@@ -1,0 +1,15 @@
+{
+  "established_by_this_stage": [
+    "All heap allocations inside `source_input_bridge::from_program_bounded` (function table Vec, per-function parameter Vecs, function/parameter/variable/let/call/pattern String clones, expression Box/Vec slots, Match arm Vecs, List literal KIntC Vecs, Tree literal Box<CoreTree> nodes, and the iterative expression/tree copy worklists) are preceded by checked arithmetic comparisons against caller-supplied `SourceCopyBudget` fields.",
+    "No numerical defaults, profile caps, or silent fallbacks to `from_program`, `max_parse_depth`, `max_structural_ast_depth`, or `max_type_depth` exist.",
+    "`SourceCopyError` is Copy and allocates zero heap memory when constructed or returned.",
+    "`recursive_source.rs` wires `parse_draft_source_bounded`, `check_program_types_bounded`, and `source_input_bridge::from_program_bounded` with no remaining call to unbounded `from_program`."
+  ],
+  "remaining_owner_and_integration_gaps": [
+    "GAP-1 (B iterative Drop worklist/replacement-box allocations, BODY 06): `shared/owner_prepare.rs` implements iterative `Drop` for `CoreProgram`, `CoreExpr`, and `CoreTree`, avoiding native stack recursion, but allocates fresh `ew: Vec<Box<CoreExpr>>`, `tw: Vec<Box<CoreTree>>`, and replacement `Box::new(dummy_expr())` / `Box::new(dummy_tree())` nodes during `drop()`. On partial-failure unwind in `from_program_bounded` or post-admission drop of `CoreProgram`, the number of dropped nodes is bounded by the already-admitted `max_expr_nodes` and `max_tree_nodes`, but those transient `Drop` heap allocations themselves are un-metered and infallible-only (`Drop::drop` cannot return `Result`).",
+    "GAP-2 (A AST recursive Drop, BODY 02): `a::Program` holds `ExprRef = Arc<a::Expr>` and `a::Tree` holds `Arc<a::Tree>` with compiler-generated recursive `Drop` when the last strong reference drops. Bounding copy depth/nodes in `from_program_bounded` does not make `Arc<a::Program>` destruction iterative.",
+    "GAP-3 (Owner `prepare_core` / `admit` / `admit_run` host allocations, BODY 03): `owner.admit` and `owner.admit_run` allocate `ProgramView` tables (`expressions`, `occurrences`, `occurrence_paths`, `children`, `functions`, `parameters`, `arms`, `patterns`, `constants`, `constant_fields`, `names`), `WidthTable`, and `MachineImage` vectors under the owner engine's separate admission rules after `from_program_bounded` returns.",
+    "GAP-4 (Reporting, provenance, and serialization allocations, R112/R207): `project_admitted_preparation` clones declarations, provenance paths/binders, and type vectors; `draft_diagnostics` (`serde_json::Value`) and `OwnerWire`/serde artifact serialization allocate without a reporting resource guard.",
+    "GAP-5 (Public `compile_draft_host` route and H1 host guarantees): Public `compile_draft_host` implementation and module registration remain Root-controlled and out of scope here. Logical cardinality bounds in the copy bridge do not constitute a process-wide physical heap allocator, native stack byte, or wall-clock time guarantee."
+  ]
+}

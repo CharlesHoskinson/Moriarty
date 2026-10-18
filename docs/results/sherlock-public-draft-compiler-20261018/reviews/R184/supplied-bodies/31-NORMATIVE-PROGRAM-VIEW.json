@@ -1,0 +1,194 @@
+{
+  "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/R20-compiler-oracle/normative/02-schema-supplement.proposed.json",
+  "source_sha256": "f2c3506ccf51a68f4bcee2d6f90c56238bfc1d4d3eaa4bd2f154148f89d62a2f",
+  "program_image_view": {
+    "source": "interfaces.md:144-158; prepared once, immutable at runtime (security-phase0.md:65)",
+    "construction": "Only prepare_core produces a ProgramView. admit runs prepare_core and then check_program_view (AD-5). No API admits a caller-supplied ProgramView.",
+    "tables": {
+      "prog.expressions": {
+        "capacity": "codeRows",
+        "row": {
+          "variant": {
+            "Literal": {
+              "constant": "ConstId"
+            },
+            "Var": {
+              "binder": "NameId"
+            },
+            "Let": {
+              "binder": "NameId",
+              "value": "ExprId",
+              "body": "ExprId"
+            },
+            "Binary": {
+              "op": "BinaryOp",
+              "left": "ExprId",
+              "right": "ExprId"
+            },
+            "Unary": {
+              "op": "UnaryOp",
+              "operand": "ExprId"
+            },
+            "If": {
+              "cond": "ExprId",
+              "thenExpr": "ExprId",
+              "elseExpr": "ExprId"
+            },
+            "Call": {
+              "functionName": "NameId",
+              "args": "ExprSlice"
+            },
+            "Match": {
+              "scrutinee": "ExprId",
+              "arms": "ArmSlice"
+            }
+          }
+        },
+        "occurrence": "ExprId is the occurrence index: one row per syntactic occurrence, no interning (interfaces.md:49). Preorder, entry first (ExprId 0), then each function body in original function order, children in semantic source order; every child and arm body ExprId is greater than its parent's (MCL design.md:65, 138-141, 154)."
+      },
+      "prog.occurrences": {
+        "capacity": "codeRows",
+        "row": {
+          "owner": "Entry | Function{index: FunctionRowId}",
+          "path": "OccPathSlice"
+        },
+        "rule": "row i describes ExprId i; root occurrences (entry, function bodies) have the empty path; Entry has no index (MCL design.md:150)"
+      },
+      "prog.occurrencePaths": {
+        "capacity": "layout.capacities.occurrencePathSlots",
+        "row": "ChildPosition",
+        "rule": "Let value 0, body 1; Binary left 0, right 1; Unary operand 0; If cond 0, then 1, else 2; Call argument i at i; Match scrutinee 0, arm k body k+1 (MCL design.md:146-150 F1(b), G2). Each complete path is appended in occurrence order."
+      },
+      "prog.children": {
+        "capacity": "codeChildSlots",
+        "row": "ExprId",
+        "rule": "each Call row's args slice, appended in ExprId order"
+      },
+      "prog.functions": {
+        "capacity": "functionRows",
+        "row": {
+          "functionName": "NameId",
+          "params": "ParamSlice",
+          "returnType": "SortTag",
+          "body": "ExprId"
+        },
+        "rule": "row index equals sourceTableIndex; original order, duplicate names retained"
+      },
+      "prog.parameters": {
+        "capacity": "parameterSlots",
+        "row": {
+          "binder": "NameId",
+          "sort": "SortTag"
+        },
+        "rule": "parameter slices appended in function order"
+      },
+      "prog.arms": {
+        "capacity": "matchArmRows",
+        "row": {
+          "pattern": "PatternRowId",
+          "body": "ExprId"
+        },
+        "rule": "each Match's arms contiguous, appended in ExprId order"
+      },
+      "prog.patterns": {
+        "capacity": "patternRows",
+        "row": {
+          "variant": {
+            "PVar": {
+              "x": "NameId"
+            },
+            "PNil": {},
+            "PCons": {
+              "x": "NameId",
+              "y": "NameId"
+            },
+            "PLeaf": {
+              "x": "NameId"
+            },
+            "PBranch": {
+              "x": "NameId",
+              "y": "NameId"
+            }
+          }
+        },
+        "rule": "one pattern row per arm, in source arm order"
+      },
+      "prog.constants": {
+        "capacity": "constantNodes",
+        "row": "ConstRow",
+        "order": "constant subtrees in literal ExprId order, each left-to-right post-order, children before parent, no interning (MCL design.md:156-161 F1(c))",
+        "out_of_range": "KInt Negative or AboveU128 prepares to U128OutOfRange with zero payload (D-13)"
+      },
+      "prog.constantFields": {
+        "capacity": "constantFieldSlots",
+        "row": "ConstId",
+        "rule": "a node's field block is appended with the node, after its children (MCL design.md:200 G1)"
+      },
+      "prog.names": {
+        "capacity": "layout.capacities.nameRows",
+        "row": {
+          "bytes": "Text (host metadata; total bytes bounded by layout.capacities.nameBytes)"
+        },
+        "rule": "distinct exact names, strictly ascending UTF-8 byte order, containing exactly the names occurring in program syntax including unused code (MCL design.md:128-136 F1(a)); NameId is the index, so NameId equality is name equality; circuit views carry NameId only (schema-types.json:32-35)"
+      }
+    },
+    "declaration_tables": "Under DedicatedSorts the view has no types, constructors, constructorFields or matchPlans table. Bounds typeRows, constructorRows, constructorFieldSlots and matchPlanRows are carried in identity only (AD-4). The A node form's builtin rows are a physical layout choice (I/L01-L02), not a core table.",
+    "header": {
+      "entry": "ExprId, always 0",
+      "activeLengths": "one ActiveLen per table above"
+    }
+  },
+  "deterministic_order": {
+    "decision": "D-27 (answers Muse F-10)",
+    "rule": "Three passes in fixed order; the first failing check in pass order, and within a pass in traversal order, is the single reported Tooling value.",
+    "traversal": "Occurrence preorder: the entry expression, then for each function in table order its name, its parameter names in order, then its body. Within an expression node: the node's own names (Var binder, Let binder, Call functionName, each arm's pattern binders x then y in arm order) before its children in semantic source order.",
+    "pass_A_features": "For adapters from a richer AST only: the first generic or financial construct in traversal order yields UnsupportedFeature{feature, locator}. CoreProgram cannot express such constructs, so pass A is vacuous for CoreProgram.",
+    "pass_B_names": "Collect distinct names in traversal order. At the first discovery of each distinct name, first report CapacityNotAdmitted{NameRows, needed: Exact(distinct_count+1), limit: nameRows} if accepting it would exceed nameRows; otherwise report CapacityNotAdmitted{NameBytes, needed: Exact(cumulative_distinct_bytes+name_bytes_len), limit: nameBytes} if accepting it would exceed nameBytes. Duplicate occurrences cause no check and no clone. Membership is held as borrowed references in a deterministic ordered set; after a successful pass the names are materialized once each in ascending order, which is the sorted result. This preparation work is unmetered trusted-host work under GD-R7-A: no preparation-work unit, cap, counter, PreparationReport, CapacityKind, Tooling variant, Bounds field, or LayoutCapacities field is added.",
+    "pass_C_emission": [
+      "C1 expressions and occurrences in occurrence preorder: each emitted row checks codeRows; each Call checks args count <= maxArity (CapacityNotAdmitted{MaxArity})",
+      "C2 children slots in ExprId order: codeChildSlots",
+      "C3 arms then their pattern rows in ExprId order: matchArmRows, then patternRows per arm",
+      "C4 occurrence paths in occurrence order: occurrencePathSlots",
+      "C5 functions in table order: functionRows; each function checks parameter count <= maxArity, then its parameters: parameterSlots",
+      "C6 constants in literal ExprId order, left-to-right post-order: constantNodes per node, constantFieldSlots per field block"
+    ],
+    "incremental": "every check happens at the emitting row, refusing at the first overflow, never after a complete traversal (F5)"
+  },
+  "const_row": {
+    "variant": {
+      "U128": {
+        "n": "UInt128"
+      },
+      "Bool": {
+        "b": "Bool"
+      },
+      "Nil": {},
+      "Cons": {
+        "fields": "ConstFieldSlice(len 2)"
+      },
+      "Leaf": {
+        "fields": "ConstFieldSlice(len 1)"
+      },
+      "Branch": {
+        "fields": "ConstFieldSlice(len 2)"
+      },
+      "U128OutOfRange": {}
+    },
+    "common": {
+      "markerFree": "Bool"
+    },
+    "field_kinds": {
+      "Cons": [
+        "UInt or Marker",
+        "Nil or Cons"
+      ],
+      "Leaf": [
+        "UInt or Marker"
+      ],
+      "Branch": [
+        "Leaf or Branch",
+        "Leaf or Branch"
+      ]
+    }
+  }
+}

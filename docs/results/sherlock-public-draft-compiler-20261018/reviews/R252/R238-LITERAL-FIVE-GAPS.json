@@ -1,0 +1,15 @@
+{
+  "source": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/238-current-compiler-review-packet/FINAL-RESPONSE.txt",
+    "bytes": 25015,
+    "sha256": "f17dd873f39b99fd8c3d0b088591a80bfaa68332c89afc0ce8dbde4f675f4fa3"
+  },
+  "field": "preserved_owner_gaps",
+  "value": [
+    "GAP-1 (B iterative Drop allocations): `impl Drop for CoreProgram`, `CoreExpr`, and `CoreTree` in `owner_prepare` (F031 `031-01.txt`, anchor `fn drain_worklists(ew: &mut Vec<Box<CoreExpr>>, tw: &mut Vec<Box<CoreTree>>)`) avoid call-stack recursion but allocate transient heap worklist entries and `Box::new(dummy_expr())` / `Box::new(dummy_tree())` replacement boxes",
+    "GAP-2 (A recursive Arc Drop): Input `a::Program`, `a::ExprRef` (`Arc<Expr>`), and `a::Tree` (`Arc<Tree>`) in `reference_types.rs` (F030 `030-01.txt`, anchor `pub type ExprRef = Arc<Expr>;`) use standard compiler-generated recursive `Drop`",
+    "GAP-3 (Owner prepare/admit/admit_run allocations): `owner_prepare::{prepare_core,check_program_view,admit,admit_run}` (F032 `032-01.txt`, anchor `let view = prepare_core(p, b, l)?;`) perform internal host table/diagnostic allocations not governed by `SourceCopyBudget`",
+    "GAP-4 (Report/provenance/diagnostic/serialization allocations): `SourceProvenance` collection (F019 `019-02.txt`, anchor `fn collect_sites(`), `DraftCompileArtifact` projection (F009 `009-01.txt`, anchor `pub(crate) fn project_admitted_preparation(`), `OwnerWire` JSON construction, and `serde_json` serialization allocate unmetered host memory",
+    "GAP-5 (Public route / global H1 resource guarantees): Bounded parser/checker/copy budgets enforce structural preprocessing counts only and do not establish process-wide host heap, native stack-byte, or wall-clock time admission (H1)"
+  ]
+}

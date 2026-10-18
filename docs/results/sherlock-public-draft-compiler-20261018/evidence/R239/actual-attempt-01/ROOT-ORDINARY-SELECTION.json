@@ -1,0 +1,34 @@
+{
+  "utc": "2026-10-18T02:32:28.787200+00:00",
+  "planSha256": "47a61a287301e5b31845c2a867e12582b99fe66d372d1c05a03d311ad08c035d",
+  "actualSourceReview": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/238-current-compiler-review-packet/FINAL-RESPONSE.txt",
+    "sha256": "f17dd873f39b99fd8c3d0b088591a80bfaa68332c89afc0ce8dbde4f675f4fa3",
+    "CID": "2c1ab85c-9307-47ff-ac9b-1ac1483c7dfd",
+    "sourceVerdict": "APPROVE_CURRENT_BOUNDED_PUBLIC_COMPILER_AND_COPY_SOURCE_ONLY"
+  },
+  "adoption": "Exact actual ordinary operation classification only; scope/conditions/omissions/5ownerH1gaps retained; no native/globalH1/semanticproof acceptance",
+  "decision": {
+    "classification": "ELIGIBLE_ORDINARY_BOUNDED_PUBLIC_COMPILER_QA",
+    "exact_plan_sha256": "47a61a287301e5b31845c2a867e12582b99fe66d372d1c05a03d311ad08c035d",
+    "review_projection_page_sha256s": [
+      "c2ef590bb43b84fca7bb071ef9eca36279ab444082fc766f36f993821ff59643",
+      "5a4b2d2d76f98aa990db6a87b26e9b38b9a8ebcf6dfa8bfbaa8f2e3ecc7ffa3b"
+    ],
+    "scope": "Exact R239 five-phase public QA plan (F034 `034-01.txt`, `034-02.txt`): Phase 1 normal non-test `rustc` compile of `mori_core` (`lib.rs`) to `libmori_core.rlib` (30s wall bound) reusing R191 `libmori_lexer_r191.rlib` (`419fed43346bc022726248d36ec9aaaa8e7235b0dac2a121a3cb157675a4e4db`, matching `mori-lexer/src/lib.rs` `b561625e0eaddd206bbf5dd95a2c79f6c70f90b408c50263f3604ad6a834737a` in F024) with no lexer rebuild; Phase 2 external `rustc --test` compile of `crates/mori-core/tests/sherlock_draft_compile.rs` (F017, 30s wall bound); Phase 3 `--list` check (10s wall bound) verifying exact 2-test membership; Phase 4 `public_chain_total_prepares_admitted_complete_independent_tables` (10s wall bound); Phase 5 `public_branch_total_prepares_admitted_complete_independent_tables` (10s wall bound). Operations in Phases 4 and 5 are strictly bounded compile-only host preparation on two tiny fixed `include_str!` fixtures (`chain-total.mori` 177B, `branch-total.mori` 211B, `config.json` 1792B, `target.json` 64B): `parse_draft_config`, `json::parse`, `parse_draft_source_bounded` (`lex_with_token_limit`), `check_program_types_bounded`, `from_program_bounded`, `host_owner_engine().admit` (`prepare_core` + `check_program_view`), `admit_run(..., FinanceInput::Absent)` (unstepped genesis image), `observe_bound_image` (`PreImage::bind` + `implied_seg_base`), `DraftCompileArtifact` projection, SHA-256 input hashing, and `serde_json` equality assertions against sealed R115 `EXPECTED.json` (27299B) and `CORRESPONDENCE-EXPECTED.json` (20139B). No B `step`/`run`, no A reference evaluator, no CLI filesystem publication, no Cargo/buildscripts, and no SDK/native/prover path is selected.",
+    "conditions": [
+      "Root sole executor verifies all 569 flat input SHA256/byte pins (`FLAT-INPUT-PINS.json` `4de3bc2bd910fecc427638851bb5c28206cf48a9ce45c911334c47a895c7fec0`) before and after execution",
+      "Exact fixed environment (`PATH=/usr/bin:/bin`, `LANG=C.UTF-8`, isolated `TMPDIR`) and `cwd` (`/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/239-public-compiler-five-phase-qa`)",
+      "Enforce `/usr/bin/timeout --signal=KILL` (30s/30s/10s/10s/10s) and Root capture procedure (`051-01.txt` `01b9e50b952bf700bdb5149bb8fb77943ec4f260e0b5860a4b6ff485cb568d7a`) with 131072B per-stream cap and `killpg(SIGKILL)`",
+      "Verify Phase 3 `--list` reports exclusively the two named tests before selecting Phases 4 and 5; stop on first nonzero exit, timeout, stream cap, or pin mismatch with zero retries"
+    ],
+    "gaps": [
+      "142-file normal compilation source snapshot (`NORMAL-COMPILATION-SOURCE-SNAPSHOT.json` `d10328b34f63f37bf992d91ac7b9550b7cceb906792330e367314745409f5c3c`) and 273-entry tool/dependency inventory (`b95bfb12e9925613975c4c1f5861ab37cd338baf0f2a4444de83adf43884e9e0`) are immutable source-available gaps, not freshly reread in full",
+      "Transitive bodies of `owner_prepare::{prepare_core,check_program_view}`, `compile_artifact/wire.rs`, `json.rs`, and `intent.rs` execute on the two small fixed inputs without full inline source inspection in this 52-body packet",
+      "All five owner/H1 gaps persist; executing two fixed positive fixtures does not certify untrusted-input H1 safety, negative/hostile rejection paths, B runtime execution, or native/circuit targets"
+    ]
+  },
+  "nativeAuthority": 0,
+  "oneAttemptNoRetry": true,
+  "captureProvenance": "ExistingRootsubprocess/selectors block executed in this exec_command stdin cell, not a pre-existing named collector file. Exact phase argv/env/cwd/outputcaps retained."
+}

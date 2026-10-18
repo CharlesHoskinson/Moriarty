@@ -1,0 +1,148 @@
+{
+  "reviewer_identity_and_role": {
+    "role": "Fresh NONAUTHOR designated-security reviewer for R200 Sol-authored bounded typechecker source and R204 fixed external ordinary test harness operation",
+    "requested_fallback_identity": "gemini-4-argon-high HIGH (standing fallback for primary Opus5.5 HIGH quota outage)",
+    "returned_model_identity": "Gemini 4 Argon (High)",
+    "author_independence": "Non-author; R200 authored by Sol under the explicit October 18 UTC narrow type-checker authoring exception. No R192 empty-author state or prior reviewer/author vote is resumed or transferred.",
+    "execution_and_tool_status": "SOURCE_ONLY / UNRUN; zero tools, reads, shell commands, compilations, tests, or provider calls executed.",
+    "standing_holds_preserved": {
+      "current_native_authority": 0,
+      "C4": "OPEN",
+      "R2": "UNSAT",
+      "60460": "HOLD",
+      "stopped_items": "Amendment 10 and quarantined T3 remain stopped; contents not supplied and not recovered/rerouted."
+    }
+  },
+  "read_scope_and_omitted_dependencies": {
+    "focused_inline_full_read": [
+      "01-candidate-checker.rs (sha256 2a3a135d4c0cd45a1ee648ad9fd641a6116d8c6292b41a1447aac83f7697b849, 13280B)",
+      "02-candidate-tests.rs (sha256 ad36596dc61d574d0f319a5f6dff3da085a04ae30964b87b069b5cc41b3ebade, 12435B, 18 tests: 5 original prefix + 13 new AST)",
+      "03-original-checker.rs (full baseline preimage)",
+      "04-reference_types.rs (full Sherlock AST/type/machine declarations)",
+      "05-sourceLocation-contract.rs (exact byte slice [0,2166))",
+      "06-candidate-API.md (sha256 9a7232f7660f7d30045467b0645c2ffdfcf18f2109ef56372add0e62f20d8b1d)",
+      "07-R115-type-accounting.json, 08-R115-type-provenance-cells.json, 09-chain-total.mori, 09-branch-total.mori, 10-R115-methodology.md",
+      "11-user-assignment.md",
+      "12-R204-exact-parser.rs (sha256 caa5bbad2cedf9856caa2896908971d1c8920f94e985cc7543dda855c812e9ef, 25464B)",
+      "13-R204-wrapper.rs (sha256 a7722e0947e4a477e7a7a0de11f438dae7f6bfc94c5734ebb754100b772a2ef7, 222B)",
+      "14-R204-operation.json, 15-R204-source-flow.json, 16-Root-capture-procedure.txt, 17-R204-coverage-clarification.md",
+      "18-R120-uncompiled-diagnostic-mapping.rs (uncompiled downstream context)"
+    ],
+    "omitted_dependency_and_semantic_scope_limits": [
+      "existingCoreSourceInventory (117 source files) andexistingNormalCoreRlib (libmori_core.rlib, sha256 7d40515f92e4686d50c5090b787bb47ecd34b83e636c71e3e023bb272b1c8831, 31799734B) are hash-pinned linked inputs, not semantically reread in full here beyond 04-reference_types.rs.",
+      "existingUniqueNormalLexerSources (6 files: diagnostics.rs, lib.rs, number.rs, scan.rs, string.rs, token.rs) and existingUniqueNormalLexerRlib (libmori_lexer_r191.rlib, sha256 419fed43346bc022726248d36ec9aaaa8e7235b0dac2a121a3cb157675a4e4db, 893470B) are hash-pinned linked inputs; lexer bodies (including number.rs relied upon by test 5) are not inline.",
+      "normalDependenciesTools (273 items: 198 normal_dependency_inventory + 75 toolchain_linker_sysroot) and launcherExecutable (/usr/lib/cargo/bin/coreutils/timeout, sha256 f84e76ea4da1e0c4e92254bd0d7dccdabe2c8b3098e734f27997dae3ee5d8e02) are pin-inventoried in PROPOSED.json / FLAT-INPUT-PINS.json without full toolchain/stdlib/OS binary audit.",
+      "Input pin lists and rustc dep-info do not attest exclusive filesystem read closure or kernel-enforced I/O sandboxing."
+    ]
+  },
+  "SOURCE_DECISION": {
+    "verdict": "APPROVE_WITH_LIMITS",
+    "mandatory_fixes": [],
+    "question_1_depth_budget_and_traversal_audit": {
+      "inclusive_depth_and_no_default_cap": {
+        "conclusion": "Caller supplies max_type_depth with no Default impl or hidden cap; legacy entry passes limit: None which performs no arithmetic or capping.",
+        "anchors": [
+          "pub fn check_program_types(program: &Program) -> Result<DraftTypeSummary, DraftTypeError>",
+          "check_program_types_inner(program, DepthBudget { limit: None })",
+          "pub fn check_program_types_bounded(program: &Program, max_type_depth: usize)",
+          "check_program_types_inner(program, DepthBudget { limit: Some(max_type_depth) })",
+          "let Some(limit) = self.limit else {",
+          "return Ok(0);"
+        ]
+      },
+      "checked_add_overflow_and_parent_path_diagnostics": {
+        "conclusion": "Depth increments via checked_add(1). If next <= limit, next is returned. If next > limit, observed is Some(next). If parent_depth == usize::MAX, checked_add(1) yields None and Budget is returned with observed: None (no wrapping, saturation, or fabricated depth). Error clones only the already-admitted parent SourceLocation (path length at most limit - 1, or 0 at root).",
+        "anchors": [
+          "let observed = parent_depth.checked_add(1);",
+          "if let Some(next) = observed {",
+          "if next <= limit { return Ok(next); }",
+          "Err(error(source, DraftTypeErrorKind::Budget(DraftTypeBudgetExceeded {",
+          "resource: DraftTypeBudgetResource::TypeDepth, limit, observed, child_index,"
+        ]
+      },
+      "root_reset_and_root0_precedence": {
+        "conclusion": "Every function body in program.functions and program.entry starts from parent_depth 0 with child_index None and empty child_path, resetting depth to 1 when limit >= 1. When max_type_depth == 0, next_depth(0, &source, None) fails with observed: Some(1) and child_index: None before Types::new() or parameter iteration/duplicate checking.",
+        "anchors": [
+          "for (index, function) in program.functions.iter().enumerate() {",
+          "let source = SourceLocation { function_index: Some(index), child_path: vec![] };",
+          "let depth = budget.next_depth(0, &source, None)?;{}",
+          "let mut environment = Types::new();",
+          "let source = SourceLocation { function_index: None, child_path: vec![] };",
+          "let depth = budget.next_depth(0, &source, None)?;"
+        ]
+      },
+      "refusal_before_child_path_descent_and_env_clones": {
+        "conclusion": "Helper child() checks budget.next_depth(depth, source, Some(index))? before cloning source or pushing index to child_path. All recursive Expr edges (Let value/body, Binary left/right, Unary operand, If condition/yes/no, Call arguments, Match scrutinee/arm bodies) pass through child() before recursive infer(). In Let, child(source, 1, depth, budget)? precedes environment.clone(); in Match, child(source, index + 1, depth, budget)? precedes pattern_types() and its saved.clone(). Named calls check first signature and argument depths only, never unrolling callee bodies.",
+        "anchors": [
+          "let child_depth = budget.next_depth(depth, source, Some(index))?;",
+          "let mut source = source.clone();",
+          "source.child_path.push(index);",
+          "let (value_source, value_depth) = child(source, 0, depth, budget)?;",
+          "let (body_source, body_depth) = child(source, 1, depth, budget)?;",
+          "let mut inner = environment.clone();",
+          "let (left_source, left_depth) = child(source, 0, depth, budget)?;",
+          "let (right_source, right_depth) = child(source, 1, depth, budget)?;",
+          "let (operand_source, operand_depth) = child(source, 0, depth, budget)?;",
+          "let (condition_source, condition_depth) = child(source, 0, depth, budget)?;",
+          "let (yes_source, yes_depth) = child(source, 1, depth, budget)?;",
+          "let (no_source, no_depth) = child(source, 2, depth, budget)?;",
+          "let (source, argument_depth) = child(source, index, depth, budget)?;",
+          "let (scrutinee_source, scrutinee_depth) = child(source, 0, depth, budget)?;",
+          "let (body_source, body_depth) = child(source, index + 1, depth, budget)?;",
+          "let inner = pattern_types(&arm.pattern, scrutinee_type, environment, &body_source)?;"
+        ]
+      },
+      "strict_resource_bounds_qualification": "max_type_depth bounds only active structural Expr inference depth (at most max_type_depth active infer frames). It does not bound AST width (function count, parameter count, call argument count, match arm count), total visited AST nodes/time across wide trees, BTreeMap environment clone sizes, or native stack safety if a caller supplies an arbitrarily large max_type_depth."
+    },
+    "question_2_preimage_comparison_and_semantics": {
+      "conclusion": "When budget permits traversal (and unconditionally in check_program_types), behavior, error kinds, precedence, and SourceLocation paths are identical to 03-original-checker.rs. All function bodies (including shadowed duplicates and unreachable functions) are checked in declaration order before entry. Call lookup uses find() (first matching declaration). BinaryOp::Eq infers both left and right before returning Ok(Type::Bool) without requiring equal operand sorts; non-Eq binary operators infer both operands before checking left then right sort expectations. Moving right_source creation in Expr::Binary after left inference avoids unused path cloning when left fails and cannot alter outcomes.",
+      "anchors": [
+        "if *op == BinaryOp::Eq { return Ok(Type::Bool); }",
+        "require(left, left_expected, &left_source)?;{}",
+        "require(right, right_expected, &right_source)?;{}",
+        "require(condition, Type::Bool, &condition_source)?;{}",
+        "if yes == no { Ok(yes) }",
+        "let function: &Function = program.functions.iter().find(|function| &function.name == name)",
+        "if function.parameters.len() != arguments.len() {",
+        "Ok(function.return_type)",
+        "result.ok_or_else(|| error(source, DraftTypeErrorKind::EmptyMatch))"
+      ]
+    },
+    "question_3_test_coverage_and_r115_alignment": {
+      "r115_independent_verification": "Traced 09-chain-total.mori (sum: max depth 4 at [2,1,0]; entry: max depth 4 at [0,1,0]/[0,1,1]; summary [UInt], UInt) and 09-branch-total.mori (fold: max depth 4 at [2,0,0]/[2,1,0]; entry: max depth 5 at [0,1,0,0]/[0,1,1,0]; summary [UInt], UInt) against 07-R115-type-accounting.json and 08-R115-type-provenance-cells.json. All expression SourceLocations and sorts match the checker and parser conventions.",
+      "test_suite_assessment": "All 18 tests in 02-candidate-tests.rs are UNRUN. The 5 original prefix tests (2966B unchanged) and 13 new direct-AST bounded tests match actual APIs and error/depth conventions.",
+      "nonblocking_coverage_gaps": [
+        "All 18 tests are currently unexecuted (UNRUN).",
+        "The two R115 independent fixtures (ChainTotal and BranchTotal) are not included as test cases in 02-candidate-tests.rs at their exact depth boundaries (4 and 5).",
+        "The 13 new bounded tests construct Program ASTs directly and do not test parse_draft_source_bounded composed with check_program_types_bounded.",
+        "Tree patterns/constructors/literals (Pattern::Leaf, Pattern::Branch, UnaryOp::Leaf, BinaryOp::Branch, Value::Tree) and BinaryOp::{Sub, Mul, Lt} are not directly exercised in 02-candidate-tests.rs.",
+        "Because siblings share depth + 1, direct child refusal on Binary/Let/If/Match always triggers at child_index Some(0) first; tests cover child_index Some(0) inside child [1] of Binary/Let, while direct budget refusal inside a Call argument or inside a Match arm body (after pattern_types admission) is not separately asserted."
+      ]
+    },
+    "question_4_downstream_compatibility_and_remaining_limits": {
+      "api_compatibility": "DraftTypeBudgetResource, DraftTypeBudgetExceeded, DraftTypeErrorKind::Budget, and check_program_types_bounded match 06-candidate-API.md.",
+      "remaining_limits": [
+        "18-R120-uncompiled-diagnostic-mapping.rs is uncompiled context and its exhaustive match on DraftTypeErrorKind (and DraftError) must be updated to map Budget variants before R120 compilation.",
+        "Public compiler configuration/entrypoint does not yet thread or enforce max_type_depth.",
+        "H1 unmetered host evaluator warning remains active; A-to-B copy bridge, owner preparation, diagnostic report integration, and non-recursive Drop for deep Arc<Expr>/Arc<Tree> remain separate open obligations.",
+        "Native0 / C4: OPEN / R2: UNSAT / 60460: HOLD and formal/financial admission remain ungranted."
+      ]
+    }
+  },
+  "EXACT_ORDINARY_OPERATION_DECISION": {
+    "verdict": "ELIGIBLE_WITH_EXPLICIT_CONDITIONS",
+    "blockers": [],
+    "scope_and_operation_summary": {
+      "wrapper": "13-R204-wrapper.rs (typechecker_harness.rs, 222B, sha256 a7722e0947e4a477e7a7a0de11f438dae7f6bfc94c5734ebb754100b772a2ef7) exposes mori_core::sherlock, candidate/draft_source.rs (without parser test module), and candidate/draft_typecheck.rs (with draft_typecheck_tests.rs).",
+      "phases": "20 serial commands in 14-R204-operation.json: 1 external rustc --test compile (30s wall timeout), 1 --list check (10s wall timeout), and 18 individual --exact test runs with --test-threads=1 --nocapture (10s wall timeout each).",
+      "selectors": "Exact 18 selectors under sherlock_draft_types::tests::* matching expectedTestMembership and Mechanical Facts.",
+      "workload_bound": "Original 5 tests parse fixed inline strings (<160B each); new 13 tests build tiny in-memory ASTs (depth <= 3, functions <= 2). No evaluator/Machine execution, no Core or lexer rebuild, no Cargo/build scripts/network."
+    },
+    "explicit_conditions": [
+      "Pre-execution verification of all 466 flatInputPins (sha256 1aeb09360247deadd78342862bb36cb202f81474c798ef666475ce49025254bc), including the 4 sourceSnapshot files, libmori_core.rlib, libmori_lexer_r191.rlib, 6 lexer sources, PROPOSED.json, SOURCE-FLOW.json, and timeout executable.",
+      "Execution strictly inside cwd /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/204-bounded-typechecker-ordinary-qa with the exact 3-key environment (PATH, LANG, TMPDIR) and 16-Root-capture-procedure.txt (start_new_session=True, 131072B per-stream stdout/stderr cap with SIGKILL of process group on breach).",
+      "Phase 2 (--list) output must match the exact 18 expectedTestMembership selectors before running Phases 3..20; fail-stop immediately on any nonzero exit, timeout, or stream-cap breach with no retries.",
+      "Post-execution re-verification of input pins and recording of outputs without treating ordinary test execution as H1, full-compiler, linker/SDK read-exclusivity, or native/financial admission."
+    ]
+  }
+}

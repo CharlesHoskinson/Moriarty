@@ -1,0 +1,778 @@
+--- base/crates/mori-core/src/sherlock/compile_artifact/draft_correspondence.rs
++++ revision02/crates/mori-core/src/sherlock/compile_artifact/draft_correspondence.rs
+@@ -0,0 +1,397 @@
++//! Named UIREQ022 correspondence obligations, not proofs or runtime evidence.
++//! SOURCE_ONLY / UNRUN. Dedicated pure grammar; reporting/H1 gaps remain.
++use serde::Serialize;
++
++#[derive(Serialize)]
++pub struct MappingObligation {
++    pub id: &'static str,
++    pub construct: &'static str,
++    pub target: &'static str,
++    pub returned_values: &'static str,
++    pub defined_failures: &'static str,
++    pub order: &'static str,
++    pub resource_obligation: &'static str,
++    pub effects_and_duties: &'static str,
++    pub status: &'static str,
++}
++
++#[derive(Serialize)]
++pub struct ResourceMapping {
++    pub id: &'static str,
++    pub a_clock: &'static str,
++    pub b_clock: &'static str,
++    pub helper_mapping: &'static str,
++    pub same_fuel: &'static str,
++    pub failure_classes: &'static str,
++    pub required_comparison: &'static str,
++    pub unmeasured: &'static str,
++}
++
++#[derive(Serialize)]
++pub struct FinanceApplicability {
++    pub source_profile: &'static str,
++    pub target_input: &'static str,
++    pub effects: &'static str,
++    pub residual_duties: &'static str,
++}
++
++#[derive(Serialize)]
++pub struct ProofStatus {
++    pub semantic_correspondence: &'static str,
++    pub runtime_values_failures_order_resources: &'static str,
++    pub witness_plan: &'static str,
++    pub constraint_plan: &'static str,
++    pub native_export: &'static str,
++    pub native_proof_target: &'static str,
++    pub gap: &'static str,
++}
++
++#[derive(Serialize)]
++pub struct SemanticCorrespondenceReport {
++    pub mapping_id: &'static str,
++    pub mapping_version: &'static str,
++    pub status: &'static str,
++    pub source_language: &'static str,
++    pub source_semantics: &'static str,
++    pub reference_profile: &'static str,
++    pub target_profile: &'static str,
++    pub target_layout: &'static str,
++    pub pipeline: &'static str,
++    pub occurrence_binding: &'static str,
++    pub declared_scope: &'static str,
++    pub obligations: &'static [MappingObligation],
++    pub resources: ResourceMapping,
++    pub finance: FinanceApplicability,
++    pub proof: ProofStatus,
++}
++
++const OBLIGATIONS: &[MappingObligation] = &[
++    MappingObligation {
++        id: "draft-to-b.program/1",
++        construct: "Program",
++        target: "Program -> CoreProgram -> ProgramView + genesis",
++        returned_values: "Preserve closed entry, original function table and the eventual entry value.",
++        defined_failures: "Keep parse/type/copy/owner admission diagnostics separate from runtime Outcome.",
++        order: "Retain entry-preorder owner occurrence IDs and original function-table order.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.function/1",
++        construct: "Function",
++        target: "Function/Parameter -> CoreFunction/CoreParameter -> function/parameter rows",
++        returned_values: "Preserve names, parameter sorts/order, declared return sort and body.",
++        defined_failures: "Preserve first declaration lookup and runtime bind/return failures 8/6 on applicable common-domain states; preparation typing may reject earlier.",
++        order: "Check every body in original order before entry; do not unroll recursive calls.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.literal/1",
++        construct: "Literal",
++        target: "Expr::Literal -> CoreExpr::Literal -> constant rows",
++        returned_values: "Preserve UInt128, Bool and nil literals; construct other List/Tree values via existing constructors.",
++        defined_failures: "Public UInt overflow is a source UIntLiteral diagnostic; no typed-domain runtime literal failure is invented.",
++        order: "Preserve each structural occurrence and literal constant identity/order.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.var/1",
++        construct: "Var",
++        target: "Expr::Var -> CoreExpr::Var; EnvGet",
++        returned_values: "Preserve exact lexical lookup value and sort.",
++        defined_failures: "Name the unknown-variable diagnostic and common-domain runtime missing-variable code3 separately.",
++        order: "Search the same saved lexical environment; structural sharing is not name equality.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.let/1",
++        construct: "Let",
++        target: "Expr::Let -> CoreExpr::Let; EnvPut",
++        returned_values: "Preserve bound value, shadowing, body value and restored caller environment.",
++        defined_failures: "Preserve first value/body failure without inventing a successful binding.",
++        order: "Evaluate value before body; body sees the new binding; restore saved scope.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.if/1",
++        construct: "If",
++        target: "Expr::If -> CoreExpr::If",
++        returned_values: "Preserve Bool-directed selected branch value.",
++        defined_failures: "Preserve condition failure and runtime non-Bool condition code5 where applicable; do not execute the unselected branch.",
++        order: "Condition first, then only selected branch at runtime; static checker still checks both branches.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.call/1",
++        construct: "Call",
++        target: "Expr::Call -> CoreExpr::Call; Find/Bind/Validate/ReturnF",
++        returned_values: "Preserve named recursive call result and declared return sort; no evaluated-literal substitution.",
++        defined_failures: "Name missing function7, binding8 and return-sort6 on applicable runtime states; phase diagnostics remain distinct.",
++        order: "Strict left-to-right arguments, first matching declaration, ordered parameter binding and caller restoration.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.match/1",
++        construct: "Match",
++        target: "Expr::Match -> CoreExpr::Match; Match/ScopeF",
++        returned_values: "Preserve selected arm value and saved-environment extension.",
++        defined_failures: "Preserve scrutinee/selected-body failures and no-matching-arm code9; preparation EmptyMatch is distinct.",
++        order: "Scrutinee first; try source arms in order and execute the first matching arm only.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-add/1",
++        construct: "Binary.Add",
++        target: "Expr::Binary(Add) -> CoreExpr::Binary(Add); Scalar",
++        returned_values: "Exact checked UInt128 sum.",
++        defined_failures: "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-sub/1",
++        construct: "Binary.Sub",
++        target: "Expr::Binary(Sub) -> CoreExpr::Binary(Sub); Scalar",
++        returned_values: "Exact checked UInt128 difference.",
++        defined_failures: "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-mul/1",
++        construct: "Binary.Mul",
++        target: "Expr::Binary(Mul) -> CoreExpr::Binary(Mul); Scalar",
++        returned_values: "Exact checked UInt128 product.",
++        defined_failures: "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-eq/1",
++        construct: "Binary.Eq",
++        target: "Expr::Binary(Eq) -> CoreExpr::Binary(Eq); Scalar/Equal",
++        returned_values: "Structural Bool equality across all dedicated sorts, including unequal sorts.",
++        defined_failures: "No equal-sort precondition is added; preserve failures from either operand.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-lt/1",
++        construct: "Binary.Lt",
++        target: "Expr::Binary(Lt) -> CoreExpr::Binary(Lt); Scalar",
++        returned_values: "UInt128 less-than Bool.",
++        defined_failures: "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-cons/1",
++        construct: "Binary.Cons",
++        target: "Expr::Binary(Cons) -> CoreExpr::Binary(Cons); Scalar",
++        returned_values: "Preserve head UInt and the ordered tail List.",
++        defined_failures: "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.binary-branch/1",
++        construct: "Binary.Branch",
++        target: "Expr::Binary(Branch) -> CoreExpr::Binary(Branch); Scalar",
++        returned_values: "Preserve ordered left/right Tree children.",
++        defined_failures: "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
++        order: "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.unary-leaf/1",
++        construct: "Unary.Leaf",
++        target: "Expr::Unary(Leaf) -> CoreExpr::Unary(Leaf); Scalar",
++        returned_values: "Preserve the UInt payload as a Tree Leaf.",
++        defined_failures: "Preserve operand failures and invalid operand-sort error11 on applicable runtime states.",
++        order: "Evaluate the operand before the unary operation.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.unary-not/1",
++        construct: "Unary.Not",
++        target: "Expr::Unary(Not) -> CoreExpr::Unary(Not); Scalar",
++        returned_values: "Preserve Bool negation.",
++        defined_failures: "Preserve operand failures and invalid operand-sort error11 on applicable runtime states.",
++        order: "Evaluate the operand before the unary operation.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.pattern-var/1",
++        construct: "Pattern.Var",
++        target: "Pattern::Var -> CorePattern::PVar -> pattern rows; Match",
++        returned_values: "Bind the entire scrutinee value and its sort.",
++        defined_failures: "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++        order: "Preserve arm order, binder order, saved environment and first-match selection.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.pattern-nil/1",
++        construct: "Pattern.Nil",
++        target: "Pattern::Nil -> CorePattern::PNil -> pattern rows; Match",
++        returned_values: "Match exactly the empty List.",
++        defined_failures: "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++        order: "Preserve arm order, binder order, saved environment and first-match selection.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.pattern-cons/1",
++        construct: "Pattern.Cons",
++        target: "Pattern::Cons -> CorePattern::PCons -> pattern rows; Match",
++        returned_values: "Match nonempty List and bind ordered UInt head/List tail.",
++        defined_failures: "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++        order: "Preserve arm order, binder order, saved environment and first-match selection.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.pattern-leaf/1",
++        construct: "Pattern.Leaf",
++        target: "Pattern::Leaf -> CorePattern::PLeaf -> pattern rows; Match",
++        returned_values: "Match Tree Leaf and bind its UInt payload.",
++        defined_failures: "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++        order: "Preserve arm order, binder order, saved environment and first-match selection.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.pattern-branch/1",
++        construct: "Pattern.Branch",
++        target: "Pattern::Branch -> CorePattern::PBranch -> pattern rows; Match",
++        returned_values: "Match Tree Branch and bind ordered left/right Trees.",
++        defined_failures: "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++        order: "Preserve arm order, binder order, saved environment and first-match selection.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.sort-uint/1",
++        construct: "Sort.UInt",
++        target: "Type::UInt -> SortTag::UInt",
++        returned_values: "Preserve dedicated UInt sort, constructor membership and declared argument/return typing.",
++        defined_failures: "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++        order: "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.sort-bool/1",
++        construct: "Sort.Bool",
++        target: "Type::Bool -> SortTag::Bool",
++        returned_values: "Preserve dedicated Bool sort, constructor membership and declared argument/return typing.",
++        defined_failures: "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++        order: "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.sort-list/1",
++        construct: "Sort.List",
++        target: "Type::List -> SortTag::List",
++        returned_values: "Preserve dedicated List sort, constructor membership and declared argument/return typing.",
++        defined_failures: "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++        order: "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++    MappingObligation {
++        id: "draft-to-b.sort-tree/1",
++        construct: "Sort.Tree",
++        target: "Type::Tree -> SortTag::Tree",
++        returned_values: "Preserve dedicated Tree sort, constructor membership and declared argument/return typing.",
++        defined_failures: "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++        order: "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++        resource_obligation: "draft-to-b.resource-observations/1",
++        effects_and_duties: "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++        status: "named-unproved",
++    },
++];
++
++pub(super) fn report() -> SemanticCorrespondenceReport {
++    SemanticCorrespondenceReport {
++        mapping_id: "moriarty-sherlock-draft-to-b-obligations",
++        mapping_version: "1",
++        status: "named-unproved",
++        source_language: "moriarty-sherlock-draft/1",
++        source_semantics: "moriarty-sherlock-dedicated/1",
++        reference_profile: "sherlock-k-a/1",
++        target_profile: "sherlock-helper-microstep/1",
++        target_layout: "HostOnly",
++        pipeline: "bounded source parse -> typed A Program -> bounded structural CoreProgram copy -> owner admit/admit_run -> unstepped ProgramView/genesis projection",
++        occurrence_binding: "source function_index/child_path -> owner occurrence owner_is_function/function/path; complete preparation/provenance and ProgramView remain separate fields",
++        declared_scope: "All supported Program/Function, Expr operator families, patterns and dedicated sorts; no generic ADT or financial grammar is added",
++        obligations: OBLIGATIONS,
++        resources: ResourceMapping {
++            id: "draft-to-b.resource-observations/1",
++            a_clock: "sherlock-k-a/1: one charge per charged machine rule; terminal publication zero; pure helpers and allocation unmetered",
++            b_clock: "sherlock-helper-microstep/1: consumed_work, helper_work, helper_visits and reference_cursor are distinct observations",
++            helper_mapping: "Explicitly align/hide Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal and Match visits and bookkeeping against reference boundaries",
++            same_fuel: "not-claimed: equal source values do not imply equal A/B fuel or helper schedules",
++            failure_classes: "Parse/type/copy/Tooling preparation refusals, HostViolation, semantic errors, frame-cap/resource rejection4 and fuel/capacity exhaustion remain distinct",
++            required_comparison: "Compare complete returned values, defined failures, order and resource prefixes under explicit caller extents; compile-only tables do not observe those runtime prefixes",
++            unmeasured: "Physical host time/heap/stack, circuit rows/degree, proof/key size and ledger fees are not inferred",
++        },
++        finance: FinanceApplicability {
++            source_profile: "pure-dedicated-sorts",
++            target_input: "FinanceInput::Absent",
++            effects: "not-applicable in this grammar/profile; no transfers/fees are represented",
++            residual_duties: "not-applicable in this grammar/profile; no liabilities/wait/resume are represented",
++        },
++        proof: ProofStatus {
++            semantic_correspondence: "unproved",
++            runtime_values_failures_order_resources: "unobserved-by-compile-only-preparation",
++            witness_plan: "missing",
++            constraint_plan: "missing",
++            native_export: "unsupported",
++            native_proof_target: "unrun",
++            gap: "No source-to-B semantic proof or B-to-Clean/handwritten circuit correspondence/native exporter is supplied; host evaluation cannot supply missing circuit evidence",
++        },
++    }
++}
+--- base/crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
++++ revision02/crates/mori-core/src/sherlock/compile_artifact/draft_report.rs
+@@ -2,6 +2,9 @@
+ //! evaluator, owner step, importable image or source-admission check is added.
+ //! Root must wire this immediately after its bounded preparation/admit_run seam.
+ use serde::Serialize;
++
++#[path = "draft_correspondence.rs"]
++pub mod correspondence;
+ use serde_json::Value;
+ use crate::sherlock::Type;
+ use crate::sherlock_draft as source;
+@@ -22,6 +25,7 @@
+     pub config: DraftConfigIdentity,
+     pub target: TargetDescriptor,
+     pub preparation: PreparationReport,
++    pub correspondence: correspondence::SemanticCorrespondenceReport,
+     // Existing complete OwnerWire views, not reconstructed stand-ins.
+     pub admission: Value,
+     pub genesis: Value,
+@@ -196,6 +200,7 @@
+                 correspondence: "unestablished-until-independent-comparison",
+             },
+         },
++        correspondence: correspondence::report(),
+         admission: wire::admission(&observed), genesis: wire::image(&observed.image),
+         plans: Plans {
+             witness: Plan { status: "missing", artifact: None, reason: "dedicated draft witness plan not implemented" },
+--- base/crates/mori-core/tests/fixtures/draft-compile/CORRESPONDENCE-EXPECTED.json
++++ revision02/crates/mori-core/tests/fixtures/draft-compile/CORRESPONDENCE-EXPECTED.json
+@@ -0,0 +1,326 @@
++{
++  "mapping_id": "moriarty-sherlock-draft-to-b-obligations",
++  "mapping_version": "1",
++  "status": "named-unproved",
++  "source_language": "moriarty-sherlock-draft/1",
++  "source_semantics": "moriarty-sherlock-dedicated/1",
++  "reference_profile": "sherlock-k-a/1",
++  "target_profile": "sherlock-helper-microstep/1",
++  "target_layout": "HostOnly",
++  "pipeline": "bounded source parse -> typed A Program -> bounded structural CoreProgram copy -> owner admit/admit_run -> unstepped ProgramView/genesis projection",
++  "occurrence_binding": "source function_index/child_path -> owner occurrence owner_is_function/function/path; complete preparation/provenance and ProgramView remain separate fields",
++  "declared_scope": "All supported Program/Function, Expr operator families, patterns and dedicated sorts; no generic ADT or financial grammar is added",
++  "obligations": [
++    {
++      "id": "draft-to-b.program/1",
++      "construct": "Program",
++      "target": "Program -> CoreProgram -> ProgramView + genesis",
++      "returned_values": "Preserve closed entry, original function table and the eventual entry value.",
++      "defined_failures": "Keep parse/type/copy/owner admission diagnostics separate from runtime Outcome.",
++      "order": "Retain entry-preorder owner occurrence IDs and original function-table order.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.function/1",
++      "construct": "Function",
++      "target": "Function/Parameter -> CoreFunction/CoreParameter -> function/parameter rows",
++      "returned_values": "Preserve names, parameter sorts/order, declared return sort and body.",
++      "defined_failures": "Preserve first declaration lookup and runtime bind/return failures 8/6 on applicable common-domain states; preparation typing may reject earlier.",
++      "order": "Check every body in original order before entry; do not unroll recursive calls.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.literal/1",
++      "construct": "Literal",
++      "target": "Expr::Literal -> CoreExpr::Literal -> constant rows",
++      "returned_values": "Preserve UInt128, Bool and nil literals; construct other List/Tree values via existing constructors.",
++      "defined_failures": "Public UInt overflow is a source UIntLiteral diagnostic; no typed-domain runtime literal failure is invented.",
++      "order": "Preserve each structural occurrence and literal constant identity/order.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.var/1",
++      "construct": "Var",
++      "target": "Expr::Var -> CoreExpr::Var; EnvGet",
++      "returned_values": "Preserve exact lexical lookup value and sort.",
++      "defined_failures": "Name the unknown-variable diagnostic and common-domain runtime missing-variable code3 separately.",
++      "order": "Search the same saved lexical environment; structural sharing is not name equality.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.let/1",
++      "construct": "Let",
++      "target": "Expr::Let -> CoreExpr::Let; EnvPut",
++      "returned_values": "Preserve bound value, shadowing, body value and restored caller environment.",
++      "defined_failures": "Preserve first value/body failure without inventing a successful binding.",
++      "order": "Evaluate value before body; body sees the new binding; restore saved scope.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.if/1",
++      "construct": "If",
++      "target": "Expr::If -> CoreExpr::If",
++      "returned_values": "Preserve Bool-directed selected branch value.",
++      "defined_failures": "Preserve condition failure and runtime non-Bool condition code5 where applicable; do not execute the unselected branch.",
++      "order": "Condition first, then only selected branch at runtime; static checker still checks both branches.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.call/1",
++      "construct": "Call",
++      "target": "Expr::Call -> CoreExpr::Call; Find/Bind/Validate/ReturnF",
++      "returned_values": "Preserve named recursive call result and declared return sort; no evaluated-literal substitution.",
++      "defined_failures": "Name missing function7, binding8 and return-sort6 on applicable runtime states; phase diagnostics remain distinct.",
++      "order": "Strict left-to-right arguments, first matching declaration, ordered parameter binding and caller restoration.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.match/1",
++      "construct": "Match",
++      "target": "Expr::Match -> CoreExpr::Match; Match/ScopeF",
++      "returned_values": "Preserve selected arm value and saved-environment extension.",
++      "defined_failures": "Preserve scrutinee/selected-body failures and no-matching-arm code9; preparation EmptyMatch is distinct.",
++      "order": "Scrutinee first; try source arms in order and execute the first matching arm only.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-add/1",
++      "construct": "Binary.Add",
++      "target": "Expr::Binary(Add) -> CoreExpr::Binary(Add); Scalar",
++      "returned_values": "Exact checked UInt128 sum.",
++      "defined_failures": "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-sub/1",
++      "construct": "Binary.Sub",
++      "target": "Expr::Binary(Sub) -> CoreExpr::Binary(Sub); Scalar",
++      "returned_values": "Exact checked UInt128 difference.",
++      "defined_failures": "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-mul/1",
++      "construct": "Binary.Mul",
++      "target": "Expr::Binary(Mul) -> CoreExpr::Binary(Mul); Scalar",
++      "returned_values": "Exact checked UInt128 product.",
++      "defined_failures": "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-eq/1",
++      "construct": "Binary.Eq",
++      "target": "Expr::Binary(Eq) -> CoreExpr::Binary(Eq); Scalar/Equal",
++      "returned_values": "Structural Bool equality across all dedicated sorts, including unequal sorts.",
++      "defined_failures": "No equal-sort precondition is added; preserve failures from either operand.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-lt/1",
++      "construct": "Binary.Lt",
++      "target": "Expr::Binary(Lt) -> CoreExpr::Binary(Lt); Scalar",
++      "returned_values": "UInt128 less-than Bool.",
++      "defined_failures": "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-cons/1",
++      "construct": "Binary.Cons",
++      "target": "Expr::Binary(Cons) -> CoreExpr::Binary(Cons); Scalar",
++      "returned_values": "Preserve head UInt and the ordered tail List.",
++      "defined_failures": "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.binary-branch/1",
++      "construct": "Binary.Branch",
++      "target": "Expr::Binary(Branch) -> CoreExpr::Binary(Branch); Scalar",
++      "returned_values": "Preserve ordered left/right Tree children.",
++      "defined_failures": "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
++      "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.unary-leaf/1",
++      "construct": "Unary.Leaf",
++      "target": "Expr::Unary(Leaf) -> CoreExpr::Unary(Leaf); Scalar",
++      "returned_values": "Preserve the UInt payload as a Tree Leaf.",
++      "defined_failures": "Preserve operand failures and invalid operand-sort error11 on applicable runtime states.",
++      "order": "Evaluate the operand before the unary operation.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.unary-not/1",
++      "construct": "Unary.Not",
++      "target": "Expr::Unary(Not) -> CoreExpr::Unary(Not); Scalar",
++      "returned_values": "Preserve Bool negation.",
++      "defined_failures": "Preserve operand failures and invalid operand-sort error11 on applicable runtime states.",
++      "order": "Evaluate the operand before the unary operation.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.pattern-var/1",
++      "construct": "Pattern.Var",
++      "target": "Pattern::Var -> CorePattern::PVar -> pattern rows; Match",
++      "returned_values": "Bind the entire scrutinee value and its sort.",
++      "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++      "order": "Preserve arm order, binder order, saved environment and first-match selection.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.pattern-nil/1",
++      "construct": "Pattern.Nil",
++      "target": "Pattern::Nil -> CorePattern::PNil -> pattern rows; Match",
++      "returned_values": "Match exactly the empty List.",
++      "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++      "order": "Preserve arm order, binder order, saved environment and first-match selection.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.pattern-cons/1",
++      "construct": "Pattern.Cons",
++      "target": "Pattern::Cons -> CorePattern::PCons -> pattern rows; Match",
++      "returned_values": "Match nonempty List and bind ordered UInt head/List tail.",
++      "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++      "order": "Preserve arm order, binder order, saved environment and first-match selection.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.pattern-leaf/1",
++      "construct": "Pattern.Leaf",
++      "target": "Pattern::Leaf -> CorePattern::PLeaf -> pattern rows; Match",
++      "returned_values": "Match Tree Leaf and bind its UInt payload.",
++      "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++      "order": "Preserve arm order, binder order, saved environment and first-match selection.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.pattern-branch/1",
++      "construct": "Pattern.Branch",
++      "target": "Pattern::Branch -> CorePattern::PBranch -> pattern rows; Match",
++      "returned_values": "Match Tree Branch and bind ordered left/right Trees.",
++      "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
++      "order": "Preserve arm order, binder order, saved environment and first-match selection.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.sort-uint/1",
++      "construct": "Sort.UInt",
++      "target": "Type::UInt -> SortTag::UInt",
++      "returned_values": "Preserve dedicated UInt sort, constructor membership and declared argument/return typing.",
++      "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++      "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.sort-bool/1",
++      "construct": "Sort.Bool",
++      "target": "Type::Bool -> SortTag::Bool",
++      "returned_values": "Preserve dedicated Bool sort, constructor membership and declared argument/return typing.",
++      "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++      "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.sort-list/1",
++      "construct": "Sort.List",
++      "target": "Type::List -> SortTag::List",
++      "returned_values": "Preserve dedicated List sort, constructor membership and declared argument/return typing.",
++      "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++      "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    },
++    {
++      "id": "draft-to-b.sort-tree/1",
++      "construct": "Sort.Tree",
++      "target": "Type::Tree -> SortTag::Tree",
++      "returned_values": "Preserve dedicated Tree sort, constructor membership and declared argument/return typing.",
++      "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
++      "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
++      "resource_obligation": "draft-to-b.resource-observations/1",
++      "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
++      "status": "named-unproved"
++    }
++  ],
++  "resources": {
++    "id": "draft-to-b.resource-observations/1",
++    "a_clock": "sherlock-k-a/1: one charge per charged machine rule; terminal publication zero; pure helpers and allocation unmetered",
++    "b_clock": "sherlock-helper-microstep/1: consumed_work, helper_work, helper_visits and reference_cursor are distinct observations",
++    "helper_mapping": "Explicitly align/hide Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal and Match visits and bookkeeping against reference boundaries",
++    "same_fuel": "not-claimed: equal source values do not imply equal A/B fuel or helper schedules",
++    "failure_classes": "Parse/type/copy/Tooling preparation refusals, HostViolation, semantic errors, frame-cap/resource rejection4 and fuel/capacity exhaustion remain distinct",
++    "required_comparison": "Compare complete returned values, defined failures, order and resource prefixes under explicit caller extents; compile-only tables do not observe those runtime prefixes",
++    "unmeasured": "Physical host time/heap/stack, circuit rows/degree, proof/key size and ledger fees are not inferred"
++  },
++  "finance": {
++    "source_profile": "pure-dedicated-sorts",
++    "target_input": "FinanceInput::Absent",
++    "effects": "not-applicable in this grammar/profile; no transfers/fees are represented",
++    "residual_duties": "not-applicable in this grammar/profile; no liabilities/wait/resume are represented"
++  },
++  "proof": {
++    "semantic_correspondence": "unproved",
++    "runtime_values_failures_order_resources": "unobserved-by-compile-only-preparation",
++    "witness_plan": "missing",
++    "constraint_plan": "missing",
++    "native_export": "unsupported",
++    "native_proof_target": "unrun",
++    "gap": "No source-to-B semantic proof or B-to-Clean/handwritten circuit correspondence/native exporter is supplied; host evaluation cannot supply missing circuit evidence"
++  }
++}
+--- base/crates/mori-core/tests/sherlock_draft_compile.rs
++++ revision02/crates/mori-core/tests/sherlock_draft_compile.rs
+@@ -6,6 +6,7 @@
+ const CONFIG: &str = include_str!("fixtures/draft-compile/config.json");
+ const TARGET: &str = include_str!("fixtures/draft-compile/target.json");
+ const EXPECTED: &str = include_str!("fixtures/draft-compile/EXPECTED.json");
++const CORRESPONDENCE_EXPECTED: &str = include_str!("fixtures/draft-compile/CORRESPONDENCE-EXPECTED.json");
+ const CONFIG_SHA256: &str = "0763c35fedd5aa8807bfac55f4d6ea0264cbaf5f6ed587a0fe8e08672e02f50f";
+ const TARGET_SHA256: &str = "b7b9069acc831ae962d941c75a75c7bc2780e4029a569209458601f9b3f8d56d";
+ 
+@@ -23,6 +24,10 @@
+     assert_eq!(serde_json::to_value(&artifact.source).unwrap(), expected["source"]);
+     assert_eq!(serde_json::to_value(&artifact.preparation).unwrap(), expected["preparation"]);
+     assert_eq!(&artifact.admission["program_view"], &expected["program_view"]);
++    // Full literal contract for every named construct obligation and all
++    // value/failure/order/resource/effect-duty/proof-status fields.
++    assert_eq!(serde_json::to_value(&artifact.correspondence).unwrap(),
++        serde_json::from_str::<Value>(CORRESPONDENCE_EXPECTED).unwrap());
+     assert_eq!(artifact.format, "sherlock-host-artifact/2");
+     assert_eq!(artifact.execution_profile, "sherlock-helper-microstep/1");
+     assert_eq!(artifact.config.file_digest, CONFIG_SHA256);

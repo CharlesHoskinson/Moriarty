@@ -1,0 +1,42 @@
+{
+  "existing_fields_reused_from_DraftPreprocessingExtents": {
+    "max_functions": "SourceCopyBudget::max_functions (self.max_functions.0)",
+    "max_parameters_per_function": "SourceCopyBudget::max_parameters_per_function (self.max_parameters_per_function.0)",
+    "max_total_parameters": "SourceCopyBudget::max_total_parameters (self.max_total_parameters.0)",
+    "max_copy_depth": "SourceCopyBudget::max_copy_depth (self.max_copy_depth.0)"
+  },
+  "required_additional_fields_on_DraftPreprocessingExtents": [
+    {
+      "field": "pub max_copy_expr_nodes: UsizeDecimal",
+      "maps_to": "SourceCopyBudget::max_expr_nodes (self.max_copy_expr_nodes.0)",
+      "rationale": "Bounds copied CoreExpr occurrences across entry and all function bodies without conflating with parser syntactic Expr+Pattern max_ast_nodes."
+    },
+    {
+      "field": "pub max_copy_match_arms: UsizeDecimal",
+      "maps_to": "SourceCopyBudget::max_match_arms (self.max_copy_match_arms.0)",
+      "rationale": "Bounds copied CoreArm/CorePattern allocations across Match nodes."
+    },
+    {
+      "field": "pub max_copy_name_bytes: UsizeDecimal",
+      "maps_to": "SourceCopyBudget::max_name_bytes (self.max_copy_name_bytes.0)",
+      "rationale": "Bounds cumulative cloned String UTF-8 bytes across declarations, variables, let binders, call targets, and pattern binders."
+    },
+    {
+      "field": "pub max_copy_list_elements: UsizeDecimal",
+      "maps_to": "SourceCopyBudget::max_list_elements (self.max_copy_list_elements.0)",
+      "rationale": "Bounds cumulative KIntC elements allocated in CoreValue::List literals before owner admission."
+    },
+    {
+      "field": "pub max_copy_tree_nodes: UsizeDecimal",
+      "maps_to": "SourceCopyBudget::max_tree_nodes (self.max_copy_tree_nodes.0)",
+      "rationale": "Bounds cumulative CoreTree Leaf/Branch allocations across CoreValue::Tree literals before owner admission."
+    },
+    {
+      "field": "pub max_copy_tree_depth: UsizeDecimal",
+      "maps_to": "SourceCopyBudget::max_tree_depth (self.max_copy_tree_depth.0)",
+      "rationale": "Bounds CoreTree Branch nesting depth and tree-copy worklist depth independently of CoreExpr max_copy_depth."
+    }
+  ],
+  "draft_contract_declaration_snippet": "pub struct DraftPreprocessingExtents {\n    pub max_source_bytes: UsizeDecimal,\n    pub max_tokens: UsizeDecimal,\n    pub max_functions: UsizeDecimal,\n    pub max_parameters_per_function: UsizeDecimal,\n    pub max_total_parameters: UsizeDecimal,\n    pub max_ast_nodes: UsizeDecimal,\n    pub max_parse_depth: UsizeDecimal,\n    pub max_structural_ast_depth: UsizeDecimal,\n    pub max_type_depth: UsizeDecimal,\n    pub max_copy_depth: UsizeDecimal,\n    pub max_copy_expr_nodes: UsizeDecimal,\n    pub max_copy_match_arms: UsizeDecimal,\n    pub max_copy_name_bytes: UsizeDecimal,\n    pub max_copy_list_elements: UsizeDecimal,\n    pub max_copy_tree_nodes: UsizeDecimal,\n    pub max_copy_tree_depth: UsizeDecimal,\n}\n\nimpl DraftPreprocessingExtents {\n    pub fn copy_budget(\n        self,\n    ) -> crate::sherlock::helper_machine::source_input_bridge::SourceCopyBudget {\n        crate::sherlock::helper_machine::source_input_bridge::SourceCopyBudget {\n            max_functions: self.max_functions.0,\n            max_parameters_per_function: self.max_parameters_per_function.0,\n            max_total_parameters: self.max_total_parameters.0,\n            max_expr_nodes: self.max_copy_expr_nodes.0,\n            max_copy_depth: self.max_copy_depth.0,\n            max_match_arms: self.max_copy_match_arms.0,\n            max_name_bytes: self.max_copy_name_bytes.0,\n            max_list_elements: self.max_copy_list_elements.0,\n            max_tree_nodes: self.max_copy_tree_nodes.0,\n            max_tree_depth: self.max_copy_tree_depth.0,\n        }\n    }\n}",
+  "draft_diagnostics_projection_snippet": "pub(super) fn copy(\n    error: crate::sherlock::helper_machine::source_input_bridge::SourceCopyError,\n) -> Value {\n    use crate::sherlock::helper_machine::source_input_bridge::{\n        SourceCopyError, SourceCopyResource,\n    };\n    match error {\n        SourceCopyError::Budget(exceeded) => {\n            let resource = match exceeded.resource {\n                SourceCopyResource::Functions => \"Functions\",\n                SourceCopyResource::ParametersPerFunction => \"ParametersPerFunction\",\n                SourceCopyResource::TotalParameters => \"TotalParameters\",\n                SourceCopyResource::ExprNodes => \"ExprNodes\",\n                SourceCopyResource::CopyDepth => \"CopyDepth\",\n                SourceCopyResource::MatchArms => \"MatchArms\",\n                SourceCopyResource::NameBytes => \"NameBytes\",\n                SourceCopyResource::ListElements => \"ListElements\",\n                SourceCopyResource::TreeNodes => \"TreeNodes\",\n                SourceCopyResource::TreeDepth => \"TreeDepth\",\n            };\n            json!({\n                \"Budget\": {\n                    \"resource\": resource,\n                    \"limit\": exceeded.limit.to_string(),\n                    \"observed\": exceeded.observed.map(|n| n.to_string()),\n                    \"function_index\": exceeded.function_index.map(|n| n.to_string()),\n                    \"child_index\": exceeded.child_index.map(|n| n.to_string()),\n                }\n            })\n        }\n    }\n}"
+}
