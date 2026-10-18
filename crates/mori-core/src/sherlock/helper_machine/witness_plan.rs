@@ -1,10 +1,11 @@
-//! Deterministic, uncached host materialization of existing B observations.
+//! Deterministic host materialization of existing B observations.
 //!
 //! This read-only plan does not evaluate source expressions, select owner rules,
 //! modify an image, emit constraints or authenticate supplied snapshots. Plans
-//! bind exact immutable observation inputs. Every node executes once per call;
-//! retained evaluation slots are not a cross-call cache. Complete raw snapshots
-//! remain alongside decoded values. Host allocation/copy/time costs and H1 are
+//! bind exact immutable observation inputs. Existing uncached entrypoints execute
+//! every node once per call. Optional memoization and last-use/streaming APIs
+//! retain the same operations and complete raw/decoded boundaries, with separate
+//! logical host diagnostics. Physical allocation/copy/time costs and H1 remain
 //! unmeasured; no native, resource, A/B-clock or correspondence claim is made.
 use super::complete_observation::{
     AdmissionSnapshot, ConstantSnapshot, DataSnapshot, ExpressionSnapshot, HostSnapshot,
@@ -240,7 +241,8 @@ pub struct HostDiagnostics {
     pub copied_value_nodes: usize,
     /// Only prior-chain entries copied within Environment operations.
     pub copied_environment_entries: usize,
-    /// Slots retained by this uncached baseline; not allocated bytes/prover memory.
+    /// Scratch slots at publication: all nodes in the uncached baseline,
+    /// potentially fewer after last-use. Not allocated bytes/prover memory.
     pub retained_slots: usize,
     pub measured_host_bytes: Option<usize>,
     pub measured_host_time_ns: Option<u128>,
@@ -280,3 +282,18 @@ pub fn materialize_for(input: &HostSnapshot, lifetime: LifetimeUnit)
     let evaluation = evaluate_uncached(&plan, input)?;
     Ok(MaterializedSnapshot { raw: input.clone(), plan, evaluation })
 }
+
+// Optional host scheduling strategies reuse the same validated DAG operations.
+#[path = "witness_plan/strategy.rs"]
+mod strategy;
+pub use strategy::{
+    evaluate_last_use, evaluate_memoized, evaluate_with_storage,
+    SlotStorage, StrategyDiagnostics, StrategyEvaluation, WitnessCache,
+};
+#[path = "witness_plan/stream.rs"]
+mod stream;
+pub use stream::{
+    materialize_with_storage, record_step_with_storage, stream_owner_steps,
+    StrategyMaterializedSnapshot, StrategyObservedStep, StrategyStepError,
+    WitnessRecordCache, StreamAction, StreamStop,
+};
