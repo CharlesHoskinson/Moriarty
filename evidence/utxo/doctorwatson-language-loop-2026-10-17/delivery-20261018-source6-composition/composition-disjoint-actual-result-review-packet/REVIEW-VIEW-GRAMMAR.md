@@ -1,0 +1,5 @@
+# One-off lossless reviewer view
+
+ORACLE-REVIEW-VIEW.json is data only and adds no product helper/framework. Nodes are [tag,payload]. Tag v returns exact scalar (string/number/boolean/null), tag a returns array of recursively expanded payload nodeIDs, tag o returns object from ordered [key,nodeID] pairs. Root rows=[originalCustodyFilename,nodeID,codec]. Codec0 encodes expanded value with recursively lexical keys, JSON indent2/ASCII escaping and one final LF; codec1 uses compact UTF8 recursively lexical keys/arrays unchanged/no LF. Selected values are ASCII, so compact UTF8 escape choice is unambiguous.
+
+All19roots expanded/deep-compared to original parsed objects and reencoded/byte-compared to complete raw frozen custody files. ORACLE-VIEW-VERIFICATION.json records every path/hash/size and view hash. Raw originals remain in independent-custody/ and after/; view never replaces test expected bytes or builds runtime inputs. This verifies representation losslessness only, not semantics or actual parser/runtime/consumer behavior.

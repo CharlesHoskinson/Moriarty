@@ -1,0 +1,119 @@
+{
+  "classification": "Implementation DTO field/type inventory ONLY. Not normative independently derived field values, byte order, ABI assignment, output or golden. Object entries below retain source declaration order for source navigation, not as an independent serialization mandate.",
+  "source_commit": "588d811dbbd9e88d22d3ebe90b0544672870caa0",
+  "finite_target": "unsigned input target only; signed-policy content and authorization semantics are outside this nonsecurity proposal",
+  "types": {
+    "Artifact": {
+      "format": "String",
+      "abi": "String",
+      "relation": "String",
+      "authorization_mode": "String",
+      "program_hash": "String",
+      "semantics": "String",
+      "target": "Target",
+      "circuits": "CircuitArtifact[]",
+      "resources": "Resources",
+      "gates": "Gate[]"
+    },
+    "Target": {
+      "profile": "String",
+      "network": "String",
+      "anchor": "String",
+      "ledger_revision": "String",
+      "zkir_version": "String",
+      "max_instructions": "u32",
+      "max_artifact_bytes": "u32",
+      "signed_policy": "Option<SignedPolicy>; omitted if None; explicit null is not an omitted value"
+    },
+    "CircuitArtifact": {
+      "action": "String",
+      "zkir": "String containing JSON",
+      "context_hash": "String",
+      "public_inputs": "PublicBinding[]",
+      "authorization_bindings": "AuthorizationBinding[]",
+      "private_inputs": "PrivateBinding[]",
+      "instruction_count": "u32",
+      "effect_frame": "EffectDescriptor[]",
+      "balance_frame": "BalanceDescriptor[]",
+      "liability_frame": "LiabilityDescriptor[]",
+      "replay_steps": "u32"
+    },
+    "PublicBinding": {
+      "role": "String",
+      "name": "String",
+      "ty": "Core Type",
+      "constant": "Option<String>; explicit null field",
+      "asset": "Option<AssetId>; explicit null field"
+    },
+    "EffectDescriptor": {
+      "step": "u32",
+      "kind": "String",
+      "name": "Option<String>; explicit null field",
+      "asset": "Option<AssetId>; explicit null field",
+      "from": "Option<String>; explicit null field",
+      "to": "Option<String>; explicit null field",
+      "public_positions": "u32[]",
+      "liability": "Option<LiabilityIdentity>; explicit null field",
+      "operation": "Option<LiabilityOperation>; explicit null field"
+    },
+    "BalanceDescriptor": {
+      "asset": "AssetId",
+      "account": "String",
+      "pre_position": "u32",
+      "post_position": "u32"
+    },
+    "LiabilityIdentity": {
+      "name": "String",
+      "asset": "AssetId",
+      "debtor": "String",
+      "creditor": "String"
+    },
+    "LiabilityDescriptor": {
+      "name": "String",
+      "asset": "AssetId",
+      "debtor": "String",
+      "creditor": "String",
+      "pre_presence_position": "u32",
+      "pre_amount_position": "u32",
+      "post_presence_position": "u32",
+      "post_amount_position": "u32"
+    },
+    "AssetId": {
+      "network": "String",
+      "issuer": "String",
+      "reference": "String",
+      "scale": "u8"
+    },
+    "Resources": {
+      "instructions": "u32",
+      "zkir_bytes": "u32",
+      "artifact_bytes": "u32",
+      "public_values": "u32",
+      "max_replay_steps": "u32",
+      "circuit_k": "Option<u8>; explicit null field",
+      "fraud_max_k": "Option<u8>; explicit null field",
+      "cost_measured": "bool",
+      "liability_registry_entries": "u32",
+      "max_liability_registry_entries": "u32"
+    },
+    "Gate": {
+      "predicate": "String",
+      "status": "String"
+    },
+    "PrivateBinding": {
+      "name": "String",
+      "ty": "PrivateType"
+    },
+    "IrSource": {
+      "version": "IrMinorVersion (internal serde form); disk-loader accepts separate major/minor format",
+      "inputs": "TypedIdentifier[]",
+      "outputs": "IrType[]",
+      "do_communications_commitment": "bool",
+      "instructions": "Instruction[]"
+    },
+    "TypedIdentifier": {
+      "name": "Identifier",
+      "type": "IrType"
+    }
+  }
+}

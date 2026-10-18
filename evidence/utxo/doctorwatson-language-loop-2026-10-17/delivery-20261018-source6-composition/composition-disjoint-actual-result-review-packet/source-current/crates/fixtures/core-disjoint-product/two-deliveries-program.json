@@ -1,0 +1,148 @@
+{
+  "actions": [
+    {
+      "inputs": [],
+      "name": "deliver",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "UNIT",
+          "from": "alice",
+          "kind": "Transfer",
+          "to": "bob"
+        },
+        {
+          "kind": "Next",
+          "state": "phase",
+          "value": 1
+        },
+        {
+          "binders": [
+            {
+              "name": "ok",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 2,
+          "kind": "Await",
+          "label": "approval"
+        },
+        {
+          "amount": 3,
+          "asset": "UNIT",
+          "from": "alice",
+          "kind": "Transfer",
+          "to": "bob"
+        },
+        {
+          "binders": [
+            {
+              "name": "seen",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 4,
+          "kind": "Await",
+          "label": "receipt"
+        },
+        {
+          "kind": "Next",
+          "state": "phase",
+          "value": 5
+        },
+        {
+          "kind": "Emit",
+          "name": "done",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "inputs": [],
+      "name": "declare",
+      "statements": [
+        {
+          "amount": 7,
+          "asset": "UNIT",
+          "creditor": "bob",
+          "debtor": "alice",
+          "kind": "Liability",
+          "name": "duty"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "independent-staged-test-oracle",
+        "network": "local",
+        "reference": "UNIT",
+        "scale": 0
+      },
+      "name": "UNIT"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "7"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "ok"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "3"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "seen"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "2"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "phase"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    }
+  ],
+  "language": "moriarty/2",
+  "name": "TwoDeliveries",
+  "semantics": "moriarty-core/2",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "phase",
+      "ty": "UInt"
+    }
+  ]
+}

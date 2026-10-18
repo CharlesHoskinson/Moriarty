@@ -1,0 +1,26 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/core2-next-stage-source-proposal/after/crates/mori/tests/core2_multi_condition_complete.rs	2026-10-18 04:53:26.009999638 -0600
++++ /home/charl/Moriarty/.worktrees/utxo-main-merge-20261017/crates/mori/tests/core2_multi_condition_complete.rs	2026-10-18 04:56:39.303008575 -0600
+@@ -61,10 +61,9 @@
+ fn multi_condition_library_requires_both_observations_in_the_same_event() {
+     let source = fs::read_to_string(inputs().join("multi-condition.mori")).unwrap();
+     let program = stage::load(&source).unwrap();
+-    let scenario: Scenario = serde_json::from_slice(
+-        &fs::read(inputs().join("multi-condition.scenario.json")).unwrap(),
+-    )
+-    .unwrap();
++    let scenario: Scenario =
++        serde_json::from_slice(&fs::read(inputs().join("multi-condition.scenario.json")).unwrap())
++            .unwrap();
+     let mut pending = waiting(
+         stage::start(&program, "deliver", scenario, None).unwrap(),
+         "start",
+@@ -185,7 +184,8 @@
+ #[test]
+ fn multi_condition_cli_requires_both_observations_and_matches_complete_public_bytes() {
+     let project = Project::new();
+-    let mut previous = project.assert_case("start", &["--scenario", "multi-condition.scenario.json"]);
++    let mut previous =
++        project.assert_case("start", &["--scenario", "multi-condition.scenario.json"]);
+     for (name, file) in [
+         ("document-only", "document-only.event.json"),
+         ("amount-only", "amount-only.event.json"),

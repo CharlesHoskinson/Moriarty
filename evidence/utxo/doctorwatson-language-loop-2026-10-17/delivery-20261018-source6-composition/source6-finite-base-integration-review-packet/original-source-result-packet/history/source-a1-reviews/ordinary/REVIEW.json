@@ -1,0 +1,36 @@
+{
+  "filesRead": [
+    "MANIFEST.json",
+    "CANDIDATE-MANIFEST.json",
+    "source-after/Cargo.toml",
+    "source-after/crates/mori/Cargo.toml",
+    "source-after/crates/mori/src/cli.rs",
+    "source-after/crates/mori/src/commands/expand.rs",
+    "source-after/crates/mori/src/commands/expand/source6.rs",
+    "source-after/crates/mori/tests/source6_expand.rs",
+    "source-after/crates/mori-source6/src/lib.rs",
+    "source-after/crates/mori-source6/src/transfer.rs",
+    "source-after/crates/mori-source6/tests/transfer.rs",
+    "source-after/experiments/moriarty-language/regressions/rust-source6-transfer.mjs",
+    "source-after/experiments/moriarty-language/regressions/fixtures/source6-transfer/FINANCIAL-PRE-POST.json",
+    "independent/source6-nominal-mapping-independent-oracles/REQUIRED-NOMINAL-AND-FINANCIAL-FIELDS.json",
+    "inherited-context/crates/mori-checker/src/intents.rs"
+  ],
+  "findings": [
+    "crates/mori-source6/src/transfer.rs (select_transfer, SelectedTransfer::expand, extract, validate_scenario, emit, lines 66-345) calls real mori_parser::parse and mori_checker::check, enforces Support::LocalS0 and call_name == \"transfer\", validates scenario cells/bounds, and emits local-stipulation-only Source/6 text within MAX_SOURCE_BYTES while relying on inherited checker invariants (declarations.rs:410-431,639-647; intents.rs:152-247; relations.rs:63-129).",
+    "crates/mori/Cargo.toml (lines 9-25), crates/mori/src/commands/expand.rs (lines 8-46), and crates/mori/src/commands/expand/source6.rs (read_scenario, run, lines 88-159) gate --emit-source6-transfer behind non-default source6-expansion, preserve default Core expand and beta syntax refusal, run select_transfer before scenario I/O, enforce closed moriarty-local-scenario/1 transfer subset diagnostics, and write raw stdout with a single trailing LF.",
+    "experiments/moriarty-language/regressions/rust-source6-transfer.mjs (lines 19-137) verifies FIXTURE-PINS.json digests against freeze 64a6b4a6e454bbc6bc2cf3582581e81e3dd5fd379f9ed3fc89bbfc8051180269, captures raw CLI stdout/stderr into a fresh observations directory, and feeds unmodified UTF-8 stdout into actual parseAndLowerSource6 and prepareSource6S0Unqualified without host-generated Source/6 or trimming.",
+    "semanticEffects in experiments/moriarty-language/regressions/rust-source6-transfer.mjs (lines 33-49) only renames S0Effect fields and JSON.parses the documented UseReplay tuple ([domain, signer, nonce]) from lowerSource6 (financial-agreement-source-v6-frontend.ts:273-295); it computes no quantities, effects, or post-state.",
+    "Emitted transfer fields in crates/mori-source6/src/transfer.rs (lines 298-343) and regression assertions (rust-source6-transfer.mjs:84-137) match both FINANCIAL-PRE-POST.json and REQUIRED-NOMINAL-AND-FINANCIAL-FIELDS.json (freeze bdd550f9b32b94919e67caa3d444ef0f5ea583903cbc85ec38513f1451bd6107) for invoice (1010/1000/10; post 8990/1000/10; allowance 8990/1010) and workshop (242/235/7; post 758/260/10; allowance 758/259), while leaving post-work and agreement-id unasserted."
+  ],
+  "limitations": [
+    "Source-only review; all proposed Cargo and Node checks (PROPOSED-CHECKS.json) are unrun and no runtime, build, or test pass is claimed.",
+    "Same-author Rust fixtures and snapshots (crates/mori-source6/tests/fixtures/*.source6, snapshots/*.snap) are author baselines, not independent whole-wire goldens; rust-source6-transfer.mjs asserts the narrower FINANCIAL-PRE-POST.json projection and does not directly assert every extra nominal AST claim in REQUIRED-NOMINAL-AND-FINANCIAL-FIELDS.json.",
+    "Whole emitted wire/DTO agreement-token mapping, independent success-work schedule/cost/post counters, and residual-duty DTO fields remain unasserted and open under UNI-019 and UNI-020.",
+    "Source/6 and Core/5 preparation remain provisional and PreparedUnqualified (mil4-s0-source-v6.ts:29-59; mil4-s0-core-v5.ts:127-309) with unverified external premises, distinct from Core/1, Core/2, Sherlock, native compilation, proof, or ledger admission; all U0-U7, M1-M17, MC, SP, G, and UNI-021 parent exits remain open.",
+    "Security-owned diagnostic/filename escaping changes (OWNER-SOURCE.patch in crates/mori-source6/src/diagnostics.rs, crates/mori/src/commands/expand/source6.rs, and tests) and transitive SDK-free execution eligibility belong exclusively to the paired security reviewer and are not judged here."
+  ],
+  "reviewToken": "doctorwatson-source6-complete-source-ordinary-20261018-a1-whole-review",
+  "summary": "Scoped ordinary source review of the 39-file Source/6 candidate (CANDIDATE-MANIFEST.json digest 3735e1579f2e3a70f6378f4348a53a679e932e78d5e793b5faf924797a13a0d6) approves the candidate within ordinary scope. crates/mori-source6/src/transfer.rs (select_transfer, SelectedTransfer::expand) invokes real mori_parser::parse and mori_checker::check, enforces LocalS0 transfer selection before scenario I/O, validates local scenario cells against checked terms, and emits raw local-stipulation-only Source/6 text matching all independent nominal and financial constraints (freezes 64a6b4a6e454bbc6bc2cf3582581e81e3dd5fd379f9ed3fc89bbfc8051180269 and bdd550f9b32b94919e67caa3d444ef0f5ea583903cbc85ec38513f1451bd6107) for Invoice and WorkshopReceipt. crates/mori/src/commands/expand.rs and expand/source6.rs preserve default Core expand, gate --emit-source6-transfer behind non-default source6-expansion, and enforce the adopted scenario subset. rust-source6-transfer.mjs feeds unmodified CLI stdout into real parseAndLowerSource6 and prepareSource6S0Unqualified using a pure field-renaming effect adapter. Checks remain unrun; security belongs to the paired reviewer.",
+  "verdict": "approve-scoped-source"
+}

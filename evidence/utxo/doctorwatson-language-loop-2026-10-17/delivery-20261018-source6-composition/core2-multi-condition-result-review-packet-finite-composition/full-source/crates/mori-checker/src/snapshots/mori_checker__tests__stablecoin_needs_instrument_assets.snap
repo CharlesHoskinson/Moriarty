@@ -1,0 +1,17 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Stable {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  instrument coin = { domain: Preview, id: \"coin\", asset: USD };\n  const mint = stablecoin.mint(instrument: coin, owner: alice, supply: 1 USD, backing: 1 USD);\n}\n"
+---
+mori::check::instrument_missing_field
+
+  × `stablecoin.mint` needs the instrument `coin` to have a `backing` field.
+   ╭─[test.mori:7:16]
+ 6 │   instrument coin = { domain: Preview, id: "coin", asset: USD };
+ 7 │   const mint = stablecoin.mint(instrument: coin, owner: alice, supply: 1 USD, backing: 1 USD);
+   ·                ───────────────────────────────────────┬──────────────────────────────────────
+   ·                                                       ╰── `coin` has no `backing`
+ 8 │ }
+   ╰────
+  help: Add `backing` to the instrument's declaration, naming an asset:
+
+            backing: USD,

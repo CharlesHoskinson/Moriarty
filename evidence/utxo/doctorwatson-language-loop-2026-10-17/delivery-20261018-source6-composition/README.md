@@ -1,0 +1,3 @@
+Source6 PR214, local disjoint composition PR216 and multi-condition validation PR215 are merged with scoped source/result/integration records. STK04 has one selected ordinary test pass after a preserved compile failure and minimal public hex-format fix; its current-source/result review is pending. Full artifact, independent ABI, unasserted ACTUS fields, authenticated ledger and all parent acceptance remain open.
+
+Two designated owner contexts adopt only the Q1 generated sibling route for separate source authoring. Two ordinary contexts adopt the first LSP transport/types/profile choices; no resolver, implementation or protocol execution is approved by those design votes. Original failed/time-limited and rejected reviews remain intact.

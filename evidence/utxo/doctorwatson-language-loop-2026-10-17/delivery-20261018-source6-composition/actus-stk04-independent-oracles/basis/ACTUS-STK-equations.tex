@@ -1,0 +1,54 @@
+
+\subsection{STK: Stock}\label{sec:stk}
+
+
+% ---------------------- table: stk schedule ----------------------
+\begin{schedule}{STK}
+	AD & & Same as PAM \\
+	\hline
+	PRD & & Same as PAM \\
+	\hline
+	TD & & Same as PAM \\
+	\hline
+	DV$^{(fix)}$ & $t^{DV^{(fix)}} = \begin{cases}
+					\undef & \text{if}\quad \attr{DVNP}=\undef \\
+					\attr{DVANX} & \text{else} \end{cases}$ & \\
+	\hline
+	DV & $\vec{t}^{DV} = \begin{cases}
+					\undef & \text{if}\quad \attr{DVANX}=\undef \land \attr{DVCL}=\undef \\
+					\sdl{s}{\attr{DVCL}}{\tmax} & \text{else} \end{cases}$
+		& where\par
+		$s=\begin{cases} \attr{DVANX} & \text{if}\quad \attr{DVNP}=\undef \\
+				\attr{DVANX}+\attr{DVCL} & \text{else} \end{cases}$ \\
+	\hline
+	CE & & Same as PAM \\
+\end{schedule}
+
+
+% ---------------------- table: stk states ----------------------
+\begin{states}{STK}
+  	$\svar{Prf}{}$ & & Same as PAM \\
+	\hline
+	$\svar{Sd}{}$ & & Same as PAM \\
+\end{states}
+
+
+% ---------------------- table: stk functions ----------------------
+\begin{functions}{STK}
+	AD & \pof{AD}{PAM} & $\svar{Sd}{t^+}=t$ \\
+	\hline
+	PRD & $X_{\attr{CUR}}^{\attr{CURS}}(t)\sgn (-1) \attr{PPRD}$
+		& $\svar{Sd}{t^+}=t$ \\
+	\hline
+	TD & $X_{\attr{CUR}}^{\attr{CURS}}(t)\sgn \attr{PTD}$
+		& $\svar{Sd}{t^+}=t$ \\
+	\hline
+	DV$^{(fix)}$ & $X_{\attr{CUR}}^{\attr{CURS}}(t)\sgn\attr{DVNP}$ & $\svar{Sd}{t^+}=t$ \\
+	\hline
+	DV & $X_{\attr{CUR}}^{\attr{CURS}}(t)\sgn \obs{rf}{concat(\text{\attr{CID},"-DV"})}{t}$ \par
+	with $concat(x,y,z)$ indicates the string concatenation function
+		& $\svar{Sd}{t^+}=t$ \\
+	\hline
+	CE & \pof{CE}{PAM} & \stf{AD}{STK} \\
+\end{functions}
+
