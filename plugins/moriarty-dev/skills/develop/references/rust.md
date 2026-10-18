@@ -33,8 +33,12 @@ installed package, so resolve the path against the active checkout root.
 
 ## Tests
 
-- Never run the `mori` binary from a test and never snapshot `--help`. Test the
-  library crates; keep the CLI a thin layer over them.
+- Test semantics in the library crates; keep the CLI a thin layer over them.
+  The CLI feature-boundary work permits narrowly scoped real binary tests of
+  dispatch, availability, complete frozen output, process exits and I/O as
+  recorded in `RUST_GUIDELINES.md`. Never snapshot `--help`; use clap schema
+  assertions. Existing fixture paths and test-support mounts remain separate
+  documented guideline deviations, not permission to add new mounts.
 - Nothing under `crates/` reads outside it. Shared programs and fixtures live in
   `crates/fixtures/`.
 - Snapshot tests use insta and show the `.mori` source, not the Rust

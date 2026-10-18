@@ -161,6 +161,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
 
 /// Signed native preparation: trusted reconstruction of the unsigned payload
 /// and its native message. Nothing is signed here.
+#[cfg(feature = "native")]
 fn signed(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     let (Some(target), Some(at)) = (&args.target, args.at) else {
         return Err(super::core_io::operation(
@@ -242,4 +243,15 @@ fn signed(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     }
     super::core_io::print(&prepared)?;
     Ok(ExitCode::SUCCESS)
+}
+
+#[cfg(not(feature = "native"))]
+fn signed(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let (Some(target), Some(at)) = (&args.target, args.at) else {
+        return Err(super::core_io::operation(
+            "--profile moriarty-jubjub-owner-intent/1 requires --target and --at together",
+        ));
+    };
+    let _ = (target, at);
+    super::native_unavailable()
 }

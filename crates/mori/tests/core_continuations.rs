@@ -246,6 +246,7 @@ fn check_and_source_inspect_route_core_two_without_legacy_consumers() {
         json!(["11", "15", "10"])
     );
 }
+#[cfg(feature = "native")]
 #[test]
 fn stage_compile_publishes_and_reopens_actual_ordered_segment_artifacts() {
     for (source, action, costs) in [
@@ -363,6 +364,7 @@ const STAGE_LABELS: [(&str, &str); 3] = [
     ("consumption", "untracked"),
 ];
 /// Rendered stderr without the diagnostic gutter glyphs or the 80-column wrap.
+#[cfg(feature = "native")]
 fn diagnostic(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr)
         .split_whitespace()
@@ -419,6 +421,7 @@ fn h16_core_one_resume_is_labelled_profile_rejection_before_continuation_or_even
     }
     assert!(!continuation.exists() && !event.exists());
 }
+#[cfg(feature = "native")]
 #[test]
 fn h16_core_two_trace_target_prints_backend_program_profile_rejection_before_reconstruction() {
     let o = oracle();
@@ -452,6 +455,7 @@ fn h16_core_two_trace_target_prints_backend_program_profile_rejection_before_rec
     );
     assert_eq!(std::fs::read_dir(&f.0).unwrap().count(), 3);
 }
+#[cfg(feature = "native")]
 #[test]
 fn h16_core_two_inspect_target_refuses_with_core_profile_before_target_read() {
     let f = Files::new(DELIVERY);
@@ -470,6 +474,7 @@ fn h16_core_two_inspect_target_refuses_with_core_profile_before_target_read() {
     );
     assert!(!target.exists());
 }
+#[cfg(feature = "native")]
 #[test]
 fn h19_core_two_compile_call_refuses_before_deployment_read_or_emission() {
     let f = Files::new(DELIVERY);
@@ -493,7 +498,9 @@ fn h19_core_two_compile_call_refuses_before_deployment_read_or_emission() {
 // H18: byte-identical copy of the public `target_canonical_utf8` in
 // examples/core/native-owner-intent/golden-vector.json (the backend
 // `signed_target()` fixture); only the Target data, no key material.
+#[cfg(feature = "native")]
 const SIGNED_TARGET: &str = r#"{"anchor":"native-liability-qa","ledger_revision":"04c9c5d9bcebb8d4427d8589fb54d58a55599c14","max_artifact_bytes":16777216,"max_instructions":100000,"network":"local","profile":"ledger-9","signed_policy":{"beneficiary":"bob","owner":"alice","program_address":"local/DutySettlement"},"zkir_version":"3.0.0-rc.2"}"#;
+#[cfg(feature = "native")]
 #[test]
 fn h18_core_two_compile_signed_target_is_unsupported_before_output_directory() {
     assert!(

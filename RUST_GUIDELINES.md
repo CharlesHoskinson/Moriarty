@@ -249,8 +249,24 @@ difference is listed here under the applicable user authorization.
   panics, fed random strings, sequences of tricky fragments and, from the
   parser on, real programs with random damage.
 - Formatter tests also assert that formatting the output again changes nothing.
-- **Never write tests that invoke the CLI binary**, and never snapshot `--help`.
-  Test the library crates; keep the CLI a thin layer over them.
+- **Test semantics in the library crates; keep the CLI a thin layer over them.**
+  The CLI feature-boundary work has a narrow exception for real binary tests
+  of public dispatch, feature availability, frozen complete output, process
+  exits and I/O. This exception does not make a shared evaluator an independent
+  oracle. Never snapshot `--help`; use clap schema assertions for that contract.
+- Existing external fixture paths and test-support mounts are retained during
+  the feature-boundary cut; they are not precedents for new paths or mounts.
+  `core_continuations` includes the three `examples/core/continuations/*.mori`
+  sources and `normal-oracle.json`; `stage_test_public` reads
+  `models/core-stage-tests`; `fee_pool_component` and one `core_test_report`
+  case read `examples/core/fee-pool`. Native targets also retain their existing
+  example/deliverable inputs. Their provenance and the rule against fixtures
+  outside `crates/` need separate reconciliation before claiming full guideline
+  conformance. Preserve originals and evidence identities.
+- Existing `#[path = "../../mori-ledger/tests/support/mod.rs"]` mounts in
+  `prepare_call`, `installed_call` and `signed_installed_call` remain unchanged
+  in the native-only targets. They are existing deviations from the no-remount
+  rule above; this cut adds none and does not claim to resolve them.
 
 ## CLI
 

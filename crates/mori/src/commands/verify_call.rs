@@ -1,6 +1,10 @@
-use super::{call_io, core_io};
+use super::call_io;
+#[cfg(feature = "native")]
+use super::core_io;
 use crate::shell::Shell;
-use std::{io::Write, path::PathBuf, process::ExitCode};
+#[cfg(feature = "native")]
+use std::io::Write;
+use std::{path::PathBuf, process::ExitCode};
 #[derive(Debug, clap::Args)]
 pub struct Args {
     #[command(flatten)]
@@ -10,6 +14,7 @@ pub struct Args {
     #[arg(long)]
     pub proof: PathBuf,
 }
+#[cfg(feature = "native")]
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     let i = args.input.read()?;
     // This reader never accesses PK/prover-cache leaves, including when the
@@ -59,4 +64,21 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
         .write_all(&bytes)
         .map_err(core_io::operation)?;
     Ok(ExitCode::SUCCESS)
+}
+
+#[cfg(not(feature = "native"))]
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let _ = (
+        &args.input.file,
+        &args.input.deployment,
+        &args.input.predecessor,
+        &args.input.parameters,
+        &args.input.request,
+        &args.input.action,
+        &args.input.params_dir,
+        &args.input.work_limits,
+        &args.public_keyset,
+        &args.proof,
+    );
+    super::native_unavailable()
 }

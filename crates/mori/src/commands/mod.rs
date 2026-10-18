@@ -66,3 +66,13 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Mcp(args) => mcp::run(args, shell),
     }
 }
+
+#[cfg(not(feature = "native"))]
+fn native_unavailable<T>() -> Result<T> {
+    Err(crate::error::CliError::Operation {
+        code: "mori::command::native-unavailable".into(),
+        message: "This mori build has no Midnight support. Rebuild with the native feature enabled."
+            .into(),
+    }
+    .into())
+}

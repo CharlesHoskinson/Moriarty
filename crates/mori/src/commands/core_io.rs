@@ -21,7 +21,7 @@ pub fn read_source(path: &Path) -> super::Result<String> {
     Ok(source)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod key_export_diagnostic_tests {
     use super::*;
     use mori_ledger::{Error, KeyExportDiagnostic, KeyExportFailureReason, KeyExportKind};
@@ -162,6 +162,7 @@ pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
     }
     .into()
 }
+#[cfg(feature = "native")]
 pub fn ledger_operation(error: mori_ledger::Error) -> mori_diagnostics::Report {
     use mori_ledger::{DegreeRefusalReason, KeyExportFailureReason, KeyExportKind};
     let mut message = crate::display::text(&error.to_string());
@@ -216,6 +217,7 @@ pub fn ledger_operation(error: mori_ledger::Error) -> mori_diagnostics::Report {
 }
 /// JSON escaping quotes/controls once, with UTF-16 escapes for non-ASCII
 /// identities. This remains valid JSON even for supplementary Unicode scalars.
+#[cfg(feature = "native")]
 fn key_export_identity(value: &str) -> String {
     let json = serde_json::to_string(value).expect("serializing a string cannot fail");
     let mut escaped = String::with_capacity(json.len());
@@ -248,6 +250,7 @@ pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
     Ok(())
 }
 /// Trusted signed Target, separately supplied expected authority and logical time.
+#[cfg(feature = "native")]
 pub fn signed_target(path: &Path) -> super::Result<mori_backend::Target> {
     let target: mori_backend::Target = read_json(path)?;
     if target.signed_policy.is_none() {
@@ -257,10 +260,12 @@ pub fn signed_target(path: &Path) -> super::Result<mori_backend::Target> {
     }
     Ok(target)
 }
+#[cfg(feature = "native")]
 pub fn authority(path: &Path) -> super::Result<mori_backend::authorization::ExpectedAuthority> {
     mori_backend::authorization::ExpectedAuthority::from_json(&read_source(path)?)
         .map_err(operation)
 }
+#[cfg(feature = "native")]
 pub fn signed_intent(path: &Path) -> super::Result<mori_backend::authorization::SignedIntent> {
     mori_backend::authorization::SignedIntent::from_json(&read_source(path)?).map_err(operation)
 }
@@ -275,7 +280,7 @@ pub fn review_identity(value: &str) -> String {
     )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod degree_diagnostic_tests {
     use super::*;
     use mori_ledger::{DegreeRefusalDiagnostic, DegreeRefusalReason, Error};

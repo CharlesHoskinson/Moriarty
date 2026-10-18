@@ -3,11 +3,13 @@ use crate::{
     cli::{ActionInput, SignedProfile},
     shell::Shell,
 };
+#[cfg(feature = "native")]
 use mori_backend::{
     Target,
     authorization::{ExpectedAuthority, SignedIntent},
     replay::{ReplayAuthorization, ReplayError, ReplayRecord},
 };
+#[cfg(feature = "native")]
 use mori_core::UInt;
 use std::{path::PathBuf, process::ExitCode};
 
@@ -26,6 +28,7 @@ pub struct AuthorizationArgs {
     #[arg(long, value_name = "FILE")]
     pub signature: Option<PathBuf>,
 }
+#[cfg(feature = "native")]
 pub enum LoadedAuthorization {
     Unsigned,
     Signed {
@@ -41,6 +44,7 @@ impl AuthorizationArgs {
             || self.at.is_some()
             || self.signature.is_some()
     }
+    #[cfg(feature = "native")]
     pub fn load(&self, target: &Target) -> super::Result<LoadedAuthorization> {
         if target.signed_policy.is_none() {
             if self.present() {
@@ -64,6 +68,7 @@ impl AuthorizationArgs {
         })
     }
 }
+#[cfg(feature = "native")]
 impl LoadedAuthorization {
     pub fn as_input(&self) -> ReplayAuthorization<'_> {
         match self {
@@ -96,6 +101,7 @@ pub struct Args {
     #[command(flatten)]
     pub authorization: AuthorizationArgs,
 }
+#[cfg(feature = "native")]
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     // File/schema/group errors have the same input classification as failed
     // reconstruction. Neither case creates or publishes a challenge.
@@ -165,4 +171,16 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     };
     super::core_io::print(&report)?;
     Ok(status)
+}
+
+#[cfg(not(feature = "native"))]
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let _ = (
+        &args.input,
+        &args.target,
+        &args.record,
+        &args.challenge_out,
+        &args.authorization,
+    );
+    super::native_unavailable()
 }
