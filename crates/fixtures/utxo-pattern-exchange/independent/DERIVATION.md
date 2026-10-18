@@ -1,0 +1,9 @@
+The supplied nonempty state is marker77,phase0,revision4. Action inputs are quotedA10,quotedB25,serviceFee1. All four requires are true, so prefix0..3 exactly preserve the complete opening snapshot.
+
+At index4, the A transfer moves10 from escrow-a10 to trader3: escrow-a becomes0 and trader13. All other seven balance rows and both duties stay unchanged. At index5, the B transfer moves25 from escrow-b25 to provider4: escrow-b becomes0 and provider29; all A rows and B observer11/trader8 remain. At index6, the A fee moves1 from fee-payer5 to treasury2, giving4 and3. It does not erase either zero escrow row or alter any duty.
+
+At index7 phase becomes1. At index8 revision reads the scenario/current4 and adds1, becoming5. Marker77 never changes. Index9 checks phase1 and adds no effect. Index10 emits exchanged with UInt10 and leaves all state/balances/duties unchanged. This gives11after-statement complete snapshots and6ordered effects: TransferA10,TransferB25,FeeA1,Statephase0to1,Staterevision4to5,Emit10.
+
+AssetA total29 and assetB total48 are preserved at every prefix. Gross A debit11 consists of transfer10 plus fee1; gross B debit25 is the second transfer. service-B2 and warranty-A7 remain present through every prefix because the program neither creates nor discharges liabilities. No row or residual duty disappears. No external fee, DUST, reserve or native execution claim is inferred.
+
+Complete snapshots/effect payloads are hand-derived literal vectors serialized with Python standard library only. No product parser/evaluator/compiler was imported or run, and no authored expected assertion was read. Python was used only to assemble the literal repeated full snapshots, serialize JSON and verify hashes/cardinalities/conservation. No source execution/operation interpreter was implemented.
