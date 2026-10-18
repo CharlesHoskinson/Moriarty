@@ -1218,3 +1218,106 @@ without rerunning unchanged passing cohorts. Named semantic obligations are
 still unproved. A report clause can close while the reported runtime, constraint,
 proof and target work remains incomplete. No new factory or native authority
 was needed for this reporting capability.
+
+
+### DW-63 — Report and test the admitted call's actual configuration
+
+A supported-profile leaf is useful only when the public artifact returns it and
+it describes the config used for that admitted result. R254 wires
+`DraftCompileArtifact.supported_profile` through
+`draft_profile::report(&config.fields)` before moving that same config identity
+into the artifact. It reports complete grammar/domain/schedule, all 22 logical
+bounds, layout capacities, fuel/stack, all 16 preprocessing extents, extensions
+and remaining owner admission work. Logical capacities do not measure physical
+resource use or enforce public JSON size.
+
+R256 actually passed five phases: normal Core compilation, public consumer
+compilation, exact two-test listing and both new tests, with all 723 selected
+inputs unchanged. Both calls use the same ProfileFragment source. One compares
+the complete returned report with the frozen source-first literal contract; the
+other changes all 22 bounds and selected layout/run/preprocessing fields before
+calling the producer. Its full equality check discriminates this invocation's
+projection from fixture constants or an unwired export. R257 approved the
+supplied source and exact plan, retaining coverage/owner/H1 limitations. R263's
+same-owner reply subsequently returned, but Root withheld its original UIREQ-002
+and compatibility adoption. A successful provider terminal did not make its
+fixture, grammar, format, 22-bound inventory, 26 mapping IDs, gap labels and
+pointers faithful to the supplied source. The raw reply remains unchanged.
+
+Check a bounded review reply against the actual returned JSON schema, exact
+fixture, named mappings and owner gap text before adopting its recommendation.
+Hashes, a familiar conversation and an approval-shaped conclusion cannot repair
+invented fields or examples. Preserve and qualify the failed reply, then change
+to a fresh small literal result review (R272), rather than asking the same owner
+for a metadata rephrase or rerunning unchanged passing tests. This is a material
+review-delivery correction, not a new public developer permission requirement.
+
+The prior ten-of-35 adopted-original baseline includes original UIREQ-022.
+Passing report tests are not a new UIREQ-002 adoption; only Root's later actual
+adoption after result review would make eleven. Public developers need no
+reviewer permission to inspect the report. The separate R258 runtime source,
+R259 independent two-program expectations and R264 QA composition are READY /
+UNRUN: intended values 7/8, recursive-call sequences and counter relations have
+not become runtime observations. Complete independent B clocks/prefixes, H1,
+semantic proof and native/target results remain separate gaps.
+
+Tutorial/explanation behavior is unchanged because this batch adds metadata
+without transition or circuit changes. The full guide's file-publication
+example remains unrun; no new circuit or website iteration is claimed. Preserve
+R261's earlier UNRUN cut and original receipts as history. These material
+consumer checks improve the existing DoctorWatson workflow without rerunning
+old passing cohorts or adding another framework.
+
+
+### DW-64 — Preserve review coverage through compaction and rerun only the changed case
+
+A compressed handoff or a continued conversation is not a fresh full-source
+review. Preserve the exact candidate, complete relevant bodies, independent
+expectations, actual results and delivered membership. When replacing a large
+packet, show how any lossless edit map reconstructs the omitted source; do not
+ask a fresh reviewer to infer code from earlier conversational summaries. The
+[paired-checker review](../docs/results/sherlock-paired-model-qa-20261018/review/r253-revision02/REPORT.md)
+used a fresh context with the complete current checker/test/driver and exact
+old-checker reconstruction, then returned a new source/result/reader judgment.
+A previous review's missed `uiReturn` versus canonical `uiRet` fixture literal
+remains part of the record; compaction does not erase that mistake or promote a
+prior summary into coverage of changed source.
+
+The first actual ten-case QA run had nine passes and one failure. Correct only
+the two mistaken fixture literals against unchanged K/oracle declarations.
+Execute the formerly failing method once, and retain the other nine historical
+passes with the fresh source-compatibility judgment. The corrected case passed;
+there was no fresh ten-case run and no rerun of the unchanged 254-test cohort.
+Keep the original failing output, correction, exact selector and resulting pass
+separate. Never fill an absent producer result from matching supplied fixtures.
+
+Preserve review findings through integration: missing-field error typing,
+unavailable top-level raw context on a program-identity difference, and the
+unexercised F03 loading branch remain NB-01/02/03. Actual F03 K/Quint execution
+and original UIREQ-021 stay open. The two current checker-hash cells maintain
+an existing reporting closure; they add no new interpreter or formal closure.
+Root also restored the ledger's original byte encoding after a JSON serializer
+changed unrelated Unicode escapes: equivalent decoded values do not satisfy an
+exact two-literal byte-edit claim. Use the guarded pointer patch and additive
+correction, not a whole-ledger replacement that could overwrite another lane.
+
+
+### DW-65 — Check terminal status before adopting a review
+
+CLI exit 0 and a complete visible approval-shaped JSON reply do not establish
+a successful review. R265 returned terminal `ERROR` after a stream interruption.
+Root initially missed that status and hardcoded `SUCCESS` in its selection;
+[the additive correction](../docs/results/sherlock-supported-profile-20261018/ROOT-RUNTIME-REVIEW-STATUS-CORRECTION.json)
+preserves that mistake and withholds adoption of the visible opinion. Existing
+compilation receipts and the first pre-step capacity refusal remain actual
+observations, with no successful runtime result inferred. Check the explicit
+terminal status, errors, identity and readable coverage before selecting further
+execution. A fresh independently classified input cut reuses the passed Core
+build rather than rerunning the passing prefix.
+
+R272 supplied a successful fresh literal-result review for the separate
+supported-profile report. Root checked the exact fixture, format and all 22
+bounds before adopting UIREQ-002. The [installed adoption](../docs/results/sherlock-supported-profile-20261018/ROOT-INSTALLED-ORIGINAL002.json)
+and current evidence check record 11 accepted originals and 24 open. DW-63's
+ten-original/pending cut remains historical. Report tests were not rerun to
+repair a review reply, and no runtime, semantic proof or native closure follows.

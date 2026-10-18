@@ -71,6 +71,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 std::process::exit(1);
             }
         };
+        // R256 checked the returned field; this complete I/O example is UNRUN.
+        let profile = serde_json::to_value(&artifact.supported_profile)?;
+        eprintln!("{name} supported profile: {}",
+                  serde_json::to_string_pretty(&profile)?);
         outputs.push((name, serde_json::to_string_pretty(&artifact)?));
     }
 
@@ -89,6 +93,36 @@ file. This example prepares and serializes both artifacts before reserving that
 directory. An I/O failure can leave a partial directory; successful preparation
 is distinct from file publication. Changing any source/config/target byte also
 changes the corresponding digest.
+
+## Inspect the supported-profile field
+
+With the R254 source overlay, borrow `artifact.supported_profile` from the
+returned artifact as shown above. No argument is added to
+`compile_draft_host(&source, &config, &target)`. The example prints the actual
+returned report; no captured printout or successful run of this file-publication
+example is claimed. R256's five phases and both exact report tests passed,
+including the test that changes every bound and selected other extents. Normal
+Core compilation and all 723 selected input pins are recorded in that result.
+R257 approved the supplied source and exact plan. After withholding the
+inaccurate R263 reply, Root adopted original UIREQ-002 following fresh R272
+literal-result review. The two passing tests were not rerun. See the
+[profile result and adoption](../../results/sherlock-supported-profile-20261018/README.md). Public developers
+need no reviewer permission to inspect this returned report.
+
+Inspect `format`, source identities and `execution_profile`, then `grammar`,
+`numeric_domains`, `schedule`, `extents`, `admission_scope` and `dispositions`.
+Compare all 22 `extents.bounds` fields, layout capacities, fuel/stack and all 16
+preprocessing fields with the exact config supplied to this call. Consult the
+[complete report reference](../reference/draft-source-compiler.md#supported-profile-report)
+for the field inventory and its serialization/frame/work qualifications. Values
+in the fixture are test inputs, not defaults. The report must describe this
+invocation rather than a constant copy of the fixture's capacities.
+
+Read the owner closed-body/unique-function and extension dispositions literally:
+source typechecking is not a new whole-program owner admission checker, and
+first declaration lookup is not unique-name admission. Tooling failures,
+runtime limits and HostViolation remain distinct. A reported logical extent is
+not physical H1, runtime, circuit or target evidence.
 
 ## Inspect the artifacts
 
@@ -123,8 +157,15 @@ The original oracle remains unchanged; the correspondence reference data is
 ordinary author data. This result exercises the public producer on two distinct
 programs, without running B steps or the CLI and without running this guide’s
 file publication example. Runtime results, failures and resource-prefix
-correspondence need their own observations. Final result review and original
-UIREQ-022 adoption remain pending.
+correspondence need their own observations. Original UIREQ-022 is adopted; the
+new supported-profile field has separate passing R256 observations, with
+original UIREQ-002 reporting scope adopted after fresh R272 result review.
+
+A separate [runtime candidate](../reference/draft-source-compiler.md#separate-public-runtime-candidate)
+and its external consumer compiled. Its first test was refused before stepping
+under the original capacity input; corrected input is under fresh review.
+Those two programs still have intended, unobserved results 7 and 8. This compile-only guide does not execute it or substitute
+those expected values for observations.
 
 For the existing scalar Core1 path and its historical observed fixtures, use
 [prepare a compile-only HostOnly artifact](prepare-host-source-artifact.md).

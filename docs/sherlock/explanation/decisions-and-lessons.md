@@ -17,3 +17,16 @@ The first literal stagenet transaction is a valuable scoped discriminator. It wo
 The old automatic goal remains cleared. After the ordinary entry conditions closed, Root armed a separate full implementation goal (creation epoch1792260805). This records the observed arming event, rather than certifying future worker activity. Final03/R18 retain25 additive SCON clauses mapped to all35 original UIREQ, with68 scenarios in reconciliation02. These counts index obligations; they are not completion scores. Root integrates shared interfaces and canonical documentation. Current native authority zero, C4 OPEN, R2 UNSATISFIED and incident60460 HOLD are attributed retained states from the blocker audit, not new security assessments or evidence of a failed native compilation. Existing Opus ownership, counters and no-retry dispositions remain intact.
 
 [DoctorWatson reference](../reference/doctorwatson.md) describes its actual local consumers. [Evidence and acceptance](evidence-and-acceptance.md) gives the reasoning behind the separate status classes; the [Sherlock index](../README.md) routes readers to the other documentation forms.
+
+
+The [supported-profile report](../reference/draft-source-compiler.md#supported-profile-report)
+projects the actual admitted call's configuration without changing transition or
+circuit semantics. This explanation's design claims and evidence distinctions
+are unaffected; no new circuit or website iteration is reported. R256 passed
+both new producer tests and its five phases. Fresh literal-result review then
+preceded Root's adoption of original UIREQ-002, bringing accepted originals to
+11 of 35. The separate runtime candidate compiled, but its first test was
+refused before stepping under the original capacity input. Corrected input is
+under review; expected results 7/8 are not observations. The DW-63 lesson is recorded
+separately in the [DoctorWatson improvement log](../../../wiki-llm/doctorwatson-improvement-log.md),
+not as a new semantic or acceptance decision here.

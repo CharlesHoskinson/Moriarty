@@ -63,8 +63,8 @@ records current Core compilation, external public consumer compilation and two
 passing public fixture tests, plus seven passing bounded-copy tests. All four
 sealed comparison fields (including all twelve program tables), the full
 26-obligation correspondence object and selected artifact metadata match. Fresh
-source review is complete; final post-result review and original UIREQ-022
-adoption remain pending. Runtime 7/8 values, the CLI, the guide’s file-writing
+source review and corrected final result review are complete; original
+UIREQ-022 is adopted. Runtime 7/8 values, the CLI, the guide’s file-writing
 example, semantic proof and native/target evidence remain unobserved.
 
 The [Core2 financial observation result](../results/sherlock-financial-observation-20261018/README.md)
@@ -80,3 +80,23 @@ See the [Root adoption](../results/sherlock-public-draft-compiler-20261018/ROOT-
 This accepts the original named-mapping report clause. All 26 semantic
 correspondence obligations remain unproved; runtime, CLI, witness/constraint,
 native and target evidence retain their separate requirements.
+
+
+The [supported-profile field](reference/draft-source-compiler.md#supported-profile-report)
+adds an explicit grammar/domain/schedule/extents report using the admitted
+invocation's config. The public API arguments are unchanged. R256 passed normal
+Core compilation, public consumer compilation, listing and both new exact tests,
+with 723 selected inputs unchanged. R257 approved the supplied source and exact
+plan. After withholding the inaccurate R263 reply, Root adopted original
+UIREQ-002 following fresh R272 literal-result review. The current evidence
+check records 11 accepted originals out of 35, with 24 open. See the
+[profile result and adoption](../results/sherlock-supported-profile-20261018/README.md).
+The passing report tests were not rerun to repair the review reply. Use the
+[inspection guide](how-to/compile-draft-program.md#inspect-the-supported-profile-field)
+without treating its unrun file-writing example as a captured printout.
+
+The separate [public runtime candidate](reference/draft-source-compiler.md#separate-public-runtime-candidate)
+and its external test consumer compiled. The first ChainTotal run was refused
+before stepping because value-slot capacity 1024 was below the supplied fuel
+4096; BranchTotal was not run. Corrected input is under fresh review. Intended
+results 7/8 remain expectations. No new circuit or website iteration occurred.

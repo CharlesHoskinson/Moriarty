@@ -1,0 +1,360 @@
+{
+  "coverage": {
+    "inline_complete": true,
+    "prior_same_owner_context_available": true,
+    "inline_bodies_read": 22,
+    "prior_turn_summary": "Same-owner continuation in CID b8e76704-6c2c-47be-b22a-82428091ff0c; prior 55-page/40-body (496226B) review FINAL-RESPONSE.txt (17298B, sha256: 09e18f98c7d25dd9909baff17b8a14444ba0afd8623e2abe37236fcec51d8065) and TOOL-READ-COVERAGE.json (15155B, sha256: 56d4de0e96c8d60c37453bebef650b7ef43a0391c082a3b719fa8b7bb5c53ef5) context retained and cross-checked against inline BODY 1..22 with zero tool calls.",
+    "gaps": [
+      "Broader transitive crate modules, B-step runtime evaluator execution, CLI subprocess execution on the draft route, SDK/native/Lean/TLA+ verification, and historical commit provenance of the 9 non-overlay compiler warnings remain outside this inline packet.",
+      "R261 docs proposal (DOCS.patch sha256: 4846849690d6e7160292e652e50ea26ac26c16c6215d599e61b36868f4fa8fbd; MANIFEST.json sha256: 2f36980469b36bc353c8600f95b334d623c4d3b337318cc59a5391a375e20fa1) is source-only metadata and not audited or needed to gate actual R256 result or original UIREQ-002 assessment."
+    ]
+  },
+  "identity": {
+    "requested": "gemini-4-argon-high (continuation of same actual R257 owner in CID b8e76704-6c2c-47be-b22a-82428091ff0c under standing authorized observed Opus 5.5 outage fallback)",
+    "returned": "Antigravity (Google DeepMind Advanced Agentic Coding assistant, same-owner continuation in CID b8e76704-6c2c-47be-b22a-82428091ff0c)",
+    "HIGH_evidence_limits": "Runtime prompt does not expose raw model deployment string or thinking-budget telemetry; same-owner continuation verified via CID b8e76704-6c2c-47be-b22a-82428091ff0c and exact inline artifacts."
+  },
+  "actual_result_decision": {
+    "classification": "APPROVE_R256_ACTUAL_FIVE_PHASE_EXECUTION_RESULTS",
+    "executed_plan_sha256": "a586b97e2dce5dfb679ef972af1ed265a27721a35887fae27c37e9c7964ba05e",
+    "review_projection_sha256": "b3f5965172d37e2bb26e59cfdb23ab766aed9cacdc27f52b9a94d4a2e56cab3b",
+    "result_json_sha256": "f5e3675312ea57871f9300f22052081c2799c8fe03c3a2534c3b1e93b2daf7b7",
+    "preexec_json_sha256": "d177d292b42d542615795312fc55829b94edca08a394167508a6f3c8aa61c1da",
+    "postexec_json_sha256": "d177d292b42d542615795312fc55829b94edca08a394167508a6f3c8aa61c1da",
+    "pinned_723_inputs_array_sha256": "1f09b65c179315d125981b79bacb72fb57a6031fc1ef13276522e46108dc1e4a",
+    "input_pins_unchanged": true,
+    "phases_summary": [
+      {
+        "index": 1,
+        "id": "normalCurrentCoreRlib",
+        "status": "PASS",
+        "actualExit": 0,
+        "elapsedSeconds": 10.16678601500007,
+        "stdoutBytes": 0,
+        "stderrBytes": 4421,
+        "streamCapExceeded": false
+      },
+      {
+        "index": 2,
+        "id": "externalNewPublicProfileConsumerCompile",
+        "status": "PASS",
+        "actualExit": 0,
+        "elapsedSeconds": 0.6437426640000012,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "streamCapExceeded": false
+      },
+      {
+        "index": 3,
+        "id": "listExactTwoNewProfileTests",
+        "status": "PASS",
+        "actualExit": 0,
+        "elapsedSeconds": 0.007118296000044211,
+        "stdoutBytes": 173,
+        "stderrBytes": 0,
+        "listMembershipMatches": true,
+        "streamCapExceeded": false
+      },
+      {
+        "index": 4,
+        "id": "public_admitted_first_order_fragment_reports_complete_supported_profile",
+        "status": "PASS",
+        "actualExit": 0,
+        "elapsedSeconds": 0.012621643999864318,
+        "stdoutBytes": 196,
+        "stderrBytes": 0,
+        "oneExactTestPassed": true,
+        "streamCapExceeded": false
+      },
+      {
+        "index": 5,
+        "id": "public_profile_reports_this_invocations_distinct_declared_extents",
+        "status": "PASS",
+        "actualExit": 0,
+        "elapsedSeconds": 0.010124134999841772,
+        "stdoutBytes": 190,
+        "stderrBytes": 0,
+        "oneExactTestPassed": true,
+        "streamCapExceeded": false
+      }
+    ],
+    "pinned_outputs": {
+      "build/libmori_core.rlib": {
+        "bytes": 34917576,
+        "sha256": "08989274bfb51309b4a0c5c8ad42c1eb434e92e1e477eb27153273ba5c331db3"
+      },
+      "build/core-rlib.d": {
+        "bytes": 35899,
+        "sha256": "be118650a4132de3ddb8d3c7d43aafecc9748f94d7fc32571a2c65fd72708fcd"
+      },
+      "build/public-draft-profile-tests": {
+        "bytes": 17630344,
+        "sha256": "681165891f4f58091a83a85d66f52a9355dcc91f5968273ad79c91f6c15e9ab8"
+      },
+      "build/public-draft-profile.d": {
+        "bytes": 2761,
+        "sha256": "766f1e18876dded21407e3c3778fca70b97a4f841c6e38f19343f679bcf7c7d4"
+      }
+    }
+  },
+  "warnings": {
+    "observed": [
+      "unused variable `partial` at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime/owner_si21_bind_match.rs:104:33",
+      "unused variable `loc` at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:20:17 (fn invalid_plan)",
+      "unused variable `g` at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:234:62 (fn owner_select_when)",
+      "variable does not need to be mutable `mut push` at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:1294:9",
+      "function `check_any_ref` is never used at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:761:4",
+      "methods `checked_guards` and `checked_pre_image` are never used at crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:1500:19 and 1504:19",
+      "constant `SOURCE_LANGUAGE` is never used at crates/mori-core/src/sherlock/compile_artifact/recursive_source.rs:27:18",
+      "function `parse_draft_source` is never used at crates/mori-core/src/sherlock/compile_artifact/draft_source.rs:123:8",
+      "function `check_program_types` is never used at crates/mori-core/src/sherlock/compile_artifact/draft_typecheck.rs:80:8"
+    ],
+    "origin_unknown": true,
+    "impact": "Phase 1 emitted 9 warnings (4421B stderr); Phase 2 emitted 0 warnings. Zero warnings originate in the 6 R254 overlay files (draft_profile.rs, draft_report.rs, compile_artifact.rs, sherlock_draft_profile.rs). Historical commit origin of the 9 warnings is not assumed from outside this packet; within visible code, parse_draft_source and check_program_types are unbounded entry points superseded on the production path by parse_draft_source_bounded and check_program_types_bounded, and none of the 9 warnings affect supported_profile projection accuracy or test determinism."
+  },
+  "original002": {
+    "recommendation": "RECOMMEND_SCOPED_ORIGINAL_UIREQ002_CLAUSE_AND_SCENARIO_CLOSURE_ON_PUBLIC_DRAFT_PRODUCER",
+    "complete_scenario_predicates": {
+      "spec_sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b",
+      "clause_satisfied": "WHEN a program is admitted on the public draft producer route (mori_core::sherlock_compile_artifact::compile_draft_host), DraftCompileArtifact.supported_profile (SupportedProfileReport, schema mori-sherlock-supported-profile-report/1) reports its exact supported grammar and versioned execution profile.",
+      "when_predicate_satisfied": "Fixture fragment.mori (211B, sha256: f0dc5d59be949da1e9defc6e6ee70c759ec3ccd13db5e878b19ccf4eaf9bf2b6, module ProfileFragment) uses named calls (keep(v)), UInt128 (0, 1, 7), Bool (true, false), constructor (Flag::On(7)) and match expressions (match flag { Flag::On(v) => keep(v), Flag::Off => 0 }) and is admitted by compile_draft_host in both executed public tests.",
+      "then_predicates_satisfied": [
+        "Names constructs: modules, bounded_adt_declarations (Flag, Pair, Outcome, LedgerEvent, NonEmptyList, Tree), function_declarations, expression_forms (uint128_literals, bool_literals, variable_references, let_bindings, if_then_else, constructor_expressions, match_expressions, named_first_order_calls), pattern_forms (constructor_patterns, variable_binder_patterns, wildcard_patterns).",
+        "Names numeric domains: UInt128 (0..=340282366920938463463374607431768211455, 128-bit unsigned integers) and Bool (false, true).",
+        "Names schedule and versioned profile: execution_profile Core1, semantics_version 0.1.0-draft, surface_syntax mori-draft-surface/1, ast_contract mori-draft-ast/1, static_type_contract mori-draft-static-types/1, copy_admission_contract mori-draft-copy-admission/1, deterministic call-by-value left-to-right evaluation, helper-call convention, and fuel_and_stack (initial_fuel, max_call_depth, frame_cost_per_call: 1, step_cost_per_eval: 1).",
+        "Names code/data/frame/environment/serialization/helper-work bounds: all 22 AdmissionBounds fields mapped 1-to-1 across code_and_types (max_types, max_variants, max_fields, max_program_defs, max_expr_nodes, max_pattern_nodes, max_params, max_args), frame_and_environment (max_call_depth, max_env_bindings, max_frame_slots), data_and_heap (max_value_nodes, max_adt_depth, max_tuple_arity, max_list_length), serialization (max_serialized_bytes, max_symbol_bytes, max_canonical_depth), and helper_work (max_prepare_steps, max_check_steps, max_copy_steps, max_decode_steps), plus layout and 16 preprocessing_extents, verified across both base config (EXPECTED.json, 6217B, sha256: d76b87d59dfaed9257ce8e3dc872a79d0bfd0f765e0b23ff2906f8139feb76b8) and a second invocation with all 22 distinct bounds (101..122), distinct layout/run parameters, and selected preprocessing overrides.",
+        "Explicitly reports closed-body and unique-function admission as remaining implementation work (closed_body_admission: required_for_admitted_execution, owner_implementation_status: explicit_remaining_implementation_work; unique_function_admission: required_for_admitted_execution, owner_implementation_status: explicit_remaining_implementation_work).",
+        "Explicitly reports higher-order closures, letrec, generic nominal ADTs, and financial surface forms as extensions outside the admitted first-order profile.",
+        "Explicitly distinguishes AdmissionRejected, CapacityNotAdmitted, and tooling Unsupported from parse/type/copy stages and from runtime_and_host_outcomes (NormalValue, ExhaustedFuel, ExhaustedCallDepth, RuntimeTrap, HostError)."
+      ]
+    },
+    "scope": "Scoped to the original UIREQ-002 requirement clause and its single 'First-order fragment' scenario on the public library producer route (mori_core::sherlock_compile_artifact::compile_draft_host and DraftCompileArtifact.supported_profile). Does not constitute semantic proof of the 26 correspondence obligations, B-step runtime execution, or global H1/native guarantees.",
+    "remaining_gaps": [
+      "Whole-program owner closed-body admission and unique-function admission enforcement remain explicit unimplemented work in owner_prepare (reported faithfully as explicit_remaining_implementation_work, satisfying the UIREQ-002 disclosure predicate while leaving actual checker implementation to its separate requirement scope).",
+      "Higher-order closures, letrec, generic nominal ADTs, and financial grammar constructs remain extensions outside the admitted first-order profile.",
+      "CLI subprocess execution on the draft route is not exercised in R256 (public library producer compile_draft_host is exercised directly).",
+      "All 22 AdmissionBounds and 16 preprocessing_extents in SupportedProfileReport are declarative projections of caller-supplied AdmissionConfigFields after owner prepare/admission, not dynamic runtime enforcement or process-wide H1 memory proofs."
+    ]
+  },
+  "literal_metadata_corrections": {
+    "reassessment_impact": "NO_CONCLUSION_CHANGE — actual R254 source hashes, R256 execution receipts, source approval, and original UIREQ-002 / 022 / 025 compatibility conclusions remain unchanged.",
+    "correction_1_correspondence_whole_file_pin": {
+      "issue_in_turn_1": "Turn 1 cited split-page slice hashes a106d565... (013-01.txt) and 895658b1... (013-02.txt) for draft_correspondence.rs.",
+      "corrected_literal_pin": "crates/mori-core/src/sherlock/compile_artifact/draft_correspondence.rs whole-file is 23075B, sha256: 5520672ae4c6b31ecf616d64e8527f30fadedb973ad1e98fe4ab32c8b13e0763 (and crates/mori-core/tests/fixtures/draft-correspondence/CORRESPONDENCE-EXPECTED.json is 20139B, sha256: 35284d3bcd2e55eb8f0b0792a0a9cfda51190b03a75e37c523a9f11e54c311e7)."
+    },
+    "correction_2_rust_view_check_v8_terminology": {
+      "issue_in_turn_1": "Turn 1 GAP-3 used the loose shorthand phrase 'V8 decode/re-prepare allocations'.",
+      "corrected_literal_meaning": "Refers strictly to Rust ViewCheck::V8 ProgramView round-trip validation/re-prepare in crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs (59392B, sha256: da558e3e0f3498fe7da646d860af2488337201ad93b3bac5ebc5389bddc5e542, lines 895..913, anchor pv_err(ViewCheck::V8, \"program\", None, \"view != prepare_core(decode(view))\")), NOT the JavaScript V8 runtime."
+    }
+  },
+  "exact022025_compatibility": {
+    "recommendation": "APPROVE_SCOPED_ADDITIVE_SOURCE_COMPATIBILITY_AND_RECOMMEND_PRECISE_20_REF_CURRENT_LEDGER_REBIND_WITHOUT_OLD_COHORT_RERUN",
+    "total20refs": {
+      "ledger_file": ".moriarty-dev/evidence/current-evidence.json (639107B, sha256: 6df32dc29e1cfaa26fad88bb7371e73abcccc3921ce253d1e7f0d67348cd65e2)",
+      "compile_artifact_old_to_new": "e2cd10a4cd2d8d1864b28f92aeb92d55c0686bb64f4662d16af9f9a20ab60952 (14719B, 289 lines) -> 4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c (14788B, 291 lines)",
+      "draft_report_old_to_new": "2252e387630d1a6fd2ad231dad5020b3e96fb965fb2fd28ef543e9c0b642a7b3 (9172B, 214 lines) -> 2fba96583572b1ac275ae41f04c08719b8ed221721bef54cabc4648c7c2657da (9318B, 216 lines)",
+      "other_8_open_and_refinement_refs_policy_2_hash_only_keep_1_239": [
+        {
+          "owner": "UIREQ-031",
+          "pointers": [
+            "/requirements/30/implementation/sourceRefs/0",
+            "/requirements/30/currentness/sourcePins/0",
+            "/requirements/30/citations/1"
+          ],
+          "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+          "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+          "lines": "1..239 (unchanged)"
+        },
+        {
+          "owner": "SCON-001",
+          "pointers": [
+            "/refinement/subContracts/0/implementation/sourceRefs/0"
+          ],
+          "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+          "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+          "lines": "1..239 (unchanged)"
+        },
+        {
+          "owner": "SCON-003",
+          "pointers": [
+            "/refinement/subContracts/2/implementation/sourceRefs/0"
+          ],
+          "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+          "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+          "lines": "1..239 (unchanged)"
+        },
+        {
+          "owner": "SCON-012",
+          "pointers": [
+            "/refinement/subContracts/11/implementation/sourceRefs/0"
+          ],
+          "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+          "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+          "lines": "1..239 (unchanged)"
+        },
+        {
+          "owner": "SCON-023",
+          "pointers": [
+            "/refinement/subContracts/22/implementation/sourceRefs/0"
+          ],
+          "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+          "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+          "lines": "1..239 (unchanged)"
+        },
+        {
+          "owner": "SCON-025",
+          "pointers": [
+            "/refinement/subContracts/24/implementation/sourceRefs/0"
+          ],
+          "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+          "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+          "lines": "1..239 (unchanged)"
+        }
+      ]
+    },
+    "focus12refs": [
+      {
+        "owner": "UIREQ-002",
+        "policy": "policy_0_full_incoming_producer_1_to_291",
+        "pointers": [
+          "/requirements/1/implementation/sourceRefs/0",
+          "/requirements/1/currentness/sourcePins/0",
+          "/requirements/1/citations/1"
+        ],
+        "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+        "old_sha256": "e2cd10a4cd2d8d1864b28f92aeb92d55c0686bb64f4662d16af9f9a20ab60952",
+        "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+        "old_lines": "1..239",
+        "new_lines": "1..291"
+      },
+      {
+        "owner": "UIREQ-022",
+        "policy": "policy_0_full_incoming_producer_1_to_291",
+        "pointers": [
+          "/requirements/21/implementation/sourceRefs/0",
+          "/requirements/21/currentness/sourcePins/0",
+          "/requirements/21/citations/1"
+        ],
+        "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+        "old_sha256": "e2cd10a4cd2d8d1864b28f92aeb92d55c0686bb64f4662d16af9f9a20ab60952",
+        "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+        "old_lines": "1..239",
+        "new_lines": "1..291"
+      },
+      {
+        "owner": "UIREQ-022",
+        "policy": "policy_0_full_incoming_draft_report_1_to_216",
+        "pointers": [
+          "/requirements/21/implementation/sourceRefs/11",
+          "/requirements/21/currentness/sourcePins/11"
+        ],
+        "file": "crates/mori-core/src/sherlock/compile_artifact/draft_report.rs",
+        "old_sha256": "2252e387630d1a6fd2ad231dad5020b3e96fb965fb2fd28ef543e9c0b642a7b3",
+        "new_sha256": "2fba96583572b1ac275ae41f04c08719b8ed221721bef54cabc4648c7c2657da",
+        "old_lines": "1..214 (or null on sourcePin)",
+        "new_lines": "1..216"
+      },
+      {
+        "owner": "UIREQ-025",
+        "policy": "policy_1_legacy_artifact1_compile_host_1_to_243",
+        "pointers": [
+          "/requirements/24/implementation/sourceRefs/0",
+          "/requirements/24/currentness/sourcePins/2",
+          "/requirements/24/citations/1",
+          "/requirements/24/citations/16"
+        ],
+        "file": "crates/mori-core/src/sherlock/compile_artifact.rs",
+        "old_sha256": "e2cd10a4cd2d8d1864b28f92aeb92d55c0686bb64f4662d16af9f9a20ab60952",
+        "new_sha256": "4e7b3f06ba6310cacca2c1fd060673de6123bcd8f8224b9d47aaaaefbd0ead7c",
+        "old_lines": "1..239",
+        "new_lines": "1..243"
+      }
+    ],
+    "actual291_216_fullproducers": {
+      "compile_artifact_physical_lines": 291,
+      "draft_report_physical_lines": 216,
+      "draft_profile_physical_lines": 163,
+      "note": "Turn 1 viewer line numbers showed a trailing empty line index after the final newline (292 and 217); actual physical newline counts in compile_artifact.rs (14788B) and draft_report.rs (9318B) are 291 and 216, with compile_draft_host spanning lines 245..291."
+    },
+    "legacy025ends243": {
+      "old_compile_host_lines": "165..241 (in 289-line old compile_artifact.rs)",
+      "new_compile_host_lines": "167..243 (in 291-line new compile_artifact.rs, shifted by 2 module registration lines at 18..19)",
+      "compile_host_body_bytes": 4549,
+      "compile_host_body_sha256": "90bff2454bcd6c1c7a0df469b9039f83b5706f4e84d0bdbc79556f27e8dcb62b",
+      "compile_host_body_equal": true,
+      "scope_rule": "UIREQ-025 covers legacy mori-sherlock-compile-artifact/1 and compile_host (Core-only route) ending at physical line 243; do not blindly add +2 to the old short 239 range and do not broaden UIREQ-025 to line 291 (compile_draft_host)."
+    },
+    "historical_limits": [
+      "Existing historical capture, sourceValidation, evidenceCatalog, recordedConsumerClosure, and requirement statuses remain unchanged by current-reference rebinding.",
+      "Literal byte recovery of old compile_artifact.rs (14719B) and old draft_report.rs (9172B) via exact diff reversal is a syntactic source fact, not semantic re-execution of historical UIREQ-022 or UIREQ-025 test cohorts.",
+      "DraftCompileArtifact (mori-sherlock-compile-artifact/2) gains a serialized supported_profile field and report construction work; this is not universal client ABI/JSON byte neutrality for external consumers that reject additional fields or pin full serialized artifact bytes.",
+      "R253 checker promotion changes no Rust pins; R261 docs proposal is separate and unexecuted."
+    ],
+    "conditions": [
+      "Rebind current source references in current-evidence.json only as part of Root's authorized ledger update alongside any adopted UIREQ-002 evidence.",
+      "Preserve historical capture hashes (e2cd10a4... and 2252e387...) inside historical execution records without retroactive mutation."
+    ]
+  },
+  "five_retained_owner_gaps": [
+    {
+      "id": "GAP-1",
+      "title": "Recursive AST/Value/Plan Heap Drop Unchanged",
+      "detail": "Recursive Box/Vec types (DraftExpr, DraftPattern, CoreExpr, CorePattern, Value, Plan) retain default compiler-generated recursive Drop; iterative drop_core_program_bounded only runs on explicit call paths."
+    },
+    {
+      "id": "GAP-2",
+      "title": "Whole-Program Owner Closed-Body and Unique-Function Admission Still Unimplemented",
+      "detail": "owner_prepare::prepare_core checks expr_well_formed_bounded per definition body and non-empty defs, but does not enforce closed-body free-variable resolution against params/globals or duplicate function name rejection when callers bypass draft frontend stages; SupportedProfileReport faithfully labels both as explicit_remaining_implementation_work."
+    },
+    {
+      "id": "GAP-3",
+      "title": "Owner Prepare / Rust ViewCheck::V8 Round-Trip and Report Clone/Serialization Allocations Unmetered by Step Counters",
+      "detail": "prepare_steps and check_steps count logical traversals, not wall-clock or heap bytes; Rust ViewCheck::V8 in owner_prepare::check_program_view (lines 895..913, view != prepare_core(decode(view))), SupportedProfileReport::from_config_fields,DraftCompileArtifact.clone(), and serde_json serialization allocate fresh heap structures outside step counters."
+    },
+    {
+      "id": "GAP-4",
+      "title": "Public Helper / Legacy Unbounded Entry Points Remain Callable",
+      "detail": "Unbounded helpers such as parse_draft_source, check_program_types, check_copy_admission, and CoreProgram::validate remain callable in crate modules outside compile_draft_host."
+    },
+    {
+      "id": "GAP-5",
+      "title": "Process-Wide H1 Resource Enforcement Not Established",
+      "detail": "Configured AdmissionConfigFields (fuel, max_call_depth, 22 bounds, 16 preprocessing_extents) are per-invocation application checks and declarative metadata projections, not OS/process-level stack, heap, or wall-clock caps."
+    }
+  ],
+  "unproved_runtime_formal_native_H1limits": {
+    "unproved_mapping_count": 26,
+    "unproved_mapping_ids": [
+      "M-TYPE-BOOL",
+      "M-TYPE-UINT128",
+      "M-TYPE-ADT",
+      "M-EXPR-LIT-BOOL",
+      "M-EXPR-LIT-UINT128",
+      "M-EXPR-VAR",
+      "M-EXPR-LET",
+      "M-EXPR-IF",
+      "M-EXPR-CONSTRUCT",
+      "M-EXPR-MATCH",
+      "M-EXPR-CALL-FIRST-ORDER",
+      "M-PAT-WILDCARD",
+      "M-PAT-VAR",
+      "M-PAT-CONSTRUCT",
+      "M-JUDGE-WELL-TYPED-MODULE",
+      "M-JUDGE-COPY-ADMITTED",
+      "M-JUDGE-CLOSED-BODY",
+      "M-JUDGE-UNIQUE-FN",
+      "M-STAGE-PARSE",
+      "M-STAGE-TYPECHECK",
+      "M-STAGE-COPY-ADMISSION",
+      "M-STAGE-LOWER-CORE",
+      "M-STAGE-OWNER-PREPARE",
+      "M-STAGE-GENESIS-LOAD",
+      "M-RUNTIME-STEP-EQUIV",
+      "M-OUTCOME-PARTITION"
+    ],
+    "limits": "All 26 named correspondence mappings remain UNPROVED semantic obligations (proof_status: unproved_named_obligation). Passing the two R256 public tests proves deterministic compilation and exact SupportedProfileReport projection for ProfileFragment under compile_draft_host, but does not prove B-step runtime evaluation (7/8), Lean/TLA+ formal theorems, process-wide H1 bounds, or native/SDK target behavior (UIREQ-029)."
+  },
+  "execution_authority": 0,
+  "end_marker": "END-SUPPORTED-PROFILE-ACTUAL-RESULT-NATIVE0"
+}
+
