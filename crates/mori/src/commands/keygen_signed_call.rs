@@ -1,3 +1,4 @@
+#[cfg(feature = "native")]
 use super::{call_io, core_io};
 use crate::shell::Shell;
 use std::{path::PathBuf, process::ExitCode};
@@ -21,6 +22,7 @@ pub struct Args {
     #[arg(long)]
     pub out: PathBuf,
 }
+#[cfg(feature = "native")]
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     call_io::require_new(&args.out)?;
     let limits = call_io::limits(&args.work_limits)?;
@@ -80,4 +82,20 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         &args.action,
         &args.out,
     ))
+}
+
+#[cfg(not(feature = "native"))]
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let _ = (
+        &args.file,
+        &args.signer_policy,
+        &args.seed_deployment,
+        &args.seed_state,
+        &args.parameters,
+        &args.action,
+        &args.params_dir,
+        &args.work_limits,
+        &args.out,
+    );
+    super::native_unavailable()
 }

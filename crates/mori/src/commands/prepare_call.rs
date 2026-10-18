@@ -1,10 +1,11 @@
+#[cfg(feature = "native")]
 use super::{core_io, proof_io};
-use crate::{error::CliError, shell::Shell};
-use std::{
-    io::Read,
-    path::{Path, PathBuf},
-    process::ExitCode,
-};
+#[cfg(feature = "native")]
+use crate::error::CliError;
+use crate::shell::Shell;
+#[cfg(feature = "native")]
+use std::{io::Read, path::Path};
+use std::{path::PathBuf, process::ExitCode};
 #[derive(Debug, clap::Args)]
 pub struct Args {
     pub file: PathBuf,
@@ -24,6 +25,7 @@ pub struct Args {
     #[arg(long)]
     pub out: PathBuf,
 }
+#[cfg(feature = "native")]
 fn binary(path: &Path) -> super::Result<Vec<u8>> {
     let file = std::fs::File::open(path).map_err(|source| CliError::Read {
         path: path.into(),
@@ -41,6 +43,7 @@ fn binary(path: &Path) -> super::Result<Vec<u8>> {
     }
     Ok(bytes)
 }
+#[cfg(feature = "native")]
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let (source, program) = core_io::program(&args.file)?;
     let deployment =
@@ -109,6 +112,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     );
     Ok(ExitCode::SUCCESS)
 }
+#[cfg(feature = "native")]
 fn publish_leaves(
     out: &Path,
     leaves: &std::collections::BTreeMap<String, Vec<u8>>,
@@ -119,7 +123,7 @@ fn publish_leaves(
     }
     proof_io::publish_new(&out.join("preparation.json"), marker)
 }
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -177,4 +181,19 @@ mod tests {
             }
         }
     }
+}
+
+#[cfg(not(feature = "native"))]
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let _ = (
+        &args.file,
+        &args.action,
+        &args.deployment,
+        &args.predecessor,
+        &args.parameters,
+        &args.request,
+        &args.relation,
+        &args.out,
+    );
+    super::native_unavailable()
 }

@@ -1,9 +1,14 @@
+#[cfg(feature = "native")]
 use super::core_io;
-use crate::{cli::ActionInput, error::CliError};
+use crate::cli::ActionInput;
+#[cfg(feature = "native")]
+use crate::error::CliError;
+use std::path::PathBuf;
+#[cfg(feature = "native")]
 use std::{
     fs::{File, OpenOptions},
     io::{ErrorKind, Write},
-    path::{Path, PathBuf},
+    path::Path,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -31,17 +36,20 @@ pub struct Input {
     pub at: Option<u128>,
 }
 /// The complete signed group accompanying a trusted signed Target.
+#[cfg(feature = "native")]
 pub struct Signed {
     pub authority: mori_backend::authorization::ExpectedAuthority,
     pub at: mori_core::UInt,
     pub intent: mori_backend::authorization::SignedIntent,
 }
+#[cfg(feature = "native")]
 pub type Inputs = (
     String,
     mori_core::Scenario,
     mori_backend::Target,
     Option<Signed>,
 );
+#[cfg(feature = "native")]
 impl Input {
     /// The trusted Target selects the mode. A signed Target requires the whole
     /// signed group; an unsigned Target refuses any part of it.
@@ -84,6 +92,7 @@ impl Input {
         }
     }
 }
+#[cfg(feature = "native")]
 pub fn require_new(path: &Path) -> super::Result<()> {
     match std::fs::symlink_metadata(path) {
         Ok(_) => Err(CliError::Write {
@@ -99,15 +108,19 @@ pub fn require_new(path: &Path) -> super::Result<()> {
         .into()),
     }
 }
+#[cfg(feature = "native")]
 struct Staging(PathBuf);
+#[cfg(feature = "native")]
 impl Drop for Staging {
     fn drop(&mut self) {
         let _ = std::fs::remove_file(&self.0);
     }
 }
+#[cfg(feature = "native")]
 static NEXT: AtomicU64 = AtomicU64::new(0);
 /// Publish only complete bytes. A same-directory hard link atomically refuses
 /// any destination created since the early check, including dangling symlinks.
+#[cfg(feature = "native")]
 pub fn publish_new(path: &Path, bytes: &[u8]) -> super::Result<()> {
     let parent = path
         .parent()
@@ -141,7 +154,7 @@ pub fn publish_new(path: &Path, bytes: &[u8]) -> super::Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "native"))]
 mod tests {
     use super::*;
     #[test]
