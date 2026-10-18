@@ -1,0 +1,119 @@
+{
+  "profile": "moriarty-tests/shared-interleaving-proposal/1",
+  "source": "shared-deliveries.mori",
+  "opening": "opening.json",
+  "slots": [
+    {
+      "action": "deliver_a",
+      "inputs": [],
+      "logical_cap": "23"
+    },
+    {
+      "action": "deliver_b",
+      "inputs": [],
+      "logical_cap": "23"
+    }
+  ],
+  "bounds": {
+    "attempted_cap": "46",
+    "invocation_limit": 4
+  },
+  "cases": [
+    {
+      "name": "sequential-a-then-b",
+      "steps": [
+        {
+          "op": "start",
+          "slot": 0
+        },
+        {
+          "op": "resume",
+          "slot": 0,
+          "event": "ready-a.json"
+        },
+        {
+          "op": "start",
+          "slot": 1
+        },
+        {
+          "op": "resume",
+          "slot": 1,
+          "event": "ready-b.json"
+        }
+      ],
+      "expected": "sequential-a-then-b.reports.json"
+    },
+    {
+      "name": "sequential-b-then-a",
+      "steps": [
+        {
+          "op": "start",
+          "slot": 1
+        },
+        {
+          "op": "resume",
+          "slot": 1,
+          "event": "ready-b.json"
+        },
+        {
+          "op": "start",
+          "slot": 0
+        },
+        {
+          "op": "resume",
+          "slot": 0,
+          "event": "ready-a.json"
+        }
+      ],
+      "expected": "sequential-b-then-a.reports.json"
+    },
+    {
+      "name": "interleaved-a-first",
+      "steps": [
+        {
+          "op": "start",
+          "slot": 0
+        },
+        {
+          "op": "start",
+          "slot": 1
+        },
+        {
+          "op": "resume",
+          "slot": 0,
+          "event": "ready-a.json"
+        },
+        {
+          "op": "resume",
+          "slot": 1,
+          "event": "ready-b.json"
+        }
+      ],
+      "expected": "interleaved-a-first.reports.json"
+    },
+    {
+      "name": "interleaved-b-first",
+      "steps": [
+        {
+          "op": "start",
+          "slot": 0
+        },
+        {
+          "op": "start",
+          "slot": 1
+        },
+        {
+          "op": "resume",
+          "slot": 1,
+          "event": "ready-b.json"
+        },
+        {
+          "op": "resume",
+          "slot": 0,
+          "event": "ready-a.json"
+        }
+      ],
+      "expected": "interleaved-b-first.reports.json"
+    }
+  ]
+}

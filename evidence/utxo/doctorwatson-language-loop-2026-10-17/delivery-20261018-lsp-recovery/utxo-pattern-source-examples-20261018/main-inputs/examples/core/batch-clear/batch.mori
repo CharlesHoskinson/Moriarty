@@ -1,0 +1,24 @@
+language "moriarty/1";
+agreement UniformBatch {
+  asset NIGHT = { network: "local", issuer: "issuer", reference: "night", scale: 0 };
+  asset USD = { network: "local", issuer: "issuer", reference: "usd", scale: 2 };
+  state rounds: UInt = 0;
+  action clear(aliceQty: UInt, bobQty: UInt, price: UInt, oracle: UInt,
+               observedAt: UInt, now: UInt, solverCap: UInt) {
+    requires now >= observedAt;
+    requires now - observedAt <= 10;
+    requires price == oracle;
+    requires aliceQty > 0 and bobQty > 0;
+    requires aliceQty + bobQty <= solverCap;
+    let aliceQuote = aliceQty * price;
+    let bobQuote = bobQty * price;
+    transfer(NIGHT, "maker", "alice", aliceQty);
+    transfer(NIGHT, "maker", "bob", bobQty);
+    transfer(USD, "alice", "maker", aliceQuote);
+    transfer(USD, "bob", "maker", bobQuote);
+    fee(USD, "alice", "pool", 1);
+    fee(USD, "bob", "pool", 1);
+    next rounds = rounds + 1;
+    emit "uniform_price"(price);
+  }
+}

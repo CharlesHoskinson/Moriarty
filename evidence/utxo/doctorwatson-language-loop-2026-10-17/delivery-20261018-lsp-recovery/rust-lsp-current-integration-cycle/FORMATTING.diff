@@ -1,0 +1,58 @@
+--- authored/crates/mori/src/commands/lsp.rs
++++ formatted/crates/mori/src/commands/lsp.rs
+@@ -4,10 +4,10 @@
+ 
+ use lsp_server::{ErrorCode, Message, Notification, Request, Response};
+ use lsp_types::{
+-    Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+-    DidOpenTextDocumentParams, InitializeParams, InitializeResult, PositionEncodingKind,
+-    PublishDiagnosticsParams, ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent,
+-    TextDocumentSyncKind, TextDocumentSyncOptions, Uri,
++    Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
++    InitializeParams, InitializeResult, PositionEncodingKind, PublishDiagnosticsParams,
++    ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent, TextDocumentSyncKind,
++    TextDocumentSyncOptions, Uri,
+ };
+ use serde_json::json;
+ 
+@@ -106,10 +106,9 @@
+             return Response::new_ok(request.id, initialize_result());
+         }
+         let error = match self.phase {
+-            Phase::New | Phase::Initializing => Some((
+-                ErrorCode::ServerNotInitialized,
+-                "Server not initialized.",
+-            )),
++            Phase::New | Phase::Initializing => {
++                Some((ErrorCode::ServerNotInitialized, "Server not initialized."))
++            }
+             Phase::Shutdown => Some((ErrorCode::InvalidRequest, "Server has shut down.")),
+             Phase::Running => None,
+         };
+@@ -165,11 +164,8 @@
+                 if self.documents.contains_key(&document.uri) {
+                     return Ok(None);
+                 }
+-                let found = diagnostics::check(
+-                    &document.uri,
+-                    &document.text,
+-                    self.related_information,
+-                );
++                let found =
++                    diagnostics::check(&document.uri, &document.text, self.related_information);
+                 let version = self.versioned_diagnostics.then_some(document.version);
+                 let uri = document.uri;
+                 self.documents.insert(
+--- authored/crates/mori/tests/lsp.rs
++++ formatted/crates/mori/tests/lsp.rs
+@@ -53,7 +53,9 @@
+             .unwrap();
+         let body_start = header_end + 4;
+         let body_end = body_start + length;
+-        let body = wire.get(body_start..body_end).expect("complete message body");
++        let body = wire
++            .get(body_start..body_end)
++            .expect("complete message body");
+         messages.push(serde_json::from_slice(body).unwrap());
+         wire = &wire[body_end..];
+     }

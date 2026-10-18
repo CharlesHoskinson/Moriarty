@@ -1,0 +1,89 @@
+# SP12: Developer release and reproducible evidence implementation plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
+
+**Goal:** Deliver a cold-start developer workflow whose advertised guarantees match the accepted implementation.
+
+**Architecture:** This sprint contributes to MC08; those OpenSpec packages retain acceptance ownership. It consumes the exact accepted profiles and artifacts named by its prerequisites.
+
+**Tech Stack:** TypeScript/Node.js, `.mori`, ISO/IEC 14977 EBNF, K, Compact and the selected Midnight native stack where applicable. Versions are pinned at task admission.
+
+## Global constraints
+
+This is an internal maintainer implementation plan. Reviewer, task-admission and RP03 controls apply only to project-operated development and funded campaigns. Public authoring, compilation, proving and deployment with developer-owned resources require objective language/proof validity and participant authorization, not project records. The [product contract](../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope.
+
+Status: S2, specified-only. [Program rules](README.md) apply to every task.
+
+Full-completion dependencies (not individual task entry gates): SP11. Stage scope: release. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
+
+## File and interface map
+
+Paths marked create are proposed outputs. Their presence or commands are not claimed today. If a path already exists at dispatch, reconcile it first.
+
+| Operation | Path | Responsibility |
+| --- | --- | --- |
+| create | `experiments/moriarty-release-check/src/verify.ts` | Final evidence and lineage checker |
+| create | `experiments/moriarty-release-check/tests/release.test.mjs` | Stale, missing and fake evidence rejection |
+| create | `docs/developer-guide.md` | Author/check/simulate/sign/prove/submit/finality guide |
+| modify | `README.md` | Implemented language and explicit remaining release limits |
+| modify | `ROADMAP.md` | Evidence-backed completion status |
+| create | `deliverables/moriarty-completion-program-2026-09-07/README.md` | Seven-goal and G01-G24 completion crosswalk |
+
+Interfaces use the common records in [the sprint contract](README.md#shared-artifact-contract). Exact code signatures belong to the reviewed execution packet. Do not invent a prover API before its pinned source is inspected.
+
+## SP12.1: Finish developer commands and API
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Expose authoring, formatting, checking, simulation, canonical authorization display/signing, proving, submission and finality inspection. Explain fees, debt, locks, recovery rights, trust assumptions and residual duties. Keep mocked data out of the accepted workflow.
+- [ ] Verify: A cold-start developer without project metadata authors a new supported program beyond the fixed fixtures and runs valid loan/swap, rejected intent, stale observation, unavailable witness, pending redemption, restart, conflict, activation-window, revoked-key/spec and consumption-preserving migration scenarios. Unknown signed semantics rejects.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP12.2: Verify a fresh checkout
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Re-execute deterministic frontend, K, theorem and conformance checks with pinned dependencies. Verify SRS acquisition digests. Re-verify retained native proofs and canonical chain receipts separately from fresh transactions.
+- [ ] Verify: No hidden local file or private key is needed to verify public evidence. The guide distinguishes retained receipt verification from a newly funded public campaign.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP12.3: Audit the final release claims
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Bind every MC package and all G01-G24 obligations to exact candidate/source/profile/deployment evidence. Run missing-audit, stale-hash, fake-proof and omitted-row controls. Obtain the independent audits selected by the current maintainer release assignment. Review developer prose for accuracy and clarity. Neither activity is a public developer prerequisite.
+- [ ] Verify: Close only accepted predicates. Unperformed pilots, licensing, baselines or broader assurances stay explicit release blockers; this sprint does not infer production readiness.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP12.4: Publish the accepted result
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Update the roadmap, developer guide, canonical wiki navigation and completion dossier. Publish reviewed work under standing authority. Close the runtime goal only if its actual full objective is fulfilled.
+- [ ] Verify: No test count, planning review, merged branch or expended budget substitutes for product acceptance.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## Verification entry points
+
+Existing package commands may run only in their declared scope. Other commands are proposed interfaces that task admission must create and verify. Behavioral task packets must include exact runnable inputs, failing tests and expected outputs before implementation.
+
+```sh
+npm --prefix experiments/moriarty-release-check test
+npm --prefix experiments/moriarty-release-check run verify -- --program openspec/moriarty-completion-program.json
+openspec validate --all --strict
+```
+
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection rather than a crash or unauthorized effect. Pre-submission logical rejection is atomic; submitted transactions may retain only effects, authority/nonce consumption and fees permitted by the signed phase-specific failure policy. Project-operated proof and public-network campaigns additionally require live RP03 admission; independent public toolchain use does not.
+
+## Report-informed acceptance refinement
+
+**Release something developers can use and reproduce.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP12.1: cold-start author→check→simulate→sign→prove→submit→inspect. Show quantities, valuation purpose, fees, debt, pending rights and trust assumptions when they affect a user decision; support stable typed failure, cancellation, partial-fill, crash and unavailable outcomes.
+- [ ] SP12.2: reproduce artifacts byte-for-byte on two independent clean builders (G12). Verify retained proof bytes and finalized receipts separately from new funded submissions; include exact SRS and dependency acquisition.
+- [ ] SP12.3: reconcile all G01–G24 individually. Require two non-toy pilots including full ACTUS against the audited Compact-library baseline, licenses/attribution, named trusted dependencies, separate confidential leakage evidence and no unresolved high/critical audit findings.
+- [ ] SP12.4: publish current reviewed evidence and exact limitations. G18 retains its historical text; failure stops the affected language release, and any scope reduction needs a new user decision. Planning or plugin installation never substitutes for these results.
+
+## Exit gate
+
+A reproducible bounded Midnight developer release with all requested language/PCD/financial predicates closed and broader release limitations stated.

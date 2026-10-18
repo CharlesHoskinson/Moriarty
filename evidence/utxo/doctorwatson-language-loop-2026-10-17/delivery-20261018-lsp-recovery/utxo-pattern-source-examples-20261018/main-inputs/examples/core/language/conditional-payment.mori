@@ -1,0 +1,16 @@
+language "moriarty/1";
+agreement ConditionalPayment {
+ asset USD = { network: "preview", issuer: "issuer", reference: "usd", scale: 2 };
+ state paid: UInt = 0;
+ action settle(amount: UInt, approved: Bool) {
+   requires approved and amount > 0;
+   let charge = amount + 2;
+   transfer(USD, "alice", "bob", amount);
+   fee(USD, "alice", "treasury", 2);
+   liability("delivery", USD, "bob", "alice", amount);
+   next paid = paid + charge;
+   ensures paid >= charge;
+   emit "settled"(paid);
+ }
+ action finish(amount: UInt) { discharge("delivery", amount); }
+}

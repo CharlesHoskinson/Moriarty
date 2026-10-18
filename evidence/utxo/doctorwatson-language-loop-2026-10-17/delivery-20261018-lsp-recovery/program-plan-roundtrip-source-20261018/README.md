@@ -1,0 +1,15 @@
+# Program/Plan roundtrip source candidate — L20
+
+Prepared one new ordinary regression against exact main commit `74a909d69639df8823a527a4d608a7516ccd69a2`, tree `f18c2346ff435f9ac95a7f6f56457c2edde3f71c`. Nothing has been compiled or executed.
+
+The complete test is `candidate/crates/mori-core/tests/program_plan_roundtrip.rs`; `candidate.patch` adds that file only. Baseline full-file bytes and Git blob/SHA-256 pins are retained in `baseline/` and `BASELINE-PINS.json`. `CANDIDATE-PINS.json` pins the full candidate and patch. `SOURCE-REVIEW.json` records the consumer trace, hand-derived expectations, source gaps and exact limits.
+
+The financially distinct InvoiceReceipt program creates and pays a 17-unit invoice (14 principal + 3), charges a separate 2-unit fee, retains its discharged zero duty, and waits for an ordinary receipt. Its unused action registers a later credit without creating a row. Opening balances 50/0/4/0 become 31/17/4/2 for alice/merchant/observer/treasury. Both actions and all 13 expression nodes appear in the full Program oracle. The full Plan has pay segment costs 15 and 8, committed-before 0 and 15, total23; the unused action costs2. Captures retain quantity14 and owed17, including origin/ordinal metadata in Plan. Every field of the continued boundary is compared, including exactly one zero paid-invoice row and no later-credit row.
+
+The public Program/Plan reopening boundary is JSON `Value`: `json::export` followed by `json::parse`. The pinned shared Program decode deliberately routes through Core/1 without Await; StagePlan has no Deserialize. This candidate introduces no typed Core/2 Program/Plan reopen API. The actual typed continuation reopen is `stage::decode::continuation`.
+
+All non-hash expected fields are hand-authored from parser schema, capture layout, cost schedule and direct arithmetic before `stage::load` is called. Expected hash fields use the production `intent::canonical`/`hash_bytes` over those literals. That is a **producer-derived codec assumption**, not independent canonical-byte or cryptographic evidence. No hash values or evaluator outputs were fabricated or imported.
+
+The existing default tests cover Core/1 Program literals, generic JSON export and complete stage outcomes; the opt-in disjoint test covers Program/Plan literals and stronger independent canonical preimages. This ordinary default-target candidate adds the distinct full-value financial continuation roundtrip; it claims no independent byte oracle, full execution/effect oracle, suffix-resume behavior or security result. Inline literal equality follows existing full-object tests and is a stated difference from general insta snapshot guidance.
+
+Only source reads, read-only pinned Git queries, file copying/hash custody and writes beneath this new directory occurred. No runtime, test, compiler, formatter, SDK, provider, network, framework, wallet, ledger or Git mutation was performed. Guarded status and all Rust checks remain unrun under the source-only task. Complete source/result review and actual ordinary test observation remain pending. This source candidate closes no product, native or roadmap predicate.

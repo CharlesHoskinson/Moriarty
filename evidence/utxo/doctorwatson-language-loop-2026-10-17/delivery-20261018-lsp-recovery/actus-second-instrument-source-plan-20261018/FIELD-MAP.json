@@ -1,0 +1,93 @@
+{
+  "kind": "proposed source/typed-field mapping, not an accepted conformance result or expected oracle",
+  "case": "tests/actus-tests-ump.json/ump01",
+  "all_present_result_fields": [
+    {
+      "field": "eventDate",
+      "original_json_type": "string",
+      "planned_type": "String",
+      "observation": "actual single IED Emit UInt timestamp, mechanically formatted YYYYMMDDhhmmss; checked against actual closing statusTime",
+      "normative_basis": "UMP IED schedule same as PAM; PAM IED date=initialExchangeDate; UMP IED state transition same as PAM Sd=t",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED"
+    },
+    {
+      "field": "eventType",
+      "original_json_type": "string",
+      "planned_type": "String",
+      "observation": "actual source Emit name IED",
+      "normative_basis": "UMP IED event named in normative schedule/functions",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED"
+    },
+    {
+      "field": "payoff",
+      "original_json_type": "number (integer lexeme)",
+      "planned_type": "i64 JSON integer",
+      "observation": "negative actual lender-to-borrower Transfer amount under explicit RPA lender subject binding; checked signed conversion, no floating arithmetic",
+      "normative_basis": "UMP POF_IED=CLM POF_IED; CLM IED X*roleSign*(-1)*notionalPrincipal; role RPA, no settlementCurrency supplied",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED"
+    },
+    {
+      "field": "currency",
+      "original_json_type": "string",
+      "planned_type": "String",
+      "observation": "actual Transfer AssetId.reference after full equality to supplied local subject AssetId",
+      "normative_basis": "original currency term; no fiat/native/deployed asset equivalence claimed",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED"
+    },
+    {
+      "field": "notionalPrincipal",
+      "original_json_type": "number (integer lexeme)",
+      "planned_type": "u64 JSON integer",
+      "observation": "actual closing identified principal liability amount with exact local asset/debtor/creditor; no zero placeholder principal state",
+      "normative_basis": "UMP STF_IED=PAM STF_IED; PAM Nt_after=roleSign*notionalPrincipal; proposed positive RPA claim-to-duty representation requires independent financial mapping review",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED"
+    },
+    {
+      "field": "nominalInterestRate",
+      "original_json_type": "number (integer lexeme)",
+      "planned_type": "u64 JSON integer for this absent-rate case only",
+      "observation": "actual UInt source state explicitly assigned by initialExchange; no adapter-side constant default",
+      "normative_basis": "PAM STF_IED line887: absent IPNR selects explicit zero branch; UMP delegates IED state transition to PAM",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED; general signed/decimal rates UNSUPPORTED"
+    },
+    {
+      "field": "accruedInterest",
+      "original_json_type": "number (integer lexeme)",
+      "planned_type": "u64 JSON integer for this no-IPAC/no-IPANX case only",
+      "observation": "actual UInt source state explicitly assigned by initialExchange; no adapter-side constant default",
+      "normative_basis": "PAM STF_IED lines889-891: absent IPAC and absent earlier IPANX select explicit else-zero branch; no year fraction is evaluated in selected branch",
+      "disposition": "REPRESENTABLE_PROPOSED_MAPPING_UNVALIDATED; general accrual/day-count UNSUPPORTED"
+    }
+  ],
+  "absent_result_field_kinds": [
+    "exerciseAmount",
+    "exerciseDate"
+  ],
+  "all_original_input_fields": {
+    "identifier": "retained source identity; no ledger identity assertion",
+    "terms.contractID": "retained, reflected in proposed fixed duty name; generic importer absent",
+    "terms.contractType": "UMP module/case selection retained; no universal UMP implementation",
+    "terms.statusDate": "literal source statusTime initializer, finite timestamp encoding",
+    "terms.contractRole": "fixed RPA lender-subject/positive-principal mapping only; other roles not admitted by this specimen",
+    "terms.currency": "explicit local exact AssetId input; no external dollar/token deployment",
+    "terms.contractDealDate": "retained provenance, no clock/authorization/execution-date policy implemented",
+    "terms.initialExchangeDate": "source eventTime equality guard; no calendar or scheduling service",
+    "terms.notionalPrincipal": "raw original string with two leading ASCII spaces retained; source literal1000 is explicit manual reification, no general lexical normalization rule",
+    "terms.dayCountConvention": "30E360 retained; general day-count implementation UNSUPPORTED and not needed by selected absent-interest IED branch",
+    "terms.xDayNotice": "P1M retained; notice/call/redemption lifecycle UNSUPPORTED",
+    "to": "horizon retained; no auto-discharge, maturity or horizon-step behavior implemented",
+    "dataObserved": "complete empty original object retained; general observation intake UNSUPPORTED",
+    "eventsObserved": "complete empty original array retained; unscheduled events/redemptions UNSUPPORTED",
+    "results": "unaltered original results retained only in full normative fixture file; no author expected oracle generated"
+  },
+  "unsupported_broader_semantics": [
+    "general signed/decimal rate, accrued-interest, rounding and overflow correspondence",
+    "30E360/year-fraction, cycles/calendar/event scheduling and event completeness across horizon",
+    "P1M notice and arbitrary principal redemption/increase/credit/default events",
+    "derived maturity from external event observations",
+    "loan performance/fees/exposure fields outside selected result record",
+    "source-to-IR ExprId allocation, compiler/native/proof/ledger correspondence and exact bytes",
+    "generic ACTUS whitespace import beyond manually reified selected notional term"
+  ],
+  "no_silent_skip": "Every original field is retained. A future unsupported field or mapping blocks full fixture/family scoring; no expected failure/quarantine/tolerance/host-success flag is proposed."
+}

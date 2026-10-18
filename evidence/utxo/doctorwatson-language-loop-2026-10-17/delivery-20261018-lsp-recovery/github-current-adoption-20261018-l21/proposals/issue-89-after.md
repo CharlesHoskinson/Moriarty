@@ -1,0 +1,63 @@
+Follow-up cleanup from the review of the Rust crates added since the beta toolchain. [PR #74](https://github.com/CharlesHoskinson/Moriarty/pull/74) and [PR #75](https://github.com/CharlesHoskinson/Moriarty/pull/75) are merged as reviewed source-only integration, at merge commits `7a25a75e6074ac6c9728864dd9b874bd00ef564e` and `baf61ebd0cb49f2c4441cb7fa8de53b343e056dc`. Tier 1 source changes include shared dependencies and diagnostics, source-list coverage and Rust guidance; the quality workflow is manual only. The original author's macOS checks describe the earlier candidate and do not qualify this integrated source. Later bounded local Core/CLI results are recorded separately below; full default/native/workspace checks remain UNRUN. Subsequent finite compiler/SDK observations are qualified below; general compiler/SDK, cryptographic proof and ledger acceptance remain open.
+
+Each issue lists its problem, a suggested fix, what still **needs input**, and when it's done. Issues whose *Needs input* section names a decision need maintainer agreement before an agent starts on them.
+
+## Tier 4: decision first
+- [ ] #76 Decide how the Core language relates to the beta frontend (blocks #82 and #83)
+
+## Tier 3: structural (agree the approach first)
+- [ ] #77 Derive build and ABI identities from artifacts, not source text
+- [ ] #78 One Program-to-ZKIR lowering path for mori-backend and mori-ledger
+- [ ] #79 Move Sherlock into its own crate and build it only through Cargo
+- [ ] #80 Move business logic out of the mori CLI (blocks most of #85)
+- [ ] #81 Put the Midnight ledger dependencies behind a feature
+- [ ] #82 Route Core, backend, ledger and CLI errors through MoriDiagnostic
+- [ ] #83 Remove duplicated logic inside mori-core
+
+## Tier 2: test cleanup (mostly no decisions needed)
+- [ ] #84 Move test fixtures into crates/fixtures
+- [ ] #85 Replace mori binary tests with library tests
+- [ ] #86 Load Sherlock oracles from JSON instead of generated Rust
+- [ ] #87 Snapshot and fuzz the Core and Sherlock frontends
+- [ ] #88 Remove env-var-driven test behavior and the task4 driver from proving paths
+
+## Suggested order
+1. Tier 2 issues that need no input: #84, #86 (proptests in #87), #88.
+2. Decide #76, then #77 and #80.
+3. The rest of tier 3, then #85 and the error snapshots in #87.
+
+Every change follows `RUST_GUIDELINES.md` and `plugins/moriarty-dev/skills/develop/references/rust.md`. Before handoff, `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` pass.
+
+## UTXO workstream adoption
+
+Tracked as `GH-I89` in [doctormoriarty<utxo>](https://github.com/CharlesHoskinson/Moriarty/blob/utxo/docs/utxo/doctorwatson/github/work-items.json) and its [EARS/consumer assessment](https://github.com/CharlesHoskinson/Moriarty/blob/utxo/docs/utxo/doctorwatson/github/issue-triage.md).
+
+Shared requirement lineage: UNI-018, UNI-019, UNI-020, UNI-021, UNI-023, UNI-024. Retained delivery exits: U0, U1, U2, U3, U4, U6, U7, MC01, MC03, MC04, MC05, MC07, MC08, SP02, SP03, SP04, SP05, SP06, SP08, SP09, SP11, SP12. Cardano candidate relevance: shared-language/release dependency; no automatic Cardano scope transfer. This is a traceability mapping, not a claim that the issue or any parent requirement is complete.
+
+Source preparation can proceed within the current user authorization. Concrete API/identity proposals and applicable independent reviews remain required where semantics change. Original suggested fixes and historical tool counts are proposals and observations, not automatic migration or test oracles. Keep public developer use permissionless. Run checks locally; automatic hosted CI is outside the current workflow. Existing native/proving/ledger limits remain in force.
+
+All thirteen children #76–#88 remain open. PR #74 and PR #75 have already merged; there is no remaining pre-merge repair of those PRs in this tracker. Their source-only integration and later selected tests do not close the original child predicates or establish full Rust, Cardano or Midnight acceptance.
+
+## Dated child evidence — 2026-10-18
+
+- [#191](https://github.com/CharlesHoskinson/Moriarty/pull/191) merged the independently frozen publication transport fixture as source only. Its Rust publication tests remain UNRUN; the fixture is opaque transport data, not compiled ZKIR or a proof.
+- [#193](https://github.com/CharlesHoskinson/Moriarty/pull/193) and [#194](https://github.com/CharlesHoskinson/Moriarty/pull/194) supply Core dependency isolation and a finite financial-pair test child. Their combined selected run passed five existing continuation tests and two financial tests.
+- [#197](https://github.com/CharlesHoskinson/Moriarty/pull/197) extracted the consumed Core/2 report renderer and passed two selected Core report tests. This is partial #80/#84/#85/#86-related work, not completion of those issues.
+- [#199](https://github.com/CharlesHoskinson/Moriarty/pull/199) merged default-enabled `native` and the SDK-free CLI configuration, with twelve selected local CLI integration tests. [#200](https://github.com/CharlesHoskinson/Moriarty/pull/200) added two non-native boundary tests covering 27 cases and 44 CLI invocations. These are bounded #81-related observations, not an SDK-free whole-workspace or full configuration pass.
+- [#202](https://github.com/CharlesHoskinson/Moriarty/pull/202) passed two public normal-report tests covering five CLI calls on its exact tree. [#203](https://github.com/CharlesHoskinson/Moriarty/pull/203) passed two complete finite Program parser/serialization tests. [#204](https://github.com/CharlesHoskinson/Moriarty/pull/204) adopted the additive financial observation contract as source only. These retain separate report, Program and design scopes.
+- [#205](https://github.com/CharlesHoskinson/Moriarty/pull/205) is now merged at `6695d6a387b0ce362aa9411e63b36e4a0db066b2`, with merged tree equal to tested tree `55fab2c3cbd818ffb04eeb7d5930a28758a858b3`. Its exact selected financial-report target passed two tests in 52.624672563 seconds: two complete Program comparisons and six real CLI report comparisons. The fresh accepted ordinary result review is a3, alongside the designated security-fallback result review; rejected a1 and timed-out a2 remain preserved. The earlier issue-body proposal recorded that result review was pending; that dated state is retained in the before capture rather than asserted as current. This finite actual-result adoption remains separate from #204's source-only design and does not close a child issue or parent exit.
+
+## Later scoped observations — 2026-10-18
+
+A separate earlier compiler/IR baseline at exact source `7e0d753c40a3e5f694aa226bd657c831da111f65`, tree `55fab2c3cbd818ffb04eeb7d5930a28758a858b3`, passed one selected legacy Counter/Payment test (five filtered) in 169.097748 seconds, with its scoped actual-result reviews adopted. It covers the historical Counter role/name ABI, Payment first effect frame and unsigned compiler/SDK IR-loader roundtrip for two programs and three circuits. It is not an independently complete Artifact/IR, financial, VM, proving or ledger result.
+
+A later separate scoped compiler/SDK observation is now available in [PR #210](https://github.com/CharlesHoskinson/Moriarty/pull/210): two positive Core/1 financial tests passed in 149.424869 seconds at source `4f83f0f613464343efd7a6322efacd8f87fdbc1d`, tree `2d4bddedb32182737e5536996a411317d44d8763`. They compile four unsigned actions, reopen emitted SDK IR and check three positive transcripts with `ProofPreimage::check`. This is an observed finite compiler/interpreter result, not a native cryptographic proof or general compiler/SDK qualification. Independent full Artifact/IR byte goldens, register transcripts, negative-witness rejection and general grammar/field coverage remain open. No SRS loading, key generation, cryptographic proving or ledger validation is established by that result.
+
+- [#208](https://github.com/CharlesHoskinson/Moriarty/pull/208) and [#212](https://github.com/CharlesHoskinson/Moriarty/pull/212) add finite local Core/2 escrow and partial-delivery comparisons. The #208 tested/merged tree matched. For #212, the integrated tree differed from the observed test tree; exact selected source/dependency/fixture guards and fresh scoped integration review carried only the named consumer result. Neither demonstrates authenticated observation, consumption, cancellation, compensation, proof or ledger settlement.
+- [#213](https://github.com/CharlesHoskinson/Moriarty/pull/213) fixes generated starter executable selection and observes eight selected Linux/POSIX init tests after the preserved original failure. Its merged integration tree differs from the observed test tree; selected-byte guards, rather than a whole merged-tree rerun, support the scoped integration.
+- [#214](https://github.com/CharlesHoskinson/Moriarty/pull/214) adds an opt-in Rust beta-transfer-to-Source/6 path and passes its four selected local commands (12 tests plus the public binary build). The real experimental TypeScript consumer returns only `PreparedUnqualified`; raw DTO/work/authenticated-ledger premises and parent exits remain open. The observed test tree/binary identity is distinct from the merged integration tree and future rebuilt binaries.
+- [#216](https://github.com/CharlesHoskinson/Moriarty/pull/216) adds a nondefault, unsigned local two-member disjoint staged consumer. Its combined Source6/disjoint-feature CLI result was observed on the exact merged tree; the earlier library result is retained only for its byte-identical selected subset. It does not complete all five composition operators or authenticated/constraint/proof/ledger correspondence.
+- [#215](https://github.com/CharlesHoskinson/Moriarty/pull/215) observes three tests for the existing local same-event multi-condition behavior, including actual false-event continuation preservation. The joined main tree was not re-executed; exact feature-off finite source/fixture guards support only that named result. Caller-supplied observations remain unauthenticated and all fourteen staged gaps remain open.
+
+These counts describe different exact candidates and are not added into a current whole-suite result. Historical captures, failures, freezes and review dispositions remain preserved. All thirteen original requests and their completion conditions remain in force; shared language/DevEx evidence does not transfer to Cardano scripts, native proofs or ledger acceptance.
+

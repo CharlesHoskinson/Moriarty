@@ -1,0 +1,31 @@
+{
+  "status": "Bounded source-only API/ownership/import/manifest/fixture review; not compiler/formatter or test success",
+  "resolvedFindings": [
+    {
+      "source": "gen-lsp-types0.11 PublishDiagnosticsClientCapabilities",
+      "finding": "related_information is inside flattened diagnostics_capabilities, not directly on publish_diagnostics",
+      "candidate": "request reads capabilities.diagnostics_capabilities.related_information"
+    },
+    {
+      "source": "gen-lsp-types0.11 VersionedTextDocumentIdentifier",
+      "finding": "URI is inside flattened text_document_identifier, not directly beside version",
+      "candidate": "didChange reads params.text_document.text_document_identifier.uri"
+    },
+    {
+      "source": "gen-lsp-types0.11 TextDocumentContentChangeEvent",
+      "finding": "WholeDocument variant uses generated full name; list entries describe ordered whole-document replacements",
+      "candidate": "matches TextDocumentContentChangeWholeDocument and keeps final supplied Full text before one analysis/publication"
+    }
+  ],
+  "remainingConcreteSourceCompileFindings": [],
+  "qualification": "No compiler run. Empty remaining list is bounded manual-source review only and cannot certify compilation or warning cleanliness. Full independent source review/actual dependency resolution remain root steps.",
+  "inspectedPublicApis": [
+    "lsp_server Message/Request/Response/Notification and ErrorCode",
+    "gen InitializeParams/Result, ServerCapabilities/Info, nested client diagnostic capabilities, Uri",
+    "gen DidOpen/Change/Close and nested VersionedTextDocumentIdentifier; Full content change variant",
+    "gen Position/Range/Diagnostic/Code/Message/Severity/RelatedInformation/Location constructors and serde fields",
+    "current MoriDiagnostic traits/labels and public mori_core::Error; unchanged legacy/Core1/Core2 APIs"
+  ],
+  "noBlanketAllowOrPathMountAdded": true,
+  "noProductExecutionOrLockGeneration": true
+}

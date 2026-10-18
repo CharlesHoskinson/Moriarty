@@ -1,0 +1,15 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  const left = 5 USD - 10.25 USD;\n}\n"
+---
+mori::check::below_zero
+
+  × This subtraction goes below zero.
+   ╭─[test.mori:5:16]
+ 4 │   asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+ 5 │   const left = 5 USD - 10.25 USD;
+   ·                ────────┬────────
+   ·                        ╰── 5.00 USD - 10.25 USD is below zero
+ 6 │ }
+   ╰────
+  help: Numbers and amounts in Moriarty are never negative.

@@ -1,0 +1,127 @@
+{
+  "format": "moriarty-async-request-design/1",
+  "status": "proposal-not-an-implemented-profile",
+  "source": {
+    "file": "invoice.mori.proposed",
+    "language": "moriarty/1",
+    "semantics": "moriarty-core/1",
+    "binding": "exact program/source identity; concrete async binding encoding requires separate adoption"
+  },
+  "request": {
+    "name": "collect-invoice",
+    "endpoint": "invoice-portal",
+    "occurrence": {
+      "workflow": "invoice-37",
+      "request_ordinal": "1"
+    },
+    "payload": {
+      "invoice_number": "37",
+      "asset": {
+        "network": "local",
+        "issuer": "independent-invoice-example",
+        "reference": "PAY",
+        "scale": 0
+      },
+      "amount": "90",
+      "beneficiary": "supplier"
+    },
+    "request_meaning": "Ask the external endpoint to establish the application settlement condition. Recording the request does not execute an external payment.",
+    "deadline": {
+      "domain": "example-logical-time",
+      "unit": "tick",
+      "at": "100",
+      "effect": "classify-unresolved-as-unknown"
+    },
+    "owner_dependencies": {
+      "observation_policy": "developer-supplied application policy; origin/correlation/finality/consumption semantics await the security owner",
+      "stage_authority": "owner-defined stage grants and time authority; no originating authority is inferred",
+      "settlement_judgment": "owner-defined exact-request settlement-ready observation",
+      "recovery_judgment": "owner-defined exact-request recovery-ready observation; no timeout or cancellation interpretation supplied here",
+      "target_phase_layout": "separately qualified Midnight ZKIRv3 phase mapping"
+    },
+    "transitions": [
+      {
+        "event": "create",
+        "from": [
+          "idle"
+        ],
+        "source_action": "open",
+        "after": "pending",
+        "additional_effect": {
+          "kind": "RequestRecorded",
+          "endpoint": "invoice-portal",
+          "request": "invoice-37/1"
+        }
+      },
+      {
+        "event": "acknowledgment",
+        "from": [
+          "pending",
+          "acknowledged",
+          "unknown"
+        ],
+        "source_action": "acknowledge",
+        "after": "derive-with-unknown-precedence",
+        "owner_judgment_required": true
+      },
+      {
+        "event": "deadline-observed",
+        "from": [
+          "pending",
+          "acknowledged",
+          "unknown"
+        ],
+        "source_action": "observe_deadline",
+        "after": "unknown",
+        "input": {
+          "at": "logical_time_from_declared_domain"
+        },
+        "owner_time_judgment_required_for_target": true
+      },
+      {
+        "event": "settlement-ready",
+        "from": [
+          "pending",
+          "acknowledged",
+          "unknown"
+        ],
+        "source_action": "settle",
+        "after": "settled",
+        "owner_judgment_required": true
+      },
+      {
+        "event": "recovery-ready",
+        "from": [
+          "pending",
+          "acknowledged",
+          "unknown"
+        ],
+        "source_action": "recover",
+        "after": "recovered",
+        "owner_judgment_required": true
+      }
+    ],
+    "status_projection": {
+      "0": "idle",
+      "1": "acknowledged if acknowledged is true; pending otherwise",
+      "3": "unknown regardless of acknowledgment",
+      "4": "settled",
+      "5": "recovered"
+    },
+    "external_duty": "Resolve collect-invoice for exact occurrence; acknowledgment and deadline observation retain it; qualified settlement/recovery observations close only this request duty.",
+    "financial_policy": {
+      "reserve": "91",
+      "supplier_payment": "90",
+      "submission_fee": "2",
+      "settlement_fee": "1",
+      "recovery_fee": "1",
+      "cumulative_fee_bound": "3",
+      "recovery_retains": [
+        "invoice liability 90",
+        "service liability 7"
+      ]
+    },
+    "cancellation": "not-defined; no cancel event, source action or implied permission",
+    "retry": "not-defined; no implicit redispatch or new occurrence on timeout"
+  }
+}

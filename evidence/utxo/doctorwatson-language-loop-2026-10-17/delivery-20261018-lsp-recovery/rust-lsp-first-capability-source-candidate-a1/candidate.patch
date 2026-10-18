@@ -1,0 +1,754 @@
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -49,6 +49,8 @@
+ k256 = { version = "=0.13.4", features = ["schnorr", "ecdsa"] }
+ libc = "=0.2.190"
+ miette = { version = "7.6.0", default-features = false }
++lsp-server = "=0.10.0"
++lsp-types = { package = "gen-lsp-types", version = "=0.11.0", default-features = false }
+ proptest = "1.11.0"
+ rand = "=0.8.8"
+ rayon = "1.12.0"
+diff --git a/crates/mori/Cargo.toml b/crates/mori/Cargo.toml
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -30,6 +30,8 @@
+ anstyle.workspace = true
+ clap.workspace = true
+ ignore.workspace = true
++lsp-server.workspace = true
++lsp-types.workspace = true
+ mori-ast.workspace = true
+ mori-checker.workspace = true
+ mori-core.workspace = true
+diff --git a/crates/mori/src/commands/lsp.rs b/crates/mori/src/commands/lsp.rs
+--- a/crates/mori/src/commands/lsp.rs
++++ b/crates/mori/src/commands/lsp.rs
+@@ -1,10 +1,273 @@
++use std::collections::HashMap;
++use std::io::{Write, stdin, stdout};
+ use std::process::ExitCode;
+ 
++use lsp_server::{ErrorCode, Message, Notification, Request, Response};
++use lsp_types::{
++    Diagnostic, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
++    DidOpenTextDocumentParams, InitializeParams, InitializeResult, PositionEncodingKind,
++    PublishDiagnosticsParams, ServerCapabilities, ServerInfo, TextDocumentContentChangeEvent,
++    TextDocumentSyncKind, TextDocumentSyncOptions, Uri,
++};
++use serde_json::json;
++
+ use crate::shell::Shell;
++
++mod diagnostics;
+ 
+ #[derive(Debug, clap::Args)]
+ pub struct Args {}
+ 
+ pub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+-    todo!("mori lsp")
+-}
++    let stdin = stdin();
++    let stdout = stdout();
++    let mut input = stdin.lock();
++    let mut output = stdout.lock();
++    let mut server = Server::default();
++    while let Some(message) = Message::read(&mut input).map_err(super::core_io::operation)? {
++        if let Some(code) = server.dispatch(message, &mut output)? {
++            return Ok(code);
++        }
++    }
++    // A normal LSP session ends with shutdown followed by exit, not just EOF.
++    Ok(ExitCode::FAILURE)
++}
++
++#[derive(Default, PartialEq, Eq)]
++enum Phase {
++    #[default]
++    New,
++    Initializing,
++    Running,
++    Shutdown,
++}
++
++struct Document {
++    version: i32,
++    text: String,
++}
++
++#[derive(Default)]
++struct Server {
++    phase: Phase,
++    documents: HashMap<Uri, Document>,
++    versioned_diagnostics: bool,
++    related_information: bool,
++}
++
++impl Server {
++    fn dispatch(
++        &mut self,
++        message: Message,
++        output: &mut impl Write,
++    ) -> super::Result<Option<ExitCode>> {
++        match message {
++            Message::Request(request) => {
++                let response = self.request(request);
++                Message::Response(response)
++                    .write(output)
++                    .map_err(super::core_io::operation)?;
++            }
++            Message::Notification(notification) => return self.notification(notification, output),
++            // This server sends no requests, so there are no pending responses.
++            Message::Response(_) => {}
++        }
++        Ok(None)
++    }
++
++    fn request(&mut self, request: Request) -> Response {
++        if request.method == "initialize" {
++            if self.phase != Phase::New {
++                return Response::new_err(
++                    request.id,
++                    ErrorCode::InvalidRequest as i32,
++                    "Server already initialized.".into(),
++                );
++            }
++            let Ok(params) = serde_json::from_value::<InitializeParams>(request.params) else {
++                return Response::new_err(
++                    request.id,
++                    ErrorCode::InvalidParams as i32,
++                    "Invalid initialize parameters.".into(),
++                );
++            };
++            let diagnostics = params
++                .capabilities
++                .text_document
++                .as_ref()
++                .and_then(|document| document.publish_diagnostics.as_ref());
++            self.versioned_diagnostics = diagnostics
++                .and_then(|capabilities| capabilities.version_support)
++                .unwrap_or(false);
++            self.related_information = diagnostics
++                .and_then(|capabilities| capabilities.diagnostics_capabilities.related_information)
++                .unwrap_or(false);
++            self.phase = Phase::Initializing;
++            return Response::new_ok(request.id, initialize_result());
++        }
++        let error = match self.phase {
++            Phase::New | Phase::Initializing => Some((
++                ErrorCode::ServerNotInitialized,
++                "Server not initialized.",
++            )),
++            Phase::Shutdown => Some((ErrorCode::InvalidRequest, "Server has shut down.")),
++            Phase::Running => None,
++        };
++        if let Some((code, message)) = error {
++            return Response::new_err(request.id, code as i32, message.into());
++        }
++        if request.method == "shutdown" {
++            if !request.params.is_null() {
++                return Response::new_err(
++                    request.id,
++                    ErrorCode::InvalidParams as i32,
++                    "Shutdown has no parameters.".into(),
++                );
++            }
++            self.phase = Phase::Shutdown;
++            self.documents.clear();
++            return Response::new_ok(request.id, ());
++        }
++        Response::new_err(
++            request.id,
++            ErrorCode::MethodNotFound as i32,
++            "Method not supported by this diagnostics server.".into(),
++        )
++    }
++
++    fn notification(
++        &mut self,
++        notification: Notification,
++        output: &mut impl Write,
++    ) -> super::Result<Option<ExitCode>> {
++        if notification.method == "exit" {
++            return Ok(Some(if self.phase == Phase::Shutdown {
++                ExitCode::SUCCESS
++            } else {
++                ExitCode::FAILURE
++            }));
++        }
++        if notification.method == "initialized" && self.phase == Phase::Initializing {
++            self.phase = Phase::Running;
++            return Ok(None);
++        }
++        if self.phase != Phase::Running {
++            return Ok(None);
++        }
++        match notification.method.as_str() {
++            "textDocument/didOpen" => {
++                let Ok(params) =
++                    serde_json::from_value::<DidOpenTextDocumentParams>(notification.params)
++                else {
++                    return Ok(None);
++                };
++                let document = params.text_document;
++                if self.documents.contains_key(&document.uri) {
++                    return Ok(None);
++                }
++                let found = diagnostics::check(
++                    &document.uri,
++                    &document.text,
++                    self.related_information,
++                );
++                let version = self.versioned_diagnostics.then_some(document.version);
++                let uri = document.uri;
++                self.documents.insert(
++                    uri.clone(),
++                    Document {
++                        version: document.version,
++                        text: document.text,
++                    },
++                );
++                publish(output, uri, version, found)?;
++            }
++            "textDocument/didChange" => {
++                let Ok(params) =
++                    serde_json::from_value::<DidChangeTextDocumentParams>(notification.params)
++                else {
++                    return Ok(None);
++                };
++                let mut text = None;
++                for change in params.content_changes {
++                    let TextDocumentContentChangeEvent::TextDocumentContentChangeWholeDocument(
++                        change,
++                    ) = change
++                    else {
++                        return Ok(None);
++                    };
++                    // Full changes replace the whole document in their supplied order.
++                    text = Some(change.text);
++                }
++                let Some(text) = text else {
++                    return Ok(None);
++                };
++                let uri = params.text_document.text_document_identifier.uri;
++                let Some(document) = self.documents.get_mut(&uri) else {
++                    return Ok(None);
++                };
++                if params.text_document.version <= document.version {
++                    return Ok(None);
++                }
++                document.version = params.text_document.version;
++                document.text = text;
++                let found = diagnostics::check(&uri, &document.text, self.related_information);
++                let version = self.versioned_diagnostics.then_some(document.version);
++                publish(output, uri, version, found)?;
++            }
++            "textDocument/didClose" => {
++                let Ok(params) =
++                    serde_json::from_value::<DidCloseTextDocumentParams>(notification.params)
++                else {
++                    return Ok(None);
++                };
++                let uri = params.text_document.uri;
++                if self.documents.remove(&uri).is_some() {
++                    publish(output, uri, None, Vec::new())?;
++                }
++            }
++            _ => {}
++        }
++        Ok(None)
++    }
++}
++
++fn initialize_result() -> InitializeResult {
++    InitializeResult {
++        capabilities: ServerCapabilities {
++            position_encoding: Some(PositionEncodingKind::UTF16),
++            text_document_sync: Some(
++                TextDocumentSyncOptions {
++                    open_close: Some(true),
++                    change: Some(TextDocumentSyncKind::Full),
++                    ..Default::default()
++                }
++                .into(),
++            ),
++            experimental: Some(json!({
++                "moriarty": {
++                    "analysis": "local-check-only",
++                    "sourceProfiles": ["moriarty-beta/1", "moriarty/1", "moriarty/2"]
++                }
++            })),
++            ..Default::default()
++        },
++        server_info: Some(ServerInfo {
++            name: "moriarty-rust".into(),
++            version: Some(env!("CARGO_PKG_VERSION").into()),
++        }),
++    }
++}
++
++fn publish(
++    output: &mut impl Write,
++    uri: Uri,
++    version: Option<i32>,
++    diagnostics: Vec<Diagnostic>,
++) -> super::Result<()> {
++    Message::Notification(Notification::new(
++        "textDocument/publishDiagnostics".into(),
++        PublishDiagnosticsParams::new(uri, version, diagnostics),
++    ))
++    .write(output)
++    .map_err(super::core_io::operation)
++}
+diff --git a/crates/mori/src/commands/lsp/diagnostics.rs b/crates/mori/src/commands/lsp/diagnostics.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/lsp/diagnostics.rs
+@@ -0,0 +1,136 @@
++use lsp_types::{
++    Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Location, Position, Range, Uri,
++};
++use mori_diagnostics::{Diagnostic as _, MoriDiagnostic, Severity};
++
++/// Match the public check command's source-profile dispatch without running an action.
++pub(super) fn check(uri: &Uri, source: &str, related: bool) -> Vec<Diagnostic> {
++    if mori_lexer::first_token_text(source).is_ok_and(|token| token == "language") {
++        let staged = mori_core::language(source).is_ok_and(|language| language == "moriarty/2");
++        let error = if staged {
++            mori_core::stage::load(source).err()
++        } else {
++            mori_core::parse(source).err()
++        };
++        let profile = if staged { "moriarty/2" } else { "moriarty/1" };
++        return error
++            .map(|error| core(source, profile, error))
++            .into_iter()
++            .collect();
++    }
++    let diagnostics = match mori_parser::parse(source) {
++        Err(error) => vec![error],
++        Ok(ast) => mori_checker::check(&ast).diagnostics,
++    };
++    diagnostics
++        .iter()
++        .map(|diagnostic| legacy(uri, source, diagnostic, related))
++        .collect()
++}
++
++fn core(source: &str, profile: &str, error: mori_core::Error) -> Diagnostic {
++    let at = position(source, error.offset.unwrap_or(0) as usize);
++    Diagnostic::new(
++        Range::new(at, at),
++        Some(DiagnosticSeverity::Error),
++        Some(error.code.into()),
++        None,
++        Some(format!("moriarty-rust ({profile})")),
++        error.message.into(),
++        None,
++        None,
++        None,
++    )
++}
++
++fn legacy(uri: &Uri, source: &str, diagnostic: &MoriDiagnostic, related: bool) -> Diagnostic {
++    let labels: Vec<_> = diagnostic.labels().into_iter().flatten().collect();
++    let primary = labels.iter().position(|label| label.primary()).unwrap_or(0);
++    let range = labels.get(primary).map_or_else(
++        || Range::new(Position::new(0, 0), Position::new(0, 0)),
++        |label| label_range(source, label.offset(), label.len()),
++    );
++    let information: Vec<_> = if related {
++        labels
++            .iter()
++            .enumerate()
++            .filter(|(index, _)| *index != primary)
++            .filter_map(|(_, label)| {
++                label.label().map(|text| {
++                    DiagnosticRelatedInformation::new(
++                        Location::new(
++                            uri.clone(),
++                            label_range(source, label.offset(), label.len()),
++                        ),
++                        text.to_owned(),
++                    )
++                })
++            })
++            .collect()
++    } else {
++        Vec::new()
++    };
++    let mut message = diagnostic.to_string();
++    if let Some(help) = diagnostic.help() {
++        message.push_str("\n\n");
++        message.push_str(&help.to_string());
++    }
++    let severity = match diagnostic.severity() {
++        Some(Severity::Warning) => DiagnosticSeverity::Warning,
++        Some(Severity::Advice) => DiagnosticSeverity::Information,
++        _ => DiagnosticSeverity::Error,
++    };
++    Diagnostic::new(
++        range,
++        Some(severity),
++        diagnostic.code().map(|code| code.to_string().into()),
++        None,
++        Some("moriarty-rust (moriarty-beta/1)".into()),
++        message.into(),
++        None,
++        (!information.is_empty()).then_some(information),
++        None,
++    )
++}
++
++fn label_range(source: &str, offset: usize, length: usize) -> Range {
++    Range::new(
++        position(source, offset),
++        position(source, offset.saturating_add(length)),
++    )
++}
++
++/// LSP positions count UTF-16 units and treat CRLF as one line break.
++fn position(source: &str, byte: usize) -> Position {
++    let mut byte = byte.min(source.len());
++    while !source.is_char_boundary(byte) {
++        byte -= 1;
++    }
++    let mut line = 0;
++    let mut character = 0;
++    let mut chars = source.char_indices().peekable();
++    while let Some((offset, ch)) = chars.next() {
++        if offset >= byte {
++            break;
++        }
++        match ch {
++            '\r' => {
++                if let Some(&(next, '\n')) = chars.peek() {
++                    // A byte position between CR and LF denotes the preceding line end.
++                    if byte <= next {
++                        break;
++                    }
++                    chars.next();
++                }
++                line += 1;
++                character = 0;
++            }
++            '\n' => {
++                line += 1;
++                character = 0;
++            }
++            _ => character += ch.len_utf16() as u32,
++        }
++    }
++    Position::new(line, character)
++}
+diff --git a/crates/mori/tests/fixtures/lsp/expected-session.json b/crates/mori/tests/fixtures/lsp/expected-session.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/lsp/expected-session.json
+@@ -0,0 +1,117 @@
++{
++  "status": "Hand-derived proposed normal protocol oracle, UNRUN, NOT independently custodial or adopted",
++  "orderedMessages": [
++    {
++      "jsonrpc": "2.0",
++      "id": 1,
++      "result": {
++        "capabilities": {
++          "positionEncoding": "utf-16",
++          "textDocumentSync": {
++            "openClose": true,
++            "change": 1
++          },
++          "experimental": {
++            "moriarty": {
++              "analysis": "local-check-only",
++              "sourceProfiles": [
++                "moriarty-beta/1",
++                "moriarty/1",
++                "moriarty/2"
++              ]
++            }
++          }
++        },
++        "serverInfo": {
++          "name": "moriarty-rust",
++          "version": "0.1.0"
++        }
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:invoice.mori",
++        "diagnostics": [
++          {
++            "range": {
++              "start": {
++                "line": 2,
++                "character": 25
++              },
++              "end": {
++                "line": 2,
++                "character": 33
++              }
++            },
++            "severity": 1,
++            "code": "mori::check::unknown_name",
++            "source": "moriarty-rust (moriarty-beta/1)",
++            "message": "I cannot find a declaration named `shipping`.\n\nDeclare `shipping` above this line. A declaration can only use the names declared above it."
++          }
++        ],
++        "version": 1
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:invoice.mori",
++        "diagnostics": [],
++        "version": 2
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:invoice.mori",
++        "diagnostics": []
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:core1.mori",
++        "diagnostics": [],
++        "version": 1
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:core1.mori",
++        "diagnostics": []
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:core2.mori",
++        "diagnostics": [],
++        "version": 1
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "method": "textDocument/publishDiagnostics",
++      "params": {
++        "uri": "untitled:core2.mori",
++        "diagnostics": []
++      }
++    },
++    {
++      "jsonrpc": "2.0",
++      "id": 2,
++      "result": null
++    }
++  ],
++  "processExit": 0,
++  "stderrUtf8": "",
++  "stdoutRule": "Exactly nine Content-Length framed UTF-8 JSON objects in this order; complete semantic JSON equality, no extra messages/status bytes; byte serialization/member order not independently frozen."
++}
+diff --git a/crates/mori/tests/fixtures/lsp/input-session.json b/crates/mori/tests/fixtures/lsp/input-session.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/lsp/input-session.json
+@@ -0,0 +1,117 @@
++[
++  {
++    "jsonrpc": "2.0",
++    "id": 1,
++    "method": "initialize",
++    "params": {
++      "processId": null,
++      "rootUri": null,
++      "capabilities": {
++        "general": {
++          "positionEncodings": [
++            "utf-16"
++          ]
++        },
++        "textDocument": {
++          "publishDiagnostics": {
++            "versionSupport": true
++          }
++        }
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "initialized",
++    "params": {}
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didOpen",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:invoice.mori",
++        "languageId": "moriarty",
++        "version": 1,
++        "text": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  /* 🧪 */ const total = shipping + 1;\n}\n"
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didChange",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:invoice.mori",
++        "version": 2
++      },
++      "contentChanges": [
++        {
++          "text": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  /* 🧪 */ const total = 4 + 1;\n}\n"
++        }
++      ]
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didClose",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:invoice.mori"
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didOpen",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:core1.mori",
++        "languageId": "moriarty",
++        "version": 1,
++        "text": "language \"moriarty/1\"; agreement Minimal { action tick() {} }\n"
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didClose",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:core1.mori"
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didOpen",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:core2.mori",
++        "languageId": "moriarty",
++        "version": 1,
++        "text": "language \"moriarty/2\"; agreement Minimal { action tick() {} }\n"
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "textDocument/didClose",
++    "params": {
++      "textDocument": {
++        "uri": "untitled:core2.mori"
++      }
++    }
++  },
++  {
++    "jsonrpc": "2.0",
++    "id": 2,
++    "method": "shutdown",
++    "params": null
++  },
++  {
++    "jsonrpc": "2.0",
++    "method": "exit",
++    "params": null
++  }
++]
+diff --git a/crates/mori/tests/lsp.rs b/crates/mori/tests/lsp.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/lsp.rs
+@@ -0,0 +1,61 @@
++//! The public Rust stdio diagnostic session with frozen normal expectations.
++use std::io::Write;
++use std::process::{Command, Stdio};
++
++use serde_json::Value;
++
++#[test]
++fn full_sync_diagnostics_follow_public_checker_and_clear_after_edit() {
++    let input: Vec<Value> =
++        serde_json::from_str(include_str!("fixtures/lsp/input-session.json")).unwrap();
++    let expected: Value =
++        serde_json::from_str(include_str!("fixtures/lsp/expected-session.json")).unwrap();
++    let mut child = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .args(["--color", "never", "lsp"])
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped())
++        .spawn()
++        .unwrap();
++    {
++        let mut stdin = child.stdin.take().unwrap();
++        for message in input {
++            let body = serde_json::to_vec(&message).unwrap();
++            write!(stdin, "Content-Length: {}\r\n\r\n", body.len()).unwrap();
++            stdin.write_all(&body).unwrap();
++        }
++    }
++    let output = child.wait_with_output().unwrap();
++    assert_eq!(output.status.code(), Some(0), "{:?}", output);
++    assert_eq!(
++        output.stderr.as_slice(),
++        expected["stderrUtf8"].as_str().unwrap().as_bytes()
++    );
++    assert_eq!(
++        Value::Array(read_frames(&output.stdout)),
++        expected["orderedMessages"]
++    );
++}
++
++/// Read the wire independently of the server's lsp-server framing helpers.
++fn read_frames(mut wire: &[u8]) -> Vec<Value> {
++    let mut messages = Vec::new();
++    while !wire.is_empty() {
++        let header_end = wire
++            .windows(4)
++            .position(|bytes| bytes == b"\r\n\r\n")
++            .expect("stdout contains only complete framed messages");
++        let header = std::str::from_utf8(&wire[..header_end]).unwrap();
++        let length: usize = header
++            .strip_prefix("Content-Length: ")
++            .expect("the server emits one Content-Length header")
++            .parse()
++            .unwrap();
++        let body_start = header_end + 4;
++        let body_end = body_start + length;
++        let body = wire.get(body_start..body_end).expect("complete message body");
++        messages.push(serde_json::from_slice(body).unwrap());
++        wire = &wire[body_end..];
++    }
++    messages
++}
