@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
+    capabilities, check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
     keygen_signed_call, lsp, mcp, prepare_call, prepare_signed_call, prove, prove_call,
     prove_signed_call, replay, simulate, test, verify, verify_call, verify_intent,
     verify_signed_call,
@@ -115,6 +115,8 @@ impl From<Color> for anstream::ColorChoice {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Describe compiled features and public source consumers without running them
+    Capabilities(capabilities::Args),
     /// Create a new project from a starter template
     Init(init::Args),
     /// Check syntax, names, types and action support
