@@ -13,3 +13,5 @@ pub enum SignedProfile {
 pub mod replay;
 #[path = "cli_args/simulate.rs"]
 pub mod simulate;
+#[path = "cli_args/compile.rs"]
+pub mod compile;

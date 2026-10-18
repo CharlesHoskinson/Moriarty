@@ -129,8 +129,8 @@ These are current selections within the active full-EARS goal, not a new loop.
 The simulation/report batch is installed after R315 actual-result review: shared
 production argument selection, public report API and six independent test/fixture
 files, with the prior currentness negative retained. The existing reader is
-CURRENT11/35; 24 originals and all25 refinements remain open. Full CLI/file
-execution and B04 acceptance remain unobserved.
+CURRENT11/35; 24 originals and all25 refinements remain open. Full global CLI/default/refusal coverage and whole B04 acceptance remain
+unobserved; the later selected compile file-publication scope is recorded below.
 
 Automated OP0–OP6 passed. An initial stale ancestor timestamp was measured and
 rebound without a guard/cap change; the changed-input supervisor then failed at
@@ -142,3 +142,8 @@ source/consumer work in parallel and retain full formal/proof/stagenet exits.
 
 See [the simulation evidence](../results/sherlock-simulate-report-20261018/README.md)
 and [actual startup receipts](../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/README.md).
+
+
+## Observed selected compile handler publication — October18UTC
+
+The [selected compile handler archive](../results/sherlock-selected-compile-handler-20261018/README.md) records actual source reading and six complete JSON publications through the genuine selected handler. The original consumer compiled, then exited101 after publishing quote; that raw negative and artifact remain. Reviewed consumer revision02 compiled, verified the original saved quote without a handler replay, and passed five new cases: eligibility compile, quote/eligibility observe and both Draft ChainTotal/BranchTotal compile cases. Core observe reports82/true; full Draft source/preparation/tables remain in the artifacts. Ten production source files are installed byte-exact. Actual-result/currentness review is pending augmentation at this cut. Whole B04, global CLI/default/refusal coverage, full requirements and native/proof/target exits remain open; no closure count changes here.

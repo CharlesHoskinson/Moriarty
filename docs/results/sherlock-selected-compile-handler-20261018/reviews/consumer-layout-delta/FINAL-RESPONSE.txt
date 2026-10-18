@@ -1,0 +1,38 @@
+{
+  "review_id": "R354-B04-CONSUMER-REV02-AND-PRESERVED-FIRST-FAILURE-REVIEW",
+  "identity_and_coverage": {
+    "conversation_id": "d2f4cab5-a214-4450-af91-35feb60db39f",
+    "original_cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/142-r2b-final-nonsecurity/review-session",
+    "role": "nonsecurity_source_reviewer",
+    "primary_model": "claude-opus-5-5",
+    "requested_model": "gemini-4-argon-high",
+    "returned_identity": "gemini-4-argon-high",
+    "effort": "high",
+    "fallback_status": "standing_opus_quota_outage_fallback",
+    "context_and_read_coverage": "100% of all 9 new inline blocks in this turn read without clipping (new consumer 944cf829b53767d684a8c75009ee06a2986503ab03b7fae5f8cded1e0909c139 11056B, diff 9eac78169150e2170eee2d6b81ed414e0c8d35cb00d4f32b9706ed3cfc7ccff8 6862B, public typed-declaration derivation 40f309789e00a1041ffd22dbd574b53f567e3dc7d771b2c14fc50d169d60f451 6111B, compile result c0eb61536c0ed7ae66dba63b147ad5148b296216528d6273ff95d6e54be2e315 1341B, FAIL_STOP summary 91699bbbc4b99ab6c9d0a6991123bcad850f30b7034090d6d7594e645443d93c 1275B, first-quote command 095e0c6b764e6bb7dab6905c7b80bc04a61606603502e08ffe479be1e14884ba 1220B, first-quote stderr 336059909f42087a1c0d2822514d0d4d96a14de5c69b90b91796415686ca94a2 2008B, published artifact ae898872a4395e05e5b24a7309f63efdb3d5f1bf81c0cf1f0be7b51438bd32a5 12753B, scope summary a9218064c5929272f4cc3341d291cb17174b6c527593b26133cb169cfa9a3d53 2940B), and all 35 prior inline blocks from the preceding turn in this CID (10 R354 files, SOURCE.patch 4215413f..., EXPECTED-OUTPUT.json 72fdc135..., EXPECTATION-FREEZE.json a0bf9a53..., DRAFT-INDEPENDENT-PREPARATION.json 24cc457d..., and 6 case fixtures) remain live in context. Zero tool calls.",
+    "missing_or_clipped_material": "None."
+  },
+  "q1_changed_consumer_source": {
+    "verdict": "APPROVED_CONSUMER_REV02_SOURCE_FIX",
+    "new_consumer_sha256": "944cf829b53767d684a8c75009ee06a2986503ab03b7fae5f8cded1e0909c139",
+    "old_consumer_sha256": "177dfe39cb3be0f965e3fd81be43fb994da9db620aeae8a06536f4e90ba164c8",
+    "diff_sha256": "9eac78169150e2170eee2d6b81ed414e0c8d35cb00d4f32b9706ed3cfc7ccff8",
+    "findings": [
+      "Admitted Layout Predicate: admission_layout(config) clones immutable exactConfig.layout and inserts 'bounds': exactConfig.bounds. Both core() and draft() now assert actual['admission']['bounds'] == e['exactConfig']['bounds'] and actual['admission']['layout'] == admission_layout(&e['exactConfig']). This matches public LayoutObservation<'a> (b6d05244... L51-61), LayoutSchemaC (479eb398... L345-351), and wire::layout (727f8a3a... L955-962) vs wire config::Layout (d87f772d... L132-155). Full object equality is preserved with zero deleted, filtered, or output-fitted fields, and EXPECTED-OUTPUT.json (72fdc135...) and EXPECTATION-FREEZE.json (a0bf9a53...) remain byte-unchanged.",
+      "verify_published & --verify-published Ordering: verify_published() retains out.is_dir(), exact directory membership {'sherlock-artifact.json'}, strict JSON readback, and full core()/draft() checks. When --verify-published is passed as the first arg, run() validates case/mode/expected record, invokes verify_published(), and returns ExitCode::SUCCESS BEFORE reading the .mori source file, parsing compile_args::Args, checking !out.exists(), or calling selected_compile::run. Normal mode without --verify-published still exercises genuine Clap Args, source_io::read_source, selected_compile::run, publish_io::publish_new,status_output::status, and verify_published() once.",
+      "Defects: None."
+    ]
+  },
+  "q2_captured_first_failure": {
+    "verdict": "CONFIRMED_HANDLER_PUBLISHED_BEFORE_OLD_ORACLE_LAYOUT_PANIC101_FAIL_STOP",
+    "findings": [
+      "Compile & First-Case Execution: Old consumer (177dfe39...) compiled with exit 0 (c0eb6153..., binary 0ed592ab...). In 1-quote-compile (095e0c6b..., 91699bbb...), the production handler executed and published sherlock-artifact.json (ae898872..., 12753B) and emitted '    Prepared Sherlock HostOnly artifact into .../1-quote-compile/published' on stderr (33605990...) before the old consumer's post-publication assertion at L35:74 panicked (actual_exit=101, FAIL_STOP) because left (actual.admission.layout) included bounds while right (exactConfig.layout) did not.",
+      "Diagnostic Artifact Check: Published ae898872... is diagnostic evidence only (not a new golden record); its admission.layout equals exactConfig.layout plus bounds: exactConfig.bounds per wire::layout, and no redo of the already-executed quote-compile handler prefix is needed."
+    ]
+  },
+  "q3_retained_scope_and_next": {
+    "source_verdict": "APPROVED_CONSUMER_REV02_SOURCE_ONLY_UNRUN (944cf829b53767d684a8c75009ee06a2986503ab03b7fae5f8cded1e0909c139)",
+    "observed_vs_unobserved_scope": "Observed so far: old consumer compile PASS (c0eb6153...), quote-compile handler publication (ae898872...) + old consumer panic 101 FAIL_STOP (91699bbb...). Unobserved/UNRUN: compiling rev02 consumer (944cf829...), running --verify-published on preserved quote-compile output (ae898872...), and running the remaining 5 positive cases (eligibility compile, quote observe, eligibility observe, chain_total compile, branch_total compile) once.",
+    "scope_limits": "Non-security source and captured-failure review only. Grants no execution authority and does not close full global CLI, default-Core, negative/bounds matrix, B04, exact B clock, H1, or formal/native/target gates."
+  }
+}

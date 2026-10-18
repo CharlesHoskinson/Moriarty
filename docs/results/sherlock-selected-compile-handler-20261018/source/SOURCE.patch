@@ -1,0 +1,525 @@
+--- a/crates/mori/src/commands/compile.rs
++++ b/crates/mori/src/commands/compile.rs
+@@ -1,43 +1,20 @@
+ use super::core_io;
+ use crate::{error::CliError, shell::Shell};
+ use std::{
+-    path::{Path, PathBuf},
++    path::Path,
+     process::ExitCode,
+ };
+ 
+-#[derive(Debug, clap::Args)]
+-pub struct Args {
+-    pub file: PathBuf,
+-    /// Exact target profile JSON with network, anchor and compiler limits
+-    #[arg(long)]
+-    pub target: PathBuf,
+-    /// New output directory; refuses to overwrite existing artifacts
+-    #[arg(long)]
+-    pub out: PathBuf,
+-    /// Explicit Sherlock execution profile; omission preserves ordinary Core compilation
+-    #[arg(long)]
+-    pub execution_profile: Option<String>,
+-    /// Explicit source dialect on the selected Sherlock route; no autodetection
+-    #[arg(long, requires = "execution_profile")]
+-    pub source_profile: Option<String>,
+-    /// Select the draft program's sole closed entry; no external inputs
+-    #[arg(long, requires = "execution_profile", conflicts_with = "action")]
+-    pub entry: bool,
+-    /// Exact parameter-free source action for selected Sherlock preparation
+-    #[arg(long, requires = "execution_profile")]
+-    pub action: Option<String>,
+-    /// Exact configuration for the selected source profile; no numerical defaults
+-    #[arg(long, requires = "execution_profile")]
+-    pub execution_config: Option<PathBuf>,
+-    /// Explicit host observation after actual preparation/admission
+-    #[arg(long, requires = "execution_profile")]
+-    pub observe: bool,
+-}
++#[cfg(test)]
++use std::path::PathBuf;
++
++pub use crate::cli_args::compile::Args;
++
+ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+     let source = core_io::read_source(&args.file)?;
+     // Selected HostOnly preparation returns before either native/backend path.
+     if args.execution_profile.is_some() || args.source_profile.is_some() || args.entry {
+-        return compile_sherlock(&args, &source, shell);
++        return super::compile_sherlock::run(&args, &source, |verb, message| shell.status(verb, message));
+     }
+     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
+         let target: mori_backend::Target = core_io::read_json(&args.target)?;
+@@ -84,98 +61,6 @@
+         ),
+     );
+     Ok(ExitCode::SUCCESS)
+-}
+-
+-/// Selected SDK-free host artifact path. Observation is explicit and retains
+-/// its separate H1/command-closure dependency; flags confer no internal authority.
+-fn compile_sherlock(args: &Args, source: &str, shell: &mut Shell) -> super::Result<ExitCode> {
+-    use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
+-    use host::draft_contract::{select_source, SourceSelection};
+-    let execute = || -> Result<(SelectedSherlockArtifact, String), CompileFailure> {
+-        let profile = args.execution_profile.as_deref().ok_or_else(||
+-            CompileFailure::input("select", "missing --execution-profile"))?;
+-        if profile != host::EXECUTION_PROFILE {
+-            return Err(CompileFailure::input("select", format!("unsupported execution profile: {profile}")));
+-        }
+-        let selection = select_source(args.source_profile.as_deref(), args.action.as_deref(), args.entry)
+-            .map_err(|error| match error {
+-                host::draft_contract::SelectionError::MissingAction =>
+-                    CompileFailure::input("select", "selected Sherlock compilation requires --action"),
+-                other => CompileFailure {
+-                    stage: "select", actual_error: serde_json::json!({
+-                        "selection_error": format!("{other:?}"),
+-                        "source_profile": args.source_profile.as_deref(),
+-                        "entry": args.entry, "action": args.action.as_deref(),
+-                    }), evaluation_performed: false, events_forwarded: "0".into(), completed: false,
+-                },
+-            })?;
+-        if matches!(&selection, SourceSelection::DraftEntry) && args.observe {
+-            return Err(CompileFailure::input("select",
+-                "draft preparation is compile-only; --observe is unsupported"));
+-        }
+-        let config_path = args.execution_config.as_deref().ok_or_else(||
+-            CompileFailure::input("config", "selected Sherlock compilation requires --execution-config"))?;
+-        let config = core_io::read_source(config_path)
+-            .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+-        // Target bytes are an explicit descriptor and digest, not native support.
+-        let target = core_io::read_source(&args.target)
+-            .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+-        let artifact = match selection {
+-            SourceSelection::CoreAction(action) => SelectedSherlockArtifact::Core(
+-                host::compile_host(source, action, &config, &target, args.observe)?),
+-            SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
+-                host::compile_draft_host(source, &config, &target)?),
+-        };
+-        let manifest = artifact.manifest()?;
+-        Ok((artifact, manifest))
+-    };
+-    let (artifact, manifest) = match execute() {
+-        Ok(result) => result,
+-        Err(failure) => {
+-            return Err(report_sherlock_failure(&failure));
+-        }
+-    };
+-    // Complete preparation/optional observation and serialization before reserving
+-    // NEWDIR. Existing publish_new never replaces a concurrently created leaf.
+-    std::fs::create_dir(&args.out).map_err(|source| {
+-        let actual = CliError::Write { path:args.out.clone(), source };
+-        report_sherlock_failure(&artifact.failure("publish", actual.to_string()))
+-    })?;
+-    super::proof_io::publish_new(&args.out.join("sherlock-artifact.json"), manifest.as_bytes())
+-        .map_err(|error| report_sherlock_failure(&artifact.failure("publish", error.to_string())))?;
+-    shell.status("Prepared", format!("Sherlock HostOnly artifact into {}", args.out.display()));
+-    Ok(ExitCode::SUCCESS)
+-}
+-
+-// Serialize the selected artifact directly: no new envelope around artifact/1.
+-enum SelectedSherlockArtifact {
+-    Core(mori_core::sherlock_compile_artifact::CompileArtifact),
+-    Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
+-}
+-impl SelectedSherlockArtifact {
+-    fn failure(&self, stage: &'static str, message: impl Into<String>)
+-        -> mori_core::sherlock_compile_artifact::CompileFailure
+-    {
+-        match self { Self::Core(value) => value.failure(stage, message),
+-            Self::Draft(value) => value.failure(stage, message) }
+-    }
+-    fn manifest(&self) -> Result<String, mori_core::sherlock_compile_artifact::CompileFailure> {
+-        match self {
+-            Self::Core(value) => serde_json::to_string_pretty(value)
+-                .map_err(|error| value.failure("observation", error.to_string())),
+-            Self::Draft(value) => serde_json::to_string_pretty(value)
+-                .map_err(|error| value.failure("serialization", error.to_string())),
+-        }
+-    }
+-}
+-
+-fn report_sherlock_failure(
+-    failure: &mori_core::sherlock_compile_artifact::CompileFailure,
+-) -> mori_diagnostics::Report {
+-    match mori_core::json::export(failure) {
+-        Ok(diagnostic) => core_io::operation(diagnostic),
+-        Err(error) => core_io::operation(error),
+-    }
+ }
+ 
+ // The caller has reserved a new directory after all input/compiler preflight.
+--- a/crates/mori/src/cli_args/compile.rs
++++ b/crates/mori/src/cli_args/compile.rs
+@@ -0,0 +1,31 @@
++//! Production compile arguments shared by the public CLI and direct consumers.
++use std::path::PathBuf;
++
++#[derive(Debug, clap::Args)]
++pub struct Args {
++    pub file: PathBuf,
++    /// Exact target profile JSON with network, anchor and compiler limits
++    #[arg(long)]
++    pub target: PathBuf,
++    /// New output directory; refuses to overwrite existing artifacts
++    #[arg(long)]
++    pub out: PathBuf,
++    /// Explicit Sherlock execution profile; omission preserves ordinary Core compilation
++    #[arg(long)]
++    pub execution_profile: Option<String>,
++    /// Explicit source dialect on the selected Sherlock route; no autodetection
++    #[arg(long, requires = "execution_profile")]
++    pub source_profile: Option<String>,
++    /// Select the draft program's sole closed entry; no external inputs
++    #[arg(long, requires = "execution_profile", conflicts_with = "action")]
++    pub entry: bool,
++    /// Exact parameter-free source action for selected Sherlock preparation
++    #[arg(long, requires = "execution_profile")]
++    pub action: Option<String>,
++    /// Exact configuration for the selected source profile; no numerical defaults
++    #[arg(long, requires = "execution_profile")]
++    pub execution_config: Option<PathBuf>,
++    /// Explicit host observation after actual preparation/admission
++    #[arg(long, requires = "execution_profile")]
++    pub observe: bool,
++}
+--- a/crates/mori/src/cli_args.rs
++++ b/crates/mori/src/cli_args.rs
+@@ -13,3 +13,5 @@
+ pub mod replay;
+ #[path = "cli_args/simulate.rs"]
+ pub mod simulate;
++#[path = "cli_args/compile.rs"]
++pub mod compile;
+--- a/crates/mori/src/commands/compile_sherlock.rs
++++ b/crates/mori/src/commands/compile_sherlock.rs
+@@ -0,0 +1,98 @@
++//! The complete selected Sherlock compile handler, shared with direct consumers.
++//! Source is read by the caller before selection, as in the existing public path.
++use crate::cli_args::compile::Args;
++use super::{source_io as core_io, publish_io};
++use std::process::ExitCode;
++
++/// Selected SDK-free host artifact path. Observation is explicit and retains
++/// its separate H1/command-closure dependency; flags confer no internal authority.
++pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String)) -> Result<ExitCode, mori_diagnostics::Report> {
++    use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
++    use host::draft_contract::{select_source, SourceSelection};
++    let execute = || -> Result<(SelectedSherlockArtifact, String), CompileFailure> {
++        let profile = args.execution_profile.as_deref().ok_or_else(||
++            CompileFailure::input("select", "missing --execution-profile"))?;
++        if profile != host::EXECUTION_PROFILE {
++            return Err(CompileFailure::input("select", format!("unsupported execution profile: {profile}")));
++        }
++        let selection = select_source(args.source_profile.as_deref(), args.action.as_deref(), args.entry)
++            .map_err(|error| match error {
++                host::draft_contract::SelectionError::MissingAction =>
++                    CompileFailure::input("select", "selected Sherlock compilation requires --action"),
++                other => CompileFailure {
++                    stage: "select", actual_error: serde_json::json!({
++                        "selection_error": format!("{other:?}"),
++                        "source_profile": args.source_profile.as_deref(),
++                        "entry": args.entry, "action": args.action.as_deref(),
++                    }), evaluation_performed: false, events_forwarded: "0".into(), completed: false,
++                },
++            })?;
++        if matches!(&selection, SourceSelection::DraftEntry) && args.observe {
++            return Err(CompileFailure::input("select",
++                "draft preparation is compile-only; --observe is unsupported"));
++        }
++        let config_path = args.execution_config.as_deref().ok_or_else(||
++            CompileFailure::input("config", "selected Sherlock compilation requires --execution-config"))?;
++        let config = core_io::read_source(config_path)
++            .map_err(|error| CompileFailure::input("config", error.to_string()))?;
++        // Target bytes are an explicit descriptor and digest, not native support.
++        let target = core_io::read_source(&args.target)
++            .map_err(|error| CompileFailure::input("config", error.to_string()))?;
++        let artifact = match selection {
++            SourceSelection::CoreAction(action) => SelectedSherlockArtifact::Core(
++                host::compile_host(source, action, &config, &target, args.observe)?),
++            SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
++                host::compile_draft_host(source, &config, &target)?),
++        };
++        let manifest = artifact.manifest()?;
++        Ok((artifact, manifest))
++    };
++    let (artifact, manifest) = match execute() {
++        Ok(result) => result,
++        Err(failure) => {
++            return Err(report_sherlock_failure(&failure));
++        }
++    };
++    // Complete preparation/optional observation and serialization before reserving
++    // NEWDIR. Existing publish_new never replaces a concurrently created leaf.
++    std::fs::create_dir(&args.out).map_err(|source| {
++        let actual = publish_io::WriteError { path:args.out.clone(), source };
++        report_sherlock_failure(&artifact.failure("publish", actual.to_string()))
++    })?;
++    publish_io::publish_new(&args.out.join("sherlock-artifact.json"), manifest.as_bytes())
++        .map_err(|error| report_sherlock_failure(&artifact.failure("publish", error.to_string())))?;
++    status("Prepared", format!("Sherlock HostOnly artifact into {}", args.out.display()));
++    Ok(ExitCode::SUCCESS)
++}
++
++// Serialize the selected artifact directly: no new envelope around artifact/1.
++enum SelectedSherlockArtifact {
++    Core(mori_core::sherlock_compile_artifact::CompileArtifact),
++    Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
++}
++impl SelectedSherlockArtifact {
++    fn failure(&self, stage: &'static str, message: impl Into<String>)
++        -> mori_core::sherlock_compile_artifact::CompileFailure
++    {
++        match self { Self::Core(value) => value.failure(stage, message),
++            Self::Draft(value) => value.failure(stage, message) }
++    }
++    fn manifest(&self) -> Result<String, mori_core::sherlock_compile_artifact::CompileFailure> {
++        match self {
++            Self::Core(value) => serde_json::to_string_pretty(value)
++                .map_err(|error| value.failure("observation", error.to_string())),
++            Self::Draft(value) => serde_json::to_string_pretty(value)
++                .map_err(|error| value.failure("serialization", error.to_string())),
++        }
++    }
++}
++
++fn report_sherlock_failure(
++    failure: &mori_core::sherlock_compile_artifact::CompileFailure,
++) -> mori_diagnostics::Report {
++    match mori_core::json::export(failure) {
++        Ok(diagnostic) => core_io::operation(diagnostic),
++        Err(error) => core_io::operation(error),
++    }
++}
++
+--- a/crates/mori/src/commands/publish_io.rs
++++ b/crates/mori/src/commands/publish_io.rs
+@@ -0,0 +1,60 @@
++//! Existing complete-byte, no-replacement publisher shared by CLI consumers.
++//! This is the existing staging/sync/hard-link/cleanup algorithm, not a new policy.
++use std::{
++    fs::{File, OpenOptions},
++    io::Write,
++    path::{Path, PathBuf},
++    sync::atomic::{AtomicU64, Ordering},
++};
++
++// Same display and io::Error source as CliError::Write. Existing proof_io callers
++// convert this carrier back into that original diagnostic before returning.
++#[derive(Debug, thiserror::Error)]
++#[error("could not write `{}`", crate::display::text(&path.display().to_string()))]
++pub struct WriteError {
++    pub path: PathBuf,
++    #[source]
++    pub source: std::io::Error,
++}
++
++struct Staging(PathBuf);
++impl Drop for Staging {
++    fn drop(&mut self) {
++        let _ = std::fs::remove_file(&self.0);
++    }
++}
++pub(super) static NEXT: AtomicU64 = AtomicU64::new(0);
++/// Publish only complete bytes. A same-directory hard link atomically refuses
++/// any destination created since the early check, including dangling symlinks.
++pub fn publish_new(path: &Path, bytes: &[u8]) -> Result<(), WriteError> {
++    let parent = path
++        .parent()
++        .filter(|p| !p.as_os_str().is_empty())
++        .unwrap_or(Path::new("."));
++    let stage = parent.join(format!(
++        ".mori-proof-{}-{}.tmp",
++        std::process::id(),
++        NEXT.fetch_add(1, Ordering::Relaxed)
++    ));
++    let mut file: File = OpenOptions::new()
++        .write(true)
++        .create_new(true)
++        .open(&stage)
++        .map_err(|source| WriteError {
++            path: stage.clone(),
++            source,
++        })?;
++    let staging = Staging(stage);
++    file.write_all(bytes)
++        .and_then(|()| file.sync_all())
++        .map_err(|source| WriteError {
++            path: staging.0.clone(),
++            source,
++        })?;
++    drop(file);
++    std::fs::hard_link(&staging.0, path).map_err(|source| WriteError {
++        path: path.into(),
++        source,
++    })?;
++    Ok(())
++}
+--- a/crates/mori/src/commands/proof_io.rs
++++ b/crates/mori/src/commands/proof_io.rs
+@@ -1,10 +1,8 @@
+ use super::core_io;
+ use crate::{cli::ActionInput, error::CliError};
+ use std::{
+-    fs::{File, OpenOptions},
+-    io::{ErrorKind, Write},
++    io::ErrorKind,
+     path::{Path, PathBuf},
+-    sync::atomic::{AtomicU64, Ordering},
+ };
+ 
+ #[derive(Debug, clap::Args)]
+@@ -99,47 +97,15 @@
+         .into()),
+     }
+ }
+-struct Staging(PathBuf);
+-impl Drop for Staging {
+-    fn drop(&mut self) {
+-        let _ = std::fs::remove_file(&self.0);
+-    }
++pub fn publish_new(path: &Path, bytes: &[u8]) -> super::Result<()> {
++    super::publish_io::publish_new(path, bytes)
++        .map_err(|error| CliError::Write { path: error.path, source: error.source }.into())
+ }
+-static NEXT: AtomicU64 = AtomicU64::new(0);
+-/// Publish only complete bytes. A same-directory hard link atomically refuses
+-/// any destination created since the early check, including dangling symlinks.
+-pub fn publish_new(path: &Path, bytes: &[u8]) -> super::Result<()> {
+-    let parent = path
+-        .parent()
+-        .filter(|p| !p.as_os_str().is_empty())
+-        .unwrap_or(Path::new("."));
+-    let stage = parent.join(format!(
+-        ".mori-proof-{}-{}.tmp",
+-        std::process::id(),
+-        NEXT.fetch_add(1, Ordering::Relaxed)
+-    ));
+-    let mut file: File = OpenOptions::new()
+-        .write(true)
+-        .create_new(true)
+-        .open(&stage)
+-        .map_err(|source| CliError::Write {
+-            path: stage.clone(),
+-            source,
+-        })?;
+-    let staging = Staging(stage);
+-    file.write_all(bytes)
+-        .and_then(|()| file.sync_all())
+-        .map_err(|source| CliError::Write {
+-            path: staging.0.clone(),
+-            source,
+-        })?;
+-    drop(file);
+-    std::fs::hard_link(&staging.0, path).map_err(|source| CliError::Write {
+-        path: path.into(),
+-        source,
+-    })?;
+-    Ok(())
+-}
++
++#[cfg(test)]
++use super::publish_io::NEXT;
++#[cfg(test)]
++use std::sync::atomic::Ordering;
+ 
+ #[cfg(test)]
+ mod tests {
+--- a/crates/mori/src/commands/mod.rs
++++ b/crates/mori/src/commands/mod.rs
+@@ -10,6 +10,7 @@
+ mod call_io;
+ pub mod check;
+ pub mod compile;
++mod compile_sherlock;
+ pub mod compile_call;
+ mod core_io;
+ mod source_io;
+@@ -25,6 +26,7 @@
+ pub mod prepare_call;
+ pub mod prepare_signed_call;
+ mod proof_io;
++mod publish_io;
+ pub mod prove;
+ pub mod prove_call;
+ pub mod prove_signed_call;
+--- a/crates/mori/src/status_output.rs
++++ b/crates/mori/src/status_output.rs
+@@ -0,0 +1,26 @@
++//! Genuine status renderer shared by Shell and SDK-free selected consumers.
++use std::{fmt::Display, io::Write};
++use anstyle::Style;
++use crate::styles;
++
++/// Width of the right-aligned verb column, matching cargo.
++const VERB_WIDTH: usize = 12;
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub enum Verbosity {
++    Quiet,
++    Normal,
++    Verbose,
++}
++
++pub fn status(err: &mut impl Write, verbosity: Verbosity, verb: &str, message: impl Display) {
++    if verbosity != Verbosity::Quiet {
++        aligned(err, verb, styles::HEADER, message);
++    }
++}
++
++pub(crate) fn aligned(err: &mut impl Write, verb: &str, style: Style, message: impl Display) {
++    let message = crate::display::text(&message.to_string());
++    let _ = writeln!(err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
++}
++
+--- a/crates/mori/src/shell.rs
++++ b/crates/mori/src/shell.rs
+@@ -10,15 +10,7 @@
+ 
+ use crate::styles;
+ 
+-/// Width of the right-aligned verb column, matching cargo.
+-const VERB_WIDTH: usize = 12;
+-
+-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+-pub enum Verbosity {
+-    Quiet,
+-    Normal,
+-    Verbose,
+-}
++pub use crate::status_output::Verbosity;
+ 
+ /// Writes status lines such as `    Checking invoice.mori` to stderr.
+ ///
+@@ -39,9 +31,7 @@
+ 
+     /// Prints a right-aligned green verb followed by a message.
+     pub fn status(&mut self, verb: &str, message: impl Display) {
+-        if self.verbosity != Verbosity::Quiet {
+-            self.aligned(verb, styles::HEADER, message);
+-        }
++        crate::status_output::status(&mut self.err, self.verbosity, verb, message);
+     }
+ 
+     /// Like [`Shell::status`], but only under `--verbose`.
+@@ -97,8 +87,7 @@
+     }
+ 
+     fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
+-        let message = crate::display::text(&message.to_string());
+-        let _ = writeln!(self.err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
++        crate::status_output::aligned(&mut self.err, verb, style, message);
+     }
+ 
+     fn prefixed(&mut self, label: &str, style: Style, message: impl Display) {
+--- a/crates/mori/src/main.rs
++++ b/crates/mori/src/main.rs
+@@ -13,6 +13,7 @@
+ mod json;
+ mod shell;
+ mod styles;
++mod status_output;
+ 
+ fn main() -> ExitCode {
+     let cli = Cli::parse();
