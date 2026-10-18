@@ -1,0 +1,44 @@
+PR237 current-integration whole-opinion fidelity, 2026-10-18.
+
+No actual code bug, failed output, nonzero phase, mismatched frozen shell input, or material false source/result claim was found. The checks below support the opinion's stated finite account, subject to incidental coordinate/path/count corrections and the distinction between recorded custody and independently audited source. This is not a new vote, adoption or global closure; root decides qualification.
+
+Whole original opinion preserved byte-for-byte in TERMINAL-REVIEW.original.json, SHA-256 `ccdf1173f034fb894eba3ec672a3fcc97778dcc248a65de4c16d5af5d9a08d9d`. Source and actual-result assessments remain in one complete object, with unchanged findings, limitations, dissent and verdict. Subject SHA and reviewToken match the actual SUBJECT.json. Exact head `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`, tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`, parents `[caa416f52b23fc1709d83d2c93794e1af4b79846, f2975f1fbfbaf060207a9d26331ad52745ce5247]` are retained.
+
+Paths below resolve under `R/concurrency-increase-main238/pr237-main-source-result-review-20261018`, R `/home/charl/moriarty-c2-opus55-restored-20261017`.
+
+| Material claim | Evidence and mechanical check | Fidelity result |
+|---|---|---|
+| Three complete changed paths | SUBJECT.json and complete source/before bytes for cli.rs, commands/expand.rs and NATIVE-CORE.md | All three after hashes and all three before hashes match. Diff changes help comments, one metadata regression and guide text only. No runtime dispatch logic changes in these three paths. |
+| 104 mandatory inputs and40contexts | MANDATORY-INPUTS.json, SOURCE-COVERAGE.json, ORIGINAL-SCOPE-PRESERVATION, complete opinion coverage | All104file hashes/lengths match, and the opinion's104read paths equal the mandatory set. All40physical source pins and complete mandatory representations match:21whole bodies,17declared ranges and2selected JSON-pointer representations. Each range was checked against its original full source; each selected JSON value against its full JSON source. Current check_source/simulate have full-body representations and diffs. |
+| Help and feature boundaries | Changed cli.rs and expand.rs, frozen EXPECTED-CLAP-CONTRACT and complete CLAP-REGRESSION | Core1/Core2 compile/simulate wording and Beta/Source6 exclusions match the actual comments. Default expand still loads Core1; explicit Source6 flag remains feature-gated. Frozen regression bytes are an exact substring of cli.rs, lines282-326. |
+| One actual selected metadata test | actual/clap-help-test START/CHILD/RESULT/stdout/stderr and final driver receipt | Exact argv is `timeout --signal=TERM --kill-after=5s 90s cargo test --manifest-path .../Cargo.toml --frozen -j1 -p mori --no-default-features --bin mori cli::tests::help_distinguishes_core_consumers_from_source6_proposals -- --exact --test-threads=1`. Exit0,54.216766295001435s,1passed/0failed/7filtered; raw stream hashes match RESULT and FINAL. No added `--nocapture` or omitted selected filter in the opinion's full actual-result argv. |
+| Five exact syntax-only inputs | First five `sh` fences in source/docs/NATIVE-CORE.md and preparation/frozen/doc-shell/01.sh..05.sh; actual/shell-N START/RESULT/logs | All five full block bytes match frozen inputs. All actual argv use10s timeout plus5s grace, `/usr/bin/bash -n` and the matching numbered script. All exits0; all stdout/stderr buffers empty with matching hashes. Only shell parsing occurred. |
+| Actual assertion scope | Whole frozen regression and current cli.rs | Unit test inspects Cli::command metadata via get_long_about/get_long_help and selected required substrings. It does not capture rendered help, execute examples or assert all possible future metadata. Opinion preserves this boundary. Source6/native feature builds remain unrun. |
+| Source-derived guide facts |40declared representations, frozen DOC-EXPECTATIONS/DOC-COMMAND-PREDICATES and whole guide diff | Guide distinguishes Core1 reference execution, Core2 local stages, Beta checking/raw Source6 proposals and separate Node Core5 preparation. It retains local-reference-stage/none/untracked and no proof/ledger acceptance. Expected values are existing fixture/source corroboration, not a fresh financial/work oracle or newly observed product run. Static link record contains27relative links with prospective-tree existence recorded. |
+| Staged merge to committed source | actual/SOURCE-PINS, prospective source pins, POST-COMMIT-BINDING, preparation BINDING and source closure comparison | Actual and prospective876file-entry lists match despite different wrapper hashes. Postcommit receipt records same head/tree/two parents,876matching Git/worktree pins. Tests ran staged caa+f297 before the merge commit; no postcommit rerun is inferred. This lane rechecked delivered bodies and metadata, not independently all876Git blobs or tool binaries. |
+| Historical full opinion/nontransfer | Complete history/ORIGINAL-F297-WHOLE-REVIEW.json and ROOT-DISPOSITION-F297.json, HISTORY-QUALIFICATION | Prior whole review hash2533b4fc... and disposition3442a721... retain literal8269base/f297head scope. Opinion explicitly performs a fresh whole assessment for7af and transfers no old approval/runtime evidence. |
+| Export and owned cleanup | Copied TERMINAL-EXPORT-RECEIPT and CLEANUP; actual FINAL-RESULT | Public harness receipt records exit0/SUCCESS/EXPORT, ended2026-10-18T19:00:29.212239+00:00; captureReachedEOF=true, ownedGroupRemaining=false. All six actual child-session lists empty; owned temp root removed once after phases, failure:null. This is owned-session/root scope, not a host process census. Actual backend identity remains unattested. |
+
+Quote check: all24literal anchors exist in their cited bodies. Three changed-source `originalLine` starts are off by one; the exact corrections are:
+
+| Quote in sourceAssessment.changedPathCoverage | Claimed start | Exact inclusive lines |
+|---|---|---|
+| cli.rs compile header/boundary quote0 |127|126-127|
+| cli.rs default expansion quote1 |237|236-237|
+| cli.rs simulate header/boundary quote2 |242|241-242|
+
+The other seven changed-source quote starts match. The14receipt quotes are literal matches; MECHANICAL-CHECKS.json records their exact line coordinates even though the opinion supplies paths without line numbers. No fabricated quote or reconstructed source body was found.
+
+Additional incidental corrections, preserving the whole opinion:
+
+- Frozen whole test module starts cli.rs282 (`#[cfg(test)]`), not283; it ends326. The function itself starts288 as quoted correctly.
+- actualResultAssessment.exactFiveFrozenBashInputsAndUnrunDocProductsDisposition names `preparation/DOC-COMMAND-PREDICATES.json`; the actual complete file is `preparation/frozen/DOC-COMMAND-PREDICATES.json`.
+- FULL-INPUT.md/OUTPUT-SCHEMA.json/MANDATORY-INPUTS.json/REVIEW-REQUEST.md are387690/122951/17769/7747bytes, matching the opinion. Their splitlines counts are8556/3728/526/19; stated8557/3729/527/20 count an EOF display row. No omitted content follows from that convention.
+- The informal grouped extra-read file counts are approximate: its listed preparation group contains9frozen files plus7named parent preparation files, and its last history/custody group names8files. The explicit104mandatory list remains exact and complete.
+- The current diff adds the walkthrough and help updates; it does not alter older guide commands below the inserted walkthrough. The opinion's phrase that older sections were "updated only" to the Cargo prefix describes their historical state, not an additional current edit.
+
+Reviewer-declared complete reads and recovery of previously truncated view slices remain statements by the reviewer. Hash matches, inventory membership and body availability do not independently attest cognition, complete tool reads or backend identity. The opinion explicitly leaves unquoted physical context ranges and unrelated source closure files unread, and does not convert876transport pins into876source audits.
+
+The literal assertions, actual six-command results, source/feature descriptions and preserved unrun qualifications do not present the material ancillary-control fabrications found in the separate PR252 opinion. No actual code repair or failed product output is identified here. Root retains adoption authority for this complete opinion with the listed incidental corrections. All148requirements/292scenarios/20families/U/M/MC/SP/G/financial/composition/compiler/native/proof/ledger/target obligations remain open.
+
+Verification was offline Python JSON/hash/text/receipt checking only. No provider, product, compiler, test, Bash execution, Git command, source edit, security judgment or new vote occurred. Writes are confined to this fresh directory. Moriarty develop/AGENTS/product-contract context was retained and read-only plugin status refreshed; historical campaign blockers were preserved.

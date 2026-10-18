@@ -1,0 +1,697 @@
+{
+  "actualReadLimits": [],
+  "actualResultAssessment": {
+    "completeCheckPlanFinalBindingAndRootDriverRead": true,
+    "exactFiveFrozenBashInputsAndUnrunDocProductsDisposition": "All five frozen shell scripts (`preparation/frozen/doc-shell/01.sh` through `05.sh`) were read in full and verified to be byte-identical to both the five walkthrough `sh` blocks in `source/docs/NATIVE-CORE.md` and the SHA-256 digests pinned in `preparation/BINDING.json`, `preparation/DOC-COMMAND-PREDICATES.json`, and `preparation/LITERAL-AND-LINK-VALIDATION.json` (`2630be130bf43061e08bf5159374228c9d5aca84018f52d8714c764d3f8a0402`, `0f62d9146d499ebb1d7cadc08d313e4e4477d40c1e78fb76d44e571e2bb385c1`, `6639ffd8662129cc40ca8107eaa38c21fe651b6e6dde040d88b498f0217ffc00`, `03795da43c548ca771be9ef0058f819fed74a99de97c9f22f0446e617712d471`, `f0731acc155d6b43a1da4813341634b047f9d771d95213034a1e16e09e759bff`). Each phase (`shell-1` through `shell-5`) invoked `/usr/bin/bash -n` only, which parses shell syntax without executing any command. Consequently, none of the documented product commands (`cargo run -p mori ...`, `python3 -c ...` continuation extraction, `node packages/moriarty-beta/dist/cli.js ...`, or any native `compile`/`prove`/`verify`/`replay`/`compile-call`/`prepare-call`/`intent`/`verify-intent` command) ran in this check cycle, and `bash -n` success is not evidence of runtime execution or product output.",
+    "findings": [
+      "Verified from `actual/CHECK-PLAN.json`, `actual/FINAL-RESULT.json`, and `actual/clap-help-test/{START.json,CHILD.json,RESULT.json,STDOUT.log,STDERR.log}` that the single selected unit test `cli::tests::help_distinguishes_core_consumers_from_source6_proposals` ran once under `/usr/bin/timeout --signal=TERM --kill-after=5s 90s /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo test --manifest-path /home/charl/Moriarty/.worktrees/utxo-cli-main-20261018/Cargo.toml --frozen -j1 -p mori --no-default-features --bin mori cli::tests::help_distinguishes_core_consumers_from_source6_proposals -- --exact --test-threads=1` and passed (`exitCode: 0`, `wallSeconds: 54.216766295001435`, 1 passed, 0 failed, 0 ignored, 0 measured, 7 filtered out, `stdoutSha256: f9d5cfbc44112cd839eab60779e2dfb27d48d437f0e1259c210b2dbad6d99572`, `stderrSha256: 5c01bc4d92bcdf58f8db310b9ad2636efe0ff52fe28c126bc0ca997f62aa2d93`, `ownedSessionRemaining: []`).",
+      "Verified from `actual/shell-1..5/{START.json,CHILD.json,RESULT.json,STDOUT.log,STDERR.log}` and `preparation/frozen/doc-shell/01.sh..05.sh` that all five walkthrough shell blocks matched their frozen SHA-256 digests and passed `/usr/bin/bash -n` under a 10s timeout / 5s kill-after bound with `exitCode: 0`, `ownedSessionRemaining: []`, and 0-byte stdout and stderr (`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`).",
+      "Verified from `actual/COMPLETE-ROOT-DRIVER.py`, `actual/CHECK-PLAN.json`, and `actual/FINAL-RESULT.json` that the root driver verified all 33 frozen manifest files, tool binary SHA-256 pins (`cargo`, `rustc`, `rustdoc`, `timeout`, `bash`), absence of `.cargo/config` and `.cargo/config.toml` across all 18 checked ancestor paths, and exact staged merge state before and after the six phases; all six checks completed (`allSixChecksCompleted: true`, `failure: null`), no child session survived, and the temporary root `/tmp/doctorwatson-cli-help-maincaa-2q9bigvi` was removed (`existsAfter: false`).",
+      "Verified from `actual/POST-COMMIT-BINDING.json` and `actual/COMPLETE-ROOT-DRIVER.py` (`--bind-commit`) that after the staged merge test run on `HEAD` `caa416f52b23fc1709d83d2c93794e1af4b79846` with `MERGE_HEAD` `f2975f1fbfbaf060207a9d26331ad52745ce5247`, root committed `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`, parents `[\"caa416f52b23fc1709d83d2c93794e1af4b79846\", \"f2975f1fbfbaf060207a9d26331ad52745ce5247\"]`) and verified that all 876 recorded source pins match both the committed Git tree and clean worktree (`allRecordedPinsMatchCommittedGitAndWorktree: true`, `sourcePinsSha256: 3574e3397611a251c712087dd868d1f5e9c6ee65664fc4d1efe1d9a2d21922a5`)."
+    ],
+    "limitations": [
+      "Only one Clap metadata unit test (`cli::tests::help_distinguishes_core_consumers_from_source6_proposals` with `--no-default-features`) and five `bash -n` syntax checks ran; 7 other unit tests in `mori` were filtered out, no integration or workspace test suite ran, and no `--features source6-expansion` or `--features native` build or test ran.",
+      "The Clap unit test inspects `Cli::command()` metadata strings (`get_long_about()` / `get_long_help()`) and does not capture a full rendered `--help` terminal snapshot or execute `compile`, `simulate`, or `expand`.",
+      "The five `bash -n` checks validate shell syntax only; no documented product command (`cargo run -p mori ...`), Python continuation extraction, Node `@moriarty-lang/beta` CLI command, or native/SDK/proof/key/wallet/ledger command was executed.",
+      "The six phases executed against the pre-commit staged merge state (`HEAD` `caa416f52b23fc1709d83d2c93794e1af4b79846` + three staged `M` paths + `MERGE_HEAD` `f2975f1fbfbaf060207a9d26331ad52745ce5247`) and were bound post-commit to `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`) via 876-pin byte correspondence without a post-commit test rerun. Note also that `sourcePinsSha256` (`3574e339...`, the driver's `SOURCE-PINS.json` wrapper around the 876 `files` entries) differs in top-level wrapper bytes from `expectedSourcePinsSha256` (`58e500e6...`, `SOURCE-PINS-PROSPECTIVE.json`), while the 876 file entries themselves are verified identical in `verify_files()` and `--bind-commit`.",
+      "All expected outputs in `DOC-EXPECTATIONS.json`, `DOC-COMMAND-PREDICATES.json`, and `EXPECTED-CLAP-CONTRACT.json` are source-derived from existing fixtures and consumer code rather than an independent financial or runtime oracle; all 148 requirements, 292 scenarios, 20 families, U0-U7, M1-M17, MC/SP/G, and financial/composition/compiler/native/proof/ledger/target exits remain open."
+    ],
+    "newStagedMergeVsPostCommit876PinBindingDisposition": "The six actual check phases executed in `/home/charl/Moriarty/.worktrees/utxo-cli-main-20261018` while `HEAD` was `caa416f52b23fc1709d83d2c93794e1af4b79846` (tree `3a562a388cbe61ed5a0ec5105c9c892c98abfa2b`), `MERGE_HEAD` was `f2975f1fbfbaf060207a9d26331ad52745ce5247`, and the working tree and index had only the exact three staged `M` paths (`crates/mori/src/cli.rs`, `crates/mori/src/commands/expand.rs`, `docs/NATIVE-CORE.md`) with all 876 tracked closure pins matching `SOURCE-PINS-PROSPECTIVE.json` before and after the run. Root then committed the merge as `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` with parents `[\"caa416f52b23fc1709d83d2c93794e1af4b79846\", \"f2975f1fbfbaf060207a9d26331ad52745ce5247\"]` and exact tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`, and ran `root_driver.py --bind-commit` to write `actual/POST-COMMIT-BINDING.json`, verifying that all 876 committed Git blobs and worktree files match the exact tested pin hashes (`sourcePinsSha256: 3574e3397611a251c712087dd868d1f5e9c6ee65664fc4d1efe1d9a2d21922a5`). No post-commit test rerun occurred; `POST-COMMIT-BINDING.json` establishes exact byte custody between the tested staged merge and commit `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`, not a second test execution.",
+    "oneMetadataTestAndFiveSyntaxOnlyDisposition": "The fresh actual execution ran only one Clap command-factory metadata unit test (`cli::tests::help_distinguishes_core_consumers_from_source6_proposals` with `--no-default-features`, passing in 54.216766295001435s with 7 other unit tests filtered out) and five `bash -n` shell syntax checks (`shell-1`..`shell-5`, each passing in ~0.0066-0.0069s with empty stdout/stderr). Passing the Clap metadata assertion verifies the in-memory `long_about`/`long_help` substrings on `Cli::command()` under `--no-default-features`; it does not capture a full rendered terminal help snapshot or execute `compile`, `simulate`, or `expand`. Passing `bash -n` verifies shell grammar only and does not execute any documented CLI, Python, or Node command.",
+    "phaseCoverage": [
+      {
+        "completeArgvStartChildResultStdoutStderrRead": true,
+        "phase": "clap-help-test",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms the exact single-threaded `--frozen -j1 -p mori --no-default-features --bin mori` invocation of the selected unit test under a 90s timeout.",
+            "exactQuote": "\"cli::tests::help_distinguishes_core_consumers_from_source6_proposals\",",
+            "packetPath": "actual/clap-help-test/START.json"
+          },
+          {
+            "analysis": "Confirms exit code 0, wall time 54.216766295001435s, matching stream digests, and no surviving processes in the child session.",
+            "exactQuote": "  \"wallSeconds\": 54.216766295001435,",
+            "packetPath": "actual/clap-help-test/RESULT.json"
+          },
+          {
+            "analysis": "Confirms the selected Clap metadata test passed and 7 other binary unit tests were filtered out.",
+            "exactQuote": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s",
+            "packetPath": "actual/clap-help-test/STDOUT.log"
+          },
+          {
+            "analysis": "Confirms stderr contains Cargo compilation and test-runner startup output only, not product example output.",
+            "exactQuote": "     Running unittests src/main.rs (/tmp/doctorwatson-cli-help-maincaa-2q9bigvi/target/debug/deps/mori-beaeadcc1a61f15a)",
+            "packetPath": "actual/clap-help-test/STDERR.log"
+          }
+        ],
+        "scopeAssessment": "Read complete `START.json`, `CHILD.json` (`pid`/`session` 1073156), `RESULT.json`, `STDOUT.log` (193 bytes), and `STDERR.log` (4968 bytes). Exercises only the Clap metadata unit test under `--no-default-features`; 7 other unit tests were filtered out and no CLI command execution or rendered help snapshot was performed."
+      },
+      {
+        "completeArgvStartChildResultStdoutStderrRead": true,
+        "phase": "shell-1",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms `shell-1` ran `/usr/bin/bash -n` (syntax check only) on `frozen/doc-shell/01.sh` with a 10s timeout.",
+            "exactQuote": "    \"/home/charl/moriarty-c2-opus55-restored-20261017/concurrency-increase-main238/pr237-main-integration-preparation-20261018/frozen/doc-shell/01.sh\"",
+            "packetPath": "actual/shell-1/START.json"
+          },
+          {
+            "analysis": "Confirms `exitCode: 0`, empty 0-byte stdout/stderr digests (`e3b0c442...`), and `ownedSessionRemaining: []`.",
+            "exactQuote": "  \"wallSeconds\": 0.006786600002669729,",
+            "packetPath": "actual/shell-1/RESULT.json"
+          }
+        ],
+        "scopeAssessment": "Read complete `START.json`, `CHILD.json` (`pid`/`session` 1075479), `RESULT.json`, and 0-byte `STDOUT.log`/`STDERR.log`. Parses shell syntax for block 1 (`capabilities --json` with `--no-default-features`) without executing Cargo or `mori`."
+      },
+      {
+        "completeArgvStartChildResultStdoutStderrRead": true,
+        "phase": "shell-2",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms `shell-2` ran `/usr/bin/bash -n` on `frozen/doc-shell/02.sh` with a 10s timeout.",
+            "exactQuote": "    \"/home/charl/moriarty-c2-opus55-restored-20261017/concurrency-increase-main238/pr237-main-integration-preparation-20261018/frozen/doc-shell/02.sh\"",
+            "packetPath": "actual/shell-2/START.json"
+          },
+          {
+            "analysis": "Confirms `exitCode: 0`, empty 0-byte stdout/stderr digests (`e3b0c442...`), and `ownedSessionRemaining: []`.",
+            "exactQuote": "  \"wallSeconds\": 0.006828610996308271,",
+            "packetPath": "actual/shell-2/RESULT.json"
+          }
+        ],
+        "scopeAssessment": "Read complete `START.json`, `CHILD.json` (`pid`/`session` 1075482), `RESULT.json`, and 0-byte `STDOUT.log`/`STDERR.log`. Parses shell syntax for block 2 (Core/1 `check` and `simulate` on `counter.mori`) without executing Cargo or `mori`."
+      },
+      {
+        "completeArgvStartChildResultStdoutStderrRead": true,
+        "phase": "shell-3",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms `shell-3` ran `/usr/bin/bash -n` on `frozen/doc-shell/03.sh` with a 10s timeout.",
+            "exactQuote": "    \"/home/charl/moriarty-c2-opus55-restored-20261017/concurrency-increase-main238/pr237-main-integration-preparation-20261018/frozen/doc-shell/03.sh\"",
+            "packetPath": "actual/shell-3/START.json"
+          },
+          {
+            "analysis": "Confirms `exitCode: 0`, empty 0-byte stdout/stderr digests (`e3b0c442...`), and `ownedSessionRemaining: []`.",
+            "exactQuote": "  \"wallSeconds\": 0.00691381300566718,",
+            "packetPath": "actual/shell-3/RESULT.json"
+          }
+        ],
+        "scopeAssessment": "Read complete `START.json`, `CHILD.json` (`pid`/`session` 1075485), `RESULT.json`, and 0-byte `STDOUT.log`/`STDERR.log`. Parses shell syntax for block 3 (Core/2 `delivery.mori` `check`, `simulate` start, `python3` continuation extraction, and `simulate --resume`) without creating a scratch directory or executing Cargo, `mori`, or Python."
+      },
+      {
+        "completeArgvStartChildResultStdoutStderrRead": true,
+        "phase": "shell-4",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms `shell-4` ran `/usr/bin/bash -n` on `frozen/doc-shell/04.sh` with a 10s timeout.",
+            "exactQuote": "    \"/home/charl/moriarty-c2-opus55-restored-20261017/concurrency-increase-main238/pr237-main-integration-preparation-20261018/frozen/doc-shell/04.sh\"",
+            "packetPath": "actual/shell-4/START.json"
+          },
+          {
+            "analysis": "Confirms `exitCode: 0`, empty 0-byte stdout/stderr digests (`e3b0c442...`), and `ownedSessionRemaining: []`.",
+            "exactQuote": "  \"wallSeconds\": 0.006595706996449735,",
+            "packetPath": "actual/shell-4/RESULT.json"
+          }
+        ],
+        "scopeAssessment": "Read complete `START.json`, `CHILD.json` (`pid`/`session` 1075488), `RESULT.json`, and 0-byte `STDOUT.log`/`STDERR.log`. Parses shell syntax for block 4 (`--features source6-expansion` `capabilities`, `check`, and `--quiet expand ... --emit-source6-transfer`) without compiling or executing `source6-expansion`."
+      },
+      {
+        "completeArgvStartChildResultStdoutStderrRead": true,
+        "phase": "shell-5",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms `shell-5` ran `/usr/bin/bash -n` on `frozen/doc-shell/05.sh` with a 10s timeout.",
+            "exactQuote": "    \"/home/charl/moriarty-c2-opus55-restored-20261017/concurrency-increase-main238/pr237-main-integration-preparation-20261018/frozen/doc-shell/05.sh\"",
+            "packetPath": "actual/shell-5/START.json"
+          },
+          {
+            "analysis": "Confirms `exitCode: 0`, empty 0-byte stdout/stderr digests (`e3b0c442...`), and `ownedSessionRemaining: []`.",
+            "exactQuote": "  \"wallSeconds\": 0.006782763994124252,",
+            "packetPath": "actual/shell-5/RESULT.json"
+          }
+        ],
+        "scopeAssessment": "Read complete `START.json`, `CHILD.json` (`pid`/`session` 1075491), `RESULT.json`, and 0-byte `STDOUT.log`/`STDERR.log`. Parses shell syntax for block 5 (`node packages/moriarty-beta/dist/cli.js` `check`, `simulate`, and `test`) without invoking Node or building `@moriarty-lang/beta`."
+      }
+    ],
+    "reason": "All six planned phases (`clap-help-test` and `shell-1`..`shell-5`), `actual/CHECK-PLAN.json`, `actual/FINAL-RESULT.json`, `actual/POST-COMMIT-BINDING.json`, and `actual/COMPLETE-ROOT-DRIVER.py` were read completely and verified against their pinned hashes and execution bounds. The single selected Clap metadata unit test passed (`exitCode: 0`, `54.216766295001435s`, 1 passed, 7 filtered out), all five `bash -n` syntax checks on the exact frozen walkthrough scripts passed (`exitCode: 0`, 0-byte stdout/stderr), all child sessions terminated cleanly (`ownedSessionRemaining: []`), the temporary root `/tmp/doctorwatson-cli-help-maincaa-2q9bigvi` was removed (`existsAfter: false`), and `POST-COMMIT-BINDING.json` confirmed 876-pin byte correspondence between the tested staged merge on `caa416f52b23fc1709d83d2c93794e1af4b79846` + `f2975f1fbfbaf060207a9d26331ad52745ce5247` and committed merge `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`), with all scope limitations explicitly preserved.",
+    "sourceExposureAndNoIndependentFinancialOracleDisposition": "As explicitly recorded in `preparation/frozen/EXPECTED-CLAP-CONTRACT.json`, `preparation/frozen/DOC-EXPECTATIONS.json`, and `preparation/frozen/DOC-COMMAND-PREDICATES.json`, the author inspected the capability implementation, CLI routing, public fixture assertions, and frozen expected files before selecting the help contract and walkthrough output examples. Neither the source-derived guide expectations nor the six actual check phases (one Clap metadata unit test and five `bash -n` syntax checks) constitute an independent financial or work-meter oracle or new runtime execution of the financial examples.",
+    "verdict": "approve-qualified"
+  },
+  "dissent": [],
+  "findings": [
+    "Source assessment (`approve-qualified`): Across the three complete before/after changed files (`crates/mori/src/cli.rs` SHA-256 `a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988`, `crates/mori/src/commands/expand.rs` SHA-256 `2684b2251a90fda63cd4dd2b79d4809d9bde3545461d2b100295889eac73ba11`, `docs/NATIVE-CORE.md` SHA-256 `8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb`) and all 40 declared context representations (`C01`-`C40`), the CLI help strings, Clap metadata regression test, and profile walkthrough accurately reflect the current consumer implementations on merge commit `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`).",
+    "Context delta verification: The two consumer context files that changed between `f2975f1fbfbaf060207a9d26331ad52745ce5247` and `caa416f52b23fc1709d83d2c93794e1af4b79846`/`7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (`crates/mori/src/commands/check_source.rs` `C40` and `crates/mori/src/commands/simulate.rs` `C08`, both read in full along with their diffs) tighten `mori_core::language` header rejection on malformed/non-Core headers while preserving all valid Core/1 (`moriarty/1`), Core/2 (`moriarty/2`), and Beta (`moriarty-beta/1`) routing and report shapes described in `crates/mori/src/cli.rs` and `docs/NATIVE-CORE.md`.",
+    "Actual result assessment (`approve-qualified`): In the fresh six-phase root check run (`actual/CHECK-PLAN.json`, `actual/FINAL-RESULT.json`, `actual/COMPLETE-ROOT-DRIVER.py`, and all six phase directories), the single selected Clap metadata unit test `cli::tests::help_distinguishes_core_consumers_from_source6_proposals` passed (`exitCode: 0`, `54.216766295001435s`, 1 passed, 7 filtered out), all five `bash -n` checks on the exact frozen walkthrough shell blocks passed (`exitCode: 0`, 0-byte stdout/stderr), all child process sessions were empty (`ownedSessionRemaining: []`), the owned temp root `/tmp/doctorwatson-cli-help-maincaa-2q9bigvi` was removed (`existsAfter: false`), and `actual/POST-COMMIT-BINDING.json` confirmed 876-pin byte equality between the tested staged merge (`caa416` + 3 staged paths + `MERGE_HEAD` `f297`) and committed merge `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`.",
+    "Historical guard and non-transfer: The prior whole review (`2533b4fc7d609895c73aea928943043e78f8b25f86a33fff9adc3130ad03930f`) and root disposition (`3442a721aef03d08bd653785227d271717f87b95a62b5604f5d8c85a873a783a`) remain strictly scoped to `f2975f1fbfbaf060207a9d26331ad52745ce5247` (tree `3db626c5806d44d7f0a2bf49936d146d66549196`) against base `8269b5b7ceeec5169c706aa31ea33f390d49c969` and are treated solely as historical context; this opinion is a fresh independent assessment of `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`."
+  ],
+  "limitations": [
+    "This slice modifies only Clap help metadata, one Clap metadata unit regression test in `crates/mori/src/cli.rs`, the `--emit-source6-transfer` `long_help` in `crates/mori/src/commands/expand.rs`, and walkthrough/command documentation in `docs/NATIVE-CORE.md`; no parser, checker, simulator, expander, compiler, prover, verifier, or runtime semantics were added or modified.",
+    "Actual runtime verification in this increment consists solely of one Clap metadata unit test (`cli::tests::help_distinguishes_core_consumers_from_source6_proposals` with `--no-default-features`, 7 other unit tests filtered out) and five `bash -n` syntax checks; no rendered `--help` terminal output snapshot was captured, no `--features source6-expansion` or `--features native` build/test ran, and none of the documented product commands (`cargo run -p mori ...`, Python continuation extraction, or `node packages/moriarty-beta/dist/cli.js ...`) were executed.",
+    "The six check phases executed on the staged merge state (`HEAD` `caa416f52b23fc1709d83d2c93794e1af4b79846` + three staged `M` paths + `MERGE_HEAD` `f2975f1fbfbaf060207a9d26331ad52745ce5247`) and were bound post-commit to `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` via 876-pin byte verification (`actual/POST-COMMIT-BINDING.json`) without a post-commit test rerun.",
+    "Walkthrough output expectations (`DOC-EXPECTATIONS.json`, `DOC-COMMAND-PREDICATES.json`) and Clap help predicates (`EXPECTED-CLAP-CONTRACT.json`) are source-derived from existing implementation/fixture files and do not provide an independent financial or work-meter oracle.",
+    "Unquoted physical portions of ranged/JSON-pointer context files (`C04`-`C06`, `C09`-`C10`, `C12`-`C14`, `C17`, `C21`-`C23`, `C28`-`C32`, `C36`, `C38`), the 19 non-walkthrough `delta` files from parent `caa416f52b23fc1709d83d2c93794e1af4b79846` in `SOURCE-CLOSURE-COMPARISON.json` outside `check_source.rs`/`simulate.rs`, and the remaining unchanged repository files in the 876-pin closure were not read as full physical bodies and are not re-audited here.",
+    "Older sections of `docs/NATIVE-CORE.md` (lines 127-679) were read in full as part of `C03`, but their referenced external artifacts, deliverables, and native/SDK/proof/ledger workflows remain historical context and are not re-certified. All 148 requirements, 292 scenarios, 20 families, U0-U7, M1-M17, MC/SP/G, and financial/composition/compiler/native/proof/ledger/target acceptance gates remain open."
+  ],
+  "mandatoryInputCoverage": {
+    "actualQuoteRangesOrPointersRead": [
+      "C01 crates/mori/src/cli.rs: complete-changed-body (lines 1-326, SHA256 a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988)",
+      "C02 crates/mori/src/commands/expand.rs: complete-changed-body (lines 1-47, SHA256 2684b2251a90fda63cd4dd2b79d4809d9bde3545461d2b100295889eac73ba11)",
+      "C03 docs/NATIVE-CORE.md: complete-changed-body (lines 1-679, SHA256 8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb)",
+      "C04 crates/mori/Cargo.toml: exact-line-ranges lines 9-27 (units/C04-declared-ranges.txt, SHA256 21cd987fa4a70909d4c8d74bd455bed456e08189e2c3e1d605bd3a231eb3cabc)",
+      "C05 crates/mori/src/commands/capabilities.rs: exact-line-ranges lines 44-102, 111-116, 122-135 (units/C05-declared-ranges.txt, SHA256 ca3185aff571e9e293332692977c8f443fa9eaf23458fbef10665a4790768aca)",
+      "C06 crates/mori/tests/capabilities.rs: exact-line-ranges lines 70-105 (units/C06-declared-ranges.txt, SHA256 170686161852233bf1ec1d115bb399ff90fa2bab4575300756d4b56eea78e6b8)",
+      "C07 crates/mori/src/commands/check.rs: complete-context-body lines 1-143 (source/crates/mori/src/commands/check.rs, SHA256 2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb)",
+      "C08 crates/mori/src/commands/simulate.rs: complete-context-body lines 1-243 broadened from original ranges 1-39, 59-69, 110-159, 177-235 (source/crates/mori/src/commands/simulate.rs, SHA256 d1f700c8b31112a682325a32e3336e9c9168a4b7556c9184504012c15037cd08)",
+      "C09 crates/mori/src/commands/expand/source6.rs: exact-line-ranges lines 89-162 (units/C09-declared-ranges.txt, SHA256 ef51e5b9a4dd6acf29022b59dc7dc467cccc23e0bfe6709e3ede0a885ada7092)",
+      "C10 crates/mori/src/commands/compile.rs: exact-line-ranges lines 1-78 (units/C10-declared-ranges.txt, SHA256 041ad6c74afc97dd6d6622be50c92f5c06c273135bb37fc644b60629afc371f9)",
+      "C11 crates/mori-core/src/stage/report.rs: complete-context-body lines 1-38 (source/crates/mori-core/src/stage/report.rs, SHA256 25e2b88e527a3f9b90951a92fc92ba8c17dd6f16040529dcac0356bb36707b4f)",
+      "C12 crates/mori/tests/core_report_contract.rs: exact-line-ranges lines 84-110 (units/C12-declared-ranges.txt, SHA256 773d523cef7f71b6aa732e97b7be9ebedd97678cb536a28b75228a5a74a3ccfa)",
+      "C13 crates/mori/tests/core_continuations.rs: exact-line-ranges lines 145-180 (units/C13-declared-ranges.txt, SHA256 d0ef735aae44496e4696d8a5053cfb155df86873d3a0ee45ebb70a658df60897)",
+      "C14 crates/mori/tests/source6_expand.rs: exact-line-ranges lines 63-102 (units/C14-declared-ranges.txt, SHA256 42826dc0ca9397d1636509dbbff0905740ba7fb9901acf285591b85c5ec4eef0)",
+      "C15 crates/fixtures/core-report-contract/counter.mori: complete-context-body lines 1-9 (source/crates/fixtures/core-report-contract/counter.mori, SHA256 8e89db83018345a771224e3b20218eb06eb905562d4d3bc5f239b3aff41f07b0)",
+      "C16 crates/fixtures/core-report-contract/counter-amount7.scenario.json: complete-context-body line 1 (source/crates/fixtures/core-report-contract/counter-amount7.scenario.json, SHA256 79a17ed15b1009920df8718ec50961d424884ea0a2e05788beb109466456af47)",
+      "C17 crates/fixtures/core-report-contract/counter.unmetered.stdout.json: json-pointer-values /status, /qualification, /execution/post, /execution/effects (units/C17-declared-pointers.json, SHA256 edfd0a2c4a7c4711fc11747a285b9872433d1012e6b3a8bb8475c55b874ea0ba)",
+      "C18 examples/core/continuations/delivery.mori: complete-context-body lines 1-12 (source/examples/core/continuations/delivery.mori, SHA256 2eb952dd267922c968764154e9d29fbc17f40f5e45fe8b5dac74d229f3d5d60a)",
+      "C19 examples/core/continuations/delivery-scenario.json: complete-context-body lines 1-57 (source/examples/core/continuations/delivery-scenario.json, SHA256 358fd3b13c0c7021c801d8b057eb934a10a7ec199e450ec0858e40f6234e6be2)",
+      "C20 examples/core/continuations/delivery-true-resume-complete.json: complete-context-body lines 1-14 (source/examples/core/continuations/delivery-true-resume-complete.json, SHA256 53648485b97d3e5d2122a8900ae88738298eb5ba046356bc5759b79c69e273b2)",
+      "C21 examples/core/continuations/normal-oracle.json: json-pointer-values /escrow/prefix_waiting/status, /escrow/prefix_waiting/committed, /escrow/prefix_waiting/residual, /escrow/prefix_waiting/segment/post, /escrow/true_resume_complete/status, /escrow/true_resume_complete/committed, /escrow/true_resume_complete/residual, /escrow/true_resume_complete/segment/post (units/C21-declared-pointers.json, SHA256 d09b19c409b5697e466bafe5d87c94b869093b3aa137552a07aed30d3d0c1551)",
+      "C22 docs/BETA-SOURCE6-EXPANSION.md: exact-line-ranges lines 5-11, 20-20, 30-30 (units/C22-declared-ranges.txt, SHA256 82f82dfae233a3512eac865242bfed77d1733086ed5080e6d781698704cb8279)",
+      "C23 docs/CORE-CONTINUATIONS.md: exact-line-ranges lines 140-149, 179-197 (units/C23-declared-ranges.txt, SHA256 001bfaa30adbc4272ad273fbefe1fd9ecbd8f745d537d567a79edd369b5d677f)",
+      "C24 crates/mori/tests/fixtures/source6-expansion/invoice.mori: complete-context-body lines 1-18 (source/crates/mori/tests/fixtures/source6-expansion/invoice.mori, SHA256 73b9b232917555a6853e33add5f9b790e9fff955294aecac27f6083666507d81)",
+      "C25 crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json: complete-context-body lines 1-19 (source/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json, SHA256 4ea5b81e292cffef8449d6b57b9f9c487b11bead13b7d9d9321f9123789f462e)",
+      "C26 crates/mori/tests/fixtures/source6-expansion/invoice.source6: complete-context-body lines 1-45 (source/crates/mori/tests/fixtures/source6-expansion/invoice.source6, SHA256 32015ccfa3494f4592a041d624f9f19e2ef11eaeb446065d520fc0e9cde28913)",
+      "C27 packages/moriarty-beta/package.json: complete-context-body lines 1-39 (source/packages/moriarty-beta/package.json, SHA256 d7b1f8f111fb081f18a80a965019d8a95795fe086df626992e62674fbb234338)",
+      "C28 packages/moriarty-beta/GETTING-STARTED.md: exact-line-ranges lines 13-25 (units/C28-declared-ranges.txt, SHA256 1a7abb669dd3d740dd1b246d699710e89c9ad09aa2758d36c4ab8bf62e2b7f10)",
+      "C29 packages/moriarty-beta/src/cli.ts: exact-line-ranges lines 83-86, 90-102, 107-111, 132-137 (units/C29-declared-ranges.txt, SHA256 751e46480e556e51544690fbf555f3d6a199b3487ad2ed26188886d8993270e9)",
+      "C30 packages/moriarty-beta/src/bridge.ts: exact-line-ranges lines 236-240 (units/C30-declared-ranges.txt, SHA256 3aeb868436b11abeaac93956231928510807c1b1146aa93bc9aef1bc97c6cf3e)",
+      "C31 packages/moriarty-beta/src/index.ts: exact-line-ranges lines 1-5 (units/C31-declared-ranges.txt, SHA256 c06a085e10e7fabbcab281a454769a2ac5b158ddf9a8469cbb178537415c979b)",
+      "C32 packages/moriarty-beta/tests/cli.test.mjs: exact-line-ranges lines 56-64 (units/C32-declared-ranges.txt, SHA256 a0d677c60c53924e47c966c3d3ed67835504c01e2c3b9d96028c9bff9f415ae2)",
+      "C33 packages/moriarty-beta/examples/local/repay/repayment.mori: complete-context-body lines 1-14 (source/packages/moriarty-beta/examples/local/repay/repayment.mori, SHA256 1fc1749eba918c220bcf28e10564f6532787a00282ea68e96e7e8c058d4a9158)",
+      "C34 packages/moriarty-beta/examples/local/repay/scenario.json: complete-context-body lines 1-38 (source/packages/moriarty-beta/examples/local/repay/scenario.json, SHA256 00bfbfaac6d28d7d13c0450e7204634e26a3768901be79c54f80eb9fba19fe8e)",
+      "C35 packages/moriarty-beta/examples/local/repay/mori.tests.json: complete-context-body lines 1-91 (source/packages/moriarty-beta/examples/local/repay/mori.tests.json, SHA256 53b0c1ae8bff2bec3809313fac4d5a7b6878b9f806a896b48ec96f59fb475155)",
+      "C36 crates/mori/src/json.rs: exact-line-ranges lines 14-25, 58-67 (units/C36-declared-ranges.txt, SHA256 4fd415ff5af2154ffb65030e2b24cf0718910e0e6ffdea8c459ce0fd23a6feec)",
+      "C37 crates/mori/src/commands/mod.rs: complete-context-body lines 1-81 (source/crates/mori/src/commands/mod.rs, SHA256 4e39c2dd984c1dcd0687da30eddd4e630f3d9480aef0b5df25e48828001abc47)",
+      "C38 crates/mori/src/commands/core_io.rs: exact-line-ranges lines 237-252 (units/C38-declared-ranges.txt, SHA256 3d9064f934af921ef2711bf67e962ec3027144f72596d6513865d0fc30f5952b)",
+      "C39 crates/mori-backend/src/stage/mod.rs: complete-context-body lines 1-37 (source/crates/mori-backend/src/stage/mod.rs, SHA256 69fdceb125c3ef29a29f80b45b54f09eb601311d3ed181a2579f85049b796693)",
+      "C40 crates/mori/src/commands/check_source.rs: complete-context-body lines 1-90 broadened from original lines 1-86 (source/crates/mori/src/commands/check_source.rs, SHA256 a53d5c3689f3c32ddc8c595e577a0ac13cfc4fe187b42a4f83c9caf86dc9ace3)"
+    ],
+    "entireInlineInputRead": true,
+    "extraPhysicalBodiesRead": [
+      "FULL-INPUT.md: lines 1-8557 (complete 387690-byte wrapper file, including recovery of byte-truncated slices at lines 1485-1600 and 6355-6410)",
+      "OUTPUT-SCHEMA.json: lines 1-3729 (complete 122951-byte schema file)",
+      "MANDATORY-INPUTS.json: lines 1-527 (complete 17769-byte inventory file)",
+      "REVIEW-REQUEST.md: lines 1-20 (complete 7747-byte request file, also inline at FULL-INPUT.md lines 1-20)",
+      "before/crates/mori/src/cli.rs, before/crates/mori/src/commands/expand.rs, and before/docs/NATIVE-CORE.md (all three complete before-bodies read in full)",
+      "context-differences/crates/mori/src/commands/check_source.rs.diff and context-differences/crates/mori/src/commands/simulate.rs.diff (both complete diffs read in full)",
+      "preparation/frozen/{CLAP-REGRESSION.rs,DOC-COMMAND-PREDICATES.json,DOC-EXPECTATIONS.json,EXPECTED-CLAP-CONTRACT.json,doc-shell/01.sh..05.sh} and preparation/{README.md,BINDING.json,VALIDATION.json,RESULT.json,LITERAL-AND-LINK-VALIDATION.json,REFERENCE-CONTEXT-COMPARISON.json,SOURCE-CLOSURE-COMPARISON.json} (all 15 preparation/frozen files read in full)",
+      "actual/{CHECK-PLAN.json,FINAL-RESULT.json,POST-COMMIT-BINDING.json,COMPLETE-ROOT-DRIVER.py} and actual/{clap-help-test,shell-1..5}/{CHILD.json,RESULT.json,START.json,STDERR.log,STDOUT.log} (all 34 actual result and driver files read in full)",
+      "history/{ORIGINAL-F297-WHOLE-REVIEW.json,ROOT-DISPOSITION-F297.json}, HISTORY-QUALIFICATION.json, ORIGINAL-SCOPE-PRESERVATION.json, SOURCE-COVERAGE.json, SOURCE-UNIT-MAP.json, SUBJECT.json, and SOURCE-RESULT-CUSTODY.json (all 9 history and custody metadata files read in full)"
+    ],
+    "filesReadCompletely": [
+      "source/crates/mori/src/cli.rs",
+      "before/crates/mori/src/cli.rs",
+      "source/crates/mori/src/commands/expand.rs",
+      "before/crates/mori/src/commands/expand.rs",
+      "source/docs/NATIVE-CORE.md",
+      "before/docs/NATIVE-CORE.md",
+      "units/C04-declared-ranges.txt",
+      "units/C05-declared-ranges.txt",
+      "units/C06-declared-ranges.txt",
+      "source/crates/mori/src/commands/check.rs",
+      "source/crates/mori/src/commands/simulate.rs",
+      "units/C09-declared-ranges.txt",
+      "units/C10-declared-ranges.txt",
+      "source/crates/mori-core/src/stage/report.rs",
+      "units/C12-declared-ranges.txt",
+      "units/C13-declared-ranges.txt",
+      "units/C14-declared-ranges.txt",
+      "source/crates/fixtures/core-report-contract/counter.mori",
+      "source/crates/fixtures/core-report-contract/counter-amount7.scenario.json",
+      "units/C17-declared-pointers.json",
+      "source/examples/core/continuations/delivery.mori",
+      "source/examples/core/continuations/delivery-scenario.json",
+      "source/examples/core/continuations/delivery-true-resume-complete.json",
+      "units/C21-declared-pointers.json",
+      "units/C22-declared-ranges.txt",
+      "units/C23-declared-ranges.txt",
+      "source/crates/mori/tests/fixtures/source6-expansion/invoice.mori",
+      "source/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json",
+      "source/crates/mori/tests/fixtures/source6-expansion/invoice.source6",
+      "source/packages/moriarty-beta/package.json",
+      "units/C28-declared-ranges.txt",
+      "units/C29-declared-ranges.txt",
+      "units/C30-declared-ranges.txt",
+      "units/C31-declared-ranges.txt",
+      "units/C32-declared-ranges.txt",
+      "source/packages/moriarty-beta/examples/local/repay/repayment.mori",
+      "source/packages/moriarty-beta/examples/local/repay/scenario.json",
+      "source/packages/moriarty-beta/examples/local/repay/mori.tests.json",
+      "units/C36-declared-ranges.txt",
+      "source/crates/mori/src/commands/mod.rs",
+      "units/C38-declared-ranges.txt",
+      "source/crates/mori-backend/src/stage/mod.rs",
+      "source/crates/mori/src/commands/check_source.rs",
+      "context-differences/crates/mori/src/commands/check_source.rs.diff",
+      "context-differences/crates/mori/src/commands/simulate.rs.diff",
+      "preparation/frozen/CLAP-REGRESSION.rs",
+      "preparation/frozen/DOC-COMMAND-PREDICATES.json",
+      "preparation/frozen/DOC-EXPECTATIONS.json",
+      "preparation/frozen/EXPECTED-CLAP-CONTRACT.json",
+      "preparation/frozen/doc-shell/01.sh",
+      "preparation/frozen/doc-shell/02.sh",
+      "preparation/frozen/doc-shell/03.sh",
+      "preparation/frozen/doc-shell/04.sh",
+      "preparation/frozen/doc-shell/05.sh",
+      "preparation/README.md",
+      "preparation/BINDING.json",
+      "preparation/VALIDATION.json",
+      "preparation/RESULT.json",
+      "preparation/LITERAL-AND-LINK-VALIDATION.json",
+      "preparation/REFERENCE-CONTEXT-COMPARISON.json",
+      "preparation/SOURCE-CLOSURE-COMPARISON.json",
+      "actual/CHECK-PLAN.json",
+      "actual/FINAL-RESULT.json",
+      "actual/POST-COMMIT-BINDING.json",
+      "actual/clap-help-test/CHILD.json",
+      "actual/clap-help-test/RESULT.json",
+      "actual/clap-help-test/START.json",
+      "actual/clap-help-test/STDERR.log",
+      "actual/clap-help-test/STDOUT.log",
+      "actual/shell-1/CHILD.json",
+      "actual/shell-1/RESULT.json",
+      "actual/shell-1/START.json",
+      "actual/shell-1/STDERR.log",
+      "actual/shell-1/STDOUT.log",
+      "actual/shell-2/CHILD.json",
+      "actual/shell-2/RESULT.json",
+      "actual/shell-2/START.json",
+      "actual/shell-2/STDERR.log",
+      "actual/shell-2/STDOUT.log",
+      "actual/shell-3/CHILD.json",
+      "actual/shell-3/RESULT.json",
+      "actual/shell-3/START.json",
+      "actual/shell-3/STDERR.log",
+      "actual/shell-3/STDOUT.log",
+      "actual/shell-4/CHILD.json",
+      "actual/shell-4/RESULT.json",
+      "actual/shell-4/START.json",
+      "actual/shell-4/STDERR.log",
+      "actual/shell-4/STDOUT.log",
+      "actual/shell-5/CHILD.json",
+      "actual/shell-5/RESULT.json",
+      "actual/shell-5/START.json",
+      "actual/shell-5/STDERR.log",
+      "actual/shell-5/STDOUT.log",
+      "actual/COMPLETE-ROOT-DRIVER.py",
+      "history/ORIGINAL-F297-WHOLE-REVIEW.json",
+      "history/ROOT-DISPOSITION-F297.json",
+      "HISTORY-QUALIFICATION.json",
+      "ORIGINAL-SCOPE-PRESERVATION.json",
+      "SOURCE-COVERAGE.json",
+      "SOURCE-UNIT-MAP.json",
+      "SUBJECT.json",
+      "SOURCE-RESULT-CUSTODY.json",
+      "REVIEW-REQUEST.md"
+    ],
+    "scopeSummary": "Read COMPLETE `FULL-INPUT.md` (all 8557 lines / 387690 bytes, recovering the two byte-truncated view slices at lines 1485-1600 and 6355-6410), `OUTPUT-SCHEMA.json` (all 3729 lines), `MANDATORY-INPUTS.json` (all 527 lines), and `REVIEW-REQUEST.md` (all 20 lines), covering 100% of the 104 mandatory input bodies (`unreadMandatoryFiles: []`). Unquoted portions of the ranged/JSON-pointer physical source files (`C04`-`C06`, `C09`-`C10`, `C12`-`C14`, `C17`, `C21`-`C23`, `C28`-`C32`, `C36`, `C38`) and the remaining unchanged or unrelated repository files in the 876-pin source closure are physical custody only and are not claimed as full-file model reads.",
+    "unreadMandatoryFiles": []
+  },
+  "reviewToken": "mori-pr237-main-7af9c7c1-dc02676e0395180de643",
+  "reviewedSubjectSha256": "2889f252045231808e7d9c949566d5352f862246091ce0bf7b315bdfcd4be50d",
+  "sourceAssessment": {
+    "changedPathCoverage": [
+      {
+        "completeBodyRead": true,
+        "path": "crates/mori/src/cli.rs",
+        "quoteAnchors": [
+          {
+            "analysis": "Names both supported compiler headers (`language \"moriarty/1\";` and `language \"moriarty/2\";`) and explicitly excludes `Beta/1` and `Source/6` text as compiler inputs, matching `compile::run` in C10 (`HELP-P1`).",
+            "exactQuote": "    /// Use a language \"moriarty/1\"; or language \"moriarty/2\"; source header.\n    /// Beta/1 and Source/6 text are not compiler inputs.",
+            "originalLine": 127
+          },
+          {
+            "analysis": "Clarifies that default `expand` accepts `moriarty/1` Core source while `--emit-source6-transfer` explicitly emits a local beta transfer proposal (`HELP-P3`).",
+            "exactQuote": "    /// Default expansion accepts moriarty/1 Core source. The explicit\n    /// --emit-source6-transfer option emits a local beta transfer proposal.",
+            "originalLine": 237
+          },
+          {
+            "analysis": "Names both supported simulation headers (`language \"moriarty/1\";` and `language \"moriarty/2\";`) and explicitly excludes `moriarty-beta/1` and `Source/6` text as simulation inputs, matching `simulate::run` in C08 (`HELP-P2`).",
+            "exactQuote": "    /// Use a language \"moriarty/1\"; or language \"moriarty/2\"; source header.\n    /// moriarty-beta/1 and Source/6 text are not simulation inputs.",
+            "originalLine": 242
+          },
+          {
+            "analysis": "Adds the Clap command-factory regression test asserting the `compile`, `simulate`, and `expand --emit-source6-transfer` help boundaries (`HELP-P1`, `HELP-P2`, `HELP-P3`).",
+            "exactQuote": "    fn help_distinguishes_core_consumers_from_source6_proposals() {",
+            "originalLine": 288
+          }
+        ],
+        "sha256": "a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988"
+      },
+      {
+        "completeBodyRead": true,
+        "path": "crates/mori/src/commands/expand.rs",
+        "quoteAnchors": [
+          {
+            "analysis": "Expands `long_help` on `--emit-source6-transfer` to state that input is checked `moriarty-beta/1` source, the `source6-expansion` build feature is required, output is `local-stipulation-only`, default Core expansion is unchanged, and `Source/6` output is neither compiled nor simulated by this option (`HELP-P3`).",
+            "exactQuote": "        long_help = \"Emit raw local Source/6 transfer proposal text from checked moriarty-beta/1 source. Requires the source6-expansion build feature. Output is local-stipulation-only; default Core expansion is unchanged. Source/6 output is not compiled or simulated by this option.\"",
+            "originalLine": 17
+          },
+          {
+            "analysis": "Preserves existing dispatch: `--emit-source6-transfer` routes to `run_source6`, while default `expand` loads a Core/1 program via `super::core_io::program` and validates against `mori_core::simulate`.",
+            "exactQuote": "    if args.emit_source6_transfer {\n        return run_source6(args.input, shell);\n    }\n    let (_, program) = super::core_io::program(&args.input.file)?;",
+            "originalLine": 23
+          }
+        ],
+        "sha256": "2684b2251a90fda63cd4dd2b79d4809d9bde3545461d2b100295889eac73ba11"
+      },
+      {
+        "completeBodyRead": true,
+        "path": "docs/NATIVE-CORE.md",
+        "quoteAnchors": [
+          {
+            "analysis": "Documents how `--no-default-features`, `--features source6-expansion`, and default `native` partition the Rust CLI consumers without claiming standalone installation or external proof/submission qualification.",
+            "exactQuote": "The profile walkthrough disables it: Core reference tooling and beta source\nchecking remain available; explicit Source/6 expansion additionally requires\n`source6-expansion`. Midnight compile/call/proof, targeted inspection,\ntrace/replay and JubJub profiles require `native`.",
+            "originalLine": 13
+          },
+          {
+            "analysis": "Maps each source header (`language \"moriarty/1\";`, `language \"moriarty/2\";`, `profile \"moriarty-beta/1\";`) to its exact Rust CLI consumers and expected result scope.",
+            "exactQuote": "| `language \"moriarty/1\";` | `check`, `simulate` | Core/1 source checking and local reference execution |\n| `language \"moriarty/2\";` | `check`, `simulate --action \u2026`, `simulate --resume \u2026 --event \u2026` | Core/2 source checking and local reference stages |\n| `profile \"moriarty-beta/1\";` | `check`; opt-in `expand --emit-source6-transfer` for the supported transfer subset | Frontend checking; raw Source/6 proposal text from explicit expansion |",
+            "originalLine": 39
+          },
+          {
+            "analysis": "Accurately states the Core/2 `delivery.mori` start and true-resume outcomes (`waiting`/`5`, `complete`/`11`, `residual: []`, bob 10, escrow 0, retained 0-amount liability) and explicit stage labels (`local-reference-stage`, `authentication: \"none\"`, `consumption: \"untracked\"`).",
+            "exactQuote": "Both results\nretain `qualification: \"local-reference-stage\"`, `authentication: \"none\"` and\n`consumption: \"untracked\"`.",
+            "originalLine": 76
+          },
+          {
+            "analysis": "Distinguishes Rust `--emit-source6-transfer` raw `invoice.source6` proposal emission from the separate `@moriarty-lang/beta` Node CLI (`AuthoringChecked`, `PreparedUnqualified`, `TestsPassed`) and states that neither `simulate` nor `compile` accepts `Source/6` text.",
+            "exactQuote": "This option emits a local transfer proposal; Rust `simulate`\nand `compile` do not accept that Source/6 text as input.",
+            "originalLine": 97
+          }
+        ],
+        "sha256": "8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb"
+      }
+    ],
+    "currentSourceClosureAndIntegratorByteBridgeAssessment": "`preparation/BINDING.json`, `preparation/RESULT.json`, `preparation/REFERENCE-CONTEXT-COMPARISON.json`, `preparation/SOURCE-CLOSURE-COMPARISON.json`, and `actual/POST-COMMIT-BINDING.json` establish a complete, deterministic byte bridge from prospective base `caa416f52b23fc1709d83d2c93794e1af4b79846` (tree `3a562a388cbe61ed5a0ec5105c9c892c98abfa2b`) and original PR head `f2975f1fbfbaf060207a9d26331ad52745ce5247` (tree `3db626c5806d44d7f0a2bf49936d146d66549196`) to merged commit `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`). All three before-blobs on `caa416` match the original `f297` patch before-blobs (`b978fb64...`, `f7ff48dc...`, `904bddfa...`), and all three after-blobs on `7af9c7c1` are byte-for-byte identical to the reviewed `f297` after-blobs (`a1046abb...`, `2684b225...`, `8088e2b0...`). Across the 860->876 tracked source closure pins, 855 existing files are unchanged, 5 existing files changed in `caa416` (`crates/mori-core/src/parser.rs`, `crates/mori-core/tests/language.rs`, `crates/mori/src/commands/check_source.rs`, `crates/mori/src/commands/inspect.rs`, `crates/mori/src/commands/simulate.rs`), and 16 test/fixture files were added. Within the 37 referenced context files, only `check_source.rs` (`C40`) and `simulate.rs` (`C08`) changed; both were broadened to full current bodies with complete diffs and verified to preserve every walkthrough and help contract claim on `7af9c7c1`. The additional Boolean/duty-read/header-dispatch changes from `caa416` remain background context and are not silently requalified here.",
+    "declaredContextCoverage": [
+      {
+        "declaredContentRead": true,
+        "id": "C01",
+        "mandatoryRepresentation": "source/crates/mori/src/cli.rs",
+        "path": "crates/mori/src/cli.rs",
+        "scopeAssessment": "Complete changed body (lines 1-326, SHA-256 `a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988`) and complete before body (`before/crates/mori/src/cli.rs`) read and compared. Confirms `Compile`, `Expand`, and `Simulate` doc comments and `help_distinguishes_core_consumers_from_source6_proposals` unit test match `EXPECTED-CLAP-CONTRACT.json` (`HELP-P1`..`HELP-P3`)."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C02",
+        "mandatoryRepresentation": "source/crates/mori/src/commands/expand.rs",
+        "path": "crates/mori/src/commands/expand.rs",
+        "scopeAssessment": "Complete changed body (lines 1-47, SHA-256 `2684b2251a90fda63cd4dd2b79d4809d9bde3545461d2b100295889eac73ba11`) and complete before body (`before/crates/mori/src/commands/expand.rs`) read and compared. Confirms `emit_source6_transfer` `long_help` matches `HELP-P3` while preserving default Core/1 `expand` behavior."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C03",
+        "mandatoryRepresentation": "source/docs/NATIVE-CORE.md",
+        "path": "docs/NATIVE-CORE.md",
+        "scopeAssessment": "Complete changed body (lines 1-679, SHA-256 `8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb`) and complete before body (`before/docs/NATIVE-CORE.md`) read and compared. Confirms the new profile walkthrough (lines 13-126) and updated `cargo run -p mori --locked --` command prefixes agree with C04-C40, while older sections (lines 127-679) remain context."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C04",
+        "mandatoryRepresentation": "units/C04-declared-ranges.txt",
+        "path": "crates/mori/Cargo.toml",
+        "scopeAssessment": "Read declared range lines 9-27 (`[features]`). Confirms `default = [\"native\"]`, `source6-expansion = [\"dep:mori-source6\", \"mori-source6/source6-transfer-slice\"]`, and `core2-disjoint-draft = [\"mori-core/core2-disjoint-draft\"]`, matching the feature combinations documented in `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C05",
+        "mandatoryRepresentation": "units/C05-declared-ranges.txt",
+        "path": "crates/mori/src/commands/capabilities.rs",
+        "scopeAssessment": "Read declared ranges lines 44-102, 111-116, and 122-135. Confirms `format: \"moriarty-cli-capabilities/1\"`, `producer.buildFeatures`, `catalogue.sourceRevision` note, consumer rows (`core1-check`, `core2-check`, `beta-check`, `core1-reference`, `core2-reference`, `beta-to-source6-transfer`, `core1-compile`, `core2-compile`), `targets`, `otherExecutables`, and `limitations` match `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C06",
+        "mandatoryRepresentation": "units/C06-declared-ranges.txt",
+        "path": "crates/mori/tests/capabilities.rs",
+        "scopeAssessment": "Read declared range lines 70-105. Confirms `capabilities` outputs identical JSON with or without `--json` and under `--quiet`, and contains the top-level fields described in `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C07",
+        "mandatoryRepresentation": "source/crates/mori/src/commands/check.rs",
+        "path": "crates/mori/src/commands/check.rs",
+        "scopeAssessment": "Read complete file (lines 1-143). Confirms `mori check` routes through `check_source::dispatch` (`C40`) and prints `check_source::core_report` or `check_source::beta_report` when `--json` is passed."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C08",
+        "mandatoryRepresentation": "source/crates/mori/src/commands/simulate.rs",
+        "path": "crates/mori/src/commands/simulate.rs",
+        "scopeAssessment": "Read complete current file (lines 1-243, broadened from original ranges) and `context-differences/crates/mori/src/commands/simulate.rs.diff`. Confirms `simulate` checks `mori_core::language(&source).map_err(super::core_io::operation)?` (refusing non-Core headers), routes `moriarty/2` to `run_stage_start` and `--resume` to `run_resume` with `outcome_report`, and runs `moriarty/1` with `qualification: \"local-reference-execution\"`, while `--trace` requires `native` and `--target`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C09",
+        "mandatoryRepresentation": "units/C09-declared-ranges.txt",
+        "path": "crates/mori/src/commands/expand/source6.rs",
+        "scopeAssessment": "Read declared range lines 89-162. Confirms `--emit-source6-transfer` requires `moriarty-local-scenario/1` (`local-stipulation`) with 3 balance cells and no `obligation`/`candidate_effects`, writes raw `expansion.source6` to stdout, and reports `Expanded Source/6 transfer proposal (local-stipulation-only)` on stderr unless `--quiet` is set."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C10",
+        "mandatoryRepresentation": "units/C10-declared-ranges.txt",
+        "path": "crates/mori/src/commands/compile.rs",
+        "scopeAssessment": "Read declared range lines 1-78. Confirms `compile` requires the `native` feature, `--target`, and `--out`, routes `moriarty/2` to `mori_backend::stage::compile_staged` (artifact/4), and parses `moriarty/1` via `mori_core::parse` into `compile_reported` (artifact/3)."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C11",
+        "mandatoryRepresentation": "source/crates/mori-core/src/stage/report.rs",
+        "path": "crates/mori-core/src/stage/report.rs",
+        "scopeAssessment": "Read complete file (lines 1-38). Confirms Core/2 `outcome_report` envelopes (`waiting`, `complete`, `rejected`) include `attempted`, `committed`, `residual` (on `waiting`/`complete`), and `STAGE_LABELS`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C12",
+        "mandatoryRepresentation": "units/C12-declared-ranges.txt",
+        "path": "crates/mori/tests/core_report_contract.rs",
+        "scopeAssessment": "Read declared range lines 84-110. Confirms CLI test `counter_unmetered_and_positive_caps_match_complete_public_reports` asserts `counter.mori` with `counter-amount7.scenario.json` and action `run` against `counter.unmetered.stdout.json`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C13",
+        "mandatoryRepresentation": "units/C13-declared-ranges.txt",
+        "path": "crates/mori/tests/core_continuations.rs",
+        "scopeAssessment": "Read declared range lines 145-180. Confirms CLI test `delivery_false_observation_preserves_boundary_then_completes_at_eleven` starts `delivery.mori` action `deliver` with `--logical-cap 11` (`waiting`) and resumes with `true_resume_complete` to `status: \"complete\"`, `committed: \"11\"`, `residual: []`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C14",
+        "mandatoryRepresentation": "units/C14-declared-ranges.txt",
+        "path": "crates/mori/tests/source6_expand.rs",
+        "scopeAssessment": "Read declared range lines 63-102. Confirms `check invoice.mori --json` returns `status: \"accepted\"` and action `pay` `support: \"local_s0\"`, and `--quiet expand invoice.mori --action pay --scenario scenario.json --emit-source6-transfer` prints exact `invoice.source6` bytes with empty stderr."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C15",
+        "mandatoryRepresentation": "source/crates/fixtures/core-report-contract/counter.mori",
+        "path": "crates/fixtures/core-report-contract/counter.mori",
+        "scopeAssessment": "Read complete file (lines 1-9). Confirms `language \"moriarty/1\"; agreement Counter` with `state count: UInt = 0;` and `action run(amount: UInt)` updating `count` and emitting `\"count\"(count)`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C16",
+        "mandatoryRepresentation": "source/crates/fixtures/core-report-contract/counter-amount7.scenario.json",
+        "path": "crates/fixtures/core-report-contract/counter-amount7.scenario.json",
+        "scopeAssessment": "Read complete file (line 1). Confirms input `amount: {\"type\":\"UInt\",\"value\":\"7\"}` with empty initial state, balances, and liabilities."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C17",
+        "mandatoryRepresentation": "units/C17-declared-pointers.json",
+        "path": "crates/fixtures/core-report-contract/counter.unmetered.stdout.json",
+        "scopeAssessment": "Read declared JSON pointer values (`/status`, `/qualification`, `/execution/post`, `/execution/effects`). Confirms `status: \"accepted\"`, `qualification: \"local-reference-execution\"`, `execution.post.state.count: {\"type\":\"UInt\",\"value\":\"7\"}`, and `State` + `Emit` effects on `count`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C18",
+        "mandatoryRepresentation": "source/examples/core/continuations/delivery.mori",
+        "path": "examples/core/continuations/delivery.mori",
+        "scopeAssessment": "Read complete file (lines 1-12). Confirms `language \"moriarty/2\"; agreement ContinuationEscrowOracle` with action `deliver(amount: UInt)` transferring `PAY` from `alice` to `escrow`, creating liability `\"release\"`, awaiting `delivery(ready: Bool) when ready`, transferring from `escrow` to `bob`, and discharging `\"release\"`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C19",
+        "mandatoryRepresentation": "source/examples/core/continuations/delivery-scenario.json",
+        "path": "examples/core/continuations/delivery-scenario.json",
+        "scopeAssessment": "Read complete file (lines 1-57). Confirms opening balances (`alice: 100`, `bob: 0`, `escrow: 0`, `observer: 42`), input `amount: 10`, empty liabilities, and `marker: 77`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C20",
+        "mandatoryRepresentation": "source/examples/core/continuations/delivery-true-resume-complete.json",
+        "path": "examples/core/continuations/delivery-true-resume-complete.json",
+        "scopeAssessment": "Read complete file (lines 1-14). Confirms `format: \"moriarty-stage-event/1\"`, `action: \"deliver\"`, `label: \"delivery\"`, and `ready: true`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C21",
+        "mandatoryRepresentation": "units/C21-declared-pointers.json",
+        "path": "examples/core/continuations/normal-oracle.json",
+        "scopeAssessment": "Read declared JSON pointer values under `/escrow/prefix_waiting` and `/escrow/true_resume_complete`. Confirms waiting state (`status: \"waiting\"`, `committed: 5`, 10-unit `release` residual duty, 10 units in `escrow`) and completed state (`status: \"complete\"`, `committed: 11`, `residual: []`, `bob: 10`, `escrow: 0`, liability `release` present with `amount: \"0\"`)."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C22",
+        "mandatoryRepresentation": "units/C22-declared-ranges.txt",
+        "path": "docs/BETA-SOURCE6-EXPANSION.md",
+        "scopeAssessment": "Read declared ranges lines 5-11, 20, and 30. Confirms default `mori expand` remains Core/1, `--emit-source6-transfer` requires `source6-expansion` and emits `local-stipulation-only` Source/6 proposal text, and `--quiet` suppresses the CLI status line on stderr."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C23",
+        "mandatoryRepresentation": "units/C23-declared-ranges.txt",
+        "path": "docs/CORE-CONTINUATIONS.md",
+        "scopeAssessment": "Read declared ranges lines 140-149 and 179-197. Confirms staged JSON reports carry `{\"qualification\":\"local-reference-stage\",\"authentication\":\"none\",\"consumption\":\"untracked\"}`, delivery costs 5 + 6 = 11 committed units, and `mori compile` produces `/4` staged artifacts for `moriarty/2`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C24",
+        "mandatoryRepresentation": "source/crates/mori/tests/fixtures/source6-expansion/invoice.mori",
+        "path": "crates/mori/tests/fixtures/source6-expansion/invoice.mori",
+        "scopeAssessment": "Read complete file (lines 1-18). Confirms `profile \"moriarty-beta/1\"; agreement Invoice` with `action pay uses Payment;` in the `local_s0` transfer subset."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C25",
+        "mandatoryRepresentation": "source/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json",
+        "path": "crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json",
+        "scopeAssessment": "Read complete file (lines 1-19). Confirms `profile: \"moriarty-local-scenario/1\"`, `kind: \"local-stipulation\"`, and three balance cells (`Owner: 10000`, `Recipient: 0`, `Fee: 0`)."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C26",
+        "mandatoryRepresentation": "source/crates/mori/tests/fixtures/source6-expansion/invoice.source6",
+        "path": "crates/mori/tests/fixtures/source6-expansion/invoice.source6",
+        "scopeAssessment": "Read complete file (lines 1-45, SHA-256 `32015ccfa3494f4592a041d624f9f19e2ef11eaeb446065d520fc0e9cde28913`). Confirms header `profile \"moriarty-financial-agreement-source/6\";` and exact `agreement Invoice` transfer proposal text referenced in `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C27",
+        "mandatoryRepresentation": "source/packages/moriarty-beta/package.json",
+        "path": "packages/moriarty-beta/package.json",
+        "scopeAssessment": "Read complete file (lines 1-39). Confirms package name `@moriarty-lang/beta`, `engines.node: \">=24\"`, and `\"bin\": {\"mori\": \"dist/cli.js\"}`, matching `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C28",
+        "mandatoryRepresentation": "units/C28-declared-ranges.txt",
+        "path": "packages/moriarty-beta/GETTING-STARTED.md",
+        "scopeAssessment": "Read declared range lines 13-25. Confirms Node 24+ build (`npm ci`, `npm run build`) and `node dist/cli.js` usage for `check`, `simulate`, and `test`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C29",
+        "mandatoryRepresentation": "units/C29-declared-ranges.txt",
+        "path": "packages/moriarty-beta/src/cli.ts",
+        "scopeAssessment": "Read declared ranges lines 83-86, 90-102, 107-111, and 132-137. Confirms the Node beta CLI dispatches `check`, `simulate`, and `test` and exits 0 on `AuthoringChecked`, `Expanded`, `PreparedUnqualified`, and `TestsPassed`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C30",
+        "mandatoryRepresentation": "units/C30-declared-ranges.txt",
+        "path": "packages/moriarty-beta/src/bridge.ts",
+        "scopeAssessment": "Read declared range lines 236-240. Confirms Node `simulate` expands beta source to Source/6 and runs `prepareSource6S0Unqualified` with `qualification: 'local-stipulation-only'`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C31",
+        "mandatoryRepresentation": "units/C31-declared-ranges.txt",
+        "path": "packages/moriarty-beta/src/index.ts",
+        "scopeAssessment": "Read declared range lines 1-5. Confirms `@moriarty-lang/beta` exports `check`, `format`, `expand`, and `simulate` from its TypeScript frontend and bridge modules."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C32",
+        "mandatoryRepresentation": "units/C32-declared-ranges.txt",
+        "path": "packages/moriarty-beta/tests/cli.test.mjs",
+        "scopeAssessment": "Read declared range lines 56-64. Confirms the Node CLI test verifies `init --template repay` and `test` returning `status: 'TestsPassed'` with post-state `principal: '98000'` and payer balance `'197000'`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C33",
+        "mandatoryRepresentation": "source/packages/moriarty-beta/examples/local/repay/repayment.mori",
+        "path": "packages/moriarty-beta/examples/local/repay/repayment.mori",
+        "scopeAssessment": "Read complete file (lines 1-14). Confirms `profile \"moriarty-beta/1\"; agreement LoanAgreement` with `const amount = 30.00 USD;` and `action repay_loan uses Repayment;`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C34",
+        "mandatoryRepresentation": "source/packages/moriarty-beta/examples/local/repay/scenario.json",
+        "path": "packages/moriarty-beta/examples/local/repay/scenario.json",
+        "scopeAssessment": "Read complete file (lines 1-38). Confirms `Payer` balance `200000`, `Creditor` balance `0`, and `Loan` obligation with `principal: \"100000\"`, `accrued: \"1000\"`, `outstanding: \"101000\"`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C35",
+        "mandatoryRepresentation": "source/packages/moriarty-beta/examples/local/repay/mori.tests.json",
+        "path": "packages/moriarty-beta/examples/local/repay/mori.tests.json",
+        "scopeAssessment": "Read complete file (lines 1-91). Confirms expected `status: \"PreparedUnqualified\"`, `core: \"moriarty-core/5\"`, 3000 payment clearing 1000 accrued interest, reducing principal to 98000, and leaving `Payer` with 197000, matching `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C36",
+        "mandatoryRepresentation": "units/C36-declared-ranges.txt",
+        "path": "crates/mori/src/json.rs",
+        "scopeAssessment": "Read declared ranges lines 14-25 and 58-67. Confirms `CheckReport` (`status: \"accepted\"` / `\"rejected\"`) and `ActionReport` (`support: Some(\"local_s0\")` when runnable locally) match the Beta check JSON fields described in `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C37",
+        "mandatoryRepresentation": "source/crates/mori/src/commands/mod.rs",
+        "path": "crates/mori/src/commands/mod.rs",
+        "scopeAssessment": "Read complete file (lines 1-81). Confirms top-level subcommand module wiring (`capabilities`, `check`, `check_source`, `compile`, `expand`, `simulate`, etc.) and `native_unavailable()` error helper."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C38",
+        "mandatoryRepresentation": "units/C38-declared-ranges.txt",
+        "path": "crates/mori/src/commands/core_io.rs",
+        "scopeAssessment": "Read declared range lines 237-252. Confirms `core_io::program` parses Core/1 via `mori_core::parse(&source)` (used by default `mori expand` in C02) and `core_io::print` exports bounded JSON."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C39",
+        "mandatoryRepresentation": "source/crates/mori-backend/src/stage/mod.rs",
+        "path": "crates/mori-backend/src/stage/mod.rs",
+        "scopeAssessment": "Read complete file (lines 1-37). Confirms staged `moriarty/2` compilation produces distinct `/4` artifacts (`N + 1` circuits for `N` awaits, unsigned only, not accepted by `/3` proving consumers), matching `docs/NATIVE-CORE.md`."
+      },
+      {
+        "declaredContentRead": true,
+        "id": "C40",
+        "mandatoryRepresentation": "source/crates/mori/src/commands/check_source.rs",
+        "path": "crates/mori/src/commands/check_source.rs",
+        "scopeAssessment": "Read complete current file (lines 1-90, broadened from original lines 1-86) and `context-differences/crates/mori/src/commands/check_source.rs.diff`. Confirms `dispatch` explicitly propagates `Err(error)` from `mori_core::language(source)` when the first token is `\"language\"`, routes `\"moriarty/2\"` to `mori_core::stage::load` (attaching `STAGE_LABELS` in `core_report`) and `\"moriarty/1\"` to `mori_core::parse`, and routes `profile \"moriarty-beta/1\";` to `mori_parser::parse` + `mori_checker::check` (`beta_report`)."
+      }
+    ],
+    "findings": [
+      "In `C01` (`crates/mori/src/cli.rs`), `Command::Compile` (lines 125-128) and `Command::Simulate` (lines 240-243) accurately name the `language \"moriarty/1\";` and `language \"moriarty/2\";` headers and explicitly state that `Beta/1` / `moriarty-beta/1` and `Source/6` text are not compiler or simulation inputs, matching `compile::run` (`C10`) and `simulate::run` (`C08`).",
+      "In `C01` (`crates/mori/src/cli.rs`, lines 235-239) and `C02` (`crates/mori/src/commands/expand.rs`, lines 14-33), default `expand` remains Core/1 (`moriarty/1`) via `core_io::program` (`C38`) and `mori_core::simulate`, while `--emit-source6-transfer` (`long_help`) explicitly states that it emits raw local `Source/6` transfer proposal text from checked `moriarty-beta/1` source, requires the `source6-expansion` build feature, is `local-stipulation-only`, leaves default Core expansion unchanged, and is not compiled or simulated by that option, matching `C09` (`crates/mori/src/commands/expand/source6.rs`) and `C22` (`docs/BETA-SOURCE6-EXPANSION.md`).",
+      "In `C01` (`crates/mori/src/cli.rs`, lines 283-326), the unit test `cli::tests::help_distinguishes_core_consumers_from_source6_proposals` matches `preparation/frozen/CLAP-REGRESSION.rs` byte-for-byte and enforces all `HELP-P1`, `HELP-P2`, and `HELP-P3` metadata predicates in `preparation/frozen/EXPECTED-CLAP-CONTRACT.json` without changing CLI runtime dispatch.",
+      "In `C40` (`crates/mori/src/commands/check_source.rs`) and `C08` (`crates/mori/src/commands/simulate.rs`), the parent `caa416f52b23fc1709d83d2c93794e1af4b79846` header-dispatch refinements (explicit `mori_core::language` error return in `check_source::dispatch` when the first token is `\"language\"`, and `mori_core::language(&source).map_err(super::core_io::operation)?` before `/2` vs `/1` routing in `simulate::run`) preserve all valid Core/1, Core/2, and Beta behaviors while reinforcing the non-Core simulation refusal documented in `crates/mori/src/cli.rs` and `docs/NATIVE-CORE.md`.",
+      "In `C03` (`docs/NATIVE-CORE.md`), all five walkthrough command blocks (`01.sh`..`05.sh`), feature flags (`--no-default-features`, `--features source6-expansion`, global `--quiet`), JSON report fields and qualifications (`moriarty-cli-capabilities/1`, `local-reference-execution`, `local-reference-stage`/`none`/`untracked`, `local_s0`, raw `invoice.source6`, and Node `@moriarty-lang/beta` `AuthoringChecked`/`PreparedUnqualified`/`TestsPassed` over `moriarty-core/5`), and all 27 relative markdown links match the current consumer code and fixtures on `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`."
+    ],
+    "frozenHelpContractAndClapRegressionAssessment": "`preparation/frozen/EXPECTED-CLAP-CONTRACT.json` (`HELP-P1` for `compile`, `HELP-P2` for `simulate`, `HELP-P3` for `expand` / `emit_source6_transfer`) and `preparation/frozen/CLAP-REGRESSION.rs` (SHA-256 `17f012f428d6f6b91cea63aa0e28ae49be13617f141b8ee0d3ad8d33930ac2c8`) match lines 283-326 of `source/crates/mori/src/cli.rs` and line 17 of `source/crates/mori/src/commands/expand.rs` exactly. The regression test inspects `Cli::command()` metadata (`get_long_about()` on `compile`, `simulate`, and `expand`, and `get_long_help()` on `emit_source6_transfer`) and verifies every required header, profile, qualification, and boundary string at the Clap metadata stage.",
+    "historicalLiteral8269GuardAndNoApprovalTransferAssessment": "`history/ORIGINAL-F297-WHOLE-REVIEW.json` (SHA-256 `2533b4fc7d609895c73aea928943043e78f8b25f86a33fff9adc3130ad03930f`), `history/ROOT-DISPOSITION-F297.json` (SHA-256 `3442a721aef03d08bd653785227d271717f87b95a62b5604f5d8c85a873a783a`), and `HISTORY-QUALIFICATION.json` were read in full as historical records. That prior review and adoption applied exclusively to `f2975f1fbfbaf060207a9d26331ad52745ce5247` (tree `3db626c5806d44d7f0a2bf49936d146d66549196`) tested against literal base `8269b5b7ceeec5169c706aa31ea33f390d49c969`, with its own declared read scope and limitations preserved intact. No approval or runtime result transfers from `2533b4fc...` to merge commit `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`; this assessment is formed independently from the current merged source and fresh six-phase actual receipts.",
+    "limitations": [
+      "Only CLI help metadata, one Clap metadata unit test in `crates/mori/src/cli.rs`, `--emit-source6-transfer` `long_help` in `crates/mori/src/commands/expand.rs`, and documentation in `docs/NATIVE-CORE.md` change in this three-path slice; no parser, checker, interpreter, expander, compiler, or native proof logic is modified.",
+      "Older sections of `docs/NATIVE-CORE.md` (lines 127-679, updated only to use the explicit `cargo run -p mori --locked --` command prefix) remain historical context and are not re-certified as whole-language or native runtime evidence.",
+      "Walkthrough expectations (`DOC-EXPECTATIONS.json` and `DOC-COMMAND-PREDICATES.json`) are source-derived from existing fixtures and consumer code (`counter.unmetered.stdout.json`, `normal-oracle.json`, `invoice.source6`, `mori.tests.json`) and do not establish an independent financial or work-meter oracle.",
+      "Unquoted portions of ranged/JSON-pointer context files (`C04`-`C06`, `C09`-`C10`, `C12`-`C14`, `C17`, `C21`-`C23`, `C28`-`C32`, `C36`, `C38`) and the other parent `caa416` deltas outside `check_source.rs` and `simulate.rs` were not read as full physical files; all 148 requirements, 292 scenarios, 20 families, U0-U7, M1-M17, MC/SP/G, and financial/composition/compiler/native/proof/ledger/target gates remain open."
+    ],
+    "reason": "All three complete before/after changed files (`crates/mori/src/cli.rs`, `crates/mori/src/commands/expand.rs`, `docs/NATIVE-CORE.md`), all 40 declared context representations (`C01`-`C40`, including the full current bodies and diffs of `check_source.rs` and `simulate.rs`), and all frozen contract/expectation/validation artifacts were read in full and verified against merge commit `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` (tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`). Every falsifiable source predicate holds: `compile` and `simulate` help accurately name `language \"moriarty/1\";` and `language \"moriarty/2\";` and exclude `Beta/1` / `moriarty-beta/1` and `Source/6`; default `expand` remains Core/1 while `--emit-source6-transfer` requires `source6-expansion` and describes a `local-stipulation-only` beta transfer proposal that is neither compiled nor simulated; and all walkthrough commands, flags, JSON fields, qualifications, and 27 relative links in `docs/NATIVE-CORE.md` agree with the current consumers on `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`.",
+    "sourceDerivedGuideExpectationsAndLinksAssessment": "`preparation/frozen/DOC-EXPECTATIONS.json`, `preparation/frozen/DOC-COMMAND-PREDICATES.json`, `preparation/frozen/doc-shell/01.sh`..`05.sh`, and `preparation/LITERAL-AND-LINK-VALIDATION.json` were read in full and cross-checked against `source/docs/NATIVE-CORE.md` and `C04`-`C40`. All five shell scripts are byte-for-byte identical to the five walkthrough code blocks in `source/docs/NATIVE-CORE.md`; all 27 relative markdown links resolve to existing files in prospective/merged tree `7eb8ec7e993b330591a80b6e77ecc8d7a6f3a7e9`; and every documented status, qualification, state/balance/duty value, and effect in blocks 1-5 matches the declared consumer implementations and fixture pointers (`C05`, `C17`, `C21`, `C26`, `C35`, `C36`, `C40`). As documented in `DOC-EXPECTATIONS.json`, these walkthrough outcomes are source-derived from inspected implementation and fixture files, not an independent financial oracle or newly executed product run.",
+    "verdict": "approve-qualified"
+  },
+  "verdict": "approve-qualified"
+}

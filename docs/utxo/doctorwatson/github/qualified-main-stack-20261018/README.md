@@ -1,0 +1,28 @@
+Prepared public-only publication for the latest qualified whole opinions and root dispositions of PR237, PR231, PR228 and PR259. Nothing was copied into the shared checkout or published remotely. Root remains the sole integrator and adopter.
+
+The staged tree is `staged-publication/`. Its proposed destinations are the canonical tracker and `docs/utxo/doctorwatson/github/qualified-main-stack-20261018/`. `PUBLIC-FILE-ALLOWLIST.json` explicitly names every original source copied, its destination, byte count, SHA256 and public role. `STAGED-MANIFEST.json` names every staged file, including the generated dated snapshot/intake/policy/tracker. No broad directory publication is authorized by this packet. Whole opinions and dispositions are byte-exact, with original errors/dissent/limits preserved. Fidelity files qualify them separately; no corrected/spliced review is supplied.
+
+Public GitHub GET captures ran from **2026-10-18T19:50:48.132604+00:00 through 19:51:01.051982+00:00**, with per-request times and hashes in CAPTURE-RECEIPT. The snapshot contains all 43 previously tracked items plus PR259. At capture, main was `370e4fa598dfaea05de9da5e2b15cd436161b450`, the actual PR252 merge, and utxo was `94260eba86298a369c0c428a598ba8b4d00156ba`. This is a dated observation, not a continuing live-state claim.
+
+| PR | Exact head | Exact base | Captured state |
+| --- | --- | --- | --- |
+| 255 prerequisite | `ce7d16557fc0605f929357628d907d2a66d6153c` | `370e4fa598dfaea05de9da5e2b15cd436161b450` | OPEN draft, unmerged |
+| 257 prerequisite | `caa416f52b23fc1709d83d2c93794e1af4b79846` | `ce7d16557fc0605f929357628d907d2a66d6153c` | OPEN draft, unmerged |
+| 237 | `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` | `caa416f52b23fc1709d83d2c93794e1af4b79846` | OPEN draft, unmerged |
+| 231 | `36af18d48569c165480f104bed2b12b85e215d88` | `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` | OPEN draft, unmerged |
+| 228 | `7498ffb15323ba85ccb97135c994a9a8214e041e` | `36af18d48569c165480f104bed2b12b85e215d88` | OPEN draft, unmerged |
+| 259 | `e6832061db2dbdf7206e7a99081b5ef00f53fb53` | `7498ffb15323ba85ccb97135c994a9a8214e041e` | OPEN draft, unmerged |
+
+GitHub's raw `merge_commit_sha` for an open PR may name a test merge; none is presented as an actual delivered merge. PR246 was also captured OPEN draft at its original605 head. Its closure stays conditional on a verified actual259 merge. No ready/retarget/merge/close operation occurred. The 255/257 prerequisite rows describe remote state only; this packet does not assess or publish their current review/adoption eligibility.
+
+The new tracker proposal is `tracker-43-to-44.patch`; complete before/after bodies are also provided. All 43 original item objects and their raw array prefix are preserved, as are every historical top-level field except the necessary counts change. It appends only GH-PR259, changes counts from15issues/28PRs/43total to15issues/29PRs/44total, and adds one dated snapshot pointer. Fresh remote states and current exact root dispositions for older rows are stored in that snapshot rather than overwriting historical row observations. The old255procedure2 nonadoption record remains history, not a claim about any later procedure.
+
+PR259's existing EARS links are traced from PR246: UNI-001, UNI-018, UNI-021 and UNI-024; related issues23/80/81/89. This is the same two-document operational mapping, not new EARS acceptance. No original119+11+18 inventory, scenario/family count, item acceptance, wholeGoalClosed, nativeAuthority0 or paused broaderPreprodGoal changes.
+
+The four publication notes `proposed-pr-*-publication.md` are proposed text only. Their links resolve only after root publishes the staged public directory to utxo. The original captured PR bodies are retained beside them. Root should refresh head/base/body guards immediately before any external edit and preserve existing bodies, publishing a dated update without implying later merges. Do not run the historical publication script or its obsolete source guards.
+
+Selected small public actual receipts preserve: PR237's one Clap metadata pass plus five syntax-only checks and separate postcommit binding; PR231's44.125s build/0.207s one-case result with finite AST/effect/selected-finance limits; PR228's58.519s selected regression with expected inner failure/aggregate asserted in memory; PR259's3.888s static24pin/31link/11bash-n/dry-run result. This is not the complete review-input packet, all runtime captures or all source closures. Local references inside unchanged historical originals do not imply every referenced file was published in this minimal selection. Hashes identify bytes; they establish neither reading/backend authenticity nor semantic adequacy.
+
+All four root-qualified opinions retain their independent source/result limits and incidental fidelity qualifications. Installation/build/archive/runtime examples remain UNRUN for PR259; no selected result closes financial, compiler/Artifact/Target, native/proof/key/wallet/ledger, complete developer journey or parent-goal acceptance. No provider, product, test, native, Git/index/worktree or remote mutation was performed by this preparer. Work consisted of public read-only GH/Git, selected byte copies and data/patch validation.
+
+The source guard binds W HEAD94260, tracker blob `f77789d0333794660b305ca72425f57e7ff872c7` and exact canonical tracker SHA256 `9f1c2efc14c38c2d74d45bdbb4b41c410a30e485ac4b88a921984152f5532912`. Root must recheck that source before applying the patch; if it changes, reconcile against the new tracker without dropping history. The preparer never applies or commits it.
