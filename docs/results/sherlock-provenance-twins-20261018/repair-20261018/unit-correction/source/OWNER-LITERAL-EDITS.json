@@ -1,0 +1,86 @@
+{
+  "edits": [
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    CoreProgram {\n        functions,\n        entry: uint_lit(0),\n    }\n}\n\n#[test]\nfn provenance_twins_zero_one_zero_params_admits_and_preserves_declaration_order() {\n    let (b, l) = default_bounds_and_layout();\n    let prog = provenance_twins_program();\n    let view = prepare_core(&prog, &b, &l).expect(\"prepare_core should succeed\");",
+      "new": "    CoreProgram {\n        functions,\n        entry: uint_lit(0),\n    }\n}\n\nfn expect_ok<T>(res: Result<T, Tooling>, msg: &str) -> T {\n    match res {\n        Ok(v) => v,\n        Err(Tooling::AdmissionRejected { reason, detail, locator }) => {\n            panic!(\"{msg}: AdmissionRejected({reason:?}, {detail:?}, {locator:?})\")\n        }\n        Err(Tooling::CapacityNotAdmitted { kind, needed, limit, locator }) => {\n            panic!(\"{msg}: CapacityNotAdmitted({kind:?}, {needed:?}, {limit}, {locator:?})\")\n        }\n        Err(Tooling::UnsupportedFeature { feature, locator }) => {\n            panic!(\"{msg}: UnsupportedFeature({feature:?}, {locator:?})\")\n        }\n    }\n}\n\nfn unwrap_ok<T>(res: Result<T, Tooling>) -> T {\n    expect_ok(res, \"unexpected Tooling error\")\n}\n\n#[test]\nfn provenance_twins_zero_one_zero_params_admits_and_preserves_declaration_order() {\n    let (b, l) = default_bounds_and_layout();\n    let prog = provenance_twins_program();\n    let view = expect_ok(prepare_core(&prog, &b, &l), \"prepare_core should succeed\");"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    assert!(check_program_view(&view, &b, &l).is_ok());\n    let admitted = admit(&prog, &b, &l).expect(\"admit should accept [0, 1, 0] parameter slices\");\n    let img = admit_run(\n        &admitted,\n        &RunIntC::Nat(4096),\n        &RunIntC::Nat(64),\n        &FinanceInput::Absent,\n    )\n    .expect(\"admit_run should succeed\");",
+      "new": "    assert!(check_program_view(&view, &b, &l).is_ok());\n    let admitted = expect_ok(\n        admit(&prog, &b, &l),\n        \"admit should accept [0, 1, 0] parameter slices\",\n    );\n    let img = expect_ok(\n        admit_run(\n            &admitted,\n            &RunIntC::Nat(4096),\n            &RunIntC::Nat(64),\n            &FinanceInput::Absent,\n        ),\n        \"admit_run should succeed\",\n    );"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    let prog_all_empty = program_with_arities(&[0, 0, 0]);\n    let view_all_empty = prepare_core(&prog_all_empty, &b, &l).unwrap();",
+      "new": "    let prog_all_empty = program_with_arities(&[0, 0, 0]);\n    let view_all_empty = unwrap_ok(prepare_core(&prog_all_empty, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    let prog_alt = program_with_arities(&[1, 0, 2, 0]);\n    let view_alt = prepare_core(&prog_alt, &b, &l).unwrap();",
+      "new": "    let prog_alt = program_with_arities(&[1, 0, 2, 0]);\n    let view_alt = unwrap_ok(prepare_core(&prog_alt, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    let prog_lead = program_with_arities(&[0, 2, 1]);\n    let view_lead = prepare_core(&prog_lead, &b, &l).unwrap();",
+      "new": "    let prog_lead = program_with_arities(&[0, 2, 1]);\n    let view_lead = unwrap_ok(prepare_core(&prog_lead, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Trailing empty function with start == expect_start (1) instead of canonical 0\n    let mut v_trailing = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Trailing empty function with start == expect_start (1) instead of canonical 0\n    let mut v_trailing = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Leading empty function with non-zero start\n    let mut v_leading = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Leading empty function with non-zero start\n    let mut v_leading = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Overlap: function 2 starts at 0 instead of cumulative expect_start 1\n    let mut v_overlap = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Overlap: function 2 starts at 0 instead of cumulative expect_start 1\n    let mut v_overlap = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Gap: function 2 starts at 2 instead of cumulative expect_start 1\n    let mut v_gap = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Gap: function 2 starts at 2 instead of cumulative expect_start 1\n    let mut v_gap = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Out-of-range slice end (start + len > parameters.len())\n    let mut v_oob = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Out-of-range slice end (start + len > parameters.len())\n    let mut v_oob = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Arithmetic overflow in slice_inside (start + len overflows usize)\n    let mut v_ovf = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Arithmetic overflow in slice_inside (start + len overflows usize)\n    let mut v_ovf = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Trailing unowned parameter after [1, 0, 2, 0]\n    let mut v_trail = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // Trailing unowned parameter after [1, 0, 2, 0]\n    let mut v_trail = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // Trailing unowned parameter when all functions have 0 parameters\n    let prog_empty = program_with_arities(&[0, 0]);\n    let mut v_empty_trail = prepare_core(&prog_empty, &b, &l).unwrap();",
+      "new": "    // Trailing unowned parameter when all functions have 0 parameters\n    let prog_empty = program_with_arities(&[0, 0]);\n    let mut v_empty_trail = unwrap_ok(prepare_core(&prog_empty, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // V4 function_name out of range\n    let mut v_name = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // V4 function_name out of range\n    let mut v_name = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    // V4 parameter binder out of range\n    let mut v_binder = prepare_core(&prog, &b, &l).unwrap();",
+      "new": "    // V4 parameter binder out of range\n    let mut v_binder = unwrap_ok(prepare_core(&prog, &b, &l));"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs",
+      "old": "    let mut v_body = prepare_core(&entry_let_prog, &b, &l).unwrap();",
+      "new": "    let mut v_body = unwrap_ok(prepare_core(&entry_let_prog, &b, &l));"
+    }
+  ],
+  "explanation": "`shared::Tooling` intentionally omits `#[derive(Debug)]`, whereas `Result::<T, Tooling>::expect` and `Result::<T, Tooling>::unwrap` require `Tooling: fmt::Debug`, causing the 17 E0277 errors at lines 150, 186, 193, 204, 214, 225, 240, 249, 264, 273, 286, 295, 307, 320, 338, 347, and 364 of `v4_empty_params_tests.rs` (`check_program_view(...).unwrap_err()` is unaffected because `Result::<(), ProgramViewViolation>::unwrap_err` bounds `(): Debug`). Adding test-local helpers `expect_ok` and `unwrap_ok` inside `v4_empty_params_tests.rs` extracts `Ok(v)` and unconditionally panics on any `Err(Tooling)` while formatting its inner `Debug`-implementing payload fields (`AdmissionReason`, `CapacityKind`, `NeededNatC`, `FeatureKind`, `Option<LocatorC>`), resolving all 17 E0277 errors with zero changes to production types, `owner_prepare.rs` (`625cade...`), or any test assertion.",
+  "gaps": []
+}

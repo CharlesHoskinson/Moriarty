@@ -1,0 +1,11 @@
+--- old/bounded_sdk_compile.py
++++ new/bounded_sdk_compile.py
+@@ -661,7 +661,7 @@
+             if audit:target+=['--config-sha256',config_sha,'--worker-fd',str(token_fd)]
+             preserved=[stage_fd,child.fileno()]+([token_fd] if audit else [])
+             cmd=['/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]
+-            fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in args[:separator])+b'\0');args=args[:separator]+['--',*cmd]
++            bwrap_opts=args[:separator]+([] if '--as-pid-1' in args[:separator] else ['--as-pid-1']);fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in bwrap_opts)+b'\0');args=bwrap_opts+['--',*cmd]
+             try:
+                 for name in ('stdout','stderr'):logs.append(open(packet/(phase+suffix+'.'+name),'xb',buffering=0))
+                 def enter():

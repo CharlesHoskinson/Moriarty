@@ -1,0 +1,9 @@
+# V4 unit correction — 2026-10-18 UTC
+
+The corrected test source now has an observed seven-phase PASS: one cfg(test) compile, a listing of exactly five selected tests and five individually selected runs. Compilation took5.821368859 seconds; every phase exited0 and selected input pins remained unchanged. [Full receipts](actual/attempt-01/RESULT.json), [listing](actual/attempt-01/02/stdout.bin), compiler warnings and all five test streams are preserved. Seven phases means five executed unit tests.
+
+The [corrected source](source/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs) is15,902 bytes with hash8b75f705; full identity is in [actual facts](ACTUAL-FACTS.json). [Owner literal edits](source/OWNER-LITERAL-EDITS.json), [patch](source/SOURCE.patch) and materialization preserve the exact test-only correction. Production owner source625cade is unchanged from the [prior repair archive](../README.md).
+
+The [R382 source/operation opinion](reviews/source-operation/FINAL-RESPONSE.txt) approves the correction and fixed operation, acknowledging the earlier approval missed Tooling's absent Debug bound. Its raw wording and [actual terminal metadata](reviews/source-operation/STATUS.json) remain intact; this was a new source/operation review in the retained reviewer conversation, not a new result-review vote. Unchanged production source was retained by earlier review/compile receipt, not freshly reread in full.
+
+The earlier [17-error compiler stderr](../actual/normal-core-and-cfgtest-01/02/stderr.bin) and negative receipt remain unchanged. R381's then-unrun wording is correct for its earlier cut; these later results supplement it. This does not erase the initial public admission failure, rerun the passing public cases or imply whole UIREQ027/reader/native acceptance. The recorded original acceptance baseline stays11/35. No ELF/rlib, cache/SDK payload or provider wire is published.
