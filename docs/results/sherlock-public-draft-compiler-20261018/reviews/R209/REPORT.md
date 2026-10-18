@@ -1,0 +1,73 @@
+{
+  "reviewer_identity_and_scope": {
+    "conversation_id": "4cc3c2cf-b306-45f7-9f65-896286e5fc0f",
+    "role": "Focused POST-RESULT follow-up by the same NONAUTHOR R205 designated-security reviewer (not Opus, not a second independent reviewer vote, not candidate author)",
+    "requested_route": "gemini-4-argon-high HIGH (standing fallback under retained Opus5.5 HIGH quota outage)",
+    "returned_model_identity": "Gemini 4 Argon (High)",
+    "author_attribution": "R200 bounded typechecker and 13 AST tests authored by Sol under the October 18 UTC narrow type-checker exception.",
+    "execution_and_tool_status": "ZERO tools, file reads, shell commands, compilations, or executions performed by reviewer; evaluation is strictly over inline R204 actual-attempt-01 receipts, 20 phase records, 40 raw stream bodies, and dated source snapshots.",
+    "read_scope_and_factored_limits": [
+      "Full inline: 01-draft_typecheck.rs (2a3a135d4c0cd45a1ee648ad9fd641a6116d8c6292b41a1447aac83f7697b849), 01-draft_typecheck_tests.rs (ad36596dc61d574d0f319a5f6dff3da085a04ae30964b87b069b5cc41b3ebade), 01-draft_source.rs (caa5bbad2cedf9856caa2896908971d1c8920f94e985cc7543dda855c812e9ef), 02-typechecker_harness.rs (a7722e0947e4a477e7a7a0de11f438dae7f6bfc94c5734ebb754100b772a2ef7), 03-API.md, 04-PHASES.json, 05-PREEXEC.json, 05-RESULT.json, 06-Root-selection.json, 07-LIST-MEMBERSHIP-READBACK.json, 07-GENERATED-OUTPUT-PINS.json, 08-preserved-preexecution-stop.json, 09-generated-test-depinfo.d, 10-Root-capture-procedure.txt, 11-current-Core-lib.rs, 11-current-Sherlock-mod.rs, 12-R120-uncompiled-diagnostic-mapping.rs, 13-prior-own-disposition-conditions.json, 14-all40-rawstreams.txt, and 15-current-Core-lib-after-word-integration.v02.rs (89b4d954d035969ee670d245483895d172e17206c3bf25d1b1cc78f76f31a3ed).",
+      "Factored/omitted bodies: 485-item PREEXEC/RESULT pin arrays, 484-item Root selection pin array, 117 Core sources (libmori_core.rlib 7d40515f92e4686d50c5090b787bb47ecd34b83e636c71e3e023bb272b1c8831), 6 R191 lexer sources (libmori_lexer_r191.rlib 419fed43346bc022726248d36ec9aaaa8e7235b0dac2a121a3cb157675a4e4db), and 273 normal dependency/toolchain files are receipt-referenced, not inline or semantically re-audited here. Binary outputs are verified via Root receipts, not binary inspection."
+    ]
+  },
+  "ACTUAL_RESULT_DECISION": {
+    "verdict": "ACCEPT_WITH_LIMITS",
+    "blockers_or_uncertain_predicates": [],
+    "q1_phase_stream_and_source_binding": {
+      "compile_and_output_binding": "Phase 1 (externalTypecheckerTestArgv) exited 0 in 0.5568829060066491s with 0B stdout/stderr (e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855), compiling snapshot/typechecker_harness.rs with --test against fixed --extern mori_core (libmori_core.rlib) and --extern mori_lexer (libmori_lexer_r191.rlib). 07-GENERATED-OUTPUT-PINS.json records build/typechecker-selected-tests (15221816B, sha256 9ee09db7bb8d86f66af1d36d631103e887b2ac6df137382643371f6a3fa8206e) and build/typechecker-test.d (1969B, sha256 6e4c60fa965a08e5d481b192c619293d8d996387960514624a271fadb52f018f) with pinnedAfterCompileBeforeAnyBinaryExecution: true. 09-generated-test-depinfo.d lists the 4 expected snapshot .rs files (ordinary rustc dep-info only, not an exclusive-read or kernel I/O attestation).",
+      "list_and_18_exact_tests": "Phase 2 (typecheckerListArgv) exited 0 in 0.009749404998729005s; 02-typecheckerListArgv.stdout (1669B, sha256 31a5c18b432938a3e292b12d41c2b04d6f80f05c42b8996f74ac8f02a26b967b) lists the exact 18 sherlock_draft_types::tests::* selectors and '18 tests, 0 benchmarks', matching 07-LIST-MEMBERSHIP-READBACK.json (exactSetAndCountMatch: true). Phases 3..20 (typecheckerExactTest01..18) each ran serially with --exact, --test-threads=1, --nocapture, exiting 0 (0.0074s..0.0194s) with 0B stderr and stdout confirming 'running 1 test', 'test sherlock_draft_types::tests::<name> ... ok', and 'test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out;'.",
+      "scope_distinction": "This operation was 1 external rustc --test compile + 1 --list + 18 individual --exact tests. It did not rebuild Core or lexer, run broad Core cfg(test) or the 14 parser/lexer cohort, invoke Cargo/SDK/evaluator/Machine, or grant native authority.",
+      "anchors": [
+        "pub use mori_core::sherlock;",
+        "#[path = \"candidate/draft_source.rs\"]\npub mod sherlock_draft;",
+        "#[path = \"candidate/draft_typecheck.rs\"]\npub mod sherlock_draft_types;",
+        "#[cfg(test)]\n#[path = \"draft_typecheck_tests.rs\"]\nmod tests;",
+        "assert_eq!(super::DepthBudget { limit: Some(usize::MAX) }.next_depth(usize::MAX, &parent, Some(0)),",
+        "18 tests, 0 benchmarks",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out;"
+      ]
+    },
+    "q2_condition_reconciliation_and_receipt_qualifications": {
+      "preexec_and_postexec_pins": "05-PREEXEC.json records inputCount: 485, allInputsMatch: true; 05-RESULT.json records status: PASS, phasesSelected: 20, phasesCompleted: 20, exactTestsPassed: 18, inputCount: 485, allInputPinsUnchanged: true, allOutputPinsUnchanged: true, noRetry: true, and both outputChecks match: true.",
+      "inventory_membership_clarification": "In R205 we referred to PROPOSED.json and SOURCE-FLOW.json under the 466 flatInputPins; as documented in Q4_condition_inventory_membership and 06-Root-selection.json ('R204PROPOSED/SOURCE-FLOW are coveredby48freeze,notflat466'), those two files belong to the 48 base-frozen 204/SOURCE-FREEZE.json inventory and were explicitly bound and verified in 05-PREEXEC.json (plan sha256 b87cd8900a1363cfcba46e293b0cf06dffb9288edca0d49ddc158cfab65b5cc2) and 06-Root-selection.json (484 selection pins).",
+      "preserved_precheck_stop": "08-preserved-preexecution-stop.json records PREEXECUTION_STOP_BEFORE_CHILD_CREATION (childPhasesExecuted: 0, actualAttemptDirectoryCreated: false, noSubjectRetry: true) when 205-bounded-typechecker-security-review/FIXED-ITEM-LITERAL-SIZES.json was finalized (4365B to 4527B) after initial selection. Source and argv were unchanged; metadata was frozen before actual-attempt-01 executed.",
+      "dated_worktree_lib_qualification": "Per R209v02 qualification (2026-10-18T01:38:36.530607+00:00), a subsequent Root word-arithmetic integration modified worktree crates/mori-core/src/lib.rs (15-current-Core-lib-after-word-integration.v02.rs, 1733B, sha256 89b4d954d035969ee670d245483895d172e17206c3bf25d1b1cc78f76f31a3ed) after R204 completed at 01:33:42Z. That later worktree edit does not affect the historical validity of R204 PREEXEC/RESULT receipts or the unchanged R204 snapshot and linked .rlib artifacts."
+    },
+    "q3_anchor_corrections_and_established_coverage": {
+      "prior_anchor_correction": "We withdraw the trailing '{}' typographical suffix on 4 of our 42 R205 source anchors and bind to the exact contiguous lines in 01-draft_typecheck.rs:",
+      "corrected_literal_anchors": [
+        "let depth = budget.next_depth(0, &source, None)?;",
+        "require(left, left_expected, &left_source)?;",
+        "require(right, right_expected, &right_source)?;",
+        "require(condition, Type::Bool, &condition_source)?;"
+      ],
+      "fixed_parser_workload_verified": "The 9 wrapped source strings in the original 5 tests have byte lengths [61, 89, 90, 102, 130, 104, 69, 122, 99] (max 130B in declared_return_type_and_duplicate_binders_are_rejected), confirming the prior <160B bound.",
+      "established_by_execution": "Resolves the prior UNRUN status of the 18-test suite: confirms legacy behavior on the 5 original parser+checker tests and confirms bounded depth enforcement, root=1 reset across bodies/entry, root-0 refusal before parameter environment work, signature-only recursion, error precedence, parent-only SourceLocation + child_index diagnostics, and usize::MAX checked_add overflow handling (observed: None) across the 13 AST tests.",
+      "remaining_test_coverage_gaps": [
+        "Independent R115 programs (ChainTotal and BranchTotal) were not part of the 18 executed tests.",
+        "Composition of parse_draft_source_bounded with check_program_types_bounded was not executed.",
+        "Tree patterns/operators/literals (Pattern::Leaf, Pattern::Branch, UnaryOp::Leaf, BinaryOp::Branch, Value::Tree) and BinaryOp::{Sub, Mul, Lt} remain unexercised by tests.",
+        "Direct budget refusal on a Call argument or inside a Match arm body (after pattern_types admission) is not separately asserted."
+      ]
+    }
+  },
+  "REGISTRATION_AND_PUBLIC_CONSUMER_CONSIDERATIONS": {
+    "current_registration_status": "In both dated 11-current-Core-lib.rs and current 15-current-Core-lib-after-word-integration.v02.rs, sherlock_draft and sherlock_draft_types are private and #[cfg(test)]-only; neither is exported in 11-current-Sherlock-mod.rs. The newly added pub mod sherlock_word_arithmetic in 15-current-Core-lib-after-word-integration.v02.rs is unrelated to and untested by R204. The standalone external harness 02-typechecker_harness.rs does not register a normal public compiler constructor.",
+    "registration_anchors": [
+      "#[cfg(test)]\n#[path = \"sherlock/draft_source.rs\"]\nmod sherlock_draft;",
+      "#[cfg(test)]\n#[path = \"sherlock/draft_typecheck.rs\"]\nmod sherlock_draft_types;",
+      "#[path = \"sherlock/word_arithmetic.rs\"]\npub mod sherlock_word_arithmetic;"
+    ],
+    "minimal_remaining_integration_predicates": [
+      "12-R120-uncompiled-diagnostic-mapping.rs remains uncompiled context; its exhaustive matches in source(error: DraftError) and types(error: DraftTypeError) must add arms for DraftError::Budget and DraftTypeErrorKind::Budget(DraftTypeBudgetExceeded) before compiling R120.",
+      "Public compiler/source consumer integration must expose or wire the checker outside #[cfg(test)] and thread caller max_type_depth into check_program_types_bounded alongside DraftParseBudget (to bound AST width, token/occurrence counts, and parameter/function counts that depth alone does not cap).",
+      "Any future changed source/integration bytes require their own applicable review before execution."
+    ],
+    "retained_open_limits_and_holds": [
+      "H1 unmetered host evaluator warning remains in effect; A-to-B AST/image copy bridge, owner preparation, diagnostic reporting, and non-recursive Drop for deep Arc<Expr>/Arc<Tree> remain open.",
+      "Native0 / C4: OPEN / R2: UNSAT / 60460: HOLD, UIREQ022, stopped Amendment 10, quarantined T3, and formal/financial/native admission remain ungranted."
+    ]
+  }
+}
+

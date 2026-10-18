@@ -1,0 +1,64 @@
+{
+  "actual_exit": 0,
+  "start_utc": "2026-10-18T01:07:40.438553+00:00",
+  "end_utc": "2026-10-18T01:08:47.315990+00:00",
+  "elapsed_seconds": 66.87752298900159,
+  "requested_model": "gemini-4-argon-high",
+  "requested_effort": "HIGHactualpinnedslug",
+  "returned_init_selection": [
+    {
+      "model": "gemini-4-argon-high",
+      "permission_mode": "always-proceed",
+      "cwd": "/tmp/moriarty-r184-revision02-followup-5k6dfykg"
+    }
+  ],
+  "backendcanonical_attestation": false,
+  "event_counts": {
+    "init": 1,
+    "step_update": 315,
+    "result": 1
+  },
+  "step_type_counts": {
+    "user_input": 1,
+    "system_message": 1,
+    "agent_response": 313
+  },
+  "terminal_count": 1,
+  "terminal": {
+    "status": "SUCCESS",
+    "response": "{\n  \"context_identity_and_limits\": {\n    \"conversation_id\": \"6dd2357d-0b15-4b0e-8513-456977c6290f\",\n    \"reviewer\": \"Gemini 4 Argon (High) (standing gemini-4-argon-high HIGH fallback under Root-observed Opus quota outage; NOT Opus)\",\n    \"author\": \"Sol (R181 and revision02 author)\",\n    \"scope_and_context_limits\": \"Same-owner revision02 follow-up source review only; zero tool calls; all code/tests UNRUN. Prior 31-body/42-page R184 packet is unchanged and not re-audited as a fresh full pass; production draft_source.rs (25464B) and mori-lexer/src/lib.rs (11505B) hashes are unchanged. Locally pinned dependency/tool/Core hash inventories (483 flat pins, 198 normal deps, 75 toolchain files, 117 Core sources in BODY 24-25) are metadata only, not source-audited.\"\n  },\n  \"mandatory_items\": {\n    \"mandatory_1\": {\n      \"status\": \"SATISFIED\",\n      \"anchors\": \"BODY 07/09 DraftPreprocessingExtents::{max_ast_nodes, max_parse_depth, max_structural_ast_depth, parser_budget}; BODY 08/09 draft_diagnostics::source DraftError::Budget\",\n      \"assessment\": \"BODY 07 documents max_ast_nodes as syntactic Expr+Pattern occurrences (DraftParseBudget::max_ast_occurrences), max_parse_depth as active parser descent depth (max_parser_recursion_depth), adds distinct max_structural_ast_depth: UsizeDecimal without reusing max_type_depth or max_copy_depth, and implements parser_budget(self) -> crate::sherlock_draft::DraftParseBudget projecting all 8 UsizeDecimal (.0) fields (matching BODY 16/17). BODY 08 adds exhaustive DraftError::Budget(exceeded) arm matching all 8 DraftBudgetResource variants and serializing decimal string limit/observed. R120 remains unintegrated and is not compiled by R191.\"\n    },\n    \"mandatory_2\": {\n      \"status\": \"SATISFIED\",\n      \"anchors\": \"BODY 01 precedence_has_independently_expected_ast, chain_total_matches_independent_ast_and_complete_provenance, branch_total_matches_independent_ast_and_complete_provenance, pratt_structural_depth_differs_from_recursive_descent_depth, literal_has_exact_parser_recursion_depth_two, nonbinary_constructor_has_exact_structural_depth_two; BODY 03/04; BODY 10-16\",\n      \"assessment\": \"BODY 01 adds independent AST check BinaryOp::Add(1, BinaryOp::Mul(2, 3)); full Program AST and SourceProvenance assertions for ChainTotal (BODY 03, 177B) and BranchTotal (BODY 04, 211B) matching frozen R115 EXPECTED.json/DERIVATION.md (BODY 10/11) spans, child_paths, kinds, and pattern binders; exact recursion boundary 5 (observed 6) before 6 on ((1)); exact recursion boundaries 0 (observed 1) and 1 (observed 2) before 2 on literal 1; and non-binary structural depth 1 (observed 2) before 2 on leaf(1).\"\n    },\n    \"mandatory_3\": {\n      \"status\": \"SATISFIED\",\n      \"anchors\": \"BODY 02 caller_token_limit_is_inclusive_and_preserves_token_and_comment_order, caller_token_limit_retains_all_legacy_hard_limits\",\n      \"assessment\": \"BODY 02 asserts lex_with_token_limit(\\\"a @\\\", 2) returns Err(TokenLimitedLexError::TokenLimit { limit: 2, observed: 3 }) before scanning the excess invalid token '@', alongside legacy hard-limit checks.\"\n    }\n  },\n  \"optional_4_disposition\": \"EXPLICITLY_OPTIONAL_UNAPPLIED: Lexer initial capacity formula and collect_sites scheduled initializer (mechanical locator is BODY-01 L525, before while-loop at L527, per BODY 20 PQ3/PQ4) remain optional and unapplied; production parser/lexer sources are unchanged.\",\n  \"overall_source_judgment\": \"APPROVE_WITH_LIMITS (all 3 mandatory revision02 source/test items satisfied; ready for Root consideration of narrow R191 ordinary parser/lexer checks).\",\n  \"r191_ordinary_eligibility\": {\n    \"status\": \"ELIGIBLE_UNDER_EXACT_CONDITIONS\",\n    \"anchors\": \"BODY 21 parser_harness.rs; BODY 22 lexer_harness.rs; BODY 23-26 normalLexerArgv, parserExternalTestArgv, lexerExternalTestArgv, parserTestListArgv, lexerTestListArgv, parserExactTest01..12, lexerExactTest01..02\",\n    \"scope_and_conditions\": [\n      \"Wrappers (BODY 21/22) compile unchanged production lexer as normal rlib with unique -C metadata=moriarty_r191_bounded_lexer_20261017_v1 (no --cfg test) and wire candidate/draft_source.rs + revision02 tests via child module aliases against existing libmori_core.rlib.\",\n      \"No Core rebuild or Core cfg(test), no production lexer cfg(test), no Cargo/buildscripts/devdeps, no evaluator/Machine/owner-runtime/SDK/native execution, and R120 is not compiled.\",\n      \"Execution must enforce the exact 19 phases in BODY 24 (ignoring historical 5/3-phase wording in BODY 26 commentary), verify parserTestListArgv (12 tests) and lexerTestListArgv (2 tests) match expectedParserTestMembership/expectedLexerTestMembership before running parserExactTest01..12 and lexerExactTest01..02, enforce 30s/10s timeouts and 131072B stream caps, and stop immediately on any nonzero exit, cap overflow, or pin mismatch with no retries.\"\n    ]\n  },\n  \"minimal_remaining_corrections\": \"None for R181 revision02 parser/lexer/test sources or R191 harness wrappers. When Root later integrates R120 compile_draft_host, wire DraftPreprocessingExtents::parser_budget() and draft_diagnostics::source.\",\n  \"unrun_and_remaining_limits\": {\n    \"execution_status\": \"UNRUN (all compiler, lexer, parser, and test phases remain unexecuted).\",\n    \"remaining_limits\": \"H1 (unmetered host evaluator), sherlock_draft_types checker/max_type_depth recursion, general AST copying/max_copy_depth/A-to-B ProgramView lowering/report serialization, unmetered recursive Drop of Node/Arc<Expr> up to max_structural_ast_depth, native stack frame overhead per parser_depth unit, R120 public compile_draft_host wiring, and numerical cap policy remain separate and unadmitted. Preserved: Native0, C4OPEN, R2UNSAT, 60460HOLD, stopped Amendment10.\"\n  }\n}\n",
+    "duration_seconds": 1483.902832524,
+    "num_turns": 2,
+    "usage": {
+      "input_tokens": 311178,
+      "output_tokens": 39148,
+      "thinking_tokens": 27538,
+      "cache_read_tokens": 180008,
+      "total_tokens": 350326
+    },
+    "conversation_id": "6dd2357d-0b15-4b0e-8513-456977c6290f"
+  },
+  "stream_parse_error_count": 0,
+  "stdin_error": null,
+  "available_user_input_events": [
+    {
+      "conversation_id": "6dd2357d-0b15-4b0e-8513-456977c6290f",
+      "step_index": 47,
+      "state": "DONE",
+      "step_type": "user_input"
+    }
+  ],
+  "available_tool_steps": [],
+  "available_public_error_metadata": [],
+  "visible_public_fields_captured": [
+    "text_delta"
+  ],
+  "final_response_bytes": 5728,
+  "all_selected_input_pins_unchanged": true,
+  "one_manual_provider_launch": true,
+  "native_authority": 0,
+  "tests_run": false,
+  "observer_stop": null,
+  "correction_not_fresh_vote": true,
+  "actual_role": "existing_R184_designated_ArgonHIGH_owner_revision02_and_R191_followup_not_fresh_vote"
+}

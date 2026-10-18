@@ -52,9 +52,10 @@ The current full-Sherlock goal is active. The user directs the
 close every retained applicable EARS requirement. Select each next missing
 behavior or acceptance check from the current evidence report, preserve actual
 blockers on their consuming rows, and continue independent actionable work.
-Source, observed results and acceptance retain separate status. The [latest selected report](results/sherlock-live-resource-chunks-20261018/current-evidence/RESULT.json)
-verifies nine current adopted original host/reporting clauses;26 originals and all25
-refinements remain open. The earlier
+Source, observed results and acceptance retain separate status. The [latest selected report](results/sherlock-public-draft-compiler-20261018/current-evidence/RESULT.json)
+verifies ten current adopted original host/reporting clauses;25 originals and all25
+refinements remain open. Original022 names compiler correspondence obligations;
+its closure does not discharge their semantic proofs or native predicates. The earlier
 default lane passed [252 local tests](results/sherlock-ears-closure-20261017/README.md).
 After the optional evidence-record feature and an actual dependency-integration
 repair, the [updated local lane passed254 tests](results/doctorwatson-evidence-record-20261017/README.md).

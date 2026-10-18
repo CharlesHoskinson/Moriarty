@@ -1,10 +1,18 @@
 # HostOnly source compiler API and artifact
 
-Status, 2026-10-17: the production Core library builds and has produced two fixed compile-only captures. CLI integration is source in draft PR170; the CLI binary has not been built/executed, and the explicit observation branch has not been executed in this result. Mandatory R27 source corrections remain pending. These positive results do not approve those corrections. See the [exact result package](../../results/sherlock-source-compile-20261017/).
+Historical Core1 result cut, 2026-10-17: the production Core library builds and has produced two fixed compile-only captures. CLI integration is source in draft PR170; the CLI binary has not been built/executed, and the explicit observation branch has not been executed in this result. Mandatory R27 source corrections remain pending. These positive results do not approve those corrections. See the [exact result package](../../results/sherlock-source-compile-20261017/).
+
+This page retains the Core1 scalar artifact/1 contract and its historical result
+cut. The separate [dedicated draft compiler](draft-source-compiler.md) now has a
+real public compile-only body for typed functions, nested calls and list/tree
+constructors, with artifact/2 and a distinct configuration. That source candidate
+has now compiled through the current Core library and passed both public fixture
+tests. See its [2026-10-18 result](../../results/sherlock-public-draft-compiler-20261018/README.md);
+that result does not rerun or broaden the historical Core1 captures below.
 
 ## Public Rust entry points
 
-Module: `mori_core::sherlock_compile_artifact`, registered in [lib.rs](../../../crates/mori-core/src/lib.rs#L9).
+Module: `mori_core::sherlock_compile_artifact`, registered in [lib.rs](../../../crates/mori-core/src/lib.rs#L11).
 
 ```rust
 pub const EXECUTION_PROFILE: &str = "sherlock-helper-microstep/1";
@@ -21,7 +29,7 @@ pub fn compile_host(
 ) -> Result<CompileArtifact, CompileFailure>;
 ```
 
-[Exact declarations and implementation](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L121). `config_source` is complete [sherlock-host-config/1 JSON](host-source-config.md). `target_source` is parsed JSON retained as a descriptor and exact-byte digest; it does not select a native network or SDK backend.
+[Exact declarations and implementation](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L165). `config_source` is complete [sherlock-host-config/1 JSON](host-source-config.md). `target_source` is parsed JSON retained as a descriptor and exact-byte digest; it does not select a native network or SDK backend.
 
 The selected source action must have no parameters. The route uses the public Core/1 parser, current scalar source projection, a real zero-argument call to the generated function, and the existing B owner admission. Lets/operators remain in the program tables; the compiler does not evaluate a source result and replace its structure with a literal. An emit contributes its scalar value to this projection, not an executed financial effect. The lower-level [prepare_scalar_action_host](../../../crates/mori-core/src/sherlock/helper_machine/core_action_consumer.rs#L81) returns `CoreActionPrepared { preparation, admitted, image }`; `observe()` on that pair borrows actual owner-bound fields without executing B steps.
 
@@ -38,7 +46,7 @@ limitations. This does not extend the supported input policy.
 
 ## Artifact: `sherlock-host-artifact/1`
 
-`CompileArtifact` is a serializable, output-only record; there is no executable-image reopen/import API. [Complete declarations](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L26):
+`CompileArtifact` is a serializable, output-only record; there is no executable-image reopen/import API. [Complete declarations](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L35):
 
 | Field | Representation |
 | --- | --- |
@@ -55,11 +63,11 @@ limitations. This does not extend the supported input policy.
 
 The private wire module projects real owner records. ProgramView's twelve fields are `entry`, `expressions`, `occurrences`, `occurrence_paths`, `children`, `functions`, `parameters`, `arms`, `patterns`, `constants`, `constant_fields`, `names`. Struct keys/enum variant names follow the typed records, vectors preserve order/multiplicity, owner integer fields use decimal strings, and optional values preserve null/present distinctions. See [ProgramView projection](../../../crates/mori-core/src/sherlock/compile_artifact/wire.rs#L596), [admission/image projection](../../../crates/mori-core/src/sherlock/compile_artifact/wire.rs#L968). This output projection is not a public native ABI.
 
-`CompileFailure` exposes `stage`, `actual_error`, `evaluation_performed`, decimal-string `events_forwarded`, `completed`; [declaration](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L87). Failure records and completed semantic outcomes remain distinct. This page makes no guard or diagnostic acceptance claim; the pending R27 correction has its separate source/review owner.
+`CompileFailure` exposes `stage`, `actual_error`, `evaluation_performed`, decimal-string `events_forwarded`, `completed`; [declaration](../../../crates/mori-core/src/sherlock/compile_artifact.rs#L96). Failure records and completed semantic outcomes remain distinct. This page makes no guard or diagnostic acceptance claim; the pending R27 correction has its separate source/review owner.
 
 ## CLI source contract — unbuilt
 
-[compile.rs](../../../crates/mori/src/commands/compile.rs#L8) adds `--execution-profile`, `--action`, `--execution-config` and `--observe` to the existing compile arguments. Only `sherlock-helper-microstep/1` is selected by this source branch. Action/config are required with selection; target and a new output directory remain required. Omitted execution selection follows ordinary Core compilation. Selected source wiring publishes `sherlock-artifact.json`, not ordinary `artifact.json`/ZKIR artifacts. These declarations are not a demonstrated CLI invocation or installation result; use the [observed library path](../how-to/prepare-host-source-artifact.md).
+[compile.rs](../../../crates/mori/src/commands/compile.rs#L9) adds `--execution-profile`, `--action`, `--execution-config` and `--observe` to the existing compile arguments. Only `sherlock-helper-microstep/1` is selected by this source branch. Action/config are required with selection; target and a new output directory remain required. Omitted execution selection follows ordinary Core compilation. Selected source wiring publishes `sherlock-artifact.json`, not ordinary `artifact.json`/ZKIR artifacts. These declarations are not a demonstrated CLI invocation or installation result; use the [observed library path](../how-to/prepare-host-source-artifact.md).
 
 ## Observed result boundary
 

@@ -1,0 +1,42 @@
+{
+  "task": "R181 revision02 mandatory test additions and separate R120 parser mapping",
+  "author": "Sol",
+  "authorization": "Parent relayed scoped user approval for implementation after R184 feedback",
+  "implementation": "test source and exact downstream mapping afterimages/patch prepared",
+  "validation": "source-text and frozen-data comparisons only; Rust tests unrun",
+  "acceptance": "fresh narrow designated Opus/Gemini review required before execution",
+  "production_parser_lexer_changed": false,
+  "optional_refinements_applied": false,
+  "tests": ["tests/bounded_parser.rs", "tests/lexer_token_limit.rs"],
+  "fixtures": ["tests/inputs/chain-total.mori", "tests/inputs/branch-total.mori"],
+  "independent_oracle": "Original R115 EXPECTED.json, DERIVATION.md and fixtures, pinned without modification",
+  "mandatory_cases": [
+    "ChainTotal independent AST and full provenance",
+    "BranchTotal independent AST and full provenance",
+    "1 + 2 * 3 independent Add(1, Mul(2, 3)) AST",
+    "((1)) parser limit5 yields observed6",
+    "literal1 parser limit1 yields observed2, with zero and exact-two checks",
+    "leaf(1) nonbinary structural limit1 yields observed2, exact-two positive",
+    "lexer a @ limit2 yields TokenLimit observed3 before lexical error"
+  ],
+  "r120_mapping": {
+    "patch": "r120-mapping/candidate.patch",
+    "paths": [
+      "crates/mori-core/src/sherlock/compile_artifact/draft_contract.rs",
+      "crates/mori-core/src/sherlock/compile_artifact/draft_diagnostics.rs"
+    ],
+    "method": "DraftPreprocessingExtents::parser_budget(self) -> DraftParseBudget",
+    "diagnostic": "Budget { resource: exact variant name, limit: decimal string, observed: decimal string }",
+    "schema": "Distinct required max_structural_ast_depth UsizeDecimal field; no default, type/copy alias or numerical cap"
+  },
+  "remaining": [
+    "fresh designated source review, Root adoption/test module wiring and selected ordinary execution",
+    "Root real public consumer and explicit numerical policy integration",
+    "checker/type/copy/report/destruction/cleanup/H1 and full downstream acceptance"
+  ],
+  "candidate_execution": 0,
+  "provider_calls": 0,
+  "native_authority": 0,
+  "WGit_writes": 0,
+  "preserved": ["original EARS", "all existing limits", "C4", "R2", "60460", "stopped Amendment10"]
+}
