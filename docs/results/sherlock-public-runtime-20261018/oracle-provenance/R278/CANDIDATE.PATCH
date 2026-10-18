@@ -1,0 +1,41 @@
+--- a/crates/mori-core/tests/sherlock_draft_runtime_independent.rs
++++ b/crates/mori-core/tests/sherlock_draft_runtime_independent.rs
+@@ -14,7 +14,7 @@
+ const TARGET: &str = include_str!("fixtures/draft-runtime-independent/target.json");
+ const PREPARATION: &str = include_str!("fixtures/draft-runtime-independent/EXPECTED-PREPARATION.json");
+ const EXPECTED: &str = include_str!("fixtures/draft-runtime-independent/EXPECTED-RUNTIME.json");
+-const CONFIG_SHA: &str = "aa1fbd325f9897c7a35d55b564c6c2c51df2d74fa3bd1b7e8fd9d07974387e26";
++const CONFIG_SHA: &str = "3406712e1327ebe87fa9c5265986a6a51ef5856f3498d99ff4a8dd958d70ac17";
+ const TARGET_SHA: &str = "b7b9069acc831ae962d941c75a75c7bc2780e4029a569209458601f9b3f8d56d";
+ 
+ fn dec(n: usize) -> String { n.to_string() }
+--- a/crates/mori-core/tests/fixtures/draft-runtime-independent/config.json
++++ b/crates/mori-core/tests/fixtures/draft-runtime-independent/config.json
+@@ -39,7 +39,7 @@
+       "name_rows": "32",
+       "name_bytes": "256",
+       "occurrence_path_slots": "256",
+-      "value_slots": "1024"
++      "value_slots": "4096"
+     },
+     "boundary_capacities_present": false
+   },
+--- a/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-RUNTIME.json
++++ b/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-RUNTIME.json
+@@ -1,13 +1,13 @@
+ {
+   "schema": "sherlock-independent-public-draft-runtime-expectations/1",
+-  "authorship": "R259 nonauthor candidate/output-blind expectations; declaration-only R258 PUBLIC-API read, no candidate implementation or outcome read",
++  "authorship": "Inherited R259 nonauthor candidate/output-blind semantic expectations. R278 corrects only the declared value_slots input using unchanged owner R5 after the actual pre-step admission refusal; R258 implementation body remains unread.",
+   "inputs": {
+     "config": {
+       "path": "fixtures/config.json",
+-      "sha256": "aa1fbd325f9897c7a35d55b564c6c2c51df2d74fa3bd1b7e8fd9d07974387e26",
++      "sha256": "3406712e1327ebe87fa9c5265986a6a51ef5856f3498d99ff4a8dd958d70ac17",
+       "fuel": "4096",
+       "stack": "64",
+-      "extentDisposition": "All preprocessing/table/layout fields value-identical to R218 revision02; only fuel64→4096 and stack8→64. Explicit fixture inputs, no new defaults/policy."
++      "extentDisposition": "R278 input correction: layout.capacities.value_slots1024→4096, the minimum satisfying unchanged owner admit_run R5 with Nat fuel4096. Fuel4096, stack64 and every other config field are unchanged from R259. Explicit fixed fixture inputs, no policy/default change or measured runtime-clock/fuel calibration."
+     },
+     "target": {
+       "path": "fixtures/target.json",

@@ -1321,3 +1321,37 @@ bounds before adopting UIREQ-002. The [installed adoption](../docs/results/sherl
 and current evidence check record 11 accepted originals and 24 open. DW-63's
 ten-original/pending cut remains historical. Report tests were not rerun to
 repair a review reply, and no runtime, semantic proof or native closure follows.
+
+
+### DW-66 — Preserve the failing input and verify the real public consumer
+
+The public runtime path now has two observed host cases through its real source
+producer and the fixed B owner. R279 passed consumer compilation, exact listing
+and separate ChainTotal/BranchTotal tests, retaining the passed Core build.
+The inspected independent tests assert actual UInt7/8, full ordered tables,
+recursive call order/counts and relational callback/counter/resource conservation.
+Their raw stdout records libtest status, not complete payload traces, exact B
+clock totals or a semantic proof. R281/R286 successful scoped reviews and Root's
+exact three-source/seven-test installation remain distinct from those receipts.
+The result adds no original EARS adoption to the eleven-original baseline.
+
+A first input refused before stepping because value-slot capacity1024 was below
+fuel4096. Preserve that refusal and the unrun Branch case. Independently derive
+and freeze the new input's value_slots4096 from the existing owner condition,
+update its exact config-hash literal/authorship metadata and review that changed
+operation. Do not fit semantic expectations to a desired output. Root also
+preserved its mistaken ordered comparison of the alphabetic test list; correcting
+set/count membership did not rerun the passing compilation/listing prefix.
+R265's complete visible opinion still had terminalERROR and remains unadopted.
+The fresh successful review and later result do not erase the old terminal fact.
+
+Use actual consumer evidence to update living tasks without closing their parent
+prematurely. B04's initial bounds/diagnostic gap is superseded by the installed
+public path, but its real CLI/optional-observe and file publication remain unrun;
+all B04 checkboxes remain open. The guide's complete I/O example remains unrun.
+Fifteen synthetic SDK-free mocks are separate interface-informed evidence with
+R2UNSATISFIED/native0 retained, not a provisioning or native result. No new
+transition/circuit semantics or circuit/website iteration is claimed. Append a
+new dated journal entry and preserve previous pending cuts instead of rewriting
+history. These concrete corrections improve DoctorWatson without a new factory
+or a rerun of unchanged passing cohorts.

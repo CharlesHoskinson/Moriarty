@@ -64,8 +64,9 @@ passing public fixture tests, plus seven passing bounded-copy tests. All four
 sealed comparison fields (including all twelve program tables), the full
 26-obligation correspondence object and selected artifact metadata match. Fresh
 source review and corrected final result review are complete; original
-UIREQ-022 is adopted. Runtime 7/8 values, the CLI, the guide’s file-writing
-example, semantic proof and native/target evidence remain unobserved.
+UIREQ-022 is adopted. At that compile-only cut, runtime 7/8 values were
+unobserved; the later public runtime result below is separate. The CLI, guide’s
+file-writing example, semantic proof and native/target evidence remain unobserved.
 
 The [Core2 financial observation result](../results/sherlock-financial-observation-20261018/README.md)
 records the positive start/false-await/true-resume observation test and later
@@ -95,8 +96,20 @@ The passing report tests were not rerun to repair the review reply. Use the
 [inspection guide](how-to/compile-draft-program.md#inspect-the-supported-profile-field)
 without treating its unrun file-writing example as a captured printout.
 
-The separate [public runtime candidate](reference/draft-source-compiler.md#separate-public-runtime-candidate)
-and its external test consumer compiled. The first ChainTotal run was refused
-before stepping because value-slot capacity 1024 was below the supplied fuel
-4096; BranchTotal was not run. Corrected input is under fresh review. Intended
-results 7/8 remain expectations. No new circuit or website iteration occurred.
+The installed [public runtime API](reference/draft-source-compiler.md#public-draft-runtime-api)
+now has [two observed host cases](../results/sherlock-public-runtime-20261018/README.md).
+R279 passed external consumer compilation, listing and exact ChainTotal/BranchTotal
+tests, reusing the unchanged Core build with all 636 selected pins unchanged.
+The tests assert actual UInt 7/8, complete ordered tables, call order/counts and
+relational event/counter/resource contracts. Raw stdout contains test status;
+full traces and exact independent B-clock totals are absent. Successful R281/R286
+reviews preceded [Root's scoped adoption](../results/sherlock-public-runtime-20261018/ROOT-ADOPTION.json)
+and exact three-source/seven-test-file installation. Historical capacity/listing
+failures and R265 terminal ERROR remain preserved, not approval.
+
+PR187 merged the six-file supported-profile increment and original UIREQ-002
+adoption; the retained baseline is eleven adopted originals. The runtime result
+adds no new EARS row. Source-reference compatibility work retains those acceptance
+records rather than inventing a fresh scenario run. CLI/file publication, full
+semantic correspondence, physical H1, native/target evidence and broader language
+coverage remain separate. No new circuit or website iteration occurred.

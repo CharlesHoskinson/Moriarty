@@ -1,0 +1,43 @@
+{
+  "prepared_utc": "2026-10-18T03:34:58.610798+00:00",
+  "basis": {
+    "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs",
+    "bytes": 59392,
+    "sha256": "da558e3e0f3498fe7da646d860af2488337201ad93b3bac5ebc5389bddc5e542"
+  },
+  "existing_contract_region": {
+    "startLine": 1027,
+    "endLine": 1076,
+    "copy": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/278-independent-runtime-input-capacity-correction/EXISTING-OWNER-ADMIT-RUN.txt",
+      "bytes": 2430,
+      "sha256": "50811e196216ad250e8f5ec43cc1e4634c903eebcef444df38f1678a4d749c4d"
+    }
+  },
+  "R5_region": {
+    "startLine": 1067,
+    "endLine": 1069,
+    "literal": "if fuel_v > caps.value_slots as u128 { return Err(cap_err(CapacityKind::ValueSlots, fuel_v, caps.value_slots as u128, None)); }"
+  },
+  "derivation": {
+    "fixed_fuel_class": "RunIntC::Nat(4096)",
+    "R3": "4096 <= unchanged bounds.max_reference_work4096",
+    "R4": "stack64 <= unchanged bounds.frames64",
+    "R5_required_inequality": "4096 <= layout.capacities.value_slots",
+    "old_check": "4096 > 1024 => existing ValueSlots refusal",
+    "minimum_new_value": "4096",
+    "new_R5_check": "4096 > 4096 is false; this specific refusal no longer follows from R5.",
+    "limit": "No proof of complete runtime capacity or fuel sufficiency; no B runtime event/count/cost observed or guessed."
+  },
+  "observed_old_refusal": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/264-public-draft-runtime-QA/actual-new-runtime-cases-only-01/04-public_chain_total_executes_actual_owner_with_independent_result_and_event_contract.stderr.bin",
+    "bytes": 604,
+    "sha256": "3e71727513362ba2c1d241bf67b2807e323fc999ea1fabbc4dd3c91458371495"
+  },
+  "negative_observation": "admit-run CapacityNotAdmitted ValueSlots, limit1024 neededExact4096; evaluation_performedfalse, events_forwarded0, completedfalse. Chain did not Bstep; Branch unrun. Old refusal retained, not erased.",
+  "independence": "This author authored original R259 semantic expectations before subject execution and retains R258 body-blindness. This correction knows the old admission refusal and derives a new input minimum from preexisting owner R5; no measured runtime-clock/fuel recalibration, no claim of outcome-blindness to that refusal.",
+  "required_review": "Fresh narrow designated operation review of this new input cut before Root use; preparation is not execution authority.",
+  "provider_calls": 0,
+  "subject_execution": false,
+  "native_authority": 0
+}
