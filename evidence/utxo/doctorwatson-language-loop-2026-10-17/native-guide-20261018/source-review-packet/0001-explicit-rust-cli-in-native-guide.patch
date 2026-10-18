@@ -1,0 +1,146 @@
+--- a/docs/NATIVE-CORE.md
++++ b/docs/NATIVE-CORE.md
+@@ -4,6 +4,16 @@
+ bodies. It uses the existing lexer, a flat checked expression arena, a
+ reference interpreter and a direct ledger-9 ZKIRv3 lowerer. The beta/1
+ frontend and TypeScript package retain their existing behavior.
++
++Run this guide's Cargo commands from the Moriarty repository root. The explicit
++`cargo run -p mori --locked --` prefix selects the Rust workspace CLI; the Node
++`@moriarty-lang/beta` package also installs a command named `mori`, but accepts a
++separate beta source profile and supplies no Rust compiler. The Rust package
++uses its default `native` feature here. A `--no-default-features` build supplies
++local Core reference tooling only; Midnight compile/call/proof, targeted
++inspection, trace/replay and JubJub profiles require `native`. This checkout
++workflow does not establish a standalone Rust installation or completed external
++proof/submission qualification.
+ 
+ ```sh
+ cargo run -p mori --locked -- check examples/core/language/counter.mori --json
+@@ -14,9 +24,11 @@
+   --target toolchains/ledger-9.json --out build-batch
+ ```
+ 
+-`mori init NEW_DIR` creates a Core transfer starter. `--template repay`
+-creates a repayment starter. Run the generated README commands to check,
+-simulate and test the complete expected post-state and ordered effects.
++`cargo run -p mori --locked -- init NEW_DIR` creates a Core transfer starter. `--template repay`
++creates a repayment starter. Before running the generated README commands from
++its project directory, replace their `mori` executable with an absolute path to
++the Rust binary built from this checkout. Those commands check, simulate and
++test the complete expected post-state and ordered effects.
+ The destination must not exist, and its parent must exist. An I/O failure
+ can leave an incomplete project. Choose a new destination before retrying.
+ These starters use local example assets and reference execution.
+@@ -67,14 +79,14 @@
+ 
+ ## Target-bound public reference replay
+ 
+-`simulate --trace --target` produces a separate `moriarty-reference-replay/1`
++`cargo run -p mori --locked -- simulate --trace --target` produces a separate `moriarty-reference-replay/1`
+ sidecar. `replay` independently reconstructs it from separately supplied raw
+ source, action, Scenario and trusted Target. For signed Targets, both commands
+ require the complete profile, expected-authority, logical-time and actual
+ signature group. The record never supplies those trusted inputs.
+ 
+ ```sh
+-mori simulate deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.mori \
++cargo run -p mori --locked -- simulate deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.mori \
+   --action settle \
+   --scenario deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.scenario.json \
+   --target deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.target.json \
+@@ -82,7 +94,7 @@
+   --authority deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.authority.json \
+   --at 15 --signature deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.signed.json \
+   --trace > payment.replay.json
+-mori replay deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.mori \
++cargo run -p mori --locked -- replay deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.mori \
+   --action settle \
+   --scenario deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.scenario.json \
+   --target deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.target.json \
+@@ -122,11 +134,11 @@
+ ## Native public transition proofs
+ 
+ ```sh
+-mori prove examples/core/native-payment/payment.mori --action run \
++cargo run -p mori --locked -- prove examples/core/native-payment/payment.mori --action run \
+   --scenario examples/core/native-payment/scenario.json \
+   --target toolchains/ledger-9.json --params-dir /path/to/pinned/offline-srs \
+   --max-k 10 --out payment-proof.json
+-mori verify examples/core/native-payment/payment.mori --action run \
++cargo run -p mori --locked -- verify examples/core/native-payment/payment.mori --action run \
+   --scenario examples/core/native-payment/scenario.json \
+   --target toolchains/ledger-9.json --params-dir /path/to/pinned/offline-srs \
+   --max-k 10 --proof payment-proof.json
+@@ -216,7 +228,7 @@
+ source, target, artifact, frame and IR digests and raw logs are recorded in
+ [the Task 3 report](../.superpowers/sdd/native-liability-task-3-report.md).
+ 
+-`test DIRECTORY` loads `mori-tests.json`, profile `moriarty-tests/1`. Each
++`cargo run -p mori --locked -- test DIRECTORY` loads `mori-tests.json`, profile `moriarty-tests/1`. Each
+ case supplies a source, scenario, action and either exact accepted poststate
+ and complete effects or an exact rejection code. Empty manifests refuse.
+ The JSON report retains every case in manifest order, including its full actual
+@@ -233,7 +245,7 @@
+ 
+ ## Owner intent and resource APIs
+ 
+-`mori intent` uses `--action`, `--scenario`, `--authority`, `--scheme`,
++`cargo run -p mori --locked -- intent` uses `--action`, `--scenario`, `--authority`, `--scheme`,
+ `--public-key` and `--framing raw`. It produces the inspectable canonical
+ `moriarty-owner-intent/2` statement and framed signing bytes. `--review`
+ prints domain, key, predecessor, nonce, validity and financial caps before
+@@ -241,7 +253,7 @@
+ address, target hash, signer, expected key, nonce/predecessor, validity and
+ per-asset gross/fee/net/closing-liability constraints.
+ 
+-`mori verify-intent` takes the same source/action/scenario, an expected
++`cargo run -p mori --locked -- verify-intent` takes the same source/action/scenario, an expected
+ `--authority`, a `--signature` file containing `{intent, signature_hex}`
+ and current logical time `--at`. It verifies the actual signature, compares
+ all bindings, executes locally and checks complete effects. BIP340 and
+@@ -256,7 +268,7 @@
+ Both fresh full-source and actual-result audits approved the selected local
+ package, retained in [PR28](https://github.com/CharlesHoskinson/Moriarty/pull/28).
+ 
+-The integrated signed profile uses `mori intent SOURCE --profile
++The integrated signed profile uses `cargo run -p mori --locked -- intent SOURCE --profile
+ moriarty-jubjub-owner-intent/1 --action ACTION --scenario SCENARIO --target
+ TARGET --authority AUTHORITY --at TIME`. Its `--review` output includes the exact
+ payload, message, complete financial projection and authorization projection.
+@@ -381,7 +393,7 @@
+ 
+ ## Source-static native call relation (ordinary checks)
+ 
+-`mori compile-call SOURCE --action ACTION --deployment DEPLOYMENT --out DIR`
++`cargo run -p mori --locked -- compile-call SOURCE --action ACTION --deployment DEPLOYMENT --out DIR`
+ compiles current typed Core statements to pinned SDK ZKIRv3. The artifact binds
+ source/action, typed input communication framing, checked UInt128 arithmetic,
+ mutable state prefixes, captured lets, requires/ensures, native duty identities
+@@ -389,7 +401,7 @@
+ IR and the complete manifest depend on source and static native mappings; they
+ can be reused across requests, predecessor states and duty-presence openings.
+ 
+-`mori prepare-call ... --relation DIR` recompiles that trusted source/static
++`cargo run -p mori --locked -- prepare-call ... --relation DIR` recompiles that trusted source/static
+ binding and compares both artifact leaves before ordinary SDK checking. It checks
+ one activity record per native Op, complete raw consumption and skipped widths,
+ then inserts and merges Noops, runs the actual native processed transcript, and
+@@ -447,7 +459,7 @@
+ 
+ ## All-action public source-static export and inspection
+ 
+-`mori compile-call FILE --all-actions --static-bindings FILE --authorization
++`cargo run -p mori --locked -- compile-call FILE --all-actions --static-bindings FILE --authorization
+ unsigned|signed-v2 --work-limits FILE --out NEW_DIR` compiles every admitted
+ source action to tagged native-call ZKIR through the existing native relation
+ compiler. `signed-v2` requires `--signer-policy FILE`; unsigned forbids it. There
+@@ -516,7 +528,7 @@
+ 
+ ## Metered local owner-intent verification
+ 
+-`mori verify-intent FILE --action NAME --scenario FILE --authority FILE
++`cargo run -p mori --locked -- verify-intent FILE --action NAME --scenario FILE --authority FILE
+ --signature FILE --at TIME --logical-cap CANONICAL_U128` applies the existing
+ `moriarty-reference-logical-cost/1` meter to the Core
+ `moriarty-owner-intent/2` reference consumer. The optional cap is an unsigned,

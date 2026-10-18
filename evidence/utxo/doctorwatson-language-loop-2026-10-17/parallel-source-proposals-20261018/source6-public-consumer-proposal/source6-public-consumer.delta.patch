@@ -1,0 +1,515 @@
+diff --git a/Cargo.lock b/Cargo.lock
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2442,6 +2442,7 @@
+  "mori-ledger",
+  "mori-lexer",
+  "mori-parser",
++ "mori-source6",
+  "mori-span",
+  "rand 0.8.8",
+  "rayon",
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -21,6 +21,7 @@
+ mori-ledger = { path = "crates/mori-ledger" }
+ mori-lexer = { path = "crates/mori-lexer" }
+ mori-parser = { path = "crates/mori-parser" }
++mori-source6 = { path = "crates/mori-source6" }
+ mori-span = { path = "crates/mori-span" }
+ 
+ # Midnight ledger crates, all from one pinned revision.
+diff --git a/crates/mori/Cargo.toml b/crates/mori/Cargo.toml
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -9,6 +9,7 @@
+ 
+ [features]
+ default = ["native"]
++source6-expansion = ["dep:mori-source6", "mori-source6/source6-transfer-slice"]
+ native = [
+     "dep:mori-backend",
+     "dep:mori-ledger",
+@@ -38,6 +39,7 @@
+ mori-fmt.workspace = true
+ mori-lexer.workspace = true
+ mori-parser.workspace = true
++mori-source6 = { workspace = true, optional = true }
+ mori-span.workspace = true
+ rayon.workspace = true
+ futures = { workspace = true, optional = true }
+@@ -104,3 +106,7 @@
+ [[test]]
+ name = "mapped_role_static_io"
+ required-features = ["native"]
++
++[[test]]
++name = "source6_expand"
++required-features = ["source6-expansion"]
+diff --git a/crates/mori/src/cli.rs b/crates/mori/src/cli.rs
+--- a/crates/mori/src/cli.rs
++++ b/crates/mori/src/cli.rs
+@@ -15,8 +15,12 @@
+ #[derive(Debug, Parser)]
+ #[command(name = "mori", version, styles = styles::CLAP)]
+ #[cfg_attr(
+-    not(feature = "native"),
++    all(not(feature = "native"), not(feature = "source6-expansion")),
+     command(after_help = "Built without native: local Core reference tooling only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature.")
++)]
++#[cfg_attr(
++    all(not(feature = "native"), feature = "source6-expansion"),
++    command(after_help = "Built without native: local Core reference tooling and explicit Source/6 transfer expansion only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature.")
+ )]
+ pub struct Cli {
+     #[command(flatten)]
+diff --git a/crates/mori/src/commands/expand/source6.rs b/crates/mori/src/commands/expand/source6.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/expand/source6.rs
+@@ -0,0 +1,110 @@
++//! Explicit local transfer presentation consumer of mori-source6.
++use std::{io::Write, process::ExitCode};
++
++use mori_core::UInt;
++use mori_diagnostics::NamedSource;
++use mori_source6::{Allowance, Balance, LocalTransferScenario, Replay, expand_transfer};
++use serde::Deserialize;
++
++use crate::{cli::ActionInput, commands::core_io, shell::Shell};
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct TransferScenario {
++    profile: String,
++    kind: String,
++    domain: String,
++    asset: String,
++    head: String,
++    predecessor: String,
++    round: UInt,
++    balances: [BalanceCell; 3],
++    allowance: AllowanceCell,
++    replay: ReplayClaim,
++    work_remaining: UInt,
++    work_spent: UInt,
++    post_head: String,
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct BalanceCell {
++    account: String,
++    amount: UInt,
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct AllowanceCell {
++    owner: String,
++    remaining: UInt,
++    spent: UInt,
++}
++
++#[derive(Clone, Copy, Deserialize)]
++#[serde(rename_all = "lowercase")]
++enum ReplayClaim {
++    Unused,
++    Consumed,
++}
++
++impl TransferScenario {
++    fn local(&self) -> LocalTransferScenario<'_> {
++        LocalTransferScenario {
++            domain: &self.domain,
++            asset: &self.asset,
++            head: &self.head,
++            predecessor: &self.predecessor,
++            round: self.round.0,
++            balances: self.balances.each_ref().map(|cell| Balance {
++                account: &cell.account,
++                amount: cell.amount.0,
++            }),
++            allowance: Allowance {
++                owner: &self.allowance.owner,
++                remaining: self.allowance.remaining.0,
++                spent: self.allowance.spent.0,
++            },
++            replay: match self.replay {
++                ReplayClaim::Unused => Replay::Unused,
++                ReplayClaim::Consumed => Replay::Consumed,
++            },
++            work_remaining: self.work_remaining.0,
++            work_spent: self.work_spent.0,
++            post_head: &self.post_head,
++        }
++    }
++}
++
++pub(super) fn run(input: ActionInput, shell: &mut Shell) -> crate::commands::Result<ExitCode> {
++    let source = core_io::read_source(&input.file)?;
++    let scenario: TransferScenario = core_io::read_json(&input.scenario)?;
++    if scenario.profile != "moriarty-local-scenario/1" || scenario.kind != "local-stipulation" {
++        return Err(core_io::operation(
++            "Source/6 transfer expansion requires moriarty-local-scenario/1 local-stipulation input.",
++        ));
++    }
++    let expansion = match expand_transfer(&source, &input.action, &scenario.local()) {
++        Ok(expansion) => expansion,
++        Err(diagnostics) => {
++            for diagnostic in diagnostics {
++                shell.report(&diagnostic.with_source_code(NamedSource::new(
++                    input.file.display().to_string(),
++                    source.clone(),
++                )));
++            }
++            return Ok(ExitCode::FAILURE);
++        }
++    };
++    // The library includes its final newline. Write the actual generated text,
++    // without adding a JSON/string wrapper or constructing a stage result.
++    std::io::stdout()
++        .lock()
++        .write_all(expansion.source6.as_bytes())
++        .map_err(core_io::operation)?;
++    shell.status(
++        "Expanded",
++        format!("Source/6 transfer proposal ({})", expansion.qualification),
++    );
++    Ok(ExitCode::SUCCESS)
++}
+diff --git a/crates/mori/src/commands/expand.rs b/crates/mori/src/commands/expand.rs
+--- a/crates/mori/src/commands/expand.rs
++++ b/crates/mori/src/commands/expand.rs
+@@ -3,13 +3,23 @@
+ use crate::cli::ActionInput;
+ use crate::shell::Shell;
+ 
++#[cfg(feature = "source6-expansion")]
++mod source6;
++
+ #[derive(Debug, clap::Args)]
+ pub struct Args {
+     #[command(flatten)]
+     pub input: ActionInput,
++
++    /// Emit a local Source/6 transfer proposal; requires source6-expansion
++    #[arg(long)]
++    pub emit_source6_transfer: bool,
+ }
+ 
+-pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++    if args.emit_source6_transfer {
++        return run_source6(args.input, shell);
++    }
+     let (_, program) = super::core_io::program(&args.input.file)?;
+     // Validate the selected scenario/action without discarding the generic core.
+     let scenario = super::core_io::read_json(&args.input.scenario)?;
+@@ -18,3 +28,17 @@
+     super::core_io::print(&program)?;
+     Ok(ExitCode::SUCCESS)
+ }
++
++#[cfg(feature = "source6-expansion")]
++fn run_source6(input: ActionInput, shell: &mut Shell) -> super::Result<ExitCode> {
++    source6::run(input, shell)
++}
++
++#[cfg(not(feature = "source6-expansion"))]
++fn run_source6(_input: ActionInput, _shell: &mut Shell) -> super::Result<ExitCode> {
++    Err(crate::error::CliError::Operation {
++        code: "mori::command::source6-unavailable".into(),
++        message: "Source/6 transfer expansion requires the source6-expansion build feature.".into(),
++    }
++    .into())
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/core.mori b/crates/mori/tests/fixtures/source6-expansion/core.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/core.mori
+@@ -0,0 +1 @@
++language "moriarty/1"; agreement CoreDefault { action noop() {} }
+diff --git a/crates/mori/tests/fixtures/source6-expansion/core.scenario.json b/crates/mori/tests/fixtures/source6-expansion/core.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/core.scenario.json
+@@ -0,0 +1 @@
++{"state":{},"inputs":{},"balances":[],"liabilities":[]}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/core.stdout.json b/crates/mori/tests/fixtures/source6-expansion/core.stdout.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/core.stdout.json
+@@ -0,0 +1,15 @@
++{
++  "language": "moriarty/1",
++  "semantics": "moriarty-core/1",
++  "name": "CoreDefault",
++  "states": [],
++  "assets": [],
++  "expressions": [],
++  "actions": [
++    {
++      "name": "noop",
++      "inputs": [],
++      "statements": []
++    }
++  ]
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/invoice.mori b/crates/mori/tests/fixtures/source6-expansion/invoice.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.mori
+@@ -0,0 +1,18 @@
++profile "moriarty-beta/1";
++agreement Invoice {
++ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Preview, id: "Owner" };
++ account Seller = { domain: Preview, id: "Recipient" };
++ account Treasury = { domain: Preview, id: "Fee" };
++ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
++ const price: Qty<USD> = 10.00 USD;
++ const fee = 0.10 USD;
++ intent Payment = {
++  domain: Preview, asset: USD, signer: Buyer, key: "key1", nonce: "n1", pre_head: "h0",
++  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
++  source_hash: "src1", policy_digest: "policy1", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay uses Payment;
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json b/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "h0",
++  "predecessor": "genesis",
++  "round": "1",
++  "balances": [
++    { "account": "Owner", "amount": "10000" },
++    { "account": "Recipient", "amount": "0" },
++    { "account": "Fee", "amount": "0" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "10000", "spent": "0" },
++  "replay": "unused",
++  "work_remaining": "10",
++  "work_spent": "0",
++  "post_head": "h1"
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/invoice.source6 b/crates/mori/tests/fixtures/source6-expansion/invoice.source6
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.source6
+@@ -0,0 +1,45 @@
++profile "moriarty-financial-agreement-source/6";
++agreement Invoice {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "src1" digest "policy1";
++intent {
++signer Owner key "key1";
++nonce "n1";
++pre_head "h0";
++valid 0..10;
++gross_cap 1010;
++fee_cap 10;
++net_floor 1000;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "h0";
++predecessor "genesis";
++round 1;
++balance Owner 10000;
++balance Recipient 0;
++balance Fee 0;
++allowance Owner remaining 10000 spent 0;
++replay unused;
++work_remaining 10;
++work_spent 0;
++}
++submit transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++effects {
++debit Owner 1010;
++credit Recipient 1000;
++credit Fee 10;
++use_allowance Owner 1010;
++use_replay "n1";
++advance_head "h0" "h1";
++}
++post_head "h1";
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/source6.stderr.txt b/crates/mori/tests/fixtures/source6-expansion/source6.stderr.txt
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/source6.stderr.txt
+@@ -0,0 +1 @@
++    Expanded Source/6 transfer proposal (local-stipulation-only)
+diff --git a/crates/mori/tests/source6_expand.rs b/crates/mori/tests/source6_expand.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/source6_expand.rs
+@@ -0,0 +1,117 @@
++#![cfg(feature = "source6-expansion")]
++
++use serde_json::Value;
++use std::{
++    fs,
++    path::PathBuf,
++    process::{Command, Output},
++    sync::atomic::{AtomicUsize, Ordering},
++};
++
++macro_rules! fixture {
++    ($name:literal) => {
++        include_bytes!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/tests/fixtures/source6-expansion/",
++            $name
++        ))
++        .as_slice()
++    };
++}
++
++static NEXT: AtomicUsize = AtomicUsize::new(0);
++
++struct Files(PathBuf);
++
++impl Files {
++    fn new() -> Self {
++        let root = std::env::temp_dir().join(format!(
++            "mori-source6-expand-{}-{}",
++            std::process::id(),
++            NEXT.fetch_add(1, Ordering::Relaxed),
++        ));
++        fs::create_dir(&root).unwrap();
++        fs::write(root.join("invoice.mori"), fixture!("invoice.mori")).unwrap();
++        fs::write(root.join("scenario.json"), fixture!("invoice.scenario.json")).unwrap();
++        fs::write(root.join("core.mori"), fixture!("core.mori")).unwrap();
++        fs::write(root.join("core.json"), fixture!("core.scenario.json")).unwrap();
++        Self(root)
++    }
++
++    fn invoke(&self, arguments: &[&str]) -> Output {
++        Command::new(env!("CARGO_BIN_EXE_mori"))
++            .current_dir(&self.0)
++            .args(["--color", "never"])
++            .args(arguments)
++            .output()
++            .unwrap()
++    }
++}
++
++impl Drop for Files {
++    fn drop(&mut self) {
++        let _ = fs::remove_dir_all(&self.0);
++    }
++}
++
++fn source6_arguments() -> [&'static str; 7] {
++    [
++        "expand",
++        "invoice.mori",
++        "--action",
++        "pay",
++        "--scenario",
++        "scenario.json",
++        "--emit-source6-transfer",
++    ]
++}
++
++#[test]
++fn checked_beta_reaches_real_expansion_library_and_raw_stdout() {
++    let files = Files::new();
++    let check = files.invoke(&["check", "invoice.mori", "--json"]);
++    assert_eq!(check.status.code(), Some(0));
++    assert!(check.stderr.is_empty());
++    let report: Value = serde_json::from_slice(&check.stdout).unwrap();
++    assert_eq!(report["status"], "accepted");
++    assert_eq!(report["actions"][0]["name"], "pay");
++    assert_eq!(report["actions"][0]["support"], "local_s0");
++
++    let expansion = files.invoke(&source6_arguments());
++    assert_eq!(expansion.status.code(), Some(0));
++    assert_eq!(expansion.stdout.as_slice(), fixture!("invoice.source6"));
++    assert_eq!(expansion.stderr.as_slice(), fixture!("source6.stderr.txt"));
++}
++
++#[test]
++fn explicit_source6_quiet_output_is_raw_source6_text() {
++    let files = Files::new();
++    let mut arguments = vec!["--quiet"];
++    arguments.extend(source6_arguments());
++    let expansion = files.invoke(&arguments);
++    assert_eq!(expansion.status.code(), Some(0));
++    assert_eq!(expansion.stdout.as_slice(), fixture!("invoice.source6"));
++    assert!(expansion.stderr.is_empty());
++}
++
++#[test]
++fn core_default_retains_complete_program_bytes() {
++    let files = Files::new();
++    let output = files.invoke(&[
++        "expand", "core.mori", "--action", "noop", "--scenario", "core.json",
++    ]);
++    assert_eq!(output.status.code(), Some(0));
++    assert_eq!(output.stdout.as_slice(), fixture!("core.stdout.json"));
++    assert!(output.stderr.is_empty());
++}
++
++#[test]
++fn beta_default_retains_core_parser_refusal_boundary() {
++    let files = Files::new();
++    let output = files.invoke(&[
++        "expand", "invoice.mori", "--action", "pay", "--scenario", "scenario.json",
++    ]);
++    assert_eq!(output.status.code(), Some(1));
++    assert!(output.stdout.is_empty());
++    assert!(String::from_utf8_lossy(&output.stderr).contains("mori::core::syntax"));
++}
+diff --git a/docs/BETA-SOURCE6-EXPANSION.md b/docs/BETA-SOURCE6-EXPANSION.md
+new file mode 100644
+--- /dev/null
++++ b/docs/BETA-SOURCE6-EXPANSION.md
+@@ -0,0 +1,26 @@
++# Proposed explicit Rust beta Source/6 transfer expansion
++
++Status: unadopted interface/source proposal. No compile, runtime, native or release qualification is established. The `source6-expansion` Cargo feature enables the explicit local transfer presentation path; it is separate from `native` and does not alter default features.
++
++Existing default command, unchanged:
++
++```sh
++mori expand core.mori --action noop --scenario core.json
++```
++
++This still validates a Core action against its Core scenario and prints its generic Core Program JSON. A Rust beta file supplied without the new option still reaches the existing Core parser and refuses; no default beta output is replaced. The separate Node beta package and its default JSON expansion output are unchanged.
++
++Proposed explicit command, in a build with `source6-expansion` enabled:
++
++```sh
++mori check invoice.mori --json
++mori --quiet expand invoice.mori --action pay --scenario scenario.json --emit-source6-transfer
++```
++
++The explicit command reads a typed local transfer scenario and calls `mori-source6::expand_transfer`, which uses the real Rust beta parser and checker. Stdout is the actual generated Source/6 text with its existing final newline; `--quiet` leaves stderr empty. Without `--quiet`, stderr reports `Expanded Source/6 transfer proposal (local-stipulation-only)`. It does not emit a Core success result. Without the build feature, the explicit option reports `mori::command::source6-unavailable`.
++
++The proposed scenario JSON is the closed **transfer subset** of the existing `moriarty-local-scenario/1` / `local-stipulation` shape. It requires domain, asset, head, predecessor, round, exactly three ordered balances, allowance, replay, work_remaining, work_spent and post_head. Numeric values are canonical decimal strings parsed through the existing Core UInt decoder; no new decimal evaluator is introduced. Balance order is owner, recipient, fee recipient. Replay is `unused` or `consumed`. Obligation and candidate_effects overrides are outside this option. The current strict CLI reader and existing read/JSON bounds apply.
++
++This profile-token reuse, transfer subset, option name, feature name, raw stdout/status output, and JSON-decode-before-helper error ordering are **new unadopted public interface choices**. They require the planned independent design/interface votes; they do not establish full Node beta wire or diagnostic parity. The typed borrowed local scenario passed to the library is an internal input, not proof or authentication.
++
++Boundary: Rust beta/1 → proposed transfer presentation → Source/6 text. The real experimental TypeScript `parseAndLowerSource6` must still consume actual emitted bytes; its Core/5 preparation remains separately unqualified. This option provides no Source/6/Core/5→Core/1/Core/2/Sherlock/native embedding, no handwritten target IR and no target/proof/post-state success. The default Core and separate Node consumers retain their own profiles.

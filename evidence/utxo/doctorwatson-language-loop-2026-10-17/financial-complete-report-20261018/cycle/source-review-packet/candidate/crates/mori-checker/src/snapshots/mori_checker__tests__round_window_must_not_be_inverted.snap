@@ -1,0 +1,16 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Rounds {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  const window = rounds(domain: Preview, from: 10, to: 5);\n}\n"
+---
+mori::check::inverted_rounds
+
+  × This round window ends before it starts: `from` is 10 but `to` is 5.
+   ╭─[test.mori:4:56]
+ 3 │   domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+ 4 │   const window = rounds(domain: Preview, from: 10, to: 5);
+   ·                                                ─┬      ┬
+   ·                                                 │      ╰── ends earlier
+   ·                                                 ╰── starts here
+ 5 │ }
+   ╰────
+  help: `from` must be less than or equal to `to`.

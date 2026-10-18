@@ -1,0 +1,30 @@
+language "moriarty/1";
+agreement ConditionalReserve {
+  asset CASH = { network: "local", issuer: "financial-pair-reserve", reference: "CASH", scale: 2 };
+  asset BOND = { network: "local", issuer: "financial-pair-reserve", reference: "BOND", scale: 0 };
+  state allocated: UInt = 0;
+  state closed: Bool = false;
+  state marker: UInt = 77;
+  action register() {
+    liability("allocation", CASH, "reserve", "supplier", 0);
+    liability("bond", BOND, "reserve", "auditor", 10);
+    liability("emergency", CASH, "reserve", "emergency", 2);
+  }
+  action allocate(approved: Bool, amount: UInt, bondAmount: UInt) {
+    requires approved and not closed;
+    requires amount > 0;
+    requires amount <= 50;
+    let residual = (57 - amount) - 2;
+    requires residual >= 5;
+    liability("allocation", CASH, "reserve", "supplier", amount);
+    transfer(CASH, "reserve", "supplier", amount);
+    fee(CASH, "reserve", "treasury", 2);
+    discharge("allocation", amount);
+    transfer(BOND, "reserve", "auditor", bondAmount);
+    discharge("bond", bondAmount);
+    next allocated = amount;
+    next closed = true;
+    ensures liability_amount("allocation") == 0;
+    emit "allocated"(allocated);
+  }
+}
