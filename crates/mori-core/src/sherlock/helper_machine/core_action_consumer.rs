@@ -162,3 +162,22 @@ pub fn run_scalar_action(
         },
     })
 }
+
+// Opt-in report versions preserve the real existing observation/error path.
+impl CoreActionRun {
+    pub fn resource_report_with_identity(&self)
+        -> Result<super::resource_report::IdentityResourceReport, ConsumerError>
+    {
+        let observation = self.observe()?;
+        Ok(super::resource_report::ResourceReport::from_owner_with_identity(
+            &observation, &self.completed.summary))
+    }
+
+    pub fn resource_report_with_manifest(&self)
+        -> Result<super::resource_report::ManifestResourceReport, ConsumerError>
+    {
+        let observation = self.observe()?;
+        Ok(super::resource_report::ResourceReport::from_owner_with_manifest(
+            &observation, &self.completed.summary))
+    }
+}

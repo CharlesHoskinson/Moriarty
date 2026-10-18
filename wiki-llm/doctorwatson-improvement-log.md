@@ -1560,3 +1560,63 @@ Run only the new synthetic regression after source/operation review; its missing
 Root adopted the entire original UIREQ-027 on eight explicit predicates after whole current-source review and the unchanged actual draft/Core1 traces plus five admission regressions. The canonical reader reports 12 adopted originals, 23 open originals and all 25 refinements open. Keep the raw reviewer opinion and its corrections together: machine trace pins override wrong prose hashes, and the generic-extension label is UIREQ-034, not UIREQ-020. Full-page delivery supports coverage; substantive per-clause reconciliation supplies acceptance.
 
 Native05 then exposed a distinct C boundary: four extra generated members, zero missing, with no successful C or D/E/F result. Preserve the exact difference and durable evidence; do not turn removal of a previous blocker into a new native-success or membership-policy exception. Collection/teardown passed. The next designated-owner diagnosis must address that actual changed boundary. No circuit changed; no website/circuit iteration or full-v1/native/target completion is recorded.
+
+### DW85 — Permit source rereads within the same allowlist
+
+The first B06 nominal-source authoring call stopped after590.6seconds with no final source because its reused review wrapper rejected a second read of one permitted page. The call had already completed102 unique full reads, including all72 mandatory pages; no unauthorized path or execution was observed. Preserve the failed result and its exact source/read receipts.
+
+The changed continuation allows repeated reads of the same177 permitted pages, checks every completed read for full byte/line coverage, and credits the unchanged prior completed reads. Model/CID/cwd, source pins, no execution policy and time limits remain enforced. Read delivery is not source approval. Do not replay an entire unchanged readset or force an author to reconstruct an API from memory after context compaction. No native guard, resource cap or acceptance requirement changed.
+
+### DW86 — Distinguish line-count conventions from missing source
+
+R393's source author returned a concrete validation test after eight completed
+page reads. Every reported byte count matched; every reported line count used
+LF+1, while the observer expected LF. The observer therefore incorrectly marked
+all eight deliveries incomplete. Preserve that original result and a separate
+computed correction identifying the actual convention, all exact byte counts
+and the author's explicit complete-file declaration. Do not rerun the source
+request to repair a counting convention. Delivery metadata does not establish
+the test's correctness: the exact insertion still receives independent review
+before execution.
+
+### DW87 — Check a review's source facts before adopting its verdict
+
+The first UIREQ-013 review reported approval but invented type names, schema
+fields, source locations and frozen case counters. The actual source patch and
+six successful ordinary phases are separate evidence. Preserve the incorrect
+review; give its author the literal current source, complete actual reports and
+specific contradictory facts for substantive correction. An approval label and
+complete page reads cannot replace source comprehension.
+
+The new attempt persisted whole-attempt pre/post checks for all499 inputs, not
+per-phase checks or continuous source immutability. Record that exact scope;
+do not invent stronger receipts or rerun passing phases to satisfy a later
+review condition. Require an explicit source/result and affected closed-clause
+applicability judgment before reconciling current source pins. No new EARS,
+native or circuit completion follows from preparation of that follow-up.
+
+### DW88 — Compare the complete launcher argv before execution
+
+Root's native06 launch omitted the old outer shell's `-eu` flags while adapting
+its paths and config digest. Preserve the actual command and explicit deviation;
+do not describe its prefix as byte-identical to the old command. A direct
+readback confirmed the supervisor entered its required cgroup. The existing
+guard and numerical caps were unchanged. Those observations do not retroactively
+restore the omitted flags or establish identical failure behavior. Derive future
+argv from the recorded JSON and compare every permitted operand before launch.
+
+### DW89 — Preserve compilation separately from its output audit
+
+Native06 passed A0 through E and Cargo reported a completed test build in57.74s
+with the backend test executable produced. The subsequent F audit refused a
+non-normalized dependency path; there is no successful full F receipt or accepted
+native output. Preserve both the successful compiler evidence and failed audit.
+Evidence collection retained43 members; the target remains quarantined for
+diagnosis, with cleanup still owed. No compiled executable was run.
+
+The first observed dependency spelling contains `../../../../models` from an
+`include_str!` fixture. It is metadata for the source owner to assess, not a
+reason to suppress dependency checks. Request a narrowly reviewed correction
+and a bounded audit-only route over the retained outputs. Reuse the completed
+compilation; do not reset its history or rerun Cargo and the passing prefix to
+repair an audit. Whole native/proof/target acceptance remains open.
