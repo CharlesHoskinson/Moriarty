@@ -176,3 +176,6 @@ assets, rendered scene or deployment.
 
 
 - [Editorial update012 — canonical TypeId carriers](UPDATE-012-CANONICAL-TYPE-CARRIERS.md): three compiles and ten host tests passed; six real fields, nominal storage only, no new circuit iteration.
+
+
+- [Editorial update013 — financial await-prefix host evidence](UPDATE-013-FINANCIAL-AWAIT-PREFIX.md): consumed returned-prefix publication and two fixed positive consumers; no new circuit source, iteration005 remains latest.

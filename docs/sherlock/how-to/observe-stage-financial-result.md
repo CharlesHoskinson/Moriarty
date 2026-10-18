@@ -131,3 +131,10 @@ producer/adapter/shared-publication domain; Root owns adoption. Native, proof,
 settlement and later-failure claims remain separate.
 
 Root has now [adopted whole UIREQ-017](../../results/sherlock-owning-financial-producer-20261018/ROOT-FINANCIAL-PRODUCER-ADOPTION.json). The [current requirement report](../../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json) confirms fourteen current original closures. The source-only enclosing CLI and separate lowering, failure, authentication, proof and settlement qualifications above remain.
+
+
+## Read the returned await prefix
+
+Keep the owning `ProducedInvocation` and its program alive, then inspect `produced.observation().await_prefix()`. For `Waiting`, read `committed_boundary`, `logical`, `residual` and the optional `published_segment` alongside action/site/captures and attempted work. A false guard can return the same boundary with no advanced segment. On `Complete` or `RejectedNoReturnedCheckpoint`, inspect the full original result/financial observation; do not manufacture a returned checkpoint.
+
+Use `produced.publication()` for the shared JSON value; it includes top-level `await_prefix` and the complete existing financial observation. These accessors do not invoke another producer call. The [fixed ordinary observations](../../results/sherlock-financial-await-prefix-20261018/README.md) compare full publications in memory; they do not execute CLI dispatch or persist a financial report. Preserve authentication none/consumption untracked. Generic018/019, full013 and native settlement retain their own obligations.
