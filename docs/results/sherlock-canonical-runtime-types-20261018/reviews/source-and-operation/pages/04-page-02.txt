@@ -1,0 +1,400 @@
+    // C5 capacity checks: function_rows, max_arity, parameter_slots
+    let mut b_fn_cap = b;
+    b_fn_cap.function_rows = 2;
+    let mut l_fn_cap = l.clone();
+    l_fn_cap.bounds = b_fn_cap;
+    assert!(matches!(
+        prepare_core(&prog, &b_fn_cap, &l_fn_cap),
+        Err(Tooling::CapacityNotAdmitted {
+            kind: CapacityKind::FunctionRows,
+            needed: NeededNatC::Exact(3),
+            limit: 2,
+            locator: None,
+        })
+    ));
+
+    let prog_arity3 = program_with_arities(&[3]);
+    let mut b_arity_cap = b;
+    b_arity_cap.max_arity = 2;
+    let mut l_arity_cap = l.clone();
+    l_arity_cap.bounds = b_arity_cap;
+    assert!(matches!(
+        prepare_core(&prog_arity3, &b_arity_cap, &l_arity_cap),
+        Err(Tooling::CapacityNotAdmitted {
+            kind: CapacityKind::MaxArity,
+            needed: NeededNatC::Exact(3),
+            limit: 2,
+            locator: None,
+        })
+    ));
+
+    let mut b_param_cap = b;
+    b_param_cap.parameter_slots = 1;
+    let mut l_param_cap = l.clone();
+    l_param_cap.bounds = b_param_cap;
+    assert!(matches!(
+        prepare_core(&prog_arity3, &b_param_cap, &l_param_cap),
+        Err(Tooling::CapacityNotAdmitted {
+            kind: CapacityKind::ParameterSlots,
+            needed: NeededNatC::Exact(2),
+            limit: 1,
+            locator: None,
+        })
+    ));
+}
+
+fn assert_pv_ok(res: Result<(), ProgramViewViolation>) {
+    if let Err(err) = res {
+        panic!(
+            "expected check_program_view Ok(()), got Err({:?}, {:?}, {:?}, {:?})",
+            err.check, err.table, err.row, err.detail
+        );
+    }
+}
+
+fn assert_pv_err(
+    res: Result<(), ProgramViewViolation>,
+    expected_check: ViewCheck,
+    expected_table: &str,
+    expected_row: Option<usize>,
+    expected_detail: &str,
+) {
+    match res {
+        Ok(()) => panic!(
+            "expected ProgramViewViolation({expected_check:?}, {expected_table:?}, {expected_row:?}, {expected_detail:?}), got Ok(())"
+        ),
+        Err(err) => {
+            assert_eq!(err.check, expected_check);
+            assert_eq!(err.table, expected_table);
+            assert_eq!(err.row, expected_row);
+            assert_eq!(err.detail, expected_detail);
+        }
+    }
+}
+
+fn all_builtin_sorts_program() -> CoreProgram {
+    CoreProgram {
+        functions: vec![
+            CoreFunction {
+                name: "fn_0_uint".to_string(),
+                parameters: vec![
+                    CoreParameter {
+                        name: "p0_uint".to_string(),
+                        sort: SortTag::UInt,
+                    },
+                    CoreParameter {
+                        name: "p1_bool".to_string(),
+                        sort: SortTag::Bool,
+                    },
+                ],
+                return_type: SortTag::UInt,
+                body: CoreExpr::If {
+                    cond: Box::new(var_expr("p1_bool")),
+                    then_expr: Box::new(var_expr("p0_uint")),
+                    else_expr: Box::new(uint_lit(10)),
+                },
+            },
+            CoreFunction {
+                name: "fn_1_bool".to_string(),
+                parameters: vec![
+                    CoreParameter {
+                        name: "p2_list".to_string(),
+                        sort: SortTag::List,
+                    },
+                    CoreParameter {
+                        name: "p3_tree".to_string(),
+                        sort: SortTag::Tree,
+                    },
+                ],
+                return_type: SortTag::Bool,
+                body: CoreExpr::If {
+                    cond: Box::new(CoreExpr::Literal {
+                        value: CoreValue::Bool { b: true },
+                    }),
+                    then_expr: Box::new(var_expr("p2_list")),
+                    else_expr: Box::new(var_expr("p3_tree")),
+                },
+            },
+            CoreFunction {
+                name: "fn_2_list".to_string(),
+                parameters: vec![],
+                return_type: SortTag::List,
+                body: CoreExpr::Literal {
+                    value: CoreValue::List {
+                        elements: vec![
+                            i128_class::KIntC::InRange(1),
+                            i128_class::KIntC::InRange(2),
+                        ],
+                    },
+                },
+            },
+            CoreFunction {
+                name: "fn_3_tree".to_string(),
+                parameters: vec![
+                    CoreParameter {
+                        name: "p4_tree".to_string(),
+                        sort: SortTag::Tree,
+                    },
+                    CoreParameter {
+                        name: "p5_list".to_string(),
+                        sort: SortTag::List,
+                    },
+                    CoreParameter {
+                        name: "p6_bool".to_string(),
+                        sort: SortTag::Bool,
+                    },
+                    CoreParameter {
+                        name: "p7_uint".to_string(),
+                        sort: SortTag::UInt,
+                    },
+                ],
+                return_type: SortTag::Tree,
+                body: CoreExpr::If {
+                    cond: Box::new(var_expr("p6_bool")),
+                    then_expr: Box::new(var_expr("p4_tree")),
+                    else_expr: Box::new(CoreExpr::If {
+                        cond: Box::new(CoreExpr::Binary {
+                            op: BinaryOp::Eq,
+                            left: Box::new(var_expr("p7_uint")),
+                            right: Box::new(uint_lit(0)),
+                        }),
+                        then_expr: Box::new(var_expr("p5_list")),
+                        else_expr: Box::new(CoreExpr::Literal {
+                            value: CoreValue::Tree {
+                                tree: CoreTree::Branch {
+                                    left: Box::new(CoreTree::Leaf {
+                                        n: i128_class::KIntC::InRange(3),
+                                    }),
+                                    right: Box::new(CoreTree::Leaf {
+                                        n: i128_class::KIntC::InRange(4),
+                                    }),
+                                },
+                            },
+                        }),
+                    }),
+                },
+            },
+        ],
+        entry: uint_lit(0),
+    }
+}
+
+#[test]
+fn v8_accepts_all_builtin_parameter_and_return_sorts_roundtrip() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+    let view = expect_ok(
+        prepare_core(&prog, &b, &l),
+        "prepare_core should succeed for all builtin sorts",
+    );
+
+    let expected_param_sorts = [
+        TypeIdC::UInt,
+        TypeIdC::Bool,
+        TypeIdC::List,
+        TypeIdC::Tree,
+        TypeIdC::Tree,
+        TypeIdC::List,
+        TypeIdC::Bool,
+        TypeIdC::UInt,
+    ];
+    assert_eq!(view.parameters.len(), expected_param_sorts.len());
+    for (pid, &expected_sort) in expected_param_sorts.iter().enumerate() {
+        assert_eq!(view.parameters[pid].sort, expected_sort);
+    }
+
+    let expected_return_types = [
+        TypeIdC::UInt,
+        TypeIdC::Bool,
+        TypeIdC::List,
+        TypeIdC::Tree,
+    ];
+    assert_eq!(view.functions.len(), expected_return_types.len());
+    for (fi, &expected_ret) in expected_return_types.iter().enumerate() {
+        assert_eq!(view.functions[fi].return_type, expected_ret);
+    }
+
+    assert_pv_ok(check_program_view(&view, &b, &l));
+    let _admitted = expect_ok(
+        admit(&prog, &b, &l),
+        "admit should accept all builtin parameter and return sorts",
+    );
+
+    // Builtin-to-builtin mutations on the view also round-trip through V8 decode + prepare_core.
+    for &builtin_id in &[
+        TypeIdC::UInt,
+        TypeIdC::Bool,
+        TypeIdC::List,
+        TypeIdC::Tree,
+    ] {
+        for pid in 0..view.parameters.len() {
+            let mut v_param = unwrap_ok(prepare_core(&prog, &b, &l));
+            v_param.parameters[pid].sort = builtin_id;
+            assert_pv_ok(check_program_view(&v_param, &b, &l));
+        }
+        for fi in 0..view.functions.len() {
+            let mut v_ret = unwrap_ok(prepare_core(&prog, &b, &l));
+            v_ret.functions[fi].return_type = builtin_id;
+            assert_pv_ok(check_program_view(&v_ret, &b, &l));
+        }
+    }
+}
+
+#[test]
+fn v8_rejects_nominal_parameter_sorts_at_exact_parameter_row() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+    let nominal_ids = [
+        TypeIdC(4),
+        TypeIdC(5),
+        TypeIdC(7),
+        TypeIdC(64),
+        TypeIdC(usize::MAX),
+    ];
+
+    for pid in 0..8 {
+        for &nominal_id in &nominal_ids {
+            let mut view = unwrap_ok(prepare_core(&prog, &b, &l));
+            view.parameters[pid].sort = nominal_id;
+            assert_pv_err(
+                check_program_view(&view, &b, &l),
+                ViewCheck::V8,
+                "parameters",
+                Some(pid),
+                "non-builtin parameter sort",
+            );
+        }
+    }
+}
+
+#[test]
+fn v8_rejects_nominal_function_return_types_at_exact_function_row() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+    let nominal_ids = [
+        TypeIdC(4),
+        TypeIdC(5),
+        TypeIdC(8),
+        TypeIdC(128),
+        TypeIdC(usize::MAX),
+    ];
+
+    for fi in 0..4 {
+        for &nominal_id in &nominal_ids {
+            let mut view = unwrap_ok(prepare_core(&prog, &b, &l));
+            view.functions[fi].return_type = nominal_id;
+            assert_pv_err(
+                check_program_view(&view, &b, &l),
+                ViewCheck::V8,
+                "functions",
+                Some(fi),
+                "non-builtin return type",
+            );
+        }
+    }
+}
+
+#[test]
+fn v8_enforces_intra_function_body_parameter_and_return_type_precedence() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+
+    // 1. Within function 0: parameter refusal at pid=0 fires before function 0 return_type refusal.
+    let mut v_fn0_both = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn0_both.parameters[0].sort = TypeIdC(4);
+    v_fn0_both.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn0_both, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(0),
+        "non-builtin parameter sort",
+    );
+
+    // 2. Within function 3 (params 4..8): multiple nominal parameters refuse at lowest pid first.
+    let mut v_fn3_multi_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn3_multi_param.parameters[5].sort = TypeIdC(9);
+    v_fn3_multi_param.parameters[7].sort = TypeIdC(4);
+    v_fn3_multi_param.functions[3].return_type = TypeIdC(6);
+    assert_pv_err(
+        check_program_view(&v_fn3_multi_param, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(5),
+        "non-builtin parameter sort",
+    );
+
+    // 3. Within function 3: last parameter pid=7 still fires before function 3 return_type.
+    let mut v_fn3_last_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn3_last_param.parameters[7].sort = TypeIdC(4);
+    v_fn3_last_param.functions[3].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn3_last_param, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(7),
+        "non-builtin parameter sort",
+    );
+
+    // 4. Within function 0: decoded[f.body].take() ("function body taken") fires before parameter/return_type conversion.
+    let single_name_prog = CoreProgram {
+        functions: vec![CoreFunction {
+            name: "x".to_string(),
+            parameters: vec![CoreParameter {
+                name: "x".to_string(),
+                sort: SortTag::UInt,
+            }],
+            return_type: SortTag::UInt,
+            body: var_expr("x"),
+        }],
+        entry: var_expr("x"),
+    };
+    let mut v_body_taken = unwrap_ok(prepare_core(&single_name_prog, &b, &l));
+    v_body_taken.expressions.pop();
+    v_body_taken.occurrences.pop();
+    v_body_taken.functions[0].body = 0;
+    v_body_taken.parameters[0].sort = TypeIdC(4);
+    v_body_taken.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_body_taken, &b, &l),
+        ViewCheck::V8,
+        "functions",
+        None,
+        "function body taken",
+    );
+}
+
+#[test]
+fn v8_enforces_inter_function_order_and_v1_through_v8_stage_precedence() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+
+    // Inter-function order: function 0 return_type refusal fires before function 1 parameter refusal.
+    let mut v_fn0_ret_before_fn1_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn0_ret_before_fn1_param.functions[0].return_type = TypeIdC(4);
+    v_fn0_ret_before_fn1_param.parameters[2].sort = TypeIdC(5);
+    v_fn0_ret_before_fn1_param.functions[1].return_type = TypeIdC(6);
+    assert_pv_err(
+        check_program_view(&v_fn0_ret_before_fn1_param, &b, &l),
+        ViewCheck::V8,
+        "functions",
+        Some(0),
+        "non-builtin return type",
+    );
+
+    // Inter-function order: function 0 parameter pid=1 refusal fires before function 1 parameter pid=2 refusal.
+    let mut v_fn0_param_before_fn1_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn0_param_before_fn1_param.parameters[1].sort = TypeIdC(4);
+    v_fn0_param_before_fn1_param.parameters[2].sort = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn0_param_before_fn1_param, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(1),
+        "non-builtin parameter sort",
+    );
+
+    // Inter-function order: empty-param function 2 return_type refusal fires before function 3 parameter pid=4 refusal.
+    let mut v_fn2_ret_before_fn3_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn2_ret_before_fn3_param.functions[2].return_type = TypeIdC(4);
+    v_fn2_ret_before_fn3_param.parameters[4].sort = TypeIdC(5);

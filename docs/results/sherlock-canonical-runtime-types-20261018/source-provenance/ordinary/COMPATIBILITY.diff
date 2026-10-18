@@ -1,0 +1,70 @@
+--- a/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs
+@@ -177,19 +177,19 @@
+             FunctionRowC {
+                 function_name: 3,
+                 params: SliceC { start: 0, len: 0 },
+-                return_type: SortTag::UInt,
++                return_type: SortTag::UInt.into(),
+                 body: 5,
+             },
+             FunctionRowC {
+                 function_name: 0,
+                 params: SliceC { start: 0, len: 1 },
+-                return_type: SortTag::UInt,
++                return_type: SortTag::UInt.into(),
+                 body: 6,
+             },
+             FunctionRowC {
+                 function_name: 2,
+                 params: SliceC { start: 0, len: 0 },
+-                return_type: SortTag::UInt,
++                return_type: SortTag::UInt.into(),
+                 body: 15,
+             },
+         ]
+@@ -198,7 +198,7 @@
+         view.parameters,
+         vec![ParameterRowC {
+             binder: 1,
+-            sort: SortTag::UInt,
++            sort: SortTag::UInt.into(),
+         }]
+     );
+     assert!(check_program_view(&view, &b, &l).is_ok());
+@@ -297,7 +297,7 @@
+     let mut v_gap = unwrap_ok(prepare_core(&prog, &b, &l));
+     v_gap.parameters.push(ParameterRowC {
+         binder: 0,
+-        sort: SortTag::UInt,
++        sort: SortTag::UInt.into(),
+     });
+     v_gap.functions[2].params = SliceC { start: 2, len: 2 };
+     let err_gap = check_program_view(&v_gap, &b, &l).unwrap_err();
+@@ -331,7 +331,7 @@
+     let mut v_trail = unwrap_ok(prepare_core(&prog, &b, &l));
+     v_trail.parameters.push(ParameterRowC {
+         binder: 0,
+-        sort: SortTag::UInt,
++        sort: SortTag::UInt.into(),
+     });
+     let err_trail = check_program_view(&v_trail, &b, &l).unwrap_err();
+     assert_eq!(err_trail.check, ViewCheck::V4);
+@@ -344,7 +344,7 @@
+     let mut v_empty_trail = unwrap_ok(prepare_core(&prog_empty, &b, &l));
+     v_empty_trail.parameters.push(ParameterRowC {
+         binder: 0,
+-        sort: SortTag::UInt,
++        sort: SortTag::UInt.into(),
+     });
+     let err_empty_trail = check_program_view(&v_empty_trail, &b, &l).unwrap_err();
+     assert_eq!(err_empty_trail.check, ViewCheck::V4);
+@@ -389,7 +389,7 @@
+     v_body.functions.push(FunctionRowC {
+         function_name: 0,
+         params: SliceC::empty(),
+-        return_type: SortTag::UInt,
++        return_type: SortTag::UInt.into(),
+         body: 1,
+     });
+     let err_body = check_program_view(&v_body, &b, &l).unwrap_err();

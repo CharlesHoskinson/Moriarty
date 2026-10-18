@@ -1,0 +1,259 @@
+// Prepare-lane bodies are supplied exactly once as fn pointers by Root from the other lane's owner_prepare module. No default, mock, fallback, prepare/admit/Drop body, or caller FamilyPlans injection into admit exists here; CheckedOwnerEngine cannot be constructed without every dependency.
+pub struct PrepareDeps {
+    pub prepare_core: fn(&CoreProgram, &BoundsC, &LayoutSchemaC) -> Result<ProgramView, Tooling>,
+    pub check_program_view: fn(&ProgramView, &BoundsC, &LayoutSchemaC) -> Result<(), ProgramViewViolation>,
+    pub admit: fn(&CoreProgram, &BoundsC, &LayoutSchemaC) -> Result<Admitted, Tooling>,
+    pub admit_run: fn(&Admitted, &RunIntC, &RunIntC, &FinanceInput) -> Result<MachineImage, Tooling>,
+}
+pub struct CheckedOwnerEngine<F> { families: F, guards: OwnerGuards, prepare: PrepareDeps }
+impl<F> CheckedOwnerEngine<F> {
+    pub(super) fn new_reviewed(families: F, prepare: PrepareDeps) -> Self { Self { families, guards: OwnerGuards::new_owner(), prepare } }
+    pub(super) fn checked_guards(&self) -> &OwnerGuards { &self.guards }
+    pub(super) fn checked_pre_image<'a>(&self, a: &'a Admitted, img: &'a MachineImage) -> Result<PreImage<'a>, HostViolation> { PreImage::bind(a, img) }
+}
+impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
+    fn prepare_core(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC) -> Result<ProgramView, Tooling> { (self.prepare.prepare_core)(p, b, l) }
+    fn check_program_view(&self, v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC) -> Result<(), ProgramViewViolation> { (self.prepare.check_program_view)(v, b, l) }
+    fn admit(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC) -> Result<Admitted, Tooling> { (self.prepare.admit)(p, b, l) }
+    fn admit_run(&self, a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC, finance: &FinanceInput) -> Result<MachineImage, Tooling> { (self.prepare.admit_run)(a, fuel, stack_limit, finance) }
+    fn rule_id_of(&self, raw: &RawRuleId) -> RuleIdC { owner_rule_id_of(raw) }
+    fn raw_rule_id(&self, rule: &RuleIdC) -> RawRuleId { owner_raw_rule_id(rule) }
+    fn select(&self, pre: &PreImage<'_>) -> Result<Selected, HostViolation> { owner_select(pre, &self.guards) }
+    fn family_of(&self, rule: &RawRuleId) -> Option<FamilyId> { owner_family_of(rule) }
+    fn step(&self, a: &Admitted, img: &mut MachineImage) -> Result<StepResult, HostViolation> { owner_step(a, img, &self.families, &self.guards) }
+    fn run(&self, a: &Admitted, img: &mut MachineImage, sink: &mut dyn FnMut(&StepEventC)) -> Result<RunSummary, HostViolation> { owner_run(a, img, &self.families, &self.guards, sink) }
+    fn check_step_inv(&self, pre: &PreImage<'_>) -> Result<(), Vec<StepInvViolation>> { owner_check_step_inv(pre.admitted, pre.img, &self.prepare.check_program_view) }
+}
+
+// ============================================================================
+// SC05 + R6 owner regression tests, repaired candidate02. SECURITY/hostile
+// regression repair author: fresh Muse Wonder 1.0 HIGH under the recorded
+// fallback (canonical Opus author call terminated on a session limit with
+// no code; no Opus authorship claimed). SOURCE ONLY: UNCOMPILED,
+// UNEXECUTED. Direct cells call the real owner_validate_plan with
+// test-constructed Selected values and are direct-validation only, never
+// selector or end-to-end coverage. Stepped cells call the real owner_step
+// via CheckedOwnerEngine::new_reviewed. Hostile plans delegate to the real
+// HostFamilyPlans and then mutate one written field; they never fake
+// selection, a view, a guard, or provenance.
+// ============================================================================
+#[cfg(test)]
+mod sc05_r6_owner_regression_tests {
+    use super::*;
+    use crate::sherlock::helper_machine::families::HostFamilyPlans;
+    use crate::sherlock::helper_machine::shared::i128_class::KIntC;
+    use crate::sherlock::helper_machine::shared::*;
+
+    // ---------------- fixtures: real admission through owner_prepare --------
+    fn bounds() -> BoundsC {
+        BoundsC { code_rows: 64, function_rows: 8, code_child_slots: 32,
+            parameter_slots: 16, pattern_rows: 16, match_plan_rows: 0,
+            match_arm_rows: 16, type_rows: 0, constructor_rows: 0,
+            constructor_field_slots: 0, max_arity: 4, constant_nodes: 64,
+            constant_field_slots: 64, data_nodes: 64, data_field_slots: 64,
+            environment_cells: 64, frames: 64, helper_tasks: 64,
+            serialization_bytes: 0, max_reference_work: 1000,
+            max_helper_work: 1000, step_cap: 1 }
+    }
+    fn layout(b: &BoundsC) -> LayoutSchemaC {
+        LayoutSchemaC { layout_version: ("owner-regression".to_string(), "sc05-r6".to_string()),
+            field_id: None, widths: None, scalar_layout_id: None, bounds: *b,
+            capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
+                occurrence_path_slots: 128, value_slots: 1000 },
+            boundary_capacities_present: false }
+    }
+    fn deps() -> PrepareDeps {
+        PrepareDeps { prepare_core: super::super::owner_prepare::prepare_core,
+            check_program_view: super::super::owner_prepare::check_program_view,
+            admit: super::super::owner_prepare::admit,
+            admit_run: super::super::owner_prepare::admit_run }
+    }
+    fn engine<F: FamilyPlans>(families: F) -> CheckedOwnerEngine<F> {
+        CheckedOwnerEngine::new_reviewed(families, deps())
+    }
+    fn admitted_image(p: &CoreProgram, fuel: u128) -> (Admitted, MachineImage) {
+        let b = bounds(); let l = layout(&b);
+        let admitted = super::super::owner_prepare::admit(p, &b, &l)
+            .unwrap_or_else(|_| panic!("fixture admission refused"));
+        let img = super::super::owner_prepare::admit_run(&admitted,
+            &RunIntC::Nat(fuel), &RunIntC::Nat(64), &FinanceInput::Absent)
+            .unwrap_or_else(|_| panic!("fixture admit_run refused"));
+        (admitted, img)
+    }
+    fn bind_pre<'a>(a: &'a Admitted, img: &'a MachineImage) -> PreImage<'a> {
+        match PreImage::bind(a, img) {
+            Ok(p) => p,
+            Err(e) => panic!("bind failed: {:?} {:?}", e.kind, e.locator),
+        }
+    }
+    fn lit(n: u128) -> CoreExpr { CoreExpr::Literal { value: CoreValue::UInt { n: KIntC::InRange(n) } } }
+    fn prog(entry: CoreExpr) -> CoreProgram { CoreProgram { functions: Vec::new(), entry } }
+    fn prog_literal() -> CoreProgram { prog(lit(7)) }
+    fn prog_list12() -> CoreProgram {
+        prog(CoreExpr::Literal { value: CoreValue::List {
+            elements: vec![KIntC::InRange(1), KIntC::InRange(2)] } })
+    }
+    fn prog_let() -> CoreProgram {
+        prog(CoreExpr::Let { name: "x".to_string(), value: Box::new(lit(1)),
+            body: Box::new(CoreExpr::Var { name: "x".to_string() }) })
+    }
+    fn prog_match(scrutinee: CoreExpr, pattern: CorePattern, body: CoreExpr) -> CoreProgram {
+        prog(CoreExpr::Match { scrutinee: Box::new(scrutinee),
+            arms: vec![CoreArm { pattern, body }] })
+    }
+    fn prog_nameless_nil() -> CoreProgram {
+        prog_match(CoreExpr::Literal { value: CoreValue::List { elements: Vec::new() } },
+            CorePattern::PNil, lit(7))
+    }
+    fn prog_with_function() -> CoreProgram {
+        CoreProgram { functions: vec![CoreFunction { name: "identity".to_string(),
+                parameters: vec![CoreParameter { name: "x".to_string(), sort: SortTag::UInt }],
+                return_type: SortTag::UInt,
+                body: CoreExpr::Var { name: "x".to_string() } }],
+            entry: CoreExpr::Call { name: "identity".to_string(), args: vec![lit(2)] } }
+    }
+
+    // ---------- full MachineImage field snapshot for preservation ---------
+    #[derive(Debug, PartialEq)]
+    enum SnapDataRow { U128(u128), Bool(bool), Nil,
+        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize) }
+    fn snap_data_row(r: &crate::sherlock::helper_machine::raw::DataRow) -> SnapDataRow {
+        match r {
+            crate::sherlock::helper_machine::raw::DataRow::U128 { n } => SnapDataRow::U128(*n),
+            crate::sherlock::helper_machine::raw::DataRow::Bool { b } => SnapDataRow::Bool(*b),
+            crate::sherlock::helper_machine::raw::DataRow::Nil => SnapDataRow::Nil,
+            crate::sherlock::helper_machine::raw::DataRow::Cons { fields } => SnapDataRow::Cons(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Leaf { fields } => SnapDataRow::Leaf(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
+        }
+    }
+    #[derive(Debug, PartialEq)]
+    struct FullImageSnap { admission_body: usize, run_id: RunIdC,
+        control: ControlC, control_origin: usize, env_root: EnvRootC,
+        stack_limit: usize, outcome: OutcomeC, initial_fuel: u128,
+        remaining: u128, consumed: u128, helper_work: u128,
+        helper_visits: u128, cursor: u128, alloc: AllocCounters,
+        active: ActiveLengths, helper: Option<HelperControlC>,
+        result: Option<HelperResultC>, data: Vec<SnapDataRow>,
+        data_fields: Vec<RefC>, env: Vec<EnvCellC>, frames: Vec<FrameRowC>,
+        tasks: Vec<HelperTaskC>, value_slots: Vec<RefC> }
+    fn snapshot(img: &MachineImage) -> FullImageSnap {
+        FullImageSnap {
+            admission_body: std::sync::Arc::as_ptr(&img.admission.body) as usize,
+            run_id: (*img.run_id).clone(),
+            control: img.control, control_origin: img.control_origin,
+            env_root: img.env_root, stack_limit: img.stack_limit,
+            outcome: img.outcome, initial_fuel: img.initial_fuel,
+            remaining: img.remaining_work, consumed: img.consumed_work,
+            helper_work: img.helper_work, helper_visits: img.helper_visits,
+            cursor: img.reference_cursor, alloc: img.alloc, active: img.active,
+            helper: img.helper, result: img.result,
+            data: img.data.iter().map(snap_data_row).collect(),
+            data_fields: img.data_fields.clone(), env: img.env.clone(),
+            frames: img.frames.clone(), tasks: img.tasks.clone(),
+            value_slots: img.value_slots.clone() }
+    }
+
+    // ---------------- direct owner_validate_plan helpers --------------------
+    // These construct Selected as a test fixture for owner_validate_plan
+    // only. They are not owner_select and are not end-to-end coverage.
+    fn plan_with(w: PlannedWrites) -> EffectPlan {
+        let mut d = PlanDelta::default();
+        d.alloc_data_nodes = if w.alloc_data.is_some() { 1 } else { 0 };
+        d.alloc_data_fields = w.alloc_data.map_or(0, |a| a.field_len() as i64);
+        d.alloc_environment_cells = if w.alloc_env.is_some() { 1 } else { 0 };
+        d.depth = match w.frame { Some(FrameWrite::Push(_)) => 1, Some(FrameWrite::Pop) => -1, _ => 0 };
+        d.task_live = match w.task_op { TaskOp::Push(_) => 1, TaskOp::Pop => -1, TaskOp::None => 0 };
+        d.active_value_slots = if w.alloc_value_slot.is_some() { 1 } else { 0 };
+        EffectPlan { delta_assert: d, writes: w }
+    }
+    fn fixture_selected(rule: RuleIdC, hk: Option<HelperKind>) -> Selected {
+        let ek = super::event_kind_of(&rule);
+        Selected { rule, event_kind: ek, site: None, helper_kind: hk,
+            helper_eligible: ek != EventKind::LegacyComplete,
+            helper_visits: super::visits_of(&rule) }
+    }
+    fn validate(pre: &PreImage, sel: &Selected, w: PlannedWrites,
+        refs: &[RefC], envs: &[usize]) -> Result<ValidatedPlan, HostViolation> {
+        owner_validate_plan(pre, sel, plan_with(w), refs, envs)
+    }
+    fn must_err_invalid(r: Result<ValidatedPlan, HostViolation>, msg: &str) -> HostViolation {
+        match r { Ok(_) => panic!("{}", msg), Err(e) => e }
+    }
+    fn common(site: SiteTag) -> HelperCommon {
+        HelperCommon { site, origin_reference_cursor: 0, parent_resume: None } }
+    fn assert_invalid_plan(e: &HostViolation) {
+        assert_eq!(e.kind, HostViolationKind::WrongVariant);
+        assert_eq!(e.clause, None); assert_eq!(e.rule, None);
+        assert_eq!(e.locator.as_deref(), Some("invalid plan"));
+    }
+    fn match_helper(phase: MatchPhase, tag: PatternTag, x: usize, y: usize) -> HelperControlC {
+        HelperControlC::Match { common: common(SiteTag::Cases), scrutinee: RefC::Const(0),
+            arm: 0, saved_env: None, partial: None, pat_tag: tag, x, y, field_idx: 0,
+            staged: None, phase, status: TriStatus::Pending }
+    }
+
+    // ---------------- real run through CheckedOwnerEngine -------------------
+    fn run_checked<F: FamilyPlans>(eng: &CheckedOwnerEngine<F>, a: &Admitted,
+        img: &mut MachineImage) -> OutcomeC {
+        for _ in 0..10000 {
+            if img.outcome != OutcomeC::Running { return img.outcome; }
+            match eng.step(a, img) {
+                Ok(StepResult::Event { .. }) => {
+                    let pre = bind_pre(a, img);
+                    assert!(eng.check_step_inv(&pre).is_ok(), "N07: StepInv after step");
+                }
+                Ok(StepResult::Terminal) => break,
+                Err(e) => panic!("normal run HostViolation {:?} {:?}", e.kind, e.locator),
+            }
+        }
+        panic!("run did not terminate");
+    }
+
+    // ============ SC05: Match active / inactive columns, nameless case ======
+    #[test]
+    fn sc05_inactive_match_columns_phase_arm_accepted_without_names() {
+        let (a, img) = admitted_image(&prog_nameless_nil(), 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.names.len(), 0);
+        assert_eq!(a.body.view.arms.len(), 1);
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(match_helper(MatchPhase::Arm, PatternTag::PVar, 0, 0)));
+        let sel = fixture_selected(RuleIdC::BHelperMatchEntry, Some(HelperKind::Match));
+        assert!(validate(&pre, &sel, w, &[RefC::Const(0)], &[]).is_ok(),
+            "inactive zero columns in phase Arm rejected");
+    }
+    #[test]
+    fn sc05_h04_active_match_xy_at_names_len_rejected() {
+        let (a, img) = admitted_image(&prog_nameless_nil(), 100);
+        let pre = bind_pre(&a, &img);
+        let mut w = PlannedWrites::default();
+        w.helper = Write::Set(Some(match_helper(MatchPhase::Tag, PatternTag::PVar, 0, 0)));
+        let sel = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));
+        let e = must_err_invalid(validate(&pre, &sel, w, &[RefC::Const(0)], &[]),
+            "active x at names len accepted");
+        assert_invalid_plan(&e);
+        let mut h = match_helper(MatchPhase::Arm, PatternTag::PVar, 0, 0);
+        if let HelperControlC::Match { arm, .. } = &mut h { *arm = a.body.view.arms.len(); }
+        let mut w2 = PlannedWrites::default(); w2.helper = Write::Set(Some(h));
+        let sel2 = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));
+        let e2 = must_err_invalid(validate(&pre, &sel2, w2, &[RefC::Const(0)], &[]),
+            "arm at arms len accepted");
+        assert_invalid_plan(&e2);
+    }
+    #[test]
+    fn sc05_n03_active_match_patterns_with_names_accepted() {
+        // One real arm exists, so Match.arm 0 is in range and cannot mask
+        // the x/y decision. Names are exactly a and b from the PCons arm.
+        let p = prog_match(lit(3),
+            CorePattern::PCons { x: "a".to_string(), y: "b".to_string() }, lit(1));
+        let (a, img) = admitted_image(&p, 100);
+        let pre = bind_pre(&a, &img);
+        assert_eq!(a.body.view.names.len(), 2);
+        assert_eq!(a.body.view.arms.len(), 1);
+        for (tag, x, y) in [(PatternTag::PVar, 1usize, 0usize),
+            (PatternTag::PLeaf, 0, 0), (PatternTag::PCons, 0, 1),
+            (PatternTag::PBranch, 1, 0)] {
+            let mut w = PlannedWrites::default();
+            w.helper = Write::Set(Some(match_helper(MatchPhase::Tag, tag, x, y)));
+            let sel = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));

@@ -340,7 +340,7 @@ fn match_entry_payload(sel: &Selected, pre: &dyn PreImageView,
 // pr comes from the public wrapper's checked parameter read. The value-slot
 // read remains here, in normative parameter-before-argument order.
 fn bind_pair_payload(_sel: &Selected, pre: &dyn PreImageView,
-    pr: (usize, SortTag)) -> Result<EffectPlan, HostViolation> {
+    pr: (usize, TypeIdC)) -> Result<EffectPlan, HostViolation> {
     let mut helper = pre.helper().copied().ok_or_else(wrong_variant)?;
     let HelperControlC::Bind { args, p_cursor, a_cursor, .. } = &mut helper
         else { return Err(wrong_variant()); };

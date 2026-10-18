@@ -1,0 +1,400 @@
+    BindBad,
+    AppendDone,
+    ScalarValue,
+    ScalarError,
+    ScalarSelector,
+    ScalarTypeTest,
+    EqualDone,
+    MatchMatched,
+    MatchNoMatch,
+}
+
+// schema /enums/OutcomeTag
+pub enum OutcomeTag {
+    Running,
+    Halted,
+    Rejected,
+    Exhausted,
+}
+
+// schema /enums/ExhaustReason
+pub enum ExhaustReason {
+    Fuel,
+    DataNodes,
+    DataFields,
+    EnvironmentCells,
+    HelperTasks,
+    HelperWork,
+    SerializationBytes,
+}
+
+// schema /enums/StepDisposition
+pub enum StepDisposition {
+    Applied,
+    Published,
+    ExhaustedFuelUncharged,
+    RefusedHelperWorkUncharged,
+    RefusedCapCharged,
+}
+
+// schema /enums/EventStatus
+pub enum EventStatus {
+    Enabled,
+    AdministrativeBoundary,
+    Disabled,
+    ExtensionOnly,
+}
+
+// schema /enums/EventKind
+pub enum EventKind {
+    LegacyComplete,
+    HelperEnter,
+    HelperVisit,
+    HelperExit,
+    HelperFail,
+    Bookkeeping,
+    Publish,
+    Startup,
+}
+
+// schema /enums/BoundaryKind
+pub enum BoundaryKind {
+    None,
+    Terminal,
+    TechnicalCut,
+    SourceSuspensionExtensionReserved,
+}
+
+// schema /enums/RuleId
+pub enum RuleId {
+    KMachineEvalLiteralValid,
+    KMachineEvalLiteralInvalid,
+    KMachineEvalVariablePresent,
+    KMachineEvalVariableAbsent,
+    KMachineEvalLet,
+    KMachineEvalBinary,
+    KMachineEvalUnary,
+    KMachineEvalIf,
+    KMachineEvalMatch,
+    KMachineEvalCallEmpty,
+    KMachineEvalCallArguments,
+    KMachinePushAccept,
+    KMachinePushRefuse,
+    KMachineReturnLet,
+    KMachineReturnLeft,
+    KMachineReturnRight,
+    KMachineReturnUnary,
+    KMachineReturnIfTrue,
+    KMachineReturnIfFalse,
+    KMachineReturnIfInvalid,
+    KMachineReturnMatch,
+    KMachineReturnArgumentsNext,
+    KMachineReturnArgumentsFinal,
+    KMachineReturnCallValid,
+    KMachineReturnCallInvalid,
+    KMachineReturnScope,
+    KMachineInvokeFind,
+    KMachineEnterMissing,
+    KMachineEnterBind,
+    KMachineBoundInvalid,
+    KMachineBoundValid,
+    KMachineCasesEmpty,
+    KMachineCasesTry,
+    KMachineCasesMiss,
+    KMachineCasesHit,
+    KMachinePrimitiveValue,
+    KMachinePrimitiveError,
+    BHelperScalarEntry,
+    BHelperScalarTag,
+    BHelperScalarArithmetic,
+    BHelperScalarConstruct,
+    BHelperScalarExit,
+    BHelperScalarFailure,
+    BHelperEnvGetEntry,
+    BHelperEnvGetCell,
+    BHelperEnvGetEmpty,
+    BHelperEnvGetExit,
+    BHelperEnvGetFailure,
+    BHelperEnvPutEntry,
+    BHelperEnvPutCell,
+    BHelperEnvPutInsert,
+    BHelperEnvPutEmpty,
+    BHelperEnvPutExit,
+    BHelperEnvPutFailure,
+    BHelperFindEntry,
+    BHelperFindRow,
+    BHelperFindEmpty,
+    BHelperFindExit,
+    BHelperFindFailure,
+    BHelperBindEntry,
+    BHelperBindPair,
+    BHelperBindEmpty,
+    BHelperBindArity,
+    BHelperBindType,
+    BHelperBindDuplicate,
+    BHelperBindInsert,
+    BHelperBindPropagate,
+    BHelperBindExit,
+    BHelperBindFailure,
+    BHelperAppendEntry,
+    BHelperAppendCell,
+    BHelperAppendEmpty,
+    BHelperAppendTail,
+    BHelperAppendCopy,
+    BHelperAppendExit,
+    BHelperAppendFailure,
+    BHelperValidateEntry,
+    BHelperValidateOccurrence,
+    BHelperValidateField,
+    BHelperValidateDeclaration,
+    BHelperValidateEmpty,
+    BHelperValidateInvalid,
+    BHelperValidateExit,
+    BHelperValidateFailure,
+    BHelperEqualEntry,
+    BHelperEqualPair,
+    BHelperEqualField,
+    BHelperEqualEmpty,
+    BHelperEqualDifferent,
+    BHelperEqualExit,
+    BHelperEqualFailure,
+    BHelperMatchEntry,
+    BHelperMatchArm,
+    BHelperMatchOccurrence,
+    BHelperMatchField,
+    BHelperMatchBinding,
+    BHelperMatchDistinct,
+    BHelperMatchDiscard,
+    BHelperMatchNext,
+    BHelperMatchSelected,
+    BHelperMatchEmpty,
+    BHelperMatchExit,
+    BHelperMatchFailure,
+    BBookkeepingTaskEnqueue,
+    BBookkeepingTaskRelease,
+    BBookkeepingResumeStore,
+    BBookkeepingResumeRestore,
+    KAdminStartupValid,
+    KAdminStartupInvalid,
+    KAdminPublishValue,
+    KAdminPublishError,
+    KAdminPublishExhausted,
+}
+
+// schema /bounds/fields
+pub struct Bounds {
+    pub code_rows: usize,
+    pub function_rows: usize,
+    pub code_child_slots: usize,
+    pub parameter_slots: usize,
+    pub pattern_rows: usize,
+    pub match_plan_rows: usize,
+    pub match_arm_rows: usize,
+    pub type_rows: usize,
+    pub constructor_rows: usize,
+    pub constructor_field_slots: usize,
+    pub max_arity: usize,
+    pub constant_nodes: usize,
+    pub constant_field_slots: usize,
+    pub data_nodes: usize,
+    pub data_field_slots: usize,
+    pub environment_cells: usize,
+    pub frames: usize,
+    pub helper_tasks: usize,
+    pub serialization_bytes: usize,
+    pub max_reference_work: u128,
+    pub max_helper_work: u128,
+    pub step_cap: u128,
+}
+
+// schema /layout_schema/LayoutCapacities
+pub struct LayoutCapacities {
+    pub name_rows: usize,
+    pub name_bytes: usize,
+    pub occurrence_path_slots: usize,
+    pub value_slots: usize,
+}
+
+// schema /records/ValueRef/variant
+pub enum ValueRef {
+    Const { id: ConstId },
+    Data { id: DataId },
+}
+
+// schema /records/ValSlice/record
+pub struct ValSlice {
+    pub start: ValueSlotPos,
+    pub len: ArityCount,
+}
+
+// schema /records/ExprSlice/record
+pub struct ExprSlice {
+    pub start: ChildPos,
+    pub len: ArityCount,
+}
+
+// schema /records/ArmSlice/record
+pub struct ArmSlice {
+    pub start: ArmPos,
+    pub len: ArmPos,
+}
+
+// schema /records/ParamSlice/record
+pub struct ParamSlice {
+    pub start: ParamPos,
+    pub len: ArityCount,
+}
+
+// schema /records/FieldSlice/record
+pub struct FieldSlice {
+    pub start: FieldPos,
+    pub len: usize,
+}
+
+// schema /records/ConstFieldSlice/record
+pub struct ConstFieldSlice {
+    pub start: ConstFieldPos,
+    pub len: usize,
+}
+
+// schema /records/OccPathSlice/record
+pub struct OccPathSlice {
+    pub start: OccPathPos,
+    pub len: OccPathPos,
+}
+
+// schema /records/EnvRoot/type
+pub type EnvRoot = Option<EnvId>;
+
+// schema /records/EnvCell/record
+pub struct EnvCell {
+    pub binder: NameId,
+    pub value: ValueRef,
+    pub previous: Option<EnvId>,
+}
+
+// schema /records/ConstRow
+pub enum ConstRow {
+    U128 { marker_free: Bool, n: UInt128 },
+    Bool { marker_free: Bool, b: Bool },
+    Nil { marker_free: Bool },
+    Cons { marker_free: Bool, fields: ConstFieldSlice },
+    Leaf { marker_free: Bool, fields: ConstFieldSlice },
+    Branch { marker_free: Bool, fields: ConstFieldSlice },
+    U128OutOfRange { marker_free: Bool },
+}
+
+// schema /records/DataRow/variant
+pub enum DataRow {
+    U128 { n: UInt128 },
+    Bool { b: Bool },
+    Nil,
+    Cons { fields: FieldSlice },
+    Leaf { fields: FieldSlice },
+    Branch { fields: FieldSlice },
+}
+
+// schema /records/FieldSlot/type
+pub type FieldSlot = ValueRef;
+
+// schema /records/ValueSlot/type
+pub type ValueSlot = ValueRef;
+
+// schema /records/ControlRow/BoundBinding/variant
+pub enum BoundBinding {
+    Bad,
+    Ok { env: EnvRoot },
+}
+
+// schema /records/ControlRow/CaseMatching/variant
+pub enum CaseMatching {
+    NoMatch,
+    Matched { env: EnvRoot },
+}
+
+// schema /records/ControlRow/PrimOutcome/variant
+pub enum PrimOutcome {
+    Value { value: ValueRef },
+    Error { code: ErrorCode },
+}
+
+// schema /records/HelperControl/ScalarStaged/variant
+pub enum ScalarStaged {
+    None,
+    U128Value { n: UInt128 },
+    BoolValue { b: Bool },
+    PendingNode { tag: NodeKind },
+    PrimError { code: ErrorCode },
+    Selector { sel: BoolSelector },
+    TypeTest { ok: Bool },
+}
+
+// schema /records/HelperTask/variants
+pub enum HelperTask {
+    ValidateTask { r#ref: ValueRef, visit: TaskVisit, cursor: ArityCount },
+    EqualTask { left: ValueRef, right: ValueRef, visit: TaskVisit, cursor: ArityCount },
+    PairTask { binder: NameId, sort: SortTag, arg: ValueRef },
+}
+
+// schema /records/HelperResult/variants
+pub enum HelperResult {
+    Validated { ok: Bool },
+    EnvFound { value: ValueRef },
+    EnvMissing,
+    EnvUpdated { cell: EnvId },
+    FindFound { function: FunctionRowId },
+    FindMissing,
+    BindOk { env: EnvRoot },
+    BindBad,
+    AppendDone { seq: ValSlice },
+    ScalarValue { value: ValueRef },
+    ScalarError { code: ErrorCode },
+    ScalarSelector { sel: BoolSelector },
+    ScalarTypeTest { ok: Bool },
+    EqualDone { value: ValueRef },
+    MatchMatched { env: EnvRoot },
+    MatchNoMatch,
+}
+
+// schema /records/Outcome/variants
+pub enum Outcome {
+    Running,
+    Halted { value: ValueRef },
+    Rejected { code: ErrorCode },
+    Exhausted { reason: ExhaustReason },
+}
+
+// schema /program_image_view/tables/prog.expressions/row/variant
+pub enum ExpressionRow {
+    Literal { constant: ConstId },
+    Var { binder: NameId },
+    Let { binder: NameId, value: ExprId, body: ExprId },
+    Binary { op: BinaryOp, left: ExprId, right: ExprId },
+    Unary { op: UnaryOp, operand: ExprId },
+    If { cond: ExprId, then_expr: ExprId, else_expr: ExprId },
+    Call { function_name: NameId, args: ExprSlice },
+    Match { scrutinee: ExprId, arms: ArmSlice },
+}
+
+// schema /identity/SourceOccurrenceId/record/owner
+pub enum OccurrenceOwner {
+    Entry,
+    Function { index: FunctionRowId },
+}
+
+// schema /program_image_view/tables/prog.occurrences/row
+pub struct OccurrenceRow {
+    pub owner: OccurrenceOwner,
+    pub path: OccPathSlice,
+}
+
+// schema /program_image_view/tables/prog.functions/row
+pub struct FunctionRow {
+    pub function_name: NameId,
+    pub params: ParamSlice,
+    pub return_type: SortTag,
+    pub body: ExprId,
+}
+
+// schema /program_image_view/tables/prog.parameters/row
+pub struct ParameterRow {

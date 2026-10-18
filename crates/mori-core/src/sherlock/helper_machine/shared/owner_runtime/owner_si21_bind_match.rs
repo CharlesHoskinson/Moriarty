@@ -3,7 +3,7 @@
 use super::*;
 
 fn bv(loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, loc) }
-fn sort_accepts(pre: &PreImage, arg: &RefC, want: SortTag) -> Result<bool, HostViolation> {
+fn sort_accepts(pre: &PreImage, arg: &RefC, want: TypeIdC) -> Result<bool, HostViolation> {
     let k = pre.kind_of(arg)?;
     Ok(pre.checked_sort(&k).map(|s| s == want).unwrap_or(false))
 }

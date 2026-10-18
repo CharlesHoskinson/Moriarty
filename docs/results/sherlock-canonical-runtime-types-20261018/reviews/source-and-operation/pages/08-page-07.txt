@@ -1,0 +1,240 @@
+            StepDisposition::ExhaustedFuelUncharged, Some(ExhaustReason::Fuel), pre_snap.helper.as_ref().map(helper_kind_of))); }
+    // PS: select + plan + validate + physical, all pure over the pre-image.
+    let (sel, validated) = {
+        let pre = PreImage::bind(a, img)?;
+        let sel = owner_select(&pre, guards)?;
+        let (plan, read_provenance, read_env_provenance) = call_family(families, &sel, &pre, guards)?;
+        let validated = owner_validate_plan(&pre, &sel, plan, &read_provenance, &read_env_provenance)?;
+        owner_physical_check(&pre, &validated)?;
+        (sel, validated) };
+    let cap = owner_cap_refusal(&validated);
+    // P3 helper-work refusal, uncharged.
+    if sel.helper_eligible && img.helper_work == a.body.bounds.max_helper_work {
+        img.outcome = OutcomeC::Exhausted { reason: ExhaustReason::HelperWork };
+        return Ok(StepResult::Event { event: build_event(a, &pre_snap, img, pre_snap.consumed, sel.rule, sel.event_kind,
+            sel.site, sel.helper_kind, StepDisposition::RefusedHelperWorkUncharged, 0, 0, 0,
+            AllocDeltasC { data_nodes: 0, data_fields: 0, environment_cells: 0 }, 0, Some(ExhaustReason::HelperWork)) });
+    }
+    // P4 charge exactly once.
+    let remaining_work = img.remaining_work.checked_sub(1).ok_or_else(|| arith("P4 remainingWork - 1"))?;
+    let consumed_work = img.consumed_work.checked_add(1).ok_or_else(|| arith("P4 consumedWork + 1"))?;
+    let helper_work = if sel.helper_eligible { Some(img.helper_work.checked_add(1).ok_or_else(|| arith("P4 helperWork + 1"))?) } else { None };
+    img.remaining_work = remaining_work; img.consumed_work = consumed_work;
+    if let Some(helper_work) = helper_work { img.helper_work = helper_work; }
+    // P6 logical cap refusal, charged; only P4 persists.
+    if let Some(kind) = cap {
+        let reason = match kind { CapKind::DataNodes => ExhaustReason::DataNodes, CapKind::DataFields => ExhaustReason::DataFields,
+            CapKind::EnvironmentCells => ExhaustReason::EnvironmentCells, CapKind::HelperTasks => ExhaustReason::HelperTasks };
+        img.outcome = OutcomeC::Exhausted { reason };
+        return Ok(StepResult::Event { event: build_event(a, &pre_snap, img, pre_snap.consumed, sel.rule, sel.event_kind,
+            sel.site, sel.helper_kind, StepDisposition::RefusedCapCharged, 1, if sel.helper_eligible { 1 } else { 0 }, 0,
+            AllocDeltasC { data_nodes: 0, data_fields: 0, environment_cells: 0 }, 0, Some(reason)) });
+    }
+    owner_apply_validated(img, validated, &sel) // P7
+}
+pub fn owner_run(a: &Admitted, img: &mut MachineImage, families: &dyn FamilyPlans, guards: &OwnerGuards,
+    sink: &mut dyn FnMut(&StepEventC)) -> Result<RunSummary, HostViolation> {
+    PreImage::bind(a, img)?; // AB: no step or sink call on mismatch.
+    let mut events: u128 = 0;
+    while img.outcome == OutcomeC::Running {
+        match owner_step(a, img, families, guards)? {
+            StepResult::Terminal => break,
+            StepResult::Event { event } => { let next_events = events.checked_add(1).ok_or_else(|| arith("run events + 1"))?; sink(&event); events = next_events; } }
+    }
+    Ok(RunSummary { outcome: img.outcome, events, consumed_work: img.consumed_work, helper_work: img.helper_work,
+        helper_visits: img.helper_visits, reference_cursor: img.reference_cursor })
+}
+
+// ================= check_step_inv SI01-SI24 (diagnostic, explicit worklists) =================
+fn structurally_equal(pre: &PreImage, a0: RefC, b0: RefC) -> Result<bool, HostViolation> {
+    // Explicit pair worklist; visited pairs keep shared DAGs polynomial.
+    let mut stack: Vec<(RefC, RefC)> = vec![(a0, b0)];
+    let mut visited: Vec<(RefC, RefC)> = Vec::new();
+    while let Some((x, y)) = stack.pop() {
+        if visited.contains(&(x, y)) { continue; }
+        visited.push((x, y));
+        if pure_leaves::shallow_differ(pre.deref_borrowed(&x)?, pre.deref_borrowed(&y)?) { return Ok(false); }
+        let arity = pre.checked_arity(&pre.kind_of(&x)?)?;
+        let mut i = 0usize;
+        while i < arity { stack.push((pre.field_at(&x, &i)?, pre.field_at(&y, &i)?)); i += 1; }
+    }
+    Ok(true)
+}
+fn const_descendants(pre: &PreImage, root: usize) -> Result<Vec<usize>, HostViolation> {
+    let mut seen: Vec<usize> = Vec::new(); let mut stack: Vec<usize> = vec![root];
+    while let Some(id) = stack.pop() {
+        if seen.contains(&id) { continue; }
+        seen.push(id);
+        let row = pre.admitted.body.view.constants.get(id).ok_or_else(|| oob("prog.constants"))?;
+        let (start, len) = const_fields(row);
+        let mut i = 0usize;
+        while i < len { let pos = start.checked_add(i).ok_or_else(|| arith("const descendant pos"))?;
+            stack.push(pre.constant_field(&pos)?); i += 1; }
+    }
+    Ok(seen)
+}
+fn ref_in_bounds(pre: &PreImage, r: &RefC) -> bool {
+    match r { RefC::Const(id) => *id < pre.admitted.body.view.constants.len(), RefC::Data(id) => *id < pre.img.active.data }
+}
+// ---- check_step_inv private diagnostic helpers: read-only, explicit loops/worklists, no native recursion. A read Err is a violation, never a pass.
+fn frame_origin(f: &FrameRowC) -> usize {
+    match f { FrameRowC::LetF { origin, .. } | FrameRowC::LeftF { origin, .. } | FrameRowC::RightF { origin, .. }
+        | FrameRowC::UnaryF { origin, .. } | FrameRowC::IfF { origin, .. } | FrameRowC::MatchF { origin, .. }
+        | FrameRowC::ArgsF { origin, .. } | FrameRowC::ReturnF { origin, .. } | FrameRowC::ScopeF { origin, .. } => *origin }
+}
+fn frame_env(f: &FrameRowC) -> EnvRootC {
+    match f { FrameRowC::LetF { saved_env, .. } | FrameRowC::LeftF { saved_env, .. } | FrameRowC::IfF { saved_env, .. }
+        | FrameRowC::MatchF { saved_env, .. } | FrameRowC::ArgsF { saved_env, .. } | FrameRowC::ReturnF { saved_env, .. }
+        | FrameRowC::ScopeF { saved_env, .. } => *saved_env,
+        FrameRowC::RightF { .. } | FrameRowC::UnaryF { .. } => None }
+}
+// SI-13/SI-17 ValueRef holders. `exempt` receives only the SI-17 positional exemptions (helper Validate.root,
+// ValidateTask.ref); every other holder goes to `refs`.
+fn frame_refs(f: &FrameRowC, refs: &mut Vec<RefC>) {
+    if let FrameRowC::RightF { left, .. } = f { refs.push(*left); }
+}
+fn control_refs(c: &ControlC, refs: &mut Vec<RefC>) {
+    match c { ControlC::Return { value } => refs.push(*value), ControlC::Cases { value, .. } => refs.push(*value),
+        ControlC::CaseResult { value, .. } => refs.push(*value),
+        ControlC::PrimResult { result: PrimOutcome::Value { value } } => refs.push(*value),
+        ControlC::ScheduleNext { frame, .. } => frame_refs(frame, refs), _ => {} }
+}
+fn helper_refs(h: &HelperControlC, refs: &mut Vec<RefC>, exempt: &mut Vec<RefC>) {
+    match h {
+        HelperControlC::Scalar { operand_a, operand_b, .. } => { refs.push(*operand_a); if let Some(b) = operand_b { refs.push(*b); } }
+        HelperControlC::EnvGet { found, .. } => { if let Some(f) = found { refs.push(*f); } }
+        HelperControlC::EnvPut { value, .. } => refs.push(*value),
+        HelperControlC::Find { .. } | HelperControlC::Bind { .. } => {}
+        HelperControlC::Append { value, staged, .. } => { refs.push(*value); if let Some(s) = staged { refs.push(*s); } }
+        HelperControlC::Validate { root, .. } => exempt.push(*root),
+        HelperControlC::Equal { left, right, .. } => { refs.push(*left); refs.push(*right); }
+        HelperControlC::Match { scrutinee, staged, .. } => { refs.push(*scrutinee); if let Some(s) = staged { refs.push(*s); } }
+    }
+}
+fn result_refs(r: &HelperResultC, refs: &mut Vec<RefC>) {
+    match r { HelperResultC::EnvFound { value } | HelperResultC::ScalarValue { value } | HelperResultC::EqualDone { value } => refs.push(*value),
+        _ => {} }
+}
+fn task_refs(t: &HelperTaskC, refs: &mut Vec<RefC>, exempt: &mut Vec<RefC>) {
+    match t { HelperTaskC::ValidateTask { r, .. } => exempt.push(*r),
+        HelperTaskC::EqualTask { left, right, .. } => { refs.push(*left); refs.push(*right); }
+        HelperTaskC::PairTask { arg, .. } => refs.push(*arg) }
+}
+// SI-13 EnvId-valued holders (env cell `previous` is SI-14).
+fn env_holders(img: &MachineImage, out: &mut Vec<EnvRootC>) {
+    out.push(img.env_root);
+    for f in &img.frames { out.push(frame_env(f)); }
+    match &img.control {
+        ControlC::ScheduleNext { frame, env, .. } => { out.push(frame_env(frame)); out.push(*env); }
+        ControlC::Bound { binding: BoundBinding::Ok { env }, .. } => out.push(*env),
+        ControlC::Cases { saved_env, .. } => out.push(*saved_env),
+        ControlC::CaseResult { matching, saved_env, .. } => {
+            out.push(*saved_env); if let CaseMatching::Matched { env } = matching { out.push(*env); } }
+        _ => {} }
+    match &img.helper {
+        Some(HelperControlC::EnvGet { cursor, .. }) => out.push(*cursor),
+        Some(HelperControlC::EnvPut { base, new_root, .. }) => { out.push(*base); out.push(*new_root); }
+        Some(HelperControlC::Bind { partial, dup_cursor, .. }) => { out.push(*partial); out.push(*dup_cursor); }
+        Some(HelperControlC::Match { saved_env, partial, .. }) => { out.push(*saved_env); out.push(*partial); }
+        _ => {} }
+    match &img.result {
+        Some(HelperResultC::EnvUpdated { cell }) => out.push(Some(*cell)),
+        Some(HelperResultC::BindOk { env }) | Some(HelperResultC::MatchMatched { env }) => out.push(*env),
+        _ => {} }
+}
+// MCL F2 suffix rule over normalized slices: the empty slice (0,0) is a suffix of every slice.
+fn is_suffix(inner: SliceC, outer: SliceC) -> bool {
+    if inner.len == 0 { return inner.start == 0; }
+    match (inner.start.checked_add(inner.len), outer.start.checked_add(outer.len)) {
+        (Some(ie), Some(oe)) => inner.start >= outer.start && ie == oe, _ => false }
+}
+// SI-11 for data row j: arity(kind) = field-slice length, slice below active.dataFields, records.DataRow.field_kinds over kind().
+fn si11_row_ok(pre: &PreImage, j: usize, row: &RawDataRow) -> Result<bool, HostViolation> {
+    let k = pure_leaves::borrowed_kind(pure_leaves::BorrowedValueRow::Data(row));
+    let (start, len) = data_fields(row);
+    if pure_leaves::arity_of(k) != Some(len) { return Ok(false); }
+    if len > 0 && start.checked_add(len).map_or(true, |e| e > pre.img.active.data_fields) { return Ok(false); }
+    let r = RefC::Data(j);
+    let kind_at = |i: usize| -> Result<LogicalKind, HostViolation> { pre.kind_of(&pre.field_at(&r, &i)?) };
+    Ok(match k {
+        LogicalKind::Cons => kind_at(0)? == LogicalKind::UInt && matches!(kind_at(1)?, LogicalKind::Nil | LogicalKind::Cons),
+        LogicalKind::Leaf => kind_at(0)? == LogicalKind::UInt,
+        LogicalKind::Branch => matches!(kind_at(0)?, LogicalKind::Leaf | LogicalKind::Branch)
+            && matches!(kind_at(1)?, LogicalKind::Leaf | LogicalKind::Branch),
+        LogicalKind::UInt | LogicalKind::Bool | LogicalKind::Nil => true,
+        LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => false })
+}
+// SI-15 for one frame (also SI-16 ScheduleNext.frame): origin and frame ExprIds in range, FrameRow origin_tag,
+// MatchF.arms = expr(origin).arms, ArgsF.rest suffix of expr(origin).args with completed.len + rest.len + 1 = args.len,
+// and every frame slice inside its table.
+fn si15_frame_ok(pre: &PreImage, f: &FrameRowC) -> Result<bool, HostViolation> {
+    let view = &pre.admitted.body.view;
+    let n = view.expressions.len();
+    let origin = frame_origin(f);
+    if origin >= n { return Ok(false); }
+    let e = pre.expr(&origin)?;
+    Ok(match f {
+        FrameRowC::LetF { body, .. } => *body < n && matches!(e, ExpressionRowC::Let { .. }),
+        FrameRowC::LeftF { right, .. } => *right < n && matches!(e, ExpressionRowC::Binary { .. }),
+        FrameRowC::RightF { .. } => matches!(e, ExpressionRowC::Binary { .. }),
+        FrameRowC::UnaryF { .. } => matches!(e, ExpressionRowC::Unary { .. }),
+        FrameRowC::IfF { then_expr, else_expr, .. } => *then_expr < n && *else_expr < n && matches!(e, ExpressionRowC::If { .. }),
+        FrameRowC::MatchF { arms, .. } => slice_ok(*arms, view.arms.len())
+            && matches!(e, ExpressionRowC::Match { arms: ea, .. } if ea == arms),
+        FrameRowC::ArgsF { completed, rest, .. } => slice_ok(*completed, pre.img.active.value_slots)
+            && slice_ok(*rest, view.children.len()) && match e {
+                ExpressionRowC::Call { args, .. } => is_suffix(*rest, *args)
+                    && completed.len.checked_add(rest.len).and_then(|s| s.checked_add(1)) == Some(args.len),
+                _ => false },
+        FrameRowC::ReturnF { .. } => matches!(e, ExpressionRowC::Call { .. }),
+        FrameRowC::ScopeF { .. } => matches!(e, ExpressionRowC::Let { .. } | ExpressionRowC::Match { .. }),
+    })
+}
+// SI-20 Return at depth > 0: seed expectedChild(top) (all candidates for ReturnF and ScopeF-over-Match), then
+// tailClosure through nested If branches with an explicit heap worklist and a visited set over ExprIds.
+fn si20_return_ok(pre: &PreImage, top: &FrameRowC, origin: usize) -> Result<bool, HostViolation> {
+    let mut work: Vec<usize> = Vec::new();
+    let o = frame_origin(top);
+    match (top, pre.expr(&o)?) {
+        (FrameRowC::LetF { .. }, ExpressionRowC::Let { value, .. }) => work.push(*value),
+        (FrameRowC::LeftF { .. }, ExpressionRowC::Binary { left, .. }) => work.push(*left),
+        (FrameRowC::RightF { .. }, ExpressionRowC::Binary { right, .. }) => work.push(*right),
+        (FrameRowC::UnaryF { .. }, ExpressionRowC::Unary { operand, .. }) => work.push(*operand),
+        (FrameRowC::IfF { .. }, ExpressionRowC::If { cond, .. }) => work.push(*cond),
+        (FrameRowC::MatchF { .. }, ExpressionRowC::Match { scrutinee, .. }) => work.push(*scrutinee),
+        (FrameRowC::ArgsF { completed, .. }, ExpressionRowC::Call { args, .. }) => {
+            if completed.len >= args.len { return Ok(false); }
+            let pos = args.start.checked_add(completed.len).ok_or_else(|| arith("SI-20 ArgsF child pos"))?;
+            work.push(pre.child(&pos)?);
+        }
+        (FrameRowC::ReturnF { .. }, ExpressionRowC::Call { function_name, .. }) => {
+            let n = pre.admitted_function_count(); let mut i = 0usize;
+            while i < n { let f = *pre.function_row(&i)?; if f.function_name == *function_name { work.push(f.body); } i += 1; }
+        }
+        (FrameRowC::ScopeF { .. }, ExpressionRowC::Let { body, .. }) => work.push(*body),
+        (FrameRowC::ScopeF { .. }, ExpressionRowC::Match { arms, .. }) => {
+            let mut k = 0usize;
+            while k < arms.len { let aid = arms.start.checked_add(k).ok_or_else(|| arith("SI-20 ScopeF arm"))?;
+                work.push(pre.arm(&aid)?.body); k += 1; }
+        }
+        _ => return Ok(false),
+    }
+    let mut seen: Vec<bool> = vec![false; pre.admitted.body.view.expressions.len()];
+    while let Some(e) = work.pop() {
+        let slot = seen.get_mut(e).ok_or_else(|| oob("SI-20 tailClosure ExprId"))?;
+        if *slot { continue; }
+        *slot = true;
+        if e == origin { return Ok(true); }
+        if let ExpressionRowC::If { then_expr, else_expr, .. } = pre.expr(&e)? { work.push(*then_expr); work.push(*else_expr); }
+    }
+    Ok(false)
+}
+// SI-23 live ValSlices (control, frames incl. a ScheduleNext frame, helper, result) inside [0, active.valueSlots), len <= maxArity.
+fn si23_live_slices_ok(img: &MachineImage, max_arity: usize) -> bool {
+    let live = |s: &SliceC| slice_ok(*s, img.active.value_slots) && s.len <= max_arity;
+    let control_ok = match &img.control {
+        ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } => live(args),
+        ControlC::ScheduleNext { frame: FrameRowC::ArgsF { completed, .. }, .. } => live(completed),
+        _ => true };
+    let frames_ok = img.frames.iter().all(|f| match f { FrameRowC::ArgsF { completed, .. } => live(completed), _ => true });
+    let helper_ok = match &img.helper {

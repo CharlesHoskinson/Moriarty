@@ -1,0 +1,156 @@
+        KMachineReturnUnary => matches!(res(pre), Some(HelperResultC::ScalarValue { .. } | HelperResultC::ScalarError { .. })),
+        KMachineReturnIfTrue => matches!(res(pre), Some(HelperResultC::ScalarSelector { sel: BoolSelector::True })),
+        KMachineReturnIfFalse => matches!(res(pre), Some(HelperResultC::ScalarSelector { sel: BoolSelector::False })),
+        KMachineReturnIfInvalid => matches!(res(pre), Some(HelperResultC::ScalarSelector { sel: BoolSelector::NotBool })),
+        KMachineReturnArgumentsNext => matches!(res(pre), Some(HelperResultC::AppendDone { .. }))
+            && matches!(pre.top_frame(), Some(FrameRowC::ArgsF { rest, .. }) if rest.len > 0),
+        KMachineReturnArgumentsFinal => matches!(res(pre), Some(HelperResultC::AppendDone { .. }))
+            && matches!(pre.top_frame(), Some(FrameRowC::ArgsF { rest, .. }) if rest.len == 0),
+        KMachineReturnCallValid => matches!(res(pre), Some(HelperResultC::ScalarTypeTest { ok: true })),
+        KMachineReturnCallInvalid => matches!(res(pre), Some(HelperResultC::ScalarTypeTest { ok: false })),
+        KMachineInvokeFind => matches!(res(pre), Some(HelperResultC::FindFound { .. } | HelperResultC::FindMissing)),
+        KMachineEnterMissing => matches!(pre.control(), ControlC::Enter { function: None, .. }),
+        KMachineEnterBind => matches!(res(pre), Some(HelperResultC::BindOk { .. } | HelperResultC::BindBad)),
+        KMachineBoundInvalid => matches!(pre.control(), ControlC::Bound { binding: BoundBinding::Bad, .. }),
+        KMachineBoundValid => matches!(pre.control(), ControlC::Bound { binding: BoundBinding::Ok { .. }, .. }),
+        KMachineCasesEmpty => matches!(pre.control(), ControlC::Cases { arms, .. } if arms.len == 0),
+        KMachineCasesTry => matches!(res(pre), Some(HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch)),
+        KMachineCasesMiss => matches!(pre.control(), ControlC::CaseResult { matching: CaseMatching::NoMatch, .. }),
+        KMachineCasesHit => matches!(pre.control(), ControlC::CaseResult { matching: CaseMatching::Matched { .. }, .. }),
+        KMachinePrimitiveValue => matches!(pre.control(), ControlC::PrimResult { result: PrimOutcome::Value { .. } }),
+        KMachinePrimitiveError => matches!(pre.control(), ControlC::PrimResult { result: PrimOutcome::Error { .. } }),
+        // Helper entries: selected only by dispatch step 3 (helperPlan), never by group scan.
+        BHelperScalarEntry | BHelperEnvGetEntry | BHelperEnvPutEntry | BHelperFindEntry | BHelperBindEntry
+        | BHelperAppendEntry | BHelperValidateEntry | BHelperEqualEntry | BHelperMatchEntry => false,
+        BHelperScalarTag => matches!(pre.helper(), Some(HelperControlC::Scalar { phase: ScalarPhase::First, mode, .. })
+            if !matches!(mode, ScalarMode::Leaf | ScalarMode::Not)),
+        BHelperScalarArithmetic => matches!(pre.helper(), Some(HelperControlC::Scalar { phase, mode, .. })
+            if (*phase == ScalarPhase::First && *mode == ScalarMode::Not)
+            || (*phase == ScalarPhase::Second && matches!(mode, ScalarMode::Add | ScalarMode::Sub | ScalarMode::Mul | ScalarMode::Lt))),
+        BHelperScalarConstruct => matches!(pre.helper(), Some(HelperControlC::Scalar { phase, mode, .. })
+            if (*phase == ScalarPhase::First && *mode == ScalarMode::Leaf)
+            || (*phase == ScalarPhase::Second && matches!(mode, ScalarMode::Cons | ScalarMode::Branch))),
+        BHelperScalarExit => matches!(pre.helper(), Some(HelperControlC::Scalar { phase: ScalarPhase::Done, staged, .. })
+            if !matches!(staged, ScalarStaged::PrimError { .. })),
+        BHelperScalarFailure => matches!(pre.helper(), Some(HelperControlC::Scalar { phase: ScalarPhase::Done, staged: ScalarStaged::PrimError { .. }, .. })),
+        BHelperEnvGetCell => matches!(pre.helper(), Some(HelperControlC::EnvGet { status: TriStatus::Pending, cursor: Some(_), .. })),
+        BHelperEnvGetEmpty => matches!(pre.helper(), Some(HelperControlC::EnvGet { status: TriStatus::Pending, cursor: None, .. })),
+        BHelperEnvGetExit => matches!(pre.helper(), Some(HelperControlC::EnvGet { status: TriStatus::Positive, .. })),
+        BHelperEnvGetFailure => matches!(pre.helper(), Some(HelperControlC::EnvGet { status: TriStatus::Negative, .. })),
+        BHelperEnvPutInsert => matches!(pre.helper(), Some(HelperControlC::EnvPut { status: TriStatus::Pending, .. })),
+        BHelperEnvPutExit => matches!(pre.helper(), Some(HelperControlC::EnvPut { status: TriStatus::Positive, .. })),
+        BHelperFindRow => match pre.helper() { Some(HelperControlC::Find { status: TriStatus::Pending, row_cursor, .. }) =>
+            *row_cursor < pre.admitted_function_count(), _ => false },
+        BHelperFindEmpty => match pre.helper() { Some(HelperControlC::Find { status: TriStatus::Pending, row_cursor, .. }) =>
+            *row_cursor == pre.admitted_function_count(), _ => false },
+        BHelperFindExit => matches!(pre.helper(), Some(HelperControlC::Find { status: TriStatus::Positive, .. })),
+        BHelperFindFailure => matches!(pre.helper(), Some(HelperControlC::Find { status: TriStatus::Negative, .. })),
+        BHelperBindPair => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Pairing, params, args, p_cursor, a_cursor, .. })
+            if *p_cursor < params.len && *a_cursor < args.len),
+        BHelperBindEmpty => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Pairing, params, args, p_cursor, a_cursor, .. })
+            if *p_cursor == params.len && *a_cursor == args.len),
+        BHelperBindArity => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Pairing, params, args, p_cursor, a_cursor, .. })
+            if (*p_cursor == params.len) != (*a_cursor == args.len)),
+        BHelperBindType => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::UnwindType, .. })),
+        BHelperBindDuplicate => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::UnwindDup, .. })),
+        BHelperBindInsert => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::UnwindInsert, .. })),
+        BHelperBindPropagate => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Propagate, .. })),
+        BHelperBindExit => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Finished, status: BindStatus::Ok, .. })),
+        BHelperBindFailure => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Finished, status: BindStatus::Bad, .. })),
+        BHelperAppendCopy => matches!(pre.helper(), Some(HelperControlC::Append { phase: AppendPhase::Copy, staged: Some(_), .. })),
+        BHelperAppendCell => matches!(pre.helper(), Some(HelperControlC::Append { phase: AppendPhase::Copy, staged: None, src, src_cursor, .. })
+            if *src_cursor < src.len),
+        BHelperAppendEmpty => matches!(pre.helper(), Some(HelperControlC::Append { phase: AppendPhase::Copy, staged: None, src, src_cursor, .. })
+            if *src_cursor == src.len),
+        BHelperAppendTail => matches!(pre.helper(), Some(HelperControlC::Append { phase: AppendPhase::Tail, .. })),
+        BHelperAppendExit => matches!(pre.helper(), Some(HelperControlC::Append { phase: AppendPhase::Done, .. })),
+        BHelperValidateOccurrence => matches!(pre.helper(), Some(HelperControlC::Validate { status: TriStatus::Pending, .. }))
+            && pre.task_live() > 0 && matches!(pre.top_task(), Some(HelperTaskC::ValidateTask { r, visit: TaskVisitC::Unvisited, .. })
+                if pre.kind_of(r)? != LogicalKind::Marker),
+        BHelperValidateField => matches!(pre.helper(), Some(HelperControlC::Validate { status: TriStatus::Pending, .. }))
+            && matches!(pre.top_task(), Some(HelperTaskC::ValidateTask { visit: TaskVisitC::Fields, .. })),
+        BHelperValidateEmpty => matches!(pre.helper(), Some(HelperControlC::Validate { status: TriStatus::Pending, .. })) && pre.task_live() == 0,
+        BHelperValidateInvalid => matches!(pre.helper(), Some(HelperControlC::Validate { status: TriStatus::Pending, .. }))
+            && matches!(pre.top_task(), Some(HelperTaskC::ValidateTask { r, visit: TaskVisitC::Unvisited, .. })
+                if pre.kind_of(r)? == LogicalKind::Marker),
+        BHelperValidateExit => matches!(pre.helper(), Some(HelperControlC::Validate { status: TriStatus::Positive, .. })),
+        BHelperValidateFailure => matches!(pre.helper(), Some(HelperControlC::Validate { status: TriStatus::Negative, .. })) && pre.task_live() == 0,
+        BHelperEqualPair => matches!(pre.helper(), Some(HelperControlC::Equal { status: TriStatus::Pending, .. }))
+            && match pre.top_task() { Some(HelperTaskC::EqualTask { left, right, visit: TaskVisitC::Unvisited, .. }) =>
+                !pure_leaves::shallow_differ(pre.deref_borrowed(left)?, pre.deref_borrowed(right)?), _ => false },
+        BHelperEqualField => matches!(pre.helper(), Some(HelperControlC::Equal { status: TriStatus::Pending, .. }))
+            && matches!(pre.top_task(), Some(HelperTaskC::EqualTask { visit: TaskVisitC::Fields, .. })),
+        BHelperEqualEmpty => matches!(pre.helper(), Some(HelperControlC::Equal { status: TriStatus::Pending, .. })) && pre.task_live() == 0,
+        BHelperEqualDifferent => matches!(pre.helper(), Some(HelperControlC::Equal { status: TriStatus::Pending, .. }))
+            && match pre.top_task() { Some(HelperTaskC::EqualTask { left, right, visit: TaskVisitC::Unvisited, .. }) =>
+                pure_leaves::shallow_differ(pre.deref_borrowed(left)?, pre.deref_borrowed(right)?), _ => false },
+        BHelperEqualExit => matches!(pre.helper(), Some(HelperControlC::Equal { status, .. })
+            if *status == TriStatus::Positive || (*status == TriStatus::Negative && pre.task_live() == 0)),
+        BHelperMatchArm => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Arm, .. })),
+        BHelperMatchOccurrence => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Tag, .. })),
+        BHelperMatchField => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Field, .. })),
+        BHelperMatchBinding => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Bind, .. })),
+        BHelperMatchDistinct => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Distinct, .. })),
+        BHelperMatchNext => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::NoMatchReady, .. })),
+        BHelperMatchSelected => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Ready, .. })),
+        BHelperMatchExit => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Done, status: TriStatus::Positive, .. })),
+        BHelperMatchFailure => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Done, status: TriStatus::Negative, .. })),
+        BBookkeepingTaskRelease => matches!(pre.helper(),
+            Some(HelperControlC::Validate { status: TriStatus::Negative, .. } | HelperControlC::Equal { status: TriStatus::Negative, .. }))
+            && pre.task_live() > 0,
+        _ => return Err(hv(HostViolationKind::DisabledRuleReached, None, Some(*rule), "non-enabled rule in select_when")),
+    })
+}
+// Function-count seam is the shared PreImageView::admitted_function_count above; no ViewLen trait and no dyn fallback exists.
+
+// ================= Site / helperPlan / selector =================
+pub fn owner_site(pre: &PreImage) -> Result<SiteTag, HostViolation> {
+    match pre.img.control {
+        ControlC::Eval { expr } => Ok(match pre.expr(&expr)? {
+            ExpressionRowC::Literal { .. } => SiteTag::EvalLiteral, ExpressionRowC::Var { .. } => SiteTag::EvalVar,
+            ExpressionRowC::Let { .. } => SiteTag::EvalLet, ExpressionRowC::Binary { .. } => SiteTag::EvalBinary,
+            ExpressionRowC::Unary { .. } => SiteTag::EvalUnary, ExpressionRowC::If { .. } => SiteTag::EvalIf,
+            ExpressionRowC::Call { .. } => SiteTag::EvalCall, ExpressionRowC::Match { .. } => SiteTag::EvalMatch }),
+        ControlC::ScheduleNext { .. } => Ok(SiteTag::Push),
+        ControlC::Return { .. } => {
+            if pre.depth() == 0 { return Err(hv(HostViolationKind::SelectUndefined, None, None, "Return at depth 0")); }
+            Ok(match pre.top_frame().ok_or_else(|| wrong("Return top frame"))? {
+                FrameRowC::LetF { .. } => SiteTag::RetLet, FrameRowC::LeftF { .. } => SiteTag::RetLeft,
+                FrameRowC::RightF { .. } => SiteTag::RetRight, FrameRowC::UnaryF { .. } => SiteTag::RetUnary,
+                FrameRowC::IfF { .. } => SiteTag::RetIf, FrameRowC::MatchF { .. } => SiteTag::RetMatch,
+                FrameRowC::ArgsF { .. } => SiteTag::RetArgs, FrameRowC::ReturnF { .. } => SiteTag::RetCall,
+                FrameRowC::ScopeF { .. } => SiteTag::RetScope })
+        }
+        ControlC::Invoke { .. } => Ok(SiteTag::Invoke), ControlC::Enter { .. } => Ok(SiteTag::Enter),
+        ControlC::Bound { .. } => Ok(SiteTag::Bound), ControlC::Cases { .. } => Ok(SiteTag::Cases),
+        ControlC::CaseResult { .. } => Ok(SiteTag::CaseResult), ControlC::PrimResult { .. } => Ok(SiteTag::Prim),
+        ControlC::Error { .. } => Err(hv(HostViolationKind::SelectUndefined, None, None, "Error control in select")),
+    }
+}
+pub fn owner_helper_plan(site: SiteTag, pre: &PreImage) -> Option<HelperKind> {
+    match site {
+        SiteTag::EvalLiteral => Some(HelperKind::Validate), SiteTag::EvalVar => Some(HelperKind::EnvGet),
+        SiteTag::RetLet => Some(HelperKind::EnvPut),
+        SiteTag::RetRight => match pre.top_frame() { Some(FrameRowC::RightF { op, .. }) =>
+            Some(if *op == BinaryOp::Eq { HelperKind::Equal } else { HelperKind::Scalar }), _ => None },
+        SiteTag::RetUnary | SiteTag::RetIf | SiteTag::RetCall => Some(HelperKind::Scalar),
+        SiteTag::RetArgs => Some(HelperKind::Append), SiteTag::Invoke => Some(HelperKind::Find),
+        SiteTag::Enter => match pre.img.control { ControlC::Enter { function: Some(_), .. } => Some(HelperKind::Bind), _ => None },
+        SiteTag::Cases => match pre.img.control { ControlC::Cases { arms, .. } if arms.len > 0 => Some(HelperKind::Match), _ => None },
+        _ => None,
+    }
+}
+fn entry_rule(k: HelperKind) -> RuleIdC { match k { HelperKind::Scalar => RuleIdC::BHelperScalarEntry,
+    HelperKind::EnvGet => RuleIdC::BHelperEnvGetEntry, HelperKind::EnvPut => RuleIdC::BHelperEnvPutEntry,
+    HelperKind::Find => RuleIdC::BHelperFindEntry, HelperKind::Bind => RuleIdC::BHelperBindEntry,
+    HelperKind::Append => RuleIdC::BHelperAppendEntry, HelperKind::Validate => RuleIdC::BHelperValidateEntry,
+    HelperKind::Equal => RuleIdC::BHelperEqualEntry, HelperKind::Match => RuleIdC::BHelperMatchEntry } }
+fn event_kind_of(r: &RuleIdC) -> EventKind {
+    use RuleIdC::*;
+    match r {
+        BHelperScalarEntry | BHelperEnvGetEntry | BHelperEnvPutEntry | BHelperFindEntry | BHelperBindEntry | BHelperAppendEntry | BHelperValidateEntry | BHelperEqualEntry | BHelperMatchEntry => EventKind::HelperEnter,
+        BHelperScalarExit | BHelperEnvGetExit | BHelperEnvPutExit | BHelperFindExit | BHelperBindExit | BHelperAppendExit | BHelperValidateExit | BHelperEqualExit | BHelperMatchExit => EventKind::HelperExit,
+        BHelperScalarFailure | BHelperEnvGetFailure | BHelperFindFailure | BHelperBindFailure | BHelperValidateFailure | BHelperMatchFailure => EventKind::HelperFail,
+        BBookkeepingTaskRelease => EventKind::Bookkeeping,
+        KAdminPublishValue | KAdminPublishError | KAdminPublishExhausted => EventKind::Publish,
+        KAdminStartupValid | KAdminStartupInvalid => EventKind::Startup,

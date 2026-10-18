@@ -1,0 +1,41 @@
+// Declaration-only handoff; this is not a Rust compilation unit.
+// Existing canonical shared::adt::TypeIdC representation is unchanged.
+pub struct TypeIdC(pub usize);
+impl TypeIdC {
+    pub const UInt: Self; // identity 0
+    pub const Bool: Self; // identity 1
+    pub const List: Self; // identity 2
+    pub const Tree: Self; // identity 3
+    pub const fn from_source_sort(sort: SortTag) -> Self;
+}
+impl From<SortTag> for TypeIdC;
+// shared reexports the identical canonical type, with no wrapper or new table.
+pub use adt::TypeIdC;
+
+// Source Core API unchanged.
+pub enum SortTag { UInt, Bool, List, Tree }
+pub struct CoreProgram { pub functions: Vec<CoreFunction>, pub entry: CoreExpr }
+pub struct CoreFunction { pub name: String, pub parameters: Vec<CoreParameter>, pub return_type: SortTag, pub body: CoreExpr }
+pub struct CoreParameter { pub name: String, pub sort: SortTag }
+
+// Live signature/state slots now use the existing canonical ID directly.
+pub struct FunctionRowC { pub function_name: usize, pub params: SliceC, pub return_type: TypeIdC, pub body: usize }
+pub struct ParameterRowC { pub binder: usize, pub sort: TypeIdC }
+// Variants within their existing enums:
+HelperTaskC::PairTask { binder: usize, sort: TypeIdC, arg: RefC }
+ControlC::Bound { binding: BoundBinding, return_type: TypeIdC, body: usize }
+FrameRowC::ReturnF { return_type: TypeIdC, saved_env: EnvRootC, origin: usize }
+HelperControlC::Scalar { /* other fields unchanged */ expected: Option<TypeIdC> }
+
+// PreImageView declarations; concrete and read-ledger forwarding agree.
+fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation>;
+fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation>;
+// pure_leaves uses a local TypeIdC-as-SortTag alias to keep its match body exact.
+pub fn sort_of_kind(k: LogicalKind) -> Option<TypeIdC>;
+
+// Internal mechanical carrier signatures; predicate/payload bodies unchanged.
+fn bind_pair_payload(_sel: &Selected, pre: &dyn PreImageView, pr: (usize, TypeIdC)) -> Result<EffectPlan, HostViolation>;
+fn sort_accepts(pre: &PreImage, arg: &RefC, want: TypeIdC) -> Result<bool, HostViolation>;
+fn has_type(pre: &PreImage, v: &RefC, t: TypeIdC) -> Result<bool, HostViolation>;
+struct ScalarEntry { site: SiteTag, mode: ScalarMode, a: RefC, b: Option<RefC>, expected: Option<TypeIdC> }
+impl OwnerWire for TypeIdC;

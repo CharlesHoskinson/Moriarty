@@ -1,0 +1,96 @@
+            writes.result = Write::Set(None);
+            delta.depth = -1;
+        }
+        // ROW k.machine.return.call.invalid
+        RuleIdC::KMachineReturnCallInvalid => {
+            writes.control = Write::Set(ControlC::Error { code: 6 });
+            writes.result = Write::Set(None);
+        }
+        // ROW k.machine.return.scope
+        RuleIdC::KMachineReturnScope => {
+            let (saved_env, origin) = match legacy_frame(pre)? { FrameRowC::ScopeF { saved_env, origin } => (*saved_env, *origin),
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "ScopeF payload")) };
+            writes.frame = Some(FrameWrite::Pop);
+            writes.env_root = Write::Set(saved_env);
+            writes.control_origin = Write::Set(origin);
+            delta.depth = -1;
+        }
+        // ROW k.machine.invoke.find
+        RuleIdC::KMachineInvokeFind => {
+            let args = match pre.control() { ControlC::Invoke { args, .. } => *args,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Invoke payload")) };
+            let function = match pre.result() { Some(HelperResultC::FindFound { function }) => Some(*function),
+                Some(HelperResultC::FindMissing) => None,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Find result")) };
+            writes.control = Write::Set(ControlC::Enter { function, args });
+            writes.result = Write::Set(None);
+        }
+        // ROW k.machine.enter.missing
+        RuleIdC::KMachineEnterMissing => { writes.control = Write::Set(ControlC::Error { code: 7 }); }
+        // ROW k.machine.enter.bind
+        RuleIdC::KMachineEnterBind => {
+            let function = match pre.control() { ControlC::Enter { function: Some(function), .. } => *function,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Enter resolved function payload")) };
+            let function = pre.function_row(&function)?;
+            let binding = match pre.result() { Some(HelperResultC::BindOk { env }) => BoundBinding::Ok { env: *env },
+                Some(HelperResultC::BindBad) => BoundBinding::Bad,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Bind result")) };
+            writes.control = Write::Set(ControlC::Bound { binding,
+                return_type: function.return_type, body: function.body });
+            writes.result = Write::Set(None);
+        }
+        // ROW k.machine.bound.invalid
+        RuleIdC::KMachineBoundInvalid => { writes.control = Write::Set(ControlC::Error { code: 8 }); }
+        // ROW k.machine.bound.valid
+        RuleIdC::KMachineBoundValid => {
+            let (env, return_type, body) = match pre.control() { ControlC::Bound { binding: BoundBinding::Ok { env }, return_type, body } => (*env, *return_type, *body),
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Bound positive payload")) };
+            writes.control = Write::Set(ControlC::ScheduleNext {
+                frame: FrameRowC::ReturnF { return_type, saved_env: pre.env_root(), origin: pre.control_origin() },
+                next: body, env,
+            });
+        }
+        // ROW k.machine.cases.empty
+        RuleIdC::KMachineCasesEmpty => { writes.control = Write::Set(ControlC::Error { code: 9 }); }
+        // ROW k.machine.cases.try
+        RuleIdC::KMachineCasesTry => {
+            let (value, arms, saved_env) = match pre.control() { ControlC::Cases { value, arms, saved_env } => (*value, *arms, *saved_env),
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Cases payload")) };
+            let matching = match pre.result() { Some(HelperResultC::MatchMatched { env }) => CaseMatching::Matched { env: *env },
+                Some(HelperResultC::MatchNoMatch) => CaseMatching::NoMatch,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Match result")) };
+            let body = pre.arm(&arms.start)?.body;
+            writes.control = Write::Set(ControlC::CaseResult { matching, value, body,
+                rest: legacy_tail(arms)?, saved_env });
+            writes.result = Write::Set(None);
+        }
+        // ROW k.machine.cases.miss
+        RuleIdC::KMachineCasesMiss => {
+            let (value, arms, saved_env) = match pre.control() { ControlC::CaseResult { value, rest, saved_env, .. } => (*value, *rest, *saved_env),
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "CaseResult payload")) };
+            writes.control = Write::Set(ControlC::Cases { value, arms, saved_env });
+        }
+        // ROW k.machine.cases.hit
+        RuleIdC::KMachineCasesHit => {
+            let (env, body, saved_env) = match pre.control() { ControlC::CaseResult { matching: CaseMatching::Matched { env }, body, saved_env, .. } => (*env, *body, *saved_env),
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "CaseResult positive payload")) };
+            writes.control = Write::Set(ControlC::ScheduleNext {
+                frame: FrameRowC::ScopeF { saved_env, origin: pre.control_origin() }, next: body, env,
+            });
+        }
+        // ROW k.machine.primitive.value
+        RuleIdC::KMachinePrimitiveValue => {
+            let value = match pre.control() { ControlC::PrimResult { result: PrimOutcome::Value { value } } => *value,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "PrimResult value payload")) };
+            writes.control = Write::Set(ControlC::Return { value });
+        }
+        // ROW k.machine.primitive.error
+        RuleIdC::KMachinePrimitiveError => {
+            let code = match pre.control() { ControlC::PrimResult { result: PrimOutcome::Error { code } } => *code,
+                _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "PrimResult error payload")) };
+            writes.control = Write::Set(ControlC::Error { code });
+        }
+        _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "foreign rule for family")),
+    }
+    Ok(EffectPlan { delta_assert: delta, writes })
+}
