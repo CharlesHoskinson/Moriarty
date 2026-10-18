@@ -45,3 +45,7 @@ pub use parser::{language, parse};
 pub use replay::{DetailedReplayError, ReplayDifference, compare_execution, replay_detailed};
 pub use runtime::{replay, simulate, validate};
 pub use source_sponsor::*;
+
+// SDK-free typed host components; no lowering/circuit/native claim.
+#[path = "sherlock/word_arithmetic.rs"]
+pub mod sherlock_word_arithmetic;
