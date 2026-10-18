@@ -1,0 +1,12 @@
+// Normal funded delivery carries a release duty across its await.
+language "moriarty/2";
+agreement StagedEscrowCheck {
+  asset CASH = { network: "local", issuer: "check-escrow", reference: "CASH", scale: 0 };
+  action deliver(amount: UInt) {
+    transfer(CASH, "buyer", "escrow", amount);
+    liability("release", CASH, "escrow", "seller", amount);
+    await delivery(ready: Bool) when ready;
+    transfer(CASH, "escrow", "seller", amount);
+    discharge("release", amount);
+  }
+}
