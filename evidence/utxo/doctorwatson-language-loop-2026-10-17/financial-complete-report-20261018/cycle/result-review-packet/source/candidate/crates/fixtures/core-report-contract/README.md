@@ -1,0 +1,13 @@
+# Independent normal Core/1 public-report expectations
+
+These files specify five accepted public `mori --color never simulate` cases under the adopted normal-report design: Counter ordinary, Counter at cap16, Counter at the maximum UInt128 cap, an empty `idle` action ordinary, and that empty action at cap0. `CASES.json` binds each exact source, scenario, action, optional cap, exit0, complete stdout file and empty stderr file. `DERIVATION.md` records the arithmetic, representation and encoding premises.
+
+The original `FREEZE.sha256`, SHA-256 `7a314c14b87bb48e7ba26cc4f85096d0a5e860e8c0310d216c2437947a3ecc5b`, binds twenty members. Every member and the freeze itself are copied unchanged, retaining the `adopted-contract/` subdirectory. This README is a separately authored addition outside that freeze. No listed member has been reformatted, normalized or regenerated.
+
+The Counter goldens contain all five typed Step results, exact statement ExprIds, complete snapshots, statement-local effect deltas, ordered Execution effects and logical used16 for both positive caps. The empty-action goldens preserve count5, ready=true, all three CASH balances11/23/97 and present reserve duty17, with steps=[], post=pre, effects=[] and cap0 used0. The unused declaration action does not execute or reset that duty. `FINANCIAL-AND-WORK.json` preserves the complete derivation and its limits; it does not replace the whole report goldens.
+
+The five `*.stdout.json` files are complete independent public-byte expectations, with two-space pretty JSON, lexical object keys, prescribed array order and one final LF. `empty.stderr.expected.bin` has zero bytes. Tests must compare both complete parsed JSON and the exact original stdout bytes. Standalone `*.execution.expected.json` files are structural expectations; their file indentation is not an asserted embedded byte slice. Product output must never be used to repair these goldens.
+
+This is a new independent **post-adoption** freeze, with disclosed exposure to the adopted proposal and its source observations. It claims neither blinding nor preimplementation derivation. The copied proposal documents retain their original unadopted status at their original dates; `adopted-contract/DESIGN-ADOPTION.json` records the later desired-contract decision. Prior partial facts, freezes, failures and historical results retain their original scope.
+
+The freeze records chosen expectations and no actual consumer execution. This README supplies no runtime or byte-conformance result. These normal cases supply no rejection/security coverage, native/target qualification or full language/financial-family acceptance. Exact candidate, command, process outputs and independent result review belong to separate execution records.

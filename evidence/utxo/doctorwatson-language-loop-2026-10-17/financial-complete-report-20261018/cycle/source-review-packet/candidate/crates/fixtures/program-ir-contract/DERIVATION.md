@@ -1,0 +1,31 @@
+# Independent full Program expectations for two exact sources
+
+Status: **post-adoption, source/DTO-derived literal expectations; actual parser integration UNRUN**. This new packet compares the complete public Program serialization, beyond the five selected statement roots checked by Counter simulation. It does not modify any earlier source, oracle, output, failure record or counter. All original parent exits remain open.
+
+The two `.mori` files are exact byte copies from the complete normal-positive freeze `7a314c14b87bb48e7ba26cc4f85096d0a5e860e8c0310d216c2437947a3ecc5b`. Counter remains the original212-byte raw source, and empty-frame retains its uninvoked declare action. No source canonicalization or formatting was applied.
+
+The adopted `docs/CORE-EXECUTION-REPORTS.md`, the literal sources and public serialized-data declarations in `crates/mori-core/src/ir.rs` determine the proposed expectations. `lib.rs` exposes the IR through `pub use ir::*`; it supplies no additional Program member or wrapper. Development startup/AGENTS/status was restored. No parser implementation, runtime/compiler implementation, generated IR, actual output or product call was read/run for this lane. Plain JSON/data/hash checks are not parser integration. This derivation occurs after adoption and after exposure to the public DTOs and source-author disclosure in the adopted design; it claims neither blinding nor preimplementation timing.
+
+## Complete DTO mapping
+
+Program has exactly seven serialized members: `language`, `semantics`, `name`, `states`, `assets`, `expressions`, `actions`. The public constants and adopted profile give `moriarty/1` and `moriarty-core/1`; agreement identifiers give the names. There is no Program source hash, selected-action field, report frame, cost counter, hidden registry, input Scenario or synthetic default metadata.
+
+StateDecl is `{name,ty,initial}`; InputDecl is `{name,ty}`; AssetDecl is `{name,identity}`; Action is `{name,inputs,statements}`. Type enum strings are `UInt` and `Bool`. Value uses the public `type`/`value` tags, so UInt literals are canonical decimal strings and Bool is a JSON boolean. Asset identity has exactly network/issuer/reference strings and numeric scale. Expr and Statement use the `kind` tag and exactly their public variant fields. Binary operator enum names are `Add`, `Le` and `Eq`; children and statement expression references are JSON numbers indexing Program.expressions, not typed values. No extra id property is inserted in an expression node: its array position is its ExprId.
+
+Vectors retain literal declaration/statement order: declared states in their source order, assets in their source order, actions in their source order, inputs in signature order and statements in written order. These explicit source-order representation premises are the proposed finite parser-comparison expectation; the DTO Vec preserves order, and future full equality must compare it. Object key order in these JSON files is presentation, not the parser's serializer byte contract. Raw file hashes identify these particular expectation bytes and are not asserted to be a canonical Program identity.
+
+## Counter
+
+The source gives name Counter, one state count/UInt/initial UInt0, no assets, one action run with one amount/UInt input and five statements. The adopted Counter expression table explicitly gives all eleven nodes in the exact literal order: count, amount, Add(0,1), total, UInt100, Le(3,4), total, count, total, Eq(7,8), count. A declared initial value is stored directly in StateDecl rather than appended to this arena. Repeated Name occurrences remain separate nodes. The exact statements therefore use roots2,5,6,9,10, with Let name total, Next state count and Emit name count. The expected Program includes every leaf, operator and edge rather than checking only those roots. It has no runtime input amount7 or captured/evaluated total7: those belong to a Scenario/execution rather than source Program IR.
+
+## Empty-frame whole source
+
+The agreement name is PreservedIdleFrame. States are count/UInt/initial UInt5 then ready/Bool/initial true. The single asset is CASH with identity `(local,normal-report-empty-oracle,CASH,scale2)`. Actions are idle then declare, each with no inputs. Selected idle has no statements, but that does **not** make the whole Program's action list or expression array empty.
+
+The uninvoked declare action contains one Liability statement with literal name reserve, asset declaration name CASH, debtor treasury, creditor beneficiary and amount ExprId0. Its sole global expression node is Literal(Value::UInt("0")); direct initial-state literals5/true are not expression nodes. Its complete source identity tuple is therefore represented by that Statement together with AssetDecl.identity. No separate registry field is invented. No opening Scenario amount17, supplied balance, poststate, effect, selected-action status or Step appears in Program serialization. The declaration remains present even though a later test might select only idle.
+
+## Resolved fields and future consumer
+
+Every serialized field for these two finite Programs has a concrete expected value under the adopted specimen and the public grammar/DTO plus stated source-order representation premises. There are no unresolved field placeholders or invented optional/default members in the two literal Program JSON files. General source-to-IR correspondence, including whether the actual parser preserves these node/vector orders, remains unobserved. A future parser integration test must parse each exact source and compare the entire public Program JSON value to its frozen file. It must retain first differences rather than regenerate expected data from parser output, compare only action roots, discard the unselected declare action or silently reorder arrays.
+
+No test or parser call is supplied/executed here. This packet gives only expected source-to-DTO data; it adds no other classification or acceptance. `INVENTORY.json` binds source and expectation byte sizes/hashes and public-basis identities. `FREEZE.sha256` binds every payload, excluding itself. Root and the eventual test author must receive the final freeze before consuming it. All prior freezes, observations, limitations and full parent requirements retain their original scope.

@@ -1,0 +1,362 @@
+{
+  "actions": [
+    {
+      "inputs": [],
+      "name": "register",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "CASH",
+          "creditor": "supplier",
+          "debtor": "reserve",
+          "kind": "Liability",
+          "name": "allocation"
+        },
+        {
+          "amount": 1,
+          "asset": "BOND",
+          "creditor": "auditor",
+          "debtor": "reserve",
+          "kind": "Liability",
+          "name": "bond"
+        },
+        {
+          "amount": 2,
+          "asset": "CASH",
+          "creditor": "emergency",
+          "debtor": "reserve",
+          "kind": "Liability",
+          "name": "emergency"
+        }
+      ]
+    },
+    {
+      "inputs": [
+        {
+          "name": "approved",
+          "ty": "Bool"
+        },
+        {
+          "name": "amount",
+          "ty": "UInt"
+        },
+        {
+          "name": "bondAmount",
+          "ty": "UInt"
+        }
+      ],
+      "name": "allocate",
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 6
+        },
+        {
+          "kind": "Requires",
+          "predicate": 9
+        },
+        {
+          "kind": "Requires",
+          "predicate": 12
+        },
+        {
+          "kind": "Let",
+          "name": "residual",
+          "value": 17
+        },
+        {
+          "kind": "Requires",
+          "predicate": 20
+        },
+        {
+          "amount": 21,
+          "asset": "CASH",
+          "creditor": "supplier",
+          "debtor": "reserve",
+          "kind": "Liability",
+          "name": "allocation"
+        },
+        {
+          "amount": 22,
+          "asset": "CASH",
+          "from": "reserve",
+          "kind": "Transfer",
+          "to": "supplier"
+        },
+        {
+          "amount": 23,
+          "asset": "CASH",
+          "from": "reserve",
+          "kind": "Fee",
+          "to": "treasury"
+        },
+        {
+          "amount": 24,
+          "kind": "Discharge",
+          "name": "allocation"
+        },
+        {
+          "amount": 25,
+          "asset": "BOND",
+          "from": "reserve",
+          "kind": "Transfer",
+          "to": "auditor"
+        },
+        {
+          "amount": 26,
+          "kind": "Discharge",
+          "name": "bond"
+        },
+        {
+          "kind": "Next",
+          "state": "allocated",
+          "value": 27
+        },
+        {
+          "kind": "Next",
+          "state": "closed",
+          "value": 28
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 31
+        },
+        {
+          "kind": "Emit",
+          "name": "allocated",
+          "value": 32
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "financial-pair-reserve",
+        "network": "local",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "name": "CASH"
+    },
+    {
+      "identity": {
+        "issuer": "financial-pair-reserve",
+        "network": "local",
+        "reference": "BOND",
+        "scale": 0
+      },
+      "name": "BOND"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "10"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "2"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "approved"
+    },
+    {
+      "kind": "Name",
+      "name": "closed"
+    },
+    {
+      "kind": "Not",
+      "value": 4
+    },
+    {
+      "kind": "Binary",
+      "lhs": 3,
+      "op": "And",
+      "rhs": 5
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 7,
+      "op": "Gt",
+      "rhs": 8
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "50"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 10,
+      "op": "Le",
+      "rhs": 11
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "57"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 13,
+      "op": "Sub",
+      "rhs": 14
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "2"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 15,
+      "op": "Sub",
+      "rhs": 16
+    },
+    {
+      "kind": "Name",
+      "name": "residual"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "5"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 18,
+      "op": "Ge",
+      "rhs": 19
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "2"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "bondAmount"
+    },
+    {
+      "kind": "Name",
+      "name": "bondAmount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "Bool",
+        "value": true
+      }
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "allocation"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 29,
+      "op": "Eq",
+      "rhs": 30
+    },
+    {
+      "kind": "Name",
+      "name": "allocated"
+    }
+  ],
+  "language": "moriarty/1",
+  "name": "ConditionalReserve",
+  "semantics": "moriarty-core/1",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "allocated",
+      "ty": "UInt"
+    },
+    {
+      "initial": {
+        "type": "Bool",
+        "value": false
+      },
+      "name": "closed",
+      "ty": "Bool"
+    },
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      },
+      "name": "marker",
+      "ty": "UInt"
+    }
+  ]
+}

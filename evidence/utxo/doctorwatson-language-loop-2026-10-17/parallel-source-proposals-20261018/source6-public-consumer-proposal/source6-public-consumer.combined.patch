@@ -1,0 +1,1295 @@
+diff --git a/Cargo.lock b/Cargo.lock
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -2442,6 +2442,7 @@
+  "mori-ledger",
+  "mori-lexer",
+  "mori-parser",
++ "mori-source6",
+  "mori-span",
+  "rand 0.8.8",
+  "rayon",
+@@ -2586,6 +2587,20 @@
+  "mori-span",
+  "proptest",
+  "soa-rs",
++]
++
++[[package]]
++name = "mori-source6"
++version = "0.1.0"
++dependencies = [
++ "insta",
++ "mori-ast",
++ "mori-checker",
++ "mori-diagnostics",
++ "mori-lexer",
++ "mori-parser",
++ "mori-span",
++ "serde_json",
+ ]
+ 
+ [[package]]
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -21,6 +21,7 @@
+ mori-ledger = { path = "crates/mori-ledger" }
+ mori-lexer = { path = "crates/mori-lexer" }
+ mori-parser = { path = "crates/mori-parser" }
++mori-source6 = { path = "crates/mori-source6" }
+ mori-span = { path = "crates/mori-span" }
+ 
+ # Midnight ledger crates, all from one pinned revision.
+diff --git a/crates/mori/Cargo.toml b/crates/mori/Cargo.toml
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -9,6 +9,7 @@
+ 
+ [features]
+ default = ["native"]
++source6-expansion = ["dep:mori-source6", "mori-source6/source6-transfer-slice"]
+ native = [
+     "dep:mori-backend",
+     "dep:mori-ledger",
+@@ -38,6 +39,7 @@
+ mori-fmt.workspace = true
+ mori-lexer.workspace = true
+ mori-parser.workspace = true
++mori-source6 = { workspace = true, optional = true }
+ mori-span.workspace = true
+ rayon.workspace = true
+ futures = { workspace = true, optional = true }
+@@ -104,3 +106,7 @@
+ [[test]]
+ name = "mapped_role_static_io"
+ required-features = ["native"]
++
++[[test]]
++name = "source6_expand"
++required-features = ["source6-expansion"]
+diff --git a/crates/mori/src/cli.rs b/crates/mori/src/cli.rs
+--- a/crates/mori/src/cli.rs
++++ b/crates/mori/src/cli.rs
+@@ -15,8 +15,12 @@
+ #[derive(Debug, Parser)]
+ #[command(name = "mori", version, styles = styles::CLAP)]
+ #[cfg_attr(
+-    not(feature = "native"),
++    all(not(feature = "native"), not(feature = "source6-expansion")),
+     command(after_help = "Built without native: local Core reference tooling only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature.")
++)]
++#[cfg_attr(
++    all(not(feature = "native"), feature = "source6-expansion"),
++    command(after_help = "Built without native: local Core reference tooling and explicit Source/6 transfer expansion only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature.")
+ )]
+ pub struct Cli {
+     #[command(flatten)]
+diff --git a/crates/mori/src/commands/expand/source6.rs b/crates/mori/src/commands/expand/source6.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/expand/source6.rs
+@@ -0,0 +1,110 @@
++//! Explicit local transfer presentation consumer of mori-source6.
++use std::{io::Write, process::ExitCode};
++
++use mori_core::UInt;
++use mori_diagnostics::NamedSource;
++use mori_source6::{Allowance, Balance, LocalTransferScenario, Replay, expand_transfer};
++use serde::Deserialize;
++
++use crate::{cli::ActionInput, commands::core_io, shell::Shell};
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct TransferScenario {
++    profile: String,
++    kind: String,
++    domain: String,
++    asset: String,
++    head: String,
++    predecessor: String,
++    round: UInt,
++    balances: [BalanceCell; 3],
++    allowance: AllowanceCell,
++    replay: ReplayClaim,
++    work_remaining: UInt,
++    work_spent: UInt,
++    post_head: String,
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct BalanceCell {
++    account: String,
++    amount: UInt,
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct AllowanceCell {
++    owner: String,
++    remaining: UInt,
++    spent: UInt,
++}
++
++#[derive(Clone, Copy, Deserialize)]
++#[serde(rename_all = "lowercase")]
++enum ReplayClaim {
++    Unused,
++    Consumed,
++}
++
++impl TransferScenario {
++    fn local(&self) -> LocalTransferScenario<'_> {
++        LocalTransferScenario {
++            domain: &self.domain,
++            asset: &self.asset,
++            head: &self.head,
++            predecessor: &self.predecessor,
++            round: self.round.0,
++            balances: self.balances.each_ref().map(|cell| Balance {
++                account: &cell.account,
++                amount: cell.amount.0,
++            }),
++            allowance: Allowance {
++                owner: &self.allowance.owner,
++                remaining: self.allowance.remaining.0,
++                spent: self.allowance.spent.0,
++            },
++            replay: match self.replay {
++                ReplayClaim::Unused => Replay::Unused,
++                ReplayClaim::Consumed => Replay::Consumed,
++            },
++            work_remaining: self.work_remaining.0,
++            work_spent: self.work_spent.0,
++            post_head: &self.post_head,
++        }
++    }
++}
++
++pub(super) fn run(input: ActionInput, shell: &mut Shell) -> crate::commands::Result<ExitCode> {
++    let source = core_io::read_source(&input.file)?;
++    let scenario: TransferScenario = core_io::read_json(&input.scenario)?;
++    if scenario.profile != "moriarty-local-scenario/1" || scenario.kind != "local-stipulation" {
++        return Err(core_io::operation(
++            "Source/6 transfer expansion requires moriarty-local-scenario/1 local-stipulation input.",
++        ));
++    }
++    let expansion = match expand_transfer(&source, &input.action, &scenario.local()) {
++        Ok(expansion) => expansion,
++        Err(diagnostics) => {
++            for diagnostic in diagnostics {
++                shell.report(&diagnostic.with_source_code(NamedSource::new(
++                    input.file.display().to_string(),
++                    source.clone(),
++                )));
++            }
++            return Ok(ExitCode::FAILURE);
++        }
++    };
++    // The library includes its final newline. Write the actual generated text,
++    // without adding a JSON/string wrapper or constructing a stage result.
++    std::io::stdout()
++        .lock()
++        .write_all(expansion.source6.as_bytes())
++        .map_err(core_io::operation)?;
++    shell.status(
++        "Expanded",
++        format!("Source/6 transfer proposal ({})", expansion.qualification),
++    );
++    Ok(ExitCode::SUCCESS)
++}
+diff --git a/crates/mori/src/commands/expand.rs b/crates/mori/src/commands/expand.rs
+--- a/crates/mori/src/commands/expand.rs
++++ b/crates/mori/src/commands/expand.rs
+@@ -3,13 +3,23 @@
+ use crate::cli::ActionInput;
+ use crate::shell::Shell;
+ 
++#[cfg(feature = "source6-expansion")]
++mod source6;
++
+ #[derive(Debug, clap::Args)]
+ pub struct Args {
+     #[command(flatten)]
+     pub input: ActionInput,
++
++    /// Emit a local Source/6 transfer proposal; requires source6-expansion
++    #[arg(long)]
++    pub emit_source6_transfer: bool,
+ }
+ 
+-pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++    if args.emit_source6_transfer {
++        return run_source6(args.input, shell);
++    }
+     let (_, program) = super::core_io::program(&args.input.file)?;
+     // Validate the selected scenario/action without discarding the generic core.
+     let scenario = super::core_io::read_json(&args.input.scenario)?;
+@@ -18,3 +28,17 @@
+     super::core_io::print(&program)?;
+     Ok(ExitCode::SUCCESS)
+ }
++
++#[cfg(feature = "source6-expansion")]
++fn run_source6(input: ActionInput, shell: &mut Shell) -> super::Result<ExitCode> {
++    source6::run(input, shell)
++}
++
++#[cfg(not(feature = "source6-expansion"))]
++fn run_source6(_input: ActionInput, _shell: &mut Shell) -> super::Result<ExitCode> {
++    Err(crate::error::CliError::Operation {
++        code: "mori::command::source6-unavailable".into(),
++        message: "Source/6 transfer expansion requires the source6-expansion build feature.".into(),
++    }
++    .into())
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/core.mori b/crates/mori/tests/fixtures/source6-expansion/core.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/core.mori
+@@ -0,0 +1 @@
++language "moriarty/1"; agreement CoreDefault { action noop() {} }
+diff --git a/crates/mori/tests/fixtures/source6-expansion/core.scenario.json b/crates/mori/tests/fixtures/source6-expansion/core.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/core.scenario.json
+@@ -0,0 +1 @@
++{"state":{},"inputs":{},"balances":[],"liabilities":[]}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/core.stdout.json b/crates/mori/tests/fixtures/source6-expansion/core.stdout.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/core.stdout.json
+@@ -0,0 +1,15 @@
++{
++  "language": "moriarty/1",
++  "semantics": "moriarty-core/1",
++  "name": "CoreDefault",
++  "states": [],
++  "assets": [],
++  "expressions": [],
++  "actions": [
++    {
++      "name": "noop",
++      "inputs": [],
++      "statements": []
++    }
++  ]
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/invoice.mori b/crates/mori/tests/fixtures/source6-expansion/invoice.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.mori
+@@ -0,0 +1,18 @@
++profile "moriarty-beta/1";
++agreement Invoice {
++ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Preview, id: "Owner" };
++ account Seller = { domain: Preview, id: "Recipient" };
++ account Treasury = { domain: Preview, id: "Fee" };
++ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
++ const price: Qty<USD> = 10.00 USD;
++ const fee = 0.10 USD;
++ intent Payment = {
++  domain: Preview, asset: USD, signer: Buyer, key: "key1", nonce: "n1", pre_head: "h0",
++  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
++  source_hash: "src1", policy_digest: "policy1", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay uses Payment;
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json b/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "h0",
++  "predecessor": "genesis",
++  "round": "1",
++  "balances": [
++    { "account": "Owner", "amount": "10000" },
++    { "account": "Recipient", "amount": "0" },
++    { "account": "Fee", "amount": "0" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "10000", "spent": "0" },
++  "replay": "unused",
++  "work_remaining": "10",
++  "work_spent": "0",
++  "post_head": "h1"
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/invoice.source6 b/crates/mori/tests/fixtures/source6-expansion/invoice.source6
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.source6
+@@ -0,0 +1,45 @@
++profile "moriarty-financial-agreement-source/6";
++agreement Invoice {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "src1" digest "policy1";
++intent {
++signer Owner key "key1";
++nonce "n1";
++pre_head "h0";
++valid 0..10;
++gross_cap 1010;
++fee_cap 10;
++net_floor 1000;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "h0";
++predecessor "genesis";
++round 1;
++balance Owner 10000;
++balance Recipient 0;
++balance Fee 0;
++allowance Owner remaining 10000 spent 0;
++replay unused;
++work_remaining 10;
++work_spent 0;
++}
++submit transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++effects {
++debit Owner 1010;
++credit Recipient 1000;
++credit Fee 10;
++use_allowance Owner 1010;
++use_replay "n1";
++advance_head "h0" "h1";
++}
++post_head "h1";
++}
+diff --git a/crates/mori/tests/fixtures/source6-expansion/source6.stderr.txt b/crates/mori/tests/fixtures/source6-expansion/source6.stderr.txt
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/source6.stderr.txt
+@@ -0,0 +1 @@
++    Expanded Source/6 transfer proposal (local-stipulation-only)
+diff --git a/crates/mori/tests/source6_expand.rs b/crates/mori/tests/source6_expand.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/source6_expand.rs
+@@ -0,0 +1,117 @@
++#![cfg(feature = "source6-expansion")]
++
++use serde_json::Value;
++use std::{
++    fs,
++    path::PathBuf,
++    process::{Command, Output},
++    sync::atomic::{AtomicUsize, Ordering},
++};
++
++macro_rules! fixture {
++    ($name:literal) => {
++        include_bytes!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/tests/fixtures/source6-expansion/",
++            $name
++        ))
++        .as_slice()
++    };
++}
++
++static NEXT: AtomicUsize = AtomicUsize::new(0);
++
++struct Files(PathBuf);
++
++impl Files {
++    fn new() -> Self {
++        let root = std::env::temp_dir().join(format!(
++            "mori-source6-expand-{}-{}",
++            std::process::id(),
++            NEXT.fetch_add(1, Ordering::Relaxed),
++        ));
++        fs::create_dir(&root).unwrap();
++        fs::write(root.join("invoice.mori"), fixture!("invoice.mori")).unwrap();
++        fs::write(root.join("scenario.json"), fixture!("invoice.scenario.json")).unwrap();
++        fs::write(root.join("core.mori"), fixture!("core.mori")).unwrap();
++        fs::write(root.join("core.json"), fixture!("core.scenario.json")).unwrap();
++        Self(root)
++    }
++
++    fn invoke(&self, arguments: &[&str]) -> Output {
++        Command::new(env!("CARGO_BIN_EXE_mori"))
++            .current_dir(&self.0)
++            .args(["--color", "never"])
++            .args(arguments)
++            .output()
++            .unwrap()
++    }
++}
++
++impl Drop for Files {
++    fn drop(&mut self) {
++        let _ = fs::remove_dir_all(&self.0);
++    }
++}
++
++fn source6_arguments() -> [&'static str; 7] {
++    [
++        "expand",
++        "invoice.mori",
++        "--action",
++        "pay",
++        "--scenario",
++        "scenario.json",
++        "--emit-source6-transfer",
++    ]
++}
++
++#[test]
++fn checked_beta_reaches_real_expansion_library_and_raw_stdout() {
++    let files = Files::new();
++    let check = files.invoke(&["check", "invoice.mori", "--json"]);
++    assert_eq!(check.status.code(), Some(0));
++    assert!(check.stderr.is_empty());
++    let report: Value = serde_json::from_slice(&check.stdout).unwrap();
++    assert_eq!(report["status"], "accepted");
++    assert_eq!(report["actions"][0]["name"], "pay");
++    assert_eq!(report["actions"][0]["support"], "local_s0");
++
++    let expansion = files.invoke(&source6_arguments());
++    assert_eq!(expansion.status.code(), Some(0));
++    assert_eq!(expansion.stdout.as_slice(), fixture!("invoice.source6"));
++    assert_eq!(expansion.stderr.as_slice(), fixture!("source6.stderr.txt"));
++}
++
++#[test]
++fn explicit_source6_quiet_output_is_raw_source6_text() {
++    let files = Files::new();
++    let mut arguments = vec!["--quiet"];
++    arguments.extend(source6_arguments());
++    let expansion = files.invoke(&arguments);
++    assert_eq!(expansion.status.code(), Some(0));
++    assert_eq!(expansion.stdout.as_slice(), fixture!("invoice.source6"));
++    assert!(expansion.stderr.is_empty());
++}
++
++#[test]
++fn core_default_retains_complete_program_bytes() {
++    let files = Files::new();
++    let output = files.invoke(&[
++        "expand", "core.mori", "--action", "noop", "--scenario", "core.json",
++    ]);
++    assert_eq!(output.status.code(), Some(0));
++    assert_eq!(output.stdout.as_slice(), fixture!("core.stdout.json"));
++    assert!(output.stderr.is_empty());
++}
++
++#[test]
++fn beta_default_retains_core_parser_refusal_boundary() {
++    let files = Files::new();
++    let output = files.invoke(&[
++        "expand", "invoice.mori", "--action", "pay", "--scenario", "scenario.json",
++    ]);
++    assert_eq!(output.status.code(), Some(1));
++    assert!(output.stdout.is_empty());
++    assert!(String::from_utf8_lossy(&output.stderr).contains("mori::core::syntax"));
++}
+diff --git a/crates/mori-source6/Cargo.toml b/crates/mori-source6/Cargo.toml
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/Cargo.toml
+@@ -0,0 +1,24 @@
++[package]
++name = "mori-source6"
++version = "0.1.0"
++description = "Local transfer presentation expansion from checked Moriarty beta source"
++edition.workspace = true
++rust-version.workspace = true
++license.workspace = true
++repository.workspace = true
++
++[features]
++default = []
++source6-transfer-slice = []
++
++[dependencies]
++mori-ast.workspace = true
++mori-checker.workspace = true
++mori-diagnostics.workspace = true
++mori-lexer.workspace = true
++mori-parser.workspace = true
++mori-span.workspace = true
++serde_json.workspace = true
++
++[dev-dependencies]
++insta.workspace = true
+diff --git a/crates/mori-source6/src/diagnostics.rs b/crates/mori-source6/src/diagnostics.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/src/diagnostics.rs
+@@ -0,0 +1,37 @@
++use mori_diagnostics::MoriDiagnostic;
++use mori_span::Span;
++
++pub fn action(span: Span, name: &str) -> MoriDiagnostic {
++    MoriDiagnostic::error(format!("No checked action named `{name}` was found."))
++        .with_code("mori::source6::unknown_action")
++        .with_label(span.primary_label("select an action declared in this agreement"))
++        .with_help("Pass the name after `action`, for example `pay`.")
++}
++
++pub fn unsupported(span: Span) -> MoriDiagnostic {
++    MoriDiagnostic::error("This Source/6 expansion slice supports only beta `transfer` actions.")
++        .with_code("mori::source6::unsupported_operation")
++        .with_label(span.primary_label("this checked operation has no expansion in this slice"))
++        .with_help("Use the existing TypeScript bridge for other local S0 operations; family operations remain specified only.")
++}
++
++pub fn shape(span: Span, expected: &str) -> MoriDiagnostic {
++    MoriDiagnostic::error(format!("Source/6 expansion expected {expected}."))
++        .with_code("mori::source6::checked_shape")
++        .with_label(span.primary_label("the checked representation does not match the transfer mapping"))
++        .with_help("The expansion must consume the current checker output without changing its meaning.")
++}
++
++pub fn scenario(span: Span, field: &str, expected: &str) -> MoriDiagnostic {
++    MoriDiagnostic::error(format!("Local scenario field `{field}` must contain {expected}."))
++        .with_code("mori::source6::scenario_shape")
++        .with_label(span.primary_label("scenario formation for this action; cells remain local claims"))
++        .with_help("Supply the explicit local transfer cells in owner, recipient and fee-recipient order.")
++}
++
++pub fn bound(span: Span) -> MoriDiagnostic {
++    MoriDiagnostic::error("Generated Source/6 exceeds its 65,536-byte presentation bound.")
++        .with_code("mori::source6::source_bound")
++        .with_label(span.primary_label("expansion cannot be represented within Source/6's source limit"))
++        .with_help("Use a proposal that fits the existing Source/6 profile.")
++}
+diff --git a/crates/mori-source6/src/lib.rs b/crates/mori-source6/src/lib.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/src/lib.rs
+@@ -0,0 +1,17 @@
++//! Local Source/6 presentation for the closed beta transfer slice.
++//!
++//! This crate emits a proposal. Its scenario cells and declared hashes remain
++//! claims; it performs no Core/5 preparation, signing, proof or ledger action.
++//! The generated text must be consumed by the existing Source/6 lowerer before
++//! any claim of Source/6 formation or Core/5 preparation.
++
++#[cfg(feature = "source6-transfer-slice")]
++mod diagnostics;
++#[cfg(feature = "source6-transfer-slice")]
++mod transfer;
++
++#[cfg(feature = "source6-transfer-slice")]
++pub use transfer::{
++    Allowance, Balance, LocalTransferScenario, Replay, TransferExpansion,
++    expand_transfer,
++};
+diff --git a/crates/mori-source6/src/transfer.rs b/crates/mori-source6/src/transfer.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/src/transfer.rs
+@@ -0,0 +1,332 @@
++use mori_ast::NodeIdx;
++use mori_checker::{Checked, Support, ValueIdx, ValueTag};
++use mori_diagnostics::MoriDiagnostic;
++use mori_lexer::{TokenIdx, TokenKind, decode_string};
++use mori_span::Span;
++
++use crate::diagnostics;
++
++type Result<T> = std::result::Result<T, MoriDiagnostic>;
++
++/// A balance cell supplied as an unverified local claim.
++#[derive(Debug, Clone, Copy)]
++pub struct Balance<'a> {
++    pub account: &'a str,
++    pub amount: u128,
++}
++
++/// Explicit opening counters; expansion never resets or consumes them.
++#[derive(Debug, Clone, Copy)]
++pub struct Allowance<'a> {
++    pub owner: &'a str,
++    pub remaining: u128,
++    pub spent: u128,
++}
++
++#[derive(Debug, Clone, Copy)]
++pub enum Replay {
++    Unused,
++    Consumed,
++}
++
++/// Typed local scenario for the default transfer proposal only.
++///
++/// Balance order is owner, recipient, fee recipient. All three cells are
++/// supplied even for a zero fee. This is not a JSON wire format, authenticated
++/// snapshot or candidate-effects override API.
++#[derive(Debug, Clone, Copy)]
++pub struct LocalTransferScenario<'a> {
++    pub domain: &'a str,
++    pub asset: &'a str,
++    pub head: &'a str,
++    pub predecessor: &'a str,
++    pub round: u128,
++    pub balances: [Balance<'a>; 3],
++    pub allowance: Allowance<'a>,
++    pub replay: Replay,
++    pub work_remaining: u128,
++    pub work_spent: u128,
++    pub post_head: &'a str,
++}
++
++/// Generated source text, with no Core result or published post-state.
++#[derive(Debug, PartialEq, Eq)]
++pub struct TransferExpansion {
++    pub source6: String,
++    pub qualification: &'static str,
++}
++
++/// Parse and check beta source, then emit its selected transfer proposal.
++///
++/// Quantities come from the existing checker's exact atomic values. Source
++/// claims, including source_hash and policy_digest, are copied rather than
++/// replaced by computed identities. No semantic stage result is inferred.
++/// Unsupported operation selection precedes scenario formation.
++pub fn expand_transfer(
++    source: &str,
++    action: &str,
++    scenario: &LocalTransferScenario<'_>,
++) -> std::result::Result<TransferExpansion, Vec<MoriDiagnostic>> {
++    let ast = mori_parser::parse(source).map_err(|error| vec![error])?;
++    let result = mori_checker::check(&ast);
++    if !result.is_accepted() {
++        return Err(result.diagnostics);
++    }
++    let (terms, span) = extract(&result.checked, action).map_err(|error| vec![error])?;
++    validate_scenario(&terms, scenario, span).map_err(|error| vec![error])?;
++    let source6 = emit(&terms, scenario, span).map_err(|error| vec![error])?;
++    Ok(TransferExpansion {
++        source6,
++        qualification: "local-stipulation-only",
++    })
++}
++
++struct Terms {
++    agreement: String,
++    domain: String,
++    asset: String,
++    scale: u128,
++    signer: String,
++    owner: String,
++    recipient: String,
++    fee_recipient: String,
++    key: String,
++    nonce: String,
++    pre_head: String,
++    valid_from: u128,
++    valid_to: u128,
++    gross_cap: u128,
++    fee_cap: u128,
++    net_floor: u128,
++    value: u128,
++    fee: u128,
++    gross: u128,
++    source_hash: String,
++    policy_digest: String,
++}
++
++fn field(checked: &Checked<'_>, value: ValueIdx, name: &str) -> Result<ValueIdx> {
++    checked
++        .values
++        .pairs(value)
++        .find(|&(key, _)| {
++            checked.ast.token_text(TokenIdx::new(usize::from(key))) == name
++        })
++        .map(|(_, field)| field)
++        .ok_or_else(|| {
++            diagnostics::shape(
++                checked.ast.span(checked.values.node(value)),
++                &format!("the checked `{name}` field"),
++            )
++        })
++}
++
++fn string(checked: &Checked<'_>, value: ValueIdx) -> Result<String> {
++    if checked.values.tag(value) != ValueTag::String {
++        return Err(diagnostics::shape(
++            checked.ast.span(checked.values.node(value)),
++            "a checked string",
++        ));
++    }
++    let token = TokenIdx::new(usize::from(checked.values.rows.a()[value.index()]));
++    Ok(decode_string(checked.ast.token_text(token)))
++}
++
++fn number(checked: &Checked<'_>, value: ValueIdx, tag: ValueTag) -> Result<u128> {
++    if checked.values.tag(value) != tag {
++        return Err(diagnostics::shape(
++            checked.ast.span(checked.values.node(value)),
++            "a checked scalar or nominal quantity in its declared role",
++        ));
++    }
++    Ok(checked.values.amount(value))
++}
++
++fn id(checked: &Checked<'_>, entity: ValueIdx) -> Result<String> {
++    string(checked, field(checked, entity, "id")?)
++}
++
++fn call_name(checked: &Checked<'_>, value: ValueIdx) -> String {
++    let mut token = checked.ast.main_token(checked.values.node(value));
++    let mut name = checked.ast.token_text(token).to_owned();
++    while checked.ast.tokens.kind(checked.ast.token_after(token, 1)) == TokenKind::Dot {
++        token = checked.ast.token_after(token, 2);
++        name.push('.');
++        name.push_str(checked.ast.token_text(token));
++    }
++    name
++}
++
++fn extract(checked: &Checked<'_>, action: &str) -> Result<(Terms, Span)> {
++    let ast = checked.ast;
++    let index = checked.actions.node().iter().position(|&node| {
++        ast.token_text(ast.token_after(ast.main_token(node), 1)) == action
++    });
++    let index = index.ok_or_else(|| diagnostics::action(ast.span(NodeIdx::ROOT), action))?;
++    let node = checked.actions.node()[index];
++    let span = ast.span(node);
++    if checked.actions.support()[index] != Some(Support::LocalS0) {
++        return Err(diagnostics::unsupported(span));
++    }
++    let intent = checked.actions.intent()[index]
++        .and_then(|decl| checked.value(decl))
++        .ok_or_else(|| diagnostics::shape(span, "a resolved checked intent"))?;
++    let operation = field(checked, intent, "operation")?;
++    if call_name(checked, operation) != "transfer" {
++        return Err(diagnostics::unsupported(span));
++    }
++    let asset = field(checked, intent, "asset")?;
++    let validity = field(checked, intent, "valid")?;
++    let quantity = |record, name| {
++        number(checked, field(checked, record, name)?, ValueTag::Quantity)
++    };
++    let scalar = |record, name| {
++        number(checked, field(checked, record, name)?, ValueTag::Scalar)
++    };
++    let text = |name| string(checked, field(checked, intent, name)?);
++    let value = quantity(operation, "value")?;
++    let fee = quantity(operation, "fee")?;
++    let gross = value
++        .checked_add(fee)
++        .ok_or_else(|| diagnostics::shape(span, "a UInt128 transfer total"))?;
++    Ok((
++        Terms {
++            agreement: ast.token_text(ast.main_token(NodeIdx::ROOT)).to_owned(),
++            domain: id(checked, field(checked, intent, "domain")?)?,
++            asset: id(checked, asset)?,
++            scale: scalar(asset, "scale")?,
++            signer: id(checked, field(checked, intent, "signer")?)?,
++            owner: id(checked, field(checked, operation, "from")?)?,
++            recipient: id(checked, field(checked, operation, "to")?)?,
++            fee_recipient: id(checked, field(checked, operation, "fee_to")?)?,
++            key: text("key")?,
++            nonce: text("nonce")?,
++            pre_head: text("pre_head")?,
++            valid_from: scalar(validity, "from")?,
++            valid_to: scalar(validity, "to")?,
++            gross_cap: quantity(intent, "gross_cap")?,
++            fee_cap: quantity(intent, "fee_cap")?,
++            net_floor: quantity(intent, "net_floor")?,
++            value,
++            fee,
++            gross,
++            source_hash: text("source_hash")?,
++            policy_digest: text("policy_digest")?,
++        },
++        span,
++    ))
++}
++
++fn validate_scenario(terms: &Terms, s: &LocalTransferScenario<'_>, span: Span) -> Result<()> {
++    for (field, actual, expected) in [
++        ("domain", s.domain, terms.domain.as_str()),
++        ("asset", s.asset, terms.asset.as_str()),
++        ("allowance.owner", s.allowance.owner, terms.signer.as_str()),
++    ] {
++        if actual != expected {
++            return Err(diagnostics::scenario(span, field, expected));
++        }
++    }
++    for (index, (balance, expected)) in s.balances.iter().zip([
++        terms.owner.as_str(),
++        terms.recipient.as_str(),
++        terms.fee_recipient.as_str(),
++    ]).enumerate() {
++        if balance.account != expected {
++            return Err(diagnostics::scenario(span, &format!("balances[{index}].account"), expected));
++        }
++    }
++    for (field, text) in [
++        ("head", s.head),
++        ("predecessor", s.predecessor),
++        ("post_head", s.post_head),
++    ] {
++        if text.is_empty() || text.len() > mori_lexer::MAX_STRING_BYTES {
++            return Err(diagnostics::scenario(span, field, "nonempty text of at most 1024 UTF-8 bytes"));
++        }
++    }
++    if s.allowance.remaining.checked_add(s.allowance.spent).is_none()
++        || s.work_remaining.checked_add(s.work_spent).is_none()
++    {
++        return Err(diagnostics::scenario(span, "counters", "opening totals that fit UInt128"));
++    }
++    Ok(())
++}
++
++fn quote(text: &str) -> String {
++    serde_json::to_string(text).expect("serializing a UTF-8 string cannot fail")
++}
++
++fn append_line(out: &mut String, line: String, span: Span) -> Result<()> {
++    if out.len() + line.len() + 1 > mori_lexer::MAX_SOURCE_BYTES {
++        return Err(diagnostics::bound(span));
++    }
++    out.push_str(&line);
++    out.push('\n');
++    Ok(())
++}
++
++fn emit(t: &Terms, s: &LocalTransferScenario<'_>, span: Span) -> Result<String> {
++    let mut out = String::new();
++    macro_rules! line {
++        ($($arg:tt)*) => {
++            append_line(&mut out, format!($($arg)*), span)?
++        };
++    }
++    let statement = format!(
++        "transfer from {} to {} fee_to {} value {} fee {}",
++        t.owner, t.recipient, t.fee_recipient, t.value, t.fee,
++    );
++    line!("profile \"moriarty-financial-agreement-source/6\";");
++    line!("agreement {} {{", t.agreement);
++    line!("domain {};", t.domain);
++    line!("settlement {} scale {};", t.asset, t.scale);
++    line!("selected TransferLiteralFee source_hash {} digest {};", quote(&t.source_hash), quote(&t.policy_digest));
++    line!("intent {{");
++    line!("signer {} key {};", t.signer, quote(&t.key));
++    line!("nonce {};", quote(&t.nonce));
++    line!("pre_head {};", quote(&t.pre_head));
++    line!("valid {}..{};", t.valid_from, t.valid_to);
++    line!("gross_cap {};", t.gross_cap);
++    line!("fee_cap {};", t.fee_cap);
++    line!("net_floor {};", t.net_floor);
++    line!("failure success_only;");
++    line!("signed_action {statement};");
++    for field in ["observations", "disclosures", "retained_effects", "retained_duties"] {
++        line!("{field} empty;");
++    }
++    for field in ["delegation", "recovery"] {
++        line!("{field} none;");
++    }
++    line!("}}");
++    line!("authenticated {{");
++    line!("head {};", quote(s.head));
++    line!("predecessor {};", quote(s.predecessor));
++    line!("round {};", s.round);
++    for balance in &s.balances {
++        line!("balance {} {};", balance.account, balance.amount);
++    }
++    line!("allowance {} remaining {} spent {};", s.allowance.owner, s.allowance.remaining, s.allowance.spent);
++    let replay = match s.replay {
++        Replay::Unused => "unused",
++        Replay::Consumed => "consumed",
++    };
++    line!("replay {replay};");
++    line!("work_remaining {};", s.work_remaining);
++    line!("work_spent {};", s.work_spent);
++    line!("}}");
++    line!("submit {statement};");
++    line!("effects {{");
++    line!("debit {} {};", t.owner, t.gross);
++    line!("credit {} {};", t.recipient, t.value);
++    if t.fee > 0 {
++        line!("credit {} {};", t.fee_recipient, t.fee);
++    }
++    line!("use_allowance {} {};", t.signer, t.gross);
++    line!("use_replay {};", quote(&t.nonce));
++    line!("advance_head {} {};", quote(&t.pre_head), quote(s.post_head));
++    line!("}}");
++    line!("post_head {};", quote(s.post_head));
++    line!("}}");
++    Ok(out)
++}
+diff --git a/crates/mori-source6/tests/fixtures/invoice.mori b/crates/mori-source6/tests/fixtures/invoice.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/fixtures/invoice.mori
+@@ -0,0 +1,18 @@
++profile "moriarty-beta/1";
++agreement Invoice {
++ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Preview, id: "Owner" };
++ account Seller = { domain: Preview, id: "Recipient" };
++ account Treasury = { domain: Preview, id: "Fee" };
++ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
++ const price: Qty<USD> = 10.00 USD;
++ const fee = 0.10 USD;
++ intent Payment = {
++  domain: Preview, asset: USD, signer: Buyer, key: "key1", nonce: "n1", pre_head: "h0",
++  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
++  source_hash: "src1", policy_digest: "policy1", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay uses Payment;
++}
+diff --git a/crates/mori-source6/tests/fixtures/invoice.source6 b/crates/mori-source6/tests/fixtures/invoice.source6
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/fixtures/invoice.source6
+@@ -0,0 +1,45 @@
++profile "moriarty-financial-agreement-source/6";
++agreement Invoice {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "src1" digest "policy1";
++intent {
++signer Owner key "key1";
++nonce "n1";
++pre_head "h0";
++valid 0..10;
++gross_cap 1010;
++fee_cap 10;
++net_floor 1000;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "h0";
++predecessor "genesis";
++round 1;
++balance Owner 10000;
++balance Recipient 0;
++balance Fee 0;
++allowance Owner remaining 10000 spent 0;
++replay unused;
++work_remaining 10;
++work_spent 0;
++}
++submit transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++effects {
++debit Owner 1010;
++credit Recipient 1000;
++credit Fee 10;
++use_allowance Owner 1010;
++use_replay "n1";
++advance_head "h0" "h1";
++}
++post_head "h1";
++}
+diff --git a/crates/mori-source6/tests/fixtures/workshop.mori b/crates/mori-source6/tests/fixtures/workshop.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/fixtures/workshop.mori
+@@ -0,0 +1,20 @@
++profile "moriarty-beta/1";
++agreement WorkshopReceipt {
++ domain Local = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Local, id: "Owner" };
++ account Seller = { domain: Local, id: "Recipient" };
++ account Treasury = { domain: Local, id: "Fee" };
++ asset USD = { domain: Local, id: "A", scale: 2, representation: "canonical" };
++ const base = 2.00 USD;
++ const supplement = 0.35 USD;
++ const price = base + supplement;
++ const fee = 0.07 USD;
++ intent Payment = {
++  domain: Local, asset: USD, signer: Buyer, key: "key2", nonce: "n2", pre_head: "s0",
++  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: price + fee, fee_cap: fee, net_floor: price,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
++  source_hash: "src2", policy_digest: "policy2", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay uses Payment;
++}
+diff --git a/crates/mori-source6/tests/fixtures/workshop.source6 b/crates/mori-source6/tests/fixtures/workshop.source6
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/fixtures/workshop.source6
+@@ -0,0 +1,45 @@
++profile "moriarty-financial-agreement-source/6";
++agreement WorkshopReceipt {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "src2" digest "policy2";
++intent {
++signer Owner key "key2";
++nonce "n2";
++pre_head "s0";
++valid 2..20;
++gross_cap 242;
++fee_cap 7;
++net_floor 235;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 235 fee 7;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "s0";
++predecessor "earlier";
++round 3;
++balance Owner 1000;
++balance Recipient 5;
++balance Fee 2;
++allowance Owner remaining 900 spent 100;
++replay unused;
++work_remaining 9;
++work_spent 4;
++}
++submit transfer from Owner to Recipient fee_to Fee value 235 fee 7;
++effects {
++debit Owner 242;
++credit Recipient 235;
++credit Fee 7;
++use_allowance Owner 242;
++use_replay "n2";
++advance_head "s0" "s1";
++}
++post_head "s1";
++}
+diff --git a/crates/mori-source6/tests/snapshots/transfer__invoice_source6.snap b/crates/mori-source6/tests/snapshots/transfer__invoice_source6.snap
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/snapshots/transfer__invoice_source6.snap
+@@ -0,0 +1,49 @@
++---
++source: crates/mori-source6/tests/transfer.rs
++description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };\n account Buyer = { domain: Preview, id: \"Owner\" };\n account Seller = { domain: Preview, id: \"Recipient\" };\n account Treasury = { domain: Preview, id: \"Fee\" };\n asset USD = { domain: Preview, id: \"A\", scale: 2, representation: \"canonical\", symbol: \"USD\" };\n const price: Qty<USD> = 10.00 USD;\n const fee = 0.10 USD;\n intent Payment = {\n  domain: Preview, asset: USD, signer: Buyer, key: \"key1\", nonce: \"n1\", pre_head: \"h0\",\n  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,\n  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),\n  source_hash: \"src1\", policy_digest: \"policy1\", failure: SuccessOnly,\n  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,\n };\n action pay uses Payment;\n}\n"
++---
++profile "moriarty-financial-agreement-source/6";
++agreement Invoice {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "src1" digest "policy1";
++intent {
++signer Owner key "key1";
++nonce "n1";
++pre_head "h0";
++valid 0..10;
++gross_cap 1010;
++fee_cap 10;
++net_floor 1000;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "h0";
++predecessor "genesis";
++round 1;
++balance Owner 10000;
++balance Recipient 0;
++balance Fee 0;
++allowance Owner remaining 10000 spent 0;
++replay unused;
++work_remaining 10;
++work_spent 0;
++}
++submit transfer from Owner to Recipient fee_to Fee value 1000 fee 10;
++effects {
++debit Owner 1010;
++credit Recipient 1000;
++credit Fee 10;
++use_allowance Owner 1010;
++use_replay "n1";
++advance_head "h0" "h1";
++}
++post_head "h1";
++}
+diff --git a/crates/mori-source6/tests/snapshots/transfer__workshop_source6.snap b/crates/mori-source6/tests/snapshots/transfer__workshop_source6.snap
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/snapshots/transfer__workshop_source6.snap
+@@ -0,0 +1,49 @@
++---
++source: crates/mori-source6/tests/transfer.rs
++description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement WorkshopReceipt {\n domain Local = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };\n account Buyer = { domain: Local, id: \"Owner\" };\n account Seller = { domain: Local, id: \"Recipient\" };\n account Treasury = { domain: Local, id: \"Fee\" };\n asset USD = { domain: Local, id: \"A\", scale: 2, representation: \"canonical\" };\n const base = 2.00 USD;\n const supplement = 0.35 USD;\n const price = base + supplement;\n const fee = 0.07 USD;\n intent Payment = {\n  domain: Local, asset: USD, signer: Buyer, key: \"key2\", nonce: \"n2\", pre_head: \"s0\",\n  valid: rounds(domain: Local, from: 2, to: 20), gross_cap: price + fee, fee_cap: fee, net_floor: price,\n  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),\n  source_hash: \"src2\", policy_digest: \"policy2\", failure: SuccessOnly,\n  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,\n };\n action pay uses Payment;\n}\n"
++---
++profile "moriarty-financial-agreement-source/6";
++agreement WorkshopReceipt {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "src2" digest "policy2";
++intent {
++signer Owner key "key2";
++nonce "n2";
++pre_head "s0";
++valid 2..20;
++gross_cap 242;
++fee_cap 7;
++net_floor 235;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 235 fee 7;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "s0";
++predecessor "earlier";
++round 3;
++balance Owner 1000;
++balance Recipient 5;
++balance Fee 2;
++allowance Owner remaining 900 spent 100;
++replay unused;
++work_remaining 9;
++work_spent 4;
++}
++submit transfer from Owner to Recipient fee_to Fee value 235 fee 7;
++effects {
++debit Owner 242;
++credit Recipient 235;
++credit Fee 7;
++use_allowance Owner 242;
++use_replay "n2";
++advance_head "s0" "s1";
++}
++post_head "s1";
++}
+diff --git a/crates/mori-source6/tests/transfer.rs b/crates/mori-source6/tests/transfer.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-source6/tests/transfer.rs
+@@ -0,0 +1,68 @@
++#![cfg(feature = "source6-transfer-slice")]
++
++use mori_source6::{
++    Allowance, Balance, LocalTransferScenario, Replay, expand_transfer,
++};
++
++fn invoice_scenario() -> LocalTransferScenario<'static> {
++    LocalTransferScenario {
++        domain: "Midnight",
++        asset: "A",
++        head: "h0",
++        predecessor: "genesis",
++        round: 1,
++        balances: [
++            Balance { account: "Owner", amount: 10_000 },
++            Balance { account: "Recipient", amount: 0 },
++            Balance { account: "Fee", amount: 0 },
++        ],
++        allowance: Allowance { owner: "Owner", remaining: 10_000, spent: 0 },
++        replay: Replay::Unused,
++        work_remaining: 10,
++        work_spent: 0,
++        post_head: "h1",
++    }
++}
++
++#[test]
++fn literal_decimal_transfer_has_complete_source6_presentation() {
++    let source = include_str!("fixtures/invoice.mori");
++    let expansion = expand_transfer(source, "pay", &invoice_scenario()).unwrap();
++    assert_eq!(expansion.qualification, "local-stipulation-only");
++    assert_eq!(expansion.source6, include_str!("fixtures/invoice.source6"));
++    insta::with_settings!({
++        description => format!("Code:\n\n{source}"),
++        omit_expression => true,
++    }, {
++        insta::assert_snapshot!("invoice_source6", expansion.source6);
++    });
++}
++
++#[test]
++fn referenced_quantity_sum_and_fee_use_exact_atomic_values() {
++    let source = include_str!("fixtures/workshop.mori");
++    let scenario = LocalTransferScenario {
++        head: "s0",
++        predecessor: "earlier",
++        round: 3,
++        balances: [
++            Balance { account: "Owner", amount: 1000 },
++            Balance { account: "Recipient", amount: 5 },
++            Balance { account: "Fee", amount: 2 },
++        ],
++        allowance: Allowance { owner: "Owner", remaining: 900, spent: 100 },
++        work_remaining: 9,
++        work_spent: 4,
++        post_head: "s1",
++        ..invoice_scenario()
++    };
++    let expansion = expand_transfer(source, "pay", &scenario).unwrap();
++    assert_eq!(expansion.qualification, "local-stipulation-only");
++    assert_eq!(expansion.source6, include_str!("fixtures/workshop.source6"));
++    insta::with_settings!({
++        description => format!("Code:\n\n{source}"),
++        omit_expression => true,
++    }, {
++        insta::assert_snapshot!("workshop_source6", expansion.source6);
++    });
++}
+diff --git a/docs/BETA-SOURCE6-EXPANSION.md b/docs/BETA-SOURCE6-EXPANSION.md
+new file mode 100644
+--- /dev/null
++++ b/docs/BETA-SOURCE6-EXPANSION.md
+@@ -0,0 +1,26 @@
++# Proposed explicit Rust beta Source/6 transfer expansion
++
++Status: unadopted interface/source proposal. No compile, runtime, native or release qualification is established. The `source6-expansion` Cargo feature enables the explicit local transfer presentation path; it is separate from `native` and does not alter default features.
++
++Existing default command, unchanged:
++
++```sh
++mori expand core.mori --action noop --scenario core.json
++```
++
++This still validates a Core action against its Core scenario and prints its generic Core Program JSON. A Rust beta file supplied without the new option still reaches the existing Core parser and refuses; no default beta output is replaced. The separate Node beta package and its default JSON expansion output are unchanged.
++
++Proposed explicit command, in a build with `source6-expansion` enabled:
++
++```sh
++mori check invoice.mori --json
++mori --quiet expand invoice.mori --action pay --scenario scenario.json --emit-source6-transfer
++```
++
++The explicit command reads a typed local transfer scenario and calls `mori-source6::expand_transfer`, which uses the real Rust beta parser and checker. Stdout is the actual generated Source/6 text with its existing final newline; `--quiet` leaves stderr empty. Without `--quiet`, stderr reports `Expanded Source/6 transfer proposal (local-stipulation-only)`. It does not emit a Core success result. Without the build feature, the explicit option reports `mori::command::source6-unavailable`.
++
++The proposed scenario JSON is the closed **transfer subset** of the existing `moriarty-local-scenario/1` / `local-stipulation` shape. It requires domain, asset, head, predecessor, round, exactly three ordered balances, allowance, replay, work_remaining, work_spent and post_head. Numeric values are canonical decimal strings parsed through the existing Core UInt decoder; no new decimal evaluator is introduced. Balance order is owner, recipient, fee recipient. Replay is `unused` or `consumed`. Obligation and candidate_effects overrides are outside this option. The current strict CLI reader and existing read/JSON bounds apply.
++
++This profile-token reuse, transfer subset, option name, feature name, raw stdout/status output, and JSON-decode-before-helper error ordering are **new unadopted public interface choices**. They require the planned independent design/interface votes; they do not establish full Node beta wire or diagnostic parity. The typed borrowed local scenario passed to the library is an internal input, not proof or authentication.
++
++Boundary: Rust beta/1 → proposed transfer presentation → Source/6 text. The real experimental TypeScript `parseAndLowerSource6` must still consume actual emitted bytes; its Core/5 preparation remains separately unqualified. This option provides no Source/6/Core/5→Core/1/Core/2/Sherlock/native embedding, no handwritten target IR and no target/proof/post-state success. The default Core and separate Node consumers retain their own profiles.

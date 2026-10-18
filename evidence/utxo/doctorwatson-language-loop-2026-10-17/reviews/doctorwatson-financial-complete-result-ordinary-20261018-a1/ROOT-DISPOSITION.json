@@ -1,0 +1,79 @@
+{
+  "decidedAt": "2026-10-18T09:07:31.850123+00:00",
+  "decision": "REJECT_MATERIALLY_INVALID_ORDINARY_RESULT_AUDIT",
+  "scope": "Only doctorwatson-financial-complete-result-ordinary-20261018-a1; both retained whole objects rejected for substantive source/result fidelity. No security judgment, no change to security contexts.",
+  "delegatedBy": "root",
+  "recordedBy": "root-delegated independent ordinary source-fidelity lane6",
+  "originalPublicRecordsBeforeSha256": {
+    "OUTPUT-SCHEMA.json": "bdd96fa3100190b0a2f3cd117dd6987c6c9f338b5c81b6136b6178b287c87bda",
+    "PROCESS.json": "ed9aa141215b9785e4aab509b33a21891b982fcde96ab09471ee3c6368df2770",
+    "AMBIGUOUS-COMPLETE-REVIEWS.json": "e9d6995c8ecd1c3208f068cbad58288aa6692fdf02d60a3f8ddf3631483f3345",
+    "TASK.json": "dedaba49c21a6834b0ff86f3a7d6b4ced884c6b08ad262df692fdadf58543405",
+    "PROMPT.md": "b52ca70e69e1d37e0efd0a159b84b86c071992f84d1ba6fd51561e35d6007e2d",
+    "WHOLE-SCHEMA-VALID-CANDIDATES.json": "e9d6995c8ecd1c3208f068cbad58288aa6692fdf02d60a3f8ddf3631483f3345"
+  },
+  "wholeObjectCount": 2,
+  "wholeObjectVerdicts": [
+    "approve-exact-result-and-guarded-merge",
+    "approve-exact-result-and-guarded-merge"
+  ],
+  "falsifyingSourceFacts": [
+    {
+      "id": "F1",
+      "claim": "parse_program + validate + to_value/from_value + Program round-trip",
+      "sourceFact": "financial_sources_match_complete_independent_programs calls mori_core::parse then serde_json::to_value(program) and compares the complete Value to a JSON fixture. There is no parse_program, validate, from_value or Program-typed round-trip in this test.",
+      "evidence": "core_financial_report_contract.rs:financial_sources_match_complete_independent_programs"
+    },
+    {
+      "id": "F2",
+      "claim": "invoice 27 Expr + 5 Pred; reserve 26 Expr + 7 Pred",
+      "sourceFact": "The serialized Program fixtures each expose one expressions arena with respectively 32 and 33 nodes; no separate Expr/Pred arena or asserted 27+5/26+7 split exists in these fixtures or consumer. Such a split is unsupported and is not the test contract.",
+      "evidence": "installment-invoice.program.expected.json and conditional-reserve.program.expected.json; Program DTO"
+    },
+    {
+      "id": "F3",
+      "claim": "direct complete execution field equality against 3 standalone Execution oracle files",
+      "sourceFact": "assert_case reads the CASES stdout and stderr fields only (plus copies source/scenario). It compares the complete actual report Value and raw stdout bytes to the six *.stdout.json files. It does not read CASES execution/program fields or open the three *.execution.expected.json files. Complete execution coverage is through the complete report equality, not an additional standalone Execution-file assertion.",
+      "evidence": "core_financial_report_contract.rs:Project::assert_case"
+    },
+    {
+      "id": "F4",
+      "claim": "raw stdout against *.stdout.expected.json",
+      "sourceFact": "All six CASES stdout names end in .stdout.json (ordinary or cap42/cap45), not .stdout.expected.json.",
+      "evidence": "CASES.json:cases[*].stdout"
+    },
+    {
+      "id": "F5",
+      "claim": "work fields total and remaining:0",
+      "sourceFact": "The metered report envelopes have logical:{cap:\"42\",used:\"42\"} or logical:{cap:\"45\",used:\"45\"}, profile:moriarty-reference-logical-cost/1, qualification:local-reference-execution, status:accepted. There are no total/remaining fields. The ordinary envelope has execution,qualification,status only.",
+      "evidence": "six original *.stdout.json complete report fixtures"
+    },
+    {
+      "id": "F6",
+      "claim": "freeze created at 2026-10-18T06:16:33Z",
+      "sourceFact": "The original FREEZE.sha256 is a digest inventory and neither it nor PROVENANCE.json/INVENTORY.json contains that claimed timestamp. The exact creation-time claim is unsupported by the cited bytes and cannot be accepted. No substitute freeze timestamp is inferred from filesystem metadata.",
+      "evidence": "FREEZE.sha256,PROVENANCE.json,INVENTORY.json"
+    },
+    {
+      "id": "F7",
+      "claim": "Program struct round-trip equality limitation and validation coverage",
+      "sourceFact": "The limitations repeat the nonexistent round-trip, and validation is not a direct call in the Program comparison test. The observed scope must follow the exact code: two parse\u2192to_value complete-Value comparisons, six real CLI full-JSON/raw-byte comparisons, and two full actual invoice post\u2192pre comparisons (ordinary and cap42).",
+      "evidence": "both complete test functions; original whole limitations[2]"
+    }
+  ],
+  "disposition": "Do not rely on either original ordinary approval. Preserve all originals unchanged, do not rewrite WHOLE or AGREE fields. Obtain one fresh focused ordinary replacement audit over actual source and captured result.",
+  "actualResultRetained": {
+    "testFunctionsPassed": 2,
+    "failed": 0,
+    "completedParserInputs": 2,
+    "completedCLICalls": 6,
+    "wallSeconds": 52.624672563000786,
+    "countQualification": "2 parser inputs and 6 CLI calls inferred from passing test control flow, not separate per-call telemetry",
+    "commit": "7e0d753c40a3e5f694aa226bd657c831da111f65",
+    "tree": "55fab2c3cbd818ffb04eeb7d5930a28758a858b3"
+  },
+  "nativeAuthority": 0,
+  "newProductExecution": false,
+  "replacementJob": "doctorwatson-financial-complete-result-ordinary-20261018-a2",
+  "rootFinalReviewAndMerge": "Root owns final reliance/integration/merge; this disposition does not approve those actions."
+}
