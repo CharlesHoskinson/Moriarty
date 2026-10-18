@@ -121,3 +121,23 @@ Correct that input, independently derive the changed Program/Plan identities,
 and select the discriminating check again only on the changed candidate. Do not
 rerun its already passed production-library compilation without a source change.
 These are current selections within the active full-EARS goal, not a new loop.
+
+
+## Observed beta startup and simulation integration — October18UTC
+
+The simulation/report batch is installed after R315 actual-result review: shared
+production argument selection, public report API and six independent test/fixture
+files, with the prior currentness negative retained. The existing reader is
+CURRENT11/35; 24 originals and all25 refinements remain open. Full CLI/file
+execution and B04 acceptance remain unobserved.
+
+Automated OP0–OP6 passed. An initial stale ancestor timestamp was measured and
+rebound without a guard/cap change; the changed-input supervisor then failed at
+A0 listener handoff before Cargo. Its one-shot marker and both failures are
+durable, and automatic collection/teardown passed. The next native action is
+the designated owner’s bounded startup diagnosis; do not repeat the unchanged
+consumed operation or introduce a human-only approval step. Continue eligible
+source/consumer work in parallel and retain full formal/proof/stagenet exits.
+
+See [the simulation evidence](../results/sherlock-simulate-report-20261018/README.md)
+and [actual startup receipts](../results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/README.md).

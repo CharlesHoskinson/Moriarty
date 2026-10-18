@@ -144,6 +144,8 @@ than repeatedly reading the whole repository. Track useful integrated behavior,
 review delay, repeated defects and actual check duration; agent count is not
 completion.
 
+Current beta operator policy follows the [canonical automation override](../raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md). Do not recover historical human-only operator/tier approval requirements as current beta steps. Existing source/resource/correctness and acceptance requirements remain as recorded there; evidence below still describes only what each consumer actually observed.
+
 ## Sprint sequence
 
 These are execution slices of the existing roadmap, not replacement milestones.
@@ -157,11 +159,11 @@ Advance ready independent source tasks in parallel; acceptance retains dependenc
 | Existing A arithmetic/fuel QA | Finish adjudicating the already captured 18-test attempt; run the existing separately admitted sampled phase once only if its postgates pass | K source review and normal literal maps; G4 source analysis | No rerun of terminal attempts; K execution and full relation correspondence remain open |
 | Reference and model adapters | Map one declared common domain to complete typed observations and earliest differing prefix | Independent fixtures; K field map; finite Quint map; existing Lean reconciliation | Profile clocks differ; absent layers cannot count as agreement |
 | Bounded state and helpers | Complete the existing rule/representation decisions and source consumers for data, frames, arithmetic and immutable append | Disjoint host codecs, oracle derivations and operation inventories | Candidate B schemas require their existing decision; A P1–P6 is a separate scope |
-| Handwritten and Clean components | Same admitted step projected through independently bound witness and constraint implementations | Component inventories and source preparation within existing authority | C4 requires admitted A102 compilation before dependent circuit edits; native authority is zero |
+| Handwritten and Clean components | Same admitted step projected through independently bound witness and constraint implementations | Component inventories and source preparation within existing authority | C4 retains its separate admitted-compilation/circuit evidence; ordinary QA supplies no native result |
 | Witness/export and resources | Actual consumer reports supported operations and separate witness/constraint export, logical work and physical costs | Witness DAG, exporter capability and resource adapters after their interfaces stabilize | Unknown physical costs are unknown, not zero; source inventory is not native support |
 | Optimization | Batch/resume/cache/residual implementations preserve every internal prefix and earliest stop against baseline | Independent width 1/2/4/8 expectations and cut/resume cases | Stable semantics and complete observation adapters first |
 | Financial compiler mapping | Two contrasting supported programs preserve full ordered effects, work, fees, liabilities and residual duties | Independent source programs and finance expectations | General compiler/continuation mapping and target phase semantics remain open |
-| Native and Midnight stagenet | Sherlock itself compiles, proves, verifies, deploys, calls and reads back complete state/effects on the qualified target | Source integration and operator-supplied non-secret target facts | Existing execution admission, exact toolchain/target tuple and required security evidence |
+| Native and Midnight stagenet | Sherlock itself compiles, proves, verifies, deploys, calls and reads back complete state/effects on the qualified target | Source integration and agent/operator-collected non-secret target facts | Existing execution admission, exact toolchain/target tuple and required security evidence |
 
 For each slice update the existing correctness-loop evidence matrix: source and
 profile, independent oracle, actual command/exit, raw output digest, per-layer
