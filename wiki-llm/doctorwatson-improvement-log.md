@@ -1478,3 +1478,21 @@ independent compatibility review, the reader reported current with no findings.
 UIREQ-035 and SCON-013 now record partial implementation and observed baseline
 tests while their cache, streaming and complete-prefix acceptance stays OPEN.
 The interpreter tests did not need to run again for this reference correction.
+
+
+### DW-74 — Check actors and mutable cache inputs before native setup
+
+Fresh beta setup passed all seven steps automatically. Reading the actual
+operator caught an incorrect actor in the prepared commands: OP3 requires the
+ordinary user; only OP2, OP4 and OP5 require root. The actual selection corrected
+that metadata and preserved the operator and numeric caps. No human window was
+needed. The guard's new launch tests passed all thirty cases after the exact
+reviewer-prescribed fixture corrections.
+
+The native launcher now reaches the authenticated A0 worker. It refused stale
+staging metadata: thirteen Cargo registry-index files had grown since their
+manifest was captured. Preserve that failure and cleanup; do not convert it to
+a build result or repeat the unchanged attempt. DoctorWatson should compare
+current cache descriptors with the selected manifest before provisioning and
+retain a stable cache snapshot for the chosen dependency tuple. Input refresh
+and code/archive identity checks belong in the next scoped reconciliation.
