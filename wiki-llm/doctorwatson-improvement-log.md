@@ -1737,3 +1737,18 @@ Preserve each actual failure and later stage result with its exact source/input 
 
 
 October 18 observed check follow-up: the fresh Quint source review approved the finite operations, but the first actual typecheck failed with QNT101 on local binders `fields` and `field`; the two later commands remain unrun. The corrected K queries parsed, reduced and printed with exit0 for all seven cases, but complete comparison rejected every unevaluated `ngObserve` term. This is an evaluation failure, not correspondence evidence. The dedicated agents are preparing source/operation corrections while preserving these receipts. Clean review found a reserved `prefix` identifier and a non-definitional `rfl` base case; kernel checks remain unrun pending corrected source.
+
+
+## DW102 — Judge the complete result, then preserve the successful prefix
+
+October 18 observation: K reduction/printing exits0 once produced an unevaluated `ngObserve` term. Only the full independent tape comparison exposed the failure. A later selected initial-simplification tail matched all seven complete tapes while reusing the successful model definition and query parses. Preserve the failed comparison and all raw captures; terminal values or frontend success cannot replace initial/every-returned/final state and event-prefix equality. Deterministic gzip may store a large raw record only with its original byte identity and verified exact decompression.
+
+Quint's corrected identifiers passed three commands, eight author-fixture tests and a directed run. Those results have a different expectation basis from K's independently frozen tapes. Clean's corrected source passed four module checks without warnings after a record-layout failure; five successful CanonicalTypeId artifacts were reused. State the conditional theorem scope instead of claiming an absent real child evaluator or whole correspondence. Actual-result review, source installation and native/product acceptance remain separate. The [evidence archive](../docs/results/sherlock-formal-nominal-progress-20261018/README.md) preserves both the failures and the new passes; no unchanged passing-prefix replay or new factory is needed.
+
+
+DW102 result-review follow-up: the K raw ACCEPT contained 23 factual catalog errors, including invented codec/frame names, keys, bounds and a wrong fixture description. Preserve the full raw report plus the exact correction map/facts, and adopt only the supported seven-positive-tape claim. Quint's three minor qualifications preserve its distinct author-fixture scope. A mechanical factual map is not a new semantic vote, and a provider's hash recital cannot replace the actual selected manifest.
+
+
+October 18 qualified-result and new-actual follow-up: K's seven-case actual result now has scoped review support only with the full 23-entry factual map and exact manifests; raw review catalogs are not adopted. Quint B01's three finite commands have qualified review support with three factual qualifications; its eight tests/193-state trace are author-fixture observations, not independent complete-oracle agreement. Clean's four conditional module passes remain separate from real child evaluation or whole correspondence. Root owns source/publication adoption; this adds no EARS closure.
+
+The new witness reference projector also passed five ordinary operations across three exact reference-prefix cases; its result review remains pending. The shared-four Quint batch passed four operations, and Root's data-only comparison found all four complete observations equal (15/27/10/28 states, 80 total; 17 snapshot fields). Its result review remains pending. Neither result broadens the existing native/proof/target or whole-language scope.
