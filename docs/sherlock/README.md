@@ -148,3 +148,11 @@ See the [source and receipt archive](../results/sherlock-simulate-report-2026101
 ## Canonical runtime type identities
 
 The canonical TypeId migration passed three compiles and ten new tests. Read the [interface reference](reference/canonical-runtime-types.md), [inspection guide](how-to/inspect-canonical-runtime-types.md), [builtin walkthrough](tutorials/first-local-observations.md#follow-one-builtin-identity-across-six-carriers) and [runtime explanation](explanation/whole-program-types-and-runtime.md#canonical-typeid-through-the-existing-owner). [Actual receipts](../results/sherlock-canonical-runtime-types-20261018/ACTUAL-TEN-TESTS-SCOPE.json) cover four builtin live-carrier cases, five V8 cases and nominal storage only. Generic nominal runtime, original UIREQ034 and all 25 refinements remain open.
+
+
+## Offline K capture utilities
+
+- How-to: [Assemble observations from an existing F03 capture set](how-to/assemble-offline-f03-observations.md).
+- Reference: [Offline K capture adapters](reference/offline-k-capture-adapters.md).
+
+These pages describe supplied-file assembly and comparison. The archived eleven guards and four installed-decoder regressions are separate from producer execution and native/target evidence.
