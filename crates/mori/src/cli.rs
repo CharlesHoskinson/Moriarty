@@ -5,9 +5,10 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use crate::commands::{
     check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
     keygen_signed_call, lsp, mcp, prepare_call, prepare_signed_call, prove, prove_call,
-    prove_signed_call, replay, simulate, test, verify, verify_call, verify_intent,
+    prove_signed_call, replay, test, verify, verify_call, verify_intent,
     verify_signed_call,
 };
+use crate::cli_args::simulate;
 use crate::shell::Verbosity;
 use crate::styles;
 
@@ -77,12 +78,7 @@ pub struct SigningOutputArgs {
     pub json: bool,
 }
 
-/// Signed native owner-intent profile selected explicitly by name.
-#[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum SignedProfile {
-    #[value(name = "moriarty-jubjub-owner-intent/1")]
-    JubjubOwnerIntent,
-}
+pub use crate::cli_args::SignedProfile;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Color {
@@ -138,7 +134,7 @@ pub enum Command {
     Inspect(inspect::Args),
     /// Show the native core IR after checking an action against a scenario
     Expand(expand::Args),
-    /// Run an action locally against a scenario
+    /// Run a Core action/scenario or an explicitly selected Sherlock draft entry locally
     Simulate(simulate::Args),
     /// Independently replay a public record against separately trusted inputs
     Replay(replay::Args),

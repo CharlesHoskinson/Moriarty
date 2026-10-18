@@ -90,7 +90,7 @@ Core compilation, public consumer compilation, listing and both new exact tests,
 with 723 selected inputs unchanged. R257 approved the supplied source and exact
 plan. After withholding the inaccurate R263 reply, Root adopted original
 UIREQ-002 following fresh R272 literal-result review. The current evidence
-check records 11 accepted originals out of 35, with 24 open. See the
+check at that adoption cut recorded eleven accepted originals and 24 open. See the
 [profile result and adoption](../results/sherlock-supported-profile-20261018/README.md).
 The passing report tests were not rerun to repair the review reply. Use the
 [inspection guide](how-to/compile-draft-program.md#inspect-the-supported-profile-field)
@@ -113,3 +113,20 @@ adds no new EARS row. Source-reference compatibility work retains those acceptan
 records rather than inventing a fresh scenario run. CLI/file publication, full
 semantic correspondence, physical H1, native/target evidence and broader language
 coverage remain separate. No new circuit or website iteration occurred.
+
+
+The installed [simulate command/report](reference/draft-source-compiler.md#simulate-source-integration-observed-consumers-cli-unrun)
+source is installed as fourteen exact files following R300/R311 review. R299
+passed seventeen phases and its one-test/24-row shared production argument
+consumer; R301 compiled the report composition with its additive metadata
+corrections retained. R310 then passed three phases and one new test looping two
+programs through real run/report/Serialize/JSON, checking independent UInt7/8 and
+same-run report bindings with 457 pins unchanged. See the
+[intended command shape](how-to/compile-draft-program.md#pending-command-shape-unrun).
+No full CLI/global handler, file I/O or command report printout was observed.
+R315 returned SUCCESS and Root installed all six consumer files, verified all
+twenty source/test files and applied the reviewed R316 reporting-reference update.
+The existing reader is CURRENT11/35 with no findings, 24 originals and all 25
+refinements open. The old CURRENT10/stale025 negative remains preserved; no new
+EARS adoption or reader run is claimed by this docs update. B04 stays unchecked.
+See the [source and receipt archive](../results/sherlock-simulate-report-20261018/README.md).

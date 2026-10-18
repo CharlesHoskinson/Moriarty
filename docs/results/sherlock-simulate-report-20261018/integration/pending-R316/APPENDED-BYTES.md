@@ -1,0 +1,12 @@
+
+
+## Offline K-capture decoding
+
+`k_capture_observations.decode_capture` keeps its default limit of 64 captures.
+An explicit keyword `max_captures=F03_MAX_CAPTURES` selects the ceiling of 95;
+other byte, depth, log and argument limits remain unchanged. The [five selected
+offline checks](../../results/sherlock-k-f03-offline-decoder-20261018/README.md)
+passed against the installed decoder and literal source identities. The F03 test
+uses supplied boundary states with placeholder intermediate states and empty
+engine artifacts, so `comparison_ready` remains false. These tests establish no
+actual F03 engine capture, paired K/Quint agreement or UIREQ-021 acceptance.

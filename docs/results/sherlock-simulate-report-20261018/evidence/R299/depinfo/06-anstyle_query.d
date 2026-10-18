@@ -1,0 +1,6 @@
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/build/anstyle_query.d: /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/snapshot/registry/anstyle-query-1.1.5/src/lib.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/snapshot/registry/anstyle-query-1.1.5/src/windows.rs
+
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/build/libanstyle_query.rlib: /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/snapshot/registry/anstyle-query-1.1.5/src/lib.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/snapshot/registry/anstyle-query-1.1.5/src/windows.rs
+
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/snapshot/registry/anstyle-query-1.1.5/src/lib.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/299-shared-simulate-arguments-ordinary-QA/snapshot/registry/anstyle-query-1.1.5/src/windows.rs:
