@@ -66,7 +66,10 @@ fn assert_financial_prefixes(execution: &Value) {
         .iter()
         .map(|step| {
             prefix.extend(step["effects"].as_array().unwrap().iter().cloned());
-            Value::Array(prefix.clone())
+            json!({
+                "index": step["index"],
+                "effects": prefix.clone(),
+            })
         })
         .collect::<Vec<_>>();
     assert_eq!(
