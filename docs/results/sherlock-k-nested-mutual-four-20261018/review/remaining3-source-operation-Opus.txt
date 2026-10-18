@@ -1,0 +1,108 @@
+# Review: remaining-three finite capture (source change and 291-child operation)
+
+## Verdicts
+
+- **SOURCE: APPROVE.** The `consume_case_window.py` delta is correct for start-0, 32 windows of 16. No mandatory source fix.
+- **FINITE OPERATION: APPROVE, conditional on the Root-side gates in §4.** If Root cannot enforce gates G1–G4, treat the operation as **REJECT** rather than run it degraded.
+- **No new whole-K semantic claim.** No golden equality is implied. Normal halt is not equality.
+
+## 1. Source findings
+
+### Window-0 bootstrap (`index == 0`)
+
+| Check | Assessment |
+|---|---|
+| `prior.kind == parsed_initial_query` and `prior.query == window.query == <case>-kast/stdout` | Correct. It matches reduce-window-0 `--pattern` in all three cases. |
+| `seed_query(query,16) == query` | Correct as an identity check. It asserts that the kast output is `LblngObserve…(X, \dv{SortInt{}}("16"))` with nothing else rewritten. It uses the unchanged helper. |
+| Surface identity `b"ngObserve(" + initial.strip() + b",16)\n"` | Byte arithmetic matches all three ports. 3231+15=3246, 2575+15=2590, 2517+15=2532. The original `.term` files are exactly one byte longer (`512` vs `16`). |
+| Declared-input decode | Correct. `parse_printed(..., sort="NGState")` relies on the `REG['ngInitial']=('NGState',('NGProgram','Map'))` that `configure()` adds, and `configure` runs before the parse. The Map lexer handles `10 \|-> ngUInt(11) 20 \|-> ngUInt(7)` followed by the closing `)`. `complete()` enforces full token consumption. |
+| Observed initial vs declared | The check covers all five fields: program, environment, `control == {"ngEval":{"expr_id":entry}}`, empty frames, and empty events. Both sides use the same `CompleteKWire.decode`. This is a strong end-to-end binding of the kast parse to the frozen surface without emitting any model state. |
+| `join_complete_chunks([(16,new_states)], overall_bound=16)` | Correct. The empty-initial-events, short-window-must-be-terminal and loss/duplication invariants all still apply. |
+| `actual_last_event = joined[-1]["events"][-1]` | Cannot raise `IndexError` on window 0. The control is forced to `ngEval`, and `ngStep` from `ngEval` always appends an event (normal or `ngOutsideEvent`). |
+
+### Windows 1–31 and shared suffix
+
+- Windows 1–31 use the preimage code verbatim: `prior_inputs`, `read_pinned`, `resume_query`, the typed boundary, and the ordinal prefix.
+- The status ladder is unchanged. At window 31, `used==512` yields `STOP_BOUND` before `CONTINUE`, and `index+1>=len` also guards it. No dangling next query is possible.
+
+### Non-blocking source observations (record; no edit required)
+
+- **Vacuous label on window 0.** `complete_typed_boundary_equal: True` is emitted on window 0, where no boundary comparison happens. The equivalent there is the declared-input check. Interpret it that way in Root's result; it is not a false boundary claim.
+- **Dead branch.** The `prior_inputs` `frozen_actual` branch is unreachable now. It requires `start == resume_actual_ordinal == 0`, and only window 0 has start 0, which never calls `prior_inputs`. It is harmless.
+- **Unpinned kast read.** On window 0 the consumer reads kast stdout without a pin, after reduce and print. Integrity therefore depends on Root's pre-reduce pin and its re-verification before print and consume (G2).
+- **Existing design: printed final vs raw final.** The consumer never directly compares a printed final against the raw final. For windows that continue, the chain closes indirectly: print(raw final) equals print(next tape initial). For the last window of each case, binding relies only on Root pinning `result.kore` before print and consume.
+
+## 2. Operation findings
+
+- **Phase count.** The geometry is internally consistent: 3 kast + 3×32×(reduce, print, consume) = 291 phases, `maximum_direct_children` 97 per case, 96 manifests, 873 directories.
+- **Wiring.** argv, cwd, env, stdout and stderr follow one regular pattern:
+  - kast → `window16.term`.
+  - reduce-0 → kast stdout.
+  - reduce-k → its own `input.kore`, which the previous consume wrote via `next_query_output`.
+  - print → `result.kore`.
+  - consume → manifest.
+- **Per-phase settings.** Every phase has a distinct token and `inherit_environment: false`. Reduce PATH is z3-only, matching F03 `KORE_EXEC_PATH`. kast PATH matches F03 `JAVA_PATH`.
+- **Manifest bodies.** All 96 point at the correct case contract with indices 0..31. Pin sizes are consistent with stem lengths (02: +3 characters; 03 and 04 are both 45-character stems with equal contract sizes).
+- **Inputs.** Case-to-input mapping is correct: SAFE `/cases/1`, `/2`, `/3` correspond to 02, 03, 04. I hand-checked the key literals (case 02 exprs 7 and 8, case 03 and 04 expr 1, all arm patterns, and `Binary Add→ngAdd`) against the `initial.ng` texts.
+- **Callback.** `F03.launch(record, argv, env, cwd, token, 536870912)` matches the F03 signature. It uses module constants of 30 s wall and 3 s sweep, applies CORE=0 / FSIZE / umask 077, uses a new session with a group kill, and sweeps by token. The module has no import-time side effects beyond constants and definitions.
+- **Erratum, non-blocking.** `resource_caps` in PROPOSED-OPERATIONS states `90*(30+3)=2970s`. That figure is stale from the 30-window lane. The correct per-child-cap arithmetic for this plan is 291×33 = **9603 s**. The field is descriptive only, so do not edit the pinned file. Record the correction in the Root result.
+
+## 3. Readable coverage and unread ranges
+
+**Read in full:**
+- SCOPE, SOURCE-DIFF, readback, and all five Python files. The changed file matches the diff hunks.
+- PUBLIC-API and K-PROGRAM-WIRE declarations.
+- SAFE inputs, ports, and all six input texts.
+- COMPILED15 and STATIC-PINS listings.
+- FIRSTCASE metadata (provenance only), PREPARATION-QA, and the 96 manifest bodies.
+- F03 `launch` and its closure: `processes`, `kill_group`, `sweep`, `open_exclusive`, `utc`.
+- The three K sources, as reference.
+
+**Structurally reviewed with spot-checks:**
+- The three contracts: windows 0, 1, middle windows, and 31 per case; the pattern is regular.
+- PROPOSED-OPERATIONS: the kast phase plus windows 0, 1 and 31 of each case, and the phase pattern throughout. I did not read all 291 objects character by character; I rely on Root's attested QA for byte regularity.
+
+**Unread or not inline:**
+- `EXISTING-LAUNCH-CALLABLE-CLOSURE.py.txt` and `IMPORT-TIME-AST-REVIEW-PROJECTION.json` bodies (pinned only).
+- The firstcase wire body.
+- Expected documents (correctly absent).
+- I recomputed no hashes.
+
+## 4. Required Root-side gates (conditions of approval)
+
+- **G1 — Consumer import surface.** Before every consume child, verify that the `source/` directory inventory is exactly the five pinned files, with no `__pycache__` and no extra `.py` files.
+  - The consumer runs `/usr/bin/python3 -B` without `-I`, so `sys.path[0]` is `source/`. Any extra module there, such as `json.py`, shadows the stdlib.
+  - `-B` still loads an existing matching `.pyc`.
+- **G2 — Produced-artifact pins re-checked before every child**, not only the next one. This follows the F03 `captured-artifact-changed` semantics. In particular:
+  - Pin kast stdout before reduce-0 and re-verify it before print-0 and consume-0. The consumer reads it unpinned after reduce.
+  - Pin `result.kore` before print and consume; pin print stdout before consume.
+  - Pin checkpoint and next query before the next reduce.
+  - Before reduce-0, Root itself should also assert the OBSERVE head and `seed_query(stdout,16)==stdout`.
+- **G3 — Compiled-directory inventory.** Before every child, check that `nominal-kompiled/` contains exactly the 15 pinned entries, not just that the pinned hashes match. kast or K could add a file that a hash-only recheck would not catch.
+- **G4 — Dispatch from the pinned checkpoint.**
+  - Root derives `CONTINUE`, `STOP_HALT`, `STOP_OUTSIDE_MODEL` or `STOP_BOUND` from the persisted checkpoint and requires consume stdout `status` to agree.
+  - On any terminal status, require `completed_case_output` to exist and pin it.
+  - Require `next_query=null`, and require that no `input.kore` appeared in the next (unrun) window's directory.
+- **M1/M2 as stated.**
+  - Precreate the 873 directories at mode 0700 only.
+  - Precreate no streams, outputs, queries, checkpoints or `actual/<stem>.complete-observed-wire.json`.
+  - A later reduce cwd may contain only `input.kore` plus the empty `home/` and `tmp/`.
+- **Recommended (non-blocking).** Pin the argv[0] realpaths once at batch start: java, `.kore-exec-wrapped`, kprint, and `/usr/bin/python3`. F03 `PINNED_FILES` covered some of these, but only `launch` is selected here. Nix-store immutability makes drift unlikely.
+
+## 5. Empirical risks retained (no cap or window change)
+
+- **K temp directory in kast cwd.** K may create a `.kast-*` temp directory in the kast cwd. It is cleaned on normal exit, but a kill leaves residue, and that residue must fail closed.
+- **Growth in state size.** Each state carries its cumulative events, so state size grows linearly with ordinal and per-window cost grows with it. Firstcase scale: a 16-state window took 27.5 MB of raw kore, and the full wire was 20 MB at 134 states.
+  - Per-window raw kore, kprint output, `parse_printed` work and consumer RAM grow roughly linearly with ordinal.
+  - The persisted prefix wire per window and the cumulative disk usage grow roughly quadratically.
+  - A long case approaching 512 risks the 30 s wall and RAM/disk pressure. There is no aggregate disk or RSS cap.
+- **Python recursion depth.** `PrintedTermParser.term` recurses once per cons cell, so depth is about the event count plus roughly 20. The 512 bound stays under Python's default limit of 1000; the margin is adequate but finite.
+- **Batch-wide stop.** `STOP_OUTSIDE_MODEL` or any failure in case 02 forfeits cases 03 and 04 by declared policy. All unrun phases stay UNRUN, with no retry.
+- **No count prediction.** The firstcase's 133 steps predict nothing for these cases.
+
+## 6. Unchanged boundary
+
+There is no golden or expected read until all four complete actual wires and the actual-only `observerCuts` are frozen.
+- The firstcase being frozen is provenance only.
+- K evaluator and observer semantics remain the historical premise.
+- Other native, profile, clock and EARS gaps remain open.
