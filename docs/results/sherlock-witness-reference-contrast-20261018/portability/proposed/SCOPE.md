@@ -1,0 +1,5 @@
+# Three fixture paths made portable
+
+This separate source proposal replaces exactly three absolute `include_str!` literals with same-directory-relative paths and copies their exact independent fixture bytes into tests/fixtures/witness-reference-contrast-independent. All constructors, APIs, assertions, strategy joins, schedules, stream behavior and semantics remain byte-identical after reversing those literals. The tested historical source and its actual receipts are preserved separately.
+
+The proposed acceptance is fresh nonauthor review of this complete four-file source composition and one normal external-consumer compile using the same retained actual Core4afb artifact. No Core rebuild or passing runtime case replay is selected. Compile dep-info must name the new consumer and its exact three relative fixture inputs. This is source/fixture packaging compatibility, not another runtime observation. The support consumer remains outside default Cargo autodiscovery; no environment variable or product permission rule is introduced. Neither source nor compile eligibility has yet been adopted by Root here.
