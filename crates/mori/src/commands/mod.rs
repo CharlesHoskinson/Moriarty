@@ -8,6 +8,7 @@ use crate::cli::Command;
 use crate::shell::Shell;
 
 mod call_io;
+pub mod capabilities;
 pub mod check;
 pub mod compile;
 pub mod compile_call;
@@ -40,6 +41,7 @@ pub type Result<T> = std::result::Result<T, Report>;
 
 pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
     match command {
+        Command::Capabilities(args) => capabilities::run(args, shell),
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
         Command::Compile(args) => compile::run(args, shell),
