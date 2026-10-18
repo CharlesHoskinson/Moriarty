@@ -1,0 +1,9 @@
+# Exact final-base confirmations — terminal
+
+Both fresh non-author GeminiHIGH contexts terminated exit0 within420seconds and returned confirm-exact-base-integration-guard. Ordinary282.381217seconds; designated security fallback249.333828seconds. Both first findings explicitly confirm only actualf794/exact38upstreamblobs/incoming39pins/expectedtree7e7, find no concrete changed consumer predicate, and require no consumer rerun for these unrelated changes. Their judgments remain contingent on both confirmations, explicit root adoption and root final verification.
+
+Each context preserves2complete schema-valid WHOLE objects with identical6required fields; one adds only toolAction/toolSummary. Zero preview exclusions/schema losses; no object manually selected, spliced or synthesized, and each context counts once. Whole source, result and original strict-e3 review objects remain unchanged. All269packet inputs remain byte-identical. Canonical actual-provider identity is unavailable; requested GeminiHIGH/fallback identities remain honest.
+
+Root must explicitly adopt the exact revised guard and verify actualmainf794/tree3a765, all38exact upstream path/status/blob/SHA256 entries, incoming8267/all39pins/currentlock, clean source/merge and expected integrationtree7e7a6fc1980b67c06ba9ceda78a6f11eaf682227 before using these confirmations. This grants no future-base approval. The original e3 guards are still unsatisfied and preserved; no historical vote was relabeled.
+
+Original4commands/12tests remain captured observations of8267; no merged-tree execution or same-binary-digest claim is made. No product rerun, Git or worktree mutation occurred here. All fullwire/work/binding/native/proof/ledger and parent acceptance limitations remain. RESULTS.json retains exact hashes, context metadata and first findings; complete public WHOLE/TASK/schema/PROCESS/ambiguity copies are beside it.

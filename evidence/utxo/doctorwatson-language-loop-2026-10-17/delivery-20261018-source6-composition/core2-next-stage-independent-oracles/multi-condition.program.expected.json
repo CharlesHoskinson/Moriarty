@@ -1,0 +1,123 @@
+{
+  "actions": [
+    {
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "name": "deliver",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "PAY",
+          "from": "alice",
+          "kind": "Transfer",
+          "to": "escrow"
+        },
+        {
+          "amount": 1,
+          "asset": "PAY",
+          "creditor": "bob",
+          "debtor": "escrow",
+          "kind": "Liability",
+          "name": "delivery"
+        },
+        {
+          "binders": [
+            {
+              "name": "documentObserved",
+              "ty": "Bool"
+            },
+            {
+              "name": "approvedAmount",
+              "ty": "UInt"
+            }
+          ],
+          "guard": 6,
+          "kind": "Await",
+          "label": "release"
+        },
+        {
+          "amount": 7,
+          "asset": "PAY",
+          "from": "escrow",
+          "kind": "Transfer",
+          "to": "bob"
+        },
+        {
+          "amount": 8,
+          "kind": "Discharge",
+          "name": "delivery"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "multi-condition-input",
+        "network": "local",
+        "reference": "PAY",
+        "scale": 0
+      },
+      "name": "PAY"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "documentObserved"
+    },
+    {
+      "kind": "Name",
+      "name": "approvedAmount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 3,
+      "op": "Ge",
+      "rhs": 4
+    },
+    {
+      "kind": "Binary",
+      "lhs": 2,
+      "op": "And",
+      "rhs": 5
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    }
+  ],
+  "language": "moriarty/2",
+  "name": "MultiConditionDelivery",
+  "semantics": "moriarty-core/2",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      },
+      "name": "marker",
+      "ty": "UInt"
+    }
+  ]
+}

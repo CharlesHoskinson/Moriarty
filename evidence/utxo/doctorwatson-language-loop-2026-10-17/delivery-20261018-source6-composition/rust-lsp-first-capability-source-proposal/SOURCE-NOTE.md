@@ -1,0 +1,9 @@
+# Source preparation note
+
+All repository files were copied by read-only git show from the exact full commit/tree in INPUT-PINS.json. The working checkout and Git were not edited. The required plugin/status startup was read/run read-only; historical SP01.6 blockers remain unchanged and select no current work.
+
+Public source acquisition used installed Scrapling0.4.15, public unauthenticated registry metadata/static archives and official Microsoft LSP3.17 documentation only. No package installation, Cargo, rustc, generated lock, library code, model, SDK, VM/proof/key or product process was run. No cookie/auth/provider/private streams were retained or read. No new site pattern or cookie retention was necessary. Existing source copies/checksums and original caps/failures remain unchanged.
+
+PROPOSED-SOURCE-PINS.json verifies each public archive against registry metadata checksums, NOT current Cargo.lock. Repo lock SHA remains the input pin. lsp-server0.10.0, gen-lsp-types0.11.0 and original lsp-types0.97.0 are finite candidate inspection inputs only. They are not three simultaneously proposed dependencies, not a resolved lock graph, and not security or execution votes. Safe extraction rejected traversal/special files and copied only finite normal UTF8 source/TOML/Markdown/JSON/license text. The original archive and per-file provenance remain physical.
+
+Brainstorming explored existing requirements and three transport choices with exact type/profile alternatives. DESIGN.md and DESIGN-DECISION-CONTRACT.json are unadopted. The requested complete source/test candidate is dependent on two substantive agreeing ordinary choices and root adoption; no premature partial implementation or fake candidate.patch is supplied. Independent source preparation continues through the exact normal protocol oracle and source packet. No security/hostile tests are authored.

@@ -1,0 +1,156 @@
+[
+  {
+    "choice": "B",
+    "limitations": [
+      "Source analysis is strictly static and scoped to pinned commit 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb (20 verified public files); no shell, compiler, Aiken, Cargo, cardano-cli, node, VM, prover, wallet, or network execution was performed.",
+      "This proposal decides only Q1 (selecting Route B with one guarded source-authoring increment) and does not decide or pre-approve Q2-Q6, which remain explicit downstream dependencies.",
+      "The production guard PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923) is preserved unchanged; no source patch is authored or applied in this task, and root requires two substantive agreeing proposals before adoption.",
+      "Original EUC-012 and EUC-013 requirements remain OPEN, generated production end-to-end execution remains UNESTABLISHED, and fixed-C2 (EnvV2/Issue/Burn) remains a separate ABI and evidence class that does not substitute for generated spending correspondence.",
+      "subjectSha256 binds only the review input packet bytes and is not an authenticated ledger, runtime, or script identity; model self-report is not canonical provider identity."
+    ],
+    "namedRelation": "Profile moriarty-financial-agreement-source/5 (moriarty-financial-expression-contract/4, moriarty-financial-lifecycle-state/1, public-single-head-script-custody-transfer/1) closed revision03 T1 HeadDatum (Constr 0, 13 positional fields: program_hash, bounds_hash, source_hash, schema_hash, seed_hash, domain_network=\"yaci-isolated-t1\", domain_deployment=\"t1-custody-revision03\", instance_id, transport_revision, transport_remaining, ordinary_locked, ordinary_revision, lifecycle: LifecycleState Constr 0 with 9 positional fields schema_version, balances, allowances, obligations=[], used_transfer_ids, used_allocation_ids=[], used_origination_ids=[], used_accrual_ids=[], work: Work{remaining,spent,closure_reserve}) and Redeemer (Release Constr 0 | Refund Constr 1 | Cancel Constr 2, each with 5 positional fields actor, recipient, transfer_id, lower, upper) enforced by financial_head(seed, cash, lender, borrower, genesis).spend(datum, redeemer, own_ref, self) in lower-custody.mjs:258-272,1297-1330 and native-financial.mjs:190-309; strictly separate from fixed-C2 EnvV2/ThreadDatumV2/Issue/Burn (c2.ak:9-26).",
+    "nextSourceIncrement": "In compile-custody.mjs (lines 339-358, 395-408) and apply-head.mjs (applyUnitParameters lines 87-218 plus a calibrated-sibling parameter application helper): (1) gate blueprint publication (cpSync to outDir/plutus.json), parameter application, and non-null blueprintPath return strictly on (checkOk && compiled) rather than (compiled) alone, and when (checkOk && compiled && applied?.ok) persist the applied financial_head.spend PlutusScriptV3 envelope (head.applied.script.json from appliedSpend.compiledCode, verified byte-identical to appliedMint.compiledCode and 4-way blake2b-224/Lucid/cardano-cli hash-agreed) alongside .uplc artifacts in outDir; and (2) provide a hash-pinned sibling application helper for compileGuardSibling/runNativeCaller that verifies the unapplied financial_head hash against the same-run admitted compileCustody output hash (instead of rejecting calibrated siblings at applyHeadToCashPolicy line 356 with UNAPPLIED_HEAD_UNEXPECTED) and binds admitted cashPolicyId, seed OutputReference, lenderVkh, borrowerVkh, and genesisDigest, while preserving the PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE guard (native-caller.mjs:2915-2923) unchanged until all four production consumer bindings (policy, script, budget, minAda) are explicitly supplied and verified.",
+    "reason": "Route B (calibrated generated sibling from compileGuardSibling -> compileCustody -> lowerCustody -> applyUnitParameters plus exact applied financial_head.spend entry) is the only route in the pinned source that compiles the actual moriarty-financial-agreement-source/5 validator with POSIX-calibrated guard literals (satisfying EUC-008) and produces the parameterized generated spending validator financial_head.spend needed for EUC-012 and EUC-013. Route A (applyHeadToCashPolicy in apply-head.mjs:346-418) is restricted to the uncalibrated static fixture head (1000/1100/1200 guards) because line 356 hardcodes head.hash !== UNAPPLIED_HEAD (a34f6bccd249d1524b4b72129b8d10babeb4e86145d44f27651798ca) and line 355 hardcodes embedded.hash !== FAIL_CLOSED_CASH (332f90fe4531f72bc89151eb530cdeddbd90c8bb7c1aa077ee072ed9), causing applyHeadToCashPolicy to refuse any calibrated sibling blueprint with UNAPPLIED_HEAD_UNEXPECTED, and is wired only to buildApprovedFunding with unit fixture role hashes from examples/custody-unit.manifest.json. Route C (declaring the source/profile path unsupported) is overly broad for the scoped T1 /5 custody profile because the generated validator producer (admitCustody -> lowerCustody -> compileCustody -> applyUnitParameters) and its generated entrypoint financial_head(seed, cash, lender, borrower, genesis).spend(datum, redeemer, own_ref, self) already exist in the repository (though C would apply if an unauthored general Rust /1 or strand/public-proof-claim profile were requested). Under Route B, the exact producer/artifact/statement chain is: (1) compileGuardSibling (native-caller.mjs:225-333) verifies PARITY_ADMITTED production time and invokes compileCustody (compile-custody.mjs:202-411) on sourcePath with substituteTimeGuards writing outDir/sibling.mori and outDir/SIBLING.json; (2) admitCustody (admit-custody.mjs:240-332) elaborates moriarty-financial-agreement-source/5 (contract /4, lifecycle-state/1, predicate public-single-head-script-custody-transfer/1) and computes revision03 domain hashes (sourceHash, programHash, schemaHash, seedHash, boundsHash); (3) lowerCustody (lower-custody.mjs:1214-1371) and bindOracleSpends (custody-oracle-bind.mjs:200-283) emit outDir/custody.ak (isolated validators/financial_head.ak) declaring validator financial_head(seed, cash, lender, borrower, genesis) with mint and spend(datum: Option<HeadDatum>, redeemer: Redeemer, own_ref: OutputReference, self: Transaction); (4) compileCustody runs aiken check and aiken build --uplc and invokes applyUnitParameters (apply-head.mjs:87-218), which applies definite canonical CBOR parameters [seed, cash, lender, borrower, genesis] to financial_head, verifies appliedMint.compiledCode === appliedSpend.compiledCode and 4-way Plutus V3 hash agreement (tag03 0x03 blake2b-224, Lucid mintingPolicyToId, cardano-cli hash script, cardano-cli conway transaction policyid), checks absence of cyclic identity literals (IDENTITY_LITERAL), and writes outDir/plutus.applied.json and outDir/apply-report.json. Three explicit publication/consumption gaps remain to be closed by the guarded source increment and downstream Q2-Q6 decisions while keeping PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE intact: (a) compile-custody.mjs:346-358,401 gates plutus.json publication and applyUnitParameters on compiled rather than (checkOk && compiled) and does not write a standalone V3 script envelope (head.applied.script.json) or .uplc files to outDir; (b) applyUnitParameters binds FAIL_CLOSED_CASH (332f90fe4531f72bc89151eb530cdeddbd90c8bb7c1aa077ee072ed9) and unit manifest role VKHs (c3.../d4...), while applyHeadToCashPolicy rejects calibrated siblings via UNAPPLIED_HEAD_UNEXPECTED; and (c) assembleConsumedFinancial (native-caller.mjs:2408-2750) still uses UNIT_CASH_POLICY ('aa'.repeat(28)), UNIT_HEAD_POLICY ('bb'.repeat(28)), OFFLINE_PROTOCOL_PARAMS, and unit EraHistory, and is rightly blocked in production by PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923).",
+    "remainingDependencies": {
+      "Q2": "Adopt or confirm the closed revision03 T1 HeadDatum (13 fields) + Redeemer (Release/Refund/Cancel, 5 fields) + LifecycleState (moriarty-financial-lifecycle-state/1) state/action/effect relation for moriarty-financial-agreement-source/5, and explicitly refuse any unauthored general strand or public-proof-claim ABI extension.",
+      "Q3": "Define the authenticated public producer or CLI/programmatic forwarding contract supplying detailedData (13-field HeadDatum), spendScriptPath (applied sibling PlutusScriptV3 envelope), public role verification keys (paymentVkeyCbor, lenderVkeyCbor, borrowerVkeyCbor), and 12-role dispatcher inputs setting twelveInputFrameSatisfied (currently omitted by cli.mjs:68-167).",
+      "Q4": "Author concrete authenticated production bindings for all four dependencies guarded by PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923): (1) real compiled cash and head policy IDs replacing UNIT_CASH_POLICY/UNIT_HEAD_POLICY, (2) applied calibrated sibling spendScriptPath and reconciled consumed head OutputReference (holding vs openedRef), (3) live node/era-history/protocol-parameter execution unit measurement replacing OFFLINE_PROTOCOL_PARAMS and stub EraHistory, and (4) protocol-measured minAda output sponsorship, plus authenticated role key hashes replacing unit manifest lenderVkh/borrowerVkh.",
+      "Q5": "Enforce EUC-012 failure-isolated publication in compileCustody (compile-custody.mjs:339-358,401) so plutus.json, plutus.applied.json, applied spend PlutusScriptV3 envelope, .uplc artifacts, Cardano script credentials, source digest, and dependency manifest are published only when (checkOk && compiled && applied?.ok === true) and stale/failed builds leave no success blueprint.",
+      "Q6": "Specify the EUC-013/EUC-014 observation adapter that executes the actual generated financial_head.spend entrypoint (and compiled UPLC bytes) on decoded Lucid canonical definite CBOR inputs and reconstructed transaction contexts across all Packet 19 source-envelope cases to compare ordinary post, canonical admitted financialPost, ordered effects, and workRemaining, while preserving sourceCode on spending refusal."
+    },
+    "reviewToken": "doctorwatson-utxo-generated-spend-owner-design-q1-one-20261018-a2-whole-design",
+    "sourceFacts": [
+      {
+        "fact": "Source snapshot main9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb;20completepublicfiles match custodianSOURCE-PINS. This is not a current-main/runtime observation.",
+        "id": "F1",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "Actual integrated CLI request construction does not forward detailedData or spendScriptPath. runNativeCaller(request={}) is an open object API, not a declared closed schema.",
+        "id": "F2",
+        "source": "cli.mjs68-167;native-caller.mjs2770;REQUEST-SURFACE.md",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "Current consumed-financial helper reads13field detailedData and request.spendScriptPath; dispatcher twelveInputFrameSatisfied controls this branch. A filename alone does not replace UNIT policy/script/budget/minAda bindings.",
+        "id": "F3",
+        "source": "native-caller.mjs2408-2751,2915-2943",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "RealCLI+financialBody+productionAdmitted sibling sets PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE with current-policy-script-budget-minAda-binding-required and blocks consuming builder in this source. Preserve this guard.",
+        "id": "F4",
+        "source": "native-caller.mjs2915-2936",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "Generated financial_head has parameterized mint/spend with HeadDatum and Release/Refund/Cancel. Existing applyHeadToCashPolicy checks fixed identities; compileGuardSibling/compileCustody are separate producer paths. FixedC2 uses EnvV2 and is a separate ABI.",
+        "id": "F5",
+        "source": "lower-custody.mjs258-272,1297-1330;apply-head.mjs346-418;c2.ak9-26",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "No authenticated production datum/UTxO reference/public-role/target-binding relation is selected or established by this packet. Owner must identify required facts/definition; do not infer authenticity from shape or path.",
+        "id": "U1",
+        "status": "UNKNOWN_UNASSESSED"
+      },
+      {
+        "fact": "Generated production end-to-end and originalEUC012/013 acceptance remain unestablished/open. No current SDK/ledger/execution authority or target qualification is supplied.",
+        "id": "U2",
+        "status": "UNKNOWN_UNASSESSED"
+      },
+      {
+        "fact": "Q2-Q6 relation, producer, authenticatedcontext, publication and observation dependencies remain owner-unassessed except public source facts; this task does not silently decide them.",
+        "id": "U3",
+        "status": "UNKNOWN_UNASSESSED"
+      }
+    ],
+    "subjectSha256": "f505c0cce87297d8eb2e724e9550db272aff95dee8fd516aacfd8c70be8ba40c",
+    "toolAction": "Submitting Q1 owner design proposal",
+    "toolSummary": "Submit schema-valid Q1 design proposal",
+    "unresolvedPredicates": [
+      "Authenticated production role key hashes (lenderVkh, borrowerVkh) and public verification keys (paymentVkeyCbor, lenderVkeyCbor, borrowerVkeyCbor) replacing unit fixture constants c3...c3 and d4...d4 in custody-unit.manifest.json.",
+      "Authenticated production cash policy binding for calibrated sibling parameter application replacing FAIL_CLOSED_CASH (332f90fe4531f72bc89151eb530cdeddbd90c8bb7c1aa077ee072ed9) in applyUnitParameters and UNIT_CASH_POLICY/UNIT_HEAD_POLICY (aa...aa/bb...bb) in assembleConsumedFinancial.",
+      "Authoritative consumed head OutputReference selection reconciling the connected funding branch (holding from cash mint vs head-open output) and the consumed-financial branch (openedRef from head-open transaction output at native-caller.mjs:2600).",
+      "Live node protocol parameter, EraHistory, Plutus script execution unit budget, and protocol minAda measurement bindings required to satisfy and lift PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923).",
+      "Executed EUC-012 check-gated isolated artifact publication and EUC-013/EUC-014 compiled generated-spending correspondence across all Packet 19 positive and negative source envelopes."
+    ],
+    "verdict": "recommend-route"
+  },
+  {
+    "choice": "B",
+    "limitations": [
+      "Source analysis is strictly static and scoped to pinned commit 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb (20 verified public files); no shell, compiler, Aiken, Cargo, cardano-cli, node, VM, prover, wallet, or network execution was performed.",
+      "This proposal decides only Q1 (selecting Route B with one guarded source-authoring increment) and does not decide or pre-approve Q2-Q6, which remain explicit downstream dependencies.",
+      "The production guard PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923) is preserved unchanged; no source patch is authored or applied in this task, and root requires two substantive agreeing proposals before adoption.",
+      "Original EUC-012 and EUC-013 requirements remain OPEN, generated production end-to-end execution remains UNESTABLISHED, and fixed-C2 (EnvV2/Issue/Burn) remains a separate ABI and evidence class that does not substitute for generated spending correspondence.",
+      "subjectSha256 binds only the review input packet bytes and is not an authenticated ledger, runtime, or script identity; model self-report is not canonical provider identity."
+    ],
+    "namedRelation": "Profile moriarty-financial-agreement-source/5 (moriarty-financial-expression-contract/4, moriarty-financial-lifecycle-state/1, public-single-head-script-custody-transfer/1) closed revision03 T1 HeadDatum (Constr 0, 13 positional fields: program_hash, bounds_hash, source_hash, schema_hash, seed_hash, domain_network=\"yaci-isolated-t1\", domain_deployment=\"t1-custody-revision03\", instance_id, transport_revision, transport_remaining, ordinary_locked, ordinary_revision, lifecycle: LifecycleState Constr 0 with 9 positional fields schema_version, balances, allowances, obligations=[], used_transfer_ids, used_allocation_ids=[], used_origination_ids=[], used_accrual_ids=[], work: Work{remaining,spent,closure_reserve}) and Redeemer (Release Constr 0 | Refund Constr 1 | Cancel Constr 2, each with 5 positional fields actor, recipient, transfer_id, lower, upper) enforced by financial_head(seed, cash, lender, borrower, genesis).spend(datum, redeemer, own_ref, self) in lower-custody.mjs:258-272,1297-1330 and native-financial.mjs:190-309; strictly separate from fixed-C2 EnvV2/ThreadDatumV2/Issue/Burn (c2.ak:9-26).",
+    "nextSourceIncrement": "In compile-custody.mjs (lines 339-358, 395-408) and apply-head.mjs (applyUnitParameters lines 87-218 plus a calibrated-sibling parameter application helper): (1) gate blueprint publication (cpSync to outDir/plutus.json), parameter application, and non-null blueprintPath return strictly on (checkOk && compiled) rather than (compiled) alone, and when (checkOk && compiled && applied?.ok) persist the applied financial_head.spend PlutusScriptV3 envelope (head.applied.script.json from appliedSpend.compiledCode, verified byte-identical to appliedMint.compiledCode and 4-way blake2b-224/Lucid/cardano-cli hash-agreed) alongside .uplc artifacts in outDir; and (2) provide a hash-pinned sibling application helper for compileGuardSibling/runNativeCaller that verifies the unapplied financial_head hash against the same-run admitted compileCustody output hash (instead of rejecting calibrated siblings at applyHeadToCashPolicy line 356 with UNAPPLIED_HEAD_UNEXPECTED) and binds admitted cashPolicyId, seed OutputReference, lenderVkh, borrowerVkh, and genesisDigest, while preserving the PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE guard (native-caller.mjs:2915-2923) unchanged until all four production consumer bindings (policy, script, budget, minAda) are explicitly supplied and verified.",
+    "reason": "Route B (calibrated generated sibling from compileGuardSibling -> compileCustody -> lowerCustody -> applyUnitParameters plus exact applied financial_head.spend entry) is the only route in the pinned source that compiles the actual moriarty-financial-agreement-source/5 validator with POSIX-calibrated guard literals (satisfying EUC-008) and produces the parameterized generated spending validator financial_head.spend needed for EUC-012 and EUC-013. Route A (applyHeadToCashPolicy in apply-head.mjs:346-418) is restricted to the uncalibrated static fixture head (1000/1100/1200 guards) because line 356 hardcodes head.hash !== UNAPPLIED_HEAD (a34f6bccd249d1524b4b72129b8d10babeb4e86145d44f27651798ca) and line 355 hardcodes embedded.hash !== FAIL_CLOSED_CASH (332f90fe4531f72bc89151eb530cdeddbd90c8bb7c1aa077ee072ed9), causing applyHeadToCashPolicy to refuse any calibrated sibling blueprint with UNAPPLIED_HEAD_UNEXPECTED, and is wired only to buildApprovedFunding with unit fixture role hashes from examples/custody-unit.manifest.json. Route C (declaring the source/profile path unsupported) is overly broad for the scoped T1 /5 custody profile because the generated validator producer (admitCustody -> lowerCustody -> compileCustody -> applyUnitParameters) and its generated entrypoint financial_head(seed, cash, lender, borrower, genesis).spend(datum, redeemer, own_ref, self) already exist in the repository (though C would apply if an unauthored general Rust /1 or strand/public-proof-claim profile were requested). Under Route B, the exact producer/artifact/statement chain is: (1) compileGuardSibling (native-caller.mjs:225-333) verifies PARITY_ADMITTED production time and invokes compileCustody (compile-custody.mjs:202-411) on sourcePath with substituteTimeGuards writing outDir/sibling.mori and outDir/SIBLING.json; (2) admitCustody (admit-custody.mjs:240-332) elaborates moriarty-financial-agreement-source/5 (contract /4, lifecycle-state/1, predicate public-single-head-script-custody-transfer/1) and computes revision03 domain hashes (sourceHash, programHash, schemaHash, seedHash, boundsHash); (3) lowerCustody (lower-custody.mjs:1214-1371) and bindOracleSpends (custody-oracle-bind.mjs:200-283) emit outDir/custody.ak (isolated validators/financial_head.ak) declaring validator financial_head(seed, cash, lender, borrower, genesis) with mint and spend(datum: Option<HeadDatum>, redeemer: Redeemer, own_ref: OutputReference, self: Transaction); (4) compileCustody runs aiken check and aiken build --uplc and invokes applyUnitParameters (apply-head.mjs:87-218), which applies definite canonical CBOR parameters [seed, cash, lender, borrower, genesis] to financial_head, verifies appliedMint.compiledCode === appliedSpend.compiledCode and 4-way Plutus V3 hash agreement (tag03 0x03 blake2b-224, Lucid mintingPolicyToId, cardano-cli hash script, cardano-cli conway transaction policyid), checks absence of cyclic identity literals (IDENTITY_LITERAL), and writes outDir/plutus.applied.json and outDir/apply-report.json. Three explicit publication/consumption gaps remain to be closed by the guarded source increment and downstream Q2-Q6 decisions while keeping PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE intact: (a) compile-custody.mjs:346-358,401 gates plutus.json publication and applyUnitParameters on compiled rather than (checkOk && compiled) and does not write a standalone V3 script envelope (head.applied.script.json) or .uplc files to outDir; (b) applyUnitParameters binds FAIL_CLOSED_CASH (332f90fe4531f72bc89151eb530cdeddbd90c8bb7c1aa077ee072ed9) and unit manifest role VKHs (c3.../d4...), while applyHeadToCashPolicy rejects calibrated siblings via UNAPPLIED_HEAD_UNEXPECTED; and (c) assembleConsumedFinancial (native-caller.mjs:2408-2750) still uses UNIT_CASH_POLICY ('aa'.repeat(28)), UNIT_HEAD_POLICY ('bb'.repeat(28)), OFFLINE_PROTOCOL_PARAMS, and unit EraHistory, and is rightly blocked in production by PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923).",
+    "remainingDependencies": {
+      "Q2": "Adopt or confirm the closed revision03 T1 HeadDatum (13 fields) + Redeemer (Release/Refund/Cancel, 5 fields) + LifecycleState (moriarty-financial-lifecycle-state/1) state/action/effect relation for moriarty-financial-agreement-source/5, and explicitly refuse any unauthored general strand or public-proof-claim ABI extension.",
+      "Q3": "Define the authenticated public producer or CLI/programmatic forwarding contract supplying detailedData (13-field HeadDatum), spendScriptPath (applied sibling PlutusScriptV3 envelope), public role verification keys (paymentVkeyCbor, lenderVkeyCbor, borrowerVkeyCbor), and 12-role dispatcher inputs setting twelveInputFrameSatisfied (currently omitted by cli.mjs:68-167).",
+      "Q4": "Author concrete authenticated production bindings for all four dependencies guarded by PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923): (1) real compiled cash and head policy IDs replacing UNIT_CASH_POLICY/UNIT_HEAD_POLICY, (2) applied calibrated sibling spendScriptPath and reconciled consumed head OutputReference (holding vs openedRef), (3) live node/era-history/protocol-parameter execution unit measurement replacing OFFLINE_PROTOCOL_PARAMS and stub EraHistory, and (4) protocol-measured minAda output sponsorship, plus authenticated role key hashes replacing unit manifest lenderVkh/borrowerVkh.",
+      "Q5": "Enforce EUC-012 failure-isolated publication in compileCustody (compile-custody.mjs:339-358,401) so plutus.json, plutus.applied.json, applied spend PlutusScriptV3 envelope, .uplc artifacts, Cardano script credentials, source digest, and dependency manifest are published only when (checkOk && compiled && applied?.ok === true) and stale/failed builds leave no success blueprint.",
+      "Q6": "Specify the EUC-013/EUC-014 observation adapter that executes the actual generated financial_head.spend entrypoint (and compiled UPLC bytes) on decoded Lucid canonical definite CBOR inputs and reconstructed transaction contexts across all Packet 19 source-envelope cases to compare ordinary post, canonical admitted financialPost, ordered effects, and workRemaining, while preserving sourceCode on spending refusal."
+    },
+    "reviewToken": "doctorwatson-utxo-generated-spend-owner-design-q1-one-20261018-a2-whole-design",
+    "sourceFacts": [
+      {
+        "fact": "Source snapshot main9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb;20completepublicfiles match custodianSOURCE-PINS. This is not a current-main/runtime observation.",
+        "id": "F1",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "Actual integrated CLI request construction does not forward detailedData or spendScriptPath. runNativeCaller(request={}) is an open object API, not a declared closed schema.",
+        "id": "F2",
+        "source": "cli.mjs68-167;native-caller.mjs2770;REQUEST-SURFACE.md",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "Current consumed-financial helper reads13field detailedData and request.spendScriptPath; dispatcher twelveInputFrameSatisfied controls this branch. A filename alone does not replace UNIT policy/script/budget/minAda bindings.",
+        "id": "F3",
+        "source": "native-caller.mjs2408-2751,2915-2943",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "RealCLI+financialBody+productionAdmitted sibling sets PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE with current-policy-script-budget-minAda-binding-required and blocks consuming builder in this source. Preserve this guard.",
+        "id": "F4",
+        "source": "native-caller.mjs2915-2936",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "Generated financial_head has parameterized mint/spend with HeadDatum and Release/Refund/Cancel. Existing applyHeadToCashPolicy checks fixed identities; compileGuardSibling/compileCustody are separate producer paths. FixedC2 uses EnvV2 and is a separate ABI.",
+        "id": "F5",
+        "source": "lower-custody.mjs258-272,1297-1330;apply-head.mjs346-418;c2.ak9-26",
+        "status": "KNOWN_PUBLIC_SOURCE"
+      },
+      {
+        "fact": "No authenticated production datum/UTxO reference/public-role/target-binding relation is selected or established by this packet. Owner must identify required facts/definition; do not infer authenticity from shape or path.",
+        "id": "U1",
+        "status": "UNKNOWN_UNASSESSED"
+      },
+      {
+        "fact": "Generated production end-to-end and originalEUC012/013 acceptance remain unestablished/open. No current SDK/ledger/execution authority or target qualification is supplied.",
+        "id": "U2",
+        "status": "UNKNOWN_UNASSESSED"
+      },
+      {
+        "fact": "Q2-Q6 relation, producer, authenticatedcontext, publication and observation dependencies remain owner-unassessed except public source facts; this task does not silently decide them.",
+        "id": "U3",
+        "status": "UNKNOWN_UNASSESSED"
+      }
+    ],
+    "subjectSha256": "f505c0cce87297d8eb2e724e9550db272aff95dee8fd516aacfd8c70be8ba40c",
+    "unresolvedPredicates": [
+      "Authenticated production role key hashes (lenderVkh, borrowerVkh) and public verification keys (paymentVkeyCbor, lenderVkeyCbor, borrowerVkeyCbor) replacing unit fixture constants c3...c3 and d4...d4 in custody-unit.manifest.json.",
+      "Authenticated production cash policy binding for calibrated sibling parameter application replacing FAIL_CLOSED_CASH (332f90fe4531f72bc89151eb530cdeddbd90c8bb7c1aa077ee072ed9) in applyUnitParameters and UNIT_CASH_POLICY/UNIT_HEAD_POLICY (aa...aa/bb...bb) in assembleConsumedFinancial.",
+      "Authoritative consumed head OutputReference selection reconciling the connected funding branch (holding from cash mint vs head-open output) and the consumed-financial branch (openedRef from head-open transaction output at native-caller.mjs:2600).",
+      "Live node protocol parameter, EraHistory, Plutus script execution unit budget, and protocol minAda measurement bindings required to satisfy and lift PRODUCTION_FINANCIAL_CONSUMER_INCOMPLETE (native-caller.mjs:2915-2923).",
+      "Executed EUC-012 check-gated isolated artifact publication and EUC-013/EUC-014 compiled generated-spending correspondence across all Packet 19 positive and negative source envelopes."
+    ],
+    "verdict": "recommend-route"
+  }
+]

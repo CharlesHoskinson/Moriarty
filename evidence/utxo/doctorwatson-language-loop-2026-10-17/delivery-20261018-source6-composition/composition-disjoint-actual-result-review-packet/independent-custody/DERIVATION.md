@@ -1,0 +1,85 @@
+# Independent disjoint-composition positive expectations
+
+Status: **complete selected positive expectation packet; actual consumers UNRUN**. The packet contains the exact nine frozen inputs, complete independent child Programs/filled StagePlans and canonical preimages, ten complete expanded Pair report goldens, and one complete public aggregate byte golden. Financial/work/value/history expectations are independently source-derived. Full field/attachment/byte expectations are conditional on the separately supplied authored implementation-derived codec; they are not independent compiler-wire proof.
+
+The falsifiable future predicates are complete equality for every expanded Pair report, lossless expansion of every case reference back to its independent report, exact complete aggregate bytes, and separately actual full child Program/Plan correspondence. Expected reports/continuations never supply actual runtime state. File presence, child hashes or successful report comparisons do not by themselves observe full parsed Programs or Plans.
+
+## Basis, custody and exposure
+
+The input-only MANIFEST SHA is `e21bb787aca12dfc6c165f5a833a51c706073b093344dae6f2fe932c7f0f2fa1`; its final packet freeze SHA is `da05ddb06df55a43046b716312c3430e74897d4963f8879c09bd08f9574d28a5`. The earlier nine-input freeze SHA is `ad734f7023fd54b85b2d1fae0b9f76efa641b4f8e80a54426b56a7cbacfbb1c4`. All hashes/sizes and all nine unchanged input bytes were checked before use. The complete permitted input-only packet is copied under basis/input-packet/; it contains no producer/test/expected output bodies. Active inputs/ retain exact original bytes and relative names.
+
+D1–D5/RV1–RV3 select a conditional ordinary two-member whole-program state/asset/source-duty-disjoint local product, fixed starts0 then1 and explicit subsequent member events. Core2 M01/ordinary clauses select expression representation, captures, Step attachment, status projection and logical work. Designated-owner M03 F4 supplies local observational preimages/digests. Public core language background is documented as /1; it is used only for the narrow existing shared finite operation premise referred to by adopted /2 clauses: checked UInt +/− and comparisons; current state/let/event reads; Next/Emit; transfer/fee; duty checked addition/discharge. Root explicitly directed that scope before this freeze. No /1 report/DTO/test result is inherited and no new global /2 semantic selection is asserted.
+
+PROPOSED-FIELD-CODEC.md SHA `c3d50289dda2d373597a8be5245eecd8962850a3b5314e1dd1e04716832c27e4` is **authored, implementation-derived schema**, not independent wire/value evidence or an additional semantic adoption. Its exact full Pair/case/error field expansion, reference attachments, rendering and StagePlan no-idle-row detail are declared representation premises. This custodian read that contract by authorization, not its producer/source pins' implementation bodies. Independent numbers were not obtained from it. Initial Program/Plan/arithmetic files were assembled before reading this Pair codec; agreement with the authored shape is not behavior proof. BASIS.json retains these distinctions.
+
+Prior exposure is explicit: this custodian earlier handled R3 staged fixture/report custody, potentially the same original child examples, other independently authored Core1/Core2/Source6 oracles and public DTOs. Earlier unrelated Core2 DTO excerpts incidentally displayed a residual helper and InputDecl-to-StageBinder conversion; those exposures were disclosed at that time. No old report was reread to fill this packet. This is not blinded or preimplementation work. Only these exact current inputs and public/adopted semantics plus disclosed authored schema determine the new expectations. Inbound unrelated result-count status messages are not output/value oracles and were not used.
+
+Development skill/AGENTS/product/status were restored in read-only W. Only this new outside-Git directory was written. No producer Pair evaluation/report, parser/plan builder/compiler, testexpected or actual output body was read. No product/consumer/Cargo/rustc/rustfmt/Node/Mori/model/SDK/native/network/private or Git mutation was run. Plain independent Python copied bytes, assembled explicitly chosen JSON literals, performed integer/hash checks and combined literal prefixes; no production helper was imported or called. All prior input freezes, reviews, failures and counters remain unchanged.
+
+## Complete child Programs and identities
+
+TwoDeliveries has state phase/UInt/initial0, exact asset `(local,independent-staged-test-oracle,UNIT,scale0)`, selected deliver() and unused declare(). M01 gives nodes0..7: Literal7, Literal1, Name ok, Literal3, Name seen, Literal2, Name phase, Literal0. Deliver roots0,1,2,3,4,5,6 are Transfer, Next, Await approval, Transfer, Await receipt, Next, Emit done. Unused declare retains Liability duty/UNIT/alice/bob/root7. Initial state literals are direct declaration values, not arena nodes. Keeping unused declare is necessary to whole Program identity and source-wide duty identity; it is never executed.
+
+ReserveContinuationOracle declares basis40,allocated0,marker77 and exact asset `(local,continuation-reserve-oracle,UNIT,scale0)` aliased CREDIT. Its sole allocate(extra:UInt) has22 fresh nodes0..21: basis,extra,Add(0,1); basis,Literal5,Sub(3,4); held; quote,held,Ge(7,8); held; held; held; basis,quote,Add(13,14); ready; quote,Literal50,Le(17,18); extra; quote. Statement roots are2,5,6,9,10,11,12,15,16,19,20,21. Every repeated name occurrence remains a separate node. Full metadata, state/action/input/asset arrays and all expression edges are frozen in the complete Program JSONs.
+
+TwoDeliveries plan includes both actions. Deliver sites1/ordinal2/approval/ok:Bool with captures[], then2/ordinal4/receipt/seen:Bool with prior Event ok at ordinal2. It excludes pending seen. Deliver costs[5,5,6], committed_before[0,5,10], total16. Unused declare has sites[], costs[2], committed_before[0], total2. Its static cost is in the whole Plan identity but not the selected execution budget.
+
+Reserve sites are1/ordinal3/approval/quote:UInt and2/ordinal8/settlement/ready:Bool. Site1 captures Input extra/UInt/ordinal0 then Let held/UInt/ordinal0. Site2 appends prior Event quote/UInt/ordinal3. State fields are excluded; pending quote/ready are excluded from their own sites. There is no liveness pruning. Actual captures are extra2,held42, then quote43. Plan costs[11,15,10], committed_before[0,11,26], total36. No synthetic idle row is inserted in either sites array under the explicit authored codec premise; PendingFrame idle0 remains separate.
+
+M03 canonical preimages are compact UTF8 recursively key-sorted JSON, arrays unchanged, canonical UInt strings/u16-u8 numbers, no prefix/framing/whitespace/final LF. StagePlan is fully filled with child program_hash and all actions/costs before hashing. Every chosen value is ASCII, so independent standard JSON encoding has no non-ASCII escape ambiguity. Independent SHA256 gives:
+
+| Child object | Preimage bytes | Local digest |
+| --- | --- | --- |
+| TwoDeliveries Program |1301|582b7923087e42b46c318576ad4bb786904b7ac0691a6c4580ed2deb187afe44|
+| TwoDeliveries Plan |618|d9f7cba42cd4ce1dc1f70544a3592b8a0aba984c8f5cd779c3716d26ca1ac575|
+| Reserve Program |2089|60ff43afae17f7d7d4f32e734f4cb841aff28552a7ec8223948a55e3b25b550a|
+| Reserve Plan |744|634bf5ef487e9f4b2a2828d89a6dd2afe158e0edc9514437fbae04245dbf7ef7|
+
+IDENTITY-DIGESTS names every exact object/preimage/source file. Pretty object file hashes differ from semantic digest preimages. These local diagnostic identities are not proof/authentication keys. **No Pair hash or Pair preimage is selected or invented.** The proposed positive test loads only eleven report files; separate actual consumers are needed to observe these four complete Program/Plan objects and canonical identities.
+
+## Independent member values, complete frames and work
+
+TwoDeliveries opens phase0, balances alice20,bob0,observer11,treasury0 and incoming duty5/alice→bob. Transfer7 gives alice13/bob7; Next phase1 updates immediately; await approval entry stops without a Step. Its first segment has indices0,1, values UInt7/UInt1 and deltas Transfer7/State0→1. Work2+2+entry1=5. Pending frame is site1/captures[], which is not idle despite empty captures.
+
+Approval ok=true emits original Await index2, Booltrue, unchanged member boundary/effects[]. Transfer3 at index3 yields alice10/bob10, UInt3 and Transfer3. Await receipt entry emits no Step. Work guard2+transfer2+entry1=5; committed10. Pending site2 captures ok=true. Receipt seen=true emits Await index4/Booltrue, then Next phase2 at5/UInt2/State1→2 and Emit done2 at6/UInt2. Work2+2+2=6; committed16. Full balances close alice10,bob10,observer11,treasury0, total31. Duty5 is never discharged or reset by unused declare; it remains positive on completion. Observer11/treasury0 survive every prefix. No fee is charged.
+
+Reserve opens basis40,allocated0,marker77, balances observer42,reserve100,target0,treasury0 and present allocation5/reserve→target. Let held=40+2 captures42 without changing state. Next basis=40−5 sets35. Liability adds42 to the existing duty5, yielding47; its Step.value is **42**, not47. Start indices0,1,2 have values42,35,42 and deltas[],State40→35,Liability5→47. Work4+4+2+entry1=11; pending approval captures extra2/held42.
+
+Quote43≥held42 is true. Approval emits Await index3/Booltrue with pre-boundary/effects[]. Next allocated42 at4, Transfer42 at5, Discharge42 at6 and Next basis=35+43=78 at7 follow. Discharge Step.value is **42**, not closing5. Balances become reserve58,target42; duty returns47−42=5. Work guard4+2+2+2+4+next-entry1=15; committed26. Pending settlement captures extra2/held42/quote43. Held remains42 rather than being recaptured from basis35 or78.
+
+Settlement ready=true emits Await index8/Booltrue. Requires quote43≤50 at9 emits Booltrue with unchanged state/effects[]. Fee extra2 at10 leaves reserve56/treasury2, emits UInt2/Fee2; Emit settled_quote43 at11 emits UInt43/Emit43. Work2+4+2+2=10; committed36. Final state basis78,allocated42,marker77. Balance sum142 stays142: observer42,reserve56,target42,treasury2. Gross reserve debit44 includes transfer42 and fee2; target net42, treasury net2. Allocation opening5+added42−discharged42=closing5 stays positive. Closing reserve56 is unspent balance, not rounding dust or an automatically protected recovery reserve.
+
+FULL-PREFIX-SNAPSHOTS-AND-WORK and MEMBER-EXPECTED-SEGMENTS retain all19 unique source Step records, full local snapshots/deltas, every captured value and all six complete child outcomes per case. A member's execution/pre/post/steps/continuation/residual contain only its own complete supplied domain, never padding with the other asset/state. All19 source statements execute once per schedule; unused declare is excluded. No state map contains an input/let/event capture. All mathematical work is charged by adopted /2 statement/node/entry rules, not Step count or target cost.
+
+## Both schedules and complete Pair fields
+
+Whole-program state names, exact asset sets and source duty names are disjoint. Shared account strings observer/treasury are safe distinct rows here because their exact AssetIds differ. Equal reference UNIT and scale0 do not permit cross-asset addition. D1's strong subset excludes same-asset disjoint-account composition; it does not retire that broader required case. There is no hidden third domain.
+
+Pair pre is the full union of both normalized original pre-snapshots. Pair post is the full union of both current member boundaries. It preserves four typed state fields, eight full balance rows and two duties, with canonical asset/account/name order. The other complete member boundary survives each selected member resume unchanged. Pair frames/members are in manifest order; members are latest original whole invocation envelopes. History retains starts0 then1 followed by the exact successful schedule observations; it is not reconstructed from final state.
+
+All selected guards are true. The nine input files include no false or error event; concrete false/error goldens are therefore unselected rather than invented. Generic adopted false semantics remain: actual guard work contributes attempted, committed/continuation stay unchanged, latest segment is null and history still retains the observation. This positive packet does not observe that case or any failure diagnostic.
+
+The underlying invocation schedules are starts0,1 then0,1,0,1 for left-first, or starts0,1 then1,0,1,0 for right-first. Each case has six member invocations and five Pair observations. Both reach52 attempted/committed units, caps16/36 unchanged and descriptive cap_total52; no member borrows capacity or resets work. Prefixes are:
+
+| Case | Pair attempted/committed totals | History lengths | Effect prefix lengths |
+| --- | --- | --- | --- |
+| left-first |16,21,36,42,52|2,3,4,5,6|4,5,9,11,13|
+| right-first |16,31,36,46,52|2,3,4,5,6|4,8,9,11,13|
+
+The ten complete reports retain every original Pair/member field, full local and global frames, history envelope and ordered effect. Root members are latest invocations, not cumulative synthesized segments; original attempted fields remain per-invocation while Pair attempted_total sums all published calls. Committed values are per-child successful prefixes, summed separately. Start publication occurs only after both successful starts/union; no extra public Pair after the first start is invented.
+
+Both final Pair snapshots and positive residual sets agree; ordered histories and effects differ. Root complete means both local actions completed while **allocation5 and duty5 remain positive**. No settlement, native acceptance or history proof follows. Explicit fee2 and logical52 are distinct from unmeasured DUST/service/native/circuit/wall-time/allocation costs; no interest/day-count/accrual convention, refund, mint, burn or rounding operation is added.
+
+## Aggregate representation and bytes
+
+Each expanded stage JSON is independent comparison data. The aggregate is separately assembled from those independent literals, not production output: case stages replace only cumulative history/effects with exact full-prefix references into case-local final tables, save expanded_format and change the format marker. Expansion restores the two prefixes, restores original format and removes expanded_format; every other field must equal its expanded literal. Prefix lengths are lengths, not last indices or truncation budgets. Full extension/equality is checked at each stage. No table is shared between cases or reordered to make histories match.
+
+The aggregate has exactly cases/status, manifest case order and all stage flags expected true **if actual reports match these literals**. Those flags and status passed are expectations, not an observed test pass. Data-only Python prefix assembly is disclosed: it combines independently derived whole report literals and checks exact prefix membership; it imports no producer/report/test function.
+
+public-report.json is the complete independent ASCII pretty expected document with recursively lexical object keys, array order intact, two-space indentation and one final LF. These finite report values contain only printable ASCII strings, integral indices/scales, canonical UInt strings and booleans, so independent standard JSON pretty encoding matches the declared finite codec without escape ambiguity. No public formatter generated expected bytes. Whole aggregate size839110 bytes is a static fact about these chosen expectations, not a general resource adequacy claim. Separate per-case bounds/depth/nodes remain checked statically. Exact ordinary stderr status/error bytes are not specified here; no such byte golden is fabricated. Expected exit0 is conditional on actual full comparisons matching, not an observed process result.
+
+## Remaining obligations and delivery
+
+No selected field placeholder remains under the explicit narrow finite-operation and authored representation premises. That expectation completeness is separate from actual parser/Plan/Pair/public consumer/byte/I/O behavior, independent compiler-wire correspondence or result-review approval. StagePlan no-idle-row and complete field codec remain authored-schema conditions. All14 staged gaps, R7 contradiction, prior failed reviews/caps/history, five full composition operators and U0–U7/M1–M17/MC/SP/G/native/target/proof/ledger/resource requirements retain their status. No shared-state/same-asset/arbitrary-schedule/thread/asynchronous/private/recursive/native Step/Split/Join result is implied. No security/hostile/resource judgment is supplied.
+
+INDEPENDENT-FREEZE/INVENTORY bind input custody, exact output hashes/sizes and provenance; FREEZE.sha256 binds every payload including those records, excluding itself. Root receives the final freeze before any author/future consumer uses it. Future checks must retain mismatches, use actual retained continuations/Pair state and never regenerate or weaken these expectations.

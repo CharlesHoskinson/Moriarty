@@ -1,0 +1,14 @@
+# Ordinary complete-source audit reconciliation
+
+One fresh AGYHIGH source context exited0 in138.83s. Two complete retained objects have identical six substantive fields; only toolAction/toolSummary extras differ. Both are preserved, no canonical whole object is selected or spliced, and this counts once. Requested Gemini4ArgonHigh/HIGH is explicit; canonical actual model identity remains unavailable from public provider-envelope metadata.
+
+All five source checks are satisfied-source and verdicts accept-source, conditional on unrun compilation/runtime and stated semantic/codec/exposure premises. No blocking ordinary source change is requested. The original eight adopted choices, labels, scope and parent failures/caps remain unchanged.
+
+| Material finding | Actual source/fixture basis | Disposition |
+|---|---|---|
+| Whole Program/filledPlan/preimage/localdigest comparison | New feature-gated mori-core/tests/disjoint_program_plan.rs reads4literalJSONs+4preimages before any actual publicstage::load and compares both complete Program/Plan values, canonical bytes and localhash values. Source inputs alone drive actualload. | Meaningful new positive library regression closes the specified source-test omission; actual observation remains UNRUN. |
+| Whole Pair/public output retained | Existing feature-gated publicbinarytest retains exact aggregate JSON/stdoutbytes and expands all10prefixreferences against complete independent Pairgoldens. Real CLI runner compares fullreports BEFORE projection and uses actualcontinuations. | Source assertions retained; all expectedfiles copied verbatim. No host success wrapper, weakened comparison or expected-supplied runtime state. |
+| Independent financial/work/capture expectations align | Full19artifactreviewview includes every originalvalue/rawbyte; custodyDERIVATION independently gives both selectedsourcefinancial/work sequences, residualduties and captures. | Source-agreement only. Fullwire remains authored-codec conditional; no observed run or independent compiler-wire proof. |
+| Strong domain/caps/publication/lateerror behavior unchanged | Pair source changed only by rustfmt from adopted16; code retains fixedstarts, strongwholeprogramsubset, actualNone->storedcap, false/null latest envelope+fullhistory, RV1 rawcounters and RV2 completeprefix tables. | No new source repair from this audit. General/sharedasset/sharedstate/native behavior is not inferred. |
+
+Reviewer wording such as verifies or match describes source assertions/static expected-data agreement here, never a test result. Allfive fulloperators remain OPEN; the review does not establish the global implementation status of unrelated components. No false/error fixture or security/resource/proof/target decision is supplied. Root owns actual checkintegration and subsequent independent result review.

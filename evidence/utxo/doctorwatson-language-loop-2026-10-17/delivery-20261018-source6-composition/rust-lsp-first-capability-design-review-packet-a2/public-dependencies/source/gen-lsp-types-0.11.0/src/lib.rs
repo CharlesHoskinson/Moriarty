@@ -1,0 +1,973 @@
+mod generated;
+pub mod json_rpc;
+
+pub use generated::*;
+
+/// # Tests for compilation success/failure.
+///
+/// ## Should not leak internal symbols
+///
+/// ```compile_fail
+/// use gen_lsp_types::generated;
+/// ```
+///
+/// ```compile_fail
+/// use gen_lsp_types::deserialize_some;
+/// ```
+///
+/// ```compile_fail
+/// use gen_lsp_types::SemanticToken::deserialize_tokens;
+/// ```
+///
+/// ```
+/// use gen_lsp_types::SemanticToken;
+/// ```
+///
+/// ```compile_fail
+/// use gen_lsp_types::json_rpc::deserialize_some;
+/// ```
+///
+/// ## Should have newtype Lsp(Request|Notification)Method semantics
+///
+/// ```compile_fail
+/// use gen_lsp_types::LspNotificationMethod;
+/// let foo: &str = LspNotificationMethod::CancelRequest;
+/// ```
+mod compiletest {}
+
+/// Tests for default features.
+#[cfg(test)]
+#[cfg(all(not(feature = "url"), not(feature = "fluent-uri")))]
+mod test {
+    #![allow(deprecated)]
+    use std::{
+        borrow::Cow,
+        collections::{HashMap, HashSet},
+    };
+
+    use serde_json::json;
+
+    use crate::*;
+
+    #[test]
+    fn nullable_field() {
+        let tdro = TextDocumentRegistrationOptions {
+            document_selector: None,
+        };
+        let tdro_str = serde_json::to_string(&tdro).unwrap();
+        assert_eq!(tdro_str, r#"{"documentSelector":null}"#);
+
+        let tdro = serde_json::from_str::<TextDocumentRegistrationOptions>(&tdro_str).unwrap();
+        assert_eq!(
+            tdro,
+            TextDocumentRegistrationOptions {
+                document_selector: None
+            }
+        );
+
+        // Missing documentSelector. Be liberal on deserialization, even though this is technically a
+        // noncompliant representation.
+        assert_eq!(tdro, serde_json::from_str("{}").unwrap());
+    }
+
+    #[test]
+    fn nullable_field_default() {
+        let ip = InitializeParams::default();
+
+        let ip_str = serde_json::to_string(&ip).unwrap();
+
+        assert_eq!(
+            ip_str,
+            r#"{"processId":null,"rootUri":null,"capabilities":{}}"#
+        );
+
+        assert_eq!(
+            InitializeParams::default(),
+            serde_json::from_str(&ip_str).unwrap()
+        );
+
+        // Missing processId. Be liberal on deserialization, even though this is technically a
+        // noncompliant representation.
+        let bad_ip_str = r#"{"rootUri":null,"capabilities":{}}"#;
+        assert_eq!(
+            InitializeParams::default(),
+            serde_json::from_str(bad_ip_str).unwrap()
+        );
+    }
+
+    #[test]
+    fn optional_field() {
+        let cp = ColorPresentation {
+            label: "Label".to_string(),
+            text_edit: None,
+            ..Default::default()
+        };
+        let cp_str = serde_json::to_string(&cp).unwrap();
+        assert_eq!(cp_str, r#"{"label":"Label"}"#);
+
+        let cp = serde_json::from_str::<ColorPresentation>(&cp_str).unwrap();
+        assert_eq!(
+            cp,
+            ColorPresentation {
+                label: "Label".to_string(),
+                text_edit: None,
+                ..Default::default()
+            }
+        );
+        // While technically illegal in the spec, this library chooses to be more liberal with
+        // DEserialization, in order to be tolerant of slightly spec-noncompliant communicators.
+        assert_eq!(
+            serde_json::from_str::<ColorPresentation>(r#"{"label":"Label","textEdit":null}"#)
+                .unwrap(),
+            cp
+        );
+    }
+
+    #[test]
+    fn optional_nullable_field() {
+        let wfip = WorkspaceFoldersInitializeParams {
+            workspace_folders: None,
+        };
+
+        let wfip_str = serde_json::to_string(&wfip).unwrap();
+
+        assert_eq!(wfip_str, r"{}");
+
+        assert_eq!(
+            serde_json::from_str::<WorkspaceFoldersInitializeParams>(&wfip_str).unwrap(),
+            wfip
+        );
+
+        let wfip = WorkspaceFoldersInitializeParams {
+            workspace_folders: Some(crate::WorkspaceFolders::Null),
+        };
+        let wfip_str = serde_json::to_string(&wfip).unwrap();
+        assert_eq!(wfip_str, r#"{"workspaceFolders":null}"#);
+        assert_eq!(
+            serde_json::from_str::<WorkspaceFoldersInitializeParams>(&wfip_str).unwrap(),
+            wfip
+        );
+
+        let wfip = WorkspaceFoldersInitializeParams {
+            workspace_folders: Some(crate::WorkspaceFolders::WorkspaceFolderList(Vec::new())),
+        };
+        let wfip_str = serde_json::to_string(&wfip).unwrap();
+        assert_eq!(wfip_str, r#"{"workspaceFolders":[]}"#);
+        assert_eq!(
+            serde_json::from_str::<WorkspaceFoldersInitializeParams>(&wfip_str).unwrap(),
+            wfip
+        );
+    }
+
+    #[test]
+    fn derives() {
+        let pos = Position::default();
+        let table = HashMap::from([(pos, 123)]);
+        assert_eq!(table.get(&pos), Some(&123));
+
+        let range = Range::default();
+        let table = HashSet::from([range]);
+        assert!(table.contains(&range));
+
+        let doc_sym = DocumentSymbol {
+            kind: crate::SymbolKind::Function,
+            name: String::default(),
+            detail: Option::default(),
+            tags: Option::default(),
+            deprecated: Option::default(),
+            range: Range::default(),
+            selection_range: Range::default(),
+            children: Option::default(),
+        };
+        let table = HashSet::from([doc_sym.clone()]);
+        assert!(table.contains(&doc_sym));
+
+        // From
+        let wfip = WorkspaceFoldersInitializeParams {
+            workspace_folders: Some(Vec::new().into()),
+        };
+        let wfip_str = serde_json::to_string(&wfip).unwrap();
+        assert_eq!(wfip_str, r#"{"workspaceFolders":[]}"#);
+        assert_eq!(
+            serde_json::from_str::<WorkspaceFoldersInitializeParams>(&wfip_str).unwrap(),
+            wfip
+        );
+        assert_eq!(WorkspaceFolders::Null, ().into());
+        let wfip = WorkspaceFoldersInitializeParams {
+            workspace_folders: Some(().into()),
+        };
+        let wfip_str = serde_json::to_string(&wfip).unwrap();
+        assert_eq!(wfip_str, r#"{"workspaceFolders":null}"#);
+        assert_eq!(
+            serde_json::from_str::<WorkspaceFoldersInitializeParams>(&wfip_str).unwrap(),
+            wfip
+        );
+        let wfsc = WorkspaceFoldersServerCapabilities {
+            change_notifications: Some("some-noti-id".into()),
+            ..Default::default()
+        };
+        let wfsc_str = serde_json::to_string(&wfsc).unwrap();
+        assert_eq!(wfsc_str, r#"{"changeNotifications":"some-noti-id"}"#);
+        let wfsc = WorkspaceFoldersServerCapabilities {
+            change_notifications: Some(String::from("some-noti-id").into()),
+            ..Default::default()
+        };
+        let wfsc_str = serde_json::to_string(&wfsc).unwrap();
+        assert_eq!(wfsc_str, r#"{"changeNotifications":"some-noti-id"}"#);
+        let wfsc = WorkspaceFoldersServerCapabilities {
+            change_notifications: Some(false.into()),
+            ..Default::default()
+        };
+        let wfsc_str = serde_json::to_string(&wfsc).unwrap();
+        assert_eq!(wfsc_str, r#"{"changeNotifications":false}"#);
+        let wfsc = WorkspaceFoldersServerCapabilities {
+            change_notifications: Some('f'.into()),
+            ..Default::default()
+        };
+        let wfsc_str = serde_json::to_string(&wfsc).unwrap();
+        assert_eq!(wfsc_str, r#"{"changeNotifications":"f"}"#);
+        let boxed_str: Box<str> = Box::from("foo");
+        let wfsc = WorkspaceFoldersServerCapabilities {
+            change_notifications: Some(boxed_str.into()),
+            ..Default::default()
+        };
+        let wfsc_str = serde_json::to_string(&wfsc).unwrap();
+        assert_eq!(wfsc_str, r#"{"changeNotifications":"foo"}"#);
+    }
+
+    #[test]
+    fn special_impls() {
+        let pos = Position {
+            line: 2,
+            character: 0,
+        };
+        let pos2 = Position {
+            line: 1,
+            character: 9,
+        };
+        assert!(pos2 < pos);
+
+        // Copy
+        let pos3 = pos2;
+        assert_eq!(pos3, pos2);
+
+        let range = Range {
+            start: pos2,
+            end: pos,
+        };
+        // Copy
+        let range2 = range;
+        assert_eq!(range2, range);
+
+        let range3 = Range {
+            start: Position::default(),
+            end: Position {
+                line: 999,
+                character: 999,
+            },
+        };
+        assert!(range3 < range2);
+
+        let range4 = Range::default();
+        assert!(range4 < range3);
+
+        let method: String = LspRequestMethod::TextDocumentOnTypeFormatting.into();
+        assert_eq!(method, "textDocument/onTypeFormatting");
+        let method = LspRequestMethod::Shutdown.to_string();
+        assert_eq!(method, "shutdown");
+        let method = LspRequestMethod::Custom("foo").to_string();
+        assert_eq!(method, "foo");
+        let method = LspNotificationMethod::Custom("foo").to_string();
+        assert_eq!(method, "foo");
+        let method = LspNotificationMethod::CancelRequest.to_string();
+        assert_eq!(method, "$/cancelRequest");
+        let method = LspNotificationMethod::WorkspaceDidChangeWatchedFiles.to_string();
+        assert_eq!(method, "workspace/didChangeWatchedFiles");
+
+        let wk = WatchKind::Delete;
+        let wk2 = WatchKind::Create;
+        assert_eq!(wk | wk2, WatchKind::Custom(5));
+        assert_eq!(wk | wk2 | WatchKind::Change, WatchKind::Custom(7));
+        assert_eq!((wk | wk2) & wk, wk);
+        assert_eq!(wk | wk, wk);
+        assert_eq!((wk | wk2 | WatchKind::Change) & (wk | wk2), wk | wk2);
+        assert_eq!(WatchKind::Delete ^ WatchKind::Delete, WatchKind::Custom(0));
+        assert_eq!(WatchKind::Custom(0) ^ WatchKind::Create, WatchKind::Create);
+        let mut wk = WatchKind::Custom(0);
+        wk |= WatchKind::Delete;
+        assert_eq!(wk, WatchKind::Delete);
+        wk &= WatchKind::Create;
+        assert_eq!(wk, WatchKind::Custom(0));
+        wk ^= WatchKind::Delete;
+        assert_eq!(wk, WatchKind::Delete);
+    }
+
+    #[test]
+    fn string_literal_field() {
+        let wdpe = WorkDoneProgressEnd {
+            message: Some("change da world. my final message. goodbye".to_string()),
+        };
+
+        let ser = serde_json::to_string(&wdpe).unwrap();
+        assert_eq!(
+            ser,
+            r#"{"message":"change da world. my final message. goodbye","kind":"end"}"#
+        );
+
+        let deser = serde_json::from_str::<WorkDoneProgressEnd>(&ser).unwrap();
+        assert_eq!(deser, wdpe);
+
+        let fake_ser = r#"{"message":"change da world. my final message. goodbye","kind":"begin"}"#;
+        assert!(serde_json::from_str::<WorkDoneProgressEnd>(fake_ser).is_err());
+
+        let doc_change = CreateFile {
+            uri: "file:///foo.txt".to_string().into(),
+            options: None,
+            annotation_id: None,
+        };
+        let ser = serde_json::to_string(&doc_change).unwrap();
+        assert_eq!(ser, r#"{"uri":"file:///foo.txt","kind":"create"}"#);
+
+        let ser = r#"{"uri":"file:///foo.txt","kind":"create"}"#;
+        let deser = serde_json::from_str::<DocumentChange>(ser).unwrap();
+        assert_eq!(deser, doc_change.into());
+        let ser = r#"{"uri":"file:///foo.txt","kind":"delete","annotationId":"foo"}"#;
+        let deser = serde_json::from_str::<DocumentChange>(ser).unwrap();
+        assert_eq!(
+            deser,
+            DocumentChange::DeleteFile(DeleteFile {
+                uri: crate::Uri("file:///foo.txt".to_string()),
+                options: None,
+                annotation_id: Some(String::from("foo"))
+            })
+        );
+        let bad_ser = r#"{"uri":"file:///foo.txt","kind":"delet"}"#;
+        assert!(serde_json::from_str::<DocumentChange>(bad_ser).is_err());
+    }
+
+    #[test]
+    fn string_enum() {
+        let frk = FoldingRangeKind::Comment;
+        let ser = serde_json::to_string(&frk).unwrap();
+
+        assert_eq!(ser, "\"comment\"");
+        assert_eq!(
+            serde_json::from_str::<FoldingRangeKind>(&ser).unwrap(),
+            FoldingRangeKind::Comment
+        );
+
+        let frk = FoldingRangeKind::Custom(Cow::Borrowed("foo"));
+        let ser = serde_json::to_string(&frk).unwrap();
+
+        assert_eq!(ser, "\"foo\"");
+        assert_eq!(
+            serde_json::from_str::<FoldingRangeKind>(&ser).unwrap(),
+            FoldingRangeKind::Custom(Cow::Borrowed("foo"))
+        );
+        assert_eq!("foo", frk.as_str());
+
+        let mk = MarkupKind::PlainText;
+        assert_eq!("\"plaintext\"", serde_json::to_string(&mk).unwrap());
+        assert!(serde_json::from_str::<MarkupKind>("foo").is_err());
+        assert_eq!("plaintext", mk.as_str());
+    }
+
+    #[test]
+    fn str_enum_into() {
+        const CONSTANT: &str = "my_custom_variant";
+        let _parsed: LspNotificationMethod = CONSTANT.into();
+    }
+
+    #[test]
+    fn int_enum() {
+        let sk = SymbolKind::Namespace;
+        let ser = serde_json::to_string(&sk).unwrap();
+
+        assert_eq!(ser, "3");
+        assert_eq!(
+            serde_json::from_str::<SymbolKind>(&ser).unwrap(),
+            SymbolKind::Namespace
+        );
+        assert!(serde_json::from_str::<SymbolKind>("299").is_ok());
+
+        let wk = WatchKind::Custom(123);
+        let ser = serde_json::to_string(&wk).unwrap();
+
+        assert_eq!(ser, "123");
+        assert_eq!(wk, serde_json::from_str::<WatchKind>(&ser).unwrap());
+        assert_eq!(
+            WatchKind::Change,
+            serde_json::from_str::<WatchKind>("2").unwrap()
+        );
+    }
+
+    #[test]
+    fn request_object_from_request() {
+        let params = TypeDefinitionParams {
+            work_done_progress_params: crate::WorkDoneProgressParams {
+                work_done_token: None,
+            },
+            partial_result_params: crate::PartialResultParams {
+                partial_result_token: None,
+            },
+            text_document_position_params: crate::TextDocumentPositionParams {
+                text_document: crate::TextDocumentIdentifier { uri: "foo".into() },
+                position: Position::default(),
+            },
+        };
+        let req = json_rpc::RequestObject::from_request::<TypeDefinitionRequest>(
+            json_rpc::Id::Number(123),
+            params.clone(),
+        );
+
+        let ser = serde_json::to_string(&req).unwrap();
+
+        assert_eq!(
+            ser,
+            r#"{"jsonrpc":"2.0","id":123,"method":"textDocument/typeDefinition","params":{"position":{"character":0,"line":0},"textDocument":{"uri":"foo"}}}"#
+        );
+        assert_eq!(req.id(), Some(&json_rpc::Id::Number(123)));
+        assert_eq!(req.method(), "textDocument/typeDefinition");
+        assert_eq!(req.params(), Some(&json!(params)));
+    }
+
+    #[test]
+    fn request_object_from_request_no_params() {
+        let req = json_rpc::RequestObject::from_request::<WorkspaceFoldersRequest>(
+            json_rpc::Id::String("foo".into()),
+            (),
+        );
+
+        let ser = serde_json::to_string(&req).unwrap();
+
+        assert_eq!(
+            ser,
+            r#"{"jsonrpc":"2.0","id":"foo","method":"workspace/workspaceFolders"}"#
+        );
+    }
+
+    #[test]
+    fn request_object_from_notification() {
+        let noti = json_rpc::RequestObject::from_notification::<InitializedNotification>(
+            InitializedParams {},
+        );
+
+        let ser = serde_json::to_string(&noti).unwrap();
+
+        assert_eq!(
+            ser,
+            r#"{"jsonrpc":"2.0","method":"initialized","params":{}}"#
+        );
+        assert_eq!(noti.id(), None);
+        assert_eq!(noti.method(), "initialized");
+        assert_eq!(noti.params(), Some(&json!(InitializedParams {})));
+    }
+
+    #[test]
+    fn request_object_from_notification_no_params() {
+        let noti = json_rpc::RequestObject::from_notification::<ExitNotification>(());
+
+        let ser = serde_json::to_string(&noti).unwrap();
+
+        assert_eq!(ser, r#"{"jsonrpc":"2.0","method":"exit"}"#);
+    }
+
+    #[test]
+    fn response_object_from_success() {
+        let id = json_rpc::Id::Number(123);
+
+        let res = json_rpc::ResponseObject::from_success::<ImplementationRequest>(
+            id.clone(),
+            Some(ImplementationResponse::DefinitionLinkList(Vec::new())),
+        );
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(r#"{"jsonrpc":"2.0","result":[],"id":123}"#, &ser);
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+
+        let res = json_rpc::ResponseObject::from_success::<ImplementationRequest>(id.clone(), None);
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(r#"{"jsonrpc":"2.0","result":null,"id":123}"#, &ser);
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+
+        let res = json_rpc::ResponseObject::from_success::<ImplementationRequest>(id.clone(), None);
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(r#"{"jsonrpc":"2.0","result":null,"id":123}"#, &ser);
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+
+        let res = json_rpc::ResponseObject::from_success::<ShowMessageRequest>(id.clone(), None);
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(r#"{"jsonrpc":"2.0","result":null,"id":123}"#, &ser);
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+
+        let res = json_rpc::ResponseObject::from_success::<ShowMessageRequest>(
+            id.clone(),
+            Some(MessageActionItem {
+                title: "foo".into(),
+                properties: HashMap::default(),
+            }),
+        );
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","result":{"title":"foo"},"id":123}"#,
+            &ser
+        );
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+
+        let res = json_rpc::ResponseObject::from_success::<ShowMessageRequest>(
+            id.clone(),
+            Some(MessageActionItem {
+                title: "foo".into(),
+                properties: HashMap::from([(
+                    String::from("bar"),
+                    MessageActionItemProperty::Int(321),
+                )]),
+            }),
+        );
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","result":{"bar":321,"title":"foo"},"id":123}"#,
+            &ser
+        );
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+
+        let res = json_rpc::ResponseObject::from_success::<CodeLensRefreshRequest>(id, ());
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(r#"{"jsonrpc":"2.0","result":null,"id":123}"#, &ser);
+        assert_eq!(res, serde_json::from_str(&ser).unwrap());
+    }
+
+    #[test]
+    fn response_object_from_error() {
+        let id = json_rpc::Id::Null;
+        let res = json_rpc::ResponseObject::from_error(
+            id,
+            json_rpc::Error {
+                code: crate::ErrorCodes::ParseError,
+                message: "invalid format".into(),
+                data: None,
+            },
+        );
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","error":{"code":-32700,"message":"invalid format"},"id":null}"#,
+            &ser
+        );
+
+        let id = json_rpc::Id::String("foo-req".into());
+        let res = json_rpc::ResponseObject::from_error(
+            id,
+            json_rpc::Error {
+                code: crate::ErrorCodes::Custom(-32803),
+                message: "failed to foo the bar".into(),
+                data: Some(json!("hi")),
+            },
+        );
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","error":{"code":-32803,"message":"failed to foo the bar","data":"hi"},"id":"foo-req"}"#,
+            &ser
+        );
+
+        let id = json_rpc::Id::String("foo-req".into());
+        let res = json_rpc::ResponseObject::from_error(
+            id,
+            json_rpc::Error {
+                code: crate::ErrorCodes::Custom(crate::LspErrorCodes::ContentModified.into()),
+                message: "failed to foo the bar".into(),
+                data: Some(json!("hi")),
+            },
+        );
+
+        let ser = serde_json::to_string(&res).unwrap();
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","error":{"code":-32801,"message":"failed to foo the bar","data":"hi"},"id":"foo-req"}"#,
+            &ser
+        );
+    }
+
+    #[test]
+    fn structures_new_constructor() {
+        assert_eq!(
+            Position::new(1, 2),
+            Position {
+                line: 1,
+                character: 2
+            }
+        );
+        assert_eq!(
+            Range::new(Position::new(0, 0), Position::new(0, 99)),
+            Range {
+                start: Position::default(),
+                end: Position {
+                    line: 0,
+                    character: 99
+                }
+            }
+        );
+
+        assert_eq!(
+            Location::new(Uri("foo".into()), Range::default()),
+            Location {
+                uri: Uri("foo".into()),
+                range: Range::default()
+            }
+        );
+
+        // For some structures, the new() constructor does not help as much.
+        assert_eq!(
+            Diagnostic::new(
+                Range::default(),
+                Some(DiagnosticSeverity::Warning),
+                None,
+                None,
+                None,
+                "bad".into(),
+                None,
+                None,
+                None
+            ),
+            Diagnostic {
+                range: Range::default(),
+                message: "bad".into(),
+                severity: Some(DiagnosticSeverity::Warning),
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn custom_request_object_methods() {
+        struct ParentModule;
+        impl Request for ParentModule {
+            type Params = ();
+            type Result = Option<DefinitionResponse>;
+            const METHOD: LspRequestMethod<'_> =
+                LspRequestMethod::Custom("experimental/parentModule");
+            const MESSAGE_DIRECTION: MessageDirection = MessageDirection::ClientToServer;
+        }
+
+        let req =
+            json_rpc::RequestObject::from_request::<ParentModule>(json_rpc::Id::Number(123), ());
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","id":123,"method":"experimental/parentModule"}"#,
+            serde_json::to_string(&req).unwrap()
+        );
+
+        struct ServerStatusNotification;
+        impl Notification for ServerStatusNotification {
+            type Params = ();
+            const METHOD: LspNotificationMethod<'_> =
+                LspNotificationMethod::new("experimental/serverStatus");
+            const MESSAGE_DIRECTION: MessageDirection = MessageDirection::ClientToServer;
+        }
+
+        let noti = json_rpc::RequestObject::from_notification::<ServerStatusNotification>(());
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","method":"experimental/serverStatus"}"#,
+            serde_json::to_string(&noti).unwrap()
+        );
+
+        // Compilation checks
+        let method: &'static str = <ParentModule as Request>::METHOD.as_str();
+        assert_eq!(method, "experimental/parentModule");
+        let method = LspRequestMethod::new("asdf");
+        let method_str: &'static str = method.as_str();
+        assert_eq!(method_str, "asdf");
+        let method = LspRequestMethod::Custom("asdf");
+        let method_str: &'static str = method.as_str();
+        assert_eq!(method_str, "asdf");
+        let owned = String::from("workspace/didCreateFiles");
+        let method: LspNotificationMethod<'_> = owned.as_str().into();
+        assert_eq!(method, LspNotificationMethod::WorkspaceDidCreateFiles);
+        let owned = String::from("foo");
+        let method: LspNotificationMethod<'_> = owned.as_str().into();
+        assert_eq!(method, LspNotificationMethod::new("foo"));
+        // Copy
+        let method1 = LspRequestMethod::TextDocumentCompletion;
+        let method2 = method1;
+        assert_eq!(method1, method2);
+        // We can `match` on local vars without extra allocations! Yay!
+        #[allow(clippy::match_same_arms)]
+        match method {
+            LspNotificationMethod::TextDocumentWillSave => {}
+            LspNotificationMethod::Custom("foo") => {}
+            LspNotificationMethod::Custom(_) => {}
+            _ => {}
+        }
+    }
+
+    #[test]
+    fn request_with_partial_results() {
+        fn foo<R: RequestWithPartialResults>(
+            _params: R::Params,
+            _partial_result: R::PartialResult,
+        ) {
+            // Do nothing!
+        }
+
+        foo::<DocumentSymbolRequest>(
+            DocumentSymbolParams {
+                text_document: TextDocumentIdentifier { uri: "".into() },
+                work_done_progress_params: WorkDoneProgressParams {
+                    work_done_token: None,
+                },
+                partial_result_params: PartialResultParams {
+                    partial_result_token: None,
+                },
+            },
+            DocumentSymbolPartialResponse::SymbolInformationList(vec![SymbolInformation {
+                deprecated: None,
+                location: Location {
+                    uri: "".into(),
+                    range: Range::default(),
+                },
+                base_symbol_information: BaseSymbolInformation {
+                    name: String::new(),
+                    kind: SymbolKind::File,
+                    tags: None,
+                    container_name: None,
+                },
+            }]),
+        );
+
+        let partial_result = DocumentSymbolPartialResponse::DocumentSymbolList(Vec::new());
+        let _ = match partial_result {
+            DocumentSymbolPartialResponse::SymbolInformationList(_) => 1,
+            DocumentSymbolPartialResponse::DocumentSymbolList(_) => 2,
+            // No `null` branch
+        };
+    }
+
+    #[test]
+    #[allow(clippy::similar_names)]
+    fn semantic_tokens() {
+        let ste = SemanticTokensEdit {
+            start: 0,
+            delete_count: 1,
+            data: None,
+        };
+        let ste_ser = r#"{"start":0,"deleteCount":1}"#;
+        assert_eq!(serde_json::to_string(&ste).unwrap(), ste_ser);
+        assert_eq!(ste, serde_json::from_str(ste_ser).unwrap());
+
+        let ste = SemanticTokensEdit {
+            start: 0,
+            delete_count: 1,
+            data: None,
+        };
+        let ste_ser_fake = r#"{"start":0,"deleteCount":1,"data":null}"#;
+        assert_eq!(serde_json::to_string(&ste).unwrap(), ste_ser);
+        // Be permissive on technically incorrect deserialization.
+        assert_eq!(ste, serde_json::from_str(ste_ser_fake).unwrap());
+
+        let ste = SemanticTokensEdit {
+            start: 0,
+            delete_count: 1,
+            data: Some(vec![2, 5, 3, 4, 1, 0]),
+        };
+        let ste_ser = r#"{"start":0,"deleteCount":1,"data":[2,5,3,4,1,0]}"#;
+        assert_eq!(serde_json::to_string(&ste).unwrap(), ste_ser);
+        assert_eq!(ste, serde_json::from_str(ste_ser).unwrap());
+
+        let ste = SemanticTokensEdit {
+            start: 0,
+            delete_count: 1,
+            data: Some(Vec::new()),
+        };
+        let ste_ser = r#"{"start":0,"deleteCount":1,"data":[]}"#;
+        assert_eq!(serde_json::to_string(&ste).unwrap(), ste_ser);
+        assert_eq!(ste, serde_json::from_str(ste_ser).unwrap());
+
+        let st = SemanticTokens {
+            result_id: None,
+            data: Vec::default(),
+        };
+        let st_ser = r#"{"data":[]}"#;
+        assert_eq!(serde_json::to_string(&st).unwrap(), st_ser);
+        assert_eq!(st, serde_json::from_str(st_ser).unwrap());
+
+        let st = SemanticTokens {
+            result_id: None,
+            data: vec![
+                SemanticToken {
+                    delta_line: 2,
+                    delta_start: 5,
+                    length: 3,
+                    token_type: 0,
+                    token_modifiers_bitset: 3,
+                },
+                SemanticToken {
+                    delta_line: 0,
+                    delta_start: 5,
+                    length: 4,
+                    token_type: 1,
+                    token_modifiers_bitset: 0,
+                },
+            ],
+        };
+        let st_ser = r#"{"data":[2,5,3,0,3,0,5,4,1,0]}"#;
+        assert_eq!(serde_json::to_string(&st).unwrap(), st_ser);
+        assert_eq!(st, serde_json::from_str(st_ser).unwrap());
+
+        let stpr = SemanticTokensPartialResult {
+            data: vec![
+                SemanticToken {
+                    delta_line: 2,
+                    delta_start: 5,
+                    length: 3,
+                    token_type: 0,
+                    token_modifiers_bitset: 3,
+                },
+                SemanticToken {
+                    delta_line: 0,
+                    delta_start: 5,
+                    length: 4,
+                    token_type: 1,
+                    token_modifiers_bitset: 0,
+                },
+            ],
+        };
+        let stpr_ser = r#"{"data":[2,5,3,0,3,0,5,4,1,0]}"#;
+        assert_eq!(serde_json::to_string(&stpr).unwrap(), stpr_ser);
+        assert_eq!(stpr, serde_json::from_str(stpr_ser).unwrap());
+
+        let stpr = SemanticTokensPartialResult {
+            data: Vec::default(),
+        };
+        let stpr_ser = r#"{"data":[]}"#;
+        assert_eq!(serde_json::to_string(&stpr).unwrap(), stpr_ser);
+        assert_eq!(stpr, serde_json::from_str(stpr_ser).unwrap());
+
+        let slice: [u32; 5] = [1, 2, 3, 4, 5];
+        let token: SemanticToken = slice.into();
+        assert_eq!(
+            token,
+            SemanticToken {
+                delta_line: 1,
+                delta_start: 2,
+                length: 3,
+                token_type: 4,
+                token_modifiers_bitset: 5,
+            }
+        );
+        let slice: [u32; 5] = token.into();
+        assert_eq!(slice, [1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn request_macro() {
+        let req = json_rpc::RequestObject::from_request::<lsp_request!("workspace/workspaceFolders")>(
+            json_rpc::Id::Number(123),
+            (),
+        );
+
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","id":123,"method":"workspace/workspaceFolders"}"#,
+            serde_json::to_string(&req).unwrap()
+        );
+    }
+
+    #[test]
+    fn notification_macro() {
+        let req = json_rpc::RequestObject::from_notification::<lsp_notification!("exit")>(());
+
+        assert_eq!(
+            r#"{"jsonrpc":"2.0","method":"exit"}"#,
+            serde_json::to_string(&req).unwrap()
+        );
+    }
+
+    #[test]
+    fn tuple_serialization() {
+        let pil = ParameterInformationLabel::Tuple((1, 2));
+        assert_eq!("[1,2]", serde_json::to_string(&pil).unwrap());
+        assert_eq!(pil, serde_json::from_str("[1,2]").unwrap());
+    }
+
+    #[test]
+    fn lsp_object_derives() {
+        // `LspObject` is `Hash`able
+        let _: HashMap<NotebookCell, i32> = HashMap::from([(
+            NotebookCell::new(NotebookCellKind::Code, Uri("foo".to_owned()), None, None),
+            123,
+        )]);
+
+        // Structure literals are `Hash`able
+        let _: HashMap<SemanticTokensRegistrationOptions, i32> =
+            HashMap::from([(SemanticTokensRegistrationOptions::default(), 123)]);
+
+        // `LspAny` is `Hash`able
+        let _: HashMap<Command, i32> = HashMap::from([(Command::default(), 123)]);
+    }
+
+    #[test]
+    fn hover_contents() {
+        let contents = Contents::MarkedStringList(vec![
+            MarkedString::String("Foo".to_owned()),
+            MarkedString::String("Bar".to_owned()),
+        ]);
+
+        // https://github.com/serde-rs/json/issues/1244
+        let ser = serde_json::to_string(&contents).unwrap();
+        assert_eq!(ser, r#"["Foo","Bar"]"#);
+        assert_eq!(contents, serde_json::from_str(&ser).unwrap());
+
+        let contents = Contents::MarkedString(MarkedString::String("Foo".to_owned()));
+
+        let ser = serde_json::to_string(&contents).unwrap();
+        assert_eq!(ser, r#""Foo""#);
+        assert_eq!(contents, serde_json::from_str(&ser).unwrap());
+
+        let contents = Contents::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: "foo".to_owned(),
+        });
+
+        let ser = serde_json::to_string(&contents).unwrap();
+        assert_eq!(ser, r#"{"kind":"markdown","value":"foo"}"#);
+        assert_eq!(contents, serde_json::from_str(&ser).unwrap());
+    }
+}
+
+/// Tests for the "url" feature.
+#[cfg(test)]
+#[cfg(all(feature = "url", not(feature = "fluent-uri")))]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn url_feature() {
+        let url = url::Url::parse("file://tmp/foo.txt/").unwrap();
+        let tdi = TextDocumentIdentifier { uri: url };
+        let ser = r#"{"uri":"file://tmp/foo.txt/"}"#;
+
+        assert_eq!(ser, serde_json::to_string(&tdi).unwrap());
+        assert_eq!(tdi, serde_json::from_str(ser).unwrap());
+    }
+}
+
+/// Tests for the "fluent-uri" feature.
+#[cfg(test)]
+#[cfg(all(feature = "fluent-uri", not(feature = "url")))]
+mod test {
+    use crate::*;
+
+    #[test]
+    fn url_feature() {
+        let uri = fluent_uri::Uri::try_from("file://tmp/foo.txt/".to_string()).unwrap();
+        let tdi = TextDocumentIdentifier { uri };
+        let ser = r#"{"uri":"file://tmp/foo.txt/"}"#;
+
+        assert_eq!(ser, serde_json::to_string(&tdi).unwrap());
+        assert_eq!(tdi, serde_json::from_str(ser).unwrap());
+    }
+}

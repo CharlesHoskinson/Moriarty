@@ -1,0 +1,12 @@
+language "moriarty/2";
+agreement MultiConditionDelivery {
+  asset PAY = { network: "local", issuer: "multi-condition-input", reference: "PAY", scale: 0 };
+  state marker: UInt = 77;
+  action deliver(amount: UInt) {
+    transfer(PAY, "alice", "escrow", amount);
+    liability("delivery", PAY, "escrow", "bob", amount);
+    await release(documentObserved: Bool, approvedAmount: UInt) when documentObserved and approvedAmount >= amount;
+    transfer(PAY, "escrow", "bob", amount);
+    discharge("delivery", amount);
+  }
+}

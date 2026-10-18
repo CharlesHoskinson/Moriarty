@@ -1,0 +1,57 @@
+## ACTUS requirements by executable type
+
+The matrix contains exact type-specific source locators, fixture counts,
+capabilities, pitfalls and remaining gaps. The following groups explain the
+common machinery they require:
+
+| Types | Financial behavior that must survive elaboration |
+| --- | --- |
+| PAM, LAM | Accrual, resets, principal redemption, interest base, caps/floors, derived maturity and final residuals. |
+| LAX, NAM, ANN | Array schedules and changing principal; negative amortization without clamping; fixed installments versus recalculated annuities. |
+| CLM, UMP | Calls/notices and unscheduled principal events, with explicit finite horizons and observation bounds. |
+| CSH, STK, COM | Zero-payoff analysis events; dividends; quantity and price; signed purchase versus termination. |
+| FXOUT, SWPPV | Currency/leg orientation, gross versus net settlement, distinct accruals and fixed/floating events. |
+| SWAPS, CAPFL | Bounded child composition; stable merge and identity; paired child evaluation with controlled term overrides. |
+| OPTNS, FUTUR | Exercise versus settlement; option positive-part versus signed futures payoff; observed underlying and fixing time. |
+| CEG, CEC | Referenced exposure, credit triggers, collateral value, coverage caps, valuation time and settlement lag. |
+
+Calendar functions must preserve scalar/array cycles, stubs, end-of-month rules,
+business-day adjustment, distinct calculation/payment dates and event precedence.
+Numeric functions must preserve scale, rounding, sign, year fraction, annuity,
+quantity and conversion rules. A supplied schedule, observation or underlying
+value is not an unconstrained witness that can decide the result arbitrarily.
+
+All nine present result-field kinds matter: date, event type, payoff, currency,
+principal, interest rate, accrued interest, exercise amount and exercise date.
+The largest expected result list has 241 rows; that source observation is not a
+universal event bound. The comparative Haskell implementation is useful evidence,
+but its excluded cases and narrower/Float32 comparator prevent using its test
+harness as a complete oracle.
+
+The 14 non-vector taxonomy nodes retain their own dispositions. BCS has a
+retained descriptive specification/example without a reference vector and with
+completeness gaps. NAX and REP are planned. CDSWP, MAR, BNDCP, CLNTE, EXOTi,
+ANX, PBN, SCRCR, SCRMR, TRSWP and BNDWR remain taxonomy-only in this inspected
+executable corpus. An upstream “Implemented” label does not establish Moriarty
+implementation or supply a missing executable vector.
+
+## Source discrepancies and dispositions
+
+These are source observations followed by explicit proposed dispositions. An
+interpretation supported by a fixture is not yet an executed conformance result.
+
+| ID | Evidence | Disposition and remaining acceptance obligation |
+| --- | --- | --- |
+| DS-01 | TEX schedule section says non-working day; dictionary and Haskell `DateShift.hs:33–103` shift to business days. `pam08` CSF and `pam09` SCF move payment to April 1 but report interest 26.6666666666667 versus 27.5. | Propose business-day semantics and preserve calculation-before/after-shift. Use the contrast as a required regression, then independent all-field comparison. |
+| DS-02 | Dictionary `calculateShiftModifiedPreceding` repeats SCMP; TEX and Haskell distinguish SCMP/CSMP. No CSMP fixture was found in the bounded pass. | Preserve raw tokens and typed identifiers; propose CSMP for that identifier without reinterpreting existing SCMP fixtures. Add independently sourced convention tests before conformance. |
+| DS-03 | ANN initial `Prnxt` TEX formula around line1688 contains `todo/todo`. | Public TEX is incomplete at this point. Derive an explicit initialization rule from the annuity definition, pinned comparative implementation and fixtures, and check independently before implementation acceptance. No invented completed formula in this sprint. |
+| DS-04 | COM TD table points to PRD/STK; `com01` and Haskell `Payoff.hs:319/387` include quantity and opposite purchase/termination signs. | Propose signed quantity × unit price with purchase/termination direction. Preserve erratum and independently check all COM cases. |
+| DS-05 | CLM references PR/PAM although PAM has no PR schedule; surveyed Haskell excludes CLM cases. | Keep call/redemption semantics unresolved where this matters. A complete callable package needs an explicit schedule/state rule and all-case comparison. |
+| DS-06 | `fxout01` uses two MD result records where TEX names settlement-event variants. | Preserve vector event identities; reconcile the representation with the package rule before claiming FXOUT compatibility. No silent event renaming. |
+| DS-07 | FUTUR taxonomy describes margining breadth beyond sampled TEX/vector lifecycle; BNDCP name and callable/puttable description differ. | Preserve taxonomy breadth separately. Futures settlement does not certify a margin-account package; do not label BNDCP a proved convertible-note implementation. |
+
+Lossless import and numeric profiles are an additional cross-cutting obligation.
+For example, the first `lam01` interest expression is an exact rational, whereas
+the expected trace uses a finite decimal. A chosen representation/tolerance
+must be justified per field before running a compatibility gate. The design
+does not choose a convenient global tolerance to make the corpus pass.

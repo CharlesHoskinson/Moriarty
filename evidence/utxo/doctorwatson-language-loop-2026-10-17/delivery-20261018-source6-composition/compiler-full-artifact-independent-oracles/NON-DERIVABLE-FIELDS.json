@@ -1,0 +1,85 @@
+{
+  "completeArtifactExpectationsDerivable": false,
+  "gapFamilies": [
+    {
+      "id": "D1",
+      "fields": [
+        "$.program_hash",
+        "$.semantics"
+      ],
+      "missing": "Normative source-to-Program embedding: exact semantics identifier, expression arena allocation/traversal/duplicate policy and ExprId numbering, field/enum/UInt representation, canonical JSON object-key/array/escaping/UTF8 rules and exact program-hash algorithm/output spelling.",
+      "evidence": "backend-profile26-28 names canonical JSON convention but does not define it; core-language3-6 names flat public IR only. Supplied core-canonical-serializer is implementation-only, not independent authority.",
+      "needed": "A finite public canonical Program byte contract and independently authored expected Programs/preimages for these two sources; exact semantics literal must be normative."
+    },
+    {
+      "id": "D2",
+      "fields": [
+        "$.circuits[].context_hash",
+        "$.circuits[].public_inputs[context].constant"
+      ],
+      "missing": "The exact18members, domain tag, member order/types, inclusion/exclusion rules for Target fields/caps/mode/context identity, JSON byte conventions, SHA256 digest spelling, limb split/endianness/width and canonical decimal limb spelling.",
+      "evidence": "backend-profile17-28 specifies two-limb SHA256 commitment to canonical program,target,action; CircuitArtifact DTO comment says18-element preimage but does not list members.",
+      "needed": "A finite normative context-preimage/limb specification reviewed by the designated owner where security interpretation is required; then freeze raw complete preimages/digests independently."
+    },
+    {
+      "id": "D3",
+      "fields": [
+        "$.circuits (array order)",
+        "$.circuits[].public_inputs (all exact rows/order)",
+        "$.circuits[].authorization_bindings",
+        "$.circuits[].private_inputs"
+      ],
+      "missing": "Exact circuit ordering; ABI group order, role/name string spelling, scalar packing, context placement, source state/input order policy, registry/balance order, nullable static members and any per-operation field allocation. Unsigned emptiness is asserted by implementation DTO comments but not a full normative layout specification.",
+      "evidence": "backend-profile17-24 describes values and positional ABI; supplementary duty semantics specifies presence/amount and source-ordered effects, not every serialization position.",
+      "needed": "A finite unsigned/3 ABI layout table including every group and naming/null rule, from which a separate author can calculate both complete layouts."
+    },
+    {
+      "id": "D4",
+      "fields": [
+        "$.circuits[].zkir (entire string)",
+        "$.circuits[].instruction_count",
+        "$.circuits[].zkir::<parsed-json>.*"
+      ],
+      "missing": "Exact source-expression/statement lowering sequence, range/arithmetic helper expansion, fresh identifier scheme, immediate operand bytes, version-envelope transformation, output signature/instructions, object field order/whitespace/escaping/newline.",
+      "evidence": "backend-profile9-24 specifies behavior and upstream-readable IR, not one unique instruction sequence or byte representation. DTO/operand/loader excerpts describe implementation wire forms only; no generated output or compiler calculation body was consumed.",
+      "needed": "A versioned deterministic normal-form lowering/serialization contract or independently qualified full IR specification for these exact inputs. Do not substitute compiler output as an independent oracle."
+    },
+    {
+      "id": "D5",
+      "fields": [
+        "$.circuits[].effect_frame.*",
+        "$.circuits[].balance_frame.*",
+        "$.circuits[].liability_frame.*"
+      ],
+      "missing": "Static source identities are known, but exact descriptor kind/name conventions, nullable members, source-step index convention, frame row order, public position arrays and identity-to-slot mapping are not completely normative.",
+      "evidence": "backend-profile19-21; supplementary duty profile14-20; DTO definitions enumerate required shape without independently defining all current values.",
+      "needed": "Complete finite descriptor rules consistent with ABI D3; preserve5exact reserve touched rows rather than copy earlier ancillary4row/51slot prose."
+    },
+    {
+      "id": "D6",
+      "fields": [
+        "$.resources.instructions",
+        "$.resources.zkir_bytes",
+        "$.resources.artifact_bytes",
+        "$.resources.public_values",
+        "$.resources.max_replay_steps",
+        "$.circuits[].replay_steps"
+      ],
+      "missing": "Exact aggregation functions/count scope, whether replay steps are precisely source statement counts, emitted-byte boundary and complete pretty artifact size equation including its own numeric field, indentation/ordering/escaping/trailing newline and fixed-point selection.",
+      "evidence": "backend-profile50-53 says these are measured and k/cost fields are unmeasured; public-compile43-46 distinguishes emitted artifact vs transaction size. Measurements are not independent expected literals.",
+      "needed": "Explicit resource metric formulas and serialized-envelope byte contract; then derive totals from independent full IR/envelope bytes after D1-D5."
+    },
+    {
+      "id": "D7",
+      "fields": [
+        "$.gates[].predicate",
+        "$.gates[].status",
+        "$.gates (membership/order)"
+      ],
+      "missing": "Exact finite gate set, predicate/status string vocabulary, ordering and rule selecting the unsigned-local artifact labels. General prose about open qualification is not an exact gates array.",
+      "evidence": "Gate DTO has two arbitrary String fields; backend-profile42-53 documents broad scope but not literal serialized gate records.",
+      "needed": "A finite normative gate vocabulary/membership/order for this profile or explicitly narrower semantic assertions that do not claim full Artifact equality."
+    }
+  ],
+  "securityQualification": "Hash/context-related design or effect/security judgments are left to the designated owner. This record identifies missing ordinary source/format premises only."
+}

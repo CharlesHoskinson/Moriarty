@@ -1,0 +1,8 @@
+`simulate_metered(program, action, scenario, cap)` runs the same interpreter
+with a separately supplied `UInt` cap and returns `MeteredExecution` or
+`MeteredExecutionError`. Both carry a `CostReport` with `profile`, `cap` and
+`used`. The provisional profile is `moriarty-reference-logical-cost/1`.
+It charges one logical unit before each attempted statement and one before each
+uncached expression node within that statement. Repeated `ExprId` cache hits
+cost no additional unit; caches reset for each statement. Distinct nodes with
+equal values still charge separately. Boolean operands retain eager left-to-right

@@ -1,0 +1,10 @@
+--- original-preparation-a1.py
++++ corrected-run_actual.py
+@@ -15,6 +15,7 @@
+ for row in source['sourceFiles']:pins[row['path']]={'path':row['path'],'sha256':row['sha256'],'bytes':(K/row['path']).stat().st_size}
+ # Both init paths changed independently in PR213 and are compiled into mori, but not called by this selection.
+ for p in ['crates/mori/src/commands/init.rs','crates/mori/tests/init.rs']:pins[p]={'path':p,'sha256':sha(K/p),'bytes':(K/p).stat().st_size}
++guideline=next(r for r in json.loads((R/'composition-disjoint-complete-source-proposal/BEFORE-PINS.json').read_text()) if r['path']=='RUST_GUIDELINES.md');assert sha(K/'RUST_GUIDELINES.md')==guideline['sha256'];pins['RUST_GUIDELINES.md']=guideline
+ for p,row in pins.items():assert sha(K/p)==row['sha256'],p
+ write(C/'SOURCE-PINS.json',{'sourceCommit':head,'sourceTree':tree,'files':list(pins.values())})
+ root=Path(tempfile.mkdtemp(prefix='doctorwatson-disjoint-public-'));(root/'cwd').mkdir();(root/'tmp').mkdir();(root/'cargo-home').mkdir()

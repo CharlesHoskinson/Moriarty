@@ -1,0 +1,65 @@
+(* ISO 14977 EBNF; provisional Source/6 S0 presentation syntax only.
+   This is not the /3 signed-intent byte codec. The exact profile string is
+   moriarty-financial-agreement-source/6. Whitespace, comments, identifiers,
+   integers and strings use lexical.md. New words and the .. interval token
+   below are profile-local and do not extend Source/5.
+   All productions are closed; unknown fields and duplicate fields reject.
+   The companion contract defines nominal typing, caps and Core/5 mapping. *)
+
+source = header, agreement, ? end of file ? ;
+header = "profile", '"moriarty-financial-agreement-source/6"', ";" ;
+agreement = "agreement", identifier, "{", domain, settlement,
+            selected, intent, authenticated, submitted, "}" ;
+domain = "domain", identifier, ";" ;
+settlement = "settlement", identifier, "scale", integerToken, ";" ;
+selected = "selected", identifier, "source_hash", stringToken,
+           "digest", stringToken, ";" ;
+
+intent = "intent", "{", "signer", identifier, "key", stringToken, ";",
+         "nonce", stringToken, ";", "pre_head", stringToken, ";",
+         "valid", integerToken, "..", integerToken, ";",
+         "gross_cap", integerToken, ";", "fee_cap", integerToken, ";",
+         "net_floor", integerToken, ";", "failure", "success_only", ";",
+         "signed_action", ( transfer | repay ),
+         "observations", "empty", ";", "disclosures", "empty", ";",
+         "retained_effects", "empty", ";", "retained_duties", "empty", ";",
+         "delegation", "none", ";", "recovery", "none", ";", "}" ;
+
+authenticated = "authenticated", "{", "head", stringToken, ";",
+                "predecessor", stringToken, ";", "round", integerToken, ";",
+                "balance", identifier, integerToken, ";",
+                "balance", identifier, integerToken, ";",
+                [ "balance", identifier, integerToken, ";" ],
+                "allowance", identifier, "remaining", integerToken,
+                "spent", integerToken, ";",
+                [ obligation ], "replay", ( "unused" | "consumed" ), ";",
+                "work_remaining", integerToken, ";",
+                "work_spent", integerToken, ";", "}" ;
+obligation = "obligation", identifier, "{", "debtor", identifier, ";",
+             "creditor", identifier, ";", "asset", identifier, ";",
+             "principal", integerToken, ";", "accrued", integerToken, ";",
+             "outstanding", integerToken, ";", "status", "outstanding", ";",
+             "}" ;
+
+submitted = "submit", ( transfer | repay ), "effects", "{", effectVector, "}",
+            "post_head", stringToken, ";" ;
+transfer = "transfer", "from", identifier, "to", identifier,
+           "fee_to", identifier, "value", integerToken,
+           "fee", integerToken, ";" ;
+repay = "repay", "obligation", identifier, "payer", identifier,
+        "amount", integerToken, "conversion", "identity", ";" ;
+effectVector = transferEffects | repayEffects ;
+transferEffects = debit, credit, [ credit ], useAllowance, useReplay, advanceHead ;
+repayEffects = debit, credit, setObligation, useAllowance, useReplay, advanceHead ;
+debit = "debit", identifier, integerToken, ";" ;
+credit = "credit", identifier, integerToken, ";" ;
+setObligation = "set_obligation", identifier, "principal", integerToken,
+                "accrued", integerToken, "outstanding", integerToken,
+                "status", ( "outstanding" | "settled" ), ";" ;
+useAllowance = "use_allowance", identifier, integerToken, ";" ;
+useReplay = "use_replay", stringToken, ";" ;
+advanceHead = "advance_head", stringToken, stringToken, ";" ;
+
+identifier = ? ASCII identifier token in lexical.md ? ;
+integerToken = ? canonical unsigned decimal token in lexical.md ? ;
+stringToken = ? JSON string token in lexical.md ? ;

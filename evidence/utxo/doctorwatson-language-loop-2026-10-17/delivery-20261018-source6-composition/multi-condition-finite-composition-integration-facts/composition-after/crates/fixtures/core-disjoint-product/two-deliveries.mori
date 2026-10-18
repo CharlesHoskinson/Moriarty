@@ -1,0 +1,15 @@
+language "moriarty/2";
+agreement TwoDeliveries {
+  state phase: UInt = 0;
+  asset UNIT = { network: "local", issuer: "independent-staged-test-oracle", reference: "UNIT", scale: 0 };
+  action deliver() {
+    transfer(UNIT, "alice", "bob", 7);
+    next phase = 1;
+    await approval(ok: Bool) when ok;
+    transfer(UNIT, "alice", "bob", 3);
+    await receipt(seen: Bool) when seen;
+    next phase = 2;
+    emit "done"(phase);
+  }
+  action declare() { liability("duty", UNIT, "alice", "bob", 0); }
+}

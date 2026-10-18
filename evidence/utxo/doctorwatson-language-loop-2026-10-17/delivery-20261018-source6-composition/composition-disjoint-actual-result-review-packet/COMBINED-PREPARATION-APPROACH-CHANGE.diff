@@ -1,0 +1,24 @@
+--- failed-preparation-a1.py
++++ fresh-current-Git-inventory.py
+@@ -11,14 +11,13 @@
+ for line in lines:
+  h,name=line.split(maxsplit=1);name=name.lstrip('*');assert sha(O/name)==h,name
+ for row in source['sourceFiles']:assert sha(K/row['path'])==row['sha256']
+-previous=json.loads((R/'core2-partial-delivery-check-cycle/SOURCE-PINS.json').read_text());rows=previous['files'];pins={r['path']:r for r in rows}
+-for row in source['sourceFiles']:pins[row['path']]={'path':row['path'],'sha256':row['sha256'],'bytes':(K/row['path']).stat().st_size}
+-# Both init paths changed independently in PR213 and are compiled into mori, but not called by this selection.
+-for p in ['crates/mori/src/commands/init.rs','crates/mori/tests/init.rs']:pins[p]={'path':p,'sha256':sha(K/p),'bytes':(K/p).stat().st_size}
+-guideline=next(r for r in json.loads((R/'composition-disjoint-complete-source-proposal/BEFORE-PINS.json').read_text()) if r['path']=='RUST_GUIDELINES.md');assert sha(K/'RUST_GUIDELINES.md')==guideline['sha256'];pins['RUST_GUIDELINES.md']=guideline
+-for p in json.loads((R/'source6-public-consumer-check-cycle/CURRENT-SOURCE.json').read_text())['changedPaths']:
+- if (K/p).is_file():pins[p]={'path':p,'sha256':sha(K/p),'bytes':(K/p).stat().st_size}
+-for p,row in pins.items():assert sha(K/p)==row['sha256'],p
++prior=json.loads((R/'core2-partial-delivery-check-cycle/SOURCE-PINS.json').read_text())['files']
++paths={r['path'] for r in prior}|{r['path'] for r in source['sourceFiles']}|set(json.loads((R/'source6-public-consumer-check-cycle/CURRENT-SOURCE.json').read_text())['changedPaths'])|{'crates/mori/src/commands/init.rs','crates/mori/tests/init.rs'}
++pins={}
++for path in sorted(paths):
++ expected_bytes=subprocess.check_output(['git','show',head+':'+path],cwd=K)
++ actual_bytes=(K/path).read_bytes();assert actual_bytes==expected_bytes,path
++ pins[path]={'path':path,'sha256':hashlib.sha256(expected_bytes).hexdigest(),'bytes':len(expected_bytes),'gitBlob':git('rev-parse',head+':'+path)}
+ write(C/'SOURCE-PINS.json',{'sourceCommit':head,'sourceTree':tree,'files':list(pins.values())})
+ root=Path(tempfile.mkdtemp(prefix='doctorwatson-disjoint-public-'));(root/'cwd').mkdir();(root/'tmp').mkdir();(root/'cargo-home').mkdir()
+ for name in ['registry','git']:(root/'cargo-home'/name).symlink_to(Path('/home/charl/.cargo')/name,target_is_directory=True)

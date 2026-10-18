@@ -1,0 +1,9 @@
+# Complete positive financial report fixtures
+
+These 32 payloads and `FREEZE.sha256` are exact byte copies of the independent `financial-complete-report-independent-oracles` packet frozen before this consumer source was written. The freeze SHA256 is `5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d`. This README was added for placement/provenance and is deliberately outside that freeze; no original member was changed or renamed.
+
+`DERIVATION.md`, `PROVENANCE.json`, `INVENTORY.json` and the copied basis state the actual post-adoption source/DTO/documentation exposure and independent literal derivation. The custodian did not use parser/evaluator/exporter results or this consumer candidate to create expectations. This is not a blinded or preimplementation claim. Frozen `status`/UNRUN fields describe that packet's creation; retain them when recording later results separately.
+
+`core_financial_report_contract` compares the two whole public Programs and all six `CASES.json` reports through the real `mori simulate` binary: first/final invoice ordinary and cap42, reserve ordinary and cap45. It compares whole JSON, raw stdout, exit0 and exact empty stderr, then compares the actual first invoice post with the actual final pre for both invocation modes. No actual output updates expected files. Existing financial-pair/v2 source, fixtures and freezes remain untouched.
+
+These are finite Core/1 parser/report predicates. Compiler, authenticated history, conditional lifecycle, native/proof/ledger behavior, Mint/Burn/dedicated accrual and complete finance/ACTUS/DeFi/composition/release acceptance remain separate. Original U0–U7/M1–M17/MC/SP/G and all prior gaps/receipts retain their status. Preparation of this consumer did not run either parser or CLI; actual results must name their later exact candidate and command.

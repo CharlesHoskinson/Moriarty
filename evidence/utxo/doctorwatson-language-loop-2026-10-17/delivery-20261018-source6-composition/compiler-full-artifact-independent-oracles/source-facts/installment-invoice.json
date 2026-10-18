@@ -1,0 +1,160 @@
+{
+  "program": "InstallmentInvoice",
+  "sourceFile": "custody/oracle-input/inputs/installment-invoice.mori",
+  "languageLiteral": "moriarty/1",
+  "assets": [
+    {
+      "alias": "CASH",
+      "identity": {
+        "network": "local",
+        "issuer": "financial-pair-invoice",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "sourceLine": 3
+    }
+  ],
+  "states": [
+    {
+      "name": "paid",
+      "type": "UInt",
+      "initializerLiteral": "0",
+      "sourceLine": 4
+    },
+    {
+      "name": "dueDay",
+      "type": "UInt",
+      "initializerLiteral": "30",
+      "sourceLine": 5
+    },
+    {
+      "name": "installments",
+      "type": "UInt",
+      "initializerLiteral": "0",
+      "sourceLine": 6
+    },
+    {
+      "name": "marker",
+      "type": "UInt",
+      "initializerLiteral": "77",
+      "sourceLine": 7
+    }
+  ],
+  "actions": [
+    {
+      "name": "register",
+      "sourceLine": 8,
+      "inputs": [],
+      "syntacticStatementCount": 2,
+      "sourceStatementLines": [
+        9,
+        10
+      ],
+      "effectStatementLines": [
+        9,
+        10
+      ]
+    },
+    {
+      "name": "collect",
+      "sourceLine": 12,
+      "inputs": [
+        {
+          "name": "amount",
+          "type": "UInt"
+        },
+        {
+          "name": "atDay",
+          "type": "UInt"
+        }
+      ],
+      "syntacticStatementCount": 12,
+      "sourceStatementLines": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "effectStatementLines": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        24
+      ],
+      "touchedExactBalanceRows": [
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-invoice",
+            "reference": "CASH",
+            "scale": 2
+          },
+          "account": "payer"
+        },
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-invoice",
+            "reference": "CASH",
+            "scale": 2
+          },
+          "account": "seller"
+        },
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-invoice",
+            "reference": "CASH",
+            "scale": 2
+          },
+          "account": "treasury"
+        }
+      ]
+    }
+  ],
+  "sourceWideUniqueDuties": [
+    {
+      "name": "invoice",
+      "asset": {
+        "network": "local",
+        "issuer": "financial-pair-invoice",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "debtor": "payer",
+      "creditor": "seller",
+      "declarationLines": [
+        9
+      ]
+    },
+    {
+      "name": "warranty",
+      "asset": {
+        "network": "local",
+        "issuer": "financial-pair-invoice",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "debtor": "payer",
+      "creditor": "auditor",
+      "declarationLines": [
+        10
+      ]
+    }
+  ],
+  "uniqueDutyCount": 2,
+  "classification": "Independently hand-transcribed source facts only; NOT Program DTO, compiler Artifact, numeric execution outcome or serialized ABI layout.",
+  "orderingQualification": "Lists follow source navigation order only; no artifact circuit/ABI/frame ordering is inferred.",
+  "syntacticCountQualification": "Source statement counts are not automatically a compiler replay_steps resource formula."
+}
