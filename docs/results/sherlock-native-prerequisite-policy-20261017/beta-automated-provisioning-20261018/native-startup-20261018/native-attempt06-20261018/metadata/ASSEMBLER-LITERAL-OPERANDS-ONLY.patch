@@ -1,0 +1,45 @@
+--- 387/assemble_fresh05_metadata.py
++++ 396/afterimages/assemble_fresh06_metadata.py
+@@ -8,10 +8,10 @@
+ R=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017')
+ D=Path(__file__).resolve().parent
+ SOURCE=R/'53-r2-integrated-source-candidate/source'
+-OLD=R/'376-fresh04-integration-metadata/config-assembly/config.final.proposed.json'
+-GUARD=R/'366-owner-authored-as-pid1-guard-candidate/bounded_sdk_compile.py'
++OLD=R/'387-fresh05-generated-membership-metadata/config-assembly/config.final.proposed.json'
++GUARD=R/'392-native05-owner-literal-candidate/bounded_sdk_compile.py'
+ OPERATOR=R/'275-owner-literal-mock-fixes/afterimages/operator_provisioner.py'
+-GUARD_SHA='cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc'
++GUARD_SHA='bb1492fd2b4b1411b873a9131073fa91d985da3c167dd557e99bccf9b6d73d34'
+ 
+ def pin(path):
+     path=Path(path).resolve(); raw=path.read_bytes()
+@@ -32,15 +32,15 @@
+     ap.add_argument('--runner',type=Path,default=GUARD)
+     ap.add_argument('--output-dir',type=Path,required=True)
+     args=ap.parse_args()
+-    request=D/'request.fresh05.candidate.json'; req=load(request); obs=load(args.qobs)
+-    assert pin(request)['sha256']=='c92016d7252bb3becc08fcf8343b578fc1bf45ebff2fe14766d18cf4664959e2'
++    request=D/'request.fresh06.candidate.json'; req=load(request); obs=load(args.qobs)
++    assert pin(request)['sha256']=='59e46b4dd7b80598956c7dda6ec113b2d4b27257087d9d9ba652e9018391f0b9'
+     assert pin(args.runner)['sha256']==GUARD_SHA
+     assert pin(OPERATOR)['sha256']=='7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476'
+     assert obs['schema']=='sherlock-operator-provisioning-observation/1'
+     assert obs['request_sha256']==pin(request)['sha256'] and obs['provisioner_sha256']==pin(OPERATOR)['sha256']
+     c=load(OLD); before=copy.deepcopy(c)
+-    assert c['expected_generated_files']==load(D/'EXPECTED-GENERATED-576.preimage.json')
+-    c['expected_generated_files']=load(D/'EXPECTED-GENERATED-575.proposed.json')
++    assert c['expected_generated_files']==load(D/'EXPECTED-GENERATED-575.preimage.json')
++    c['expected_generated_files']=load(D/'EXPECTED-GENERATED-579.proposed.json')
+     for key in ('execution_root','source_home','target','tmp','packet','empty_home','mask_empty'):
+         c['paths'][key]=req['paths'][key]
+     c['paths']['config']=str(Path(req['paths']['config_dir'])/'config.final.json')
+@@ -82,7 +82,7 @@
+     for row in frozen['files']:
+         old=SOURCE/row['path']; actual=pin(old)
+         assert actual['bytes']==row['bytes'] and actual['sha256']==row['sha256']
+-        selected=args.runner if row['path']=='bounded_sdk_compile.py' else (R/'386-native-generated-membership-test-candidate/test_config_source.py' if row['path']=='test_config_source.py' else old)
++        selected=args.runner if row['path']=='bounded_sdk_compile.py' else (R/'395-cachedir-validation-test-owner-candidate/test_config_source.py' if row['path']=='test_config_source.py' else old)
+         members.append({'basename':row['path'],'source':pin(selected)})
+     focused_tree=ast.parse(args.focused_test.read_text())
+     members.append({'basename':args.focused_test.name,'source':pin(args.focused_test)})
