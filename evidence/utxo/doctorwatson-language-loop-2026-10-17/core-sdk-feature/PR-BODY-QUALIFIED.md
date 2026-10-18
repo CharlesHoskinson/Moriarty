@@ -1,0 +1,5 @@
+Ordinary Core tests currently build Midnight SDK development dependencies. Make those dependencies optional under the nondefault `midnight-compat-tests` feature and gate the existing native signing-frame compatibility test with it. Its body and Cargo.lock stay unchanged. The manual workflow retains an explicit compatibility-test command.
+
+Validation: combined with #194 at tree `33a39221d279f6feba518bc2184b526056ce3071`, one offline `mori-core` check passed5 continuation tests and2 financial tests in28.8seconds. Static byte/TOML checks and10 guidance tests pass. Source and actual results received fresh independent reviews, using the authorized Gemini security fallback after an observed Opus rate rejection; all original receipts and scope corrections are preserved.
+
+Only selected Core targets were compiled/tested. SDK compatibility, other workspace/CLI/backend/ledger tests, Rust formatting and Clippy remain UNRUN. This source integration does not finish issue81 or establish proof/ledger/product acceptance. Exact feature source head `d9fb106585bf0ded35a47e3ec82b90cfbb9ce657`, tree `9d0c4c16244230acb3e04f8b96896a9c15d79c58`. Related: #81.

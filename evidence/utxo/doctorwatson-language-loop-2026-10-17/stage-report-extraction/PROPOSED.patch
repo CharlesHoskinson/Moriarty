@@ -1,0 +1,177 @@
+diff --git a/crates/mori-core/src/stage/mod.rs b/crates/mori-core/src/stage/mod.rs
+--- a/crates/mori-core/src/stage/mod.rs
++++ b/crates/mori-core/src/stage/mod.rs
+@@ -10,12 +10,14 @@
+ mod digest;
+ mod plan;
+ mod profile;
++mod report;
+ mod validate;
+ 
+ pub use crate::LOGICAL_COST_PROFILE_2;
+ pub use admit::{resume, start};
+ pub use plan::{ActionPlan, AwaitSite, CaptureSlot, Origin, StageBinder, StagePlan};
+ pub use profile::{require_core1, require_core2};
++pub use report::outcome_report;
+ 
+ use crate::{Error, Execution, Liability, Program, Snapshot, UInt, Value};
+ use serde::{Deserialize, Serialize};
+diff --git a/crates/mori-core/src/stage/report.rs b/crates/mori-core/src/stage/report.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-core/src/stage/report.rs
+@@ -0,0 +1,38 @@
++//! Complete qualified JSON envelopes for the local Core/2 outcome API.
++use super::{STAGE_LABELS, StageOutcome, StageRejection};
++use serde_json::{Value, json};
++
++/// Render an outcome or rejection without executing a program or performing I/O.
++/// Every envelope retains the explicit local-stage qualifications.
++pub fn outcome_report(result: Result<StageOutcome, StageRejection>) -> Value {
++    let mut report = match result {
++        Ok(StageOutcome::Waiting {
++            advanced,
++            segment,
++            continuation,
++            attempted,
++            residual,
++        }) => {
++            let committed = continuation.logical.committed;
++            json!({"status":"waiting","advanced":advanced,"segment":segment,
++                "continuation":continuation,"attempted":attempted,
++                "committed":committed,"residual":residual})
++        }
++        Ok(StageOutcome::Complete {
++            segment,
++            committed,
++            attempted,
++            residual,
++        }) => json!({"status":"complete","segment":segment,"attempted":attempted,
++                "committed":committed,"residual":residual}),
++        Err(rejected) => json!({"status":"rejected","error":rejected.error,
++            "attempted":rejected.attempted,"committed":rejected.committed}),
++    };
++    let object = report
++        .as_object_mut()
++        .expect("stage reports are JSON objects");
++    for (name, value) in STAGE_LABELS {
++        object.insert(name.into(), Value::String(value.into()));
++    }
++    report
++}
+diff --git a/crates/mori/src/commands/simulate.rs b/crates/mori/src/commands/simulate.rs
+--- a/crates/mori/src/commands/simulate.rs
++++ b/crates/mori/src/commands/simulate.rs
+@@ -151,46 +151,12 @@
+ fn print_stage_result(
+     result: Result<mori_core::stage::StageOutcome, mori_core::stage::StageRejection>,
+ ) -> super::Result<ExitCode> {
+-    use mori_core::stage::StageOutcome;
+-    let (report, exit) = match result {
+-        Ok(StageOutcome::Waiting {
+-            advanced,
+-            segment,
+-            continuation,
+-            attempted,
+-            residual,
+-        }) => {
+-            let committed = continuation.logical.committed;
+-            (
+-                serde_json::json!({
+-                    "status":"waiting", "advanced":advanced, "segment":segment,
+-                    "continuation":continuation, "attempted":attempted,
+-                    "committed":committed, "residual":residual
+-                }),
+-                ExitCode::SUCCESS,
+-            )
+-        }
+-        Ok(StageOutcome::Complete {
+-            segment,
+-            committed,
+-            attempted,
+-            residual,
+-        }) => (
+-            serde_json::json!({
+-                "status":"complete", "segment":segment, "attempted":attempted,
+-                "committed":committed, "residual":residual
+-            }),
+-            ExitCode::SUCCESS,
+-        ),
+-        Err(rejected) => (
+-            serde_json::json!({
+-                "status":"rejected", "error":rejected.error,
+-                "attempted":rejected.attempted, "committed":rejected.committed
+-            }),
+-            ExitCode::FAILURE,
+-        ),
++    let exit = if result.is_ok() {
++        ExitCode::SUCCESS
++    } else {
++        ExitCode::FAILURE
+     };
+-    print_stage_report(report)?;
++    super::core_io::print(&mori_core::stage::outcome_report(result))?;
+     Ok(exit)
+ }
+ 
+diff --git a/crates/mori/src/commands/test/stage_test.rs b/crates/mori/src/commands/test/stage_test.rs
+--- a/crates/mori/src/commands/test/stage_test.rs
++++ b/crates/mori/src/commands/test/stage_test.rs
+@@ -105,7 +105,7 @@
+         Err(error) => Err(no_work(error.clone())),
+     };
+     let mut pending = continuation(&started);
+-    let actual = report(started)?;
++    let actual = stage::outcome_report(started);
+     let passed = actual == expected_start;
+     let mut stages = vec![json!({"index":0,"passed":passed,"actual":actual})];
+     let mut all_passed = passed;
+@@ -130,7 +130,7 @@
+             Err(_) => Some(previous),
+             _ => continuation(&resumed),
+         };
+-        let actual = report(resumed)?;
++        let actual = stage::outcome_report(resumed);
+         let passed = actual == expected;
+         all_passed &= passed;
+         stages.push(json!({"index":index+1,"passed":passed,"actual":actual}));
+@@ -168,39 +168,3 @@
+         _ => None,
+     }
+ }
+-
+-/// Same complete report envelope as public `simulate` for a Core/2 invocation.
+-/// Output-only StageSegment/Statement types are serialized, never deserialized
+-/// through the intentionally Core/1-only shared execution wire.
+-fn report(result: std::result::Result<StageOutcome, StageRejection>) -> Result<Value> {
+-    let mut report = match result {
+-        Ok(StageOutcome::Waiting {
+-            advanced,
+-            segment,
+-            continuation,
+-            attempted,
+-            residual,
+-        }) => {
+-            let committed = continuation.logical.committed;
+-            json!({"status":"waiting","advanced":advanced,"segment":segment,
+-                "continuation":continuation,"attempted":attempted,
+-                "committed":committed,"residual":residual})
+-        }
+-        Ok(StageOutcome::Complete {
+-            segment,
+-            committed,
+-            attempted,
+-            residual,
+-        }) => json!({"status":"complete","segment":segment,"attempted":attempted,
+-                "committed":committed,"residual":residual}),
+-        Err(rejected) => json!({"status":"rejected","error":rejected.error,
+-            "attempted":rejected.attempted,"committed":rejected.committed}),
+-    };
+-    let object = report
+-        .as_object_mut()
+-        .expect("stage reports are JSON objects");
+-    for (name, value) in stage::STAGE_LABELS {
+-        object.insert(name.into(), Value::String(value.into()));
+-    }
+-    Ok(report)
+-}
