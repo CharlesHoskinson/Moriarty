@@ -32,6 +32,9 @@ pub mod sherlock_source;
 // Caller-bounded scalar diagnostic proposal; H1 qualification is explicit in its API.
 #[path = "sherlock/bounded_scalar_source.rs"]
 pub mod sherlock_bounded_source;
+// Read-only financial observations over the existing Core/2 public carrier.
+#[path = "sherlock/financial_projection.rs"]
+pub mod sherlock_financial_projection;
 pub mod stage;
 mod replay;
 mod runtime;

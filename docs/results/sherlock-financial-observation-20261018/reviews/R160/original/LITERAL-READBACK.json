@@ -1,0 +1,227 @@
+{
+  "status": "RAW_OWNER_APPROVE_ELIGIBLE_WITH_LITERAL_ERRORS_NOT_CLEAN_COORDINATOR_APPROVAL",
+  "scope": "Mechanical exact literal/hash/API-name/callsite readback only; judgments remain actual designated reviewer and Root disposition. No replacement security or functional vote, no automatic correction or retry.",
+  "raw_report": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/REPORT.md",
+    "bytes": 7686,
+    "sha256": "ccfa681ea20eb0b4299bb4df52fb263f5f6f54d6f84ba5308eba930753fd237a",
+    "strict_JSON": true,
+    "decisionA": "APPROVE",
+    "decisionB": "ELIGIBLE",
+    "mandatory_findings": []
+  },
+  "factual_mismatches_and_deviations": [
+    {
+      "id": "E1",
+      "kind": "literal_digest_transcription",
+      "report_occurrences": 2,
+      "reported": "aa2fcffeeb804a9922f70deaf1e1e549d2f4479790d223f06736e74f1dd4ac4",
+      "actual_F022_SHA256": "aa2fcffeeb804a9922f70deaf1e1e549d2f4479790d9223f06736e74f1dd4ac4",
+      "actual_bytes": 152151,
+      "fact": "The report shortens the 64-character plan SHA to 63 characters, omitting the 9 in ...9790d9223...; raw opinion unchanged."
+    },
+    {
+      "id": "E2",
+      "kind": "nonexistent_API_identifiers",
+      "reported": [
+        "ExecutionObservation::from_execution",
+        "SegmentObservation::from_segment",
+        "FinancialObservation::from_stage_result"
+      ],
+      "absent_from_F001": true,
+      "actual_anchors": [
+        {
+          "file_id": "F001",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/001-financial_projection.rs",
+          "source_line": 81,
+          "literal": "pub fn project_execution(execution: &Execution) -> ExecutionObservation"
+        },
+        {
+          "file_id": "F001",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/001-financial_projection.rs",
+          "source_line": 87,
+          "literal": "pub fn project_segment(segment: &StageSegment) -> SegmentObservation"
+        },
+        {
+          "file_id": "F001",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/001-financial_projection.rs",
+          "source_line": 101,
+          "literal": "pub fn project_stage_result("
+        }
+      ],
+      "fact": "The underlying destructuring and variant mappings exist as free functions with different names; no coordinator semantic vote supplied."
+    },
+    {
+      "id": "E3",
+      "kind": "nonblocking_test_coverage_and_API_facts",
+      "reported_full_NF1": "NF1 (F001/F002 helper coverage): `ResumeFinancialObservation`, `project_resume_result`, `financial_observation_matches`, `resume_financial_observation_matches`, `committed_logical_work`, `attempted_logical_work`, and `residual_obligations` in F001 are not directly called by F002, which tests `project_invocation` and `committed_boundary` directly.",
+      "false_noncall_claim": "committed_logical_work is directly called in F002, twice",
+      "actual_anchors": [
+        {
+          "file_id": "F002",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/151-financial-observation-adapter/test-followup/financial_observation_positive.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/002-financial_observation_positive.rs",
+          "source_line": 103,
+          "literal": "assert_eq!(view.committed_logical_work(), c.logical.committed);"
+        },
+        {
+          "file_id": "F002",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/151-financial-observation-adapter/test-followup/financial_observation_positive.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/002-financial_observation_positive.rs",
+          "source_line": 112,
+          "literal": "assert_eq!(view.committed_logical_work(), *c);"
+        }
+      ],
+      "nonexistent_F001_identifiers": [
+        "attempted_logical_work",
+        "residual_obligations"
+      ],
+      "identifiers_absent": true,
+      "unchallenged_part": "Other listed existing legacy helpers are not directly called by F002; no general helper coverage claim made."
+    },
+    {
+      "id": "E4",
+      "kind": "nonexistent_underlying_owner_function_name",
+      "reported_full_NF2": "NF2 (F001/F014 unvalidated rejection echo): `FinancialObservation::committed_logical_work` returns `*committed` on `Rejected { committed, .. }`; as documented in F001 and F014 (`reject_resume`), early pre-validation resume refusal echoes unvalidated caller input `continuation.logical.committed`.",
+      "reported_name": "reject_resume",
+      "absent_from_F014": true,
+      "actual_anchors": [
+        {
+          "file_id": "F014",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/admit.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/014-admit.rs",
+          "source_line": 16,
+          "literal": "fn rejected(error: Error, attempted: UInt, committed: UInt) -> StageRejection"
+        },
+        {
+          "file_id": "F014",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/admit.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/014-admit.rs",
+          "source_line": 287,
+          "literal": "let kept = c.logical.committed;"
+        },
+        {
+          "file_id": "F014",
+          "original_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/admit.rs",
+          "local_body": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/160-financial-source-functional-review/bodies/014-admit.rs",
+          "source_line": 288,
+          "literal": "let refuse = |code: &str, message: &str| rejected(Error::new(code, message), UInt(0), kept);"
+        }
+      ],
+      "fact": "The named function is absent. The report-described input committed echo has the supplied literal source anchors; factual readback is not a new security judgment."
+    },
+    {
+      "id": "E5",
+      "kind": "output_size_instruction_deviation",
+      "requested_max_UTF8_bytes": 6000,
+      "actual_UTF8_bytes": 7686,
+      "excess_bytes": 1686,
+      "strict_JSON_parses": true,
+      "raw_preserved": true
+    }
+  ],
+  "all_hashlike_tokens_readback": [
+    {
+      "literal": "0a066734f24b37289c2b631ca1f7297da58ce36cc224b298ab0d553e408db55d",
+      "length": 64,
+      "matches_frozen_body_digest": true,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "18782ce4c49cfe9fb9b3f885c0651aa2273893aaf33b604355bd49f511368533",
+      "length": 64,
+      "matches_frozen_body_digest": false,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "22cdba1c8016814471b3d468fe510797f5a542a20f6343ae12cdadf8a81dc403",
+      "length": 64,
+      "matches_frozen_body_digest": true,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "4fca10be53f9c7ce73bd2e8783976011f8efd681bc055ae67852de99691a79c7",
+      "length": 64,
+      "matches_frozen_body_digest": true,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "8723f842aa0f508e47716dfcdec88dedad2433bf8625a8476aa1ef7fd6f5113b",
+      "length": 64,
+      "matches_frozen_body_digest": true,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "8ffdfc5433c9efe78b26cf31d86e86aacbb8cab9b41506c713d2aff4f3441142",
+      "length": 64,
+      "matches_frozen_body_digest": true,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "90f627462b94f23dc4c7c08653da81cc421e8c88804d289b377b4e1960164965",
+      "length": 64,
+      "matches_frozen_body_digest": true,
+      "occurs_in_exact_supplied_body": true,
+      "known_error": false
+    },
+    {
+      "literal": "aa2fcffeeb804a9922f70deaf1e1e549d2f4479790d223f06736e74f1dd4ac4",
+      "length": 63,
+      "matches_frozen_body_digest": false,
+      "occurs_in_exact_supplied_body": false,
+      "known_error": true
+    }
+  ],
+  "other_checked_facts": [
+    "Reported source/test/lib/EXPECTED digest literals match frozen bodies.",
+    "Reported R150 baseline digest matches F022 baseline metadata.",
+    "Reported program_hash/plan_hash match F046 program_context.",
+    "Reported positive work/plan values match complete independent goldens; no subject execution performed for this readback.",
+    "Exact five prospective argv/env/cwd/time/output bounds and normal inventory counts correspond to F022.",
+    "Positive-only/local failed tentative carrier and external normal dependency source-body limitations retained."
+  ],
+  "coverage": {
+    "mandatory_pages": 127,
+    "unique_DONE_pages": 127,
+    "all_required_DONE_once": true,
+    "all_line_byte_summaries_match": true,
+    "missing_pages": [],
+    "duplicate_reads": {},
+    "disallowed_tools_paths_parameters": [],
+    "observed_failed_terminal_tool_states": [],
+    "unchanged_original_body_and_page_pins": true,
+    "limitation": "Actual AGY tool_info output contains line/byte summary, not full response text. Count/path summaries are mechanically checked; end-to-end body fidelity and semantic reading are not proved by summaries. Auditor scope and literal source-grounding checked separately."
+  },
+  "actual_terminal": {
+    "CLI_exit": 0,
+    "provider_status": "SUCCESS",
+    "provider_duration_seconds": 331.497933285,
+    "controller_elapsed_seconds": 334.1047527799965,
+    "conversation_id": "10e93f5e-f8e5-4881-a530-773926c29fdd",
+    "actual_init_model": [
+      "gemini-4-argon-high"
+    ],
+    "weights_attestation": false,
+    "fresh_context": true,
+    "provider_stderr_bytes": 0,
+    "stream_parse_errors": 0,
+    "stop_events": [],
+    "checkpoint_step_count": 1,
+    "checkpoint_payload_or_private_thoughts_retained": false
+  },
+  "transport_boundary": "AGY init exposes broad always-proceed tools; reviewer prompt plus live metadata observer enforce exact view_file paths and stop on disallowed metadata. This is not claimed as OS-level tool isolation. All127 DONE metadata observed; whole semantic comprehension/body fidelity is not attested by counts.",
+  "provider_calls": 1,
+  "retries_or_probes_or_owner_followup": 0,
+  "source_compiler_test_SDK_native_W_Git_actions": "NONE",
+  "native_authority": 0,
+  "Root_disposition_pending": true
+}
