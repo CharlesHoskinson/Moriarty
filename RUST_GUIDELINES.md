@@ -249,6 +249,10 @@ security approval or language-exit acceptance.
   `crates/fixtures/financial-report-contract/`; expected values must not come
   from the evaluator, compiler output or generated baselines. This exception
   adds no authority to execute SDK checks or claim native/proof acceptance.
+- The finite Core `financial_program_wire_contract` target uses independently
+  frozen complete financial Program JSON and the public Program/v1 decoder
+  instead of generated snapshots. It selects no Midnight compatibility feature
+  and makes no compiler-Artifact, SDK, native-proof or ledger acceptance claim.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
