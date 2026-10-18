@@ -1,0 +1,144 @@
+{
+  "rootDescription": "Muse Session Protocol (MSP) v1 wire schema bundle, rendered from the tbh-protocol schema model (spec 206). Generated; do not edit.",
+  "rootKeys": [
+    "$defs",
+    "$schema",
+    "capabilities",
+    "description",
+    "errors",
+    "methods",
+    "notifications",
+    "requests",
+    "reserved"
+  ],
+  "definitions": {
+    "Notification": {
+      "description": "A notification frame, either direction (SS1.2 \u00a72.2). No `id`; a\nnotification is never answered.",
+      "properties": {
+        "emittedAtMs": {
+          "description": "Emission time in Unix milliseconds, recorded once at emission;\nserver\u2192client notifications only (SS1.2.5). Optional on the wire so\ndecoders tolerate older servers.",
+          "type": "integer"
+        },
+        "jsonrpc": {
+          "$ref": "#/$defs/JsonRpcVersion",
+          "description": "The literal `\"2.0\"`."
+        },
+        "method": {
+          "description": "Notification method name.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Method-specific parameters; omitted entirely when empty.",
+          "properties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "jsonrpc",
+        "method"
+      ],
+      "type": "object"
+    },
+    "ItemCompletedParams": {
+      "description": "`item/completed` params (tdd SS4.3): the item reached its terminal state\n\u2014 the authoritative final object. Always cites a durable `sourceRange`\n(tdd SS4.2). Clients MUST accept `item/completed` for an `itemId` they\nnever saw `item/started` for (single-shot kinds; after a gap fill; tdd\nSS4.4.1).",
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/Item",
+          "description": "The full item at its terminal revision."
+        },
+        "sessionId": {
+          "description": "The owning session.",
+          "type": "string"
+        },
+        "sourceRange": {
+          "$ref": "#/$defs/SourceRange",
+          "description": "The durable records this event folded from."
+        },
+        "viewCursor": {
+          "description": "Opaque, strictly monotonic view cursor (tdd SS4.1).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item",
+        "sessionId",
+        "sourceRange",
+        "viewCursor"
+      ],
+      "type": "object"
+    },
+    "MessagePhase": {
+      "description": "`agentMessage.messagePhase` (tdd SS4.5.3, #50254): the phase the model\ndeclared on the commit, never inferred from position. Set on the\ncompleted item only; absent on `item/started`, which opens before the\nphase is recorded. Open: a client reads an absent or unknown value on a\ncompleted item as `\"finalAnswer\"` and still decodes the item. Not a\nturn-done signal; `turn/completed` is.",
+      "enum": [
+        "commentary",
+        "finalAnswer"
+      ],
+      "type": "string",
+      "x-msp-openness": "open"
+    },
+    "TurnCompletedParams": {
+      "description": "`turn/completed` params (tdd SS4.5.1): the run's durable terminal record\nlanded.",
+      "properties": {
+        "durationMs": {
+          "description": "Turn duration; absent means unmeasured, never fabricated.",
+          "type": "integer"
+        },
+        "error": {
+          "$ref": "#/$defs/TurnError",
+          "description": "Present when `terminal` is `\"failed\"`, except on a synthesized\nhost-death terminal, which carries `reason` instead (tdd SS4.5.1,\nADR 36635 D2): mid-turn failures reach the client here \u2014 never as a\nJSON-RPC error."
+        },
+        "reason": {
+          "description": "The runtime's free-text terminal reason, verbatim. Display and\ndiagnostics only; never branch on it.",
+          "type": "string"
+        },
+        "sessionId": {
+          "description": "The owning session.",
+          "type": "string"
+        },
+        "sourceRange": {
+          "$ref": "#/$defs/SourceRange",
+          "description": "The durable records this event folded from."
+        },
+        "terminal": {
+          "$ref": "#/$defs/TurnTerminal",
+          "description": "The turn terminal (open enum)."
+        },
+        "timeToFirstTokenMs": {
+          "description": "Time to first token, when measured.",
+          "type": "integer"
+        },
+        "turnId": {
+          "description": "The terminated turn.",
+          "type": "string"
+        },
+        "usage": {
+          "$ref": "#/$defs/TokenUsage",
+          "description": "The turn's aggregate token usage, summed across the turn's model\ncompletions (same shape as `session/tokenUsage.usage`)."
+        },
+        "viewCursor": {
+          "description": "Opaque, strictly monotonic view cursor (tdd SS4.1).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionId",
+        "sourceRange",
+        "terminal",
+        "turnId",
+        "viewCursor"
+      ],
+      "type": "object"
+    },
+    "TurnTerminal": {
+      "description": "Turn terminal vocabulary (tdd SS4.5.1): exactly the runtime's\n`RunTerminalKind` \u2014 closed in the runtime, wire-open for evolution.",
+      "enum": [
+        "completed",
+        "failed",
+        "cancelled"
+      ],
+      "type": "string",
+      "x-msp-openness": "open"
+    }
+  },
+  "execSpecificDefinitions": []
+}

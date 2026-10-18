@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "sourcePatchUnchanged",
+    "unifiedPatch",
+    "revisedTestSource",
+    "additionalTestFiles",
+    "inputDispositions",
+    "prerequisites",
+    "portableWithoutExcludedHistoricalDirectory",
+    "sourceLimitations",
+    "testingLimitations",
+    "unreadScope",
+    "outsideSourcePatchNeed",
+    "executionPerformed",
+    "selfApproval",
+    "actualBackendIdentityAttested",
+    "reviewToken"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "REVISED_PORTABLE_TEST_SOURCE_SUPPLIED",
+        "BLOCKED_WITH_EXACT_MISSING_INPUTS"
+      ]
+    },
+    "sourcePatchUnchanged": {
+      "const": true
+    },
+    "unifiedPatch": {
+      "const": "--- a/experiments/moriarty-eutxo/src/compile-custody.mjs\n+++ b/experiments/moriarty-eutxo/src/compile-custody.mjs\n@@ -343,7 +343,7 @@ export function compileCustody({ sourcePath, seedPath, casesPath, expectedReleas\n     const blueprintSrc = join(isolated, 'plutus.json');\n     const compiled = build.status === 0 && existsSync(blueprintSrc);\n     let applied = null;\n-    if (compiled) {\n+    if (checkOk && compiled) {\n       cpSync(blueprintSrc, published);\n       const queried = production ? syntheticTime.queriedSeed : null;\n       applied = applyUnitParameters({\n@@ -398,7 +398,7 @@ export function compileCustody({ sourcePath, seedPath, casesPath, expectedReleas\n       missingTests: missing,\n       checkStatus,\n       buildStatus: build.status,\n-      blueprintPath: compiled ? published : null,\n+      blueprintPath: checkOk && compiled ? published : null,\n       check: { status: checkStatus, stdout: check.stdout, stderr: check.stderr, tests: parsed.tests, missing },\n       build: { status: build.status, stdout: build.stdout, stderr: build.stderr },\n       oracleBound: bound.bound,\n"
+    },
+    "revisedTestSource": {
+      "type": "string",
+      "minLength": 1
+    },
+    "additionalTestFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repositoryRelativePath",
+          "fullSource",
+          "purpose"
+        ],
+        "properties": {
+          "repositoryRelativePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fullSource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "inputDispositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "disposition",
+          "sourceBasis"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "disposition": {
+            "enum": [
+              "USED_AS_IS",
+              "USED_WITH_OWNER_AUTHORED_TEST_DATA",
+              "NOT_USED",
+              "INSUFFICIENT_UNREAD"
+            ]
+          },
+          "sourceBasis": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "prerequisites": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "exactInputOrCapability",
+          "suppliedOrMissing",
+          "sourceBasis",
+          "remainingAction"
+        ],
+        "properties": {
+          "exactInputOrCapability": {
+            "type": "string",
+            "minLength": 1
+          },
+          "suppliedOrMissing": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceBasis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remainingAction": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "portableWithoutExcludedHistoricalDirectory": {
+      "enum": [
+        "YES_WITH_LISTED_PREREQUISITES",
+        "NO",
+        "UNESTABLISHED"
+      ]
+    },
+    "sourceLimitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "testingLimitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "unreadScope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outsideSourcePatchNeed": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "executionPerformed": {
+      "const": false
+    },
+    "selfApproval": {
+      "const": false
+    },
+    "actualBackendIdentityAttested": {
+      "const": false
+    },
+    "reviewToken": {
+      "const": "q1-portable-test-owner-92cdb92125ca4c508ad48a411436e02f"
+    }
+  }
+}

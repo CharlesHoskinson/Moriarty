@@ -1,0 +1,33 @@
+{
+  "case": "tests/actus-tests-pam.json/pam16",
+  "all7original_output_keys": [
+    "eventDate",
+    "eventType",
+    "payoff",
+    "currency",
+    "notionalPrincipal",
+    "nominalInterestRate",
+    "accruedInterest"
+  ],
+  "mapping_origin": "author proposal from original input/spec; not independent oracle",
+  "dimensional_encoding": {
+    "principal": "UInt lots of10USD, source transfer/principal duty amount = lots*10; exact supplied NT3000 reifies as300lots",
+    "nominal_rate": "UInt tenths of1/year; exact supplied rate0.1 reifies as1tenth; mandatory result projection must emit exact decimalquantity without float tolerance",
+    "accrued_interest": "UInt USD integral for the selected bounded Jan1 annual slices only; generic fractional accrual not claimed",
+    "calendar": "Jan1 finite source guards for2013..2016; A365 actualdays/365; no date parser/calendar API or generic businessday model substituted"
+  },
+  "source_program": null,
+  "Core_scenario": null,
+  "reason_no_source": "Every mandatory result is not yet uniquely mapped: IP Feac update with absent FER/FEB and undefined FP predecessor/successor feeds MD payoff. Full source/test held until that rule is resolved.",
+  "input_schedule_premises": {
+    "source": "PAM IED/IP/MD schedules and original P1YL0 anchor/maturity, with source event ordering dictionary",
+    "horizon": "Original to is empty string; wrapper/default horizon meaning must be pinned rather than silently replaced by host stop flag"
+  },
+  "independent_questions": [
+    "Does the absent fee driver give an explicit normative zero/carry rule for every IP Feac update?",
+    "If not, MD payoff is not uniquely determined even with exact principal/rate/day fractions.",
+    "What exact original-wrapper rule interprets empty to?",
+    "Confirm same-instant IED before IP and IP before MD from normative event sequence."
+  ],
+  "no_expected_results": "No expected cashflow numbers/snapshots/effects/work or local evaluator results included"
+}

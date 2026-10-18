@@ -1,0 +1,102 @@
+{
+  "status": "NO_COMPLETE_POSITIVE_SPECIMEN_ESTABLISHED",
+  "case": "tests/actus-tests-pam.json/pam16",
+  "base": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+  "preserved_prior_block": "CSH01 numeric output/default gap unchanged; not replaced by a partial specimen",
+  "all_required_fields": [
+    {
+      "field": "eventDate",
+      "status": "DIRECT_TERM_OR_SCHEDULE_PREMISE",
+      "basis": "PAM date/schedule/time rules, with empty-to wrapper still unresolved"
+    },
+    {
+      "field": "eventType",
+      "status": "DIRECT_TERM_OR_SCHEDULE_PREMISE",
+      "basis": "IED/IP/MD schedules; dictionary event order1/8/19"
+    },
+    {
+      "field": "payoff",
+      "status": "NOT_UNIQUE_FOR_MD_UNTIL_FEE_STATE_RULE_RESOLVED",
+      "basis": "PAM MD includes Feac; PAM IP else branch references undefined FER and undefined FP times."
+    },
+    {
+      "field": "currency",
+      "status": "DIRECT_TERM_OR_SCHEDULE_PREMISE",
+      "basis": "Explicit USD term; local exact asset binding remains a future source adapter"
+    },
+    {
+      "field": "notionalPrincipal",
+      "status": "EXPLICIT_NORMATIVE_STATE_DEFINITION",
+      "basis": "PAM initial/IED/MD Nt rules"
+    },
+    {
+      "field": "nominalInterestRate",
+      "status": "EXPLICIT_NORMATIVE_STATE_DEFINITION",
+      "basis": "PAM initial/IED Ipnr; exact0.1 may be finite tenths UInt encoding"
+    },
+    {
+      "field": "accruedInterest",
+      "status": "POST_EVENT_RULE_EXPLICIT_BUT_INITIAL_DEFINEDNESS_UNRESOLVED",
+      "basis": "PAM Ipac initializer needs previousIP time despite empty pre-status schedule; IED/IP/MD post-event assignments do not retroactively define initial state."
+    }
+  ],
+  "first_blocked_interface": "PAM initial Ipac definedness -> complete initial Core scenario; later IP Feac update also blocks MD payoff",
+  "exact_chain": [
+    {
+      "line_range": [
+        853,
+        856
+      ],
+      "fact": "IPNR is supplied, IPAC absent; initial Ipac else branch uses YF(previousIP,t0)*Nt0*Ipnr0 with no pre-status IP. Zero factors do not define an undefined year fraction."
+    },
+    {
+      "line": 858,
+      "fact": "PAM initial Feac explicitly0.0 when FERundefined (complete original clause retained)"
+    },
+    {
+      "line_range": [
+        965,
+        970
+      ],
+      "fact": "PAM IP Feac branch has conditional FEB=N, else uses YF(FPprev,t)/YF(FPprev,FPnext)*roleSign*FER; absent FER/FEB/fee schedule do not assign those operands."
+    },
+    {
+      "line": 896,
+      "fact": "PAM MD payoff adds Feac, so principal/rate/daycount uniqueness does not determine complete cashflow."
+    }
+  ],
+  "independent_resolved_inputs": [
+    "A365 actualdays/365 supplied by dictionary",
+    "Selected Jan1 annual calendar periods are exact",
+    "IED1 < IP8 < MD19 by event dictionary",
+    "Principal and positive rate directly specified; no inapplicable interest-state padding needed"
+  ],
+  "additional_wrapper_gap": "Original to empty string horizon/default rule not supplied; independent abstention retains this wrapper gap.",
+  "not_a_solution": "Public PAM Group1 conditional fee-term applicability establishes requiredness, not an explicit undefined-fee Feac state-update algebra. Empty dictionary defaults do not authorize zero.",
+  "decision_alternatives": [
+    {
+      "option": "Locate additional pinned normative rule",
+      "consequence": "If it explicitly defines no-fee state transition and wrapper horizon, derive all outputs without changing financial semantics."
+    },
+    {
+      "option": "Review/adopt explicit absent-or-zero FER fee-state guard",
+      "consequence": "A versioned semantic decision could retain or zero Feac under explicit conditions, but must specify domain/carry behavior and family effects. This packet does not choose it."
+    },
+    {
+      "option": "Preserve formal undefinedness",
+      "consequence": "Full raw PAM16 output conformance remains unestablished; do not create a passing partial test."
+    }
+  ],
+  "source_program": null,
+  "Core_scenario": null,
+  "expected_outcomes": null,
+  "test_patch": null,
+  "runtime": "UNRUN",
+  "family_score": 0,
+  "all277_18types_32taxonomy_DS01to07_retained": true,
+  "independent_receipts": {
+    "main_freeze_sha256": "7ea3c6d7e9e780814c418c2ff712dc51cb36390bf9b58ae556404e2585a2b97e",
+    "addendum_freeze_sha256": "ba2559169ad5434a1e853bce4c245d23b118b0ad82532ffa594ca0d15c31882c",
+    "main_freeze_unchanged": true
+  }
+}

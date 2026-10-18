@@ -1,0 +1,27 @@
+{
+  "fullSourcePin": {
+    "commit": "b988764129e8828e3bc5b4d4b7660df61c3a184f",
+    "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+    "gitBlob": "2857e14f74955cfad24891354992fcecc794d9e7",
+    "sha256": "572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680",
+    "bytes": 19587,
+    "unchangedFromBase": true
+  },
+  "excerpts": [
+    {
+      "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+      "commit": "b988764129e8828e3bc5b4d4b7660df61c3a184f",
+      "firstLine": 200,
+      "lastLine": 205,
+      "body": "}\n\nexport function compileCustody({ sourcePath, seedPath, casesPath, expectedReleasePath, expectedRefundPath, residualPath, manifest, outDir, oracleResultsPath = DEFAULT_ORACLE, aikenRun = runAiken, syntheticTime = null }) {\n  mkdirSync(outDir, { recursive: true });\n  const stale = clearArtifacts(outDir);\n  if (stale) return stale;\n"
+    },
+    {
+      "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+      "commit": "b988764129e8828e3bc5b4d4b7660df61c3a184f",
+      "firstLine": 310,
+      "lastLine": 319,
+      "body": "  let bound;\n  try {\n    bound = bindOracleSpends(JSON.parse(readFileSync(oracleResultsPath, 'utf8')), syntheticTime);\n  } catch (error) {\n    const failure = refuse(error.code || 'ORACLE_DIVERGENCE', error.message);\n    const drift = writeAdmission(outDir, failure, false);\n    if (drift) return drift;\n    return failure;\n  }\n  const validator = `${lowered.validator}\\n${bound.source}\\n`;\n"
+    }
+  ],
+  "scope": "Existing option default and selected file read only; no oracle contents/trust or Q1 judgment."
+}

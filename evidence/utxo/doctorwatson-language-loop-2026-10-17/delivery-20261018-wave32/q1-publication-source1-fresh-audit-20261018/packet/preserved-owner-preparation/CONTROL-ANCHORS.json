@@ -1,0 +1,68 @@
+[
+  {
+    "id": "producer-check",
+    "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+    "span": [
+      339,
+      360
+    ],
+    "fact": "Existing checkOk, compiled, publication/application branch and final result flag; exact source is in the complete producer below.",
+    "sourceExcerpt": "    const checkOk = check.status === 0 && parsed.ok && missing.length === 0;\n    const build = aikenRun(['build', '--uplc'], isolated);\n    writeFileSync(join(outDir, 'aiken-build.stdout'), build.stdout || '');\n    writeFileSync(join(outDir, 'aiken-build.stderr'), build.stderr || '');\n    const blueprintSrc = join(isolated, 'plutus.json');\n    const compiled = build.status === 0 && existsSync(blueprintSrc);\n    let applied = null;\n    if (compiled) {\n      cpSync(blueprintSrc, published);\n      const queried = production ? syntheticTime.queriedSeed : null;\n      applied = applyUnitParameters({\n        blueprintPath: published,\n        isolatedDir: isolated,\n        hashes: admitted.hashes,\n        manifest: admitted.manifest,\n        seedTxId: queried?.txId || '88'.repeat(32),\n        seedIndex: Number.isInteger(queried?.index) ? queried.index : 0,\n        persistDir: outDir,\n      });\n    }\n    const ok = checkOk && compiled && applied?.ok === true;\n    const checkStatus = check.status === 0 && !checkOk ? 1 : check.status;\n",
+    "fullFileSha256": "572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680"
+  },
+  {
+    "id": "producer-advertised-path",
+    "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+    "span": [
+      385,
+      413
+    ],
+    "fact": "Existing returned blueprintPath and finally cleanup; exact source is in the complete producer below.",
+    "sourceExcerpt": "    return {\n      ok,\n      code: ok ? undefined : (!checkOk ? 'AIKEN_CHECK' : (applied && applied.ok === false ? applied.code : 'AIKEN_BUILD')),\n      detail: checkOk ? null : missing.join(','),\n      ledgerExecution: false,\n      nativePins: false,\n      productionArtifact: production === true,\n      nativeProbe: false,\n      layer: production ? 'calibrated-sibling-offline' : 'source-uplc-unit',\n      hashes: admitted.hashes,\n      instanceId: admitted.instanceId,\n      applied,\n      validatorPath,\n      missingTests: missing,\n      checkStatus,\n      buildStatus: build.status,\n      blueprintPath: compiled ? published : null,\n      check: { status: checkStatus, stdout: check.stdout, stderr: check.stderr, tests: parsed.tests, missing },\n      build: { status: build.status, stdout: build.stdout, stderr: build.stderr },\n      oracleBound: bound.bound,\n      oracleSkipped: bound.skipped,\n      outDir,\n    };\n  } finally {\n    rmSync(isolated, { recursive: true, force: true });\n  }\n}\n\nexport { LowerError };\n",
+    "fullFileSha256": "572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680"
+  },
+  {
+    "id": "public-cli",
+    "path": "experiments/moriarty-eutxo/src/cli.mjs",
+    "span": [
+      299,
+      331
+    ],
+    "fact": "Existing compile-custody CLI invokes this producer and displays result.blueprintPath.",
+    "sourceExcerpt": "if (command === 'compile-custody') {\n  const task = '/home/charl/moriarty-eutxo-validation-2026-10-12';\n  const designer = join(task, 'designers/02-escrow-time');\n  const manifestPath = arg('--manifest', join(ROOT, 'examples/custody-unit.manifest.json'));\n  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));\n  const source = arg('--source', join(designer, 'escrow-custody-v5.mori'));\n  const seed = arg('--seed', join(designer, 'financial-seed-custody-v5.json'));\n  const out = takeOut(join(task, 't1-native-adapters-57/checks/cli-custody'));\n  const result = compileCustody({\n    sourcePath: source,\n    seedPath: seed,\n    casesPath: arg('--cases', join(designer, 'cases.json')),\n    expectedReleasePath: arg('--expected-release', join(designer, 'E13-release-real-custody.expected.json')),\n    expectedRefundPath: arg('--expected-refund', join(designer, 'E11-refund-real-custody.expected.json')),\n    residualPath: arg('--residual', join(designer, 'financial-residual-custody-v5.json')),\n    manifest,\n    outDir: out,\n  });\n  process.stdout.write(JSON.stringify({\n    ok: result.ok,\n    code: result.code,\n    ledgerExecution: false,\n    nativePins: false,\n    layer: result.layer || 'source-uplc-unit',\n    hashes: result.hashes,\n    instanceId: result.instanceId,\n    checkStatus: result.check?.status,\n    buildStatus: result.build?.status,\n    blueprint: result.blueprintPath,\n    validator: result.validatorPath,\n    missing: result.check?.missing,\n  }, null, 2) + '\\n');\n  process.exit(result.ok ? 0 : 1);\n",
+    "fullFileSha256": "5f88ec51a97ea835d85ed03c62153ff6dc221d460bab6b58f2cb34c84abb55c0"
+  },
+  {
+    "id": "sibling-caller",
+    "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+    "span": [
+      266,
+      318
+    ],
+    "fact": "Existing production sibling caller invokes this producer, reads result.ok and returns blueprint identity/path fields.",
+    "sourceExcerpt": "    const compiled = compileCustody({\n      sourcePath,\n      seedPath: join(DESIGNER, 'financial-seed-custody-v5.json'),\n      casesPath: join(DESIGNER, 'cases.json'),\n      expectedReleasePath: join(DESIGNER, 'E13-release-real-custody.expected.json'),\n      expectedRefundPath: join(DESIGNER, 'E11-refund-real-custody.expected.json'),\n      residualPath: join(DESIGNER, 'financial-residual-custody-v5.json'),\n      manifest,\n      outDir,\n      syntheticTime: {\n        evidenceClass: 'node-genesis-v3-probe',\n        productionArtifact: true,\n        unitFixture: false,\n        probeExecuted: true,\n        genesisSha256: production.genesisSha256,\n        queriedSeed: seed,\n        bounds,\n        productionAdmission: production,\n      },\n    });\n    const programHash = compiled.hashes?.programHash || null;\n    if (!compiled.ok || !programHash || programHash === previousProgramHash || compiled.hashes?.sourceHash === sourceHash) {\n      return closed(compiled.code || 'SIBLING_COMPILE_REJECTED', {\n        siblingEmitted: false,\n        productionAdmitted: false,\n        calibrated: false,\n        nativeProbe: false,\n        detail: compiled.detail || null,\n      });\n    }\n    return {\n      ok: true,\n      code: 'SIBLING_COMPILED',\n      siblingEmitted: true,\n      calibrated: true,\n      productionAdmitted: true,\n      productionArtifact: true,\n      nativeProbe: true,\n      spawned: true,\n      compilerInvoked: true,\n      cacheHit: false,\n      programHash,\n      boundsHash: compiled.hashes.boundsHash,\n      sourceHash: compiled.hashes.sourceHash,\n      schemaHash: compiled.hashes.schemaHash,\n      seedHash: compiled.hashes.seedHash,\n      blueprintSha256: compiled.blueprintPath ? fileHash(compiled.blueprintPath) : null,\n      blueprintPath: compiled.blueprintPath,\n      sourcePath: join(outDir, 'sibling.mori'),\n      applied: compiled.applied,\n      productionAdmission: production,\n      zeroTime: production.zeroTime,\n      zeroSlot: production.zeroSlot,\n",
+    "fullFileSha256": "3c621003f9d4c5e00e9b5efafd21ee058aebb2d8886569b199670561b1c9f469"
+  },
+  {
+    "id": "source-cache-caller",
+    "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+    "span": [
+      1298,
+      1326
+    ],
+    "fact": "Existing source compiler caller checks result.ok/path then copies blueprint into source cache.",
+    "sourceExcerpt": "  const { compileCustody } = await import('./compile-custody.mjs');\n  const compileRoot = evidenceRoot || REPAIR_ROOT;\n  const outDir = join(compileRoot, 'checks/source-compile', sha256);\n  const compiled = compileCustody({\n    sourcePath,\n    seedPath,\n    casesPath: join(DESIGNER, 'cases.json'),\n    expectedReleasePath: join(DESIGNER, 'E13-release-real-custody.expected.json'),\n    expectedRefundPath: join(DESIGNER, 'E11-refund-real-custody.expected.json'),\n    residualPath: join(DESIGNER, 'financial-residual-custody-v5.json'),\n    manifest,\n    outDir,\n  });\n  if (!compiled.ok || !compiled.blueprintPath || !existsSync(compiled.blueprintPath)) {\n    return closed(compiled.code || 'SOURCE_COMPILE_FAILED', {\n      compiled: false,\n      sha256,\n      admitted: true,\n      path: sourcePath,\n      checkStatus: compiled.check?.status ?? null,\n      buildStatus: compiled.build?.status ?? null,\n      missing: compiled.check?.missing || compiled.missingTests || null,\n    });\n  }\n  const cacheDir = evidenceRoot ? join(evidenceRoot, 'checks/source-cache') : SOURCE_CACHE;\n  mkdirSync(cacheDir, { recursive: true });\n  const blueprintPath = join(cacheDir, `${sha256}.plutus.json`);\n  cpSync(compiled.blueprintPath, blueprintPath);\n  const blueprintSha256 = fileHash(blueprintPath);\n",
+    "fullFileSha256": "3c621003f9d4c5e00e9b5efafd21ee058aebb2d8886569b199670561b1c9f469"
+  },
+  {
+    "id": "existing-check-status-control",
+    "path": "experiments/moriarty-eutxo/tests/custody.test.mjs",
+    "span": [
+      549,
+      577
+    ],
+    "fact": "Existing unrun test control invokes compileCustody with an aikenRun callback. This excerpt is supplied unchanged; no test adequacy or new security expectation is supplied by Sol.",
+    "sourceExcerpt": "test('aiken status 7 does not publish admission ok true or a stale blueprint', () => {\n  const outDir = join(CHECKS, 'aiken-exit-7');\n  rmSync(outDir, { recursive: true, force: true });\n  mkdirSync(outDir, { recursive: true });\n  writeFileSync(join(outDir, 'plutus.json'), 'STALE\\n');\n  const result = compileCustody({\n    sourcePath: SOURCE,\n    seedPath: SEED,\n    casesPath: CASES,\n    expectedReleasePath: E13,\n    expectedRefundPath: E11,\n    residualPath: RESIDUAL,\n    manifest: unitManifest(),\n    outDir,\n    aikenRun() {\n      return { status: 7, stdout: '', stderr: 'forced-exit-7' };\n    },\n  });\n  assert.equal(result.ok, false);\n  assert.equal(result.code, 'AIKEN_CHECK');\n  assert.equal(result.check.status, 7);\n  assert.equal(result.blueprintPath, null);\n  assert.equal(existsSync(join(outDir, 'plutus.json')), false);\n  const admission = JSON.parse(readFileSync(join(outDir, 'admission.json'), 'utf8'));\n  assert.equal(admission.ok, false);\n  assert.equal(admission.ok, result.ok);\n  assert.equal(admission.checkStatus, 7);\n});\n\n",
+    "fullFileSha256": "48e7400eff7ea431816a16793499e5947c50fe01e3991d1f9e6a4bd0f683f3c9"
+  }
+]

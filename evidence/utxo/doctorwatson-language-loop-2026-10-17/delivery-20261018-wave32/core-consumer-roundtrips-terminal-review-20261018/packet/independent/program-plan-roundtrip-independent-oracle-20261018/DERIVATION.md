@@ -1,0 +1,11 @@
+# Independent derivation
+
+Selected input is pay(quantity UInt14), cap23, stopping at first await. Empty scenario state selects principal UInt0. All CREDIT amounts are atoms; scale3 is identity metadata, not a multiplication. owed=14+3=17.
+
+Let preserves the complete snapshot. Liability inserts paid-invoice17, debtor alice and creditor merchant. Transfer subtracts17 from alice50 and adds17 to merchant0: alice33/merchant17. Fee subtracts2 from alice33 and adds2 to treasury0: alice31/treasury2. Observer4 is preserved throughout. Discharge subtracts17 from duty17 and retains its named zero row. Next sets principal14. Thus payer total debit19 consists of transfer17 plus fee2; recipient increase17 and treasury increase2. The four supplied balances total54 before and after. This is finite arithmetic, not a general conservation/security judgment.
+
+At await receipt, no guard evaluation or Await Step occurs on entry. Complete boundary has principal14, balances31/17/4/2 (alice/merchant/observer/treasury), and paid-invoice present0. later-credit remains absent: its declaration in an unused action supplies the read identity but does not execute that action. Positive residual list is empty while the complete duty row is retained. Inputs and lets are captures, not state: quantity14 then owed17. The pending accepted binder is excluded.
+
+Documented work has fresh expression occurrences and a per-statement cache. Let visits quantity, UInt3, Add, plus dispatch:4. Liability, Transfer, Fee, Discharge and Next each visit one expression plus dispatch:2 each. Await entry adds1, total15. The conditional accepted guard visits Name accepted plus dispatch:2. Each of three suffix Emits visits one liability-read leaf plus dispatch:2, so the conditional second segment is8 and full successful total23. False guard attempt2 does not increment committed15. No actual event supplied; suffix consequences are conditional. open_credit has one dispatch plus one literal node=2; this plan-only quantity does not execute it.
+
+Exact global ExprIds, Program/Plan hashes/codecs and target are intentionally unknown. No evaluator/compiler/product imports or outputs, authored expectation arrays or test assertions were used. Previous implementation and report-design exposure is disclosed in provenance.

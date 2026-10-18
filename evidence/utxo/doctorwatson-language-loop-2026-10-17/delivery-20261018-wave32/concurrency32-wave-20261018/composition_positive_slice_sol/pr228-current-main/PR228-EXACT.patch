@@ -1,0 +1,70 @@
+diff --git a/crates/mori/tests/disjoint_test_public.rs b/crates/mori/tests/disjoint_test_public.rs
+index e2c70194..9dcd1c67 100644
+--- a/crates/mori/tests/disjoint_test_public.rs
++++ b/crates/mori/tests/disjoint_test_public.rs
+@@ -133,3 +133,65 @@ fn public_consumer_observes_both_disjoint_domains_for_two_explicit_schedules() {
+         actual["cases"][1]["stages"][4]["actual"]["post"],
+     );
+ }
++
++#[test]
++fn ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports() {
++    let project = Project::new();
++    // Keep the complete original observations before changing one expectation.
++    // Source, scenarios, events and actual continuations are unchanged.
++    let baseline = fs::read(project.0.join("public-report.json")).unwrap();
++    let mut expected: Value = serde_json::from_slice(&baseline).unwrap();
++    let expected_stages: Vec<Vec<Value>> = ["left-first", "right-first"]
++        .into_iter()
++        .map(|case| {
++            (0..5)
++                .map(|index| {
++                    serde_json::from_slice(
++                        &fs::read(project.0.join(format!("{case}-{index}.json"))).unwrap(),
++                    )
++                    .unwrap()
++                })
++                .collect()
++        })
++        .collect();
++    // Model an ordinary transcription error in an untouched state value.
++    let mut wrong = expected_stages[0][2].clone();
++    assert_eq!(wrong["post"]["state"]["marker"]["value"], "77");
++    wrong["post"]["state"]["marker"]["value"] = Value::String("78".into());
++    fs::write(
++        project.0.join("left-first-2.json"),
++        serde_json::to_vec_pretty(&wrong).unwrap(),
++    )
++    .unwrap();
++    // Only comparison flags change in the public aggregate; all actual data
++    // and the later stage/case observations must remain exactly the baseline.
++    expected["status"] = Value::String("failed".into());
++    expected["cases"][0]["passed"] = Value::Bool(false);
++    expected["cases"][0]["stages"][2]["passed"] = Value::Bool(false);
++    let mut expected_bytes = serde_json::to_vec_pretty(&expected).unwrap();
++    expected_bytes.push(b'\n');
++    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .args(["--color", "never", "test"])
++        .arg(&project.0)
++        .output()
++        .unwrap();
++    assert_eq!(
++        output.status.code(),
++        Some(1),
++        "{}",
++        String::from_utf8_lossy(&output.stderr)
++    );
++    let actual: Value = serde_json::from_slice(&output.stdout).unwrap();
++    assert_eq!(actual, expected);
++    assert_eq!(output.stdout, expected_bytes);
++    assert!(String::from_utf8_lossy(&output.stderr).contains("1 passed; 1 failed"));
++    let cases = actual["cases"].as_array().unwrap();
++    assert_eq!(cases.len(), expected_stages.len());
++    for (case, expected_stages) in cases.iter().zip(expected_stages) {
++        let stages = case["stages"].as_array().unwrap();
++        assert_eq!(stages.len(), expected_stages.len());
++        for (stage, expected_stage) in stages.iter().zip(expected_stages) {
++            assert_eq!(expand(&stage["actual"], &case["tables"]), expected_stage);
++        }
++    }
++}

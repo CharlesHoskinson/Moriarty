@@ -1,0 +1,48 @@
+{
+  "candidate": "pam16",
+  "complete_mapping_unique": false,
+  "blockers": [
+    {
+      "id": "PAM16-FEE-STATE",
+      "kind": "missing semantic/default binding",
+      "premises": [
+        "Original feeRate,feeBasis,feeAccrued and fee-cycle terms absent",
+        "Dictionary FER,FEB,FEAC defaults blank",
+        "PAM FP schedule empty when FER undefined",
+        "PAM initialization Feac0 branch explicit",
+        "PAM IP else Feac formula references FER and FP bounds without absent-fee guard",
+        "MD POF explicitly adds Feac"
+      ],
+      "first_blocked_interface": "PAM IP STF -> post-event feeAccrued -> later MD payoff",
+      "public_conditional_group_assessment": "Group1 feeRate driver makes feeBasis conditionally required and fee cycle/FEAC optional. It defines term applicability/requiredness, not the missing arithmetic/state update for an absent driver.",
+      "needed": "An authoritative absent-fee rule, conditional-function interpretation or explicit correction defining IP Feac evolution and MD payoff under undefined fee terms.",
+      "prohibited_shortcut": "No substituted zero/default term or source expected literal."
+    },
+    {
+      "id": "PAM16-EMPTY-TO",
+      "kind": "missing original-fixture wrapper binding",
+      "premises": [
+        "Original to is empty string",
+        "Formal contract lifetime caps by min(MD,...,tmax)",
+        "Formal text defines tmax as optional analysis parameter, not the JSON empty-string convention"
+      ],
+      "first_blocked_interface": "Original fixture JSON to -> selected tmax/horizon -> event set",
+      "needed": "Pinned original test/wrapper specification for empty to, without reading runtime result values or implementation as expected-value oracle.",
+      "prohibited_shortcut": "Do not replace empty to with maturity or infinity as an unrecorded host choice."
+    },
+    {
+      "id": "PAM16-NO-CORE-INPUT",
+      "kind": "dependent source not supplied because mapping incomplete",
+      "first_blocked_interface": "No input-only Core program/initial state/calls to derive complete snapshots and effects against",
+      "needed": "After semantic bindings resolve, author supplies complete source and scenario/call inputs with exact types,unit adapter and financial frame.",
+      "prohibited_shortcut": "No authoring a passing substitute, partial fixture or synthetic replacement data."
+    }
+  ],
+  "resolved_premises": {
+    "same_instant_order": "IED1<IP8<MD19 from pinned dictionary; no guessed ordering",
+    "A365": "actual number of calendar days divided by365 from pinned day-count allowed-value definition",
+    "RPA": "role sign+1 from normative role convention",
+    "dimensional_input_arithmetic": "3000USD /10USD per lot=300lots and0.1/year /(0.1/year per rate unit)=1rateunit exactly; these are input conversions, not complete execution outcomes"
+  },
+  "explicit_abstention": true
+}

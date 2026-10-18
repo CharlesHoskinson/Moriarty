@@ -1,0 +1,431 @@
+--- a/crates/mori/tests/source6_expand.rs
++++ b/crates/mori/tests/source6_expand.rs
+@@ -268,3 +268,78 @@
+     assert!(stderr.contains(r"invoice\u{1b}\u{202e}.mori"), "{stderr}");
+     assert!(!stderr.contains(['\u{1b}', '\u{202e}']), "{stderr}");
+ }
++#[test]
++fn checked_transfer_profiles_have_complete_cli_contracts() {
++    let files = Files::new();
++    fs::write(files.0.join("max-rebate.mori"), fixture!("max-rebate.mori")).unwrap();
++    fs::write(
++        files.0.join("max-rebate.scenario.json"),
++        fixture!("max-rebate.scenario.json"),
++    )
++    .unwrap();
++
++    for (source, action, scenario, expected_check, expected_source6) in [
++        (
++            "invoice.mori",
++            "pay",
++            "scenario.json",
++            fixture!("invoice.check.stdout.json"),
++            fixture!("invoice.source6"),
++        ),
++        (
++            "max-rebate.mori",
++            "pay_rebate",
++            "max-rebate.scenario.json",
++            fixture!("max-rebate.check.stdout.json"),
++            fixture!("max-rebate.source6"),
++        ),
++    ] {
++        let checked = files.invoke(&["check", source, "--json"]);
++        assert_eq!(checked.status.code(), Some(0), "check {source}");
++        assert_eq!(checked.stdout.as_slice(), expected_check, "check {source}");
++        assert!(
++            checked.stderr.is_empty(),
++            "check {source}: {:?}",
++            checked.stderr
++        );
++
++        // Beta reports identify the source agreement/action; Source/6 is the
++        // emitted proposal profile, rather than the checked input language.
++        let report: Value = serde_json::from_slice(&checked.stdout).unwrap();
++        assert!(report.get("language").is_none());
++        assert_eq!(report["actions"][0]["name"], action);
++        assert_eq!(report["actions"][0]["support"], "local_s0");
++
++        let arguments = [
++            "expand",
++            source,
++            "--action",
++            action,
++            "--scenario",
++            scenario,
++            "--emit-source6-transfer",
++        ];
++        let expanded = files.invoke(&arguments);
++        assert_eq!(expanded.status.code(), Some(0), "expand {source}");
++        assert_eq!(
++            expanded.stdout.as_slice(),
++            expected_source6,
++            "expand {source}"
++        );
++        assert_eq!(expanded.stderr.as_slice(), fixture!("source6.stderr.txt"));
++        assert!(expanded.stdout.starts_with(
++            b"profile \"moriarty-financial-agreement-source/6\";\n"
++        ));
++
++        let mut quiet_arguments = vec!["--quiet"];
++        quiet_arguments.extend(arguments);
++        let quiet = files.invoke(&quiet_arguments);
++        assert_eq!(quiet.status.code(), Some(0), "quiet expand {source}");
++        assert_eq!(
++            quiet.stdout.as_slice(),
++            expected_source6,
++            "quiet expand {source}"
++        );
++        assert!(quiet.stderr.is_empty(), "quiet expand {source}");
++    }
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/invoice.check.stdout.json
+@@ -0,0 +1,126 @@
++{
++  "status": "accepted",
++  "file": "invoice.mori",
++  "source_hash": "73b9b232917555a6853e33add5f9b790e9fff955294aecac27f6083666507d81",
++  "agreement": {
++    "name": "Invoice",
++    "span": {
++      "start": 37,
++      "end": 44
++    }
++  },
++  "declarations": [
++    {
++      "kind": "domain",
++      "name": "Preview",
++      "span": {
++        "start": 48,
++        "end": 123
++      },
++      "name_span": {
++        "start": 55,
++        "end": 62
++      }
++    },
++    {
++      "kind": "account",
++      "name": "Buyer",
++      "span": {
++        "start": 125,
++        "end": 174
++      },
++      "name_span": {
++        "start": 133,
++        "end": 138
++      }
++    },
++    {
++      "kind": "account",
++      "name": "Seller",
++      "span": {
++        "start": 176,
++        "end": 230
++      },
++      "name_span": {
++        "start": 184,
++        "end": 190
++      }
++    },
++    {
++      "kind": "account",
++      "name": "Treasury",
++      "span": {
++        "start": 232,
++        "end": 282
++      },
++      "name_span": {
++        "start": 240,
++        "end": 248
++      }
++    },
++    {
++      "kind": "asset",
++      "name": "USD",
++      "span": {
++        "start": 284,
++        "end": 379
++      },
++      "name_span": {
++        "start": 290,
++        "end": 293
++      }
++    },
++    {
++      "kind": "const",
++      "name": "price",
++      "span": {
++        "start": 381,
++        "end": 415
++      },
++      "name_span": {
++        "start": 387,
++        "end": 392
++      }
++    },
++    {
++      "kind": "const",
++      "name": "fee",
++      "span": {
++        "start": 417,
++        "end": 438
++      },
++      "name_span": {
++        "start": 423,
++        "end": 426
++      }
++    },
++    {
++      "kind": "intent",
++      "name": "Payment",
++      "span": {
++        "start": 440,
++        "end": 932
++      },
++      "name_span": {
++        "start": 447,
++        "end": 454
++      }
++    }
++  ],
++  "actions": [
++    {
++      "name": "pay",
++      "intent": "Payment",
++      "support": "local_s0",
++      "span": {
++        "start": 934,
++        "end": 958
++      },
++      "name_span": {
++        "start": 941,
++        "end": 944
++      }
++    }
++  ],
++  "diagnostics": []
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/max-rebate.check.stdout.json
+@@ -0,0 +1,126 @@
++{
++  "status": "accepted",
++  "file": "max-rebate.mori",
++  "source_hash": "f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712",
++  "agreement": {
++    "name": "MaxRebatePayout",
++    "span": {
++      "start": 37,
++      "end": 52
++    }
++  },
++  "declarations": [
++    {
++      "kind": "domain",
++      "name": "Preview",
++      "span": {
++        "start": 56,
++        "end": 131
++      },
++      "name_span": {
++        "start": 63,
++        "end": 70
++      }
++    },
++    {
++      "kind": "account",
++      "name": "Buyer",
++      "span": {
++        "start": 133,
++        "end": 182
++      },
++      "name_span": {
++        "start": 141,
++        "end": 146
++      }
++    },
++    {
++      "kind": "account",
++      "name": "Seller",
++      "span": {
++        "start": 184,
++        "end": 238
++      },
++      "name_span": {
++        "start": 192,
++        "end": 198
++      }
++    },
++    {
++      "kind": "account",
++      "name": "Treasury",
++      "span": {
++        "start": 240,
++        "end": 290
++      },
++      "name_span": {
++        "start": 248,
++        "end": 256
++      }
++    },
++    {
++      "kind": "asset",
++      "name": "USD",
++      "span": {
++        "start": 292,
++        "end": 387
++      },
++      "name_span": {
++        "start": 298,
++        "end": 301
++      }
++    },
++    {
++      "kind": "const",
++      "name": "payout",
++      "span": {
++        "start": 389,
++        "end": 481
++      },
++      "name_span": {
++        "start": 395,
++        "end": 401
++      }
++    },
++    {
++      "kind": "const",
++      "name": "fee",
++      "span": {
++        "start": 483,
++        "end": 534
++      },
++      "name_span": {
++        "start": 489,
++        "end": 492
++      }
++    },
++    {
++      "kind": "intent",
++      "name": "Rebate",
++      "span": {
++        "start": 536,
++        "end": 1059
++      },
++      "name_span": {
++        "start": 543,
++        "end": 549
++      }
++    }
++  ],
++  "actions": [
++    {
++      "name": "pay_rebate",
++      "intent": "Rebate",
++      "support": "local_s0",
++      "span": {
++        "start": 1061,
++        "end": 1091
++      },
++      "name_span": {
++        "start": 1068,
++        "end": 1078
++      }
++    }
++  ],
++  "diagnostics": []
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/max-rebate.mori
+@@ -0,0 +1,19 @@
++profile "moriarty-beta/1";
++agreement MaxRebatePayout {
++ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
++ account Buyer = { domain: Preview, id: "Owner" };
++ account Seller = { domain: Preview, id: "Recipient" };
++ account Treasury = { domain: Preview, id: "Fee" };
++ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
++ const payout: Qty<USD> = max(a: 2 * (4.50 USD - atoms(asset: USD, value: 50)), b: 7.00 USD);
++ const fee: Qty<USD> = atoms(asset: USD, value: 25);
++ intent Rebate = {
++  domain: Preview, asset: USD, signer: Buyer, key: "rebate-key", nonce: "rebate-nonce", pre_head: "m0",
++  valid: rounds(domain: Preview, from: 2, to: 12),
++  gross_cap: 8.50 USD, fee_cap: fee, net_floor: payout,
++  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: payout, fee: fee),
++  source_hash: "rebate-source", policy_digest: "rebate-policy", failure: SuccessOnly,
++  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
++ };
++ action pay_rebate uses Rebate;
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/max-rebate.scenario.json
+@@ -0,0 +1,19 @@
++{
++  "profile": "moriarty-local-scenario/1",
++  "kind": "local-stipulation",
++  "domain": "Midnight",
++  "asset": "A",
++  "head": "m0",
++  "predecessor": "rebate-opening",
++  "round": "4",
++  "balances": [
++    { "account": "Owner", "amount": "2000" },
++    { "account": "Recipient", "amount": "5" },
++    { "account": "Fee", "amount": "7" }
++  ],
++  "allowance": { "owner": "Owner", "remaining": "2000", "spent": "25" },
++  "replay": "unused",
++  "work_remaining": "12",
++  "work_spent": "2",
++  "post_head": "m1"
++}
+--- /dev/null
++++ b/crates/mori/tests/fixtures/source6-expansion/max-rebate.source6
+@@ -0,0 +1,45 @@
++profile "moriarty-financial-agreement-source/6";
++agreement MaxRebatePayout {
++domain Midnight;
++settlement A scale 2;
++selected TransferLiteralFee source_hash "rebate-source" digest "rebate-policy";
++intent {
++signer Owner key "rebate-key";
++nonce "rebate-nonce";
++pre_head "m0";
++valid 2..12;
++gross_cap 850;
++fee_cap 25;
++net_floor 800;
++failure success_only;
++signed_action transfer from Owner to Recipient fee_to Fee value 800 fee 25;
++observations empty;
++disclosures empty;
++retained_effects empty;
++retained_duties empty;
++delegation none;
++recovery none;
++}
++authenticated {
++head "m0";
++predecessor "rebate-opening";
++round 4;
++balance Owner 2000;
++balance Recipient 5;
++balance Fee 7;
++allowance Owner remaining 2000 spent 25;
++replay unused;
++work_remaining 12;
++work_spent 2;
++}
++submit transfer from Owner to Recipient fee_to Fee value 800 fee 25;
++effects {
++debit Owner 825;
++credit Recipient 800;
++credit Fee 25;
++use_allowance Owner 825;
++use_replay "rebate-nonce";
++advance_head "m0" "m1";
++}
++post_head "m1";
++}

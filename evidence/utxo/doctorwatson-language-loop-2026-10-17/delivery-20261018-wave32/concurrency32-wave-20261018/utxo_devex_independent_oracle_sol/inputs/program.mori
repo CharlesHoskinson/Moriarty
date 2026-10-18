@@ -1,0 +1,25 @@
+// Ordinary local Core/1 partial release. Account labels and supplied state
+// are local premises; no ledger custody or authority is asserted.
+language "moriarty/1";
+agreement PartialEscrowRelease {
+  asset CASH = { network: "local", issuer: "escrow-partial-example", reference: "CASH", scale: 0 };
+  asset BONUS = { network: "local", issuer: "escrow-partial-example", reference: "BONUS", scale: 0 };
+  state paid: UInt = 0;
+  state fees: UInt = 0;
+  state marker: UInt = 77;
+  state epoch: UInt = 0;
+
+  action release(payout: UInt, processingFee: UInt) {
+    requires payout > 0;
+    requires payout <= 50;
+    requires processingFee == 3;
+    let priorPaid = paid;
+    transfer(CASH, "escrow", "merchant", payout);
+    fee(CASH, "escrow", "treasury", processingFee);
+    discharge("merchant-due", payout);
+    next paid = priorPaid + payout;
+    next fees = fees + processingFee;
+    ensures paid == priorPaid + payout;
+    emit "released"(payout);
+  }
+}

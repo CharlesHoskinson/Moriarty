@@ -1,0 +1,3 @@
+Root may run the separately authored ordinary release regression after integrating it. This oracle supplies no runnable product command because that test target has not been read/authored by this custodian.
+
+Bounded predicate: parse exactinputs/program.mori, simulate actionrelease using exactinputs/normal.scenario.json; compare completepre,11orderedsnapshots and fullpost, eachdelta/cumulativefinancialeffectvector and ordered6effects with COMPLETE-PREFIXES.expected.json. Runtime must be inspected/selected by root; this file grants no SDK/native execution or familyacceptance. No product command ran in this lane.

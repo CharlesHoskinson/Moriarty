@@ -1,0 +1,22 @@
+language "moriarty/1";
+agreement PrintRun {
+  asset CREDIT = { network: "local", issuer: "print-cooperative", reference: "printing-credit", scale: 2 };
+  asset STAMP = { network: "local", issuer: "city-post", reference: "postage", scale: 0 };
+  state copies_paid: UInt = 0;
+  state spent: UInt = 0;
+  state campaign: UInt = 17;
+  action pay(copies: UInt, unit_price: UInt, rebate: UInt, surcharge: UInt) {
+    requires copies > 0;
+    let gross = copies * unit_price;
+    requires gross >= rebate;
+    let due = gross - rebate;
+    let fee_total = surcharge + 2;
+    transfer(CREDIT, "sponsor", "printer", due);
+    fee(CREDIT, "sponsor", "coop", fee_total);
+    next copies_paid = copies_paid + copies;
+    next spent = spent + due + fee_total;
+    ensures copies_paid >= copies;
+    emit "printDue"(due);
+    emit "printGross"(gross);
+  }
+}

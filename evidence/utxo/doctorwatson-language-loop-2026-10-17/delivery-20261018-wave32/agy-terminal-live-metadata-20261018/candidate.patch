@@ -1,0 +1,127 @@
+--- a/future_runner.py
++++ b/future_runner.py
+@@ -1,5 +1,6 @@
+ """One explicit fresh AGY task. No scheduling, retry, replay or capture reread."""
+ import argparse
++import copy
+ from datetime import datetime, timezone
+ import hashlib
+ import json
+@@ -85,18 +86,91 @@
+ 
+ class LiveCapture:
+     """Parse only bytes supplied by this new process; keep every parsed value."""
+-    def __init__(self):
++    def __init__(self, *, clock=time.monotonic):
++        self._clock = clock
++        self._origin = clock()
++        self._event_counts = {"init": 0, "step_update": 0, "result": 0,
++                              "otherObject": 0, "nonObject": 0}
++        self._result_observations = []
++        self._eof_observed = None
++        self._process_exit = None
+         self.events = []
+         self.parse_errors = 0
+         self.buffer = b""
+         self.byte_count = 0
+         self.complete = False
+ 
++    def _elapsed(self):
++        return round(max(0.0, self._clock() - self._origin), 6)
++
++    @staticmethod
++    def _json_type(value):
++        if value is None:
++            return "null"
++        if isinstance(value, dict):
++            return "object"
++        if isinstance(value, list):
++            return "array"
++        if isinstance(value, str):
++            return "string"
++        if isinstance(value, bool):
++            return "boolean"
++        return "number"
++
++    def _observe_value(self, value):
++        # Fixed keys and finite enums only. No arbitrary event/status/text export.
++        if not isinstance(value, dict):
++            self._event_counts["nonObject"] += 1
++            return
++        event = value.get("event")
++        category = event if event in ("init", "step_update", "result") else "otherObject"
++        self._event_counts[category] += 1
++        if category != "result" or len(self._result_observations) >= 2:
++            return
++        result = value.get("result")
++        observation = {"parsedValueIndex": len(self.events) - 1,
++            "observedAfterSeconds": self._elapsed(),
++            "resultType": self._json_type(result) if "result" in value else "missing",
++            "statusClass": "RESULT_NOT_OBJECT", "statusLiteral": None,
++            "structuredOutputType": "missing"}
++        if isinstance(result, dict):
++            status = result.get("status")
++            if "status" not in result:
++                observation["statusClass"] = "MISSING"
++            elif not isinstance(status, str):
++                observation["statusClass"] = "NON_STRING"
++            elif status == "SUCCESS":
++                observation["statusClass"] = "ALLOWLISTED"
++                observation["statusLiteral"] = "SUCCESS"
++            else:
++                observation["statusClass"] = "OTHER_STRING"
++            if "structured_output" in result:
++                observation["structuredOutputType"] = self._json_type(result["structured_output"])
++        self._result_observations.append(observation)
++
++    def observe_process_exit(self, exit_code):
++        # Observation after wait/poll, never a claimed kernel/provider exit time.
++        if self._process_exit is None:
++            self._process_exit = {"code": exit_code, "observedAfterSeconds": self._elapsed()}
++
++    def live_metadata(self):
++        return copy.deepcopy({"policy": "future-live-allowlisted-transport-metadata-v1",
++            "timingBasis": "local-monotonic-seconds-since-capture-construction",
++            "eventCounts": self._event_counts,
++            "resultObservations": self._result_observations,
++            "resultObservationsOmitted": self._event_counts["result"] - len(self._result_observations),
++            "captureParseErrors": self.parse_errors,
++            "parsedTopLevelValues": len(self.events), "stdoutBytes": self.byte_count,
++            "captureReachedEOF": self.complete, "eofObservedAfterSeconds": self._eof_observed,
++            "processExit": self._process_exit, "actualBackendIdentityAttested": False,
++            "reviewPayloadExportedHere": False, "noPrivateCaptureReread": True})
++
+     def _line(self, line):
+         if not line.strip():
+             return
+         try:
+             self.events.append(json.loads(line.decode("utf-8")))
++            self._observe_value(self.events[-1])
+         except (ValueError, UnicodeError, RecursionError):
+             self.parse_errors += 1
+ 
+@@ -113,6 +187,8 @@
+             self._line(self.buffer)
+             self.buffer = b""
+         self.complete = True
++        if self._eof_observed is None:
++            self._eof_observed = self._elapsed()
+ 
+ 
+ def finish_capture(capture, bundle, exit_code, unchanged):
+@@ -182,6 +258,7 @@
+                 _kill_owned_group(process.pid)
+             if process.poll() is None:
+                 process.wait(timeout=1)
++        capture.observe_process_exit(process.returncode)
+         cleanup = {"ownedProcessGroup": process.pid, "ownedGroupRemaining": _group_present(process.pid),
+                    "captureReachedEOF": capture.complete}
+         return capture, process.returncode, cleanup
+@@ -201,6 +278,7 @@
+         "argvWithoutPrompt": argv[:-1], "promptSha256": bundle["task"]["promptSha256"],
+         "actualBackendIdentityAttested": False, "selectorSha256": SELECTOR_SHA256})
+     capture, exit_code, cleanup = _run_new_process(bundle, output_dir, argv)
++    _write_json(output_dir / "LIVE-METADATA.json", capture.live_metadata())
+     unchanged = pins_match(bundle["pins"])
+     outcome = finish_capture(capture, bundle, exit_code, unchanged)
+     receipt = dict(outcome["receipt"], id=bundle["task"]["id"], taskSha256=task_sha256,

@@ -1,0 +1,124 @@
+{
+  "schema": "moriarty-independent-ACTUS-PAM16-field-disposition/1",
+  "case": "pam16",
+  "classification": "independent source-grounded mapping assessment; NOT a complete positive oracle",
+  "required_original_field_keys": {
+    "source": "tests/actus-tests-pam.json/pam16",
+    "required_keys_in_order": [
+      [
+        "eventDate",
+        "eventType",
+        "payoff",
+        "currency",
+        "notionalPrincipal",
+        "nominalInterestRate",
+        "accruedInterest"
+      ],
+      [
+        "eventDate",
+        "eventType",
+        "payoff",
+        "currency",
+        "notionalPrincipal",
+        "nominalInterestRate",
+        "accruedInterest"
+      ],
+      [
+        "eventDate",
+        "eventType",
+        "payoff",
+        "currency",
+        "notionalPrincipal",
+        "nominalInterestRate",
+        "accruedInterest"
+      ],
+      [
+        "eventDate",
+        "eventType",
+        "payoff",
+        "currency",
+        "notionalPrincipal",
+        "nominalInterestRate",
+        "accruedInterest"
+      ],
+      [
+        "eventDate",
+        "eventType",
+        "payoff",
+        "currency",
+        "notionalPrincipal",
+        "nominalInterestRate",
+        "accruedInterest"
+      ],
+      [
+        "eventDate",
+        "eventType",
+        "payoff",
+        "currency",
+        "notionalPrincipal",
+        "nominalInterestRate",
+        "accruedInterest"
+      ]
+    ],
+    "values_omitted": true
+  },
+  "all_original_result_members_retained": true,
+  "mandatory_fields": [
+    {
+      "field": "eventDate",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/event_definitions/eventTime",
+      "unit": "ISO8601 date/time without timezone; original result key eventDate vs dictionary eventTime needs explicit naming adapter",
+      "time_basis": "event evaluation instant, with pre/post state sides distinguished",
+      "disposition": "Unqualified complete row sequence: empty fixture to wrapper rule is missing. Same-instant ordering separately resolved by event sequence dictionary."
+    },
+    {
+      "field": "eventType",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/event_definitions/eventType",
+      "unit": "ACTUS event enum",
+      "time_basis": "same-event timestamp ordered IED(sequence1),IP(sequence8),MD(sequence19)",
+      "disposition": "Resolved ordering rule; complete event membership/horizon and target constructor adapter unqualified pending input wrapper/source."
+    },
+    {
+      "field": "payoff",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/event_definitions/payoff",
+      "unit": "Real signed USD monetary amount, creatorRPA perspective",
+      "time_basis": "event payoff computed from pre-event state using event-specific POF",
+      "disposition": "BLOCKED for complete fixture: MD POF includes Feac, whose IP update is not uniquely defined from absent fee inputs."
+    },
+    {
+      "field": "currency",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/event_definitions/currency",
+      "unit": "ISO4217 denomination USD; not a ledger asset identity",
+      "time_basis": "per-event payoff denomination",
+      "disposition": "Input denomination fixed, but no source asset/scale/settlement identity adapter supplied; complete financial row not asserted."
+    },
+    {
+      "field": "notionalPrincipal",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/states/notionalPrincipal",
+      "unit": "Real USD principal; proposal uses UInt10USDlots; exact conversion factor10 must be preserved",
+      "time_basis": "Nt(t0),Nt(t-),Nt(t+) by PAM initialization/IED/MD rules",
+      "disposition": "Explicit normative state exists; proposal finite unit conversion can represent supplied NT exactly. Complete state-prefix oracle unasserted without source/scenario and complete event mapping."
+    },
+    {
+      "field": "nominalInterestRate",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/states/nominalInterestRate",
+      "unit": "Real annual rate, input0.1/year; proposed UInt units1/10 per year",
+      "time_basis": "initial state beforeIED and applicable rate afterIED; A365 actualdays/365",
+      "disposition": "Explicit rate initialization and exact supplied rate unit mapping are available; no source/complete prefix oracle asserted."
+    },
+    {
+      "field": "accruedInterest",
+      "definition_ref": "basis/complete-raw-term-and-dependency-definitions.json#/states/accruedInterest",
+      "unit": "Real signed USD accrued interest; proposed selected Jan1 slices integral USD only",
+      "time_basis": "at status date and pre/post-event; IP reset is explicit; Jan1 whole-year intervals2013-14,2014-15,2015-16 each365days",
+      "disposition": "Explicit state/reset rules and dimensional arithmetic support finite calculations, but no complete prefix/output oracle asserted because fee/horizon/source mapping remains missing."
+    }
+  ],
+  "outside_seven_but_mandatory_dependency": {
+    "field": "feeAccrued",
+    "reason": "Unlisted Feac directly enters mandatory MD payoff, so dropping it would change the complete financial predicate.",
+    "initial_value_rule": "Feac(t0)=0 if FER undefined is explicit.",
+    "first_blocked_interface": "First PAM IP state transition, including same-instant IP afterIED, evaluates Feac branch with absent FEB and FER and FP predecessor/successor from an empty fee schedule.",
+    "inference_prohibited": "Do not assume FER0,FEB=N,0*undefined=0,empty-schedule ratios0,or carryzero unless a normative rule supplies that meaning."
+  }
+}

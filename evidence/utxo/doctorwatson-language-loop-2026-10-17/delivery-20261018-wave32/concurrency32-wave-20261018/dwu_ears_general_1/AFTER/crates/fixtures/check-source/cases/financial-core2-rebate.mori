@@ -1,0 +1,12 @@
+// Normal treasury rebate has a different payer, fee and event binder.
+language "moriarty/2";
+agreement StagedRebateCheck {
+  asset CASH = { network: "local", issuer: "check-rebate", reference: "CASH", scale: 0 };
+  action rebate() {
+    liability("rebate", CASH, "treasury", "buyer", 9);
+    await approval(approved: Bool) when approved;
+    fee(CASH, "treasury", "auditor", 1);
+    transfer(CASH, "treasury", "buyer", 9);
+    discharge("rebate", 9);
+  }
+}

@@ -1,0 +1,153 @@
+diff --git a/experiments/moriarty-eutxo/src/cli.mjs b/experiments/moriarty-eutxo/src/cli.mjs
+index aa572228..221ba947 100644
+--- a/experiments/moriarty-eutxo/src/cli.mjs
++++ b/experiments/moriarty-eutxo/src/cli.mjs
+@@ -49,7 +49,7 @@ function usage() {
+   return `moriarty-eutxo public atomic experiment (not production, not private/PCD)
+ 
+   node src/cli.mjs compile --source <file.mori> --manifest <manifest.json> [--out artifacts]
+-  node src/cli.mjs compile-custody --source <file.mori> --seed <seed.json> --manifest <manifest.json> [--out t1-native-adapters-57/checks/cli-custody]
++  node src/cli.mjs compile-custody --source <file.mori> --seed <seed.json> --manifest <manifest.json> [--oracle-results <file.json>] [--out t1-native-adapters-57/checks/cli-custody]
+   node src/cli.mjs native [--out t1-native-adapters-57/checks/native-cli]
+   node src/cli.mjs validate --designers <dir> --manifest <manifest.json> [--out artifacts]
+ 
+@@ -311,6 +311,7 @@ if (command === 'compile-custody') {
+     expectedReleasePath: arg('--expected-release', join(designer, 'E13-release-real-custody.expected.json')),
+     expectedRefundPath: arg('--expected-refund', join(designer, 'E11-refund-real-custody.expected.json')),
+     residualPath: arg('--residual', join(designer, 'financial-residual-custody-v5.json')),
++    oracleResultsPath: arg('--oracle-results', undefined),
+     manifest,
+     outDir: out,
+   });
+diff --git a/experiments/moriarty-eutxo/tests/compile-custody-cli-args.test.mjs b/experiments/moriarty-eutxo/tests/compile-custody-cli-args.test.mjs
+new file mode 100644
+index 00000000..9745c278
+--- /dev/null
++++ b/experiments/moriarty-eutxo/tests/compile-custody-cli-args.test.mjs
+@@ -0,0 +1,80 @@
++// Public CLI argument transport only; no compiler, oracle or native operation.
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { spawnSync } from 'node:child_process';
++import { fileURLToPath } from 'node:url';
++
++const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
++const captureHook = fileURLToPath(new URL('./support/compile-custody-cli-capture.mjs', import.meta.url));
++
++function captureOptions(oracleResultsPath) {
++  const dir = mkdtempSync(join(tmpdir(), 'mori-custody-cli-args-'));
++  try {
++    const manifest = { purpose: 'CLI argument transport only' };
++    const manifestPath = join(dir, 'manifest.json');
++    const capturePath = join(dir, 'captured-options.json');
++    writeFileSync(manifestPath, JSON.stringify(manifest));
++    const inputs = {
++      sourcePath: 'inputs/source.mori',
++      seedPath: 'inputs/seed.json',
++      casesPath: 'inputs/cases.json',
++      expectedReleasePath: 'inputs/release.json',
++      expectedRefundPath: 'inputs/refund.json',
++      residualPath: 'inputs/residual.json',
++      manifest,
++      outDir: join(dir, 'output artifacts'),
++    };
++    const args = [
++      '--import', captureHook, cli, 'compile-custody',
++      '--source', inputs.sourcePath,
++      '--seed', inputs.seedPath,
++      '--cases', inputs.casesPath,
++      '--expected-release', inputs.expectedReleasePath,
++      '--expected-refund', inputs.expectedRefundPath,
++      '--residual', inputs.residualPath,
++      '--manifest', manifestPath,
++      '--out', inputs.outDir,
++    ];
++    if (oracleResultsPath !== undefined) args.push('--oracle-results', oracleResultsPath);
++    const child = spawnSync(process.execPath, args, {
++      cwd: dir,
++      encoding: 'utf8',
++      env: { ...process.env, MORI_CLI_ARGUMENT_CAPTURE: capturePath },
++    });
++    assert.equal(child.error, undefined);
++    assert.equal(child.status, 1, child.stderr);
++    assert.equal(child.stderr, '');
++    // The operation probe deliberately returns no compile-success result.
++    assert.equal(JSON.parse(child.stdout).code, 'CLI_ARGUMENT_MAPPING_CAPTURE');
++    const captured = JSON.parse(readFileSync(capturePath, 'utf8'));
++    const expected = oracleResultsPath === undefined
++      ? inputs
++      : { ...inputs, oracleResultsPath };
++    assert.deepEqual(captured.options, expected);
++    assert.equal(captured.oracleResultsPathType,
++      oracleResultsPath === undefined ? 'undefined' : 'string');
++  } finally {
++    rmSync(dir, { recursive: true, force: true });
++  }
++}
++
++for (const path of ['fixtures/public/oracle-a.json', 'fixtures/public/oracle-b.json']) {
++  test(`compile-custody forwards the exact oracle path ${path}`, () => {
++    captureOptions(path);
++  });
++}
++
++test('compile-custody forwards an explicit oracle results path with spaces', () => {
++  captureOptions(join(tmpdir(), 'independent oracle directory', 'RESULTS.json'));
++});
++
++test('compile-custody preserves a relative oracle results path for its existing API', () => {
++  captureOptions('independent oracle directory/RESULTS.json');
++});
++
++test('compile-custody omission leaves the existing API default selected', () => {
++  captureOptions(undefined);
++});
+diff --git a/experiments/moriarty-eutxo/tests/support/compile-custody-cli-capture.mjs b/experiments/moriarty-eutxo/tests/support/compile-custody-cli-capture.mjs
+new file mode 100644
+index 00000000..44638ec1
+--- /dev/null
++++ b/experiments/moriarty-eutxo/tests/support/compile-custody-cli-capture.mjs
+@@ -0,0 +1,40 @@
++// Capture only the existing compileCustody options boundary of the real CLI.
++import { registerHooks } from 'node:module';
++
++const cliUrl = new URL('../../src/cli.mjs', import.meta.url).href;
++const unused = (names) => names.map((name) =>
++  `export function ${name}() { throw new Error('unused CLI operation: ${name}'); }`
++).join('\n');
++const probes = new Map([
++  ['./compile-public.mjs', unused(['compilePublic'])],
++  ['./compile-custody.mjs', `
++    import { writeFileSync } from 'node:fs';
++    export function compileCustody(options) {
++      writeFileSync(process.env.MORI_CLI_ARGUMENT_CAPTURE, JSON.stringify({
++        options,
++        oracleResultsPathType: typeof options.oracleResultsPath,
++      }));
++      return { ok: false, code: 'CLI_ARGUMENT_MAPPING_CAPTURE', layer: 'argument-mapping-only' };
++    }
++  `],
++  ['./designers.mjs', unused(['validateDesigners'])],
++  ['./native-caller.mjs', unused(['runNativeCaller'])],
++  ['./native-consumer.mjs', unused(['inspectLauncher', 'runNativeCase'])],
++  ['./native-runtime.mjs', `
++    export function resolveOutputPath(path, fallback) {
++      return { ok: true, path: path ?? fallback };
++    }
++  `],
++]);
++
++registerHooks({
++  resolve(specifier, context, nextResolve) {
++    if (context.parentURL === cliUrl && probes.has(specifier)) {
++      return {
++        url: `data:text/javascript,${encodeURIComponent(probes.get(specifier))}`,
++        shortCircuit: true,
++      };
++    }
++    return nextResolve(specifier, context);
++  },
++});

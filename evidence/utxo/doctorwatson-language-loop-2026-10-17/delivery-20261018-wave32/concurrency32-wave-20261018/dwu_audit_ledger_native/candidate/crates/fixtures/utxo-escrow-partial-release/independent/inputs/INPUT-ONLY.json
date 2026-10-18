@@ -1,0 +1,208 @@
+{
+  "format": "moriarty.escrow-partial.input-only/1",
+  "status": "FIXED_INPUT_ONLY_BEFORE_ORACLE_READ",
+  "sourceBase": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+  "action": "release",
+  "language": "moriarty/1",
+  "semantics": "moriarty-core/1",
+  "publicConsumer": "mori_core::parse -> unmetered mori_core::simulate",
+  "program": "// Ordinary local Core/1 partial release. Account labels and supplied state\n// are local premises; no ledger custody or authority is asserted.\nlanguage \"moriarty/1\";\nagreement PartialEscrowRelease {\n  asset CASH = { network: \"local\", issuer: \"escrow-partial-example\", reference: \"CASH\", scale: 0 };\n  asset BONUS = { network: \"local\", issuer: \"escrow-partial-example\", reference: \"BONUS\", scale: 0 };\n  state paid: UInt = 0;\n  state fees: UInt = 0;\n  state marker: UInt = 77;\n  state epoch: UInt = 0;\n\n  action release(payout: UInt, processingFee: UInt) {\n    requires payout > 0;\n    requires payout <= 50;\n    requires processingFee == 3;\n    let priorPaid = paid;\n    transfer(CASH, \"escrow\", \"merchant\", payout);\n    fee(CASH, \"escrow\", \"treasury\", processingFee);\n    discharge(\"merchant-due\", payout);\n    next paid = priorPaid + payout;\n    next fees = fees + processingFee;\n    ensures paid == priorPaid + payout;\n    emit \"released\"(payout);\n  }\n}\n",
+  "scenario": {
+    "state": {
+      "paid": {
+        "type": "UInt",
+        "value": "9"
+      },
+      "fees": {
+        "type": "UInt",
+        "value": "4"
+      },
+      "marker": {
+        "type": "UInt",
+        "value": "88"
+      },
+      "epoch": {
+        "type": "UInt",
+        "value": "6"
+      }
+    },
+    "inputs": {
+      "payout": {
+        "type": "UInt",
+        "value": "41"
+      },
+      "processingFee": {
+        "type": "UInt",
+        "value": "3"
+      }
+    },
+    "balances": [
+      {
+        "account": "escrow",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "amount": "137"
+      },
+      {
+        "account": "merchant",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "amount": "11"
+      },
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "amount": "23"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "amount": "19"
+      },
+      {
+        "account": "treasury",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "amount": "5"
+      },
+      {
+        "account": "escrow",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "BONUS",
+          "scale": 0
+        },
+        "amount": "7"
+      },
+      {
+        "account": "merchant",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "BONUS",
+          "scale": 0
+        },
+        "amount": "13"
+      },
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "BONUS",
+          "scale": 0
+        },
+        "amount": "29"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "BONUS",
+          "scale": 0
+        },
+        "amount": "37"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "merchant-due",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "debtor": "escrow",
+        "creditor": "merchant",
+        "amount": "97"
+      },
+      {
+        "name": "unrelated-warranty",
+        "asset": {
+          "network": "local",
+          "issuer": "escrow-partial-example",
+          "reference": "CASH",
+          "scale": 0
+        },
+        "debtor": "merchant",
+        "creditor": "auditor",
+        "amount": "8"
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "inputs/normal.scenario.json",
+      "sha256": "9b0b8ae229d56b385afa664c532aaa8878cb60b33b5b9fb6bf313e1e19814156",
+      "bytes": 2885
+    },
+    {
+      "path": "inputs/program.mori",
+      "sha256": "d1319f22563072bb397dc31b90f467a9d147360d3160aa7ada8f2ba5371b8a08",
+      "bytes": 957
+    }
+  ],
+  "normativePremises": [
+    {
+      "path": "crates/mori-core/README.md",
+      "revision": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+      "gitBlob": "5e92bb1f300741f9293758ea286bd0a50bd6878c",
+      "sha256": "0d91facda4bcf06e545af2f9ced7c72b2b76220a9b53eb46a5a4caea66ebc4dc",
+      "bytes": 11482
+    },
+    {
+      "path": "crates/mori-core/src/ir.rs",
+      "revision": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+      "gitBlob": "7f5c17744ba13fb05286ea3e69ae16e001ea64e3",
+      "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+      "bytes": 12823
+    },
+    {
+      "path": "crates/mori-core/src/parser.rs",
+      "revision": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+      "gitBlob": "3426272432fd5c76f1d4c6a33b5ade7f65c58b53",
+      "sha256": "587e8b024ae16d513c5e6d6ef4929e4140bbfc7d2a716b5d38781645cb7c7275",
+      "bytes": 15275
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "revision": "64c6dedff1d99b33c23832330d7911a5fad9ed59",
+      "gitBlob": "9f13b37c14ef18c1e01330901845c91412b824ab",
+      "sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+      "bytes": 37871
+    }
+  ],
+  "budget": {
+    "logicalCap": null,
+    "meteredConsumerSelected": false,
+    "nativeDustOrServiceBudget": null
+  },
+  "representationPremise": "Core normalizes balances by exact AssetId then account, duties by name. AssetId Ord fields are network,issuer,reference,scale. This is a disclosed nonnumeric source rule, not an output observation. The submitted Scenario row order need not be normalized.",
+  "sourceExposure": "Author previously wrote the bilateral-exchange source/test and read its independent oracle after freeze. No new partial-release oracle result has been read. Earlier source/math exposure is not global blindness; this is a new fixed specimen.",
+  "oracleBoundary": "No expected poststate, prefix snapshot, effect payload, test or arithmetic outcome is supplied. Derive/freeze independent semantic expectations from these immutable inputs before viewing this lane assertions."
+}

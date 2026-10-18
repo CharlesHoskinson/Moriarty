@@ -1,0 +1,3 @@
+The custody compiler API accepts an explicit oracle-results file, but the CLI never forwards that option. Add `--oracle-results FILE` to the existing argument mapping and help text so callers can select their file without relying on the historical default path.
+
+Five local argument-mapping tests passed onb988764129e8828e3bc5b4d4b7660df61c3a184f/tree32a27d88760401c65be4606527274a15410792ea in0.238s. They invoke the actual CLI with capture-only replacements for its direct operation imports and verify supplied paths, spaces, relative paths and omission. The producer, its oracle validation and Q1 publication code are unchanged and were not executed. Source/tree stayed clean; owned temporary files were removed. Fresh source/result review is pending.

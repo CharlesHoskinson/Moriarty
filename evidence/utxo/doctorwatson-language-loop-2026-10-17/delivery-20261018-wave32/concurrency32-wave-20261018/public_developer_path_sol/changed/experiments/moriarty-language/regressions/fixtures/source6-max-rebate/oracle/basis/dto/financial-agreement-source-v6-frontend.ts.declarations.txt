@@ -1,0 +1,35 @@
+// DTOdeclarations experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:112-138; no implementation body used.
+export type Source6Action =
+  | { kind: 'Transfer'; from: string; to: string; feeTo: string; value: string; fee: string }
+  | { kind: 'Repay'; obligation: string; payer: string; amount: string; conversion: 'identity' };
+export interface Source6Obligation {
+  id: string; debtor: string; creditor: string; asset: string;
+  principal: string; accrued: string; outstanding: string; status: 'Outstanding';
+}
+export interface Source6Ast {
+  profile: typeof MIL4_S0_SOURCE; programId: string; domain: string;
+  settlement: { asset: string; scale: string };
+  selected: { actionId: string; sourceHash: string; policyDigest: string };
+  intent: {
+    signer: string; keyRef: string; nonce: string; preHead: string;
+    notBefore: string; notAfter: string; grossCap: string; feeCap: string; netFloor: string;
+    signedAction: Source6Action; failure: 'success_only';
+    observations: 'empty'; disclosures: 'empty'; retainedEffects: 'empty'; retainedDuties: 'empty';
+    delegation: 'none'; recovery: 'none';
+  };
+  authenticated: {
+    head: string; predecessor: string; round: string;
+    balances: { account: string; amount: string }[];
+    allowance: { owner: string; remaining: string; spent: string };
+    obligation?: Source6Obligation; replay: 'unused' | 'consumed';
+    workRemaining: string; workSpent: string;
+  };
+  submitted: { action: Source6Action; effects: S0Effect[]; postHead: string };
+}
+
+// DTOdeclarations experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts:318-321; no implementation body used.
+export interface Source6Lowered {
+  ast: Source6Ast; state: S0State; intent: S0Intent;
+  submittedEffects: S0Effect[]; proposedPostHead: string;
+}
+

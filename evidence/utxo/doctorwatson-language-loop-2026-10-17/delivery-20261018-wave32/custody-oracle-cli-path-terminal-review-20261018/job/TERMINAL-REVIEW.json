@@ -1,0 +1,103 @@
+{
+  "concreteChecks": [
+    {
+      "lineOrPointer": "L314 (L307-L317, L332; PRIMARY.md L410)",
+      "path": "experiments/moriarty-eutxo/src/cli.mjs",
+      "quoteOrSelectedJsonValue": "oracleResultsPath: arg('--oracle-results', undefined),",
+      "reason": "Substantive reason: In the command === 'compile-custody' branch (L299-L333), cli.mjs passes oracleResultsPath: arg('--oracle-results', undefined) into compileCustody({...}) while leaving sourcePath, seedPath, casesPath, expectedReleasePath, expectedRefundPath, residualPath, manifest, outDir, and process.exit(result.ok ? 0 : 1) (L332) unchanged. When --oracle-results <FILE> is present in process.argv, arg() (L15-L19) returns process.argv[i + 1] verbatim (preserving relative spelling and spaces, satisfying CLI-PATH-1); when omitted, arg() returns the fallback undefined (satisfying CLI-PATH-2). Scope limit: Covers CLI argument extraction and call-site handoff only; arg() uses minimal indexOf/startsWith('--') parsing (it does not support --oracle-results=FILE syntax, empty string values, or filenames starting with '--', which fall back to undefined), and cli.mjs does not validate or read the oracle file itself.",
+      "scope": "source"
+    },
+    {
+      "lineOrPointer": "L52 (L48-L63; PRIMARY.md L148)",
+      "path": "experiments/moriarty-eutxo/src/cli.mjs",
+      "quoteOrSelectedJsonValue": "node src/cli.mjs compile-custody --source <file.mori> --seed <seed.json> --manifest <manifest.json> [--oracle-results <file.json>] [--out t1-native-adapters-57/checks/cli-custody]",
+      "reason": "Substantive reason: usage() at L52 advertises the optional [--oracle-results <file.json>] flag on the compile-custody synopsis line without altering other command synopses or safety notices, satisfying the help requirement of CLI-PATH-3. Scope limit: Verified by static inspection of the embedded src/cli.mjs source; the five-test child regression always dispatches the compile-custody subcommand and does not exercise the invalid-command stderr usage() exit path (L334-L337).",
+      "scope": "source"
+    },
+    {
+      "lineOrPointer": "L202, L312 (PRIMARY.md L76, L83)",
+      "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+      "quoteOrSelectedJsonValue": "export function compileCustody({ sourcePath, seedPath, casesPath, expectedReleasePath, expectedRefundPath, residualPath, manifest, outDir, oracleResultsPath = DEFAULT_ORACLE, aikenRun = runAiken, syntheticTime = null }) {",
+      "reason": "Substantive reason: The pinned producer excerpt (commit b988764129e8828e3bc5b4d4b7660df61c3a184f, gitBlob 2857e14f74955cfad24891354992fcecc794d9e7, sha256 572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680, unchangedFromBase: true) defines oracleResultsPath = DEFAULT_ORACLE in object destructuring at L202 and reads readFileSync(oracleResultsPath, 'utf8') at L312. Passing undefined from cli.mjs when --oracle-results is omitted triggers the JavaScript default parameter = DEFAULT_ORACLE without duplicating or altering default paths in cli.mjs (CLI-PATH-2, CLI-PATH-4), while passing a string forwards that exact path to readFileSync (CLI-PATH-1). Scope limit: Establishes API signature and read-site compatibility from the unchanged excerpt only; compileCustody did not execute in the scoped test and no oracle content, oracle trust, compiler, or Q1 security judgment is made.",
+      "scope": "source"
+    },
+    {
+      "lineOrPointer": "L8-L39 (L31-L36; PRIMARY.md L578-L609)",
+      "path": "experiments/moriarty-eutxo/tests/support/compile-custody-cli-capture.mjs",
+      "quoteOrSelectedJsonValue": "if (context.parentURL === cliUrl && probes.has(specifier)) {",
+      "reason": "Substantive reason: The module resolution hook intercepts imports only when context.parentURL === cliUrl (experiments/moriarty-eutxo/src/cli.mjs) and probes.has(specifier), short-circuiting all six relative operation modules imported by src/cli.mjs (./compile-public.mjs, ./compile-custody.mjs, ./designers.mjs, ./native-caller.mjs, ./native-consumer.mjs, ./native-runtime.mjs) to inline data:text/javascript modules while allowing Node built-ins (node:fs, node:path, node:url) to load normally. Unused CLI operations throw if invoked; the compileCustody probe writes { options, oracleResultsPathType: typeof options.oracleResultsPath } to MORI_CLI_ARGUMENT_CAPTURE and returns { ok: false, code: 'CLI_ARGUMENT_MAPPING_CAPTURE', layer: 'argument-mapping-only' }, satisfying RESULT-2 and RESULT-3. Scope limit: Because ./compile-custody.mjs and ./native-runtime.mjs are replaced by short-circuited probes, neither real compilation/oracle reading nor real resolveOutputPath output-directory policy validation runs during the test.",
+      "scope": "source"
+    },
+    {
+      "lineOrPointer": "L41-L58, L64-L80 (PRIMARY.md L524-L541, L547-L563)",
+      "path": "experiments/moriarty-eutxo/tests/compile-custody-cli-args.test.mjs",
+      "quoteOrSelectedJsonValue": "assert.deepEqual(captured.options, expected);",
+      "reason": "Substantive reason: captureOptions() spawns a real child Node process with ['--import', captureHook, cli, 'compile-custody', ...], writes and reads a real manifest.json in a temporary directory, verifies child.error === undefined, child.status === 1, child.stderr === '', and JSON.parse(child.stdout).code === 'CLI_ARGUMENT_MAPPING_CAPTURE', and asserts both assert.deepEqual(captured.options, expected) and captured.oracleResultsPathType ('string' when supplied, 'undefined' when omitted) across all five test cases (fixtures/public/oracle-a.json, fixtures/public/oracle-b.json, an explicit path with spaces under tmpdir(), a relative path with spaces 'independent oracle directory/RESULTS.json', and undefined on omission), removing the temporary directory in finally (L59-L61). Scope limit: Exercises CLI argv parsing, manifest JSON loading, compileCustody option object construction, and false-result exit code 1 mapping only; does not test real compileCustody execution, ok: true exit code 0, or CLI fallback defaults for the other eight flags (which are explicitly supplied in inputs).",
+      "scope": "source"
+    },
+    {
+      "lineOrPointer": "/environment (PRIMARY.md L631-L635)",
+      "path": "CHECK-PLAN.json",
+      "quoteOrSelectedJsonValue": "{\"PATH\":\"/usr/bin:/bin\",\"LANG\":\"C.UTF-8\",\"TMPDIR\":\"/tmp/doctorwatson-custody-cli-args-cqi6sgh2/tmp\"}",
+      "reason": "Substantive reason: CHECK-PLAN.json pins head b988764129e8828e3bc5b4d4b7660df61c3a184f, tree 32a27d88760401c65be4606527274a15410792ea, oracleCompilerSourceUntouched: true, the exact SHA256 hashes of all three source files, and nodeSha256, and executes node --test on compile-custody-cli-args.test.mjs under /usr/bin/timeout 30s with a minimal environment (PATH restricted to /usr/bin:/bin, LANG=C.UTF-8, TMPDIR isolated under ownedRoot /tmp/doctorwatson-custody-cli-args-cqi6sgh2/tmp, and no MORIARTY_ALLOW_REAL_NODE). Scope limit: Documents the planned and launched outer runner environment and file pins; it is an execution plan receipt rather than a kernel/syscall audit or full-suite test run.",
+      "scope": "result"
+    },
+    {
+      "lineOrPointer": "/exitCode, /wallSeconds, /stdoutSha256, /stderrSha256 (PRIMARY.md L661-L667, L695-L708)",
+      "path": "RESULT.json",
+      "quoteOrSelectedJsonValue": "{\"exitCode\":0,\"wallSeconds\":0.23836761200072942,\"stdoutSha256\":\"38c9668d2ed81f296f55ad8501a805c4986965ea0b6cd4e87795d442432d1feb\",\"stderrSha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}",
+      "reason": "Substantive reason: RESULT.json and the embedded stdout receipt confirm exitCode: 0, five passed tests (pass 5, fail 0, cancelled 0, skipped 0, todo 0), empty stderr (SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855), sourcePinsUnchanged: true, and workingTreeClean: true at head b988764129e8828e3bc5b4d4b7660df61c3a184f / tree 32a27d88760401c65be4606527274a15410792ea, while distinguishing outer wall clock time (wallSeconds: 0.23836761200072942) from Node's internal test runner duration (duration_ms 202.867133), satisfying RESULT-1 and RESULT-3. Scope limit: Passes reflect capture-probe CLI argument transport only (with the probe returning ok: false / CLI_ARGUMENT_MAPPING_CAPTURE to each child CLI invocation); they do not evidence compileCustody execution, Aiken/UPLC compilation, oracle validity, or EUC-012/EUC-013 compliance.",
+      "scope": "result"
+    },
+    {
+      "lineOrPointer": "/existsAfter (PRIMARY.md L677-L680, L687-L689)",
+      "path": "CLEANUP.json",
+      "quoteOrSelectedJsonValue": "{\"recordedAt\":\"2026-10-18T14:09:44.273178+00:00\",\"ownedRoot\":\"/tmp/doctorwatson-custody-cli-args-cqi6sgh2\",\"existsAfter\":false}",
+      "reason": "Substantive reason: Together with CHILD.json (pid: 800143, session: 800143) and RESULT.json (ownedSessionRemaining: []), CLEANUP.json confirms that the owned process session 800143 had no remaining processes after completion and that the temporary ownedRoot /tmp/doctorwatson-custody-cli-args-cqi6sgh2 was removed (existsAfter: false), satisfying RESULT-4. Scope limit: Cleanup receipts cover only the owned session (800143) and ownedRoot (/tmp/doctorwatson-custody-cli-args-cqi6sgh2); they do not prove system-wide unrelated-process or syscall exclusion, and all original financial, compiler, native, target, Q1, and product gates remain unchanged.",
+      "scope": "result"
+    }
+  ],
+  "filesRead": [
+    "PRIMARY.md",
+    "OUTPUT-SCHEMA.json"
+  ],
+  "head": "b988764129e8828e3bc5b4d4b7660df61c3a184f",
+  "resultAssessment": {
+    "disposition": "approve-qualified",
+    "findings": [
+      "CHECK-PLAN.json and RESULT.json match the exact commit head b988764129e8828e3bc5b4d4b7660df61c3a184f, tree 32a27d88760401c65be4606527274a15410792ea, and SHA256 pins for all three candidate files (cli.mjs, compile-custody-cli-args.test.mjs, compile-custody-cli-capture.mjs) with oracleCompilerSourceUntouched: true, sourcePinsUnchanged: true, and workingTreeClean: true (RESULT-1).",
+      "All five targeted Node test cases in compile-custody-cli-args.test.mjs passed (tests 5, pass 5, fail 0, cancelled 0, skipped 0, todo 0) with exitCode 0, stdoutSha256 38c9668d2ed81f296f55ad8501a805c4986965ea0b6cd4e87795d442432d1feb, and zero-byte stderr (stderrSha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855). Outer wallSeconds (0.23836761200072942s) and Node test runner duration_ms (202.867133ms) are both recorded and consistent (RESULT-1).",
+      "Each child CLI invocation executed the real src/cli.mjs argv parser and manifest JSON read while the --import capture hook short-circuited all six relative operation imports in src/cli.mjs, preventing execution of compileCustody, compilePublic, validateDesigners, runNativeCaller, inspectLauncher, runNativeCase, and the real resolveOutputPath (RESULT-2).",
+      "The compileCustody probe returned { ok: false, code: 'CLI_ARGUMENT_MAPPING_CAPTURE', layer: 'argument-mapping-only' }, verifying that src/cli.mjs maps ok: false to exit status 1 and that the test result is strictly argument-transport evidence rather than compilation success (RESULT-3).",
+      "CHILD.json (pid 800143, session 800143), RESULT.json (ownedSessionRemaining: []), and CLEANUP.json (ownedRoot: '/tmp/doctorwatson-custody-cli-args-cqi6sgh2', existsAfter: false) confirm cleanup of the owned session and owned temporary root directory under a minimal environment (PATH=/usr/bin:/bin, LANG=C.UTF-8, TMPDIR=/tmp/doctorwatson-custody-cli-args-cqi6sgh2/tmp) (RESULT-4)."
+    ],
+    "limitations": [
+      "The five-test execution is a scoped unit/regression run for CLI argument transport using module-resolution capture probes; compileCustody itself, Aiken, UPLC compilation, oracle file reading/parsing, bindOracleSpends, and native/SDK/ledger consumers did not execute.",
+      "Because ./native-runtime.mjs was also replaced by a pass-through probe (resolveOutputPath returning { ok: true, path: path ?? fallback }), output-path policy validation (such as refusing historical campaign check directories) was not exercised in these test runs.",
+      "When --oracle-results is omitted, the test verifies that options.oracleResultsPath is of type 'undefined' at the compileCustody call boundary; actual binding to DEFAULT_ORACLE and reading of that path depend on the unchanged compile-custody.mjs parameter default (L202) and read site (L312), which were not executed during the probed run.",
+      "The usage() help string update in src/cli.mjs (L52) is verified by static source inspection of the embedded file rather than a runtime test case triggering the usage() stderr exit path.",
+      "Cleanup receipts (ownedSessionRemaining: [] and existsAfter: false) attest only to the owned session (800143) and ownedRoot (/tmp/doctorwatson-custody-cli-args-cqi6sgh2); they do not prove system-wide unrelated-process or syscall exclusion, and no EUC-012/EUC-013, Q1 security, oracle-trust, or financial/native admission gate is satisfied or altered by this result."
+    ]
+  },
+  "reviewToken": "doctorwatson-custody-oracle-cli-path-source-result-ordinary-20261018-a1-whole-review",
+  "reviewedSubjectSha256": "4dc0747eba262bce761256bcdc4d2b5bc48049949140f298d84e576870c83758",
+  "sourceAssessment": {
+    "disposition": "approve-qualified",
+    "findings": [
+      "In experiments/moriarty-eutxo/src/cli.mjs (L314, inside L299-L333), compile-custody forwards oracleResultsPath: arg('--oracle-results', undefined) to compileCustody({...}), passing the exact argv token (including relative paths and spaces) when --oracle-results is supplied and passing undefined when omitted (CLI-PATH-1, CLI-PATH-2).",
+      "All other compile-custody options (sourcePath, seedPath, casesPath, expectedReleasePath, expectedRefundPath, residualPath, manifest, outDir) and the process.exit(result.ok ? 0 : 1) exit mapping (L332) remain unchanged, and usage() at L52 advertises [--oracle-results <file.json>] (CLI-PATH-3).",
+      "The producer module experiments/moriarty-eutxo/src/compile-custody.mjs is unchanged from base (gitBlob 2857e14f74955cfad24891354992fcecc794d9e7, sha256 572f4ae5a767cadd47080eceb09ef56e920f507618a9fdacba27695851f41680); its signature at L202 (oracleResultsPath = DEFAULT_ORACLE) and file read at L312 (readFileSync(oracleResultsPath, 'utf8')) preserve the existing parameter default when undefined is passed and read the caller-supplied path when a string is passed, with no change to compiler API, oracle validation, publication, or Q1 security fixtures (CLI-PATH-4).",
+      "experiments/moriarty-eutxo/tests/support/compile-custody-cli-capture.mjs (L8-L39) uses node:module registerHooks scoped strictly to context.parentURL === cliUrl to short-circuit all six relative imports of src/cli.mjs, isolating CLI argument parsing and dispatch from compiler and native execution while recording options and typeof options.oracleResultsPath.",
+      "experiments/moriarty-eutxo/tests/compile-custody-cli-args.test.mjs (L13-L80) tests real child-process CLI invocation across five cases: two explicit fixture paths, an explicit path with spaces, a relative path with spaces, and flag omission, asserting exact options deep-equality, oracleResultsPathType ('string' vs 'undefined'), non-success probe code CLI_ARGUMENT_MAPPING_CAPTURE, empty stderr, and exit code 1."
+    ],
+    "limitations": [
+      "The existing arg(flag, fallback) helper in src/cli.mjs (L15-L19) only returns process.argv[i + 1] when it is truthy and does not start with '--'; if --oracle-results is passed as the final argv token without a value, followed immediately by another '--' flag, given an empty string, given a path starting with '--', or passed in '--oracle-results=FILE' form, arg() silently falls back to undefined rather than raising a CLI usage error. Also, process.argv.indexOf(flag) selects the first match if the flag is repeated.",
+      "src/cli.mjs performs pure string forwarding for --oracle-results without path normalization or existence checks; relative paths are resolved later by readFileSync(oracleResultsPath, 'utf8') in compile-custody.mjs (L312) relative to the process current working directory at call time.",
+      "compile-custody-cli-args.test.mjs supplies explicit CLI flags for all eight non-oracle inputs (--source, --seed, --cases, --expected-release, --expected-refund, --residual, --manifest, --out), so the hardcoded fallback paths in src/cli.mjs (L300-L313) and the usage() output text (L52) are verified by static inspection rather than runtime assertions in this test file.",
+      "This source change is strictly limited to CLI argument handoff for --oracle-results; it does not modify or establish compiler correctness, oracle content/trust validation, Q1 security properties, EUC-012/EUC-013 publication or generated-spend requirements, or native/ledger execution."
+    ]
+  },
+  "summary": "Independent ordinary source and result review of commit b988764129e8828e3bc5b4d4b7660df61c3a184f (tree 32a27d88760401c65be4606527274a15410792ea) against embedded PRIMARY.md contents and OUTPUT-SCHEMA.json only. Both sourceAssessment and resultAssessment are approve-qualified: src/cli.mjs accurately advertises [--oracle-results <file.json>] in usage() (L52) and forwards oracleResultsPath: arg('--oracle-results', undefined) (L314) to the unchanged compileCustody API (compile-custody.mjs L202, L312), preserving exact supplied path strings (including relative paths and spaces) and falling back to undefined when omitted so the existing function-parameter default (DEFAULT_ORACLE) remains selected without touching compiler, oracle, native, or Q1 security logic. The five-test regression suite (compile-custody-cli-args.test.mjs with compile-custody-cli-capture.mjs) ran the real CLI argv parser and manifest loader under a minimal environment while short-circuiting all six relative operation imports in src/cli.mjs to capture probes returning ok: false (CLI_ARGUMENT_MAPPING_CAPTURE), and all five tests passed with exitCode 0, empty stderr, and verified session/root cleanup. Approval is strictly qualified to ordinary CLI argument transport and capture-probe test evidence, with no compiler, oracle-content/trust, output-path policy, Q1 security, EUC-012/EUC-013, or native/ledger admission claim.",
+  "tree": "32a27d88760401c65be4606527274a15410792ea",
+  "verdict": "approve-qualified"
+}
