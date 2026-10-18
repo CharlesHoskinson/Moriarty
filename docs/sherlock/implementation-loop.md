@@ -86,3 +86,16 @@ For native build/proof/target work, native authority0, C4 OPEN, R2 UNSATISFIED,6
 ## Full completion
 
 Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
+
+
+## Prospective native policy adoption — October17
+
+The [exact R2b policy adoption](../results/sherlock-native-prerequisite-policy-20261017/ROOT-PROSPECTIVE-ADOPTION.json)
+resolves the prospective policy/P1 disposition after two agreeing designated
+security owners and one nonsecurity reviewer corrected their literal citations.
+It does not admit a runtime configuration, provisioning or native execution.
+The [current source-only field table](../results/sherlock-native-prerequisite-policy-20261017/158-next-native-prerequisite-metadata/FIELD-STATUS.json)
+names the missing privileged operator source, fresh observations, final bindings
+and grants. Select those exact dependencies; do not repeat unchanged policy
+reviews or the ordinary69 cohort. Native authority0/C4/R2/60460 and the stopped
+amendment stay in their recorded states until their actual predicates are met.

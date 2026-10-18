@@ -1,0 +1,400 @@
+              "type": "integer",
+              "minimum": 1
+            },
+            "target_tmp_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "file_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "namespace_tmpfs_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "cgroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "envelope_path",
+        "supervisor_leaf_name",
+        "phase_parent_name",
+        "envelope_memory_max",
+        "envelope_pids_max",
+        "envelope_cpu_max"
+      ],
+      "properties": {
+        "envelope_path": {
+          "type": "string",
+          "pattern": "^(/[A-Za-z0-9_][A-Za-z0-9_.@-]{0,127})+$",
+          "not": {
+            "pattern": "(^|/)cgroup\\."
+          }
+        },
+        "supervisor_leaf_name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$",
+          "not": {
+            "pattern": "^sdk-once-"
+          }
+        },
+        "phase_parent_name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$",
+          "not": {
+            "pattern": "^sdk-once-"
+          }
+        },
+        "envelope_memory_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "envelope_pids_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "envelope_cpu_max": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]* [1-9][0-9]*$"
+        }
+      }
+    },
+    "quota_mounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_home",
+        "target_tmp",
+        "packet"
+      ],
+      "properties": {
+        "source_home": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mountpoint",
+            "mount_id",
+            "device",
+            "max_bytes",
+            "max_inodes"
+          ],
+          "properties": {
+            "mountpoint": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "mount_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "device": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_inodes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "target_tmp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mountpoint",
+            "mount_id",
+            "device",
+            "max_bytes",
+            "max_inodes"
+          ],
+          "properties": {
+            "mountpoint": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "mount_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "device": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_inodes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "packet": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mountpoint",
+            "mount_id",
+            "device",
+            "max_bytes",
+            "max_inodes"
+          ],
+          "properties": {
+            "mountpoint": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "mount_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "device": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_inodes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "review_receipts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "security",
+        "nonsecurity",
+        "root",
+        "tier1"
+      ],
+      "properties": {
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "nonsecurity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "root": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "tier1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "tier2": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/[^\\u0000]*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "old_home_stat_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "source_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/[^\\u0000]*$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "git_checkouts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "relative_root",
+          "commit",
+          "files"
+        ],
+        "properties": {
+          "relative_root": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/].*$"
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "relative",
+                "blob",
+                "mode"
+              ],
+              "properties": {
+                "relative": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[^/].*$"
+                },
+                "blob": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$"
+                },
+                "mode": {
+                  "enum": [
+                    "100644",
+                    "100755",
+                    "120000"
+                  ]
+                }
+              }
+            },
+            "minItems": 1
+          }
+        }
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "registry_roots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "archive",
+          "source_relative",
+          "package_checksum"
+        ],
+        "properties": {
+          "archive": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/].*$"
+          },
+          "source_relative": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/].*$"
+          },
+          "package_checksum": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "minItems": 423,
+      "maxItems": 423
+    },

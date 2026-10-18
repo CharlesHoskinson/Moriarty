@@ -1,0 +1,7 @@
+R149 owner clarification resumed the actual R140 conversation bb6043a1-63f1-4de9-b26f-ef50139233e3 (new user step 72). CLI 0 / SUCCESS in 71.816 seconds, Argon-high selection, zero tool calls, no observer violations, all pinned inputs unchanged. This is the same reviewer continuation, not a new independent vote or fresh full-source review.
+
+All ten wrong full hashes are explicitly withdrawn and replaced with exact original hashes and byte counts. The q2 count is corrected from 26 to 27 guard surfaces; 17 host surfaces remains correct. All other full hashes and named guard function line ranges in the clarification match original pins/source. The owner confirms each of its own q1–q4 decisions with the existing scope and prerequisite limits.
+
+The unmodified response is 7,076 bytes against a requested 4,000 bytes. It repeats long hashes despite the requested fact-ID form. Anchor fields are composite pinned artifact/hash/locator references, not short verbatim source quotations; constituent full hashes and named source locators were checked. Acknowledging O01 does not erase either output overrun. No retry occurred.
+
+The raw opinion and correction remain unadopted. Prospective policy approval and scoped ordinary69 evidence do not provide full SDK/dependency source approval, complete R6 config, provisioning, disclosures or grants. Actual prerequisites remain unsatisfied; native authority is zero and C4/60s/460s holds remain unchanged. These mechanical checks do not substitute for security-owner judgment or Root adoption.

@@ -1,0 +1,38 @@
+            for worker in ([True,False] if phase in ('B','E','F') else [True]):
+                with patch.object(runner,'owned_paths'),patch.object(runner,'jload',return_value={'head_files':[]}):args=runner.sandbox_args(c,phase,worker)
+                binds=[tuple(args[i+1:i+3]) for i,x in enumerate(args) if x=='--ro-bind']
+                self.assertEqual(binds.count((c['paths']['mask_empty'],'/sys/fs/cgroup')),2)
+
+
+
+class RegisteredA102Subject(unittest.TestCase):
+    def test_exact_registered_a102_subject_and_inventory_bindings(self):
+        c=json.loads((Path(__file__).parent/'config.example.json').read_text())
+        self.assertEqual(runner.BASE, '5cf27d64fe91a3faef3ed1b4283284c50f660b24')
+        self.assertEqual(c['paths']['worktree'], '/home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016')
+        self.assertEqual(c['bindings']['subject'], {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/astra-a102-compile-subject-prep-r1/COMPILE-SUBJECT.json', 'sha256': '68620a2a2462411050860503128193f32250f9165ce4ec80346da195cd4f157b'})
+        self.assertEqual(c['source_manifest'], {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/astra-a102-compile-subject-prep-r1/source-manifest.proposal.json', 'sha256': '9f48d1f227c2714bab374828b7fe4dd930aab660ea63dd2685f91d6250bcafce'})
+        self.assertEqual(runner.LOCK, 'dfffb853b47a7b2d0d1b80a64bb3e826d64d66f247881603b6fc31c8e3e34003')
+
+    def test_ten_reviewed_source_members_bind_through_actual_source_binding(self):
+        # All paths/digests are independent frozen expectations. Every filesystem
+        # access in source_binding is patched; this fixture does not hash a checkout.
+        root=Path('/home/charl/Moriarty/.worktrees/sherlock-a102-build-20261016')
+        selected={'crates/mori-backend/src/sherlock_machine/enabled_fetch.rs': '6c45ab9190ad829db29b039d91050bfd8b82d1ccb66b3dd990538c18415dc8c1', 'crates/mori-backend/src/sherlock_machine/enabled_fetch_tests.rs': 'b6afffebff3c3d1bed4e2a6b94baa2f410e25a573c31756e2e90c4c27a820973', 'crates/mori-backend/src/sherlock_machine/fetch.rs': '6e71e0dccf687bec051556eeefdc435cef1c61535323d62a3994dc7220cadc87', 'crates/mori-backend/src/sherlock_machine/identifier_rejection_tests.rs': '3c5be80e5104827b287cc4f310f88f4b2ae4a084a0518d517d421bb4e3374851', 'crates/mori-backend/src/sherlock_machine/literal_step.rs': 'b5d2ca73b0e6b561f554902c3f4e50ec7743cc7ca04b9e7e9acb0c3aca10b839', 'crates/mori-backend/src/sherlock_machine/literal_step_normal_tests.rs': '255408fdafb36b2ed771206c366232dea2b61d7345d79537121e556f38163ef6', 'crates/mori-backend/src/sherlock_machine/mod.rs': '5f193ee16986094b9706c7dedc7c8ac091d29496b83e46e71fa7c4553f6eea2f', 'crates/mori-backend/src/sherlock_machine/normal_tests.rs': '651a47138ab6a9bd37666508ca48de7c1ea9846840f1b56fee2b3a30e5400c8c', 'crates/mori-backend/src/lib.rs': 'dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263', 'models/sherlock/literal-step/MAPPING.md': '60d5c62650055ba6ed644786ac5146c60892c1b2dbbc81c313e6d24873377243'}
+        all_files=dict(selected, **{'Cargo.lock':'dfffb853b47a7b2d0d1b80a64bb3e826d64d66f247881603b6fc31c8e3e34003'})
+        manifest={'root':str(root),'head':'5cf27d64fe91a3faef3ed1b4283284c50f660b24','files':all_files,'excluded_directories':['.git'],'head_files':[]}
+        subject={'candidate_files':[{'path':p,'sha256':h} for p,h in selected.items()]}
+        c={'paths':{'worktree':str(root)},'source_manifest':{'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/astra-a102-compile-subject-prep-r1/source-manifest.proposal.json', 'sha256': '9f48d1f227c2714bab374828b7fe4dd930aab660ea63dd2685f91d6250bcafce'},'bindings':{'subject':{'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/astra-a102-compile-subject-prep-r1/COMPILE-SUBJECT.json', 'sha256': '68620a2a2462411050860503128193f32250f9165ce4ec80346da195cd4f157b'}}}
+        grouped={}
+        for name in all_files:
+            p=Path(name);grouped.setdefault(str(root/p.parent),[]).append(p.name)
+        walk=[(base,[],names) for base,names in grouped.items()]
+        def data(path):return manifest if path=={'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/opus-sprint-loop-20261015/astra-a102-compile-subject-prep-r1/source-manifest.proposal.json', 'sha256': '9f48d1f227c2714bab374828b7fe4dd930aab660ea63dd2685f91d6250bcafce'}['path'] else subject
+        with patch.object(runner,'check_pin') as pins,patch.object(runner,'jload',side_effect=data),patch.object(runner.os,'walk',return_value=walk),patch.object(runner,'digest',side_effect=lambda p:all_files[str(p.relative_to(root))]) as digests:
+            runner.source_binding(c)
+        self.assertEqual(pins.call_count,1)
+        self.assertEqual(digests.call_count,11)
+        self.assertEqual(len(selected),10)
+        self.assertEqual(set(selected),set(row['path'] for row in subject['candidate_files']))
+
+if __name__=='__main__':unittest.main()

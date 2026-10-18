@@ -1,0 +1,35 @@
+[
+  {
+    "source": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/134-final-r2b-policy-freeze/pages/02-02.txt",
+      "bytes": 15912,
+      "sha256": "98924a40525020d44dedf64011890fbdecea6d22c04b88f1920eeac9e4062be6"
+    },
+    "scope": "exact selected page-line excerpt, not complete body",
+    "first_line": 229,
+    "last_line": 237,
+    "text": "229: def sandbox_args(c,phase,worker=True,precheck=False):\n230:     owned_paths(c)\n231:     p=c['paths'];args=['--die-with-parent','--new-session','--unshare-user','--unshare-pid','--unshare-net','--unshare-ipc','--unshare-uts','--disable-userns','--cap-drop','ALL','--ro-bind','/','/']\n232:     # Mask private home and old trees first; restore only the exact bound public\n233:     # worktree/toolchain/proposal and current owned output mounts afterwards.\n234:     args+=['--size',str(c['limits'][phase]['namespace_tmpfs_bytes']),'--tmpfs','/home/charl']\n235:     for mask in sorted(set(c['masks'])-{'/home/charl'},key=lambda x:(len(Path(x).parts),x)):\n236:         if phase in ('A0','A') and mask=='/home/charl/.cargo':continue\n237:         args+=['--ro-bind',p['mask_empty'],mask]"
+  },
+  {
+    "source": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/134-final-r2b-policy-freeze/pages/02-03.txt",
+      "bytes": 15980,
+      "sha256": "817611e9c2236105fd84d5f3857adbd07827eede1a28d1547405cf44f9998d03"
+    },
+    "scope": "exact selected page-line excerpt, not complete body",
+    "first_line": 1,
+    "last_line": 30,
+    "text": "1:     args+=['--proc','/proc','--remount-ro','/proc','--dev','/dev','--remount-ro','/dev']\n2:     for path in c['readonly_tools']+[p['worktree']]:\n3:         args+=['--ro-bind',path,path]\n4:     if worker:\n5:         runner=c['bindings']['runner']['path'];args+=['--ro-bind',runner,runner]\n6:         for binding in [*c['bindings'].values(),*c['review_receipts'].values(),c['source_manifest'],c['old_home_stat_manifest']]:\n7:             path=binding['path'];args+=['--ro-bind',path,path]\n8:         args+=['--ro-bind',p['config'],p['config']]\n9:         marker=str(Path(p['execution_root'])/'ONE_SHOT_STARTED');args+=['--ro-bind',marker,marker]\n10:         for binding in jload(c['source_manifest']['path'])['head_files']:\n11:             path=binding['path'];args+=['--ro-bind',path,path]\n12:     if phase in ('A0','A'):\n13:         for path in c['source_copy_mounts']:args+=['--ro-bind',path,path]\n14:     args+=['--ro-bind',p['empty_home'],p['empty_home']]\n15:     args+=['--bind' if phase in ('A','B','D') else '--ro-bind',p['source_home'],p['source_home']]\n16:     args+=['--bind',p['tmp'],p['tmp']]\n17:     if phase=='F':args+=['--bind',p['target'],p['target']]\n18:     # Only our data workers write phase receipts. Cargo never sees writable logs.\n19:     if worker:args+=['--bind',p['packet'],p['packet']]\n20:     for mask in sorted(set(c['masks'])-{'/home/charl'},key=lambda x:(len(Path(x).parts),x)):\n21:         if phase in ('A0','A') and mask=='/home/charl/.cargo':continue\n22:         args+=['--ro-bind',p['mask_empty'],mask]\n23:     args+=['--remount-ro','/home/charl']\n24:     args+=['--clearenv']\n25:     for k,v in cargo_env(c,phase).items():args+=['--setenv',k,v]\n26:     args+=['--chdir',p['worktree'],'--']\n27:     if worker:args+=['/usr/bin/python3','-I','-B',c['bindings']['runner']['path'],'--worker',phase,'--config',p['config']]\n28:     else:args+=cargo_argv(phase)\n29:     if precheck:args+=['--precheck']\n30:     return args"
+  },
+  {
+    "source": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/134-final-r2b-policy-freeze/snapshots/37-REPORT.md",
+      "bytes": 22731,
+      "sha256": "031216f8d47d6704b029494b757a2b7b91bb439bd140c36c0f6bf10a5220e78f"
+    },
+    "scope": "complete original lines60 and61 retained R21 scope; full body was read in original43-body cut",
+    "first_line": 60,
+    "last_line": 61,
+    "text": "60:    - Operator provisions fresh execution root, 3 tmpfs mounts (`target_tmp` 8 GiB `rw,nosuid,nodev`; `source_home` `1,287,098,368` B `rw,nosuid,nodev,noexec`; `packet` 64 MiB `rw,nosuid,nodev,noexec`), and cgroups `E` (`20 GiB`, `1088` pids, `500000 100000`, `swap.max=0`), `L` (`1.5 GiB`, `64` pids), and `P` (`18,534,076,416` B, `1024` pids, `400000 100000`).\n61:    - Record `Q-OBS` and `old_home_stat_manifest`, bind 5 fresh receipts (`security`, `muse`, `root`, `tier1`, `tier2` granting `AM-1..AM-4` + `link_text_extension` under [CONTRACT-ADDENDUM.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/21-native-build-path-review/pages/13-01.txt#L1-L4) `29c3bbac...`), and run `fc1c1c98` under `setpriv --reuid=1000 --regid=1000 --clear-groups --inh-caps=-all --bounding-set=-all --no-new-privs`."
+  }
+]

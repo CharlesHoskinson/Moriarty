@@ -1,0 +1,217 @@
+    args+=['--proc','/proc','--remount-ro','/proc','--dev','/dev','--remount-ro','/dev']
+    for path in c['readonly_tools']+[p['worktree']]:
+        args+=['--ro-bind',path,path]
+    if worker:
+        runner=c['bindings']['runner']['path'];args+=['--ro-bind',runner,runner]
+        for binding in [*c['bindings'].values(),*c['review_receipts'].values(),c['source_manifest'],c['old_home_stat_manifest']]:
+            path=binding['path'];args+=['--ro-bind',path,path]
+        args+=['--ro-bind',p['config'],p['config']]
+        marker=str(Path(p['execution_root'])/'ONE_SHOT_STARTED');args+=['--ro-bind',marker,marker]
+        for binding in jload(c['source_manifest']['path'])['head_files']:
+            path=binding['path'];args+=['--ro-bind',path,path]
+    if phase in ('A0','A'):
+        for path in c['source_copy_mounts']:args+=['--ro-bind',path,path]
+    args+=['--ro-bind',p['empty_home'],p['empty_home']]
+    args+=['--bind' if phase in ('A','B','D') else '--ro-bind',p['source_home'],p['source_home']]
+    args+=['--bind',p['tmp'],p['tmp']]
+    if phase=='F':args+=['--bind',p['target'],p['target']]
+    # Only our data workers write phase receipts. Cargo never sees writable logs.
+    if worker:args+=['--bind',p['packet'],p['packet']]
+    for mask in sorted(set(c['masks'])-{'/home/charl'},key=lambda x:(len(Path(x).parts),x)):
+        if phase in ('A0','A') and mask=='/home/charl/.cargo':continue
+        args+=['--ro-bind',p['mask_empty'],mask]
+    args+=['--remount-ro','/home/charl']
+    args+=['--clearenv']
+    for k,v in cargo_env(c,phase).items():args+=['--setenv',k,v]
+    args+=['--chdir',p['worktree'],'--']
+    if worker:args+=['/usr/bin/python3','-I','-B',c['bindings']['runner']['path'],'--worker',phase,'--config',p['config']]
+    else:args+=cargo_argv(phase)
+    if precheck:args+=['--precheck']
+    return args
+
+def _cg_text(path):return Path(path).read_text()
+def _cg_children(path):return {p.name for p in Path(path).iterdir() if p.is_dir()}
+def _cg_writable(path,search=False):return os.access(path,os.W_OK | (os.X_OK if search else 0))
+def _cg_dirstat(path):
+    p=Path(path);return p.lstat(),p.resolve(strict=True)
+def _cg_mkdir(path):Path(path).mkdir(exist_ok=False)
+def _cg_rmdir(path):Path(path).rmdir()
+def _cg_write(path,value):Path(path).write_text(value)
+def _mount_rows():
+    rows=[]
+    for line in _cg_text('/proc/self/mountinfo').splitlines():
+        pre,post=line.split(' - ',1);rows.append((pre.split()[4],post.split()[0]))
+    return rows
+
+def cg_paths(c):
+    cg=c['cgroup'];e=cg['envelope_path']
+    return e,e+'/'+cg['supervisor_leaf_name'],e+'/'+cg['phase_parent_name']
+
+def cg_fs(ns):return Path('/sys/fs/cgroup')/ns.lstrip('/')
+
+def phase_cgroup(c,phase):return cg_paths(c)[2]+'/sdk-once-'+phase
+
+def read_numbers(path):return dict((k,int(v)) for k,v in (x.split() for x in _cg_text(path).splitlines()))
+
+class Group:
+    def __init__(self,c,phase):
+        self.path=cg_fs(phase_cgroup(c,phase));self.v=c['limits'][phase];self.created=False
+    def create(self):
+        _cg_mkdir(self.path);self.created=True
+        need(_cg_text(self.path/'cgroup.type').strip()=='domain','phase cgroup type')
+        need({'cpu','memory','pids'}<=set(_cg_text(self.path/'cgroup.controllers').split()),'phase controllers missing')
+        need(not _cg_text(self.path/'cgroup.procs').splitlines(),'phase group populated at creation')
+        for k,v in {'memory.max':self.v['memory_bytes'],'memory.swap.max':0,'pids.max':self.v['pids'],'cpu.max':str(self.v['cpu_quota_us'])+' '+str(self.v['cpu_period_us'])}.items():
+            _cg_write(self.path/k,str(v));need(_cg_text(self.path/k).strip()==str(v),'cgroup setting not effective')
+        _cg_dirstat(self.path/'cgroup.kill')  # Existence required; no fallback kill path.
+    def join_child(self):
+        (self.path/'cgroup.procs').write_text(str(os.getpid()))
+        resource.setrlimit(resource.RLIMIT_FSIZE,(self.v['file_bytes'],self.v['file_bytes']))
+        resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+    def kill(self):
+        if not self.created:return
+        try:_cg_dirstat(self.path)
+        except FileNotFoundError:return
+        _cg_write(self.path/'cgroup.kill','1')
+    def check(self):
+        need(read_numbers(self.path/'cpu.stat').get('usage_usec',0)<=self.v['cpu_time_us'],'total cgroup CPU cap')
+        need(read_numbers(self.path/'memory.events').get('oom_kill',0)==0,'cgroup OOM')
+        need(read_numbers(self.path/'pids.events').get('max',0)==0,'tasks cap hit')
+    def close(self):
+        if not self.created:return
+        self.kill()
+        deadline=time.monotonic()+5
+        while read_numbers(self.path/'cgroup.events').get('populated',0):
+            need(time.monotonic()<deadline,'descendants did not terminate');time.sleep(.02)
+        _cg_rmdir(self.path)
+
+def supervisor_envelope(c):
+    # Read-only E/L/P preflight, per adopted owner contract and mandatory K1-K3.
+    cg=c['cgroup'];e_ns,l_ns,p_ns=cg_paths(c);uid=os.getuid()
+    need(uid==os.geteuid() and uid!=0,'unprivileged matching supervisor uid required')
+    status=dict(line.split(':',1) for line in _cg_text('/proc/self/status').splitlines() if ':' in line)
+    for key in ('CapPrm','CapEff','CapAmb'):
+        need(re.fullmatch(r'0+',status.get(key,'').strip()) is not None,'nonzero or missing '+key)
+    need(_cg_text('/proc/self/cgroup').splitlines()==['0::'+l_ns],'unbound supervisor leaf')
+    rows=_mount_rows();cgroups=[row for row in rows if row[1]=='cgroup2']
+    need(cgroups==[('/sys/fs/cgroup','cgroup2')] and sum(row[0]=='/sys/fs/cgroup' for row in rows)==1,'single global cgroup2 mount required')
+    need(not any(point.startswith('/sys/fs/cgroup/') for point,kind in rows),'nested cgroup mount')
+    root_stat,_=_cg_dirstat('/sys/fs/cgroup');paths=[cg_fs(ns) for ns in (e_ns,l_ns,p_ns)];stats=[]
+    for p in paths:
+        st,resolved=_cg_dirstat(p)
+        need(stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode) and resolved==p and st.st_dev==root_stat.st_dev,'cgroup path identity')
+        stats.append(st)
+    e,l,p=paths
+    need(_cg_text(l/'cgroup.procs').splitlines()==[str(os.getpid())],'supervisor leaf membership')
+    for path in paths:need(_cg_text(path/'cgroup.type').strip()=='domain','cgroup domain required')
+    for k,v in [('memory.max',cg['envelope_memory_max']),('pids.max',cg['envelope_pids_max']),('cpu.max',cg['envelope_cpu_max']),('memory.swap.max',0)]:
+        need(_cg_text(e/k).strip()==str(v),'aggregate resource envelope mismatch')
+        st,_=_cg_dirstat(e/k)
+        need(st.st_uid!=uid and not _cg_writable(e/k),'aggregate cap owned or writable by supervisor')
+    need(not _cg_text(e/'cgroup.procs').splitlines(),'aggregate envelope populated')
+    need({'cpu','memory','pids'}<=set(_cg_text(e/'cgroup.subtree_control').split()),'aggregate controllers missing')
+    need(_cg_children(e)=={cg['supervisor_leaf_name'],cg['phase_parent_name']},'unexpected envelope children')
+    need(_cg_writable(e/'cgroup.procs'),'migration ancestor not writable')
+    need(not _cg_children(l),'supervisor leaf has children')
+    need(not _cg_text(l/'cgroup.subtree_control').split(),'supervisor leaf enables controllers')
+    need(not _cg_text(p/'cgroup.procs').splitlines(),'phase parent populated')
+    for name in ('cgroup.controllers','cgroup.subtree_control'):
+        need({'cpu','memory','pids'}<=set(_cg_text(p/name).split()),'phase parent controllers missing')
+    need(stats[2].st_uid==uid and _cg_writable(p,search=True),'phase parent ownership or access')
+    _cg_dirstat(p/'cgroup.kill')
+    need(not _cg_children(p),'phase parent contains residual groups')
+
+TRAMPOLINE = b"import array,ctypes as ct,fcntl,json,os,socket,sys\nstage_fd,control_fd,token_fd=map(int,sys.argv[1:4]);argv=sys.argv[4:]\nseals=fcntl.F_SEAL_WRITE|fcntl.F_SEAL_SHRINK|fcntl.F_SEAL_GROW|fcntl.F_SEAL_SEAL\nif fcntl.fcntl(stage_fd,fcntl.F_GET_SEALS)&seals!=seals:raise RuntimeError('unsealed stage')\nif token_fd>=0 and fcntl.fcntl(token_fd,fcntl.F_GET_SEALS)&seals!=seals:raise RuntimeError('unsealed worker token')\nclass Filter(ct.Structure):_fields_=[('code',ct.c_ushort),('jt',ct.c_ubyte),('jf',ct.c_ubyte),('k',ct.c_uint)]\nclass Program(ct.Structure):_fields_=[('len',ct.c_ushort),('filter',ct.POINTER(Filter))]\n# Default allow; individual network/uring syscalls notify. AF_UNIX sendmsg is\n# retained for SCM_RIGHTS handoff; no network FD is passed to the target.\nins=[(0x20,0,0,4),(0x15,1,0,0xc000003e),(0x06,0,0,0x80000000),\n     (0x20,0,0,0),(0x45,0,1,0x40000000),(0x06,0,0,0x80000000)]\nfor syscall in (42,425,426,427):ins.extend([(0x15,0,1,syscall),(0x06,0,0,0x7fc00000)])\nins.extend([(0x15,2,0,41),(0x15,1,0,53),(0x06,0,0,0x7fff0000),\n            (0x20,0,0,16),(0x15,0,1,1),(0x06,0,0,0x7fff0000),(0x06,0,0,0x7fc00000)])\nfilters=(Filter*len(ins))(*(Filter(*x) for x in ins));program=Program(len(ins),filters);libc=ct.CDLL(None,use_errno=True)\nif libc.prctl(38,1,0,0,0)!=0:raise RuntimeError('no_new_privs failed')\nlistener=libc.syscall(317,1,8,ct.byref(program))\nif listener<0:raise RuntimeError('seccomp NEW_LISTENER unavailable')\ncontrol=socket.socket(fileno=control_fd)\ncontrol.sendmsg([b'L'],[(socket.SOL_SOCKET,socket.SCM_RIGHTS,array.array('i',[listener]))])\nos.close(listener);control.close();os.close(stage_fd)\nkeep={0,1,2}\nif token_fd>=0:keep.add(token_fd);os.set_inheritable(token_fd,True)\nfor item in os.listdir('/proc/self/fd'):\n fd=int(item)\n if fd not in keep:\n  try:os.close(fd)\n  except OSError:pass\nif not argv or not argv[0].startswith('/'):raise RuntimeError('absolute target required')\nos.execve(argv[0],argv,dict(os.environ))\n"
+
+def sealed_memfd(name,data):
+    import fcntl
+    fd=os.memfd_create(name,os.MFD_CLOEXEC|os.MFD_ALLOW_SEALING)
+    offset=0
+    while offset<len(data):offset+=os.write(fd,data[offset:])
+    os.lseek(fd,0,os.SEEK_SET)
+    seals=fcntl.F_SEAL_WRITE|fcntl.F_SEAL_SHRINK|fcntl.F_SEAL_GROW|fcntl.F_SEAL_SEAL
+    fcntl.fcntl(fd,fcntl.F_ADD_SEALS,seals);return fd
+
+def prior_receipts(c,phase,precheck):
+    packet=Path(c['paths']['packet']);names=[p+'_RESULT.json' for p in PHASES[:PHASES.index(phase)]]
+    extra={'A':['A0_FREEZE.json'],'C':['A0_FREEZE.json'],'D':['C_RAW_IDENTITIES.json'],'E':['D_FREEZE.json'],'F':['D_FREEZE.json','E_RESOLVED.json']}
+    names+=extra.get(phase,[])
+    if phase in ('E','F') and not precheck:names+=[phase+'.stdout',phase+'.stderr']
+    return {name:digest(packet/name) for name in names}
+
+def child_mounts(c,phase):
+    p=c['paths'];wanted={'/':'ro','/proc':'ro','/dev':'ro','/home/charl':'ro',p['worktree']:'ro',p['source_home']:'rw' if phase in ('A','B','D') else 'ro',p['tmp']:'rw',p['empty_home']:'ro',p['packet']:'rw'}
+    for tool in c['readonly_tools']:wanted[tool]='ro'
+    if phase=='F':wanted[p['target']]='rw'
+    return wanted
+
+def verify_worker_context(c,phase,precheck,fd,config_sha):
+    import fcntl
+    need(fd is not None and fd>2,'internal inherited worker FD required')
+    seals=fcntl.F_SEAL_WRITE|fcntl.F_SEAL_SHRINK|fcntl.F_SEAL_GROW|fcntl.F_SEAL_SEAL
+    need(fcntl.fcntl(fd,fcntl.F_GET_SEALS)&seals==seals,'worker FD not sealed')
+    os.lseek(fd,0,os.SEEK_SET)
+    with os.fdopen(fd,'rb') as f:context=json.loads(f.read())
+    exact(context,'nonce phase precheck config_sha256 runner_sha256 cgroup marker_sha256 predecessors host_originals_checked mounts','worker launch context')
+    need(HEX.fullmatch(context['nonce']) is not None,'launch nonce')
+    need((context['phase'],context['precheck'],context['config_sha256'],context['runner_sha256'])==(phase,precheck,config_sha,c['bindings']['runner']['sha256']),'worker phase/config/runner binding')
+    expected='0::'+phase_cgroup(c,phase)
+    need(context['cgroup']==expected and _cg_text('/proc/self/cgroup').strip()==expected,'worker cgroup differs')
+    need(context['marker_sha256']==digest(Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED'),'one-shot marker differs')
+    need(context['predecessors']==prior_receipts(c,phase,precheck),'worker predecessor receipts differ')
+    need(context['host_originals_checked'] is True,'supervisor original-home check absent')
+    need(context['mounts']==child_mounts(c,phase),'worker mount contract differs')
+    mounts={}
+    for line in Path('/proc/self/mountinfo').read_text().splitlines():
+        fields=line.split(' - ',1)[0].split();mounts[fields[4]]=set(fields[5].split(','))
+    for path,access in context['mounts'].items():need(path in mounts and access in mounts[path],'worker mount mode differs: '+path)
+    # Consume the nonce once inside the already verified bounded writable packet.
+    write_new(Path(c['paths']['packet'])/('USED_LAUNCH_'+context['nonce']),b'consumed\n',64)
+    bound_identities(c,host_originals=False)
+    # Original-home objects remain masked in C/D/E/F. Their real checks happen
+    # in the supervisor immediately before creating this sealed launch context.
+
+
+def network_pending(fd):
+    import select
+    poll=select.poll();poll.register(fd,select.POLLIN)
+    return any(events & select.POLLIN for _,events in poll.poll(0))
+
+def launch(c,phase,config_sha):
+    import array
+    import socket
+    import fcntl
+    group=Group(c,phase);v=c['limits'][phase];packet=Path(c['paths']['packet'])
+    need((Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
+    supervisor_envelope(c);bound_identities(c);quotas(c,phase)
+    start=time.monotonic();counts={'stdout':0,'stderr':0};records=[]
+    try:
+        group.create()
+        variants=[(False,False)] if phase in ('B','E','F') else [(True,False)]
+        if phase in ('E','F'):variants=[(True,True),(False,False),(True,False)]  # same phase/group/deadline, data audit only
+        for audit,precheck in variants:
+            args=sandbox_args(c,phase,audit,precheck);suffix='_precheck' if precheck else '_audit' if audit and phase in ('E','F') else ''
+            parent,child=socket.socketpair();proc=None;listener=None;sel=selectors.DefaultSelector();logs=[];token_fd=-1
+            stage_fd=sealed_memfd('sdk-post-bwrap-stage',TRAMPOLINE)
+            if audit:
+                context={'nonce':os.urandom(32).hex(),'phase':phase,'precheck':precheck,'config_sha256':config_sha,'runner_sha256':c['bindings']['runner']['sha256'],
+                         'cgroup':'0::'+phase_cgroup(c,phase),
+                         'marker_sha256':digest(Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED'),
+                         'predecessors':prior_receipts(c,phase,precheck),'host_originals_checked':True,'mounts':child_mounts(c,phase)}
+                token_fd=sealed_memfd('sdk-internal-worker-context',json_bytes(context))
+            separator=args.index('--');target=args[separator+1:]
+            if audit:target+=['--config-sha256',config_sha,'--worker-fd',str(token_fd)]
+            preserved=[stage_fd,child.fileno()]+([token_fd] if audit else [])
+            args=args[:separator]+['--','/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]
+            fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in args)+b'\0')
+            try:
+                for name in ('stdout','stderr'):logs.append(open(packet/(phase+suffix+'.'+name),'xb',buffering=0))
+                def enter():
+                    parent.close();group.join_child()
+                proc=subprocess.Popen(['/usr/bin/bwrap','--args',str(fd)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={},pass_fds=tuple([fd,*preserved]),preexec_fn=enter,close_fds=True)
+                child.close();parent.settimeout(max(.001,v['wall_seconds']-(time.monotonic()-start)))
+                message,anc,flags,_=parent.recvmsg(1,socket.CMSG_SPACE(array.array('i').itemsize))
+                need(message==b'L' and not flags,'listener handoff failed')
+                received=[]
+                for level,kind,data in anc:
+                    need(level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS,'unexpected handoff')
