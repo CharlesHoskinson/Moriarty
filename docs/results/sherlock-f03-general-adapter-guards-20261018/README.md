@@ -1,0 +1,11 @@
+# Bounded F03/N01 offline adapter guard evidence
+
+The eleven complementary offline guard methods passed once: exit 0 in 1.432471144 seconds; unittest reports 11 tests in 1.361 seconds. All 521 input pins matched before and after the operation. Stdout was empty, the complete 2,102-byte stderr ends with OK, and the isolated temporary directory was empty. No K, Quint, Cargo, SDK, native or engine process ran.
+
+The exact revised tests cover the six R328 categories, multiline single-KItem admission and refusals, and full decode_capture input/path-chain propagation and tampering. Earlier seven helper guards and three passive operations remain separate scoped observations. They were not replayed. Complete independent source and result/adoption reports from the retained 7d reviewer are included, with factual qualifications.
+
+SOURCE-PINS.json identifies the installation candidate: the new F03 assembler 83a6424f, decoder 85e4e79a, unchanged observations 540128fd and terms c79a852c, and the sole existing-test identity tuple refresh. Root's separate installation/adoption readback establishes canonical installation; this staged archive does not establish it. The old 41,478-byte decoder and 90,731-byte test, plus both document and ledger source cuts, are preserved in source-preimages.
+
+The 45,064-byte new test module depends on archived R paths. It must remain archival evidence and must not be copied into canonical QA discovery. Portable fixture sourcing is separate, unexecuted source work. Hashes identify bytes; they do not approve semantics or authenticate execution. See SOURCE-CLAIM-QUALIFICATIONS.json.
+
+The owner's ADOPTABLE disposition covers bounded passive offline F03/N01 utilities. The default capture limit remains 64 and the explicit F03 ceiling remains 95. Other byte, depth, log and term limits, refusals and trust limits remain unchanged. Internal byte/hash/path consistency does not authenticate an engine, eliminate filesystem TOCTOU, admit arbitrary K formats, prove refinement, or establish finance/wait/B, circuit, native, proof or target acceptance. Historical original021 evidence and all 15 closed original statuses retain their adopted scope; all 25 refinements remain open. No new clause closure is claimed.
