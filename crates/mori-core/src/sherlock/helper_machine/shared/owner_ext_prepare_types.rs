@@ -38,7 +38,7 @@ pub fn instantiate_declared_types<'a>(
     builder.finish()
 }
 
-fn drain_pending_keys<'a>(
+pub(super) fn drain_pending_keys<'a>(
     view: &CheckedTypeDeclView<'a>,
     builder: &mut OwnerExtTypeBuilder<'a>,
     locator: Option<LocatorC>,

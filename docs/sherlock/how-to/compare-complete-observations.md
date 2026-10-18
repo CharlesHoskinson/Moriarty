@@ -59,3 +59,33 @@ The checkers reject missing files, malformed or duplicate JSON members and nonfi
 A pass retains `acceptance: none`. Supplied producer and profile labels are declarations; `producer_authenticity: not-established` and `execution_receipt: not-supplied` remain appropriate for file comparison. Attach a separate actual producer receipt when reporting execution. See [profiles and results](../reference/profiles-results.md) and [DoctorWatson commands](../reference/doctorwatson.md).
 
 For projection and clock differences, read [observation boundaries](../explanation/observation-boundaries.md).
+
+
+## Read the accepted F03 report without rerunning its producers
+
+Open the [F03 actual archive](../../results/sherlock-k-quint-f03-actual-20261018/README.md)
+and verify the compression manifest's raw-byte pins when decompressing its five
+complete output files. Inspect `selected_paired_projection` for F03/fuel93;
+top-level eight-program/216-prefix counts concern frozen source-literal QA,
+not fresh model executions. The report names all eleven state fields and94 ordered
+records, numeric bounds, rule/action mapping, hidden steps, representation changes
+and unmatched finance/wait behavior. Keep K startup/no-next probes separate from
+the93 charges and free publication80.
+
+The recorded passive comparison used the existing file-only selection:
+
+```bash
+python3 -I -B models/sherlock/qa/check.py \
+  --repo /path/to/trusted/checkout \
+  --paired-k-observations /absolute/k-observations.json \
+  --paired-quint-observations /absolute/quint-observations.json \
+  --selected-case F03 --selected-initial-fuel 93
+```
+
+This is a path-template for supplied files, not the archived exact argv or an
+instruction to replay the passed producers. Attach their separate actual receipts.
+[Original021 adoption](../../results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json)
+accepts the finite report requirement; the comparator still records acceptance
+and refinement as `none`. The seven map-key helper/log tests passed separately;
+they do not waive the six assembler, multiline or end-to-end chain guards needed
+for general candidate04 tool adoption. No proof, native, finance or B claim follows.

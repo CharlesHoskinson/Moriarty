@@ -141,3 +141,12 @@ adoption adds no generic runtime dispatch or whole-clause acceptance.
 
 For the distinction between declaration preparation and actual constructor
 execution, see [the explanation](../explanation/nominal-declaration-boundary.md).
+
+## Separate whole-program source preparation
+
+The newer [prepare_ext_program_types API](generic-program-preparation-api.md)
+accepts an owned ExtProgram and retains it with the complete unified names, tables
+and T3 records. One checked builder processes T1/T2 declarations before T3
+signatures and entry/function-body uses. Its [actual two-fixture result](../../results/sherlock-generic-one-builder-preparation-20261018/README.md)
+does not change the declaration-only scope of the two functions on this page,
+execute the original Schedule scenario or close UIREQ034.

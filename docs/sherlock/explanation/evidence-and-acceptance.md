@@ -17,3 +17,21 @@ Final03 reconciles ten Gemini HIGH reports through three Astra MAX reviews. Five
 This evidence remains attached to source membership, profiles, bounds, projections and actual results. A changed dependency invalidates the comparisons that depend on it; unchanged historical receipts keep their original meaning. Source approval, actual-result review and product acceptance are separate. Full UIREQ/U/M/MC/SP/G exits, current Opus-owned obligations and target qualification remain required.
 
 The [result reference](../reference/profiles-results.md) names evidence classes. [Adding a normal case](../how-to/add-normal-case.md) and [finding a first difference](../how-to/find-first-difference.md) describe the practical tasks.
+
+
+## The finite projection report now has scoped acceptance
+
+The [original021 adoption](../../results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json)
+accepts the report-content clause and finite call-return scenario for one actual
+F03/fuel93 K/Quint pair. The final review read all95/94 common data in lossless
+factored form and complete report metadata/comparison bodies; large raw contexts
+remained separately pinned, not claimed manually read in full. Original021 asks
+for a declared common domain, rule-to-action projection and honest differences.
+It does not turn this finite trace agreement into a semantic refinement theorem.
+
+Source, actual results, reporting acceptance and general tool installation remain
+different facts. Seven map-key helper/log guards subsequently passed, but the six
+assembler categories, multiline decoder guards and end-to-end chain propagation
+remain required before general adoption. Complete captures, failed attempts and
+unmeasured finance/B/native scopes remain explicit. Root's accepted count is15
+originals after this adoption; no broader correctness-loop completion follows.
