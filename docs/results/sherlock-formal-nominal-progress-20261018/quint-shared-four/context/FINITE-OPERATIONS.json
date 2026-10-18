@@ -1,0 +1,110 @@
+{
+  "schema": "existing-local-shared-four-capture-consumer-plan/1",
+  "status": "Root-only exactsource review and selection required; no newsubject/normalizertest/capture execution by sourceauthor",
+  "source_freeze": "CANDIDATE-FREEZE.json",
+  "readset": "READSET.json",
+  "manifest": {
+    "path": "NORMALIZER-MANIFEST.json",
+    "sha256": "9e9b5a2d747126e65fb8d641723b39af4f970e8021cbf2a6251b32094867a785"
+  },
+  "commands_in_order": [
+    {
+      "name": "shared-four-capture-typecheck",
+      "argv": [
+        "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+        "--max-old-space-size=512",
+        "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+        "typecheck",
+        "models/sherlock/quint/nominal-construction/nominalConstructionSharedObservation.qnt"
+      ],
+      "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/afterimages",
+      "timeout_seconds": 60
+    },
+    {
+      "name": "normal-wire-serialization-tests",
+      "argv": [
+        "/usr/bin/python3",
+        "-B",
+        "-m",
+        "unittest",
+        "-v",
+        "test_nominal_quint_observations"
+      ],
+      "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/afterimages/models/sherlock/qa",
+      "timeout_seconds": 30
+    },
+    {
+      "name": "shared-four-actual-itf-capture",
+      "argv": [
+        "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+        "--max-old-space-size=512",
+        "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+        "test",
+        "models/sherlock/quint/nominal-construction/nominalConstructionSharedObservation.qnt",
+        "--main",
+        "nominalConstructionSharedObservation",
+        "--match",
+        "^sharedCase[0-3]ObservationTest$",
+        "--backend",
+        "typescript",
+        "--max-samples",
+        "1",
+        "--seed",
+        "1",
+        "--out-itf",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/actual/itf/{test}.itf.json"
+      ],
+      "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/afterimages",
+      "timeout_seconds": 60
+    },
+    {
+      "name": "shared-four-full-wire-consumer",
+      "argv": [
+        "/usr/bin/python3",
+        "-B",
+        "models/sherlock/qa/nominal_quint_observations.py",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/NORMALIZER-MANIFEST.json"
+      ],
+      "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/afterimages",
+      "timeout_seconds": 60,
+      "stdout_format": "JSON bundle; independent comparison input is runs[i].observation; all rawITF/hash/ordinal provenance retained outside it"
+    }
+  ],
+  "tool_pins": [
+    {
+      "path": "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    {
+      "path": "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+      "sha256": "ac12595b1cb7253feec93c79417615c6eb20fc3b6a3df35c5e3530b24e90a501"
+    },
+    {
+      "path": "/usr/bin/python3",
+      "resolved_path": "/usr/bin/python3.14",
+      "sha256": "52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+    }
+  ],
+  "preconditions": [
+    "All8 source hashes and manifest/toolpins must match immediately before each command and at result recording.",
+    "Root uses existing inspected ordinary execution mechanism; this plan adds no launcher/framework.",
+    "Root creates fresh empty /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/shared-four-full-wire-revision02/actual/itf before capture; no actualfiles exist or are created by author.",
+    "Capture command only follows successfultypecheck; consumer only follows successfulserializationtests+all4actualcaptureresults.",
+    "Consumer imports only the copied existing ITFdecoder in the8member closure; no expected/oraclecode is imported."
+  ],
+  "bounds": {
+    "node_heap_mb": 512,
+    "qnt_cases": 4,
+    "qnt_test_max_samples": 1,
+    "qnt_seed": 1,
+    "qnt_explicit_transitions_each": 96,
+    "python_normal_serialization_tests": 2,
+    "capture_stdout_bytes_max": 67108864,
+    "consumer_stdout_bytes_max": 67108864,
+    "network": false,
+    "native": false,
+    "verify": false,
+    "old8nominalfixture_rerun": false
+  },
+  "separate_root_comparison": "Root binds each complete normalized observation to the already frozen nonauthor cells outside sourceauthor contexts; equality/result review is not this adapter and remains unrun. No expected path/body is included or read."
+}

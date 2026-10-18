@@ -1,0 +1,75 @@
+requires "domains.md"
+
+module SHERLOCK-NOMINAL-PRODUCT-SYNTAX
+  imports DOMAINS-SYNTAX
+  imports MAP
+
+  syntax NGValue ::= ngUInt(Int) | ngBool(Bool) | ngNominal(Int, Int, NGValues)
+  syntax NGValues ::= ngNoValues() | ngValue(NGValue, NGValues)
+  syntax NGTypes ::= ngNoTypes() | ngType(Int, NGTypes)
+  syntax NGExprIds ::= ngNoExprs() | ngExprId(Int, NGExprIds)
+  syntax NGCtor ::= ngCtor(Int, Int, Int, NGTypes)
+  syntax NGCtors ::= ngNoCtors() | ngCtorRow(NGCtor, NGCtors)
+  syntax NGDecls ::= ngNoDecls() | ngDecl(Int, Int, NGCtors, NGDecls)
+  syntax NGPattern ::= ngWildcard() | ngBind(Int)
+                     | ngConstructorPattern(Int, Int, NGPatterns)
+  syntax NGPatterns ::= ngNoPatterns() | ngPattern(NGPattern, NGPatterns)
+  syntax NGArms ::= ngNoArms() | ngArm(Int, NGPattern, Int, NGArms)
+  // Every expression carries a source occurrence independent of its table ID.
+  syntax NGExpr ::= ngLiteral(Int, NGValue) | ngVariable(Int, Int)
+                  | ngAdd(Int, Int, Int) | ngConstruct(Int, Int, Int, NGExprIds)
+                  | ngCall(Int, Int, NGExprIds) | ngMatch(Int, Int, NGArms)
+  syntax NGNodes ::= ngNoNodes() | ngNode(Int, NGExpr, NGNodes)
+  syntax NGParams ::= ngNoParams() | ngParam(Int, Int, NGParams)
+  syntax NGFunction ::= ngFunction(Int, NGParams, Int, Int)
+  syntax NGFunctions ::= ngNoFunctions() | ngFunctionRow(NGFunction, NGFunctions)
+  syntax NGProgram ::= ngProgram(NGDecls, NGNodes, NGFunctions, Int)
+
+  syntax NGPath ::= ngRoot() | ngAt(Int, NGPath)
+  // name, match expression, source arm, source field path, value
+  syntax NGBindings ::= ngNoBindings()
+                      | ngBinding(Int, Int, Int, NGPath, NGValue, NGBindings)
+  syntax NGMatching ::= ngMatched(NGBindings) | ngMiss()
+  syntax NGEnvironment ::= ngBoundEnvironment(Map) | ngBadBindings()
+  syntax NGExprLookup ::= ngFoundExpr(NGExpr) | ngMissingExpr()
+  syntax NGFunctionLookup ::= ngFoundFunction(NGFunction) | ngMissingFunction()
+  syntax NGCtorLookup ::= ngFoundCtor(NGCtor) | ngMissingCtor()
+
+  syntax NGFrame ::= ngAddLeft(Int, Int, Int, Map)
+                   | ngAddRight(Int, Int, NGValue, Map)
+                   | ngArguments(Int, Int, Int, Int, Int, NGValues, NGExprIds, Map)
+                   | ngFunctionReturn(Int, Int, Int, Int, Map)
+                   | ngConstructorFields(Int, Int, Int, Int, NGTypes, Int, Int,
+                                         NGValues, NGExprIds, Map)
+                   | ngScrutinee(Int, Int, NGArms, Map)
+                   | ngArmScope(Int, Int, Int, Map)
+  syntax NGFrames ::= ngNoFrames() | ngFrame(NGFrame, NGFrames)
+  syntax NGControl ::= ngEval(Int) | ngReturn(NGValue)
+                     | ngApply(Int, Int, Int, NGValues)
+                     | ngChoose(Int, Int, NGValue, NGArms, Map)
+                     | ngMaterialize(Int, Int, Int, Int, NGValues)
+                     | ngHalted(NGValue) | ngOutsideModel(String)
+  // Trace identity is separate from extensional immutable NGValue.
+  syntax NGEvent ::= ngLiteralEvaluated(Int, Int, NGValue)
+                   | ngVariableRead(Int, Int, Int, NGValue)
+                   | ngAddStarted(Int, Int, Int, Int, Map)
+                   | ngAddRightRequested(Int, Int, NGValue, Int, Map)
+                   | ngAdded(Int, Int, NGValue, NGValue, NGValue)
+                   | ngConstructorStarted(Int, Int, Int, Int, NGExprIds, NGTypes, Map)
+                   | ngConstructorFieldReturned(Int, Int, Int, Int, Int, NGValue,
+                                                 NGValues, NGExprIds, Map)
+                   | ngConstructorBuilt(Int, Int, Int, Int, NGValue, Map)
+                   | ngCallStarted(Int, Int, Int, NGExprIds, Map)
+                   | ngArgumentReturned(Int, Int, Int, Int, NGValue, NGValues,
+                                         NGExprIds, Map)
+                   | ngFunctionEntered(Int, Int, Int, NGValues, Map, Int)
+                   | ngFunctionReturned(Int, Int, Int, NGValue, Map)
+                   | ngMatchStarted(Int, Int, Int, NGArms, Map)
+                   | ngScrutineeReturned(Int, Int, NGValue, NGArms, Map)
+                   | ngArmMiss(Int, Int, Int, NGValue)
+                   | ngArmSelected(Int, Int, Int, NGBindings, Int, Map)
+                   | ngArmBodyReturned(Int, Int, Int, NGValue, Map)
+                   | ngFinished(NGValue) | ngOutsideEvent(String)
+  syntax NGEvents ::= ngNoEvents() | ngEvent(NGEvent, NGEvents)
+  syntax NGState ::= ngState(NGProgram, NGControl, Map, NGFrames, NGEvents)
+endmodule
