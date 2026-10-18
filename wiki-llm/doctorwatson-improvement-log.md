@@ -1167,3 +1167,54 @@ finalized after selection. Its historical selection and stop were retained; the
 final metadata was frozen before the actual eighteen checker tests ran and passed.
 Finalized records now use new revision paths for later corrections. Record a
 metadata stop separately from a compiler failure or subject retry.
+
+
+### DW-61 — Check the materialized public consumer and reuse observed dependencies
+
+The [public draft compiler result](../docs/results/sherlock-public-draft-compiler-20261018/README.md)
+records nine passing bounded-copy phases (seven exact tests) and five passing
+public compiler phases. A normal current Core library compiled in 5.247679
+seconds using the already observed R191 lexer; the passing lexer prefix was not
+rebuilt. The canonical external public consumer then compiled and passed both
+positive fixtures, 177-byte ChainTotal and 211-byte BranchTotal. Full equality
+of all four sealed R115 fields includes the twelve program tables; the separate
+26-obligation literal correspondence object and selected artifact metadata also
+match. These consuming tests discriminate actual public integration from an
+exported declaration or an isolated copy-helper pass.
+
+An earlier source-only R207 basis did not itself establish that its six extra
+copy extents and copy-error diagnostics had reached the materialized public
+configuration/report path. Inspect that current path: all sixteen preprocessing
+fields and the exact copy-error projection are now present. Preserve the older
+source-only assessment and its integration gap instead of rewriting it as an
+observed public result. The lost R219 response supplied no verdict. The fresh
+current-source review read all 64 supplied pages/52 bodies and approved the
+changed current source with retained coverage and host-resource limitations;
+it is a new source judgment, not recovery of the missing vote.
+
+Keep source review, observed result and requirement closure separate. Final
+post-result review and original UIREQ-022 adoption remain pending at this cut.
+Compile-only preparation observes no B runtime values 7/8, defined failure or
+resource-prefix traces, CLI publication, semantic proof or native result. The
+complete documentation file-writing example remains unrun. These receipts
+improve the existing DoctorWatson workflow without another factory or a rerun
+of unchanged passing prefixes.
+
+
+### DW-62 — Verify review examples and close the exact requirement
+
+The public draft compiler batch closed original UIREQ-022 after actual normal
+Core compilation, seven new bounded-copy tests and two public preparation
+comparisons. The final review had invented example obligation names and merged
+owner-gap descriptions. Literal checking caught those errors; its same-owner
+correction supplies the actual 22 construct mappings, four dedicated sorts and
+all five retained owner gaps. Original reports remain verbatim. Adopt the actual
+report contract and corrected judgment, never the inaccurate examples.
+
+The existing requirement reader then reported ten current adopted original
+closures, with all other 25 originals and 25 refinement features open. Exact
+reviewed source and documentation compatibility retained earlier closures
+without rerunning unchanged passing cohorts. Named semantic obligations are
+still unproved. A report clause can close while the reported runtime, constraint,
+proof and target work remains incomplete. No new factory or native authority
+was needed for this reporting capability.

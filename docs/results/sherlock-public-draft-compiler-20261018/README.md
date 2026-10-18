@@ -1,5 +1,32 @@
 # Sherlock public draft compiler — 2026-10-18
 
+## Current public compiler observations
+
+The current normal Core library compiled in 5.247679 seconds. The external
+public consumer compiled and both ChainTotal and BranchTotal preparation tests
+passed, comparing the full independent source/preparation/twelve-table goldens
+and the separate 26-obligation report object. The seven new bounded-copy tests
+also passed. See [public five-phase receipts](evidence/R239/actual-attempt-01/PHASES.json)
+and [copy nine-phase receipts](evidence/R221/revision02/actual-attempt-01/PHASES.json).
+No unchanged parser, checker or whole local-CI cohort was rerun.
+
+The [fresh source review](reviews/R238/REPORT.md) approved the current source.
+The [actual result follow-up](reviews/R245/REPORT.md) accepted both result sets
+and recommended original UIREQ-022 report-clause closure and compatible prior
+source bindings. The [literal correction](reviews/R252/REPORT.md) withdraws inaccurate example
+identifiers and restores the exact five owner gaps. [Root adopted original
+UIREQ-022](ROOT-ORIGINAL022-ADOPTION.json), and the [current report](current-evidence/RESULT.json)
+confirms ten current original closures. All 26 correspondence
+obligations remain `named-unproved`: these preparations execute no B steps,
+observe no runtime values 7/8, and produce no witness, constraints, native proof
+or target transaction. The public CLI and full guide example remain unrun.
+
+The sections below preserve the **02:12 UTC historical archive cut**. Their
+pending/unrun descriptions retain that date; the current observations above
+supersede those specific missing positive checks. Immutable raw records and
+historical review qualifications remain unchanged.
+
+
 Prepared archive cut: 2026-10-18T02:12:30.409113+00:00. Root alone installs this copytree, establishes current source equivalence, adds subsequent results and decides adoption. Runtime originals and pinned records remain unchanged, including their absolute public source paths. This archive does not make those historical paths relocatable execution commands.
 
 ## Actual local observations

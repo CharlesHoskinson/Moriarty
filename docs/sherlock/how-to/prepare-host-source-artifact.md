@@ -1,6 +1,14 @@
 # Prepare a compile-only HostOnly artifact
 
+Historical Core1 result cut, 2026-10-17.
+
 Use this when you want the current library to parse one parameter-free scalar Core/1 action and inspect the actual admitted B program tables. It prepares an artifact without running B steps. The library path has actual fixed-input results; the CLI binary remains unbuilt and the observation branch unexecuted. Mandatory R27 source corrections remain pending at this evidence cut. See the [scope and receipts](../../results/sherlock-source-compile-20261017/).
+
+For the separate typed draft language, use
+[compile dedicated draft fixtures](compile-draft-program.md). That guide calls
+the public body on both list/tree programs. Both public consumer tests now
+pass; its complete file-writing example remains unrun. This page keeps the
+historical Core1 action example and its original result qualifications.
 
 ## Select the public inputs
 
