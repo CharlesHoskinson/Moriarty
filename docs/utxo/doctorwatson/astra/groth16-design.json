@@ -1,0 +1,886 @@
+{
+  "format": "doctorwatson-utxo-groth16-design/1",
+  "displayName": "doctorwatson<UTXO>",
+  "machineSlug": "doctorwatson-utxo",
+  "status": "ADVISORY_DESIGN_DRAFT_NOT_IMPLEMENTED_NOT_SECURITY_APPROVAL",
+  "baselineCommit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+  "sherlockCommit": "0aecf98455dd9abc1635801166151431cba309f7",
+  "scope": {
+    "broaderPreprodGoal": "paused",
+    "nativeAuthority": 0,
+    "implementation": false,
+    "subjectTestsExecuted": false,
+    "securityJudgment": false,
+    "newCryptographicAcceptancePredicate": false,
+    "newScheduler": false,
+    "additionalAgents": false,
+    "webRetrieval": false,
+    "privateMaterialRead": false
+  },
+  "inventories": [
+    {
+      "id": "utxo-original",
+      "requirements": 119,
+      "scenarios": 238,
+      "families": 20,
+      "currentRustInheritance": false
+    },
+    {
+      "id": "retained-cardano-first-contract",
+      "requirements": 11,
+      "scenarios": 16,
+      "originalScope": "profile/5 and Cardano Preview",
+      "preprodInheritance": false
+    },
+    {
+      "id": "retained-midnight-pcd",
+      "requirements": 18,
+      "scenarios": 38,
+      "originalScope": "Midnight-specific",
+      "cardanoInheritance": false
+    }
+  ],
+  "interface": {
+    "entrypoint": "./scripts/doctorwatson-utxo.sh",
+    "canonicalRecord": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+    "operation": "pure read-only inventory/evidence report",
+    "selectors": [
+      "--requirement ID",
+      "--next",
+      "--gate ID"
+    ],
+    "ordinaryExitCodes": {
+      "0": "valid declarations, possibly every requirement open",
+      "1": "stale, missing or inconsistent declared evidence",
+      "2": "malformed input"
+    },
+    "selectedClosureGate": "nonzero unless the complete selected predicate has current applicable scoped owner acceptance evidence; file checks do not authenticate owner",
+    "commandText": "inert data; never executed",
+    "references": "explicit allowlisted repository-relative public files; reject absolute/traversal/symlink escape/private paths before read"
+  },
+  "types": {
+    "PublicRef": {
+      "path": "repository-relative public file",
+      "sha256": "64 lowercase hex digits",
+      "startLine": "optional positive integer",
+      "endLine": "optional integer >= startLine within file",
+      "claim": "scope description",
+      "commit": "full commit or explicit uncommitted snapshot"
+    },
+    "DigestIdentity": {
+      "algorithm": "named algorithm from owner contract",
+      "encoding": "pinned encoding/profile reference",
+      "value": "digest bytes encoded per declared contract",
+      "basis": "declared | tool-derived | independently-observed",
+      "evidenceRefs": "PublicRef[]"
+    },
+    "ProfileMapping": {
+      "originalProfile": "exact source/semantics/target",
+      "claimedProfile": "exact source/semantics/target",
+      "disposition": "unassessed | current-applicable | explicit-adapter-required | legacy-only | refinement-required",
+      "ownerDecisionRef": "PublicRef or null",
+      "missingDefinition": "string or null"
+    },
+    "TrustProfile": {
+      "classification": "owner-defined; preserve single-party-test-setup/1 where applicable",
+      "ownerContractRef": "PublicRef or null",
+      "publicProvenanceRefs": "PublicRef[]",
+      "verificationRecordRef": "PublicRef or null",
+      "verificationKeyDigest": "DigestIdentity or explicit unknown",
+      "publicAvailability": "present | absent | uninspected",
+      "relationLinkEvidenceRefs": "PublicRef[]",
+      "assumptions": "owner-stated strings with provenance",
+      "unresolved": "named gaps; no automatic trust upgrade"
+    },
+    "EvidenceItem": {
+      "id": "stable record id",
+      "recordType": "universal-property-certificate | concrete-execution-proof | claim-issuance | claim-consumption | settlement-observation",
+      "claimScope": {
+        "predicate": "exact owner predicate",
+        "domain": "admitted programs/inputs/target/bounds",
+        "evidenceClass": "source-inspected | captured-local | current-local | native-local | target-observed | synthetic-reporting-fixture",
+        "compositionMode": "none | sequential | atomic-multi-input | ledger-induced | recursive-certificate | private-handoff | multi-parent"
+      },
+      "requirementRefs": "inventory + canonical clause reference + full original scenario membership",
+      "scenarioRefs": "exact original names and source spans; no aggregate-count replacement",
+      "ownerContractRef": "PublicRef or null with explicit owner gap",
+      "identities": {
+        "sourceProfile": "string",
+        "semanticsProfile": "string",
+        "program": "DigestIdentity",
+        "sourceClosure": "PublicRef[]",
+        "compiler": "version/build/consumer identity",
+        "relation": "descriptor + DigestIdentity",
+        "statement": "encoding/profile + DigestIdentity",
+        "proofExport": "PublicRef or null",
+        "verifier": "consumer/version/VK identity",
+        "scripts": "applied/unapplied identity + parameter DAG + observed hashes + independent hash result refs",
+        "anchor": "chain/network/genesis/contract/policy/deployed verifier binding/predecessor/block identities; each unknown explicit",
+        "bounds": "owner profile + measured values/units/domain/environment refs"
+      },
+      "trustProfile": "TrustProfile",
+      "observation": {
+        "consumer": "actual executed consumer",
+        "attempt": "original attempt id",
+        "command": "inert captured command text",
+        "exit": "observed exit or null",
+        "inputs": "PublicRef[]",
+        "outputs": "PublicRef[]",
+        "failureLayer": "source | decode | identity | pairing | wrapper | transport | phase1 | phase2 | confirmation | unknown | none",
+        "firstDivergence": "exact evidence or null",
+        "targetAuthentication": "caller-declared | observed-public-chain | unknown",
+        "transactionId": "observed identity or null",
+        "consumedInputs": "public output refs",
+        "referenceInputs": "public output refs",
+        "producedOutputs": "public output refs",
+        "ledgerStatus": "not-observed | evaluated | submitted | rejected-phase1 | rejected-phase2 | included | readback-confirmed | finality-confirmed | unknown"
+      },
+      "expectation": {
+        "frozenBeforeExecutionRef": "PublicRef or null",
+        "independence": "author/consumer and limitations",
+        "completeComparisonRef": "PublicRef or null",
+        "requiredDimensions": [
+          "state",
+          "preserved frame",
+          "ordered effects",
+          "authority",
+          "nonces",
+          "work",
+          "gross debit",
+          "fees",
+          "net receipts",
+          "liabilities",
+          "residual duties",
+          "phase-specific collateral"
+        ]
+      },
+      "dependencies": "typed record/reference edges with reason and all consumed identity/profile/bounds/oracle/review pins; closure declared-only",
+      "implementation": "absent | partial | complete | unknown",
+      "validation": "unrun | partial | observed | unknown",
+      "acceptance": {
+        "status": "open | closed",
+        "scope": "exact owner declaration",
+        "sourceReviewRefs": "PublicRef[]",
+        "actualResultReviewRefs": "PublicRef[]",
+        "ownerDecisionRef": "PublicRef or null",
+        "requestedIdentity": "recorded model/person",
+        "returnedIdentity": "observed identity or unknown",
+        "independence": "recorded limits",
+        "adoption": "pending | adopted | not-applicable",
+        "authentication": "not established by file equality"
+      },
+      "currentness": {
+        "computed": "current | stale | missing | invalid | unknown",
+        "declaredDependencyClosure": "PublicRef[]",
+        "limitations": "undeclared dependencies not established; target currentness needs its own observation contract"
+      },
+      "gaps": "missing predicate, owner, observable resolution condition, authority state",
+      "nextDiscriminatingAction": "read-only description; never dispatch"
+    }
+  },
+  "lifecycleEdges": [
+    {
+      "from": "concrete-execution-proof",
+      "to": "claim-issuance",
+      "rule": "requires separately observed owner-defined C2 issue consumer; proof alone insufficient"
+    },
+    {
+      "from": "claim-issuance",
+      "to": "claim-consumption",
+      "rule": "exact issued output matched to actual consumed input; reference input insufficient"
+    },
+    {
+      "from": "claim-consumption",
+      "to": "settlement-observation",
+      "rule": "complete independently expected effects and qualified target observation required"
+    },
+    {
+      "from": "settlement-observation",
+      "to": "settlement-observation",
+      "rule": "ordered successor/predecessor identity for sequential composition; distinct from atomic one-transaction joint observation"
+    }
+  ],
+  "phaseGates": [
+    {
+      "id": "G0",
+      "name": "Inventory and applicability",
+      "reportingPredicate": "Exact clause/scenario membership and explicit original-profile → claimed-profile mapping, with owner disposition",
+      "currentDisposition": "Inventories extracted; current Rust/Preprod inheritance unestablished",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G1",
+      "name": "Artifact identity",
+      "reportingPredicate": "Actual consumed source/dependencies, applied scripts, parameter DAG, independent hash result, current source/result reviews",
+      "currentDisposition": "Four-piece tool-derived historical measurements reusable; R4 full builder and corrected hash checker unadopted/unexecuted",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G2",
+      "name": "Local proof",
+      "reportingPredicate": "Public statement/proof identities, trust profile, actual verification observations and exact reviewed scope",
+      "currentDisposition": "K6 narrow captured roundtrip adopted; K7 public inputs exported; fresh public pairing re-execution is not observed",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G3",
+      "name": "Compiled Cardano claim issuance",
+      "reportingPredicate": "Existing C2 contract, actual applied-wrapper evaluation including real proof consumer, identity correspondence and scoped result review",
+      "currentDisposition": "Unestablished in inspected evidence",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G4",
+      "name": "Claim consumption",
+      "reportingPredicate": "Existing release/burn/settlement contract, actual compiled spend consumer, complete input/output/effect comparison and applicable authority observation",
+      "currentDisposition": "Unestablished in inspected evidence",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G5",
+      "name": "Concrete transaction fit",
+      "reportingPredicate": "Same intended body and scripts, genuine authorized intent evidence, pinned target parameters, measured size/fees/ExUnits/collateral and all complete financial outcomes",
+      "currentDisposition": "Unestablished; no qualified target tuple here",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G6",
+      "name": "Target settlement",
+      "reportingPredicate": "Actual target identity, persisted exact body/transaction identity, ledger observations, consumed inputs, full readback and named confirmation/finality evidence",
+      "currentDisposition": "No Preprod completion; broader goal paused",
+      "grantsExecutionAuthority": false
+    },
+    {
+      "id": "G7",
+      "name": "Composition and broader coverage",
+      "reportingPredicate": "Separate sequential and atomic multi-input results, lineage/complete effects; separately retained recursion/private/multi-parent/property-certificate rows",
+      "currentDisposition": "Open; FV-02 restriction retained",
+      "grantsExecutionAuthority": false
+    }
+  ],
+  "qaCases": [
+    {
+      "id": "Q01",
+      "positiveFixture": "Separate current certificate, proof and ledger rows retain their own owners and scopes",
+      "negativeFixtureAndExpectedReport": "Label one K6 proof as universal or ledger-authenticated: incompatible evidence class; requested closure remains open",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q02",
+      "positiveFixture": "All original scenario names survive in their proper inventory",
+      "negativeFixtureAndExpectedReport": "Remove a required scenario but preserve total count with a duplicate: inventory integrity failure",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q03",
+      "positiveFixture": "Legacy Preview result stays visible as historical legacy evidence",
+      "negativeFixtureAndExpectedReport": "Relabel it Rust/Preprod without approved mapping: applicability unestablished",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q04",
+      "positiveFixture": "Public VK reference, its digest and owner-qualified provenance are distinct",
+      "negativeFixtureAndExpectedReport": "Digest-only capsule claims public pairing reproducibility or Class-0 becomes ceremony-backed: unsupported declaration",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q05",
+      "positiveFixture": "Unchanged consumed dependencies preserve an owner declaration's computed currentness",
+      "negativeFixtureAndExpectedReport": "Change semantics, script parameter, VK, bounds or oracle pin: all transitively affected declarations become non-current; history retained",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q06",
+      "positiveFixture": "Adopted result references the exact candidate and actual-result review",
+      "negativeFixtureAndExpectedReport": "Source review or renderer attribution offered as full-builder/result acceptance: missing scoped review",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q07",
+      "positiveFixture": "Issued, referenced and consumed claim outputs are distinct events",
+      "negativeFixtureAndExpectedReport": "Claim reference input labelled consumption, or proof verification labelled issuance: missing observation of required event",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q08",
+      "positiveFixture": "Sequential settlements have ordered references; atomic settlement has one joint body and complete input set",
+      "negativeFixtureAndExpectedReport": "Combine separate transaction receipts into atomic closure or omit one required input: incomplete atomic evidence",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q09",
+      "positiveFixture": "Proof, C2, VI and S2′ identities match the declared reviewed DAG",
+      "negativeFixtureAndExpectedReport": "Swap a script identity or omit FV-02 restriction: inconsistent dependency/unsupported composition declaration",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q10",
+      "positiveFixture": "Preserve D7 1/13/0 result and review-pending state",
+      "negativeFixtureAndExpectedReport": "Convert expected missing-implementation failures into checker passes: invalid scope promotion; keep original result",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q11",
+      "positiveFixture": "Separate nominal charge, observed wall and unknown transitive CPU; separate script bytes and transaction costs",
+      "negativeFixtureAndExpectedReport": "Present K6 nominal CPU or 14,336 B as measured proof CPU or a protocol limit: mismatched metric/provenance",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q12",
+      "positiveFixture": "Submission, refusal, inclusion, readback and finality remain distinct",
+      "negativeFixtureAndExpectedReport": "Callback success, timeout or provider evaluation labelled settled: missing ledger/finality evidence",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q13",
+      "positiveFixture": "Full financial comparison includes gross debit, fees, net receipts, frame, liabilities and residual duties",
+      "negativeFixtureAndExpectedReport": "Omit a required effect or duty field while retaining a pass summary: incomplete comparison",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q14",
+      "positiveFixture": "Recursion, private handoff and multi-parent rows stay open beside a public-only success",
+      "negativeFixtureAndExpectedReport": "Collapse those rows into a single PCD pass or delete an unsupported family: inventory/claim-scope failure",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q15",
+      "positiveFixture": "Complete all-open inventory yields integrity success and selected closure failure",
+      "negativeFixtureAndExpectedReport": "Infer product success from integrity exit 0 or a synthetic reporting fixture: reject closure declaration",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    },
+    {
+      "id": "Q16",
+      "positiveFixture": "Explicit allowlisted public relative file refs resolve without executing content",
+      "negativeFixtureAndExpectedReport": "Absolute/traversal/symlink-escape/private refs or command strings offered as inputs: report invalid reference and do not follow/execute",
+      "status": "specified-only",
+      "kind": "ordinary-reporting-fixture",
+      "subjectExecution": false
+    }
+  ],
+  "reuse": [
+    {
+      "artifact": "K6",
+      "sourceRefs": [
+        "S5",
+        "S6",
+        "S7"
+      ],
+      "reuse": "narrow adopted captured local invoice proof/verification and bounded refusal results",
+      "cannotClose": [
+        "universal certificate",
+        "authenticated context",
+        "Aiken C2",
+        "ledger settlement",
+        "general UTXO"
+      ]
+    },
+    {
+      "artifact": "K7",
+      "sourceRefs": [
+        "S20",
+        "S21"
+      ],
+      "reuse": "adopted byte-exact public verification-record export; 3926 bytes SHA-256 confirmed by this source inspection",
+      "supersedes": "K6 input-publication gap only",
+      "publicPairingReexecutionObserved": false,
+      "retainedGaps": [
+        "Class-0 setup qualification",
+        "VK/matrix linkage",
+        "fabricated context",
+        "ledger integration"
+      ]
+    },
+    {
+      "artifact": "four-piece",
+      "sourceRefs": [
+        "S8",
+        "S9"
+      ],
+      "reuse": "147 frozen library unit outcomes, sizes and tool-derived parameter DAG",
+      "retainedRestriction": "FV-02 shared VS1/VS2/VS4 restrict cross-deployment atomic settlement"
+    },
+    {
+      "artifact": "R4",
+      "sourceRefs": [
+        "S10"
+      ],
+      "reuse": "renderer source attribution only",
+      "fullBuilder": "unadopted unrun draft"
+    },
+    {
+      "artifact": "D7",
+      "sourceRefs": [
+        "S11"
+      ],
+      "reuse": "14 methods: one provenance/control/premise pass, 13 exact missing-implementation failures, zero errors",
+      "actualResultReview": "pending",
+      "checkerExecuted": false
+    },
+    {
+      "artifact": "uppercase checker correction",
+      "sourceRefs": [
+        "S11"
+      ],
+      "reuse": "unexecuted source draft only",
+      "historical19TestFailure": "task-handoff fact; original payload not read; preserve 18 pass and one failure"
+    }
+  ],
+  "criticalPath": [
+    "current Rust/Cardano requirement and claim mapping",
+    "reuse K7 public verification inputs without new export/proof run",
+    "current full-builder and hash-checker source/result evidence under existing authority",
+    "real C2 proof consumer and compiled applied-wrapper evidence with exact hashes",
+    "claim issuance then real consumption/spend with genuine intent and full financial comparison",
+    "concrete Conway transaction economics against pinned target observations",
+    "separately resumed and admitted real Preprod issuance/consumption/settlement",
+    "separate sequential and atomic multi-input results; retain universal/recursive/private/multi-parent/general gaps"
+  ],
+  "ownerBoundaries": {
+    "reader": "nonsecurity membership/pins/dependencies/public path safety/reporting",
+    "integrator": "shared schema and profile mappings",
+    "cryptographicSecurity": "designated Opus 5.5 or 4.8 high; setup/certificate/relation/verifier/claim/signature/composition judgments",
+    "compilerSemantics": "source domain, numeric/effect projection and correspondence",
+    "ledger": "target tuple, actual receipt and finality/phase contract",
+    "finance": "independent complete outcome oracle"
+  },
+  "ownerDefinitionGaps": [
+    "current Rust/Cardano universal certificate contract and discharge locus",
+    "current-profile mapping for retained mandatory claims",
+    "setup trust and relation linkage beyond adopted public K7 export",
+    "authenticated frame/context correspondence",
+    "qualified Preprod target and protocol parameters",
+    "exact confirmation/finality contract",
+    "current claim-output lifecycle target-evidence contract",
+    "cross-deployment atomic composition under FV-02"
+  ],
+  "afterBuildAudit": {
+    "requested": true,
+    "order": "bounded implementation and observed ordinary review first; then update all EARS and audit remaining roadmap",
+    "preserve": [
+      "119/11/18 separate clause inventories and 292 named scenarios",
+      "all20 UTXO families",
+      "U0-U7",
+      "M1-M17",
+      "every MC/SP/G exit",
+      "ACTUS277/18/32/DS01-07",
+      "DeFi72/DA01-24/held-outs/intents/regressions",
+      "recursion/privatehandoff/multiparent/universal certificates"
+    ],
+    "perAtomicExit": [
+      "profile",
+      "proof classes",
+      "setup assumptions",
+      "owner contract",
+      "target observations",
+      "scenario completeness",
+      "dependency closure",
+      "actual owner adoption",
+      "next real consumer check and blocker"
+    ],
+    "noImplicitCompletion": true,
+    "noWholeLanguagePercentageWhileUnflattened": true,
+    "k6k7Handling": "adopt narrow actual scopes; supersede only public input gap; preserve failures and remaining trust/context/ledger gaps",
+    "uninspectedRequirements": "report explicitly; this design is not their semantic audit",
+    "resumesPreprod": false,
+    "grantsNativeAuthority": false
+  },
+  "sources": [
+    {
+      "id": "S1",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "0aecf98455dd9abc1635801166151431cba309f7",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "models/sherlock/qa/check.py",
+      "sha256": "30c7e1d27d7de79694063042c3a00797ec8e045bc1b4e6f1c245559d013c62dc",
+      "bytes": 63516,
+      "readSpans": [
+        {
+          "startLine": 682,
+          "endLine": 914
+        }
+      ],
+      "readScope": "Pinned function only",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S2",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": null,
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "docs/utxo/doctorwatson/DESIGN.md",
+      "sha256": "bcdb5b78a129d49b3a287660210dbfe034b30dec0e149dc095248c102023d92c",
+      "bytes": 18165,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 126
+        }
+      ],
+      "readScope": "Full initial draft read; parent may update during design",
+      "pinMeaning": "working-draft bytes at output generation; no committed acceptance"
+    },
+    {
+      "id": "S3",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": null,
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "docs/utxo/doctorwatson/ASSESSMENT.json",
+      "sha256": "d0502fe9a1ed584655b3a22accb76adc55b6a4d596f2314caddfae66991f2739",
+      "bytes": 2267,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 50
+        }
+      ],
+      "readScope": "Full draft read",
+      "pinMeaning": "working-draft bytes at output generation; no committed acceptance"
+    },
+    {
+      "id": "S4",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": null,
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "docs/utxo/doctorwatson/EARS-BASELINE.json",
+      "sha256": "edbeb9373b442244d3c0d85927caed850befa9413109f26e897bf88a010f137b",
+      "bytes": 375620,
+      "readSpans": [],
+      "readScope": "Parsed structure, all group/family metadata and selected clauses/scenarios; not full semantic review",
+      "pinMeaning": "working-draft bytes at output generation; no committed acceptance"
+    },
+    {
+      "id": "S5",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/current-rust-groth16-first-proof-2026-10-16/README.md",
+      "sha256": "88c39a8db79af37bf7e67cec78b89843c39326c63889dfeaed7991fff5c7f53c",
+      "bytes": 9354,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 56
+        }
+      ],
+      "readScope": "Full public capsule summary",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S6",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/current-rust-groth16-first-proof-2026-10-16/reviews/native-actual/REPORT.md",
+      "sha256": "d0926597ef0e3f869fd1036f56f90ec068c089f8a6b4c3ad172c9e4bec5c877e",
+      "bytes": 10124,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 30
+        }
+      ],
+      "readScope": "Full published actual review; historical pointers not followed",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S7",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/current-rust-groth16-first-proof-2026-10-16/root/K6-ACTUAL-ADOPTION.json",
+      "sha256": "83a6e4fd1624774ee050ce88d3671187548e65c294ad147e5910a42685a6cb4d",
+      "bytes": 4005,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 69
+        }
+      ],
+      "readScope": "Full public adoption",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S8",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/cardano-four-piece-settlement-2026-10-16/README.md",
+      "sha256": "58d63ab458e40ee61c92283ff6e1a2823d470bb0f49a2ca72abb5056388fd33b",
+      "bytes": 8518,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 44
+        }
+      ],
+      "readScope": "Full public capsule summary",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S9",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/cardano-four-piece-settlement-2026-10-16/root/ACTUAL-ADOPTION.json",
+      "sha256": "a6a9b2ec8c6551d2b0a142aecf55bbdec765abc1542580e4e47d2f576cb49e14",
+      "bytes": 2732,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 40
+        }
+      ],
+      "readScope": "Full public adoption",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S10",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/current-cardano-c2-builder-r4-renderer-attribution-2026-10-17/README.md",
+      "sha256": "ebd96262021e4a3f1522796c0e0b03a89c8ff74713240c6aca17077f13808e2b",
+      "bytes": 1242,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 9
+        }
+      ],
+      "readScope": "Full public summary",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S11",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/pending-review-checkpoint-2026-10-17/README.md",
+      "sha256": "0d5f1800affb8c34164637c3deb9f558d7e5118a7165b3d38ab2c57feb3bfc44",
+      "bytes": 1673,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 11
+        }
+      ],
+      "readScope": "Full public summary; original 19-test failure payload not read",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S12",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "openspec/changes/pcd-ledger-anchored-acceptance/specs/pcd-certificates/spec.md",
+      "sha256": "e2e655b12c52aab96e7f450ad734c3b3e356aab18baeea46b03455ee637e5b71",
+      "bytes": 2783,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 34
+        }
+      ],
+      "readScope": "Full retained Midnight specification",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S13",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "openspec/changes/pcd-ledger-anchored-acceptance/specs/pcd-composition/spec.md",
+      "sha256": "fef2572484566673c80252d171cf9c69b286358d93b60f7d229cc47c3ac020fc",
+      "bytes": 3242,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 45
+        }
+      ],
+      "readScope": "Full retained Midnight specification",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S14",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "openspec/changes/pcd-ledger-anchored-acceptance/specs/pcd-ledger-correspondence/spec.md",
+      "sha256": "6587bdbc97c4c3bb0f62db48dbb02ac396fd51e727a3db5804cd5ffe8d8abc29",
+      "bytes": 5077,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 64
+        }
+      ],
+      "readScope": "Full retained Midnight specification",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S15",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "openspec/changes/pcd-ledger-anchored-acceptance/specs/pcd-mandatory-acceptance/spec.md",
+      "sha256": "a1583869377f332cbab25821e6492930078ffd2d1b0a94aad311c75374095c51",
+      "bytes": 6190,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 67
+        }
+      ],
+      "readScope": "Full retained Midnight specification",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S16",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "experiments/cardano-four-piece-settlement/README.md",
+      "sha256": "6930e42b6ceaa7904051d85cf58233f11e9394ba88037533b6774effee497c7d",
+      "bytes": 6827,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 47
+        }
+      ],
+      "readScope": "Full published consumer overview; implementation not audited",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S17",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "openspec/changes/eutxo-ledger-state-and-authority/specs/eutxo-ledger-state/spec.md",
+      "sha256": "586d1fb849e055b1c61c62fae64d893f0dae56ce01d188e3b10e744310931d22",
+      "bytes": 23658,
+      "readSpans": [
+        {
+          "startLine": 245,
+          "endLine": 261
+        },
+        {
+          "startLine": 466,
+          "endLine": 532
+        }
+      ],
+      "readScope": "Selected complete clauses EU-LDG-015 and EU-LDG-028 through 031",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S18",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "openspec/changes/eutxo-native-validation-and-receipts/specs/eutxo-native-validation/spec.md",
+      "sha256": "928ce8909b42ec26f298763e9ed673fd2e8069fc6143a190a9c262cb955203f6",
+      "bytes": 15519,
+      "readSpans": [
+        {
+          "startLine": 135,
+          "endLine": 217
+        },
+        {
+          "startLine": 303,
+          "endLine": 337
+        }
+      ],
+      "readScope": "Selected receipt, phase, financial, bounds and family clauses",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S19",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "docs/MORIARTY-PRODUCT-CONTRACT.md",
+      "sha256": "d5674c650741103284e0aa8cded4c0e8a0a1be38faa0c65aedb043710caa4396",
+      "bytes": 12394,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 82
+        }
+      ],
+      "readScope": "Full product contract; links not followed",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S20",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "8360447be4b6eeb737a670baf98a78114b7e63f2",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/current-rust-groth16-public-verifier-record-2026-10-16/root/K7-ACTUAL-ADOPTION.json",
+      "sha256": "8abe3d64c3aa1fee865e04c45c081f81f0d51a03309add4eb20cbb961dd80114",
+      "bytes": 1831,
+      "readSpans": [
+        {
+          "startLine": 1,
+          "endLine": 22
+        }
+      ],
+      "readScope": "Full later public adoption; supersedes only K6 public-input availability gap",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    },
+    {
+      "id": "S21",
+      "repository": "CharlesHoskinson/Moriarty",
+      "commit": "8360447be4b6eeb737a670baf98a78114b7e63f2",
+      "workingTreeBaseline": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+      "path": "evidence/utxo/current-rust-groth16-public-verifier-record-2026-10-16/receipts/invoice-partial.setup.json",
+      "sha256": "86b588fe3d7de5b5291a88928f400b9b52199bba07f9926a1f498584fd7e378b",
+      "bytes": 3926,
+      "readSpans": [],
+      "readScope": "Public record parsed for top-level keys, byte count and SHA-256 only; no curve or pairing verification",
+      "pinMeaning": "published file read in baseline worktree; cited commit lineage, Sherlock read via git show"
+    }
+  ],
+  "readLimits": [
+    "No remote web retrieval",
+    "Only explicit public repository files and pinned Sherlock function",
+    "No prohibited historical-directory enumeration or pointer following",
+    "No private captures/auth/config/env/wallet/PK/SRS/cache reads",
+    "K7 public setup JSON top-level metadata and byte hash only; no key decoding or proof verification",
+    "No validator/circuit implementation audit or full capsule payload audit",
+    "No full semantic audit of EARS/whole roadmap",
+    "No subject test/model/SDK/compiler/prover/VM/sign/deploy/ledger execution",
+    "Source SHA-256 and JSON construction are documentation integrity operations only"
+  ]
+}
