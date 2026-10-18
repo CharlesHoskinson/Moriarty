@@ -1,0 +1,188 @@
+# EXACT COMPLETE FUNCTION pointer
+def pointer(path, key):
+    return path + '/' + str(key).replace('~', '~0').replace('/', '~1')
+
+
+# EXACT COMPLETE FUNCTION first_difference
+def first_difference(expected, observed, path=''):
+    """Structural equality with exact types, all fields and ordered arrays."""
+    def delta(kind, left=expected, right=observed, at=path, **extra):
+        return dict(path=at, kind=kind, expected=left, observed=right, **extra)
+    if type(expected) is not type(observed):
+        return delta('type')
+    if type(expected) is dict:
+        for key in list(expected) + [key for key in observed if key not in expected]:
+            at = pointer(path, key)
+            if key not in expected or key not in observed:
+                return delta('member', expected.get(key), observed.get(key), at,
+                             expected_present=key in expected, observed_present=key in observed)
+            found = first_difference(expected[key], observed[key], at)
+            if found is not None:
+                return found
+    elif type(expected) is list:
+        for index, (left, right) in enumerate(zip(expected, observed)):
+            found = first_difference(left, right, pointer(path, index))
+            if found is not None:
+                return found
+        if len(expected) != len(observed):
+            return delta('array-length', common_entries=min(len(expected), len(observed)))
+    elif expected != observed:
+        return delta('value')
+    return None
+
+
+# EXACT COMPLETE FUNCTION host_adapter
+def host_adapter():
+    """Load the known sibling source even when Python -I excludes script paths."""
+    path = Path(__file__).resolve().with_name('host_observations.py')
+    raw = path.read_bytes()
+    spec = importlib.util.spec_from_file_location('sherlock_host_observations', path)
+    require(spec is not None and spec.loader is not None, 'host observation adapter unavailable')
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(raw, str(path), 'exec', dont_inherit=True), module.__dict__)
+    return module
+
+
+# EXACT COMPLETE FUNCTION compare_supplied_observations
+def compare_supplied_observations(artifact, families, *, layer, selection=None):
+    """Compare a declared adapter envelope with independently frozen literals.
+
+    Only the existing common observation projection is compared. Raw machine
+    diagnostics and projection limitations are retained without interpreting
+    them or authenticating the producing process.
+    """
+    require(layer in LAYER_ARTIFACTS, 'unsupported supplied observation layer')
+    fmt, producer, extra = LAYER_ARTIFACTS[layer]
+    fields(artifact, ('format', 'observations', 'projection') + extra, layer + ' artifact')
+    require(artifact['format'] == fmt, layer + ' artifact: format mismatch')
+    require(type(artifact['projection']) is dict, layer + ' artifact: projection must be object')
+    adapter = host_adapter()
+    expected = adapter.expected_observations(families, producer=producer)
+    observed = artifact['observations']
+    omissions = None
+    if selection is not None:
+        expected, _ = _selected_observations(expected, **selection)
+        observed, omissions = _selected_observations(observed, **selection)
+    difference = adapter.compare_observations(expected, observed, first_difference)
+    if difference is not None:
+        difference.update(projection=artifact['projection'],
+                          raw_context=layer_raw_context(artifact, difference))
+    declaration = observed if type(observed) is dict else {}
+    summary = dict(status='mismatch' if difference else 'match',
+                   scope='complete-supplied-' + layer + '-diagnostic-artifact-comparison-only',
+                   format=fmt, declared_producer=declaration.get('producer'),
+                   declared_profile=declaration.get('profile'),
+                   declared_source_sha256=declaration.get('source_sha256'),
+                   producer_authenticity='not-established', execution_receipt='not-supplied',
+                   constructor_startup='unsupported', projection=artifact['projection'],
+                   artifact_metadata={key: value for key, value in artifact.items()
+                                      if key not in ('observations', 'projection', 'raw_runs', 'raw_traces')},
+                   raw_diagnostic_counts={key: len(artifact[key]) for key in ('raw_runs', 'raw_traces')
+                                          if type(artifact.get(key)) is list},
+                   expected_programs=len(expected['programs']), expected_prefix_runs=len(expected['runs']))
+    if omissions is not None:
+        summary.update(omissions)
+        summary['scope'] = 'selected-supplied-' + layer + '-diagnostic-artifact-comparison-only'
+    return difference, summary
+
+
+# EXACT COMPLETE FUNCTION _selected_observations
+def _selected_observations(observations, *, case_id, initial_fuel):
+    """Select complete literal objects; do not trim fields within either object."""
+    require(type(observations) is dict, 'selected observations must be object')
+    programs, runs = observations.get('programs'), observations.get('runs')
+    require(type(programs) is list and type(runs) is list,
+            'selected observations need program and run arrays')
+    selected_programs = [row for row in programs
+                         if type(row) is dict and row.get('case_id') == case_id]
+    selected_runs = [row for row in runs if type(row) is dict
+                     and row.get('case_id') == case_id and type(row.get('initial')) is dict
+                     and type(row['initial'].get('initial_fuel')) is int
+                     and row['initial']['initial_fuel'] == initial_fuel]
+    require(len(selected_programs) == 1, 'exactly one selected program identity required')
+    require(len(selected_runs) == 1, 'exactly one selected run required')
+    # Preserve all envelope members as well, so undeclared extra members do not
+    # disappear from complete structural comparison. Only unrelated rows are omitted.
+    selected = dict(observations, programs=selected_programs, runs=selected_runs)
+    return selected, dict(omitted_programs=len(programs) - 1, omitted_runs=len(runs) - 1)
+
+
+# EXACT COMPLETE FUNCTION compare_paired_observations
+def compare_paired_observations(k_artifact, quint_artifact, families, *, case_id, initial_fuel):
+    """Compare one explicitly selected supplied pair and independent literals.
+
+    No producer is executed or authenticated. Each selected run retains all11
+    snapshot fields, ordered records, rule/charge, before/after and terminal probe.
+    Literal overlay expansion uses the existing adapter, never a new evaluator.
+    """
+    require(type(case_id) is str and type(initial_fuel) is int,
+            'selected case and exact integer initial fuel required')
+    adapter = host_adapter()
+    expected_all = adapter.expected_observations(families)
+    expected, omitted = _selected_observations(expected_all, case_id=case_id, initial_fuel=initial_fuel)
+    artifacts = dict(k=k_artifact, quint=quint_artifact)
+    selected, layers = {}, {}
+    for layer, artifact in artifacts.items():
+        observed, _ = _selected_observations(
+            artifact['observations'], case_id=case_id, initial_fuel=initial_fuel)
+        selected[layer] = observed
+        difference, summary = compare_supplied_observations(artifact, families, layer=layer,
+            selection=dict(case_id=case_id, initial_fuel=initial_fuel))
+        context_key = dict(case_id=case_id, initial_fuel=initial_fuel, path='/runs/0/terminal')
+        summary.update(first_difference=difference, evidence=artifact.get('evidence'),
+                       raw_context=layer_raw_context(artifact, context_key))
+        layers[layer] = summary
+    # Producer names intentionally differ. Their exact per-layer identity was
+    # compared above; every other selected observation member is compared here.
+    left = {key: value for key, value in selected['k'].items() if key != 'producer'}
+    right = {key: value for key, value in selected['quint'].items() if key != 'producer'}
+    paired_difference = adapter.compare_observations(left, right, first_difference)
+    if paired_difference is not None:
+        paired_difference['raw_context'] = {layer: layer_raw_context(artifact, paired_difference)
+                                            for layer, artifact in artifacts.items()}
+    failed = paired_difference is not None or any(row['first_difference'] is not None
+                                                 for row in layers.values())
+    expected_program = expected['programs'][0]
+    oracle_program = next(program for programs, _ in families for program in programs['programs']
+                          if program['case_id'] == case_id)
+    peaks, stack_limits, record_projection = {}, {}, {}
+    for layer, observations in selected.items():
+        run = observations['runs'][0]
+        stack_limits[layer] = run['initial'].get('stack_limit')
+        records = run.get('records', [])
+        snapshots = [run.get('initial'), run.get('terminal')]
+        if type(records) is list:
+            snapshots.extend(record.get(field) for record in records if type(record) is dict
+                             for field in ('before', 'after'))
+            record_projection[layer] = [dict(record_index=index,
+                rule_start_line=record.get('rule_start_line'), charge=record.get('charge'))
+                for index, record in enumerate(records) if type(record) is dict]
+        else:
+            record_projection[layer] = None
+        peaks[layer] = max((state['depth'] for state in snapshots if type(state) is dict
+                           and type(state.get('depth')) is int), default=None)
+    known_cases = list(dict.fromkeys(SELECTED_CASES + tuple(
+        row['case_id'] for row in expected_all['programs'])))
+    return dict(status='mismatch' if failed else 'match',
+        scope='explicit-selected-supplied-k-quint-complete-state-comparison-only',
+        disposition='mismatch' if failed else 'supplied-finite-complete-trace-agreement-only',
+        actual_execution='not-established-by-comparator', refinement='none', acceptance='none',
+        selection=dict(case_id=case_id, initial_fuel=initial_fuel, compared_programs=1,
+                       compared_runs=1, oracle_omissions=omitted),
+        oracle=dict(profile=expected['profile'], source_sha256=expected['source_sha256'],
+                    program=expected_program, input_sha256=oracle_program.get('input_sha256'),
+                    exact_completion_fuel=oracle_program.get('exact_completion_fuel'),
+                    expected_value_k=oracle_program.get('expected_value_k'),
+                    expected_logical_frame_peak=oracle_program.get('expected_maximum_frame_depth')),
+        numeric_bounds=dict(UInt128_min=0, UInt128_max=340282366920938463463374607431768211455,
+            initial_fuel=initial_fuel, stack_limit=expected['runs'][0]['initial']['stack_limit'],
+            observed_stack_limit=stack_limits, observed_logical_frame_peak=peaks),
+        projection_contract=PAIRED_PROJECTION_CONTRACT, selected_rule_action_projection=record_projection,
+        paired=dict(status='mismatch' if paired_difference else 'match', first_difference=paired_difference),
+        layers=layers, catalogue=dict(retained_default_cases=list(SELECTED_CASES[:-1]),
+            unobserved_by_this_report=[case for case in known_cases if case != case_id],
+            other_catalogue_status='unchanged; omitted cases are not observed by this report'),
+        gaps=['Supplied declarations and raw diagnostics do not authenticate model execution.',
+              'Finite selected trace agreement is not semantic refinement, proof, native or target evidence.',
+              'The pure profile supplies no finance/wait correspondence; other retained models remain separate.'])
+

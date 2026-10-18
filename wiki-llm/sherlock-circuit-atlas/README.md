@@ -163,3 +163,8 @@ assets, rendered scene or deployment.
 ## Editorial update009 — selected word host lowering
 
 [Selected word host lowering](UPDATE-009-SELECTED-WORD-HOST-LOWERING.md) records Root's whole030 host arithmetic adoption and the exact normal/error observations. Root/Sol factual editorial update only; circuit-source iteration005 remains latest. Host lowering is not circuit/native acceptance, and no circuit layout/cost winner is selected.
+
+
+## Editorial update010 — actual trace and preparation
+
+[Actual trace and preparation assembly](UPDATE-010-ACTUAL-TRACE-AND-PREPARATION.md) connects the observed typed-source preparation and finite F03 model trace to a future source-clickthrough view. Root/Sol factual concept only; no website code or circuit-source iteration is added. Latest actual circuit entry remains005.

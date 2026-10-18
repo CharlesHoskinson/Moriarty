@@ -1,0 +1,361 @@
+## Role 1: Independent Inspection of the 4 Sol Ordinary Dependency Leaves
+
+*(Dependency inspection only; these findings are not an independent approval vote on the new owner preparation kernel authored in Role 2.)*
+
+1. **`ordinary-ext_pass_b_walk.rs` (`ext_pass_b_walk.rs`, 7202B, SHA256 `224ae524c19702f5e4c107d8b5a74d498dfdc23ba11483c2fad9dd1d6fe54819`)**
+   - **Verified behavior**: Iteratively traverses borrowed `&'s ExtProgram` names in Pass-B order: `program.types` (`decl.name`, `ctor.name`, `field.name`), `program.assets` (`asset.name`), `program.states` (`state.name`), `program.inputs` (`input.name`), then `entry` followed by `program.functions` (`function.name`, `param.name`, `function.body`) using a heap worklist. Preserves D-27 `Match` Pass-B order (all arm patterns in preorder, then `scrutinee`, then all arm bodies) and skips type parameter declarations, `TypeExprSrc` names, and constructor-use type/constructor names (`ExtExpr::Construct`, `ExtValue::Constructor`, `ExtPattern::Ctor`). Does not construct `PassBTypeNameIds`.
+   - **Boundary & seam required of owner**: Contains no domain or feature refusal. If called without prior declaration/expression checks or with an unchecked `|_| Ok(None)` `project_fin_name` callback, it will intern `assets`/`states`/`inputs` names, intern `LiabilityPresent`/`LiabilityAmount`/`Await` names, and silently skip `ExtExpr::Fin` own-names while traversing `Fin.operand`. The owner must refuse non-empty financial declaration slices and refuse financial `ExtExpr` variants inside `project_fin_name` (and prior to name capacity accounting).
+
+2. **`ordinary-ext_source_traversal.rs` (`ext_source_traversal.rs`, 5852B, SHA256 `3481176aac60322dce0bc78f129927a6a9f23b6757a28e88a5aff4cbe87d0670`)**
+   - **Verified behavior**: Provides iterative heap-worklist preorder traversals (`walk_type_expr_preorder`, `walk_ext_value_preorder`, `walk_ext_pattern_preorder`, `walk_ext_expr_preorder`), local root enumerators (`for_each_decl_field_type_root`, `for_each_function_signature_type_root`), and `for_each_ext_program_type_use` forwarding `T3UseWalker`.
+   - **Boundary & seam required of owner**: `walk_ext_expr_preorder` visits expression nodes (`ExtExpr`) only and does not automatically descend into `ExtValue`, `ExtPattern`, or `TypeExprSrc` subtrees, nor does it define a global Pass-A cross-carrier order.
+
+3. **`ordinary-owner_ext_source_program.rs` (`owner_ext_source_program.rs`, 13267B, SHA256 `5170e6ba0aa54ea798194ca8748bad8e01c725ad48db4a10843d903af5158b43`)**
+   - **Verified behavior**: Defines `AssetScaleSrc` (preserving raw `Nat(u128)`, `NatAboveU128`, `Negative` without host width truncation), `ValidatedAssetScale`, `AssetIdSrc`, `AssetDeclSrc`, `StateDeclSrc`, `InputSrc`, `ExtProgram`, explicit `ExtDomain`, and iterative heap-worklist `embed_core_expr` / `embed_core_program` (D-36/C8). Omits recursive derives on `StateDeclSrc`, `InputSrc`, and `ExtProgram`.
+   - **Boundary & seam required of owner**: `AssetScaleSrc::validate_0_to_38` and `AssetIdSrc::validate_g12_complete_and_scale` are pure Pass-F helpers and are not invoked in Pass A/B/T. `ExtProgram` must be borrowed during preparation and moved into `PreparedExtProgramSource` without `Clone`.
+
+4. **`ordinary-owner_ext_t3_uses.rs` (`owner_ext_t3_uses.rs`, 14397B, SHA256 `719f7aa1912e11eef11b378b05a7cac8a55946dd3b5cba8e3bb50738eb118095`)**
+   - **Verified behavior**: Defines `ExtParamSrc`, `ExtFunction`, `AwaitBinderSrc`, `FinOpSrc`, `ExtArm`, `ExtExpr`, `ExtValue`, `ExtPattern`, iterative heap-worklist `Drop` implementations (`ExtExpr`, `ExtValue`, `ExtPattern`, dismantling `CoreTree`), `BodyOwner`, `T3UseSite`, `T3UseKind`, `T3Use`, `T3Record`, and `T3UseWalker` with public `is_finished(&self) -> bool`. Emits signature parameter/return type uses in function-table order followed by `entry` and function bodies in PD-1 order (at `Match`: arm `Ctor` patterns in arm order and pattern preorder, then `scrutinee`, then arm bodies).
+   - **Boundary & seam required of owner**: `T3UseWalker` is read-only, ignores `states`/`inputs`/`AwaitBinderSrc.ty`, and steps through `StateRead`/`LiabilityPresent`/`LiabilityAmount`/`Fin`/`Await` without refusal. `T3UseSite` ordinals (`expr`, `value`, `pattern`) are walker-local 0-based preorder indices, not `ExprId` or `SourceOccurrenceId`.
+
+---
+
+## Role 2: Authored Owner Preparation Unit
+
+### Target Paths and Preimage Hashes
+
+- **`owner_ext_prepare_types.rs`** — supplied as `current-T1-T2-and-FIFO.rs` (3125B, SHA256 `23e9a894e39b0e29c4f636d06cadd68a0f940c8a940a373aa97f2489b4388c3f`)
+- **`owner_prepare.rs`** — selected excerpt supplied as `current-name-and-declaration-producer.rs` (6596B, SHA256 `ee0cf6deae6e51aa6bf8df05e74359d61e57a8c0663a8909927c0d87dec954ad`)
+- **Parent `shared` module (`mod.rs` / `lib.rs`)** — selected excerpt supplied as `current-source-preparation-types.rs` (7122B, SHA256 `b9fff62f436b90dca78e759af4b2ef8dbf92384d0d8857e8afbd77db936391be`)
+- **Pinned unchanged dependencies**:
+  - `nominal_declaration_order.rs` (`d7f70be22e0a4736fb2dcd8a08676b74d3a6763f95810f4f7d0fa641ed86585e`)
+  - `owner_ext_type_builder.rs` API headers (`2c1b5e3ee75d7c1fe484518f127a0ae9ab73290f562e1b6786d8c36321c45ac5`)
+  - `adt.rs` (`245fabd722f779a130058af5409e4346f15ed0a1687c9651ddc2da787e5d5109`)
+  - `adt_storage.rs` (`c70c61d523d1a0e1f480c02e7b6aeeb94b44d647d93afb6b081dae282e1bab6d`)
+
+### Callable Declaration
+
+```rust
+pub fn prepare_ext_program_types(
+    program: super::owner_ext_source_program::ExtProgram,
+    layout: &LayoutSchemaC,
+    domain: super::owner_ext_source_program::ExtDomain,
+    locator: Option<LocatorC>,
+) -> Result<PreparedExtProgramSource, super::owner_ext_type_builder::ExtTypeBuildError>
+```
+
+### Hunk 1: `owner_ext_prepare_types.rs` (1 changed line; body unchanged)
+
+```diff
+@@ -42,4 +42,4 @@
+-fn drain_pending_keys<'a>(
++pub(super) fn drain_pending_keys<'a>(
+     view: &CheckedTypeDeclView<'a>,
+     builder: &mut OwnerExtTypeBuilder<'a>,
+     locator: Option<LocatorC>,
+```
+
+### Hunk 2: `owner_prepare.rs` (additive hunk after `prepare_nominal_declarations`, 166 lines)
+
+```diff
+@@ -167,6 +167,172 @@
+         tables,
+     })
+ }
++
++fn pass_t_wrong(loc: &str) -> super::owner_ext_type_builder::ExtTypeBuildError {
++    super::owner_ext_type_builder::ExtTypeBuildError::Host( super::HostViolation {
++        kind: super::HostViolationKind::WrongVariant,
++        clause: None,
++        rule: None,
++        locator: Some(loc.to_string()),
++    })
++}
++
++fn reject_absent_fin_expr(
++    expr: &super::owner_ext_t3_uses::ExtExpr,
++) -> Result<Option<&str>, Tooling> {
++    use super::owner_ext_t3_uses::ExtExpr;
++    match expr {
++        ExtExpr::StateRead { .. }
++        | ExtExpr::LiabilityPresent { .. }
++        | ExtExpr::LiabilityAmount { .. }
++        | ExtExpr::Fin { .. }
++        | ExtExpr::Await { .. } => Err(Tooling::UnsupportedFeature {
++            feature: FeatureKind::FinancialSyntax,
++            locator: None,
++        }),
++        _ => Ok(None),
++    }
++}
++
++fn ensure_absent_finance_source(
++    program: &super::owner_ext_source_program::ExtProgram,
++) -> Result<(), Tooling> {
++    use super::ext_source_traversal::walk_ext_expr_preorder;
++    if !program.assets.is_empty() || !program.states.is_empty() || !program.inputs.is_empty() {
++        return Err(Tooling::UnsupportedFeature {
++            feature: FeatureKind::FinancialSyntax,
++            locator: None,
++        });
++    }
++    walk_ext_expr_preorder(&program.entry, |e| reject_absent_fin_expr(e).map(|_| ()))?;
++    for function in &program.functions {
++        walk_ext_expr_preorder(&function.body, |e| reject_absent_fin_expr(e).map(|_| ()))?;
++    }
++    Ok(())
++}
++
++fn collect_ext_program_names(
++    program: &super::owner_ext_source_program::ExtProgram,
++    l: &LayoutSchemaC,
++) -> Result<
++    (Vec<String>, super::owner_ext_type_builder::PassBTypeNameIds),
++    super::owner_ext_type_builder::ExtTypeBuildError,
++> {
++    use super::ext_pass_b_walk::for_each_ext_program_name;
++    use super::owner_ext_type_builder::ExtTypeBuildError;
++    ensure_absent_finance_source(program).map_err(ExtTypeBuildError::CoreTooling)?;
++    let mut distinct: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
++    let mut bytes_total: u128 = 0;
++    for_each_ext_program_name(
++        program,
++        &mut |n| push_distinct_name(&mut distinct, &mut bytes_total, n, l),
++        &mut reject_absent_fin_expr,
++    )
++    .map_err(ExtTypeBuildError::CoreTooling)?;
++    let interned_names: Vec<String> = distinct.into_iter().map(|s| s.to_string()).collect();
++    let decl_ids = bind_owner_decl_name_ids(&program.types, &interned_names)
++        .map_err(ExtTypeBuildError::CoreTooling)?;
++    Ok((interned_names, decl_ids))
++}
++
++#[derive(Clone, PartialEq, Eq, Debug)]
++pub struct PassTOutput {
++    pub tables: super::owner_ext_type_builder::BuiltAdtTypeTables,
++    pub records: Vec<super::owner_ext_t3_uses::T3Record>,
++}
++
++pub struct PassTSession<'v, 's> {
++    view: &'v super::owner_ext_type_builder::CheckedTypeDeclView<'v>,
++    builder: super::owner_ext_type_builder::OwnerExtTypeBuilder<'v>,
++    walker: super::owner_ext_t3_uses::T3UseWalker<'s>,
++    locator: Option<LocatorC>,
++    records: Vec<super::owner_ext_t3_uses::T3Record>,
++    poisoned: bool,
++}
++
++impl<'v, 's> PassTSession<'v, 's> {
++    pub fn begin(
++        domain: GrammarDomain,
++        view: &'v super::owner_ext_type_builder::CheckedTypeDeclView<'v>,
++        functions: &'s [super::owner_ext_t3_uses::ExtFunction],
++        entry: &'s super::owner_ext_t3_uses::ExtExpr,
++        locator: Option<LocatorC>,
++    ) -> Result<Self, super::owner_ext_type_builder::ExtTypeBuildError> {
++        use super::owner_ext_prepare_types::drain_pending_keys;
++        use super::owner_ext_t3_uses::T3UseWalker;
++        use super::owner_ext_type_builder::OwnerExtTypeBuilder;
++        if domain == GrammarDomain::DedicatedSorts {
++            return Err(pass_t_wrong("pass T under DedicatedSorts (G-10)"));
++        }
++        let mut builder = OwnerExtTypeBuilder::new_checked(view)?;
++        for &d in view.non_parameterized_decls() {
++            builder.register_non_parameterized_decl(d)?;
++        }
++        drain_pending_keys(view, &mut builder, locator.clone())?;
++        Ok(Self {
++            view,
++            builder,
++            walker: T3UseWalker::new(functions, entry),
++            locator,
++            records: Vec::new(),
++            poisoned: false,
++        })
++    }
++
++    pub fn process_next_use(
++        &mut self,
++    ) -> Result<Option<super::owner_ext_t3_uses::T3Record>, super::owner_ext_type_builder::ExtTypeBuildError> {
++        if self.poisoned {
++            return Err(pass_t_wrong("pass T session poisoned"));
++        }
++        let r = self.step();
++        if r.is_err() {
++            self.poisoned = true;
++        }
++        r
++    }
++
++    fn step(
++        &mut self,
++    ) -> Result<Option<super::owner_ext_t3_uses::T3Record>, super::owner_ext_type_builder::ExtTypeBuildError> {
++        use super::owner_ext_prepare_types::drain_pending_keys;
++        use super::owner_ext_t3_uses::{T3Record, T3UseKind};
++        let u = match self.walker.next_use()? {
++            Some(u) => u,
++            None => return Ok(None),
++        };
++        if self.builder.has_pending_keys() {
++            return Err(pass_t_wrong("T3 use with undrained FIFO"));
++        }
++        let b = &mut self.builder;
++        let (type_id, ctor_use) = match u.kind {
++            T3UseKind::Signature { ty } => (b.resolve_type_expr(ty, None, self.locator.clone())?, None),
++            T3UseKind::Constructor { ty, ctor, arity } => {
++                let r = b.resolve_construct_use(ty, ctor, arity, self.locator.clone())?;
++                (r.type_id, Some(r))
++            }
++            T3UseKind::PatternCtor { ty, ctor, arity } => {
++                let r = b.resolve_pattern_ctor_use(ty, ctor, arity, self.locator.clone())?;
++                (r.type_id, Some(r))
++            }
++        };
++        drain_pending_keys(self.view, &mut self.builder, self.locator.clone())?;
++        let ctor_id = match ctor_use {
++            Some(r) => Some(self.builder.resolved_ctor_id(r)?),
++            None => None,
++        };
++        let rec = T3Record { site: u.site, type_id, ctor_id };
++        self.records.push(rec);
++        Ok(Some(rec))
++    }
++
++    pub fn records(&self) -> &[super::owner_ext_t3_uses::T3Record] {
++        &self.records
++    }
++
++    pub fn finish(self) -> Result<PassTOutput, super::owner_ext_type_builder::ExtTypeBuildError> {
++        if self.poisoned || !self.walker.is_finished() {
++            return Err(pass_t_wrong("pass T finish before every T3 use processed"));
++        }
++        let tables = self.builder.finish()?;
++        Ok(PassTOutput { tables, records: self.records })
++    }
++}
++
++pub fn run_pass_t<'v, 's>(
++    domain: GrammarDomain,
++    view: &'v super::owner_ext_type_builder::CheckedTypeDeclView<'v>,
++    functions: &'s [super::owner_ext_t3_uses::ExtFunction],
++    entry: &'s super::owner_ext_t3_uses::ExtExpr,
++    locator: Option<LocatorC>,
++) -> Result<PassTOutput, super::owner_ext_type_builder::ExtTypeBuildError> {
++    let mut s = PassTSession::begin(domain, view, functions, entry, locator)?;
++    while s.process_next_use()?.is_some() {}
++    s.finish()
++}
++
++pub struct PreparedExtProgramSource {
++    pub program: super::owner_ext_source_program::ExtProgram,
++    pub domain: super::owner_ext_source_program::ExtDomain,
++    pub interned_names: Vec<String>,
++    pub decl_name_ids: super::owner_ext_type_builder::PassBTypeNameIds,
++    pub tables: super::owner_ext_type_builder::BuiltAdtTypeTables,
++    pub t3_records: Vec<super::owner_ext_t3_uses::T3Record>,
++}
++
++pub fn prepare_ext_program_types(
++    program: super::owner_ext_source_program::ExtProgram,
++    layout: &LayoutSchemaC,
++    domain: super::owner_ext_source_program::ExtDomain,
++    locator: Option<LocatorC>,
++) -> Result<PreparedExtProgramSource, super::owner_ext_type_builder::ExtTypeBuildError> {
++    use super::nominal_declaration_order::walk_declaration_type_occurrences;
++    use super::owner_ext_type_builder::{CheckedTypeDeclView, ExtTypeBuildError};
++    if layout.boundary_capacities_present {
++        return Err(ExtTypeBuildError::CoreTooling(Tooling::UnsupportedFeature {
++            feature: FeatureKind::BoundarySection,
++            locator: None,
++        }));
++    }
++    if !domain.is_finance_absent() {
++        return Err(ExtTypeBuildError::CoreTooling(Tooling::UnsupportedFeature {
++            feature: FeatureKind::FinancialInput,
++            locator: None,
++        }));
++    }
++    let (interned_names, decl_name_ids) = collect_ext_program_names(&program, layout)?;
++    let pass_t = {
++        let view = CheckedTypeDeclView::new_checked(
++            domain.grammar_domain,
++            &program.types,
++            &decl_name_ids,
++            &layout.bounds,
++        )?;
++        walk_declaration_type_occurrences(&view, |occ, _path, ty_expr| {
++            view.validate_declaration_type_occurrence(occ, ty_expr)
++        })?;
++        run_pass_t(domain.grammar_domain, &view, &program.functions, &program.entry, locator)?
++    };
++    Ok(PreparedExtProgramSource {
++        program,
++        domain,
++        interned_names,
++        decl_name_ids,
++        tables: pass_t.tables,
++        t3_records: pass_t.records,
++    })
++}
+```
+
+### Hunk 3: Parent `shared` Module (`current-source-preparation-types.rs`, 6 added lines)
+
+```diff
+@@ -111,13 +111,19 @@
+ pub mod adt;
+ pub mod adt_storage;
++pub mod ext_pass_b_walk;
++pub mod ext_source_traversal;
+ pub mod nominal_declaration_order;
+ pub mod owner_ext_prepare_types;
++pub mod owner_ext_source_program;
++pub mod owner_ext_t3_uses;
+ pub mod owner_ext_type_builder;
+ mod owner_prepare;
+ mod owner_runtime;
+ pub mod owner_host;
+ pub mod host_implied_prefix;
+ 
+ pub use owner_prepare::{
+-    prepare_nominal_declarations, prepare_program_nominal_declarations, PreparedDeclarationScope,
+-    PreparedNominalDeclarations,
++    prepare_ext_program_types, prepare_nominal_declarations, prepare_program_nominal_declarations,
++    PassTOutput, PassTSession, PreparedDeclarationScope, PreparedExtProgramSource,
++    PreparedNominalDeclarations, run_pass_t,
+ };
+```
+
+### Tiny Source-Only Caller Retaining the Owned Source-Bearing Output
+
+```rust
+pub fn prepare_generic_absent_ext_source(
+    program: super::owner_ext_source_program::ExtProgram,
+    layout: &LayoutSchemaC,
+    locator: Option<LocatorC>,
+) -> Result<PreparedExtProgramSource, super::owner_ext_type_builder::ExtTypeBuildError> {
+    let prepared = prepare_ext_program_types(
+        program,
+        layout,
+        super::owner_ext_source_program::ExtDomain::GENERIC_ABSENT,
+        locator,
+    )?;
+    let _retained_entry = &prepared.program.entry;
+    let _retained_types = &prepared.tables.types;
+    let _retained_t3 = &prepared.t3_records;
+    Ok(prepared)
+}
+```
+
+---
+
+## Exact Limitations and Unspecified Policy Seams
+
+1. **Finance `TypedExtensionReserved` and `FinOpSrc` Own-Name Projection Seam**:
+   Initial source scope is `ExtDomain::GENERIC_ABSENT` (`GrammarDomain::GenericNominalExtensionReserved`, `FinanceInput::Absent`). `FinanceInput::TypedExtensionReserved` is refused with `FeatureKind::FinancialInput`, and any non-empty `assets`/`states`/`inputs` slice or `StateRead`/`LiabilityPresent`/`LiabilityAmount`/`Fin`/`Await` expression is refused with `FeatureKind::FinancialSyntax` both prior to Pass-B capacity accounting and inside the internal `project_fin_name` callback. Which optional `ExtExpr::Fin` fields (`asset`, `from`, `to`, `liability`, `state`, `name`) project into Pass B under `TypedExtensionReserved` vs fail in Pass F is an unspecified finance policy seam and is not invented here.
+2. **Global Pass-A Cross-Carrier Precedence Seam**:
+   `ext_source_traversal` and `nominal_declaration_order` intentionally omit a global Pass-A feature-classification order across non-declaration carriers (`ExtExpr::Construct`, `ExtValue::Constructor`, `ExtPattern::Ctor`/`Wildcard`, signature `TypeExprSrc` under `DedicatedSorts` when `program.types` is empty). `prepare_ext_program_types` delegates `CheckedTypeDeclView::new_checked` and `PassTSession::begin` (`G-10` refusal under `DedicatedSorts`) without inventing a new cross-carrier Pass-A ordering policy.
+3. **Pass-C `T3UseSite` to `ExprId` / `SourceOccurrenceId` Seam**:
+   `PreparedExtProgramSource.t3_records` records walker-local `T3UseSite` ordinals (`expr`, `value`, `pattern` in PD-1 order), not `ExprId` or `SourceOccurrenceId`. Materializing the Pass-C occurrence map, Pass-P decision trees, `Admitted` tokens, and runtime `ConstructorFields` pending work remains downstream work.
+4. **No Compilation, Execution, or Requirement Closure Claim**:
+   `CheckedTypeDeclView` and `OwnerExtTypeBuilder` implementation bodies remain pinned and unreviewed here; no compilation, test run, runtime execution, or UIREQ-034 (`Schedule` 4 / 9 / 8) closure is claimed.

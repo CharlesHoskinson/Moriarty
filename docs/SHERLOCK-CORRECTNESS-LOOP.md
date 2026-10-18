@@ -584,3 +584,10 @@ follows; operation remains UNCLASSIFIED and native authority remains0.
 No new circuit iteration occurred in this batch. R216 remains a historical
 01:42UTC cut, with its original artifacts unchanged; the additive graph retains
 its old membership and dates those earlier facts.
+
+
+## One-builder preparation and bounded actual model comparison — October18 closing batch
+
+The [adopted one-builder feature](results/sherlock-generic-one-builder-preparation-20261018/ROOT-PREPARATION-FEATURE-ADOPTION.json) now prepares whole typed ExtProgram type uses through the real public API. T1/T2 non-parameterized declaration registration and declaration-field FIFO precede T3 signatures and bodies. Two independent full preparation tests passed after the normal Core and consumer compiles; all427 inputs matched whole-attempt pre/post. Their complete comparisons were in memory, without a persisted actual prepared-JSON report. Original034 remains partial/open and its Schedule runtime scenario is unrun; ConstructorFields and ordered MatchPlan are separate next implementation work.
+
+The first reader's missing public aliases are preserved beside the exact publication correction and later actual CURRENT14 result. Root then adopts [whole original021](results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json) from the actual F03 K/Quint pair and its independent final full-clause review. The compared domain has94records,93charges,free publication80 and11complete-state fields; common-domain/rule-to-action projection, numeric bounds, field maps, hidden steps, state-representation differences, unmatched finance/wait behavior and omitted inputs remain explicit. After this adoption, fifteen original clauses are closed and the implementation inventory is15 complete/17 partial/3 absent. All25 refinements and broader generic/formal/native/target obligations remain open. No model rerun or circuit iteration occurred in this documentation/graph batch.

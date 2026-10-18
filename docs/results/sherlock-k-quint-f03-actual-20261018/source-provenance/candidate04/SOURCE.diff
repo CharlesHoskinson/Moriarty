@@ -1,0 +1,51 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ021-F03-K-caller-materialized-review/F03-next-capture-and-projection/decoder-schema-candidate-03/afterimages/models/sherlock/qa/k_capture_observations.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ021-F03-K-caller-materialized-review/F03-next-capture-and-projection/logged-input-chain-candidate-04/afterimages/models/sherlock/qa/k_capture_observations.py
+@@ -85,6 +85,9 @@
+ _LOGGED_CLOSE = ('      \\and{SortGeneratedTopCell{}}(', '          /* predicate: */',
+                  '          \\top{SortGeneratedTopCell{}}(),', '          /* substitution: */',
+                  '          \\top{SortGeneratedTopCell{}}()', '      ))')
++_INLINE_MAP_KEY_INJ = re.compile(
++    r'( *)/\* Inj: \*/ inj\{SortInt\{\}, SortKItem\{\}\}\(\\dv\{SortInt\{\}\}\("(-?[0-9]+)"\)\),'
++)
+ _COUNTER = b"Lbl'-LT-'generatedCounter'-GT-'"
+ _ENGINE_VALUED = frozenset({'--module', '--pattern', '--output', '--depth', '--smt',
+                             '--log-format', '--log-entries'})
+@@ -497,14 +500,33 @@
+     return dict(decoded_log=decoded, applied=entry, rule=rule, gaps=list(dict.fromkeys(gaps)))
+ 
+ 
++def _logged_map_key_line(line):
++    """Render an inline SortInt map-key injection in kore-exec's wrapped On-configuration form."""
++    match = _INLINE_MAP_KEY_INJ.fullmatch(line)
++    if match is None:
++        return ' ' * 10 + line
++    indent = ' ' * (10 + len(match[1]))
++    return (
++        f'{indent}/* Inj: */ inj{{SortInt{{}}, SortKItem{{}}}}(\n'
++        f'{indent}    \\dv{{SortInt{{}}}}("{match[2]}")\n'
++        f'{indent}),'
++    )
++
++
+ def _logged_input_gaps(entry, input_kore):
+-    """Require the logged On-configuration term to be the input Kore bytes, re-indented."""
++    """Require the logged On-configuration term to match the re-indented input Kore term."""
+     if entry is None or len(input_kore) > MAX_KORE_BYTES or not input_kore.isascii():
+         return ['logged-configuration-is-not-input-kore']
+-    term = [' ' * 10 + line for line in input_kore.decode('ascii').split('\n')]
+-    term[-1] += ','
+-    expected = '\n'.join(_LOGGED_OPEN + tuple(term) + _LOGGED_CLOSE) + '\n'
+-    return [] if entry['configuration_text'] == expected else [
++    lines = input_kore.decode('ascii').split('\n')
++    inline_term = [' ' * 10 + line for line in lines]
++    inline_term[-1] += ','
++    wrapped_term = [_logged_map_key_line(line) for line in lines]
++    wrapped_term[-1] += ','
++    expected = {
++        '\n'.join(_LOGGED_OPEN + tuple(inline_term) + _LOGGED_CLOSE) + '\n',
++        '\n'.join(_LOGGED_OPEN + tuple(wrapped_term) + _LOGGED_CLOSE) + '\n',
++    }
++    return [] if entry['configuration_text'] in expected else [
+         'logged-configuration-is-not-input-kore']
+ 
+ 
