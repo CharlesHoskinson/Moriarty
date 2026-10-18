@@ -38,6 +38,25 @@ difference is listed here under the applicable user authorization.
   frontend resolves names while parsing, so in a file with several errors it
   may report a different first one. Files with a single error behave the same.
 
+### Adopted explicit Source/6 consumer disposition
+
+The adopted `mori expand --emit-source6-transfer` interface, behind the non-default
+`source6-expansion` feature, is a separate local transfer-only consumer. It
+keeps default Rust Core expansion and the Node beta package unchanged. It
+accepts the closed transfer subset of `moriarty-local-scenario/1`, refuses
+repayment/family actions before scenario I/O, and explicitly refuses obligation
+and candidate-effect override fields. It emits raw Source/6 text with its final
+newline and reports local-stipulation-only on stderr; quiet suppresses that
+status line. It does not claim full Node BetaExpansion JSON/provenance parity.
+Existing Rust diagnostics may differ in code and presentation. The
+[2026-10-18 root decision](evidence/utxo/doctorwatson-language-loop-2026-10-17/source6-public-consumer-adoption-20261018/DESIGN-ADOPTION.json)
+adopts this ordinary interface only. Compilation, public CLI execution, actual
+Source/6 lowerer consumption and native/security qualification remain unrun or
+unestablished. The existing independent14 financial payload baseline predates
+this consumer; complete wire/output/work expectations and the chosen WorkshopReceipt
+fixture freeze remain missing. Interface adoption supplies no native embedding,
+security approval or language-exit acceptance.
+
 ## Workspace
 
 - Every crate lives in `crates/*`. The `mori` crate is the CLI entry point.
