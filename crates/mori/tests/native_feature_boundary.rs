@@ -1,0 +1,596 @@
+#![cfg(not(feature = "native"))]
+
+use std::{
+    collections::BTreeMap,
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::atomic::{AtomicU64, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+const NATIVE_CODE: &str = "mori::command::native-unavailable";
+const NATIVE_MSG: &str =
+    "This mori build has no Midnight support. Rebuild with the native feature enabled.";
+
+static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+struct TempRoot(PathBuf);
+
+impl TempRoot {
+    fn new(label: &str) -> Self {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let dir = env::temp_dir().join(format!(
+            "mori_no_native_{}_{}_{}_{}",
+            label,
+            std::process::id(),
+            nanos,
+            seq
+        ));
+        fs::create_dir(&dir).expect("create temp root");
+        Self(dir)
+    }
+
+    fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl Drop for TempRoot {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+fn snapshot_tree(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
+    fn walk(base: &Path, dir: &Path, out: &mut BTreeMap<PathBuf, Option<Vec<u8>>>) {
+        let mut entries: Vec<_> = fs::read_dir(dir)
+            .expect("read_dir")
+            .map(|e| e.expect("dir entry"))
+            .collect();
+        entries.sort_by_key(|e| e.file_name());
+        for entry in entries {
+            let path = entry.path();
+            let rel = path
+                .strip_prefix(base)
+                .expect("relative path")
+                .to_path_buf();
+            let ftype = entry.file_type().expect("file_type");
+            if ftype.is_dir() {
+                out.insert(rel, None);
+                walk(base, &path, out);
+            } else {
+                out.insert(rel, Some(fs::read(&path).expect("read sentinel file")));
+            }
+        }
+    }
+    let mut out = BTreeMap::new();
+    walk(root, root, &mut out);
+    out
+}
+
+fn normalize_ws(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn run_mori(cwd: &Path, args: &[&str]) -> (Option<i32>, Vec<u8>, String) {
+    let before = snapshot_tree(cwd);
+    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
+        .current_dir(cwd)
+        .args(["--color", "never"])
+        .args(args)
+        .output()
+        .expect("spawn mori subprocess");
+    let after = snapshot_tree(cwd);
+    assert_eq!(
+        before, after,
+        "filesystem tree mutated by invocation: {args:?}"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    (output.status.code(), output.stdout, stderr)
+}
+
+const CALL_ARGS: &[&str] = &[
+    "agreement.mori",
+    "--deployment",
+    "deploy.json",
+    "--predecessor",
+    "pred.bin",
+    "--parameters",
+    "params.bin",
+    "--request",
+    "req.json",
+    "--action",
+    "settle",
+    "--params-dir",
+    "srs_dir",
+    "--work-limits",
+    "limits.json",
+];
+
+const SIGNED_CALL_ARGS: &[&str] = &[
+    "agreement.mori",
+    "--signer-policy",
+    "policy.json",
+    "--deployment",
+    "deploy.json",
+    "--predecessor",
+    "pred.bin",
+    "--parameters",
+    "params.bin",
+    "--request",
+    "req.json",
+    "--action",
+    "settle",
+    "--params-dir",
+    "srs_dir",
+    "--work-limits",
+    "limits.json",
+];
+
+const ACTION_ARGS: &[&str] = &[
+    "agreement.mori",
+    "--action",
+    "settle",
+    "--scenario",
+    "scenario.json",
+];
+
+#[test]
+fn native_routes_report_unavailable_before_io() {
+    let routes: Vec<(&str, Vec<&str>)> = vec![
+        (
+            "compile",
+            vec![
+                "compile",
+                "agreement.mori",
+                "--target",
+                "target.json",
+                "--out",
+                "out_dir",
+            ],
+        ),
+        (
+            "compile-call",
+            vec![
+                "compile-call",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--out",
+                "out_dir",
+            ],
+        ),
+        (
+            "prepare-call",
+            vec![
+                "prepare-call",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--deployment",
+                "deploy.json",
+                "--predecessor",
+                "pred.bin",
+                "--parameters",
+                "params.bin",
+                "--request",
+                "req.json",
+                "--out",
+                "out_dir",
+            ],
+        ),
+        (
+            "keygen-call",
+            vec![
+                "keygen-call",
+                "agreement.mori",
+                "--seed-deployment",
+                "deploy.json",
+                "--seed-state",
+                "state.bin",
+                "--parameters",
+                "params.bin",
+                "--action",
+                "settle",
+                "--params-dir",
+                "srs_dir",
+                "--work-limits",
+                "limits.json",
+                "--out",
+                "out_dir",
+            ],
+        ),
+        ("prove-call", {
+            let mut v = vec!["prove-call"];
+            v.extend_from_slice(CALL_ARGS);
+            v.extend_from_slice(&["--keyset", "keyset.bin", "--out", "out_dir"]);
+            v
+        }),
+        ("verify-call", {
+            let mut v = vec!["verify-call"];
+            v.extend_from_slice(CALL_ARGS);
+            v.extend_from_slice(&["--public-keyset", "pub_keyset.bin", "--proof", "proof.bin"]);
+            v
+        }),
+        (
+            "keygen-signed-call",
+            vec![
+                "keygen-signed-call",
+                "agreement.mori",
+                "--signer-policy",
+                "policy.json",
+                "--seed-deployment",
+                "deploy.json",
+                "--seed-state",
+                "state.bin",
+                "--parameters",
+                "params.bin",
+                "--action",
+                "settle",
+                "--params-dir",
+                "srs_dir",
+                "--work-limits",
+                "limits.json",
+                "--out",
+                "out_dir",
+            ],
+        ),
+        ("prepare-signed-call", {
+            let mut v = vec!["prepare-signed-call"];
+            v.extend_from_slice(SIGNED_CALL_ARGS);
+            v.extend_from_slice(&["--public-keyset", "pub_keyset.bin", "--out", "out_dir"]);
+            v
+        }),
+        ("prove-signed-call", {
+            let mut v = vec!["prove-signed-call"];
+            v.extend_from_slice(SIGNED_CALL_ARGS);
+            v.extend_from_slice(&[
+                "--keyset",
+                "keyset.bin",
+                "--signed-attachment",
+                "attach.json",
+                "--out",
+                "out_dir",
+            ]);
+            v
+        }),
+        ("verify-signed-call", {
+            let mut v = vec!["verify-signed-call"];
+            v.extend_from_slice(SIGNED_CALL_ARGS);
+            v.extend_from_slice(&[
+                "--public-keyset",
+                "pub_keyset.bin",
+                "--proof",
+                "proof.bin",
+                "--signed-attachment",
+                "attach.json",
+            ]);
+            v
+        }),
+        ("prove", {
+            let mut v = vec!["prove"];
+            v.extend_from_slice(ACTION_ARGS);
+            v.extend_from_slice(&[
+                "--target",
+                "target.json",
+                "--params-dir",
+                "srs_dir",
+                "--out",
+                "out.proof",
+            ]);
+            v
+        }),
+        ("verify", {
+            let mut v = vec!["verify"];
+            v.extend_from_slice(ACTION_ARGS);
+            v.extend_from_slice(&[
+                "--target",
+                "target.json",
+                "--params-dir",
+                "srs_dir",
+                "--proof",
+                "out.proof",
+            ]);
+            v
+        }),
+        ("replay", {
+            let mut v = vec!["replay"];
+            v.extend_from_slice(ACTION_ARGS);
+            v.extend_from_slice(&["--target", "target.json", "--record", "record.json"]);
+            v
+        }),
+        (
+            "inspect-target",
+            vec!["inspect", "agreement.mori", "--target", "target.json"],
+        ),
+        ("simulate-trace-target", {
+            let mut v = vec!["simulate"];
+            v.extend_from_slice(ACTION_ARGS);
+            v.extend_from_slice(&["--trace", "--target", "target.json"]);
+            v
+        }),
+        ("intent-signed-profile", {
+            let mut v = vec!["intent"];
+            v.extend_from_slice(ACTION_ARGS);
+            v.extend_from_slice(&[
+                "--authority",
+                "authority.json",
+                "--profile",
+                "moriarty-jubjub-owner-intent/1",
+                "--target",
+                "target.json",
+                "--at",
+                "0",
+            ]);
+            v
+        }),
+        ("verify-intent-signed-profile", {
+            let mut v = vec!["verify-intent"];
+            v.extend_from_slice(ACTION_ARGS);
+            v.extend_from_slice(&[
+                "--signature",
+                "sig.json",
+                "--authority",
+                "authority.json",
+                "--at",
+                "0",
+                "--profile",
+                "moriarty-jubjub-owner-intent/1",
+                "--target",
+                "target.json",
+            ]);
+            v
+        }),
+    ];
+
+    let temp = TempRoot::new("routes");
+
+    for (phase, populate) in [("missing-inputs", false), ("populated-sentinels", true)] {
+        if populate {
+            fs::write(
+                temp.path().join("agreement.mori"),
+                r#"language "moriarty/2";
+agreement TwoDeliveries {
+  state phase: UInt = 0;
+  asset UNIT = { network: "local", issuer: "independent-staged-test-oracle", reference: "UNIT", scale: 0 };
+  action deliver() {
+    transfer(UNIT, "alice", "bob", 7);
+    next phase = 1;
+    await approval(ok: Bool) when ok;
+    transfer(UNIT, "alice", "bob", 3);
+    await receipt(seen: Bool) when seen;
+    next phase = 2;
+    emit "done"(phase);
+  }
+  action declare() { liability("duty", UNIT, "alice", "bob", 0); }
+}
+"#,
+            )
+            .expect("write source sentinel");
+            fs::create_dir_all(temp.path().join("srs_dir")).expect("create fake srs_dir");
+            for name in [
+                "target.json",
+                "deploy.json",
+                "pred.bin",
+                "params.bin",
+                "req.json",
+                "state.bin",
+                "limits.json",
+                "keyset.bin",
+                "pub_keyset.bin",
+                "proof.bin",
+                "policy.json",
+                "attach.json",
+                "scenario.json",
+                "out.proof",
+                "record.json",
+                "authority.json",
+                "sig.json",
+            ] {
+                fs::write(temp.path().join(name), b"not-valid-sentinel-payload")
+                    .expect("write sentinel");
+            }
+        }
+
+        for (label, argv) in &routes {
+            let (code, stdout, stderr) = run_mori(temp.path(), argv);
+            let norm = normalize_ws(&stderr);
+            assert_eq!(
+                code,
+                Some(1),
+                "{phase}/{label}: expected exit 1, stderr: {stderr}"
+            );
+            assert!(stdout.is_empty(), "{phase}/{label}: expected empty stdout");
+            assert!(
+                stderr.contains(NATIVE_CODE),
+                "{phase}/{label}: missing {NATIVE_CODE} in {stderr}"
+            );
+            assert!(
+                norm.contains(NATIVE_MSG),
+                "{phase}/{label}: missing message in {norm}"
+            );
+        }
+    }
+}
+
+#[test]
+fn arg_and_clap_precedence_without_native_diagnostic() {
+    let temp = TempRoot::new("precedence");
+
+    let clap_cases: &[(&str, &[&str])] = &[
+        (
+            "compile-missing-out",
+            &["compile", "agreement.mori", "--target", "target.json"],
+        ),
+        (
+            "prove-missing-required",
+            &["prove", "agreement.mori", "--action", "settle"],
+        ),
+        (
+            "simulate-trace-conflicts-logical-cap",
+            &[
+                "simulate",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--scenario",
+                "scenario.json",
+                "--trace",
+                "--logical-cap",
+                "10",
+            ],
+        ),
+        (
+            "simulate-resume-conflicts-target",
+            &[
+                "simulate",
+                "agreement.mori",
+                "--resume",
+                "cont.json",
+                "--event",
+                "ev.json",
+                "--target",
+                "target.json",
+            ],
+        ),
+        (
+            "verify-intent-cap-conflicts-profile",
+            &[
+                "verify-intent",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--scenario",
+                "scenario.json",
+                "--signature",
+                "sig.json",
+                "--authority",
+                "authority.json",
+                "--at",
+                "0",
+                "--profile",
+                "moriarty-jubjub-owner-intent/1",
+                "--target",
+                "target.json",
+                "--logical-cap",
+                "10",
+            ],
+        ),
+        (
+            "global-quiet-verbose-conflict",
+            &[
+                "--quiet",
+                "--verbose",
+                "compile",
+                "agreement.mori",
+                "--target",
+                "target.json",
+                "--out",
+                "out_dir",
+            ],
+        ),
+    ];
+
+    for (label, argv) in clap_cases {
+        let (code, stdout, stderr) = run_mori(temp.path(), argv);
+        assert_eq!(code, Some(2), "{label}: expected clap exit 2, got {stderr}");
+        assert!(stdout.is_empty(), "{label}: expected empty stdout");
+        assert!(!stderr.is_empty(), "{label}: expected clap diagnostic");
+        assert!(
+            !stderr.contains(NATIVE_CODE),
+            "{label}: unexpected {NATIVE_CODE} in {stderr}"
+        );
+    }
+
+    let semantic_cases: &[(&str, &[&str], &str)] = &[
+        (
+            "simulate-trace-missing-target",
+            &[
+                "simulate",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--scenario",
+                "scenario.json",
+                "--trace",
+            ],
+            "--trace requires --target",
+        ),
+        (
+            "intent-signed-profile-missing-at",
+            &[
+                "intent",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--scenario",
+                "scenario.json",
+                "--authority",
+                "authority.json",
+                "--profile",
+                "moriarty-jubjub-owner-intent/1",
+                "--target",
+                "target.json",
+            ],
+            "requires --target and --at together",
+        ),
+        (
+            "intent-signed-profile-missing-target",
+            &[
+                "intent",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--scenario",
+                "scenario.json",
+                "--authority",
+                "authority.json",
+                "--profile",
+                "moriarty-jubjub-owner-intent/1",
+                "--at",
+                "0",
+            ],
+            "requires --target and --at together",
+        ),
+        (
+            "verify-intent-signed-profile-missing-target",
+            &[
+                "verify-intent",
+                "agreement.mori",
+                "--action",
+                "settle",
+                "--scenario",
+                "scenario.json",
+                "--signature",
+                "sig.json",
+                "--authority",
+                "authority.json",
+                "--at",
+                "0",
+                "--profile",
+                "moriarty-jubjub-owner-intent/1",
+            ],
+            "requires --target",
+        ),
+    ];
+
+    for &(label, argv, expected_msg) in semantic_cases {
+        let (code, stdout, stderr) = run_mori(temp.path(), argv);
+        let norm = normalize_ws(&stderr);
+        assert_eq!(code, Some(1), "{label}: expected exit 1, got {stderr}");
+        assert!(stdout.is_empty(), "{label}: expected empty stdout");
+        assert!(
+            !stderr.contains(NATIVE_CODE),
+            "{label}: unexpected {NATIVE_CODE} in {stderr}"
+        );
+        assert!(
+            norm.contains(expected_msg),
+            "{label}: expected '{expected_msg}' in '{norm}'"
+        );
+    }
+}
