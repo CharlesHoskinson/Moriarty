@@ -55,6 +55,7 @@ MAX_CONFIGURATION_BYTES = 8192
 MAX_NESTING = 32
 MAX_TERM_BYTES = 4096
 MAX_CAPTURES = 64
+F03_MAX_CAPTURES = 95
 MAX_ARGV = 64
 MAX_ARG_CHARS = 4096
 MAX_RULE_SPANS = 4096
@@ -296,8 +297,10 @@ def _probe(probe, label):
             _receipt(probe.get('print_receipt'), PRINT_RECEIPT_KEYS, 'print'))
 
 
-def _captures(captures):
-    if type(captures) is not list or not captures or len(captures) > MAX_CAPTURES:
+def _captures(captures, *, max_captures=MAX_CAPTURES):
+    if type(max_captures) is not int or not 1 <= max_captures <= F03_MAX_CAPTURES:
+        raise ValueError('max_captures must be an int between 1 and F03_MAX_CAPTURES')
+    if type(captures) is not list or not captures or len(captures) > max_captures:
         raise ValueError('ordered complete post-startup captures required')
     receipts = []
     for index, capture in enumerate(captures):
@@ -618,13 +621,14 @@ def decode_startup_probe(probe, *, post_startup_configuration, entry_k, source_p
 
 
 def decode_capture(case_id, entry_k, captures, *, source_path, rule_spans=None,
-                   terminal_probe=None, startup_probe=None, run_input=None):
+                   terminal_probe=None, startup_probe=None, run_input=None,
+                   max_captures=MAX_CAPTURES):
     """Join observed incoming spans with supplied adjacent kprint cells and their receipts."""
     if type(case_id) is not str or not case_id or len(case_id) > 64:
         raise ValueError('case_id and separately retained entry_k text required')
     _term_text(entry_k, 'entry_k')
     _source(source_path)
-    receipts = _captures(captures)
+    receipts = _captures(captures, max_captures=max_captures)
     spans = _spans(rule_spans, source_path)
     terminal_receipts = _probe(terminal_probe, 'terminal') if terminal_probe is not None else None
     startup_receipts = _probe(startup_probe, 'startup') if startup_probe is not None else None
