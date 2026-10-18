@@ -129,11 +129,12 @@ mod tests {
         }
     }
     fn artifact() -> (mori_backend::Artifact, String) {
-        let p=mori_core::parse("language \"moriarty/1\"; agreement Publication { state count: UInt = 0; action z_first() { next count = count + 1; } action a_second() { next count = count + 2; } }").unwrap();
-        let a =
-            mori_backend::compile(&p, &mori_backend::Target::ledger9("local", "leaves")).unwrap();
-        let manifest = serde_json::to_string_pretty(&a).unwrap();
-        (a, manifest)
+        let manifest = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../fixtures/publication/transport-artifact.json"
+        ));
+        let artifact = serde_json::from_str::<mori_backend::Artifact>(manifest).unwrap();
+        (artifact, manifest.to_owned())
     }
     #[test]
     fn raced_files_at_first_second_and_manifest_are_never_clobbered() {
@@ -233,5 +234,27 @@ mod tests {
                 c.zkir.as_bytes()
             );
         }
+    }
+    #[test]
+    fn source_projection_is_published_with_complete_circuits_and_manifest() {
+        let (a, m) = artifact();
+        let d = Reserved::new();
+        let projection = "{\"transport_fixture\":\"projection\"}\n";
+        publish_artifact(&a, &m, Some(projection), &d.0).unwrap();
+        for (leaf, bytes) in [
+            (
+                "000-z_first.zkir",
+                "publication fixture: z_first\nopaque UTF-8: α\n",
+            ),
+            (
+                "001-a_second.zkir",
+                "publication fixture: a_second\nopaque UTF-8: β\n",
+            ),
+            ("source-projection.json", projection),
+            ("artifact.json", m.as_str()),
+        ] {
+            assert_eq!(std::fs::read(d.0.join(leaf)).unwrap(), bytes.as_bytes());
+        }
+        assert_eq!(std::fs::read_dir(&d.0).unwrap().count(), 4);
     }
 }
