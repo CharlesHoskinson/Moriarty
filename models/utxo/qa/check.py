@@ -424,7 +424,12 @@ def main(argv=None):
             elif selection:
                 for row in report["requirements"]:
                     print(f"  {row['id'] or row['key']}: declared {row['acceptance']['status']}; {row['currentness']}; gate {row['gate']}")
-                    print(f"  Source: {row['source']['path']}#{row['heading']}")
+                    source = row["source"]
+                    location = str(files.root / source["path"])
+                    if type(source.get("startLine")) is int and source["startLine"] > 0:
+                        location += f":{source['startLine']}"
+                    print(f"  Source: {location}")
+                    print(f"  Requirement: {row['heading']}")
                     if row["clause"]:
                         print(row["clause"])
                     for scenario in row["scenarios"]:
