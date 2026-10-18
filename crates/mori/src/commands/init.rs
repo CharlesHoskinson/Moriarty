@@ -47,7 +47,7 @@ agreement StarterRepay {
 
 /// Prepare all bytes before reserving the destination. Expectations are literal
 /// financial examples, never outputs obtained from running the interpreter.
-fn project(template: Template) -> super::Result<Vec<(&'static str, Vec<u8>)>> {
+fn project(template: Template, executable: &str) -> super::Result<Vec<(&'static str, Vec<u8>)>> {
     use super::core_io::operation;
     let (source, action, amount, alice, bob) = match template {
         Template::Transfer => (TRANSFER, "pay", "25", "75", "25"),
@@ -90,7 +90,7 @@ fn project(template: Template) -> super::Result<Vec<(&'static str, Vec<u8>)>> {
     let scenario = mori_core::json::export(&scenario).map_err(operation)?;
     let manifest = mori_core::json::export(&manifest).map_err(operation)?;
     let readme = format!(
-        "# Moriarty starter\n\nThis project uses `language \"moriarty/1\"` and local reference execution.\nThe TEST asset and accounts are examples. Simulation does not settle a ledger transaction or produce a proof.\n\nRun these commands from this directory with `mori` on your PATH:\n\n```sh\nmori check source.mori --json\nmori simulate source.mori --action {action} --scenario scenario.json\nmori test .\n```\n\nThe manifest checks the complete expected post-state and ordered effects.\n\nInitialization requires a new destination and an existing parent directory.\nAn I/O failure can leave an incomplete project. Choose a new destination before retrying.\n"
+        "# Moriarty starter\n\nThis project uses `language \"moriarty/1\"` and `moriarty-core/1` local reference execution.\nThe TEST asset and accounts are examples. Simulation does not settle a ledger transaction or produce a proof.\n\nThe commands below use the Rust CLI that created this project. If you move that executable, update its absolute path below.\nRun these commands from this directory in a POSIX shell:\n\n```sh\n{executable} check source.mori --json\n{executable} simulate source.mori --action {action} --scenario scenario.json\n{executable} test .\n```\n\nThe manifest checks the complete expected post-state and ordered effects.\n\nInitialization requires a new destination and an existing parent directory.\nAn I/O failure can leave an incomplete project. Choose a new destination before retrying.\n"
     );
     Ok(vec![
         ("source.mori", source.as_bytes().to_vec()),
@@ -101,7 +101,14 @@ fn project(template: Template) -> super::Result<Vec<(&'static str, Vec<u8>)>> {
 }
 
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
-    let files = project(args.template)?;
+    // Keep generated commands on this Rust CLI even when another `mori` is on PATH.
+    // Quote the complete absolute executable as one POSIX shell word.
+    let executable = std::env::current_exe().map_err(super::core_io::operation)?;
+    let executable = executable.to_str().ok_or_else(|| {
+        super::core_io::operation("starter commands require a UTF-8 Rust executable path")
+    })?;
+    let executable = format!("'{}'", executable.replace('\'', "'\\''"));
+    let files = project(args.template, &executable)?;
     // create_dir atomically refuses existing files, directories and symlinks.
     // Do not create ancestors or remove this directory after a later failure.
     std::fs::create_dir(&args.dir).map_err(|source| CliError::Write {
