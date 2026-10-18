@@ -1,0 +1,82 @@
+### 1. Actual Reviewer Identity, Session Continuity & 8-Body Readable Coverage
+
+- **Actual Reviewer & Effort**: `gemini-4-argon-high` / `HIGH` (standing observed Opus outage fallback; same-reviewer tail-gap followup; zero tools called; zero file/history/transcript reads, writes, code edits, imports, test/mock runs, host-metadata queries, provisioning, SDK, native, or Git operations).
+- **Actual Resumed Context**:
+  - **CID**: `6277cc2c-99b8-4b7a-a220-a6c971d1bb98`
+  - **CWD (inert transport datum)**: `/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`
+  - **Prior Retained Turn-1 Output**: `25288B`, SHA-256 `aab5d202c7f5e9f679548d587b302ce782767c221575f850a8c2fdc199719754` (completed `operator_provisioner.py` `48932B SHA7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476` and `test_operator_provisioner_mock.py` `50163B SHA3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7` audit).
+- **Readable Coverage of All 8 Newly Supplied Inline Bodies (100% Read, Zero Truncation)**:
+  1. `FULL_MISSING_NORMATIVE_F039` (`1387B`, `f30fadab5e8acadf0ab4b7db33e1a39039bc0174733a796183d174114298d8a0`): Complete (`BEGIN` to `END`). *(Note: 1-byte length/digest difference vs. turn-1 header `1388B SHA458ab0f4...` reflects trailing-newline framing only; the JSON body is complete and matches the turn-1 prefix verbatim.)*
+  2. `FULL_MISSING_NORMATIVE_F040` (`1203B`, `0cacec066123e350b95a6c3a8dfd164a10290d7e6d30fcffaefab80b4618baab`): Complete (`BEGIN` to `END`).
+  3. `FULL_MISSING_NORMATIVE_F041` (`1190B`, `a87834da1309cd54a52b6c2d60f23fcd1ead506ed373d19c25144330b5849868`): Complete (`BEGIN` to `END`).
+  4. `COMPLETE_EXACT_NEW_MOCK15_JSON` (`2484B`, `6b86bcedfe1dc63b94ff22f68b9a6d52aeb97443962a258482e43e210a606a98`): Complete (`BEGIN` to `END`).
+  5. `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED` (`2191B`, `372c5bb7763a410abd7e33097028928cae873f91e3df7329bd5ee45fd317f3aa`): Complete (`BEGIN` to `END`).
+  6. `UNCHANGED_CURRENT_TWO_SOURCE_PINS` (`1392B`, `8362cfd81b522af317ed15b99657d7b7ba9f6919fbaac336e9dabd74de85846f`): Complete (`BEGIN` to `END`).
+  7. `QUALIFIED_PRIOR_PUBLIC_SOURCE_JUDGMENT_AND_TAIL_GAP` (`2282B`, `72e71c69f150f63b09160bb5505e44034225fce32cb7b7337ff0570f6dcce0a6`): Complete (`BEGIN` to `END`).
+  8. `PUBLIC_INPUT_EVIDENCE_NO_HIDDEN_CONTEXT` (`2308B`, `d6810cf937a539264e44d1912fb6ceec6b18fee9edd269431badb4683dc289be`): Complete (`BEGIN` to `END`).
+
+---
+
+### 2. Disposition of `GAP-TRUNC-F039-F041` & Comparison Against Prior Scoped Inspection
+
+- **Tail-Gap Status**: **`GAP-TRUNC-F039-F041` IS `CLOSED`** (along with the previously unread exact `COMPLETE_EXACT_NEW_MOCK15_JSON` specification).
+- **Comparison of Newly Supplied `F039`–`F041` Against Turn-1 Source Inspection (`7a8e55b9...` / `3e23ab97...`)**:
+  1. **`F039` (`op6_observation_json_schema` & `collect_evidence_outputs`)**:
+     - `verify_and_observe()` (L500–622) and `cmd_op6()` (L629–634) emit the exact schema (`"sherlock-operator-provisioning-observation/1"`), `op0_facts` (`mem_available_bytes >= 23622320128`, single-line `0::/...` `self_cgroup`), `quota_mounts` (`mountpoint`, `mount_id`, `device`, `max_bytes == statvfs.f_blocks * f_frsize`, `max_inodes == statvfs.f_files`), `cgroup_verified` (`E`/`L`/`P` cap readbacks, controllers, empty `cgroup.procs`, `K1`–`K3` root-owned `0644` cap non-writability, and `1000:1000` delegation on `E/cgroup.procs` and `P/{.,cgroup.procs,cgroup.threads,cgroup.subtree_control}`), and `operator_tool_sha256` across all 6 `OPERATOR_TOOLS`.
+     - `cmd_collect_evidence()` (L666–711) creates `<paths.evidence_dir>` (`0700`, `1000:1000`), copies only `ONE_SHOT_STARTED` and `packet/*` (excluding `target`, `tmp`, and `source_home`), and writes `EVIDENCE_SHA256_MANIFEST.json`.
+  2. **`F040` (`pre_launch_abort`, `runtime_terminal_failure`, `post_run_teardown_and_provenance`)**:
+     - `OP-0..OP-6` fail closed via `Refusal` with no retry/auto-repair/cap-lowering/fallback; `cmd_abort_prelaunch_cleanup()` (L792–806) refuses if `ONE_SHOT_STARTED` exists, tears down `P` children and `P`/`L`/`E`, and unmounts `packet`, `source_home`, and `execution_root` in reverse order (`require_mounted=False`).
+     - `cmd_teardown()` (L770–790) refuses unless `EVIDENCE_SHA256_MANIFEST.json` exists, parses and verifies `request_sha256`, `provisioner_sha256`, `observation_sha256`, `'ONE_SHOT_STARTED' in files`, and every copied file's SHA-256 digest before `teardown_cgroups()` (which writes `'1'` to `E/cgroup.kill` and `cgroup.kill` on populated nodes) and reverse-order `umount_quota_tmpfs(..., require_mounted=False)`.
+  3. **`F041` (Proposal Scope, Global Holds, Dated Observations, `L`/`P` Cap Obligation & Unread SDK/Loose Objects)**:
+     - Matches `cmd_op5()` (L424–476) and `verify_and_observe()` (L554–565) enforcing and verifying `L` and `P` numeric caps during `OP-5`/`OP-6`, and aligns with all preserved global hold/status flags and unread SDK/dependency boundaries.
+- **Contradiction Check & Updated `source_only_verdict`**:
+  - **Zero contradictions** exist between `F039`–`F041` and our turn-1 source audit.
+  - **`source_only_verdict`**: **`APPROVE`** for `operator_provisioner.py` (`48932B`, `7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476`) and `test_operator_provisioner_mock.py` (`50163B`, `3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7`) across the **complete** `F033`–`F041` normative set (`GAP-TRUNC-F039-F041` closed; `NEW-MF-03` quiescent-operator / pathname-atomicity contract boundary and omitted raw historical/runner/SDK file boundaries explicitly preserved).
+
+---
+
+### 3. Classification of Exact `COMPLETE_EXACT_NEW_MOCK15_JSON` Command & Disposition of `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED`
+
+- **Exact Audited Command & Two-File Binding (`COMPLETE_EXACT_NEW_MOCK15_JSON`, `2484B`, `6b86bced...`)**:
+  - **CWD**: `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/275-owner-literal-mock-fixes/proposed-mock-two-filedir`
+  - **Exact Two Files**:
+    1. `.../proposed-mock-two-filedir/operator_provisioner.py` (`48932B`, SHA-256 `7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476`)
+    2. `.../proposed-mock-two-filedir/test_operator_provisioner_mock.py` (`50163B`, SHA-256 `3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7`)
+  - **Exact `subject_argv`**:
+    `["/usr/bin/python3", "-I", "-B", "-c", "import unittest\nsuite = unittest.defaultTestLoader.discover(start_dir='.', pattern='test_operator_provisioner_mock.py', top_level_dir='.')\nif suite.countTestCases() != 15:\n    raise SystemExit('expected exactly 15 selected mock tests')\nresult = unittest.TextTestRunner(verbosity=2).run(suite)\nraise SystemExit(0 if result.wasSuccessful() else 1)\n"]`
+- **Audit of `effects_required` & `SDK_inputs` on `COMPLETE_EXACT_NEW_MOCK15_JSON`**:
+  - **100% Satisfied in Source**: As verified across all 15 `test_*` methods in turn 1, `3e23ab97...` (with `os.geteuid=1000` in Test 6 and `Path.is_symlink=False` in Test 9's `cmd_op3` block) mocks **100% of reached candidate-directed OS/filesystem/proc/sysfs/cgroup/mount/privilege/subprocess/FD/timer calls**. Only Python stdlib and the two bound source modules are imported; zero SDK payloads, crates, git objects, caches, keys, or `driver 4bdb0146` files are read or executed.
+- **Disposition of `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED` (`2191B`, `372c5bb7...`)**:
+  - **Sufficiency**: **`SUFFICIENT_AS_WRITTEN` (Zero Bounded Corrections Required)**.
+  - **Direct Answer to Scope Question**: **Yes**—recording Root's explicit adoption of `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED` (`372c5bb7...`), together with launch-time verification of Root's own ordinary unprivileged identity/capability metadata (`uid=euid=gid=egid=1000`, `CapPrm=CapEff=CapAmb=0`), the isolated two-file directory membership/digests, and active bounded controller enforcement (`30s` hard wall cap, `131072B` combined `stdout+stderr` cap), makes the exact `COMPLETE_EXACT_NEW_MOCK15_JSON` (`6b86bced...`) operation **`ELIGIBLE_WITH_EXACT_CONDITIONS`** as a limited SDK-free ordinary synthetic mock unit test (`native_authority = 0`).
+  - **Why No `OP-0` / Host / Provisioning / SDK Probe Is Required**: Because all 15 unit tests execute entirely against in-memory `unittest.mock` patches and touch zero live cgroups, mounts, `/proc/meminfo`, `bwrap`, `userns`, or SDK inputs, classifying or launching this synthetic mock test requires **only** ordinary launch-process identity/capability metadata (`uid=euid=gid=egid=1000`, `CapPrm=CapEff=CapAmb=0`) and bounded controller enforcement—never an `OP-0`, `MemAvailable`, cgroup, mount, `userns`, `bwrap`, SDK, or provisioning probe.
+- **Prospective Classification of `COMPLETE_EXACT_NEW_MOCK15_JSON` (`6b86bced...`)**:
+  - **`ELIGIBLE_WITH_EXACT_CONDITIONS`** *(subject to the 4 exact pre-launch conditions below; currently unselected and unexecuted because `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED` is `PREPARATION ONLY, NOT ADOPTED` and runtime identity/controller facts are `UNKNOWN`)*:
+    1. **Explicit Limited Root Scope Adoption Recorded**: Root records adoption of `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED` (`372c5bb7763a410abd7e33097028928cae873f91e3df7329bd5ee45fd317f3aa`) binding `COMPLETE_EXACT_NEW_MOCK15_JSON` (`6b86bcedfe1dc63b94ff22f68b9a6d52aeb97443962a258482e43e210a606a98`), exact `cwd`, exact `subject_argv`, exact two file digests (`7a8e55b9...` and `3e23ab97...`), and exact `15` test cases, where any byte, command, or directory-membership change voids the scope.
+    2. **Ordinary Self UID/GID & Capability Metadata Precondition (`UNKNOWN` Until Launch Verification)**: Verified via ordinary launch metadata only (not `OP-0`) that the executing identity has `uid == euid == gid == egid == 1000` and `CapPrm == CapEff == CapAmb == 0`.
+    3. **Bounded Controller Precondition (`UNKNOWN` Until Launch Verification)**: Executed under the existing Root bounded controller enforcing `hard_wall_seconds = 30` and `combined_stdout_stderr_max_bytes = 131072`, terminating the selected process group on exceed with no retry.
+    4. **Verbatim Labeling & Non-Citation**: All outcomes (`success`/`failure`/`error`) recorded verbatim as `INTERFACE_INFORMED_NOT_BLIND_R2_UNSATISFIED`, with zero citation as `R2` satisfaction, `C4` closure, `OP-0` / host provisioning feasibility, `ADMITTED_CONFIGURATION`, tier consent, or native authority.
+
+---
+
+### 4. Residual Unresolved Boundaries, Omissions & Authority Status
+
+1. **Unadopted Quiescent-Operator / Pathname-Atomicity Contract Boundary (`NEW-MF-03`)**:
+   - `operator_provisioner.py` uses Python user-space symlink/stat checks followed by pathname-based `/usr/bin/mount` and `/usr/bin/umount` subprocesses (`F035`, `F038`, `F040`) rather than kernel-atomic `openat2(RESOLVE_NO_SYMLINKS)` or fd-bound `fsopen`/`move_mount`. Single-human-operator quiescence during root steps remains an explicit unadopted contract boundary that grants zero root/provisioning/native authority.
+2. **Omitted Raw Historical / Runner / SDK Scope & Unobserved Live Host State**:
+   - Raw historical review/closure files (`F022`, `F023`, `F031`, `F032`, `F047`, `F050`, `F055`, `F303`–`F306`), non-excerpted lines of `bounded_sdk_compile.py` outside `F036`, full SDK/transitive dependency sources, and the 52 `git-loose-unknown` containers (`F034` §1.4–1.5, `F041`) remain outside inline scope and unapproved.
+   - Live host `OP-0` predicates (`MemAvailable >= 23,622,320,128` B per `F033:CPOL4` and `F041`, `/sys/fs/cgroup` topology/controllers/`cgroup.kill`, `/usr/bin/bwrap`, `user.max_user_namespaces`), `OP-0..OP-6` provisioning, `old_home_stat_manifest`, external Root `CPOL3` verification (`9f48d1f227c2714bab374828b7fe4dd930aab660ea63dd2685f91d6250bcafce` and R53 freeze `f7910a648f0558c9aa3f0543c18cc546d0b0238c83b867db75c2ff0dfb3cdf17`), `ADMITTED_CONFIGURATION`, verbatim `P1` §1.5(a)–(c) disclosures, explicit human `GRANTED_TIER1`/`GRANTED_TIER2`, and separate Root disposition of `R2` and `C4` remain **unobserved and ungranted**.
+3. **Public Input Truncation Evidence (`PUBLIC_INPUT_EVIDENCE_NO_HIDDEN_CONTEXT`, `d6810cf9...`)**:
+   - Acknowledged without hidden-context or backend-cause inference: public `user_input` metadata carried no text or delivered byte length, so turn 1's reported `<truncated 13794 bytes>` active-window truncation was properly treated as a fail-closed gap and is now resolved strictly by the inline bodies in this followup.
+4. **Final Status Flags**:
+   - **`GAP-TRUNC-F039-F041`**: `CLOSED`
+   - **`source_only_verdict`**: `APPROVE` (across complete `7a8e55b9...` + `3e23ab97...` + `F033`–`F041`, with `NEW-MF-03` quiescent-operator / pathname-atomicity boundary preserved)
+   - **`mock15_prospective_classification`**: `ELIGIBLE_WITH_EXACT_CONDITIONS` (for `COMPLETE_EXACT_NEW_MOCK15_JSON` `6b86bced...` upon explicit Root adoption of `BOUNDED_LIMITED_ROOT_SCOPE_PROPOSAL_NOT_ADOPTED` `372c5bb7...` + launch-time verification of ordinary self `uid=euid=gid=egid=1000`, `CapPrm=CapEff=CapAmb=0`, isolated two-file directory pins, and active `30s`/`131072B` controller; zero `OP-0`/host/SDK probes required)
+   - **`limited_root_scope_proposal_disposition`**: `SUFFICIENT_AS_WRITTEN_NO_CORRECTION_NEEDED` (`Rootproposaladopted: false`)
+   - **`old_policy_adoption`**: `NONE`
+   - **`Rootproposaladopted`**: `false`
+   - **`operationselected`**: `false`
+   - **`execution_authority`**: `0`
+   - **`native_authority`**: `0` (`C4=OPEN`, `R2=UNSATISFIED`, `60-460=HOLD`, `stoppedAm10=noRetryNoRephraseNoReroute`, `quarantinedT3=UNCHANGED`)
+
+END-R283-TAIL-GAP-EXACT-SDKFREE-MOCK15-NATIVE0

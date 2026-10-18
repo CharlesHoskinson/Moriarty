@@ -1355,3 +1355,28 @@ transition/circuit semantics or circuit/website iteration is claimed. Append a
 new dated journal entry and preserve previous pending cuts instead of rewriting
 history. These concrete corrections improve DoctorWatson without a new factory
 or a rerun of unchanged passing cohorts.
+
+
+### DW-67 — Keep synthetic decoding and mock results in their actual scope
+
+The corrected K adapter preserves its default64 capture bound and admits up to95
+only through an explicit keyword selection. Five exact offline cases passed,
+with literal source hashes and all five inputs unchanged. The supplied F03 test
+uses selected boundary states and placeholder intermediate states with empty
+engine artifacts; comparison_ready stays false. Preserve that qualification
+when installing the decoder. Neither that pass nor a ready command plan is an
+actual K capture or paired model comparison. The unchanged21 N01 methods were
+not rerun. See the [decoder result](../docs/results/sherlock-k-f03-offline-decoder-20261018/README.md).
+
+The [native prerequisite mock result](../docs/results/sherlock-native-prerequisite-policy-20261017/285-sdkfree-mock15-source-result/README.md)
+passed15 synthetic SDK-free tests after the designated reviewer checked the
+complete source and missing packet tail. Its exact label remains
+INTERFACE_INFORMED_NOT_BLIND_R2_UNSATISFIED. Root publishes co-located source/test
+snapshots in the result archive, keeping them out of default test discovery.
+Passive publication preserves the original execution cwd and does not select a
+new invocation or establish provisioning, native build, R2 or C4 closure.
+
+Source judgment, prospective operation classification, captured execution and
+actual-result review remain separate records. Readable complete input and an
+explicit successful terminal are checked before adoption. This iteration adds
+no new original EARS acceptance, circuit/website iteration or native authority.
