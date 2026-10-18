@@ -1,0 +1,164 @@
+{
+  "language": "moriarty/2",
+  "semantics": "moriarty-core/2",
+  "name": "DutyObserver",
+  "states": [
+    {
+      "name": "observed",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "name": "CASH",
+      "identity": {
+        "network": "local",
+        "issuer": "source-coverage",
+        "reference": "cash",
+        "scale": 2
+      }
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "invoice"
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "invoice"
+    },
+    {
+      "kind": "Name",
+      "name": "accepted"
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "invoice"
+    },
+    {
+      "kind": "Binary",
+      "op": "And",
+      "lhs": 3,
+      "rhs": 4
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "invoice"
+    },
+    {
+      "kind": "Name",
+      "name": "observed"
+    },
+    {
+      "kind": "Name",
+      "name": "minimum"
+    },
+    {
+      "kind": "Binary",
+      "op": "Ge",
+      "lhs": 7,
+      "rhs": 8
+    },
+    {
+      "kind": "Name",
+      "name": "observed"
+    },
+    {
+      "kind": "Name",
+      "name": "maximum"
+    },
+    {
+      "kind": "Binary",
+      "op": "Le",
+      "lhs": 10,
+      "rhs": 11
+    },
+    {
+      "kind": "Binary",
+      "op": "And",
+      "lhs": 9,
+      "rhs": 12
+    },
+    {
+      "kind": "Name",
+      "name": "opening"
+    }
+  ],
+  "actions": [
+    {
+      "name": "register",
+      "inputs": [],
+      "statements": [
+        {
+          "kind": "Liability",
+          "name": "invoice",
+          "asset": "CASH",
+          "debtor": "payer",
+          "creditor": "seller",
+          "amount": 0
+        }
+      ]
+    },
+    {
+      "name": "observe",
+      "inputs": [
+        {
+          "name": "minimum",
+          "ty": "UInt"
+        },
+        {
+          "name": "maximum",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 1
+        },
+        {
+          "kind": "Let",
+          "name": "opening",
+          "value": 2
+        },
+        {
+          "kind": "Await",
+          "label": "confirmed",
+          "binders": [
+            {
+              "name": "accepted",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 5
+        },
+        {
+          "kind": "Next",
+          "state": "observed",
+          "value": 6
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 13
+        },
+        {
+          "kind": "Emit",
+          "name": "observed",
+          "value": 14
+        }
+      ]
+    }
+  ]
+}
