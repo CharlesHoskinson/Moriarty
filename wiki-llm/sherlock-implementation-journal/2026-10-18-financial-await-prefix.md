@@ -1,0 +1,9 @@
+# October18 — financial await-prefix publication
+
+Observation: the fixed Core/2 start, false-await and true-resume calls now pass complete independently frozen publication/prefix comparisons through the public owning producer. The [new archive](../../docs/results/sherlock-financial-await-prefix-20261018/README.md) retains the source, five ordinary phases and two exact positive results. The second selection reused the actual union Core rlib and changed only the existing strict publication consumer; no passing Core/new-consumer prefix was replayed.
+
+Implementation choice: expose a borrowed view of the returned continuation boundary and published segment, then consume that same view in the shared top-level `await_prefix` field. Preserve `segment: None`, the original nested observation, gross accounting and residual duties. The compatibility patch adds exactly five lines from independently frozen prefix expectations; it keeps the original complete publication assertion.
+
+Interpretation: these are host-reference finance observations for a fixed fixture, not native financial proof, generic await lowering or settlement. Captures are empty and optional CLI flags are None. Existing old-wire receipts and source preimages stay historical. [Root qualified adoption](../../docs/results/sherlock-financial-await-prefix-20261018/ROOT-FINANCIAL-AWAIT-PREFIX-ADOPTION.json) follows the actual-source-grounded final review; the original error-bearing report and explicit withdrawals remain archived. Original018/019 and full013 remain open.
+
+Next unresolved question: connect the retained generic-machine await/failure behavior and authenticated native/target obligations through their own independently specified cases. No new circuit implementation is included; source iteration005 remains latest.

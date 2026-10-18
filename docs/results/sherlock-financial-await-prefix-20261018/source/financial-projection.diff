@@ -1,0 +1,122 @@
+--- a/crates/mori-core/src/sherlock/financial_projection.rs
++++ b/crates/mori-core/src/sherlock/financial_projection.rs
+@@ -12,7 +12,8 @@
+ //! No cumulative prefix history, native fee, DUST or ledger phase is invented.
+ 
+ use crate::stage::{
+-    Continuation, PendingFrame, StageEvent, StageOutcome, StageRejection, StageSegment,
++    Continuation, NamedValue, PendingFrame, StageEvent, StageLogical, StageOutcome, StageRejection,
++    StageSegment,
+ };
+ use crate::{AssetId, Effect, Error, Execution, Liability, Scenario, Snapshot, Step, UInt};
+ use crate::stage::StagedProgram;
+@@ -62,6 +63,67 @@
+         attempted: UInt,
+         committed: UInt,
+     },
++}
++
++/// Ordinary field/control view of the actual returned Core/2 await boundary.
++///
++/// `Waiting` borrows one returned continuation's control, committed snapshot and
++/// logical counters, together with that outcome's residual duties and optional
++/// published segment. It is not a universal-machine image or persistent codec.
++/// The complete continuation envelope remains in `FinancialObservation`.
++///
++/// `advanced: false` and `published_segment: None` remain distinct from a
++/// successful segment with no effects. No earlier effects are reconstructed.
++/// Completion and rejection do not acquire a synthetic await checkpoint.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
++pub enum AwaitPrefixObservation<'a> {
++    Waiting {
++        advanced: bool,
++        action: &'a str,
++        site: u16,
++        captures: &'a [NamedValue],
++        logical: &'a StageLogical,
++        committed_boundary: &'a Snapshot,
++        residual: &'a [Liability],
++        published_segment: Option<SegmentObservation<'a>>,
++        attempted: UInt,
++    },
++    Complete,
++    RejectedNoReturnedCheckpoint,
++}
++
++// No evaluation, admission, checkpoint construction or input/result pairing.
++// Only fields of the same returned outcome feed this consumed publication view.
++fn project_await_prefix(
++    result: &Result<StageOutcome, StageRejection>,
++) -> AwaitPrefixObservation<'_> {
++    match result {
++        Ok(StageOutcome::Waiting {
++            advanced, segment, continuation, attempted, residual,
++        }) => {
++            let Continuation {
++                format: _, program_hash: _, plan_hash: _, action, site, captures,
++                logical, boundary,
++            } = continuation;
++            AwaitPrefixObservation::Waiting {
++                advanced: *advanced,
++                action,
++                site: *site,
++                captures,
++                logical,
++                committed_boundary: boundary,
++                residual,
++                published_segment: segment.as_ref().map(project_segment),
++                attempted: *attempted,
++            }
++        }
++        Ok(StageOutcome::Complete {
++            segment: _, committed: _, attempted: _, residual: _,
++        }) => AwaitPrefixObservation::Complete,
++        Err(StageRejection { error: _, attempted: _, committed: _ }) => {
++            AwaitPrefixObservation::RejectedNoReturnedCheckpoint
++        }
++    }
+ }
+ 
+ /// Captured continuation, event and CLI flags, separate from the returned result.
+@@ -268,6 +330,15 @@
+     pub outcome: FinancialObservation<'a>,
+     pub accounting: AccountingAvailability<'a>,
+     pub tentative_publication: TentativePublication,
++}
++
++impl<'a> InvocationObservation<'a> {
++    /// Borrows the returned await control and committed prefix from this result.
++    /// The actual owning producer retains the same-call binding; diagnostic
++    /// observations retain their existing caller-supplied relationship limits.
++    pub fn await_prefix(&self) -> AwaitPrefixObservation<'a> {
++        project_await_prefix(self.result)
++    }
+ }
+ 
+ impl AmountAggregate {
+@@ -466,8 +537,9 @@
+ 
+     /// Complete JSON publication shared with the actual Core/2 simulate branch.
+     /// Existing status/segment/continuation/work/residual fields and local labels
+-    /// remain, with the entire serialized invocation added. This is per-call
+-    /// accounting, not cumulative history, a B runtime, or target acceptance.
++    /// remain, with the entire serialized invocation and its returned await
++    /// field/control view added. This is per-call accounting, not cumulative
++    /// history, a B runtime, persistent checkpoint or target acceptance.
+     pub fn publication(&self) -> Result<serde_json::Value, serde_json::Error> {
+         let mut report = match &self.result {
+             Ok(StageOutcome::Waiting { advanced, segment, continuation, attempted, residual }) => {
+@@ -488,9 +560,12 @@
+                 "attempted": rejected.attempted, "committed": rejected.committed,
+             }),
+         };
+-        let observation = serde_json::to_value(self.observation())?;
++        let invocation = self.observation();
++        let await_prefix = serde_json::to_value(invocation.await_prefix())?;
++        let observation = serde_json::to_value(invocation)?;
+         let object = report.as_object_mut().expect("stage reports are JSON objects");
+         object.insert("financial_observation".into(), observation);
++        object.insert("await_prefix".into(), await_prefix);
+         for (name, value) in crate::stage::STAGE_LABELS {
+             object.insert(name.into(), serde_json::Value::String(value.into()));
+         }

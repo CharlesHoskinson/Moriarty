@@ -168,3 +168,12 @@ does not itself change acceptance. Older R176/R189 records above retain
 their original consumers and scope. No old passing cohort was replayed.
 
 Root has now [adopted whole UIREQ-017](../../results/sherlock-owning-financial-producer-20261018/ROOT-FINANCIAL-PRODUCER-ADOPTION.json). The [current requirement report](../../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json) confirms fourteen current original closures. The source-only enclosing CLI and separate lowering, failure, authentication, proof and settlement qualifications above remain.
+
+
+## Returned await-prefix view — October18 increment
+
+`InvocationObservation::await_prefix(&self)` returns `AwaitPrefixObservation<'a>` borrowing the actual returned result. `Waiting` exposes `advanced`, `action`, `site`, `captures`, `logical`, `committed_boundary`, `residual`, `published_segment` and `attempted`. The complete continuation envelope remains in the existing financial observation. `Complete` and `RejectedNoReturnedCheckpoint` are explicit variants; neither creates a checkpoint or tentative state.
+
+The shared `ProducedInvocation::publication()` adds the serialized view at top-level `await_prefix`. Existing nested `financial_observation`, status/work/residual fields and local-stage labels remain. False await preserves `published_segment: None`; do not replace it with an empty advanced segment or reconstruct earlier effects. No new evaluation or admission occurs when borrowing/serializing this view.
+
+The [ordinary host archive](../../results/sherlock-financial-await-prefix-20261018/README.md) records two exact positive consumers and the five selected compile/run phases. The updated existing consumer preserves its complete publication comparison and uses three independently frozen prefix includes. Historical receipts keep their old wire source cut. Current017 retargeting follows final post-result acceptance and Root's explicit qualified adoption. No new rejection/nonempty-capture/optional-flag, generic018/019, native fee/proof/settlement result is implied.
