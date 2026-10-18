@@ -1,0 +1,9 @@
+# Conditional join: production caller diagnosis
+
+The requested successor handoff has **no current public consumer** in the inspected main e4d7a2b5709caa18a94f5256d03a0302364b8235. The nearest real two-parent route is `mori test DIRECTORY` → feature-gated disjoint manifest → actual `Pair::start/resume/report`. It starts both parents itself and reports them, with no pending-parent import or declared successor. `simulate` and the ordinary staged manifest each carry one actual continuation.
+
+CALLER-ANALYSIS.md gives the exact caller matrix and retained full-frame/effect/duty/work behavior. MISSING-INTERFACES.json identifies the unresolved import, readiness, frame mapping, control, work and real-caller decisions. No production patch is supplied: implementing this handoff would choose new behavior still proposed in frozen L09. A detached helper or manual JSON projection would leave the requested production predicate missing.
+
+SOURCE-PINS.json binds 30 full public main-source files. input-only/ preserves all 12 original L09 inputs byte-for-byte; INPUT-CUSTODY.json pins their originals. PROVISIONAL-INPUT-SCHEDULES.json supplies only invocation/event order to the separate independent custodian, with draft operations explicitly unadopted. No expected test body, value or assertion was sent. Existing ordinary per-parent semantics may be derived independently; joined transition rules cannot be inferred from producer output. L09 itself remains unchanged.
+
+Only this new directory was written. Static file/JSON/hash/copy/text checks are recorded in STATIC-CHECKS.json. No product, build, parser, model, SDK, provider or network execution occurred. No Git or shared checkout mutation occurred. All 14 staged gaps and full original finance/composition/conditional/U0–U7/M1–M17/MC/SP/G exits remain open. This ordinary source task supplies no security, admission, native or ledger judgment.

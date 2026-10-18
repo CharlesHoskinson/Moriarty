@@ -1,0 +1,2031 @@
+diff --git a/RUST_GUIDELINES.md b/RUST_GUIDELINES.md
+--- a/RUST_GUIDELINES.md
++++ b/RUST_GUIDELINES.md
+@@ -249,6 +249,14 @@
+   `crates/fixtures/financial-report-contract/`; expected values must not come
+   from the evaluator, compiler output or generated baselines. This exception
+   adds no authority to execute SDK checks or claim native/proof acceptance.
++- The finite `positive_transfer` and `core_positive_transfer_compile` targets
++  use source fixtures, independently frozen financial assertions and actual
++  public bundle checks instead of insta snapshots. Their shared source and
++  oracle live in `crates/fixtures/core-positive-transfer/`. Financial expected
++  values must not come from evaluator/compiler output. Equality of the actual
++  manifest's ZKIR text and its published file checks publication fidelity; it
++  is not an independent whole-IR golden. This exception grants no SDK/native
++  execution authority and supplies no proof or ledger qualification.
+ - Test programs shared by several crates live in `crates/fixtures/`, which is
+   excluded from the workspace. Nothing under `crates/` reads files outside it;
+   copy anything needed in.
+diff --git a/crates/fixtures/core-positive-transfer/CALL.json b/crates/fixtures/core-positive-transfer/CALL.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/CALL.json
+@@ -0,0 +1,10 @@
++{
++  "language": "moriarty/1",
++  "semantics": "moriarty-core/1",
++  "agreement": "PrintRun",
++  "action": "pay",
++  "source": "print-run.mori",
++  "scenario": "print-run.scenario.json",
++  "compileTarget": "print-run.target.json",
++  "policy": "Unsigned ordinary existing Core/1 compiler; explicit initial state. No intent/proof/ledger/work-success policy is added. Initial maintenance duty is a general Core external duty and local-preservation input, not a backend authenticated frame claim."
++}
+diff --git a/crates/fixtures/core-positive-transfer/CONSUMER-SCOPE.json b/crates/fixtures/core-positive-transfer/CONSUMER-SCOPE.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/CONSUMER-SCOPE.json
+@@ -0,0 +1,39 @@
++{
++  "compiler_scope": "Compile consumes print-run.mori and print-run.target.json only, not scenario. Successful compilation alone does not validate or realize these scenario outcomes.",
++  "execution": "UNRUN; freeze before root authorized actual checks",
++  "expected_file": "financial-execution-projection.expected.json",
++  "external_duty_scope": "maintenance11 is a general Core local preservation input; not an authenticated backend/target financial frame claim",
++  "non_claims": [
++    "No security/authority/history judgment",
++    "No hostile/rejection cases",
++    "No compiler soundness or general family conformance",
++    "No closure of any parent roadmap exit"
++  ],
++  "positive_predicate": "Real supported Core1 evaluator output agrees with every retained field of complete independent financial expectations",
++  "program_and_ir_scope": "Whole Program/global arena/raw Statement+ExprId and whole Artifact/sidecar/IR packing unasserted here; separate ordinary source/consumer work may establish those without weakening this financial check",
++  "projection": {
++    "root_members": [
++      "semantics",
++      "action",
++      "pre",
++      "post",
++      "steps",
++      "effects"
++    ],
++    "rule": "Copy only these fields from actual Execution, preserving every array entry/order and every nested snapshot/effect/value field. Do not generate expected values from actual output.",
++    "step_members": [
++      "index",
++      "value",
++      "snapshot",
++      "effects"
++    ]
++  },
++  "split_files": {
++    "effects": "ordered-effects.expected.json",
++    "post": "post.expected.json",
++    "pre": "pre.expected.json"
++  },
++  "strict_equality": "Whole projected values, exact step count12, exact state keys/typed values, ordered six balance rows, exact duty rows and complete ordered effects/deltas; no wildcard values or sorting/dropping actual rows",
++  "target_scope": "Unsigned local ledger-9 target input is pinned only; no SDK/target/proof/native/ledger qualification inferred",
++  "work_scope": "No success/cap/meter policy added; WORK-SCOPE informational42 is not inserted into actual ordinary output"
++}
+diff --git a/crates/fixtures/core-positive-transfer/INPUT-PINS.json b/crates/fixtures/core-positive-transfer/INPUT-PINS.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/INPUT-PINS.json
+@@ -0,0 +1,25 @@
++{
++  "status": "INPUT-ONLY BEFORE EXPECTATIONS",
++  "files": [
++    {
++      "path": "CALL.json",
++      "bytes": 490,
++      "sha256": "fede66974885e452b4feeffee1832d1f53f100c854386c07d1e31a96fd998a97"
++    },
++    {
++      "path": "print-run.mori",
++      "bytes": 843,
++      "sha256": "c61996f754918b864d3ed0220f68198ebd31b6771ddea2d089834ce82ba9c162"
++    },
++    {
++      "path": "print-run.scenario.json",
++      "bytes": 2062,
++      "sha256": "6a63aafe802beedcdaa895b61fe081c7cdc584683091a91e3124955152db165d"
++    },
++    {
++      "path": "print-run.target.json",
++      "bytes": 248,
++      "sha256": "e4365c53f762e271544696c6a927225818d7baabeb97010fdee3ac5ddb55a9a4"
++    }
++  ]
++}
+diff --git a/crates/fixtures/core-positive-transfer/ORACLE-CUSTODY.json b/crates/fixtures/core-positive-transfer/ORACLE-CUSTODY.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/ORACLE-CUSTODY.json
+@@ -0,0 +1,22 @@
++{
++  "oracleDirectory": "core-positive-transfer-compiler-independent-oracle-20261018",
++  "originalFreezeSha256": "16deb9f6f11b960210a7e00e9dbed27d17c88a3ae37da72634be33ad825b1da3",
++  "expectedFile": "financial-execution-projection.expected.json",
++  "expectedSha256": "8e6261089dc5193606298f5b4435aca19dd7ec7929e80f4ca55cf28ce3987fcd",
++  "inputOnlySentBeforeAssertions": true,
++  "wholeProgramArenaAndCompilerWireUnasserted": true,
++  "copiedFiles": [
++    {
++      "path": "financial-execution-projection.expected.json",
++      "sha256": "8e6261089dc5193606298f5b4435aca19dd7ec7929e80f4ca55cf28ce3987fcd"
++    },
++    {
++      "path": "CONSUMER-SCOPE.json",
++      "sha256": "126d565cb9faac763ac3b70b20311e83f22185595fa98c3e4b4602ed68ae7c76"
++    },
++    {
++      "path": "PROVENANCE.json",
++      "sha256": "4dddac319a2b50693aa255a726d2784115e32d85da0778682a960b95c0b0556e"
++    }
++  ]
++}
+diff --git a/crates/fixtures/core-positive-transfer/PROVENANCE.json b/crates/fixtures/core-positive-transfer/PROVENANCE.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/PROVENANCE.json
+@@ -0,0 +1,34 @@
++{
++  "actual_calls": "UNRUN by this lane",
++  "input_manifest_sha256": "90c00abd4d8e468a07e548addfd965ab3d325902f0304977a1b9923ef9a0f6c4",
++  "input_source": "/home/charl/moriarty-c2-opus55-restored-20261017/core-positive-transfer-compiler-source-20261018/input-only",
++  "method": "Source/input and public documented semantics exposed; independent literal arithmetic/frames; standard library copy/JSON/hash/static arithmetic only",
++  "no_global_blind_claim": true,
++  "normative_language_contracts": [
++    {
++      "bytes": 11482,
++      "copy": "basis/crates/mori-core/README.md",
++      "sha256": "0d91facda4bcf06e545af2f9ced7c72b2b76220a9b53eb46a5a4caea66ebc4dc",
++      "source": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/crates/mori-core/README.md"
++    },
++    {
++      "bytes": 19177,
++      "copy": "basis/docs/CORE-EXECUTION-REPORTS.md",
++      "sha256": "9d36a1ea979a52608a832d4b5429a6ca4e392091880326501071614808973b1e",
++      "source": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/docs/CORE-EXECUTION-REPORTS.md"
++    },
++    {
++      "bytes": 12394,
++      "copy": "basis/docs/MORIARTY-PRODUCT-CONTRACT.md",
++      "sha256": "d5674c650741103284e0aa8cded4c0e8a0a1be38faa0c65aedb043710caa4396",
++      "source": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/docs/MORIARTY-PRODUCT-CONTRACT.md"
++    }
++  ],
++  "prior_exposure": [
++    "Earlier Core1/Core2/financial/Source6/composition/multi-condition/Quint/ACTUS oracle lanes",
++    "Public DTOs and earlier incidental residual/InputDecl conversion helper snippets",
++    "Current public grammar/report clauses; no current implementation/compiler/test/expected/output bodies"
++  ],
++  "startup_checkout": "/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018",
++  "status": "Input-only bytes supplied/frozen by source author before assertions/expected data; no candidate assertions or outputs read"
++}
+diff --git a/crates/fixtures/core-positive-transfer/financial-execution-projection.expected.json b/crates/fixtures/core-positive-transfer/financial-execution-projection.expected.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/financial-execution-projection.expected.json
+@@ -0,0 +1,1526 @@
++{
++  "action": "pay",
++  "effects": [
++    {
++      "amount": "128",
++      "asset": {
++        "issuer": "print-cooperative",
++        "network": "local",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "from": "sponsor",
++      "kind": "Transfer",
++      "to": "printer"
++    },
++    {
++      "amount": "5",
++      "asset": {
++        "issuer": "print-cooperative",
++        "network": "local",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "from": "sponsor",
++      "kind": "Fee",
++      "to": "coop"
++    },
++    {
++      "after": {
++        "type": "UInt",
++        "value": "14"
++      },
++      "before": {
++        "type": "UInt",
++        "value": "7"
++      },
++      "kind": "State",
++      "name": "copies_paid"
++    },
++    {
++      "after": {
++        "type": "UInt",
++        "value": "174"
++      },
++      "before": {
++        "type": "UInt",
++        "value": "41"
++      },
++      "kind": "State",
++      "name": "spent"
++    },
++    {
++      "kind": "Emit",
++      "name": "printDue",
++      "value": {
++        "type": "UInt",
++        "value": "128"
++      }
++    },
++    {
++      "kind": "Emit",
++      "name": "printGross",
++      "value": {
++        "type": "UInt",
++        "value": "133"
++      }
++    }
++  ],
++  "post": {
++    "balances": [
++      {
++        "account": "observer",
++        "amount": "6",
++        "asset": {
++          "issuer": "city-post",
++          "network": "local",
++          "reference": "postage",
++          "scale": 0
++        }
++      },
++      {
++        "account": "sponsor",
++        "amount": "9",
++        "asset": {
++          "issuer": "city-post",
++          "network": "local",
++          "reference": "postage",
++          "scale": 0
++        }
++      },
++      {
++        "account": "coop",
++        "amount": "9",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      },
++      {
++        "account": "observer",
++        "amount": "19",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      },
++      {
++        "account": "printer",
++        "amount": "151",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      },
++      {
++        "account": "sponsor",
++        "amount": "367",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      }
++    ],
++    "liabilities": [
++      {
++        "amount": "11",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        },
++        "creditor": "coop",
++        "debtor": "printer",
++        "name": "maintenance"
++      }
++    ],
++    "state": {
++      "campaign": {
++        "type": "UInt",
++        "value": "17"
++      },
++      "copies_paid": {
++        "type": "UInt",
++        "value": "14"
++      },
++      "spent": {
++        "type": "UInt",
++        "value": "174"
++      }
++    }
++  },
++  "pre": {
++    "balances": [
++      {
++        "account": "observer",
++        "amount": "6",
++        "asset": {
++          "issuer": "city-post",
++          "network": "local",
++          "reference": "postage",
++          "scale": 0
++        }
++      },
++      {
++        "account": "sponsor",
++        "amount": "9",
++        "asset": {
++          "issuer": "city-post",
++          "network": "local",
++          "reference": "postage",
++          "scale": 0
++        }
++      },
++      {
++        "account": "coop",
++        "amount": "4",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      },
++      {
++        "account": "observer",
++        "amount": "19",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      },
++      {
++        "account": "printer",
++        "amount": "23",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      },
++      {
++        "account": "sponsor",
++        "amount": "500",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        }
++      }
++    ],
++    "liabilities": [
++      {
++        "amount": "11",
++        "asset": {
++          "issuer": "print-cooperative",
++          "network": "local",
++          "reference": "printing-credit",
++          "scale": 2
++        },
++        "creditor": "coop",
++        "debtor": "printer",
++        "name": "maintenance"
++      }
++    ],
++    "state": {
++      "campaign": {
++        "type": "UInt",
++        "value": "17"
++      },
++      "copies_paid": {
++        "type": "UInt",
++        "value": "7"
++      },
++      "spent": {
++        "type": "UInt",
++        "value": "41"
++      }
++    }
++  },
++  "semantics": "moriarty-core/1",
++  "steps": [
++    {
++      "effects": [],
++      "index": 0,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "4",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "23",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "500",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "effects": [],
++      "index": 1,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "4",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "23",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "500",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "133"
++      }
++    },
++    {
++      "effects": [],
++      "index": 2,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "4",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "23",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "500",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "effects": [],
++      "index": 3,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "4",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "23",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "500",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "128"
++      }
++    },
++    {
++      "effects": [],
++      "index": 4,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "4",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "23",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "500",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "5"
++      }
++    },
++    {
++      "effects": [
++        {
++          "amount": "128",
++          "asset": {
++            "issuer": "print-cooperative",
++            "network": "local",
++            "reference": "printing-credit",
++            "scale": 2
++          },
++          "from": "sponsor",
++          "kind": "Transfer",
++          "to": "printer"
++        }
++      ],
++      "index": 5,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "4",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "372",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "128"
++      }
++    },
++    {
++      "effects": [
++        {
++          "amount": "5",
++          "asset": {
++            "issuer": "print-cooperative",
++            "network": "local",
++            "reference": "printing-credit",
++            "scale": 2
++          },
++          "from": "sponsor",
++          "kind": "Fee",
++          "to": "coop"
++        }
++      ],
++      "index": 6,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "9",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "367",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "5"
++      }
++    },
++    {
++      "effects": [
++        {
++          "after": {
++            "type": "UInt",
++            "value": "14"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "7"
++          },
++          "kind": "State",
++          "name": "copies_paid"
++        }
++      ],
++      "index": 7,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "9",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "367",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "14"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "41"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "14"
++      }
++    },
++    {
++      "effects": [
++        {
++          "after": {
++            "type": "UInt",
++            "value": "174"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "41"
++          },
++          "kind": "State",
++          "name": "spent"
++        }
++      ],
++      "index": 8,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "9",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "367",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "14"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "174"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "174"
++      }
++    },
++    {
++      "effects": [],
++      "index": 9,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "9",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "367",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "14"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "174"
++          }
++        }
++      },
++      "value": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "effects": [
++        {
++          "kind": "Emit",
++          "name": "printDue",
++          "value": {
++            "type": "UInt",
++            "value": "128"
++          }
++        }
++      ],
++      "index": 10,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "9",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "367",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "14"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "174"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "128"
++      }
++    },
++    {
++      "effects": [
++        {
++          "kind": "Emit",
++          "name": "printGross",
++          "value": {
++            "type": "UInt",
++            "value": "133"
++          }
++        }
++      ],
++      "index": 11,
++      "snapshot": {
++        "balances": [
++          {
++            "account": "observer",
++            "amount": "6",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "9",
++            "asset": {
++              "issuer": "city-post",
++              "network": "local",
++              "reference": "postage",
++              "scale": 0
++            }
++          },
++          {
++            "account": "coop",
++            "amount": "9",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "observer",
++            "amount": "19",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "printer",
++            "amount": "151",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          },
++          {
++            "account": "sponsor",
++            "amount": "367",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "11",
++            "asset": {
++              "issuer": "print-cooperative",
++              "network": "local",
++              "reference": "printing-credit",
++              "scale": 2
++            },
++            "creditor": "coop",
++            "debtor": "printer",
++            "name": "maintenance"
++          }
++        ],
++        "state": {
++          "campaign": {
++            "type": "UInt",
++            "value": "17"
++          },
++          "copies_paid": {
++            "type": "UInt",
++            "value": "14"
++          },
++          "spent": {
++            "type": "UInt",
++            "value": "174"
++          }
++        }
++      },
++      "value": {
++        "type": "UInt",
++        "value": "133"
++      }
++    }
++  ]
++}
+diff --git a/crates/fixtures/core-positive-transfer/print-run.mori b/crates/fixtures/core-positive-transfer/print-run.mori
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/print-run.mori
+@@ -0,0 +1,22 @@
++language "moriarty/1";
++agreement PrintRun {
++  asset CREDIT = { network: "local", issuer: "print-cooperative", reference: "printing-credit", scale: 2 };
++  asset STAMP = { network: "local", issuer: "city-post", reference: "postage", scale: 0 };
++  state copies_paid: UInt = 0;
++  state spent: UInt = 0;
++  state campaign: UInt = 17;
++  action pay(copies: UInt, unit_price: UInt, rebate: UInt, surcharge: UInt) {
++    requires copies > 0;
++    let gross = copies * unit_price;
++    requires gross >= rebate;
++    let due = gross - rebate;
++    let fee_total = surcharge + 2;
++    transfer(CREDIT, "sponsor", "printer", due);
++    fee(CREDIT, "sponsor", "coop", fee_total);
++    next copies_paid = copies_paid + copies;
++    next spent = spent + due + fee_total;
++    ensures copies_paid >= copies;
++    emit "printDue"(due);
++    emit "printGross"(gross);
++  }
++}
+diff --git a/crates/fixtures/core-positive-transfer/print-run.scenario.json b/crates/fixtures/core-positive-transfer/print-run.scenario.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/print-run.scenario.json
+@@ -0,0 +1,110 @@
++{
++  "state": {
++    "copies_paid": {
++      "type": "UInt",
++      "value": "7"
++    },
++    "spent": {
++      "type": "UInt",
++      "value": "41"
++    },
++    "campaign": {
++      "type": "UInt",
++      "value": "17"
++    }
++  },
++  "inputs": {
++    "copies": {
++      "type": "UInt",
++      "value": "7"
++    },
++    "unit_price": {
++      "type": "UInt",
++      "value": "19"
++    },
++    "rebate": {
++      "type": "UInt",
++      "value": "5"
++    },
++    "surcharge": {
++      "type": "UInt",
++      "value": "3"
++    }
++  },
++  "balances": [
++    {
++      "account": "sponsor",
++      "asset": {
++        "network": "local",
++        "issuer": "print-cooperative",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "amount": "500"
++    },
++    {
++      "account": "printer",
++      "asset": {
++        "network": "local",
++        "issuer": "print-cooperative",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "amount": "23"
++    },
++    {
++      "account": "coop",
++      "asset": {
++        "network": "local",
++        "issuer": "print-cooperative",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "amount": "4"
++    },
++    {
++      "account": "observer",
++      "asset": {
++        "network": "local",
++        "issuer": "print-cooperative",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "amount": "19"
++    },
++    {
++      "account": "sponsor",
++      "asset": {
++        "network": "local",
++        "issuer": "city-post",
++        "reference": "postage",
++        "scale": 0
++      },
++      "amount": "9"
++    },
++    {
++      "account": "observer",
++      "asset": {
++        "network": "local",
++        "issuer": "city-post",
++        "reference": "postage",
++        "scale": 0
++      },
++      "amount": "6"
++    }
++  ],
++  "liabilities": [
++    {
++      "name": "maintenance",
++      "asset": {
++        "network": "local",
++        "issuer": "print-cooperative",
++        "reference": "printing-credit",
++        "scale": 2
++      },
++      "debtor": "printer",
++      "creditor": "coop",
++      "amount": "11"
++    }
++  ]
++}
+diff --git a/crates/fixtures/core-positive-transfer/print-run.target.json b/crates/fixtures/core-positive-transfer/print-run.target.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/core-positive-transfer/print-run.target.json
+@@ -0,0 +1,9 @@
++{
++  "profile": "ledger-9",
++  "network": "local",
++  "anchor": "print-run-source-only",
++  "ledger_revision": "04c9c5d9bcebb8d4427d8589fb54d58a55599c14",
++  "zkir_version": "3.0.0-rc.2",
++  "max_instructions": 100000,
++  "max_artifact_bytes": 16777216
++}
+diff --git a/crates/mori/Cargo.toml b/crates/mori/Cargo.toml
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -111,3 +111,7 @@
+ [[test]]
+ name = "source6_expand"
+ required-features = ["source6-expansion"]
++
++[[test]]
++name = "core_positive_transfer_compile"
++required-features = ["native"]
+diff --git a/crates/mori/tests/core_positive_transfer_compile.rs b/crates/mori/tests/core_positive_transfer_compile.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/tests/core_positive_transfer_compile.rs
+@@ -0,0 +1,113 @@
++//! A new Core/1 source through the public compiler and its published bundle.
++use mori_backend::Artifact;
++use serde_json::Value;
++use std::{
++    collections::BTreeSet,
++    fs,
++    path::{Path, PathBuf},
++    process::Command,
++    sync::atomic::{AtomicUsize, Ordering},
++};
++
++static NEXT: AtomicUsize = AtomicUsize::new(0);
++
++fn fixtures() -> PathBuf {
++    Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures/core-positive-transfer")
++}
++
++struct Project(PathBuf);
++
++impl Project {
++    fn new() -> Self {
++        let root = std::env::temp_dir().join(format!(
++            "mori-core-positive-transfer-{}-{}",
++            std::process::id(),
++            NEXT.fetch_add(1, Ordering::Relaxed)
++        ));
++        fs::create_dir(&root).unwrap();
++        let project = Self(root);
++        for name in ["print-run.mori", "print-run.target.json"] {
++            fs::copy(fixtures().join(name), project.0.join(name)).unwrap();
++        }
++        project
++    }
++}
++
++impl Drop for Project {
++    fn drop(&mut self) {
++        let _ = fs::remove_dir_all(&self.0);
++    }
++}
++
++#[test]
++fn print_run_reaches_public_compile_and_publishes_its_actual_bundle() {
++    let project = Project::new();
++    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .current_dir(&project.0)
++        .args([
++            "--quiet",
++            "--color",
++            "never",
++            "compile",
++            "print-run.mori",
++            "--target",
++            "print-run.target.json",
++            "--out",
++            "compiled",
++        ])
++        .output()
++        .unwrap();
++    assert!(
++        output.status.success(),
++        "{}",
++        String::from_utf8_lossy(&output.stderr)
++    );
++    assert!(output.stdout.is_empty());
++    assert!(output.stderr.is_empty(), "quiet compile has no status line");
++
++    let out = project.0.join("compiled");
++    let artifact: Artifact =
++        serde_json::from_slice(&fs::read(out.join("artifact.json")).unwrap()).unwrap();
++    let expected_target: Value = serde_json::from_slice(
++        &fs::read(fixtures().join("print-run.target.json")).unwrap(),
++    )
++    .unwrap();
++    assert_eq!(serde_json::to_value(&artifact.target).unwrap(), expected_target);
++    assert_eq!(artifact.format, "moriarty-zkir-artifact/3");
++    assert_eq!(artifact.abi, "moriarty-public-abi/3");
++    assert_eq!(artifact.relation, "moriarty-zkir-relation/3");
++    assert_eq!(artifact.authorization_mode, "unsigned");
++    assert_eq!(artifact.semantics, "moriarty-core/1");
++    assert_eq!(artifact.circuits.len(), 1);
++    let circuit = &artifact.circuits[0];
++    assert_eq!(circuit.action, "pay");
++    assert!(!circuit.zkir.is_empty());
++    // Publication fidelity uses the actual compiler output, not an IR fixture.
++    assert_eq!(
++        fs::read(out.join("000-pay.zkir")).unwrap(),
++        circuit.zkir.as_bytes()
++    );
++    let leaves = fs::read_dir(&out)
++        .unwrap()
++        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
++        .collect::<BTreeSet<_>>();
++    assert_eq!(
++        leaves,
++        BTreeSet::from([
++            "000-pay.zkir".to_owned(),
++            "artifact.json".to_owned(),
++            "source-projection.json".to_owned(),
++        ])
++    );
++    let projection: Value =
++        serde_json::from_slice(&fs::read(out.join("source-projection.json")).unwrap()).unwrap();
++    assert_eq!(
++        projection["compilation"]["compiled_program_hash"],
++        artifact.program_hash
++    );
++    assert_eq!(projection["compilation"]["projection"]["agreement"], "PrintRun");
++    assert_eq!(
++        projection["compilation"]["projection"]["evaluation_performed"],
++        false
++    );
++}
+diff --git a/crates/mori-core/tests/positive_transfer.rs b/crates/mori-core/tests/positive_transfer.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori-core/tests/positive_transfer.rs
+@@ -0,0 +1,37 @@
++//! A positive Core/1 payment against independent financial prefix literals.
++use mori_core::{Execution, Scenario, parse, simulate, validate};
++use serde_json::Value;
++
++macro_rules! fixture {
++    ($name:literal) => {
++        include_str!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/../fixtures/core-positive-transfer/",
++            $name
++        ))
++    };
++}
++
++fn financial_projection(execution: &Execution) -> Value {
++    let mut actual = serde_json::to_value(execution).unwrap();
++    // The financial oracle excludes raw statement/ExprId serialization only.
++    // Keep all other actual fields, every row and their original array order.
++    for step in actual["steps"].as_array_mut().unwrap() {
++        assert!(step.as_object_mut().unwrap().remove("statement").is_some());
++    }
++    actual
++}
++
++#[test]
++fn print_run_matches_every_independent_financial_prefix() {
++    let program = parse(fixture!("print-run.mori")).expect("positive Core source must parse");
++    validate(&program).expect("positive Core program must validate");
++    assert_eq!(program.name, "PrintRun");
++    let scenario: Scenario = serde_json::from_str(fixture!("print-run.scenario.json")).unwrap();
++    let original = scenario.clone();
++    let execution = simulate(&program, "pay", &scenario).expect("positive payment must succeed");
++    let expected: Value =
++        serde_json::from_str(fixture!("financial-execution-projection.expected.json")).unwrap();
++    assert_eq!(financial_projection(&execution), expected);
++    assert_eq!(scenario, original);
++}

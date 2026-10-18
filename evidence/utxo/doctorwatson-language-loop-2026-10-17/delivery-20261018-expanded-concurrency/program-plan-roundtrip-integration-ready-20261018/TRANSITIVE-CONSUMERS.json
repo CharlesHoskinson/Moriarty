@@ -1,0 +1,152 @@
+{
+  "scope": "Source-level calls selected by this one ordinary test, with local transitive imports and explicit off-path I/O. Not a complete third-party/build-script or security audit.",
+  "calls": [
+    {
+      "call": "stage::load(SOURCE)",
+      "source": "crates/mori-core/src/stage/mod.rs",
+      "imports": [
+        "parser::parse_v2",
+        "stage::profile::require_core2",
+        "stage::validate::{validate_v2,plan_invariants,cost_invariants}",
+        "stage::plan::build",
+        "stage::cost::fill",
+        "stage::digest::{program_hash,plan_hash}"
+      ],
+      "effects": "Local allocation/validation/costing and deterministic serialization/hash computation only in the inspected call path."
+    },
+    {
+      "call": "parser::parse_v2 \u2192 parse_profile",
+      "source": "crates/mori-core/src/parser.rs",
+      "imports": [
+        "mori_lexer::{lex,decode_string,TokenIdx,TokenKind}",
+        "ir::{Program,Action,Statement,Expr,...}"
+      ],
+      "effects": "Consumes supplied source string; builds in-memory flat IR; no source file I/O in this API."
+    },
+    {
+      "call": "mori_lexer::{lex,decode_string}",
+      "source": "crates/mori-lexer/src/lib.rs",
+      "imports": [
+        "number",
+        "scan",
+        "string",
+        "token",
+        "diagnostics",
+        "mori_span::Span",
+        "mori_diagnostics::MoriDiagnostic",
+        "soa_rs::Soa"
+      ],
+      "effects": "Local text scan/decoding/allocation and diagnostic construction. Source pattern inspection found no fs/process/net command in selected local lexer/diagnostic/span modules; not a third-party audit."
+    },
+    {
+      "call": "stage::validate + plan::build",
+      "source": "crates/mori-core/src/stage/validate.rs",
+      "imports": [
+        "runtime::{expr_type,identifier,require_uint,validate_asset,validate_liability_reads}",
+        "stage::plan::{StagePlan,CaptureSlot,AwaitSite,...}",
+        "std::collections::{BTreeMap,BTreeSet}"
+      ],
+      "effects": "Checks/constructs local types, captures, identities and counts. No service or native operation selected."
+    },
+    {
+      "call": "stage::cost::fill and static plan checks",
+      "source": "crates/mori-core/src/stage/cost.rs",
+      "imports": [
+        "ir::{Expr,Statement,UInt,...}",
+        "policy::{Cost,Meter}"
+      ],
+      "effects": "Integer counters and local DAG traversal; primitive logical work is distinct from fees/native cost."
+    },
+    {
+      "call": "intent::{canonical,hash_bytes} and stage::digest",
+      "source": "crates/mori-core/src/intent.rs",
+      "imports": [
+        "serde::{Serialize,...}",
+        "serde_json",
+        "sha2::{Digest,Sha256}",
+        "std::collections::BTreeMap"
+      ],
+      "effects": "Local JSON sorting/serialization/hash/hex; test calls no signing/verification/authorization function. k256 remains a regular compile dependency of the module, not a called security lane."
+    },
+    {
+      "call": "json::export(program.program/plan/continuation) \u2192 json::parse",
+      "source": "crates/mori-core/src/json.rs",
+      "imports": [
+        "serde::Serialize",
+        "serde_json::{Map,Value}",
+        "serde::de::{DeserializeSeed,Visitor,...}",
+        "std::{cell::Cell,fmt}"
+      ],
+      "effects": "In-memory bounded JSON/escape handling. fmt::Write writes to String, not an output file. Generic export has its own1MiB profile."
+    },
+    {
+      "call": "serde_json::from_value(literal scenario)",
+      "source": "crates/mori-core/tests/program_plan_roundtrip.rs",
+      "imports": [
+        "Scenario",
+        "ir-derived Deserialize"
+      ],
+      "effects": "Constructs local typed scenario from supplied literal values; no evaluator-derived oracle or external I/O."
+    },
+    {
+      "call": "stage::start \u2192 runtime::scenario_snapshot/run_segment \u2192 Admitted::finish",
+      "source": "crates/mori-core/src/stage/admit.rs",
+      "imports": [
+        "runtime::{SegmentEntry,SegmentRun,...}",
+        "policy::Meter",
+        "stage::cost",
+        "stage::decode::canonical_boundary",
+        "stage::decode::continuation",
+        "serde_json::to_string"
+      ],
+      "effects": "Mutates clones/local meter/env/snapshots and constructs actual waiting continuation. No authentication, persistent consumption, submission, SDK or ledger action is called. emit_checked performs local codec consistency and boundary checks."
+    },
+    {
+      "call": "stage::decode::continuation(text)",
+      "source": "crates/mori-core/src/stage/decode.rs",
+      "imports": [
+        "json::parse_limited",
+        "serde_json::from_value",
+        "Continuation derived Deserialize"
+      ],
+      "effects": "Decodes supplied text locally. Neighbor read_bounded uses std::fs::File::open but is NOT called by this test or continuation(text). Continuation decode ceiling4MiB differs from generic export ceiling1MiB; fixture is small and no max-capacity claim is made."
+    },
+    {
+      "call": "assert_eq over full reopened values",
+      "source": "crates/mori-core/tests/program_plan_roundtrip.rs",
+      "imports": [
+        "serde_json::to_value",
+        "std test harness"
+      ],
+      "effects": "Whole-value equality, not a filtered field subset; possible ordinary assertion failure/test-harness diagnostics only when later executed."
+    }
+  ],
+  "regularLocalCrateGraph": {
+    "mori-core": [
+      "mori-lexer"
+    ],
+    "mori-lexer": [
+      "mori-diagnostics",
+      "mori-span"
+    ],
+    "mori-diagnostics": [
+      "mori-span"
+    ],
+    "mori-span": []
+  },
+  "regularExternalGroups": [
+    "mori-core: serde,serde_json,thiserror,sha2,k256; dev proptest",
+    "mori-lexer: soa-rs plus local diagnostic/span; dependency unit-test-only modules not selected by this integration test",
+    "mori-diagnostics/mori-span: miette; proc-macro/build dependencies transitively recorded in Cargo.lock but not executed/independently audited"
+  ],
+  "optionalFeaturesNotRequested": [
+    "core2-disjoint-draft",
+    "midnight-compat-tests and its midnight-base-crypto/midnight-serialize inputs"
+  ],
+  "limits": [
+    "Cargo/rustup/compiler/harness have their normal future process/cache/target-output behavior; no build or test ran in this lane.",
+    "No installed toolchain/cache availability inferred from manifests. --frozen forbids Cargo network/lock updates but does not independently establish rustup toolchain availability or all build-script behavior.",
+    "Public mori-core modules not called by test may still compile; full compile closure and third-party build scripts remain unobserved.",
+    "StageOutcome report/render, CLI paths, read_bounded, signing and persistent sponsorship APIs not selected by this test."
+  ]
+}

@@ -1,0 +1,26 @@
+language "moriarty/1";
+agreement InstallmentInvoice {
+  asset CASH = { network: "local", issuer: "financial-pair-invoice", reference: "CASH", scale: 2 };
+  state paid: UInt = 0;
+  state dueDay: UInt = 30;
+  state installments: UInt = 0;
+  state marker: UInt = 77;
+  action register() {
+    liability("invoice", CASH, "payer", "seller", 127);
+    liability("warranty", CASH, "payer", "auditor", 9);
+  }
+  action collect(amount: UInt, atDay: UInt) {
+    requires amount > 0;
+    requires atDay >= dueDay;
+    requires liability_present("invoice") and liability_amount("invoice") >= amount;
+    let opening = liability_amount("invoice");
+    transfer(CASH, "payer", "seller", amount);
+    fee(CASH, "payer", "treasury", 3);
+    discharge("invoice", amount);
+    next paid = paid + amount;
+    next dueDay = dueDay + 30;
+    next installments = installments + 1;
+    ensures liability_amount("invoice") == opening - amount;
+    emit "collected"(paid);
+  }
+}

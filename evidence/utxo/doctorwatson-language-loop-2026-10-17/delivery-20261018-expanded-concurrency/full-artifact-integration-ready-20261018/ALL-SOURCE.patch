@@ -1,0 +1,748 @@
+--- a/RUST_GUIDELINES.md
++++ b/RUST_GUIDELINES.md
+@@ -249,6 +249,15 @@
+   `crates/fixtures/financial-report-contract/`; expected values must not come
+   from the evaluator, compiler output or generated baselines. This exception
+   adds no authority to execute SDK checks or claim native/proof acceptance.
++- The finite backend `full_artifact_consumer_contract` target uses independent
++  source facts and a fixed Target, whole Artifact decoding, and explicit wire
++  shape/codec consistency checks instead of generated snapshots. Exact hash,
++  ABI-position and IR-byte goldens remain separate. This exception adds no
++  compiler/SDK execution authority or proof/native acceptance.
++- The finite Core `financial_program_wire_contract` target uses independently
++  frozen complete financial Program JSON and the public Program/v1 decoder
++  instead of generated snapshots. It selects no Midnight compatibility feature
++  and makes no compiler-Artifact, SDK, native-proof or ledger acceptance claim.
+ - Test programs shared by several crates live in `crates/fixtures/`, which is
+   excluded from the workspace. Nothing under `crates/` reads files outside it;
+   copy anything needed in.
+--- /dev/null
++++ b/crates/fixtures/full-artifact-consumer-contract/README.md
+@@ -0,0 +1,3 @@
++These fixtures are independent source facts and an exact Target input, not full Artifact/IR goldens. The .mori sources remain in ../financial-report-contract/. Source facts were hand-transcribed without product execution in compiler-full-artifact-independent-oracles; source hashes are identical at main74a909. The Target is the exact244-byte toolchains/ledger-9.json input, including absent signed_policy.
++
++The new positive test consumes the whole real public Artifact and separates independent facts from codec/measurement consistency. It does not generate expected digests, context limbs, ABI layouts, IR bytes, gate vocabularies or undocumented aggregate metrics from compiler output. Those remain explicit gaps. The reserve allocate action touches5exactasset/account rows: CASH reserve/supplier/treasury and BOND reserve/auditor.
+--- /dev/null
++++ b/crates/fixtures/full-artifact-consumer-contract/conditional-reserve.source-facts.json
+@@ -0,0 +1,208 @@
++{
++  "program": "ConditionalReserve",
++  "sourceFile": "custody/oracle-input/inputs/conditional-reserve.mori",
++  "languageLiteral": "moriarty/1",
++  "assets": [
++    {
++      "alias": "CASH",
++      "identity": {
++        "network": "local",
++        "issuer": "financial-pair-reserve",
++        "reference": "CASH",
++        "scale": 2
++      },
++      "sourceLine": 3
++    },
++    {
++      "alias": "BOND",
++      "identity": {
++        "network": "local",
++        "issuer": "financial-pair-reserve",
++        "reference": "BOND",
++        "scale": 0
++      },
++      "sourceLine": 4
++    }
++  ],
++  "states": [
++    {
++      "name": "allocated",
++      "type": "UInt",
++      "initializerLiteral": "0",
++      "sourceLine": 5
++    },
++    {
++      "name": "closed",
++      "type": "Bool",
++      "initializerLiteral": "false",
++      "sourceLine": 6
++    },
++    {
++      "name": "marker",
++      "type": "UInt",
++      "initializerLiteral": "77",
++      "sourceLine": 7
++    }
++  ],
++  "actions": [
++    {
++      "name": "register",
++      "sourceLine": 8,
++      "inputs": [],
++      "syntacticStatementCount": 3,
++      "sourceStatementLines": [
++        9,
++        10,
++        11
++      ],
++      "effectStatementLines": [
++        9,
++        10,
++        11
++      ]
++    },
++    {
++      "name": "allocate",
++      "sourceLine": 13,
++      "inputs": [
++        {
++          "name": "approved",
++          "type": "Bool"
++        },
++        {
++          "name": "amount",
++          "type": "UInt"
++        },
++        {
++          "name": "bondAmount",
++          "type": "UInt"
++        }
++      ],
++      "syntacticStatementCount": 15,
++      "sourceStatementLines": [
++        14,
++        15,
++        16,
++        17,
++        18,
++        19,
++        20,
++        21,
++        22,
++        23,
++        24,
++        25,
++        26,
++        27,
++        28
++      ],
++      "effectStatementLines": [
++        19,
++        20,
++        21,
++        22,
++        23,
++        24,
++        25,
++        26,
++        28
++      ],
++      "touchedExactBalanceRows": [
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-reserve",
++            "reference": "CASH",
++            "scale": 2
++          },
++          "account": "reserve"
++        },
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-reserve",
++            "reference": "CASH",
++            "scale": 2
++          },
++          "account": "supplier"
++        },
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-reserve",
++            "reference": "CASH",
++            "scale": 2
++          },
++          "account": "treasury"
++        },
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-reserve",
++            "reference": "BOND",
++            "scale": 0
++          },
++          "account": "reserve"
++        },
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-reserve",
++            "reference": "BOND",
++            "scale": 0
++          },
++          "account": "auditor"
++        }
++      ]
++    }
++  ],
++  "sourceWideUniqueDuties": [
++    {
++      "name": "allocation",
++      "asset": {
++        "network": "local",
++        "issuer": "financial-pair-reserve",
++        "reference": "CASH",
++        "scale": 2
++      },
++      "debtor": "reserve",
++      "creditor": "supplier",
++      "declarationLines": [
++        9,
++        19
++      ]
++    },
++    {
++      "name": "bond",
++      "asset": {
++        "network": "local",
++        "issuer": "financial-pair-reserve",
++        "reference": "BOND",
++        "scale": 0
++      },
++      "debtor": "reserve",
++      "creditor": "auditor",
++      "declarationLines": [
++        10
++      ]
++    },
++    {
++      "name": "emergency",
++      "asset": {
++        "network": "local",
++        "issuer": "financial-pair-reserve",
++        "reference": "CASH",
++        "scale": 2
++      },
++      "debtor": "reserve",
++      "creditor": "emergency",
++      "declarationLines": [
++        11
++      ]
++    }
++  ],
++  "uniqueDutyCount": 3,
++  "classification": "Independently hand-transcribed source facts only; NOT Program DTO, compiler Artifact, numeric execution outcome or serialized ABI layout.",
++  "orderingQualification": "Lists follow source navigation order only; no artifact circuit/ABI/frame ordering is inferred.",
++  "syntacticCountQualification": "Source statement counts are not automatically a compiler replay_steps resource formula."
++}
+--- /dev/null
++++ b/crates/fixtures/full-artifact-consumer-contract/installment-invoice.source-facts.json
+@@ -0,0 +1,160 @@
++{
++  "program": "InstallmentInvoice",
++  "sourceFile": "custody/oracle-input/inputs/installment-invoice.mori",
++  "languageLiteral": "moriarty/1",
++  "assets": [
++    {
++      "alias": "CASH",
++      "identity": {
++        "network": "local",
++        "issuer": "financial-pair-invoice",
++        "reference": "CASH",
++        "scale": 2
++      },
++      "sourceLine": 3
++    }
++  ],
++  "states": [
++    {
++      "name": "paid",
++      "type": "UInt",
++      "initializerLiteral": "0",
++      "sourceLine": 4
++    },
++    {
++      "name": "dueDay",
++      "type": "UInt",
++      "initializerLiteral": "30",
++      "sourceLine": 5
++    },
++    {
++      "name": "installments",
++      "type": "UInt",
++      "initializerLiteral": "0",
++      "sourceLine": 6
++    },
++    {
++      "name": "marker",
++      "type": "UInt",
++      "initializerLiteral": "77",
++      "sourceLine": 7
++    }
++  ],
++  "actions": [
++    {
++      "name": "register",
++      "sourceLine": 8,
++      "inputs": [],
++      "syntacticStatementCount": 2,
++      "sourceStatementLines": [
++        9,
++        10
++      ],
++      "effectStatementLines": [
++        9,
++        10
++      ]
++    },
++    {
++      "name": "collect",
++      "sourceLine": 12,
++      "inputs": [
++        {
++          "name": "amount",
++          "type": "UInt"
++        },
++        {
++          "name": "atDay",
++          "type": "UInt"
++        }
++      ],
++      "syntacticStatementCount": 12,
++      "sourceStatementLines": [
++        13,
++        14,
++        15,
++        16,
++        17,
++        18,
++        19,
++        20,
++        21,
++        22,
++        23,
++        24
++      ],
++      "effectStatementLines": [
++        17,
++        18,
++        19,
++        20,
++        21,
++        22,
++        24
++      ],
++      "touchedExactBalanceRows": [
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-invoice",
++            "reference": "CASH",
++            "scale": 2
++          },
++          "account": "payer"
++        },
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-invoice",
++            "reference": "CASH",
++            "scale": 2
++          },
++          "account": "seller"
++        },
++        {
++          "asset": {
++            "network": "local",
++            "issuer": "financial-pair-invoice",
++            "reference": "CASH",
++            "scale": 2
++          },
++          "account": "treasury"
++        }
++      ]
++    }
++  ],
++  "sourceWideUniqueDuties": [
++    {
++      "name": "invoice",
++      "asset": {
++        "network": "local",
++        "issuer": "financial-pair-invoice",
++        "reference": "CASH",
++        "scale": 2
++      },
++      "debtor": "payer",
++      "creditor": "seller",
++      "declarationLines": [
++        9
++      ]
++    },
++    {
++      "name": "warranty",
++      "asset": {
++        "network": "local",
++        "issuer": "financial-pair-invoice",
++        "reference": "CASH",
++        "scale": 2
++      },
++      "debtor": "payer",
++      "creditor": "auditor",
++      "declarationLines": [
++        10
++      ]
++    }
++  ],
++  "uniqueDutyCount": 2,
++  "classification": "Independently hand-transcribed source facts only; NOT Program DTO, compiler Artifact, numeric execution outcome or serialized ABI layout.",
++  "orderingQualification": "Lists follow source navigation order only; no artifact circuit/ABI/frame ordering is inferred.",
++  "syntacticCountQualification": "Source statement counts are not automatically a compiler replay_steps resource formula."
++}
+--- /dev/null
++++ b/crates/fixtures/full-artifact-consumer-contract/target.expected.json
+@@ -0,0 +1,9 @@
++{
++  "profile": "ledger-9",
++  "network": "local",
++  "anchor": "local-unqualified",
++  "ledger_revision": "04c9c5d9bcebb8d4427d8589fb54d58a55599c14",
++  "zkir_version": "3.0.0-rc.2",
++  "max_instructions": 100000,
++  "max_artifact_bytes": 16777216
++}
+--- /dev/null
++++ b/crates/mori-backend/tests/full_artifact_consumer_contract.rs
+@@ -0,0 +1,284 @@
++//! Whole Artifact consumer checks; exact hash/ABI/IR goldens remain separate.
++use mori_backend::{Artifact, Target, source_projection::compile_reported};
++use serde_json::{Value, json};
++use std::collections::BTreeSet;
++
++macro_rules! source {
++    ($name:literal) => {
++        include_str!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/../fixtures/financial-report-contract/",
++            $name
++        ))
++    };
++}
++macro_rules! expectation {
++    ($name:literal) => {
++        include_str!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/../fixtures/full-artifact-consumer-contract/",
++            $name
++        ))
++    };
++}
++
++fn object(value: &Value, fields: &[&str]) {
++    let actual: BTreeSet<_> = value.as_object().expect("object").keys().map(String::as_str).collect();
++    let expected: BTreeSet<_> = fields.iter().copied().collect();
++    assert_eq!(actual, expected, "whole wire object must retain every declared field");
++}
++fn array(value: &Value) -> &[Value] {
++    value.as_array().expect("array")
++}
++fn text(value: &Value) -> &str {
++    value.as_str().expect("string")
++}
++fn uint(value: &Value) -> u64 {
++    let value = value.as_u64().expect("unsigned integer");
++    assert!(value <= u64::from(u32::MAX));
++    value
++}
++fn optional_text(value: &Value) {
++    if !value.is_null() {
++        text(value);
++    }
++}
++fn asset(value: &Value) {
++    object(value, &["network", "issuer", "reference", "scale"]);
++    for field in ["network", "issuer", "reference"] {
++        text(&value[field]);
++    }
++    assert!(uint(&value["scale"]) <= u64::from(u8::MAX));
++}
++fn optional_asset(value: &Value) {
++    if !value.is_null() {
++        asset(value);
++    }
++}
++fn declared_asset(value: &Value, facts: &Value) {
++    asset(value);
++    assert!(array(&facts["assets"]).iter().any(|item| &item["identity"] == value));
++}
++fn identity(value: &Value) {
++    object(value, &["name", "asset", "debtor", "creditor"]);
++    asset(&value["asset"]);
++    for field in ["name", "debtor", "creditor"] {
++        text(&value[field]);
++    }
++}
++fn same_members(actual: &[Value], expected: &[Value]) {
++    assert_eq!(actual.len(), expected.len());
++    for item in expected {
++        assert_eq!(actual.iter().filter(|value| *value == item).count(), 1);
++    }
++}
++fn duty_identities(facts: &Value) -> Vec<Value> {
++    array(&facts["sourceWideUniqueDuties"]).iter().map(|duty| {
++        json!({"name": duty["name"], "asset": duty["asset"],
++               "debtor": duty["debtor"], "creditor": duty["creditor"]})
++    }).collect()
++}
++fn reference(bindings: &[Value], position: &Value, ty: &str, expected_asset: &Value) {
++    let binding = bindings.get(usize::try_from(uint(position)).unwrap()).expect("ABI reference exists");
++    assert_eq!(binding["ty"], json!(ty));
++    assert_eq!(&binding["asset"], expected_asset);
++    assert!(binding["constant"].is_null());
++    // Role/name spelling and the choice of position need an independent ABI oracle.
++}
++
++fn source_declarations(program: &mori_core::Program, facts: &Value) {
++    assert_eq!(program.name, text(&facts["program"]));
++    assert_eq!(program.language, text(&facts["languageLiteral"]));
++    let assets: Vec<_> = program.assets.iter().map(|item| {
++        json!({"alias": item.name, "identity": item.identity})
++    }).collect();
++    let expected_assets: Vec<_> = array(&facts["assets"]).iter().map(|item| {
++        json!({"alias": item["alias"], "identity": item["identity"]})
++    }).collect();
++    same_members(&assets, &expected_assets);
++    let states: Vec<_> = program.states.iter().map(|item| serde_json::to_value(item).unwrap()).collect();
++    let expected_states: Vec<_> = array(&facts["states"]).iter().map(|item| {
++        let initial = match text(&item["type"]) {
++            "UInt" => json!({"type": "UInt", "value": item["initializerLiteral"]}),
++            "Bool" => json!({"type": "Bool", "value": match text(&item["initializerLiteral"]) {
++                "true" => true,
++                "false" => false,
++                _ => panic!("fixture contains a Bool literal"),
++            }}),
++            _ => panic!("fixture contains a supported declared type"),
++        };
++        json!({"name": item["name"], "ty": item["type"], "initial": initial})
++    }).collect();
++    same_members(&states, &expected_states);
++    assert_eq!(program.actions.len(), array(&facts["actions"]).len());
++    for action in &program.actions {
++        let expected = array(&facts["actions"]).iter().find(|item| item["name"] == action.name).unwrap();
++        let inputs: Vec<_> = action.inputs.iter().map(|item| serde_json::to_value(item).unwrap()).collect();
++        let expected_inputs: Vec<_> = array(&expected["inputs"]).iter().map(|item| {
++            json!({"name": item["name"], "ty": item["type"]})
++        }).collect();
++        same_members(&inputs, &expected_inputs);
++        assert_eq!(action.statements.len() as u64, uint(&expected["syntacticStatementCount"]));
++    }
++    // Declaration projections supplement the complete Program equality in observe.
++}
++
++fn circuit(value: &Value, facts: &Value, expected_action: &Value) {
++    object(value, &["action", "zkir", "context_hash", "public_inputs", "authorization_bindings",
++        "private_inputs", "instruction_count", "effect_frame", "balance_frame", "liability_frame", "replay_steps"]);
++    assert_eq!(value["action"], expected_action["name"]);
++    text(&value["context_hash"]); // No independent digest or context-limb value is asserted.
++    let bindings = array(&value["public_inputs"]);
++    for binding in bindings {
++        object(binding, &["role", "name", "ty", "constant", "asset"]);
++        text(&binding["role"]);
++        text(&binding["name"]);
++        assert!(matches!(text(&binding["ty"]), "UInt" | "Bool"));
++        optional_text(&binding["constant"]);
++        optional_asset(&binding["asset"]);
++        if !binding["asset"].is_null() {
++            declared_asset(&binding["asset"], facts);
++        }
++    }
++    // Positive Artifact decoding below is the real consumer of these typed arrays.
++    array(&value["authorization_bindings"]);
++    for binding in array(&value["private_inputs"]) {
++        object(binding, &["name", "ty"]);
++        text(&binding["name"]);
++        assert!(matches!(text(&binding["ty"]), "Native" | "Point<Jubjub>"));
++    }
++    let mut balances = Vec::new();
++    for frame in array(&value["balance_frame"]) {
++        object(frame, &["asset", "account", "pre_position", "post_position"]);
++        asset(&frame["asset"]);
++        text(&frame["account"]);
++        for position in ["pre_position", "post_position"] {
++            reference(bindings, &frame[position], "UInt", &frame["asset"]);
++        }
++        balances.push(json!({"asset": frame["asset"], "account": frame["account"]}));
++    }
++    let expected_balances = expected_action.get("touchedExactBalanceRows").map(array).unwrap_or(&[]);
++    same_members(&balances, expected_balances);
++    let duties = duty_identities(facts);
++    let mut actual_duties = Vec::new();
++    for frame in array(&value["liability_frame"]) {
++        object(frame, &["name", "asset", "debtor", "creditor", "pre_presence_position",
++            "pre_amount_position", "post_presence_position", "post_amount_position"]);
++        let duty = json!({"name": frame["name"], "asset": frame["asset"],
++            "debtor": frame["debtor"], "creditor": frame["creditor"]});
++        identity(&duty);
++        actual_duties.push(duty);
++        for (position, ty) in [("pre_presence_position", "Bool"), ("pre_amount_position", "UInt"),
++            ("post_presence_position", "Bool"), ("post_amount_position", "UInt")] {
++            reference(bindings, &frame[position], ty, &frame["asset"]);
++        }
++    }
++    same_members(&actual_duties, &duties);
++    assert_eq!(array(&value["effect_frame"]).len(), array(&expected_action["effectStatementLines"]).len());
++    for frame in array(&value["effect_frame"]) {
++        object(frame, &["step", "kind", "name", "asset", "from", "to", "public_positions", "liability", "operation"]);
++        uint(&frame["step"]);
++        text(&frame["kind"]);
++        for field in ["name", "from", "to"] {
++            optional_text(&frame[field]);
++        }
++        optional_asset(&frame["asset"]);
++        if !frame["asset"].is_null() {
++            declared_asset(&frame["asset"], facts);
++        }
++        if !frame["liability"].is_null() {
++            identity(&frame["liability"]);
++            assert!(duties.contains(&frame["liability"]));
++        }
++        if !frame["operation"].is_null() {
++            assert!(matches!(text(&frame["operation"]), "create_or_accrue" | "discharge"));
++        }
++        for position in array(&frame["public_positions"]) {
++            assert!(usize::try_from(uint(position)).unwrap() < bindings.len());
++        }
++        // Exact effect-field encoding/order/step indices are not a frozen golden here.
++    }
++    assert_eq!(uint(&value["replay_steps"]), uint(&expected_action["syntacticStatementCount"]));
++
++    let ir: Value = serde_json::from_str(text(&value["zkir"])).expect("complete IR JSON");
++    object(&ir, &["version", "inputs", "outputs", "do_communications_commitment", "instructions"]);
++    object(&ir["version"], &["major", "minor"]);
++    assert_eq!(ir["version"], json!({"major": 3, "minor": 0}));
++    ir["do_communications_commitment"].as_bool().expect("boolean");
++    array(&ir["inputs"]);
++    array(&ir["outputs"]);
++    assert_eq!(uint(&value["instruction_count"]) as usize, array(&ir["instructions"]).len());
++    // Pinned SDK disk->serde version adapter; this is codec consistency, not an IR oracle.
++    let mut serde_ir = ir;
++    serde_ir["version"] = json!(0);
++    let decoded: midnight_zkir_v3::IrSource = serde_json::from_value(serde_ir.clone()).unwrap();
++    assert_eq!(serde_json::to_value(decoded).unwrap(), serde_ir);
++}
++
++fn observe(source: &str, facts: &str, frozen_program: &str) {
++    let facts: Value = serde_json::from_str(facts).unwrap();
++    let expected_target: Value = serde_json::from_str(expectation!("target.expected.json")).unwrap();
++    let target = Target::from_json(expectation!("target.expected.json")).unwrap();
++    let program = mori_core::parse(source).unwrap();
++    let expected_program: Value = serde_json::from_str(frozen_program).unwrap();
++    assert_eq!(serde_json::to_value(&program).unwrap(), expected_program,
++        "the complete independently frozen Program must match before compiling");
++    source_declarations(&program, &facts);
++    // Same Core/1 entry point as the public CLI, including its separate metadata wrapper.
++    let artifact = compile_reported(&program, &target).unwrap().artifact;
++    let serialized = serde_json::to_string_pretty(&artifact).unwrap();
++    let wire: Value = serde_json::from_str(&serialized).unwrap();
++    let reopened: Artifact = serde_json::from_value(wire.clone()).expect("whole public Artifact decodes");
++    assert_eq!(serde_json::to_value(reopened).unwrap(), wire);
++    object(&wire, &["format", "abi", "relation", "authorization_mode", "program_hash", "semantics",
++        "target", "circuits", "resources", "gates"]);
++    assert_eq!(wire["format"], json!("moriarty-zkir-artifact/3"));
++    assert_eq!(wire["abi"], json!("moriarty-public-abi/3"));
++    assert_eq!(wire["relation"], json!("moriarty-zkir-relation/3"));
++    assert_eq!(wire["authorization_mode"], json!("unsigned"));
++    text(&wire["program_hash"]); // Exact canonical Program hash remains independently unasserted.
++    assert_eq!(wire["semantics"], expected_program["semantics"]); // Frozen independent literal.
++    assert_eq!(wire["target"], expected_target);
++    object(&wire["target"], &["profile", "network", "anchor", "ledger_revision", "zkir_version",
++        "max_instructions", "max_artifact_bytes"]);
++    let actual_names: Vec<_> = array(&wire["circuits"]).iter().map(|item| item["action"].clone()).collect();
++    let expected_names: Vec<_> = array(&facts["actions"]).iter().map(|item| item["name"].clone()).collect();
++    same_members(&actual_names, &expected_names);
++    for value in array(&wire["circuits"]) {
++        let expected_action = array(&facts["actions"]).iter().find(|item| item["name"] == value["action"]).unwrap();
++        circuit(value, &facts, expected_action);
++    }
++    let resources = &wire["resources"];
++    object(resources, &["instructions", "zkir_bytes", "artifact_bytes", "public_values", "max_replay_steps",
++        "circuit_k", "fraud_max_k", "cost_measured", "liability_registry_entries", "max_liability_registry_entries"]);
++    for field in ["instructions", "zkir_bytes", "artifact_bytes", "public_values", "max_replay_steps",
++        "liability_registry_entries", "max_liability_registry_entries"] {
++        uint(&resources[field]);
++    }
++    assert!(resources["circuit_k"].is_null() && resources["fraud_max_k"].is_null());
++    assert_eq!(resources["cost_measured"], json!(false));
++    assert_eq!(resources["liability_registry_entries"], facts["uniqueDutyCount"]);
++    assert_eq!(resources["max_liability_registry_entries"], json!(16));
++    let max_steps = array(&facts["actions"]).iter().map(|item| uint(&item["syntacticStatementCount"])).max().unwrap();
++    assert_eq!(uint(&resources["max_replay_steps"]), max_steps);
++    // Measure the exact complete public CLI serialization, including its own size field.
++    assert_eq!(uint(&resources["artifact_bytes"]), serialized.len() as u64);
++    for gate in array(&wire["gates"]) {
++        object(gate, &["predicate", "status"]);
++        text(&gate["predicate"]);
++        text(&gate["status"]);
++    }
++    // Exact program/context hashes and limb values, ABI layout, IR bytes/semantics,
++    // gate vocabulary and remaining aggregate resource totals need separate oracles.
++}
++
++#[test]
++fn invoice_whole_artifact_reopens_and_preserves_independent_source_facts() {
++    observe(source!("installment-invoice.mori"), expectation!("installment-invoice.source-facts.json"),
++        source!("installment-invoice.program.expected.json"));
++}
++#[test]
++fn reserve_whole_artifact_reopens_and_preserves_five_exact_balance_rows() {
++    observe(source!("conditional-reserve.mori"), expectation!("conditional-reserve.source-facts.json"),
++        source!("conditional-reserve.program.expected.json"));
++}
+--- /dev/null
++++ b/crates/mori-core/tests/financial_program_wire_contract.rs
+@@ -0,0 +1,48 @@
++//! Complete independently frozen Core/1 wires, without selecting the SDK backend.
++use mori_core::{Program, parse, v1};
++use serde_json::Value;
++
++macro_rules! fixture {
++    ($name:literal) => {
++        include_str!(concat!(
++            env!("CARGO_MANIFEST_DIR"),
++            "/../fixtures/financial-report-contract/",
++            $name
++        ))
++    };
++}
++
++fn consume(source: &str, frozen_program: &str) {
++    let expected: Value = serde_json::from_str(frozen_program)
++        .expect("independently frozen complete Program JSON must decode");
++    let actual = parse(source).expect("exact source must parse through the real Core consumer");
++    let bytes = serde_json::to_vec(&actual).expect("complete Program must serialize");
++    let actual_wire: Value = serde_json::from_slice(&bytes).expect("complete wire must be JSON");
++    assert_eq!(actual_wire, expected, "every Program field and nested cell must match");
++
++    // Actual shared public decoding routes through the frozen Core/1 DTO.
++    let reopened: Program = serde_json::from_slice(&bytes).expect("public Program wire must reopen");
++    assert_eq!(reopened, actual, "reopening must preserve the complete parsed Program");
++    assert_eq!(serde_json::to_value(&reopened).unwrap(), expected);
++
++    // This is a codec/adapter check, separate from the independent equality above.
++    let frozen_v1: v1::Program = serde_json::from_str(frozen_program).unwrap();
++    let converted: Program = frozen_v1.into();
++    assert_eq!(converted, actual);
++}
++
++#[test]
++fn invoice_complete_core_wire_matches_frozen_32_node_program_and_reopens() {
++    consume(
++        fixture!("installment-invoice.mori"),
++        fixture!("installment-invoice.program.expected.json"),
++    );
++}
++
++#[test]
++fn reserve_complete_core_wire_matches_frozen_33_node_program_and_reopens() {
++    consume(
++        fixture!("conditional-reserve.mori"),
++        fixture!("conditional-reserve.program.expected.json"),
++    );
++}

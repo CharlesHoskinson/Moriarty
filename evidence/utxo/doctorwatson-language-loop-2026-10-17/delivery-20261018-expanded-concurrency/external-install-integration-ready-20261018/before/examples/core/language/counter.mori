@@ -1,0 +1,12 @@
+language "moriarty/1";
+agreement Counter {
+ state count: UInt = 0;
+ action increment(amount: UInt) {
+   let total = count + amount;
+   requires total <= 100;
+   next count = total;
+   ensures count == total;
+   emit "count"(count);
+ }
+ action double() { next count = count * 2; }
+}

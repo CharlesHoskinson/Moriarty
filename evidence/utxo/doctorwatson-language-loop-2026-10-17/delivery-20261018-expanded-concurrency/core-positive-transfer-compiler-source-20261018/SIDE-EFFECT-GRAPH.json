@@ -1,0 +1,103 @@
+{
+  "status": "UNRUN SOURCE-SPECIFIED GRAPH; NOT EXECUTION AUTHORITY",
+  "currentLaneExecution": {
+    "product": 0,
+    "SDK": 0,
+    "VM": 0,
+    "provider": 0,
+    "GitMutation": 0,
+    "worktreeMutation": 0
+  },
+  "counterpart": {
+    "proposedCommand": [
+      "cargo",
+      "test",
+      "--frozen",
+      "-j1",
+      "-p",
+      "mori-core",
+      "--no-default-features",
+      "--test",
+      "positive_transfer",
+      "--",
+      "--test-threads=1"
+    ],
+    "runtimePath": [
+      "mori_core::parse",
+      "mori_core::validate",
+      "mori_core::simulate"
+    ],
+    "inputs": [
+      "print-run.mori",
+      "print-run.scenario.json",
+      "independent financial/prefix oracle"
+    ],
+    "effects": [
+      "Rust compilation/test process if separately authorized",
+      "no fixture writes",
+      "no Midnight feature enabled"
+    ],
+    "scope": "Local parser/evaluator values, snapshots and ordered effects only; no target/compiler/native claim"
+  },
+  "publicCompiler": {
+    "proposedCommand": [
+      "cargo",
+      "test",
+      "--frozen",
+      "-j1",
+      "-p",
+      "mori",
+      "--no-default-features",
+      "--features",
+      "native",
+      "--test",
+      "core_positive_transfer_compile",
+      "--",
+      "--test-threads=1"
+    ],
+    "testChildArgv": [
+      "mori",
+      "--quiet",
+      "--color",
+      "never",
+      "compile",
+      "print-run.mori",
+      "--target",
+      "print-run.target.json",
+      "--out",
+      "compiled"
+    ],
+    "path": [
+      "mori::main",
+      "commands::run(Command::Compile)",
+      "commands::compile::run",
+      "core_io::read_source",
+      "mori_core::parse",
+      "core_io::read_json<Target>",
+      "mori_backend::source_projection::compile_reported",
+      "mori_backend::compile",
+      "compile_mode",
+      "lower_action",
+      "lower_action_segment",
+      "midnight_zkir_v3::IrSource::load",
+      "source_projection_report",
+      "publish_artifact",
+      "proof_io::publish_new",
+      "serde_json::from_slice<Artifact>"
+    ],
+    "buildGraph": "mori native feature enables mori-backend/mori-ledger and mandatory Midnight transitive crates; backend has no SDK-free feature. Full build graph/native execution eligibility is for root/designated owners, not granted here.",
+    "testFilesystem": [
+      "create unique temp root or fail on existing path",
+      "copy source+target into own root",
+      "compiler creates new compiled directory",
+      "publish actual 000-pay.zkir,source-projection.json,artifact.json completion marker",
+      "read actual artifact and matching published bytes",
+      "remove only own temp root on Drop"
+    ],
+    "environment": "Child uses Command::output with inherited test environment, null stdin, captured stdout/stderr; this task does not execute it or read private environment/config/cache.",
+    "runtimeExclusions": "Test calls no proving/prepare/keygen/cost-model/ProofPreimage::check or ledger path; compiler itself still uses real SDK IrSource::load. This is source call-graph inventory, not a security absence judgment.",
+    "expectations": "Exact empty stdout/stderr under quiet; declared target/version/action; actual manifest-to-file fidelity and sidecar linkage. Complete circuit bytes/packing are not independently frozen expected results.",
+    "eligibility": "UNADMITTED/UNRUN; requires root source/resource/security scope disposition, no transferred PR210 or earlier native allocation"
+  },
+  "dependencyChanges": "None. Only an explicit required-features native integration-test declaration is proposed. Cargo.lock must remain byte-identical."
+}

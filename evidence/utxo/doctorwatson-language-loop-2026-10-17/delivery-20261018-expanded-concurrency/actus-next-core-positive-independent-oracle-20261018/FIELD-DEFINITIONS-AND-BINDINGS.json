@@ -1,0 +1,81 @@
+{
+  "candidate": "csh01",
+  "status": "definitions and exact missing binding; not a positive test oracle",
+  "fields": [
+    {
+      "field": "eventDate",
+      "dimension": "ACTUS ISO8601 local date/time; timezone unsupported by formal convention",
+      "time_basis": "Observed AD event time2015-07-30T00:00:00 and post-event status date from CSH STF",
+      "normative_basis": [
+        "input eventsObserved[0].time",
+        "CSH AD Sd(t+)=t",
+        "generic definition pre-event t- / post-event t+"
+      ],
+      "binding_disposition": "Normative event/status-time fact; no Moriarty source/date adapter supplied or frozen"
+    },
+    {
+      "field": "eventType",
+      "dimension": "ACTUS event constructor",
+      "time_basis": "Observed AD event at supplied timestamp",
+      "normative_basis": [
+        "input eventsObserved[0].type=AD",
+        "CSH schedule/function table includes AD"
+      ],
+      "binding_disposition": "Normative event identity fact; no Moriarty emit/source encoding supplied or frozen"
+    },
+    {
+      "field": "payoff",
+      "dimension": "Real monetary cash flow in denomination CHF; signed per role convention",
+      "time_basis": "AD event payoff at event time",
+      "normative_basis": [
+        "CSH AD refers specifically to POF_AD_PAM",
+        "PAM AD payoff0.0"
+      ],
+      "binding_disposition": "Normative zero payoff is explicitly justified for AD, distinct from inferring missing interest-state zero; no target state/effect oracle invented"
+    },
+    {
+      "field": "notionalPrincipal",
+      "dimension": "Real nominal contract currency amount CHF; Nt state indexed by time",
+      "time_basis": "t0=SD2015-07-15T00:00:00; CSH Nt(t0)=R(role)*NT; AD STF updates only Sd",
+      "normative_basis": [
+        "NT input1000",
+        "RPA sign+1",
+        "CSH initialization Nt(t0)=R*NT",
+        "CSH AD Sd(t+)=t"
+      ],
+      "binding_disposition": "Normative principal1000 follows; no source atomic scale/signedness/date adapter supplied, so no complete positive oracle frozen"
+    },
+    {
+      "field": "nominalInterestRate",
+      "dimension": "Real annual rate; independent rate precision/denominator required, not asset monetary scale",
+      "time_basis": "Generic interest uses Y(s,t,DCC); csh01 supplies no IPNR,DCC or interest schedule and CSH defines no Ipnr state",
+      "normative_basis": [
+        "full term definition IPNR Real",
+        "formal year-fraction section",
+        "CSH state table lists Nt and Sd only"
+      ],
+      "binding_disposition": "UNMAPPED; no CSH Ipnr initialization or explicit common-result applicability/undefined/default/zero-padding rule. Missing IPNR does not imply0."
+    },
+    {
+      "field": "accruedInterest",
+      "dimension": "Real accrued monetary amount; denomination/sign/scale/exactness must be explicit if applicable",
+      "time_basis": "Generic term IPAC is accrued interest at SD; optional recalculation depends on interest anchor/cycle/rate/time basis, none supplied for CSH01",
+      "normative_basis": [
+        "full term definition IPAC Real atSD",
+        "CSH state table lists Nt and Sd only",
+        "generic undef means no assigned value"
+      ],
+      "binding_disposition": "UNMAPPED; no CSH Ipac initialization or explicit common-result applicability/undefined/default/zero-padding rule. PAM zero fallback is not inherited by CSH."
+    },
+    {
+      "field": "currency",
+      "dimension": "Nominal denomination identifier CHF",
+      "time_basis": "Contract term and payoff denomination; no converted settlement currency supplied",
+      "normative_basis": [
+        "csh01 terms.currency=CHF"
+      ],
+      "binding_disposition": "Normative identifier retained; no ledger/native identity or target asset encoding supplied"
+    }
+  ],
+  "full_schema_rule": "Keep every raw result-field key in the retained requirement universe. Definitions do not authorize deleting interest columns, synthesizing zero, or relabeling a partial mapping as full fixture coverage."
+}

@@ -1,0 +1,36 @@
+{
+  "format": "moriarty.integration-ready.consumer-side-effects/1",
+  "scope": "Static source inspection only; no cargo metadata/build/test or subject API execution.",
+  "actualRoute": [
+    "Test include_str! embeds three complete fixtures from crates/fixtures at compile time.",
+    "serde_json decodes complete Scenario/expected Value in memory.",
+    "mori_core::parse -> mori_lexer::lex -> parser parse_profile -> validate.",
+    "mori_core::simulate -> validate -> scenario_snapshot -> execute_statement for Requires/Transfer/Fee/Next/Ensures/Emit.",
+    "Scenario clone, full Execution serialization and literal comparisons remain ordinary in-memory operations."
+  ],
+  "directRuntimeInspection": "No fs/process/network/thread calls found in selected parser/runtime/IR/JSON/policy and lexer/diagnostics/span source search. This identifies the inspected normal call route, not a whole dependency security audit.",
+  "workspaceClosure": [
+    "mori-core normally depends on mori-lexer, serde, serde_json, thiserror, sha2 and k256; core dev-dependency proptest remains a compile-time test dependency even though no proptest API is used by this candidate.",
+    "mori-lexer normal dependencies are mori-diagnostics, mori-span and soa-rs; diagnostics/span use miette without default fancy features.",
+    "Lexer/core dependency unit-test modules are not selected by --test utxo_pattern_exchange; no CLI binary or other integration target selected.",
+    "Midnight crates in root workspace/lock remain present but mori-core enables their optional dependencies only through midnight-compat-tests, which is not enabled by proposed command. Presence in Cargo.lock is not proof of active dependency."
+  ],
+  "projectBuildInputs": {
+    "buildRs": [
+      "No build.rs exists at workspace root or mori-core/mori-lexer/mori-diagnostics/mori-span roots."
+    ],
+    "repoAndAncestorCargoConfigs": "Neither legacy .cargo/config nor .cargo/config.toml exists at K or any inspected filesystem ancestor, including /home/charl/.cargo.",
+    "toolchain": "Pinned 1.99.0; direct toolchain bin paths inspected for existence and byte hashes only."
+  },
+  "uninspectedOrUnobserved": [
+    "Cargo feature resolution was not executed; closure classification is source-based.",
+    "Registry procedural macro/build-script bodies and host linker/transitive compiler implementation were not fully audited.",
+    "No actual lock/cache/toolchain adequacy, binary version, compile, formatting, harness success, cost or result observation established.",
+    "Current inherited environment not dumped; proposed command uses an explicit replaced allowlist."
+  ],
+  "noSubjectOperations": [
+    "No compiler/native VM/SDK/prover/wallet/provider/network/model/test invocation performed by this lane.",
+    "No shared file, Git index/branch/commit/worktree mutation performed."
+  ],
+  "securityBoundary": "This is effect/call-route attribution only; no security adequacy or authorization correctness judgment is supplied."
+}

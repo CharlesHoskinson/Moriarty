@@ -1,0 +1,12 @@
+language "moriarty/2";
+agreement DocumentParent {
+  asset DOC = { network: "local", issuer: "join-document", reference: "DOC", scale: 0 };
+  state docMarker: UInt = 7;
+  action await_document(amount: UInt) {
+    liability("documentDuty", DOC, "documentAgent", "documentReceiver", amount);
+    liability("retainedDocumentDuty", DOC, "documentAgent", "documentReceiver", 2);
+    await document(observed: Bool) when observed;
+    transfer(DOC, "documentAgent", "documentReceiver", amount);
+    discharge("documentDuty", amount);
+  }
+}
