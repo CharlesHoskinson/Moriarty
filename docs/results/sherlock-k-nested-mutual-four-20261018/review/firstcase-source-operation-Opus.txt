@@ -1,0 +1,223 @@
+# Fresh Opus review: first-case 0..32 prefix, five-source closure, finite 30-window / 90-child proposal
+
+**Mode:** data-only. I ran no tools, shell, provider, subject or file writes. I did not recompute any SHA-256 or run any inverse. Every hash and inverse-equality claim in the bundle is a Root-attested premise. What I checked myself is internal consistency between bodies: cross-referenced pins, byte arithmetic, DAG references, seed rows against decoded state 32, and source-path linkage.
+
+**Prior empty results:** the empty same31395 final and the empty Gemini Part1 are transport failures. I treat them as neither dissent nor votes.
+
+## Verdict summary
+
+| Scope | Judgment | Mandatory |
+|---|---|---|
+| (1) Actual first new window 16→32 and observed prefix 0..32 (33 states), with no firstcase completion and no oracle comparison | **APPROVE (narrow)** | none |
+| (2) Five-source closure, public API, Program/state carry, boundary-only join: **source correctness** | **APPROVE** | 0 source fixes |
+| (3) Finite 30-window / 90-max reduce→print→consume proposal from raw state 32: **prospective operation eligibility** | **CONDITIONAL APPROVE** (fail-closed bounded capture) | M1, M2 below, both Root-side; no source change |
+
+Completion of the first case is **not** predicted (see Scope 3 risk analysis). Source correctness does not imply that the operation will reach a terminal state.
+
+---
+
+## Scope 1: actual window 16→32 and prefix 0..32
+
+**Children and results**
+- All three children exited 0, with no timeout, no group members after exit, nothing swept and no containment breach.
+- Serial timestamps are ordered as declared: reduce 3.815 s, print 0.58 s, consume 1.332 s.
+- The reduce output artifact (8,417,957 B, `6eed0ce…`) is the same pin that serves as the contract's frozen `raw_tape`.
+- The print stdout (338,956 B, `8fe8d8f…`) matches `actual_print_sha256`. Both stderr streams are empty.
+
+**Joined prefix wire (root 587)**
+- 33 states.
+- `observerCuts` is exactly `[0..32]`.
+- Cumulative event lengths are 0,1,…,32 in order. I checked every state node.
+- The Program node is a single shared node (316) across all states.
+- The window file holds 17 states with global ordinals `16..32`. Its first state (node 452) is joined state 16.
+
+**Last state**
+- Last control is `ngEval{101}` and the last event is `ngMatchStarted` (match 100 / occ 5100).
+- The environment is `{10 ↦ Nominal(50,501,[UInt 21, Nominal(51,510,[])])}` with 11 frames.
+
+**Raw carry arithmetic**
+- 8,417,955 − 7,925,412 = 492,543. This matches the stated final span.
+- The seed query length is `|OBSERVE|`(111) + `(`(1) + 492,543 + `,`(1) + `\dv{SortInt{}}("16")`(20) + `)`(1) = **492,677**. This matches the seed pin.
+- The prior carry (3,372,057 − 3,143,683 = 228,374) is also consistent.
+
+**Seed rows against decoded state 32 (spot-checked)**
+- `ngEval("101")`.
+- One InternalMap element `10 ↦ ngNominal(50,501,[21, ngNominal(51,510,·)])`.
+- Exactly 11 `ngFrame` cells, ending in `ngNoFrames`. The second frame is `ngFunctionReturn(204,5204,100,50,{10,11,12})`, which equals node 575.
+- Exactly 32 `ngEvent` cells at indents 8…132, ending in `ngMatchStarted(100,5100,101,…)`, then `ngNoEvents`.
+- `ngDecl 50` with ctor 501 has field_types `[0,51]`.
+- The query is `ngObserve(<final verbatim>, 16)`.
+
+**Qualification:** the prefix 0..16 comes from an earlier window whose evidence is not in this bundle. The `consume_first_window.py` that produced the 0..32 wire is also not supplied. Its correctness rests on the prior exact3 approval. The new consumer structurally re-validates this whole prefix at window 0. That check is structural only and cannot re-derive the prefix from K.
+
+---
+
+## Scope 2: source correctness of the five Python files
+
+I read all five files in full and traced every runtime path that consume() can take.
+
+### `consume_continuation_window.py`
+
+**Bounds and schedule**
+- Guards on `(512, 32, 16, 30)`, `len(windows)==30`, integer index, and `(start,end,bound)==(32+16i, 48+16i, 16)` together pin the schedule.
+- A frozen prior is only accepted when `start==32`.
+
+**Dependency chain**
+- For index ≥1, the prior checkpoint must have `status==CONTINUE`, the same case, bound 512, and `actual_advancing_records==start`.
+- All three row paths must equal the predeclared `expected_*` paths. I checked the template linkage:
+  - checkpoint `raw_tape.path` = `@PREVIOUS@-reduce/result.kore`
+  - `prefix_wire.path` = `@PREVIOUS@-consume/prefix.actual-wire.json`
+  - `next_query.path` = `@WINDOW@-reduce/input.kore` = `window.query`
+- Window 0's `next_query_output` equals `windows[1].query`.
+- `read_pinned` compares the whole `{path, bytes, sha256}` dict.
+
+**Query identity**
+- The query must equal `resume_query(prior_raw, 16)` byte-for-byte. This makes it impossible to substitute a query generated from JSON or from expected data.
+
+**Boundary and join**
+- The typed boundary check `_same(prior[-1], new[0])` is type-strict.
+- `join_complete_chunks` drops exactly one boundary row. It re-checks Program immutability, the one-event extension per step with `_same`, no state after a terminal, and that a short window is only accepted on a terminal.
+- Global `len(events)==ordinal` is checked.
+
+**Status precedence**
+- Order is HALT, then OUTSIDE, then BOUND (used==512), then CONTINUE.
+- CONTINUE is only reachable when `used==end`, so CONTINUE at index 29 is impossible (it becomes STOP_BOUND). The `index+1` guard is a redundant backstop.
+
+**Persistence and outputs**
+- All writes use `xb`. The checkpoint is written last, so a partial failure leaves no checkpoint and nothing downstream can continue.
+- `observerCuts` is derived only from actual joined length.
+- No expected documents are opened. No process is launched.
+
+### Helper modules (`kore_continuation.py`, `complete_chunk_wire.py`, `complete_k_wire.py`, `nominal_trace_codec.py`)
+
+- They are byte-identical to the preimages, per the attested pins.
+- `resume_query` takes the third ngTape argument verbatim after whitespace trim. It wraps only `OBSERVE(…, \dv Int)` around it and checks 5-arity of ngState.
+- `application()` correctly treats Kore `'` label quoting as non-delimiting and `"…"` as strings.
+- `CompleteKWire` checks that the API declarations match the registry arity. Its decode of Maps keeps duplicate keys, and its list decoding (`_rows`) is iterative.
+- API drift between the first-window decode and this decode would surface as a typed-boundary key mismatch. The check is self-detecting.
+
+### Composition argument
+
+The claim that the joined prefix equals one `ngObserve(initial, 512)` holds given these retained premises:
+- `ngStep` is a deterministic function of the 5-field state.
+- The observer counter is external to the state.
+- Cumulative events live inside the state.
+- No terminal stutter occurs.
+- K's parse of the carried raw final is that state.
+
+The last premise is verified *one window later* by the next typed boundary. The final carried state is never re-queried, so it needs no such check.
+
+**Advisories (non-blocking, no re-review needed unless adopted):**
+- **A1** `next_carry` is computed and then discarded. Recording it in stdout or the checkpoint would make each hop self-describing.
+- **A2** The consumer does not pin-check `contract`, `api`, `syntax` or its own imports. This relies on Root (see M2).
+- **A3** There is no byte check `raw_parts[0] == carried final`. The typed check plus the next-window boundary cover this semantically, so it is optional hardening.
+- **A4** `first-case.complete-observed-wire.json` is written for STOP_BOUND and STOP_OUTSIDE_MODEL as well. The wire carries no status, so any later consumer must read `checkpoint.status` alongside it.
+- **A5** The whole prefix is re-validated and re-serialized each window. This costs O(n²) per window and O(n³) overall. It is acceptable at the expected scale (see Scope 3).
+- **A6** `application()` assumes Kore comments contain no top-level `,`/`(`/`)`. This holds for the observed `/* InternalMap: */`, `/* Inj: */` and `/* concrete element: */`.
+- **A7** `PrintedTermParser.term` recursion depth grows about one frame per cumulative event. That stays under the default limit of 1000 to roughly n≈900 but is untested beyond n=32.
+- **A8** `complete_states` uses `==`, which conflates `True` and `1`. `join_complete_chunks` re-checks with `_same`, so this is closed.
+
+---
+
+## Scope 3: finite operation eligibility
+
+**Statically consistent (by reading)**
+
+| Item | Finding |
+|---|---|
+| Phase templates | Each expands to the same argv shape as the passed reduce, print and consume, with the same definition, module, depth 1, `--smt none`, kprint `false false`, `python3 -B`. |
+| Interpreter flags | Not using `-I` is correct, because `-P` would drop the script directory and break sibling imports. |
+| `@QUERY@` per row | Equals `contract.windows[i].query`. |
+| Manifests | `window-XXX.json` maps to `window_index` 0..29 in stem order. |
+| Tokens | 90 tokens; I saw no duplicates on read. |
+| Caps and env | Limits, `inherit_environment:false` and `DEVNULL` are unchanged from F03. |
+| Outputs | No filename collisions inside the reduce, print or consume cwds. |
+| `F03.launch` closure | New session with group kill at deadline and after exit, token sweep, `O_EXCL\|O_NOFOLLOW` streams, CORE 0, FSIZE, umask 077. |
+| F03 import projection | The call-bearing top-level statements are pure (`dict`, `re.compile`, `tuple/range`, `join`). `main` is guarded. Factored literal RHS remain a premise. |
+
+### Mandatory pre-dispatch conditions (Root-side; no source change)
+
+**M1. Directory existence for carried queries (untested path).**
+
+Consumer *i* writes `actual/<window i+1>-reduce/input.kore` with `open("xb")`. That call raises `FileNotFoundError` if the directory does not exist. The readback says `actual_output_directory_absent`, and the passed exact3 run never wrote into a future phase's cwd.
+
+Root's dispatcher is not in this bundle, so Root must confirm one of the following:
+- (a) it creates `<next>-reduce/` (0700) before launching consumer *i*, and its later reduce launch tolerates a pre-existing cwd containing exactly `input.kore`; or
+- (b) it pre-creates all cwd/home/tmp directories up front, with the understanding that empty directories for unrun windows are not run evidence.
+
+If neither holds, window 0's consume will fail after persisting its window and prefix files but before writing a checkpoint. That is a clean stop, but a wasted selection.
+
+**M2. Static and dependency pin rechecks.**
+
+Before each child, Root must recheck pins of:
+- `CONTINUATION-CONTRACT.json`
+- the 30 manifests
+- the 5 sources
+- `PUBLIC-API.json`
+- `nominal-product-syntax.k`
+- the compiled-15 set
+
+Before launching reduce *i+1*, Root must also verify that `input.kore` equals `checkpoint_i.next_query` and that the checkpoint itself is pinned. The consumer trusts the checkpoint JSON unpinned and checks the query only after kore-exec has already consumed it.
+
+### Prospective risk: completion is not established
+
+This is my structural analysis, not an observation.
+
+**Raw Kore grows about quadratically per state.** Kore pretty-printing indents each successive `ngEvent` cons cell by +4 spaces. This is visible in the seed, where cells sit at indents 8→132 and their content lines inherit that indent. A raw ngState with *n* events therefore carries Θ(n²) indentation bytes.
+
+The data agrees: state 16 is 228 KB and state 32 is 493 KB, a ratio of 2.16, which is superlinear. A window tape holds about 18 such states.
+
+Illustrative fit, assuming about 70 KB of fixed size: size(n) ≈ 70K + 6.6K·n + 206·n² bytes.
+
+| Window start S | Estimated tape |
+|---|---|
+| ≈64 | ~29 MB |
+| ≈104 | ~54 MB |
+| ≈120 | ~69 MB |
+| ≈248 | ~260 MB |
+| ≳350 | above FSIZE 512 MiB (→ SIGXFSZ) |
+
+**Reduce wall time.** If kore-exec time scales roughly with tape bytes (observed ≈0.3–0.45 s/MB), the 30 s wall is reached somewhere around S≈110–160. The host was already loaded during the passed run: load average ≈13 and CPU PSI "some" ≈53–70%. That adds inflation, and there is no RSS cap on Haskell-backend memory.
+
+**Consumer.** The indented JSON prefix grows as ≈ N·8 KB + N²·1.5 KB. That is about 30 MB at N≈140 and should be fine. Much larger N would strain the pure-Python indented encoder and the O(N²) `_same` pass.
+
+**Where the program likely terminates.** A coarse reading of the supplied Program suggests termination in roughly the 120–150 advancing-record range. This is non-binding. It is not an oracle or a golden, and it must not enter scheduling or comparison. That range overlaps the estimated wall-time risk zone.
+
+**Consequence.** Every failure mode above (timeout-kill, SIGXFSZ, consumer exception) is a clean fail-closed stop under the contract:
+- evidence is preserved;
+- no checkpoint is written for the failed window;
+- the suffix stays UNRUN;
+- there is no retry.
+
+That is why I judge the proposal *eligible*. But a timeout ends this selection without any termination claim. Any remedy, such as resuming from the last CONTINUE checkpoint with smaller windows, changes the hard-coded `16`/`32+16i` schedule. That would be a new source and contract requiring fresh review, not an in-flight adjustment.
+
+---
+
+## Premises retained, not freshly approved
+
+- The K model, syntax and observer semantics; determinism; parse/print fidelity; compiled-artifact identity. Prior ordinary opinions and pins only.
+- Every SHA-256, size and inverse-equality claim. This includes the claims that the contract and plan canonical hashes equal the full originals, and the whole-object roundtrip of the DAG.
+- That the `F03.launch` closure is byte-equal to lines 1094–1135 of the 73,962 B module, and that the factored import-time literals are side-effect-free.
+- Root dispatcher behavior: directory creation, pin checks, stop logic, status parsing.
+- The independence of the prior first-window derivation (`consume_first_window.py` and window 000–016).
+
+## Unread ranges
+
+- The raw 8,417,957 B tape and 338,956 B print bodies (pins only).
+- The full 80,201 B contract and 223,939 B plan. I read them only through their template projections.
+- The full F03 module, other than the selected closure. The full `IMPORT-TIME-AST.json` (only its compact projection).
+- The K sources (`nominal-product.k`, syntax, observer) and the compiled tree.
+- `consume_first_window.py` and the prior `REPORT.md` body (only its one-line disposition).
+- Earlier-window evidence (0..16) and the Root dispatcher source.
+
+## Residual empirical gaps
+
+- Never yet exercised:
+  - the `previous_actual_checkpoint` path;
+  - the `persist_raw(next_query)` write path;
+  - all three STOP branches;
+  - `completed_case_output`.
+- Late-window reduce, print and consume wall time; RSS; FSIZE headroom; parser recursion beyond n=32; host contention.
+- Byte-level stability of kore-exec's re-printing of a carried state. This is only checked in the typed domain.
+
+The other three original cases remain unselected. The v1 and rev02 ports stay intact. No golden read is permitted until all four complete actual wires and their actual-only `observerCuts` are persisted. Whole-four equality, native/profile clocks, EARS and full-scope claims remain open.
