@@ -1548,3 +1548,15 @@ After the test-build failure stopped its sequence, Root separately selected the 
 ### DW82 — Reconcile generated membership with the pinned tool's behavior
 
 Native04 passed its earlier A0 failure boundary, staging and Cargo fetch. Raw verification then found that only `.package-cache-mutate` was missing from576 declared generated entries. Preserve the strict refusal, the actual575-present/one-absent metadata, and the completed cleanup. Send this precise producer/expected-membership disagreement to the owner before changing configuration or source; another unchanged build attempt would add no evidence.
+
+### DW83 — Fix expected producer metadata without relaxing validation
+
+Native04's raw check expected576 generated files but observed575; `.package-cache-mutate` alone was absent. The owner checked four official Cargo source files at the binary-reported commit, and a non-author reviewer confirmed the narrow next-attempt correction. Keep the guard unchanged and remove only that expected metadata row, with ordered equality for all remaining rows. Preserve the failed attempt rather than precreate a cache file or weaken membership checks.
+
+Run only the new synthetic regression after source/operation review; its missing/extra/exact membership and freeze checks passed. Retain the unchanged30 prior checks without repeating them. The owner's raw32-test suggestion was wrong: static methods total31, and this batch executed exactly one new method. Source facts, actual test result, setup/prelaunch and live native state remain separate. [Published source/ordinary evidence](../docs/results/sherlock-native-prerequisite-policy-20261017/beta-automated-provisioning-20261018/native-startup-20261018/fresh05-metadata-remedy-20261018/README.md).
+
+### DW84 — whole-clause adoption and exact next native boundary, 2026-10-18
+
+Root adopted the entire original UIREQ-027 on eight explicit predicates after whole current-source review and the unchanged actual draft/Core1 traces plus five admission regressions. The canonical reader reports 12 adopted originals, 23 open originals and all 25 refinements open. Keep the raw reviewer opinion and its corrections together: machine trace pins override wrong prose hashes, and the generic-extension label is UIREQ-034, not UIREQ-020. Full-page delivery supports coverage; substantive per-clause reconciliation supplies acceptance.
+
+Native05 then exposed a distinct C boundary: four extra generated members, zero missing, with no successful C or D/E/F result. Preserve the exact difference and durable evidence; do not turn removal of a previous blocker into a new native-success or membership-policy exception. Collection/teardown passed. The next designated-owner diagnosis must address that actual changed boundary. No circuit changed; no website/circuit iteration or full-v1/native/target completion is recorded.

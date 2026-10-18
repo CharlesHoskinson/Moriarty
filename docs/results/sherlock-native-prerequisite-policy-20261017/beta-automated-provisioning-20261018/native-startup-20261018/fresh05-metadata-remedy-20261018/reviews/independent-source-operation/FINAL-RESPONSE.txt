@@ -1,0 +1,88 @@
+### 1. Inline Read Accounting, Provenance & Authorship Separation
+
+- **Reviewer Identity & Route**: Retained independent non-author reviewer `CID=6277cc2c-99b8-4b7a-a220-a6c971d1bb98` at original `cwd=/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`, running on `gemini-4-argon-high` (`HIGH` thinking) under the standing observed `claude-opus-5-5` HIGH outage fallback. Zero tools, commands, file reads/writes, imports, or external actions were invoked.
+- **Authorship Separation & Count Correction**:
+  - R140 (`bb6043a1-63f1-4de9-b26f-ef50139233e3`) authored the R383 disposition (`BODY7`) and the single 54-line test hunk materialized by Root into `test_config_source.py` (`24,251` bytes, SHA-256 `9afdc4dbbcb283f35809af494ba6ef3a81d8311815a14451575b6855412f6c9b`, `BODY8`–`BODY10`). This reviewer did not author any part of the candidate test or metadata.
+  - **Static Test Count Correction**: R383's prose reference to `32` tests (`23 + 9`) is **not adopted**; the actual materialized static test count across the two modules is **`31`** (`23` methods in `test_config_source.py` `9afdc4db...` + `8` methods in `test_launch_handoff.py` `2dc9f00b...`, as the optional 9th launch test was not materialized). Only the **single new method** `RegisteredA102Subject.test_verify_raw_and_freeze_source_enforce_exact_generated_lockfile_membership` is proposed for execution here.
+- **Inline Read Coverage & Explicit Omissions**:
+  - Read 100% in full: `BODY1`–`BODY6` (4 official Cargo source files at commit `5f94df4789f005f9a352888e8355ffc645b7ed0e`: `src/util/cache_lock.rs` `78ac4920...`, `src/util/flock.rs` `d21295c2...`, `src/ops/cargo_fetch.rs` `9f82a25c...`, `src/util/sqlite.rs` `a4fd48c3...`, acquisition provenance, and `cargo --version --verbose` output), `BODY7` (R383 untrusted owner proposal), `BODY8`–`BODY10` (`RegisteredA102Subject` class, imports, diff, and materialization of `test_config_source.py` `9afdc4db...`), `BODY11` (all relevant `bounded_sdk_compile.py` `cf94c096...` functions/globals), `BODY12`–`BODY13` (all 575 `EXPECTED-GENERATED-575.proposed.json` `d1ddad44...` rows and single-deletion proof from `EXPECTED-GENERATED-576.preimage.json` `2954ab3c...`), `BODY14` (`EXACT-ONE-NEW-SDKFREE-TEST-OPERATION.proposed.json`), and `BODY15`–`BODY18` (`request.fresh05.candidate.json`, `assemble_fresh05_metadata.py`, assembler diff, and mechanical scope summary).
+  - Explicit Omissions: The unchanged 22 test methods in `test_config_source.py` and full `bounded_sdk_compile.py` (`cf94c096...`) are retained from R370 context rather than re-audited in full; Cargo modules outside the 4 supplied files (`ops::resolve_ws`, `PackageSet::get_many`, `workspace::gc`, `global_cache_tracker`, `cargo_output_metadata`, `cargo_compile`) and stdlib internals (`tempfile`, `unittest`) were not provided or audited.
+
+---
+
+### 2. Decision 1 — Independent Source Review of New Test Method in `test_config_source.py` (`9afdc4dbbcb283f35809af494ba6ef3a81d8311815a14451575b6855412f6c9b`)
+
+- **New Test Source Verdict**: **`APPROVE`**
+- **Mandatory Blocking Issues**: **None (`0`)**.
+- **Non-Blocking Observations**: **None (`0`)**.
+
+#### Technical Verification of `RegisteredA102Subject.test_verify_raw_and_freeze_source_enforce_exact_generated_lockfile_membership` (`L268–320`)
+1. **Actual Guard API & Branch Precedence Verification (`BODY8`, `BODY9`, `BODY11`)**:
+   - **Subcase A — Missing Expected Lockfile (`L278–294`)**:
+     - Creates `source_home/.global-cache`, `source_home/.package-cache`, and `source_home/registry/.../adler2-2.0.1/.cargo-ok` inside `tempfile.TemporaryDirectory()`, while `c['expected_generated_files']` additionally declares `{'relative': '.package-cache-mutate', 'kind': 'cargo-lockfile'}`.
+     - With `patch.object(runner, 'approved_includes', return_value=set())`, `runner.verify_raw(c)` (`L857–858`) iterates `c['expected_generated_files']` and calls `regular(root / relative(row['relative']))`. On `.package-cache-mutate`, `regular()` (`L235`) executes `os.stat(p, follow_symlinks=False)` and raises **`FileNotFoundError`** before `tree_hashes` (`L861`) and before `receipt(c, 'C_RAW_IDENTITIES.json', ...)` (`L863`).
+     - This matches the exact uncaught `FileNotFoundError` branch precedence that caused native `04` `B0/C` failure. Because `C_RAW_IDENTITIES.json` is not written on failure, `packet/` remains clean for subsequent calls.
+   - **Subcase B — Unexpected Extra Lockfile on Disk (`L295–302`)**:
+     - Updates `c['expected_generated_files']` to `[.global-cache, .package-cache-mutate, ok_rel]` (omitting `.package-cache`, which remains on disk) and creates `source_home/.package-cache-mutate`.
+     - Inside `runner.verify_raw(c)`, all 3 declared entries pass `regular(p)`, producing `expected = {'.global-cache', '.package-cache-mutate', ok_rel}`. Then `actual = tree_hashes(root, declared_links(c))` (`L861`) discovers all 4 regular files on disk (`{'.global-cache', '.package-cache', '.package-cache-mutate', ok_rel}`), and `need(set(actual) == expected, 'unexpected or missing source-home file membership')` raises `runner.Refusal('unexpected or missing source-home file membership')` before `receipt(...)`.
+   - **Subcase C — Exact 3-File Match, Receipt Write, `freeze_source`, and `frozen_source` (`L303–315`)**:
+     - Unlinks `.package-cache-mutate` and sets `c['expected_generated_files']` to `[.global-cache, .package-cache, ok_rel]`.
+     - `runner.verify_raw(c)` succeeds and writes `packet/C_RAW_IDENTITIES.json` (`write_new` with `O_CREAT | O_EXCL`, `65,536B` cap).
+     - Verifies `set(raw_receipt['files']) == {'.global-cache', '.package-cache', ok_rel}` and `len(raw_receipt['cargo_ok']) == 1`.
+     - Calls `runner.freeze_source(c)` (`L873–882`), which verifies `tree_hashes` against `C_RAW_IDENTITIES.json`, strips write bits via `chmod_nofollow` (`0o444` on files, `0o555` on directories in reverse depth order and on `source_home`), and writes `packet/D_FREEZE.json`.
+     - Calls `runner.frozen_source(c)` (`L884–885`) and asserts `frozen['files'] == raw_receipt['files']`.
+2. **Permission Restoration & `TemporaryDirectory` Cleanup Safety (`L316–320`)**:
+   - In the `finally:` block:
+     ```python
+     for root_dir,dirs,files in os.walk(source_home,topdown=False):
+         for f in files:os.chmod(Path(root_dir)/f,0o600)
+         for d in dirs:os.chmod(Path(root_dir)/d,0o700)
+     os.chmod(source_home,0o700)
+     ```
+   - After `freeze_source(c)`, `source_home` and its subdirectories have mode `0o555` (`r-x` for owner UID `1000`). On Linux, `os.walk` requires only read+search (`0o500`) on directories, and `os.chmod` on existing child inodes checks only inode ownership (`st_uid == euid == 1000`) and search (`0o100`) permission on ancestor directories—it does not require parent directory write permission. Restoring `0o600` on files and `0o700` on all subdirectories and `source_home` before exiting `with tempfile.TemporaryDirectory() as tmp:` guarantees that `TemporaryDirectory.__exit__` removes the entire tree cleanly with zero leaked read-only directories.
+
+---
+
+### 3. Decision 2 — Independent Review of Exact 575-Row Metadata (`d1ddad44...`), Cargo Primary-Source Basis & Prospective `fresh05` Assembler (`BODY1`–`BODY7`, `BODY12`–`BODY13`, `BODY15`–`BODY17`)
+
+- **Metadata, Remedy & Prospective Assembler Verdict**: **`APPROVE`** (with explicit source/runtime scope qualifications and residual pre-launch conditions below).
+
+#### 3.1 Independent Assessment of Official Cargo Source (`5f94df4789f005f9a352888e8355ffc645b7ed0e`, `BODY1`–`BODY6`)
+1. **What the Supplied Official Cargo Source Directly Proves**:
+   - **Lockfile Separation (`src/util/cache_lock.rs` `L355–405`, `L421–451`)**: `CacheLocker` manages two distinct lockfiles in `CARGO_HOME`: `CACHE_LOCK_NAME = ".package-cache"` (acquired exclusively by `CacheLockMode::DownloadExclusive`) and `MUTATE_NAME = ".package-cache-mutate"` (acquired in shared mode by `CacheLockMode::Shared` and exclusively by `CacheLockMode::MutateExclusive`). Acquiring `DownloadExclusive` opens/creates only `.package-cache` and never opens or creates `.package-cache-mutate`.
+   - **Read-Only `CARGO_HOME` Fallback Across All Three Lock Modes (`src/util/cache_lock.rs` `L206–327`, `L501–514`; `src/util/flock.rs` `L235–240`, `L292–329`)**: Both `open_rw_exclusive_create` and `open_ro_shared_create` open lockfiles with `OpenOptions::new().read(true).write(true).create(true)` (`O_RDWR | O_CREAT`). When `CARGO_HOME` (`source-home`) is read-only (`0o555` after Phase D and `--ro-bind` in Phases E/F), `open` fails with `EROFS` or `EACCES` (`PermissionDenied`) whether `.package-cache-mutate` exists or not. For `Shared`, `lock_shared_blocking`/`nonblocking` catches any `Err`, logs `tracing::warn!`, sets `self.lock = None`, increments `self.count`, and returns `LockAcquired`. For `DownloadExclusive` and `MutateExclusive`, `lock_exclusive_blocking`/`nonblocking` checks `maybe_readonly(&e)` (which matches `PermissionDenied` and `libc::EROFS`), falls back to `lock_shared_*`, sets `self.is_exclusive = true`, and returns `Ok(())` / `Ok(LockAcquired)`.
+2. **Explicit Scope Qualifications (Distinguishing Proven Cache-Lock Facts from Unsupplied Call-Graph & Unrun Phases)**:
+   - While `src/ops/cargo_fetch.rs` (`L29, L89–90`) and `src/util/sqlite.rs` (`L89–106`) show `fetch` calling `ops::resolve_ws`, `packages.get_many`, and `workspace::gc::auto_gc` (and SQLite migration creating `.global-cache`), the call-graph bodies of `resolve_ws`, `get_many`, `auto_gc` / `global_cache_tracker`, `cargo_output_metadata`, and `cargo_compile` are not in the 4 supplied files. The fact that Phase B (`cargo fetch --frozen` on a fresh `source-home`) creates `.global-cache` and `.package-cache` without `.package-cache-mutate` is jointly supported by `cache_lock.rs` (`DownloadExclusive` never touching `.package-cache-mutate`) and the empirical native `04` Phase B output (`575` files).
+   - Matching `cargo --version --verbose` commit `5f94df4789f005f9a352888e8355ffc645b7ed0e` (`BODY6`) establishes official upstream commit-source behavior, **not** reproducible binary provenance.
+   - Actual native Phases D, E, and F have **not** yet executed in a native attempt and their runtime success is **not** inferred here.
+
+#### 3.2 Verification of `EXPECTED-GENERATED-575.proposed.json` (`d1ddad44740a4236260ab101e31c503298c799791173278d216d9eacb177a309`, `BODY12`, `BODY13`)
+- **Single-Row Deletion Only**: `EXPECTED-GENERATED-575.proposed.json` (`76,963` bytes) differs from `EXPECTED-GENERATED-576.preimage.json` (`77,042` bytes, `2954ab3c...`) solely by deleting index `2` (`{"kind": "cargo-lockfile", "relative": ".package-cache-mutate"}`).
+- **Complete 575-Row Accounting**: All other 575 rows and their relative order are unchanged: `2` `cargo-lockfile` rows (`.global-cache`, `.package-cache`), `2` git checkout `.cargo-ok` rows (`04c9c5d/.cargo-ok`, `a01a1ea/.cargo-ok`), `148` `git-control` rows (`75` under `04c9c5d/.git/...` and `73` under `a01a1ea/.git/...`), and `423` registry `.cargo-ok` rows (`152..574`).
+- **No Guard or Policy Weakening**: Production guard `bounded_sdk_compile.py` (`cf94c096...`) is untouched. `validate(c)` (`L178–186`), `verify_raw(c)` (`L857–862`), `freeze_source(c)` (`L873–882`), and `frozen_source(c)` (`L884–885`) continue to enforce exact bijective `set(actual) == expected` file membership, SHA-256/SHA-1 content authentication, symlink containment, and read-only freezing.
+
+#### 3.3 Verification of Prospective `fresh05` Request & Assembler (`BODY15`–`BODY17`)
+- `request.fresh05.candidate.json` (`BODY15`, SHA-256 `c92016d7252bb3becc08fcf8343b578fc1bf45ebff2fe14766d18cf4664959e2`) and `assemble_fresh05_metadata.py` (`BODY16`, diff `BODY17`) preserve all numeric quota/cgroup/phase limits, pin `GUARD_SHA = 'cf94c096...'` and `OPERATOR = '7a8e55b9...'`, verify `EXPECTED-GENERATED-576.preimage.json` before substituting `EXPECTED-GENERATED-575.proposed.json`, and bind updated `test_config_source.py` (`9afdc4db...`).
+- **Residual Conditions**: `request.fresh05.candidate.json` and `assemble_fresh05_metadata.py` are prospective only; actual `fresh05` readiness still requires live `OP-0`–`OP-6` provisioning, fresh `Q-OBS.json`, current `old_home_stat_manifest` verification, actual pass of the new unit test, config assembly, external archive SHA verification, and Root pre-launch selection.
+
+---
+
+### 4. Decision 3 — Separate Classification of the Exact ONE Ordinary Test Operation (`EXACT-ONE-NEW-SDKFREE-TEST-OPERATION.proposed.json`, `BODY14`)
+
+- **Single Ordinary Test Operation Verdict**: **`ELIGIBLE`**
+
+#### Concrete Execution & Verification Conditions
+1. **Exact 3-File Isolated Staging Pin Check**:
+   - Before and after execution, the isolated directory `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/387-fresh05-generated-membership-metadata/prospective-isolated-onecase-suite` must contain the exact 3 staged files with unchanged byte lengths and SHA-256 digests:
+     - `bounded_sdk_compile.py` (`74,900` bytes, `cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc`)
+     - `test_config_source.py` (`24,251` bytes, `9afdc4dbbcb283f35809af494ba6ef3a81d8311815a14451575b6855412f6c9b`)
+     - `config.example.json` (`15,229` bytes, `4b12357a4af85553be2ca833760d3bd4a08bb9ad4f5585823d63e800f0ff42cb`)
+   - And zero residual temporary subdirectories or `.pyc` files after completion.
+2. **Exact Command, Selector, Count Gate & Resource Bounds**:
+   - Execute the exact `argv` in `BODY14` (`/usr/bin/timeout --signal=TERM --kill-after=1s 30s /usr/bin/python3 -I -B -c ...`) as `uid=1000`, `gid=1000`, in `cwd=suite_dir`, with the exact 4-key environment (`LANG=C.UTF-8`, `PATH=/usr/bin:/bin`, `HOME=suite_dir`, `TMPDIR=suite_dir`, no inherited env) and `combined_capture_cap_bytes = 131072`.
+   - Must assert `suite.countTestCases() == 1`, print `SELECTED_ONE_CASE test_config_source.RegisteredA102Subject.test_verify_raw_and_freeze_source_enforce_exact_generated_lockfile_membership`, execute only that 1 method (`Ran 1 test` / `OK`), and exit `0`.
+3. **Fail-Stop & Non-Inference Boundaries**:
+   - Any non-zero exit, timeout/signal, output exceeding `131,072` bytes, pin mismatch, or leftover temp artifact fails the operation immediately with no retry.
+   - Passing this single ordinary synthetic test does not close `C4` or `R2`, does not alter retired native attempts `01`–`04` or stopped Amendment 10, and does not itself grant native attempt `05` launch authority.
+
+END-R388-GENERATED575-NEWTEST-ONEORDINARY-REVIEW
