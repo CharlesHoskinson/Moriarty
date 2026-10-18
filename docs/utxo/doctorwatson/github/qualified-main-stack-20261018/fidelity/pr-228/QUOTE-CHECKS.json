@@ -1,0 +1,138 @@
+[
+  {
+    "endLine": 25,
+    "exactQuote": "  \"head\": \"7498ffb15323ba85ccb97135c994a9a8214e041e\",\n  \"tree\": \"9922929b66fbc48164c9a17dcbae680907e7bdf9\",\n  \"parents\": [\n    \"36af18d48569c165480f104bed2b12b85e215d88\",\n    \"2f1b969ae4153c4f4f05ffe27a285a12e20f09cd\"\n  ],\n  \"base\": \"36af18d48569c165480f104bed2b12b85e215d88\",\n  \"soleChangedPath\": \"crates/mori/tests/disjoint_test_public.rs\",\n  \"candidateSha256\": \"b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41\",\n  \"candidateBytes\": 7274,\n  \"candidateLines\": 197,\n  \"delta\": {\n    \"added\": 62,\n    \"deleted\": 0\n  },\n  \"actualSelectedTest\": \"ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports\",\n  \"actualExitCode\": 0,\n  \"actualWallSeconds\": 58.519370103000256,\n  \"actualPassed\": 1,\n  \"actualFiltered\": 1,\n  \"currentSourcePins\": 875,\n  \"sourceClosurePinSha256\": \"57378cd050282b099f25e355ea433d0e9ede46ed3ce48cc6f3ba2f1d969e586a\",",
+    "path": "SUBJECT.json",
+    "sha256": "114a46128f849257a14027e725a761e841a64d188e8a287cf3dabb713fad754c",
+    "startLine": 4,
+    "supports": "Binds the reviewed integrated main commit 7498ffb15323ba85ccb97135c994a9a8214e041e, tree 9922929b66fbc48164c9a17dcbae680907e7bdf9, base 36af18d48569c165480f104bed2b12b85e215d88, sole changed path crates/mori/tests/disjoint_test_public.rs (+62/-0 lines, 197 lines, 7274 bytes), and selected test execution summary.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        4,
+        25
+      ]
+    ]
+  },
+  {
+    "endLine": 172,
+    "exactQuote": "    // Model an ordinary transcription error in an untouched state value.\n    let mut wrong = expected_stages[0][2].clone();\n    assert_eq!(wrong[\"post\"][\"state\"][\"marker\"][\"value\"], \"77\");\n    wrong[\"post\"][\"state\"][\"marker\"][\"value\"] = Value::String(\"78\".into());\n    fs::write(\n        project.0.join(\"left-first-2.json\"),\n        serde_json::to_vec_pretty(&wrong).unwrap(),\n    )\n    .unwrap();\n    // Only comparison flags change in the public aggregate; all actual data\n    // and the later stage/case observations must remain exactly the baseline.\n    expected[\"status\"] = Value::String(\"failed\".into());\n    expected[\"cases\"][0][\"passed\"] = Value::Bool(false);\n    expected[\"cases\"][0][\"stages\"][2][\"passed\"] = Value::Bool(false);\n    let mut expected_bytes = serde_json::to_vec_pretty(&expected).unwrap();\n    expected_bytes.push(b'\\n');",
+    "path": "source-preparation/source/crates/mori/tests/disjoint_test_public.rs",
+    "sha256": "b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41",
+    "startLine": 157,
+    "supports": "Proves that only the temporary expected comparison file left-first-2.json (/post/state/marker/value from \"77\" to \"78\") and the three comparison wrapper flags (/status, /cases/0/passed, /cases/0/stages/2/passed) are modified prior to invoking the CLI, leaving all source programs, scenarios, events, and baseline actual expectations untouched.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        157,
+        172
+      ]
+    ]
+  },
+  {
+    "endLine": 197,
+    "exactQuote": "    let output = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .args([\"--color\", \"never\", \"test\"])\n        .arg(&project.0)\n        .output()\n        .unwrap();\n    assert_eq!(\n        output.status.code(),\n        Some(1),\n        \"{}\",\n        String::from_utf8_lossy(&output.stderr)\n    );\n    let actual: Value = serde_json::from_slice(&output.stdout).unwrap();\n    assert_eq!(actual, expected);\n    assert_eq!(output.stdout, expected_bytes);\n    assert!(String::from_utf8_lossy(&output.stderr).contains(\"1 passed; 1 failed\"));\n    let cases = actual[\"cases\"].as_array().unwrap();\n    assert_eq!(cases.len(), expected_stages.len());\n    for (case, expected_stages) in cases.iter().zip(expected_stages) {\n        let stages = case[\"stages\"].as_array().unwrap();\n        assert_eq!(stages.len(), expected_stages.len());\n        for (stage, expected_stage) in stages.iter().zip(expected_stages) {\n            assert_eq!(expand(&stage[\"actual\"], &case[\"tables\"]), expected_stage);\n        }\n    }\n}",
+    "path": "source-preparation/source/crates/mori/tests/disjoint_test_public.rs",
+    "sha256": "b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41",
+    "startLine": 173,
+    "supports": "Demonstrates that the test invokes the real mori binary once and asserts in memory that it exits with code 1, emits \"1 passed; 1 failed\" on stderr, produces the exact expected aggregate JSON and byte stream on stdout, and preserves all 10 complete original stage reports across both cases after lossless prefix expansion with explicit length checks.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        173,
+        197
+      ]
+    ]
+  },
+  {
+    "endLine": 86,
+    "exactQuote": "    let mut reports = Vec::new();\n    let mut failed = 0;\n    for case in manifest.cases {\n        let report = run_case(dir, case)?;\n        if report[\"passed\"] != true {\n            failed += 1;\n        }\n        reports.push(report);\n    }\n    shell.status(\n        \"Tested\",\n        format!(\"{} passed; {} failed\", reports.len() - failed, failed),\n    );\n    println!(\"{}\", super::aggregate_report(failed == 0, reports)?);\n    Ok(if failed == 0 {\n        ExitCode::SUCCESS\n    } else {\n        ExitCode::FAILURE\n    })\n}",
+    "path": "source-preparation/source/crates/mori/src/commands/test/disjoint_test.rs",
+    "sha256": "ce01456416e68b37457f20f3cd12ae4b715716d2be3c801d3cc0c2ddada88ce1",
+    "startLine": 67,
+    "supports": "Verifies the public disjoint_test::run execution path: it executes every case in manifest order regardless of earlier case failure, prints the shell status summary and complete aggregate_report(failed == 0, reports), and returns ExitCode::FAILURE when failed != 0.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        67,
+        86
+      ]
+    ]
+  },
+  {
+    "endLine": 198,
+    "exactQuote": "    let mut pair = Pair::start(members).map_err(pair_error)?;\n    let actual = pair.report().map_err(pair_error)?;\n    let mut passed = actual == expected_start;\n    let mut tables = ObservationTables::default();\n    let mut stages = vec![json!({\"index\":0,\"passed\":passed,\"actual\":tables.reference(actual)?})];\n    for (index, ((step, event), expected)) in case\n        .events\n        .iter()\n        .zip(events)\n        .zip(expected_events)\n        .enumerate()\n    {\n        pair.resume(step.member, event).map_err(pair_error)?;\n        let actual = pair.report().map_err(pair_error)?;\n        let matched = actual == expected;\n        passed &= matched;\n        stages.push(json!({\"index\":index+1,\"passed\":matched,\"actual\":tables.reference(actual)?}));\n    }",
+    "path": "source-preparation/source/crates/mori/src/commands/test/disjoint_test.rs",
+    "sha256": "ce01456416e68b37457f20f3cd12ae4b715716d2be3c801d3cc0c2ddada88ce1",
+    "startLine": 181,
+    "supports": "Verifies that run_case compares each full Pair::report() against expected before prefix-referencing into ObservationTables, folds matched into passed via passed &= matched without aborting, and continues executing all subsequent events with the actual Pair state.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        181,
+        198
+      ]
+    ]
+  },
+  {
+    "endLine": 352,
+    "exactQuote": "The JSON report retains every case in manifest order, including its full actual\nexecution or error. An execution includes the prestate, poststate, every step\nand ordered effects. When every case report is exportable, expectation mismatches\nretain all results and produce `status: \"failed\"` with exit 1; a matching suite produces `status: \"passed\"`\nwith exit 0. Small reports retain their existing pretty JSON format.\nThe report is ASCII with every string escaped, but it is not a bounded\n`mori_core::json` reader-profile document: it may exceed 1 MiB, depth 32 or\n65,536 nodes. Each case is exported and bounded individually.",
+    "path": "source-preparation/source/docs/NATIVE-CORE.md",
+    "sha256": "8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb",
+    "startLine": 345,
+    "supports": "Confirms the documented public test aggregate contract in current NATIVE-CORE.md (shifted from historical 2f lines 234-241 to lines 345-352 on current main 7498): expectation mismatches retain all results and produce status \"failed\" with exit 1 when every case report is individually exportable.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        345,
+        352
+      ]
+    ]
+  },
+  {
+    "endLine": 12,
+    "exactQuote": "{\n  \"finishedAt\": \"2026-10-18T19:15:28.099517+00:00\",\n  \"head\": \"7498ffb15323ba85ccb97135c994a9a8214e041e\",\n  \"tree\": \"9922929b66fbc48164c9a17dcbae680907e7bdf9\",\n  \"exitCode\": 0,\n  \"wallSeconds\": 58.519370103000256,\n  \"stdoutSha256\": \"d3bd8c09a032cd838c75d5ac0427231deab431ccc00f72d1f7d3cadb9d4dbdfb\",\n  \"stderrSha256\": \"c52ed95054b9ac9005920366214be6cd5d9628db56466776a349962dc809d661\",\n  \"ownedSessionRemaining\": [],\n  \"sourcePinsUnchanged\": true,\n  \"workingTreeClean\": true\n}",
+    "path": "actual/RESULT.json",
+    "sha256": "44224c2adf100ecafa133ec482b09bb83c84dbefd78f2a763bf84b1bdadbb43f",
+    "startLine": 1,
+    "supports": "Attests the actual execution result on current HEAD 7498ffb15323ba85ccb97135c994a9a8214e041e / tree 9922929b66fbc48164c9a17dcbae680907e7bdf9: exitCode 0, wallSeconds 58.519370103000256, empty ownedSessionRemaining, sourcePinsUnchanged true, and workingTreeClean true.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": true,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        1,
+        12
+      ]
+    ]
+  },
+  {
+    "endLine": 6,
+    "exactQuote": "running 1 test\ntest ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.30s",
+    "path": "actual/STDOUT.log",
+    "sha256": "d3bd8c09a032cd838c75d5ac0427231deab431ccc00f72d1f7d3cadb9d4dbdfb",
+    "startLine": 2,
+    "supports": "Confirms that exactly 1 selected test (ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports) executed and passed in 0.30s while 1 existing test was filtered out.",
+    "hashMatches": true,
+    "exactAtClaimedCoordinates": false,
+    "literalOccurs": true,
+    "actualExactLineRanges": [
+      [
+        2,
+        5
+      ]
+    ]
+  }
+]

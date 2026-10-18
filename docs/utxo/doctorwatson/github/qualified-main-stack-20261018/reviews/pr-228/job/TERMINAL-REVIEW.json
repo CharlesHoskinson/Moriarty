@@ -1,0 +1,166 @@
+{
+  "actualResultAssessment": {
+    "findings": [
+      "No defects or anomalies found in the actual execution receipts (`actual/CHECK-PLAN.json`, `actual/START.json`, `actual/CHILD.json`, `actual/RESULT.json`, `actual/CLEANUP.json`, `actual/STDOUT.log`, `actual/STDERR.log`).",
+      "The selected test `ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports` passed in 0.30s harness time (58.519370103000256s outer wall time including cold offline compile; exitCode 0) while the 1 older positive test was filtered out.",
+      "Post-run verification confirmed 0 remaining session processes (`ownedSessionRemaining: []`), all 875 source closure pins unchanged (`sourcePinsUnchanged: true`, sha256 `57378cd050282b099f25e355ea433d0e9ede46ed3ce48cc6f3ba2f1d969e586a`), `workingTreeClean: true`, and removal of `/tmp/doctorwatson-pr228-main36af-oh8bi3bh` (`existsAfter: false`)."
+    ],
+    "limitations": [
+      "Inner CLI stdout (839,112 bytes), stderr (`1 passed; 1 failed`), exit code 1, and all 10 lossless prefix-expanded stage reports were asserted in memory by the passing Rust test and were not exported as standalone physical capture files.",
+      "The physical file `source-preparation/historical-2f/DERIVED-FAILED-PUBLIC-REPORT.json` (839,112 bytes, sha256 `96ed426bef4d9804205d009fca5036b39592f2fdfab5754fdf02c2a68ca7a6d8`) is strictly an expected derivative and is never claimed as captured inner CLI stdout.",
+      "Historical results and approvals on `2f1b969ae4153c4f4f05ffe27a285a12e20f09cd` and `7ef` do not transfer; only the current `7498ffb15323ba85ccb97135c994a9a8214e041e` run is assessed.",
+      "Execution selected `-p mori --no-default-features --features core2-disjoint-draft --test disjoint_test_public`; native/SDK/proving/ledger/compiler targets were not exercised."
+    ],
+    "reason": "The current actual result on integrated HEAD 7498ffb15323ba85ccb97135c994a9a8214e041e (tree 9922929b66fbc48164c9a17dcbae680907e7bdf9, parents 36af18d48569c165480f104bed2b12b85e215d88 and 2f1b969ae4153c4f4f05ffe27a285a12e20f09cd) is verified across actual/CHECK-PLAN.json, actual/START.json, actual/CHILD.json, actual/RESULT.json, actual/CLEANUP.json, actual/STDOUT.log, and actual/STDERR.log, together with source-preparation/root_check.py. Execution ran offline (CARGO_NET_OFFLINE=true, CARGO_INCREMENTAL=0, --frozen, -j1, --test-threads=1) under /usr/bin/timeout --signal=TERM --kill-after=5s 90s with pinned 1.99.0 toolchain binaries (cargo e951141cc55a6cd7b9876d187bd30a3720e6086b99413af95e3b8de1cdd72f14, rustc f3834d26669b03f6855fa54bd2381443123e860167bc0c7a8dd137e5cf6e5e4f), verified absence of 18 ancestor .cargo/config(.toml) paths, and an isolated temporary root /tmp/doctorwatson-pr228-main36af-oh8bi3bh. Exactly 1 selected test ran and passed (exitCode 0, 1 passed, 1 filtered out), asserting the child CLI exit code 1, stderr summary substring, full 839,112-byte failed aggregate stdout, and 10 lossless expanded stage reports in memory, with verified process/tempdir cleanup and 875 unchanged source pins.",
+    "verdict": "approve-qualified"
+  },
+  "dissent": [],
+  "literalEvidence": [
+    {
+      "endLine": 25,
+      "exactQuote": "  \"head\": \"7498ffb15323ba85ccb97135c994a9a8214e041e\",\n  \"tree\": \"9922929b66fbc48164c9a17dcbae680907e7bdf9\",\n  \"parents\": [\n    \"36af18d48569c165480f104bed2b12b85e215d88\",\n    \"2f1b969ae4153c4f4f05ffe27a285a12e20f09cd\"\n  ],\n  \"base\": \"36af18d48569c165480f104bed2b12b85e215d88\",\n  \"soleChangedPath\": \"crates/mori/tests/disjoint_test_public.rs\",\n  \"candidateSha256\": \"b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41\",\n  \"candidateBytes\": 7274,\n  \"candidateLines\": 197,\n  \"delta\": {\n    \"added\": 62,\n    \"deleted\": 0\n  },\n  \"actualSelectedTest\": \"ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports\",\n  \"actualExitCode\": 0,\n  \"actualWallSeconds\": 58.519370103000256,\n  \"actualPassed\": 1,\n  \"actualFiltered\": 1,\n  \"currentSourcePins\": 875,\n  \"sourceClosurePinSha256\": \"57378cd050282b099f25e355ea433d0e9ede46ed3ce48cc6f3ba2f1d969e586a\",",
+      "path": "SUBJECT.json",
+      "sha256": "114a46128f849257a14027e725a761e841a64d188e8a287cf3dabb713fad754c",
+      "startLine": 4,
+      "supports": "Binds the reviewed integrated main commit 7498ffb15323ba85ccb97135c994a9a8214e041e, tree 9922929b66fbc48164c9a17dcbae680907e7bdf9, base 36af18d48569c165480f104bed2b12b85e215d88, sole changed path crates/mori/tests/disjoint_test_public.rs (+62/-0 lines, 197 lines, 7274 bytes), and selected test execution summary."
+    },
+    {
+      "endLine": 172,
+      "exactQuote": "    // Model an ordinary transcription error in an untouched state value.\n    let mut wrong = expected_stages[0][2].clone();\n    assert_eq!(wrong[\"post\"][\"state\"][\"marker\"][\"value\"], \"77\");\n    wrong[\"post\"][\"state\"][\"marker\"][\"value\"] = Value::String(\"78\".into());\n    fs::write(\n        project.0.join(\"left-first-2.json\"),\n        serde_json::to_vec_pretty(&wrong).unwrap(),\n    )\n    .unwrap();\n    // Only comparison flags change in the public aggregate; all actual data\n    // and the later stage/case observations must remain exactly the baseline.\n    expected[\"status\"] = Value::String(\"failed\".into());\n    expected[\"cases\"][0][\"passed\"] = Value::Bool(false);\n    expected[\"cases\"][0][\"stages\"][2][\"passed\"] = Value::Bool(false);\n    let mut expected_bytes = serde_json::to_vec_pretty(&expected).unwrap();\n    expected_bytes.push(b'\\n');",
+      "path": "source-preparation/source/crates/mori/tests/disjoint_test_public.rs",
+      "sha256": "b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41",
+      "startLine": 157,
+      "supports": "Proves that only the temporary expected comparison file left-first-2.json (/post/state/marker/value from \"77\" to \"78\") and the three comparison wrapper flags (/status, /cases/0/passed, /cases/0/stages/2/passed) are modified prior to invoking the CLI, leaving all source programs, scenarios, events, and baseline actual expectations untouched."
+    },
+    {
+      "endLine": 197,
+      "exactQuote": "    let output = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .args([\"--color\", \"never\", \"test\"])\n        .arg(&project.0)\n        .output()\n        .unwrap();\n    assert_eq!(\n        output.status.code(),\n        Some(1),\n        \"{}\",\n        String::from_utf8_lossy(&output.stderr)\n    );\n    let actual: Value = serde_json::from_slice(&output.stdout).unwrap();\n    assert_eq!(actual, expected);\n    assert_eq!(output.stdout, expected_bytes);\n    assert!(String::from_utf8_lossy(&output.stderr).contains(\"1 passed; 1 failed\"));\n    let cases = actual[\"cases\"].as_array().unwrap();\n    assert_eq!(cases.len(), expected_stages.len());\n    for (case, expected_stages) in cases.iter().zip(expected_stages) {\n        let stages = case[\"stages\"].as_array().unwrap();\n        assert_eq!(stages.len(), expected_stages.len());\n        for (stage, expected_stage) in stages.iter().zip(expected_stages) {\n            assert_eq!(expand(&stage[\"actual\"], &case[\"tables\"]), expected_stage);\n        }\n    }\n}",
+      "path": "source-preparation/source/crates/mori/tests/disjoint_test_public.rs",
+      "sha256": "b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41",
+      "startLine": 173,
+      "supports": "Demonstrates that the test invokes the real mori binary once and asserts in memory that it exits with code 1, emits \"1 passed; 1 failed\" on stderr, produces the exact expected aggregate JSON and byte stream on stdout, and preserves all 10 complete original stage reports across both cases after lossless prefix expansion with explicit length checks."
+    },
+    {
+      "endLine": 86,
+      "exactQuote": "    let mut reports = Vec::new();\n    let mut failed = 0;\n    for case in manifest.cases {\n        let report = run_case(dir, case)?;\n        if report[\"passed\"] != true {\n            failed += 1;\n        }\n        reports.push(report);\n    }\n    shell.status(\n        \"Tested\",\n        format!(\"{} passed; {} failed\", reports.len() - failed, failed),\n    );\n    println!(\"{}\", super::aggregate_report(failed == 0, reports)?);\n    Ok(if failed == 0 {\n        ExitCode::SUCCESS\n    } else {\n        ExitCode::FAILURE\n    })\n}",
+      "path": "source-preparation/source/crates/mori/src/commands/test/disjoint_test.rs",
+      "sha256": "ce01456416e68b37457f20f3cd12ae4b715716d2be3c801d3cc0c2ddada88ce1",
+      "startLine": 67,
+      "supports": "Verifies the public disjoint_test::run execution path: it executes every case in manifest order regardless of earlier case failure, prints the shell status summary and complete aggregate_report(failed == 0, reports), and returns ExitCode::FAILURE when failed != 0."
+    },
+    {
+      "endLine": 198,
+      "exactQuote": "    let mut pair = Pair::start(members).map_err(pair_error)?;\n    let actual = pair.report().map_err(pair_error)?;\n    let mut passed = actual == expected_start;\n    let mut tables = ObservationTables::default();\n    let mut stages = vec![json!({\"index\":0,\"passed\":passed,\"actual\":tables.reference(actual)?})];\n    for (index, ((step, event), expected)) in case\n        .events\n        .iter()\n        .zip(events)\n        .zip(expected_events)\n        .enumerate()\n    {\n        pair.resume(step.member, event).map_err(pair_error)?;\n        let actual = pair.report().map_err(pair_error)?;\n        let matched = actual == expected;\n        passed &= matched;\n        stages.push(json!({\"index\":index+1,\"passed\":matched,\"actual\":tables.reference(actual)?}));\n    }",
+      "path": "source-preparation/source/crates/mori/src/commands/test/disjoint_test.rs",
+      "sha256": "ce01456416e68b37457f20f3cd12ae4b715716d2be3c801d3cc0c2ddada88ce1",
+      "startLine": 181,
+      "supports": "Verifies that run_case compares each full Pair::report() against expected before prefix-referencing into ObservationTables, folds matched into passed via passed &= matched without aborting, and continues executing all subsequent events with the actual Pair state."
+    },
+    {
+      "endLine": 352,
+      "exactQuote": "The JSON report retains every case in manifest order, including its full actual\nexecution or error. An execution includes the prestate, poststate, every step\nand ordered effects. When every case report is exportable, expectation mismatches\nretain all results and produce `status: \"failed\"` with exit 1; a matching suite produces `status: \"passed\"`\nwith exit 0. Small reports retain their existing pretty JSON format.\nThe report is ASCII with every string escaped, but it is not a bounded\n`mori_core::json` reader-profile document: it may exceed 1 MiB, depth 32 or\n65,536 nodes. Each case is exported and bounded individually.",
+      "path": "source-preparation/source/docs/NATIVE-CORE.md",
+      "sha256": "8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb",
+      "startLine": 345,
+      "supports": "Confirms the documented public test aggregate contract in current NATIVE-CORE.md (shifted from historical 2f lines 234-241 to lines 345-352 on current main 7498): expectation mismatches retain all results and produce status \"failed\" with exit 1 when every case report is individually exportable."
+    },
+    {
+      "endLine": 12,
+      "exactQuote": "{\n  \"finishedAt\": \"2026-10-18T19:15:28.099517+00:00\",\n  \"head\": \"7498ffb15323ba85ccb97135c994a9a8214e041e\",\n  \"tree\": \"9922929b66fbc48164c9a17dcbae680907e7bdf9\",\n  \"exitCode\": 0,\n  \"wallSeconds\": 58.519370103000256,\n  \"stdoutSha256\": \"d3bd8c09a032cd838c75d5ac0427231deab431ccc00f72d1f7d3cadb9d4dbdfb\",\n  \"stderrSha256\": \"c52ed95054b9ac9005920366214be6cd5d9628db56466776a349962dc809d661\",\n  \"ownedSessionRemaining\": [],\n  \"sourcePinsUnchanged\": true,\n  \"workingTreeClean\": true\n}",
+      "path": "actual/RESULT.json",
+      "sha256": "44224c2adf100ecafa133ec482b09bb83c84dbefd78f2a763bf84b1bdadbb43f",
+      "startLine": 1,
+      "supports": "Attests the actual execution result on current HEAD 7498ffb15323ba85ccb97135c994a9a8214e041e / tree 9922929b66fbc48164c9a17dcbae680907e7bdf9: exitCode 0, wallSeconds 58.519370103000256, empty ownedSessionRemaining, sourcePinsUnchanged true, and workingTreeClean true."
+    },
+    {
+      "endLine": 6,
+      "exactQuote": "running 1 test\ntest ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.30s",
+      "path": "actual/STDOUT.log",
+      "sha256": "d3bd8c09a032cd838c75d5ac0427231deab431ccc00f72d1f7d3cadb9d4dbdfb",
+      "startLine": 2,
+      "supports": "Confirms that exactly 1 selected test (ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports) executed and passed in 0.30s while 1 existing test was filtered out."
+    }
+  ],
+  "materialFindings": [
+    "No blocking or revise-worthy defects found in the 62-line test addition (`crates/mori/tests/disjoint_test_public.rs`) or in the actual execution record (`actual/*`) on integrated commit `7498ffb15323ba85ccb97135c994a9a8214e041e`.",
+    "Non-blocking context note: between historical PR head `2f1b969ae4153c4f4f05ffe27a285a12e20f09cd` and current integrated `main` `7498ffb15323ba85ccb97135c994a9a8214e041e`, 7 of the 89 selected context files changed (`RUST_GUIDELINES.md`, `crates/mori/src/cli.rs`, `crates/mori/src/commands/check.rs`, `crates/mori/src/commands/mod.rs`, `crates/mori/src/commands/simulate.rs`, `crates/mori-core/src/lib.rs`, and `docs/NATIVE-CORE.md`, where the `mori test` aggregate-report specification cited at historical lines 234-241 now appears verbatim at lines 345-352). None of these 7 context changes alters `Command::Test` -> `test::run` -> `disjoint_test::run` -> `Pair::{start,resume,report}` -> `aggregate_report` semantics or the 11 `core-disjoint-product` fixture goldens."
+  ],
+  "overallVerdict": "approve-qualified",
+  "readScope": {
+    "completeUnitsRead": [
+      "PRIMARY.md (all 17312 lines / 719703 bytes read in bounded non-truncated ranges, containing all 79 inlineCompleteBodies listed in INLINE-AND-PHYSICAL-COVERAGE.json)",
+      "OUTPUT-SCHEMA.json",
+      "SUBJECT.json",
+      "READ-SCOPE.json",
+      "INLINE-AND-PHYSICAL-COVERAGE.json",
+      "source-preparation/BINDING.json",
+      "source-preparation/CURRENT-CONTEXT-PINS.json",
+      "source-preparation/candidate.patch",
+      "source-preparation/before/crates/mori/tests/disjoint_test_public.rs",
+      "source-preparation/source/crates/mori/tests/disjoint_test_public.rs",
+      "source-preparation/source/crates/mori/src/commands/test/disjoint_test.rs",
+      "source-preparation/source/crates/mori/src/commands/test.rs",
+      "source-preparation/source/docs/NATIVE-CORE.md",
+      "source-preparation/source/docs/CORE-STAGED-TESTS.md",
+      "source-preparation/source/ all 73 inline current source, manifest, fixture, and documentation bodies (including all 7 files changed between historical 2f and current 7498: RUST_GUIDELINES.md, crates/mori/src/cli.rs, crates/mori/src/commands/check.rs, crates/mori/src/commands/mod.rs, crates/mori/src/commands/simulate.rs, crates/mori-core/src/lib.rs, docs/NATIVE-CORE.md)",
+      "original-unique-context/FINANCIAL-EXPECTATION-VIEW.json",
+      "original-unique-context/SOURCE-CALL-MATRIX.md",
+      "original-unique-context/SCOPE.md",
+      "original-unique-context/HISTORICAL-PROPOSAL-SCOPE.md",
+      "original-unique-context/PREPARATION-INTENDED-CONTRACT.md",
+      "original-unique-context/PREPARATION-EXPECTED-EXPORT-PREMISE.json",
+      "original-unique-context/PREPARATION-FEATURE-SELECTION.json",
+      "source-preparation/historical-2f/EXPECTATION-DERIVATION.json",
+      "source-preparation/historical-2f/OBSERVED-SCOPE.json",
+      "source-preparation/historical-2f/ACTUAL-FEATURE-SELECTION.json",
+      "source-preparation/root_check.py",
+      "actual/CHECK-PLAN.json",
+      "actual/START.json",
+      "actual/CHILD.json",
+      "actual/RESULT.json",
+      "actual/CLEANUP.json",
+      "actual/STDOUT.log",
+      "actual/STDERR.log"
+    ],
+    "effectOnJudgment": "None. Complete reading of PRIMARY.md (all 17,312 lines without truncation) and the direct physical files covers 100% of the candidate diff, before/after test source, the entire public CLI and library execution path, all 73 non-large source/doc/manifest/fixture context units (including all 7 context files changed on current main), the extracted financial expectation view and derivation metadata, and all 7 actual execution receipts. Because the candidate neither modifies any fixture golden nor authors a new financial oracle, and because the passing Rust test verified byte-for-byte equality and lossless 10-stage prefix expansion in memory against the unchanged pinned fixture files (whose SHA-256 digests were verified before and after execution by root_check.py), leaving the 16 large physical fixture/preimage/lock files, the 839,112-byte physical expected derivative, the 875-entry pin list JSON, and the 74-member historical custody archive unread as raw physical bodies does not impair source or actual-result judgment.",
+    "partialOrUnread": [
+      "source-preparation/source/Cargo.lock (117290 bytes; sha256 verified via metadata, raw body not read)",
+      "source-preparation/source/crates/fixtures/core-disjoint-product/public-report.json (839110 bytes; sha256 verified via metadata and FINANCIAL-EXPECTATION-VIEW.json read in full, raw golden body not read)",
+      "source-preparation/source/crates/fixtures/core-disjoint-product/left-first-0.json through left-first-4.json and right-first-0.json through right-first-4.json (10 stage golden JSON files; sha256 verified via metadata and FINANCIAL-EXPECTATION-VIEW.json read in full, raw golden bodies not read)",
+      "source-preparation/source/crates/fixtures/core-disjoint-product/reserve-plan.preimage.bin, reserve-program.preimage.bin, two-deliveries-plan.preimage.bin, two-deliveries-program.preimage.bin (4 binary preimage files; unread)",
+      "source-preparation/historical-2f/DERIVED-FAILED-PUBLIC-REPORT.json (839112 bytes; physical expected derivative only, unread in raw bytes)",
+      "source-preparation/SOURCE-CLOSURE-PINS.json, original 74-member custody archive, and uninlined historical-2f / historical-7ef physical archive files (unread in raw bytes)"
+    ]
+  },
+  "retainedLimits": [
+    "Historical approvals and results on 2f1b969ae4153c4f4f05ffe27a285a12e20f09cd and 7ef do not transfer to 7498ffb15323ba85ccb97135c994a9a8214e041e; this review assesses only the current 7498 candidate and actual result.",
+    "Inner CLI stdout (839,112 bytes) and stderr (\"1 passed; 1 failed\") and the 10 prefix-expanded stage reports were asserted in memory inside the passing Rust test and were not separately exported as raw physical capture files.",
+    "The physical file DERIVED-FAILED-PUBLIC-REPORT.json (839,112 bytes, sha256 96ed426bef4d9804205d009fca5036b39592f2fdfab5754fdf02c2a68ca7a6d8) is an expected derivative and is never claimed or treated as captured inner CLI stdout.",
+    "The mutated marker (\"77\" -> \"78\" in temporary left-first-2.json) is an ordinary expected-observation comparison mismatch; it does not exercise StageRejection, false guards, runtime execution failure, or hostile/malformed input handling.",
+    "No new financial scenario, work/cost model, or ProgramPlan fixture observation is introduced; all financial, balance, liability, state, frame, history, effect, and logical-cost expectations reuse existing independent custody with its disclosed related-source exposure, narrow finite shared-Core premise, and authored-codec-conditional wire qualification.",
+    "The 16 large physical source units (Cargo.lock, public-report.json, 10 stage golden JSONs, 4 .preimage.bin files), DERIVED-FAILED-PUBLIC-REPORT.json, SOURCE-CLOSURE-PINS.json, and the 74-member original custody archive were not read in full raw bytes; their availability and hash pins do not constitute a full raw-byte read.",
+    "All five full composition operators (sequential, disjoint parallel, shared-state interleaving where SI1-SI4 remain unadopted, atomic synchronization, asynchronous messaging), U0-U7, M1-M17, MC/SP/G, 148 EARS requirements, 292 scenarios, 20 families, and all compiler, native proving, ZKIR, ledger, resource, security/authentication, and target qualification obligations remain open."
+  ],
+  "reviewToken": "mori-pr228-main7498-whole-20261018-a1",
+  "reviewedSubjectSha256": "114a46128f849257a14027e725a761e841a64d188e8a287cf3dabb713fad754c",
+  "reviewer": {
+    "actualBackendIdentityAttested": false,
+    "requestedModel": "gemini-4-argon-high",
+    "returnedLabel": "Gemini 4 Argon (High)"
+  },
+  "sourceAssessment": {
+    "findings": [
+      "The candidate diff against base `36af18d48569c165480f104bed2b12b85e215d88` is strictly confined to `crates/mori/tests/disjoint_test_public.rs` (+62/-0 lines; 135 -> 197 lines; 4,571 -> 7,274 bytes; sha256 `b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41`).",
+      "The new test `ordinary_expected_frame_mismatch_fails_and_retains_all_actual_reports` mutates only a temporary copy of `left-first-2.json` (`/post/state/marker/value` from `\"77\"` to `\"78\"`) and the three expected wrapper flags (`/status` -> `\"failed\"`, `/cases/0/passed` -> `false`, `/cases/0/stages/2/passed` -> `false`), then verifies exit code 1, stderr substring `\"1 passed; 1 failed\"`, exact aggregate JSON and byte equality (839,112 bytes), explicit case/stage array lengths, and lossless expansion of all 10 `stage[\"actual\"]` reports against the unmodified original 10 stage goldens.",
+      "The 7 context files that changed between historical `2f1b969ae4153c4f4f05ffe27a285a12e20f09cd` and current `7498ffb15323ba85ccb97135c994a9a8214e041e` (`RUST_GUIDELINES.md`, `crates/mori/src/cli.rs`, `crates/mori/src/commands/check.rs`, `crates/mori/src/commands/mod.rs`, `crates/mori/src/commands/simulate.rs`, `crates/mori-core/src/lib.rs`, and `docs/NATIVE-CORE.md`, where the aggregate-report contract shifted from lines 234-241 to lines 345-352) do not alter the `mori test` disjoint execution path or fixture custody."
+    ],
+    "limitations": [
+      "The mutated expected marker (`\"77\"` -> `\"78\"`) is an ordinary comparison-only mismatch; it does not test `StageRejection`, false guards, runtime execution failure, or hostile/malformed input handling.",
+      "No new financial scenario or independent oracle is introduced; original financial/work values retain their disclosed related-source exposure, narrow finite shared-Core premise, and authored-codec-conditional wire qualification.",
+      "Only the local qualified disjoint `Pair` draft profile (`moriarty-tests/disjoint-draft/1`) is exercised; all five full composition operators (sequential, disjoint parallel, shared-state interleaving where SI1-SI4 remain unadopted, atomic synchronization, asynchronous messaging) and all native/proof/ledger/security obligations remain open."
+    ],
+    "reason": "The candidate change against base 36af18d48569c165480f104bed2b12b85e215d88 is strictly confined to crates/mori/tests/disjoint_test_public.rs (before sha256 b5b49d18e5b8d031728e5118bb7fbc4909585af8c927702b8cfae5af8efc7aa9, 135 lines / 4571 bytes; after sha256 b522275389d57247a68c36c3e28e7e174a6035d644b5b7cbaa6b592a865b4c41, 197 lines / 7274 bytes; +62/-0 lines). Inspection of the complete current public path (main::main -> commands::run -> commands::test::run -> commands::test::disjoint_test::run -> disjoint_test::run_case -> mori_core::stage::disjoint::Pair::{start,resume,report} -> ObservationTables::reference -> test::aggregate_report) confirms that expected stage JSONs are used solely for equality comparison (actual == expected), never as runtime state, event input, or continuation. A mismatch at case 0 stage 2 sets matched = false and passed &= matched while continuing through stages 3 and 4 of left-first and all 5 stages (0..4) of right-first, referencing all 10 actual reports losslessly into per-case history/effects prefix tables, printing the complete aggregate report, and returning ExitCode::FAILURE (exit code 1). All RUST_GUIDELINES.md requirements are met and all original expectation qualifications are preserved.",
+    "verdict": "approve-qualified"
+  },
+  "summary": "Fresh independent whole SOURCE + ACTUAL RESULT review of PR228 integrated on current main (7498ffb15323ba85ccb97135c994a9a8214e041e, tree 9922929b66fbc48164c9a17dcbae680907e7bdf9): approve-qualified on both sourceAssessment and actualResultAssessment. The sole 62-line addition in crates/mori/tests/disjoint_test_public.rs cleanly tests ordinary expected-observation mismatch handling across the unchanged public CLI and local disjoint Pair harness without altering production code or fixture custody, and the isolated offline execution receipt (actual/RESULT.json) confirms the selected test passed (exit 0, 1 passed / 1 filtered, 58.52s wall / 0.30s harness) with in-memory verification of inner CLI exit 1, 839,112-byte failed aggregate stdout, and all 10 lossless expanded stage reports, followed by verified process/tempdir cleanup and 875 unchanged source pins."
+}

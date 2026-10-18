@@ -1,0 +1,330 @@
+{
+  "actualReadLimits": [],
+  "actualResultAssessment": {
+    "evidenceIds": [
+      "E7",
+      "E8",
+      "E10",
+      "E11",
+      "E12",
+      "E13",
+      "E14",
+      "E15",
+      "E16",
+      "E18"
+    ],
+    "reason": "Fresh build (`rust-build` in 44.12506190199929s, exit 0, stdout 0B, stderr 4865B SHA256 d81faadf8ad3e1400a36a3aa6d10a51373075d65f32bfdb1e75cfec1eb172139, binary SHA256 98a623600ff6601b6f639ecd5b5e74cbf8b1f807107371aa4cc47c58e191b7f6) and Node consumer execution (`node-consumers` in 0.2070410120068118s, exit 0, stdout 216B SHA256 a1bb298552d19a18d6141373feb626941c84991f107bea1c3e504d210d802ba6, 1 test / 1 pass / 0 fail) on exact head 36af18d48569c165480f104bed2b12b85e215d88 (tree 87a8c049e9e74d1e75eba911aab629d476df0d9c, base 7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1) confirm that public `mori check` (exit 0, 2266B stdout SHA256 3a09e2b8381f5060157146910899b181401e51560e85eb37127e3af6ecc29042) and `mori expand --emit-source6-transfer` (exit 0, 988B stdout SHA256 c7eb98b1e7f95d66ae68655508086df659621b555fc69db46cf238744c9e66af) produce real `Source/6` bytes consumed directly by `parseAndLowerSource6` and `prepareSource6S0Unqualified` -> `prepareMil4S0`. Qualifications: (1) the 988B emission is verified through downstream AST, 6 ordered effects, 20 selected intent fields (out of 22 serialized keys, with `version`/`core` observed-only and `signedDigest` undefined/omitted), and opening/closing financial frames rather than independent wire-byte equality; (2) the 7 frames in `pay_rebate.effect-prefix-financial-states.expected.json` are conditional mathematical expectations, not observed runtime traces; (3) retained fields in `actual-consumer.json` (9626B, SHA256 0f32f5122fd57c0fb12f0732d059bdde013a8c9e03b963eb02520838b06fd6da) including `status: PreparedUnqualified`, `core: moriarty-core/5`, post-work `11`/`3`, `obligations: []`, 4 `requiredPremises`, 4 `unverifiedBindings`, and global replay state are observed-only; and (4) results bind only exact tree 87a8c049e9e74d1e75eba911aab629d476df0d9c with clean session and `/tmp/doctorwatson-pr231-main-sum3zl5r` removal.",
+    "verdict": "approve-qualified"
+  },
+  "dissent": [
+    {
+      "evidenceIds": [
+        "E7",
+        "E8",
+        "E9"
+      ],
+      "position": "Reject any literal reading of historical P3 wording that implies an exported API named `prepareMil4Source6` exists or was executed.",
+      "reason": "The actual TypeScript consumer modules export and call `parseAndLowerSource6` and `prepareSource6S0Unqualified` (which delegates internally to `parseAndLowerSource6` and `prepareMil4S0`); `prepareMil4Source6` is only historical prompt shorthand.",
+      "scope": "P3 consumer function naming (`prepareMil4Source6` vs `prepareSource6S0Unqualified` -> `prepareMil4S0`)"
+    },
+    {
+      "evidenceIds": [
+        "E12",
+        "E13",
+        "E16"
+      ],
+      "position": "Do not treat the 7 effect-prefix financial frames or the retained post-work/status/premise/binding fields in `actual-consumer.json` as runtime-verified intermediate traces or proven security/meter properties.",
+      "reason": "The consumer test asserts only opening/closing financial frames, `head`, `round`, and the selected replay tuple while pin-checking the 7-frame prefix file's SHA256; intermediate prefix frames are conditional mathematical expectations and `workRemaining: 11` / `workSpent: 3` / `PreparedUnqualified` remain observed-only.",
+      "scope": "P5/P7 distinction between asserted semantic oracle fields, conditional prefix math, and observed-only runtime output"
+    }
+  ],
+  "evidence": [
+    {
+      "analysis": "Pins the custodian freeze digest across the 22 frozen custodian members and 23 fixture pins.",
+      "exactQuote": "\"custodianFreezeSha256\": \"28671c70406c61f32870c5f40e5470c7fe7ef11a720a0d3aa8df84de0b3a77b0\",",
+      "id": "E1",
+      "originalLine": 3,
+      "path": "source/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/FIXTURE-PINS.json"
+    },
+    {
+      "analysis": "Establishes the independent arithmetic derivation for payout 800, fee 25, gross debit/allowance 825, and cap headroom 25.",
+      "exactQuote": "USD aliases economicassetA at scale2 inMidnight. Buyer/Seller/Treasury aliasOwner/Recipient/Fee. 4.50USD=450atoms; atoms(USD,50)=50, so subtraction450-50=400Qty. Leftscalar2*400=800Qty. The other maxargument7.00USD=700, therefore max(a800,b700)=800 choosesa. Feeatoms25 is25, independent of decimal display. Gross800+25=825, grosscap8.50USD=850, feecap25, netfloor800, capheadroom25. The owner pays825; recipient's netincrease is800, fee recipient's increase25. No double fee subtraction, rounding, conversion or floatingpoint arithmetic.",
+      "id": "E2",
+      "originalLine": 5,
+      "path": "source/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md"
+    },
+    {
+      "analysis": "Discloses non-blind prior related implementation exposure of the oracle custodian.",
+      "exactQuote": "Prior implementation exposure is disclosed: this author prepared earlier Corefinancial/report and Source6 CLI/library/emitter/checker/source-owner packets and the separate capped-remittance oracle. This is not globalblindness.",
+      "id": "E3",
+      "originalLine": 13,
+      "path": "source/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md"
+    },
+    {
+      "analysis": "Shows the explicit `--emit-source6-transfer` CLI dispatch into `run_source6`, which remains unchanged in executable body after PR237 help-text updates.",
+      "exactQuote": "pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {\n    if args.emit_source6_transfer {\n        return run_source6(args.input, shell);\n    }",
+      "id": "E4",
+      "originalLine": 22,
+      "path": "source/crates/mori/src/commands/expand.rs"
+    },
+    {
+      "analysis": "Confirms `mori check` routes `pay_rebate.mori` (starting with `agreement`, not `language`) through the Beta parser/checker branch.",
+      "exactQuote": "pub(super) fn dispatch<C: SourceCheckConsumer>(source: &str, mut consumer: C) -> C::Output {\n    if mori_lexer::first_token_text(source).is_ok_and(|token| token == \"language\") {",
+      "id": "E5",
+      "originalLine": 29,
+      "path": "source/crates/mori/src/commands/check_source.rs"
+    },
+    {
+      "analysis": "Shows `emit_checked_source6_transfer` parsing, checking, and extracting the single `pay_rebate` transfer action before evaluating and emitting `Source/6`.",
+      "exactQuote": "let ast = mori_parser::parse(source).map_err(|error| vec![error])?;\n    let result = mori_checker::check(&ast);\n    if !result.is_accepted() {\n        return Err(result.diagnostics);\n    }\n    let (terms, span) = extract(&result.checked, action).map_err(|error| vec![error])?;",
+      "id": "E6",
+      "originalLine": 87,
+      "path": "source/crates/mori-source6/src/transfer.rs"
+    },
+    {
+      "analysis": "Establishes the exact imported producer functions in the consumer regression test (no `prepareMil4Source6` API exists).",
+      "exactQuote": "import { parseAndLowerSource6 } from '../src/successor/financial-agreement-source-v6-frontend.ts';\nimport { prepareSource6S0Unqualified } from '../src/successor/mil4-s0-source-v6.ts';",
+      "id": "E7",
+      "originalLine": 10,
+      "path": "source/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs"
+    },
+    {
+      "analysis": "Confirms raw decoded `mori expand --emit-source6-transfer` stdout enters `parseAndLowerSource6` and `prepareSource6S0Unqualified` directly without a manufactured AST or wrapper.",
+      "exactQuote": "actual.loweringAttempted = true;\n      try { actual.lowered = parseAndLowerSource6(source6); }\n      catch (error) { actual.loweringError = errorRecord(error); }\n      actual.preparationAttempted = true;\n      try { actual.outcome = prepareSource6S0Unqualified(source6); }\n      catch (error) { actual.preparationError = errorRecord(error); }",
+      "id": "E8",
+      "originalLine": 122,
+      "path": "source/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs"
+    },
+    {
+      "analysis": "Shows `prepareSource6S0Unqualified` delegating lowered `Source/6` state, intent, effects, and proposed post-head directly to `prepareMil4S0`.",
+      "exactQuote": "const { ast, state, intent, submittedEffects, proposedPostHead } = lowered;\n  const result = prepareMil4S0(state, intent, submittedEffects, proposedPostHead);",
+      "id": "E9",
+      "originalLine": 39,
+      "path": "source/experiments/moriarty-language/src/successor/mil4-s0-source-v6.ts"
+    },
+    {
+      "analysis": "Verifies whole-object equality of `lowered.ast` and `outcome.ast` against `pay_rebate.source6.ast.expected.json` and all 6 ordered `Source/6` effects.",
+      "exactQuote": "assert.deepEqual(ast, expectedAst);\n    assert.deepEqual(ast.submitted.effects, expected.source6OrderedEffects);\n    assert.equal(ast.submitted.effects.length, expected.effectCount);\n    assert.deepEqual(observed.outcome.ast, expectedAst);",
+      "id": "E10",
+      "originalLine": 159,
+      "path": "source/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs"
+    },
+    {
+      "analysis": "Confirms the regression test asserts 20 selected intent fields while leaving `version` and `core` observed-only and `signedDigest` undefined.",
+      "exactQuote": "assert.deepEqual({\n      sourceProfile: intent.sourceProfile, programId: intent.programId,\n      sourceHash: intent.sourceHash, policyDigest: intent.policyDigest, keyRef: intent.keyRef,\n      domain: intent.domain, asset: intent.asset, signer: intent.signer, nonce: intent.nonce,\n      preHead: intent.preHead, notBefore: intent.notBefore, notAfter: intent.notAfter,\n      grossCap: intent.grossCap, feeCap: intent.feeCap, netFloor: intent.netFloor,\n      kind: intent.kind, recipient: intent.recipient, feeRecipient: intent.feeRecipient,\n      amount: intent.amount, fee: intent.fee,\n    }, {",
+      "id": "E11",
+      "originalLine": 170,
+      "path": "source/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs"
+    },
+    {
+      "analysis": "Shows assertion of all 6 `Core/5` semantic ordered effects, closing financial frame, `head`, `round`, and selected replay key `[\"Midnight\",\"Owner\",\"rebate-nonce\"]`.",
+      "exactQuote": "assert.deepEqual(candidate.effects, expected.core5SemanticOrderedEffects);\n    assert.equal(candidate.effects.length, expected.effectCount);\n    assert.deepEqual(financialFrame(candidate.candidatePost), {\n      domain: post.domain, asset: post.asset, balances: post.balances, allowances: post.allowances,\n    });\n    assert.equal(candidate.candidatePost.head, post.head);\n    assert.equal(candidate.candidatePost.round, post.round);\n    // The independent oracle fixes the selected key, not a global replay\n    // inventory or a security/history judgment about consuming that key.\n    const selectedKey = candidate.candidatePost.consumedReplay\n      .find((key) => key === post.selectedReplay.encodedKey);\n    assert.equal(selectedKey, post.selectedReplay.encodedKey);\n    assert.deepEqual(JSON.parse(selectedKey), post.selectedReplay.tuple);",
+      "id": "E12",
+      "originalLine": 198,
+      "path": "source/experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs"
+    },
+    {
+      "analysis": "Explicitly marks the 7 effect-prefix financial states as conditional mathematical expectations rather than observed runtime traces.",
+      "exactQuote": "\"scope\": \"Conditional mathematical application of the six normative effects; all provided financial cells retained at every prefix, no runtime trace/meters asserted.\",",
+      "id": "E13",
+      "originalLine": 2,
+      "path": "source/experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.effect-prefix-financial-states.expected.json"
+    },
+    {
+      "analysis": "Binds the fresh execution receipts to commit 36af18d48569c165480f104bed2b12b85e215d88 and tree 87a8c049e9e74d1e75eba911aab629d476df0d9c on base 7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1.",
+      "exactQuote": "\"finishedAt\": \"2026-10-18T19:11:02.194374+00:00\",\n  \"head\": \"36af18d48569c165480f104bed2b12b85e215d88\",\n  \"tree\": \"87a8c049e9e74d1e75eba911aab629d476df0d9c\",\n  \"base\": \"7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1\",",
+      "id": "E14",
+      "originalLine": 2,
+      "path": "actual/FINAL-RESULT.json"
+    },
+    {
+      "analysis": "Records the fresh passing Node consumer test execution (`tests 1, pass 1, fail 0`).",
+      "exactQuote": "\u2714 pay_rebate: actual public Source/6 bytes against independent semantic observations (19.527396ms)\n\u2139 tests 1\n\u2139 suites 0\n\u2139 pass 1\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 173.157268",
+      "id": "E15",
+      "originalLine": 1,
+      "path": "actual/node-consumers/STDOUT.log"
+    },
+    {
+      "analysis": "Shows the retained `candidatePost` in `actual-consumer.json`, including observed-only `core`, `workRemaining: \"11\"`, and `workSpent: \"3\"`.",
+      "exactQuote": "\"candidatePost\": {\n        \"core\": \"moriarty-core/5\",\n        \"domain\": \"Midnight\",\n        \"asset\": \"A\",\n        \"head\": \"m1\",\n        \"round\": \"4\",\n        \"workRemaining\": \"11\",\n        \"workSpent\": \"3\",",
+      "id": "E16",
+      "originalLine": 364,
+      "path": "actual/observations/pay_rebate/actual-consumer.json"
+    },
+    {
+      "analysis": "Documents the two trailing blank lines at EOF in frozen oracle DTO basis declaration snapshots.",
+      "exactQuote": "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt:35: new blank line at EOF.\nexperiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt:39: new blank line at EOF.",
+      "id": "E17",
+      "originalLine": 1,
+      "path": "history/old-actual/SOURCE-WHITESPACE.log"
+    },
+    {
+      "analysis": "Shows a stale prose reference to `clean7fe/treef9fd` in `SOURCE-RESULT-CUSTODY.json` narrative text while structured custody fields and actual receipts bind `36af18d4` / `87a8c049`.",
+      "exactQuote": "\"executionBinding\": \"Root driver executed committed clean7fe/treef9fd and verified exact source before/after. No separate postcommit rerun/binding is invented. Parent list comes from root task message, exact head/tree from complete actual receipts.\",",
+      "id": "E18",
+      "originalLine": 120,
+      "path": "SOURCE-RESULT-CUSTODY.json"
+    }
+  ],
+  "findings": [
+    {
+      "evidenceIds": [
+        "E14",
+        "E18"
+      ],
+      "issue": "In `SOURCE-RESULT-CUSTODY.json` at line 120, the narrative field `rootFidelityCorrections.executionBinding` retains a stale copy-paste string `\"Root driver executed committed clean7fe/treef9fd\"`, whereas the structured header of `SOURCE-RESULT-CUSTODY.json` (lines 3-5) and all fresh execution receipts (`actual/CHECK-PLAN.json`, `actual/FINAL-RESULT.json`, `actual/rust-build/START.json`, and `actual/node-consumers/START.json`) bind exact head `36af18d48569c165480f104bed2b12b85e215d88` and tree `87a8c049e9e74d1e75eba911aab629d476df0d9c` on base `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1`.",
+      "requestedAction": "Treat the structured commit/tree fields and fresh `actual/*` receipts (`36af18d48569c165480f104bed2b12b85e215d88` / `87a8c049e9e74d1e75eba911aab629d476df0d9c`) as authoritative and update the prose string in future custody packet generation.",
+      "severity": "informational"
+    },
+    {
+      "evidenceIds": [
+        "E1",
+        "E17"
+      ],
+      "issue": "Two frozen DTO declaration basis files (`financial-agreement-source-v6-frontend.ts.declarations.txt:35` and `mil4-s0-core-v5.ts.declarations.txt:39`) contain a trailing blank line at EOF as recorded in `SOURCE-WHITESPACE.log`; they remain intentionally untouched to preserve `FREEZE.sha256` (`28671c70406c61f32870c5f40e5470c7fe7ef11a720a0d3aa8df84de0b3a77b0`).",
+      "requestedAction": "Keep the frozen custodian files byte-for-byte unchanged so `FREEZE.sha256` and `FIXTURE-PINS.json` remain intact.",
+      "severity": "informational"
+    }
+  ],
+  "limitations": [
+    "This review is strictly scoped to exact commit 36af18d48569c165480f104bed2b12b85e215d88 (tree 87a8c049e9e74d1e75eba911aab629d476df0d9c) on base 7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1 (incorporating PR237 only); it does not transfer to any future main or merge tree.",
+    "The oracle custodian had prior related implementation exposure (`PROVENANCE.json` / `DERIVATION.md`) and the `Source/6` expected AST is conditionally shaped to the authored DTO/codec contract rather than derived under global blindness.",
+    "The 315 compiled Rust input pins in `RUST-COMPILE-INPUT-PINS.json` and duplicate historical archive entries in `FULL-INPUT.md` were verified as manifest/custody records along with the specific inspected diffs (`cli.rs`, `expand.rs`, `docs/NATIVE-CORE.md`), without claiming full-repository model reading or execution of all 315 Rust source files.",
+    "All broader repository gates (148/292/20, U/M/MC/SP/G, work-meter semantics, PCD/cryptographic verification, wallet/key custody, VM/ledger integration, and production target readiness) remain outside the scope of this single-fixture regression slice."
+  ],
+  "predicates": {
+    "P1": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E1",
+        "E2",
+        "E3"
+      ],
+      "reason": "All 25 candidate files (unchanged from 8ee0a1f1ca98b09ba08221f0b1b52a1def2e8c65), 23 fixture pins, and 22 custodian freeze hashes (`28671c70...`) match, and the `pay_rebate` arithmetic (`450 - 50 = 400`, `2 * 400 = 800`, `max(800, 700) = 800`, `fee = 25`, `gross = 825 <= 850`) is independently derived with prior related implementation exposure transparently disclosed."
+    },
+    "P2": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E4",
+        "E5",
+        "E6"
+      ],
+      "reason": "`mori check` dispatches `pay_rebate.mori` through the Beta parser/checker branch and `mori expand --emit-source6-transfer` runs `mori_source6::emit_checked_source6_transfer` to emit the canonical 988-byte `Source/6` program with trailing LF, unaffected by PR237's CLI help-text and doc updates."
+    },
+    "P3": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E7",
+        "E8",
+        "E9"
+      ],
+      "reason": "`rust-source6-max-rebate.mjs` spawns the compiled `mori` binary for `check` and `expand` and feeds raw decoded `Source/6` stdout directly into `parseAndLowerSource6` and `prepareSource6S0Unqualified` (which calls `prepareMil4S0`), with no manufactured AST/wrapper and with historical `prepareMil4Source6` wording recognized as a non-existent API name."
+    },
+    "P4": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E10",
+        "E11",
+        "E12"
+      ],
+      "reason": "`lowered.ast` and `outcome.ast` deep-equal `pay_rebate.source6.ast.expected.json`, all 6 ordered effects match in both `Source/6` (`UseReplay \"rebate-nonce\"`) and `Core/5` (`UseReplay [\"Midnight\",\"Owner\",\"rebate-nonce\"]`) with `Credit Fee 25` at index 2, and all 20 selected intent fields match while `version` and `core` remain observed-only across the 22 serialized keys."
+    },
+    "P5": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E2",
+        "E12",
+        "E13"
+      ],
+      "reason": "Opening and closing financial frames (`Owner 2000 -> 1175`, `Recipient 5 -> 805`, `Fee 7 -> 32`; allowance `2000/25 -> 1175/850`), `head` (`m0 -> m1`), `round` (`4`), and selected replay key match, while the 7 prefix frames in `pay_rebate.effect-prefix-financial-states.expected.json` are explicitly scoped as conditional math expectations rather than observed runtime traces."
+    },
+    "P6": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E14",
+        "E15"
+      ],
+      "reason": "Fresh receipts for exact commit `36af18d48569c165480f104bed2b12b85e215d88` / tree `87a8c049e9e74d1e75eba911aab629d476df0d9c` on base `7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1` confirm `rust-build` (44.12506190199929s, exit 0) and `node-consumers` (0.2070410120068118s, exit 0, 1 pass / 0 fail), public `check` (2266B stdout) and `expand` (988B stdout) processes, empty owned sessions, and deleted temporary root `/tmp/doctorwatson-pr231-main-sum3zl5r`."
+    },
+    "P7": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E11",
+        "E12",
+        "E16"
+      ],
+      "reason": "`actual-consumer.json` (9626B) preserves the full return from `parseAndLowerSource6` and `prepareSource6S0Unqualified` while keeping `status: \"PreparedUnqualified\"`, `core: \"moriarty-core/5\"`, post-work `11`/`3`, `obligations: []`, 4 `requiredPremises`, 4 `unverifiedBindings`, and global replay state strictly observed-only."
+    },
+    "P8": {
+      "disposition": "supported-within-scope",
+      "evidenceIds": [
+        "E1",
+        "E3",
+        "E13",
+        "E16"
+      ],
+      "reason": "`UNKNOWN-VECTORS.json`, `PROVENANCE.json`, `DERIVATION.md`, and `SOURCE-RESULT-CUSTODY.json` bound all non-claims, leaving work meters, PCD/cryptographic verification, key/signature custody, multi-action/multi-asset composition, and future main merges explicitly unasserted."
+    }
+  },
+  "providedProducerIdentity": {
+    "corePreparationFunction": "prepareMil4S0",
+    "loweringFunction": "parseAndLowerSource6",
+    "metadataSha256": "5d2a16493d3fc644cf7afeb56f39f7b80172cff21e11b38b90a7abfa8ac0dd9f",
+    "sourcePreparationFunction": "prepareSource6S0Unqualified",
+    "sourceSha256": "f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712"
+  },
+  "readScope": {
+    "actualRangesRead": [
+      "REVIEW-RESPONSE.schema.json:1-2",
+      "MANDATORY-INPUTS.json:1-532",
+      "REVIEW-REQUEST.md:1-28",
+      "FULL-INPUT.md:1-600",
+      "FULL-INPUT.md:601-1165 (truncated 762B at byte 46080)",
+      "FULL-INPUT.md:1160-1200 (recovered truncated tail)",
+      "FULL-INPUT.md:1201-1800",
+      "FULL-INPUT.md:1801-2400",
+      "FULL-INPUT.md:2401-3000",
+      "FULL-INPUT.md:3001-3600",
+      "FULL-INPUT.md:3601-4200",
+      "FULL-INPUT.md:4201-4800",
+      "FULL-INPUT.md:4801-5400",
+      "FULL-INPUT.md:5401-6000",
+      "FULL-INPUT.md:6001-6600",
+      "FULL-INPUT.md:6601-7200",
+      "FULL-INPUT.md:7201-7800",
+      "FULL-INPUT.md:7801-8400",
+      "FULL-INPUT.md:8401-9000",
+      "FULL-INPUT.md:9001-9450",
+      "FULL-INPUT.md:9451-9900",
+      "FULL-INPUT.md:9901-10350",
+      "FULL-INPUT.md:10351-10800",
+      "FULL-INPUT.md:10801-11437"
+    ],
+    "all25CandidateBodiesRead": true,
+    "all64OriginalMeaningsRead": true,
+    "completeActualResultRead": true,
+    "entireInputRead": true,
+    "mandatoryInventorySha256": "1b1122574ce28480698eda8c36d26bdc88fc140612270ddb5b1ba7b6bba2dec1",
+    "meaningMapSha256": "30dddc0e85c2557f5894473be646beccd102eb1cbff23b346a99092aad7a094d",
+    "scopeQualification": "Complete `FULL-INPUT.md` (lines 1-11437, 557815 bytes, SHA256 57228e45ebcd383ea6a5d5635630f0fe2e9e3cb223cca60105fc2f730b2ff333), `MANDATORY-INPUTS.json` (105 entries, SHA256 1b1122574ce28480698eda8c36d26bdc88fc140612270ddb5b1ba7b6bba2dec1), `REVIEW-REQUEST.md`, and `REVIEW-RESPONSE.schema.json` were read in full, including recovery of the single 762-byte truncation at lines 1160-1165. All 25 candidate files, all 64 original primary meanings, and all fresh execution receipts were read in full; the 315 Rust compile pin rows and duplicate old-PRIMARY archive summaries were inspected as custody/manifest records without claiming full-repository model reading or execution of all 315 Rust source files.",
+    "unreadMandatoryPaths": []
+  },
+  "reviewToken": "mori-pr231-main7af-36af18d4-12fdd7082047e3eb2962",
+  "reviewedSubjectSha256": "36e54ea9fd061329978c2d9097fbb0b0eb7b79c0ce9b5ea9f1ea0314bb1cee4f",
+  "sourceAssessment": {
+    "evidenceIds": [
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5",
+      "E6",
+      "E7",
+      "E9",
+      "E17"
+    ],
+    "reason": "The 25 candidate files for PR231 (unchanged from 8ee0a1f1ca98b09ba08221f0b1b52a1def2e8c65) integrate cleanly onto base 7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1 (commit 36af18d48569c165480f104bed2b12b85e215d88, tree 87a8c049e9e74d1e75eba911aab629d476df0d9c, parents [7af9c7c120beb7e8f4e46a3b8baff26eb7bdafc1, 8ee0a1f1ca98b09ba08221f0b1b52a1def2e8c65]) with intact 22-file custodian freeze (`28671c70406c61f32870c5f40e5470c7fe7ef11a720a0d3aa8df84de0b3a77b0`) and 23 fixture pins, verified `pay_rebate` `max` rebate arithmetic (`800` payout, `25` fee, `825` gross debit/allowance against `850` gross cap), explicit gated `--emit-source6-transfer` Rust CLI emission (`mori_parser::parse` -> `mori_checker::check` -> `mori_source6::emit_checked_source6_transfer`), and unmanufactured TypeScript consumer wiring (`parseAndLowerSource6` and `prepareSource6S0Unqualified` -> `prepareMil4S0`). Qualifications: (1) between `caa416f5...` and `7af9c7c1...` (PR237), only CLI help text/tests in `crates/mori/src/cli.rs` and `crates/mori/src/commands/expand.rs` plus `docs/NATIVE-CORE.md` changed across the 315 compiled Rust inputs while `expand::run`/`run_source6` and all 3 TS production modules remain unchanged; (2) the oracle custodian discloses prior related implementation exposure (`PROVENANCE.json` / `DERIVATION.md`) and conditional DTO/codec shaping for `pay_rebate.source6.ast.expected.json` (not global blindness); (3) no API named `prepareMil4Source6` exists; and (4) two frozen DTO basis files retain a trailing blank line at EOF (`SOURCE-WHITESPACE.log`) to preserve `FREEZE.sha256`.",
+    "verdict": "approve-qualified"
+  },
+  "verdict": "approve-qualified"
+}
