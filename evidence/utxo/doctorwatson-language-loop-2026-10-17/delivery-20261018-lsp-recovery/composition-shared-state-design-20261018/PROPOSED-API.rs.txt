@@ -1,0 +1,105 @@
+// Proposed signatures/record contract only. Not an existing or implemented API.
+// Module: mori_core::stage::shared, feature: core2-shared-interleaving-draft.
+use crate::{Snapshot, UInt};
+use crate::stage::{NamedValue, StageEvent, StagedProgram};
+use serde_json::Value;
+
+pub struct Slot {
+    pub action: String,
+    pub inputs: Vec<NamedValue>,
+    pub logical_cap: UInt,
+}
+
+// Proposed accepted invocation_limit range is 1..=256, subject to SI4.
+pub struct Bounds {
+    pub attempted_cap: UInt,
+    pub invocation_limit: u16,
+}
+
+// Opaque, not Deserialize/Default/Clone and no public field or boundary setter.
+// One owned admitted program; one opening/current full Snapshot; two fixed
+// slot states/frames/caps/inputs/committed prefixes; immutable observation log;
+// current revision; cumulative attempted work and attempted invocation count.
+pub struct Session { /* private fields */ }
+
+// Typed error must preserve full original StageRejection when present, actual
+// invocation attempt, before/after accounting, unchanged financial revision,
+// and classification before-evaluation versus after-invocation composition.
+// Error codes/messages/wire layout require SI3/SI4 adoption; none are invented
+// as current mori::core diagnostics. Error Display is not the public envelope.
+#[derive(Debug)]
+pub struct Error { /* private fields */ }
+
+impl Error {
+    pub fn public_report(&self) -> Value;
+}
+
+impl Session {
+    // Validate source-selected membership/input layouts and whole canonical
+    // opening for BOTH actions. Opening invokes no source segment, work=0.
+    // Positive fixture bounds are 46 attempted units/4 source invocations.
+    pub fn open(
+        program: StagedProgram,
+        opening: Snapshot,
+        slots: [Slot; 2],
+        bounds: Bounds,
+    ) -> Result<Self, Error>;
+
+    // Explicitly start one not-started action against the current full head.
+    // Some errors may record attempted work without advancing financial head;
+    // exact SI4 accounting must be adopted before a body is implemented.
+    pub fn start(&mut self, slot: usize) -> Result<(), Error>;
+
+    // Resume selected frame, keeping captures but using current global head.
+    // The current standalone stage::resume semantics are not modified.
+    pub fn resume(&mut self, slot: usize, event: StageEvent) -> Result<(), Error>;
+
+    // Complete report; original full stage envelopes remain in history.
+    // Reporting performs no evaluator invocation and consumes no logical work.
+    pub fn report(&self) -> Result<Value, Error>;
+}
+
+// Proposed complete report field contract (JSON UInt values are decimal
+// strings, revision/index/count fields are bounded ordinary JSON integers):
+// {
+// format: "moriarty-local-shared-interleaving-proposal/1",
+// status: "ready" | "waiting" | "complete",
+// qualification: "local-reference-stage",
+// composition_qualification: "unadopted-local-shared-interleaving",
+// authentication: "none", consumption: "untracked",
+// ordering: { start: "explicit", effects: "invocation-then-source-order" },
+// program_hash: <existing stage program hash hex>,
+// plan_hash: <existing stage plan hash hex>,
+// pre: <whole opening Snapshot>, post: <whole current Snapshot>,
+// head_revision: <integer, counts successful advancing segments>,
+// slots: [ EXACT TWO {
+//   action: <selected name>,
+//   status: "not-started" | "waiting" | "complete",
+//   frame: <whole PendingFrame>, frame_origin_revision: <integer or null>,
+//   cap: <UInt>, committed: <UInt>, last_observation: <history index or null>
+// } ],
+// history: [ {
+//   slot: <0|1>, frame_origin_revision: <integer or null for start>,
+//   entry_revision: <integer>, exit_revision: <integer>,
+//   outcome: <UNMODIFIED COMPLETE existing stage::outcome_report(Ok(...))>
+// } ... ],
+// effects: [ <all actual segment effects, in full> ... ],
+// logical: {
+//   profile: <unchanged existing stage logical profile>,
+//   caps: [<UInt>,<UInt>], cap_total: <checked descriptive sum>,
+//   committed: [<UInt>,<UInt>], committed_total: <checked sum>,
+//   attempted_total: <checked cumulative actual attempts>,
+//   attempted_cap: <UInt>, invocations: <integer>, invocation_limit: <integer>
+// },
+// residual: [ <every whole positive Liability in current head> ... ]
+// }
+// No field is omitted; null is explicit. A newly waiting frame originates at
+// its segment's exit revision. An unselected pending frame retains that origin.
+// A completed slot's frame_origin_revision is null. Historical rows record the
+// frame origin used for THAT invocation; their original boundaries never move.
+// Top status is ready iff both slots not-started, complete iff both complete,
+// waiting otherwise (including one complete and one not-started).
+// last_observation is a direct zero-based index within this session's full
+// history; it is not a continuation, head pointer, hash or current projection.
+// No imported session decoder, pair hash, public wire replay, prefix references
+// or native/authentication/unique-consumption guarantee exists in this slice.

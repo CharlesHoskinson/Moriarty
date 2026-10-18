@@ -1,0 +1,5 @@
+# Frozen independent capped-remittance semantic oracle
+
+Start with EXPECTED-SEMANTICS.json, then the two complete Source6Ast files and ordered-target-lines files. Each independent-source6 text contains all target statements in grammar order; indentation is independently chosen and is not an actual stdout byte oracle. ConditionalClosingFinancialProjection contains complete provided3balance/1allowance financial projection, not a complete accepted Core post. Source6 bare nonce and Core5 encoded replay-key effect vectors are separately labeled. UNKNOWN.json keeps Program/Artifact/hashes/work/gates/qualification unasserted.
+
+Inputs and exact74norms/DTO excerpts are frozen alongside DERIVATION.md and PROVENANCE.json. Prior Source6 implementation exposure is disclosed; no new authored test/expected Source6/INDEPENDENT-SOURCE-SHAPE or actualoutput was read. No product/provider/runtime/SDK call occurred. FREEZE.sha256 is the immutable payload manifest; do not add execution results or edit expectations in this directory.

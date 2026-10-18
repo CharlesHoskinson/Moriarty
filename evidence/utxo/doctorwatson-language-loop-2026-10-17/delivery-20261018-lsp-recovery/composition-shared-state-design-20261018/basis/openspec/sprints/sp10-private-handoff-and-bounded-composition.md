@@ -1,0 +1,80 @@
+# SP10: Private handoff and bounded composition implementation plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
+
+**Goal:** Allow independent participants to continue, split and join private financial histories without losing duties or authority limits.
+
+**Architecture:** This sprint contributes to MC06; those OpenSpec packages retain acceptance ownership. It consumes the exact accepted profiles and artifacts named by its prerequisites.
+
+**Tech Stack:** TypeScript/Node.js, `.mori`, ISO/IEC 14977 EBNF, K, Compact and the selected Midnight native stack where applicable. Versions are pinned at task admission.
+
+## Global constraints
+
+This is an internal maintainer implementation plan. Reviewer, task-admission and RP03 controls apply only to project-operated development and funded campaigns. Public authoring, compilation, proving and deployment with developer-owned resources require objective language/proof validity and participant authorization, not project records. The [product contract](../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope.
+
+Status: S2, specified-only. [Program rules](README.md) apply to every task.
+
+Full-completion dependencies (not individual task entry gates): SP09. Stage scope: composition. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
+
+## File and interface map
+
+Paths marked create are proposed outputs. Their presence or commands are not claimed today. If a path already exists at dispatch, reconcile it first.
+
+| Operation | Path | Responsibility |
+| --- | --- | --- |
+| create | `experiments/moriarty-composition/spec/operators.md` | Five operator semantics and compatibility judgments |
+| create | `experiments/moriarty-composition/spec/handoff.schema.json` | Artifact recipients, availability and recovery ownership |
+| create | `experiments/moriarty-composition/tests/composition.test.mjs` | Residual, aliasing and duplicate predecessor controls |
+| create | `experiments/moriarty-composition/proof/relation-spec.md` | Private successor and actual branch/join relation |
+| create | `experiments/moriarty-composition/isolation/compose.yaml` | Separate OS/container secret boundaries |
+
+Interfaces use the common records in [the sprint contract](README.md#shared-artifact-contract). Exact code signatures belong to the reviewed execution packet. Do not invent a prover API before its pinned source is inspected.
+
+## SP10.1: Realize every required operator
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP10.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Implement sequential, disjoint parallel, shared-state interleaving, atomic synchronization and asynchronous messaging using the RP01 definitions. Check read/write compatibility and explicit ordering. Partition and conserve a global finite work measure.
+- [ ] Verify: A required unsupported operator leaves MC06 open. Shared-state conflicts cannot masquerade as disjoint branches; async Pending does not claim atomic completion.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP10` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP10.2: Demonstrate independent private continuation
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP10.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Inventory proof, commitment openings, witness fragments, recipients and recovery responsibility. Run Alice and Bob under distinct OS users or isolated containers. Give Bob only the allowed handoff package and prove the successor.
+- [ ] Verify: Denied-read evidence establishes harness separation. Missing allowed witness causes an explicit unavailable outcome. Plain shared-process private directories are insufficient.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP10` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## SP10.3: Prove split/join and exercise recovery
+
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP10.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
+- [ ] Generate actual split, branch and join proofs with distinct predecessor identities and compatible policies. Test duplicate inputs, excessive fan-in, authority amplification, debt erasure, reset budgets, fill/cancel races and unavailable handoff recovery.
+- [ ] Verify: The same acceptance path enforces durable consumption and residual duties. Scoped privacy evidence states leakage and availability assumptions. Changed MC04/MC05 domains are requalified.
+- [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP10` in the owning package evidence.
+- [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
+
+## Verification entry points
+
+Existing package commands may run only in their declared scope. Other commands are proposed interfaces that task admission must create and verify. Behavioral task packets must include exact runnable inputs, failing tests and expected outputs before implementation.
+
+```sh
+npm --prefix experiments/moriarty-composition test
+npm --prefix experiments/moriarty-composition run verify-isolated
+npm --prefix experiments/moriarty-composition run verify-preview
+python3 experiments/moriarty-composition/proof/run-reviewed.py --contract experiments/moriarty-composition/proof/resource-contract.json --verify-retained
+```
+
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection rather than a crash or unauthorized effect. Pre-submission logical rejection is atomic; submitted transactions may retain only effects, authority/nonce consumption and fees permitted by the signed phase-specific failure policy. Project-operated proof and public-network campaigns additionally require live RP03 admission; independent public toolchain use does not.
+
+## Report-informed acceptance refinement
+
+**Prove private handoff and all five composition operators.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP10.1/.2: use separate participant environments with demonstrably denied access to predecessor secrets; create real split, independent branches and join proofs. State disclosure policy and retain the separate confidential-profile leakage theorem obligation.
+- [ ] SP10.3: preserve request entitlements through partial fulfillment and claim/cancel races; carry shared collateral, remaining debt, gross authority and global work across all five operators.
+- [ ] Exercise actual acceptance lineage conflicts and bounded recovery on Preview. Local atomicity, foreign settlement, payout and solver reimbursement are distinct; unavailable witnesses are not invalid proofs or successful settlement.
+
+## Exit gate
+
+Real isolated continuation and all required bounded composition operators accepted under the requalified native/ledger lineage.

@@ -1,0 +1,396 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moriarty:cli-capabilities:1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "moriarty-cli-capabilities/1"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {
+          "const": "rust-workspace-cli"
+        },
+        "packageVersion": {
+          "type": "string"
+        },
+        "binarySourceRevision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "buildFeatures": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "native": {
+              "type": "boolean"
+            },
+            "source6-expansion": {
+              "type": "boolean"
+            },
+            "core2-disjoint-draft": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "native",
+            "source6-expansion",
+            "core2-disjoint-draft"
+          ]
+        },
+        "responseKind": {
+          "enum": [
+            "specified-example-not-command-output",
+            "command-self-report"
+          ]
+        }
+      },
+      "required": [
+        "implementation",
+        "packageVersion",
+        "binarySourceRevision",
+        "buildFeatures",
+        "responseKind"
+      ]
+    },
+    "catalogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sourceRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "coverage": {
+          "type": "string"
+        },
+        "basis": {
+          "const": "source-inspection"
+        },
+        "runtimeEvidence": {
+          "const": "not-included"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourceRevision",
+        "coverage",
+        "basis",
+        "runtimeEvidence",
+        "note"
+      ]
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sourceProfile": {
+            "type": "string"
+          },
+          "sourceHeader": {
+            "type": "string"
+          },
+          "semanticsProfile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parser": {
+            "type": "string"
+          },
+          "implementation": {
+            "enum": [
+              "source-present",
+              "unsupported",
+              "stub",
+              "unknown"
+            ]
+          },
+          "grammar": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "coverage": {
+                "type": "string"
+              },
+              "types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "declarations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "statements": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "expressions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "unsupported": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "bounds": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "coverage",
+              "types",
+              "declarations",
+              "statements",
+              "expressions",
+              "unsupported",
+              "bounds",
+              "notes"
+            ]
+          },
+          "qualification": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "sourceProfile",
+          "sourceHeader",
+          "semanticsProfile",
+          "parser",
+          "implementation",
+          "grammar",
+          "qualification",
+          "limitations"
+        ]
+      },
+      "minItems": 1
+    },
+    "consumers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "entrypoint": {
+            "type": "string"
+          },
+          "inputProfile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "semanticsProfile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outputProfile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requiresBuildFeatures": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "native",
+                "source6-expansion",
+                "core2-disjoint-draft"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "implementation": {
+            "enum": [
+              "source-present",
+              "unsupported",
+              "stub",
+              "unknown"
+            ]
+          },
+          "availableInBuild": {
+            "type": "boolean"
+          },
+          "qualification": {
+            "type": "string"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "sourceRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "entrypoint",
+          "inputProfile",
+          "semanticsProfile",
+          "outputProfile",
+          "requiresBuildFeatures",
+          "implementation",
+          "availableInBuild",
+          "qualification",
+          "limitations",
+          "sourceRefs"
+        ]
+      },
+      "minItems": 1
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "consumerIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "descriptorRequired": {
+            "type": "boolean"
+          },
+          "configuredTarget": {
+            "type": "null"
+          },
+          "qualification": {
+            "enum": [
+              "not-checked",
+              "not-advertised-by-this-rust-cli"
+            ]
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "consumerIds",
+          "descriptorRequired",
+          "configuredTarget",
+          "qualification",
+          "notes"
+        ]
+      }
+    },
+    "otherExecutables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "package": {
+            "type": "string"
+          },
+          "binaryName": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "availability": {
+            "const": "not-inspected"
+          }
+        },
+        "required": [
+          "id",
+          "package",
+          "binaryName",
+          "relationship",
+          "availability"
+        ]
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "format",
+    "producer",
+    "catalogue",
+    "profiles",
+    "consumers",
+    "targets",
+    "otherExecutables",
+    "limitations"
+  ]
+}

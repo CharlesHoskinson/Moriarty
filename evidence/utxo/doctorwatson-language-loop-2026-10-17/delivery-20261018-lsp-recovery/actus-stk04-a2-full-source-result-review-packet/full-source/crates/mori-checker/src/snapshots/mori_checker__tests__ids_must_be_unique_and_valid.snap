@@ -1,0 +1,45 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Ids {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Mainnet = { id: \"main\", chain: \"midnight\", network: \"main\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account alice2 = { domain: Preview, id: \"alice\" };\n  account alice_main = { domain: Mainnet, id: \"alice\" };\n  account bad = { domain: Preview, id: \"not-valid\" };\n  account reserved = { domain: Preview, id: \"transfer\" };\n}\n"
+---
+mori::check::duplicate_id
+
+  × Another account on `Preview` already has the id `alice`.
+   ╭─[test.mori:6:43]
+ 4 │   domain Mainnet = { id: "main", chain: "midnight", network: "main" };
+ 5 │   account alice = { domain: Preview, id: "alice" };
+   ·                                          ───┬───
+   ·                                             ╰── first used here
+ 6 │   account alice2 = { domain: Preview, id: "alice" };
+   ·                                           ───┬───
+   ·                                              ╰── used again here
+ 7 │   account alice_main = { domain: Mainnet, id: "alice" };
+   ╰────
+  help: Each economic identity is declared once. Refer to the existing
+        declaration instead of declaring an alias.
+
+mori::check::invalid_id
+
+  × The id `not-valid` cannot be used in Source/6.
+   ╭─[test.mori:8:40]
+ 7 │   account alice_main = { domain: Mainnet, id: "alice" };
+ 8 │   account bad = { domain: Preview, id: "not-valid" };
+   ·                                        ─────┬─────
+   ·                                             ╰── not a valid Source/6 id
+ 9 │   account reserved = { domain: Preview, id: "transfer" };
+   ╰────
+  help: Ids start with an ASCII letter, continue with letters, digits or `_`,
+        are at most 64 characters, and avoid Source/6's reserved words.
+
+mori::check::invalid_id
+
+  × The id `transfer` cannot be used in Source/6.
+    ╭─[test.mori:9:45]
+  8 │   account bad = { domain: Preview, id: "not-valid" };
+  9 │   account reserved = { domain: Preview, id: "transfer" };
+    ·                                             ─────┬────
+    ·                                                  ╰── not a valid Source/6 id
+ 10 │ }
+    ╰────
+  help: Ids start with an ASCII letter, continue with letters, digits or `_`,
+        are at most 64 characters, and avoid Source/6's reserved words.

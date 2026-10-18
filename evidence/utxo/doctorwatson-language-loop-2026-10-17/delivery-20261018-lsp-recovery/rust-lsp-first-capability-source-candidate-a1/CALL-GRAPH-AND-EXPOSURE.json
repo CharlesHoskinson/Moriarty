@@ -1,0 +1,48 @@
+{
+  "status": "Mechanical proposed selected call graph and I/O references, NOT execution/security/resource classification",
+  "entry": [
+    "crates/mori/src/main.rs main",
+    "commands::run -> Command::Lsp -> commands/lsp.rs run",
+    "stdin.lock/stdout.lock -> lsp_server::Message::read -> Server::dispatch -> Message::write"
+  ],
+  "requests": [
+    "initialize -> gen InitializeParams serde deserialization -> client capability fields -> InitializeResult/ServerCapabilities/ServerInfo",
+    "shutdown -> phase transition + in-memory document clear -> response result null",
+    "other requests -> ErrorCode response; no outgoing server requests"
+  ],
+  "notifications": [
+    "initialized -> running phase",
+    "didOpen -> typed text document + in-memory URI map + diagnostics::check + PublishDiagnosticsParams",
+    "didChange -> typed whole-document changes in order, newer version -> diagnostics::check -> PublishDiagnosticsParams",
+    "didClose -> remove in-memory document + empty diagnostic notification without version",
+    "exit -> return success only after shutdown; EOF returns failure"
+  ],
+  "analysisRoutes": [
+    "mori_lexer::first_token_text; mori_core::language",
+    "legacy -> mori_parser::parse -> mori_checker::check -> MoriDiagnostic code/labels/help/severity",
+    "Core1 -> public mori_core::parse -> parser::parse_profile -> legacy validate -> public mori_core::Error",
+    "Core2 -> mori_core::stage::load -> parse_v2/profile/validate/plan/cost/digest -> public mori_core::Error"
+  ],
+  "outputs": [
+    "Message::write produces Content-Length UTF8 JSON frames and flushes stdout",
+    "Existing core_io::operation wraps operational I/O errors; main/Shell reports those on inherited stderr",
+    "Library framing parse errors and debug log calls are retained source exposure for owner inspection"
+  ],
+  "selectedTest": [
+    "crates/mori/tests/lsp.rs spawns env!(CARGO_BIN_EXE_mori) --color never lsp with3stdio pipes",
+    "Writes frozen11-message sequence with byte Content-Length, closes stdin, waits and captures stdout/stderr",
+    "Independent test-only frame reader compares exactly9 complete semantic values, exit0, empty stderr"
+  ],
+  "ownerInputs": [
+    "public-dependencies/source/lsp-server-0.10.0/src/msg.rs Message::read/read_msg_text/write_msg_text and message serde",
+    "public-dependencies/source/gen-lsp-types-0.11.0 generated parameter/URI/diagnostic structs and serde",
+    "New application document storage, protocol state, notification early returns and lifecycle in candidate/crates/mori/src/commands/lsp.rs",
+    "Actual resolved graph/feature/build/proc-macro source unknown until separate root resolution"
+  ],
+  "notSelectedByNewEntry": [
+    "URI-to-file/workspace/watch/socket APIs",
+    "mori_core::simulate or replay",
+    "native compiler/SDK/VM/proof/key/ledger/wallet consumers"
+  ],
+  "qualification": "Not-selected list describes direct implemented call selection, not a certificate of all dependency or host effects. No resource cap/command admission or safety judgment supplied."
+}

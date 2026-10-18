@@ -1,0 +1,73 @@
+{
+  "status": "conceptual event predicates only; no protocol was run",
+  "premises": [
+    "Client uses UTF16 positions and full document changes.",
+    "Each event is checked after its normal diagnostic recomputation has completed; no millisecond threshold is asserted.",
+    "The close-clearing predicate applies to a single-file/open-document diagnostics service. LSP3.17 explicitly distinguishes project-system diagnostics, which may persist after close; this packet makes no universal close-clearing claim for project-wide servers.",
+    "For a stale error followed by valid content, server must publish an empty list; prior client list is replaced rather than merged."
+  ],
+  "sequences": [
+    {
+      "name": "normal-change-clears-former-error",
+      "uri": "file:///independent-normal/beta.mori",
+      "steps": [
+        {
+          "event": "didOpen",
+          "version": 1,
+          "text_file": "beta-unknown-name.mori",
+          "expected_case": "beta-unknown-name.mori"
+        },
+        {
+          "event": "didChange",
+          "version": 2,
+          "change_kind": "full-document",
+          "text_file": "beta-valid.mori",
+          "expected_diagnostics": []
+        },
+        {
+          "event": "didClose",
+          "expected_diagnostics": []
+        }
+      ]
+    },
+    {
+      "name": "unicode-crlf-change-clears-former-error",
+      "uri": "file:///independent-normal/unicode.mori",
+      "steps": [
+        {
+          "event": "didOpen",
+          "version": 1,
+          "text_file": "beta-unicode-crlf-unknown-name.mori",
+          "expected_case": "beta-unicode-crlf-unknown-name.mori"
+        },
+        {
+          "event": "didChange",
+          "version": 2,
+          "change_kind": "full-document",
+          "text_file": "beta-unicode-crlf-valid.mori",
+          "expected_diagnostics": []
+        },
+        {
+          "event": "didClose",
+          "expected_diagnostics": []
+        }
+      ]
+    },
+    {
+      "name": "normal-close-clears-open-file-error",
+      "uri": "file:///independent-normal/close.mori",
+      "steps": [
+        {
+          "event": "didOpen",
+          "version": 1,
+          "text_file": "beta-unknown-name.mori",
+          "expected_case": "beta-unknown-name.mori"
+        },
+        {
+          "event": "didClose",
+          "expected_diagnostics": []
+        }
+      ]
+    }
+  ]
+}

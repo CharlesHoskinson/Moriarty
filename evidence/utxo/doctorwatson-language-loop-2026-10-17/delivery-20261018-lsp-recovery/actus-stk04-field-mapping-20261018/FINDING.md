@@ -1,0 +1,11 @@
+Exact mapping is not justified for any of the three fields from the inspected normative definitions and source schema.
+
+ACTUS techspecs at 94ef09e define contract attributes and mathematical states separately, indexed by status/event time. The STK initialization table lists only Prf and Sd, with individual references to PAM. Its PRD and TD transition functions change Sd only. There is no STK Nt, Ipnr or Ipac initialization, nor any instruction there to inherit PAM zero defaults for those fields. The stock taxonomy entry classifies ownership and supplies no numeric state defaults.
+
+STK04 input terms include NT=1000 EUR, statusDate2012-12-30T00:00:00, PRD2013-01-01T00:00:00/PPRD1200, and TD2016-12-31T23:59:59/PTD3000. IPNR, IPAC, interest schedule and day-count terms are absent. Absence, mathematical nonapplicability, and a numeric zero are distinct. In particular, copying the NT term to a state would suggest1000 rather than0 unless a separate contract-specific rule said otherwise; neither value is asserted as an STK state here.
+
+The local candidate source at6c6e29651dc01322bb7eb8a18fc98b3c1e818231 declares each field as UInt0 and never assigns it in purchase or terminate. This establishes local source behavior only. Current Core1 DTOs at74a909d69639df8823a527a4d608a7516ccd69a2 provide UInt(u128), Bool and named state maps, with no dimensional, applicability or ACTUS binding. Scale0 on the local EUR asset does not define rate precision, identify a reference result padding convention or prove a principal/accrual mapping.
+
+A precise missing binding is an authoritative STK/common-result-field schema defining whether those exported columns are applicable economic states, undefined values, or zero-padded nonapplicable columns, together with units, signedness, numeric encoding and event time/side. The supplied dictionary file is taxonomy only. The proposed typed adapter retains Undefined/NotApplicable/SchemaPadding separately and refuses an unbound economic comparison.
+
+No runtime output, local test expected record, prior local oracle or evaluator implementation supplied a premise. No runtime, provider or proof action was executed. No seven-field/full-fixture status or acceptance requirement changed; all three exact mappings remain blocked pending justified review. This report does not make a security or trust-adequacy judgment.

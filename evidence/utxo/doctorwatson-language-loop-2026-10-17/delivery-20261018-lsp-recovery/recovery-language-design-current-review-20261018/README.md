@@ -1,0 +1,7 @@
+# Full current recovery-language choice review packet
+
+Base: exact main74a909d69639df8823a527a4d608a7516ccd69a2. This packet freezes complete L03 and original full /3 alternatives, exact current Core/2 source, original consolidated/partial transaction/product/public-continuation requirements and independent L04 financial expectations. Source-only ordinary design review; all choices remain unadopted pending root integration and designated-owner authority/failure review.
+
+Read REVIEW-SCOPE.md and REQUIRED-READS.json. PRIMARY-COVERAGE.json describes every primary representation. Complete raw physical files remain supplied. Both full L04 JSON objects, including conditional failure and missing-premise fields, are represented without omission by L04-LOSSLESS-TREES.json; recursively expand each sole $ref object through the bottom-up pool to reconstruct them exactly. This is only lossless data transport, not an aggregation or semantic projection.
+
+Exactly two fresh AGY Gemini4ArgonHigh high ordinary contexts will be launched through the existing runner. Their jobs/results are outside this immutable packet. Each external timeout is415s plus≤5s termination grace, bounding each context by420s. No blind retry, additional provider, framework or scheduler is authorized here. Complete result objects and terminal failure metadata remain separate from product acceptance and actual-model verification.

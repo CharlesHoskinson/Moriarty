@@ -1,0 +1,64 @@
+// PROPOSED source specimen. No parser/evaluator/compiler/test was run.
+// This selector is a proposal label, not an allocated or supported profile.
+language "moriarty/proposed-uint-floor-div/1";
+
+agreement ConstantProductSwap {
+  asset A = { network: "specimen", issuer: "example-issuer", reference: "A", scale: 0 };
+  asset B = { network: "specimen", issuer: "example-issuer", reference: "B", scale: 0 };
+  state reserveA: UInt = 1000000;
+  state reserveB: UInt = 2000000;
+  state revision: UInt = 4;
+  state marker: UInt = 7;
+  state paused: Bool = false;
+
+  action exactInput(amountIn: UInt, minimumOut: UInt) {
+    requires amountIn > 0;
+    requires not paused;
+    requires reserveA > 0;
+    requires reserveB > 0;
+    let beforeA = reserveA;
+    let beforeB = reserveB;
+    let weighted = amountIn * 997;
+    let numerator = weighted * beforeB;
+    let denominator = beforeA * 1000 + weighted;
+    let amountOut = floor_div(numerator, denominator);
+    requires amountOut > 0;
+    requires amountOut >= minimumOut;
+    let afterA = beforeA + amountIn;
+    let afterB = beforeB - amountOut;
+    requires afterA * afterB >= beforeA * beforeB;
+    transfer(A, "trader", "pool", amountIn);
+    transfer(B, "pool", "trader", amountOut);
+    next reserveA = afterA;
+    next reserveB = afterB;
+    next revision = revision + 1;
+    emit "amountOut"(amountOut);
+    ensures reserveA == afterA;
+    ensures reserveB == afterB;
+  }
+
+  action exactOutput(desiredOut: UInt, maximumIn: UInt) {
+    requires desiredOut > 0;
+    requires not paused;
+    requires reserveA > 0;
+    requires reserveB > 0;
+    let beforeA = reserveA;
+    let beforeB = reserveB;
+    requires desiredOut < beforeB;
+    let numerator = beforeA * desiredOut * 1000;
+    let denominator = (beforeB - desiredOut) * 997;
+    let amountIn = floor_div(numerator - 1, denominator) + 1;
+    requires amountIn <= maximumIn;
+    let afterA = beforeA + amountIn;
+    let afterB = beforeB - desiredOut;
+    requires afterA * afterB >= beforeA * beforeB;
+    transfer(A, "trader", "pool", amountIn);
+    transfer(B, "pool", "trader", desiredOut);
+    next reserveA = afterA;
+    next reserveB = afterB;
+    next revision = revision + 1;
+    emit "amountIn"(amountIn);
+    ensures reserveA == afterA;
+    ensures reserveB == afterB;
+  }
+}

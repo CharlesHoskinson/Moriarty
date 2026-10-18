@@ -1,0 +1,297 @@
+[
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/1",
+    "text": "2. Evaluator/Prover Independence & Frozen Fixtures: financial_observation_relation.rs never calls mori_core::simulate, mori_backend::proving::prepare, proving::financial_values, or signed_relation::reconstruct. It reads 10 frozen payloads from crates/fixtures/financial-report-contract/ (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d, 32 files total): installment-invoice.mori, conditional-reserve.mori, 2 expected Program JSONs, 3 Scenario JSONs, and 3 Execution JSONs (invoice-…"
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/limitations/0",
+    "text": "1. Custodian Fixture Provenance (Non-Blind): Per fixtures/PROVENANCE.json, the 32 frozen files in crates/fixtures/financial-report-contract/ (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were authored post-adoption with public source and DTO visibility rather than pre-implementation blind custody, though without invoking mori_core::parse, simulate, or mori_backend::compile."
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/0",
+    "text": "1. Provenance, Integrated Candidate & Hash Corrections: Executed on Gemini (gemini-4-argon-high) as fresh independent fallback owner after Opus 4.8 failed at 2026-10-18T09:21:47Z; read-only packet inspection only. Commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) modifies only crates/mori-backend/tests/financial_observation_relation.rs (650 lines / 21,573 bytes, SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-formatted from 368-line / 18,367-byte draft f6fb7fd92606c9d905d9f52bf244d2ae7496be6d8349e96e945071723024472f with zero semantic change per FORMATTING.diff/RUSTFMT.json) and RUST_GUIDELINES.md (301 lines / 16,900 bytes, SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6, lines 227-232 exception). Corrections to prior source-only prose: draft/SOURCE.patch is 368 lines (SHA-256 39bd63464075e3edde2b16d4ae551af960c72288e84a30dd99888314d91867e8) and after/RUST_GUIDELINES.md is 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6. Prior compiler-only admission (7e0d753c..., 169.097748s) is consumed and distinct."
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/1",
+    "text": "2. Evaluator/Prover Independence & Frozen Fixtures: financial_observation_relation.rs never calls mori_core::simulate, mori_backend::proving::prepare, proving::financial_values, or signed_relation::reconstruct. It reads 10 frozen payloads from crates/fixtures/financial-report-contract/ (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d, 32 files total): installment-invoice.mori, conditional-reserve.mori, 2 expected Program JSONs, 3 Scenario JSONs, and 3 Execution JSONs (invoice-first, invoice-final, reserve-approved) containing 39 Statement records (12+12+15) and 23 ordered Effects (7+7+9) covering collect 47, linked collect 80, and allocate 50 / bond 7. DTOs decode via serde_json::from_str::<v1::{Program, Execution}> and convert through structural From<v1::*> impls in mori-core/src/ir.rs:361-453. Per fixtures/PROVENANCE.json, fixtures were authored post-adoption with public DTO/source visibility and zero parser/evaluator/compiler execution."
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/2",
+    "text": "3. Exhaustive Injective ABI Mapping & Duty/Balance Semantics: transcript() initializes values = vec![None; circuit.public_inputs.len()], assigns slots via put() asserting values[position].replace(atom(value)).is_none(), and requires values.into_iter().collect::<Option<Vec<_>>>().expect(...). InstallmentInvoice compiles register (26 public_inputs: 2 context + 4 pre_state + 4 pre_liability + 8 effect + 4 post_state + 4 post_liability) and collect (39 public_inputs: 2+4+2+3+4+13+4+3+4); ConditionalReserve compiles register (32 public_inputs: 2+3+6+12+3+6) and allocate (51 public_inputs: 2+3+3+4+6+20+3+4+6), correcting the prior review's 43/50 miscount. source_wide() enforces first-seen source Duty order (matching collect_program_liabilities in liabilities.rs) and full Duty (name, asset, obligor, claimant) and Asset (code, issuer, scale) equality. Each liability slot binds present (Bool) and amount (UInt), distinguishing absent (false, 0) (allocation pre), present-zero (true, 0) (invoice final post; allocation post), and unchanged duties (warranty=9; bond=10->3, emergency=2), plus unchanged marker=77. Outside-frame balances (CASH/observer=23, CASH/reserve=19; BOND/observer=7, CASH/observer=11) are checked absent from balance_frame and equal pre/post as a harness premise."
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/limitations/0",
+    "text": "1. Custodian Fixture Provenance (Non-Blind): Per fixtures/PROVENANCE.json, the 32 frozen files in crates/fixtures/financial-report-contract/ (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were authored post-adoption with public source and DTO visibility rather than pre-implementation blind custody, though without invoking mori_core::parse, simulate, or mori_backend::compile."
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/summary",
+    "text": "As a fresh, independent Gemini (gemini-4-argon-high) security-fallback whole-contract owner (after fresh Opus 4.8 failed at 2026-10-18T09:21:47Z), I approve the exact single-attempt execution contract (EXECUTION-CONTRACT.json, SHA-256 482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562) for commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763). Read-only inspection of formatted crates/mori-backend/tests/financial_observation_relation.rs (650 lines / 21,573 bytes, SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03), RUST_GUIDELINES.md (SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6), mori-backend/src/{lib.rs,liabilities.rs}, frozen fixtures (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d), full Midnight SDK runtime bodies (transient-crypto/src/proofs.rs, zkir-v3/src/{ir.rs,ir_vm.rs,ir_types.rs,ir_instructions/*.rs}), blst-package-root/build.rs, and FRESH-METADATA-PREFLIGHT.json confirms: (1) complete test-adapter independence from mori_core::simulate and mori_backend::{proving,signed_relation}; (2) exhaustive, injective ABI slot binding across all 39 public inputs of InstallmentInvoice::collect and 51 public inputs of ConditionalReserve::allocate (plus 26 and 32 on register), preserving full Asset/Duty identities, source/typed ordering, and duty presence vs. amount; (3) ProofPreimage::check -> IrSource::check -> IrSource::preprocess is a pure in-memory ZKIR interpreter with zero SRS/file/network I/O, zero OsRng, and zero Halo2/KZG keygen or proving; and (4) the single cold attempt under /tmp/doctorwatson-financial-relation-4f83f0f6-20261018-a1 (18 argv elements, 600s TERM + 5s KILL, -j1, --test-threads=1, 17 env vars) is properly bounded."
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/ROOT-DISPOSITION.json",
+    "jsonPointer": "/completeReviewSha256",
+    "text": "20ce25baebdfd8a2334cabc09491b69e7538af4516b861fbe1a5e0f32522306a"
+  },
+  {
+    "file": "evidence/owners/execution-source-security-fallback-20261018-a1/PROCESS.json",
+    "jsonPointer": "/reviewSha256",
+    "text": "20ce25baebdfd8a2334cabc09491b69e7538af4516b861fbe1a5e0f32522306a"
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/1",
+    "text": "2. Call-Graph & Emitted ZKIR Subset: Unfiltered execution runs 2 parse calls, 2 compile calls (4 actions), 7 IrSource::load calls (4 in lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. In mori-backend/src/lib.rs:519-1231, unsigned Core/1 compilation builds IrSource with inputs=[], outputs=Native, do_communications_commitment=false, emitting only 14 Instruction variants over IrType::Native (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, Test…"
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/0",
+    "text": "1. Target, Source & Fixture Independence: Commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763) changes only financial_observation_relation.rs (650 lines/21573B, SHA bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-identical to 368-line draft f6fb7fd9...) and RUST_GUIDELINES.md (SHA 972ea86f...). The test reads 10 frozen payloads (FREEZE 5fca1721..., 39 statements, 23 effects) via v1 DTOs without calling simulate, proving::*, or signed_relation::*, and injectively binds all 26/39 and 32/51 public_inputs slots."
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/1",
+    "text": "2. Call-Graph & Emitted ZKIR Subset: Unfiltered execution runs 2 parse calls, 2 compile calls (4 actions), 7 IrSource::load calls (4 in lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. In mori-backend/src/lib.rs:519-1231, unsigned Core/1 compilation builds IrSource with inputs=[], outputs=Native, do_communications_commitment=false, emitting only 14 Instruction variants over IrType::Native (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, TestEq, LessThan(128), DivModPowerOfTwo(64), Assert, Output)."
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/summary",
+    "text": "Independent Gemini HIGH runtime owner a2 approves EXECUTION-CONTRACT.json (SHA-256 482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562) for commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763). Read-only inspection of formatted financial_observation_relation.rs (SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03), mori-backend/src/{lib.rs,liabilities.rs}, frozen fixtures (FREEZE 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d), Midnight SDK runtime/scalar sources, blst/aws-lc-sys build scripts, and FRESH-METADATA-PREFLIGHT.json confirms: (1) independence from simulate/proving/signed_relation and injective ABI binding across all 26/39 and 32/51 public slots; (2) unsigned Core/1 lowering emits 14 Native-only ZKIR instructions with inputs=[], do_communications_commitment=false; (3) ProofPreimage::check -> IrSource::preprocess on this subset runs pure in-memory scalar/field logic with zero SRS/file/network I/O, zero OsRng, and zero Halo2/KZG keygen/proving, leaving non-emitted helpers unreached; and (4) the single cold 600s+5s/-j1/--test-threads=1 attempt is eligible."
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/ROOT-DISPOSITION.json",
+    "jsonPointer": "/completeReviewSha256",
+    "text": "120f07099a6d2691647eb5e47316d9a145e063481a1f18e515004adf662e15b8"
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/TASK.json",
+    "jsonPointer": "/artifactSha256",
+    "text": "5164a21ac0f6d172defc52c726166606663451ea196aaee07092be653e6b9a27"
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/PROCESS.json",
+    "jsonPointer": "/artifactSha256",
+    "text": "5164a21ac0f6d172defc52c726166606663451ea196aaee07092be653e6b9a27"
+  },
+  {
+    "file": "evidence/owners/execution-runtime-security-fallback-20261018-a2/PROCESS.json",
+    "jsonPointer": "/reviewSha256",
+    "text": "120f07099a6d2691647eb5e47316d9a145e063481a1f18e515004adf662e15b8"
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/0",
+    "text": "1. Source-Result Identity, Exact Candidate & Independent Fixture Custody: Candidate commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base main 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) modifies only crates/mori-backend/tests/financial_observation_relation.rs (650 lines / 21,573 bytes, SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-formatted from 368-line draft f6fb7fd92606c9d905d9f52bf244d2ae7496be6d8349e96e945071723024472f per actual-cycle/RUSTFMT.json) and RUST_GUIDELINES.md (SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6), with Cargo.lock pinned at SHA-256 659ca9ca7df02e4ff4e3c2b424fa2d6b95d73e596fdf85d0046df423ced4dbb5. All 33 source pins (CURRENT-SOURCE-PINS.json) and 32 frozen financial payloads (FIXTURE-CUSTODY.json, FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were re-verified without Git queries or product execution. The test never invokes mori_core::simulate, mori_backend::proving::*, or signed_relation::*; it decodes 10 frozen fixture files via mori_core::v1::{Program, Execution} and Scenario (39 statements across 3 executions: 12+12+15; 23 ordered effects: 7+7+9) derived post-adoption from public source/DTOs without evaluator or compiler execution."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/1",
+    "text": "2. Actual Run Receipt, Consumed Sole Allocation & Cleanup Evidence: Under root admission (actual-cycle/ADMISSION.json SHA-256 842eefb28a86118318ae6f18879b4c0eaf9a7de0c33dbc5ed335669717b55fc7) of EXECUTION-CONTRACT.json (SHA-256 482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562; 18 argv elements, 17 isolated environment keys, -j1, --test-threads=1, 600s TERM + 5s KILL), actual-cycle/attempt-1/START.json (SHA-256 05b1958a2f6ccaffdb0a0d27a7e6425a4afee0983440de1b6ad67b4993adffa0) and RESULT.json (SHA-256 9e8157f8b31b22bc9a75aa318ddcc7ef13517d11f216b150ad6812740019f7f1) record exitCode 0, wallSeconds 149.42486905600163 (whole cold build+run, distinct from the 0.04s test-body timing in STDOUT.log SHA-256 1fd2f14047bca5c0a1abeeef7d40c41f5de8ff77bfb41a997228d0c3c2426979: 2 passed, 0 failed, 0 ignored, 0 measured, 0 filtered out), STDERR.log SHA-256 e910c5d490520435b7d646578afa25b9a3bf7679138135b824d776323d4d491e, and clean post-run checkout (sourceCommitAfter 4f83f0f6..., sourceTreeAfter 2d4bdded..., sourceStatusAfter \"\"). The sole 600s+5s allocation (maximumAttempts 1, retryAllowed false) is CONSUMED; no rerun is authorized. CLEANUP.json (SHA-256 0298cb1e5cab45a8d9d22c95a59436b700b8af2da59f0ebfc514bf1355db194d) confirms /tmp/doctorwatson-financial-relation-4f83f0f6-20261018-a1 has existsAfter: false, and PROCESS-CLEANUP.json (SHA-256 eecdc4f9e4146b18327d5f9b2bebb128d5eefe53c89421fbd69f676ee03f3083) confirms ownedSession 565545 has members: []."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/2",
+    "text": "3. Reached Compiler/SDK Call Graph, Emitted 14-Variant Native Subset & TCB Scrutiny: The 2 passed tests executed 2 mori_core::parse calls (with full Program equality assertions against frozen v1::Program JSON), 2 mori_backend::compile calls lowering 4 unsigned Core/1 action circuits (InstallmentInvoice::{register,collect}, ConditionalReserve::{register,allocate}), 7 midnight_zkir_v3::IrSource::load calls (4 in mori-backend/src/lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. In mori-backend/src/lib.rs:519-1231, unsigned Core/1 lowering constructs IrSource with inputs=[], outputs=Native, do_communications_commitment=false, and emits only 14 Instruction variants over IrType::Native (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, TestEq, LessThan(128), DivModPowerOfTwo(64), Assert, Output). Inspection of proofs.rs:739-741, ir.rs:75-80, and ir_vm.rs:185-691 confirms ProofPreimage::check calls only IrSource::preprocess(preimage)?.pi_skips, ignoring key_location and never calling prove, keygen, k, model, cost_model, optimal_k, MidnightDataProvider, or ParamsProver::read. As designated security-fallback reviewer, I independently adopt the narrowed 14-emitted-variant runtime scope and TCB boundary (excluding source-a1's broad 34-arm certification claim and wrong 0.39.1/0.2.1 labels per correction 9c470d47...): STDERR.log confirms compilation of aws-lc-sys v0.45.0 (line 66), blst v0.3.17 (line 125), and midnight-curves v0.3.1 (line 166) on the 04c9c5d9 SDK/backend chain (while midnight-curves 0.2.1 also exists in the workspace lock), and unreached SDK helpers (OMITTED-FUNCTIONS.json:82-142), C/assembly/FFI routines, proc-macros, build scripts, and host toolchain binaries remain explicit TCB."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/3",
+    "text": "4. Exhaustive Injective ABI Binding, Financial Duties/Balances & Harness Premises: source_wide() and transcript() enforce injective, complete slot population (values[position].replace(...).is_none() and final Option unwrap) across all public_inputs: InstallmentInvoice register (26 slots) and collect (39 slots: 2 context, 4 pre_state, 2 input, 3 pre_balance, 4 pre_liability_*, 13 effect, 4 post_state, 3 post_balance, 4 post_liability_*); ConditionalReserve register (32 slots) and allocate (51 slots: 2 context, 3 pre_state, 3 input, 4 pre_balance, 6 pre_liability_*, 20 effect, 3 post_state, 4 post_balance, 6 post_liability_*). Full AssetId (network, issuer, reference, scale) and LiabilityIdentity (name, asset, debtor, creditor) match canonical registry order (liabilities.rs:42-110). Duty slots bind (presence: Bool, amount: UInt) under canonical_liability (!presence * amount == 0), covering absent (false, 0) (allocation pre), discharged-present (true, 0) (invoice final post, allocation post), partial discharge (invoice 127->80, bond 10->3), unchanged duties/state (warranty=9, emergency=2, marker=77), and gross debits with fees (collect 47+3=50 and 80+3=83; allocate 50+2=52 CASH and 7 BOND). Context slots 0..1 copy compiler-emitted entry.constant (self-referential), while untouched outside-frame balances (CASH/observer=23, CASH/reserve=19; BOND/observer=7, CASH/observer=11) and invoice post-to-pre linkage (observations[0].post == observations[1].pre) are verified as Rust test harness premises."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/limitations/1",
+    "text": "2. Post-Adoption Non-Blind Custody, Referential ABI Positions & Self-Sourced Context Constants: Per fixtures/PROVENANCE.json and DERIVATION.md, the 32 frozen financial payloads (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were authored post-adoption with public source and DTO visibility rather than pre-implementation blind custody. Physical public_inputs indices are verified referentially against the CircuitArtifact emitted by mori_backend::compile, context slots program_target_action.0/1 copy compiler-emitted entry.constant rather than an independent context-hash oracle, and the 4 complete Artifact/Target/IR golden fixtures (SEPARATE-FULL-ARTIFACT-ORACLE-INTERFACE.md) remain absent."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/0",
+    "text": "1. Source-Result Identity, Exact Candidate & Independent Fixture Custody: Candidate commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base main 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) modifies only crates/mori-backend/tests/financial_observation_relation.rs (650 lines / 21,573 bytes, SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-formatted from 368-line draft f6fb7fd92606c9d905d9f52bf244d2ae7496be6d8349e96e945071723024472f per actual-cycle/RUSTFMT.json) and RUST_GUIDELINES.md (SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6), with Cargo.lock pinned at SHA-256 659ca9ca7df02e4ff4e3c2b424fa2d6b95d73e596fdf85d0046df423ced4dbb5. All 33 source pins (CURRENT-SOURCE-PINS.json) and 32 frozen financial payloads (FIXTURE-CUSTODY.json, FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were re-verified without Git queries or product execution. The test never invokes mori_core::simulate, mori_backend::proving::*, or signed_relation::*; it decodes 10 frozen fixture files via mori_core::v1::{Program, Execution} and Scenario (39 statements across 3 executions: 12+12+15; 23 ordered effects: 7+7+9) derived post-adoption from public source/DTOs without evaluator or compiler execution."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/1",
+    "text": "2. Actual Run Receipt, Consumed Sole Allocation & Cleanup Evidence: Under root admission (actual-cycle/ADMISSION.json SHA-256 842eefb28a86118318ae6f18879b4c0eaf9a7de0c33dbc5ed335669717b55fc7) of EXECUTION-CONTRACT.json (SHA-256 482f21361afb17672e54b4f8ea35edd38fc6e3942319d831301402881c0f4562; 18 argv elements, 17 isolated environment keys, -j1, --test-threads=1, 600s TERM + 5s KILL), actual-cycle/attempt-1/START.json (SHA-256 05b1958a2f6ccaffdb0a0d27a7e6425a4afee0983440de1b6ad67b4993adffa0) and RESULT.json (SHA-256 9e8157f8b31b22bc9a75aa318ddcc7ef13517d11f216b150ad6812740019f7f1) record exitCode 0, wallSeconds 149.42486905600163 (whole cold build+run, distinct from the 0.04s test-body timing in STDOUT.log SHA-256 1fd2f14047bca5c0a1abeeef7d40c41f5de8ff77bfb41a997228d0c3c2426979: 2 passed, 0 failed, 0 ignored, 0 measured, 0 filtered out), STDERR.log SHA-256 e910c5d490520435b7d646578afa25b9a3bf7679138135b824d776323d4d491e, and clean post-run checkout (sourceCommitAfter 4f83f0f6..., sourceTreeAfter 2d4bdded..., sourceStatusAfter \"\"). The sole 600s+5s allocation (maximumAttempts 1, retryAllowed false) is CONSUMED; no rerun is authorized. CLEANUP.json (SHA-256 0298cb1e5cab45a8d9d22c95a59436b700b8af2da59f0ebfc514bf1355db194d) confirms /tmp/doctorwatson-financial-relation-4f83f0f6-20261018-a1 has existsAfter: false, and PROCESS-CLEANUP.json (SHA-256 eecdc4f9e4146b18327d5f9b2bebb128d5eefe53c89421fbd69f676ee03f3083) confirms ownedSession 565545 has members: []."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/2",
+    "text": "3. Reached Compiler/SDK Call Graph, Emitted 14-Variant Native Subset & TCB Scrutiny: The 2 passed tests executed 2 mori_core::parse calls (with full Program equality assertions against frozen v1::Program JSON), 2 mori_backend::compile calls lowering 4 unsigned Core/1 action circuits (InstallmentInvoice::{register,collect}, ConditionalReserve::{register,allocate}), 7 midnight_zkir_v3::IrSource::load calls (4 in mori-backend/src/lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. In mori-backend/src/lib.rs:519-1231, unsigned Core/1 lowering constructs IrSource with inputs=[], outputs=Native, do_communications_commitment=false, and emits only 14 Instruction variants over IrType::Native (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, TestEq, LessThan(128), DivModPowerOfTwo(64), Assert, Output). Inspection of proofs.rs:739-741, ir.rs:75-80, and ir_vm.rs:185-691 confirms ProofPreimage::check calls only IrSource::preprocess(preimage)?.pi_skips, ignoring key_location and never calling prove, keygen, k, model, cost_model, optimal_k, MidnightDataProvider, or ParamsProver::read. As designated security-fallback reviewer, I independently adopt the narrowed 14-emitted-variant runtime scope and TCB boundary (excluding source-a1's broad 34-arm certification claim and wrong 0.39.1/0.2.1 labels per correction 9c470d47...): STDERR.log confirms compilation of aws-lc-sys v0.45.0 (line 66), blst v0.3.17 (line 125), and midnight-curves v0.3.1 (line 166) on the 04c9c5d9 SDK/backend chain (while midnight-curves 0.2.1 also exists in the workspace lock), and unreached SDK helpers (OMITTED-FUNCTIONS.json:82-142), C/assembly/FFI routines, proc-macros, build scripts, and host toolchain binaries remain explicit TCB."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/3",
+    "text": "4. Exhaustive Injective ABI Binding, Financial Duties/Balances & Harness Premises: source_wide() and transcript() enforce injective, complete slot population (values[position].replace(...).is_none() and final Option unwrap) across all public_inputs: InstallmentInvoice register (26 slots) and collect (39 slots: 2 context, 4 pre_state, 2 input, 3 pre_balance, 4 pre_liability_*, 13 effect, 4 post_state, 3 post_balance, 4 post_liability_*); ConditionalReserve register (32 slots) and allocate (51 slots: 2 context, 3 pre_state, 3 input, 4 pre_balance, 6 pre_liability_*, 20 effect, 3 post_state, 4 post_balance, 6 post_liability_*). Full AssetId (network, issuer, reference, scale) and LiabilityIdentity (name, asset, debtor, creditor) match canonical registry order (liabilities.rs:42-110). Duty slots bind (presence: Bool, amount: UInt) under canonical_liability (!presence * amount == 0), covering absent (false, 0) (allocation pre), discharged-present (true, 0) (invoice final post, allocation post), partial discharge (invoice 127->80, bond 10->3), unchanged duties/state (warranty=9, emergency=2, marker=77), and gross debits with fees (collect 47+3=50 and 80+3=83; allocate 50+2=52 CASH and 7 BOND). Context slots 0..1 copy compiler-emitted entry.constant (self-referential), while untouched outside-frame balances (CASH/observer=23, CASH/reserve=19; BOND/observer=7, CASH/observer=11) and invoice post-to-pre linkage (observations[0].post == observations[1].pre) are verified as Rust test harness premises."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/limitations/1",
+    "text": "2. Post-Adoption Non-Blind Custody, Referential ABI Positions & Self-Sourced Context Constants: Per fixtures/PROVENANCE.json and DERIVATION.md, the 32 frozen financial payloads (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were authored post-adoption with public source and DTO visibility rather than pre-implementation blind custody. Physical public_inputs indices are verified referentially against the CircuitArtifact emitted by mori_backend::compile, context slots program_target_action.0/1 copy compiler-emitted entry.constant rather than an independent context-hash oracle, and the 4 complete Artifact/Target/IR golden fixtures (SEPARATE-FULL-ARTIFACT-ORACLE-INTERFACE.md) remain absent."
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/ROOT-DISPOSITION.json",
+    "jsonPointer": "/recordedAt",
+    "text": "2026-10-18T10:17:22.936513+00:00"
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/ROOT-DISPOSITION.json",
+    "jsonPointer": "/wholeSha256",
+    "text": "6865b64444f3f49afbf30c2c3f211af660c646b5c51cff4a6d3156679ba0a4a8"
+  },
+  {
+    "file": "evidence/owners/result-security-fallback-20261018-a1/ROOT-DISPOSITION.json",
+    "jsonPointer": "/completeAmbiguousArraySha256",
+    "text": "6865b64444f3f49afbf30c2c3f211af660c646b5c51cff4a6d3156679ba0a4a8"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/0",
+    "text": "1. Exact Candidate Source, Diff & Actual Run Fidelity: Read-only inspection of MANIFEST.json (a6d6d9a16580345d1a769974712ca401816adef9f26e86056b2a8f200c6eea67) and RESULT-REVIEW-CONTRACT.json (40ae673ea48b30daf0ff4275768847011630dba6d6a18455b420847368e258c7) confirms candidate commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base main 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) modifies only RUST_GUIDELINES.md (16,900B, SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6, lines 227-232 testing exception) and crates/mori-backend/tests/financial_observation_relation.rs (650 lines / 21,573B, SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-formatted from 368-line draft f6fb7fd9... with zero semantic change). Actual receipts (ADMISSION.json, START.json, RESULT.json 9e8157f8b31b22bc9a75aa318ddcc7ef13517d11f216b150ad6812740019f7f1, STDOUT.log 1fd2f14047bca5c0a1abeeef7d40c41f5de8ff77bfb41a997228d0c3c2426979, STDERR.log e910c5d490520435b7d646578afa25b9a3bf7679138135b824d776323d4d491e) verify the admitted 18-argv / 17-env cold run in /tmp/doctorwatson-financial-relation-4f83f0f6-20261018-a1 exited 0 in 149.42486905600163s wall time (0.04s test body timing; 2m 29s Cargo build across 280 dependency targets including aws-lc-sys v0.45.0 and midnight-curves v0.3.1), passing both tests (2 passed, 0 failed, 0 ignored, 0 measured, 0 filtered out) and leaving the checkout clean. The sole 600s+5s allocation is CONSUMED (maximumAttempts=1, retryAllowed=false); CLEANUP.json (0298cb1e...) confirms temporary root removal and PROCESS-CLEANUP.json (eecdc4f9...) confirms empty owned session 565545."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/1",
+    "text": "2. Independent Fixture Custody vs. Referential/Compiler-Sourced Metadata: financial_observation_relation.rs never invokes mori_core::simulate, mori_backend::proving::*, or mori_backend::signed_relation::*. It consumes 10 frozen files from crates/fixtures/financial-report-contract/ (bound under 32-payload FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d, preserving the 7 original v2 payloads 7e5b09d8...). Per PROVENANCE.json and DERIVATION.md, expected Program and Execution payloads were derived post-adoption from literal .mori source, scenarios, and public v1 DTO definitions without product execution. In observe(), mori_core::parse parses installment-invoice.mori (32 expressions 0..31; register and collect) and conditional-reserve.mori (33 expressions 0..32; register and allocate) and asserts full Program equality against v1::Program fixtures. While all financial values (states, inputs, touched balances, duties, and 23 ordered effects across 39 statements) come from the independent fixtures, physical public_inputs indices are resolved referentially from the compiled CircuitArtifact, and slots 0..2 (role == 'context', program_target_action.0/1) copy entry.constant emitted by the compiler under test (lib.rs:1198-1205) rather than an independent context-hash oracle."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/2",
+    "text": "3. Injective ABI Slot Binding & State/Balance/Duty/Effect Coverage: source_wide() and transcript() enforce a complete bijection between expected financial observations and circuit.public_inputs. source_wide() checks all 4 compiled circuits (InstallmentInvoice::register 26 slots, collect 39 slots; ConditionalReserve::register 32 slots, allocate 51 slots) for action order, replay_steps, empty authorization_bindings/private_inputs, pre_state/post_state declaration order, input order, and source-wide liability_frame matching closing.liabilities in BTreeMap name order (liabilities.rs:43-109) with full LiabilityIdentity (name, asset with network/issuer/reference/scale, debtor, creditor) and 4 typed slots per duty (pre/post presence: Bool, pre/post amount: UInt). transcript() initializes values = vec![None; circuit.public_inputs.len()], assigns each slot once via put() (asserting binding metadata, constant.is_none(), and replace().is_none()), and unwraps all slots. It verifies: (a) invoice collect(47, 30) and linked collect(80, 60) updating payer 200->150->67, seller 11->58->138, treasury 5->8->11, invoice duty (true,127)->(true,80)->(true,0), unchanged warranty (true,9), paid 0->47->127, dueDay 30->60->90, installments 0->1->2, unchanged marker 77, and emit collected(47/127); and (b) reserve allocate(true, 50, 7) transitioning absent allocation (false,0)->(true,50)->(true,0) (distinguishing absent from present-zero), CASH reserve 57->5, supplier 5->55, treasury 1->3, BOND reserve 20->13, auditor 2->9, bond duty (true,10)->(true,3), unchanged emergency (true,2), allocated 0->50, closed false->true, unchanged marker 77, and emit allocated(50)."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/findings/3",
+    "text": "4. Real Compiler/SDK Preprocess Consumer & Harness Premises: Across the 2 passed tests, execution performed 2 mori_core::parse calls, 2 mori_backend::compile calls lowering 4 unsigned Core/1 circuits, 7 midnight_zkir_v3::IrSource::load calls (4 internal round-trips in lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. Direct inspection of mori-backend/src/lib.rs:519-1231, transient-crypto/src/proofs.rs:739-741, zkir-v3/src/ir.rs:75-80, and zkir-v3/src/ir_vm.rs:185-691 confirms unsigned Core/1 compilation emits 14 Native-only ZKIR Instruction variants (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, TestEq, LessThan(128), DivModPowerOfTwo(64), Assert, Output) with inputs=[], outputs=Native, and do_communications_commitment=false, and ProofPreimage::check runs only IrSource::preprocess(preimage)?.pi_skips in memory (checking PublicInput witness assignment, 128-bit/boolean/arithmetic/equality/assert constraints, and Impact equality against public_transcript_inputs) without calling prove, keygen, k, model, cost_model, or MidnightDataProvider. Outside-frame balance preservation (invoice CASH observer=23, reserve=19; reserve BOND observer=7, CASH observer=11) and multi-step invoice linkage (observations[0].post == observations[1].pre) are asserted in test harness Rust code as explicit ledger-adapter premises, not enforced by single-step circuit constraints."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/limitations/0",
+    "text": "1. Non-Blind Post-Adoption Fixture Custody & Missing Full-Artifact Goldens: Per fixtures/PROVENANCE.json, the 32 frozen payloads (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were derived post-adoption with public source and DTO visibility rather than pre-implementation blind custody. Physical ABI slot indices are checked referentially against compiler output, context slots (program_target_action.0/1) copy compiler-emitted constants rather than an independent context-hash oracle, and the 4 complete Target/Artifact/IR golden files in SEPARATE-FULL-ARTIFACT-ORACLE-INTERFACE.md remain missing."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/0/summary",
+    "text": "Fresh nonauthor ordinary review (requested model Gemini 4 Argon High; no canonical provider model identity exported; read-only packet inspection only, zero execution) approves the exact observed run result and guarded merge of candidate commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base main 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) for RESULT-REVIEW-CONTRACT.json (SHA-256 40ae673ea48b30daf0ff4275768847011630dba6d6a18455b420847368e258c7). Inspection of crates/mori-backend/tests/financial_observation_relation.rs (SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03), RUST_GUIDELINES.md (SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6), mori-backend/mori-core sources, the 32 frozen financial fixtures (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d), Midnight SDK runtime sources, and actual-cycle/attempt-1 receipts (RESULT.json 9e8157f8..., STDOUT.log 1fd2f140..., STDERR.log e910c5d4..., CLEANUP.json 0298cb1e..., PROCESS-CLEANUP.json eecdc4f9...) confirms: (1) the sole admitted 600s+5s attempt exited 0 in 149.42486905600163s wall time (0.04s test body) with 2 passed / 0 failed / 0 filtered tests, leaving the checkout clean and the temporary root removed; (2) both authored Core/1 programs parse through real mori_core::parse, match independently derived frozen Program DTOs, compile all 4 actions via mori_backend::compile, reopen via midnight_zkir_v3::IrSource::load, and satisfy 3 positive ProofPreimage::check (IrSource::preprocess) relations over the 14 emitted Native-only ZKIR instruction variants; (3) ABI slot bindings are exhaustively and injectively checked across all 26/39 (invoice) and 32/51 (reserve) public_inputs slots from independent frozen Scenarios/Executions, except physical slot positions (referential to CircuitArtifact) and slots 0..2 (compiler-emitted context constants); and (4) guarded merge is supported strictly under all four contract conditions, including immediate pre-merge verification of unchanged base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb and updating stale PR-BODY.md prose to the exact observed scope."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/1",
+    "text": "2. Independent Fixture Custody vs. Referential/Compiler-Sourced Metadata: financial_observation_relation.rs never invokes mori_core::simulate, mori_backend::proving::*, or mori_backend::signed_relation::*. It consumes 10 frozen files from crates/fixtures/financial-report-contract/ (bound under 32-payload FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d, preserving the 7 original v2 payloads 7e5b09d8...). Per PROVENANCE.json and DERIVATION.md, expected Program and Execution payl…"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/2",
+    "text": "3. Injective ABI Slot Binding & State/Balance/Duty/Effect Coverage: source_wide() and transcript() enforce a complete bijection between expected financial observations and circuit.public_inputs. source_wide() checks all 4 compiled circuits (InstallmentInvoice::register 26 slots, collect 39 slots; ConditionalReserve::register 32 slots, allocate 51 slots) for action order, replay_steps, empty authorization_bindings/private_inputs, pre_state/post_state declaration order, input order, and source-wide liability_…"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/findings/3",
+    "text": "4. Real Compiler/SDK Preprocess Consumer & Harness Premises: Across the 2 passed tests, execution performed 2 mori_core::parse calls, 2 mori_backend::compile calls lowering 4 unsigned Core/1 circuits, 7 midnight_zkir_v3::IrSource::load calls (4 internal round-trips in lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. Direct inspection of mori-backend/src/lib.rs:519-1231, transient-crypto/src/proofs.rs:739-741, zkir-v3/src/ir.rs:75-80, and zkir-v3/src/ir_vm.rs:185-691 confirms unsigned Co…"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/1/limitations/0",
+    "text": "1. Non-Blind Post-Adoption Fixture Custody & Missing Full-Artifact Goldens: Per fixtures/PROVENANCE.json, the 32 frozen payloads (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were derived post-adoption with public source and DTO visibility rather than pre-implementation blind custody. Physical ABI slot indices are checked referentially against compiler output, context slots (program_target_action.0/1) copy compiler-emitted constants rather than an independent context-hash …"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/2/findings/0",
+    "text": "1. Exact Candidate Source, Diff & Actual Run Fidelity: Read-only inspection of MANIFEST.json (a6d6d9a16580345d1a769974712ca401816adef9f26e86056b2a8f200c6eea67) and RESULT-REVIEW-CONTRACT.json (40ae673ea48b30daf0ff4275768847011630dba6d6a18455b420847368e258c7) confirms candidate commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base main 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) modifies only RUST_GUIDELINES.md (16,900B, SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6, lines 227-232 testing exception) and crates/mori-backend/tests/financial_observation_relation.rs (650 lines / 21,573B, SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03, rustfmt-formatted from 368-line draft f6fb7fd9... with zero semantic change). Actual receipts (ADMISSION.json, START.json, RESULT.json 9e8157f8b31b22bc9a75aa318ddcc7ef13517d11f216b150ad6812740019f7f1, STDOUT.log 1fd2f14047bca5c0a1abeeef7d40c41f5de8ff77bfb41a997228d0c3c2426979, STDERR.log e910c5d490520435b7d646578afa25b9a3bf7679138135b824d776323d4d491e) verify the admitted 18-argv / 17-env cold run in /tmp/doctorwatson-financial-relation-4f83f0f6-20261018-a1 exited 0 in 149.42486905600163s wall time (0.04s test body timing; 2m 29s Cargo build across 280 dependency targets including aws-lc-sys v0.45.0 and midnight-curves v0.3.1), passing both tests (2 passed, 0 failed, 0 ignored, 0 measured, 0 filtered out) and leaving the checkout clean. The sole 600s+5s allocation is CONSUMED (maximumAttempts=1, retryAllowed=false); CLEANUP.json (0298cb1e...) confirms temporary root removal and PROCESS-CLEANUP.json (eecdc4f9...) confirms empty owned session 565545."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/2/findings/1",
+    "text": "2. Independent Fixture Custody vs. Referential/Compiler-Sourced Metadata: financial_observation_relation.rs never invokes mori_core::simulate, mori_backend::proving::*, or mori_backend::signed_relation::*. It consumes 10 frozen files from crates/fixtures/financial-report-contract/ (bound under 32-payload FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d, preserving the 7 original v2 payloads 7e5b09d8...). Per PROVENANCE.json and DERIVATION.md, expected Program and Execution payloads were derived post-adoption from literal .mori source, scenarios, and public v1 DTO definitions without product execution. In observe(), mori_core::parse parses installment-invoice.mori (32 expressions 0..31; register and collect) and conditional-reserve.mori (33 expressions 0..32; register and allocate) and asserts full Program equality against v1::Program fixtures. While all financial values (states, inputs, touched balances, duties, and 23 ordered effects across 39 statements) come from the independent fixtures, physical public_inputs indices are resolved referentially from the compiled CircuitArtifact, and slots 0..2 (role == 'context', program_target_action.0/1) copy entry.constant emitted by the compiler under test (lib.rs:1198-1205) rather than an independent context-hash oracle."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/2/findings/2",
+    "text": "3. Injective ABI Slot Binding & State/Balance/Duty/Effect Coverage: source_wide() and transcript() enforce a complete bijection between expected financial observations and circuit.public_inputs. source_wide() checks all 4 compiled circuits (InstallmentInvoice::register 26 slots, collect 39 slots; ConditionalReserve::register 32 slots, allocate 51 slots) for action order, replay_steps, empty authorization_bindings/private_inputs, pre_state/post_state declaration order, input order, and source-wide liability_frame matching closing.liabilities in BTreeMap name order (liabilities.rs:43-109) with full LiabilityIdentity (name, asset with network/issuer/reference/scale, debtor, creditor) and 4 typed slots per duty (pre/post presence: Bool, pre/post amount: UInt). transcript() initializes values = vec![None; circuit.public_inputs.len()], assigns each slot once via put() (asserting binding metadata, constant.is_none(), and replace().is_none()), and unwraps all slots. It verifies: (a) invoice collect(47, 30) and linked collect(80, 60) updating payer 200->150->67, seller 11->58->138, treasury 5->8->11, invoice duty (true,127)->(true,80)->(true,0), unchanged warranty (true,9), paid 0->47->127, dueDay 30->60->90, installments 0->1->2, unchanged marker 77, and emit collected(47/127); and (b) reserve allocate(true, 50, 7) transitioning absent allocation (false,0)->(true,50)->(true,0) (distinguishing absent from present-zero), CASH reserve 57->5, supplier 5->55, treasury 1->3, BOND reserve 20->13, auditor 2->9, bond duty (true,10)->(true,3), unchanged emergency (true,2), allocated 0->50, closed false->true, unchanged marker 77, and emit allocated(50)."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/2/findings/3",
+    "text": "4. Real Compiler/SDK Preprocess Consumer & Harness Premises: Across the 2 passed tests, execution performed 2 mori_core::parse calls, 2 mori_backend::compile calls lowering 4 unsigned Core/1 circuits, 7 midnight_zkir_v3::IrSource::load calls (4 internal round-trips in lib.rs:1235 + 3 in observe()), and 3 ProofPreimage::check(&ir) calls. Direct inspection of mori-backend/src/lib.rs:519-1231, transient-crypto/src/proofs.rs:739-741, zkir-v3/src/ir.rs:75-80, and zkir-v3/src/ir_vm.rs:185-691 confirms unsigned Core/1 compilation emits 14 Native-only ZKIR Instruction variants (PublicInput, ConstrainBits(128), ConstrainToBoolean, ConstrainEq, Impact, Neg, Not, Add, Mul, TestEq, LessThan(128), DivModPowerOfTwo(64), Assert, Output) with inputs=[], outputs=Native, and do_communications_commitment=false, and ProofPreimage::check runs only IrSource::preprocess(preimage)?.pi_skips in memory (checking PublicInput witness assignment, 128-bit/boolean/arithmetic/equality/assert constraints, and Impact equality against public_transcript_inputs) without calling prove, keygen, k, model, cost_model, or MidnightDataProvider. Outside-frame balance preservation (invoice CASH observer=23, reserve=19; reserve BOND observer=7, CASH observer=11) and multi-step invoice linkage (observations[0].post == observations[1].pre) are asserted in test harness Rust code as explicit ledger-adapter premises, not enforced by single-step circuit constraints."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/2/limitations/0",
+    "text": "1. Non-Blind Post-Adoption Fixture Custody & Missing Full-Artifact Goldens: Per fixtures/PROVENANCE.json, the 32 frozen payloads (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d) were derived post-adoption with public source and DTO visibility rather than pre-implementation blind custody. Physical ABI slot indices are checked referentially against compiler output, context slots (program_target_action.0/1) copy compiler-emitted constants rather than an independent context-hash oracle, and the 4 complete Target/Artifact/IR golden files in SEPARATE-FULL-ARTIFACT-ORACLE-INTERFACE.md remain missing."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/WHOLE-SCHEMA-VALID-CANDIDATES.json",
+    "jsonPointer": "/2/summary",
+    "text": "Fresh nonauthor ordinary review (requested model Gemini 4 Argon High; no canonical provider model identity exported; read-only packet inspection only, zero execution) approves the exact observed run result and guarded merge of candidate commit 4f83f0f613464343efd7a6322efacd8f87fdbc1d (tree 2d4bddedb32182737e5536996a411317d44d8763, base main 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb) for RESULT-REVIEW-CONTRACT.json (SHA-256 40ae673ea48b30daf0ff4275768847011630dba6d6a18455b420847368e258c7). Inspection of crates/mori-backend/tests/financial_observation_relation.rs (SHA-256 bb7dd1c8dd0a34fb48aefd6a2549a90af606010d044c72cb707c35eb42c21c03), RUST_GUIDELINES.md (SHA-256 972ea86f2fcc8d54fd3e4aab429068e946873726f978132ad82e8360917c20e6), mori-backend/mori-core sources, the 32 frozen financial fixtures (FREEZE.sha256 5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d), Midnight SDK runtime sources, and actual-cycle/attempt-1 receipts (RESULT.json 9e8157f8..., STDOUT.log 1fd2f140..., STDERR.log e910c5d4..., CLEANUP.json 0298cb1e..., PROCESS-CLEANUP.json eecdc4f9...) confirms: (1) the sole admitted 600s+5s attempt exited 0 in 149.42486905600163s wall time (0.04s test body) with 2 passed / 0 failed / 0 filtered tests, leaving the checkout clean and the temporary root removed; (2) both authored Core/1 programs parse through real mori_core::parse, match independently derived frozen Program DTOs, compile all 4 actions via mori_backend::compile, reopen via midnight_zkir_v3::IrSource::load, and satisfy 3 positive ProofPreimage::check (IrSource::preprocess) relations over the 14 emitted Native-only ZKIR instruction variants; (3) ABI slot bindings are exhaustively and injectively checked across all 26/39 (invoice) and 32/51 (reserve) public_inputs slots from independent frozen Scenarios/Executions, except physical slot positions (referential to CircuitArtifact) and slots 0..2 (compiler-emitted context constants); and (4) guarded merge is supported strictly under all four contract conditions, including immediate pre-merge verification of unchanged base 9a140f7eb7844ca2b952d8f4142a5cd7fd820dbb and updating stale PR-BODY.md prose to the exact observed scope."
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/ROOT-DISPOSITION.json",
+    "jsonPointer": "/recordedAt",
+    "text": "2026-10-18T10:17:22.936513+00:00"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/ROOT-DISPOSITION.json",
+    "jsonPointer": "/completeAmbiguousArraySha256",
+    "text": "844d3c23db8fc8a54498cc6b757e3fe84930b45518ffa1f9f23751bba6bc053d"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/PROCESS.json",
+    "jsonPointer": "/endedAt",
+    "text": "2026-10-18T10:15:08.051437+00:00"
+  },
+  {
+    "file": "evidence/owners/result-ordinary-20261018-a1/PROCESS.json",
+    "jsonPointer": "/reexportedAt",
+    "text": "2026-10-18T10:15:08.051468+00:00"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/actualResultFileSha256",
+    "text": "9e8157f8b31b22bc9a75aa318ddcc7ef13517d11f216b150ad6812740019f7f1"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/financialFreezeSha256",
+    "text": "5fca1721249e603226df21d1a2d7ad886a27e66232d1b722dfd76011611d510d"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/owners/0/endedAt",
+    "text": "2026-10-18T10:15:08.051437+00:00"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/owners/0/wholeOutputSha256",
+    "text": "844d3c23db8fc8a54498cc6b757e3fe84930b45518ffa1f9f23751bba6bc053d"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/owners/0/publicExports/5/sha256",
+    "text": "844d3c23db8fc8a54498cc6b757e3fe84930b45518ffa1f9f23751bba6bc053d"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/owners/1/wholeOutputSha256",
+    "text": "6865b64444f3f49afbf30c2c3f211af660c646b5c51cff4a6d3156679ba0a4a8"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/owners/1/publicExports/4/sha256",
+    "text": "6865b64444f3f49afbf30c2c3f211af660c646b5c51cff4a6d3156679ba0a4a8"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/owners/1/publicExports/5/sha256",
+    "text": "6865b64444f3f49afbf30c2c3f211af660c646b5c51cff4a6d3156679ba0a4a8"
+  },
+  {
+    "file": "evidence/result/RESULTS.json",
+    "jsonPointer": "/sourceFidelityClarification",
+    "text": "Transcript value population/check is for collect39slots twice and allocate51slots once. Register26/32-slot artifacts receive source_wide metadata/frame assertions but no register Execution/transcript check; both reviews explicitly retain unexecuted-register limits."
+  }
+]

@@ -1,0 +1,1253 @@
+{
+  "predicate": "Every newly used lsp-server/gen-lsp-types API in the seven-path snapshot has an exact public export/definition/signature/required trait conversion in the adopted version source under its stated cfg.",
+  "method": "Manual ordinary source comparison with mechanically pinned full input bytes and exact excerpts; no Rust parser/compiler/product execution.",
+  "result": "No API-definition or signature mismatch found in the inspected snapshot. Source-only, not a compiler result.",
+  "directImportInventory": {
+    "lsp_server": [
+      "ErrorCode",
+      "Message",
+      "Notification",
+      "Request",
+      "Response"
+    ],
+    "lsp_types": [
+      "Diagnostic",
+      "DidChangeTextDocumentParams",
+      "DidCloseTextDocumentParams",
+      "DidOpenTextDocumentParams",
+      "InitializeParams",
+      "InitializeResult",
+      "PositionEncodingKind",
+      "PublishDiagnosticsParams",
+      "ServerCapabilities",
+      "ServerInfo",
+      "TextDocumentContentChangeEvent",
+      "TextDocumentSyncKind",
+      "TextDocumentSyncOptions",
+      "Uri",
+      "DiagnosticRelatedInformation",
+      "DiagnosticSeverity",
+      "Location",
+      "Position",
+      "Range"
+    ]
+  },
+  "rows": [
+    {
+      "id": "API-01",
+      "api": "lsp_server root imports",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "use lsp_server::",
+          "lines": [
+            5
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/lib.rs",
+          "startLine": 19,
+          "endLine": 28,
+          "excerpt": "};\n\nuse crossbeam_channel::{Receiver, RecvError, RecvTimeoutError, Sender};\n\npub use crate::{\n    error::{ExtractError, ProtocolError},\n    msg::{ErrorCode, Message, Notification, Request, RequestId, Response, ResponseError},\n    req_queue::{Incoming, Outgoing, ReqQueue},\n    stdio::IoThreads,\n};"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "ErrorCode, Message, Notification, Request and Response are public crate-root re-exports of msg types."
+    },
+    {
+      "id": "API-02",
+      "api": "Message variants",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Message::Request(",
+          "lines": [
+            65
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Message::Notification(",
+          "lines": [
+            71,
+            263
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Message::Response(",
+          "lines": [
+            67,
+            73
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 11,
+          "endLine": 17,
+          "excerpt": "#[derive(Serialize, Deserialize, Debug, Clone)]\n#[serde(untagged)]\npub enum Message {\n    Request(Request),\n    Response(Response),\n    Notification(Notification),\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The public enum has precisely the Request(Request), Response(Response) and Notification(Notification) variants used by dispatch."
+    },
+    {
+      "id": "API-03",
+      "api": "Message::read",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Message::read(",
+          "lines": [
+            27
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 172,
+          "endLine": 175,
+          "excerpt": "impl Message {\n    pub fn read(r: &mut impl BufRead) -> io::Result<Option<Message>> {\n        Message::_read(r)\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Signature is read(&mut impl BufRead) -> io::Result<Option<Message>>. The candidate passes &mut StdinLock and handles Result then Option."
+    },
+    {
+      "id": "API-04",
+      "api": "Message::write",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": ".write(output)",
+          "lines": [
+            68,
+            267
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 191,
+          "endLine": 203,
+          "excerpt": "    pub fn write(&self, w: &mut impl Write) -> io::Result<()> {\n        self._write(w)\n    }\n    fn _write(&self, w: &mut dyn Write) -> io::Result<()> {\n        #[derive(Serialize)]\n        struct JsonRpc<'a> {\n            jsonrpc: &'static str,\n            #[serde(flatten)]\n            msg: &'a Message,\n        }\n        let text = serde_json::to_string(&JsonRpc { jsonrpc: \"2.0\", msg: self })?;\n        write_msg_text(w, &text)\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Signature is write(&self, &mut impl Write) -> io::Result<()>, matching each candidate output helper and error mapping."
+    },
+    {
+      "id": "API-05",
+      "api": "Request public fields",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "request.method",
+          "lines": [
+            79,
+            118
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "request.params",
+          "lines": [
+            87,
+            119
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "request.id",
+          "lines": [
+            82,
+            89,
+            106,
+            116,
+            121,
+            128,
+            131
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 72,
+          "endLine": 80,
+          "excerpt": "#[derive(Debug, Serialize, Deserialize, Clone)]\npub struct Request {\n    pub id: RequestId,\n    pub method: String,\n    #[serde(default = \"serde_json::Value::default\")]\n    #[serde(skip_serializing_if = \"serde_json::Value::is_null\")]\n    pub params: serde_json::Value,\n}\n"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "method is String; params is serde_json::Value; id is RequestId. Response constructors accept that same RequestId."
+    },
+    {
+      "id": "API-06",
+      "api": "Response::new_ok",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Response::new_ok(",
+          "lines": [
+            106,
+            128
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 206,
+          "endLine": 209,
+          "excerpt": "impl Response {\n    pub fn new_ok<R: serde::Serialize>(id: RequestId, result: R) -> Response {\n        Response { id, response_result: Ok(serde_json::to_value(result).unwrap()) }\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "new_ok<R: serde::Serialize>(RequestId, R) -> Response accepts InitializeResult (derived Serialize) and unit ()."
+    },
+    {
+      "id": "API-07",
+      "api": "Response::new_err",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Response::new_err(",
+          "lines": [
+            81,
+            88,
+            116,
+            120,
+            130
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 210,
+          "endLine": 214,
+          "excerpt": "    pub fn new_err(id: RequestId, code: i32, message: String) -> Response {\n        let error = ResponseError { code, message, data: None };\n        Response { id, response_result: Err(error) }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "new_err(RequestId, i32, String) -> Response matches the moved id, cast enum discriminant and inferred String conversion."
+    },
+    {
+      "id": "API-08",
+      "api": "ErrorCode variants/casts",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "ErrorCode::InvalidRequest",
+          "lines": [
+            83,
+            112
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "ErrorCode::InvalidParams",
+          "lines": [
+            90,
+            122
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "ErrorCode::ServerNotInitialized",
+          "lines": [
+            110
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "ErrorCode::MethodNotFound",
+          "lines": [
+            132
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 108,
+          "endLine": 126,
+          "excerpt": "#[derive(Clone, Copy, Debug)]\n#[non_exhaustive]\npub enum ErrorCode {\n    // Defined by JSON RPC:\n    ParseError = -32700,\n    InvalidRequest = -32600,\n    MethodNotFound = -32601,\n    InvalidParams = -32602,\n    InternalError = -32603,\n    ServerErrorStart = -32099,\n    ServerErrorEnd = -32000,\n\n    /// Error code indicating that a server received a notification or\n    /// request before the server has received the `initialize` request.\n    ServerNotInitialized = -32002,\n    UnknownErrorCode = -32001,\n\n    // Defined by the protocol:\n    /// The client has canceled a request and a server has detected"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "All four names are real unit enum variants; integer casts target the required i32 code parameter. The non_exhaustive marker does not prevent naming these variants."
+    },
+    {
+      "id": "API-09",
+      "api": "Notification public fields and constructor",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "notification.method",
+          "lines": [
+            142,
+            149,
+            156
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "notification.params",
+          "lines": [
+            159,
+            182,
+            215
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "Notification::new(",
+          "lines": [
+            263
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 156,
+          "endLine": 163,
+          "excerpt": "#[derive(Debug, Serialize, Deserialize, Clone)]\npub struct Notification {\n    pub method: String,\n    #[serde(default = \"serde_json::Value::default\")]\n    #[serde(skip_serializing_if = \"serde_json::Value::is_null\")]\n    pub params: serde_json::Value,\n}\n"
+        },
+        {
+          "path": "dependency/source/lsp-server-0.10.0/src/msg.rs",
+          "startLine": 241,
+          "endLine": 244,
+          "excerpt": "impl Notification {\n    pub fn new(method: String, params: impl serde::Serialize) -> Notification {\n        Notification { method, params: serde_json::to_value(params).unwrap() }\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "method is String, params serde_json::Value, and new(String, impl serde::Serialize) accepts the typed publish parameters."
+    },
+    {
+      "id": "API-10",
+      "api": "gen-lsp-types crate-root exports",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "use lsp_types::",
+          "lines": [
+            6
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "use lsp_types::",
+          "lines": [
+            1
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/lib.rs",
+          "startLine": 1,
+          "endLine": 4,
+          "excerpt": "mod generated;\npub mod json_rpc;\n\npub use generated::*;"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated.rs",
+          "startLine": 19,
+          "endLine": 33,
+          "excerpt": "mod common;\nmod enum_ors;\nmod enumerations;\nmod notifications;\nmod requests;\nmod structures;\nmod type_aliases;\n\npub use common::*;\npub use enum_ors::*;\npub use enumerations::*;\npub use notifications::*;\npub use requests::*;\npub use structures::*;\npub use type_aliases::*;"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "All generated structures/enums/common types are public root re-exports. Workspace alias lsp-types maps to package gen-lsp-types, whose explicit lib target is gen_lsp_types; Cargo dependency renaming supplies the lsp_types external name.",
+      "conditionOrLimitation": "Cargo alias selection has not been executed; manifests are preserved exactly."
+    },
+    {
+      "id": "API-11",
+      "api": "Uri and HashMap trait bounds",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "HashMap<Uri, Document>",
+          "lines": [
+            53
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "uri.clone()",
+          "lines": [
+            172
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "uri.clone()",
+          "lines": [
+            62
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/common.rs",
+          "startLine": 25,
+          "endLine": 40,
+          "excerpt": "#[cfg(all(not(feature = \"url\"), not(feature = \"fluent-uri\")))]\n/// URIs are transferred as strings. The URI's format is defined in https://tools.ietf.org/html/rfc3986.\n#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]\npub struct Uri(pub String);\n#[cfg(all(not(feature = \"url\"), not(feature = \"fluent-uri\")))]\nimpl From<String> for Uri {\n    fn from(s: String) -> Self {\n        Self(s)\n    }\n}\n#[cfg(all(not(feature = \"url\"), not(feature = \"fluent-uri\")))]\nimpl From<&str> for Uri {\n    fn from(s: &str) -> Self {\n        Self(s.into())\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Under the adopted no-URI-feature configuration Uri(pub String) derives Clone, Eq and Hash, satisfying clone and HashMap key use; it also derives Serialize/Deserialize.",
+      "conditionOrLimitation": "The exact source cfg is not(url) and not(fluent-uri). No Cargo feature-unification result is asserted."
+    },
+    {
+      "id": "API-12",
+      "api": "InitializeParams + capabilities",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "from_value::<InitializeParams>",
+          "lines": [
+            87
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": ".capabilities",
+          "lines": [
+            95
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2093,
+          "endLine": 2095,
+          "excerpt": "#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct InitializeParams {"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2131,
+          "endLine": 2144,
+          "excerpt": "    pub root_uri: Option<Uri>,\n    /// The capabilities provided by the client (editor or tool)\n    pub capabilities: ClientCapabilities,\n    /// User provided initialization options.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub initialization_options: Option<LspAny>,\n    /// The initial trace setting. If omitted trace is disabled ('off').\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub trace: Option<TraceValue>,\n    #[serde(flatten)]\n    pub work_done_progress_params: WorkDoneProgressParams,\n    #[serde(flatten)]\n    pub workspace_folders_initialize_params: WorkspaceFoldersInitializeParams,\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "InitializeParams derives Deserialize and exposes public capabilities: ClientCapabilities. Candidate does not construct deprecated initialize fields."
+    },
+    {
+      "id": "API-13",
+      "api": "Client capability traversal",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": ".text_document",
+          "lines": [
+            96,
+            163,
+            200,
+            204,
+            207,
+            219
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "document.publish_diagnostics",
+          "lines": [
+            98
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 7820,
+          "endLine": 7829,
+          "excerpt": "/// Defines the capabilities provided by the client.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct ClientCapabilities {\n    /// Workspace specific client capabilities.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub workspace: Option<WorkspaceClientCapabilities>,\n    /// Text document specific client capabilities.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub text_document: Option<TextDocumentClientCapabilities>,"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 8341,
+          "endLine": 8347,
+          "excerpt": "/// Text document specific client capabilities.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct TextDocumentClientCapabilities {\n    /// Defines which synchronization capabilities the client supports.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub synchronization: Option<TextDocumentSyncClientCapabilities>,"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 8424,
+          "endLine": 8428,
+          "excerpt": "    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub selection_range: Option<SelectionRangeClientCapabilities>,\n    /// Capabilities specific to the `textDocument/publishDiagnostics` notification.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub publish_diagnostics: Option<PublishDiagnosticsClientCapabilities>,"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "ClientCapabilities.text_document is Option<TextDocumentClientCapabilities>; that type has public publish_diagnostics: Option<PublishDiagnosticsClientCapabilities>. The as_ref/and_then chain matches these types."
+    },
+    {
+      "id": "API-14",
+      "api": "Publish diagnostics client flags",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "capabilities.version_support",
+          "lines": [
+            100
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "capabilities.diagnostics_capabilities.related_information",
+          "lines": [
+            103
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 9949,
+          "endLine": 9961,
+          "excerpt": "/// The publish diagnostic client capabilities.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct PublishDiagnosticsClientCapabilities {\n    /// Whether the client interprets the version property of the\n    /// `textDocument/publishDiagnostics` notification's parameter.\n    ///\n    /// @since 3.15.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub version_support: Option<bool>,\n    #[serde(flatten)]\n    pub diagnostics_capabilities: DiagnosticsCapabilities,\n}"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 10812,
+          "endLine": 10818,
+          "excerpt": "/// General diagnostics capabilities for pull and push model.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct DiagnosticsCapabilities {\n    /// Whether the clients accepts diagnostics with related information.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub related_information: Option<bool>,"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "version_support is Option<bool>; diagnostics_capabilities is a flattened DiagnosticsCapabilities containing related_information: Option<bool>. Candidate uses the real nested Rust field rather than assuming serde flatten creates a direct Rust field."
+    },
+    {
+      "id": "API-15",
+      "api": "DidOpenTextDocumentParams",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "from_value::<DidOpenTextDocumentParams>",
+          "lines": [
+            159
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "let document = params.text_document;",
+          "lines": [
+            163
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2329,
+          "endLine": 2335,
+          "excerpt": "/// The parameters sent in an open text document notification\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct DidOpenTextDocumentParams {\n    /// The document that was opened.\n    pub text_document: TextDocumentItem,\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The type derives Deserialize and has text_document: TextDocumentItem."
+    },
+    {
+      "id": "API-16",
+      "api": "TextDocumentItem fields",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "document.uri",
+          "lines": [
+            164,
+            168,
+            170,
+            219
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "document.text",
+          "lines": [
+            168,
+            175,
+            200,
+            208,
+            209
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "document.version",
+          "lines": [
+            169,
+            174,
+            204,
+            207,
+            210
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 5648,
+          "endLine": 5662,
+          "excerpt": "/// An item to transfer a text document from the client to the\n/// server.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct TextDocumentItem {\n    /// The text document's uri.\n    pub uri: Uri,\n    /// The text document's language identifier.\n    pub language_id: LanguageKind,\n    /// The version number of this document (it will increase after each\n    /// change, including undo/redo).\n    pub version: i32,\n    /// The content of the opened text document.\n    pub text: String,\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "uri is Uri, text String, version i32; these match diagnostics borrow, owned HashMap key/document fields and Option<i32> diagnostic versions. language_id exists but is not read by this candidate."
+    },
+    {
+      "id": "API-17",
+      "api": "DidChangeTextDocumentParams",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "from_value::<DidChangeTextDocumentParams>",
+          "lines": [
+            182
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "params.content_changes",
+          "lines": [
+            187
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2358,
+          "endLine": 2377,
+          "excerpt": "/// The change text document notification's parameters.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct DidChangeTextDocumentParams {\n    /// The document that did change. The version number points\n    /// to the version after all provided content changes have\n    /// been applied.\n    pub text_document: VersionedTextDocumentIdentifier,\n    /// The actual content changes. The content changes describe single state changes\n    /// to the document. So if there are two content changes c1 (at array index 0) and\n    /// c2 (at array index 1) for a document in state S then c1 moves the document from\n    /// S to S' and c2 from S' to S''. So c1 is computed on the state S and c2 is computed\n    /// on the state S'.\n    ///\n    /// To mirror the content of a document using change events use the following approach:\n    /// - start with the same initial content\n    /// - apply the 'textDocument/didChange' notifications in the order you receive them.\n    /// - apply the `TextDocumentContentChangeEvent`s in a single notification in the order\n    ///   you receive them.\n    pub content_changes: Vec<TextDocumentContentChangeEvent>,"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The type derives Deserialize; content_changes is Vec<TextDocumentContentChangeEvent>, and text_document is VersionedTextDocumentIdentifier."
+    },
+    {
+      "id": "API-18",
+      "api": "VersionedTextDocumentIdentifier nesting",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "params.text_document.text_document_identifier.uri",
+          "lines": [
+            200
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "params.text_document.version",
+          "lines": [
+            204,
+            207
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 6191,
+          "endLine": 6199,
+          "excerpt": "/// A text document identifier to denote a specific version of a text document.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct VersionedTextDocumentIdentifier {\n    /// The version number of this document.\n    pub version: i32,\n    #[serde(flatten)]\n    pub text_document_identifier: TextDocumentIdentifier,\n}"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 4644,
+          "endLine": 4650,
+          "excerpt": "/// A literal to identify a text document in the client.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct TextDocumentIdentifier {\n    /// The text document's uri.\n    pub uri: Uri,\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "version is i32 and the flattened Rust member is text_document_identifier: TextDocumentIdentifier, whose public uri: Uri matches candidate access."
+    },
+    {
+      "id": "API-19",
+      "api": "TextDocumentContentChangeEvent full variant",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "TextDocumentContentChangeEvent::TextDocumentContentChangeWholeDocument(",
+          "lines": [
+            188
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs",
+          "startLine": 1688,
+          "endLine": 1705,
+          "excerpt": "/// An event describing a change to a text document. If only a text is provided\n/// it is considered to be the full content of the document.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(untagged)]\npub enum TextDocumentContentChangeEvent {\n    TextDocumentContentChangePartial(TextDocumentContentChangePartial),\n    TextDocumentContentChangeWholeDocument(TextDocumentContentChangeWholeDocument),\n}\nimpl From<TextDocumentContentChangePartial> for TextDocumentContentChangeEvent {\n    fn from(v: TextDocumentContentChangePartial) -> Self {\n        Self::TextDocumentContentChangePartial(v)\n    }\n}\nimpl From<TextDocumentContentChangeWholeDocument> for TextDocumentContentChangeEvent {\n    fn from(v: TextDocumentContentChangeWholeDocument) -> Self {\n        Self::TextDocumentContentChangeWholeDocument(v)\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The exact named tuple variant exists alongside a partial variant. The let-else pattern binds its whole-document payload."
+    },
+    {
+      "id": "API-20",
+      "api": "Whole-document change payload",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "text = Some(change.text);",
+          "lines": [
+            195
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 7970,
+          "endLine": 7982,
+          "excerpt": "/// @since 3.18.0\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct TextDocumentContentChangeWholeDocument {\n    /// The new text of the whole document.\n    pub text: String,\n}\nimpl TextDocumentContentChangeWholeDocument {\n    #[must_use]\n    pub const fn new(text: String) -> Self {\n        Self { text }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "TextDocumentContentChangeWholeDocument.text is String, matching replacement document text."
+    },
+    {
+      "id": "API-21",
+      "api": "DidCloseTextDocumentParams",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "from_value::<DidCloseTextDocumentParams>",
+          "lines": [
+            215
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "let uri = params.text_document.uri;",
+          "lines": [
+            219
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2414,
+          "endLine": 2425,
+          "excerpt": "/// The parameters sent in a close text document notification\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct DidCloseTextDocumentParams {\n    /// The document that was closed.\n    pub text_document: TextDocumentIdentifier,\n}\nimpl DidCloseTextDocumentParams {\n    #[must_use]\n    pub const fn new(text_document: TextDocumentIdentifier) -> Self {\n        Self { text_document }\n    }"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 4644,
+          "endLine": 4650,
+          "excerpt": "/// A literal to identify a text document in the client.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct TextDocumentIdentifier {\n    /// The text document's uri.\n    pub uri: Uri,\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The type derives Deserialize and has text_document: TextDocumentIdentifier with uri: Uri."
+    },
+    {
+      "id": "API-22",
+      "api": "InitializeResult literal",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "fn initialize_result() -> InitializeResult",
+          "lines": [
+            230
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "InitializeResult {",
+          "lines": [
+            230,
+            231
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2174,
+          "endLine": 2194,
+          "excerpt": "/// The result returned from an initialize request.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct InitializeResult {\n    /// The capabilities the language server provides.\n    pub capabilities: ServerCapabilities,\n    /// Information about the server.\n    ///\n    /// @since 3.15.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub server_info: Option<ServerInfo>,\n}\nimpl InitializeResult {\n    #[must_use]\n    pub const fn new(\n        capabilities: ServerCapabilities,\n        server_info: Option<ServerInfo>,\n    ) -> Self {\n        Self { capabilities, server_info }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "InitializeResult derives Serialize and its two public fields are capabilities: ServerCapabilities and server_info: Option<ServerInfo>; the candidate initializes both."
+    },
+    {
+      "id": "API-23",
+      "api": "ServerCapabilities fields/Default",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "capabilities: ServerCapabilities {",
+          "lines": [
+            232
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "position_encoding:",
+          "lines": [
+            233
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "text_document_sync:",
+          "lines": [
+            234
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "experimental:",
+          "lines": [
+            242
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 5942,
+          "endLine": 5962,
+          "excerpt": "/// Defines the capabilities provided by a language\n/// server.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct ServerCapabilities {\n    /// The position encoding the server picked from the encodings offered\n    /// by the client via the client capability `general.positionEncodings`.\n    ///\n    /// If the client didn't provide any position encodings the only valid\n    /// value that a server can return is 'utf-16'.\n    ///\n    /// If omitted it defaults to 'utf-16'.\n    ///\n    /// @since 3.17.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub position_encoding: Option<PositionEncodingKind>,\n    /// Defines how text documents are synced. Is either a detailed structure\n    /// defining each notification or for backwards compatibility the\n    /// TextDocumentSyncKind number.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub text_document_sync: Option<TextDocumentSync>,"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 6083,
+          "endLine": 6089,
+          "excerpt": "    /// Workspace specific server capabilities.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub workspace: Option<WorkspaceOptions>,\n    /// Experimental server capabilities.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub experimental: Option<LspAny>,\n}"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/type_aliases.rs",
+          "startLine": 15,
+          "endLine": 21,
+          "excerpt": "/// Please note that strictly speaking a property with the value `undefined`\n/// can't be converted into JSON preserving the property name. However for\n/// convenience it is allowed and assumed that all these properties are\n/// optional as well.\n/// @since 3.17.0\npub type LspAny = serde_json::Value;\n"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "ServerCapabilities derives Default; the three explicitly set fields have the expected Option types. LspAny aliases serde_json::Value, matching json!(...). Remaining fields come from Default."
+    },
+    {
+      "id": "API-24",
+      "api": "PositionEncodingKind::UTF16",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "PositionEncodingKind::UTF16",
+          "lines": [
+            233
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enumerations.rs",
+          "startLine": 1931,
+          "endLine": 1943,
+          "excerpt": "/// A set of predefined position encoding kinds.\n///\n/// @since 3.17.0\n#[derive(PartialEq, Eq, Hash, Debug, Clone, Serialize, Deserialize)]\n#[serde(into = \"String\", from = \"String\")]\npub enum PositionEncodingKind {\n    /// Character offsets count UTF-8 code units (e.g. bytes).\n    UTF8,\n    /// Character offsets count UTF-16 code units.\n    ///\n    /// This is the default and must always be supported\n    /// by servers\n    UTF16,"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enumerations.rs",
+          "startLine": 1954,
+          "endLine": 1961,
+          "excerpt": "impl From<PositionEncodingKind> for String {\n    fn from(e: PositionEncodingKind) -> Self {\n        match e {\n            PositionEncodingKind::UTF8 => \"utf-8\".to_string(),\n            PositionEncodingKind::UTF16 => \"utf-16\".to_string(),\n            PositionEncodingKind::UTF32 => \"utf-32\".to_string(),\n            PositionEncodingKind::Custom(any) => any.into_owned(),\n        }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "UTF16 is a real enum variant; its Serialize conversion maps to the string utf-16. No dependency constant named UTF_16 is assumed."
+    },
+    {
+      "id": "API-25",
+      "api": "TextDocumentSyncOptions fields/Default",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "TextDocumentSyncOptions {",
+          "lines": [
+            235
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "open_close:",
+          "lines": [
+            236
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "change: Some(",
+          "lines": [
+            237
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 7868,
+          "endLine": 7891,
+          "excerpt": "#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default, Copy)]\n#[serde(rename_all = \"camelCase\")]\npub struct TextDocumentSyncOptions {\n    /// Open and close notifications are sent to the server. If omitted open close notification should not\n    /// be sent.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub open_close: Option<bool>,\n    /// Change notifications are sent to the server. See TextDocumentSyncKind.None, TextDocumentSyncKind.Full\n    /// and TextDocumentSyncKind.Incremental. If omitted it defaults to TextDocumentSyncKind.None.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub change: Option<TextDocumentSyncKind>,\n    /// If present will save notifications are sent to the server. If omitted the notification should not be\n    /// sent.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub will_save: Option<bool>,\n    /// If present will save wait until requests are sent to the server. If omitted the request should not be\n    /// sent.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub will_save_wait_until: Option<bool>,\n    /// If present save notifications are sent to the server. If omitted the notification should not be\n    /// sent.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub save: Option<Save>,\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Options derives Default and Copy; open_close: Option<bool>, change: Option<TextDocumentSyncKind> match candidate fields. Other fields default to None."
+    },
+    {
+      "id": "API-26",
+      "api": "TextDocumentSyncOptions -> TextDocumentSync conversion",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": ".into(),",
+          "lines": [
+            84,
+            91,
+            123,
+            133,
+            240,
+            251,
+            264
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs",
+          "startLine": 1746,
+          "endLine": 1760,
+          "excerpt": "#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Copy)]\n#[serde(untagged)]\npub enum TextDocumentSync {\n    Options(TextDocumentSyncOptions),\n    Kind(TextDocumentSyncKind),\n}\nimpl From<TextDocumentSyncOptions> for TextDocumentSync {\n    fn from(v: TextDocumentSyncOptions) -> Self {\n        Self::Options(v)\n    }\n}\nimpl From<TextDocumentSyncKind> for TextDocumentSync {\n    fn from(v: TextDocumentSyncKind) -> Self {\n        Self::Kind(v)\n    }"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 5961,
+          "endLine": 5962,
+          "excerpt": "    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub text_document_sync: Option<TextDocumentSync>,"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Explicit From<TextDocumentSyncOptions> for TextDocumentSync makes the .into() value fit ServerCapabilities.text_document_sync. The same line anchor also sees unrelated ordinary string conversions; this row addresses the options conversion only."
+    },
+    {
+      "id": "API-27",
+      "api": "TextDocumentSyncKind::Full",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "TextDocumentSyncKind::Full",
+          "lines": [
+            237
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enumerations.rs",
+          "startLine": 888,
+          "endLine": 913,
+          "excerpt": "/// Defines how the host (editor) should sync\n/// document changes to the language server.\n#[derive(PartialEq, Eq, Hash, Debug, Clone, Serialize, Deserialize, Copy)]\n#[serde(into = \"u32\", from = \"u32\")]\npub enum TextDocumentSyncKind {\n    /// Documents should not be synced at all.\n    None,\n    /// Documents are synced by always sending the full content\n    /// of the document.\n    Full,\n    /// Documents are synced by sending the full content on open.\n    /// After that only incremental updates to the document are\n    /// send.\n    Incremental,\n    /// A custom value.\n    #[serde(untagged)]\n    Custom(u32),\n}\nimpl From<TextDocumentSyncKind> for u32 {\n    fn from(e: TextDocumentSyncKind) -> Self {\n        match e {\n            TextDocumentSyncKind::None => 0u32,\n            TextDocumentSyncKind::Full => 1u32,\n            TextDocumentSyncKind::Incremental => 2u32,\n            TextDocumentSyncKind::Custom(any) => any,\n        }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Full exists and its Serialize conversion is numeric 1, matching the author-frozen initialize expectation."
+    },
+    {
+      "id": "API-28",
+      "api": "ServerInfo literal",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "server_info: Some(ServerInfo {",
+          "lines": [
+            250
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 6171,
+          "endLine": 6188,
+          "excerpt": "/// Information about the server\n///\n/// @since 3.15.0\n/// @since 3.18.0 ServerInfo type name added.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct ServerInfo {\n    /// The name of the server as defined by the server.\n    pub name: String,\n    /// The server's version as defined by the server.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub version: Option<String>,\n}\nimpl ServerInfo {\n    #[must_use]\n    pub const fn new(name: String, version: Option<String>) -> Self {\n        Self { name, version }\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Public name: String and version: Option<String> are all fields. Its type name was added in the 3.18 metamodel but the candidate emits only the existing name/version wire fields."
+    },
+    {
+      "id": "API-29",
+      "api": "PublishDiagnosticsParams::new",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp.rs",
+          "anchor": "PublishDiagnosticsParams::new(",
+          "lines": [
+            265
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 2536,
+          "endLine": 2558,
+          "excerpt": "/// The publish diagnostic notification's parameters.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct PublishDiagnosticsParams {\n    /// The URI for which diagnostic information is reported.\n    pub uri: Uri,\n    /// Optional the version number of the document the diagnostics are published for.\n    ///\n    /// @since 3.15.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub version: Option<i32>,\n    /// An array of diagnostic information items.\n    pub diagnostics: Vec<Diagnostic>,\n}\nimpl PublishDiagnosticsParams {\n    #[must_use]\n    pub const fn new(\n        uri: Uri,\n        version: Option<i32>,\n        diagnostics: Vec<Diagnostic>,\n    ) -> Self {\n        Self { uri, version, diagnostics }\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The exact parameter order is (uri: Uri, version: Option<i32>, diagnostics: Vec<Diagnostic>) -> Self, which matches the candidate call and implements Serialize for Notification::new."
+    },
+    {
+      "id": "API-30",
+      "api": "Diagnostic::new nine-argument constructor",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "Diagnostic::new(",
+          "lines": [
+            33,
+            83
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 6265,
+          "endLine": 6311,
+          "excerpt": "/// Represents a diagnostic, such as a compiler error or warning. Diagnostic objects\n/// are only valid in the scope of a resource.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash, Default)]\n#[serde(rename_all = \"camelCase\")]\npub struct Diagnostic {\n    /// The range at which the message applies\n    pub range: Range,\n    /// The diagnostic's severity. To avoid interpretation mismatches when a\n    /// server is used with different clients it is highly recommended that servers\n    /// always provide a severity value.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub severity: Option<DiagnosticSeverity>,\n    /// The diagnostic's code, which usually appear in the user interface.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub code: Option<Code>,\n    /// An optional property to describe the error code.\n    /// Requires the code field (above) to be present/not null.\n    ///\n    /// @since 3.16.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub code_description: Option<CodeDescription>,\n    /// A human-readable string describing the source of this\n    /// diagnostic, e.g. 'typescript' or 'super lint'. It usually\n    /// appears in the user interface.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub source: Option<String>,\n    /// The diagnostic's message. It usually appears in the user interface.\n    ///\n    /// @since 3.18.0 - support for MarkupContent. This is guarded by the client\n    /// capability `textDocument.diagnostic.markupMessageSupport`.\n    pub message: Message,\n    /// Additional metadata about the diagnostic.\n    ///\n    /// @since 3.15.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub tags: Option<Vec<DiagnosticTag>>,\n    /// An array of related diagnostic information, e.g. when symbol-names within\n    /// a scope collide all definitions can be marked via this property.\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub related_information: Option<Vec<DiagnosticRelatedInformation>>,\n    /// A data entry field that is preserved between a `textDocument/publishDiagnostics`\n    /// notification and `textDocument/codeAction` request.\n    ///\n    /// @since 3.16.0\n    #[serde(skip_serializing_if = \"Option::is_none\")]\n    pub data: Option<LspAny>,\n}"
+        },
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 6312,
+          "endLine": 6337,
+          "excerpt": "impl Diagnostic {\n    #[must_use]\n    pub const fn new(\n        range: Range,\n        severity: Option<DiagnosticSeverity>,\n        code: Option<Code>,\n        code_description: Option<CodeDescription>,\n        source: Option<String>,\n        message: Message,\n        tags: Option<Vec<DiagnosticTag>>,\n        related_information: Option<Vec<DiagnosticRelatedInformation>>,\n        data: Option<LspAny>,\n    ) -> Self {\n        Self {\n            range,\n            severity,\n            code,\n            code_description,\n            source,\n            message,\n            tags,\n            related_information,\n            data,\n        }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Both core and legacy calls supply exactly (Range, Option<DiagnosticSeverity>, Option<Code>, Option<CodeDescription>, Option<String>, Message, Option<Vec<DiagnosticTag>>, Option<Vec<DiagnosticRelatedInformation>>, Option<LspAny>). This is the real generated signature, not the older original-lsp-types constructor."
+    },
+    {
+      "id": "API-31",
+      "api": "Diagnostic code string conversions",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "Some(error.code.into())",
+          "lines": [
+            36
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "code.to_string().into()",
+          "lines": [
+            86
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs",
+          "startLine": 135,
+          "endLine": 154,
+          "excerpt": "#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(untagged)]\npub enum Code {\n    Int(i32),\n    String(String),\n}\nimpl From<i32> for Code {\n    fn from(v: i32) -> Self {\n        Self::Int(v)\n    }\n}\nimpl From<String> for Code {\n    fn from(v: String) -> Self {\n        Self::String(v)\n    }\n}\nimpl From<&str> for Code {\n    fn from(v: &str) -> Self {\n        Self::String(v.into())\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Code has From<String> and From<&str>. Actual mori_core::Error.code is String, and the legacy conversion also produces String; both .into() expressions match Code."
+    },
+    {
+      "id": "API-32",
+      "api": "Diagnostic message string conversion",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "error.message.into()",
+          "lines": [
+            39
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "message.into()",
+          "lines": [
+            39,
+            89
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs",
+          "startLine": 1182,
+          "endLine": 1196,
+          "excerpt": "#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(untagged)]\npub enum Message {\n    String(String),\n    MarkupContent(MarkupContent),\n}\nimpl From<String> for Message {\n    fn from(v: String) -> Self {\n        Self::String(v)\n    }\n}\nimpl From<&str> for Message {\n    fn from(v: &str) -> Self {\n        Self::String(v.into())\n    }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The generated diagnostic Message is an untagged String/MarkupContent enum with From<String>; both candidate calls select the String conversion. This enum is distinct from lsp_server::Message and is inferred from Diagnostic::new, so no import-name collision occurs."
+    },
+    {
+      "id": "API-33",
+      "api": "DiagnosticSeverity variants",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "DiagnosticSeverity::Error",
+          "lines": [
+            35,
+            81
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "DiagnosticSeverity::Warning",
+          "lines": [
+            79
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "DiagnosticSeverity::Information",
+          "lines": [
+            80
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/enumerations.rs",
+          "startLine": 2078,
+          "endLine": 2102,
+          "excerpt": "/// The diagnostic's severity.\n#[derive(PartialEq, Eq, Hash, Debug, Clone, Serialize, Deserialize, Copy)]\n#[serde(into = \"u32\", from = \"u32\")]\npub enum DiagnosticSeverity {\n    /// Reports an error.\n    Error,\n    /// Reports a warning.\n    Warning,\n    /// Reports an information.\n    Information,\n    /// Reports a hint.\n    Hint,\n    /// A custom value.\n    #[serde(untagged)]\n    Custom(u32),\n}\nimpl From<DiagnosticSeverity> for u32 {\n    fn from(e: DiagnosticSeverity) -> Self {\n        match e {\n            DiagnosticSeverity::Error => 1u32,\n            DiagnosticSeverity::Warning => 2u32,\n            DiagnosticSeverity::Information => 3u32,\n            DiagnosticSeverity::Hint => 4u32,\n            DiagnosticSeverity::Custom(any) => any,\n        }"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "The three named variants exist; Serialize maps Error=1, Warning=2, Information=3."
+    },
+    {
+      "id": "API-34",
+      "api": "DiagnosticRelatedInformation::new",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "DiagnosticRelatedInformation::new(",
+          "lines": [
+            60
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 8000,
+          "endLine": 8016,
+          "excerpt": "/// Represents a related message and source code location for a diagnostic. This should be\n/// used to point to code locations that cause or related to a diagnostics, e.g when duplicating\n/// a symbol in a scope.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct DiagnosticRelatedInformation {\n    /// The location of this related diagnostic information.\n    pub location: Location,\n    /// The message of this related diagnostic information.\n    pub message: String,\n}\nimpl DiagnosticRelatedInformation {\n    #[must_use]\n    pub const fn new(location: Location, message: String) -> Self {\n        Self { location, message }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Signature (Location, String) -> Self matches the location and text.to_owned() arguments."
+    },
+    {
+      "id": "API-35",
+      "api": "Location::new",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "Location::new(",
+          "lines": [
+            61
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 32,
+          "endLine": 45,
+          "excerpt": "/// Represents a location inside a resource, such as a line\n/// inside a text file.\n#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]\n#[serde(rename_all = \"camelCase\")]\npub struct Location {\n    pub uri: Uri,\n    pub range: Range,\n}\nimpl Location {\n    #[must_use]\n    pub const fn new(uri: Uri, range: Range) -> Self {\n        Self { uri, range }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Signature (Uri, Range) -> Self matches cloned URI and label range."
+    },
+    {
+      "id": "API-36",
+      "api": "Range::new",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "Range::new(",
+          "lines": [
+            34,
+            50,
+            97
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 4552,
+          "endLine": 4563,
+          "excerpt": "pub struct Range {\n    /// The range's start position.\n    pub start: Position,\n    /// The range's end position.\n    pub end: Position,\n}\nimpl Range {\n    #[must_use]\n    pub const fn new(start: Position, end: Position) -> Self {\n        Self { start, end }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Signature (Position, Position) -> Self matches both zero/default span construction and label endpoints."
+    },
+    {
+      "id": "API-37",
+      "api": "Position::new and Copy",
+      "consumerReferences": [
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "Position::new(",
+          "lines": [
+            50,
+            135
+          ]
+        },
+        {
+          "path": "candidate/crates/mori/src/commands/lsp/diagnostics.rs",
+          "anchor": "Range::new(at, at)",
+          "lines": [
+            34
+          ]
+        }
+      ],
+      "publicDefinitions": [
+        {
+          "path": "dependency/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+          "startLine": 4744,
+          "endLine": 4772,
+          "excerpt": "#[derive(\n    Serialize,\n    Deserialize,\n    PartialEq,\n    Debug,\n    Clone,\n    Eq,\n    Hash,\n    Default,\n    Copy,\n    PartialOrd,\n    Ord\n)]\n#[serde(rename_all = \"camelCase\")]\npub struct Position {\n    /// Line position in a document (zero-based).\n    pub line: u32,\n    /// Character offset on a line in a document (zero-based).\n    ///\n    /// The meaning of this offset is determined by the negotiated\n    /// `PositionEncodingKind`.\n    pub character: u32,\n}\nimpl Position {\n    #[must_use]\n    pub const fn new(line: u32, character: u32) -> Self {\n        Self { line, character }\n    }\n}"
+        }
+      ],
+      "sourceComparison": "matching definition/signature found",
+      "reason": "Position has public line/character: u32 and new(u32,u32). It derives Copy, so the same local at can be passed twice without a move error."
+    }
+  ],
+  "mismatches": [],
+  "patchJustified": false,
+  "limitations": [
+    "No Cargo resolution, lock change, build or compiler check was run.",
+    "gen-lsp-types URI checks assume the adopted default-features=false/no optional URI features declaration; feature-unification selection remains unobserved.",
+    "Serde derives and standard trait contracts were read as source declarations, not executed.",
+    "This is not a protocol conformance, input/resource, security or full-language acceptance judgment.",
+    "Candidate test/fixture source is preserved; tests were not run and author-frozen expectations are not independent observations."
+  ]
+}

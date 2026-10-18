@@ -1,0 +1,240 @@
+[
+  {
+    "actualSourceFacts": {
+      "currentCargoLockVersions": {
+        "crossbeam-channel": [],
+        "crossbeam-utils": [
+          "0.8.23"
+        ],
+        "gen-lsp-types": [],
+        "log": [
+          "0.4.34"
+        ],
+        "lsp-server": [],
+        "lsp-types": [],
+        "serde": [
+          "1.0.229"
+        ],
+        "serde_derive": [
+          "1.0.229"
+        ],
+        "serde_json": [
+          "1.0.151"
+        ]
+      },
+      "existingConsumers": {
+        "routes": [
+          "language first token + moriarty/2 -> mori_core::stage::load",
+          "other language first token -> mori_core::parse (includes legacy validate)",
+          "otherwise -> mori_parser::parse then mori_checker::check"
+        ],
+        "rustCheck": "source/crates/mori/src/commands/check.rs",
+        "rustLsp": "source/crates/mori/src/commands/lsp.rs run -> todo!",
+        "rustMcp": "source/crates/mori/src/commands/mcp.rs run -> todo!"
+      },
+      "literalTokenDeclaration": {
+        "coreCaller": "source/crates/mori-core/src/parser.rs -> mori_lexer::lex",
+        "file": "source/crates/mori-lexer/src/lib.rs",
+        "name": "MAX_TOKENS",
+        "value": 8192
+      },
+      "normalPredicate": "Actual mori lsp binary,11 input messages ->9 ordered complete semantic JSON messages, beta unknown-name UTF16 line2 chars25..33, full edit/close clear, ordinary Core1/Core2 open/close, shutdown/exit0 and empty stderr. Proposed hand-derived UNRUN expectation; not independent finance or execution evidence.",
+      "normativeEarsPaths": [
+        "source/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+        "source/openspec/changes/consolidated-language-kernel/traceability.md"
+      ],
+      "ordinaryEars": {
+        "ids": [
+          "LSP-N01",
+          "LSP-N02",
+          "LSP-N03",
+          "LSP-N04",
+          "LSP-N05"
+        ],
+        "path": "EARS-PROPOSAL.md",
+        "status": "Proposed child clauses, unadopted"
+      },
+      "originalInputManifestSha256": "a337f8a473c885c188957d1199fbe1a3a8ca669818e43251afa8383700e10028",
+      "proposedDirectVersionsNotCurrentLock": {
+        "lsp-server": "=0.10.0",
+        "lsp-types alias package gen-lsp-types": "=0.11.0, default-features=false, no features"
+      },
+      "publishedManifestRangesNotResolvedVersions": {
+        "gen-lsp-types0.11.0": {
+          "optionalFeaturesNotProposed": [
+            "url",
+            "fluent-uri"
+          ],
+          "serde": "1.0.228 with derive",
+          "serde_json": "1.0.150"
+        },
+        "lsp-server0.10.0": {
+          "crossbeam-channel": "0.5.15",
+          "log": "0.4.27",
+          "serde": "1.0.219",
+          "serde_derive": "1.0.219",
+          "serde_json": "1.0.140"
+        }
+      },
+      "repoCommit": "588d811dbbd9e88d22d3ebe90b0544672870caa0",
+      "resolvedNewGraph": "UNKNOWN. Manifest ranges are not exact new selected identities. No claim that current log/serde/json pins must be downgraded or replaced.",
+      "status": "NOT EXECUTED; NO Cargo resolution; Rust LSP/MCP not implemented in observed input",
+      "typeProtocolQualification": "gen-lsp-types0.11.0 generated from3.18; proposed serialization emits only specified3.17 subset, Diagnostic.message plain String. Uri is String wrapper with no optional URI feature."
+    },
+    "filesRead": [
+      "ACTUAL-SOURCE-FACTS.json",
+      "PROPOSED-INPUT-SESSION.json",
+      "PROPOSED-EXPECTED-SESSION.json",
+      "EARS-PROPOSAL.md",
+      "source/crates/mori/src/commands/check.rs",
+      "source/crates/mori/src/commands/lsp.rs",
+      "public-dependencies/source/lsp-server-0.10.0/src/msg.rs",
+      "public-dependencies/source/lsp-server-0.10.0/src/stdio.rs",
+      "public-dependencies/source/lsp-server-0.10.0/src/lib.rs",
+      "public-dependencies/source/gen-lsp-types-0.11.0/src/generated/common.rs",
+      "public-dependencies/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs",
+      "public-dependencies/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+      "source/crates/mori-core/src/parser.rs",
+      "source/crates/mori-core/src/stage/mod.rs",
+      "source/crates/mori-core/src/ir.rs",
+      "source/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md"
+    ],
+    "findings": [
+      "D1 (Transport): In public-dependencies/source/lsp-server-0.10.0/src/msg.rs, Message::read and Message::write (via read_msg_text and write_msg_text) provide complete Content-Length framing and JSON-RPC 2.0 envelope handling directly over locked stdin/stdout in a deterministic synchronous loop for source/crates/mori/src/commands/lsp.rs::run, avoiding the three background threads (LspServerReader, LspServerWriter, LspMessageDropper) and bounded channel handoffs spawned by stdio::stdio_transport in Connection::stdio (public-dependencies/source/lsp-server-0.10.0/src/stdio.rs) as well as bespoke manual framing.",
+      "D2 (Types): In public-dependencies/source/gen-lsp-types-0.11.0/src/generated/common.rs, disabling default and optional features defines pub struct Uri(pub String), preserving arbitrary client-supplied document identifiers (such as untitled: URIs in PROPOSED-INPUT-SESSION.json) without external URL parsing, while Diagnostic.message in public-dependencies/source/gen-lsp-types-0.11.0/src/generated/structures.rs and Message::String in public-dependencies/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs serialize plain JSON strings via #[serde(untagged)] for the specified 3.17 subset.",
+      "D3 (Profiles): Reusing the exact dispatch of source/crates/mori/src/commands/check.rs::run (inspecting mori_lexer::first_token_text and mori_core::language to route moriarty/2 to mori_core::stage::load, other language-header inputs to mori_core::parse, and remaining inputs to mori_parser::parse followed by mori_checker::check) keeps mori lsp aligned with mori check per LSP-N02 and UNI-018, mapping MoriDiagnostic labels and mori_core::ir::Error optional offset fields (with explicit zero-width fallback per LSP-N03) under local-check-only capabilities."
+    ],
+    "limitations": [
+      "Review covers ordinary protocol and library design fit only across the supplied static files and bound actualSourceFacts; Cargo dependency resolution, lockfile generation, and binary execution are not performed.",
+      "Proposed session transcripts (PROPOSED-INPUT-SESSION.json and PROPOSED-EXPECTED-SESSION.json) are unrun hand-derived protocol predictions, and source/crates/mori/src/commands/lsp.rs::run remains a todo! stub.",
+      "Hostile-input, resource, and security requirements remain outside the scope of this ordinary review."
+    ],
+    "reviewToken": "doctorwatson-rust-lsp-design-protocol-ordinary-20261018-a2-whole-review",
+    "reviewedDesignSubjectSha256": "32bf1810058935515e05b4efcabd97b3356f5166ebd7e083979f665cec62c490",
+    "selectedProfiles": "same-routing-as-current-Rust-check",
+    "selectedTransport": "lsp-server-0.10.0-Message-read-write",
+    "selectedTypes": "gen-lsp-types-0.11.0-no-features-3.17-subset",
+    "summary": "Approve the proposed ordinary Rust LSP design choices: synchronous stdio framing via lsp-server Message::read and Message::write (D1), gen-lsp-types with no optional features emitting the 3.17 subset and plain String diagnostic messages (D2), and the same three-way profile routing as mori check (D3).",
+    "toolAction": "Completing ordinary LSP design review",
+    "toolSummary": "Complete ordinary LSP design review",
+    "verdict": "approve-proposed-design"
+  },
+  {
+    "actualSourceFacts": {
+      "currentCargoLockVersions": {
+        "crossbeam-channel": [],
+        "crossbeam-utils": [
+          "0.8.23"
+        ],
+        "gen-lsp-types": [],
+        "log": [
+          "0.4.34"
+        ],
+        "lsp-server": [],
+        "lsp-types": [],
+        "serde": [
+          "1.0.229"
+        ],
+        "serde_derive": [
+          "1.0.229"
+        ],
+        "serde_json": [
+          "1.0.151"
+        ]
+      },
+      "existingConsumers": {
+        "routes": [
+          "language first token + moriarty/2 -> mori_core::stage::load",
+          "other language first token -> mori_core::parse (includes legacy validate)",
+          "otherwise -> mori_parser::parse then mori_checker::check"
+        ],
+        "rustCheck": "source/crates/mori/src/commands/check.rs",
+        "rustLsp": "source/crates/mori/src/commands/lsp.rs run -> todo!",
+        "rustMcp": "source/crates/mori/src/commands/mcp.rs run -> todo!"
+      },
+      "literalTokenDeclaration": {
+        "coreCaller": "source/crates/mori-core/src/parser.rs -> mori_lexer::lex",
+        "file": "source/crates/mori-lexer/src/lib.rs",
+        "name": "MAX_TOKENS",
+        "value": 8192
+      },
+      "normalPredicate": "Actual mori lsp binary,11 input messages ->9 ordered complete semantic JSON messages, beta unknown-name UTF16 line2 chars25..33, full edit/close clear, ordinary Core1/Core2 open/close, shutdown/exit0 and empty stderr. Proposed hand-derived UNRUN expectation; not independent finance or execution evidence.",
+      "normativeEarsPaths": [
+        "source/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md",
+        "source/openspec/changes/consolidated-language-kernel/traceability.md"
+      ],
+      "ordinaryEars": {
+        "ids": [
+          "LSP-N01",
+          "LSP-N02",
+          "LSP-N03",
+          "LSP-N04",
+          "LSP-N05"
+        ],
+        "path": "EARS-PROPOSAL.md",
+        "status": "Proposed child clauses, unadopted"
+      },
+      "originalInputManifestSha256": "a337f8a473c885c188957d1199fbe1a3a8ca669818e43251afa8383700e10028",
+      "proposedDirectVersionsNotCurrentLock": {
+        "lsp-server": "=0.10.0",
+        "lsp-types alias package gen-lsp-types": "=0.11.0, default-features=false, no features"
+      },
+      "publishedManifestRangesNotResolvedVersions": {
+        "gen-lsp-types0.11.0": {
+          "optionalFeaturesNotProposed": [
+            "url",
+            "fluent-uri"
+          ],
+          "serde": "1.0.228 with derive",
+          "serde_json": "1.0.150"
+        },
+        "lsp-server0.10.0": {
+          "crossbeam-channel": "0.5.15",
+          "log": "0.4.27",
+          "serde": "1.0.219",
+          "serde_derive": "1.0.219",
+          "serde_json": "1.0.140"
+        }
+      },
+      "repoCommit": "588d811dbbd9e88d22d3ebe90b0544672870caa0",
+      "resolvedNewGraph": "UNKNOWN. Manifest ranges are not exact new selected identities. No claim that current log/serde/json pins must be downgraded or replaced.",
+      "status": "NOT EXECUTED; NO Cargo resolution; Rust LSP/MCP not implemented in observed input",
+      "typeProtocolQualification": "gen-lsp-types0.11.0 generated from3.18; proposed serialization emits only specified3.17 subset, Diagnostic.message plain String. Uri is String wrapper with no optional URI feature."
+    },
+    "filesRead": [
+      "ACTUAL-SOURCE-FACTS.json",
+      "PROPOSED-INPUT-SESSION.json",
+      "PROPOSED-EXPECTED-SESSION.json",
+      "EARS-PROPOSAL.md",
+      "source/crates/mori/src/commands/check.rs",
+      "source/crates/mori/src/commands/lsp.rs",
+      "public-dependencies/source/lsp-server-0.10.0/src/msg.rs",
+      "public-dependencies/source/lsp-server-0.10.0/src/stdio.rs",
+      "public-dependencies/source/lsp-server-0.10.0/src/lib.rs",
+      "public-dependencies/source/gen-lsp-types-0.11.0/src/generated/common.rs",
+      "public-dependencies/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs",
+      "public-dependencies/source/gen-lsp-types-0.11.0/src/generated/structures.rs",
+      "source/crates/mori-core/src/parser.rs",
+      "source/crates/mori-core/src/stage/mod.rs",
+      "source/crates/mori-core/src/ir.rs",
+      "source/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md"
+    ],
+    "findings": [
+      "D1 (Transport): In public-dependencies/source/lsp-server-0.10.0/src/msg.rs, Message::read and Message::write (via read_msg_text and write_msg_text) provide complete Content-Length framing and JSON-RPC 2.0 envelope handling directly over locked stdin/stdout in a deterministic synchronous loop for source/crates/mori/src/commands/lsp.rs::run, avoiding the three background threads (LspServerReader, LspServerWriter, LspMessageDropper) and bounded channel handoffs spawned by stdio::stdio_transport in Connection::stdio (public-dependencies/source/lsp-server-0.10.0/src/stdio.rs) as well as bespoke manual framing.",
+      "D2 (Types): In public-dependencies/source/gen-lsp-types-0.11.0/src/generated/common.rs, disabling default and optional features defines pub struct Uri(pub String), preserving arbitrary client-supplied document identifiers (such as untitled: URIs in PROPOSED-INPUT-SESSION.json) without external URL parsing, while Diagnostic.message in public-dependencies/source/gen-lsp-types-0.11.0/src/generated/structures.rs and Message::String in public-dependencies/source/gen-lsp-types-0.11.0/src/generated/enum_ors.rs serialize plain JSON strings via #[serde(untagged)] for the specified 3.17 subset.",
+      "D3 (Profiles): Reusing the exact dispatch of source/crates/mori/src/commands/check.rs::run (inspecting mori_lexer::first_token_text and mori_core::language to route moriarty/2 to mori_core::stage::load, other language-header inputs to mori_core::parse, and remaining inputs to mori_parser::parse followed by mori_checker::check) keeps mori lsp aligned with mori check per LSP-N02 and UNI-018, mapping MoriDiagnostic labels and mori_core::ir::Error optional offset fields (with explicit zero-width fallback per LSP-N03) under local-check-only capabilities."
+    ],
+    "limitations": [
+      "Review covers ordinary protocol and library design fit only across the supplied static files and bound actualSourceFacts; Cargo dependency resolution, lockfile generation, and binary execution are not performed.",
+      "Proposed session transcripts (PROPOSED-INPUT-SESSION.json and PROPOSED-EXPECTED-SESSION.json) are unrun hand-derived protocol predictions, and source/crates/mori/src/commands/lsp.rs::run remains a todo! stub.",
+      "Hostile-input, resource, and security requirements remain outside the scope of this ordinary review."
+    ],
+    "reviewToken": "doctorwatson-rust-lsp-design-protocol-ordinary-20261018-a2-whole-review",
+    "reviewedDesignSubjectSha256": "32bf1810058935515e05b4efcabd97b3356f5166ebd7e083979f665cec62c490",
+    "selectedProfiles": "same-routing-as-current-Rust-check",
+    "selectedTransport": "lsp-server-0.10.0-Message-read-write",
+    "selectedTypes": "gen-lsp-types-0.11.0-no-features-3.17-subset",
+    "summary": "Approve the proposed ordinary Rust LSP design choices: synchronous stdio framing via lsp-server Message::read and Message::write (D1), gen-lsp-types with no optional features emitting the 3.17 subset and plain String diagnostic messages (D2), and the same three-way profile routing as mori check (D3).",
+    "verdict": "approve-proposed-design"
+  }
+]

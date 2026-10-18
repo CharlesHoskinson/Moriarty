@@ -1,0 +1,190 @@
+{
+  "schema": "moriarty-cardano-catalogue-example-proposal/1",
+  "status": "unapplied; expected-display-data, not runtime-observation",
+  "entryIds": [
+    "MCP-PLN-01@2",
+    "MCP-PLN-02@2"
+  ],
+  "scenario": {
+    "id": "retained-catalogue-declarations",
+    "title": "Two existing retained predicate declarations",
+    "strands": [
+      {
+        "id": "MCP-PLN-01@2",
+        "label": "P-L0: bound-bytes predicate over one historical Preprod transaction body"
+      },
+      {
+        "id": "MCP-PLN-02@2",
+        "label": "P-M0: P-L0 composed with one hand-lowered Moriarty pay action"
+      }
+    ]
+  },
+  "display": [
+    {
+      "id": "MCP-PLN-01@2",
+      "sourceStatus": "experiment-disputed",
+      "publicStatementFields": [
+        {
+          "name": "domain_tag",
+          "type": "Bytes",
+          "role": "domain-tag",
+          "source": "circuit-constant"
+        },
+        {
+          "name": "predicate_digest",
+          "type": "Bytes32",
+          "digest_of": "predicate_digest",
+          "source": "circuit-constant",
+          "note": "per-row predicate digest of this SemanticEntry; never a whole-catalogue digest"
+        },
+        {
+          "name": "template_digest",
+          "type": "Bytes32",
+          "digest_of": "template_digest",
+          "source": "circuit-constant",
+          "value": "55186627f90973f0e59c0bb9e2bfafb6473c3f31f00df069fcb976a886520402",
+          "note": "BLAKE2b-256 of the template description bytes"
+        },
+        {
+          "name": "network_label",
+          "type": "Bytes",
+          "role": "network-label-asserted",
+          "source": "statement-public"
+        },
+        {
+          "name": "tx_id",
+          "type": "TxId",
+          "tx_relation": "historical-other-tx",
+          "source": "statement-public",
+          "note": "id of a past transaction whose bytes are the witness; never the carrying transaction (MCP-REF-09)"
+        },
+        {
+          "name": "output_index",
+          "type": "Int",
+          "index_of": "historical-tx-output",
+          "min": "0",
+          "max": "65535",
+          "source": "circuit-constant",
+          "value": "1"
+        },
+        {
+          "name": "payment_key_hash",
+          "type": "Bytes28",
+          "role": "payment-key-hash",
+          "source": "statement-public"
+        },
+        {
+          "name": "threshold_lovelace",
+          "type": "Int",
+          "role": "amount",
+          "min": "0",
+          "max": "9223372036854775807",
+          "source": "statement-public"
+        }
+      ],
+      "publicStatementEncoding": "typed field list (moriarty-statement-fields/1); the byte encoding into Plutus Data or scalars is not fixed",
+      "inputDescription": "Body bytes B.",
+      "outputDescription": "accept/reject of the relation over the typed statement; no ledger result",
+      "assumptions": "BLAKE2b-256 collision resistance; the template fixes the decoding path to output 1; Groth16 knowledge soundness as MCP-EXE-01. Inclusion of B in any chain is not part of this relation.",
+      "targetStatus": "unqualified; owner mapping required",
+      "setupStatus": "not-row-bound-in-this-source; owner-dependent",
+      "notEstablished": "Inclusion on any chain; Preprod membership (network label asserted, body key 15 absent); phase-2 validity (is_valid and witnesses outside the txid); signer; output existence or unspentness; finality; any other template shape; that a circuit enforces each binding constraint of this statement schema."
+    },
+    {
+      "id": "MCP-PLN-02@2",
+      "sourceStatus": "experiment-disputed",
+      "publicStatementFields": [
+        {
+          "name": "domain_tag",
+          "type": "Bytes",
+          "role": "domain-tag",
+          "source": "circuit-constant"
+        },
+        {
+          "name": "predicate_digest",
+          "type": "Bytes32",
+          "digest_of": "predicate_digest",
+          "source": "circuit-constant",
+          "note": "per-row predicate digest of this SemanticEntry; never a whole-catalogue digest"
+        },
+        {
+          "name": "template_digest",
+          "type": "Bytes32",
+          "digest_of": "template_digest",
+          "source": "circuit-constant",
+          "value": "55186627f90973f0e59c0bb9e2bfafb6473c3f31f00df069fcb976a886520402",
+          "note": "BLAKE2b-256 of the template description bytes"
+        },
+        {
+          "name": "network_label",
+          "type": "Bytes",
+          "role": "network-label-asserted",
+          "source": "statement-public"
+        },
+        {
+          "name": "tx_id",
+          "type": "TxId",
+          "tx_relation": "historical-other-tx",
+          "source": "statement-public",
+          "note": "id of a past transaction whose bytes are the witness; never the carrying transaction (MCP-REF-09)"
+        },
+        {
+          "name": "output_index",
+          "type": "Int",
+          "index_of": "historical-tx-output",
+          "min": "0",
+          "max": "65535",
+          "source": "circuit-constant",
+          "value": "1"
+        },
+        {
+          "name": "payment_key_hash",
+          "type": "Bytes28",
+          "role": "payment-key-hash",
+          "source": "statement-public"
+        },
+        {
+          "name": "raw_source_sha256",
+          "type": "Bytes32",
+          "digest_of": "raw_source_sha256",
+          "source": "circuit-constant",
+          "note": "identity layer 1 (source bytes); not program_hash"
+        },
+        {
+          "name": "action_name",
+          "type": "Bytes",
+          "role": "action-id",
+          "source": "circuit-constant"
+        },
+        {
+          "name": "pre_snapshot",
+          "type": "Bytes32",
+          "digest_of": "pre-snapshot",
+          "source": "statement-public",
+          "note": "declared pre-snapshot; predecessor authenticity not established"
+        },
+        {
+          "name": "post_snapshot",
+          "type": "Bytes32",
+          "digest_of": "post-snapshot",
+          "source": "statement-public"
+        },
+        {
+          "name": "amount",
+          "type": "Int",
+          "role": "amount",
+          "min": "0",
+          "max": "9223372036854775807",
+          "source": "statement-public"
+        }
+      ],
+      "publicStatementEncoding": "typed field list (moriarty-statement-fields/1); the byte encoding into Plutus Data or scalars is not fixed",
+      "inputDescription": "Body bytes, intermediate wires.",
+      "outputDescription": "accept/reject of the relation over the typed statement; no ledger result",
+      "assumptions": "As MCP-PLN-01@2; correspondence of the hand lowering to moriarty-core/1 is vector-evidenced at most.",
+      "targetStatus": "unqualified; owner mapping required",
+      "setupStatus": "not-row-bound-in-this-source; owner-dependent",
+      "notEstablished": "Compiler/lowering correctness; the requires amount > 0 constraint in isolation; effect digest (not in statement); asset identity (program asset vs lovelace unbound); predecessor authenticity; Cardano validator or ScriptContext binding; program_hash correspondence (identity layer 2)."
+    }
+  ]
+}

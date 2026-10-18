@@ -1,0 +1,114 @@
+{
+  "status": "independently derived normal diagnostic oracle; NOT execution evidence",
+  "frozen_at": "2026-10-18T11:31:30.599824+00:00",
+  "source_commit": "74a909d69639df8823a527a4d608a7516ccd69a2",
+  "position_premise": "LSP3.17 utf-16 position encoding, either explicitly negotiated or default; zero-based lines/characters; CRLF counts as one line break; half-open ranges.",
+  "diagnostic_assertion_scope": "Exact semantic checker message, stable code, severity Error=1 and complete label-token range. Optional LSP fields, help text placement, source identifier and framing are not inferred from the candidate. If an adapter appends help into message, compare separately and record divergence rather than silently changing this frozen expected message.",
+  "cases": [
+    {
+      "input": "beta-valid.mori",
+      "input_sha256": "2e379e38d3b1c172a30d0aa66128342c26af1f86b7337aa30e2a86ea20884f8c",
+      "profile": "moriarty-beta/1",
+      "expected_diagnostics": [],
+      "semantic_basis": "Valid beta arithmetic with an earlier scalar declaration."
+    },
+    {
+      "input": "beta-unknown-name.mori",
+      "input_sha256": "7e43d653b12d142d0aec7dfc1dbcfa7803f1ffc1007f0521332cdeb3f296f586",
+      "profile": "moriarty-beta/1",
+      "expected_diagnostics": [
+        {
+          "message": "I cannot find a declaration named `missing`.",
+          "code": "mori::check::unknown_name",
+          "severity": 1,
+          "range": {
+            "start": {
+              "line": 3,
+              "character": 16
+            },
+            "end": {
+              "line": 3,
+              "character": 23
+            }
+          }
+        }
+      ],
+      "source_byte_span": {
+        "start": 87,
+        "end_exclusive": 94,
+        "token": "missing"
+      },
+      "position_derivation": {
+        "line_prefix": "  const twice = ",
+        "prefix_unicode_codepoints": 16,
+        "prefix_utf8_bytes": 16,
+        "prefix_utf16_units": 16,
+        "range_end_exclusive": true
+      },
+      "semantic_basis": "Names collection finds no declaration missing; ordered checker resolves missing once, adds unknown_name once; failed const does not add a second diagnostic. Source label is the complete identifier token."
+    },
+    {
+      "input": "beta-unicode-crlf-unknown-name.mori",
+      "input_sha256": "14e478bfa4ae4a44afec89b356640dbb8d44f365f034fe408651c9e8dd44abee",
+      "profile": "moriarty-beta/1",
+      "expected_diagnostics": [
+        {
+          "message": "I cannot find a declaration named `missing`.",
+          "code": "mori::check::unknown_name",
+          "severity": 1,
+          "range": {
+            "start": {
+              "line": 2,
+              "character": 45
+            },
+            "end": {
+              "line": 2,
+              "character": 52
+            }
+          }
+        }
+      ],
+      "source_byte_span": {
+        "start": 97,
+        "end_exclusive": 104,
+        "token": "missing"
+      },
+      "position_derivation": {
+        "line_prefix": "  const amount = 10; /* \ud83d\ude00\u00e9 */ const twice = ",
+        "prefix_unicode_codepoints": 44,
+        "prefix_utf8_bytes": 48,
+        "prefix_utf16_units": 45,
+        "range_end_exclusive": true
+      },
+      "semantic_basis": "Names collection finds no declaration missing; ordered checker resolves missing once, adds unknown_name once; failed const does not add a second diagnostic. Source label is the complete identifier token."
+    },
+    {
+      "input": "beta-unicode-crlf-valid.mori",
+      "input_sha256": "82710fbbed702a5682f02a3a4c8eaf52f44038f1a0cc50e78a7d7e8d46776ec6",
+      "profile": "moriarty-beta/1",
+      "expected_diagnostics": [],
+      "semantic_basis": "Same normal beta arithmetic, with a valid Unicode block comment and CRLF line breaks."
+    },
+    {
+      "input": "core1-valid.mori",
+      "input_sha256": "d729658a1531a7102320e7de5e78d0e9a400ab9b67028699022f36e112a0a9d4",
+      "profile": "moriarty/1",
+      "expected_diagnostics": [],
+      "semantic_basis": "Core1 parser and finite validator admit declared UInt state/input, UInt arithmetic, Bool predicate and matching state assignment."
+    },
+    {
+      "input": "core2-valid.mori",
+      "input_sha256": "a4e3ea45c3a3f85e4ee53218ffb6e0410380a551b7c0750891cbff5347e0d301",
+      "profile": "moriarty/2",
+      "expected_diagnostics": [],
+      "semantic_basis": "Core2 parser and staged validator additionally admit unique approved await with nonshadowing Bool binder ok, Bool guard ok, then preserved UInt state/input assignment."
+    }
+  ],
+  "unasserted": [
+    "Transport request IDs, byte framing, server capability shape and notification count/timing/order across different URIs",
+    "Optional diagnostic source, relatedInformation, tags, data, codeDescription and version presence",
+    "Non-UTF16 negotiated positions",
+    "Whether the candidate currently routes Core1/Core2; these are expectations for a consumer claiming the same supported checks as public check.rs",
+    "Compilation, simulation, proofs, ledger outcomes or security judgments"
+  ]
+}

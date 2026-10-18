@@ -1,0 +1,57 @@
+{
+  "status": "accepted",
+  "file": "core2-rebate.mori",
+  "source_hash": "991a0317a16eae38c6454bfe640fc3da01e387706c39adcc6c47c45e8581bd6e",
+  "language": "moriarty/2",
+  "agreement": "StagedRebateCheck",
+  "actions": [
+    {
+      "name": "rebate",
+      "inputs": [],
+      "statements": [
+        {
+          "kind": "Liability",
+          "name": "rebate",
+          "asset": "CASH",
+          "debtor": "treasury",
+          "creditor": "buyer",
+          "amount": 0
+        },
+        {
+          "kind": "Await",
+          "label": "approval",
+          "binders": [
+            {
+              "name": "approved",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 1
+        },
+        {
+          "kind": "Fee",
+          "asset": "CASH",
+          "from": "treasury",
+          "to": "auditor",
+          "amount": 2
+        },
+        {
+          "kind": "Transfer",
+          "asset": "CASH",
+          "from": "treasury",
+          "to": "buyer",
+          "amount": 3
+        },
+        {
+          "kind": "Discharge",
+          "name": "rebate",
+          "amount": 4
+        }
+      ]
+    }
+  ],
+  "qualification": "local-reference-stage",
+  "authentication": "none",
+  "consumption": "untracked",
+  "diagnostics": []
+}

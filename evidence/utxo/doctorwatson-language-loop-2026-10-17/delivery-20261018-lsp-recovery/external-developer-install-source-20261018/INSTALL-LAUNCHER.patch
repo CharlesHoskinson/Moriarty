@@ -1,0 +1,34 @@
+--- a/packages/moriarty-beta/GETTING-STARTED.md
++++ b/packages/moriarty-beta/GETTING-STARTED.md
+@@ -26,9 +26,28 @@
+ 
+ `init` refuses an existing directory. `--template transfer` is the default;
+ `--template repay` creates `repayment.mori` instead of `invoice.mori`.
+-For an installation outside the checkout, run `npm pack` here, then install that
+-local `.tgz` into your project with `npm install /absolute/path/to/archive.tgz`.
+-Run `npx mori` there. No npm registry publication is claimed.
++For an installation outside the checkout, run `npm pack` here; its prepack step
++builds the archive. Install that local `.tgz` into your own project. In bash or zsh,
++replace both absolute paths below, then define a launcher for the installed beta:
++
++```sh
++cd /absolute/path/to/your/project
++npm install /absolute/path/to/archive.tgz
++MORI_BETA_PKG="$PWD/node_modules/@moriarty-lang/beta"
++mori() { node "$MORI_BETA_PKG/dist/cli.js" "$@"; }
++mori init invoice
++cd invoice
++mori check invoice.mori --json
++mori test .
++mori simulate invoice.mori --action pay --scenario scenario.json
++```
++
++The `invoice` directory must not exist yet. Keep using the same terminal: the
++function selects the installed beta CLI even after changing directories, so the
++starter README's `mori` commands need no global install or repository metadata.
++In a new terminal, return to your install project and define the function again.
++`npx mori` is also available from that install project. No npm registry publication
++is claimed. These local examples still return **PreparedUnqualified**.
+ `mori COMMAND --help` shows the command's arguments. Exit 0 means the requested
+ local operation completed: a preparation remains unqualified. Exit 1 means
+ rejection, unsupported execution, test mismatch or a command/file error.

@@ -1,0 +1,44 @@
+// PROPOSAL SPECIMEN ONLY. Core bodies do not authenticate asynchronous observations.
+// The proposed async descriptor is mandatory for the claimed async behavior.
+language "moriarty/1";
+agreement InvoiceEscrowRequest {
+  asset PAY = { network: "local", issuer: "independent-invoice-example", reference: "PAY", scale: 0 };
+  state phase: UInt = 0;
+  state acknowledged: Bool = false;
+  state marker: UInt = 31;
+
+  action open() {
+    requires phase == 0;
+    transfer(PAY, "buyer", "escrow", 91);
+    fee(PAY, "buyer", "relay", 2);
+    liability("invoice", PAY, "buyer", "supplier", 90);
+    liability("service", PAY, "buyer", "inspector", 7);
+    next phase = 1;
+  }
+  action acknowledge() {
+    requires phase > 0;
+    requires phase < 4;
+    next acknowledged = true;
+  }
+  action observe_deadline(at: UInt) {
+    requires phase > 0;
+    requires phase < 4;
+    requires at >= 100;
+    next phase = 3;
+  }
+  action settle() {
+    requires phase > 0;
+    requires phase < 4;
+    transfer(PAY, "escrow", "supplier", 90);
+    fee(PAY, "escrow", "relay", 1);
+    discharge("invoice", 90);
+    next phase = 4;
+  }
+  action recover() {
+    requires phase > 0;
+    requires phase < 4;
+    transfer(PAY, "escrow", "buyer", 90);
+    fee(PAY, "escrow", "relay", 1);
+    next phase = 5;
+  }
+}

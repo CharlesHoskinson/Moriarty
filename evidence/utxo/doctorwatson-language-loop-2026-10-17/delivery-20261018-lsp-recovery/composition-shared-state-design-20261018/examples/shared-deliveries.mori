@@ -1,0 +1,33 @@
+language "moriarty/2";
+agreement SharedTierDeliveries {
+  asset CASH = { network: "local", issuer: "shared-tier-design", reference: "CASH", scale: 0 };
+  state tier: UInt = 1;
+  state marker: UInt = 77;
+  action deliver_a() {
+    let quoted = tier;
+    liability("delivery-a", CASH, "reserve", "alice", 10);
+    await approval_a(ok: Bool) when ok;
+    let charged = tier;
+    fee(CASH, "reserve", "fees-a", charged);
+    next tier = tier + 1;
+    transfer(CASH, "reserve", "alice", 7);
+    discharge("delivery-a", 7);
+    emit "quote-a"(quoted);
+    emit "charged-a"(charged);
+  }
+  action deliver_b() {
+    let quoted = tier;
+    liability("delivery-b", CASH, "reserve", "bob", 20);
+    await approval_b(ok: Bool) when ok;
+    let charged = tier;
+    fee(CASH, "reserve", "fees-b", charged);
+    next tier = tier + 1;
+    transfer(CASH, "reserve", "bob", 12);
+    discharge("delivery-b", 12);
+    emit "quote-b"(quoted);
+    emit "charged-b"(charged);
+  }
+  action declare_outside() {
+    liability("outside", CASH, "reserve", "observer", 0);
+  }
+}

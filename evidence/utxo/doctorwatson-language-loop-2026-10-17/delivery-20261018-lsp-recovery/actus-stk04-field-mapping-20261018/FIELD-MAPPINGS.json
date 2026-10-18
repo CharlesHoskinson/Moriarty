@@ -1,0 +1,71 @@
+{
+  "status": "all three exact cross-system mappings remain blocked; no new interpretation adopted",
+  "fields": [
+    {
+      "field": "notionalPrincipal",
+      "ACTUS_term_symbol": "NT",
+      "ACTUS_state_symbol": "Nt(t)",
+      "definition_summary": "Term NT is current nominal value; for debt, remaining principal outstanding. The formal notation distinguishes the NT attribute from time-indexed Nt state.",
+      "type": "ACTUS term Real, positive in acquired term definition; applicable role-sensitive state convention must be established per contract.",
+      "units": "Nominal contract amount; fixture denomination currency EUR. The STK rules do not define an Nt state or its encoding; do not equate NT=1000 with purchase price1200, termination price3000, balance or zero state.",
+      "time_basis": "NT supplied with terms as of SD2012-12-30T00:00:00; no STK Nt(t0), Nt(PRD+), or Nt(TD+) initialization/update is specified by the inspected STK table.",
+      "fixture_presence": {
+        "term_present": true,
+        "term_literal": "1000",
+        "currency": "EUR"
+      },
+      "candidate_state": {
+        "type": "UInt",
+        "initial_literal": "0",
+        "updated_by_selected_source": false
+      },
+      "exact_mapping_status": "BLOCKED",
+      "blocker": "No STK-specific Nt state initialization or explicit common-result-schema applicability/default rule binds NT term1000 or undefined STK Nt to local UInt0. Equal field spelling does not bind term and state."
+    },
+    {
+      "field": "nominalInterestRate",
+      "ACTUS_term_symbol": "IPNR",
+      "ACTUS_state_symbol": "Ipnr(t)",
+      "definition_summary": "Nominal rate used for accruals and next interest payment; NT times IPNR is a payment-calculation base, with time basis controlled by day count. Variable-rate contracts can update it at status date.",
+      "type": "ACTUS Real rate; generic arithmetic/domain may need signed rational/fixed-decimal representation, while Core1 UInt is unsigned u128.",
+      "units": "Per-annum rate (dimensionless annual fraction), not EUR amount; rate denominator/precision is not asset scale.",
+      "time_basis": "Rate applies over a year-fraction interval Y(s,t,DCC). The fixture has no IPNR, DCC, interest interval or STK Ipnr state rule.",
+      "fixture_presence": {
+        "term_present": false,
+        "day_count_present": false,
+        "interest_schedule_terms_present": false
+      },
+      "candidate_state": {
+        "type": "UInt",
+        "initial_literal": "0",
+        "updated_by_selected_source": false
+      },
+      "exact_mapping_status": "BLOCKED",
+      "blocker": "Absent IPNR is undefined per formal undef convention, not an automatic zero. STK state table does not initialize Ipnr. Need explicit applicability/export rule and an adopted rate-unit/precision adapter; PAM defaults do not transfer to STK."
+    },
+    {
+      "field": "accruedInterest",
+      "ACTUS_term_symbol": "IPAC",
+      "ACTUS_state_symbol": "Ipac(t)",
+      "definition_summary": "Accrued interest at SD; the term definition permits recalculation from payment-anchor/cycle/rate information when null. This is distinct from a local zero scalar.",
+      "type": "ACTUS Real accrued monetary amount; Core1 UInt is unsigned integral atomic units.",
+      "units": "Accrued monetary amount in the applicable contract denomination and sign convention; exact EUR atomic-unit scale/rounding is not selected by the STK state rules.",
+      "time_basis": "At SD for initial term, and pre/post-event times for states. Recalculation needs interest anchor/cycle/rate, applicable principal basis and Y(s,t,DCC); these are not supplied for STK04 and STK defines no Ipac recurrence.",
+      "fixture_presence": {
+        "term_present": false,
+        "nominal_rate_present": false,
+        "day_count_present": false,
+        "interest_schedule_terms_present": false
+      },
+      "candidate_state": {
+        "type": "UInt",
+        "initial_literal": "0",
+        "updated_by_selected_source": false
+      },
+      "exact_mapping_status": "BLOCKED",
+      "blocker": "Neither absent term nor lack of interest events proves an exported Ipac=0. Need STK applicability/state definition or a separately adopted generic-result zero-padding convention, plus amount-scale/sign/time adapter. PAM Ipac=0 when IPNR undefined is confined to PAM initialization."
+    }
+  ],
+  "shared_precise_binding_gap": "The supplied taxonomy is taxonomy only; it does not contain dictionary state definitions, applicability matrix, event-result wire schema, or an STK common-state default rule. Formal STK explicitly inherits only Prf and Sd from PAM.",
+  "unchanged_scope": "No seven-field/full-fixture disposition, retained membership, counter or acceptance status changed."
+}

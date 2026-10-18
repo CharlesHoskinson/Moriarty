@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moriarty:proposal:cardano-catalogue-display:1",
+  "title": "Unapplied Cardano catalogue display metadata",
+  "description": "Structural metadata shape proposal only. It neither validates cryptographic statements nor establishes trusted setup, profile/target applicability, field binding, proof or ledger acceptance. Source binding_constraints remain owner-authored declarations.",
+  "type": "object",
+  "required": [
+    "schema",
+    "status",
+    "catalogueSource",
+    "catalogueId",
+    "catalogueVersion",
+    "coverage",
+    "ownerDependencies",
+    "entries"
+  ],
+  "properties": {
+    "schema": {
+      "const": "moriarty-cardano-catalogue-display-proposal/1"
+    },
+    "status": {
+      "const": "unapplied-source-proposal"
+    },
+    "catalogueSource": {
+      "$ref": "#/$defs/sourceLocation"
+    },
+    "catalogueId": {
+      "type": "string"
+    },
+    "catalogueVersion": {
+      "type": "string"
+    },
+    "coverage": {
+      "type": "object"
+    },
+    "ownerDependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sourceLocation": {
+      "type": "object",
+      "required": [
+        "commit",
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "jsonPointer": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceField": {
+      "type": "object",
+      "required": [
+        "name",
+        "type",
+        "source"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "context_item": {
+          "type": "string"
+        },
+        "digest_of": {
+          "type": "string"
+        },
+        "index_of": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "tx_relation": {
+          "type": "string"
+        },
+        "min": {
+          "type": "string"
+        },
+        "max": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "sourceStatementSchema": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "encoding": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sourceField"
+          }
+        },
+        "binding_constraints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "entry": {
+      "type": "object",
+      "required": [
+        "identity",
+        "title",
+        "claimKind",
+        "property",
+        "source",
+        "inputs",
+        "outputs",
+        "publicStatement",
+        "profile",
+        "target",
+        "evidence",
+        "assumptions",
+        "setupIdentity",
+        "limits",
+        "sourceRow"
+      ],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "required": [
+            "catalogueId",
+            "catalogueVersion",
+            "id",
+            "version",
+            "versionedId",
+            "family",
+            "sourceHead",
+            "supersedes",
+            "predicateDigest",
+            "predicateDigestStatus"
+          ],
+          "properties": {
+            "catalogueId": {
+              "type": "string"
+            },
+            "catalogueVersion": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "versionedId": {
+              "type": "string"
+            },
+            "family": {
+              "type": "string"
+            },
+            "predicateDigestStatus": {
+              "type": "string"
+            },
+            "sourceHead": {
+              "type": "boolean"
+            },
+            "supersedes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "predicateDigest": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "title": {
+          "type": "string"
+        },
+        "claimKind": {
+          "type": "string"
+        },
+        "property": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceLocation"
+        },
+        "inputs": {
+          "type": "object",
+          "required": [
+            "publicDescription",
+            "privateWitnessDescription",
+            "typedInputSchemaStatus",
+            "typedInputFields"
+          ],
+          "properties": {
+            "publicDescription": {
+              "type": "string"
+            },
+            "privateWitnessDescription": {
+              "type": "string"
+            },
+            "typedInputSchemaStatus": {
+              "type": "string"
+            },
+            "typedInputFields": {
+              "type": "null"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputs": {
+          "type": "object",
+          "required": [
+            "description",
+            "schemaStatus",
+            "typedFields"
+          ],
+          "properties": {
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "schemaStatus": {
+              "type": "string"
+            },
+            "typedFields": {
+              "type": "null"
+            }
+          },
+          "additionalProperties": false
+        },
+        "publicStatement": {
+          "type": "object",
+          "required": [
+            "status",
+            "description",
+            "schema"
+          ],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "schema": {
+              "$ref": "#/$defs/sourceStatementSchema"
+            }
+          },
+          "additionalProperties": false
+        },
+        "profile": {
+          "type": "object"
+        },
+        "target": {
+          "type": "object"
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "assumptions": {
+          "type": "object"
+        },
+        "setupIdentity": {
+          "type": "object"
+        },
+        "limits": {
+          "type": "object"
+        },
+        "sourceRow": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

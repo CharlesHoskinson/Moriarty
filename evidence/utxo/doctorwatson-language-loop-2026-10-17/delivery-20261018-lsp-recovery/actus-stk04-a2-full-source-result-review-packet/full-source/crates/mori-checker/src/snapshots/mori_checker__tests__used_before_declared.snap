@@ -1,0 +1,19 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const total = price + 1;\n  const price = 10;\n}\n"
+---
+mori::check::used_before_declared
+
+  × `price` is used before it is declared.
+   ╭─[test.mori:3:17]
+ 2 │ agreement Invoice {
+ 3 │   const total = price + 1;
+   ·                 ──┬──
+   ·                   ╰── used here
+ 4 │   const price = 10;
+   ·         ──┬──
+   ·           ╰── declared further down
+ 5 │ }
+   ╰────
+  help: A declaration can only use the names declared above it. Move the
+        declaration of `price` above this line.

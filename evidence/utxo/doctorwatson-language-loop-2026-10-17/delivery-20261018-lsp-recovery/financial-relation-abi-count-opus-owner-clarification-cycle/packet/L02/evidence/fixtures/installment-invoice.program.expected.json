@@ -1,0 +1,315 @@
+{
+  "actions": [
+    {
+      "inputs": [],
+      "name": "register",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "CASH",
+          "creditor": "seller",
+          "debtor": "payer",
+          "kind": "Liability",
+          "name": "invoice"
+        },
+        {
+          "amount": 1,
+          "asset": "CASH",
+          "creditor": "auditor",
+          "debtor": "payer",
+          "kind": "Liability",
+          "name": "warranty"
+        }
+      ]
+    },
+    {
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        },
+        {
+          "name": "atDay",
+          "ty": "UInt"
+        }
+      ],
+      "name": "collect",
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 4
+        },
+        {
+          "kind": "Requires",
+          "predicate": 7
+        },
+        {
+          "kind": "Requires",
+          "predicate": 12
+        },
+        {
+          "kind": "Let",
+          "name": "opening",
+          "value": 13
+        },
+        {
+          "amount": 14,
+          "asset": "CASH",
+          "from": "payer",
+          "kind": "Transfer",
+          "to": "seller"
+        },
+        {
+          "amount": 15,
+          "asset": "CASH",
+          "from": "payer",
+          "kind": "Fee",
+          "to": "treasury"
+        },
+        {
+          "amount": 16,
+          "kind": "Discharge",
+          "name": "invoice"
+        },
+        {
+          "kind": "Next",
+          "state": "paid",
+          "value": 19
+        },
+        {
+          "kind": "Next",
+          "state": "dueDay",
+          "value": 22
+        },
+        {
+          "kind": "Next",
+          "state": "installments",
+          "value": 25
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 30
+        },
+        {
+          "kind": "Emit",
+          "name": "collected",
+          "value": 31
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "financial-pair-invoice",
+        "network": "local",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "name": "CASH"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "127"
+      }
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "9"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 2,
+      "op": "Gt",
+      "rhs": 3
+    },
+    {
+      "kind": "Name",
+      "name": "atDay"
+    },
+    {
+      "kind": "Name",
+      "name": "dueDay"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 5,
+      "op": "Ge",
+      "rhs": 6
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "invoice"
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "invoice"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 9,
+      "op": "Ge",
+      "rhs": 10
+    },
+    {
+      "kind": "Binary",
+      "lhs": 8,
+      "op": "And",
+      "rhs": 11
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "invoice"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "3"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Name",
+      "name": "paid"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 17,
+      "op": "Add",
+      "rhs": 18
+    },
+    {
+      "kind": "Name",
+      "name": "dueDay"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "30"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 20,
+      "op": "Add",
+      "rhs": 21
+    },
+    {
+      "kind": "Name",
+      "name": "installments"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 23,
+      "op": "Add",
+      "rhs": 24
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "invoice"
+    },
+    {
+      "kind": "Name",
+      "name": "opening"
+    },
+    {
+      "kind": "Name",
+      "name": "amount"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 27,
+      "op": "Sub",
+      "rhs": 28
+    },
+    {
+      "kind": "Binary",
+      "lhs": 26,
+      "op": "Eq",
+      "rhs": 29
+    },
+    {
+      "kind": "Name",
+      "name": "paid"
+    }
+  ],
+  "language": "moriarty/1",
+  "name": "InstallmentInvoice",
+  "semantics": "moriarty-core/1",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "paid",
+      "ty": "UInt"
+    },
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "30"
+      },
+      "name": "dueDay",
+      "ty": "UInt"
+    },
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "installments",
+      "ty": "UInt"
+    },
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      },
+      "name": "marker",
+      "ty": "UInt"
+    }
+  ]
+}
