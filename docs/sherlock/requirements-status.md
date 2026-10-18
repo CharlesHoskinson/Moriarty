@@ -1,8 +1,8 @@
 # Current35 EARS assessment
 
-Fifteen of the 35 original requirements are closed on their supported host or reporting
+Sixteen of the 35 original requirements are closed on their supported host or reporting
 scope: UIREQ-001, UIREQ-002, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008,
-UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-017, UIREQ-021, UIREQ-022, UIREQ-025, UIREQ-027 and UIREQ-030.
+UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-017, UIREQ-021, UIREQ-022, UIREQ-025, UIREQ-027, UIREQ-030 and UIREQ-035.
 The [supported-profile adoption](../results/sherlock-supported-profile-20261018/ROOT-ORIGINAL002-ADOPTION.json)
 adds original UIREQ-002's admitted grammar/versioned-profile reporting clause and
 First-order fragment scenario. The earlier [whole-provenance adoption](../results/sherlock-provenance-twins-20261018/whole-original027-acceptance/ROOT-ORIGINAL027-ADOPTION.json)
@@ -11,8 +11,11 @@ records the thirteen-closure cut. The later [owning financial producer adoption]
 and [current report](../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json)
 record the historical fourteen-closure cut. The later [original021 adoption](../results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json)
 adds the complete declared paired-model observation clause: 15 closed originals,
-15 complete, 17 partial and 3 absent original implementations. The remaining 20 original
-requirements and all 25 refinements/68 scenarios remain open. Whole-owner
+15 complete, 17 partial and 3 absent original implementations at that historical cut. The later
+[original035 adoption](../results/sherlock-four-lane-progress-20261018/witness035/ROOT-ORIGINAL035-ADOPTION.json)
+adds the literal deterministic witness-dataflow clause after independent complete A/B0 and
+decoded-metadata observations plus Cargo discovery: 16 closed/complete, 16 partial and 3 absent
+original implementations. The remaining 19 originals and all 25 refinements/68 scenarios remain open. Whole-owner
 closed-body/unique-function admission, higher-order/letrec and generic extensions,
 bound enforcement and runtime/formal/native predicates remain distinct unfinished
 work. The [public compiler adoption](../results/sherlock-public-draft-compiler-20261018/ROOT-ORIGINAL022-ADOPTION.json)
@@ -63,7 +66,7 @@ retain their exact scoped observations. Matching files alone cannot close a requ
 | UIREQ-032 | partial | partial | open | Public grouping API is exposed; all three fixed N01 cases passed and reviewed. Twelve fixed grouped callee-return cases now passed and reviewed. Implement causal occurrence IDs and complete precedence/B/persistent/financial/circuit scope; preserve complete internal records and first-stop precedence. |
 | UIREQ-033 | absent | unrun | open | Implement finite worklist generic baseline/masks and force reachable low-size fallback; compare every dynamic prefix/state/charge/origin/first stop, never specializing runtime fuel/values or unrolling recursion. |
 | UIREQ-034 | partial | partial | open | Whole typed-source one-builder T1/T2/T3 preparation is observed in two frozen cases. Implement admitted generic ProgramView, ConstructorFields and ordered MatchPlan/runtime; original Schedule first-arm4/separate-sum9 remains unrun, with identities/field order/binder paths/workMap required. |
-| UIREQ-035 | partial | partial | open | Implement uncached dependency DAG and exact bindings before caches/lifetime/stream variants; compare complete factorial/list/tree/pendingcaller prefixes vs independent oracle and retain visits/copies/livevalue diagnostics separately. |
+| UIREQ-035 | complete | observed | closed | Entire literal deterministic witness-dataflow clause adopted by Root after unchanged compiled DAG/materializer/cache/projector, independently frozen complete A/B0, actual five-operation PASS and same8efb whole-clause result review. Additive Cargo entry compile/list found all9tests includingnew4, zero bodies. Finite evidence limits retained; separate refinement/security/physical/H1/native/generalADT scopes remain open. |
 
 Exact predicates, complete original scenario text, per-row source/result/audit pins and source-currentness are in current-evidence.json. Scope-specific additional obligations are in refinementRequirements and retainedInventory;35 rows are not the complete EARS programme denominator.
 

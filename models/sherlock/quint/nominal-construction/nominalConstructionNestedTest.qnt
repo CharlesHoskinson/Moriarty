@@ -1,0 +1,14 @@
+module nominalConstructionNestedTest {
+  import nominalConstruction.* from "./nominalConstruction"
+  // Same-author normative helper tests frozen before matcher source; not an independent oracle.
+  // wildcard-no-binding
+  run nestedPatternUnit0Test = nestedPatternMatch(List(PatternWildcard), List(UIntToken(1)), Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))) == {matched: true, bindings: Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))}
+  // bind-shadow-and-preserve
+  run nestedPatternUnit1Test = nestedPatternMatch(List(PatternBind(10)), List(UIntToken(1)), Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))) == {matched: true, bindings: Map(10 -> List(UIntToken(1)), 20 -> List(UIntToken(8)))}
+  // nested-nominal-binder-path
+  run nestedPatternUnit2Test = nestedPatternMatch(List(PatternConstructor({typeId: 20, ctorId: 23, arity: 2}), PatternConstructor({typeId: 20, ctorId: 22, arity: 2}), PatternBind(11), PatternWildcard, PatternWildcard), List(ConstructorToken({typeId: 20, ctorId: 23, arity: 2}), ConstructorToken({typeId: 20, ctorId: 22, arity: 2}), UIntToken(4), ConstructorToken({typeId: 20, ctorId: 21, arity: 0}), ConstructorToken({typeId: 20, ctorId: 22, arity: 2}), UIntToken(5), ConstructorToken({typeId: 20, ctorId: 21, arity: 0})), Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))) == {matched: true, bindings: Map(10 -> List(UIntToken(7)), 11 -> List(UIntToken(4)), 20 -> List(UIntToken(8)))}
+  // well-typed-nested-constructor-miss
+  run nestedPatternUnit3Test = nestedPatternMatch(List(PatternConstructor({typeId: 20, ctorId: 23, arity: 2}), PatternConstructor({typeId: 20, ctorId: 22, arity: 2}), PatternBind(11), PatternWildcard, PatternWildcard), List(ConstructorToken({typeId: 20, ctorId: 23, arity: 2}), ConstructorToken({typeId: 20, ctorId: 21, arity: 0}), ConstructorToken({typeId: 20, ctorId: 22, arity: 2}), UIntToken(5), ConstructorToken({typeId: 20, ctorId: 21, arity: 0})), Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))) == {matched: false, bindings: Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))}
+  // wildcard-skip-whole-left-subtree
+  run nestedPatternUnit4Test = nestedPatternMatch(List(PatternConstructor({typeId: 20, ctorId: 23, arity: 2}), PatternWildcard, PatternBind(12)), List(ConstructorToken({typeId: 20, ctorId: 23, arity: 2}), ConstructorToken({typeId: 20, ctorId: 22, arity: 2}), UIntToken(4), ConstructorToken({typeId: 20, ctorId: 21, arity: 0}), ConstructorToken({typeId: 20, ctorId: 22, arity: 2}), UIntToken(5), ConstructorToken({typeId: 20, ctorId: 21, arity: 0})), Map(10 -> List(UIntToken(7)), 20 -> List(UIntToken(8)))) == {matched: true, bindings: Map(10 -> List(UIntToken(7)), 12 -> List(ConstructorToken({typeId: 20, ctorId: 22, arity: 2}), UIntToken(5), ConstructorToken({typeId: 20, ctorId: 21, arity: 0})), 20 -> List(UIntToken(8)))}
+}
