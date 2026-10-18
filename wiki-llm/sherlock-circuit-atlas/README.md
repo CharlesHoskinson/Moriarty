@@ -179,3 +179,5 @@ assets, rendered scene or deployment.
 
 
 - [Editorial update013 — financial await-prefix host evidence](UPDATE-013-FINANCIAL-AWAIT-PREFIX.md): consumed returned-prefix publication and two fixed positive consumers; no new circuit source, iteration005 remains latest.
+
+- [Editorial update 014 — complete observations and portable prefixes](UPDATE-014-COMPLETE-OBSERVATIONS-AND-PORTABLE-PREFIXES.md): full-field comparison and distinct portability stages; concept only, circuit iteration 005 remains latest.
