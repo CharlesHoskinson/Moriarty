@@ -1,0 +1,75 @@
+{
+  "complete_inline_read": true,
+  "reviewer_identity": {
+    "conversation_id": "421d0a5d-02d4-452d-97a5-09805c3fac01",
+    "model": "Gemini 4 Argon (High)",
+    "role": "Same-owner independent non-author post-result/installation/whole-clause reviewer (standing Opus 429 outage fallback)",
+    "tools_or_execution_used": false,
+    "inline_bodies_read": "Prior Turn 1 BODY01..BODY33 and current Turn 2 BODY01..BODY33 read completely without clipping"
+  },
+  "actual_result_verdict": "APPROVE",
+  "actual_result_assessment": {
+    "four_operations_passed": true,
+    "pin_integrity": "PRE-PIN-CHECK.json and POST-PIN-CHECK.json both match byte-for-byte (151243 bytes, sha256 001f823ba09b71954c2671ea7645273b0a920fd41cb04b7d762dbffff40fc55e), confirming all 492 flat input pins were unchanged before and after the 4-operation sequence (whole-attempt pre/post scope).",
+    "phase_01_compile_core": "01-compileChangedOwningFinancialCoreRlib exited 0 in 4.036s, producing libmori_core.rlib (40706860 bytes, sha256 b63bbbd5981e0b78e34ddde5067fe13dec980753d47c18dd9eb829af9ddf73d2) and core-rlib.d (47330 bytes, sha256 c113619d89cc91cc062d72c0bd2f23c3243abd51fca9275182774fec9cf872bc). 0.stderr (4619 bytes) contains 9 compiler warnings in unrelated modules (owner_runtime, owner_si21_bind_match, recursive_source, draft_source, draft_typecheck) and 0 warnings or errors in financial_projection.rs.",
+    "phase_02_compile_consumer": "02-compileNewOwningFinancialPositiveConsumer exited 0 in 0.412s with 0 stdout/stderr bytes, producing owning-financial-tests (17337264 bytes, sha256 0d8df704f3f1d0c4c7a36b3f552be9a46cbaef1b3e6c30b55b05febf96d92da2) and owning-financial-tests.d (9785 bytes, sha256 f6b7e47f994beec381afddc30b34f0f2389f7af990f346a97da64e4be95b8357).",
+    "phase_03_list_test": "03-listExactNewOwningFinancialPositiveTest exited 0 in 0.0038s; 2.stdout (95 bytes) lists the exact single test owning_core2_producer_publishes_complete_frozen_financial_sequence (1 test, 0 benchmarks).",
+    "phase_04_run_test": "04-runExactNewOwningFinancialPositiveTest exited 0 in 0.0198s; 3.stdout (191 bytes) reports 1 passed, 0 failed, 0 ignored, 0 measured, 0 filtered out for owning_core2_producer_publishes_complete_frozen_financial_sequence.",
+    "in_memory_comparison_qualification": "The executed test verified complete in-memory equality of raw_result(), pointer identity of view.program and view.result, full serialized InvocationObservation JSON, and full ProducedInvocation::publication() JSON across the 3-call sequence (start_observed -> resume_observed false -> resume_observed true) against the 12 independently frozen expected JSON fixtures. Raw serialized JSON publications were not persisted to separate output files or stdout; the supplied expected JSON bodies are frozen oracle expectations verified by the passing assertions, not fabricated output captures."
+  },
+  "installation_verdict": "APPROVE",
+  "installation_assessment": {
+    "candidate_files_count": 18,
+    "snapshot_and_worktree_alignment": "152 of 153 mori-core snapshot files match the current worktree byte-for-byte; only crates/mori-core/src/sherlock/financial_projection.rs is overlaid (preimage 15133 bytes, sha256 8ffdfc5433c9efe78b26cf31d86e86aacbb8cab9b41506c713d2aff4f3441142 -> afterimage 21297 bytes, sha256 54ebd690ce5748e970b579ab6eb43fe7a9353f190017675abec4924df6368a6f). The 18 candidate afterimages (2 production files, 1 new positive integration test, 15 frozen fixture files) have verified byte lengths and SHA-256 digests.",
+    "legacy_component_reuse": "All 14 existing functions in financial_projection.rs (project_execution, project_segment, project_stage_result, project_resume_result, committed_boundary, successful_segment, committed_logical_work, input_boundary, financial_observation_matches, resume_financial_observation_matches, add, account_index, account_effects, project_invocation) and all 5 existing helper functions in simulate.rs (legacy, run, print_stage_report, print_stage_result, no_work) are byte-for-byte unchanged (LEGACY-BODY-REUSE.json). Reusing the qualified R176/R188/R189 component observations for those unchanged projection/accounting bodies alongside the new 4-operation actual pass for the new Serialize/ProducedInvocation/publication additions is sound and requires no rewriting of historical receipts or digests."
+  },
+  "whole_original017": {
+    "recommendation": "CLOSE_WHOLE_ORIGINAL",
+    "reason": "The normative requirement of UIREQ-017 states: 'WHEN the future financial extension reports a segment outcome, it SHALL expose the complete ordered financial observation defined by its adapter,' together with 'Scenario: First paid prefix (WHEN Reserve 100/liability 40 pays 30, charges fee 2 and discharges liability 30 at an admitted prefix boundary. THEN The observation reports reserve 68, liability 10, gross debit 32 and recipient receipt 30, with residual duty 10).' Within the declared financial domain (public Core/2 stage producer plus complete borrowed financial projection/accounting adapter and shared CLI publication, with applicable evidence classes ['source', 'scoped-observation', 'declared-component-correspondence']), there are zero unimplemented or incorrect field mappings and zero missing producer/adapter/consumer bindings: (1) start_observed and resume_observed invoke stage::start and stage::resume once and bind the admitted StagedProgram, exact consumed inputs/CLI flags, and raw Result<StageOutcome, StageRejection> inside private-field ProducedInvocation<'p>; (2) ProducedInvocation::observation() and ProducedInvocation::publication() exhaustively expose the complete ordered financial observation (program, plan, digests, captured input, raw result, outcome, per-segment accounting, and tentative_publication alongside preserved legacy CLI keys and STAGE_LABELS) without re-running the evaluator; (3) crates/mori/src/commands/simulate.rs integrates start_observed, resume_observed, and print_produced_stage_result on the Core/2 start and resume paths without renaming the non-financial pure Sherlock Core/HostOnly route; and (4) the new positive integration test has now compiled and passed (4/4 operations exit 0), empirically verifying the exact First paid prefix (68 reserve, 10 liability, 32 gross debit, 30 recipient receipt, 10 residual duty, plus unaffected auditDuty 5 and AUX/observer balances), the subsequent false-await resume (segment: None, NoPublishedSegment, NoAdvancedSegment), and the final true-await completion (final discharge to 0 retained in post.liabilities and filtered from positive residual). Prior SF-05 (pre-stage load/decode errors in simulate.rs before a StagedProgram or decoded input exists) occurs before any segment execution and is outside UIREQ-017's 'WHEN the future financial extension reports a segment outcome' antecedent. Branches not executed by the single positive test (such as in-producer StageRejection, non-None CLI caps/actions, non-empty await captures, State/Emit/Liability-creation effects, and u128 overflow saturation) are completely implemented and verified by direct source audit of exhaustive Rust match/destructuring patterns; UIREQ-017 does not mandate separate runtime test execution of every source-audited branch or invent a hypothetical new execution profile when UIREQ-018 universal await lowering is separate.",
+    "exact_remaining_predicates": [],
+    "clause_scope": "Satisfied and eligible for Root closure across the declared Core/2 stage financial producer, complete borrowed observation/accounting adapter, and shared Core/2 CLI publication route (mori_core::sherlock_financial_projection::{ProducedInvocation, start_observed, resume_observed} and crates/mori/src/commands/simulate.rs), preserving qualification: local-reference-stage, authentication: none, consumption: untracked, and leaving the non-financial pure Sherlock Core/HostOnly route unrenamed. Does not include or close UIREQ-018 universal await lowering, UIREQ-019 local failure/diagnostics, authentication/consumption tracking, or native/halo2/Compact proof and Preview settlement gates.",
+    "source_vs_observed_roles": {
+      "category_i_unimplemented_or_incorrect_mapping_or_missing_consumer": "None. All required types, lifetimes, private-field same-call ownership, exhaustive struct/enum projections, Serialize implementations, per-segment accounting, shared CLI publication(), and simulate.rs Core/2 calls are implemented and verified.",
+      "category_ii_source_covered_and_audited_not_executed_in_positive_test": "1. Enclosing CLI subprocess dispatch and stdout printing in crates/mori/src/commands/simulate.rs (run_stage_start, run_resume, print_produced_stage_result), which are thin wrappers around start_observed, resume_observed, and ProducedInvocation::publication() verified by source inspection while ProducedInvocation::publication() itself was executed in Phase 04. (Pre-stage load/decode failures before stage::start/resume produce no segment outcome and are outside UIREQ-017's antecedent.) 2. In-producer Err(StageRejection) projection/publication (FinancialObservation::Rejected, AccountingAvailability::RejectedNoPublishedDelta, TentativePublication::UnavailableFromStageRejection), non-None cap/cli_action/cli_cap values, non-empty await captures, Effect::State/Emit/Liability-creation skip arms in account_effects, and AmountAggregate::AboveU128 / NetFlow::Unavailable overflow saturation, all of which are verified by source audit of exhaustive match patterns and unchanged R176/R188 component bodies.",
+      "category_iii_separate_requirements_and_future_scopes": "UIREQ-018 (universal await lowering into the Sherlock step machine), UIREQ-019 (later local failure/diagnostic clauses), continuation authentication and consumption tracking, native/halo2/Compact proof generation, and Preview ledger settlement remain separate open requirements."
+    }
+  },
+  "closed13_compatibility": {
+    "verdict": "COMPATIBLE_UNCHANGED",
+    "closed_rows_checked": [
+      "UIREQ-001",
+      "UIREQ-002",
+      "UIREQ-003",
+      "UIREQ-005",
+      "UIREQ-006",
+      "UIREQ-008",
+      "UIREQ-009",
+      "UIREQ-010",
+      "UIREQ-011",
+      "UIREQ-022",
+      "UIREQ-025",
+      "UIREQ-027",
+      "UIREQ-030"
+    ],
+    "assessment": "None of the 13 closed UIREQ rows reference crates/mori-core/src/sherlock/financial_projection.rs or crates/mori/src/commands/simulate.rs in their sourceRefs or sourcePins, and all 13 rows remain byte-for-byte identical in CANONICAL-CURRENTNESS-CONDITIONAL.patch.json. In source, financial_projection.rs preserves all 14 existing functions byte-identically and only adds Serialize derives and new owning-producer items, while simulate.rs preserves explicit Sherlock CLI routing (sherlock::run), Core/1 simulation, and --trace replay unchanged. No new runtime test execution is inferred for the 13 closed rows from static pin checks."
+  },
+  "canonical_metadata_verdict": "APPROVE",
+  "canonical_metadata_assessment": {
+    "base_digest_verified": "a897ae2ebf48a62ab50d03e80b2d605dc423014690d089b66fca3895e9e19cde (728250 bytes)",
+    "patch_digest_verified": "87f38c1da457a7756c216f0e79258f9c0a9aa3852c40ca87207b8b3e9c8c9d0c (6467 bytes, 25 JSON Patch operations)",
+    "expected_candidate_digest": "399b1401e87071d53fade27ccff4e67cf14eec8cc3985a70742c727351f634cd (732446 bytes)",
+    "operations_scope": "Tests and updates the 2 live SHA-256 cells for crates/mori-core/src/sherlock/financial_projection.rs under /requirements/16/{implementation/sourceRefs/1,currentness/sourcePins/1} from 8ffdfc54... to 54ebd690...; retargets historical citation /requirements/16/citations/4/path to docs/results/sherlock-owning-financial-producer-20261018/source/pre-owning/financial_projection.rs while keeping its original 8ffdfc54... digest; appends crates/mori/src/commands/simulate.rs (f02804f8...) and crates/mori-core/tests/sherlock_financial_producer_positive.rs (cc746c09...) to implementation/sourceRefs and currentness/sourcePins; and appends all 15 fixture files with their exact afterimage SHA-256 hashes to currentness/sourcePins. Keeps UIREQ-017 acceptance/status/predicate/validation/evidenceCatalog unchanged in the currentness patch until Root applies its separate semantic adoption record.",
+    "conditions": [
+      "Root must copy the immutable pre-owning financial_projection.rs (15133 bytes, sha256 8ffdfc5433c9efe78b26cf31d86e86aacbb8cab9b41506c713d2aff4f3441142) to docs/results/sherlock-owning-financial-producer-20261018/source/pre-owning/financial_projection.rs before or when applying the citation path update.",
+      "Root must verify worktree baseline preimages and install all 18 candidate afterimages with their exact pinned SHA-256 digests before running the canonical currentness reader.",
+      "Root owns the separate semantic adoption step transitioning UIREQ-017 from open to closed based on this post-result review."
+    ]
+  },
+  "retained_gaps": [
+    "Enclosing CLI crate (crates/mori/src/commands/simulate.rs) was verified by source inspection and shares ProducedInvocation::publication() (executed in Phase 04), but the mori CLI binary itself was not compiled or executed as a subprocess in the 4 ordinary QA operations.",
+    "In-producer StageRejection outcomes, non-None CLI cap/action flags, non-empty await captures, State/Emit/Liability-creation effects in account_effects, and u128 overflow saturation (AboveU128 / NetFlow::Unavailable) are verified by source audit rather than executed in the single positive test.",
+    "Pre-attempt and post-attempt pin checks (PRE-PIN-CHECK.json / POST-PIN-CHECK.json) establish whole-attempt immutability of all 492 inputs, not per-phase continuous filesystem monitoring.",
+    "UIREQ-018 (universal await lowering), UIREQ-019 (later local failure/diagnostic obligations), continuation authentication and consumption tracking, native/halo2/Compact proof correspondence, and Preview ledger settlement remain separately open."
+  ],
+  "execution_performed": false
+}
