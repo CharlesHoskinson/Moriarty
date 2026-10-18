@@ -224,6 +224,12 @@ difference is listed here under the applicable user authorization.
 ## Testing
 
 - Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
+- The finite backend `financial_observation_relation` target uses frozen
+  complete Program/Execution literals and positive SDK relation checks instead
+  of insta snapshots. The exact sources and independent expectations remain in
+  `crates/fixtures/financial-report-contract/`; expected values must not come
+  from the evaluator, compiler output or generated baselines. This exception
+  adds no authority to execute SDK checks or claim native/proof acceptance.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
