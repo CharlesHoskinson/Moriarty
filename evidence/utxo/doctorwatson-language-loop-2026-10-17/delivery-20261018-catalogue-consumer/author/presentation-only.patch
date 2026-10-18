@@ -1,0 +1,69 @@
+--- a/docs/webs/app/src/catalogue.ts
++++ b/docs/webs/app/src/catalogue.ts
+@@ -1,4 +1,4 @@
+-/** Unapplied, ordinary display proposal. No verifier, policy, proof or ledger API. */
++/** Read-only catalogue source display. No verifier, policy, proof or ledger API. */
+ export interface SourceLocation {
+   readonly commit: string | null;
+   readonly path: string;
+@@ -134,13 +134,12 @@
+   readonly limits: {
+     readonly notEstablished: string;
+     readonly firstBlocker: string;
+-    readonly ownerDependencies: readonly string[];
+   };
+   readonly sourceRow: RetainedRow;
+ }
+ export interface CatalogView {
+-  readonly schema: 'moriarty-cardano-catalogue-display-proposal/1';
+-  readonly status: 'unapplied-source-proposal';
++  readonly schema: 'moriarty-cardano-catalogue-display/1';
++  readonly status: 'source-display';
+   readonly catalogueSource: SourceLocation;
+   readonly catalogueId: string;
+   readonly catalogueVersion: string;
+@@ -150,16 +149,8 @@
+     readonly sourceTypedRows: number;
+     readonly scope: string;
+   };
+-  readonly ownerDependencies: readonly string[];
+   readonly entries: readonly CatalogEntry[];
+ }
+-const ownerDependencies = [
+-  'Cryptographic/security interpretation: designated Opus owner',
+-  'Trusted-setup and key/relation identity judgments: designated Opus owner',
+-  'Statement binding, acceptance and validation rules: designated semantic/security owner',
+-  'Target qualification, ledger facts and deployment observations: designated target owner',
+-] as const;
+-
+ /** Source projection only: preserves all versions and never computes predicate digests. */
+ export function projectCatalogue(source: RetainedCatalogue, location: SourceLocation): CatalogView {
+   const superseded = new Set(source.rows.flatMap(row => row.supersedes ? [row.supersedes] : []));
+@@ -208,23 +199,23 @@
+       status: 'not-supplied-to-display; no assessment',
+       note: 'Catalogue SemanticEntry excludes setup/VK/admission identity; no profile or setup-class selection is inferred.',
+     },
+-    limits: {notEstablished: row.notEstablished, firstBlocker: row.firstBlocker, ownerDependencies},
++    limits: {notEstablished: row.notEstablished, firstBlocker: row.firstBlocker},
+     sourceRow: row,
+   }));
+   return {
+-    schema: 'moriarty-cardano-catalogue-display-proposal/1', status: 'unapplied-source-proposal',
++    schema: 'moriarty-cardano-catalogue-display/1', status: 'source-display',
+     catalogueSource: location, catalogueId: source.catalogueId, catalogueVersion: source.catalogueVersion,
+     coverage: {
+       versionedRows: entries.length, sourceHeads: entries.filter(entry => entry.identity.sourceHead).length,
+       sourceTypedRows: entries.filter(entry => entry.publicStatement.schema !== null).length,
+       scope: 'All retained rows from the supplied catalogue. Counts describe source membership, not accepted property coverage. CAP candidates and other inventories remain independent.',
+     },
+-    ownerDependencies, entries,
++    entries,
+   };
+ }
+ 
+ /**
+- * Concrete loader proposal for the pinned retained JSON only.
++ * Parse supplied retained catalogue JSON for display.
+  * JSON parsing/type assertion is not shape validation or evidence authentication.
+  * No schema validator, cryptographic check or acceptance rule is installed here.
+  */
