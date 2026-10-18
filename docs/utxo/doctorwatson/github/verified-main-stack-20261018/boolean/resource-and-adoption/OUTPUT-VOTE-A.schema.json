@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewToken",
+    "subjectSha256",
+    "requestedModel",
+    "reportedIdentity",
+    "decision",
+    "rationale",
+    "evidence",
+    "checks",
+    "dissent",
+    "limitations",
+    "readCoverage",
+    "productApproval"
+  ],
+  "properties": {
+    "reviewToken": {
+      "const": "mori-boolean-ce7-finite900-resource-a-20261018-v1"
+    },
+    "subjectSha256": {
+      "const": "16d25fa1cf504d14e9686d9f5ff132cae4d03f895d02c35cb35db70160be188a"
+    },
+    "requestedModel": {
+      "const": "gemini-4-argon-high/HIGH"
+    },
+    "reportedIdentity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision": {
+      "enum": [
+        "approve",
+        "reject",
+        "revise",
+        "abstain"
+      ]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 80
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "anchor",
+          "implication"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "anchor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "implication": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finiteBudget",
+        "unchangedProductContract",
+        "strictTerminal",
+        "deadlineCleanup",
+        "loaderPinsArgv",
+        "priorCohorts",
+        "unknowns",
+        "rootGate"
+      ],
+      "properties": {
+        "finiteBudget": {
+          "type": "string",
+          "minLength": 15
+        },
+        "unchangedProductContract": {
+          "type": "string",
+          "minLength": 15
+        },
+        "strictTerminal": {
+          "type": "string",
+          "minLength": 15
+        },
+        "deadlineCleanup": {
+          "type": "string",
+          "minLength": 15
+        },
+        "loaderPinsArgv": {
+          "type": "string",
+          "minLength": 15
+        },
+        "priorCohorts": {
+          "type": "string",
+          "minLength": 15
+        },
+        "unknowns": {
+          "type": "string",
+          "minLength": 15
+        },
+        "rootGate": {
+          "type": "string",
+          "minLength": 15
+        }
+      }
+    },
+    "dissent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "readCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wholePrimaryRead",
+        "unreadMandatoryBodies"
+      ],
+      "properties": {
+        "wholePrimaryRead": {
+          "type": "boolean"
+        },
+        "unreadMandatoryBodies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "productApproval": {
+      "const": false
+    }
+  }
+}
