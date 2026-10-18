@@ -1,5 +1,22 @@
 # Moriarty repository instructions
 
+## Narrow type-checker authoring exception — October18UTC
+
+The user answered **“Sol writes; Opus/Gemini audits”** for the compiler's
+type-checker depth limits after the Gemini source request returned no source.
+Sol6.1HIGH may implement those depth checks and their tests; fresh Opus/Gemini
+review is required before executing the candidate. This extends the parser-only
+exception below to this stated type-checker scope. Other security ownership and
+all native limits remain unchanged.
+
+## Narrow parser authoring exception — October18UTC
+
+The user answered **“Sol writes; Opus/Gemini audits”** for Sherlock’s bounded
+parser budget checks. Sol6.1HIGH may author those checks and their necessary
+early lexer token-budget hook; fresh Opus/Gemini security review is required
+before executing that candidate. All other security ownership remains unchanged.
+See [the exact scoped assignment](raw/assignments/moriarty-sherlock-parser-sol-authoring-2026-10-18.md).
+
 ## Latest priority — DoctorWatson requirement closure
 
 The user instructs: update DoctorWatson, use it to close all retained Sherlock

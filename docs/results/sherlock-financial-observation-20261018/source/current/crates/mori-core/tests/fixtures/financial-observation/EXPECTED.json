@@ -1,0 +1,5573 @@
+{
+  "format": "r175-independent-typed-financial-expectations/1",
+  "representation": "Own typed logical mapping for borrowed non-Serialize InvocationObservation/FinancialObservation; result/accounting/publication files separately match their actual serde declarations. No new production wire is claimed.",
+  "program_context": {
+    "program": {
+      "language": "moriarty/2",
+      "semantics": "moriarty-core/2",
+      "name": "RetainedPaymentObservation",
+      "states": [
+        {
+          "name": "marker",
+          "ty": "UInt",
+          "initial": {
+            "type": "UInt",
+            "value": "77"
+          }
+        },
+        {
+          "name": "flag",
+          "ty": "Bool",
+          "initial": {
+            "type": "Bool",
+            "value": true
+          }
+        }
+      ],
+      "assets": [
+        {
+          "name": "UNIT",
+          "identity": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          }
+        },
+        {
+          "name": "AUX",
+          "identity": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          }
+        }
+      ],
+      "expressions": [
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "30"
+          }
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "2"
+          }
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "30"
+          }
+        },
+        {
+          "kind": "Name",
+          "name": "ready"
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "10"
+          }
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "1"
+          }
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "10"
+          }
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "0"
+          }
+        },
+        {
+          "kind": "Literal",
+          "value": {
+            "type": "UInt",
+            "value": "0"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "name": "pay",
+          "inputs": [],
+          "statements": [
+            {
+              "kind": "Transfer",
+              "asset": "UNIT",
+              "from": "reserve",
+              "to": "beneficiary",
+              "amount": 0
+            },
+            {
+              "kind": "Fee",
+              "asset": "UNIT",
+              "from": "reserve",
+              "to": "fee_recipient",
+              "amount": 1
+            },
+            {
+              "kind": "Discharge",
+              "name": "pay-beneficiary",
+              "amount": 2
+            },
+            {
+              "kind": "Await",
+              "label": "release",
+              "binders": [
+                {
+                  "name": "ready",
+                  "ty": "Bool"
+                }
+              ],
+              "guard": 3
+            },
+            {
+              "kind": "Transfer",
+              "asset": "UNIT",
+              "from": "reserve",
+              "to": "beneficiary",
+              "amount": 4
+            },
+            {
+              "kind": "Fee",
+              "asset": "UNIT",
+              "from": "reserve",
+              "to": "fee_recipient",
+              "amount": 5
+            },
+            {
+              "kind": "Discharge",
+              "name": "pay-beneficiary",
+              "amount": 6
+            }
+          ]
+        },
+        {
+          "name": "declareDuties",
+          "inputs": [],
+          "statements": [
+            {
+              "kind": "Liability",
+              "name": "auditDuty",
+              "asset": "AUX",
+              "debtor": "observer",
+              "creditor": "fee_recipient",
+              "amount": 7
+            },
+            {
+              "kind": "Liability",
+              "name": "pay-beneficiary",
+              "asset": "UNIT",
+              "debtor": "reserve",
+              "creditor": "beneficiary",
+              "amount": 8
+            }
+          ]
+        }
+      ]
+    },
+    "plan": {
+      "format": "moriarty-stage-plan/1",
+      "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+      "actions": [
+        {
+          "action": "pay",
+          "statement_count": 7,
+          "sites": [
+            {
+              "site": 1,
+              "ordinal": 3,
+              "label": "release",
+              "binders": [
+                {
+                  "name": "ready",
+                  "ty": "Bool"
+                }
+              ],
+              "captures": []
+            }
+          ],
+          "segment_cost": [
+            "7",
+            "8"
+          ],
+          "committed_before": [
+            "0",
+            "7"
+          ],
+          "plan_total": "15"
+        },
+        {
+          "action": "declareDuties",
+          "statement_count": 2,
+          "sites": [],
+          "segment_cost": [
+            "4"
+          ],
+          "committed_before": [
+            "0"
+          ],
+          "plan_total": "4"
+        }
+      ]
+    },
+    "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+    "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d"
+  },
+  "initial": {
+    "state": {
+      "flag": {
+        "type": "Bool",
+        "value": true
+      },
+      "marker": {
+        "type": "UInt",
+        "value": "77"
+      }
+    },
+    "balances": [
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "amount": "13"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "amount": "9"
+      },
+      {
+        "account": "beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "0"
+      },
+      {
+        "account": "fee_recipient",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "0"
+      },
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "11"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "100"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "auditDuty",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "debtor": "observer",
+        "creditor": "fee_recipient",
+        "amount": "5"
+      },
+      {
+        "name": "pay-beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "debtor": "reserve",
+        "creditor": "beneficiary",
+        "amount": "40"
+      }
+    ]
+  },
+  "committed_first_prefix": {
+    "state": {
+      "flag": {
+        "type": "Bool",
+        "value": true
+      },
+      "marker": {
+        "type": "UInt",
+        "value": "77"
+      }
+    },
+    "balances": [
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "amount": "13"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "amount": "9"
+      },
+      {
+        "account": "beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "30"
+      },
+      {
+        "account": "fee_recipient",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "2"
+      },
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "11"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "68"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "auditDuty",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "debtor": "observer",
+        "creditor": "fee_recipient",
+        "amount": "5"
+      },
+      {
+        "name": "pay-beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "debtor": "reserve",
+        "creditor": "beneficiary",
+        "amount": "10"
+      }
+    ]
+  },
+  "final_complete": {
+    "state": {
+      "flag": {
+        "type": "Bool",
+        "value": true
+      },
+      "marker": {
+        "type": "UInt",
+        "value": "77"
+      }
+    },
+    "balances": [
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "amount": "13"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "amount": "9"
+      },
+      {
+        "account": "beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "40"
+      },
+      {
+        "account": "fee_recipient",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "3"
+      },
+      {
+        "account": "observer",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "11"
+      },
+      {
+        "account": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "amount": "57"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "auditDuty",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "debtor": "observer",
+        "creditor": "fee_recipient",
+        "amount": "5"
+      },
+      {
+        "name": "pay-beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "debtor": "reserve",
+        "creditor": "beneficiary",
+        "amount": "0"
+      }
+    ]
+  },
+  "published_source_steps": [
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "30"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "0"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "70"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "40"
+        }
+      ]
+    },
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "30"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "2"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "68"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "40"
+        }
+      ]
+    },
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "30"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "2"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "68"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "10"
+        }
+      ]
+    },
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "30"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "2"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "68"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "10"
+        }
+      ]
+    },
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "40"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "2"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "58"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "10"
+        }
+      ]
+    },
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "40"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "3"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "57"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "10"
+        }
+      ]
+    },
+    {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "40"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "3"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "57"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "0"
+        }
+      ]
+    }
+  ],
+  "observations": {
+    "start": {
+      "program_ref": "program_context",
+      "input": {
+        "Start": {
+          "action": "pay",
+          "scenario": {
+            "state": {
+              "flag": {
+                "type": "Bool",
+                "value": true
+              },
+              "marker": {
+                "type": "UInt",
+                "value": "77"
+              }
+            },
+            "inputs": {},
+            "balances": [
+              {
+                "account": "observer",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "AUX",
+                  "scale": 0
+                },
+                "amount": "13"
+              },
+              {
+                "account": "reserve",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "AUX",
+                  "scale": 0
+                },
+                "amount": "9"
+              },
+              {
+                "account": "beneficiary",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "amount": "0"
+              },
+              {
+                "account": "fee_recipient",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "amount": "0"
+              },
+              {
+                "account": "observer",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "amount": "11"
+              },
+              {
+                "account": "reserve",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "amount": "100"
+              }
+            ],
+            "liabilities": [
+              {
+                "name": "auditDuty",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "AUX",
+                  "scale": 0
+                },
+                "debtor": "observer",
+                "creditor": "fee_recipient",
+                "amount": "5"
+              },
+              {
+                "name": "pay-beneficiary",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "debtor": "reserve",
+                "creditor": "beneficiary",
+                "amount": "40"
+              }
+            ]
+          },
+          "cap": null
+        }
+      },
+      "result": {
+        "Ok": {
+          "Waiting": {
+            "advanced": true,
+            "segment": {
+              "action": "pay",
+              "frame_pre": {
+                "site": 0,
+                "captures": []
+              },
+              "frame_post": {
+                "site": 1,
+                "captures": []
+              },
+              "execution": {
+                "semantics": "moriarty-core/2",
+                "action": "pay",
+                "pre": {
+                  "state": {
+                    "flag": {
+                      "type": "Bool",
+                      "value": true
+                    },
+                    "marker": {
+                      "type": "UInt",
+                      "value": "77"
+                    }
+                  },
+                  "balances": [
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "13"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "9"
+                    },
+                    {
+                      "account": "beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "0"
+                    },
+                    {
+                      "account": "fee_recipient",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "0"
+                    },
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "11"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "100"
+                    }
+                  ],
+                  "liabilities": [
+                    {
+                      "name": "auditDuty",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "debtor": "observer",
+                      "creditor": "fee_recipient",
+                      "amount": "5"
+                    },
+                    {
+                      "name": "pay-beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "debtor": "reserve",
+                      "creditor": "beneficiary",
+                      "amount": "40"
+                    }
+                  ]
+                },
+                "post": {
+                  "state": {
+                    "flag": {
+                      "type": "Bool",
+                      "value": true
+                    },
+                    "marker": {
+                      "type": "UInt",
+                      "value": "77"
+                    }
+                  },
+                  "balances": [
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "13"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "9"
+                    },
+                    {
+                      "account": "beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "30"
+                    },
+                    {
+                      "account": "fee_recipient",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "2"
+                    },
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "11"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "68"
+                    }
+                  ],
+                  "liabilities": [
+                    {
+                      "name": "auditDuty",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "debtor": "observer",
+                      "creditor": "fee_recipient",
+                      "amount": "5"
+                    },
+                    {
+                      "name": "pay-beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "debtor": "reserve",
+                      "creditor": "beneficiary",
+                      "amount": "10"
+                    }
+                  ]
+                },
+                "steps": [
+                  {
+                    "index": 0,
+                    "statement": {
+                      "kind": "Transfer",
+                      "asset": "UNIT",
+                      "from": "reserve",
+                      "to": "beneficiary",
+                      "amount": 0
+                    },
+                    "value": {
+                      "type": "UInt",
+                      "value": "30"
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "30"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "0"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "70"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "40"
+                        }
+                      ]
+                    },
+                    "effects": [
+                      {
+                        "kind": "Transfer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "from": "reserve",
+                        "to": "beneficiary",
+                        "amount": "30"
+                      }
+                    ]
+                  },
+                  {
+                    "index": 1,
+                    "statement": {
+                      "kind": "Fee",
+                      "asset": "UNIT",
+                      "from": "reserve",
+                      "to": "fee_recipient",
+                      "amount": 1
+                    },
+                    "value": {
+                      "type": "UInt",
+                      "value": "2"
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "30"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "2"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "68"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "40"
+                        }
+                      ]
+                    },
+                    "effects": [
+                      {
+                        "kind": "Fee",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "from": "reserve",
+                        "to": "fee_recipient",
+                        "amount": "2"
+                      }
+                    ]
+                  },
+                  {
+                    "index": 2,
+                    "statement": {
+                      "kind": "Discharge",
+                      "name": "pay-beneficiary",
+                      "amount": 2
+                    },
+                    "value": {
+                      "type": "UInt",
+                      "value": "30"
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "30"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "2"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "68"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "10"
+                        }
+                      ]
+                    },
+                    "effects": [
+                      {
+                        "kind": "Liability",
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "before": "40",
+                        "after": "10"
+                      }
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "Transfer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "from": "reserve",
+                    "to": "beneficiary",
+                    "amount": "30"
+                  },
+                  {
+                    "kind": "Fee",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "from": "reserve",
+                    "to": "fee_recipient",
+                    "amount": "2"
+                  },
+                  {
+                    "kind": "Liability",
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "before": "40",
+                    "after": "10"
+                  }
+                ]
+              }
+            },
+            "continuation": {
+              "format": "moriarty-continuation/1",
+              "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+              "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+              "action": "pay",
+              "site": 1,
+              "captures": [],
+              "logical": {
+                "profile": "moriarty-reference-logical-cost/2",
+                "cap": null,
+                "committed": "7"
+              },
+              "boundary": {
+                "state": {
+                  "flag": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "marker": {
+                    "type": "UInt",
+                    "value": "77"
+                  }
+                },
+                "balances": [
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "13"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "9"
+                  },
+                  {
+                    "account": "beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "30"
+                  },
+                  {
+                    "account": "fee_recipient",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "2"
+                  },
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "11"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "68"
+                  }
+                ],
+                "liabilities": [
+                  {
+                    "name": "auditDuty",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "debtor": "observer",
+                    "creditor": "fee_recipient",
+                    "amount": "5"
+                  },
+                  {
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "amount": "10"
+                  }
+                ]
+              }
+            },
+            "attempted": "7",
+            "residual": [
+              {
+                "name": "auditDuty",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "AUX",
+                  "scale": 0
+                },
+                "debtor": "observer",
+                "creditor": "fee_recipient",
+                "amount": "5"
+              },
+              {
+                "name": "pay-beneficiary",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "debtor": "reserve",
+                "creditor": "beneficiary",
+                "amount": "10"
+              }
+            ]
+          }
+        }
+      },
+      "outcome": {
+        "Waiting": {
+          "advanced": true,
+          "segment": {
+            "action": "pay",
+            "frame_pre": {
+              "site": 0,
+              "captures": []
+            },
+            "frame_post": {
+              "site": 1,
+              "captures": []
+            },
+            "execution": {
+              "semantics": "moriarty-core/2",
+              "action": "pay",
+              "pre": {
+                "state": {
+                  "flag": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "marker": {
+                    "type": "UInt",
+                    "value": "77"
+                  }
+                },
+                "balances": [
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "13"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "9"
+                  },
+                  {
+                    "account": "beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "0"
+                  },
+                  {
+                    "account": "fee_recipient",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "0"
+                  },
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "11"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "100"
+                  }
+                ],
+                "liabilities": [
+                  {
+                    "name": "auditDuty",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "debtor": "observer",
+                    "creditor": "fee_recipient",
+                    "amount": "5"
+                  },
+                  {
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "amount": "40"
+                  }
+                ]
+              },
+              "post": {
+                "state": {
+                  "flag": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "marker": {
+                    "type": "UInt",
+                    "value": "77"
+                  }
+                },
+                "balances": [
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "13"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "9"
+                  },
+                  {
+                    "account": "beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "30"
+                  },
+                  {
+                    "account": "fee_recipient",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "2"
+                  },
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "11"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "68"
+                  }
+                ],
+                "liabilities": [
+                  {
+                    "name": "auditDuty",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "debtor": "observer",
+                    "creditor": "fee_recipient",
+                    "amount": "5"
+                  },
+                  {
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "amount": "10"
+                  }
+                ]
+              },
+              "steps": [
+                {
+                  "index": 0,
+                  "statement": {
+                    "kind": "Transfer",
+                    "asset": "UNIT",
+                    "from": "reserve",
+                    "to": "beneficiary",
+                    "amount": 0
+                  },
+                  "value": {
+                    "type": "UInt",
+                    "value": "30"
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "30"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "0"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "70"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "40"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "Transfer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "from": "reserve",
+                      "to": "beneficiary",
+                      "amount": "30"
+                    }
+                  ]
+                },
+                {
+                  "index": 1,
+                  "statement": {
+                    "kind": "Fee",
+                    "asset": "UNIT",
+                    "from": "reserve",
+                    "to": "fee_recipient",
+                    "amount": 1
+                  },
+                  "value": {
+                    "type": "UInt",
+                    "value": "2"
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "30"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "2"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "68"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "40"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "Fee",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "from": "reserve",
+                      "to": "fee_recipient",
+                      "amount": "2"
+                    }
+                  ]
+                },
+                {
+                  "index": 2,
+                  "statement": {
+                    "kind": "Discharge",
+                    "name": "pay-beneficiary",
+                    "amount": 2
+                  },
+                  "value": {
+                    "type": "UInt",
+                    "value": "30"
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "30"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "2"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "68"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "10"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "Liability",
+                      "name": "pay-beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "debtor": "reserve",
+                      "creditor": "beneficiary",
+                      "before": "40",
+                      "after": "10"
+                    }
+                  ]
+                }
+              ],
+              "effects": [
+                {
+                  "kind": "Transfer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "from": "reserve",
+                  "to": "beneficiary",
+                  "amount": "30"
+                },
+                {
+                  "kind": "Fee",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "from": "reserve",
+                  "to": "fee_recipient",
+                  "amount": "2"
+                },
+                {
+                  "kind": "Liability",
+                  "name": "pay-beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "debtor": "reserve",
+                  "creditor": "beneficiary",
+                  "before": "40",
+                  "after": "10"
+                }
+              ]
+            }
+          },
+          "continuation": {
+            "format": "moriarty-continuation/1",
+            "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+            "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+            "action": "pay",
+            "site": 1,
+            "captures": [],
+            "logical": {
+              "profile": "moriarty-reference-logical-cost/2",
+              "cap": null,
+              "committed": "7"
+            },
+            "boundary": {
+              "state": {
+                "flag": {
+                  "type": "Bool",
+                  "value": true
+                },
+                "marker": {
+                  "type": "UInt",
+                  "value": "77"
+                }
+              },
+              "balances": [
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "13"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "9"
+                },
+                {
+                  "account": "beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "30"
+                },
+                {
+                  "account": "fee_recipient",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "2"
+                },
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "11"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "68"
+                }
+              ],
+              "liabilities": [
+                {
+                  "name": "auditDuty",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "debtor": "observer",
+                  "creditor": "fee_recipient",
+                  "amount": "5"
+                },
+                {
+                  "name": "pay-beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "debtor": "reserve",
+                  "creditor": "beneficiary",
+                  "amount": "10"
+                }
+              ]
+            }
+          },
+          "attempted": "7",
+          "residual": [
+            {
+              "name": "auditDuty",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "AUX",
+                "scale": 0
+              },
+              "debtor": "observer",
+              "creditor": "fee_recipient",
+              "amount": "5"
+            },
+            {
+              "name": "pay-beneficiary",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "debtor": "reserve",
+              "creditor": "beneficiary",
+              "amount": "10"
+            }
+          ]
+        }
+      },
+      "accounting": {
+        "PublishedSegment": {
+          "effects": [
+            {
+              "kind": "Transfer",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "from": "reserve",
+              "to": "beneficiary",
+              "amount": "30"
+            },
+            {
+              "kind": "Fee",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "from": "reserve",
+              "to": "fee_recipient",
+              "amount": "2"
+            },
+            {
+              "kind": "Liability",
+              "name": "pay-beneficiary",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "debtor": "reserve",
+              "creditor": "beneficiary",
+              "before": "40",
+              "after": "10"
+            }
+          ],
+          "accounts": [
+            {
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "account": "reserve",
+              "transfer_debit": {
+                "Exact": "30"
+              },
+              "transfer_receipts": {
+                "Exact": "0"
+              },
+              "fee_debit": {
+                "Exact": "2"
+              },
+              "fee_receipts": {
+                "Exact": "0"
+              },
+              "gross_debit": {
+                "Exact": "32"
+              },
+              "gross_receipts": {
+                "Exact": "0"
+              },
+              "net_flow": {
+                "Outflow": "32"
+              }
+            },
+            {
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "account": "beneficiary",
+              "transfer_debit": {
+                "Exact": "0"
+              },
+              "transfer_receipts": {
+                "Exact": "30"
+              },
+              "fee_debit": {
+                "Exact": "0"
+              },
+              "fee_receipts": {
+                "Exact": "0"
+              },
+              "gross_debit": {
+                "Exact": "0"
+              },
+              "gross_receipts": {
+                "Exact": "30"
+              },
+              "net_flow": {
+                "Inflow": "30"
+              }
+            },
+            {
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "account": "fee_recipient",
+              "transfer_debit": {
+                "Exact": "0"
+              },
+              "transfer_receipts": {
+                "Exact": "0"
+              },
+              "fee_debit": {
+                "Exact": "0"
+              },
+              "fee_receipts": {
+                "Exact": "2"
+              },
+              "gross_debit": {
+                "Exact": "0"
+              },
+              "gross_receipts": {
+                "Exact": "2"
+              },
+              "net_flow": {
+                "Inflow": "2"
+              }
+            }
+          ]
+        }
+      },
+      "tentative_publication": "PublishedSuccessfulSegment"
+    },
+    "false_await": {
+      "program_ref": "program_context",
+      "input": {
+        "Resume": {
+          "continuation": {
+            "format": "moriarty-continuation/1",
+            "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+            "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+            "action": "pay",
+            "site": 1,
+            "captures": [],
+            "logical": {
+              "profile": "moriarty-reference-logical-cost/2",
+              "cap": null,
+              "committed": "7"
+            },
+            "boundary": {
+              "state": {
+                "flag": {
+                  "type": "Bool",
+                  "value": true
+                },
+                "marker": {
+                  "type": "UInt",
+                  "value": "77"
+                }
+              },
+              "balances": [
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "13"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "9"
+                },
+                {
+                  "account": "beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "30"
+                },
+                {
+                  "account": "fee_recipient",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "2"
+                },
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "11"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "68"
+                }
+              ],
+              "liabilities": [
+                {
+                  "name": "auditDuty",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "debtor": "observer",
+                  "creditor": "fee_recipient",
+                  "amount": "5"
+                },
+                {
+                  "name": "pay-beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "debtor": "reserve",
+                  "creditor": "beneficiary",
+                  "amount": "10"
+                }
+              ]
+            }
+          },
+          "event": {
+            "format": "moriarty-stage-event/1",
+            "action": "pay",
+            "label": "release",
+            "values": [
+              {
+                "name": "ready",
+                "value": {
+                  "type": "Bool",
+                  "value": false
+                }
+              }
+            ]
+          },
+          "cli_action": null,
+          "cli_cap": null
+        }
+      },
+      "result": {
+        "Ok": {
+          "Waiting": {
+            "advanced": false,
+            "segment": null,
+            "continuation": {
+              "format": "moriarty-continuation/1",
+              "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+              "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+              "action": "pay",
+              "site": 1,
+              "captures": [],
+              "logical": {
+                "profile": "moriarty-reference-logical-cost/2",
+                "cap": null,
+                "committed": "7"
+              },
+              "boundary": {
+                "state": {
+                  "flag": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "marker": {
+                    "type": "UInt",
+                    "value": "77"
+                  }
+                },
+                "balances": [
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "13"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "9"
+                  },
+                  {
+                    "account": "beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "30"
+                  },
+                  {
+                    "account": "fee_recipient",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "2"
+                  },
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "11"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "68"
+                  }
+                ],
+                "liabilities": [
+                  {
+                    "name": "auditDuty",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "debtor": "observer",
+                    "creditor": "fee_recipient",
+                    "amount": "5"
+                  },
+                  {
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "amount": "10"
+                  }
+                ]
+              }
+            },
+            "attempted": "2",
+            "residual": [
+              {
+                "name": "auditDuty",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "AUX",
+                  "scale": 0
+                },
+                "debtor": "observer",
+                "creditor": "fee_recipient",
+                "amount": "5"
+              },
+              {
+                "name": "pay-beneficiary",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "UNIT",
+                  "scale": 0
+                },
+                "debtor": "reserve",
+                "creditor": "beneficiary",
+                "amount": "10"
+              }
+            ]
+          }
+        }
+      },
+      "outcome": {
+        "Waiting": {
+          "advanced": false,
+          "segment": null,
+          "continuation": {
+            "format": "moriarty-continuation/1",
+            "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+            "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+            "action": "pay",
+            "site": 1,
+            "captures": [],
+            "logical": {
+              "profile": "moriarty-reference-logical-cost/2",
+              "cap": null,
+              "committed": "7"
+            },
+            "boundary": {
+              "state": {
+                "flag": {
+                  "type": "Bool",
+                  "value": true
+                },
+                "marker": {
+                  "type": "UInt",
+                  "value": "77"
+                }
+              },
+              "balances": [
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "13"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "9"
+                },
+                {
+                  "account": "beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "30"
+                },
+                {
+                  "account": "fee_recipient",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "2"
+                },
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "11"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "68"
+                }
+              ],
+              "liabilities": [
+                {
+                  "name": "auditDuty",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "debtor": "observer",
+                  "creditor": "fee_recipient",
+                  "amount": "5"
+                },
+                {
+                  "name": "pay-beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "debtor": "reserve",
+                  "creditor": "beneficiary",
+                  "amount": "10"
+                }
+              ]
+            }
+          },
+          "attempted": "2",
+          "residual": [
+            {
+              "name": "auditDuty",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "AUX",
+                "scale": 0
+              },
+              "debtor": "observer",
+              "creditor": "fee_recipient",
+              "amount": "5"
+            },
+            {
+              "name": "pay-beneficiary",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "debtor": "reserve",
+              "creditor": "beneficiary",
+              "amount": "10"
+            }
+          ]
+        }
+      },
+      "accounting": "NoPublishedSegment",
+      "tentative_publication": "NoAdvancedSegment"
+    },
+    "true_resume": {
+      "program_ref": "program_context",
+      "input": {
+        "Resume": {
+          "continuation": {
+            "format": "moriarty-continuation/1",
+            "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+            "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+            "action": "pay",
+            "site": 1,
+            "captures": [],
+            "logical": {
+              "profile": "moriarty-reference-logical-cost/2",
+              "cap": null,
+              "committed": "7"
+            },
+            "boundary": {
+              "state": {
+                "flag": {
+                  "type": "Bool",
+                  "value": true
+                },
+                "marker": {
+                  "type": "UInt",
+                  "value": "77"
+                }
+              },
+              "balances": [
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "13"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "amount": "9"
+                },
+                {
+                  "account": "beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "30"
+                },
+                {
+                  "account": "fee_recipient",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "2"
+                },
+                {
+                  "account": "observer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "11"
+                },
+                {
+                  "account": "reserve",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "amount": "68"
+                }
+              ],
+              "liabilities": [
+                {
+                  "name": "auditDuty",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "AUX",
+                    "scale": 0
+                  },
+                  "debtor": "observer",
+                  "creditor": "fee_recipient",
+                  "amount": "5"
+                },
+                {
+                  "name": "pay-beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "debtor": "reserve",
+                  "creditor": "beneficiary",
+                  "amount": "10"
+                }
+              ]
+            }
+          },
+          "event": {
+            "format": "moriarty-stage-event/1",
+            "action": "pay",
+            "label": "release",
+            "values": [
+              {
+                "name": "ready",
+                "value": {
+                  "type": "Bool",
+                  "value": true
+                }
+              }
+            ]
+          },
+          "cli_action": null,
+          "cli_cap": null
+        }
+      },
+      "result": {
+        "Ok": {
+          "Complete": {
+            "segment": {
+              "action": "pay",
+              "frame_pre": {
+                "site": 1,
+                "captures": []
+              },
+              "frame_post": {
+                "site": 0,
+                "captures": []
+              },
+              "execution": {
+                "semantics": "moriarty-core/2",
+                "action": "pay",
+                "pre": {
+                  "state": {
+                    "flag": {
+                      "type": "Bool",
+                      "value": true
+                    },
+                    "marker": {
+                      "type": "UInt",
+                      "value": "77"
+                    }
+                  },
+                  "balances": [
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "13"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "9"
+                    },
+                    {
+                      "account": "beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "30"
+                    },
+                    {
+                      "account": "fee_recipient",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "2"
+                    },
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "11"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "68"
+                    }
+                  ],
+                  "liabilities": [
+                    {
+                      "name": "auditDuty",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "debtor": "observer",
+                      "creditor": "fee_recipient",
+                      "amount": "5"
+                    },
+                    {
+                      "name": "pay-beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "debtor": "reserve",
+                      "creditor": "beneficiary",
+                      "amount": "10"
+                    }
+                  ]
+                },
+                "post": {
+                  "state": {
+                    "flag": {
+                      "type": "Bool",
+                      "value": true
+                    },
+                    "marker": {
+                      "type": "UInt",
+                      "value": "77"
+                    }
+                  },
+                  "balances": [
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "13"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "amount": "9"
+                    },
+                    {
+                      "account": "beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "40"
+                    },
+                    {
+                      "account": "fee_recipient",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "3"
+                    },
+                    {
+                      "account": "observer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "11"
+                    },
+                    {
+                      "account": "reserve",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "amount": "57"
+                    }
+                  ],
+                  "liabilities": [
+                    {
+                      "name": "auditDuty",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "AUX",
+                        "scale": 0
+                      },
+                      "debtor": "observer",
+                      "creditor": "fee_recipient",
+                      "amount": "5"
+                    },
+                    {
+                      "name": "pay-beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "debtor": "reserve",
+                      "creditor": "beneficiary",
+                      "amount": "0"
+                    }
+                  ]
+                },
+                "steps": [
+                  {
+                    "index": 3,
+                    "statement": {
+                      "kind": "Await",
+                      "label": "release",
+                      "binders": [
+                        {
+                          "name": "ready",
+                          "ty": "Bool"
+                        }
+                      ],
+                      "guard": 3
+                    },
+                    "value": {
+                      "type": "Bool",
+                      "value": true
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "30"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "2"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "68"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "10"
+                        }
+                      ]
+                    },
+                    "effects": []
+                  },
+                  {
+                    "index": 4,
+                    "statement": {
+                      "kind": "Transfer",
+                      "asset": "UNIT",
+                      "from": "reserve",
+                      "to": "beneficiary",
+                      "amount": 4
+                    },
+                    "value": {
+                      "type": "UInt",
+                      "value": "10"
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "40"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "2"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "58"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "10"
+                        }
+                      ]
+                    },
+                    "effects": [
+                      {
+                        "kind": "Transfer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "from": "reserve",
+                        "to": "beneficiary",
+                        "amount": "10"
+                      }
+                    ]
+                  },
+                  {
+                    "index": 5,
+                    "statement": {
+                      "kind": "Fee",
+                      "asset": "UNIT",
+                      "from": "reserve",
+                      "to": "fee_recipient",
+                      "amount": 5
+                    },
+                    "value": {
+                      "type": "UInt",
+                      "value": "1"
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "40"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "3"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "57"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "10"
+                        }
+                      ]
+                    },
+                    "effects": [
+                      {
+                        "kind": "Fee",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "from": "reserve",
+                        "to": "fee_recipient",
+                        "amount": "1"
+                      }
+                    ]
+                  },
+                  {
+                    "index": 6,
+                    "statement": {
+                      "kind": "Discharge",
+                      "name": "pay-beneficiary",
+                      "amount": 6
+                    },
+                    "value": {
+                      "type": "UInt",
+                      "value": "10"
+                    },
+                    "snapshot": {
+                      "state": {
+                        "flag": {
+                          "type": "Bool",
+                          "value": true
+                        },
+                        "marker": {
+                          "type": "UInt",
+                          "value": "77"
+                        }
+                      },
+                      "balances": [
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "13"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "amount": "9"
+                        },
+                        {
+                          "account": "beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "40"
+                        },
+                        {
+                          "account": "fee_recipient",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "3"
+                        },
+                        {
+                          "account": "observer",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "11"
+                        },
+                        {
+                          "account": "reserve",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "amount": "57"
+                        }
+                      ],
+                      "liabilities": [
+                        {
+                          "name": "auditDuty",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "AUX",
+                            "scale": 0
+                          },
+                          "debtor": "observer",
+                          "creditor": "fee_recipient",
+                          "amount": "5"
+                        },
+                        {
+                          "name": "pay-beneficiary",
+                          "asset": {
+                            "network": "local",
+                            "issuer": "r151-financial-observation",
+                            "reference": "UNIT",
+                            "scale": 0
+                          },
+                          "debtor": "reserve",
+                          "creditor": "beneficiary",
+                          "amount": "0"
+                        }
+                      ]
+                    },
+                    "effects": [
+                      {
+                        "kind": "Liability",
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "before": "10",
+                        "after": "0"
+                      }
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "Transfer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "from": "reserve",
+                    "to": "beneficiary",
+                    "amount": "10"
+                  },
+                  {
+                    "kind": "Fee",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "from": "reserve",
+                    "to": "fee_recipient",
+                    "amount": "1"
+                  },
+                  {
+                    "kind": "Liability",
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "before": "10",
+                    "after": "0"
+                  }
+                ]
+              }
+            },
+            "committed": "15",
+            "attempted": "8",
+            "residual": [
+              {
+                "name": "auditDuty",
+                "asset": {
+                  "network": "local",
+                  "issuer": "r151-financial-observation",
+                  "reference": "AUX",
+                  "scale": 0
+                },
+                "debtor": "observer",
+                "creditor": "fee_recipient",
+                "amount": "5"
+              }
+            ]
+          }
+        }
+      },
+      "outcome": {
+        "Complete": {
+          "segment": {
+            "action": "pay",
+            "frame_pre": {
+              "site": 1,
+              "captures": []
+            },
+            "frame_post": {
+              "site": 0,
+              "captures": []
+            },
+            "execution": {
+              "semantics": "moriarty-core/2",
+              "action": "pay",
+              "pre": {
+                "state": {
+                  "flag": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "marker": {
+                    "type": "UInt",
+                    "value": "77"
+                  }
+                },
+                "balances": [
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "13"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "9"
+                  },
+                  {
+                    "account": "beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "30"
+                  },
+                  {
+                    "account": "fee_recipient",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "2"
+                  },
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "11"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "68"
+                  }
+                ],
+                "liabilities": [
+                  {
+                    "name": "auditDuty",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "debtor": "observer",
+                    "creditor": "fee_recipient",
+                    "amount": "5"
+                  },
+                  {
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "amount": "10"
+                  }
+                ]
+              },
+              "post": {
+                "state": {
+                  "flag": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "marker": {
+                    "type": "UInt",
+                    "value": "77"
+                  }
+                },
+                "balances": [
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "13"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "amount": "9"
+                  },
+                  {
+                    "account": "beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "40"
+                  },
+                  {
+                    "account": "fee_recipient",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "3"
+                  },
+                  {
+                    "account": "observer",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "11"
+                  },
+                  {
+                    "account": "reserve",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "amount": "57"
+                  }
+                ],
+                "liabilities": [
+                  {
+                    "name": "auditDuty",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "AUX",
+                      "scale": 0
+                    },
+                    "debtor": "observer",
+                    "creditor": "fee_recipient",
+                    "amount": "5"
+                  },
+                  {
+                    "name": "pay-beneficiary",
+                    "asset": {
+                      "network": "local",
+                      "issuer": "r151-financial-observation",
+                      "reference": "UNIT",
+                      "scale": 0
+                    },
+                    "debtor": "reserve",
+                    "creditor": "beneficiary",
+                    "amount": "0"
+                  }
+                ]
+              },
+              "steps": [
+                {
+                  "index": 3,
+                  "statement": {
+                    "kind": "Await",
+                    "label": "release",
+                    "binders": [
+                      {
+                        "name": "ready",
+                        "ty": "Bool"
+                      }
+                    ],
+                    "guard": 3
+                  },
+                  "value": {
+                    "type": "Bool",
+                    "value": true
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "30"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "2"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "68"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "10"
+                      }
+                    ]
+                  },
+                  "effects": []
+                },
+                {
+                  "index": 4,
+                  "statement": {
+                    "kind": "Transfer",
+                    "asset": "UNIT",
+                    "from": "reserve",
+                    "to": "beneficiary",
+                    "amount": 4
+                  },
+                  "value": {
+                    "type": "UInt",
+                    "value": "10"
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "40"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "2"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "58"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "10"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "Transfer",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "from": "reserve",
+                      "to": "beneficiary",
+                      "amount": "10"
+                    }
+                  ]
+                },
+                {
+                  "index": 5,
+                  "statement": {
+                    "kind": "Fee",
+                    "asset": "UNIT",
+                    "from": "reserve",
+                    "to": "fee_recipient",
+                    "amount": 5
+                  },
+                  "value": {
+                    "type": "UInt",
+                    "value": "1"
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "40"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "3"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "57"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "10"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "Fee",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "from": "reserve",
+                      "to": "fee_recipient",
+                      "amount": "1"
+                    }
+                  ]
+                },
+                {
+                  "index": 6,
+                  "statement": {
+                    "kind": "Discharge",
+                    "name": "pay-beneficiary",
+                    "amount": 6
+                  },
+                  "value": {
+                    "type": "UInt",
+                    "value": "10"
+                  },
+                  "snapshot": {
+                    "state": {
+                      "flag": {
+                        "type": "Bool",
+                        "value": true
+                      },
+                      "marker": {
+                        "type": "UInt",
+                        "value": "77"
+                      }
+                    },
+                    "balances": [
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "13"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "amount": "9"
+                      },
+                      {
+                        "account": "beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "40"
+                      },
+                      {
+                        "account": "fee_recipient",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "3"
+                      },
+                      {
+                        "account": "observer",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "11"
+                      },
+                      {
+                        "account": "reserve",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "amount": "57"
+                      }
+                    ],
+                    "liabilities": [
+                      {
+                        "name": "auditDuty",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "AUX",
+                          "scale": 0
+                        },
+                        "debtor": "observer",
+                        "creditor": "fee_recipient",
+                        "amount": "5"
+                      },
+                      {
+                        "name": "pay-beneficiary",
+                        "asset": {
+                          "network": "local",
+                          "issuer": "r151-financial-observation",
+                          "reference": "UNIT",
+                          "scale": 0
+                        },
+                        "debtor": "reserve",
+                        "creditor": "beneficiary",
+                        "amount": "0"
+                      }
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "Liability",
+                      "name": "pay-beneficiary",
+                      "asset": {
+                        "network": "local",
+                        "issuer": "r151-financial-observation",
+                        "reference": "UNIT",
+                        "scale": 0
+                      },
+                      "debtor": "reserve",
+                      "creditor": "beneficiary",
+                      "before": "10",
+                      "after": "0"
+                    }
+                  ]
+                }
+              ],
+              "effects": [
+                {
+                  "kind": "Transfer",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "from": "reserve",
+                  "to": "beneficiary",
+                  "amount": "10"
+                },
+                {
+                  "kind": "Fee",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "from": "reserve",
+                  "to": "fee_recipient",
+                  "amount": "1"
+                },
+                {
+                  "kind": "Liability",
+                  "name": "pay-beneficiary",
+                  "asset": {
+                    "network": "local",
+                    "issuer": "r151-financial-observation",
+                    "reference": "UNIT",
+                    "scale": 0
+                  },
+                  "debtor": "reserve",
+                  "creditor": "beneficiary",
+                  "before": "10",
+                  "after": "0"
+                }
+              ]
+            }
+          },
+          "committed": "15",
+          "attempted": "8",
+          "residual": [
+            {
+              "name": "auditDuty",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "AUX",
+                "scale": 0
+              },
+              "debtor": "observer",
+              "creditor": "fee_recipient",
+              "amount": "5"
+            }
+          ]
+        }
+      },
+      "accounting": {
+        "PublishedSegment": {
+          "effects": [
+            {
+              "kind": "Transfer",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "from": "reserve",
+              "to": "beneficiary",
+              "amount": "10"
+            },
+            {
+              "kind": "Fee",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "from": "reserve",
+              "to": "fee_recipient",
+              "amount": "1"
+            },
+            {
+              "kind": "Liability",
+              "name": "pay-beneficiary",
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "debtor": "reserve",
+              "creditor": "beneficiary",
+              "before": "10",
+              "after": "0"
+            }
+          ],
+          "accounts": [
+            {
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "account": "reserve",
+              "transfer_debit": {
+                "Exact": "10"
+              },
+              "transfer_receipts": {
+                "Exact": "0"
+              },
+              "fee_debit": {
+                "Exact": "1"
+              },
+              "fee_receipts": {
+                "Exact": "0"
+              },
+              "gross_debit": {
+                "Exact": "11"
+              },
+              "gross_receipts": {
+                "Exact": "0"
+              },
+              "net_flow": {
+                "Outflow": "11"
+              }
+            },
+            {
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "account": "beneficiary",
+              "transfer_debit": {
+                "Exact": "0"
+              },
+              "transfer_receipts": {
+                "Exact": "10"
+              },
+              "fee_debit": {
+                "Exact": "0"
+              },
+              "fee_receipts": {
+                "Exact": "0"
+              },
+              "gross_debit": {
+                "Exact": "0"
+              },
+              "gross_receipts": {
+                "Exact": "10"
+              },
+              "net_flow": {
+                "Inflow": "10"
+              }
+            },
+            {
+              "asset": {
+                "network": "local",
+                "issuer": "r151-financial-observation",
+                "reference": "UNIT",
+                "scale": 0
+              },
+              "account": "fee_recipient",
+              "transfer_debit": {
+                "Exact": "0"
+              },
+              "transfer_receipts": {
+                "Exact": "0"
+              },
+              "fee_debit": {
+                "Exact": "0"
+              },
+              "fee_receipts": {
+                "Exact": "1"
+              },
+              "gross_debit": {
+                "Exact": "0"
+              },
+              "gross_receipts": {
+                "Exact": "1"
+              },
+              "net_flow": {
+                "Inflow": "1"
+              }
+            }
+          ]
+        }
+      },
+      "tentative_publication": "PublishedSuccessfulSegment"
+    }
+  },
+  "work": {
+    "profile": "moriarty-reference-logical-cost/2",
+    "start": {
+      "statement_indices": [
+        0,
+        1,
+        2
+      ],
+      "statement_costs": [
+        "2",
+        "2",
+        "2"
+      ],
+      "await_entry_charge": "1",
+      "attempted": "7",
+      "committed_before": "0",
+      "committed_after": "7",
+      "emitted_steps": 3
+    },
+    "false_await": {
+      "statement_indices_evaluated": [
+        3
+      ],
+      "statement_costs": [
+        "2"
+      ],
+      "attempted": "2",
+      "committed_before": "7",
+      "committed_after": "7",
+      "published_segment": null,
+      "returned_continuation_identical": true
+    },
+    "true_resume": {
+      "statement_indices": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "statement_costs": [
+        "2",
+        "2",
+        "2",
+        "2"
+      ],
+      "attempted": "8",
+      "committed_before": "7",
+      "committed_after": "15",
+      "emitted_steps": 4
+    },
+    "chosen_invocation_attempt_total": "17",
+    "final_committed_total": "15",
+    "universal_financial_work": {
+      "status": "unavailable",
+      "reason": "unselected-universal-financial-schedule"
+    },
+    "raw_machine_work": {
+      "status": "unavailable",
+      "reason": "not-carried-by-Core2-stage-result"
+    },
+    "target_fee_dust_circuit_cost": {
+      "status": "unmeasured",
+      "reason": "not-observed-no-target-execution"
+    }
+  },
+  "local_failure_observation": {
+    "status": "PARAMETRIC_ONLY_NO_DIAGNOSTIC_INPUT_SELECTED",
+    "input_committed_prefix": {
+      "state": {
+        "flag": {
+          "type": "Bool",
+          "value": true
+        },
+        "marker": {
+          "type": "UInt",
+          "value": "77"
+        }
+      },
+      "balances": [
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "13"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "amount": "9"
+        },
+        {
+          "account": "beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "30"
+        },
+        {
+          "account": "fee_recipient",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "2"
+        },
+        {
+          "account": "observer",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "11"
+        },
+        {
+          "account": "reserve",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "amount": "68"
+        }
+      ],
+      "liabilities": [
+        {
+          "name": "auditDuty",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "AUX",
+            "scale": 0
+          },
+          "debtor": "observer",
+          "creditor": "fee_recipient",
+          "amount": "5"
+        },
+        {
+          "name": "pay-beneficiary",
+          "asset": {
+            "network": "local",
+            "issuer": "r151-financial-observation",
+            "reference": "UNIT",
+            "scale": 0
+          },
+          "debtor": "reserve",
+          "creditor": "beneficiary",
+          "amount": "10"
+        }
+      ]
+    },
+    "retained_positive_residual": [
+      {
+        "name": "auditDuty",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "debtor": "observer",
+        "creditor": "fee_recipient",
+        "amount": "5"
+      },
+      {
+        "name": "pay-beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "debtor": "reserve",
+        "creditor": "beneficiary",
+        "amount": "10"
+      }
+    ],
+    "result_constraint": "Err(StageRejection{error:E, attempted:A, committed:7}) for an existing actual resumed invocation at this prefix; E/A must come from independently bound diagnostic input, not invented here.",
+    "accounting": "RejectedNoPublishedDelta",
+    "tentative_publication": "UnavailableFromStageRejection",
+    "raw_error_expected": {
+      "status": "named-gap",
+      "id": "LOCAL-FAILURE-ERROR-INPUT"
+    },
+    "attempted_work_expected": {
+      "status": "named-gap",
+      "id": "LOCAL-FAILURE-ATTEMPTED-WORK-INPUT"
+    },
+    "failed_tentative_snapshot": {
+      "status": "unavailable",
+      "reason": "StageRejection-has-no-snapshot-field"
+    },
+    "failed_tentative_effects": {
+      "status": "unavailable",
+      "reason": "StageRejection-has-no-effects-field"
+    },
+    "returned_continuation": {
+      "status": "not-returned",
+      "reason": "StageRejection-has-no-continuation-field"
+    },
+    "captured_invocation_context": "Retain separately exact program/input continuation/event/cli action/cap; no fabricated returned rollback continuation or global ledger rollback."
+  },
+  "accounting_cross_checks": {
+    "first_payment": "30",
+    "first_source_fee": "2",
+    "first_discharge": "30",
+    "first_reserve": "68",
+    "first_liability": "10",
+    "first_gross_debit": "32",
+    "first_receipts": "30",
+    "final_reserve": "57",
+    "final_liability_row_present": true,
+    "final_liability_amount": "0",
+    "cumulative_payment": "40",
+    "cumulative_source_fees": "3",
+    "cumulative_gross_debit": "43",
+    "cumulative_receipts": "40",
+    "audit_duty_preserved": "5",
+    "UNIT_all_listed_balance_total": "111",
+    "AUX_all_listed_balance_total": "22",
+    "note": "AccountingAvailability itself reports only current published segment: resume gross11, not cumulative43."
+  },
+  "selected_positive_expected_gaps": [],
+  "local_failure_input_gaps": [
+    "LOCAL-FAILURE-ERROR-INPUT",
+    "LOCAL-FAILURE-ATTEMPTED-WORK-INPUT",
+    "LOCAL-FAILURE-EXACT-INVOCATION-CONTEXT"
+  ]
+}
