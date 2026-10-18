@@ -1,8 +1,9 @@
 # Observe a Core2 stage financial result
 
-Use `mori_core::sherlock_financial_projection::project_invocation` at the actual
-stage call site to retain the original program, inputs and complete returned
-result. This guide uses the existing retained-payment fixture and its false
+Use the owning `start_observed`/`resume_observed` API below to retain a same-call
+program/input/result record. `project_invocation` remains available for diagnostic
+manual capture; it cannot establish that arbitrary supplied inputs produced a
+supplied result. This guide uses the existing retained-payment fixture and its false
 then true events. The [API reference](../reference/financial-observation-adapter.md)
 defines the borrowed fields and accounting cases.
 
@@ -102,3 +103,31 @@ dependencies include the Midnight SDK. The local stage labels and objective
 language rules apply to public developer use; project review receipts introduce
 no maintainer permission step. The wider Sherlock financial producer,
 UIREQ-017/018/019 completion and native settlement retain their separate scope.
+
+
+## Use the owning call record
+
+The [reviewed producer candidate and actual positive check](../../results/sherlock-owning-financial-producer-20261018/README.md)
+use `financial-producer-integration` fixtures. Load the staged program, then call
+`start_observed(&program, action_string, scenario, cap)`. It returns a
+`ProducedInvocation` directly; inspect `raw_result()` for Waiting, Complete or
+Rejected. Clone a returned Waiting continuation before passing it, the next event
+and optional flags to `resume_observed`. The actual positive test feeds the false
+resume from the real start continuation and the true resume from that returned
+continuation; it does not refill actual values from expected JSON.
+
+Read `observation()` for full borrowed inputs/result/accounting, or call
+`publication()` for the shared JSON value. Neither invokes stage execution again.
+Retain the produced record and its external program for the borrow's lifetime.
+The publisher preserves local-stage qualification/authentication/consumption
+labels and existing status/work fields alongside `financial_observation`.
+Do not replace `segment: None` with an empty execution or use per-segment account
+aggregates as cumulative prefix history.
+
+The one exact positive test compared the complete values in memory. It saved no
+financial JSON report and did not execute CLI dispatch, file IO or stdout. The
+manual snippet above still has no separate execution receipt. The final source/result review recommends whole017 closure for this declared
+producer/adapter/shared-publication domain; Root owns adoption. Native, proof,
+settlement and later-failure claims remain separate.
+
+Root has now [adopted whole UIREQ-017](../../results/sherlock-owning-financial-producer-20261018/ROOT-FINANCIAL-PRODUCER-ADOPTION.json). The [current requirement report](../../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json) confirms fourteen current original closures. The source-only enclosing CLI and separate lowering, failure, authentication, proof and settlement qualifications above remain.

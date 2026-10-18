@@ -1,8 +1,9 @@
 # Core2 financial observation adapter
 
-Public Rust path: `mori_core::sherlock_financial_projection`. This module borrows
-the existing local Core/2 stage carriers and derives diagnostic accounting for
-one published successful segment. `stage::load`, `stage::start` and
+Public Rust path: `mori_core::sherlock_financial_projection`. The diagnostic projectors borrow
+the existing local Core/2 stage carriers and derive accounting for one published
+successful segment. The owning producer below also retains the input/result
+relationship of one actual call. `stage::load`, `stage::start` and
 `stage::resume` produce the program and results; projection does not execute
 them or establish that a supplied program/input produced a supplied result.
 See the [implementation](../../../crates/mori-core/src/sherlock/financial_projection.rs)
@@ -112,12 +113,58 @@ independent values. Equality helpers do not certify oracle independence, and
 Core/1 JSON decoding does not bind Core/2 Await-bearing steps by itself.
 
 R188 returned `APPROVE_SCOPED_RESULT` with preserved factual qualifications.
-The Core/2 first-paid-prefix scenario is observed; the general UIREQ-017 clause
-remains open for the Sherlock financial extension's producer/adapter
-relationship. UIREQ-018 universal lowering and UIREQ-019 later local failure
+At the R188 cut the Core/2 first-paid-prefix scenario was observed, while the
+general UIREQ-017 producer/adapter relationship remained open. The later owning
+producer and final review below address that separate relationship. UIREQ-018 universal lowering and UIREQ-019 later local failure
 remain open. The positive test does not exercise rejection, aggregate overflow,
 self-transfer or every helper. These results establish no financial circuit,
 native proof or ledger settlement. Existing H1 and native boundaries remain.
 
 See [observe a stage invocation](../how-to/observe-stage-financial-result.md)
 and [financial boundaries](../explanation/chunks-and-financial-boundaries.md).
+
+
+## Owning producer and shared publication
+
+The new reviewed candidate exposes these exact public functions in the same module:
+
+```rust
+pub fn start_observed<'p>(
+    program: &'p StagedProgram, action: String,
+    scenario: Scenario, cap: Option<UInt>,
+) -> ProducedInvocation<'p>;
+pub fn resume_observed<'p>(
+    program: &'p StagedProgram, continuation: Continuation,
+    event: StageEvent, cli_action: Option<String>, cli_cap: Option<UInt>,
+) -> ProducedInvocation<'p>;
+```
+
+Each calls the existing stage producer once and retains owned equal input values
+with its unmodified raw Result. Private fields prevent caller replacement of the
+input/result pair. `raw_result(&self)` returns
+`&Result<StageOutcome, StageRejection>`; `observation(&self)` returns the complete
+borrowed `InvocationObservation`; `publication(&self)` returns
+`Result<serde_json::Value, serde_json::Error>` without running the producer again.
+Keep the external `StagedProgram` alive while the produced record borrows it.
+Same-call ownership establishes no authentication, event provenance, continuation
+consumption, admission theorem or native correspondence.
+
+Serialization covers full program/plan and their digests, captured arguments,
+raw result, outcome, accounting and tentative publication. `publication()` keeps
+legacy status/segment/continuation/work/residual/error fields, adds
+`financial_observation`, and retains `qualification: local-reference-stage`,
+`authentication: none`, `consumption: untracked`. An absent segment remains absent;
+rejection provides no invented tentative state or replacement continuation.
+The real Core/2 CLI branch is wired to these functions in the candidate source.
+
+The [new ordinary result](../../results/sherlock-owning-financial-producer-20261018/README.md)
+passed normal Core/consumer compilation, one exact listing and one positive test,
+with all492 input pins unchanged. Its complete start/false/true comparisons and
+serialization are in memory; no actual financial JSON report was persisted.
+Enclosing CLI execution and non-None flag behavior remain unobserved. The final same-context review approves the actual result and installation and
+recommends closing whole017 for this declared Core/2 producer/adapter/publication
+domain. Root owns its separate semantic adoption; this documentation proposal
+does not itself change acceptance. Older R176/R189 records above retain
+their original consumers and scope. No old passing cohort was replayed.
+
+Root has now [adopted whole UIREQ-017](../../results/sherlock-owning-financial-producer-20261018/ROOT-FINANCIAL-PRODUCER-ADOPTION.json). The [current requirement report](../../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json) confirms fourteen current original closures. The source-only enclosing CLI and separate lowering, failure, authentication, proof and settlement qualifications above remain.
