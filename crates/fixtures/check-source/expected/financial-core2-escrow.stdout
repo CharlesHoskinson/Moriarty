@@ -1,0 +1,62 @@
+{
+  "actions": [
+    {
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "name": "deliver",
+      "statements": [
+        {
+          "amount": 0,
+          "asset": "CASH",
+          "from": "buyer",
+          "kind": "Transfer",
+          "to": "escrow"
+        },
+        {
+          "amount": 1,
+          "asset": "CASH",
+          "creditor": "seller",
+          "debtor": "escrow",
+          "kind": "Liability",
+          "name": "release"
+        },
+        {
+          "binders": [
+            {
+              "name": "ready",
+              "ty": "Bool"
+            }
+          ],
+          "guard": 2,
+          "kind": "Await",
+          "label": "delivery"
+        },
+        {
+          "amount": 3,
+          "asset": "CASH",
+          "from": "escrow",
+          "kind": "Transfer",
+          "to": "seller"
+        },
+        {
+          "amount": 4,
+          "kind": "Discharge",
+          "name": "release"
+        }
+      ]
+    }
+  ],
+  "agreement": "StagedEscrowCheck",
+  "authentication": "none",
+  "consumption": "untracked",
+  "diagnostics": [],
+  "file": "core2-escrow.mori",
+  "language": "moriarty/2",
+  "qualification": "local-reference-stage",
+  "source_hash": "2b6acd88611b5866bb74f04d850771e6a512be898c66ea4f2aeb0cb86d5475ed",
+  "status": "accepted"
+}
