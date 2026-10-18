@@ -1,0 +1,25 @@
+{
+  "reviewToken": "doctorwatson-publication-fixture-ordinary-review-20261017-a1-whole-review",
+  "verdict": "approve-source-integration",
+  "summary": "Source-only ordinary review approves candidate tree 518ed8c4aca3babc7682d862a70079cc8aa99a7b for source integration under DoctorWatson Task 2. In crates/mori/src/commands/compile.rs, the compile-dependent test helper artifact() is replaced by include_str!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/../fixtures/publication/transport-artifact.json\")) decoded via serde_json::from_str::<mori_backend::Artifact>, eliminating mori_core::parse and mori_backend::compile from test fixture construction. Production publisher code (compile::run, publish_artifact, publish_staged_artifact, and proof_io::publish_new) and all three original failure/order test bodies are unchanged. The added source_projection_is_published_with_complete_circuits_and_manifest test asserts exact raw byte transport and directory count (4) using independently frozen fixture payloads and the 35-byte projection literal without synthesizing or importing compiler output. Source inspection of mori_backend::Artifact::try_from, Target::validate, Resources registry decoders, authorization::decode_digest, and signed_relation::validate_shape confirms that the unsigned constructor path accepts the frozen 2424-byte JSON shape and preserves non-lexicographic circuit slice order (000-z_first.zkir, 001-a_second.zkir), optional source-projection.json, and terminal artifact.json marker via atomic hard-link staging in proof_io::publish_new. All Rust/Cargo tests remain UNRUN and all higher tiers/security judgments remain outside ordinary review scope.",
+  "findings": [],
+  "filesRead": [
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/SCOPE.json",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/PATCH.diff",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori/src/commands/compile.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/fixtures/publication/README.md",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/fixtures/publication/transport-artifact.json",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori/src/commands/proof_io.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori-backend/src/lib.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori-backend/src/signed_relation.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori-backend/src/authorization.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori-backend/src/liabilities.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/doctorwatson-publication-fixture-review-20261017-packet/candidate/crates/mori-backend/src/schnorr.rs"
+  ],
+  "limitations": [
+    "Source-only review of explicit packet files for candidate tree 518ed8c4aca3babc7682d862a70079cc8aa99a7b against base baf61ebd0cb49f2c4441cb7fa8de53b343e056dc; all Rust/Cargo compilation, serde decoder, and publication unit tests are UNRUN (no RED/GREEN execution).",
+    "Opaque ZKIR payload strings and placeholder digests/context constants in transport-artifact.json test raw byte transport and publication ordering only, never genuine compiled ZKIR, circuit relation validity, native proving/verification, or financial/ledger acceptance.",
+    "No native execution or resource admission, shell, Cargo, rustc, SDK, model, VM, proof, key, signing, wallet, ledger, or network operations were performed; all higher verification tiers and product gates remain unperformed/open.",
+    "Ordinary code/test review scope only; all hostile/security judgments belong exclusively to Opus."
+  ]
+}

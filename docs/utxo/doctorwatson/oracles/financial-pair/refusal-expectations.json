@@ -1,0 +1,60 @@
+{
+  "format":"doctorwatson-independent-refusal-expectations/1",
+  "status":"specified-only; cases are declarative input deltas, not run results",
+  "delta_rule":"Clone the named complete supplied Scenario, change only the listed JSON-pointer values. For a poststate-based case, use the named mori-tests.json case's expected.post as the complete Scenario state/balances/liabilities and the listed complete inputs. Never derive expected output from actual execution.",
+  "rollback_rule":"On every refusal there is no accepted Execution, no committed effects, no poststate and no success artifact. The borrowed Scenario remains byte-for-byte unchanged. Do not present the prestate as an emitted poststate. A private interpreter prefix, if any, is not a committed financial effect.",
+  "cases":[
+    {
+      "name":"invoice-before-first-due-day","source":"installment-invoice.mori","action":"collect","base_scenario":"invoice-first.scenario.json",
+      "replace":{"/inputs/atDay/value":"29"},
+      "expected_code":"mori::core::requires","failed_statement":1,"charged_logical_units":"8",
+      "financial_commit":"none; all five balances, both duties and all four state fields remain as supplied"
+    },
+    {
+      "name":"invoice-over-final-residual","source":"installment-invoice.mori","action":"collect","base_scenario":"invoice-final.scenario.json",
+      "replace":{"/inputs/amount/value":"81"},
+      "expected_code":"mori::core::requires","failed_statement":2,"charged_logical_units":"14",
+      "financial_commit":"none; all five balances, both duties and all four state fields remain as supplied"
+    },
+    {
+      "name":"invoice-positive-collection-after-full-discharge","source":"installment-invoice.mori","action":"collect","base_expected_post_case":"installment-final-80",
+      "inputs":{"amount":{"type":"UInt","value":"1"},"atDay":{"type":"UInt","value":"90"}},
+      "expected_code":"mori::core::requires","failed_statement":2,"charged_logical_units":"14",
+      "financial_commit":"none; invoice remains present-zero and warranty9 survives"
+    },
+    {
+      "name":"reserve-unapproved","source":"conditional-reserve.mori","action":"allocate","base_scenario":"reserve-approved.scenario.json",
+      "replace":{"/inputs/approved/value":false},
+      "expected_code":"mori::core::requires","failed_statement":0,"charged_logical_units":"5",
+      "financial_commit":"none; allocation remains absent, bond10/emergency2 and all seven balances/all three states survive"
+    },
+    {
+      "name":"reserve-repeat-closed","source":"conditional-reserve.mori","action":"allocate","base_expected_post_case":"approved-reserve-multiasset",
+      "inputs":{"approved":{"type":"Bool","value":true},"amount":{"type":"UInt","value":"50"},"bondAmount":{"type":"UInt","value":"7"}},
+      "expected_code":"mori::core::requires","failed_statement":0,"charged_logical_units":"5",
+      "financial_commit":"none; allocation stays present-zero, bond3/emergency2 and closed=true survive"
+    },
+    {
+      "name":"reserve-late-duty-overdischarge-rolls-back-every-asset","source":"conditional-reserve.mori","action":"allocate","base_scenario":"reserve-approved.scenario.json",
+      "replace":{"/inputs/bondAmount/value":"11"},
+      "expected_code":"mori::core::liability","failed_statement":10,"charged_logical_units":"35",
+      "financial_commit":"none; even prior CASH transfer50/fee2 and BOND transfer11 are rolled back, allocation remains absent, bond remains10, emergency remains2 and all supplied states survive"
+    },
+    {
+      "name":"invoice-one-unit-below-successful-logical-cap","source":"installment-invoice.mori","action":"collect","base_scenario":"invoice-first.scenario.json",
+      "logical_cap":"41","failed_statement":11,"charged_logical_units":"41",
+      "denied_charge":"Emit expression after its statement dispatch; no counter increment for denied unit",
+      "expected_code":null,"unresolved":"Exact metered resource error code/message requires an independent agreed diagnostic contract; do not infer a native fee failure.",
+      "financial_commit":"none; prior private prefix is not returned as an accepted execution"
+    },
+    {
+      "name":"reserve-one-unit-below-successful-logical-cap","source":"conditional-reserve.mori","action":"allocate","base_scenario":"reserve-approved.scenario.json",
+      "logical_cap":"44","failed_statement":14,"charged_logical_units":"44",
+      "denied_charge":"Emit expression after its statement dispatch; no counter increment for denied unit",
+      "expected_code":null,"unresolved":"Exact metered resource error code/message requires an independent agreed diagnostic contract; do not infer a native fee failure.",
+      "financial_commit":"none; all supplied balances, liabilities and states survive"
+    }
+  ],
+  "diagnostic_basis":"Requires/liability code spellings are the public moriarty-tests/1 examples in examples/core/native-liability/mori-tests.json, read statically. Human message bytes, source spans, ExprIds, full error DTO bytes and exact resource code are not independently specified here.",
+  "artifact_boundary":"These are source/reference financial refusals. They do not specify publication I/O or artifact decoder diagnostics; those separate consumer-oracle owners must retain original diagnostic objects and absence of success. No compile/proof/target consumer is run."
+}
