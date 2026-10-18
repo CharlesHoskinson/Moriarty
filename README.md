@@ -29,6 +29,12 @@ source catalogue, experimental compiler/backend, tests and evidence. These
 experiments remain distinct from the current Rust language and Midnight path.
 The Cardano Preprod end-to-end prototype and full UTXO compatibility remain open.
 
+[doctormoriarty&lt;utxo&gt;](docs/utxo/doctorwatson/ROADMAP-AUDIT.md), also named
+`doctorwatson<UTXO>`, tracks the retained EARS, remaining roadmap and
+[GitHub work items](docs/utxo/doctorwatson/github/issue-triage.md).
+Run `./scripts/doctorwatson-utxo.sh` for local requirement integrity and reporting
+regressions. A passing inventory is distinct from product or ledger acceptance.
+
 ## Mid-roadmap audit review
 
 The [October 14 review and audit plan](docs/audits/2026-10-14/README.md)

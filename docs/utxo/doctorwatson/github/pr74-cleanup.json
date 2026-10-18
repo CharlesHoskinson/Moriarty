@@ -1,0 +1,1524 @@
+{
+  "schema": "doctorwatson.pr74-source-cleanup/1",
+  "observed_at_utc": "2026-10-18T03:44:16.779465+00:00",
+  "scope": "source-only conflict cleanup; blocked draft, not approved for main merge",
+  "worktree": "/home/charl/Moriarty/.worktrees/utxo-main-merge-20261017",
+  "branch": "doctorwatson-utxo/pr74-integration-20261017",
+  "main_commit": "1721457439dbd6d988d00c6c86d1cf648caf2a0c",
+  "pr_head_commit": "0861c75254f33b92194db0542f224215d47269a8",
+  "merge_base_commit": "f7ff06ed05bcef5fc3540bdde70ddbf6402f5547",
+  "candidate_index_tree": "8d4804002b720cdae1c07046ddd81f1f94e5b535",
+  "merge_head": "0861c75254f33b92194db0542f224215d47269a8",
+  "head_unchanged": true,
+  "main_branch_not_mutated": true,
+  "github_metadata": {
+    "baseRefName": "main",
+    "baseRefOid": "f7ff06ed05bcef5fc3540bdde70ddbf6402f5547",
+    "body": "On `main`, `cargo test --workspace` had 19 failing tests, `cargo clippy` stopped on an error after about 350 warnings, and `cargo fmt --check` reported about 620 unformatted regions. No CI job ran the Rust crates. This PR makes all three pass and adds a `rust` workflow that runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace`. It also fixes several departures from `RUST_GUIDELINES.md`.\n\n## Errors and dependencies\n- **`anyhow` removed from `mori-ledger`.** The SDK's `ProvingProvider` trait returns `anyhow::Error`, but the SDK exports it as `ProvingError`, so the impl names that alias instead. Previously `prove_prepared_call` threw the prover's error away (`.map_err(|_| refusal(\"sdk-intent-proving\"))`). It now finds the refusal again inside the SDK's `TransactionProvingError::Proving` wrapping, so `snapshot-key-location`, `binding-changed-activity` and `proving-activity-mismatch` reach the caller. A unit test covers this.\n- `midnight-curves` and `midnight-proofs` are declared once in `[workspace.dependencies]`, which is now grouped.\n- The optional diagnostics on `mori-ledger`'s `Error` are boxed, which clears 266 `result_large_err` warnings. The large `SegmentRun` and `LoadedAuthorization` variants are boxed too. Where boxing would change a public error or outcome type used in dozens of places, the warning is allowed with a comment saying why.\n\n## Duplication\n- `mori-ledger` now depends on `mori-backend`. It reuses the backend's FENS Schnorr verifier through a thin adapter that keeps the ledger's `strict-fens-refusal` codes, its pinned SRS hashes and byte cap, and `mori-core`'s `hex`. The ledger's jubjub notice now points at the shared verifier and still covers `signed/constraints.rs`.\n- `mori-ledger`'s test support and Sherlock's `extra_oracle_programs.rs` are each loaded as a module once instead of four times.\n\n## The 19 failing tests\n- **3 `source_closure_coverage`.** The 35 Sherlock sources were never added to the ledger's source closure. They are now an appended list, and the backend files the ledger now uses are a second one. The frozen baseline and Core-stage lists are unchanged. The exclusion check matched `foo_tests.rs` as `tests.rs`; it now matches only whole path components.\n- **5 `check_compile_io`.** #71 made `compile` write `source-projection.json` before the circuits. It is now written after the circuits and before `artifact.json`, which stays the completion marker. That keeps the write-fault test checking circuit writes. The tests now expect the extra file.\n- **4 static-ABI tests (`check_static_compile_io` and `fee_pool_component`).** `templates_hash()` is a SHA-256 of the text of `ops.rs`. When e9a2b80b added one line to `ops.rs`, the example bindings' `templates_hash` and `abi_hash` went stale, so they are regenerated here. Any edit to `ops.rs`, including reformatting it, will make them stale again.\n- **1 `signed_installed_call`.** The signed-version check from a91e76b2 runs before any other input is read, so a legacy deployment profile is now refused as `signed-version`. The test still checks that the refusal happens before any key or attachment file is read.\n- **1 backend `proving`.** The reference liability registry from 7cb60de8 now refuses the wrong-party scenario. The hidden-name scenario is still accepted by the reference simulator.\n- **5 `call_artifacts`.** The fake 8 KiB prover key is now smaller than the signed public keyset, so it was enlarged to 128 KiB.\n\n## Hygiene\n- Hard-coded `/home/charl/...` paths are now repository-relative or based on `$HOME`.\n- Removed comments that are no longer true (\"not yet run\", `SOURCE_ONLY / UNRUN`) and authorship labels.\n- The workspace is formatted with rustfmt. Most of the diff is formatting; the generated Sherlock oracle files are unchanged.\n\n## Agent guidance\nBefore this PR, neither `AGENTS.md` nor the `moriarty-dev` plugin mentioned `RUST_GUIDELINES.md`.\n- `RUST_GUIDELINES.md` now states rules that the recent changes broke but that weren't written down:\n  - every Rust file builds and tests through Cargo, with no direct-`rustc` harness and no `#[path]` remounts;\n  - no test-only prototypes in `src/`;\n  - no identities hashed from source text;\n  - no absolute paths and no `anyhow` in library crates;\n  - the fmt, clippy and test gates;\n  - every `#[allow]` comes with a reason;\n  - comments explain the code, not the review process.\n- The develop skill sends Rust changes to the guidelines and a new `references/rust.md` checklist. Deviations need the maintainer's agreement first, the three cargo checks must pass before handoff, and reviewers check conformance to the guidelines.\n- `AGENTS.md` has a new Rust toolchain section saying the same, so agents that skip the plugin still see it.\n- The plugin version is now 0.1.2, and `test_guidance.py` checks the new checklist. Installed copies pick it up only after the plugin is re-synced and reinstalled through the README's upgrade procedure.\n\n## Verification (macOS, Rust 1.99.0)\n- `cargo fmt --all --check` passes.\n- `cargo clippy --workspace --all-targets --locked -- -D warnings` passes.\n- `cargo test --workspace --locked`: 890 passed, 0 failed, 5 ignored. On `main` it was 870 passed and 19 failed.\n- `models/sherlock/reference/check-reference.py` still passes (86 tests, 8 programs, 216 prefixes).\n- `test_guidance.py` (10 tests), `test_registration_pin.py` and `test_upgrade.py` pass. `test_compatibility.py` has one failure, `/var` vs `/private/var`, which fails the same way on `main`.\n- The new workflow has not run on Linux yet; this PR is its first run.\n\n## Notes for review\n- Formatting and the comment edits change the bytes of files that the audit records under `docs/audits/` pin by hash. They also change `mori-ledger`'s `source_closure()`, so locally saved deployment and key manifests need to be generated again.\n- No independent model reviews were run for this PR.\n\n## Follow-ups\nTiers 2\u20134 of the cleanup are filed as issues #76\u2013#88 and tracked in #89. Each issue gives a suggested fix and says what still needs maintainer input.\n",
+    "comments": [],
+    "commits": [
+      {
+        "authoredDate": "2026-10-16T02:34:05Z",
+        "authors": [
+          {
+            "email": "x@rvcas.dev",
+            "id": "MDQ6VXNlcjEyMDcwNTk4",
+            "login": "rvcas",
+            "name": "rvcas"
+          }
+        ],
+        "committedDate": "2026-10-16T02:34:05Z",
+        "messageBody": "Bring the crates added since the beta toolchain back in line with\nRUST_GUIDELINES.md and make main green under cargo fmt, clippy and test.\n\nErrors and dependencies\n- Drop anyhow from mori-ledger. Its ProvingProvider impl now names the\n  SDK's own ProvingError alias, and prove_prepared_call recovers the\n  prover's refusal (snapshot-key-location, binding-changed-activity,\n  proving-activity-mismatch) through the SDK's TransactionProvingError\n  wrapping instead of reporting every failure as sdk-intent-proving.\n- Declare midnight-curves and midnight-proofs in [workspace.dependencies]\n  and group the workspace dependencies.\n- Box the optional diagnostics on mori-ledger's Error, the large\n  SegmentRun and LoadedAuthorization variants, and fix the remaining\n  clippy warnings so clippy passes with -D warnings.\n\nDuplication\n- mori-ledger now depends on mori-backend and reuses its FENS Schnorr\n  verifier (wrapped in ledger refusal codes), pinned SRS hashes and byte\n  cap. mori-backend uses mori-core's hex. The ledger notice points at the\n  shared verifier and still covers constraints.rs.\n- Mount mori-ledger's test support and Sherlock's extra oracle programs\n  once instead of loading each file as several modules.\n\nTests that were failing on main (19)\n- Add the 35 Sherlock sources and the reused backend files to the ledger\n  source closure, and match excluded files by whole path component.\n- compile publishes source-projection.json after the circuits and before\n  the artifact.json completion marker; the compile tests expect it.\n- Expect signed-version for a legacy deployment profile, the reference\n  liability registry's refusal of the wrong-party scenario, and a test\n  key larger than the grown public keyset.\n- Regenerate the static bindings' templates and ABI hashes, stale since\n  ops.rs changed in e9a2b80b.\n\nHygiene\n- Replace hard-coded /home/charl paths with repository-relative ones.\n- Remove stale UNRUN, SOURCE_ONLY and authorship notes from comments.\n- Format the workspace with rustfmt.\n- Add a rust workflow running fmt, clippy -D warnings and the tests.",
+        "messageHeadline": "Clean up the Rust workspace and add Rust CI",
+        "oid": "e2b5786782c2bb02a36d9782db3faf4847345ff3"
+      },
+      {
+        "authoredDate": "2026-10-16T03:31:47Z",
+        "authors": [
+          {
+            "email": "x@rvcas.dev",
+            "id": "MDQ6VXNlcjEyMDcwNTk4",
+            "login": "rvcas",
+            "name": "rvcas"
+          }
+        ],
+        "committedDate": "2026-10-16T03:32:30Z",
+        "messageBody": "Agents working in crates/ had no instruction to read RUST_GUIDELINES.md:\nneither AGENTS.md nor the moriarty-dev plugin mentioned it.\n\n- RUST_GUIDELINES.md gains the rules recent changes broke without them\n  being written down: everything builds and tests through Cargo (no\n  direct-rustc harness, no #[path] remounts), no test-only prototypes in\n  src/, no identities hashed from source text, no absolute paths, no\n  anyhow in library crates, the fmt/clippy/test gates, justified\n  #[allow]s, and comments that explain code rather than process.\n- The develop skill points Rust changes at the guidelines and a new\n  references/rust.md checklist. Deviations need the maintainer's\n  agreement, the three cargo checks pass before handoff, and reviewers\n  check conformance.\n- AGENTS.md gets a Rust toolchain section saying the same, so agents\n  that skip the plugin still see it.\n- Plugin version 0.1.2; the guidance tests cover the new checklist.",
+        "messageHeadline": "Point agents at the Rust guidelines",
+        "oid": "0861c75254f33b92194db0542f224215d47269a8"
+      }
+    ],
+    "files": [
+      {
+        "path": ".github/workflows/rust.yml",
+        "additions": 63,
+        "deletions": 0,
+        "changeType": "ADDED"
+      },
+      {
+        "path": "AGENTS.md",
+        "additions": 11,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "Cargo.lock",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "Cargo.toml",
+        "additions": 20,
+        "deletions": 15,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "RUST_GUIDELINES.md",
+        "additions": 26,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/Cargo.toml",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/liabilities.rs",
+        "additions": 14,
+        "deletions": 14,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/lib.rs",
+        "additions": 56,
+        "deletions": 31,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/parameters.rs",
+        "additions": 4,
+        "deletions": 2,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/proving.rs",
+        "additions": 13,
+        "deletions": 13,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/schnorr.rs",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/signed_relation.rs",
+        "additions": 12,
+        "deletions": 12,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/source_projection.rs",
+        "additions": 65,
+        "deletions": 26,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/stage/artifact.rs",
+        "additions": 106,
+        "deletions": 39,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/stage/context.rs",
+        "additions": 7,
+        "deletions": 2,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/stage/frame.rs",
+        "additions": 78,
+        "deletions": 19,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/stage/lower.rs",
+        "additions": 86,
+        "deletions": 33,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/src/task4_native_driver.rs",
+        "additions": 11,
+        "deletions": 4,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/authorization.rs",
+        "additions": 2,
+        "deletions": 2,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/liabilities.rs",
+        "additions": 2,
+        "deletions": 6,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/proving.rs",
+        "additions": 18,
+        "deletions": 6,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/replay.rs",
+        "additions": 2,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/replay_challenge.rs",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/stage_relation.rs",
+        "additions": 68,
+        "deletions": 20,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-backend/tests/stages.rs",
+        "additions": 269,
+        "deletions": 57,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/intent.rs",
+        "additions": 3,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/lib.rs",
+        "additions": 9,
+        "deletions": 9,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/logical_cost.rs",
+        "additions": 4,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/parser.rs",
+        "additions": 39,
+        "deletions": 9,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/runtime.rs",
+        "additions": 92,
+        "deletions": 49,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/checkpoint_normal_tests.rs",
+        "additions": 251,
+        "deletions": 61,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/compare.rs",
+        "additions": 4,
+        "deletions": 12,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/compare_tests.rs",
+        "additions": 130,
+        "deletions": 40,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/draft_image_bridge.rs",
+        "additions": 30,
+        "deletions": 11,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/draft_image_bridge_tests.rs",
+        "additions": 53,
+        "deletions": 28,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/draft_source.rs",
+        "additions": 313,
+        "deletions": 75,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/draft_source_tests.rs",
+        "additions": 198,
+        "deletions": 75,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/draft_typecheck.rs",
+        "additions": 124,
+        "deletions": 38,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/draft_typecheck_tests.rs",
+        "additions": 91,
+        "deletions": 25,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/extra_oracle_programs.rs",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_call_adapter.rs",
+        "additions": 288,
+        "deletions": 92,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_call_adapter_tests.rs",
+        "additions": 296,
+        "deletions": 78,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_schedule.rs",
+        "additions": 322,
+        "deletions": 91,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_schedule_tests.rs",
+        "additions": 538,
+        "deletions": 124,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/image_reference.rs",
+        "additions": 253,
+        "deletions": 84,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/image_reference_tests.rs",
+        "additions": 32,
+        "deletions": 20,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/machine_image.rs",
+        "additions": 430,
+        "deletions": 117,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/machine_image_tests.rs",
+        "additions": 263,
+        "deletions": 69,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/mod.rs",
+        "additions": 4,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/program_image.rs",
+        "additions": 98,
+        "deletions": 31,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/program_image_oracles.rs",
+        "additions": 150,
+        "deletions": 30,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/program_image_tests.rs",
+        "additions": 468,
+        "deletions": 129,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/reference_display.rs",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
+        "additions": 110,
+        "deletions": 31,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/reference_slice.rs",
+        "additions": 11,
+        "deletions": 5,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/reference_slice_tests.rs",
+        "additions": 78,
+        "deletions": 39,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/resource_tests.rs",
+        "additions": 5,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+        "additions": 287,
+        "deletions": 94,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/source_adapter_tests.rs",
+        "additions": 198,
+        "deletions": 60,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/source_origin_normal_tests.rs",
+        "additions": 140,
+        "deletions": 54,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/source_sponsor.rs",
+        "additions": 2,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/stage/admit.rs",
+        "additions": 28,
+        "deletions": 10,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/stage/cost.rs",
+        "additions": 54,
+        "deletions": 20,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/stage/decode.rs",
+        "additions": 11,
+        "deletions": 3,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/stage/mod.rs",
+        "additions": 2,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/stage/plan.rs",
+        "additions": 30,
+        "deletions": 11,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/src/stage/validate.rs",
+        "additions": 11,
+        "deletions": 8,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/compat_v1.rs",
+        "additions": 20,
+        "deletions": 5,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/continuations.rs",
+        "additions": 327,
+        "deletions": 48,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/fixtures/continuations/normal-oracle.json",
+        "additions": 14,
+        "deletions": 14,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/language.rs",
+        "additions": 1,
+        "deletions": 2,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/metered_intents.rs",
+        "additions": 2,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/source_sponsor.rs",
+        "additions": 2,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/stage_hostile.rs",
+        "additions": 140,
+        "deletions": 41,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-core/tests/stage_static_cost.rs",
+        "additions": 149,
+        "deletions": 40,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/Cargo.toml",
+        "additions": 3,
+        "deletions": 3,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/codec.rs",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/custody.rs",
+        "additions": 11,
+        "deletions": 13,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/lib.rs",
+        "additions": 12,
+        "deletions": 6,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/local_deployment.rs",
+        "additions": 3,
+        "deletions": 4,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/parameters.rs",
+        "additions": 1,
+        "deletions": 27,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/prepare.rs",
+        "additions": 28,
+        "deletions": 26,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/proving.rs",
+        "additions": 188,
+        "deletions": 111,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/relation/compiler.rs",
+        "additions": 8,
+        "deletions": 7,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/signed/deployment.rs",
+        "additions": 2,
+        "deletions": 0,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/signed/nonce.rs",
+        "additions": 1,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/signed/preparation.rs",
+        "additions": 2,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/signed/schnorr.rs",
+        "additions": 24,
+        "deletions": 98,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/signed/tests.rs",
+        "additions": 6,
+        "deletions": 7,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/src/static_compile.rs",
+        "additions": 4,
+        "deletions": 4,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/tests/call_artifacts.rs",
+        "additions": 3,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/tests/core_profile_refusals.rs",
+        "additions": 4,
+        "deletions": 1,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/tests/duty_reads_source.rs",
+        "additions": 12,
+        "deletions": 20,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/tests/relation.rs",
+        "additions": 12,
+        "deletions": 13,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/tests/source_closure_coverage.rs",
+        "additions": 123,
+        "deletions": 18,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/tests/static_compile.rs",
+        "additions": 4,
+        "deletions": 8,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori-ledger/third-party/jubjub-fens/NOTICE.md",
+        "additions": 3,
+        "deletions": 3,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori/src/commands/compile.rs",
+        "additions": 18,
+        "deletions": 7,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori/src/commands/inspect.rs",
+        "additions": 10,
+        "deletions": 2,
+        "changeType": "MODIFIED"
+      },
+      {
+        "path": "crates/mori/src/commands/replay.rs",
+        "additions": 4,
+        "deletions": 4,
+        "changeType": "MODIFIED"
+      }
+    ],
+    "headRefName": "chore/rust-tier1-cleanup",
+    "headRefOid": "0861c75254f33b92194db0542f224215d47269a8",
+    "mergeStateStatus": "DIRTY",
+    "mergeable": "CONFLICTING",
+    "number": 74,
+    "reviews": [],
+    "state": "OPEN",
+    "title": "Clean up the Rust workspace, add Rust CI and point agents at the guidelines",
+    "url": "https://github.com/CharlesHoskinson/Moriarty/pull/74"
+  },
+  "github_base_note": "baseRefOid equals merge base f7ff06ed and is ancestor of local main17214574; it is not a newer main tip.",
+  "conflict_count": 2,
+  "resolutions": [
+    {
+      "path": "crates/mori-core/src/lib.rs",
+      "kind": "content conflict",
+      "resolution": "Keep main sherlock_bounded_source public API/comment; retain PR declaration ordering with one replay, runtime and stage declaration."
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
+      "kind": "content conflict",
+      "resolution": "Keep main normal_oracle_inputs imports; retain PR formatting in remaining file. Do not reintroduce duplicate typed normal_program implementations."
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/normal_oracle_inputs.rs",
+      "kind": "dependent module integration",
+      "resolution": "Import sibling extra_oracle_programs now declared once by PR in sherlock/mod.rs; preserve all normal typed input definitions and main consumers."
+    },
+    {
+      "path": ".github/workflows/rust.yml",
+      "kind": "user policy reconciliation",
+      "resolution": "Retain optional workflow_dispatch only; remove push/pull_request triggers. No workflow dispatched."
+    },
+    {
+      "path": "AGENTS.md; RUST_GUIDELINES.md; plugin README/develop SKILL/rust checklist/test_guidance",
+      "kind": "guidance reconciliation",
+      "resolution": "Preserve current AGENTS Opus4.8/5.5 high, Gemini4 Argon high nonsecurity reviewer, Sol author, noForeman/localCI/native0 rules. Keep useful Rust checklist; replace extra maintainer agreement and unconditional pre-handoff Cargo execution with current user authorization, inspected local scope, source-only unrun reporting. Cargo commands documented with locked flags."
+    },
+    {
+      "path": "crates/mori-core/tests/fixtures/continuations/normal-oracle.json; examples/core/continuations/normal-oracle.json",
+      "kind": "frozen provenance preservation",
+      "resolution": "Restore exact pinned-main bytes; incoming PR path-only cleanup would rewrite historical oracle provenance. No oracle regenerated."
+    }
+  ],
+  "candidate_changed_paths_count": 114,
+  "candidate_diff_stat": "114 files changed, 7993 insertions(+), 2591 deletions(-)",
+  "manifest": [
+    {
+      "path": ".github/workflows/rust.yml",
+      "main_sha256": null,
+      "pr_head_sha256": "e77bdfc72227f73a05b4dffd917e6b9f637eb0e0321207549fef0666e0a9e80f",
+      "candidate_sha256": "6c661efbd788898b7d2b64f2b5288cc0ee5102d0f1d23050dcf47c2a13db3d9a"
+    },
+    {
+      "path": "AGENTS.md",
+      "main_sha256": "bb72341075ddbdc61fd7d2f7b239505963e2794c3a33654db7f6221e3f389196",
+      "pr_head_sha256": "81fb446f6f45a2c74ccd825a0a57a4ea954e05e06ec009ff50586eeec23e3604",
+      "candidate_sha256": "f058c13f2ff40192dc55a7ef729dfcd02291494c649797bdc132ed4cc8ee163a"
+    },
+    {
+      "path": "Cargo.lock",
+      "main_sha256": "dfffb853b47a7b2d0d1b80a64bb3e826d64d66f247881603b6fc31c8e3e34003",
+      "pr_head_sha256": "659ca9ca7df02e4ff4e3c2b424fa2d6b95d73e596fdf85d0046df423ced4dbb5",
+      "candidate_sha256": "659ca9ca7df02e4ff4e3c2b424fa2d6b95d73e596fdf85d0046df423ced4dbb5"
+    },
+    {
+      "path": "Cargo.toml",
+      "main_sha256": "dea75cec40896a7aab9f561b9bd26ee5457ff9c46c6dd7522a6a5bccac048e2a",
+      "pr_head_sha256": "91e489de70caf1cd51fa77169a269617e402bca14f47f7c5cbd0bfe6e11b7c76",
+      "candidate_sha256": "91e489de70caf1cd51fa77169a269617e402bca14f47f7c5cbd0bfe6e11b7c76"
+    },
+    {
+      "path": "RUST_GUIDELINES.md",
+      "main_sha256": "7faaf005fc60012a4e380a2c5b2f68c48c956f6d53964dc45fd7709ad9b70ed3",
+      "pr_head_sha256": "b6dec98f74e62708f7d3662a38b3f5f7b3dd060ecbbf0e9723e36895791e2f83",
+      "candidate_sha256": "dbc4781f8bfda258ce281d6957e870e41d77e2a414f2a91aab119d69db2650c8"
+    },
+    {
+      "path": "crates/mori-backend/Cargo.toml",
+      "main_sha256": "ffc9b90aa57486c910077f0308cabab16f94003dceaa7e2d30ca4cf1ea570be7",
+      "pr_head_sha256": "a5e869229b539d46eed4688d1a25edd8b2a591f2b982d6ac4e3d47a62406776c",
+      "candidate_sha256": "a5e869229b539d46eed4688d1a25edd8b2a591f2b982d6ac4e3d47a62406776c"
+    },
+    {
+      "path": "crates/mori-backend/src/liabilities.rs",
+      "main_sha256": "5706d938f5d7a0afe9fc58adb4ec192683d18c07f0924a70c7c1777e6814e10c",
+      "pr_head_sha256": "c05a718c201db4c437bb6aa8df7fd97d81600541181a09d2f03be4a55ca3cb24",
+      "candidate_sha256": "c05a718c201db4c437bb6aa8df7fd97d81600541181a09d2f03be4a55ca3cb24"
+    },
+    {
+      "path": "crates/mori-backend/src/lib.rs",
+      "main_sha256": "dcc9f256a05c4d2d85b18aa8c8a20572440995807bc233c0adfc6e5b8d5c0263",
+      "pr_head_sha256": "32c44eb6660058977a2b4f591fe72f528286f9e14c48516871fee0531142a7e8",
+      "candidate_sha256": "3ad0862058adbdc9b9a080f644fec7aa1721d70f115cdf8a08f5ef45cbdf2259"
+    },
+    {
+      "path": "crates/mori-backend/src/parameters.rs",
+      "main_sha256": "12db590a334ea76bee475ade3e0daf9058d4903d2224787d3ca58c6c3457b53d",
+      "pr_head_sha256": "82136c51411bfcd5b219d7b5b49f377c66c34ab66b6702cbf0ca5e50236829b6",
+      "candidate_sha256": "82136c51411bfcd5b219d7b5b49f377c66c34ab66b6702cbf0ca5e50236829b6"
+    },
+    {
+      "path": "crates/mori-backend/src/proving.rs",
+      "main_sha256": "b1c26193104ad52ef561ec53646911603dcda87ee39f40e1062d7929658822e4",
+      "pr_head_sha256": "eaf44650f81d0570b79fd7e8746a9c7d49d7856b6b87e9cd6cc072e8ac7941d8",
+      "candidate_sha256": "eaf44650f81d0570b79fd7e8746a9c7d49d7856b6b87e9cd6cc072e8ac7941d8"
+    },
+    {
+      "path": "crates/mori-backend/src/schnorr.rs",
+      "main_sha256": "4cfe926023430a5e1576106f51ac3895f859be5611337dfeff13da08f1c36343",
+      "pr_head_sha256": "ee1d36a7ced2c55ab4a495446fb1905594a9b718a72f5e64f3a30b32fe29b1fe",
+      "candidate_sha256": "ee1d36a7ced2c55ab4a495446fb1905594a9b718a72f5e64f3a30b32fe29b1fe"
+    },
+    {
+      "path": "crates/mori-backend/src/signed_relation.rs",
+      "main_sha256": "7a810ed1b06e5fe73b11478e910d2d2baf987a6114a96aed993f4ffa12192b03",
+      "pr_head_sha256": "8c78c341c4a7d1611486402d882e004529555d4eb9557d884575575c9d5611c1",
+      "candidate_sha256": "8c78c341c4a7d1611486402d882e004529555d4eb9557d884575575c9d5611c1"
+    },
+    {
+      "path": "crates/mori-backend/src/source_projection.rs",
+      "main_sha256": "e346ca735246d4339c5d32ce684bff7ff0dc790a412ef59b59c06b31313ed6d5",
+      "pr_head_sha256": "3b82d09a511d8420e13ed60c6adf5d7a171ff2aa8e1223a5b8821218541551b6",
+      "candidate_sha256": "3b82d09a511d8420e13ed60c6adf5d7a171ff2aa8e1223a5b8821218541551b6"
+    },
+    {
+      "path": "crates/mori-backend/src/stage/artifact.rs",
+      "main_sha256": "f753fe36b9295f61d58b13b13f3e820fb8afb9b958d365d45c2581e0abf3fdc6",
+      "pr_head_sha256": "cf792142ec2ed0eec84b5fec5dbaa81eecdac18f3ac11cae0a8c08ca9759db72",
+      "candidate_sha256": "cf792142ec2ed0eec84b5fec5dbaa81eecdac18f3ac11cae0a8c08ca9759db72"
+    },
+    {
+      "path": "crates/mori-backend/src/stage/context.rs",
+      "main_sha256": "7a380e9bea22289e8185b7d72af4abbb01dcf60c33bcd1d6757ce9bea46f4b34",
+      "pr_head_sha256": "4227f30bc406f5380c85f169a118cdb0ca60326dc482ba4faedbadeccfc4e73b",
+      "candidate_sha256": "4227f30bc406f5380c85f169a118cdb0ca60326dc482ba4faedbadeccfc4e73b"
+    },
+    {
+      "path": "crates/mori-backend/src/stage/frame.rs",
+      "main_sha256": "d13bb9f7f5dc36bc955cba03fcc660b24fd6081371ca77a120d29cdf6d65ff2f",
+      "pr_head_sha256": "5745daaf59f6c9aec50aaafa9ba2bdd4032c15941d7b8ea736b59a4db7e5b6f3",
+      "candidate_sha256": "5745daaf59f6c9aec50aaafa9ba2bdd4032c15941d7b8ea736b59a4db7e5b6f3"
+    },
+    {
+      "path": "crates/mori-backend/src/stage/lower.rs",
+      "main_sha256": "0e3d7aacc96b4379a235761bd25fb9478c4ab6ff70d7cd3649acb11b7e796724",
+      "pr_head_sha256": "4e1b1d782acb54c8c7e4c0cd2ee385ff7f5236cd36425083626c227770c74c81",
+      "candidate_sha256": "4e1b1d782acb54c8c7e4c0cd2ee385ff7f5236cd36425083626c227770c74c81"
+    },
+    {
+      "path": "crates/mori-backend/src/task4_native_driver.rs",
+      "main_sha256": "6e279fe905fb29c1f9cb91992fb76383e2f9463799494b941203d369074890ba",
+      "pr_head_sha256": "cb13de503aad41e726bfe2847fc6bf214e48f057aa0ee5bddfe2fadf7c764647",
+      "candidate_sha256": "cb13de503aad41e726bfe2847fc6bf214e48f057aa0ee5bddfe2fadf7c764647"
+    },
+    {
+      "path": "crates/mori-backend/tests/authorization.rs",
+      "main_sha256": "77f5904d057049863a6b12cc13057f84b646448bc3e31804612eff58b85e417e",
+      "pr_head_sha256": "05b5300e55e5c5e9333f33ee7fd882517787013b89053f93b8d399c89f4ec17f",
+      "candidate_sha256": "05b5300e55e5c5e9333f33ee7fd882517787013b89053f93b8d399c89f4ec17f"
+    },
+    {
+      "path": "crates/mori-backend/tests/liabilities.rs",
+      "main_sha256": "123dbb647ac64fcd44ced4fe9f79a4247e69118579be956a3a9c00f3a8c30a9d",
+      "pr_head_sha256": "1aa8c82148efd48868f4a105ff62232d5bb266776842016561af0f1ce6516d6d",
+      "candidate_sha256": "1aa8c82148efd48868f4a105ff62232d5bb266776842016561af0f1ce6516d6d"
+    },
+    {
+      "path": "crates/mori-backend/tests/proving.rs",
+      "main_sha256": "e848820a646448aa041a3966467c4ec335198342421b4362021da9cd5a3e733d",
+      "pr_head_sha256": "818a63ab4d2a3857ff9d6d553778276e29151d2395f496ff3812184081aa42c1",
+      "candidate_sha256": "818a63ab4d2a3857ff9d6d553778276e29151d2395f496ff3812184081aa42c1"
+    },
+    {
+      "path": "crates/mori-backend/tests/replay.rs",
+      "main_sha256": "bec93b8a1f0cea4ea0ba8c1003e5e90ec932768480a5e7969d98c1e8bc895995",
+      "pr_head_sha256": "7a16efb274230ce4e9c0c4e3d95efa2bb9ee35fba021ee26f511ce74a1dd7f03",
+      "candidate_sha256": "7a16efb274230ce4e9c0c4e3d95efa2bb9ee35fba021ee26f511ce74a1dd7f03"
+    },
+    {
+      "path": "crates/mori-backend/tests/replay_challenge.rs",
+      "main_sha256": "a8c544db40a05afd836b5d56d773a754c1a73a45831c0743f8c97b089cb7de43",
+      "pr_head_sha256": "96fbe34103ac09bba3c59d83a84ab48cb333ff91750b86321fb6c634d9a638a1",
+      "candidate_sha256": "96fbe34103ac09bba3c59d83a84ab48cb333ff91750b86321fb6c634d9a638a1"
+    },
+    {
+      "path": "crates/mori-backend/tests/stage_relation.rs",
+      "main_sha256": "3c5d011149d157feb5b7b99eb81661522cc9ab2b2bb1b40079802d96d3119a8b",
+      "pr_head_sha256": "ed2c5aa90fcf1b8a63685acfcfc769923964e9ea699f787913e236809792e4ad",
+      "candidate_sha256": "ed2c5aa90fcf1b8a63685acfcfc769923964e9ea699f787913e236809792e4ad"
+    },
+    {
+      "path": "crates/mori-backend/tests/stages.rs",
+      "main_sha256": "217c75af42e94b5f01087ccc04d3cb254cf7c50908041a138575ce6e8c51e1e1",
+      "pr_head_sha256": "10b757f45bbba0a2e68d88fbc4c3ca776b01ee4fb954e5923a3514f4246dd491",
+      "candidate_sha256": "10b757f45bbba0a2e68d88fbc4c3ca776b01ee4fb954e5923a3514f4246dd491"
+    },
+    {
+      "path": "crates/mori-core/src/intent.rs",
+      "main_sha256": "a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c",
+      "pr_head_sha256": "cb69505636fa017f473749e33b1772ef06813f061c68b15919e76b355cd815da",
+      "candidate_sha256": "cb69505636fa017f473749e33b1772ef06813f061c68b15919e76b355cd815da"
+    },
+    {
+      "path": "crates/mori-core/src/lib.rs",
+      "main_sha256": "df45168fa300562f532577739731c257d016a387fc943b25975ae46e3968a2fa",
+      "pr_head_sha256": "3c9a18831f72f2f8e8c428f6d09667eae25f133ae205784617ce82bb16da3c18",
+      "candidate_sha256": "b33afe9a9f7a32d0c4b10211fa139bca5d1a8741ba61ee4df8acebbcd5f8304a"
+    },
+    {
+      "path": "crates/mori-core/src/logical_cost.rs",
+      "main_sha256": "0aa110259dbc7f5aad2b3d0edab95e7b40f63b704ce4c06eb971be2e7df5ee8d",
+      "pr_head_sha256": "8c1b38da8cbefb5f3bb83e89fc1fb471410e3886fc50b74e2af8c0d9dc9636cc",
+      "candidate_sha256": "8c1b38da8cbefb5f3bb83e89fc1fb471410e3886fc50b74e2af8c0d9dc9636cc"
+    },
+    {
+      "path": "crates/mori-core/src/parser.rs",
+      "main_sha256": "83c8d4fabbd5837517c43353528545a783784e202aa913f7924a5d72c50abed2",
+      "pr_head_sha256": "587e8b024ae16d513c5e6d6ef4929e4140bbfc7d2a716b5d38781645cb7c7275",
+      "candidate_sha256": "587e8b024ae16d513c5e6d6ef4929e4140bbfc7d2a716b5d38781645cb7c7275"
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "main_sha256": "7c736b2f817c3dc095df27d96744369c3357c758267f9838564c8f9e583ac27d",
+      "pr_head_sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930",
+      "candidate_sha256": "eceac176f673180e83533ce55a99afa5bdf3f97a548bbb1c463dac3f84c83930"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/checkpoint_normal_tests.rs",
+      "main_sha256": "058255534914b7e2b28fe6455c2d0fc783e901ba7908305c0f30b093f19858a7",
+      "pr_head_sha256": "fe7259f67468ff9855ddaf0813e706722af271e7e44fd4e10a50528284a13f28",
+      "candidate_sha256": "fe7259f67468ff9855ddaf0813e706722af271e7e44fd4e10a50528284a13f28"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/compare.rs",
+      "main_sha256": "775f0c3825a8dff5fd700a539e0e24e4421674f0fab4d54d757da0b24615a216",
+      "pr_head_sha256": "3da77b80e7308e5b2a2e493ebc896a9410fa169fec907fdb29d5cc2133101e36",
+      "candidate_sha256": "3da77b80e7308e5b2a2e493ebc896a9410fa169fec907fdb29d5cc2133101e36"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/compare_tests.rs",
+      "main_sha256": "21b05b053a773797dad2bbc2cc772a744392476533fe74011d307d68e162a61f",
+      "pr_head_sha256": "6b9de6d44b774aba160fd9c5409c09d73c84631944e2a20503f2eec7d4d1ad14",
+      "candidate_sha256": "6b9de6d44b774aba160fd9c5409c09d73c84631944e2a20503f2eec7d4d1ad14"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/draft_image_bridge.rs",
+      "main_sha256": "6e559d6168100a365e9848b1df6e64c6967b13794b0424bb76403563f1a6eca6",
+      "pr_head_sha256": "7a6597bced9337fdd2c16110009ff47eef5a9125a6c33a7723b59ccd0562ac2d",
+      "candidate_sha256": "7a6597bced9337fdd2c16110009ff47eef5a9125a6c33a7723b59ccd0562ac2d"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/draft_image_bridge_tests.rs",
+      "main_sha256": "a4c8f28cae5aa1a1bc35a9f1acd67104d5ec16c1a4b3a9026b6ea51b6f8fe0c4",
+      "pr_head_sha256": "5fb1c6ad3327b73c1f7ddafb73e9b41ed03b734c20901787458fc2539e8fd165",
+      "candidate_sha256": "5fb1c6ad3327b73c1f7ddafb73e9b41ed03b734c20901787458fc2539e8fd165"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/draft_source.rs",
+      "main_sha256": "a5f721aaccdd22ec0ac3ef3e7f6f0deffbdbae6d6e992dafd494d46feaa88784",
+      "pr_head_sha256": "c4de1fe4132d1cdfd2d68245c50ce927383190ce8dfc1d655b5e60eb3ff8fe99",
+      "candidate_sha256": "c4de1fe4132d1cdfd2d68245c50ce927383190ce8dfc1d655b5e60eb3ff8fe99"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/draft_source_tests.rs",
+      "main_sha256": "c128eebbddc0056f963f858ea13feba2faef608a20b53e0c85bb76d92129ad99",
+      "pr_head_sha256": "efeaa026e4e50bff03d2cfc53f99bdb8d84c8c8a9c9ce8b09fc0ab225ba98b77",
+      "candidate_sha256": "efeaa026e4e50bff03d2cfc53f99bdb8d84c8c8a9c9ce8b09fc0ab225ba98b77"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/draft_typecheck.rs",
+      "main_sha256": "dbe4104c4ece1c45523dc0504ee21b64726fa882bac5cc870bd729308897f1c6",
+      "pr_head_sha256": "63c55ac52589d9324321eca03a2ab412c175669e914afdccfb4a6607312664f8",
+      "candidate_sha256": "63c55ac52589d9324321eca03a2ab412c175669e914afdccfb4a6607312664f8"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/draft_typecheck_tests.rs",
+      "main_sha256": "80688b1771281e592b82518f14fbdfe8ba1f609eee0b9dafac1eaa3bff373179",
+      "pr_head_sha256": "de4653c600c5d8d3de9c82fb9caa1bbe54d134a00ebe09d6309513be200ed9b6",
+      "candidate_sha256": "de4653c600c5d8d3de9c82fb9caa1bbe54d134a00ebe09d6309513be200ed9b6"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/extra_oracle_programs.rs",
+      "main_sha256": "e0c6819d9389d04a71bed0e56cb0f91661b67db5deb828060fb0d5f861a5f152",
+      "pr_head_sha256": "018be3f63a596c496c7033344b28a8efd54cf4b39e80c9f411a6d515e51fac16",
+      "candidate_sha256": "018be3f63a596c496c7033344b28a8efd54cf4b39e80c9f411a6d515e51fac16"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_call_adapter.rs",
+      "main_sha256": "8fcb8d3f5efc7e944734d3d1ce5d58ad2a8bbedce75083117ab17de926831e37",
+      "pr_head_sha256": "787d95f590f0066e72a8e34097e9975af701d20b5dce358b2a4bead2151aca51",
+      "candidate_sha256": "787d95f590f0066e72a8e34097e9975af701d20b5dce358b2a4bead2151aca51"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_call_adapter_tests.rs",
+      "main_sha256": "891d56782d0d043b66d92c485cc680893172812c7428b1ec8d21f075c54641b7",
+      "pr_head_sha256": "ea8f8902df76060a50d9f432ec6902f4aec8462c909ed81a875e6b630d2249f2",
+      "candidate_sha256": "ea8f8902df76060a50d9f432ec6902f4aec8462c909ed81a875e6b630d2249f2"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_schedule.rs",
+      "main_sha256": "8deb79088d4c69e193b31f4017d63051e38e643dc0d7421c7730827a0a4502c1",
+      "pr_head_sha256": "6dc655c5a37c7902dddbaa8fb315fb5dc299c1b4804e5bcc81368654806dccd0",
+      "candidate_sha256": "6dc655c5a37c7902dddbaa8fb315fb5dc299c1b4804e5bcc81368654806dccd0"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_schedule_tests.rs",
+      "main_sha256": "4965cf61613a86a9311c7d58ed57bcf08ec05e184012a0c68436b9df3ed10188",
+      "pr_head_sha256": "d15ebd8b1fcad553251d273de431c0c88fc894195e6d0d92a634161061315f1e",
+      "candidate_sha256": "d15ebd8b1fcad553251d273de431c0c88fc894195e6d0d92a634161061315f1e"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/image_reference.rs",
+      "main_sha256": "ee85e6a2b8b2d1d63c425b7a942689933b5129b16106b6ce4797cc74fc92daa7",
+      "pr_head_sha256": "674411b3eb153288d5381eaec52150efcef7fbbd711667de06d0b26a7249fd05",
+      "candidate_sha256": "5f1f8f99abbce721a18876670a0ddabcc54df3fc02a5b9a21063b8ee4d0872a2"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/image_reference_tests.rs",
+      "main_sha256": "36b3eccf185c04b331683817c36e3322ab53bee64020df72ce67d5d040b2506f",
+      "pr_head_sha256": "6459aaddba3e8c13d02cc3d9e5a3eb8cd891bee730ecb89b1f3987e941347842",
+      "candidate_sha256": "6459aaddba3e8c13d02cc3d9e5a3eb8cd891bee730ecb89b1f3987e941347842"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/machine_image.rs",
+      "main_sha256": "f0f18ccec868ab327291b6daef14bbd2f0ec2213e5139ce55a51c286e7a6c75b",
+      "pr_head_sha256": "54817fae54b80d6fbff88cde68b0de9688a9e4ca910f38e563ff8a15abc443fb",
+      "candidate_sha256": "54817fae54b80d6fbff88cde68b0de9688a9e4ca910f38e563ff8a15abc443fb"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/machine_image_tests.rs",
+      "main_sha256": "b95a077a7c99d76e078c771b81e8bf235f037c75d55afc3e738abf6b4fb22121",
+      "pr_head_sha256": "2e0de3a5bc41553f26968622f50a792b478a5187d1d167058d1057d08f10dad2",
+      "candidate_sha256": "2e0de3a5bc41553f26968622f50a792b478a5187d1d167058d1057d08f10dad2"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/mod.rs",
+      "main_sha256": "562f563d6f679d188bdb283d1dc191b34f19459a98d9c8a260911f16e7e367de",
+      "pr_head_sha256": "6b54cdd64b0670d0578f6b721b712e60cbc5e304cf20e1171d886e0cf39ba1f5",
+      "candidate_sha256": "96f3c36a8fa014ca0c829dae759ef7c32f58a9dbba0add97768608ef3f3550bd"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/normal_oracle_inputs.rs",
+      "main_sha256": "d02cf40e5328ee5c672a2eec9883885dd0de1af9e974ab9561888aaa5613d2b8",
+      "pr_head_sha256": null,
+      "candidate_sha256": "1839f38ac3e5ba3a3fc1c1b05116047dee3184aed12f8972c0fe3b21af249cbd"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/program_image.rs",
+      "main_sha256": "d06baba6332dd97c730acbd439f91c9b54c1475ff70ef96aa0c03c5a6a68fd2f",
+      "pr_head_sha256": "864bf07d67439ad7a886d952fe1edabb0ae8f9b81724bb1493962c7467ea0d27",
+      "candidate_sha256": "864bf07d67439ad7a886d952fe1edabb0ae8f9b81724bb1493962c7467ea0d27"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/program_image_oracles.rs",
+      "main_sha256": "d11bddcfc4e8b9ab68485bb9b268b7ff6cc2b239e3635d9f2999f55567514e87",
+      "pr_head_sha256": "a23e6c5750e508a38dc49f0fbcf41f0ac55f2e2cdea63690a5c8380bfa7e7065",
+      "candidate_sha256": "a23e6c5750e508a38dc49f0fbcf41f0ac55f2e2cdea63690a5c8380bfa7e7065"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/program_image_tests.rs",
+      "main_sha256": "34defc00cb5822792d1895bc1b59403cc15330fa84248e72955c08f7ba33fea8",
+      "pr_head_sha256": "7e126ae66badf9a44e8594196b2afd8bd6164cb393af22b1607261ac233e0b56",
+      "candidate_sha256": "7e126ae66badf9a44e8594196b2afd8bd6164cb393af22b1607261ac233e0b56"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference_display.rs",
+      "main_sha256": "3f3456bfeaa6ce043986de29673ba038d94cfa405de2d715fd774ad8aa1872e4",
+      "pr_head_sha256": "a72393b90180fadefb4719573d91d48baae430c1bd9dde7bda7faa67d9dbce2b",
+      "candidate_sha256": "a72393b90180fadefb4719573d91d48baae430c1bd9dde7bda7faa67d9dbce2b"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
+      "main_sha256": "56f0fe0ff8211bc8f580346ad09911dc8ec2f9051a7a3dc66c71a10729a1e9f9",
+      "pr_head_sha256": "603ff38dd6bb3a0164e53ba141c3f454b77d93e459f33394ca97254ba9baf004",
+      "candidate_sha256": "67c8a00628ad1ec890244e4e87993c5ce8502ffe75c268eca1c68e7709485b95"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference_slice.rs",
+      "main_sha256": "751037de39c85e1b4d7b09bdef963da40cca7c49c8e645aacdcc528475904e5b",
+      "pr_head_sha256": "87d45d2356c25831122f9cd2df0bb3ed2ccd812053a95bdc8d2607634864b57f",
+      "candidate_sha256": "87d45d2356c25831122f9cd2df0bb3ed2ccd812053a95bdc8d2607634864b57f"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference_slice_tests.rs",
+      "main_sha256": "490fba70d6e9c66b67b8b9cc5e221a6b8e93272fd4762995066dac36a5307e25",
+      "pr_head_sha256": "3dbba8f908f9c03f489b6759bb49cebe8848f31e836590e6c1bb2998a53b5bb3",
+      "candidate_sha256": "3dbba8f908f9c03f489b6759bb49cebe8848f31e836590e6c1bb2998a53b5bb3"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/resource_tests.rs",
+      "main_sha256": "e785241f3ebfe3269de8e2c316270f4308476d956c996a95e014965b872b1457",
+      "pr_head_sha256": "6472b7f574678aa92092a4d158bc485d0a28569c3c80c41b93618433950ceb31",
+      "candidate_sha256": "6472b7f574678aa92092a4d158bc485d0a28569c3c80c41b93618433950ceb31"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+      "main_sha256": "d7fba670a7903ff751d895806375c652ecaa21a9f71689446b3cabf9f960e065",
+      "pr_head_sha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b",
+      "candidate_sha256": "cbd553b49dba11d6bc578b05606723ee2f01f5d62b813adcd7445f01ad17488b"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/source_adapter_tests.rs",
+      "main_sha256": "22feec2f21465492e8763114f6f03868c2938b33c116cd71c24acdff6376b83f",
+      "pr_head_sha256": "2a718ad180abf3d53e30f47ff5697edefbfdc982b54bae0ca1e74a7cbbcd2595",
+      "candidate_sha256": "2a718ad180abf3d53e30f47ff5697edefbfdc982b54bae0ca1e74a7cbbcd2595"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/source_origin_normal_tests.rs",
+      "main_sha256": "91ba92488b20a98fffb57fefec3742be58ded3adf2988cfdbc7f85b65d4330ab",
+      "pr_head_sha256": "d0d36a4b638e6e548783d53bf3b37e6da6f7b250e1ae07ca4e4b6be8b33ccade",
+      "candidate_sha256": "d0d36a4b638e6e548783d53bf3b37e6da6f7b250e1ae07ca4e4b6be8b33ccade"
+    },
+    {
+      "path": "crates/mori-core/src/source_sponsor.rs",
+      "main_sha256": "870e71ba219a5e8adaaff980d3757810c8e44c0047d770e93627ba4b0c34cfd2",
+      "pr_head_sha256": "fe221c4c03154065a976b677b2fd19aa8711929fc725be56a06cd7cc1955e57f",
+      "candidate_sha256": "fe221c4c03154065a976b677b2fd19aa8711929fc725be56a06cd7cc1955e57f"
+    },
+    {
+      "path": "crates/mori-core/src/stage/admit.rs",
+      "main_sha256": "7d98472ec2d4bd151cb42682ed32deaff257d4b9746615a6453aad41b3f2ec10",
+      "pr_head_sha256": "12474f92ad0752cfeee1a6054c5b251370dc08d8a17949f7747878ada60450c3",
+      "candidate_sha256": "12474f92ad0752cfeee1a6054c5b251370dc08d8a17949f7747878ada60450c3"
+    },
+    {
+      "path": "crates/mori-core/src/stage/cost.rs",
+      "main_sha256": "6edebd925cdc8f775f9a0711775f6eca656e808f1c428bc389e21b4d0042eee2",
+      "pr_head_sha256": "eeb5c9fbd1c58c5b46f346a0e62484c1bb366e548c50824295d833648ba6bcc1",
+      "candidate_sha256": "eeb5c9fbd1c58c5b46f346a0e62484c1bb366e548c50824295d833648ba6bcc1"
+    },
+    {
+      "path": "crates/mori-core/src/stage/decode.rs",
+      "main_sha256": "48f950510b5ac255e614b1f92d945497acc2120c0d4311c114e0b5200e87650c",
+      "pr_head_sha256": "58f0c1156efa2682f17240dda19be7f567905b61c95f399831136746a2e09f50",
+      "candidate_sha256": "58f0c1156efa2682f17240dda19be7f567905b61c95f399831136746a2e09f50"
+    },
+    {
+      "path": "crates/mori-core/src/stage/mod.rs",
+      "main_sha256": "428246f869f4ceb3297435faff47215beeafee5c18facc38c3dc68e440ff726c",
+      "pr_head_sha256": "8aec54ae7b72689bfdc239321ff89a929cd1f4128e9a2a7df628ef0867633932",
+      "candidate_sha256": "8aec54ae7b72689bfdc239321ff89a929cd1f4128e9a2a7df628ef0867633932"
+    },
+    {
+      "path": "crates/mori-core/src/stage/plan.rs",
+      "main_sha256": "e29954e5c5f028e75f4f4f74ccf86c4eeda8f59c0be6dbbe5714bf30a200d3d3",
+      "pr_head_sha256": "9d8e71b2d5089bf3221b3e06454038357559a9eddab8245464d55b19653d1e1c",
+      "candidate_sha256": "9d8e71b2d5089bf3221b3e06454038357559a9eddab8245464d55b19653d1e1c"
+    },
+    {
+      "path": "crates/mori-core/src/stage/validate.rs",
+      "main_sha256": "5828e182243250a3263ae301efab4e141c94729f469e1f7aa93a86036f0bf473",
+      "pr_head_sha256": "d301530692f2f02a51bb68cf8b30ee51db6d3f3c9019b9045ed2a50e3ad8debf",
+      "candidate_sha256": "d301530692f2f02a51bb68cf8b30ee51db6d3f3c9019b9045ed2a50e3ad8debf"
+    },
+    {
+      "path": "crates/mori-core/tests/compat_v1.rs",
+      "main_sha256": "1a8d5de45830c8bc5b7ed229bb269a76b20b404009a224e7da4b18122b119559",
+      "pr_head_sha256": "5e5a2e60051012c342044a561c10b511770ee7c3b5c37aaabce8640885979c9b",
+      "candidate_sha256": "5e5a2e60051012c342044a561c10b511770ee7c3b5c37aaabce8640885979c9b"
+    },
+    {
+      "path": "crates/mori-core/tests/continuations.rs",
+      "main_sha256": "6c0e103f0f45e7d1a432d802af0cd124350aa0e82a3322d04643ef095621df9b",
+      "pr_head_sha256": "36502844101ed8af1b48ac486c8e5ed20463850c304cedc368fd3da8b04197f5",
+      "candidate_sha256": "36502844101ed8af1b48ac486c8e5ed20463850c304cedc368fd3da8b04197f5"
+    },
+    {
+      "path": "crates/mori-core/tests/language.rs",
+      "main_sha256": "50a5ee441a4f71c1c86ad5c5ce18e5dfe06d056bb2d82d2d6bd3e17dd359a8ad",
+      "pr_head_sha256": "b3da72f773ed269a1e247ad9bfb1b50f3967070074d64336b2c6b79110be6f6c",
+      "candidate_sha256": "b3da72f773ed269a1e247ad9bfb1b50f3967070074d64336b2c6b79110be6f6c"
+    },
+    {
+      "path": "crates/mori-core/tests/metered_intents.rs",
+      "main_sha256": "a61b4581a484312adddf0c6a829e0db81772bca0fb78fe8dd1e880599f07954c",
+      "pr_head_sha256": "8a1aa384e17854857f7c61494a74a2e9b5a23d47e0da469393d6ec2b86b307dc",
+      "candidate_sha256": "8a1aa384e17854857f7c61494a74a2e9b5a23d47e0da469393d6ec2b86b307dc"
+    },
+    {
+      "path": "crates/mori-core/tests/source_sponsor.rs",
+      "main_sha256": "acf825cd725e6f7bc1d8dc59c37fb275f3d007c796560481970638525852b425",
+      "pr_head_sha256": "160a49e2f74ffbe4d8530b8c7d5e29a9c58e465586be87efdef8ae77fb022341",
+      "candidate_sha256": "160a49e2f74ffbe4d8530b8c7d5e29a9c58e465586be87efdef8ae77fb022341"
+    },
+    {
+      "path": "crates/mori-core/tests/stage_hostile.rs",
+      "main_sha256": "e8d3af1257d447aad9f14b566b6eb9b3005a929f26887cbe3863a546f93054a7",
+      "pr_head_sha256": "3cd6ccd9ede96e2a6adbd1c8b77efab6cec0a2dbf217c40696fa2e26848134fa",
+      "candidate_sha256": "3cd6ccd9ede96e2a6adbd1c8b77efab6cec0a2dbf217c40696fa2e26848134fa"
+    },
+    {
+      "path": "crates/mori-core/tests/stage_static_cost.rs",
+      "main_sha256": "de1d385fd497718f649e026d6327e6d88c8197ca0498b6711d8cfa8a478fd344",
+      "pr_head_sha256": "9d0769efcbbba88a8c4928799fbc37fb08a481d44ae4449a1389a5f89117365e",
+      "candidate_sha256": "9d0769efcbbba88a8c4928799fbc37fb08a481d44ae4449a1389a5f89117365e"
+    },
+    {
+      "path": "crates/mori-ledger/Cargo.toml",
+      "main_sha256": "821e341519a68462325a138edc6eacfd1669279ba70c552dfa77823256ec5653",
+      "pr_head_sha256": "b3a43bfca76e7fafaf6dce61e1a5369c2c67ec0c4c2468a2d82f934357f86b58",
+      "candidate_sha256": "b3a43bfca76e7fafaf6dce61e1a5369c2c67ec0c4c2468a2d82f934357f86b58"
+    },
+    {
+      "path": "crates/mori-ledger/src/codec.rs",
+      "main_sha256": "0a460630b87d793cba7a8ee00157c12d65ad4de7c829a926eec07df7acc8cc7b",
+      "pr_head_sha256": "32ee6a55f8c5a2924370d500a93d774481a57638b8b5a241e9818f0bf8b7863b",
+      "candidate_sha256": "32ee6a55f8c5a2924370d500a93d774481a57638b8b5a241e9818f0bf8b7863b"
+    },
+    {
+      "path": "crates/mori-ledger/src/custody.rs",
+      "main_sha256": "62cc69361d77a2f955fc51c222c37acfa4a7e431bf88abea160ac3c228693321",
+      "pr_head_sha256": "9d1e56dd5c94e317878a75d9118e287584c8354431786827f6a542a0d95e8e46",
+      "candidate_sha256": "9d1e56dd5c94e317878a75d9118e287584c8354431786827f6a542a0d95e8e46"
+    },
+    {
+      "path": "crates/mori-ledger/src/lib.rs",
+      "main_sha256": "3631afbc1b219a8da68717259d0c471ec5d6aed2db263f80ed4662ad85152855",
+      "pr_head_sha256": "04bc8363e481fed0b445658f4d49224050dbc7ab728ac3cbd85b5855bdc8a23a",
+      "candidate_sha256": "04bc8363e481fed0b445658f4d49224050dbc7ab728ac3cbd85b5855bdc8a23a"
+    },
+    {
+      "path": "crates/mori-ledger/src/local_deployment.rs",
+      "main_sha256": "7ef140bdb61ea61e3af6a59fbc3d80335cb214fdcabe81187a3f7fbfdbc53272",
+      "pr_head_sha256": "33d68089db3f542308fe5782e016c5be6fffd64a994e00adb29b6463522c83a2",
+      "candidate_sha256": "33d68089db3f542308fe5782e016c5be6fffd64a994e00adb29b6463522c83a2"
+    },
+    {
+      "path": "crates/mori-ledger/src/parameters.rs",
+      "main_sha256": "0ca2aecf94457b3f210d3ffdb23ebcad2554afd7de679c1bd3f4b477cbddcdc4",
+      "pr_head_sha256": "c780f41fc2081af5ca35dc8de42e1ad62fd5a0f662d423010f6f956c65b3f8f1",
+      "candidate_sha256": "c780f41fc2081af5ca35dc8de42e1ad62fd5a0f662d423010f6f956c65b3f8f1"
+    },
+    {
+      "path": "crates/mori-ledger/src/prepare.rs",
+      "main_sha256": "e85449c454fc88701c21c1d2a5f6b7ea770208d1eab1b6a28158566a3e619c37",
+      "pr_head_sha256": "f6fa9789bad3e443551175a015bf66c5d79c15e83176df752271b4054da0cfcb",
+      "candidate_sha256": "f6fa9789bad3e443551175a015bf66c5d79c15e83176df752271b4054da0cfcb"
+    },
+    {
+      "path": "crates/mori-ledger/src/proving.rs",
+      "main_sha256": "c636795ddc2b28245533320c5f5b8d574d739116824b8137dba63ed7565c38cb",
+      "pr_head_sha256": "2e3fed358cdf7c8e0b30afe7804b166201cef58c17e6f6481b3ee57fdc784e51",
+      "candidate_sha256": "2e3fed358cdf7c8e0b30afe7804b166201cef58c17e6f6481b3ee57fdc784e51"
+    },
+    {
+      "path": "crates/mori-ledger/src/relation/compiler.rs",
+      "main_sha256": "5bc377dbddedd88a4144c1a47a54f71a32e8d051e935f5ba588c45c658a7dd06",
+      "pr_head_sha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a",
+      "candidate_sha256": "f1fc28ed3975e5dc0c647b464e9ba13adadb9f5876f2f9c94943b690a683ba1a"
+    },
+    {
+      "path": "crates/mori-ledger/src/signed/deployment.rs",
+      "main_sha256": "c809bb0f6a6a57a5aadeaecace36fb332bbb6966cd696707fd938c855cd6a246",
+      "pr_head_sha256": "5c565c7fa44b38e060e6dacd278f0bffb01f209722a93111d10a9ef01dab2f99",
+      "candidate_sha256": "5c565c7fa44b38e060e6dacd278f0bffb01f209722a93111d10a9ef01dab2f99"
+    },
+    {
+      "path": "crates/mori-ledger/src/signed/nonce.rs",
+      "main_sha256": "7b2a27fe1f3a43caf65bb01a20431059500eb15398d90436ce60ad34b3af6d0f",
+      "pr_head_sha256": "4a6a595214a1bea58d8e87503d69c4c18c45d4e355174a64791ca305ae78a9db",
+      "candidate_sha256": "4a6a595214a1bea58d8e87503d69c4c18c45d4e355174a64791ca305ae78a9db"
+    },
+    {
+      "path": "crates/mori-ledger/src/signed/preparation.rs",
+      "main_sha256": "03051ea0b2c2c782d1f1db1f31240fc44a7c8fce459f84f834c563f26f344a75",
+      "pr_head_sha256": "e7e236ac4a07dd592e0f5157e784d7b23cf881a1931ebf534bd072cae65299a3",
+      "candidate_sha256": "e7e236ac4a07dd592e0f5157e784d7b23cf881a1931ebf534bd072cae65299a3"
+    },
+    {
+      "path": "crates/mori-ledger/src/signed/schnorr.rs",
+      "main_sha256": "9ed4170fe5fa1785798a99e4eac16c814d9e2c971b337e4848fcbf0a43fda3bd",
+      "pr_head_sha256": "a69b6f13de6eb437b874f7a2d81615696601bee3eaee67d70bb29105dfe2bbcf",
+      "candidate_sha256": "a69b6f13de6eb437b874f7a2d81615696601bee3eaee67d70bb29105dfe2bbcf"
+    },
+    {
+      "path": "crates/mori-ledger/src/signed/tests.rs",
+      "main_sha256": "70def985719ca24f671d409de53065f03cb93dd68e902fe4a8dc90a249bb62bc",
+      "pr_head_sha256": "ae8321f398e3f8d75cbd0061b14a58226267299dc72683b7e116b80c3ee5d24f",
+      "candidate_sha256": "ae8321f398e3f8d75cbd0061b14a58226267299dc72683b7e116b80c3ee5d24f"
+    },
+    {
+      "path": "crates/mori-ledger/src/static_compile.rs",
+      "main_sha256": "d829d34c067d5ff382c393a329fd80d499b637ac79ec0b03915517b964ec30d0",
+      "pr_head_sha256": "0cd503a8256a0625d495cab2e755a0ddd7bc3bef5c450d1df9d1a855e1196472",
+      "candidate_sha256": "0cd503a8256a0625d495cab2e755a0ddd7bc3bef5c450d1df9d1a855e1196472"
+    },
+    {
+      "path": "crates/mori-ledger/tests/call_artifacts.rs",
+      "main_sha256": "17734bbaedabaafa5363fc419159872f2456c33518916baf4081d720b7ca1f88",
+      "pr_head_sha256": "d96a44f5be14e72b5cfda91cce8c8961a048ee0a07d4f236e6909048a4a2893a",
+      "candidate_sha256": "d96a44f5be14e72b5cfda91cce8c8961a048ee0a07d4f236e6909048a4a2893a"
+    },
+    {
+      "path": "crates/mori-ledger/tests/core_profile_refusals.rs",
+      "main_sha256": "ca14acf37b565f44f24dc223a68cd9ffaa82f319c91338dfae476ffd7c470eeb",
+      "pr_head_sha256": "c75e2ec113391d2e4caab02c29f197ff05bbbac5ee847c3e4bb14c722441531b",
+      "candidate_sha256": "c75e2ec113391d2e4caab02c29f197ff05bbbac5ee847c3e4bb14c722441531b"
+    },
+    {
+      "path": "crates/mori-ledger/tests/duty_reads_source.rs",
+      "main_sha256": "4c2991e390fc6046eab4e2e069d417c0d5d7c95e726752e6f391d007a74dd257",
+      "pr_head_sha256": "a9387c1f7e5a383637b14b217ff782945272fb405a9f4c2cdcc4c34c195fb6be",
+      "candidate_sha256": "a9387c1f7e5a383637b14b217ff782945272fb405a9f4c2cdcc4c34c195fb6be"
+    },
+    {
+      "path": "crates/mori-ledger/tests/relation.rs",
+      "main_sha256": "6d2c79168f44c8ad52050382ef13983b5b579cec0a27e5d76b892c81ebc0f4b3",
+      "pr_head_sha256": "3706978c8df43a814effc3f9e0358cbddab13ee6280ddf287625a9f1b498101a",
+      "candidate_sha256": "3706978c8df43a814effc3f9e0358cbddab13ee6280ddf287625a9f1b498101a"
+    },
+    {
+      "path": "crates/mori-ledger/tests/source_closure_coverage.rs",
+      "main_sha256": "85d144e1a57640fb180bc09b4af1e20f9e4b7c6aeca4d37e7b676aceaca298c5",
+      "pr_head_sha256": "db2be3a8caba56e7f594eb7d586db44972ffd6275773d6bfd3802bb4cad4fdab",
+      "candidate_sha256": "db2be3a8caba56e7f594eb7d586db44972ffd6275773d6bfd3802bb4cad4fdab"
+    },
+    {
+      "path": "crates/mori-ledger/tests/static_compile.rs",
+      "main_sha256": "a966763b246626187028cf95b11256f5162e271a159cf81ef9a7c3a3534a8dfc",
+      "pr_head_sha256": "5a651099340ba7ed819640812f634dbad42f40c8eb4b4f8e4b6f868df94103d5",
+      "candidate_sha256": "5a651099340ba7ed819640812f634dbad42f40c8eb4b4f8e4b6f868df94103d5"
+    },
+    {
+      "path": "crates/mori-ledger/third-party/jubjub-fens/NOTICE.md",
+      "main_sha256": "e74127faee309ad62abbbe82793225a7abb191ee22e48b17481c7f8063312ad4",
+      "pr_head_sha256": "b0704d01632a71f6f3f6e0aafd626df601f12b0fa48f96b91388a9c630a76760",
+      "candidate_sha256": "b0704d01632a71f6f3f6e0aafd626df601f12b0fa48f96b91388a9c630a76760"
+    },
+    {
+      "path": "crates/mori/src/commands/compile.rs",
+      "main_sha256": "cadcdcfd1951219af01e2677df1b7b56494238243be3a7c41e3bd4f86cbf0867",
+      "pr_head_sha256": "a8e345b507fa54b77a135ec06354172b411f5c22d130708b75bc7cdcdc29a38d",
+      "candidate_sha256": "a8e345b507fa54b77a135ec06354172b411f5c22d130708b75bc7cdcdc29a38d"
+    },
+    {
+      "path": "crates/mori/src/commands/inspect.rs",
+      "main_sha256": "5cef6e03dcb29a3fdeb97a5f2462b74b0ce7d7d23b93407f400a4156c2adebef",
+      "pr_head_sha256": "db6f9651c7567cd7b92a92158b337c43adb7a49554418a4464c906555a01cfe9",
+      "candidate_sha256": "db6f9651c7567cd7b92a92158b337c43adb7a49554418a4464c906555a01cfe9"
+    },
+    {
+      "path": "crates/mori/src/commands/replay.rs",
+      "main_sha256": "41c907d748aaff6619c4087af1c4f16622cf3f4e6df6d51fa18d57f7d56e04d0",
+      "pr_head_sha256": "804202ddabbc70d524a3c22b154a2cd1330463bcb2a7db9253375260193d44ab",
+      "candidate_sha256": "804202ddabbc70d524a3c22b154a2cd1330463bcb2a7db9253375260193d44ab"
+    },
+    {
+      "path": "crates/mori/src/commands/simulate.rs",
+      "main_sha256": "72488636c58101d78fec39f60e2106d40d2c67d44ef2a70c4ccd4d15cd3ac216",
+      "pr_head_sha256": "fb1c3a6bd891c287495c9d7068ddd1683f7ec2fcc3322c260c3dae1e533e4f7f",
+      "candidate_sha256": "fb1c3a6bd891c287495c9d7068ddd1683f7ec2fcc3322c260c3dae1e533e4f7f"
+    },
+    {
+      "path": "crates/mori/src/commands/test.rs",
+      "main_sha256": "4d8bc18746dab1ce89247c7a6e30b9eb376e912c5afe26ce6f367516b7409dc7",
+      "pr_head_sha256": "03e1811ad84a484ad34ced2524c10d3663dbf40a29a6958ba01ba9f805337177",
+      "candidate_sha256": "03e1811ad84a484ad34ced2524c10d3663dbf40a29a6958ba01ba9f805337177"
+    },
+    {
+      "path": "crates/mori/tests/check_compile_io.rs",
+      "main_sha256": "3583233c3d1a472af4ea037474cd7393a8f716bf09fde37851050cbc3d5b83d3",
+      "pr_head_sha256": "56693025f85a3da1f268a0e5cea416d00ac4c3567049df821bff9b8a6f9228ab",
+      "candidate_sha256": "56693025f85a3da1f268a0e5cea416d00ac4c3567049df821bff9b8a6f9228ab"
+    },
+    {
+      "path": "crates/mori/tests/core_continuations.rs",
+      "main_sha256": "7a93fd084b5df5412a80531cf78d9b1c9ea7f1c9031f46e2e7df1328f277c6d9",
+      "pr_head_sha256": "72aba6a725a1f42b63fbddc3a5b704516fc0b32847f11f9101e4e73199728b75",
+      "candidate_sha256": "72aba6a725a1f42b63fbddc3a5b704516fc0b32847f11f9101e4e73199728b75"
+    },
+    {
+      "path": "crates/mori/tests/signed_installed_call.rs",
+      "main_sha256": "ba7ed42e1f00d5d90fcdd51db3f3167eb895b9ea0297b173f52cb34ec20dc1c7",
+      "pr_head_sha256": "c10df8b73fe2736be85a41cf210bd8c2ad37753f4986d817aa9d65537a3d2162",
+      "candidate_sha256": "c10df8b73fe2736be85a41cf210bd8c2ad37753f4986d817aa9d65537a3d2162"
+    },
+    {
+      "path": "examples/core/fee-pool/contrasting.static-bindings.json",
+      "main_sha256": "0e094f503333d0010801e4ba334a16873a5a758fc91565cbaf528f4287f59fb3",
+      "pr_head_sha256": "18f0b1cb53bb9a37542fd1c7460b105089a0b7c4b6b7d2e67298af5edacf53e5",
+      "candidate_sha256": "18f0b1cb53bb9a37542fd1c7460b105089a0b7c4b6b7d2e67298af5edacf53e5"
+    },
+    {
+      "path": "examples/core/fee-pool/static-bindings.json",
+      "main_sha256": "796bf2bb5bb379ec86386c7845cba22e182228ef8c83aef15eb075fe4de5c945",
+      "pr_head_sha256": "1ad872de61b9a6222e604c0bb9f5449fb700e2a06587a4caa7099aa49e7a337b",
+      "candidate_sha256": "1ad872de61b9a6222e604c0bb9f5449fb700e2a06587a4caa7099aa49e7a337b"
+    },
+    {
+      "path": "examples/core/static-compile/financial-duty.bindings.json",
+      "main_sha256": "d47ccdf9f5a837eb0fcf352c2fbe95efce7746672668cb9030c664a44af36d3f",
+      "pr_head_sha256": "0189cb37196b3e18adcdda847d4a64b0b3fdd7443014a75575b6f50f38b49f16",
+      "candidate_sha256": "0189cb37196b3e18adcdda847d4a64b0b3fdd7443014a75575b6f50f38b49f16"
+    },
+    {
+      "path": "examples/core/static-compile/numeric-state.bindings.json",
+      "main_sha256": "527c31b762c763ba1d33d61572876ec74adb4ddedf44c0ae5900f82872e8a1ba",
+      "pr_head_sha256": "f6bccaf544aa2fed30370deb037fb3af0f041cc0e013d1a75e77afbccc97e69b",
+      "candidate_sha256": "f6bccaf544aa2fed30370deb037fb3af0f041cc0e013d1a75e77afbccc97e69b"
+    },
+    {
+      "path": "plugins/moriarty-dev/.codex-plugin/plugin.json",
+      "main_sha256": "c51dda8993921a6d52a5943af10d4172a7099b4d1ea293ed8b1010e55274bdf6",
+      "pr_head_sha256": "63abdf282dd9df4d7c38b8abbec711a2bf0be245457778e47ee5c80dd56db0ab",
+      "candidate_sha256": "63abdf282dd9df4d7c38b8abbec711a2bf0be245457778e47ee5c80dd56db0ab"
+    },
+    {
+      "path": "plugins/moriarty-dev/README.md",
+      "main_sha256": "121697fbd92532eaf4c9e9f7f8d5f1844b5d9912feb86eb34c3c9f8ffe01db1b",
+      "pr_head_sha256": "99ef2575454633fc40da49ae8869f60e94673c404398873aa2ac18a4843d16e1",
+      "candidate_sha256": "e31a7a968c70481745199ea27b6e72aeda4ed861a1d6b58e8ab34a8a554196ad"
+    },
+    {
+      "path": "plugins/moriarty-dev/skills/develop/SKILL.md",
+      "main_sha256": "a0f620b2e32148071f0df5ec4081b1447c11e50c80c9a7c722bd94d46950b7f0",
+      "pr_head_sha256": "6fa6de043f321772d45bb320d1136d7f4f44788e7682e27ba9489c6a50d09bd7",
+      "candidate_sha256": "10ab54b1ec3e743b236d16905300908b5bebfeef4aeee622961d56e406721f14"
+    },
+    {
+      "path": "plugins/moriarty-dev/skills/develop/references/rust.md",
+      "main_sha256": null,
+      "pr_head_sha256": "34a5bd547251fd087fa713a6ff3ffbf2e33c5b39ae8a4661c0a5ddf2d7715459",
+      "candidate_sha256": "d5ffd89421ae42cf53acd23747a02c35c732753a99dd8dcfc9280386bcbf78fc"
+    },
+    {
+      "path": "plugins/moriarty-dev/tests/test_guidance.py",
+      "main_sha256": "5b3ff16b08aa70d8d590c8c9666c4c48dea5209d99da0195a7671b4b25a5f0c1",
+      "pr_head_sha256": "227876ef6951537ca34610e43f8f624af303b19d5f08b43722e261ba025c037e",
+      "candidate_sha256": "4b85eb2ef5775ee2cfb87f8f2bc68eade11ea4cbe94e1efb251a5724dd317dd0"
+    }
+  ],
+  "frozen_preservation": [
+    {
+      "path": "crates/mori-core/tests/fixtures/continuations/normal-oracle.json",
+      "same_as_main": true,
+      "main_sha256": "76075b6350f83ba2776a4466ed9eb4dada7e9d1da0c509a366026e6b98ec9640"
+    },
+    {
+      "path": "examples/core/continuations/normal-oracle.json",
+      "same_as_main": true,
+      "main_sha256": "76075b6350f83ba2776a4466ed9eb4dada7e9d1da0c509a366026e6b98ec9640"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/normal_oracles.rs",
+      "same_as_main": true,
+      "main_sha256": "3421828bada394a5f1aa7b9ccc2fa52182db88adf7f2bfd58bf1d871e9d6bbe5"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/extra_normal_oracles.rs",
+      "same_as_main": true,
+      "main_sha256": "ce0e83e6fc09507f88c2bd2a523514ed087f14c15d75d1ed58ab84427b5a7b00"
+    }
+  ],
+  "formatting_vs_substantive": {
+    "limitation": "PR author describes most diff as rustfmt. No whole-diff formatting-only or semantic-equivalence claim is made; formatting changes consumed source hashes.",
+    "substantive": [
+      "Workspace dependency grouping/removal of direct anyhow and new ledger->backend dependency.",
+      "Shared FENS adapter/parameter constants and public backend parameters module.",
+      "Proving error refusal recovery through SDK wrapping and added unit source.",
+      "Boxed error diagnostics, SegmentRun and LoadedAuthorization payloads.",
+      "Source closure appended35 Sherlock/six backend inputs and changed coverage tests; stale versus29 newer-main files.",
+      "CLI circuit/source-projection/artifact publication order and IO test expectations.",
+      "Changed signed-version/liability reference refusal expectations and128KiB fake-key test fixture size, retained incoming without security judgment.",
+      "Four incoming public static ABI/templates hash binding fixture updates retained without regeneration.",
+      "Rust guidelines, plugin0.1.2 metadata/checklist, test guidance and manual-only optional workflow.",
+      "Conflicts resolved around newer-main bounded source API and shared normal inputs."
+    ]
+  },
+  "checks": [
+    {
+      "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+      "exit": 0,
+      "scope": "read-only historical operational status; no dispatch",
+      "observation": "stale candidate/binding admission and missing accounting/resource state remain; native0 unchanged"
+    },
+    {
+      "command": "python3 plugins/moriarty-dev/tests/test_guidance.py",
+      "exit": 0,
+      "tests_passed": 10,
+      "scope": "inspected Python stdlib-only guidance/link/package-copy tests; no compiler/SDK/native operation"
+    },
+    {
+      "command": "git diff --check; git diff --cached --check",
+      "exit": 0,
+      "scope": "Git whitespace validation"
+    },
+    {
+      "command": "git ls-files --unmerged; git diff --name-only",
+      "exit": 0,
+      "scope": "no unresolved entries, no unstaged changes after staging"
+    },
+    {
+      "command": "stdlib source include_str/tracked path metadata comparison",
+      "exit": 0,
+      "scope": "metadata only;29 missing source dependencies listed under CLOSURE29, not a Rust/native test result"
+    }
+  ],
+  "required_gates": [
+    {
+      "id": "CLOSURE29",
+      "status": "blocked-source",
+      "owner": "designated Opus security owner",
+      "detail": "Source metadata comparison finds29 newer-main tracked Rust files absent from PR source_closure and existing exclusions. source_closure_coverage walks these roots; historical PR pass cannot apply. No closure identity/policy repair authored here.",
+      "paths": [
+        "crates/mori-core/src/sherlock/arithmetic_witness.rs",
+        "crates/mori-core/src/sherlock/arithmetic_witness_normal_tests.rs",
+        "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+        "crates/mori-core/src/sherlock/bounded_scalar_source_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/arithmetic_fuel.rs",
+        "crates/mori-core/src/sherlock/layout_a/arithmetic_fuel_normal_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/aux_normal_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/auxiliary.rs",
+        "crates/mori-core/src/sherlock/layout_a/constants.rs",
+        "crates/mori-core/src/sherlock/layout_a/encoding.rs",
+        "crates/mori-core/src/sherlock/layout_a/limits.rs",
+        "crates/mori-core/src/sherlock/layout_a/mod.rs",
+        "crates/mori-core/src/sherlock/layout_a/normal_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/observation.rs",
+        "crates/mori-core/src/sherlock/layout_a/observation_normal_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/prepare.rs",
+        "crates/mori-core/src/sherlock/layout_a/rows.rs",
+        "crates/mori-core/src/sherlock/layout_a/state.rs",
+        "crates/mori-core/src/sherlock/layout_a/state_decode.rs",
+        "crates/mori-core/src/sherlock/layout_a/state_decode_normal_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/state_encode.rs",
+        "crates/mori-core/src/sherlock/layout_a/state_encode_normal_tests.rs",
+        "crates/mori-core/src/sherlock/layout_a/state_encoding.rs",
+        "crates/mori-core/src/sherlock/layout_a/state_encoding_normal_tests.rs",
+        "crates/mori-core/src/sherlock/normal_oracle_inputs.rs",
+        "crates/mori-core/src/sherlock/reference_bounded_extra_tests.rs",
+        "crates/mori-core/src/sherlock/reference_bounded_tests.rs",
+        "crates/mori-core/src/sherlock/reference_stream.rs",
+        "crates/mori-core/src/sherlock/reference_stream_tests.rs"
+      ]
+    },
+    {
+      "id": "SECURITY",
+      "status": "unreviewed",
+      "owner": "Opus5.5 or4.8 high per current AGENTS",
+      "detail": "Assess exact full candidate FENS verifier sharing, parameter pins/cap sharing, proving error adapter, source-identity/closure changes, key-export diagnostics and changed refusal/security-adjacent expectations. This report supplies no security correctness judgment."
+    },
+    {
+      "id": "NONSECURITY",
+      "status": "unreviewed",
+      "owner": "fresh non-author Gemini4 Argon high per current AGENTS",
+      "detail": "Full current tree/source and scoped actual-result review required; no independent PR reviews returned."
+    },
+    {
+      "id": "RUST_CHECKS",
+      "status": "unrun",
+      "detail": "Cargo fmt/clippy/workspace tests and compiler consumers not run. Any future selection requires inspected existing authority and must respect native0; historical macOS counts are author-reported evidence for old PR tree only."
+    },
+    {
+      "id": "LAYERS",
+      "status": "open",
+      "detail": "Affected K/Quint/Lean-Clean/circuit/native/stagenet requirements and every U0-U7/M1-M17/MC/SP/G exit remain open. No rerun here."
+    },
+    {
+      "id": "PUBLICATION",
+      "status": "not-performed",
+      "detail": "No commit/push/PR edit/main merge. Candidate is staged uncommitted merge in isolated branch; applicable review and remaining source blockers precede publication."
+    }
+  ],
+  "forbidden_execution_performed": false,
+  "native_authority": 0,
+  "sdk_compiler_model_proof_wallet_network_checks_run": false,
+  "github_metadata_reads_only": true,
+  "hosted_ci_dispatched": false,
+  "generated_keys_or_proofs": false,
+  "checkpoint_note": "Foreman-backed checkpoint runtime not invoked because current user and AGENTS explicitly prohibit Foreman; this scoped typed report captures pins/results/obligations."
+}

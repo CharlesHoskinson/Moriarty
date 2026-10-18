@@ -14,6 +14,22 @@ refusal, resource limit or execution boundary. Gemini 4 Argon High remains the
 nonsecurity reviewer, and GPT-6.1 Sol high remains the nonsecurity author.
 
 
+## DoctorWatson workstream names
+
+Use `doctorwatson<UTXO>` for the Cardano, Groth16 and UTXO workstream.
+The naming convention is `doctorwatson<WORKSTREAM>` for display and
+`doctorwatson-workstream` for shell commands, file paths and evidence namespaces.
+The UTXO machine slug is `doctorwatson-utxo`; angle brackets are not part of
+an unquoted shell command. The user also calls this workstream
+`doctormoriarty<utxo>`; treat it as an alias, with the same existing entrypoint
+and requirement/evidence namespace. Track GitHub intake in
+`docs/utxo/doctorwatson/github/work-items.json` without inflating product closure. The existing `scripts/doctorwatson.sh` remains the
+Sherlock entrypoint. Keep the workstreams' requirements, results and closure
+claims distinct. The UTXO entrypoint is `scripts/doctorwatson-utxo.sh`; it checks local
+requirement declarations and ordinary reporting regressions. Its implementation
+and actual results are recorded in `docs/utxo/doctorwatson/ASSESSMENT.json`.
+A valid inventory does not establish product closure or arm a loop.
+
 ## Current user workflow — October 16 DoctorWatson
 
 The user prohibits Foreman for current work. Use direct agent/model calls,
