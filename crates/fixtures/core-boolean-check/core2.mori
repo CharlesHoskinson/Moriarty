@@ -1,0 +1,14 @@
+language "moriarty/2";
+agreement StagedBooleanChoice {
+  state result: Bool = false;
+  action choose(limit: UInt, enabled: Bool) {
+    let smaller = 2 < limit;
+    await approve(accepted: Bool) when accepted or enabled and not false;
+    next result = smaller or not enabled;
+    ensures result or not accepted;
+    emit "decision"(result);
+  }
+  action inspect_limit(limit: UInt) {
+    requires limit > 0;
+  }
+}
