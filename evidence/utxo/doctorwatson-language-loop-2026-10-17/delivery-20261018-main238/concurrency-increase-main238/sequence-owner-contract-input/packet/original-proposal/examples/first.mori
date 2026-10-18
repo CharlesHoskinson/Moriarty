@@ -1,0 +1,13 @@
+language "moriarty/2";
+agreement FirstPayment {
+  state phase: UInt = 0;
+  asset UNIT = { network: "local", issuer: "completed-successor-design-example", reference: "UNIT", scale: 0 };
+  action pay() {
+    liability("invoice", UNIT, "alice", "bob", 12);
+    transfer(UNIT, "alice", "bob", 6);
+    fee(UNIT, "alice", "treasury", 1);
+    discharge("invoice", 6);
+    next phase = 1;
+    emit "first"(phase);
+  }
+}

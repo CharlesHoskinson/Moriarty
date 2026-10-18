@@ -1,0 +1,135 @@
+Original lines1–8:
+# Rust toolchain guidelines
+
+Rules for the Rust implementation of the Moriarty toolchain in `crates/`.
+Current checkout `AGENTS.md`, the product contract and explicit user steering
+control profile scope, authorization and execution boundaries. Routine repairs
+within existing authorization need no additional approval. Record intentional
+differences; these guidelines do not grant compiler, SDK or native execution.
+
+Original lines60–110:
+## Workspace
+
+- Every crate lives in `crates/*`. The `mori` crate is the CLI entry point.
+- The toolchain is pinned in `rust-toolchain.toml` (Rust 1.99.0, edition 2024).
+- Declare every dependency version once in the root `[workspace.dependencies]`.
+  Crates reference it with `dep = { workspace = true }` or `dep.workspace = true`.
+- The pre-existing Rust crates under `experiments/`, `raw/` and `wiki-llm/` are
+  not part of this toolchain. They are excluded from the workspace so they still
+  build standalone; the beta CLI tells users to build `experiments/midnight-crypto`
+  with `--manifest-path`, which fails if the workspace claims it.
+- Every Rust file builds and tests through Cargo. No harness compiles a module
+  with `rustc` directly, and no `#[path]` mounts a file from another directory
+  or loads one file as several modules; share code through a crate or a module
+  and `use` it.
+- Code only tests use lives in test modules. Unadopted prototypes go in
+  `experiments/` or behind a feature, not in `src/` gated by `#[cfg(test)]`.
+- Never hash source text to identify an ABI, deployment, key or build. Any
+  reformat changes it. Hash the produced artifact or a declared version.
+- No absolute paths. Locate files from `env!("CARGO_MANIFEST_DIR")`.
+
+## Checks
+
+- Document and run these local checks only within their inspected scope and
+  existing execution authority:
+
+  ```
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets --locked -- -D warnings
+  cargo test --workspace --locked
+  ```
+- `mori-core`'s Midnight-native compatibility test is gated behind the
+  non-default `midnight-compat-tests` feature, so ordinary `mori-core` test
+  selection is free of Midnight dependencies, for example
+  `cargo test -p mori-core` or
+  `cargo test --frozen -j1 -p mori-core --no-default-features --test continuations -- --test-threads=1`.
+  The `cargo test --workspace --locked` above does not enable that feature, so
+  run the compatibility test explicitly for full coverage (it builds the pinned
+  Midnight SDK closure):
+
+  ```
+  cargo test --locked -p mori-core --features midnight-compat-tests --test intents
+  ```
+- The optional `rust` workflow is manual only. Ordinary work does not dispatch
+  hosted CI. Source-only handoffs list unrun checks and blocked acceptance;
+  broad Rust suites do not override the zero-native boundary.
+- Fix a lint rather than silence it. An `#[allow(clippy::...)]` needs a comment
+  saying why.
+- Comments explain the code. Review status, authorship, model names, audit IDs
+  and notes like "not yet run" go in commit messages, pull requests or
+  `docs/audits/`, not in source.
+
+Original lines243–315:
+## Testing
+
+- Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
+- The finite backend `financial_observation_relation` target uses frozen
+  complete Program/Execution literals and positive SDK relation checks instead
+  of insta snapshots. The exact sources and independent expectations remain in
+  `crates/fixtures/financial-report-contract/`; expected values must not come
+  from the evaluator, compiler output or generated baselines. This exception
+  adds no authority to execute SDK checks or claim native/proof acceptance.
+- The finite Core `financial_program_wire_contract` target uses independently
+  frozen complete financial Program JSON and the public Program/v1 decoder
+  instead of generated snapshots. It selects no Midnight compatibility feature
+  and makes no compiler-Artifact, SDK, native-proof or ledger acceptance claim.
+- Test programs shared by several crates live in `crates/fixtures/`, which is
+  excluded from the workspace. Nothing under `crates/` reads files outside it;
+  copy anything needed in.
+- **Any test that consumes `.mori` source must put the source, not the Rust
+  expression, in the snapshot.** Use a macro that takes an `indoc!` literal and
+  sets `description` and `omit_expression`:
+
+  ```rust
+  insta::with_settings!({
+      description => format!("Code:\n\n{}", input),
+      omit_expression => true,
+  }, {
+      insta::assert_snapshot!(render(&output));
+  });
+  ```
+
+- Use separate macros for success and error cases. Error snapshots render the
+  diagnostic through miette's `GraphicalReportHandler` with
+  `GraphicalTheme::unicode_nocolor()` and a fixed width, so the snapshot is
+  exactly what a user sees.
+- Snapshot the AST through a tree printer, not `Debug` of the struct-of-arrays.
+- Every phase that consumes source has a `proptest` property that it never
+  panics, fed random strings, sequences of tricky fragments and, from the
+  parser on, real programs with random damage.
+- Formatter tests also assert that formatting the output again changes nothing.
+- **Test semantics in the library crates; keep the CLI a thin layer over them.**
+  The CLI feature-boundary work has a narrow exception for real binary tests
+  of public dispatch, feature availability, frozen complete output, process
+  exits and I/O. This exception does not make a shared evaluator an independent
+  oracle. Never snapshot `--help`; use clap schema assertions for that contract.
+- Existing external fixture paths and test-support mounts are retained during
+  the feature-boundary cut; they are not precedents for new paths or mounts.
+  `core_continuations` includes the three `examples/core/continuations/*.mori`
+  sources and `normal-oracle.json`; `stage_test_public` reads
+  `models/core-stage-tests`; `fee_pool_component` and one `core_test_report`
+  case read `examples/core/fee-pool`. Native targets also retain their existing
+  example/deliverable inputs. Their provenance and the rule against fixtures
+  outside `crates/` need separate reconciliation before claiming full guideline
+  conformance. Preserve originals and evidence identities.
+- Existing `#[path = "../../mori-ledger/tests/support/mod.rs"]` mounts in
+  `prepare_call`, `installed_call` and `signed_installed_call` remain unchanged
+  in the native-only targets. They are existing deviations from the no-remount
+  rule above; this cut adds none and does not claim to resolve them.
+
+## CLI
+
+- [`clap`](https://crates.io/crates/clap) with derive, styled with cargo's colors
+  through `clap::builder::styling::Styles`.
+- Cargo-style status lines on stderr: a right-aligned, bold, colored verb, then
+  details (`    Checking invoice.mori`, `    Finished check in 3.2ms`). Use
+  `anstream` and `anstyle`.
+- Results go to stdout. `--json` turns status lines off. JSON reports are our
+  own format, not the TypeScript beta's; spans are UTF-8 byte ranges and every
+  diagnostic has exactly one primary label.
+- Global `-q`/`--quiet`, `-v`/`--verbose` and `--color` (`auto` respects
+  `NO_COLOR` and non-terminal output). Verbose adds stage timings and
+  token/node counts.
+- Final verbs say exactly what happened, for example `Prepared (unqualified)`.
+  Never imply proof, signature authority or ledger acceptance that did not occur.
+

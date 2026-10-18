@@ -1,0 +1,9 @@
+The CLI and tooling adapters need one source checker that preserves the existing beta/Core1/Core2 reports. Extract a shared source-dispatch helper and route `mori check` through it while retaining complete report ordering, byte spans, exit codes and Core2 stage labels. JSON construction stays behind the JSON output path.
+
+Integrated current main `79de664a3d16b5e0456043a530c8f33d723561a2` at `09a442faa60192cde8f51f60986957ea5e4ff8da` (tree `4b792e710bed78aa6a506f592dd283a52012b280`). The whole 21-path PR diff remains byte-identical to the prior checker candidate; the combined tree includes main’s reviewed Core consumer tests and custody CLI forwarding.
+
+Actual local validation on this exact combined tree: 10 public CLI tests passed in 53.567s and four Core tests passed in 17.014s, with zero filtered. Eight fresh direct checks matched the original complete baseline stdout bytes and exit codes, with empty stderr. Source pins stayed unchanged, the worktree stayed clean, and the owned temporary root was removed.
+
+Fresh non-author AGY Gemini4ArgonHigh HIGH source and result reviews both completed with exit0, exact SUCCESS and whole typed terminal opinions. The source review supports all11source predicates and all21changed paths; the separate result review supports all14stored result checks and21path read scope. Root adopted each whole opinion separately. Citation line/representation corrections are recorded against the same pinned files; no review object was rewritten or spliced. Human verbose output/allocation measurements and independent financial/canonical-byte qualification remain open. The earlier combined review's exit124/NO_EXPORT is preserved and supplies no approval. Actual backend identity remains unattested.
+
+MCP SDK integration, complete financial/compiler/native/proof/ledger qualification and all original parent requirements remain open. No hosted CI or proof/ledger operations were dispatched.

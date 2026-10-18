@@ -1,0 +1,7 @@
+The public Core language-header probe accepts both moriarty/1 and moriarty/2, but its error messages named only Core/1. Include both supported profiles in unsupported, missing-keyword and missing-quoted-profile diagnostics while retaining error codes, offsets and parsing behavior.
+
+Integrated main8269b5b7 at3bb93ec676340ebca4b772c9ff9277289328c4e0, tree6b6204185c316ceaf7ecd19cc6fb8164ad1d79b4. The full two-file candidate diff is identical to the previously tested main79 variant. Root rustfmt changed only two accepted-input test tuple layouts; original author patch and first formatting failure remain preserved.
+
+Actual local selected regression:1pass,18filtered,29.058s on this combined tree. It checks both accepted profiles and four exact negative diagnostics through the public library API. Owned session and temporary root were removed and source pins stayed clean. Fresh non-author AGY Gemini4ArgonHigh HIGH source/result review completed with exit0/SUCCESS and one whole typed opinion. Root adopted the complete opinion for this exact public-library increment after all six literal quotes and bound file hashes matched; citation range corrections are retained separately. Actual backend identity remains unattested.
+
+The CLI routing callers discard the probe error when choosing a parser; this change does not claim new CLI-rendered unsupported-profile diagnostics. Full native/compiler/ledger and parent acceptance remain open.

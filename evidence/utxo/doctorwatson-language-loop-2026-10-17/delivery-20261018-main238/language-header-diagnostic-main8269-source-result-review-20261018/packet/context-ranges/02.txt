@@ -1,0 +1,96 @@
+    // malformed invocation reads no file.
+    if let Some(resume) = &args.resume {
+        return run_resume(&args, resume);
+    }
+    let (action, scenario_path) = args.legacy()?;
+    if args.trace {
+        let path = args
+            .target
+            .as_ref()
+            .ok_or_else(|| super::core_io::operation("--trace requires --target"))?;
+        #[cfg(feature = "native")]
+        let target = super::core_io::read_json(path)?;
+        #[cfg(feature = "native")]
+        let authorization = args.authorization.load(&target)?;
+        #[cfg(feature = "native")]
+        let source = super::core_io::read_source(&args.file)?;
+        #[cfg(feature = "native")]
+        let scenario = super::core_io::read_json(scenario_path)?;
+        #[cfg(feature = "native")]
+        return match mori_backend::replay::generate(
+            &source,
+            action,
+            &scenario,
+            &target,
+            authorization.as_input(),
+        ) {
+            Ok(record) => {
+                super::core_io::print(&record)?;
+                Ok(ExitCode::SUCCESS)
+            }
+            Err(error) => {
+                super::core_io::print(
+                    &serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":error}),
+                )?;
+                Ok(ExitCode::FAILURE)
+            }
+        };
+        #[cfg(not(feature = "native"))]
+        {
+            let _ = path;
+            return super::native_unavailable();
+        }
+    }
+    if args.target.is_some() || args.authorization.present() {
+        return Err(super::core_io::operation(
+            "--target and signed replay arguments require --trace",
+        ));
+    }
+    let source = super::core_io::read_source(&args.file)?;
+    // Hook: /2 routing. A /2 start keeps every core failure labelled.
+    if mori_core::language(&source) == Ok(mori_core::stage::LANGUAGE_2) {
+        return run_stage_start(&args, &source, action, scenario_path);
+    }
+    let program = mori_core::parse(&source).map_err(super::core_io::operation)?;
+    let scenario = super::core_io::read_json(scenario_path)?;
+    if let Some(cap) = args.logical_cap {
+        return match mori_core::simulate_metered(&program, action, &scenario, cap) {
+            Ok(metered) => {
+                super::core_io::print(&serde_json::json!({
+                    "status": "accepted", "qualification": "local-reference-execution",
+                    "execution": metered.execution, "profile": metered.cost.profile,
+                    "logical": {"cap": metered.cost.cap, "used": metered.cost.used}
+                }))?;
+                Ok(ExitCode::SUCCESS)
+            }
+            Err(refused) => {
+                super::core_io::print(&serde_json::json!({
+                    "status": "rejected", "error": refused.error,
+                    "profile": refused.cost.profile,
+                    "logical": {"cap": refused.cost.cap, "used": refused.cost.used}
+                }))?;
+                Ok(ExitCode::FAILURE)
+            }
+        };
+    }
+    match mori_core::simulate(&program, action, &scenario) {
+        Ok(execution) => {
+            super::core_io::print(
+                &serde_json::json!({"status":"accepted", "qualification":"local-reference-execution", "execution":execution}),
+            )?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Err(error) => {
+            super::core_io::print(&serde_json::json!({"status":"rejected", "error":error}))?;
+            Ok(ExitCode::FAILURE)
+        }
+    }
+}
+
+/// Render the same explicit qualification on every staged public object.
+pub(super) fn print_stage_report(mut report: serde_json::Value) -> super::Result<()> {
+    let object = report
+        .as_object_mut()
+        .expect("stage reports are JSON objects");
+    for (name, value) in mori_core::stage::STAGE_LABELS {
+        object.insert(name.into(), serde_json::Value::String(value.into()));

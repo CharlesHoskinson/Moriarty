@@ -1,0 +1,271 @@
+{
+  "profile": "moriarty-tests/recovery/1",
+  "cases": [
+    {
+      "name": "forward-compensation-recover-direct",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "purchase",
+      "workspace": "isolated-case",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "recover",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "recover.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "recover-direct.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "reopen-closed.report.example.json"
+        }
+      ]
+    },
+    {
+      "name": "forward-compensation-recover-after-normal-false",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "purchase",
+      "workspace": "isolated-case",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "resume",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "normal-false.event.json",
+          "checkpoint_out": "scratch/observed.json",
+          "expected": "resume-normal-false.report.example.json"
+        },
+        {
+          "operation": "recover",
+          "checkpoint_in": "scratch/observed.json",
+          "event": "recover.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "recover-after-normal-false.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "reopen-closed-after-normal-false.report.example.json"
+        }
+      ]
+    },
+    {
+      "name": "forward-compensation-forward-direct",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "purchase",
+      "workspace": "isolated-case",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "resume",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "normal-true.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "forward.direct.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "forward.reopen-direct.report.example.json"
+        }
+      ]
+    },
+    {
+      "name": "forward-compensation-forward-after-normal-false",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "purchase",
+      "workspace": "isolated-case",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "resume",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "normal-false.event.json",
+          "checkpoint_out": "scratch/observed.json",
+          "expected": "resume-normal-false.report.example.json"
+        },
+        {
+          "operation": "resume",
+          "checkpoint_in": "scratch/observed.json",
+          "event": "normal-true.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "forward.after-normal-false.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "forward.reopen-after-normal-false.report.example.json"
+        }
+      ]
+    },
+    {
+      "name": "forward-compensation-recover-after-recovery-not-taken",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "purchase",
+      "workspace": "isolated-case",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "recover",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "recover-unknown.event.json",
+          "checkpoint_out": "scratch/not-taken.json",
+          "expected": "recover-unknown.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/not-taken.json",
+          "expected": "reopen-after-recovery-not-taken.report.example.json"
+        },
+        {
+          "operation": "recover",
+          "checkpoint_in": "scratch/not-taken.json",
+          "event": "recover.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "recover-after-recovery-not-taken.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "reopen-closed-after-recovery-not-taken.report.example.json"
+        }
+      ]
+    },
+    {
+      "name": "forward-compensation-forward-after-recovery-not-taken",
+      "source": "base.mori",
+      "recovery_module": "recovery.mori",
+      "action": "purchase",
+      "workspace": "isolated-case",
+      "process_isolation": "fresh-process-per-operation",
+      "operations": [
+        {
+          "operation": "inspect",
+          "expected": "program.inspect.example.json"
+        },
+        {
+          "operation": "start",
+          "scenario": "start.scenario.json",
+          "committed_cap": "13",
+          "checkpoint_out": "scratch/pending.json",
+          "expected": "start.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/pending.json",
+          "expected": "reopen.report.example.json"
+        },
+        {
+          "operation": "recover",
+          "checkpoint_in": "scratch/pending.json",
+          "event": "recover-unknown.event.json",
+          "checkpoint_out": "scratch/not-taken.json",
+          "expected": "recover-unknown.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/not-taken.json",
+          "expected": "reopen-after-recovery-not-taken.report.example.json"
+        },
+        {
+          "operation": "resume",
+          "checkpoint_in": "scratch/not-taken.json",
+          "event": "normal-true.event.json",
+          "checkpoint_out": "scratch/closed.json",
+          "expected": "forward.after-recovery-not-taken.report.example.json"
+        },
+        {
+          "operation": "reopen",
+          "checkpoint_in": "scratch/closed.json",
+          "expected": "forward.reopen-after-recovery-not-taken.report.example.json"
+        }
+      ]
+    }
+  ]
+}

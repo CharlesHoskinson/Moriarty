@@ -1,0 +1,30 @@
+language "moriarty/1";
+agreement StockPurchaseTermination {
+  asset EUR = { network: "actus-reference", issuer: "fixture-only", reference: "EUR", scale: 0 };
+  state purchased: Bool = false;
+  state terminated: Bool = false;
+  state statusTime: UInt = 20121230000000;
+  state notionalPrincipal: UInt = 0;
+  state nominalInterestRate: UInt = 0;
+  state accruedInterest: UInt = 0;
+
+  action purchase(eventTime: UInt) {
+    requires not purchased;
+    requires not terminated;
+    requires eventTime == 20130101000000;
+    transfer(EUR, "investor", "counterparty", 1200);
+    next statusTime = eventTime;
+    next purchased = true;
+    emit "PRD"(eventTime);
+  }
+
+  action terminate(eventTime: UInt) {
+    requires purchased;
+    requires not terminated;
+    requires eventTime == 20161231235959;
+    transfer(EUR, "counterparty", "investor", 3000);
+    next statusTime = eventTime;
+    next terminated = true;
+    emit "TD"(eventTime);
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "candidateCommit": "b3b4f9166832d3905492654edbc8f720cef8642b",
+  "findings": [
+    {
+      "axis": "source",
+      "detail": "The selector display change in models/utxo/qa/check.py resolves the repository-relative path against files.root, appends a positive integer startLine when present (using type(...) is int to exclude booleans), and prints the normative heading on a separate Requirement line while leaving the canonical path#heading requirement key in inspect() unchanged.",
+      "exactQuoteRefs": [
+        {
+          "lineEnd": 432,
+          "lineStart": 427,
+          "path": "models/utxo/qa/check.py",
+          "quote": "                    source = row[\"source\"]\n                    location = str(files.root / source[\"path\"])\n                    if type(source.get(\"startLine\")) is int and source[\"startLine\"] > 0:\n                        location += f\":{source['startLine']}\"\n                    print(f\"  Source: {location}\")\n                    print(f\"  Requirement: {row['heading']}\")"
+        }
+      ],
+      "severity": "info"
+    },
+    {
+      "axis": "result",
+      "detail": "The inline reportingChildObservation in current-evidence.json records the pre-rebinding state at commit 409b429c01ab3094d8fd3e1af70b844ccb3b4aa6 (focused exit 0, unsupported --metadata-only exit 2, and corrected-argv metadata exit 1 with four stale check.py pins), whereas the terminal post-rebinding runs at candidate commit b3b4f9166832d3905492654edbc8f720cef8642b (full-reporting-suite exit 0 across 63 tests and metadata-after-rebinding exit 0 with 148 open requirements, 292 scenario records, and 20 families) are captured in the external root receipts because current-evidence.json cannot hash-pin a receipt generated after its own commit.",
+      "exactQuoteRefs": [
+        {
+          "lineEnd": 13679,
+          "lineStart": 13677,
+          "path": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+          "quote": "          \"observed\": \"Root focused path regression exit0, one synthetic case; corrected metadata inventory exit1 with four stale source pins.\",\n          \"notObserved\": \"Full reporting suite after rebinding, exact original native scenario outcomes, native family observations and independent review remain unestablished.\"\n        }"
+        },
+        {
+          "lineEnd": 126,
+          "lineStart": 121,
+          "path": "docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json",
+          "quote": "  \"limits\": [\n    \"All148 original acceptances remain open; both EU-NAT-028 native scenarios remain unestablished.\",\n    \"One focused synthetic reporting test passed, not a complete reporting suite or native family run.\",\n    \"The corrected inventory result is a retained failure, not a pass. Rebinding below is proposed and unexecuted.\",\n    \"Full root receipts remain at retained external paths; their exact content hashes identify them without authenticating their provenance.\"\n  ]"
+        }
+      ],
+      "severity": "info"
+    }
+  ],
+  "identityLimits": [
+    "Requested model tier/name (gemini-4-argon-high at HIGH effort) is a caller-supplied configuration label and not an independent cryptographic or backend attestation of model, weights, or execution effort.",
+    "This review is a non-author read-only inspection of the supplied packet and inline/physical files without independent runtime re-execution or external oracle verification."
+  ],
+  "limits": [
+    "Canonical JSON review of openspec/changes/utxo-doctorwatson/current-evidence.json is bounded to the complete changed EU-NAT-028 row (physical lines 13597-13891) and the exact 15-operation rebinding patch; the other 147 parsed rows are verified unchanged by the packet, and no model read of the full 1.4MB canonical file is claimed.",
+    "All 148 requirement acceptances remain open, all 292 scenario statuses (174 unrun, 118 unestablished) and 20 family layer records remain unchanged, and neither EU-NAT-028 native scenario is established.",
+    "No commands or subject executions were performed during this review; terminal results are evaluated from the supplied hash-pinned root receipts.",
+    "The underlying cause of the prior attempt's NO_EXPORT outcome is unknown; the keyed pathCoverage schema is treated only as an unconfirmed compatibility hypothesis.",
+    "This review covers ordinary local metadata reporting and source-pin rebinding only, with no security, cryptographic, compiler, prover, wallet, or native ledger/product acceptance."
+  ],
+  "pathCoverage": {
+    "docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json": {
+      "coverage": "complete",
+      "coverageScope": "Complete current file body.",
+      "exactQuoteRefs": [
+        {
+          "lineEnd": 126,
+          "lineStart": 121,
+          "path": "docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json",
+          "quote": "  \"limits\": [\n    \"All148 original acceptances remain open; both EU-NAT-028 native scenarios remain unestablished.\",\n    \"One focused synthetic reporting test passed, not a complete reporting suite or native family run.\",\n    \"The corrected inventory result is a retained failure, not a pass. Rebinding below is proposed and unexecuted.\",\n    \"Full root receipts remain at retained external paths; their exact content hashes identify them without authenticating their provenance.\"\n  ]"
+        }
+      ],
+      "path": "docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json",
+      "reason": "Read complete 128-line (6,667-byte) public observation JSON capturing pre-rebinding root runs at commit 409b429c01ab3094d8fd3e1af70b844ccb3b4aa6 (focused test exit 0, unsupported --metadata-only exit 2, and corrected-argv metadata exit 1 due to four stale check.py pins) and explicit scope/limit declarations.",
+      "sha256": "fddaf1e7fbfb8b44d42796a3e5fb60a15badd2797b30edd8fe2193e10d540ec3"
+    },
+    "models/utxo/qa/check.py": {
+      "coverage": "complete",
+      "coverageScope": "Complete current file body.",
+      "exactQuoteRefs": [
+        {
+          "lineEnd": 172,
+          "lineStart": 171,
+          "path": "models/utxo/qa/check.py",
+          "quote": "            files.pin(row[\"source\"], \"baseline source\", issues)\n            key = row[\"source\"][\"path\"] + \"#\" + row[\"heading\"]"
+        },
+        {
+          "lineEnd": 432,
+          "lineStart": 427,
+          "path": "models/utxo/qa/check.py",
+          "quote": "                    source = row[\"source\"]\n                    location = str(files.root / source[\"path\"])\n                    if type(source.get(\"startLine\")) is int and source[\"startLine\"] > 0:\n                        location += f\":{source['startLine']}\"\n                    print(f\"  Source: {location}\")\n                    print(f\"  Requirement: {row['heading']}\")"
+        }
+      ],
+      "path": "models/utxo/qa/check.py",
+      "reason": "Read complete 463-line (23,224-byte) current file body; verified the display-only hunk at lines 427-432 resolves files.root / source['path'] with optional positive integer startLine and prints Requirement heading separately while preserving all baseline/evidence inspection, key identity, and gate logic.",
+      "sha256": "924fa46454ef025b135473cbc153a5a123322e7a544816a8eac1b3256893d8f3"
+    },
+    "models/utxo/qa/test_requirement_source_locations.py": {
+      "coverage": "complete",
+      "coverageScope": "Complete current file body.",
+      "exactQuoteRefs": [
+        {
+          "lineEnd": 84,
+          "lineStart": 74,
+          "path": "models/utxo/qa/test_requirement_source_locations.py",
+          "quote": "            result = subprocess.run([sys.executable, \"-B\", str(CHECKER), \"--repo\", str(repo),\n                                     \"--requirement\", row[\"id\"]], cwd=elsewhere,\n                                    capture_output=True, text=True, timeout=10)\n            self.assertEqual(0, result.returncode, result.stdout + result.stderr)\n            source_line = next(line.strip() for line in result.stdout.splitlines() if line.strip().startswith(\"Source:\"))\n            location = source_line.removeprefix(\"Source: \")\n            self.assertEqual(str(original_file) + \":3\", location,\n                             \"Source output must open the original clause from a different working directory\")\n            displayed_path, displayed_line = location.rsplit(\":\", 1)\n            self.assertEqual(f\"### Requirement: {heading}\",\n                             Path(displayed_path).read_text().splitlines()[int(displayed_line) - 1])"
+        }
+      ],
+      "path": "models/utxo/qa/test_requirement_source_locations.py",
+      "reason": "Read complete 98-line (6,133-byte) focused regression test verifying that --requirement output from a different working directory resolves the full path and 1-based startLine of the synthetic requirement clause while keeping requirement key identity and open/unrun states intact.",
+      "sha256": "312618a4bf51edc4ba35285e53531c77f6e7909a7ee4156e0804683ecd268437"
+    },
+    "openspec/changes/utxo-doctorwatson/current-evidence.json": {
+      "coverage": "complete_changed_row_and_rebinding_only",
+      "coverageScope": "Complete EU-NAT-028 changed row, exact rebinding and147other parsed rows equality; not a full1.4MB model read.",
+      "exactQuoteRefs": [
+        {
+          "lineEnd": 13679,
+          "lineStart": 13656,
+          "path": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+          "quote": "        \"reportingChildObservation\": {\n          \"scope\": \"Ordinary reader source-location display only; separate from original Cardano-native scenarios.\",\n          \"sourceRefs\": [\n            {\n              \"path\": \"models/utxo/qa/check.py\",\n              \"sha256\": \"924fa46454ef025b135473cbc153a5a123322e7a544816a8eac1b3256893d8f3\",\n              \"evidenceClass\": \"current-ordinary-source\"\n            },\n            {\n              \"path\": \"models/utxo/qa/test_requirement_source_locations.py\",\n              \"sha256\": \"312618a4bf51edc4ba35285e53531c77f6e7909a7ee4156e0804683ecd268437\",\n              \"evidenceClass\": \"current-ordinary-source\"\n            }\n          ],\n          \"resultRefs\": [\n            {\n              \"path\": \"docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json\",\n              \"sha256\": \"fddaf1e7fbfb8b44d42796a3e5fb60a15badd2797b30edd8fe2193e10d540ec3\",\n              \"evidenceClass\": \"focused-ordinary-reporting-result\"\n            }\n          ],\n          \"observed\": \"Root focused path regression exit0, one synthetic case; corrected metadata inventory exit1 with four stale source pins.\",\n          \"notObserved\": \"Full reporting suite after rebinding, exact original native scenario outcomes, native family observations and independent review remain unestablished.\"\n        }"
+        },
+        {
+          "lineEnd": 13832,
+          "lineStart": 13813,
+          "path": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+          "quote": "      \"historicalReferenceBindings\": [\n        {\n          \"rowPointer\": \"/validation/evidenceRefs/1\",\n          \"oldRef\": {\n            \"path\": \"models/utxo/qa/check.py\",\n            \"sha256\": \"d83f1bf0be6031256f311e8d32d71c54d5f41a4f0e0b45ca197378dd416aa9cd\"\n          },\n          \"newRef\": {\n            \"path\": \"models/utxo/qa/check.py\",\n            \"sha256\": \"924fa46454ef025b135473cbc153a5a123322e7a544816a8eac1b3256893d8f3\",\n            \"evidenceClass\": \"current-source-inspection-only\",\n            \"scope\": \"Unchanged metadata/family-reporting implementation; no current native scenario observation.\"\n          },\n          \"historicalSource\": {\n            \"commit\": \"55f6659bc18e92fc525c26c79f8d06de53401c44\",\n            \"path\": \"models/utxo/qa/check.py\",\n            \"gitBlob\": \"fd50514df0d9a5eb460780207e973d96346cc76c\"\n          },\n          \"reason\": \"Display-only source edit changes whole-file digest. This rebinding identifies inspected current source; it does not refresh prior validation or establish a native scenario.\"\n        },"
+        }
+      ],
+      "path": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+      "reason": "Read the complete changed EU-NAT-028 row before and after rebinding (physical lines 13597-13891) and verified the exact 15-operation JSON patch rebinding the four check.py pins to sha256 924fa46454ef025b135473cbc153a5a123322e7a544816a8eac1b3256893d8f3 with historicalReferenceBindings back to commit 55f6659bc18e92fc525c26c79f8d06de53401c44, adding scoped test/observation pins, and preserving all open/unestablished statuses across EU-NAT-028 and the 147 verified-equal rows.",
+      "sha256": "bf4ef7f7ebaa71d9fc26d3ea77cd1e19c79f042da5bc36c64c0ec238746d7457"
+    }
+  },
+  "resultAxis": {
+    "exactQuoteRefs": [
+      {
+        "lineEnd": 43,
+        "lineStart": 36,
+        "path": "docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json",
+        "quote": "      \"result\": {\n        \"name\": \"focused\",\n        \"exitCode\": 0,\n        \"stdoutSha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n        \"stderrSha256\": \"25b2f5accdac98a191136cb854426f350f0b8b3747f4919f234c31bf9b9717fe\",\n        \"finishedAt\": \"2026-10-18T14:49:11.777626+00:00\"\n      },\n      \"stderr\": \"test_original_clause_location_resolves_from_another_directory (__main__.RequirementSourceLocations.test_original_clause_location_resolves_from_another_directory) ... ok\\n\\n----------------------------------------------------------------------\\nRan 1 test in 0.040s\\n\\nOK\\n\","
+      },
+      {
+        "lineEnd": 126,
+        "lineStart": 121,
+        "path": "docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json",
+        "quote": "  \"limits\": [\n    \"All148 original acceptances remain open; both EU-NAT-028 native scenarios remain unestablished.\",\n    \"One focused synthetic reporting test passed, not a complete reporting suite or native family run.\",\n    \"The corrected inventory result is a retained failure, not a pass. Rebinding below is proposed and unexecuted.\",\n    \"Full root receipts remain at retained external paths; their exact content hashes identify them without authenticating their provenance.\"\n  ]"
+      },
+      {
+        "lineEnd": 13679,
+        "lineStart": 13656,
+        "path": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+        "quote": "        \"reportingChildObservation\": {\n          \"scope\": \"Ordinary reader source-location display only; separate from original Cardano-native scenarios.\",\n          \"sourceRefs\": [\n            {\n              \"path\": \"models/utxo/qa/check.py\",\n              \"sha256\": \"924fa46454ef025b135473cbc153a5a123322e7a544816a8eac1b3256893d8f3\",\n              \"evidenceClass\": \"current-ordinary-source\"\n            },\n            {\n              \"path\": \"models/utxo/qa/test_requirement_source_locations.py\",\n              \"sha256\": \"312618a4bf51edc4ba35285e53531c77f6e7909a7ee4156e0804683ecd268437\",\n              \"evidenceClass\": \"current-ordinary-source\"\n            }\n          ],\n          \"resultRefs\": [\n            {\n              \"path\": \"docs/utxo/doctorwatson/evidence/reader-source-location-root-20261018.json\",\n              \"sha256\": \"fddaf1e7fbfb8b44d42796a3e5fb60a15badd2797b30edd8fe2193e10d540ec3\",\n              \"evidenceClass\": \"focused-ordinary-reporting-result\"\n            }\n          ],\n          \"observed\": \"Root focused path regression exit0, one synthetic case; corrected metadata inventory exit1 with four stale source pins.\",\n          \"notObserved\": \"Full reporting suite after rebinding, exact original native scenario outcomes, native family observations and independent review remain unestablished.\"\n        }"
+      }
+    ],
+    "limitations": [
+      "Terminal results (63-test ordinary reporting suite exit 0 and post-rebinding metadata check exit 0 at commit b3b4f9166832d3905492654edbc8f720cef8642b) validate local metadata reader behavior and pin consistency only, not Cardano-native, Midnight, compiler, prover, or ledger execution.",
+      "All 148 requirements remain open with 0 closed gates, and both EU-NAT-028 positive and negative scenarios remain unestablished.",
+      "Receipts are evaluated from supplied content and SHA-256 digests without independent command re-execution."
+    ],
+    "reason": "Complete terminal root receipts for candidate commit b3b4f9166832d3905492654edbc8f720cef8642b (tree 4dbe42ccf802c17e5a4dd4e49c9f37df38b480c1) confirm that the full 63-test ordinary reporting suite (including test_original_clause_location_resolves_from_another_directory) passed with exit code 0 and the post-rebinding metadata check (check.py --repo ... --json) passed with exit code 0, reporting integrity ok, 0 issues, 148 open requirements, 292 scenario records, 20 families, and 0 closed gates. Prior pre-rebinding observations at commit 409b429c01ab3094d8fd3e1af70b844ccb3b4aa6 (focused exit 0, unsupported --metadata-only exit 2, and stale-pin metadata exit 1) are accurately retained without status promotion.",
+    "scope": "Exact ordinary reader source-location display, explicit source rebinding and scoped reporting evidence only.",
+    "verdict": "approve"
+  },
+  "reviewToken": "reader-location-keyed-b3b4f916-20261018-v2",
+  "sourceAxis": {
+    "exactQuoteRefs": [
+      {
+        "lineEnd": 432,
+        "lineStart": 427,
+        "path": "models/utxo/qa/check.py",
+        "quote": "                    source = row[\"source\"]\n                    location = str(files.root / source[\"path\"])\n                    if type(source.get(\"startLine\")) is int and source[\"startLine\"] > 0:\n                        location += f\":{source['startLine']}\"\n                    print(f\"  Source: {location}\")\n                    print(f\"  Requirement: {row['heading']}\")"
+      },
+      {
+        "lineEnd": 84,
+        "lineStart": 74,
+        "path": "models/utxo/qa/test_requirement_source_locations.py",
+        "quote": "            result = subprocess.run([sys.executable, \"-B\", str(CHECKER), \"--repo\", str(repo),\n                                     \"--requirement\", row[\"id\"]], cwd=elsewhere,\n                                    capture_output=True, text=True, timeout=10)\n            self.assertEqual(0, result.returncode, result.stdout + result.stderr)\n            source_line = next(line.strip() for line in result.stdout.splitlines() if line.strip().startswith(\"Source:\"))\n            location = source_line.removeprefix(\"Source: \")\n            self.assertEqual(str(original_file) + \":3\", location,\n                             \"Source output must open the original clause from a different working directory\")\n            displayed_path, displayed_line = location.rsplit(\":\", 1)\n            self.assertEqual(f\"### Requirement: {heading}\",\n                             Path(displayed_path).read_text().splitlines()[int(displayed_line) - 1])"
+      },
+      {
+        "lineEnd": 13832,
+        "lineStart": 13813,
+        "path": "openspec/changes/utxo-doctorwatson/current-evidence.json",
+        "quote": "      \"historicalReferenceBindings\": [\n        {\n          \"rowPointer\": \"/validation/evidenceRefs/1\",\n          \"oldRef\": {\n            \"path\": \"models/utxo/qa/check.py\",\n            \"sha256\": \"d83f1bf0be6031256f311e8d32d71c54d5f41a4f0e0b45ca197378dd416aa9cd\"\n          },\n          \"newRef\": {\n            \"path\": \"models/utxo/qa/check.py\",\n            \"sha256\": \"924fa46454ef025b135473cbc153a5a123322e7a544816a8eac1b3256893d8f3\",\n            \"evidenceClass\": \"current-source-inspection-only\",\n            \"scope\": \"Unchanged metadata/family-reporting implementation; no current native scenario observation.\"\n          },\n          \"historicalSource\": {\n            \"commit\": \"55f6659bc18e92fc525c26c79f8d06de53401c44\",\n            \"path\": \"models/utxo/qa/check.py\",\n            \"gitBlob\": \"fd50514df0d9a5eb460780207e973d96346cc76c\"\n          },\n          \"reason\": \"Display-only source edit changes whole-file digest. This rebinding identifies inspected current source; it does not refresh prior validation or establish a native scenario.\"\n        },"
+      }
+    ],
+    "limitations": [
+      "Canonical evidence review is bounded to the complete changed EU-NAT-028 row (lines 13597-13891) and the 15-operation JSON patch; the remaining 147 unchanged rows were not model-read across the 1.4MB file.",
+      "The focused test is an author-supplied synthetic reporting regression, not an independent target or native-family oracle.",
+      "Source rebinding updates file digests for the display-only reader change without advancing native validation or closing any requirement gate."
+    ],
+    "reason": "The 6-line selector display change in models/utxo/qa/check.py (lines 427-432) cleanly resolves the repository-relative path against files.root, appends a positive integer startLine when present, and prints the requirement heading on its own line while preserving the canonical path#heading requirement key and all DWU-01/DWU-06 inspection invariants. The focused regression in models/utxo/qa/test_requirement_source_locations.py directly tests cross-directory resolution to the exact file and line without mutating requirement identity or status. The 15-operation patch in openspec/changes/utxo-doctorwatson/current-evidence.json (lines 13597-13891) rebinds only the four EU-NAT-028 check.py pins to the new digest, records explicit historicalReferenceBindings to base commit 55f6659bc18e92fc525c26c79f8d06de53401c44, attaches the new test and root observation under bounded evidenceClass/scope metadata, and preserves all 148 open acceptances, 292 scenario statuses, and 20 family records unchanged.",
+    "scope": "Exact ordinary reader source-location display, explicit source rebinding and scoped reporting evidence only.",
+    "verdict": "approve"
+  }
+}

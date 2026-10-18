@@ -1,0 +1,73 @@
+#[cfg(feature = "native")]
+use super::core_io;
+#[cfg(feature = "native")]
+use crate::error::CliError;
+use crate::shell::Shell;
+#[cfg(feature = "native")]
+use std::path::Path;
+use std::{path::PathBuf, process::ExitCode};
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    pub file: PathBuf,
+    /// Exact target profile JSON with network, anchor and compiler limits
+    #[arg(long)]
+    pub target: PathBuf,
+    /// New output directory; refuses to overwrite existing artifacts
+    #[arg(long)]
+    pub out: PathBuf,
+}
+#[cfg(feature = "native")]
+pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    let source = core_io::read_source(&args.file)?;
+    if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
+        let target: mori_backend::Target = core_io::read_json(&args.target)?;
+        let artifact = mori_backend::stage::compile_staged(&source, &target, &args.out)
+            .map_err(core_io::operation)?;
+        let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;
+        std::fs::create_dir(&args.out).map_err(|source| CliError::Write {
+            path: args.out.clone(),
+            source,
+        })?;
+        publish_staged_artifact(&artifact, &manifest, &args.out)?;
+        shell.status(
+            "Compiled",
+            format!(
+                "{} circuits into {}",
+                artifact.circuits.len(),
+                args.out.display()
+            ),
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+    let program = mori_core::parse(&source).map_err(core_io::operation)?;
+    let target: mori_backend::Target = core_io::read_json(&args.target)?;
+    // The trusted Target selects the mode explicitly; a signed Target never
+    // reaches the unsigned compiler.
+    let reported = mori_backend::source_projection::compile_reported(&program, &target)
+        .map_err(core_io::operation)?;
+    let artifact = reported.artifact;
+    let projection = serde_json::to_string_pretty(&serde_json::json!({
+        "source_hash": mori_core::intent::hash_bytes(source.as_bytes()),
+        "compilation": reported.source_projection,
+    }))
+    .map_err(core_io::operation)?;
+    // Compile and serialize fully before touching the destination.
+    let manifest = serde_json::to_string_pretty(&artifact).map_err(core_io::operation)?;
+    std::fs::create_dir(&args.out).map_err(|source| CliError::Write {
+        path: args.out.clone(),
+        source,
+    })?;
+    publish_artifact(&artifact, &manifest, Some(&projection), &args.out)?;
+    shell.status(
+        "Compiled",
+        format!(
+            "{} circuits into {}",
+            artifact.circuits.len(),
+            args.out.display()
+        ),
+    );
+    Ok(ExitCode::SUCCESS)
+}
+
+// The caller has reserved a new directory after all input/compiler preflight.

@@ -1,0 +1,1714 @@
+{
+  "type": "object",
+  "additionalProperties": true,
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "path",
+        "reference",
+        "quote"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string"
+        }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "originalRequestVerbatim",
+        "fullProposedContract",
+        "exactInterfaces",
+        "resourceRules",
+        "failurePublicationRules",
+        "controlAuthorityRules",
+        "evidenceObligations",
+        "existingRulesPreservedOrProposedChanges",
+        "blockers",
+        "sourceEvidence"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete-proposed-contract",
+            "blocked",
+            "abstain"
+          ]
+        },
+        "originalRequestVerbatim": {
+          "type": "string"
+        },
+        "fullProposedContract": {
+          "type": "string"
+        },
+        "exactInterfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "surface",
+              "contract"
+            ],
+            "properties": {
+              "surface": {
+                "type": "string"
+              },
+              "contract": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "resourceRules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failurePublicationRules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "controlAuthorityRules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidenceObligations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "existingRulesPreservedOrProposedChanges": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "blockedInterface",
+              "missingPremiseOrDecision",
+              "whyRequired"
+            ],
+            "properties": {
+              "blockedInterface": {
+                "type": "string"
+              },
+              "missingPremiseOrDecision": {
+                "type": "string"
+              },
+              "whyRequired": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "sourceEvidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete-proposed-contract"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "fullProposedContract": {
+                "minLength": 1
+              },
+              "exactInterfaces": {
+                "minItems": 1
+              },
+              "sourceEvidence": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "blocked",
+                  "abstain"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blockers": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "reviewToken",
+    "reviewedSubject",
+    "verdict",
+    "ODContracts",
+    "SCPreservation",
+    "MPLRCoverage",
+    "wholeContractConsistency",
+    "readScope",
+    "blockers",
+    "limitations",
+    "executionAuthorityGranted",
+    "implementationOrRuntimeClaimed",
+    "summary"
+  ],
+  "properties": {
+    "reviewToken": {
+      "const": "sequence-owner-full-contract-f91-20261018-v1"
+    },
+    "reviewedSubject": {
+      "const": {
+        "task": "all-OD1-OD8-complete-Sequence-owner-contract-proposal",
+        "sourceCommit": "f91f2c7f1b3bf2229d1243fc6a1f9ee37004a209",
+        "sourceTree": "ed8323c00f31deaace461bf63db0365e8c4e0aac",
+        "sourceParent": "07d486d5a9d75c7c0bc02c7943b43970cdf81bef",
+        "currentSourcePinsSha256": "e69d716081eaaed71b6eeb16408674c5698e4790c062a2aa02b62792504b27e4",
+        "originalProposalInventorySha256": "a6c3a16429ec5cb1cdb82ceb1aa12a739ab3d543429162df910fadf4cbde6e91",
+        "originalProposalPrimarySha256": "243a2e1eef296ac3e48f47c618b7cbee23eaf330a8840aec73c6a4736e9d7b2c",
+        "ownerRequestsSha256": "66f98c0075821d9162ba3e604b6edf2064f4072e84b451dd1cbb6ee48727ed0d",
+        "scChoicesSha256": "206b4b45df4f1e53ab5021fd058fa0807ee5e5e067dbd59157f5bf528d821812",
+        "ordinaryOpinions": [
+          {
+            "path": "ordinary-opinions/job-a/TERMINAL-REVIEW.json",
+            "sha256": "68294c0dff5daa351038fdfc7cb5bca8a3f3336106c54200200760f48deedf48",
+            "status": "recommend-B-conditional; fidelity pending; unadopted"
+          },
+          {
+            "path": "ordinary-opinions/job-b/TERMINAL-REVIEW.json",
+            "sha256": "bbe06a8e1c42c4742014005a2296a1006239bcb7795c4cd514e4fe9bd45cc612",
+            "status": "recommend-B-conditional; fidelity pending; unadopted"
+          }
+        ]
+      }
+    },
+    "verdict": {
+      "enum": [
+        "whole-proposed-contracts",
+        "proposed-contracts-with-explicit-blockers",
+        "abstain"
+      ]
+    },
+    "ODContracts": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "OD1",
+        "OD2",
+        "OD3",
+        "OD4",
+        "OD5",
+        "OD6",
+        "OD7",
+        "OD8"
+      ],
+      "properties": {
+        "OD1": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD1 \u2014 Source/domain admission | `Sequence::plan`, `FrameBindings`, projection before `stage::start` | What exact valid binding/domain/alias/schema judgments apply? Which local duty registry identities may be projected, including discharge-only incoming duties and await/R7 boundaries? Current predicates are not silently weakened. Supply exact admission ordering and supported domain; ordinary SC2 projection is not an admission proof. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD2": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD2 \u2014 Identity and predecessor carrier | Catalog's existing Program/Plan hashes, invocation ordinals, any future persisted Sequence | Existing stage identities are preserved verbatim. Specify any new source/plan/manifest/whole-prefix identity, canonical preimage, verification, origin, reopen and persistent parent rules. Local labels/array indices are only observations. No new sequence hash, proof lineage or authenticity follows from this design. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD3": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD3 \u2014 Errors and publication | `SequenceError`, failures during planning/stage calls/projection/lift/checked totals/export | Specify variants, exact public wire, diagnostic precedence, mutation/publication points and retained earlier observations/work. Existing original StageRejection envelopes/counters must remain available under their current contract; how a new envelope carries them is not defined by this ordinary author. No fabricated zero-attempt result or silent truncation is proposed. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD4": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD4 \u2014 Global resource envelope | `LogicalAllocation`, cumulative attempted/committed/remaining observations, output tables | Decide global preflight/enforcement, false/rejected/late-call charges, overflow, invocation/plan/output limits, adapter overhead and closure-reserve use. Existing per-action caps are not raised or borrowed. The proposed positive-trace equations are descriptive arithmetic, not adequacy or lifecycle enforcement evidence. Native DUST/service/proof/wall-time/resource controls retain their owners and historical counters. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD5": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD5 \u2014 Participant authority, consent and effects | Whole head/duty creation, source inputs, events, any authenticated successor | Supply required participant/source/intent authority and consent semantics. A shared key, transfer, ordinary local outcome or reviewer decision supplies no such authority. The product remains permissionless; project membership is not a source-language validity argument. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD6": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD6 \u2014 Head/ledger/phase semantics | Future native `Step`, failed Q after completed P, reserved/recovery paths | Specify actual phase-dependent effects, consumption, rejection/recovery and native/ledger correspondence. Ordinary local prefix retention does not decide transaction phase atomicity, rollback, ledger uniqueness or proof induction. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD7": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD7 \u2014 Private/persistent handoff and asynchronous evidence | Any reopened continuation, external callback or another process/party | Specify permitted witness/artifact ownership, disclosure, availability, origin/correlation/finality/consumption, late results and recovery. The proposed one-process raw StageEvent flow retains current local labels and is not an authenticated asynchronous outcome or isolated private handoff. |\n"
+                }
+              }
+            }
+          ]
+        },
+        "OD8": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/contract"
+            },
+            {
+              "properties": {
+                "originalRequestVerbatim": {
+                  "const": "| OD8 \u2014 Other operators | Shared-state schedule, split/join, atomic domain and external asynchronous branches | Supply each operator's actual rule and designated-owner judgments. This sequence has one active action and one local predecessor; it cannot accept a many-parent Join or concurrent head by merely listing it as the next invocation. Existing D1\u2013D5/RV1\u2013RV3 and unadopted SI1\u2013SI4 are not modified. |\n"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SCPreservation": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "SC1",
+        "SC2",
+        "SC3",
+        "SC4",
+        "SC5",
+        "SC6"
+      ],
+      "properties": {
+        "SC1": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "originalRecommendation",
+            "disposition",
+            "reason",
+            "evidence"
+          ],
+          "properties": {
+            "originalRecommendation": {
+              "const": "Implement approach B: an opaque production Sequence owns the actual complete head and every original invocation prefix; do not add stateless externally supplied CompletePrefix transition A in this slice."
+            },
+            "disposition": {
+              "enum": [
+                "retained-in-proposal",
+                "proposed-amendment-required",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "SC2": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "originalRecommendation",
+            "disposition",
+            "reason",
+            "evidence"
+          ],
+          "properties": {
+            "originalRecommendation": {
+              "const": "Use complete global Snapshot with explicit local-state/duty bindings, exact-asset balance projection and lossless outside-frame lift; support different program schemas and shared exact assets along serial order, subject to unchanged stage admission and owner rules."
+            },
+            "disposition": {
+              "enum": [
+                "retained-in-proposal",
+                "proposed-amendment-required",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "SC3": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "originalRecommendation",
+            "disposition",
+            "reason",
+            "evidence"
+          ],
+          "properties": {
+            "originalRecommendation": {
+              "const": "Retain each original whole stage outcome and all source Step/frame/capture/effect/work fields; expose complete lifted Step/head observations and ordered globally named effect attachments with exact run-local prefix references."
+            },
+            "disposition": {
+              "enum": [
+                "retained-in-proposal",
+                "proposed-amendment-required",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "SC4": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "originalRecommendation",
+            "disposition",
+            "reason",
+            "evidence"
+          ],
+          "properties": {
+            "originalRecommendation": {
+              "const": "Add public mori compose and reuse its production Sequence/loader/driver in the existing mori test adapter; expected files never supply successor state, prior history or accounting."
+            },
+            "disposition": {
+              "enum": [
+                "retained-in-proposal",
+                "proposed-amendment-required",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "SC5": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "originalRecommendation",
+            "disposition",
+            "reason",
+            "evidence"
+          ],
+          "properties": {
+            "originalRecommendation": {
+              "const": "Observe exact-asset/account gross debit/credits/fees, duty presence/additions/discharges/residuals and original local versus cumulative attempted/committed work, with visible unchanged closure reserve on normal traces; resource admission/failure/reserve authority remain owner-defined."
+            },
+            "disposition": {
+              "enum": [
+                "retained-in-proposal",
+                "proposed-amendment-required",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "SC6": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "originalRecommendation",
+            "disposition",
+            "reason",
+            "evidence"
+          ],
+          "properties": {
+            "originalRecommendation": {
+              "const": "Preserve existing Pair/DTO/profile behavior and all full original MPLR/five-operator/native/private/persistent/ledger/target requirements; ordinary source votes supply no owner rules, independent oracles, execution pass or parent closure."
+            },
+            "disposition": {
+              "enum": [
+                "retained-in-proposal",
+                "proposed-amendment-required",
+                "blocked"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        }
+      }
+    },
+    "MPLRCoverage": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "MPLR-001",
+        "MPLR-002",
+        "MPLR-003",
+        "MPLR-004",
+        "MPLR-005",
+        "MPLR-006",
+        "MPLR-007",
+        "MPLR-008",
+        "MPLR-009",
+        "MPLR-010",
+        "MPLR-011",
+        "MPLR-012",
+        "MPLR-013",
+        "MPLR-014",
+        "MPLR-015",
+        "MPLR-016",
+        "MPLR-017",
+        "MPLR-018",
+        "MPLR-019",
+        "MPLR-020",
+        "MPLR-021",
+        "MPLR-022",
+        "MPLR-023",
+        "MPLR-024",
+        "MPLR-025",
+        "MPLR-026",
+        "MPLR-027",
+        "MPLR-028",
+        "MPLR-029",
+        "MPLR-030",
+        "MPLR-031",
+        "MPLR-032",
+        "MPLR-033",
+        "MPLR-034",
+        "MPLR-035"
+      ],
+      "properties": {
+        "MPLR-001": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-002": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-003": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-004": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-005": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-006": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-007": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-008": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-009": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-010": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-011": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-012": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-013": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-014": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-015": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-016": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-017": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-018": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-019": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-020": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-021": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-022": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-023": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-024": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-025": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-026": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-027": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-028": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-029": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-030": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-031": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-032": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-033": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-034": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "MPLR-035": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "disposition",
+            "contractReferences",
+            "retainedOpenObligations"
+          ],
+          "properties": {
+            "disposition": {
+              "enum": [
+                "linked-to-proposed-contract",
+                "retained-open",
+                "blocked"
+              ]
+            },
+            "contractReferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "retainedOpenObligations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "wholeContractConsistency": {
+      "type": "string"
+    },
+    "readScope": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "path",
+          "status",
+          "rangesOrReferences",
+          "limitations"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "read-complete",
+              "read-partial",
+              "unread",
+              "exact-byte-alias-read-through-target"
+            ]
+          },
+          "rangesOrReferences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "executionAuthorityGranted": {
+      "const": false
+    },
+    "implementationOrRuntimeClaimed": {
+      "const": false
+    },
+    "summary": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+The Core regressions now compare the complete Waiting segment and independently frozen financial prefixes, including fees, residual duties, preserved rows and ordered effects. Reserve/spend/refund is checked through both the library and the public simulate command, with complete CLI process output retained before assertions.
+
+Local validation at `fca9aa11704bc556b6f7c5bfc9b6dcab7c59893e`: four tests pass across the guarded-quantity, program/plan roundtrip and reserve targets. Rustfmt passes for the three executable test files. All fixture bytes remain frozen; formatting changed only executable test layout. RUST_GUIDELINES records the direct frozen-value comparison exception. Prior author exposure and finite projection limits remain explicit in the evidence. No SDK, native-proof, compiler-Artifact or ledger correspondence is established.
+
+This branch is based on the tested CLI/financial-check candidate in #240. Fresh complete source/result review remains pending. No hosted CI was dispatched.

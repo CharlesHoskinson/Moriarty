@@ -1,0 +1,5 @@
+Add six financial source specimens to the existing real-binary source-check harness: beta invoice/repayment, Core/1 payment/loan, and contrasting Core/2 escrow/rebate. Assert complete frozen check-report stdout, exit code and JSON-mode empty stderr, plus quiet-human stream/exit behavior. Preserve all eight original cases.
+
+Candidate360f32ba5b6680788d1c0f1e7b68c2207a877d47, tree66a7d788405966afe87f27e0879332652ee11125, based on main8269b5b7. Actual local selection:6passed,8oldcasesfiltered in52.614s;12publicCLI invocations. Owned root/session cleaned up and source pins unchanged. Fresh independent source/result review is pending.
+
+Expected report values/bytes were declared before execution, with original source-exposed author provenance retained. They are not blinded semantic or financial execution evidence. Root rustfmt removed one newly added trailing blank line in the test source; frozen source/output fixtures are unchanged. These checks do not establish complete Program, financial execution, continuation, compiler/native/proof/ledger behavior or close any parent requirement.

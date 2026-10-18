@@ -1,0 +1,7 @@
+Unapplied PR237 CLI guidance integration on main71
+
+Base 71c22f8a477231be869786eb42f04e3b50d1b3a7 / tree 6b6204185c316ceaf7ecd19cc6fb8164ad1d79b4. Prospective tree 4951a6445227ebfec40aceb201e80fdf497e8fa1 (pure in-memory Git tree calculation, not an actual commit). CANDIDATE.patch is the exact previously reviewed f297 3-path delta; every current before body equals the earlier8269 before body. All hunks reconstruct exact f297 after bodies. No conflicts or resolutions.
+
+Full before/after3files and45full candidate context bodies are physical. The previous40-body public-consumer context set is retained; parser.rs, its language regression, mori-core Cargo features and normative guidance are added. Main71 retains PR238 Core-header error changes; current check wrapper/helper, module dispatch, compile, simulate, default expand, explicit Source6 and Node contexts remain byteequal to f297. CURRENT-HEADER-DIAGNOSTIC.patch records the exact upstream difference.
+
+SOURCE-PREDICATES and SOURCE-PINS identify source expectations and exact blobs. ORDINARY-REGRESSION-ARGV contains existing selected Clap metadata/header regression and5shell syntax commands, all inspected and UNRUN on this prospective tree. No new semantic/test authoring or output goldens. Root alone integrates/checks/reviews. Existing exact f297 approval and actual results remain historical; no new-tree approval is claimed. No product/native/SDK/proof/wallet execution, provider calls or Git/shared writes occurred.

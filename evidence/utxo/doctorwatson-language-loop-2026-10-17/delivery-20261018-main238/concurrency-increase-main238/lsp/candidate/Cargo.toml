@@ -1,0 +1,76 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+# Standalone experiment and evidence crates keep their own builds, and
+# crates/fixtures holds shared test programs, not a crate.
+exclude = ["experiments", "raw", "wiki-llm", "deliverables", "crates/fixtures"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+repository = "https://github.com/CharlesHoskinson/Moriarty"
+
+[workspace.dependencies]
+mori-ast = { path = "crates/mori-ast" }
+mori-backend = { path = "crates/mori-backend" }
+mori-checker = { path = "crates/mori-checker" }
+mori-core = { path = "crates/mori-core" }
+mori-diagnostics = { path = "crates/mori-diagnostics" }
+mori-fmt = { path = "crates/mori-fmt" }
+mori-ledger = { path = "crates/mori-ledger" }
+mori-lexer = { path = "crates/mori-lexer" }
+mori-parser = { path = "crates/mori-parser" }
+mori-source6 = { path = "crates/mori-source6" }
+mori-span = { path = "crates/mori-span" }
+
+# Midnight ledger crates, all from one pinned revision.
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-coin-structure = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-ledger = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14", package = "midnight-ledger-v9" }
+midnight-onchain-runtime = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-onchain-state = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-onchain-vm = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-storage = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-zkir-v3 = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+# Published crates that must match the versions the ledger revision uses.
+midnight-curves = "=0.3.1"
+midnight-proofs = "=0.8.3"
+
+anstream = "1.0.0"
+anstyle = "1.0.14"
+clap = { version = "4.6.7", features = ["derive"] }
+futures = "=0.3.34"
+ignore = "0.4.33"
+indoc = "2.0.7"
+insta = "1.49.0"
+k256 = { version = "=0.13.4", features = ["schnorr", "ecdsa"] }
+libc = "=0.2.190"
+miette = { version = "7.6.0", default-features = false }
+lsp-server = "=0.10.0"
+lsp-types = { package = "gen-lsp-types", version = "=0.11.0", default-features = false }
+proptest = "1.11.0"
+rand = "=0.8.8"
+rayon = "1.12.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+similar = "2.7.0"
+soa-rs = "1.0.1"
+terminal_size = "0.4.4"
+thiserror = "2.0.21"
+
+# Faster snapshot diffing, as recommended by insta.
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
+
+# The pinned ledger's v2 compatibility path requires unpublished crypto 2.2.
+# Mirror its own workspace patches with an immutable retained release commit;
+# direct v3 dependencies remain pinned to 04c9c5d. No mutable local paths.
+[patch.crates-io]
+midnight-transient-crypto-old = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1", package = "midnight-transient-crypto" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14" }

@@ -1,0 +1,58 @@
+{
+  "allocation": {
+    "closure_reserve": "7",
+    "ordinary": "40"
+  },
+  "invocations": [
+    {
+      "action": "deliver",
+      "duty_bindings": {
+        "duty": "invoice.main"
+      },
+      "inputs": "empty-inputs.json",
+      "logical_cap": "16",
+      "program": "staged",
+      "state_bindings": {
+        "phase": "payment.phase"
+      }
+    },
+    {
+      "action": "finish",
+      "duty_bindings": {},
+      "inputs": "empty-inputs.json",
+      "logical_cap": "12",
+      "program": "successor",
+      "state_bindings": {
+        "progress": "payment.phase"
+      }
+    }
+  ],
+  "opening": "staged-opening.json",
+  "operations": [
+    {
+      "kind": "begin"
+    },
+    {
+      "event": "approval-true.json",
+      "kind": "resume"
+    },
+    {
+      "event": "receipt-true.json",
+      "kind": "resume"
+    },
+    {
+      "kind": "next"
+    }
+  ],
+  "profile": "moriarty-composition/sequential-proposed/1",
+  "programs": [
+    {
+      "key": "staged",
+      "source": "staged-first.mori"
+    },
+    {
+      "key": "successor",
+      "source": "staged-second.mori"
+    }
+  ]
+}

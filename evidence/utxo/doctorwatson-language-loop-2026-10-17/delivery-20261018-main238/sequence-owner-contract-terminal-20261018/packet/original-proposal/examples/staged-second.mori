@@ -1,0 +1,12 @@
+language "moriarty/2";
+agreement StagedSuccessor {
+  state progress: UInt = 999;
+  asset UNIT = { network: "local", issuer: "independent-staged-test-oracle", reference: "UNIT", scale: 0 };
+  action finish() {
+    requires progress == 2;
+    transfer(UNIT, "alice", "bob", 1);
+    fee(UNIT, "alice", "treasury", 1);
+    next progress = 3;
+    emit "successor"(progress);
+  }
+}

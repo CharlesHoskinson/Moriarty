@@ -1,0 +1,352 @@
+{
+  "wholeOpinionSha256": "47ff40ae342351e121d6d8035293a525bdb187bff81555a937800fe83aa04ea0",
+  "assessmentType": "mechanical source/result claim fidelity; not a review vote or adoption",
+  "sourceAssessments": 10,
+  "resultAssessments": 11,
+  "originalFindings": 4,
+  "coverageRows": 15,
+  "narrativeMismatchesAndQualifications": [
+    {
+      "id": "N1-manifest-name-conflation",
+      "status": "literal naming mismatch",
+      "occurrences": [
+        {
+          "opinionPointer": "/findings/3/observed",
+          "exactClaim": "CHECK-PLAN.json records sourceManifestSha256=fd71c6fa5efd3262bb8e64a188dbf1072f5981b61190efd2c957ae8b47146be2 (computed by actual-driver.py from financial-check-cases-main79-20261018/MANIFEST.json), while actual-receipts/SOURCE-PINS.json has SHA256 aeed0fd5928c1c17d4c166e59aa5067a6de56b21ca4c53064c47cd379f8cf386 across 873 rows (of which 23 changed/context rows are delivered inline in SELECTED-ACTUAL-SOURCE-PINS.json) and the review packet manifest hash is 615615177708f8b44ce6d4c642968f698ae87c85c0575f34d7b440611e1b7cb5. Additionally, head 360f32ba5b6680788d1c0f1e7b68c2207a877d47 differs from historical author patch e355f2381c42e7ab3c4de5fb8ea7ce975bd084879b64d2d3e62b6a905174a92f by a single trailing newline removed by rustfmt in crates/mori/tests/check_source_dispatch.rs."
+        },
+        {
+          "opinionPointer": "/resultChecks/candidate-and-source-bindings/limitations/1",
+          "exactClaim": "CHECK-PLAN.json records sourceManifestSha256=fd71c6fa5efd3262bb8e64a188dbf1072f5981b61190efd2c957ae8b47146be2 (the hash of P/MANIFEST.json in actual-driver.py), whereas the review packet manifest hash is 615615177708f8b44ce6d4c642968f698ae87c85c0575f34d7b440611e1b7cb5 and full SOURCE-PINS.json is aeed0fd5928c1c17d4c166e59aa5067a6de56b21ca4c53064c47cd379f8cf386."
+        }
+      ],
+      "fact": "61561517... is packet/SOURCE-PINS.json, the sourceManifestSha256 field. packet/MANIFEST.json hashes to b4f7705e46db191c3484cf8d09baaf950c871fa57871d6cc682a279eb6a6a35a. The top-level review sourceManifestSha256 and receiptManifestSha256 fields are correctly bound; their prose names are conflated.",
+      "sourceHashes": {
+        "SOURCE-PINS.json": "615615177708f8b44ce6d4c642968f698ae87c85c0575f34d7b440611e1b7cb5",
+        "MANIFEST.json": "b4f7705e46db191c3484cf8d09baaf950c871fa57871d6cc682a279eb6a6a35a",
+        "RECEIPT-PINS.json": "9b819fe8a8270e051d8dee26e341cc656134dedc814aa0140a02f6d7e0ca566a"
+      },
+      "scope": "Names do not change actual exact head/tree/result custody; do not silently repair the opinion."
+    },
+    {
+      "id": "N2-driver-try-finally",
+      "status": "literal control-flow mismatch",
+      "occurrences": [
+        {
+          "opinionPointer": "/resultChecks/terminal-and-containment/reason",
+          "exactClaim": "RESULT.json and FINAL-RESULT.json record exitCode 0 and wallSeconds 52.61422588999994s (of which 52.55s was compilation per STDERR.log line 131 and 0.03s was test execution per STDOUT.log line 10). CHILD.json records pid/session 861608 started with start_new_session=True; actual-driver.py checked ps -eo pid=,sid= upon completion and recorded ownedSessionRemaining: []. In its finally block, actual-driver.py verified post-run git HEAD, clean git status, and all 873 file SHA256 pins before removing /tmp/doctorwatson-cli-help-fi7krwv2 (recording existsAfter: false). No peak memory measurement or current live machine state is claimed."
+        }
+      ],
+      "fact": "Post-run clean-head/status/file-pin assertion occurs in try on driver line49. finally begins line50 and removes the root/writes FINAL-RESULT. The source has no unconditional finally recheck. The successful root-reported driver completion and recorded exit0 still corroborate the successful path.",
+      "anchors": [
+        {
+          "packetPath": "actual-driver.py",
+          "sha256": "28e090f9b628ddaccb5a98ac45c211b6d224a64eb1050e8835eb6230259b8431",
+          "lineStart": 41,
+          "lineEnd": 53,
+          "literal": " result={'finishedAt':now(),'exitCode':code,'wallSeconds':time.monotonic()-start,'stdoutSha256':sha(d/'STDOUT.log'),'stderrSha256':sha(d/'STDERR.log'),'ownedSessionRemaining':remaining};write(name+'/RESULT.json',result)\n assert not remaining;return result,d\nresults=[]\ntry:\n result,d=run('financial-source-check-tests',[str(TC/'cargo'),'test','--manifest-path',str(K/'Cargo.toml'),'--frozen','-j1','-p','mori','--no-default-features','--test','check_source_dispatch','financial_','--','--test-threads=1'],90)\n results.append({'name':'financial-source-check-tests',**result});print(json.dumps(results[-1]),flush=True)\n assert result['exitCode']==0\n text=(d/'STDOUT.log').read_text();assert '6 passed; 0 failed' in text and 'financial_core2_rebate ... ok' in text\n assert git('rev-parse','HEAD')==HEAD and not git('status','--porcelain=v1')and all(sha(K/p['path'])==p['sha256']for p in pins)\nfinally:\n shutil.rmtree(root)\n write('FINAL-RESULT.json',{'finishedAt':now(),'head':HEAD,'tree':tree,'results':results,'selectedSixCaseSuiteCompleted':len(results)==1,'ownedRoot':str(root),'existsAfter':root.exists(),'scope':'Six selected source report byte assertions with predeclared source-exposed author expectations. No financial evaluator/fullProgram/compiler/native/ledger or parent EARS acceptance. Originalpatch trailing blankline removed by rustfmt in test source only, allfrozenfixtures unchanged.'})\n print(json.dumps({'selectedSixCaseSuiteCompleted':len(results)==1,'ownedRootRemoved':not root.exists()}),flush=True)"
+        }
+      ],
+      "scope": "Do not infer unconditional source revalidation on failed runs from the opinion."
+    },
+    {
+      "id": "N3-prose-line-numbers",
+      "status": "source/log location mismatches",
+      "occurrences": [
+        {
+          "opinionPointer": "/coverage/crates~1mori~1tests~1check_source_dispatch.rs/assessment",
+          "exactClaim": "Read full 3931-byte Rust integration test file and compared against the 3431-byte 8269 base file. Preserves Case, CaseDirectory, check_case, and the eight original #[test] functions verbatim (lines 1..132), and appends six #[test] functions prefixed with financial_ (lines 134..162) with single trailing newline after rustfmt removed the extra blank line from e355."
+        },
+        {
+          "opinionPointer": "/sourceChecks/actual-public-consumer/reason",
+          "exactClaim": "All six new #[test] functions in crates/mori/tests/check_source_dispatch.rs (lines 134-162) call the unchanged check_case(id) harness (lines 46-92). For each case, check_case stages the .mori source under its declared fileLabel in an isolated temp directory and invokes the real compiled binary env!(\"CARGO_BIN_EXE_mori\") twice: first with [\"--color\", \"never\", \"check\", \"<fileLabel>\", \"--json\"], asserting exit code equality (0), whole-byte stdout equality with expected/<case>.stdout, and empty stderr; second with [\"--color\", \"never\", \"--quiet\", \"check\", \"<fileLabel>\"], asserting exit code equality (0), empty stdout, and empty stderr (since expected_exit == 0). Through commands::check::run and check_source::dispatch, this exercises the actual public CliConsumer path."
+        },
+        {
+          "opinionPointer": "/sourceChecks/original-eight-and-selected-six/reason",
+          "exactClaim": "Comparison of base/crates/fixtures/check-source/cases.json (3181 bytes) with head cases.json (5863 bytes) confirms that the first eight manifest entries (accepted, rejected, unparsable, core1-accepted, core1-rejected, core2-accepted, core2-rejected, unicode-byte-offsets) are preserved without modification, and six new financial-* entries are appended. Comparison of base/crates/mori/tests/check_source_dispatch.rs (3431 bytes, lines 1-132) with head check_source_dispatch.rs (3931 bytes, lines 1-162) confirms that lines 1-132 are byte-for-byte identical, and lines 134-162 append six #[test] functions named financial_beta_invoice, financial_beta_repayment, financial_core1_payment, financial_core1_loan, financial_core2_escrow, and financial_core2_rebate. Because none of the eight original test function names contain 'financial_', the Cargo test filter 'financial_' selects all 6 new tests and filters out all 8 original tests, making no false claim that the original 8 baseline cases were rerun."
+        },
+        {
+          "opinionPointer": "/sourceChecks/original-eight-and-selected-six/reason",
+          "exactClaim": "Comparison of base/crates/fixtures/check-source/cases.json (3181 bytes) with head cases.json (5863 bytes) confirms that the first eight manifest entries (accepted, rejected, unparsable, core1-accepted, core1-rejected, core2-accepted, core2-rejected, unicode-byte-offsets) are preserved without modification, and six new financial-* entries are appended. Comparison of base/crates/mori/tests/check_source_dispatch.rs (3431 bytes, lines 1-132) with head check_source_dispatch.rs (3931 bytes, lines 1-162) confirms that lines 1-132 are byte-for-byte identical, and lines 134-162 append six #[test] functions named financial_beta_invoice, financial_beta_repayment, financial_core1_payment, financial_core1_loan, financial_core2_escrow, and financial_core2_rebate. Because none of the eight original test function names contain 'financial_', the Cargo test filter 'financial_' selects all 6 new tests and filters out all 8 original tests, making no false claim that the original 8 baseline cases were rerun."
+        },
+        {
+          "opinionPointer": "/resultChecks/terminal-and-containment/reason",
+          "exactClaim": "RESULT.json and FINAL-RESULT.json record exitCode 0 and wallSeconds 52.61422588999994s (of which 52.55s was compilation per STDERR.log line 131 and 0.03s was test execution per STDOUT.log line 10). CHILD.json records pid/session 861608 started with start_new_session=True; actual-driver.py checked ps -eo pid=,sid= upon completion and recorded ownedSessionRemaining: []. In its finally block, actual-driver.py verified post-run git HEAD, clean git status, and all 873 file SHA256 pins before removing /tmp/doctorwatson-cli-help-fi7krwv2 (recording existsAfter: false). No peak memory measurement or current live machine state is claimed."
+        }
+      ],
+      "fact": "Base harness has131 lines; unchanged prefix is lines1-131. New six wrappers occupy lines133-161; current complete harness has161 lines. Cargo Finished test ...52.55s is stderr line134, not131. The recorded wall duration52.61422588999994 and PASS counts are correct. Cargo elapsed build duration does not independently measure only compiler time.",
+      "anchors": [
+        {
+          "packetPath": "head/crates/mori/tests/check_source_dispatch.rs",
+          "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+          "lineStart": 128,
+          "lineEnd": 161,
+          "literal": "#[test]\nfn beta_unicode_byte_offsets() {\n    check_case(\"unicode-byte-offsets\");\n}\n\n#[test]\nfn financial_beta_invoice() {\n    check_case(\"financial-beta-invoice\");\n}\n\n#[test]\nfn financial_beta_repayment() {\n    check_case(\"financial-beta-repayment\");\n}\n\n#[test]\nfn financial_core1_payment() {\n    check_case(\"financial-core1-payment\");\n}\n\n#[test]\nfn financial_core1_loan() {\n    check_case(\"financial-core1-loan\");\n}\n\n#[test]\nfn financial_core2_escrow() {\n    check_case(\"financial-core2-escrow\");\n}\n\n#[test]\nfn financial_core2_rebate() {\n    check_case(\"financial-core2-rebate\");\n}"
+        },
+        {
+          "packetPath": "actual-receipts/financial-source-check-tests/STDERR.log",
+          "sha256": "276c7c5e416298c3b271026f8210352e8797b9da9c4db73251caa401ae4195b6",
+          "lineStart": 131,
+          "lineEnd": 135,
+          "literal": "   Compiling insta v1.49.0\n   Compiling indoc v2.0.7\n   Compiling mori v0.1.0 (/home/charl/Moriarty/.worktrees/utxo-partial-delivery-20261018/crates/mori)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 52.55s\n     Running tests/check_source_dispatch.rs (/tmp/doctorwatson-cli-help-fi7krwv2/target/debug/deps/check_source_dispatch-51bc4c5be4331471)"
+        }
+      ],
+      "scope": "The exact underlying bodies/results are preserved despite stale prose locations."
+    },
+    {
+      "id": "N4-guideline-scope-inference",
+      "status": "literal scope overstated; interpretation must be qualified",
+      "occurrences": [
+        {
+          "opinionPointer": "/findings/0/quotes/1/supports",
+          "exactClaim": "Establishes the Rust toolchain guideline that review status, authorship, and 'not yet run' notes belong in commit messages, PRs, or docs/audits/ rather than under crates/."
+        }
+      ],
+      "fact": "The quoted guideline says comments explain code and review/authorship/not-yet-run notes go in commit messages, PRs or docs/audits/, not in source. It does not literally ban such metadata from every path under crates/ or explicitly classify Markdown fixture documentation as Rust source. Applying it to FINANCIAL-ORACLES.md is reviewer interpretation. The stale New case outputs are UNRUN sentence itself exists and conflicts with later six-PASS receipts. The proposed docs/audits cleanup remains a recommendation, not an explicit quoted rule covering all crates documentation.",
+      "anchors": [
+        {
+          "packetPath": "context/RUST_GUIDELINES.md",
+          "sha256": "7ac417984778c52387d49295364b1e2f85bde14d04d2130dc2c09b4f3bf9d404",
+          "lineStart": 107,
+          "lineEnd": 109,
+          "literal": "- Comments explain the code. Review status, authorship, model names, audit IDs\n  and notes like \"not yet run\" go in commit messages, pull requests or\n  `docs/audits/`, not in source."
+        },
+        {
+          "packetPath": "head/crates/fixtures/check-source/FINANCIAL-ORACLES.md",
+          "sha256": "4018696304cd3dbde57db4f72d5dd12c8b4bdd468e1e672bb968fb6d4f2a79d8",
+          "lineStart": 11,
+          "lineEnd": 20,
+          "literal": "The six JSON value expectations were declared before these cases were executed.\nThey were not generated by the tested parser, checker, evaluator or report\nconstructor. The author had already inspected implementation/report schemas;\nthese are source-derived author expectations, not blinded semantic evidence or\nan independent provider review. UTF-8 offsets and SHA256 are metadata of the\nliteral ASCII sources. Core ExprIds are explicitly enumerated in source order:\npayment0/1; loan-open0 then repayment1/2; escrow0–4; rebate0–4. Full stdout bytes\nare frozen, including final newline. Beta struct field ordering and Core object\nlexical key ordering follow the existing public wire format, corroborated only\nfor the separately captured original eight cases. New case outputs are UNRUN."
+        }
+      ],
+      "scope": "No product-source repair or reviewer-vote rewrite authorized by this fidelity check."
+    }
+  ],
+  "claimCoverage": [
+    {
+      "axis": "sourceChecks",
+      "key": "actual-public-consumer",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact real-binary env!(CARGO_BIN_EXE_mori) harness has two Command::output calls per selected case, complete-byte stdout/exit/stderr assertions and temp source staging; current check.rs delegates to check_source dispatch.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": [
+        "N3-prose-line-numbers"
+      ]
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "beta-transfer-and-repayment",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported by pinned source/result or explicitly bounded provenance",
+      "sourceResultFact": "The two literal Beta sources contain the named transfer/repay intents; exact expected reports contain accepted/local_s0, all declaration/action metadata and source hashes. Name spans were checked against literal source bytes, not executed semantics.",
+      "citationMismatchCount": 0,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "core1-financial-report",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "The two Core1 expected reports contain the exact ordered Liability/Transfer/Discharge and Transfer/Fee statement payloads, input names/types, ExprId integers, file/agreement/language/hash and diagnostics. No expression values/execution inferred.",
+      "citationMismatchCount": 2,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "core2-financial-await-report",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "The two Core2 reports contain ordered five-statement action arrays, Await label/binder/guard IDs and the three stated stage labels. Full Program, continuation execution and authentication/consumption remain outside the check.",
+      "citationMismatchCount": 2,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "exact-candidate-and-format",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "All15 changed file hashes and both modified base bodies match exact Git objects at the stated base/head/tree. Original author patch is preserved; recorded one-newline formatting delta is distinct from exact current patch.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "guidelines-and-scope",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Changed paths are fixture/documentation/test-only; no production/dependency/feature changes occur in the exact diff. Applicable guideline excerpt is real. N4 qualifies the proposed interpretation for Markdown fixture docs.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": [
+        "N4-guideline-scope-inference"
+      ]
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "oracle-exposure-boundary",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Author-freeze EXPECTATIONS and fixture docs explicitly disclose prior implementation/schema exposure and source-derived predeclared expectations. These records are provenance assertions, not independent evidence of hidden author process; no blinded/provider semantic-oracle attestation is supplied.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "original-eight-and-selected-six",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Base manifest objects match first8 current rows and original harness byte prefix is unchanged; six appended wrapper names match six PASS lines. Filter excludes8 original tests. Prose/reference line counts need N3 qualification.",
+      "citationMismatchCount": 2,
+      "narrativeQualifications": [
+        "N3-prose-line-numbers"
+      ]
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "qualification-boundary",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Actual dispatch and report constructors show Beta CheckReport and Core serde_json::Value projection. Program fields expressions/assets/states/semantics are omitted. Results establish report checks only, not financial/ledger/parent closure.",
+      "citationMismatchCount": 2,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "sourceChecks",
+      "key": "whole-byte-oracles",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "The harness reads frozen .stdout bytes and compares output.stdout directly; source hashes/lengths/final newlines/expected statuses and statements match pinned fixtures. In-memory child assertions are distinguished from persisted raw Cargo suite streams.",
+      "citationMismatchCount": 2,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "candidate-and-source-bindings",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Actual plan/start/final/source pins/driver bind360f/66a7/base8269. Selected23 rows match changed/context payloads;873 recorded source-pin rows are a driver-selected path set (crates plus named root/docs files), not all repository source dependencies. N1 fixes only report naming, N2 bounds control flow.",
+      "citationMismatchCount": 2,
+      "narrativeQualifications": [
+        "N1-manifest-name-conflation"
+      ]
+    },
+    {
+      "axis": "resultChecks",
+      "key": "command-and-selection",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported by pinned source/result or explicitly bounded provenance",
+      "sourceResultFact": "START argv matches actual-driver: timeout90s/kill-after5s, workspace Cargo.toml, frozen -j1 mori no-default-features check_source_dispatch financial_ single thread. Raw stdout6PASS/8filtered matches;12 calls inferred via exact two-call harness.",
+      "citationMismatchCount": 0,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "financial-beta-invoice",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact wrapper-to-manifest index/fileLabel/argv mapping, source/expected hashes/lengths, exit0 expectations and named PASS line match pinned public material. Child stdout/stderr agreement is harness-mediated; separate per-child raw receipt not retained.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "financial-beta-repayment",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact wrapper-to-manifest index/fileLabel/argv mapping, source/expected hashes/lengths, exit0 expectations and named PASS line match pinned public material. Child stdout/stderr agreement is harness-mediated; separate per-child raw receipt not retained.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "financial-core1-loan",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact wrapper-to-manifest index/fileLabel/argv mapping, source/expected hashes/lengths, exit0 expectations and named PASS line match pinned public material. Child stdout/stderr agreement is harness-mediated; separate per-child raw receipt not retained.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "financial-core1-payment",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact wrapper-to-manifest index/fileLabel/argv mapping, source/expected hashes/lengths, exit0 expectations and named PASS line match pinned public material. Child stdout/stderr agreement is harness-mediated; separate per-child raw receipt not retained.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "financial-core2-escrow",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact wrapper-to-manifest index/fileLabel/argv mapping, source/expected hashes/lengths, exit0 expectations and named PASS line match pinned public material. Child stdout/stderr agreement is harness-mediated; separate per-child raw receipt not retained.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "financial-core2-rebate",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact wrapper-to-manifest index/fileLabel/argv mapping, source/expected hashes/lengths, exit0 expectations and named PASS line match pinned public material. Child stdout/stderr agreement is harness-mediated; separate per-child raw receipt not retained.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "format-qualified-exact-result",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Exact current source-body hashes, retained original patch and FORMAT-QUALIFICATION separate360f one-newline adjustment from historical source. Source/result do not extend to later main238.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "raw-output-boundary",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "Retained suite stdout324bytes/stderr5058bytes and their hashes agree with RESULT/FINAL; no individual child raw stream persisted. Passing harness assertions support12 invocations without inventing separate receipts.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": []
+    },
+    {
+      "axis": "resultChecks",
+      "key": "terminal-and-containment",
+      "opinionDispositionUnchanged": "supported",
+      "fidelityStatus": "supported substance with separately listed citation/narrative qualifications",
+      "sourceResultFact": "RESULT and FINAL record exit0,52.61422588999994s,empty ownedSessionRemaining and removed exact ownedRoot. Driver code supports session collection/cleanup. N2/N3 qualify control-flow/line-location claims; no live process/memory/backend assertion is added.",
+      "citationMismatchCount": 1,
+      "narrativeQualifications": [
+        "N2-driver-try-finally",
+        "N3-prose-line-numbers"
+      ]
+    },
+    {
+      "axis": "findings",
+      "key": "F1-ORACLE-DOC-UNRUN-AND-PROVENANCE-NOTE-IN-CRATES-FIXTURES",
+      "fidelityStatus": "stale UNRUN literal supported; guideline application is interpretation N4; one bad citation"
+    },
+    {
+      "axis": "findings",
+      "key": "F2-AUTHOR-EXPOSURE-AND-CHECK-REPORT-PROJECTION-BOUNDARY",
+      "fidelityStatus": "source-exposure/report-projection boundary supported; one bad citation"
+    },
+    {
+      "axis": "findings",
+      "key": "F3-SUBPROCESS-OUTPUT-RETENTION-AND-FILTERED-BASELINE-BOUNDARY",
+      "fidelityStatus": "six PASS/eight filtered/twelve harness-mediated calls boundary supported; one bad citation"
+    },
+    {
+      "axis": "findings",
+      "key": "F4-SCOPED-MANIFEST-PIN-AND-FORMAT-DELTA-PROVENANCE",
+      "fidelityStatus": "counts/hash values and formatting delta supported; manifest naming needs N1 qualification"
+    }
+  ],
+  "otherLimits": [
+    "ReadScope full/independent/authorOfCandidate fields are preserved reviewer self-reports; content/hash/coverage inspection cannot attest internal reading or backend model identity.",
+    "Parent-reported provider child0/exactSUCCESS terminal94694 is recorded as a parent report only; no private capture, auth or cache read and no backend attestation.",
+    "No full pipeline financial execution, Program expression/asset/state semantics, native/proof/SDK/ledger or parent EARS acceptance derived.",
+    "Original source-exposed oracle/formatting failure/provenance context retained; no corrected/spliced vote or provider retry."
+  ]
+}

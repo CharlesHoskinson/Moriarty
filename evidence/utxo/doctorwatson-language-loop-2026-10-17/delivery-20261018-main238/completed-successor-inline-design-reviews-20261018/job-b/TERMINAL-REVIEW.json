@@ -1,0 +1,216 @@
+{
+  "decisions": {
+    "SC1": {
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "quote": "Add `Sequence::plan`, `begin`, `resume`, `next`, `report` in `mori-core::stage::sequence`. The object retains the actual outputs from every call. `next` takes no Snapshot or predecessor supplied by the caller; it starts the next planned program from the owned completed head.",
+          "supports": "Approach B owns the complete financial head and call history in-process without accepting caller-injected predecessor state on next()."
+        },
+        {
+          "path": "basis/crates/mori-core/src/stage/mod.rs",
+          "quote": "Complete {\n        segment: StageSegment,\n        committed: UInt,\n        attempted: UInt,\n        residual: Vec<Liability>,\n    },",
+          "supports": "A bare StageOutcome::Complete retains only the final segment and cannot serve as a lossless multi-segment predecessor carrier for Approach A."
+        }
+      ],
+      "reason": "Approach B (owned `mori_core::stage::sequence::Sequence` exposing `plan`, `begin`, `resume`, `next`, and `report`) is strictly preferable to Approach A's stateless `CompletePrefix` transition in this slice. In `basis/crates/mori-core/src/stage/mod.rs`, `StageOutcome::Complete` carries only the final `StageSegment` and final counters, omitting earlier `Waiting` segments, outside-frame history, and cumulative multi-call accounting. Approach A would therefore require inventing an externally supplied full-prefix carrier DTO and immediately resolving cross-call reopen, identity, and tamper-admission contracts (OD2/OD7) just to execute local sequential composition. Approach B keeps predecessor ownership in-process, ensures `next()` takes no caller-supplied `Snapshot` or predecessor state, preserves `stage::start` and `stage::resume` as authoritative for individual calls, and cleanly defers persistent cross-process reopening to OD2/OD7.",
+      "vote": "agree"
+    },
+    "SC2": {
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "quote": "The local `Scenario` passed to the actual `stage::start` is constructed **inside this production adapter** from this projection and the specified inputs, not by the test or CLI caller from a supplied successor scenario.",
+          "supports": "Internal projection constructs the local Scenario from the owned global Snapshot and explicit bindings rather than caller-supplied successor state."
+        },
+        {
+          "path": "basis/crates/mori-core/src/runtime.rs",
+          "quote": "let value = if s.state.is_empty() {\n            d.initial.clone()\n        } else {\n            s.state\n                .get(&d.name)\n                .ok_or_else(|| failure(\"state\", format!(\"Missing state {:?}.\", d.name)))?\n                .clone()\n        };",
+          "supports": "Supplying every declared local state in the projected Scenario prevents runtime::scenario_snapshot from falling back to source initializers on successor start."
+        }
+      ],
+      "reason": "Explicit whole-frame projection from the owned global `Snapshot` (`G`) and lossless lifting back into the unselected outside frame (`F`) accurately match the mechanics of `runtime::scenario_snapshot` in `basis/crates/mori-core/src/runtime.rs`. Supplying all declared local states via `FrameBindings.states` prevents `s.state.is_empty()` from resetting mapped states to `d.initial`, while projecting all global balance rows whose exact `AssetId` is declared by the program satisfies `scenario_snapshot`'s exact-asset check and retains observer and counterparty accounts. Keeping unselected duties, assets, and states in `F` allows programs with different schemas to share assets, accounts, states, and duties serially without bypassing `stage::decode::canonical_boundary` (R7) or `scenario_snapshot`, while leaving alias/collision and discharge-only duty admission rules to OD1.",
+      "vote": "agree"
+    },
+    "SC3": {
+      "evidence": [
+        {
+          "path": "WIRE-CONTRACT.md",
+          "quote": "The original per-Step effect at step_effect_offset must equal the original Execution.effects element at execution_effect_offset; whole_effect is its explicit global name image.",
+          "supports": "EffectLink preserves exact 1-to-1 correspondence with original Step and Execution effects while recording the mapped global name image."
+        },
+        {
+          "path": "openspec/changes/completed-successor-reference-sequence/specs/completed-successor-reference-sequence/spec.md",
+          "quote": "WHEN the sequence reports a prefix, it SHALL retain every original invocation envelope and every segment/Execution/Step/statement/ExprId/value/snapshot/frame/capture/continuation/effect/residual/work field without replacing earlier segments by the final segment.",
+          "supports": "All original call outcomes, awaiting segments, and step snapshots are retained losslessly in run-local prefix order."
+        }
+      ],
+      "reason": "The observation architecture in `WIRE-CONTRACT.md` and `CSQ-005`/`CSQ-006` preserves complete fidelity to the underlying stage evaluator. Storing each `OutcomeReport` once in `root.calls`, pairing `projected_pre`/`projected_post` and `outside` with `whole_pre`/`whole_post` and per-step lifted `FramedStep` records, and indexing global effects through `EffectLink` without deduplication, sorting, or netting ensures both the local view and the global frame are inspectable at every step. Furthermore, explicitly specifying the `Waiting(advanced: false)` representation (`segment: null`, `framed_steps: []`, unchanged `whole_pre`/`whole_post` and `outside`, and preserved `continuation`) avoids any ambiguity when a resume guard evaluates to false.",
+      "vote": "agree"
+    },
+    "SC4": {
+      "evidence": [
+        {
+          "path": "API-AND-CALLER-TRACE.md",
+          "quote": "The suite preloads all expected values before production calls. It executes the same plan driver and compares complete values; it does not derive runtime state from expectations or perform its own projection/accounting.",
+          "supports": "The test consumer reuses the production loader and Sequence driver and never derives runtime state from expected outputs."
+        },
+        {
+          "path": "basis/crates/mori/src/commands/test/disjoint_test.rs",
+          "quote": "// Freeze complete expected observations before invoking either program.\n    let expected_start: Value = core_io::read_json(&dir.join(case.expected))?;",
+          "supports": "Preloading complete expectations before driving production calls matches the established pattern in disjoint_test.rs."
+        }
+      ],
+      "reason": "Exposing a single production `mori compose` execution path (`moriarty-composition/sequential-proposed/1`) and reusing the exact same plan loader and `Sequence` driver inside `commands/test/sequence_test.rs` (`moriarty-tests/sequential-proposed/1`) eliminates any split between production and test semantics. Neither the production manifest nor `Sequence::next` accepts expected outputs or caller-supplied successor state, and preloading `expected_observations` and `expected_report` prior to execution mirrors the discipline in `basis/crates/mori/src/commands/test/disjoint_test.rs` while keeping all projection and accounting strictly inside `mori_core::stage::sequence`.",
+      "vote": "agree"
+    },
+    "SC5": {
+      "evidence": [
+        {
+          "path": "WIRE-CONTRACT.md",
+          "quote": "attempted sums actual attempted fields for that instance's calls; committed is its latest original committed prefix (from its continuation while pending, or original Complete.committed). attempted_total sums all original call attempted values; committed_total sums these latest per-instance committed values once each.",
+          "supports": "Logical accounting avoids double-counting cumulative per-action committed counters across multi-segment resume calls."
+        },
+        {
+          "path": "WIRE-CONTRACT.md",
+          "quote": "The EffectLink's attached original Statement distinguishes addition from discharge; before/after amounts alone are insufficient.",
+          "supports": "Liability accounting uses the attached source Statement rather than Effect::Liability before/after deltas alone, properly handling zero-amount additions and discharges."
+        }
+      ],
+      "reason": "The financial and logical accounting specifications in `DESIGN.md`, `WIRE-CONTRACT.md`, and `CSQ-004`/`CSQ-007`/`CSQ-008`/`CSQ-009` are sound and faithful to `ir.rs` and `stage/admit.rs`. Separating transfer debits/credits from fees paid/received and accumulating gross debits/credits without netting later refunds satisfies MPLR-005, MPLR-017, and MPLR-025. Distinguishing liability `present: bool` from `amount: Option<UInt>` and classifying additions versus discharges via the attached original `Statement` (since `Effect::Liability` carries only `before` and `after`, which are equal on zero-amount statements) preserves zero-discharged rows. Likewise, summing per-call `attempted` work while summing only the latest `committed` value per started action instance matches `admit.rs` (where `Continuation.logical.committed` is already cumulative within an action instance) and keeps `closure_reserve` visibly unspent on normal traces while deferring enforcement and reserve authority to OD4.",
+      "vote": "agree"
+    },
+    "SC6": {
+      "evidence": [
+        {
+          "path": "RETAINED-LINEAGE.md",
+          "quote": "Design votes, owner contracts, independent oracles, implementation, actual checks and parent acceptance remain separate records.",
+          "supports": "Ordinary sequential design agreement does not substitute for owner contracts, independent expectations, or parent MPLR closure."
+        },
+        {
+          "path": "OWNER-DEPENDENCIES.md",
+          "quote": "The normal-path records include the complete data these future rules must bind; they do not replace those rules with optional report fields. Production integration depends on applicable owner contracts and ordinary consequential-design votes.",
+          "supports": "OD1-OD8 remain mandatory prerequisites before dependent production integration."
+        }
+      ],
+      "reason": "The proposal maintains strict additive isolation and honest qualification boundaries. Existing Core/1 and Core/2 APIs, `stage::disjoint::Pair`, DTOs, digests, and `STAGE_LABELS` (`qualification: \"local-reference-stage\"`, `authentication: \"none\"`, `consumption: \"untracked\"`) remain untouched alongside `composition_qualification: \"proposed-local-sequential-composition\"`. `RETAINED-LINEAGE.md` and `OWNER-DEPENDENCIES.md` preserve all 35 original MPLR requirements (`MPLR-001` through `MPLR-035`), the five composition operators, and all OD1\u2013OD8 owner dependencies without claiming that local serial completion establishes external settlement, authenticated persistence, native ZKIRv3 correspondence, or global resource adequacy.",
+      "vote": "agree"
+    }
+  },
+  "findings": [
+    {
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "quote": "Lift every original local Step.snapshot and the final boundary by applying the inverse state/duty name map and joining it to F.",
+          "supports": "Lifting relies on a well-defined inverse mapping from local state/duty names to global keys and a canonical merge with the outside frame F."
+        },
+        {
+          "path": "basis/crates/mori-core/src/runtime.rs",
+          "quote": "balances.sort_by(|a, b| (&a.asset, &a.account).cmp(&(&b.asset, &b.account)));",
+          "supports": "Snapshots in mori-core maintain canonical sorting of balances by (asset, account) and liabilities by name."
+        }
+      ],
+      "issue": "`FrameBindings` maps local state and duty names to global keys (`BTreeMap<String, String>`), and lifting applies the inverse map and joins the result to the outside frame `F`. If a single invocation's `state_bindings` or `duty_bindings` is non-injective (mapping two distinct local names in the same action to the same global key), the inverse map on `Step.snapshot` and `projected_post` is not well-defined; additionally, joining lifted local `Liability` rows with `F.liabilities` (and local `Balance` rows with `F.balances`) must re-sort by global `name` and `(asset, account)` respectively so `whole_pre`, `whole_post`, `FramedStep.whole_snapshot`, and `PrefixObservation.head` preserve canonical `Snapshot` ordering.",
+      "nextStep": "In OD1 admission rules and the `sequence.rs` frame-lift implementation, require per-invocation injectivity of `state_bindings` and `duty_bindings` and specify canonical `(asset, account)` balance sorting and ascending global `name` liability sorting whenever a lifted local `Snapshot` is joined with `outside`.",
+      "severity": "minor"
+    },
+    {
+      "evidence": [
+        {
+          "path": "basis/crates/mori-core/src/stage/admit.rs",
+          "quote": "if !plan.sites.is_empty() {\n        decode::canonical_boundary(sp, index, &inputs, &pre).map_err(refuse)?;\n    }",
+          "supports": "stage::start invokes decode::canonical_boundary (R7) only when the selected action has await sites, whereas non-awaiting actions only run runtime::scenario_snapshot."
+        },
+        {
+          "path": "basis/crates/mori-core/src/stage/decode.rs",
+          "quote": "if registry.get(l.name.as_str())\n            != Some(&(&l.asset, l.debtor.as_str(), l.creditor.as_str()))\n        {\n            return Err(Error::new(\n                \"liability\",\n                format!(\"Existing liability identity differs for {:?}.\", l.name),\n            ));\n        }",
+          "supports": "canonical_boundary requires every present liability in the projected boundary to exist in registry(p) with matching (asset, debtor, creditor)."
+        }
+      ],
+      "issue": "In `admit.rs`, `stage::start` enforces `decode::canonical_boundary` (R7) only when `!plan.sites.is_empty()`, whereas `runtime::scenario_snapshot` only checks `if let Some(identity) = identities.get(l.name.as_str())`. Consequently, an incoming global duty projected into a successor program Q that only discharges (or does not re-declare) that duty may behave differently depending on whether Q contains an `Await` site or how `registry(p)` vs. `liability_identities(p)` populates local duty identities.",
+      "nextStep": "Ensure OD1 explicitly specifies the admission rule for projecting incoming global duties into successor programs (including discharge-only successor actions and awaiting vs. non-awaiting actions under R7) before implementation.",
+      "severity": "minor"
+    },
+    {
+      "evidence": [
+        {
+          "path": "WIRE-CONTRACT.md",
+          "quote": "On the sufficiently funded ordinary successful trace, available_ordinary = allocation.ordinary \u2212 attempted_total; remaining_closure_reserve equals allocation.closure_reserve.",
+          "supports": "available_ordinary is a UInt computed by subtracting attempted_total from allocation.ordinary on sufficiently funded traces."
+        },
+        {
+          "path": "WIRE-CONTRACT.md",
+          "quote": "For original Waiting(advanced:false), projected_pre and projected_post equal the retained continuation.boundary; whole_pre equals whole_post, outside is unchanged, framed_steps is empty and no effect is appended.",
+          "supports": "Waiting(advanced:false) is a normal observation that increments attempted_total without advancing committed_total."
+        }
+      ],
+      "issue": "Because `available_ordinary` in `LogicalSummary` is a `UInt` (`u128`) and `Waiting(advanced: false)` calls are ordinary non-error observations that increment `attempted_total` while keeping the local action within its per-call `logical_cap`, a sequence of calls can stay within each individual action's `logical_cap` while causing cumulative `attempted_total` to exceed `allocation.ordinary`, which would underflow `allocation.ordinary - attempted_total` if unchecked.",
+      "nextStep": "Under OD3 and OD4, specify the exact sequence-level envelope preflight and post-call check against `allocation.ordinary` (including whether an attempted work overrun refuses the call via `SequenceError` before publishing a `PrefixObservation`).",
+      "severity": "minor"
+    },
+    {
+      "evidence": [
+        {
+          "path": "API-AND-CALLER-TRACE.md",
+          "quote": "pub fn resume(&mut self, event: stage::StageEvent)\n        -> Result<ObservationIndex, SequenceError>;",
+          "supports": "Sequence::resume accepts only StageEvent and relies on the owned active continuation."
+        },
+        {
+          "path": "basis/crates/mori-core/src/stage/admit.rs",
+          "quote": "pub fn resume(\n    sp: &StagedProgram,\n    c: Continuation,\n    e: StageEvent,\n    cli_action: Option<&str>,\n    cli_cap: Option<UInt>,\n) -> Result<StageOutcome, StageRejection>",
+          "supports": "Underlying stage::resume accepts optional cli_action and cli_cap overrides in addition to the stored Continuation fields."
+        }
+      ],
+      "issue": "`Sequence::resume` takes only `event: stage::StageEvent`, whereas `stage::resume` in `admit.rs` takes `(sp, c, e, cli_action: Option<&str>, cli_cap: Option<UInt>)`. While `c.action` and `c.logical.cap` are already preserved inside the owned `Continuation`, the exact arguments passed by `Sequence::resume` to `stage::resume` (`Some(c.action.as_str())` and `None` for `cli_cap`) and the wrapping of any resulting `StageRejection` into `SequenceError` depend on OD3.",
+      "nextStep": "Confirm in OD3 that `Sequence::resume` delegates to `stage::resume` with `cli_cap: None` (preserving the invocation's initial `logical_cap` stored in `Continuation.logical.cap`) and retains the full `StageRejection` counters on refusal.",
+      "severity": "note"
+    }
+  ],
+  "mandatoryInputDelivery": "complete inline PRIMARY.md; optional physical context unread; ordinary design decision only",
+  "oracle_limitations": [
+    "This ordinary design vote reviews only the 16 inline primary design documents, EARS specification, verbatim MPLR-001..035 clauses, and actual Core/2 source excerpts delivered in the prompt; no filesystem, command, network, or provider tools were invoked.",
+    "All 71 physical baseline files beyond the inline excerpts, as well as optional worked examples (EXAMPLES-AND-TESTS.md, AUTHOR-WORKED-PREFIXES.json, and example fixture plans), remain unread in this vote and their concrete arithmetic/bytes are not certified here.",
+    "WIRE-CONTRACT.md is an authored codec/DTO proposal, not an independent compiler or wire oracle; complete expected observations and byte goldens must be derived and frozen by an independent custodian after design adoption and before running binary regressions.",
+    "No security, admission, identity, error-wire, resource-enforcement, proof-correspondence, or hostile-test judgments are authored or certified by this ordinary design review; all OD1-OD8 contracts remain required from the designated owner."
+  ],
+  "owner_dependencies": {
+    "OD1": "Required before implementation: exact source/domain admission rules for Sequence::plan and FrameBindings, including per-invocation binding injectivity, state/duty alias rules, and admissibility of incoming/discharge-only duties across non-awaiting (runtime::scenario_snapshot) and awaiting (decode::canonical_boundary R7) actions.",
+    "OD2": "Required before implementation: identity, canonical preimage, verification, and lineage contracts for any sequence manifest, prefix commitment, or future cross-process persisted Sequence reopening beyond local array indices and copied Program/StagePlan hashes.",
+    "OD3": "Required before implementation: complete SequenceError taxonomy, public error wire format, diagnostic precedence, failure publication rules, and preservation of underlying StageRejection attempted/committed counters across planning, stage calls, projection/lift, and export.",
+    "OD4": "Required before implementation: global resource enforcement for LogicalAllocation (ordinary and closure_reserve), sequence-level preflight and post-call overflow/underflow checks when cumulative attempted_total exceeds allocation.ordinary, rejected/false-guard call charging, plan/invocation/output size bounds, and reserve consumption authority.",
+    "OD5": "Required before any authority/obligation claim: participant, source, and intent authority and obligation-formation consent contracts (MPLR-008, MPLR-016, MPLR-019) governing state/duty creation, transfers, and event inputs while keeping public deployment permissionless.",
+    "OD6": "Required before native/ledger integration: phase atomicity, rollback/recovery vs. committed prefix retention when a successor fails after a completed predecessor, consumption tracking, and Midnight ZKIRv3 / ledger correspondence (MPLR-001, MPLR-005, MPLR-014, MPLR-024).",
+    "OD7": "Required before persistent or cross-party handoff: witness/continuation privacy, disclosure, availability, authenticated event origin/correlation/finality, single-consumption enforcement, and late-result recovery (MPLR-002, MPLR-006, MPLR-013).",
+    "OD8": "Required separately for non-serial composition: formal scheduling, interference, domain, and late-duty contracts for disjoint parallel extensions, shared-state interleaving (SI1-SI4), atomic synchronization (Join), and asynchronous messaging (MPLR-007, MPLR-011, MPLR-024, MPLR-032)."
+  },
+  "primarySha256": "243a2e1eef296ac3e48f47c618b7cbee23eaf330a8840aec73c6a4736e9d7b2c",
+  "readScope": [
+    "DESIGN.md",
+    "API-AND-CALLER-TRACE.md",
+    "WIRE-CONTRACT.md",
+    "OWNER-DEPENDENCIES.md",
+    "RETAINED-LINEAGE.md",
+    "DESIGN-CHOICES.json",
+    "DESIGN-REVIEW-SCOPE.md",
+    "openspec/changes/completed-successor-reference-sequence/specs/completed-successor-reference-sequence/spec.md",
+    "ORIGINAL-MPLR-001-035.json",
+    "basis/crates/mori-core/src/stage/mod.rs",
+    "basis/crates/mori-core/src/ir.rs",
+    "basis/crates/mori-core/src/stage/admit.rs",
+    "basis/crates/mori-core/src/stage/disjoint.rs",
+    "basis/crates/mori-core/src/runtime.rs",
+    "basis/crates/mori/src/commands/test/disjoint_test.rs",
+    "basis/crates/mori-core/src/stage/decode.rs"
+  ],
+  "reviewToken": "completed-successor-inline-design-b-20261018-v2",
+  "reviewer": {
+    "actualBackendIdentityAttested": false,
+    "effort": "HIGH",
+    "independent": true,
+    "requestedModel": "gemini-4-argon-high",
+    "returnedModel": "gemini-4-argon-high"
+  },
+  "summary": "Recommend Approach B (`recommend-B-conditional`) with `agree` across SC1\u2013SC6. An owned `mori_core::stage::sequence::Sequence` cleanly bridges the gap in current `mori-core` (where `stage::start` accepts only a fresh caller `Scenario`, `StageOutcome::Complete` retains only the final segment of an awaiting action, and `Pair::start` requires whole-program disjointness) without prematurely introducing an unauthenticated external `CompletePrefix` carrier (Approach A). The explicit whole-frame projection and outside-frame lifting rules align with `runtime::scenario_snapshot` and `stage::admit::{start, resume}`, retain lossless per-call/per-step/per-effect observations and accurate gross financial and per-instance logical work accounting, share a single production execution path between `mori compose` and `mori test`, and preserve all 35 original MPLR requirements and OD1\u2013OD8 designated-owner dependencies as mandatory prerequisites before production integration.",
+  "verdict": "recommend-B-conditional"
+}

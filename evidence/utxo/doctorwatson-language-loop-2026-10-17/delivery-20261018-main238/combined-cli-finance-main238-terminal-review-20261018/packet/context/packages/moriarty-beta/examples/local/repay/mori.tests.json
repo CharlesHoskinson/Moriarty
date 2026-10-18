@@ -1,0 +1,91 @@
+{
+  "profile": "moriarty-beta-tests/1",
+  "cases": [
+    {
+      "name": "interest first partial repayment",
+      "source": "repayment.mori",
+      "action": "repay_loan",
+      "scenario": "scenario.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          {
+            "kind": "Debit",
+            "account": "Payer",
+            "asset": "A",
+            "amount": "3000"
+          },
+          {
+            "kind": "Credit",
+            "account": "Creditor",
+            "asset": "A",
+            "amount": "3000"
+          },
+          {
+            "kind": "SetObligation",
+            "id": "Loan",
+            "principal": "98000",
+            "accrued": "0",
+            "outstanding": "98000",
+            "status": "Outstanding"
+          },
+          {
+            "kind": "UseAllowance",
+            "owner": "Payer",
+            "amount": "3000"
+          },
+          {
+            "kind": "UseReplay",
+            "key": "[\"Midnight\",\"Payer\",\"n1\"]"
+          },
+          {
+            "kind": "AdvanceHead",
+            "predecessor": "h0",
+            "successor": "h1"
+          }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "Midnight",
+          "asset": "A",
+          "head": "h1",
+          "round": "1",
+          "workRemaining": "9",
+          "workSpent": "1",
+          "balances": [
+            {
+              "account": "Payer",
+              "amount": "197000"
+            },
+            {
+              "account": "Creditor",
+              "amount": "3000"
+            }
+          ],
+          "allowances": [
+            {
+              "owner": "Payer",
+              "remaining": "197000",
+              "spent": "3000"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Loan",
+              "debtor": "Payer",
+              "creditor": "Creditor",
+              "asset": "A",
+              "principal": "98000",
+              "accrued": "0",
+              "outstanding": "98000",
+              "status": "Outstanding"
+            }
+          ],
+          "consumedReplay": [
+            "[\"Midnight\",\"Payer\",\"n1\"]"
+          ]
+        }
+      }
+    }
+  ]
+}

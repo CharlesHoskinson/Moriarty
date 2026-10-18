@@ -1,0 +1,14 @@
+language "moriarty/2";
+agreement SecondPayment {
+  state progress: UInt = 999;
+  state spare: UInt = 0;
+  asset UNIT = { network: "local", issuer: "completed-successor-design-example", reference: "UNIT", scale: 0 };
+  action pay() {
+    requires progress == 1;
+    transfer(UNIT, "alice", "bob", 3);
+    fee(UNIT, "alice", "treasury", 2);
+    discharge("invoice", 3);
+    next progress = 2;
+    emit "second"(progress);
+  }
+}

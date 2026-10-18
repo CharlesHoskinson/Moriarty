@@ -1,0 +1,9 @@
+# Read-once full-context recovery design delivery
+
+Root can give each of two fresh independent ordinary reviewers the appropriate TASK-A.txt/TASK-B.txt, the entire PRIMARY.md once and the entire WHOLE-OPINION.schema.json once through the working full-file context method. PRIMARY is the unchanged500104-byte full context with all44 bodies. The descriptors require reasoning and a complete independent opinion from that delivered context, not subsequent physical reopens of the44 original files, manifests, old packets or optional examples. They do not request a hash/checksum task from the reviewer.
+
+MANDATORY-INVENTORY.json is caller custody/byte-span evidence, not a further required reviewer read. It preserves all original locations/hashes. DELIVERY-MANIFEST.json states the proposed transport and current PREPARED_NOT_DISPATCHED status. A descriptor or path alone is not full delivery; the500104-byte context exceeds the125KB inline limit. If full context cannot be delivered, preserve a truthful whole abstention/failure, not a scope-reduced approval.
+
+The original complete A/B choices, full source/process-exit/reopen/refund/compensation/forward lifecycle, original35MPLR, full economics/history/duties and all owner/financial/composition/target/live-consumption obligations remain intact. All12 owner rules remain mandatory/open. The74 whole examples and27 L04 files remain optional for this architecture vote and unmodified in the original packet; no arithmetic, identity, work, byte or behavior oracle is certified. No waiting viewer or library-only substitute is allowed.
+
+No provider/model/reviewer was dispatched here. No implementation/product execution/security rule/scheduler/shared source/Git write was introduced. Parent root alone calls providers and assesses actual transport/terminal/whole opinions/identity evidence. Backend identity must remain unknown unless actually observed.

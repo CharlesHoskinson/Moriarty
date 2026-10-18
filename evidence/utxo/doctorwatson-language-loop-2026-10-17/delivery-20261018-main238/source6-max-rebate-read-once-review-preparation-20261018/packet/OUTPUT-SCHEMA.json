@@ -1,0 +1,1156 @@
+{
+  "type": "object",
+  "additionalProperties": true,
+  "$defs": {
+    "range": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "unit",
+        "start",
+        "end"
+      ],
+      "properties": {
+        "unit": {
+          "enum": [
+            "primary-line-inclusive",
+            "primary-byte-half-open"
+          ]
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "reference",
+        "quote"
+      ],
+      "properties": {
+        "reference": {
+          "type": "string"
+        },
+        "quote": {
+          "type": "string"
+        }
+      }
+    },
+    "candidateScope": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "sourceSha256",
+        "representation",
+        "status",
+        "actualPrimaryRangesRead",
+        "evidence",
+        "physicalFileReadClaimed",
+        "limitations"
+      ],
+      "properties": {
+        "sourceSha256": {
+          "type": "string"
+        },
+        "representation": {
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "complete-via-primary",
+            "partial-via-primary",
+            "unread"
+          ]
+        },
+        "actualPrimaryRangesRead": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/range"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "physicalFileReadClaimed": {
+          "const": false
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete-via-primary"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "actualPrimaryRangesRead": {
+                "minItems": 1
+              },
+              "evidence": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "disposition",
+        "reason",
+        "evidence",
+        "limitations"
+      ],
+      "properties": {
+        "disposition": {
+          "enum": [
+            "supported-within-scope",
+            "problem",
+            "unresolved"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "representedPath",
+              "reference",
+              "quote"
+            ],
+            "properties": {
+              "representedPath": {
+                "type": "string"
+              },
+              "reference": {
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "reviewToken",
+    "reviewedSubject",
+    "readScopeQualification",
+    "primaryReadScope",
+    "candidateReadScopes",
+    "additionalPhysicalReadScopes",
+    "predicates",
+    "sourceDisposition",
+    "resultDisposition",
+    "overallDisposition",
+    "findings",
+    "limitations",
+    "summary"
+  ],
+  "properties": {
+    "reviewToken": {
+      "const": "source6-max-rebate-read-once-20261018-v1"
+    },
+    "reviewedSubject": {
+      "const": {
+        "pullRequest": 231,
+        "sourceHead": "8ee0a1f1ca98b09ba08221f0b1b52a1def2e8c65",
+        "sourceTree": "b5ce08e6125f2962bd6df7a329a97c0e1b6678a0",
+        "baseParent": "b2786e8123e8d9327265f0fbb373444a7cb30f16",
+        "originalPacketManifestSha256": "9757fd25ab4f6bf1ce0e457cbd31e4d5277895381e3cc2fcb2028079e4c3efaa",
+        "primaryPath": "PRIMARY.md",
+        "primaryBytes": 207559,
+        "primarySha256": "20ec43e582c69be07ea2df1e4339589fb52329caa3364559a4246da852466cc5",
+        "candidatePathCount": 25
+      }
+    },
+    "readScopeQualification": {
+      "const": "reviewer-declared-primary-representation-not-physical-read-attestation"
+    },
+    "primaryReadScope": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "actualRangesRead",
+        "gapsOrTruncation"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete-once",
+            "partial",
+            "unread"
+          ]
+        },
+        "actualRangesRead": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/range"
+          }
+        },
+        "gapsOrTruncation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "candidateReadScopes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/FIXTURE-PINS.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/EXPECTED-SEMANTICS.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/FREEZE.sha256",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/LOGICAL-WORK-ASSUMPTIONS.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/MANIFEST.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/PROVENANCE.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/README.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/STATIC-CHECKS.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/UNKNOWN.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/README.md",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.mori",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.scenario.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.effect-prefix-financial-states.expected.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.independent-source6.txt",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.ordered-target-lines.expected.json",
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.source6.ast.expected.json",
+        "experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs"
+      ],
+      "properties": {
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/FIXTURE-PINS.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "01596e5db506169c6d92949ace1fe6f7ff41e2a7507066c04371de9787be2c7b"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      9,
+                      14
+                    ],
+                    "bodyByteRange": [
+                      3860,
+                      6804
+                    ],
+                    "sourceBytes": 3106,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/DERIVATION.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "c115484c31f249053b82bf3761ad669d4633ba1bcbfd93b97704ef1e7c016a89"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      15,
+                      33
+                    ],
+                    "bodyByteRange": [
+                      7033,
+                      9912
+                    ],
+                    "sourceBytes": 2879,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/EXPECTED-SEMANTICS.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "6cf5d7d0dbc95ea5b4d15fbbf1c37f15d7ac46b0527c89cc0e754f3a91e446a6"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      34,
+                      39
+                    ],
+                    "bodyByteRange": [
+                      10204,
+                      14752
+                    ],
+                    "sourceBytes": 7276,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/FREEZE.sha256": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "28671c70406c61f32870c5f40e5470c7fe7ef11a720a0d3aa8df84de0b3a77b0"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      40,
+                      67
+                    ],
+                    "bodyByteRange": [
+                      14981,
+                      17281
+                    ],
+                    "sourceBytes": 2300,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/LOGICAL-WORK-ASSUMPTIONS.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "f871ce9a1cb4ae4006f5920a1e9d68ec0edfe2180ea9c096cd66f63220b725df"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      68,
+                      73
+                    ],
+                    "bodyByteRange": [
+                      17579,
+                      18307
+                    ],
+                    "sourceBytes": 791,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/MANIFEST.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "4330ae4e3961df7bc69bfcc737e7428d07ce56599bd571662d8284c59a6bbde8"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      74,
+                      79
+                    ],
+                    "bodyByteRange": [
+                      18588,
+                      21742
+                    ],
+                    "sourceBytes": 3892,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/PROVENANCE.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "1b8f09d4a8f977b3a30c631d7ffcf63c71462f940161bf44575dcc335217aee6"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      80,
+                      85
+                    ],
+                    "bodyByteRange": [
+                      22025,
+                      26898
+                    ],
+                    "sourceBytes": 5618,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/README.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "abd609f1e05d5bf7530a90df864291a59d58efd93b271b5b1bd1417d911efc9e"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      86,
+                      96
+                    ],
+                    "bodyByteRange": [
+                      27123,
+                      28089
+                    ],
+                    "sourceBytes": 966,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/STATIC-CHECKS.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "5a830a0c6b8ce380debae51c7acd32835a7c8ffb6e4591eef30c4d8961a3f3ec"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      97,
+                      102
+                    ],
+                    "bodyByteRange": [
+                      28376,
+                      28756
+                    ],
+                    "sourceBytes": 441,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/UNKNOWN.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "9c0103fa47134b369fa13209727987fb0cb2ccec49fa0af0bef7e3b754e1dff7"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      103,
+                      108
+                    ],
+                    "bodyByteRange": [
+                      29036,
+                      30138
+                    ],
+                    "sourceBytes": 1135,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/docs/BETA-SOURCE6-EXPANSION.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "78b827813bd9d45c82f3ea48fb2752f2c05915df7cdce309cb38b49b68b2226f"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      109,
+                      144
+                    ],
+                    "bodyByteRange": [
+                      30390,
+                      34766
+                    ],
+                    "sourceBytes": 4376,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/financial-agreement-source-v6-frontend.ts.declarations.txt": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "6ffb712142eff9c36d8eb2f89b9e75a105f6b1e875cdc4f4f855b49adb9dcc9f"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      145,
+                      185
+                    ],
+                    "bodyByteRange": [
+                      35051,
+                      36884
+                    ],
+                    "sourceBytes": 1833,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/dto/mil4-s0-core-v5.ts.declarations.txt": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "3cb6485ca0014fe2f72cb4c8d2ff1dc2b4a0025bdc6f93c450cdb4d66c8d06e8"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      186,
+                      231
+                    ],
+                    "bodyByteRange": [
+                      37146,
+                      39064
+                    ],
+                    "sourceBytes": 1918,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6-grammar.ebnf": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "5fb03d51d863e5c959e1cb80f67da9d261c668200837bfab4d748cda0403f72e"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      232,
+                      302
+                    ],
+                    "bodyByteRange": [
+                      39374,
+                      43127
+                    ],
+                    "sourceBytes": 3753,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "725662ae7572a93cbc8f0d1631ca364a56d1c3dff3b9b02cae92485cd5a899ec"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      303,
+                      356
+                    ],
+                    "bodyByteRange": [
+                      43427,
+                      55075
+                    ],
+                    "sourceBytes": 11648,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/experiments/moriarty-language/spec/successor/lexical.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      357,
+                      442
+                    ],
+                    "bodyByteRange": [
+                      55353,
+                      60942
+                    ],
+                    "sourceBytes": 5589,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/GETTING-STARTED.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "7bab6fbc179626977f5836e1389685cf070c752cebcd003824e579c31ad9f706"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      443,
+                      643
+                    ],
+                    "bodyByteRange": [
+                      61206,
+                      73145
+                    ],
+                    "sourceBytes": 11939,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/basis/packages/moriarty-beta/README.md": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "a12bee5aef1b1de2559a5da85ef0937e822af72ee530275606b427944a8d9c4d"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      644,
+                      742
+                    ],
+                    "bodyByteRange": [
+                      73400,
+                      78172
+                    ],
+                    "sourceBytes": 4772,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.mori": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "f99b32789a8c6bd242e8a38cb7d675f99802823043460eb700a56ad79a1e4712"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      743,
+                      767
+                    ],
+                    "bodyByteRange": [
+                      78411,
+                      79505
+                    ],
+                    "sourceBytes": 1094,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/inputs/max-rebate.scenario.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "3f4686133024bc48a8b9f5499a7811b007682f89e27b91dd620f5e6da11973d8"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      768,
+                      773
+                    ],
+                    "bodyByteRange": [
+                      79805,
+                      80212
+                    ],
+                    "sourceBytes": 500,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.effect-prefix-financial-states.expected.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "45471ab3be3b1ad9bde1c2584bd6c616ffcafb7d00a651dd197547729703f5f2"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      774,
+                      779
+                    ],
+                    "bodyByteRange": [
+                      80535,
+                      86671
+                    ],
+                    "sourceBytes": 10672,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.independent-source6.txt": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "4fd05327c2575ee4dc583b7d76061e2d8b0ec340cd476f66502d21970900ee6f"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      780,
+                      830
+                    ],
+                    "bodyByteRange": [
+                      86921,
+                      88057
+                    ],
+                    "sourceBytes": 1136,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.ordered-target-lines.expected.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "02ed4f6a1e83f47de5cf1713d91d127262e9dc7702b456f5b33e3eeff2d2dfbb"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      831,
+                      836
+                    ],
+                    "bodyByteRange": [
+                      88371,
+                      89642
+                    ],
+                    "sourceBytes": 1512,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/fixtures/source6-max-rebate/oracle/pay_rebate.source6.ast.expected.json": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "778d2b32521b6ab76e4cfa0b3bcfdfc052ee5c71e55d2d08523993e9215d8015"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "whole-json-value",
+                    "sectionLineRange": [
+                      837,
+                      842
+                    ],
+                    "bodyByteRange": [
+                      89946,
+                      91419
+                    ],
+                    "sourceBytes": 2250,
+                    "qualification": "Complete JSON Value, not a claim of original whitespace bytes"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "experiments/moriarty-language/regressions/rust-source6-max-rebate.mjs": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/candidateScope"
+            },
+            {
+              "properties": {
+                "sourceSha256": {
+                  "const": "e5113b77728e12257c2bf49348320f746b6cc390a615fe702d84ff9900284d26"
+                },
+                "representation": {
+                  "const": {
+                    "via": "PRIMARY.md",
+                    "kind": "complete-raw-body",
+                    "sectionLineRange": [
+                      843,
+                      1062
+                    ],
+                    "bodyByteRange": [
+                      91627,
+                      103917
+                    ],
+                    "sourceBytes": 12290,
+                    "qualification": "Full original text bytes"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "additionalPhysicalReadScopes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "path",
+          "reasonNeeded",
+          "status",
+          "rangesRead",
+          "evidence"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "reasonNeeded": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "read-complete",
+              "read-partial",
+              "unread"
+            ]
+          },
+          "rangesRead": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "predicates": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "P1-fixture-and-oracle-custody",
+        "P2-real-rust-source-path",
+        "P3-real-ts-consumers",
+        "P4-complete-ast-and-effect-oracles",
+        "P5-financial-frames-and-prefix-limit",
+        "P6-actual-process-and-result-scope",
+        "P7-whole-return-and-unknowns",
+        "P8-portability-and-bounded-claim"
+      ],
+      "properties": {
+        "P1-fixture-and-oracle-custody": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P2-real-rust-source-path": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P3-real-ts-consumers": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P4-complete-ast-and-effect-oracles": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P5-financial-frames-and-prefix-limit": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P6-actual-process-and-result-scope": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P7-whole-return-and-unknowns": {
+          "$ref": "#/$defs/predicate"
+        },
+        "P8-portability-and-bounded-claim": {
+          "$ref": "#/$defs/predicate"
+        }
+      }
+    },
+    "sourceDisposition": {
+      "enum": [
+        "recommend-integrate-scoped",
+        "request-changes",
+        "abstain-incomplete"
+      ]
+    },
+    "resultDisposition": {
+      "enum": [
+        "supports-stated-finite-result",
+        "result-claims-need-correction",
+        "abstain-incomplete"
+      ]
+    },
+    "overallDisposition": {
+      "enum": [
+        "ordinary-scoped-recommendation",
+        "request-changes",
+        "abstain-incomplete"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "kind",
+          "pathOrReceipt",
+          "explanation"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "ordinary-source",
+              "ordinary-result",
+              "read-gap",
+              "scope-limit"
+            ]
+          },
+          "pathOrReceipt": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  }
+}

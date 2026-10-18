@@ -1,0 +1,40 @@
+{
+  "quotes": [
+    {
+      "path": "candidate/crates/mori-core/src/parser.rs",
+      "lineStart": 397,
+      "lineEnd": 417,
+      "literal": "    let expected = format!(\n        \"language \\\"{LANGUAGE}\\\" or \\\"{}\\\"\",\n        crate::stage::LANGUAGE_2\n    );\n    parser.expect(\"language\").map_err(|mut error| {\n        error.message = format!(\"Expected {expected}. {}\", error.message);\n        error\n    })?;\n    let profile = parser.string().map_err(|mut error| {\n        error.message = format!(\"Expected {expected}. {}\", error.message);\n        error\n    })?;\n    match profile.as_str() {\n        LANGUAGE => Ok(LANGUAGE),\n        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),\n        _ => Err(parser.error(\n            \"profile\",\n            format!(\"Expected {expected}; found {profile:?}.\"),\n        )),\n    }\n}"
+    },
+    {
+      "path": "candidate/crates/mori-core/src/parser.rs",
+      "lineStart": 190,
+      "lineEnd": 194,
+      "literal": "    fn error(&self, code: &str, message: impl Into<String>) -> Error {\n        let mut e = Error::new(code, message);\n        e.offset = Some(self.peek().start);\n        e\n    }"
+    },
+    {
+      "path": "candidate/crates/mori-core/tests/language.rs",
+      "lineStart": 429,
+      "lineEnd": 475,
+      "literal": "fn language_header_diagnostics_name_both_supported_core_profiles() {\n    for (source, expected) in [\n        (\n            r#\"language \"moriarty/1\"; agreement Example {}\"#,\n            \"moriarty/1\",\n        ),\n        (\n            r#\"language \"moriarty/2\"; agreement Example {}\"#,\n            \"moriarty/2\",\n        ),\n    ] {\n        assert_eq!(language(source).unwrap(), expected);\n    }\n\n    let expected = r#\"Expected language \"moriarty/1\" or \"moriarty/2\"\"#;\n    for (source, code, offset, suffix) in [\n        (\n            r#\"language \"other\";\"#,\n            \"mori::core::profile\",\n            16,\n            r#\"; found \"other\".\"#,\n        ),\n        (\n            \"\",\n            \"mori::core::syntax\",\n            0,\n            r#\". Expected \"language\"; found \"\".\"#,\n        ),\n        (\n            \"agreement Empty {}\",\n            \"mori::core::syntax\",\n            0,\n            r#\". Expected \"language\"; found \"agreement\".\"#,\n        ),\n        (\n            \"language ;\",\n            \"mori::core::syntax\",\n            9,\n            \". Expected a quoted string.\",\n        ),\n    ] {\n        let error = language(source).unwrap_err();\n        assert_eq!(error.code, code, \"{source:?}\");\n        assert_eq!(error.offset, Some(offset), \"{source:?}\");\n        assert_eq!(error.message, format!(\"{expected}{suffix}\"), \"{source:?}\");\n    }\n}"
+    },
+    {
+      "path": "actual-check/language-header-test/STDOUT.log",
+      "lineStart": 2,
+      "lineEnd": 5,
+      "literal": "running 1 test\ntest language_header_diagnostics_name_both_supported_core_profiles ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s"
+    },
+    {
+      "path": "source-context/crates/mori/src/commands/check_source.rs",
+      "lineStart": 31,
+      "lineEnd": 36,
+      "literal": "        let staged = mori_core::language(source).is_ok_and(|language| language == \"moriarty/2\");\n        let result = if staged {\n            mori_core::stage::load(source).map(|program| program.program().clone())\n        } else {\n            mori_core::parse(source)\n        };"
+    },
+    {
+      "path": "source-context/crates/mori/src/commands/check.rs",
+      "lineStart": 31,
+      "lineEnd": 40,
+      "literal": "    let outcome = check_source::dispatch(\n        &source,\n        CliConsumer {\n            name: &name,\n            source: &source,\n            json: args.json,\n            shell,\n        },\n    )?;\n    if outcome.beta {"
+    }
+  ]
+}
