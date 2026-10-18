@@ -28,7 +28,11 @@ pub(super) trait SourceCheckConsumer {
 /// Select exactly the same Beta, Core1 or staged Core2 path as `mori check`.
 pub(super) fn dispatch<C: SourceCheckConsumer>(source: &str, mut consumer: C) -> C::Output {
     if mori_lexer::first_token_text(source).is_ok_and(|token| token == "language") {
-        let staged = mori_core::language(source).is_ok_and(|language| language == "moriarty/2");
+        let language = match mori_core::language(source) {
+            Ok(language) => language,
+            Err(error) => return consumer.core(Err(error), false),
+        };
+        let staged = language == "moriarty/2";
         let result = if staged {
             mori_core::stage::load(source).map(|program| program.program().clone())
         } else {
