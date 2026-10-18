@@ -47,3 +47,7 @@ pub use source_sponsor::*;
 // SDK-free typed host components; no lowering/circuit/native claim.
 #[path = "sherlock/word_arithmetic.rs"]
 pub mod sherlock_word_arithmetic;
+
+// Explicit typed host arithmetic lowering used by the selected Scalar family.
+#[path = "sherlock/word_lowering.rs"]
+pub mod sherlock_word_lowering;

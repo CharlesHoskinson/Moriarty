@@ -6,12 +6,15 @@
 //! allocations and caller-owned sink retention remain separate premises. This
 //! in-process diagnostic API is not an untrusted-input sandbox or a proof path.
 use serde_json::json;
+use crate::sherlock_word_lowering::WordLayout;
 
 use crate::sherlock::helper_machine::core_action_consumer::{
     CompletedRun, ConsumerError, EventForwarding,
 };
 use crate::sherlock::helper_machine::resource_report::ResourceReport;
-use crate::sherlock::helper_machine::shared::owner_host::{host_owner_engine, HostObservation};
+use crate::sherlock::helper_machine::shared::owner_host::{
+    host_owner_engine, host_owner_engine_with_word_layout, HostObservation,
+};
 use crate::sherlock::helper_machine::shared::{OwnerEngine, StepEventC};
 
 use super::draft_contract::DraftConfigIdentity;
@@ -74,6 +77,33 @@ pub fn run_draft_host(
     target_source: &str,
     sink: &mut dyn FnMut(&StepEventC),
 ) -> Result<DraftHostRun, CompileFailure> {
+    run_draft_host_impl(source, config_source, target_source, None, sink)
+}
+
+/// The caller-selected arithmetic realization and its actual completed owner run.
+/// The preparation snapshot still describes logical HostOnly tables/genesis;
+/// wire widths remain null, and no field/circuit/native layout is inferred.
+pub struct WordLoweredDraftHostRun {
+    pub word_layout: WordLayout,
+    pub run: DraftHostRun,
+}
+
+/// Run real dedicated source with explicit32/64 typed arithmetic lowering.
+/// This choice affects only the host implementation of Scalar Add/Sub/Mul.
+/// All parser/type/copy/owner policy, operand order and event/failure contracts
+/// are the same shared implementation as run_draft_host. No default width.
+pub fn run_draft_host_with_word_layout(
+    source: &str, config_source: &str, target_source: &str,
+    word_layout: WordLayout, sink: &mut dyn FnMut(&StepEventC),
+) -> Result<WordLoweredDraftHostRun, CompileFailure> {
+    let run = run_draft_host_impl(source, config_source, target_source, Some(word_layout), sink)?;
+    Ok(WordLoweredDraftHostRun { word_layout, run })
+}
+
+fn run_draft_host_impl(
+    source: &str, config_source: &str, target_source: &str,
+    word_layout: Option<WordLayout>, sink: &mut dyn FnMut(&StepEventC),
+) -> Result<DraftHostRun, CompileFailure> {
     let config = parse_draft_config(config_source)?;
     let target_descriptor = crate::json::parse(target_source)
         .map_err(|error| CompileFailure::core("config", error))?;
@@ -112,14 +142,17 @@ pub fn run_draft_host(
     })?;
 
     let AdmittedDraftSource { preparation: _, admitted, mut image } = pair;
-    let engine = host_owner_engine();
     let mut events = EventForwarding::default();
     let result = {
         let mut forwarding_sink = |event: &StepEventC| {
             events.note();
             sink(event);
         };
-        engine.run(&admitted, &mut image, &mut forwarding_sink)
+        match word_layout {
+            None => host_owner_engine().run(&admitted, &mut image, &mut forwarding_sink),
+            Some(layout) => host_owner_engine_with_word_layout(layout)
+                .run(&admitted, &mut image, &mut forwarding_sink),
+        }
     };
     let summary = result.map_err(|violation| CompileFailure::consumer(ConsumerError::Run {
         violation,

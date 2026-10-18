@@ -32,6 +32,20 @@ pub fn host_owner_engine() -> impl OwnerEngine {
     })
 }
 
+pub fn host_owner_engine_with_word_layout(
+    layout: crate::sherlock_word_lowering::WordLayout,
+) -> impl OwnerEngine {
+    CheckedOwnerEngine::new_reviewed(
+        crate::sherlock::helper_machine::families::WordFamilyPlans::new(layout),
+        PrepareDeps {
+            prepare_core: owner_prepare::prepare_core,
+            check_program_view: owner_prepare::check_program_view,
+            admit: owner_prepare::admit,
+            admit_run: owner_prepare::admit_run,
+        },
+    )
+}
+
 // Records are built only by observe_bound_image (private _sealed). Every
 // field borrows the bound pair, so the image stays immutable while observed.
 #[derive(Clone, Copy)]

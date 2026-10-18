@@ -1,0 +1,96 @@
+{
+  "request_id": "R274-29F6-ERROR10-CONSUMER-AND-4OPS-REVIEW",
+  "reviewer_identity": {
+    "CID": "29f6efee-2b5e-4f3f-b663-bad4292ff558",
+    "model": "Gemini 4 Argon (High) via gemini-4-argon-high standing fallback under Root-observed Opus quota outage (not Opus)",
+    "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/212-word-public-integration-final-review/actual-same-owner-review-01/review-session",
+    "test_author": "a3ce0928-17c0-46b9-ac7f-7324c51d4611",
+    "non_author_of_error10_test_and_hunks": true,
+    "production_self_approval_excluded": "Reviewer 29f6 previously authored the additive host_owner_engine_with_word_layout constructor in owner_host.rs (R402) and does not self-approve production constructor source here; supplied production bodies (BODY03-BODY11, BODY15) are used strictly to verify test type/API/path compatibility."
+  },
+  "complete_inline_read": true,
+  "no_execution_observed": true,
+  "test_source_verdict": "APPROVE",
+  "actual_types_checked": {
+    "corrected_test_file": {
+      "path": "crates/mori-core/tests/sherlock_word_lowering_error10.rs",
+      "bytes": 5775,
+      "sha256": "339e500e2ba0a36ab60a856051370bd1e86747abeb0b0d4a9ceec02ebb07ee90",
+      "original_5798b_sha256": "4f62407986f01f0df4b82b9d7a69ab4d42713d133231147ca3e356e237a8be31",
+      "materialization_sha256": "1f20b9a81103a727346f70834633965cb0c8985bc05229b0fd1e96d26c0792c2"
+    },
+    "author_three_hunks_verified": [
+      "Hunk 1: `let mut actual_events = 0usize;` -> `let mut actual_events = 0u128;` matches `CompletedRun::events_forwarded: u128` (BODY15) in `assert_eq!(selected.run.completed.events_forwarded, actual_events)`.",
+      "Hunk 2: Replaced `{err:?}` on `run_draft_host_with_word_layout` error because `CompileFailure` derives only `Serialize` and not `Debug` (BODY15).",
+      "Hunk 3: Replaced `{err:?}` on `selected.run.observe()` error because `ConsumerError` does not implement `Debug` (BODY15)."
+    ],
+    "types_and_traits_verified": [
+      "WordLayout::{Word32, Word64}, UInt128Operation::{Add, Sub, Mul}, ArithmeticLowering, FullArithmeticResult::{Add32, Sub32, Mul32, Add64, Sub64, Mul64}: all derive Clone, Copy, Debug, PartialEq, Eq (BODY08). Matching `add32`/`sub32`/`mul32`/`add64`/`sub64`/`mul64` by value copies the enum, so subsequent `.checked()` calls and `{other:?}` panic formatting are valid.",
+      "CheckedUInt128{Add,Sub,Mul}{32,64}, Full{Add,Sub,Product}{32,64}, CarryBit(bool), BorrowBit(bool): all derive Clone, Copy, Debug, PartialEq, Eq (BODY10) with `checked: Result<u128, u8>`.",
+      "OutcomeC::Rejected { code: u8 } (BODY11): matched via `&selected.run.completed.summary.outcome` (`&OutcomeC`) and `observation.image.outcome` (`&'a OutcomeC` in BODY09), binding `code: &u8` and comparing `*code == 10u8`.",
+      "include_str!(\"fixtures/draft-compile/config.json\") (0763c35f...) and include_str!(\"fixtures/draft-compile/target.json\") (b7b9069a...) resolve against the staged consumer directory."
+    ],
+    "independent_math_and_intermediate_arrays_verified": {
+      "oracle_sha256": "e49e186f5ae83a3d1c8cbb97f68f545537b172ca07c83f83765df9bea52f854f",
+      "add_overflow": "(2^128 - 1) + 1 = 0 + 2^128 * 1: Word32 full.low=[0,0,0,0], carry_out=CarryBit(true); Word64 full.low=[0,0], carry_out=CarryBit(true); both retain full 129-bit sum before projecting checked=Err(10).",
+      "sub_underflow": "0 - 1 = (2^128 - 1) - 2^128 * 1: Word32 full.low=[U32_MAX,U32_MAX,U32_MAX,U32_MAX], borrow_out=BorrowBit(true); Word64 full.low=[U64_MAX,U64_MAX], borrow_out=BorrowBit(true); both retain full borrow result before projecting checked=Err(10).",
+      "mul_high128_nonzero": "(2^128 - 1) * 2 = (2^128 - 2) + 2^128 * 1: Word32 full.low=[U32_MAX-1,U32_MAX,U32_MAX,U32_MAX], full.high=[1,0,0,0]; Word64 full.low=[U64_MAX-1,U64_MAX], full.high=[1,0]; both retain full 256-bit schoolbook product before projecting checked=Err(10)."
+    },
+    "public_selected_run_path_verified": "6 total public runs (3 expressions x Word32/Word64) via run_draft_host_with_word_layout -> host_owner_engine_with_word_layout -> WordFamilyPlans -> plan_scalar_with_word_layout -> checked_word_result -> ScalarStaged::PrimError { code: 10 } -> BHelperScalarFailure -> OutcomeC::Rejected { code: 10 }. Each run verifies word_layout equality, actual_events > 0, completed.events_forwarded == actual_events, and OutcomeC::Rejected { code: 10 } in both completed.summary.outcome and observe().image.outcome without inventing exact step/clock counts or claiming other error classes."
+  },
+  "ordinary_operations": [
+    {
+      "id": "01-compileVerbatimNewError10Consumer",
+      "disposition": "APPROVE",
+      "classification": "Ordinary standalone rustc --test compilation linking against already-compiled normal libmori_core.rlib (017f698f...) and cached dependency rlibs/proc-macros; bounded by 30s wall, 25s CPU, 2GiB AS, 64MiB fsize, core=0.",
+      "conditions": [
+        "Recheck all 505 flat input pins (198b8c17...), including reused libmori_core.rlib (017f698f...) and core-rlib.d (419f2c15...), pre/post.",
+        "Do not rebuild mori_core or rerun the 5 passed normal operations.",
+        "Record exact SHA256 and byte pins of generated word-lowering-error10-tests and word-lowering-error10-tests.d before running operations 02-04."
+      ]
+    },
+    {
+      "id": "02-selected_lowering_retains_full_intermediates_before_error10_selection",
+      "disposition": "APPROVE",
+      "classification": "Single-test ordinary host execution (--exact, 1 thread) exercising pure in-memory 32/64-bit component overflow/underflow/high-product intermediates before Err(10) projection; bounded by 10s wall, 8s CPU, 1GiB AS, 16MiB fsize, core=0.",
+      "conditions": [
+        "Requires exit 0 from operation 01 and pinned test binary.",
+        "Receipt must show exit 0 and exactly `1 passed; 0 failed; 0 ignored` (non-zero test count)."
+      ]
+    },
+    {
+      "id": "03-public_selected32_source_rejects_overflow_underflow_and_high128_mul_with_error10",
+      "disposition": "APPROVE",
+      "classification": "Single-test ordinary host execution (--exact, 1 thread) running 3 actual B-owner executions under WordLayout::Word32 with fixed config.json bounds (fuel=64, stack=8, step_cap=4096) and u128 event-forwarding counter; bounded by 10s wall, 8s CPU, 1GiB AS, 16MiB fsize, core=0.",
+      "conditions": [
+        "Requires exit 0 from operation 01 and pinned test binary.",
+        "Receipt must show exit 0 and exactly `1 passed; 0 failed; 0 ignored` (non-zero test count)."
+      ]
+    },
+    {
+      "id": "04-public_selected64_source_rejects_overflow_underflow_and_high128_mul_with_error10",
+      "disposition": "APPROVE",
+      "classification": "Single-test ordinary host execution (--exact, 1 thread) running 3 actual B-owner executions under WordLayout::Word64 with fixed config.json bounds (fuel=64, stack=8, step_cap=4096) and u128 event-forwarding counter; bounded by 10s wall, 8s CPU, 1GiB AS, 16MiB fsize, core=0.",
+      "conditions": [
+        "Requires exit 0 from operation 01 and pinned test binary.",
+        "Receipt must show exit 0 and exactly `1 passed; 0 failed; 0 ignored` (non-zero test count)."
+      ]
+    }
+  ],
+  "uireq_030_relation": {
+    "uireq_030_sha256": "ed95f8b1ba6e2f0e7edb39ce9b3c45c279619c36fb492af909d64965f9b4e1cc",
+    "assessment": "Directly targets UIREQ-030's requirement that 32/64 little-endian word-lowering wrappers retain K mathematical-result/error10 meaning\u2014including full 129-bit carry/borrow and full 256-bit product intermediates before checked UInt128 Err(10) selection\u2014and verifies end-to-end B-owner semantic OutcomeC::Rejected { code: 10 } under both Word32 and Word64.",
+    "preserved_duties_and_non_claims": "Error10 test review/execution alone does not close UIREQ-030: original normal carry/borrow/product equations ((2^32-3)+8=2^32+5, (2^64+9)-7=2^64+2, (2^48+1)*3=3*2^48+3), leaf component APIs, independent non-author production review of owner_host.rs constructor, and Root ledger adoption remain separate mandatory obligations. No 32-vs-64 layout winner, row-cost winner, circuit constraint, or native proof is claimed."
+  },
+  "conditions": [
+    "Root must verify pre/post equality of all 505 active flat input pins (198b8c17...), linking only the existing libmori_core.rlib (017f698f...) without rebuilding Core or replaying the 5 passed normal operations.",
+    "Each of operations 02, 03, and 04 must record exit 0 with `1 passed; 0 failed; 0 ignored`.",
+    "Independent non-author review of production source (specifically host_owner_engine_with_word_layout in owner_host.rs, which 29f6 authored in R402) must come from a non-author reviewer."
+  ],
+  "retained_gaps": [
+    "All 4 new error10 operations are currently unexecuted (`PROPOSED_UNRUN`); actual execution receipts and post-run pin checks are still required.",
+    "Reviewer 29f6 is the R402 author of `host_owner_engine_with_word_layout` in `owner_host.rs` (7cd051df...) and therefore abstains from self-approving that production constructor; this review approves only `a3ce`'s error10 test source (339e500e...) and the 4 proposed ordinary QA operations.",
+    "The 500/505 input pin arrays (`37832ad1...` / `198b8c17...` / `402bf4d1...`) are bound by SHA256 digest metadata; omitted array bodies are not claimed as a fresh semantic reread of all 500 dependency/toolchain files.",
+    "Per-process `prlimit` settings bound individual processes, not an aggregate process tree."
+  ]
+}
