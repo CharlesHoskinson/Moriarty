@@ -1,0 +1,159 @@
+```json
+{
+  "schema": "moriarty.r140.r368.owner_as_pid1_choice_and_test_source.v1",
+  "identity_and_scope": {
+    "conversation_id": "bb6043a1-63f1-4de9-b26f-ef50139233e3",
+    "original_cwd": "/tmp/moriarty-r140-final-security-A-9c662tt7",
+    "reviewer_slot": "security-A",
+    "reviewer_role": "designated_security_owner",
+    "primary_model": "claude-opus-5-5",
+    "requested_model": "gemini-4-argon-high",
+    "returned_identity": "gemini-4-argon-high",
+    "effort": "high",
+    "fallback_status": "standing_opus_quota_outage_fallback",
+    "request_id": "R368-AS-PID1-OWNER-CHOICE-AND-TEST-SOURCE",
+    "role_in_this_turn": "author_disposition_and_focused_test_source_delivery_only_not_independent_self_approval",
+    "tools_or_external_actions_invoked": 0,
+    "completeness_check": {
+      "read_all_inline_inputs_in_full": true,
+      "missing_or_truncated_regions": [],
+      "abstain": false
+    }
+  },
+  "author_disposition_and_cross_phase_analysis": {
+    "decision": "CONFIRM_MATERIALIZED_CF94_AS_PID1_GUARD_CANDIDATE_UNCHANGED",
+    "selected_guard_candidate": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/366-owner-authored-as-pid1-guard-candidate/bounded_sdk_compile.py",
+      "bytes": 74900,
+      "sha256": "cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc",
+      "base_sha256": "087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f",
+      "base_bytes": 74823,
+      "exact_line_664": "    bwrap_opts=args[:separator]+([] if '--as-pid-1' in args[:separator] else ['--as-pid-1']);fd=sealed_memfd('sdk-bwrap-argv',b'\\0'.join(x.encode() for x in bwrap_opts)+b'\\0');args=bwrap_opts+['--',*cmd]",
+      "further_guard_edits_required": false
+    },
+    "r365_discriminator_evidence_evaluation": {
+      "diagnostic_script_sha256": "646f85e1178b19cc126746579b0e9fbb9f60c2ec98efa93bf6d7dd3536cbb028",
+      "result_json_sha256": "621a7d0d022cad9f606ec7a107707711ec506d992edb782d7eb33d366a22c6d0",
+      "step_A_default_bwrap_no_as_pid_1": {
+        "observed_facts": "distinct_p2_and_p3=true (p1=464765, p2=464766, p3=464767); seccomp listener received pure POLLHUP (revents=16, pollin=false, pollerr=false); immediately after proc.wait() (P1) returned 0, intermediate bwrap init p2 (464766, comm='bwrap') still existed in /proc with state='Z', ppid=464764 (reparented to diagnostic subreaper) and was reaped 103.2 us later (wstatus=0).",
+        "mechanistic_meaning": "Proves that under --unshare-pid without --as-pid-1, bwrap forks intermediate init P2 (PID 1 in child PID ns) which forks target P3 (PID 2), and when P3 exits, P2 writes to raw_exit_fd (eventfd) before calling _exit(); outer bwrap P1 exits immediately upon reading eventfd without calling waitpid(P2). Because P1 does not wait for P2, P1 can return to Python proc.wait() while P2 has not yet finished kernel do_exit() -> cgroup_exit() (or while P2 remains an unwaited task)."
+      },
+      "step_B_bwrap_with_as_pid_1": {
+        "observed_facts": "distinct_p2_and_p3=false (p1=464768, p2=p3=464769); seccomp listener received pure POLLHUP (revents=16, pollin=false, pollerr=false); immediately after proc.wait() (P1) returned 0, p2 (464769) was already absent from /proc (exists=false) and reparented_orphans_reaped_by_subreaper=[].",
+        "mechanistic_meaning": "Proves that adding --as-pid-1 eliminates the intermediate bwrap do_init process and eventfd shortcut: outer bwrap P1 waits directly on the child PID-1 target process P2 via waitpid(P2). In Linux kernel do_exit(), waitpid(P2) cannot return to P1 until after P2 completes exit_task_namespaces() -> zap_pid_ns_processes() and cgroup_exit(P2), and proc.wait() (P1) cannot return to the Python supervisor until after cgroup_exit(P1)."
+      }
+    },
+    "cross_phase_suitability_analysis": {
+      "python_worker_phases_A0_A_C_D_and_E_F_precheck_audit": {
+        "phases_covered": [
+          "A0 (audit_worker=True, worker_a0)",
+          "A (audit_worker=True, worker_a)",
+          "C (audit_worker=True, worker_c)",
+          "D (audit_worker=True, worker_d)",
+          "E precheck and post-Cargo audit (audit_worker=True, worker_e --mode precheck / --mode audit)",
+          "F precheck and post-Cargo audit (audit_worker=True, worker_f --mode precheck / --mode audit)"
+        ],
+        "suitability": "In all 8 audit worker invocations, TRAMPOLINE runs in P2 (PID 1 of the child PID namespace), installs the seccomp listener, sends b'L' + SCM_RIGHTS over control_fd, closes listener/control_fd/stage_fd, and calls os.execve('/usr/bin/python3', ...) into WORKER in the same PID-1 process. Every Python worker is single-process, single-threaded stdlib code that spawns no child processes and does not rely on self-sent default signal dispositions. When WORKER exits, P2 exits as PID 1 and outer bwrap P1 waits synchronously via waitpid(P2)."
+      },
+      "cargo_phases_B_E_F_as_pid_1": {
+        "phases_covered": [
+          "B (audit_worker=False, CARGO fetch --frozen)",
+          "E (audit_worker=False, CARGO metadata --frozen --format-version 1)",
+          "F (audit_worker=False, CARGO test --no-run --frozen --offline ... -j4)"
+        ],
+        "direct_child_and_reparented_grandchild_reaping": "TRAMPOLINE execves CARGO in-place as PID 1 of the child PID namespace. Cargo tracks and reaps all direct child processes (rustc, build-script-build, proc-macro servers, rustdoc) via waitpid(pid, ...). If any compiler or build script spawns a short-lived grandchild that gets reparented to PID 1 (cargo), phase cgroup pids.max budgets (256 in B/E, 1024 in F with -j4) provide ample headroom while Cargo runs; when Cargo (PID 1) exits, kernel zap_pid_ns_processes() synchronously sends SIGKILL to and wait4-reaps all remaining processes and zombies in the child PID namespace inside do_exit() before cgroup_exit(P2) runs and before waitpid(P2) returns to outer bwrap P1.",
+        "pid_1_signal_semantics": "Linux sets SIGNAL_UNKILLABLE on child PID-namespace init, which causes unhandled signals sent from within the same PID namespace to be ignored, but never blocks SIGKILL or SIGSTOP sent from an ancestor PID namespace (nor synchronous hardware faults). Both supervisor refusal/timeout teardown (group.kill() writing '1' to cgroup.kill from the host namespace) and bwrap --die-with-parent (PR_SET_PDEATHSIG(SIGKILL) from outer bwrap P1 in the host PID namespace) originate in the ancestor PID namespace and unconditionally terminate PID 1 and all descendants.",
+        "inherited_seccomp_listener_and_handoff": "TRAMPOLINE installs the seccomp filter before execve, so CARGO and all descendants inherit the filter. As verified in R365 step_B, normal seccomp notifications (POLLIN) and final filter teardown (pure POLLHUP, revents=16 when all tasks in the filter exit) behave identically under --as-pid-1.",
+        "strict_l711_populated_check_and_cleanup": "Line 711 (need(read_numbers(group.path/'cgroup.events').get('populated',0)==0,'background descendants remain after phase process')) remains 100% strict and immediate with zero sleeps or retries, and finally: group.close() still runs group.kill() and rmdir() deterministically."
+      }
+    },
+    "explicit_remaining_limitations": [
+      "In the Linux kernel, a process that has reached state 'Z' (EXIT_ZOMBIE) in /proc has already executed cgroup_exit() earlier in do_exit(). Thus, observing state='Z' for default bwrap P2 in host-only step_A proves that P1 exits via eventfd without waiting for P2 (creating the exact race window in which P2 was still mid-do_exit() before cgroup_exit() when proc.wait() returned in retired attempt 03), but does not retroactively observe the retired attempt 03 cgroup task state.",
+      "The R365 diagnostic ran on the host without cgroups, SDK mounts, or Cargo; actual multi-phase native execution (A0 through F) with candidate cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc remains unrun and uncertified until independent non-author source/test review, SDK-free unit test execution, and a Root-selected fresh native attempt complete."
+    ]
+  },
+  "exact_literal_test_edits": {
+    "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/342-launch-handoff-test-source-review/revision03-owner-literal-fixes/test_launch_handoff.py",
+    "base_bytes": 29867,
+    "base_sha256": "1a7b42184e581bafd44f9a35607c7c3dbfef5ac286e47f14cf84fe2278e3ae0a",
+    "edits": [
+      {
+        "edit_id": 1,
+        "location": "LaunchHandoffTests.test_audit_phase_a0_options_only_memfd_outer_argv_pass_fds_and_records (lines 326-331)",
+        "purpose": "Update expected_options in A0 happy-path test to include '--as-pid-1' appended to args[:separator] before sealed_memfd and recorded argv construction.",
+        "old": "        expected_raw = runner.sandbox_args(h.c, 'A0', True, 100, 3)\n        sep = expected_raw.index('--')\n        expected_options = expected_raw[:sep]\n        expected_target = expected_raw[sep + 1:] + ['--config-sha256', h.config_sha, '--worker-fd', '101']",
+        "new": "        expected_raw = runner.sandbox_args(h.c, 'A0', True, 100, 3)\n        sep = expected_raw.index('--')\n        expected_options = expected_raw[:sep] + ['--as-pid-1']\n        expected_target = expected_raw[sep + 1:] + ['--config-sha256', h.config_sha, '--worker-fd', '101']"
+      },
+      {
+        "edit_id": 2,
+        "location": "LaunchHandoffTests.test_non_audit_phase_b_omits_token_fd_and_separates_cargo_command (lines 391-396)",
+        "purpose": "Update expected_options in non-audit phase B test to include '--as-pid-1' appended to args[:separator] before sealed_memfd and recorded argv construction.",
+        "old": "        expected_raw = runner.sandbox_args(h.c, 'B', False, 100, 3)\n        sep = expected_raw.index('--')\n        expected_options = expected_raw[:sep]\n        expected_cmd = [\n            '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/100',",
+        "new": "        expected_raw = runner.sandbox_args(h.c, 'B', False, 100, 3)\n        sep = expected_raw.index('--')\n        expected_options = expected_raw[:sep] + ['--as-pid-1']\n        expected_cmd = [\n            '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/100',"
+      },
+      {
+        "edit_id": 3,
+        "location": "End of LaunchHandoffTests class (lines 589-603)",
+        "purpose": "Add 9th focused unit test verifying that when '--as-pid-1' is already present in sandbox_args() before '--', launch() does not duplicate '--as-pid-1' and preserves options-only memfd, outer Popen argv, and res['processes'][0]['argv'] placement.",
+        "old": "        # Breaks out of drain loop on deadline without raising 'wall cap B' or calling sel.select.\n        self.assertEqual(str(ctx.exception), 'listener handoff failed')\n        self.assertIn('group.kill', h.events)\n        self.assertNotIn('sel.select', h.events)\n        self.assertEqual(h.open_fds, set())\n        self.assertEqual(h.events[-1], 'group.close')\n\n\nif __name__ == '__main__':\n    unittest.main()\n",
+        "new": "        # Breaks out of drain loop on deadline without raising 'wall cap B' or calling sel.select.\n        self.assertEqual(str(ctx.exception), 'listener handoff failed')\n        self.assertIn('group.kill', h.events)\n        self.assertNotIn('sel.select', h.events)\n        self.assertEqual(h.open_fds, set())\n        self.assertEqual(h.events[-1], 'group.close')\n\n    def test_existing_as_pid_1_option_is_not_duplicated_and_preserves_placement(self):\n        h = LaunchHarness(phase='B')\n        orig_sandbox_args = runner.sandbox_args\n\n        def sandbox_args_with_as_pid_1(*a, **kw):\n            raw = orig_sandbox_args(*a, **kw)\n            sep = raw.index('--')\n            return raw[:sep] + ['--as-pid-1'] + raw[sep:]\n\n        with h.patched_context(), mock.patch.object(runner, 'sandbox_args', side_effect=sandbox_args_with_as_pid_1):\n            res = runner.launch(h.c, 'B', h.config_sha)\n\n        expected_raw = orig_sandbox_args(h.c, 'B', False, 100, 3)\n        sep = expected_raw.index('--')\n        expected_options = expected_raw[:sep] + ['--as-pid-1']\n        expected_cmd = [\n            '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/100',\n            '3', 'B', '--',\n            runner.CARGO, 'fetch', '--frozen',\n            '--manifest-path', f'{h.c.work}/Cargo.toml',\n            '--target', h.c.target,\n        ]\n\n        self.assertEqual(expected_options.count('--as-pid-1'), 1)\n        self.assertEqual(list(h.memfd_payloads), ['sdk-bwrap-argv'])\n        memfd_bytes = h.memfd_payloads['sdk-bwrap-argv']\n        self.assertTrue(memfd_bytes.endswith(b'\\0'))\n        memfd_tokens = [tok.decode() for tok in memfd_bytes[:-1].split(b'\\0')]\n        self.assertEqual(memfd_tokens.count('--as-pid-1'), 1)\n        self.assertEqual(memfd_tokens, expected_options)\n        self.assertNotIn('--', memfd_tokens)\n\n        proc = h.last_popen\n        self.assertEqual(proc.argv, ['/usr/bin/bwrap', '--args', '101', '--', *expected_cmd])\n        self.assertEqual(res['processes'], [{\n            'argv': expected_options + ['--', *expected_cmd],\n            'audit_worker': False,\n            'child_exit': 0,\n        }])\n        self.assertEqual(h.open_fds, set())\n        self.assertEqual(h.events[-1], 'group.close')\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+      }
+    ]
+  },
+  "ordinary_sdk_free_unit_test_plan": {
+    "prerequisite_gate": "Execute only after independent non-author reviewer approves both candidate bounded_sdk_compile.py (cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc) and the updated 9-test test_launch_handoff.py.",
+    "isolated_staging_directory_files": [
+      {
+        "filename": "bounded_sdk_compile.py",
+        "source_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/366-owner-authored-as-pid1-guard-candidate/bounded_sdk_compile.py",
+        "bytes": 74900,
+        "sha256": "cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc"
+      },
+      {
+        "filename": "test_config_source.py",
+        "source_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/test_config_source.py",
+        "bytes": 21076,
+        "sha256": "0f966d96932136e0762c18b80ba0ca0d13230079125850ce3c35e438a37e5e9d"
+      },
+      {
+        "filename": "config.example.json",
+        "source_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/config.example.json",
+        "bytes": 15229,
+        "sha256": "4b12357a4af85553be2ca833760d3bd4a08bb9ad4f5585823d63e800f0ff42cb"
+      },
+      {
+        "filename": "test_launch_handoff.py",
+        "base_source_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/342-launch-handoff-test-source-review/revision03-owner-literal-fixes/test_launch_handoff.py",
+        "base_sha256": "1a7b42184e581bafd44f9a35607c7c3dbfef5ac286e47f14cf84fe2278e3ae0a",
+        "edits_applied": "exact_literal_test_edits.edits[1..3]"
+      }
+    ],
+    "argv": [
+      "/usr/bin/python3",
+      "-I",
+      "-B",
+      "-m",
+      "unittest",
+      "-v",
+      "test_config_source",
+      "test_launch_handoff"
+    ],
+    "environment": {
+      "HOME": "<isolated-empty-home-under-attempt-dir>",
+      "LANG": "C.UTF-8",
+      "LC_ALL": "C.UTF-8",
+      "PATH": "/usr/bin:/bin"
+    },
+    "expected_test_counts": {
+      "test_config_source": 22,
+      "test_launch_handoff": 9,
+      "total": 31
+    },
+    "bounds": {
+      "wall_timeout_seconds": 30,
+      "combined_output_cap_bytes": 131072,
+      "sdk_or_native_or_bwrap_or_cgroup_access": false
+    }
+  }
+}
+```

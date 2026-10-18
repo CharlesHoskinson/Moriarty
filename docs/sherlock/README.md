@@ -36,6 +36,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 
 - [Universal interpreter](explanation/universal-interpreter.md)
 - [Observation boundaries](explanation/observation-boundaries.md)
+- [Source occurrence identity](explanation/source-occurrence-identity.md)
 - [Relations, witnesses and ledger](explanation/relations-witnesses-ledger.md)
 - [Evidence and acceptance](explanation/evidence-and-acceptance.md)
 - [Chunks and financial boundaries](explanation/chunks-and-financial-boundaries.md)

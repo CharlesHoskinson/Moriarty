@@ -1,0 +1,9 @@
+{
+  "description": "Pass `'--as-pid-1'` to `bwrap` in `sandbox_args` so `bwrap` ($P_1$) does not fork an unwaited `do_init` ($P_2$) via `event_fd`, and instead waits on the sandbox PID-1 process directly via `waitpid(P_2)` (which in `kernel/exit.c` cannot return until `cgroup_exit(P_2)` has already completed). Keeps L711 (`read_numbers(group.path/'cgroup.events').get('populated',0)==0`) 100% strict and immediate with zero polling.",
+  "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/336-unadopted-owner-exact-guard-correction/bounded_sdk_compile.owner-proposed.py",
+  "base_sha256": "087f3a37121d4f809c174ce35c424094abbf08da94f2770f518a4c5f61780e7f",
+  "exact_edit_in_launch_or_sandbox_args": {
+    "old_literal_in_launch_L662": "fd=sealed_memfd('sdk-bwrap-argv',b'\\0'.join(x.encode() for x in args[:separator])+b'\\0');args=args[:separator]+['--',*cmd]",
+    "new_literal_in_launch_L662": "bwrap_opts=args[:separator]+([] if '--as-pid-1' in args[:separator] else ['--as-pid-1']);fd=sealed_memfd('sdk-bwrap-argv',b'\\0'.join(x.encode() for x in bwrap_opts)+b'\\0');args=bwrap_opts+['--',*cmd]"
+  }
+}

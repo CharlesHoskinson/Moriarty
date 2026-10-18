@@ -1,0 +1,12 @@
+{
+  "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/363-r140-actual-descendant-diagnostic-failure-followup/source/bwrap_descendant_diagnostic.py",
+  "base_bytes": 14426,
+  "base_sha256": "df596128583030a7369d4f5f24bde82e4076a223a93a41cd44957deb64ab604a",
+  "patch_author_cid": "6277cc2c-99b8-4b7a-a220-a6c971d1bb98",
+  "edits": [
+    {
+      "old": "SECCOMP_IOCTL_NOTIF_RECV = 0xC0502100\n\n\ndef inspect_listener(fd):\n    poll = select.poll()\n    poll.register(fd, select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLHUP)\n    revents = 0\n    for _, ev in poll.poll(0):\n        revents |= ev\n    os.set_blocking(fd, False)\n    buf = bytearray(80)\n    try:\n        fcntl.ioctl(fd, SECCOMP_IOCTL_NOTIF_RECV, buf, True)\n        nid, pid, flg, nr, arch, ip, a0, a1, a2, a3, a4, a5 = struct.unpack(\"<QIIiIQQQQQQQ\", buf)\n        return {\n            \"revents\": revents,\n            \"pollin\": bool(revents & select.POLLIN),\n            \"pollhup\": bool(revents & select.POLLHUP),\n            \"notif\": {\n                \"id\": nid,\n                \"pid\": pid,\n                \"flags\": flg,\n                \"syscall_nr\": nr,\n                \"arch\": arch,\n                \"ip\": ip,\n                \"args\": [a0, a1, a2, a3, a4, a5],\n            },\n        }\n    except OSError as exc:\n        return {\n            \"revents\": revents,\n            \"pollin\": bool(revents & select.POLLIN),\n            \"pollhup\": bool(revents & select.POLLHUP),\n            \"ioctl_errno\": exc.errno,\n        }",
+      "new": "def inspect_listener(fd):\n    poll = select.poll()\n    poll.register(fd, select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLHUP)\n    revents = 0\n    for _, ev in poll.poll(0):\n        revents |= ev\n    bad = bool(revents & (select.POLLIN | select.POLLPRI | select.POLLERR | select.POLLNVAL))\n    return {\n        \"revents\": revents,\n        \"pollin\": bad,\n        \"pollhup\": bool(revents & select.POLLHUP),\n        \"pollerr\": bool(revents & (select.POLLERR | select.POLLPRI | select.POLLNVAL)),\n    }"
+    }
+  ]
+}

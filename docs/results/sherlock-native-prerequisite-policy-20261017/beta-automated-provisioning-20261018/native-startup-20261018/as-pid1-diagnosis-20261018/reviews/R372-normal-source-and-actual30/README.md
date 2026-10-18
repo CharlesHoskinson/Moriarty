@@ -1,0 +1,11 @@
+# Normal-source and recorded 30-test review supplement
+
+R372 returned `SUCCESS` and `APPROVED_NORMAL_SOURCE` for the exact guard and two-line expectation correction already archived here. The reviewer was Gemini 4 Argon high under the recorded Opus quota-outage fallback, in the retained R142 normal-review conversation. This was not a fresh independent review of every unchanged source member.
+
+The [raw opinion](FINAL-RESPONSE.txt), [terminal projection](STATUS.json), and [mechanical identities](ACTUAL-PINS.json) preserve that scope. The recorded [30-test result](../../mocked30/actual-01/RESULT.json) remains one observed SDK-free mocked run: exit0, 0.119574191 seconds, zero stdout bytes, 4972 stderr bytes, all four source pins unchanged. No test was rerun for this supplement.
+
+The guard is [cf94 source](../../guard-candidate/bounded_sdk_compile.py); the [focused test](../../test-candidate/test_launch_handoff.py) is the 2dc9 candidate. The prior R370 prose errors and withheld test suggestions remain historical in the [scoped projection](R370-SCOPED-VERDICTS-LOSSLESS-PROJECTION.json). Exact source and machine-derived pins govern; raw reviewer prose is not a substitute for those bytes. R372's recommended receipt contains explicit placeholders and is not itself an assembled or admitted native config.
+
+R372 supplied the complete changed guard, focused test and selected actual receipts inline. Unchanged 22-test/config/other source members were retained by pin and earlier conversation context. Full R368/R370 texts outside the supplied projections were not claimed freshly read. See the [exact supplied facts and qualifications](EXACT-MACHINE-FACTS-RECORD-SCHEMA-AND-QUALIFICATIONS.json).
+
+The [host-only diagnostic](../../diagnostic/actual-01/RESULT.json) does not identify the residual task in retired native attempt03. Normal source approval and mocked30 success establish neither native04 readiness/selection, live preflight, SDK/Cargo execution nor proof/target acceptance. Historical attempt failures, resource limits, refusal behavior and the stopped amendment remain recorded. Current original acceptance stays 11/35. R375's V4 repair review was pending at this supplement's cut; no repair or new subject-test result is claimed.

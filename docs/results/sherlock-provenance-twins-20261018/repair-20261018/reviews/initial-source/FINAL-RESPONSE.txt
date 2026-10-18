@@ -1,0 +1,100 @@
+### 1. Independent Non-Author Source Verdict Summary
+
+- **Reviewer Identity & Route**: Retained independent non-author reviewer `CID=6277cc2c-99b8-4b7a-a220-a6c971d1bb98` at original `cwd=/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`, running on `gemini-4-argon-high` (`HIGH` thinking) under the standing observed `claude-opus-5-5` HIGH outage fallback. Zero tools, commands, file reads/writes, imports, or external actions were used.
+- **Authorship Separation**: Candidate changes in `owner_prepare.rs` (`625cade487933678de4908625ac77930d8043a6aff9e318cbd81c23324ef41e6`, `59,455` bytes) and `v4_empty_params_tests.rs` (`4748c639d1a2e2c8d38684ef4aeea09256ca4da9ce59828df19675efe2da09e2`, `15,098` bytes) were authored by `bb6043a1-63f1-4de9-b26f-ef50139233e3` in R371 and materialized by Root in R374. This reviewer did not author any part of the candidate.
+- **Overall Source Verdict**: **`APPROVE`** (strictly scoped to the supplied source artifacts `owner_prepare.rs` `625cade4...` and `v4_empty_params_tests.rs` `4748c639...`; **no execution-eligibility grant**, as no concrete QA execution plan/argv is supplied in this turn, and **no `UIREQ-027`, `H1`, Core-wide, or native completion claim**).
+- **Mandatory Blocking Issues**: **None (`0`)**.
+- **Non-Blocking Observations**: **None requiring source modification** (one defense-in-depth note on `expect_start.checked_add` documented in Section 2.2).
+
+---
+
+### 2. Production Source Findings (`crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs`, `59,455B`, `625cade487933678de4908625ac77930d8043a6aff9e318cbd81c23324ef41e6`)
+
+- **Production Source Verdict**: **`APPROVE`**
+
+#### 2.1 Root Cause of the Prior `UIREQ-027` Public Run Failure (`actual_exit: 101`) & Exact Fix Mechanics
+1. **Producer Normalization Contract (`prepare_core` C5, `L657–677` & `SliceC::normalized`, `shared.rs` `L164–169`)**:
+   - In `prepare_core` C5, each function row's parameter slice is constructed via `SliceC::normalized(start, f.parameters.len())`, where `start = parameters.len()`.
+   - By contract, `SliceC::normalized(start, 0)` normalizes every zero-length slice to `SliceC { start: 0, len: 0 }`, regardless of whether prior functions pushed rows into `parameters` (`start > 0`).
+   - Correspondingly, `slice_inside(s: &SliceC, table_len: usize)` (`owner_prepare.rs` `L43–47`) requires `s.start == 0` whenever `s.len == 0`.
+2. **Prior Contradiction in Preimage `da558e3e...` (`L767`)**:
+   - Preimage `check_program_view` V4 enforced `!slice_inside(&f.params, v.parameters.len()) || f.params.start != expect_start`.
+   - For any zero-parameter function (`f.params.len == 0`) appearing after at least one non-empty parameter list (`expect_start > 0`)—such as `unused_after()` (`fi = 2`, `params = { start: 0, len: 0 }`, `expect_start = 1`) in `ProvenanceTwins` (`source.mori` `69450d4e...`, `EXPECTED.json` `4b775100...`)—`slice_inside` required `f.params.start == 0` while `f.params.start != expect_start` required `f.params.start == 1`, making admission impossible and causing `runOnlyNewOriginal027PublicCaseOnce` (`BODY16`/`BODY18`) to fail at `admit` with `AdmissionRejected { detail: "V4:params not contiguous", locator: null, reason: "ProgramViewMalformed" }` before evaluation (`evaluation_performed: false, events_forwarded: "0"`).
+3. **Exact Hunk 1 Verification (`owner_prepare.rs` `L767`)**:
+   - Anchor (`L767`):
+     ```rust
+     if !slice_inside(&f.params, v.parameters.len()) || (f.params.len > 0 && f.params.start != expect_start) {
+         return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "params not contiguous")); }
+     ```
+   - **When `f.params.len == 0`**: `!slice_inside(&f.params, v.parameters.len())` enforces `f.params.start == 0`; `(f.params.len > 0 && ...)` evaluates to `false`; `expect_start.checked_add(0)` leaves `expect_start` unchanged. Thus, a zero-parameter function at any table index `fi` is accepted if and only if its slice is the canonical `SliceC { start: 0, len: 0 }`. Any non-canonical empty slice (`SliceC { start: k, len: 0 }` with `k != 0`, including `k == expect_start` when `expect_start > 0`) is rejected with `ViewCheck::V4, "functions", Some(fi), "params not contiguous"`.
+   - **When `f.params.len > 0`**: `!slice_inside` enforces `f.params.start.checked_add(f.params.len) <= Some(v.parameters.len())` (no `usize` overflow and in-range end), and `f.params.start != expect_start` enforces exact contiguity with the cumulative end of all preceding non-empty parameter slices.
+
+#### 2.2 Full Parameter Consumption, Error-Order, Producer/Declaration & Round-Trip Contracts
+- **Full Consumption & No Unowned/Trailing Parameters (`L764–776`)**:
+  - Because non-empty parameter slices start at `expect_start` (initially `0`) and advance `expect_start` by `f.params.len`, the non-empty slices partition `0..expect_start` into contiguous, pairwise-disjoint intervals in function-declaration order.
+  - After the loop, `if expect_start != v.parameters.len() { return Err(pv_err(ViewCheck::V4, "parameters", None, "trailing parameters")); }` (`L776`) ensures `expect_start == v.parameters.len()`, rejecting any unowned parameter rows (including when all functions have `len == 0` and `v.parameters` is non-empty).
+- **Per-Function Error Order in V4 (`L765–774`)**:
+  1. `f.function_name >= v.names.len()` $\rightarrow$ `V4`, `"functions"`, `Some(fi)`, `"name"`.
+  2. `!slice_inside(&f.params, v.parameters.len()) || (f.params.len > 0 && f.params.start != expect_start)` $\rightarrow$ `V4`, `"functions"`, `Some(fi)`, `"params not contiguous"`.
+  3. `expect_start = expect_start.checked_add(f.params.len)...` $\rightarrow$ `V4`, `"functions"`, `Some(fi)`, `"parameter offset overflow"` (non-blocking note: for `f.params.len > 0`, `slice_inside` and `f.params.start == expect_start` already guarantee `expect_start + f.params.len <= v.parameters.len() <= usize::MAX`, so `checked_add` is unreachable after `slice_inside` passes; keeping it is harmless defense-in-depth).
+  4. `f.body >= n_expr || parent[f.body].is_some() || fn_of_root[f.body] != Some(fi)` $\rightarrow$ `V4`, `"functions"`, `Some(fi)`, `"body not function root"`.
+  5. `for pid in f.params.start..f.params.start + f.params.len`: `v.parameters[pid].binder >= v.names.len()` $\rightarrow$ `V4`, `"parameters"`, `Some(pid)`, `"binder"`.
+  6. Post-loop `expect_start != v.parameters.len()` $\rightarrow$ `V4`, `"parameters"`, `None`, `"trailing parameters"`.
+- **Preserved Declaration Order, First-Match Semantics & V8 Round-Trip**:
+  - `prepare_core` C1 and C5 preserve all functions in declaration order without eliding unreferenced functions (`unused_before`, `unused_after`).
+  - V8 (`L878–889`) decodes zero-parameter functions (`f.params.len == 0`) to `parameters: Vec::new()`, re-prepares them via `prepare_core` back to `SliceC { start: 0, len: 0 }`, and verifies bit-for-bit equality in `views_equal`.
+  - All other checks (`V1`–`V3`, `V5`–`V8`, `AD-0a`–`AD-6`, `R1`–`R6`, iterative `Drop` `C8`) remain completely unmodified.
+- **Exact Hunk 2 Verification (`owner_prepare.rs` `L1077–1079`)**:
+  - Anchor: `#[cfg(test)] mod v4_empty_params_tests;` at EOF of `crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs` resolves under Rust's module system to `crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs`.
+
+---
+
+### 3. Five-Test Module Findings (`crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs`, `15,098B`, `4748c639d1a2e2c8d38684ef4aeea09256ca4da9ce59828df19675efe2da09e2`)
+
+- **Test Module Source Verdict**: **`APPROVE`**
+
+#### 3.1 API, Visibility, Type, Fixture & Oracle Alignment
+- **Imports & Visibility**: `use super::*;` inside child module `shared::owner_prepare::v4_empty_params_tests` imports all `pub` items from `owner_prepare` (`prepare_core`, `check_program_view`, `admit`, `admit_run`) and ancestor `shared` (`BoundsC`, `LayoutSchemaC`, `LayoutCapacitiesC`, `CoreProgram`, `CoreFunction`, `CoreParameter`, `CoreExpr`, `CoreValue`, `i128_class::KIntC`, `SortTag`, `BinaryOp`, `FunctionRowC`, `ParameterRowC`, `SliceC`, `RunIntC`, `FinanceInput`, `ViewCheck`, `Tooling`, `CapacityKind`, `NeededNatC`). Private fields `img.initial_fuel` and `img.stack_limit` on `shared::MachineImage` (`L173–174`) are legally visible to `shared::owner_prepare::v4_empty_params_tests` as a descendant module of `shared`. No invented helpers or nonexistent APIs are used.
+- **Oracle & Config Alignment (`default_bounds_and_layout`, `provenance_twins_program`, `L3–110`)**:
+  - All 22 `BoundsC` fields and 4 `LayoutCapacitiesC` fields in `default_bounds_and_layout()` match frozen `config.json` (`BODY10`, `3406712e...`).
+  - `provenance_twins_program()` matches frozen `source.mori` (`BODY9`, `69450d4e...`) and `EXPECTED.json` (`BODY12`, `4b775100...`): functions `unused_before` (`name_id=3`, `params={0,0}`, `body=5`), `down` (`name_id=0`, `params={0,1}`, `body=6`), `unused_after` (`name_id=2`, `params={0,0}`, `body=15`), `parameters=[{binder: 1, sort: UInt}]`, and `names=["down", "n", "unused_after", "unused_before"]`.
+
+#### 3.2 Per-Test Verification & Stage-Preemption Audit (`V1`/`V2`/`V3` vs `V4`, and `Pass B`/`C1`–`C4` vs `C5`)
+1. **`provenance_twins_zero_one_zero_params_admits_and_preserves_declaration_order` (`L137–175`)**:
+   - Positive test verifying `prepare_core`, `check_program_view`, `admit`, and `admit_run` (`fuel=4096`, `stack_limit=64`, `FinanceInput::Absent`) on the exact `[0, 1, 0]` arity pattern of `ProvenanceTwins`.
+2. **`empty_and_nonempty_parameter_boundary_patterns_admit` (`L178–215`)**:
+   - Positive test verifying `prepare_core`, `check_program_view`, and `admit` across `[0, 0, 0]`, `[1, 0, 2, 0]`, and `[0, 2, 1]`. In `program_with_arities` (`L112–134`), every function name `fn_{fi}` is referenced by `v.functions[fi].function_name` and every parameter name `p_{fi}_{pi}` is referenced by both `v.parameters` and `body` (`BinaryOp::Add`), so V7 (`used`) and V8 round-trip succeed without side-effects.
+3. **`v4_rejects_noncanonical_empty_param_slices` (`L218–240`)**:
+   - **Trailing mutation (`L223–229`)**: `v_trailing.functions[2].params = SliceC { start: 1, len: 0 }`. Passes V1 (lengths unchanged), V2 (does not read `v.functions`), and V3 (reads only `f.body`). Fails at V4 (`fi = 2`) via `!slice_inside` with `ViewCheck::V4, "functions", Some(2), "params not contiguous"`.
+   - **Leading mutation (`L232–239`)**: `v_leading.functions[0].params = SliceC { start: 1, len: 0 }`. Passes V1–V3; fails at V4 (`fi = 0`) with `ViewCheck::V4, "functions", Some(0), "params not contiguous"`.
+4. **`v4_rejects_nonempty_gaps_overlaps_out_of_range_and_trailing_parameters` (`L243–305`)**:
+   - **Overlap (`L248–254`)**: `v_overlap.functions[2].params = SliceC { start: 0, len: 2 }`. Passes V1–V3; fails at V4 (`fi = 2`, `start 0 != expect_start 1`) with `ViewCheck::V4, "functions", Some(2), "params not contiguous"`.
+   - **Gap (`L257–267`)**: pushes 1 `ParameterRowC` (`v_gap.parameters.len() == 4 <= b.parameter_slots (8)`, so V1 passes) and sets `v_gap.functions[2].params = SliceC { start: 2, len: 2 }`. Passes V1–V3; fails at V4 (`fi = 2`, `start 2 != expect_start 1`) with `ViewCheck::V4, "functions", Some(2), "params not contiguous"`.
+   - **Out-of-range (`L270–276`)**: `v_oob.functions[2].params = SliceC { start: 1, len: 3 }` (`1 + 3 > 3`). Passes V1–V3; fails at V4 (`fi = 2`, `!slice_inside`) with `ViewCheck::V4, "functions", Some(2), "params not contiguous"`.
+   - **Overflow (`L279–288`)**: `v_ovf.functions[2].params = SliceC { start: usize::MAX, len: 1 }` (`checked_add` returns `None` in `slice_inside`). Passes V1–V3; fails at V4 (`fi = 2`) with `ViewCheck::V4, "functions", Some(2), "params not contiguous"`.
+   - **Trailing parameter after `[1, 0, 2, 0]` (`L291–299`)** & **after `[0, 0]` (`L302–311`)**: pushes 1 unowned `ParameterRowC` (`len <= 8`, passing V1–V3 and the V4 function loop); fails at post-loop `expect_start != v.parameters.len()` with `ViewCheck::V4, "parameters", None, "trailing parameters"`.
+5. **`v4_rejects_invalid_function_name_body_root_and_parameter_binder_and_preserves_c5_caps` (`L314–395`)**:
+   - **Invalid `function_name` (`L319–325`)**: `v_name.functions[1].function_name = v_name.names.len()`. Passes V1–V3; fails at V4 (`fi = 1`) with `ViewCheck::V4, "functions", Some(1), "name"`.
+   - **Invalid parameter `binder` (`L328–334`)**: `v_binder.parameters[0].binder = v_binder.names.len()`. Passes V1–V3; fails at V4 (`fi = 1, pid = 0`) with `ViewCheck::V4, "parameters", Some(0), "binder"`.
+   - **Non-root `body` (`L337–356`)**: prepares `entry_let_prog` (`functions: []`, `entry: Let("f", 1, Var("f"))`) and pushes `FunctionRowC { function_name: 0, params: SliceC::empty(), return_type: SortTag::UInt, body: 1 }`.
+     - *Why V3 does not preempt V4 here*: In V3 (`L740–743`), `fn_of_root[1]` is set to `Some(0)`. Then in V3's loop (`L746–750`), expression `1` has `parent[1] == Some(0)`, so `match parent[1]` takes the `Some(par)` arm (`expected_owner[1] = expected_owner[0] = (false, 0)`), matching `occurrences[1]`. V3 only inspects `fn_of_root[i]` when `parent[i]` is `None`. Thus V3 succeeds, and V4 (`L770`) catches `parent[f.body].is_some()` at `fi = 0`, returning `ViewCheck::V4, "functions", Some(0), "body not function root"`.
+   - **C5 Capacity Regressions (`L359–394`)**:
+     - `FunctionRows` (`b_fn_cap.function_rows = 2` on 3-function `prog`): passes Pass B and C1–C4; fails in C5 (`L661`) with `CapacityNotAdmitted { kind: FunctionRows, needed: Exact(3), limit: 2, locator: None }`.
+     - `MaxArity` (`b_arity_cap.max_arity = 2` on `prog_arity3 = program_with_arities(&[3])`): because `prog_arity3` contains no `CoreExpr::Call` nodes, C1's call-arity check (`L557`) is not triggered, and execution reaches C5's function-parameter arity check (`L665`), failing with `CapacityNotAdmitted { kind: MaxArity, needed: Exact(3), limit: 2, locator: None }`.
+     - `ParameterSlots` (`b_param_cap.parameter_slots = 1` on `prog_arity3`): reaches C5's inner parameter loop (`L670`) on the 2nd parameter and fails with `CapacityNotAdmitted { kind: ParameterSlots, needed: Exact(2), limit: 1, locator: None }`.
+
+---
+
+### 4. Coverage, Explicit Omissions & Preserved Boundaries
+
+- **Reviewed in Full**:
+  - Candidate `crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs` (`59,455` bytes, SHA-256 `625cade487933678de4908625ac77930d8043a6aff9e318cbd81c23324ef41e6`, `BODY2`).
+  - Candidate `crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs` (`15,098` bytes, SHA-256 `4748c639d1a2e2c8d38684ef4aeea09256ca4da9ce59828df19675efe2da09e2`, `BODY1`).
+  - Mechanical diff `SOURCE.patch` (`BODY3`) and materialization record `ROOT-MATERIALIZATION.json` (`BODY4`) against preimage `da558e3e0f3498fe7da646d860af2488337201ad93b3bac5ebc5389bddc5e542` (`59,392` bytes).
+  - Relevant `shared.rs` and `owner_host.rs` declaration/contract regions (`BODY5`–`BODY8`), frozen `UIREQ-027` oracle inputs (`source.mori`, `config.json`, `target.json`, `EXPECTED.json`, `DERIVATION.md`, `ORIGINAL-REQUIREMENTS.md`, `ORACLE-FREEZE.json` in `BODY9`–`BODY15`), actual failure receipts (`BODY16`–`BODY19`), beta override (`BODY20`), and mechanical summary (`BODY21`).
+- **Explicit Omissions & Scope Limits**:
+  - Candidate `owner_prepare.rs` and `v4_empty_params_tests.rs` are currently **unrun and not yet installed in workspace `W`**.
+  - Implementations outside the supplied files (`owner_runtime.rs`, family modules, `sherlock_provenance_twins_independent.rs` body, compiler/SDK/native lanes) were not re-audited in this turn.
+  - Because no concrete QA command/argv plan was supplied in R375, **no execution eligibility is granted** here, and **no closure of `UIREQ-027`, `UIREQ-020`, `H1`, `C4`, `R2`, or stopped Amendment 10** is inferred.
+
+END-R375-NONAUTHOR-V4-FIX-AND-TEST-SOURCE-REVIEW

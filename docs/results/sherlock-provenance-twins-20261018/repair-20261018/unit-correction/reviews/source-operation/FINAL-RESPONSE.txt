@@ -1,0 +1,90 @@
+### 1. Inline Read Accounting, Scope & Authorship Audit
+
+- **Reviewer Identity & Route**: Retained independent non-author reviewer `CID=6277cc2c-99b8-4b7a-a220-a6c971d1bb98` at original `cwd=/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`, running on `gemini-4-argon-high` (`HIGH` thinking) under the standing observed `claude-opus-5-5` HIGH outage fallback. Zero tools, commands, file reads/writes, imports, or external actions were used.
+- **Authorship & Prior-Verdict Qualification**:
+  - The 16 test-only literal edits producing `v4_empty_params_tests.rs` (`15,902` bytes, SHA-256 `8b75f70569c31df58ae9739d991a16e4f473a685c342c0fa809a8a99ede85b6d`) from `4748c639d1a2e2c8d38684ef4aeea09256ca4da9ce59828df19675efe2da09e2` (`15,098` bytes) were authored by `bb6043a1-63f1-4de9-b26f-ef50139233e3` and materialized by Root in R380 (`a8e127562468a7ef1b24ea74730ec566f37eaec6744842642ff9c3ec8b3c4888`). This reviewer did not author any part of the candidate.
+  - Our prior R375 test-source approval of `4748c639...` missed that `shared::Tooling` intentionally omits `#[derive(Debug)]`, which caused 17 `E0277` errors (`the trait Debug is not implemented for shared::Tooling`) when compiling `02-compileCoreCfgTestForFiveNewUnits` (`BODY4`/`BODY5`). That historical test-source verdict is superseded for the test file; meanwhile, unchanged production `owner_prepare.rs` (`59,455` bytes, SHA-256 `625cade487933678de4908625ac77930d8043a6aff9e318cbd81c23324ef41e6`) compiled cleanly (`actual_exit: 0`) in `01-compileChangedNormalCoreRlib` (`BODY6`).
+- **Inline Read Coverage & Explicit Omissions**:
+  - Read 100% in full: `BODY1` (`v4_empty_params_tests.rs` `8b75f705...`), `BODY2` (16-edit diff), `BODY3` (`ROOT-MATERIALIZATION.json`), `BODY4`–`BODY7` (prior `E0277` stderr, phase `02` failure receipt, phase `01` `libmori_core.rlib` pass receipt, and metadata for separate phases `09`–`11`), `BODY8`–`BODY10` (`shared.rs` `L79–94`, `L139–140`, `L350–370` declarations and `#[derive(...)]` attributes), `BODY11`–`BODY16` (historical excerpt, mechanical scope/APIs, 7-phase `REVIEW-PROJECTION.json`, `CFG-TEST-CLOSURE-CHECK.json`, QA handoff, and beta override).
+  - Explicit Omissions / Non-Inferences: Unchanged `owner_prepare.rs` (`625cade...`, `59,455B`) is retained from R375 + phase `01` compile receipt without duplicating its full 59KB body here; the other 143 snapshot files / 323 normal tool+dep pins (`SOURCE-COMPOSITION.json` `b3adabc8...`, `FLAT-INPUT-PINS.json` `988d0e0e...`) and the separate `UIREQ-027` public run streams (`307,049B` events `3f1f34fe...`, `35,329B` stdout `e76afdec...`) are not freshly semantically re-audited in this narrow test-plumbing review.
+
+---
+
+### 2. Decision 1 — Independent Non-Author Source Review of Corrected `v4_empty_params_tests.rs` (`8b75f70569c31df58ae9739d991a16e4f473a685c342c0fa809a8a99ede85b6d`)
+
+- **Corrected Test Source Verdict**: **`APPROVE`**
+- **Mandatory Blocking Issues**: **None (`0`)**.
+- **Non-Blocking Observations**: **None (`0`)**.
+
+#### 2.1 Verification of `expect_ok` and `unwrap_ok` (`v4_empty_params_tests.rs` `L146–163`)
+1. **Elimination of `Tooling: Debug` and `T: Debug` Trait Bounds**:
+   - Anchor (`L146–163`):
+     ```rust
+     fn expect_ok<T>(res: Result<T, Tooling>, msg: &str) -> T {
+         match res {
+             Ok(v) => v,
+             Err(Tooling::AdmissionRejected { reason, detail, locator }) => {
+                 panic!("{msg}: AdmissionRejected({reason:?}, {detail:?}, {locator:?})")
+             }
+             Err(Tooling::CapacityNotAdmitted { kind, needed, limit, locator }) => {
+                 panic!("{msg}: CapacityNotAdmitted({kind:?}, {needed:?}, {limit}, {locator:?})")
+             }
+             Err(Tooling::UnsupportedFeature { feature, locator }) => {
+                 panic!("{msg}: UnsupportedFeature({feature:?}, {locator:?})")
+             }
+         }
+     }
+
+     fn unwrap_ok<T>(res: Result<T, Tooling>) -> T {
+         expect_ok(res, "unexpected Tooling error")
+     }
+     ```
+   - `expect_ok<T>` and `unwrap_ok<T>` impose **zero trait bounds** on `T` or `Tooling`. On `Ok(v)`, `v` is returned by value (`ProgramView`, `Admitted`, or `MachineImage`); on `Err(...)`, every arm diverges via `panic!(...)` (`!`), so `Result::<T, Tooling>::expect` / `::unwrap` is never invoked.
+   - No `#[derive(Debug)]` is added to production `shared::Tooling`, preserving production contracts (`shared.rs` `L350–370`) unchanged.
+2. **Exhaustiveness Over `shared::Tooling` (`shared.rs` `L367–371`, `BODY10`)**:
+   - `pub enum Tooling` has exactly three variants:
+     - `AdmissionRejected { reason: AdmissionReason, detail: String, locator: Option<LocatorC> }`
+     - `CapacityNotAdmitted { kind: CapacityKind, needed: NeededNatC, limit: u128, locator: Option<LocatorC> }`
+     - `UnsupportedFeature { feature: FeatureKind, locator: Option<LocatorC> }`
+   - `expect_ok` destructures `Ok(v)` and all three `Err(Tooling::...)` variants with their exact field identifiers.
+3. **Formatting Trait Verification for Every Destructured Field**:
+   - `msg: &str` (`{msg}`) and `limit: u128` (`{limit}`) use `Display` (`std::fmt::Display` implemented in `core`).
+   - `reason: AdmissionReason` (`{reason:?}`): derives `Debug` at `shared.rs` `L92–94` (`BODY8`).
+   - `detail: String` (`{detail:?}`): implements `Debug` in `alloc`/`std`.
+   - `locator: Option<LocatorC>` (`{locator:?}`): `LocatorC` derives `Debug` at `shared.rs` `L139–140` (`BODY9`), and `Option<T>: Debug` where `T: Debug` in `core`.
+   - `kind: CapacityKind` (`{kind:?}`): derives `Debug` at `shared.rs` `L83–89` (`BODY8`), and its nested payload `CounterWidthField` derives `Debug` at `shared.rs` `L81–82` (`BODY8`).
+   - `needed: NeededNatC` (`{needed:?}`): derives `Debug` at `shared.rs` `L359–360` (`BODY10`).
+   - `feature: FeatureKind` (`{feature:?}`): derives `Debug` at `shared.rs` `L90–91` (`BODY8`).
+4. **Complete Replacement of All 17 Prior `E0277` Sites & Preservation of All Assertions**:
+   - All 3 `.expect(...)` call sites in `provenance_twins_zero_one_zero_params_admits_and_preserves_declaration_order` (`L169`, `L205`, `L209`) now use `expect_ok(...)`.
+   - All 14 `.unwrap()` call sites on `prepare_core(...)` across the remaining 4 tests (`L228`, `L238`, `L249`, `L264`, `L273`, `L288`, `L297`, `L310`, `L319`, `L331`, `L344`, `L362`, `L371`, `L388`) now use `unwrap_ok(...)`.
+   - The 11 `.unwrap_err()` call sites in Tests 3, 4, and 5 are called on `check_program_view(...) -> Result<(), ProgramViewViolation>`, where `Result::<(), E>::unwrap_err` requires only `(): Debug` (which succeeded with 0 errors in `BODY4`).
+   - All 5 test function names, fixture constructions, positive assertions, negative `ViewCheck::V4` mutations (`check`, `table`, `row`, `detail`), and C5 capacity `matches!(..., Err(Tooling::CapacityNotAdmitted { ... }))` checks remain 100% identical to R375.
+
+---
+
+### 3. Decision 2 — Separate Classification of the Exact 7-Phase Ordinary QA Operation (`BODY13`–`BODY15`)
+
+- **7-Phase Operation Verdict**: **`ELIGIBLE`** (specifically for the exact 7-phase plan in `REVIEW-PROJECTION.json` `febb7b98c5e9dfee69696a01efb23b94f7660c8818167048fad9109574805c38`, `BODY13`).
+
+#### 3.1 Concrete Eligibility Conditions & Verification Scope
+1. **Exact Input Pinning (`468` Active Inputs)**:
+   - Before Phase `01` and after each of Phases `01`–`07`, all `468` active inputs in `FLAT-INPUT-PINS.json` (`988d0e0ec872b50f52fbe98f6accfb0ffc6acc1c2c51b740c3a4fed77630dc21`) and `SOURCE-COMPOSITION.json` (`b3adabc86dd5ae1a1ec62b8d1583c869a6ecb703ce19400dc32c8623bbcd7b17`)—comprising `145` snapshot files (`134` Rust files including unchanged `owner_prepare.rs` `625cade487933678de4908625ac77930d8043a6aff9e318cbd81c23324ef41e6` and corrected `v4_empty_params_tests.rs` `8b75f70569c31df58ae9739d991a16e4f473a685c342c0fa809a8a99ede85b6d`, plus `11` cfg(test) fixtures) and `323` unchanged normal toolchain/extern dependency files—must match their pinned SHA-256 digests and byte lengths.
+2. **Pre-Run Output Absence & Post-Compile Output / Dep-Info Binding**:
+   - Outputs `.../ordinary-QA/build/mori-core-v4-corrected-unit-tests` and `.../ordinary-QA/build/core-corrected-tests.d` must be verified absent before Phase `01`.
+   - After Phase `01` (`01-compileCoreCfgTestForFiveNewUnits`, direct `/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc --test .../snapshot/crates/mori-core/src/lib.rs`, `wallSeconds=30`, `cpu=25:25`, `as=2147483648:2147483648`, `fsize=67108864:67108864`, `core=0:0`) exits `0`, Root binds the resulting test executable and `core-corrected-tests.d` digests and verifies that the dep-info source membership resolves within the pinned 145-file snapshot closure (including `owner_prepare.rs` `625cade...` and `v4_empty_params_tests.rs` `8b75f705...`) before executing Phases `02`–`07`.
+3. **Exact Module-Prefix Listing Gate (Phase `02`)**:
+   - Phase `02` (`02-listOnlyFiveNewV4Units`, `.../mori-core-v4-corrected-unit-tests sherlock::helper_machine::shared::owner_prepare::v4_empty_params_tests:: --list`, `wallSeconds=10`, `cpu=25:25`, `as=1073741824:1073741824`, `fsize=1048576:1048576`, `core=0:0`) must exit `0` and list the **exact set and count (`5`)** of test names in `expectedMembership.names` (`BODY13`), with zero ignored, benchmark, or extra entries.
+4. **Exact Serial Single-Test Execution & Isolation (Phases `03`–`07`)**:
+   - Phases `03`–`07` must run serially, each invoking `--exact <full_test_name> --test-threads=1 --nocapture` under `timeout --signal=KILL 10s` and `prlimit --cpu=25:25 --as=1073741824:1073741824 --fsize=1048576:1048576 --core=0:0`, with exact 3-key environment (`PATH=/usr/bin:/bin`, `LANG=C.UTF-8`, `TMPDIR=.../ordinary-QA/tmp`, no inherited env) and `keptBytesPerStream: 131072` per raw stream (`stdout`/`stderr`).
+   - Each of Phases `03`–`07` must exit `0` with `passed: 1, failed: 0, ignored: 0`. Unrelated `#[cfg(test)]` modules in `mori_core` are compiled in Phase `01` as part of the crate snapshot but are never selected to execute.
+5. **Serial Fail-Stop & Process-Group Cleanup**:
+   - Any non-zero exit code, timeout/rlimit signal, stream-cap truncation (`> 131,072` bytes), input-pin mutation, dep-info membership mismatch, or list/test count mismatch in any phase must immediately terminate the process group and halt subsequent phases with no retry.
+
+---
+
+### 4. Preserved Boundaries
+- No rebuild of `libmori_core.rlib` (`08f5a14c...`) and no re-run of the `UIREQ-027` public consumer (`provenance-twins-v4-tests` `69d6f5c5...`) is part of this 7-phase operation.
+- Neither this test-source approval nor the 7-phase unit test execution closes whole `UIREQ-027` (whose `307,049B` event log and `35,329B` stdout remain subject to their own dedicated review), `UIREQ-020`, `H1`, `C4`, `R2`, or stopped Amendment 10, nor does it authorize any Cargo, SDK, or native execution.
+
+END-R382-V4-TEST-DEBUG-FIX-SOURCE-AND-ORDINARY-OPERATION-REVIEW
