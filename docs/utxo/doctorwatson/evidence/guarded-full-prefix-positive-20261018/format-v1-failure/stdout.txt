@@ -1,0 +1,736 @@
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:6:
+     AssetId, BinaryOp, Effect, Expr, Program, Scenario, Snapshot, Statement, UInt, Value, parse,
+     simulate, validate,
+ };
+[31m-use serde::de::DeserializeOwned;
+(B[m use serde::Deserialize;
+[32m+use serde::de::DeserializeOwned;
+(B[m use serde_json::{Value as Json, json};
+ use std::collections::BTreeMap;
+ 
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:59:
+ fn balance_rows(snapshot: &Snapshot) -> BTreeMap<(AssetId, String), UInt> {
+     let mut rows = BTreeMap::new();
+     for row in &snapshot.balances {
+[31m-        assert!(rows.insert((row.asset.clone(), row.account.clone()), row.amount).is_none());
+(B[m[32m+        assert!(
+(B[m[32m+            rows.insert((row.asset.clone(), row.account.clone()), row.amount)
+(B[m[32m+                .is_none()
+(B[m[32m+        );
+(B[m     }
+     rows
+ }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:68:
+ fn liability_rows(snapshot: &Snapshot) -> BTreeMap<DutyKey, UInt> {
+     let mut rows = BTreeMap::new();
+     for row in &snapshot.liabilities {
+[31m-        assert!(rows.insert((
+(B[m[31m-            row.name.clone(), row.asset.clone(), row.debtor.clone(), row.creditor.clone(),
+(B[m[31m-        ), row.amount).is_none());
+(B[m[32m+        assert!(
+(B[m[32m+            rows.insert(
+(B[m[32m+                (
+(B[m[32m+                    row.name.clone(),
+(B[m[32m+                    row.asset.clone(),
+(B[m[32m+                    row.debtor.clone(),
+(B[m[32m+                    row.creditor.clone(),
+(B[m[32m+                ),
+(B[m[32m+                row.amount
+(B[m[32m+            )
+(B[m[32m+            .is_none()
+(B[m[32m+        );
+(B[m     }
+     rows
+ }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:77:
+ 
+ fn assert_frame(actual: &Snapshot, literal: &Json, context: &str) {
+     let expected: Snapshot = decode(literal);
+[31m-    assert_eq!(actual.state, expected.state, "{context}: complete typed state");
+(B[m[31m-    assert_eq!(balance_rows(actual), balance_rows(&expected), "{context}: complete balances");
+(B[m[31m-    assert_eq!(liability_rows(actual), liability_rows(&expected), "{context}: complete duties");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        actual.state, expected.state,
+(B[m[32m+        "{context}: complete typed state"
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        balance_rows(actual),
+(B[m[32m+        balance_rows(&expected),
+(B[m[32m+        "{context}: complete balances"
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        liability_rows(actual),
+(B[m[32m+        liability_rows(&expected),
+(B[m[32m+        "{context}: complete duties"
+(B[m[32m+    );
+(B[m }
+ 
+ fn balance(snapshot: &Snapshot, asset: &AssetId, account: &str) -> UInt {
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:86:
+[31m-    let matches: Vec<_> = snapshot.balances.iter()
+(B[m[31m-        .filter(|row| row.asset == *asset && row.account == account).collect();
+(B[m[31m-    assert_eq!(matches.len(), 1, "one explicit balance for {account} and {asset:?}");
+(B[m[32m+    let matches: Vec<_> = snapshot
+(B[m[32m+        .balances
+(B[m[32m+        .iter()
+(B[m[32m+        .filter(|row| row.asset == *asset && row.account == account)
+(B[m[32m+        .collect();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        matches.len(),
+(B[m[32m+        1,
+(B[m[32m+        "one explicit balance for {account} and {asset:?}"
+(B[m[32m+    );
+(B[m     matches[0].amount
+ }
+ 
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:92:
+[31m-fn duty<'a>(snapshot: &'a Snapshot, name: &str, asset: &AssetId, debtor: &str, creditor: &str)
+(B[m[31m-    -> Option<&'a mori_core::Liability>
+(B[m[31m-{
+(B[m[31m-    let matches: Vec<_> = snapshot.liabilities.iter().filter(|row|
+(B[m[31m-        row.name == name && row.asset == *asset && row.debtor == debtor && row.creditor == creditor
+(B[m[31m-    ).collect();
+(B[m[32m+fn duty<'a>(
+(B[m[32m+    snapshot: &'a Snapshot,
+(B[m[32m+    name: &str,
+(B[m[32m+    asset: &AssetId,
+(B[m[32m+    debtor: &str,
+(B[m[32m+    creditor: &str,
+(B[m[32m+) -> Option<&'a mori_core::Liability> {
+(B[m[32m+    let matches: Vec<_> = snapshot
+(B[m[32m+        .liabilities
+(B[m[32m+        .iter()
+(B[m[32m+        .filter(|row| {
+(B[m[32m+            row.name == name
+(B[m[32m+                && row.asset == *asset
+(B[m[32m+                && row.debtor == debtor
+(B[m[32m+                && row.creditor == creditor
+(B[m[32m+        })
+(B[m[32m+        .collect();
+(B[m     assert!(matches.len() <= 1);
+     matches.first().copied()
+ }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:106:
+     match &program.expressions[usize::from(id)] {
+         Expr::Name { name } => name.clone(),
+         Expr::Binary { op, lhs, rhs } => {
+[31m-            assert!(matches!(program.expressions[usize::from(*lhs)], Expr::Name { .. }));
+(B[m[31m-            assert!(matches!(program.expressions[usize::from(*rhs)], Expr::Name { .. }));
+(B[m[32m+            assert!(matches!(
+(B[m[32m+                program.expressions[usize::from(*lhs)],
+(B[m[32m+                Expr::Name { .. }
+(B[m[32m+            ));
+(B[m[32m+            assert!(matches!(
+(B[m[32m+                program.expressions[usize::from(*rhs)],
+(B[m[32m+                Expr::Name { .. }
+(B[m[32m+            ));
+(B[m             let symbol = match op {
+                 BinaryOp::Ge => ">=",
+                 BinaryOp::Sub => "-",
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:116:
+                 BinaryOp::Eq => "==",
+                 _ => panic!("operator outside the frozen positive specimen"),
+             };
+[31m-            format!("{} {symbol} {}", expression_text(program, *lhs), expression_text(program, *rhs))
+(B[m[32m+            format!(
+(B[m[32m+                "{} {symbol} {}",
+(B[m[32m+                expression_text(program, *lhs),
+(B[m[32m+                expression_text(program, *rhs)
+(B[m[32m+            )
+(B[m         }
+         _ => panic!("expression shape outside this scoped representation adapter"),
+     }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:133:
+         Statement::Ensures { predicate } => format!("ensures {};", expression(*predicate)),
+         Statement::Let { name, value } => format!("let {name} = {};", expression(*value)),
+         Statement::Next { state, value } => format!("next {state} = {};", expression(*value)),
+[31m-        Statement::Emit { name, value } => format!("emit {}({});", quoted(name), expression(*value)),
+(B[m[31m-        Statement::Transfer { asset, from, to, amount } => format!(
+(B[m[31m-            "transfer({asset}, {}, {}, {});", quoted(from), quoted(to), expression(*amount)
+(B[m[32m+        Statement::Emit { name, value } => {
+(B[m[32m+            format!("emit {}({});", quoted(name), expression(*value))
+(B[m[32m+        }
+(B[m[32m+        Statement::Transfer {
+(B[m[32m+            asset,
+(B[m[32m+            from,
+(B[m[32m+            to,
+(B[m[32m+            amount,
+(B[m[32m+        } => format!(
+(B[m[32m+            "transfer({asset}, {}, {}, {});",
+(B[m[32m+            quoted(from),
+(B[m[32m+            quoted(to),
+(B[m[32m+            expression(*amount)
+(B[m         ),
+[31m-        Statement::Fee { asset, from, to, amount } => format!(
+(B[m[31m-            "fee({asset}, {}, {}, {});", quoted(from), quoted(to), expression(*amount)
+(B[m[32m+        Statement::Fee {
+(B[m[32m+            asset,
+(B[m[32m+            from,
+(B[m[32m+            to,
+(B[m[32m+            amount,
+(B[m[32m+        } => format!(
+(B[m[32m+            "fee({asset}, {}, {}, {});",
+(B[m[32m+            quoted(from),
+(B[m[32m+            quoted(to),
+(B[m[32m+            expression(*amount)
+(B[m         ),
+[31m-        Statement::Liability { name, asset, debtor, creditor, amount } => format!(
+(B[m[31m-            "liability({}, {asset}, {}, {}, {});", quoted(name), quoted(debtor),
+(B[m[31m-            quoted(creditor), expression(*amount)
+(B[m[32m+        Statement::Liability {
+(B[m[32m+            name,
+(B[m[32m+            asset,
+(B[m[32m+            debtor,
+(B[m[32m+            creditor,
+(B[m[32m+            amount,
+(B[m[32m+        } => format!(
+(B[m[32m+            "liability({}, {asset}, {}, {}, {});",
+(B[m[32m+            quoted(name),
+(B[m[32m+            quoted(debtor),
+(B[m[32m+            quoted(creditor),
+(B[m[32m+            expression(*amount)
+(B[m         ),
+[31m-        Statement::Discharge { name, amount } => format!(
+(B[m[31m-            "discharge({}, {});", quoted(name), expression(*amount)
+(B[m[31m-        ),
+(B[m[32m+        Statement::Discharge { name, amount } => {
+(B[m[32m+            format!("discharge({}, {});", quoted(name), expression(*amount))
+(B[m[32m+        }
+(B[m         Statement::Await { .. } => panic!("Await is outside this Core/1 specimen"),
+     }
+ }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:161:
+ // Project actual raw effects and their actual adjacent frames into the independent
+ // oracle's richer semantic operations. This uses no oracle value as an input and
+ // performs no expression evaluation. Every raw Effect variant is handled.
+[31m-fn operation(effect: &Effect, statement: &Statement, result: &Value,
+(B[m[31m-    before: &Snapshot, after: &Snapshot) -> Json
+(B[m[31m-{
+(B[m[32m+fn operation(
+(B[m[32m+    effect: &Effect,
+(B[m[32m+    statement: &Statement,
+(B[m[32m+    result: &Value,
+(B[m[32m+    before: &Snapshot,
+(B[m[32m+    after: &Snapshot,
+(B[m[32m+) -> Json {
+(B[m     match effect {
+[31m-        Effect::Transfer { asset, from, to, amount } | Effect::Fee { asset, from, to, amount } => {
+(B[m[32m+        Effect::Transfer {
+(B[m[32m+            asset,
+(B[m[32m+            from,
+(B[m[32m+            to,
+(B[m[32m+            amount,
+(B[m[32m+        }
+(B[m[32m+        | Effect::Fee {
+(B[m[32m+            asset,
+(B[m[32m+            from,
+(B[m[32m+            to,
+(B[m[32m+            amount,
+(B[m[32m+        } => {
+(B[m             json!({
+                 "kind": if matches!(effect, Effect::Fee { .. }) { "fee" } else { "transfer" },
+                 "asset": asset, "from": from, "to": to, "amount": amount,
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:175:
+                 "recipient_after": balance(after, asset, to),
+             })
+         }
+[31m-        Effect::Liability { name, asset, debtor, creditor, before: opening, after: closing } => {
+(B[m[32m+        Effect::Liability {
+(B[m[32m+            name,
+(B[m[32m+            asset,
+(B[m[32m+            debtor,
+(B[m[32m+            creditor,
+(B[m[32m+            before: opening,
+(B[m[32m+            after: closing,
+(B[m[32m+        } => {
+(B[m             let kind = match statement {
+                 Statement::Liability { .. } => "liability_add",
+                 Statement::Discharge { .. } => "discharge",
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:193:
+             }
+             projected
+         }
+[31m-        Effect::State { name, before, after } => json!({
+(B[m[32m+        Effect::State {
+(B[m[32m+            name,
+(B[m[32m+            before,
+(B[m[32m+            after,
+(B[m[32m+        } => json!({
+(B[m             "kind": "state_write", "name": name, "before": scalar(before), "after": scalar(after),
+         }),
+         Effect::Emit { name, value } => json!({ "kind": "emit", "name": name, "value": value }),
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:201:
+ }
+ 
+ fn category(operations: &[Json], kinds: &[&str]) -> Vec<Json> {
+[31m-    operations.iter().filter(|op| kinds.contains(&op["kind"].as_str().unwrap())).cloned().collect()
+(B[m[32m+    operations
+(B[m[32m+        .iter()
+(B[m[32m+        .filter(|op| kinds.contains(&op["kind"].as_str().unwrap()))
+(B[m[32m+        .cloned()
+(B[m[32m+        .collect()
+(B[m }
+ 
+ #[derive(Default)]
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:219:
+     assert_eq!(rows.len(), pre.balances.len());
+     let mut actual = BTreeMap::new();
+     for row in &pre.balances {
+[31m-        assert!(actual.insert((row.asset.clone(), row.account.clone()), Flow::default()).is_none());
+(B[m[32m+        assert!(
+(B[m[32m+            actual
+(B[m[32m+                .insert((row.asset.clone(), row.account.clone()), Flow::default())
+(B[m[32m+                .is_none()
+(B[m[32m+        );
+(B[m     }
+     for effect in effects {
+         match effect {
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:226:
+[31m-            Effect::Transfer { asset, from, to, amount } => {
+(B[m[31m-                actual.get_mut(&(asset.clone(), from.clone())).unwrap().nonfee_debit += amount.0;
+(B[m[31m-                actual.get_mut(&(asset.clone(), to.clone())).unwrap().gross_credit += amount.0;
+(B[m[32m+            Effect::Transfer {
+(B[m[32m+                asset,
+(B[m[32m+                from,
+(B[m[32m+                to,
+(B[m[32m+                amount,
+(B[m[32m+            } => {
+(B[m[32m+                actual
+(B[m[32m+                    .get_mut(&(asset.clone(), from.clone()))
+(B[m[32m+                    .unwrap()
+(B[m[32m+                    .nonfee_debit += amount.0;
+(B[m[32m+                actual
+(B[m[32m+                    .get_mut(&(asset.clone(), to.clone()))
+(B[m[32m+                    .unwrap()
+(B[m[32m+                    .gross_credit += amount.0;
+(B[m             }
+[31m-            Effect::Fee { asset, from, to, amount } => {
+(B[m[31m-                actual.get_mut(&(asset.clone(), from.clone())).unwrap().fee_debit += amount.0;
+(B[m[32m+            Effect::Fee {
+(B[m[32m+                asset,
+(B[m[32m+                from,
+(B[m[32m+                to,
+(B[m[32m+                amount,
+(B[m[32m+            } => {
+(B[m[32m+                actual
+(B[m[32m+                    .get_mut(&(asset.clone(), from.clone()))
+(B[m[32m+                    .unwrap()
+(B[m[32m+                    .fee_debit += amount.0;
+(B[m                 let recipient = actual.get_mut(&(asset.clone(), to.clone())).unwrap();
+                 recipient.gross_credit += amount.0;
+                 recipient.fee_credit += amount.0;
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:245:
+         let flow = &actual[&key];
+         let opening = balance(pre, &asset, account);
+         let closing = balance(post, &asset, account);
+[31m-        assert_eq!(json!({
+(B[m[31m-            "account": account, "asset": asset,
+(B[m[31m-            "opening_amount": opening, "closing_amount": closing,
+(B[m[31m-            "opening_present": true, "closing_present": true,
+(B[m[31m-            "nonfee_debit": flow.nonfee_debit.to_string(),
+(B[m[31m-            "fee_debit": flow.fee_debit.to_string(),
+(B[m[31m-            "gross_debit_including_fees": (flow.nonfee_debit + flow.fee_debit).to_string(),
+(B[m[31m-            "gross_credit": flow.gross_credit.to_string(),
+(B[m[31m-            "fee_credit": flow.fee_credit.to_string(),
+(B[m[31m-            "signed_net_flow": (i128::try_from(closing.0).unwrap() - i128::try_from(opening.0).unwrap()).to_string(),
+(B[m[31m-        }), *expected, "complete gross/fee/net account flow for {account}");
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!({
+(B[m[32m+                "account": account, "asset": asset,
+(B[m[32m+                "opening_amount": opening, "closing_amount": closing,
+(B[m[32m+                "opening_present": true, "closing_present": true,
+(B[m[32m+                "nonfee_debit": flow.nonfee_debit.to_string(),
+(B[m[32m+                "fee_debit": flow.fee_debit.to_string(),
+(B[m[32m+                "gross_debit_including_fees": (flow.nonfee_debit + flow.fee_debit).to_string(),
+(B[m[32m+                "gross_credit": flow.gross_credit.to_string(),
+(B[m[32m+                "fee_credit": flow.fee_credit.to_string(),
+(B[m[32m+                "signed_net_flow": (i128::try_from(closing.0).unwrap() - i128::try_from(opening.0).unwrap()).to_string(),
+(B[m[32m+            }),
+(B[m[32m+            *expected,
+(B[m[32m+            "complete gross/fee/net account flow for {account}"
+(B[m[32m+        );
+(B[m     }
+     assert_eq!(seen.len(), actual.len());
+ }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:274:
+     for expected in oracle.as_array().unwrap() {
+         let asset: AssetId = decode(&expected["asset"]);
+         assert!(seen.insert(asset.clone(), ()).is_none());
+[31m-        assert_eq!(json!({
+(B[m[31m-            "asset": asset,
+(B[m[31m-            "opening_total": opening[&asset].to_string(),
+(B[m[31m-            "closing_total": closing[&asset].to_string(),
+(B[m[31m-            // The complete effect enum above has no mint/burn/external operation.
+(B[m[31m-            "minted": "0", "burned": "0", "net_external_flow": "0",
+(B[m[31m-        }), *expected, "separate token totals, excluding duties");
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!({
+(B[m[32m+                "asset": asset,
+(B[m[32m+                "opening_total": opening[&asset].to_string(),
+(B[m[32m+                "closing_total": closing[&asset].to_string(),
+(B[m[32m+                // The complete effect enum above has no mint/burn/external operation.
+(B[m[32m+                "minted": "0", "burned": "0", "net_external_flow": "0",
+(B[m[32m+            }),
+(B[m[32m+            *expected,
+(B[m[32m+            "separate token totals, excluding duties"
+(B[m[32m+        );
+(B[m     }
+     assert_eq!(seen.len(), opening.len());
+     assert_eq!(seen.len(), closing.len());
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:296:
+         let name = expected["name"].as_str().unwrap();
+         let debtor = expected["debtor"].as_str().unwrap();
+         let creditor = expected["creditor"].as_str().unwrap();
+[31m-        assert!(seen.insert((name.to_owned(), asset.clone(), debtor.to_owned(), creditor.to_owned()), ()).is_none());
+(B[m[32m+        assert!(
+(B[m[32m+            seen.insert(
+(B[m[32m+                (
+(B[m[32m+                    name.to_owned(),
+(B[m[32m+                    asset.clone(),
+(B[m[32m+                    debtor.to_owned(),
+(B[m[32m+                    creditor.to_owned()
+(B[m[32m+                ),
+(B[m[32m+                ()
+(B[m[32m+            )
+(B[m[32m+            .is_none()
+(B[m[32m+        );
+(B[m         let opening = duty(pre, name, &asset, debtor, creditor).unwrap();
+         let closing = duty(post, name, &asset, debtor, creditor).unwrap();
+         let mut addition = 0u128;
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:303:
+         let mut discharge = 0u128;
+[31m-        for op in operations.iter().filter(|op| op["name"].as_str() == Some(name)) {
+(B[m[32m+        for op in operations
+(B[m[32m+            .iter()
+(B[m[32m+            .filter(|op| op["name"].as_str() == Some(name))
+(B[m[32m+        {
+(B[m             match op["kind"].as_str().unwrap() {
+                 "liability_add" => addition += decode::<UInt>(&op["amount"]).0,
+                 "discharge" => discharge += decode::<UInt>(&op["amount"]).0,
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:308:
+                 _ => {}
+             }
+         }
+[31m-        assert_eq!(json!({
+(B[m[31m-            "name": name, "asset": asset, "debtor": debtor, "creditor": creditor,
+(B[m[31m-            "opening_amount": opening.amount, "closing_amount": closing.amount,
+(B[m[31m-            "opening_present": true, "closing_present": true,
+(B[m[31m-            "addition": addition.to_string(), "discharge": discharge.to_string(),
+(B[m[31m-        }), *expected, "duty evolution for {name}");
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!({
+(B[m[32m+                "name": name, "asset": asset, "debtor": debtor, "creditor": creditor,
+(B[m[32m+                "opening_amount": opening.amount, "closing_amount": closing.amount,
+(B[m[32m+                "opening_present": true, "closing_present": true,
+(B[m[32m+                "addition": addition.to_string(), "discharge": discharge.to_string(),
+(B[m[32m+            }),
+(B[m[32m+            *expected,
+(B[m[32m+            "duty evolution for {name}"
+(B[m[32m+        );
+(B[m         assert_eq!(opening.amount.0 + addition - discharge, closing.amount.0);
+     }
+ }
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:326:
+         assert_eq!(snapshot.state.get(&name), Some(&expected));
+     }
+     let reserves = oracle["reserve_balances"].as_object().unwrap();
+[31m-    let reserve_asset = snapshot.balances.iter().find(|row| row.asset.reference == "Reserve")
+(B[m[31m-        .expect("complete frame has the exact Reserve asset").asset.clone();
+(B[m[31m-    let cash_asset = snapshot.balances.iter().find(|row| row.asset.reference == "Cash")
+(B[m[31m-        .expect("complete frame has the exact Cash asset").asset.clone();
+(B[m[32m+    let reserve_asset = snapshot
+(B[m[32m+        .balances
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|row| row.asset.reference == "Reserve")
+(B[m[32m+        .expect("complete frame has the exact Reserve asset")
+(B[m[32m+        .asset
+(B[m[32m+        .clone();
+(B[m[32m+    let cash_asset = snapshot
+(B[m[32m+        .balances
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|row| row.asset.reference == "Cash")
+(B[m[32m+        .expect("complete frame has the exact Cash asset")
+(B[m[32m+        .asset
+(B[m[32m+        .clone();
+(B[m     // Exact identities are compared by assert_frame, not inferred from a ticker.
+     for (account, expected) in reserves {
+[31m-        assert_eq!(balance(snapshot, &reserve_asset, account), decode::<UInt>(expected));
+(B[m[32m+        assert_eq!(
+(B[m[32m+            balance(snapshot, &reserve_asset, account),
+(B[m[32m+            decode::<UInt>(expected)
+(B[m[32m+        );
+(B[m     }
+[31m-    assert_eq!(balance(snapshot, &cash_asset, "witness"), decode::<UInt>(&oracle["witness_cash"]));
+(B[m[31m-    let reserve_duty = snapshot.liabilities.iter().find(|row| row.name == "reserveDuty").unwrap();
+(B[m[32m+    assert_eq!(
+(B[m[32m+        balance(snapshot, &cash_asset, "witness"),
+(B[m[32m+        decode::<UInt>(&oracle["witness_cash"])
+(B[m[32m+    );
+(B[m[32m+    let reserve_duty = snapshot
+(B[m[32m+        .liabilities
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|row| row.name == "reserveDuty")
+(B[m[32m+        .unwrap();
+(B[m     assert_eq!(reserve_duty.amount, decode::<UInt>(&oracle["reserveDuty"]));
+     let tombstone = &oracle["zero_liability"];
+[31m-    let zero = snapshot.liabilities.iter().find(|row|
+(B[m[31m-        Some(row.name.as_str()) == tombstone["name"].as_str()).unwrap();
+(B[m[32m+    let zero = snapshot
+(B[m[32m+        .liabilities
+(B[m[32m+        .iter()
+(B[m[32m+        .find(|row| Some(row.name.as_str()) == tombstone["name"].as_str())
+(B[m[32m+        .unwrap();
+(B[m     assert_eq!(zero.amount, decode::<UInt>(&tombstone["amount_before"]));
+     assert_eq!(zero.amount, decode::<UInt>(&tombstone["amount_after"]));
+     assert_eq!(tombstone["present_before"], true);
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:350:
+ fn guarded_quantity_fee_matches_every_complete_independent_financial_prefix() {
+     let input: Input = serde_json::from_str(INPUT).unwrap();
+     let expected: Json = serde_json::from_str(ORACLE).unwrap();
+[31m-    assert_eq!(expected["schema"], "moriarty-independent-financial-semantic-expectation/1");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        expected["schema"],
+(B[m[32m+        "moriarty-independent-financial-semantic-expectation/1"
+(B[m[32m+    );
+(B[m     assert_eq!(input.id, expected["input_id"].as_str().unwrap());
+     assert_eq!(input.action, expected["action"].as_str().unwrap());
+[31m-    assert_eq!(input.scenario.inputs, decode::<BTreeMap<String, Value>>(&expected["inputs"]));
+(B[m[32m+    assert_eq!(
+(B[m[32m+        input.scenario.inputs,
+(B[m[32m+        decode::<BTreeMap<String, Value>>(&expected["inputs"])
+(B[m[32m+    );
+(B[m     let original = input.scenario.clone();
+ 
+     // The tested consumer is the public production path; no mock/helper evaluator.
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:368:
+     assert_frame(&execution.pre, &expected["opening_frame"], "endpoint pre");
+     assert_frame(&execution.post, &expected["closing_frame"], "endpoint post");
+     let preservation = &expected["explicit_absence_and_preservation"];
+[31m-    assert_eq!(execution.pre.balances.len() as u64, preservation["balance_rows_before"].as_u64().unwrap());
+(B[m[31m-    assert_eq!(execution.post.balances.len() as u64, preservation["balance_rows_after"].as_u64().unwrap());
+(B[m[31m-    assert_eq!(execution.pre.liabilities.len() as u64, preservation["liability_rows_before"].as_u64().unwrap());
+(B[m[31m-    assert_eq!(execution.post.liabilities.len() as u64, preservation["liability_rows_after"].as_u64().unwrap());
+(B[m[32m+    assert_eq!(
+(B[m[32m+        execution.pre.balances.len() as u64,
+(B[m[32m+        preservation["balance_rows_before"].as_u64().unwrap()
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        execution.post.balances.len() as u64,
+(B[m[32m+        preservation["balance_rows_after"].as_u64().unwrap()
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        execution.pre.liabilities.len() as u64,
+(B[m[32m+        preservation["liability_rows_before"].as_u64().unwrap()
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        execution.post.liabilities.len() as u64,
+(B[m[32m+        preservation["liability_rows_after"].as_u64().unwrap()
+(B[m[32m+    );
+(B[m     assert_preserved(&execution.pre, preservation);
+     assert_preserved(&execution.post, preservation);
+ 
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:384:
+     let mut bindings = BTreeMap::<String, Value>::new();
+     for (index, (step, prefix)) in execution.steps.iter().zip(prefixes).enumerate() {
+         let ordinal = index + 1;
+[31m-        assert_eq!(prefix["statement_ordinal"].as_u64().unwrap(), ordinal as u64);
+(B[m[31m-        assert_eq!(usize::from(step.index), index, "prefix {ordinal}: actual index");
+(B[m[31m-        assert_eq!(statement_text(&program, &step.statement), prefix["source_statement"].as_str().unwrap(),
+(B[m[31m-            "prefix {ordinal}: source statement meaning");
+(B[m[32m+        assert_eq!(
+(B[m[32m+            prefix["statement_ordinal"].as_u64().unwrap(),
+(B[m[32m+            ordinal as u64
+(B[m[32m+        );
+(B[m[32m+        assert_eq!(
+(B[m[32m+            usize::from(step.index),
+(B[m[32m+            index,
+(B[m[32m+            "prefix {ordinal}: actual index"
+(B[m[32m+        );
+(B[m[32m+        assert_eq!(
+(B[m[32m+            statement_text(&program, &step.statement),
+(B[m[32m+            prefix["source_statement"].as_str().unwrap(),
+(B[m[32m+            "prefix {ordinal}: source statement meaning"
+(B[m[32m+        );
+(B[m         let value = typed_result(&prefix["evaluated_expression_result"]);
+[31m-        assert_eq!(step.value.as_ref(), Some(&value), "prefix {ordinal}: typed expression value");
+(B[m[31m-        assert_frame(before, &prefix["opening_frame"], &format!("prefix {ordinal} opening"));
+(B[m[31m-        assert_frame(&step.snapshot, &prefix["closing_frame"], &format!("prefix {ordinal} closing"));
+(B[m[32m+        assert_eq!(
+(B[m[32m+            step.value.as_ref(),
+(B[m[32m+            Some(&value),
+(B[m[32m+            "prefix {ordinal}: typed expression value"
+(B[m[32m+        );
+(B[m[32m+        assert_frame(
+(B[m[32m+            before,
+(B[m[32m+            &prefix["opening_frame"],
+(B[m[32m+            &format!("prefix {ordinal} opening"),
+(B[m[32m+        );
+(B[m[32m+        assert_frame(
+(B[m[32m+            &step.snapshot,
+(B[m[32m+            &prefix["closing_frame"],
+(B[m[32m+            &format!("prefix {ordinal} closing"),
+(B[m[32m+        );
+(B[m         assert_preserved(&step.snapshot, preservation);
+         if matches!(step.statement, Statement::Discharge { .. }) {
+[31m-            let cash_flow = step.snapshot.balances.iter().map(|row|
+(B[m[31m-                row.amount.0.abs_diff(balance(before, &row.asset, &row.account).0)
+(B[m[31m-            ).sum::<u128>();
+(B[m[31m-            assert_eq!(UInt(cash_flow), decode::<UInt>(&preservation["discharge_cash_flow"]));
+(B[m[32m+            let cash_flow = step
+(B[m[32m+                .snapshot
+(B[m[32m+                .balances
+(B[m[32m+                .iter()
+(B[m[32m+                .map(|row| {
+(B[m[32m+                    row.amount
+(B[m[32m+                        .0
+(B[m[32m+                        .abs_diff(balance(before, &row.asset, &row.account).0)
+(B[m[32m+                })
+(B[m[32m+                .sum::<u128>();
+(B[m[32m+            assert_eq!(
+(B[m[32m+                UInt(cash_flow),
+(B[m[32m+                decode::<UInt>(&preservation["discharge_cash_flow"])
+(B[m[32m+            );
+(B[m         }
+ 
+         // Oracle input row order is intentionally not assumed to be Core row order.
+Diff in /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-consumer-source-20261018/candidate/crates/mori-core/tests/guarded_quantity_fee_full_prefix_positive.rs:404:
+         // Every changing and preserved state/balance/duty field was compared above.
+         let actual_result = step.value.as_ref().unwrap();
+[31m-        let delta: Vec<_> = step.effects.iter().map(|effect|
+(B[m[31m-            operation(effect, &step.statement, actual_result, before, &step.snapshot)
+(B[m[31m-        ).collect();
+(B[m[31m-        assert_eq!(json!(delta), prefix["statement_semantic_operations"],
+(B[m[31m-            "prefix {ordinal}: complete ordered effect delta");
+(B[m[32m+        let delta: Vec<_> = step
+(B[m[32m+            .effects
+(B[m[32m+            .iter()
+(B[m[32m+            .map(|effect| {
+(B[m[32m+                operation(
+(B[m[32m+                    effect,
+(B[m[32m+                    &step.statement,
+(B[m[32m+                    actual_result,
+(B[m[32m+                    before,
+(B[m[32m+                    &step.snapshot,
+(B[m[32m+                )
+(B[m[32m+            })
+(B[m[32m+            .collect();
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!(delta),
+(B[m[32m+            prefix["statement_semantic_operations"],
+(B[m[32m+            "prefix {ordinal}: complete ordered effect delta"
+(B[m[32m+        );
+(B[m         cumulative.extend(delta);
+         raw_effects.extend(step.effects.iter().cloned());
+[31m-        assert_eq!(json!(cumulative), prefix["cumulative_semantic_operations"],
+(B[m[31m-            "prefix {ordinal}: complete ordered effect history");
+(B[m[31m-        assert_eq!(json!(category(&cumulative, &["transfer", "fee", "liability_add", "discharge"])),
+(B[m[31m-            prefix["cumulative_economic_effects"], "prefix {ordinal}: economic history");
+(B[m[31m-        assert_eq!(json!(category(&cumulative, &["state_write"])),
+(B[m[31m-            prefix["cumulative_state_writes"], "prefix {ordinal}: state history");
+(B[m[31m-        assert_eq!(json!(category(&cumulative, &["emit"])),
+(B[m[31m-            prefix["cumulative_emissions"], "prefix {ordinal}: emission history");
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!(cumulative),
+(B[m[32m+            prefix["cumulative_semantic_operations"],
+(B[m[32m+            "prefix {ordinal}: complete ordered effect history"
+(B[m[32m+        );
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!(category(
+(B[m[32m+                &cumulative,
+(B[m[32m+                &["transfer", "fee", "liability_add", "discharge"]
+(B[m[32m+            )),
+(B[m[32m+            prefix["cumulative_economic_effects"],
+(B[m[32m+            "prefix {ordinal}: economic history"
+(B[m[32m+        );
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!(category(&cumulative, &["state_write"])),
+(B[m[32m+            prefix["cumulative_state_writes"],
+(B[m[32m+            "prefix {ordinal}: state history"
+(B[m[32m+        );
+(B[m[32m+        assert_eq!(
+(B[m[32m+            json!(category(&cumulative, &["emit"])),
+(B[m[32m+            prefix["cumulative_emissions"],
+(B[m[32m+            "prefix {ordinal}: emission history"
+(B[m[32m+        );
+(B[m         if let Statement::Let { name, .. } = &step.statement {
+[31m-            assert!(bindings.insert(name.clone(), actual_result.clone()).is_none());
+(B[m[32m+            assert!(
+(B[m[32m+                bindings
+(B[m[32m+                    .insert(name.clone(), actual_result.clone())
+(B[m[32m+                    .is_none()
+(B[m[32m+            );
+(B[m         }
+[31m-        assert_eq!(bindings, decode::<BTreeMap<String, Value>>(&prefix["bindings_after"]),
+(B[m[31m-            "prefix {ordinal}: all captured binding values");
+(B[m[32m+        assert_eq!(
+(B[m[32m+            bindings,
+(B[m[32m+            decode::<BTreeMap<String, Value>>(&prefix["bindings_after"]),
+(B[m[32m+            "prefix {ordinal}: all captured binding values"
+(B[m[32m+        );
+(B[m         before = &step.snapshot;
+     }
+[31m-    assert_eq!(bindings, decode::<BTreeMap<String, Value>>(&expected["bindings"]));
+(B[m[31m-    assert_eq!(before, &execution.post, "last complete prefix equals endpoint post");
+(B[m[31m-    assert_eq!(execution.effects, raw_effects, "full raw effects equal all checked ordered deltas");
+(B[m[32m+    assert_eq!(
+(B[m[32m+        bindings,
+(B[m[32m+        decode::<BTreeMap<String, Value>>(&expected["bindings"])
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        before, &execution.post,
+(B[m[32m+        "last complete prefix equals endpoint post"
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        execution.effects, raw_effects,
+(B[m[32m+        "full raw effects equal all checked ordered deltas"
+(B[m[32m+    );
+(B[m     assert_eq!(json!(cumulative), expected["ordered_semantic_operations"]);
+[31m-    assert_eq!(json!(category(&cumulative, &["transfer", "fee", "liability_add", "discharge"])),
+(B[m[31m-        expected["ordered_economic_effects"]);
+(B[m[31m-    assert_eq!(json!(category(&cumulative, &["state_write"])), expected["ordered_state_writes"]);
+(B[m[31m-    assert_eq!(json!(category(&cumulative, &["emit"])), expected["ordered_emissions"]);
+(B[m[32m+    assert_eq!(
+(B[m[32m+        json!(category(
+(B[m[32m+            &cumulative,
+(B[m[32m+            &["transfer", "fee", "liability_add", "discharge"]
+(B[m[32m+        )),
+(B[m[32m+        expected["ordered_economic_effects"]
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        json!(category(&cumulative, &["state_write"])),
+(B[m[32m+        expected["ordered_state_writes"]
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        json!(category(&cumulative, &["emit"])),
+(B[m[32m+        expected["ordered_emissions"]
+(B[m[32m+    );
+(B[m 
+[31m-    assert_account_flows(&execution.pre, &execution.post, &execution.effects,
+(B[m[31m-        &expected["per_account_asset_flows"]);
+(B[m[31m-    assert_conservation(&execution.pre, &execution.post, &expected["asset_conservation"]);
+(B[m[31m-    assert_duty_evolution(&execution.pre, &execution.post, &cumulative, &expected["liability_evolution"]);
+(B[m[31m-    assert_eq!(input.scenario, original, "production consumer preserves the borrowed scenario");
+(B[m[32m+    assert_account_flows(
+(B[m[32m+        &execution.pre,
+(B[m[32m+        &execution.post,
+(B[m[32m+        &execution.effects,
+(B[m[32m+        &expected["per_account_asset_flows"],
+(B[m[32m+    );
+(B[m[32m+    assert_conservation(
+(B[m[32m+        &execution.pre,
+(B[m[32m+        &execution.post,
+(B[m[32m+        &expected["asset_conservation"],
+(B[m[32m+    );
+(B[m[32m+    assert_duty_evolution(
+(B[m[32m+        &execution.pre,
+(B[m[32m+        &execution.post,
+(B[m[32m+        &cumulative,
+(B[m[32m+        &expected["liability_evolution"],
+(B[m[32m+    );
+(B[m[32m+    assert_eq!(
+(B[m[32m+        input.scenario, original,
+(B[m[32m+        "production consumer preserves the borrowed scenario"
+(B[m[32m+    );
+(B[m     // No cost, cap49 refusal, proof, circuit, sponsor, wallet or target operation.
+ }
+ 

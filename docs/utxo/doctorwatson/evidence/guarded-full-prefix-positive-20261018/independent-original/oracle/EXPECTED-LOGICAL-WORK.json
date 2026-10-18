@@ -1,0 +1,277 @@
+{
+  "excluded_costs": [
+    "parsing",
+    "validation",
+    "normalization",
+    "snapshot allocation",
+    "lookup complexity",
+    "replay comparison",
+    "wall-clock",
+    "allocation bound",
+    "DUST",
+    "native proving",
+    "ledger settlement"
+  ],
+  "expression_units": 32,
+  "mapping_premises": [
+    "Every source statement shown contributes exactly one statement charge, including let, requires, ensures, next, emit, and financial statements.",
+    "Each name reference is one expression node; each binary operator/comparison is one additional expression node.",
+    "Transfer/fee/liability/discharge evaluate only their amount expression; asset identifiers and literal account/liability/event names are statement metadata rather than separately charged expression nodes.",
+    "No hidden wrapper, injected, or desugared expression node is evaluated; no constant folding removes the listed nodes.",
+    "Let references return captured values and state references return current state, without re-evaluating earlier expressions.",
+    "There are no repeated nodes within an expression tree for this program; per-statement caches reset, so equal values or repeated names in different statements do not share charges.",
+    "The listed node order describes a root-before-left-before-right charging premise only; successful totals do not depend on the within-expression traversal order."
+  ],
+  "one_unit_short_prediction_under_mapping": {
+    "cap": "49",
+    "caveat": "exact denied expression node depends on unobserved traversal and lowering; no consumer run performed",
+    "partial_execution_or_committed_effects_on_refusal": false,
+    "refusal_context": "final equality has one pending charge after statement and two expression charges",
+    "refusal_statement_ordinal": 18,
+    "used_on_denied_charge": "49"
+  },
+  "profile": "moriarty-reference-logical-cost/1",
+  "schedule": [
+    {
+      "expression_units": 3,
+      "source_statement": "requires first >= second;",
+      "statement_ordinal": 1,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "ge(first,second)",
+        "name:first",
+        "name:second"
+      ],
+      "units": 4,
+      "used_after": "4",
+      "used_before": "0"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "requires active;",
+      "statement_ordinal": 2,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:active"
+      ],
+      "units": 2,
+      "used_after": "6",
+      "used_before": "4"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "let maximum = first;",
+      "statement_ordinal": 3,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:first"
+      ],
+      "units": 2,
+      "used_after": "8",
+      "used_before": "6"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "let minimum = second;",
+      "statement_ordinal": 4,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:second"
+      ],
+      "units": 2,
+      "used_after": "10",
+      "used_before": "8"
+    },
+    {
+      "expression_units": 3,
+      "source_statement": "let quantity = maximum - minimum;",
+      "statement_ordinal": 5,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "sub(maximum,minimum)",
+        "name:maximum",
+        "name:minimum"
+      ],
+      "units": 4,
+      "used_after": "14",
+      "used_before": "10"
+    },
+    {
+      "expression_units": 3,
+      "source_statement": "let quote = quantity * price;",
+      "statement_ordinal": 6,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "mul(quantity,price)",
+        "name:quantity",
+        "name:price"
+      ],
+      "units": 4,
+      "used_after": "18",
+      "used_before": "14"
+    },
+    {
+      "expression_units": 3,
+      "source_statement": "let feeCharge = baseFee + minimum;",
+      "statement_ordinal": 7,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "add(baseFee,minimum)",
+        "name:baseFee",
+        "name:minimum"
+      ],
+      "units": 4,
+      "used_after": "22",
+      "used_before": "18"
+    },
+    {
+      "expression_units": 3,
+      "source_statement": "let gross = quote + feeCharge;",
+      "statement_ordinal": 8,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "add(quote,feeCharge)",
+        "name:quote",
+        "name:feeCharge"
+      ],
+      "units": 4,
+      "used_after": "26",
+      "used_before": "22"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "transfer(Cash, \"buyer\", \"seller\", quote);",
+      "statement_ordinal": 9,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:quote"
+      ],
+      "units": 2,
+      "used_after": "28",
+      "used_before": "26"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "fee(Cash, \"buyer\", \"treasury\", feeCharge);",
+      "statement_ordinal": 10,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:feeCharge"
+      ],
+      "units": 2,
+      "used_after": "30",
+      "used_before": "28"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "liability(\"delivery\", Cash, \"seller\", \"buyer\", quote);",
+      "statement_ordinal": 11,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:quote"
+      ],
+      "units": 2,
+      "used_after": "32",
+      "used_before": "30"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "discharge(\"delivery\", settleAmount);",
+      "statement_ordinal": 12,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:settleAmount"
+      ],
+      "units": 2,
+      "used_after": "34",
+      "used_before": "32"
+    },
+    {
+      "expression_units": 3,
+      "source_statement": "next filled = filled + quantity;",
+      "statement_ordinal": 13,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "add(filled,quantity)",
+        "name:filled",
+        "name:quantity"
+      ],
+      "units": 4,
+      "used_after": "38",
+      "used_before": "34"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "next lastGross = gross;",
+      "statement_ordinal": 14,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:gross"
+      ],
+      "units": 2,
+      "used_after": "40",
+      "used_before": "38"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "emit \"max\"(maximum);",
+      "statement_ordinal": 15,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:maximum"
+      ],
+      "units": 2,
+      "used_after": "42",
+      "used_before": "40"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "emit \"min\"(minimum);",
+      "statement_ordinal": 16,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:minimum"
+      ],
+      "units": 2,
+      "used_after": "44",
+      "used_before": "42"
+    },
+    {
+      "expression_units": 1,
+      "source_statement": "emit \"quantity\"(quantity);",
+      "statement_ordinal": 17,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "name:quantity"
+      ],
+      "units": 2,
+      "used_after": "46",
+      "used_before": "44"
+    },
+    {
+      "expression_units": 3,
+      "source_statement": "ensures lastGross == gross;",
+      "statement_ordinal": 18,
+      "statement_units": 1,
+      "uncached_expression_nodes": [
+        "eq(lastGross,gross)",
+        "name:lastGross",
+        "name:gross"
+      ],
+      "units": 4,
+      "used_after": "50",
+      "used_before": "46"
+    }
+  ],
+  "schema": "moriarty-independent-logical-work-expectation/1",
+  "statement_units": 18,
+  "status": "conditional on explicit surface-to-expression-node mapping; not observed runtime cost",
+  "sufficient_cap_under_mapping": "50",
+  "total_units": "50",
+  "unknowns": [
+    "U1",
+    "U2",
+    "U3",
+    "U5"
+  ]
+}
