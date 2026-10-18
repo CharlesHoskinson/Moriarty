@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-10-18T16:11:43.940044+00:00",
+  "head": "5f7c2a28efb69d36e171d85ffd39bf59f8e68c68",
+  "tree": "7f8a25ef4157fc96b7758f5ff01fe22d85c59477",
+  "parent": "fca9aa11704bc556b6f7c5bfc9b6dcab7c59893e",
+  "sourcePinsAfterSha256": "6ac1411e16744d107274f5f8c9a6d059436cf4b5e1676d9c677870b7025a3de0",
+  "allRecordedCurrentSourcePinsMatchCommittedGitAndWorktree": true,
+  "sourcePinsCompared": 887,
+  "changedPaths": [
+    "crates/mori/src/commands/check_source.rs",
+    "crates/mori/tests/check_header_dispatch.rs"
+  ],
+  "sourceDiff": "diff --git a/crates/mori/src/commands/check_source.rs b/crates/mori/src/commands/check_source.rs\nindex e619c2c7..330a14e0 100644\n--- a/crates/mori/src/commands/check_source.rs\n+++ b/crates/mori/src/commands/check_source.rs\n@@ -28,7 +28,11 @@ pub(super) trait SourceCheckConsumer {\n /// Select exactly the same Beta, Core1 or staged Core2 path as `mori check`.\n pub(super) fn dispatch<C: SourceCheckConsumer>(source: &str, mut consumer: C) -> C::Output {\n     if mori_lexer::first_token_text(source).is_ok_and(|token| token == \"language\") {\n-        let staged = mori_core::language(source).is_ok_and(|language| language == \"moriarty/2\");\n+        let language = match mori_core::language(source) {\n+            Ok(language) => language,\n+            Err(error) => return consumer.core(Err(error), false),\n+        };\n+        let staged = language == \"moriarty/2\";\n         let result = if staged {\n             mori_core::stage::load(source).map(|program| program.program().clone())\n         } else {\n",
+  "workingTreeClean": true,
+  "scope": "Commit binds exact actually testedafterworkingtree, notnewexecution orindependentreview. CHECKPLAN.sourceManifestSha256 names frozen EXPECTATION-FREEZE source of literal predictions, not SOURCE-PINS; originalreceipt field retained."
+}

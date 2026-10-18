@@ -1,0 +1,283 @@
+{
+  "actualReadLimits": [],
+  "actualResultAssessment": {
+    "phaseCoverage": [
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "red-header-tests",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms that before applying the check_source.rs fix, all three test cases in check_header_dispatch.rs execute the JSON mode CLI call first, observe exit code 1, and fail at line 41 (assert_eq!(json.stdout, expected_stdout.as_bytes())) because the unpatched dispatcher swallowed the mori_core::language(source) Err and fell through to mori_core::parse(source), emitting Core1-only messages instead of the dual-profile routing error. Because each test panics at line 41 on the JSON assertion, the subsequent quiet-human and normal-human CLI invocations in check_header are not reached during the RED phase (3 CLI calls executed, not 9).",
+            "exactQuote": "thread 'commented_unknown_profile_reaches_public_check' (922656) panicked at crates/mori/tests/check_header_dispatch.rs:41:5:",
+            "packetPath": "actual/red-header-tests/STDOUT.log"
+          },
+          {
+            "analysis": "Verifies that all three header dispatch tests failed as expected in the unpatched baseline (0 passed; 3 failed), producing cargo test exit code 101 in RESULT.json with left byte arrays matching the frozen beforeJsonStdout predictions and right byte arrays matching the frozen afterJsonStdout expectations in EXPECTATION-FREEZE.json.",
+            "exactQuote": "test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+            "packetPath": "actual/red-header-tests/STDOUT.log"
+          },
+          {
+            "analysis": "Confirms clean single-target execution of the check_header_dispatch integration test binary under the offline pinned Rust 1.99.0 toolchain and isolated target directory, terminating with the expected test failure diagnostic.",
+            "exactQuote": "error: test failed, to rerun pass `-p mori --test check_header_dispatch`",
+            "packetPath": "actual/red-header-tests/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      },
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "green-header-tests",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms that after mutating only crates/mori/src/commands/check_source.rs (from b41456e7b975b1b68f499652765f8bc807f13cf1e811dd73ed77787a3a3320b6 to a53d5c3689f3c32ddc8c595e577a0ac13cfc4fe187b42a4f83c9caf86dc9ace3), all 3 test functions in check_header_dispatch.rs pass, meaning all 3 cases x 3 CLI modes = 9 public mori check process invocations matched the exact expected exit code (1), stdout bytes, and stderr bytes.",
+            "exactQuote": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+            "packetPath": "actual/green-header-tests/STDOUT.log"
+          },
+          {
+            "analysis": "Shows that only crate mori was recompiled after the single-file check_source.rs mutation and that the exact same test binary target check_header_dispatch was executed in the isolated environment with exit code 0.",
+            "exactQuote": "     Running tests/check_header_dispatch.rs (/tmp/doctorwatson-core-header-6t4qv701/target/debug/deps/check_header_dispatch-f3f4ef3239700423)",
+            "packetPath": "actual/green-header-tests/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      },
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "preserved-source-check-tests",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms that all 14 existing public mori check dispatch fixture cases (beta_accepted, beta_parse_error, beta_rejected, beta_unicode_byte_offsets, core1_accepted, core1_rejected, core2_accepted, core2_rejected, financial_beta_invoice, financial_beta_repayment, financial_core1_loan, financial_core1_payment, financial_core2_escrow, financial_core2_rebate) pass across 28 public CLI calls (14 JSON calls matching exact frozen .stdout fixture bytes and exit codes, plus 14 quiet human calls matching exit codes, empty stdout, and stderr emptiness/non-emptiness). Note that check_source_dispatch.rs asserts human stderr emptiness equivalence (human.stderr.is_empty() == (case.expected_exit == 0)) rather than exact historical human stderr byte equality.",
+            "exactQuote": "test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+            "packetPath": "actual/preserved-source-check-tests/STDOUT.log"
+          },
+          {
+            "analysis": "Verifies execution of the unchanged check_source_dispatch integration test target against the patched mori binary in the same isolated test session with zero leftover processes.",
+            "exactQuote": "     Running tests/check_source_dispatch.rs (/tmp/doctorwatson-core-header-6t4qv701/target/debug/deps/check_source_dispatch-51bc4c5be4331471)",
+            "packetPath": "actual/preserved-source-check-tests/STDERR.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      },
+      {
+        "completeStdoutAndStderrRead": true,
+        "phase": "library-header-test",
+        "quoteAnchors": [
+          {
+            "analysis": "Confirms that the existing mori-core library test language_header_diagnostics_name_both_supported_core_profiles passes unchanged, verifying that mori_core::language() continues to accept moriarty/1 and moriarty/2 and produce the exact frozen dual-profile error codes, byte offsets (16, 0, 0, 9), and messages that check_source.rs now propagates to public mori check.",
+            "exactQuote": "test language_header_diagnostics_name_both_supported_core_profiles ... ok",
+            "packetPath": "actual/library-header-test/STDOUT.log"
+          },
+          {
+            "analysis": "Shows exact single-test execution (1 passed; 0 failed; 18 filtered out) in mori-core's language test target with exit code 0.",
+            "exactQuote": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s",
+            "packetPath": "actual/library-header-test/STDOUT.log"
+          }
+        ],
+        "sourceAndAssertionsRead": true
+      }
+    ],
+    "reason": "The finite four-phase actual execution record in COMPLETE-ROOT-DRIVER.py, FINAL-RESULT.json, and the per-phase START/CHILD/RESULT/STDOUT/STDERR receipts substantively and coherently establishes the scoped regression and preservation claims for commit 5f7c2a28efb69d36e171d85ffd39bf59f8e68c68 (tree 7f8a25ef4157fc96b7758f5ff01fe22d85c59477, parent fca9aa11704bc556b6f7c5bfc9b6dcab7c59893e). Specifically: (1) In red-header-tests, running check_header_dispatch against the unpatched check_source.rs (b41456e7b975b1b68f499652765f8bc807f13cf1e811dd73ed77787a3a3320b6) exited with 101 as all 3 tests failed at line 41 on the JSON stdout byte comparison; the observed left byte slices in STDOUT.log match the frozen beforeJsonStdout predictions (Core1-only messages), and because each test panicked at line 41, the subsequent quiet and normal human CLI calls were not reached in RED (only 3 child CLI calls ran). (2) Between RED and GREEN, SOURCE-MUTATION.json and COMPLETE-ROOT-DRIVER.py record that only crates/mori/src/commands/check_source.rs was mutated to a53d5c3689f3c32ddc8c595e577a0ac13cfc4fe187b42a4f83c9caf86dc9ace3 while crates/mori/tests/check_header_dispatch.rs (436ed1f95be58430ad9b0aa6ce2af38b8d1c6f9fd8fa37ebc5d2dedc7e316bb4) and all other 885 tracked files remained unchanged. (3) In green-header-tests, the same check_header_dispatch target passed all 3 tests (exit 0), exercising all 3 cases x 3 modes = 9 public mori check child invocations and verifying exact exit codes (1), JSON stdout bytes, empty JSON stderr, empty human stdout, and exact quiet/normal human stderr bytes (with child outputs verified in-process by assert_eq! rather than saved as standalone stdout files). (4) In preserved-source-check-tests, all 14 existing check-source cases passed (exit 0, 28 public CLI calls), confirming exact preservation of frozen JSON stdout bytes and exit codes plus human stream emptiness/non-emptiness assertions (without claiming historical human byte identity beyond those written assertions). (5) In library-header-test, mori-core's language_header_diagnostics_name_both_supported_core_profiles passed (1 passed, 18 filtered out, exit 0). All child process sessions terminated cleanly (ownedSessionRemaining: []) and temporary roots were removed. Expectations in EXPECTATION-FREEZE.json were derived with source/implementation exposure rather than an independent semantic or financial oracle, and POST-COMMIT-BINDING.json / SOURCE-AND-RESULT-VERIFICATION.json bind the exact tested working tree to the committed Git state without constituting a new test run.",
+    "receiptNamingIssueDisposition": "CHECK-PLAN.sourceManifestSha256 (line 6 of actual/CHECK-PLAN.json) has value cb519efeabd61613ef524ec06849e2b0f96cc7962fb2f2c8a66707b7edf0c073, which is the SHA-256 of actual/EXPECTATION-FREEZE.json (9,501 bytes), not SOURCE-PINS-BEFORE.json (0dd2f28e39dc305dabadd02e673f1b4ea20e012071ef1daf3e2690d03c8b3d87) or SOURCE-PINS-AFTER.json (6ac1411e16744d107274f5f8c9a6d059436cf4b5e1676d9c677870b7025a3de0). Inspection of actual/COMPLETE-ROOT-DRIVER.py line 34 confirms why: the driver explicitly wrote 'sourceManifestSha256': sha(P/'EXPECTATION-FREEZE.json') when recording CHECK-PLAN.json. The original receipt bytes in CHECK-PLAN.json are preserved unaltered (d726553d98fb4ec764098c25eddd34d1d94f73f13253c66111ffb0e803e1b696). This misnamed field label does not impair source custody because COMPLETE-ROOT-DRIVER.py separately computed and verified all 887 file pins before RED (SOURCE-PINS-BEFORE.json) and after GREEN/preservation/library phases (SOURCE-PINS-AFTER.json), recorded the sole production file mutation in SOURCE-MUTATION.json, bound all 887 post-mutation pins to commit 5f7c2a28efb69d36e171d85ffd39bf59f8e68c68 / tree 7f8a25ef4157fc96b7758f5ff01fe22d85c59477 / parent fca9aa11704bc556b6f7c5bfc9b6dcab7c59893e in actual/POST-COMMIT-BINDING.json (with sourcePinsAfterSha256: 6ac1411e16744d107274f5f8c9a6d059436cf4b5e1676d9c677870b7025a3de0 and workingTreeClean: true), and corroborated the exact 887-pin match and single-file before/after delta in SOURCE-AND-RESULT-VERIFICATION.json.",
+    "verdict": "approve"
+  },
+  "dissent": [],
+  "findings": [
+    {
+      "evidence": "\"sourceManifestSha256\": \"cb519efeabd61613ef524ec06849e2b0f96cc7962fb2f2c8a66707b7edf0c073\",",
+      "issue": "In actual/CHECK-PLAN.json (generated by actual/COMPLETE-ROOT-DRIVER.py line 34), the field named sourceManifestSha256 hashes EXPECTATION-FREEZE.json (cb519efeabd61613ef524ec06849e2b0f96cc7962fb2f2c8a66707b7edf0c073) rather than the before or after 887-entry source pin manifests (SOURCE-PINS-BEFORE.json: 0dd2f28e39dc305dabadd02e673f1b4ea20e012071ef1daf3e2690d03c8b3d87; SOURCE-PINS-AFTER.json: 6ac1411e16744d107274f5f8c9a6d059436cf4b5e1676d9c677870b7025a3de0). Exact source custody is intact via SOURCE-PINS-BEFORE.json, SOURCE-MUTATION.json, SOURCE-PINS-AFTER.json, POST-COMMIT-BINDING.json, and SOURCE-AND-RESULT-VERIFICATION.json.",
+      "line": 6,
+      "path": "actual/CHECK-PLAN.json",
+      "requestedChange": "Preserve the historical receipt bytes in actual/CHECK-PLAN.json unchanged, and continue qualifying in verification metadata and future root drivers that expectation-freeze digests and source-pin manifest digests should use distinct field names.",
+      "severity": "informational"
+    }
+  ],
+  "limitations": [
+    "Review is strictly read-only over the static packet files; no code execution, cargo test run, git command, or external provider call was performed by the reviewer.",
+    "The 887-row SOURCE-PINS-BEFORE.json and SOURCE-PINS-AFTER.json manifests serve as physical custody corroboration summarized via actual/POST-COMMIT-BINDING.json and SOURCE-AND-RESULT-VERIFICATION.json; this review does not claim an 887-file model read or a full-repository audit, nor were the 62 unchanged transitive modules outside the 102 mandatory inputs audited.",
+    "Expectations in actual/EXPECTATION-FREEZE.json and crates/mori/tests/check_header_dispatch.rs were authored with direct exposure to the implementation and existing library test rather than an independent semantic or financial oracle.",
+    "Child CLI stdout/stderr streams in green-header-tests and preserved-source-check-tests were compared in-process by Rust test assertions and were not saved as standalone per-invocation output capture files; in red-header-tests, each test panicked at line 41 on the JSON stdout assertion, so the subsequent quiet and normal human CLI invocations were not reached (3 CLI calls executed in RED, not 9).",
+    "In preserved-source-check-tests, check_source_dispatch.rs verifies complete frozen JSON stdout bytes and exit codes across all 14 cases, but for human mode it asserts only exit code, empty stdout, and stderr emptiness/non-emptiness (human.stderr.is_empty() == (case.expected_exit == 0)), not exact historical human stderr byte identity.",
+    "Scope is restricted to propagating mori_core::language(source) errors through check_source::dispatch in mori check when mori_lexer::first_token_text(source) identifies a leading 'language' token; sources without a leading 'language' token, other CLI subcommands, broad workspace fmt/clippy/test suites, and all U0-U7/M1-M17/MC/SP/G exits, counters (148/292/20), financial oracles, composition, native, SDK, proof, ledger, wallet, security, and target conclusions remain outside the scope of this result."
+  ],
+  "mandatoryInputCoverage": {
+    "coverageSummary": "Read the complete inline packet FULL-INPUT.md (all 6,472 lines / 239,681 bytes) and all 102 mandatory input bodies in MANDATORY-INPUTS.json completely once, together with RUNTIME-REVIEW.schema.json, MANDATORY-INPUTS.json, and REVIEW-REQUEST.md. Both changed files (crates/mori/src/commands/check_source.rs and crates/mori/tests/check_header_dispatch.rs), the before helper (actual/DISPATCHER-BEFORE.rs), all four actual phase logs and receipts, the root driver, producer/report/lexer/stage source units, fixtures, and verification/binding summaries were read in full. The 887-row before/after source-pin manifests remain physical custody corroboration evaluated through POST-COMMIT-BINDING.json and SOURCE-AND-RESULT-VERIFICATION.json without claiming a full-manifest model read.",
+    "entireInlineInputRead": true,
+    "filesReadCompletely": [
+      "actual/CHECK-PLAN.json",
+      "actual/COMPLETE-ROOT-DRIVER.py",
+      "actual/DISPATCHER-AFTER.rs",
+      "actual/DISPATCHER-BEFORE.rs",
+      "actual/EXPECTATION-FREEZE.json",
+      "actual/FINAL-RESULT.json",
+      "actual/ORIGINAL-AUTHOR-PATCH.diff",
+      "actual/POST-COMMIT-BINDING.json",
+      "actual/SOURCE-MUTATION.json",
+      "actual/green-header-tests/CHILD.json",
+      "actual/green-header-tests/RESULT.json",
+      "actual/green-header-tests/START.json",
+      "actual/green-header-tests/STDERR.log",
+      "actual/green-header-tests/STDOUT.log",
+      "actual/library-header-test/CHILD.json",
+      "actual/library-header-test/RESULT.json",
+      "actual/library-header-test/START.json",
+      "actual/library-header-test/STDERR.log",
+      "actual/library-header-test/STDOUT.log",
+      "actual/preserved-source-check-tests/CHILD.json",
+      "actual/preserved-source-check-tests/RESULT.json",
+      "actual/preserved-source-check-tests/START.json",
+      "actual/preserved-source-check-tests/STDERR.log",
+      "actual/preserved-source-check-tests/STDOUT.log",
+      "actual/red-header-tests/CHILD.json",
+      "actual/red-header-tests/RESULT.json",
+      "actual/red-header-tests/START.json",
+      "actual/red-header-tests/STDERR.log",
+      "actual/red-header-tests/STDOUT.log",
+      "author/STATIC-VERIFICATION.json",
+      "source/crates/mori/src/commands/check_source.rs",
+      "source/crates/mori/tests/check_header_dispatch.rs",
+      "source/crates/mori/src/main.rs",
+      "source/crates/mori/src/commands/mod.rs",
+      "source/crates/mori/src/commands/check.rs",
+      "source/crates/mori/src/shell.rs",
+      "source/crates/mori/src/display.rs",
+      "source/crates/mori/src/error.rs",
+      "source/crates/mori-core/src/parser.rs",
+      "source/crates/mori-core/src/json.rs",
+      "source/crates/mori-lexer/src/lib.rs",
+      "source/crates/mori-lexer/src/scan.rs",
+      "source/crates/mori-lexer/src/token.rs",
+      "source/crates/mori-lexer/src/string.rs",
+      "source/crates/mori/tests/check_source_dispatch.rs",
+      "source/crates/mori/Cargo.toml",
+      "source/crates/mori-core/Cargo.toml",
+      "source/rust-toolchain.toml",
+      "source-units/core_io-read_source.rs",
+      "source-units/core_io-operation.rs",
+      "source-units/core_io-print.rs",
+      "source-units/beta-json-production.rs",
+      "source-units/core-profile-constants.rs",
+      "source-units/core-Error-dto-display-constructor.rs",
+      "source-units/core-public-parser-reexports.rs",
+      "source-units/stage-profile-and-report-label-constants.rs",
+      "source-units/stage-program-and-accessors.rs",
+      "source-units/stage-load-complete.rs",
+      "source-units/library-header-test-complete.rs",
+      "source-units/lexer-header-test-complete.rs",
+      "source-units/cli-global-args-and-verbosity.rs",
+      "source-units/cli-color-and-conversion.rs",
+      "source/crates/fixtures/check-source/FINANCIAL-ORACLES.md",
+      "source/crates/fixtures/check-source/cases/accepted.mori",
+      "source/crates/fixtures/check-source/cases/core1-accepted.mori",
+      "source/crates/fixtures/check-source/cases/core1-rejected.mori",
+      "source/crates/fixtures/check-source/cases/core2-accepted.mori",
+      "source/crates/fixtures/check-source/cases/core2-rejected.mori",
+      "source/crates/fixtures/check-source/cases/financial-beta-invoice.mori",
+      "source/crates/fixtures/check-source/cases/financial-beta-repayment.mori",
+      "source/crates/fixtures/check-source/cases/financial-core1-loan.mori",
+      "source/crates/fixtures/check-source/cases/financial-core1-payment.mori",
+      "source/crates/fixtures/check-source/cases/financial-core2-escrow.mori",
+      "source/crates/fixtures/check-source/cases/financial-core2-rebate.mori",
+      "source/crates/fixtures/check-source/cases/rejected.mori",
+      "source/crates/fixtures/check-source/cases/unicode-byte-offsets.mori",
+      "source/crates/fixtures/check-source/cases/unparsable.mori",
+      "source/crates/fixtures/check-source/cases.json",
+      "source/crates/fixtures/check-source/expected/accepted.stdout",
+      "source/crates/fixtures/check-source/expected/core1-accepted.stdout",
+      "source/crates/fixtures/check-source/expected/core1-rejected.stdout",
+      "source/crates/fixtures/check-source/expected/core2-accepted.stdout",
+      "source/crates/fixtures/check-source/expected/core2-rejected.stdout",
+      "source/crates/fixtures/check-source/expected/financial-beta-invoice.stdout",
+      "source/crates/fixtures/check-source/expected/financial-beta-repayment.stdout",
+      "source/crates/fixtures/check-source/expected/financial-core1-loan.stdout",
+      "source/crates/fixtures/check-source/expected/financial-core1-payment.stdout",
+      "source/crates/fixtures/check-source/expected/financial-core2-escrow.stdout",
+      "source/crates/fixtures/check-source/expected/financial-core2-rebate.stdout",
+      "source/crates/fixtures/check-source/expected/rejected.stdout",
+      "source/crates/fixtures/check-source/expected/unicode-byte-offsets.stdout",
+      "source/crates/fixtures/check-source/expected/unparsable.stdout",
+      "source-units/UNI-018-complete-original-requirement.md",
+      "source-units/RUST-diagnostics-testing-cli-contracts.md",
+      "source-units/RUST-target-language-and-existing-differences.md",
+      "source-units/PRODUCT-boundary.md",
+      "source-units/workspace-serde-json-declaration.toml",
+      "SOURCE-UNIT-MAP.json",
+      "SOURCE-AND-RESULT-VERIFICATION.json",
+      "CANDIDATE.json",
+      "REVIEW-RESPONSE-SCHEMA.json",
+      "REVIEW-REQUEST.md"
+    ],
+    "unreadMandatoryFiles": []
+  },
+  "reviewToken": "mori-header-5f7c2a28-79a12952ac536b54055a",
+  "sourceAssessment": {
+    "changedPathCoverage": [
+      {
+        "completeBodyRead": true,
+        "path": "crates/mori/src/commands/check_source.rs",
+        "quoteAnchors": [
+          {
+            "analysis": "Preserves the existing real-lexer leading-token check (mori_lexer::first_token_text) without introducing any ad-hoc string prefix detection; sources that do not begin with a lexed 'language' token after whitespace and comments continue to route to the Beta parser/checker unchanged.",
+            "exactQuote": "    if mori_lexer::first_token_text(source).is_ok_and(|token| token == \"language\") {",
+            "originalLine": 30
+          },
+          {
+            "analysis": "Replaces the previous `mori_core::language(source).is_ok_and(|language| language == \"moriarty/2\")` boolean collapse with an explicit match on `mori_core::language(source)` so that header routing errors are not discarded in favor of a Core1-only `mori_core::parse(source)` fallback.",
+            "exactQuote": "        let language = match mori_core::language(source) {",
+            "originalLine": 31
+          },
+          {
+            "analysis": "Propagates the exact `mori_core::Error` from `mori_core::language(source)` directly into `consumer.core(Err(error), false)`, preserving dual-profile (`\"moriarty/1\"` or `\"moriarty/2\"`) error messages, codes (`mori::core::profile` or `mori::core::syntax`), UTF-8 byte offsets, full-lex error precedence (`mori::core::lex`), and `staged = false` so `/2` stage qualification labels are omitted when no profile was admitted.",
+            "exactQuote": "            Err(error) => return consumer.core(Err(error), false),",
+            "originalLine": 33
+          },
+          {
+            "analysis": "Retains the exact existing Core1 (`mori_core::parse`) vs staged Core2 (`mori_core::stage::load`) selection when `mori_core::language(source)` succeeds with `\"moriarty/1\"` or `\"moriarty/2\"`.",
+            "exactQuote": "        let staged = language == \"moriarty/2\";",
+            "originalLine": 35
+          },
+          {
+            "analysis": "Ensures `core_report` only attaches `mori_core::stage::STAGE_LABELS` (`qualification`, `authentication`, `consumption`) when `staged` is true, so failed header routing (`staged = false`) emits only `diagnostics`, `file`, and `status: \"rejected\"`.",
+            "exactQuote": "    if staged {",
+            "originalLine": 81
+          }
+        ],
+        "sha256": "a53d5c3689f3c32ddc8c595e577a0ac13cfc4fe187b42a4f83c9caf86dc9ace3"
+      },
+      {
+        "completeBodyRead": true,
+        "path": "crates/mori/tests/check_header_dispatch.rs",
+        "quoteAnchors": [
+          {
+            "analysis": "Verifies the complete `--json` stdout byte stream against `expected_stdout.as_bytes()` after checking exit status 1; in RED, all three test functions panicked on this exact line because the unpatched binary emitted Core1-only messages.",
+            "exactQuote": "    assert_eq!(json.stdout, expected_stdout.as_bytes(), \"source:\\n{source}\");",
+            "originalLine": 41
+          },
+          {
+            "analysis": "Constructs the expected normal-verbosity stderr output by prepending the Cargo-style `    Checking header.mori\\n` status line to the quiet stderr diagnostic, verifying that normal and quiet human modes preserve the existing `Shell` rendering path on stderr while leaving stdout empty.",
+            "exactQuote": "    let normal_stderr = format!(\"    Checking header.mori\\n{expected_stderr}\");",
+            "originalLine": 68
+          },
+          {
+            "analysis": "Tests an unknown profile string (`language \"other\";`) across JSON, quiet human, and normal human CLI invocations, asserting code `mori::core::profile`, UTF-8 byte offset 16 (the `;` token after `\"other\"`), `step: null`, and the dual-profile message naming both `\"moriarty/1\"` and `\"moriarty/2\"`.",
+            "exactQuote": "fn unknown_profile_reaches_public_check() {",
+            "originalLine": 73
+          },
+          {
+            "analysis": "Tests a missing profile string literal (`language ;`), asserting code `mori::core::syntax`, UTF-8 byte offset 9 (the `;` token), `step: null`, and the prepended dual-profile expectation message (`Expected language \"moriarty/1\" or \"moriarty/2\". Expected a quoted string.`).",
+            "exactQuote": "fn missing_profile_string_reaches_public_check() {",
+            "originalLine": 95
+          },
+          {
+            "analysis": "Tests a leading UTF-8 comment (`// caf\u00e9\\nlanguage \"other\";` where `\u00e9` is 2 UTF-8 bytes) before the `language` header, confirming that `first_token_text` skips comments and `mori_core::language` reports the exact UTF-8 byte offset 25 (`9 + 16`).",
+            "exactQuote": "fn commented_unknown_profile_reaches_public_check() {",
+            "originalLine": 117
+          }
+        ],
+        "sha256": "436ed1f95be58430ad9b0aa6ce2af38b8d1c6f9fd8fa37ebc5d2dedc7e316bb4"
+      }
+    ],
+    "reason": "The two-path change in commit 5f7c2a28efb69d36e171d85ffd39bf59f8e68c68 is minimal, well-scoped, and faithful to the existing architecture and contracts. In crates/mori/src/commands/check_source.rs (a53d5c3689f3c32ddc8c595e577a0ac13cfc4fe187b42a4f83c9caf86dc9ace3), dispatch() previously called `mori_core::language(source).is_ok_and(|language| language == \"moriarty/2\")` after `mori_lexer::first_token_text(source)` identified a leading `\"language\"` token. Whenever `mori_core::language(source)` returned `Err(error)` (such as an unknown profile `\"other\"` or missing profile string `language ;`), `is_ok_and` collapsed that `Err` to `staged = false` and ran `mori_core::parse(source)` (the Core1 parser), which overwrote the routing reader's dual-profile diagnostic (`Expected language \"moriarty/1\" or \"moriarty/2\"...`, already frozen in `crates/mori-core/tests/language.rs`) with a Core1-only diagnostic (`Expected language \"moriarty/1\"; found \"other\".` or `Expected a quoted string.`). Matching on `mori_core::language(source)` and returning `consumer.core(Err(error), false)` on `Err` propagates the existing `mori_core::Error` unchanged through `CliConsumer::core`: `--json` serializes the rejected report via `core_report` and `mori_core::json::export` without `/2` `STAGE_LABELS` (`staged = false`), while human normal and quiet modes render `error: {code}: {message}` on stderr via `Shell::error` (with `    Checking <file>` on stderr only in non-quiet, non-JSON mode) and exit with code 1. Because `mori_core::language(source)` calls `mori_lexer::lex(source)` before inspecting header tokens, full-source lexical errors still take precedence and produce the identical `mori::core::lex` `Error`. All accepted and rejected `moriarty/1` and `moriarty/2` paths after header selection, as well as the entire Beta branch and non-`\"language\"` leading-token dispatch, are untouched. The companion integration test crates/mori/tests/check_header_dispatch.rs (436ed1f95be58430ad9b0aa6ce2af38b8d1c6f9fd8fa37ebc5d2dedc7e316bb4) follows the established `check_source_dispatch.rs` real-binary pattern and tests unknown profile, missing profile string, and UTF-8 commented header cases across `--json`, `--quiet`, and normal human modes, checking exit code 1, UTF-8 byte offsets (16, 9, 25), `step: null`, and exact stdout/stderr bytes. Both files pass Rust 1.99.0 rustfmt (`--edition 2024 --check`) and respect UNI-018 and the Rust diagnostics/testing/CLI guidelines.",
+    "verdict": "approve"
+  },
+  "verdict": "approve"
+}

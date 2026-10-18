@@ -1,0 +1,1049 @@
+{
+  "actualResultAssessment": {
+    "limitations": [
+      "Only 3 narrow --no-default-features Cargo test commands (selecting 8 tests total: 1 Clap unit test with 7 filtered, 6 financial_ check_source_dispatch tests with 8 filtered, and 1 mori-core language header test with 18 filtered) and 5 bash -n syntax checks were executed.",
+      "Twelve public mori binary invocations (6 --json check calls and 6 --quiet human check calls) were asserted inside the 6 financial_ test wrappers in check_source_dispatch; individual subprocess stdout/stderr streams were not independently captured as external receipt files.",
+      "The 8 original check_source_dispatch cases were filtered out and not rerun in this cycle.",
+      "The 5 walkthrough shell scripts (S1-S5) were checked with bash -n for shell syntax only; no product, compiler, simulator, source6-expansion, or Node CLI commands inside those blocks were executed.",
+      "The 6 financial check expected reports were authored with prior source/schema exposure and are not blinded independent-provider financial oracles or runtime evaluator outputs.",
+      "CHECK-PLAN.sourceManifestSha256 binds the historical main79 MANIFEST.json used for shell syntax block selection, while SOURCE-PINS.json and exact head/tree bind the current candidate source; driver pre/post checks and cleanup are recorded driver assertions, not independent external producer authentication.",
+      "Only wall-clock elapsed times and timeout/thread ceilings (90s Cargo, 10s bash -n, -j1, --test-threads=1) were recorded; no measured peak memory, CPU, or disk resource telemetry was captured.",
+      "No broad cargo fmt, cargo clippy, or workspace test suite was run, and all financial evaluation, compiler/native/proof/ledger/target, U0-U7/M1-M17/MC/SP/G/EARS parent obligations, and security certification remain open."
+    ],
+    "predicates": {
+      "clap-selection": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C15",
+          "H08",
+          "R03",
+          "R04",
+          "R05",
+          "R06",
+          "R07",
+          "R08"
+        ],
+        "limitations": [
+          "Inspects Clap Command/Arg schema metadata only; does not snapshot rendered --help output or execute compile, simulate, or expand subcommands.",
+          "Seven other unit tests in the mori binary crate were filtered out by --exact."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "running 1 test\ntest cli::tests::help_distinguishes_core_consumers_from_source6_proposals ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s",
+            "lineEnd": 5,
+            "lineStart": 2,
+            "path": "clap-help-test/STDOUT.log",
+            "sha256": "f9d5cfbc44112cd839eab60779e2dfb27d48d437f0e1259c210b2dbad6d99572",
+            "supports": "Confirms exactly one Clap metadata unit regression ran and passed with 7 unit tests filtered out."
+          },
+          {
+            "exactQuote": "    fn help_distinguishes_core_consumers_from_source6_proposals() {\n        let command = Cli::command();\n        let compile = command.find_subcommand(\"compile\").unwrap();",
+            "lineEnd": 290,
+            "lineStart": 288,
+            "path": "crates/mori/src/cli.rs",
+            "sha256": "a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988",
+            "supports": "Shows the test inspects Clap schema metadata via Cli::command() rather than executing subcommands or snapshotting rendered help."
+          }
+        ],
+        "reason": "Receipt R04-R08 confirms cargo test ran with --bin mori cli::tests::help_distinguishes_core_consumers_from_source6_proposals -- --exact --test-threads=1 under --no-default-features, passing 1 test and filtering 7. C15 confirms the test inspects Cli::command() subcommand/arg help metadata for compile, simulate, and expand without executing product commands or snapshotting rendered help text."
+      },
+      "exact-source-bindings": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "DRIVER",
+          "H11",
+          "R01",
+          "R02",
+          "R03",
+          "VERIFICATION",
+          "SUBJECT"
+        ],
+        "limitations": [
+          "CHECK-PLAN.sourceManifestSha256 points to the historical main79 MANIFEST.json (H11) used for shell-block selection rather than current SOURCE-PINS.json (R02).",
+          "Driver pre/post git and SHA256 checks and temporary directory cleanup are self-recorded driver assertions, not independent external producer authentication."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "assert git('rev-parse','HEAD')==HEAD and not git('status','--porcelain=v1')\ntree=git('rev-parse','HEAD^{tree}')\nassert tree=='ed8323c00f31deaace461bf63db0365e8c4e0aac'",
+            "lineEnd": 16,
+            "lineStart": 14,
+            "path": "DRIVER",
+            "sha256": "14443d2227a2f700ad72ba37a7640653def34f8b4a173f5896d550a028482152",
+            "supports": "Confirms the driver asserted exact candidate HEAD and tree before pinning and running checks."
+          },
+          {
+            "exactQuote": "  \"recordedAt\": \"2026-10-18T15:33:09.367132+00:00\",\n  \"head\": \"f91f2c7f1b3bf2229d1243fc6a1f9ee37004a209\",\n  \"tree\": \"ed8323c00f31deaace461bf63db0365e8c4e0aac\",\n  \"base\": \"71c22f8a477231be869786eb42f04e3b50d1b3a7\",\n  \"sourceManifestSha256\": \"d95ad0709723b0eb00a9810c48095281c37a6a027e4fe9896eef8ebc11b31f00\",",
+            "lineEnd": 6,
+            "lineStart": 2,
+            "path": "CHECK-PLAN.json",
+            "sha256": "1c0c231d85e89a84a5165f40115e5f960174b826cfd93096a50e083eca48ae11",
+            "supports": "Shows CHECK-PLAN.json records exact head, tree, base, and the historical main79 manifest hash used for shell block selection."
+          }
+        ],
+        "reason": "FINAL-RESULT.json (R03), CHECK-PLAN.json (R01), SOURCE-PINS.json (R02), historical shell manifest H11, DRIVER, VERIFICATION, and SUBJECT all bind or agree on exact head f91f2c7f1b3bf2229d1243fc6a1f9ee37004a209, tree ed8323c00f31deaace461bf63db0365e8c4e0aac, and base 71c22f8a477231be869786eb42f04e3b50d1b3a7, with all 873 tracked source pins matching candidate Git bytes and all 18 changed candidate bodies matching R02 and SUBJECT."
+      },
+      "financial-beta-invoice": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C01",
+          "C02",
+          "C03",
+          "C09",
+          "C17",
+          "H01",
+          "R09",
+          "R11",
+          "R12",
+          "X046",
+          "X052"
+        ],
+        "limitations": [
+          "Individual child process stdout/stderr streams for the two mori invocations are asserted inside check_case and not retained as standalone receipt files.",
+          "Expected JSON report bytes were authored with prior source/schema exposure and check source admission/LocalS0 classification only, not simulation or settlement."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "running 6 tests\ntest financial_beta_invoice ... ok\ntest financial_beta_repayment ... ok",
+            "lineEnd": 4,
+            "lineStart": 2,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Confirms financial_beta_invoice executed and passed in the captured test run."
+          },
+          {
+            "exactQuote": "fn financial_beta_invoice() {\n    check_case(\"financial-beta-invoice\");\n}",
+            "lineEnd": 136,
+            "lineStart": 134,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Binds the test wrapper to check_case(\"financial-beta-invoice\"), which runs both JSON and quiet-human CLI invocations."
+          }
+        ],
+        "reason": "R12 captures PASS for financial_beta_invoice. In C17, financial_beta_invoice() calls check_case(\"financial-beta-invoice\"), which runs the mori binary twice against C03 (financial-beta-invoice.mori): first with --color never check beta-invoice.mori --json asserting exit 0, empty stderr, and stdout bytes equal to C09 (2118 bytes, SHA256 31cef7f2fa88c43d31c66d6045324873b57d11ebc6d1e708fee95d83916abe55), and second with --color never --quiet check beta-invoice.mori asserting exit 0 and empty stdout/stderr."
+      },
+      "financial-beta-repayment": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C01",
+          "C02",
+          "C04",
+          "C10",
+          "C17",
+          "H01",
+          "R09",
+          "R11",
+          "R12",
+          "X046",
+          "X052"
+        ],
+        "limitations": [
+          "Individual child process stdout/stderr streams for the two mori invocations are asserted inside check_case and not retained as standalone receipt files.",
+          "Expected JSON report bytes were authored with prior source/schema exposure and check source admission/LocalS0 classification only, not repayment execution."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "test financial_beta_invoice ... ok\ntest financial_beta_repayment ... ok\ntest financial_core1_loan ... ok",
+            "lineEnd": 5,
+            "lineStart": 3,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Confirms financial_beta_repayment executed and passed in the captured test run."
+          },
+          {
+            "exactQuote": "#[test]\nfn financial_beta_repayment() {\n    check_case(\"financial-beta-repayment\");\n}",
+            "lineEnd": 141,
+            "lineStart": 138,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Binds the repayment test wrapper to check_case(\"financial-beta-repayment\") and its two public CLI assertions."
+          }
+        ],
+        "reason": "R12 captures PASS for financial_beta_repayment. In C17, financial_beta_repayment() calls check_case(\"financial-beta-repayment\"), which runs the mori binary twice against C04 (financial-beta-repayment.mori): first with --color never check beta-repayment.mori --json asserting exit 0, empty stderr, and stdout bytes equal to C10 (1943 bytes, SHA256 9ba17c3d41f1915e052f75142f67e71b822296dd0c0982a16143c236db8dda6d), and second with --color never --quiet check beta-repayment.mori asserting exit 0 and empty stdout/stderr."
+      },
+      "financial-core1-loan": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C01",
+          "C02",
+          "C05",
+          "C11",
+          "C17",
+          "H01",
+          "R09",
+          "R11",
+          "R12",
+          "X024",
+          "X046",
+          "XV"
+        ],
+        "limitations": [
+          "Individual child process stdout/stderr streams for the two mori invocations are asserted inside check_case and not retained as standalone receipt files.",
+          "Core/1 check report covers source validation and action/declaration summary only, omitting expression/state/asset tables and runtime evaluation."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "test financial_beta_repayment ... ok\ntest financial_core1_loan ... ok\ntest financial_core1_payment ... ok",
+            "lineEnd": 6,
+            "lineStart": 4,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Confirms financial_core1_loan executed and passed in the captured test run."
+          },
+          {
+            "exactQuote": "#[test]\nfn financial_core1_loan() {\n    check_case(\"financial-core1-loan\");\n}",
+            "lineEnd": 151,
+            "lineStart": 148,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Binds the Core/1 loan test wrapper to check_case(\"financial-core1-loan\") and its two public CLI assertions."
+          }
+        ],
+        "reason": "R12 captures PASS for financial_core1_loan. In C17, financial_core1_loan() calls check_case(\"financial-core1-loan\"), which runs the mori binary twice against C05 (financial-core1-loan.mori): first with --color never check core1-loan.mori --json asserting exit 0, empty stderr, and stdout bytes equal to C11 (935 bytes, SHA256 106656286325626911560924b1921be67a109ad59fb7e7b066d5d1289e4bbb56), and second with --color never --quiet check core1-loan.mori asserting exit 0 and empty stdout/stderr."
+      },
+      "financial-core1-payment": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C01",
+          "C02",
+          "C06",
+          "C12",
+          "C17",
+          "H01",
+          "R09",
+          "R11",
+          "R12",
+          "X024",
+          "X046",
+          "XV"
+        ],
+        "limitations": [
+          "Individual child process stdout/stderr streams for the two mori invocations are asserted inside check_case and not retained as standalone receipt files.",
+          "Core/1 check report covers source validation and action/declaration summary only, omitting expression/state/asset tables and runtime evaluation."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "test financial_core1_loan ... ok\ntest financial_core1_payment ... ok\ntest financial_core2_escrow ... ok",
+            "lineEnd": 7,
+            "lineStart": 5,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Confirms financial_core1_payment executed and passed in the captured test run."
+          },
+          {
+            "exactQuote": "#[test]\nfn financial_core1_payment() {\n    check_case(\"financial-core1-payment\");\n}",
+            "lineEnd": 146,
+            "lineStart": 143,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Binds the Core/1 payment test wrapper to check_case(\"financial-core1-payment\") and its two public CLI assertions."
+          }
+        ],
+        "reason": "R12 captures PASS for financial_core1_payment. In C17, financial_core1_payment() calls check_case(\"financial-core1-payment\"), which runs the mori binary twice against C06 (financial-core1-payment.mori): first with --color never check core1-payment.mori --json asserting exit 0, empty stderr, and stdout bytes equal to C12 (713 bytes, SHA256 500fabff3f6739f8323237d5ab9770e3bf6e3fbef330525da6ac59f69bd0e39f), and second with --color never --quiet check core1-payment.mori asserting exit 0 and empty stdout/stderr."
+      },
+      "financial-core2-escrow": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C01",
+          "C02",
+          "C07",
+          "C13",
+          "C17",
+          "H01",
+          "R09",
+          "R11",
+          "R12",
+          "X029",
+          "X030",
+          "X046"
+        ],
+        "limitations": [
+          "Individual child process stdout/stderr streams for the two mori invocations are asserted inside check_case and not retained as standalone receipt files.",
+          "Core/2 check report is static stage check metadata (local-reference-stage/none/untracked) and does not execute staged simulation or continuation resumption."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "test financial_core1_payment ... ok\ntest financial_core2_escrow ... ok\ntest financial_core2_rebate ... ok",
+            "lineEnd": 8,
+            "lineStart": 6,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Confirms financial_core2_escrow executed and passed in the captured test run."
+          },
+          {
+            "exactQuote": "#[test]\nfn financial_core2_escrow() {\n    check_case(\"financial-core2-escrow\");\n}",
+            "lineEnd": 156,
+            "lineStart": 153,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Binds the Core/2 escrow test wrapper to check_case(\"financial-core2-escrow\") and its two public CLI assertions."
+          }
+        ],
+        "reason": "R12 captures PASS for financial_core2_escrow. In C17, financial_core2_escrow() calls check_case(\"financial-core2-escrow\"), which runs the mori binary twice against C07 (financial-core2-escrow.mori): first with --color never check core2-escrow.mori --json asserting exit 0, empty stderr, and stdout bytes equal to C13 (1338 bytes, SHA256 7c72b267f1807990c531b31df438b16f3f5ce00c0f28e8a14eb793f4e943567a), and second with --color never --quiet check core2-escrow.mori asserting exit 0 and empty stdout/stderr."
+      },
+      "financial-core2-rebate": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C01",
+          "C02",
+          "C08",
+          "C14",
+          "C17",
+          "H01",
+          "R09",
+          "R11",
+          "R12",
+          "X029",
+          "X030",
+          "X046"
+        ],
+        "limitations": [
+          "Individual child process stdout/stderr streams for the two mori invocations are asserted inside check_case and not retained as standalone receipt files.",
+          "Core/2 check report is static stage check metadata (local-reference-stage/none/untracked) and does not execute staged simulation or continuation resumption."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "test financial_core2_escrow ... ok\ntest financial_core2_rebate ... ok\n\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.03s",
+            "lineEnd": 10,
+            "lineStart": 7,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Confirms financial_core2_rebate executed and passed in the captured test run."
+          },
+          {
+            "exactQuote": "#[test]\nfn financial_core2_rebate() {\n    check_case(\"financial-core2-rebate\");\n}",
+            "lineEnd": 161,
+            "lineStart": 158,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Binds the Core/2 rebate test wrapper to check_case(\"financial-core2-rebate\") and its two public CLI assertions."
+          }
+        ],
+        "reason": "R12 captures PASS for financial_core2_rebate. In C17, financial_core2_rebate() calls check_case(\"financial-core2-rebate\"), which runs the mori binary twice against C08 (financial-core2-rebate.mori): first with --color never check core2-rebate.mori --json asserting exit 0, empty stderr, and stdout bytes equal to C14 (1261 bytes, SHA256 604d1afd66ac5a3cb733bd278604832c3f449eedfa3b7b67b6cfde409519849a), and second with --color never --quiet check core2-rebate.mori asserting exit 0 and empty stdout/stderr."
+      },
+      "financial-count-and-selection": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C02",
+          "C17",
+          "R03",
+          "R09",
+          "R10",
+          "R11",
+          "R12",
+          "R13"
+        ],
+        "limitations": [
+          "The 8 non-financial check_source_dispatch tests were filtered out by the financial_ substring filter and were not rerun in this cycle.",
+          "The 12 public mori binary invocations are derived from check_case() assertions inside the 6 passed tests, not from 12 standalone receipt directories."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.03s",
+            "lineEnd": 10,
+            "lineStart": 10,
+            "path": "financial-source-check-tests/STDOUT.log",
+            "sha256": "31eaa5dad12944fc0599251fe78f5dc464244b752cba73dd7a631dc39c47b765",
+            "supports": "Proves the financial_ filter ran and passed 6 tests while filtering out 8 tests in check_source_dispatch."
+          },
+          {
+            "exactQuote": "    let output = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .current_dir(&temp)\n        .args(&case.argv)\n        .output()\n        .unwrap();\n    assert_eq!(output.status.code(), Some(case.expected_exit), \"{id}\");\n    assert_eq!(\n        output.stdout,\n        expected,\n        \"{id}:\\n{}\",\n        String::from_utf8_lossy(&output.stdout)\n    );\n    assert!(\n        output.stderr.is_empty(),\n        \"{id} stderr:\\n{}\",\n        String::from_utf8_lossy(&output.stderr)\n    );\n\n    let human = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .current_dir(&temp)\n        .args(&case.human_argv)\n        .output()\n        .unwrap();",
+            "lineEnd": 82,
+            "lineStart": 61,
+            "path": "crates/mori/tests/check_source_dispatch.rs",
+            "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966",
+            "supports": "Shows each check_case(id) executes exactly 2 Command::new(env!(\"CARGO_BIN_EXE_mori\")) calls, yielding 12 public binary invocations across the 6 passed tests."
+          }
+        ],
+        "reason": "R09-R13 confirm that cargo test --test check_source_dispatch financial_ ran 6 tests (all passing) and filtered out the 8 original tests in C17. Because each of the 6 financial_* tests calls check_case(id) once and check_case(id) executes 2 subprocess calls to CARGO_BIN_EXE_mori (case.argv and case.human_argv), the 12 public binary invocations are derived from the executed harness assertions inside one Cargo test receipt rather than 12 separate external receipt files."
+      },
+      "five-shell-syntax": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "C18",
+          "H10",
+          "H11",
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5",
+          "R19",
+          "R21",
+          "R22",
+          "R23",
+          "R24",
+          "R26",
+          "R27",
+          "R28",
+          "R29",
+          "R31",
+          "R32",
+          "R33",
+          "R34",
+          "R36",
+          "R37",
+          "R38",
+          "R39",
+          "R41",
+          "R42",
+          "R43"
+        ],
+        "limitations": [
+          "bash -n parses shell syntax only; none of the cargo run, python3, or node commands in S1-S5 were executed.",
+          "Agreement of the documented walkthrough commands and prose with source consumers is a source-axis obligation, not a runtime execution result."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "  for block in manifest['rootShellSyntaxChecks']:\n   file=P/block['path'];assert sha(file)==block['sha256']\n   result,d=run('shell-'+str(block['block']),['/usr/bin/bash','-n',str(file)],10);results.append({'name':'shell-'+str(block['block']),**result});assert result['exitCode']==0 and not(d/'STDOUT.log').read_bytes()and not(d/'STDERR.log').read_bytes()",
+            "lineEnd": 59,
+            "lineStart": 57,
+            "path": "DRIVER",
+            "sha256": "14443d2227a2f700ad72ba37a7640653def34f8b4a173f5896d550a028482152",
+            "supports": "Shows the driver verified each extracted shell block hash against H11 and ran /usr/bin/bash -n with exit 0 and empty streams."
+          },
+          {
+            "exactQuote": "  \"finishedAt\": \"2026-10-18T15:34:21.544932+00:00\",\n  \"exitCode\": 0,\n  \"wallSeconds\": 0.006139566001365893,\n  \"stdoutSha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"stderrSha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"ownedSessionRemaining\": []",
+            "lineEnd": 7,
+            "lineStart": 2,
+            "path": "shell-5/RESULT.json",
+            "sha256": "626a33df634916ccf9ee7b1ee80e7829bbb4ef76a97a76e16be7542a00b10124",
+            "supports": "Confirms bash -n exited 0 with empty stdout and stderr (SHA256 e3b0c442...) and no remaining session processes."
+          }
+        ],
+        "reason": "S1-S5 match the 5 sh code blocks in C18 (docs/NATIVE-CORE.md) and their pinned hashes in H10/H11. Receipts R19-R43 confirm that shell-1 through shell-5 each ran /usr/bin/bash -n under a 10s timeout, exiting 0 with 0-byte STDOUT.log and STDERR.log (SHA256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855). No command inside S1-S5 was executed."
+      },
+      "header-selection": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "H07",
+          "R03",
+          "R14",
+          "R15",
+          "R16",
+          "R17",
+          "R18",
+          "X024",
+          "X031"
+        ],
+        "limitations": [
+          "Probes mori_core::language(source) header parsing only; does not execute full program compilation, simulation, or target features.",
+          "Eighteen other tests in crates/mori-core/tests/language.rs were filtered out by --exact."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "running 1 test\ntest language_header_diagnostics_name_both_supported_core_profiles ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 0.00s",
+            "lineEnd": 5,
+            "lineStart": 2,
+            "path": "language-header-test/STDOUT.log",
+            "sha256": "1301c42af24d2ab43bfb0ed4a9ec976e27a5ff466da8a5fd47ea164a3ccd1b28",
+            "supports": "Confirms the exact header diagnostic regression ran and passed with 18 tests filtered out."
+          },
+          {
+            "exactQuote": "#[test]\nfn language_header_diagnostics_name_both_supported_core_profiles() {\n    for (source, expected) in [\n        (\n            r#\"language \"moriarty/1\"; agreement Example {}\"#,\n            \"moriarty/1\",\n        ),\n        (\n            r#\"language \"moriarty/2\"; agreement Example {}\"#,\n            \"moriarty/2\",\n        ),\n    ] {\n        assert_eq!(language(source).unwrap(), expected);\n    }",
+            "lineEnd": 440,
+            "lineStart": 427,
+            "path": "crates/mori-core/tests/language.rs",
+            "sha256": "c9520a4e5ab35f77b9da24030f43b997b3135fba865fde4dd949cd35b7d5421c",
+            "supports": "Shows the test exercises mori_core::language on accepted Core1/Core2 headers followed by the four invalid header diagnostic cases."
+          }
+        ],
+        "reason": "Receipts R14-R18 confirm that cargo test -p mori-core --no-default-features --test language language_header_diagnostics_name_both_supported_core_profiles -- --exact --test-threads=1 exited 0 with 1 passed and 18 filtered out. X031 and X024 confirm the test checks accepted moriarty/1 and moriarty/2 headers and 4 invalid header cases (language \"other\";, empty string, missing language keyword, and unquoted profile) without running target features."
+      },
+      "remaining-gaps": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "CONTRACT",
+          "C01",
+          "H01",
+          "H02",
+          "H04",
+          "H05",
+          "H06",
+          "R01",
+          "R03",
+          "VERIFICATION",
+          "X002",
+          "X074"
+        ],
+        "limitations": [
+          "Broad workspace formatting, linting, and test suites (cargo fmt --all --check, cargo clippy --workspace --all-targets --locked -- -D warnings, cargo test --workspace --locked) were not executed.",
+          "All financial runtime evaluation, compiler/native/proof/ledger/target obligations, parent U0-U7/M1-M17/MC/SP/G/EARS requirements, and security certification remain open."
+        ],
+        "quotes": [
+          {
+            "exactQuote": "  \"existsAfter\": false,\n  \"scope\": \"Eight selected test cases, five shell syntax commands. Financial expectations remain exposed-author fixtures; twelve CLI byte assertions execute inside selected six tests, no separate twelve-stream captures. Full language/compiler/proof/native/ledger acceptance remains open.\"",
+            "lineEnd": 83,
+            "lineStart": 82,
+            "path": "FINAL-RESULT.json",
+            "sha256": "87c436d52188f546d12417de5675bb5ef6892feee7b264a19ec9908f9d5b26a6",
+            "supports": "Explicitly bounds the terminal result scope and states that full language/compiler/proof/native/ledger acceptance remains open."
+          },
+          {
+            "exactQuote": "This is a source-and-check-report fixture set, not a simulation, compiler,\nproving, wallet or ledger execution suite. It does not close general financial\nconformance, runtime accounting or target-backend requirements.",
+            "lineEnd": 31,
+            "lineStart": 29,
+            "path": "crates/fixtures/check-source/FINANCIAL-ORACLES.md",
+            "sha256": "4018696304cd3dbde57db4f72d5dd12c8b4bdd468e1e672bb968fb6d4f2a79d8",
+            "supports": "Confirms in-repo documentation explicitly disclaims simulation, compiler, proving, wallet, ledger, and general financial conformance closure."
+          }
+        ],
+        "reason": "CONTRACT, R01, R03, C01, and H01-H11 consistently state that only 8 selected tests across 3 Cargo commands and 5 bash -n syntax checks were run, that financial expected reports are author-exposed static check fixtures rather than runtime evaluator oracles, that prior approvals/receipts (360f32, f297, main79) remain historical, and that broad cargo fmt/clippy/workspace tests, financial evaluation, compiler/native/proof/ledger/target acceptance, U0-U7/M1-M17/MC/SP/G/EARS obligations, and security certification remain open."
+      },
+      "terminal-and-containment": {
+        "disposition": "supported",
+        "evidenceRefs": [
+          "DRIVER",
+          "R01",
+          "R02",
+          "R03",
+          "R04",
+          "R05",
+          "R06",
+          "R07",
+          "R08",
+          "R09",
+          "R10",
+          "R11",
+          "R12",
+          "R13",
+          "R14",
+          "R15",
+          "R16",
+          "R17",
+          "R18",
+          "R19",
+          "R20",
+          "R21",
+          "R22",
+          "R23",
+          "R24",
+          "R25",
+          "R26",
+          "R27",
+          "R28",
+          "R29",
+          "R30",
+          "R31",
+          "R32",
+          "R33",
+          "R34",
+          "R35",
+          "R36",
+          "R37",
+          "R38",
+          "R39",
+          "R40",
+          "R41",
+          "R42",
+          "R43"
+        ],
+        "limitations": [
+          "Only wall-clock elapsed times (wallSeconds) and configured timeout/thread ceilings (90s Cargo, 10s bash -n, -j1, --test-threads=1) were recorded; peak memory, CPU, and disk usage were not measured.",
+          "Containment and postcheck assertions are recorded by the driver process itself rather than an external supervisor."
+        ],
+        "quotes": [
+          {
+            "exactQuote": " assert git('rev-parse','HEAD')==HEAD and not git('status','--porcelain=v1')and all(sha(K/p['path'])==p['sha256']for p in pins)\nfinally:\n shutil.rmtree(root)\n write('FINAL-RESULT.json',{'finishedAt':now(),'head':HEAD,'tree':tree,'results':results,'allEightCommandsCompleted':len(results)==8,'ownedRoot':str(root),'existsAfter':root.exists(),'scope':'Eight selected test cases, five shell syntax commands. Financial expectations remain exposed-author fixtures; twelve CLI byte assertions execute inside selected six tests, no separate twelve-stream captures. Full language/compiler/proof/native/ledger acceptance remains open.'})",
+            "lineEnd": 63,
+            "lineStart": 60,
+            "path": "DRIVER",
+            "sha256": "14443d2227a2f700ad72ba37a7640653def34f8b4a173f5896d550a028482152",
+            "supports": "Shows the postcheck verifying HEAD, clean worktree, and all 873 file hashes, followed by shutil.rmtree(root) and recording existsAfter."
+          },
+          {
+            "exactQuote": "  \"allEightCommandsCompleted\": true,\n  \"ownedRoot\": \"/tmp/doctorwatson-cli-help-1a8xppdp\",\n  \"existsAfter\": false,",
+            "lineEnd": 82,
+            "lineStart": 80,
+            "path": "FINAL-RESULT.json",
+            "sha256": "87c436d52188f546d12417de5675bb5ef6892feee7b264a19ec9908f9d5b26a6",
+            "supports": "Confirms all eight commands completed and the temporary ownedRoot was removed (existsAfter: false)."
+          }
+        ],
+        "reason": "Receipts R04-R43 provide complete START.json, CHILD.json, RESULT.json, STDOUT.log, and STDERR.log records for all 8 commands with exitCode 0, matching stdout/stderr SHA256 digests, and ownedSessionRemaining: []. R01 and R03 confirm offline/frozen single-job execution (-j1, --test-threads=1, 90s Cargo ceilings, 10s bash -n ceilings), wallSeconds observations (~53.01s, ~2.18s, ~16.90s, and ~0.006-0.007s), post-run git/pin verification, and deletion of /tmp/doctorwatson-cli-help-1a8xppdp (existsAfter: false) without claiming measured peak resource usage."
+      }
+    },
+    "verdict": "accept-scoped-results"
+  },
+  "contextCoverage": {
+    "X001": "full",
+    "X002": "full",
+    "X003": "full",
+    "X004": "full",
+    "X005": "full",
+    "X006": "full",
+    "X010": "full",
+    "X014": "full",
+    "X015": "full",
+    "X021": "full",
+    "X022": "full",
+    "X023": "full",
+    "X024": "full",
+    "X026": "full",
+    "X027": "full",
+    "X028": "full",
+    "X029": "full",
+    "X030": "full",
+    "X031": "full",
+    "X034": "full",
+    "X041": "full",
+    "X042": "full",
+    "X043": "full",
+    "X044": "full",
+    "X045": "full",
+    "X046": "full",
+    "X047": "full",
+    "X048": "full",
+    "X049": "full",
+    "X050": "full",
+    "X051": "full",
+    "X052": "full",
+    "X053": "full",
+    "X054": "full",
+    "X055": "full",
+    "X056": "full",
+    "X057": "full",
+    "X058": "full",
+    "X059": "full",
+    "X060": "full",
+    "X061": "full",
+    "X062": "full",
+    "X063": "full",
+    "X064": "full",
+    "X066": "full",
+    "X067": "full",
+    "X068": "full",
+    "X069": "full",
+    "X071": "full",
+    "X074": "full",
+    "X075": "full",
+    "X082": "full",
+    "X083": "full",
+    "X084": "full",
+    "X085": "full",
+    "X086": "full",
+    "X087": "full",
+    "X088": "full",
+    "X089": "full",
+    "X090": "full",
+    "X091": "full",
+    "XV": "full"
+  },
+  "coverage": {
+    "crates/fixtures/check-source/FINANCIAL-ORACLES.md": {
+      "assessment": "Read in full via C01. Documents the six additive financial check-source cases, discloses prior author exposure to checker/IR/stage/report sources, and states that the fixtures test static check reports only rather than simulation, compilation, proving, or ledger execution.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "# Normal financial check report cases\n\nSix additive cases use the existing real-binary check-source harness. The eight",
+        "lineEnd": 3,
+        "lineStart": 1,
+        "path": "crates/fixtures/check-source/FINANCIAL-ORACLES.md",
+        "sha256": "4018696304cd3dbde57db4f72d5dd12c8b4bdd468e1e672bb968fb6d4f2a79d8"
+      },
+      "readScope": "full",
+      "sha256": "4018696304cd3dbde57db4f72d5dd12c8b4bdd468e1e672bb968fb6d4f2a79d8"
+    },
+    "crates/fixtures/check-source/cases.json": {
+      "assessment": "Read in full via C02 and compared against B02. Preserves all 8 original manifest rows unchanged and appends 6 financial-* case entries binding source paths, fileLabels, --json argv, --quiet humanArgv, expectedExit 0, and expected stdout files.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "    \"id\": \"financial-beta-invoice\",\n    \"source\": \"cases/financial-beta-invoice.mori\",\n    \"fileLabel\": \"beta-invoice.mori\",",
+        "lineEnd": 173,
+        "lineStart": 171,
+        "path": "crates/fixtures/check-source/cases.json",
+        "sha256": "669adec0abb3aa88ecb0fc1a4882bf8ccfe3a136d04227aa6839ce37831d311e"
+      },
+      "readScope": "full",
+      "sha256": "669adec0abb3aa88ecb0fc1a4882bf8ccfe3a136d04227aa6839ce37831d311e"
+    },
+    "crates/fixtures/check-source/cases/financial-beta-invoice.mori": {
+      "assessment": "Read in full via C03. Defines moriarty-beta/1 agreement BetaInvoiceCheck with Midnight Preview domain, Buyer/Seller/Treasury accounts, USD scale-2 asset, PayInvoice transfer intent, and pay_invoice action exercised by financial_beta_invoice.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "agreement BetaInvoiceCheck {\n  domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };\n  account Buyer = { domain: Preview, id: \"Buyer\" };",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/cases/financial-beta-invoice.mori",
+        "sha256": "d3fb8b7d1a0f9dee4981782584900c7cde91fa84f74e4a0c83bcd54df3946198"
+      },
+      "readScope": "full",
+      "sha256": "d3fb8b7d1a0f9dee4981782584900c7cde91fa84f74e4a0c83bcd54df3946198"
+    },
+    "crates/fixtures/check-source/cases/financial-beta-repayment.mori": {
+      "assessment": "Read in full via C04. Defines moriarty-beta/1 agreement BetaRepaymentCheck with Midnight Preview domain, Payer/Lender accounts, USD scale-2 asset, Debt obligation, RepayLoan repay intent, and repay_loan action exercised by financial_beta_repayment.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "agreement BetaRepaymentCheck {\n  domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };\n  account Payer = { domain: Preview, id: \"Payer\" };",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/cases/financial-beta-repayment.mori",
+        "sha256": "aa568de4a6caded6eec9ed28329775ff66216fb8696d78a6215e1c806a6e8915"
+      },
+      "readScope": "full",
+      "sha256": "aa568de4a6caded6eec9ed28329775ff66216fb8696d78a6215e1c806a6e8915"
+    },
+    "crates/fixtures/check-source/cases/financial-core1-loan.mori": {
+      "assessment": "Read in full via C05. Defines moriarty/1 agreement CoreLoanCheck with asset CASH and actions open() and settle(payment: UInt) using liability, liability_present, liability_amount, transfer, discharge, and ensures, exercised by financial_core1_loan.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "agreement CoreLoanCheck {\n  asset CASH = { network: \"local\", issuer: \"check-loan\", reference: \"CASH\", scale: 0 };\n  action open() {",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/cases/financial-core1-loan.mori",
+        "sha256": "764eb776e6175134e11ea2abcbf6e11b8025ca20d33863f98bfbca14082341ab"
+      },
+      "readScope": "full",
+      "sha256": "764eb776e6175134e11ea2abcbf6e11b8025ca20d33863f98bfbca14082341ab"
+    },
+    "crates/fixtures/check-source/cases/financial-core1-payment.mori": {
+      "assessment": "Read in full via C06. Defines moriarty/1 agreement CorePaymentCheck with asset CASH and action pay(amount: UInt) using requires, transfer, fee, and ensures, exercised by financial_core1_payment.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "agreement CorePaymentCheck {\n  asset CASH = { network: \"local\", issuer: \"check-payment\", reference: \"CASH\", scale: 0 };\n  action pay(amount: UInt) {",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/cases/financial-core1-payment.mori",
+        "sha256": "749636c36ea02807e1aa90258cb4285224a3be3c891d616861d5e4c090c38df5"
+      },
+      "readScope": "full",
+      "sha256": "749636c36ea02807e1aa90258cb4285224a3be3c891d616861d5e4c090c38df5"
+    },
+    "crates/fixtures/check-source/cases/financial-core2-escrow.mori": {
+      "assessment": "Read in full via C07. Defines moriarty/2 agreement StagedEscrowCheck with asset CASH and staged action deliver(amount: UInt) containing await delivery(ready: Bool) when ready, exercised by financial_core2_escrow.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "agreement StagedEscrowCheck {\n  asset CASH = { network: \"local\", issuer: \"check-escrow\", reference: \"CASH\", scale: 0 };\n  action deliver(amount: UInt) {",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/cases/financial-core2-escrow.mori",
+        "sha256": "2b6acd88611b5866bb74f04d850771e6a512be898c66ea4f2aeb0cb86d5475ed"
+      },
+      "readScope": "full",
+      "sha256": "2b6acd88611b5866bb74f04d850771e6a512be898c66ea4f2aeb0cb86d5475ed"
+    },
+    "crates/fixtures/check-source/cases/financial-core2-rebate.mori": {
+      "assessment": "Read in full via C08. Defines moriarty/2 agreement StagedRebateCheck with state settled: Bool, asset CASH, and staged action rebate() containing await approval(approved: Bool) when approved, exercised by financial_core2_rebate.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "agreement StagedRebateCheck {\n  asset CASH = { network: \"local\", issuer: \"check-rebate\", reference: \"CASH\", scale: 0 };\n  action rebate() {",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/cases/financial-core2-rebate.mori",
+        "sha256": "991a0317a16eae38c6454bfe640fc3da01e387706c39adcc6c47c45e8581bd6e"
+      },
+      "readScope": "full",
+      "sha256": "991a0317a16eae38c6454bfe640fc3da01e387706c39adcc6c47c45e8581bd6e"
+    },
+    "crates/fixtures/check-source/expected/financial-beta-invoice.stdout": {
+      "assessment": "Read in full via C09. Expected 2118-byte JSON CheckReport for beta-invoice.mori with status accepted, source_hash d3fb8b7d..., 13 declarations, and pay_invoice support local_s0, asserted byte-for-byte in financial_beta_invoice.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "  \"file\": \"beta-invoice.mori\",\n  \"source_hash\": \"d3fb8b7d1a0f9dee4981782584900c7cde91fa84f74e4a0c83bcd54df3946198\",\n  \"agreement\": {",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/expected/financial-beta-invoice.stdout",
+        "sha256": "31cef7f2fa88c43d31c66d6045324873b57d11ebc6d1e708fee95d83916abe55"
+      },
+      "readScope": "full",
+      "sha256": "31cef7f2fa88c43d31c66d6045324873b57d11ebc6d1e708fee95d83916abe55"
+    },
+    "crates/fixtures/check-source/expected/financial-beta-repayment.stdout": {
+      "assessment": "Read in full via C10. Expected 1943-byte JSON CheckReport for beta-repayment.mori with status accepted, source_hash aa568de4..., 12 declarations, and repay_loan support local_s0, asserted byte-for-byte in financial_beta_repayment.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "  \"file\": \"beta-repayment.mori\",\n  \"source_hash\": \"aa568de4a6caded6eec9ed28329775ff66216fb8696d78a6215e1c806a6e8915\",\n  \"agreement\": {",
+        "lineEnd": 5,
+        "lineStart": 3,
+        "path": "crates/fixtures/check-source/expected/financial-beta-repayment.stdout",
+        "sha256": "9ba17c3d41f1915e052f75142f67e71b822296dd0c0982a16143c236db8dda6d"
+      },
+      "readScope": "full",
+      "sha256": "9ba17c3d41f1915e052f75142f67e71b822296dd0c0982a16143c236db8dda6d"
+    },
+    "crates/fixtures/check-source/expected/financial-core1-loan.stdout": {
+      "assessment": "Read in full via C11. Expected 935-byte lexical-key JSON check report for core1-loan.mori with agreement CoreLoanCheck, language moriarty/1, semantics moriarty-core/1, and actions open/settle, asserted byte-for-byte in financial_core1_loan.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "  \"agreement\": \"CoreLoanCheck\",\n  \"diagnostics\": [],\n  \"file\": \"core1-loan.mori\",",
+        "lineEnd": 43,
+        "lineStart": 41,
+        "path": "crates/fixtures/check-source/expected/financial-core1-loan.stdout",
+        "sha256": "106656286325626911560924b1921be67a109ad59fb7e7b066d5d1289e4bbb56"
+      },
+      "readScope": "full",
+      "sha256": "106656286325626911560924b1921be67a109ad59fb7e7b066d5d1289e4bbb56"
+    },
+    "crates/fixtures/check-source/expected/financial-core1-payment.stdout": {
+      "assessment": "Read in full via C12. Expected 713-byte lexical-key JSON check report for core1-payment.mori with agreement CorePaymentCheck, language moriarty/1, semantics moriarty-core/1, and action pay, asserted byte-for-byte in financial_core1_payment.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "  \"agreement\": \"CorePaymentCheck\",\n  \"diagnostics\": [],\n  \"file\": \"core1-payment.mori\",",
+        "lineEnd": 31,
+        "lineStart": 29,
+        "path": "crates/fixtures/check-source/expected/financial-core1-payment.stdout",
+        "sha256": "500fabff3f6739f8323237d5ab9770e3bf6e3fbef330525da6ac59f69bd0e39f"
+      },
+      "readScope": "full",
+      "sha256": "500fabff3f6739f8323237d5ab9770e3bf6e3fbef330525da6ac59f69bd0e39f"
+    },
+    "crates/fixtures/check-source/expected/financial-core2-escrow.stdout": {
+      "assessment": "Read in full via C13. Expected 1338-byte lexical-key JSON stage check report for core2-escrow.mori with agreement StagedEscrowCheck, awaits 1, segments 2, and qualification local-reference-stage, asserted byte-for-byte in financial_core2_escrow.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "  \"agreement\": \"StagedEscrowCheck\",\n  \"authentication\": \"none\",\n  \"consumption\": \"untracked\",",
+        "lineEnd": 55,
+        "lineStart": 53,
+        "path": "crates/fixtures/check-source/expected/financial-core2-escrow.stdout",
+        "sha256": "7c72b267f1807990c531b31df438b16f3f5ce00c0f28e8a14eb793f4e943567a"
+      },
+      "readScope": "full",
+      "sha256": "7c72b267f1807990c531b31df438b16f3f5ce00c0f28e8a14eb793f4e943567a"
+    },
+    "crates/fixtures/check-source/expected/financial-core2-rebate.stdout": {
+      "assessment": "Read in full via C14. Expected 1261-byte lexical-key JSON stage check report for core2-rebate.mori with agreement StagedRebateCheck, awaits 1, segments 2, and qualification local-reference-stage, asserted byte-for-byte in financial_core2_rebate.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "  \"agreement\": \"StagedRebateCheck\",\n  \"authentication\": \"none\",\n  \"consumption\": \"untracked\",",
+        "lineEnd": 50,
+        "lineStart": 48,
+        "path": "crates/fixtures/check-source/expected/financial-core2-rebate.stdout",
+        "sha256": "604d1afd66ac5a3cb733bd278604832c3f449eedfa3b7b67b6cfde409519849a"
+      },
+      "readScope": "full",
+      "sha256": "604d1afd66ac5a3cb733bd278604832c3f449eedfa3b7b67b6cfde409519849a"
+    },
+    "crates/mori/src/cli.rs": {
+      "assessment": "Read in full via C15 and compared against B15. Updates Clap help metadata on compile, simulate, and expand and updates the unit test help_distinguishes_core_consumers_from_source6_proposals, which passed in receipt R04-R08.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "    fn help_distinguishes_core_consumers_from_source6_proposals() {\n        let command = Cli::command();\n        let compile = command.find_subcommand(\"compile\").unwrap();",
+        "lineEnd": 290,
+        "lineStart": 288,
+        "path": "crates/mori/src/cli.rs",
+        "sha256": "a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988"
+      },
+      "readScope": "full",
+      "sha256": "a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988"
+    },
+    "crates/mori/src/commands/expand.rs": {
+      "assessment": "Read in full via C16 and compared against B16. Updates the long_help metadata on ExpandArgs::emit_source6_transfer without altering production dispatch or feature gating; verified by the Clap schema unit test in R04-R08.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "    /// Emit a local Source/6 transfer proposal; requires source6-expansion\n    #[arg(\n        long,",
+        "lineEnd": 16,
+        "lineStart": 14,
+        "path": "crates/mori/src/commands/expand.rs",
+        "sha256": "2684b2251a90fda63cd4dd2b79d4809d9bde3545461d2b100295889eac73ba11"
+      },
+      "readScope": "full",
+      "sha256": "2684b2251a90fda63cd4dd2b79d4809d9bde3545461d2b100295889eac73ba11"
+    },
+    "crates/mori/tests/check_source_dispatch.rs": {
+      "assessment": "Read in full via C17 and compared against B17. Preserves the exact original harness and 8 test functions unchanged and adds the 6 financial_* test wrappers that executed and passed in receipt R09-R13.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "fn financial_beta_invoice() {\n    check_case(\"financial-beta-invoice\");\n}",
+        "lineEnd": 136,
+        "lineStart": 134,
+        "path": "crates/mori/tests/check_source_dispatch.rs",
+        "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966"
+      },
+      "readScope": "full",
+      "sha256": "546005d283ee9aca3ab719158554f2de4c87cf40a0ff21530f8204b4d31b4966"
+    },
+    "docs/NATIVE-CORE.md": {
+      "assessment": "Read in full via C18 and compared against B18. Adds the source-profile selection walkthrough section containing the 5 shell blocks (S1-S5) whose syntax was checked by bash -n in receipts R19-R43.",
+      "literalAnchor": {
+        "deliveryScope": "full",
+        "exactQuote": "Compilation is a separate [Rust consumer](../crates/mori/src/commands/compile.rs)\nrequiring `native`, an admitted Core source and an explicit target descriptor.\nCore/1 produces artifact/3; Core/2",
+        "lineEnd": 121,
+        "lineStart": 119,
+        "path": "docs/NATIVE-CORE.md",
+        "sha256": "8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb"
+      },
+      "readScope": "full",
+      "sha256": "8088e2b009f8e6fc4f98f129f1e499740bc36c4cec8d06fe0fe6ebfceeadeddb"
+    }
+  },
+  "dissent": [],
+  "extraPhysicalBodiesRead": [],
+  "primaryCoverage": {
+    "actualSectionIdsRead": [
+      "CONTRACT",
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09",
+      "C10",
+      "C11",
+      "C12",
+      "C13",
+      "C14",
+      "C15",
+      "C16",
+      "C17",
+      "C18",
+      "B02",
+      "B15",
+      "B16",
+      "B17",
+      "B18",
+      "X001",
+      "X002",
+      "X003",
+      "X004",
+      "X005",
+      "X006",
+      "X010",
+      "X014",
+      "X015",
+      "X021",
+      "X022",
+      "X023",
+      "X024",
+      "X026",
+      "X027",
+      "X028",
+      "X029",
+      "X030",
+      "X031",
+      "X034",
+      "X041",
+      "X042",
+      "X043",
+      "X044",
+      "X045",
+      "X046",
+      "X047",
+      "X048",
+      "X049",
+      "X050",
+      "X051",
+      "X052",
+      "X053",
+      "X054",
+      "X055",
+      "X056",
+      "X057",
+      "X058",
+      "X059",
+      "X060",
+      "X061",
+      "X062",
+      "X063",
+      "X064",
+      "X066",
+      "X067",
+      "X068",
+      "X069",
+      "X071",
+      "X074",
+      "X075",
+      "X082",
+      "X083",
+      "X084",
+      "X085",
+      "X086",
+      "X087",
+      "X088",
+      "X089",
+      "X090",
+      "X091",
+      "XV",
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H05",
+      "H06",
+      "H07",
+      "H08",
+      "H09",
+      "H10",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "H11",
+      "DRIVER",
+      "R01",
+      "R02",
+      "R03",
+      "R04",
+      "R05",
+      "R06",
+      "R07",
+      "R08",
+      "R09",
+      "R10",
+      "R11",
+      "R12",
+      "R13",
+      "R14",
+      "R15",
+      "R16",
+      "R17",
+      "R18",
+      "R19",
+      "R20",
+      "R21",
+      "R22",
+      "R23",
+      "R24",
+      "R25",
+      "R26",
+      "R27",
+      "R28",
+      "R29",
+      "R30",
+      "R31",
+      "R32",
+      "R33",
+      "R34",
+      "R35",
+      "R36",
+      "R37",
+      "R38",
+      "R39",
+      "R40",
+      "R41",
+      "R42",
+      "R43",
+      "VERIFICATION",
+      "ANCHORS",
+      "SELECTION",
+      "SUBJECT",
+      "SCHEMA"
+    ],
+    "omissions": [],
+    "readOnceInFull": true
+  },
+  "reviewRole": "RESULT",
+  "reviewToken": "doctorwatson-main238-cli-finance-f91f2c7-result-whole-20261018",
+  "reviewedCandidate": {
+    "base": "71c22f8a477231be869786eb42f04e3b50d1b3a7",
+    "head": "f91f2c7f1b3bf2229d1243fc6a1f9ee37004a209",
+    "mandatoryPrimaryBytes": 1001567,
+    "mandatoryPrimarySha256": "f0323e5135f39c679dae6cc97d677a6d473d8cd4b7d03199be7894e0c07f4fe2",
+    "tree": "ed8323c00f31deaace461bf63db0365e8c4e0aac"
+  },
+  "reviewedSubjectSha256": "bca6529104c4f0f800a36956426291f58e3f0841535ec6ca8f43211bb74a73fe",
+  "reviewer": {
+    "actualModel": "gemini-4-argon-high",
+    "authorOfCandidate": false,
+    "effort": "high",
+    "independent": true,
+    "provider": "google",
+    "requestedModel": "gemini-4-argon-high",
+    "terminalStatus": "completed"
+  },
+  "rootReviewToken": "doctorwatson-main238-cli-finance-f91f2c7-source-result-20261018-whole",
+  "summary": "Fresh independent non-author RESULT review of candidate f91f2c7f1b3bf2229d1243fc6a1f9ee37004a209 (tree ed8323c00f31deaace461bf63db0365e8c4e0aac, base 71c22f8a477231be869786eb42f04e3b50d1b3a7) after reading PRIMARY.md (1001567 bytes, SHA256 f0323e5135f39c679dae6cc97d677a6d473d8cd4b7d03199be7894e0c07f4fe2) once in full in order with zero extra physical reads. All thirteen result predicates are supported within their explicit qualifications: exact source/head/tree/pin bindings hold across DRIVER, CHECK-PLAN, SOURCE-PINS, and FINAL-RESULT; the 3 narrow --no-default-features Cargo test commands passed 8 selected tests (1 Clap metadata test with 7 filtered, 6 financial_ check_source_dispatch tests with 8 filtered asserting 12 in-harness public mori CLI invocations, and 1 mori-core language header diagnostic test with 18 filtered); all 5 extracted walkthrough shell blocks passed bash -n syntax checks with exit 0 and empty streams; and all 8 command receipts record zero exits, matching stream hashes, empty remaining sessions, and deleted temporary root. No source-axis approval, broad fmt/clippy/workspace test run, financial evaluator conformance, native/compiler/proof/ledger acceptance, or security certification is inferred.",
+  "unreadOrInsufficientContext": [],
+  "verdict": "approve-qualified"
+}
