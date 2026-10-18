@@ -13,8 +13,12 @@ normal report candidates copied exactly from the separately authored
 [R3 freeze](../models/core-stage-tests/independent-oracle-r3/INDEPENDENT-FREEZE.json),
 together with fresh complete program/plan preimages. This source/data integration
 is not a runtime comparison or an admission. Review dispositions are recorded
-in the [final audit binding](audits/2026-10-16/core-staged-tests-r3/REVIEW-BINDING.json),
-which Root must supply before publication; no approval is assumed here.
+in the [header-correction audit binding](audits/2026-10-16/core-staged-tests-r3/header-correction-r1/REVIEW-BINDING.json)
+for the PR75 head before this documentation cleanup. Its source/draft-only
+dispositions do not approve these changed documentation bytes, ready-for-review,
+merge or execution. The [earlier binding](audits/2026-10-16/core-staged-tests-r3/REVIEW-BINDING.json)
+retains its historical candidate scope. This cleanup requires fresh applicable
+reviews and a separate execution-admission decision before ready-for-review or merge.
 
 R3 sources append unused matching-duty `declare` actions after their target
 actions; target deliver/charge code and incoming duty5/duty3 scenarios remain
@@ -26,6 +30,15 @@ bytes, not current root reports/preimages. See
 [fixture provenance](../models/core-stage-tests/PROVENANCE.md) for current full
 program/plan digests, disclosed representation/admission premises, historical
 C1–C6/N1–N6 limits and all fourteen open draft gaps.
+
+`mori test` requires an explicit directory and opens only that directory's
+`mori-tests.json`; it does not discover manifests recursively. Selecting
+`models/core-stage-tests` uses the current root manifest. The public staged-test
+regression copies only root regular files and skips subdirectories, including
+`history/blocked-r2`. An explicit selection of `history/blocked-r2` would read its
+preserved historical manifest; those invalidated positive expectations remain
+unusable for current validation. This is a source-inspection finding; no command
+or test run established it.
 
 A directory contains `mori-tests.json`:
 
