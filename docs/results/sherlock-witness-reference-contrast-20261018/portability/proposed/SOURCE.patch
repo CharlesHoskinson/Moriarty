@@ -1,0 +1,29 @@
+--- tested/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs
++++ b/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs
+@@ -244,7 +244,7 @@
+ }
+ 
+ // This existing independently frozen contrast predates the new consumer source.
+-const FACT2: &str = include_str!("/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-reference-prefix-oracle-20261018/expectations/factorial2-normal-program-contrast-A39-prefix.json");
++const FACT2: &str = include_str!("../fixtures/witness-reference-contrast-independent/factorial2-normal-program-contrast-A39-prefix.json");
+ 
+ // A valid distinct program is admitted/captured only; no old owner step is run.
+ fn capture_initial(p:&a::Program)->co::HostSnapshot {
+@@ -272,7 +272,7 @@
+     assert_eq!(warm.witness.decoded,baseline.decoded);
+ }
+ 
+-const LET_LEAF_VAR: &str = include_str!("/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-normal-countercase-oracle-20261018/expectations/let-leaf-pattern-var-complete-A39-prefix.json");
++const LET_LEAF_VAR: &str = include_str!("../fixtures/witness-reference-contrast-independent/let-leaf-pattern-var-complete-A39-prefix.json");
+ fn let_leaf_pattern_var()->Arc<a::Program> {
+     let held=Arc::new(a::Expr::Let("x".into(),uint(3),Arc::new(a::Expr::Unary(a::UnaryOp::Leaf,var("x")))));
+     Arc::new(a::Program{functions:vec![],entry:Arc::new(a::Expr::Match(held,vec![a::Arm{pattern:a::Pattern::Var("whole".into()),body:var("whole")}]))})
+@@ -411,7 +411,7 @@
+     RuleIdC::KAdminPublishError=>"k.admin.publish.error",
+     RuleIdC::KAdminPublishExhausted=>"k.admin.publish.exhausted",
+ }}
+-const FACT2_B0: &str = include_str!("/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-B0-work-oracle-20261018/factorial2-normal-program-contrast-A39-prefix-B0-clocks.json");
++const FACT2_B0: &str = include_str!("../fixtures/witness-reference-contrast-independent/factorial2-normal-program-contrast-A39-prefix-B0-clocks.json");
+ fn b_clock_row(a_record:Option<usize>,preceding_rule:Option<&str>,raw:&co::HostSnapshot,semantic_index:usize)->J {
+     let image=&raw.image;
+     json!([a_record,preceding_rule,image.consumed_work,image.helper_work,image.helper_visits,image.reference_cursor,image.remaining_work,semantic_index])

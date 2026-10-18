@@ -1,0 +1,148 @@
+### Final Review Report — Saved-Record Reference Contrast & Additive B0 Schedule Consumer (`witness-reference-contrast-B0`, Parts 1 + 2 Complete)
+
+**Reviewer Identity:** Existing independent non-author reviewer (`CID: fe7486d5-c674-4f04-9f52-ef41e1eff966`, requested model `gemini-4-argon-high` / HIGH under existing Root selection, original `fresh-provider-cwd`: `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-plan-cache-stream-ordinary-QA-20261018/inline-review-02/part-01-fresh/fresh-provider-cwd`; no backend canonical-attestation claim)  
+**Mode:** Fresh source and operation judgment on new consumer bytes (`33,281`B, `sha256=97975468466accb30fa5dc465bf58ecd48e95f41498bbfa0d611f98693bdca91`) and complete factored oracle delivery across Parts 1 and 2. Zero tools, filesystem reads, shell commands, model/owner/evaluator executions, code installations, or W/Git actions were performed. **Both new test cases remain UNRUN.**
+
+---
+
+### 1. Explicit Full-Readable Coverage Inventory & Scope Boundaries
+
+All **12 Part 1 inline bodies** and all **12 Part 2 inline bodies** (numbered `01` through `21`, with `14` delivered across `4` complete ordinal pages `14-oracle-full-page-1`..`14-oracle-full-page-4` whose payload chunks concatenate byte-exact to the `56,170`-byte [`REVIEW-PAYLOAD.txt`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/REVIEW-PAYLOAD.txt), `sha256=b6b0b0f119a32f1ab65615bceeb19853caa5f2617f79fc958d0007ccaef83a24`) were received and read in full (100%) without truncation or omission:
+
+| Part | Body ID | Artifact Path | Bytes | SHA-256 | Read Status |
+|---|---|---|---:|---|---|
+| P1 | `01-full-clauses` | [01-ORIGINAL035-AND-SCON013-024.txt](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-review-20261018/bodies/01-ORIGINAL035-AND-SCON013-024.txt) | 4,608 | `4ad84345278f7a0bff232bd6702fa5bbf5107ea02317f58dfc412f69e74b0f51` | 100% Read |
+| P1 | `02-full-new-consumer` | [sherlock_witness_reference_contrast_positive.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs) | 33,281 | `97975468466accb30fa5dc465bf58ecd48e95f41498bbfa0d611f98693bdca91` | 100% Read |
+| P1 | `03-full-consumed-projector` | [reference_projection.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/helper_machine/reference_projection.rs) | 24,000 | `ad197ca8b1b965d7b29af16daa629c399cf5d19f9c6566105a65945546c61547` | 100% Read |
+| P1 | `04-full-A-types` | [reference_types.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/reference_types.rs) | 5,882 | `4b4bb364a0c8182e117a9c36efb5d91cb7e405f653a6d3870f54dc03eefa317f` | 100% Read |
+| P1 | `05-full-actual-observation` | [complete_observation.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/helper_machine/complete_observation.rs) | 16,561 | `6b70d2ba8dc528fd6fcc5ca31d4e7f52e1a2115b853f2f55961462eae922ed5f` | 100% Read |
+| P1 | `06-full-witness-types-api` | [witness_plan.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/helper_machine/witness_plan.rs) | 12,255 | `069c78ce06e093409a038ae3e9b36d2fa76585f843aa9f733e128461a96932a9` | 100% Read |
+| P1 | `07-full-cache-strategy` | [strategy.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/helper_machine/witness_plan/strategy.rs) | 8,718 | `d437ba618b74303bd4fb01f2a1292d69b0f9e3148dc54466f821c6b4d7ba5cb4` | 100% Read |
+| P1 | `08-full-owner-stream-consumer` | [stream.rs](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/helper_machine/witness_plan/stream.rs) | 5,014 | `21b1ecd3d8db3f2913d5829831892d4102540436a2da5fc703b067f76d26bad6` | 100% Read |
+| P1/P2 | `09` / `21` | [PROPOSED.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA/PROPOSED.json) | 10,273 | `4f019e4c5ade0e798a4b981c823677045490ce2979c7befb737a9f2eabcfb091` | 100% Read |
+| P1 | `10-scope-and-exposure` | [INTERFACES-AND-SCOPE.md](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/INTERFACES-AND-SCOPE.md) | 2,774 | `28f3f330ef66e3df97cb25d3a200f98be66351a34eaa8cd4d4550351adc96839` | 100% Read |
+| P1/P2 | `11` / `20` | [AUTHOR-EXPOSURE-PROVENANCE.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/AUTHOR-EXPOSURE-PROVENANCE.json) | 820 | `a74a1f7f14fd157ec25e29ccda1d061658b616b6f9d767e83c7b6b5ce23188f4` | 100% Read |
+| P1 | `12-actual-core-readset` | [02-COMPILED-CORE-AND-READSET-SCOPE.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-review-20261018/bodies/02-COMPILED-CORE-AND-READSET-SCOPE.json) | 4,742 | `c1e2d465b56e57a4167e11504baa7f52e3ed673b61feac4907d1402235d7ceac` | 100% Read |
+| P2 | `13-safe-oracle-delivery-manifest` | [SAFE-TRANSPORT.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/SAFE-TRANSPORT.json) | 3,979 | `ac35986fa8bfa7c46d73ffbba39514716108988c24b7b67e6c9e899a292e031f` | 100% Read |
+| P2 | `14-oracle-full-page-1` | [page-01.txt](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/review-pages/page-01.txt) (chunk `15,467`B, `f2656dbb...`) | 15,610 | `3ebbe30291a7258274a59c53770900cced97a19b8ef2d1eaaf56db041e9f7a10` | 100% Read |
+| P2 | `14-oracle-full-page-2` | [page-02.txt](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/review-pages/page-02.txt) (chunk `15,456`B, `74c5334f...`) | 15,599 | `d50b95e81e452c7d7e3a01d69621da63cf9e2a867dbee680075800dc81ba159b` | 100% Read |
+| P2 | `14-oracle-full-page-3` | [page-03.txt](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/review-pages/page-03.txt) (chunk `15,451`B, `6bfe8f04...`) | 15,594 | `f8cbd31d5ea012ef33a748198dbf7f17afab7aeabb15cd32329ce61b133974cc` | 100% Read |
+| P2 | `14-oracle-full-page-4` | [page-04.txt](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/review-pages/page-04.txt) (chunk `9,796`B, `4e2c3f83...`) | 9,939 | `53b16c5faa1c748d4f32881e94b97ab6f87d225c1efbe1da33c83ac0e8a4c149` | 100% Read |
+| P2 | `15-full-common-A39-wire` | [SAFE-WIRE-SCHEMA.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-reference-prefix-oracle-20261018/SAFE-WIRE-SCHEMA.json) | 8,869 | `237375bfea216104df6ed81a70ae6d62877571adb4aef9c20b4ade1481aae44b` | 100% Read |
+| P2 | `16-full-new-source-gap-wire` | [SAFE-INPUT-AND-BINDINGS.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-normal-countercase-oracle-20261018/SAFE-INPUT-AND-BINDINGS.json) | 3,652 | `50f90643ef4cf5c612f79c7ceea9085172230b0819479f30347e946346152d65` | 100% Read |
+| P2 | `17-full-B0-wire-and-public-rule-map` | [SAFE-COMPARISON-WIRE.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-B0-work-oracle-20261018/SAFE-COMPARISON-WIRE.json) | 10,501 | `4f350411ee2aa879d45ecae1fd9a2065c358f7a0fecb61d31ae74f2ec380adcc` | 100% Read |
+| P2 | `18-complete-source-freeze-binding` | [SOURCE-FREEZE.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/SOURCE-FREEZE.json) | 6,245 | `f04eb5539392540d32ed659779be9114b01727e256bc66d3e36eddffb13989e0` | 100% Read |
+| P2 | `19-original-scope-inventory` | [MISSING-PREDICATE-INVENTORY.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/MISSING-PREDICATE-INVENTORY.json) | 5,467 | `eceeb3a67017df41148e8a203b571686f7e04bdb2e061731c328a45300807ec5` | 100% Read |
+
+- **Reassembled Payload & Factored Oracles Verified in Full (`14-oracle-full-page-1`..`4`):**
+  - [`REVIEW-INSTRUCTIONS.txt`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/REVIEW-INSTRUCTIONS.txt) (`1,165`B, `sha256=a2319788...`), [`FACTORED-ORACLES.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/FACTORED-ORACLES.json) (`46,875`B, `sha256=bff71c77...`; `88` structural constants `C01..P02` + all `3` complete oracle documents), [`expand_and_prove.py`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/expand_and_prove.py) (`2,971`B, `sha256=ee92eae6...`), and [`ROUNDTRIP-PROOF.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/ROUNDTRIP-PROOF.json) (`3,945`B, `sha256=bfe30fd7...`).
+- **Provenance vs. Semantic Read Boundary:** Externally referenced files (`FLAT-INPUT-PINS.json` [`139,952`B, `sha256=1e9f386a...`, `487` static pins], `SOURCE-COMPOSITION.json` [`177,160`B, `sha256=63732a95...`], `rows-supplement.json` [`97,998`B, `sha256=a0dd03b1...`], `schema-supplement.json` [`150,343`B, `sha256=237a3f31...`], and prebuilt binaries `libmori_core.rlib` [`43,779,842`B, `sha256=4afb6609...`]) are bound as identity/provenance pins; unchanged `mori_core` modules outside the inline bodies (`source_input_bridge.rs`, `owner_prepare.rs`, `owner_runtime.rs`, and `witness_plan/{dag,decode}.rs` read in earlier turns of this same reviewer context) are not claimed freshly re-audited wholesale here.
+
+---
+
+### 2. Source Correctness Verdict for Exact Candidate `97975468466accb30fa5dc465bf58ecd48e95f41498bbfa0d611f98693bdca91`
+
+- **SOURCE CORRECTNESS DISPOSITION:** **`APPROVE`**
+  - Candidate: [`sherlock_witness_reference_contrast_positive.rs`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs) (`33,281` bytes, `sha256=97975468466accb30fa5dc465bf58ecd48e95f41498bbfa0d611f98693bdca91`).
+  - Zero product library, owner, guard, budget, parser, or admission source files are modified (`productSourceChanges: 0`).
+
+---
+
+### 3. Distinct Concrete Eligibility Judgment for the 3 Proposed Ordinary Operations
+
+All **3 proposed ordinary operations** in [`PROPOSED.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA/PROPOSED.json) (`10,273`B, `sha256=4f019e4c5ade0e798a4b981c823677045490ce2979c7befb737a9f2eabcfb091`) are currently **UNRUN** and are judged **individually `ELIGIBLE`** for single-attempt serial fail-stop execution by Root:
+
+1. **Operation `01-compileWitnessReferenceCountercaseConsumer` — `ELIGIBLE`**
+   - **Actual Ordinary `argv`:**
+     ```text
+     /usr/bin/timeout --signal=KILL 30s /usr/bin/prlimit --cpu=25:25 --as=2147483648:2147483648 --fsize=67108864:67108864 --core=0:0 -- /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc --sysroot /home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu --target x86_64-unknown-linux-gnu --edition=2024 --crate-name witness_reference_contrast_positive --test /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs --extern mori_core=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/build/libmori_core.rlib --extern serde_json=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/24-compiler-qa/proposed-run/core-target/debug/deps/libserde_json-76dc87088753b61e.rlib -L dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/build -L dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/191-bounded-parser-ordinary-qa/build -L dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/24-compiler-qa/proposed-run/core-target/debug/deps --emit=link,dep-info=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA/build/witness-reference-contrast-positive.d -o /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA/build/witness-reference-contrast-positive -C debuginfo=0 -C opt-level=0 -C debug-assertions=yes -C linker=/usr/bin/x86_64-linux-gnu-gcc-15 -C link-arg=-fuse-ld=bfd
+     ```
+   - **Binding & Caps:** Reuses existing compiled [`libmori_core.rlib`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/build/libmori_core.rlib) (`43,779,842`B, `sha256=4afb66098943d7a3da24bcfd4e2930b30944f81d1b06268cf369ace9454fe873`) and [`core-rlib.d`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/build/core-rlib.d) (`50,509`B, `sha256=cae5d50f33ceda8f9039bd4bcc34594cdcb56b7acaab97c021ce767be99ebc2a`) with `normalCoreRecompiles: 0`; `wall=30s`, `CPU=25s`, `AS=2GiB`, `FSIZE=64MiB`, `CORE=0`, `keptBytesPerStream=131072`.
+
+2. **Operation `02-factorial_two_complete_prefix_program_cache_and_incomplete_stream` (Selector: `factorial_two_complete_prefix_program_cache_and_incomplete_stream`) — `ELIGIBLE` (Currently UNRUN)**
+   - **Actual Ordinary `argv`:**
+     ```text
+     /usr/bin/timeout --signal=KILL 10s /usr/bin/prlimit --cpu=8:8 --as=1073741824:1073741824 --fsize=16777216:16777216 --core=0:0 -- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA/build/witness-reference-contrast-positive --exact factorial_two_complete_prefix_program_cache_and_incomplete_stream --test-threads=1 --nocapture
+     ```
+   - **Binding & Caps:** Executes the exact binary emitted by `01`; `wall=10s`, `CPU=8s`, `AS=1GiB`, `FSIZE=16MiB`, `CORE=0`, `keptBytesPerStream=131072`; requires `selected: 1, passed: 1, failed: 0, ignored: 0, measured: 0, filtered_out: 1` (`zero_test_exit0_is_failure: true`).
+
+3. **Operation `03-let_leaf_pattern_variable_complete_reference_prefix` (Selector: `let_leaf_pattern_variable_complete_reference_prefix`) — `ELIGIBLE` (Currently UNRUN)**
+   - **Actual Ordinary `argv`:**
+     ```text
+     /usr/bin/timeout --signal=KILL 10s /usr/bin/prlimit --cpu=8:8 --as=1073741824:1073741824 --fsize=16777216:16777216 --core=0:0 -- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA/build/witness-reference-contrast-positive --exact let_leaf_pattern_variable_complete_reference_prefix --test-threads=1 --nocapture
+     ```
+   - **Binding & Caps:** Executes the exact binary emitted by `01`; `wall=10s`, `CPU=8s`, `AS=1GiB`, `FSIZE=16MiB`, `CORE=0`, `keptBytesPerStream=131072`; requires `selected: 1, passed: 1, failed: 0, ignored: 0, measured: 0, filtered_out: 1` (`zero_test_exit0_is_failure: true`).
+
+- **Common Execution & Readset Conditions Across `01`–`03`:**
+  - `cwd`: `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/ordinary-QA`; `environment`: `{"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "TMPDIR": ".../ordinary-QA/tmp"}` (`build/` and `tmp/` fresh and empty before `01`).
+  - All `487` static pins in `FLAT-INPUT-PINS.json` (`139,952`B, `sha256=1e9f386ae8cc9602aff703c382bac9cc08c20789208b8abaf9e6f79c350b087f`, which includes `libmori_core.rlib` and `core-rlib.d` as static inputs) must verify unchanged before and after each phase; the 2 generated outputs (`build/witness-reference-contrast-positive` and `build/witness-reference-contrast-positive.d`) must be hashed after `01` and verified unchanged before and after `02` and `03`.
+  - Uses only the existing R435 revision02 capture callbacks (`capture`, `dep_inputs`, `test_membership` in `run_selected_13.py`, `sha256=ce0482fd...`); `oldPassingPrefixReruns: 0`.
+
+---
+
+### 4. Verification of Complete A39 & B0 Schedule Comparison Path vs. Cosmetic Self-Comparison
+
+#### A. Actual Owner Step Streaming, 5-Way Decoded Strategy Join, and Full A39 Prefix Comparison
+- In [`exercise`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs#L105-L205), the consumer admits each program through `bridge::from_program_bounded`, `owner.admit`, `owner.admit_run`, and `co::capture`, then streams real B transitions once via `wp::stream_owner_steps(&admitted, &mut image, Some(&mut cache), &mut sink)`.
+- At every observed step, [`variants`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs#L85-L104) reconstructs `DecodedSnapshot` via `wp::evaluate_uncached`, `wp::evaluate_last_use`, `wp::evaluate_memoized(..., RetainAll)` (cold), and `wp::evaluate_memoized(..., LastUse)` (warm), verifies scheduling/lifetime diagnostics (`retained_slots_at_publication == live`, `reclaimed_slots == s.plan.nodes.len() - live`, `warm.scheduling.cache_hits == s.plan.nodes.len() - s.plan.inputs.len()`, `input_reads == s.plan.inputs.len()`, `measured_host_bytes == None`, `measured_host_time_ns == None`), and checks that all 5 decoded representations project via [`rp::project_reference_boundary`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-projection-ordinary-QA-20261018/snapshot/crates/mori-core/src/sherlock/helper_machine/reference_projection.rs#L218-L226) to the same `span.reference.after` (and `span.reference.before` on 1-step intervals).
+- Cross-checking the factored oracle tables in [`FACTORED-ORACLES.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-contrast-review-lossless-delivery-20261018/FACTORED-ORACLES.json) confirms that:
+  - **`FACT2` ([`factorial2-normal-program-contrast-A39-prefix.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-reference-prefix-oracle-20261018/expectations/factorial2-normal-program-contrast-A39-prefix.json), `322,314`B):** Compares all `84` complete snapshots (`0..=83`, fuel `4096 -> 4014`), all `83` records (`0..=82`, ending at `[80, 0, 82, 83]`), `prefix_work_A` (`0..=82, 82`), `charged_A_work: 82`, `A_event_count: 83`, `terminal_outcome: {"Done": {"UInt": 2}}`, and `logical_depth_peak_A: 7` (reached at `S28 = [F15, F24, F10, F05, F11, F07, F09]` during `fact(0)` inside pending callers `fact(1)` and `fact(2)`).
+  - **`LET_LEAF_VAR` ([`let-leaf-pattern-var-complete-A39-prefix.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-normal-countercase-oracle-20261018/expectations/let-leaf-pattern-var-complete-A39-prefix.json), `34,861`B):** Compares all `20` complete snapshots (`0..=19`, fuel `4096 -> 4078`), all `19` records (`0..=18`, including `114`=`KMachineEvalLet`, `145`=`KMachineReturnLet`, `120`=`KMachineEvalUnary`, `157`=`KMachineReturnUnary`, `214`=`KMachineCasesTry`, `220`=`KMachineCasesHit`, and `[80, 0, 18, 19]`), `prefix_work_A` (`0..=18, 18`), `charged_A_work: 18`, `A_event_count: 19`, `terminal_outcome: {"Done": {"Tree": {"Leaf": 3}}}`, and `logical_depth_peak_A: 3` (at `S07 = [{"Unary": {"op": "Leaf"}}, F01, F12]`), exercising `Expr::Let`, `Frame::Let` (`F13` in `S09`), `Expr::Unary(Leaf)`, `Frame::Unary(Leaf)` (`S07`), and `Pattern::Var("whole")` (`L01`).
+
+#### B. Direct Raw B Counter & Schedule Construction Before Parsing `FACT2_B0`
+- In [`verify_record_counters`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs#L249-L260), every raw B transition's counters are checked directly against the saved `before.image`, `after.image`, and `record.event` deltas without referencing A charges or expected rows:
+  ```rust
+  assert_eq!(after.consumed_work,before.consumed_work.checked_add(event.work_delta as u128).expect("B work addition"));
+  assert_eq!(after.helper_work,before.helper_work.checked_add(event.helper_work_delta as u128).expect("B helper work addition"));
+  assert_eq!(after.helper_visits,before.helper_visits.checked_add(event.helper_visits_delta as u128).expect("B helper visits addition"));
+  assert_eq!(after.reference_cursor,before.reference_cursor.checked_add(event.reference_cursor_delta as u128).expect("B reference cursor addition"));
+  assert_eq!(after.remaining_work.checked_add(event.work_delta as u128),Some(before.remaining_work));
+  assert_eq!(after.remaining_work.checked_add(after.consumed_work),Some(after.initial_fuel));
+  ```
+- In [`compare_b0_schedule`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs#L381-L423), the consumer constructs the entire `prefixes` (`216` rows: genesis `[null, null, 0, 0, 0, 0, 4096, 0]` plus `215` post-record rows through `[82, "k.admin.publish.value", 214, 132, 46, 82, 3882, 83]`) and `intervals` (`83` interval objects partitioning `0..215`) from `initial` and `spans` **before** parsing `FACT2_B0`:
+  ```rust
+  if is_completion {
+      assert!(matches!(record.event.event_kind,EventKind::LegacyComplete|EventKind::Publish));
+      completion_id=Some(id);
+  }else{
+      assert!(!matches!(record.event.event_kind,EventKind::LegacyComplete|EventKind::Publish));
+      // Charged bookkeeping belongs here as well; event kind cannot
+      // hide any prefix row or charged preceding rule.
+      if record.event.work_delta!=0 {helper_ids.push(id);}
+  }
+  prefixes.push(b_clock_row(Some(a_index),Some(id),&record.after,if is_completion {a_index+1}else{a_index}));
+  ```
+  and then compares `actual` against the parsed `FACT2_B0` ([`factorial2-normal-program-contrast-A39-prefix-B0-clocks.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-B0-work-oracle-20261018/factorial2-normal-program-contrast-A39-prefix-B0-clocks.json), `28,581`B, `sha256=d384409dc97941fb7397c7a583ab2a322248ea3553219b8f526de5205c81d703`):
+  ```rust
+  let expected:J=serde_json::from_str(FACT2_B0).expect("opaque independent complete B0 schedule");
+  assert_eq!(expected.get("profile"),Some(&json!(profile)));
+  assert_eq!(expected.get("grammarDomain"),Some(&json!(grammar)));
+  assert_eq!(expected.get("initialFuel"),Some(&json!(initial.image.initial_fuel)));
+  for key in ["clockPrefixColumns","clockPrefixes","intervals"] {
+      assert!(expected.get(key).is_some(),"missing independent B0 field {key}");
+      assert_eq!(&actual[key],&expected[key],"complete independent B0 field {key}");
+  }
+  ```
+
+---
+
+### 5. Ordinary Mismatch / Incomplete-Interval Scope vs. Retained Security & Negative Obligations
+
+1. **Ordinary Source-Association Mismatch (`ProjectionGap::SourceAssociation`):**
+   - [`exercise`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs#L114-L124) tests that associating the valid `factorial(3)` AST with the admitted `factorial(2)` initial snapshot fails in the `ProjectionGap::SourceAssociation { section, row }` category (`!section.is_empty()` and `row < initial.admission.view.expressions.len()`). As declared in [`SAFE-INPUT-AND-BINDINGS.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-normal-countercase-oracle-20261018/SAFE-INPUT-AND-BINDINGS.json), the exact internal diagnostic locator (`section`, `row`) is unbound API metadata.
+2. **Ordinary Incomplete Helper Interval Stop & Resume (`ProjectionGap::IncompleteInterval`):**
+   - On `factorial(2)`, the first `EventKind::HelperEnter` occurs at B record `2` (`"b.helper.Validate.entry"` inside A record `2`, row `3` of `clockPrefixes`). The sink verifies `projection.finish().unwrap_err() == rp::ProjectionGap::IncompleteInterval`, checks `projection.pending_records()` continuity and unchanged `projection.returned()`, stops the stream (`wp::StreamAction::Stop` -> `wp::StreamStop::Sink`), and then resumes the **same** `image`, `cache`, and `projection` to `wp::StreamStop::Terminal` without replay.
+3. **Retained Negative / Security Guard Obligations (Not Closed Here):**
+   - This ordinary incomplete-stream and program-contrast consumer does **not** replace or close hostile/malformed `WitnessPlan` security tests (cyclic/missing dependencies, `SCON-013` omitted-dependency rejection, `InputChanged` tampering, wrong arity/sort/type, unstable topological order, or `last_use_order`/liveness corruption) or `UIREQ-015` waiting-callee checkpoint acceptance. Those negative/security obligations remain open under owner/security scope.
+
+---
+
+### 6. Finite Evidence & Known-Final-Scalar (`214`) Qualification
+
+- **Known Summary Scalar Qualification (`factorial2FinalConsumedWork = 214`):** As recorded in [`AUTHOR-EXPOSURE-PROVENANCE.json`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/AUTHOR-EXPOSURE-PROVENANCE.json) (`sha256=a74a1f7f...`), the source author knew the single disclosed final B work scalar `214` from assignment context. While `214` is verified absent as a literal, branch, or assertion in [`sherlock_witness_reference_contrast_positive.rs`](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/witness-reference-contrast-source-20261018/revision02-B0-schedule/afterimages/crates/mori-core/tests/support/sherlock_witness_reference_contrast_positive.rs) and the `216`-row `clockPrefixes` / `83`-row `intervals` tables remained withheld from the author, that final scalar `214` must **not** be described as fully blind (`noFullyBlindFinalScalarClaim: true`).
+- **Retained Open Gaps:**
+  - Both new test cases (`factorial_two_complete_prefix_program_cache_and_incomplete_stream` and `let_leaf_pattern_variable_complete_reference_prefix`) are **UNRUN**; this source and operation approval is not a predictive `PASS`.
+  - Raw B counters (`consumed_work = 214`, `helper_work = 132`, `helper_visits = 46`, `reference_cursor = 82`, `remaining_work = 3882`) are distinct from logical A fuel charges (`charged_A_work = 82`, `remaining_fuel = 4014`).
+  - The other three B0 schedule oracles (`factorial(3)`, `list [2, 5]`, `tree 4,(1, 3)`) are not selected here.
+  - Physical host memory/allocation/copy/drop/time (`SCON-024`), general H1 bounds, canonical `ProjectRel`/state import/`Link` proofs, full semantic refinement, native/proof targets, and whole `UIREQ-035` / `SCON-013` / `SCON-024` acceptance remain **OPEN**.
+
