@@ -105,7 +105,7 @@ fn run_case(dir: &Path, case: Case) -> Result<Value> {
         Err(error) => Err(no_work(error.clone())),
     };
     let mut pending = continuation(&started);
-    let actual = report(started)?;
+    let actual = stage::outcome_report(started);
     let passed = actual == expected_start;
     let mut stages = vec![json!({"index":0,"passed":passed,"actual":actual})];
     let mut all_passed = passed;
@@ -130,7 +130,7 @@ fn run_case(dir: &Path, case: Case) -> Result<Value> {
             Err(_) => Some(previous),
             _ => continuation(&resumed),
         };
-        let actual = report(resumed)?;
+        let actual = stage::outcome_report(resumed);
         let passed = actual == expected;
         all_passed &= passed;
         stages.push(json!({"index":index+1,"passed":passed,"actual":actual}));
@@ -167,40 +167,4 @@ fn continuation(
         Ok(StageOutcome::Waiting { continuation, .. }) => Some(continuation.clone()),
         _ => None,
     }
-}
-
-/// Same complete report envelope as public `simulate` for a Core/2 invocation.
-/// Output-only StageSegment/Statement types are serialized, never deserialized
-/// through the intentionally Core/1-only shared execution wire.
-fn report(result: std::result::Result<StageOutcome, StageRejection>) -> Result<Value> {
-    let mut report = match result {
-        Ok(StageOutcome::Waiting {
-            advanced,
-            segment,
-            continuation,
-            attempted,
-            residual,
-        }) => {
-            let committed = continuation.logical.committed;
-            json!({"status":"waiting","advanced":advanced,"segment":segment,
-                "continuation":continuation,"attempted":attempted,
-                "committed":committed,"residual":residual})
-        }
-        Ok(StageOutcome::Complete {
-            segment,
-            committed,
-            attempted,
-            residual,
-        }) => json!({"status":"complete","segment":segment,"attempted":attempted,
-                "committed":committed,"residual":residual}),
-        Err(rejected) => json!({"status":"rejected","error":rejected.error,
-            "attempted":rejected.attempted,"committed":rejected.committed}),
-    };
-    let object = report
-        .as_object_mut()
-        .expect("stage reports are JSON objects");
-    for (name, value) in stage::STAGE_LABELS {
-        object.insert(name.into(), Value::String(value.into()));
-    }
-    Ok(report)
 }
