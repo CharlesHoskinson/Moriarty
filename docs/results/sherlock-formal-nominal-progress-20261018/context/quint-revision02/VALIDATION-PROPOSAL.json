@@ -1,0 +1,98 @@
+{
+  "schema": "existing-local-quint-validation-proposal/1",
+  "execution": "ROOT only after fresh exact-source independent review and selection; NONE run by author",
+  "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/revision02-identifiers/afterimages",
+  "source_freeze": "CANDIDATE-FREEZE.json",
+  "source_membership": [
+    "models/sherlock/quint/nominal-construction/nominalConstruction.qnt",
+    "models/sherlock/quint/nominal-construction/nominalConstructionInputs.qnt",
+    "models/sherlock/quint/nominal-construction/nominalConstructionTest.qnt"
+  ],
+  "commands_in_order": [
+    {
+      "name": "new-nominal-typecheck",
+      "argv": [
+        "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+        "--max-old-space-size=512",
+        "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+        "typecheck",
+        "models/sherlock/quint/nominal-construction/nominalConstructionTest.qnt"
+      ],
+      "timeout_seconds": 60
+    },
+    {
+      "name": "new-nominal-directed-tests",
+      "argv": [
+        "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+        "--max-old-space-size=512",
+        "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+        "test",
+        "models/sherlock/quint/nominal-construction/nominalConstructionTest.qnt",
+        "--main",
+        "nominalConstructionTest",
+        "--match",
+        "Test$",
+        "--backend",
+        "typescript",
+        "--max-samples",
+        "1",
+        "--seed",
+        "1"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "name": "new-nominal-directed-reachability",
+      "argv": [
+        "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+        "--max-old-space-size=512",
+        "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+        "run",
+        "models/sherlock/quint/nominal-construction/nominalConstructionTest.qnt",
+        "--main",
+        "nominalConstructionTest",
+        "--invariant",
+        "allInv",
+        "--witnesses",
+        "recursiveFirstFieldWitness",
+        "recursiveLastFieldWitness",
+        "orderedArmWitness",
+        "completedWitness",
+        "--backend",
+        "typescript",
+        "--max-samples",
+        "1",
+        "--max-steps",
+        "192",
+        "--seed",
+        "1"
+      ],
+      "timeout_seconds": 60
+    }
+  ],
+  "tool_pins": [
+    {
+      "path": "/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node",
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    {
+      "path": "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js",
+      "sha256": "ac12595b1cb7253feec93c79417615c6eb20fc3b6a3df35c5e3530b24e90a501"
+    }
+  ],
+  "limits": {
+    "heap_mb": 512,
+    "samples": 1,
+    "max_steps": 192,
+    "seed": 1,
+    "test_cases": 8,
+    "new_models_only": true,
+    "verify_apalache": false,
+    "network": false,
+    "native": false
+  },
+  "result_scope": "Observed finite directed model evidence only; no independent complete-prefix comparison until separately frozen non-author oracle is bound; no UIREQ/SCON closure",
+  "revision": 3,
+  "metadata_correction": "Original approved argv/toolpins/caps preserved; cwd/freeze point to additive corrected source. Prior QNT101 receipt retained; no author execution.",
+  "source_revision": 2
+}

@@ -1,0 +1,64 @@
+{
+  "status": "DECLARATIONS_AND_NORMATIVE_SEMANTIC_CONTRACT_ONLY_NO_POPULATED_EXPECTATIONS",
+  "sourcePins": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-clean-20261018/batch01-correction01/afterimage/clean/fork/Clean/Sherlock/CanonicalTypeId.lean",
+      "sha256": "527ceaf7234b03367d74b46ed9af0c4de0f8393d1d5d28d3ab4bfdab1db99944"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-clean-20261018/batch01-correction01/afterimage/clean/fork/Clean/Sherlock/ConstructorFields.lean",
+      "sha256": "918b677de853e66a4b9ddacd531aaa9bfd89bf9571ac603d38d3e170c37b55e0"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-clean-20261018/batch02/afterimage/clean/fork/Clean/Sherlock/NominalValue.lean",
+      "sha256": "4c4dda0e8bef8ada40b69e3190648dfea22be01a64f2b9a983401b6560841e56"
+    }
+  ],
+  "carriers": {
+    "TypeId": "{index:Nat}; same canonical carrier for builtin rows0..3 and arbitrary later rows",
+    "CtorId": "{index:Nat}; separate identity from TypeId",
+    "Frame(Expr,Value,Env)": [
+      "typeId:TypeId",
+      "ctorId:CtorId",
+      "origin:Nat",
+      "completedValues:List Value",
+      "remainingExprs:List Expr",
+      "savedEnvironment:Env"
+    ],
+    "BuildInput(Value,Env)": [
+      "typeId:TypeId",
+      "ctorId:CtorId",
+      "origin:Nat",
+      "fields:List Value",
+      "savedEnvironment:Env"
+    ],
+    "Cursor(Expr,Value,Env)": [
+      "eval(expression:Expr,environment:Env,frame:Frame Expr Value Env)",
+      "build(input:BuildInput Value Env)"
+    ],
+    "NominalValue.Value": [
+      "uint(Int)",
+      "bool(Bool)",
+      "constructor(TypeId,CtorId,List Value)"
+    ]
+  },
+  "callables": {
+    "beginFields": "(TypeId,CtorId,origin:Nat,expressions:List Expr,saved:Env)->Cursor Expr Value Env",
+    "beginFrom": "(TypeId,CtorId,origin:Nat,fieldPrefix:List Value,expressions:List Expr,saved:Env)->Cursor Expr Value Env",
+    "returnField": "(Cursor Expr Value Env,value:Value)->Option(Cursor Expr Value Env)",
+    "runReturned": "(values:List Value,Cursor Expr Value Env)->Option(Cursor Expr Value Env)",
+    "finishBuild": "(BuildInput NominalValue.Value Env)->(NominalValue.Value,Env)",
+    "finishCursor": "(Cursor Expr NominalValue.Value Env)->Option(NominalValue.Value,Env)"
+  },
+  "normativeContract": [
+    "Expressions remain in source field order; active expression is distinct from remaining suffix",
+    "Save canonical typeId/ctorId, origin and complete caller environment across every field return",
+    "A child return accumulates its value once and schedules the next source field in the saved environment",
+    "An empty field sequence reaches Build without evaluating a fabricated expression",
+    "Build is not a financial boundary or terminal machine outcome",
+    "finishBuild constructs semantic nominal value and restores saved environment, without field evaluation or arena allocation",
+    "Child source-expression meanings and all clocks/capacities remain separate premises",
+    "No populated expected values, cursor prefixes, compiler outputs, result counts or work cells in this artifact"
+  ],
+  "correction": "Reserved binder rename and append_nil proof repair only; semantic interface and independent expected cells unchanged; originals retained"
+}
