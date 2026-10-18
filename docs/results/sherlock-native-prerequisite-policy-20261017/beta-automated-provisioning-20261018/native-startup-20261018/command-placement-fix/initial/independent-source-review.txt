@@ -1,0 +1,48 @@
+### 1. Reviewer Identity, Resumed Context & Complete Read Coverage
+
+- **Actual Reviewer & Effort**: `gemini-4-argon-high` / `HIGH` (standing observed Opus 5.5 HIGH outage fallback; independent non-author security reviewer; author is R140 slot `bb6043a1-63f1-4de9-b26f-ef50139233e3`; zero tools, commands, or external reads/actions invoked).
+- **Resumed Context**:
+  - **CID**: `6277cc2c-99b8-4b7a-a220-a6c971d1bb98`
+  - **CWD (inert transport datum)**: `/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`
+- **Complete Read Coverage of All 5 Supplied Inline Bodies (100% Read, Zero Truncation)**:
+  1. `bwrap_handoff_diag.owner-proposed.py` (`13766B`, SHA-256 `87bc176659f58253f73a8d504f22109733bd4d2b85b97218d4a602cef1704f4d`): Complete (`BEGIN` to `END`, 322 lines).
+  2. `COMPLETE-AUTHOR-NONCODE-FIELDS.json` (`4206B`, SHA-256 `bbe1f3a8a1ad07f970398b0219da5df846f72d8f4ecd660305033c2c312ca0aa`): Complete (`BEGIN` to `END`).
+  3. `EXACT-GUARD-TRAMPOLINE-DATA.json` (`2586B`, SHA-256 `f623e3ee4c66f2bafb11c0aad727c411883ee12178724151d5f745aefa902f80`): Complete (`BEGIN` to `END`).
+  4. `COMPLETE-ACTUAL-SMOKE-FACTS.json` (`8331B`, SHA-256 `56de658a7c45abefa596baf626a5d5339c9b30a035e72e31d1863983378ee3d3`): Complete (`BEGIN` to `END`).
+  5. `ACTUAL-AUTHOR-TERMINAL-AND-SCOPE.json` (`2268B`, SHA-256 `ebff4c1b8e5311c458568a299fcf62d79cd9f70a1742978a9d164cb8cdfc8dd9`): Complete (`BEGIN` to `END`).
+
+---
+
+### 2. Independent Technical Audit of `bwrap_handoff_diag.owner-proposed.py` (`87bc1766...`)
+
+1. **Exact `TRAMPOLINE`, `memfd`, `--args` Serialization, Seccomp & `SCM_RIGHTS` Behavior**:
+   - **Byte Equality (`L40–72`)**: `TRAMPOLINE` in `bwrap_handoff_diag.owner-proposed.py` matches `EXACT-GUARD-TRAMPOLINE-DATA.json` (`bounded_sdk_compile.py` `94810a65...` L582, `1950B`, SHA-256 `fccbc0bf539c21f5afc1ead78cf821ba6aa1042cc2388438ad17b415732932b0`) byte-for-byte (`script_literal_equals_guard_literal: true`) and reports `trampoline_sha256` at L288.
+   - **Sealed `memfd` & NUL-Delimited `--args` (`L83–95`, `L146–169`)**: `sealed_memfd()` creates `MFD_CLOEXEC | MFD_ALLOW_SEALING` descriptors for `stage_fd`, `token_fd`, and `fd` (`sdk-bwrap-argv`), rewinds to offset `0`, and applies `F_SEAL_WRITE | F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL`. `b'\0'.join(x.encode() for x in args) + b'\0'` (L169) reproduces `bounded_sdk_compile.py`'s exact NUL-terminated `--args` buffer format.
+   - **FD Inheritance, Seccomp Listener & `SCM_RIGHTS` Handoff (`L175–222`)**: `subprocess.Popen` passes `pass_fds=(fd, stage_fd, child.fileno(), token_fd)` with `close_fds=True`, clearing `FD_CLOEXEC` on those 4 FDs before `execve('/usr/bin/bwrap', ...)`. The parent closes `child` immediately (`L184`) and polls `parent` and `proc.stdout`/`proc.stderr` via `selectors.DefaultSelector()`. On `handoff` readability (`L197–216`), `parent.recvmsg(1, socket.CMSG_SPACE(array.array('i').itemsize))` reads the 1-byte `'L'` (`0x4c`) marker and `SCM_RIGHTS` `cmsg`, immediately closes every received listener FD (`close_quiet(rfd)` at L209), records `scm_rights_fds`, and unregisters `parent`.
+
+2. **Diagnostic Discrimination Beyond the Passed `/bin/true` Smokes**:
+   - The two passed smokes (`5fe89ab9...` and `514f0022...` in `COMPLETE-ACTUAL-SMOKE-FACTS.json`) executed `/usr/bin/bwrap ... -- /bin/true` directly from CLI `argv` and established that base namespace unsharing and the 6 directory masks (all confirmed `is_dir: true` in `MASK-LSTAT.json` `70845de8...`) succeed.
+   - They did **not** test: (a) `--args <fd>` memfd parsing, (b) `pass_fds` survival of `stage_fd`, `control_fd`, and `token_fd` through `bwrap 0.11.1` (which lacks `--preserve-fds`), (c) `--remount-ro /proc`, `--remount-ro /dev`, and `--remount-ro /home/charl`, (d) duplicated pre/post-`/proc` mask binds (`L155–160`), or (e) `TRAMPOLINE` execution (`/proc/self/fd/<stage_fd>`, seal checks, `prctl(PR_SET_NO_NEW_PRIVS)`, `seccomp` `NEW_LISTENER` syscall 317, `SCM_RIGHTS` `sendmsg`, `/proc/self/fd` scrub, and `os.execve('/bin/true', ...)`).
+   - Comparing `B1_no_masks` (`use_masks=False`) and `B2_with_masks` (`use_masks=True`) cleanly isolates FD/remount/trampoline/seccomp failures from mask-bind interactions while capturing child `stderr`, `returncode`, and `handoff` state (which `bounded_sdk_compile.py` did not expose on A0 handoff failure).
+
+3. **Signal, Deadline, Cleanup & Output Cap Audit (`<= 10s` Wall / `<= 4096B` Combined Output)**:
+   - **Deadlines & Cleanup (`L24–25`, `L134`, `L231–264`, `L279–307`)**: `B1` and `B2` each enforce `VARIANT_WALL_SECONDS = 4.0` inside the selector loop, bounded overall by `GLOBAL_WALL_SECONDS = 9.0` via `signal.setitimer(signal.ITIMER_REAL, 9.0)`. Each child calls `os.setsid()` in `preexec_fn` (`L173`) and runs with `--die-with-parent`. If `SIGALRM` fires during `run_variant()`, `except BaseException` (`L231`) catches `TimeoutError`, enters `finally:` (`L234–264`) to issue `os.killpg(proc.pid, signal.SIGKILL)` + `proc.wait(timeout=1.0)` and close all pipes/sockets/memfds, skips `B2` if `time.monotonic() >= global_deadline` (`L300`), removes `/tmp/bwrap-diag-*`, and flushes valid JSON within `<= 10s`.
+   - **Output Accounting (`L26–27`, `L223–229`, `L309–319`)**: Child `stdout`/`stderr` are captured into memory (capped at `768B` per stream; truncated to `256` chars if serialized JSON exceeds `4096B`) and never written raw to the parent's `stderr`. Provided `apply_limits()` does not fail before `try:` (see Wrapper Caveat below), total combined `stdout + stderr` of the script is strictly `<= 4096B`.
+
+4. **Process-Tree (`<= 4` Tasks), Memory (`<= 1 GiB`) & Wrapper Invocation Findings**:
+   - **Task & Memory Bounds (`L28–30`, `L75–80`)**: Omitting `RLIMIT_NPROC` is technically sound because Linux `RLIMIT_NPROC` counts all UID `1000` tasks host-wide. Because `B1` and `B2` run sequentially and `TRAMPOLINE` `execve()`s `/bin/true` in-place without forking, at most **4 concurrent processes** exist in the job tree at any instant: (1) outer `python3`, (2) outer `bwrap`, (3) `bwrap` pidns monitor, and (4) inner `python3` -> `/bin/true`. Under inherited `RLIMIT_AS = 256 MiB` and `RLIMIT_DATA = 128 MiB`, worst-case aggregate virtual address space is `4 * 256 MiB = 1 GiB` and heap/data is `<= 512 MiB` (plus 16 MiB ephemeral `/home/charl` tmpfs), remaining within A0's `1 GiB` / `64`-task ceilings without inventing a cgroup framework.
+   - **Two Concrete Wrapper/Controller Placement Conditions (No Script Edit Needed if Controller Observes Either Option)**:
+     1. **Outer `prlimit` Compatibility (`L75–80`)**: `apply_limits()` calls `resource.setrlimit` with `(soft, hard)` equal to `FSIZE=65536`, `DATA=134217728`, `AS=268435456`, `CPU=5`. Unlike the earlier `/bin/true` smokes (which wrapped `bwrap` in `prlimit --as=67108864 --cpu=2 --fsize=4096 --nofile=32`), the outer controller launching `bwrap_handoff_diag.py` **must not** pre-set hard `rlimit`s below `(AS=268435456, DATA=134217728, FSIZE=65536, CPU=5)`, or `apply_limits()` will raise `ValueError: not allowed to raise maximum limit` at L77–80 before `try:`.
+     2. **`setpriv` Privilege Requirement (`COMPLETE-AUTHOR-NONCODE-FIELDS.json` `wrapper_argv`)**: `setpriv --reuid=1000 --regid=1000 --clear-groups --inh-caps=-all --bounding-set=-all --no-new-privs` requires root capabilities (`CAP_SETGID`/`CAP_SETPCAP` for `--clear-groups` and `--bounding-set=-all`, as used in the passed smokes via `sudo -n -- ... setpriv ...`). If Root instead launches the script directly from an already-unprivileged `uid=euid=gid=egid=1000`, `CapEff=0` process without `sudo -n`, only `setpriv --no-new-privs -- /usr/bin/env -i ...` (or `/usr/bin/env -i ...` directly, since `bwrap --cap-drop ALL --disable-userns` and `TRAMPOLINE` `prctl(38, 1)` already enforce `NoNewPrivs=1` inside the sandbox) can be used without `setpriv` failing with `EPERM`.
+
+---
+
+### 3. Separate Verdicts & Scope Disposition
+
+- **`source_verdict`**: **`APPROVE`** (for `bwrap_handoff_diag.owner-proposed.py`, `13766B`, SHA-256 `87bc176659f58253f73a8d504f22109733bd4d2b85b97218d4a602cef1704f4d`, as a standalone host-only A0 FD/trampoline/seccomp diagnostic script; zero source edits required).
+- **`ordinary_operation_scope_disposition`**: **`ELIGIBLE_WITH_EXACT_CONDITIONS`** as a one-shot, SDK-free ordinary host-only diagnostic operation (`native_authority = 0`), subject to:
+  1. **Exact Script & Target Binding**: Execute unmodified `87bc176659f58253f73a8d504f22109733bd4d2b85b97218d4a602cef1704f4d` at `/tmp/bwrap_handoff_diag.py` (and remove `/tmp/bwrap_handoff_diag.py` after capture), targeting `/bin/true` only.
+  2. **Wrapper & Controller Enforcement**: Enforce an outer `10s` hard wall timeout (`--signal=TERM --kill-after=1s 10s`) and `<= 4096B` combined output capture without imposing outer hard `prlimit` values lower than `apply_limits()` (`AS >= 268435456`, `DATA >= 134217728`, `FSIZE >= 65536`, `CPU >= 5`, `NOFILE >= 32`); use `wrapper_argv`'s full `setpriv --reuid=1000 ... --clear-groups --bounding-set=-all --no-new-privs` only when dropping from `sudo -n`, or `setpriv --no-new-privs -- /usr/bin/env -i LANG=C PATH=/usr/bin:/bin /usr/bin/python3 -I -B -S /tmp/bwrap_handoff_diag.py` when already running as verified `1000:1000` / `CapEff=0`.
+  3. **Strict Non-Effects**: Zero SDK/Cargo/worktree/archive/native-root/marker access; zero reuse of consumed `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-evidence-20261018-01`; unadopted guard patch remains unadopted; `native_authority = 0`, `R2 = UNSATISFIED`, `C4 = OPEN`, `60s/460s = HOLD`, `stoppedAm10 = UNCHANGED`, `T3 = QUARANTINED`.
+
+END-INDEPENDENT-HOST-ONLY-FD-TRAMPOLINE-SOURCE-REVIEW

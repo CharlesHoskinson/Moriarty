@@ -1,0 +1,51 @@
+### 1. Reviewer Identity, Resumed Context & Complete Read Coverage
+
+- **Actual Reviewer & Effort**: `gemini-4-argon-high` / `HIGH` (standing observed Opus 5.5 HIGH outage fallback; independent non-author security reviewer; author of the changed diagnostic candidate is R140 slot `bb6043a1-63f1-4de9-b26f-ef50139233e3`; zero tools, commands, or external reads/actions invoked).
+- **Resumed Context**:
+  - **CID**: `6277cc2c-99b8-4b7a-a220-a6c971d1bb98`
+  - **CWD (inert transport datum)**: `/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`
+- **Complete Read Coverage of All 5 Supplied Inline Bodies (100% Read, Zero Truncation)**:
+  1. `COMPLETE_CHANGED_DIAGNOSTIC_SOURCE` (`bwrap_handoff_diag.owner-minimal-correction.py`, `13798B`, SHA-256 `0ee523a0f46bf072dd72c79085b19495a5d2cb8def73281043c5cd19cb1e71e3`): Complete (`BEGIN` to `END`, 325 lines).
+  2. `FULL_ACTUAL_OWNER_DIAGNOSIS_AND_PATCH_PROPOSALS` (`FINAL-RESPONSE.txt`, `11181B`, SHA-256 `8b01f67fe795677cc5444e06e9b424b3ad8639c2518a349feaec623849794deb`): Complete (`BEGIN` to `END`).
+  3. `COMPLETE_PRIOR_ACTUAL2809B_JSON` (`combined-output.bin`, `2809B`, SHA-256 `0ef33e8dec9354339dcaf236745d4cf90bf31a43ea6778322340cc5586aa016b`): Complete (`BEGIN` to `END`).
+  4. `EXACT_UNCHANGED_WRAPPER_AND_CONTROLLER_FACTS` (`ROOT-SELECTION.json`, `969B`, SHA-256 `3849500921d33b0227f2d25ef654d390e371802d5ad7544d14b30e30733e85a4`): Complete (`BEGIN` to `END`).
+  5. `COMPLETE_PRIOR_ACTUAL_CAPTURE_RESULT` (`RESULT.json`, `385B`, SHA-256 `fff5abcc146ea860bcd9021e97fdc45df79ef92d5e73791c8c59e975314e49e1`): Complete (`BEGIN` to `END`).
+
+---
+
+### 2. Independent Technical Audit of Changed Candidate `0ee523a0f46bf072dd72c79085b19495a5d2cb8def73281043c5cd19cb1e71e3` (`13798B`)
+
+1. **Evaluation of Prior Actual Output (`0ef33e8d...`, `2809B`) & Exact `+32B` Diff (`L161–184`)**:
+   - **What Attempt 01 Established**: In `COMPLETE_PRIOR_ACTUAL2809B_JSON`, both `B1_no_masks` (`2.94ms`) and `B2_with_masks` (`1.96ms`) exited with `returncode: 1`, `scm_rights_fds: 0`, `received_msg_hex: ""`, and `stderr` beginning with `usage: /usr/bin/bwrap [OPTIONS...] [--] COMMAND [ARGS...]\n\n`. When `bwrap` parses `--args FD`, its in-file option parser consumes `[OPTIONS...]` from the memfd, but `main()` still requires `COMMAND [ARGS...]` to be present on the outer process `argv` (`argc > 0` after option parsing). Because `87bc1766...` placed `'--'` and `/usr/bin/python3 ...` inside the `--args` memfd and invoked `['/usr/bin/bwrap', '--args', str(fd)]` with no trailing positional command on outer `argv`, `bwrap` exited at CLI usage check before creating namespaces, mounting, or executing `TRAMPOLINE`.
+   - **Exact Verification of the Literal Edit in `0ee523a0...` (`L161–184`)**:
+     - `args` (`L149–165`) now stops at `'--chdir', '/'`, so `fd = sealed_memfd('sdk-bwrap-argv', b'\0'.join(x.encode() for x in args) + b'\0')` (`L170`) contains **only** `bwrap` option tokens.
+     - `cmd` (`L166–169`) defines `['/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/' + str(stage_fd), str(stage_fd), str(child.fileno()), str(token_fd), '/bin/true']`.
+     - `subprocess.Popen` (`L176–184`) invokes `['/usr/bin/bwrap', '--args', str(fd), '--', *cmd]` with unchanged `pass_fds=(fd, stage_fd, child.fileno(), token_fd)`, `preexec_fn=enter`, `close_fds=True`, `env={}`, `stdin=DEVNULL`, and piped `stdout`/`stderr`.
+     - All other lines (`L1–160` and `L185–325`) are byte-for-byte identical to `87bc1766...` (`13766B + 32B = 13798B`).
+
+2. **Diagnostic Usefulness & Remaining Unobserved Hypotheses**:
+   - Separating `[OPTIONS...]` (in `--args <fd>`) from `['--', *cmd]` (on outer `bwrap` `argv`) directly resolves the CLI usage refusal and advances `B1` and `B2` into post-parse `bwrap` execution, testing the exact hypotheses that remained unreached in attempt 01:
+     1. Whether `bwrap 0.11.1` leaves inherited `pass_fds` (`stage_fd`, `child.fileno()`, `token_fd`) open across sandbox setup into `/usr/bin/python3 -I -B -S /proc/self/fd/<stage_fd>` or closes FDs `> 2` before exec;
+     2. Whether `--remount-ro /proc`, `--remount-ro /dev`, `--remount-ro /home/charl`, and (`B2`) the doubled pre/post-`/proc` 6-directory `--ro-bind` mask loops succeed when launching `TRAMPOLINE`; and
+     3. Whether `TRAMPOLINE` (`fccbc0bf...`) completes `F_GET_SEALS`, `prctl(38, 1)`, `seccomp` `NEW_LISTENER` (`syscall 317`), `SCM_RIGHTS` `sendmsg` (`received_msg_hex == "4c"`, `scm_rights_fds == 1`), `/proc/self/fd` scrubbing, and `os.execve('/bin/true', ...)`.
+   - **Important Distinction**: The author's inference that this `--args` parser behavior was the sole cause of native A0's failure (`39126d62...`) is a plausible hypothesis, **not** yet an established complete explanation of post-parse handoff survival until `0ee523a0...` actually runs and observes `B1`/`B2` post-parse outcomes.
+
+3. **Resource, Process-Tree, Deadline, Output & Cleanup Invariants (Unchanged by `+32B` Edit)**:
+   - **Timers & Cleanup**: `GLOBAL_WALL_SECONDS = 9.0` (`ITIMER_REAL`, `L279–284`) and `VARIANT_WALL_SECONDS = 4.0` (`L134`) remain unchanged beneath the outer controller's `10s` (`+ 1s` `SIGKILL`) timeout (`next_wrapper_argv`). Each variant isolates its child in a new session/process group (`os.setsid()`, `L174`) with `--die-with-parent`, and `finally:` (`L237–267`) kills any surviving process group via `os.killpg(proc.pid, signal.SIGKILL)`, waits up to `1.0s`, closes all pipes, sockets, received `SCM_RIGHTS` descriptors (`L212`), and memfds, and removes `/tmp/bwrap-diag-*`.
+   - **Output Cap**: Per-stream capture (`768B`) and final stdout JSON truncation (`OUTPUT_CAP_BYTES = 4096`, `L312–322`) remain unchanged and compatible with the outer controller's `4096B` combined capture cap.
+   - **Memory & Task Bounds (Qualified Structural Bound, Not Kernel Memcg)**: Per-process `RLIMIT_AS = 256 MiB`, `RLIMIT_DATA = 128 MiB`, `RLIMIT_FSIZE = 65536B`, `RLIMIT_CPU = 5s`, and `RLIMIT_CORE = 0` (`L75–80`) apply across a sequential, at-most-4-process tree (outer `python3`, outer `bwrap`, `bwrap` pidns monitor, and inner `python3` `execve`ing `/bin/true` in-place), keeping worst-case aggregate virtual address space `<= 1 GiB` and concurrent tasks `<= 4` (within A0's `1 GiB` / `64`-task ceilings, without `RLIMIT_NPROC` host-UID interference or cgroup creation).
+   - **Wrapper Compatibility**: `next_wrapper_argv` in `8b01f67f...` matches the exact wrapper and controller configuration (`38495009...`) that succeeded in attempt 01 (`no_outer_rlimit_lower_than_script: true`).
+
+4. **Non-Review / Non-Adoption of the Separate Guard Patch Proposal in `8b01f67f...`**:
+   - `matching_unchanged_guard_defect_and_minimal_proposal` inside `8b01f67f...` is **not** part of this diagnostic candidate, is **not** adopted or reviewed here, and cannot be evaluated until: (a) `0ee523a0...` runs and reveals whether post-parse FD inheritance in `bwrap 0.11.1` also requires changes (e.g., if `bwrap 0.11.1` closes extra FDs not referenced by `--args` / `--sync-fd`), and (b) its exact source anchor against `bounded_sdk_compile.py` (`94810a65...`) is reconciled in a separate review (noting that the first line of `old` in `8b01f67f...`'s guard snippet has 13 leading spaces vs. 12).
+
+---
+
+### 3. Separate Verdicts & Scope Disposition
+
+- **`source_verdict`**: **`APPROVE`** (for `bwrap_handoff_diag.owner-minimal-correction.py`, `13798B`, SHA-256 `0ee523a0f46bf072dd72c79085b19495a5d2cb8def73281043c5cd19cb1e71e3`, as a standalone host-only FD/trampoline discriminator; zero defects found in the diagnostic script).
+- **`operation_scope_disposition`**: **`OPERATION_ELIGIBLE`** (with exact unchanged conditions) for a single one-shot, SDK-free ordinary host-only diagnostic execution (`native_authority = 0`):
+  1. **Exact Script, Placement & Wrapper**: Place unmodified `0ee523a0f46bf072dd72c79085b19495a5d2cb8def73281043c5cd19cb1e71e3` (`13798B`) at `/tmp/bwrap_handoff_diag.py` with `cwd = /tmp`, execute once via `next_wrapper_argv` (`/usr/bin/timeout --signal=TERM --kill-after=1s 10s /usr/bin/sudo -n -- /usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups --inh-caps=-all --bounding-set=-all --no-new-privs -- /usr/bin/env -i LANG=C PATH=/usr/bin:/bin /usr/bin/python3 -I -B -S /tmp/bwrap_handoff_diag.py`) under the `10s` (`+ 1s` kill) / `4096B` combined capture controller with no outer `rlimit` lower than `apply_limits()`, and remove `/tmp/bwrap_handoff_diag.py` afterward.
+  2. **Strict Non-Effects & Preserved Boundaries**: Targets `/bin/true` only; performs only the 6 directory `lstat` calls and ephemeral `/tmp/bwrap-diag-*` scratch mounts inside `bwrap`; touches zero SDK, Cargo, archive, worktree, config, or consumed native/evidence paths (`/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-evidence-20261018-01`); adopts no guard patch (`bounded_sdk_compile.py` `94810a65...` unchanged); and leaves `native_authority = 0`, `R2 = UNSATISFIED`, `C4 = OPEN`, `60s/460s = HOLD`, `stoppedAm10 = UNCHANGED`, and `T3 = QUARANTINED`.
+
+END-R329-INDEPENDENT-MINIMAL-CHANGED-DISCRIMINATOR-REVIEW

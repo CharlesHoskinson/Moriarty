@@ -1,0 +1,55 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/bounded_sdk_compile.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/336-unadopted-owner-exact-guard-correction/bounded_sdk_compile.owner-proposed.py
+@@ -660,24 +660,41 @@
+             separator=args.index('--');target=args[separator+1:]
+             if audit:target+=['--config-sha256',config_sha,'--worker-fd',str(token_fd)]
+             preserved=[stage_fd,child.fileno()]+([token_fd] if audit else [])
+-            args=args[:separator]+['--','/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]
+-            fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in args)+b'\0')
++            cmd=['/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]
++            fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in args[:separator])+b'\0');args=args[:separator]+['--',*cmd]
+             try:
+                 for name in ('stdout','stderr'):logs.append(open(packet/(phase+suffix+'.'+name),'xb',buffering=0))
+                 def enter():
+                     parent.close();group.join_child()
+-                proc=subprocess.Popen(['/usr/bin/bwrap','--args',str(fd)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={},pass_fds=tuple([fd,*preserved]),preexec_fn=enter,close_fds=True)
++                proc=subprocess.Popen(['/usr/bin/bwrap','--args',str(fd),'--',*cmd],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={},pass_fds=tuple([fd,*preserved]),preexec_fn=enter,close_fds=True)
+                 child.close();parent.settimeout(max(.001,v['wall_seconds']-(time.monotonic()-start)))
+-                message,anc,flags,_=parent.recvmsg(1,socket.CMSG_SPACE(array.array('i').itemsize))
+-                need(message==b'L' and not flags,'listener handoff failed')
+-                received=[]
+-                for level,kind,data in anc:
+-                    need(level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS,'unexpected handoff')
+-                    values=array.array('i');values.frombytes(data);received.extend(values)
+-                need(len(received)==1,'exact one seccomp listener required');listener=received[0]
+-                sel.register(listener,selectors.EVENT_READ,('network',None))
+                 for name,stream,log in zip(('stdout','stderr'),(proc.stdout,proc.stderr),logs):
+                     os.set_blocking(stream.fileno(),False);sel.register(stream,selectors.EVENT_READ,(name,log))
++                received=[]
++                try:
++                    message,anc,flags,_=parent.recvmsg(1,socket.CMSG_SPACE(array.array('i').itemsize))
++                    need(message==b'L' and not flags,'listener handoff failed')
++                    for level,kind,data in anc:
++                        need(level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS,'unexpected handoff')
++                        values=array.array('i');values.frombytes(data);received.extend(values)
++                    need(len(received)==1,'exact one seccomp listener required');listener=received[0]
++                except BaseException:
++                    for rfd in received:
++                        try:os.close(rfd)
++                        except OSError:pass
++                    group.kill()
++                    while sel.get_map():
++                        if time.monotonic()-start>v['wall_seconds']:break
++                        events=sel.select(.05)
++                        if not events and proc.poll() is not None:break
++                        for key,_ in events:
++                            name,log=key.data;chunk=os.read(key.fileobj.fileno(),65536)
++                            if not chunk:sel.unregister(key.fileobj);continue
++                            take=min(len(chunk),max(0,v[name+'_bytes']-counts[name]))
++                            if take:counts[name]+=take;log.write(chunk[:take])
++                            if take<len(chunk):sel.unregister(key.fileobj)
++                    raise
++                sel.register(listener,selectors.EVENT_READ,('network',None))
+                 while len(sel.get_map())>1 or proc.poll() is None:
+                     need(time.monotonic()-start<=v['wall_seconds'],'wall cap '+phase);group.check()
+                     for key,_ in sel.select(.05):

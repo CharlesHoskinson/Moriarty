@@ -174,10 +174,11 @@ mori simulate SOURCE --execution-profile sherlock-helper-microstep/1 --source-pr
 `SOURCE`, `CONFIG` and `TARGET` denote actual file paths. The current
 [runtime fixtures](../../../crates/mori-core/tests/fixtures/draft-runtime-independent/)
 are explicit specimen inputs, not numerical defaults. No output or successful
-invocation of this command is shown: the enclosing public CLI/global handler,
-file reads/writes remain **UNRUN**. The report API now has the separate Rust
-consumer observation below; it is not CLI/file-I/O evidence. The existing complete
-Rust file-publication example above also remains unrun.
+invocation of this command is shown: the enclosing public CLI/global dispatch
+remains **UNRUN**. R322 separately passed a direct consumer of the actual selected
+handler with production file reads and JSON export/printing, saving both complete
+reports; this does not execute the enclosing command. The existing complete Rust
+file-publication example above also remains unrun.
 
 The installed command source selects a dedicated entry without action/scenario, resume,
 trace, logical-cap or signed replay arguments. It prints preparation and actual
@@ -204,8 +205,12 @@ test status, not a saved report or trace. R315 completed successfully; Root
 installed all six consumer files, verified the combined twenty-file source/test
 set and applied reviewed reporting compatibility. The existing reader is now
 CURRENT11/35 with no findings; the earlier CURRENT10/stale025 negative is retained.
-Full CLI and file/output handling remain UNRUN, so B04's actual clause stays
-unchecked. See the [source and receipt archive](../../results/sherlock-simulate-report-20261018/README.md);
+R322 subsequently passed four phases covering the actual selected handler's
+production Args, file reads, JSON export/printing and a saved-files-only verifier.
+Both complete reports are persisted (ChainTotal 59,814 bytes; BranchTotal 64,160),
+with independent UInt 7/8 and declared bindings checked under frozen R324 predicates.
+Full root CLI/global dispatch and file publication remain UNRUN; B04 stays
+unchecked, with no exact B-clock/full-trace or new requirement closure. See the [source and receipt archive](../../results/sherlock-simulate-report-20261018/README.md);
 no command output is fabricated here.
 
 ## Inspect the observed public runtime cases

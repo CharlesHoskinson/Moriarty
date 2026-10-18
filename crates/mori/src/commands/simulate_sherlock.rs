@@ -4,7 +4,7 @@ use std::process::ExitCode;
 use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
 use mori_core::sherlock::helper_machine::shared::{OutcomeC, StepEventC};
 use super::Args;
-use super::super::core_io;
+use super::super::source_io as core_io;
 
 pub(super) use crate::cli_args::simulate::selection;
 
