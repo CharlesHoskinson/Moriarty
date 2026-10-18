@@ -1,0 +1,154 @@
+{
+  "scope": "ordinary literal/source fidelity, not a correctness or security vote",
+  "finding_count": 5,
+  "minor": 3,
+  "note": 2,
+  "blocking": 0,
+  "findings": [
+    {
+      "id": "F-01",
+      "severity": "minor",
+      "kind": "owner_interface_dependency",
+      "fidelity_assessment": "SUPPORTED_CONDITIONAL_CODEC_DEPENDENCY",
+      "scope_and_qualification": "B01/B02 require complete baseline reports in saved history; B32 explicitly requires an Await-bearing Step on a true resume. B21 shared Statement/Step/Execution Deserialize routes via frozen v1 without Await, and B26 StageSegment is Serialize-only. Thus directly deriving shared decoding as-is is incompatible with the proposed complete-history carrier. No recovery decoder was executed or supplied. The suggested dedicated DTO/DeserializeSeed is a reviewer-requested owner disposition, not an owner-adopted algorithm.",
+      "unchanged_review_fields": {
+        "source_location": {
+          "review_json_line": 26,
+          "literal": "B01 CONTRACT.json:57,84,107-132; B21 source/crates/mori-core/src/ir.rs:3568-3572,3904-3915; B26 source/crates/mori-core/src/stage/mod.rs:5283-5291",
+          "utf8_sha256": "e6dd8900c5e163c0ce54302c1439fcf6fee9163f9f165eba1bc7e04bd5eba71b"
+        },
+        "finding": {
+          "review_json_line": 21,
+          "literal": "RecoveryCheckpoint persists history: Invocation[] containing full baseline StageReport objects (B01 CONTRACT.json:84,107-113; B02 DESIGN.md:330,342), and DR-005 requires reopen/resume/recover to decode the entire saved checkpoint. In existing Core2 (B21 source/crates/mori-core/src/ir.rs:3568-3572,3904-3915; B26 source/crates/mori-core/src/stage/mod.rs:5283-5291; B32 source/docs/CORE-STAGED-TESTS.md:6549), a true resume emits a Step whose statement is Statement::Await, but StageSegment is Serialize-only and shared ir::Statement/Step/Execution route Deserialize exclusively through ir::v1 (which forbids Await). CONTRACT.json:57 notes that no general shared Deserialize is introduced on Statement.",
+          "utf8_sha256": "8c41776b4a4626baa9a67f92285fc4cd70bc63e91be4a5634393a97e721d6ce6"
+        },
+        "consequence": {
+          "review_json_line": 20,
+          "literal": "If an implementation attempts to derive Deserialize on RecoveryCheckpoint using the shared mori_core::ir::Execution / ir::Step / ir::Statement types as-is, reopening any checkpoint whose baseline history contains a true resume across an Await step will fail deserialization because ir::v1::Statement rejects Await; conversely, adding Await to shared ir::Statement::deserialize would break the frozen Core1 v1 decode wire invariant in B21.",
+          "utf8_sha256": "e894957739dea5b86fcb0e146a56767342c2a7d681e630fe68bcf87a1b0f757b"
+        },
+        "requested_disposition": {
+          "review_json_line": 24,
+          "literal": "Under O-DURABLE and the versioned checkpoint codec implementation, provide a dedicated recovery-checkpoint DTO / DeserializeSeed path that decodes StageReport/StageSegment (allowing Statement::Await in baseline history steps while keeping handler body statements non-Await) without modifying the shared ir::v1 Deserialize implementation on mori_core::ir::{Statement, Step, Execution}.",
+          "utf8_sha256": "86609188f5dd2403f249c8f3e618d635223882b7f3717080a68fdec2793d273b"
+        }
+      }
+    },
+    {
+      "id": "F-02",
+      "severity": "minor",
+      "kind": "owner_interface_dependency",
+      "fidelity_assessment": "SUPPORTED_DISTINCT_SIZE_ENVELOPES; NO_REPRODUCED_FAILURE",
+      "scope_and_qualification": "B22 exports through the 1 MiB parser, depth32/node65536 checks, ASCII escaping and final-LF bound. B20 exports each case independently; it deliberately does not put a 1 MiB ceiling on the entire multi-case aggregate. B25 uses the continuation-specific bound; B26 supplies its exact 4*1048576 constant. B08 proposes repeated report/checkpoint/stdout nesting. This supports an owner consistency question, not proof any concrete normal case currently fails, nor selection of new bounds.",
+      "unchanged_review_fields": {
+        "source_location": {
+          "review_json_line": 36,
+          "literal": "B08 PUBLIC-LIFECYCLE.md:1458-1461; B20 source/crates/mori/src/commands/test.rs:3335-3364; B22 source/crates/mori-core/src/json.rs:3943-3955,4054-4077; B25 source/crates/mori-core/src/stage/decode.rs:4909-4911",
+          "utf8_sha256": "722fcb768e00bb7ef8f13d9bd423756abcef7a32d9927743385822262efd2dda"
+        },
+        "finding": {
+          "review_json_line": 31,
+          "literal": "In B22 (source/crates/mori-core/src/json.rs:3943-3955,4054-4077) and B20 (source/crates/mori/src/commands/test.rs:3354), json::export enforces a 1 MiB byte ceiling, depth 32, and 65,536 JSON nodes per exported value (and per test case in aggregate_report), whereas B25 (source/crates/mori-core/src/stage/decode.rs:4909-4911) allows 4 MiB for Continuation. In the proposed recovery lifecycle (B01 CONTRACT.json:60-85,158-169; B08 PUBLIC-LIFECYCLE.md:1460), RecoveryReport embeds both the last Invocation and the full RecoveryCheckpoint (which embeds cumulative history: Invocation[]), and each operation in a mori test case embeds report, checkpoint_in, checkpoint_out, and process.stdout (the serialized report text).",
+          "utf8_sha256": "39f7e3955af73d577f8592e6773ead7adb69c7d4fb26bd0bf57341c735f637c8"
+        },
+        "consequence": {
+          "review_json_line": 30,
+          "literal": "Without explicit coordination of byte, depth, and node bounds across RecoveryCheckpoint, RecoveryReport, and moriarty-local-recovery-test-report/1, multi-operation recovery test cases could exceed the existing 1 MiB / depth-32 / 65,536-node per-case export limit in test.rs even when individual checkpoints fit within a 4 MiB continuation ceiling.",
+          "utf8_sha256": "301b2388cb237151e1e9a84f9c7d62a786e636a293ef64436e2677b4582c5797"
+        },
+        "requested_disposition": {
+          "review_json_line": 34,
+          "literal": "Ensure the designated owner under O-TRACE, O-DURABLE, and O-IO specifies exact byte, depth, and JSON node envelopes for RecoveryCheckpoint, RecoveryReport, and moriarty-local-recovery-test-report/1 so that checkpoint decoding, report printing, and per-case aggregate export are mutually consistent without truncating history or failing valid multi-step test cases.",
+          "utf8_sha256": "3bd4bf6d0d9987771cb08a14d67a9670f69dc55de3da3142ca1f362490bc41b9"
+        }
+      }
+    },
+    {
+      "id": "F-03",
+      "severity": "minor",
+      "kind": "owner_interface_dependency",
+      "fidelity_assessment": "SUPPORTED_COMBINED_DOMAIN_DEPENDENCY",
+      "scope_and_qualification": "B25 registry ranges over base p.actions; explicit account checks at the cited loop concern selected base action Transfer/Fee accounts. B04 states a reserve-to-buyer handler transfer absent from the base prefix transfer/fee list. The source summaries and fixed current scope support asking O-ACCT/O-REG for the paired domain; optional source specimens were not opened or certified. No new balance/authority/admission rule is authored here.",
+      "unchanged_review_fields": {
+        "source_location": {
+          "review_json_line": 46,
+          "literal": "B04 NORMAL-CASES.md:759-765; B06 OWNER-RULES.json:1262-1275; B25 source/crates/mori-core/src/stage/decode.rs:4953-4978,5058-5117",
+          "utf8_sha256": "0a9d647bc09e8ef6e71eb4305b8b0e3a422bca0efe0fcbc7ae9c0ab359ee34d2"
+        },
+        "finding": {
+          "review_json_line": 41,
+          "literal": "In B25 (source/crates/mori-core/src/stage/decode.rs:4953-4978,5058-5117), Core2 canonical_boundary (R7) checks explicit balance rows only for accounts referenced in Statement::Transfer or Statement::Fee of the selected base action, and builds the duty registry only from base Program.actions. In B04 (NORMAL-CASES.md:761-763), the forward-compensation base purchase prefix creates a remedy liability (reserve -> buyer) without a base Transfer/Fee touching reserve, while the companion compensate handler executes Transfer(PAY, \"reserve\", \"buyer\", compensation).",
+          "utf8_sha256": "229f3ecc0119358d75127b67f91172a05f0abb9781cbd565f2c1086ac57f2fab"
+        },
+        "consequence": {
+          "review_json_line": 40,
+          "literal": "If start or reopen/recover boundary validation reused base canonical_boundary (B25) without including companion handler accounts and duties, an account touched only by a recovery handler Transfer/Fee (or a duty created/discharged in a handler) would not be uniformly checked across the paired lifecycle.",
+          "utf8_sha256": "3ad7d19537075ea474d8271bd4524c15771cd41443071d88c7845a1236c3a66f"
+        },
+        "requested_disposition": {
+          "review_json_line": 44,
+          "literal": "Under O-ACCT and O-REG, define the exact combined account-row boundary and duty registry over the paired base action plus all companion recovery handlers for that action so required accounts (such as reserve) and duty identities are validated consistently at start, reopen, resume, and recover.",
+          "utf8_sha256": "49d08dd012bca589845e384fd149baf87b609f13768684f7a82702bbcf6e8a68"
+        }
+      }
+    },
+    {
+      "id": "F-04",
+      "severity": "note",
+      "kind": "ordinary_design",
+      "fidelity_assessment": "SUPPORTED_NONBLOCKING_SCHEMA_SYNCHRONIZATION_NOTE",
+      "scope_and_qualification": "B02 gives the named RecoveryPlan fields; B01 has the ceiling equation and complete plan inspection but no equivalent structured root Plan field-map block. B08 states reopen+transition for CLI resume/recover and distinguishes event-free reopen_report. This is the reviewer's note for a later schema freeze, with required_ordinary_changes still empty; it does not create a new blocking vote.",
+      "unchanged_review_fields": {
+        "source_location": {
+          "review_json_line": 56,
+          "literal": "B01 CONTRACT.json:182,218-220,248-260; B02 DESIGN.md:354; B08 PUBLIC-LIFECYCLE.md:1414-1423,1440-1449",
+          "utf8_sha256": "eec6dfb17b678f3e8a2863d196528b4435e36b211f25a9bfb520623c93fe80cd"
+        },
+        "finding": {
+          "review_json_line": 51,
+          "literal": "B02 (DESIGN.md:354) specifies the exact per-arm fields (guard_cost, body_cost, recovery_cost, committed_before, successful_path_total) and per-action fields (forward_total, successful_path_ceiling) of the recovery plan (moriarty-recovery-plan/1), while B01 (CONTRACT.json:182,218-220,259) summarizes the ceiling equation and inspect_report.plan in prose. Similarly, B08 (PUBLIC-LIFECYCLE.md:1418-1421,1430,1443-1448) explains that CLI --resume and --recover read the checkpoint file via reopen before invoking library resume/recover, whereas CLI --reopen invokes reopen and reopen_report without an event.",
+          "utf8_sha256": "2df2ee786575a225d41b6e7c3d3a9a860b61baa34ac628568408c9e096d61c55"
+        },
+        "consequence": {
+          "review_json_line": 50,
+          "literal": "Having RecoveryPlan's exact field map in prose (B02) rather than as a top-level structured entry in CONTRACT.json, and leaving the CLI-to-library reopen step implicit in CONTRACT.json's public_operation_contracts, could cause minor schema-key drift if not kept synchronized.",
+          "utf8_sha256": "be86c7089bf0f7705b220f69a8ac229510ef6d0caa248974274af68234e3f73c"
+        },
+        "requested_disposition": {
+          "review_json_line": 54,
+          "literal": "When freezing the final ordinary schema after owner rules are supplied, include an explicit RecoveryPlan field-map block in CONTRACT.json matching DESIGN.md:354 and note explicitly in CONTRACT.json public_operation_contracts that CLI --resume/--recover compose reopen + resume/recover over the on-disk checkpoint path.",
+          "utf8_sha256": "356c2e222e5e37ffe969e062480f6528cf5e6b35a4c9bfcd0b4ff02e53d93b37"
+        }
+      }
+    },
+    {
+      "id": "F-05",
+      "severity": "note",
+      "kind": "scope_or_evidence",
+      "fidelity_assessment": "SUPPORTED_EVIDENCE_CUSTODY_LIMITATION",
+      "scope_and_qualification": "B04/B09 explicitly disclose author-assembled source-exposed specimens and L04 financial-only scope. B03 DR-016 and B34 UNI-020 retain distinct independent full expectations before scoring. Counts74/27 are proposal statements, not custody certification of those unread optional files. No example arithmetic, work, identity or bytes are certified by this opinion or this fidelity check.",
+      "unchanged_review_fields": {
+        "source_location": {
+          "review_json_line": 66,
+          "literal": "B03 EARS.json:641-653; B04 NORMAL-CASES.md:743,773-778; B09 README.md:1481-1484; B34 source/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md:6999-7016",
+          "utf8_sha256": "5fbe971e8efa73f4ab97e4c3b70993fa066bf58e09edaf11ae2e2e4c8103182f"
+        },
+        "finding": {
+          "review_json_line": 61,
+          "literal": "B04 (NORMAL-CASES.md:743,777) and B09 (README.md:1481-1483) explicitly disclose that the 74 example files are author-assembled documentary design specimens with literal OWNER identity slots and that the 27 L04 files supply financial frames without recovery work, admission, or failure policy. Per review instructions, those optional files were not reopened or verified in this architectural review.",
+          "utf8_sha256": "6a5259dd2131f8e8380df246dce0fac0b8492f4bdb2a9c01fd1edc26caca45b0"
+        },
+        "consequence": {
+          "review_json_line": 60,
+          "literal": "Treating the author's design specimens or partial L04 financial frames as already-certified runtime goldens would violate UNI-020 and DR-016.",
+          "utf8_sha256": "449b60c09aa459b1d0dd87762f85734ef211f1f238edb43c58c8c19d52213912"
+        },
+        "requested_disposition": {
+          "review_json_line": 64,
+          "literal": "Maintain DR-016 and UNI-020 strictly: after two agreeing ordinary votes and designated-owner O-* contracts are adopted, require a distinct independent custodian to derive and freeze complete Program, Plan, checkpoint, report, work, financial, and byte expectations from the adopted rules before scoring any implementation or test run.",
+          "utf8_sha256": "b97a10885b60657eb619446b5108d04561d0e8689403006e0d964b61f64b7aec"
+        }
+      }
+    }
+  ]
+}
