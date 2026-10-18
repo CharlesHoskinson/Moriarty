@@ -1,0 +1,400 @@
+//! PROVISIONAL, UNINSTALLED raw type preparation from the pinned B-core R2 proposal.
+//! No schema freeze, adoption, product capability, bounded layout or wire ABI.
+//! All fields are unvalidated data. No admission tokens, MachineImage, checks,
+//! constructors enforcing policy, defaults, conversions or behavioral methods.
+//! Compilation and all execution are UNRUN. See TYPE-MAPPING.json for exact
+//! provenance and omitted dependent closures. Public visibility here does not
+//! install or export this file in Moriarty.
+
+// schema /primitive_types/Text
+pub type Text = String;
+
+// schema /primitive_types/Bool
+pub type Bool = bool;
+
+// schema /primitive_types/UInt128
+pub type UInt128 = u128;
+
+// schema /primitive_types/ErrorCode; raw carrier only, no range check.
+pub struct ErrorCode(pub u8);
+
+// schema /primitive_types/Id/record
+pub struct Id {
+    pub namespace: Text,
+    pub name: Text,
+}
+
+// schema /primitive_types/Digest/variant
+pub enum Digest {
+    Unselected,
+    Selected { format: Id, bytes: Vec<u8> },
+}
+
+// schema /primitive_types/RunInt/variant
+pub enum RunInt {
+    Negative,
+    Nat { value: u128 },
+    NatAboveU128,
+}
+
+// schema /primitive_types/KInt/variant
+pub enum KInt {
+    InRange { value: UInt128 },
+    Negative,
+    AboveU128,
+}
+
+// schema /derived_widths/ExprId; raw carrier only, no range check.
+pub struct ExprId(pub usize);
+
+// schema /derived_widths/ChildPos; raw carrier only, no range check.
+pub struct ChildPos(pub usize);
+
+// schema /derived_widths/FunctionRowId; raw carrier only, no range check.
+pub struct FunctionRowId(pub usize);
+
+// schema /derived_widths/FunctionCursor; raw carrier only, no range check.
+pub struct FunctionCursor(pub usize);
+
+// schema /derived_widths/ParamPos; raw carrier only, no range check.
+pub struct ParamPos(pub usize);
+
+// schema /derived_widths/ArmId; raw carrier only, no range check.
+pub struct ArmId(pub usize);
+
+// schema /derived_widths/ArmPos; raw carrier only, no range check.
+pub struct ArmPos(pub usize);
+
+// schema /derived_widths/PatternRowId; raw carrier only, no range check.
+pub struct PatternRowId(pub usize);
+
+// schema /derived_widths/ConstId; raw carrier only, no range check.
+pub struct ConstId(pub usize);
+
+// schema /derived_widths/ConstFieldPos; raw carrier only, no range check.
+pub struct ConstFieldPos(pub usize);
+
+// schema /derived_widths/DataId; raw carrier only, no range check.
+pub struct DataId(pub usize);
+
+// schema /derived_widths/FieldPos; raw carrier only, no range check.
+pub struct FieldPos(pub usize);
+
+// schema /derived_widths/EnvId; raw carrier only, no range check.
+pub struct EnvId(pub usize);
+
+// schema /derived_widths/NameId; raw carrier only, no range check.
+pub struct NameId(pub usize);
+
+// schema /derived_widths/OccPathPos; raw carrier only, no range check.
+pub struct OccPathPos(pub usize);
+
+// schema /derived_widths/ChildPosition; raw carrier only, no range check.
+pub struct ChildPosition(pub usize);
+
+// schema /derived_widths/ValueSlotPos; raw carrier only, no range check.
+pub struct ValueSlotPos(pub usize);
+
+// schema /derived_widths/ArityCount; raw carrier only, no range check.
+pub struct ArityCount(pub usize);
+
+// schema /derived_widths/Depth; raw carrier only, no range check.
+pub struct Depth(pub usize);
+
+// schema /derived_widths/StackLimit; raw carrier only, no range check.
+pub struct StackLimit(pub usize);
+
+// schema /derived_widths/TaskCount; raw carrier only, no range check.
+pub struct TaskCount(pub usize);
+
+// schema /derived_widths/WorkCounter; raw carrier only, no range check.
+pub struct WorkCounter(pub u128);
+
+// schema /derived_widths/HelperCounter; raw carrier only, no range check.
+pub struct HelperCounter(pub u128);
+
+// schema /derived_widths/ReferenceCursor; raw carrier only, no range check.
+pub struct ReferenceCursor(pub u128);
+
+// schema /enums/ProfileId
+pub enum ProfileId {
+    SherlockKA1,
+    SherlockQuintA1,
+    SherlockHelperMicrostep1,
+}
+
+// schema /enums/GrammarDomain
+pub enum GrammarDomain {
+    DedicatedSorts,
+    GenericNominalExtensionReserved,
+}
+
+// schema /enums/FinanceInput
+pub enum FinanceInput {
+    Absent,
+    TypedExtensionReserved,
+}
+
+// schema /enums/SortTag
+pub enum SortTag {
+    UInt,
+    Bool,
+    List,
+    Tree,
+}
+
+// schema /enums/BinaryOp
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Eq,
+    Lt,
+    Cons,
+    Branch,
+}
+
+// schema /enums/UnaryOp
+pub enum UnaryOp {
+    Leaf,
+    Not,
+}
+
+// schema /enums/ExprTag
+pub enum ExprTag {
+    Literal,
+    Var,
+    Let,
+    Binary,
+    Unary,
+    If,
+    Call,
+    Match,
+    ConstructExtensionReserved,
+}
+
+// schema /enums/PatternTag
+pub enum PatternTag {
+    PVar,
+    PNil,
+    PCons,
+    PLeaf,
+    PBranch,
+    WildcardExtensionReserved,
+    ConstructorExtensionReserved,
+}
+
+// schema /enums/LogicalKind
+pub enum LogicalKind {
+    UInt,
+    Bool,
+    Nil,
+    Cons,
+    Leaf,
+    Branch,
+    Marker,
+    ConstructorExtensionReserved,
+}
+
+// schema /enums/ConstTag
+pub enum ConstTag {
+    U128,
+    Bool,
+    Nil,
+    Cons,
+    Leaf,
+    Branch,
+    ConstructorExtensionReserved,
+    U128OutOfRange,
+}
+
+// schema /enums/DataTag
+pub enum DataTag {
+    U128,
+    Bool,
+    Nil,
+    Cons,
+    Leaf,
+    Branch,
+    ConstructorExtensionReserved,
+}
+
+// schema /enums/FrameTag
+pub enum FrameTag {
+    LetF,
+    LeftF,
+    RightF,
+    UnaryF,
+    IfF,
+    MatchF,
+    ArgsF,
+    ReturnF,
+    ScopeF,
+    ConstructorFieldsExtensionReserved,
+}
+
+// schema /enums/ControlTag
+pub enum ControlTag {
+    Eval,
+    Return,
+    ScheduleNext,
+    Invoke,
+    Enter,
+    Bound,
+    Cases,
+    CaseResult,
+    PrimResult,
+    Error,
+}
+
+// schema /enums/HelperKind
+pub enum HelperKind {
+    Scalar,
+    EnvGet,
+    EnvPut,
+    Find,
+    Bind,
+    Append,
+    Validate,
+    Equal,
+    Match,
+}
+
+// schema /enums/SiteTag
+pub enum SiteTag {
+    EvalLiteral,
+    EvalVar,
+    EvalLet,
+    EvalBinary,
+    EvalUnary,
+    EvalIf,
+    EvalMatch,
+    EvalCall,
+    Push,
+    RetLet,
+    RetLeft,
+    RetRight,
+    RetUnary,
+    RetIf,
+    RetMatch,
+    RetArgs,
+    RetCall,
+    RetScope,
+    Invoke,
+    Enter,
+    Bound,
+    Cases,
+    CaseResult,
+    Prim,
+}
+
+// schema /enums/ScalarMode
+pub enum ScalarMode {
+    Add,
+    Sub,
+    Mul,
+    Lt,
+    Cons,
+    Branch,
+    Leaf,
+    Not,
+    TestBool,
+    TestType,
+}
+
+// schema /enums/ScalarPhase
+pub enum ScalarPhase {
+    First,
+    Second,
+    Done,
+}
+
+// schema /enums/ScalarStagedTag
+pub enum ScalarStagedTag {
+    None,
+    U128Value,
+    BoolValue,
+    PendingNode,
+    PrimError,
+    Selector,
+    TypeTest,
+}
+
+// schema /enums/NodeKind
+pub enum NodeKind {
+    Cons,
+    Leaf,
+    Branch,
+}
+
+// schema /enums/BoolSelector
+pub enum BoolSelector {
+    True,
+    False,
+    NotBool,
+}
+
+// schema /enums/TriStatus
+pub enum TriStatus {
+    Pending,
+    Positive,
+    Negative,
+}
+
+// schema /enums/BindPhase
+pub enum BindPhase {
+    Pairing,
+    UnwindType,
+    UnwindDup,
+    UnwindInsert,
+    Propagate,
+    Finished,
+}
+
+// schema /enums/BindStatus
+pub enum BindStatus {
+    Ok,
+    Bad,
+}
+
+// schema /enums/AppendPhase
+pub enum AppendPhase {
+    Copy,
+    Tail,
+    Done,
+}
+
+// schema /enums/TaskVisit
+pub enum TaskVisit {
+    Unvisited,
+    Fields,
+}
+
+// schema /enums/MatchPhase
+pub enum MatchPhase {
+    Arm,
+    Tag,
+    Distinct,
+    Field,
+    Bind,
+    Ready,
+    NoMatchReady,
+    Done,
+}
+
+// schema /enums/HelperTaskTag
+pub enum HelperTaskTag {
+    ValidateTask,
+    EqualTask,
+    PairTask,
+}
+
+// schema /enums/HelperResultTag
+pub enum HelperResultTag {
+    Validated,
+    EnvFound,
+    EnvMissing,
+    EnvUpdated,
+    FindFound,
+    FindMissing,
+    BindOk,

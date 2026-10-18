@@ -1,0 +1,23 @@
+Compatibility source follow-up completed; no execution
+
+The original eight carrier afterimages, SOURCE.diff, SOURCE-MANIFEST and body/prompt pins remain unchanged. This separate packet supplies one full compatibility afterimage under `compatibility-afterimages/<W-relative-path>`, `COMPATIBILITY.diff` and `COMPATIBILITY-MANIFEST.json` with exact current preimage/afterimage SHA256. All edits are eight `.into()` conversions on existing UInt SortTag literals; reversing those exact conversions reproduces the complete original test file byte-for-byte.
+
+Current connected consumer requiring adaptation
+
+`crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs`: FunctionRowC.return_type literals at current lines 180, 186, 192 and 392; ParameterRowC.sort literals at 201, 300, 334 and 347. Each becomes `SortTag::UInt.into()` at the runtime field only. Existing assertion structure, asserted builtin identity, mutation sequence, guard/error expectations and every other byte remain unchanged. The file's source CoreFunction/CoreParameter SortTag literals stay untouched. This test module is included by current owner_prepare and would otherwise have source type mismatches under a test target even after library V8 integration. No tests or assertions are added.
+
+Other actual current consumers
+
+Searching current nonprotected Rust crate source for FunctionRowC/ParameterRowC, PairTask/Bound/ReturnF, checked_sort/scalar_test_type_ok/sort_of_kind and SortTag-bearing test inputs found no additional direct runtime literals or alternative PreImageView implementations needing type adaptation beyond this test file and the original selected eight production files. Existing CoreProgram source fixtures and source_input_bridge continue to construct source SortTags and need no conversion. witness_plan has its own source SortTag/ValueType validation, not the changed runtime signature carrier. Complete observation/comparison records consume the changed row types directly. Public compile-artifact OwnerWire is adapted in the original eight-file packet and preserves builtin rendering.
+
+Retained external source snapshots
+
+`models/sherlock/joined09-host-source-20261016/lib.rs` explicitly loads `inputs/shared.rs`; that directory and b-core-host-source snapshots retain their own separate old row/guard engines. The old shared/source/preparation snapshots under models are not callers of the installed crate's new runtime records, so no mechanical rewrite of those historical engines is supplied. Their typed_inputs/source_input_bridge construct Core source SortTags, which remain valid under the unchanged source API. `models/sherlock/{host-client-source-20261016,joined09-host-source-20261016}/observation_json.rs` have their own JsonValue implementation for old shared::SortTag; if Root later rebinds those historical capture modules to the current canonical runtime, their separate JsonValue trait will need a canonical TypeIdC rendering adapter. That conditional rebind is not currently installed or claimed by this follow-up. The production OwnerWire adapter is separate and already prepared.
+
+Public Rust API compatibility changes
+
+The original source prerequisite deliberately changes public runtime field types: FunctionRowC.return_type, ParameterRowC.sort, HelperTaskC::PairTask.sort, ControlC::Bound.return_type, FrameRowC::ReturnF.return_type and HelperControlC::Scalar.expected now use TypeIdC. Direct Rust callers must convert source builtin values with `.into()`/`TypeIdC::from_source_sort` or supply actual canonical TypeIds; Rust does not insert these conversions implicitly. PreImageView.checked_sort now returns TypeIdC and scalar_test_type_ok takes &TypeIdC; downstream implementations/callers must match. pure_leaves::sort_of_kind returns Option<TypeIdC> via its local alias, so direct Option<SortTag> callers would need type adaptation. Unknown external crates cannot be enumerated by a local source scan. CoreProgram/CoreFunction/CoreParameter source SortTag API and builtin public OwnerWire values are unchanged. No coercive PartialEq implementation, implicit nominal-to-source conversion or compatibility guard is added.
+
+Checks and remaining owner seam
+
+Performed only source reads/searches, data-only conversion/diff and SHA/byte comparisons. No compile, tests, model/candidate/native execution, project imports or providers. Protected R259/R278 runtime oracle/test bodies and populated new independent expectation/assertion packets were excluded. This packet supplies compile-surface source preparation, not a compile claim or semantic approval. The original V8 designated-owner seam is still pending and remains independent of these eight existing test literal adaptations.

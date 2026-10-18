@@ -19,3 +19,6 @@ The circuit atlas remains the separate visual concept log, with its own authorsh
 - [October18: generic preparation and actual paired models](2026-10-18-generic-preparation-and-paired-models.md) — whole typed-source preparation, finite F03 comparison and retained publication failures; no generic-runtime or circuit result.
 
 - [October 18: retained native06 R3 audit and durable cleanup](2026-10-18-native06-r3-audit.md) — scoped provenance accepted by two independent reviewers; preservation and cleanup completed; outputs remain quarantined and target ELF unrun.
+
+
+- [Canonical runtime TypeId carriers](2026-10-18-canonical-runtime-type-carriers.md): three compiles and ten new tests passed for six consumed type-identity fields; nominal storage remains distinct from admission/runtime.

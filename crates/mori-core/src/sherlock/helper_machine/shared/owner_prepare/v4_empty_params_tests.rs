@@ -177,19 +177,19 @@ fn provenance_twins_zero_one_zero_params_admits_and_preserves_declaration_order(
             FunctionRowC {
                 function_name: 3,
                 params: SliceC { start: 0, len: 0 },
-                return_type: SortTag::UInt,
+                return_type: SortTag::UInt.into(),
                 body: 5,
             },
             FunctionRowC {
                 function_name: 0,
                 params: SliceC { start: 0, len: 1 },
-                return_type: SortTag::UInt,
+                return_type: SortTag::UInt.into(),
                 body: 6,
             },
             FunctionRowC {
                 function_name: 2,
                 params: SliceC { start: 0, len: 0 },
-                return_type: SortTag::UInt,
+                return_type: SortTag::UInt.into(),
                 body: 15,
             },
         ]
@@ -198,7 +198,7 @@ fn provenance_twins_zero_one_zero_params_admits_and_preserves_declaration_order(
         view.parameters,
         vec![ParameterRowC {
             binder: 1,
-            sort: SortTag::UInt,
+            sort: SortTag::UInt.into(),
         }]
     );
     assert!(check_program_view(&view, &b, &l).is_ok());
@@ -297,7 +297,7 @@ fn v4_rejects_nonempty_gaps_overlaps_out_of_range_and_trailing_parameters() {
     let mut v_gap = unwrap_ok(prepare_core(&prog, &b, &l));
     v_gap.parameters.push(ParameterRowC {
         binder: 0,
-        sort: SortTag::UInt,
+        sort: SortTag::UInt.into(),
     });
     v_gap.functions[2].params = SliceC { start: 2, len: 2 };
     let err_gap = check_program_view(&v_gap, &b, &l).unwrap_err();
@@ -331,7 +331,7 @@ fn v4_rejects_nonempty_gaps_overlaps_out_of_range_and_trailing_parameters() {
     let mut v_trail = unwrap_ok(prepare_core(&prog, &b, &l));
     v_trail.parameters.push(ParameterRowC {
         binder: 0,
-        sort: SortTag::UInt,
+        sort: SortTag::UInt.into(),
     });
     let err_trail = check_program_view(&v_trail, &b, &l).unwrap_err();
     assert_eq!(err_trail.check, ViewCheck::V4);
@@ -344,7 +344,7 @@ fn v4_rejects_nonempty_gaps_overlaps_out_of_range_and_trailing_parameters() {
     let mut v_empty_trail = unwrap_ok(prepare_core(&prog_empty, &b, &l));
     v_empty_trail.parameters.push(ParameterRowC {
         binder: 0,
-        sort: SortTag::UInt,
+        sort: SortTag::UInt.into(),
     });
     let err_empty_trail = check_program_view(&v_empty_trail, &b, &l).unwrap_err();
     assert_eq!(err_empty_trail.check, ViewCheck::V4);
@@ -389,7 +389,7 @@ fn v4_rejects_invalid_function_name_body_root_and_parameter_binder_and_preserves
     v_body.functions.push(FunctionRowC {
         function_name: 0,
         params: SliceC::empty(),
-        return_type: SortTag::UInt,
+        return_type: SortTag::UInt.into(),
         body: 1,
     });
     let err_body = check_program_view(&v_body, &b, &l).unwrap_err();
@@ -441,4 +441,538 @@ fn v4_rejects_invalid_function_name_body_root_and_parameter_binder_and_preserves
             locator: None,
         })
     ));
+}
+
+fn assert_pv_ok(res: Result<(), ProgramViewViolation>) {
+    if let Err(err) = res {
+        panic!(
+            "expected check_program_view Ok(()), got Err({:?}, {:?}, {:?}, {:?})",
+            err.check, err.table, err.row, err.detail
+        );
+    }
+}
+
+fn assert_pv_err(
+    res: Result<(), ProgramViewViolation>,
+    expected_check: ViewCheck,
+    expected_table: &str,
+    expected_row: Option<usize>,
+    expected_detail: &str,
+) {
+    match res {
+        Ok(()) => panic!(
+            "expected ProgramViewViolation({expected_check:?}, {expected_table:?}, {expected_row:?}, {expected_detail:?}), got Ok(())"
+        ),
+        Err(err) => {
+            assert_eq!(err.check, expected_check);
+            assert_eq!(err.table, expected_table);
+            assert_eq!(err.row, expected_row);
+            assert_eq!(err.detail, expected_detail);
+        }
+    }
+}
+
+fn all_builtin_sorts_program() -> CoreProgram {
+    CoreProgram {
+        functions: vec![
+            CoreFunction {
+                name: "fn_0_uint".to_string(),
+                parameters: vec![
+                    CoreParameter {
+                        name: "p0_uint".to_string(),
+                        sort: SortTag::UInt,
+                    },
+                    CoreParameter {
+                        name: "p1_bool".to_string(),
+                        sort: SortTag::Bool,
+                    },
+                ],
+                return_type: SortTag::UInt,
+                body: CoreExpr::If {
+                    cond: Box::new(var_expr("p1_bool")),
+                    then_expr: Box::new(var_expr("p0_uint")),
+                    else_expr: Box::new(uint_lit(10)),
+                },
+            },
+            CoreFunction {
+                name: "fn_1_bool".to_string(),
+                parameters: vec![
+                    CoreParameter {
+                        name: "p2_list".to_string(),
+                        sort: SortTag::List,
+                    },
+                    CoreParameter {
+                        name: "p3_tree".to_string(),
+                        sort: SortTag::Tree,
+                    },
+                ],
+                return_type: SortTag::Bool,
+                body: CoreExpr::If {
+                    cond: Box::new(CoreExpr::Literal {
+                        value: CoreValue::Bool { b: true },
+                    }),
+                    then_expr: Box::new(var_expr("p2_list")),
+                    else_expr: Box::new(var_expr("p3_tree")),
+                },
+            },
+            CoreFunction {
+                name: "fn_2_list".to_string(),
+                parameters: vec![],
+                return_type: SortTag::List,
+                body: CoreExpr::Literal {
+                    value: CoreValue::List {
+                        elements: vec![
+                            i128_class::KIntC::InRange(1),
+                            i128_class::KIntC::InRange(2),
+                        ],
+                    },
+                },
+            },
+            CoreFunction {
+                name: "fn_3_tree".to_string(),
+                parameters: vec![
+                    CoreParameter {
+                        name: "p4_tree".to_string(),
+                        sort: SortTag::Tree,
+                    },
+                    CoreParameter {
+                        name: "p5_list".to_string(),
+                        sort: SortTag::List,
+                    },
+                    CoreParameter {
+                        name: "p6_bool".to_string(),
+                        sort: SortTag::Bool,
+                    },
+                    CoreParameter {
+                        name: "p7_uint".to_string(),
+                        sort: SortTag::UInt,
+                    },
+                ],
+                return_type: SortTag::Tree,
+                body: CoreExpr::If {
+                    cond: Box::new(var_expr("p6_bool")),
+                    then_expr: Box::new(var_expr("p4_tree")),
+                    else_expr: Box::new(CoreExpr::If {
+                        cond: Box::new(CoreExpr::Binary {
+                            op: BinaryOp::Eq,
+                            left: Box::new(var_expr("p7_uint")),
+                            right: Box::new(uint_lit(0)),
+                        }),
+                        then_expr: Box::new(var_expr("p5_list")),
+                        else_expr: Box::new(CoreExpr::Literal {
+                            value: CoreValue::Tree {
+                                tree: CoreTree::Branch {
+                                    left: Box::new(CoreTree::Leaf {
+                                        n: i128_class::KIntC::InRange(3),
+                                    }),
+                                    right: Box::new(CoreTree::Leaf {
+                                        n: i128_class::KIntC::InRange(4),
+                                    }),
+                                },
+                            },
+                        }),
+                    }),
+                },
+            },
+        ],
+        entry: uint_lit(0),
+    }
+}
+
+#[test]
+fn v8_accepts_all_builtin_parameter_and_return_sorts_roundtrip() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+    let view = expect_ok(
+        prepare_core(&prog, &b, &l),
+        "prepare_core should succeed for all builtin sorts",
+    );
+
+    let expected_param_sorts = [
+        TypeIdC::UInt,
+        TypeIdC::Bool,
+        TypeIdC::List,
+        TypeIdC::Tree,
+        TypeIdC::Tree,
+        TypeIdC::List,
+        TypeIdC::Bool,
+        TypeIdC::UInt,
+    ];
+    assert_eq!(view.parameters.len(), expected_param_sorts.len());
+    for (pid, &expected_sort) in expected_param_sorts.iter().enumerate() {
+        assert_eq!(view.parameters[pid].sort, expected_sort);
+    }
+
+    let expected_return_types = [
+        TypeIdC::UInt,
+        TypeIdC::Bool,
+        TypeIdC::List,
+        TypeIdC::Tree,
+    ];
+    assert_eq!(view.functions.len(), expected_return_types.len());
+    for (fi, &expected_ret) in expected_return_types.iter().enumerate() {
+        assert_eq!(view.functions[fi].return_type, expected_ret);
+    }
+
+    assert_pv_ok(check_program_view(&view, &b, &l));
+    let _admitted = expect_ok(
+        admit(&prog, &b, &l),
+        "admit should accept all builtin parameter and return sorts",
+    );
+
+    // Builtin-to-builtin mutations on the view also round-trip through V8 decode + prepare_core.
+    for &builtin_id in &[
+        TypeIdC::UInt,
+        TypeIdC::Bool,
+        TypeIdC::List,
+        TypeIdC::Tree,
+    ] {
+        for pid in 0..view.parameters.len() {
+            let mut v_param = unwrap_ok(prepare_core(&prog, &b, &l));
+            v_param.parameters[pid].sort = builtin_id;
+            assert_pv_ok(check_program_view(&v_param, &b, &l));
+        }
+        for fi in 0..view.functions.len() {
+            let mut v_ret = unwrap_ok(prepare_core(&prog, &b, &l));
+            v_ret.functions[fi].return_type = builtin_id;
+            assert_pv_ok(check_program_view(&v_ret, &b, &l));
+        }
+    }
+}
+
+#[test]
+fn v8_rejects_nominal_parameter_sorts_at_exact_parameter_row() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+    let nominal_ids = [
+        TypeIdC(4),
+        TypeIdC(5),
+        TypeIdC(7),
+        TypeIdC(64),
+        TypeIdC(usize::MAX),
+    ];
+
+    for pid in 0..8 {
+        for &nominal_id in &nominal_ids {
+            let mut view = unwrap_ok(prepare_core(&prog, &b, &l));
+            view.parameters[pid].sort = nominal_id;
+            assert_pv_err(
+                check_program_view(&view, &b, &l),
+                ViewCheck::V8,
+                "parameters",
+                Some(pid),
+                "non-builtin parameter sort",
+            );
+        }
+    }
+}
+
+#[test]
+fn v8_rejects_nominal_function_return_types_at_exact_function_row() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+    let nominal_ids = [
+        TypeIdC(4),
+        TypeIdC(5),
+        TypeIdC(8),
+        TypeIdC(128),
+        TypeIdC(usize::MAX),
+    ];
+
+    for fi in 0..4 {
+        for &nominal_id in &nominal_ids {
+            let mut view = unwrap_ok(prepare_core(&prog, &b, &l));
+            view.functions[fi].return_type = nominal_id;
+            assert_pv_err(
+                check_program_view(&view, &b, &l),
+                ViewCheck::V8,
+                "functions",
+                Some(fi),
+                "non-builtin return type",
+            );
+        }
+    }
+}
+
+#[test]
+fn v8_enforces_intra_function_body_parameter_and_return_type_precedence() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+
+    // 1. Within function 0: parameter refusal at pid=0 fires before function 0 return_type refusal.
+    let mut v_fn0_both = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn0_both.parameters[0].sort = TypeIdC(4);
+    v_fn0_both.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn0_both, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(0),
+        "non-builtin parameter sort",
+    );
+
+    // 2. Within function 3 (params 4..8): multiple nominal parameters refuse at lowest pid first.
+    let mut v_fn3_multi_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn3_multi_param.parameters[5].sort = TypeIdC(9);
+    v_fn3_multi_param.parameters[7].sort = TypeIdC(4);
+    v_fn3_multi_param.functions[3].return_type = TypeIdC(6);
+    assert_pv_err(
+        check_program_view(&v_fn3_multi_param, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(5),
+        "non-builtin parameter sort",
+    );
+
+    // 3. Within function 3: last parameter pid=7 still fires before function 3 return_type.
+    let mut v_fn3_last_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn3_last_param.parameters[7].sort = TypeIdC(4);
+    v_fn3_last_param.functions[3].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn3_last_param, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(7),
+        "non-builtin parameter sort",
+    );
+
+    // 4. Within function 0: decoded[f.body].take() ("function body taken") fires before parameter/return_type conversion.
+    let single_name_prog = CoreProgram {
+        functions: vec![CoreFunction {
+            name: "x".to_string(),
+            parameters: vec![CoreParameter {
+                name: "x".to_string(),
+                sort: SortTag::UInt,
+            }],
+            return_type: SortTag::UInt,
+            body: var_expr("x"),
+        }],
+        entry: var_expr("x"),
+    };
+    let mut v_body_taken = unwrap_ok(prepare_core(&single_name_prog, &b, &l));
+    v_body_taken.expressions.pop();
+    v_body_taken.occurrences.pop();
+    v_body_taken.functions[0].body = 0;
+    v_body_taken.parameters[0].sort = TypeIdC(4);
+    v_body_taken.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_body_taken, &b, &l),
+        ViewCheck::V8,
+        "functions",
+        None,
+        "function body taken",
+    );
+}
+
+#[test]
+fn v8_enforces_inter_function_order_and_v1_through_v8_stage_precedence() {
+    let (b, l) = default_bounds_and_layout();
+    let prog = all_builtin_sorts_program();
+
+    // Inter-function order: function 0 return_type refusal fires before function 1 parameter refusal.
+    let mut v_fn0_ret_before_fn1_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn0_ret_before_fn1_param.functions[0].return_type = TypeIdC(4);
+    v_fn0_ret_before_fn1_param.parameters[2].sort = TypeIdC(5);
+    v_fn0_ret_before_fn1_param.functions[1].return_type = TypeIdC(6);
+    assert_pv_err(
+        check_program_view(&v_fn0_ret_before_fn1_param, &b, &l),
+        ViewCheck::V8,
+        "functions",
+        Some(0),
+        "non-builtin return type",
+    );
+
+    // Inter-function order: function 0 parameter pid=1 refusal fires before function 1 parameter pid=2 refusal.
+    let mut v_fn0_param_before_fn1_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn0_param_before_fn1_param.parameters[1].sort = TypeIdC(4);
+    v_fn0_param_before_fn1_param.parameters[2].sort = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn0_param_before_fn1_param, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(1),
+        "non-builtin parameter sort",
+    );
+
+    // Inter-function order: empty-param function 2 return_type refusal fires before function 3 parameter pid=4 refusal.
+    let mut v_fn2_ret_before_fn3_param = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_fn2_ret_before_fn3_param.functions[2].return_type = TypeIdC(4);
+    v_fn2_ret_before_fn3_param.parameters[4].sort = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_fn2_ret_before_fn3_param, &b, &l),
+        ViewCheck::V8,
+        "functions",
+        Some(2),
+        "non-builtin return type",
+    );
+
+    // V1 precedes V8 parameter/return_type refusal.
+    let mut v_v1 = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_v1.entry = 1;
+    v_v1.parameters[0].sort = TypeIdC(4);
+    v_v1.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v1, &b, &l),
+        ViewCheck::V1,
+        "header",
+        None,
+        "entry != 0",
+    );
+
+    // V2 precedes V8 parameter/return_type refusal.
+    let mut v_v2 = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_v2.expressions[0] = ExpressionRowC::Var {
+        binder: v_v2.names.len(),
+    };
+    v_v2.parameters[0].sort = TypeIdC(4);
+    v_v2.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v2, &b, &l),
+        ViewCheck::V2,
+        "expressions",
+        Some(0),
+        "binder out of range",
+    );
+
+    // V3 precedes V8 parameter/return_type refusal.
+    let mut v_v3 = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_v3.occurrences[0].owner_is_function = true;
+    v_v3.parameters[0].sort = TypeIdC(4);
+    v_v3.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v3, &b, &l),
+        ViewCheck::V3,
+        "occurrences",
+        Some(0),
+        "owner mismatch",
+    );
+
+    // V4 precedes V8 parameter/return_type refusal.
+    let mut v_v4 = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_v4.parameters[0].binder = v_v4.names.len();
+    v_v4.parameters[0].sort = TypeIdC(4);
+    v_v4.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v4, &b, &l),
+        ViewCheck::V4,
+        "parameters",
+        Some(0),
+        "binder",
+    );
+
+    // V5 precedes V8 parameter/return_type refusal.
+    let mut v_v5 = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_v5.patterns.push(PatternRowC::PNil);
+    v_v5.parameters[0].sort = TypeIdC(4);
+    v_v5.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v5, &b, &l),
+        ViewCheck::V5,
+        "patterns",
+        None,
+        "count != arms",
+    );
+
+    // V6 precedes V8 parameter/return_type refusal.
+    let mut v_v6 = unwrap_ok(prepare_core(&prog, &b, &l));
+    let first_composite_const = v_v6
+        .constants
+        .iter()
+        .position(|r| const_fields_of(r).len > 0)
+        .expect("fixture has composite constants");
+    v_v6.constant_fields.clear();
+    v_v6.parameters[0].sort = TypeIdC(4);
+    v_v6.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v6, &b, &l),
+        ViewCheck::V6,
+        "constants",
+        Some(first_composite_const),
+        "field slice",
+    );
+
+    // V7 precedes V8 parameter/return_type refusal.
+    let mut v_v7 = unwrap_ok(prepare_core(&prog, &b, &l));
+    v_v7.names.swap(0, 1);
+    v_v7.parameters[0].sort = TypeIdC(4);
+    v_v7.functions[0].return_type = TypeIdC(5);
+    assert_pv_err(
+        check_program_view(&v_v7, &b, &l),
+        ViewCheck::V7,
+        "names",
+        Some(1),
+        "not ascending",
+    );
+
+    // V8 expression/constant decode precedes V8 parameter/return_type conversion,
+    // which in turn precedes V8 re-prepare/views_equal.
+    let dag_prog = CoreProgram {
+        functions: vec![CoreFunction {
+            name: "f".to_string(),
+            parameters: vec![CoreParameter {
+                name: "p".to_string(),
+                sort: SortTag::UInt,
+            }],
+            return_type: SortTag::UInt,
+            body: var_expr("p"),
+        }],
+        entry: CoreExpr::Literal {
+            value: CoreValue::Tree {
+                tree: CoreTree::Branch {
+                    left: Box::new(CoreTree::Branch {
+                        left: Box::new(CoreTree::Leaf {
+                            n: i128_class::KIntC::InRange(1),
+                        }),
+                        right: Box::new(CoreTree::Leaf {
+                            n: i128_class::KIntC::InRange(2),
+                        }),
+                    }),
+                    right: Box::new(CoreTree::Leaf {
+                        n: i128_class::KIntC::InRange(3),
+                    }),
+                },
+            },
+        },
+    };
+    let mut v_dag = unwrap_ok(prepare_core(&dag_prog, &b, &l));
+    let root_const = v_dag.constants.len() - 1;
+    let root_fs = const_fields_of(&v_dag.constants[root_const]);
+    assert_eq!(root_fs.len, 2);
+    // Share the left Branch subtree in both fields of root Branch: V1..V7 remain valid,
+    // active constants.len() is 8, but unfolding visits 11 constant nodes.
+    v_dag.constant_fields[root_fs.start + 1] = v_dag.constant_fields[root_fs.start];
+    v_dag.parameters[0].sort = TypeIdC(4);
+    v_dag.functions[0].return_type = TypeIdC(5);
+
+    let mut b_const_cap = b;
+    b_const_cap.constant_nodes = v_dag.constants.len();
+    let mut l_const_cap = l.clone();
+    l_const_cap.bounds = b_const_cap;
+    assert_pv_err(
+        check_program_view(&v_dag, &b_const_cap, &l_const_cap),
+        ViewCheck::V8,
+        "constants",
+        Some(0),
+        "constant expansion exceeds bounds.constantNodes",
+    );
+
+    // When constant_nodes allows unfolding (16 >= 11), V8 parameter refusal fires before views_equal.
+    assert_pv_err(
+        check_program_view(&v_dag, &b, &l),
+        ViewCheck::V8,
+        "parameters",
+        Some(0),
+        "non-builtin parameter sort",
+    );
+
+    // When parameter and return sorts are restored to builtin, V8 proceeds to views_equal and refuses the shared DAG view.
+    v_dag.parameters[0].sort = TypeIdC::UInt;
+    v_dag.functions[0].return_type = TypeIdC::UInt;
+    assert_pv_err(
+        check_program_view(&v_dag, &b, &l),
+        ViewCheck::V8,
+        "program",
+        None,
+        "view != prepare_core(decode(view))",
+    );
 }

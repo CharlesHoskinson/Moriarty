@@ -1,0 +1,65 @@
+{
+  "status": "PUBLIC_FINAL_SOURCE_AUTHOR_ONLY",
+  "role": "SECURITY_SOURCE_AUTHOR",
+  "model_identity": "Gemini 4 Argon (High)",
+  "authority_scope": "Source authoring only for the narrow V8 check_program_view TypeIdC-to-SortTag conversion/refusal seam. Not an independent review vote, not an execution grant, and not a whole-crate audit.",
+  "target_preimage": {
+    "target_file": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs",
+    "ordinary_afterimage_sha256": "9d9a59458439e09845858c80292bd12e5324d1953301ff70e7935f6432b9de80",
+    "check_program_view_sha256": "b09ef3359df2e62b8bf4f4ca5536543c1eaef061efe6c540ecb3b713a3c17440"
+  },
+  "exact_edits": [
+    {
+      "target": "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs",
+      "old": "    let mut funcs: Vec<CoreFunction> = Vec::new();\n    for f in &v.functions {\n        let bod = decoded[f.body].take().ok_or_else(|| pv_err(ViewCheck::V8, \"functions\", None, \"function body taken\"))?;\n        let mut params: Vec<CoreParameter> = Vec::new();\n        if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {\n            params.push(CoreParameter { name: v.names[v.parameters[pid].binder].clone(),\n                sort: v.parameters[pid].sort }); } }\n        funcs.push(CoreFunction { name: v.names[f.function_name].clone(),\n            parameters: params, return_type: f.return_type, body: bod });\n    }",
+      "new": "    fn decode_source_sort(sort: TypeIdC, table: &str, row: usize, detail: &str)\n        -> Result<SortTag, ProgramViewViolation> {\n        match sort {\n            TypeIdC::UInt => Ok(SortTag::UInt),\n            TypeIdC::Bool => Ok(SortTag::Bool),\n            TypeIdC::List => Ok(SortTag::List),\n            TypeIdC::Tree => Ok(SortTag::Tree),\n            _ => Err(pv_err(ViewCheck::V8, table, Some(row), detail)),\n        }\n    }\n    let mut funcs: Vec<CoreFunction> = Vec::new();\n    for (fi, f) in v.functions.iter().enumerate() {\n        let bod = decoded[f.body].take().ok_or_else(|| pv_err(ViewCheck::V8, \"functions\", None, \"function body taken\"))?;\n        let mut params: Vec<CoreParameter> = Vec::new();\n        if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {\n            let sort = decode_source_sort(\n                v.parameters[pid].sort, \"parameters\", pid, \"non-builtin parameter sort\")?;\n            params.push(CoreParameter { name: v.names[v.parameters[pid].binder].clone(),\n                sort }); } }\n        let return_type = decode_source_sort(\n            f.return_type, \"functions\", fi, \"non-builtin return type\")?;\n        funcs.push(CoreFunction { name: v.names[f.function_name].clone(),\n            parameters: params, return_type, body: bod });\n    }"
+    }
+  ],
+  "api_refusal_and_order": {
+    "helper_signature": "fn decode_source_sort(sort: TypeIdC, table: &str, row: usize, detail: &str) -> Result<SortTag, ProgramViewViolation> (scoped locally inside check_program_view V8 reconstruction)",
+    "builtin_conversion_bijection": {
+      "TypeIdC::UInt (TypeIdC(0))": "Ok(SortTag::UInt)",
+      "TypeIdC::Bool (TypeIdC(1))": "Ok(SortTag::Bool)",
+      "TypeIdC::List (TypeIdC(2))": "Ok(SortTag::List)",
+      "TypeIdC::Tree (TypeIdC(3))": "Ok(SortTag::Tree)"
+    },
+    "non_representable_refusal": {
+      "domain": "All TypeIdC(id) with id >= 4",
+      "parameter_refusal": {
+        "check": "ViewCheck::V8",
+        "table": "parameters",
+        "row": "Some(pid)",
+        "detail": "non-builtin parameter sort"
+      },
+      "return_type_refusal": {
+        "check": "ViewCheck::V8",
+        "table": "functions",
+        "row": "Some(fi)",
+        "detail": "non-builtin return type"
+      }
+    },
+    "evaluation_and_refusal_order": [
+      "1. V1..V7 predicates execute first and unchanged (including V4 function/parameter slice, contiguity, body-root, binder-range, and trailing-parameter checks).",
+      "2. V8 expression reverse-ExprId decoding (including decode_const_value) and entry take execute unchanged before function/parameter reconstruction.",
+      "3. V8 iterates functions in ascending function index order fi in 0..v.functions.len().",
+      "4. Within function fi: (a) decoded[f.body].take() is checked first with existing (ViewCheck::V8, \"functions\", None, \"function body taken\"); (b) parameter rows pid in f.params.start..f.params.start + f.params.len are decoded in ascending pid order, refusing the first non-builtin parameter sort at (ViewCheck::V8, \"parameters\", Some(pid), \"non-builtin parameter sort\"); (c) f.return_type is decoded next, refusing a non-builtin return type at (ViewCheck::V8, \"functions\", Some(fi), \"non-builtin return type\"); (d) function fi completes before fi + 1 begins.",
+      "5. V8 prepare_core(&prog, b, l) re-prepare and views_equal(v, &reprepared) execute unchanged after all functions and parameters decode to SortTag."
+    ]
+  },
+  "material_gaps_and_testing_requirements": {
+    "seam_grounding_gap": "NONE for the V8 check_program_view partial conversion/refusal seam; complete check_program_view, prepare_core, decode/equality helpers, shared.rs, and adt.rs bodies were supplied inline.",
+    "scope_boundaries": [
+      "Existing test fixture module is not supplied inline; no guessed test harness code is authored here.",
+      "Other functions in owner_prepare.rs outside the supplied bodies are untouched and not claimed as a fresh whole-file audit.",
+      "Requires fresh independent non-author review before integration/execution."
+    ],
+    "required_test_cases_for_review": [
+      "1. Builtin round-trip acceptance: ProgramView with parameters and return types covering all four builtin IDs TypeIdC::UInt(0), TypeIdC::Bool(1), TypeIdC::List(2), TypeIdC::Tree(3) passes check_program_view and round-trips through prepare_core + views_equal.",
+      "2. Nominal parameter sort refusal: ProgramView otherwise V1..V8-valid with v.parameters[pid].sort = TypeIdC(4) (and higher nominal IDs) returns Err(ProgramViewViolation { check: ViewCheck::V8, table: \"parameters\", row: Some(pid), detail: \"non-builtin parameter sort\" }).",
+      "3. Nominal return_type refusal: ProgramView otherwise V1..V8-valid with builtin parameter sorts and v.functions[fi].return_type = TypeIdC(4) returns Err(ProgramViewViolation { check: ViewCheck::V8, table: \"functions\", row: Some(fi), detail: \"non-builtin return type\" }).",
+      "4. Intra-function precedence: when function fi has both v.parameters[pid].sort = TypeIdC(4) and f.return_type = TypeIdC(5), the parameter refusal at Some(pid) fires before the return_type refusal at Some(fi); if multiple parameters in fi have IDs >= 4, the lowest pid fires first.",
+      "5. Inter-function and stage precedence: function fi errors fire before function fi + 1; V1..V7 violations (e.g., V4 parameter binder out of range or non-contiguous params) and V8 expression/entry decode errors fire before V8 parameter/return_type sort conversion."
+    ]
+  }
+}
+

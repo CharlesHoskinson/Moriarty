@@ -865,6 +865,18 @@ impl OwnerWire for SliceC {
     }
 }
 
+impl OwnerWire for TypeIdC {
+    fn owner_wire(&self) -> Value {
+        match *self {
+            Self::UInt => json!("UInt"),
+            Self::Bool => json!("Bool"),
+            Self::List => json!("List"),
+            Self::Tree => json!("Tree"),
+            _ => json!({"TypeId": self.0.owner_wire()}),
+        }
+    }
+}
+
 impl OwnerWire for SortTag {
     fn owner_wire(&self) -> Value {
         match self {

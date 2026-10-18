@@ -91,3 +91,12 @@ saved-files-only process.
 This does not execute the root CLI/global dispatch or the file-publication example.
 Existing tutorial commands/results stay unchanged; there is no transition/
 circuit semantic change or circuit/website iteration.
+
+
+## Follow one builtin identity across six carriers
+
+Open the [tested ordinary consumer](../../results/sherlock-canonical-runtime-types-20261018/source/candidate/crates/mori-core/tests/support/sherlock_resolved_signature_positive.rs) and locate `uint_builtin_identity_uses_real_canonical_carriers`. Its independent input describes a UInt identity function applied to 7.
+
+First identify the prepared function and parameter rows. Follow ID 0 into PairTask.sort, Bound.return_type, ReturnF.return_type and Scalar.expected. Then find the assertions for the bound value and returned 7. Repeat for Bool 1, List 2 and Tree 3; these four cases passed through the real owner.
+
+Finally inspect the separate IDs 4/5/17 storage case. It passed all 18 stored-cell comparisons but did not attempt nominal admission or runtime. Use the [interface reference](../reference/canonical-runtime-types.md) and [actual receipts](../../results/sherlock-canonical-runtime-types-20261018/ACTUAL-TEN-TESTS-SCOPE.json) to distinguish those claims. Absolute independent B clocks remain unbound.

@@ -173,3 +173,6 @@ assets, rendered scene or deployment.
 ## Editorial update 011 — retained native audit provenance
 
 [Retained native audit provenance](UPDATE-011-NATIVE06-AUDIT-PROVENANCE.md) links the two scoped result acceptances and actual preservation/cleanup. Root/Sol factual editorial entry only; circuit-source iteration 005 remains latest. SDK target execution, proofs and stagenet remain open.
+
+
+- [Editorial update012 — canonical TypeId carriers](UPDATE-012-CANONICAL-TYPE-CARRIERS.md): three compiles and ten host tests passed; six real fields, nominal storage only, no new circuit iteration.

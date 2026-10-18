@@ -1,0 +1,117 @@
+                        assert_eq!(function, 0); assert_eq!(params, f.params);
+                        let HelperTaskC::PairTask { binder, sort, arg } = *after.tasks.last().unwrap() else { panic!("real PairTask producer") };
+                        assert_eq!((binder, sort, arg), (p.binder, p.sort, argument));
+                        stages.push("pair");
+                    },
+                    RuleIdC::KMachineEnterBind => {
+                        assert!(matches!(before.control, ControlC::Enter { function: Some(0), .. }));
+                        let ControlC::Bound { binding: BoundBinding::Ok { env }, return_type, body } = after.control else { panic!("real Bound producer") };
+                        assert_eq!(return_type, f.return_type); assert_eq!(body, f.body);
+                        bound_value(&r.after, env, p.binder, argument);
+                        actual_bound_env = Some(env); stages.push("bound");
+                    },
+                    RuleIdC::KMachineBoundValid => {
+                        let ControlC::ScheduleNext { frame: FrameRowC::ReturnF { return_type, saved_env, origin }, next, env } = after.control else { panic!("real ReturnF schedule") };
+                        assert_eq!(return_type, f.return_type); assert_eq!(saved_env, None);
+                        assert_eq!(origin, prepared.entry); assert_eq!(next, f.body);
+                        assert_eq!(Some(env), actual_bound_env); bound_value(&r.after, env, p.binder, argument);
+                        stages.push("schedule_return");
+                    },
+                    RuleIdC::KMachinePushAccept => {
+                        if let ControlC::ScheduleNext { frame: FrameRowC::ReturnF { .. }, .. } = before.control {
+                            let FrameRowC::ReturnF { return_type, saved_env, .. } = *after.frames.last().unwrap() else { panic!("real pushed ReturnF") };
+                            assert_eq!(return_type, f.return_type); assert_eq!(saved_env, None);
+                            assert_eq!(after.control, ControlC::Eval { expr: f.body });
+                            assert_eq!(Some(after.env_root), actual_bound_env);
+                            bound_value(&r.after, after.env_root, p.binder, argument); stages.push("return_frame");
+                        }
+                    },
+                    RuleIdC::KMachineEvalVariablePresent => {
+                        assert_eq!(before.control, ControlC::Eval { expr: f.body });
+                        assert_eq!(before.result, Some(HelperResultC::EnvFound { value: argument }));
+                        assert_eq!(after.control, ControlC::Return { value: argument }); stages.push("body_value");
+                    },
+                    RuleIdC::BHelperScalarEntry => {
+                        let FrameRowC::ReturnF { return_type, .. } = *before.frames.last().unwrap() else { panic!("scalar's actual continuation") };
+                        let HelperControlC::Scalar { common, mode, operand_a, operand_b, expected: scalar_expected, .. } = after.helper.unwrap() else { panic!("real Scalar producer") };
+                        assert_eq!(before.control, ControlC::Return { value: argument });
+                        assert_eq!(common.site, SiteTag::RetCall); assert_eq!(mode, ScalarMode::TestType);
+                        assert_eq!(operand_a, argument); assert_eq!(operand_b, None);
+                        assert_eq!(return_type, f.return_type); assert_eq!(scalar_expected, Some(return_type));
+                        stages.push("scalar_expected");
+                    },
+                    RuleIdC::BHelperScalarTag => {
+                        let HelperControlC::Scalar { expected: scalar_expected, staged, .. } = after.helper.unwrap() else { panic!("real scalar type test") };
+                        assert_eq!(scalar_expected, Some(f.return_type));
+                        assert_eq!(staged, ScalarStaged::TypeTest { ok: true }); stages.push("type_true");
+                    },
+                    RuleIdC::BHelperScalarExit => {
+                        assert_eq!(after.result, Some(HelperResultC::ScalarTypeTest { ok: true })); stages.push("type_result");
+                    },
+                    RuleIdC::KMachineReturnCallValid => {
+                        assert_eq!(before.result, Some(HelperResultC::ScalarTypeTest { ok: true }));
+                        assert_eq!(after.control, ControlC::Return { value: argument });
+                        assert!(after.frames.is_empty()); assert_eq!(after.env_root, None); stages.push("returned");
+                    },
+                    RuleIdC::KAdminPublishValue => {
+                        assert_eq!(after.outcome, OutcomeC::Halted { value: argument }); stages.push("published");
+                    },
+                    _ => {},
+                }
+                previous = r.after;
+            },
+        }
+    }
+    assert!(terminal, "frozen positive fixture must reach actual terminal within case step_cap");
+    assert_eq!(stages, ["pair", "bound", "schedule_return", "return_frame", "body_value", "scalar_expected", "type_true", "type_result", "returned", "published"]);
+    println!("{case_id}: owner_events={events}, consumed={}, remaining={}, helper_work={}, helper_visits={}, reference_cursor={}; absolute independent B clocks UNBOUND", previous.image.consumed_work, previous.image.remaining_work, previous.image.helper_work, previous.image.helper_visits, previous.image.reference_cursor);
+}
+
+#[test]
+fn uint_builtin_identity_uses_real_canonical_carriers() { run_identity("uint_identity"); }
+#[test]
+fn bool_builtin_identity_uses_real_canonical_carriers() { run_identity("bool_identity"); }
+#[test]
+fn list_builtin_identity_uses_real_canonical_carriers() { run_identity("list_identity"); }
+#[test]
+fn tree_builtin_identity_uses_real_canonical_carriers() { run_identity("tree_identity"); }
+
+#[test]
+fn nominal_ids_roundtrip_in_all_six_real_storage_roles_only() {
+    let oracle: Value = serde_json::from_str(STORAGE).unwrap();
+    let ids: Vec<usize> = oracle["nominal_input_ids"].as_array().unwrap().iter()
+        .map(|v| v.as_u64().unwrap() as usize).collect();
+    assert_eq!(ids, [4, 5, 17]);
+    let mut observed = vec![Vec::new(); 6];
+    for &n in &ids {
+        let id = TypeIdC(n);
+        // Actual public carrier types. These illustrative payloads are never
+        // admitted, put into a MachineImage, or claimed as nominal runtime state.
+        let f = FunctionRowC { function_name: 0, params: SliceC::empty(), return_type: id, body: 0 };
+        let p = ParameterRowC { binder: 0, sort: id };
+        let t = HelperTaskC::PairTask { binder: 0, sort: id, arg: RefC::Const(0) };
+        let c = ControlC::Bound { binding: BoundBinding::Bad, return_type: id, body: 0 };
+        let r = FrameRowC::ReturnF { return_type: id, saved_env: None, origin: 0 };
+        let h = HelperControlC::Scalar {
+            common: HelperCommon { site: SiteTag::RetCall, origin_reference_cursor: 0, parent_resume: None },
+            mode: ScalarMode::TestType, operand_a: RefC::Const(0), operand_b: None,
+            expected: Some(id), phase: ScalarPhase::First, reg_a: 0, staged: ScalarStaged::None,
+        };
+        observed[0].push(f.return_type.0); observed[1].push(p.sort.0);
+        if let HelperTaskC::PairTask { sort, .. } = t { observed[2].push(sort.0); } else { unreachable!() }
+        if let ControlC::Bound { return_type, .. } = c { observed[3].push(return_type.0); } else { unreachable!() }
+        if let FrameRowC::ReturnF { return_type, .. } = r { observed[4].push(return_type.0); } else { unreachable!() }
+        if let HelperControlC::Scalar { expected: Some(e), .. } = h { observed[5].push(e.0); } else { unreachable!() }
+    }
+    let roles = oracle["required_existing_carrier_slots"].as_array().unwrap();
+    assert_eq!(roles.len(), 6);
+    for (i, role) in roles.iter().enumerate() {
+        let wanted: Vec<usize> = oracle["per_slot_expected_roundtrip"][role.as_str().unwrap()]
+            .as_array().unwrap().iter().map(|v| v.as_u64().unwrap() as usize).collect();
+        assert_eq!(observed[i], wanted);
+        for pair in oracle["distinctness_pairs"].as_array().unwrap() {
+            let a = pair[0].as_u64().unwrap() as usize; let b = pair[1].as_u64().unwrap() as usize;
+            assert_ne!(observed[i][ids.iter().position(|v| *v == a).unwrap()], observed[i][ids.iter().position(|v| *v == b).unwrap()]);
+        }
+    }
+}

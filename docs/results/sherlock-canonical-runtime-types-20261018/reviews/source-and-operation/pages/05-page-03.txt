@@ -1,0 +1,297 @@
+    let start = fields_out.len();
+    for f in field_ids {
+        if fields_out.len() >= b.constant_field_slots {
+            return Err(cap_err(CapacityKind::ConstantFieldSlots,
+                fields_out.len() as u128 + 1, b.constant_field_slots as u128, None));
+        }
+        fields_out.push(*f);
+    }
+    let mf = match kind {
+        LogicalKind::Marker => false,
+        _ => field_ids.iter().all(|f| marker_of(&constants[*f])),
+    };
+    let slice = crate::sherlock::helper_machine::raw::ConstFieldSlice {
+        start: crate::sherlock::helper_machine::raw::ConstFieldPos(if field_ids.is_empty() { 0 } else { start }),
+        len: field_ids.len() };
+    let row = match payload {
+        ConstPayload::U128(n) => RawConstRow::U128 { marker_free: mf, n },
+        ConstPayload::Bool(v) => RawConstRow::Bool { marker_free: mf, b: v },
+        ConstPayload::Nil => RawConstRow::Nil { marker_free: mf },
+        ConstPayload::Marker => RawConstRow::U128OutOfRange { marker_free: false },
+        ConstPayload::Cons => RawConstRow::Cons { marker_free: mf, fields: slice },
+        ConstPayload::Leaf => RawConstRow::Leaf { marker_free: mf, fields: slice },
+        ConstPayload::Branch => RawConstRow::Branch { marker_free: mf, fields: slice },
+    };
+    constants.push(row);
+    Ok(constants.len() - 1)
+}
+enum ConstPayload { U128(u128), Bool(bool), Nil, Marker, Cons, Leaf, Branch }
+
+enum ConstTask<'a> { Value(&'a CoreValue), Tree(&'a CoreTree),
+    Scalar(&'a i128_class::KIntC), BuildLeaf, BuildBranch }
+enum DecodedConst { Scalar(i128_class::KIntC), BoolVal(bool),
+    List(Vec<i128_class::KIntC>), Tree(CoreTree) }
+
+fn emit_literal(value: &CoreValue, constants: &mut Vec<RawConstRow>,
+    fields_out: &mut Vec<usize>, b: &BoundsC) -> Result<usize, Tooling> {
+    // Iterative post-order over the uniquely-owned literal tree (no recursion).
+    let mut results: Vec<usize> = Vec::new();
+    let mut stack: Vec<ConstTask<'_>> = vec![ConstTask::Value(value)];
+    while let Some(t) = stack.pop() {
+        match t {
+            ConstTask::Scalar(k) => {
+                let id = match k {
+                    i128_class::KIntC::InRange(n) => emit_const_node(constants, fields_out, b,
+                        LogicalKind::UInt, ConstPayload::U128(*n), &[])?,
+                    _ => emit_const_node(constants, fields_out, b,
+                        LogicalKind::Marker, ConstPayload::Marker, &[])?,
+                };
+                results.push(id);
+            }
+            ConstTask::Value(v) => match v {
+                CoreValue::UInt { n } => stack.push(ConstTask::Scalar(n)),
+                CoreValue::Bool { b: v } => {
+                    results.push(emit_const_node(constants, fields_out, b,
+                        LogicalKind::Bool, ConstPayload::Bool(*v), &[])?);
+                }
+                CoreValue::List { elements } => {
+                    // Post-order a,b,Nil,Cons(b),Cons(a): scalars in order, Nil,
+                    // then Cons nodes in reverse element order.
+                    let mut elem_ids: Vec<usize> = Vec::new();
+                    for el in elements {
+                        elem_ids.push(match el {
+                            i128_class::KIntC::InRange(n) => emit_const_node(constants,
+                                fields_out, b, LogicalKind::UInt, ConstPayload::U128(*n), &[])?,
+                            _ => emit_const_node(constants, fields_out, b,
+                                LogicalKind::Marker, ConstPayload::Marker, &[])?,
+                        });
+                    }
+                    let mut tail = emit_const_node(constants, fields_out, b,
+                        LogicalKind::Nil, ConstPayload::Nil, &[])?;
+                    for eid in elem_ids.iter().rev() {
+                        tail = emit_const_node(constants, fields_out, b, LogicalKind::Cons,
+                            ConstPayload::Cons, &[*eid, tail])?;
+                    }
+                    results.push(tail);
+                }
+                CoreValue::Tree { tree } => stack.push(ConstTask::Tree(tree)),
+            },
+            ConstTask::Tree(t) => match t {
+                CoreTree::Leaf { n } => {
+                    stack.push(ConstTask::BuildLeaf); stack.push(ConstTask::Scalar(n));
+                }
+                CoreTree::Branch { left, right } => {
+                    stack.push(ConstTask::BuildBranch);
+                    stack.push(ConstTask::Tree(right)); stack.push(ConstTask::Tree(left));
+                }
+            },
+            ConstTask::BuildLeaf => {
+                let f = results.pop().ok_or_else(const_stack_underflow)?;
+                results.push(emit_const_node(constants, fields_out, b, LogicalKind::Leaf,
+                    ConstPayload::Leaf, &[f])?);
+            }
+            ConstTask::BuildBranch => {
+                let r = results.pop().ok_or_else(const_stack_underflow)?;
+                let lf = results.pop().ok_or_else(const_stack_underflow)?;
+                results.push(emit_const_node(constants, fields_out, b, LogicalKind::Branch,
+                    ConstPayload::Branch, &[lf, r])?);
+            }
+        }
+    }
+    results.pop().ok_or_else(const_stack_underflow)
+}
+
+pub fn prepare_core(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
+    -> Result<ProgramView, Tooling> {
+    // Pass A vacuous: CoreProgram cannot express GenericAdt/FinancialSyntax.
+    let names = collect_names(p, l)?; // Pass B
+    // ---- C1: expressions + occurrences, preorder, check before each push.
+    let mut temps: Vec<TempExpr<'_>> = Vec::new();
+    struct Item<'a> { e: &'a CoreExpr, owner_fn: bool, function: usize,
+        parent: Option<usize>, child_pos: usize }
+    let mut stack: Vec<Item<'_>> = Vec::new();
+    for (fi, f) in p.functions.iter().enumerate().rev() {
+        stack.push(Item { e: &f.body, owner_fn: true, function: fi, parent: None, child_pos: 0 });
+    }
+    stack.push(Item { e: &p.entry, owner_fn: false, function: 0, parent: None, child_pos: 0 });
+    let mut fn_body_ids: Vec<usize> = vec![0; p.functions.len()];
+    while let Some(it) = stack.pop() {
+        if temps.len() >= b.code_rows {
+            return Err(cap_err(CapacityKind::CodeRows, temps.len() as u128 + 1,
+                b.code_rows as u128, None));
+        }
+        if let CoreExpr::Call { args, .. } = it.e {
+            if args.len() > b.max_arity {
+                return Err(cap_err(CapacityKind::MaxArity, args.len() as u128,
+                    b.max_arity as u128, None));
+            }
+        }
+        let id = temps.len();
+        if it.parent.is_none() && it.owner_fn { fn_body_ids[it.function] = id; }
+        let n_children = match it.e {
+            CoreExpr::Let { .. } | CoreExpr::Binary { .. } => 2,
+            CoreExpr::Unary { .. } => 1,
+            CoreExpr::If { .. } => 3,
+            CoreExpr::Call { args, .. } => args.len(),
+            CoreExpr::Match { arms, .. } => 1 + arms.len(),
+            _ => 0,
+        };
+        temps.push(TempExpr { expr: it.e, owner_is_function: it.owner_fn,
+            function: it.function, parent: it.parent, child_pos: it.child_pos,
+            child_ids: vec![usize::MAX; n_children] });
+        if let Some(par) = it.parent { temps[par].child_ids[it.child_pos] = id; }
+        // Push children reversed so IDs are preorder in semantic order.
+        match it.e {
+            CoreExpr::Let { value, body, .. } => {
+                stack.push(Item { e: body, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 1 });
+                stack.push(Item { e: value, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 0 });
+            }
+            CoreExpr::Binary { left, right, .. } => {
+                stack.push(Item { e: right, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 1 });
+                stack.push(Item { e: left, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 0 });
+            }
+            CoreExpr::Unary { operand, .. } => stack.push(Item { e: operand,
+                owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 0 }),
+            CoreExpr::If { cond, then_expr, else_expr } => {
+                stack.push(Item { e: else_expr, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 2 });
+                stack.push(Item { e: then_expr, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 1 });
+                stack.push(Item { e: cond, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 0 });
+            }
+            CoreExpr::Call { args, .. } => {
+                for (i, a) in args.iter().enumerate().rev() {
+                    stack.push(Item { e: a, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: i });
+                }
+            }
+            CoreExpr::Match { scrutinee, arms } => {
+                for (k, arm) in arms.iter().enumerate().rev() {
+                    stack.push(Item { e: &arm.body, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: k + 1 });
+                }
+                stack.push(Item { e: scrutinee, owner_fn: it.owner_fn, function: it.function, parent: Some(id), child_pos: 0 });
+            }
+            _ => {}
+        }
+    }
+    // Expression rows with placeholder Call/Match slices, fixed in C2/C3.
+    let mut expressions: Vec<ExpressionRowC> = Vec::new();
+    let mut occurrences: Vec<OccurrenceRowC> = Vec::new();
+    for t in &temps {
+        occurrences.push(OccurrenceRowC { owner_is_function: t.owner_is_function,
+            function: if t.owner_is_function { t.function } else { 0 }, path: SliceC::empty() });
+        expressions.push(match t.expr {
+            CoreExpr::Literal { .. } => ExpressionRowC::Literal { constant: usize::MAX },
+            CoreExpr::Var { name } => ExpressionRowC::Var { binder: name_id(&names, name)? },
+            CoreExpr::Let { name, .. } => ExpressionRowC::Let { binder: name_id(&names, name)?,
+                value: t.child_ids[0], body: t.child_ids[1] },
+            CoreExpr::Binary { op, .. } => ExpressionRowC::Binary { op: *op,
+                left: t.child_ids[0], right: t.child_ids[1] },
+            CoreExpr::Unary { op, .. } => ExpressionRowC::Unary { op: *op, operand: t.child_ids[0] },
+            CoreExpr::If { .. } => ExpressionRowC::If { cond: t.child_ids[0],
+                then_expr: t.child_ids[1], else_expr: t.child_ids[2] },
+            CoreExpr::Call { name, .. } => ExpressionRowC::Call {
+                function_name: name_id(&names, name)?, args: SliceC::empty() },
+            CoreExpr::Match { .. } => ExpressionRowC::Match {
+                scrutinee: t.child_ids[0], arms: SliceC::empty() },
+        });
+    }
+    // ---- C2: children slots in ExprId order.
+    let mut children: Vec<usize> = Vec::new();
+    for (i, t) in temps.iter().enumerate() {
+        if let CoreExpr::Call { args, .. } = t.expr {
+            let start = children.len();
+            for cid in &t.child_ids {
+                if children.len() >= b.code_child_slots {
+                    return Err(cap_err(CapacityKind::CodeChildSlots,
+                        children.len() as u128 + 1, b.code_child_slots as u128, None));
+                }
+                children.push(*cid);
+            }
+            let _ = args;
+            if let ExpressionRowC::Call { args: a, .. } = &mut expressions[i] {
+                *a = SliceC::normalized(start, t.child_ids.len());
+            }
+        }
+    }
+    // ---- C3: arms, then pattern rows per arm, in ExprId order.
+    let mut arms: Vec<ArmRowC> = Vec::new();
+    let mut patterns: Vec<PatternRowC> = Vec::new();
+    for (i, t) in temps.iter().enumerate() {
+        if let CoreExpr::Match { arms: m_arms, .. } = t.expr {
+            let start = arms.len();
+            for (k, arm) in m_arms.iter().enumerate() {
+                if arms.len() >= b.match_arm_rows {
+                    return Err(cap_err(CapacityKind::MatchArmRows, arms.len() as u128 + 1,
+                        b.match_arm_rows as u128, None));
+                }
+                if patterns.len() >= b.pattern_rows {
+                    return Err(cap_err(CapacityKind::PatternRows, patterns.len() as u128 + 1,
+                        b.pattern_rows as u128, None));
+                }
+                let prow = match &arm.pattern {
+                    CorePattern::PVar { x } => PatternRowC::PVar { x: name_id(&names, x)? },
+                    CorePattern::PNil => PatternRowC::PNil,
+                    CorePattern::PCons { x, y } => PatternRowC::PCons {
+                        x: name_id(&names, x)?, y: name_id(&names, y)? },
+                    CorePattern::PLeaf { x } => PatternRowC::PLeaf { x: name_id(&names, x)? },
+                    CorePattern::PBranch { x, y } => PatternRowC::PBranch {
+                        x: name_id(&names, x)?, y: name_id(&names, y)? },
+                };
+                patterns.push(prow);
+                arms.push(ArmRowC { pattern: patterns.len() - 1, body: t.child_ids[k + 1] });
+            }
+            if let ExpressionRowC::Match { arms: a, .. } = &mut expressions[i] {
+                *a = SliceC::normalized(start, m_arms.len());
+            }
+        }
+    }
+    // ---- C4: occurrence paths in occurrence order, from parent links.
+    let mut occurrence_paths: Vec<usize> = Vec::new();
+    for i in 0..temps.len() {
+        let mut path: Vec<usize> = Vec::new();
+        let mut cur = i;
+        while let Some(par) = temps[cur].parent { path.push(temps[cur].child_pos); cur = par; }
+        path.reverse();
+        let start = occurrence_paths.len();
+        for c in &path {
+            if occurrence_paths.len() >= l.capacities.occurrence_path_slots {
+                return Err(cap_err(CapacityKind::OccurrencePathSlots,
+                    occurrence_paths.len() as u128 + 1,
+                    l.capacities.occurrence_path_slots as u128, None));
+            }
+            occurrence_paths.push(*c);
+        }
+        occurrences[i].path = SliceC::normalized(start, path.len());
+    }
+    // ---- C5: functions, then parameters, in table order.
+    let mut functions: Vec<FunctionRowC> = Vec::new();
+    let mut parameters: Vec<ParameterRowC> = Vec::new();
+    for (fi, f) in p.functions.iter().enumerate() {
+        if functions.len() >= b.function_rows {
+            return Err(cap_err(CapacityKind::FunctionRows, functions.len() as u128 + 1,
+                b.function_rows as u128, None));
+        }
+        if f.parameters.len() > b.max_arity {
+            return Err(cap_err(CapacityKind::MaxArity, f.parameters.len() as u128,
+                b.max_arity as u128, None));
+        }
+        let start = parameters.len();
+        for prm in &f.parameters {
+            if parameters.len() >= b.parameter_slots {
+                return Err(cap_err(CapacityKind::ParameterSlots,
+                    parameters.len() as u128 + 1, b.parameter_slots as u128, None));
+            }
+            parameters.push(ParameterRowC { binder: name_id(&names, &prm.name)?, sort: TypeIdC::from_source_sort(prm.sort) });
+        }
+        functions.push(FunctionRowC { function_name: name_id(&names, &f.name)?,
+            params: SliceC::normalized(start, f.parameters.len()),
+            return_type: TypeIdC::from_source_sort(f.return_type), body: fn_body_ids[fi] });
+    }
+    // ---- C6: constants in literal ExprId order, post-order per literal.
+    let mut constants: Vec<RawConstRow> = Vec::new();
+    let mut constant_fields: Vec<usize> = Vec::new();
+    for (i, t) in temps.iter().enumerate() {
+        if let CoreExpr::Literal { value } = t.expr {
+            let cid = emit_literal(value, &mut constants, &mut constant_fields, b)?;
+            if let ExpressionRowC::Literal { constant } = &mut expressions[i] { *constant = cid; }
+        }
+    }
+    Ok(ProgramView { entry: 0, expressions, occurrences, occurrence_paths, children,

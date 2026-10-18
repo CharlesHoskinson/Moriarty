@@ -1,0 +1,88 @@
+        let e = must_err_invalid(validate(&pre, &sel, w, &[RefC::Const(0)], &[]),
+            "alloc_env previous equal to fresh id accepted");
+        assert_invalid_plan(&e);
+        let mut w2 = PlannedWrites::default();
+        w2.alloc_env = Some(EnvCellC { binder: 0, value: RefC::Const(0), previous: None });
+        assert!(validate(&pre, &sel, w2, &[RefC::Const(0)], &[]).is_ok());
+    }
+    #[test]
+    fn r6_env_fresh_id_only_under_alloc_env_and_below_active_rule() {
+        let (a, img) = admitted_image(&prog_let(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperEnvPutInsert, Some(HelperKind::EnvPut));
+        let mut w = PlannedWrites::default(); w.env_root = Write::Set(Some(0));
+        let e = must_err_invalid(validate(&pre, &sel, w, &[], &[]),
+            "would-be-next EnvId minted without alloc_env");
+        assert_invalid_plan(&e);
+        let mut w2 = PlannedWrites::default();
+        w2.alloc_env = Some(EnvCellC { binder: 0, value: RefC::Const(0), previous: None });
+        w2.env_root = Write::Set(Some(0));
+        assert!(validate(&pre, &sel, w2, &[RefC::Const(0)], &[]).is_ok());
+    }
+    #[test]
+    fn r6_refc_fresh_data_exception_and_unread_data_rejected() {
+        let (a, img) = admitted_image(&prog_literal(), 100);
+        let pre = bind_pre(&a, &img);
+        let sel = fixture_selected(RuleIdC::BHelperScalarExit, Some(HelperKind::Scalar));
+        let mut w = PlannedWrites::default();
+        w.alloc_data = Some(AllocDataWrite::U128 { n: 7 });
+        w.helper = Write::Set(None);
+        w.result = Write::Set(Some(HelperResultC::ScalarValue { value: RefC::Data(0) }));
+        assert!(validate(&pre, &sel, w, &[], &[]).is_ok(), "fresh Data exception refused");
+        let mut w2 = PlannedWrites::default();
+        w2.helper = Write::Set(None);
+        w2.result = Write::Set(Some(HelperResultC::ScalarValue { value: RefC::Data(0) }));
+        let e = must_err_invalid(validate(&pre, &sel, w2, &[], &[]),
+            "unread Data result accepted");
+        assert_invalid_plan(&e);
+    }
+
+    // ============ N04 / N06 / N07 normal cells ==============================
+    #[test]
+    fn sc05_n04_call_to_missing_function_rejected_7() {
+        let p = prog(CoreExpr::Call { name: "missing".to_string(), args: Vec::new() });
+        let eng = engine(HostFamilyPlans);
+        let (a, mut img) = admitted_image(&p, 200);
+        assert_eq!(a.body.view.functions.len(), 0);
+        match run_checked(&eng, &a, &mut img) {
+            OutcomeC::Rejected { code: 7 } => {}
+            other => panic!("missing function outcome {:?}", other), }
+    }
+    #[test]
+    fn sc05_n06_genesis_invalid_publish_unchanged() {
+        let eng = engine(HostFamilyPlans);
+        let b = bounds(); let l = layout(&b);
+        let a = match super::super::owner_prepare::admit(&prog_literal(), &b, &l) {
+            Ok(a) => a, Err(_) => panic!("admit refused") };
+        let mut img = match super::super::owner_prepare::admit_run(&a, &RunIntC::Negative,
+            &RunIntC::Nat(4), &FinanceInput::Absent) {
+            Ok(i) => i, Err(_) => panic!("admit_run refused") };
+        assert_eq!(img.control, ControlC::Error { code: 1 });
+        match eng.step(&a, &mut img) {
+            Ok(StepResult::Event { .. }) => {}
+            Ok(StepResult::Terminal) => panic!("genesis publish returned Terminal"),
+            Err(e) => panic!("genesis publish HostViolation {:?} {:?}", e.kind, e.locator), }
+        assert_eq!(img.outcome, OutcomeC::Rejected { code: 1 });
+        assert_eq!(img.consumed_work, 0);
+        assert!(matches!(eng.step(&a, &mut img), Ok(StepResult::Terminal)));
+    }
+    #[test]
+    fn sc05_n07_step_inv_ok_throughout_literal_run() {
+        let eng = engine(HostFamilyPlans);
+        let (a, mut img) = admitted_image(&prog_literal(), 200);
+        let pre = bind_pre(&a, &img);
+        assert!(eng.check_step_inv(&pre).is_ok());
+        match run_checked(&eng, &a, &mut img) {
+            OutcomeC::Halted { .. } => {}
+            other => panic!("literal outcome {:?}", other), }
+    }
+
+    // ============ N01: mandatory full96 differential, UNIMPLEMENTED ========
+    // Focused cells above do NOT substitute for this contract. It stays UNRUN
+    // until an independently authored candidate04 differential corpus exists.
+    #[test]
+    #[ignore = "UNIMPLEMENTED: full 96-Enabled positive differential corpus (N01) not supplied; focused regressions do not close it"]
+    fn n01_full96_enabled_differential_unimplemented() {
+        unimplemented!("UNIMPLEMENTED: all-96-Enabled event-stream and RunSummary differential vs candidate04")
+    }
+}

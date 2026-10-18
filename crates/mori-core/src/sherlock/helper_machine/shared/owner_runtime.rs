@@ -157,10 +157,10 @@ impl<'a> PreImageView for PreImage<'a> {
     fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation> {
         pure_leaves::arity_of(*k).ok_or_else(|| arith("arity undefined"))
     }
-    fn checked_sort(&self, k: &LogicalKind) -> Result<SortTag, HostViolation> {
+    fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation> {
         pure_leaves::sort_of_kind(*k).ok_or_else(|| arith("sort undefined"))
     }
-    fn scalar_test_type_ok(&self, r: &RefC, expected: &SortTag) -> Result<bool, HostViolation> {
+    fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation> {
         let k = self.kind_of(r)?;
         if matches!(k, LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved) { return Ok(false); }
         Ok(self.checked_sort(&k)? == *expected)
@@ -647,8 +647,8 @@ impl<'a> PreImageView for RecordingPreImageView<'a> {
     fn u128_of(&self, r: &RefC) -> Result<u128, HostViolation> { self.inner.u128_of(r) }
     fn bool_of(&self, r: &RefC) -> Result<bool, HostViolation> { self.inner.bool_of(r) }
     fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation> { self.inner.checked_arity(k) }
-    fn checked_sort(&self, k: &LogicalKind) -> Result<SortTag, HostViolation> { self.inner.checked_sort(k) }
-    fn scalar_test_type_ok(&self, r: &RefC, expected: &SortTag) -> Result<bool, HostViolation> { self.inner.scalar_test_type_ok(r, expected) }
+    fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation> { self.inner.checked_sort(k) }
+    fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation> { self.inner.scalar_test_type_ok(r, expected) }
 }
 fn check_copied_refs(pre: &PreImage, w: &PlannedWrites, reads: &[RefC]) -> Result<(), HostViolation> {
     let fresh = if w.alloc_data.is_some() { Some(RefC::Data(pre.img.active.data)) } else { None };

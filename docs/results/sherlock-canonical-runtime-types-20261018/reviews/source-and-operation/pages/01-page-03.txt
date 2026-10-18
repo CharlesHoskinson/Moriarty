@@ -1,0 +1,320 @@
+            Self::Bool { b } => json!({"Bool": {"b": b.owner_wire()}}),
+            Self::Nil => json!("Nil"),
+            Self::Cons { fields } => json!({"Cons": {"fields": fields.owner_wire()}}),
+            Self::Leaf { fields } => json!({"Leaf": {"fields": fields.owner_wire()}}),
+            Self::Branch { fields } => json!({"Branch": {"fields": fields.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for RefC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Const(item0) => json!({"Const": item0.owner_wire()}),
+            Self::Data(item0) => json!({"Data": item0.owner_wire()}),
+        }
+    }
+}
+
+impl OwnerWire for RuleIdC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::KMachineEvalLiteralValid => json!("KMachineEvalLiteralValid"),
+            Self::KMachineEvalLiteralInvalid => json!("KMachineEvalLiteralInvalid"),
+            Self::KMachineEvalVariablePresent => json!("KMachineEvalVariablePresent"),
+            Self::KMachineEvalVariableAbsent => json!("KMachineEvalVariableAbsent"),
+            Self::KMachineEvalLet => json!("KMachineEvalLet"),
+            Self::KMachineEvalBinary => json!("KMachineEvalBinary"),
+            Self::KMachineEvalUnary => json!("KMachineEvalUnary"),
+            Self::KMachineEvalIf => json!("KMachineEvalIf"),
+            Self::KMachineEvalMatch => json!("KMachineEvalMatch"),
+            Self::KMachineEvalCallEmpty => json!("KMachineEvalCallEmpty"),
+            Self::KMachineEvalCallArguments => json!("KMachineEvalCallArguments"),
+            Self::KMachinePushAccept => json!("KMachinePushAccept"),
+            Self::KMachinePushRefuse => json!("KMachinePushRefuse"),
+            Self::KMachineReturnLet => json!("KMachineReturnLet"),
+            Self::KMachineReturnLeft => json!("KMachineReturnLeft"),
+            Self::KMachineReturnRight => json!("KMachineReturnRight"),
+            Self::KMachineReturnUnary => json!("KMachineReturnUnary"),
+            Self::KMachineReturnIfTrue => json!("KMachineReturnIfTrue"),
+            Self::KMachineReturnIfFalse => json!("KMachineReturnIfFalse"),
+            Self::KMachineReturnIfInvalid => json!("KMachineReturnIfInvalid"),
+            Self::KMachineReturnMatch => json!("KMachineReturnMatch"),
+            Self::KMachineReturnArgumentsNext => json!("KMachineReturnArgumentsNext"),
+            Self::KMachineReturnArgumentsFinal => json!("KMachineReturnArgumentsFinal"),
+            Self::KMachineReturnCallValid => json!("KMachineReturnCallValid"),
+            Self::KMachineReturnCallInvalid => json!("KMachineReturnCallInvalid"),
+            Self::KMachineReturnScope => json!("KMachineReturnScope"),
+            Self::KMachineInvokeFind => json!("KMachineInvokeFind"),
+            Self::KMachineEnterMissing => json!("KMachineEnterMissing"),
+            Self::KMachineEnterBind => json!("KMachineEnterBind"),
+            Self::KMachineBoundInvalid => json!("KMachineBoundInvalid"),
+            Self::KMachineBoundValid => json!("KMachineBoundValid"),
+            Self::KMachineCasesEmpty => json!("KMachineCasesEmpty"),
+            Self::KMachineCasesTry => json!("KMachineCasesTry"),
+            Self::KMachineCasesMiss => json!("KMachineCasesMiss"),
+            Self::KMachineCasesHit => json!("KMachineCasesHit"),
+            Self::KMachinePrimitiveValue => json!("KMachinePrimitiveValue"),
+            Self::KMachinePrimitiveError => json!("KMachinePrimitiveError"),
+            Self::BHelperScalarEntry => json!("BHelperScalarEntry"),
+            Self::BHelperScalarTag => json!("BHelperScalarTag"),
+            Self::BHelperScalarArithmetic => json!("BHelperScalarArithmetic"),
+            Self::BHelperScalarConstruct => json!("BHelperScalarConstruct"),
+            Self::BHelperScalarExit => json!("BHelperScalarExit"),
+            Self::BHelperScalarFailure => json!("BHelperScalarFailure"),
+            Self::BHelperEnvGetEntry => json!("BHelperEnvGetEntry"),
+            Self::BHelperEnvGetCell => json!("BHelperEnvGetCell"),
+            Self::BHelperEnvGetEmpty => json!("BHelperEnvGetEmpty"),
+            Self::BHelperEnvGetExit => json!("BHelperEnvGetExit"),
+            Self::BHelperEnvGetFailure => json!("BHelperEnvGetFailure"),
+            Self::BHelperEnvPutEntry => json!("BHelperEnvPutEntry"),
+            Self::BHelperEnvPutCell => json!("BHelperEnvPutCell"),
+            Self::BHelperEnvPutInsert => json!("BHelperEnvPutInsert"),
+            Self::BHelperEnvPutEmpty => json!("BHelperEnvPutEmpty"),
+            Self::BHelperEnvPutExit => json!("BHelperEnvPutExit"),
+            Self::BHelperEnvPutFailure => json!("BHelperEnvPutFailure"),
+            Self::BHelperFindEntry => json!("BHelperFindEntry"),
+            Self::BHelperFindRow => json!("BHelperFindRow"),
+            Self::BHelperFindEmpty => json!("BHelperFindEmpty"),
+            Self::BHelperFindExit => json!("BHelperFindExit"),
+            Self::BHelperFindFailure => json!("BHelperFindFailure"),
+            Self::BHelperBindEntry => json!("BHelperBindEntry"),
+            Self::BHelperBindPair => json!("BHelperBindPair"),
+            Self::BHelperBindEmpty => json!("BHelperBindEmpty"),
+            Self::BHelperBindArity => json!("BHelperBindArity"),
+            Self::BHelperBindType => json!("BHelperBindType"),
+            Self::BHelperBindDuplicate => json!("BHelperBindDuplicate"),
+            Self::BHelperBindInsert => json!("BHelperBindInsert"),
+            Self::BHelperBindPropagate => json!("BHelperBindPropagate"),
+            Self::BHelperBindExit => json!("BHelperBindExit"),
+            Self::BHelperBindFailure => json!("BHelperBindFailure"),
+            Self::BHelperAppendEntry => json!("BHelperAppendEntry"),
+            Self::BHelperAppendCell => json!("BHelperAppendCell"),
+            Self::BHelperAppendEmpty => json!("BHelperAppendEmpty"),
+            Self::BHelperAppendTail => json!("BHelperAppendTail"),
+            Self::BHelperAppendCopy => json!("BHelperAppendCopy"),
+            Self::BHelperAppendExit => json!("BHelperAppendExit"),
+            Self::BHelperAppendFailure => json!("BHelperAppendFailure"),
+            Self::BHelperValidateEntry => json!("BHelperValidateEntry"),
+            Self::BHelperValidateOccurrence => json!("BHelperValidateOccurrence"),
+            Self::BHelperValidateField => json!("BHelperValidateField"),
+            Self::BHelperValidateDeclaration => json!("BHelperValidateDeclaration"),
+            Self::BHelperValidateEmpty => json!("BHelperValidateEmpty"),
+            Self::BHelperValidateInvalid => json!("BHelperValidateInvalid"),
+            Self::BHelperValidateExit => json!("BHelperValidateExit"),
+            Self::BHelperValidateFailure => json!("BHelperValidateFailure"),
+            Self::BHelperEqualEntry => json!("BHelperEqualEntry"),
+            Self::BHelperEqualPair => json!("BHelperEqualPair"),
+            Self::BHelperEqualField => json!("BHelperEqualField"),
+            Self::BHelperEqualEmpty => json!("BHelperEqualEmpty"),
+            Self::BHelperEqualDifferent => json!("BHelperEqualDifferent"),
+            Self::BHelperEqualExit => json!("BHelperEqualExit"),
+            Self::BHelperEqualFailure => json!("BHelperEqualFailure"),
+            Self::BHelperMatchEntry => json!("BHelperMatchEntry"),
+            Self::BHelperMatchArm => json!("BHelperMatchArm"),
+            Self::BHelperMatchOccurrence => json!("BHelperMatchOccurrence"),
+            Self::BHelperMatchField => json!("BHelperMatchField"),
+            Self::BHelperMatchBinding => json!("BHelperMatchBinding"),
+            Self::BHelperMatchDistinct => json!("BHelperMatchDistinct"),
+            Self::BHelperMatchDiscard => json!("BHelperMatchDiscard"),
+            Self::BHelperMatchNext => json!("BHelperMatchNext"),
+            Self::BHelperMatchSelected => json!("BHelperMatchSelected"),
+            Self::BHelperMatchEmpty => json!("BHelperMatchEmpty"),
+            Self::BHelperMatchExit => json!("BHelperMatchExit"),
+            Self::BHelperMatchFailure => json!("BHelperMatchFailure"),
+            Self::BBookkeepingTaskEnqueue => json!("BBookkeepingTaskEnqueue"),
+            Self::BBookkeepingTaskRelease => json!("BBookkeepingTaskRelease"),
+            Self::BBookkeepingResumeStore => json!("BBookkeepingResumeStore"),
+            Self::BBookkeepingResumeRestore => json!("BBookkeepingResumeRestore"),
+            Self::KAdminStartupValid => json!("KAdminStartupValid"),
+            Self::KAdminStartupInvalid => json!("KAdminStartupInvalid"),
+            Self::KAdminPublishValue => json!("KAdminPublishValue"),
+            Self::KAdminPublishError => json!("KAdminPublishError"),
+            Self::KAdminPublishExhausted => json!("KAdminPublishExhausted"),
+        }
+    }
+}
+
+impl OwnerWire for RunIdC {
+    fn owner_wire(&self) -> Value {
+        let RunIdC { identity, fuel_input, stack_limit_input } = self;
+        json!({"identity": identity.owner_wire(), "fuel_input": fuel_input.owner_wire(), "stack_limit_input": stack_limit_input.owner_wire()})
+    }
+}
+
+impl OwnerWire for RunIntC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Negative => json!("Negative"),
+            Self::Nat(item0) => json!({"Nat": item0.owner_wire()}),
+            Self::NatAboveU128 => json!("NatAboveU128"),
+        }
+    }
+}
+
+impl OwnerWire for RunSummary {
+    fn owner_wire(&self) -> Value {
+        let RunSummary { outcome, events, consumed_work, helper_work, helper_visits, reference_cursor } = self;
+        json!({"outcome": outcome.owner_wire(), "events": events.owner_wire(), "consumed_work": consumed_work.owner_wire(), "helper_work": helper_work.owner_wire(), "helper_visits": helper_visits.owner_wire(), "reference_cursor": reference_cursor.owner_wire()})
+    }
+}
+
+impl OwnerWire for ScalarMode {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Add => json!("Add"),
+            Self::Sub => json!("Sub"),
+            Self::Mul => json!("Mul"),
+            Self::Lt => json!("Lt"),
+            Self::Cons => json!("Cons"),
+            Self::Branch => json!("Branch"),
+            Self::Leaf => json!("Leaf"),
+            Self::Not => json!("Not"),
+            Self::TestBool => json!("TestBool"),
+            Self::TestType => json!("TestType"),
+        }
+    }
+}
+
+impl OwnerWire for ScalarPhase {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::First => json!("First"),
+            Self::Second => json!("Second"),
+            Self::Done => json!("Done"),
+        }
+    }
+}
+
+impl OwnerWire for ScalarStaged {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::None => json!("None"),
+            Self::U128Value { n } => json!({"U128Value": {"n": n.owner_wire()}}),
+            Self::BoolValue { b } => json!({"BoolValue": {"b": b.owner_wire()}}),
+            Self::PendingNode { tag } => json!({"PendingNode": {"tag": tag.owner_wire()}}),
+            Self::PrimError { code } => json!({"PrimError": {"code": code.owner_wire()}}),
+            Self::Selector { sel } => json!({"Selector": {"sel": sel.owner_wire()}}),
+            Self::TypeTest { ok } => json!({"TypeTest": {"ok": ok.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for Selected {
+    fn owner_wire(&self) -> Value {
+        let Selected { rule, event_kind, site, helper_kind, helper_eligible, helper_visits } = self;
+        json!({"rule": rule.owner_wire(), "event_kind": event_kind.owner_wire(), "site": site.owner_wire(), "helper_kind": helper_kind.owner_wire(), "helper_eligible": helper_eligible.owner_wire(), "helper_visits": helper_visits.owner_wire()})
+    }
+}
+
+impl OwnerWire for SiteTag {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::EvalLiteral => json!("EvalLiteral"),
+            Self::EvalVar => json!("EvalVar"),
+            Self::EvalLet => json!("EvalLet"),
+            Self::EvalBinary => json!("EvalBinary"),
+            Self::EvalUnary => json!("EvalUnary"),
+            Self::EvalIf => json!("EvalIf"),
+            Self::EvalMatch => json!("EvalMatch"),
+            Self::EvalCall => json!("EvalCall"),
+            Self::Push => json!("Push"),
+            Self::RetLet => json!("RetLet"),
+            Self::RetLeft => json!("RetLeft"),
+            Self::RetRight => json!("RetRight"),
+            Self::RetUnary => json!("RetUnary"),
+            Self::RetIf => json!("RetIf"),
+            Self::RetMatch => json!("RetMatch"),
+            Self::RetArgs => json!("RetArgs"),
+            Self::RetCall => json!("RetCall"),
+            Self::RetScope => json!("RetScope"),
+            Self::Invoke => json!("Invoke"),
+            Self::Enter => json!("Enter"),
+            Self::Bound => json!("Bound"),
+            Self::Cases => json!("Cases"),
+            Self::CaseResult => json!("CaseResult"),
+            Self::Prim => json!("Prim"),
+        }
+    }
+}
+
+impl OwnerWire for SliceC {
+    fn owner_wire(&self) -> Value {
+        let SliceC { start, len } = self;
+        json!({"start": start.owner_wire(), "len": len.owner_wire()})
+    }
+}
+
+impl OwnerWire for TypeIdC {
+    fn owner_wire(&self) -> Value {
+        match *self {
+            Self::UInt => json!("UInt"),
+            Self::Bool => json!("Bool"),
+            Self::List => json!("List"),
+            Self::Tree => json!("Tree"),
+            _ => json!({"TypeId": self.0.owner_wire()}),
+        }
+    }
+}
+
+impl OwnerWire for SortTag {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::UInt => json!("UInt"),
+            Self::Bool => json!("Bool"),
+            Self::List => json!("List"),
+            Self::Tree => json!("Tree"),
+        }
+    }
+}
+
+impl OwnerWire for SourceHostBounds {
+    fn owner_wire(&self) -> Value {
+        let SourceHostBounds { max_source_actions, max_source_expressions, max_source_statements, max_action_inputs, max_supplied_inputs, max_projection_occurrences, max_generated_ast_nodes, max_ast_nesting, max_input_name_bytes, max_total_input_name_bytes } = self;
+        json!({"max_source_actions": max_source_actions.owner_wire(), "max_source_expressions": max_source_expressions.owner_wire(), "max_source_statements": max_source_statements.owner_wire(), "max_action_inputs": max_action_inputs.owner_wire(), "max_supplied_inputs": max_supplied_inputs.owner_wire(), "max_projection_occurrences": max_projection_occurrences.owner_wire(), "max_generated_ast_nodes": max_generated_ast_nodes.owner_wire(), "max_ast_nesting": max_ast_nesting.owner_wire(), "max_input_name_bytes": max_input_name_bytes.owner_wire(), "max_total_input_name_bytes": max_total_input_name_bytes.owner_wire()})
+    }
+}
+
+impl OwnerWire for StepInvClauseId {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::SI01 => json!("SI01"),
+            Self::SI02 => json!("SI02"),
+            Self::SI03 => json!("SI03"),
+            Self::SI04 => json!("SI04"),
+            Self::SI05 => json!("SI05"),
+            Self::SI06 => json!("SI06"),
+            Self::SI07 => json!("SI07"),
+            Self::SI08 => json!("SI08"),
+            Self::SI09 => json!("SI09"),
+            Self::SI10 => json!("SI10"),
+            Self::SI11 => json!("SI11"),
+            Self::SI12 => json!("SI12"),
+            Self::SI13 => json!("SI13"),
+            Self::SI14 => json!("SI14"),
+            Self::SI15 => json!("SI15"),
+            Self::SI16 => json!("SI16"),
+            Self::SI17 => json!("SI17"),
+            Self::SI18 => json!("SI18"),
+            Self::SI19 => json!("SI19"),
+            Self::SI20 => json!("SI20"),
+            Self::SI21 => json!("SI21"),
+            Self::SI22 => json!("SI22"),
+            Self::SI23 => json!("SI23"),
+            Self::SI24 => json!("SI24"),
+        }
+    }
+}
+
+impl OwnerWire for TaskVisitC {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Unvisited => json!("Unvisited"),
+            Self::Fields => json!("Fields"),
+        }
+    }
+}
+
+impl OwnerWire for Tooling {
+    fn owner_wire(&self) -> Value {
+        match self {
