@@ -4,3 +4,6 @@ mod positive;
 
 #[path = "support/sherlock_witness_reference_contrast_positive.rs"]
 mod contrast;
+
+#[path = "support/sherlock_witness_reference_work_positive.rs"]
+mod work;

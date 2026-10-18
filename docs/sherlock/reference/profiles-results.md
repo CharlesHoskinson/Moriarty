@@ -158,3 +158,20 @@ See the [qualified result supplement](../../results/sherlock-formal-nominal-prog
 The contrast consumer passed one compile and two exact runtime tests. Its selected full-helper B0 expectation is 214 consumed work, 132 helper work, 46 helper visits and reference cursor 82; complete comparisons occurred in memory, with no persisted full actual trace dump. The discovery wrapper separately compiled and listed three tests, executing zero bodies. Clean's tiny frontend diagnosis returned the expected negative1 and positive0; full JSON remains unrun. Original035 stays partial/open, originals stay15/35 and refinements0/25.
 
 See the [stage-separated receipts](../../results/sherlock-stage-separation-20261018/README.md). Root reports a separate native P3 refusal before Cargo on global-cache mismatch, followed by preservation and cleanup; its debt-carry correction still awaits independent review. No new native, proof or target claim follows.
+
+
+## October 18 — exact returned sources, complete observations and stage failures
+
+Clean's existing IR route matched the full independent five-case document byte-for-byte and as JSON, including all fields/order across 112 states. The expectation-freeze SHA typo was corrected in metadata without rerunning the subject. Its separate constructor correspondence frontend passed. After retaining actual failed diagnostics, the corrected Observation, Caller and Arm modules also passed their Lean frontend/kernel checks; statements and premises were preserved. The four source/result checks still require their scoped final audit and publication to the Clean fork.
+
+Quint's supplied mutual three-argument/postcaller and nested first-arm/ordered-fallback documents still agree across 455 states, all 17 snapshot fields and eight root keys. All four selected operations passed. The seven-part actual-result review returned a narrow ACCEPT. Its incorrect manual command/timing and data descriptions remain qualified against Root's actual receipts and complete-document comparison. The exact eight consumed source afterimages accompany this publication proposal.
+
+The changed K observer compiled and parsed its first query, then its first reduction timed out at 30.094 seconds. Eleven later operations remained unrun and no expected body was opened. Preserve that failure and successful prefix; no complete comparison follows.
+
+The actual returned handwritten checkedAdd emitter and corrected tests are now source-frozen, with independent A/B source reviews live and no verdict. Scalar.tag005 is the latest recorded archived/unregistered circuit SOURCE, not an observed native circuit baseline. Iteration006 is a ready concept note, not an execution or proof. The merged recovery contract continues all four permanent lanes: Clean, Quint, K and concrete handwritten circuits.
+
+Native P5 passed nine dated reconstitution transitions with 30,660 unchanged source-plus-generated entries: 30,090 source and 570 generated. It then failed before target copy or Cargo on 20 workspace fingerprint entries versus 8 expected; 157 aliases remain for the owner's whole-class correction. Collection and teardown passed with `cleanupOwed:false`. Six Git templates and two 177-byte historical TAG files retain the live-hash fallback qualification. No new native build, proof or target success is claimed.
+
+The new decoded-metadata witness consumer now passed five operations: compilation plus four changed positive selectors covering factorial/list/tree mandatory B0 comparisons and valid program/layout/run-input cache contrasts. The DAG/projector exists, and the new support source plus three B0 fixtures are included at their canonical paths. The independent actual-result review now establishes literal UIREQ035 with disclosed finite limits. Canonical registration/discovery and the evidence-ledger update remain pending; UIREQ035 is still recorded partial/open in this cut. Original acceptance stays 15/35 and refinements 0/25.
+
+See the [source/evidence proposal](../../results/sherlock-four-lane-progress-20261018/README.md).

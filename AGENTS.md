@@ -7,8 +7,9 @@ missing relation/emitter/consumer, pending review/check and native gap from the
 [implementation loop](docs/sherlock/implementation-loop.md#october-18-priority-continue-handwritten-circuit-implementation)
 and latest typed Root continuation. Formal verification and evidence maintenance
 must accompany concrete circuit source progress. A completed task does not retire
-the circuit lane. Keep the existing source/resource/correctness requirements and
-current security author/reviewer routing.
+the circuit lane. Every loop iteration and compaction handoff must retain the next
+concrete circuit source task, owner, source cut and pending review/check. Keep the existing source/resource/correctness
+requirements and current security author/reviewer routing.
 
 ## Persistent formal lanes and compaction recovery — October 18
 
