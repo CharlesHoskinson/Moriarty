@@ -1,0 +1,8 @@
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/build/test.d: /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/harness.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/word_arithmetic.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/word_arithmetic_tests.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/independent.rs
+
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/build/word-components-tests: /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/harness.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/word_arithmetic.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/word_arithmetic_tests.rs /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/independent.rs
+
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/harness.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/word_arithmetic.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/word_arithmetic_tests.rs:
+/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/201-word-components-local-qa/snapshot/independent.rs:
