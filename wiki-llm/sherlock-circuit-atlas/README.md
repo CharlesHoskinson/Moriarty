@@ -158,3 +158,8 @@ assets, rendered scene or deployment.
 ## Editorial update008 — nominal declaration assembly
 
 [Nominal declaration assembly](UPDATE-008-NOMINAL-DECLARATION-ASSEMBLY.md) records the adopted compiler table substrate and its independent complete-table normal observation. Root/Sol factual editorial update; circuit iteration005 remains the latest circuit-source entry.
+
+
+## Editorial update009 — selected word host lowering
+
+[Selected word host lowering](UPDATE-009-SELECTED-WORD-HOST-LOWERING.md) records Root's whole030 host arithmetic adoption and the exact normal/error observations. Root/Sol factual editorial update only; circuit-source iteration005 remains latest. Host lowering is not circuit/native acceptance, and no circuit layout/cost winner is selected.

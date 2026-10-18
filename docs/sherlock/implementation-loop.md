@@ -53,9 +53,11 @@ target evidence retain those obligations. A blocked row names its missing
 premise and the event that can make work actionable; independent rows continue.
 
 The factory repair is complete: the existing checker consumes current evidence,
-and its regression demonstrates that a source edit invalidates closure. Twelve
-original host/reporting clauses are now adopted and current, including the complete
-original indexed-provenance clause UIREQ-027. Select the remaining missing
+and its regression demonstrates that a source edit invalidates closure. Thirteen
+original host/reporting clauses are now adopted and current, including complete
+original indexed-provenance UIREQ-027 and typed-word arithmetic/lowering UIREQ-030.
+The [latest adoption/currentness](../results/sherlock-selected-word-arithmetic-20261018/ROOT-CURRENTNESS-READBACK.json)
+reports 13 closed,19 partial and3 absent originals; all25 refinements stay open. Select the remaining missing
 behavior from the [current checklist](requirements-status.md) and
 `NEXT-ACTIONS.json`: whole-owner closed-body/unique-function admission,
 remaining public compiler/refusal coverage and resource accounting/chunk observations,
@@ -189,3 +191,20 @@ review a bounded audit-only reuse route; do not repeat Cargo or the passing
 prefix, execute the test binary, or relabel the failed attempt as accepted.
 Root retains cleanup responsibility. Full proofs, Midnight stagenet and all
 retained language requirements remain required.
+
+### October18 typed-word lowering adoption — current13
+
+[Whole original030 adoption](../results/sherlock-selected-word-arithmetic-20261018/ROOT-WORD-ADOPTION.json)
+installs seven production files and two tests after exact source equality,
+source/result review and compatibility retention for six earlier closures. Five
+normal operations and four error10 operations passed with500/505 input pins
+unchanged; the new error cohort reused the successful Core artifact. The existing
+reader reports CURRENT13 with no findings. Earlier11/12 counts above are dated
+historical cuts, not the latest count. All25 refinements remain open.
+
+Select the next still-missing predicate from the current checklist; do not repeat
+these passed cohorts. The explicit Word32/Word64 host selection now reaches the
+real Scalar Add/Sub/Mul components, including full intermediates before checked
+UInt128/error10 selection. Circuit constraints, row-cost/layout winner, charged-work
+equivalence and native/proof/target acceptance are separate unfinished work. This
+ordinary adoption does not make the consumed retained native audit a pass.

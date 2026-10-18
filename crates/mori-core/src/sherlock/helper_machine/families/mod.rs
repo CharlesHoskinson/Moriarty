@@ -65,3 +65,67 @@ impl FamilyPlans for HostFamilyPlans {
         environment::plan_bookkeeping_release(sel, pre, guards)
     }
 }
+
+// Closed selected realization. The owner constructs this fixed implementation.
+pub(crate) struct WordFamilyPlans { layout: crate::sherlock_word_lowering::WordLayout }
+impl WordFamilyPlans {
+    pub(crate) fn new(layout: crate::sherlock_word_lowering::WordLayout) -> Self { Self { layout } }
+}
+
+impl FamilyPlans for WordFamilyPlans {
+    fn plan_legacy(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        legacy::dispatch(sel, pre, guards)
+    }
+    fn plan_scalar(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        scalar::dispatch_word(sel, pre, guards, self.layout)
+    }
+    fn plan_env_get(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        environment::plan_env_get(sel, pre, guards)
+    }
+    fn plan_env_put(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        environment::plan_env_put(sel, pre, guards)
+    }
+    fn plan_find(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        environment::plan_find(sel, pre, guards)
+    }
+    fn plan_bind(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        structural::plan_bind(sel, pre, guards)
+    }
+    fn plan_append(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        environment::plan_append(sel, pre, guards)
+    }
+    fn plan_validate(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        structural::plan_validate(sel, pre, guards)
+    }
+    fn plan_equal(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        structural::plan_equal(sel, pre, guards)
+    }
+    fn plan_match(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        structural::plan_match(sel, pre, guards)
+    }
+    fn plan_bookkeeping_release(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        environment::plan_bookkeeping_release(sel, pre, guards)
+    }
+}
