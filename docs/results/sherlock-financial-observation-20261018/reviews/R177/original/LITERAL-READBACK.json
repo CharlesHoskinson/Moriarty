@@ -1,0 +1,257 @@
+{
+  "status": "RAW_APPROVE_ELIGIBLE_HAS_SUBSTANTIVE_LITERAL_ERRORS_NOT_CLEAN_SOURCE_ACCEPTANCE",
+  "raw_report": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/177-financial-input-revision-review/REPORT.md",
+    "bytes": 5921,
+    "sha256": "26dc1cb2e74c13c7b4d26adbbcf80e8caf06a247d50baa3ebdb55ff75abc0744",
+    "strict_JSON": true,
+    "decisionA": "APPROVE",
+    "decisionB": "ELIGIBLE",
+    "mandatory_findings": []
+  },
+  "scope": "Mechanical source/hash/name/field/branch/callsite readback only; not a replacement functional/security vote. Root owns disposition and any actual operations.",
+  "factual_mismatches_and_deviations": [
+    {
+      "id": "E1",
+      "kind": "fictitious_error_API",
+      "reported": "Err(RuntimeError::LiabilityIdentityMismatch)",
+      "actual": "No RuntimeError type/variant appears in the relevant actual Core source. canonical_boundary returns Error::new(\"liability\", format!(\"Existing liability identity differs for {:?}.\", l.name)).",
+      "actual_source_anchors": [
+        {
+          "file_id": "F026",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/decode.rs",
+          "source_line": 206,
+          "literal": "if registry.get(l.name.as_str()) != Some(&(&l.asset, l.debtor.as_str(), l.creditor.as_str())) {"
+        },
+        {
+          "file_id": "F026",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/decode.rs",
+          "source_line": 207,
+          "literal": "return Err(Error::new(\n                \"liability\",\n                format!(\"Existing liability identity differs for {:?}.\", l.name),\n            ));"
+        }
+      ]
+    },
+    {
+      "id": "E2",
+      "kind": "nonexistent_helper",
+      "reported": "snapshot_from_stage",
+      "actual": "F017 declares no snapshot_from_stage. Existing actual free functions are project_execution, project_segment, project_stage_result and project_invocation; full source maps borrowed snapshot fields without a helper of the reported name.",
+      "actual_source_anchors": [
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 81,
+          "literal": "pub fn project_execution(execution: &Execution)"
+        },
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 101,
+          "literal": "pub fn project_stage_result("
+        }
+      ]
+    },
+    {
+      "id": "E3",
+      "kind": "nonexistent_type",
+      "reported": "resume consumes StageContinuation by value",
+      "actual": "Actual type is Continuation; StageContinuation is not declared or referenced in relevant Core source. The actual resume c:Continuation argument is by value.",
+      "actual_source_anchors": [
+        {
+          "file_id": "F024",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/admit.rs",
+          "source_line": 279,
+          "literal": "pub fn resume(\n    sp: &StagedProgram,\n    c: Continuation,"
+        }
+      ]
+    },
+    {
+      "id": "E4",
+      "kind": "incorrect_rejection_projection_field_and_value",
+      "reported": "project_invocation sets tentative:None on Err",
+      "actual": "InvocationObservation has tentative_publication: TentativePublication, not tentative:Option. Err maps AccountingAvailability::RejectedNoPublishedDelta and TentativePublication::UnavailableFromStageRejection; no None payload invented.",
+      "actual_source_anchors": [
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 266,
+          "literal": "pub tentative_publication: TentativePublication,"
+        },
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 355,
+          "literal": "Err(_) => (AccountingAvailability::RejectedNoPublishedDelta,\n            TentativePublication::UnavailableFromStageRejection),"
+        }
+      ]
+    },
+    {
+      "id": "E5",
+      "kind": "incorrect_overflow_semantics",
+      "reported": "account_effects uses saturating_add",
+      "actual": "AmountAggregate::add uses checked_add, records AboveU128 on overflow, keeps AboveU128 absorbing, and account_effects sets net_flow Unavailable unless both gross buckets Exact. No saturating_add occurs in F017.",
+      "actual_source_anchors": [
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 272,
+          "literal": "Self::Exact(value) => match value.0.checked_add(amount.0) {\n                Some(sum) => Self::Exact(UInt(sum)), None => Self::AboveU128,"
+        },
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 275,
+          "literal": "Self::AboveU128 => Self::AboveU128,"
+        },
+        {
+          "file_id": "F017",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+          "source_line": 329,
+          "literal": "_ => NetFlow::Unavailable,"
+        }
+      ]
+    },
+    {
+      "id": "E6",
+      "kind": "incorrect_self_transfer_refusal_description",
+      "reported": "does not reject self-transfer (enforced in runtime.rs)",
+      "actual": "Full move_funds computes checked source debit, updates balances only under if f != t, then returns Ok(()). It has no general equal-account rejection. This is static literal branch readback, no executed self-transfer result or security judgment.",
+      "actual_source_anchors": [
+        {
+          "file_id": "F020",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "source_line": 668,
+          "literal": "fn move_funds("
+        },
+        {
+          "file_id": "F020",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "source_line": 690,
+          "literal": "if f != t {\n        let credit"
+        },
+        {
+          "file_id": "F020",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "source_line": 697,
+          "literal": "snapshot.balances[t].amount = UInt(credit);\n    }\n    Ok(())"
+        }
+      ]
+    },
+    {
+      "id": "E7",
+      "kind": "other_invented_function_anchors",
+      "reported": [
+        "stage::plan::build_action",
+        "stage/validate.rs validate",
+        "F027 sha256_canonical_json",
+        "eval_statement"
+      ],
+      "actual": [
+        "Actual stage/plan.rs function build",
+        "Actual stage/validate.rs function validate_v2",
+        "Actual stage/digest.rs function digest plus program_hash/plan_hash (intent::canonical reused)",
+        "Actual runtime.rs function execute_statement"
+      ],
+      "actual_source_anchors": [
+        {
+          "file_id": "F029",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/plan.rs",
+          "source_line": 56,
+          "literal": "fn build("
+        },
+        {
+          "file_id": "F031",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/validate.rs",
+          "source_line": 47,
+          "literal": "fn validate_v2("
+        },
+        {
+          "file_id": "F027",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/digest.rs",
+          "source_line": 7,
+          "literal": "fn digest<T: serde::Serialize>(value: &T)"
+        },
+        {
+          "file_id": "F020",
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "source_line": 702,
+          "literal": "fn execute_statement("
+        }
+      ]
+    },
+    {
+      "id": "E8",
+      "kind": "reply_size_deviation",
+      "reported": {
+        "requested_max_UTF8_bytes": 5000,
+        "actual_UTF8_bytes": 5921
+      },
+      "actual": "Raw visible report preserved byte-for-byte; exceeds requested maximum by921B. No automatic truncation/retry.",
+      "actual_source_anchors": []
+    }
+  ],
+  "scope_ambiguities": [
+    {
+      "id": "A1",
+      "kind": "identity_count_scope_ambiguity",
+      "reported": "updated across all15hashcells in F005,F008,F011 (F041)",
+      "actual_counts_by_full_body": {
+        "F005": 15,
+        "F008": 2,
+        "F011": 2
+      },
+      "actual_total_across_all_three_named_bodies": 19,
+      "qualification": "15 is correct for F005/all_expected_identity_binding_cells list alone. F008 and F011 each repeat2 continuation hash cells; all three physical bodies have19 such cells. Clarify intended logical-versus-physical count rather than silently treating15 as all copies."
+    }
+  ],
+  "hashlike_literal_readback": [
+    {
+      "reported_literal": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+      "matches_actual_program_or_plan_hash": true
+    },
+    {
+      "reported_literal": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d",
+      "matches_actual_program_or_plan_hash": true
+    }
+  ],
+  "coverage": {
+    "required_pages": 96,
+    "done_allowlisted_pages": 96,
+    "all_required_done_once": true,
+    "missing_pages": [],
+    "duplicate_done_reads": {},
+    "unexpected_tools_paths_parameters": [],
+    "all_done_summary_line_byte_counts_match": true,
+    "selected_input_pins_changed": [],
+    "public_tool_response_limitation": "Actual AGY tool_info output contains line/byte summary, not full response text. Count/path summaries are mechanically checked; end-to-end body fidelity and semantic reading are not proved by summaries. Auditor scope and literal source-grounding checked separately.",
+    "failed_terminal_tools": []
+  },
+  "actual_terminal": {
+    "CLI_exit": 0,
+    "provider_status": "SUCCESS",
+    "controller_elapsed_seconds": 270.56431408799835,
+    "provider_duration_seconds": 267.43530899,
+    "conversation_id": "ae7df8a1-994e-464f-8d5c-14631dcdeb72",
+    "actual_init_model": [
+      "gemini-4-argon-high"
+    ],
+    "stderr_bytes": 0,
+    "stream_parse_errors": 0,
+    "stop_events": [],
+    "checkpoint_step_count": 1,
+    "private_thought_or_checkpoint_payload_retained": false
+  },
+  "input_pins_unchanged": true,
+  "fresh_context": true,
+  "no_prior_R160_conversation_or_raw_votes_supplied": true,
+  "provider_calls": 1,
+  "retries_or_followup_calls": 0,
+  "limitations": [
+    "Tool metadata line/byte summaries do not prove full semantic comprehension or toolbody fidelity.",
+    "533pins mechanically checked, not complete dependency/binary/117Core source semantics.",
+    "AllR176new3phasesUNRUN at frozenreviewinput; R159failureretained.",
+    "No security/native/policy/SDK/fullfinancial/UIREQclosure."
+  ],
+  "subject_source_compiler_test_SDK_native_W_Git_actions": "NONE",
+  "native_authority": 0
+}

@@ -1,0 +1,954 @@
+PROPOSED R188 SAME-ACTUAL-OWNER literal correction + NEW canonical test promotion review. Requested SAME conversation 524baa6c-d27d-49c1-8b7b-6873391cb336 (actual priorR188ArgonHIGH owner), not a fresh independent vote or98page re-audit. Your original full98page context remains; current request supplies only changed fullcanonicaltest and exactcorrection/promotion evidence. Root will inspect this prompt BEFORE selecting onecall. No callselected by preparation.
+
+If selected: NO TOOLS at all, no shell/source/compiler/tests/SDK/native/network/WGit/provider/subagents/probes/retry. Do not request old98pages. Read completeinline C01-C08 below; if lostcontext or clippedbody =>ABSTAIN precisely, no toolread. Allcode changes suppliedfullbody(C01), originalstableadapter/corecontext inherited explicitly. Native0/C4OPEN/R2UNSAT/60460HOLD/Am10 unchanged.
+
+TASK ONLY: (1) Assess the falsifiable literal correction requests against Q1-Q4: priorR188 EXPECTEDfullfilehash viaQ1; proposedwrongtypealiases viaQ2; admit::load/declarationlocators viaQ3; proposedfalseunexecutedzero-liabilityrejection in eval_statement viaQ4. Accept, reject or qualify each correction with exactsuppliedsourceevidence; no requiredverdict. Q5actualchecked_add/debitcredit semantics. Allreviewconclusions remain open to source-grounded dissent/abstention. No freeformnewhash/API/linecatalog. (2) Confirm/revise originalAPPROVE_SCOPED_RESULT aftercorrections, withoutfalsecounterfactual or newvoteinflation. (3) NEW canonicalpromotion source review: fullC01currentW12064Btest; C02historicalmapping qualifiedC05:15include locator replacements and initialmodule-doc comment/provenance changes only; all15currentpayloads exactlyR176stagedbytes, noassertion/logicchanges; C03/C04canonicalcompileONLYexit0/no binaryrun, retainedsameCore rlib; C06actualcompileplanprojection/fulloriginalpin. Assess canonicalsourcepromotion APPROVE_SCOPED_PROMOTION/CHANGES_REQUIRED/ABSTAIN with exactgaps. Do NOTpretendcanonicaltestexecuted. Do not treatC02earlier63f51pin ascurrent; currentC01pin inC05/C06controls. (4) Independently assess original017clause/scenario scope against supplied normative sources. Root current proposed disposition OPEN/Core2scenarioobserved is advisory, not your requiredverdict. Do not impose018orMachineImage-onlygate absentnorms; disagree or abstain if warranted. Independently confirm or dispute stated018lowering/019negativecarrier limits from the originalclauses and actualevidence. C08actualcorrectedR1776331B updateshistoricalfalsealiases/saturation/selftransfer claims; its oldphasesUNRUN scope is historical, currentactualR176PASS separate. Do not transferitsvote.
+
+RETURN strictJSON <=2500UTF8bytes ONLY: corrections{Q1..Q4:ACCEPT/REJECT/QUALIFY/ABSTAIN withprecisebasis usingquoteIDs;nohashstrings}, original_scoped_result{CONFIRM/REVISE/ABSTAIN,reason}, canonical_promotion{APPROVE_SCOPED_PROMOTION/CHANGES_REQUIRED/ABSTAIN,reason/gaps},017_scope{clause_verdict,scenario_verdict,reason,normative_basis_or_gap},limits. Cite C/QIDs and EXACTsuppliedsymbols; no additionalAPIaliases,uncalledcounterfactuals,digests,lineguesses,numericcatalog,private reasoning or inflatedfreshvote. Usecompactshortstrings, nofreeformprose. Tailmarker field END-R188-SAMEOWNER-CANONICAL-PROMOTION-NATIVE0.
+
+COMPLETE INLINE MEMBERS (each exactbody between named markers; no excerpt substitutions except explicitlylabelledderivedprojections):
+
+BEGIN C01 FULL currentcanonicaltest; changedcomments+include locators | /home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/sherlock_financial_observation_positive.rs | 12064B
+//! Fixed ordinary positive Core/2 integration.
+//! Actual stage calls produce every observed result. R152 supplies all expected
+//! result/accounting/program/plan schema; R175 independently revises its input
+//! identities. The test author read the expectation schema only.
+//! Borrow checks supplement independent JSON equality; they are not an oracle.
+use mori_core::{Execution, Scenario, UInt};
+use mori_core::stage::{self, Continuation, StageEvent, StageOutcome, StageRejection, StageSegment, StagedProgram};
+use mori_core::sherlock_financial_projection::{
+    self as projection, AccountingAvailability, ExecutionObservation, FinancialObservation,
+    InvocationInput, InvocationObservation, SegmentObservation,
+};
+use serde_json::Value;
+
+const SOURCE: &str = include_str!("fixtures/financial-observation/retained-payment.mori");
+const SCENARIO: &str = include_str!("fixtures/financial-observation/scenario.json");
+const INVOCATIONS: &str = include_str!("fixtures/financial-observation/invocations.json");
+const EXPECTED_CONTEXT: &str = include_str!("fixtures/financial-observation/EXPECTED.json");
+const EXPECTED_PROGRAM: &str = include_str!("fixtures/financial-observation/EXPECTED-PROGRAM.json");
+const EXPECTED_PLAN: &str = include_str!("fixtures/financial-observation/EXPECTED-PLAN.json");
+
+struct Golden {
+    raw_result: &'static str,
+    accounting: &'static str,
+    tentative_publication: &'static str,
+}
+const START: Golden = Golden {
+    raw_result: include_str!("fixtures/financial-observation/EXPECTED-START-RESULT.json"),
+    accounting: include_str!("fixtures/financial-observation/EXPECTED-START-ACCOUNTING.json"),
+    tentative_publication: include_str!("fixtures/financial-observation/EXPECTED-START-TENTATIVE-PUBLICATION.json"),
+};
+const FALSE_AWAIT: Golden = Golden {
+    raw_result: include_str!("fixtures/financial-observation/EXPECTED-FALSE-AWAIT-RESULT.json"),
+    accounting: include_str!("fixtures/financial-observation/EXPECTED-FALSE-AWAIT-ACCOUNTING.json"),
+    tentative_publication: include_str!("fixtures/financial-observation/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json"),
+};
+const TRUE_RESUME: Golden = Golden {
+    raw_result: include_str!("fixtures/financial-observation/EXPECTED-TRUE-RESUME-RESULT.json"),
+    accounting: include_str!("fixtures/financial-observation/EXPECTED-TRUE-RESUME-ACCOUNTING.json"),
+    tentative_publication: include_str!("fixtures/financial-observation/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json"),
+};
+fn json(text: &str) -> Value { serde_json::from_str(text).expect("frozen JSON parses") }
+fn hash_text(bytes: [u8; 32]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+// The following checks compare borrowed views to their original raw arguments.
+// They do not construct any golden or replace independent raw-result comparison.
+fn assert_execution(view: &ExecutionObservation<'_>, execution: &Execution) {
+    let ExecutionObservation { semantics, action, pre, post, steps, effects } = view;
+    let Execution { semantics: raw_semantics, action: raw_action, pre: raw_pre,
+        post: raw_post, steps: raw_steps, effects: raw_effects } = execution;
+    assert!(std::ptr::eq(*semantics, raw_semantics.as_str()));
+    assert!(std::ptr::eq(*action, raw_action.as_str()));
+    assert!(std::ptr::eq(*pre, raw_pre));
+    assert!(std::ptr::eq(*post, raw_post));
+    assert!(std::ptr::eq(*steps, raw_steps.as_slice()));
+    assert!(std::ptr::eq(*effects, raw_effects.as_slice()));
+}
+fn assert_segment(view: &SegmentObservation<'_>, segment: &StageSegment) {
+    let SegmentObservation { action, frame_pre, frame_post, execution } = view;
+    let StageSegment { action: raw_action, frame_pre: raw_pre, frame_post: raw_post,
+        execution: raw_execution } = segment;
+    assert!(std::ptr::eq(*action, raw_action.as_str()));
+    assert!(std::ptr::eq(*frame_pre, raw_pre));
+    assert!(std::ptr::eq(*frame_post, raw_post));
+    assert_execution(execution, raw_execution);
+}
+fn assert_input(actual: InvocationInput<'_>, captured: InvocationInput<'_>) {
+    match (actual, captured) {
+        (InvocationInput::Start { action, scenario, cap },
+         InvocationInput::Start { action: a, scenario: s, cap: c }) => {
+            assert!(std::ptr::eq(action, a));
+            assert!(std::ptr::eq(scenario, s));
+            assert_eq!(cap, c);
+        }
+        (InvocationInput::Resume { continuation, event, cli_action, cli_cap },
+         InvocationInput::Resume { continuation: c, event: e, cli_action: a, cli_cap: cap }) => {
+            assert!(std::ptr::eq(continuation, c));
+            assert!(std::ptr::eq(event, e));
+            match (cli_action, a) {
+                (Some(actual), Some(captured)) => assert!(std::ptr::eq(actual, captured)),
+                (None, None) => {},
+                _ => panic!("CLI action option changed"),
+            }
+            assert_eq!(cli_cap, cap);
+        }
+        _ => panic!("invocation input variant changed"),
+    }
+}
+fn assert_outcome(view: &FinancialObservation<'_>, result: &Result<StageOutcome, StageRejection>) {
+    match (view, result) {
+        (FinancialObservation::Waiting { advanced, segment, continuation, attempted, residual },
+         Ok(StageOutcome::Waiting { advanced: a, segment: s, continuation: c, attempted: w, residual: r })) => {
+            assert_eq!(advanced, a);
+            match (segment, s) {
+                (Some(view), Some(raw)) => assert_segment(view, raw),
+                (None, None) => {},
+                _ => panic!("published segment option changed"),
+            }
+            assert!(std::ptr::eq(*continuation, c));
+            assert_eq!(attempted, w);
+            assert!(std::ptr::eq(*residual, r.as_slice()));
+            assert!(std::ptr::eq(view.committed_boundary().unwrap(), &c.boundary));
+            assert_eq!(view.committed_logical_work(), c.logical.committed);
+        }
+        (FinancialObservation::Complete { segment, committed, attempted, residual },
+         Ok(StageOutcome::Complete { segment: s, committed: c, attempted: a, residual: r })) => {
+            assert_segment(segment, s);
+            assert_eq!(committed, c);
+            assert_eq!(attempted, a);
+            assert!(std::ptr::eq(*residual, r.as_slice()));
+            assert!(std::ptr::eq(view.committed_boundary().unwrap(), &s.execution.post));
+            assert_eq!(view.committed_logical_work(), *c);
+        }
+        // No rejected result is constructed or selected by this positive test.
+        // Any unexpected rejection first fails complete independent JSON equality.
+        _ => panic!("positive stage outcome shape differs from its projection"),
+    }
+}
+fn compare_invocation(
+    key: &str,
+    program: &StagedProgram,
+    input: InvocationInput<'_>,
+    result: &Result<StageOutcome, StageRejection>,
+    golden: &Golden,
+) {
+    assert_eq!(serde_json::to_value(result).unwrap(), json(golden.raw_result), "{key}: complete raw Result");
+    let view = projection::project_invocation(program, input, result);
+    let InvocationObservation { program: observed_program, input: observed_input,
+        result: observed_result, outcome, accounting, tentative_publication } = &view;
+    assert!(std::ptr::eq(*observed_program, program));
+    assert!(std::ptr::eq(*observed_result, result));
+    assert_input(*observed_input, input);
+    assert_outcome(outcome, result);
+    // Complete independent accounting JSON checks every ordered effect/group/
+    // bucket/status; no selected account, field stripping or numeric coercion.
+    assert_eq!(serde_json::to_value(accounting).unwrap(), json(golden.accounting), "{key}: full accounting");
+    assert_eq!(serde_json::to_value(tentative_publication).unwrap(), json(golden.tentative_publication), "{key}: publication");
+    match (accounting, result) {
+        (AccountingAvailability::PublishedSegment(report), Ok(StageOutcome::Waiting { segment: Some(segment), .. })) |
+        (AccountingAvailability::PublishedSegment(report), Ok(StageOutcome::Complete { segment, .. })) => {
+            assert!(std::ptr::eq(report.effects, segment.execution.effects.as_slice()));
+        }
+        (AccountingAvailability::NoPublishedSegment, Ok(StageOutcome::Waiting { segment: None, .. })) => {},
+        _ => panic!("accounting must preserve actual published-segment availability"),
+    }
+    // The original Program/Plan/hash context is available through the identical
+    // StagedProgram argument; compare complete public values to independent cells.
+    assert_eq!(serde_json::to_value(observed_program.program()).unwrap(), json(EXPECTED_PROGRAM));
+    assert_eq!(serde_json::to_value(observed_program.plan()).unwrap(), json(EXPECTED_PLAN));
+    let context = json(EXPECTED_CONTEXT);
+    assert_eq!(Value::String(hash_text(observed_program.program_hash())),
+        context.pointer("/program_context/program_hash").expect("frozen program hash").clone());
+    assert_eq!(Value::String(hash_text(observed_program.plan_hash())),
+        context.pointer("/program_context/plan_hash").expect("frozen plan hash").clone());
+}
+fn waiting(result: &Result<StageOutcome, StageRejection>) -> &Continuation {
+    match result {
+        Ok(StageOutcome::Waiting { continuation, .. }) => continuation,
+        _ => panic!("fixed positive invocation must return Waiting"),
+    }
+}
+
+#[test]
+fn actual_core2_positive_financial_observations_match_complete_independent_r152() {
+    let program = stage::load(SOURCE).expect("fixed ordinary source admits");
+    let scenario: Scenario = serde_json::from_str(SCENARIO).expect("frozen input scenario");
+    let inputs = json(INVOCATIONS);
+    let action = inputs["action"].as_str().expect("selected action");
+    let start_cap: Option<UInt> = serde_json::from_value(inputs.get("start_cap").expect("frozen start_cap input").clone()).unwrap();
+    let cli_action: Option<String> = serde_json::from_value(inputs.get("resume_cli_action").expect("frozen resume_cli_action input").clone()).unwrap();
+    let cli_cap: Option<UInt> = serde_json::from_value(inputs.get("resume_cli_cap").expect("frozen resume_cli_cap input").clone()).unwrap();
+    let events: Vec<StageEvent> = serde_json::from_value(inputs.get("events").expect("frozen events input").clone()).unwrap();
+    assert_eq!(events.len(), 2, "frozen positive input sequence");
+
+    let start_result = stage::start(&program, action, scenario.clone(), start_cap);
+    compare_invocation("start", &program,
+        InvocationInput::Start { action, scenario: &scenario, cap: start_cap }, &start_result, &START);
+    // Initial full snapshot is observed from the actual successful segment,
+    // never synthesized from scenario or substituted for missing actual fields.
+    let initial = match &start_result {
+        Ok(StageOutcome::Waiting { segment: Some(segment), .. }) => &segment.execution.pre,
+        _ => panic!("fixed prefix publishes a successful suspended segment"),
+    };
+    assert_eq!(serde_json::to_value(initial).unwrap(),
+        json(START.raw_result).pointer("/Ok/Waiting/segment/execution/pre")
+            .expect("independent full initial snapshot").clone());
+
+    let false_input = waiting(&start_result).clone();
+    let false_result = stage::resume(&program, false_input.clone(), events[0].clone(), cli_action.as_deref(), cli_cap);
+    compare_invocation("false_await", &program,
+        InvocationInput::Resume { continuation: &false_input, event: &events[0],
+            cli_action: cli_action.as_deref(), cli_cap }, &false_result, &FALSE_AWAIT);
+    assert_eq!(waiting(&false_result), &false_input, "actual false guard retains full input continuation");
+
+    let true_input = waiting(&false_result).clone();
+    let true_result = stage::resume(&program, true_input.clone(), events[1].clone(), cli_action.as_deref(), cli_cap);
+    compare_invocation("true_resume", &program,
+        InvocationInput::Resume { continuation: &true_input, event: &events[1],
+            cli_action: cli_action.as_deref(), cli_cap }, &true_result, &TRUE_RESUME);
+    assert!(matches!(&true_result, Ok(StageOutcome::Complete { .. })));
+}
+
+END C01
+
+BEGIN C02 FULL historicalRootpromotion/mapping; earliercanonicalpin/wholebyteclaimqualifiedbyC05 | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/ROOT-PROMOTION.json | 17813B
+{
+  "utc": "2026-10-18T00:53:13.520369+00:00",
+  "operation": "Root exact source promotion plus test include locator changes only",
+  "librarySource": "all117currentnormalCorefiles byteequal actualR159compiledsnapshot",
+  "checkedNormalCoreSources": [
+    "crates/mori-core/src/intent.rs",
+    "crates/mori-core/src/ir.rs",
+    "crates/mori-core/src/json.rs",
+    "crates/mori-core/src/lib.rs",
+    "crates/mori-core/src/logical_cost.rs",
+    "crates/mori-core/src/parser.rs",
+    "crates/mori-core/src/policy.rs",
+    "crates/mori-core/src/replay.rs",
+    "crates/mori-core/src/runtime.rs",
+    "crates/mori-core/src/sherlock/arithmetic_witness.rs",
+    "crates/mori-core/src/sherlock/arithmetic_witness_normal_tests.rs",
+    "crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+    "crates/mori-core/src/sherlock/bounded_scalar_source_tests.rs",
+    "crates/mori-core/src/sherlock/checkpoint_normal_tests.rs",
+    "crates/mori-core/src/sherlock/compare.rs",
+    "crates/mori-core/src/sherlock/compare_tests.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/config.rs",
+    "crates/mori-core/src/sherlock/compile_artifact/wire.rs",
+    "crates/mori-core/src/sherlock/compile_artifact.rs",
+    "crates/mori-core/src/sherlock/draft_image_bridge.rs",
+    "crates/mori-core/src/sherlock/draft_image_bridge_tests.rs",
+    "crates/mori-core/src/sherlock/draft_source.rs",
+    "crates/mori-core/src/sherlock/draft_source_tests.rs",
+    "crates/mori-core/src/sherlock/draft_typecheck.rs",
+    "crates/mori-core/src/sherlock/draft_typecheck_tests.rs",
+    "crates/mori-core/src/sherlock/extra_normal_oracles.rs",
+    "crates/mori-core/src/sherlock/extra_oracle_programs.rs",
+    "crates/mori-core/src/sherlock/financial_projection.rs",
+    "crates/mori-core/src/sherlock/helper_call_adapter.rs",
+    "crates/mori-core/src/sherlock/helper_call_adapter_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/complete_comparison.rs",
+    "crates/mori-core/src/sherlock/helper_machine/complete_observation.rs",
+    "crates/mori-core/src/sherlock/helper_machine/core_action_consumer.rs",
+    "crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security.rs",
+    "crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security_operator_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/core_action_consumer_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/core_action_operator_pipeline_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/core_action_resource_integration_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/families/environment.rs",
+    "crates/mori-core/src/sherlock/helper_machine/families/legacy.rs",
+    "crates/mori-core/src/sherlock/helper_machine/families/mod.rs",
+    "crates/mori-core/src/sherlock/helper_machine/families/scalar.rs",
+    "crates/mori-core/src/sherlock/helper_machine/families/structural.rs",
+    "crates/mori-core/src/sherlock/helper_machine/fragments/legacy.proposed.rs",
+    "crates/mori-core/src/sherlock/helper_machine/fragments/scalar.proposed.rs",
+    "crates/mori-core/src/sherlock/helper_machine/mod.rs",
+    "crates/mori-core/src/sherlock/helper_machine/raw.rs",
+    "crates/mori-core/src/sherlock/helper_machine/resource_event_accounting.rs",
+    "crates/mori-core/src/sherlock/helper_machine/resource_event_accounting_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/resource_report.rs",
+    "crates/mori-core/src/sherlock/helper_machine/resource_report_tests.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/host_implied_prefix.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime/owner_si21_bind_match.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime/owner_si21_closure.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs",
+    "crates/mori-core/src/sherlock/helper_machine/shared.rs",
+    "crates/mori-core/src/sherlock/helper_machine/source_input_bridge.rs",
+    "crates/mori-core/src/sherlock/helper_schedule.rs",
+    "crates/mori-core/src/sherlock/helper_schedule_tests.rs",
+    "crates/mori-core/src/sherlock/image_reference.rs",
+    "crates/mori-core/src/sherlock/image_reference_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/arithmetic_fuel.rs",
+    "crates/mori-core/src/sherlock/layout_a/arithmetic_fuel_normal_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/aux_normal_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/auxiliary.rs",
+    "crates/mori-core/src/sherlock/layout_a/constants.rs",
+    "crates/mori-core/src/sherlock/layout_a/encoding.rs",
+    "crates/mori-core/src/sherlock/layout_a/limits.rs",
+    "crates/mori-core/src/sherlock/layout_a/mod.rs",
+    "crates/mori-core/src/sherlock/layout_a/normal_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/observation.rs",
+    "crates/mori-core/src/sherlock/layout_a/observation_normal_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/prepare.rs",
+    "crates/mori-core/src/sherlock/layout_a/rows.rs",
+    "crates/mori-core/src/sherlock/layout_a/state.rs",
+    "crates/mori-core/src/sherlock/layout_a/state_decode.rs",
+    "crates/mori-core/src/sherlock/layout_a/state_decode_normal_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/state_encode.rs",
+    "crates/mori-core/src/sherlock/layout_a/state_encode_normal_tests.rs",
+    "crates/mori-core/src/sherlock/layout_a/state_encoding.rs",
+    "crates/mori-core/src/sherlock/layout_a/state_encoding_normal_tests.rs",
+    "crates/mori-core/src/sherlock/machine_image.rs",
+    "crates/mori-core/src/sherlock/machine_image_tests.rs",
+    "crates/mori-core/src/sherlock/mod.rs",
+    "crates/mori-core/src/sherlock/normal_oracle_inputs.rs",
+    "crates/mori-core/src/sherlock/normal_oracles.rs",
+    "crates/mori-core/src/sherlock/program_image.rs",
+    "crates/mori-core/src/sherlock/program_image_oracles.rs",
+    "crates/mori-core/src/sherlock/program_image_tests.rs",
+    "crates/mori-core/src/sherlock/reference.rs",
+    "crates/mori-core/src/sherlock/reference_bounded_extra_tests.rs",
+    "crates/mori-core/src/sherlock/reference_bounded_tests.rs",
+    "crates/mori-core/src/sherlock/reference_display.rs",
+    "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
+    "crates/mori-core/src/sherlock/reference_slice.rs",
+    "crates/mori-core/src/sherlock/reference_slice_tests.rs",
+    "crates/mori-core/src/sherlock/reference_stream.rs",
+    "crates/mori-core/src/sherlock/reference_stream_tests.rs",
+    "crates/mori-core/src/sherlock/reference_tests.rs",
+    "crates/mori-core/src/sherlock/reference_types.rs",
+    "crates/mori-core/src/sherlock/resource_tests.rs",
+    "crates/mori-core/src/sherlock/source_adapter.rs",
+    "crates/mori-core/src/sherlock/source_adapter_operator_tests.rs",
+    "crates/mori-core/src/sherlock/source_adapter_tests.rs",
+    "crates/mori-core/src/sherlock/source_origin_normal_tests.rs",
+    "crates/mori-core/src/sherlock/trace_continuity_tests.rs",
+    "crates/mori-core/src/source_sponsor.rs",
+    "crates/mori-core/src/stage/admit.rs",
+    "crates/mori-core/src/stage/cost.rs",
+    "crates/mori-core/src/stage/decode.rs",
+    "crates/mori-core/src/stage/digest.rs",
+    "crates/mori-core/src/stage/mod.rs",
+    "crates/mori-core/src/stage/plan.rs",
+    "crates/mori-core/src/stage/profile.rs",
+    "crates/mori-core/src/stage/validate.rs"
+  ],
+  "canonicalTest": {
+    "path": "crates/mori-core/tests/sherlock_financial_observation_positive.rs",
+    "sha256": "63f51fab52c77ba497293957390b11a1dfdfb00bea90eab79db43aa572b500cd"
+  },
+  "executedOriginalTest": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/test-followup/financial_observation_positive.rs",
+    "bytes": 12271,
+    "sha256": "8723f842aa0f508e47716dfcdec88dedad2433bf8625a8476aa1ef7fd6f5113b"
+  },
+  "testBodyEquality": "reverse only15 exactinclude replacements yields byte-identical entire actuallyexecutedR176test",
+  "includeMappings": [
+    {
+      "oldInclude": "../inputs/retained-payment.mori",
+      "newInclude": "fixtures/financial-observation/retained-payment.mori",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/retained-payment.mori",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/inputs/retained-payment.mori",
+      "bytes": 821,
+      "sha256": "14df54dae79da68a20d37f285b7de91628cf6d999db197f423f6689e490c13f0"
+    },
+    {
+      "oldInclude": "../inputs/scenario.json",
+      "newInclude": "fixtures/financial-observation/scenario.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/scenario.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/inputs/scenario.json",
+      "bytes": 2036,
+      "sha256": "393cf28b5597f1be44edecc1b072591e0cd16ec086258b0445bd804b0d9cbff9"
+    },
+    {
+      "oldInclude": "../inputs/invocations.json",
+      "newInclude": "fixtures/financial-observation/invocations.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/invocations.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/inputs/invocations.json",
+      "bytes": 1055,
+      "sha256": "3f8076305dd7cd9694e6fdcb9d8fb58b2c5682aeb31f19317be41c28e5cda936"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED.json",
+      "bytes": 179206,
+      "sha256": "3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-PROGRAM.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-PROGRAM.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-PROGRAM.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-PROGRAM.json",
+      "bytes": 3399,
+      "sha256": "c49d38b7f447845e83060e8ab06cf72632cd788cf51a97bbb391f41e456ec5f6"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-PLAN.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-PLAN.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-PLAN.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-PLAN.json",
+      "bytes": 833,
+      "sha256": "f546eba9757dc9b626ade0cdf61eb5e7401c8d4ebc55711c14969811a67d9fa6"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-START-RESULT.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-START-RESULT.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-START-RESULT.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-START-RESULT.json",
+      "bytes": 24432,
+      "sha256": "8c788a81ff9efbdf9eafee2044a293d8d120d3008fe35f76c412d6e923a9d005"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-START-ACCOUNTING.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-START-ACCOUNTING.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-START-ACCOUNTING.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-START-ACCOUNTING.json",
+      "bytes": 2906,
+      "sha256": "0177cba8e0e6d14b98b36b3ea9e4874f622c67efe1f5c5dfb0f1d25fe67e77df"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+      "bytes": 29,
+      "sha256": "94d62cf9d22fa501c1ce69df38c87287e41f23ceba8219ec1dcde810cd7adf40"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-RESULT.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-FALSE-AWAIT-RESULT.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-FALSE-AWAIT-RESULT.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-RESULT.json",
+      "bytes": 4084,
+      "sha256": "374b67e8cbc8d7c9e9118a0ba3f779b0d1a6f180b9752d6d5b8cfb5dc159b926"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+      "bytes": 21,
+      "sha256": "416f6cf8b134015093ff43ce4d16f6fef821034153d4dd290e1864aff7a8b4f4"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+      "bytes": 20,
+      "sha256": "d15ae48467880bc849af27595ce363c862f61d7146148a8afa8f1231b2ee709e"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-RESULT.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-TRUE-RESUME-RESULT.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-TRUE-RESUME-RESULT.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-RESULT.json",
+      "bytes": 24726,
+      "sha256": "c3af4656a81153fbdde217265283fc8de8c9c13327ee15e07a302a2a9728a092"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+      "bytes": 2905,
+      "sha256": "757ccb322d4dabfebd55d044175a368118b5533bf58256a3c5f04ab470a8ba15"
+    },
+    {
+      "oldInclude": "../../152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+      "newInclude": "fixtures/financial-observation/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+      "path": "crates/mori-core/tests/fixtures/financial-observation/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+      "source": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+      "bytes": 29,
+      "sha256": "94d62cf9d22fa501c1ce69df38c87287e41f23ceba8219ec1dcde810cd7adf40"
+    }
+  ],
+  "canonicalTestExecution": "UNRUN at this record; new fixed ordinary check selected separately",
+  "whole017_acceptance": "pendingfreshR188resultscopeandRootadoption",
+  "018_019": "OPEN",
+  "nativeAuthority": 0
+}
+
+END C02
+
+BEGIN C03 FULL currentactualcanonicalcompileONLYresult; no binaryexecution | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/actual-canonical-compile-01/RESULT.json | 968B
+{
+  "status": "PASS",
+  "exitCode": 0,
+  "elapsedSeconds": 0.5424692980013788,
+  "streamCapExceeded": false,
+  "streamBytes": {
+    "stdout": 0,
+    "stderr": 0
+  },
+  "inputPinsUnchanged": 666,
+  "outputs": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/canonical-financial-test.d",
+      "bytes": 7805,
+      "sha256": "7239ff98a51acc98067bfcdeec6383a2ad87e7d0f875bcdbed1dbde560aa0d0a"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/canonical-financial-observation-tests",
+      "bytes": 18151424,
+      "sha256": "4faeac86a84ca75947bf536c125cc2ae266f149da4b2907b6867ae3e59df97ab"
+    }
+  ],
+  "scope": "Canonical external test compilation only; original R176 positive result reused by exact source/payload equivalence. No test binary executed.",
+  "subjectExecution": false,
+  "nativeAuthority": 0
+}
+
+END C03
+
+BEGIN C04 FULL exactcompiledargv/666matchedinputrecord | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/actual-canonical-compile-01/PREEXEC.json | 1401B
+{
+  "utc": "2026-10-18T00:59:35.528085+00:00",
+  "planSha256": "753346ed0aed3fc3a846019f6055e17118ef1df5ce4d8b0aed8491a4d6b12a3e",
+  "selectedCommand": [
+    "/usr/bin/timeout",
+    "--signal=KILL",
+    "30s",
+    "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc",
+    "--edition=2024",
+    "--test",
+    "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/sherlock_financial_observation_positive.rs",
+    "--extern",
+    "mori_core=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/build/libmori_core.rlib",
+    "--extern",
+    "serde_json=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/24-compiler-qa/proposed-run/core-target/debug/deps/libserde_json-76dc87088753b61e.rlib",
+    "-L",
+    "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/24-compiler-qa/proposed-run/core-target/debug/deps",
+    "--emit=link,dep-info=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/canonical-financial-test.d",
+    "-o",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/canonical-financial-observation-tests",
+    "-C",
+    "debuginfo=0"
+  ],
+  "inputPinsMatched": 666,
+  "subjectExecution": false,
+  "nativeAuthority": 0
+}
+
+END C04
+
+BEGIN C05 FULL currentcomment/includeequivalence and all15payloadpins | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/188-financial-positive-result-review/owner-literal-canonical-promotion-proposal-01/EXACT-COMMENT-INCLUDE-PAYLOAD-EQUIVALENCE.json | 16408B
+{
+  "current_canonical": {
+    "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/sherlock_financial_observation_positive.rs",
+    "bytes": 12064,
+    "sha256": "03a8d211cd4e982039f51bbe418bb434746f1ff0017f8558283b048ec33689c6"
+  },
+  "actually_executed_R176_test": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/test-followup/financial_observation_positive.rs",
+    "bytes": 12271,
+    "sha256": "8723f842aa0f508e47716dfcdec88dedad2433bf8625a8476aa1ef7fd6f5113b"
+  },
+  "include_replacements": 15,
+  "whole_reversed_bytes_equal": false,
+  "whole_non_module_doc_bytes_equal_after_reverse15": true,
+  "remaining_diff_only_module_doc_lines": "--- R176actualtest\n+++ currentWcanonicalreverse15includes\n@@ -1,6 +1,7 @@\n-//! SOURCE ONLY / UNRUN: fixed ordinary positive Core/2 integration.\n+//! Fixed ordinary positive Core/2 integration.\n //! Actual stage calls produce every observed result. R152 supplies all expected\n-//! result/accounting/program/plan cells; this source author read only its schema.\n+//! result/accounting/program/plan schema; R175 independently revises its input\n+//! identities. The test author read the expectation schema only.\n //! Borrow checks supplement independent JSON equality; they are not an oracle.\n use mori_core::{Execution, Scenario, UInt};\n use mori_core::stage::{self, Continuation, StageEvent, StageOutcome, StageRejection, StageSegment, StagedProgram};\n",
+  "payloads": [
+    {
+      "old_include": "../inputs/retained-payment.mori",
+      "new_include": "fixtures/financial-observation/retained-payment.mori",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/retained-payment.mori",
+        "bytes": 821,
+        "sha256": "14df54dae79da68a20d37f285b7de91628cf6d999db197f423f6689e490c13f0"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/inputs/retained-payment.mori",
+        "bytes": 821,
+        "sha256": "14df54dae79da68a20d37f285b7de91628cf6d999db197f423f6689e490c13f0"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../inputs/scenario.json",
+      "new_include": "fixtures/financial-observation/scenario.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/scenario.json",
+        "bytes": 2036,
+        "sha256": "393cf28b5597f1be44edecc1b072591e0cd16ec086258b0445bd804b0d9cbff9"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/inputs/scenario.json",
+        "bytes": 2036,
+        "sha256": "393cf28b5597f1be44edecc1b072591e0cd16ec086258b0445bd804b0d9cbff9"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../inputs/invocations.json",
+      "new_include": "fixtures/financial-observation/invocations.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/invocations.json",
+        "bytes": 1055,
+        "sha256": "3f8076305dd7cd9694e6fdcb9d8fb58b2c5682aeb31f19317be41c28e5cda936"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/151-financial-observation-adapter/inputs/invocations.json",
+        "bytes": 1055,
+        "sha256": "3f8076305dd7cd9694e6fdcb9d8fb58b2c5682aeb31f19317be41c28e5cda936"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED.json",
+      "new_include": "fixtures/financial-observation/EXPECTED.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED.json",
+        "bytes": 179206,
+        "sha256": "3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED.json",
+        "bytes": 179206,
+        "sha256": "3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-PROGRAM.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-PROGRAM.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-PROGRAM.json",
+        "bytes": 3399,
+        "sha256": "c49d38b7f447845e83060e8ab06cf72632cd788cf51a97bbb391f41e456ec5f6"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-PROGRAM.json",
+        "bytes": 3399,
+        "sha256": "c49d38b7f447845e83060e8ab06cf72632cd788cf51a97bbb391f41e456ec5f6"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-PLAN.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-PLAN.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-PLAN.json",
+        "bytes": 833,
+        "sha256": "f546eba9757dc9b626ade0cdf61eb5e7401c8d4ebc55711c14969811a67d9fa6"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-PLAN.json",
+        "bytes": 833,
+        "sha256": "f546eba9757dc9b626ade0cdf61eb5e7401c8d4ebc55711c14969811a67d9fa6"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-START-RESULT.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-START-RESULT.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-START-RESULT.json",
+        "bytes": 24432,
+        "sha256": "8c788a81ff9efbdf9eafee2044a293d8d120d3008fe35f76c412d6e923a9d005"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-START-RESULT.json",
+        "bytes": 24432,
+        "sha256": "8c788a81ff9efbdf9eafee2044a293d8d120d3008fe35f76c412d6e923a9d005"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-START-ACCOUNTING.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-START-ACCOUNTING.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-START-ACCOUNTING.json",
+        "bytes": 2906,
+        "sha256": "0177cba8e0e6d14b98b36b3ea9e4874f622c67efe1f5c5dfb0f1d25fe67e77df"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-START-ACCOUNTING.json",
+        "bytes": 2906,
+        "sha256": "0177cba8e0e6d14b98b36b3ea9e4874f622c67efe1f5c5dfb0f1d25fe67e77df"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+        "bytes": 29,
+        "sha256": "94d62cf9d22fa501c1ce69df38c87287e41f23ceba8219ec1dcde810cd7adf40"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-START-TENTATIVE-PUBLICATION.json",
+        "bytes": 29,
+        "sha256": "94d62cf9d22fa501c1ce69df38c87287e41f23ceba8219ec1dcde810cd7adf40"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-RESULT.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-FALSE-AWAIT-RESULT.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-FALSE-AWAIT-RESULT.json",
+        "bytes": 4084,
+        "sha256": "374b67e8cbc8d7c9e9118a0ba3f779b0d1a6f180b9752d6d5b8cfb5dc159b926"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-RESULT.json",
+        "bytes": 4084,
+        "sha256": "374b67e8cbc8d7c9e9118a0ba3f779b0d1a6f180b9752d6d5b8cfb5dc159b926"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+        "bytes": 21,
+        "sha256": "416f6cf8b134015093ff43ce4d16f6fef821034153d4dd290e1864aff7a8b4f4"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-ACCOUNTING.json",
+        "bytes": 21,
+        "sha256": "416f6cf8b134015093ff43ce4d16f6fef821034153d4dd290e1864aff7a8b4f4"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+        "bytes": 20,
+        "sha256": "d15ae48467880bc849af27595ce363c862f61d7146148a8afa8f1231b2ee709e"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-FALSE-AWAIT-TENTATIVE-PUBLICATION.json",
+        "bytes": 20,
+        "sha256": "d15ae48467880bc849af27595ce363c862f61d7146148a8afa8f1231b2ee709e"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-RESULT.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-TRUE-RESUME-RESULT.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-TRUE-RESUME-RESULT.json",
+        "bytes": 24726,
+        "sha256": "c3af4656a81153fbdde217265283fc8de8c9c13327ee15e07a302a2a9728a092"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-RESULT.json",
+        "bytes": 24726,
+        "sha256": "c3af4656a81153fbdde217265283fc8de8c9c13327ee15e07a302a2a9728a092"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+        "bytes": 2905,
+        "sha256": "757ccb322d4dabfebd55d044175a368118b5533bf58256a3c5f04ab470a8ba15"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-ACCOUNTING.json",
+        "bytes": 2905,
+        "sha256": "757ccb322d4dabfebd55d044175a368118b5533bf58256a3c5f04ab470a8ba15"
+      },
+      "byte_equal": true
+    },
+    {
+      "old_include": "../../152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+      "new_include": "fixtures/financial-observation/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+      "canonical": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/fixtures/financial-observation/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+        "bytes": 29,
+        "sha256": "94d62cf9d22fa501c1ce69df38c87287e41f23ceba8219ec1dcde810cd7adf40"
+      },
+      "executed_R176_source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED-TRUE-RESUME-TENTATIVE-PUBLICATION.json",
+        "bytes": 29,
+        "sha256": "94d62cf9d22fa501c1ce69df38c87287e41f23ceba8219ec1dcde810cd7adf40"
+      },
+      "byte_equal": true
+    }
+  ],
+  "historical_ROOT_PROMOTION_canonicalTest_field": {
+    "path": "crates/mori-core/tests/sherlock_financial_observation_positive.rs",
+    "sha256": "63f51fab52c77ba497293957390b11a1dfdfb00bea90eab79db43aa572b500cd"
+  },
+  "historical_qualification": "ROOT-PROMOTION canonicalTestpin and testBodyEquality entirebytes claim predate module-doc provenance cleanup. Currenttest pin matches CANONICAL-COMPILE-PLAN and actualcanonicalcompile; only15include locator strings and module-doc provenance lines differ from R176actuallyexecuted source. No expectedpayload/assertion changed.",
+  "all666_current_compileplan_inputpins_match": true,
+  "compileplan_fullidentity": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/CANONICAL-COMPILE-PLAN.json",
+    "bytes": 242649,
+    "sha256": "753346ed0aed3fc3a846019f6055e17118ef1df5ce4d8b0aed8491a4d6b12a3e"
+  },
+  "post_compile_outputs_still_match": true,
+  "canonical_test_execution": "UNRUN; canonicalcompilationonly. R176actualpositive used solely for exactlogic/payload equivalence, not a claimed canonicalbinaryrun."
+}
+
+END C05
+
+BEGIN C06 EXACTfullplanfieldprojection except666identitylist;fulloriginalpinretained | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/188-financial-positive-result-review/owner-literal-canonical-promotion-proposal-01/EXACT-CANONICAL-COMPILE-PROJECTION.json | 3288B
+{
+  "original_complete_plan": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/CANONICAL-COMPILE-PLAN.json",
+    "bytes": 242649,
+    "sha256": "753346ed0aed3fc3a846019f6055e17118ef1df5ce4d8b0aed8491a4d6b12a3e"
+  },
+  "status": "ROOT_SELECTED_ORDINARY_CANONICAL_TEST_COMPILE_ONLY",
+  "utc": "2026-10-18T00:59:24.617477+00:00",
+  "argv": [
+    "/usr/bin/timeout",
+    "--signal=KILL",
+    "30s",
+    "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc",
+    "--edition=2024",
+    "--test",
+    "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/sherlock_financial_observation_positive.rs",
+    "--extern",
+    "mori_core=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/build/libmori_core.rlib",
+    "--extern",
+    "serde_json=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/24-compiler-qa/proposed-run/core-target/debug/deps/libserde_json-76dc87088753b61e.rlib",
+    "-L",
+    "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/24-compiler-qa/proposed-run/core-target/debug/deps",
+    "--emit=link,dep-info=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/canonical-financial-test.d",
+    "-o",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration/canonical-financial-observation-tests",
+    "-C",
+    "debuginfo=0"
+  ],
+  "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/189-financial-canonical-integration",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TMPDIR": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/tmp"
+  },
+  "pinCount": 666,
+  "boundSeconds": 30,
+  "streamCapBytes": 131072,
+  "rationale": "Current public test/include locations compile against exactly the already compiled financial Core library; all117 library source files byteequal R159. Test body modulo include locators and provenance comments unchanged from actual R176 PASS. No positive subject rerun or Core recompilation.",
+  "subjectExecution": false,
+  "nativeAuthority": 0,
+  "priorResult": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/actual-attempt-01/RESULT.json",
+  "bodyEquivalence": "all non-module-doc lines identical after reversing exact15include replacements",
+  "scope": "Compile integration only; existing R176 actual positive observation retains original source identity.",
+  "canonical_test_inputpin": {
+    "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/tests/sherlock_financial_observation_positive.rs",
+    "bytes": 12064,
+    "sha256": "03a8d211cd4e982039f51bbe418bb434746f1ff0017f8558283b048ec33689c6",
+    "roles": [
+      "canonical_promotion"
+    ]
+  },
+  "all666_currentpins_matched": true,
+  "omitted_inputPins_array": "Complete666-rowlist exists at original plan/fullpin; not repeated in this compact sameownerclarification. This is not a second source/dependency audit."
+}
+
+END C06
+
+BEGIN C07 FULL falsifiableliteralcorrections and originalnorms; Root017status advisory, freeindependentverdict | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/188-financial-positive-result-review/owner-literal-canonical-promotion-proposal-01/LITERAL-QUOTE-IDS.json | 11154B
+{
+  "Q1": {
+    "meaning": "exact consumed context fulloriginalpin; do not copy a different hash",
+    "record": {
+      "source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED.json",
+        "bytes": 179206,
+        "sha256": "3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4"
+      },
+      "selectors_actually_compared": [
+        "/program_context/program_hash",
+        "/program_context/plan_hash"
+      ],
+      "projection": {
+        "program_context": {
+          "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+          "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d"
+        }
+      },
+      "not_compared": "All other179206B EXPECTED.json fields are compiled/parsing input but NOT compared by the test. This projection preserves exactly both consumed scalar cells; it does not claim fulloriginal-body review or179KBcomparison."
+    }
+  },
+  "Q2": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+    "actual_type_declarations": [
+      "pub enum FinancialObservation<'a> {",
+      "pub enum AccountingAvailability<'a> {",
+      "pub enum TentativePublication {"
+    ],
+    "actual_raw_type": "Result<stage::StageOutcome,stage::StageRejection>",
+    "withdraw": [
+      "StageResults",
+      "SegmentAccountingDispositions",
+      "TentativeSegmentPublicationDispositions",
+      "ProjectedStageOutcome::Rejected"
+    ]
+  },
+  "Q3": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/mod.rs",
+    "declaration": "pub fn load(src: &str) -> Result<StagedProgram, Error> {\n    let program = crate::parser::parse_v2(src)?;\n",
+    "other_actual_definitions": {
+      "stage/admit.rs": {
+        "start_line": 219,
+        "resume_line": 279
+      },
+      "stage/decode.rs": {
+        "canonical_boundary_line": 94
+      }
+    },
+    "withdraw": "admit::{load,start,resume} and oldwrongdeclarationlocators"
+  },
+  "Q4": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+    "amount_helper": "fn amount(\n    p: &Program,\n    id: ExprId,\n    env: &BTreeMap<String, Value>,\n    snapshot: &Snapshot,\n    meter: &mut Option<&mut Meter>,\n) -> Result<UInt, Error> {\n    match evaluate(p, id, env, snapshot, meter)? {\n        Value::UInt(v) => Ok(v),\n        _ => Err(failure(\"type\", \"Expected UInt amount.\")),\n    }\n",
+    "actual_executor": "fn execute_statement(\n    program: &Program,\n    stmt: &Statement,\n    env: &mut BTreeMap<String, Value>,\n    current: &mut Snapshot,\n    meter: &mut Option<&mut Meter>,\n    effects: &mut Vec<Effect>,\n) -> Result<Option<Value>, Error> {\n    charge_logical(meter)?;\n    match stmt {\n        Statement::Await { guard, .. } => {\n",
+    "Liability_arm": "        Statement::Liability {\n            name,\n            asset,\n            debtor,\n            creditor,\n            amount: expr,\n        } => {\n            let amount = amount(program, *expr, env, current, meter)?;\n            let id = validate_asset(program, asset)?.clone();\n            let found = current.liabilities.iter().position(|l| l.name == *name);\n            let before = if let Some(index) = found {\n                let l = &current.liabilities[index];\n                if l.asset != id || l.debtor != *debtor || l.creditor != *creditor {\n                    return Err(failure(\n                        \"liability\",\n                        \"Existing liability identity differs.\",\n                    ));\n                }\n                l.amount\n            } else {\n                UInt(0)\n            };\n            let after = UInt(\n                before\n                    .0\n                    .checked_add(amount.0)\n                    .ok_or_else(|| failure(\"overflow\", \"Liability exceeds u128.\"))?,\n            );\n            if let Some(index) = found {\n                current.liabilities[index].amount = after;\n            } else {\n                current.liabilities.push(Liability {\n                    name: name.clone(),\n                    asset: id.clone(),\n                    debtor: debtor.clone(),\n                    creditor: creditor.clone(),\n                    amount: after,\n                });\n                current.liabilities.sort_by(|a, b| a.name.cmp(&b.name));\n            }\n            effects.push(Effect::Liability {\n                name: name.clone(),\n                asset: id,\n                debtor: debtor.clone(),\n                creditor: creditor.clone(),\n                before,\n                after,\n",
+    "withdraw": "declareDuties wouldrejecton amount==0 in runtime::eval_statement; no suchfunction/zeroamountguard exists. This action remains unexecuted; do not add a policy change."
+  },
+  "Q5": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+    "checked_add": "impl AmountAggregate {\n    fn add(self, amount: UInt) -> Self {\n        match self {\n            Self::Exact(value) => match value.0.checked_add(amount.0) {\n                Some(sum) => Self::Exact(UInt(sum)), None => Self::AboveU128,\n            },\n            Self::AboveU128 => Self::AboveU128,\n        }\n    }\n}\n\n",
+    "selftransfer_debit_credit": "pub fn account_effects(effects: &[Effect]) -> AccountingReport<'_> {\n    let mut accounts = Vec::new();\n    for effect in effects {\n        let (asset, from, to, amount, fee) = match effect {\n            Effect::Transfer { asset, from, to, amount } => (asset, from.as_str(), to.as_str(), *amount, false),\n            Effect::Fee { asset, from, to, amount } => (asset, from.as_str(), to.as_str(), *amount, true),\n            Effect::State { .. } | Effect::Liability { .. } | Effect::Emit { .. } => continue,\n        };\n        let debit = account_index(&mut accounts, asset, from);\n        {\n            let row = &mut accounts[debit];\n            row.gross_debit = row.gross_debit.add(amount);\n            if fee { row.fee_debit = row.fee_debit.add(amount); }\n            else { row.transfer_debit = row.transfer_debit.add(amount); }\n        }\n        let credit = account_index(&mut accounts, asset, to);\n        {\n            let row = &mut accounts[credit];\n            row.gross_receipts = row.gross_receipts.add(amount);\n            if fee { row.fee_receipts = row.fee_receipts.add(amount); }\n            else { row.transfer_receipts = row.transfer_receipts.add(amount); }\n        }\n    }\n    for row in &mut accounts {\n        row.net_flow = match (row.gross_receipts, row.gross_debit) {\n            (AmountAggregate::Exact(receipts), AmountAggregate::Exact(debit)) => {\n                if receipts.0 > debit.0 { NetFlow::Inflow(UInt(receipts.0 - debit.0)) }\n                else if debit.0 > receipts.0 { NetFlow::Outflow(UInt(debit.0 - receipts.0)) }\n                else { NetFlow::Balanced }\n",
+    "scope": "Unchangedsource frompriorfullcontext; corrected literalfact only, not newexecution ofoverflow/selftransfer."
+  },
+  "Q6": {
+    "source": "original UIREQ017/018/019 and interfacefinancialparagraph",
+    "exact": {
+      "original_spec": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+        "bytes": 23568,
+        "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b"
+      },
+      "UIREQ017_018_019_verbatim": "### Requirement: UIREQ-017 Complete financial observation\nWHEN the future financial extension reports a segment outcome, it SHALL expose the complete ordered financial observation defined by its adapter.\n\n#### Scenario: First paid prefix\n- **WHEN** Reserve 100/liability 40 pays 30, charges fee 2 and discharges liability 30 at an admitted prefix boundary.\n- **THEN** The observation reports reserve 68, liability 10, gross debit 32 and recipient receipt 30, with residual duty 10.\n\n### Requirement: UIREQ-018 Existing await-prefix preservation\nWHEN existing Core/2 typed-await behavior is lowered to the universal machine, the adapter SHALL preserve its successful-prefix effects, duties and checkpoint atomicity.\n\n#### Scenario: Await after partial payment\n- **WHEN** The preceding successful prefix reaches a typed await.\n- **THEN** Its committed prefix and residual duty remain the same as Core/2; exact universal Commit/Yield/Await opcodes remain an open design choice.\n\n### Requirement: UIREQ-019 Local segment failure outcome\nWHEN a future financial segment fails locally, the adapter SHALL distinguish its discarded tentative delta from the retained committed prefix, consumed work and residual duties.\n\n#### Scenario: Second segment fails before commit\n- **WHEN** After the 68-reserve/10-liability prefix, a later local segment fails before its financial commit.\n- **THEN** The retained prefix still reports reserve 68 and liability 10, plus later consumed work; no global ledger rollback is inferred.\n",
+      "original_interfaces": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/openspec/changes/sherlock-universal-interpreter-design/interfaces.md",
+        "bytes": 36972,
+        "sha256": "bee739da090c41230adc6ebd711075d842ef127d7fed8d54276e9fb484d19536"
+      },
+      "financial_extension_verbatim": "The financial extension must add complete committed/tentative state, ordered effects, residual duties, pending operations/observations and phase/cost fields to `ReferenceState`, images and observations together. Existing Core/2 successful-prefix typed await remains controlling. Exact universal `Commit`/`Yield`/`Await` opcodes and target-phase mapping stay OPEN for integration/review; no opcode is supplied here. Chunk cuts, caches, match plans and residual blocks cannot create financial commits or move source boundaries. Existing UISEC clauses remain unchanged, with all new security implications referred to their Opus owner.",
+      "source_presence_check": true,
+      "interpretation": "Actual owner argument retained in REPORT.md; this exact-text record makes no new acceptance decision."
+    },
+    "Root_proposed_scope_advisory": "Root current proposed disposition:017 overall OPEN; exactCore2 component and First paid prefix scenario observed; actualSherlockfinancial producer relationship unestablished. This is advisory context, not a requiredreviewverdict. Independently assess originalclause/scenario against supplied norms; disagree or abstain if warranted. Do not impose018orMachineImage-onlygate absentnorms."
+  }
+}
+
+END C07
+
+BEGIN C08 FULL actualR177sameownercorrected6331B; replacesraw177falseclaims only, no currentresultvote | /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/177-financial-input-revision-review/owner-literal-correction-proposal-01/actual-owner-clarification-01/REPORT.md | 6331B
+{"review_id":"R177-SAME-OWNER-LITERAL-CORRECTION","actual_owner_context":{"conversation_id":"ae7df8a1-994e-464f-8d5c-14631dcdeb72","same_owner_cid_matched":true,"model":"gemini-4-argon-high","role":"Same-actual-owner literal source-anchor correction on unchanged 96-page/71-body R177 cut (all 3 R176 phases UNRUN in reviewed cut); not a fresh independent/security vote, source adoption, or execution grant","native_authority":0},"withdrawn_and_corrected_assertions":{"E1":{"withdrawn":"Err(RuntimeError::LiabilityIdentityMismatch)","actual":"No RuntimeError exists in Core source. In F026 (stage/decode.rs) line 206-207, canonical_boundary checks if registry.get(l.name.as_str()) != Some(&(&l.asset, l.debtor.as_str(), l.creditor.as_str())) and returns Err(Error::new(\"liability\", format!(\"Existing liability identity differs for {:?}.\", l.name)))."},"E2":{"withdrawn":"snapshot_from_stage","actual":"F017 (financial_projection.rs) defines no snapshot_from_stage. Its actual public free functions are project_execution, project_segment, project_stage_result, project_resume_result, financial_observation_matches, resume_financial_observation_matches, account_effects, and project_invocation."},"E3":{"withdrawn":"StageContinuation","actual":"No StageContinuation exists. In F028 (stage/mod.rs) and F024 (stage/admit.rs) line 279, the struct is Continuation, and pub fn resume(sp: &StagedProgram, c: Continuation, ...) takes c: Continuation by value."},"E4":{"withdrawn":"project_invocation sets tentative:None on Err","actual":"In F017 (financial_projection.rs) line 266 and 355, InvocationObservation has tentative_publication: TentativePublication (and accounting: AccountingAvailability<'a>), not tentative:Option. On Err(_), project_invocation returns (AccountingAvailability::RejectedNoPublishedDelta, TentativePublication::UnavailableFromStageRejection)."},"E5":{"withdrawn":"account_effects uses saturating_add","actual":"In F017 (financial_projection.rs) line 272-275 and 329, AmountAggregate::add uses value.0.checked_add(amount.0), returning Self::Exact(UInt(sum)) or Self::AboveU128 (with AboveU128 absorbing), and account_effects sets row.net_flow = NetFlow::Unavailable unless both gross_receipts and gross_debit are Exact. Does not change A or B: F001 positive pay amounts (30,2,10,1) stay Exact."},"E6":{"withdrawn":"does not reject self-transfer (enforced in runtime.rs)","actual":"In F020 (runtime.rs) line 668-699, move_funds checks debit via checked_sub, updates balances only inside if f != t { ... }, and returns Ok(()). It has no general equal-account rejection (static branch readback only; F001 pay transfers only between distinct accounts reserve->beneficiary and reserve->fee_recipient)."},"E7":{"withdrawn":["stage::plan::build_action","stage/validate.rs validate","F027 sha256_canonical_json","eval_statement"],"actual":["F029 (stage/plan.rs line 56): pub(crate) fn build(program: &Program) -> Result<StagePlan, Error>","F031 (stage/validate.rs line 47): pub(crate) fn validate_v2(program: &Program) -> Result<(), Error>","F027 (stage/digest.rs line 7): fn digest<T: serde::Serialize>(value: &T) -> Result<[u8; 32], Error> (program_hash/plan_hash reuse intent::canonical)","F020 (runtime.rs line 702): fn execute_statement(program: &Program, stmt: &Statement, env: &mut BTreeMap<String, Value>, current: &mut Snapshot, meter: &mut Option<&mut Meter>, effects: &mut Vec<Effect>) -> Result<Option<Value>, Error>"]},"E8":{"acknowledged":"Prior raw report (REPORT.md) was 5921 UTF-8 bytes, exceeding the 5000-byte ceiling by 921 bytes."},"A1_hash_cell_scope":{"clarification":"F005 (EXPECTED.json) has 15 logical/physical identity-binding hash cells; F008 (EXPECTED-START-RESULT.json) and F011 (EXPECTED-FALSE-AWAIT-RESULT.json) each repeat 2 physical continuation hash cells (program_hash, plan_hash), totaling 19 physical cells across F005, F008, and F011. Both reported hash literals (program_hash a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723, plan_hash b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d) are exact."},"additional_call_graph_clarification":"In F001 (financial_observation_positive.rs), compare_invocation calls projection::project_invocation (which calls account_effects and project_stage_result -> project_segment -> project_execution) and assert_outcome calls view.committed_boundary() and view.committed_logical_work(). F017 helpers project_resume_result, ResumeFinancialObservation::input_boundary, FinancialObservation::successful_segment, financial_observation_matches, and resume_financial_observation_matches are uncalled in F001."},"decisions":{"decisionA":{"disposition":"CONFIRM","verdict":"APPROVE","rationale":"With E1-E7 corrected to exact source literals, R174 (F002 retained-payment.mori) and R175 (F005..F016) remain functionally consistent with F017..F031 and F001. Appending unselected action declareDuties() registers auditDuty and pay-beneficiary in F026 decode::registry(p) so F024 start() passes decode::canonical_boundary before runtime::run_segment, without executing declareDuties in F020 execute_statement or changing pay trace cells (99 <= MAX_TRACE_CELLS), effects, accounting, or work."},"decisionB":{"disposition":"CONFIRM","verdict":"ELIGIBLE","rationale":"E1-E8 do not alter the prospective 3-phase ordinary plan in R176/PROPOSED.json (externalTestArgv 30s, testListArgv 10s, exactSerialPositiveTestArgv 10s for actual_core2_positive_financial_observations_match_complete_independent_r152, reusing retained R159 libmori_core.rlib/.rmeta with newCoreBuild=false, 131072B/stream cap in ROOT-CAPTURE-CODE.txt, 1 run/phase, 0 retries, nativeAuthority=0, all 3 phases UNRUN in reviewed cut)."}},"limits":["UIREQ-017/018 positive Core/2 diagnostic only; no Sherlock lowering, A/B equivalence, circuit, native proof, or ledger settlement.","UIREQ-019 negative/failure oracle unexecuted; StageRejection carries no failed tentative delta (RejectedNoPublishedDelta / UnavailableFromStageRejection); resume consumes Continuation by value.","117 Core and 273 normal dependency/tool pins are mechanically matched (533 paths), not source-audited; R175 is a deterministic source-grounded manual oracle, not compiler-independence proof; Root alone selects execution."],"tailmarker":"END-R177-SAME-OWNER-LITERAL-CORRECTION-NATIVE0"}
+
+END C08
+
+END ALL COMPACT CANONICAL PROMOTION INPUTS. Output onlyrequested<=2500BJSON withindependentverdicts.

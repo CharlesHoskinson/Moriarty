@@ -1,0 +1,123 @@
+{
+  "status": "SOURCE_PREDICTION_WITH_LISTED_PREMISES_NOT_ACTUAL_ADMISSION_OBSERVATION",
+  "old_counterexample": {
+    "input_source_sha256": "3fae5fd83728d10589c140eeb6c479a72da36b170dd6e77eb40399cd17bd49ec",
+    "program_has_source_Liability_statements": false,
+    "sourcewide_decode_registry": "empty",
+    "initial_first_liability_name": "auditDuty",
+    "failing_existing_clause": "stage/decode.rs:canonical_boundary exact registry.get(name)==(asset,debtor,creditor)",
+    "start_causal_order": "scenario_snapshot then start_preflight then canonical_boundary for awaiting action, all before segment_meter/run_segment",
+    "runtime_registry_distinction": "runtime.rs::liability_identities permits undeclared incoming duties unless a source identity exists; that is not the stricter stage R7 registry check. This distinction was omitted by R152.",
+    "root_failure_metadata_only": "Root reports R159 first raw positive-result comparison failed at sourcewide identity admission with attempted0/committed0. No actual output file read or reused as a positive oracle."
+  },
+  "corrected_registries": {
+    "sourcewide_runtime_liability_identities": [
+      {
+        "name": "auditDuty",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "debtor": "observer",
+        "creditor": "fee_recipient"
+      },
+      {
+        "name": "pay-beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "debtor": "reserve",
+        "creditor": "beneficiary"
+      }
+    ],
+    "sourcewide_stage_decode_registry": [
+      {
+        "name": "auditDuty",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "AUX",
+          "scale": 0
+        },
+        "debtor": "observer",
+        "creditor": "fee_recipient"
+      },
+      {
+        "name": "pay-beneficiary",
+        "asset": {
+          "network": "local",
+          "issuer": "r151-financial-observation",
+          "reference": "UNIT",
+          "scale": 0
+        },
+        "debtor": "reserve",
+        "creditor": "beneficiary"
+      }
+    ],
+    "construction": "Both scan all Program actions for Liability statements and resolve asset name to exact declared AssetId; both new tuples match all existing snapshot liability rows; no conflicting duplicate source tuple. Zero source amount is not an opening-state overwrite because declareDuties is unselected."
+  },
+  "fixed_static_source": {
+    "language_semantics": [
+      "moriarty/2",
+      "moriarty-core/2"
+    ],
+    "actions_in_order": [
+      "pay",
+      "declareDuties"
+    ],
+    "states_in_source_order": [
+      "marker",
+      "flag"
+    ],
+    "assets_in_source_order": [
+      "UNIT",
+      "AUX"
+    ],
+    "expressions": 9,
+    "declarations_states_assets_actions": 6,
+    "no_forward_or_cyclic_expression_reference": true,
+    "guard": "Bool Name ready in the await binder environment",
+    "one_unique_await_label": "release",
+    "one_await_site_with_one_binder_and_no_captures": true,
+    "complete_asset_identities_unique_scale0": true,
+    "amounts_UInt_nodes_and_finite_statement_counts": true
+  },
+  "selected_start": {
+    "action_index": 0,
+    "inputs": "exact empty action inputs and scenario.inputs{}",
+    "state": "Exactly declared flag Bool/marker UInt values; complete present state no extras",
+    "balances": "All exact identities declared; valid unique full account/asset keys, canonical ordering; every pay transfer/fee party present",
+    "liabilities": "auditDuty and pay-beneficiary present, name-sorted, complete exact tuples registered under BOTH sourcewide maps",
+    "trace_cells": {
+      "records": 11,
+      "statement_count_plus2": 9,
+      "product": 99,
+      "existing_max": 65536
+    },
+    "cap": "None; no new cap or policy; selected pay plan costs unchanged",
+    "source_outcome_prediction": "Only after these source predicates: ordinary pay prefix publishes Waiting with complete expected output, not an observed result"
+  },
+  "selected_resume": {
+    "R0": "cli_action None; action pay preserved",
+    "R1": "format/profile exact existing constants",
+    "R2": "Both corrected complete source Program/Plan identity hashes used in all continuation cells",
+    "R3": "pay remains action0, site1 exists",
+    "R4": "captures[] exactly match site capture layout[]",
+    "R5": "Exact release event format/action/label and single ready Bool binder; false then true",
+    "R6": "logical.committed matches selected pay committed_before at site1; cap/cli_cap None, source arithmetic representable",
+    "R7": "All complete preserved snapshots meet exact state, balance, liability registry/order and trace-cell predicates",
+    "publication_roundtrip": "Continuation contains all mandatory keys and correct UInt strings/frames/site; source size far below existing decoder limits; actual emit_checked remains unexecuted"
+  },
+  "nonclaims": [
+    "No new guard/cap/fee design or security judgment",
+    "No actual load/start/resume or serializer result",
+    "No selecting/executing declareDuties",
+    "No inference of failed tentative state or returned rollback continuation",
+    "No global ledger/native/phase correspondence"
+  ]
+}
