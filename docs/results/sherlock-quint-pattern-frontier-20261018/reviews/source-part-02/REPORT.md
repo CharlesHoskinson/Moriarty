@@ -1,0 +1,131 @@
+ACK-QUINT-B10-SAME8A-SOURCE-REVIEW-PART2
+
+### Reviewer Identity & Continuation Scope
+- **Conversation ID**: `8a6a2b55-186d-4a62-a8ae-142ea13ba7e7` (continuing same non-author reviewer conversation at original CWD `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/formal-three-profile-fresh-review-20261018/quint-batch01/fresh-provider-cwd`; one continuing non-author opinion, not a second vote or execution result).
+- **Requested Route / Observed Model Identity**: Requested standing Opus quota-outage fallback `Gemini4ArgonHIGH`; actual returned model identity `Gemini 4 Argon (High)`.
+- **Execution Discipline**: **Zero tools used** (no file reads/writes, no shell commands, no delegation, no Quint/frontend/model/native execution, no Git/network calls, no private context disclosure). All findings and verdicts below are derived exclusively from the complete inline bodies `1..23` delivered across Manual Parts 1/2 and 2/2.
+
+---
+
+### 1. Complete Readable Coverage of All 23 Bodies (`1..23`) & Full Imported API Closure
+
+#### 1.1 Global Body Coverage (`Bodies 1–23`)
+All 23 bodies across Manual Part 1/2 (`Bodies 1–7`) and Manual Part 2/2 (`Bodies 8–23`) were received and read in full without truncation or elision:
+
+| Global Ordinal | Artifact / File | Bytes | SHA-256 | Part | First / Last Readable Markers Verified |
+|---|---|---|---|---|---|
+| **1** | `nominalConstruction.qnt` | `18,761` | `77a487c5b7ce84569540faa0a780991d67cf8217d3a1d68a81916426d8943008` | Part 1 | `module nominalConstruction {` .. `val completedWitness = machine.outcome == Done(uint(18))` / `}` |
+| **2** | `patternFrontier.qnt` | `19,257` | `a583233ecd20d82dd92202537bf2364235f1ed53bf04d315091828905b7d778b` | Part 1 | `module patternFrontier {` .. `frontierRepeat(prefixes.nth(cut), input.analysisBounds.advances - cut) == completed)` / `}` |
+| **3** | `patternFrontierInputs.qnt` | `15,962` | `76bd87614a4f7c22e734ea358f5a57b6815d10a54ee2771f7ac075dcb75e7b7f` | Part 1 | `module patternFrontierInputs {` .. `pure val frontierCohort: List[F::FrontierInput] = List(...)` / `}` |
+| **4** | `patternFrontierTest.qnt` | `3,393` | `715c44aa74d004937e39ab2f7bceb786301039295d85ee6b756397bcf8fe29ed` | Part 1 | `module patternFrontierTest {` .. `I::frontierCohort.foldl(false, (seen, input) => seen or frontierHasRetainedParentWitness(input)),` / `}` |
+| **5** | `prepare_safe_frontier_inputs.py` | `7,464` | `ef40319ede16990a49b37e07c56b63c04c6dccae2e3912dcd1c803b902990ab2` | Part 1 | `"""Source-only preparation...` .. `if __name__ == '__main__':\n    main()` |
+| **6** | `SAFE-FRONTIER-INPUTS.compact.json` | `6,764` | `c58873d13f5574515f41404dc82e80a1917c105a5cbd3ad354852468152fb8ce` | Part 1 | `{"status":"SAFE_INPUT_AND_PREPARATION_WITNESSES_ONLY...` .. `...external."}` |
+| **7** | `SAFE-SOURCE-TO-TABLE-ALL-ROWS.compact.json` | `18,631` | `bafb950674ad3bcf123c636173c69992343dd16cb4a2b9e64812ef828d393782` | Part 1 | `{"status":"INPUT_TABLES_AND_LITERAL_REPRESENTATION_WITNESSES_ONLY...` .. `..."sourcePattern":{"Bind":13}}]}]}` |
+| **8** | `SAFE-FRONTIER-DECLARATIONS.md` | `3864` | `0c93382857c788b54a38077ba8c97820a1d0359c4f2a3329b9aec8165e749c45` | Part 2 | `# Local pattern-frontier correspondence declarations` .. `...no full035/034/B/native acceptance follows.` |
+| **9** | `NORMATIVE-AND-OWNER-EXCERPTS.md` | `24,053` | `8a2b623cc5cba950ab64dc8521d870b2d28d69f7aa250249c1a3ea3ca9ecc8a4` | Part 2 | `# Exact selected normative/current-owner excerpts` .. `...constant_fields are Const ids in field order.` |
+| **10** | `SOURCE-SCOPE-AND-PREDICATE.md` | `5,350` | `0de71fbf655d4616c0870146e597e6f8e2022acd9c617b3f44c91d9ea4ffef51` | Part 2 | `# B10 indexed pattern-frontier correspondence source` .. `...B06 financial source remains separate and unchanged.` |
+| **11** | `OWNER-DEPENDENCY-GAP.json` | `3,224` | `2dcf2c2cbed9d6dcdaf2765816612b3d417b1a9fc705e569f562a372a46f85da` | Part 2 | `{\n  "status": "ACTUAL_CURRENT_OWNER_GAP_PINNED...` .. `..."Root may provide a newly adopted exact cut later."\n}` |
+| **12** | `FINITE-OPERATIONS.json` | `3,184` | `8e6e790804ae506eca61a1a2eb18e0ee2571c68077fa8e573bc4dbb227fd615c` | Part 2 | `{\n  "schema": "existing-local-frontier-finite-proposal/1"...` .. `..."fresh source review is separate from semantic derivation."\n}` |
+| **13** | `LEXICAL-NAME-AUDIT.json` | `4,628` | `e1711e07736b2137b13d2ea539ac88e87ede79c15feac68a52d20a7c5ded77dc` | Part 2 | `{\n  "status": "LEXICAL_METADATA_ONLY...` .. `..."builtinCollisions": []\n    }\n  ]\n}` |
+| **14** | `PREIMAGES.json` | `2,459` | `34f4ca0c07809387c44a02c6a7b3ff1339428eaa64c1d7603f2acc4f4c1b322e` | Part 2 | `{\n  "status": "R_ONLY_NEW_CANDIDATE_NOT_APPLIED_TO_W"...` .. `..."state": "ABSENT"\n      }\n    }\n  ]\n}` |
+| **15** | `batch09-nested-patterns/actual/RESULT.json` | `4,432` | `18bec2efa99d64891e719fb9a61175949774c4e2e2d7a7702b41510b6bf0e210` | Part 2 | `{\n  "status": "ALL4_PASS"...` .. `..."expected_bodies_opened": 0\n}` |
+| **16** | `SAFE-INPUT-FREEZE.json` | `1,127` | `f6d921df518d47e1a331f3711268de79800d2cceea5c55c31928ff675e997eac` | Part 2 | `{\n  "status": "Input/declaration/owner-boundary freeze...` .. `..."noGoldenRead": true\n}` |
+| **17** | `ORIGINAL-UIREQ-COMPLETE-CLAUSES.txt` | `6,656` | `2bb11fe6d783f05d4b00364e24b64fb76e61da9d4d4bf4af22d559981dbab9c1` | Part 2 | `SOURCE .../spec.md\n### Requirement: UIREQ-003...` .. `...generated from the materializer/DAG metadata.` |
+| **18** | `ADOPTED-SCON-COMPLETE-CLAUSES.txt` | `8,554` | `8a6fdd71ce6792029254f1069b2133a72eb07fafa8463b6884206b05092f689c` | Part 2 | `SOURCE .../spec.md\n### Requirement: SCON-016...` .. `...prevent affected documentation being claimed current.` |
+| **19** | `MORIARTY-PRODUCT-CONTRACT.md` | `12,394` | `d5674c650741103284e0aa8cded4c0e8a0a1be38faa0c65aedb043710caa4396` | Part 2 | `# Moriarty: permissionless language of provable intention` .. `...and [MPLR theory log](../wiki/research/mplr/index.md).` |
+| **20** | `AGENTS-LATEST-ROUTING-AND-PERSISTENCE.txt` | `4,017` | `2bb4dde27d268e205db4e93f0afe1455328c7caf47bcb46c17fd097e89131c5c` | Part 2 | `SOURCE .../AGENTS.md\n## Persistent formal lanes...` .. `...current availability is not tested by source author.` |
+| **21** | `INSTALLED-BUILTIN-NAMES.txt` | `1,546` | `ca63009f72f4dbe0950ff3f2b628f257be3184d230dfce1221c24c3b71ecbe73` | Part 2 | `SOURCE .../names/base.js\nexports.builtinNames = [` .. `...'q::testOnce',\n];` |
+| **22** | `INSTALLED-LEXER-LITERALS.txt` | `749` | `d89ad0971dd75fb56ea1ab7438e9424f2a6271b7736d29049fc1101424f2a6271` (`d89ad097...`) | Part 2 | `SOURCE .../QuintLexer.js\nQuintLexer._LITERAL_NAMES = [` .. `...'from'", "'as'",\n];` |
+| **23** | `INSTALLED-CLI-BOUNDED-OPTIONS.txt` | `3,074` | `31081f8fed64c8015dea4cc072e4d7c46250dcd2079aedffdbc45dde09b8d06f` | Part 2 | `SOURCE .../cli.js lines 371..440` .. `SOURCE .../cli.js lines 471..545` (`END-QUINT-B10-SAME8A-SOURCE-REVIEW-PART2`) |
+
+#### 1.2 Complete Imported API Closure Across All 4 Quint Modules
+All four `.qnt` modules reside in the same directory (`afterimages/models/sherlock/quint/pattern-frontier/`) and form a closed, acyclic import DAG:
+1. `nominalConstruction.qnt` (`Body 1`, unchanged B09 module, `sha256: 77a487c5...`): Self-contained root module with zero imports.
+2. `patternFrontier.qnt` (`Body 2`, line 2): `import nominalConstruction.* from "./nominalConstruction"`.
+   - Symbols used from `nominalConstruction`:
+     - Types: `Token` (`UIntToken`, `BoolToken`, `ConstructorToken`), `Value`, `Environment`, `Layout`, `PatternToken` (`PatternWildcard`, `PatternBind`, `PatternConstructor`), `Program`.
+     - Pure functions (used **only** outside `frontierAdvance` in property/reference helpers): `tokenArity` (line 125 in `frontierValueEncodingValid`), `validValue` (line 131 in `frontierValueEncodingValid`), `rootType` (line 136 in `frontierPatternTyped`), `distinct` (line 147 in `frontierPatternTyped`), and `nestedPatternMatch` (line 115 in `frontierReference`).
+3. `patternFrontierInputs.qnt` (`Body 3`, lines 2–3):
+   - `import nominalConstruction.* from "./nominalConstruction"` (uses constructors `UIntToken`, `ConstructorToken`, `PatternConstructor`, `PatternBind`, `PatternWildcard`).
+   - `import patternFrontier as F from "./patternFrontier"` (uses type `F::FrontierInput`).
+4. `patternFrontierTest.qnt` (`Body 4`, lines 2–3):
+   - `import patternFrontier.* from "./patternFrontier"` (uses types `FrontierInput`, `InspectTask`, `FieldTask` and pure defs `frontierCaseCorresponds`, `frontierAllCuts`, `frontierTrace`, `frontierIsWildcard`).
+   - `import patternFrontierInputs as I from "./patternFrontierInputs"` (uses `I::frontierInput0`..`I::frontierInput4`, `I::frontierCohort`).
+
+---
+
+### 2. Concrete Source Findings (Exact File / Function / Line)
+
+#### 2.1 Mandatory Model Fixes Required Before Running `FINITE-OPERATIONS.json`
+- **None (`0` blocking defects)**.
+  - **Parser / Lexer / Builtin-Name Check**: Cross-checking every module, type, variant, `pure val`, `pure def`, `run`, parameter, lambda binder, and pattern binder in `patternFrontier.qnt` (`lines 1..273`), `patternFrontierInputs.qnt` (`lines 1..164`), and `patternFrontierTest.qnt` (`lines 1..55`) against `INSTALLED-BUILTIN-NAMES.txt` (`Body 21`, `exports.builtinNames`) and `INSTALLED-LEXER-LITERALS.txt` (`Body 22`, `QuintLexer._LITERAL_NAMES`) confirms **zero** reserved-word or builtin-operator name collisions (record field labels such as `fields`, `values`, `children` are namespace-scoped in Quint and only bound via `.` projection or `{...}` record construction).
+  - **Typecheck & Polymorphic Empty-Collection Unification Check**: All empty `List()` and `Map()` literals in `patternFrontier.qnt` (`frontierInitial` line 40, `frontierInspect` line 77, `frontierAdvance` line 99, `frontierProgram` line 119, `frontierPatternTyped` line 136, `frontierSourceMetadataValid` lines 171 and 174, `frontierPendingValid` line 231) and `patternFrontierInputs.qnt` (`frontierInput0`..`frontierInput4`, each explicitly typed `: F::FrontierInput`) have concrete enclosing record/return types that unify unambiguously under Quint's Hindley-Milner typechecker.
+  - **Transition Isolation & Absence of Fixture Hardcoding**:
+    - `patternFrontier.qnt:47-107` (`frontierTerminal`, `frontierHeaderEquals`, `frontierInspect`, `frontierField`, `frontierAdvance`) contains **zero** fixture/case IDs (`701..705`, `7010..7051`, etc.) and **never** reads `input.decodedValues`, `input.encodedPatterns`, `input.sourcePaths`, `input.binderOrigins`, `input.savedEnvironment`, `input.layouts`, `fieldsOf`, or `nestedPatternMatch`.
+    - `frontierInspect` (`lines 56-79`) reads exactly 1 pattern row (`input.patternRows.get(task.patternRow)`), records 1 `FrontierVisit`, increments `diagnostics.patternRows` by `1`, and:
+      - on `PatternWildcard` (`line 64`): pops the task (`event: WildcardDone`) with **zero** `valueRows` reads (`valueHeaders` unchanged);
+      - on `PatternBind(name)` (`lines 65-67`): pops the task (`event: BinderDone`), appends `{name, valueRow: task.valueRow, path: task.path}` to `partial`, and increments `diagnostics.bindings` by `1` with **zero** `valueRows` reads (`valueHeaders` unchanged);
+      - on `PatternConstructor(_)` (`lines 68-78`): reads 1 value row (`input.valueRows.get(task.valueRow)`), increments `diagnostics.valueHeaders` by `1`, and if `frontierHeaderEquals(valRow.token, patRow.token)` (`actual == wanted`, checking nominal `typeId`, `ctorId`, `arity`) pushes `FieldTask({..., cursor: 0, path: task.path})` (`event: HeaderMatched`); otherwise transitions to `phase: BeginArm, armIndex: cursorState.armIndex + 1, tasks: List(), partial: List(), event: ArmMiss`, discarding all tentative bindings and pending tasks for the failed arm.
+    - `frontierField` (`lines 81-92`) checks `task.cursor == task.patterns.len`: when equal, pops the exhausted `FieldTask` (`event: FieldFinished`, `diagnostics.fieldFinishes + 1`); otherwise reads 1 pattern-field row ID (`input.patternFields.nth(task.patterns.start + task.cursor)`) and 1 value-field row ID (`input.valueFields.nth(task.values.start + task.cursor)`), pushing `InspectTask` for child `task.cursor` **ahead of** the retained parent `FieldTask({...task, cursor: task.cursor + 1})` (`event: FieldScheduled`, `diagnostics.fieldPairs + 1`). This guarantees strict left-to-right source-field preorder without eager child-value list construction.
+  - **Source-to-Table & Reference Coherence (`Bodies 1, 2, 3, 5, 6, 7`)**:
+    - Manual verification of `prepare_safe_frontier_inputs.py` (`Body 5`) against `SAFE-FRONTIER-INPUTS.compact.json` (`Body 6`), `SAFE-SOURCE-TO-TABLE-ALL-ROWS.compact.json` (`Body 7`), and `patternFrontierInputs.qnt` (`Body 3`) confirms that all 5 inputs (`frontierInput0`..`frontierInput4`) are faithfully translated from `SAFE-FRONTIER-INPUTS.json` (`sha256: ad59b21d...` frozen in `SAFE-INPUT-FREEZE.json`, `Body 16`), with parent `patternRow` indices reserved in preorder before child recursion (`prepare_safe_frontier_inputs.py:55-63`) and `decodedValues` / `encodedPatterns` / `sourcePaths` / `binderOrigins` serving strictly as representation witnesses verified outside `frontierAdvance` by `frontierInputsValid` (`patternFrontier.qnt:184-195`).
+
+#### 2.2 Bounded-Scope Technical Qualifications (Non-Blocking, Must Be Retained in Evidence Claims)
+1. **Unchecked Total Indexing Inside `frontierAdvance` Relies on External Positive Premises (`patternFrontier.qnt:57-91` vs. `120-195`)**:
+   - `frontierInspect` (`lines 58, 60, 69`), `frontierField` (`lines 87-88`), and `frontierAdvance` (`line 100`) perform direct `.get(...)` / `.nth(...)` lookups and rely on `valRow.children.len == patRow.children.len` once `frontierHeaderEquals` succeeds. Those invariants hold for all well-formed positive inputs satisfying `frontierInputsValid(input)` (`lines 184-195`), which is checked outside `frontierAdvance`. Consequently, `frontierAdvance` models a positive well-formed frontier transition, not a defensive runtime admission or bounds-checking state machine.
+2. **Acyclicity & Witness Checks Live Outside `frontierAdvance` (`patternFrontier.qnt:120-183`, `prepare_safe_frontier_inputs.py:42-44`)**:
+   - `frontierValueAtPath` (`lines 160-164`) and `frontierPatternAtPath` (`lines 165-169`) fold over finite `path: List[int]` without an explicit visited-node set because finite DAG acyclicity is enforced during input preparation (`prepare_safe_frontier_inputs.py:42-44`) and witnessed by finite `decodedValues` / `encodedPatterns` in `frontierValueEncodingValid` (`lines 120-134`) and `frontierPatternEncodingValid` (`lines 149-159`).
+3. **Local `NoArm` Phase Is Unexercised as a Terminal Outcome by the 5 Positive Cohort Inputs (`patternFrontier.qnt:97-98, 112-117, 196-211`)**:
+   - All 5 cohort inputs (`frontierInput0`..`frontierInput4`) eventually reach `phase == Selected` (selecting arm indices `1, 0, 0, 1, 0` at transitions `19, 16, 8, 6, 15`, all `<= 32`). While `NoArm` (`ArmsExhausted`) is defined in `frontierAdvance` (`lines 97-98`), it is a local non-match result (`SAFE-FRONTIER-DECLARATIONS.md`, `SOURCE-SCOPE-AND-PREDICATE.md`) and is not mapped to Candidate B's application `Rejected(error9)` (`NORMATIVE-AND-OWNER-EXCERPTS.md`, `interfaces.md:304`).
+4. **Unused Helper & Retained B09 State Machine (`patternFrontier.qnt:119-122`, `nominalConstruction.qnt:272-313`)**:
+   - `frontierIsWildcard` (`patternFrontier.qnt:120-122`) is used by `patternFrontierTest.qnt:37` (`frontierHasWholeWildcardWitness`), while `nominalConstruction.qnt`'s stateful `var machine` and actions (`lines 272-313`) remain unreferenced by `patternFrontierTest.qnt` because B10 executes only pure relational `run` definitions.
+
+---
+
+### 3. Assessment of the 11 Test Selectors (`patternFrontierTest.qnt`)
+
+| Test Group | Selectors in `patternFrontierTest.qnt` | What They Actually Verify | Scope & Evidentiary Qualification |
+|---|---|---|---|
+| **5 Correspondence Tests** (`lines 6-10`) | `frontierCase0CorrespondenceTest` .. `frontierCase4CorrespondenceTest` (`frontierCaseCorresponds(I::frontierInput0..4)`) | For each of the 5 inputs (`701..705`) across all `33` trace prefixes (`0..32` advances):<br>1. `frontierInputsValid(input)` (value/pattern slice & witness validity, declaration layout typing, per-arm binder linearity via `distinct(scan.names)`, and source-preorder `sourcePaths`/`binderOrigins` metadata coherence);<br>2. `frontierTerminal(completed)` within `32` advances;<br>3. `frontierProjection(completed) == frontierReference(input)` (exact agreement with B09's pure `nestedPatternMatch` on `found`, selected `armIndex`, and full `savedEnvironment` + arm bindings);<br>4. `frontierVisitsOrdered(prefix)` and `frontierPendingValid(prefix)` at every prefix `0..32`;<br>5. `frontierLocalReadBound(prefix[i], prefix[i+1])` on every step `0..31` (at most 1 pattern-row read or 1 field-pair schedule per advance, 0 value-header reads on `WildcardDone`/`BinderDone`, and immediate clearing of `partial` and `tasks` on `ArmMiss`). | Strong finite **model-to-model** relational discriminator between the row-local frontier (`patternFrontier.qnt`) and the accepted B09 pure whole-value matcher (`nominalConstruction.qnt::nestedPatternMatch`). It is **not** an independent full-state trace oracle and **not** a B `helperWork`/`W_B = W_A + H_B` proof. |
+| **5 All-33-Cuts Replay Tests** (`lines 14-18`) | `frontierCase0CutsTest` .. `frontierCase4CutsTest` (`frontierAllCuts(I::frontierInput0..4)`) | Checks that for every cut `cut in 0..32`, `frontierRepeat(prefixes.nth(cut), 32 - cut) == completed` (exact `FrontierCursor` equality including `diagnostics`, `visits`, `event`, and `input`). | **Explicit deterministic-cut weakness**: Because `frontierAdvance` is a pure deterministic function and `prefixes.nth(cut)` is `frontierAdvance^cut(frontierInitial(input))`, `f^(32-cut)(f^cut(x0)) == f^32(x0)` is a mathematical identity of pure iteration plus terminal stutter. It confirms that `FrontierCursor` is self-contained across pure advances, but does **not** test a production serializer/deserializer or Candidate B's `TechnicalCut` wire/checkpoint ABI. |
+| **1 Directed Coverage Test** (`lines 21-54`) | `frontierDirectedCoverageTest` | Verifies across `I::frontierCohort` that the 5 inputs exercise all 4 targeted structural phenomena:<br>- `frontierHasDiscardWitness` (witnessed by `frontierInput0` at advance `10 -> 11`: non-empty `partial` binding `11 -> UInt(4)` discarded on late `ArmMiss`, preserving saved `11 -> UInt(77)`);<br>- `frontierHasSharedOccurrenceWitness` (witnessed by `frontierInput1`: shared `valueRow = 2` visited at distinct paths `[0]` and `[1]` in arm `0`);<br>- `frontierHasWholeWildcardWitness` (witnessed by `frontierInput2`: `PatternWildcard` at path `[0]` skips multi-token subtree `valueRow = 5` of length `5 > 1` without reading its header or children);<br>- `frontierHasRetainedParentWitness` (witnessed by `frontierInput4`: 3-field parent `FieldTask` for `Ctor(30, 300)` remains on `tasks.nth(1)` with `cursor > 0` while child `InspectTask` at `tasks.head()` is evaluated). | Meaningful cohort-completeness check ensuring the 5 inputs are not degenerate single-node or miss-free cases. Defined outside `frontierAdvance` in `patternFrontierTest.qnt`. |
+
+---
+
+### 4. Final Candidate Source Verdict & Exact Two-Operation Eligibility Verdict (`FINITE-OPERATIONS.json`)
+
+- **Candidate Source Verdict (`Bodies 1–11, 13–14, 16`)**: **`ACCEPT`** (for the scoped local reference profile `sherlock-quint-pattern-frontier-correspondence/1`).
+- **Exact Two-Operation Dispatch Eligibility Verdict (`Body 12`, `FINITE-OPERATIONS.json`)**: **`ACCEPT WITH ENFORCEABLE CONDITIONS`** for Root to execute the exact two proposed finite operations once in sequence:
+  1. **Operation 1 (`new-indexed-frontier-typecheck`)**:
+     - `argv`: `["/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node", "--max-old-space-size=512", "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js", "typecheck", "models/sherlock/quint/pattern-frontier/patternFrontierTest.qnt"]`
+     - `cwd`: `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch10-pattern-frontier-correspondence/afterimages`
+     - `timeout_seconds`: `60`
+  2. **Operation 2 (`new-eleven-frontier-correspondence-tests`)**:
+     - `argv`: `["/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node", "--max-old-space-size=512", "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cli.js", "test", "models/sherlock/quint/pattern-frontier/patternFrontierTest.qnt", "--main", "patternFrontierTest", "--match", "^frontier(Case[0-4](Correspondence|Cuts)|DirectedCoverage)Test$", "--backend", "typescript", "--max-samples", "1", "--seed", "1"]`
+     - `cwd`: `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch10-pattern-frontier-correspondence/afterimages`
+     - `timeout_seconds`: `120`
+  - **CLI & Resource-Bound Verification (`Bodies 12, 23`)**:
+    - Both tool pins (`node` v24.21.0 `sha256: 7fde7b8a...` and `quint/dist/src/cli.js` `sha256: ac12595b...`) are explicitly pinned in `FINITE-OPERATIONS.json`.
+    - `--max-old-space-size=512` caps Node V8 old-space heap at `512 MiB`; `--backend typescript`, `--max-samples 1`, and `--seed 1` match the installed Quint CLI validation rules in `INSTALLED-CLI-BOUNDED-OPTIONS.txt` (`Body 23`, lines 409–426) and avoid Apalache JVM/SMT startup overhead.
+    - The regex `^frontier(Case[0-4](Correspondence|Cuts)|DirectedCoverage)Test$` selects **only** the 11 new `run` definitions in `patternFrontierTest.qnt` (`5 + 5 + 1 = 11`) and does **not** rerun any old B01 (`8` tests), shared-four (`/1`), or B09 (`5` unit + `4` ITF capture / `455`-state) operations.
+  - **Enforceable Conditions on Execution & Reporting**:
+    1. Root must verify all source, input-freeze, owner-gap, and tool SHA-256 pins (`Bodies 1–7, 11, 12, 14, 16`) before Operation 1 and after Operation 2 (`pre == post`).
+    2. Operation 2 may execute only if Operation 1 (`new-indexed-frontier-typecheck`) exits `0` with `0` errors.
+    3. All candidate files remain in `afterimages/` (`R_ONLY_NEW_CANDIDATE_NOT_APPLIED_TO_W` per `PREIMAGES.json`) until Root records actual execution receipts and post-result review.
+    4. No execution or pass claim for B10 is established by this pre-execution source review.
+
+---
+
+### 5. Retained Independence, Positive-Premise, Owner-Gap & Scope Boundaries
+
+1. **Model-to-Model Reference Relation Only (Not an Independent Oracle)**:
+   - B10 compares the new row-local frontier (`patternFrontier.qnt`) against the accepted B09 pure matcher (`nominalConstruction.qnt::nestedPatternMatch`) over 5 pre-frozen positive inputs (`SAFE-INPUT-FREEZE.json`). No independent populated expected trace document was read or used. This review is one continuing non-author Quint opinion, not a second independent semantic vote.
+2. **Local Diagnostics Are Not Candidate B Metering or Circuit Costs**:
+   - `FrontierDiagnostics` (`transitions`, `patternRows`, `valueHeaders`, `fieldPairs`, `fieldFinishes`, `bindings`, `maxTasks`) and `FrontierEvent` are local reference diagnostics under `sherlock-quint-pattern-frontier-correspondence/1`. They do **not** represent Candidate B `consumedWork`, `helperWork`, `visits`, `fuel`, `W_B = W_A + H_B`, Halo2/ZKIRv3 circuit reads, or fixed-cost hardware steps.
+3. **Positive Premises & External Admission**:
+   - Acyclicity, nominal layout typing, per-arm binder linearity, and slice/witness validity (`frontierInputsValid`) are checked outside `frontierAdvance` and do not implement bounded Candidate B runtime admission (`admit`) or capacity refusal (`isResourceLimit`). The bounds `advances = 32`, `maxTasks = 12`, `maxPath = 4` are finite analysis bounds, not runtime capacity policy.
+4. **Explicit Owner ABI Gap (`Body 9`, `Body 11` `OWNER-DEPENDENCY-GAP.json`)**:
+   - In the inspected current Rust owner carrier (`crates/mori-core/src/sherlock/helper_machine/shared.rs`, `sha256: 8092ce1e...`), `GrammarDomain` is `DedicatedSorts | GenericNominalExtensionReserved`, `PatternTag` reserves `WildcardExtensionReserved` and `ConstructorExtensionReserved`, `PatternRowC` supports only the 5 dedicated shallow patterns (`PVar`, `PNil`, `PCons`, `PLeaf`, `PBranch`), `HelperControlC::Match` has only shallow `pat_tag`/`x`/`y`/`field_idx` fields, `ProgramView` has no nominal `MatchPlan`/`workMap` table, and `FrameRowC` refuses `ConstructorFields`. Adopting generic nominal pattern matching in Candidate B still requires owner-adopted `MatchPlan`/`PlanNode`/`workMap` tables, bounded helper cursor/resume storage, complete per-rule charge/cap/precedence tables, and an explicit `eraseHelpers`/event-cursor correspondence proof.
+5. **Open Product & Convergence Requirements**:
+   - This pre-execution source review does **not** close `UIREQ-034`, `UIREQ-035`, `SCON-016` (or `SCON-016.R02`), `SCON-017` (or `SCON-017.R02`), `SCON-021`, B06 financial modeling, Clean/K profile correspondence, ZKIRv3/Halo2 native proving, or Midnight ledger settlement.
+
