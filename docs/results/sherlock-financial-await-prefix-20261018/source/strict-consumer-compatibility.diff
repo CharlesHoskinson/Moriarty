@@ -1,0 +1,36 @@
+--- a/crates/mori-core/tests/sherlock_financial_producer_positive.rs
++++ b/crates/mori-core/tests/sherlock_financial_producer_positive.rs
+@@ -18,21 +18,25 @@
+     result: &'static str,
+     accounting: &'static str,
+     publication: &'static str,
++    await_prefix: &'static str,
+ }
+ const START: Golden = Golden {
+     result: include_str!("fixtures/financial-producer-integration/expected/START-RESULT.json"),
+     accounting: include_str!("fixtures/financial-producer-integration/expected/START-ACCOUNTING.json"),
+     publication: include_str!("fixtures/financial-producer-integration/expected/START-PUBLICATION.json"),
++    await_prefix: include_str!("support/fixtures/financial-await-prefix/EXPECTED-START-AWAIT-PREFIX.json"),
+ };
+ const FALSE: Golden = Golden {
+     result: include_str!("fixtures/financial-producer-integration/expected/FALSE-RESULT.json"),
+     accounting: include_str!("fixtures/financial-producer-integration/expected/FALSE-ACCOUNTING.json"),
+     publication: include_str!("fixtures/financial-producer-integration/expected/FALSE-PUBLICATION.json"),
++    await_prefix: include_str!("support/fixtures/financial-await-prefix/EXPECTED-FALSE-AWAIT-PREFIX.json"),
+ };
+ const TRUE: Golden = Golden {
+     result: include_str!("fixtures/financial-producer-integration/expected/TRUE-RESULT.json"),
+     accounting: include_str!("fixtures/financial-producer-integration/expected/TRUE-ACCOUNTING.json"),
+     publication: include_str!("fixtures/financial-producer-integration/expected/TRUE-PUBLICATION.json"),
++    await_prefix: include_str!("support/fixtures/financial-await-prefix/EXPECTED-TRUE-RESUME-AWAIT-PREFIX.json"),
+ };
+ fn frozen(text: &str) -> Value { serde_json::from_str(text).expect("frozen complete JSON") }
+ fn waiting<'a>(produced: &'a ProducedInvocation<'_>) -> &'a Continuation {
+@@ -83,6 +87,7 @@
+     };
+     let object = report.as_object_mut().unwrap();
+     object.insert("financial_observation".into(), expected);
++    object.insert("await_prefix".into(), frozen(golden.await_prefix));
+     object.insert("qualification".into(), json!("local-reference-stage"));
+     object.insert("authentication".into(), json!("none"));
+     object.insert("consumption".into(), json!("untracked"));
