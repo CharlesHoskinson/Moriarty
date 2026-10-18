@@ -2,9 +2,9 @@
 //! Literal N01 states follow the committed normal-prefix oracle: rule 102 costs
 //! one step; rule 80 publishes UInt(7) for free. No evaluator computes expectations.
 
+use super::Machine;
 use super::compare::*;
 use super::reference_types::*;
-use super::Machine;
 use std::sync::Arc;
 
 const IDENTITY: TraceIdentity<'static> = TraceIdentity {
@@ -180,9 +180,10 @@ fn change_field(snapshot: &mut Snapshot, field: SnapshotField) {
             snapshot.environment.insert("0".into(), Value::Bool(true));
         }
         SnapshotField::Frames => {
-            snapshot.frames.push(Frame::Scope(Environment::from([
-                ("1".into(), Value::List(vec![4, 5])),
-            ])));
+            snapshot.frames.push(Frame::Scope(Environment::from([(
+                "1".into(),
+                Value::List(vec![4, 5]),
+            )])));
         }
         SnapshotField::StackLimit => snapshot.stack_limit = 9,
         SnapshotField::RemainingFuel => snapshot.remaining_fuel = 3,
@@ -239,14 +240,20 @@ fn each_record_rule_and_charge_has_an_exact_position() {
         assert_difference(
             left.view(),
             right.view(),
-            TraceDifference::Record { index, field: RecordField::RuleStartLine },
+            TraceDifference::Record {
+                index,
+                field: RecordField::RuleStartLine,
+            },
         );
         let mut right = literal_seven();
         right.records[index].charge = 2;
         assert_difference(
             left.view(),
             right.view(),
-            TraceDifference::Record { index, field: RecordField::Charge },
+            TraceDifference::Record {
+                index,
+                field: RecordField::Charge,
+            },
         );
     }
 }
@@ -272,7 +279,10 @@ fn earliest_record_precedes_later_metadata_differences() {
     assert_difference(
         left.view(),
         right.view(),
-        TraceDifference::Record { index: 0, field: RecordField::After(SnapshotField::Outcome) },
+        TraceDifference::Record {
+            index: 0,
+            field: RecordField::After(SnapshotField::Outcome),
+        },
     );
 }
 
@@ -284,17 +294,32 @@ fn record_order_is_rule_then_charge_then_before_then_after() {
     right.records[0].charge = 2;
     right.records[0].before.outcome = Outcome::Done(Value::UInt(8));
     right.records[0].after.program = literal_program(8);
-    assert_difference(left.view(), right.view(), TraceDifference::Record {
-        index: 0, field: RecordField::RuleStartLine,
-    });
+    assert_difference(
+        left.view(),
+        right.view(),
+        TraceDifference::Record {
+            index: 0,
+            field: RecordField::RuleStartLine,
+        },
+    );
     right.records[0].rule_start_line = 102;
-    assert_difference(left.view(), right.view(), TraceDifference::Record {
-        index: 0, field: RecordField::Charge,
-    });
+    assert_difference(
+        left.view(),
+        right.view(),
+        TraceDifference::Record {
+            index: 0,
+            field: RecordField::Charge,
+        },
+    );
     right.records[0].charge = 1;
-    assert_difference(left.view(), right.view(), TraceDifference::Record {
-        index: 0, field: RecordField::Before(SnapshotField::Outcome),
-    });
+    assert_difference(
+        left.view(),
+        right.view(),
+        TraceDifference::Record {
+            index: 0,
+            field: RecordField::Before(SnapshotField::Outcome),
+        },
+    );
 }
 
 #[test]
@@ -303,24 +328,52 @@ fn initial_difference_precedes_record_difference() {
     let mut right = literal_seven();
     right.initial.outcome = Outcome::Done(Value::UInt(8));
     right.records[0].rule_start_line = 108;
-    assert_difference(left.view(), right.view(), TraceDifference::Initial(SnapshotField::Outcome));
+    assert_difference(
+        left.view(),
+        right.view(),
+        TraceDifference::Initial(SnapshotField::Outcome),
+    );
 }
 
 #[test]
 fn prefix_length_difference_is_not_a_match() {
     let left = literal_seven();
     let right = literal_seven();
-    let prefix = TraceView { records: &right.records[..1], ..right.view() };
-    assert_difference(left.view(), prefix, TraceDifference::Length {
-        common_records: 1, left_records: 2, right_records: 1,
-    });
-    assert_difference(prefix, left.view(), TraceDifference::Length {
-        common_records: 1, left_records: 1, right_records: 2,
-    });
-    let empty = TraceView { records: &[], ..right.view() };
-    assert_difference(left.view(), empty, TraceDifference::Length {
-        common_records: 0, left_records: 2, right_records: 0,
-    });
+    let prefix = TraceView {
+        records: &right.records[..1],
+        ..right.view()
+    };
+    assert_difference(
+        left.view(),
+        prefix,
+        TraceDifference::Length {
+            common_records: 1,
+            left_records: 2,
+            right_records: 1,
+        },
+    );
+    assert_difference(
+        prefix,
+        left.view(),
+        TraceDifference::Length {
+            common_records: 1,
+            left_records: 1,
+            right_records: 2,
+        },
+    );
+    let empty = TraceView {
+        records: &[],
+        ..right.view()
+    };
+    assert_difference(
+        left.view(),
+        empty,
+        TraceDifference::Length {
+            common_records: 0,
+            left_records: 2,
+            right_records: 0,
+        },
+    );
     assert_eq!(first_difference(empty, empty), None);
 }
 
@@ -330,9 +383,14 @@ fn common_prefix_difference_precedes_length_difference() {
     let mut right = literal_seven();
     right.records.truncate(1);
     right.records[0].after.remaining_fuel = 3;
-    assert_difference(left.view(), right.view(), TraceDifference::Record {
-        index: 0, field: RecordField::After(SnapshotField::RemainingFuel),
-    });
+    assert_difference(
+        left.view(),
+        right.view(),
+        TraceDifference::Record {
+            index: 0,
+            field: RecordField::After(SnapshotField::RemainingFuel),
+        },
+    );
 }
 
 #[test]
@@ -349,8 +407,16 @@ fn legitimate_distinct_programs_and_fuel_are_observable() {
         initial_fuel: 1,
         outcome: Outcome::Pending,
     };
-    let right_view = TraceView { identity: IDENTITY, initial: &right, records: &[] };
-    assert_difference(left.view(), right_view, TraceDifference::Initial(SnapshotField::Program));
+    let right_view = TraceView {
+        identity: IDENTITY,
+        initial: &right,
+        records: &[],
+    };
+    assert_difference(
+        left.view(),
+        right_view,
+        TraceDifference::Initial(SnapshotField::Program),
+    );
     // Same normal input with fuel two, an independent legal startup observation.
     let fueled = Snapshot {
         program: literal_program(7),
@@ -362,8 +428,16 @@ fn legitimate_distinct_programs_and_fuel_are_observable() {
         initial_fuel: 2,
         outcome: Outcome::Pending,
     };
-    let fueled_view = TraceView { identity: IDENTITY, initial: &fueled, records: &[] };
-    assert_difference(left.view(), fueled_view, TraceDifference::Initial(SnapshotField::RemainingFuel));
+    let fueled_view = TraceView {
+        identity: IDENTITY,
+        initial: &fueled,
+        records: &[],
+    };
+    assert_difference(
+        left.view(),
+        fueled_view,
+        TraceDifference::Initial(SnapshotField::RemainingFuel),
+    );
 }
 
 #[test]
@@ -372,17 +446,29 @@ fn returned_position_keeps_original_typed_values_accessible() {
     let mut right = literal_seven();
     right.records[1].after.outcome = Outcome::Done(Value::UInt(8));
     let position = first_difference(left.view(), right.view()).expect("different outcomes");
-    let TraceDifference::Record { index, field: RecordField::After(SnapshotField::Outcome) } = position else {
+    let TraceDifference::Record {
+        index,
+        field: RecordField::After(SnapshotField::Outcome),
+    } = position
+    else {
         panic!("expected the terminal outcome position, got {position:?}");
     };
-    assert_eq!(left.records[index].after.outcome, Outcome::Done(Value::UInt(7)));
-    assert_eq!(right.records[index].after.outcome, Outcome::Done(Value::UInt(8)));
+    assert_eq!(
+        left.records[index].after.outcome,
+        Outcome::Done(Value::UInt(7))
+    );
+    assert_eq!(
+        right.records[index].after.outcome,
+        Outcome::Done(Value::UInt(8))
+    );
 }
 
 #[test]
 fn program_function_order_is_structural_observation() {
     let function = |name: &str| Function {
-        name: name.into(), parameters: vec![], return_type: Type::UInt,
+        name: name.into(),
+        parameters: vec![],
+        return_type: Type::UInt,
         body: Arc::new(Expr::Literal(Value::UInt(7))),
     };
     let mut left = literal_seven();
@@ -395,5 +481,9 @@ fn program_function_order_is_structural_observation() {
         functions: vec![function("11"), function("10")],
         entry: Arc::new(Expr::Literal(Value::UInt(7))),
     });
-    assert_difference(left.view(), right.view(), TraceDifference::Initial(SnapshotField::Program));
+    assert_difference(
+        left.view(),
+        right.view(),
+        TraceDifference::Initial(SnapshotField::Program),
+    );
 }

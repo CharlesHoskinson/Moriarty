@@ -1,5 +1,5 @@
-//! SOURCE_ONLY / UNRUN: ordinary monomorphic typing proposal for the actual AST.
-//! No execution, source profile adoption, H1 admission or host resource guarantee.
+//! Monomorphic type checking for the draft Sherlock source AST. Not an adopted
+//! source profile; it gives no H1 admission or host resource guarantee.
 use crate::sherlock::{BinaryOp, Expr, Function, Name, Pattern, Program, Type, UnaryOp, Value};
 use crate::sherlock_draft::SourceLocation;
 use std::collections::BTreeMap;
@@ -21,11 +21,27 @@ pub struct DraftTypeError {
 pub enum DraftTypeErrorKind {
     UnknownVariable(Name),
     UnknownFunction(Name),
-    Arity { name: Name, expected: usize, actual: usize },
-    Expected { expected: Type, actual: Type },
-    BranchTypes { yes: Type, no: Type },
-    ArmTypes { expected: Type, actual: Type },
-    DuplicateParameter { name: Name, index: usize },
+    Arity {
+        name: Name,
+        expected: usize,
+        actual: usize,
+    },
+    Expected {
+        expected: Type,
+        actual: Type,
+    },
+    BranchTypes {
+        yes: Type,
+        no: Type,
+    },
+    ArmTypes {
+        expected: Type,
+        actual: Type,
+    },
+    DuplicateParameter {
+        name: Name,
+        index: usize,
+    },
     DuplicatePatternBinder(Name),
     EmptyMatch,
 }
@@ -43,26 +59,45 @@ type Types = BTreeMap<Name, Type>;
 pub fn check_program_types(program: &Program) -> Result<DraftTypeSummary, DraftTypeError> {
     let mut function_returns = Vec::new();
     for (index, function) in program.functions.iter().enumerate() {
-        let source = SourceLocation { function_index: Some(index), child_path: vec![] };
+        let source = SourceLocation {
+            function_index: Some(index),
+            child_path: vec![],
+        };
         let mut environment = Types::new();
         for (parameter_index, parameter) in function.parameters.iter().enumerate() {
-            if environment.insert(parameter.name.clone(), parameter.ty).is_some() {
-                return Err(error(&source, DraftTypeErrorKind::DuplicateParameter {
-                    name: parameter.name.clone(), index: parameter_index,
-                }));
+            if environment
+                .insert(parameter.name.clone(), parameter.ty)
+                .is_some()
+            {
+                return Err(error(
+                    &source,
+                    DraftTypeErrorKind::DuplicateParameter {
+                        name: parameter.name.clone(),
+                        index: parameter_index,
+                    },
+                ));
             }
         }
         let actual = infer(program, &function.body, &environment, &source)?;
         require(actual, function.return_type, &source)?;
         function_returns.push(actual);
     }
-    let source = SourceLocation { function_index: None, child_path: vec![] };
+    let source = SourceLocation {
+        function_index: None,
+        child_path: vec![],
+    };
     let entry_type = infer(program, &program.entry, &Types::new(), &source)?;
-    Ok(DraftTypeSummary { function_returns, entry_type })
+    Ok(DraftTypeSummary {
+        function_returns,
+        entry_type,
+    })
 }
 
 fn error(source: &SourceLocation, kind: DraftTypeErrorKind) -> DraftTypeError {
-    DraftTypeError { source: source.clone(), kind }
+    DraftTypeError {
+        source: source.clone(),
+        kind,
+    }
 }
 
 fn child(source: &SourceLocation, index: usize) -> SourceLocation {
@@ -72,18 +107,32 @@ fn child(source: &SourceLocation, index: usize) -> SourceLocation {
 }
 
 fn require(actual: Type, expected: Type, source: &SourceLocation) -> Result<(), DraftTypeError> {
-    if actual == expected { Ok(()) }
-    else { Err(error(source, DraftTypeErrorKind::Expected { expected, actual })) }
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(error(
+            source,
+            DraftTypeErrorKind::Expected { expected, actual },
+        ))
+    }
 }
 
-fn infer(program: &Program, expression: &Expr, environment: &Types,
-         source: &SourceLocation) -> Result<Type, DraftTypeError> {
+fn infer(
+    program: &Program,
+    expression: &Expr,
+    environment: &Types,
+    source: &SourceLocation,
+) -> Result<Type, DraftTypeError> {
     match expression {
         Expr::Literal(value) => Ok(match value {
-            Value::UInt(_) => Type::UInt, Value::Bool(_) => Type::Bool,
-            Value::List(_) => Type::List, Value::Tree(_) => Type::Tree,
+            Value::UInt(_) => Type::UInt,
+            Value::Bool(_) => Type::Bool,
+            Value::List(_) => Type::List,
+            Value::Tree(_) => Type::Tree,
         }),
-        Expr::Var(name) => environment.get(name).copied()
+        Expr::Var(name) => environment
+            .get(name)
+            .copied()
             .ok_or_else(|| error(source, DraftTypeErrorKind::UnknownVariable(name.clone()))),
         Expr::Let(name, value, body) => {
             let value_type = infer(program, value, environment, &child(source, 0))?;
@@ -98,9 +147,13 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
             let right = infer(program, right, environment, &right_source)?;
             // Frozen A equality is structural across all existing value sorts,
             // including unequal sorts. Do not silently copy Core's Eq rule.
-            if *op == BinaryOp::Eq { return Ok(Type::Bool); }
+            if *op == BinaryOp::Eq {
+                return Ok(Type::Bool);
+            }
             let (left_expected, right_expected, result) = match op {
-                BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul => (Type::UInt, Type::UInt, Type::UInt),
+                BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul => {
+                    (Type::UInt, Type::UInt, Type::UInt)
+                }
                 BinaryOp::Lt => (Type::UInt, Type::UInt, Type::Bool),
                 BinaryOp::Cons => (Type::UInt, Type::List, Type::List),
                 BinaryOp::Branch => (Type::Tree, Type::Tree, Type::Tree),
@@ -126,19 +179,33 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
             require(condition, Type::Bool, &condition_source)?;
             let yes = infer(program, yes, environment, &child(source, 1))?;
             let no = infer(program, no, environment, &child(source, 2))?;
-            if yes == no { Ok(yes) }
-            else { Err(error(source, DraftTypeErrorKind::BranchTypes { yes, no })) }
+            if yes == no {
+                Ok(yes)
+            } else {
+                Err(error(source, DraftTypeErrorKind::BranchTypes { yes, no }))
+            }
         }
         Expr::Call(name, arguments) => {
             // Same first matching declaration rule as actual A lookup. Checking
             // all bodies above does not reorder/deduplicate this original table.
-            let function: &Function = program.functions.iter().find(|function| &function.name == name)
+            let function: &Function = program
+                .functions
+                .iter()
+                .find(|function| &function.name == name)
                 .ok_or_else(|| error(source, DraftTypeErrorKind::UnknownFunction(name.clone())))?;
             if function.parameters.len() != arguments.len() {
-                return Err(error(source, DraftTypeErrorKind::Arity { name: name.clone(),
-                    expected: function.parameters.len(), actual: arguments.len() }));
+                return Err(error(
+                    source,
+                    DraftTypeErrorKind::Arity {
+                        name: name.clone(),
+                        expected: function.parameters.len(),
+                        actual: arguments.len(),
+                    },
+                ));
             }
-            for (index, (argument, parameter)) in arguments.iter().zip(&function.parameters).enumerate() {
+            for (index, (argument, parameter)) in
+                arguments.iter().zip(&function.parameters).enumerate()
+            {
                 let source = child(source, index);
                 let actual = infer(program, argument, environment, &source)?;
                 require(actual, parameter.ty, &source)?;
@@ -154,21 +221,34 @@ fn infer(program: &Program, expression: &Expr, environment: &Types,
                 let actual = infer(program, &arm.body, &inner, &body_source)?;
                 if let Some(expected) = result {
                     if actual != expected {
-                        return Err(error(&body_source, DraftTypeErrorKind::ArmTypes { expected, actual }));
+                        return Err(error(
+                            &body_source,
+                            DraftTypeErrorKind::ArmTypes { expected, actual },
+                        ));
                     }
-                } else { result = Some(actual); }
+                } else {
+                    result = Some(actual);
+                }
             }
             result.ok_or_else(|| error(source, DraftTypeErrorKind::EmptyMatch))
         }
     }
 }
 
-fn pattern_types(pattern: &Pattern, scrutinee: Type, saved: &Types,
-                 source: &SourceLocation) -> Result<Types, DraftTypeError> {
+fn pattern_types(
+    pattern: &Pattern,
+    scrutinee: Type,
+    saved: &Types,
+    source: &SourceLocation,
+) -> Result<Types, DraftTypeError> {
     let mut environment = saved.clone();
     match pattern {
-        Pattern::Var(name) => { environment.insert(name.clone(), scrutinee); }
-        Pattern::Nil => { require(scrutinee, Type::List, source)?; }
+        Pattern::Var(name) => {
+            environment.insert(name.clone(), scrutinee);
+        }
+        Pattern::Nil => {
+            require(scrutinee, Type::List, source)?;
+        }
         Pattern::Cons(head, tail) => {
             require(scrutinee, Type::List, source)?;
             distinct(head, tail, source)?;
@@ -190,8 +270,14 @@ fn pattern_types(pattern: &Pattern, scrutinee: Type, saved: &Types,
 }
 
 fn distinct(left: &str, right: &str, source: &SourceLocation) -> Result<(), DraftTypeError> {
-    if left == right { Err(error(source, DraftTypeErrorKind::DuplicatePatternBinder(left.into()))) }
-    else { Ok(()) }
+    if left == right {
+        Err(error(
+            source,
+            DraftTypeErrorKind::DuplicatePatternBinder(left.into()),
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

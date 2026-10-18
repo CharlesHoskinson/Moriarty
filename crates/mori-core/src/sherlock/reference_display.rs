@@ -25,7 +25,7 @@ fn sequence<T>(items: &[T], cons: &str, nil: &str, head: impl Fn(&T) -> String) 
         output.push_str(", ");
     }
     output.push_str(nil);
-    output.extend(std::iter::repeat(')').take(items.len()));
+    output.extend(std::iter::repeat_n(')', items.len()));
     output
 }
 

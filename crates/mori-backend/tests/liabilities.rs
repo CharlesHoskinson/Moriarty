@@ -678,15 +678,11 @@ fn context_commits_revision_profile_and_sorted_exact_registry() {
         .public_inputs
         .iter()
         .take(2)
-        .zip(expected.chunks_exact(16))
+        .zip(expected.as_chunks::<16>().0)
     {
         assert_eq!(
             b.constant.as_deref(),
-            Some(
-                u128::from_le_bytes(bytes.try_into().unwrap())
-                    .to_string()
-                    .as_str()
-            )
+            Some(u128::from_le_bytes(*bytes).to_string().as_str())
         );
     }
     let modified = artifact(&SOURCE.replace("\"buyer\"", "\"buyer-2\""));

@@ -56,6 +56,7 @@ pub struct SignedAdmittedSeed {
 
 /// Derive a descriptor for an independently supplied current snapshot. This
 /// does not prove ancestry, freshness, or ledger application of earlier calls.
+#[allow(clippy::too_many_arguments)]
 pub fn derive_signed_supplied_frame(
     source: &str,
     program: &Program,
@@ -441,6 +442,7 @@ pub async fn rederive_signed_local_public_deployment(
         static_bindings: s,
     })
 }
+#[allow(clippy::too_many_arguments)]
 pub async fn reopen_signed_local_proving_deployment(
     source: &str,
     p: &Program,

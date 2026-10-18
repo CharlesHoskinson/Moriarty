@@ -19,6 +19,7 @@ class CurrentGuidanceTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.skill = (PLUGIN / "skills/develop/SKILL.md").read_text()
         cls.focus = (PLUGIN / "skills/develop/references/execution-focus.md").read_text()
+        cls.rust = (PLUGIN / "skills/develop/references/rust.md").read_text()
         cls.readme = (PLUGIN / "README.md").read_text()
         cls.manifest = json.loads((PLUGIN / ".codex-plugin/plugin.json").read_text())
 
@@ -75,13 +76,29 @@ class CurrentGuidanceTestCase(unittest.TestCase):
         self.assertIn("do not reset", self.focus)
 
     def test_release_metadata_reflects_guidance_update(self):
-        self.assertEqual(self.manifest["version"], "0.1.1")
+        self.assertEqual(self.manifest["version"], "0.1.2")
         self.assertIn("roadmap", self.manifest["description"].lower())
+
+    def test_rust_changes_follow_the_checkout_guidelines(self):
+        for text in (self.skill, self.readme):
+            with self.subTest(document=text.splitlines()[0]):
+                self.assertIn("RUST_GUIDELINES.md", text)
+                self.assertIn("references/rust.md", text)
+        self.assertIn("RUST_GUIDELINES.md", self.rust)
+        self.assertIn("crates/", self.rust)
+        for check in ("cargo fmt --all --check",
+                      "cargo clippy --workspace --all-targets --locked -- -D warnings",
+                      "cargo test --workspace"):
+            self.assertIn(check, self.rust)
+        for rule in ("MoriDiagnostic", "[workspace.dependencies]", "crates/fixtures/",
+                     "never snapshot `--help`", "additional approval gate"):
+            self.assertIn(rule, self.rust)
 
     def test_checkout_links_resolve_and_skill_stays_compact(self):
         self.assertLess(len(self.skill.split()), 750)
         for path, text in ((PLUGIN / "skills/develop/SKILL.md", self.skill),
-                           (PLUGIN / "skills/develop/references/execution-focus.md", self.focus)):
+                           (PLUGIN / "skills/develop/references/execution-focus.md", self.focus),
+                           (PLUGIN / "skills/develop/references/rust.md", self.rust)):
             for target in re.findall(r"\]\(([^)#]+)(?:#[^)]*)?\)", text):
                 if not target.startswith(("https:", "http:")):
                     with self.subTest(target=target):

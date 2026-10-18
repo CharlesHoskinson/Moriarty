@@ -191,7 +191,9 @@ fn actual_prepare_prove_verify_refuse_unsigned_profile_before_key_or_attachment_
         assert!(!result.status.success(), "{name}");
         assert!(result.stdout.is_empty());
         assert!(
-            String::from_utf8_lossy(&result.stderr).contains("deployment-profile"),
+            // The signed version check runs before every input read, so a
+            // legacy profile is refused as an unknown signed version.
+            String::from_utf8_lossy(&result.stderr).contains("signed-version"),
             "{name}: {}",
             String::from_utf8_lossy(&result.stderr)
         );

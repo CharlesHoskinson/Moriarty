@@ -79,7 +79,7 @@ pub(crate) fn validate_authority(
             continue;
         }
         let n = u128::try_from(&k.value[..]).map_err(|_| refuse("authority-map"))?;
-        if AlignedValue::from(n) != **k || layout::cell(&v)? != AlignedValue::from(true) {
+        if AlignedValue::from(n) != **k || layout::cell(v)? != AlignedValue::from(true) {
             return Err(refuse("authority-map"));
         }
     }

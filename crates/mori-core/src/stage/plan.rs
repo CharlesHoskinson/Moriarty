@@ -25,7 +25,10 @@ pub struct StageBinder {
 }
 impl From<&InputDecl> for StageBinder {
     fn from(value: &InputDecl) -> Self {
-        Self { name: value.name.clone(), ty: value.ty }
+        Self {
+            name: value.name.clone(),
+            ty: value.ty,
+        }
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -56,14 +59,19 @@ pub struct StagePlan {
 pub(crate) fn build(program: &Program) -> Result<StagePlan, Error> {
     let mut actions = Vec::new();
     for action in &program.actions {
-        let mut types: BTreeMap<_, _> = program.states.iter()
-            .map(|state| (state.name.clone(), state.ty)).collect();
+        let mut types: BTreeMap<_, _> = program
+            .states
+            .iter()
+            .map(|state| (state.name.clone(), state.ty))
+            .collect();
         let mut captures = Vec::new();
         for (ordinal, input) in action.inputs.iter().enumerate() {
             types.insert(input.name.clone(), input.ty);
             captures.push(CaptureSlot {
-                name: input.name.clone(), ty: input.ty,
-                origin: Origin::Input, ordinal: ordinal as u16,
+                name: input.name.clone(),
+                ty: input.ty,
+                origin: Origin::Input,
+                ordinal: ordinal as u16,
             });
         }
         let mut sites = Vec::new();
@@ -73,7 +81,10 @@ pub(crate) fn build(program: &Program) -> Result<StagePlan, Error> {
                     let ty = crate::runtime::expr_type(program, *value, &types, 0)?;
                     types.insert(name.clone(), ty);
                     captures.push(CaptureSlot {
-                        name: name.clone(), ty, origin: Origin::Let, ordinal: ordinal as u16,
+                        name: name.clone(),
+                        ty,
+                        origin: Origin::Let,
+                        ordinal: ordinal as u16,
                     });
                 }
                 Statement::Await { label, binders, .. } => {
@@ -87,8 +98,10 @@ pub(crate) fn build(program: &Program) -> Result<StagePlan, Error> {
                     for binder in binders {
                         types.insert(binder.name.clone(), binder.ty);
                         captures.push(CaptureSlot {
-                            name: binder.name.clone(), ty: binder.ty,
-                            origin: Origin::Event, ordinal: ordinal as u16,
+                            name: binder.name.clone(),
+                            ty: binder.ty,
+                            origin: Origin::Event,
+                            ordinal: ordinal as u16,
                         });
                     }
                 }
@@ -96,11 +109,17 @@ pub(crate) fn build(program: &Program) -> Result<StagePlan, Error> {
             }
         }
         actions.push(ActionPlan {
-            action: action.name.clone(), statement_count: action.statements.len() as u16,
-            sites, segment_cost: Vec::new(), committed_before: Vec::new(), plan_total: UInt(0),
+            action: action.name.clone(),
+            statement_count: action.statements.len() as u16,
+            sites,
+            segment_cost: Vec::new(),
+            committed_before: Vec::new(),
+            plan_total: UInt(0),
         });
     }
     Ok(StagePlan {
-        format: "moriarty-stage-plan/1".into(), program_hash: String::new(), actions,
+        format: "moriarty-stage-plan/1".into(),
+        program_hash: String::new(),
+        actions,
     })
 }

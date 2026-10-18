@@ -479,16 +479,28 @@ fn registered_duties_reach_missing_srs_and_closed_registry_refuses() {
             "parameters",
         );
     }
-    for text in [
-        include_str!(
-            "../../../examples/core/native-liability/reference-broader-wrong-party.scenario.json"
+    // The reference liability registry now refuses a declared liability whose
+    // parties differ; a hidden extra name is still reference-only.
+    for (text, reference) in [
+        (
+            include_str!(
+                "../../../examples/core/native-liability/reference-broader-wrong-party.scenario.json"
+            ),
+            Some("mori::core::liability"),
         ),
-        include_str!(
-            "../../../examples/core/native-liability/reference-broader-hidden-name.scenario.json"
+        (
+            include_str!(
+                "../../../examples/core/native-liability/reference-broader-hidden-name.scenario.json"
+            ),
+            None,
         ),
     ] {
         let s: Scenario = serde_json::from_str(text).unwrap();
-        assert!(mori_core::simulate(&mori_core::parse(settlement).unwrap(), "repay", &s).is_ok());
+        let simulated = mori_core::simulate(&mori_core::parse(settlement).unwrap(), "repay", &s);
+        assert_eq!(
+            simulated.map(|_| ()).map_err(|e| e.code).err().as_deref(),
+            reference
+        );
         assert_code(
             proving::prove(settlement, "repay", &s, &target, &opts),
             "unsupported",
