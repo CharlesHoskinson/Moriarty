@@ -1,0 +1,19 @@
+# Reserve lifecycle ITF decoder — source-only delivery
+
+`decode_reserve_itf.py` is a standalone standard-library Python decoder/comparator for **only five captured Observation states**. The root integrator owns actual execution and integration. The first complete source was authored from pinned Quint serializer/parser/type sources and K model source before this author inspected the actual ITF contents; `PRE-ACTUAL-EXPOSURE.json` records its hash. Root then authorized actual-format inspection. `ACTUAL-EXPOSURE.json` records the later exposure and confirms the emitted shape. The decoder did not change after that inspection.
+
+Frozen decoder SHA-256: `5b4d046c735b2d1b6b387127f38e9e68a7b72b330e034f31ccc47411af1525e0` (`DECODER-FREEZE.json`). No decoder import, unit test or actual compare was executed by this author. No provider, model, SDK, native/prover, package manager, Git or shared-source edit occurred. The repository-native read-only status CLI was loaded from K as instructed and reported historical SP01 dependency/evidence blockers; no campaign was dispatched. `moriarty-dev:develop` and the applicable Quint language reference were reloaded/read.
+
+Actual exposure is to the root-produced ITF at `core2-quint-shared-projection-check-cycle/actual-check-a1/reserve_reserveSharedProjectionTraceTest_0.itf.json`, SHA-256 `77c8d1896b29408d1b4da48edb5b99bae202989686291d9e466c9923d5fd748d`,4545bytes. It contains vars=[observation], five states, complete pending/invocation record fields and the source-predicted `#bigint`, `#map`, `{tag,value}`/empty-tuple encodings. This is an input-format inspection finding, not an actual decoder pass or a validation of financial outcomes. No actual output was manufactured, rewritten or copied into synthetic fixtures.
+
+`INPUT-CONTRACT.md` documents every represented field, conversion, expected-reference selection and exclusion. Full serializer/test-handler/parser unit/type source and current K model/test source are preserved under `basis/` with exact hashes in `SOURCE-PINS.json`. K HEAD identity is supplied by root, not independently checked using Git. The installed parser full source proves unit constructors wrap Tup([]), and the installed serializer encodes it as `{"#tup":[]}`. The existing common codec is retained as a schema-only basis; no expected financial trace is used by decoder code.
+
+`test_normal_synthetic_format.py` is an **optional unrun source artifact** with four normal format tests: one complete literal record, all five ResumeEffect payload forms, explicit variable/order through five synthetic records, and type/order-sensitive common JSON comparison. Its specimens use obviously synthetic map/state names and are not a reserve trajectory. They were authored after actual-format exposure, are not blinded, and establish no actual-result evidence. Root's latest steering makes actual captured-trace comparison the meaningful next verification; no additional synthetic-test runtime is requested here. Malformed/adversarial/security testing and judgments remain with the designated owner.
+
+Root may run the frozen decoder against the actual capture and the independently frozen reference, with a fresh output file. For example (path placeholders are explicit choices, not commands executed by this lane):
+
+```sh
+python3 -I -B decode_reserve_itf.py --input ACTUAL_CAPTURE.itf.json --variable observation --expected INDEPENDENT_COMMON_EXPECTED.json --output NEW_DECODED_OBSERVATIONS.json
+```
+
+Receipt exit0 means complete typed equality of those five records only; it does not establish capture authenticity, general refinement or product acceptance. Initial/prefix pure assertions remain separate and are never synthesized from expected constants. Preserve original ITF/independent reference, root tool/source pins, complete actual comparison receipt and all existing requirement/acceptance gaps. No U/M/MC/SP/G or native/target exit is closed by this source delivery.

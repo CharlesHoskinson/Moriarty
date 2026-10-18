@@ -1,0 +1,43 @@
+--- a/crates/mori/src/commands/capabilities.rs
++++ b/crates/mori/src/commands/capabilities.rs
+@@ -98,12 +98,12 @@
+                 ("source-present", "frontend-check-only"), &["Named-action admission is determined by the checker; no Core semantics are inferred."], &["crates/mori/src/commands/check.rs"]),
+             consumer("core1-reference", "simulate FILE --action NAME --scenario FILE", (Some(LANGUAGE), Some(SEMANTICS), None), None,
+                 ("source-present", "local-reference-execution"), &["--trace is a separate native-feature consumer."], &["crates/mori/src/commands/simulate.rs"]),
+-            consumer("core2-reference", "simulate FILE --action NAME --scenario FILE; simulate FILE --resume FILE --event FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), Some(mori_core::stage::CONTINUATION_FORMAT)), None,
+-                ("source-present", "local-reference-stage"), &["Continuation output occurs only when waiting; complete is a different outcome.", "Authentication is none; consumption is untracked."], &["crates/mori/src/commands/simulate.rs", "crates/mori-core/src/stage/mod.rs"]),
++            consumer("core2-reference", "simulate FILE --action NAME --scenario FILE; simulate FILE --resume FILE --event FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), None,
++                ("source-present", "local-reference-stage"), &["Stdout has no outer format. Waiting alone contains continuation.format=moriarty-continuation/1; complete and rejected do not.", "Authentication is none; consumption is untracked."], &["crates/mori/src/commands/simulate.rs", "crates/mori-core/src/stage/mod.rs"]),
+             consumer("core1-inspect", "inspect FILE", (Some(LANGUAGE), Some(SEMANTICS), Some("moriarty-enforcement-report/1")), None,
+                 ("source-present", "source-only-unqualified"), &["No target was supplied or compiled."], &["crates/mori/src/commands/inspect.rs"]),
+-            consumer("core2-inspect", "inspect FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), Some(mori_core::stage::STAGE_PLAN_FORMAT)), None,
+-                ("source-present", "local-reference-stage"), &["Source-only stage plan; --target is a distinct refused consumer."], &["crates/mori/src/commands/inspect.rs"]),
++            consumer("core2-inspect", "inspect FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), None,
++                ("source-present", "local-reference-stage"), &["Stdout has no outer format; stage_plan.format=moriarty-stage-plan/1 identifies the nested stage plan. --target is a distinct refused consumer."], &["crates/mori/src/commands/inspect.rs"]),
+             consumer("core2-target-inspect", "inspect FILE --target FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), Some(("native", native)),
+                 ("unsupported", "profile-refused"), &["Core/2 target inspection refuses even though Core/2 has a separate compiler."], &["crates/mori/src/commands/inspect.rs"]),
+             consumer("core2-disjoint-draft", "test DIRECTORY", (Some("moriarty-tests/disjoint-draft/1"), Some(SEMANTICS_2), None), Some(("core2-disjoint-draft", disjoint)),
+--- a/crates/mori/tests/capabilities.rs
++++ b/crates/mori/tests/capabilities.rs
+@@ -114,6 +114,7 @@
+     assert_eq!(transfer["availableInBuild"], cfg!(feature = "source6-expansion"));
+     assert_eq!(row(&report, "consumers", "core2-disjoint-draft")["availableInBuild"], cfg!(feature = "core2-disjoint-draft"));
+     assert_eq!(row(&report, "consumers", "core2-reference")["availableInBuild"], true);
++    assert!(row(&report, "consumers", "core2-reference")["outputProfile"].is_null());
+     for (id, artifact) in [("core1-compile", "moriarty-zkir-artifact/3"), ("core2-compile", "moriarty-zkir-artifact/4")] {
+         let compiler = row(&report, "consumers", id);
+         assert_eq!(compiler["availableInBuild"], cfg!(feature = "native"));
+@@ -161,6 +162,13 @@
+         assert_eq!(inspected["status"], "accepted");
+         assert_eq!(inspected["semantics"], semantics);
+         assert!(inspected["enforcement_report"].is_null());
++        if language == "moriarty/2" {
++            assert!(row(&report, "consumers", "core2-inspect")["outputProfile"].is_null());
++            assert!(inspected.get("format").is_none());
++            assert_eq!(inspected["stage_plan"]["format"], "moriarty-stage-plan/1");
++        } else {
++            assert_eq!(inspected["format"], "moriarty-enforcement-report/1");
++        }
+         assert_eq!(before, f.snapshot());
+     }
+ }

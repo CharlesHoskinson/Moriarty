@@ -1,0 +1,21 @@
+language "moriarty/2";
+agreement ProposedCustodyRefund {
+  asset PAY = { network: "local", issuer: "independent-recovery-custody-refund", reference: "PAY", scale: 0 };
+  asset BOND = { network: "local", issuer: "independent-recovery-custody-refund", reference: "BOND", scale: 0 };
+  state marker: UInt = 77;
+  action recordAudit(auditAmount: UInt) {
+    liability("audit", BOND, "observer", "auditor", auditAmount);
+  }
+  action fund(principal: UInt, retainedFee: UInt) {
+    fee(PAY, "buyer", "treasury", retainedFee);
+    transfer(PAY, "buyer", "escrow", principal);
+    liability("custody-refund", PAY, "escrow", "buyer", principal);
+    await acceptance(accepted: Bool) when accepted;
+    transfer(PAY, "escrow", "merchant", principal);
+    discharge("custody-refund", principal);
+  }
+  action refundControlled(refundAmount: UInt) {
+    transfer(PAY, "escrow", "buyer", refundAmount);
+    discharge("custody-refund", refundAmount);
+  }
+}

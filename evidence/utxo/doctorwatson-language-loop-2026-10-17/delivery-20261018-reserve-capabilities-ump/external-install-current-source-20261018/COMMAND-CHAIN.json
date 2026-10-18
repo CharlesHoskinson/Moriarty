@@ -1,0 +1,76 @@
+{
+  "scope": "Complete selected launcher/starter/command-dispatch chain; no full semantic/dependency/proof audit",
+  "baseCommit": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
+  "beta": [
+    {
+      "path": "packages/moriarty-beta/package.json",
+      "consumer": "local archive; files includes dist; bin mori->dist/cli.js; prepack builds and prepares editor"
+    },
+    {
+      "path": "packages/moriarty-beta/build.mjs",
+      "consumer": "esbuild bundles src/cli.ts into dist/cli.js; types generated separately"
+    },
+    {
+      "path": "packages/moriarty-beta/src/cli.ts",
+      "consumer": "main parses one path; init creates invoice.mori/pay or repayment.mori/repay_loan plus scenario.json,mori.tests.json,README; README calls bare mori"
+    },
+    {
+      "path": "packages/moriarty-beta/src/starter.ts",
+      "consumer": "explicit transfer and repayment source/scenario/full expected case literals"
+    },
+    {
+      "path": "packages/moriarty-beta/src/index.ts",
+      "consumer": "check forwarded from frontend; simulate forwarded from bridge"
+    },
+    {
+      "path": "packages/moriarty-beta/src/cli.ts",
+      "consumer": "check dispatch; runCases reads mori.tests.json and source/scenario paths; simulate dispatch uses action and scenario"
+    },
+    {
+      "path": "packages/moriarty-beta/src/bridge.ts",
+      "consumer": "simulate calls expand then prepareSource6S0Unqualified; local-stipulation-only result, no ledger qualification"
+    }
+  ],
+  "rust": [
+    {
+      "path": "crates/mori/Cargo.toml",
+      "consumer": "package mori; default native; no-default-features does not opt into native; source6-expansion is separate opt-in"
+    },
+    {
+      "path": "crates/mori/src/main.rs",
+      "consumer": "ordinary binary entrypoint parses Cli and dispatches commands::run"
+    },
+    {
+      "path": "crates/mori/src/cli.rs",
+      "consumer": "Init/Check/Simulate/Test command argument definitions"
+    },
+    {
+      "path": "crates/mori/src/commands/mod.rs",
+      "consumer": "each command invokes actual corresponding run function"
+    },
+    {
+      "path": "crates/mori/src/commands/init.rs",
+      "consumer": "current_exe is POSIX-quoted; transfer pay25 or repayment repay30; source.mori/scenario.json/mori-tests.json/README created using literal expectations"
+    },
+    {
+      "path": "crates/mori/src/commands/check.rs",
+      "consumer": "language header path calls mori_core::parse; other frontend path separate"
+    },
+    {
+      "path": "crates/mori/src/commands/simulate.rs",
+      "consumer": "ordinary nontrace Core/1 path invokes mori_core::parse and simulate, labels local-reference-execution; native trace branch separate"
+    },
+    {
+      "path": "crates/mori/src/commands/test.rs",
+      "consumer": "reads mori-tests.json; parse+simulate each case; compares full post/effects or rejection code"
+    },
+    {
+      "path": "crates/mori/src/commands/core_io.rs",
+      "consumer": "bounded public source/JSON readers and print/export helpers"
+    },
+    {
+      "path": "crates/mori/src/commands/expand.rs",
+      "consumer": "--emit-source6-transfer explicitly routed and feature-gated; not required by generated starter commands"
+    }
+  ]
+}

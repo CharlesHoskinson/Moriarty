@@ -1,0 +1,21 @@
+---
+source: crates/mori-parser/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n"
+---
+mori::syntax::unclosed_agreement
+
+  × The agreement `Invoice` never closes.
+   ╭─[test.mori:3:20]
+ 1 │ profile "moriarty-beta/1";
+ 2 │ agreement Invoice {
+   ·           ───┬───
+   ·              ╰── the agreement starts here
+ 3 │   const price = 10;
+   ·                    ▲
+   ·                    ╰── the file ends here
+   ╰────
+  help: Add a `}` after the last declaration or action:
+
+            agreement Invoice {
+              ...
+            }

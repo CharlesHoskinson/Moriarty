@@ -1,0 +1,133 @@
+{
+  "baseCommit": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
+  "classification": "source-inspected missing floor-division support, scoped to exact paths; no runtime observation",
+  "rows": [
+    {
+      "path": "crates/mori-core/src/ir.rs",
+      "symbol": "Expr",
+      "startLine": 69,
+      "baselineObservation": "No FloorDiv node exists. BinaryOp has checked Add/Sub/Mul and comparisons/Bool only.",
+      "candidateDisposition": "Feature-gated Expr::FloorDiv with numerator/denominator ExprIds; no new BinaryOp or native arithmetic code."
+    },
+    {
+      "path": "crates/mori-core/src/parser.rs",
+      "symbol": "parse; parse_profile; Parser::expr; language",
+      "startLine": 4,
+      "baselineObservation": "Only Core/1 or the separate staged Core/2 source selectors route. Expr supports liability-read calls, names and existing operator table; floor_div call is absent.",
+      "candidateDisposition": "Adds explicit floor_div_draft::parse using the same parser internals and a two-operand node. Default parse/language CLI dispatch remain unextended."
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "type_cached",
+      "startLine": 65,
+      "baselineObservation": "No division typing case.",
+      "candidateDisposition": "Adds UInt\u00d7UInt\u2192UInt typing only for the explicit proposed profile."
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "validate",
+      "startLine": 120,
+      "baselineObservation": "Profile validator admits only Core/1; node-order/depth traversal knows Binary/Not children.",
+      "candidateDisposition": "Reuses the validator under a private explicit draft-profile mode; validates division child order/depth and refuses division nodes under ordinary validation."
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "eval_cached",
+      "startLine": 417,
+      "baselineObservation": "No floor quotient evaluation case.",
+      "candidateDisposition": "New node evaluates numerator then denominator with existing metering/cache; ordinary checked_div returns a UInt or proposed division_by_zero error. No proof constraint supplied."
+    },
+    {
+      "path": "crates/mori-core/src/runtime.rs",
+      "symbol": "simulate_with_meter; simulate",
+      "startLine": 866,
+      "baselineObservation": "Both use the existing Core/1 validation and execution construction.",
+      "candidateDisposition": "Private shared implementation with explicit draft-validation choice; public default path stays Core/1. Draft returns the actual validated program semantics string."
+    },
+    {
+      "path": "crates/mori-core/src/logical_cost.rs",
+      "symbol": "simulate_metered; replay_detailed_metered; CostReport",
+      "startLine": 37,
+      "baselineObservation": "No versioned floor-division cost identity or explicit draft public wrapper.",
+      "candidateDisposition": "New feature module wraps existing Meter/CostReport and compare_execution under proposed cost identity; existing module itself is unchanged."
+    },
+    {
+      "path": "crates/mori-core/src/ir.rs",
+      "symbol": "v1; decode_via_v1",
+      "startLine": 274,
+      "baselineObservation": "Frozen Program/Step/Execution decode reuses shared Expr.",
+      "candidateDisposition": "Unresolved design: enabling the feature lets serde recognize the new shared variant before validation. Default feature-off wire remains unchanged; feature-on wire isolation/diagnostic policy needs an explicit owner decision."
+    },
+    {
+      "path": "crates/mori-core/src/stage/cost.rs",
+      "symbol": "expression_nodes",
+      "startLine": 23,
+      "baselineObservation": "Staged successful-work traversal is exhaustive over old expression shapes.",
+      "candidateDisposition": "Adds explicit unsupported-profile outcome for opt-in division; no staged support or cost inheritance."
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/source_adapter.rs",
+      "symbol": "map_expression",
+      "startLine": 390,
+      "baselineObservation": "Maps only a restricted subset of current scalar expressions to a separate Sherlock AST.",
+      "candidateDisposition": "Explicit unsupported-projection for FloorDiv; no new Sherlock operation or correspondence claim."
+    },
+    {
+      "path": "crates/mori/src/commands/simulate.rs",
+      "symbol": "run normal source branch",
+      "startLine": 109,
+      "baselineObservation": "Real CLI uses language /2 dispatch or default parse + simulate/simulate_metered.",
+      "candidateDisposition": "Not extended. Draft API is explicit library-only; command is still unsupported for the new selector."
+    },
+    {
+      "path": "crates/mori-backend/src/lib.rs",
+      "symbol": "compile; compile_signed; compile_mode; Builder::expression",
+      "startLine": 367,
+      "baselineObservation": "Actual compiler gates require Core/1; Builder::expression has no division lowering.",
+      "candidateDisposition": "No division lowering. Generic unsupported-expression fallback is proposed solely for exhaustive-match compatibility. Existing profile gates stay in force; native source change needs applicable review."
+    },
+    {
+      "path": "crates/mori-ledger/src/relation/compiler.rs",
+      "symbol": "Compiler::expr; compile",
+      "startLine": 441,
+      "baselineObservation": "Actual expression compiler has no division case and forwards BinaryOp to arithmetic Builder.",
+      "candidateDisposition": "No division lowering. Generic expression-not-lowered fallback only; all native numeric/constraint work remains absent."
+    },
+    {
+      "path": "crates/mori-ledger/src/relation/arithmetic.rs",
+      "symbol": "Builder::expression",
+      "startLine": 140,
+      "baselineObservation": "Native arithmetic Builder handles existing BinaryOp variants with operand result, not a division/remainder witness rule.",
+      "candidateDisposition": "Unchanged. No quotient/range/remainder/field or proof policy is chosen."
+    },
+    {
+      "path": "crates/mori-core/src/stage/profile.rs",
+      "symbol": "require_core1; require_core2",
+      "startLine": 10,
+      "baselineObservation": "Real consumer profile gates distinguish Core/1 and Core/2 only.",
+      "candidateDisposition": "Unchanged; proposed profile is not accepted by these consumers."
+    },
+    {
+      "path": "experiments/moriarty-cardano-rust/k2/src/relation.rs",
+      "symbol": "check_selector; compile_selected",
+      "startLine": 31,
+      "baselineObservation": "Selected Cardano consumer fixes moriarty/1 / moriarty-core/1 and calls the frozen relation compiler.",
+      "candidateDisposition": "Unchanged; no fixed Cardano evidence, admission, proof or scope transfers to this proposal."
+    },
+    {
+      "path": "experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/frontend.rs",
+      "symbol": "admit_source; admit_checked",
+      "startLine": 35,
+      "baselineObservation": "Separate frozen compiler frontend routes current /1 or /2; checked admission requires Core/1.",
+      "candidateDisposition": "Unchanged; the source/reference alternative does not extend that compiler."
+    },
+    {
+      "path": "experiments/moriarty-cardano-rust/r1cs/source/mori-r1cs/src/plan.rs",
+      "symbol": "expression type planning",
+      "startLine": 207,
+      "baselineObservation": "Frozen expression planner has no generic floor division.",
+      "candidateDisposition": "Unchanged and unqualified for the new semantics. No proving/SDK path was invoked."
+    }
+  ],
+  "acceptance": "open; source alternative unapplied/unbuilt/unreviewed"
+}

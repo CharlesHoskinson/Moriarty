@@ -1,0 +1,208 @@
+{
+  "program": "ConditionalReserve",
+  "sourceFile": "custody/oracle-input/inputs/conditional-reserve.mori",
+  "languageLiteral": "moriarty/1",
+  "assets": [
+    {
+      "alias": "CASH",
+      "identity": {
+        "network": "local",
+        "issuer": "financial-pair-reserve",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "sourceLine": 3
+    },
+    {
+      "alias": "BOND",
+      "identity": {
+        "network": "local",
+        "issuer": "financial-pair-reserve",
+        "reference": "BOND",
+        "scale": 0
+      },
+      "sourceLine": 4
+    }
+  ],
+  "states": [
+    {
+      "name": "allocated",
+      "type": "UInt",
+      "initializerLiteral": "0",
+      "sourceLine": 5
+    },
+    {
+      "name": "closed",
+      "type": "Bool",
+      "initializerLiteral": "false",
+      "sourceLine": 6
+    },
+    {
+      "name": "marker",
+      "type": "UInt",
+      "initializerLiteral": "77",
+      "sourceLine": 7
+    }
+  ],
+  "actions": [
+    {
+      "name": "register",
+      "sourceLine": 8,
+      "inputs": [],
+      "syntacticStatementCount": 3,
+      "sourceStatementLines": [
+        9,
+        10,
+        11
+      ],
+      "effectStatementLines": [
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "allocate",
+      "sourceLine": 13,
+      "inputs": [
+        {
+          "name": "approved",
+          "type": "Bool"
+        },
+        {
+          "name": "amount",
+          "type": "UInt"
+        },
+        {
+          "name": "bondAmount",
+          "type": "UInt"
+        }
+      ],
+      "syntacticStatementCount": 15,
+      "sourceStatementLines": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "effectStatementLines": [
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        28
+      ],
+      "touchedExactBalanceRows": [
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-reserve",
+            "reference": "CASH",
+            "scale": 2
+          },
+          "account": "reserve"
+        },
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-reserve",
+            "reference": "CASH",
+            "scale": 2
+          },
+          "account": "supplier"
+        },
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-reserve",
+            "reference": "CASH",
+            "scale": 2
+          },
+          "account": "treasury"
+        },
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-reserve",
+            "reference": "BOND",
+            "scale": 0
+          },
+          "account": "reserve"
+        },
+        {
+          "asset": {
+            "network": "local",
+            "issuer": "financial-pair-reserve",
+            "reference": "BOND",
+            "scale": 0
+          },
+          "account": "auditor"
+        }
+      ]
+    }
+  ],
+  "sourceWideUniqueDuties": [
+    {
+      "name": "allocation",
+      "asset": {
+        "network": "local",
+        "issuer": "financial-pair-reserve",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "debtor": "reserve",
+      "creditor": "supplier",
+      "declarationLines": [
+        9,
+        19
+      ]
+    },
+    {
+      "name": "bond",
+      "asset": {
+        "network": "local",
+        "issuer": "financial-pair-reserve",
+        "reference": "BOND",
+        "scale": 0
+      },
+      "debtor": "reserve",
+      "creditor": "auditor",
+      "declarationLines": [
+        10
+      ]
+    },
+    {
+      "name": "emergency",
+      "asset": {
+        "network": "local",
+        "issuer": "financial-pair-reserve",
+        "reference": "CASH",
+        "scale": 2
+      },
+      "debtor": "reserve",
+      "creditor": "emergency",
+      "declarationLines": [
+        11
+      ]
+    }
+  ],
+  "uniqueDutyCount": 3,
+  "classification": "Independently hand-transcribed source facts only; NOT Program DTO, compiler Artifact, numeric execution outcome or serialized ABI layout.",
+  "orderingQualification": "Lists follow source navigation order only; no artifact circuit/ABI/frame ordering is inferred.",
+  "syntacticCountQualification": "Source statement counts are not automatically a compiler replay_steps resource formula."
+}

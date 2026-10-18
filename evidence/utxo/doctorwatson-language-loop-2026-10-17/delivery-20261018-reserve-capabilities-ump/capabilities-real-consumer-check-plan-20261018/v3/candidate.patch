@@ -1,0 +1,363 @@
+--- a/crates/mori/src/cli.rs
++++ b/crates/mori/src/cli.rs
+@@ -3,7 +3,7 @@
+ use clap::{Args, Parser, Subcommand, ValueEnum};
+ 
+ use crate::commands::{
+-    check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
++    capabilities, check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
+     keygen_signed_call, lsp, mcp, prepare_call, prepare_signed_call, prove, prove_call,
+     prove_signed_call, replay, simulate, test, verify, verify_call, verify_intent,
+     verify_signed_call,
+@@ -115,6 +115,8 @@
+ 
+ #[derive(Debug, Subcommand)]
+ pub enum Command {
++    /// Describe compiled features and public source consumers without running them
++    Capabilities(capabilities::Args),
+     /// Create a new project from a starter template
+     Init(init::Args),
+     /// Check syntax, names, types and action support
+--- a/crates/mori/src/commands/mod.rs
++++ b/crates/mori/src/commands/mod.rs
+@@ -8,6 +8,7 @@
+ use crate::shell::Shell;
+ 
+ mod call_io;
++pub mod capabilities;
+ pub mod check;
+ pub mod compile;
+ pub mod compile_call;
+@@ -40,6 +41,7 @@
+ 
+ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
+     match command {
++        Command::Capabilities(args) => capabilities::run(args, shell),
+         Command::Init(args) => init::run(args, shell),
+         Command::Check(args) => check::run(args, shell),
+         Command::Compile(args) => compile::run(args, shell),
+--- /dev/null
++++ b/crates/mori/src/commands/capabilities.rs
+@@ -0,0 +1,139 @@
++//! Curated public source capabilities, with this binary's actual Cargo features.
++//! This query does not inspect files, targets, installations or runtime evidence.
++use std::process::ExitCode;
++
++use serde_json::{Value, json};
++
++use crate::shell::Shell;
++
++#[derive(Debug, clap::Args)]
++pub struct Args {
++    /// Print JSON (the only output format)
++    #[arg(long)]
++    pub json: bool,
++}
++
++// Inspection basis for the curated consumer notes, not a binary/build identity.
++// Update this catalogue when public routing or editor implementations change.
++const SOURCE_REVISION: &str = "e4d7a2b5709caa18a94f5256d03a0302364b8235";
++
++fn profile(
++    id: &str,
++    source: &str,
++    semantics: Option<&str>,
++    parser: &str,
++    header_keyword: &str,
++    types: &[&str],
++) -> Value {
++    json!({
++        "id": id, "sourceProfile": source,
++        "sourceHeader": format!("{header_keyword} \"{source}\";"),
++        "semanticsProfile": semantics, "parser": parser,
++        "implementation": "source-present",
++        "grammar": {
++            "coverage": "profile-selection-summary-not-grammar-completion",
++            "types": types, "declarations": [], "statements": [],
++            "expressions": [], "unsupported": [], "bounds": {},
++            "notes": ["Grammar is not enumerated here; use the actual parser/checker for admission."]
++        },
++        "qualification": "source-description-only",
++        "limitations": ["Parser/checker support does not imply compiler or target qualification."]
++    })
++}
++
++/// Metadata only. The profile tuple is (input, semantics, output); an optional
++/// build requirement carries its actual cfg value, not a runtime probe.
++fn consumer(
++    id: &str,
++    entrypoint: &str,
++    profiles: (Option<&str>, Option<&str>, Option<&str>),
++    build: Option<(&str, bool)>,
++    status: (&str, &str),
++    limitations: &[&str],
++    source_refs: &[&str],
++) -> Value {
++    let requirements: Vec<_> = build.iter().map(|(name, _)| *name).collect();
++    json!({
++        "id": id, "entrypoint": entrypoint,
++        "inputProfile": profiles.0, "semanticsProfile": profiles.1,
++        "outputProfile": profiles.2, "requiresBuildFeatures": requirements,
++        "implementation": status.0,
++        "availableInBuild": status.0 == "source-present" && build.is_none_or(|(_, enabled)| enabled),
++        "qualification": status.1, "limitations": limitations, "sourceRefs": source_refs
++    })
++}
++
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    use mori_core::{LANGUAGE, SEMANTICS};
++    use mori_core::stage::{LANGUAGE_2, SEMANTICS_2};
++
++    // JSON is the sole format; the flag is an explicit client spelling.
++    let _ = args.json;
++    let native = cfg!(feature = "native");
++    let source6 = cfg!(feature = "source6-expansion");
++    let disjoint = cfg!(feature = "core2-disjoint-draft");
++    let report = json!({
++        "format": "moriarty-cli-capabilities/1",
++        "producer": {
++            "implementation": "rust-workspace-cli", "packageVersion": env!("CARGO_PKG_VERSION"),
++            "binarySourceRevision": null, "responseKind": "command-self-report",
++            "buildFeatures": {"native": native, "source6-expansion": source6, "core2-disjoint-draft": disjoint}
++        },
++        "catalogue": {
++            "sourceRevision": SOURCE_REVISION, "coverage": "selected-public-profile-consumers",
++            "basis": "source-inspection", "runtimeEvidence": "not-included",
++            "note": "Curated consumer descriptions use this inspection basis, not an inferred binary revision. Linked profile constants and cfg flags come from the build. Routing/editor changes require a catalogue update."
++        },
++        "profiles": [
++            profile("rust-core1", LANGUAGE, Some(SEMANTICS), "mori_core::parse", "language", &["UInt", "Bool"]),
++            profile("rust-core2", LANGUAGE_2, Some(SEMANTICS_2), "mori_core::stage::load", "language", &["UInt", "Bool"]),
++            profile("rust-beta-frontend", mori_parser::PROFILE, None, "mori_parser::parse then mori_checker::check", "profile", &[])
++        ],
++        "consumers": [
++            consumer("core1-check", "check FILE --json", (Some(LANGUAGE), Some(SEMANTICS), None), None,
++                ("source-present", "source-check"), &["No compilation or target qualification."], &["crates/mori/src/commands/check.rs"]),
++            consumer("core2-check", "check FILE --json", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), None,
++                ("source-present", "source-check"), &["Uses staged admission and planning."], &["crates/mori/src/commands/check.rs"]),
++            consumer("beta-check", "check FILE --json", (Some(mori_parser::PROFILE), None, None), None,
++                ("source-present", "frontend-check-only"), &["Named-action admission is determined by the checker; no Core semantics are inferred."], &["crates/mori/src/commands/check.rs"]),
++            consumer("core1-reference", "simulate FILE --action NAME --scenario FILE", (Some(LANGUAGE), Some(SEMANTICS), None), None,
++                ("source-present", "local-reference-execution"), &["--trace is a separate native-feature consumer."], &["crates/mori/src/commands/simulate.rs"]),
++            consumer("core2-reference", "simulate FILE --action NAME --scenario FILE; simulate FILE --resume FILE --event FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), None,
++                ("source-present", "local-reference-stage"), &["Stdout has no outer format. Waiting alone contains continuation.format=moriarty-continuation/1; complete and rejected do not.", "Authentication is none; consumption is untracked."], &["crates/mori/src/commands/simulate.rs", "crates/mori-core/src/stage/mod.rs"]),
++            consumer("core1-inspect", "inspect FILE", (Some(LANGUAGE), Some(SEMANTICS), Some("moriarty-enforcement-report/1")), None,
++                ("source-present", "source-only-unqualified"), &["No target was supplied or compiled."], &["crates/mori/src/commands/inspect.rs"]),
++            consumer("core2-inspect", "inspect FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), None,
++                ("source-present", "local-reference-stage"), &["Stdout has no outer format; stage_plan.format=moriarty-stage-plan/1 identifies the nested stage plan. --target is a distinct refused consumer."], &["crates/mori/src/commands/inspect.rs"]),
++            consumer("core2-target-inspect", "inspect FILE --target FILE", (Some(LANGUAGE_2), Some(SEMANTICS_2), None), Some(("native", native)),
++                ("unsupported", "profile-refused"), &["Core/2 target inspection refuses even though Core/2 has a separate compiler."], &["crates/mori/src/commands/inspect.rs"]),
++            consumer("core2-disjoint-draft", "test DIRECTORY", (Some("moriarty-tests/disjoint-draft/1"), Some(SEMANTICS_2), None), Some(("core2-disjoint-draft", disjoint)),
++                ("source-present", "unadopted-local-disjoint-product"), &["Opt-in draft; not required for base Core/2 check, start or resume."], &["crates/mori/src/commands/test.rs"]),
++            consumer("beta-to-source6-transfer", "expand FILE --emit-source6-transfer --action NAME --scenario FILE", (Some(mori_parser::PROFILE), None, Some("Source/6")), Some(("source6-expansion", source6)),
++                ("source-present", "local-stipulation-only"), &["Checked LocalS0 transfer subset and moriarty-local-scenario/1 only.", "Raw proposal output; no Source/6 input parser or Core/5 preparation is supplied."], &["crates/mori/src/commands/expand.rs", "crates/mori/src/commands/expand/source6.rs"]),
++            consumer("core1-compile", "compile FILE --target FILE --out DIR", (Some(LANGUAGE), Some(SEMANTICS), Some("moriarty-zkir-artifact/3")), Some(("native", native)),
++                ("source-present", "compiler-source-present"), &["Exact target descriptor and compiler subset admission required; nothing was compiled by this query."], &["crates/mori/src/commands/compile.rs"]),
++            consumer("core2-compile", "compile FILE --target FILE --out DIR", (Some(LANGUAGE_2), Some(SEMANTICS_2), Some("moriarty-zkir-artifact/4")), Some(("native", native)),
++                ("source-present", "staged-compiler-source-present"), &["Distinct staged artifact/4, ABI/4 and relation/4; unsigned target only.", "Legacy /3 proving consumers do not accept the distinct /4 type; no proof or ledger result is inferred."], &["crates/mori/src/commands/compile.rs", "crates/mori-backend/src/stage/mod.rs"]),
++            consumer("rust-lsp", "lsp", (None, None, None), None,
++                ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/lsp.rs"]),
++            consumer("rust-mcp", "mcp", (None, None, None), None,
++                ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/mcp.rs"])
++        ],
++        "targets": [{
++            "id": "midnight-ledger9-zkirv3", "consumerIds": ["core1-compile", "core2-compile"],
++            "descriptorRequired": true, "configuredTarget": null, "qualification": "not-checked",
++            "notes": ["No target, network, anchor, parameters, prover, verifier or deployment was inspected."]
++        }],
++        "otherExecutables": [{
++            "id": "node-beta-cli", "package": "@moriarty-lang/beta", "binaryName": "mori",
++            "relationship": "separate executable; no Rust capability inheritance", "availability": "not-inspected"
++        }],
++        "limitations": [
++            "availableInBuild means the source path is compiled in, not that a request passed admission or execution.",
++            "This selected catalogue is not exhaustive; omitted capabilities and grammar remain unknown.",
++            "No runtime, proof, installation, deployment or ledger qualification is established."
++        ]
++    });
++    super::core_io::print(&report)?;
++    Ok(ExitCode::SUCCESS)
++}
+--- /dev/null
++++ b/crates/mori/tests/capabilities.rs
+@@ -0,0 +1,180 @@
++//! Public capability consumers only; no compiler, target, SDK or native operation.
++use serde_json::Value;
++use std::{
++    collections::BTreeSet,
++    ffi::OsString,
++    fs,
++    path::PathBuf,
++    process::{Command, Output, Stdio},
++    sync::atomic::{AtomicUsize, Ordering},
++};
++
++static NEXT: AtomicUsize = AtomicUsize::new(0);
++struct Files(PathBuf);
++impl Files {
++    fn new() -> Self {
++        let dir = std::env::temp_dir().join(format!(
++            "mori-capabilities-{}-{}",
++            std::process::id(),
++            NEXT.fetch_add(1, Ordering::Relaxed)
++        ));
++        fs::create_dir(&dir).unwrap();
++        Self(dir)
++    }
++    fn run(&self, args: &[&str]) -> Output {
++        Command::new(env!("CARGO_BIN_EXE_mori"))
++            .current_dir(&self.0)
++            .env("PATH", "")
++            .stdin(Stdio::null())
++            .args(["--color", "never"])
++            .args(args)
++            .output()
++            .unwrap()
++    }
++    fn snapshot(&self) -> Vec<(OsString, Vec<u8>)> {
++        let mut files: Vec<_> = fs::read_dir(&self.0)
++            .unwrap()
++            .map(|entry| {
++                let entry = entry.unwrap();
++                (entry.file_name(), fs::read(entry.path()).unwrap())
++            })
++            .collect();
++        files.sort();
++        files
++    }
++}
++impl Drop for Files {
++    fn drop(&mut self) {
++        let _ = fs::remove_dir_all(&self.0);
++    }
++}
++fn json(output: &Output) -> Value {
++    assert!(
++        output.status.success(),
++        "exit {:?}: {}",
++        output.status.code(),
++        String::from_utf8_lossy(&output.stderr)
++    );
++    assert!(output.stderr.is_empty());
++    serde_json::from_slice(&output.stdout).unwrap()
++}
++fn row<'a>(report: &'a Value, section: &str, id: &str) -> &'a Value {
++    report[section]
++        .as_array()
++        .unwrap()
++        .iter()
++        .find(|row| row["id"] == id)
++        .unwrap()
++}
++
++#[test]
++fn public_query_distinguishes_profiles_build_consumers_and_unchecked_targets() {
++    let f = Files::new();
++    fs::write(f.0.join("user-note.txt"), "user content\n").unwrap();
++    let before = f.snapshot();
++    let output = f.run(&["capabilities", "--json"]);
++    let report = json(&output);
++    assert_eq!(before, f.snapshot());
++    assert!(output.stdout.ends_with(b"\n"));
++    assert!(output.stdout.len() < 65_536);
++    for args in [vec!["capabilities"], vec!["--quiet", "capabilities", "--json"]] {
++        let next = f.run(&args);
++        assert_eq!(json(&next), report);
++        assert_eq!(next.stdout, output.stdout);
++        assert_eq!(before, f.snapshot());
++    }
++    let fields: BTreeSet<_> = report.as_object().unwrap().keys().map(String::as_str).collect();
++    assert_eq!(fields, BTreeSet::from([
++        "format", "producer", "catalogue", "profiles", "consumers", "targets",
++        "otherExecutables", "limitations"
++    ]));
++    assert_eq!(report["format"], "moriarty-cli-capabilities/1");
++    assert_eq!(report["producer"]["implementation"], "rust-workspace-cli");
++    assert_eq!(report["producer"]["packageVersion"], env!("CARGO_PKG_VERSION"));
++    assert!(report["producer"]["binarySourceRevision"].is_null());
++    assert_eq!(report["catalogue"]["runtimeEvidence"], "not-included");
++    for (name, enabled) in [
++        ("native", cfg!(feature = "native")),
++        ("source6-expansion", cfg!(feature = "source6-expansion")),
++        ("core2-disjoint-draft", cfg!(feature = "core2-disjoint-draft")),
++    ] {
++        assert_eq!(report["producer"]["buildFeatures"][name], enabled);
++    }
++    for section in ["profiles", "consumers", "targets", "otherExecutables"] {
++        let values = report[section].as_array().unwrap();
++        let ids: BTreeSet<_> = values.iter().map(|value| value["id"].as_str().unwrap()).collect();
++        assert_eq!(ids.len(), values.len());
++    }
++    assert_eq!(report["profiles"].as_array().unwrap().len(), 3);
++    assert_eq!(row(&report, "profiles", "rust-beta-frontend")["sourceProfile"], "moriarty-beta/1");
++    assert!(row(&report, "profiles", "rust-beta-frontend")["semanticsProfile"].is_null());
++    let transfer = row(&report, "consumers", "beta-to-source6-transfer");
++    assert_eq!(transfer["inputProfile"], "moriarty-beta/1");
++    assert_eq!(transfer["outputProfile"], "Source/6");
++    assert_eq!(transfer["availableInBuild"], cfg!(feature = "source6-expansion"));
++    assert_eq!(row(&report, "consumers", "core2-disjoint-draft")["availableInBuild"], cfg!(feature = "core2-disjoint-draft"));
++    assert_eq!(row(&report, "consumers", "core2-reference")["availableInBuild"], true);
++    assert!(row(&report, "consumers", "core2-reference")["outputProfile"].is_null());
++    for (id, artifact) in [("core1-compile", "moriarty-zkir-artifact/3"), ("core2-compile", "moriarty-zkir-artifact/4")] {
++        let compiler = row(&report, "consumers", id);
++        assert_eq!(compiler["availableInBuild"], cfg!(feature = "native"));
++        assert_eq!(compiler["outputProfile"], artifact);
++    }
++    let targeted = row(&report, "consumers", "core2-target-inspect");
++    assert_eq!(targeted["implementation"], "unsupported");
++    assert_eq!(targeted["availableInBuild"], false);
++    for id in ["rust-lsp", "rust-mcp"] {
++        let editor = row(&report, "consumers", id);
++        assert_eq!(editor["implementation"], "stub");
++        assert_eq!(editor["availableInBuild"], false);
++    }
++    for target in report["targets"].as_array().unwrap() {
++        assert!(target["configuredTarget"].is_null());
++        assert_eq!(target["qualification"], "not-checked");
++        for id in target["consumerIds"].as_array().unwrap() {
++            row(&report, "consumers", id.as_str().unwrap());
++        }
++    }
++    assert_eq!(row(&report, "otherExecutables", "node-beta-cli")["availability"], "not-inspected");
++}
++
++#[test]
++fn reported_core_profiles_select_real_source_only_cli_consumers() {
++    let f = Files::new();
++    let report = json(&f.run(&["capabilities", "--json"]));
++    for (id, language, semantics, body) in [
++        ("rust-core1", "moriarty/1", "moriarty-core/1", "next count = count + 1;"),
++        ("rust-core2", "moriarty/2", "moriarty-core/2", "await review(ok: Bool) when ok; next count = count + 1;"),
++    ] {
++        let profile = row(&report, "profiles", id);
++        assert_eq!(profile["sourceProfile"], language);
++        assert_eq!(profile["semanticsProfile"], semantics);
++        let source = format!(
++            "{}\nagreement CapabilityProbe {{ state count: UInt = 0; action run() {{ {body} }} }}\n",
++            profile["sourceHeader"].as_str().unwrap()
++        );
++        fs::write(f.0.join("source.mori"), source).unwrap();
++        let before = f.snapshot();
++        let checked = json(&f.run(&["check", "source.mori", "--json"]));
++        assert_eq!(checked["status"], "accepted");
++        assert_eq!(checked["language"], language);
++        let inspected = json(&f.run(&["inspect", "source.mori"]));
++        assert_eq!(inspected["language"], language);
++        assert_eq!(inspected["semantics"], semantics);
++        assert_eq!(inspected.get("enforcement_report"), Some(&Value::Null));
++        if language == "moriarty/2" {
++            assert_eq!(inspected["status"], "accepted");
++            assert_eq!(inspected["qualification"], "local-reference-stage");
++            assert_eq!(inspected["authentication"], "none");
++            assert_eq!(inspected["consumption"], "untracked");
++            assert!(row(&report, "consumers", "core2-inspect")["outputProfile"].is_null());
++            assert!(inspected.get("format").is_none());
++            assert_eq!(inspected["stage_plan"]["format"], "moriarty-stage-plan/1");
++        } else {
++            assert!(inspected.get("status").is_none());
++            assert_eq!(inspected["qualification"], "source-only-unqualified");
++            assert_eq!(inspected["format"], "moriarty-enforcement-report/1");
++        }
++        assert_eq!(before, f.snapshot());
++    }
++}

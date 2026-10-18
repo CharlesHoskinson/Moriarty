@@ -1,0 +1,43 @@
+{
+  "scope": "Source declarations at exact main e4d7a2b5709caa18a94f5256d03a0302364b8235 and draft PR220 adff55f33942310123dc32f272cd6291e5b5c4da; not observed compilation",
+  "configurations": [
+    {"selector": "-p mori --no-default-features", "native": false, "core2DisjointDraft": false, "source6Expansion": false, "sdkEdges": "CLI backend/ledger/eight direct Midnight edges and futures/rand optional aliases remain off", "coreCompatibilitySdkFeature": false},
+    {"selector": "-p mori", "native": true, "core2DisjointDraft": false, "source6Expansion": false, "sdkEdges": "native default enables CLI backend/ledger/direct Midnight aliases", "coreCompatibilitySdkFeature": false},
+    {"selector": "-p mori --no-default-features --features core2-disjoint-draft", "native": false, "core2DisjointDraft": true, "source6Expansion": false, "sdkEdges": "disjoint feature only forwards mori-core/core2-disjoint-draft; no native edge", "coreCompatibilitySdkFeature": false},
+    {"selector": "-p mori --no-default-features --features source6-expansion", "native": false, "core2DisjointDraft": false, "source6Expansion": true, "sdkEdges": "adds optional local mori-source6 and its source6-transfer-slice feature; no native edge", "coreCompatibilitySdkFeature": false},
+    {"selector": "-p mori-core --no-default-features", "native": "not a mori-core feature", "core2DisjointDraft": false, "sdkEdges": "two optional Midnight compatibility aliases remain off", "coreCompatibilitySdkFeature": false},
+    {"selector": "-p mori-core --no-default-features --features core2-disjoint-draft", "native": "not a mori-core feature", "core2DisjointDraft": true, "sdkEdges": "feature has no dependency edges", "coreCompatibilitySdkFeature": false},
+    {"selector": "-p mori-core --no-default-features --features midnight-compat-tests", "sdkEdges": "explicitly enables midnight-base-crypto and midnight-serialize", "coreCompatibilitySdkFeature": true},
+    {"selector": "-p mori-backend --no-default-features", "sdkEdges": "Midnight ZKIR/transient-crypto/curves normal dependencies remain unconditional; no SDK-free backend feature exists"},
+    {"selector": "--workspace --no-default-features", "sdkEdges": "selects backend and ledger packages independently of CLI optional edges; both have unconditional SDK dependencies"},
+    {"selector": "-p mori --all-features", "native": true, "core2DisjointDraft": true, "source6Expansion": true, "sdkEdges": "native is included"},
+    {"selector": "-p mori-core --all-features", "core2DisjointDraft": true, "coreCompatibilitySdkFeature": true, "sdkEdges": "midnight-compat-tests is included"}
+  ],
+  "publicCliNoNativeCapabilities": [
+    {"command": "init", "availability": "implementation remains compiled; creates starter files/instructions", "source": "crates/mori/src/commands/init.rs"},
+    {"command": "check", "availability": "beta parser/checker or Core1 parse/Core2 stage load selected by source profile; no backend", "source": "crates/mori/src/commands/check.rs:21"},
+    {"command": "format", "availability": "legacy formatter implementation remains compiled; do not infer Core source formatter support", "source": "crates/mori/src/commands/format.rs"},
+    {"command": "inspect without --target", "availability": "Core1 structure or Core2 staged structure/plan reporting", "source": "crates/mori/src/commands/inspect.rs:22"},
+    {"command": "inspect with --target", "availability": "no-native availability refusal before source read; native Core2 postread profile refusal is a separate native branch", "source": "crates/mori/src/commands/inspect.rs:23"},
+    {"command": "simulate without --trace", "availability": "Core1 local execution/logical-cap; Core2 stage start/resume/events/logical-cap; no backend call in these branches", "source": "crates/mori/src/commands/simulate.rs:59"},
+    {"command": "simulate --trace", "availability": "requires target and native; native branch calls mori_backend::replay::generate; no-native branch availability-refuses", "source": "crates/mori/src/commands/simulate.rs:66"},
+    {"command": "test", "availability": "moriarty-tests/1 Core parse/simulate and moriarty-tests/2 staged start/resume are Core-only; disjoint-draft profile separately requires core2-disjoint-draft", "source": "crates/mori/src/commands/test.rs:41"},
+    {"command": "expand default", "availability": "Core1 program parse plus scenario/action local simulation and Program export; no SDK compilation", "source": "crates/mori/src/commands/expand.rs:22"},
+    {"command": "expand --emit-source6-transfer", "availability": "requires source6-expansion; otherwise source6-unavailable", "source": "crates/mori/src/commands/expand.rs:35"},
+    {"command": "intent / verify-intent legacy host profile", "availability": "Core1 host intent preparation or signature/reference execution through mori-core; k256 remains an unconditional Core dependency", "source": "crates/mori/src/commands/intent.rs:57 and verify_intent.rs:42"},
+    {"command": "intent / verify-intent signed Midnight profile", "availability": "native-only helper; argument companion/group checks retained before no-native refusal", "source": "crates/mori/src/commands/intent.rs:248 and verify_intent.rs:180"},
+    {"command": "compile, compile-call, prepare-call, keygen-call, prove-call, verify-call, prepare-signed-call, keygen-signed-call, prove-signed-call, verify-signed-call, prove, verify, replay", "availability": "public Args/commands remain; implementation branches require native and no-native returns Operation(native-unavailable)", "source": "native cfg implementations in respective commands modules; commands/mod.rs:70"},
+    {"command": "lsp", "mainE4": "todo stub, not a usable normal capability", "draftPR220": "sync stdio full-document local diagnostics implementation is unconditional, as are its two new LSP dependencies", "source": "crates/mori/src/commands/lsp.rs"},
+    {"command": "mcp", "availability": "todo stub in both revisions, not a delivered capability", "source": "crates/mori/src/commands/mcp.rs"}
+  ],
+  "roundtripSelection": {
+    "sourcePath": "crates/mori-core/src/sherlock/layout_a/state_encode_normal_tests.rs",
+    "containingCfg": "sherlock/mod.rs:73 cfg(test) -> layout_a/mod.rs:18 cfg(test) -> state_encode_normal_tests",
+    "normalExampleExactFilter": "sherlock::layout_a::state_encode_normal_tests::every_control_form_roundtrips_with_options_and_source_slices",
+    "unrunSelectorWords": ["test", "-p", "mori-core", "--no-default-features", "--lib", "sherlock::layout_a::state_encode_normal_tests::every_control_form_roundtrips_with_options_and_source_slices", "--", "--exact", "--test-threads=1"],
+    "sourcePredicate": "helper encodes supplied Snapshot, constructs AImage, decodes in Canonical mode and asserts entire decoded Snapshot equality",
+    "limits": "Filter selects test execution, not an isolated build: the Core library-test target still compiles its complete cfg(test) graph and root dev dependencies. CLI-only -p mori tests do not compile this dependency's internal test graph. All selector words are unrun, not an execution/resource proposal or permission."
+  },
+  "failureSurface": "native_unavailable is CliError::Operation with code mori::command::native-unavailable; main reports Err and returns ExitCode::FAILURE. Commands and flags remain in clap interface. No JSON-exit-2 API is inferred.",
+  "limits": ["No compiler success is established by source eligibility.", "Package/feature/target unification and registry transitive selection were not executed.", "No security/input/resource assessment or execution approval is supplied."]
+}

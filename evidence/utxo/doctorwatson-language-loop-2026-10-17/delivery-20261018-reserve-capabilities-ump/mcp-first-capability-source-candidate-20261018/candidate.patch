@@ -1,0 +1,2633 @@
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -52,6 +52,7 @@
+ proptest = "1.11.0"
+ rand = "=0.8.8"
+ rayon = "1.12.0"
++rmcp = { version = "=3.5.1", default-features = false, features = ["server", "transport-io"] }
+ serde = { version = "1.0.229", features = ["derive"] }
+ serde_json = "1.0.151"
+ sha2 = "0.11.0"
+@@ -59,6 +60,7 @@
+ soa-rs = "1.0.1"
+ terminal_size = "0.4.4"
+ thiserror = "2.0.21"
++tokio = { version = "=1.53.2", features = ["rt", "sync", "time", "io-std"] }
+ 
+ # Faster snapshot diffing, as recommended by insta.
+ [profile.dev.package]
+diff --git a/crates/fixtures/mcp/accepted.request.json b/crates/fixtures/mcp/accepted.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/accepted.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    },
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "profile \"moriarty-beta/1\";\nagreement Oracle {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  observation price = { id: \"price\", domain: Preview };\n  intent read = { operation: oracle.select(observation: price) };\n  action fetch uses read;\n}\n",
++      "file": "test.mori"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/accepted.response.json b/crates/fixtures/mcp/accepted.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/accepted.response.json
+@@ -0,0 +1,25 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"test.mori\",\"source_hash\":\"2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b\",\"checked_profile\":\"moriarty-beta/1\",\"status\":\"accepted\",\"diagnostics\":[],\"stage_qualification\":null}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b",
++      "checked_profile": "moriarty-beta/1",
++      "status": "accepted",
++      "diagnostics": [],
++      "stage_qualification": null
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/check-cases.json b/crates/fixtures/mcp/check-cases.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/check-cases.json
+@@ -0,0 +1,598 @@
++[
++  {
++    "name": "accepted",
++    "source": "profile \"moriarty-beta/1\";\nagreement Oracle {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  observation price = { id: \"price\", domain: Preview };\n  intent read = { operation: oracle.select(observation: price) };\n  action fetch uses read;\n}\n",
++    "file": "test.mori",
++    "expected_cli": {
++      "status": "accepted",
++      "file": "test.mori",
++      "source_hash": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b",
++      "agreement": {
++        "name": "Oracle",
++        "span": {
++          "start": 37,
++          "end": 43
++        }
++      },
++      "declarations": [
++        {
++          "kind": "domain",
++          "name": "Preview",
++          "span": {
++            "start": 48,
++            "end": 122
++          },
++          "name_span": {
++            "start": 55,
++            "end": 62
++          }
++        },
++        {
++          "kind": "observation",
++          "name": "price",
++          "span": {
++            "start": 125,
++            "end": 178
++          },
++          "name_span": {
++            "start": 137,
++            "end": 142
++          }
++        },
++        {
++          "kind": "intent",
++          "name": "read",
++          "span": {
++            "start": 181,
++            "end": 244
++          },
++          "name_span": {
++            "start": 188,
++            "end": 192
++          }
++        }
++      ],
++      "actions": [
++        {
++          "name": "fetch",
++          "intent": "read",
++          "support": "specified_only",
++          "span": {
++            "start": 247,
++            "end": 270
++          },
++          "name_span": {
++            "start": 254,
++            "end": 259
++          }
++        }
++      ],
++      "diagnostics": []
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b",
++      "checked_profile": "moriarty-beta/1",
++      "status": "accepted",
++      "diagnostics": [],
++      "stage_qualification": null
++    },
++    "expectation_basis": "Exact e4d7a2b5 beta CheckReport snapshot, not generated from candidate.",
++    "expected_cli_text": "{\n  \"status\": \"accepted\",\n  \"file\": \"test.mori\",\n  \"source_hash\": \"2b08461661551b3d54f1db9e8d4c887ecfe31378585202c48ca7ef232cb7751b\",\n  \"agreement\": {\n    \"name\": \"Oracle\",\n    \"span\": {\n      \"start\": 37,\n      \"end\": 43\n    }\n  },\n  \"declarations\": [\n    {\n      \"kind\": \"domain\",\n      \"name\": \"Preview\",\n      \"span\": {\n        \"start\": 48,\n        \"end\": 122\n      },\n      \"name_span\": {\n        \"start\": 55,\n        \"end\": 62\n      }\n    },\n    {\n      \"kind\": \"observation\",\n      \"name\": \"price\",\n      \"span\": {\n        \"start\": 125,\n        \"end\": 178\n      },\n      \"name_span\": {\n        \"start\": 137,\n        \"end\": 142\n      }\n    },\n    {\n      \"kind\": \"intent\",\n      \"name\": \"read\",\n      \"span\": {\n        \"start\": 181,\n        \"end\": 244\n      },\n      \"name_span\": {\n        \"start\": 188,\n        \"end\": 192\n      }\n    }\n  ],\n  \"actions\": [\n    {\n      \"name\": \"fetch\",\n      \"intent\": \"read\",\n      \"support\": \"specified_only\",\n      \"span\": {\n        \"start\": 247,\n        \"end\": 270\n      },\n      \"name_span\": {\n        \"start\": 254,\n        \"end\": 259\n      }\n    }\n  ],\n  \"diagnostics\": []\n}"
++  },
++  {
++    "name": "rejected",
++    "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n",
++    "file": "test.mori",
++    "expected_cli": {
++      "status": "rejected",
++      "file": "test.mori",
++      "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
++      "agreement": {
++        "name": "Invoice",
++        "span": {
++          "start": 37,
++          "end": 44
++        }
++      },
++      "declarations": [
++        {
++          "kind": "const",
++          "name": "price",
++          "span": {
++            "start": 49,
++            "end": 66
++          },
++          "name_span": {
++            "start": 55,
++            "end": 60
++          }
++        },
++        {
++          "kind": "const",
++          "name": "price",
++          "span": {
++            "start": 69,
++            "end": 89
++          },
++          "name_span": {
++            "start": 75,
++            "end": 80
++          }
++        }
++      ],
++      "actions": [],
++      "diagnostics": [
++        {
++          "code": "mori::check::duplicate_name",
++          "severity": "error",
++          "message": "`price` is declared twice.",
++          "help": "Each declaration and action in an agreement needs its own name.",
++          "labels": [
++            {
++              "span": {
++                "start": 55,
++                "end": 60
++              },
++              "text": "first declared here",
++              "primary": false
++            },
++            {
++              "span": {
++                "start": 75,
++                "end": 80
++              },
++              "text": "declared again here",
++              "primary": true
++            }
++          ]
++        },
++        {
++          "code": "mori::check::unknown_name",
++          "severity": "error",
++          "message": "I cannot find a declaration named `pirce`.",
++          "help": "Did you mean `price`?\n\n    const price = price;",
++          "labels": [
++            {
++              "span": {
++                "start": 83,
++                "end": 88
++              },
++              "text": "not declared above",
++              "primary": true
++            }
++          ]
++        }
++      ]
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
++      "checked_profile": "moriarty-beta/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "beta",
++          "code": "mori::check::duplicate_name",
++          "severity": "error",
++          "message": "`price` is declared twice.",
++          "help": "Each declaration and action in an agreement needs its own name.",
++          "labels": [
++            {
++              "span": {
++                "start": 55,
++                "end": 60
++              },
++              "text": "first declared here",
++              "primary": false
++            },
++            {
++              "span": {
++                "start": 75,
++                "end": 80
++              },
++              "text": "declared again here",
++              "primary": true
++            }
++          ]
++        },
++        {
++          "kind": "beta",
++          "code": "mori::check::unknown_name",
++          "severity": "error",
++          "message": "I cannot find a declaration named `pirce`.",
++          "help": "Did you mean `price`?\n\n    const price = price;",
++          "labels": [
++            {
++              "span": {
++                "start": 83,
++                "end": 88
++              },
++              "text": "not declared above",
++              "primary": true
++            }
++          ]
++        }
++      ],
++      "stage_qualification": null
++    },
++    "expectation_basis": "Exact e4d7a2b5 beta CheckReport snapshot, not generated from candidate.",
++    "expected_cli_text": "{\n  \"status\": \"rejected\",\n  \"file\": \"test.mori\",\n  \"source_hash\": \"4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b\",\n  \"agreement\": {\n    \"name\": \"Invoice\",\n    \"span\": {\n      \"start\": 37,\n      \"end\": 44\n    }\n  },\n  \"declarations\": [\n    {\n      \"kind\": \"const\",\n      \"name\": \"price\",\n      \"span\": {\n        \"start\": 49,\n        \"end\": 66\n      },\n      \"name_span\": {\n        \"start\": 55,\n        \"end\": 60\n      }\n    },\n    {\n      \"kind\": \"const\",\n      \"name\": \"price\",\n      \"span\": {\n        \"start\": 69,\n        \"end\": 89\n      },\n      \"name_span\": {\n        \"start\": 75,\n        \"end\": 80\n      }\n    }\n  ],\n  \"actions\": [],\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::check::duplicate_name\",\n      \"severity\": \"error\",\n      \"message\": \"`price` is declared twice.\",\n      \"help\": \"Each declaration and action in an agreement needs its own name.\",\n      \"labels\": [\n        {\n          \"span\": {\n            \"start\": 55,\n            \"end\": 60\n          },\n          \"text\": \"first declared here\",\n          \"primary\": false\n        },\n        {\n          \"span\": {\n            \"start\": 75,\n            \"end\": 80\n          },\n          \"text\": \"declared again here\",\n          \"primary\": true\n        }\n      ]\n    },\n    {\n      \"code\": \"mori::check::unknown_name\",\n      \"severity\": \"error\",\n      \"message\": \"I cannot find a declaration named `pirce`.\",\n      \"help\": \"Did you mean `price`?\\n\\n    const price = price;\",\n      \"labels\": [\n        {\n          \"span\": {\n            \"start\": 83,\n            \"end\": 88\n          },\n          \"text\": \"not declared above\",\n          \"primary\": true\n        }\n      ]\n    }\n  ]\n}"
++  },
++  {
++    "name": "unparsable",
++    "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10\n",
++    "file": "test.mori",
++    "expected_cli": {
++      "status": "rejected",
++      "file": "test.mori",
++      "source_hash": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123",
++      "agreement": null,
++      "declarations": [],
++      "actions": [],
++      "diagnostics": [
++        {
++          "code": "mori::syntax::missing_semicolon",
++          "severity": "error",
++          "message": "I was partway through the declaration of `price` when I found the end of the file.",
++          "help": "A declaration looks like this. The type after `:` is optional:\n\n    const fee: Qty<USD> = 0.10 USD;",
++          "labels": [
++            {
++              "span": {
++                "start": 65,
++                "end": 65
++              },
++              "text": "I expected `;` here",
++              "primary": true
++            }
++          ]
++        }
++      ]
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123",
++      "checked_profile": "moriarty-beta/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "beta",
++          "code": "mori::syntax::missing_semicolon",
++          "severity": "error",
++          "message": "I was partway through the declaration of `price` when I found the end of the file.",
++          "help": "A declaration looks like this. The type after `:` is optional:\n\n    const fee: Qty<USD> = 0.10 USD;",
++          "labels": [
++            {
++              "span": {
++                "start": 65,
++                "end": 65
++              },
++              "text": "I expected `;` here",
++              "primary": true
++            }
++          ]
++        }
++      ],
++      "stage_qualification": null
++    },
++    "expectation_basis": "Exact e4d7a2b5 beta CheckReport snapshot, not generated from candidate.",
++    "expected_cli_text": "{\n  \"status\": \"rejected\",\n  \"file\": \"test.mori\",\n  \"source_hash\": \"b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123\",\n  \"agreement\": null,\n  \"declarations\": [],\n  \"actions\": [],\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::syntax::missing_semicolon\",\n      \"severity\": \"error\",\n      \"message\": \"I was partway through the declaration of `price` when I found the end of the file.\",\n      \"help\": \"A declaration looks like this. The type after `:` is optional:\\n\\n    const fee: Qty<USD> = 0.10 USD;\",\n      \"labels\": [\n        {\n          \"span\": {\n            \"start\": 65,\n            \"end\": 65\n          },\n          \"text\": \"I expected `;` here\",\n          \"primary\": true\n        }\n      ]\n    }\n  ]\n}"
++  },
++  {
++    "name": "core1-accepted",
++    "source": "language \"moriarty/1\"; agreement Minimal { action advance() { requires true; } }\n",
++    "file": "minimal.mori",
++    "expected_cli": {
++      "status": "accepted",
++      "file": "minimal.mori",
++      "source_hash": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526",
++      "language": "moriarty/1",
++      "agreement": "Minimal",
++      "actions": [
++        {
++          "name": "advance",
++          "inputs": [],
++          "statements": [
++            {
++              "kind": "Requires",
++              "predicate": 0
++            }
++          ]
++        }
++      ],
++      "diagnostics": []
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "minimal.mori",
++      "source_hash": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526",
++      "checked_profile": "moriarty/1",
++      "status": "accepted",
++      "diagnostics": [],
++      "stage_qualification": null
++    },
++    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
++    "expected_cli_text": null
++  },
++  {
++    "name": "core1-rejected",
++    "source": "language \"moriarty/1\"; agreement Empty {}\n",
++    "file": "empty.mori",
++    "expected_cli": {
++      "status": "rejected",
++      "file": "empty.mori",
++      "diagnostics": [
++        {
++          "code": "mori::core::program",
++          "message": "Program needs at least one action.",
++          "offset": null,
++          "step": null
++        }
++      ]
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "empty.mori",
++      "source_hash": "eb7a9e96829f3ef9aae077f18adee18f334c4b6ab3b34db8463a9153af99d9e8",
++      "checked_profile": "moriarty/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "core",
++          "code": "mori::core::program",
++          "message": "Program needs at least one action.",
++          "offset": null,
++          "step": null
++        }
++      ],
++      "stage_qualification": null
++    },
++    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
++    "expected_cli_text": null
++  },
++  {
++    "name": "core2-accepted",
++    "source": "language \"moriarty/2\"; agreement Minimal { action advance() { requires true; } }\n",
++    "file": "minimal.mori",
++    "expected_cli": {
++      "status": "accepted",
++      "file": "minimal.mori",
++      "source_hash": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc",
++      "language": "moriarty/2",
++      "agreement": "Minimal",
++      "actions": [
++        {
++          "name": "advance",
++          "inputs": [],
++          "statements": [
++            {
++              "kind": "Requires",
++              "predicate": 0
++            }
++          ]
++        }
++      ],
++      "diagnostics": [],
++      "qualification": "local-reference-stage",
++      "authentication": "none",
++      "consumption": "untracked"
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "minimal.mori",
++      "source_hash": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc",
++      "checked_profile": "moriarty/2",
++      "status": "accepted",
++      "diagnostics": [],
++      "stage_qualification": {
++        "qualification": "local-reference-stage",
++        "authentication": "none",
++        "consumption": "untracked"
++      }
++    },
++    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
++    "expected_cli_text": null
++  },
++  {
++    "name": "core2-rejected",
++    "source": "language \"moriarty/2\"; agreement Empty {}\n",
++    "file": "empty.mori",
++    "expected_cli": {
++      "status": "rejected",
++      "file": "empty.mori",
++      "diagnostics": [
++        {
++          "code": "mori::core::program",
++          "message": "Program needs at least one action.",
++          "offset": null,
++          "step": null
++        }
++      ],
++      "qualification": "local-reference-stage",
++      "authentication": "none",
++      "consumption": "untracked"
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "empty.mori",
++      "source_hash": "37d660cea5a09c6d85d9a8121a634320754cf833eee733efc208728ca5c24d19",
++      "checked_profile": "moriarty/2",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "core",
++          "code": "mori::core::program",
++          "message": "Program needs at least one action.",
++          "offset": null,
++          "step": null
++        }
++      ],
++      "stage_qualification": {
++        "qualification": "local-reference-stage",
++        "authentication": "none",
++        "consumption": "untracked"
++      }
++    },
++    "expectation_basis": "Source-derived expected parser/validator JSON; UNRUN, not checker-generated.",
++    "expected_cli_text": null
++  },
++  {
++    "name": "unicode-byte-offsets",
++    "source": "// café\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n",
++    "file": "test.mori",
++    "expected_cli": {
++      "status": "rejected",
++      "file": "test.mori",
++      "source_hash": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f",
++      "agreement": {
++        "name": "Invoice",
++        "span": {
++          "start": 46,
++          "end": 53
++        }
++      },
++      "declarations": [
++        {
++          "kind": "const",
++          "name": "price",
++          "span": {
++            "start": 58,
++            "end": 75
++          },
++          "name_span": {
++            "start": 64,
++            "end": 69
++          }
++        },
++        {
++          "kind": "const",
++          "name": "price",
++          "span": {
++            "start": 78,
++            "end": 98
++          },
++          "name_span": {
++            "start": 84,
++            "end": 89
++          }
++        }
++      ],
++      "actions": [],
++      "diagnostics": [
++        {
++          "code": "mori::check::duplicate_name",
++          "severity": "error",
++          "message": "`price` is declared twice.",
++          "help": "Each declaration and action in an agreement needs its own name.",
++          "labels": [
++            {
++              "span": {
++                "start": 64,
++                "end": 69
++              },
++              "text": "first declared here",
++              "primary": false
++            },
++            {
++              "span": {
++                "start": 84,
++                "end": 89
++              },
++              "text": "declared again here",
++              "primary": true
++            }
++          ]
++        },
++        {
++          "code": "mori::check::unknown_name",
++          "severity": "error",
++          "message": "I cannot find a declaration named `pirce`.",
++          "help": "Did you mean `price`?\n\n    const price = price;",
++          "labels": [
++            {
++              "span": {
++                "start": 92,
++                "end": 97
++              },
++              "text": "not declared above",
++              "primary": true
++            }
++          ]
++        }
++      ]
++    },
++    "expected_mcp": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f",
++      "checked_profile": "moriarty-beta/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "beta",
++          "code": "mori::check::duplicate_name",
++          "severity": "error",
++          "message": "`price` is declared twice.",
++          "help": "Each declaration and action in an agreement needs its own name.",
++          "labels": [
++            {
++              "span": {
++                "start": 64,
++                "end": 69
++              },
++              "text": "first declared here",
++              "primary": false
++            },
++            {
++              "span": {
++                "start": 84,
++                "end": 89
++              },
++              "text": "declared again here",
++              "primary": true
++            }
++          ]
++        },
++        {
++          "kind": "beta",
++          "code": "mori::check::unknown_name",
++          "severity": "error",
++          "message": "I cannot find a declaration named `pirce`.",
++          "help": "Did you mean `price`?\n\n    const price = price;",
++          "labels": [
++            {
++              "span": {
++                "start": 92,
++                "end": 97
++              },
++              "text": "not declared above",
++              "primary": true
++            }
++          ]
++        }
++      ],
++      "stage_qualification": null
++    },
++    "expectation_basis": "Frozen rejected beta source plus a UTF-8 comment prefix; every byte span increases by independently counted prefix bytes. UNRUN.",
++    "expected_cli_text": null
++  }
++]
+diff --git a/crates/fixtures/mcp/core1-accepted.request.json b/crates/fixtures/mcp/core1-accepted.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core1-accepted.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    },
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "language \"moriarty/1\"; agreement Minimal { action advance() { requires true; } }\n",
++      "file": "minimal.mori"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/core1-accepted.response.json b/crates/fixtures/mcp/core1-accepted.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core1-accepted.response.json
+@@ -0,0 +1,25 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"minimal.mori\",\"source_hash\":\"5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526\",\"checked_profile\":\"moriarty/1\",\"status\":\"accepted\",\"diagnostics\":[],\"stage_qualification\":null}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "minimal.mori",
++      "source_hash": "5014535ca4879d3a6e1580f6dc3f08dcf511309eb8757f2c9c34d7e226a80526",
++      "checked_profile": "moriarty/1",
++      "status": "accepted",
++      "diagnostics": [],
++      "stage_qualification": null
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/core1-rejected.request.json b/crates/fixtures/mcp/core1-rejected.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core1-rejected.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "language \"moriarty/1\"; agreement Empty {}\n",
++      "file": "empty.mori"
++    },
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/core1-rejected.response.json b/crates/fixtures/mcp/core1-rejected.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core1-rejected.response.json
+@@ -0,0 +1,33 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"empty.mori\",\"source_hash\":\"eb7a9e96829f3ef9aae077f18adee18f334c4b6ab3b34db8463a9153af99d9e8\",\"checked_profile\":\"moriarty/1\",\"status\":\"rejected\",\"diagnostics\":[{\"kind\":\"core\",\"code\":\"mori::core::program\",\"message\":\"Program needs at least one action.\",\"offset\":null,\"step\":null}],\"stage_qualification\":null}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "empty.mori",
++      "source_hash": "eb7a9e96829f3ef9aae077f18adee18f334c4b6ab3b34db8463a9153af99d9e8",
++      "checked_profile": "moriarty/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "core",
++          "code": "mori::core::program",
++          "message": "Program needs at least one action.",
++          "offset": null,
++          "step": null
++        }
++      ],
++      "stage_qualification": null
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/core2-accepted.request.json b/crates/fixtures/mcp/core2-accepted.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core2-accepted.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    },
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "language \"moriarty/2\"; agreement Minimal { action advance() { requires true; } }\n",
++      "file": "minimal.mori"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/core2-accepted.response.json b/crates/fixtures/mcp/core2-accepted.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core2-accepted.response.json
+@@ -0,0 +1,29 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"minimal.mori\",\"source_hash\":\"29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc\",\"checked_profile\":\"moriarty/2\",\"status\":\"accepted\",\"diagnostics\":[],\"stage_qualification\":{\"qualification\":\"local-reference-stage\",\"authentication\":\"none\",\"consumption\":\"untracked\"}}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "minimal.mori",
++      "source_hash": "29d20136db0fbe85bc161e134a497696ef5c7e994b0787b492af0246660359dc",
++      "checked_profile": "moriarty/2",
++      "status": "accepted",
++      "diagnostics": [],
++      "stage_qualification": {
++        "qualification": "local-reference-stage",
++        "authentication": "none",
++        "consumption": "untracked"
++      }
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/core2-rejected.request.json b/crates/fixtures/mcp/core2-rejected.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core2-rejected.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "language \"moriarty/2\"; agreement Empty {}\n",
++      "file": "empty.mori"
++    },
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/core2-rejected.response.json b/crates/fixtures/mcp/core2-rejected.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/core2-rejected.response.json
+@@ -0,0 +1,37 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"empty.mori\",\"source_hash\":\"37d660cea5a09c6d85d9a8121a634320754cf833eee733efc208728ca5c24d19\",\"checked_profile\":\"moriarty/2\",\"status\":\"rejected\",\"diagnostics\":[{\"kind\":\"core\",\"code\":\"mori::core::program\",\"message\":\"Program needs at least one action.\",\"offset\":null,\"step\":null}],\"stage_qualification\":{\"qualification\":\"local-reference-stage\",\"authentication\":\"none\",\"consumption\":\"untracked\"}}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "empty.mori",
++      "source_hash": "37d660cea5a09c6d85d9a8121a634320754cf833eee733efc208728ca5c24d19",
++      "checked_profile": "moriarty/2",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "core",
++          "code": "mori::core::program",
++          "message": "Program needs at least one action.",
++          "offset": null,
++          "step": null
++        }
++      ],
++      "stage_qualification": {
++        "qualification": "local-reference-stage",
++        "authentication": "none",
++        "consumption": "untracked"
++      }
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/discover.request.json b/crates/fixtures/mcp/discover.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/discover.request.json
+@@ -0,0 +1,15 @@
++{
++  "jsonrpc": "2.0",
++  "id": 1,
++  "method": "server/discover",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/discover.response.json b/crates/fixtures/mcp/discover.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/discover.response.json
+@@ -0,0 +1,26 @@
++{
++  "jsonrpc": "2.0",
++  "id": 1,
++  "result": {
++    "resultType": "complete",
++    "supportedVersions": [
++      "2024-11-05",
++      "2025-03-26",
++      "2025-06-18",
++      "2025-11-25",
++      "2026-07-28"
++    ],
++    "capabilities": {
++      "tools": {}
++    },
++    "instructions": "One source-check tool. A local accepted report is not compilation, proof or settlement.",
++    "ttlMs": 0,
++    "cacheScope": "private",
++    "_meta": {
++      "io.modelcontextprotocol/serverInfo": {
++        "name": "mori",
++        "version": "0.1.0"
++      }
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/input-schema.json b/crates/fixtures/mcp/input-schema.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/input-schema.json
+@@ -0,0 +1,17 @@
++{
++  "type": "object",
++  "properties": {
++    "source": {
++      "type": "string",
++      "description": "Exact .mori source text; checked as UTF-8 bytes."
++    },
++    "file": {
++      "type": "string",
++      "description": "Display label only; no filesystem lookup. Defaults to mcp-input.mori."
++    }
++  },
++  "required": [
++    "source"
++  ],
++  "additionalProperties": false
++}
+diff --git a/crates/fixtures/mcp/legacy-initialize.request.json b/crates/fixtures/mcp/legacy-initialize.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/legacy-initialize.request.json
+@@ -0,0 +1,13 @@
++{
++  "jsonrpc": "2.0",
++  "id": 1,
++  "method": "initialize",
++  "params": {
++    "protocolVersion": "2025-11-25",
++    "capabilities": {},
++    "clientInfo": {
++      "name": "mori-design-fixture",
++      "version": "1"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/legacy-initialize.response.json b/crates/fixtures/mcp/legacy-initialize.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/legacy-initialize.response.json
+@@ -0,0 +1,15 @@
++{
++  "jsonrpc": "2.0",
++  "id": 1,
++  "result": {
++    "protocolVersion": "2025-11-25",
++    "capabilities": {
++      "tools": {}
++    },
++    "serverInfo": {
++      "name": "mori",
++      "version": "0.1.0"
++    },
++    "instructions": "One source-check tool. A local accepted report is not compilation, proof or settlement."
++  }
++}
+diff --git a/crates/fixtures/mcp/legacy-initialized.notification.json b/crates/fixtures/mcp/legacy-initialized.notification.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/legacy-initialized.notification.json
+@@ -0,0 +1,4 @@
++{
++  "jsonrpc": "2.0",
++  "method": "notifications/initialized"
++}
+diff --git a/crates/fixtures/mcp/output-schema.json b/crates/fixtures/mcp/output-schema.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/output-schema.json
+@@ -0,0 +1,274 @@
++{
++  "oneOf": [
++    {
++      "type": "object",
++      "properties": {
++        "format": {
++          "const": "mori-mcp-check/1"
++        },
++        "kind": {
++          "const": "check"
++        },
++        "scope": {
++          "const": "source-check-only"
++        },
++        "file": {
++          "type": "string"
++        },
++        "source_hash": {
++          "type": "string",
++          "pattern": "^[a-f0-9]{64}$"
++        },
++        "checked_profile": {
++          "enum": [
++            "moriarty-beta/1",
++            "moriarty/1",
++            "moriarty/2"
++          ]
++        },
++        "status": {
++          "enum": [
++            "accepted",
++            "rejected"
++          ]
++        },
++        "diagnostics": {
++          "type": "array",
++          "items": {
++            "oneOf": [
++              {
++                "type": "object",
++                "properties": {
++                  "kind": {
++                    "const": "beta"
++                  },
++                  "code": {
++                    "type": [
++                      "string",
++                      "null"
++                    ]
++                  },
++                  "severity": {
++                    "enum": [
++                      "error",
++                      "warning",
++                      "advice"
++                    ]
++                  },
++                  "message": {
++                    "type": "string"
++                  },
++                  "help": {
++                    "type": [
++                      "string",
++                      "null"
++                    ]
++                  },
++                  "labels": {
++                    "type": "array",
++                    "items": {
++                      "type": "object",
++                      "properties": {
++                        "span": {
++                          "type": "object",
++                          "properties": {
++                            "start": {
++                              "type": "integer",
++                              "minimum": 0,
++                              "maximum": 4294967295
++                            },
++                            "end": {
++                              "type": "integer",
++                              "minimum": 0,
++                              "maximum": 4294967295
++                            }
++                          },
++                          "required": [
++                            "start",
++                            "end"
++                          ],
++                          "additionalProperties": false
++                        },
++                        "text": {
++                          "type": [
++                            "string",
++                            "null"
++                          ]
++                        },
++                        "primary": {
++                          "type": "boolean"
++                        }
++                      },
++                      "required": [
++                        "span",
++                        "text",
++                        "primary"
++                      ],
++                      "additionalProperties": false
++                    }
++                  }
++                },
++                "required": [
++                  "kind",
++                  "code",
++                  "severity",
++                  "message",
++                  "help",
++                  "labels"
++                ],
++                "additionalProperties": false
++              },
++              {
++                "type": "object",
++                "properties": {
++                  "kind": {
++                    "const": "core"
++                  },
++                  "code": {
++                    "type": "string"
++                  },
++                  "message": {
++                    "type": "string"
++                  },
++                  "offset": {
++                    "type": [
++                      "integer",
++                      "null"
++                    ],
++                    "minimum": 0,
++                    "maximum": 4294967295
++                  },
++                  "step": {
++                    "type": [
++                      "integer",
++                      "null"
++                    ],
++                    "minimum": 0,
++                    "maximum": 65535
++                  }
++                },
++                "required": [
++                  "kind",
++                  "code",
++                  "message",
++                  "offset",
++                  "step"
++                ],
++                "additionalProperties": false
++              }
++            ]
++          }
++        },
++        "stage_qualification": {
++          "oneOf": [
++            {
++              "type": "null"
++            },
++            {
++              "type": "object",
++              "properties": {
++                "qualification": {
++                  "const": "local-reference-stage"
++                },
++                "authentication": {
++                  "const": "none"
++                },
++                "consumption": {
++                  "const": "untracked"
++                }
++              },
++              "required": [
++                "qualification",
++                "authentication",
++                "consumption"
++              ],
++              "additionalProperties": false
++            }
++          ]
++        }
++      },
++      "required": [
++        "format",
++        "kind",
++        "scope",
++        "file",
++        "source_hash",
++        "checked_profile",
++        "status",
++        "diagnostics",
++        "stage_qualification"
++      ],
++      "additionalProperties": false,
++      "allOf": [
++        {
++          "if": {
++            "properties": {
++              "checked_profile": {
++                "const": "moriarty/2"
++              }
++            }
++          },
++          "then": {
++            "properties": {
++              "stage_qualification": {
++                "type": "object",
++                "properties": {
++                  "qualification": {
++                    "const": "local-reference-stage"
++                  },
++                  "authentication": {
++                    "const": "none"
++                  },
++                  "consumption": {
++                    "const": "untracked"
++                  }
++                },
++                "required": [
++                  "qualification",
++                  "authentication",
++                  "consumption"
++                ],
++                "additionalProperties": false
++              }
++            }
++          },
++          "else": {
++            "properties": {
++              "stage_qualification": {
++                "type": "null"
++              }
++            }
++          }
++        }
++      ]
++    },
++    {
++      "type": "object",
++      "properties": {
++        "format": {
++          "const": "mori-mcp-check/1"
++        },
++        "kind": {
++          "const": "tool_error"
++        },
++        "code": {
++          "const": "source_too_large"
++        },
++        "message": {
++          "type": "string"
++        },
++        "limit_bytes": {
++          "const": 1048576
++        }
++      },
++      "required": [
++        "format",
++        "kind",
++        "code",
++        "message",
++        "limit_bytes"
++      ],
++      "additionalProperties": false
++    }
++  ]
++}
+diff --git a/crates/fixtures/mcp/rejected.request.json b/crates/fixtures/mcp/rejected.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/rejected.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    },
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n",
++      "file": "test.mori"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/rejected.response.json b/crates/fixtures/mcp/rejected.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/rejected.response.json
+@@ -0,0 +1,68 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"test.mori\",\"source_hash\":\"4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b\",\"checked_profile\":\"moriarty-beta/1\",\"status\":\"rejected\",\"diagnostics\":[{\"kind\":\"beta\",\"code\":\"mori::check::duplicate_name\",\"severity\":\"error\",\"message\":\"`price` is declared twice.\",\"help\":\"Each declaration and action in an agreement needs its own name.\",\"labels\":[{\"span\":{\"start\":55,\"end\":60},\"text\":\"first declared here\",\"primary\":false},{\"span\":{\"start\":75,\"end\":80},\"text\":\"declared again here\",\"primary\":true}]},{\"kind\":\"beta\",\"code\":\"mori::check::unknown_name\",\"severity\":\"error\",\"message\":\"I cannot find a declaration named `pirce`.\",\"help\":\"Did you mean `price`?\\n\\n    const price = price;\",\"labels\":[{\"span\":{\"start\":83,\"end\":88},\"text\":\"not declared above\",\"primary\":true}]}],\"stage_qualification\":null}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
++      "checked_profile": "moriarty-beta/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "beta",
++          "code": "mori::check::duplicate_name",
++          "severity": "error",
++          "message": "`price` is declared twice.",
++          "help": "Each declaration and action in an agreement needs its own name.",
++          "labels": [
++            {
++              "span": {
++                "start": 55,
++                "end": 60
++              },
++              "text": "first declared here",
++              "primary": false
++            },
++            {
++              "span": {
++                "start": 75,
++                "end": 80
++              },
++              "text": "declared again here",
++              "primary": true
++            }
++          ]
++        },
++        {
++          "kind": "beta",
++          "code": "mori::check::unknown_name",
++          "severity": "error",
++          "message": "I cannot find a declaration named `pirce`.",
++          "help": "Did you mean `price`?\n\n    const price = price;",
++          "labels": [
++            {
++              "span": {
++                "start": 83,
++                "end": 88
++              },
++              "text": "not declared above",
++              "primary": true
++            }
++          ]
++        }
++      ],
++      "stage_qualification": null
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/tools-list.request.json b/crates/fixtures/mcp/tools-list.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/tools-list.request.json
+@@ -0,0 +1,15 @@
++{
++  "jsonrpc": "2.0",
++  "id": 3,
++  "method": "tools/list",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/tools-list.response.json b/crates/fixtures/mcp/tools-list.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/tools-list.response.json
+@@ -0,0 +1,311 @@
++{
++  "jsonrpc": "2.0",
++  "id": 3,
++  "result": {
++    "tools": [
++      {
++        "name": "mori_check_source",
++        "title": "Check Moriarty source",
++        "description": "Return source-check diagnostics through the same profile consumer as mori check. Accepted means local source checking only.",
++        "inputSchema": {
++          "type": "object",
++          "properties": {
++            "source": {
++              "type": "string",
++              "description": "Exact .mori source text; checked as UTF-8 bytes."
++            },
++            "file": {
++              "type": "string",
++              "description": "Display label only; no filesystem lookup. Defaults to mcp-input.mori."
++            }
++          },
++          "required": [
++            "source"
++          ],
++          "additionalProperties": false
++        },
++        "outputSchema": {
++          "oneOf": [
++            {
++              "type": "object",
++              "properties": {
++                "format": {
++                  "const": "mori-mcp-check/1"
++                },
++                "kind": {
++                  "const": "check"
++                },
++                "scope": {
++                  "const": "source-check-only"
++                },
++                "file": {
++                  "type": "string"
++                },
++                "source_hash": {
++                  "type": "string",
++                  "pattern": "^[a-f0-9]{64}$"
++                },
++                "checked_profile": {
++                  "enum": [
++                    "moriarty-beta/1",
++                    "moriarty/1",
++                    "moriarty/2"
++                  ]
++                },
++                "status": {
++                  "enum": [
++                    "accepted",
++                    "rejected"
++                  ]
++                },
++                "diagnostics": {
++                  "type": "array",
++                  "items": {
++                    "oneOf": [
++                      {
++                        "type": "object",
++                        "properties": {
++                          "kind": {
++                            "const": "beta"
++                          },
++                          "code": {
++                            "type": [
++                              "string",
++                              "null"
++                            ]
++                          },
++                          "severity": {
++                            "enum": [
++                              "error",
++                              "warning",
++                              "advice"
++                            ]
++                          },
++                          "message": {
++                            "type": "string"
++                          },
++                          "help": {
++                            "type": [
++                              "string",
++                              "null"
++                            ]
++                          },
++                          "labels": {
++                            "type": "array",
++                            "items": {
++                              "type": "object",
++                              "properties": {
++                                "span": {
++                                  "type": "object",
++                                  "properties": {
++                                    "start": {
++                                      "type": "integer",
++                                      "minimum": 0,
++                                      "maximum": 4294967295
++                                    },
++                                    "end": {
++                                      "type": "integer",
++                                      "minimum": 0,
++                                      "maximum": 4294967295
++                                    }
++                                  },
++                                  "required": [
++                                    "start",
++                                    "end"
++                                  ],
++                                  "additionalProperties": false
++                                },
++                                "text": {
++                                  "type": [
++                                    "string",
++                                    "null"
++                                  ]
++                                },
++                                "primary": {
++                                  "type": "boolean"
++                                }
++                              },
++                              "required": [
++                                "span",
++                                "text",
++                                "primary"
++                              ],
++                              "additionalProperties": false
++                            }
++                          }
++                        },
++                        "required": [
++                          "kind",
++                          "code",
++                          "severity",
++                          "message",
++                          "help",
++                          "labels"
++                        ],
++                        "additionalProperties": false
++                      },
++                      {
++                        "type": "object",
++                        "properties": {
++                          "kind": {
++                            "const": "core"
++                          },
++                          "code": {
++                            "type": "string"
++                          },
++                          "message": {
++                            "type": "string"
++                          },
++                          "offset": {
++                            "type": [
++                              "integer",
++                              "null"
++                            ],
++                            "minimum": 0,
++                            "maximum": 4294967295
++                          },
++                          "step": {
++                            "type": [
++                              "integer",
++                              "null"
++                            ],
++                            "minimum": 0,
++                            "maximum": 65535
++                          }
++                        },
++                        "required": [
++                          "kind",
++                          "code",
++                          "message",
++                          "offset",
++                          "step"
++                        ],
++                        "additionalProperties": false
++                      }
++                    ]
++                  }
++                },
++                "stage_qualification": {
++                  "oneOf": [
++                    {
++                      "type": "null"
++                    },
++                    {
++                      "type": "object",
++                      "properties": {
++                        "qualification": {
++                          "const": "local-reference-stage"
++                        },
++                        "authentication": {
++                          "const": "none"
++                        },
++                        "consumption": {
++                          "const": "untracked"
++                        }
++                      },
++                      "required": [
++                        "qualification",
++                        "authentication",
++                        "consumption"
++                      ],
++                      "additionalProperties": false
++                    }
++                  ]
++                }
++              },
++              "required": [
++                "format",
++                "kind",
++                "scope",
++                "file",
++                "source_hash",
++                "checked_profile",
++                "status",
++                "diagnostics",
++                "stage_qualification"
++              ],
++              "additionalProperties": false,
++              "allOf": [
++                {
++                  "if": {
++                    "properties": {
++                      "checked_profile": {
++                        "const": "moriarty/2"
++                      }
++                    }
++                  },
++                  "then": {
++                    "properties": {
++                      "stage_qualification": {
++                        "type": "object",
++                        "properties": {
++                          "qualification": {
++                            "const": "local-reference-stage"
++                          },
++                          "authentication": {
++                            "const": "none"
++                          },
++                          "consumption": {
++                            "const": "untracked"
++                          }
++                        },
++                        "required": [
++                          "qualification",
++                          "authentication",
++                          "consumption"
++                        ],
++                        "additionalProperties": false
++                      }
++                    }
++                  },
++                  "else": {
++                    "properties": {
++                      "stage_qualification": {
++                        "type": "null"
++                      }
++                    }
++                  }
++                }
++              ]
++            },
++            {
++              "type": "object",
++              "properties": {
++                "format": {
++                  "const": "mori-mcp-check/1"
++                },
++                "kind": {
++                  "const": "tool_error"
++                },
++                "code": {
++                  "const": "source_too_large"
++                },
++                "message": {
++                  "type": "string"
++                },
++                "limit_bytes": {
++                  "const": 1048576
++                }
++              },
++              "required": [
++                "format",
++                "kind",
++                "code",
++                "message",
++                "limit_bytes"
++              ],
++              "additionalProperties": false
++            }
++          ]
++        },
++        "annotations": {
++          "readOnlyHint": true,
++          "openWorldHint": false
++        }
++      }
++    ],
++    "resultType": "complete",
++    "ttlMs": 0,
++    "cacheScope": "private"
++  }
++}
+diff --git a/crates/fixtures/mcp/unicode-byte-offsets.request.json b/crates/fixtures/mcp/unicode-byte-offsets.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/unicode-byte-offsets.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    },
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "// café\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n",
++      "file": "test.mori"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/unicode-byte-offsets.response.json b/crates/fixtures/mcp/unicode-byte-offsets.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/unicode-byte-offsets.response.json
+@@ -0,0 +1,68 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"test.mori\",\"source_hash\":\"211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f\",\"checked_profile\":\"moriarty-beta/1\",\"status\":\"rejected\",\"diagnostics\":[{\"kind\":\"beta\",\"code\":\"mori::check::duplicate_name\",\"severity\":\"error\",\"message\":\"`price` is declared twice.\",\"help\":\"Each declaration and action in an agreement needs its own name.\",\"labels\":[{\"span\":{\"start\":64,\"end\":69},\"text\":\"first declared here\",\"primary\":false},{\"span\":{\"start\":84,\"end\":89},\"text\":\"declared again here\",\"primary\":true}]},{\"kind\":\"beta\",\"code\":\"mori::check::unknown_name\",\"severity\":\"error\",\"message\":\"I cannot find a declaration named `pirce`.\",\"help\":\"Did you mean `price`?\\n\\n    const price = price;\",\"labels\":[{\"span\":{\"start\":92,\"end\":97},\"text\":\"not declared above\",\"primary\":true}]}],\"stage_qualification\":null}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "211dc3011819cc0e18300d745edc7b9510fc4b32a74146eb11566c69bc9bf34f",
++      "checked_profile": "moriarty-beta/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "beta",
++          "code": "mori::check::duplicate_name",
++          "severity": "error",
++          "message": "`price` is declared twice.",
++          "help": "Each declaration and action in an agreement needs its own name.",
++          "labels": [
++            {
++              "span": {
++                "start": 64,
++                "end": 69
++              },
++              "text": "first declared here",
++              "primary": false
++            },
++            {
++              "span": {
++                "start": 84,
++                "end": 89
++              },
++              "text": "declared again here",
++              "primary": true
++            }
++          ]
++        },
++        {
++          "kind": "beta",
++          "code": "mori::check::unknown_name",
++          "severity": "error",
++          "message": "I cannot find a declaration named `pirce`.",
++          "help": "Did you mean `price`?\n\n    const price = price;",
++          "labels": [
++            {
++              "span": {
++                "start": 92,
++                "end": 97
++              },
++              "text": "not declared above",
++              "primary": true
++            }
++          ]
++        }
++      ],
++      "stage_qualification": null
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/fixtures/mcp/unparsable.request.json b/crates/fixtures/mcp/unparsable.request.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/unparsable.request.json
+@@ -0,0 +1,20 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "method": "tools/call",
++  "params": {
++    "_meta": {
++      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
++      "io.modelcontextprotocol/clientInfo": {
++        "name": "mori-design-fixture",
++        "version": "1"
++      },
++      "io.modelcontextprotocol/clientCapabilities": {}
++    },
++    "name": "mori_check_source",
++    "arguments": {
++      "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10\n",
++      "file": "test.mori"
++    }
++  }
++}
+diff --git a/crates/fixtures/mcp/unparsable.response.json b/crates/fixtures/mcp/unparsable.response.json
+new file mode 100644
+--- /dev/null
++++ b/crates/fixtures/mcp/unparsable.response.json
+@@ -0,0 +1,43 @@
++{
++  "jsonrpc": "2.0",
++  "id": 4,
++  "result": {
++    "resultType": "complete",
++    "content": [
++      {
++        "type": "text",
++        "text": "{\"format\":\"mori-mcp-check/1\",\"kind\":\"check\",\"scope\":\"source-check-only\",\"file\":\"test.mori\",\"source_hash\":\"b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123\",\"checked_profile\":\"moriarty-beta/1\",\"status\":\"rejected\",\"diagnostics\":[{\"kind\":\"beta\",\"code\":\"mori::syntax::missing_semicolon\",\"severity\":\"error\",\"message\":\"I was partway through the declaration of `price` when I found the end of the file.\",\"help\":\"A declaration looks like this. The type after `:` is optional:\\n\\n    const fee: Qty<USD> = 0.10 USD;\",\"labels\":[{\"span\":{\"start\":65,\"end\":65},\"text\":\"I expected `;` here\",\"primary\":true}]}],\"stage_qualification\":null}"
++      }
++    ],
++    "structuredContent": {
++      "format": "mori-mcp-check/1",
++      "kind": "check",
++      "scope": "source-check-only",
++      "file": "test.mori",
++      "source_hash": "b58eb56f4fb88fa8f93aea956f22020c9af595bb9223b83f772f1cdef7a92123",
++      "checked_profile": "moriarty-beta/1",
++      "status": "rejected",
++      "diagnostics": [
++        {
++          "kind": "beta",
++          "code": "mori::syntax::missing_semicolon",
++          "severity": "error",
++          "message": "I was partway through the declaration of `price` when I found the end of the file.",
++          "help": "A declaration looks like this. The type after `:` is optional:\n\n    const fee: Qty<USD> = 0.10 USD;",
++          "labels": [
++            {
++              "span": {
++                "start": 65,
++                "end": 65
++              },
++              "text": "I expected `;` here",
++              "primary": true
++            }
++          ]
++        }
++      ],
++      "stage_qualification": null
++    },
++    "isError": false
++  }
++}
+diff --git a/crates/mori/Cargo.toml b/crates/mori/Cargo.toml
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -10,6 +10,7 @@
+ [features]
+ core2-disjoint-draft = ["mori-core/core2-disjoint-draft"]
+ default = ["native"]
++mcp = ["dep:rmcp", "dep:tokio"]
+ source6-expansion = ["dep:mori-source6", "mori-source6/source6-transfer-slice"]
+ native = [
+     "dep:mori-backend",
+@@ -43,6 +44,7 @@
+ mori-source6 = { workspace = true, optional = true }
+ mori-span.workspace = true
+ rayon.workspace = true
++rmcp = { workspace = true, optional = true }
+ futures = { workspace = true, optional = true }
+ rand = { workspace = true, optional = true }
+ serde.workspace = true
+@@ -50,6 +52,7 @@
+ sha2.workspace = true
+ terminal_size.workspace = true
+ thiserror.workspace = true
++tokio = { workspace = true, optional = true }
+ 
+ midnight-ledger = { workspace = true, optional = true }
+ midnight-base-crypto = { workspace = true, optional = true }
+@@ -61,6 +64,7 @@
+ midnight-serialize = { workspace = true, optional = true }
+ 
+ [dev-dependencies]
++rmcp = { workspace = true, features = ["client"] }
+ indoc.workspace = true
+ insta.workspace = true
+ 
+diff --git a/crates/mori/src/commands/check.rs b/crates/mori/src/commands/check.rs
+--- a/crates/mori/src/commands/check.rs
++++ b/crates/mori/src/commands/check.rs
+@@ -4,7 +4,7 @@
+ 
+ use mori_diagnostics::{MoriDiagnostic, NamedSource};
+ 
+-use crate::json::CheckReport;
++use super::check_source::{CheckAnalysis, analyze_source};
+ use crate::shell::Shell;
+ 
+ #[derive(Debug, clap::Args)]
+@@ -21,85 +21,46 @@
+ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+     let name = args.file.display().to_string();
+     let source = super::core_io::read_source(&args.file)?;
+-
+     if !args.json {
+         shell.status("Checking", &name);
+     }
+     let started = Instant::now();
+-    if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
+-        let staged = mori_core::language(&source).is_ok_and(|language| language == "moriarty/2");
+-        let result = if staged {
+-            mori_core::stage::load(&source).map(|program| program.program().clone())
+-        } else {
+-            mori_core::parse(&source)
+-        };
+-        if args.json {
+-            let report = match &result {
+-                Ok(program) => {
+-                    serde_json::json!({"status":"accepted", "file":name,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
+-                }
+-                Err(error) => {
+-                    serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
+-                }
+-            };
+-            if staged {
+-                super::simulate::print_stage_report(report)?;
+-            } else {
++    let analysis = analyze_source(&name, &source);
++    let accepted = analysis.is_accepted();
++
++    if args.json {
++        match &analysis {
++            // Serialize the original struct so its public field order stays intact.
++            CheckAnalysis::Beta { report, .. } => super::core_io::print(report)?,
++            CheckAnalysis::Core { .. } => {
++                let report = analysis
++                    .cli_report(&name, &source)
++                    .map_err(super::core_io::operation)?;
+                 super::core_io::print(&report)?;
+             }
+-        } else {
+-            match &result {
++        }
++    } else {
++        match analysis {
++            CheckAnalysis::Core { result, .. } => match result {
+                 Ok(_) => shell.status("Finished", "bounded core check"),
+                 Err(error) => shell.error(error),
++            },
++            CheckAnalysis::Beta {
++                diagnostics,
++                parsed,
++                ..
++            } => {
++                if let Some((tokens, nodes)) = parsed {
++                    shell.verbose_status("Parsed", format!("{tokens} tokens, {nodes} nodes"));
++                }
++                if finish(shell, &name, &source, diagnostics) {
++                    shell.status(
++                        "Finished",
++                        format!("check in {:.2}s", started.elapsed().as_secs_f64()),
++                    );
++                }
+             }
+         }
+-        return Ok(if result.is_ok() {
+-            ExitCode::SUCCESS
+-        } else {
+-            ExitCode::FAILURE
+-        });
+-    }
+-    let (accepted, report) = match mori_parser::parse(&source) {
+-        Err(error) => {
+-            let diagnostics = vec![error];
+-            let report = args
+-                .json
+-                .then(|| CheckReport::new(name.clone(), &source, None, &diagnostics));
+-            (
+-                finish(shell, &name, &source, diagnostics, args.json),
+-                report,
+-            )
+-        }
+-        Ok(ast) => {
+-            if !args.json {
+-                shell.verbose_status(
+-                    "Parsed",
+-                    format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
+-                );
+-            }
+-            let result = mori_checker::check(&ast);
+-            let report = args.json.then(|| {
+-                CheckReport::new(
+-                    name.clone(),
+-                    &source,
+-                    Some(&result.checked),
+-                    &result.diagnostics,
+-                )
+-            });
+-            (
+-                finish(shell, &name, &source, result.diagnostics, args.json),
+-                report,
+-            )
+-        }
+-    };
+-
+-    if let Some(report) = report {
+-        super::core_io::print(&report)?;
+-    } else if accepted {
+-        shell.status(
+-            "Finished",
+-            format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+-        );
+     }
+     Ok(if accepted {
+         ExitCode::SUCCESS
+@@ -108,29 +69,26 @@
+     })
+ }
+ 
+-/// Renders the diagnostics, unless the report is JSON. True when there are none.
++/// Renders human diagnostics. True when there are none.
+ fn finish(
+     shell: &mut Shell,
+     name: &str,
+     source: &str,
+     diagnostics: Vec<MoriDiagnostic>,
+-    json: bool,
+ ) -> bool {
+     if diagnostics.is_empty() {
+         return true;
+     }
+-    if !json {
+-        let count = diagnostics.len();
+-        for diagnostic in diagnostics {
+-            shell.report(&diagnostic.with_source_code(NamedSource::new(
+-                crate::display::text(name),
+-                source.to_owned(),
+-            )));
+-        }
+-        let plural = if count == 1 { "" } else { "s" };
+-        shell.error(format!(
+-            "could not check `{name}` due to {count} previous error{plural}"
+-        ));
++    let count = diagnostics.len();
++    for diagnostic in diagnostics {
++        shell.report(&diagnostic.with_source_code(NamedSource::new(
++            crate::display::text(name),
++            source.to_owned(),
++        )));
+     }
++    let plural = if count == 1 { "" } else { "s" };
++    shell.error(format!(
++        "could not check `{name}` due to {count} previous error{plural}"
++    ));
+     false
+ }
+diff --git a/crates/mori/src/commands/check_source/tests.rs b/crates/mori/src/commands/check_source/tests.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/check_source/tests.rs
+@@ -0,0 +1,42 @@
++use super::{CheckAnalysis, analyze_source};
++use serde::Deserialize;
++use serde_json::Value;
++
++#[derive(Deserialize)]
++struct Case {
++    name: String,
++    source: String,
++    file: String,
++    expected_cli: Value,
++    expected_cli_text: Option<String>,
++}
++
++#[test]
++fn complete_cli_reports_match_frozen_public_expectations() {
++    let cases: Vec<Case> = serde_json::from_str(include_str!(concat!(
++        env!("CARGO_MANIFEST_DIR"),
++        "/../fixtures/mcp/check-cases.json"
++    )))
++    .unwrap();
++    assert_eq!(cases.len(), 8);
++    for case in cases {
++        let analysis = analyze_source(&case.file, &case.source);
++        if let (CheckAnalysis::Beta { report, .. }, Some(expected)) =
++            (&analysis, &case.expected_cli_text)
++        {
++            assert_eq!(serde_json::to_string_pretty(report).unwrap(), *expected);
++        }
++        assert_eq!(
++            analysis.is_accepted(),
++            case.expected_cli["status"] == "accepted",
++            "{} decision",
++            case.name
++        );
++        assert_eq!(
++            analysis.cli_report(&case.file, &case.source).unwrap(),
++            case.expected_cli,
++            "{} complete public report",
++            case.name
++        );
++    }
++}
+diff --git a/crates/mori/src/commands/check_source.rs b/crates/mori/src/commands/check_source.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/check_source.rs
+@@ -0,0 +1,99 @@
++//! Shared source analysis for the public check command and MCP diagnostics.
++
++use mori_diagnostics::MoriDiagnostic;
++use serde_json::Value;
++
++use crate::json::CheckReport;
++
++pub(super) enum CheckAnalysis {
++    Beta {
++        report: CheckReport,
++        diagnostics: Vec<MoriDiagnostic>,
++        parsed: Option<(usize, usize)>,
++    },
++    Core {
++        result: Result<mori_core::Program, mori_core::Error>,
++        staged: bool,
++    },
++}
++
++/// Uses the same profile dispatch for file checks and supplied source text.
++pub(super) fn analyze_source(file: &str, source: &str) -> CheckAnalysis {
++    if mori_lexer::first_token_text(source).is_ok_and(|token| token == "language") {
++        let staged = mori_core::language(source).is_ok_and(|language| language == "moriarty/2");
++        let result = if staged {
++            mori_core::stage::load(source).map(|program| program.program().clone())
++        } else {
++            mori_core::parse(source)
++        };
++        return CheckAnalysis::Core { result, staged };
++    }
++
++    match mori_parser::parse(source) {
++        Err(error) => {
++            let diagnostics = vec![error];
++            CheckAnalysis::Beta {
++                report: CheckReport::new(file.to_owned(), source, None, &diagnostics),
++                diagnostics,
++                parsed: None,
++            }
++        }
++        Ok(ast) => {
++            let parsed = Some((ast.tokens.len(), ast.nodes.len()));
++            let result = mori_checker::check(&ast);
++            // The checked AST is borrowed. Own its public report before it drops.
++            let report = CheckReport::new(
++                file.to_owned(),
++                source,
++                Some(&result.checked),
++                &result.diagnostics,
++            );
++            CheckAnalysis::Beta {
++                report,
++                diagnostics: result.diagnostics,
++                parsed,
++            }
++        }
++    }
++}
++
++impl CheckAnalysis {
++    pub(super) fn is_accepted(&self) -> bool {
++        match self {
++            Self::Beta { diagnostics, .. } => diagnostics.is_empty(),
++            Self::Core { result, .. } => result.is_ok(),
++        }
++    }
++
++    /// Preserves the existing full `mori check --json` objects.
++    pub(super) fn cli_report(&self, file: &str, source: &str) -> Result<Value, serde_json::Error> {
++        match self {
++            Self::Beta { report, .. } => serde_json::to_value(report),
++            Self::Core { result, staged } => {
++                let mut report = match result {
++                    Ok(program) => serde_json::json!({
++                        "status": "accepted",
++                        "file": file,
++                        "source_hash": mori_core::intent::hash_bytes(source.as_bytes()),
++                        "language": program.language,
++                        "agreement": program.name,
++                        "actions": program.actions,
++                        "diagnostics": []
++                    }),
++                    Err(error) => serde_json::json!({
++                        "status": "rejected", "file": file, "diagnostics": [error]
++                    }),
++                };
++                if *staged {
++                    for (name, value) in mori_core::stage::STAGE_LABELS {
++                        report[name] = Value::String(value.to_owned());
++                    }
++                }
++                Ok(report)
++            }
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests;
+diff --git a/crates/mori/src/commands/mcp/server/tests.rs b/crates/mori/src/commands/mcp/server/tests.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/mcp/server/tests.rs
+@@ -0,0 +1,94 @@
++use super::{MoriServer, TOOL_NAME};
++use clap::Parser;
++use rmcp::{ServiceExt, model::CallToolRequestParams};
++use serde::Deserialize;
++use serde_json::{Value, json};
++
++#[derive(Deserialize)]
++struct Case {
++    name: String,
++    source: String,
++    file: String,
++    expected_mcp: Value,
++}
++
++#[test]
++fn public_mcp_subcommand_selects_the_server() {
++    let cli = crate::cli::Cli::try_parse_from(["mori", "mcp"]).unwrap();
++    assert!(matches!(cli.command, crate::cli::Command::Mcp(_)));
++}
++
++#[test]
++fn normal_sdk_session_lists_and_checks_all_public_profile_fixtures() {
++    let cases: Vec<Case> = serde_json::from_str(include_str!(concat!(
++        env!("CARGO_MANIFEST_DIR"),
++        "/../fixtures/mcp/check-cases.json"
++    )))
++    .unwrap();
++    let expected_listing: Value = serde_json::from_str(include_str!(concat!(
++        env!("CARGO_MANIFEST_DIR"),
++        "/../fixtures/mcp/tools-list.response.json"
++    )))
++    .unwrap();
++    tokio::runtime::Builder::new_current_thread()
++        .enable_all()
++        .build()
++        .unwrap()
++        .block_on(async {
++            tokio::time::timeout(std::time::Duration::from_secs(5), async {
++                let (server_io, client_io) = tokio::io::duplex(16_384);
++                let starting_server = tokio::spawn(async {
++                    MoriServer.serve(server_io).await.unwrap()
++                });
++                let client = ().serve(client_io).await.unwrap();
++                let server = starting_server.await.unwrap();
++                let listing = client.list_tools(None).await.unwrap();
++                assert_eq!(listing.tools.len(), 1);
++                assert_eq!(
++                    serde_json::to_value(&listing.tools[0]).unwrap(),
++                    expected_listing["result"]["tools"][0]
++                );
++                for case in &cases {
++                    let args = json!({"source": case.source, "file": case.file})
++                        .as_object()
++                        .unwrap()
++                        .clone();
++                    let result = client
++                        .call_tool(CallToolRequestParams::new(TOOL_NAME).with_arguments(args))
++                        .await
++                        .unwrap();
++                    assert_eq!(result.is_error, Some(false), "{} tool result", case.name);
++                    assert_eq!(
++                        result.structured_content.as_ref().unwrap(),
++                        &case.expected_mcp,
++                        "{} complete diagnostics",
++                        case.name
++                    );
++                    assert_eq!(result.content.len(), 1);
++                    let text = result.content[0].as_text().unwrap();
++                    assert_eq!(
++                        serde_json::from_str::<Value>(&text.text).unwrap(),
++                        case.expected_mcp,
++                        "{} text and structured agreement",
++                        case.name
++                    );
++                }
++                // A normal later request still works after reported source errors.
++                let mut expected = cases[0].expected_mcp.clone();
++                expected["file"] = json!("mcp-input.mori");
++                let args = json!({"source": cases[0].source})
++                    .as_object()
++                    .unwrap()
++                    .clone();
++                let later = client
++                    .call_tool(CallToolRequestParams::new(TOOL_NAME).with_arguments(args))
++                    .await
++                    .unwrap();
++                assert_eq!(later.structured_content, Some(expected));
++                client.cancel().await.unwrap();
++                server.waiting().await.unwrap();
++            })
++            .await
++            .expect("normal in-memory SDK session completes");
++        });
++}
+diff --git a/crates/mori/src/commands/mcp/server.rs b/crates/mori/src/commands/mcp/server.rs
+new file mode 100644
+--- /dev/null
++++ b/crates/mori/src/commands/mcp/server.rs
+@@ -0,0 +1,176 @@
++//! One source-check tool, served through the SDK's standard MCP transport.
++
++use std::sync::Arc;
++
++use rmcp::{
++    ErrorData, RoleServer, ServerHandler,
++    model::{
++        CacheScope, CallToolRequestMethod, CallToolRequestParams, CallToolResponse,
++        CallToolResult, Implementation, JsonObject, ListToolsResult, PaginatedRequestParams,
++        ServerCapabilities, ServerConfig, Tool, ToolAnnotations,
++    },
++    service::RequestContext,
++};
++use serde::Deserialize;
++use serde_json::{Value, json};
++
++use super::super::check_source::{CheckAnalysis, analyze_source};
++
++const TOOL_NAME: &str = "mori_check_source";
++const SOURCE_INPUT_BYTES: usize = 1_048_576;
++const INPUT_SCHEMA: &str = include_str!(concat!(
++    env!("CARGO_MANIFEST_DIR"),
++    "/../fixtures/mcp/input-schema.json"
++));
++const OUTPUT_SCHEMA: &str = include_str!(concat!(
++    env!("CARGO_MANIFEST_DIR"),
++    "/../fixtures/mcp/output-schema.json"
++));
++
++pub(super) struct MoriServer;
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct CheckArgs {
++    source: String,
++    #[serde(default = "default_file")]
++    file: String,
++}
++
++fn default_file() -> String {
++    "mcp-input.mori".into()
++}
++
++fn schema(text: &str) -> Arc<JsonObject> {
++    // Both arguments are embedded, versioned JSON objects, never caller input.
++    Arc::new(serde_json::from_str(text).expect("embedded MCP schema is a JSON object"))
++}
++
++fn tool_definition() -> Tool {
++    Tool::new(
++        TOOL_NAME,
++        "Return source-check diagnostics through the same profile consumer as mori check. Accepted means local source checking only.",
++        schema(INPUT_SCHEMA),
++    )
++    .with_title("Check Moriarty source")
++    .with_raw_output_schema(schema(OUTPUT_SCHEMA))
++    .with_annotations(ToolAnnotations::new().read_only(true).open_world(false))
++}
++
++fn diagnostic_payload(args: &CheckArgs) -> Value {
++    let analysis = analyze_source(&args.file, &args.source);
++    let (profile, diagnostics, qualification) = match &analysis {
++        CheckAnalysis::Beta { report, .. } => {
++            let diagnostics: Vec<Value> = report
++                .diagnostics
++                .iter()
++                .map(|diagnostic| {
++                    json!({
++                        "kind": "beta",
++                        "code": diagnostic.code,
++                        "severity": diagnostic.severity,
++                        "message": diagnostic.message,
++                        "help": diagnostic.help,
++                        "labels": diagnostic.labels
++                    })
++                })
++                .collect();
++            ("moriarty-beta/1", diagnostics, Value::Null)
++        }
++        CheckAnalysis::Core { result, staged } => {
++            let diagnostics = match result {
++                Ok(_) => Vec::new(),
++                Err(error) => vec![json!({
++                    "kind": "core", "code": error.code, "message": error.message,
++                    "offset": error.offset, "step": error.step
++                })],
++            };
++            let qualification = if *staged {
++                Value::Object(
++                    mori_core::stage::STAGE_LABELS
++                        .into_iter()
++                        .map(|(name, value)| (name.to_owned(), Value::String(value.to_owned())))
++                        .collect(),
++                )
++            } else {
++                Value::Null
++            };
++            (
++                if *staged { "moriarty/2" } else { "moriarty/1" },
++                diagnostics,
++                qualification,
++            )
++        }
++    };
++    json!({
++        "format": "mori-mcp-check/1",
++        "kind": "check",
++        "scope": "source-check-only",
++        "file": args.file,
++        "source_hash": mori_core::intent::hash_bytes(args.source.as_bytes()),
++        "checked_profile": profile,
++        "status": if analysis.is_accepted() { "accepted" } else { "rejected" },
++        "diagnostics": diagnostics,
++        "stage_qualification": qualification
++    })
++}
++
++impl ServerHandler for MoriServer {
++    fn get_info(&self) -> ServerConfig {
++        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
++            .with_server_info(Implementation::new("mori", env!("CARGO_PKG_VERSION")))
++            .with_instructions(
++                "One source-check tool. A local accepted report is not compilation, proof or settlement.",
++            )
++    }
++
++    async fn list_tools(
++        &self,
++        request: Option<PaginatedRequestParams>,
++        _context: RequestContext<RoleServer>,
++    ) -> Result<ListToolsResult, ErrorData> {
++        if request.as_ref().is_some_and(|params| params.cursor.is_some()) {
++            return Err(ErrorData::invalid_params("No tool-list continuation exists.", None));
++        }
++        Ok(ListToolsResult::with_all_items(vec![tool_definition()])
++            .with_ttl_ms(0)
++            .with_cache_scope(CacheScope::Private))
++    }
++
++    fn get_tool(&self, name: &str) -> Option<Tool> {
++        (name == TOOL_NAME).then(tool_definition)
++    }
++
++    async fn call_tool(
++        &self,
++        request: CallToolRequestParams,
++        _context: RequestContext<RoleServer>,
++    ) -> Result<CallToolResponse, ErrorData> {
++        if request.name != TOOL_NAME {
++            return Err(ErrorData::method_not_found::<CallToolRequestMethod>());
++        }
++        let args: CheckArgs = serde_json::from_value(Value::Object(
++            request.arguments.unwrap_or_default(),
++        ))
++        .map_err(|_| {
++            ErrorData::invalid_params(
++                "mori_check_source requires source:string and optional file:string; unknown fields are rejected.",
++                None,
++            )
++        })?;
++        if args.source.len() > SOURCE_INPUT_BYTES {
++            return Ok(CallToolResult::structured_error(json!({
++                "format": "mori-mcp-check/1",
++                "kind": "tool_error",
++                "code": "source_too_large",
++                "message": "source exceeds the existing public CLI 1 MiB input bound",
++                "limit_bytes": SOURCE_INPUT_BYTES
++            }))
++            .into());
++        }
++        Ok(CallToolResult::structured(diagnostic_payload(&args)).into())
++    }
++}
++
++#[cfg(test)]
++mod tests;
+diff --git a/crates/mori/src/commands/mcp.rs b/crates/mori/src/commands/mcp.rs
+--- a/crates/mori/src/commands/mcp.rs
++++ b/crates/mori/src/commands/mcp.rs
+@@ -1,10 +1,57 @@
+ use std::process::ExitCode;
+ 
+ use crate::shell::Shell;
++
++#[cfg(feature = "mcp")]
++mod server;
+ 
+ #[derive(Debug, clap::Args)]
+ pub struct Args {}
+ 
+ pub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+-    todo!("mori mcp")
++    #[cfg(feature = "mcp")]
++    {
++        use rmcp::{ServiceExt, service::QuitReason};
++
++        let runtime = tokio::runtime::Builder::new_current_thread()
++            .enable_all()
++            .build()
++            .map_err(super::core_io::operation)?;
++        runtime.block_on(async {
++            let service = server::MoriServer
++                .serve(rmcp::transport::stdio())
++                .await
++                .map_err(super::core_io::operation)?;
++            match service.waiting().await.map_err(super::core_io::operation)? {
++                QuitReason::Closed | QuitReason::Cancelled => Ok(ExitCode::SUCCESS),
++                QuitReason::JoinError(error) => Err(super::core_io::operation(error)),
++                _ => Err(super::core_io::operation("MCP service ended unexpectedly")),
++            }
++        })
++    }
++    #[cfg(not(feature = "mcp"))]
++    {
++        Err(crate::error::CliError::Operation {
++            code: "mori::command::mcp-unavailable".into(),
++            message: "This mori build has no MCP server. Rebuild with the mcp feature enabled."
++                .into(),
++        }
++        .into())
++    }
+ }
++
++#[cfg(all(test, not(feature = "mcp")))]
++mod tests {
++    use super::{Args, run};
++    use crate::shell::{Shell, Verbosity};
++
++    #[test]
++    fn unavailable_feature_returns_an_explicit_command_error() {
++        let mut shell = Shell::new(Verbosity::Quiet, anstream::ColorChoice::Never);
++        let error = run(Args {}, &mut shell).unwrap_err();
++        assert_eq!(
++            error.to_string(),
++            "mori::command::mcp-unavailable: This mori build has no MCP server. Rebuild with the mcp feature enabled."
++        );
++    }
++}
+diff --git a/crates/mori/src/commands/mod.rs b/crates/mori/src/commands/mod.rs
+--- a/crates/mori/src/commands/mod.rs
++++ b/crates/mori/src/commands/mod.rs
+@@ -9,6 +9,7 @@
+ 
+ mod call_io;
+ pub mod check;
++mod check_source;
+ pub mod compile;
+ pub mod compile_call;
+ mod core_io;

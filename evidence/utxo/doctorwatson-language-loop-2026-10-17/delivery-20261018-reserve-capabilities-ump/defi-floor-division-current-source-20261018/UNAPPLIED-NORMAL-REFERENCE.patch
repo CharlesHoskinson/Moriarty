@@ -1,0 +1,612 @@
+--- /dev/null
++++ b/crates/fixtures/defi-floor-div-draft/constant-product.mori
+@@ -0,0 +1,62 @@
++language "moriarty/proposed-uint-floor-div/1";
++
++agreement ConstantProductSwap {
++  asset A = { network: "specimen", issuer: "example-issuer", reference: "A", scale: 0 };
++  asset B = { network: "specimen", issuer: "example-issuer", reference: "B", scale: 0 };
++  state reserveA: UInt = 1000000;
++  state reserveB: UInt = 2000000;
++  state revision: UInt = 4;
++  state marker: UInt = 7;
++  state paused: Bool = false;
++
++  action exactInput(amountIn: UInt, minimumOut: UInt) {
++    requires amountIn > 0;
++    requires not paused;
++    requires reserveA > 0;
++    requires reserveB > 0;
++    let beforeA = reserveA;
++    let beforeB = reserveB;
++    let weighted = amountIn * 997;
++    let numerator = weighted * beforeB;
++    let denominator = beforeA * 1000 + weighted;
++    let amountOut = floor_div(numerator, denominator);
++    requires amountOut > 0;
++    requires amountOut >= minimumOut;
++    let afterA = beforeA + amountIn;
++    let afterB = beforeB - amountOut;
++    requires afterA * afterB >= beforeA * beforeB;
++    transfer(A, "trader", "pool", amountIn);
++    transfer(B, "pool", "trader", amountOut);
++    next reserveA = afterA;
++    next reserveB = afterB;
++    next revision = revision + 1;
++    emit "amountOut"(amountOut);
++    ensures reserveA == afterA;
++    ensures reserveB == afterB;
++  }
++
++  action exactOutput(desiredOut: UInt, maximumIn: UInt) {
++    requires desiredOut > 0;
++    requires not paused;
++    requires reserveA > 0;
++    requires reserveB > 0;
++    let beforeA = reserveA;
++    let beforeB = reserveB;
++    requires desiredOut < beforeB;
++    let numerator = beforeA * desiredOut * 1000;
++    let denominator = (beforeB - desiredOut) * 997;
++    let amountIn = floor_div(numerator - 1, denominator) + 1;
++    requires amountIn <= maximumIn;
++    let afterA = beforeA + amountIn;
++    let afterB = beforeB - desiredOut;
++    requires afterA * afterB >= beforeA * beforeB;
++    transfer(A, "trader", "pool", amountIn);
++    transfer(B, "pool", "trader", desiredOut);
++    next reserveA = afterA;
++    next reserveB = afterB;
++    next revision = revision + 1;
++    emit "amountIn"(amountIn);
++    ensures reserveA == afterA;
++    ensures reserveB == afterB;
++  }
++}
+--- a/crates/mori/src/commands/inspect.rs
++++ b/crates/mori/src/commands/inspect.rs
+@@ -383,6 +383,8 @@
+                 BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => "unsigned 128-bit comparison with boolean result",
+                 BinaryOp::And | BinaryOp::Or => "boolean conjunction or disjunction with boolean result",
+             }
++            #[allow(unreachable_patterns)] // Opt-in dependency expressions are not part of this display profile.
++            _ => "expression outside the current inspection profile",
+         };
+         json!({"expression": id, "source": node, "reference": reference(&[rule]), "constraint": encoded(&[rule]),
+             "unknown": ["native-proof-soundness", "compiler-correspondence"]})
+--- a/crates/mori-backend/src/lib.rs
++++ b/crates/mori-backend/src/lib.rs
+@@ -690,6 +690,8 @@
+                     _ => {}
+                 }
+             }
++            // Dependency features may add expressions that this lowerer does not admit.
++            #[allow(unreachable_patterns)]
+             let wire = match expression {
+                 Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {
+                     let (presence, amount) = liabilities.get(name).ok_or_else(|| {
+@@ -755,6 +757,7 @@
+                     self.range(operand.clone(), ty);
+                     Wire { operand, ty }
+                 }
++                _ => return Err(error("unsupported", "Expression is outside this compiler profile.")),
+             };
+             values.insert(id, wire);
+         }
+--- a/crates/mori-core/Cargo.toml
++++ b/crates/mori-core/Cargo.toml
+@@ -6,6 +6,8 @@
+ license.workspace = true
+ 
+ [features]
++# Ordinary reference prototype; no default source or compiler routing.
++core-floor-div-draft = []
+ core2-disjoint-draft = []
+ # Opt-in and non-default: enables only the Midnight-native signing-frame
+ # compatibility test. Ordinary mori-core consumers and SDK-free test
+--- /dev/null
++++ b/crates/mori-core/src/floor_div_draft.rs
+@@ -0,0 +1,43 @@
++//! Explicit ordinary reference API for the opt-in unsigned floor-division profile.
++use crate::policy::{Cost, Meter};
++use crate::{CostReport, DetailedReplayError, Error, Execution, MeteredExecution,
++    MeteredExecutionError, Program, Scenario, UInt};
++
++pub const LANGUAGE: &str = "moriarty/proposed-uint-floor-div/1";
++pub const SEMANTICS: &str = "moriarty-core/proposed-uint-floor-div/1";
++pub const LOGICAL_COST_PROFILE: &str = "moriarty-proposed-reference-logical-cost-floor-div/1";
++
++pub fn parse(source: &str) -> Result<Program, Error> {
++    crate::parser::parse_floor_div_draft(source)
++}
++pub fn validate(program: &Program) -> Result<(), Error> {
++    crate::runtime::validate_floor_div_draft(program)
++}
++pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<Execution, Error> {
++    crate::runtime::simulate_floor_div_draft_with_meter(program, action, scenario, None)
++}
++pub fn simulate_metered(
++    program: &Program,
++    action: &str,
++    scenario: &Scenario,
++    cap: UInt,
++) -> Result<MeteredExecution, MeteredExecutionError> {
++    let mut meter = Meter::new(Cost { logical: cap, ..Cost::default() });
++    let result = crate::runtime::simulate_floor_div_draft_with_meter(
++        program, action, scenario, Some(&mut meter),
++    );
++    let cost = CostReport { profile: LOGICAL_COST_PROFILE.into(), cap, used: meter.used().logical };
++    match result {
++        Ok(execution) => Ok(MeteredExecution { execution, cost }),
++        Err(error) => Err(MeteredExecutionError { error, cost }),
++    }
++}
++pub fn replay_detailed(
++    program: &Program,
++    action: &str,
++    scenario: &Scenario,
++    candidate: &Execution,
++) -> Result<(), DetailedReplayError> {
++    let actual = simulate(program, action, scenario).map_err(DetailedReplayError::Execution)?;
++    crate::compare_execution(&actual, candidate).map_err(DetailedReplayError::Divergence)
++}
+--- a/crates/mori-core/src/ir.rs
++++ b/crates/mori-core/src/ir.rs
+@@ -67,6 +67,11 @@
+ #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+ #[serde(tag = "kind", deny_unknown_fields)]
+ pub enum Expr {
++    #[cfg(feature = "core-floor-div-draft")]
++    FloorDiv {
++        numerator: ExprId,
++        denominator: ExprId,
++    },
+     LiabilityPresent {
+         name: String,
+     },
+--- a/crates/mori-core/src/lib.rs
++++ b/crates/mori-core/src/lib.rs
+@@ -1,4 +1,6 @@
+ //! Bounded composable Moriarty language and deterministic local semantics.
++#[cfg(feature = "core-floor-div-draft")]
++pub mod floor_div_draft;
+ pub mod intent;
+ mod ir;
+ pub mod json;
+--- a/crates/mori-core/src/parser.rs
++++ b/crates/mori-core/src/parser.rs
+@@ -12,7 +12,26 @@
+ }
+ 
+ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
++    parse_profile_with_division(source, staged, false)
++}
++
++#[cfg(feature = "core-floor-div-draft")]
++pub(crate) fn parse_floor_div_draft(source: &str) -> Result<Program, Error> {
++    parse_profile_with_division(source, false, true)
++}
++
++fn parse_profile_with_division(source: &str, staged: bool, division: bool) -> Result<Program, Error> {
+     let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
++    let (language, semantics) = if division {
++        #[cfg(feature = "core-floor-div-draft")]
++        { (crate::floor_div_draft::LANGUAGE, crate::floor_div_draft::SEMANTICS) }
++        #[cfg(not(feature = "core-floor-div-draft"))]
++        { return Err(Error::new("profile", "Division draft is not enabled.")); }
++    } else if staged {
++        (crate::stage::LANGUAGE_2, crate::stage::SEMANTICS_2)
++    } else {
++        (LANGUAGE, SEMANTICS)
++    };
+     let tokens = (0..lexed.len())
+         .map(|i| {
+             let idx = TokenIdx::new(i);
+@@ -34,18 +53,8 @@
+         tokens,
+         pos: 0,
+         program: Program {
+-            language: if staged {
+-                crate::stage::LANGUAGE_2
+-            } else {
+-                LANGUAGE
+-            }
+-            .into(),
+-            semantics: if staged {
+-                crate::stage::SEMANTICS_2
+-            } else {
+-                SEMANTICS
+-            }
+-            .into(),
++            language: language.into(),
++            semantics: semantics.into(),
+             name: String::new(),
+             states: vec![],
+             assets: vec![],
+@@ -55,11 +64,7 @@
+     };
+     parser.expect("language")?;
+     let profile = parser.string()?;
+-    let expected_language = if staged {
+-        crate::stage::LANGUAGE_2
+-    } else {
+-        LANGUAGE
+-    };
++    let expected_language = language;
+     if profile != expected_language {
+         return Err(parser.error(
+             "profile",
+@@ -169,7 +174,12 @@
+         return Err(parser.error("syntax", "Unexpected content after agreement."));
+     }
+     if !staged {
+-        validate(&parser.program)?;
++        if division {
++            #[cfg(feature = "core-floor-div-draft")]
++            crate::runtime::validate_floor_div_draft(&parser.program)?;
++        } else {
++            validate(&parser.program)?;
++        }
+     }
+     Ok(parser.program)
+ }
+@@ -282,7 +292,13 @@
+             self.push(Expr::Literal { value })?
+         } else {
+             let name = self.word()?;
+-            if matches!(name.as_str(), "liability_present" | "liability_amount") && self.eat("(") {
++            #[cfg(feature = "core-floor-div-draft")]
++            let division = self.floor_div_call(&name, depth)?;
++            #[cfg(not(feature = "core-floor-div-draft"))]
++            let division: Option<ExprId> = None;
++            if let Some(id) = division {
++                id
++            } else if matches!(name.as_str(), "liability_present" | "liability_amount") && self.eat("(") {
+                 let duty = self.string()?;
+                 self.expect(")")?;
+                 self.push(if name == "liability_present" {
+@@ -327,6 +343,21 @@
+         }
+         Ok(lhs)
+     }
++    #[cfg(feature = "core-floor-div-draft")]
++    fn floor_div_call(&mut self, name: &str, depth: usize) -> Result<Option<ExprId>, Error> {
++        if name != "floor_div"
++            || self.program.language != crate::floor_div_draft::LANGUAGE
++            || !self.eat("(")
++        {
++            return Ok(None);
++        }
++        let numerator = self.expr(0, depth + 1)?;
++        self.expect(",")?;
++        let denominator = self.expr(0, depth + 1)?;
++        self.expect(")")?;
++        self.push(Expr::FloorDiv { numerator, denominator }).map(Some)
++    }
++
+     fn statement(&mut self) -> Result<Statement, Error> {
+         let keyword = self.word()?;
+         let s=match keyword.as_str() {
+--- a/crates/mori-core/src/runtime.rs
++++ b/crates/mori-core/src/runtime.rs
+@@ -81,6 +81,20 @@
+         return Ok(ty);
+     }
+     let result = match node {
++        #[cfg(feature = "core-floor-div-draft")]
++        Expr::FloorDiv { numerator, denominator } => {
++            if program.language != crate::floor_div_draft::LANGUAGE
++                || program.semantics != crate::floor_div_draft::SEMANTICS
++            {
++                return Err(failure("profile", "FloorDiv requires the division draft profile."));
++            }
++            let numerator_type = type_cached(program, *numerator, env, depth + 1, cache)?;
++            let denominator_type = type_cached(program, *denominator, env, depth + 1, cache)?;
++            if numerator_type != Type::UInt || denominator_type != Type::UInt {
++                return Err(failure("type", "floor_div requires two UInt operands."));
++            }
++            Ok(Type::UInt)
++        }
+         Expr::LiabilityPresent { .. } => Ok(Type::Bool),
+         Expr::LiabilityAmount { .. } => Ok(Type::UInt),
+         Expr::Literal { value } => Ok(value.ty()),
+@@ -118,7 +132,24 @@
+ }
+ /// Validates even manually constructed/deserialized IR before interpretation.
+ pub fn validate(program: &Program) -> Result<(), Error> {
+-    if program.language != LANGUAGE || program.semantics != SEMANTICS {
++    validate_with_division(program, false)
++}
++
++#[cfg(feature = "core-floor-div-draft")]
++pub(crate) fn validate_floor_div_draft(program: &Program) -> Result<(), Error> {
++    validate_with_division(program, true)
++}
++
++fn validate_with_division(program: &Program, division: bool) -> Result<(), Error> {
++    let expected = if division {
++        #[cfg(feature = "core-floor-div-draft")]
++        { (crate::floor_div_draft::LANGUAGE, crate::floor_div_draft::SEMANTICS) }
++        #[cfg(not(feature = "core-floor-div-draft"))]
++        { return Err(failure("profile", "Division draft is not enabled.")); }
++    } else {
++        (LANGUAGE, SEMANTICS)
++    };
++    if program.language != expected.0 || program.semantics != expected.1 {
+         return Err(failure(
+             "profile",
+             "Unsupported language or semantics identity.",
+@@ -182,6 +213,13 @@
+     let mut depths = Vec::with_capacity(program.expressions.len());
+     for (i, e) in program.expressions.iter().enumerate() {
+         let refs = match e {
++            #[cfg(feature = "core-floor-div-draft")]
++            Expr::FloorDiv { numerator, denominator } => {
++                if !division {
++                    return Err(failure("profile", "FloorDiv requires the division draft profile."));
++                }
++                vec![*numerator, *denominator]
++            }
+             Expr::Binary { lhs, rhs, .. } => vec![*lhs, *rhs],
+             Expr::Not { value } => vec![*value],
+             _ => vec![],
+@@ -430,6 +468,17 @@
+     // above remain free, and evaluate creates a new cache for each statement.
+     charge_logical(meter)?;
+     let result = match &p.expressions[i] {
++        #[cfg(feature = "core-floor-div-draft")]
++        Expr::FloorDiv { numerator, denominator } => {
++            let a = eval_cached(p, *numerator, env, snapshot, cache, meter)?;
++            let b = eval_cached(p, *denominator, env, snapshot, cache, meter)?;
++            let (Value::UInt(UInt(a)), Value::UInt(UInt(b))) = (a, b) else {
++                return Err(failure("type", "floor_div requires two UInt operands."));
++            };
++            Value::UInt(UInt(a.checked_div(b).ok_or_else(|| {
++                failure("division_by_zero", "floor_div denominator must be positive.")
++            })?))
++        }
+         Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {
+             let row = snapshot
+                 .liabilities
+@@ -870,9 +919,29 @@
+     program: &Program,
+     action: &str,
+     scenario: &Scenario,
++    meter: Option<&mut Meter>,
++) -> Result<Execution, Error> {
++    simulate_with_division(program, action, scenario, meter, false)
++}
++
++#[cfg(feature = "core-floor-div-draft")]
++pub(crate) fn simulate_floor_div_draft_with_meter(
++    program: &Program,
++    action: &str,
++    scenario: &Scenario,
++    meter: Option<&mut Meter>,
++) -> Result<Execution, Error> {
++    simulate_with_division(program, action, scenario, meter, true)
++}
++
++fn simulate_with_division(
++    program: &Program,
++    action: &str,
++    scenario: &Scenario,
+     mut meter: Option<&mut Meter>,
++    division: bool,
+ ) -> Result<Execution, Error> {
+-    validate(program)?;
++    validate_with_division(program, division)?;
+     let selected = program
+         .actions
+         .iter()
+@@ -908,7 +977,7 @@
+         });
+     }
+     Ok(Execution {
+-        semantics: SEMANTICS.into(),
++        semantics: program.semantics.clone(),
+         action: action.into(),
+         pre,
+         post: current,
+--- a/crates/mori-core/src/sherlock/source_adapter.rs
++++ b/crates/mori-core/src/sherlock/source_adapter.rs
+@@ -403,6 +403,8 @@
+         )
+     })?;
+     let kind = match source {
++        #[cfg(feature = "core-floor-div-draft")]
++        CoreExpr::FloorDiv { .. } => "floor-div",
+         CoreExpr::Literal { .. } => "literal",
+         CoreExpr::Name { .. } => "name",
+         CoreExpr::Binary { .. } => "binary",
+@@ -433,6 +435,10 @@
+         )
+     };
+     let mapped = match source {
++        #[cfg(feature = "core-floor-div-draft")]
++        CoreExpr::FloorDiv { .. } => {
++            return Err(diagnostic(action, Some(statement), Some(id), kind, "unsupported-projection"));
++        }
+         CoreExpr::Literal { value } => Expr::Literal(match value {
+             crate::Value::UInt(value) => Value::UInt(value.0),
+             crate::Value::Bool(value) => Value::Bool(*value),
+--- a/crates/mori-core/src/stage/cost.rs
++++ b/crates/mori-core/src/stage/cost.rs
+@@ -35,6 +35,10 @@
+         }
+         count += 1;
+         match node {
++            #[cfg(feature = "core-floor-div-draft")]
++            Expr::FloorDiv { .. } => {
++                return Err(Error::new("profile", "FloorDiv is not a staged expression."));
++            }
+             Expr::Binary { lhs, rhs, .. } => pending.extend([*lhs, *rhs]),
+             Expr::Not { value } => pending.push(*value),
+             Expr::LiabilityPresent { .. }
+--- /dev/null
++++ b/crates/mori-core/tests/floor_div_draft_normal.rs
+@@ -0,0 +1,145 @@
++#![cfg(feature = "core-floor-div-draft")]
++
++use mori_core::floor_div_draft as draft;
++use mori_core::{AssetId, Balance, Effect, Liability, Scenario, Snapshot, UInt, Value};
++use std::collections::BTreeMap;
++const SWAP: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),
++    "/../fixtures/defi-floor-div-draft/constant-product.mori"));
++fn u(n: u128) -> Value { Value::UInt(UInt(n)) }
++fn b(value: bool) -> Value { Value::Bool(value) }
++fn asset(reference: &str) -> AssetId {
++    AssetId { network: "specimen".into(), issuer: "example-issuer".into(),
++        reference: reference.into(), scale: 0 }
++}
++fn snapshot(a: u128, bb: u128, revision: u128, trader_a: u128, trader_b: u128) -> Snapshot {
++    let mut balances = Vec::new();
++    for (id, rows) in [
++        (asset("A"), [("pool", a), ("spectator", 41), ("trader", trader_a), ("treasury", 11)]),
++        (asset("B"), [("pool", bb), ("spectator", 43), ("trader", trader_b), ("treasury", 17)]),
++    ] {
++        for (account, amount) in rows {
++            balances.push(Balance { account: account.into(), asset: id.clone(), amount: UInt(amount) });
++        }
++    }
++    Snapshot {
++        state: BTreeMap::from([("reserveA".into(), u(a)), ("reserveB".into(), u(bb)),
++            ("revision".into(), u(revision)), ("marker".into(), u(7)), ("paused".into(), b(false))]),
++        balances,
++        liabilities: vec![
++            Liability { name: "reserveDuty".into(), asset: asset("A"), debtor: "pool".into(),
++                creditor: "saver".into(), amount: UInt(14) },
++            Liability { name: "settledDuty".into(), asset: asset("B"), debtor: "trader".into(),
++                creditor: "saver".into(), amount: UInt(0) },
++        ],
++    }
++}
++fn scenario(pre: &Snapshot, inputs: [(&str, u128); 2]) -> Scenario {
++    Scenario { state: pre.state.clone(),
++        inputs: inputs.into_iter().map(|(name, value)| (name.into(), u(value))).collect(),
++        balances: pre.balances.clone(), liabilities: pre.liabilities.clone() }
++}
++fn effects(old: (u128,u128,u128), new: (u128,u128), output: u128, event: (&str,u128)) -> Vec<Effect> {
++    vec![
++        Effect::Transfer { asset: asset("A"), from: "trader".into(), to: "pool".into(), amount: UInt(10_000) },
++        Effect::Transfer { asset: asset("B"), from: "pool".into(), to: "trader".into(), amount: UInt(output) },
++        Effect::State { name: "reserveA".into(), before: u(old.0), after: u(new.0) },
++        Effect::State { name: "reserveB".into(), before: u(old.1), after: u(new.1) },
++        Effect::State { name: "revision".into(), before: u(old.2), after: u(old.2 + 1) },
++        Effect::Emit { name: event.0.into(), value: u(event.1) },
++    ]
++}
++#[test]
++fn generic_floor_division_is_source_computed() {
++    let source = format!(r#"language "{}"; agreement Quotient {{ state q: UInt = 0;
++        action divide(n: UInt, d: UInt) {{ next q = floor_div(n, d); }} }}"#, draft::LANGUAGE);
++    let program = draft::parse(&source).unwrap();
++    draft::validate(&program).unwrap();
++    for (n, d, q) in [(7, 3, 2), (0, 3, 0), (u128::MAX, 1, u128::MAX)] {
++        let mut input = Scenario::default();
++        input.inputs = BTreeMap::from([("n".into(), u(n)), ("d".into(), u(d))]);
++        let execution = draft::simulate(&program, "divide", &input).unwrap();
++        assert_eq!(execution.post.state["q"], u(q));
++        assert_eq!(execution.effects, vec![Effect::State { name: "q".into(), before: u(0), after: u(q) }]);
++    }
++}
++#[test]
++fn exact_input_preserves_complete_normal_state_values_and_ordered_effects() {
++    let program = draft::parse(SWAP).unwrap();
++    let pre = snapshot(1_000_000, 2_000_000, 4, 30_000, 0);
++    let input = scenario(&pre, [("amountIn", 10_000), ("minimumOut", 19_743)]);
++    let saved = input.clone();
++    let execution = draft::simulate(&program, "exactInput", &input).unwrap();
++    let post = snapshot(1_010_000, 1_980_257, 5, 20_000, 19_743);
++    let deltas = effects((1_000_000,2_000_000,4), (1_010_000,1_980_257), 19_743, ("amountOut",19_743));
++    assert_eq!(execution.semantics, draft::SEMANTICS);
++    assert_eq!(execution.pre, pre);
++    assert_eq!(execution.post, post);
++    assert_eq!(execution.effects, deltas);
++    assert_eq!(input, saved);
++    let values = vec![b(true),b(true),b(true),b(true),u(1_000_000),u(2_000_000),u(9_970_000),
++        u(19_940_000_000_000),u(1_009_970_000),u(19_743),b(true),b(true),u(1_010_000),
++        u(1_980_257),b(true),u(10_000),u(19_743),u(1_010_000),u(1_980_257),u(5),u(19_743),b(true),b(true)];
++    assert_eq!(execution.steps.len(), values.len());
++    for (ordinal, (step, value)) in execution.steps.iter().zip(values).enumerate() {
++        assert_eq!(usize::from(step.index), ordinal);
++        assert_eq!(step.value, Some(value));
++        let mut expected = pre.clone();
++        if ordinal >= 15 {
++            expected.balances[0].amount = UInt(1_010_000);
++            expected.balances[2].amount = UInt(20_000);
++        }
++        if ordinal >= 16 { expected.balances = post.balances.clone(); }
++        if ordinal >= 17 { expected.state.insert("reserveA".into(),u(1_010_000)); }
++        if ordinal >= 18 { expected.state.insert("reserveB".into(),u(1_980_257)); }
++        if ordinal >= 19 { expected.state.insert("revision".into(),u(5)); }
++        assert_eq!(step.snapshot, expected);
++        let delta = match ordinal { 15..=20 => vec![deltas[ordinal-15].clone()], _ => Vec::new() };
++        assert_eq!(step.effects, delta);
++    }
++    let metered = draft::simulate_metered(&program,"exactInput",&input,UInt(100)).unwrap();
++    assert_eq!(metered.execution,execution);
++    assert_eq!(metered.cost.profile,draft::LOGICAL_COST_PROFILE);
++    assert_eq!(metered.cost.used,UInt(83));
++    draft::replay_detailed(&program,"exactInput",&input,&execution).unwrap();
++}
++#[test]
++fn successor_trade_uses_current_reserves_and_keeps_duties() {
++    let program = draft::parse(SWAP).unwrap();
++    let pre = snapshot(1_010_000,1_980_257,5,20_000,19_743);
++    let input = scenario(&pre,[("amountIn",10_000),("minimumOut",19_356)]);
++    let execution = draft::simulate(&program,"exactInput",&input).unwrap();
++    assert_eq!(execution.pre,pre);
++    assert_eq!(execution.post,snapshot(1_020_000,1_960_901,6,10_000,39_099));
++    assert_eq!(execution.effects,effects((1_010_000,1_980_257,5),(1_020_000,1_960_901),19_356,("amountOut",19_356)));
++    assert_eq!(execution.steps[9].value,Some(u(19_356)));
++    let metered = draft::simulate_metered(&program,"exactInput",&input,UInt(100)).unwrap();
++    assert_eq!(metered.cost.used,UInt(83));
++    assert_eq!(metered.execution,execution);
++}
++#[test]
++fn exact_output_computes_ceiling_from_the_general_primitive() {
++    let program = draft::parse(SWAP).unwrap();
++    let pre = snapshot(1_000_000,2_000_000,4,30_000,0);
++    let input = scenario(&pre,[("desiredOut",19_743),("maximumIn",10_000)]);
++    let execution = draft::simulate(&program,"exactOutput",&input).unwrap();
++    assert_eq!(execution.pre,pre);
++    assert_eq!(execution.post,snapshot(1_010_000,1_980_257,5,20_000,19_743));
++    assert_eq!(execution.effects,effects((1_000_000,2_000_000,4),(1_010_000,1_980_257),19_743,("amountIn",10_000)));
++    assert_eq!(execution.steps.len(),22);
++    assert_eq!(execution.steps[9].value,Some(u(10_000)));
++    let metered = draft::simulate_metered(&program,"exactOutput",&input,UInt(100)).unwrap();
++    assert_eq!(metered.cost.used,UInt(85));
++    assert_eq!(metered.execution,execution);
++}
++#[test]
++fn existing_core1_counter_keeps_the_existing_public_consumer() {
++    let source = r#"language "moriarty/1"; agreement Counter { state count: UInt = 0;
++        action increment(amount: UInt) { let total = count + amount; requires total <= 100;
++            next count = total; ensures count == total; emit "count"(count); } }"#;
++    let program = mori_core::parse(source).unwrap();
++    let mut input = Scenario::default(); input.inputs.insert("amount".into(),u(7));
++    let metered = mori_core::simulate_metered(&program,"increment",&input,UInt(16)).unwrap();
++    assert_eq!(metered.execution.post.state["count"],u(7));
++    assert_eq!(metered.cost.used,UInt(16));
++    assert_eq!(metered.cost.profile,mori_core::LOGICAL_COST_PROFILE);
++}
+--- a/crates/mori-ledger/src/relation/compiler.rs
++++ b/crates/mori-ledger/src/relation/compiler.rs
+@@ -442,6 +442,8 @@
+         if let Some(w) = cache.get(&id) {
+             return Ok(w.clone());
+         }
++        // Dependency features may add expressions that this lowerer does not admit.
++        #[allow(unreachable_patterns)]
+         let w = match self
+             .p
+             .expressions
+@@ -494,6 +496,7 @@
+                     },
+                 }
+             }
++            _ => return Err(refusal("expression-not-lowered")),
+         };
+         self.b.range(w.val.clone(), w.ty);
+         cache.insert(id, w.clone());

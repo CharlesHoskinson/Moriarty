@@ -1,0 +1,3380 @@
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/call-operands.json
+@@ -0,0 +1,20 @@
++{
++  "language": "moriarty/1",
++  "semantics": "moriarty-core/1",
++  "source": "source.mori",
++  "scenario": "opening.scenario.json",
++  "calls": [
++    {
++      "action": "initialExchange",
++      "inputs": {
++        "eventTime": {
++          "type": "UInt",
++          "value": "20130101000000"
++        }
++      }
++    }
++  ],
++  "logical_cap": null,
++  "horizon_retained_in_normative_operands": true,
++  "no_auto_discharge_at_horizon": true
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/independent/ACTUS-FINANCIAL-SCHEDULE.expected.json
+@@ -0,0 +1,74 @@
++{
++  "artifact_role": "Hand-derived semantic projection; decimal strings here do not assert original upstream result JSON scalar encoding",
++  "dataObserved": {},
++  "eventsObserved": [],
++  "execution": "No ACTUS or Mori implementation executed",
++  "horizon": "2014-01-01T00:00:00",
++  "initial_at_statusDate": {
++    "accruedInterest": "0 (IPNR undefined)",
++    "contractPerformance": "UNRESOLVED: term/default binding not specified in chosen input",
++    "feeAccrued": "0 (FER undefined)",
++    "maturityDate": "tmax per UMP no observed PR/PI; no concrete timestamp invented",
++    "nominalInterestRate": "0 (IED is later)",
++    "notionalPrincipal": "0 (IED is later)",
++    "time": "2012-12-15T00:00:00"
++  },
++  "mapped_Mori_effects": "Chosen fixture-only source maps negative RPA payoff to lender->borrower transfer1000 and separately creates borrower->lender duty1000. This is an explicit finite subject/asset embedding, not a universal ACTUS-to-ledger schema.",
++  "operand_source": "input-only/inputs/ump01.normative-operands.json",
++  "ordered_known_scheduled_financial_events": [
++    {
++      "currency": "USD",
++      "event_time": "2013-01-01T00:00:00",
++      "event_type": "IED",
++      "payoff_equation": "FX1 * RPA(+1) * (-1) * NT1000 = -1000",
++      "payoff_in_contract_role_perspective": "-1000",
++      "post_accruedInterest": "0 (no explicit IPAC or prior anchor)",
++      "post_nominalInterestRate": "0 (IPNR undefined)",
++      "post_notionalPrincipal": "1000",
++      "post_statusDate": "2013-01-01T00:00:00"
++    }
++  ],
++  "primary_subject": "tests/actus-tests-ump.json/ump01",
++  "principal_at_horizon_under_selected_no_further_events": "1000 outstanding; horizon itself has no payment/discharge",
++  "role_sign": "RPA = +1",
++  "schedule_basis": {
++    "AD/CE": "No custom analysis/credit-performance observations supplied; no additional financial event invented",
++    "FP": "Undefined feeRate makes fee schedule undefined",
++    "IED": "UMP same as PAM, exact term date",
++    "IPCI": "Undefined IPNR makes capitalization schedule undefined",
++    "MD": "UMP schedule supplies no automatic maturity redemption at fixture horizon",
++    "PR/PI": "No eventsObserved inputs",
++    "RR/RRF": "No reset anchor/cycle supplied"
++  },
++  "settlement_fx": "1 because settlementCurrency undefined",
++  "terms": {
++    "contractDealDate": "2012-12-15T00:00:00",
++    "contractID": "ump01",
++    "contractRole": "RPA",
++    "contractType": "UMP",
++    "currency": "USD",
++    "dayCountConvention": "30E360",
++    "initialExchangeDate": "2013-01-01T00:00:00",
++    "notionalPrincipal": "  1000",
++    "statusDate": "2012-12-15T00:00:00",
++    "xDayNotice": "P1M"
++  },
++  "time_basis": {
++    "contractDealDate": "2012-12-15T00:00:00",
++    "dayCountConvention": "30E360",
++    "initialExchangeDate": "2013-01-01T00:00:00",
++    "notice": "Retained input term; no observed withdrawal/redemption/notice event or implemented source notice calculation",
++    "statusDate": "2012-12-15T00:00:00",
++    "to": "2014-01-01T00:00:00",
++    "xDayNotice": "P1M",
++    "year_fraction": "UNASSERTED: named convention retained; no numerical year-fraction implementation executed or needed for absent-rate IED"
++  },
++  "unknown_state_applicability": [
++    "Concrete tmax representation",
++    "Contract performance/default binding",
++    "Full ACTUS schema-to-Mori state coverage and omitted state/event fields",
++    "Currency identity beyond chosen fixture-only binding",
++    "General rational/decimal rate and day-count arithmetic"
++  ],
++  "upstream_result_values_used": false
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/independent/APPLICABILITY-AND-EXPOSURE.json
+@@ -0,0 +1,71 @@
++{
++  "applicable_selected_ACTUS_quantities": [
++    "IED date/payoff",
++    "RPA sign",
++    "FX1 for absent settlement currency",
++    "pre-IED NT/IPNR0",
++    "IED NT1000/IPNR0/IPAC0/SD",
++    "no observed behavioral principal flow",
++    "no horizon-triggered source discharge"
++  ],
++  "execution": "No product/parser/evaluator/compiler/ACTUS/model/SDK/native/provider/network/Git/shared-write action",
++  "exposure": [
++    "Earlier DTO/helper/financial/composition/multi-condition/Quint oracle lanes",
++    "Public UMP documentation example and illustrative generated-event table seen; it explicitly supplies rate0, unlike authoritative raw fixture that omits the term",
++    "Whitelisted source/scenario/operands and exact ACTUS normative excerpts",
++    "Original official raw results copied for provenance, not displayed or used; case selection excludes results before equality"
++  ],
++  "input_manifest_sha256": "b62e24c0040b319733f49d84f5be133a74df49313f5e251c6b7f886cf78455bd",
++  "language_contract_pins": [
++    {
++      "bytes": 11482,
++      "copy": "basis/crates/mori-core/README.md",
++      "sha256": "0d91facda4bcf06e545af2f9ced7c72b2b76220a9b53eb46a5a4caea66ebc4dc",
++      "source_path": "/home/charl/Moriarty/.worktrees/utxo-main-merge-20261017/crates/mori-core/README.md"
++    },
++    {
++      "bytes": 19177,
++      "copy": "basis/docs/CORE-EXECUTION-REPORTS.md",
++      "sha256": "9d36a1ea979a52608a832d4b5429a6ca4e392091880326501071614808973b1e",
++      "source_path": "/home/charl/Moriarty/.worktrees/utxo-main-merge-20261017/docs/CORE-EXECUTION-REPORTS.md"
++    },
++    {
++      "bytes": 12394,
++      "copy": "basis/docs/MORIARTY-PRODUCT-CONTRACT.md",
++      "sha256": "d5674c650741103284e0aa8cded4c0e8a0a1be38faa0c65aedb043710caa4396",
++      "source_path": "/home/charl/Moriarty/.worktrees/utxo-main-merge-20261017/docs/MORIARTY-PRODUCT-CONTRACT.md"
++    }
++  ],
++  "local_only_bookkeeping": [
++    "exchangeRecorded flag",
++    "lender/borrower names and exact fixture-only AssetId",
++    "packed calendar labels and principal duty identifier"
++  ],
++  "mori_base": "e4d7a2b5709caa18a94f5256d03a0302364b8235 as pinned by source-only custodian; no Git query",
++  "original_upstream_commits_from_existing_acquisition_record": {
++    "actus-dictionary": "356f7663f26091105cc4fef4ae3496942dcf0ebf",
++    "actus-techspecs": "94ef09e4992f79d573f84f41d8480f557365870e",
++    "actus-tests": "f7a8064872b69db1f0beabac771c99dc3ce0c397"
++  },
++  "prohibited_bodies_not_read": [
++    "actus-second-instrument-source-plan expected outcomes",
++    "Proposed runtime/adapter/test bodies or actual output"
++  ],
++  "represented_Mori_quantities": [
++    "rate UInt0",
++    "accrued interest UInt0",
++    "status packed UInt date",
++    "chosen outstanding principal duty1000",
++    "chosen fixture-only USD balance movement1000"
++  ],
++  "retained": "All277 fixtures/18 executable types/32 taxonomy rows/DS01-07, all14 staged gaps, all composition and U/M/MC/SP/G/proof/ledger exits unchanged",
++  "scope": "Financial ordinary source math only; no security/proof/ledger judgment",
++  "unknown_or_unrepresented": [
++    "Concrete tmax encoding/actual maturity",
++    "Contract performance default/applicability",
++    "Complete ACTUS state/event schema-to-Mori mapping",
++    "Nonzero/rational rates and concrete day-count/year-fraction implementation",
++    "Behavioral principal/capitalization/notice/redemption/event-policy generality",
++    "Raw upstream results scalar schema and whole Mori Program/Execution/CLI byte oracle"
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/independent/CORE-FINANCIAL-WORK.expected.json
+@@ -0,0 +1,1559 @@
++{
++  "action": "initialExchange",
++  "artifact_role": "Independent financial/work projection with full source prefixes; documentary wrapper, not a whole Mori report/Step/Program wire oracle",
++  "asset": {
++    "issuer": "fixture-only",
++    "network": "actus-reference",
++    "reference": "USD",
++    "scale": 0
++  },
++  "call_inputs": {
++    "eventTime": {
++      "type": "UInt",
++      "value": "20130101000000"
++    }
++  },
++  "financial": {
++    "accrued_principal_duty": "0",
++    "borrower_net_receipt": "1000",
++    "closing_asset_total": "2000",
++    "closing_principal_duty": "1000 present",
++    "created_principal_duty": "1000",
++    "discharged_principal_duty": "0",
++    "equation": "opening0 + creation1000 + accrual0 - discharge0 = closing1000; absence is still distinct from present-zero",
++    "explicit_fee": "0",
++    "fee_recipient": "inapplicable: no fee statement",
++    "lender_gross_debit": "1000",
++    "lender_remaining": "1000",
++    "opening_asset_total": "2000",
++    "opening_principal_duty": "absent",
++    "preserved": "All four declared state fields until their explicit assignments; exact asset and both balance rows; no input/let leaks into state; same-value rate/accrued State effects retained",
++    "reserve_dust": "inapplicable: no rounding/division or reserve rule; lender1000 is preserved balance",
++    "residual_positive_duties": [
++      {
++        "amount": "1000",
++        "asset": {
++          "issuer": "fixture-only",
++          "network": "actus-reference",
++          "reference": "USD",
++          "scale": 0
++        },
++        "creditor": "lender",
++        "debtor": "borrower",
++        "name": "ump01_principal"
++      }
++    ]
++  },
++  "horizon": "2014-01-01T00:00:00 is normative fixture evaluation horizon only, not an additional source call, maturity, repayment or discharge",
++  "logical_profile": "moriarty-reference-logical-cost/1",
++  "logical_work": {
++    "cumulative": [
++      3,
++      6,
++      10,
++      12,
++      14,
++      16,
++      18,
++      20,
++      22,
++      24,
++      30,
++      32
++    ],
++    "distinct_expression_occurrences": 20,
++    "metering_scope": "Normally accepted source math only; no execution/rejection/circuit/native cost result",
++    "per_statement": [
++      3,
++      3,
++      4,
++      2,
++      2,
++      2,
++      2,
++      2,
++      2,
++      2,
++      6,
++      2
++    ],
++    "statement_dispatches": 12,
++    "total": "32"
++  },
++  "ordered_effects": [
++    {
++      "amount": "1000",
++      "asset": {
++        "issuer": "fixture-only",
++        "network": "actus-reference",
++        "reference": "USD",
++        "scale": 0
++      },
++      "from": "lender",
++      "kind": "Transfer",
++      "to": "borrower"
++    },
++    {
++      "after": "1000",
++      "asset": {
++        "issuer": "fixture-only",
++        "network": "actus-reference",
++        "reference": "USD",
++        "scale": 0
++      },
++      "before": "0",
++      "creditor": "lender",
++      "debtor": "borrower",
++      "kind": "Liability",
++      "name": "ump01_principal"
++    },
++    {
++      "after": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "before": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "kind": "State",
++      "name": "nominalInterestRate"
++    },
++    {
++      "after": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "before": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "kind": "State",
++      "name": "accruedInterest"
++    },
++    {
++      "after": {
++        "type": "UInt",
++        "value": "20130101000000"
++      },
++      "before": {
++        "type": "UInt",
++        "value": "20121215000000"
++      },
++      "kind": "State",
++      "name": "statusTime"
++    },
++    {
++      "after": {
++        "type": "Bool",
++        "value": true
++      },
++      "before": {
++        "type": "Bool",
++        "value": false
++      },
++      "kind": "State",
++      "name": "exchangeRecorded"
++    },
++    {
++      "kind": "Emit",
++      "name": "IED",
++      "value": {
++        "type": "UInt",
++        "value": "20130101000000"
++      }
++    }
++  ],
++  "post": {
++    "balances": [
++      {
++        "account": "borrower",
++        "amount": "1000",
++        "asset": {
++          "issuer": "fixture-only",
++          "network": "actus-reference",
++          "reference": "USD",
++          "scale": 0
++        }
++      },
++      {
++        "account": "lender",
++        "amount": "1000",
++        "asset": {
++          "issuer": "fixture-only",
++          "network": "actus-reference",
++          "reference": "USD",
++          "scale": 0
++        }
++      }
++    ],
++    "liabilities": [
++      {
++        "amount": "1000",
++        "asset": {
++          "issuer": "fixture-only",
++          "network": "actus-reference",
++          "reference": "USD",
++          "scale": 0
++        },
++        "creditor": "lender",
++        "debtor": "borrower",
++        "name": "ump01_principal"
++      }
++    ],
++    "state": {
++      "accruedInterest": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "exchangeRecorded": {
++        "type": "Bool",
++        "value": true
++      },
++      "nominalInterestRate": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "statusTime": {
++        "type": "UInt",
++        "value": "20130101000000"
++      }
++    }
++  },
++  "pre": {
++    "balances": [
++      {
++        "account": "borrower",
++        "amount": "0",
++        "asset": {
++          "issuer": "fixture-only",
++          "network": "actus-reference",
++          "reference": "USD",
++          "scale": 0
++        }
++      },
++      {
++        "account": "lender",
++        "amount": "2000",
++        "asset": {
++          "issuer": "fixture-only",
++          "network": "actus-reference",
++          "reference": "USD",
++          "scale": 0
++        }
++      }
++    ],
++    "liabilities": [],
++    "state": {
++      "accruedInterest": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "exchangeRecorded": {
++        "type": "Bool",
++        "value": false
++      },
++      "nominalInterestRate": {
++        "type": "UInt",
++        "value": "0"
++      },
++      "statusTime": {
++        "type": "UInt",
++        "value": "20121215000000"
++      }
++    }
++  },
++  "product_execution": "UNRUN",
++  "source_language": "moriarty/1",
++  "source_prefixes": [
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "0",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "2000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 3,
++      "distinct_expression_nodes": 2,
++      "logical_units": 3,
++      "new_effects": [],
++      "ordered_effect_history": [],
++      "source_ordinal": 0,
++      "statement_description": "requires not exchangeRecorded",
++      "typed_result": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "0",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "2000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 6,
++      "distinct_expression_nodes": 2,
++      "logical_units": 3,
++      "new_effects": [],
++      "ordered_effect_history": [],
++      "source_ordinal": 1,
++      "statement_description": "requires not liability_present(\"ump01_principal\")",
++      "typed_result": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "0",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "2000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 10,
++      "distinct_expression_nodes": 3,
++      "logical_units": 4,
++      "new_effects": [],
++      "ordered_effect_history": [],
++      "source_ordinal": 2,
++      "statement_description": "requires eventTime == 20130101000000",
++      "typed_result": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "0",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "2000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 12,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [],
++      "ordered_effect_history": [],
++      "source_ordinal": 3,
++      "statement_description": "let principal = 1000",
++      "typed_result": {
++        "type": "UInt",
++        "value": "1000"
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 14,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        }
++      ],
++      "source_ordinal": 4,
++      "statement_description": "transfer USD lender->borrower principal",
++      "typed_result": {
++        "type": "UInt",
++        "value": "1000"
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 16,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        }
++      ],
++      "source_ordinal": 5,
++      "statement_description": "liability ump01_principal USD borrower->lender principal",
++      "typed_result": {
++        "type": "UInt",
++        "value": "1000"
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 18,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        }
++      ],
++      "source_ordinal": 6,
++      "statement_description": "next nominalInterestRate = 0",
++      "typed_result": {
++        "type": "UInt",
++        "value": "0"
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20121215000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 20,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "accruedInterest"
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "accruedInterest"
++        }
++      ],
++      "source_ordinal": 7,
++      "statement_description": "next accruedInterest = 0",
++      "typed_result": {
++        "type": "UInt",
++        "value": "0"
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": false
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20130101000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 22,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "after": {
++            "type": "UInt",
++            "value": "20130101000000"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "20121215000000"
++          },
++          "kind": "State",
++          "name": "statusTime"
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "accruedInterest"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "20130101000000"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "20121215000000"
++          },
++          "kind": "State",
++          "name": "statusTime"
++        }
++      ],
++      "source_ordinal": 8,
++      "statement_description": "next statusTime = eventTime",
++      "typed_result": {
++        "type": "UInt",
++        "value": "20130101000000"
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": true
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20130101000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 24,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "after": {
++            "type": "Bool",
++            "value": true
++          },
++          "before": {
++            "type": "Bool",
++            "value": false
++          },
++          "kind": "State",
++          "name": "exchangeRecorded"
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "accruedInterest"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "20130101000000"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "20121215000000"
++          },
++          "kind": "State",
++          "name": "statusTime"
++        },
++        {
++          "after": {
++            "type": "Bool",
++            "value": true
++          },
++          "before": {
++            "type": "Bool",
++            "value": false
++          },
++          "kind": "State",
++          "name": "exchangeRecorded"
++        }
++      ],
++      "source_ordinal": 9,
++      "statement_description": "next exchangeRecorded = true",
++      "typed_result": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": true
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20130101000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 30,
++      "distinct_expression_nodes": 5,
++      "logical_units": 6,
++      "new_effects": [],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "accruedInterest"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "20130101000000"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "20121215000000"
++          },
++          "kind": "State",
++          "name": "statusTime"
++        },
++        {
++          "after": {
++            "type": "Bool",
++            "value": true
++          },
++          "before": {
++            "type": "Bool",
++            "value": false
++          },
++          "kind": "State",
++          "name": "exchangeRecorded"
++        }
++      ],
++      "source_ordinal": 10,
++      "statement_description": "ensures liability_present(...) and liability_amount(...) == principal",
++      "typed_result": {
++        "type": "Bool",
++        "value": true
++      }
++    },
++    {
++      "complete_snapshot": {
++        "balances": [
++          {
++            "account": "borrower",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          },
++          {
++            "account": "lender",
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            }
++          }
++        ],
++        "liabilities": [
++          {
++            "amount": "1000",
++            "asset": {
++              "issuer": "fixture-only",
++              "network": "actus-reference",
++              "reference": "USD",
++              "scale": 0
++            },
++            "creditor": "lender",
++            "debtor": "borrower",
++            "name": "ump01_principal"
++          }
++        ],
++        "state": {
++          "accruedInterest": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "exchangeRecorded": {
++            "type": "Bool",
++            "value": true
++          },
++          "nominalInterestRate": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "statusTime": {
++            "type": "UInt",
++            "value": "20130101000000"
++          }
++        }
++      },
++      "cumulative_logical_units": 32,
++      "distinct_expression_nodes": 1,
++      "logical_units": 2,
++      "new_effects": [
++        {
++          "kind": "Emit",
++          "name": "IED",
++          "value": {
++            "type": "UInt",
++            "value": "20130101000000"
++          }
++        }
++      ],
++      "ordered_effect_history": [
++        {
++          "amount": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "from": "lender",
++          "kind": "Transfer",
++          "to": "borrower"
++        },
++        {
++          "after": "1000",
++          "asset": {
++            "issuer": "fixture-only",
++            "network": "actus-reference",
++            "reference": "USD",
++            "scale": 0
++          },
++          "before": "0",
++          "creditor": "lender",
++          "debtor": "borrower",
++          "kind": "Liability",
++          "name": "ump01_principal"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "nominalInterestRate"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "0"
++          },
++          "kind": "State",
++          "name": "accruedInterest"
++        },
++        {
++          "after": {
++            "type": "UInt",
++            "value": "20130101000000"
++          },
++          "before": {
++            "type": "UInt",
++            "value": "20121215000000"
++          },
++          "kind": "State",
++          "name": "statusTime"
++        },
++        {
++          "after": {
++            "type": "Bool",
++            "value": true
++          },
++          "before": {
++            "type": "Bool",
++            "value": false
++          },
++          "kind": "State",
++          "name": "exchangeRecorded"
++        },
++        {
++          "kind": "Emit",
++          "name": "IED",
++          "value": {
++            "type": "UInt",
++            "value": "20130101000000"
++          }
++        }
++      ],
++      "source_ordinal": 11,
++      "statement_description": "emit IED(eventTime)",
++      "typed_result": {
++        "type": "UInt",
++        "value": "20130101000000"
++      }
++    }
++  ],
++  "source_semantics": "moriarty-core/1",
++  "subject_bindings": "input-only/inputs/subject-bindings.json",
++  "supplied_cap": null,
++  "time": "Packed decimal calendar label from chosen source input, not Unix seconds, elapsed-time arithmetic or an ACTUS time type",
++  "unasserted": [
++    "Raw Program/ExprId/Statement serialization and whole simulate envelopes/stdout/exit",
++    "Other ACTUS state variables/full-schema applicability",
++    "General UMP behavioral flows/notices/capitalization/nonzero rates",
++    "Actual ledger currency mapping, authority, proof or security",
++    "External/native fees and costs"
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/independent/FREEZE.json
+@@ -0,0 +1,16 @@
++{
++  "closing_residual_principal": "1000 present; no horizon discharge",
++  "expected_ACTUS_projection_sha256": "49126886ad8efdfce72252bcbe117634dd3a6b702fc00ff798af71eda5080ce7",
++  "expected_financial_projection_sha256": "6711c863fd3cfaf332de85660fb19ab24b7177c07f1bbdd36943e30408053e6e",
++  "independent_logical_units": "32",
++  "input_manifest_sha256": "b62e24c0040b319733f49d84f5be133a74df49313f5e251c6b7f886cf78455bd",
++  "inventory_members": 37,
++  "limits": "Financial/work projections only; no whole wire oracle or full ACTUS state schema/type conformance; unknown mappings explicit; prior exposure disclosed, no blind claim",
++  "logical_cap_input": null,
++  "ordered_effects": 7,
++  "payload_inventory_sha256": "0e0d61d10c570439064cbf333da8725edd1ac1e7be8503277cd9aadd685ac69f",
++  "preserved": "Original source/history/failures/counters/fixtures and all parent exits unchanged",
++  "scheduled_known_events": "One IED2013-01-01 payoff-1000USD under selected fixture observations/drivers",
++  "source_prefixes": 12,
++  "status": "FROZEN independent financial/work expectations before consumer; actual execution UNRUN"
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/independent/FREEZE.sha256
+@@ -0,0 +1,39 @@
++49126886ad8efdfce72252bcbe117634dd3a6b702fc00ff798af71eda5080ce7  ACTUS-FINANCIAL-SCHEDULE.expected.json
++5fbe30dfdd0d01a1cbd2b9dd793e48b9af4cd84e0f86585a2e46ef46c9d43b48  APPLICABILITY-AND-EXPOSURE.json
++6711c863fd3cfaf332de85660fb19ab24b7177c07f1bbdd36943e30408053e6e  CORE-FINANCIAL-WORK.expected.json
++bfb6b7762ec98a1f0a240c5a4dc0d3409bcfa8efd14fe2831ad21f4d6010e5f1  DERIVATION.md
++e9e3b3c822c479ff345375800bf155ac475e7e1fc4b968aba479d3e004f93727  FREEZE.json
++b62e24c0040b319733f49d84f5be133a74df49313f5e251c6b7f886cf78455bd  INPUT-ONLY-MANIFEST.json
++0e0d61d10c570439064cbf333da8725edd1ac1e7be8503277cd9aadd685ac69f  PAYLOAD-INVENTORY.json
++8cf2b29cf0ca995510af64c32fbf26bf95f2946637b78acbafee9f2e7c8e01f9  PREPARATION.json
++d0c822676e71fbff6367138faa60e6246a02cd46e1a183a0d517751a48ce1f4b  README.md
++98138dbb8c345ffa2dd07a7a8bbf6f596b3591af66b7fc442a1bd9b3b85a669b  basis/PAM-SCHEDULE-EXACT.tex
++0d91facda4bcf06e545af2f9ced7c72b2b76220a9b53eb46a5a4caea66ebc4dc  basis/crates/mori-core/README.md
++9d36a1ea979a52608a832d4b5429a6ca4e392091880326501071614808973b1e  basis/docs/CORE-EXECUTION-REPORTS.md
++d5674c650741103284e0aa8cded4c0e8a0a1be38faa0c65aedb043710caa4396  basis/docs/MORIARTY-PRODUCT-CONTRACT.md
++6e08e242e1774a2c8deb5cff9bae642ea41930265358af7bee4277846d78994f  basis/raw/sources/actus-public-2026-09-03/documentation/0167-docs-contract-types-ump-b4e902fada69.html
++a96896b099ad19b4a67f1b1a6eb19a1bc3246f63d323325739bc1fdf3ccc261e  basis/raw/sources/actus-public-2026-09-03/documentation/0167-docs-contract-types-ump-b4e902fada69.md
++ea40b580f4b3269a63c824eec4b95085f38a1073d466e3c30b90156999ebcd2a  basis/raw/sources/actus-public-2026-09-03/documentation/0167-docs-contract-types-ump-b4e902fada69.receipt.json
++6b3a876652f95391a8857bd9b57a2f0070c329c5f7e83e6404838e39888f7dc0  basis/raw/sources/actus-public-2026-09-03/documentation/0192-docs-examples-basic-contract-types-example_ump-cdeddfd17ed5.html
++ebf056c17bcd90fda535384ebf4a94b60aa51881107d0bb1d32a9ab8f7c86a7e  basis/raw/sources/actus-public-2026-09-03/documentation/0192-docs-examples-basic-contract-types-example_ump-cdeddfd17ed5.md
++8516e92e896292d8d43d2d41b82b820fd5a5ccfedb304c67aa86ffbfdc4acea0  basis/raw/sources/actus-public-2026-09-03/documentation/0192-docs-examples-basic-contract-types-example_ump-cdeddfd17ed5.receipt.json
++a72dad87b96b3b882d6307c54aa68edc6a4cf9e43063ace42ffb7effe8a3df9c  derive_independent_literals.py
++6e2ca71d390490825d82bdbd28b35185189a87a0d5cb9ddc8ad7e561f755a5e1  input-only/inputs/call-operands.json
++30f88d05dadc143a4738ae22a8e41533ec140a0eed2802232025cccb5c8ebd7f  input-only/inputs/opening.scenario.json
++0f6058302d5706ba8ceb134f36f73926eed83837c79d945e31e5a2c8c744ff7a  input-only/inputs/source.mori
++d8056dfff1fe6a2541c47aac989dc925e15b2e6644646e996072bff7179e0beb  input-only/inputs/subject-bindings.json
++827bf8b9fa6ace31034f87434160fb51d7330ea853eab6de2acebdce72053fb4  input-only/inputs/ump01.normative-operands.json
++16a89e266327c24d38e58eaa55cfc352d8bb03dad2d23b30f5e3386685edc150  input-only/normative/ACTUS-LICENSE.md
++16a89e266327c24d38e58eaa55cfc352d8bb03dad2d23b30f5e3386685edc150  input-only/normative/ACTUS-TECHSPEC-LICENSE.md
++ceab659d35dca615287360b9266cf105a9e2a79e99ee75253ea8b3abc5af91d9  input-only/normative/actus-techspecs.tex
++6b98f2a663d27099579e6b2a0365a161a82ec84f1fb51fd31660b4afd26f152f  input-only/normative/actus-tests-ump.json
++16a89e266327c24d38e58eaa55cfc352d8bb03dad2d23b30f5e3386685edc150  input-only/normative/dictionary/LICENSE.md
++07a8a7afc43a6f91938775530fe6a64f06e0c7eb650628694d473552225d53f7  input-only/normative/dictionary/actus-dictionary-event.json
++182d3b3aa9be4bf7643e6b76dadcfabe383dbdbb443918553221ad05089876de  input-only/normative/dictionary/actus-dictionary-states.json
++e92c03492608ba9bea7484616c2781eadba80c301241fc2a45c2a7756ee43295  input-only/normative/excerpts/CLM-IED-payoff.tex
++808a118c6c6307312d137a62ad23955130d9d10a0e5f6543c5dc3a5ce7dc3f0a  input-only/normative/excerpts/PAM-IED-date.tex
++8c243c54b4de4c438a92639d407b1c5fccc87859a2099aaa77f4503fbf784bb4  input-only/normative/excerpts/PAM-IED-transition.tex
++41c63870747be7f7c518b74449624bbcaea807376f1d5b5e17551443c6943212  input-only/normative/excerpts/PAM-initial-states.tex
++4aea2bbb450ab6d5100c9dff75c61d8b55a4d26c94112d84a473d41d1aad4277  input-only/normative/excerpts/UMP-schedules-states-functions.tex
++8b0bb504ef2c75d4aea014e27f0fd622051d909eef6daaa443b3be0256014320  input-only/normative/excerpts/role-sign.tex
++c9d2f89836966bffe611cd3f2b999a3de7e2434e9162d53505600e68f564bccf  input-only/normative/excerpts/settlement-FX.tex
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/independent/INPUT-ONLY-MANIFEST.json
+@@ -0,0 +1,120 @@
++{
++  "base": "e4d7a2b5709caa18a94f5256d03a0302364b8235",
++  "scope": "Input only; no authored expected outputs or adapter. Raw original ACTUS file includes upstream results. Use operands-only JSON to avoid raw results.",
++  "files": [
++    {
++      "path": "inputs/source.mori",
++      "sha256": "0f6058302d5706ba8ceb134f36f73926eed83837c79d945e31e5a2c8c744ff7a",
++      "bytes": 917,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/inputs/source.mori"
++    },
++    {
++      "path": "inputs/opening.scenario.json",
++      "sha256": "30f88d05dadc143a4738ae22a8e41533ec140a0eed2802232025cccb5c8ebd7f",
++      "bytes": 572,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/inputs/opening.scenario.json"
++    },
++    {
++      "path": "inputs/subject-bindings.json",
++      "sha256": "d8056dfff1fe6a2541c47aac989dc925e15b2e6644646e996072bff7179e0beb",
++      "bytes": 211,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/inputs/subject-bindings.json"
++    },
++    {
++      "path": "inputs/call-operands.json",
++      "sha256": "6e2ca71d390490825d82bdbd28b35185189a87a0d5cb9ddc8ad7e561f755a5e1",
++      "bytes": 430,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/inputs/call-operands.json"
++    },
++    {
++      "path": "inputs/ump01.normative-operands.json",
++      "sha256": "827bf8b9fa6ace31034f87434160fb51d7330ea853eab6de2acebdce72053fb4",
++      "bytes": 460,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/inputs/ump01.normative-operands.json"
++    },
++    {
++      "path": "normative/actus-tests-ump.json",
++      "sha256": "6b98f2a663d27099579e6b2a0365a161a82ec84f1fb51fd31660b4afd26f152f",
++      "bytes": 27152,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/actus-tests-ump.json"
++    },
++    {
++      "path": "normative/actus-techspecs.tex",
++      "sha256": "ceab659d35dca615287360b9266cf105a9e2a79e99ee75253ea8b3abc5af91d9",
++      "bytes": 121672,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/actus-techspecs.tex"
++    },
++    {
++      "path": "normative/ACTUS-LICENSE.md",
++      "sha256": "16a89e266327c24d38e58eaa55cfc352d8bb03dad2d23b30f5e3386685edc150",
++      "bytes": 18507,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/ACTUS-LICENSE.md"
++    },
++    {
++      "path": "normative/ACTUS-TECHSPEC-LICENSE.md",
++      "sha256": "16a89e266327c24d38e58eaa55cfc352d8bb03dad2d23b30f5e3386685edc150",
++      "bytes": 18507,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/ACTUS-TECHSPEC-LICENSE.md"
++    },
++    {
++      "path": "normative/dictionary/actus-dictionary-states.json",
++      "sha256": "182d3b3aa9be4bf7643e6b76dadcfabe383dbdbb443918553221ad05089876de",
++      "bytes": 9012,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/dictionary/actus-dictionary-states.json"
++    },
++    {
++      "path": "normative/dictionary/actus-dictionary-event.json",
++      "sha256": "07a8a7afc43a6f91938775530fe6a64f06e0c7eb650628694d473552225d53f7",
++      "bytes": 10255,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/dictionary/actus-dictionary-event.json"
++    },
++    {
++      "path": "normative/dictionary/LICENSE.md",
++      "sha256": "16a89e266327c24d38e58eaa55cfc352d8bb03dad2d23b30f5e3386685edc150",
++      "bytes": 18507,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/dictionary/LICENSE.md"
++    },
++    {
++      "path": "normative/excerpts/role-sign.tex",
++      "sha256": "8b0bb504ef2c75d4aea014e27f0fd622051d909eef6daaa443b3be0256014320",
++      "bytes": 563,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/role-sign.tex"
++    },
++    {
++      "path": "normative/excerpts/PAM-initial-states.tex",
++      "sha256": "41c63870747be7f7c518b74449624bbcaea807376f1d5b5e17551443c6943212",
++      "bytes": 1701,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/PAM-initial-states.tex"
++    },
++    {
++      "path": "normative/excerpts/CLM-IED-payoff.tex",
++      "sha256": "e92c03492608ba9bea7484616c2781eadba80c301241fc2a45c2a7756ee43295",
++      "bytes": 323,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/CLM-IED-payoff.tex"
++    },
++    {
++      "path": "normative/excerpts/settlement-FX.tex",
++      "sha256": "c9d2f89836966bffe611cd3f2b999a3de7e2434e9162d53505600e68f564bccf",
++      "bytes": 535,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/settlement-FX.tex"
++    },
++    {
++      "path": "normative/excerpts/PAM-IED-date.tex",
++      "sha256": "808a118c6c6307312d137a62ad23955130d9d10a0e5f6543c5dc3a5ce7dc3f0a",
++      "bytes": 203,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/PAM-IED-date.tex"
++    },
++    {
++      "path": "normative/excerpts/PAM-IED-transition.tex",
++      "sha256": "8c243c54b4de4c438a92639d407b1c5fccc87859a2099aaa77f4503fbf784bb4",
++      "bytes": 586,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/PAM-IED-transition.tex"
++    },
++    {
++      "path": "normative/excerpts/UMP-schedules-states-functions.tex",
++      "sha256": "4aea2bbb450ab6d5100c9dff75c61d8b55a4d26c94112d84a473d41d1aad4277",
++      "bytes": 2372,
++      "copied_from": "/home/charl/moriarty-c2-opus55-restored-20261017/actus-second-instrument-source-plan-20261018/normative/excerpts/UMP-schedules-states-functions.tex"
++    }
++  ]
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/normative/LICENSE.md
+@@ -0,0 +1,175 @@
++## creative commons
++
++# Attribution-ShareAlike 4.0 International
++
++Creative Commons Corporation (“Creative Commons”) is not a law firm and does not provide legal services or legal advice. Distribution of Creative Commons public licenses does not create a lawyer-client or other relationship. Creative Commons makes its licenses and related information available on an “as-is” basis. Creative Commons gives no warranties regarding its licenses, any material licensed under their terms and conditions, or any related information. Creative Commons disclaims all liability for damages resulting from their use to the fullest extent possible.
++
++### Using Creative Commons Public Licenses
++
++Creative Commons public licenses provide a standard set of terms and conditions that creators and other rights holders may use to share original works of authorship and other material subject to copyright and certain other rights specified in the public license below. The following considerations are for informational purposes only, are not exhaustive, and do not form part of our licenses.
++
++* __Considerations for licensors:__ Our public licenses are intended for use by those authorized to give the public permission to use material in ways otherwise restricted by copyright and certain other rights. Our licenses are irrevocable. Licensors should read and understand the terms and conditions of the license they choose before applying it. Licensors should also secure all rights necessary before applying our licenses so that the public can reuse the material as expected. Licensors should clearly mark any material not subject to the license. This includes other CC-licensed material, or material used under an exception or limitation to copyright. [More considerations for licensors](http://wiki.creativecommons.org/Considerations_for_licensors_and_licensees#Considerations_for_licensors).
++
++* __Considerations for the public:__ By using one of our public licenses, a licensor grants the public permission to use the licensed material under specified terms and conditions. If the licensor’s permission is not necessary for any reason–for example, because of any applicable exception or limitation to copyright–then that use is not regulated by the license. Our licenses grant only permissions under copyright and certain other rights that a licensor has authority to grant. Use of the licensed material may still be restricted for other reasons, including because others have copyright or other rights in the material. A licensor may make special requests, such as asking that all changes be marked or described. Although not required by our licenses, you are encouraged to respect those requests where reasonable. [More considerations for the public](http://wiki.creativecommons.org/Considerations_for_licensors_and_licensees#Considerations_for_licensees).
++
++## Creative Commons Attribution-ShareAlike 4.0 International Public License
++
++By exercising the Licensed Rights (defined below), You accept and agree to be bound by the terms and conditions of this Creative Commons Attribution-ShareAlike 4.0 International Public License ("Public License"). To the extent this Public License may be interpreted as a contract, You are granted the Licensed Rights in consideration of Your acceptance of these terms and conditions, and the Licensor grants You such rights in consideration of benefits the Licensor receives from making the Licensed Material available under these terms and conditions.
++
++### Section 1 – Definitions.
++
++a. __Adapted Material__ means material subject to Copyright and Similar Rights that is derived from or based upon the Licensed Material and in which the Licensed Material is translated, altered, arranged, transformed, or otherwise modified in a manner requiring permission under the Copyright and Similar Rights held by the Licensor. For purposes of this Public License, where the Licensed Material is a musical work, performance, or sound recording, Adapted Material is always produced where the Licensed Material is synched in timed relation with a moving image.
++
++b. __Adapter's License__ means the license You apply to Your Copyright and Similar Rights in Your contributions to Adapted Material in accordance with the terms and conditions of this Public License.
++
++c. __BY-SA Compatible License__ means a license listed at [creativecommons.org/compatiblelicenses](http://creativecommons.org/compatiblelicenses), approved by Creative Commons as essentially the equivalent of this Public License.
++
++d. __Copyright and Similar Rights__ means copyright and/or similar rights closely related to copyright including, without limitation, performance, broadcast, sound recording, and Sui Generis Database Rights, without regard to how the rights are labeled or categorized. For purposes of this Public License, the rights specified in Section 2(b)(1)-(2) are not Copyright and Similar Rights.
++
++e. __Effective Technological Measures__ means those measures that, in the absence of proper authority, may not be circumvented under laws fulfilling obligations under Article 11 of the WIPO Copyright Treaty adopted on December 20, 1996, and/or similar international agreements.
++
++f. __Exceptions and Limitations__ means fair use, fair dealing, and/or any other exception or limitation to Copyright and Similar Rights that applies to Your use of the Licensed Material.
++
++g. __License Elements__ means the license attributes listed in the name of a Creative Commons Public License. The License Elements of this Public License are Attribution and ShareAlike.
++
++h. __Licensed Material__ means the artistic or literary work, database, or other material to which the Licensor applied this Public License.
++
++i. __Licensed Rights__ means the rights granted to You subject to the terms and conditions of this Public License, which are limited to all Copyright and Similar Rights that apply to Your use of the Licensed Material and that the Licensor has authority to license.
++
++j. __Licensor__ means the individual(s) or entity(ies) granting rights under this Public License.
++
++k. __Share__ means to provide material to the public by any means or process that requires permission under the Licensed Rights, such as reproduction, public display, public performance, distribution, dissemination, communication, or importation, and to make material available to the public including in ways that members of the public may access the material from a place and at a time individually chosen by them.
++
++l. __Sui Generis Database Rights__ means rights other than copyright resulting from Directive 96/9/EC of the European Parliament and of the Council of 11 March 1996 on the legal protection of databases, as amended and/or succeeded, as well as other essentially equivalent rights anywhere in the world.
++
++m. __You__ means the individual or entity exercising the Licensed Rights under this Public License. Your has a corresponding meaning.
++
++### Section 2 – Scope.
++
++a. ___License grant.___
++
++ 1. Subject to the terms and conditions of this Public License, the Licensor hereby grants You a worldwide, royalty-free, non-sublicensable, non-exclusive, irrevocable license to exercise the Licensed Rights in the Licensed Material to:
++
++  A. reproduce and Share the Licensed Material, in whole or in part; and
++
++  B. produce, reproduce, and Share Adapted Material.
++
++ 2. __Exceptions and Limitations.__ For the avoidance of doubt, where Exceptions and Limitations apply to Your use, this Public License does not apply, and You do not need to comply with its terms and conditions.
++
++ 3. __Term.__ The term of this Public License is specified in Section 6(a).
++
++ 4. __Media and formats; technical modifications allowed.__ The Licensor authorizes You to exercise the Licensed Rights in all media and formats whether now known or hereafter created, and to make technical modifications necessary to do so. The Licensor waives and/or agrees not to assert any right or authority to forbid You from making technical modifications necessary to exercise the Licensed Rights, including technical modifications necessary to circumvent Effective Technological Measures. For purposes of this Public License, simply making modifications authorized by this Section 2(a)(4) never produces Adapted Material.
++    
++ 5. __Downstream recipients.__
++
++  A. __Offer from the Licensor – Licensed Material.__ Every recipient of the Licensed Material automatically receives an offer from the Licensor to exercise the Licensed Rights under the terms and conditions of this Public License.
++        
++  B. __Additional offer from the Licensor – Adapted Material.__ Every recipient of Adapted Material from You automatically receives an offer from the Licensor to exercise the Licensed Rights in the Adapted Material under the conditions of the Adapter’s License You apply.
++
++  C. __No downstream restrictions.__ You may not offer or impose any additional or different terms or conditions on, or apply any Effective Technological Measures to, the Licensed Material if doing so restricts exercise of the Licensed Rights by any recipient of the Licensed Material.
++
++ 6. __No endorsement.__ Nothing in this Public License constitutes or may be construed as permission to assert or imply that You are, or that Your use of the Licensed Material is, connected with, or sponsored, endorsed, or granted official status by, the Licensor or others designated to receive attribution as provided in Section 3(a)(1)(A)(i).
++    
++b. ___Other rights.___
++
++ 1. Moral rights, such as the right of integrity, are not licensed under this Public License, nor are publicity, privacy, and/or other similar personality rights; however, to the extent possible, the Licensor waives and/or agrees not to assert any such rights held by the Licensor to the limited extent necessary to allow You to exercise the Licensed Rights, but not otherwise.
++
++ 2. Patent and trademark rights are not licensed under this Public License.
++
++ 3. To the extent possible, the Licensor waives any right to collect royalties from You for the exercise of the Licensed Rights, whether directly or through a collecting society under any voluntary or waivable statutory or compulsory licensing scheme. In all other cases the Licensor expressly reserves any right to collect such royalties.
++    
++### Section 3 – License Conditions.
++
++Your exercise of the Licensed Rights is expressly made subject to the following conditions.
++
++a. ___Attribution.___
++
++ 1. If You Share the Licensed Material (including in modified form), You must:
++
++  A. retain the following if it is supplied by the Licensor with the Licensed Material:
++
++   i. identification of the creator(s) of the Licensed Material and any others designated to receive attribution, in any reasonable manner requested by the Licensor (including by pseudonym if designated);
++
++   ii. a copyright notice;
++
++   iii. a notice that refers to this Public License;
++
++   iv. a notice that refers to the disclaimer of warranties;
++
++   v. a URI or hyperlink to the Licensed Material to the extent reasonably practicable;
++
++  B. indicate if You modified the Licensed Material and retain an indication of any previous modifications; and
++
++  C. indicate the Licensed Material is licensed under this Public License, and include the text of, or the URI or hyperlink to, this Public License.
++
++ 2. You may satisfy the conditions in Section 3(a)(1) in any reasonable manner based on the medium, means, and context in which You Share the Licensed Material. For example, it may be reasonable to satisfy the conditions by providing a URI or hyperlink to a resource that includes the required information.
++
++ 3. If requested by the Licensor, You must remove any of the information required by Section 3(a)(1)(A) to the extent reasonably practicable.
++    
++b. ___ShareAlike.___
++
++In addition to the conditions in Section 3(a), if You Share Adapted Material You produce, the following conditions also apply.
++
++1. The Adapter’s License You apply must be a Creative Commons license with the same License Elements, this version or later, or a BY-SA Compatible License.        
++
++2. You must include the text of, or the URI or hyperlink to, the Adapter's License You apply. You may satisfy this condition in any reasonable manner based on the medium, means, and context in which You Share Adapted Material.
++
++3. You may not offer or impose any additional or different terms or conditions on, or apply any Effective Technological Measures to, Adapted Material that restrict exercise of the rights granted under the Adapter's License You apply.
++
++### Section 4 – Sui Generis Database Rights.
++
++Where the Licensed Rights include Sui Generis Database Rights that apply to Your use of the Licensed Material:
++
++a. for the avoidance of doubt, Section 2(a)(1) grants You the right to extract, reuse, reproduce, and Share all or a substantial portion of the contents of the database;
++
++b. if You include all or a substantial portion of the database contents in a database in which You have Sui Generis Database Rights, then the database in which You have Sui Generis Database Rights (but not its individual contents) is Adapted Material, including for purposes of Section 3(b); and
++
++c. You must comply with the conditions in Section 3(a) if You Share all or a substantial portion of the contents of the database.
++
++For the avoidance of doubt, this Section 4 supplements and does not replace Your obligations under this Public License where the Licensed Rights include other Copyright and Similar Rights.
++
++### Section 5 – Disclaimer of Warranties and Limitation of Liability.
++
++a. __Unless otherwise separately undertaken by the Licensor, to the extent possible, the Licensor offers the Licensed Material as-is and as-available, and makes no representations or warranties of any kind concerning the Licensed Material, whether express, implied, statutory, or other. This includes, without limitation, warranties of title, merchantability, fitness for a particular purpose, non-infringement, absence of latent or other defects, accuracy, or the presence or absence of errors, whether or not known or discoverable. Where disclaimers of warranties are not allowed in full or in part, this disclaimer may not apply to You.__
++
++b. __To the extent possible, in no event will the Licensor be liable to You on any legal theory (including, without limitation, negligence) or otherwise for any direct, special, indirect, incidental, consequential, punitive, exemplary, or other losses, costs, expenses, or damages arising out of this Public License or use of the Licensed Material, even if the Licensor has been advised of the possibility of such losses, costs, expenses, or damages. Where a limitation of liability is not allowed in full or in part, this limitation may not apply to You.__
++
++c. The disclaimer of warranties and limitation of liability provided above shall be interpreted in a manner that, to the extent possible, most closely approximates an absolute disclaimer and waiver of all liability.
++
++### Section 6 – Term and Termination.
++
++a. This Public License applies for the term of the Copyright and Similar Rights licensed here. However, if You fail to comply with this Public License, then Your rights under this Public License terminate automatically.
++
++b. Where Your right to use the Licensed Material has terminated under Section 6(a), it reinstates:
++
++ 1. automatically as of the date the violation is cured, provided it is cured within 30 days of Your discovery of the violation; or
++
++ 2. upon express reinstatement by the Licensor.
++
++ For the avoidance of doubt, this Section 6(b) does not affect any right the Licensor may have to seek remedies for Your violations of this Public License.
++
++c. For the avoidance of doubt, the Licensor may also offer the Licensed Material under separate terms or conditions or stop distributing the Licensed Material at any time; however, doing so will not terminate this Public License.
++
++d. Sections 1, 5, 6, 7, and 8 survive termination of this Public License.
++
++### Section 7 – Other Terms and Conditions.
++
++a. The Licensor shall not be bound by any additional or different terms or conditions communicated by You unless expressly agreed.
++
++b. Any arrangements, understandings, or agreements regarding the Licensed Material not stated herein are separate from and independent of the terms and conditions of this Public License.t stated herein are separate from and independent of the terms and conditions of this Public License.
++
++### Section 8 – Interpretation.
++
++a. For the avoidance of doubt, this Public License does not, and shall not be interpreted to, reduce, limit, restrict, or impose conditions on any use of the Licensed Material that could lawfully be made without permission under this Public License.
++
++b. To the extent possible, if any provision of this Public License is deemed unenforceable, it shall be automatically reformed to the minimum extent necessary to make it enforceable. If the provision cannot be reformed, it shall be severed from this Public License without affecting the enforceability of the remaining terms and conditions.
++
++c. No term or condition of this Public License will be waived and no failure to comply consented to unless expressly agreed to by the Licensor.
++
++d. Nothing in this Public License constitutes or may be interpreted as a limitation upon, or waiver of, any privileges and immunities that apply to the Licensor or You, including from the legal processes of any jurisdiction or authority.
++
++```
++Creative Commons is not a party to its public licenses. Notwithstanding, Creative Commons may elect to apply one of its public licenses to material it publishes and in those instances will be considered the “Licensor.” Except for the limited purpose of indicating that material is shared under a Creative Commons public license or as otherwise permitted by the Creative Commons policies published at [creativecommons.org/policies](http://creativecommons.org/policies), Creative Commons does not authorize the use of the trademark “Creative Commons” or any other trademark or logo of Creative Commons without its prior written consent including, without limitation, in connection with any unauthorized modifications to any of its public licenses or any other arrangements, understandings, or agreements concerning use of licensed material. For the avoidance of doubt, this paragraph does not form part of the public licenses. 
++
++Creative Commons may be contacted at [creativecommons.org](http://creativecommons.org/).
++```
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/normative/actus-tests-ump.json
+@@ -0,0 +1,812 @@
++{
++    "ump01": {
++        "identifier": "ump01",
++        "terms": {
++            "contractID": "ump01",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "  1000",
++            "dayCountConvention": "30E360",
++            "xDayNotice": "P1M"
++        },
++        "to": "2014-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": -1000,
++                "currency": "USD",
++                "notionalPrincipal": 1000,
++                "nominalInterestRate": 0,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump02": {
++        "identifier": "ump02",
++        "terms": {
++            "contractID": "ump02",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "  1000",
++            "cycleAnchorDateOfInterestPayment": "2013-01-25T00:00:00",
++            "cycleOfInterestPayment": "P1ML1",
++            "nominalInterestRate": "0.01",
++            "dayCountConvention": "30E360",
++            "xDayNotice": "P1M"
++        },
++        "to": "2014-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": -1000,
++                "currency": "USD",
++                "notionalPrincipal": 1000,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-01-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1000.66666666666,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-02-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1001.50055555555,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-03-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1002.33513935185,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-04-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1003.17041863464,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-05-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1004.0063939835,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-06-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1004.84306597849,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-07-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1005.68043520014,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-08-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1006.51850222947,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-09-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1007.357267648,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-10-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1008.1967320377,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-11-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1009.03689598107,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-12-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1009.87776006105,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump03": {
++        "identifier": "ump03",
++        "terms": {
++            "contractID": "ump03",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "  1000",
++            "cycleAnchorDateOfInterestPayment": "2013-01-25T00:00:00",
++            "cycleOfInterestPayment": "P1ML1",
++            "nominalInterestRate": "0.01",
++            "dayCountConvention": "AA",
++            "xDayNotice": "P1M"
++        },
++        "to": "2014-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": -1000,
++                "currency": "USD",
++                "notionalPrincipal": 1000,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-01-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1000.65753424657,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-02-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1001.50740776881,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-03-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1002.27568742408,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-04-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1003.1269352682,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-05-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1003.9514231602,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-06-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1004.80409423192,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-07-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1005.62996061074,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-08-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1006.48405728962,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-09-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1007.33887936567,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-10-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1008.16682912953,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-11-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1009.02308040907,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2013-12-25T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 1009.85241444776,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump04": {
++        "identifier": "ump04",
++        "terms": {
++            "contractID": "ump04",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPL",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "  1000",
++            "cycleAnchorDateOfInterestPayment": "2014-01-01T00:00:00",
++            "cycleOfInterestPayment": "P1YL1",
++            "nominalInterestRate": "0.01",
++            "dayCountConvention": "30E360",
++            "xDayNotice": "P1M"
++        },
++        "to": "2018-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": 1000,
++                "currency": "USD",
++                "notionalPrincipal": -1000,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2014-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": -1010,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2015-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": -1020.1,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2016-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": -1030.301,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2017-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": -1040.60401,
++                "nominalInterestRate": 0.01,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump05": {
++        "identifier": "ump05",
++        "terms": {
++            "contractID": "ump05",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "  1000",
++            "cycleAnchorDateOfInterestPayment": "2014-01-01T00:00:00",
++            "cycleOfInterestPayment": "P1YL1",
++            "nominalInterestRate": "-0.005",
++            "dayCountConvention": "30E360",
++            "xDayNotice": "P1M"
++        },
++        "to": "2018-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": -1000,
++                "currency": "USD",
++                "notionalPrincipal": 1000,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2014-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 995,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2015-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 990.025,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2016-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 985.074875,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2017-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 980.149500625,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump06": {
++        "identifier": "ump06",
++        "terms": {
++            "contractID": "ump06",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "100000",
++            "cycleAnchorDateOfInterestPayment": "2014-01-01T00:00:00",
++            "cycleOfInterestPayment": "P1YL1",
++            "nominalInterestRate": "-0.005",
++            "dayCountConvention": "30E360",
++            "xDayNotice": "P1M"
++        },
++        "to": "2020-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": -100000,
++                "currency": "USD",
++                "notionalPrincipal": 100000,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2014-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99500,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2015-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99002.5,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2016-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98507.4875,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2017-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98014.9500625,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2018-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 97524.8753121875,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2019-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 97037.2509356265,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump07": {
++        "identifier": "ump07",
++        "terms": {
++            "contractID": "ump07",
++            "contractType": "UMP",
++            "statusDate": "2012-12-15T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2012-12-15T00:00:00",
++            "initialExchangeDate": "2013-01-01T00:00:00",
++            "notionalPrincipal": "100000",
++            "cycleAnchorDateOfInterestPayment": "2014-01-01T00:00:00",
++            "cycleOfInterestPayment": "P1YL1",
++            "nominalInterestRate": "-0.005",
++            "dayCountConvention": "AA",
++            "xDayNotice": "P1M"
++        },
++        "to": "2020-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2013-01-01T00:00:00",
++                "eventType": "IED",
++                "payoff": -100000,
++                "currency": "USD",
++                "notionalPrincipal": 100000,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2014-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99500,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2015-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99002.5,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2016-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98507.4875,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2017-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98014.9500625,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2018-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 97524.8753121875,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2019-01-01T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 97037.2509356265,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump08": {
++        "identifier": "ump08",
++        "terms": {
++            "contractID": "ump08",
++            "contractType": "UMP",
++            "statusDate": "2014-05-12T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2014-05-12T00:00:00",
++            "initialExchangeDate": "2014-05-13T00:00:00",
++            "notionalPrincipal": "100000",
++            "cycleAnchorDateOfInterestPayment": "2014-12-31T00:00:00",
++            "cycleOfInterestPayment": "P1YL1",
++            "nominalInterestRate": "-0.005",
++            "dayCountConvention": "AA",
++            "xDayNotice": "P1M"
++        },
++        "to": "2020-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2014-05-13T00:00:00",
++                "eventType": "IED",
++                "payoff": -100000,
++                "currency": "USD",
++                "notionalPrincipal": 100000,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2014-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99682.1917808219,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2015-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99183.7808219178,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2016-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98687.8582055625,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2017-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98194.422608219,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2018-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 97703.4504951779,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2019-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 97214.933242702,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            }
++        ]
++    },
++    "ump09": {
++        "identifier": "ump09",
++        "terms": {
++            "contractID": "ump09",
++            "contractType": "UMP",
++            "statusDate": "2014-05-12T00:00:00",
++            "contractRole": "RPA",
++            "currency": "USD",
++            "contractDealDate": "2014-05-12T00:00:00",
++            "initialExchangeDate": "2014-05-13T00:00:00",
++            "notionalPrincipal": "100000",
++            "cycleAnchorDateOfInterestPayment": "2014-12-31T00:00:00",
++            "cycleOfInterestPayment": "P1YL1",
++            "nominalInterestRate": "-0.005",
++            "dayCountConvention": "AA",
++            "terminationDate": "2017-05-13T00:00:00",
++            "priceAtTerminationDate": "90000",
++            "xDayNotice": "P1M"
++        },
++        "to": "2020-01-01T00:00:00",
++        "dataObserved": {
++
++        },
++        "eventsObserved": [
++
++        ],
++        "results": [
++            {
++                "eventDate": "2014-05-13T00:00:00",
++                "eventType": "IED",
++                "payoff": -100000,
++                "currency": "USD",
++                "notionalPrincipal": 100000,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2014-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99682.1917808219,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2015-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 99183.7808219178,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2016-12-31T00:00:00",
++                "eventType": "IPCI",
++                "payoff": 0,
++                "currency": "USD",
++                "notionalPrincipal": 98687.8582055625,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            },
++            {
++                "eventDate": "2017-05-13T00:00:00",
++                "eventType": "TD",
++                "payoff": 89820.2025273646,
++                "currency": "USD",
++                "notionalPrincipal": 0,
++                "nominalInterestRate": -0.005,
++                "accruedInterest": 0
++            }
++        ]
++    }
++}
++
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/opening.scenario.json
+@@ -0,0 +1,32 @@
++{
++  "state": {},
++  "inputs": {
++    "eventTime": {
++      "type": "UInt",
++      "value": "20130101000000"
++    }
++  },
++  "balances": [
++    {
++      "account": "lender",
++      "asset": {
++        "network": "actus-reference",
++        "issuer": "fixture-only",
++        "reference": "USD",
++        "scale": 0
++      },
++      "amount": "2000"
++    },
++    {
++      "account": "borrower",
++      "asset": {
++        "network": "actus-reference",
++        "issuer": "fixture-only",
++        "reference": "USD",
++        "scale": 0
++      },
++      "amount": "0"
++    }
++  ],
++  "liabilities": []
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/provenance.json
+@@ -0,0 +1,40 @@
++{
++  "selected": "tests/actus-tests-ump.json/ump01",
++  "fixture_origin": "offline normative custody, NOT asserted main-tracked source",
++  "upstreams": {
++    "tests": {
++      "repository": "https://github.com/actusfrf/actus-tests.git",
++      "commit": "f7a8064872b69db1f0beabac771c99dc3ce0c397",
++      "file": "tests/actus-tests-ump.json",
++      "license": "CC-BY-SA-4.0"
++    },
++    "spec": {
++      "repository": "https://github.com/actusfrf/actus-techspecs.git",
++      "commit": "94ef09e4992f79d573f84f41d8480f557365870e"
++    },
++    "dictionary": {
++      "repository": "https://github.com/actusfrf/actus-dictionary.git",
++      "commit": "356f7663f26091105cc4fef4ae3496942dcf0ebf"
++    }
++  },
++  "original_family_members_retained": 9,
++  "full_fixture_family_bytes_sha256": "6b98f2a663d27099579e6b2a0365a161a82ec84f1fb51fd31660b4afd26f152f",
++  "original_case_operands_exclude": "results only; raw original file retains results unmodified",
++  "expected_origin": "independently frozen financial/work projections; author supplied checked typed field binding; no raw upstream scalar wire oracle",
++  "runtime_compiler_native_execution": "UNRUN",
++  "all277_retained": true,
++  "executable_types_retained": 18,
++  "taxonomy_rows_retained": 32,
++  "DS01_to_DS07": "unchanged",
++  "all_present_selected_result_fields": [
++    "eventDate",
++    "eventType",
++    "payoff",
++    "currency",
++    "notionalPrincipal",
++    "nominalInterestRate",
++    "accruedInterest"
++  ],
++  "independent_freeze_sha256": "ebf385af5db731fdcc037f43ce685b6cdb7c3006a1b6900f3cf90ad99451a7d4",
++  "raw_ACTUS_result_scalar_encoding": "not independently asserted by oracle; adapter integer domain is finite author binding for review"
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/source.mori
+@@ -0,0 +1,23 @@
++language "moriarty/1";
++agreement UndefinedMaturityInitialExchange {
++  asset USD = { network: "actus-reference", issuer: "fixture-only", reference: "USD", scale: 0 };
++  state exchangeRecorded: Bool = false;
++  state statusTime: UInt = 20121215000000;
++  state nominalInterestRate: UInt = 0;
++  state accruedInterest: UInt = 0;
++
++  action initialExchange(eventTime: UInt) {
++    requires not exchangeRecorded;
++    requires not liability_present("ump01_principal");
++    requires eventTime == 20130101000000;
++    let principal = 1000;
++    transfer(USD, "lender", "borrower", principal);
++    liability("ump01_principal", USD, "borrower", "lender", principal);
++    next nominalInterestRate = 0;
++    next accruedInterest = 0;
++    next statusTime = eventTime;
++    next exchangeRecorded = true;
++    ensures liability_present("ump01_principal") and liability_amount("ump01_principal") == principal;
++    emit "IED"(eventTime);
++  }
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/subject-bindings.json
+@@ -0,0 +1,11 @@
++{
++  "asset": {
++    "network": "actus-reference",
++    "issuer": "fixture-only",
++    "reference": "USD",
++    "scale": 0
++  },
++  "lender": "lender",
++  "borrower": "borrower",
++  "principal_duty": "ump01_principal"
++}
+--- /dev/null
++++ b/crates/fixtures/financial-pair/actus-ump01/ump01.normative-operands.json
+@@ -0,0 +1,18 @@
++{
++  "identifier": "ump01",
++  "terms": {
++    "contractID": "ump01",
++    "contractType": "UMP",
++    "statusDate": "2012-12-15T00:00:00",
++    "contractRole": "RPA",
++    "currency": "USD",
++    "contractDealDate": "2012-12-15T00:00:00",
++    "initialExchangeDate": "2013-01-01T00:00:00",
++    "notionalPrincipal": "  1000",
++    "dayCountConvention": "30E360",
++    "xDayNotice": "P1M"
++  },
++  "to": "2014-01-01T00:00:00",
++  "dataObserved": {},
++  "eventsObserved": []
++}
+--- a/crates/mori-core/tests/financial_pair.rs
++++ b/crates/mori-core/tests/financial_pair.rs
+@@ -1,5 +1,8 @@
+-//! Positive Core/1 financial observations against independently frozen literals.
+-use mori_core::{Execution, Program, Scenario, UInt, parse, simulate, simulate_metered, validate};
++//! Positive Core/1 financial observations against frozen literal expectations.
++use mori_core::{
++    AssetId, Effect, Execution, Program, Scenario, UInt, Value as CoreValue, parse, simulate,
++    simulate_metered, validate,
++};
+ use serde_json::{Value, json};
+ 
+ macro_rules! fixture {
+@@ -432,3 +435,314 @@
+         oracle["complete_ordered_effect_history"]
+     );
+ }
++
++#[derive(Debug, Clone, serde::Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Ump01Bindings {
++    pub asset: AssetId,
++    pub lender: String,
++    pub borrower: String,
++    pub principal_duty: String,
++}
++
++// Exact selected-fixture JSON integer types. Other decimal/signed rate or
++// amount domains are deliberately outside this finite adapter's admission.
++#[derive(Debug, serde::Serialize)]
++#[serde(rename_all = "camelCase")]
++struct Ump01Fields {
++    pub event_date: String,
++    pub event_type: String,
++    pub payoff: i64,
++    pub currency: String,
++    pub notional_principal: u64,
++    pub nominal_interest_rate: u64,
++    pub accrued_interest: u64,
++}
++
++fn ump01_uint_duty_amount(execution: &Execution, bindings: &Ump01Bindings) -> Result<UInt, String> {
++    execution
++        .post
++        .liabilities
++        .iter()
++        .find(|row| row.name == bindings.principal_duty)
++        .map(|row| row.amount)
++        .ok_or_else(|| "missing actual closing principal duty".into())
++}
++
++fn ump01_uint_state(execution: &Execution, name: &str) -> Result<UInt, String> {
++    match execution.post.state.get(name) {
++        Some(CoreValue::UInt(value)) => Ok(*value),
++        _ => Err(format!("missing or non-UInt source state {name}")),
++    }
++}
++
++fn ump01_integral_result(value: UInt, name: &str) -> Result<u64, String> {
++    u64::try_from(value.0).map_err(|_| format!("{name} exceeds selected integer adapter"))
++}
++
++/// Project actual public effects/duties/state into the seven present fields.
++/// This function reads no fixture results or expected oracle. It preserves no
++/// claim that projection alone validates the complete execution: `observe`
++/// returns the complete Execution for a separate trace comparison.
++fn ump01_project(
++    execution: &Execution,
++    bindings: &Ump01Bindings,
++) -> Result<Ump01Fields, String> {
++    if execution.semantics != "moriarty-core/1" || execution.action != "initialExchange" {
++        return Err("wrong selected profile/action".into());
++    }
++    let mut transfer = None;
++    let mut event = None;
++    let mut principal_effects = 0usize;
++    for effect in &execution.effects {
++        match effect {
++            Effect::Transfer {
++                asset,
++                from,
++                to,
++                amount,
++            } => {
++                if transfer.is_some()
++                    || asset != &bindings.asset
++                    || from != &bindings.lender
++                    || to != &bindings.borrower
++                {
++                    return Err("wrong or additional selected initial-exchange cashflow".into());
++                }
++                transfer = Some((asset.reference.clone(), *amount));
++            }
++            Effect::Liability {
++                name,
++                asset,
++                debtor,
++                creditor,
++                before,
++                after,
++            } => {
++                if name != &bindings.principal_duty
++                    || asset != &bindings.asset
++                    || debtor != &bindings.borrower
++                    || creditor != &bindings.lender
++                {
++                    return Err("unexpected duty identity".into());
++                }
++                if before.0 != 0 || *after != ump01_uint_duty_amount(execution, bindings)? {
++                    return Err("principal effect differs from actual closing duty".into());
++                }
++                principal_effects += 1;
++            }
++            Effect::Emit { name, value } => {
++                if event.is_some() || name != "IED" {
++                    return Err("wrong or additional selected event".into());
++                }
++                let CoreValue::UInt(time) = value else {
++                    return Err("event timestamp is not UInt".into());
++                };
++                event = Some((name.clone(), *time));
++            }
++            Effect::State { .. } => {}
++            _ => return Err("effect outside selected initial-exchange source".into()),
++        }
++    }
++    if principal_effects != 1 {
++        return Err("selected issuance requires one actual principal-duty effect".into());
++    }
++    let (currency, amount) = transfer.ok_or("missing actual cashflow")?;
++    let (event_type, time) = event.ok_or("missing actual IED emit")?;
++    if ump01_uint_state(execution, "statusTime")? != time {
++        return Err("source status time differs from emitted time".into());
++    }
++    let duty = execution
++        .post
++        .liabilities
++        .iter()
++        .find(|row| row.name == bindings.principal_duty)
++        .ok_or("missing actual outstanding principal duty")?;
++    if duty.asset != bindings.asset
++        || duty.debtor != bindings.borrower
++        || duty.creditor != bindings.lender
++    {
++        return Err("closing duty does not retain exact selected identity".into());
++    }
++    if duty.amount != amount {
++        return Err("principal duty differs from actual initial-exchange amount".into());
++    }
++    let magnitude = i64::try_from(amount.0)
++        .map_err(|_| "payoff exceeds selected signed integer adapter")?;
++    let payoff = magnitude.checked_neg().ok_or("signed payoff overflow")?;
++    let digits = format!("{:014}", time.0);
++    if digits.len() != 14 {
++        return Err("timestamp outside supplied YYYYMMDDhhmmss encoding".into());
++    }
++    let event_date = format!(
++        "{}-{}-{}T{}:{}:{}",
++        &digits[0..4],
++        &digits[4..6],
++        &digits[6..8],
++        &digits[8..10],
++        &digits[10..12],
++        &digits[12..14]
++    );
++    Ok(Ump01Fields {
++        event_date,
++        event_type,
++        payoff,
++        currency,
++        notional_principal: ump01_integral_result(duty.amount, "notionalPrincipal")?,
++        nominal_interest_rate: ump01_integral_result(
++            ump01_uint_state(execution, "nominalInterestRate")?,
++            "nominalInterestRate",
++        )?,
++        accrued_interest: ump01_integral_result(
++            ump01_uint_state(execution, "accruedInterest")?,
++            "accruedInterest",
++        )?,
++    })
++}
++
++/// Actual existing public consumer path; no fixture lookup or shadow evaluator.
++/// The caller compares the returned complete trace against frozen literals.
++fn ump01_observe(
++    source: &str,
++    scenario: &Scenario,
++    bindings: &Ump01Bindings,
++) -> Result<(Execution, Ump01Fields), String> {
++    let program = mori_core::parse(source).map_err(|error| error.to_string())?;
++    mori_core::validate(&program).map_err(|error| error.to_string())?;
++    let execution = mori_core::simulate(&program, "initialExchange", scenario)
++        .map_err(|error| error.to_string())?;
++    let fields = ump01_project(&execution, bindings)?;
++    Ok((execution, fields))
++}
++
++#[test]
++fn actus_ump01_matches_independent_core_trace_and_seven_financial_fields() {
++    use sha2::Digest;
++
++    let core_json = fixture!("actus-ump01/independent/CORE-FINANCIAL-WORK.expected.json");
++    let actus_json = fixture!("actus-ump01/independent/ACTUS-FINANCIAL-SCHEDULE.expected.json");
++    let manifest_json = fixture!("actus-ump01/independent/INPUT-ONLY-MANIFEST.json");
++    for (bytes, literal_sha256) in [
++        (
++            core_json,
++            "6711c863fd3cfaf332de85660fb19ab24b7177c07f1bbdd36943e30408053e6e",
++        ),
++        (
++            actus_json,
++            "49126886ad8efdfce72252bcbe117634dd3a6b702fc00ff798af71eda5080ce7",
++        ),
++        (
++            manifest_json,
++            "b62e24c0040b319733f49d84f5be133a74df49313f5e251c6b7f886cf78455bd",
++        ),
++    ] {
++        assert_eq!(
++            mori_core::intent::hex(&sha2::Sha256::digest(bytes.as_bytes())),
++            literal_sha256
++        );
++    }
++    let expected: Value = serde_json::from_str(core_json).unwrap();
++    let actus: Value = serde_json::from_str(actus_json).unwrap();
++    let manifest: Value = serde_json::from_str(manifest_json).unwrap();
++    let source = fixture!("actus-ump01/source.mori");
++    let opening = fixture!("actus-ump01/opening.scenario.json");
++    let bindings_json = fixture!("actus-ump01/subject-bindings.json");
++    let operands_json = fixture!("actus-ump01/call-operands.json");
++    let normative_json = fixture!("actus-ump01/ump01.normative-operands.json");
++    for (name, input) in [
++        ("inputs/source.mori", source),
++        ("inputs/opening.scenario.json", opening),
++        ("inputs/subject-bindings.json", bindings_json),
++        ("inputs/call-operands.json", operands_json),
++        ("inputs/ump01.normative-operands.json", normative_json),
++    ] {
++        let pin = manifest["files"]
++            .as_array()
++            .unwrap()
++            .iter()
++            .find(|pin| pin["path"] == name)
++            .unwrap();
++        assert_eq!(
++            mori_core::intent::hex(&sha2::Sha256::digest(input.as_bytes())),
++            pin["sha256"].as_str().unwrap()
++        );
++    }
++    let bindings: Ump01Bindings = serde_json::from_str(bindings_json).unwrap();
++    let scenario: Scenario = serde_json::from_str(opening).unwrap();
++    let original = scenario.clone();
++    let operands: Value = serde_json::from_str(operands_json).unwrap();
++    let calls = operands["calls"].as_array().unwrap();
++    assert_eq!(calls.len(), 1);
++    assert_eq!(calls[0]["action"], expected["action"]);
++    assert_eq!(calls[0]["inputs"], expected["call_inputs"]);
++    assert_eq!(
++        serde_json::to_value(&scenario.inputs).unwrap(),
++        expected["call_inputs"]
++    );
++    assert_eq!(operands["language"], expected["source_language"]);
++    assert_eq!(operands["semantics"], expected["source_semantics"]);
++
++    let (actual, fields) = ump01_observe(source, &scenario, &bindings).unwrap();
++    assert_eq!(scenario, original);
++    assert_eq!(actual.action, expected["action"].as_str().unwrap());
++    assert_eq!(
++        actual.semantics,
++        expected["source_semantics"].as_str().unwrap()
++    );
++    assert_eq!(serde_json::to_value(&actual.pre).unwrap(), expected["pre"]);
++    assert_eq!(serde_json::to_value(&actual.post).unwrap(), expected["post"]);
++    assert_eq!(
++        serde_json::to_value(&actual.effects).unwrap(),
++        expected["ordered_effects"]
++    );
++
++    let expected_steps = expected["source_prefixes"].as_array().unwrap();
++    assert_eq!(actual.steps.len(), expected_steps.len());
++    let mut prefix: Vec<Value> = Vec::new();
++    for (ordinal, (step, frozen)) in actual.steps.iter().zip(expected_steps).enumerate() {
++        assert_eq!(usize::from(step.index), ordinal);
++        assert_eq!(json!(step.index), frozen["source_ordinal"]);
++        assert_eq!(
++            serde_json::to_value(&step.value).unwrap(),
++            frozen["typed_result"]
++        );
++        assert_eq!(
++            serde_json::to_value(&step.snapshot).unwrap(),
++            frozen["complete_snapshot"]
++        );
++        let delta = serde_json::to_value(&step.effects).unwrap();
++        assert_eq!(delta, frozen["new_effects"]);
++        prefix.extend(delta.as_array().unwrap().iter().cloned());
++        assert_eq!(json!(prefix), frozen["ordered_effect_history"]);
++    }
++    assert_eq!(json!(prefix), expected["ordered_effects"]);
++
++    let events = actus["ordered_known_scheduled_financial_events"]
++        .as_array()
++        .unwrap();
++    assert_eq!(events.len(), 1);
++    let event = &events[0];
++    assert_eq!(fields.event_date, event["event_time"].as_str().unwrap());
++    assert_eq!(fields.event_type, event["event_type"].as_str().unwrap());
++    assert_eq!(
++        fields.payoff.to_string(),
++        event["payoff_in_contract_role_perspective"].as_str().unwrap()
++    );
++    assert_eq!(fields.currency, event["currency"].as_str().unwrap());
++    assert_eq!(
++        fields.notional_principal.to_string(),
++        event["post_notionalPrincipal"].as_str().unwrap()
++    );
++    assert_eq!(
++        fields.nominal_interest_rate.to_string(),
++        expected["post"]["state"]["nominalInterestRate"]["value"]
++            .as_str()
++            .unwrap()
++    );
++    assert_eq!(
++        fields.accrued_interest.to_string(),
++        expected["post"]["state"]["accruedInterest"]["value"]
++            .as_str()
++            .unwrap()
++    );
++}
