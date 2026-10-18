@@ -17,3 +17,5 @@ The circuit atlas remains the separate visual concept log, with its own authorsh
 - [October18: public draft runtime observed](2026-10-18-public-runtime-observed.md) — adopted two-case host results, retained earlier failures and limited mock evidence; no new EARS closure.
 
 - [October18: generic preparation and actual paired models](2026-10-18-generic-preparation-and-paired-models.md) — whole typed-source preparation, finite F03 comparison and retained publication failures; no generic-runtime or circuit result.
+
+- [October 18: retained native06 R3 audit and durable cleanup](2026-10-18-native06-r3-audit.md) — scoped provenance accepted by two independent reviewers; preservation and cleanup completed; outputs remain quarantined and target ELF unrun.

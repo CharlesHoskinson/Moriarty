@@ -1,0 +1,200 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/424-native06-association-corrected-test-candidate/afterimages/test_output_retained_accounting.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/427-native06-r3-successor-source-candidate/afterimages/test_output_retained_accounting.py
+@@ -727,6 +727,197 @@
+         self.assertIs(res['native_outputs_accepted'], False)
+         self.assertEqual(set(res['predecessors']), set(self.PREDECESSORS) | set(runner.R411_CONSUMED_PINS))
+ 
++    def test_retained_f_audit_r3_binds_consumed_r411_and_r419_artifacts_and_enforces_post_r419_bounds(self):
++        _write(self.packet / 'F_retained_audit.stdout', b'')
++        _write(
++            self.packet / 'F_retained_audit.stderr',
++            b'TERMINAL_REFUSAL: non-normalized dep-info path\n',
++        )
++        _write(
++            self.packet / 'TERMINAL_FAILURE_RETAINED_AUDIT.json',
++            runner.json_bytes(
++                {
++                    'message': 'phase exit nonzero F',
++                    'native_outputs_accepted': False,
++                    'type': 'Refusal',
++                }
++            ),
++        )
++        _write(
++            self.packet
++            / 'USED_LAUNCH_93645c50dfc6c31930def6df095941fec5f41243bede003b450fe0c3db0cf5f3',
++            b'consumed\n',
++        )
++        _write(self.packet / 'F_retained_audit_r2.stdout', b'')
++        _write(
++            self.packet / 'F_retained_audit_r2.stderr',
++            b'TERMINAL_REFUSAL: run-unit lacks dep-info-associated compiled build script\n',
++        )
++        _write(
++            self.packet / 'TERMINAL_FAILURE_RETAINED_AUDIT_R2.json',
++            runner.json_bytes(
++                {
++                    'message': 'phase exit nonzero F',
++                    'native_outputs_accepted': False,
++                    'type': 'Refusal',
++                }
++            ),
++        )
++        _write(
++            self.packet
++            / 'USED_LAUNCH_183c19e3bb8f12d2b527d4decdf5844995b4d5bc2e0ff0fb45e5d3c32a579ff8',
++            b'consumed\n',
++        )
++        self.c['total_wall_seconds'] = 6566
++        self.c['limits']['F']['wall_seconds'] = 2546
++
++        with patch.object(runner, 'owned_paths'):
++            args = runner.sandbox_args(
++                self.c, 'F', worker=True, precheck=False, retained_audit='r3'
++            )
++            self.assertIn('--retained-f-audit-r3', args)
++            self.assertNotIn('--retained-f-audit', args)
++            self.assertNotIn('--retained-f-audit-r2', args)
++            t_idx = args.index(str(self.target))
++            self.assertEqual(args[t_idx - 1], '--ro-bind')
++
++        preds = runner.prior_receipts(self.c, 'F', False, retained_audit='r3')
++        expected_keys = (
++            set(self.PREDECESSORS)
++            | set(runner.R411_CONSUMED_PINS)
++            | set(runner.R419_R2_CONSUMED_PINS)
++        )
++        self.assertEqual(set(preds), expected_keys)
++        for k, v in {**runner.R411_CONSUMED_PINS, **runner.R419_R2_CONSUMED_PINS}.items():
++            self.assertEqual(preds[k], v)
++
++        runner.worker(self.c, 'F', retained_audit='r3')
++        self.assertTrue((self.packet / 'F_RETAINED_QUARANTINED_OUTPUTS_R3.json').is_file())
++        (self.packet / 'F_RETAINED_QUARANTINED_OUTPUTS_R3.json').unlink()
++
++        # Cumulative F stderr (10237 + 47 + 47 + 75 = 10406) > 10400 refuses before create
++        self.c['limits']['F']['stderr_bytes'] = 10400
++        with (
++            patch.object(runner, 'supervisor_envelope'),
++            patch.object(runner, 'bound_identities'),
++            patch.object(runner, 'quotas'),
++        ):
++            with self.assertRaises(runner.Refusal) as ctx:
++                runner.launch(self.c, 'F', self.config_sha, retained_audit='r3')
++            self.assertIn('log cap hit F stderr', str(ctx.exception))
++        self.c['limits']['F']['stderr_bytes'] = 16777216
++
++        # Reset phases/cpu.stat (< 257950306) refuses
++        with (
++            patch.object(runner, 'supervisor_envelope'),
++            patch.object(runner, 'bound_identities'),
++            patch.object(runner, 'quotas'),
++            patch.object(runner, '_cg_text', return_value='usage_usec 246681730\n'),
++        ):
++            with self.assertRaises(runner.Refusal) as ctx:
++                runner.launch(self.c, 'F', self.config_sha, retained_audit='r3')
++            self.assertIn('phase CPU counter reset', str(ctx.exception))
++
++        # Unreduced wall ceiling (> 6566 / 2546) refuses
++        self.c['limits']['F']['wall_seconds'] = 2566
++        with self.assertRaises(runner.Refusal) as ctx:
++            runner.retained_f_audit(self.c, self.config_sha, retained_audit='r3')
++        self.assertIn('post-R419 wall ceiling', str(ctx.exception))
++        self.c['limits']['F']['wall_seconds'] = 2546
++
++        # Reset supervisor/cpu.stat (< 65462023) refuses
++        with (
++            patch.object(runner.signal, 'signal'),
++            patch.object(runner.signal, 'setitimer'),
++            patch.object(runner, '_cg_text', return_value='usage_usec 56990698\n'),
++            patch.object(runner, 'consent'),
++            patch.object(runner, 'supervisor_envelope'),
++        ):
++            with self.assertRaises(runner.Refusal) as ctx:
++                runner.retained_f_audit(self.c, self.config_sha, retained_audit='r3')
++            self.assertIn('supervisor CPU counter reset', str(ctx.exception))
++
++        # Tampered consumed R419 r2 artifact refuses
++        _write(self.packet / 'F_retained_audit_r2.stderr', b'tampered\n')
++        with (
++            patch.object(runner.signal, 'signal'),
++            patch.object(runner.signal, 'setitimer'),
++            patch.object(runner.resource, 'setrlimit'),
++            patch.object(runner, '_cg_text', return_value='usage_usec 65462023\n'),
++            patch.object(runner, 'consent'),
++            patch.object(runner, 'supervisor_envelope'),
++            patch.object(runner, 'bound_identities'),
++            patch.object(runner, 'owned_paths'),
++            patch.object(runner, 'quotas'),
++        ):
++            with self.assertRaises(runner.Refusal) as ctx:
++                runner.retained_f_audit(self.c, self.config_sha, retained_audit='r3')
++            self.assertIn('consumed R419 r2 predecessor digest mismatch', str(ctx.exception))
++        _write(
++            self.packet / 'F_retained_audit_r2.stderr',
++            b'TERMINAL_REFUSAL: run-unit lacks dep-info-associated compiled build script\n',
++        )
++
++        # Success path on 'r3'
++        timers = []
++        rlimits = []
++
++        def _fake_launch_r3(c, phase, sha, retained_audit=False):
++            self.assertEqual(retained_audit, 'r3')
++            _write(self.packet / 'F_RETAINED_QUARANTINED_OUTPUTS_R3.json', b'{"ok":true}\n')
++            return {
++                'phase': 'F',
++                'processes': [{'argv': [], 'audit_worker': True, 'child_exit': 0}],
++                'environment': {},
++                'wall_seconds': 0.25,
++                'log_bytes': {'stdout': 0, 'stderr': 10406},
++            }
++
++        clock = iter([100.0, 103.0, 103.5])
++        with (
++            patch.object(runner.time, 'monotonic', side_effect=lambda: next(clock)),
++            patch.object(runner.signal, 'signal'),
++            patch.object(runner.signal, 'setitimer', side_effect=lambda w, v: timers.append(v)),
++            patch.object(runner.resource, 'setrlimit', side_effect=lambda r, v: rlimits.append(v)),
++            patch.object(runner, '_cg_text', return_value='usage_usec 65462023\n'),
++            patch.object(runner, 'consent'),
++            patch.object(runner, 'supervisor_envelope'),
++            patch.object(runner, 'bound_identities'),
++            patch.object(runner, 'owned_paths'),
++            patch.object(runner, 'quotas'),
++            patch.object(runner, 'launch', side_effect=_fake_launch_r3),
++        ):
++            runner.retained_f_audit(self.c, self.config_sha, retained_audit='r3')
++
++        self.assertEqual(timers[0], 2546)
++        self.assertAlmostEqual(timers[1], 2546 - 3.0)
++        self.assertEqual(timers[-1], 0)
++        self.assertEqual(rlimits[0], (10800 - 66, 10800 - 66))
++
++        res = runner.jload(self.packet / 'F_RETAINED_AUDIT_R3_RESULT.json')
++        self.assertEqual(res['retained_audit'], 'r3')
++        self.assertIs(res['native_outputs_accepted'], False)
++        self.assertEqual(set(res['predecessors']), expected_keys)
++
++        # Fresh-output exclusivity refusal when F_RETAINED_AUDIT_R3_RESULT.json already exists
++        with (
++            patch.object(runner.signal, 'signal'),
++            patch.object(runner.signal, 'setitimer'),
++            patch.object(runner.resource, 'setrlimit'),
++            patch.object(runner, '_cg_text', return_value='usage_usec 65462023\n'),
++            patch.object(runner, 'consent'),
++            patch.object(runner, 'supervisor_envelope'),
++            patch.object(runner, 'bound_identities'),
++            patch.object(runner, 'owned_paths'),
++            patch.object(runner, 'quotas'),
++        ):
++            with self.assertRaises(runner.Refusal) as ctx:
++                runner.retained_f_audit(self.c, self.config_sha, retained_audit='r3')
++            self.assertIn(
++                'retained audit output already exists: F_RETAINED_AUDIT_R3_RESULT.json',
++                str(ctx.exception),
++            )
++
+ 
+ if __name__ == '__main__':
+     unittest.main()
