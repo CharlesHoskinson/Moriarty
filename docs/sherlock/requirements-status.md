@@ -1,13 +1,18 @@
 # Current35 EARS assessment
 
-Ten of the 35 original requirements are closed on their supported host or reporting
-scope: UIREQ-001, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008, UIREQ-009,
-UIREQ-010, UIREQ-011, UIREQ-022 and UIREQ-025.
-The [public compiler adoption](../results/sherlock-public-draft-compiler-20261018/ROOT-ORIGINAL022-ADOPTION.json)
-adds original UIREQ-022 after current source review, actual public preparation
-checks and corrected result review. DoctorWatson's [selected current report](../results/sherlock-public-draft-compiler-20261018/current-evidence/RESULT.json)
-verifies ten current adopted closures. The remaining 25 original requirements
-and all 25 refinements/68 scenarios remain open. These are separate inventories
+Eleven of the 35 original requirements are closed on their supported host or reporting
+scope: UIREQ-001, UIREQ-002, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008,
+UIREQ-009, UIREQ-010, UIREQ-011, UIREQ-022 and UIREQ-025.
+The [supported-profile adoption](../results/sherlock-supported-profile-20261018/ROOT-ORIGINAL002-ADOPTION.json)
+adds original UIREQ-002's admitted grammar/versioned-profile reporting clause and
+First-order fragment scenario. The [current report](../results/sherlock-simulate-report-20261018/CURRENTNESS-RESULT.json)
+verifies eleven current adopted closures with no findings. The remaining 24 original
+requirements and all 25 refinements/68 scenarios remain open. Whole-owner
+closed-body/unique-function admission, higher-order/letrec and generic extensions,
+bound enforcement and runtime/formal/native predicates remain distinct unfinished
+work. The [public compiler adoption](../results/sherlock-public-draft-compiler-20261018/ROOT-ORIGINAL022-ADOPTION.json)
+and [its ten-closure report](../results/sherlock-public-draft-compiler-20261018/current-evidence/RESULT.json)
+retain their dated evidence; they do not describe the latest closure count. These are separate inventories
 from retained security, financial, formal, native and release requirements.
 All 26 compiler correspondence obligations remain named-unproved; mapping-report
 acceptance supplies no semantic theorem, runtime trace or native proof.
@@ -20,7 +25,7 @@ retain their exact scoped observations. Matching files alone cannot close a requ
 | ID | Implementation | Validation | Acceptance | Exact missing work / next discriminator |
 |---|---|---|---|---|
 | UIREQ-001 | complete | observed | closed | None for this exact host predicate: adopt exact scenario/current source evidence; do not repeat unchanged passing fixtures. |
-| UIREQ-002 | partial | partial | open | Use real current selected compiler/report API on one named-call/constructor/match admitted program; compare every required grammar/domain/bound/disposition field, or located Unsupported, against independent declaration. |
+| UIREQ-002 | complete | observed | closed | Original admitted supported-grammar/versioned-profile report and First-order fragment scenario adopted after ProfileFragment passed under two explicit configurations. Do not rerun unchanged reporting tests; whole-owner closed-body/unique-function admission, generic extensions, bound enforcement and runtime/formal/native requirements remain separate. |
 | UIREQ-003 | complete | observed | closed | Lexical parameter binding and caller scope are source-complete and observed in the exact original case; retain unchanged evidence. |
 | UIREQ-004 | partial | partial | open | Nested-arguments case now observed: double2 completes before increment3 and add returns8. Implement generic ConstructorFields and independent strict/recursive field cases; do not repeat the passed argument test. |
 | UIREQ-005 | complete | observed | closed | Factorial3, even4 and odd5 use the same generic call/return relation and all passed under declared bounds. |
