@@ -7,6 +7,8 @@ use mori_diagnostics::{MoriDiagnostic, NamedSource};
 use crate::json::CheckReport;
 use crate::shell::Shell;
 
+use super::check_source::{self, SourceCheckConsumer};
+
 #[derive(Debug, clap::Args)]
 pub struct Args {
     /// Source file
@@ -26,86 +28,91 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         shell.status("Checking", &name);
     }
     let started = Instant::now();
-    if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
-        let staged = mori_core::language(&source).is_ok_and(|language| language == "moriarty/2");
-        let result = if staged {
-            mori_core::stage::load(&source).map(|program| program.program().clone())
-        } else {
-            mori_core::parse(&source)
-        };
-        if args.json {
-            let report = match &result {
-                Ok(program) => {
-                    serde_json::json!({"status":"accepted", "file":name,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
-                }
-                Err(error) => {
-                    serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
-                }
-            };
-            if staged {
-                super::simulate::print_stage_report(report)?;
-            } else {
-                super::core_io::print(&report)?;
-            }
-        } else {
-            match &result {
-                Ok(_) => shell.status("Finished", "bounded core check"),
-                Err(error) => shell.error(error),
-            }
+    let outcome = check_source::dispatch(
+        &source,
+        CliConsumer {
+            name: &name,
+            source: &source,
+            json: args.json,
+            shell,
+        },
+    )?;
+    if outcome.beta {
+        if let Some(report) = outcome.report {
+            super::core_io::print(&report)?;
+        } else if outcome.accepted {
+            shell.status(
+                "Finished",
+                format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+            );
         }
-        return Ok(if result.is_ok() {
-            ExitCode::SUCCESS
-        } else {
-            ExitCode::FAILURE
-        });
     }
-    let (accepted, report) = match mori_parser::parse(&source) {
-        Err(error) => {
-            let diagnostics = vec![error];
-            let report = args
-                .json
-                .then(|| CheckReport::new(name.clone(), &source, None, &diagnostics));
-            (
-                finish(shell, &name, &source, diagnostics, args.json),
-                report,
-            )
-        }
-        Ok(ast) => {
-            if !args.json {
-                shell.verbose_status(
-                    "Parsed",
-                    format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
-                );
-            }
-            let result = mori_checker::check(&ast);
-            let report = args.json.then(|| {
-                CheckReport::new(
-                    name.clone(),
-                    &source,
-                    Some(&result.checked),
-                    &result.diagnostics,
-                )
-            });
-            (
-                finish(shell, &name, &source, result.diagnostics, args.json),
-                report,
-            )
-        }
-    };
-
-    if let Some(report) = report {
-        super::core_io::print(&report)?;
-    } else if accepted {
-        shell.status(
-            "Finished",
-            format!("check in {:.2}s", started.elapsed().as_secs_f64()),
-        );
-    }
-    Ok(if accepted {
+    Ok(if outcome.accepted {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
     })
+}
+
+struct CliOutcome {
+    accepted: bool,
+    beta: bool,
+    report: Option<CheckReport>,
+}
+
+struct CliConsumer<'a> {
+    name: &'a str,
+    source: &'a str,
+    json: bool,
+    shell: &'a mut Shell,
+}
+
+impl SourceCheckConsumer for CliConsumer<'_> {
+    type Output = super::Result<CliOutcome>;
+
+    fn parsed(&mut self, tokens: usize, nodes: usize) {
+        if !self.json {
+            self.shell
+                .verbose_status("Parsed", format!("{tokens} tokens, {nodes} nodes"));
+        }
+    }
+
+    fn beta(
+        self,
+        checked: Option<&mori_checker::Checked<'_>>,
+        diagnostics: Vec<MoriDiagnostic>,
+    ) -> Self::Output {
+        let report = self.json.then(|| {
+            check_source::beta_report(self.name.to_owned(), self.source, checked, &diagnostics)
+        });
+        let accepted = finish(self.shell, self.name, self.source, diagnostics, self.json);
+        Ok(CliOutcome {
+            accepted,
+            beta: true,
+            report,
+        })
+    }
+
+    fn core(
+        self,
+        result: Result<mori_core::Program, mori_core::Error>,
+        staged: bool,
+    ) -> Self::Output {
+        if self.json {
+            let report = check_source::core_report(self.name, self.source, &result, staged);
+            super::core_io::print(&report)?;
+        } else {
+            match &result {
+                Ok(_) => self.shell.status("Finished", "bounded core check"),
+                Err(error) => self.shell.error(error),
+            }
+        }
+        Ok(CliOutcome {
+            accepted: result.is_ok(),
+            beta: false,
+            report: None,
+        })
+    }
 }
 
 /// Renders the diagnostics, unless the report is JSON. True when there are none.
