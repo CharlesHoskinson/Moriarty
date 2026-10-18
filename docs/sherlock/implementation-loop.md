@@ -230,3 +230,15 @@ The source lanes remain persistent after this batch. Future batch handoffs name 
 
 
 October 18 observed check follow-up: the fresh Quint source review approved the finite operations, but the first actual typecheck failed with QNT101 on local binders `fields` and `field`; the two later commands remain unrun. The corrected K queries parsed, reduced and printed with exit0 for all seven cases, but complete comparison rejected every unevaluated `ngObserve` term. This is an evaluation failure, not correspondence evidence. The dedicated agents are preparing source/operation corrections while preserving these receipts. Clean review found a reserved `prefix` identifier and a non-definitional `rfl` base case; kernel checks remain unrun pending corrected source.
+
+
+### Recover all three formal lanes after compaction
+
+The Clean, Quint and K lanes are permanent responsibilities of this loop until Sherlock's retained formal and correspondence requirements are complete. A context summary alone is insufficient recovery. On every compaction/restart, read checkout `AGENTS.md`, this section and the latest timestamped typed Root continuation under `.moriarty-dev/runtime/sherlock-review-20261017/295-root-runtime-integration/` before selecting new work.
+
+1. Restore each lane's named owner, source and result paths/hashes, independent input/oracle binding, pending review/check, next substantive action and unsupported requirements. Keep actual source, kernel/model execution, complete comparison and native acceptance separate.
+2. Query the actual agent roster and poll any recorded active session handle. A checkpoint is a locator, never evidence that an agent or process is still running. Continue an existing lane; replace it only after terminal or missing state is confirmed. Do not duplicate a live call or restart because an observation timed out.
+3. Keep dedicated ownership for Clean, Quint and K. A completed source subtask is followed by its next missing semantic/model/correspondence task while Root integrates and runs reviewed checks. Preserve failed attempts, unchanged passing prefixes, independent expectations, source isolation and the current review routing.
+4. Every primary batch handoff records the affected counterpart files and check/comparison, or the exact unsupported construct and follow-up action. Every Root checkpoint carries all three lane records, even while another implementation or native prerequisite is the immediate priority. No lane may disappear from recovery because its last subtask completed.
+
+Observed first-batch evidence on October 18: Clean's canonical type module and three continuation/reference modules passed their finite kernel checks; Quint's corrected model passed typechecking, eight directed tests and its 192-step invariant/witness run; K's seven nominal cases matched independently frozen complete tapes. These are scoped results. Subsequent nominal recursion, complete wire comparisons, production correspondence, circuits and target acceptance retain their own obligations.
