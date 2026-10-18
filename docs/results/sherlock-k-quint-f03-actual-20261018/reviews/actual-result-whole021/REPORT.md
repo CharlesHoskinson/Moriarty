@@ -1,0 +1,158 @@
+# Independent Actual-Result & Whole Original UIREQ-021 Review
+
+## 1. Reviewer Identity & Non-Author Attestation
+
+- **Conversation ID (`reviewer_cid`)**: `7d931b5d-fc0c-4a84-927e-2b7af395d63b` (same independent reviewer context across Turns 1–4)
+- **Working Directory (`cwd`)**: `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ021-F03-K-caller-materialized-review/F03-next-capture-and-projection/optional-lf-candidate-02/fresh-nonauthor-review-transport/fresh-provider-cwd`
+- **Model**: Gemini 4 Argon (High)
+- **Independence**: Non-author of all production/candidate modules (`dfa2b7b7...`, `7356947d...`, `8b5575c5...`), consumer scripts, and the separately authored 7-method guard test file (`4d7aec...` / `85cf...`).
+- **Execution / Mutation Discipline**: Zero tools, zero commands, zero file edits, zero code/test authorship, and zero model/evaluator/provider executions performed.
+
+---
+
+## 2. Truthful Coverage Inventory
+
+| Coverage Tier | Artifact / Path | Size & Digest | Status in This Review |
+| :--- | :--- | :--- | :--- |
+| **`PROVIDED_FULL_BODY` (Read Inline in Turn 4)** | `.../inputs/UIREQ021-ORIGINAL-CLAUSE-EXACT.md` (BODY 1) & `WHOLE021-CLAUSE-DECISION-REQUEST.json` (BODY 6) | `480B`, SHA256 `547dc499c5a315667354177184d716ac40dc58491a95f559b69aa3338c3fab6f` (matches `openspec/.../universal-interpreter/spec.md`, `23568B`, `e593ecbe...`) | Verbatim original requirement and scenario read inline |
+| **`PROVIDED_FULL_BODY` (Read Inline in Turn 4)** | `.../inputs/COMPLETE-REPORT-METADATA-AND-RAW-REFERENCES.json` (BODY 2) & `LOSSLESS-ROUNDTRIP-AND-OMISSION-PROOF.json` (BODY 4) | `32588B`, SHA256 `dde268973728b29d9daa22311e552447cbb2132f4ecdd3e1f745232baccdcca0` | Every report metadata/projection/rule-action/gap field of `paired-projection-report.json` (`12965725B`, `c809897f...`) read inline; only `/selected_paired_projection/layers/{k,quint}/raw_context` replaced by explicit JSON-pointer/SHA256 references |
+| **`PROVIDED_FULL_BODY` (Read Inline in Turn 4)** | `.../inputs/ALL95-SNAPSHOTS-ALL94-RECORDS.lossless.json` (BODY 3) & `EXECUTION-JOINS-READABLE.compact.json` (BODY 5) | `23235B`, SHA256 `c3fcf13bb2693a341cd2fe6b2a586534a6ac912a119e7cbc43d771965edcf2fb` | All 102 canonical strings, all 95 distinct 11-field common snapshots, and all 94 ordered transition records read inline (exact roundtrip to both `206965B` `/observations/runs/0` objects, SHA256 `6a6071768c47bf1daca8ecad6ddb37621c475289a99a1a90759b2be7e64d77f1`) |
+| **`PROVIDED_FULL_BODY` (Read Inline in Turn 4)** | `ACTUAL-CHECKER-COMPARISON-FUNCTIONS.COMPLETE.py.txt` (BODY 7), `host_observations.py` (BODY 8), `QUINT-RENDERER-SNAPSHOT-ADAPT.COMPLETE.py.txt` (BODY 9) | Complete comparison functions from `check.py`, full `host_observations.py`, and `_Renderer`/`project_snapshot`/`_adapt` from `quint_observations.py` | Complete comparison, oracle-expansion, and Quint projection functions read and audited inline |
+| **`PROVIDED_FULL_BODY` (Read Inline in Turn 4)** | Passive & Producer Receipts: `RESULT.json` (BODY 10), `0.RESULT.json` (BODY 11), `1.RESULT.json` (BODY 12), `2.RESULT.json` (BODY 13), `failedDecodeOnlyAndKArtifacts.{stdout,stderr}` (BODY 14–15), `projectActualQuintITF.stderr` (BODY 16), `compareActualPairAndIndependentOracle.stderr` (BODY 17), `actual-raw-F03-01/RESULT.json` (BODY 18), `ACTUAL-K-CAPTURE-READBACK.json` (BODY 19), `actual-Quint-F03-01/RESULT.json` (BODY 20), `f03Typecheck.RESULT.json` (BODY 21), `f03Fuel93ObservationTest.RESULT.json` (BODY 22), `f03Fuel93ObservationTest.stdout` (BODY 23) | Complete execution receipts and stream captures | All producer and passive operation receipts read inline |
+| **`PROVIDED_FULL_BODY` (Read Inline in Turn 4)** | `INDEPENDENT-F03-PROGRAM-COMPLETE.json` (BODY 24) & `R328-NECESSARY-OFFLINE-UNIT-CATEGORIES.json` (BODY 25) | Complete selected `F03` oracle program object and 6 R328 offline guard categories | Read inline |
+| **`PRIOR_QUALIFIED_SOURCE` (Read Inline in Turns 1–3 of Same CID `7d931b5d...`)** | Candidate 04 `assemble_k_f03_observations.py` (`63706B`, `83a6424f...`), `k_capture_observations.py` (`42838B`, `85e4e79a...`), `k_observations.py` (`7686B`, `540128fd...`), `k_terms.py` (`5666B`, `c79a852c...`), `test_actual_f03_decode_only.candidate04.py` (`6248B`), 96 lossless print configs, 94-edge byte/span matrix, and 5 raw `(input_kore, actual_logged_config)` pairs | Audited inline in Turns 1–3 | Retained in same reviewer context |
+| **`EXTERNALLY_PINNED_NOT_READ_INLINE`** | Unfactored `paired-projection-report.json` (`12965725B`, `c809897f...`), `/selected_paired_projection/layers/k/raw_context` (`10925906B`, `269f8f8a...`), `/selected_paired_projection/layers/quint/raw_context` (`258649B`, `8d64c611...`), `k-observations.json` (`11114869B`, `780dfb6b...`), `k-decoded-run.json` (`10898898B`, `5b911c28...`), `k-assembled-provenance.json` (`26302B`, `be7483a9...`), `quint-observations.json` (`465291B`, `85f5b9e2...`), raw `f03Fuel93ObservationTest.itf.json` (`256488B`, `2d32b41a...`), 488 raw K stage files (`3732460B`) + `actual/k/receipt.json` (`1642368B`, `c745f760...`), `fixture-normal-prefixes.json` (`165696B`, `13d00607...`), full `fixture-normal-programs.json` (`4420B`, `71e780f2...`), remaining CLI/ITF wrapper lines of `check.py` / `quint_observations.py`, and unrun 7-method guard test file (`13119B`, `4d7aec...`) | Pinned by byte length and SHA256 | Machine-checked / externally pinned; not claimed manually expanded or read inline by LLM |
+
+---
+
+## 3. Mandatory Literal Readbacks & Evidence Quotes
+
+1. **Verbatim Original UIREQ-021 Clause and Scenario** (`UIREQ021-ORIGINAL-CLAUSE-EXACT.md`, BODY 1):
+   ```markdown
+   ### Requirement: UIREQ-021 Declared model projection
+   WHEN a K trace is compared with Quint, the adapter SHALL identify its common domain and rule-to-action projection.
+
+   #### Scenario: Finite call-return comparison
+   - **WHEN** A pure arithmetic/list trace is compared with a bounded Quint instance.
+   - **THEN** The report names numeric bounds, field maps, hidden steps, state representation differences and unmatched finance/wait behavior; trace agreement is not called refinement.
+   ```
+
+2. **Exact Report Status, Disposition, Refinement/Acceptance Qualifiers, and Numeric Bounds** (`COMPLETE-REPORT-METADATA-AND-RAW-REFERENCES.json`, BODY 2):
+   ```json
+   "status": "match",
+   "scope": "explicit-selected-supplied-k-quint-complete-state-comparison-only",
+   "disposition": "supplied-finite-complete-trace-agreement-only",
+   "actual_execution": "not-established-by-comparator",
+   "refinement": "none",
+   "acceptance": "none",
+   ```
+   ```json
+   "numeric_bounds": {
+     "UInt128_min": 0,
+     "UInt128_max": 340282366920938463463374607431768211455,
+     "initial_fuel": 93,
+     "stack_limit": 64,
+     "observed_stack_limit": {"k": 64, "quint": 64},
+     "observed_logical_frame_peak": {"k": 11, "quint": 11}
+   }
+   ```
+
+3. **Exact `ruleToAction`, `unmatchedFinanceWait`, and `reportDisposition` Declarations** (`COMPLETE-REPORT-METADATA-AND-RAW-REFERENCES.json`, BODY 2):
+   ```json
+   "ruleToAction": "For each actually observed K semantic rule span/startline, compare the Quint step transition raw lastRule with that same pinned rule line and lastCharge with observed charge. step dispatches through generic advance/evaluate/return/invoke/bind/cases/primitive branches; no case-specific interpreter. Startup74 is model initialization metadata, not an observed Quint startup action.",
+   ```
+   ```json
+   "unmatchedFinanceWait": "Chosen pure K-A grammar has no financial working store/effects/duties/await/resume cells. Older universalMachine localwaiting does not establish a Kfinancial counterpart; no mapping is claimed for it. Bfinancial/helper state and newer interpreter-chunk models are separate retained obligations.",
+   "reportDisposition": "FINITE_ACTUAL_TRACE_AGREEMENT_ONLY when actual pair matches; semantic refinement/proof/native/target NONE. Producer origin comes from separately retained actual receipts, not adapter hashes alone."
+   ```
+
+4. **Exact Comparator Structural Equality and Pairwise Comparison Logic** (`ACTUAL-CHECKER-COMPARISON-FUNCTIONS.COMPLETE.py.txt`, BODY 7):
+   ```python
+   left = {key: value for key, value in selected['k'].items() if key != 'producer'}
+   right = {key: value for key, value in selected['quint'].items() if key != 'producer'}
+   paired_difference = adapter.compare_observations(left, right, first_difference)
+   ```
+
+5. **Exact Quint Snapshot Projection and Post-Startup Trace Adaptation** (`QUINT-RENDERER-SNAPSHOT-ADAPT.COMPLETE.py.txt`, BODY 9):
+   ```python
+   def project_snapshot(state):
+       """Render every shared post-startup state field from one decoded Snapshot."""
+       renderer = _Renderer(state['program'])
+       return dict(code_k=_sequence(state['program']['functions'], 'uiFunction', 'uiNoFuns', renderer.function),
+                   entry_k=renderer.expression(state['program']['entry']),
+                   control_k=renderer.control(state['control']),
+                   environment_k=renderer.environment(state['environment']),
+                   frames_top_first_k=[renderer.frame(frame) for frame in state['frames']],
+                   depth=len(state['frames']), stack_limit=state['stackLimit'],
+                   remaining_fuel=state['remaining'], initial_fuel=state['initial'],
+                   output_k=renderer.outcome(state['outcome']), charged_steps=state['initial'] - state['remaining'])
+   ```
+   ```python
+   if (_variable(states[0], 'lastRule'), _variable(states[0], 'lastCharge')) != (74, 0):
+       raise ValueError('initial state lacks post-startup 74/0 metadata')
+   ```
+
+---
+
+## 4. Actual-Result Verification & Structural vs. Factored Read Scope
+
+### 4.1 Execution & Artifact Hash Joins (BODY 2, 3, 4, 5, 10–23)
+- **Independent Producer Runs**:
+  - **K**: `actual-raw-F03-01/RESULT.json` (BODY 18) and `ACTUAL-K-CAPTURE-READBACK.json` (BODY 19) record `actual_exit: 0` (`73.607641514s`), `195` child processes (`kast`, `exec-000..096`, `print-000..096`) all exiting `0` plus `1` local `initializer.kore`, materializing `488` stage files (`3,732,460B`) and parent `actual/k/receipt.json` (`1,642,368B`, SHA256 `c745f760...`).
+  - **Quint**: `f03Typecheck.RESULT.json` (BODY 21, `actual_exit: 0`, `1.130s`) and `f03Fuel93ObservationTest.RESULT.json` (BODY 22, `actual_exit: 0`, `1.188s`) materialized `f03Fuel93ObservationTest.itf.json` (`256,488B`, SHA256 `2d32b41a59de7d9c2f805af867a1ac016f86292e068e755e96aebaacdeb0ceef`, `95` raw states).
+- **Three Passive Operations (BODY 10–17)**:
+  - All 517 pinned inputs matched pre- and post-execution (`all517InputPinsPrePostUnchanged: true`).
+  - **Op 0 (`failedDecodeOnlyAndKArtifacts`)**: `actualExit: 0` (`0.198s`), ran the single previously failed test `test_actual_decoding_has_complete_eleven_field_94_record_contract` (`OK`), retaining the Attempt 02 byte-preservation pass without replay, and exclusively wrote `k-observations.json` (`11,114,869B`, `780dfb6b...`), `k-decoded-run.json` (`10,898,898B`, `5b911c28...`), and `k-assembled-provenance.json` (`26,302B`, `be7483a9...`).
+  - **Op 1 (`projectActualQuintITF`)**: `actualExit: 0` (`0.069s`), wrote complete fresh stdout file `quint-observations.json` (`465,291B`, `85f5b9e2...`), which embeds `file_sha256: "2d32b41a59de7d9c2f805af867a1ac016f86292e068e755e96aebaacdeb0ceef"` joining directly to `f03Fuel93ObservationTest.itf.json`.
+  - **Op 2 (`compareActualPairAndIndependentOracle`)**: `actualExit: 0` (`0.170s`), consumed `k-observations.json` (`780dfb6b...`), `quint-observations.json` (`85f5b9e2...`), and the frozen oracle fixtures (`71e780f2...`, `13d00607...`), and wrote complete fresh stdout file `paired-projection-report.json` (`12,965,725B`, `c809897f...`) with `report.status = "pass"`, `supplied_observation_status = "match"`, `selected_paired_projection.status = "match"`, `paired.status = "match"`, and `first_difference = null` across all layers.
+- **Identity Digest Join (`832f1c65...` vs. `c1ab51c6...`)**:
+  - `oracle.input_sha256` (`832f1c6521477d052b1021cb7cff25c2a7da3b807e6374243479e7b3126e4100`) is the SHA256 of compact sorted-key UTF-8 JSON of the six source fields in `fixture-normal-programs.json` (BODY 24), whereas `c1ab51c62fc70ea5693e1d9046445cba6a03eb3222273c045b511913c0f6b91b` is the SHA256 of the 359-byte K input file `F03-fuel093-stack064.ui`. Both bind the exact same `F03` `code_k`, `entry_k`, `initial_fuel = 93`, `stack_limit = 64`, and `main.k` (`b3746ff5...`).
+
+### 4.2 Checker Full Structural Comparison vs. LLM Factored Read Coverage
+- **Checker Coverage (BODY 7 & BODY 8)**: `check.py` (`first_difference`, `compare_supplied_observations`, `compare_paired_observations`) and `host_observations.py` (`expected_observations`, `literal_snapshot`) recursively compare exact Python types, all dictionary keys, and all ordered list elements of `/observations/runs/0` (`206,965` canonical bytes, SHA256 `6a607176...`) between K and the frozen oracle, between Quint and the frozen oracle, and directly between K and Quint.
+- **LLM Factored Read Coverage (BODY 2 & BODY 3)**: In BODY 3 (`ALL95-SNAPSHOTS-ALL94-RECORDS.lossless.json`), all 95 distinct 11-field snapshots (`snapshots[0..94]`), all 102 strings (`strings[0..101]`), and all 94 transition records (`records[0..93]`) were read inline in factored form:
+  - Initial state `snapshots[0]` starts at `uiEval(uiCall(3, ...))` with `remaining_fuel = 93`, `charged_steps = 0`, `depth = 0`, `environment_k = ".Map"`, `output_k = "uiPending()"`.
+  - Records `0..92` execute 93 charged transitions (`charge = 1`), preserving named recursive `uiCall(3, ...)` expressions, full caller environments (`0 |-> ... 1 |-> ... 2 |-> ...`), and all top-first stack frames up to peak `depth = 11` (`snapshots[73..74]` and `snapshots[78..79]`), unwinding `3 + 0 = 3`, `2 + 3 = 5`, and `1 + 5 = 6` to `snapshots[93]` (`control_k = "uiRet(uiU(6))"`, `remaining_fuel = 0`, `charged_steps = 93`).
+  - Record `93` (`[80, 0, 93, 94]`) applies free publication rule `80` (`charge = 0`) to reach terminal state `snapshots[94]` (`control_k = ".K"`, `output_k = "uiDone(uiU(6))"`, `depth = 0`, `frames_top_first_k = []`, `environment_k = ".Map"`, `remaining_fuel = 0`, `charged_steps = 93`, `terminal_has_next = False`).
+
+---
+
+## 5. Whole Original UIREQ-021 Predicate & Scenario Mapping
+
+| Original UIREQ-021 Predicate (`UIREQ021-ORIGINAL-CLAUSE-EXACT.md`, BODY 1) | Report / Source Evidence (`BODY 2`, `BODY 3`, `BODY 7`, `BODY 9`) | Disposition |
+| :--- | :--- | :--- |
+| **1. "WHEN a K trace is compared with Quint, the adapter SHALL identify its common domain..."** | `selected_paired_projection.projection_contract.commonDomain` & `comparisonProfile: "sherlock-k-a/1"`, `referenceSource` (`models/sherlock/k/main.k`, `b3746ff5...`), naming closed immutable K-compatible syntax/function tables, acyclic expression refs, named recursive functions, `UInt128`/`Bool`/`List[UInt128]`/`Tree`, finite fuel/stack, and explicit `notClaims`. | **SATISFIED (Scoped to Finite Pure `sherlock-k-a/1`)** |
+| **2. "...and rule-to-action projection."** | `projection_contract.ruleToAction` and `selected_rule_action_projection.{k,quint}` (all 94 ordered entries `0..93` matching on `rule_start_line` and `charge`: `[1]*93 + [0]` with final rule `80`). K spans matched to `COMPILED-MAIN-RULE-SPANS-01.json`; Quint steps projected from raw `lastRule`/`lastCharge` in `_adapt` (BODY 9), with startup rule `74` documented as separate K probe vs. Quint initial `(74, 0)` metadata. | **SATISFIED** |
+| **3. "Scenario: Finite call-return comparison — WHEN A pure arithmetic/list trace is compared with a bounded Quint instance."** | Actual F03 recursive list-sum `[1, 2, 3]` (`initial_fuel = 93`, `stack_limit = 64`) compared between actual K capture (`195` child commands + initializer -> `k-observations.json` `780dfb6b...`) and bounded Quint ITF capture (`95` states -> `quint-observations.json` `85f5b9e2...`), matching across all 95 snapshots and 94 records (`paired.status = "match"`, `first_difference = null`). | **SATISFIED** |
+| **4. "THEN The report names numeric bounds..."** | `selected_paired_projection.numeric_bounds` and `commonDomain.numericBounds` name `UInt128_min: 0`, `UInt128_max: 340282366920938463463374607431768211455` (`2^128 - 1`, declared bound, not exhaustively enumerated), `initial_fuel: 93`, `stack_limit: 64`, `observed_stack_limit: {"k": 64, "quint": 64}`, and `observed_logical_frame_peak: {"k": 11, "quint": 11}`. | **SATISFIED** |
+| **5. "...field maps..."** | `projection_contract.fieldMaps` maps all 11 common snapshot fields (`code_k`, `entry_k`, `control_k`, `environment_k`, `frames_top_first_k`, `depth`, `stack_limit`, `initial_fuel`, `remaining_fuel`, `charged_steps`, `output_k`), transition record fields (`rule_start_line`, `charge`, `before`, `after`), and `terminal_has_next`. | **SATISFIED** |
+| **6. "...hidden steps..."** | `projection_contract.hiddenSteps` names K internal helper/function normalization within A-charged rules (unmeasured, not 0), Quint pure helper folds/rendering, Quint post-publication `rule 0 / charge 0` stutters (`terminal_stutters: [0]`), and K `<generatedCounter>` / pre-startup Kore retained raw outside the 9-cell projection. | **SATISFIED** |
+| **7. "...state representation differences..."** | `projection_contract.fieldMaps[*].difference`, `layers.k.projection`, and `layers.quint.projection.gaps` document K structural text vs. Quint `ExprId` tables (`_Renderer` expansion keeping named calls), canonical signed-decimal String key ordering for maps, top-first frame list vs. nested `uiFrame` terms, and K terminal replay probe (`exec-096/print-096`) vs. Quint semantic terminal convention. | **SATISFIED** |
+| **8. "...and unmatched finance/wait behavior..."** | `projection_contract.unmatchedFinanceWait` and `selected_paired_projection.gaps` explicitly state that pure `K-A` has no financial working store, effects, duties, or await/resume cells, and that older `universalMachine` local waiting and `B` financial/helper models remain separate unmapped obligations. | **SATISFIED** |
+| **9. "...trace agreement is not called refinement."** | `report.acceptance: "none"`, `selected_paired_projection.refinement: "none"`, `selected_paired_projection.acceptance: "none"`, `disposition: "supplied-finite-complete-trace-agreement-only"`, and `reportDisposition: "FINITE_ACTUAL_TRACE_AGREEMENT_ONLY when actual pair matches; semantic refinement/proof/native/target NONE."` | **SATISFIED** |
+
+---
+
+## 6. Guard-Unit Dependency vs. Original UIREQ-021 Acceptance Boundary
+
+- **Why Unrun Offline Guard Units Block General Tool Adoption, Not Original UIREQ-021 Clause Acceptance**:
+  - The original UIREQ-021 requirement and its `Finite call-return comparison` scenario (BODY 1) specify the required content and honesty of the model-projection comparison report when comparing a pure arithmetic/list K trace with a bounded Quint instance. Every predicate of that specification is fulfilled in `paired-projection-report.json` (`c809897f...`) on the verified, hash-pinned F03 artifacts.
+  - Conversely, general installation or adoption of the unadopted F03 assembler (`assemble_k_f03_observations.py`) and Candidate 04 decoder (`k_capture_observations.py`) into the repository's general QA toolchain requires offline negative/guard test coverage against malformed/hostile inputs. Those guard obligations—all six R328 categories (BODY 25), multiline `<k>` single-item vs. multi-item guards, and the newly authored but **unrun** 7-method `_logged_map_key_line` / `_logged_input_gaps` guard suite (`13119B`, `4d7aec...`)—remain **mandatory and unwaived** before general tool adoption.
+
+---
+
+## 7. Verdicts & Explicit Retained Boundaries
+
+### 7.1 Actual-Result Acceptance Verdict
+- **Verdict**: **`APPROVE_WITH_LIMITS`**
+- **Scope**: Accepts the actual execution results of the three passive operations (`actual-three-passive-04/RESULT.json`, all three `actualExit: 0`, all 517 input pins unchanged) and the resulting artifacts `k-observations.json` (`780dfb6b...`), `k-decoded-run.json` (`5b911c28...`), `k-assembled-provenance.json` (`be7483a9...`), `quint-observations.json` (`85f5b9e2...`), and `paired-projection-report.json` (`c809897f...`), joined to the actual K (`actual-raw-F03-01/RESULT.json`, `actual/k/receipt.json` `c745f760...`) and Quint (`f03Typecheck.RESULT.json`, `f03Fuel93ObservationTest.RESULT.json`, `f03Fuel93ObservationTest.itf.json` `2d32b41a...`) producer receipts.
+
+### 7.2 Whole Original UIREQ-021 Verdict
+- **Verdict**: **`APPROVE_WITH_LIMITS`**
+- **Scope & Retained Limits**:
+  1. **Satisfied Original Clause & Scenario**: All predicates of `UIREQ-021 Declared model projection` and `Scenario: Finite call-return comparison` (`UIREQ021-ORIGINAL-CLAUSE-EXACT.md`, SHA256 `547dc499...`) are satisfied for the bounded finite pure `sherlock-k-a/1` call-return comparison on `F03` (`initial_fuel = 93`, `stack_limit = 64`), with Root holding sole authority to record closure adoption.
+  2. **General Tool Adoption Still Blocked**: Neither `assemble_k_f03_observations.py` nor Candidate 04 `k_capture_observations.py` is approved for general installation or adoption; all six R328 offline guard categories, multiline single-item `<k>` guards, and the unrun 7-method map-key guard suite (`4d7aec...`) remain mandatory prerequisites for general tool adoption.
+  3. **Catalogue & Outer-Counter Scope**: This paired report observes only the selected `F03` (`initial_fuel = 93`) K/Quint run (`omitted_programs: 2`, `omitted_runs: 171`); catalogue cases `N01..N08`, `F04`, and `F05` are unobserved by this report, and the outer `8` programs / `216` prefix rows in `report.counts` validate frozen JSON/Rust literal transcriptions only, not freshly executed 216-prefix model runs.
+  4. **Comparator & Evidence Limits Preserved**: `execution_layers: not-run` and `actual_execution: "not-established-by-comparator"` truthfully describe the passive comparator (`check.py`), while producer execution is evidenced separately by Root's K/Quint receipts; supplied receipts remain unauthenticated inside the adapter (`producer_authenticity: "not-established"`).
+  5. **No Refinement, Proof, Finance/Wait, or Native/H1 Claim**: Trace agreement is finite trace agreement only (`refinement: "none"`, `acceptance: "none"`). Pure `K-A` has no finance/wait counterpart; `B` financial/helper models, Lean/Clean, circuits, theorems, native proofs, target execution, `C4 OPEN`, `R2 UNSAT`, `60460 HOLD`, and stopped `Amendment 10` remain unchanged.
+

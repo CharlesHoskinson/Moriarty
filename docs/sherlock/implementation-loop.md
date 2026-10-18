@@ -57,8 +57,8 @@ and its regression demonstrates that a source edit invalidates closure. Fourteen
 original host/reporting/financial-observation clauses are now adopted and current,
 including indexed provenance UIREQ-027, typed arithmetic UIREQ-030 and the real
 Core/2 owning financial producer/adapter UIREQ-017.
-The [latest adoption/currentness](../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json)
-reports 14 closed,18 partial and3 absent originals; all25 refinements stay open. Select the remaining missing
+The [current report](../results/sherlock-k-quint-f03-actual-20261018/ROOT-FINAL-CURRENTNESS-READBACK.json)
+reports 15 closed originals after the [original021 adoption](../results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json), with implementation counts15 complete,17 partial and3 absent; all25 refinements stay open. Select the remaining missing
 behavior from the [current checklist](requirements-status.md) and
 `NEXT-ACTIONS.json`: whole-owner closed-body/unique-function admission,
 remaining public compiler/refusal coverage and resource accounting/chunk observations,
@@ -209,3 +209,10 @@ real Scalar Add/Sub/Mul components, including full intermediates before checked
 UInt128/error10 selection. Circuit constraints, row-cost/layout winner, charged-work
 equivalence and native/proof/target acceptance are separate unfinished work. This
 ordinary adoption does not make the consumed retained native audit a pass.
+
+
+### October18 one-builder preparation and actual paired-model adoption
+
+The [preparation feature](../results/sherlock-generic-one-builder-preparation-20261018/ROOT-PREPARATION-FEATURE-ADOPTION.json) records two actual complete typed-source preparation observations through `prepare_ext_program_types`; generic admission/runtime, ConstructorFields and ordered MatchPlan remain missing and original034 stays open. Exact public alias correction restored the existing reader's fourteen-closure currentness without replaying passed product work.
+
+Root's separate [original021 adoption](../results/sherlock-k-quint-f03-actual-20261018/ROOT-ORIGINAL021-ADOPTION.json) records the complete original paired-model comparison predicate on actual F03 K/Quint evidence with the common domain/rule-to-action projection, numeric bounds, complete field maps, hidden steps, state-representation differences, work/publication distinction and unmatched finance/wait behavior. The updated original implementation inventory is15 complete/17 partial/3 absent, with15 original clauses closed and all25 refinements still open. This supplies neither universal model equivalence nor generic-runtime, financial, formal, circuit/native or target acceptance. Earlier counts above remain dated historical cuts.
