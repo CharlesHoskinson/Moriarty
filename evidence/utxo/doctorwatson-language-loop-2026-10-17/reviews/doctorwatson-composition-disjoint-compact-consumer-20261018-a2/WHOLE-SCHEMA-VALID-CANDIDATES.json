@@ -1,0 +1,42 @@
+[
+  {
+    "decisionVotes": {
+      "D1": {
+        "reason": "disjoint.rs::declared_domains bans shared AssetIds across whole StagedPrograms (including unused actions like TwoDeliveries::declare), blocking same-asset disjoint-account composition that merge() supports by (asset,account), and ignores 0-await scenario duties.",
+        "vote": "revise-design"
+      },
+      "D2": {
+        "reason": "disjoint.rs::Pair::start hardcodes [0,1] start order, so right-first in mori-tests.json still runs member 0 segment 0 before member 1 ([0,1,1,0,1,0]). Local Pair is a reference product only and does not realize native Split or the other four required composition operators.",
+        "vote": "revise-design"
+      },
+      "D3": {
+        "reason": "disjoint.rs::Pair::resume overwrites latest[member] on Waiting{advanced:false}, replacing its last committed segment with null in report().members, and sets attempted_before:vec![] on resume error. disjoint_test.rs maps Error::Branch via Display, dropping StageRejection.{attempted,committed}.",
+        "vote": "revise-design"
+      },
+      "D4": {
+        "reason": "Pair::resume passes cli_cap=None instead of Some(self.caps[member]), and cap_total only sums child caps without a conserved parent budget. Cloning full history into each Pair::report() makes disjoint_test.rs stage arrays grow O(N^2), hitting test.rs's 1 MiB per-case cap well before 256 calls.",
+        "vote": "revise-design"
+      },
+      "D5": {
+        "reason": "Feature gating (core2-disjoint-draft) and moriarty-local-disjoint-draft/1 labels mark local untracked status, but crates/mori/tests/disjoint_test_public.rs and mori-tests.json reference 10 stage goldens and public-report.json absent from the candidate, blocking consumer verification.",
+        "vote": "revise-design"
+      }
+    },
+    "findings": [
+      "1. [crates/mori-core/src/stage/disjoint.rs: Pair::resume, Pair::report] When super::resume returns StageOutcome::Waiting { advanced: false, segment: None, .. }, Pair::resume unconditionally overwrites self.latest[member] = outcome.clone(). In Pair::report(), members therefore serializes segment: null instead of the member's latest committed segment, contradicting D3/D5. Change Pair::resume to update latest[member]'s attempted/continuation only or preserve the last committed segment in members when advanced is false, and pass Some(self.caps[member]) as cli_cap to super::resume.",
+      "2. [crates/mori-core/src/stage/disjoint.rs: Error::Branch; crates/mori/src/commands/test/disjoint_test.rs: run_case] Error::Branch formats as #[error(\"member {member}: {rejection}\")], and StageRejection formats only {error}. When disjoint_test.rs maps Pair::start/resume errors via core_io::operation, rejection.attempted, rejection.committed, and attempted_before are discarded, and Pair::resume sets attempted_before: vec![] on rejection despite prior self.attempted_total. Expose work fields in Error::Branch/report output and record prior attempted work.",
+      "3. [crates/mori-core/src/stage/disjoint.rs: declared_domains, disjoint, merge] declared_domains rejects any shared AssetId across the entire left and right Programs and scans all actions' Statement::Liability declarations. This blocks same-asset disjoint-account composition (even though merge() checks exact (asset, account) collisions) and couples admission to unused helper actions like TwoDeliveries::declare, while 0-await actions can still admit undeclared scenario duties. Scope domain checks to selected actions and allow disjoint accounts per AssetId.",
+      "4. [crates/mori-core/src/stage/disjoint.rs: Pair::start; crates/fixtures/core-disjoint-product/mori-tests.json] Pair::start hardcodes starting member 0 then member 1 (ordering.start: [0, 1]). Consequently, the right-first case in mori-tests.json still starts member 0 before member 1 (invocation history [0, 1, 1, 0, 1, 0]), testing only post-start resume interleaving rather than right-first start linearization. Parameterize start order in the manifest/Pair::start or explicitly restrict the schedule claim in D2 and mori-tests.json.",
+      "5. [crates/mori-core/src/stage/disjoint.rs: Pair::report; crates/mori/src/commands/test/disjoint_test.rs: run_case; crates/mori/src/commands/test.rs: aggregate_report] Pair::report() clones all cumulative history outcomes into every stage report, and run_case stores every stage's full report in stages. Across K events this duplicates O(K^2) StageOutcome envelopes inside one case Value, which hits mori_core::json::export's 1 MiB per-case cap in aggregate_report well below MAX_INVOCATIONS (256), and all 11 fixture golden files required by disjoint_test_public.rs are missing."
+    ],
+    "limitations": [
+      "1. Source-only review: no build, cargo, rustc, mori CLI, native, proof, VM, or test execution was performed; all candidate code and crates/mori/tests/disjoint_test_public.rs remain UNRUN.",
+      "2. Absent independent oracle evidence: all 10 stage golden files (left-first-0..4.json, right-first-0..4.json), public-report.json, independent Program/StagePlan preimages and digests, DERIVATION.md, and INDEPENDENT-FREEZE.json are missing and cannot be treated as passing.",
+      "3. Operator and lane separation: this local unadopted Pair consumer covers only a restricted local reference product; all five composition operators (sequential, disjoint parallel, shared-state interleaving, atomic synchronization, asynchronous messaging), native Split/Join, parent exits/caps, and the separate sequential escrow oracle lane remain open.",
+      "4. Unanswered security, constraint, proof, and resource-authorization judgments (including memory/output bounds for 256-step cumulative history serialization, uncharged host dispatch/merge overhead, and hostile rejection coverage) are outside this ordinary consumer review and flagged for the designated owner."
+    ],
+    "reviewToken": "doctorwatson-composition-disjoint-compact-consumer-20261018-a2-whole-review",
+    "summary": "Independent consumer design review of the 16-file core2-disjoint-draft candidate yields revise-design. While crates/mori-core/src/stage/disjoint.rs and crates/mori/src/commands/test/disjoint_test.rs wire an opaque two-member local product into mori test behind non-default feature core2-disjoint-draft, concrete consumer, domain, publication, and bound defects require revision: (1) Pair::resume overwrites latest[member] on non-advancing Waiting outcomes (erasing the last committed segment from members) and passes cli_cap=None; (2) Error::Branch Display and disjoint_test.rs .map_err(core_io::operation) discard StageRejection.{attempted,committed} and attempted_before, and resume rejections report attempted_before=[] despite prior pair work; (3) declared_domains rejects shared AssetIds across whole programs (blocking same-asset disjoint-account composition and colliding on unused actions like TwoDeliveries::declare); (4) Pair::start hardcodes [0,1] start order so right-first cannot start member 1 first; (5) embedding full history in every stage report causes quadratic case growth against test.rs::aggregate_report's 1 MiB per-case export cap, and all 11 fixture goldens are absent.",
+    "verdict": "revise-design"
+  }
+]

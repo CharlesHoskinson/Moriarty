@@ -1,0 +1,11 @@
+# Adopted Source/6 interface: mechanical source promotion
+
+Root adopted the exact29-file ordinary interface on2026-10-18. This successor changes only `RUST_GUIDELINES.md` and `docs/BETA-SOURCE6-EXPANSION.md` labels/disposition text and adds the exact root receipt at `evidence/utxo/doctorwatson-language-loop-2026-10-17/source6-public-consumer-adoption-20261018/DESIGN-ADOPTION.json`. All reviewed Rust code, tests, manifest/lock bytes and original fixtures remain byte-identical.
+
+`source6-adopted.promotion.patch` (3 files, SHA4a18af3d1f25a0427f1079b3fb402b1e2c6ffcaf143cd31cd3fb74bcc0d8e606) applies after the reviewed29-file source. `source6-adopted.combined.patch` (30 files, SHA3b2e8cb47426c17cc05fccb82c346d44d41337a3315e102741a2bb3ae39f0679) includes that source plus promotion against the exact reconstructed reviewed baseline. Use one route after root integration/rebase; do not overwrite subsequent postmerge source or native guide work. `reviewed-base/` is reverse-reconstructed from the frozen prior full patch/source and hash-matched to original target baseline pins. No live I compiler or J merge path was read or operated on.
+
+Interface adoption is distinct from source/runtime acceptance. UNRUN/unqualified real CLI/lowerer/native/security limits are retained. The independent14 financial payload baseline predates this actual consumer; complete wire/output/work expectations and the chosen WorkshopReceipt fixture freeze remain missing. Original same-author pre-code fixtures remain baseline-only. No parent U/M/MC/SP/G, financial/composition/native/Preview/Fenrir exit is waived.
+
+The reviewed Cargo.lock already has `mori-source6`0.1.0 and `mori.dependencies += mori-source6`; this promotion needs no further lock edit. `LOCK-NEEDED-DELTA.patch` shows only those two differences from the reviewed pre-Source6 lock. No versions/remote sources were changed and no dependency resolution was run. Final postmerge lock identity remains root-owned; root may perform ordinary offline maintenance before checks.
+
+`ordinary-source-audit-packet/` is prepared but NOT DISPATCHED. Root must supply the final postmerge candidate/source identity and lock bytes before freezing/dispatching that ordinary source audit. No new design vote is requested for mechanical promotion. Original revised proposal, root receipt and a2 WHOLE/ROOT dispositions remain intact.

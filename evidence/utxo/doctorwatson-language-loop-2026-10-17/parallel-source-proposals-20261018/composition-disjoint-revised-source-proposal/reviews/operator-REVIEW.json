@@ -1,0 +1,39 @@
+{
+  "decisionVotes": {
+    "D1": {
+      "reason": "`disjoint.rs::declared_domains` only checks `Statement::Liability`, omitting `Statement::Discharge` and `Scenario.liabilities` (admitted on 0-await actions without `canonical_boundary`). Whole-program `AssetId` disjointness also excludes required same-asset disjoint-account composition under SP10.1.",
+      "vote": "revise-design"
+    },
+    "D2": {
+      "reason": "`Pair::start` and `Pair::resume` in `disjoint.rs` deterministically linearize starts as `[0,1]`, step one pending member per event without cross-branch state reads, and order `effects` by invocation then source order, keeping distinct schedules non-equivalent despite equal final `post` state.",
+      "vote": "adopt-design"
+    },
+    "D3": {
+      "reason": "`Pair::start` runs both `stage::start` calls before `merge`/`sum`, so `Error::Shape` discards executed `attempted` work. `Pair::resume` sets `attempted_before: vec![]` and drops `rejection.attempted`. `disjoint_test.rs` maps `Error::Branch` via `Display`, losing `attempted_before` and `committed`.",
+      "vote": "revise-design"
+    },
+    "D4": {
+      "reason": "`Pair::report` tracks `caps` and `committed` per member plus `attempted_total`, but omits per-member cumulative `attempted` and rejected resume work. `disjoint_test.rs` duplicates growing `history` across `stages` under the 1 MiB per-case `json::export` cap; resource adequacy is routed to owner.",
+      "vote": "revise-design"
+    },
+    "D5": {
+      "reason": "Feature gating (`core2-disjoint-draft`) and local-only labels (`unadopted-local-disjoint-product`, `authentication: none`, `consumption: untracked`) are sound, but `disjoint_test_public.rs` fails until missing goldens exist and false-guard `resume` overwrites `members[i]` with `segment: None`.",
+      "vote": "revise-design"
+    }
+  },
+  "findings": [
+    "`crates/mori-core/src/stage/disjoint.rs` (`declared_domains`, `disjoint`, `Pair::start`): `declared_domains` only collects `Statement::Liability`, ignoring `Statement::Discharge` and `Scenario.liabilities` (admitted by `scenario_snapshot` on 0-await actions when `admit::start` skips `canonical_boundary`). `Pair::start` runs both `super::start` calls before `merge`, so duty collisions or `sum` overflows fail with `Error::Shape` after execution and discard `attempted` work. Change: validate `Statement::Discharge`, `scenario.liabilities`, and pre-snapshot disjointness before `super::start`.",
+    "`crates/mori-core/src/stage/disjoint.rs` (`Pair::resume`, `Pair::report`, `Error::Branch`): On `Err(rejection)`, `Pair::resume` sets `attempted_before: vec![]` instead of exposing prior `self.attempted_total` and does not accumulate `rejection.attempted`. On a false guard (`Waiting { advanced: false, segment: None, .. }`), `Pair::resume` overwrites `self.latest[member]`, replacing the member's last committed segment in `report()[\"members\"]`, while `report()[\"logical\"]` omits per-member `attempted: [UInt; 2]`. Change: track per-member `attempted` and preserve `attempted_before`.",
+    "`crates/mori/src/commands/test/disjoint_test.rs` (`run_case`) & `crates/mori-core/src/stage/disjoint.rs` (`Error::Branch`): `Error::Branch`'s `Display` (`#[error(\"member {member}: {rejection}\")]`) omits `attempted_before`, `rejection.attempted`, and `rejection.committed`, so `core_io::operation` drops work counters and cannot test rejections like `stage_test.rs`. Also, embedding full `Pair::report()` `history` in every stage grows $O(N^2)$ against `mori_core::json::export(&case)`'s 1 MiB cap in `test.rs::aggregate_report`. Change: report rejection work metadata and bound history.",
+    "`crates/fixtures/core-disjoint-product/two-deliveries.mori` (`declare`), `mori-tests.json`, & `crates/mori/tests/disjoint_test_public.rs`: Because `decode::canonical_boundary` requires awaiting-action scenario duties to appear in `Statement::Liability`, `two-deliveries.mori` adds a dummy `action declare()` to keep untouched duty `duty`. Also, `disjoint_test_public.rs` unconditionally reads `public-report.json` and `mori-tests.json`'s 10 stage goldens (`left-first-0..4.json`, `right-first-0..4.json`), which are absent. Change: supply the 11 independent oracle files and preimages."
+  ],
+  "limitations": [
+    "All 10 stage golden files (`left-first-0..4.json`, `right-first-0..4.json`), `public-report.json`, and independent `Program`/`StagePlan` preimages (`DERIVATION.md`, `INDEPENDENT-FREEZE.json`) required by `ORACLE-REQUIRED.md` are absent, and no build, Cargo, `mori`, or test execution was run (`SOURCE-ONLY` review). Missing goldens and unrun tests are not a pass; D1\u2013D5 remain unadopted.",
+    "`Pair` is a local, unauthenticated, untracked source consumer for asset-disjoint pairs only. All 5 operators remain separately open under MC06/SP10.1/U4: sequential (`Step` and the separate sequential escrow lane), full disjoint parallel (same-asset disjoint-account and native circuit `Split`), shared-state interleaving, atomic synchronization (`Join`), and async messaging (`Pending`).",
+    "No security, constraint, proof, target-phase, or resource authorization judgment is made here: memory/output adequacy of retaining 256 full outcomes in `Pair::history`, merged `Snapshot` bounds (up to 8,192 balances/2,048 liabilities), dispatch/merge/serialization cost certification, and hostile test rules are flagged unanswered for the designated Opus/fallback owner.",
+    "All existing parent exits, failure records, and logical/native caps remain unchanged and open; `Pair` keeps static per-member caps (`16` and `36`, descriptive sum `52`) without dynamic global budget partitioning, native head lifetime conservation (`revision + remaining = allocatedLifetime(head)`), predecessor proof verification, or authority attenuation."
+  ],
+  "reviewToken": "doctorwatson-composition-disjoint-compact-operator-20261018-a2-whole-review",
+  "summary": "Independent source-only operator review of the 16-file `core2-disjoint-draft` candidate (`Pair` in `crates/mori-core/src/stage/disjoint.rs`, CLI runner `crates/mori/src/commands/test/disjoint_test.rs`, `crates/mori/src/commands/test.rs`, `crates/mori/tests/disjoint_test_public.rs`, and `crates/fixtures/core-disjoint-product/*`). Verdict: `revise-design` (D1\u2013D5 remain unadopted). D2's local reference linearization and `ORACLE-REQUIRED.md`'s stage arithmetic/work totals (`[16,21,36,42,52]` and `[16,31,36,46,52]`) are consistent, but concrete defects require revision: (1) `declared_domains` omits `Statement::Discharge` and `Scenario.liabilities`, and `Pair::start` executes both starts before `merge`, losing attempted work on `Error::Shape`; (2) `Pair::resume` drops rejected-attempt work/`attempted_before` and overwrites `latest[member]` on false guards; (3) `disjoint_test.rs` discards `Error::Branch` work counters via `Display` and lacks rejection support; (4) all 10 stage goldens, `public-report.json`, and independent preimages are missing and unrun.",
+  "verdict": "revise-design"
+}

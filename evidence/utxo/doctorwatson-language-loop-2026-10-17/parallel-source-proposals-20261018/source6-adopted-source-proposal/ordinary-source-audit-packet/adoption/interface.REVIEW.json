@@ -1,0 +1,61 @@
+{
+  "decisionVotes": [
+    {
+      "decisionId": "selection_option_feature",
+      "reason": "Gating `--emit-source6-transfer` behind the non-default `source6-expansion` feature (activating `mori-source6/source6-transfer-slice`) cleanly isolates the transfer-only Source/6 consumer from default `moriarty-core/1` `mori expand` and the Node beta package, returns `mori::command::source6-unavailable` before any file I/O when disabled, and scopes CLI help to the flag without marking default Core expansion unavailable. Remains unadopted until two substantive agreeing votes are recorded.",
+      "requiredFix": "none",
+      "vote": "adopt"
+    },
+    {
+      "decisionId": "scenario_profile_subset",
+      "reason": "Reusing `moriarty-local-scenario/1` (`local-stipulation`) with canonical decimal `UInt` decoding and `[owner, recipient, fee_recipient]` balance ordering avoids inventing a parallel wire format while explicitly classifying missing/foreign profile or kind (`source6-scenario-profile`), unsupported `obligation`/`candidate_effects` fields (`source6-scenario-unsupported`), non-three balance arrays (`source6-scenario-cells`), remaining DTO schema errors (`source6-scenario-shape`), and source-vs-scenario cell mismatches (`mori::source6::scenario_shape`).",
+      "requiredFix": "none",
+      "vote": "adopt"
+    },
+    {
+      "decisionId": "raw_output_qualification",
+      "reason": "Emitting raw generated Source/6 text with a single trailing newline on stdout, printing `Expanded Source/6 transfer proposal (local-stipulation-only)` on non-quiet stderr, suppressing stderr under `--quiet`, and writing no stdout bytes on failure provides a clean CLI contract that preserves `local-stipulation-only` qualification without claiming Node `BetaExpansion` JSON parity or Core/5 preparation.",
+      "requiredFix": "none",
+      "vote": "adopt"
+    },
+    {
+      "decisionId": "existing_refusal_precedence",
+      "reason": "Splitting `mori-source6` into `select_transfer` (owning validated private `Terms` after real `mori-parser` and `mori-checker` acceptance plus `LocalS0` transfer selection) and `SelectedTransfer::expand` (with `expand_transfer` delegating to both) repairs CLI precedence so source syntax/checker errors, `mori::source6::unknown_action`, and `mori::source6::unsupported_operation` (repay/family) win before any scenario file read, while relying on existing lexer/checker invariants for `.id`/agreement lexical and reserved-word rules, distinct same-domain transfer accounts, `scale <= 18`, and `rounds` `from <= to`.",
+      "requiredFix": "none",
+      "vote": "adopt"
+    }
+  ],
+  "filesRead": [
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/FINAL-DESIGN-CHOICES.md",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/SOURCE-FIDELITY-DISPOSITION.md",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/EXPECTATION-STATUS.json",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/RUST_GUIDELINES.md",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori/Cargo.toml",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori/src/cli.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori/src/commands/expand.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori/src/commands/expand/source6.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori/tests/source6_expand.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori-source6/Cargo.toml",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori-source6/src/diagnostics.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori-source6/src/lib.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori-source6/src/transfer.rs",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/source6-public-consumer-revised-proposal/review-packet/candidate/crates/mori-source6/tests/transfer.rs"
+  ],
+  "findings": [
+    "`select_transfer` and `SelectedTransfer::expand` in `mori-source6` cleanly separate source parsing, real checker validation, and `LocalS0` transfer selection from scenario I/O, ensuring unknown actions (`mori::source6::unknown_action`) and unsupported repayment/family operations (`mori::source6::unsupported_operation`) refuse before reading `--scenario`.",
+    "Inherited `mori-lexer` and `mori-checker` definitions (`declarations.rs`, `relations.rs`, `checker.rs`, `eval.rs`, `intents.rs`) already enforce Source/6 identifier and reserved-word rules, per-domain account `.id` uniqueness with distinct transfer endpoints, `scale <= 18`, and `rounds` `from <= to` before `select_transfer` extracts `Terms`, requiring no duplicate checks in `mori-source6`.",
+    "`read_scenario` in `crates/mori/src/commands/expand/source6.rs` inspects the parsed JSON value before serde DTO decoding, giving deterministic refusal precedence for `source6-scenario-profile`, `source6-scenario-unsupported` (`obligation`, `candidate_effects`), `source6-scenario-cells` (`balances.len() != 3`), and `source6-scenario-shape`.",
+    "`mori expand --emit-source6-transfer` behind non-default `source6-expansion` leaves default `moriarty-core/1` `mori expand` and Node `moriarty-beta` untouched, fails prior to file I/O with `mori::command::source6-unavailable` when built without the feature, and scopes flag help without mislabeling default Core expansion.",
+    "Stdout/stderr/quiet behavior is unambiguous: successful expansion writes raw Source/6 text with one trailing newline to stdout and `Expanded Source/6 transfer proposal (local-stipulation-only)` to stderr (suppressed by `--quiet`), while all refusal paths write zero bytes to stdout."
+  ],
+  "limitations": [
+    "Source-only design and interface review; no Cargo build, CLI binary execution, or test run was performed, and all U0-U7, M1-M17, MC, SP, G, native, Preview, and Fenrir exits remain open.",
+    "The three consequential public interface choices (`selection_option_feature`, `scenario_profile_subset`, `raw_output_qualification`) and the `RUST_GUIDELINES.md` disposition remain unadopted until root records two substantive agreeing design votes.",
+    "Financial fixtures and expected Source/6 outputs remain same-author pre-code baseline literals rather than an independent financial/work freeze (`UNI-020`), and ordinary refusal tests assert diagnostic codes/precedence without freezing complete stderr bytes.",
+    "Generated Source/6 proposal text is unconsumed by the real Source/6 lowerer or any Core/5, Core/1, Core/2, or Sherlock target path; scenario cells and hashes remain unverified local claims (`local-stipulation-only`).",
+    "The preserved a1 filename/security topic and any cryptographic, conservation, resource-policy, or hostile-input questions are outside this nonsecurity interface review and routed to the designated security owner."
+  ],
+  "reviewToken": "doctorwatson-source6-public-consumer-design-interface-20261018-a2-whole-review",
+  "summary": "The revised 29-file candidate (patch SHA 706b188950e78e9eddd505e9b5440a72cee33653aa2d6eb9cccea0bfa3d29a46) merits `adopt-design`. Introducing `select_transfer` and `SelectedTransfer::expand` in `mori-source6` (with `expand_transfer` delegating to both) repairs CLI precedence so `.mori` parsing, real `mori-checker` validation, action lookup, and `LocalS0` transfer admission precede scenario file I/O without duplicating frontend checks. Existing `mori-lexer` and `mori-checker` rules already enforce entity `.id` and agreement lexical/reserved validity, distinct same-domain transfer endpoint IDs, `scale <= 18`, and `rounds` `from <= to`. Reusing `moriarty-local-scenario/1` (`local-stipulation`) with pre-DTO checks (`source6-scenario-profile`, `source6-scenario-unsupported`, `source6-scenario-cells`, `source6-scenario-shape`), gating `--emit-source6-transfer` behind non-default `source6-expansion`, and emitting raw Source/6 stdout with `local-stipulation-only` stderr status (suppressed by `--quiet`) are coherent public choices. Consequential choices still require two agreeing votes; runtime, independent goldens, lowerer consumption, and security remain separate.",
+  "verdict": "adopt-design"
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "filesRead": [
+      "PRIMARY.md",
+      "EXECUTION-CONTRACT.json",
+      "ACTUAL-RESULT-SUMMARY.json",
+      "MANIFEST.json",
+      "OWNER-REPORT-INDEX.json",
+      "BUILD-A3-PREFIX-FACTS.json",
+      "SOURCE-INDEX.json",
+      "receipts/ADMISSION.json",
+      "receipts/attempt-1/START.json",
+      "receipts/attempt-1/CHILD.json",
+      "receipts/attempt-1/RESULT.json",
+      "receipts/attempt-1/STDOUT.log",
+      "receipts/attempt-1/STDERR.log",
+      "receipts/attempt-1/PROCESS-CLEANUP.json",
+      "receipts/attempt-1/CLEANUP.json",
+      "source/SELECTED-TEST.rs",
+      "source/counter.mori",
+      "source/payment.mori",
+      "source/compile__authored_counter_abi.snap",
+      "source/compile__authored_payment_effects.snap",
+      "source/COMPILER-IR-EXCERPTS.md",
+      "frozen-inputs/literal-clarification/source/stages.rs",
+      "frozen-inputs/literal-clarification/source/mori-backend-lib.rs",
+      "frozen-inputs/literal-clarification/source/mori-core-parser.rs",
+      "frozen-inputs/literal-clarification/source/sdk-ir.rs",
+      "owner-reports/doctorwatson-compiler-blst-cwd-build-security-fallback-20261018-a3/ROOT-DISPOSITION.json",
+      "owner-reports/doctorwatson-compiler-blst-cwd-runtime-security-fallback-20261018-a3/ROOT-DISPOSITION.json"
+    ],
+    "findings": [
+      "Receipt and contract fidelity: `receipts/ADMISSION.json` records outer root admission with both `a3` owner dispositions and corrected `blst-0.3.17` preflight while preserving `EXECUTION-CONTRACT.json` (`admitted: false`) as an unedited proposal snapshot. `START.json`, `CHILD.json`, `RESULT.json`, `STDOUT.log`, and `STDERR.log` match all hashes, commit/tree pins, the 20-element `argv`, 17 env vars, PID/session 529196, exit code 0, wall time 169.09774812700198s, `sourceStatusAfter: \"\"`, and consumption of the single 600s+5s allocation.",
+      "Exact test filtering: `stages.rs` (399 lines) defines 6 `#[test]` functions. The `--exact` selector ran only `legacy_counter_abi_and_payment_effects_match_existing_frozen_snapshots` (`stages.rs:374-399`, 1 passed) and filtered out the other 5 tests (`5 filtered out`, `0 ignored`): all 4 `moriarty/2` `compile_staged` tests\u2014including the two new financial continuation programs `ESCROW` (`ContinuationEscrowOracle`) and `RESERVE` (`ReserveContinuationOracle`)\u2014plus the `#[ignore]` baseline byte-comparison test `legacy_artifact_and_every_ir_file_match_baseline_bytes`.",
+      "Tested predicate and compiler/SDK IR path: `SELECTED-TEST.rs` parses legacy `moriarty/1` `counter.mori` and `payment.mori` via `mori_core::parse` (including `mori_core::validate`) and lowers them via unsigned `mori_backend::compile` (`Target::ledger9`). In `lower_action_segment` (`mori-backend/src/lib.rs:1225-1238`), each circuit constructs `midnight_zkir_v3::IrSource` (with `Fr::from(n)` immediates), serializes JSON with version `3.0`, reloads via SDK `IrSource::load(zkir.as_bytes())`, and checks `parsed == ir` before stabilizing pretty-JSON `artifact_bytes`.",
+      "Historical oracle scope and build vs. runtime distinction: The two `assert_eq!` checks compare only Counter's `(action, public_inputs (role, name))` tuples and Payment's `circuits[0].effect_frame` debug string against pre-existing `tests/compile.rs` snapshots (`compile__authored_counter_abi.snap`, `compile__authored_payment_effects.snap`). Although `STDERR.log` compiles 280 crate units including `midnight-proofs`, `midnight-circuits`, `midnight-zk-stdlib`, and `blst`, `IrSource::model`, `prove_unchecked`, `mori_backend::proving`, and all 6 artifact `gates` remained unexecuted.",
+      "Provenance and cleanup records: `BUILD-A3-PREFIX-FACTS.json` and `OWNER-REPORT-INDEX.json` accurately document that `a3` build object 0 is a 4-field bounded-prefix preview (`513` chars ending in `\u2026`) of root-selected complete object 1 (`providerCanonical: false`), and that the six earlier narrow SDK jobs are source contexts rather than execution votes. `PROCESS-CLEANUP.json` (`ownedSession: 529196` empty before/after) and `CLEANUP.json` (`existsAfter: false`) accurately state their session-only observation scope without claiming syscall tracing."
+    ],
+    "limitations": [
+      "This read-only ordinary review performed no Cargo, compiler, build-script, proc-macro, native, SDK, VM, model, proving, or network execution; all conclusions derive strictly from static inspection of the supplied packet files, receipts, and pinned source excerpts.",
+      "The passing test checks only legacy `moriarty/1` `counter.mori` public-input `(role, name)` pairs and `payment.mori` `circuits[0].effect_frame` against historical `tests/compile.rs` snapshots; it does not assert full ZKIR instructions, `balance_frame`, `liability_frame`, `context_hash`, `compile_signed`, or `moriarty/2` `compile_staged`.",
+      "Five of six `stages.rs` tests were filtered out, leaving `ESCROW` (`ContinuationEscrowOracle`), `RESERVE` (`ReserveContinuationOracle`), `Scalars`, `Registry`, and `legacy_artifact_and_every_ir_file_match_baseline_bytes` unexecuted; this run does not provide independent full-compiler or financial soundness qualification.",
+      "No SDK cost model (`IrSource::model`), proving (`prove_unchecked`, `mori_backend::proving`), circuit `k`/row measurement, SRS/key setup, VM, or Midnight ledger/Preview/Fenrir validation ran; all 6 artifact `gates`, historical C4/k17/failure/allocation counters, and U0-U7/M/MC/SP/G product gates remain unchanged.",
+      "Security and resource-governance questions remain with the designated security reviewer: `PROCESS-CLEANUP.json` observes only session 529196 without syscall-level exclusion of detached descendants, OS-level RAM/disk/process caps were null, and the single 600s+5s attempt allocation is consumed (`retryAllowed: false`)."
+    ],
+    "reviewToken": "doctorwatson-compiler-one-check-result-ordinary-20261018-a1-whole-review",
+    "summary": "Approve the narrowly scoped finite compiler/IR result. Under outer root `receipts/ADMISSION.json` (which retains `EXECUTION-CONTRACT.json` unchanged with `admitted: false` as the proposal snapshot), the single admitted cold attempt (`START.json`, PID/session 529196) ran the exact 20-element `cargo test` argv with 17 env keys at commit `7e0d753c40a3e5f694aa226bd657c831da111f65` (tree `55fab2c3cbd818ffb04eeb7d5930a28758a858b3`), exited 0 in 169.09774812700198s (`RESULT.json`), left `sourceStatusAfter: \"\"`, and consumed the sole 600s+5s allocation (`retryAllowed: false`). `STDOUT.log` reports `1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out` (`0.01s`). The 26-line test `legacy_counter_abi_and_payment_effects_match_existing_frozen_snapshots` (`stages.rs:374-399`) verifies unsigned `mori_backend::compile` and `IrSource::load` round-trip equality on legacy `counter.mori` and `payment.mori` against existing `compile.rs` snapshots.",
+    "verdict": "approve-scoped-result"
+  }
+]

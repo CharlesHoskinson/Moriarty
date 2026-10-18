@@ -1,0 +1,80 @@
+{
+  "format": "moriarty-core2-escrow-proposed-commands/1",
+  "status": "UNRUN; root controls exact source/result review and later execution",
+  "cargo_target": [
+    "cargo",
+    "test",
+    "--frozen",
+    "-j1",
+    "-p",
+    "mori",
+    "--no-default-features",
+    "--test",
+    "core2_escrow_complete",
+    "--",
+    "--test-threads=1"
+  ],
+  "callable_predicates": [
+    "escrow_public_load_matches_complete_program_and_filled_plan",
+    "escrow_library_start_false_observation_and_delivery_match_complete_reports",
+    "escrow_cli_start_false_observation_and_delivery_match_complete_public_bytes"
+  ],
+  "cli_program": "env!(\"CARGO_BIN_EXE_mori\")",
+  "cli_current_dir": "owned PID/atomic temporary directory",
+  "cli_calls": [
+    {
+      "name": "start",
+      "args": [
+        "--color",
+        "never",
+        "simulate",
+        "escrow.mori",
+        "--action",
+        "deliver",
+        "--scenario",
+        "escrow.scenario.json",
+        "--logical-cap",
+        "11"
+      ],
+      "attempted": "5",
+      "committed": "5"
+    },
+    {
+      "name": "delivery-false",
+      "args": [
+        "--color",
+        "never",
+        "simulate",
+        "escrow.mori",
+        "--action",
+        "deliver",
+        "--resume",
+        "actual-continuation.json",
+        "--event",
+        "delivery-false.event.json"
+      ],
+      "attempted": "2",
+      "committed": "5"
+    },
+    {
+      "name": "delivery-true",
+      "args": [
+        "--color",
+        "never",
+        "simulate",
+        "escrow.mori",
+        "--action",
+        "deliver",
+        "--resume",
+        "actual-continuation.json",
+        "--event",
+        "delivery-true.event.json"
+      ],
+      "attempted": "6",
+      "committed": "11"
+    }
+  ],
+  "resume_cap_override": null,
+  "continuation_file": "serialize only immediately preceding actual report continuation; no expected continuation input",
+  "scope": "one full Program/filled Plan, three library reports, three real CLI reports/ASCII bytes/exit0/empty stderr; ordinary positive only"
+}

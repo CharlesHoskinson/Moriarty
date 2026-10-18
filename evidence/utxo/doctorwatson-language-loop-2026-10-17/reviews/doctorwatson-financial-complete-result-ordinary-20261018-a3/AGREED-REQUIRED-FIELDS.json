@@ -1,0 +1,40 @@
+{
+  "providerCanonical": false,
+  "wholeObjectsPreserved": true,
+  "wholeObjects": 1,
+  "comparison": "Six required fields agree; one context one vote",
+  "agreedRequiredFields": {
+    "filesRead": [
+      "ACTUAL-REVIEWED-TEST.rs",
+      "LOSSLESS-REVIEW-VIEW.json",
+      "START.json",
+      "RESULT.json",
+      "CLEANUP.json",
+      "STDOUT.log",
+      "STDERR.log",
+      "RUSTFMT.json",
+      "FORMATTING-ORIGINAL-vs-REVIEWED.diff",
+      "ROOT-LITERAL-CONTEXT.json",
+      "CASES.json",
+      "PACKAGING-CHECKS.json",
+      "PRIMARY-INDEX.json",
+      "MANIFEST.json"
+    ],
+    "findings": [
+      "ACTUAL-REVIEWED-TEST.rs (4047 bytes, sha256 76ee071a...) defines two tests: financial_sources_match_complete_independent_programs calls mori_core::parse then serde_json::to_value on installment-invoice.mori and conditional-reserve.mori against *.program.expected.json without calling parse_program, validate, from_value, or roundtripping Program.",
+      "financial_cli_reports_match_complete_oracles_and_invoice_link runs all 6 CASES.json entries via CARGO_BIN_EXE_mori, asserting exit 0, exact empty stderr bytes (empty.stderr.expected.bin), complete serde_json::Value equality, and exact raw stdout bytes against six *.stdout.json fixtures, then asserts full execution.post == execution.pre for invoice-first/final in ordinary and cap42 modes.",
+      "LOSSLESS-REVIEW-VIEW.json and PACKAGING-CHECKS.json losslessly represent the 2 Program values (single expressions arena 0..=31 and 0..=32), 3 Execution values (12, 12, and 15 steps; embedded inside reports rather than asserted by standalone *.execution.expected.json filenames), and 6 report wrappers using logical.cap/used ('42'/'42', '45'/'45') and profile 'moriarty-reference-logical-cost/1'.",
+      "START.json, RESULT.json, STDOUT.log, STDERR.log, and CLEANUP.json verify a single isolated execution (attempt 1/1, nativeAuthority 0, offline, -j1, --test-threads=1) completing 2 tests with 0 failures in 52.624672563000786s, preserving commit 7e0d753c... and tree 55fab2c3... with clean git status, and removing /tmp/doctorwatson-financial-report-check-md25jyby (existsAfter: false).",
+      "RUSTFMT.json and FORMATTING-ORIGINAL-vs-REVIEWED.diff confirm routine formatting (exit 0) from original c298f75d... (4059 bytes) to reviewed 76ee071a... (4047 bytes) only joined the two invoice post/pre argument lines in assert_eq! with no semantic change."
+    ],
+    "limitations": [
+      "Captured STDOUT.log and STDERR.log record only the outer cargo test process output; per-case CLI stdout/stderr buffers were validated in-memory by the passing test and not saved as separate capture artifacts.",
+      "LOSSLESS-REVIEW-VIEW.json is a read-only compacted inspection presentation; the test binary reads the standalone fixture files under crates/fixtures/financial-report-contract rather than this view.",
+      "Coverage is limited to 2 positive Core/1 Program parse/serialize comparisons, 6 local reference simulate CLI invocations (ordinary and logical-cap 42/45), and 2 snapshot post-to-pre equality checks.",
+      "This ordinary result review does not establish native feature execution, cryptographic proof/signature verification, ledger/network/U2/financial-family acceptance exits, or security properties; Root alone holds merge authority."
+    ],
+    "reviewToken": "doctorwatson-financial-complete-result-ordinary-20261018-a3-whole-review",
+    "summary": "Independent ordinary result review of core_financial_report_contract (4047-byte ACTUAL-REVIEWED-TEST.rs, sha256 76ee071a...) and its single captured execution on commit 7e0d753c40a3e5f694aa226bd657c831da111f65 (tree 55fab2c3cbd818ffb04eeb7d5930a28758a858b3). Both test functions passed (2 passed, 0 failed in 52.624672563000786s, exit 0) with unchanged source state and verified cleanup of /tmp/doctorwatson-financial-report-check-md25jyby. Expected Program, Execution, and CLI report fixtures in LOSSLESS-REVIEW-VIEW.json and CASES.json match the actual test assertions and rustfmt diff (4059 to 4047 bytes joining two assert_eq! argument lines). Guard-limited merge is approved for Root adoption.",
+    "verdict": "approve-exact-result-and-guarded-merge"
+  }
+}

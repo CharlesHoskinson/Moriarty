@@ -1,0 +1,5 @@
+The earlier financial tests compared a projection of each execution. This adds complete parsed Program comparisons for the installment invoice and conditional reserve, plus six real CLI report comparisons covering all statement/value/frame/effect fields, exact stdout and stderr bytes, and actual invoice post-to-pre linkage. Expectations are independently derived from the adopted finite report contract and frozen before test authoring.
+
+Validation: the offline, single-job `cargo test -p mori --no-default-features --test core_financial_report_contract -- --test-threads=1` check passed both tests in 52.62 seconds on tree `55fab2c3cbd818ffb04eeb7d5930a28758a858b3`. Fresh ordinary and designated security-fallback result reviews approve this exact scope; the inaccurate initial ordinary audit and subsequent timed-out review are preserved. No production code or dependencies change. Compiler, SDK, proof and ledger qualification remain open.
+
+[Captured execution and cleanup](https://github.com/CharlesHoskinson/Moriarty/tree/utxo/evidence/utxo/doctorwatson-language-loop-2026-10-17/financial-complete-report-20261018/cycle/attempt-1).
