@@ -1766,3 +1766,22 @@ Portability also has distinct evidence stages: historical five-operation runtime
 October 18 lesson: a successful discovery compile and an exact three-name list execute zero test bodies. Preserve those receipts alongside the contrast consumer's actual two-body pass; do not combine them into five runtime tests. Where comparisons occur in memory, report that boundary instead of inventing a persisted full actual dump. Keep the independently specified B0 counters distinct from the reference cursor.
 
 For a frontend failure, the tiny Clean reproducer retained an expected negative exit1 and a positive exit0. That confirms a narrow correction approach while the full JSON path remains unrun. Reuse the passing prefix, retain failures and require the next actual stage before broadening a claim. The [records](../docs/results/sherlock-stage-separation-20261018/README.md) add no EARS closure, factory, circuit or native acceptance. Pending cache-debt source likewise remains separate from its eventual reviewed and observed behavior.
+
+
+## DW105 — Name the source class, preserve the stage, and keep writing circuits
+
+A preserved entry count is not a source-only count: P5 matched30,660 unchanged entries consisting of30,090 source and 570 generated files. It then failed a different partition check before target copy/Cargo. Preserve both observations and actual cleanup. Likewise, the44-byte TAG fallback does not reproduce177-byte historical TAGs; the six-template/two-TAG live-hash qualification remains.
+
+Keep all four permanent lanes concrete after compaction. Returned checkedAdd emitter/test source is reviewable progress, while live A/B reviews supply no verdict. The archived/unregistered Scalar.tag005 source is not an observed native circuit baseline. Formal passes cannot substitute for the next handwritten implementation.
+
+Separate observations within each formal lane: Clean's complete five-case equality does not turn a later zero/rfl frontend failure into a theorem. K compile/kast success does not turn a timed-out reduction into a complete tape. Quint's complete finite comparison does not make Part 4 acknowledgement a final result review. The new decoded-metadata consumer's actual five-operation pass remains separate from whole035 adoption. Preserve the successful prefixes and failed stages without reruns or expected-data fitting. See the [records](../docs/results/sherlock-four-lane-progress-20261018/README.md). No new framework or closure follows.
+
+Persist each returned child receipt before later bookkeeping. One Root postcheck used an absent recipe key after a failed Caller check; the streams were retained, but its exit/time remained explicitly unknown. The next check persisted its child result first. Actual Lean diagnostics also found Caller and Arm defects missed by the source reviewer; all four corrected B06 modules subsequently passed without changing theorem meanings. A model opinion does not replace compiler/kernel evidence.
+
+
+October18: follow the existing acceptance schema exactly: acceptance.adoption
+is the enum adopted; keep the actual decision path/hash in rootAdoption. A
+current owner declaration can pass integrity while not entering the adopted
+subtotal. Inspect both subtotals before publishing a closure count. The035
+metadata correction retained the actual reviewed semantic adoption and all
+source/result pins.
