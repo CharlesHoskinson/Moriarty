@@ -1,0 +1,17 @@
+fn collect_decl_group_names<'a>(
+    decls: &'a [super::owner_ext_type_builder::TypeDeclSrc],
+    distinct: &mut std::collections::BTreeSet<&'a str>,
+    bytes_total: &mut u128,
+    l: &LayoutSchemaC,
+) -> Result<(), Tooling> {
+    for decl in decls {
+        push_distinct_name(distinct, bytes_total, &decl.name, l)?;
+        for ctor in &decl.ctors {
+            push_distinct_name(distinct, bytes_total, &ctor.name, l)?;
+            for field in &ctor.fields {
+                push_distinct_name(distinct, bytes_total, &field.name, l)?;
+            }
+        }
+    }
+    Ok(())
+}

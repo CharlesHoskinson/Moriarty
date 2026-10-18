@@ -1,0 +1,55 @@
+### Header
+- **`request_id`**: `END-TINY-PATCH2-PLACEMENT-ONLY`
+- **`conversation_id`**: `bb6043a1-63f1-4de9-b26f-ef50139233e3`
+- **`cwd`**: `/tmp/moriarty-r140-final-security-A-9c662tt7`
+- **`reviewer_slot`**: `security-A` (`designated_security_owner`)
+- **`returned_identity`**: `gemini-4-argon-high` (`effort = high`, `standing_opus_quota_outage_fallback`)
+
+---
+
+### 1. Completeness of Received Source Bodies (`67,773B`, `sha256=4f6703c3c86ceb9ff035eb063ef0c8312b7d354b86689252c50d94bdcd4deaf0`)
+- **All intended source units were delivered in full.** All ten Rust code fences closed cleanly; the six retained new modules ([adt.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/adt.rs), [adt_storage.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/adt_storage.rs), [owner_ext_type_builder.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/owner_ext_type_builder.rs), [nominal_declaration_order.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/nominal_declaration_order.rs), [owner_ext_prepare_types.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/owner_ext_prepare_types.rs), and [nominal_decl_producer_tests.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/nominal_decl_producer_tests.rs)) and `Patch 1` ([shared.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared.rs)) have **no missing tail or missing unit**.
+
+---
+
+### 2. Corrected `Patch 2` Placement Against [owner_prepare.rs](file:///tmp/moriarty-r140-final-security-A-9c662tt7/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs)
+- **Target base**: `crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare.rs` (`59,455B`, `sha256=625cade487933678de4908625ac77930d8043a6aff9e318cbd81c23324ef41e6`)
+- **Immutable source block**: Received `Patch 2` `NEW` block (`12,244B`, `sha256=f74d0465612681745759d15e9389dd61358a8830ad8f8b25e9859e78be9b15e1`), slice `bytes[292, 12106)` (`11,814B`, `sha256=1dd4e1820975bdf75c091b1f45a12ce0804f5c9aa51285d443e51a755d4c5503`), starting at `/// Identifies whether \`PreparedNominalDeclarations::interned_names\` covers only` and ending after the closing `}\n\n` of `prepare_program_nominal_declarations`.
+- **Exclusions**:
+  - Exclude `bytes[0, 292)` (`name_id` is already present once in `owner_prepare.rs` and must not be duplicated).
+  - Exclude `bytes[12106, 12244)` (excludes the synthetic packet comment `// COMPLETE CURRENT END-OF-MODULE REGISTRATION SEAM`).
+
+#### Mechanical Application (Two Separate Unique Anchors in `owner_prepare.rs`)
+
+1. **Edit 2A — Insert `bytes[292, 12106)` immediately after existing `name_id`**:
+   - **Unique `old` anchor**:
+```rust
+fn name_id(names: &[String], n: &str) -> Result<usize, Tooling> {
+    names.binary_search_by(|x| x.as_str().cmp(n)).map_err(|_| Tooling::AdmissionRejected {
+        reason: AdmissionReason::ProgramViewMalformed,
+        detail: "name not collected in pass B".to_string(), locator: None })
+}
+```
+   - **`new` replacement**:
+     `old` anchor followed by `\n\n` + `COPY_RANGE(Patch2_NEW, 292..12106)` (trimmed of its trailing extra newline so one blank line follows `prepare_program_nominal_declarations`).
+
+2. **Edit 2B — Register `nominal_decl_producer_tests` at `EOF` anchor**:
+   - **Unique `old` anchor**:
+```rust
+#[cfg(test)]
+mod v4_empty_params_tests;
+```
+   - **`new` replacement**:
+```rust
+#[cfg(test)]
+mod v4_empty_params_tests;
+#[cfg(test)]
+mod nominal_decl_producer_tests;
+```
+
+*(Note: Placing `COPY_RANGE(Patch2_NEW, 292..12106)` directly before the `EOF` anchor in a single edit is also valid and semantically identical in Rust.)*
+
+---
+
+### 3. Symbol & Import Dependency Check
+- **Zero omitted symbol or import dependencies.** All items referenced in `bytes[292, 12106)` (`GrammarDomain`, `LayoutSchemaC`, `CapacityKind`, `FeatureKind`, `LocatorC`, `Tooling`, `CoreProgram`, `CoreFunction`, `CoreExpr`, `CorePattern`, `NameAct`, `cap_err`, `name_id`, and `super::{nominal_declaration_order, owner_ext_prepare_types, owner_ext_type_builder}`) are already in scope in `owner_prepare.rs` and `shared.rs`.
