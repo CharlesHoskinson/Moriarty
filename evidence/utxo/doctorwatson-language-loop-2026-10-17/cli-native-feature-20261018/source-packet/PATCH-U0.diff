@@ -1,0 +1,916 @@
+diff --git a/RUST_GUIDELINES.md b/RUST_GUIDELINES.md
+index 61efe7d4..02f1f2f7 100644
+--- a/RUST_GUIDELINES.md
++++ b/RUST_GUIDELINES.md
+@@ -252,2 +252,18 @@ difference is listed here under the applicable user authorization.
+-- **Never write tests that invoke the CLI binary**, and never snapshot `--help`.
+-  Test the library crates; keep the CLI a thin layer over them.
++- **Test semantics in the library crates; keep the CLI a thin layer over them.**
++  The CLI feature-boundary work has a narrow exception for real binary tests
++  of public dispatch, feature availability, frozen complete output, process
++  exits and I/O. This exception does not make a shared evaluator an independent
++  oracle. Never snapshot `--help`; use clap schema assertions for that contract.
++- Existing external fixture paths and test-support mounts are retained during
++  the feature-boundary cut; they are not precedents for new paths or mounts.
++  `core_continuations` includes the three `examples/core/continuations/*.mori`
++  sources and `normal-oracle.json`; `stage_test_public` reads
++  `models/core-stage-tests`; `fee_pool_component` and one `core_test_report`
++  case read `examples/core/fee-pool`. Native targets also retain their existing
++  example/deliverable inputs. Their provenance and the rule against fixtures
++  outside `crates/` need separate reconciliation before claiming full guideline
++  conformance. Preserve originals and evidence identities.
++- Existing `#[path = "../../mori-ledger/tests/support/mod.rs"]` mounts in
++  `prepare_call`, `installed_call` and `signed_installed_call` remain unchanged
++  in the native-only targets. They are existing deviations from the no-remount
++  rule above; this cut adds none and does not claim to resolve them.
+diff --git a/crates/mori/Cargo.toml b/crates/mori/Cargo.toml
+index a0016685..7ce55ab9 100644
+--- a/crates/mori/Cargo.toml
++++ b/crates/mori/Cargo.toml
+@@ -9,0 +10,17 @@ repository.workspace = true
++[features]
++default = ["native"]
++native = [
++    "dep:mori-backend",
++    "dep:mori-ledger",
++    "dep:futures",
++    "dep:rand",
++    "dep:midnight-ledger",
++    "dep:midnight-base-crypto",
++    "dep:midnight-coin-structure",
++    "dep:midnight-onchain-state",
++    "dep:midnight-onchain-runtime",
++    "dep:midnight-storage",
++    "dep:midnight-transient-crypto",
++    "dep:midnight-serialize",
++]
++
+@@ -18,2 +35,2 @@ mori-core.workspace = true
+-mori-backend.workspace = true
+-mori-ledger.workspace = true
++mori-backend = { workspace = true, optional = true }
++mori-ledger = { workspace = true, optional = true }
+@@ -26,2 +43,2 @@ rayon.workspace = true
+-futures.workspace = true
+-rand.workspace = true
++futures = { workspace = true, optional = true }
++rand = { workspace = true, optional = true }
+@@ -33,0 +51,9 @@ thiserror.workspace = true
++midnight-ledger = { workspace = true, optional = true }
++midnight-base-crypto = { workspace = true, optional = true }
++midnight-coin-structure = { workspace = true, optional = true }
++midnight-onchain-state = { workspace = true, optional = true }
++midnight-onchain-runtime = { workspace = true, optional = true }
++midnight-storage = { workspace = true, optional = true }
++midnight-transient-crypto = { workspace = true, optional = true }
++midnight-serialize = { workspace = true, optional = true }
++
+@@ -38,8 +64,43 @@ insta.workspace = true
+-midnight-ledger.workspace = true
+-midnight-base-crypto.workspace = true
+-midnight-coin-structure.workspace = true
+-midnight-onchain-state.workspace = true
+-midnight-onchain-runtime.workspace = true
+-midnight-storage.workspace = true
+-midnight-transient-crypto.workspace = true
+-midnight-serialize.workspace = true
++[[test]]
++name = "check_compile_io"
++required-features = ["native"]
++
++[[test]]
++name = "check_static_compile_io"
++required-features = ["native"]
++
++[[test]]
++name = "prepare_call"
++required-features = ["native"]
++
++[[test]]
++name = "installed_call"
++required-features = ["native"]
++
++[[test]]
++name = "signed_installed_call"
++required-features = ["native"]
++
++[[test]]
++name = "native_proofs"
++required-features = ["native"]
++
++[[test]]
++name = "signed_intents"
++required-features = ["native"]
++
++[[test]]
++name = "replay"
++required-features = ["native"]
++
++[[test]]
++name = "replay_challenge"
++required-features = ["native"]
++
++[[test]]
++name = "enforcement_report"
++required-features = ["native"]
++
++[[test]]
++name = "mapped_role_static_io"
++required-features = ["native"]
+diff --git a/crates/mori/src/cli.rs b/crates/mori/src/cli.rs
+index 6262c1e4..6b783a2d 100644
+--- a/crates/mori/src/cli.rs
++++ b/crates/mori/src/cli.rs
+@@ -16,0 +17,4 @@ use crate::styles;
++#[cfg_attr(
++    not(feature = "native"),
++    command(after_help = "Built without native: local Core reference tooling only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature.")
++)]
+@@ -110,0 +115,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -112,0 +121,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -114,0 +127,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -116,0 +133,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -118,0 +139,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -120,0 +145,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -122,0 +151,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -124,0 +157,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -126,0 +163,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -128,0 +169,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -130,0 +175,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -132,0 +181,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -137,0 +190,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Without native, source-only inspection is available; --target requires the native feature.")
++    )]
+@@ -141,0 +198,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Without native, local Core simulation and staged start/resume are available; --trace requires the native feature.")
++    )]
+@@ -143,0 +204,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Unavailable in this build: this command requires the native feature.")
++    )]
+@@ -147,0 +212,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Without native, legacy raw Core intents are available; the JubJub --profile requires the native feature.")
++    )]
+@@ -149,0 +218,4 @@ pub enum Command {
++    #[cfg_attr(
++        not(feature = "native"),
++        command(after_help = "Without native, legacy Core signature/reference verification is available; the JubJub --profile requires the native feature.")
++    )]
+diff --git a/crates/mori/src/commands/call_io.rs b/crates/mori/src/commands/call_io.rs
+index 900e4407..3f5a3e68 100644
+--- a/crates/mori/src/commands/call_io.rs
++++ b/crates/mori/src/commands/call_io.rs
+@@ -2,0 +3 @@
++#[cfg(feature = "native")]
+@@ -3,0 +5 @@ use super::{core_io, proof_io};
++#[cfg(feature = "native")]
+@@ -4,0 +7 @@ use crate::{error::CliError, shell::Shell};
++#[cfg(feature = "native")]
+@@ -9,4 +12,3 @@ use mori_ledger::{
+-use std::{
+-    path::{Path, PathBuf},
+-    process::ExitCode,
+-};
++use std::path::PathBuf;
++#[cfg(feature = "native")]
++use std::{path::Path, process::ExitCode};
+@@ -30,0 +33 @@ pub struct Input {
++#[cfg(feature = "native")]
+@@ -39,0 +43 @@ pub struct Inputs {
++#[cfg(feature = "native")]
+@@ -49,0 +54 @@ pub fn limits(path: &Path) -> super::Result<NativeWorkLimits> {
++#[cfg(feature = "native")]
+@@ -52,0 +58 @@ pub fn binary(path: &Path, cap: u64) -> super::Result<Vec<u8>> {
++#[cfg(feature = "native")]
+@@ -59,0 +66 @@ pub fn text(path: &Path, cap: u64) -> super::Result<String> {
++#[cfg(feature = "native")]
+@@ -64,0 +72 @@ pub fn program(path: &Path, cap: u64) -> super::Result<(String, mori_core::Progr
++#[cfg(feature = "native")]
+@@ -104,0 +113 @@ impl Input {
++#[cfg(feature = "native")]
+@@ -107,0 +117 @@ pub fn require_new(out: &Path) -> super::Result<()> {
++#[cfg(feature = "native")]
+@@ -114,0 +125 @@ pub fn publish(out: &Path, artifact: &ArtifactLeaves) -> super::Result<()> {
++#[cfg(feature = "native")]
+@@ -120,0 +132 @@ fn publish_leaves(out: &Path, artifact: &ArtifactLeaves) -> super::Result<()> {
++#[cfg(feature = "native")]
+@@ -132 +144 @@ pub fn status(shell: &mut Shell, label: &str, action: &str, out: &Path) -> ExitC
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+diff --git a/crates/mori/src/commands/compile.rs b/crates/mori/src/commands/compile.rs
+index 1bc26469..40786732 100644
+--- a/crates/mori/src/commands/compile.rs
++++ b/crates/mori/src/commands/compile.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -2,5 +3,6 @@ use super::core_io;
+-use crate::{error::CliError, shell::Shell};
+-use std::{
+-    path::{Path, PathBuf},
+-    process::ExitCode,
+-};
++#[cfg(feature = "native")]
++use crate::error::CliError;
++use crate::shell::Shell;
++#[cfg(feature = "native")]
++use std::path::Path;
++use std::{path::PathBuf, process::ExitCode};
+@@ -17,0 +20 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -70,0 +74 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -91,0 +96 @@ fn publish_artifact(
++#[cfg(feature = "native")]
+@@ -109 +114 @@ fn publish_staged_artifact(
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+@@ -237,0 +243,10 @@ mod tests {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.file,
++        &args.target,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/compile_call.rs b/crates/mori/src/commands/compile_call.rs
+index d3b83b94..cf7df79b 100644
+--- a/crates/mori/src/commands/compile_call.rs
++++ b/crates/mori/src/commands/compile_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -2,6 +3,6 @@ use super::{core_io, proof_io};
+-use crate::{error::CliError, shell::Shell};
+-use std::{
+-    io::Read,
+-    path::{Path, PathBuf},
+-    process::ExitCode,
+-};
++#[cfg(feature = "native")]
++use crate::error::CliError;
++use crate::shell::Shell;
++#[cfg(feature = "native")]
++use std::{io::Read, path::Path};
++use std::{path::PathBuf, process::ExitCode};
+@@ -31,0 +33 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -48,0 +51 @@ pub(crate) fn artifact_bytes(path: &Path) -> super::Result<Vec<u8>> {
++#[cfg(feature = "native")]
+@@ -83,0 +87 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -119,0 +124 @@ fn validate_shape(args: &Args) -> super::Result<()> {
++#[cfg(feature = "native")]
+@@ -124,0 +130 @@ fn static_text(path: &Path, cap: usize) -> super::Result<String> {
++#[cfg(feature = "native")]
+@@ -247,0 +254 @@ fn run_static(args: &Args, shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -253,0 +261 @@ fn publish_static(
++#[cfg(feature = "native")]
+@@ -269,0 +278 @@ fn publish_static_with(
++#[cfg(feature = "native")]
+@@ -276 +285 @@ fn publish(out: &Path, ir: &[u8], manifest: &[u8]) -> super::Result<()> {
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+@@ -384,0 +394,17 @@ mod tests {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.file,
++        &args.action,
++        &args.deployment,
++        &args.out,
++        &args.all_actions,
++        &args.static_bindings,
++        &args.authorization,
++        &args.signer_policy,
++        &args.work_limits,
++        &args.inspect_static,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/core_io.rs b/crates/mori/src/commands/core_io.rs
+index 2ba5d313..cc5f1941 100644
+--- a/crates/mori/src/commands/core_io.rs
++++ b/crates/mori/src/commands/core_io.rs
+@@ -24 +24 @@ pub fn read_source(path: &Path) -> super::Result<String> {
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+@@ -164,0 +165 @@ pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
++#[cfg(feature = "native")]
+@@ -218,0 +220 @@ pub fn ledger_operation(error: mori_ledger::Error) -> mori_diagnostics::Report {
++#[cfg(feature = "native")]
+@@ -250,0 +253 @@ pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
++#[cfg(feature = "native")]
+@@ -259,0 +263 @@ pub fn signed_target(path: &Path) -> super::Result<mori_backend::Target> {
++#[cfg(feature = "native")]
+@@ -263,0 +268 @@ pub fn authority(path: &Path) -> super::Result<mori_backend::authorization::Expe
++#[cfg(feature = "native")]
+@@ -278 +283 @@ pub fn review_identity(value: &str) -> String {
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+diff --git a/crates/mori/src/commands/inspect.rs b/crates/mori/src/commands/inspect.rs
+index 2c7495c6..04a186b8 100644
+--- a/crates/mori/src/commands/inspect.rs
++++ b/crates/mori/src/commands/inspect.rs
+@@ -1 +1,3 @@
+-use std::{collections::BTreeSet, path::PathBuf, process::ExitCode};
++#[cfg(feature = "native")]
++use std::collections::BTreeSet;
++use std::{path::PathBuf, process::ExitCode};
+@@ -2,0 +5 @@ use std::{collections::BTreeSet, path::PathBuf, process::ExitCode};
++#[cfg(feature = "native")]
+@@ -3,0 +7 @@ use mori_backend::{Artifact, CircuitArtifact, PublicBinding};
++#[cfg(feature = "native")]
+@@ -18,0 +23,4 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    #[cfg(not(feature = "native"))]
++    if args.target.is_some() {
++        return super::native_unavailable();
++    }
+@@ -38,0 +47 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    #[cfg(feature = "native")]
+@@ -51,0 +61 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(feature = "native")]
+@@ -63,0 +74,2 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(not(feature = "native"))]
++        Some(_) => return super::native_unavailable(),
+@@ -90,0 +103 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -93,0 +107 @@ fn encoded(predicates: &[&str]) -> Value {
++#[cfg(feature = "native")]
+@@ -97,0 +112 @@ fn reference(predicates: &[&str]) -> Value {
++#[cfg(feature = "native")]
+@@ -148,0 +164 @@ fn enforcement_report(
++#[cfg(feature = "native")]
+@@ -201,0 +218 @@ fn action_report(
++#[cfg(feature = "native")]
+@@ -246,0 +264 @@ fn public_field(position: usize, binding: &PublicBinding) -> Value {
++#[cfg(feature = "native")]
+@@ -285,0 +304 @@ fn authorization_rule(name: &str) -> &'static str {
++#[cfg(feature = "native")]
+@@ -294,0 +314 @@ fn core1_refusal() -> mori_core::Error {
++#[cfg(feature = "native")]
+@@ -319,0 +340 @@ fn statement_rule(statement: &Statement) -> super::Result<&'static str> {
++#[cfg(feature = "native")]
+@@ -370,0 +392 @@ fn expression_constraints(program: &Program, action: &Action) -> super::Result<V
++#[cfg(feature = "native")]
+diff --git a/crates/mori/src/commands/intent.rs b/crates/mori/src/commands/intent.rs
+index f3e97f17..73fdd558 100644
+--- a/crates/mori/src/commands/intent.rs
++++ b/crates/mori/src/commands/intent.rs
+@@ -163,0 +164 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -245,0 +247,11 @@ fn signed(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++fn signed(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let (Some(target), Some(at)) = (&args.target, args.at) else {
++        return Err(super::core_io::operation(
++            "--profile moriarty-jubjub-owner-intent/1 requires --target and --at together",
++        ));
++    };
++    let _ = (target, at);
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/keygen_call.rs b/crates/mori/src/commands/keygen_call.rs
+index 1e0320d7..a21bb33a 100644
+--- a/crates/mori/src/commands/keygen_call.rs
++++ b/crates/mori/src/commands/keygen_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -21,0 +23 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -69,0 +72,15 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.file,
++        &args.seed_deployment,
++        &args.seed_state,
++        &args.parameters,
++        &args.action,
++        &args.params_dir,
++        &args.work_limits,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/keygen_signed_call.rs b/crates/mori/src/commands/keygen_signed_call.rs
+index 39c2de69..e08383a2 100644
+--- a/crates/mori/src/commands/keygen_signed_call.rs
++++ b/crates/mori/src/commands/keygen_signed_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -23,0 +25 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -83,0 +86,16 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.file,
++        &args.signer_policy,
++        &args.seed_deployment,
++        &args.seed_state,
++        &args.parameters,
++        &args.action,
++        &args.params_dir,
++        &args.work_limits,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/mod.rs b/crates/mori/src/commands/mod.rs
+index 64089be7..cc59d26c 100644
+--- a/crates/mori/src/commands/mod.rs
++++ b/crates/mori/src/commands/mod.rs
+@@ -68,0 +69,10 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++fn native_unavailable<T>() -> Result<T> {
++    Err(crate::error::CliError::Operation {
++        code: "mori::command::native-unavailable".into(),
++        message: "This mori build has no Midnight support. Rebuild with the native feature enabled."
++            .into(),
++    }
++    .into())
++}
+diff --git a/crates/mori/src/commands/prepare_call.rs b/crates/mori/src/commands/prepare_call.rs
+index 883ca0f8..7a744666 100644
+--- a/crates/mori/src/commands/prepare_call.rs
++++ b/crates/mori/src/commands/prepare_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -2,6 +3,6 @@ use super::{core_io, proof_io};
+-use crate::{error::CliError, shell::Shell};
+-use std::{
+-    io::Read,
+-    path::{Path, PathBuf},
+-    process::ExitCode,
+-};
++#[cfg(feature = "native")]
++use crate::error::CliError;
++use crate::shell::Shell;
++#[cfg(feature = "native")]
++use std::{io::Read, path::Path};
++use std::{path::PathBuf, process::ExitCode};
+@@ -26,0 +28 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -43,0 +46 @@ fn binary(path: &Path) -> super::Result<Vec<u8>> {
++#[cfg(feature = "native")]
+@@ -111,0 +115 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -122 +126 @@ fn publish_leaves(
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+@@ -180,0 +185,15 @@ mod tests {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.file,
++        &args.action,
++        &args.deployment,
++        &args.predecessor,
++        &args.parameters,
++        &args.request,
++        &args.relation,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/prepare_signed_call.rs b/crates/mori/src/commands/prepare_signed_call.rs
+index 67b09704..d9a46343 100644
+--- a/crates/mori/src/commands/prepare_signed_call.rs
++++ b/crates/mori/src/commands/prepare_signed_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -12,0 +14 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -59,0 +62,19 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.file,
++        &args.input.signer_policy,
++        &args.input.deployment,
++        &args.input.predecessor,
++        &args.input.parameters,
++        &args.input.request,
++        &args.input.action,
++        &args.input.params_dir,
++        &args.input.work_limits,
++        &args.input.derive_supplied_frame,
++        &args.public_keyset,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/proof_io.rs b/crates/mori/src/commands/proof_io.rs
+index 73500b6d..a39ed2bb 100644
+--- a/crates/mori/src/commands/proof_io.rs
++++ b/crates/mori/src/commands/proof_io.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -2 +3,5 @@ use super::core_io;
+-use crate::{cli::ActionInput, error::CliError};
++use crate::cli::ActionInput;
++#[cfg(feature = "native")]
++use crate::error::CliError;
++use std::path::PathBuf;
++#[cfg(feature = "native")]
+@@ -6 +11 @@ use std::{
+-    path::{Path, PathBuf},
++    path::Path,
+@@ -33,0 +39 @@ pub struct Input {
++#[cfg(feature = "native")]
+@@ -38,0 +45 @@ pub struct Signed {
++#[cfg(feature = "native")]
+@@ -44,0 +52 @@ pub type Inputs = (
++#[cfg(feature = "native")]
+@@ -86,0 +95 @@ impl Input {
++#[cfg(feature = "native")]
+@@ -101,0 +111 @@ pub fn require_new(path: &Path) -> super::Result<()> {
++#[cfg(feature = "native")]
+@@ -102,0 +113 @@ struct Staging(PathBuf);
++#[cfg(feature = "native")]
+@@ -107,0 +119 @@ impl Drop for Staging {
++#[cfg(feature = "native")]
+@@ -110,0 +123 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
++#[cfg(feature = "native")]
+@@ -144 +157 @@ pub fn publish_new(path: &Path, bytes: &[u8]) -> super::Result<()> {
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+diff --git a/crates/mori/src/commands/prove.rs b/crates/mori/src/commands/prove.rs
+index 6075c31e..29ede200 100644
+--- a/crates/mori/src/commands/prove.rs
++++ b/crates/mori/src/commands/prove.rs
+@@ -1 +1,3 @@
+-use super::{core_io, proof_io};
++use super::proof_io;
++#[cfg(feature = "native")]
++use super::core_io;
+@@ -11,0 +14 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -39,0 +43,15 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.action,
++        &args.input.target,
++        &args.input.params_dir,
++        &args.input.max_k,
++        &args.input.signature,
++        &args.input.authority,
++        &args.input.at,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/prove_call.rs b/crates/mori/src/commands/prove_call.rs
+index 9732d152..722adb9a 100644
+--- a/crates/mori/src/commands/prove_call.rs
++++ b/crates/mori/src/commands/prove_call.rs
+@@ -1 +1,3 @@
+-use super::{call_io, core_io};
++use super::call_io;
++#[cfg(feature = "native")]
++use super::core_io;
+@@ -2,0 +5 @@ use crate::shell::Shell;
++#[cfg(feature = "native")]
+@@ -13,0 +17 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -61,0 +66,17 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.file,
++        &args.input.deployment,
++        &args.input.predecessor,
++        &args.input.parameters,
++        &args.input.request,
++        &args.input.action,
++        &args.input.params_dir,
++        &args.input.work_limits,
++        &args.keyset,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/prove_signed_call.rs b/crates/mori/src/commands/prove_signed_call.rs
+index 865c9f36..e8dbe39e 100644
+--- a/crates/mori/src/commands/prove_signed_call.rs
++++ b/crates/mori/src/commands/prove_signed_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -2,0 +4 @@ use crate::shell::Shell;
++#[cfg(feature = "native")]
+@@ -15,0 +18 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -71,0 +75,20 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.file,
++        &args.input.signer_policy,
++        &args.input.deployment,
++        &args.input.predecessor,
++        &args.input.parameters,
++        &args.input.request,
++        &args.input.action,
++        &args.input.params_dir,
++        &args.input.work_limits,
++        &args.input.derive_supplied_frame,
++        &args.keyset,
++        &args.signed_attachment,
++        &args.out,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/replay.rs b/crates/mori/src/commands/replay.rs
+index 5e12f892..1f88300d 100644
+--- a/crates/mori/src/commands/replay.rs
++++ b/crates/mori/src/commands/replay.rs
+@@ -5,0 +6 @@ use crate::{
++#[cfg(feature = "native")]
+@@ -10,0 +12 @@ use mori_backend::{
++#[cfg(feature = "native")]
+@@ -28,0 +31 @@ pub struct AuthorizationArgs {
++#[cfg(feature = "native")]
+@@ -43,0 +47 @@ impl AuthorizationArgs {
++    #[cfg(feature = "native")]
+@@ -66,0 +71 @@ impl AuthorizationArgs {
++#[cfg(feature = "native")]
+@@ -98,0 +104 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -168,0 +175,12 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input,
++        &args.target,
++        &args.record,
++        &args.challenge_out,
++        &args.authorization,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/signed_call_io.rs b/crates/mori/src/commands/signed_call_io.rs
+index 2dfa8c99..fec7efd1 100644
+--- a/crates/mori/src/commands/signed_call_io.rs
++++ b/crates/mori/src/commands/signed_call_io.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -1,0 +3 @@ use super::{call_io, core_io};
++#[cfg(feature = "native")]
+@@ -3 +5,3 @@ use mori_ledger::{profile::NativeWorkLimits, signed::*};
+-use std::{path::PathBuf, process::ExitCode};
++use std::path::PathBuf;
++#[cfg(feature = "native")]
++use std::process::ExitCode;
+@@ -25,0 +30 @@ pub struct Input {
++#[cfg(feature = "native")]
+@@ -35,0 +41 @@ pub struct Inputs {
++#[cfg(feature = "native")]
+@@ -94,0 +101 @@ impl Input {
++#[cfg(feature = "native")]
+@@ -116,0 +124 @@ pub fn descriptor(
++#[cfg(feature = "native")]
+@@ -126,0 +135 @@ pub fn attachment(
++#[cfg(feature = "native")]
+@@ -137 +146 @@ pub fn status(
+-#[cfg(test)]
++#[cfg(all(test, feature = "native"))]
+diff --git a/crates/mori/src/commands/simulate.rs b/crates/mori/src/commands/simulate.rs
+index 8646afa2..204e7f5e 100644
+--- a/crates/mori/src/commands/simulate.rs
++++ b/crates/mori/src/commands/simulate.rs
+@@ -70,0 +71 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(feature = "native")]
+@@ -71,0 +73 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(feature = "native")]
+@@ -72,0 +75 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(feature = "native")]
+@@ -73,0 +77 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(feature = "native")]
+@@ -74,0 +79 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(feature = "native")]
+@@ -92,0 +98,5 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++        #[cfg(not(feature = "native"))]
++        {
++            let _ = path;
++            return super::native_unavailable();
++        }
+diff --git a/crates/mori/src/commands/verify.rs b/crates/mori/src/commands/verify.rs
+index 2deace76..d8857a08 100644
+--- a/crates/mori/src/commands/verify.rs
++++ b/crates/mori/src/commands/verify.rs
+@@ -1 +1,3 @@
+-use super::{core_io, proof_io};
++use super::proof_io;
++#[cfg(feature = "native")]
++use super::core_io;
+@@ -11,0 +14 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -38,0 +42,15 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.action,
++        &args.input.target,
++        &args.input.params_dir,
++        &args.input.max_k,
++        &args.input.signature,
++        &args.input.authority,
++        &args.input.at,
++        &args.proof,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/verify_call.rs b/crates/mori/src/commands/verify_call.rs
+index 912acbac..3ffdaf6e 100644
+--- a/crates/mori/src/commands/verify_call.rs
++++ b/crates/mori/src/commands/verify_call.rs
+@@ -1 +1,3 @@
+-use super::{call_io, core_io};
++use super::call_io;
++#[cfg(feature = "native")]
++use super::core_io;
+@@ -3 +5,3 @@ use crate::shell::Shell;
+-use std::{io::Write, path::PathBuf, process::ExitCode};
++#[cfg(feature = "native")]
++use std::io::Write;
++use std::{path::PathBuf, process::ExitCode};
+@@ -12,0 +17 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -62,0 +68,17 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.file,
++        &args.input.deployment,
++        &args.input.predecessor,
++        &args.input.parameters,
++        &args.input.request,
++        &args.input.action,
++        &args.input.params_dir,
++        &args.input.work_limits,
++        &args.public_keyset,
++        &args.proof,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/verify_intent.rs b/crates/mori/src/commands/verify_intent.rs
+index 9372c41d..de7e51f6 100644
+--- a/crates/mori/src/commands/verify_intent.rs
++++ b/crates/mori/src/commands/verify_intent.rs
+@@ -133,0 +134 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++#[cfg(feature = "native")]
+@@ -177,0 +179,5 @@ fn signed(args: &Args, target: &std::path::Path) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++fn signed(_args: &Args, _target: &std::path::Path) -> super::Result<ExitCode> {
++    super::native_unavailable()
++}
+diff --git a/crates/mori/src/commands/verify_signed_call.rs b/crates/mori/src/commands/verify_signed_call.rs
+index 345c535c..d948fed4 100644
+--- a/crates/mori/src/commands/verify_signed_call.rs
++++ b/crates/mori/src/commands/verify_signed_call.rs
+@@ -0,0 +1 @@
++#[cfg(feature = "native")]
+@@ -3 +4,3 @@ use crate::shell::Shell;
+-use std::{io::Write, path::PathBuf, process::ExitCode};
++#[cfg(feature = "native")]
++use std::io::Write;
++use std::{path::PathBuf, process::ExitCode};
+@@ -14,0 +18 @@ pub struct Args {
++#[cfg(feature = "native")]
+@@ -70,0 +75,20 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++
++#[cfg(not(feature = "native"))]
++pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
++    let _ = (
++        &args.input.file,
++        &args.input.signer_policy,
++        &args.input.deployment,
++        &args.input.predecessor,
++        &args.input.parameters,
++        &args.input.request,
++        &args.input.action,
++        &args.input.params_dir,
++        &args.input.work_limits,
++        &args.input.derive_supplied_frame,
++        &args.public_keyset,
++        &args.proof,
++        &args.signed_attachment,
++    );
++    super::native_unavailable()
++}
+diff --git a/crates/mori/tests/core_continuations.rs b/crates/mori/tests/core_continuations.rs
+index 1ebffaac..ef18c760 100644
+--- a/crates/mori/tests/core_continuations.rs
++++ b/crates/mori/tests/core_continuations.rs
+@@ -248,0 +249 @@ fn check_and_source_inspect_route_core_two_without_legacy_consumers() {
++#[cfg(feature = "native")]
+@@ -365,0 +367 @@ const STAGE_LABELS: [(&str, &str); 3] = [
++#[cfg(feature = "native")]
+@@ -421,0 +424 @@ fn h16_core_one_resume_is_labelled_profile_rejection_before_continuation_or_even
++#[cfg(feature = "native")]
+@@ -454,0 +458 @@ fn h16_core_two_trace_target_prints_backend_program_profile_rejection_before_rec
++#[cfg(feature = "native")]
+@@ -472,0 +477 @@ fn h16_core_two_inspect_target_refuses_with_core_profile_before_target_read() {
++#[cfg(feature = "native")]
+@@ -495,0 +501 @@ fn h19_core_two_compile_call_refuses_before_deployment_read_or_emission() {
++#[cfg(feature = "native")]
+@@ -496,0 +503 @@ const SIGNED_TARGET: &str = r#"{"anchor":"native-liability-qa","ledger_revision"
++#[cfg(feature = "native")]
+diff --git a/crates/mori/tests/fee_pool_component.rs b/crates/mori/tests/fee_pool_component.rs
+index 77c73f5d..6c48e2fb 100644
+--- a/crates/mori/tests/fee_pool_component.rs
++++ b/crates/mori/tests/fee_pool_component.rs
+@@ -71,0 +72 @@ fn invoke(mut c: Command) -> Output {
++#[cfg(feature = "native")]
+@@ -435,0 +437 @@ fn public_simulate_budget_boundary_and_atomic_refusals() {
++#[cfg(feature = "native")]
+@@ -465,0 +468 @@ fn static_command(
++#[cfg(feature = "native")]
+@@ -679,0 +683 @@ fn public_source_static_all_actions_and_separate_process_reopen_both_programs()
++#[cfg(feature = "native")]
+diff --git a/plugins/moriarty-dev/skills/develop/references/rust.md b/plugins/moriarty-dev/skills/develop/references/rust.md
+index a2f162d8..c90b9645 100644
+--- a/plugins/moriarty-dev/skills/develop/references/rust.md
++++ b/plugins/moriarty-dev/skills/develop/references/rust.md
+@@ -36,2 +36,6 @@ installed package, so resolve the path against the active checkout root.
+-- Never run the `mori` binary from a test and never snapshot `--help`. Test the
+-  library crates; keep the CLI a thin layer over them.
++- Test semantics in the library crates; keep the CLI a thin layer over them.
++  The CLI feature-boundary work permits narrowly scoped real binary tests of
++  dispatch, availability, complete frozen output, process exits and I/O as
++  recorded in `RUST_GUIDELINES.md`. Never snapshot `--help`; use clap schema
++  assertions. Existing fixture paths and test-support mounts remain separate
++  documented guideline deviations, not permission to add new mounts.
