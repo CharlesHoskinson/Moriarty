@@ -1,0 +1,19 @@
+This archive records three genuine ordinary positive test observations at local GP0345, not source approval or parent acceptance. The tested source remains LOCAL_UNAPPROVED. Source bodies published earlier as evidence are not thereby implementation-approved.
+
+| Target | Passed / failed / filtered | Wall seconds | Complete captures |
+|---|---|---:|---|
+| escrow |1/0/0|47.84033541099|one full Execution,50925B|
+| invoice |1/0/0|39.41020975000|five complete Results/Continuation/views|
+| financial_pair |4/0/0|34.04895561599|none; no Execution reconstructed|
+
+All actual raw stdout/stderr/terminal/final results, cleanup/capture records and root dispositions are copied byte-for-byte. Immutable TERMINAL false before postchecks and final RESULT true are preserved as different temporal records. Invoice's initial root metadata KeyError is preserved separately from the single successful product run; the correct raw shapes are Ok/Waiting and Ok/Complete.
+
+The full escrow and invoice fidelity reports and exhaustive leaf/container/expected-field maps are retained unchanged. Escrow covers all 11 financial snapshots/deltas/history and six effects with 55 captured Step.value/Statement leaves outside independent expectations. Invoice covers complete 13-key resume/four-key journey, four suffix steps/ten total steps and aggregate cap 23/start 15/suffix 8/final 23; raw identity/hash/arena/codec fields and typed reopen-only relations remain qualified. These reports are metadata analyses, not review votes. Financial_pair has only the whole compiled four-test predicate and public harness receipts; no raw Execution leaf map is fabricated. ASSERTION-BOUNDARIES preserves each actual consumer's narrower predicates, original finite ACTUS field gaps and unobserved conceptual work.
+
+Complete original expectation packets are retained: 19 escrow fixture files, 18 invoice files, 10 v2/33 STK/39 UMP payloads plus their three freeze files. Original related-source/oracle exposure, supplied ordering/ASCII/representation premises, unknowns and unselected refusal data remain unchanged. No new hostile/refusal test or security/resource decision follows. In particular UMP old inventory_members 37 text is retained; the authoritative 39-payload freeze is preserved without normalization.
+
+SOURCE-AND-COPY-BINDING.json contains the explicit per-file allowlist, original full fidelity membership mappings, and tested-source mappings. The 191 previously published GP bodies resolve to exact commit 0eea5c8e4b8d842e6bf4d89d60069f4f3bc1aab1, path and SHA256; those bytes were verified with immutable Git object reads. Additional required public bodies are copied or deduplicated to an exact new archive path/SHA. Historical local paths in original receipts/manifests remain provenance, never a mutable byte authority. All generated archive content consists only of this overview, the binding and OBSERVATION.json; other archive bodies are byte copies.
+
+No source/result review is supplied by this archive. Original five-new/three-overlap and original financial/ACTUS eight-test scopes remain required, with no eight-of-eight or parent closure. Three payout, one Waiting and two reserve tests and original guarded predicates retain separate custody. All original 148 requirements/292 scenarios/20 families,U/M/MC/SP/G,ACTUS/DeFi,all five composition/native/proof/ledger/target obligations remain. Public developer compile/prove/deploy permissions are unchanged.
+
+Two UMP frozen normative basis files (Core README and product contract) resolve to the exact already-published GP bodies rather than duplicate copies. Their original frozen payload membership, names, sizes, hashes and freeze bytes remain unchanged; SOURCE-AND-COPY-BINDING resolves each file immutably. All other original expectation packet bodies are present as unchanged copies. No previously published GP source body is physically duplicated in this archive.

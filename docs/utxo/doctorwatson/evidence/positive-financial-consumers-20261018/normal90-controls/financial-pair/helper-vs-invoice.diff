@@ -1,0 +1,87 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/invoice-receipt-normal90-preparation-20261018/run_check.py
++++ /home/charl/moriarty-c2-opus55-restored-20261017/financial-pair-normal90-preparation-20261018/run_check.py
+@@ -17,10 +17,6 @@
+ import time
+ 
+ D = Path(__file__).resolve().parent
+-CAPTURE_NAMES = (
+-    'start-result.json', 'reopened-continuation.json', 'resume-result.json',
+-    'resume-observations.json', 'cross-segment-observations.json',
+-)
+ 
+ 
+ def sha(p):
+@@ -102,7 +98,7 @@
+               'noAutomaticRetry': True})
+         raise
+ 
+-    root = Path(tempfile.mkdtemp(prefix='doctorwatson-invoice-receipt-'))
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-financial-pair-'))
+     child = None
+     result = {'head': binding['head'], 'tree': binding['tree'], 'sourceBefore': source_before,
+               'attemptConsumed': False, 'selectedCheckSatisfied': False}
+@@ -121,16 +117,12 @@
+                'CARGO_TARGET_DIR': str(root / 'target'), 'CARGO_NET_OFFLINE': 'true',
+                'CARGO_INCREMENTAL': '0', 'CARGO_CACHE_AUTO_CLEAN_FREQUENCY': 'never',
+                'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
+-               'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp'),
+-               'MORI_INVOICE_RECEIPT_CAPTURE_DIR': str(cycle / 'invoice-captures')}
+-        assert len(env) == 14 and not (root / 'target').exists()
+-        capture_directory = Path(env['MORI_INVOICE_RECEIPT_CAPTURE_DIR'])
+-        capture_directory.mkdir(exist_ok=False)
+-        assert not any(capture_directory.iterdir())
++               'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp')}
++        assert len(env) == 13 and not (root / 'target').exists()
+         absent_configs = configs(root)
+         command = [tools['cargo']['path'], 'test', '--manifest-path', str(checkout / 'Cargo.toml'),
+                    '--frozen', '-j1', '-p', 'mori-core', '--no-default-features', '--test',
+-                   'invoice_receipt_resume', '--', '--test-threads=1']
++                   'financial_pair', '--', '--test-threads=1']
+         argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '90s', *command]
+         write(cycle / 'CHECK-PLAN.json', {'at': now(), 'head': binding['head'], 'tree': binding['tree'],
+               'bindingSha256': args.binding_sha, 'argv': argv, 'cwd': str(root / 'cwd'),
+@@ -168,22 +160,6 @@
+                       parentDeadlineExceeded=expired, directChildReaped=reaped,
+                       phaseError=phase_error, stdoutPath=str(cycle / 'STDOUT.log'), stderrPath=str(cycle / 'STDERR.log'))
+         write(cycle / 'TERMINAL.json', result)
+-        write(cycle / 'RESULT.json', result)
+-        # The unchanged consumer saves genuine Results/continuation plus its
+-        # complete observation views before final semantic assertions. Keep all
+-        # five raw files; persist facts before census/assertions/postchecks.
+-        capture_files = []
+-        for name in CAPTURE_NAMES:
+-            captured = capture_directory / name
+-            row = {'name': name, 'path': str(captured), 'exists': captured.is_file()}
+-            if captured.is_file():
+-                row.update(bytes=captured.stat().st_size, sha256=sha(captured))
+-            capture_files.append(row)
+-        capture_facts = {'at': now(), 'directory': str(capture_directory),
+-                         'directoryEntries': sorted(p.name for p in capture_directory.iterdir()),
+-                         'files': capture_files}
+-        write(cycle / 'INVOICE-CAPTURES.json', capture_facts)
+-        result['invoiceCaptures'] = capture_facts
+         write(cycle / 'RESULT.json', result)
+         if child is None:
+             members = []  # No session was created when spawn failed.
+@@ -227,13 +203,14 @@
+                 summaries = re.findall(r'test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out', text)
+                 assert len(summaries) == 1, 'Require one whole selected target summary.'
+                 summary = dict(zip(['passed', 'failed', 'ignored', 'measured', 'filtered'], map(int, summaries[0])))
+-                assert summary == {'passed': 1, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
+-                assert 'test reopened_invoice_receipt_completes_with_all_financial_prefixes_preserved ... ok' in text
+-                captured = result['invoiceCaptures']
+-                assert captured['directoryEntries'] == sorted(CAPTURE_NAMES)
+-                assert len(captured['files']) == 5
+-                assert all(row['exists'] is True and row.get('bytes', 0) > 0
+-                           for row in captured['files']), 'Require all five genuine invoice captures.'
++                assert summary == {'passed': 4, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
++                for name in (
++                    'linked_installments_match_every_frozen_financial_prefix_and_total_work',
++                    'approved_multiasset_reserve_matches_every_frozen_financial_prefix_and_total_work',
++                    'actus_stk04_matches_independent_core_trace_and_four_cashflow_fields',
++                    'actus_ump01_matches_independent_core_trace_and_seven_financial_fields',
++                ):
++                    assert f'test {name} ... ok' in text
+                 result['rustSummary'] = summary
+                 result['wholeSelectedTargetPredicate'] = True
+             else:
