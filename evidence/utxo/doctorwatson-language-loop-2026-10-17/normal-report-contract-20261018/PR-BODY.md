@@ -1,0 +1,5 @@
+Normal Core reports need a precise contract for captured Let values, immediate state updates, statement-local effects and empty actions. This documents the adopted behavior, adds six child clauses under existing UNI requirements, and adds two public CLI tests covering five independently frozen Counter and empty-action reports.
+
+The fixtures include complete typed executions, preserved balances/liabilities, logical work and exact stdout/stderr bytes. They were derived independently after the disclosed design adoption. Existing Transfer mori-test aggregate bytes retain their separate consumer and freeze. No production code or dependency changes.
+
+Validation so far: all twenty independent fixture hashes, exact copy checks, the changed Rust file formatter check and Git whitespace checks pass. Full candidate review, execution admission, both tests and all five CLI calls remain pending. Eleven-node parser correspondence, native/default/workspace/compiler/proof/ledger checks and all parent EARS exits remain open.

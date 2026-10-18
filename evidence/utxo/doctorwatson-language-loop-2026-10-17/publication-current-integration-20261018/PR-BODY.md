@@ -1,0 +1,5 @@
+The publication tests previously built their input by running the compiler. This replaces that helper with an independently frozen transport fixture decoded through the real Artifact constructor, preserving production publication code and the three existing refusal/order test bodies. A fourth test checks exact circuit, source-projection and manifest bytes.
+
+Validation is source-only: JSON/freeze/patch checks and fresh ordinary and designated security-fallback integration reviews approve the exact merge candidate on the current main tree. The original canonical Opus4.8 source review is preserved separately. The complete original PR test module and mainline native feature gates are retained.
+
+All four Rust decoder/publication tests remain UNRUN because they build the native SDK closure. The opaque fixture is byte-transport data, not compiled ZKIR, a proof or financial/ledger evidence. Projection collision/marker-order coverage and an independent fixture hash assertion in Rust remain open. Core CLI results are not publication or compiler qualification. No parent EARS acceptance is claimed.

@@ -1,0 +1,102 @@
+[
+  {
+    "filesRead": [
+      "INLINE",
+      "MANIFEST.json",
+      "PATCH.diff",
+      "TOOL-METADATA.json",
+      "CARGO-CONFIG-METADATA.json",
+      "RUSTFMT-CHECK.json",
+      "candidate/Cargo.toml",
+      "candidate/crates/mori/src/commands/inspect.rs",
+      "candidate/crates/mori/src/commands/simulate.rs",
+      "candidate/crates/mori/src/commands/intent.rs",
+      "candidate/crates/mori/src/commands/verify_intent.rs",
+      "candidate/crates/mori/src/commands/replay.rs",
+      "candidate/crates/mori/src/commands/compile.rs",
+      "candidate/crates/mori/src/commands/compile_call.rs",
+      "candidate/crates/mori/src/commands/prepare_call.rs",
+      "candidate/crates/mori/src/commands/keygen_call.rs",
+      "candidate/crates/mori/src/commands/prove_call.rs",
+      "candidate/crates/mori/src/commands/verify_call.rs",
+      "candidate/crates/mori/src/commands/keygen_signed_call.rs",
+      "candidate/crates/mori/src/commands/prepare_signed_call.rs",
+      "candidate/crates/mori/src/commands/prove_signed_call.rs",
+      "candidate/crates/mori/src/commands/verify_signed_call.rs",
+      "candidate/crates/mori/src/commands/prove.rs",
+      "candidate/crates/mori/src/commands/verify.rs",
+      "candidate/crates/mori/src/commands/call_io.rs",
+      "candidate/crates/mori/src/commands/signed_call_io.rs",
+      "candidate/crates/mori/src/commands/proof_io.rs",
+      "candidate/crates/mori/src/commands/core_io.rs"
+    ],
+    "findings": [
+      "PATCH.diff on baseTree 23a78098cbdf690ac3b6f9a994f6d5033b869b18 adds only crates/mori/tests/native_feature_boundary.rs (prospectiveTree 7a89671b88b8e9e879c24657a299adcf6b7fac1e, sha256 a07195e95d035b3fdfbd5dcf6c7767b041d6b06165530fee4179b7b0ddec879c); zero production files change and RUSTFMT-R2-CHECK.json records checkExit 0.",
+      "Crate-level #![cfg(not(feature = \"native\"))] at crates/mori/tests/native_feature_boundary.rs:1 gates the entire test binary to --no-default-features builds and selects 0 tests under default = [\"native\"] in crates/mori/Cargo.toml:10.",
+      "In native_routes_report_unavailable_before_io (crates/mori/tests/native_feature_boundary.rs:144-419), all 13 native-only subcommands (compile, compile-call, prepare-call, keygen-call, prove-call, verify-call, keygen-signed-call, prepare-signed-call, prove-signed-call, verify-signed-call, prove, verify, replay) and 4 mixed routes (inspect --target at inspect.rs:23-26, simulate --trace --target at simulate.rs:66-103, intent --profile+--target+--at at intent.rs:63-70,248-257, verify-intent --profile+--target at verify_intent.rs:43-44,180-183) return commands::native_unavailable() (mod.rs:66-74) with exit 1, empty stdout, and mori::command::native-unavailable before file reads or output creation across both missing-inputs and populated-sentinels phases (34 CLI calls).",
+      "In arg_and_clap_precedence_without_native_diagnostic (crates/mori/tests/native_feature_boundary.rs:422-596), 6 malformed/conflicting invocations fail in Cli::parse() (main.rs:16) with exit 2 and no mori::command::native-unavailable, and 4 incomplete companion invocations (simulate.rs:67-70, intent.rs:250-254, verify_intent.rs:45-49) fail with exit 1 and expected operational messages before reaching native_unavailable() (10 CLI calls; 27 catalog cases / 44 total invocations matching CATALOG.json).",
+      "R2 explicit tuple destructuring `for &(label, argv, expected_msg) in semantic_cases` (crates/mori/tests/native_feature_boundary.rs:582) is clean and unambiguous; STD-PATTERN-PROBE.json confirms rustc 1.99 --edition 2024 --emit=metadata also accepts the R1 pattern with exit 0, so the prior E0277 claim is not adopted.",
+      "PROPOSAL.json scopes a single offline frozen attempt (`timeout --signal=TERM --kill-after=5s 90s cargo test ... --frozen -j1 -p mori --no-default-features --test native_feature_boundary -- --test-threads=1`) with an exact 13-variable environment, owned empty cwd/target/tmp/cargo-home, 4 tool SHA-256 rechecks, 14 ancestor Cargo config absence rechecks, and no compilation or execution of mori-backend, mori-ledger, or midnight-* crates."
+    ],
+    "limitations": [
+      "crates/mori/tests/native_feature_boundary.rs is UNRUN; this decision approves the R2 candidate source and one scoped command attempt only, and post-execution result review is required before merge.",
+      "Directory snapshots (snapshot_tree) and sentinel error-precedence checks in native_feature_boundary.rs plus static source inspection verify no directory mutations and show #[cfg(not(feature = \"native\"))] returns precede file readers, but do not runtime-prove the absence of read-only syscalls (no strace or OS I/O interception seam).",
+      "Under default/native features, #![cfg(not(feature = \"native\"))] compiles 0 tests in native_feature_boundary (which is not a pass for no-native availability); default/native, workspace, --all-features, workspace rustfmt, clippy, and U/M/MC/SP/G/financial/composition/proof/ledger checks remain open outside this scope.",
+      "PROPOSAL.json enforces a 90s+5s wall-clock timeout with -j1 and --test-threads=1, but does not enforce an OS-level aggregate child RAM, disk, or process-group bound, and relies on the declared local toolchain and public Cargo cache TCB."
+    ],
+    "reviewToken": "doctorwatson-native-availability-source-security-fallback-20261018-a2-whole-review",
+    "summary": "Independent R2 security-fallback review of prospectiveTree 7a89671b88b8e9e879c24657a299adcf6b7fac1e on baseTree 23a78098cbdf690ac3b6f9a994f6d5033b869b18 approves the candidate source and the single scoped 90s+5s no-default-features test command in PROPOSAL.json. Production code is unchanged; crates/mori/tests/native_feature_boundary.rs is gated by #![cfg(not(feature = \"native\"))], uses only owned temporary paths and std subprocess checks, matches CATALOG.json across 27 cases / 44 CLI invocations, and compiles without native backend/ledger/Midnight dependencies.",
+    "toolAction": "Completing R2 security source review",
+    "toolSummary": "Return R2 security review verdict",
+    "verdict": "approve-source-and-one-ordinary-command"
+  },
+  {
+    "filesRead": [
+      "INLINE",
+      "MANIFEST.json",
+      "PATCH.diff",
+      "TOOL-METADATA.json",
+      "CARGO-CONFIG-METADATA.json",
+      "RUSTFMT-CHECK.json",
+      "candidate/Cargo.toml",
+      "candidate/crates/mori/src/commands/inspect.rs",
+      "candidate/crates/mori/src/commands/simulate.rs",
+      "candidate/crates/mori/src/commands/intent.rs",
+      "candidate/crates/mori/src/commands/verify_intent.rs",
+      "candidate/crates/mori/src/commands/replay.rs",
+      "candidate/crates/mori/src/commands/compile.rs",
+      "candidate/crates/mori/src/commands/compile_call.rs",
+      "candidate/crates/mori/src/commands/prepare_call.rs",
+      "candidate/crates/mori/src/commands/keygen_call.rs",
+      "candidate/crates/mori/src/commands/prove_call.rs",
+      "candidate/crates/mori/src/commands/verify_call.rs",
+      "candidate/crates/mori/src/commands/keygen_signed_call.rs",
+      "candidate/crates/mori/src/commands/prepare_signed_call.rs",
+      "candidate/crates/mori/src/commands/prove_signed_call.rs",
+      "candidate/crates/mori/src/commands/verify_signed_call.rs",
+      "candidate/crates/mori/src/commands/prove.rs",
+      "candidate/crates/mori/src/commands/verify.rs",
+      "candidate/crates/mori/src/commands/call_io.rs",
+      "candidate/crates/mori/src/commands/signed_call_io.rs",
+      "candidate/crates/mori/src/commands/proof_io.rs",
+      "candidate/crates/mori/src/commands/core_io.rs"
+    ],
+    "findings": [
+      "PATCH.diff on baseTree 23a78098cbdf690ac3b6f9a994f6d5033b869b18 adds only crates/mori/tests/native_feature_boundary.rs (prospectiveTree 7a89671b88b8e9e879c24657a299adcf6b7fac1e, sha256 a07195e95d035b3fdfbd5dcf6c7767b041d6b06165530fee4179b7b0ddec879c); zero production files change and RUSTFMT-R2-CHECK.json records checkExit 0.",
+      "Crate-level #![cfg(not(feature = \"native\"))] at crates/mori/tests/native_feature_boundary.rs:1 gates the entire test binary to --no-default-features builds and selects 0 tests under default = [\"native\"] in crates/mori/Cargo.toml:10.",
+      "In native_routes_report_unavailable_before_io (crates/mori/tests/native_feature_boundary.rs:144-419), all 13 native-only subcommands (compile, compile-call, prepare-call, keygen-call, prove-call, verify-call, keygen-signed-call, prepare-signed-call, prove-signed-call, verify-signed-call, prove, verify, replay) and 4 mixed routes (inspect --target at inspect.rs:23-26, simulate --trace --target at simulate.rs:66-103, intent --profile+--target+--at at intent.rs:63-70,248-257, verify-intent --profile+--target at verify_intent.rs:43-44,180-183) return commands::native_unavailable() (mod.rs:66-74) with exit 1, empty stdout, and mori::command::native-unavailable before file reads or output creation across both missing-inputs and populated-sentinels phases (34 CLI calls).",
+      "In arg_and_clap_precedence_without_native_diagnostic (crates/mori/tests/native_feature_boundary.rs:422-596), 6 malformed/conflicting invocations fail in Cli::parse() (main.rs:16) with exit 2 and no mori::command::native-unavailable, and 4 incomplete companion invocations (simulate.rs:67-70, intent.rs:250-254, verify_intent.rs:45-49) fail with exit 1 and expected operational messages before reaching native_unavailable() (10 CLI calls; 27 catalog cases / 44 total invocations matching CATALOG.json).",
+      "R2 explicit tuple destructuring `for &(label, argv, expected_msg) in semantic_cases` (crates/mori/tests/native_feature_boundary.rs:582) is clean and unambiguous; STD-PATTERN-PROBE.json confirms rustc 1.99 --edition 2024 --emit=metadata also accepts the R1 pattern with exit 0, so the prior E0277 claim is not adopted.",
+      "PROPOSAL.json scopes a single offline frozen attempt (`timeout --signal=TERM --kill-after=5s 90s cargo test ... --frozen -j1 -p mori --no-default-features --test native_feature_boundary -- --test-threads=1`) with an exact 13-variable environment, owned empty cwd/target/tmp/cargo-home, 4 tool SHA-256 rechecks, 14 ancestor Cargo config absence rechecks, and no compilation or execution of mori-backend, mori-ledger, or midnight-* crates."
+    ],
+    "limitations": [
+      "crates/mori/tests/native_feature_boundary.rs is UNRUN; this decision approves the R2 candidate source and one scoped command attempt only, and post-execution result review is required before merge.",
+      "Directory snapshots (snapshot_tree) and sentinel error-precedence checks in native_feature_boundary.rs plus static source inspection verify no directory mutations and show #[cfg(not(feature = \"native\"))] returns precede file readers, but do not runtime-prove the absence of read-only syscalls (no strace or OS I/O interception seam).",
+      "Under default/native features, #![cfg(not(feature = \"native\"))] compiles 0 tests in native_feature_boundary (which is not a pass for no-native availability); default/native, workspace, --all-features, workspace rustfmt, clippy, and U/M/MC/SP/G/financial/composition/proof/ledger checks remain open outside this scope.",
+      "PROPOSAL.json enforces a 90s+5s wall-clock timeout with -j1 and --test-threads=1, but does not enforce an OS-level aggregate child RAM, disk, or process-group bound, and relies on the declared local toolchain and public Cargo cache TCB."
+    ],
+    "reviewToken": "doctorwatson-native-availability-source-security-fallback-20261018-a2-whole-review",
+    "summary": "Independent R2 security-fallback review of prospectiveTree 7a89671b88b8e9e879c24657a299adcf6b7fac1e on baseTree 23a78098cbdf690ac3b6f9a994f6d5033b869b18 approves the candidate source and the single scoped 90s+5s no-default-features test command in PROPOSAL.json. Production code is unchanged; crates/mori/tests/native_feature_boundary.rs is gated by #![cfg(not(feature = \"native\"))], uses only owned temporary paths and std subprocess checks, matches CATALOG.json across 27 cases / 44 CLI invocations, and compiles without native backend/ledger/Midnight dependencies.",
+    "verdict": "approve-source-and-one-ordinary-command"
+  }
+]

@@ -1,0 +1,7 @@
+In a Core-only build, native commands must fail clearly before touching their inputs or outputs. This adds subprocess coverage for 17 native or mixed command routes with both missing inputs and populated sentinels, plus ten argument and clap precedence cases. The two tests cover 27 cases and 44 CLI invocations. Production source is unchanged.
+
+Local validation: the exact `cargo test -p mori --no-default-features --test native_feature_boundary -- --test-threads=1` target passed both tests, with no ignored or filtered tests, in 53.026 seconds including a cold build. The first attempt exposed a test comparison bug with miette continuation gutters; the source repair and original failed result are retained. The accepted check was offline/frozen, single-job and bounded to 90 seconds plus five seconds termination grace.
+
+Fresh ordinary and designated security-fallback source and actual-result reviews approve this exact candidate. The source/tree, complete logs, original failed attempt, repair and review records are retained on the `utxo` evidence branch. Review approval covers this test-only change and its observed local result.
+
+The unchanged directory snapshots establish sentinel and directory preservation, not absence of read-only syscalls. Default/native and workspace checks, SDK/compiler/proof/ledger validation and parent EARS acceptance remain open. The earlier twelve CLI integration tests were not rerun or counted as a pass on this tree.
