@@ -53,11 +53,12 @@ target evidence retain those obligations. A blocked row names its missing
 premise and the event that can make work actionable; independent rows continue.
 
 The factory repair is complete: the existing checker consumes current evidence,
-and its regression demonstrates that a source edit invalidates closure. Thirteen
-original host/reporting clauses are now adopted and current, including complete
-original indexed-provenance UIREQ-027 and typed-word arithmetic/lowering UIREQ-030.
-The [latest adoption/currentness](../results/sherlock-selected-word-arithmetic-20261018/ROOT-CURRENTNESS-READBACK.json)
-reports 13 closed,19 partial and3 absent originals; all25 refinements stay open. Select the remaining missing
+and its regression demonstrates that a source edit invalidates closure. Fourteen
+original host/reporting/financial-observation clauses are now adopted and current,
+including indexed provenance UIREQ-027, typed arithmetic UIREQ-030 and the real
+Core/2 owning financial producer/adapter UIREQ-017.
+The [latest adoption/currentness](../results/sherlock-owning-financial-producer-20261018/ROOT-CURRENTNESS-READBACK.json)
+reports 14 closed,18 partial and3 absent originals; all25 refinements stay open. Select the remaining missing
 behavior from the [current checklist](requirements-status.md) and
 `NEXT-ACTIONS.json`: whole-owner closed-body/unique-function admission,
 remaining public compiler/refusal coverage and resource accounting/chunk observations,

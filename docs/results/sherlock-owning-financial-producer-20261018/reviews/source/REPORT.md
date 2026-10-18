@@ -1,0 +1,152 @@
+```json
+{
+  "complete_inline_read": true,
+  "reviewer_identity": {
+    "model": "Gemini 4 Argon (High)",
+    "role": "Fresh independent non-author source/oracle/ordinary-operation reviewer (standing Opus 429 outage fallback)",
+    "tools_or_execution_used": false,
+    "inline_bodies_read": "BODY01 through BODY33 complete and unclipped"
+  },
+  "source_verdict": "APPROVE",
+  "source_findings": [
+    {
+      "id": "SF-01",
+      "component": "crates/mori-core/src/sherlock/financial_projection.rs",
+      "subject": "Owning ProducedInvocation<'p> encapsulation and single-call guarantee",
+      "disposition": "SOUND",
+      "detail": "ProducedInvocation<'p> holds private fields (program: &'p StagedProgram, input: CapturedInvocationInput, result: Result<StageOutcome, StageRejection>), and CapturedInvocationInput is a private enum. Only start_observed and resume_observed can construct ProducedInvocation<'p>. start_observed invokes crate::stage::start(program, &action, scenario.clone(), cap) exactly once and retains the owned action, unmutated Scenario clone, cap, and raw Result. resume_observed invokes crate::stage::resume(program, continuation.clone(), event.clone(), cli_action.as_deref(), cli_cap) exactly once and retains the owned Continuation, StageEvent, cli_action: Option<String>, cli_cap: Option<UInt>, and raw Result. Neither raw_result(), observation(), nor publication() invokes stage::start, stage::resume, parser, policy, or runtime evaluator."
+    },
+    {
+      "id": "SF-02",
+      "component": "crates/mori-core/src/sherlock/financial_projection.rs",
+      "subject": "Exhaustive borrowed field projection, lifetimes, and Serialize implementations",
+      "disposition": "SOUND",
+      "detail": "ExecutionObservation<'a>, SegmentObservation<'a>, FinancialObservation<'a>, ResumeFinancialObservation<'a>, InvocationInput<'a>, AccountFlow<'a>, AccountingReport<'a>, AccountingAvailability<'a>, TentativePublication, and InvocationObservation<'a> all derive serde::Serialize with sound lifetime bindings tied to the borrowed StagedProgram and ProducedInvocation. project_execution, project_segment, and project_stage_result use exhaustive struct/enum field destructuring over crate::Execution, crate::stage::StageSegment, crate::stage::StageOutcome, and crate::stage::StageRejection without dropping or synthesizing fields. serialize_staged_program serializes all four public StagedProgram components (program, plan, lowercase hex program_hash, lowercase hex plan_hash)."
+    },
+    {
+      "id": "SF-03",
+      "component": "crates/mori-core/src/sherlock/financial_projection.rs",
+      "subject": "Per-segment diagnostic accounting and overflow handling",
+      "disposition": "SOUND",
+      "detail": "account_effects borrows the slice &[Effect] and groups only Effect::Transfer and Effect::Fee in first-encounter (asset, account) order while leaving Effect::State, Effect::Liability, and Effect::Emit untouched in the borrowed effects slice and snapshots. Fees are accumulated into fee_debit/fee_receipts and gross_debit/gross_receipts once (never double-counted), and reverse transfers add to receipts rather than subtracting from gross_debit. AmountAggregate::add uses u128::checked_add and saturates to AboveU128 on overflow, which sets NetFlow::Unavailable. Waiting { segment: None, .. } maps to (AccountingAvailability::NoPublishedSegment, TentativePublication::NoAdvancedSegment) without fabricating an empty execution, and Err(StageRejection) maps to (AccountingAvailability::RejectedNoPublishedDelta, TentativePublication::UnavailableFromStageRejection) while preserving error, attempted, and committed."
+    },
+    {
+      "id": "SF-04",
+      "component": "crates/mori-core/src/sherlock/financial_projection.rs & crates/mori/src/commands/simulate.rs",
+      "subject": "Shared CLI publication() preservation of legacy Core/2 keys and STAGE_LABELS",
+      "disposition": "SOUND",
+      "detail": "ProducedInvocation::publication(&self) constructs the exact legacy JSON object for Waiting (status, advanced, segment, continuation, attempted, committed: continuation.logical.committed, residual), Complete (status, segment, attempted, committed, residual), and Rejected (status, error, attempted, committed), inserts \"financial_observation\": serde_json::to_value(self.observation())?, and inserts all three crate::stage::STAGE_LABELS (\"qualification\": \"local-reference-stage\", \"authentication\": \"none\", \"consumption\": \"untracked\"). In simulate.rs, run_stage_start and run_resume call start_observed and resume_observed once stage::load and bounded input decoding succeed, then call print_produced_stage_result(&produced), which invokes produced.publication() and print_stage_report(report) and preserves ExitCode::SUCCESS on Ok and ExitCode::FAILURE on Err. Explicit Sherlock CLI selection (execution_profile, source_profile, entry, execution_config) still routes to sherlock::run(&args) without renaming or relabeling the pure Sherlock Core / draft HostOnly route."
+    },
+    {
+      "id": "SF-05",
+      "component": "crates/mori/src/commands/simulate.rs",
+      "subject": "Pre-producer load/decode failure path in CLI vs. in-producer StageRejection",
+      "disposition": "NON_BLOCKING_OBSERVATION",
+      "detail": "In simulate.rs, when stage::load or bounded file read/decode fails in run_stage_start or run_resume before a StagedProgram and Scenario/Continuation/StageEvent exist, the Err(rejected) branch calls print_stage_result(Err(rejected)), emitting the legacy rejected JSON object without a \"financial_observation\" field (since no StagedProgram or decoded input exists to construct ProducedInvocation). Once stage::load and input decoding succeed, any stage admission or evaluation rejection inside start_observed or resume_observed is wrapped in ProducedInvocation and published via print_produced_stage_result with \"financial_observation\" (outcome: Rejected, accounting: RejectedNoPublishedDelta, tentative_publication: UnavailableFromStageRejection)."
+    },
+    {
+      "id": "SF-06",
+      "component": "crates/mori-core/tests/sherlock_financial_producer_positive.rs",
+      "subject": "Positive integration test binding and assertions",
+      "disposition": "SOUND",
+      "detail": "The test loads retained-payment.mori via stage::load, deserializes scenario.json and INPUTS.json, executes projection::start_observed, feeds the actual returned Waiting continuation into projection::resume_observed with the false release event, and feeds the actual returned Waiting continuation from the false resume into projection::resume_observed with the true release event. At each of the three steps it verifies: (1) complete raw_result() JSON equality against START/FALSE/TRUE-RESULT.json, (2) std::ptr::eq(view.program, &program) and std::ptr::eq(view.result, produced.raw_result()), (3) full serialized InvocationObservation equality against frozen PROGRAM.json, PLAN.json, hashes, captured input, raw result, outcome, accounting, and tentative_publication, (4) full produced.publication() equality against the legacy stage report keys plus financial_observation and STAGE_LABELS, and (5) direct field equality on observation().input."
+    }
+  ],
+  "oracle_assessment": {
+    "verdict": "INDEPENDENT_AND_EXACT",
+    "independence_and_disclosure": {
+      "pre_implementation_freeze": true,
+      "disclosed_exposures": "Oracle author inspected existing IR/stage/runtime/serializer/digest data contracts (ir.rs, stage/{mod,admit,plan,cost,digest}.rs, runtime.rs, intent.rs, logical_cost.rs) and existing scenario/source parameters (retained-payment.mori, scenario.json). New owning producer source and candidate outputs did not exist and were not read prior to freeze.",
+      "post_freeze_historical_crosscheck": "After EXPECTATION-FREEZE.json was frozen, 11 historical full goldens were statically cross-checked and matched byte-for-byte; this static cross-check is properly treated as non-execution and not a new review vote."
+    },
+    "program_and_plan_verification": {
+      "program_json": "Matches retained-payment.mori (moriarty/2, moriarty-core/2, RetainedPaymentObservation): 2 states (marker: UInt = 77, flag: Bool = true), 2 assets (UNIT and AUX on network local, issuer r151-financial-observation, scale 0), 9 expressions (ExprIds 0..8: literals 30, 2, 30, name ready, literals 10, 1, 10, 0, 0 in source order), action pay (7 statements: Transfer 0, Fee 1, Discharge 2, Await release(ready: Bool) guard 3, Transfer 4, Fee 5, Discharge 6), and action declareDuties (2 Liability statements with exprs 7 and 8).",
+      "plan_json": "Matches stage::plan::build and stage::cost::fill: format moriarty-stage-plan/1, program_hash a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723, plan_hash (in continuations) b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d. For pay: statement_count 7, single site {site: 1, ordinal: 3, label: \"release\", binders: [{name: \"ready\", ty: \"Bool\"}], captures: []}, segment_cost [\"7\", \"8\"] (segment 0: 3 statements * 2 + 1 await entry = 7; segment 1: 1 await guard * 2 + 3 statements * 2 = 8), committed_before [\"0\", \"7\"], plan_total \"15\". For declareDuties: statement_count 2, sites [], segment_cost [\"4\"], committed_before [\"0\"], plan_total \"4\"."
+    },
+    "three_outcomes_verification": {
+      "start_outcome": {
+        "result": "Ok(Waiting) with advanced: true, frame_pre {site: 0, captures: []}, frame_post {site: 1, captures: []}, attempted: \"7\", continuation.logical.committed: \"7\", cap: null.",
+        "financial_transitions": "Opening UNIT reserve 100, beneficiary 0, fee_recipient 0, observer 11; AUX observer 13, reserve 9; liabilities auditDuty 5 (AUX), pay-beneficiary 40 (UNIT). Step 0 transfers 30 UNIT reserve->beneficiary (reserve 70, beneficiary 30). Step 1 charges fee 2 UNIT reserve->fee_recipient (reserve 68, fee_recipient 2). Step 2 discharges 30 on pay-beneficiary (40->10). Post snapshot and continuation boundary preserve state {flag: true, marker: \"77\"}, AUX observer 13, AUX reserve 9, UNIT observer 11, UNIT reserve 68, UNIT beneficiary 30, UNIT fee_recipient 2, auditDuty 5, pay-beneficiary 10. Residual contains [auditDuty 5, pay-beneficiary 10].",
+        "accounting_and_publication": "PublishedSegment with 3 ordered effects and 3 AccountFlow rows in first-encounter order: reserve (transfer_debit 30, fee_debit 2, gross_debit 32, Outflow 32), beneficiary (transfer_receipts 30, gross_receipts 30, Inflow 30), fee_recipient (fee_receipts 2, gross_receipts 2, Inflow 2). TentativePublication is PublishedSuccessfulSegment. Matches all original UIREQ-017 First paid prefix numbers (68 reserve, 10 liability, 32 gross debit, 30 recipient receipt, 10 residual duty) plus unaffected auditDuty 5."
+      },
+      "false_resume_outcome": {
+        "result": "Ok(Waiting) with advanced: false, segment: null, continuation identical to START continuation (site 1, captures [], committed \"7\", cap null, boundary unchanged), attempted: \"2\" (1 Await dispatch + 1 Name(\"ready\") node), residual: [auditDuty 5, pay-beneficiary 10].",
+        "accounting_and_publication": "AccountingAvailability is \"NoPublishedSegment\" and TentativePublication is \"NoAdvancedSegment\"."
+      },
+      "true_resume_outcome": {
+        "result": "Ok(Complete) with frame_pre {site: 1, captures: []}, frame_post {site: 0, captures: []}, attempted: \"8\", committed: \"15\" (7 + 8).",
+        "financial_transitions": "Step 0 (index 3) records Await release with value Bool(true), empty effects, and pre snapshot. Step 1 (index 4) transfers 10 UNIT reserve->beneficiary (reserve 68->58, beneficiary 30->40). Step 2 (index 5) charges fee 1 UNIT reserve->fee_recipient (reserve 58->57, fee_recipient 2->3). Step 3 (index 6) discharges 10 on pay-beneficiary (10->0). Post snapshot retains present zero liability pay-beneficiary (amount \"0\") alongside auditDuty (amount \"5\"), while residual filters to positive duties only ([auditDuty 5]).",
+        "accounting_and_publication": "PublishedSegment with 3 ordered effects (Transfer 10, Fee 1, Liability 10->0) and 3 AccountFlow rows: reserve (transfer_debit 10, fee_debit 1, gross_debit 11, Outflow 11), beneficiary (transfer_receipts 10, gross_receipts 10, Inflow 10), fee_recipient (fee_receipts 1, gross_receipts 1, Inflow 1). TentativePublication is PublishedSuccessfulSegment."
+      }
+    }
+  },
+  "ordinary_operations": [
+    {
+      "id": "01-compileChangedOwningFinancialCoreRlib",
+      "disposition": "ELIGIBLE_ORDINARY_COMPILE",
+      "reasons": [
+        "Directly justified by the source modification to crates/mori-core/src/sherlock/financial_projection.rs in the 153-file mori-core snapshot overlay.",
+        "Uses the pinned normal cached rustc 1.99.0 toolchain, sysroot, linker (/usr/bin/x86_64-linux-gnu-gcc-15 with -fuse-ld=bfd), and existing prebuilt extern rlibs (k256, mori_lexer, serde, serde_json, sha2, thiserror) totaling 323 normal tool/dependency pins without invoking Cargo, build scripts, SDK, native provers, or circuits.",
+        "Enforces strict resource and environment bounds: timeout 30s KILL, prlimit CPU 25s, AS 2 GiB, FSIZE 64 MiB, core 0, minimal declared environment (PATH, LANG, TMPDIR), 131072 kept bytes per stream, serial fail-stop with no retry."
+      ],
+      "conditions": [
+        "Verify all 492 flat input pins before and after execution.",
+        "Do not assume or pre-populate hashes for planned outputs build/libmori_core.rlib and build/core-rlib.d; root must record and bind their actual byte/SHA-256 identities after Phase 01 succeeds and verify dep-info paths before Phase 02."
+      ]
+    },
+    {
+      "id": "02-compileNewOwningFinancialPositiveConsumer",
+      "disposition": "ELIGIBLE_ORDINARY_COMPILE",
+      "reasons": [
+        "Compiles only the single new external positive test crate (sherlock_financial_producer_positive.rs with its 14 include_str! fixture files) against the newly produced build/libmori_core.rlib and cached libserde_json.rlib.",
+        "Does not recompile or replay the historical R176 test binary and does not compile the backend-linked mori CLI crate.",
+        "Uses the same bounded rustc/linker closure and prlimit caps (30s wall, 25s CPU, 2 GiB AS, 64 MiB FSIZE, core 0, minimal env, serial fail-stop)."
+      ],
+      "conditions": [
+        "Requires Phase 01 actual success and byte-identity verification of build/libmori_core.rlib.",
+        "Root must bind the generated build/owning-financial-tests binary and build/owning-financial-tests.d after actual Phase 02 success and verify all 492 input pins pre/post."
+      ]
+    },
+    {
+      "id": "03-listExactNewOwningFinancialPositiveTest",
+      "disposition": "ELIGIBLE_ORDINARY_TEST_LIST",
+      "reasons": [
+        "Runs build/owning-financial-tests --list under tight resource caps (10s wall, 25s CPU, 1 GiB AS, 1 MiB FSIZE, core 0) to confirm the compiled test binary contains the exact single test owning_core2_producer_publishes_complete_frozen_financial_sequence (SET + COUNT = 1) and no extra, ignored, or benchmark entries."
+      ],
+      "conditions": [
+        "Requires Phase 02 actual success and verified byte identity of build/owning-financial-tests.",
+        "Must observe exact test set [\"owning_core2_producer_publishes_complete_frozen_financial_sequence\"] with count 1 before Phase 04 is dispatched."
+      ]
+    },
+    {
+      "id": "04-runExactNewOwningFinancialPositiveTest",
+      "disposition": "ELIGIBLE_ORDINARY_TEST_RUN",
+      "reasons": [
+        "Executes only the single new test owning_core2_producer_publishes_complete_frozen_financial_sequence (--exact --test-threads=1 --nocapture) under tight caps (10s wall, 25s CPU, 1 GiB AS, 1 MiB FSIZE, core 0), exercising exactly 3 new stage invocations (start_observed, resume_observed false, resume_observed true) and ProducedInvocation::publication() against the 12 independently frozen golden files.",
+        "Performs no subject filesystem writes, no Cargo/default-suite run, no R176 replay, and no SDK/native/circuit/model execution."
+      ],
+      "conditions": [
+        "Requires Phase 03 exact list verification.",
+        "Must observe 1 passed, 0 failed, 0 ignored and preserve all 492 pinned inputs unchanged.",
+        "No predictive PASS is granted prior to execution; actual command streams, exit statuses, generated artifact hashes, and test output must be reviewed after execution."
+      ]
+    }
+  ],
+  "whole_original017_relationship": {
+    "status": "OPEN_PENDING_EXECUTION_AND_SCOPED_GAP_DISPOSITION",
+    "reason": "In the declared Core/2 stage financial domain, ProducedInvocation<'p> is a genuine owning same-call producer record: its private fields can only be populated by start_observed or resume_observed, each of which calls crate::stage::start or crate::stage::resume once and retains the exact program reference, consumed inputs/CLI flags, and raw Result, while observation() and publication() project and serialize that exact record and preserve all legacy Core/2 CLI keys and STAGE_LABELS without renaming the non-financial pure Sherlock Core/HostOnly route. However, UIREQ-017 cannot be closed now because (1) no compilation or test execution has been observed yet, and (2) specific public-consumer and domain-breadth gaps remain between the 4-operation positive Core/2 test and the whole UIREQ-017 clause.",
+    "exact_remaining_gap": "1. Unexecuted verification: The 4 ordinary QA operations have not yet been run (execution_observed: false). 2. Enclosing CLI consumer uncompiled/unrun and pre-stage rejection asymmetry: crates/mori/src/commands/simulate.rs is inspected in source, but the 4-operation QA plan compiles and runs only mori-core and the external test consumer calling ProducedInvocation::publication() directly; it does not compile or execute the mori CLI binary (argument dispatch, bounded file I/O, print_produced_stage_result stdout rendering, exit codes), and pre-stage load/decode failures in simulate.rs (run_stage_start / run_resume Err(rejected) before start_observed/resume_observed) still call print_stage_result(Err(rejected)) without a financial_observation field. 3. Single positive scenario vs. general segment outcomes in the declared financial domain: The new test exercises only one positive 3-call sequence (RetainedPaymentObservation::pay start -> false await -> true complete, with cap: None, cli_action: None, cli_cap: None, empty await captures, and Transfer/Fee/Discharge effects); in-producer StageRejection outcomes (RejectedNoPublishedDelta / UnavailableFromStageRejection), non-None cap/cli_action/cli_cap flags, non-empty await captures (Input/Let/Event slots), State/Emit/Liability-creation effects, and AboveU128/Unavailable accounting saturation are source-inspected only and not exercised by an executed oracle test. 4. Carrier scope: start_observed/resume_observed wrap the existing local-reference-stage Core/2 carrier (authentication: none, consumption: untracked); if root requires a dedicated Sherlock financial-extension profile/driver beyond the Core/2 stage route, that remains separate.",
+    "conditional_recommendation_after_actual_pass": "IF all 4 ordinary operations execute cleanly with 1 passed / 0 failed / 0 ignored, all 492 input pins verified pre/post, and independent post-run receipt review confirms the expected outputs, THEN record the First paid prefix and 3-call sequence (start / false-await / true-complete) as verified on the owning Core/2 producer (start_observed / resume_observed / ProducedInvocation::publication), AND either (a) close UIREQ-017 for the Core/2 stage financial domain if root accepts source-level audit for simulate.rs and the unexercised rejection/capture/flag branches, or (b) run a bounded follow-up covering in-producer StageRejection / non-empty capture / CLI consumer execution before closing whole UIREQ-017, without requiring UIREQ-018 universal await opcodes, a B MachineImage-only runtime, or native proof gates.",
+    "after_actual_pass_review_needed": true
+  },
+  "retained_gaps": [
+    "No compilation or test execution has occurred in this review (execution_observed: false); generated artifact hashes for build/libmori_core.rlib, build/core-rlib.d, build/owning-financial-tests, and build/owning-financial-tests.d remain unbound until actual execution.",
+    "Enclosing CLI crate (crates/mori/src/commands/simulate.rs) is source-audited only; the 4 ordinary operations do not compile or execute the mori binary or test CLI file I/O, stdout printing, or pre-stage load/decode rejection output.",
+    "Only the positive 3-invocation sequence (start, false await, true complete) on RetainedPaymentObservation::pay with None caps/flags and empty captures is covered by the new oracle test; StageRejection through start_observed/resume_observed, non-None cap/cli_action/cli_cap, non-empty await captures, State/Emit/Liability-creation effects, and u128 overflow saturation (AboveU128 / NetFlow::Unavailable) remain source-only at this cut.",
+    "Transitive unchanged helper bodies in mori-core outside the supplied inline regions (such as parser_v2, validate_v2, decode::canonical_boundary, and runtime::move_funds/scenario_snapshot) were not re-read in full here; they are unchanged from the pinned 153-file Core snapshot and are not required to answer Q1-Q3, though full-language/security/formal properties over those modules are not re-certified by this scoped review.",
+    "UIREQ-018 (universal await lowering), UIREQ-019 (local failure/diagnostic obligations), authentication/consumption tracking, native/halo2/Compact proof correspondence, and Preview ledger settlement remain separately open."
+  ],
+  "execution_observed": false
+}
+```
+
