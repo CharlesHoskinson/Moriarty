@@ -10,15 +10,7 @@ use mori_diagnostics::render::{self, WIDTH};
 
 use crate::styles;
 
-/// Width of the right-aligned verb column, matching cargo.
-const VERB_WIDTH: usize = 12;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Verbosity {
-    Quiet,
-    Normal,
-    Verbose,
-}
+pub use crate::status_output::Verbosity;
 
 /// Writes status lines such as `    Checking invoice.mori` to stderr.
 ///
@@ -39,9 +31,7 @@ impl Shell {
 
     /// Prints a right-aligned green verb followed by a message.
     pub fn status(&mut self, verb: &str, message: impl Display) {
-        if self.verbosity != Verbosity::Quiet {
-            self.aligned(verb, styles::HEADER, message);
-        }
+        crate::status_output::status(&mut self.err, self.verbosity, verb, message);
     }
 
     /// Like [`Shell::status`], but only under `--verbose`.
@@ -97,8 +87,7 @@ impl Shell {
     }
 
     fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
-        let message = crate::display::text(&message.to_string());
-        let _ = writeln!(self.err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
+        crate::status_output::aligned(&mut self.err, verb, style, message);
     }
 
     fn prefixed(&mut self, label: &str, style: Style, message: impl Display) {

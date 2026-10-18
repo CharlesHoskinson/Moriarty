@@ -1,0 +1,361 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/350-staging-control-metadata-owner-request/source/refresh_staging_control_metadata.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/350-staging-control-metadata-owner-request/source/revision02-reviewed-literals/refresh_staging_control_metadata.py
+@@ -21,6 +21,20 @@
+ CARGO_ROOT = "/home/charl/.cargo"
+ REGISTRY_NAME = "index.crates.io-1949cf8c6b5b557f"
+ GIT_DB_PREFIX = "git/db/midnight-ledger-b2f9c59d942dfdca/"
++ACQUIRED_ARCHIVE_DIR = (
++    "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/"
++    "opus-sprint-loop-20261015/astra-sdk-compile-grant-data-r1/acquired-thirdparty"
++)
++ACQUIRED_ARCHIVE_FILENAMES = (
++    "objc2-0.6.5.crate",
++    "rustls-platform-verifier-android-0.2.0.crate",
++    "wasm-bindgen-futures-0.4.79.crate",
++    "web-sys-0.3.106.crate",
++    "zerocopy-derive-0.8.61.crate",
++)
++ACQUIRED_ARCHIVE_SOURCES = frozenset(
++    f"{ACQUIRED_ARCHIVE_DIR}/{name}" for name in ACQUIRED_ARCHIVE_FILENAMES
++)
+ 
+ EXPECTED_TOP_KEYS = (
+     "observation",
+@@ -93,7 +107,7 @@
+ GIT_COMMIT_REF_RE = re.compile(r"^refs/commit/[0-9a-f]{40}$")
+ GIT_LOOSE_RE = re.compile(r"^objects/[0-9a-f]{2}/[0-9a-f]{38}$")
+ GIT_PACK_RE = re.compile(
+-    r"^objects/pack/pack-[0-9a-f]{40}\.(pack|idx|rev|mtimes)$"
++    r"^objects/pack/pack-[0-9a-f]{40}\.(pack|idx|rev)$"
+ )
+ 
+ 
+@@ -113,8 +127,8 @@
+             new_hard = min(cur_hard, hard) if cur_hard != resource.RLIM_INFINITY else hard
+             new_soft = min(soft, new_hard)
+             resource.setrlimit(res, (new_soft, new_hard))
+-        except (ValueError, OSError):
+-            pass
++        except (ValueError, OSError) as exc:
++            raise Refusal(f"failed to set rlimit {res}: {exc}") from exc
+ 
+     _set_rlimit(resource.RLIMIT_CORE, 0, 0)
+     _set_rlimit(resource.RLIMIT_FSIZE, 4 * 1024 * 1024, 4 * 1024 * 1024)
+@@ -223,7 +237,9 @@
+     return json.loads(raw.decode("utf-8"), object_pairs_hook=no_dup_pairs)
+ 
+ 
+-def validate_row_destination_and_source(row, cargo_root=CARGO_ROOT):
++def validate_row_destination_and_source(
++    row, cargo_root=CARGO_ROOT, acquired_sources=ACQUIRED_ARCHIVE_SOURCES
++):
+     rel = row.get("destination_relative_to_future_home")
+     src = row.get("source")
+     cat = row.get("category")
+@@ -235,7 +251,6 @@
+     p = pathlib.PurePosixPath(rel)
+     need(".." not in p.parts and "." not in p.parts, f"invalid path parts in {rel}")
+     expected_src = f"{cargo_root.rstrip('/')}/{rel}"
+-    need(src == expected_src, f"source/destination mismatch: {src} != {expected_src}")
+ 
+     idx_prefix = f"registry/index/{REGISTRY_NAME}/"
+     cache_prefix = f"registry/cache/{REGISTRY_NAME}/"
+@@ -244,13 +259,20 @@
+             rel == f"{idx_prefix}config.json" or rel.startswith(f"{idx_prefix}.cache/"),
+             f"invalid registry-index destination: {rel}",
+         )
++        need(src == expected_src, f"source/destination mismatch: {src} != {expected_src}")
+     elif cat == "registry-archive-container":
+         need(
+             rel.startswith(cache_prefix) and rel.endswith(".crate") and len(p.parts) == 4,
+             f"invalid registry-archive-container destination: {rel}",
+         )
++        need(
++            src == expected_src
++            or (src in acquired_sources and pathlib.PurePosixPath(src).name == p.name),
++            f"source/destination mismatch: {src} != {expected_src}",
++        )
+     else:
+         need(rel.startswith(GIT_DB_PREFIX), f"invalid git destination prefix: {rel}")
++        need(src == expected_src, f"source/destination mismatch: {src} != {expected_src}")
+         tail = rel[len(GIT_DB_PREFIX) :]
+         if cat == "git-db-metadata":
+             need(
+@@ -267,7 +289,13 @@
+     return rel
+ 
+ 
+-def refresh_staging_manifest(doc, cargo_root=CARGO_ROOT, base_sha256=EXPECTED_BASE_SHA256):
++def refresh_staging_manifest(
++    doc,
++    cargo_root=CARGO_ROOT,
++    base_sha256=EXPECTED_BASE_SHA256,
++    acquired_sources=ACQUIRED_ARCHIVE_SOURCES,
++    expected_noncontrol_total_bytes=EXPECTED_NONCONTROL_TOTAL_BYTES,
++):
+     need(isinstance(doc, dict), "manifest root must be dict")
+     need(tuple(doc.keys()) == EXPECTED_TOP_KEYS, f"unexpected top-level keys: {list(doc.keys())}")
+     need(doc["all_staging_files_have_hashes"] is False, "all_staging_files_have_hashes must be False")
+@@ -276,12 +304,11 @@
+ 
+     counts = doc["counts"]
+     need(isinstance(counts, dict), "counts must be dict")
+-    need(counts.get("total_selected_files") == 2243, "counts.total_selected_files != 2243")
+-    for k, v in EXPECTED_CATEGORY_COUNTS.items():
+-        need(counts.get(k) == v, f"counts[{k}] != {v}")
++    need(counts == EXPECTED_CATEGORY_COUNTS, f"unexpected counts dictionary: {counts}")
+ 
+     cat_counter = collections.Counter()
+     seen_dests = set()
++    seen_acquired_sources = set()
+     new_inputs = []
+ 
+     control_total_bytes = 0
+@@ -289,10 +316,13 @@
+     changed_rows = []
+     unchanged_control_count = 0
+     preserved_noncontrol_count = 0
++    cargo_prefix = cargo_root.rstrip("/") + "/"
+ 
+     for idx, row in enumerate(inputs):
+         need(isinstance(row, dict), f"row {idx} not a dict")
+-        rel = validate_row_destination_and_source(row, cargo_root=cargo_root)
++        rel = validate_row_destination_and_source(
++            row, cargo_root=cargo_root, acquired_sources=acquired_sources
++        )
+         need(rel not in seen_dests, f"duplicate destination at row {idx}: {rel}")
+         seen_dests.add(rel)
+         cat = row["category"]
+@@ -349,8 +379,11 @@
+             new_inputs.append(updated_row)
+         else:
+             need(cat in NONSELECTED_CATEGORIES, f"unhandled category: {cat}")
++            if not row["source"].startswith(cargo_prefix):
++                seen_acquired_sources.add(row["source"])
+             # lstat-only verification; NEVER open or read non-control files
+-            st_info = stable_stat(row["source"], stop_root=cargo_root)
++            stop = cargo_root if row["source"].startswith(cargo_prefix) else None
++            st_info = stable_stat(row["source"], stop_root=stop)
+             need(
+                 st_info["size"] == row["bytes"],
+                 f"non-control row {idx} ({cat}) size drifted: {st_info['size']} != {row['bytes']} ({rel})",
+@@ -364,11 +397,12 @@
+             new_inputs.append(copy.deepcopy(row))
+ 
+     need(dict(cat_counter) == EXPECTED_CATEGORY_COUNTS, f"category counts mismatch: {dict(cat_counter)}")
++    need(seen_acquired_sources == set(acquired_sources), f"acquired archive sources mismatch: {sorted(seen_acquired_sources)}")
+     need(preserved_noncontrol_count == 488, f"expected 488 non-control rows, got {preserved_noncontrol_count}")
+     need(len(changed_rows) + unchanged_control_count == 1755, "control row count != 1755")
+     need(
+-        noncontrol_total_bytes == EXPECTED_NONCONTROL_TOTAL_BYTES,
+-        f"noncontrol_total_bytes mismatch: {noncontrol_total_bytes} != {EXPECTED_NONCONTROL_TOTAL_BYTES}",
++        noncontrol_total_bytes == expected_noncontrol_total_bytes,
++        f"noncontrol_total_bytes mismatch: {noncontrol_total_bytes} != {expected_noncontrol_total_bytes}",
+     )
+     total_bytes = control_total_bytes + noncontrol_total_bytes
+     need(
+@@ -460,10 +494,26 @@
+                     "source": full,
+                 }
+             )
+-        # 423 registry-archive-container rows
++        cargo_dir = os.path.join(root_dir, "cargo")
++        acquired_dir = os.path.join(root_dir, "acquired-thirdparty")
++        os.makedirs(acquired_dir, exist_ok=True)
++        for row in inputs:
++            rel = row["destination_relative_to_future_home"]
++            full = os.path.join(cargo_dir, rel)
++            os.makedirs(os.path.dirname(full), exist_ok=True)
++            os.replace(row["source"], full)
++            row["source"] = full
++        acquired_sources = set()
++        # 423 registry-archive-container rows (first 5 in external acquired_dir, 418 under cargo_dir)
+         for i in range(423):
+-            rel = f"registry/cache/{REGISTRY_NAME}/crate_{i:04d}-1.0.0.crate"
+-            full = os.path.join(root_dir, rel)
++            if i < len(ACQUIRED_ARCHIVE_FILENAMES):
++                fname = ACQUIRED_ARCHIVE_FILENAMES[i]
++                rel = f"registry/cache/{REGISTRY_NAME}/{fname}"
++                full = os.path.join(acquired_dir, fname)
++                acquired_sources.add(full)
++            else:
++                rel = f"registry/cache/{REGISTRY_NAME}/crate_{i:04d}-1.0.0.crate"
++                full = os.path.join(cargo_dir, rel)
+             os.makedirs(os.path.dirname(full), exist_ok=True)
+             content = b"A" * 10
+             with open(full, "wb") as f:
+@@ -491,7 +541,7 @@
+         ] + [f"refs/commit/{i:040x}" for i in range(14)]
+         for i, tail in enumerate(meta_tails):
+             rel = f"{GIT_DB_PREFIX}{tail}"
+-            full = os.path.join(root_dir, rel)
++            full = os.path.join(cargo_dir, rel)
+             os.makedirs(os.path.dirname(full), exist_ok=True)
+             content = f"meta-{i}\n".encode("utf-8")
+             with open(full, "wb") as f:
+@@ -511,7 +561,7 @@
+         # 6 known loose rows
+         for i in range(6):
+             rel = f"{GIT_DB_PREFIX}objects/00/{i:038x}"
+-            full = os.path.join(root_dir, rel)
++            full = os.path.join(cargo_dir, rel)
+             os.makedirs(os.path.dirname(full), exist_ok=True)
+             content = b"K" * 8
+             with open(full, "wb") as f:
+@@ -531,7 +581,7 @@
+         # 52 unknown loose rows (hash_gap, no sha256/observation)
+         for i in range(52):
+             rel = f"{GIT_DB_PREFIX}objects/ff/{i:038x}"
+-            full = os.path.join(root_dir, rel)
++            full = os.path.join(cargo_dir, rel)
+             os.makedirs(os.path.dirname(full), exist_ok=True)
+             content = b"U" * 9
+             with open(full, "wb") as f:
+@@ -547,20 +597,19 @@
+                     "source": full,
+                 }
+             )
+-        # 7 pack rows (sized so noncontrol total == EXPECTED_NONCONTROL_TOTAL_BYTES in metadata)
+-        rem = EXPECTED_NONCONTROL_TOTAL_BYTES - (423 * 10 + 6 * 8 + 52 * 9)
++        # 7 pack rows (100 B each so --self-test stays well below RLIMIT_FSIZE = 4 MiB)
+         for i in range(7):
+             ext = "pack" if i % 2 == 0 else "idx"
+             rel = f"{GIT_DB_PREFIX}objects/pack/pack-{i:040x}.{ext}"
+-            full = os.path.join(root_dir, rel)
++            full = os.path.join(cargo_dir, rel)
+             os.makedirs(os.path.dirname(full), exist_ok=True)
+-            sz = (rem // 7) + (rem % 7 if i == 0 else 0)
++            content = b"P" * 100
+             with open(full, "wb") as f:
+-                f.truncate(sz)
++                f.write(content)
+             st = os.lstat(full)
+             inputs.append(
+                 {
+-                    "bytes": sz,
++                    "bytes": len(content),
+                     "category": "git-pack-container-or-index",
+                     "destination_relative_to_future_home": rel,
+                     "mode": oct(st.st_mode),
+@@ -569,6 +618,9 @@
+                     "source": full,
+                 }
+             )
++        self._test_cargo_dir = cargo_dir
++        self._test_acquired_sources = frozenset(acquired_sources)
++        self._test_noncontrol_total = 423 * 10 + 6 * 8 + 52 * 9 + 7 * 100
+         doc = collections.OrderedDict(
+             [
+                 ("observation", "orig"),
+@@ -578,23 +630,25 @@
+                 ("native_pins", {"sdk": "9f48d1f2"}),
+                 ("exclusions", []),
+                 ("gaps", []),
+-                (
+-                    "counts",
+-                    {
+-                        "total_selected_files": 2243,
+-                        **EXPECTED_CATEGORY_COUNTS,
+-                    },
+-                ),
++                ("counts", dict(EXPECTED_CATEGORY_COUNTS)),
+                 ("all_staging_files_have_hashes", False),
+                 ("scope", {"future_home": True}),
+             ]
+         )
+         return doc
+ 
++    def _run_refresh(self, doc):
++        return refresh_staging_manifest(
++            doc,
++            cargo_root=self._test_cargo_dir,
++            base_sha256=EXPECTED_BASE_SHA256,
++            acquired_sources=self._test_acquired_sources,
++            expected_noncontrol_total_bytes=self._test_noncontrol_total,
++        )
++
+     def test_1_refresh_updates_size_and_same_size_etag_while_never_opening_noncontrol(self):
+         with tempfile.TemporaryDirectory() as tmp:
+             doc = self._build_synthetic_fixture(tmp)
+-            # Mutate 1 registry-index file with size growth and 1 with same-size content change
+             grow_path = doc["inputs"][1]["source"]
+             with open(grow_path, "wb") as f:
+                 f.write(b"grown-index-payload-extra-bytes\n")
+@@ -602,7 +656,6 @@
+             old_len = doc["inputs"][2]["bytes"]
+             with open(same_size_path, "wb") as f:
+                 f.write(b"Z" * old_len)
+-            # Chmod all 488 non-control files to 0o000 would change mode, so instead wrap os.open
+             real_open = os.open
+             opened_paths = []
+ 
+@@ -612,17 +665,15 @@
+ 
+             os.open = tracked_open
+             try:
+-                out_doc, summary = refresh_staging_manifest(
+-                    doc, cargo_root=tmp, base_sha256=EXPECTED_BASE_SHA256
+-                )
++                out_doc, summary = self._run_refresh(doc)
+             finally:
+                 os.open = real_open
+ 
+             self.assertEqual(len(opened_paths), 1755)
++            self.assertTrue(all(p not in self._test_acquired_sources for p in opened_paths))
+             self.assertEqual(summary["control_rows_changed_count"], 2)
+             self.assertEqual(summary["control_rows_unchanged_count"], 1753)
+             self.assertEqual(summary["noncontrol_rows_preserved_unopened"], 488)
+-            # Verify 52 git-loose-unknown rows keep hash_gap and no sha256
+             unknowns = [r for r in out_doc["inputs"] if r["category"] == "git-loose-unknown"]
+             self.assertEqual(len(unknowns), 52)
+             for r in unknowns:
+@@ -635,7 +686,7 @@
+             with open(crate_row["source"], "ab") as f:
+                 f.write(b"drift")
+             with self.assertRaisesRegex(Refusal, "non-control row .* size drifted"):
+-                refresh_staging_manifest(doc, cargo_root=tmp)
++                self._run_refresh(doc)
+ 
+     def test_3_refuses_symlink_in_control_row(self):
+         with tempfile.TemporaryDirectory() as tmp:
+@@ -644,7 +695,7 @@
+             os.unlink(idx_path)
+             os.symlink("/etc/passwd", idx_path)
+             with self.assertRaisesRegex(Refusal, "symlink forbidden"):
+-                refresh_staging_manifest(doc, cargo_root=tmp)
++                self._run_refresh(doc)
+ 
+     def test_4_refuses_duplicate_destination(self):
+         with tempfile.TemporaryDirectory() as tmp:
+@@ -652,7 +703,30 @@
+             doc["inputs"][2]["destination_relative_to_future_home"] = doc["inputs"][1]["destination_relative_to_future_home"]
+             doc["inputs"][2]["source"] = doc["inputs"][1]["source"]
+             with self.assertRaisesRegex(Refusal, "duplicate destination"):
+-                refresh_staging_manifest(doc, cargo_root=tmp)
++                self._run_refresh(doc)
++
++    def test_5_refuses_unlisted_external_archive_source(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            doc = self._build_synthetic_fixture(tmp)
++            crate_row = next(r for r in doc["inputs"] if r["category"] == "registry-archive-container")
++            crate_row["source"] = os.path.join(tmp, "unlisted", os.path.basename(crate_row["source"]))
++            with self.assertRaisesRegex(Refusal, "source/destination mismatch"):
++                self._run_refresh(doc)
++
++    def test_6_refuses_counts_schema_or_noncontrol_total_mismatch(self):
++        with tempfile.TemporaryDirectory() as tmp:
++            doc = self._build_synthetic_fixture(tmp)
++            bad_counts = copy.deepcopy(doc)
++            bad_counts["counts"]["total_selected_files"] = 2243
++            with self.assertRaisesRegex(Refusal, "unexpected counts dictionary"):
++                self._run_refresh(bad_counts)
++            with self.assertRaisesRegex(Refusal, "noncontrol_total_bytes mismatch"):
++                refresh_staging_manifest(
++                    doc,
++                    cargo_root=self._test_cargo_dir,
++                    acquired_sources=self._test_acquired_sources,
++                    expected_noncontrol_total_bytes=EXPECTED_NONCONTROL_TOTAL_BYTES,
++                )
+ 
+ 
+ def main(argv=None):

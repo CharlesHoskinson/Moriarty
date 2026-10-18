@@ -13,6 +13,7 @@ mod error;
 mod json;
 mod shell;
 mod styles;
+mod status_output;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();

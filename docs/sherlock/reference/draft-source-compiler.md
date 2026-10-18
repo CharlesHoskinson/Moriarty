@@ -492,3 +492,12 @@ See the [Root adoption](../../results/sherlock-public-draft-compiler-20261018/RO
 This accepts the original named-mapping report clause. All 26 semantic
 correspondence obligations remain unproved; runtime, CLI, witness/constraint,
 native and target evidence retain their separate requirements.
+
+
+### Selected compile handler and artifact publication — 2026-10-18 UTC
+
+The public compile command now shares its argument type in `cli_args/compile.rs` and its selected Sherlock handler in `commands/compile_sherlock.rs`. The existing `commands/compile.rs` entry reads source and delegates to that handler. Preparation, optional observation, JSON serialization, new-directory publication and status rendering use the production modules. The output is `NEWDIR/sherlock-artifact.json`.
+
+The SDK-free consumer parsed the real arguments and exercised artifact publication for FixedQuote, FixedEligibility, ChainTotal and BranchTotal. Core supports compile-only preparation and explicit `--observe`; the draft route uses `--source-profile moriarty-sherlock-draft/1 --entry` for compile-only preparation. Observed Core execution returned UInt82 and Booltrue. Both draft artifacts matched the independently frozen source, preparation and twelve program tables. The initial quote consumer failed after publication because its layout expectation omitted the typed layout's bounds. The corrected check verified that saved artifact before the other five cases ran once. Source and result evidence remain separately recorded in the [dated result](../../results/sherlock-selected-compile-handler-20261018/README.md).
+
+These observations cover the selected production handler. Full backend-linked CLI execution, default-Core regression coverage, the refusal matrix and whole B04 acceptance remain open, alongside formal, native-proof and target qualification.

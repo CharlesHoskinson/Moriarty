@@ -1,0 +1,76 @@
+--- a/crates/mori/tests/support/real_compile_handler_independent.rs
++++ b/crates/mori/tests/support/real_compile_handler_independent.rs
+@@ -28,11 +28,19 @@
+     let s=v.as_str().expect("canonical decimal string");assert!(s=="0"||(!s.is_empty()&&!s.starts_with('0')&&s.bytes().all(|b|b.is_ascii_digit())));s.parse().unwrap()
+ }
+ fn idx(v:&Value)->usize{usize::try_from(number(v)).unwrap()}
++// Wire config owns one bounds object at its top level. Public typed
++// LayoutObservation/LayoutSchemaC also carry that same bounds inside layout.
++// This adapter follows those declarations; it never copies subject output.
++fn admission_layout(config:&Value)->Value{
++    let mut layout=config["layout"].clone();
++    layout.as_object_mut().unwrap().insert("bounds".into(),config["bounds"].clone());
++    layout
++}
+ fn core(actual:&Value,case:&str,observe:bool,expected:&Value){
+     let e=&expected["core"];let c=&e["cases"][case];expected_keys(actual,&e["topLevelExactKeys"]);pointers(actual,&e["commonPointers"]);
+     pointers(actual,if observe{&e["observePointers"]}else{&e["compileOnlyPointers"]});
+     assert_eq!(actual["source"],c["source"]);assert_eq!(actual["config"],e["exactConfig"]);assert_eq!(actual["target"],e["exactTarget"]);
+-    assert_eq!(actual["admission"]["bounds"],e["exactConfig"]["bounds"]);assert_eq!(actual["admission"]["layout"],e["exactConfig"]["layout"]);
++    assert_eq!(actual["admission"]["bounds"],e["exactConfig"]["bounds"]);assert_eq!(actual["admission"]["layout"],admission_layout(&e["exactConfig"]));
+     assert_eq!(actual["admission"]["identity"]["layout_version"],e["exactConfig"]["layout"]["layout_version"]);
+     let view=&actual["admission"]["program_view"];expected_keys(view,&e["programViewExactKeys"]);
+     let expressions=view["expressions"].as_array().unwrap();let entry=&expressions[idx(&view["entry"])]["Call"];assert!(entry.is_object());assert_eq!(entry["args"]["len"],"0");
+@@ -64,19 +72,37 @@
+     let e=&expected["draft"];expected_keys(actual,&e["topLevelExactKeys"]);pointers(actual,&e["commonPointers"]);
+     assert_eq!(actual["config"],e["exactConfig"]);assert_eq!(actual["target"],e["exactTarget"]);
+     assert_eq!(actual["source"],independent[case]["source"]);assert_eq!(actual["preparation"],independent[case]["preparation"]);assert_eq!(actual["admission"]["program_view"],independent[case]["program_view"]);
+-    assert_eq!(actual["admission"]["bounds"],e["exactConfig"]["bounds"]);assert_eq!(actual["admission"]["layout"],e["exactConfig"]["layout"]);
++    assert_eq!(actual["admission"]["bounds"],e["exactConfig"]["bounds"]);assert_eq!(actual["admission"]["layout"],admission_layout(&e["exactConfig"]));
+     assert_eq!(actual["genesis"]["initial_fuel"],e["exactConfig"]["fuel"]["value"]);assert_eq!(actual["genesis"]["remaining_work"],e["exactConfig"]["fuel"]["value"]);
+     assert_eq!(actual["supported_profile"]["format"],"sherlock-supported-profile/1");assert_eq!(actual["supported_profile"]["execution_profile"],actual["execution_profile"]);
+     // Mathematical7/8 are not reported as observed results by compile-only.
+ }
++fn verify_published(out:&Path,fixtures:&Path,case:&str,observe:bool,expected:&Value,is_draft:bool)->Result<()> {
++    assert!(out.is_dir());
++    let names=std::fs::read_dir(out).unwrap().map(|entry|entry.unwrap().file_name().into_string().unwrap()).collect::<BTreeSet<_>>();
++    assert_eq!(names,BTreeSet::from(["sherlock-artifact.json".to_owned()]));
++    let actual=read(&out.join("sherlock-artifact.json"))?;
++    if is_draft{draft(&actual,case,expected,&read(&fixtures.join("DRAFT-INDEPENDENT-PREPARATION.json"))?);}else{core(&actual,case,observe,expected);}
++    Ok(())
++}
+ fn run()->Result<ExitCode>{
+     // Consumer invocation: CASE compile|observe OUTDIR FIXTURES_ROOT.
+     // Root chooses only normal fixed combinations; this is not another public CLI.
+-    let input:Vec<OsString>=std::env::args_os().skip(1).collect();assert_eq!(input.len(),4);
++    let mut input:Vec<OsString>=std::env::args_os().skip(1).collect();
++    let verify_only=input.first().is_some_and(|v|v=="--verify-published");
++    if verify_only{input.remove(0);}
++    assert_eq!(input.len(),4);
+     let case=input[0].to_str().unwrap();let observe=match input[1].to_str().unwrap(){"compile"=>false,"observe"=>true,_=>panic!("normal selected mode")};
+     let out=PathBuf::from(&input[2]);let fixtures=PathBuf::from(&input[3]);let expected=read(&fixtures.join("EXPECTED-OUTPUT.json"))?;
+     let is_draft=case=="chain_total"||case=="branch_total";assert!(!is_draft||!observe,"no draft observe positive");
+     let group=if is_draft{"draft"}else{"core"};let record=&expected[group]["cases"][case];assert!(record.is_object());
++    // Harness-only readback mode returns BEFORE source reading, production Args
++    // parsing or the handler call. It cannot rerun the passing handler prefix.
++    if verify_only{
++        verify_published(&out,&fixtures,case,observe,&expected,is_draft)?;
++        println!("PASS persisted artifact verification ONLY: {case}; handler not invoked");
++        return Ok(ExitCode::SUCCESS);
++    }
+     let file=fixtures.join(record["file"].as_str().unwrap());let target=fixtures.join("target.json");let config=fixtures.join(if is_draft{"draft-config.json"}else{"core-config.json"});
+     let mut argv=vec![OsString::from("compile"),file.clone().into_os_string(),"--target".into(),target.into_os_string(),"--out".into(),out.clone().into_os_string(),"--execution-profile".into(),"sherlock-helper-microstep/1".into(),"--execution-config".into(),config.into_os_string()];
+     if is_draft{argv.extend(["--source-profile".into(),"moriarty-sherlock-draft/1".into(),"--entry".into()]);}else{argv.extend(["--action".into(),record["action"].as_str().unwrap().into()]);}
+@@ -87,10 +113,8 @@
+     let mut err=anstream::AutoStream::new(std::io::stderr(),anstream::ColorChoice::Never);
+     assert!(!out.exists(),"fresh ordinary publication destination");
+     let code=selected_compile::run(&args,&source,|verb,message|status_output::status(&mut err,status_output::Verbosity::Normal,verb,message))?;
+-    assert_eq!(code,ExitCode::SUCCESS);assert!(out.is_dir());
+-    let names=std::fs::read_dir(&out).unwrap().map(|entry|entry.unwrap().file_name().into_string().unwrap()).collect::<BTreeSet<_>>();assert_eq!(names,BTreeSet::from(["sherlock-artifact.json".into()]));
+-    let actual=read(&out.join("sherlock-artifact.json"))?;
+-    if is_draft{draft(&actual,case,&expected,&read(&fixtures.join("DRAFT-INDEPENDENT-PREPARATION.json"))?);}else{core(&actual,case,observe,&expected);}
++    assert_eq!(code,ExitCode::SUCCESS);
++    verify_published(&out,&fixtures,case,observe,&expected,is_draft)?;
+     println!("PASS actual production compile handler: {case} {} wrote {}",if observe{"observe"}else{"compile-only"},out.join("sherlock-artifact.json").display());
+     Ok(code)
+ }
