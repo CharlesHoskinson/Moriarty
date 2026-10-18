@@ -1,0 +1,88 @@
+--- R398-de3/bounded_sdk_compile.py
++++ UNADOPTED-R406/bounded_sdk_compile.py
+@@ -448,6 +448,7 @@
+     need(q['packet']['max_bytes']<=v['packet_bytes'],'packet hard bound too large')
+ 
+ def sandbox_args(c,phase,worker=True,precheck=False,retained_audit=False):
++    need(not retained_audit or (phase=='F' and worker and not precheck),'retained audit sandbox mismatch')
+     owned_paths(c)
+     p=c['paths'];args=['--die-with-parent','--new-session','--unshare-user','--unshare-pid','--unshare-net','--unshare-ipc','--unshare-uts','--disable-userns','--cap-drop','ALL','--ro-bind','/','/']
+     # Mask private home and old trees first; restore only the exact bound public
+@@ -533,7 +534,7 @@
+         except FileNotFoundError:return
+         _cg_write(self.path/'cgroup.kill','1')
+     def check(self):
+-        need(read_numbers(self.path/'cpu.stat').get('usage_usec',0)<=self.v['cpu_time_us'],'total cgroup CPU cap')
++        need(getattr(self,'prior_cpu',0)+read_numbers(self.path/'cpu.stat').get('usage_usec',0)<=self.v['cpu_time_us'],'total cgroup CPU cap')
+         need(read_numbers(self.path/'memory.events').get('oom_kill',0)==0,'cgroup OOM')
+         need(read_numbers(self.path/'pids.events').get('max',0)==0,'tasks cap hit')
+     def close(self):
+@@ -647,7 +648,11 @@
+     group=Group(c,phase);v=c['limits'][phase];packet=Path(c['paths']['packet'])
+     need((Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
+     supervisor_envelope(c);bound_identities(c);quotas(c,phase)
+-    start=time.monotonic();counts={'stdout':0,'stderr':0};records=[]
++    start=time.monotonic();counts={k:sum((packet/f'F{s}.{k}').stat().st_size for s in ('_precheck','','_audit')) for k in ('stdout','stderr')} if retained_audit else {'stdout':0,'stderr':0};records=[]
++    for k,n in counts.items():need(n<=v[k+'_bytes'],'log cap hit '+phase+' '+k)
++    if retained_audit:
++        group.prior_cpu=read_numbers(group.path.parent/'cpu.stat').get('usage_usec',0)
++        need(group.prior_cpu<v['cpu_time_us'],'total cgroup CPU cap')
+     try:
+         group.create()
+         variants=[(True,False)] if retained_audit else [(False,False)] if phase in ('B','E','F') else [(True,False)]
+@@ -1052,26 +1057,40 @@
+     else:raise Unsupported('invalid data worker phase')
+ 
+ def retained_f_audit(c,config_sha):
++    start=time.monotonic()
+     need(c['mode']=='tier1-and-compile','retained F audit requires tier1-and-compile mode')
+     consent(c);supervisor_envelope(c)
+     def expired(signum,frame):raise Refusal('whole-job wall cap')
+-    signal.signal(signal.SIGALRM,expired);signal.setitimer(signal.ITIMER_REAL,min(c['total_wall_seconds'],c['limits']['F']['wall_seconds']))
+-    resource.setrlimit(resource.RLIMIT_CPU,(c['supervisor_cpu_seconds'],c['supervisor_cpu_seconds']))
+-    bound_identities(c);owned_paths(c);quotas(c,'F');frozen_source(c)
+-    p=c['paths'];root=Path(p['execution_root']);packet=Path(p['packet'])
+-    need((root/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
+-    prior_receipts(c,'F',False,retained_audit=True)
+-    for name in ('F_RESULT.json','F_QUARANTINED_OUTPUTS.json','F_RETAINED_AUDIT_RESULT.json','F_RETAINED_QUARANTINED_OUTPUTS.json','TERMINAL_FAILURE_RETAINED_AUDIT.json','F_retained_audit.stdout','F_retained_audit.stderr'):
+-        need(not (packet/name).exists(),'retained audit output already exists: '+name)
++    init_wall=min(c['total_wall_seconds'],c['limits']['F']['wall_seconds'])
++    need(init_wall>0,'whole-job wall cap')
++    signal.signal(signal.SIGALRM,expired);signal.setitimer(signal.ITIMER_REAL,init_wall)
+     try:
+-        result=launch(c,'F',config_sha,retained_audit=True)
+-        bound_identities(c)
+-        receipt(c,'F_RETAINED_AUDIT_RESULT.json',result,'F')
+-    except BaseException as e:
++        sup_cpu=c['supervisor_cpu_seconds']-(read_numbers(cg_fs(cg_paths(c)[1])/'cpu.stat').get('usage_usec',0)+999999)//1000000
++        need(sup_cpu>0,'supervisor CPU cap');resource.setrlimit(resource.RLIMIT_CPU,(sup_cpu,sup_cpu))
++        bound_identities(c);owned_paths(c);quotas(c,'F');frozen_source(c)
++        p=c['paths'];root=Path(p['execution_root']);packet=Path(p['packet'])
++        need((root/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
++        predecessors=prior_receipts(c,'F',False,retained_audit=True)
++        need(jload(packet/'TERMINAL_FAILURE.json')=={'message':'phase exit nonzero F','native_outputs_accepted':False,'type':'Refusal'},'unexpected prior terminal failure')
++        prior_wall=sum(jload(packet/(ph+'_RESULT.json'))['wall_seconds'] for ph in PHASES[:-1])
++        wall_budget=min(c['total_wall_seconds']-prior_wall,c['limits']['F']['wall_seconds'])
++        rem_wall=wall_budget-(time.monotonic()-start)
++        need(rem_wall>0,'whole-job wall cap');signal.setitimer(signal.ITIMER_REAL,rem_wall)
++        for name in ('F_RESULT.json','F_QUARANTINED_OUTPUTS.json','F_RETAINED_AUDIT_RESULT.json','F_RETAINED_QUARANTINED_OUTPUTS.json','TERMINAL_FAILURE_RETAINED_AUDIT.json','F_retained_audit.stdout','F_retained_audit.stderr'):
++            need(not (packet/name).exists(),'retained audit output already exists: '+name)
++        try:
++            result=launch(c,'F',config_sha,retained_audit=True)
++            bound_identities(c)
++            need(time.monotonic()-start<=wall_budget,'whole-job wall cap')
++            result.update({'retained_audit':True,'audit_config_sha256':config_sha,'audit_runner_sha256':c['bindings']['runner']['sha256'],'marker_sha256':digest(root/'ONE_SHOT_STARTED'),'predecessors':predecessors,'quarantined_outputs_sha256':digest(packet/'F_RETAINED_QUARANTINED_OUTPUTS.json'),'native_outputs_accepted':False})
++            receipt(c,'F_RETAINED_AUDIT_RESULT.json',result,'F')
++        except BaseException as e:
++            signal.setitimer(signal.ITIMER_REAL,0)
++            try:receipt(c,'TERMINAL_FAILURE_RETAINED_AUDIT.json',{'type':type(e).__name__,'message':str(e),'native_outputs_accepted':False},'F')
++            except Exception:pass
++            raise
++    finally:
+         signal.setitimer(signal.ITIMER_REAL,0)
+-        try:receipt(c,'TERMINAL_FAILURE_RETAINED_AUDIT.json',{'type':type(e).__name__,'message':str(e),'native_outputs_accepted':False},'F')
+-        except Exception:pass
+-        raise
+ 
+ def run(c,config_sha):
+     consent(c);supervisor_envelope(c)
