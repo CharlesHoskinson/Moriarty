@@ -6,7 +6,12 @@ module nominalConstruction {
   type Value = List[Token]
   type Environment = int -> Value
   type Layout = {typeId: int, ctorId: int, fields: List[int]}
+  // Source patterns are finite preorder tokens, not recursive Quint types/functions.
+  type PatternToken = PatternWildcard | PatternBind(int)
+    | PatternConstructor({typeId: int, ctorId: int, arity: int})
   type Pattern = Bind(int) | ConstructorPattern({typeId: int, ctorId: int, binders: List[int]})
+    | NestedPattern(List[PatternToken])
+  type PatternMatch = {matched: bool, bindings: Environment}
   type Arm = {pattern: Pattern, body: int}
   type Op = Add | Sub | Equal
   type Expression = Literal(Value) | Variable(int)
@@ -47,7 +52,7 @@ module nominalConstruction {
     enteredArguments: List[List[Value]], maxDepth: int,
   }
   var machine: Snapshot
-  pure val PROFILE = "sherlock-quint-nominal-construction/1"
+  pure val PROFILE = "sherlock-quint-nominal-pattern-worklist/1"
   pure val TERMINAL_PUBLICATION_CHARGE = 1
   pure val FROZEN_K_A_TERMINAL_PUBLICATION_CHARGE = 0
   pure val MAX_SCALAR = 255
@@ -106,7 +111,35 @@ module nominalConstruction {
     names.foldl(Set(), (seen, name) => seen.union(Set(name))).size() == names.length()
   pure def bindNames(names: List[int], values: List[Value], saved: Environment): Environment =
     range(0, names.length()).foldl(saved, (env, index) => env.put(names.nth(index), values.nth(index)))
+  // Positive domain: finite declaration-typed values and well-formed typed patterns,
+  // with linear bind names per arm. Source admission/type checking is external.
+  // This pure traversal has no new charged transition/helper/native-work claim.
+  pure def nestedPatternMatch(nestedTokens: List[PatternToken], subject: Value, saved: Environment): PatternMatch = {
+    val scan = nestedTokens.foldl({pending: List(subject), bindings: saved, matched: true}, (acc, patToken) =>
+      if (not(acc.matched) or acc.pending.length() == 0) {...acc, matched: false}
+      else {
+        val subjectValue = acc.pending.head()
+        val remainingValues = acc.pending.tail()
+        match patToken {
+          | PatternWildcard => {...acc, pending: remainingValues}
+          | PatternBind(name) => {...acc, pending: remainingValues, bindings: acc.bindings.put(name, subjectValue)}
+          | PatternConstructor(expectedCtor) => if (subjectValue.length() == 0) {...acc, matched: false}
+            else match subjectValue.head() {
+              | ConstructorToken(actualCtor) => if (and {
+                  actualCtor.typeId == expectedCtor.typeId,
+                  actualCtor.ctorId == expectedCtor.ctorId,
+                  actualCtor.arity == expectedCtor.arity,
+                }) {...acc, pending: fieldsOf(subjectValue).concat(remainingValues)}
+                else {...acc, matched: false}
+              | _ => {...acc, matched: false}
+            }
+        }
+      })
+    val isMatch = scan.matched and scan.pending.length() == 0
+    {matched: isMatch, bindings: if (isMatch) scan.bindings else saved}
+  }
   pure def constructorMatches(pattern: Pattern, value: Value): bool = match pattern {
+    | NestedPattern(nestedTokens) => nestedPatternMatch(nestedTokens, value, Map()).matched
     | Bind(_) => true
     | ConstructorPattern(c) => if (value.length() == 0) false else match value.head() {
         | ConstructorToken(t) => and {
@@ -117,6 +150,7 @@ module nominalConstruction {
       }
   }
   pure def armEnvironment(pattern: Pattern, value: Value, saved: Environment): Environment = match pattern {
+    | NestedPattern(nestedTokens) => nestedPatternMatch(nestedTokens, value, saved).bindings
     | Bind(name) => saved.put(name, value)
     | ConstructorPattern(c) => bindNames(c.binders, fieldsOf(value), saved)
   }
