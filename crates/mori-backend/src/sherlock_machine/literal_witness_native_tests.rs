@@ -6,10 +6,11 @@
 use crate::proving::hex;
 use crate::sherlock_machine::literal_bridge::{
     check_literal_statement, check_literal_transition, local_max_statement_lanes, CircuitMode,
-     ImageValues, LiteralConstraintCheck, LiteralLane, LiteralLayout, LiteralSourceIdentity,
+     ImageValues, LiteralConstraintCheck, LiteralLayout, LiteralSourceIdentity,
     BINDING_VERSION, OPEN_OBLIGATIONS, PROFILE, RULE_CHARGE, RULE_START_LINE, RULE_TAG, SCOPE,
     STATEMENT_FORMAT,
 };
+use crate::sherlock_machine::literal_host::LiteralLane;
 use crate::sherlock_machine::literal_step::{LiteralCapacities, LiteralTable};
 use crate::sherlock_machine::literal_witness::{
     build_checked_literal_transition_request, core_program_capacities, ProducedLiteralTransition,
