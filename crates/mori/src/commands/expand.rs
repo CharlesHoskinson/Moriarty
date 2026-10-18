@@ -14,7 +14,7 @@ pub struct Args {
     /// Emit a local Source/6 transfer proposal; requires source6-expansion
     #[arg(
         long,
-        long_help = "Emit raw local Source/6 transfer proposal text. Requires the source6-expansion build feature; default Core expansion is unchanged."
+        long_help = "Emit raw local Source/6 transfer proposal text from checked moriarty-beta/1 source. Requires the source6-expansion build feature. Output is local-stipulation-only; default Core expansion is unchanged. Source/6 output is not compiled or simulated by this option."
     )]
     pub emit_source6_transfer: bool,
 }
