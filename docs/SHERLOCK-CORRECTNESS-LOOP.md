@@ -470,3 +470,117 @@ When only adoption metadata changes, reuse unchanged passing observations and
 run the existing pure reader, recording its new ledger cut. Source proposals,
 terminal provider envelopes and serialized graph counts each retain their own
 meaning. This update adds no runner, circuit iteration or website circuit claim.
+
+
+## Product APIs, scoped results and missing consumers — October18UTC R216
+
+Reported at **2026-10-18T01:42:11.177012+00:00**. This dated update adds no
+original closure. Earlier graph nodes, evidence cuts and adoption records retain
+their meanings; no new circuit iteration, formal proof, native result or
+stagenet settlement is claimed. Root remains the sole integrator, with native
+authority0 and the full goal open.
+
+The public `mori_core::sherlock_financial_projection` component now exposes the
+Core/2 financial observation adapter. [R176's corrected positive](results/sherlock-financial-observation-20261018/evidence/R176/actual-attempt-01/RESULT.json)
+actually observes `stage::{load,start,resume}` through the adapter, including
+false-await/true-resume states, accounting and invocation context. R189 separately
+compiled the canonical test without executing its binary. Final same-owner R188
+review approved the documentation/API and compatible integration, and Root reports
+PR183 merged at prefix `a7953da9`. The full017 Sherlock financial-extension
+producer,018lowering and019negative coverage remain open. The adapter does not
+make financial state/effects/residual duties part of Sherlock ReferenceState or
+MachineImage through observation alone.
+
+The installed public `mori_core::sherlock_word_arithmetic` provides typed32/64
+carry, borrow, wide multiplication and checked UInt128 wrappers. R201 actually
+passed12 independent and5 author normal tests; R203 accepted source/results with
+qualifications. Component tests include true carry/borrow and nonzero word high
+values; whole-UInt128 Err10 paths were not executed by that corpus. R206's two
+phases compiled the public Core module and external consumer without rerunning
+the17 tests. R214 compiled the canonical consumer only. At this cut final R212
+review and R211 currentness remain pending. The inspected `reference::binary_result`
+still uses native `u128::checked_add/sub/mul`; these word functions have no new
+consumer in that path. Source registration and compile-only evidence do not
+select a word layout, implement lowering or establish whole030 acceptance.
+
+The R181 bounded parser/early lexer-hook candidates actually passed R191's12
+parser and2 lexer tests; the same R184 owner subsequently ACCEPTed those results
+with retained integration/cleanup limits. R200's bounded typechecker candidate
+actually passed R204's18 tests, while R205 supplies the separate attributed
+source APPROVE_WITH_LIMITS. R209v02 post-result review is prepared but uncalled
+at this cut. Those candidate parser, lexer and checker bytes differ from current
+canonical source. The inspected public `compile_sherlock` still calls
+`host::compile_host`; a complete public recursive draft compile has not been
+observed. Root reports R208's bounded-copy author active with no returned API.
+The missing copy contract and explicit parser/checker/config/diagnostic consumer
+wiring remain product dependencies, not completed behavior inferred from tests.
+
+R182's resource identity v2 actually passed two scoped positives: an empty A
+slice with fuel9/stack4 and selected/unselected bare IdentityC projection. R202
+ACCEPTed that actual binding and scoped functionality. The candidate v2 source
+differs from current `reference_slice`; current composition is unchecked and
+unintegrated at this cut. No live B wrapper/owner/Machine result or whole013
+acceptance follows. Preserve explicit unmeasured values and run bounds when
+composing the existing source increment.
+
+R198 and R199 literally report owner CHANGES_REQUIRED for the native provisioner.
+The selected paged owner correction is still unapproved/unexecuted at this cut;
+this entry supplies no new security judgment, mock classification or native
+authority. New work remains the missing product source/consumer edges: obtain the
+bounded-copy API, compose the reviewed parser/checker route with explicit mappings,
+finish word final-review/currentness, and check resource-v2 composition. Reuse
+unchanged passing observations and keep any newly selected result separately
+dated. The [R216 evidence map](audits/2026-10-17/sherlock-knowledge/r216-evidence/ROOT-REPORTED-STATE.json)
+and pinned source snapshots preserve these distinctions without a new runner or
+factory.
+
+
+## Public recursive compiler actual observations — October18UTC R247
+
+As of **2026-10-18T02:40:02.682946+00:00**, Root reports the24-file public compiler source integrated
+in commit prefix `2f078c40`, draft PR185. The explicit draft public route now
+composes bounded parse, type check, source copy, owner admission and `admit_run`,
+then projects the same fresh unstepped admitted/genesis pair. The source report
+names26 construct correspondence obligations, all unproved. This is bounded
+typed recursive List/Tree preparation; B steps, runtime values7/8, witness and
+constraint emission, semantic proof, native execution and target results remain
+unobserved. The CLI dispatch is source-inspected; R239 exercised the public
+Core API through its external consumer, without running the `mori` CLI.
+
+[R238](results/sherlock-public-draft-compiler-20261018/knowledge/R247/evidence/238-current-compiler-review-packet/REPORT.md)
+returned fresh Argon HIGH source approval for the current compiler/copy wiring,
+including the corrected config and diagnostic mappings. Its report records64
+allowlisted pages,52 complete bodies and469324 bytes, with transitive omissions
+and five retained owner/H1 gaps. Transport completed with one terminal and no
+parse/stdin errors. Source approval is separate from actual-result acceptance.
+
+[R221 revision02 actual attempt01](results/sherlock-public-draft-compiler-20261018/knowledge/R247/evidence/221-bounded-copy-ordinary-unit-qa/revision02/actual-attempt-01/RESULT.json)
+passed9 phases: external unit compile, exact seven-test membership and7 individual
+unit runs, with433 selected inputs unchanged.
+[R239 actual attempt01](results/sherlock-public-draft-compiler-20261018/knowledge/R247/evidence/239-public-compiler-five-phase-qa/actual-attempt-01/RESULT.json)
+passed5 phases: normal current Core rlib compile (5.247679s), external public
+consumer compile, exact two-test membership and the independent ChainTotal/List
+and BranchTotal/Tree positive preparation tests, with569 selected inputs
+unchanged and4 generated outputs pinned. These results add no global H1 or
+semantic proof. R245 same-owner actual-result/compatibility review is preparing;
+original UIREQ022 remains OPEN until Root adopts a supported result. Earlier
+accepted closures and current invalidated feature pins remain separately dated;
+this entry freezes no whole current closure count.
+
+The unintegrated R237 paired K/Quint candidate has R243 source PASS with retained
+gaps. Actual R241 ran10 new ordinary unit fixtures:9 passed and1 failed because
+handwritten fixtures used `uiReturn` while actual K and the frozen oracle use
+`uiRet`. R244 proposes exactly two literal corrections; those changed bytes are
+source only, unrun and awaiting fresh review. Actual F03 K and Quint captures
+remain MISSING, so neither model correspondence nor021 closure is established.
+
+The corrected two-file native wrapper has no new adoption or execution. R240
+source auditA ended after a public transport error with exit-9, no terminal and
+no verdict. B completed with source-only APPROVE for the exact two files, while
+retaining NB04 mock coverage, ADDNB01 dual-open, ADDNB02 author overstatement and
+NEWMF03 quiescent-operator contract assumptions. This is the reviewer's judgment,
+not a new coordinator security decision. No policy/configuration/provision grant
+follows; operation remains UNCLASSIFIED and native authority remains0.
+No new circuit iteration occurred in this batch. R216 remains a historical
+01:42UTC cut, with its original artifacts unchanged; the additive graph retains
+its old membership and dates those earlier facts.

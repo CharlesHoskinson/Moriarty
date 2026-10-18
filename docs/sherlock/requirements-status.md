@@ -1,14 +1,21 @@
 # Current35 EARS assessment
 
-Nine of the 35 original requirements are closed on their supported host or reporting
-scope: UIREQ-001, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008, UIREQ-009, UIREQ-010, UIREQ-011 and UIREQ-025.
-The latest [independent review and Root adoption](../results/sherlock-ears-host-closure-20261017/README.md)
-bind the unchanged generic source, original scenarios, independent expectations
-and actual host observations. DoctorWatson's selected report verifies all nine
-as current. The remaining 26 original requirements and all 25 refinements/68
-scenarios remain open. These are separate inventories from the retained security,
-financial, formal, native and release requirements. UIREQ-025 reporting acceptance is separate from the reported capabilities; UIREQ-026 lacks the private-record and per-slice evidence.
-The [sharing review and adoption](../results/sherlock-structural-sharing-20261017/ROOT-ADOPTION.json) adds UIREQ-009. Matching files alone cannot close a requirement.
+Ten of the 35 original requirements are closed on their supported host or reporting
+scope: UIREQ-001, UIREQ-003, UIREQ-005, UIREQ-006, UIREQ-008, UIREQ-009,
+UIREQ-010, UIREQ-011, UIREQ-022 and UIREQ-025.
+The [public compiler adoption](../results/sherlock-public-draft-compiler-20261018/ROOT-ORIGINAL022-ADOPTION.json)
+adds original UIREQ-022 after current source review, actual public preparation
+checks and corrected result review. DoctorWatson's [selected current report](../results/sherlock-public-draft-compiler-20261018/current-evidence/RESULT.json)
+verifies ten current adopted closures. The remaining 25 original requirements
+and all 25 refinements/68 scenarios remain open. These are separate inventories
+from retained security, financial, formal, native and release requirements.
+All 26 compiler correspondence obligations remain named-unproved; mapping-report
+acceptance supplies no semantic theorem, runtime trace or native proof.
+UIREQ-025 reporting acceptance is separate from reported capabilities;
+UIREQ-026 lacks private-record and complete per-slice evidence. The earlier
+[host adoption](../results/sherlock-ears-host-closure-20261017/README.md) and
+[sharing adoption](../results/sherlock-structural-sharing-20261017/ROOT-ADOPTION.json)
+retain their exact scoped observations. Matching files alone cannot close a requirement.
 
 | ID | Implementation | Validation | Acceptance | Exact missing work / next discriminator |
 |---|---|---|---|---|
@@ -33,7 +40,7 @@ The [sharing review and adoption](../results/sherlock-structural-sharing-2026101
 | UIREQ-019 | partial | partial | open | Implement required committed/tentative outcome adapter and run the existing designated-owner local-failure scenario; retained68/10 plus attempted work, no fabricated returned rollback continuation/global ledger rollback. |
 | UIREQ-020 | absent | unrun | open | Owner/compiler map actual chosen target phase policy and retained fee/duty observations; only then obtain separately admitted actual phase evidence. This clause genuinely needs target evidence. |
 | UIREQ-021 | partial | partial | open | Obtain one permitted actual K arithmetic/list trace (e.g.N02 add2,3), pair with existing Quint trace and publish numeric/field/hidden-step/difference/finance omissions. No native requirement. |
-| UIREQ-022 | partial | partial | open | Five current preflight regressions are complete via preserved R83 two plus corrected R90 three results. Next qualify the public two-program scalar compile pipeline, then implement nested-call/list public grammar/lowering with named semantic correspondence and complete applicable observations; no evaluated-literal proof. |
+| UIREQ-022 | complete | observed | closed | Original named-mapping report clause adopted through the actual public nested-call/List and Tree preparation cases, complete independent tables and 26 literal unproved obligations. Runtime, semantic/circuit proof, CLI and native predicates stay separate. |
 | UIREQ-023 | partial | partial | open | Complete full39/native consumer inventory, then only original separately admitted build/proof/target stages with exact relation/key/statement/network/effects. Do not close from333 host carriers. |
 | UIREQ-024 | partial | partial | open | Select one actual frame/sharing optimization proposal, freeze complete preservation predicate and independently compare its declared observations/costs; unmeasured physical/native costs remain unknown rather than mandatory native run for host-only proposal. |
 | UIREQ-025 | complete | observed | closed | Complete C1-C4 seven-field record and qualified compiler companion adopted after actual checks and fresh reviews; historical model evidence does not validate changed B semantics. Raw artifact requires its companion. |
