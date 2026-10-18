@@ -168,3 +168,8 @@ assets, rendered scene or deployment.
 ## Editorial update010 — actual trace and preparation
 
 [Actual trace and preparation assembly](UPDATE-010-ACTUAL-TRACE-AND-PREPARATION.md) connects the observed typed-source preparation and finite F03 model trace to a future source-clickthrough view. Root/Sol factual concept only; no website code or circuit-source iteration is added. Latest actual circuit entry remains005.
+
+
+## Editorial update 011 — retained native audit provenance
+
+[Retained native audit provenance](UPDATE-011-NATIVE06-AUDIT-PROVENANCE.md) links the two scoped result acceptances and actual preservation/cleanup. Root/Sol factual editorial entry only; circuit-source iteration 005 remains latest. SDK target execution, proofs and stagenet remain open.

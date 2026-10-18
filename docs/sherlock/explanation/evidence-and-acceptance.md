@@ -35,3 +35,10 @@ assembler categories, multiline decoder guards and end-to-end chain propagation
 remain required before general adoption. Complete captures, failed attempts and
 unmeasured finance/B/native scopes remain explicit. Root's accepted count is15
 originals after this adoption; no broader correctness-loop completion follows.
+
+
+## October 18 — audit acceptance, preservation and cleanup are separate facts
+
+The corrected retained R3 audit passed and both independent result reviewers accepted its scoped build-provenance result. Root subsequently verified durable preservation of 3,554 files (3,498 target files, 55 packet files and one external marker), totaling 2,628,344,281 bytes, then completed all six cleanup operations. The three tmpfs mounts are gone, cgroups are absent and the final receipt records `cleanupOwed:false`. Archived files remain read-only/nonexecutable; native outputs remain unaccepted and the SDK target ELF was not executed. Proofs, native target semantics, stagenet and full Sherlock completion remain open. No requirement status changes; the current published count remains 15/35.
+
+The [two independent scoped audit opinions](../../results/sherlock-native06-association-audit-20261018/README.md) support the recorded output association and compile provenance, not execution or promotion of the SDK target. Same-context source/operation/result followups do not create extra independent votes. Root's [later filesystem disposition](../../results/sherlock-native06-association-audit-20261018/actual/preservation/ROOT-PRESERVATION-DISPOSITION.json) verifies preservation, and the [subsequent cleanup receipt](../../results/sherlock-native06-association-audit-20261018/actual/preservation/POST-CLEANUP-RESULT.json) resolves cleanup separately. Preserve raw reports and their factual qualifications: the complete packet has 55 files plus a separate 9-byte marker, not 29 packet files. A current hash binds bytes; it does not extend any earlier host, financial, formal or target claim.
