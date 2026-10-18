@@ -38,6 +38,10 @@ fn waiting(outcome: StageOutcome, expected: &Value) -> Continuation {
         UInt(expected["committed"].as_u64().unwrap().into())
     );
     assert_eq!(
+        u64::from(continuation.site),
+        expected["site"].as_u64().unwrap()
+    );
+    assert_eq!(
         serde_json::to_value(&continuation.captures).unwrap(),
         expected["captures"]
     );
@@ -46,7 +50,11 @@ fn waiting(outcome: StageOutcome, expected: &Value) -> Continuation {
         expected["residual"]
     );
     if advanced {
-        compare_segment(&segment.expect("advanced prefix"), &expected["segment"]);
+        let segment = segment.expect("advanced prefix");
+        assert_eq!(segment.frame_post.site, continuation.site);
+        assert_eq!(segment.frame_post.captures, continuation.captures);
+        assert_eq!(segment.execution.post, continuation.boundary);
+        compare_segment(&segment, &expected["segment"]);
     } else {
         assert!(segment.is_none());
         assert_eq!(
