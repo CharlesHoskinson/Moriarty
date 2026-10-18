@@ -1,0 +1,131 @@
+[
+  {
+    "id": "M1",
+    "severity": "material source-consumer contradiction",
+    "opinionPointers": [
+      "/sourceAssessment/findings/0",
+      "/sixPathCoverage/crates~1mori~1src~1commands~1check_source.rs/reason"
+    ],
+    "claim": "Header diagnostics/offsets preserved across LSP, MCP and capabilities.rs consumers; these are called transitive callers.",
+    "actual": "lsp.rs and mcp.rs are todo! stubs. capabilities.rs emits a metadata catalogue; none calls check_source::dispatch or implements SourceCheckConsumer. Only actual check.rs routes through this dispatch in the pinned production source. Claimed editor/MCP consumers do not exist here.",
+    "anchors": [
+      {
+        "physical": "source/crates/mori/src/commands/lsp.rs",
+        "sha256": "8187ef893f48b6a5a54a5d48e61e120edde48ddb57b64d21b46100970d8df478",
+        "startLine": 1,
+        "endLine": 10,
+        "literal": "use std::process::ExitCode;\n\nuse crate::shell::Shell;\n\n#[derive(Debug, clap::Args)]\npub struct Args {}\n\npub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {\n    todo!(\"mori lsp\")\n}"
+      },
+      {
+        "physical": "source/crates/mori/src/commands/mcp.rs",
+        "sha256": "778c04c0168fd45efc8823a4f329f6b332f8808045b58d4fbccb58f279119756",
+        "startLine": 1,
+        "endLine": 10,
+        "literal": "use std::process::ExitCode;\n\nuse crate::shell::Shell;\n\n#[derive(Debug, clap::Args)]\npub struct Args {}\n\npub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {\n    todo!(\"mori mcp\")\n}"
+      },
+      {
+        "physical": "source/crates/mori/src/commands/capabilities.rs",
+        "sha256": "800fe8007fe12c719128ee51b40273ea89dbc2457eebf8d28c4d9903d9a99380",
+        "startLine": 66,
+        "endLine": 85,
+        "literal": "pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {\n    use mori_core::stage::{LANGUAGE_2, SEMANTICS_2};\n    use mori_core::{LANGUAGE, SEMANTICS};\n\n    // JSON is the sole format; the flag is an explicit client spelling.\n    let _ = args.json;\n    let native = cfg!(feature = \"native\");\n    let source6 = cfg!(feature = \"source6-expansion\");\n    let disjoint = cfg!(feature = \"core2-disjoint-draft\");\n    let report = json!({\n        \"format\": \"moriarty-cli-capabilities/1\",\n        \"producer\": {\n            \"implementation\": \"rust-workspace-cli\", \"packageVersion\": env!(\"CARGO_PKG_VERSION\"),\n            \"binarySourceRevision\": null, \"responseKind\": \"command-self-report\",\n            \"buildFeatures\": {\"native\": native, \"source6-expansion\": source6, \"core2-disjoint-draft\": disjoint}\n        },\n        \"catalogue\": {\n            \"sourceRevision\": SOURCE_REVISION, \"coverage\": \"selected-public-profile-consumers\",\n            \"basis\": \"source-inspection\", \"runtimeEvidence\": \"not-included\",\n            \"note\": \"Curated consumer descriptions use this inspection basis, not an inferred binary revision. Linked profile constants and cfg flags come from the build. Routing/editor changes require a catalogue update.\""
+      },
+      {
+        "physical": "source/crates/mori/src/commands/capabilities.rs",
+        "sha256": "800fe8007fe12c719128ee51b40273ea89dbc2457eebf8d28c4d9903d9a99380",
+        "startLine": 117,
+        "endLine": 120,
+        "literal": "            consumer(\"rust-lsp\", \"lsp\", (None, None, None), None,\n                (\"stub\", \"not-implemented\"), &[\"Stub at the catalogue inspection revision. Update this row when the editor implementation changes.\"], &[\"crates/mori/src/commands/lsp.rs\"]),\n            consumer(\"rust-mcp\", \"mcp\", (None, None, None), None,\n                (\"stub\", \"not-implemented\"), &[\"Stub at the catalogue inspection revision. Update this row when the editor implementation changes.\"], &[\"crates/mori/src/commands/mcp.rs\"])"
+      },
+      {
+        "physical": "source/crates/mori/src/commands/check.rs",
+        "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+        "startLine": 29,
+        "endLine": 39,
+        "literal": "    }\n    let started = Instant::now();\n    let outcome = check_source::dispatch(\n        &source,\n        CliConsumer {\n            name: &name,\n            source: &source,\n            json: args.json,\n            shell,\n        },\n    )?;"
+      }
+    ]
+  },
+  {
+    "id": "M2",
+    "severity": "substantive test-coverage overstatement",
+    "opinionPointers": [
+      "/ninePhaseCoverage/check-preserved/claimAndLimits"
+    ],
+    "claim": "Existing check_source_dispatch.rs confirms public check and internal check_source::dispatch agree.",
+    "actual": "The full test launches public JSON/human CLI commands, compares frozen JSON bytes, exits and human stream presence. It does not call internal dispatch independently or compare internal-vs-public reports. Public implementation uses dispatch, but that does not create a second independently compared consumer.",
+    "anchors": [
+      {
+        "physical": "source/crates/mori/tests/check_source_dispatch.rs",
+        "sha256": "cbc4529bd03751163e28bb8089ae6d451e120bd95f5023733845402b3185a91a",
+        "startLine": 53,
+        "endLine": 110,
+        "literal": "    let source = std::fs::read(fixtures.join(&case.source)).expect(\"read source fixture\");\n    let directory = CaseDirectory::new(id);\n    std::fs::write(directory.0.join(&case.file_label), &source).expect(\"copy source bytes\");\n    let expected = std::fs::read(fixtures.join(&case.expected_stdout)).expect(\"read byte oracle\");\n    let output = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .current_dir(&directory.0)\n        .args(&case.argv)\n        .output()\n        .expect(\"run public JSON check\");\n    let description = format!(\"case {id} source:\\n{}\", String::from_utf8_lossy(&source));\n    assert_eq!(\n        output.status.code(),\n        Some(case.expected_exit),\n        \"{description}\"\n    );\n    assert_eq!(output.stdout, expected, \"{description}\");\n    assert!(\n        output.stderr.is_empty(),\n        \"{description}: {:?}\",\n        output.stderr\n    );\n\n    let human = Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n        .current_dir(&directory.0)\n        .args(&case.human_argv)\n        .output()\n        .expect(\"run public human check\");\n    assert_eq!(\n        human.status.code(),\n        Some(case.expected_exit),\n        \"{description}\"\n    );\n    assert!(human.stdout.is_empty(), \"{description}\");\n    assert_eq!(\n        human.stderr.is_empty(),\n        case.expected_exit == 0,\n        \"{description}\"\n    );\n}\n\n#[test]\nfn beta_accepted() {\n    check_case(\"accepted\");\n}\n\n#[test]\nfn beta_rejected() {\n    check_case(\"rejected\");\n}\n\n#[test]\nfn beta_parse_error() {\n    check_case(\"unparsable\");\n}\n\n#[test]\nfn core1_accepted() {\n    check_case(\"core1-accepted\");"
+      }
+    ]
+  },
+  {
+    "id": "M3",
+    "severity": "substantive selected-control coverage overstatement",
+    "opinionPointers": [
+      "/ninePhaseCoverage/capabilities-positive/claimAndLimits"
+    ],
+    "claim": "Selected capability control confirms agreement on valid and rejected probes.",
+    "actual": "Selected reported_core_profiles_select_real_source_only_cli_consumers contains two positive programs, asserts accepted check/inspect and selected fields/snapshot preservation. It does not execute rejected probes. No sibling test was selected to provide those missing probes.",
+    "anchors": [
+      {
+        "physical": "source/crates/mori/tests/capabilities.rs",
+        "sha256": "7743a40ccf758ac71af613f2957a1cfcee6ea05473578478a130a3d050b388a3",
+        "startLine": 186,
+        "endLine": 234,
+        "literal": "fn reported_core_profiles_select_real_source_only_cli_consumers() {\n    let f = Files::new();\n    let report = json(&f.run(&[\"capabilities\", \"--json\"]));\n    for (id, language, semantics, body) in [\n        (\n            \"rust-core1\",\n            \"moriarty/1\",\n            \"moriarty-core/1\",\n            \"next count = count + 1;\",\n        ),\n        (\n            \"rust-core2\",\n            \"moriarty/2\",\n            \"moriarty-core/2\",\n            \"await review(ok: Bool) when ok; next count = count + 1;\",\n        ),\n    ] {\n        let profile = row(&report, \"profiles\", id);\n        assert_eq!(profile[\"sourceProfile\"], language);\n        assert_eq!(profile[\"semanticsProfile\"], semantics);\n        let source = format!(\n            \"{}\\nagreement CapabilityProbe {{ state count: UInt = 0; action run() {{ {body} }} }}\\n\",\n            profile[\"sourceHeader\"].as_str().unwrap()\n        );\n        fs::write(f.0.join(\"source.mori\"), source).unwrap();\n        let before = f.snapshot();\n        let checked = json(&f.run(&[\"check\", \"source.mori\", \"--json\"]));\n        assert_eq!(checked[\"status\"], \"accepted\");\n        assert_eq!(checked[\"language\"], language);\n        let inspected = json(&f.run(&[\"inspect\", \"source.mori\"]));\n        assert_eq!(inspected[\"language\"], language);\n        assert_eq!(inspected[\"semantics\"], semantics);\n        assert_eq!(inspected.get(\"enforcement_report\"), Some(&Value::Null));\n        if language == \"moriarty/2\" {\n            assert_eq!(inspected[\"status\"], \"accepted\");\n            assert_eq!(inspected[\"qualification\"], \"local-reference-stage\");\n            assert_eq!(inspected[\"authentication\"], \"none\");\n            assert_eq!(inspected[\"consumption\"], \"untracked\");\n            assert!(row(&report, \"consumers\", \"core2-inspect\")[\"outputProfile\"].is_null());\n            assert!(inspected.get(\"format\").is_none());\n            assert_eq!(inspected[\"stage_plan\"][\"format\"], \"moriarty-stage-plan/1\");\n        } else {\n            assert!(inspected.get(\"status\").is_none());\n            assert_eq!(inspected[\"qualification\"], \"source-only-unqualified\");\n            assert_eq!(inspected[\"format\"], \"moriarty-enforcement-report/1\");\n        }\n        assert_eq!(before, f.snapshot());\n    }\n}"
+      }
+    ]
+  },
+  {
+    "id": "I1",
+    "severity": "incidental count discrepancy",
+    "opinionPointers": [
+      "/sixPathCoverage/crates~1mori~1src~1commands~1check_source.rs/reason"
+    ],
+    "claim": "before check_source.rs has87lines",
+    "actual": "86 splitlines; hash and3014bytes are exact. Terminal-newline count+1 can explain the convention difference."
+  },
+  {
+    "id": "I2",
+    "severity": "incidental count discrepancy",
+    "opinionPointers": [
+      "/readLimits/effectOnVerdict",
+      "/summary"
+    ],
+    "claim": "PROMPT-SOURCE.md37958lines",
+    "actual": "37957splitlines;1345896bytes and6751a356... hash are exact. Terminal-newline count+1 can explain difference."
+  },
+  {
+    "id": "Q1",
+    "severity": "wording qualified elsewhere in whole opinion",
+    "opinionPointers": [
+      "/sourceAssessment/findings/0",
+      "/sourceAssessment/findings/1",
+      "/sourceAssessment/limits/3"
+    ],
+    "claim": "Complete header error/UTF8offset preserved across human modes/operation conversion.",
+    "actual": "Core Error DTO carries offset; JSON check exposes it. Human check uses Display code/message, and operation conversion also uses Display; neither emits the offset. The whole opinion explicitly recognizes this distinction in limits[3] and its inspect/simulate narratives. Do not lift findings wording into a claim of public human-offset exposure.",
+    "anchors": [
+      {
+        "physical": "source/crates/mori-core/src/ir.rs",
+        "sha256": "0f5c27000c7236fab11d2b9e6c8b38c48909433ee0dd41ae06114ddef6c2960d",
+        "startLine": 466,
+        "endLine": 473,
+        "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, thiserror::Error)]\n#[error(\"{code}: {message}\")]\npub struct Error {\n    pub code: String,\n    pub message: String,\n    pub offset: Option<u32>,\n    pub step: Option<u16>,\n}"
+      },
+      {
+        "physical": "source/crates/mori/src/commands/check.rs",
+        "sha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+        "startLine": 112,
+        "endLine": 124,
+        "literal": "            beta: false,\n            report: None,\n        })\n    }\n}\n\n/// Renders the diagnostics, unless the report is JSON. True when there are none.\nfn finish(\n    shell: &mut Shell,\n    name: &str,\n    source: &str,\n    diagnostics: Vec<MoriDiagnostic>,\n    json: bool,"
+      }
+    ]
+  }
+]
