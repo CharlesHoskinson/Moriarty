@@ -1,0 +1,79 @@
+```json
+{
+  "schema": "moriarty.r140.r383.cargo_primary_source_owner_confirmation.v1",
+  "identity_and_scope": {
+    "conversation_id": "bb6043a1-63f1-4de9-b26f-ef50139233e3",
+    "original_cwd": "/tmp/moriarty-r140-final-security-A-9c662tt7",
+    "reviewer_slot": "security-A",
+    "reviewer_role": "designated_security_owner",
+    "primary_model": "claude-opus-5-5",
+    "requested_model": "gemini-4-argon-high",
+    "returned_identity": "gemini-4-argon-high",
+    "effort": "high",
+    "fallback_status": "standing_opus_quota_outage_fallback",
+    "request_id": "R383-CARGO-PRIMARY-SOURCE-OWNER-CONFIRMATION",
+    "tools_or_external_actions_invoked": 0,
+    "withheld_r378_test_fragment_status": "WITHHELD_AND_DISCARDED_NOT_REUSED",
+    "stopped_amendment_10_t3_status": "PERMANENTLY_STOPPED_NOT_RECOVERED_OR_REROUTED"
+  },
+  "disposition": "CONFIRMED_METADATA_REMEDY",
+  "primary_source_resolution": {
+    "cargo_commit": "5f94df4789f005f9a352888e8355ffc645b7ed0e",
+    "q1_phase_b_fetch_lockfile_creation": {
+      "status": "PROVED_FROM_SUPPLIED_PRIMARY_SOURCE",
+      "literal_source_anchors": [
+        "src/util/cache_lock.rs:421-424: `const CACHE_LOCK_NAME: &str = \".package-cache\";` (for `CacheLockMode::DownloadExclusive`) and `const MUTATE_NAME: &str = \".package-cache-mutate\";` (for `CacheLockMode::MutateExclusive` and `CacheLockMode::Shared`).",
+        "src/util/cache_lock.rs:443-451 (`CacheLocker::new`): initializes `cache_lock: RecursiveLock::new(CACHE_LOCK_NAME)` and `mutate_lock: RecursiveLock::new(MUTATE_NAME)`.",
+        "src/util/cache_lock.rs:355-393 (`CacheState::lock`): `DownloadExclusive` calls `self.cache_lock.lock_exclusive(gctx, DOWNLOAD_EXCLUSIVE_DESCR, blocking)?` and never touches `self.mutate_lock` (`.package-cache-mutate`); `Shared` locks only `self.mutate_lock`; `MutateExclusive` locks `self.mutate_lock` then `self.cache_lock`. Lines 343-353 panic if `Shared` is requested while `DownloadExclusive` is held.",
+        "src/ops/cargo_fetch.rs:29,89-90 (`fetch`): runs `let (mut packages, resolve) = ops::resolve_ws(ws, dry_run)?;`, `packages.get_many(to_download)?;`, and `crate::workspace::gc::auto_gc(gctx);`."
+      ],
+      "conclusion": "In Cargo `5f94df4789f005f9a352888e8355ffc645b7ed0e`, `DownloadExclusive` opens/creates only `.package-cache` and never opens `.package-cache-mutate`. In native attempt 04 Phase B (`cargo fetch --frozen` on a fresh `source-home`), Cargo acquired `DownloadExclusive` (creating `.package-cache` and `.global-cache` plus the 573 `.cargo-ok`/`.git` files = 575 files total) while `auto_gc` did not acquire `MutateExclusive`. The 576th entry `{\"kind\":\"cargo-lockfile\",\"relative\":\".package-cache-mutate\"}` in `config.final.json` (`705f983f...`) was an erroneous metadata expectation carried over from historical `/home/charl/.cargo` state."
+    },
+    "q2_phases_e_and_f_readonly_cargo_home_behavior": {
+      "status": "PROVED_FOR_ALL_CACHE_LOCK_MODES_FROM_SUPPLIED_PRIMARY_SOURCE",
+      "literal_source_anchors": [
+        "src/util/flock.rs:235-237 (`Filesystem::open_rw_exclusive_create`) and 292-294 (`Filesystem::open_ro_shared_create`): both execute `let mut opts = OpenOptions::new(); opts.read(true).write(true).create(true); let (path, f) = self.open(path.as_ref(), &opts, true)?;`.",
+        "src/util/flock.rs:314-329 (`Filesystem::open`): calls `opts.open(&path)`. When `CARGO_HOME` (`source-home`) is an existing directory mounted read-only (`--ro-bind` in `sandbox_args` and `0o555` from Phase D `freeze_source`), `open` with `O_RDWR | O_CREAT` returns `EROFS` (`libc::EROFS`) or `EACCES` (`io::ErrorKind::PermissionDenied`) regardless of whether `.package-cache-mutate` exists.",
+        "src/util/cache_lock.rs:206-225 (`RecursiveLock::lock_shared_blocking`): `match gctx.home().open_ro_shared_create(self.filename, gctx, description) { Ok(lock) => Some(lock), Err(e) => { tracing::warn!(\"failed to acquire cache lock {}: {e:?}\", self.filename); None } }` followed by `self.increment();` (and identically in `lock_shared_nonblocking`, lines 228-244).",
+        "src/util/cache_lock.rs:274-299 (`RecursiveLock::lock_exclusive_blocking`): on `Err(e)` from `open_rw_exclusive_create`, checks `if maybe_readonly(&e) { self.lock_shared_blocking(gctx, description); self.is_exclusive = true; return Ok(()); }` (and identically in `lock_exclusive_nonblocking`, lines 306-325).",
+        "src/util/cache_lock.rs:501-514 (`maybe_readonly`): returns `true` for `io.kind() == io::ErrorKind::PermissionDenied` and `#[cfg(unix)] io.raw_os_error() == Some(libc::EROFS)`."
+      ],
+      "conclusion": "In Cargo `5f94df4789f005f9a352888e8355ffc645b7ed0e`, when `CARGO_HOME` is read-only in Phases E (`cargo metadata --frozen ...`) and F (`cargo test --no-run --frozen ...`), `CacheLocker` gracefully falls back to an unlocked in-memory guard (`self.lock = None`, `self.count = 1`, `tracing::warn!` only) for ALL THREE `CacheLockMode` variants (`Shared`, `DownloadExclusive`, `MutateExclusive`) when `.package-cache-mutate` is absent. No additional primary Cargo source files are required to resolve the `.package-cache-mutate` failure."
+    }
+  },
+  "confirmed_minimal_remedy": {
+    "guard_source": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/366-owner-authored-as-pid1-guard-candidate/bounded_sdk_compile.py",
+      "bytes": 74900,
+      "sha256": "cf94c09645c9610f338cc73322cc15222d061d09a7b8e9748c6da18a09c1c0fc",
+      "edits": [],
+      "rationale": "Zero changes to `bounded_sdk_compile.py`. `validate(c)` line 183 already permits any subset of the allowed `cargo-lockfile` names, and `verify_raw(c)` lines 857-861 (`regular(p)` and `need(set(actual)==expected, 'unexpected or missing source-home file membership')`), `freeze_source(c)` (Phase D), and read-only `--ro-bind` in Phases E/F remain 100% strict."
+    },
+    "next_fresh_attempt_config_metadata_edit": {
+      "scope": "Apply only when assembling the next fresh attempt's `config-inputs.proposed.json` and `config.final.json` (retired attempt 04 `config.final.json` `705f983f713398c8656a84b04c3afa2be79222663eb0f0af5b6717fd4f5ae553` remains immutable).",
+      "field": "expected_generated_files",
+      "old_count": 576,
+      "new_count": 575,
+      "old": "{\"kind\":\"cargo-lockfile\",\"relative\":\".global-cache\"},{\"kind\":\"cargo-lockfile\",\"relative\":\".package-cache\"},{\"kind\":\"cargo-lockfile\",\"relative\":\".package-cache-mutate\"}",
+      "new": "{\"kind\":\"cargo-lockfile\",\"relative\":\".global-cache\"},{\"kind\":\"cargo-lockfile\",\"relative\":\".package-cache\"}"
+    }
+  },
+  "focused_synthetic_regression_test_edits": {
+    "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/test_config_source.py",
+    "base_bytes": 21076,
+    "base_sha256": "0f966d96932136e0762c18b80ba0ca0d13230079125850ce3c35e438a37e5e9d",
+    "edits": [
+      {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/test_config_source.py",
+        "old": "        self.assertEqual(pins.call_count,1)\n        self.assertEqual(digests.call_count,11)\n        self.assertEqual(len(selected),10)\n        self.assertEqual(set(selected),set(row['path'] for row in subject['candidate_files']))\n\nif __name__=='__main__':unittest.main()",
+        "new": "        self.assertEqual(pins.call_count,1)\n        self.assertEqual(digests.call_count,11)\n        self.assertEqual(len(selected),10)\n        self.assertEqual(set(selected),set(row['path'] for row in subject['candidate_files']))\n\n    def test_verify_raw_and_freeze_source_enforce_exact_generated_lockfile_membership(self):\n        import os\n        import tempfile\n        with tempfile.TemporaryDirectory() as tmp:\n            base=Path(tmp).resolve()\n            source_home=base/'source-home';packet=base/'packet'\n            source_home.mkdir();packet.mkdir()\n            (packet/'A0_FREEZE.json').write_text('{\"inputs\":[]}\\n')\n            (source_home/'.global-cache').write_bytes(b'sqlite')\n            (source_home/'.package-cache').write_bytes(b'')\n            ok_rel='registry/src/index.crates.io-1949cf8c6b5b557f/adler2-2.0.1/.cargo-ok'\n            ok_path=source_home/ok_rel;ok_path.parent.mkdir(parents=True);ok_path.write_bytes(b'{\"v\":1}')\n            c={\n                'paths':{'source_home':str(source_home),'packet':str(packet)},\n                'limits':{'C':{'packet_bytes':65536},'D':{'packet_bytes':65536}},\n                'registry_roots':[],'git_checkouts':[],'includes':[],\n                'expected_generated_files':[\n                    {'relative':'.global-cache','kind':'cargo-lockfile'},\n                    {'relative':'.package-cache','kind':'cargo-lockfile'},\n                    {'relative':'.package-cache-mutate','kind':'cargo-lockfile'},\n                    {'relative':ok_rel,'kind':'cargo-ok'},\n                ],\n            }\n            try:\n                with patch.object(runner,'approved_includes',return_value=set()):\n                    with self.assertRaises(FileNotFoundError):\n                        runner.verify_raw(c)\n                    c['expected_generated_files']=[\n                        {'relative':'.global-cache','kind':'cargo-lockfile'},\n                        {'relative':'.package-cache-mutate','kind':'cargo-lockfile'},\n                        {'relative':ok_rel,'kind':'cargo-ok'},\n                    ]\n                    (source_home/'.package-cache-mutate').write_bytes(b'')\n                    with self.assertRaisesRegex(runner.Refusal,'unexpected or missing source-home file membership'):\n                        runner.verify_raw(c)\n                    (source_home/'.package-cache-mutate').unlink()\n                    c['expected_generated_files']=[\n                        {'relative':'.global-cache','kind':'cargo-lockfile'},\n                        {'relative':'.package-cache','kind':'cargo-lockfile'},\n                        {'relative':ok_rel,'kind':'cargo-ok'},\n                    ]\n                    runner.verify_raw(c)\n                raw_receipt=json.loads((packet/'C_RAW_IDENTITIES.json').read_text())\n                self.assertEqual(set(raw_receipt['files']),{'.global-cache','.package-cache',ok_rel})\n                self.assertEqual(len(raw_receipt['cargo_ok']),1)\n                runner.freeze_source(c)\n                frozen=runner.frozen_source(c)\n                self.assertEqual(frozen['files'],raw_receipt['files'])\n            finally:\n                for root_dir,dirs,files in os.walk(source_home,topdown=False):\n                    for f in files:os.chmod(Path(root_dir)/f,0o600)\n                    for d in dirs:os.chmod(Path(root_dir)/d,0o700)\n                os.chmod(source_home,0o700)\n\nif __name__=='__main__':unittest.main()"
+      }
+    ]
+  },
+  "residual_limitations_and_obligations": [
+    "1. Binary provenance limit: `cargo --version --verbose` reported commit `5f94df4789f005f9a352888e8355ffc645b7ed0e`, matching the 4 official upstream source files; this establishes upstream source behavior for that commit, not reproducible binary build provenance.",
+    "2. Unaudited call-graph/runtime scope: While `src/util/cache_lock.rs` and `src/util/flock.rs` completely prove `CacheLocker` behavior on `.package-cache` and `.package-cache-mutate` across all lock modes and read-only `CARGO_HOME`, other Cargo modules (`global_cache_tracker`, `workspace::gc`, `cargo_output_metadata`, `cargo_compile`) and actual Phase D/E/F execution remain unrun until a fresh attempt executes.",
+    "3. Next steps for Root: (a) Obtain independent non-author review of the updated 23-test `test_config_source.py` (23 + 9 = 32 SDK-free unit tests total) and the 575-entry `expected_generated_files` config assembly; (b) run the 32 SDK-free unit tests; (c) provision and run a fresh native attempt (`05`) with unchanged guard `cf94c096...` and the refreshed 575-row `expected_generated_files` config."
+  ]
+}
+```

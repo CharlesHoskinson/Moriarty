@@ -1,0 +1,61 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/test_config_source.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/386-native-generated-membership-test-candidate/test_config_source.py
+@@ -265,4 +265,58 @@
+         self.assertEqual(len(selected),10)
+         self.assertEqual(set(selected),set(row['path'] for row in subject['candidate_files']))
+ 
++    def test_verify_raw_and_freeze_source_enforce_exact_generated_lockfile_membership(self):
++        import os
++        import tempfile
++        with tempfile.TemporaryDirectory() as tmp:
++            base=Path(tmp).resolve()
++            source_home=base/'source-home';packet=base/'packet'
++            source_home.mkdir();packet.mkdir()
++            (packet/'A0_FREEZE.json').write_text('{"inputs":[]}\n')
++            (source_home/'.global-cache').write_bytes(b'sqlite')
++            (source_home/'.package-cache').write_bytes(b'')
++            ok_rel='registry/src/index.crates.io-1949cf8c6b5b557f/adler2-2.0.1/.cargo-ok'
++            ok_path=source_home/ok_rel;ok_path.parent.mkdir(parents=True);ok_path.write_bytes(b'{"v":1}')
++            c={
++                'paths':{'source_home':str(source_home),'packet':str(packet)},
++                'limits':{'C':{'packet_bytes':65536},'D':{'packet_bytes':65536}},
++                'registry_roots':[],'git_checkouts':[],'includes':[],
++                'expected_generated_files':[
++                    {'relative':'.global-cache','kind':'cargo-lockfile'},
++                    {'relative':'.package-cache','kind':'cargo-lockfile'},
++                    {'relative':'.package-cache-mutate','kind':'cargo-lockfile'},
++                    {'relative':ok_rel,'kind':'cargo-ok'},
++                ],
++            }
++            try:
++                with patch.object(runner,'approved_includes',return_value=set()):
++                    with self.assertRaises(FileNotFoundError):
++                        runner.verify_raw(c)
++                    c['expected_generated_files']=[
++                        {'relative':'.global-cache','kind':'cargo-lockfile'},
++                        {'relative':'.package-cache-mutate','kind':'cargo-lockfile'},
++                        {'relative':ok_rel,'kind':'cargo-ok'},
++                    ]
++                    (source_home/'.package-cache-mutate').write_bytes(b'')
++                    with self.assertRaisesRegex(runner.Refusal,'unexpected or missing source-home file membership'):
++                        runner.verify_raw(c)
++                    (source_home/'.package-cache-mutate').unlink()
++                    c['expected_generated_files']=[
++                        {'relative':'.global-cache','kind':'cargo-lockfile'},
++                        {'relative':'.package-cache','kind':'cargo-lockfile'},
++                        {'relative':ok_rel,'kind':'cargo-ok'},
++                    ]
++                    runner.verify_raw(c)
++                raw_receipt=json.loads((packet/'C_RAW_IDENTITIES.json').read_text())
++                self.assertEqual(set(raw_receipt['files']),{'.global-cache','.package-cache',ok_rel})
++                self.assertEqual(len(raw_receipt['cargo_ok']),1)
++                runner.freeze_source(c)
++                frozen=runner.frozen_source(c)
++                self.assertEqual(frozen['files'],raw_receipt['files'])
++            finally:
++                for root_dir,dirs,files in os.walk(source_home,topdown=False):
++                    for f in files:os.chmod(Path(root_dir)/f,0o600)
++                    for d in dirs:os.chmod(Path(root_dir)/d,0o700)
++                os.chmod(source_home,0o700)
++
+ if __name__=='__main__':unittest.main()
