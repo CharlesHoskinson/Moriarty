@@ -1,0 +1,104 @@
+{
+  "format":"moriarty-independent-counter-positive-facts/1",
+  "status":"specified-only; complete semantic/prefix/effect/work facts with an explicitly incomplete wire projection",
+  "not_a_complete_Execution_or_simulate_output_golden":true,
+  "input":{"source":"counter.mori","scenario":"amount7.scenario.json","action":"run","language":"moriarty/1","semantics":"moriarty-core/1"},
+  "arithmetic":{"initial_count":"0","amount":"7","captured_total":"7","requires_total_at_most100":true,"next_count":"7","ensures_count_equals_captured_total":true,"emitted_count":"7"},
+  "representation_premise":"Hand allocation follows fresh lexical/postorder expression nodes and direct literal state initializer outside the expression arena, consistent with the independently hand-lowered existing Core1 oracles. This supplies proposed concrete ExprIds for this source, not a universal parser specification or proof. No parser/evaluator/compiler implementation or output was read to obtain them.",
+  "expression_arena":[
+    {"id":0,"kind":"Name","name":"count"},
+    {"id":1,"kind":"Name","name":"amount"},
+    {"id":2,"kind":"Binary","op":"Add","lhs":0,"rhs":1},
+    {"id":3,"kind":"Name","name":"total"},
+    {"id":4,"kind":"Literal","value":{"type":"UInt","value":"100"}},
+    {"id":5,"kind":"Binary","op":"Le","lhs":3,"rhs":4},
+    {"id":6,"kind":"Name","name":"total"},
+    {"id":7,"kind":"Name","name":"count"},
+    {"id":8,"kind":"Name","name":"total"},
+    {"id":9,"kind":"Binary","op":"Eq","lhs":7,"rhs":8},
+    {"id":10,"kind":"Name","name":"count"}
+  ],
+  "execution_known_fields":{
+    "semantics":"moriarty-core/1",
+    "action":"run",
+    "pre":{"state":{"count":{"type":"UInt","value":"0"}},"balances":[],"liabilities":[]},
+    "post":{"state":{"count":{"type":"UInt","value":"7"}},"balances":[],"liabilities":[]},
+    "steps":[
+      {
+        "index":0,
+        "statement":{"kind":"Let","name":"total","value":2},
+        "snapshot":{"state":{"count":{"type":"UInt","value":"0"}},"balances":[],"liabilities":[]},
+        "effects":[]
+      },
+      {
+        "index":1,
+        "statement":{"kind":"Requires","predicate":5},
+        "value":{"type":"Bool","value":true},
+        "snapshot":{"state":{"count":{"type":"UInt","value":"0"}},"balances":[],"liabilities":[]},
+        "effects":[]
+      },
+      {
+        "index":2,
+        "statement":{"kind":"Next","state":"count","value":6},
+        "value":{"type":"UInt","value":"7"},
+        "snapshot":{"state":{"count":{"type":"UInt","value":"7"}},"balances":[],"liabilities":[]},
+        "effects":[{"kind":"State","name":"count","before":{"type":"UInt","value":"0"},"after":{"type":"UInt","value":"7"}}]
+      },
+      {
+        "index":3,
+        "statement":{"kind":"Ensures","predicate":9},
+        "value":{"type":"Bool","value":true},
+        "snapshot":{"state":{"count":{"type":"UInt","value":"7"}},"balances":[],"liabilities":[]},
+        "effects":[]
+      },
+      {
+        "index":4,
+        "statement":{"kind":"Emit","name":"count","value":10},
+        "value":{"type":"UInt","value":"7"},
+        "snapshot":{"state":{"count":{"type":"UInt","value":"7"}},"balances":[],"liabilities":[]},
+        "effects":[{"kind":"Emit","name":"count","value":{"type":"UInt","value":"7"}}]
+      }
+    ],
+    "effects":[
+      {"kind":"State","name":"count","before":{"type":"UInt","value":"0"},"after":{"type":"UInt","value":"7"}},
+      {"kind":"Emit","name":"count","value":{"type":"UInt","value":"7"}}
+    ]
+  },
+  "unresolved_wire_fields":[
+    {
+      "execution_pointer":"/steps/0/value",
+      "all_simulate_envelope_pointers":["/execution/steps/0/value"],
+      "known_semantic_value":{"type":"UInt","value":"7"},
+      "wire_type":"Option<Value>",
+      "unknown":"Whether the successful Let Step exports Some(captured UInt7) or None/null. No permitted independent public Core1 contract inspected supplies the per-kind attachment rule for Let.",
+      "projection_omission":"This field is deliberately absent from execution_known_fields. Absence is a gap marker in this custom facts document, NOT an expected omitted JSON member, an expected null, a complete serde Execution value or a wildcard-matching test contract.",
+      "not_evaluator_rejection":true
+    }
+  ],
+  "simulate_envelope_known_fields":{
+    "unmetered":{"status":"accepted","qualification":"local-reference-execution","execution_reference":"execution_known_fields; missing pointer must first be independently specified","ordinary_top_level_field_count":3},
+    "cap16":{"status":"accepted","qualification":"local-reference-execution","profile":"moriarty-reference-logical-cost/1","logical":{"cap":"16","used":"16"},"execution_reference":"the same execution_known_fields; missing pointer remains unresolved"},
+    "capmax":{"status":"accepted","qualification":"local-reference-execution","profile":"moriarty-reference-logical-cost/1","logical":{"cap":"340282366920938463463374607431768211455","used":"16"},"execution_reference":"the same execution_known_fields; missing pointer remains unresolved"}
+  },
+  "work":{
+    "profile":"moriarty-reference-logical-cost/1",
+    "statements":[
+      {"index":0,"statement":"let total = count + amount","expression_ids":[2,0,1],"statement_charge":"1","expression_charges":"3","units":"4","cumulative":"4"},
+      {"index":1,"statement":"requires total <= 100","expression_ids":[5,3,4],"statement_charge":"1","expression_charges":"3","units":"4","cumulative":"8"},
+      {"index":2,"statement":"next count = total","expression_ids":[6],"statement_charge":"1","expression_charges":"1","units":"2","cumulative":"10"},
+      {"index":3,"statement":"ensures count == total","expression_ids":[9,7,8],"statement_charge":"1","expression_charges":"3","units":"4","cumulative":"14"},
+      {"index":4,"statement":"emit count(count)","expression_ids":[10],"statement_charge":"1","expression_charges":"1","units":"2","cumulative":"16"}
+    ],
+    "total":"16","counter_cap16":"16","counter_capmax":"340282366920938463463374607431768211455",
+    "cache":"fresh per statement; all expression nodes within a statement are distinct; no dynamic loops or short-circuit assumptions",
+    "expression_id_lists":"node membership only; their listed order does not certify a charge visitation order",
+    "unmeasured":["parsing","validation","normalization","allocation","wall time","DUST","service fees","external work","native circuit/proof/ledger cost"]
+  },
+  "financial_scope":{"declared_assets":[],"balances":[],"liabilities":[],"transfer_or_fee_or_duty_effects":[],"gross_debit":"inapplicable; no financial asset or payment in source","fees":"inapplicable; no declared fee asset","net_receipts":"inapplicable; no financial recipient","reserve_or_dust_or_residual_duties":"inapplicable; no financial contract rows; no funded settlement is inferred"},
+  "intended_positive_calls":[
+    {"cap":null,"expected_exit":0,"expected_stderr":"empty","full_stdout_golden":"NOT_AVAILABLE_PENDING_Let_Step.value_CONTRACT"},
+    {"cap":"16","expected_exit":0,"expected_stderr":"empty","full_stdout_golden":"NOT_AVAILABLE_PENDING_Let_Step.value_CONTRACT"},
+    {"cap":"340282366920938463463374607431768211455","expected_exit":0,"expected_stderr":"empty","full_stdout_golden":"NOT_AVAILABLE_PENDING_Let_Step.value_CONTRACT"}
+  ],
+  "acceptance":"No whole-output golden or positive integration test is supplied. Filling the missing pointer from parser/evaluator/current CLI output would violate independence. Existing12 compatibility tests and prior oracle packet remain unchanged. All original stage and roadmap gaps remain open."
+}

@@ -1,0 +1,34 @@
+--- a/native_feature_boundary.rs
++++ b/native_feature_boundary.rs
+@@ -31,7 +31,7 @@
+             nanos,
+             seq
+         ));
+-        fs::create_dir_all(&dir).expect("create temp root");
++        fs::create_dir(&dir).expect("create temp root");
+         Self(dir)
+     }
+ 
+@@ -351,7 +351,21 @@
+         if populate {
+             fs::write(
+                 temp.path().join("agreement.mori"),
+-                b"moriarty/2\n\naction settle() {}\n",
++                r#"language "moriarty/2";
++agreement TwoDeliveries {
++  state phase: UInt = 0;
++  asset UNIT = { network: "local", issuer: "independent-staged-test-oracle", reference: "UNIT", scale: 0 };
++  action deliver() {
++    transfer(UNIT, "alice", "bob", 7);
++    next phase = 1;
++    await approval(ok: Bool) when ok;
++    transfer(UNIT, "alice", "bob", 3);
++    await receipt(seen: Bool) when seen;
++    next phase = 2;
++    emit "done"(phase);
++  }
++  action declare() { liability("duty", UNIT, "alice", "bob", 0); }
++}"#,
+             )
+             .expect("write source sentinel");
+             fs::create_dir_all(temp.path().join("srs_dir")).expect("create fake srs_dir");
