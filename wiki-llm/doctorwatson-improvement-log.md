@@ -1620,3 +1620,34 @@ reason to suppress dependency checks. Request a narrowly reviewed correction
 and a bounded audit-only route over the retained outputs. Reuse the completed
 compilation; do not reset its history or rerun Cargo and the passing prefix to
 repair an audit. Whole native/proof/target acceptance remains open.
+
+### DW90 — Check every selected path and let independent names expose producer defects
+
+Nominal QA preparation initially assumed a missing manifest key, then retained a
+copied argv pointing at the wrong consumer path. Preserve those failed preflight
+steps rather than treating their correction as a subject pass. Compare every
+actual argv input operand against existing pinned files, distinguishing future
+generated outputs, and compare the complete unchanged source snapshot with W.
+The corrected candidate03 comparison covers151 files:143 non-overlay sources
+match W, eight are intended overlays and no unexpected differences remain.
+
+The independent frozen name oracle exposed an actual producer defect: candidate02
+collected declaration type-parameter and type-use names beyond Pass-B policy.
+Candidate03 removes only those extra collection steps; declaration type,
+constructor and field names remain, while the program entry also collects real
+Core program names. Keep the oracle unchanged. Both entry points are publicly
+re-exported from shared; the child owner_prepare module is private, so a consumer
+import must use the real public interface.
+
+The corrected normal Core compile exited0 in3.987870814seconds. Reuse that exact
+artifact and dep-info after source/output pin checks for the remaining consumer
+compile/list/test operations; do not replay its unchanged passing prefix. Source
+adoption and tests remain pending independent review at this log proposal cut.
+No generic runtime, full004/007/034, circuit, native or target acceptance follows.
+
+
+### DW91 — Nominal integration and observed parser refusal fixture
+
+Nominal declaration source and its independent full-table positive observation are adopted in `docs/results/sherlock-nominal-declaration-preparation-20261018/ROOT-DECLARATION-ADOPTION.json`. The archive has 83 mapping rows and 82 unique original destinations; its duplicate is byte-identical. Integration initially used the wrong published source-review directory name after exact source/archive copying; the corrected reference completed adoption without recompilation. Check actual archive destinations before constructing adoption links. Model-written digest suffixes are untrusted metadata: retain the raw opinion and use host-computed pins plus the published factual qualification map. One unresolved reported prefix is excluded.
+
+Two native dep-info parser positive methods passed. The negative method initially expected filesystem-parent refusal from a path that first underflowed the lexical stack. The reviewed fixture correction preserves the underflow case and adds the intended regular-file-parent case; that one corrected method passed on October18UTC. The guard was unchanged and the positive methods were not rerun. Native output/lifecycle accounting remains a separate review; parser observations establish no SDK proof or stagenet result.

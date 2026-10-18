@@ -20,6 +20,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 ## Reference
 
 - [Components](reference/components.md)
+- [Nominal declaration preparation API](reference/nominal-declaration-api.md)
 - [Profiles and results](reference/profiles-results.md)
 - [Resource manifest report API](reference/resource-manifest-api.md)
 - [Host machine](reference/host-machine.md)
@@ -39,6 +40,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Observation boundaries](explanation/observation-boundaries.md)
 - [Resource reporting boundaries](explanation/resource-reporting-boundaries.md)
 - [Source occurrence identity](explanation/source-occurrence-identity.md)
+- [Nominal declaration preparation and runtime](explanation/nominal-declaration-boundary.md)
 - [Relations, witnesses and ledger](explanation/relations-witnesses-ledger.md)
 - [Evidence and acceptance](explanation/evidence-and-acceptance.md)
 - [Chunks and financial boundaries](explanation/chunks-and-financial-boundaries.md)
