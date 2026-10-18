@@ -1,0 +1,32 @@
+language "moriarty/1";
+agreement ReserveSpendRefund {
+  asset CASH = { network: "local", issuer: "reserve-refund", reference: "CASH", scale: 0 };
+  asset BOND = { network: "local", issuer: "reserve-refund", reference: "BOND", scale: 0 };
+  state remaining: UInt = 0;
+  state grossReserved: UInt = 0;
+  state grossSpent: UInt = 0;
+  state refunded: UInt = 0;
+  state marker: UInt = 77;
+  action run(reserveAmount: UInt, partAmount: UInt, feeAmount: UInt, refundAmount: UInt) {
+    let spendGross = partAmount + feeAmount;
+    requires reserveAmount >= spendGross + refundAmount;
+    transfer(CASH, "payer", "reserve", reserveAmount);
+    liability("reserve-duty", CASH, "reserve", "payer", reserveAmount);
+    next remaining = remaining + reserveAmount;
+    next grossReserved = grossReserved + reserveAmount;
+    transfer(CASH, "reserve", "merchant", partAmount);
+    fee(CASH, "reserve", "treasury", feeAmount);
+    discharge("reserve-duty", spendGross);
+    next remaining = remaining - spendGross;
+    next grossSpent = grossSpent + spendGross;
+    transfer(CASH, "reserve", "payer", refundAmount);
+    discharge("reserve-duty", refundAmount);
+    next remaining = remaining - refundAmount;
+    next refunded = refunded + refundAmount;
+    ensures liability_amount("reserve-duty") == remaining;
+    emit "remaining"(remaining);
+    emit "gross_reserved"(grossReserved);
+    emit "gross_spent"(grossSpent);
+    emit "refunded"(refunded);
+  }
+}

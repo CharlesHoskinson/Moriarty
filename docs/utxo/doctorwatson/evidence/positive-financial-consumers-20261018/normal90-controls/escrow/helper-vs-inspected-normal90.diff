@@ -1,0 +1,57 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/guarded-full-prefix-normal90-preparation-20261018/run_check.py
++++ /home/charl/moriarty-c2-opus55-restored-20261017/escrow-full-prefix-normal90-preparation-20261018/run_check.py
+@@ -98,7 +98,7 @@
+               'noAutomaticRetry': True})
+         raise
+ 
+-    root = Path(tempfile.mkdtemp(prefix='doctorwatson-guarded-full-prefix-'))
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-escrow-full-prefix-'))
+     child = None
+     result = {'head': binding['head'], 'tree': binding['tree'], 'sourceBefore': source_before,
+               'attemptConsumed': False, 'selectedCheckSatisfied': False}
+@@ -117,12 +117,14 @@
+                'CARGO_TARGET_DIR': str(root / 'target'), 'CARGO_NET_OFFLINE': 'true',
+                'CARGO_INCREMENTAL': '0', 'CARGO_CACHE_AUTO_CLEAN_FREQUENCY': 'never',
+                'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
+-               'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp')}
+-        assert len(env) == 13 and not (root / 'target').exists()
++               'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp'),
++               'MORI_UTXO_PATTERN_EXECUTION_OUTPUT': str(cycle / 'escrow-execution.json')}
++        assert len(env) == 14 and not (root / 'target').exists()
++        assert not Path(env['MORI_UTXO_PATTERN_EXECUTION_OUTPUT']).exists()
+         absent_configs = configs(root)
+         command = [tools['cargo']['path'], 'test', '--manifest-path', str(checkout / 'Cargo.toml'),
+                    '--frozen', '-j1', '-p', 'mori-core', '--no-default-features', '--test',
+-                   'guarded_quantity_fee_full_prefix_positive', '--', '--test-threads=1']
++                   'utxo_escrow_partial_release', '--', '--test-threads=1']
+         argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '90s', *command]
+         write(cycle / 'CHECK-PLAN.json', {'at': now(), 'head': binding['head'], 'tree': binding['tree'],
+               'bindingSha256': args.binding_sha, 'argv': argv, 'cwd': str(root / 'cwd'),
+@@ -161,6 +163,16 @@
+                       phaseError=phase_error, stdoutPath=str(cycle / 'STDOUT.log'), stderrPath=str(cycle / 'STDERR.log'))
+         write(cycle / 'TERMINAL.json', result)
+         write(cycle / 'RESULT.json', result)
++        # The existing consumer writes/syncs the whole actual Execution before
++        # its financial assertions. Persist capture facts immediately after
++        # terminal facts, before census, summary assertions or source postchecks.
++        captured = cycle / 'escrow-execution.json'
++        capture_facts = {'at': now(), 'path': str(captured), 'exists': captured.is_file()}
++        if captured.is_file():
++            capture_facts.update(bytes=captured.stat().st_size, sha256=sha(captured))
++        write(cycle / 'EXECUTION-CAPTURE.json', capture_facts)
++        result['executionCapture'] = capture_facts
++        write(cycle / 'RESULT.json', result)
+         if child is None:
+             members = []  # No session was created when spawn failed.
+         elif not expired and time.monotonic() < deadline:
+@@ -204,7 +216,9 @@
+                 assert len(summaries) == 1, 'Require one whole selected target summary.'
+                 summary = dict(zip(['passed', 'failed', 'ignored', 'measured', 'filtered'], map(int, summaries[0])))
+                 assert summary == {'passed': 1, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
+-                assert 'test guarded_quantity_fee_matches_every_complete_independent_financial_prefix ... ok' in text
++                assert 'test partial_escrow_release_preserves_residual_duty_and_observers ... ok' in text
++                assert result.get('executionCapture', {}).get('exists') is True
++                assert result['executionCapture'].get('bytes', 0) > 0, 'Require retained whole actual Execution.'
+                 result['rustSummary'] = summary
+                 result['wholeSelectedTargetPredicate'] = True
+             else:

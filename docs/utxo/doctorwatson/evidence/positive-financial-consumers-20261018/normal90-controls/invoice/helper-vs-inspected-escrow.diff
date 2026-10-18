@@ -1,0 +1,88 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/escrow-full-prefix-normal90-preparation-20261018/run_check.py
++++ /home/charl/moriarty-c2-opus55-restored-20261017/invoice-receipt-normal90-preparation-20261018/run_check.py
+@@ -17,6 +17,10 @@
+ import time
+ 
+ D = Path(__file__).resolve().parent
++CAPTURE_NAMES = (
++    'start-result.json', 'reopened-continuation.json', 'resume-result.json',
++    'resume-observations.json', 'cross-segment-observations.json',
++)
+ 
+ 
+ def sha(p):
+@@ -98,7 +102,7 @@
+               'noAutomaticRetry': True})
+         raise
+ 
+-    root = Path(tempfile.mkdtemp(prefix='doctorwatson-escrow-full-prefix-'))
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-invoice-receipt-'))
+     child = None
+     result = {'head': binding['head'], 'tree': binding['tree'], 'sourceBefore': source_before,
+               'attemptConsumed': False, 'selectedCheckSatisfied': False}
+@@ -118,13 +122,15 @@
+                'CARGO_INCREMENTAL': '0', 'CARGO_CACHE_AUTO_CLEAN_FREQUENCY': 'never',
+                'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
+                'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp'),
+-               'MORI_UTXO_PATTERN_EXECUTION_OUTPUT': str(cycle / 'escrow-execution.json')}
++               'MORI_INVOICE_RECEIPT_CAPTURE_DIR': str(cycle / 'invoice-captures')}
+         assert len(env) == 14 and not (root / 'target').exists()
+-        assert not Path(env['MORI_UTXO_PATTERN_EXECUTION_OUTPUT']).exists()
++        capture_directory = Path(env['MORI_INVOICE_RECEIPT_CAPTURE_DIR'])
++        capture_directory.mkdir(exist_ok=False)
++        assert not any(capture_directory.iterdir())
+         absent_configs = configs(root)
+         command = [tools['cargo']['path'], 'test', '--manifest-path', str(checkout / 'Cargo.toml'),
+                    '--frozen', '-j1', '-p', 'mori-core', '--no-default-features', '--test',
+-                   'utxo_escrow_partial_release', '--', '--test-threads=1']
++                   'invoice_receipt_resume', '--', '--test-threads=1']
+         argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=5s', '90s', *command]
+         write(cycle / 'CHECK-PLAN.json', {'at': now(), 'head': binding['head'], 'tree': binding['tree'],
+               'bindingSha256': args.binding_sha, 'argv': argv, 'cwd': str(root / 'cwd'),
+@@ -163,15 +169,21 @@
+                       phaseError=phase_error, stdoutPath=str(cycle / 'STDOUT.log'), stderrPath=str(cycle / 'STDERR.log'))
+         write(cycle / 'TERMINAL.json', result)
+         write(cycle / 'RESULT.json', result)
+-        # The existing consumer writes/syncs the whole actual Execution before
+-        # its financial assertions. Persist capture facts immediately after
+-        # terminal facts, before census, summary assertions or source postchecks.
+-        captured = cycle / 'escrow-execution.json'
+-        capture_facts = {'at': now(), 'path': str(captured), 'exists': captured.is_file()}
+-        if captured.is_file():
+-            capture_facts.update(bytes=captured.stat().st_size, sha256=sha(captured))
+-        write(cycle / 'EXECUTION-CAPTURE.json', capture_facts)
+-        result['executionCapture'] = capture_facts
++        # The unchanged consumer saves genuine Results/continuation plus its
++        # complete observation views before final semantic assertions. Keep all
++        # five raw files; persist facts before census/assertions/postchecks.
++        capture_files = []
++        for name in CAPTURE_NAMES:
++            captured = capture_directory / name
++            row = {'name': name, 'path': str(captured), 'exists': captured.is_file()}
++            if captured.is_file():
++                row.update(bytes=captured.stat().st_size, sha256=sha(captured))
++            capture_files.append(row)
++        capture_facts = {'at': now(), 'directory': str(capture_directory),
++                         'directoryEntries': sorted(p.name for p in capture_directory.iterdir()),
++                         'files': capture_files}
++        write(cycle / 'INVOICE-CAPTURES.json', capture_facts)
++        result['invoiceCaptures'] = capture_facts
+         write(cycle / 'RESULT.json', result)
+         if child is None:
+             members = []  # No session was created when spawn failed.
+@@ -216,9 +228,12 @@
+                 assert len(summaries) == 1, 'Require one whole selected target summary.'
+                 summary = dict(zip(['passed', 'failed', 'ignored', 'measured', 'filtered'], map(int, summaries[0])))
+                 assert summary == {'passed': 1, 'failed': 0, 'ignored': 0, 'measured': 0, 'filtered': 0}
+-                assert 'test partial_escrow_release_preserves_residual_duty_and_observers ... ok' in text
+-                assert result.get('executionCapture', {}).get('exists') is True
+-                assert result['executionCapture'].get('bytes', 0) > 0, 'Require retained whole actual Execution.'
++                assert 'test reopened_invoice_receipt_completes_with_all_financial_prefixes_preserved ... ok' in text
++                captured = result['invoiceCaptures']
++                assert captured['directoryEntries'] == sorted(CAPTURE_NAMES)
++                assert len(captured['files']) == 5
++                assert all(row['exists'] is True and row.get('bytes', 0) > 0
++                           for row in captured['files']), 'Require all five genuine invoice captures.'
+                 result['rustSummary'] = summary
+                 result['wholeSelectedTargetPredicate'] = True
+             else:

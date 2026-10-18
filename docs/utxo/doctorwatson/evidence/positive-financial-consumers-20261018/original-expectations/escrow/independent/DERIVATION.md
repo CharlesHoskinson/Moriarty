@@ -1,0 +1,9 @@
+Use the supplied nonempty state paid9,fees4,marker88,epoch6, not declared initializers0,0,77,0. Inputs payout41,processingFee3 satisfy all three requires. The let at index3 captures priorPaid9; it adds no persistent state or financial effect. Indices0..3 therefore preserve every opening snapshot field.
+
+Index4 pays41CASH: escrow137-41=96; merchant11+41=52. Duty merchant-due remains97 because payment and explicit discharge are separate operations. Index5 charges3CASH: escrow96-3=93; treasury5+3=8; duty still97. Index6 explicitly discharges41: merchant-due97-41=56, present with identical asset/parties; unrelated-warranty8 is preserved. Index7 writes paid=9+41=50; index8 writes fees=4+3=7. Index9 checks50=9+41 and changes nothing. Index10 emits released UInt41 without changing state, balances or duties.
+
+The six ordered effects are Transfer41,Fee3,Liability97to56,Statepaid9to50,Statefees4to7,Emit41. Prefix snapshots include every field after each of the11statements, plus complete initial/final states; delta and cumulative effect vectors are separate.
+
+CASH total137+11+23+19+5=195 equals93+52+23+19+8=195. Gross escrow debit44 is payout41 plus fee3. Merchant net41 and treasury net3 sum44. BONUS7+13+29+37=86 stays unchanged, as do CASHobserver23/reserve19. Debt is separate:97-41=56, with no creation/accrual. Observer/reserve rows, allBONUS rows, marker88,epoch6 and warranty8 remain throughout.
+
+Expected arrays use the disclosed nonnumeric order premise: AssetId then account, hence BONUS before CASH; duties sorted byname. This representation premise is input custody, not a product output observation. Economic arithmetic and every full numeric vector were hand-derived from inputs/README/DTO; Python only serializes explicit repeated literal snapshots and checks file hashes/conservation. No parser/evaluator/compiler import, execution, implementation-body read or author expected-output read occurred.

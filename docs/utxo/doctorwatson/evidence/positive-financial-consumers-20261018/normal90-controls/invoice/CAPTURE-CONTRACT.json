@@ -1,0 +1,89 @@
+{
+  "captureDirectory": "fixed actualOutput/invoice-captures",
+  "existingFreshEmptyBeforeChild": true,
+  "consumerWriter": "Existing std::fs::write(serde_json::to_vec_pretty(value)); no create_new/no sync_all/no addedLF in this capture helper. Freshness belongs to owned directory, not an invented writer guarantee.",
+  "allFive": [
+    {
+      "name": "start-result.json",
+      "sourceValue": "&started: Result<StageOutcome,StageRejection>",
+      "successIdentity": "whole serde Result Ok containing StageOutcome Waiting",
+      "writeOrdering": "Immediately after actual stage::start and before started.expect; all raw fields retained",
+      "asserted": "advanced true; actual start_segment post and continuation boundary equal frozen resume pre; whole start pre/6prefixes/deltas/crosshistory through journey; logical cap23/startcommitted15/startattempted15 and startresidual; reopened equals continuation",
+      "unasserted": "No independent whole serialized Result/StageSegment/continuation metadata/Program/Plan/hash/arena/codec golden. Start pendingframe metadata is captured fully but not itself an independent whole-start raw oracle."
+    },
+    {
+      "name": "reopened-continuation.json",
+      "sourceValue": "&reopened: Continuation",
+      "successIdentity": "whole actual typed Continuation decoded from json::export(&continuation)",
+      "writeOrdering": "After actual export/decode, before resume and final assertions",
+      "asserted": "Typed reopened equals original continuation; boundary equals frozen resume pre; stored cap23 and committed15 checked; suffix frame_pre/captures compared in resume view",
+      "unasserted": "No independently specified full continuation/hash/program_hash/plan_hash bytes, canonical JSON codec or exact exported UTF-8 string golden. Captured repr uses serde_json::to_vec_pretty, not a publicCLI output."
+    },
+    {
+      "name": "resume-result.json",
+      "sourceValue": "&completed: Result<StageOutcome,StageRejection>",
+      "successIdentity": "whole serde Result Ok containing StageOutcome Complete",
+      "writeOrdering": "Immediately after actual stage::resume with reopened.clone,event.clone,Some(pay),None; before completed.expect",
+      "asserted": "All13 selected complete semantic fields in resume-observations; complete4suffix step snapshots/typedvalues/deltas/history; attempted8/committed23/residual",
+      "unasserted": "No independent whole raw Result/StageSegment/Statement/ExprId arena/output enum serialization golden. Exact emitted raw metadata remains captured for separate audit."
+    },
+    {
+      "name": "resume-observations.json",
+      "sourceValue": "&actual_resume: serde_json::Value",
+      "successIdentity": "explicit actual comparison view with exactly13 semantic keys",
+      "writeOrdering": "After both genuine Results are captured, before final assert block",
+      "assertedKeys": [
+        "action",
+        "semantics",
+        "status",
+        "pre",
+        "steps",
+        "post",
+        "effects",
+        "frame_pre",
+        "frame_post",
+        "residual",
+        "attempted",
+        "committed",
+        "selectedEvent"
+      ],
+      "stepFields": [
+        "sourceOrdinal",
+        "segment",
+        "statementKind",
+        "typedValue",
+        "snapshot",
+        "deltaEffects",
+        "derivedSegmentEffectPrefix"
+      ],
+      "unasserted": "Oracle ancillary format/ordinaryCondition/financialSuffix/presence/statementExprIds fields are not all independently compared as separate raw metadata. Financial/presence effects retained by exact pre/post/steps/emissions."
+    },
+    {
+      "name": "cross-segment-observations.json",
+      "sourceValue": "&actual_journey: serde_json::Value",
+      "successIdentity": "explicit actual wholejourney comparison view with pre/steps/post/orderedCrossSegmentEffects",
+      "writeOrdering": "Before final assert block",
+      "assertedKeys": [
+        "pre",
+        "steps",
+        "post",
+        "orderedCrossSegmentEffects"
+      ],
+      "stepFields": [
+        "sourceOrdinal",
+        "segment",
+        "statementKind",
+        "typedValue",
+        "snapshot",
+        "deltaEffects",
+        "derivedCrossSegmentEffectPrefix"
+      ],
+      "prefixCount": 10,
+      "unasserted": "Oracle ancillary format/startAwaitEntry/scope not directly compared as wholeProgram/Plan/await-work serialization; actual emitted Steps contain originalsource indices/kinds/typedvalues/fullsnapshots and actual deltas."
+    }
+  ],
+  "rawResultOrContinuationNotReplacedByViews": true,
+  "helperFactOrder": "Persist TERMINAL.json and RESULT.json first, then list all five actualfileexistence/size/hash plus directoryentries into INVOICE-CAPTURES.json/RESULT; later summary/sourcepostchecks and streamhashes cannot erase earlier facts. Missingfiles stay missing, never synthesized.",
+  "successCheck": "Whole unchanged integrationtest must pass1/0filtered, and exactlyfive named nonempty capturefiles must exist. Fullbytecaptures remain for separate rootactualaudit; helper does not create resultgoldens or normalize capturedJSON.",
+  "independentRawWireOracle": false
+}
