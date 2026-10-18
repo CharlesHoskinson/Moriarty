@@ -302,20 +302,19 @@ fn actus_stk04_matches_independent_core_trace_and_four_cashflow_fields() {
     let source = fixture!("actus-stk04/source.mori");
     let opening = fixture!("actus-stk04/opening.scenario.json");
     assert_eq!(
-        format!("{:x}", sha2::Sha256::digest(source.as_bytes())),
+        mori_core::intent::hex(&sha2::Sha256::digest(source.as_bytes())),
         oracle["input_subject"]["source_sha256"].as_str().unwrap()
     );
     assert_eq!(
-        format!("{:x}", sha2::Sha256::digest(opening.as_bytes())),
+        mori_core::intent::hex(&sha2::Sha256::digest(opening.as_bytes())),
         oracle["input_subject"]["opening_scenario_sha256"]
             .as_str()
             .unwrap()
     );
     assert_eq!(
-        format!(
-            "{:x}",
-            sha2::Sha256::digest(fixture!("actus-stk04/call-operands.json").as_bytes())
-        ),
+        mori_core::intent::hex(&sha2::Sha256::digest(
+            fixture!("actus-stk04/call-operands.json").as_bytes()
+        )),
         oracle["input_subject"]["call_operands_sha256"]
             .as_str()
             .unwrap()
