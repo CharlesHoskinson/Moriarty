@@ -1,0 +1,19 @@
+language "moriarty-sherlock-nominal/1";
+program OrderedSchedule {
+  type Schedule {
+    Done;
+    Pay(amount: UInt, tail: Schedule);
+    Both(left: Schedule, right: Schedule);
+  }
+  fn choose(s: Schedule): UInt {
+    match s {
+      Schedule::Both(Schedule::Pay(x, wildcard), wildcard) => x,
+      Schedule::Both(wildcard, r) => choose(r),
+      Schedule::Pay(x, t) => x + choose(t),
+      Schedule::Done() => 0
+    }
+  }
+  entry choose(construct Schedule::Both(
+    construct Schedule::Pay(4, construct Schedule::Done()),
+    construct Schedule::Pay(5, construct Schedule::Done())));
+}
