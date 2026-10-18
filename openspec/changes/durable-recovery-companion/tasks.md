@@ -1,0 +1,9 @@
+- [x] Draft the complete ordinary design and additive EARS.
+- [x] Obtain two fresh whole substantive ordinary design opinions.
+- [x] Check source fidelity and record conditional architecture adoption.
+- [ ] Complete applicable designated-owner contracts and their required reviews.
+- [ ] Resolve remaining exact API/codec/report schema interfaces.
+- [ ] Have a separate custodian freeze complete financial, work, state, effect, history and public byte expectations from adopted premises.
+- [ ] Implement the complete library and actual public CLI/test lifecycle.
+- [ ] Run concretely admitted local checks and obtain fresh exact-candidate source/result audits.
+- [ ] Establish the original separately required native, proof, private, target, live-consumption, composition and full financial acceptance predicates.

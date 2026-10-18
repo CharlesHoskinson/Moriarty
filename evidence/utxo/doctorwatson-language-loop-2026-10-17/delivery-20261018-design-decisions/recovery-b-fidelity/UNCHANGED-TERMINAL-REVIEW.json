@@ -1,0 +1,226 @@
+{
+  "candidate": {
+    "base": "79de664a3d16b5e0456043a530c8f33d723561a2",
+    "manifest_sha256": "fefd01068978d1e5a8e7f3eb738e562795baf2c0a613c55594b114cbdbf281e4",
+    "primary_sha256": "80c1630951009981e1eaac6d03660dfdeb6cc4164ae593e34f344b5968fd6b75"
+  },
+  "decision": {
+    "A_tradeoffs": "Alternative A (A_EXPLICIT_COMPLETE_RECORD) exposes the complete versioned RecoveryCheckpoint (moriarty-recovery-checkpoint/1) as a first-class value carrier across load_pair, inspect_pair, start, reopen, resume, recover, checkpoint_bytes, outcome_report, and reopen_report. Strengths: (1) Direct architectural alignment with existing mori_core::stage (B23/B26), which uses value-oriented transition functions rather than mutable stateful objects; (2) Zero impedance mismatch with the mandatory fresh-OS-process CLI and mori test lifecycle (B08), where every operation reads actual on-disk bytes, executes at most one transition, publishes a complete checkpoint file, and exits; (3) Complete boundary transparency\u2014pending (with full unchanged Core2 Continuation), forward-complete (with final Snapshot), and recovery-complete (with site, await_label, handler, mode, and final Snapshot) control states, cumulative accounting (committed C, attempted_total T, committed_cap, ordered_effects), positive residual duties, and full ordered invocation history (Invocation[]) are directly inspectable without hidden VM caches or object state; (4) Clean failure immutability\u2014consuming ReopenedRecovery by value and returning Result<RecoveryTransition, RecoveryFailure> avoids leaving an in-memory mutable object in an ambiguous partially mutated state on failure; (5) Distinct outcome_report(&RecoveryTransition) and reopen_report(&ReopenedRecovery) signatures cleanly separate state-changing transitions from event-free reopen (attempted=0, invocation=null). Costs/tradeoffs: (1) Explicit data duplication in serialized checkpoints (cumulative ordered_effects, full history with per-step snapshots, and current boundary/continuation), which requires explicit owner resource/size envelopes (O-TRACE, O-DURABLE, O-IO) rather than silent history truncation; (2) Library callers pass program and ReopenedRecovery explicitly rather than calling methods on a bundled process handle.",
+    "B_tradeoffs": "Alternative B (B_OWNED_PROCESS_SAME_DURABLE_WIRE) wraps state in an owned RecoveryProcess with start/reopen constructors and resume(&mut self), recover(&mut self), checkpoint(&self), and report(&self) methods while requiring the exact same durable wire and fresh-process public CLI/test lifecycle. Strengths: (1) Bundles RecoveryProgram and current state into a single owned in-memory handle, which can prevent passing a mismatched program reference during multi-step in-memory library sequences; (2) Can encapsulate internal runtime caches if needed later. Costs/tradeoffs: (1) Redundant object lifecycle overhead on the mandatory public path\u2014because every CLI command and mori test operation must execute in a fresh OS process over actual files (and cannot keep a RecoveryProcess alive across test steps), RecoveryProcess is reconstructed from bytes, mutated at most once, serialized, and dropped on every operation; (2) Ambiguous failure-mutation semantics on &mut self\u2014mutating self in resume(&mut self)/recover(&mut self) requires an additional owner contract (api_alternative_B.failure_mutation_policy) to define whether self is rolled back, poisoned, or partially mutated when a transition fails; (3) Report state ambiguity\u2014a single report(&self) method on RecoveryProcess must track hidden transient state to know whether the instance was just created via reopen (which requires operation=\"reopen\", attempted=\"0\", invocation=null) or just completed start/resume/recover; (4) Higher risk of encouraging in-memory test shortcuts (similar to stage_test.rs keeping Continuation in memory) instead of enforcing fresh-process file reopen. B can remain an optional internal refactor after adoption, but is inferior to A as the public contract.",
+    "blocking_ordinary_findings": [],
+    "ordinary_vote": "AGREE",
+    "reasoning": "Independent evaluation of the 44 mandatory bodies (B01-B44) shows that Alternative A (A_EXPLICIT_COMPLETE_RECORD) is the cleaner, more direct, and more faithful ordinary architecture for Moriarty's paired durable-recovery companion (moriarty-recovery/1, moriarty-core2-recovery/1). Existing Core2 staged execution (B23 source/crates/mori-core/src/stage/admit.rs, B26 mod.rs) is structured around pure value-passing transitions (stage::load, stage::start, stage::resume) and explicit data carriers. Alternative A extends this discipline to paired recovery without mutating existing moriarty/2 Program, StagePlan, Continuation, StageEvent, or StageOutcome wire formats: handlers use a separate fresh-occurrence expression arena (guard root followed by left-to-right postorder body expressions) that never renumbers base ExprIds or await sites; the versioned RecoveryCheckpoint explicitly carries bindings, action, three normal control variants (pending, forward-complete, recovery-complete), cumulative accounting (committed C, attempted_total T, committed_cap, ordered_effects), positive residual duties, and complete Invocation[] history; and the public lifecycle connects real CLI bounded readers, language transitions, checkpoint publication, fresh-process event-free reopen, and fresh-process mori test execution. Alternative B adds mutable &mut self failure-state ambiguity and transient report-mode bookkeeping without reducing any wire, admission, or fresh-process persistence obligation. No blocking ordinary design defects were found; all 12 designated-owner security/admission/identity/ceiling/failure/IO prerequisites remain explicitly open and mandatory before dependent implementation.",
+    "required_ordinary_changes": [],
+    "scope": "ordinary full-language architecture/design alternative choice only",
+    "selected_alternative": "A_EXPLICIT_COMPLETE_RECORD"
+  },
+  "findings": [
+    {
+      "body_id": "B01",
+      "consequence": "If an implementation attempts to derive Deserialize on RecoveryCheckpoint using the shared mori_core::ir::Execution / ir::Step / ir::Statement types as-is, reopening any checkpoint whose baseline history contains a true resume across an Await step will fail deserialization because ir::v1::Statement rejects Await; conversely, adding Await to shared ir::Statement::deserialize would break the frozen Core1 v1 decode wire invariant in B21.",
+      "finding": "RecoveryCheckpoint persists history: Invocation[] containing full baseline StageReport objects (B01 CONTRACT.json:84,107-113; B02 DESIGN.md:330,342), and DR-005 requires reopen/resume/recover to decode the entire saved checkpoint. In existing Core2 (B21 source/crates/mori-core/src/ir.rs:3568-3572,3904-3915; B26 source/crates/mori-core/src/stage/mod.rs:5283-5291; B32 source/docs/CORE-STAGED-TESTS.md:6549), a true resume emits a Step whose statement is Statement::Await, but StageSegment is Serialize-only and shared ir::Statement/Step/Execution route Deserialize exclusively through ir::v1 (which forbids Await). CONTRACT.json:57 notes that no general shared Deserialize is introduced on Statement.",
+      "id": "F-01",
+      "kind": "owner_interface_dependency",
+      "requested_disposition": "Under O-DURABLE and the versioned checkpoint codec implementation, provide a dedicated recovery-checkpoint DTO / DeserializeSeed path that decodes StageReport/StageSegment (allowing Statement::Await in baseline history steps while keeping handler body statements non-Await) without modifying the shared ir::v1 Deserialize implementation on mori_core::ir::{Statement, Step, Execution}.",
+      "severity": "minor",
+      "source_location": "B01 CONTRACT.json:57,84,107-132; B21 source/crates/mori-core/src/ir.rs:3568-3572,3904-3915; B26 source/crates/mori-core/src/stage/mod.rs:5283-5291"
+    },
+    {
+      "body_id": "B08",
+      "consequence": "Without explicit coordination of byte, depth, and node bounds across RecoveryCheckpoint, RecoveryReport, and moriarty-local-recovery-test-report/1, multi-operation recovery test cases could exceed the existing 1 MiB / depth-32 / 65,536-node per-case export limit in test.rs even when individual checkpoints fit within a 4 MiB continuation ceiling.",
+      "finding": "In B22 (source/crates/mori-core/src/json.rs:3943-3955,4054-4077) and B20 (source/crates/mori/src/commands/test.rs:3354), json::export enforces a 1 MiB byte ceiling, depth 32, and 65,536 JSON nodes per exported value (and per test case in aggregate_report), whereas B25 (source/crates/mori-core/src/stage/decode.rs:4909-4911) allows 4 MiB for Continuation. In the proposed recovery lifecycle (B01 CONTRACT.json:60-85,158-169; B08 PUBLIC-LIFECYCLE.md:1460), RecoveryReport embeds both the last Invocation and the full RecoveryCheckpoint (which embeds cumulative history: Invocation[]), and each operation in a mori test case embeds report, checkpoint_in, checkpoint_out, and process.stdout (the serialized report text).",
+      "id": "F-02",
+      "kind": "owner_interface_dependency",
+      "requested_disposition": "Ensure the designated owner under O-TRACE, O-DURABLE, and O-IO specifies exact byte, depth, and JSON node envelopes for RecoveryCheckpoint, RecoveryReport, and moriarty-local-recovery-test-report/1 so that checkpoint decoding, report printing, and per-case aggregate export are mutually consistent without truncating history or failing valid multi-step test cases.",
+      "severity": "minor",
+      "source_location": "B08 PUBLIC-LIFECYCLE.md:1458-1461; B20 source/crates/mori/src/commands/test.rs:3335-3364; B22 source/crates/mori-core/src/json.rs:3943-3955,4054-4077; B25 source/crates/mori-core/src/stage/decode.rs:4909-4911"
+    },
+    {
+      "body_id": "B04",
+      "consequence": "If start or reopen/recover boundary validation reused base canonical_boundary (B25) without including companion handler accounts and duties, an account touched only by a recovery handler Transfer/Fee (or a duty created/discharged in a handler) would not be uniformly checked across the paired lifecycle.",
+      "finding": "In B25 (source/crates/mori-core/src/stage/decode.rs:4953-4978,5058-5117), Core2 canonical_boundary (R7) checks explicit balance rows only for accounts referenced in Statement::Transfer or Statement::Fee of the selected base action, and builds the duty registry only from base Program.actions. In B04 (NORMAL-CASES.md:761-763), the forward-compensation base purchase prefix creates a remedy liability (reserve -> buyer) without a base Transfer/Fee touching reserve, while the companion compensate handler executes Transfer(PAY, \"reserve\", \"buyer\", compensation).",
+      "id": "F-03",
+      "kind": "owner_interface_dependency",
+      "requested_disposition": "Under O-ACCT and O-REG, define the exact combined account-row boundary and duty registry over the paired base action plus all companion recovery handlers for that action so required accounts (such as reserve) and duty identities are validated consistently at start, reopen, resume, and recover.",
+      "severity": "minor",
+      "source_location": "B04 NORMAL-CASES.md:759-765; B06 OWNER-RULES.json:1262-1275; B25 source/crates/mori-core/src/stage/decode.rs:4953-4978,5058-5117"
+    },
+    {
+      "body_id": "B01",
+      "consequence": "Having RecoveryPlan's exact field map in prose (B02) rather than as a top-level structured entry in CONTRACT.json, and leaving the CLI-to-library reopen step implicit in CONTRACT.json's public_operation_contracts, could cause minor schema-key drift if not kept synchronized.",
+      "finding": "B02 (DESIGN.md:354) specifies the exact per-arm fields (guard_cost, body_cost, recovery_cost, committed_before, successful_path_total) and per-action fields (forward_total, successful_path_ceiling) of the recovery plan (moriarty-recovery-plan/1), while B01 (CONTRACT.json:182,218-220,259) summarizes the ceiling equation and inspect_report.plan in prose. Similarly, B08 (PUBLIC-LIFECYCLE.md:1418-1421,1430,1443-1448) explains that CLI --resume and --recover read the checkpoint file via reopen before invoking library resume/recover, whereas CLI --reopen invokes reopen and reopen_report without an event.",
+      "id": "F-04",
+      "kind": "ordinary_design",
+      "requested_disposition": "When freezing the final ordinary schema after owner rules are supplied, include an explicit RecoveryPlan field-map block in CONTRACT.json matching DESIGN.md:354 and note explicitly in CONTRACT.json public_operation_contracts that CLI --resume/--recover compose reopen + resume/recover over the on-disk checkpoint path.",
+      "severity": "note",
+      "source_location": "B01 CONTRACT.json:182,218-220,248-260; B02 DESIGN.md:354; B08 PUBLIC-LIFECYCLE.md:1414-1423,1440-1449"
+    },
+    {
+      "body_id": "B04",
+      "consequence": "Treating the author's design specimens or partial L04 financial frames as already-certified runtime goldens would violate UNI-020 and DR-016.",
+      "finding": "B04 (NORMAL-CASES.md:743,777) and B09 (README.md:1481-1483) explicitly disclose that the 74 example files are author-assembled documentary design specimens with literal OWNER identity slots and that the 27 L04 files supply financial frames without recovery work, admission, or failure policy. Per review instructions, those optional files were not reopened or verified in this architectural review.",
+      "id": "F-05",
+      "kind": "scope_or_evidence",
+      "requested_disposition": "Maintain DR-016 and UNI-020 strictly: after two agreeing ordinary votes and designated-owner O-* contracts are adopted, require a distinct independent custodian to derive and freeze complete Program, Plan, checkpoint, report, work, financial, and byte expectations from the adopted rules before scoring any implementation or test run.",
+      "severity": "note",
+      "source_location": "B03 EARS.json:641-653; B04 NORMAL-CASES.md:743,773-778; B09 README.md:1481-1484; B34 source/openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md:6999-7016"
+    }
+  ],
+  "limitations": [
+    "All 44 mandatory bodies (B01-B44, 500,104 bytes across 8,312 lines of PRIMARY.md) and WHOLE-OPINION.schema.json (12,840 bytes, 544 lines) were read completely once through non-overlapping filesystem slices.",
+    "The 74 authored documentary example files and 27 independent-L04-input files were left unread as optional context per the review instructions; this opinion does not certify their arithmetic, hashes, byte formatting, or source-to-runtime fidelity.",
+    "No shell commands, builds, tests, native proving, ledger operations, network calls, or subagents were executed; all product predicates and DR-001..DR-020 scenarios remain UNRUN.",
+    "This AGREE vote applies solely to the ordinary full-lifecycle architectural choice of Alternative A (A_EXPLICIT_COMPLETE_RECORD) over Alternative B (B_OWNED_PROCESS_SAME_DURABLE_WIRE); it supplies no designated-owner security/admission/identity/ceiling/failure/IO rule (O-ID through O-IO) and no implementation or product acceptance approval.",
+    "Actual backend model identity is not independently observable from inside the model runtime context; reviewer.actual_model is therefore reported as null alongside the observed user setting change metadata."
+  ],
+  "owner_prerequisites": [
+    {
+      "id": "O-ID",
+      "interface_gap_or_dependency": "Requires designated-owner specification of exact canonical preimages, domain separation, serialization, and concrete digests for all four bindings (base_program, base_plan, recovery_module, recovery_plan), compatibility with adopted M03 Core2 local digests (B32 F4), and version/migration refusal diagnostics.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-REG",
+      "interface_gap_or_dependency": "Requires designated-owner specification of the combined base-program plus companion-handler liability registry, permitted incoming/created/discharged duty identities across forward and recovery branches, conflict detection, and checking order.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-ACCT",
+      "interface_gap_or_dependency": "Requires designated-owner specification of combined account-row coverage and canonical boundary validation across base actions and recovery handlers (including accounts like reserve in forward-compensation touched by handler transfers/fees or liability roles), preserved untouched rows, and custody vs. funded-compensation assumptions.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-TRACE",
+      "interface_gap_or_dependency": "Requires designated-owner specification of concrete source-pair, handler-arena, JSON depth/node/byte, cumulative history, and trace-cell bounds covering full paired execution and test aggregates without silent prefix or history truncation.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-CAP",
+      "interface_gap_or_dependency": "Requires designated-owner specification of paired successful_path_ceiling preflight (distinguishing normal forward_total=11 from paired ceiling=13), committed_cap vs. cumulative attempted_total (T=15 after false observation) budget admission, CLI cap override/editability rules, recovery reserves, and refusal precedence.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-PEND",
+      "interface_gap_or_dependency": "Requires designated-owner specification of strict pending site/action/capture/history association and transition admission ensuring only an admitted forward resume or site-bound recovery handler can retire the selected pending path, and closed records cannot be resumed or recovered.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-EVIDENCE",
+      "interface_gap_or_dependency": "Requires designated-owner specification of outcome evidence origin, correlation, finality, freshness, expiry, known vs. unknown outcome classification, and late-success vs. recovery rules so local Bool binders are never treated as authenticated external nonexecution or timeout proof.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-CONTROL",
+      "interface_gap_or_dependency": "Requires designated-owner specification of per-stage normal, refund, compensation, duty-creation, and duty-discharge authority/consent, asset custody vs. external reserve funding prerequisites, and preservation of historical gross debits, retained fees, and residual duties.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-DURABLE",
+      "interface_gap_or_dependency": "Requires designated-owner specification of strict RecoveryCheckpoint decoding, canonicality, source-bound provenance, history/accounting/control consistency across pending, forward-complete, and recovery-complete variants (including dedicated history Step decoding without breaking shared Core1 v1 Statement deserialization), and malformed/oversized/stale/tampered refusal diagnostics.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-LIVE",
+      "interface_gap_or_dependency": "Requires designated-owner specification of once-only consumption, replay/copy prevention, concurrent normal-vs-recovery race resolution, authority/nonce consumption, and target live-consumption rules beyond untracked local checkpoint files.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-FAIL",
+      "interface_gap_or_dependency": "Requires designated-owner specification of the complete failure family across load, import, admission, guard, body, and target phases\u2014including exact reachable prefixes, retained state/effects/fees/duties/work, L04 conditional transfer-only-before-discharge disposition, and non-normal result/control/error DTOs without coercing failures into normal variants.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    },
+    {
+      "id": "O-IO",
+      "interface_gap_or_dependency": "Requires designated-owner specification of public checkpoint file publication/staging/overwrite/crash ordering relative to transition execution and stdout reporting, bounded reader/exporter limits, and child-process failure handling in mori simulate and mori test.",
+      "mandatory_before_dependent_implementation": true,
+      "security_rule_authored_here": false
+    }
+  ],
+  "read_scope": {
+    "all_mandatory_bodies_read_completely": true,
+    "coverage_limitations": [
+      "Read all 44 mandatory bodies (B01 through B44) in PRIMARY.md (8,312 lines, 500,104 bytes) and WHOLE-OPINION.schema.json (544 lines, 12,840 bytes) completely once using non-overlapping line ranges and exact byte-offset continuations (ContentOffset=46080 on lines 6251-6700 and 6701-7150).",
+      "Per the review instructions, the 74 optional authored example files and 27 optional independent-L04-input files were not read; their concrete bytes, arithmetic, and runtime fidelity are uncertified by this architectural vote.",
+      "No shell commands, builds, tests, or runtime checks were executed; all product predicates remain UNRUN."
+    ],
+    "mandatory_body_ids_read": [
+      "B01",
+      "B02",
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B07",
+      "B08",
+      "B09",
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14",
+      "B15",
+      "B16",
+      "B17",
+      "B18",
+      "B19",
+      "B20",
+      "B21",
+      "B22",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B27",
+      "B28",
+      "B29",
+      "B30",
+      "B31",
+      "B32",
+      "B33",
+      "B34",
+      "B35",
+      "B36",
+      "B37",
+      "B38",
+      "B39",
+      "B40",
+      "B41",
+      "B42",
+      "B43",
+      "B44"
+    ],
+    "optional_context_read": [],
+    "partial_or_unread_bodies": []
+  },
+  "retained_scope": {
+    "actual_durable_pending_and_closed_reopen": true,
+    "all_original_financial_composition_target_exits": true,
+    "explanation": "The full original recovery first-delivery scope is retained without reduction: inspectable paired base (moriarty/2) and companion (moriarty-recovery/1) sources; actual versioned durable RecoveryCheckpoint carrier across pending, forward-complete, and recovery-complete states; real language start, normal resume, refund/compensate recovery, checkpoint publication, OS-process exit, fresh-process event-free reopen, and fresh-process mori test execution; complete ordered effects, retained fees, gross debits, C/T work counters, full invocation history, and positive residual duties; all 35 original MPLR requirements, 148 requirements / 292 scenarios / 20 UTXO families, 69 top-level U/M/MC/SP/G exits, ACTUS 277, DeFi 72, and all 5 composition operators. No waiting JSON viewer, bare Continuation, in-memory-only Process, test-only writer, or host copy/sum substitution is permitted. All 12 designated-owner rules (O-ID through O-IO) remain mandatory open prerequisites, and no example/oracle arithmetic or byte certification is claimed.",
+    "full_original_recovery_first_delivery": true,
+    "mandatory_owner_rules_stay_open": true,
+    "no_example_oracle_certification": true,
+    "no_viewer_or_library_only_substitution": true,
+    "paired_source_and_public_lifecycle": true,
+    "prefix_effect_fees_C_T_history_and_residuals": true
+  },
+  "reviewToken": "durable-recovery-full-readonce-b-20261018",
+  "reviewer": {
+    "actual_model": null,
+    "effort": "high",
+    "identity_evidence": "Session metadata includes <USER_SETTINGS_CHANGE> setting Model Selection to Gemini 4 Argon (High) and prompt request AGY gemini-4-argon-high at high effort; no independent cryptographic or backend-returned model identity receipt is observable from within the model turn, so actual_model is set to null.",
+    "requested_model": "gemini-4-argon-high"
+  },
+  "schema_version": "moriarty-full-lifecycle-ordinary-choice-review/1",
+  "summary": "Independent non-author ordinary review (slot B) of the complete durable-recovery A/B language design (B01-B44 read completely once). Votes AGREE on Alternative A (A_EXPLICIT_COMPLETE_RECORD: explicit versioned RecoveryCheckpoint carrier, separate handler expression arenas preserving base Core2 wire/ExprIds, distinct pending/forward-complete/recovery-complete control states, cumulative C/T/ordered_effects/history/residual accounting, and fresh-process public CLI/test lifecycle) over Alternative B (B_OWNED_PROCESS_SAME_DURABLE_WIRE), which adds mutable &mut self failure-state ambiguity and transient report-mode state without reducing wire or fresh-process persistence requirements. Records five non-blocking findings (three minor owner-interface dependencies on history Step decoding, multi-step test-case export bounds, and combined base+handler boundary account/duty coverage; two notes on schema completeness and independent expectation freeze custody) and preserves all 12 mandatory open designated-owner prerequisites (O-ID through O-IO) and all original roadmap/financial/target acceptance gates."
+}
