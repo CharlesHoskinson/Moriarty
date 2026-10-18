@@ -231,6 +231,78 @@ impl Unmeasured {
     }
 }
 
+// Core-only adapters for the plain A report. The standalone A leaf has no
+// serde/B dependency; every serialized field retains the frozen R131 schema.
+use crate::sherlock::reference_slice as a_report;
+pub use crate::sherlock::reference_slice::ReferenceResourceReport;
+
+impl Serialize for a_report::ReferenceUnmeasuredGroup {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let Self { status, reason, metrics } = self;
+        let status = match status {
+            a_report::ReferenceUnmeasuredStatus::Unmeasured => "unmeasured",
+        };
+        let mut output = serializer.serialize_struct("UnmeasuredGroup", 3)?;
+        output.serialize_field("status", status)?;
+        output.serialize_field("reason", reason)?;
+        output.serialize_field("metrics", metrics)?;
+        output.end()
+    }
+}
+impl Serialize for a_report::ReferenceUnmeasured {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let Self { peaks, physical, circuit, proof, host, overhead, financial_target,
+            event_reconciliation, remaining_nonhelper_reference_work } = self;
+        let mut output = serializer.serialize_struct("Unmeasured", 9)?;
+        output.serialize_field("peaks", peaks)?;
+        output.serialize_field("physical", physical)?;
+        output.serialize_field("circuit", circuit)?;
+        output.serialize_field("proof", proof)?;
+        output.serialize_field("host", host)?;
+        output.serialize_field("overhead", overhead)?;
+        output.serialize_field("financial_target", financial_target)?;
+        output.serialize_field("event_reconciliation", event_reconciliation)?;
+        output.serialize_field("remaining_nonhelper_reference_work", remaining_nonhelper_reference_work)?;
+        output.end()
+    }
+}
+impl Serialize for a_report::ReferenceResourceManifest {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let Self { format, reference_schedule_id, profile_id, source_definition_sha256,
+            layout_version, bounds, unavailable_metadata, measurement_scope } = self;
+        let mut output = serializer.serialize_struct("ResourceManifest", 8)?;
+        output.serialize_field("format", format)?;
+        output.serialize_field("reference_schedule_id", reference_schedule_id)?;
+        output.serialize_field("profile_id", profile_id)?;
+        output.serialize_field("source_definition_sha256", source_definition_sha256)?;
+        output.serialize_field("layout_version", layout_version)?;
+        output.serialize_field("bounds", bounds)?;
+        output.serialize_field("unavailable_metadata", unavailable_metadata)?;
+        output.serialize_field("measurement_scope", measurement_scope)?;
+        output.end()
+    }
+}
+impl Serialize for a_report::ReferenceResourceReport {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let Self { format, manifest, reference_work, recorded_reference_events,
+            maximum_observed_logical_depth, helper_work, helper_visits, unmeasured } = self;
+        let mut output = serializer.serialize_struct("ReferenceResourceReport", 8)?;
+        output.serialize_field("format", format)?;
+        output.serialize_field("manifest", manifest)?;
+        output.serialize_field("reference_work", &Counter(*reference_work))?;
+        output.serialize_field("recorded_reference_events", &Counter(*recorded_reference_events))?;
+        output.serialize_field("maximum_observed_logical_depth", maximum_observed_logical_depth)?;
+        output.serialize_field("helper_work", helper_work)?;
+        output.serialize_field("helper_visits", helper_visits)?;
+        output.serialize_field("unmeasured", unmeasured)?;
+        output.end()
+    }
+}
+
 /// An owned, serializable diagnostic report, not a validated state or receipt.
 /// Snapshot/summary values remain distinct even if a caller supplies a stale
 /// summary. No check, subtraction, clamping, hidden total or peak is added.

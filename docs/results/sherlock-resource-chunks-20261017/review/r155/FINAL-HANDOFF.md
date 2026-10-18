@@ -1,0 +1,3 @@
+R155 **ACCEPTS actual result binding** and **ACCEPTS R156 body-preserving test/comment/documentation promotion**. It recommends **KEEP_OPEN for whole original UIREQ013**: the actual test supplies literal observations rather than collecting the same real computation in one trace and two chunks.
+
+The raw full opinion is REPORT.md; QUALIFICATIONS.md narrows unsupported repo-wide absence/history phrasing and records exact receipt limits. The one actual Argon HIGH request completed exit0/SUCCESS with zero tools/all pins unchanged. No tests, compiler or native execution occurred in this lane. Root alone adopts, publishes and updates affected evidence currentness.

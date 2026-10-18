@@ -347,3 +347,126 @@ K/Quint/Lean-Clean/handwritten full-correspondence, financial, native proof,
 qualified settlement and release obligations remain. This knowledge update
 runs no interpreter/model/circuit/native code and adds no circuit iteration or
 website circuit-progress claim.
+
+
+## Original009 adoption and current reporting gap — October17 R121
+
+[The paired-sharing result](results/sherlock-structural-sharing-20261017/README.md)
+records the exact original009 specimen: shared and physically distinct Leaf4
+occurrences both fold to8 through the same typed-A interpreter, with60 charged
+transitions and61 events per variant. A real Arc identity contrast is checked.
+Complete independent state literals cover31 of62 boundaries; the other31 lack
+full independent control/environment/frame literals. All events have independent
+rule/work/fuel/depth/program/outcome checks. Pairwise complete-trace equality and
+adjacency supplement that evidence; they do not fill independent-prefix gaps or
+measure invisible caches, allocator or physical costs.
+
+Fresh R111 functional/result review and the explicit Root adoption accept only
+that unamended supported host clause. Root reports PR177 merged at
+`f33ed04d1bb92c521894603e8479522efcc8e21c`. The actual selected R117 reporting
+call then returned current,8 adopted original clauses,27 original clauses open
+and25 refinements open, in0.161680567seconds, against ledgerc556484d. This was a
+file/JSON report, without repeating the sharing test or default252-test cohort.
+
+After that report, [R113's reporting finding](results/sherlock-evidence-class-report-20261017/FINDINGS.md)
+corrected UIREQ025 to partial implementation, partial validation and open
+acceptance. No adopted closure was removed. The standalone current compiler
+artifact still needs an explicit predicate/consumer and actual implementation
+identity at the chosen evidence-record boundary; the input program digest is
+not an implementation tree. Historical bound packages may identify all seven
+fields collectively, but their existence does not repair the current producer
+or an unbound companion join. UIREQ025 is reporting work and adds no blanket
+native prerequisite. R117 remains its exact pre-correction observation; no later
+selected report or producer-fix result is inferred here.
+
+The nine retainedInventory catalogues are separate obligation navigation. U/M/MC/SP,
+release gates,160 spec-heading keys and SF workflow IDs remain unassessed at the
+retained-family level unless an exact later owner adoption says otherwise.
+Literal historical catalogue “open” and current unassessed status are different.
+The original35/refinement25 and catalogue cross-references overlap, so they are
+not an additive all-EARS completion denominator. Security families remain
+literal ID/catalogue mappings for the designated owner; no security conclusion
+is added by the retained-map pass.
+
+Full B/generic constructors, persistent state, financial, K/Quint/Lean-Clean and
+handwritten correspondence, native proofs, target settlement and release
+requirements retain their scope. Native authority0/fullgoalopen remain. This
+knowledge update performs no subject/model/provider/native run, adds no circuit
+iteration and supplies no website concept claim of circuit progress.
+
+
+## Reporting adoption and bounded next source work — October17 R145
+
+Reported at **2026-10-17T23:50:43.494484+00:00**. This is a scoped source/evidence
+update. R121's original009 and eight-closure facts above retain their historical
+cut. Root reports PR177 merged at `f33ed04d1bb92c521894603e8479522efcc8e21c`
+and PR178 reporting-feature merge prefix `38c4745`; no full PR178 commit identity
+is invented here.
+
+The [compiler reporting feature adoption](results/doctorwatson-evidence-record-20261017/ROOT-FEATURE-ADOPTION.json)
+binds fresh R122 source/result review and the actual ordinary254-test local PASS.
+The companion reports receipt declarations; its source tree is historical,
+input_snapshot is path-named, consumer/mode may be conventional/inferred, and
+route/authenticity remain unchecked. Original compile-only captures do not
+become compiler execution or current-tree authentication through reporting.
+
+Root's [actual original025 adoption](results/sherlock-model-only-evidence-record-20261017/ROOT-ADOPTION.json)
+then combines that qualified feature with the complete curated C1–C4 record and
+fresh R136 APPROVE of all28 field assessments and the full original “Pure models
+only” scenario. R136's raw8238-byte opinion is retained despite its requested4KB
+limit; all42 supplied pages were read and118 pins stayed unchanged. Reporting
+acceptance does not accept the capabilities named by a report. The historical
+K check remains frontend/syntax-Kore only; scalar15 Quint tests/samples retain
+their exact bounds. All nine new-B scenarios are unexecuted **by C1–C4**, while
+the later B4/B9 and finite44/5-run observations remain separately actual.
+
+The [new selected reader result](results/sherlock-model-only-evidence-record-20261017/current-evidence/RESULT.json)
+actually returned exit0, statuscurrent and9 adopted originals/26 originals open,
+with all25 refinements open, in0.061369990988seconds. Its inputs were checker
+`30c7e1d2` and ledger `34c6c802`. R135's earlier8-current report remains a
+separate dated result. No unchanged254-test, model or interpreter cohort was
+rerun for this adoption/currentness report. The implementation distribution is
+9 complete,21 partial and5 absent; validation is9 observed,21 partial and5 unrun.
+These35 clauses and the25 refinements/68 refinement scenarios are distinct
+inventories, not an all-EARS completion denominator.
+
+The [grouped N08 result](results/sherlock-grouped-return-20261017/actual/attempt-01/RESULT.json)
+records one exact positive test over12 bounded Machines and411 unchanged input
+pins. Fresh R137 approves the functional case, actual binding and body-preserving
+promotion. The canonical `2bfabe2c` test changes only the source-time comment
+from executed original `a015f6b2`; it was not executed anew. Starts75/76/78 and
+widths1/2/4/8 exercise a fixed factorial2 continuation, fuel82/stack8. Static
+counts are not runtime telemetry; discarded warm-up events lack an independent
+full-state oracle. Whole032 remains open, including causal occurrence IDs,
+general error/frame-cap precedence and the separately missing formal/circuit,
+B, persistence and financial stages.
+
+The next small implementation step is the existing R130rev02/R131 resource-report
+work: complete the source audit, then use the frozen four supplied-N01 reports
+to compare every87 JSON leaf, ordered metric membership and explicit unmeasured
+value. The plain std-only A representation and Core serialization adapter are
+source-complete, uncompiled/unrun at this cut; frozen source afterimage hashes
+and all four expectation files were checked as data. No producer output or
+test result is invented. R143 was reported being prepared, not passed.
+
+R129's second parser-only owner attempt returned no usable source: its CLI0 and
+SUCCESS envelope accompany a print timeout/empty0-byte response. R120's seven
+ordinary afterimages remain preserved and not integratable: the authoritative
+bounded parser constructor, budget and error API are missing. Root's narrow
+authoring-exception question was pending at this cut. Complete that exact API
+before composing the public draft body; do not apply the incomplete call site.
+
+R134's final namespace freeze and R140–142 review metadata remain review-only.
+At this cut R140 has a launch without terminal RESULT; R141/R142 have terminal
+CLI0 receipts. Root reports R142 literal hash/result-field mistakes and no clean
+approval pending readback; q4 remains UNSAT. No designated-security judgment,
+SDK-source approval, native acceptance or execution authority is inferred.
+The full goal remains active/open and native authority0.
+
+The factory lesson is to keep evidence integrity, semantic adoption and the
+selected currentness report separate. Pin the actual record boundary and read
+the full required scenario; preserve output/format deviations and qualifications.
+When only adoption metadata changes, reuse unchanged passing observations and
+run the existing pure reader, recording its new ledger cut. Source proposals,
+terminal provider envelopes and serialized graph counts each retain their own
+meaning. This update adds no runner, circuit iteration or website circuit claim.

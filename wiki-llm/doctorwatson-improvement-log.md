@@ -1036,3 +1036,27 @@ order; the data-only correction preserved the original result and performed no
 subject rerun. Reported dependency membership never becomes an I/O attestation.
 Next work is the real recursive compiler and resource-report chunk behavior,
 with complete independently frozen expectations and the existing consumers.
+
+### DW-56 — Test the producer when the scenario requires a collected run
+
+The A cumulative reporter compiled in the normal production library. Its fixed
+supplied-data test passed all four independently frozen87-leaf reports, and a
+fresh reviewer accepted the actual result and comment/documentation promotion.
+The same review kept original013 open: literal supplied records are not a live
+admitted computation collected as one trace and two chunks. Select that exact
+missing producer check next; do not repeat the passed data-only test or claim
+that four complete reports close the broader clause.
+
+The [actual result and qualified adoption](../docs/results/sherlock-resource-chunks-20261017/ROOT-FEATURE-ADOPTION.json)
+keep missing manifest identities/profile domains and unmeasured physical costs
+separate. The snapshot contains116 source files; dep-info names63 normal source
+dependencies. Neither number is a complete read-access attestation. New emitted
+library/test hashes were collected only after execution, while input pins and
+ordered invocation records bind the ordinary run operationally.
+
+A220KB inline review abstained after reporting clipping. A smaller complete
+request accepted the source; its successor reviewed the actual result. Preserve
+that failure and stop assuming locally complete input implies complete provider
+context. Verify delivered coverage, prefer scoped full call paths or verified
+pages, and check factual citations mechanically. Do not use model-written
+cryptographic strings as the authoritative source manifest.
