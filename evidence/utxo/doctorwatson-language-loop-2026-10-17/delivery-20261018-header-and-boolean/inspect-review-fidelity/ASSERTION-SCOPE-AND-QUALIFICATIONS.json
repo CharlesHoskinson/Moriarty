@@ -1,0 +1,175 @@
+[
+  {
+    "id": "producer-error-vs-public-stream",
+    "fact": "The complete Error JSON value is asserted in-process using mori_core::language and serde_json::Value equality (code,message,offset,step). The CLI has no Error-DTO stdout and human stderr contains no offset/step. core_io::operation consumes impl Display and builds CliError::Operation{code:mori::command,message:display::text(error.to_string())}; it retains the producer Display text, not the original typed Error object or its offset/step fields. The opinion already qualifies that offsets are separate producer observations; its phrase preserves exact producer Error must be read at the probe/Display-message boundary.",
+    "anchors": [
+      {
+        "packetPath": "units/core_io-operation.rs",
+        "sha256": "51d63b55691c08ef387fc01056e995f95500a286660ef79ec6fea42edb8d9f6c",
+        "lineStart": 1,
+        "lineEnd": 7,
+        "literal": "pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {\n    CliError::Operation {\n        code: \"mori::command\".into(),\n        message: crate::display::text(&error.to_string()),\n    }\n    .into()\n}"
+      },
+      {
+        "packetPath": "units/core-Error-dto.rs",
+        "sha256": "27c7090a3c80b1316a670a7660ff7bdd2f4b289ba017379ac6c9616180404613",
+        "lineStart": 1,
+        "lineEnd": 8,
+        "literal": "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, thiserror::Error)]\n#[error(\"{code}: {message}\")]\npub struct Error {\n    pub code: String,\n    pub message: String,\n    pub offset: Option<u32>,\n    pub step: Option<u16>,\n}"
+      },
+      {
+        "packetPath": "source/crates/mori/tests/inspect_header_dispatch.rs",
+        "sha256": "f925bcc0ccd78f5a9cc9512f03718830a39475ddd98385531eaff6e90a9b43c3",
+        "lineStart": 141,
+        "lineEnd": 165,
+        "literal": "            let error = mori_core::language(case.source)\n                .err()\n                .map(|error| serde_json::to_value(error).unwrap())\n                .unwrap_or(Value::Null);\n            let output = project.run(case.name, case.source);\n            fs::write(\n                project.root.join(case.name).join(\"producer-error.json\"),\n                serde_json::to_vec_pretty(&error).unwrap(),\n            )\n            .unwrap();\n            (case, error, output)\n        })\n        .collect::<Vec<_>>();\n    for (case, error, output) in captured {\n        let expected: Value = serde_json::from_str(case.expected_error).unwrap();\n        assert_eq!(error, expected, \"{}: complete producer Error\", case.name);\n        assert_eq!(output.status.code(), Some(1), \"{}\", case.name);\n        assert!(output.stdout.is_empty(), \"{}: complete stdout\", case.name);\n        assert_eq!(\n            output.stderr,\n            case.expected_stderr.as_bytes(),\n            \"{}: complete human stream\",\n            case.name\n        );\n    }"
+      }
+    ]
+  },
+  {
+    "id": "dto-object-equality-vs-bytes",
+    "fact": "All6 captured producer-error.json files equal the frozen complete JSON objects. Their raw file bytes differ from original-author expected producer-error.json by one final LF (observed152/159bytes vs frozen153/160). No byte-identical producer JSON file result is inferred. The 3GREEN human stderr files and all6 empty stdout files have exact frozen byte equality; all3RED human streams differ.",
+    "artifacts": [
+      {
+        "phase": "red",
+        "case": "unknown",
+        "producerFrozenRawBytesEqual": false,
+        "producerFrozenJsonObjectEqual": true
+      },
+      {
+        "phase": "red",
+        "case": "missing",
+        "producerFrozenRawBytesEqual": false,
+        "producerFrozenJsonObjectEqual": true
+      },
+      {
+        "phase": "red",
+        "case": "commented",
+        "producerFrozenRawBytesEqual": false,
+        "producerFrozenJsonObjectEqual": true
+      },
+      {
+        "phase": "green",
+        "case": "unknown",
+        "producerFrozenRawBytesEqual": false,
+        "producerFrozenJsonObjectEqual": true
+      },
+      {
+        "phase": "green",
+        "case": "missing",
+        "producerFrozenRawBytesEqual": false,
+        "producerFrozenJsonObjectEqual": true
+      },
+      {
+        "phase": "green",
+        "case": "commented",
+        "producerFrozenRawBytesEqual": false,
+        "producerFrozenJsonObjectEqual": true
+      }
+    ]
+  },
+  {
+    "id": "capture-before-assertion-loop",
+    "fact": "Collect<Vec<_>> completes all3 producer observations and public subprocess captures before the per-case product assertions. In RED the first3unknown assertions succeed and the4th, complete stderr, fails at159; missing/commented Rust assertion-loop bodies are unreached. Pre-assertion raw captures independently retain all3REDprocess outcomes. GREEN runs all12per-case assertions inside one test. Setup assertions (absolute observation directory and successful filesystem operations) still exist; before assertions means before that product assertion loop.",
+    "anchors": [
+      {
+        "packetPath": "source/crates/mori/tests/inspect_header_dispatch.rs",
+        "sha256": "f925bcc0ccd78f5a9cc9512f03718830a39475ddd98385531eaff6e90a9b43c3",
+        "lineStart": 135,
+        "lineEnd": 166,
+        "literal": "fn source_only_inspect_keeps_complete_header_errors() {\n    let project = Project::new();\n    // Capture each public process stream before assertions, including on failure.\n    let captured = CASES\n        .iter()\n        .map(|case| {\n            let error = mori_core::language(case.source)\n                .err()\n                .map(|error| serde_json::to_value(error).unwrap())\n                .unwrap_or(Value::Null);\n            let output = project.run(case.name, case.source);\n            fs::write(\n                project.root.join(case.name).join(\"producer-error.json\"),\n                serde_json::to_vec_pretty(&error).unwrap(),\n            )\n            .unwrap();\n            (case, error, output)\n        })\n        .collect::<Vec<_>>();\n    for (case, error, output) in captured {\n        let expected: Value = serde_json::from_str(case.expected_error).unwrap();\n        assert_eq!(error, expected, \"{}: complete producer Error\", case.name);\n        assert_eq!(output.status.code(), Some(1), \"{}\", case.name);\n        assert!(output.stdout.is_empty(), \"{}: complete stdout\", case.name);\n        assert_eq!(\n            output.stderr,\n            case.expected_stderr.as_bytes(),\n            \"{}: complete human stream\",\n            case.name\n        );\n    }\n}"
+      }
+    ]
+  },
+  {
+    "id": "capabilities-assertion-scope",
+    "fact": "The selected capability test parses successful stderr-empty JSON and selects rust-core1/rust-core2 profile rows. It directly asserts sourceProfile/semanticsProfile; sourceHeader is as_str().unwrap() and used to build source, not compared to a fixed literal header string. Both checks assert status/language; both inspections assert language/semantics/enforcement_report explicitnull. Core2 additionally asserts accepted,three stage labels,stage_plan.format,and format absence; capability core2-inspect.outputProfile.is_null() accepts either absent or explicitnull because JSON indexing returns Null for a missing key. Core1 asserts status absence,source-only-unqualified,and enforcement format. File snapshot is the top-level directory names/file contents, not a general filesystem or metadata audit.",
+    "unasserted": "No complete JSON bytes,key order,source_hash,agreement,all actions/expressions/assets/states,all capability consumers/fields,or exact sourceHeader/outputProfile key-presence equality is asserted. No compile/simulate/native/target call is made.",
+    "anchors": [
+      {
+        "packetPath": "units/capabilities-positive-test.rs",
+        "sha256": "d85df856dfe8c3ff666b2bc16158045e2e0341716d423002257d3ab06554d496",
+        "lineStart": 1,
+        "lineEnd": 49,
+        "literal": "fn reported_core_profiles_select_real_source_only_cli_consumers() {\n    let f = Files::new();\n    let report = json(&f.run(&[\"capabilities\", \"--json\"]));\n    for (id, language, semantics, body) in [\n        (\n            \"rust-core1\",\n            \"moriarty/1\",\n            \"moriarty-core/1\",\n            \"next count = count + 1;\",\n        ),\n        (\n            \"rust-core2\",\n            \"moriarty/2\",\n            \"moriarty-core/2\",\n            \"await review(ok: Bool) when ok; next count = count + 1;\",\n        ),\n    ] {\n        let profile = row(&report, \"profiles\", id);\n        assert_eq!(profile[\"sourceProfile\"], language);\n        assert_eq!(profile[\"semanticsProfile\"], semantics);\n        let source = format!(\n            \"{}\\nagreement CapabilityProbe {{ state count: UInt = 0; action run() {{ {body} }} }}\\n\",\n            profile[\"sourceHeader\"].as_str().unwrap()\n        );\n        fs::write(f.0.join(\"source.mori\"), source).unwrap();\n        let before = f.snapshot();\n        let checked = json(&f.run(&[\"check\", \"source.mori\", \"--json\"]));\n        assert_eq!(checked[\"status\"], \"accepted\");\n        assert_eq!(checked[\"language\"], language);\n        let inspected = json(&f.run(&[\"inspect\", \"source.mori\"]));\n        assert_eq!(inspected[\"language\"], language);\n        assert_eq!(inspected[\"semantics\"], semantics);\n        assert_eq!(inspected.get(\"enforcement_report\"), Some(&Value::Null));\n        if language == \"moriarty/2\" {\n            assert_eq!(inspected[\"status\"], \"accepted\");\n            assert_eq!(inspected[\"qualification\"], \"local-reference-stage\");\n            assert_eq!(inspected[\"authentication\"], \"none\");\n            assert_eq!(inspected[\"consumption\"], \"untracked\");\n            assert!(row(&report, \"consumers\", \"core2-inspect\")[\"outputProfile\"].is_null());\n            assert!(inspected.get(\"format\").is_none());\n            assert_eq!(inspected[\"stage_plan\"][\"format\"], \"moriarty-stage-plan/1\");\n        } else {\n            assert!(inspected.get(\"status\").is_none());\n            assert_eq!(inspected[\"qualification\"], \"source-only-unqualified\");\n            assert_eq!(inspected[\"format\"], \"moriarty-enforcement-report/1\");\n        }\n        assert_eq!(before, f.snapshot());\n    }\n}"
+      },
+      {
+        "packetPath": "units/capabilities-positive-helpers.rs",
+        "sha256": "723bd317d6dfe1a2c9063030127230b2ff85d8eb10e4370ad8e161731f78b1ad",
+        "lineStart": 24,
+        "lineEnd": 66,
+        "literal": "    fn run(&self, args: &[&str]) -> Output {\n        Command::new(env!(\"CARGO_BIN_EXE_mori\"))\n            .current_dir(&self.0)\n            .env(\"PATH\", \"\")\n            .stdin(Stdio::null())\n            .args([\"--color\", \"never\"])\n            .args(args)\n            .output()\n            .unwrap()\n    }\n    fn snapshot(&self) -> Vec<(OsString, Vec<u8>)> {\n        let mut files: Vec<_> = fs::read_dir(&self.0)\n            .unwrap()\n            .map(|entry| {\n                let entry = entry.unwrap();\n                (entry.file_name(), fs::read(entry.path()).unwrap())\n            })\n            .collect();\n        files.sort();\n        files\n    }\n}\nimpl Drop for Files {\n    fn drop(&mut self) {\n        let _ = fs::remove_dir_all(&self.0);\n    }\n}\nfn json(output: &Output) -> Value {\n    assert!(\n        output.status.success(),\n        \"exit {:?}: {}\",\n        output.status.code(),\n        String::from_utf8_lossy(&output.stderr)\n    );\n    assert!(output.stderr.is_empty());\n    serde_json::from_slice(&output.stdout).unwrap()\n}\nfn row<'a>(report: &'a Value, section: &str, id: &str) -> &'a Value {\n    report[section]\n        .as_array()\n        .unwrap()\n        .iter()\n        .find(|row| row[\"id\"] == id)"
+      }
+    ]
+  },
+  {
+    "id": "reserve-assertion-scope",
+    "fact": "The selected Reserve test executes check--json and inspect. accepted() asserts processsuccess,empty stderr,parseable JSON and the3normal_output_labels_from_opus strings. The selected test also asserts checked.language=moriarty/2,inspected.semantics=moriarty-core/2,and only first action segment_cost=[11,15,10]. The helper name accepted does not itself assert report.status. Normal-oracle JSON is parsed, but reserve/compatibility_v1/escrow branches do not contribute selected assertions.",
+    "unasserted": "No complete stdout byte equality or full JSON shape/status/Program fields,all actions/financial execution/effects/state/continuation/event/cost semantics are asserted. Helpers that could simulate are defined but not called by this selected control. Existing external examples fixture mounts remain unchanged deviations.",
+    "anchors": [
+      {
+        "packetPath": "units/core2-positive-test.rs",
+        "sha256": "fd01a5831321b25da9443400fa5f9400539a8295d33ed51afd456fe1a1736fa4",
+        "lineStart": 1,
+        "lineEnd": 12,
+        "literal": "fn check_and_source_inspect_route_core_two_without_legacy_consumers() {\n    let f = Files::new(RESERVE);\n    let output = f.command(\"check\").arg(\"--json\").output().unwrap();\n    let checked = accepted(&output);\n    assert_eq!(checked[\"language\"], \"moriarty/2\");\n    let inspected = accepted(&f.command(\"inspect\").output().unwrap());\n    assert_eq!(inspected[\"semantics\"], \"moriarty-core/2\");\n    assert_eq!(\n        inspected[\"stage_plan\"][\"actions\"][0][\"segment_cost\"],\n        json!([\"11\", \"15\", \"10\"])\n    );\n}"
+      },
+      {
+        "packetPath": "units/core2-positive-helpers.rs",
+        "sha256": "134f6432e09ace6e416e977c365ed90342385b7ef63d0b0aca64fed8156dbe8f",
+        "lineStart": 1,
+        "lineEnd": 106,
+        "literal": "//! Public reference-stage consumers against literals frozen before implementation.\n//! No test in this file reaches native, proof, replay, or ledger execution; the\n//! H16/H19 `--trace` and `compile-call` requests are refused at the profile first.\nuse serde_json::{Value, json};\nuse std::{\n    path::PathBuf,\n    process::{Command, Output},\n    sync::atomic::{AtomicUsize, Ordering},\n};\n\nstatic NEXT: AtomicUsize = AtomicUsize::new(0);\nconst DELIVERY: &str = include_str!(\"../../../examples/core/continuations/delivery.mori\");\nconst RESERVE: &str = include_str!(\"../../../examples/core/continuations/reserve.mori\");\nconst LEGACY: &str = include_str!(\"../../../examples/core/continuations/atomic-compatibility.mori\");\nfn oracle() -> Value {\n    serde_json::from_str(include_str!(\n        \"../../../examples/core/continuations/normal-oracle.json\"\n    ))\n    .unwrap()\n}\nstruct Files(PathBuf);\nimpl Files {\n    fn new(source: &str) -> Self {\n        let path = std::env::temp_dir().join(format!(\n            \"mori-core-continuations-{}-{}\",\n            std::process::id(),\n            NEXT.fetch_add(1, Ordering::Relaxed)\n        ));\n        std::fs::create_dir(&path).unwrap();\n        let f = Self(path);\n        f.write(\"source.mori\", source.as_bytes());\n        f\n    }\n    fn path(&self, name: &str) -> PathBuf {\n        self.0.join(name)\n    }\n    fn write(&self, name: &str, bytes: impl AsRef<[u8]>) {\n        std::fs::write(self.path(name), bytes).unwrap();\n    }\n    fn json(&self, name: &str, value: &Value) {\n        self.write(name, serde_json::to_vec(value).unwrap());\n    }\n    fn command(&self, command: &str) -> Command {\n        let mut c = Command::new(env!(\"CARGO_BIN_EXE_mori\"));\n        c.args([\"--color\", \"never\", command])\n            .arg(self.path(\"source.mori\"));\n        c\n    }\n    fn start(&self, action: &str, opening: &Value, cap: Option<&str>) -> Output {\n        self.json(\"scenario.json\", opening);\n        let mut c = self.command(\"simulate\");\n        c.args([\"--action\", action, \"--scenario\"])\n            .arg(self.path(\"scenario.json\"));\n        if let Some(cap) = cap {\n            c.args([\"--logical-cap\", cap]);\n        }\n        c.output().unwrap()\n    }\n    fn resume(&self, continuation: &Value, event: &Value, action: Option<&str>) -> Output {\n        self.json(\"continuation.json\", continuation);\n        self.json(\"event.json\", event);\n        let mut c = self.command(\"simulate\");\n        c.arg(\"--resume\")\n            .arg(self.path(\"continuation.json\"))\n            .arg(\"--event\")\n            .arg(self.path(\"event.json\"));\n        if let Some(action) = action {\n            c.args([\"--action\", action]);\n        }\n        c.output().unwrap()\n    }\n}\nimpl Drop for Files {\n    fn drop(&mut self) {\n        let _ = std::fs::remove_dir_all(&self.0);\n    }\n}\nfn report(output: &Output) -> Value {\n    serde_json::from_slice(&output.stdout).unwrap_or_else(|e| {\n        panic!(\n            \"{e}: stdout={} stderr={}\",\n            String::from_utf8_lossy(&output.stdout),\n            String::from_utf8_lossy(&output.stderr)\n        )\n    })\n}\nfn accepted(output: &Output) -> Value {\n    assert!(\n        output.status.success(),\n        \"{}\",\n        String::from_utf8_lossy(&output.stderr)\n    );\n    assert!(\n        output.stderr.is_empty(),\n        \"{}\",\n        String::from_utf8_lossy(&output.stderr)\n    );\n    let r = report(output);\n    for (key, expected) in oracle()[\"normal_output_labels_from_opus\"]\n        .as_object()\n        .unwrap()\n    {\n        assert_eq!(&r[key], expected, \"{key}\");\n    }\n    r\n}"
+      }
+    ]
+  },
+  {
+    "id": "oracle-provenance",
+    "fact": "Negative diagnostic/error/human-renderer expected literals were source-exposed before execution, as recorded in actual/EXPECTATIONS.json, original author records and existing simulator literals. They are not implementation-blinded or independent financial/work/security oracles. The historical normal-output labels/provenance and unused oracle branches are preserved; this cycle creates no new independent oracle or regeneration of golden values.",
+    "anchors": [
+      {
+        "packetPath": "actual/EXPECTATIONS.json",
+        "sha256": "9774c3d75bf2efc1048318466a16a5f452242ad7a500af76acfdb4410d0027e6",
+        "lineStart": 44,
+        "lineEnd": 44,
+        "literal": "  \"provenance\": \"Ordinary source/diagnostic expectations. Author inspected current parser::language, Core1 fallback, operation/main/Shell renderer and existing simulate_header_dispatch literals. These are reused source-exposed literals, not independent security/financial/work or actual-output goldens. Full stderr assumes --color never and captured pipe width80, matching existing normal-simulate test and render::WIDTH. Do not regenerate literals from candidate output.\","
+      }
+    ]
+  },
+  {
+    "id": "format-history",
+    "fact": "The original author5410byte test and root5351byte test differ exactly by one6line to1line argument array declaration; all CASES literals and other source bytes are unchanged. Initial rustfmt exit1 and final exit0 are root/builder recorded history, not separately captured raw formatter stdout/stderr. FORMAT-EXACT.diff and FORMAT-ONLY-DELTA independently bind the exact array change; actual RED/GREEN and committed test body match root format.",
+    "anchors": [
+      {
+        "packetPath": "actual/FORMAT-ONLY-DELTA.json",
+        "sha256": "552c542586ef71786a22dc3e0c0e6652e2fadf5fb803abed332cf712293dcfe7",
+        "lineStart": 1,
+        "lineEnd": 7,
+        "literal": "{\n  \"beforeSha256\": \"38d4b9fd8da39b6b3b2a03f78cd93f20abaa3fb77fb2f264aa5b68b25b969f9b\",\n  \"afterSha256\": \"f925bcc0ccd78f5a9cc9512f03718830a39475ddd98385531eaff6e90a9b43c3\",\n  \"scope\": \"Only4argumentarraylinewrapping; allfrozenrawexpectationliteralsunchanged\",\n  \"originalCandidatePreserved\": true,\n  \"rustfmtExit\": 0\n}"
+      }
+    ]
+  },
+  {
+    "id": "source-pin-phase-identity",
+    "fact": "Both source-pin receipts retain baseHEAD615ece/baseTree while before pins include an untracked new formatted test, and after pins alter only inspect.rs. POST-COMMIT-BINDING supplies new4c03head/tree/parent and clean worktree report. This inspection checked903after hashes against exact4c03Git blobs,902parent blobs plus the prephase new-test hash,exact2Git changed paths,and native suffix equality. It did not inspect current live source/worktree cleanliness or reexecute phases.",
+    "anchors": [
+      {
+        "packetPath": "actual/POST-COMMIT-BINDING.json",
+        "sha256": "5e15dd13bb11b09ebc156671fdcb93bff789790421f6d2571380a6100218dcfe",
+        "lineStart": 1,
+        "lineEnd": 16,
+        "literal": "{\n  \"head\": \"4c03df51f78337d1a9e17cfaaabbbea112fef0df\",\n  \"tree\": \"27b0211b04921485afae58603811549b7b93cb7d\",\n  \"parent\": \"615eceee9c6250d2f203cb5807d5c75482dbdb5d\",\n  \"sourcePinsAfterSha256\": \"7caefc46699293788561f653951b4a620526883ab21ab9387a58f502e7b2f990\",\n  \"allRecordedAfterPinsMatchGitAndWorktree\": 903,\n  \"changedPaths\": [\n    \"crates/mori/src/commands/inspect.rs\",\n    \"crates/mori/tests/inspect_header_dispatch.rs\"\n  ],\n  \"workingTreeClean\": true,\n  \"selectedGreenTestsPassed\": 3,\n  \"newGreenHeaderPublicCalls\": 3,\n  \"redCapturedHeaderPublicCalls\": 3,\n  \"positiveControls\": \"Existing capabilities test selects validCore1+Core2 publiccheck/inspect; existingCore2Reservecheck+inspectstageplan test\",\n  \"formatQualification\": \"OriginalprivatecandidateRustfmtcheckexit1, rootappliedonlyargumentarrayformatbeforeRED/GREEN; rawexpectationliteralsunchanged, before/aftertestandFORMAT-ONLY-DELTA retained\","
+      }
+    ]
+  },
+  {
+    "id": "positive-result-vs-raw-captures",
+    "fact": "There are6 independently retained negative-header subprocess captures (3RED+3GREEN). The two positive Rust controls have complete Cargo phase streams, but their individual CLI streams are checked in-memory by their helpers and not retained as separate complete stdout receipts. Their passing test receipts establish only the written assertions.",
+    "anchors": []
+  },
+  {
+    "id": "remaining-acceptance-and-identity",
+    "fact": "The14literal source/log quotations match and141mandatorybody coverage declarations match frozen inputs; this does not attest actual provider reading or identity. Source/control observations are ordinary diagnostics only. No native/target/backend/compiler/proof/ledger/fullProgram/financial conformance or148requirements/292scenarios/20families/U0-U7/M1-M17/MC/SP/G/composition/target closure follows. Root owns disposition; original source/result verdicts,findings and dissent remain intact. No new reviewer vote or model/backend attestation is supplied.",
+    "anchors": []
+  }
+]

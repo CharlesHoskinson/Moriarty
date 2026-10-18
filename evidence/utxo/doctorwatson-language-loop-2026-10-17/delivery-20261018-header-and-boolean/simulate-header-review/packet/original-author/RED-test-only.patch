@@ -1,0 +1,218 @@
+--- /dev/null
++++ b/crates/mori/tests/simulate_header_dispatch.rs
+@@ -0,0 +1,215 @@
++//! Normal simulate preserves existing Core header diagnostics before dispatch.
++//! Literal expectations were frozen before execution; source exposure is explicit.
++use serde_json::Value;
++use std::{
++    fs,
++    path::PathBuf,
++    process::{Command, Output},
++    sync::atomic::{AtomicU64, Ordering},
++};
++
++struct HeaderCase {
++    name: &'static str,
++    source: &'static str,
++    expected_error: &'static str,
++    expected_stderr: &'static str,
++}
++
++const CASES: [HeaderCase; 3] = [
++    HeaderCase {
++        name: "unknown",
++        source: r###"language "other";"###,
++        expected_error: r###"{
++  "code": "mori::core::profile",
++  "message": "Expected language \"moriarty/1\" or \"moriarty/2\"; found \"other\".",
++  "offset": 16,
++  "step": null
++}"###,
++        expected_stderr: r###"  × mori::command: mori::core::profile: Expected language "moriarty/1" or
++  │ "moriarty/2"; found "other".
++
++"###,
++    },
++    HeaderCase {
++        name: "missing",
++        source: r###"language ;"###,
++        expected_error: r###"{
++  "code": "mori::core::syntax",
++  "message": "Expected language \"moriarty/1\" or \"moriarty/2\". Expected a quoted string.",
++  "offset": 9,
++  "step": null
++}"###,
++        expected_stderr: r###"  × mori::command: mori::core::syntax: Expected language "moriarty/1" or
++  │ "moriarty/2". Expected a quoted string.
++
++"###,
++    },
++    HeaderCase {
++        name: "commented",
++        source: r###"// café
++language "other";"###,
++        expected_error: r###"{
++  "code": "mori::core::profile",
++  "message": "Expected language \"moriarty/1\" or \"moriarty/2\"; found \"other\".",
++  "offset": 25,
++  "step": null
++}"###,
++        expected_stderr: r###"  × mori::command: mori::core::profile: Expected language "moriarty/1" or
++  │ "moriarty/2"; found "other".
++
++"###,
++    },
++];
++
++const EMPTY_CORE2: &str = r###"language "moriarty/2"; agreement Empty { action run() {} }"###;
++const EMPTY_SCENARIO: &str = r###"{
++  "state": {},
++  "inputs": {},
++  "balances": [],
++  "liabilities": []
++}
++"###;
++const EMPTY_EXECUTION: &str = r###"{
++  "semantics": "moriarty-core/2",
++  "action": "run",
++  "pre": {
++    "state": {},
++    "balances": [],
++    "liabilities": []
++  },
++  "post": {
++    "state": {},
++    "balances": [],
++    "liabilities": []
++  },
++  "steps": [],
++  "effects": []
++}"###;
++
++struct Project {
++    root: PathBuf,
++    temporary: bool,
++}
++
++impl Project {
++    fn new() -> Self {
++        static NEXT: AtomicU64 = AtomicU64::new(0);
++        let (root, temporary) = match std::env::var_os("MORI_SIMULATE_HEADER_OBSERVATIONS") {
++            Some(path) => {
++                let path = PathBuf::from(path);
++                assert!(path.is_absolute(), "use an absolute capture directory");
++                (path, false)
++            }
++            None => (
++                std::env::temp_dir().join(format!(
++                    "mori-simulate-header-{}-{}",
++                    std::process::id(),
++                    NEXT.fetch_add(1, Ordering::Relaxed)
++                )),
++                true,
++            ),
++        };
++        fs::create_dir(&root).expect("use a fresh capture directory");
++        Self { root, temporary }
++    }
++
++    fn run(&self, name: &str, source: &str) -> Output {
++        let dir = self.root.join(name);
++        fs::create_dir(&dir).unwrap();
++        fs::write(dir.join("header.mori"), source).unwrap();
++        fs::write(dir.join("scenario.json"), EMPTY_SCENARIO).unwrap();
++        let args = [
++            "--color",
++            "never",
++            "simulate",
++            "header.mori",
++            "--action",
++            "run",
++            "--scenario",
++            "scenario.json",
++        ];
++        let captured = Command::new(env!("CARGO_BIN_EXE_mori"))
++            .current_dir(&dir)
++            .args(args)
++            .output();
++        if let Err(error) = &captured {
++            fs::write(
++                dir.join("process.json"),
++                serde_json::to_vec_pretty(
++                    &serde_json::json!({"args": args, "launchError": error.to_string()}),
++                )
++                .unwrap(),
++            )
++            .unwrap();
++        }
++        let output = captured.expect("run actual public simulate");
++        // Keep all process bytes/outcomes before any product assertion.
++        fs::write(dir.join("stdout.bin"), &output.stdout).unwrap();
++        fs::write(dir.join("stderr.txt"), &output.stderr).unwrap();
++        fs::write(
++            dir.join("process.json"),
++            serde_json::to_vec_pretty(&serde_json::json!({
++                "executable": env!("CARGO_BIN_EXE_mori"),
++                "args": args, "status": output.status.code(),
++            }))
++            .unwrap(),
++        )
++        .unwrap();
++        output
++    }
++}
++
++impl Drop for Project {
++    fn drop(&mut self) {
++        if self.temporary && !std::thread::panicking() {
++            let _ = fs::remove_dir_all(&self.root);
++        }
++    }
++}
++
++#[test]
++fn normal_simulate_keeps_header_errors_and_empty_core2_control() {
++    let project = Project::new();
++    // Capture all three errors and the valid /2 control even on the RED tree.
++    let captured = CASES
++        .iter()
++        .map(|case| {
++            let error = mori_core::language(case.source)
++                .err()
++                .map(|error| serde_json::to_value(error).unwrap())
++                .unwrap_or(Value::Null);
++            let output = project.run(case.name, case.source);
++            fs::write(
++                project.root.join(case.name).join("producer-error.json"),
++                serde_json::to_vec_pretty(&error).unwrap(),
++            )
++            .unwrap();
++            (case, error, output)
++        })
++        .collect::<Vec<_>>();
++    let empty = project.run("empty-core2", EMPTY_CORE2);
++    for (case, error, output) in captured {
++        let expected: Value = serde_json::from_str(case.expected_error).unwrap();
++        assert_eq!(
++            error, expected,
++            "{}: complete producer Error, including UTF-8 offset",
++            case.name
++        );
++        assert_eq!(output.status.code(), Some(1), "{}", case.name);
++        assert!(output.stdout.is_empty(), "{}", case.name);
++        assert_eq!(
++            output.stderr,
++            case.expected_stderr.as_bytes(),
++            "{}: complete human stream",
++            case.name
++        );
++    }
++    assert_eq!(empty.status.code(), Some(0));
++    assert!(empty.stderr.is_empty());
++    let report: Value = serde_json::from_slice(&empty.stdout).unwrap();
++    assert_eq!(report["status"], "complete");
++    assert_eq!(
++        report["segment"]["execution"],
++        serde_json::from_str::<Value>(EMPTY_EXECUTION).unwrap()
++    );
++}

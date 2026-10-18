@@ -1,0 +1,1887 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moriarty:simulate-header-dispatch:615eceee:whole-review:1",
+  "title": "Complete ordinary normal simulate header source and actual-result review",
+  "description": "A real typed JSON Schema. Approval is optional. Both assessment objects, exact two-path coverage, four actual phases, complete input coverage, read limits, dissent and findings are mandatory. Real quote correctness and substantive completeness require reviewer judgment and root checking; schema validation alone establishes neither.",
+  "type": "object",
+  "properties": {
+    "reviewToken": {
+      "type": "string",
+      "const": "mori-simulate-header-615eceee-2b815998769f0595c99e"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "request_changes",
+        "abstain"
+      ]
+    },
+    "sourceAssessment": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "request_changes",
+            "abstain"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changedPathCoverage": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "const": "crates/mori/src/commands/simulate.rs"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "const": "d1f700c8b31112a682325a32e3336e9c9168a4b7556c9184504012c15037cd08"
+                  },
+                  "completeBodyRead": {
+                    "type": "boolean"
+                  },
+                  "quoteAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "originalLine": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "exactQuote": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "analysis": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "originalLine",
+                        "exactQuote",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha256",
+                  "completeBodyRead",
+                  "quoteAnchors"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "completeBodyRead": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "completeBodyRead"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "quoteAnchors": {
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "const": "crates/mori/tests/simulate_header_dispatch.rs"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "const": "c4016dd44ac2d5422da841ade032fa7528511e2b5d5bf2998161398fe893265d"
+                  },
+                  "completeBodyRead": {
+                    "type": "boolean"
+                  },
+                  "quoteAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "originalLine": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "exactQuote": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "analysis": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "originalLine",
+                        "exactQuote",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha256",
+                  "completeBodyRead",
+                  "quoteAnchors"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "completeBodyRead": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "completeBodyRead"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "quoteAnchors": {
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "path": {
+                    "const": "crates/mori/src/commands/simulate.rs"
+                  }
+                },
+                "required": [
+                  "path"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "path": {
+                    "const": "crates/mori/tests/simulate_header_dispatch.rs"
+                  }
+                },
+                "required": [
+                  "path"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ]
+        }
+      },
+      "required": [
+        "verdict",
+        "reason",
+        "changedPathCoverage"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "changedPathCoverage": {
+                "contains": {
+                  "properties": {
+                    "completeBodyRead": {
+                      "const": false
+                    }
+                  },
+                  "required": [
+                    "completeBodyRead"
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "const": "abstain"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "actualResultAssessment": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "request_changes",
+            "abstain"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phaseCoverage": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "red"
+                  },
+                  "sourceAndAssertionsRead": {
+                    "type": "boolean"
+                  },
+                  "completeStdoutAndStderrRead": {
+                    "type": "boolean"
+                  },
+                  "quoteAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "packetPath": {
+                          "type": "string",
+                          "enum": [
+                            "actual/red/STDOUT.log",
+                            "actual/red/STDERR.log"
+                          ]
+                        },
+                        "exactQuote": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "analysis": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "packetPath",
+                        "exactQuote",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "phase",
+                  "sourceAndAssertionsRead",
+                  "completeStdoutAndStderrRead",
+                  "quoteAnchors"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "completeStdoutAndStderrRead": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "completeStdoutAndStderrRead"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "quoteAnchors": {
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "green"
+                  },
+                  "sourceAndAssertionsRead": {
+                    "type": "boolean"
+                  },
+                  "completeStdoutAndStderrRead": {
+                    "type": "boolean"
+                  },
+                  "quoteAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "packetPath": {
+                          "type": "string",
+                          "enum": [
+                            "actual/green/STDOUT.log",
+                            "actual/green/STDERR.log"
+                          ]
+                        },
+                        "exactQuote": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "analysis": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "packetPath",
+                        "exactQuote",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "phase",
+                  "sourceAndAssertionsRead",
+                  "completeStdoutAndStderrRead",
+                  "quoteAnchors"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "completeStdoutAndStderrRead": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "completeStdoutAndStderrRead"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "quoteAnchors": {
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "core1-positive"
+                  },
+                  "sourceAndAssertionsRead": {
+                    "type": "boolean"
+                  },
+                  "completeStdoutAndStderrRead": {
+                    "type": "boolean"
+                  },
+                  "quoteAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "packetPath": {
+                          "type": "string",
+                          "enum": [
+                            "actual/core1-positive/STDOUT.log",
+                            "actual/core1-positive/STDERR.log"
+                          ]
+                        },
+                        "exactQuote": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "analysis": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "packetPath",
+                        "exactQuote",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "phase",
+                  "sourceAndAssertionsRead",
+                  "completeStdoutAndStderrRead",
+                  "quoteAnchors"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "completeStdoutAndStderrRead": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "completeStdoutAndStderrRead"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "quoteAnchors": {
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "core2-positive"
+                  },
+                  "sourceAndAssertionsRead": {
+                    "type": "boolean"
+                  },
+                  "completeStdoutAndStderrRead": {
+                    "type": "boolean"
+                  },
+                  "quoteAnchors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "packetPath": {
+                          "type": "string",
+                          "enum": [
+                            "actual/core2-positive/STDOUT.log",
+                            "actual/core2-positive/STDERR.log"
+                          ]
+                        },
+                        "exactQuote": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "analysis": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "packetPath",
+                        "exactQuote",
+                        "analysis"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "phase",
+                  "sourceAndAssertionsRead",
+                  "completeStdoutAndStderrRead",
+                  "quoteAnchors"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "completeStdoutAndStderrRead": {
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "completeStdoutAndStderrRead"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "quoteAnchors": {
+                          "minItems": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "minItems": 4,
+          "maxItems": 4,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "red"
+                  }
+                },
+                "required": [
+                  "phase"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "green"
+                  }
+                },
+                "required": [
+                  "phase"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "core1-positive"
+                  }
+                },
+                "required": [
+                  "phase"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "core2-positive"
+                  }
+                },
+                "required": [
+                  "phase"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ]
+        },
+        "observationComparisonDisposition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capturedProcessCoverage": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "red"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "unknown"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": "boolean"
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "red"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "missing"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": "boolean"
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "red"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "commented"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": "boolean"
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "red"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "empty-core2"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ],
+                    "const": null
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "green"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "unknown"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": "boolean"
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "green"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "missing"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": "boolean"
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "green"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "commented"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": "boolean"
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "phase": {
+                    "type": "string",
+                    "const": "green"
+                  },
+                  "case": {
+                    "type": "string",
+                    "const": "empty-core2"
+                  },
+                  "completeInputsProcessAndRawStreamsRead": {
+                    "type": "boolean"
+                  },
+                  "producerErrorDtoRead": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ],
+                    "const": null
+                  },
+                  "scopeAssessment": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case",
+                  "completeInputsProcessAndRawStreamsRead",
+                  "producerErrorDtoRead",
+                  "scopeAssessment"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "minItems": 8,
+          "maxItems": 8,
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "red"
+                  },
+                  "case": {
+                    "const": "unknown"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "red"
+                  },
+                  "case": {
+                    "const": "missing"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "red"
+                  },
+                  "case": {
+                    "const": "commented"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "red"
+                  },
+                  "case": {
+                    "const": "empty-core2"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "green"
+                  },
+                  "case": {
+                    "const": "unknown"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "green"
+                  },
+                  "case": {
+                    "const": "missing"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "green"
+                  },
+                  "case": {
+                    "const": "commented"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "properties": {
+                  "phase": {
+                    "const": "green"
+                  },
+                  "case": {
+                    "const": "empty-core2"
+                  }
+                },
+                "required": [
+                  "phase",
+                  "case"
+                ]
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ]
+        },
+        "redAssertionReachabilityDisposition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unassertedEmptyReportFieldsDisposition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "positiveOracleIndependenceDisposition": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "verdict",
+        "reason",
+        "phaseCoverage",
+        "observationComparisonDisposition",
+        "capturedProcessCoverage",
+        "redAssertionReachabilityDisposition",
+        "unassertedEmptyReportFieldsDisposition",
+        "positiveOracleIndependenceDisposition"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "phaseCoverage": {
+                "contains": {
+                  "anyOf": [
+                    {
+                      "properties": {
+                        "sourceAndAssertionsRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "sourceAndAssertionsRead"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "completeStdoutAndStderrRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "completeStdoutAndStderrRead"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "const": "abstain"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capturedProcessCoverage": {
+                "contains": {
+                  "properties": {
+                    "completeInputsProcessAndRawStreamsRead": {
+                      "const": false
+                    }
+                  },
+                  "required": [
+                    "completeInputsProcessAndRawStreamsRead"
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "const": "abstain"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capturedProcessCoverage": {
+                "contains": {
+                  "anyOf": [
+                    {
+                      "properties": {
+                        "completeInputsProcessAndRawStreamsRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "completeInputsProcessAndRawStreamsRead"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "producerErrorDtoRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "producerErrorDtoRead"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "const": "abstain"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "mandatoryInputCoverage": {
+      "type": "object",
+      "properties": {
+        "entireInlineInputRead": {
+          "type": "boolean"
+        },
+        "filesReadCompletely": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "source/crates/mori/src/commands/simulate.rs",
+              "source/crates/mori/tests/simulate_header_dispatch.rs",
+              "actual/CHECK-PLAN.json",
+              "actual/COMPLETE-ROOT-DRIVER.py",
+              "actual/EXPECTED-CASE-SPEC.json",
+              "actual/EXPECTED-FREEZE.sha256",
+              "actual/FINAL-RESULT.json",
+              "actual/FROZEN-OBSERVATION-COMPARISON.json",
+              "actual/POST-COMMIT-BINDING.json",
+              "actual/SIMULATE-BEFORE.rs",
+              "actual/SOURCE-MUTATION.json",
+              "actual/core1-positive/CHILD.json",
+              "actual/core1-positive/RESULT.json",
+              "actual/core1-positive/START.json",
+              "actual/core1-positive/STDERR.log",
+              "actual/core1-positive/STDOUT.log",
+              "actual/core2-positive/CHILD.json",
+              "actual/core2-positive/RESULT.json",
+              "actual/core2-positive/START.json",
+              "actual/core2-positive/STDERR.log",
+              "actual/core2-positive/STDOUT.log",
+              "actual/green/CHILD.json",
+              "actual/green/RESULT.json",
+              "actual/green/START.json",
+              "actual/green/STDERR.log",
+              "actual/green/STDOUT.log",
+              "actual/green/public-cli/commented/header.mori",
+              "actual/green/public-cli/commented/process.json",
+              "actual/green/public-cli/commented/producer-error.json",
+              "actual/green/public-cli/commented/scenario.json",
+              "actual/green/public-cli/commented/stderr.txt",
+              "actual/green/public-cli/commented/stdout.bin",
+              "actual/green/public-cli/empty-core2/header.mori",
+              "actual/green/public-cli/empty-core2/process.json",
+              "actual/green/public-cli/empty-core2/scenario.json",
+              "actual/green/public-cli/empty-core2/stderr.txt",
+              "actual/green/public-cli/empty-core2/stdout.bin",
+              "actual/green/public-cli/missing/header.mori",
+              "actual/green/public-cli/missing/process.json",
+              "actual/green/public-cli/missing/producer-error.json",
+              "actual/green/public-cli/missing/scenario.json",
+              "actual/green/public-cli/missing/stderr.txt",
+              "actual/green/public-cli/missing/stdout.bin",
+              "actual/green/public-cli/unknown/header.mori",
+              "actual/green/public-cli/unknown/process.json",
+              "actual/green/public-cli/unknown/producer-error.json",
+              "actual/green/public-cli/unknown/scenario.json",
+              "actual/green/public-cli/unknown/stderr.txt",
+              "actual/green/public-cli/unknown/stdout.bin",
+              "actual/red/CHILD.json",
+              "actual/red/RESULT.json",
+              "actual/red/START.json",
+              "actual/red/STDERR.log",
+              "actual/red/STDOUT.log",
+              "actual/red/public-cli/commented/header.mori",
+              "actual/red/public-cli/commented/process.json",
+              "actual/red/public-cli/commented/producer-error.json",
+              "actual/red/public-cli/commented/scenario.json",
+              "actual/red/public-cli/commented/stderr.txt",
+              "actual/red/public-cli/commented/stdout.bin",
+              "actual/red/public-cli/empty-core2/header.mori",
+              "actual/red/public-cli/empty-core2/process.json",
+              "actual/red/public-cli/empty-core2/scenario.json",
+              "actual/red/public-cli/empty-core2/stderr.txt",
+              "actual/red/public-cli/empty-core2/stdout.bin",
+              "actual/red/public-cli/missing/header.mori",
+              "actual/red/public-cli/missing/process.json",
+              "actual/red/public-cli/missing/producer-error.json",
+              "actual/red/public-cli/missing/scenario.json",
+              "actual/red/public-cli/missing/stderr.txt",
+              "actual/red/public-cli/missing/stdout.bin",
+              "actual/red/public-cli/unknown/header.mori",
+              "actual/red/public-cli/unknown/process.json",
+              "actual/red/public-cli/unknown/producer-error.json",
+              "actual/red/public-cli/unknown/scenario.json",
+              "actual/red/public-cli/unknown/stderr.txt",
+              "actual/red/public-cli/unknown/stdout.bin",
+              "original-author/README.md",
+              "original-author/SOURCE-TRACE.md",
+              "original-author/PRESERVED-27-CONSTRUCTOR-SCOPE.json",
+              "original-author/PRIOR-APPLICABILITY-DIAGNOSIS.json",
+              "original-author/RENDERER-SOURCE-PINS.json",
+              "original-author/FORMAT.json",
+              "original-author/OFFLINE-VALIDATION.json",
+              "original-author/preexecution-fixtures/commented.error.expected.json",
+              "original-author/preexecution-fixtures/commented.mori",
+              "original-author/preexecution-fixtures/commented.stderr.expected.txt",
+              "original-author/preexecution-fixtures/commented.stdout.expected.bin",
+              "original-author/preexecution-fixtures/empty-core2.execution.expected.json",
+              "original-author/preexecution-fixtures/empty-core2.mori",
+              "original-author/preexecution-fixtures/empty.scenario.json",
+              "original-author/preexecution-fixtures/missing.error.expected.json",
+              "original-author/preexecution-fixtures/missing.mori",
+              "original-author/preexecution-fixtures/missing.stderr.expected.txt",
+              "original-author/preexecution-fixtures/missing.stdout.expected.bin",
+              "original-author/preexecution-fixtures/unknown.error.expected.json",
+              "original-author/preexecution-fixtures/unknown.mori",
+              "original-author/preexecution-fixtures/unknown.stderr.expected.txt",
+              "original-author/preexecution-fixtures/unknown.stdout.expected.bin",
+              "source/crates/mori/src/main.rs",
+              "source/crates/mori/src/commands/mod.rs",
+              "source/crates/mori/src/shell.rs",
+              "source/crates/mori/src/error.rs",
+              "source/crates/mori/src/display.rs",
+              "source/crates/mori-core/src/parser.rs",
+              "source/crates/mori-core/src/json.rs",
+              "source/crates/mori-lexer/src/lib.rs",
+              "source/crates/mori-lexer/src/token.rs",
+              "source/crates/mori-lexer/src/string.rs",
+              "source/crates/mori-lexer/src/scan.rs",
+              "source/crates/mori/Cargo.toml",
+              "source/crates/mori-core/Cargo.toml",
+              "source/crates/mori-core/src/stage/report.rs",
+              "source/rust-toolchain.toml",
+              "units/core_io-read_source.rs",
+              "units/core_io-operation.rs",
+              "units/core_io-print.rs",
+              "units/core_io-read_json.rs",
+              "units/core-profile-constants.rs",
+              "units/core-Error-dto.rs",
+              "units/existing-library-header-test.rs",
+              "units/stage-labels-and-profiles.rs",
+              "units/staged-program-accessors.rs",
+              "units/stage-load.rs",
+              "units/cli-global-options.rs",
+              "units/cli-color-conversion.rs",
+              "units/mori-diagnostics-render-production.rs",
+              "units/positive-core1-complete-helpers-and-test.rs",
+              "units/positive-core2-complete-helpers-and-test.rs",
+              "source/examples/core/continuations/delivery.mori",
+              "positive-oracle-used-fields.json",
+              "POSITIVE-ORACLE-SCOPE.json",
+              "units/miette-graphical-handler-types.rs",
+              "units/miette-new-themed.rs",
+              "units/miette-with-links.rs",
+              "units/miette-with-width.rs",
+              "units/miette-render-report.rs",
+              "units/miette-render-report-inner.rs",
+              "units/miette-render-header.rs",
+              "units/miette-render-causes.rs",
+              "units/miette-render-footer.rs",
+              "units/miette-render-related.rs",
+              "units/miette-render-snippets.rs",
+              "units/miette-wrap.rs",
+              "renderer/miette-7.6.0/src/handlers/theme.rs",
+              "renderer/textwrap-0.16.4/src/options.rs",
+              "renderer/textwrap-0.16.4/src/word_separators.rs",
+              "renderer/textwrap-0.16.4/src/wrap_algorithms.rs",
+              "units/UNI-018.md",
+              "units/RUST-diagnostics-testing-cli.md",
+              "units/permissionless-product-boundary.md",
+              "units/empty-core2-contract.md",
+              "SOURCE-RESULT-CUSTODY.json",
+              "SOURCE-UNIT-MAP.json",
+              "CANDIDATE.json",
+              "REVIEW-REQUEST.md"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 156
+        },
+        "unreadMandatoryFiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "source/crates/mori/src/commands/simulate.rs",
+              "source/crates/mori/tests/simulate_header_dispatch.rs",
+              "actual/CHECK-PLAN.json",
+              "actual/COMPLETE-ROOT-DRIVER.py",
+              "actual/EXPECTED-CASE-SPEC.json",
+              "actual/EXPECTED-FREEZE.sha256",
+              "actual/FINAL-RESULT.json",
+              "actual/FROZEN-OBSERVATION-COMPARISON.json",
+              "actual/POST-COMMIT-BINDING.json",
+              "actual/SIMULATE-BEFORE.rs",
+              "actual/SOURCE-MUTATION.json",
+              "actual/core1-positive/CHILD.json",
+              "actual/core1-positive/RESULT.json",
+              "actual/core1-positive/START.json",
+              "actual/core1-positive/STDERR.log",
+              "actual/core1-positive/STDOUT.log",
+              "actual/core2-positive/CHILD.json",
+              "actual/core2-positive/RESULT.json",
+              "actual/core2-positive/START.json",
+              "actual/core2-positive/STDERR.log",
+              "actual/core2-positive/STDOUT.log",
+              "actual/green/CHILD.json",
+              "actual/green/RESULT.json",
+              "actual/green/START.json",
+              "actual/green/STDERR.log",
+              "actual/green/STDOUT.log",
+              "actual/green/public-cli/commented/header.mori",
+              "actual/green/public-cli/commented/process.json",
+              "actual/green/public-cli/commented/producer-error.json",
+              "actual/green/public-cli/commented/scenario.json",
+              "actual/green/public-cli/commented/stderr.txt",
+              "actual/green/public-cli/commented/stdout.bin",
+              "actual/green/public-cli/empty-core2/header.mori",
+              "actual/green/public-cli/empty-core2/process.json",
+              "actual/green/public-cli/empty-core2/scenario.json",
+              "actual/green/public-cli/empty-core2/stderr.txt",
+              "actual/green/public-cli/empty-core2/stdout.bin",
+              "actual/green/public-cli/missing/header.mori",
+              "actual/green/public-cli/missing/process.json",
+              "actual/green/public-cli/missing/producer-error.json",
+              "actual/green/public-cli/missing/scenario.json",
+              "actual/green/public-cli/missing/stderr.txt",
+              "actual/green/public-cli/missing/stdout.bin",
+              "actual/green/public-cli/unknown/header.mori",
+              "actual/green/public-cli/unknown/process.json",
+              "actual/green/public-cli/unknown/producer-error.json",
+              "actual/green/public-cli/unknown/scenario.json",
+              "actual/green/public-cli/unknown/stderr.txt",
+              "actual/green/public-cli/unknown/stdout.bin",
+              "actual/red/CHILD.json",
+              "actual/red/RESULT.json",
+              "actual/red/START.json",
+              "actual/red/STDERR.log",
+              "actual/red/STDOUT.log",
+              "actual/red/public-cli/commented/header.mori",
+              "actual/red/public-cli/commented/process.json",
+              "actual/red/public-cli/commented/producer-error.json",
+              "actual/red/public-cli/commented/scenario.json",
+              "actual/red/public-cli/commented/stderr.txt",
+              "actual/red/public-cli/commented/stdout.bin",
+              "actual/red/public-cli/empty-core2/header.mori",
+              "actual/red/public-cli/empty-core2/process.json",
+              "actual/red/public-cli/empty-core2/scenario.json",
+              "actual/red/public-cli/empty-core2/stderr.txt",
+              "actual/red/public-cli/empty-core2/stdout.bin",
+              "actual/red/public-cli/missing/header.mori",
+              "actual/red/public-cli/missing/process.json",
+              "actual/red/public-cli/missing/producer-error.json",
+              "actual/red/public-cli/missing/scenario.json",
+              "actual/red/public-cli/missing/stderr.txt",
+              "actual/red/public-cli/missing/stdout.bin",
+              "actual/red/public-cli/unknown/header.mori",
+              "actual/red/public-cli/unknown/process.json",
+              "actual/red/public-cli/unknown/producer-error.json",
+              "actual/red/public-cli/unknown/scenario.json",
+              "actual/red/public-cli/unknown/stderr.txt",
+              "actual/red/public-cli/unknown/stdout.bin",
+              "original-author/README.md",
+              "original-author/SOURCE-TRACE.md",
+              "original-author/PRESERVED-27-CONSTRUCTOR-SCOPE.json",
+              "original-author/PRIOR-APPLICABILITY-DIAGNOSIS.json",
+              "original-author/RENDERER-SOURCE-PINS.json",
+              "original-author/FORMAT.json",
+              "original-author/OFFLINE-VALIDATION.json",
+              "original-author/preexecution-fixtures/commented.error.expected.json",
+              "original-author/preexecution-fixtures/commented.mori",
+              "original-author/preexecution-fixtures/commented.stderr.expected.txt",
+              "original-author/preexecution-fixtures/commented.stdout.expected.bin",
+              "original-author/preexecution-fixtures/empty-core2.execution.expected.json",
+              "original-author/preexecution-fixtures/empty-core2.mori",
+              "original-author/preexecution-fixtures/empty.scenario.json",
+              "original-author/preexecution-fixtures/missing.error.expected.json",
+              "original-author/preexecution-fixtures/missing.mori",
+              "original-author/preexecution-fixtures/missing.stderr.expected.txt",
+              "original-author/preexecution-fixtures/missing.stdout.expected.bin",
+              "original-author/preexecution-fixtures/unknown.error.expected.json",
+              "original-author/preexecution-fixtures/unknown.mori",
+              "original-author/preexecution-fixtures/unknown.stderr.expected.txt",
+              "original-author/preexecution-fixtures/unknown.stdout.expected.bin",
+              "source/crates/mori/src/main.rs",
+              "source/crates/mori/src/commands/mod.rs",
+              "source/crates/mori/src/shell.rs",
+              "source/crates/mori/src/error.rs",
+              "source/crates/mori/src/display.rs",
+              "source/crates/mori-core/src/parser.rs",
+              "source/crates/mori-core/src/json.rs",
+              "source/crates/mori-lexer/src/lib.rs",
+              "source/crates/mori-lexer/src/token.rs",
+              "source/crates/mori-lexer/src/string.rs",
+              "source/crates/mori-lexer/src/scan.rs",
+              "source/crates/mori/Cargo.toml",
+              "source/crates/mori-core/Cargo.toml",
+              "source/crates/mori-core/src/stage/report.rs",
+              "source/rust-toolchain.toml",
+              "units/core_io-read_source.rs",
+              "units/core_io-operation.rs",
+              "units/core_io-print.rs",
+              "units/core_io-read_json.rs",
+              "units/core-profile-constants.rs",
+              "units/core-Error-dto.rs",
+              "units/existing-library-header-test.rs",
+              "units/stage-labels-and-profiles.rs",
+              "units/staged-program-accessors.rs",
+              "units/stage-load.rs",
+              "units/cli-global-options.rs",
+              "units/cli-color-conversion.rs",
+              "units/mori-diagnostics-render-production.rs",
+              "units/positive-core1-complete-helpers-and-test.rs",
+              "units/positive-core2-complete-helpers-and-test.rs",
+              "source/examples/core/continuations/delivery.mori",
+              "positive-oracle-used-fields.json",
+              "POSITIVE-ORACLE-SCOPE.json",
+              "units/miette-graphical-handler-types.rs",
+              "units/miette-new-themed.rs",
+              "units/miette-with-links.rs",
+              "units/miette-with-width.rs",
+              "units/miette-render-report.rs",
+              "units/miette-render-report-inner.rs",
+              "units/miette-render-header.rs",
+              "units/miette-render-causes.rs",
+              "units/miette-render-footer.rs",
+              "units/miette-render-related.rs",
+              "units/miette-render-snippets.rs",
+              "units/miette-wrap.rs",
+              "renderer/miette-7.6.0/src/handlers/theme.rs",
+              "renderer/textwrap-0.16.4/src/options.rs",
+              "renderer/textwrap-0.16.4/src/word_separators.rs",
+              "renderer/textwrap-0.16.4/src/wrap_algorithms.rs",
+              "units/UNI-018.md",
+              "units/RUST-diagnostics-testing-cli.md",
+              "units/permissionless-product-boundary.md",
+              "units/empty-core2-contract.md",
+              "SOURCE-RESULT-CUSTODY.json",
+              "SOURCE-UNIT-MAP.json",
+              "CANDIDATE.json",
+              "REVIEW-REQUEST.md"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 156
+        },
+        "coverageSummary": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "entireInlineInputRead",
+        "filesReadCompletely",
+        "unreadMandatoryFiles",
+        "coverageSummary"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "entireInlineInputRead": {
+                "const": true
+              }
+            },
+            "required": [
+              "entireInlineInputRead"
+            ]
+          },
+          "then": {
+            "properties": {
+              "filesReadCompletely": {
+                "minItems": 156
+              },
+              "unreadMandatoryFiles": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "unreadMandatoryFiles": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "actualReadLimits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unreadInputPaths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "affectedAssessments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "sourceAssessment",
+                "actualResultAssessment"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "scope",
+          "unreadInputPaths",
+          "reason",
+          "affectedAssessments"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "dissent": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "position": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "consequence": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "scope",
+          "position",
+          "evidence",
+          "consequence"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "blocking",
+              "nonblocking",
+              "informational"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "issue": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requestedChange": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "path",
+          "line",
+          "issue",
+          "evidence",
+          "requestedChange"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "reviewToken",
+    "verdict",
+    "sourceAssessment",
+    "actualResultAssessment",
+    "mandatoryInputCoverage",
+    "actualReadLimits",
+    "dissent",
+    "findings",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "approve"
+          }
+        },
+        "required": [
+          "verdict"
+        ]
+      },
+      "then": {
+        "properties": {
+          "sourceAssessment": {
+            "properties": {
+              "verdict": {
+                "const": "approve"
+              }
+            }
+          },
+          "actualResultAssessment": {
+            "properties": {
+              "verdict": {
+                "const": "approve"
+              }
+            }
+          },
+          "mandatoryInputCoverage": {
+            "properties": {
+              "entireInlineInputRead": {
+                "const": true
+              }
+            }
+          },
+          "actualReadLimits": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mandatoryInputCoverage": {
+            "properties": {
+              "entireInlineInputRead": {
+                "const": false
+              }
+            },
+            "required": [
+              "entireInlineInputRead"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "verdict": {
+            "const": "abstain"
+          },
+          "actualReadLimits": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "sourceAssessment": {
+                "properties": {
+                  "changedPathCoverage": {
+                    "contains": {
+                      "properties": {
+                        "completeBodyRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "completeBodyRead"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "actualResultAssessment": {
+                "properties": {
+                  "phaseCoverage": {
+                    "contains": {
+                      "anyOf": [
+                        {
+                          "properties": {
+                            "sourceAndAssertionsRead": {
+                              "const": false
+                            }
+                          },
+                          "required": [
+                            "sourceAndAssertionsRead"
+                          ]
+                        },
+                        {
+                          "properties": {
+                            "completeStdoutAndStderrRead": {
+                              "const": false
+                            }
+                          },
+                          "required": [
+                            "completeStdoutAndStderrRead"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "verdict": {
+            "const": "abstain"
+          },
+          "mandatoryInputCoverage": {
+            "properties": {
+              "entireInlineInputRead": {
+                "const": false
+              }
+            }
+          },
+          "actualReadLimits": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "actualResultAssessment": {
+            "properties": {
+              "capturedProcessCoverage": {
+                "contains": {
+                  "anyOf": [
+                    {
+                      "properties": {
+                        "completeInputsProcessAndRawStreamsRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "completeInputsProcessAndRawStreamsRead"
+                      ]
+                    },
+                    {
+                      "properties": {
+                        "producerErrorDtoRead": {
+                          "const": false
+                        }
+                      },
+                      "required": [
+                        "producerErrorDtoRead"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "verdict": {
+            "const": "abstain"
+          },
+          "mandatoryInputCoverage": {
+            "properties": {
+              "entireInlineInputRead": {
+                "const": false
+              }
+            }
+          },
+          "actualReadLimits": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

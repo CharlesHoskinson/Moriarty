@@ -1,0 +1,74 @@
+{
+  "wholeOpinionSha256": "3f2a0ef0cfd08640081c8ddd5983e9e165fa887457d90fafd733d1b5b2ef4fdf",
+  "newTaskOnly": true,
+  "priorReviewFindingsReused": false,
+  "noMaterialSourceOrResultContradictionFound": true,
+  "claims": [
+    {
+      "claim": "production repair and native preservation",
+      "status": "corroborated mechanically",
+      "evidence": "Sole first is_ok_and probe replacement; full source old.replace(firstProbe,newProbe)==candidate; complete source suffix from47 identical. Short-circuit args.target.is_none remains. No native or target execution inferred."
+    },
+    {
+      "claim": "complete new test and formatting history",
+      "status": "corroborated with recorded-history qualifier",
+      "evidence": "5351byte formatted test hash equals candidate and both phase test pins.5410byte author test exact one-array delta retained. Original formatting exit1/root exit0 are recorded metadata."
+    },
+    {
+      "claim": "RED reachability and6raw captures",
+      "status": "corroborated",
+      "evidence": "One aggregate RED exit101at159 unknownstderr after captureVec completes all3. All6raw source/process/producer/stdout/stderr artifacts match claimed digests and values; producer offsets16/9/25. RED stderr95/67/95 differs;GREEN111/121/111matches."
+    },
+    {
+      "claim": "four phase results and cleanup",
+      "status": "corroborated recorded result",
+      "evidence": "RED101,GREEN0,core1-positive0,core2-positive0;fullstdout/stderr hashes matchRESULT/FINAL;owned sessions empty and owned root deletion recorded. Config/limits/phase identity bound by full driver. No independent host/live process or peak resource claim."
+    },
+    {
+      "claim": "capability and Reserve controls",
+      "status": "corroborated within written assertions",
+      "evidence": "Selected existing tests and complete used source/helpers/oracle values supplied; actual assertions enumerated separately. SourceHeader indirectly used, outputProfile key presence unasserted; Reserve accepted helper asserts labels rather thanstatus. No full byte/Program/evaluator/native comparison."
+    },
+    {
+      "claim": "whole source/log quotes and mandatory input declarations",
+      "status": "corroborated metadata; reading not attested",
+      "evidence": "All14structuredquotes literal;all6source coordinates exact;141mandatory files physicallyhashmatchandinlinecomplete. Declared mandatory set exactlymatches. EOF linecounts counttrailingemptyline; substantivecoordinatesagree."
+    },
+    {
+      "claim": "source/Git pin custody",
+      "status": "corroborated by read-only exact object inspection",
+      "evidence": "Candidate4c03tree27b0parent615e;exact2changedpaths.903after hashesmatchcandidateGit objects;902parent before hashesmatchbase plusnewformattedtesthash. No shared source/Git mutation."
+    },
+    {
+      "claim": "source-exposed oracles and parent limits",
+      "status": "explicitly qualified and retained",
+      "evidence": "Original provenance/open requirements match supplied records. CompleteproducerDTOobjectequalityseparatefromhumanbytes;status/key/fullProgramunassertedfieldsnotpromotedtoresults. No newparentclosure/security/backendattestation."
+    }
+  ],
+  "sourceFindingsPreserved": [
+    {
+      "evidence": "In `source/crates/mori/tests/inspect_header_dispatch.rs` lines 135-166 (`FULL-INPUT.md` lines 585-616), all three cases (`unknown`, `missing`, `commented`) are asserted in one `for (case, error, output) in captured` loop inside `fn source_only_inspect_keeps_complete_header_errors()`, causing `actual/red/STDOUT.log` to panic at `inspect_header_dispatch.rs:159:9` on `unknown: complete human stream` before executing the Rust assertions for `missing` and `commented` during `red`.",
+      "issue": "Because `source_only_inspect_keeps_complete_header_errors` aggregates all three header cases into a single `#[test]` function, a failure on the first case (`unknown`) prevents the Rust assertion loop from reaching the `missing` and `commented` assertions during the RED phase, relying on pre-assertion disk capture (`MORI_INSPECT_HEADER_OBSERVATIONS`) and external comparison (`FROZEN-OBSERVATION-COMPARISON.json`) to observe the RED stderr mismatch for `missing` and `commented`.",
+      "line": 154,
+      "path": "crates/mori/tests/inspect_header_dispatch.rs",
+      "requestedChange": "No blocking change required for this candidate since `captured` collects and writes all three cases to disk before the assertion loop and GREEN runs all assertions across all three cases; future multi-case CLI regressions may optionally use separate `#[test]` functions per case if independent Rust test-runner reachability on failure is desired.",
+      "severity": "informational"
+    },
+    {
+      "evidence": "In `source/crates/mori/src/commands/inspect.rs` lines 47-58 (`FULL-INPUT.md` lines 84-95), `#[cfg(feature = \"native\")] if mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\")` remains unchanged when `args.target.is_some()`, falling through to `mori_core::parse(&source)` at line 59 when `language(&source)` returns `Err`.",
+      "issue": "The `#[cfg(feature = \"native\")]` `--target` branch at `inspect.rs:48` still uses `mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\")`, which is intentionally untouched by this source-only (`args.target.is_none()`) repair and unexercised by `--no-default-features` test runs.",
+      "line": 48,
+      "path": "crates/mori/src/commands/inspect.rs",
+      "requestedChange": "None in this candidate; preserve the strict source-only boundary and leave any `--target` / `native` header dispatch behavior to a separate native-scoped change if desired.",
+      "severity": "informational"
+    }
+  ],
+  "dissentPreserved": [
+    {
+      "consequence": "Does not block approval of the candidate source change or actual RED/GREEN/positive-control evidence, but bounds what the review certifies: GREEN is recorded as 1 passing Rust test function covering 3 header cases (with RED leaving `missing` and `commented` loop assertions unreached in Rust after capturing their processes), and the diagnostic expectations are certified as ordinary source-exposed regression checks rather than an independent oracle.",
+      "evidence": "`crates/mori/tests/inspect_header_dispatch.rs` lines 135-166 define a single `#[test] fn source_only_inspect_keeps_complete_header_errors()` iterating over `CASES: [HeaderCase; 3]`, which panics at line 159 on `unknown` during `red` (`actual/red/STDOUT.log` line 2246 of `FULL-INPUT.md`); `actual/EXPECTATIONS.json` line 1075 explicitly records that the expected values were inspected from `parser::language` and existing `simulate_header_dispatch` literals prior to execution.",
+      "position": "Concur with approving both `sourceAssessment` and `actualResultAssessment`, while dissenting from any characterization of the new test as three independent Rust `#[test]` cases in RED or of the frozen expectations as an independent non-source-exposed oracle.",
+      "scope": "Aggregate single-test structure in `inspect_header_dispatch.rs` and source-exposed diagnostic expectation provenance"
+    }
+  ]
+}
