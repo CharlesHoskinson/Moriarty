@@ -1419,3 +1419,206 @@ fn chain_instruction_stream_roundtrips_pinned_sdk_json_load_in_every_branch() {
         assert_sdk_json_roundtrip(&chain.instructions);
     }
 }
+
+// ---- Sub (BinaryOp::Sub) 5-stage chain: test-only adapters ----
+type SubChainHelper = super::b_scalar_subtraction::BScalarArithmeticRegister;
+type SubChainCounters = super::b_scalar_subtraction_completion::BScalarSubCompletionCounters;
+
+impl EnvBuilder {
+    fn bind_sub_publish_state(&self, prefix: &str, st: &ConcreteAdminState) -> BSubPublishState {
+        let outcome = BOutcomeLanes {
+            tag: self.bind(&format!("{prefix}.out.tag"), st.outcome_tag),
+            halted_value: BValueRef { space: self.bind(&format!("{prefix}.out.hv.sp"), st.halted_space), index: self.bind(&format!("{prefix}.out.hv.ix"), st.halted_index) },
+            rejected_code: self.bind(&format!("{prefix}.out.rej"), st.rejected_code),
+            exhausted_reason: self.bind(&format!("{prefix}.out.exh"), st.exhausted_reason),
+        };
+        let control = BControlRow {
+            tag: self.bind(&format!("{prefix}.ctrl.tag"), st.ctrl_tag),
+            return_value: BValueRef { space: self.bind(&format!("{prefix}.ctrl.rv.sp"), st.ctrl_rv_space), index: self.bind(&format!("{prefix}.ctrl.rv.ix"), st.ctrl_rv_index) },
+            prim_outcome_tag: self.bind(&format!("{prefix}.ctrl.pot"), st.ctrl_pot),
+            prim_value: BValueRef { space: self.bind(&format!("{prefix}.ctrl.pv.sp"), st.ctrl_pv_space), index: self.bind(&format!("{prefix}.ctrl.pv.ix"), st.ctrl_pv_index) },
+            prim_error_code: self.bind(&format!("{prefix}.ctrl.pec"), st.ctrl_pec),
+            error_code: self.bind(&format!("{prefix}.ctrl.ec"), st.ctrl_ec),
+            rest: vec![self.bind(&format!("{prefix}.ctrl.rest.0"), 0)],
+        };
+        let h_rest = super::b_scalar_subtraction::BScalarHelperRestLanes {
+            origin_reference_cursor: self.bind(&format!("{prefix}.h.rest.0"), st.helper.origin_ref_cursor),
+            parent_resume_present: self.bind(&format!("{prefix}.h.rest.1"), 0),
+            parent_resume_value: self.bind(&format!("{prefix}.h.rest.2"), 0),
+            expected_present: self.bind(&format!("{prefix}.h.rest.3"), 0),
+            expected_value: self.bind(&format!("{prefix}.h.rest.4"), 0),
+        };
+        let helper = SubChainHelper {
+            present: self.bind(&format!("{prefix}.h.pres"), st.helper.present),
+            kind: self.bind(&format!("{prefix}.h.kind"), st.helper.kind),
+            site: self.bind(&format!("{prefix}.h.site"), st.helper.site),
+            mode: self.bind(&format!("{prefix}.h.mode"), st.helper.mode),
+            phase: self.bind(&format!("{prefix}.h.phase"), st.helper.phase),
+            operand_a: super::b_scalar_subtraction::BValueRef { space: self.bind(&format!("{prefix}.h.oa.sp"), st.helper.op_a_space), index: self.bind(&format!("{prefix}.h.oa.ix"), st.helper.op_a_index) },
+            operand_b: super::b_scalar_subtraction::BOptValueRef { present: self.bind(&format!("{prefix}.h.ob.pr"), st.helper.op_b_present), value: super::b_scalar_subtraction::BValueRef { space: self.bind(&format!("{prefix}.h.ob.sp"), st.helper.op_b_space), index: self.bind(&format!("{prefix}.h.ob.ix"), st.helper.op_b_index) } },
+            reg_a: self.bind_u128(&format!("{prefix}.h.reg_a"), st.helper.reg_a),
+            staged: super::b_scalar_subtraction::BScalarStagedLanes { tag: self.bind(&format!("{prefix}.h.st.tag"), st.helper.staged_tag), u128_value: self.bind_u128(&format!("{prefix}.h.st.u128"), st.helper.staged_u128), bool_value: self.bind(&format!("{prefix}.h.st.bool"), 0), pending_node_tag: self.bind(&format!("{prefix}.h.st.pnt"), 0), prim_error_code: self.bind(&format!("{prefix}.h.st.pec"), st.helper.staged_err), selector: self.bind(&format!("{prefix}.h.st.sel"), 0), type_test_ok: self.bind(&format!("{prefix}.h.st.tto"), 0) },
+            rest: h_rest.to_rest_vec(),
+        };
+        let result = BHelperResultLanes {
+            present: self.bind(&format!("{prefix}.res.pres"), st.res_present),
+            tag: self.bind(&format!("{prefix}.res.tag"), st.res_tag),
+            scalar_value: BValueRef { space: self.bind(&format!("{prefix}.res.sv.sp"), st.res_val_space), index: self.bind(&format!("{prefix}.res.sv.ix"), st.res_val_index) },
+            scalar_error_code: self.bind(&format!("{prefix}.res.err"), st.res_err),
+            scalar_selector: self.bind(&format!("{prefix}.res.sel"), 0),
+            scalar_type_test_ok: self.bind(&format!("{prefix}.res.tto"), 0),
+            rest: vec![self.bind(&format!("{prefix}.res.rest.0"), 0)],
+        };
+        let data = BDataTableLanes { capacity: st.data_rows.len(), active_rows: self.bind(&format!("{prefix}.data.act"), st.data_active), rows: st.data_rows.iter().enumerate().map(|(r, row)| BDataRowLanes { tag: self.bind(&format!("{prefix}.data.r{r}.tag"), row.tag), n: self.bind_u128(&format!("{prefix}.data.r{r}.n"), row.n), bool_b: self.bind(&format!("{prefix}.data.r{r}.bool"), row.bool_b), fields_start: self.bind(&format!("{prefix}.data.r{r}.fs"), row.f_start), fields_len: self.bind(&format!("{prefix}.data.r{r}.fl"), row.f_len), rest: vec![self.bind(&format!("{prefix}.data.r{r}.rest.0"), row.rest[0])] }).collect() };
+        let frames = st.frames.iter().enumerate().map(|(i, f)| BFrameRow { tag: self.bind(&format!("{prefix}.f{i}.tag"), f.tag), origin: self.bind(&format!("{prefix}.f{i}.orig"), f.origin), right_op: self.bind(&format!("{prefix}.f{i}.rop"), f.right_op), right_left: BValueRef { space: self.bind(&format!("{prefix}.f{i}.rl.sp"), f.right_left_space), index: self.bind(&format!("{prefix}.f{i}.rl.ix"), f.right_left_index) }, rest: vec![self.bind(&format!("{prefix}.f{i}.rest.0"), f.rest[0])] }).collect();
+        let counters = SubChainCounters {
+            work: super::b_scalar_subtraction::BChargedCounters { remaining_work: self.bind_u128(&format!("{prefix}.cnt.rem"), st.remaining_work), consumed_work: self.bind_u128(&format!("{prefix}.cnt.con"), st.consumed_work), helper_work: self.bind_u128(&format!("{prefix}.cnt.hw"), st.helper_work), helper_visits: self.bind_u128(&format!("{prefix}.cnt.hv"), st.helper_visits) },
+            reference_cursor: self.bind(&format!("{prefix}.cnt.ref_c"), st.reference_cursor),
+            alloc_data_nodes: self.bind(&format!("{prefix}.cnt.alloc_dn"), st.alloc_data_nodes),
+            alloc_data_fields: self.bind(&format!("{prefix}.cnt.alloc_df"), 0),
+            alloc_environment_cells: self.bind(&format!("{prefix}.cnt.alloc_env"), 0),
+            depth: self.bind(&format!("{prefix}.cnt.depth"), st.depth),
+            task_live: self.bind(&format!("{prefix}.cnt.task_live"), st.task_live),
+            active_data_fields: self.bind(&format!("{prefix}.cnt.act_df"), 0),
+            active_env: self.bind(&format!("{prefix}.cnt.act_env"), 0),
+            active_value_slots: self.bind(&format!("{prefix}.cnt.act_vs"), 0),
+            rest: vec![self.bind(&format!("{prefix}.cnt.rest.0"), 77)],
+        };
+        BSubPublishState { site: self.bind(&format!("{prefix}.site"), st.site), outcome, control, control_origin: self.bind(&format!("{prefix}.ctrl_orig"), st.control_origin), helper, result, data, frames, counters, reference_cursor_bytes: self.bind_u128(&format!("{prefix}.ref_c_bytes"), st.reference_cursor) }
+    }
+}
+
+struct SubChainScenario { lhs_u128: u128, rhs_slot: ConcreteDataSlot, bounds_data_nodes: u128, initial_remaining_work: u128 }
+
+fn sub_chain_right_frame() -> ConcreteFrameSlot { let mut f = ConcreteFrameSlot::right_f_add(808, VALUE_SPACE_CONST, 0); f.right_op = BINARY_OP_SUB; f }
+
+fn build_sub_chain_fixture(scenario: &SubChainScenario) -> (BSubToPublicationChainInputs, BTreeMap<String, u128>) {
+    let is_rhs_uint = scenario.rhs_slot.tag == DATA_TAG_U128;
+    let difference = if is_rhs_uint { scenario.lhs_u128.checked_sub(scenario.rhs_slot.n) } else { None };
+    let applied = difference.is_some();
+    let err_code = if !is_rhs_uint { PRIM_ERROR_SORT_MISMATCH } else if applied { 0 } else { PRIM_ERROR_ARITH_OVERFLOW };
+    let diff_value = difference.unwrap_or(0);
+    let state0 = ConcreteAdminState { site: SITE_RET_RIGHT, outcome_tag: OUTCOME_TAG_RUNNING, halted_space: 0, halted_index: 0, rejected_code: 0, exhausted_reason: 0, ctrl_tag: CONTROL_TAG_RETURN, ctrl_rv_space: VALUE_SPACE_DATA, ctrl_rv_index: 0, ctrl_pot: 0, ctrl_pv_space: 0, ctrl_pv_index: 0, ctrl_pec: 0, ctrl_ec: 0, control_origin: 404, helper: ConcreteHelperState { present: HELPER_PRESENT, kind: HELPER_KIND_SCALAR, site: SITE_RET_RIGHT, mode: super::b_scalar_subtraction::SCALAR_MODE_SUB, phase: SCALAR_PHASE_SECOND, op_a_space: VALUE_SPACE_CONST, op_a_index: 0, op_b_present: OPT_PRESENT, op_b_space: VALUE_SPACE_DATA, op_b_index: 0, reg_a: scenario.lhs_u128, staged_tag: SCALAR_STAGED_TAG_NONE, staged_u128: 0, staged_err: 0, origin_ref_cursor: 5 }, res_present: 0, res_tag: 0, res_val_space: 0, res_val_index: 0, res_err: 0, data_active: 1, data_rows: vec![scenario.rhs_slot.clone(), ConcreteDataSlot::zero()], frames: vec![sub_chain_right_frame()], depth: 1, remaining_work: scenario.initial_remaining_work, consumed_work: 10, helper_work: 2, helper_visits: 1, reference_cursor: 5, alloc_data_nodes: 1, task_live: 0 };
+    let mut state1 = state0.clone();
+    state1.helper.phase = SCALAR_PHASE_DONE;
+    if applied { state1.helper.staged_tag = SCALAR_STAGED_TAG_U128_VALUE; state1.helper.staged_u128 = diff_value; } else { state1.helper.staged_tag = SCALAR_STAGED_TAG_PRIM_ERROR; state1.helper.staged_err = err_code; }
+    state1.remaining_work -= 1; state1.consumed_work += 1; state1.helper_work += 1; state1.helper_visits += 1;
+    let mut state2 = state1.clone();
+    state2.remaining_work -= 1; state2.consumed_work += 1; state2.helper_work += 1;
+    state2.helper = ConcreteHelperState::absent();
+    state2.res_present = OPT_PRESENT;
+    if applied { state2.data_active = 2; state2.data_rows[1] = ConcreteDataSlot::u128_row(diff_value); state2.alloc_data_nodes = 2; state2.res_tag = HELPER_RESULT_TAG_SCALAR_VALUE; state2.res_val_space = VALUE_SPACE_DATA; state2.res_val_index = 1; } else { state2.res_tag = HELPER_RESULT_TAG_SCALAR_ERROR; state2.res_err = err_code; }
+    let mut state3 = state2.clone();
+    state3.site = SITE_PRIM; state3.frames[0] = ConcreteFrameSlot::zero(); state3.depth = 0; state3.control_origin = 808;
+    state3.res_present = 0; state3.res_tag = 0; state3.res_val_space = 0; state3.res_val_index = 0; state3.res_err = 0;
+    state3.ctrl_tag = CONTROL_TAG_PRIM_RESULT; state3.ctrl_rv_space = 0; state3.ctrl_rv_index = 0;
+    if applied { state3.ctrl_pot = PRIM_OUTCOME_TAG_VALUE; state3.ctrl_pv_space = VALUE_SPACE_DATA; state3.ctrl_pv_index = 1; } else { state3.ctrl_pot = PRIM_OUTCOME_TAG_ERROR; state3.ctrl_pec = err_code; }
+    state3.remaining_work -= 1; state3.consumed_work += 1; state3.reference_cursor += 1;
+    let mut state4 = state3.clone();
+    let mut state4_val_branch = state3.clone();
+    let mut state4_err_branch = state3.clone();
+    if applied { state4.ctrl_tag = CONTROL_TAG_RETURN; state4.ctrl_rv_space = VALUE_SPACE_DATA; state4.ctrl_rv_index = 1; state4.ctrl_pot = 0; state4.ctrl_pv_space = 0; state4.ctrl_pv_index = 0; state4.remaining_work -= 1; state4.consumed_work += 1; state4.reference_cursor += 1; state4_val_branch = state4.clone(); } else { state4.ctrl_tag = CONTROL_TAG_ERROR; state4.ctrl_pot = 0; state4.ctrl_pec = 0; state4.ctrl_ec = err_code; state4.remaining_work -= 1; state4.consumed_work += 1; state4.reference_cursor += 1; state4_err_branch = state4.clone(); }
+    let mut state5 = state4.clone();
+    if applied { state5.outcome_tag = OUTCOME_TAG_HALTED; state5.halted_space = VALUE_SPACE_DATA; state5.halted_index = 1; } else { state5.outcome_tag = OUTCOME_TAG_REJECTED; state5.rejected_code = err_code; }
+    let builder = EnvBuilder::new();
+    let constants = super::b_scalar_subtraction::BValueTableRead { capacity: 1, active_rows: builder.bind("%sb.const.act", 1), rows: vec![super::b_scalar_subtraction::BValueRowLanes { tag: builder.bind("%sb.const.r0.tag", CONST_TAG_U128), n: builder.bind_u128("%sb.const.r0.n", scenario.lhs_u128) }] };
+    let s0 = builder.bind_sub_publish_state("%sb.s0", &state0);
+    let s1 = builder.bind_sub_publish_state("%sb.s1", &state1);
+    let s2 = builder.bind_sub_publish_state("%sb.s2", &state2);
+    let (exit_post, fail_post) = if applied { (&state2, &state1) } else { (&state1, &state2) };
+    let s2x = builder.bind_sub_publish_state("%sb.s2x", exit_post);
+    let s2f = builder.bind_sub_publish_state("%sb.s2f", fail_post);
+    let s3 = builder.bind_sub_publish_state("%sb.s3", &state3);
+    let pv = builder.bind_sub_publish_state("%sb.pv", &state4_val_branch);
+    let pe = builder.bind_sub_publish_state("%sb.pe", &state4_err_branch);
+    let s4 = builder.bind_sub_publish_state("%sb.s4", &state4);
+    let s5 = builder.bind_sub_publish_state("%sb.s5", &state5);
+    let inputs = BSubToPublicationChainInputs { enable: builder.bind("%sb.enable", 1), bounds_data_nodes: builder.bind("%sb.bounds.dn", scenario.bounds_data_nodes), constants, state0: s0, state1: s1, state2: s2, s2_exit_post: s2x, s2_fail_post: s2f, state3: s3, prim_val_post: pv.to_legacy_handoff().state, prim_err_post: pe.to_legacy_handoff().state, state4: s4, state5: s5 };
+    (inputs, builder.env.into_inner())
+}
+
+#[test]
+fn sub_chain_checked_difference_applied_reaches_p1_halted_data_at_depth_zero() {
+    // Literal sample: 25 - 7 = 18 (author-specified, not read from candidate output).
+    let scenario = SubChainScenario { lhs_u128: 25, rhs_slot: ConcreteDataSlot::u128_row(7), bounds_data_nodes: 5, initial_remaining_work: 4 };
+    let (inputs, env) = build_sub_chain_fixture(&scenario);
+    let chain = emit_b_sub_to_publication_chain(&inputs, "sub_val_chain").unwrap();
+    let eval = eval_zkir(&chain.instructions, env.clone()).unwrap();
+    assert_eq!(eval_operand(&chain.arithmetic_block.b_is_uint, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.arithmetic_block.underflow, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.exit_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.failure_enable, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.exit_block.applied, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.exit_block.cap_refused, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.legacy_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.prim_value_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.prim_error_enable, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.return_dispatch, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.p1_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_block.publish_value, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_block.publish_error, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.p1_block.published_value.space, &eval).unwrap(), VALUE_SPACE_DATA);
+    assert_eq!(eval_operand(&chain.p1_block.published_value.index, &eval).unwrap(), 1);
+    assert_eq!(eval["%sb.s5.out.tag"], OUTCOME_TAG_HALTED);
+    assert_eq!(eval["%sb.s5.data.r1.n.0"], 18);
+    assert_eq!(eval["%sb.s0.h.mode"], super::b_scalar_subtraction::SCALAR_MODE_SUB);
+    assert_eq!(eval["%sb.s0.f0.rop"], BINARY_OP_SUB);
+    // Isolated bad witness: forged staged difference 19 instead of 18.
+    let mut bad = env; bad.insert("%sb.s1.h.st.u128.0".into(), 19);
+    let err = eval_zkir(&chain.instructions, bad).unwrap_err();
+    assert!(err.contains("ConstrainEq failed"), "{err}");
+}
+
+#[test]
+fn sub_chain_genuine_underflow_error10_reaches_p1_rejected10() {
+    // Literal sample: 7 - 25 underflows checked UInt128, PrimError 10.
+    let scenario = SubChainScenario { lhs_u128: 7, rhs_slot: ConcreteDataSlot::u128_row(25), bounds_data_nodes: 5, initial_remaining_work: 4 };
+    let (inputs, env) = build_sub_chain_fixture(&scenario);
+    let chain = emit_b_sub_to_publication_chain(&inputs, "sub_under_chain").unwrap();
+    let eval = eval_zkir(&chain.instructions, env.clone()).unwrap();
+    assert_eq!(eval_operand(&chain.arithmetic_block.b_is_uint, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.arithmetic_block.underflow, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.exit_enable, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.failure_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.failure_block.error_code, &eval).unwrap(), PRIM_ERROR_ARITH_OVERFLOW);
+    assert_eq!(eval_operand(&chain.legacy_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.prim_value_enable, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.prim_error_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_block.publish_value, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.p1_block.publish_error, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_block.published_error_code, &eval).unwrap(), 10);
+    assert_eq!(eval["%sb.s5.out.tag"], OUTCOME_TAG_REJECTED);
+    assert_eq!(eval["%sb.s5.out.rej"], 10);
+    assert_eq!(eval["%sb.s3.ctrl.pec"], 10);
+    // Isolated bad witness: forged typed-handoff PrimError code 11 at state3.
+    let mut bad = env; bad.insert("%sb.s3.ctrl.pec".into(), 11);
+    let err = eval_zkir(&chain.instructions, bad).unwrap_err();
+    assert!(err.contains("ConstrainEq failed"), "{err}");
+}
+
+#[test]
+fn sub_chain_non_uint_operand_b_error11_reaches_p1_rejected11() {
+    // Literal sample: 25 - Bool(1) is a sort mismatch, PrimError 11 (no arithmetic on Bool payload).
+    let scenario = SubChainScenario { lhs_u128: 25, rhs_slot: ConcreteDataSlot::bool_row(1), bounds_data_nodes: 5, initial_remaining_work: 4 };
+    let (inputs, env) = build_sub_chain_fixture(&scenario);
+    let chain = emit_b_sub_to_publication_chain(&inputs, "sub_sort_chain").unwrap();
+    let eval = eval_zkir(&chain.instructions, env.clone()).unwrap();
+    assert_eq!(eval_operand(&chain.arithmetic_block.b_is_uint, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.exit_enable, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.failure_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.failure_block.error_code, &eval).unwrap(), PRIM_ERROR_SORT_MISMATCH);
+    assert_eq!(eval_operand(&chain.failure_block.is_sort_mismatch_11, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.legacy_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.prim_value_enable, &eval).unwrap(), 0);
+    assert_eq!(eval_operand(&chain.prim_error_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_enable, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_block.publish_error, &eval).unwrap(), 1);
+    assert_eq!(eval_operand(&chain.p1_block.published_error_code, &eval).unwrap(), 11);
+    assert_eq!(eval["%sb.s5.out.tag"], OUTCOME_TAG_REJECTED);
+    assert_eq!(eval["%sb.s5.out.rej"], 11);
+    // Isolated bad witness: forged final Rejected code 10 instead of 11.
+    let mut bad = env; bad.insert("%sb.s5.out.rej".into(), 10);
+    let err = eval_zkir(&chain.instructions, bad).unwrap_err();
+    assert!(err.contains("ConstrainEq failed"), "{err}");
+}
