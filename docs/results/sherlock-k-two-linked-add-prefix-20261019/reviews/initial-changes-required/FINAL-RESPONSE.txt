@@ -1,0 +1,132 @@
+# Independent source and operation review: two linked uncharged Add windows
+
+**Reviewer:** claude-opus-5-5. I cannot observe my own effort setting, so I can't confirm "HIGH". I used no tools, shell, subcalls, edits or execution. This was one read of inline bodies 1–26. I did not request, read or derive any protected oracle body.
+
+## Headline
+
+The plan as written is **CHANGES_REQUIRED** because of one blocking defect in phase 01. Phases 02–10 are sound under Root obligations, but none of them can run until 01 succeeds.
+
+**Blocking defect: phase 01 will fail to import its own adapter.** It runs `/usr/bin/python3 -I -B -S …/adapter/render_input.py`.
+- Python documents that in isolated mode (`-I`, which implies `-P`), `sys.path` does not contain the script's directory.
+- `render_input.py` does `import nominal_trace_codec` and `from complete_k_wire import CompleteKWire`.
+- So it will exit with `ModuleNotFoundError` before writing anything. This fails closed, but nothing downstream ever runs.
+- Phases 05 and 08 avoid this because they call `sys.path.insert(0, ADAPTER)` first. Phase 09's linker imports only the standard library, so it is unaffected.
+
+**Minimum fix:** no helper source change is needed. Replace phase 01's argv with a `-c` body in the same style as 05 and 08:
+- `sys.path.insert(0, ADAPTER)`
+- `sys.argv = ['render_input.py', '--input', …, '--api', …, '--syntax', …, '--output-dir', …]`
+- `import render_input; render_input.main()`
+
+That new argv needs re-review. Also add `initial.ng` and `query.term` to phase 01's products; the list is currently `[]`.
+
+---
+
+## 1. SOURCE — composition is correct; no missing callable
+
+**K semantics** (rules identified only; I did not author a predicted trace):
+- **Window 1:** `ngObserve(S0,1)` checks that `ngEval` is non-terminal. `ngStep` fires the `ngEvaluate(ngFoundExpr(ngAdd(…)))` rule. That pushes `ngAddLeft` with source IDs, occurrence and saved Map, and appends exactly one `ngAddStarted`. The budget is then 0, so the result is `ngTape(S0,[S1],S1)`.
+- **Window 2:** from S1, the Literal rule for the left operand fires. It appends one `ngLiteralEvaluated` and leaves frames and Map unchanged.
+- **Scope consequence:** with a whole-case budget of 2, the trace never reaches `ngAddRightRequested`, `ngAdded`, `ngFinished` or any terminal. The terminal-stutter contract is carried as metadata only; it is not exercised.
+- **`--depth 1` is not the step counter.** Every rule has a `[function]` head, so kore-exec evaluates during simplification. The one-step windows come from the `ngObserve` Int bound, not from kore-exec depth.
+
+**Parsing and decoding**
+- The `configure` regex correctly registers every base and Lt constructor from the combined syntax. Comments are stripped, and the `\n\s*syntax` and `\nendmodule` lookaheads hold for both modules.
+- The `CompleteKWire.__init__` arity checks pass against the public API. I checked ngLtCompared, ngLtSortFailed, ngLtPrimitiveReturned/Failed, ngLetBound, ngBranchSelected, ngAddStarted, ngAddLeft and ngEval, all with exact field counts.
+- Unevaluated function residue fails closed. `ngObserve` is not registered, so the parser rejects it. `ngInitial` is registered as NGState but is rejected by the `_args(…, 'ngState')` check.
+- The glue reads `parser.API` and `parser.REG` after `configure()`, so it gets fresh globals rather than stale imports. The keyword arguments to `bind_shared_wire` and the `resume_query(bytes, int) → (bytes, dict)` call match their definitions.
+
+**Preservation**
+- **Map:** decoded to a sorted list with all rows kept.
+- **Frames:** kept top-first.
+- **Events:** kept in cumulative append order, and the one-event continuity check is enforced.
+- **Program:** the same object is checked in every state.
+- **Source IDs and occurrences:** taken from the input table, with no remapping.
+
+**Raw carry is genuine.** `resume_query` byte-slices the third argument of the raw `ngTape` from `result.kore` and only checks that it is a 5-ary `ngState`; it does not regenerate anything from JSON.
+- The link is verified independently. Phase 09 checks that the whole typed decoded first final equals the decoded second initial.
+- One premise is unverified: the label constants `OBSERVE`, `TAPE` and `STATE` have not been checked against this cohort's `definition.kore`. A mismatch would fail closed.
+
+**Schema**
+- Each window has the six root fields and five-field states.
+- `observerCuts` is `list(range(2)) == [0,1]`, as `checked_window` requires. The joined wire is `[0,1,2]`.
+- Integer vs Bool is preserved by the `type()`-strict `same` function and by `json_domain`.
+
+**Missing callables**
+- Not part of this plan's glue: none.
+- Not supplied: the Root orchestration driver (directory creation, pins, fsync, stop logic, building `record`), and the F03 bodies `kast_command`, `exec_command` and `kprint_command`. I therefore can't confirm that the argv forms match F03's. I judged them on their own.
+
+**Minor finding:** the linker's receipt says `observerCuts_derived_from_actual: True`, but `[0,1,2]` is a constant. It is only valid because each window is checked to have exactly 2 states.
+
+## 2. Per-operation verdicts
+
+| Phase | Verdict | Notes |
+|---|---|---|
+| 01 render | **CHANGES_REQUIRED** | `-I` import failure (above); products list incomplete. |
+| 02 kast | ELIGIBLE (conditional) | Module and sort are correct: `mainModule`/`mainSyntaxModule` are 32 bytes, which is exactly `SHERLOCK-NOMINAL-LT-OBSERVATIONS`, so the cached scanner should be reused. PATH includes `kore-38afc81/bin`, which is absent from the supplied closure manifest; its pin relies on the unsupplied READ-IMPORT-PINS. Kast could write into the kompiled directory (lock, cache or scanner regeneration), so Root needs a full before/after directory listing, not just the 15 pinned files. |
+| 03 reduce | ELIGIBLE (conditional) | This cohort has only a compile-only receipt, so kast → kore-exec → kprint has never run on it. The bare-`ngTape` output form is inherited from a predecessor run. `--smt none` means z3 is unused. |
+| 04 print | ELIGIBLE (conditional) | The `false false` argv form cannot be compared to F03 because `kprint_command` was not supplied. The parser fails closed on unexpected print format. |
+| 05 decode+carry | ELIGIBLE | Glue is correct. The first wire is written before the carry; a partial failure is handled by the stop rule. |
+| 06 reduce | ELIGIBLE | Consumes the generated `second.query.kore`. |
+| 07 print | ELIGIBLE | Same as 04. |
+| 08 decode | ELIGIBLE | Takes metadata from the budget-2 input, consistent with the linker. |
+| 09 link | ELIGIBLE | Imports only stdlib, so `-I` is safe. Uses the budget-2 source, matching the `link()` requirement. |
+| 10 compare | ELIGIBLE, only after the barrier | Typed whole equality; mismatches fail closed. `json.loads` accepts duplicate keys (last wins), which only matters for expected-side integrity, already covered by the SHA. |
+
+**Shadowing hazard (phases 05, 08 and fixed 01).** `sys.path.insert(0, ADAPTER)` puts the adapter directory ahead of the standard library for later imports such as `dataclasses`, its dependencies, and `typing`. Also, `-B` only stops Python writing `.pyc` files; it still reads them. An existing `__pycache__` (especially an unchecked-hash `.pyc`) in the adapter directory or the raw-helper directory would be executed.
+
+**Minimum Root obligations**
+1. **Fresh directories.** `actual-attempt-01` must be absent or empty. Create each stage directory plus its `home/` and `tmp/` with mode 0700 immediately before the phase, with no pre-existing `stdout`/`stderr`.
+2. **Pre- and post-checks around every phase.** Cover:
+   - the 6 K sources, combined syntax, API, and all 3 inputs (including first-window `bf5d9…`);
+   - the adapter files and the full adapter directory listing (no extra modules, no `__pycache__`), plus the raw helper and its directory;
+   - the linker;
+   - the F03 full source SHA (`f1bcf0a0…`), plus an AST check that the launch closure equals the corresponding source lines;
+   - the 15 compiled files and the full kompiled directory listing;
+   - the tool entries, JAR membership, PATH directory listings and python3.
+3. **Per-phase checks after each run.**
+   - Process outcome: `returncode == 0`, `timed_out False`, `outcome 'exited'`, `remaining == []`, `containment_breach False`.
+   - Stage directory: exact expected file set; pin bytes and SHA of every stage file including stderr; fsync files and directories.
+   - The launch closure does not check the exit code itself, so Root must.
+4. **Carry cross-check.** The carry receipt's `actual_tape_sha256` must equal the pinned 03 `result.kore`, and `next_query_sha256` must equal the pinned `second.query.kore`.
+5. **Barrier.** After 09, durably freeze all actual artifacts and the record. Only then:
+   - re-verify SAFE-HANDOFF (`eb0e…`);
+   - verify the freeze metadata (`3b42…`) and EXPECTED-JOINED (5006 bytes, `7b78…`);
+   - run 10;
+   - re-hash both the expected and the linked actual after 10, to close the TOCTOU gap.
+
+   Before the barrier, never open, stat or hash the protected files.
+6. **Stop rule.** Stop on any nonzero exit, pin drift, leftover child process or unexpected file. No retry, no cap change, no recompile.
+
+## 3. SCOPE
+
+What a pass would establish:
+- K function-semantics reductions for two one-step prefixes, joined at one byte-carried, whole-typed-equal boundary.
+- Equality of the complete 3-position trace with a prefrozen independent expectation.
+
+That is more than boundary-only identity, which is all that phase 09 alone checks. It is still only a two-step prefix of Add (Add start plus the left literal). It does not establish:
+- the Add result, or behaviour at the terminal boundary;
+- a charged A/B clock, Kwork or fuel;
+- recursive-child, public-state, proof or circuit equivalence;
+- production Rust endpoint correspondence (still pending its owner);
+- any native, security or adoption grant.
+
+The zero-based `observerCuts` value comes from the existing decoder and consumer (`list(range(len))`, a fixed `[0,1]` check, and constant `[0,1,2]`). It is representation only, not an adjustment to the expectation. If the oracle used a different base, phase 10 fails closed rather than passing falsely.
+
+## 4. COVERAGE
+
+**Reviewed in full:** bodies 1–26.
+- Body 2's change is confined to the phase-10 EXPECTED operand and metadata. The original plan was not supplied, so I trust the diff context for the rest.
+- Byte arithmetic for body 23 holds: 5090 + 1 + 1070 = 6161.
+- I accepted the SHA identities as stated; I did not inspect or verify them myself.
+
+**Not available (premises, not approved):**
+- `definition.kore` and compiled binary contents.
+- READ-IMPORT-PINS, the full IMPORT-TIME-AST, and the full F03 source; I relied on the projection's no-side-effect claims.
+- The adapter and raw-helper directory listings.
+- Shared-library closures for kprint and kore-exec, and the python3 stdlib.
+- Actual kast, kore-exec and kprint behaviour on this cohort.
+- The Root driver.
+
+**Abstained:** all protected oracle bodies, and any judgement of how adequate the oracle's semantics are.
+
+**Dissent preserved:** I do not approve on identity, hash or count evidence. Phase 01 as specified is non-executable. Every other verdict above depends on the listed Root obligations and on re-review of a corrected phase 01 argv.
