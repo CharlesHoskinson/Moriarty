@@ -9,6 +9,16 @@ Select work in this order: saved-bundle independent verify-only → missing Sher
 
 Requested by the user on2026-10-17 after final design/spec integration. This uses the existing DoctorWatson factory and existing requirement/evidence records. It is not a new scheduler, campaign, permission system or replacement roadmap.
 
+### Dated recovery correction — October 19, revision04 review corrections
+
+P14 compiled and listed its verify-only executable, then the consumed operation timed out at exit 124 after 300.065116 seconds without a verifier verdict. Preserve the saved proof; do not requeue that operation unchanged or call the timeout proof rejection. The saved-bundle verify-only prerequisite remains unsatisfied. Any consumption of its result needs a changed, separately eligible operation. Only the immediate next actionable step changes; the stage order and every acceptance requirement remain.
+
+Root installed the exact five C4/T1 source files; its unused setup was cleaned up without compilation. The one-Camino current-index source was subsequently approved and four exact ordinary methods passed, but the next actual precheck found two other changed registry-index rows (`find-msvc-tools`, `cc`). It stopped before provisioning, ONE_SHOT or a native attempt. Own flock holders exited and cleanup/restoration owed is false. The candidate is not eligible for that compile. The source owner is preparing a separately frozen complete immutable index cohort, rather than further per-file exceptions. Historical helper pins remain immutable; staging metadata cannot silently change their meaning.
+
+The next source-to-execution path is that complete-cohort fix, applicable fresh review/checks, then eligible C4 child compilation. The bounded Moriarty A80/link module was delivered as complete source; Root now reports its source review requires changes. No source revision has returned yet, and it remains unapplied and uncompiled at this cut; Fenrir parent, terminal and harness bodies are still missing. Raw child binding and early key/instance/claim persistence are installed source facts, not observed child proof artifacts. Root reports C4 source/evidence pushed at `3dd96307`.
+
+The ten K phases and complete three-position independent trace equality passed after the durable actual freeze; those finite uncharged windows supply no Add result, charged A/B clock, native/recursive proof, endpoint or EARS closure. Keep all three permanent formal lanes and handwritten source work aligned with the recursive stagenet and Fenrir experiment. [Dated source facts](../../wiki-llm/sherlock-circuit-atlas/provenance/child-parent-source-frontier-20261019.json) retain the source and failure cuts. No new factory or acceptance shortcut is introduced.
+
 ## Entry and next actual implementation
 
 ### October 18 priority: continue handwritten circuit implementation
