@@ -1,0 +1,282 @@
+# Fresh non-author review: `b_scalar_subtraction_completion.rs` (Sub completion and typed handoff)
+
+**Reviewer identity and status.** This is a single fresh context (claude-opus-5-5). I am not one of the listed authors. It counts as one opinion, not two votes. I used no tools, files, shell, compiler, SDK or tests. Every statement below comes from reading the supplied text. The new module has not been compiled or run, and it has no completion tests. These verdicts judge the source only, not validation or readiness.
+
+## Verdicts
+
+| Facet | Verdict |
+|---|---|
+| Security (source) | **APPROVE_WITH_LIMITS** |
+| Normal, typed, API and source compatibility | **APPROVE_WITH_LIMITS**. It cannot resolve until the parent registers both Sub modules. rustc has not been run. |
+| Staged consumer handoff | **APPROVE_WITH_LIMITS**, but only as typed maps. It is not a connection: no enabled Sub state can pass the existing return-right row or chain. |
+
+I found no mandatory counterexample in the local relations. The recommended fixes are listed under "Recommended fix scope".
+
+## 1. Differences from the Add preimage
+
+I compared the bodies line by line:
+
+- **Constraint change: the mode guard only.** Exit E01 has `(&input.pre_helper.mode, SCALAR_MODE_SUB),` and failure F01 has the same line. Add had `SCALAR_MODE_ADD`. `SCALAR_MODE_SUB` is imported explicitly from `b_scalar_subtraction` and equals 1.
+- **E02–E09 and F02–F06 are the same instruction sequence** as Add in my read: same helpers, same order, same immediates.
+- **Type changes:**
+  - `pre_helper`/`post_helper` use `b_scalar_subtraction::BScalarArithmeticRegister`.
+  - The new `BScalarSubCompletionCounters.work` uses the Sub `BChargedCounters`.
+  - The local data/result/outcome carrier definitions are deleted. They are imported from `b_scalar_completion`.
+- **Renames:** the input, block and error types are renamed.
+- **New error variants:** `FrameRowCount`, `FrameRestLaneCount`, `ControlRestLaneCount` and `LegacyRestLaneCount`. They are used only by the complement and the inverse.
+- **New items:** `BSubPublishState`, `BSubLegacyHandoff`, three `sub_*_to_common` maps, two `from_states`, `emit_b_sub_completion_complement` and `complement_operands`.
+- **Mode independence is correct.** Rows `/helper_events/4` and `/helper_events/5` take their effects from `h.staged` only, and SI-22 S5 allows Sub in phase Done.
+
+## 2. Security facet
+
+**Exit**
+
+- **Branch split.** The constraints are `applied = select(enable, LessThan(eff_alloc, eff_bounds), 0)`, `cap_refused = select(enable, ¬can_alloc, 0)` and `applied + cap_refused = enable`.
+- **Allocation counter.** `alloc.dataNodes` and `active.data` each move by `+applied`, and both are 128-bit ranged. The `+1` cannot wrap, because `alloc < bounds < 2^128`.
+- **Capacity checks.**
+  - `active ≤ cap` holds on both pre and post.
+  - `pre.active < cap` is asserted only under `applied`. This matches PS: there is no physical check when `capRefusal` is some.
+  - With `capacity == 0` and `applied`, the relation is unsatisfiable, which is consistent.
+- **One-hot write.** `write_sel = applied ∧ (pre.active == r)` and `Σ = applied`. The written row is `U128{n = eff_staged}` with `bool_b`, `fields_*` and `rest` all zero. Every other row equals the pre row.
+- **Inactive rows.** Pre rows with `r ≥ pre.active` are zeroed under `enable`, so post rows above the new length are zero.
+- **Result.**
+  - Applied: `Some(ScalarValue(Data(pre.active)))`, with the inactive columns and `rest` zero.
+  - Refused: all zero, which equals the absent pre result.
+  - SI-21R freshness holds locally: `j = pre.active` and `post.active = pre.active + 1`.
+- **Helper (E07).** Every helper lane is covered: the 16 named lanes, `reg_a`, `staged.u128` and `rest`. The post lane is `select(applied, 0, pre)`, so a refusal retains `mode = 1`.
+- **Outcome (E08).** Refused gives `Exhausted(1)`; applied gives `Running`. The other payload lanes are zero.
+- **Work (E09).**
+  - The work counters move by [-1, +1, +1, 0].
+  - The decrement and increment are 9-bit, non-wrapping and unique.
+  - `remainingWork = 0` makes the row unsatisfiable. It does not select P2.
+  - `referenceCursor`, `alloc_fields`, `alloc_env`, `depth`, `task_live`, `active_fields`, `active_env`, `active_value_slots` and counter `rest` are preserved.
+
+**Failure**
+
+- **Error code.** `raw = select(enable, pec, 10)` is 4-bit ranged, and `eq10 + eq11 = 1`, so only codes 10 and 11 are accepted.
+- **Staged value.** The staged u128 lanes must be zero.
+- **Result.** `Some(ScalarError{code})`.
+- **Helper and outcome.** All post helper lanes are zero (clearHelper), and the outcome stays Running.
+- **Data.** Rows, `active.data` and `alloc.dataNodes` are preserved, with the same P4 counter deltas as exit.
+
+**Disabled rows (`enable = 0`).** Every effective operand is selected to 0, so every pre and post lane is free. This matches the module doc. Stutter is the composer's job.
+
+**Caller premises, not locally enforced:**
+
+- P2/P3 precedence, including `helperWork = maxHelperWork`.
+- `bounds_data_nodes` provenance.
+- The `enable` derivation and exactly-one selection.
+- SI-05 `active = alloc`, SI-11/SI-13 typing of pre rows, and SI-21/SI-22 coherence.
+- AB, full StepInv, envRoot/stackLimit/initialFuel/tasks/arenas, and canonical/field binding.
+
+These are stated correctly. None of the deleted local carriers were relabelled.
+
+## 3. Typed and component facet
+
+I traced every field.
+
+**`sub_helper_to_common`**
+
+- The destructure is exhaustive and has no `..`. It covers `present, kind, site, mode, phase`, `operand_a: BSubValueRef{space,index}` and `operand_b: BSubOptValueRef{present, value: BSubValueRef{..}}`.
+- It also covers `reg_a`, `staged: BSubStagedLanes{tag,u128_value,bool_value,pending_node_tag,prim_error_code,selector,type_test_ok}` and `rest`.
+- The output literal sets `mode: mode.clone()` and `rest: rest.clone()`, and it uses the common `BValueRef`, `BOptValueRef` and `BScalarStagedLanes`.
+- Nothing is cast, zeroed or defaulted.
+
+**`sub_work_to_common` and `sub_completion_counters_to_common`**
+
+- These copy all 4 work counters and all 11 completion-counter fields, ending with `rest: rest.clone()`.
+- `work` goes through `sub_work_to_common`. Its output type is `b_scalar_arithmetic::BChargedCounters`, which is the same type that `BScalarCompletionCounters.work` resolves to through its `super::*`.
+
+**`BSubPublishState::to_admin_publish_state`**
+
+- It copies all 10 fields in `BAdminPublishState` order.
+- `helper` and `counters` go through the maps above. The other fields are cloned.
+
+**`to_legacy_handoff`**
+
+- It destructures the admin state completely, including `outcome: BOutcomeLanes{tag, halted_value, rejected_code, exhausted_reason}` and the nested counters with `rest: counter_rest`.
+- It builds `rest = vec![alloc_data_nodes, alloc_data_fields, alloc_environment_cells, task_live, active_data_fields, active_env, active_value_slots]` and then `rest.extend(counter_rest)`.
+- This order is identical to the private `to_legacy_completion_state` in P1.
+- All 14 `BLegacyCompletionState` fields are filled, with `outcome: tag` and `reference_cursor: reference_cursor_bytes`.
+- The complement fields are: `outcome_halted_value`, `outcome_rejected_code`, `outcome_exhausted_reason`, `data` and the scalar `reference_cursor`.
+- Lane accounting is complete: no admin lane is dropped or duplicated.
+
+**`BSubLegacyHandoff::to_admin_publish_state`**
+
+- The inner pattern `reference_cursor: reference_cursor_bytes` binds a different name from the outer `reference_cursor`, so there is no duplicate binding.
+- It splits the rest with: `let [alloc_data_nodes, …, active_value_slots, counter_rest @ ..] = rest.as_slice() else { return Err(…LegacyRestLaneCount) };`
+- A rest of 6 or fewer lanes returns `Err`. Exactly 7 gives an empty `counters.rest`. More than 7 keeps the tail in order.
+- The claim `s.to_legacy_handoff().to_admin_publish_state() == Ok(s.to_admin_publish_state())` holds by construction.
+- **Limit:** this inverts only to the common `BAdminPublishState`. No common-to-Sub map exists, so there is no round trip back to `BSubPublishState`. The doc phrase "so the handoff inverts" should say "to `BAdminPublishState`".
+
+**`from_states` (both).** These copy pre and post data, helper, result, outcome and counters from the same `BSubPublishState` operands. The complement takes the rest.
+
+**Name resolution.**
+
+- The explicit `use` items shadow the `super::*` glob: `BChargedCounters` and `BScalarArithmeticRegister` resolve to the Sub types; `BValueRef`, `BOptValueRef` and `BScalarStagedLanes` resolve to the common types.
+- The local `pub const VALUE_SPACE_*`, `HELPER_RESULT_TAG_*`, `OUTCOME_TAG_*` and `EXHAUST_REASON_*` shadow the glob legally.
+- No explicit import collides with a local item.
+- `HELPER_PRESENT`, `SITE_RET_RIGHT`, `DATA_TAG_U128`, `PRIM_ERROR_*` and `BU128Lanes` come through the glob with identical values. The Sub `BU128Lanes` is the same type alias.
+- All referenced fields are `pub`, and all derives are satisfiable.
+- No method, import or field is phantom.
+
+## 4. New complement facet
+
+**Shape checks, in this order:**
+
+1. Empty scope.
+2. `pre.frames.len() != post.frames.len()` gives `FrameRowCount`.
+3. Any pre or post frame whose `rest.len()` differs from the first pre frame's gives `FrameRestLaneCount`.
+4. Mismatched `control.rest` lengths give `ControlRestLaneCount`.
+5. Variable checks over `enable`, both complement lane sets and both scalar cursors.
+
+**C01 lane coverage.** `gated_eq` over `site`, `control_origin` and all 8 named control lanes plus `c.rest`. For every frame: `tag`, `origin`, `right_op`, `right_left.space`, `right_left.index` and `f.rest`. Then the 16 `reference_cursor_bytes`. This equals the claimed set.
+
+**State coverage.** Together with the exit/failure rows, every `BSubPublishState` lane is covered. This holds only if the composer passes the same operands to both.
+
+**C02 binding.** The quoted code is:
+
+```rust
+let bytes = eff_bytes(&mut b, enable, &st.reference_cursor_bytes);
+let mut acc = bytes[15].clone();
+for i in (0..15).rev() { let shifted = b.mul(acc, immediate(256)); acc = b.add(shifted, bytes[i].clone()); }
+let scalar = eff_uint128(&mut b, enable, &st.counters.reference_cursor);
+b.eq(scalar, acc);
+```
+
+- It runs for both `pre` and `post`.
+- The bytes are 8-bit ranged, so `acc ≤ 2^128 − 1`. That is far below the BLS12-381 scalar modulus, so there is no wrap. The scalar is 128-bit ranged. The map is injective little-endian.
+- It is consistent with completion E09, which preserves the scalar cursor.
+- With `enable = 0`, both sides are 0 and the binding does nothing.
+
+**Caller promises that are too weak:**
+
+- **(a) Binding scope.** The binding is enable-gated. The Add chain binds the bytes to the scalar unconditionally at `state0..=state5`. A Sub composer must keep that unconditional binding. The complement alone leaves disabled-row states unbound.
+- **(b) Namespace premise.** The doc premise "scope must differ from the exit/failure scopes, with no prefix overlap" is narrower than what is needed. Example: complement scope `x` and an enabled-fetch scope `x.local` both emit `%x.local.temp.N`. In the SDK, both preprocess `memory.insert` and synthesize `mem_insert` rebind a reused identifier, so later reads of a block output such as `exit_block.applied` can silently refer to the other block's temporary. The premise must be global per `IrSource`, like the return-right and enabled-fetch wording.
+
+The complement does not claim disabled stutter, composer row selection or per-branch post muxing. With an exit post and a failure post, it must run twice under distinct scopes, or once on the muxed `state2` with `enable = exit_enable + failure_enable`. Both are composer duties.
+
+## 5. Normal, API and SDK facet
+
+**Instructions used:** `CondSelect`, `ConstrainEq`, `ConstrainToBoolean`, `ConstrainBits` (8, 9, 4 and 128 bits), `Assert`, `TestEq`, `LessThan{bits: 128}`, `Add` and `Mul`. All operands are Native.
+
+**SDK preconditions:**
+
+- Every `CondSelect` bit and every `Assert` condition is boolean-constrained or a `TestEq`/`LessThan` output.
+- Every `LessThan` operand is 128-bit ranged or a small immediate.
+- In-circuit width is `max(128 + 0, 4) = 128`.
+- Off-circuit `ConstrainBits` with `n < FR_BITS` holds.
+
+**Naming.**
+
+- Temporaries are `%{scope}.local.temp.{n}`.
+- `check_variable` requires a leading `%`. That is the serde JSON `Operand` rule; the tagged binary path does not need it, so the check is stricter and safe.
+- Scope validation is only "non-empty", unlike return-right's `validate_scope`. This scheme is not the `%{scope}__` scheme.
+
+**Rust compile risks:**
+
+- Default binding modes through nested and aliased struct patterns are fine.
+- `let`-`else` with a slice and `@ ..` is fine.
+- `[&..].into_iter().chain(..)` relies on edition 2021, which the existing modules already depend on.
+- `std::array::from_fn` takes an FnMut closure.
+- `complement_operands` reborrows through `c = &st.control`, which is fine.
+
+Nothing here is verified by rustc.
+
+**Required integration in the parent `mod.rs`:**
+
+- Add `mod b_scalar_subtraction;` and `mod b_scalar_subtraction_completion;` (either visibility works).
+- Re-export only named, non-colliding items. The Sub module redefines `BScalarArithmeticRegister`, `BChargedCounters`, `BValueRef`, `BScalarArithmeticConstructionError`, `BScalarArithmeticWitness` and others, so plain `pub use` would clash with the Add exports. The completion module duplicates `VALUE_SPACE_*`, `OUTCOME_TAG_*` and so on.
+- `BAdminPublicationError` has no variants for `BScalarSubCompletionConstructionError` or the Sub arithmetic error.
+- The private P1 helpers cannot be called from another module: `constrain_stutter_unless`, `constrain_publish_mux`, `constrain_legacy_mux`, `to_legacy_completion_state` and `publish_state_operands`. A Sub composer must either live in `b_admin_publication` or have them exposed as `pub(super)`.
+- The Sub arithmetic stage needs `b_scalar_subtraction::BValueTableRead`/`BValueRowLanes`. `BDataRowLanes::to_value_row_lanes()` returns the common type, so a further row adapter is needed.
+
+**Not qualified:** the external `lower_than`, `assigned_to_le_bits`, `convert` and `assert_non_zero` chips, and the `transient_crypto` `Fr` bodies.
+
+## 6. Staged consumer handoff
+
+**What blocks it.** `emit_return_right_add_scoped` contains `em.assert_eq_when(is_popped_i…, pre.frames[i].right_op…, c_binop_add…)`. For any enabled Sub state, the complement preserves `right_op = 1`, so the return-right row is unsatisfiable.
+
+**The existing chain cannot be reused.** `emit_b_add_to_publication_chain` hard-wires Add arithmetic (mode guard 0), Add exit/failure and Add return-right. Converting a Sub state with `to_admin_publish_state` therefore fails at stage 1. No adapter path reaches the old Add guard. This is correct and stated honestly.
+
+**What could be reused after a real Sub return-right exists:**
+
+- `emit_k_machine_primitive_value_block`/`emit_k_machine_primitive_error_block` and `emit_b_admin_publish_p1` do not depend on the operator.
+- The Sub return-right equals the Add row with `op = BINARY_OP_SUB`, because the result set for `{Add, Sub, Mul}` is identical. Parameterising the operator constant is the narrowest fix.
+- In a Sub-specialised chain, `mode = 1` at stages 1–2 and `right_op = 1` at stage 3 are both fixed constants over preserved frame operands. That couples SI-21 explicitly.
+
+**Still owed:** the Sub-specific return-right right-op guard, and a Sub P1 composer with real shared operands, selection, stutter, prefixes, complement and unconditional cursor binding.
+
+## Recommended fix scope
+
+None of these is mandatory for the staged source.
+
+1. `emit_b_sub_completion_complement` doc: replace the scope premise with the global per-`IrSource` rule (§4b).
+2. The doc for `BSubLegacyHandoff` and the module "inverts" sentence: change it to "inverts to `BAdminPublishState`; there is no common-to-Sub map".
+3. The C02 doc: state that the cursor binding is enable-gated and that the composer must bind unconditionally at every stage.
+
+## Owner-authored tests still needed
+
+These need SDK `check`/preprocess plus satisfiability probes. None exist yet.
+
+**Exit**
+
+- Applied with `mode = 1`: row write, result index, `+1` on `active`/`alloc`, helper zero, and [-1, +1, +1, 0].
+- `mode = 0` enabled is rejected; a disabled row accepts any lanes.
+- Cap refusal (`alloc == bounds`): `Exhausted(1)`, helper retained with `mode = 1`, no write.
+- `applied` with `active == cap` is unsatisfiable; `capacity = 0` is unsatisfiable when applied and satisfiable when refused.
+- Flipping any single post lane fails.
+
+**Failure**
+
+- Codes 10 and 11 pass; 0, 9, 12 and 15 fail.
+- A nonzero staged u128 fails.
+
+**Counters**
+
+- `remaining = 0` and `consumed = 2^128 − 1` are unsatisfiable.
+- A `helperVisits` change fails.
+
+**Shape and namespace**
+
+- Every error variant and its precedence order.
+- `UnprefixedVariable` and `TemporaryNameCollision`.
+
+**Complement**
+
+- A mutation of each lane fails, including `right_op`.
+- Little-endian cases: bytes `[1, 0…]` match scalar 1; a byte of 256 fails; a scalar ≥ 2^128 fails; `enable = 0` leaves everything free.
+- Frame and control rest-length errors.
+
+**Typed round trip**
+
+- Use distinct operand names for every lane, a non-empty `counters.rest` and non-empty frame `rest`.
+- Check `handoff → admin == Ok(direct)`, that `rest` of length 6 gives `Err`, and that length 7 gives an empty tail.
+- Check that the helper lane sequence is identical before and after `sub_helper_to_common`.
+
+**Gap-documenting composition tests**
+
+- The handoff state fed into the return-right row with `right_op = 1` is unsatisfiable.
+- Sub arithmetic post operands equal exit pre operands across one shared state.
+
+## Read scope and omissions
+
+**Read semantically:**
+
+- Body 2 in full.
+- Bodies 4–6: the carriers, and the Add completion compared line by line.
+- Body 7: the return-right carriers, validation, variable checks and the full return-right emitter.
+- Body 8: `BAdminPublishState`, the chain stages 1–5, the bridge and the private helpers.
+- Body 9: the parent's re-exports and `immediate`.
+- Bodies 10–12: only `ConstructionError` and the fetch namespaces.
+- Bodies 13–17: the Scalar exit/failure rows, `T-HELPER`, P2–P7, the SI clauses and the host exit/failure.
+- Bodies 21–33: Operand serde, the `Instruction` docs, and preprocess and synthesize for the instructions used.
+
+**Not read or not re-audited:**
+
+- The 43 existing tests and the three Sub test bodies.
+- The `literal_*` modules and other sibling modules.
+- The external `midnight_circuits`/`zk_stdlib`/`transient_crypto` bodies.
+- The pending arithmetic review (21906), which was not used as a premise.
+
+**Unchanged:** full 39/B96, global AB/StepInv, complete arenas, physical packing, canonical statement, financial/formal/native/target acceptance, and the global caller-prefix ownership premise.

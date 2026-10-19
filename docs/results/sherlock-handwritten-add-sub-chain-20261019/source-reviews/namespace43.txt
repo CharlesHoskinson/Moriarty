@@ -1,0 +1,247 @@
+# Fresh non-author source review: RR/PV/PE `%`-namespace, SDK serde, chain composition (43-test cut)
+
+## Identity and scope
+
+- **Requested model:** `claude-opus-5-5`. **Returned:** Claude Opus 5.5, a fresh context.
+- **Authorship:** I did not author any of this source as far as I can tell. I cannot see or attest session IDs, so root must capture the actual identity, exclusion of `ef8a54fd-…` and status.
+- **Weight:** this is one context and one opinion, not two votes.
+- **Method:** no tools, files, shell, compiler, SDK or tests were used. All 43 tests are **UNRUN**. Every claim below comes from reading the inline bodies.
+
+**Read coverage**
+- **Read closely:** Body 7 (RR source), 8 (RR tests), 9 (admin/chain), 10 (admin tests), 17–21 (SDK decls, serde/binary, `IrSource`, `Instruction` derive, `load`), 24–25 (lib/bridge JSON convention).
+- **Read for namespace derivation and semantics:** Body 3 (Add `Emitter::fresh`, `space_read_any_kind`), 5 (completion `fresh`, `check_variable`), 11–12 (fetch `fresh`).
+- **Skimmed:** Body 4 and 6 (unchanged tests), 13 (only `ConstructionError`), 15–16 (RR/P1/SI-21R/dispatch pointers), 1, 14, 22, 23.
+- **Body 23 is historical.** Its "seven percent-prefixed temp namespaces" note is superseded by Body 9.
+
+**Gaps**
+- No prior-cut bodies were supplied here. I did not verify "5 files byte-exact", "15 hunks" or "inverse-exact". My statements that semantics are unchanged come from reading the current code, not from a diff.
+- These declarations were not supplied, so I inferred them from usage:
+  - `SerdeVersion`
+  - `Fr::from_le_bytes`/`as_le_bytes`
+  - the `IrType` serde form
+  - serde's `rc` feature for `Arc`
+  - crate edition
+- Other `#[cfg(test)]` modules listed in `mod.rs` are out of scope.
+- My own recount of `#[test]` functions in the supplied text: RR 14, scalar completion 8, admin 13, arithmetic 8, total 43. All original names are present.
+
+---
+
+## 1. Security / constraint source — **APPROVE_WITH_LIMITS**
+
+**The namespace change is a pure renaming of output identifiers.** `b_return_right_completion.rs` `Emitter::fresh`:
+> `let id = format!("%{}__{}_{}", self.prefix, tag, self.counter);`
+
+- `load_imm_u64` returns `Operand::Immediate` and mints no name.
+- Every output, including both `DivModPowerOfTwo` outputs, goes through `fresh`.
+- **Uniqueness within a block:** the text after the last `_` is exactly the decimal counter, which increases monotonically. So two names can only be equal if their counters are equal.
+- Instruction kinds, operands, gates and order are unchanged by the rename. The constraint meaning therefore holds wherever names are unique and not captured by caller inputs.
+
+**Constraint semantics re-read in the current source**
+- **Disabled stutter (RR):**
+  - `not_enable` gates site, outcome, helper, result and control.
+  - `control_origin` stutters via `"stutter_ctrl_orig"`.
+  - `depth_dec` forces `pre.depth == post.depth + enable`.
+  - Frames use `preserve_slot_i = not_enable + is_below_top_i`.
+  - Counters use `assert_u128_inc_by_gate` with gate `enable`, so the delta is 0 when disabled.
+  - `state.rest` is preserved via `assert_eq_always`.
+- **Disabled stutter (PV/PE):** `emit_primitive_common` covers the same lanes. `control_origin` and `depth` are preserved unconditionally, and frames via `one_f`.
+- **Enabled RR pop:**
+  - `seen_top == enable` gives exactly one popped slot.
+  - Slots below the top are preserved.
+  - The popped top must be `RightF`/`Add`, and its `origin` becomes `post.control_origin`.
+  - Slots at or above `pre.depth`/`post.depth` must be `zeroRow`.
+- **Post-site / dispatch:**
+  - RR binds `post.site == SITE_PRIM`.
+  - PV is `ReturnDispatch`, PE is `TerminalP1`, and the chain checks this with `expect_post_site`.
+  - The chain dispatch computes `top.tag + 9`, rejects the reserved tag, and pins depth-0 Return and PE to `state3.site`.
+- **Cap-0 vs real RR:** RR refuses `EmptyFrameCapacity`; PV/PE admit cap-0 only when `depth == 0` (`depth_in_range_0_to_cap`).
+- **Result branch:**
+  - `is_val + is_err == enable`.
+  - ScalarValue must be Data-space (`pre_res_val_data_space`).
+  - Error codes are restricted to 10 or 11.
+- **SI-21R freshness on the chain:**
+  > `b.gated_eq(&exit_block.applied, fresh_next, input.state2.data.active_rows.clone())`
+  
+  It is a caller premise for standalone RR.
+- **Unchanged paths:** branch mux (`constrain_legacy_mux`, `constrain_publish_mux`), stage-2 `constrain_stutter_unless`, M-1 stage-1 stutter, charged `Exhausted(DataNodes)` with `p1_enable = 0`, and the 0-charge P1 are all present as before.
+
+**New caller check: lane coverage is complete.** `check_caller_variables` enumerates the following, which I matched field by field against every `BLegacyCompletionState` field:
+- `enable`
+- for each of `pre` and `post`:
+  - `site`, `outcome`, `control_origin`, `depth`
+  - all 8 named control lanes plus `c.rest`
+  - all 10 named helper lanes, `reg_a[16]`, `staged.tag`, `staged.u128_value[16]`, the 5 other staged lanes, `h.rest`
+  - all 7 named result lanes plus `r.rest`
+  - `st.rest`
+  - every frame, including inactive slots: `tag`, `origin`, `right_op`, `right_left.{space,index}`, `rest`
+  - all five 16-lane arrays
+
+The check itself:
+> `let reserved = format!("%{scope}__");` … `if !id.0.starts_with('%') { return Err(BReturnRightCompletionEmitError::UnprefixedVariable); } if id.0.starts_with(&reserved) { return Err(BReturnRightCompletionEmitError::TemporaryNameCollision); }`
+
+**Admission order matches the documented contract.**
+- RR: `validate_scope` → `EmptyFrameCapacity` → `validate_state_pair` → `check_caller_variables` → `Emitter::new`.
+- PV/PE: the same order without `EmptyFrameCapacity`.
+- Every refusal happens before any instruction is built, and the return type is `Result<Vec<Instruction>, _>`. No partial IR escapes, and the same holds for the chain, whose `b.code` is local.
+
+**Predicate**
+> `name.strip_prefix('%').and_then(|r| r.strip_prefix(scope)).is_some_and(|r| r.starts_with("__"))`
+
+`validate_scope` forbids `__` and a leading or trailing `_`. Given that, I checked both directions: neither `%S1__` nor `%S2__` is a prefix of the other for distinct valid scopes.
+
+**Limits that remain caller premises**
+- Scope ownership and IrSource-global uniqueness are unchecked by stateless functions; the `BLegacyCompletionBlock` doc says so.
+- Fixed standalone scopes may be used at most once per IrSource.
+- All non-full-B gaps are unchanged: StepInv, `uiValid`, OBL.G4, exactly-one dispatch, physical packing and native. Nothing in this cut closes or widens them.
+
+**Mandatory counterexamples:** none found.
+
+---
+
+## 2. SDK / serialization / types / ABI — **APPROVE_WITH_LIMITS**
+
+**JSON (serde) path**
+- `impl<'de> Deserialize for Operand`:
+  > `if !s.starts_with('%') { return Err(... "Variables must start with '%', immediates must start with '0x'" ...) }` … `Ok(Operand::Variable(Identifier(s)))`
+- The hex check `repr.starts_with(b"0x")` runs first. All emitted and fixture names start with `%`, so none can be read as an immediate.
+- `IrSource::load` is serde-only:
+  > `Ok(serde_json::from_value(serde_json::Value::Object(obj))?)`
+  
+  It does no `check`, does not require `Output`, and does not cross-check `outputs`/`inputs`.
+- **Identifier has no `%` check** (plain derive). Under the old naming, `load` would have failed at the first *Operand read* of an RR output, not at the output definition. The new test's negative uses `Operand` (`serde_json::from_value::<Operand>(old).is_err()`), which is the correct boundary.
+- **Derives confirmed:**
+  - `IrSource`: `Default, Clone, Debug, PartialEq, Serialize, Deserialize, Serializable`, so `assert_eq!(parsed, ir)` compiles.
+  - `Instruction`: `#[serde(rename_all = "snake_case", tag = "op")]`.
+  - `Operand`: `Clone, Debug, PartialEq`, with no Eq or Hash. None of the new code requires Eq or Hash on `Operand`.
+
+**Binary path is separate and unaffected.**
+> `0 => { let id = <Identifier as Deserializable>::deserialize(source, _max_depth)?; Ok(Operand::Variable(id)) }`
+
+It has no `%` condition. The old unprefixed names were therefore not a binary-decode failure. I make no blanket claim of native failure or success either way.
+
+**Rust API audit: every material call exists in the supplied source or std/serde_json.**
+- Std/serde_json: `bool::then_some`, `Option::is_some_and`, `str::strip_prefix(char/&str)`, `starts_with(&String)`, `serde_json::{to_value, from_value, to_string, json!}`.
+- `IrSource::load(&[u8])`.
+- `LegacyBlockEmit` fn-pointer casts of `_block` functions, which have late-bound lifetimes.
+- `Vec<&Operand>::extend` calls with `&[Operand;16]`, `&Vec<Operand>` and arrays. These resolve unambiguously: the `Extend<&T>` Copy impl would need item type `&&Operand`.
+- `serde_json` is already a crate dependency per lib.rs (Body 24).
+- **Test-path assumptions (inferred, not supplied):** the serde `rc` feature for `Arc<Vec<Instruction>>` (implied by the SDK derive compiling) and `{"major":3,"minor":0}` (the lib.rs/bridge convention; `SerdeVersion` not shown).
+
+**ABI**
+- `BReturnRightCompletionEmitError` gains `UnprefixedVariable` and `TemporaryNameCollision`.
+- It is publicly reachable via `mod.rs` and is not `#[non_exhaustive]`. External exhaustive matches would break; this is semver-relevant but nonblocking.
+- Signatures, `BLegacyCompletionBlock`, `BPostSiteContract` and the `mod.rs` re-exports are unchanged.
+- `is_legacy_completion_scope_variable` is `pub` in the module but not re-exported, so it is reachable by path only.
+- **External callers:** unprefixed callers of RR/PV/PE now get `Err`. This is an intentional new refusal. The prior consumer scan (Body 23) was scoped, so it is not evidence that no external callers exist.
+
+---
+
+## 3. Caller / composition — **APPROVE_WITH_LIMITS** (scoped)
+
+**Chain prefix list** (`emit_b_add_to_publication_chain`):
+> `format!("%{scope}_s3_rr__"), format!("%{scope}_s4_pv__"), format!("%{scope}_s4_pe__"),`
+
+These three join the seven `.local.temp.`/`.const_fetch.temp.`/`.data_fetch.temp.` prefixes. I re-derived all 10 from the actual producer bodies:
+
+| Namespace | Producer |
+|---|---|
+| `%{cs}_chain.local.temp.` | chain `Emitter` |
+| `%{cs}_s1_arith.local.temp.` | Add `Emitter::fresh` `"%{}.local.temp.{}"` |
+| `%{cs}_s1_arith.const_fetch.temp.` | enabled fetch `"%{}.temp.{}"`, scope `{scope}.const_fetch` |
+| `%{cs}_s1_arith.data_fetch.temp.` | enabled fetch, scope `{scope}.data_fetch` |
+| `%{cs}_s2_exit.local.temp.` | completion exit |
+| `%{cs}_s2_fail.local.temp.` | completion failure |
+| `%{cs}_s3_rr__` | RR |
+| `%{cs}_s4_pv__` | PV |
+| `%{cs}_s4_pe__` | PE |
+| `%{cs}_s5_p1.local.temp.` | P1 |
+
+Plain fetch is unused by the chain.
+
+**Within one chain**
+- The 10 prefixes are pairwise non-nested. They diverge right after `%{cs}_`.
+- **Caller coverage is complete.** The check covers:
+  - `enable`, `bounds_data_nodes`, `constants.active_rows` and constant rows `tag`/`n`
+  - all 8 publish states via `publish_state_operands`
+  - `prim_val_post`/`prim_err_post` via `legacy_state_operands`
+  
+  This is every field of `BAddToPublicationChainInputs`.
+- **Inter-block wiring is not misclassified.** Each sub-emitter receives another block's output only outside its own reserved prefix: `legacy_enable` and `p1_enable` are chain temps, and PV's enable is `exit_block.applied`, an exit temp.
+- **Consequence:** inside the chain, `ReturnRight(UnprefixedVariable)` and `ReturnRight(TemporaryNameCollision)` are unreachable, because M-2 fires first. Collisions surface deterministically as `Fetch(..)`.
+
+**Across scopes**
+- A successful chain implies `{scope}_s3_rr` passed `validate_scope`. Its scope is therefore `[A-Za-z0-9_]`, with no `__` and no leading or trailing `_`.
+- Under that grammar I could not construct an overlap between two successful chains. For the owner's example, chain `a`'s `%a_s3_rr__` diverges from chain `a_s3`'s family `%a_s3_{chain.,s1_,s2_,s3_rr__,s4_,s5_}` immediately after `%a_s3_`.
+- The real residual is chain versus a **sibling** block. A standalone `_block(…,"a_s3_rr")`, Add with `"a_s1_arith"`, a completion with `"a_s2_exit"` or P1 with `"a_s5_p1"` in the same IrSource will collide with chain `a`. That remains the caller-premise risk; the owner's premise is correct, only the example looks wrong.
+- Prefix syntax alone does not prove cross-block ownership; it remains an unenforced premise.
+
+**Unchanged and still operative:** the M-1 disabled stage-1 stutter, the per-branch stage-2 posts with `constrain_stutter_unless`, and the all-branch post mux.
+
+**Nonblocking:** the chain does not pre-validate scope grammar. A scope such as `"a.b"` or `"a_"` passes chain and Add/completion construction, then returns `ReturnRight(InvalidScope)` at stage 3. The returned `Err` carries no instructions, but the precedence is undocumented.
+
+---
+
+## 4. Test source (43, UNRUN) — **APPROVE_WITH_LIMITS**
+
+**New tests**
+- **`test_legacy_outputs_are_percent_scoped_and_roundtrip_sdk_json`**
+  - Uses 7 disabled blocks over `k_ret_right_add`/`k_prim_val`/`k_prim_err`/`rr`/`rr_2`/`pv`/`pe`.
+  - The first output is `%{scope}__not_enable_0` in both RR and the common path, because there is no `fresh` before the `not_enable` select.
+  - Cross-scope ownership counts are correct: `rr` vs `rr_2` gives `"_2__…"`, which does not start with `__`.
+  - The `old` and `new` serde checks are sound.
+  - The outputs-defined-once check, joined eval and JSON round-trip are consistent.
+  - **Limit:** only disabled rows are round-tripped here. Enabled RR/PV/PE streams are covered by the chain test.
+- **`test_legacy_emitters_reject_…`**
+  - All fixture indices exist: `pre.frames[2].rest[1]` (rest len 2), `post.result.rest[0]` (len 1), `post.control.rest[1]` (len 2), `post.rest[1]` (`[500,600]`).
+  - First-offender cases match the check order.
+  - The admitted siblings `%rr_2__…`, `%x_rr__…`, `%rr.local.temp.0` and `%rr_` are correctly outside `%rr__`.
+  - **Limit:** lanes are sampled, not exhaustive. Full coverage rests on my source enumeration above.
+- **`chain_instruction_stream_roundtrips_…_in_every_branch`**
+  - Exercises four scenarios: applied, overflow (code 10), sort mismatch (code 11) and cap refusal.
+  - A clean baseline eval implies every read variable is in `env ∪ outputs`, and the test asserts all of those start with `%`.
+  - All three legacy scopes appear in every branch, because PV and PE are always emitted.
+
+**Old tests**
+- Corrected expectations in `chain_branch_posts…` and `chain_rejects…` match the new namespace.
+- **No orphaned mutations:** the RR fixture `bind` changes key and operand together (`format!("%{name}")`). All RR negatives mutate concrete fields and rebuild; none use string env keys. Admin tests keep their `%ch.`/`%p1v.` keys.
+- First-failure strings are value-based and instruction order is unchanged, for example `"(99 != 4)"`, `"(9 != 23)"` and `"(1 != 3)"`.
+
+**Limits on the host evaluators**
+- They use host `u128` with checked Add/Mul.
+- Immediates resolve only in the range 0..=1024.
+- `LessThan` at 128 bits and `DivMod` are not field-faithful, and `Fr` wrap is not modelled.
+- Negatives using `is_err()` can be satisfied by unbound-variable errors. This is mitigated here because names are bound consistently.
+- The authored expectations are not independent goldens.
+- The JSON round-trip is load-only. It is not `IrSource::check`, preprocess, compile, prove, native, or a public end-to-end chain bridge.
+
+---
+
+## Mandatory counterexamples
+
+None.
+
+## Nonblocking limits (summary)
+
+1. **Chain vs sibling-block scope overlap** is an unenforced premise. The owner's `a`/`a_s3` two-chain example does not overlap under the current suffixes.
+2. **Late scope-grammar refusal:** the chain surfaces it as `ReturnRight(InvalidScope)`, and that precedence is undocumented.
+3. **Public error enum grew** without `#[non_exhaustive]`.
+4. **Sampled tests:** the collision tests sample lanes; coverage relies on the source enumeration.
+5. **JSON round-trip is load-only and the binary path is untouched.** No native or check evidence exists.
+6. **External unprefixed RR callers now get `Err`;** the consumer scan is scoped.
+7. **Not verified here:** diff and hunk claims, and the five-file byte-exactness.
+
+## Next meaningful actual checks
+
+- `cargo check` and `cargo test` for the 3 new tests plus the 40 old ones in `mori-backend`. Capture pass/fail output, including the JSON round-trip on real SDK serde with the `rc` feature.
+- Run `IrSource::check` and preprocess on a wrapped chain: `PublicInput`/`Impact` inputs, an `Output` terminator, and matching `outputs`.
+- Run a separate binary `Serializable` round-trip of the same stream.
+- Add a parameterised test that sets each enumerated lane in turn to a reserved name, for RR/PV/PE and the chain.
+- Test two chains (`a`, `a_s3`) plus one sibling `_block("a_s3_rr")` in one IrSource. The two chains should yield unique definitions; the sibling should produce a duplicate.
+- Run a workspace-wide search, beyond the WW crate, for callers of RR/PV/PE and `BReturnRightCompletionEmitError` matches.
+
+## Composed relation scope
+
+- **Approved with limits:** source-level namespace and serde correctness of the RR/PV/PE outputs and of chain caller admission, for the pinned SDK JSON `Operand` decoder.
+- **Unchanged:** constraint semantics.
+- **Not approved or claimed:** execution, compilation, check, proof, native, ledger, full-B/StepInv, global scope registry, or any operation eligibility.
+- **Root alone integrates, executes and adopts.**

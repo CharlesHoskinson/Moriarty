@@ -1,0 +1,22 @@
+Top finding: **PASS — source-wiring compatible, no mandatory fixes.** This is a wiring-only verdict, not compilation, SDK, proof, or field-semantics approval.
+
+Reviewer identity: fresh non-author `muse-wonder-1.0-contributor` / provider `meta`. Not Opus. Parent candidate is `mod.rs` at 15,370 B, `b26df00c…`.
+
+**(a) New modules / order — sound.** Parent declares exactly:
+- `pub mod b_scalar_subtraction;`
+- `pub mod b_scalar_subtraction_completion;`
+- `pub mod b_return_right_subtraction;`
+
+Each resolves to a pinned actual source in the resolution inventory (37,480 B `43c0d3e8…`, 57,957 B `bb08d2f2…`, 60,238 B `1823c32c…`). Declaration order is not load-bearing in Rust: `b_scalar_subtraction_completion` may import `super::b_admin_publication::BAdminPublishState` before `b_admin_publication` is declared later, and `b_admin_publication` may import back from all three. Sibling circularity within one crate is normal.
+
+**(b) 20 new root exports — exist, visible, correctly typed, no duplicates.** 6 from `b_scalar_subtraction` (`emit_b_scalar_arithmetic_sub`, `emit_public_b_scalar_arithmetic_sub`, `BScalarArithmeticSubBlock`, `BScalarArithmeticSubInputs`, `EmittedBScalarArithmeticSub`, `SCALAR_MODE_SUB: u128 = 1`), 9 from `b_scalar_subtraction_completion`, 2 from `b_return_right_subtraction` (`emit_k_machine_return_right_sub`, `emit_k_machine_return_right_sub_block`), and 3 added to the existing `b_admin_publication` group (`emit_b_sub_to_publication_chain`, `BSubToPublicationChainBlock`, `BSubToPublicationChainInputs`). All are explicit braced lists — no `::*`, no `as` alias at root. Names are unique in the parent and collide with no Add export (`SCALAR_MODE_SUB` vs `SCALAR_MODE_ADD`, `…SubBlock` vs `…AddBlock`). Previous explicit exports are preserved; the admin hunk only rewraps and appends. Note the `pub mod` paths themselves expose further `pub` items (e.g. `emit_b_sub_completion_complement`), consistent with the pre-existing B-module pattern.
+
+**(c) Current Sub P1 (`b_admin_publication.rs`, 75,906 B) — resolves through this parent.** Its explicit imports all name real declarations: Add carriers from `b_scalar_arithmetic`, completion carriers from `b_scalar_completion`, legacy carriers from `b_return_right_completion`, and Sub items via disambiguating aliases `BScalarArithmeticConstructionError as BSubArithmeticConstructionError`, `BValueRowLanes as BSubValueRowLanes`, `BValueTableRead as BSubValueTableRead`. Its `From` impls map to distinct error types (`Arithmetic`, `SubArithmetic`, `SubCompletion`, …). Shared carriers stay nominally distinct — Sub `BSubPublishState` uses the Sub register/counters and converts via `to_admin_publish_state()` / `to_legacy_handoff().state`. The parent does **not** re-export `BValueRef`, `BChargedCounters`, `BScalarArithmeticRegister`, or shared constant names from any Sub module at root, so no duplicate generic root re-exports are created.
+
+**(d) Test hooks — plausible, with one stated limit.** Registered `#[cfg(test)]` siblings (`b_scalar_arithmetic_normal_tests`, `b_scalar_completion_normal_tests`, `b_return_right_completion_normal_tests`, `b_admin_publication_normal_tests`) resolve to existing files, and their glob headers (`use super::*;` plus per-module `::*`) gain no ambiguous names: new root names are either distinct or the identical item reached by two paths. The fifth supplied header, `b_scalar_subtraction_three_tests.rs` (`use super::*;` only), is **not** registered by any parent hunk; its hook must live inside `b_scalar_subtraction.rs`, which was not supplied as a root-import excerpt. I therefore abstain on that internal hook rather than assume it — this is not a defect in the four hunks as written.
+
+**(e) Canonical prefix — preserved.** Mechanical facts state `canonical10673BytePrefixPreserved: true` against canonical `a88ac079…`; all four hunks insert well past byte 10,673. This is byte-prefix source preservation only, not a full canonical-tree audit.
+
+**Mandatory fixes: none.**
+
+**Explicit abstentions:** no compiler, SDK, test, native, or proof execution was performed or is implied; all 46 existing SDK test bodies remain UNRUN. Exact new-Sub implementation field semantics are outside this review and no verdict is transferred from the separate Root-held P1 source opinion.
