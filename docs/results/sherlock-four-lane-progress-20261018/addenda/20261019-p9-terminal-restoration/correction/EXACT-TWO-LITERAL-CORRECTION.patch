@@ -1,0 +1,20 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-p9-integration-prerequisites-20261019/post-terminal-preservation-guidance/actual-inventory-bound-01/PREPARE-CURRENT-COPY-MAP.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-p9-integration-prerequisites-20261019/post-terminal-preservation-guidance/actual-inventory-bound-02/PREPARE-CURRENT-COPY-MAP.py
+@@ -2,7 +2,7 @@
+ import json, hashlib
+ R=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017')
+ D=Path(__file__).resolve().parent
+-P=R/'native06-current-cached-p8-integration-metadata-20261018/post-terminal-actual-01/inventory'
++P=R/'native06-p9-integration-prerequisites-20261019/post-terminal-actual-01/inventory'
+ ROOT=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-compile-20261018-06')
+ DEST=R/'native06-p9-persistent-quarantine-20261019-01'
+ def pin(p):
+@@ -32,7 +32,7 @@
+  rel=str(Path(path).relative_to(ROOT))
+  assert rel.startswith(('target/','packet/')) and '\n' not in rel and '\r' not in rel and '\\' not in rel
+  rows.append({'relative_path':rel,'origin':path,'destination':str(DEST/rel),'sha256':h,**stat[path]})
+-rawfile=R/'native06-current-cached-p8-integration-metadata-20261018/post-terminal-actual-01/RAW-CGROUP-AND-MARKER.json'
++rawfile=R/'native06-p9-integration-prerequisites-20261019/post-terminal-actual-01/RAW-CGROUP-AND-MARKER.json'
+ raw=json.loads(rawfile.read_bytes());marker=raw['raw']['marker']
+ assert marker['path']==str(ROOT/'ONE_SHOT_STARTED')
+ rows.append({'relative_path':'ONE_SHOT_STARTED','origin':marker['path'],'destination':str(DEST/'ONE_SHOT_STARTED'),'sha256':marker['sha256'],'bytes':marker['bytes'],'scope':'External marker; must be rechecked against live exact source by Root before copy.'})
