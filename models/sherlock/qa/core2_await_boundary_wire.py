@@ -25,9 +25,15 @@ def _row(value, names):
 
 
 def _uint(value):
-    # Inputs are canonical Core UInt decimal strings under the source premise.
+    # Core UInt JSON: canonical ASCII decimal string, no leading zeros, u128 range.
     # Python int preserves full UInt128 without float/JS precision truncation.
-    return int(value)
+    if (type(value) is not str or not value.isascii() or not value.isdigit()
+            or (len(value) > 1 and value[0] == '0')):
+        raise ValueError('expected canonical Core UInt decimal string')
+    result = int(value)
+    if result >= 1 << 128:
+        raise ValueError('Core UInt outside u128 range')
+    return result
 
 
 def _scalar(value):
