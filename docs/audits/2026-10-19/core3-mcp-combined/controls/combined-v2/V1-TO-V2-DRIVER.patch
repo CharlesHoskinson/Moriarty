@@ -1,0 +1,31 @@
+--- v1/run_combined.py
++++ v2/run_combined.py
+@@ -19,11 +19,23 @@
+     home = owned / 'cargo-home'
+     home.mkdir()
+     (home / 'config.toml').write_bytes((D / 'cargo-config.toml').read_bytes())
+-    # Only dependency caches are copied. Never copy credentials, global user
+-    # configuration, lock files, or the old home's mutable cache databases.
+-    ignored = shutil.ignore_patterns('credentials', 'credentials.toml', '.git-credentials', '.netrc')
+-    for name in ['git', 'registry']:
+-        shutil.copytree(old_home / name, home / name, symlinks=False, ignore=ignored)
++    # Only the locked public midnight-ledger cache and exact checkout revisions.
++    git_name = 'midnight-ledger-b2f9c59d942dfdca'
++    database = old_home / 'git/db' / git_name
++    checkout_04 = old_home / 'git/checkouts' / git_name / '04c9c5d'
++    checkout_a01 = old_home / 'git/checkouts' / git_name / 'a01a1ea'
++    for selected in [database, checkout_04, checkout_a01]:
++        assert selected.is_dir(), str(selected)
++        selected_root = selected.resolve(strict=True)
++        for link in selected.rglob('*'):
++            if link.is_symlink():
++                assert not Path(os.readlink(link)).is_absolute(), str(link)
++                assert link.resolve(strict=False).is_relative_to(selected_root), str(link)
++    shutil.copytree(database, home / 'git/db' / git_name, symlinks=True)
++    shutil.copytree(checkout_04, home / 'git/checkouts' / git_name / '04c9c5d', symlinks=True)
++    shutil.copytree(checkout_a01, home / 'git/checkouts' / git_name / 'a01a1ea', symlinks=True)
++    (home / 'registry').mkdir()
++    shutil.copyfile(old_home / 'registry/CACHEDIR.TAG', home / 'registry/CACHEDIR.TAG')
+     (owned / 'cwd').mkdir()
+     (owned / 'tmp').mkdir()
+     raise SystemExit(0)
