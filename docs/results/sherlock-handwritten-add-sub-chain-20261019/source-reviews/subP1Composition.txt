@@ -1,0 +1,131 @@
+Top finding: no mandatory fix was found inside `emit_b_sub_to_publication_chain`, `sub_value_table_from_data`, or the two new `From` mappings. The function is source-correct against the supplied producers. Adoption is still blocked by the separate parent wiring, compilation, and full-chain tests.
+
+## Scope read
+
+I reviewed the inline complete bodies for:
+
+- The new target and all private helpers in [b_admin_publication.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/handwritten-sub-p1-composer-owner-candidate-20261018/afterimages/crates/mori-backend/src/sherlock_machine/b_admin_publication.rs).
+- The current [b_scalar_subtraction_completion.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/handwritten-sub-p1-composer-owner-candidate-20261018/afterimages/crates/mori-backend/src/sherlock_machine/b_scalar_subtraction_completion.rs), Sub arithmetic, Sub return-right, common return-right/primitive producers, Add carriers, fetches, schema/row bodies, and captured SDK `ir.rs`/`ir_vm.rs`/`ir_types.rs` plus instruction files.
+
+Gaps: parent wiring is the preimage, not the candidate wiring. No compilation, SDK execution, test execution, proof, field/chip/prover qualification, or real consumer connection was performed. The 43+3 existing tests and arithmetic-only tests are unrun for this review. This is one opinion, not two independent votes.
+
+## Decisions
+
+**SECURITY / constraint composition: APPROVE, source-scoped.**
+
+Stage 1 uses the actual Sub arithmetic producer and actual Sub state lanes:
+
+> `data: sub_value_table_from_data(&input.state0.data),`
+> `pre_helper: input.state0.helper.clone(),`
+
+in `emit_b_sub_to_publication_chain`. The helper then converts only through the exhaustive common-carrier maps for chain/P1 views. It is not relabelled as Add: stage 3 calls
+
+> `emit_k_machine_return_right_sub_block(`
+
+in the same function, and the Sub return-right producer guards the popped frame with `BINARY_OP_SUB`. Frames and control are preserved through stages 1–2 by the chain complements, so `RightF.op == 1` and the Sub helper mode reach the correct consumers.
+
+Stage 2 makes an exactly-one staged-kind partition:
+
+> `let s2_branch_sum = b.add(exit_enable.clone(), failure_enable.clone());`
+> `b.eq(s2_branch_sum, enable.clone());`
+
+Both actual Sub completion producers are called, and each receives its own complement:
+
+> `emit_b_sub_completion_complement(`
+> `&exit_enable, &input.state1, &input.s2_exit_post,`
+
+with the corresponding failure call for `s2_fail_post`. Disabled branch posts are pinned by `constrain_stutter_unless`, and `state2` is the publish mux, matching the Add chain structure without reusing Add completion types.
+
+The required cursor repair is present at every main and per-branch state. The chain iterates all eight views, including both branch posts:
+
+> `for st in views {`
+> `constrain_ref_cursor_scalar_matches_bytes(`
+
+That helper ranges every byte and equates the reconstructed 16-byte LE value with the scalar unconditionally. It does not rely on the completion complement, whose cursor binding remains enable-gated.
+
+Stage 3 discharges the stated carrier obligations on the actual shared Sub operands:
+
+> `b.gated_eq(&legacy_enable, a2.counters.task_live.clone(), immediate(0));`
+> `let fresh_next = b.add(a2.result.scalar_value.index.clone(), immediate(1));`
+> `b.gated_eq(&exit_block.applied, fresh_next, a2.data.active_rows.clone());`
+
+The legacy handoff places `task_live` at `rest[3]`, in the order
+
+> `task_live, active_data_fields, active_env, active_value_slots`
+
+after the three allocation lanes. The UInt-row check is also present for every exit write selector:
+
+> `b.gated_eq(write_sel, row.tag.clone(), immediate(DATA_TAG_U128));`
+
+Zip truncation is not left open: publish-state validation fixes frame, data, helper, result, and counter lengths before the muxes, and the primitive producers validate their posts against `leg_state3` before `constrain_legacy_mux` consumes them.
+
+The cap path composes correctly. `legacy_enable` is `applied + failure_enable`; `prim_value_enable` is `applied`; `prim_error_enable` is `failure_enable`. On `cap_refused`, all three later enables are zero, return-right and both primitive rows stutter on their legacy lanes, outcome/data complements preserve the non-legacy lanes, and disabled P1 imposes full publication stutter. The final outcome therefore remains `Exhausted(DataNodes)`, rather than being relabelled or published.
+
+Stage 4 honors the supplied post-site contracts:
+
+> `expect_post_site(s4_val.post_site, BPostSiteContract::ReturnDispatch)?;`
+> `expect_post_site(s4_err.post_site, BPostSiteContract::TerminalP1)?;`
+
+At depth greater than zero it derives the dispatched site from the actual top frame and refuses the reserved tag:
+
+> `let top_tag_core = b.less_than(`
+> `eff_top_tag.clone(),`
+> `immediate(FRAME_TAG_CONSTRUCTOR_FIELDS_EXTENSION_RESERVED),`
+> `);`
+> `b.assert(top_tag_core);`
+
+Stage 5 enables P1 only for an error or for a value whose post-primitive depth is zero:
+
+> `let p1_val_ready = b.mul(prim_value_enable.clone(), s4_depth_zero);`
+> `let p1_enable = b.add(p1_val_ready, prim_error_enable.clone());`
+
+Caller premises remain correctly external: unique `scope`, no other producer owning or prefix-overlapping the derived namespaces, canonical arena/StepInv/provenance, physical AB, bounds, and exactly-one upstream dispatch. The candidate does not silently claim those.
+
+**NORMAL / Rust, API, typed and serialization compatibility: APPROVE on static source inspection; ABSTAIN on compilation.**
+
+The typed mappings match the supplied definitions. `sub_value_table_from_data` moves exactly the lanes consumed by the Sub fetch carrier:
+
+> `rows: data`
+> `.rows`
+> `.iter()`
+> `.map(|row| BSubValueRowLanes {`
+> `tag: row.tag.clone(),`
+> `n: row.n.clone(),`
+> `})`
+
+`BScalarExitSubU128Inputs::from_states` and `BScalarFailureSubInputs::from_states` exist with the argument order used. `write_selectors`, `applied`, and `cap_refused` exist on the actual Sub exit block. The common PV/PE blocks and `BPostSiteContract` are the actual shared types. Error conversion is typed and unambiguous:
+
+> `impl From<BSubArithmeticConstructionError> for BAdminPublicationError {`
+> `Self::SubArithmetic(e)`
+
+and the corresponding `SubCompletion` conversion exists. These are distinct Rust types from the Add errors despite sharing source names in different modules.
+
+Namespace prefixes line up with the actual emitters: chain, arithmetic local/fetch, exit/failure local, both new `%{scope}_s2_*_cmp.local.temp.`, return-right/primitive `%{scope}__`, and P1 local prefixes are all checked against caller operands. Caller variables are also rejected unless `%`-prefixed, matching captured SDK `Operand` decoding:
+
+> `Variables must start with '%', immediates must start with '0x'`
+
+in captured SDK `ir.rs`. The instructions used by these emitters are present in the supplied SDK instruction set.
+
+I do **not** claim the candidate compiles in the current tree. The supplied parent [mod.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/handwritten-return-right-serde-namespace-owner-candidate-20261018/afterimages/crates/mori-backend/src/sherlock_machine/mod.rs) does not yet register the three Sub modules or export the new chain API. Until that separate owner wiring exists, imports such as `super::b_scalar_subtraction` cannot resolve there.
+
+**Staged real Sub consumer connection: CONDITIONAL APPROVE.**
+
+The composer genuinely consumes the Sub exit/failure results through the Sub return-right block, then the common primitive value/error blocks, then P1. This is the correct staged connection shape. It is not an executed connection: approval is conditional on exact parent wiring, successful compilation, and the full-chain tests below. No operation, ledger, financial, formal, or native eligibility follows.
+
+## Mandatory items
+
+No mandatory correction inside the new function or its two error mappings was identified.
+
+Required before adoption, as separate gates:
+
+1. Register exactly `b_scalar_subtraction`, `b_scalar_subtraction_completion`, and `b_return_right_subtraction`; export `emit_b_sub_to_publication_chain`, `BSubToPublicationChainInputs`, and `BSubToPublicationChainBlock` without re-exporting duplicate Add/Sub constant names into the parent namespace.
+2. Compile the wired tree and run the three full-chain branch tests below.
+3. Keep AB, StepInv, canonical arena, bounds, physical-capacity, and upstream exactly-one dispatch as caller obligations; this composer does not discharge them.
+
+## Next three full-chain tests
+
+1. **Normal Sub:** `RetRight/Sub/Second`, UInt operand B, no underflow, exit `Applied`, one RightF frame popped to depth 0, primitive value, then P1 `Halted` on the fresh Data row. Assert `exit_enable=1`, `legacy_enable=1`, `return_dispatch=0`, `p1_enable=1`, and `j + 1 == active.data`.
+2. **Underflow 10:** UInt operand B greater than `regA`; arithmetic stages `PrimError(10)`, failure consumes it, Sub return-right produces primitive error, and P1 publishes `Rejected(10)`.
+3. **Sort mismatch 11:** valid non-UInt operand B; arithmetic stages `PrimError(11)`, failure and primitive error follow, and P1 publishes `Rejected(11)`.
+
+Also required: disabled full-chain stutter; cap-refused stutter through stages 3–5 with `Exhausted(DataNodes)`; depth>0 value dispatch including reserved top tag refusal; Add top frame (`op=0`) refusal; freshness and written-row-tag violations; cursor scalar/bytes mismatch at a branch post; unprefixed and derived-namespace collision operands for arithmetic fetch, completion complement, `%{scope}_s3_rr__`, primitive, and P1 scopes; and host shape errors for rest/capacity mismatches and zero frame capacity.
