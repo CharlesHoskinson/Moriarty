@@ -1,5 +1,8 @@
 # Moriarty specifications
 
+The current [Sherlock stagenet recursion and Fenrir rollup experiment](changes/sherlock-stagenet-recursive-rollup/proposal.md) prioritizes actual recursive-proof acceptance on Midnight stagenet and measured circuit degree k/performance. Its additive SRPOC requirements and tasks preserve the full original requirements and separate literal, recursive, local and ledger evidence.
+
+
 ## Sherlock completion revision03 — October17
 
 The selected [completion convergence change](changes/sherlock-completion-convergence/ADOPTION.md)
