@@ -226,3 +226,27 @@ Its internal register separates three source states:
 No proof, verifier result or recursive endpoint is claimed. Root records actual authorship and hashes in `AUTHORSHIP.json` separately. This companion adds no circuit-source iteration or website code. The finished site launches once the full Sherlock goal is complete and accepted.
 
 Sol factual addendum — October 19: the separate [DESIGN011 status and provenance](DESIGN-011-STATUS-AND-PROVENANCE.md) records later review, source and prelaunch facts; the Opus note and navigation above remain verbatim at their earlier cut.
+
+## Design companion 012 — sealed handoff and complete statements
+
+[Design012: sealed handoff and complete statements](DESIGN-012-SEALED-HANDOFF-AND-COMPLETE-STATEMENTS.md) is the Opus 5.5 HIGH creative continuation of Design011's return spine. It adds:
+
+- an admission gauge that checks shape and offsets before encoding;
+- a private seal die and a read-only glass verification cabinet, with no approval lamp;
+- a full-field manifest /2 board whose child cards distinguish the A102 carrier null, drawn as a blanking plate, from any digest;
+- a keyed reader connector that stays holstered while the reviewed parent reads /1;
+- the parent's 28-lane route (16 statement lanes, then 12 accumulator lanes), and three distinct ends for the chain: genesis ring, terminal wall and anchor block;
+- four separately sourced inspection rails (Nat, K, Quint, circuit/native) with no shared wire and no shared clock.
+
+Its dated internal register records the state at the 2026-10-19 cut:
+
+- the manifest /2 source is frozen, unreviewed and uncompiled;
+- the parent source has scoped approval with a /1 reader, and /2 reconciliation is requested;
+- no 28 route is wired;
+- no current anchor exists;
+- the formal results are scoped: Nat kernel-checked, K definition-compiled only, and Quint four operations with eight directed tests.
+
+No proof, verifier result or recursive endpoint is claimed. Root records actual authorship and hashes in `AUTHORSHIP.json` separately. This companion adds no circuit-source iteration or website code. The finished site launches once the full Sherlock goal is complete and accepted.
+
+
+Sol factual publication addendum — October 19: [DESIGN012 status and provenance](DESIGN-012-STATUS-AND-PROVENANCE.md) records the actual Opus return, later Root-attributed PR294/Fenrir35 merges and newer uncompiled anchor source. The creative note and navigation above retain their exact earlier-cut author bytes.
