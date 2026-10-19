@@ -1,0 +1,2186 @@
+Required whole unchanged interfaces/norms. Read explicit consecutive cursor/limit windows through EOF; local source lines restart in each original body. Complete supply does not request adoption of unrelated module behavior.
+
+===== WHOLE BODY I02; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/commands/core_io.rs; sha256 6ebccb1465788264448ac791dea248e68a1cea71942496ee303ead619672b594; bytes 15945 =====
+use crate::error::CliError;
+use serde::{Serialize, de::DeserializeOwned};
+use std::path::Path;
+
+pub fn read_source(path: &Path) -> super::Result<String> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).map_err(|source| CliError::Read {
+        path: path.into(),
+        source,
+    })?;
+    let mut source = String::new();
+    file.take(1_048_577)
+        .read_to_string(&mut source)
+        .map_err(|source| CliError::Read {
+            path: path.into(),
+            source,
+        })?;
+    if source.len() > 1_048_576 {
+        return Err(operation("input file exceeds 1 MiB"));
+    }
+    Ok(source)
+}
+
+#[cfg(all(test, feature = "native"))]
+mod key_export_diagnostic_tests {
+    use super::*;
+    use mori_ledger::{Error, KeyExportDiagnostic, KeyExportFailureReason, KeyExportKind};
+
+    fn refusal(action: &str, key_kind: KeyExportKind, reason: KeyExportFailureReason) -> Error {
+        let cap_refusal = reason == KeyExportFailureReason::ByteCapExceeded;
+        Error::new("native-proving", "generated-key-size-or-encode").with_key_export(
+            KeyExportDiagnostic {
+                action: action.into(),
+                key_kind,
+                discovered_degree: 0,
+                byte_cap: 3,
+                accepted_bytes: 2,
+                failed_write_bytes: (reason != KeyExportFailureReason::Serialization).then_some(2),
+                attempted_minimum: cap_refusal.then_some(4),
+                reason,
+            },
+        )
+    }
+    #[test]
+    fn key_export_cli_preserves_category_and_discriminates_reasons() {
+        for kind in [KeyExportKind::Prover, KeyExportKind::Verifier] {
+            for (reason, label) in [
+                (KeyExportFailureReason::ByteCapExceeded, "byte-cap-exceeded"),
+                (
+                    KeyExportFailureReason::ByteCountOverflow,
+                    "byte-count-overflow",
+                ),
+                (
+                    KeyExportFailureReason::Serialization,
+                    "serialization-failure",
+                ),
+            ] {
+                let report = ledger_operation(refusal("settle", kind, reason)).to_string();
+                let kind = if kind == KeyExportKind::Prover {
+                    "prover"
+                } else {
+                    "verifier"
+                };
+                assert!(report.starts_with("mori::command: mori::ledger::native-proving: generated-key-size-or-encode; "), "{report}");
+                assert!(report.contains(&format!("action=\"settle\" key-kind={kind} discovered-degree=0 byte-cap=3 accepted-bytes=2 reason={label}")), "{report}");
+                assert_eq!(
+                    report.contains("failed-write-bytes=2"),
+                    reason != KeyExportFailureReason::Serialization
+                );
+                assert_eq!(
+                    report.contains("attempted-minimum=4"),
+                    reason == KeyExportFailureReason::ByteCapExceeded
+                );
+            }
+        }
+        let legacy = Error::new("native-proving", "sdk-keygen");
+        assert_eq!(
+            ledger_operation(legacy.clone()).to_string(),
+            operation(legacy).to_string()
+        );
+    }
+    #[test]
+    fn key_export_cli_action_is_ascii_json_escaped_once_and_round_trips() {
+        let action = "settle\"\\\nforged\r\u{1b}[31m\u{7f}\u{85}\u{202e}\u{1f9ea}";
+        let error = refusal(
+            action,
+            KeyExportKind::Verifier,
+            KeyExportFailureReason::ByteCapExceeded,
+        );
+        assert_eq!(error.key_export().unwrap().action, action);
+        let report = ledger_operation(error).to_string();
+        let encoded = report
+            .split_once("; action=")
+            .unwrap()
+            .1
+            .split_once(" key-kind=")
+            .unwrap()
+            .0;
+        assert_eq!(serde_json::from_str::<String>(encoded).unwrap(), action);
+        assert!(report.is_ascii(), "{report}");
+        assert!(report.chars().all(|c| !c.is_control()), "{report}");
+        assert!(encoded.contains(r"\u0085"));
+        assert!(encoded.contains(r"\u202e"));
+        assert!(encoded.contains(r"\ud83e\uddea"));
+        assert_eq!(
+            encoded,
+            r#""settle\"\\\nforged\r\u001b[31m\u007f\u0085\u202e\ud83e\uddea""#
+        );
+    }
+    #[test]
+    fn key_export_quiet_shell_reports_safe_metadata_on_actual_stderr() {
+        const CHILD: &str = "MORI_KEY_EXPORT_DIAGNOSTIC_REPORT_CHILD";
+        if std::env::var_os(CHILD).is_some() {
+            let report = ledger_operation(refusal(
+                "settle\n\u{1b}\u{202e}",
+                KeyExportKind::Prover,
+                KeyExportFailureReason::ByteCapExceeded,
+            ));
+            let mut shell = crate::shell::Shell::new(
+                crate::shell::Verbosity::Quiet,
+                anstream::ColorChoice::Never,
+            );
+            shell.report(&report);
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "commands::core_io::key_export_diagnostic_tests::key_export_quiet_shell_reports_safe_metadata_on_actual_stderr", "--nocapture"])
+            .env(CHILD, "1").output().unwrap();
+        assert!(output.status.success());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        // The trusted renderer adds Unicode box drawing and may wrap a field
+        // across lines. Inspect its joined content, plus raw hostile controls.
+        let content: String = stderr
+            .lines()
+            .map(|line| {
+                line.strip_prefix("  │ ")
+                    .or_else(|| line.strip_prefix("  × "))
+                    .unwrap_or(line)
+            })
+            .collect();
+        for value in [
+            "generated-key-size-or-encode",
+            "key-kind=prover",
+            "discovered-degree=0",
+            "byte-cap=3",
+            "accepted-bytes=2",
+            "byte-cap-exceeded",
+            "failed-write-bytes=2",
+            "attempted-minimum=4",
+            r#"action="settle\n\u001b\u202e""#,
+        ] {
+            assert!(content.contains(value), "{stderr}");
+        }
+        assert!(!stderr.contains(['\u{1b}', '\u{85}', '\u{202e}']));
+        assert!(!stderr.contains("key-bytes"));
+    }
+}
+pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
+    CliError::Operation {
+        code: "mori::command".into(),
+        message: crate::display::text(&error.to_string()),
+    }
+    .into()
+}
+#[cfg(feature = "native")]
+pub fn ledger_operation(error: mori_ledger::Error) -> mori_diagnostics::Report {
+    use mori_ledger::{DegreeRefusalReason, KeyExportFailureReason, KeyExportKind};
+    let mut message = crate::display::text(&error.to_string());
+    if let Some(diagnostic) = error.degree_refusal() {
+        let reason = match diagnostic.reason {
+            DegreeRefusalReason::CallerCeilingExceeded => "caller-ceiling-exceeded",
+            DegreeRefusalReason::UnsupportedPinnedDegree => "unsupported-pinned-degree",
+            DegreeRefusalReason::CachedDegreeMismatch { .. } => "cached-degree-mismatch",
+        };
+        // Quote the exact source identity once; operation() would escape this
+        // already-rendered identity again. All remaining context is metadata.
+        message.push_str(&format!(
+            "; action={} discovered-degree={} caller-ceiling={} pinned-supported={} reason={reason}",
+            review_identity(&diagnostic.action),
+            diagnostic.discovered_degree,
+            diagnostic.caller_ceiling,
+            diagnostic.pinned_supported,
+        ));
+        if let DegreeRefusalReason::CachedDegreeMismatch { cached_degree } = diagnostic.reason {
+            message.push_str(&format!(" cached-degree={cached_degree}"));
+        }
+    }
+    if let Some(diagnostic) = error.key_export() {
+        let kind = match diagnostic.key_kind {
+            KeyExportKind::Prover => "prover",
+            KeyExportKind::Verifier => "verifier",
+        };
+        let reason = match diagnostic.reason {
+            KeyExportFailureReason::ByteCapExceeded => "byte-cap-exceeded",
+            KeyExportFailureReason::ByteCountOverflow => "byte-count-overflow",
+            KeyExportFailureReason::Serialization => "serialization-failure",
+        };
+        message.push_str(&format!(
+            "; action={} key-kind={kind} discovered-degree={} byte-cap={} accepted-bytes={} reason={reason}",
+            key_export_identity(&diagnostic.action),
+            diagnostic.discovered_degree,
+            diagnostic.byte_cap,
+            diagnostic.accepted_bytes,
+        ));
+        if let Some(bytes) = diagnostic.failed_write_bytes {
+            message.push_str(&format!(" failed-write-bytes={bytes}"));
+        }
+        if let Some(minimum) = diagnostic.attempted_minimum {
+            message.push_str(&format!(" attempted-minimum={minimum}"));
+        }
+    }
+    CliError::Operation {
+        code: "mori::command".into(),
+        message,
+    }
+    .into()
+}
+/// JSON escaping quotes/controls once, with UTF-16 escapes for non-ASCII
+/// identities. This remains valid JSON even for supplementary Unicode scalars.
+#[cfg(feature = "native")]
+fn key_export_identity(value: &str) -> String {
+    let json = serde_json::to_string(value).expect("serializing a string cannot fail");
+    let mut escaped = String::with_capacity(json.len());
+    for character in json.chars() {
+        if character.is_ascii() && !character.is_control() {
+            escaped.push(character);
+        } else {
+            let mut units = [0; 2];
+            for unit in character.encode_utf16(&mut units) {
+                use std::fmt::Write;
+                write!(escaped, "\\u{unit:04x}").expect("writing to a String cannot fail");
+            }
+        }
+    }
+    escaped
+}
+pub fn read_json<T: DeserializeOwned>(path: &Path) -> super::Result<T> {
+    let source = read_source(path)?;
+    let value = mori_core::json::parse(&source).map_err(operation)?;
+    serde_json::from_value(value).map_err(operation)
+}
+pub fn program(path: &Path) -> super::Result<(String, mori_core::Program)> {
+    let source = read_source(path)?;
+    let program = mori_core::parse(&source).map_err(operation)?;
+    Ok((source, program))
+}
+pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
+    let display = mori_core::json::export(value).map_err(operation)?;
+    println!("{display}");
+    Ok(())
+}
+/// Trusted signed Target, separately supplied expected authority and logical time.
+#[cfg(feature = "native")]
+pub fn signed_target(path: &Path) -> super::Result<mori_backend::Target> {
+    let target: mori_backend::Target = read_json(path)?;
+    if target.signed_policy.is_none() {
+        return Err(operation(
+            "the signed profile requires a trusted Target with signed_policy",
+        ));
+    }
+    Ok(target)
+}
+#[cfg(feature = "native")]
+pub fn authority(path: &Path) -> super::Result<mori_backend::authorization::ExpectedAuthority> {
+    mori_backend::authorization::ExpectedAuthority::from_json(&read_source(path)?)
+        .map_err(operation)
+}
+#[cfg(feature = "native")]
+pub fn signed_intent(path: &Path) -> super::Result<mori_backend::authorization::SignedIntent> {
+    mori_backend::authorization::SignedIntent::from_json(&read_source(path)?).map_err(operation)
+}
+/// Quote display identities without giving source text terminal control.
+pub fn review_identity(value: &str) -> String {
+    format!(
+        "\"{}\"",
+        value
+            .chars()
+            .flat_map(char::escape_default)
+            .collect::<String>()
+    )
+}
+
+#[cfg(all(test, feature = "native"))]
+mod degree_diagnostic_tests {
+    use super::*;
+    use mori_ledger::{DegreeRefusalDiagnostic, DegreeRefusalReason, Error};
+
+    fn refusal(action: &str, reason: DegreeRefusalReason) -> Error {
+        let (discovered_degree, caller_ceiling, pinned_supported) = match reason {
+            DegreeRefusalReason::CallerCeilingExceeded => (14, 13, true),
+            DegreeRefusalReason::UnsupportedPinnedDegree => (20, 25, false),
+            DegreeRefusalReason::CachedDegreeMismatch { .. } => (13, 13, true),
+        };
+        Error::new("local-deployment", "exact-degree-unavailable").with_degree_refusal(
+            DegreeRefusalDiagnostic {
+                action: action.into(),
+                discovered_degree,
+                caller_ceiling,
+                pinned_supported,
+                reason,
+            },
+        )
+    }
+
+    #[test]
+    fn ledger_conversion_preserves_category_and_complete_permitted_context() {
+        for (reason, context) in [
+            (
+                DegreeRefusalReason::CallerCeilingExceeded,
+                "discovered-degree=14 caller-ceiling=13 pinned-supported=true reason=caller-ceiling-exceeded",
+            ),
+            (
+                DegreeRefusalReason::UnsupportedPinnedDegree,
+                "discovered-degree=20 caller-ceiling=25 pinned-supported=false reason=unsupported-pinned-degree",
+            ),
+            (
+                DegreeRefusalReason::CachedDegreeMismatch { cached_degree: 12 },
+                "discovered-degree=13 caller-ceiling=13 pinned-supported=true reason=cached-degree-mismatch cached-degree=12",
+            ),
+        ] {
+            let report = ledger_operation(refusal("freeze", reason));
+            assert_eq!(
+                report.to_string(),
+                format!(
+                    "mori::command: mori::ledger::local-deployment: exact-degree-unavailable; action=\"freeze\" {context}"
+                )
+            );
+        }
+        let legacy = Error::new("local-deployment", "selected-action");
+        assert_eq!(
+            ledger_operation(legacy.clone()).to_string(),
+            operation(legacy).to_string()
+        );
+    }
+
+    #[test]
+    fn hostile_action_is_exact_in_api_and_escaped_once_in_command_report() {
+        let action = "freeze\u{1b}[31m\nforged\r\"\\\u{85}\u{202e}";
+        let error = refusal(action, DegreeRefusalReason::CallerCeilingExceeded);
+        assert_eq!(error.degree_refusal().unwrap().action, action);
+        let message = ledger_operation(error).to_string();
+        assert!(
+            message.contains(r#"action="freeze\u{1b}[31m\nforged\r\"\\\u{85}\u{202e}""#),
+            "{message}"
+        );
+        assert!(message.chars().all(|c| !c.is_control()));
+        assert_eq!(
+            message,
+            r#"mori::command: mori::ledger::local-deployment: exact-degree-unavailable; action="freeze\u{1b}[31m\nforged\r\"\\\u{85}\u{202e}" discovered-degree=14 caller-ceiling=13 pinned-supported=true reason=caller-ceiling-exceeded"#
+        );
+    }
+
+    #[test]
+    fn quiet_shell_reports_constructed_degree_refusal_on_stderr() {
+        const CHILD: &str = "MORI_DEGREE_DIAGNOSTIC_REPORT_CHILD";
+        if std::env::var_os(CHILD).is_some() {
+            let report = ledger_operation(refusal(
+                "freeze",
+                DegreeRefusalReason::CallerCeilingExceeded,
+            ));
+            let mut shell = crate::shell::Shell::new(
+                crate::shell::Verbosity::Quiet,
+                anstream::ColorChoice::Never,
+            );
+            shell.report(&report);
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "commands::core_io::degree_diagnostic_tests::quiet_shell_reports_constructed_degree_refusal_on_stderr", "--nocapture"])
+            .env(CHILD, "1").output().unwrap();
+        assert!(output.status.success());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        for value in [
+            "exact-degree-unavailable",
+            "action=\"freeze\"",
+            "discovered-degree=14",
+            "caller-ceiling=13",
+            "caller-ceiling-exceeded",
+        ] {
+            assert!(stderr.contains(value), "{stderr}");
+        }
+        assert!(!stderr.contains('\u{1b}'));
+    }
+}
+
+===== END I02 =====
+
+===== WHOLE BODY I08; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/cli.rs; sha256 a1046abb0191c29bbc5b10e169ba3ce81a4b71324a48246d0abde34eb81c3988; bytes 11280 =====
+use std::path::PathBuf;
+
+use clap::{Args, Parser, Subcommand, ValueEnum};
+
+use crate::commands::{
+    capabilities, check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
+    keygen_signed_call, lsp, mcp, prepare_call, prepare_signed_call, prove, prove_call,
+    prove_signed_call, replay, simulate, test, verify, verify_call, verify_intent,
+    verify_signed_call,
+};
+use crate::shell::Verbosity;
+use crate::styles;
+
+/// Moriarty: a financial agreement language for Midnight.
+#[derive(Debug, Parser)]
+#[command(name = "mori", version, styles = styles::CLAP)]
+#[cfg_attr(
+    all(not(feature = "native"), not(feature = "source6-expansion")),
+    command(
+        after_help = "Built without native: local Core reference tooling only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature."
+    )
+)]
+#[cfg_attr(
+    all(not(feature = "native"), feature = "source6-expansion"),
+    command(
+        after_help = "Built without native: local Core reference tooling and explicit Source/6 transfer expansion only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature."
+    )
+)]
+pub struct Cli {
+    #[command(flatten)]
+    pub global: GlobalArgs,
+
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+#[derive(Debug, Args)]
+#[command(next_help_heading = "Global Options")]
+pub struct GlobalArgs {
+    /// Print no status output
+    #[arg(short, long, global = true, conflicts_with = "verbose")]
+    pub quiet: bool,
+
+    /// Print extra status output
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
+
+    /// When to use color
+    #[arg(long, global = true, value_name = "WHEN", default_value = "auto")]
+    pub color: Color,
+}
+
+impl GlobalArgs {
+    pub fn verbosity(&self) -> Verbosity {
+        if self.quiet {
+            Verbosity::Quiet
+        } else if self.verbose {
+            Verbosity::Verbose
+        } else {
+            Verbosity::Normal
+        }
+    }
+}
+
+/// Selects one action of an agreement and the scenario to run it against.
+#[derive(Debug, Args)]
+pub struct ActionInput {
+    /// Source file
+    pub file: PathBuf,
+
+    /// Action to run
+    #[arg(long, value_name = "NAME")]
+    pub action: String,
+
+    /// Scenario JSON with the local state and inputs
+    #[arg(long, value_name = "FILE")]
+    pub scenario: PathBuf,
+}
+
+/// Output format for the signing commands.
+#[derive(Debug, Args)]
+pub struct SigningOutputArgs {
+    /// Print a human review of what is being signed or verified
+    #[arg(long, conflicts_with = "json")]
+    pub review: bool,
+
+    /// Print the result as JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+/// Signed native owner-intent profile selected explicitly by name.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum SignedProfile {
+    #[value(name = "moriarty-jubjub-owner-intent/1")]
+    JubjubOwnerIntent,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Color {
+    Auto,
+    Always,
+    Never,
+}
+
+impl From<Color> for anstream::ColorChoice {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Auto => Self::Auto,
+            Color::Always => Self::Always,
+            Color::Never => Self::Never,
+        }
+    }
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    /// Describe compiled features and public source consumers without running them
+    Capabilities(capabilities::Args),
+    /// Create a new project from a starter template
+    Init(init::Args),
+    /// Check syntax, names, types and action support
+    Check(check::Args),
+    /// Compile supported Core/1 or Core/2 source into ledger-9 ZKIRv3 circuits
+    ///
+    /// Use a language "moriarty/1"; or language "moriarty/2"; source header.
+    /// Beta/1 and Source/6 text are not compiler inputs.
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    Compile(compile::Args),
+    /// Compile a source-static ordinary native contract-call relation
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    CompileCall(compile_call::Args),
+    /// Derive all source action keys and an explicit local installed snapshot
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    KeygenCall(keygen_call::Args),
+    /// Derive the complete local signed action map under a fixed JubJub policy
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    KeygenSignedCall(keygen_signed_call::Args),
+    /// Reconstruct a signature-free canonical local call signing package
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    PrepareSignedCall(prepare_signed_call::Args),
+    /// Prove the actual local typed SDK call with an external FENS attachment
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    ProveSignedCall(prove_signed_call::Args),
+    /// Cold public-only reconstruction and Real verification of a signed call
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    VerifySignedCall(verify_signed_call::Args),
+    /// Cold rederive keys and prove an actual local installed SDK call
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    ProveCall(prove_call::Args),
+    /// Cold rederive public keys and Real-verify an installed call without PK files
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    VerifyCall(verify_call::Args),
+    /// Prove a public local action using pinned offline parameters
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    Prove(prove::Args),
+    /// Prepare an unsigned, unproven local native call and public offer
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    PrepareCall(prepare_call::Args),
+    /// Verify a native proof against the expected source, target and scenario
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    Verify(verify::Args),
+    /// Format source files in place
+    #[command(visible_alias = "fmt")]
+    Format(format::Args),
+    /// Show identity claims, operative bounds and open premises
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Without native, source-only inspection is available; --target requires the native feature."
+        )
+    )]
+    Inspect(inspect::Args),
+    /// Show Core/1 IR or explicitly emit beta Source/6 transfer text
+    ///
+    /// Default expansion accepts moriarty/1 Core source. The explicit
+    /// --emit-source6-transfer option emits a local beta transfer proposal.
+    Expand(expand::Args),
+    /// Run a Core/1 action or Core/2 stage locally against a scenario
+    ///
+    /// Use a language "moriarty/1"; or language "moriarty/2"; source header.
+    /// moriarty-beta/1 and Source/6 text are not simulation inputs.
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Without native, local Core simulation and staged start/resume are available; --trace requires the native feature."
+        )
+    )]
+    Simulate(simulate::Args),
+    /// Independently replay a public record against separately trusted inputs
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Unavailable in this build: this command requires the native feature."
+        )
+    )]
+    Replay(replay::Args),
+    /// Run the test cases in a project directory
+    Test(test::Args),
+    /// Produce the owner signing bytes for an action
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Without native, legacy raw Core intents are available; the JubJub --profile requires the native feature."
+        )
+    )]
+    Intent(intent::Args),
+    /// Verify a signature, then prepare the action locally
+    #[cfg_attr(
+        not(feature = "native"),
+        command(
+            after_help = "Without native, legacy Core signature/reference verification is available; the JubJub --profile requires the native feature."
+        )
+    )]
+    VerifyIntent(verify_intent::Args),
+    /// Run the language server over stdio
+    Lsp(lsp::Args),
+    /// Run the read-only MCP server over stdio
+    Mcp(mcp::Args),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cli;
+    use clap::CommandFactory;
+
+    #[test]
+    fn help_distinguishes_core_consumers_from_source6_proposals() {
+        let command = Cli::command();
+        let compile = command.find_subcommand("compile").unwrap();
+        let compile_help = compile.get_long_about().unwrap().to_string();
+        for header in [r#"language "moriarty/1";"#, r#"language "moriarty/2";"#] {
+            assert!(compile_help.contains(header), "{compile_help}");
+        }
+        assert!(
+            compile_help.contains("Beta/1 and Source/6 text are not compiler inputs."),
+            "{compile_help}"
+        );
+
+        let simulate = command.find_subcommand("simulate").unwrap();
+        let simulate_help = simulate.get_long_about().unwrap().to_string();
+        for profile in ["moriarty/1", "moriarty/2"] {
+            assert!(simulate_help.contains(profile), "{simulate_help}");
+        }
+        assert!(
+            simulate_help.contains("moriarty-beta/1 and Source/6 text are not simulation inputs."),
+            "{simulate_help}"
+        );
+
+        let expand = command.find_subcommand("expand").unwrap();
+        let expand_help = expand.get_long_about().unwrap().to_string();
+        assert!(expand_help.contains("moriarty/1"), "{expand_help}");
+        let source6 = expand
+            .get_arguments()
+            .find(|argument| argument.get_id().as_str() == "emit_source6_transfer")
+            .unwrap();
+        let source6_help = source6.get_long_help().unwrap().to_string();
+        for boundary in [
+            "moriarty-beta/1",
+            "local-stipulation-only",
+            "Source/6 output is not compiled or simulated by this option.",
+        ] {
+            assert!(source6_help.contains(boundary), "{source6_help}");
+        }
+    }
+}
+
+===== END I08 =====
+
+===== WHOLE BODY I09; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-core/src/parser.rs; sha256 cf990775120f6f53e84d5a263665316d02138b331372b36555c506bd0f2e1b9a; bytes 18833 =====
+use crate::*;
+use mori_lexer::{TokenIdx, TokenKind};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Profile {
+    Core1,
+    Core2,
+    Core3,
+}
+impl Profile {
+    fn language(self) -> &'static str {
+        match self {
+            Self::Core1 => LANGUAGE,
+            Self::Core2 => crate::stage::LANGUAGE_2,
+            Self::Core3 => crate::stage::LANGUAGE_3,
+        }
+    }
+    fn semantics(self) -> &'static str {
+        match self {
+            Self::Core1 => SEMANTICS,
+            Self::Core2 => crate::stage::SEMANTICS_2,
+            Self::Core3 => crate::stage::SEMANTICS_3,
+        }
+    }
+}
+
+/// Parses the explicitly versioned core profile; beta grammar is untouched.
+pub fn parse(source: &str) -> Result<Program, Error> {
+    parse_profile(source, Profile::Core1)
+}
+
+/// Syntax-only parser; only stage::load admits the resulting source.
+pub(crate) fn parse_v2(source: &str) -> Result<Program, Error> {
+    parse_profile(source, Profile::Core2)
+}
+
+/// Syntax-only `/3` parser; only stage::load_v3 admits the result.
+/// Grammar added over `/2`: inside the agreement block, before the first
+/// action, interleaved with state/asset declarations, any number of
+/// `duty "<name>" = { asset: <asset-word>, debtor: "<debtor>", creditor: "<creditor>" };`
+/// `duty` is matched by token text only on this path; the lexer yields it
+/// as an ordinary identifier and no lexer change is required. On `/1` and
+/// `/2` paths the same text reaches the existing unsupported-declaration
+/// refusal. Name/debtor/creditor are decoded strings (`parser.string()`);
+/// asset is a word naming a declared asset, checked in `validate_v3`.
+pub(crate) fn parse_v3(source: &str) -> Result<Program, Error> {
+    parse_profile(source, Profile::Core3)
+}
+
+fn parse_profile(source: &str, profile: Profile) -> Result<Program, Error> {
+    let staged = profile != Profile::Core1;
+    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let tokens = (0..lexed.len())
+        .map(|i| {
+            let idx = TokenIdx::new(i);
+            let span = lexed.span(idx, source);
+            let raw = &source[span.start as usize..span.end as usize];
+            let text = if lexed.kind(idx) == TokenKind::String {
+                mori_lexer::decode_string(raw)
+            } else {
+                raw.to_owned()
+            };
+            Tok {
+                text,
+                kind: lexed.kind(idx),
+                start: span.start,
+            }
+        })
+        .collect();
+    let mut parser = Parser {
+        tokens,
+        pos: 0,
+        program: Program {
+            language: profile.language().into(),
+            semantics: profile.semantics().into(),
+            name: String::new(),
+            states: vec![],
+            assets: vec![],
+            expressions: vec![],
+            actions: vec![],
+            duties: vec![],
+        },
+    };
+    parser.expect("language")?;
+    let found = parser.string()?;
+    let expected_language = profile.language();
+    if found != expected_language {
+        return Err(parser.error(
+            "profile",
+            format!("Expected language \"{expected_language}\"; found {found:?}."),
+        ));
+    }
+    parser.expect(";")?;
+    parser.expect("agreement")?;
+    parser.program.name = parser.word()?;
+    parser.expect("{")?;
+    let mut seen_action = false;
+    while !parser.eat("}") {
+        if profile == Profile::Core3 && parser.peek_is_duty() {
+            if seen_action {
+                return Err(parser.error(
+                    "syntax",
+                    "Duty declarations must precede the first action.",
+                ));
+            }
+            parser.pos += 1;
+            let name = parser.string()?;
+            parser.expect("=")?;
+            parser.expect("{")?;
+            parser.expect("asset")?;
+            parser.expect(":")?;
+            let asset = parser.word()?;
+            parser.expect(",")?;
+            parser.expect("debtor")?;
+            parser.expect(":")?;
+            let debtor = parser.string()?;
+            parser.expect(",")?;
+            parser.expect("creditor")?;
+            parser.expect(":")?;
+            let creditor = parser.string()?;
+            parser.eat(",");
+            parser.expect("}")?;
+            parser.expect(";")?;
+            parser.program.duties.push(ExternalDutyDecl {
+                name,
+                asset,
+                debtor,
+                creditor,
+            });
+        } else if parser.eat("state") {
+            let name = parser.word()?;
+            parser.expect(":")?;
+            let ty = parser.ty()?;
+            parser.expect("=")?;
+            let initial = parser.literal()?;
+            parser.expect(";")?;
+            parser.program.states.push(StateDecl { name, ty, initial });
+        } else if parser.eat("asset") {
+            let name = parser.word()?;
+            parser.expect("=")?;
+            parser.expect("{")?;
+            parser.expect("network")?;
+            parser.expect(":")?;
+            let network = parser.string()?;
+            parser.expect(",")?;
+            parser.expect("issuer")?;
+            parser.expect(":")?;
+            let issuer = parser.string()?;
+            parser.expect(",")?;
+            parser.expect("reference")?;
+            parser.expect(":")?;
+            let reference = parser.string()?;
+            parser.expect(",")?;
+            parser.expect("scale")?;
+            parser.expect(":")?;
+            let Value::UInt(UInt(scale)) = parser.literal()? else {
+                return Err(parser.error("asset", "Asset scale must be an unsigned integer."));
+            };
+            let scale = u8::try_from(scale)
+                .map_err(|_| parser.error("asset", "Asset scale must fit u8."))?;
+            parser.eat(",");
+            parser.expect("}")?;
+            parser.expect(";")?;
+            parser.program.assets.push(AssetDecl {
+                name,
+                identity: AssetId {
+                    network,
+                    issuer,
+                    reference,
+                    scale,
+                },
+            });
+        } else if parser.eat("action") {
+            seen_action = true;
+            let name = parser.word()?;
+            parser.expect("(")?;
+            let mut inputs = vec![];
+            if !parser.eat(")") {
+                loop {
+                    let name = parser.word()?;
+                    parser.expect(":")?;
+                    let ty = parser.ty()?;
+                    inputs.push(InputDecl { name, ty });
+                    if parser.eat(")") {
+                        break;
+                    }
+                    parser.expect(",")?;
+                }
+            }
+            parser.expect("{")?;
+            let mut statements = vec![];
+            while !parser.eat("}") {
+                if parser.eat("input") {
+                    if !statements.is_empty() {
+                        return Err(
+                            parser.error("input", "Declare action inputs before statements.")
+                        );
+                    }
+                    let name = parser.word()?;
+                    parser.expect(":")?;
+                    let ty = parser.ty()?;
+                    parser.expect(";")?;
+                    inputs.push(InputDecl { name, ty });
+                    continue;
+                }
+                statements.push(parser.statement()?);
+                if statements.len() > MAX_STATEMENTS {
+                    return Err(parser.error("bound", "Action exceeds 1,024 statements."));
+                }
+            }
+            parser.program.actions.push(Action {
+                name,
+                inputs,
+                statements,
+            });
+        } else {
+            return Err(parser.error("unsupported", "Expected state, asset or action declaration; loops and native calls are unsupported."));
+        }
+        if parser.program.states.len()
+            + parser.program.assets.len()
+            + parser.program.actions.len()
+            + parser.program.duties.len()
+            > MAX_DECLARATIONS
+        {
+            return Err(parser.error("bound", "Program exceeds 256 declarations."));
+        }
+    }
+    if parser.peek().kind != TokenKind::Eof {
+        return Err(parser.error("syntax", "Unexpected content after agreement."));
+    }
+    if !staged {
+        validate(&parser.program)?;
+    }
+    Ok(parser.program)
+}
+struct Tok {
+    text: String,
+    kind: TokenKind,
+    start: u32,
+}
+struct Parser {
+    tokens: Vec<Tok>,
+    pos: usize,
+    program: Program,
+}
+impl Parser {
+    fn peek(&self) -> &Tok {
+        &self.tokens[self.pos]
+    }
+    fn peek_is_duty(&self) -> bool {
+        self.peek().text == "duty" && self.peek().kind != TokenKind::String
+    }
+    fn error(&self, code: &str, message: impl Into<String>) -> Error {
+        let mut e = Error::new(code, message);
+        e.offset = Some(self.peek().start);
+        e
+    }
+    fn eat(&mut self, text: &str) -> bool {
+        if self.peek().text == text && self.peek().kind != TokenKind::String {
+            self.pos += 1;
+            true
+        } else {
+            false
+        }
+    }
+    fn expect(&mut self, text: &str) -> Result<(), Error> {
+        if self.eat(text) {
+            Ok(())
+        } else {
+            Err(self.error(
+                "syntax",
+                format!("Expected {text:?}; found {:?}.", self.peek().text),
+            ))
+        }
+    }
+    fn word(&mut self) -> Result<String, Error> {
+        if self.peek().kind.is_word() {
+            let text = self.peek().text.clone();
+            self.pos += 1;
+            Ok(text)
+        } else {
+            Err(self.error("syntax", "Expected a name."))
+        }
+    }
+    fn string(&mut self) -> Result<String, Error> {
+        if self.peek().kind == TokenKind::String {
+            let text = self.peek().text.clone();
+            self.pos += 1;
+            Ok(text)
+        } else {
+            Err(self.error("syntax", "Expected a quoted string."))
+        }
+    }
+    fn ty(&mut self) -> Result<Type, Error> {
+        match self.word()?.as_str() {
+            "UInt" => Ok(Type::UInt),
+            "Bool" => Ok(Type::Bool),
+            _ => Err(self.error("type", "Supported types are UInt and Bool.")),
+        }
+    }
+    fn literal(&mut self) -> Result<Value, Error> {
+        if self.eat("true") {
+            return Ok(Value::Bool(true));
+        }
+        if self.eat("false") {
+            return Ok(Value::Bool(false));
+        }
+        if self.peek().kind != TokenKind::Number {
+            return Err(self.error("syntax", "Expected an unsigned integer or boolean literal."));
+        }
+        let raw = self.peek().text.replace('_', "");
+        let n = raw.parse::<u128>().map_err(|_| {
+            self.error(
+                "number",
+                "UInt literal must fit u128; amounts use integral atomic units.",
+            )
+        })?;
+        self.pos += 1;
+        Ok(Value::UInt(UInt(n)))
+    }
+    fn push(&mut self, expr: Expr) -> Result<ExprId, Error> {
+        if self.program.expressions.len() >= MAX_EXPRESSIONS {
+            return Err(self.error("bound", "Program exceeds 8,192 expression nodes."));
+        }
+        let id = self.program.expressions.len() as u16;
+        self.program.expressions.push(expr);
+        Ok(id)
+    }
+    fn expr(&mut self, minimum: u8, depth: usize) -> Result<ExprId, Error> {
+        if depth > 64 {
+            return Err(self.error("bound", "Expression nesting exceeds 64."));
+        }
+        let mut lhs = if self.eat("(") {
+            let e = self.expr(0, depth + 1)?;
+            self.expect(")")?;
+            e
+        } else if self.eat("not") {
+            let value = self.expr(6, depth + 1)?;
+            self.push(Expr::Not { value })?
+        } else if self.peek().kind == TokenKind::Number
+            || self.peek().text == "true"
+            || self.peek().text == "false"
+        {
+            let value = self.literal()?;
+            self.push(Expr::Literal { value })?
+        } else {
+            let name = self.word()?;
+            if matches!(name.as_str(), "liability_present" | "liability_amount") && self.eat("(") {
+                let duty = self.string()?;
+                self.expect(")")?;
+                self.push(if name == "liability_present" {
+                    Expr::LiabilityPresent { name: duty }
+                } else {
+                    Expr::LiabilityAmount { name: duty }
+                })?
+            } else {
+                self.push(Expr::Name { name })?
+            }
+        };
+        loop {
+            if self.peek().kind == TokenKind::String {
+                break;
+            }
+            let next = self
+                .tokens
+                .get(self.pos + 1)
+                .filter(|t| t.kind != TokenKind::String)
+                .map(|t| t.text.as_str());
+            let (op, precedence, length) = match (self.peek().text.as_str(), next) {
+                ("or", _) => (BinaryOp::Or, 1, 1),
+                ("and", _) => (BinaryOp::And, 2, 1),
+                ("=", Some("=")) => (BinaryOp::Eq, 3, 2),
+                ("not", Some("=")) => (BinaryOp::Ne, 3, 2),
+                ("<", Some("=")) => (BinaryOp::Le, 3, 2),
+                (">", Some("=")) => (BinaryOp::Ge, 3, 2),
+                ("<", _) => (BinaryOp::Lt, 3, 1),
+                (">", _) => (BinaryOp::Gt, 3, 1),
+                ("+", _) => (BinaryOp::Add, 4, 1),
+                ("-", _) => (BinaryOp::Sub, 4, 1),
+                ("*", _) => (BinaryOp::Mul, 5, 1),
+                _ => break,
+            };
+            if precedence < minimum {
+                break;
+            }
+            self.pos += length;
+            let rhs = self.expr(precedence + 1, depth + 1)?;
+            lhs = self.push(Expr::Binary { op, lhs, rhs })?;
+        }
+        Ok(lhs)
+    }
+    fn statement(&mut self) -> Result<Statement, Error> {
+        let keyword = self.word()?;
+        let s=match keyword.as_str() {
+            "await" if matches!(self.program.language.as_str(), crate::stage::LANGUAGE_2 | crate::stage::LANGUAGE_3) => {
+                let label = self.word()?;
+                self.expect("(")?;
+                let mut binders = Vec::new();
+                if !self.eat(")") {
+                    loop {
+                        let name = self.word()?;
+                        self.expect(":")?;
+                        let ty = self.ty()?;
+                        binders.push(InputDecl { name, ty });
+                        if self.eat(")") { break; }
+                        self.expect(",")?;
+                    }
+                }
+                self.expect("when")?;
+                Statement::Await { label, binders, guard: self.expr(0, 0)? }
+            },
+            "let"=>{let name=self.word()?;self.expect("=")?;Statement::Let{name,value:self.expr(0,0)?}},
+            "next"=>{let state=self.word()?;self.expect("=")?;Statement::Next{state,value:self.expr(0,0)?}},
+            "requires"=>Statement::Requires{predicate:self.expr(0,0)?},
+            "ensures"=>Statement::Ensures{predicate:self.expr(0,0)?},
+            "emit"=>{let name=self.string()?;self.expect("(")?;let value=self.expr(0,0)?;self.expect(")")?;Statement::Emit{name,value}},
+            "transfer"|"fee"=>{self.expect("(")?;let asset=self.word()?;self.expect(",")?;let from=self.string()?;self.expect(",")?;let to=self.string()?;self.expect(",")?;let amount=self.expr(0,0)?;self.expect(")")?;if keyword=="fee"{Statement::Fee{asset,from,to,amount}}else{Statement::Transfer{asset,from,to,amount}}},
+            "liability"=>{self.expect("(")?;let name=self.string()?;self.expect(",")?;let asset=self.word()?;self.expect(",")?;let debtor=self.string()?;self.expect(",")?;let creditor=self.string()?;self.expect(",")?;let amount=self.expr(0,0)?;self.expect(")")?;Statement::Liability{name,asset,debtor,creditor,amount}},
+            "discharge"=>{self.expect("(")?;let name=self.string()?;self.expect(",")?;let amount=self.expr(0,0)?;self.expect(")")?;Statement::Discharge{name,amount}},
+            _=>return Err(self.error("unsupported",format!("Unsupported statement {keyword:?}; use let, requires, ensures, next, emit, transfer, fee, liability or discharge."))),
+        };
+        self.expect(";")?;
+        Ok(s)
+    }
+}
+
+/// Read the explicit source profile for CLI routing; this does not admit a program.
+/// Unchanged: returns only `/1` or `/2`, so legacy consumers refuse `/3`.
+pub fn language(source: &str) -> Result<&'static str, Error> {
+    language_inner(source, false)
+}
+
+/// Extended routing for staged consumers that explicitly support `/3`.
+/// Returns `/1`, `/2` or `/3`; it does not admit a program and never
+/// converts between profiles.
+pub fn language_v3(source: &str) -> Result<&'static str, Error> {
+    language_inner(source, true)
+}
+
+fn language_inner(source: &str, v3: bool) -> Result<&'static str, Error> {
+    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let mut tokens = Vec::new();
+    for i in 0..lexed.len() {
+        let idx = TokenIdx::new(i);
+        let span = lexed.span(idx, source);
+        let raw = &source[span.start as usize..span.end as usize];
+        let kind = lexed.kind(idx);
+        tokens.push(Tok {
+            text: if kind == TokenKind::String {
+                mori_lexer::decode_string(raw)
+            } else {
+                raw.to_owned()
+            },
+            kind,
+            start: span.start,
+        });
+    }
+    let mut parser = Parser {
+        tokens,
+        pos: 0,
+        program: Program {
+            language: LANGUAGE.into(),
+            semantics: SEMANTICS.into(),
+            name: String::new(),
+            states: vec![],
+            assets: vec![],
+            expressions: vec![],
+            actions: vec![],
+            duties: vec![],
+        },
+    };
+    let expected = if v3 {
+        format!(
+            "language \"{LANGUAGE}\" or \"{}\" or \"{}\"",
+            crate::stage::LANGUAGE_2,
+            crate::stage::LANGUAGE_3
+        )
+    } else {
+        format!(
+            "language \"{LANGUAGE}\" or \"{}\"",
+            crate::stage::LANGUAGE_2
+        )
+    };
+    parser.expect("language").map_err(|mut error| {
+        error.message = format!("Expected {expected}. {}", error.message);
+        error
+    })?;
+    let profile = parser.string().map_err(|mut error| {
+        error.message = format!("Expected {expected}. {}", error.message);
+        error
+    })?;
+    match profile.as_str() {
+        LANGUAGE => Ok(LANGUAGE),
+        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),
+        crate::stage::LANGUAGE_3 if v3 => Ok(crate::stage::LANGUAGE_3),
+        _ => Err(parser.error(
+            "profile",
+            format!("Expected {expected}; found {profile:?}."),
+        )),
+    }
+}
+
+===== END I09 =====
+
+===== WHOLE BODY I10; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-core/src/ir.rs; sha256 04ca1b06c4b3d3b12b8d5a6cc1927244a0b7d99d56e6093668b06648c08fe500; bytes 13944 =====
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+pub const LANGUAGE: &str = "moriarty/1";
+pub const SEMANTICS: &str = "moriarty-core/1";
+pub const MAX_EXPRESSIONS: usize = 8192;
+pub const MAX_STATEMENTS: usize = 1024;
+pub const MAX_DECLARATIONS: usize = 256;
+pub const MAX_TRACE_CELLS: usize = 65_536;
+
+/// Unsigned integral atomic units; JSON uses canonical decimal strings.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UInt(pub u128);
+impl Serialize for UInt {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+impl<'de> Deserialize<'de> for UInt {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        if s.is_empty()
+            || !s.bytes().all(|b| b.is_ascii_digit())
+            || (s.len() > 1 && s.starts_with('0'))
+        {
+            return Err(serde::de::Error::custom(
+                "expected canonical unsigned decimal string",
+            ));
+        }
+        s.parse().map(UInt).map_err(serde::de::Error::custom)
+    }
+}
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Type {
+    UInt,
+    Bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", content = "value", deny_unknown_fields)]
+pub enum Value {
+    UInt(UInt),
+    Bool(bool),
+}
+impl Value {
+    pub fn ty(&self) -> Type {
+        match self {
+            Self::UInt(_) => Type::UInt,
+            Self::Bool(_) => Type::Bool,
+        }
+    }
+}
+pub type ExprId = u16;
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    And,
+    Or,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Expr {
+    LiabilityPresent {
+        name: String,
+    },
+    LiabilityAmount {
+        name: String,
+    },
+    Literal {
+        value: Value,
+    },
+    Name {
+        name: String,
+    },
+    Binary {
+        op: BinaryOp,
+        lhs: ExprId,
+        rhs: ExprId,
+    },
+    Not {
+        value: ExprId,
+    },
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StateDecl {
+    pub name: String,
+    pub ty: Type,
+    pub initial: Value,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct InputDecl {
+    pub name: String,
+    pub ty: Type,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(deny_unknown_fields)]
+pub struct AssetId {
+    pub network: String,
+    pub issuer: String,
+    pub reference: String,
+    pub scale: u8,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AssetDecl {
+    pub name: String,
+    pub identity: AssetId,
+}
+/// Source-declared external duty identity for `moriarty/3` only.
+/// Constructed only by `parser::parse_v3` from source text; never by JSON,
+/// a manifest, a binding map, a Scenario or a Snapshot. It is parsed source
+/// identity for admission, not OD5 consent, obligation formation,
+/// authenticated completeness or native authority.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ExternalDutyDecl {
+    pub name: String,
+    pub asset: String,
+    pub debtor: String,
+    pub creditor: String,
+}
+/// Serialize-only on the shared type: decoding always goes through the frozen
+/// `v1` wire, so JSON can never yield `Await`.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Statement {
+    Await {
+        label: String,
+        binders: Vec<InputDecl>,
+        guard: ExprId,
+    },
+    Let {
+        name: String,
+        value: ExprId,
+    },
+    Requires {
+        predicate: ExprId,
+    },
+    Ensures {
+        predicate: ExprId,
+    },
+    Next {
+        state: String,
+        value: ExprId,
+    },
+    Emit {
+        name: String,
+        value: ExprId,
+    },
+    Transfer {
+        asset: String,
+        from: String,
+        to: String,
+        amount: ExprId,
+    },
+    Fee {
+        asset: String,
+        from: String,
+        to: String,
+        amount: ExprId,
+    },
+    Liability {
+        name: String,
+        asset: String,
+        debtor: String,
+        creditor: String,
+        amount: ExprId,
+    },
+    Discharge {
+        name: String,
+        amount: ExprId,
+    },
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Action {
+    pub name: String,
+    pub inputs: Vec<InputDecl>,
+    pub statements: Vec<Statement>,
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Program {
+    pub language: String,
+    pub semantics: String,
+    pub name: String,
+    pub states: Vec<StateDecl>,
+    pub assets: Vec<AssetDecl>,
+    pub expressions: Vec<Expr>,
+    pub actions: Vec<Action>,
+    /// Empty for every `/1` and `/2` program, so serialization, canonical
+    /// bytes and program/plan hashes for those profiles are unchanged.
+    /// A `/3` program is built only by `parser::parse_v3`; its duties then
+    /// serialize in declaration order and bind into the program hash.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub duties: Vec<ExternalDutyDecl>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Balance {
+    pub account: String,
+    pub asset: AssetId,
+    pub amount: UInt,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Liability {
+    pub name: String,
+    pub asset: AssetId,
+    pub debtor: String,
+    pub creditor: String,
+    pub amount: UInt,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Scenario {
+    pub state: BTreeMap<String, Value>,
+    pub inputs: BTreeMap<String, Value>,
+    pub balances: Vec<Balance>,
+    pub liabilities: Vec<Liability>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Snapshot {
+    pub state: BTreeMap<String, Value>,
+    pub balances: Vec<Balance>,
+    pub liabilities: Vec<Liability>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Effect {
+    State {
+        name: String,
+        before: Value,
+        after: Value,
+    },
+    Transfer {
+        asset: AssetId,
+        from: String,
+        to: String,
+        amount: UInt,
+    },
+    Fee {
+        asset: AssetId,
+        from: String,
+        to: String,
+        amount: UInt,
+    },
+    Liability {
+        name: String,
+        asset: AssetId,
+        debtor: String,
+        creditor: String,
+        before: UInt,
+        after: UInt,
+    },
+    Emit {
+        name: String,
+        value: Value,
+    },
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Step {
+    pub index: u16,
+    pub statement: Statement,
+    pub value: Option<Value>,
+    pub snapshot: Snapshot,
+    pub effects: Vec<Effect>,
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Execution {
+    pub semantics: String,
+    pub action: String,
+    pub pre: Snapshot,
+    pub post: Snapshot,
+    pub steps: Vec<Step>,
+    pub effects: Vec<Effect>,
+}
+/// Frozen `moriarty-core/1` decode wire: the baseline (fe01bc8b) derives,
+/// moved verbatim. Type names are kept so serde's `expecting` text, unknown
+/// variant lists and error messages stay byte-identical. There is no Await.
+/// There is also no `duties` field, so `deny_unknown_fields` refuses any
+/// JSON object carrying `duties` on every shared decode path.
+pub mod v1 {
+    use super::{AssetDecl, Effect, Expr, ExprId, InputDecl, Snapshot, StateDecl, Value};
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum Statement {
+        Let {
+            name: String,
+            value: ExprId,
+        },
+        Requires {
+            predicate: ExprId,
+        },
+        Ensures {
+            predicate: ExprId,
+        },
+        Next {
+            state: String,
+            value: ExprId,
+        },
+        Emit {
+            name: String,
+            value: ExprId,
+        },
+        Transfer {
+            asset: String,
+            from: String,
+            to: String,
+            amount: ExprId,
+        },
+        Fee {
+            asset: String,
+            from: String,
+            to: String,
+            amount: ExprId,
+        },
+        Liability {
+            name: String,
+            asset: String,
+            debtor: String,
+            creditor: String,
+            amount: ExprId,
+        },
+        Discharge {
+            name: String,
+            amount: ExprId,
+        },
+    }
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    #[serde(deny_unknown_fields)]
+    pub struct Action {
+        pub name: String,
+        pub inputs: Vec<InputDecl>,
+        pub statements: Vec<Statement>,
+    }
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    #[serde(deny_unknown_fields)]
+    pub struct Program {
+        pub language: String,
+        pub semantics: String,
+        pub name: String,
+        pub states: Vec<StateDecl>,
+        pub assets: Vec<AssetDecl>,
+        pub expressions: Vec<Expr>,
+        pub actions: Vec<Action>,
+    }
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    #[serde(deny_unknown_fields)]
+    pub struct Step {
+        pub index: u16,
+        pub statement: Statement,
+        pub value: Option<Value>,
+        pub snapshot: Snapshot,
+        pub effects: Vec<Effect>,
+    }
+    #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+    #[serde(deny_unknown_fields)]
+    pub struct Execution {
+        pub semantics: String,
+        pub action: String,
+        pub pre: Snapshot,
+        pub post: Snapshot,
+        pub steps: Vec<Step>,
+        pub effects: Vec<Effect>,
+    }
+}
+impl From<v1::Statement> for Statement {
+    fn from(s: v1::Statement) -> Self {
+        use v1::Statement as W;
+        match s {
+            W::Let { name, value } => Self::Let { name, value },
+            W::Requires { predicate } => Self::Requires { predicate },
+            W::Ensures { predicate } => Self::Ensures { predicate },
+            W::Next { state, value } => Self::Next { state, value },
+            W::Emit { name, value } => Self::Emit { name, value },
+            W::Transfer {
+                asset,
+                from,
+                to,
+                amount,
+            } => Self::Transfer {
+                asset,
+                from,
+                to,
+                amount,
+            },
+            W::Fee {
+                asset,
+                from,
+                to,
+                amount,
+            } => Self::Fee {
+                asset,
+                from,
+                to,
+                amount,
+            },
+            W::Liability {
+                name,
+                asset,
+                debtor,
+                creditor,
+                amount,
+            } => Self::Liability {
+                name,
+                asset,
+                debtor,
+                creditor,
+                amount,
+            },
+            W::Discharge { name, amount } => Self::Discharge { name, amount },
+        }
+    }
+}
+impl From<v1::Action> for Action {
+    fn from(a: v1::Action) -> Self {
+        Self {
+            name: a.name,
+            inputs: a.inputs,
+            statements: a.statements.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+impl From<v1::Program> for Program {
+    fn from(p: v1::Program) -> Self {
+        Self {
+            language: p.language,
+            semantics: p.semantics,
+            name: p.name,
+            states: p.states,
+            assets: p.assets,
+            expressions: p.expressions,
+            actions: p.actions.into_iter().map(Into::into).collect(),
+            duties: Vec::new(),
+        }
+    }
+}
+impl From<v1::Step> for Step {
+    fn from(s: v1::Step) -> Self {
+        Self {
+            index: s.index,
+            statement: s.statement.into(),
+            value: s.value,
+            snapshot: s.snapshot,
+            effects: s.effects,
+        }
+    }
+}
+impl From<v1::Execution> for Execution {
+    fn from(e: v1::Execution) -> Self {
+        Self {
+            semantics: e.semantics,
+            action: e.action,
+            pre: e.pre,
+            post: e.post,
+            steps: e.steps.into_iter().map(Into::into).collect(),
+            effects: e.effects,
+        }
+    }
+}
+// Every direct, nested or generic decode of a shared type (CLI, replay,
+// backend bundles) is routed through `v1`, so no decode site can be missed.
+macro_rules! decode_via_v1 {
+    ($($ty:ident),*) => {$(
+        impl<'de> Deserialize<'de> for $ty {
+            fn deserialize<D: serde::Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {
+                v1::$ty::deserialize(decoder).map(Self::from)
+            }
+        }
+    )*};
+}
+decode_via_v1!(Statement, Action, Program, Step, Execution);
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, thiserror::Error)]
+#[error("{code}: {message}")]
+pub struct Error {
+    pub code: String,
+    pub message: String,
+    pub offset: Option<u32>,
+    pub step: Option<u16>,
+}
+impl Error {
+    pub(crate) fn new(code: &str, message: impl Into<String>) -> Self {
+        Self {
+            code: format!("mori::core::{code}"),
+            message: message.into(),
+            offset: None,
+            step: None,
+        }
+    }
+}
+
+===== END I10 =====
+
+===== WHOLE BODY I17; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-core/src/stage/mod.rs; sha256 caea348db26d8c5306b2ef2a03cbca4d896769a08837eda5d82a7639f1e4b1d0; bytes 7179 =====
+//! Staged `moriarty/2` and `moriarty/3` programs and their local continuation interface.
+//!
+//! Local and unsigned only. Event binders and captures are caller-chosen values
+//! (no authentication), a continuation can be resumed any number of times (no
+//! consumption tracking), and no stage authority exists. Outputs carry
+//! `STAGE_LABELS` so these limits stay visible. `/3` adds only source-declared
+//! external duty identities; it is not consent or native authority.
+mod admit;
+mod cost;
+pub mod decode;
+mod digest;
+#[cfg(feature = "core2-disjoint-draft")]
+pub mod disjoint;
+mod plan;
+mod profile;
+mod report;
+pub mod sequence_report;
+mod validate;
+
+pub use crate::LOGICAL_COST_PROFILE_2;
+pub use admit::{resume, start};
+pub use plan::{ActionPlan, AwaitSite, CaptureSlot, Origin, StageBinder, StagePlan};
+pub use profile::{require_core1, require_core2, require_core3};
+pub use report::outcome_report;
+
+use crate::{Error, Execution, Liability, Program, Snapshot, UInt, Value};
+use serde::{Deserialize, Serialize};
+
+pub const LANGUAGE_2: &str = "moriarty/2";
+pub const SEMANTICS_2: &str = "moriarty-core/2";
+pub const LANGUAGE_3: &str = "moriarty/3";
+pub const SEMANTICS_3: &str = "moriarty-core/3";
+pub const STAGE_PLAN_FORMAT: &str = "moriarty-stage-plan/1";
+pub const CONTINUATION_FORMAT: &str = "moriarty-continuation/1";
+pub const STAGE_EVENT_FORMAT: &str = "moriarty-stage-event/1";
+pub const MAX_AWAITS_PER_ACTION: usize = 16;
+pub const MAX_EVENT_BINDERS: usize = 16;
+pub const MAX_CAPTURE_SLOTS: usize = 256;
+pub const MAX_CONTINUATION_BYTES: usize = 4 * 1_048_576;
+pub const MAX_EVENT_BYTES: usize = 65_536;
+/// Inserted verbatim into every `/2` and `/3` output object.
+pub const STAGE_LABELS: [(&str, &str); 3] = [
+    ("qualification", "local-reference-stage"),
+    ("authentication", "none"),
+    ("consumption", "untracked"),
+];
+
+/// A staged program that passed profile, validation, plan invariants and
+/// static costing, with its canonical digests. Only `load` or `load_v3`
+/// constructs one; there is no public constructor, `Default` or `Deserialize`.
+/// Profile custody is exactly `program.language`/`program.semantics`.
+#[derive(Debug, Clone)]
+pub struct StagedProgram {
+    program: Program,
+    plan: StagePlan,
+    program_hash: [u8; 32],
+    plan_hash: [u8; 32],
+}
+impl StagedProgram {
+    pub fn program(&self) -> &Program {
+        &self.program
+    }
+    pub fn plan(&self) -> &StagePlan {
+        &self.plan
+    }
+    pub fn program_hash(&self) -> [u8; 32] {
+        self.program_hash
+    }
+    pub fn plan_hash(&self) -> [u8; 32] {
+        self.plan_hash
+    }
+    /// Declaration index of an action; plan and program actions share it.
+    pub(crate) fn action_index(&self, name: &str) -> Option<usize> {
+        self.program.actions.iter().position(|a| a.name == name)
+    }
+}
+
+/// Parses, admits and plans a `moriarty/2` source. Legacy `parse`/`validate`
+/// remain `/1`-only, so a `/2` source fails every legacy consumer.
+pub fn load(src: &str) -> Result<StagedProgram, Error> {
+    let program = crate::parser::parse_v2(src)?;
+    profile::require_core2(&program)?;
+    validate::validate_v2(&program)?;
+    finish_load(program)
+}
+
+/// Parses, admits and plans a `moriarty/3` source. No `/2`-to-`/3` or
+/// `/3`-to-`/2` conversion exists; a `/2` continuation can never resume
+/// as `/3` because `resume` uses the caller's retained `StagedProgram`.
+pub fn load_v3(src: &str) -> Result<StagedProgram, Error> {
+    let program = crate::parser::parse_v3(src)?;
+    profile::require_core3(&program)?;
+    validate::validate_v3(&program)?;
+    finish_load(program)
+}
+
+fn finish_load(program: Program) -> Result<StagedProgram, Error> {
+    let mut plan = plan::build(&program)?;
+    validate::plan_invariants(&program, &plan)?;
+    cost::fill(&program, &mut plan)?;
+    validate::cost_invariants(&program, &plan)?;
+    let program_hash = digest::program_hash(&program)?;
+    plan.program_hash = digest::hex(&program_hash);
+    let plan_hash = digest::plan_hash(&plan)?;
+    Ok(StagedProgram {
+        program,
+        plan,
+        program_hash,
+        plan_hash,
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NamedValue {
+    pub name: String,
+    pub value: Value,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StageLogical {
+    pub profile: String,
+    /// Mandatory key; `None` is written as `null`.
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub cap: Option<UInt>,
+    pub committed: UInt,
+}
+/// Resume input. `site` and `captures` are the executing action's pending
+/// frame; `boundary` is the legacy Snapshot. Nothing here is authenticated.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Continuation {
+    pub format: String,
+    pub program_hash: String,
+    pub plan_hash: String,
+    pub action: String,
+    pub site: u16,
+    pub captures: Vec<NamedValue>,
+    pub logical: StageLogical,
+    pub boundary: Snapshot,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StageEvent {
+    pub format: String,
+    pub action: String,
+    pub label: String,
+    pub values: Vec<NamedValue>,
+}
+/// Local frame of one action. `site == 0` exactly when `captures` is empty
+/// and the action is idle; no padding is represented locally.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PendingFrame {
+    pub site: u16,
+    pub captures: Vec<NamedValue>,
+}
+impl PendingFrame {
+    pub(crate) fn idle() -> Self {
+        Self {
+            site: 0,
+            captures: Vec::new(),
+        }
+    }
+}
+/// Output only. Segment history is never decoded or trusted on resume, so no
+/// `Deserialize` exists over the shared Await-bearing `Statement`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct StageSegment {
+    pub action: String,
+    pub frame_pre: PendingFrame,
+    pub frame_post: PendingFrame,
+    pub execution: Execution,
+}
+/// `residual` lists every post-boundary liability with a positive amount, in
+/// the existing complete `Liability` representation.
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum StageOutcome {
+    Waiting {
+        advanced: bool,
+        segment: Option<StageSegment>,
+        continuation: Continuation,
+        attempted: UInt,
+        residual: Vec<Liability>,
+    },
+    Complete {
+        segment: StageSegment,
+        committed: UInt,
+        attempted: UInt,
+        residual: Vec<Liability>,
+    },
+}
+/// A rejected invocation publishes no segment, effects or continuation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, thiserror::Error)]
+#[error("{error}")]
+pub struct StageRejection {
+    pub error: Error,
+    pub attempted: UInt,
+    pub committed: UInt,
+}
+
+/// Positive residual duties of a boundary, in its (name-sorted) order.
+pub(crate) fn residual(snapshot: &Snapshot) -> Vec<Liability> {
+    snapshot
+        .liabilities
+        .iter()
+        .filter(|l| l.amount.0 > 0)
+        .cloned()
+        .collect()
+}
+
+===== END I17 =====
+
+===== WHOLE BODY N02; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/source-context/W/RUST_GUIDELINES.md; sha256 7faaf005fc60012a4e380a2c5b2f68c48c956f6d53964dc45fd7709ad9b70ed3; bytes 12868 =====
+# Rust toolchain guidelines
+
+Rules for the Rust implementation of the Moriarty toolchain in `crates/`.
+
+## Target language
+
+Port `moriarty-beta/1`, the `.mori` language. The reference implementation is
+[`packages/moriarty-beta/src/frontend.ts`](packages/moriarty-beta/src/frontend.ts);
+the [reference page](https://charleshoskinson.github.io/Moriarty/reference.html#language)
+documents it. Beta lowers to Source/6 and Core/5
+([contract](experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md)).
+
+The surface syntax is not frozen. Keep grammar-specific code separate from the
+later phases so it can change. The Rust toolchain accepts and rejects the same
+programs as the TypeScript frontend, except for the intentional differences
+below. Error codes, messages and spans are our own.
+
+### Intentional differences
+
+The TypeScript frontend is the reference for what the language accepts and
+what values mean, not for incidental implementation choices. Every deliberate
+difference is listed here and agreed before it is made.
+
+- **Comments do not count toward the 8,192-token bound.** The bound limits
+  analysis, and comments are not analyzed. The TypeScript lexer counts them, so
+  a file whose comments push it past the bound is rejected there and accepted
+  here. The 65,536-byte source bound still caps comments.
+- **`mori format` formats any file that parses,** including files with name or
+  type errors, as rustfmt and prettier do. The TypeScript formatter refuses any
+  file with an error. Its layout also differs: ours fits lines to 80 columns.
+  And `mori format` (alias `fmt`) writes in place by default, with `--check` instead of the
+  TypeScript CLI's `--write`.
+- **Syntax errors are reported before name and type errors.** The TypeScript
+  frontend resolves names while parsing, so in a file with several errors it
+  may report a different first one. Files with a single error behave the same.
+
+## Workspace
+
+- Every crate lives in `crates/*`. The `mori` crate is the CLI entry point.
+- The toolchain is pinned in `rust-toolchain.toml` (Rust 1.99.0, edition 2024).
+- Declare every dependency version once in the root `[workspace.dependencies]`.
+  Crates reference it with `dep = { workspace = true }` or `dep.workspace = true`.
+- The pre-existing Rust crates under `experiments/`, `raw/` and `wiki-llm/` are
+  not part of this toolchain. They are excluded from the workspace so they still
+  build standalone; the beta CLI tells users to build `experiments/midnight-crypto`
+  with `--manifest-path`, which fails if the workspace claims it.
+
+## Front end
+
+- **Lexer first, then parser.** A hand-written lexer tokenizes the whole source
+  in one pass, then a hand-written recursive-descent parser walks the token
+  array, as Zig does.
+- **Data-oriented layout.** Tokens, AST nodes and comments are struct-of-arrays
+  containers built with [`soa-rs`](https://crates.io/crates/soa-rs)
+  (`#[derive(Soars)]`). Nodes refer to tokens and other nodes by index handles,
+  never by pointers or boxes. Variable-length node data goes in an `extra`
+  `Vec`. Tag enums are `#[repr(u8)]`. Node payloads stay plain `lhs`/`rhs`
+  fields interpreted by tag, not Rust enums.
+- **Small handles.** Beta caps source at 65,536 bytes and tokens and nodes at
+  8,192 each, so token and node handles are `u16` newtypes and byte offsets are
+  `u32`. `soa-rs` indexes by `usize`; convert at the handle boundary.
+- **Preallocate.** Size the token container with `source.len() / 8`, as Zig does.
+- **Tokens store only `tag` and `start`.** The end is recovered by re-lexing.
+- **Comments are kept for the formatter** in their own `start`/`end` table, not
+  in the token stream. Only tokens, including the end-of-file token, count toward
+  the 8,192-token bound; whitespace and comments do not.
+- **Crates.** `mori-span` holds spans, `mori-lexer` the tokens and lexer,
+  `mori-ast` the struct-of-arrays AST and its tree printer, `mori-parser` the
+  parser that produces it, and `mori-checker` the checker that consumes it.
+- **Separate phases.** Lex → parse → resolve and check → evaluate constants.
+  Do not copy the TypeScript parser, which evaluates while parsing.
+- **Numbers.** Values fit in `u128`; no bigint library. Decimal quantities are
+  scaled by their asset during checking.
+- **Node spans are computed, not stored.** Like Zig's `firstToken` and
+  `lastToken`, `Ast` derives a node's first and last token from its tag and
+  children when a diagnostic needs it.
+
+## Checker
+
+- **One `mori-checker` crate,** with modules for names, values, declaration
+  rules, calls and intents. Checking is one ordered walk: each declaration's
+  names are resolved, its value computed and its rules checked before the next,
+  because later declarations depend on earlier values. Its codes are
+  `mori::check::<kind>`.
+- **Output is side tables and a value store,** in the same style as the AST: a
+  `Soa` of declarations (kind, name token, value handle) and a `Soa` of values
+  with `u16` handles, an `extra` array for records and lists, and amounts in a
+  separate `u128` array. No boxed value trees.
+- **`check` returns what was checked together with its diagnostics,** so valid
+  declarations stay usable when others fail, as a language server needs. A
+  program is accepted only when there are no diagnostics.
+- **It reports every independent error.** A declaration that fails is marked
+  failed, and anything depending on it is skipped without further errors, so
+  one mistake never cascades. Which programs are accepted does not change.
+- **The built-in call schemas are a static Rust table:** each call's name and
+  its required and optional arguments with their expected types.
+
+## Formatter
+
+- **`mori-fmt` is a Wadler-style pretty printer.** It builds a document of
+  text, line breaks, groups and indentation from the AST, then fits each group
+  on one line within 80 columns or breaks it one item per line, with trailing
+  commas when broken.
+- **No `Format` trait.** The document is built by a `match` over `NodeTag`,
+  like the other phases, into an arena of rows.
+- **Output depends only on the program and its comments.** The profile line and
+  every agreement item are followed by exactly one blank line, and comments
+  above an item stay attached to it. Numbers and strings keep their spelling.
+- **Comments come from the comment table** and stay next to the token they
+  were written beside: on the same line, or on their own line above.
+- **Correctness is proven by tests, not checked at run time.** Snapshot tests
+  show each layout case with its `.mori` source, and every one also asserts
+  that formatting the output again changes nothing. A property test checks
+  that output reparses to the same tokens and comments.
+- **`mori format [PATHS]...` (alias `fmt`) rewrites files in place.** A file formats that
+  file, a directory every `.mori` file under it, and no arguments the current
+  directory. Directories are walked with `ignore` (respecting `.gitignore`)
+  and files are formatted in parallel with `rayon`; output is printed in
+  sorted path order. A file that does not parse is reported and skipped.
+- **`mori format --check [PATHS]...`** writes nothing and exits 1 when a file is
+  not formatted, for CI. Each such file gets a `mori::fmt::not_formatted`
+  diagnostic header (no snippet, no help), then the diff exactly as
+  `cargo fmt --check` prints it (one `Diff in FILE:LINE:` per region, three
+  context lines, red `-` and green `+`, via `similar`), indented to line up
+  with the message. One summary line at the end says how to fix it.
+
+## Diagnostics
+
+- Follow [oxc](https://github.com/oxc-project/oxc): one open `MoriDiagnostic`
+  struct (message, labels, help, severity, code) in a `mori-diagnostics` crate,
+  implementing miette's `Diagnostic` trait. Do not create a struct or enum
+  variant per error.
+- Each compiler crate has a `diagnostics.rs` of builder functions:
+
+  ```rust
+  pub fn quantity_separator(span: Span, source: &str) -> MoriDiagnostic {
+      MoriDiagnostic::error("A quantity needs a space between the number and its asset.")
+          .with_code("mori::syntax::quantity_without_space")
+          .with_label(span.label("no space here"))
+          .with_help_code("Put a space between them:", corrected_line(source, span, ...))
+  }
+  ```
+
+- Every phase builds a `MoriDiagnostic` where the error is found, through a
+  builder in its `diagnostics.rs`. Errors are rare and never on a hot path.
+- Messages must be Elm-quality: say what was being parsed, what was expected,
+  show a correct example and give a specific hint. Errors should teach the
+  language.
+- To support that, the parser keeps a context stack (agreement body,
+  declaration, record fields, call arguments, type annotation) and records the
+  set of expected token tags at each failure.
+- Common mistakes get their own codes and teaching messages, for example:
+  `10USD` (missing space before the asset), a decimal without an asset, a
+  forward reference, an unknown call (suggest the closest of the known calls),
+  a reserved word as a name, `/` (no division), a dotted name that is not a
+  call, and adding quantities of different assets.
+- Codes follow miette's style, one per kind of error:
+  `mori::<phase>::<kind>`, such as `mori::lex::leading_zero` or
+  `mori::syntax::missing_comma`.
+- No title banners. A help that suggests a fix shows the corrected code on its
+  own indented lines, not inside a sentence:
+
+  ```
+    help: Fields in a record are separated by commas:
+
+              { domain: Preview, id: "A" }
+  ```
+- Spans are UTF-8 byte ranges, matching miette's `SourceSpan` and beta. Editors
+  and a future language server need UTF-16 line/character positions, converted
+  from the same compact records.
+- The lexer and parser stop at the first error, like the TypeScript frontend.
+  Recovery at declaration boundaries may come later.
+- `mori-span` converts `Span` into miette's span types, as `oxc_span` does.
+- The `fancy` feature of `mori-diagnostics` enables miette's
+  `fancy-no-backtrace`. The `mori` CLI turns it on; library crates turn it on
+  only in `[dev-dependencies]`.
+- Use `thiserror` for errors that never point at source, such as I/O.
+
+## Testing
+
+- Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
+- Test programs shared by several crates live in `crates/fixtures/`, which is
+  excluded from the workspace. Nothing under `crates/` reads files outside it;
+  copy anything needed in.
+- **Any test that consumes `.mori` source must put the source, not the Rust
+  expression, in the snapshot.** Use a macro that takes an `indoc!` literal and
+  sets `description` and `omit_expression`:
+
+  ```rust
+  insta::with_settings!({
+      description => format!("Code:\n\n{}", input),
+      omit_expression => true,
+  }, {
+      insta::assert_snapshot!(render(&output));
+  });
+  ```
+
+- Use separate macros for success and error cases. Error snapshots render the
+  diagnostic through miette's `GraphicalReportHandler` with
+  `GraphicalTheme::unicode_nocolor()` and a fixed width, so the snapshot is
+  exactly what a user sees.
+- Snapshot the AST through a tree printer, not `Debug` of the struct-of-arrays.
+- Every phase that consumes source has a `proptest` property that it never
+  panics, fed random strings, sequences of tricky fragments and, from the
+  parser on, real programs with random damage.
+- Formatter tests also assert that formatting the output again changes nothing.
+- **Never write tests that invoke the CLI binary**, and never snapshot `--help`.
+  Test the library crates; keep the CLI a thin layer over them.
+
+## CLI
+
+- [`clap`](https://crates.io/crates/clap) with derive, styled with cargo's colors
+  through `clap::builder::styling::Styles`.
+- Cargo-style status lines on stderr: a right-aligned, bold, colored verb, then
+  details (`    Checking invoice.mori`, `    Finished check in 3.2ms`). Use
+  `anstream` and `anstyle`.
+- Results go to stdout. `--json` turns status lines off. JSON reports are our
+  own format, not the TypeScript beta's; spans are UTF-8 byte ranges and every
+  diagnostic has exactly one primary label.
+- Global `-q`/`--quiet`, `-v`/`--verbose` and `--color` (`auto` respects
+  `NO_COLOR` and non-terminal output). Verbose adds stage timings and
+  token/node counts.
+- Final verbs say exactly what happened, for example `Prepared (unqualified)`.
+  Never imply proof, signature authority or ledger acceptance that did not occur.
+
+## Later
+
+- Port signature verification from `experiments/midnight-crypto`
+  (`src/intent.rs`, `src/codec.rs`) so `verify-intent` runs natively. Its
+  Midnight dependencies are Git-pinned; keep them behind a feature.
+  `fixtures/intent-vectors.json` can serve as test vectors. A valid signature
+  does not prove the signer controls the account; keep reporting possession as
+  unchecked.
+- The product target is ZKIRv3 on Midnight.
+
+===== END N02 =====

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "reviewToken": {
+      "const": "core-check-location-source-actual-agy-review-20261019-a1"
+    },
+    "sourceVerdict": {
+      "type": "string",
+      "enum": [
+        "approve-scoped-source",
+        "changes-required",
+        "abstain"
+      ]
+    },
+    "actualVerdict": {
+      "type": "string",
+      "enum": [
+        "supports-scoped-location-and-json-observations",
+        "not-supported",
+        "abstain"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "sourceAssessment": {
+      "type": "string"
+    },
+    "actualAssessment": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "blocking",
+              "nonblocking",
+              "qualification"
+            ]
+          },
+          "finding": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fileId": {
+                  "type": "string"
+                },
+                "startLine": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "endLine": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "exactQuote": {
+                  "type": "string"
+                },
+                "supports": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fileId",
+                "startLine",
+                "endLine",
+                "exactQuote",
+                "supports"
+              ]
+            }
+          },
+          "requiredChangeOrUnknown": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "finding",
+          "evidence",
+          "requiredChangeOrUnknown"
+        ]
+      }
+    },
+    "readCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "whole": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "partial": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unread": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "whole",
+        "partial",
+        "unread"
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "broaderAcceptanceQualification": {
+      "type": "string"
+    },
+    "dissent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "reviewToken",
+    "sourceVerdict",
+    "actualVerdict",
+    "summary",
+    "sourceAssessment",
+    "actualAssessment",
+    "findings",
+    "readCoverage",
+    "limitations",
+    "broaderAcceptanceQualification",
+    "dissent"
+  ]
+}

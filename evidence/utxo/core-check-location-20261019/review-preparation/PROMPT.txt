@@ -1,0 +1,2927 @@
+Fresh non-author ORDINARY SOURCE+ACTUAL review: ONE human mori check source-location repair. ReviewToken core-check-location-source-actual-agy-review-20261019-a1.
+
+Read all required whole inline bodies and every whole section of the ONE required supplement. S01/S02 are original/proposed W, UNRUN; S03/S04 original CC/actualFORMATTED isolatedCC. Only CC runtime exists. H01 whole prepared095 remains available; F01 exact whitespace-only delta to actual666. Do not borrow prior Core3/MCP/library/security/profile/source approval or close MC01/parents. OriginalW/C/CC untouched; isolated baseline264 equality is qualified by root receipts, not a new executed commit/tree claim.
+
+Judge MC01 Invalid authoring source-location observable; existing code/message, UTF8 byte offset/point label, is_char_boundary validation, absent/out-of-range fallback, EOF/zero-length point, display-name escaping, quiet/normal behavior, unchanged Beta and complete JSON/API. No token-length or UTF16/LSP position inferred. Unicode/EOF/fallback runtime is NOT supplied: distinguish source reasoning from two observed ASCII cases. GREEN code/message words remain in order despite miette wrapping; exact graphical layout was not independently frozen. Compare full JSON bytes and objects including all Core2 labels, not projections.
+
+Expectations predate repair but derive from requirement+baseline source exposure; no before-baseline blindness. First build really timed out124/90.084690174s with no success binary then. One root-selected manual same90+5 continuation retained compiled artifacts and succeeded74.432258012s. No automatic retries, native counter reset, or timeout cause inferred. S04 actual binary7d7dcb..., RED earlierCCce8f root-suppliedidentity. Source integration095 predates formatting; later FORMATTING666/current source pins resolve it. No pre-pinned on-disk execution observer was supplied; no executed driver hash or strict aggregate wall claim. All setup/build/failure/continuation/formatting/selection/RED/GREEN/raw streams remain whole.
+
+Complete264-row source pin metadata is available and manifest-pinned as mechanical provenance DATA, not required semantic reading of every hash. Required unchanged interfaces support affected-path reasoning, not global module adoption. Read the supplement using the exact tool-suggested nextByteOffset, keeping the same effectivePath, StartLine and EndLine until that bound is complete. Follow the actual returned header bounds: numbered source-line prefixes count toward byte offsets; the outer header/footer does not. Do not calculate offsets from raw-source bytes or guess caps. Reset the cursor to0 whenever bounds change. Mark partial/unread bodies honestly and withhold conclusions requiring unread content. Original source line numbers remain local to each body. Inline delivery does not prove reading: give disjoint whole/partial/unread coverage of every required ID. Partial/unread dependencies qualify conclusions. Use Read only for the explicitly supplied supplement or provenance/history paths if needed. No shell commands or subject/product/test execution, network/provider/config/auth/private capture or unsolicited acquisitions. No SDK/native/VM/key/proof/wallet/ledger established; all parent language/financial/fullMC01 obligations open.
+
+Return complete11-field schema, neutral separate source/actual verdicts, unbounded reasoning/findings/dissent/limitations. Support material conclusions/findings with exact original body ID/local full line span/literal quote/support explanation in findings. No forced approval or security judgment.
+
+REQUIRED WHOLE SUPPLEMENT: /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-agy-review-preparation-20261019-v2/packet/REQUIRED-WHOLE-SUPPLEMENT.txt
+
+===== WHOLE BODY S01; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/W/before/crates/mori/src/commands/check.rs; sha256 2199d7b49173816c527436eef3cf30c2cb51d1b039603b1046e7bd508762faf7; bytes 4249 =====
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::time::Instant;
+
+use mori_diagnostics::{MoriDiagnostic, NamedSource};
+
+use crate::json::CheckReport;
+use crate::shell::Shell;
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    /// Source file
+    pub file: PathBuf,
+
+    /// Print the result as JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+/// Checks syntax, names, values, types, declarations, calls and intents.
+pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    let name = args.file.display().to_string();
+    let source = super::core_io::read_source(&args.file)?;
+
+    if !args.json {
+        shell.status("Checking", &name);
+    }
+    let started = Instant::now();
+    if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
+        let staged = mori_core::language(&source).is_ok_and(|language| language == "moriarty/2");
+        let result = if staged {
+            mori_core::stage::load(&source).map(|program| program.program().clone())
+        } else {
+            mori_core::parse(&source)
+        };
+        if args.json {
+            let report = match &result {
+                Ok(program) => {
+                    serde_json::json!({"status":"accepted", "file":name,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
+                }
+                Err(error) => {
+                    serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
+                }
+            };
+            if staged {
+                super::simulate::print_stage_report(report)?;
+            } else {
+                super::core_io::print(&report)?;
+            }
+        } else {
+            match &result {
+                Ok(_) => shell.status("Finished", "bounded core check"),
+                Err(error) => shell.error(error),
+            }
+        }
+        return Ok(if result.is_ok() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        });
+    }
+    let (accepted, report) = match mori_parser::parse(&source) {
+        Err(error) => {
+            let diagnostics = vec![error];
+            let report = args
+                .json
+                .then(|| CheckReport::new(name.clone(), &source, None, &diagnostics));
+            (
+                finish(shell, &name, &source, diagnostics, args.json),
+                report,
+            )
+        }
+        Ok(ast) => {
+            if !args.json {
+                shell.verbose_status(
+                    "Parsed",
+                    format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
+                );
+            }
+            let result = mori_checker::check(&ast);
+            let report = args.json.then(|| {
+                CheckReport::new(
+                    name.clone(),
+                    &source,
+                    Some(&result.checked),
+                    &result.diagnostics,
+                )
+            });
+            (
+                finish(shell, &name, &source, result.diagnostics, args.json),
+                report,
+            )
+        }
+    };
+
+    if let Some(report) = report {
+        super::core_io::print(&report)?;
+    } else if accepted {
+        shell.status(
+            "Finished",
+            format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+        );
+    }
+    Ok(if accepted {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
+/// Renders the diagnostics, unless the report is JSON. True when there are none.
+fn finish(
+    shell: &mut Shell,
+    name: &str,
+    source: &str,
+    diagnostics: Vec<MoriDiagnostic>,
+    json: bool,
+) -> bool {
+    if diagnostics.is_empty() {
+        return true;
+    }
+    if !json {
+        let count = diagnostics.len();
+        for diagnostic in diagnostics {
+            shell.report(&diagnostic.with_source_code(NamedSource::new(
+                crate::display::text(name),
+                source.to_owned(),
+            )));
+        }
+        let plural = if count == 1 { "" } else { "s" };
+        shell.error(format!(
+            "could not check `{name}` due to {count} previous error{plural}"
+        ));
+    }
+    false
+}
+
+===== END S01 =====
+
+===== WHOLE BODY S02; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/W/after/crates/mori/src/commands/check.rs; sha256 9fe12068de3a13483a20e87753ab1a11295878aa07931b2f40d7b06cb25cea5b; bytes 4984 =====
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::time::Instant;
+
+use mori_diagnostics::{MoriDiagnostic, NamedSource};
+
+use crate::json::CheckReport;
+use crate::shell::Shell;
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    /// Source file
+    pub file: PathBuf,
+
+    /// Print the result as JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+/// Checks syntax, names, values, types, declarations, calls and intents.
+pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    let name = args.file.display().to_string();
+    let source = super::core_io::read_source(&args.file)?;
+
+    if !args.json {
+        shell.status("Checking", &name);
+    }
+    let started = Instant::now();
+    if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
+        let staged = mori_core::language(&source).is_ok_and(|language| language == "moriarty/2");
+        let result = if staged {
+            mori_core::stage::load(&source).map(|program| program.program().clone())
+        } else {
+            mori_core::parse(&source)
+        };
+        if args.json {
+            let report = match &result {
+                Ok(program) => {
+                    serde_json::json!({"status":"accepted", "file":name,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
+                }
+                Err(error) => {
+                    serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
+                }
+            };
+            if staged {
+                super::simulate::print_stage_report(report)?;
+            } else {
+                super::core_io::print(&report)?;
+            }
+        } else {
+            match &result {
+                Ok(_) => shell.status("Finished", "bounded core check"),
+                Err(error) => {
+                    if let Some(offset) = error
+                        .offset
+                        .filter(|offset| source.is_char_boundary(*offset as usize))
+                    {
+                        let diagnostic = MoriDiagnostic::error(error.message.clone())
+                            .with_code(error.code.clone())
+                            .with_label(mori_span::Span::empty(offset).primary_label("here"));
+                        shell.report(&diagnostic.with_source_code(NamedSource::new(
+                            crate::display::text(&name),
+                            source.clone(),
+                        )));
+                    } else {
+                        shell.error(error);
+                    }
+                }
+            }
+        }
+        return Ok(if result.is_ok() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        });
+    }
+    let (accepted, report) = match mori_parser::parse(&source) {
+        Err(error) => {
+            let diagnostics = vec![error];
+            let report = args
+                .json
+                .then(|| CheckReport::new(name.clone(), &source, None, &diagnostics));
+            (
+                finish(shell, &name, &source, diagnostics, args.json),
+                report,
+            )
+        }
+        Ok(ast) => {
+            if !args.json {
+                shell.verbose_status(
+                    "Parsed",
+                    format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
+                );
+            }
+            let result = mori_checker::check(&ast);
+            let report = args.json.then(|| {
+                CheckReport::new(
+                    name.clone(),
+                    &source,
+                    Some(&result.checked),
+                    &result.diagnostics,
+                )
+            });
+            (
+                finish(shell, &name, &source, result.diagnostics, args.json),
+                report,
+            )
+        }
+    };
+
+    if let Some(report) = report {
+        super::core_io::print(&report)?;
+    } else if accepted {
+        shell.status(
+            "Finished",
+            format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+        );
+    }
+    Ok(if accepted {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
+/// Renders the diagnostics, unless the report is JSON. True when there are none.
+fn finish(
+    shell: &mut Shell,
+    name: &str,
+    source: &str,
+    diagnostics: Vec<MoriDiagnostic>,
+    json: bool,
+) -> bool {
+    if diagnostics.is_empty() {
+        return true;
+    }
+    if !json {
+        let count = diagnostics.len();
+        for diagnostic in diagnostics {
+            shell.report(&diagnostic.with_source_code(NamedSource::new(
+                crate::display::text(name),
+                source.to_owned(),
+            )));
+        }
+        let plural = if count == 1 { "" } else { "s" };
+        shell.error(format!(
+            "could not check `{name}` due to {count} previous error{plural}"
+        ));
+    }
+    false
+}
+
+===== END S02 =====
+
+===== WHOLE BODY S03; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/C-and-CC/before/crates/mori/src/commands/check.rs; sha256 2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb; bytes 3744 =====
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::time::Instant;
+
+use mori_diagnostics::{MoriDiagnostic, NamedSource};
+
+use crate::json::CheckReport;
+use crate::shell::Shell;
+
+use super::check_source::{self, SourceCheckConsumer};
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    /// Source file
+    pub file: PathBuf,
+
+    /// Print the result as JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+/// Checks syntax, names, values, types, declarations, calls and intents.
+pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    let name = args.file.display().to_string();
+    let source = super::core_io::read_source(&args.file)?;
+
+    if !args.json {
+        shell.status("Checking", &name);
+    }
+    let started = Instant::now();
+    let outcome = check_source::dispatch(
+        &source,
+        CliConsumer {
+            name: &name,
+            source: &source,
+            json: args.json,
+            shell,
+        },
+    )?;
+    if outcome.beta {
+        if let Some(report) = outcome.report {
+            super::core_io::print(&report)?;
+        } else if outcome.accepted {
+            shell.status(
+                "Finished",
+                format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+            );
+        }
+    }
+    Ok(if outcome.accepted {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
+struct CliOutcome {
+    accepted: bool,
+    beta: bool,
+    report: Option<CheckReport>,
+}
+
+struct CliConsumer<'a> {
+    name: &'a str,
+    source: &'a str,
+    json: bool,
+    shell: &'a mut Shell,
+}
+
+impl SourceCheckConsumer for CliConsumer<'_> {
+    type Output = super::Result<CliOutcome>;
+
+    fn parsed(&mut self, tokens: usize, nodes: usize) {
+        if !self.json {
+            self.shell
+                .verbose_status("Parsed", format!("{tokens} tokens, {nodes} nodes"));
+        }
+    }
+
+    fn beta(
+        self,
+        checked: Option<&mori_checker::Checked<'_>>,
+        diagnostics: Vec<MoriDiagnostic>,
+    ) -> Self::Output {
+        let report = self.json.then(|| {
+            check_source::beta_report(self.name.to_owned(), self.source, checked, &diagnostics)
+        });
+        let accepted = finish(self.shell, self.name, self.source, diagnostics, self.json);
+        Ok(CliOutcome {
+            accepted,
+            beta: true,
+            report,
+        })
+    }
+
+    fn core(
+        self,
+        result: Result<mori_core::Program, mori_core::Error>,
+        staged: bool,
+    ) -> Self::Output {
+        if self.json {
+            let report = check_source::core_report(self.name, self.source, &result, staged);
+            super::core_io::print(&report)?;
+        } else {
+            match &result {
+                Ok(_) => self.shell.status("Finished", "bounded core check"),
+                Err(error) => self.shell.error(error),
+            }
+        }
+        Ok(CliOutcome {
+            accepted: result.is_ok(),
+            beta: false,
+            report: None,
+        })
+    }
+}
+
+/// Renders the diagnostics, unless the report is JSON. True when there are none.
+fn finish(
+    shell: &mut Shell,
+    name: &str,
+    source: &str,
+    diagnostics: Vec<MoriDiagnostic>,
+    json: bool,
+) -> bool {
+    if diagnostics.is_empty() {
+        return true;
+    }
+    if !json {
+        let count = diagnostics.len();
+        for diagnostic in diagnostics {
+            shell.report(&diagnostic.with_source_code(NamedSource::new(
+                crate::display::text(name),
+                source.to_owned(),
+            )));
+        }
+        let plural = if count == 1 { "" } else { "s" };
+        shell.error(format!(
+            "could not check `{name}` due to {count} previous error{plural}"
+        ));
+    }
+    false
+}
+
+===== END S03 =====
+
+===== WHOLE BODY I01; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/commands/check_source.rs; sha256 fdf7078f00b2e69426d632eb232c57fdaee5d63be34e677e9ccde6f41aaee156; bytes 4394 =====
+//! Shared source-profile dispatch and the existing check report formats.
+
+use mori_diagnostics::MoriDiagnostic;
+
+use crate::json::CheckReport;
+
+/// Consume checked values while the Beta AST they borrow is still alive.
+/// Reports remain optional: a human consumer can render diagnostics directly.
+pub(super) trait SourceCheckConsumer {
+    type Output;
+
+    /// Called after Beta parsing, before its checker starts.
+    fn parsed(&mut self, _tokens: usize, _nodes: usize) {}
+
+    fn beta(
+        self,
+        checked: Option<&mori_checker::Checked<'_>>,
+        diagnostics: Vec<MoriDiagnostic>,
+    ) -> Self::Output;
+
+    fn core(
+        self,
+        result: Result<mori_core::Program, mori_core::Error>,
+        staged: bool,
+    ) -> Self::Output;
+}
+
+/// Recognize the additive `/3` route without changing legacy header errors.
+/// A failed profile probe is never a successful program admission.
+pub(super) fn public_core_language(source: &str) -> Result<&'static str, mori_core::Error> {
+    match mori_core::language(source) {
+        Ok(language) => Ok(language),
+        Err(legacy_error) => match mori_core::language_v3(source) {
+            Ok(mori_core::stage::LANGUAGE_3) => Ok(mori_core::stage::LANGUAGE_3),
+            _ => Err(legacy_error),
+        },
+    }
+}
+
+/// Select one exact staged loader; never retry a failed loader as another profile.
+/// Non-`/3` sources keep the existing `/2` loader and its original diagnostics.
+pub(super) fn load_staged_source(
+    source: &str,
+) -> Result<mori_core::stage::StagedProgram, mori_core::Error> {
+    match mori_core::language_v3(source) {
+        Ok(mori_core::stage::LANGUAGE_3) => mori_core::stage::load_v3(source),
+        _ => mori_core::stage::load(source),
+    }
+}
+
+/// Select Beta, Core1, staged Core2 or staged Core3 for every check consumer.
+pub(super) fn dispatch<C: SourceCheckConsumer>(source: &str, mut consumer: C) -> C::Output {
+    if mori_lexer::first_token_text(source).is_ok_and(|token| token == "language") {
+        let language = match public_core_language(source) {
+            Ok(language) => language,
+            Err(error) => return consumer.core(Err(error), false),
+        };
+        let staged = matches!(
+            language,
+            mori_core::stage::LANGUAGE_2 | mori_core::stage::LANGUAGE_3
+        );
+        let result = if staged {
+            load_staged_source(source).map(|program| program.program().clone())
+        } else {
+            mori_core::parse(source)
+        };
+        return consumer.core(result, staged);
+    }
+    match mori_parser::parse(source) {
+        Err(error) => consumer.beta(None, vec![error]),
+        Ok(ast) => {
+            consumer.parsed(ast.tokens.len(), ast.nodes.len());
+            let mori_checker::CheckResult {
+                checked,
+                diagnostics,
+            } = mori_checker::check(&ast);
+            consumer.beta(Some(&checked), diagnostics)
+        }
+    }
+}
+
+/// Preserve the Beta struct's serialization order and diagnostic/span mapping.
+pub(super) fn beta_report(
+    file: String,
+    source: &str,
+    checked: Option<&mori_checker::Checked<'_>>,
+    diagnostics: &[MoriDiagnostic],
+) -> CheckReport {
+    CheckReport::new(file, source, checked, diagnostics)
+}
+
+/// Construct the existing Core JSON object only when a consumer requests it.
+pub(super) fn core_report(
+    file: &str,
+    source: &str,
+    result: &Result<mori_core::Program, mori_core::Error>,
+    staged: bool,
+) -> serde_json::Value {
+    let mut report = match result {
+        Ok(program) => {
+            serde_json::json!({"status":"accepted", "file":file,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
+        }
+        Err(error) => {
+            serde_json::json!({"status":"rejected","file":file,"diagnostics":[error]})
+        }
+    };
+    if let Ok(program) = result
+        && program.language == mori_core::stage::LANGUAGE_3
+    {
+        report["semantics"] = serde_json::Value::String(program.semantics.clone());
+    }
+    if staged {
+        let object = report
+            .as_object_mut()
+            .expect("stage reports are JSON objects");
+        for (name, value) in mori_core::stage::STAGE_LABELS {
+            object.insert(name.into(), serde_json::Value::String(value.into()));
+        }
+    }
+    report
+}
+
+===== END I01 =====
+
+===== WHOLE BODY I03; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/json.rs; sha256 6f68940fe32eced929b8af229336eb07e9af745a78b32f45966858c7c382a3aa; bytes 7919 =====
+//! The `--json` report of `mori check`.
+//!
+//! Spans are UTF-8 byte ranges into the checked file. This format is our own;
+//! it is not the TypeScript beta's.
+
+use mori_ast::{Ast, NodeIdx};
+use mori_checker::{Checked, DeclIdx, Support};
+use mori_diagnostics::{Diagnostic, MoriDiagnostic, Severity};
+use mori_lexer::TokenIdx;
+use serde::Serialize;
+use sha2::{Digest, Sha256};
+
+#[derive(Serialize)]
+pub struct CheckReport {
+    /// `accepted` when there are no diagnostics, otherwise `rejected`.
+    pub status: &'static str,
+    pub file: String,
+    /// SHA-256 of the file's bytes, in lowercase hex.
+    pub source_hash: String,
+    /// Absent when the file did not parse.
+    pub agreement: Option<Named>,
+    pub declarations: Vec<DeclarationReport>,
+    pub actions: Vec<ActionReport>,
+    pub diagnostics: Vec<DiagnosticReport>,
+}
+
+#[derive(Serialize)]
+pub struct Span {
+    pub start: u32,
+    pub end: u32,
+}
+
+impl From<mori_span::Span> for Span {
+    fn from(span: mori_span::Span) -> Self {
+        Self {
+            start: span.start,
+            end: span.end,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct Named {
+    pub name: String,
+    pub span: Span,
+}
+
+#[derive(Serialize)]
+pub struct DeclarationReport {
+    /// The declaring keyword, such as `asset` or `intent`.
+    pub kind: String,
+    pub name: String,
+    pub span: Span,
+    pub name_span: Span,
+}
+
+#[derive(Serialize)]
+pub struct ActionReport {
+    pub name: String,
+    pub intent: String,
+    /// `local_s0` when it runs locally, `specified_only` when it is only
+    /// checked; absent when its intent did not check.
+    pub support: Option<&'static str>,
+    pub span: Span,
+    pub name_span: Span,
+}
+
+#[derive(Serialize)]
+pub struct DiagnosticReport {
+    pub code: Option<String>,
+    pub severity: &'static str,
+    pub message: String,
+    pub help: Option<String>,
+    pub labels: Vec<LabelReport>,
+}
+
+#[derive(Serialize)]
+pub struct LabelReport {
+    pub span: Span,
+    pub text: Option<String>,
+    pub primary: bool,
+}
+
+impl CheckReport {
+    pub fn new(
+        file: String,
+        source: &str,
+        checked: Option<&Checked<'_>>,
+        diagnostics: &[MoriDiagnostic],
+    ) -> Self {
+        let source_hash = Sha256::digest(source.as_bytes())
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        let mut report = Self {
+            status: if diagnostics.is_empty() {
+                "accepted"
+            } else {
+                "rejected"
+            },
+            file,
+            source_hash,
+            agreement: None,
+            declarations: Vec::new(),
+            actions: Vec::new(),
+            diagnostics: diagnostics.iter().map(DiagnosticReport::new).collect(),
+        };
+        if let Some(checked) = checked {
+            report.fill(checked);
+        }
+        report
+    }
+
+    fn fill(&mut self, checked: &Checked<'_>) {
+        let ast = checked.ast;
+        let name_token = ast.main_token(NodeIdx::ROOT);
+        self.agreement = Some(Named {
+            name: ast.token_text(name_token).to_owned(),
+            span: token_span(ast, name_token).into(),
+        });
+        for index in 0..checked.declarations.len() {
+            let decl = DeclIdx::new(index);
+            let node = checked.declarations.node()[index];
+            let keyword = ast.main_token(node);
+            self.declarations.push(DeclarationReport {
+                kind: ast.token_text(keyword).to_owned(),
+                name: checked.name(decl).to_owned(),
+                span: ast.span(node).into(),
+                name_span: token_span(ast, ast.token_after(keyword, 1)).into(),
+            });
+        }
+        for (&node, &support) in checked.actions.node().iter().zip(checked.actions.support()) {
+            let keyword = ast.main_token(node);
+            self.actions.push(ActionReport {
+                name: ast.token_text(ast.token_after(keyword, 1)).to_owned(),
+                intent: ast.token_text(ast.token_after(keyword, 3)).to_owned(),
+                support: support.map(|support| match support {
+                    Support::LocalS0 => "local_s0",
+                    Support::SpecifiedOnly => "specified_only",
+                }),
+                span: ast.span(node).into(),
+                name_span: token_span(ast, ast.token_after(keyword, 1)).into(),
+            });
+        }
+    }
+}
+
+impl DiagnosticReport {
+    fn new(diagnostic: &MoriDiagnostic) -> Self {
+        let severity = match diagnostic.severity() {
+            Some(Severity::Warning) => "warning",
+            Some(Severity::Advice) => "advice",
+            _ => "error",
+        };
+        let mut labels: Vec<LabelReport> = diagnostic
+            .labels()
+            .map(|labels| {
+                labels
+                    .map(|label| LabelReport {
+                        span: Span {
+                            start: to_u32(label.offset()),
+                            end: to_u32(label.offset() + label.len()),
+                        },
+                        text: label.label().map(str::to_owned),
+                        primary: label.primary(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        // Every diagnostic reports one primary location: the marked label, or
+        // else the first.
+        if !labels.iter().any(|label| label.primary)
+            && let Some(first) = labels.first_mut()
+        {
+            first.primary = true;
+        }
+        Self {
+            code: diagnostic.code().map(|code| code.to_string()),
+            severity,
+            message: diagnostic.to_string(),
+            help: diagnostic.help().map(|help| help.to_string()),
+            labels,
+        }
+    }
+}
+
+fn token_span(ast: &Ast<'_>, token: TokenIdx) -> mori_span::Span {
+    ast.tokens.span(token, ast.source)
+}
+
+/// Sources are at most 65,536 bytes, so offsets fit in `u32`.
+fn to_u32(offset: usize) -> u32 {
+    u32::try_from(offset).expect("source offsets fit in u32")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CheckReport;
+
+    /// Checks the source and snapshots its JSON report, recording the source.
+    macro_rules! assert_report_snapshot {
+        ($source:literal) => {{
+            let source = indoc::indoc!($source);
+            let report = match mori_parser::parse(source) {
+                Err(error) => CheckReport::new("test.mori".to_owned(), source, None, &[error]),
+                Ok(ast) => {
+                    let result = mori_checker::check(&ast);
+                    CheckReport::new("test.mori".to_owned(), source, Some(&result.checked), &result.diagnostics)
+                }
+            };
+            insta::with_settings!({
+                description => format!("Code:\n\n{source}"),
+                omit_expression => true,
+            }, {
+                insta::assert_snapshot!(serde_json::to_string_pretty(&report).unwrap());
+            });
+        }};
+    }
+
+    #[test]
+    fn accepted_report() {
+        assert_report_snapshot!(
+            r#"
+            profile "moriarty-beta/1";
+            agreement Oracle {
+              domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+              observation price = { id: "price", domain: Preview };
+              intent read = { operation: oracle.select(observation: price) };
+              action fetch uses read;
+            }
+            "#
+        );
+    }
+
+    #[test]
+    fn rejected_report() {
+        assert_report_snapshot!(
+            r#"
+            profile "moriarty-beta/1";
+            agreement Invoice {
+              const price = 10;
+              const price = pirce;
+            }
+            "#
+        );
+    }
+
+    #[test]
+    fn unparsable_report() {
+        assert_report_snapshot!(
+            r#"
+            profile "moriarty-beta/1";
+            agreement Invoice {
+              const price = 10
+            "#
+        );
+    }
+}
+
+===== END I03 =====
+
+===== WHOLE BODY I04; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/shell.rs; sha256 b2116fcd9bb80abfb175f6dc2da6327b4d9787cfa3d56481fde705e62d94fff1; bytes 3802 =====
+//! Cargo-style status output on stderr.
+
+use std::fmt::Display;
+use std::io::{self, Stderr, Write};
+
+use anstream::{AutoStream, ColorChoice};
+use anstyle::Style;
+use mori_diagnostics::Report;
+use mori_diagnostics::render::{self, WIDTH};
+
+use crate::styles;
+
+/// Width of the right-aligned verb column, matching cargo.
+const VERB_WIDTH: usize = 12;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verbosity {
+    Quiet,
+    Normal,
+    Verbose,
+}
+
+/// Writes status lines such as `    Checking invoice.mori` to stderr.
+///
+/// Command results go to stdout and never pass through the shell. Output is
+/// best effort: if stderr cannot be written, there is nowhere to report it.
+pub struct Shell {
+    err: AutoStream<Stderr>,
+    verbosity: Verbosity,
+}
+
+impl Shell {
+    pub fn new(verbosity: Verbosity, color: ColorChoice) -> Self {
+        Self {
+            err: AutoStream::new(io::stderr(), color),
+            verbosity,
+        }
+    }
+
+    /// Prints a right-aligned green verb followed by a message.
+    pub fn status(&mut self, verb: &str, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.aligned(verb, styles::HEADER, message);
+        }
+    }
+
+    /// Like [`Shell::status`], but only under `--verbose`.
+    pub fn verbose_status(&mut self, verb: &str, message: impl Display) {
+        if self.verbosity == Verbosity::Verbose {
+            self.aligned(verb, styles::HEADER, message);
+        }
+    }
+
+    #[expect(dead_code, reason = "used once a command prints notes")]
+    pub fn note(&mut self, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.prefixed("note", styles::HEADER, message);
+        }
+    }
+
+    #[expect(dead_code, reason = "used once a command emits warnings")]
+    pub fn warn(&mut self, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.prefixed("warning", styles::WARN, message);
+        }
+    }
+
+    /// Prints an error line. Errors are shown even under `--quiet`.
+    pub fn error(&mut self, message: impl Display) {
+        self.prefixed("error", styles::ERROR, message);
+    }
+
+    /// Renders an error report, wrapped to the terminal width up to 80 columns.
+    /// Errors are shown even under `--quiet`.
+    pub fn report(&mut self, report: &Report) {
+        let width = terminal_size::terminal_size_of(io::stderr())
+            .map_or(WIDTH, |(width, _)| usize::from(width.0));
+        let _ = writeln!(self.err, "{}", render::render_colored(report, width));
+    }
+
+    /// Prints `hunks` as `cargo fmt --check` does, indented to line up with a
+    /// diagnostic's message.
+    pub fn diff(&mut self, file: &str, hunks: &[mori_fmt::Hunk]) {
+        const INDENT: &str = "    ";
+        for hunk in hunks {
+            let _ = writeln!(self.err, "{INDENT}Diff in {file}:{}:", hunk.line);
+            for (change, line) in &hunk.lines {
+                let (sign, style) = match change {
+                    mori_fmt::Change::Context => (' ', Style::new()),
+                    mori_fmt::Change::Removed => ('-', styles::REMOVED),
+                    mori_fmt::Change::Added => ('+', styles::ADDED),
+                };
+                let _ = writeln!(self.err, "{INDENT}{style}{sign}{line}{style:#}");
+            }
+        }
+        let _ = writeln!(self.err);
+    }
+
+    fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
+        let message = crate::display::text(&message.to_string());
+        let _ = writeln!(self.err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
+    }
+
+    fn prefixed(&mut self, label: &str, style: Style, message: impl Display) {
+        let message = crate::display::text(&message.to_string());
+        let _ = writeln!(self.err, "{style}{label}:{style:#} {message}");
+    }
+}
+
+===== END I04 =====
+
+===== WHOLE BODY I05; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/display.rs; sha256 81d499d32561dc576651e0b1df5a349b68112030f296d93cca95a488dc3b0deb; bytes 408 =====
+/// Escape data before a terminal renderer adds its trusted styles and layout.
+pub fn text(value: &str) -> String {
+    let mut result = String::with_capacity(value.len());
+    for character in value.chars() {
+        if character.is_ascii() && !character.is_control() {
+            result.push(character);
+        } else {
+            result.extend(character.escape_default());
+        }
+    }
+    result
+}
+
+===== END I05 =====
+
+===== WHOLE BODY I06; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/main.rs; sha256 35988592bec7038a7674403a0e897184d1099dd4164e89a3ca0aa22ab0b3a232; bytes 495 =====
+use std::process::ExitCode;
+
+use clap::Parser;
+
+use crate::cli::Cli;
+use crate::shell::Shell;
+
+mod cli;
+mod commands;
+mod display;
+mod error;
+mod json;
+mod shell;
+mod styles;
+
+fn main() -> ExitCode {
+    let cli = Cli::parse();
+    let mut shell = Shell::new(cli.global.verbosity(), cli.global.color.into());
+
+    match commands::run(cli.command, &mut shell) {
+        Ok(code) => code,
+        Err(report) => {
+            shell.report(&report);
+            ExitCode::FAILURE
+        }
+    }
+}
+
+===== END I06 =====
+
+===== WHOLE BODY I07; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/src/commands/mod.rs; sha256 4e39c2dd984c1dcd0687da30eddd4e630f3d9480aef0b5df25e48828001abc47; bytes 2838 =====
+//! One module per subcommand. Each defines its `Args` and a `run` function.
+
+use std::process::ExitCode;
+
+use mori_diagnostics::Report;
+
+use crate::cli::Command;
+use crate::shell::Shell;
+
+mod call_io;
+pub mod capabilities;
+pub mod check;
+mod check_source;
+pub mod compile;
+pub mod compile_call;
+mod core_io;
+pub mod expand;
+pub mod format;
+pub mod init;
+pub mod inspect;
+pub mod intent;
+pub mod keygen_call;
+pub mod keygen_signed_call;
+pub mod lsp;
+pub mod mcp;
+pub mod prepare_call;
+pub mod prepare_signed_call;
+mod proof_io;
+pub mod prove;
+pub mod prove_call;
+pub mod prove_signed_call;
+pub mod replay;
+mod signed_call_io;
+pub mod simulate;
+pub mod test;
+pub mod verify;
+pub mod verify_call;
+pub mod verify_intent;
+pub mod verify_signed_call;
+
+pub type Result<T> = std::result::Result<T, Report>;
+
+pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
+    match command {
+        Command::Capabilities(args) => capabilities::run(args, shell),
+        Command::Init(args) => init::run(args, shell),
+        Command::Check(args) => check::run(args, shell),
+        Command::Compile(args) => compile::run(args, shell),
+        Command::KeygenSignedCall(args) => keygen_signed_call::run(args, shell),
+        Command::PrepareSignedCall(args) => prepare_signed_call::run(args, shell),
+        Command::ProveSignedCall(args) => prove_signed_call::run(args, shell),
+        Command::VerifySignedCall(args) => verify_signed_call::run(args, shell),
+        Command::KeygenCall(args) => keygen_call::run(args, shell),
+        Command::ProveCall(args) => prove_call::run(args, shell),
+        Command::VerifyCall(args) => verify_call::run(args, shell),
+        Command::CompileCall(args) => compile_call::run(args, shell),
+        Command::PrepareCall(args) => prepare_call::run(args, shell),
+        Command::Prove(args) => prove::run(args, shell),
+        Command::Verify(args) => verify::run(args, shell),
+        Command::Format(args) => format::run(args, shell),
+        Command::Inspect(args) => inspect::run(args, shell),
+        Command::Expand(args) => expand::run(args, shell),
+        Command::Simulate(args) => simulate::run(args, shell),
+        Command::Replay(args) => replay::run(args, shell),
+        Command::Test(args) => test::run(args, shell),
+        Command::Intent(args) => intent::run(args, shell),
+        Command::VerifyIntent(args) => verify_intent::run(args, shell),
+        Command::Lsp(args) => lsp::run(args, shell),
+        Command::Mcp(args) => mcp::run(args, shell),
+    }
+}
+
+#[cfg(not(feature = "native"))]
+fn native_unavailable<T>() -> Result<T> {
+    Err(crate::error::CliError::Operation {
+        code: "mori::command::native-unavailable".into(),
+        message: "This mori build has no Midnight support. Rebuild with the native feature enabled."
+            .into(),
+    }
+    .into())
+}
+
+===== END I07 =====
+
+===== WHOLE BODY I11; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-diagnostics/src/diagnostic.rs; sha256 41bc1a257e594fc8da0c625c6856d61ac3036afc5b2ae3636289ff411eae78f1; bytes 3407 =====
+use std::borrow::Cow;
+use std::fmt;
+
+use miette::{Diagnostic, LabeledSpan, Report, Severity, SourceCode};
+
+/// A problem found in Moriarty source, with optional code, labels and help.
+///
+/// The payload is boxed so `Result<T, MoriDiagnostic>` stays one pointer wide.
+#[derive(Debug, Clone)]
+pub struct MoriDiagnostic {
+    inner: Box<Inner>,
+}
+
+#[derive(Debug, Clone)]
+struct Inner {
+    message: Cow<'static, str>,
+    severity: Severity,
+    code: Option<Cow<'static, str>>,
+    labels: Vec<LabeledSpan>,
+    help: Option<Cow<'static, str>>,
+}
+
+const _: () = assert!(size_of::<MoriDiagnostic>() == size_of::<usize>());
+
+impl MoriDiagnostic {
+    pub fn error(message: impl Into<Cow<'static, str>>) -> Self {
+        Self::new(Severity::Error, message.into())
+    }
+
+    pub fn warning(message: impl Into<Cow<'static, str>>) -> Self {
+        Self::new(Severity::Warning, message.into())
+    }
+
+    fn new(severity: Severity, message: Cow<'static, str>) -> Self {
+        Self {
+            inner: Box::new(Inner {
+                message,
+                severity,
+                code: None,
+                labels: Vec::new(),
+                help: None,
+            }),
+        }
+    }
+
+    /// Sets the stable diagnostic code, such as `mori::syntax::missing_comma`.
+    pub fn with_code(mut self, code: impl Into<Cow<'static, str>>) -> Self {
+        self.inner.code = Some(code.into());
+        self
+    }
+
+    /// Adds a labeled source span. Labels render in the order they are added.
+    pub fn with_label(mut self, label: impl Into<LabeledSpan>) -> Self {
+        self.inner.labels.push(label.into());
+        self
+    }
+
+    pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
+        self.inner.help = Some(help.into());
+        self
+    }
+
+    /// Sets a help that ends with example code on its own indented lines.
+    pub fn with_help_code(self, help: impl AsRef<str>, code: impl AsRef<str>) -> Self {
+        let mut text = format!("{}\n", help.as_ref());
+        for line in code.as_ref().lines() {
+            text.push('\n');
+            if !line.is_empty() {
+                text.push_str("    ");
+                text.push_str(line);
+            }
+        }
+        self.with_help(text)
+    }
+
+    /// Attaches the source the labels point into, producing a renderable report.
+    pub fn with_source_code(self, source: impl SourceCode + 'static) -> Report {
+        Report::new(self).with_source_code(source)
+    }
+}
+
+impl fmt::Display for MoriDiagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.inner.message)
+    }
+}
+
+impl std::error::Error for MoriDiagnostic {}
+
+impl Diagnostic for MoriDiagnostic {
+    fn code<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.inner
+            .code
+            .as_ref()
+            .map(|code| Box::new(code) as Box<dyn fmt::Display>)
+    }
+
+    fn severity(&self) -> Option<Severity> {
+        Some(self.inner.severity)
+    }
+
+    fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.inner
+            .help
+            .as_ref()
+            .map(|help| Box::new(help) as Box<dyn fmt::Display>)
+    }
+
+    fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan> + '_>> {
+        if self.inner.labels.is_empty() {
+            None
+        } else {
+            Some(Box::new(self.inner.labels.iter().cloned()))
+        }
+    }
+}
+
+===== END I11 =====
+
+===== WHOLE BODY I12; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-diagnostics/src/render.rs; sha256 b28d889ac235f07a7513995ef5bbffd42b1999ce95d8cc2056bd2774f5559bdc; bytes 3348 =====
+//! Graphical rendering of diagnostics against their source.
+
+use miette::{Diagnostic, GraphicalReportHandler, GraphicalTheme, NamedSource, Report};
+
+use crate::MoriDiagnostic;
+
+/// Widest rendering, in columns. Snapshots always use this width.
+pub const WIDTH: usize = 80;
+
+/// Renders a report in color for a terminal `width` columns wide, capped at
+/// [`WIDTH`]. Write it through a stream that strips color when it is off.
+pub fn render_colored(report: &Report, width: usize) -> String {
+    trim_lines(&render(
+        GraphicalTheme::unicode(),
+        width.min(WIDTH),
+        report.as_ref(),
+    ))
+}
+
+/// Renders a diagnostic against its source with no color and a fixed width.
+///
+/// The output is what a user sees, minus color and trailing spaces, so it is
+/// stable across terminals and editors and suitable for snapshots.
+pub fn render_plain(diagnostic: &MoriDiagnostic, name: &str, source: &str) -> String {
+    let report = diagnostic
+        .clone()
+        .with_source_code(NamedSource::new(name, source.to_owned()));
+    trim_lines(&render(
+        GraphicalTheme::unicode_nocolor(),
+        WIDTH,
+        report.as_ref(),
+    ))
+}
+
+/// Removes trailing spaces from every line.
+fn trim_lines(text: &str) -> String {
+    text.lines()
+        .map(|line| line.trim_end().to_owned() + "\n")
+        .collect()
+}
+
+fn render(theme: GraphicalTheme, width: usize, diagnostic: &dyn Diagnostic) -> String {
+    let mut out = String::new();
+    GraphicalReportHandler::new_themed(theme)
+        .with_width(width)
+        .with_links(false)
+        .render_report(&mut out, diagnostic)
+        .expect("writing to a String cannot fail");
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_plain;
+    use crate::{LabeledSpan, MoriDiagnostic};
+
+    /// Renders the diagnostic built from `$source` and snapshots it, recording
+    /// the source rather than the Rust expression.
+    macro_rules! assert_render_snapshot {
+        ($source:literal, $build:expr) => {{
+            let source = indoc::indoc!($source);
+            let build: fn(&str) -> MoriDiagnostic = $build;
+            let diagnostic = build(source);
+            insta::with_settings!({
+                description => format!("Code:\n\n{source}"),
+                omit_expression => true,
+            }, {
+                insta::assert_snapshot!(render_plain(&diagnostic, "test.mori", source));
+            });
+        }};
+    }
+
+    #[test]
+    fn error_with_code_label_and_help() {
+        assert_render_snapshot!(
+            r#"
+            const price = 10USD;
+            "#,
+            |source| {
+                let asset = source.find("USD").unwrap();
+                MoriDiagnostic::error("I need a space between a number and its asset.")
+                    .with_code("mori::syntax::quantity_without_space")
+                    .with_label(LabeledSpan::at(
+                        asset..asset + 3,
+                        "this asset touches the number",
+                    ))
+                    .with_help_code("Put a space between them:", "const price = 10 USD;")
+            }
+        );
+    }
+
+    #[test]
+    fn warning_without_labels() {
+        assert_render_snapshot!(
+            r#"
+            profile "moriarty-beta/1";
+            "#,
+            |_| MoriDiagnostic::warning("This agreement declares no actions.")
+        );
+    }
+}
+
+===== END I12 =====
+
+===== WHOLE BODY I13; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-span/src/lib.rs; sha256 bc1f4d9a4c5852fa2443285e7463864f54b838933ce12a61f05de2c8bcf637a1; bytes 1753 =====
+//! Source spans for the Moriarty toolchain.
+
+use miette::{LabeledSpan, SourceSpan};
+
+/// A half-open range `[start, end)` of UTF-8 byte offsets into a source file.
+///
+/// Sources are at most 65,536 bytes, so `u32` offsets always fit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Span {
+    pub start: u32,
+    pub end: u32,
+}
+
+impl Span {
+    pub const fn new(start: u32, end: u32) -> Self {
+        debug_assert!(start <= end);
+        Self { start, end }
+    }
+
+    /// An empty span at `offset`, such as the end-of-file position.
+    pub const fn empty(offset: u32) -> Self {
+        Self::new(offset, offset)
+    }
+
+    pub const fn len(self) -> u32 {
+        self.end - self.start
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.start == self.end
+    }
+
+    /// The text this span covers in `source`.
+    pub fn source_text(self, source: &str) -> &str {
+        &source[self.start as usize..self.end as usize]
+    }
+
+    /// A diagnostic label with `text` pointing at this span.
+    pub fn label(self, text: impl Into<String>) -> LabeledSpan {
+        LabeledSpan::new_with_span(Some(text.into()), self)
+    }
+
+    /// Like [`Span::label`], but marks where the error is when a diagnostic
+    /// has several labels. Its position is the one shown in the header.
+    pub fn primary_label(self, text: impl Into<String>) -> LabeledSpan {
+        LabeledSpan::new_primary_with_span(Some(text.into()), self)
+    }
+}
+
+impl From<Span> for SourceSpan {
+    fn from(span: Span) -> Self {
+        SourceSpan::new((span.start as usize).into(), span.len() as usize)
+    }
+}
+
+/// An unlabeled underline of the span.
+impl From<Span> for LabeledSpan {
+    fn from(span: Span) -> Self {
+        LabeledSpan::underline(span)
+    }
+}
+
+===== END I13 =====
+
+===== WHOLE BODY I14; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-lexer/src/lib.rs; sha256 5cd5bd604e41fe57e754dd323a4fd86393d34c231a4dee16efe5fd13da5e28d7; bytes 8944 =====
+//! Lexer for `moriarty-beta/1` source.
+//!
+//! Turns source text into [`Tokens`] in a single pass.
+//!
+//! Lexing stops at the first error. Whitespace is skipped; comments are kept
+//! separately for the formatter and do not count toward [`MAX_TOKENS`].
+
+mod diagnostics;
+mod number;
+mod scan;
+mod string;
+mod token;
+
+#[cfg(test)]
+mod proptests;
+#[cfg(test)]
+mod tests;
+
+use mori_diagnostics::MoriDiagnostic;
+use mori_span::Span;
+use soa_rs::Soa;
+
+use crate::number::NumberError;
+use crate::string::StringErrorKind;
+
+pub use crate::token::{Comment, Token, TokenIdx, TokenKind, Tokens};
+
+/// Largest accepted source file, in bytes.
+pub const MAX_SOURCE_BYTES: usize = 65_536;
+/// Most tokens in one file, including the end-of-file token.
+pub const MAX_TOKENS: usize = 8_192;
+/// Longest identifier or keyword, in bytes.
+pub const MAX_IDENT_BYTES: usize = 64;
+/// Longest decoded string, in UTF-8 bytes.
+pub const MAX_STRING_BYTES: usize = 1_024;
+
+/// The text of a string token, with escapes decoded.
+///
+/// `raw` must be the full text of a [`TokenKind::String`] token, quotes
+/// included, as produced by [`lex`].
+pub fn decode_string(raw: &str) -> String {
+    let mut text = String::with_capacity(raw.len());
+    string::decode_with(raw, |c| text.push(c)).expect("lexed strings are valid");
+    text
+}
+
+/// Splits `source` into tokens and comments, or reports the first error.
+pub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(diagnostics::source_too_large(source.len()));
+    }
+    Lexer::new(source).run(false)
+}
+
+/// Identify a leading profile token without requiring the remaining source to
+/// lex successfully. Inspect only a bounded prefix; full parsing retains all
+/// source and token limits.
+pub fn first_token_text(source: &str) -> Result<&str, MoriDiagnostic> {
+    let end = source.floor_char_boundary(source.len().min(MAX_SOURCE_BYTES));
+    let prefix = &source[..end];
+    let tokens = Lexer::new(prefix).run(true)?;
+    Ok(tokens.span(TokenIdx::new(0), prefix).source_text(prefix))
+}
+
+struct Lexer<'src> {
+    source: &'src str,
+    bytes: &'src [u8],
+    pos: usize,
+    tokens: Soa<Token>,
+    comments: Soa<Comment>,
+}
+
+impl<'src> Lexer<'src> {
+    fn new(source: &'src str) -> Self {
+        Self {
+            source,
+            bytes: source.as_bytes(),
+            pos: 0,
+            // Roughly one token per eight bytes, as in Zig.
+            tokens: Soa::with_capacity(source.len() / 8 + 1),
+            comments: Soa::new(),
+        }
+    }
+
+    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {
+        while let Some(&b) = self.bytes.get(self.pos) {
+            let start = self.pos;
+            match b {
+                b' ' | b'\t' | b'\r' | b'\n' => self.pos += 1,
+                b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),
+                b'/' if self.peek(1) == Some(b'*') => self.block_comment(start)?,
+                b'"' => self.string(start)?,
+                b'0'..=b'9' => self.number(start)?,
+                b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,
+                _ => match TokenKind::punctuation(b) {
+                    Some(kind) => self.push(kind, start, start + 1)?,
+                    None => return Err(self.unexpected_character(start)),
+                },
+            }
+            if first_only && !self.tokens.is_empty() {
+                break;
+            }
+        }
+        // The end-of-file token is always pushed: the bound reserves room for it.
+        self.tokens.push(Token {
+            kind: TokenKind::Eof,
+            start: offset(self.pos),
+        });
+        Ok(Tokens {
+            tokens: self.tokens,
+            comments: self.comments,
+        })
+    }
+
+    fn peek(&self, ahead: usize) -> Option<u8> {
+        self.bytes.get(self.pos + ahead).copied()
+    }
+
+    /// Records a token ending at `end` and moves past it.
+    fn push(&mut self, kind: TokenKind, start: usize, end: usize) -> Result<(), MoriDiagnostic> {
+        if self.tokens.len() >= MAX_TOKENS - 1 {
+            return Err(diagnostics::too_many_tokens(span(start, end)));
+        }
+        self.tokens.push(Token {
+            kind,
+            start: offset(start),
+        });
+        self.pos = end;
+        Ok(())
+    }
+
+    fn push_comment(&mut self, start: usize, end: usize) {
+        self.comments.push(Comment {
+            start: offset(start),
+            end: offset(end),
+        });
+        self.pos = end;
+    }
+
+    /// `//` up to, but not including, the next line break.
+    fn line_comment(&mut self, start: usize) {
+        let end = self.bytes[start..]
+            .iter()
+            .position(|&b| b == b'\r' || b == b'\n')
+            .map_or(self.bytes.len(), |len| start + len);
+        self.push_comment(start, end);
+    }
+
+    /// `/*` through the first `*/`. Block comments do not nest.
+    fn block_comment(&mut self, start: usize) -> Result<(), MoriDiagnostic> {
+        let body = start + 2;
+        let Some(len) = self.source[body..].find("*/") else {
+            return Err(diagnostics::unterminated_block_comment(span(start, body)));
+        };
+        self.push_comment(start, body + len + 2);
+        Ok(())
+    }
+
+    fn string(&mut self, start: usize) -> Result<(), MoriDiagnostic> {
+        let Some(end) = scan::string_end(self.bytes, start) else {
+            return Err(diagnostics::unterminated_string(span(start, start + 1)));
+        };
+        let raw = &self.source[start..end];
+        let mut decoded_len = 0;
+        if let Err(error) = string::decode_with(raw, |c| decoded_len += c.len_utf8()) {
+            let at = span(start + error.start, start + error.end);
+            return Err(match error.kind {
+                StringErrorKind::ControlCharacter('\r' | '\n') => {
+                    diagnostics::string_line_break(at)
+                }
+                StringErrorKind::ControlCharacter(c) => {
+                    diagnostics::string_control_character(at, c)
+                }
+                StringErrorKind::InvalidEscape => {
+                    diagnostics::invalid_escape(at, at.source_text(self.source))
+                }
+                StringErrorKind::InvalidUnicodeEscape => diagnostics::invalid_unicode_escape(at),
+                StringErrorKind::LoneSurrogate => diagnostics::lone_surrogate(at),
+            });
+        }
+        if decoded_len > MAX_STRING_BYTES {
+            return Err(diagnostics::string_too_long(span(start, end), decoded_len));
+        }
+        self.push(TokenKind::String, start, end)
+    }
+
+    fn number(&mut self, start: usize) -> Result<(), MoriDiagnostic> {
+        let end = scan::number_end(self.bytes, start);
+        let raw = &self.source[start..end];
+        if let Err(error) = number::validate(raw) {
+            return Err(match error {
+                NumberError::LeadingZero => diagnostics::number_leading_zero(
+                    span(start, end),
+                    &number::without_leading_zeros(raw),
+                ),
+                NumberError::MisplacedUnderscore { at } => {
+                    diagnostics::number_misplaced_underscore(span(start + at, start + at + 1))
+                }
+                NumberError::MissingFraction => {
+                    diagnostics::number_missing_fraction(span(end - 1, end))
+                }
+                NumberError::ExtraDot { at } => {
+                    diagnostics::number_extra_dot(span(start + at, start + at + 1))
+                }
+            });
+        }
+        self.push(TokenKind::Number, start, end)
+    }
+
+    /// An identifier, or a keyword when the text matches one.
+    fn word(&mut self, start: usize) -> Result<(), MoriDiagnostic> {
+        let end = scan::word_end(self.bytes, start);
+        if end - start > MAX_IDENT_BYTES {
+            return Err(diagnostics::identifier_too_long(span(start, end)));
+        }
+        let kind = TokenKind::keyword(&self.source[start..end]).unwrap_or(TokenKind::Ident);
+        self.push(kind, start, end)
+    }
+
+    fn unexpected_character(&self, start: usize) -> MoriDiagnostic {
+        let c = self.source[start..]
+            .chars()
+            .next()
+            .expect("a character remains at the current position");
+        let at = span(start, start + c.len_utf8());
+        match c {
+            '/' => diagnostics::division(at),
+            '“' | '”' | '‘' | '’' => diagnostics::curly_quote(at),
+            '\'' => diagnostics::single_quote(at),
+            '_' => diagnostics::leading_underscore(at),
+            c if !c.is_ascii() => diagnostics::non_ascii(at, c),
+            c => diagnostics::unexpected_character(at, c),
+        }
+    }
+}
+
+/// Converts a byte index to an offset. Sources fit in `u32` after the bound check.
+fn offset(index: usize) -> u32 {
+    u32::try_from(index).expect("source offsets fit in u32")
+}
+
+fn span(start: usize, end: usize) -> Span {
+    Span::new(offset(start), offset(end))
+}
+
+===== END I14 =====
+
+===== WHOLE BODY I15; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori/Cargo.toml; sha256 2202f89a5c40b7bbe503ebb66a406226c2e446ab46580e1c2ff5d4f870ecea1b; bytes 2883 =====
+[package]
+name = "mori"
+version = "0.1.0"
+description = "Command-line interface for the Moriarty toolchain"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+core2-disjoint-draft = ["mori-core/core2-disjoint-draft"]
+default = ["native"]
+source6-expansion = ["dep:mori-source6", "mori-source6/source6-transfer-slice"]
+native = [
+    "dep:mori-backend",
+    "dep:mori-ledger",
+    "dep:futures",
+    "dep:rand",
+    "dep:midnight-ledger",
+    "dep:midnight-base-crypto",
+    "dep:midnight-coin-structure",
+    "dep:midnight-onchain-state",
+    "dep:midnight-onchain-runtime",
+    "dep:midnight-storage",
+    "dep:midnight-transient-crypto",
+    "dep:midnight-serialize",
+]
+
+[dependencies]
+anstream.workspace = true
+anstyle.workspace = true
+clap.workspace = true
+ignore.workspace = true
+mori-ast.workspace = true
+mori-checker.workspace = true
+mori-core.workspace = true
+mori-backend = { workspace = true, optional = true }
+mori-ledger = { workspace = true, optional = true }
+mori-diagnostics = { workspace = true, features = ["fancy"] }
+mori-fmt.workspace = true
+mori-lexer.workspace = true
+mori-parser.workspace = true
+mori-source6 = { workspace = true, optional = true }
+mori-span.workspace = true
+rayon.workspace = true
+futures = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+terminal_size.workspace = true
+thiserror.workspace = true
+
+midnight-ledger = { workspace = true, optional = true }
+midnight-base-crypto = { workspace = true, optional = true }
+midnight-coin-structure = { workspace = true, optional = true }
+midnight-onchain-state = { workspace = true, optional = true }
+midnight-onchain-runtime = { workspace = true, optional = true }
+midnight-storage = { workspace = true, optional = true }
+midnight-transient-crypto = { workspace = true, optional = true }
+midnight-serialize = { workspace = true, optional = true }
+
+[dev-dependencies]
+indoc.workspace = true
+insta.workspace = true
+
+[[test]]
+name = "check_compile_io"
+required-features = ["native"]
+
+[[test]]
+name = "check_static_compile_io"
+required-features = ["native"]
+
+[[test]]
+name = "prepare_call"
+required-features = ["native"]
+
+[[test]]
+name = "installed_call"
+required-features = ["native"]
+
+[[test]]
+name = "signed_installed_call"
+required-features = ["native"]
+
+[[test]]
+name = "native_proofs"
+required-features = ["native"]
+
+[[test]]
+name = "signed_intents"
+required-features = ["native"]
+
+[[test]]
+name = "replay"
+required-features = ["native"]
+
+[[test]]
+name = "replay_challenge"
+required-features = ["native"]
+
+[[test]]
+name = "enforcement_report"
+required-features = ["native"]
+
+[[test]]
+name = "mapped_role_static_io"
+required-features = ["native"]
+
+[[test]]
+name = "source6_expand"
+required-features = ["source6-expansion"]
+
+===== END I15 =====
+
+===== WHOLE BODY I16; origin /home/charl/Moriarty/.worktrees/doctorwatson-core3-mcp-combined-20261019/crates/mori-diagnostics/Cargo.toml; sha256 9931712bcbc51b701a14a485c6297eb2529513c601dde50f36100ffa3f027f5e; bytes 527 =====
+[package]
+name = "mori-diagnostics"
+version = "0.1.0"
+description = "Diagnostic type and rendering for the Moriarty toolchain"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+# Graphical rendering with source snippets.
+fancy = ["miette/fancy-no-backtrace"]
+
+[dependencies]
+miette.workspace = true
+mori-span.workspace = true
+
+[dev-dependencies]
+indoc.workspace = true
+insta.workspace = true
+miette = { workspace = true, features = ["fancy-no-backtrace"] }
+
+===== END I16 =====
+
+===== WHOLE BODY N01; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/source-context/W/openspec/changes/mc01-bounded-language/specs/mc01-bounded-language/spec.md; sha256 e3fa66dc06523ab3b0a73e1cad8c48eba7ee01a7e652cd44ad627f5eb038f1b7; bytes 5061 =====
+## ADDED Requirements
+
+Product predicates govern objective semantics, proofs, participant authorization and ledger validity. Package promotion, reviewer identities and RP01/RP02/RP03 dispatch conditions govern internal maintainer delivery and project-operated resources only. They SHALL NOT be required to author, compile, prove or deploy an independently authored supported program. The [product contract](../../../../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../../../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope; this correction establishes no new implementation evidence.
+
+### Requirement: Defined authoring and canonical representation
+The frontend SHALL define grammar, units, asset domains, typing, diagnostics, canonical bytes, and versioned elaboration.
+
+#### Scenario: Valid loan and swap programs
+- **WHEN** the frontend receives valid loan and swap source programs
+- **THEN** both parse, typecheck, elaborate, roundtrip canonically, and match independent expected evaluator traces.
+
+#### Scenario: Invalid authoring
+- **WHEN** source contains recursion, ambiguous assets, unbounded collections, malformed encodings, or unsupported operations
+- **THEN** the frontend rejects it before signing and reports the source location.
+
+### Requirement: Finite semantic work
+Every execution SHALL have explicit arithmetic, allocation, schedule, horizon, nesting, fold, transaction, proof-size, and predecessor bounds.
+
+#### Scenario: Finite closure
+- **WHEN** an execution follows ordinary work, pending progress, closure, or bounded epoch migration
+- **THEN** each transition decreases the declared lifecycle measure and respects every declared local bound.
+
+#### Scenario: Bound evasion
+- **WHEN** a transition overflows, exhausts work, leaves intermediate arithmetic unchecked, or resets a continuation budget
+- **THEN** the evaluator and proof relation reject that transition.
+
+### Requirement: Target-driven semantic freeze
+Every Core operation SHALL trace to an ACTUS behavior, DeFi behavior, or explicit developer requirement.
+
+#### Scenario: Supported profile
+- **WHEN** loan and swap source programs elaborate into Core
+- **THEN** dues and settlement remain distinct, and gross debit and net delivery checks match independent expected effects.
+
+#### Scenario: Taxonomy shortcut
+- **WHEN** a proposed Core operation cites only a financial family label or convenient numeric tolerance
+- **THEN** the semantic-freeze gate rejects that unsupported operation.
+
+### Requirement: Internal maintainer audit and provenance
+For internal delivery, the package SHALL bind release evidence to exact sources, commands, environment, outputs, and the independent audit identities selected by the current task. Reviewer records SHALL NOT enter public program or transaction validity.
+
+#### Scenario: Audited result
+- **WHEN** deterministic checks pass and both independent reviewers have no unresolved blocking finding
+- **THEN** the package records accepted scope with the exact reviewed candidate digest.
+
+#### Scenario: Missing or stale audit
+- **WHEN** an independently selected internal reviewer is unavailable or lacks a fresh substantive identity-bound verdict
+- **THEN** the internal package remains pending audit; public validation does not reject a supported program solely because that maintainer audit is absent.
+
+### Requirement: Failed predicate stops promotion
+The package SHALL remain incomplete if any required positive or rejection predicate fails.
+
+#### Scenario: Negative control incorrectly accepts
+- **WHEN** a required invalid input is accepted or its rejection lacks evidence
+- **THEN** verification fails and dependent acceptance remains blocked.
+
+### Requirement: Target-driven successor profile
+Before a successor language profile is frozen, RP01 SHALL trace the selected financial challenges through source, intent, authority, liabilities, effects, bounds and acceptance; unsupported constructs SHALL remain explicit versioned extension obligations.
+
+#### Scenario: Report requirement omitted
+- **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
+- **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).
+
+### Requirement: Complete successor specification and executable K semantics
+The successor SHALL define separate lexical rules, ISO/IEC 14977 EBNF, static judgments and executable Moriarty Core semantics in K. Required metatheorems and correspondence domains SHALL have explicit proof status.
+
+#### Scenario: Supported successor agreement
+- **WHEN** a supported `.mori` agreement is parsed, checked and elaborated
+- **THEN** its K execution and evaluator produce the independently expected complete observation, including residual duties and work.
+
+#### Scenario: Missing semantics or substituted proof
+- **WHEN** a required production, constructor or proof obligation is missing, or archived ZKIR evidence is substituted
+- **THEN** MC01 successor acceptance remains incomplete.
+
+===== END N01 =====
+
+===== WHOLE BODY E01; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/expectations/EXPECTED-COMPLETE.json; sha256 bd23cb268da0dedb5afcea8ce1d4ef04a0db3d4fc5cdbc0a75e612ffff3112f0; bytes 3517 =====
+{
+  "basis": "Original MC01 Invalid authoring requires rejection plus source location. Inputs and position/error expectations derived from source and original requirement before patch authoring; not independent of baseline source exposure, not observed outputs. No compiler/test run.",
+  "cases": [
+    {
+      "file": "unsupported-core1.mori",
+      "argv": [
+        "mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core1.mori"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderrRequirements": {
+        "exactCode": "mori::core::unsupported",
+        "exactMessage": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+        "sourceName": "unsupported-core1.mori",
+        "line": 3,
+        "column": 3,
+        "sourceLine": "  while {}",
+        "locationDerivedFrom": "UTF-8 byte offset 53",
+        "rendering": "existing MoriDiagnostic/miette renderer; layout is not independently frozen"
+      },
+      "jsonArgv": [
+        "mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core1.mori",
+        "--json"
+      ],
+      "jsonCompleteObject": {
+        "status": "rejected",
+        "file": "unsupported-core1.mori",
+        "diagnostics": [
+          {
+            "code": "mori::core::unsupported",
+            "message": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+            "offset": 53,
+            "step": null
+          }
+        ]
+      }
+    },
+    {
+      "file": "unsupported-core2.mori",
+      "argv": [
+        "mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core2.mori"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderrRequirements": {
+        "exactCode": "mori::core::unsupported",
+        "exactMessage": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+        "sourceName": "unsupported-core2.mori",
+        "line": 3,
+        "column": 3,
+        "sourceLine": "  while {}",
+        "locationDerivedFrom": "UTF-8 byte offset 53",
+        "rendering": "existing MoriDiagnostic/miette renderer; layout is not independently frozen"
+      },
+      "jsonArgv": [
+        "mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core2.mori",
+        "--json"
+      ],
+      "jsonCompleteObject": {
+        "status": "rejected",
+        "file": "unsupported-core2.mori",
+        "diagnostics": [
+          {
+            "code": "mori::core::unsupported",
+            "message": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+            "offset": 53,
+            "step": null
+          }
+        ],
+        "qualification": "local-reference-stage",
+        "authentication": "none",
+        "consumption": "untracked"
+      }
+    }
+  ],
+  "compatibility": "JSON branch remains byte-identical source; compare complete RED/GREEN JSON stdout bytes for same fixture/binary options. Accepted source and Beta branch unchanged.",
+  "scope": "This addresses Core parser errors that already carry a valid offset, not every MC01 lexical/semantic diagnostic or full frontend acceptance.",
+  "completion": "Stage labels read directly from stage/mod.rs:34-38 and simulate.rs:141-146 before source authoring. Original provisional expectation file/freeze retained unchanged; this complete successor is authoritative."
+}
+
+===== END E01 =====
+
+===== WHOLE BODY E02; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/expectations/unsupported-core1.mori; sha256 ccdfc2e1e0f1377b6c1c3eef916b8cf2a5c0cd08bb5d24fff81e222b67fb7cfa; bytes 64 =====
+language "moriarty/1";
+agreement MissingLocation {
+  while {}
+}
+
+===== END E02 =====
+
+===== WHOLE BODY E03; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/expectations/unsupported-core2.mori; sha256 97d933cfe559f1b2381fbc7991e52dbf11a62d15df61b44c812365ce570ea75b; bytes 64 =====
+language "moriarty/2";
+agreement MissingLocation {
+  while {}
+}
+
+===== END E03 =====
+
+===== WHOLE BODY E04; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/EXPECTATION-COMPLETE-FREEZE.json; sha256 59dc3a9db82397a30dd72dbd2193ba472460196a98ae33bef2988136647a9e67; bytes 890 =====
+{
+  "at": "2026-10-19T17:15:35.350887+00:00",
+  "stage": "COMPLETE EXPECTATIONS FROZEN BEFORE REPAIR SOURCE AUTHORING",
+  "predecessor": "4a5ab3c152bd17fd629de5cff683a55657a492d810aa9758dd6ed61b94721825",
+  "files": [
+    {
+      "path": "expectations/EXPECTED-COMPLETE.json",
+      "bytes": 3517,
+      "sha256": "bd23cb268da0dedb5afcea8ce1d4ef04a0db3d4fc5cdbc0a75e612ffff3112f0"
+    },
+    {
+      "path": "expectations/EXPECTED.json",
+      "bytes": 3329,
+      "sha256": "066a5e9646df6c7a79a219b49cb0c358ae3d96393569e181377d0454025dd74a"
+    },
+    {
+      "path": "expectations/unsupported-core1.mori",
+      "bytes": 64,
+      "sha256": "ccdfc2e1e0f1377b6c1c3eef916b8cf2a5c0cd08bb5d24fff81e222b67fb7cfa"
+    },
+    {
+      "path": "expectations/unsupported-core2.mori",
+      "bytes": 64,
+      "sha256": "97d933cfe559f1b2381fbc7991e52dbf11a62d15df61b44c812365ce570ea75b"
+    }
+  ]
+}
+
+===== END E04 =====
+
+===== WHOLE BODY E05; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/EXPECTATION-FREEZE.json; sha256 4a5ab3c152bd17fd629de5cff683a55657a492d810aa9758dd6ed61b94721825; bytes 644 =====
+{
+  "at": "2026-10-19T17:15:15.987048+00:00",
+  "stage": "FROZEN BEFORE AUTHORING ANY REPAIR BODY",
+  "productExecution": false,
+  "files": [
+    {
+      "path": "expectations/EXPECTED.json",
+      "bytes": 3329,
+      "sha256": "066a5e9646df6c7a79a219b49cb0c358ae3d96393569e181377d0454025dd74a"
+    },
+    {
+      "path": "expectations/unsupported-core1.mori",
+      "bytes": 64,
+      "sha256": "ccdfc2e1e0f1377b6c1c3eef916b8cf2a5c0cd08bb5d24fff81e222b67fb7cfa"
+    },
+    {
+      "path": "expectations/unsupported-core2.mori",
+      "bytes": 64,
+      "sha256": "97d933cfe559f1b2381fbc7991e52dbf11a62d15df61b44c812365ce570ea75b"
+    }
+  ]
+}
+
+===== END E05 =====
+
+===== WHOLE BODY E06; origin /home/charl/moriarty-c2-opus55-restored-20261017/ordinary-next-missing-public-behavior-diagnosis-20261019/FREEZE.json; sha256 7c3733ce422da2d6df8eb949897de2ad47c9cd1b85fd40d2b4e2af8fbad28331; bytes 474 =====
+{
+  "at": "2026-10-19T17:17:45.236647+00:00",
+  "manifestSha256": "cfb4a74f3a132e959edfb8d688e503332815db5b97267467c8d01f95961a0305",
+  "originalExpectationFreezeSha256": "4a5ab3c152bd17fd629de5cff683a55657a492d810aa9758dd6ed61b94721825",
+  "completeExpectationFreezeSha256": "59dc3a9db82397a30dd72dbd2193ba472460196a98ae33bef2988136647a9e67",
+  "fileCount": 53,
+  "allGuardsAndIndependentPositionsVerified": true,
+  "subjectExecution": false,
+  "sourceAcceptance": false
+}
+
+===== END E06 =====
+
+===== WHOLE BODY R01; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/RESULT.json; sha256 c68671490d8fcdb7ad8c86f95c1e7690312d81cef4417e4e602f5237f9153e6b; bytes 4870 =====
+{
+  "at": "2026-10-19T17:20:32.265130+00:00",
+  "observedMissingLocation": true,
+  "properRed": "Both human paths preserve existing rejection/message but omit source location; both complete JSON objects match independent frozen expectations. No build/runtime crash used as RED.",
+  "cases": [
+    {
+      "file": "unsupported-core1.mori",
+      "mode": "human",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/tmp/doctorwatson-core3-mcp-combined-check-mp2l_s1i/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core1.mori"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.036066656990442425,
+      "ownedProcessGroup": 3355156,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "fc93d0171dfe6a138c1875be5e441209c59db8c64048eba96ae616e2dd20c595",
+      "stdout": "",
+      "stderr": "error: mori::core::unsupported: Expected state, asset or action declaration; loops and native calls are unsupported.\n",
+      "frozenJsonMatched": false,
+      "greenHumanLocationPredicate": false
+    },
+    {
+      "file": "unsupported-core1.mori",
+      "mode": "json",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/tmp/doctorwatson-core3-mcp-combined-check-mp2l_s1i/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core1.mori",
+        "--json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.052926053991541266,
+      "ownedProcessGroup": 3355174,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "0fb1fc940206d2c2872fb79f3d250627179cc19000c4ffbcfae570cf8b9821af",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::core::unsupported\",\n      \"message\": \"Expected state, asset or action declaration; loops and native calls are unsupported.\",\n      \"offset\": 53,\n      \"step\": null\n    }\n  ],\n  \"file\": \"unsupported-core1.mori\",\n  \"status\": \"rejected\"\n}\n",
+      "stderr": "",
+      "frozenJsonMatched": true,
+      "greenHumanLocationPredicate": null
+    },
+    {
+      "file": "unsupported-core2.mori",
+      "mode": "human",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/tmp/doctorwatson-core3-mcp-combined-check-mp2l_s1i/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core2.mori"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.04922221601009369,
+      "ownedProcessGroup": 3355183,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "fc93d0171dfe6a138c1875be5e441209c59db8c64048eba96ae616e2dd20c595",
+      "stdout": "",
+      "stderr": "error: mori::core::unsupported: Expected state, asset or action declaration; loops and native calls are unsupported.\n",
+      "frozenJsonMatched": false,
+      "greenHumanLocationPredicate": false
+    },
+    {
+      "file": "unsupported-core2.mori",
+      "mode": "json",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/tmp/doctorwatson-core3-mcp-combined-check-mp2l_s1i/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core2.mori",
+        "--json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.042907194001600146,
+      "ownedProcessGroup": 3355192,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "3178676d74eb88f850a5b45d02453efdeaf41ca117f34f622f4d1bd273edfd84",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\n  \"authentication\": \"none\",\n  \"consumption\": \"untracked\",\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::core::unsupported\",\n      \"message\": \"Expected state, asset or action declaration; loops and native calls are unsupported.\",\n      \"offset\": 53,\n      \"step\": null\n    }\n  ],\n  \"file\": \"unsupported-core2.mori\",\n  \"qualification\": \"local-reference-stage\",\n  \"status\": \"rejected\"\n}\n",
+      "stderr": "",
+      "frozenJsonMatched": true,
+      "greenHumanLocationPredicate": null
+    }
+  ],
+  "candidateApplied": false,
+  "qualification": "Captured combined SDK-free binary only; W source established separately, no W full-build or Core3/native adoption."
+}
+
+===== END R01 =====
+
+===== WHOLE BODY R02; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/SELECTION.json; sha256 aa1d9c13b6007c88d3af3754e52959b970b4994ca146ab71fd73bbe4f8be671d; bytes 802 =====
+{
+  "at": "2026-10-19T17:20:30.635793+00:00",
+  "scope": "Four ordinary real SDK-free combined CLI observations before diagnostic patch; Core1/Core2 human/JSON. Existing binary ce8f from exact no-default-features build, not source/runtime adoption.",
+  "binary": "/tmp/doctorwatson-core3-mcp-combined-check-mp2l_s1i/target/debug/mori",
+  "binarySha256": "ce8f052ef5e8af200e7dc4d7bb90e6b0993f064ace175841398977135af61f68",
+  "historicalBuild": "/home/charl/moriarty-c2-opus55-restored-20261017/core3-mcp-combined-local-check-cycle-20261019/RESULT.json",
+  "expectationFreeze": "59dc3a9db82397a30dd72dbd2193ba472460196a98ae33bef2988136647a9e67",
+  "wallTimeSecondsEach": 5,
+  "killGraceSeconds": 1,
+  "attemptsPerCase": 1,
+  "nativeSDKVMProofKeyWalletLedger": false,
+  "expectationSourceExposed": true
+}
+
+===== END R02 =====
+
+===== WHOLE BODY R03; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core1.mori-human.stderr; sha256 fc93d0171dfe6a138c1875be5e441209c59db8c64048eba96ae616e2dd20c595; bytes 117 =====
+error: mori::core::unsupported: Expected state, asset or action declaration; loops and native calls are unsupported.
+
+===== END R03 =====
+
+===== WHOLE BODY R04; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core1.mori-human.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END R04 =====
+
+===== WHOLE BODY R05; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core1.mori-json.stderr; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END R05 =====
+
+===== WHOLE BODY R06; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core1.mori-json.stdout; sha256 0fb1fc940206d2c2872fb79f3d250627179cc19000c4ffbcfae570cf8b9821af; bytes 284 =====
+{
+  "diagnostics": [
+    {
+      "code": "mori::core::unsupported",
+      "message": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+      "offset": 53,
+      "step": null
+    }
+  ],
+  "file": "unsupported-core1.mori",
+  "status": "rejected"
+}
+
+===== END R06 =====
+
+===== WHOLE BODY R07; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core2.mori-human.stderr; sha256 fc93d0171dfe6a138c1875be5e441209c59db8c64048eba96ae616e2dd20c595; bytes 117 =====
+error: mori::core::unsupported: Expected state, asset or action declaration; loops and native calls are unsupported.
+
+===== END R07 =====
+
+===== WHOLE BODY R08; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core2.mori-human.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END R08 =====
+
+===== WHOLE BODY R09; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core2.mori-json.stderr; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END R09 =====
+
+===== WHOLE BODY R10; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/unsupported-core2.mori-json.stdout; sha256 3178676d74eb88f850a5b45d02453efdeaf41ca117f34f622f4d1bd273edfd84; bytes 386 =====
+{
+  "authentication": "none",
+  "consumption": "untracked",
+  "diagnostics": [
+    {
+      "code": "mori::core::unsupported",
+      "message": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+      "offset": 53,
+      "step": null
+    }
+  ],
+  "file": "unsupported-core2.mori",
+  "qualification": "local-reference-stage",
+  "status": "rejected"
+}
+
+===== END R10 =====
+
+===== WHOLE BODY S04; origin /home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori/src/commands/check.rs; sha256 66691dea7258e8869fca522fc0ffe01eaf4e4f205f421a5b109ddd251d37ea90; bytes 4542 =====
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::time::Instant;
+
+use mori_diagnostics::{MoriDiagnostic, NamedSource};
+
+use crate::json::CheckReport;
+use crate::shell::Shell;
+
+use super::check_source::{self, SourceCheckConsumer};
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    /// Source file
+    pub file: PathBuf,
+
+    /// Print the result as JSON
+    #[arg(long)]
+    pub json: bool,
+}
+
+/// Checks syntax, names, values, types, declarations, calls and intents.
+pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    let name = args.file.display().to_string();
+    let source = super::core_io::read_source(&args.file)?;
+
+    if !args.json {
+        shell.status("Checking", &name);
+    }
+    let started = Instant::now();
+    let outcome = check_source::dispatch(
+        &source,
+        CliConsumer {
+            name: &name,
+            source: &source,
+            json: args.json,
+            shell,
+        },
+    )?;
+    if outcome.beta {
+        if let Some(report) = outcome.report {
+            super::core_io::print(&report)?;
+        } else if outcome.accepted {
+            shell.status(
+                "Finished",
+                format!("check in {:.2}s", started.elapsed().as_secs_f64()),
+            );
+        }
+    }
+    Ok(if outcome.accepted {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
+struct CliOutcome {
+    accepted: bool,
+    beta: bool,
+    report: Option<CheckReport>,
+}
+
+struct CliConsumer<'a> {
+    name: &'a str,
+    source: &'a str,
+    json: bool,
+    shell: &'a mut Shell,
+}
+
+impl SourceCheckConsumer for CliConsumer<'_> {
+    type Output = super::Result<CliOutcome>;
+
+    fn parsed(&mut self, tokens: usize, nodes: usize) {
+        if !self.json {
+            self.shell
+                .verbose_status("Parsed", format!("{tokens} tokens, {nodes} nodes"));
+        }
+    }
+
+    fn beta(
+        self,
+        checked: Option<&mori_checker::Checked<'_>>,
+        diagnostics: Vec<MoriDiagnostic>,
+    ) -> Self::Output {
+        let report = self.json.then(|| {
+            check_source::beta_report(self.name.to_owned(), self.source, checked, &diagnostics)
+        });
+        let accepted = finish(self.shell, self.name, self.source, diagnostics, self.json);
+        Ok(CliOutcome {
+            accepted,
+            beta: true,
+            report,
+        })
+    }
+
+    fn core(
+        self,
+        result: Result<mori_core::Program, mori_core::Error>,
+        staged: bool,
+    ) -> Self::Output {
+        if self.json {
+            let report = check_source::core_report(self.name, self.source, &result, staged);
+            super::core_io::print(&report)?;
+        } else {
+            match &result {
+                Ok(_) => self.shell.status("Finished", "bounded core check"),
+                Err(error) => {
+                    if let Some(offset) = error
+                        .offset
+                        .filter(|offset| self.source.is_char_boundary(*offset as usize))
+                    {
+                        let diagnostic = MoriDiagnostic::error(error.message.clone())
+                            .with_code(error.code.clone())
+                            .with_label(mori_span::Span::empty(offset).primary_label("here"));
+                        self.shell
+                            .report(&diagnostic.with_source_code(NamedSource::new(
+                                crate::display::text(self.name),
+                                self.source.to_owned(),
+                            )));
+                    } else {
+                        self.shell.error(error);
+                    }
+                }
+            }
+        }
+        Ok(CliOutcome {
+            accepted: result.is_ok(),
+            beta: false,
+            report: None,
+        })
+    }
+}
+
+/// Renders the diagnostics, unless the report is JSON. True when there are none.
+fn finish(
+    shell: &mut Shell,
+    name: &str,
+    source: &str,
+    diagnostics: Vec<MoriDiagnostic>,
+    json: bool,
+) -> bool {
+    if diagnostics.is_empty() {
+        return true;
+    }
+    if !json {
+        let count = diagnostics.len();
+        for diagnostic in diagnostics {
+            shell.report(&diagnostic.with_source_code(NamedSource::new(
+                crate::display::text(name),
+                source.to_owned(),
+            )));
+        }
+        let plural = if count == 1 { "" } else { "s" };
+        shell.error(format!(
+            "could not check `{name}` due to {count} previous error{plural}"
+        ));
+    }
+    false
+}
+
+===== END S04 =====
+
+===== WHOLE BODY F01; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-agy-review-preparation-20261019/PREPARED-TO-FORMATTED.patch; sha256 82dc72b7aabc8707df61269a145ca36ac7892fddb9b3b93c89869ac3d71e68ba; bytes 931 =====
+--- prepared095/check.rs
++++ formatted666/check.rs
+@@ -112,10 +112,11 @@
+                         let diagnostic = MoriDiagnostic::error(error.message.clone())
+                             .with_code(error.code.clone())
+                             .with_label(mori_span::Span::empty(offset).primary_label("here"));
+-                        self.shell.report(&diagnostic.with_source_code(NamedSource::new(
+-                            crate::display::text(self.name),
+-                            self.source.to_owned(),
+-                        )));
++                        self.shell
++                            .report(&diagnostic.with_source_code(NamedSource::new(
++                                crate::display::text(self.name),
++                                self.source.to_owned(),
++                            )));
+                     } else {
+                         self.shell.error(error);
+                     }
+
+===== END F01 =====
+
+===== WHOLE BODY G01; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/RESULT.json; sha256 d7da16990e8614a8370a620ee34fae8b348c2a53dd5309c4ae4d4d86e0897ebc; bytes 5514 =====
+{
+  "at": "2026-10-19T17:31:41.358364+00:00",
+  "allFourCasesMatched": true,
+  "sourceAndBinaryPinsHeld": true,
+  "cases": [
+    {
+      "file": "unsupported-core1.mori",
+      "mode": "human",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core1.mori"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.03549416898749769,
+      "ownedProcessGroup": 3403374,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "0980d509ff990e388f4e37bf148ff4b9b65c56765c6485e78c31b036dae808c7",
+      "stdout": "",
+      "stderr": "mori::core::unsupported\n\n  \u00d7 Expected state, asset or action declaration; loops and native calls are\n  \u2502 unsupported.\n   \u256d\u2500[unsupported-core1.mori:3:3]\n 2 \u2502 agreement MissingLocation {\n 3 \u2502   while {}\n   \u00b7   \u25b2\n   \u00b7   \u2570\u2500\u2500 here\n 4 \u2502 }\n   \u2570\u2500\u2500\u2500\u2500\n\n",
+      "completeFrozenJsonAndRedBytesEqual": null,
+      "frozenHumanLocationAndMessageMatched": true
+    },
+    {
+      "file": "unsupported-core1.mori",
+      "mode": "json",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core1.mori",
+        "--json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.034149292012443766,
+      "ownedProcessGroup": 3403387,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "0fb1fc940206d2c2872fb79f3d250627179cc19000c4ffbcfae570cf8b9821af",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::core::unsupported\",\n      \"message\": \"Expected state, asset or action declaration; loops and native calls are unsupported.\",\n      \"offset\": 53,\n      \"step\": null\n    }\n  ],\n  \"file\": \"unsupported-core1.mori\",\n  \"status\": \"rejected\"\n}\n",
+      "stderr": "",
+      "completeFrozenJsonAndRedBytesEqual": true,
+      "frozenHumanLocationAndMessageMatched": null
+    },
+    {
+      "file": "unsupported-core2.mori",
+      "mode": "human",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core2.mori"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.03183994299615733,
+      "ownedProcessGroup": 3403391,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "b2d046e74c5d2d3aede6ca569eee87a19583522a1b711a9f0f5fa71f3c901447",
+      "stdout": "",
+      "stderr": "mori::core::unsupported\n\n  \u00d7 Expected state, asset or action declaration; loops and native calls are\n  \u2502 unsupported.\n   \u256d\u2500[unsupported-core2.mori:3:3]\n 2 \u2502 agreement MissingLocation {\n 3 \u2502   while {}\n   \u00b7   \u25b2\n   \u00b7   \u2570\u2500\u2500 here\n 4 \u2502 }\n   \u2570\u2500\u2500\u2500\u2500\n\n",
+      "completeFrozenJsonAndRedBytesEqual": null,
+      "frozenHumanLocationAndMessageMatched": true
+    },
+    {
+      "file": "unsupported-core2.mori",
+      "mode": "json",
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=TERM",
+        "--kill-after=1s",
+        "5s",
+        "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+        "--quiet",
+        "--color",
+        "never",
+        "check",
+        "unsupported-core2.mori",
+        "--json"
+      ],
+      "exitCode": 1,
+      "elapsedSeconds": 0.04054938201443292,
+      "ownedProcessGroup": 3403394,
+      "ownedGroupRemaining": [],
+      "captureReachedEOF": true,
+      "stdoutSha256": "3178676d74eb88f850a5b45d02453efdeaf41ca117f34f622f4d1bd273edfd84",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\n  \"authentication\": \"none\",\n  \"consumption\": \"untracked\",\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::core::unsupported\",\n      \"message\": \"Expected state, asset or action declaration; loops and native calls are unsupported.\",\n      \"offset\": 53,\n      \"step\": null\n    }\n  ],\n  \"file\": \"unsupported-core2.mori\",\n  \"qualification\": \"local-reference-stage\",\n  \"status\": \"rejected\"\n}\n",
+      "stderr": "",
+      "completeFrozenJsonAndRedBytesEqual": true,
+      "frozenHumanLocationAndMessageMatched": null
+    }
+  ],
+  "qualification": "Actual isolated SDK-free combined checkout plus one human diagnostic rendering repair only; W variant remains source-inspected/unexecuted. No fullMC01, Core3, financial, proof/native/ledger or source/security adoption inferred."
+}
+
+===== END G01 =====
+
+===== WHOLE BODY G02; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/SELECTION.json; sha256 4350fb246d207bf127fe87f31e6562c8c245d810b5d491f36896ebb382d782c3; bytes 999 =====
+{
+  "at": "2026-10-19T17:31:40.122963+00:00",
+  "scope": "Four actual repaired SDK-free CLI cases, same Core1/Core2 source/argv as properRED, complete JSON preservation andhuman source-location rendering.",
+  "binary": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+  "binarySha256": "7d7dcb01a3291b67a0f92f5ec5b878588e8500f9b2e30e5c4bb9028e12201573",
+  "sourcePinsSha256": "4c322d46b84f4729d779cf95f6337dba255bcb8be53049545c8b6893239dd955",
+  "independentExpectationFreeze": "59dc3a9db82397a30dd72dbd2193ba472460196a98ae33bef2988136647a9e67",
+  "humanMessageComparison": "Preserve exact code/message words in order; whitespace and the existing miette vertical/marker frame glyphs may wrap the message. Source-header filename:3:3 and source line required literally. No graphical layout golden claimed.",
+  "wallTimeSecondsEach": 5,
+  "killGraceSeconds": 1,
+  "maxAttemptsPerCase": 1,
+  "nativeSDKVMProofKeyWalletLedger": false
+}
+
+===== END G02 =====
+
+===== WHOLE BODY G03; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core1.mori-human.stderr; sha256 0980d509ff990e388f4e37bf148ff4b9b65c56765c6485e78c31b036dae808c7; bytes 276 =====
+mori::core::unsupported
+
+  × Expected state, asset or action declaration; loops and native calls are
+  │ unsupported.
+   ╭─[unsupported-core1.mori:3:3]
+ 2 │ agreement MissingLocation {
+ 3 │   while {}
+   ·   ▲
+   ·   ╰── here
+ 4 │ }
+   ╰────
+
+
+===== END G03 =====
+
+===== WHOLE BODY G04; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core1.mori-human.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END G04 =====
+
+===== WHOLE BODY G05; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core1.mori-json.stderr; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END G05 =====
+
+===== WHOLE BODY G06; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core1.mori-json.stdout; sha256 0fb1fc940206d2c2872fb79f3d250627179cc19000c4ffbcfae570cf8b9821af; bytes 284 =====
+{
+  "diagnostics": [
+    {
+      "code": "mori::core::unsupported",
+      "message": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+      "offset": 53,
+      "step": null
+    }
+  ],
+  "file": "unsupported-core1.mori",
+  "status": "rejected"
+}
+
+===== END G06 =====
+
+===== WHOLE BODY G07; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core2.mori-human.stderr; sha256 b2d046e74c5d2d3aede6ca569eee87a19583522a1b711a9f0f5fa71f3c901447; bytes 276 =====
+mori::core::unsupported
+
+  × Expected state, asset or action declaration; loops and native calls are
+  │ unsupported.
+   ╭─[unsupported-core2.mori:3:3]
+ 2 │ agreement MissingLocation {
+ 3 │   while {}
+   ·   ▲
+   ·   ╰── here
+ 4 │ }
+   ╰────
+
+
+===== END G07 =====
+
+===== WHOLE BODY G08; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core2.mori-human.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END G08 =====
+
+===== WHOLE BODY G09; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core2.mori-json.stderr; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END G09 =====
+
+===== WHOLE BODY G10; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-green-20261019/unsupported-core2.mori-json.stdout; sha256 3178676d74eb88f850a5b45d02453efdeaf41ca117f34f622f4d1bd273edfd84; bytes 386 =====
+{
+  "authentication": "none",
+  "consumption": "untracked",
+  "diagnostics": [
+    {
+      "code": "mori::core::unsupported",
+      "message": "Expected state, asset or action declaration; loops and native calls are unsupported.",
+      "offset": 53,
+      "step": null
+    }
+  ],
+  "file": "unsupported-core2.mori",
+  "qualification": "local-reference-stage",
+  "status": "rejected"
+}
+
+===== END G10 =====
+
+===== WHOLE BODY B01; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-CONTINUATION-A2-PROCESS.json; sha256 4075c370ca3d53879ce70fcc0e784d3d79aee1e9249b5a2431001b8cd7a2a787; bytes 42 =====
+{"pid": 3392947, "ownedSession": 3392947}
+
+===== END B01 =====
+
+===== WHOLE BODY B02; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-CONTINUATION-A2-RESULT.json; sha256 c0eda49a08cf421a0ad1195baaf5d341f61ac7f6987d2d69325f9ac2c65359ff; bytes 615 =====
+{
+  "at": "2026-10-19T17:30:44.121742+00:00",
+  "exit": 0,
+  "elapsedSeconds": 74.43225801197696,
+  "all264SourcePinsHeld": true,
+  "ownedSession": 3392947,
+  "ownedSessionRemaining": [],
+  "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrSha256": "1a304e7b775bbbca04355bd8a921b714269697aef8fdb12e956eb77d9ea54828",
+  "binaryPath": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+  "binarySha256": "7d7dcb01a3291b67a0f92f5ec5b878588e8500f9b2e30e5c4bb9028e12201573",
+  "firstBuildRemainsFailed": true
+}
+
+===== END B02 =====
+
+===== WHOLE BODY B03; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-CONTINUATION-A2-SELECTION.json; sha256 1b650f5e9973aa6df7d40392d739bb6d7b67a07a43a4e2fa3bfb8c126a1da87f; bytes 2446 =====
+{
+  "at": "2026-10-19T17:29:29.549938+00:00",
+  "argv": [
+    "/usr/bin/timeout",
+    "--signal=TERM",
+    "--kill-after=5s",
+    "90s",
+    "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo",
+    "build",
+    "--manifest-path",
+    "/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/Cargo.toml",
+    "--frozen",
+    "--offline",
+    "-j1",
+    "-p",
+    "mori",
+    "--no-default-features",
+    "--bin",
+    "mori"
+  ],
+  "cwd": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/cwd",
+  "environment": {
+    "PATH": "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin:/usr/bin:/bin",
+    "RUSTC": "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc",
+    "RUSTDOC": "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustdoc",
+    "CARGO_NET_OFFLINE": "true",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_CACHE_AUTO_CLEAN_FREQUENCY": "never",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_SYSTEM": "/dev/null",
+    "LANG": "C.UTF-8",
+    "CARGO_HOME": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/cargo-home",
+    "CARGO_TARGET_DIR": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target",
+    "TMPDIR": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/tmp"
+  },
+  "sourcePinsSha256": "4c322d46b84f4729d779cf95f6337dba255bcb8be53049545c8b6893239dd955",
+  "firstBuildResultSha256": "7b9ed753bc97bea3266a28c7f724dd9eb4c1a1a4f5e39a0ece26274684d45761",
+  "scope": "One manually selected ordinary build continuation using already compiled artifacts. First attempt remains failed124; source/predicate/90second per-child limit unchanged. No automatic retries or native resource/counter reset.",
+  "ordinaryAuthorization": "Existing user instruction permits ordinary source/tooling/local CI; this continues the same source repair and does not add native/SDK/VM/key/proof/wallet/ledger execution.",
+  "maxAttemptsThisSelection": 1,
+  "cumulativeBuildAttemptNumber": 2,
+  "maximumCumulativeChildPlusGraceSeconds": 190,
+  "methodChange": "Retained first build dependency outputs form warm compiler cache; no source edit or assumed binary success. Actual timeout cause is not established by progress log.",
+  "firstExit": 124
+}
+
+===== END B03 =====
+
+===== WHOLE BODY B04; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-CONTINUATION-A2.stderr; sha256 1a304e7b775bbbca04355bd8a921b714269697aef8fdb12e956eb77d9ea54828; bytes 417 =====
+   Compiling mori-core v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-core)
+   Compiling mori-checker v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-checker)
+   Compiling mori v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 14s
+
+===== END B04 =====
+
+===== WHOLE BODY B05; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-CONTINUATION-A2.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END B05 =====
+
+===== WHOLE BODY B06; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-PROCESS.json; sha256 6445ca927c07e25a3bc379e460ec6b5295221990636924a1e306d7f7ab9c969f; bytes 42 =====
+{"pid": 3378139, "ownedSession": 3378139}
+
+===== END B06 =====
+
+===== WHOLE BODY B07; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-RESULT.json; sha256 7b9ed753bc97bea3266a28c7f724dd9eb4c1a1a4f5e39a0ece26274684d45761; bytes 540 =====
+{
+  "at": "2026-10-19T17:27:32.941288+00:00",
+  "exit": 124,
+  "elapsedSeconds": 90.08469017400057,
+  "all264SourceAndToolsConfigVendorPinsHeld": true,
+  "ownedSession": 3378139,
+  "ownedSessionRemaining": [],
+  "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderrSha256": "6b6dc79e1bac6f4ed3714957428fb59eecedcd6776f6942ba365458004f69c79",
+  "binaryPath": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori",
+  "binarySha256": null
+}
+
+===== END B07 =====
+
+===== WHOLE BODY B08; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD-SELECTION.json; sha256 b52462b83a78d2062c38e07e8bcbec77b8f80e6750793fa8b71bb90739cbb773; bytes 1851 =====
+{
+  "at": "2026-10-19T17:26:02.230782+00:00",
+  "argv": [
+    "/usr/bin/timeout",
+    "--signal=TERM",
+    "--kill-after=5s",
+    "90s",
+    "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/cargo",
+    "build",
+    "--manifest-path",
+    "/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/Cargo.toml",
+    "--frozen",
+    "--offline",
+    "-j1",
+    "-p",
+    "mori",
+    "--no-default-features",
+    "--bin",
+    "mori"
+  ],
+  "cwd": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/cwd",
+  "environment": {
+    "PATH": "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin:/usr/bin:/bin",
+    "RUSTC": "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc",
+    "RUSTDOC": "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustdoc",
+    "CARGO_NET_OFFLINE": "true",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_CACHE_AUTO_CLEAN_FREQUENCY": "never",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_CONFIG_SYSTEM": "/dev/null",
+    "LANG": "C.UTF-8",
+    "CARGO_HOME": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/cargo-home",
+    "CARGO_TARGET_DIR": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target",
+    "TMPDIR": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/tmp"
+  },
+  "sourcePinsSha256": "4c322d46b84f4729d779cf95f6337dba255bcb8be53049545c8b6893239dd955",
+  "compiledSourceBodies": 264,
+  "scope": "One ordinary SDK-free CLI build of exactly copied combined source plus human diagnostic rendering; no tests/native/SDK/VM/proof/key/wallet/ledger consumer.",
+  "originalFrozenAllocationsUnchanged": true,
+  "maxAttempts": 1
+}
+
+===== END B08 =====
+
+===== WHOLE BODY B09; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD.stderr; sha256 6b6dc79e1bac6f4ed3714957428fb59eecedcd6776f6942ba365458004f69c79; bytes 1267 =====
+   Compiling rustix v1.1.5
+   Compiling libc v0.2.190
+   Compiling getrandom v0.2.17
+   Compiling terminal_size v0.4.4
+   Compiling miette v7.6.0
+   Compiling rand_core v0.6.4
+   Compiling mori-span v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-span)
+   Compiling mori-diagnostics v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-diagnostics)
+   Compiling mori-lexer v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-lexer)
+   Compiling ff v0.13.1
+   Compiling group v0.13.0
+   Compiling crypto-bigint v0.5.5
+   Compiling elliptic-curve v0.13.8
+   Compiling mori-ast v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-ast)
+   Compiling signature v2.2.0
+   Compiling ecdsa v0.16.9
+   Compiling once_cell v1.21.4
+   Compiling k256 v0.13.4
+   Compiling mori-parser v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-parser)
+   Compiling similar v2.7.0
+   Compiling mori-fmt v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-fmt)
+   Compiling mori-core v0.1.0 (/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori-core)
+
+===== END B09 =====
+
+===== WHOLE BODY B10; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/BUILD.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END B10 =====
+
+===== WHOLE BODY B11; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/FORMATTING.json; sha256 b6126751e7b84a9d5a0f00749a59f0eabae7301978ce537462b814cd10878954; bytes 461 =====
+{
+  "at": "2026-10-19T17:25:42.663320+00:00",
+  "source": "/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori/src/commands/check.rs",
+  "bytes": 4542,
+  "sha256": "66691dea7258e8869fca522fc0ffe01eaf4e4f205f421a5b109ddd251d37ea90",
+  "formattingOnlyComparedPrepared": true,
+  "initialRustfmtCheckExit": 1,
+  "reason": "Existing report chain needs one standard rustfmt line wrap; only whitespace changed.",
+  "formatterWriteExit": 0
+}
+
+===== END B11 =====
+
+===== WHOLE BODY B12; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/SETUP-PROCESS.json; sha256 1fc1a1a60e9699ec37ad14bbc079a549c7eb04dfff8cfb17641f3f5d3e39ef42; bytes 42 =====
+{"pid": 3366525, "ownedSession": 3366525}
+
+===== END B12 =====
+
+===== WHOLE BODY B13; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/SETUP-RESULT.json; sha256 56c5667c12e4129cf17f57f66caa8347be3e254c04ffbdfdf4843ffe0d4961fc; bytes 304 =====
+{
+  "at": "2026-10-19T17:23:52.764845+00:00",
+  "exit": 0,
+  "elapsedSeconds": 35.272138617991004,
+  "ownedSession": 3366525,
+  "ownedSessionRemaining": [],
+  "stdout": "",
+  "stderr": "",
+  "ownedRoot": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned"
+}
+
+===== END B13 =====
+
+===== WHOLE BODY B14; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/SETUP-SELECTION.json; sha256 fe423bd55a52d98d00f46d5f94224840bb8a0220b11034a63eae49e4debecd7d; bytes 831 =====
+{
+  "at": "2026-10-19T17:23:17.492586+00:00",
+  "argv": [
+    "/usr/bin/timeout",
+    "--signal=TERM",
+    "--kill-after=5s",
+    "60s",
+    "/usr/bin/python3.14",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/core3-mcp-combined-local-check-preparation-v2-20261019/run_combined.py",
+    "--copy-owned-cache",
+    "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned"
+  ],
+  "scope": "One ordinary isolated cache setup, exact reused fixed public target/Git-checkout copy only. No product invocation, original14testallocation, native counters or earlier outputs modified.",
+  "futureCompile": "Separate root inspected offline mori --no-default-features --bin mori for diagnostic-only source.",
+  "driverSha256": "13578ed09ac4b27f08718e6d13236a4c0c6266e9aef57357701c272e4e5e441d"
+}
+
+===== END B14 =====
+
+===== WHOLE BODY B15; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/SETUP.stderr; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END B15 =====
+
+===== WHOLE BODY B16; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/SETUP.stdout; sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; bytes 0 =====
+
+===== END B16 =====
+
+===== WHOLE BODY B17; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/SOURCE-INTEGRATION.json; sha256 0c475d1b4ce3371bd1b53715164f70ddeec0d2c0881a2f9f6bbfb8711a6d22c0; bytes 655 =====
+{
+  "at": "2026-10-19T17:24:55.159002+00:00",
+  "isolatedCheckout": "/home/charl/Moriarty/.worktrees/core-check-location-local-20261019",
+  "base": "0ad8a7e7e9cbd63b6e5d002139de26535abf3025",
+  "baselineAll264BodiesEqualCurrentCC": true,
+  "onlyChangedCompiledSource": "crates/mori/src/commands/check.rs",
+  "beforeSha256": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+  "afterSha256": "095ecd6c52a871815c96eff22683ae7ac80e2a35505825f3ce7fd1dd4f1ab9a9",
+  "redResult": "/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-root-red-20261019/RESULT.json",
+  "originalWAndCAndCCModified": false,
+  "adoption": false
+}
+
+===== END B17 =====
+
+===== WHOLE BODY Q01; origin /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-agy-review-preparation-20261019/SUBJECT.json; sha256 fde810edcc332434662be2a517455d6ba3e4eb0d6a15d36a1d1f5931ad03e2b5; bytes 1626 =====
+{
+  "scope": "One human CLI source-location branch only",
+  "W": {
+    "baseRootSupplied": "ad09ff616f875c5d15e18284467f489fd66b110b",
+    "before": "2199d7b49173816c527436eef3cf30c2cb51d1b039603b1046e7bd508762faf7",
+    "after": "9fe12068de3a13483a20e87753ab1a11295878aa07931b2f40d7b06cb25cea5b",
+    "runtime": "UNRUN"
+  },
+  "CC": {
+    "base": "0ad8a7e7e9cbd63b6e5d002139de26535abf3025",
+    "before": "2f08c04bdc1a07796c459385ec9271466a26572f2455ed7d63de906c1d5876bb",
+    "preparedAfter": "095ecd6c52a871815c96eff22683ae7ac80e2a35505825f3ce7fd1dd4f1ab9a9",
+    "actualFormattedAfter": "66691dea7258e8869fca522fc0ffe01eaf4e4f205f421a5b109ddd251d37ea90",
+    "actualBytes": 4542,
+    "baselineBodies": 264,
+    "onlyChangedCompiledSource": "crates/mori/src/commands/check.rs",
+    "binary": "7d7dcb01a3291b67a0f92f5ec5b878588e8500f9b2e30e5c4bb9028e12201573"
+  },
+  "qualification": "Original W/C/CC untouched. SOURCE-INTEGRATION095 precedes formatting; FORMATTING666 and post-format source pins bind final. RED4 root-reported earlier CCce8f binary; GREEN4 exact isolated binary, not W runtime or full Core3/MCP/library adoption. First build124/90.084690174s no success binary; manual continuation0/74.432258012s same90+5 bound retains compiled artifacts. No automatic retry/counter reset; timeoutcauseUNKNOWN. Source-exposed expectation freeze predates repair, not baseline source exposure. Complete source pin metadata available. No pre-pinned on-disk execution observer supplied; no executed driver hash or strict aggregate wall guarantee claimed. All MC01/language/financial/native/proof/ledger parents remain open."
+}
+
+===== END Q01 =====
+
+AVAILABLE PROVENANCE/HISTORY (not required semantic whole-read IDs):
+H01: /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-agy-review-preparation-20261019-v2/packet/inputs/S04/check.rs;4501B;sha256095ecd6c52a871815c96eff22683ae7ac80e2a35505825f3ce7fd1dd4f1ab9a9;Whole prepared unformatted CC after; retained exact history, whitespace-only relation to actualS04
+B18: /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-agy-review-preparation-20261019-v2/packet/inputs/B18/SOURCE-PINS-BEFORE-FORMAT.json;43870B;sha256180f6445bd4cdd95a5dfcbf1449013772efc45c2c440d49c9c1df2e2265aee53;Complete264-row source pins, available mechanically pinned provenance; not mandatory semantic reading of every hash
+B19: /home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-agy-review-preparation-20261019-v2/packet/inputs/B19/SOURCE-PINS.json;43870B;sha2564c322d46b84f4729d779cf95f6337dba255bcb8be53049545c8b6893239dd955;Complete264-row source pins, available mechanically pinned provenance; not mandatory semantic reading of every hash

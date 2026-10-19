@@ -1,0 +1,13 @@
+# Core check source-location repair — 2026-10-19
+
+Original MC01 “Invalid authoring” requires rejection with a source location. The one-path W proposal preserves an existing Core parser byte offset in human `mori check` diagnostics through the existing primary point label/renderer. JSON construction and Beta dispatch are unchanged. Root has integrated the exact one-path source into W; its public integration receipt records the sole tracked change and diffcheck0 at HEADad09, uncommitted. W runtime remains UNRUN.
+
+W proposed source SHA256: `9fe12068de3a13483a20e87753ab1a11295878aa07931b2f40d7b06cb25cea5b`; W runtime **UNRUN**. Actual formatted isolated CC source SHA256: `66691dea7258e8869fca522fc0ffe01eaf4e4f205f421a5b109ddd251d37ea90`, binary `7d7dcb01a3291b67a0f92f5ec5b878588e8500f9b2e30e5c4bb9028e12201573`. Four real GREEN CLI calls on two ASCII Core1/Core2 fixtures produced filename:3:3/source-point human rejections with unchanged code/message; both complete JSON byte streams equal RED and the independently frozen complete objects. These are isolated CC observations, not W execution.
+
+First build exit124/90.084690174s did not yield a newly qualified successful binary. One manual same90+5 continuation retained compiled artifacts and succeeded74.432258012s; no automatic retry, counter reset or timeout-cause claim. No pre-pinned observer driver is invented.
+
+The whole ordinary non-author opinion reports scoped source approval and support for those observations. Root reconciliation SHA256 `f67cfbdf6cfe0d657398c2bec35052f1592aefb525594f54a8f2f9903d48e97e` corrects three citation coordinates separately, preserves the original opinion and adopts W source9fe after preintegration pin checks. That earlier receipt records shared integration not yet performed; the later W integration receipt records exact9fe applied as the sole tracked source change, still uncommitted at HEADad09 and W runtime UNRUN. No pending CC/Core3/MCP interfaces are thereby adopted.
+
+Full MC01 remains open: lexer/validator/stage errors lacking offsets are outside this repair. Unicode/EOF/fallback runtime, full language/financial/native/SDK/VM/proof/key/wallet/ledger acceptance remain separate. Source-exposed expectations predate repair; exact graphical wrapping was not independently frozen.
+
+Complete original sources, controls, frozen expectations, RED/GREEN, timeout/continuation, whole peer review/public receipts and root reconciliation: [excluded bulk archive](../../../evidence/utxo/core-check-location-20261019/README.md). The archive source copy is DATA, not live-source integration. Graph indexing of this report and changed source must be bound to root’s eventual publication commit; this report makes no graph-freshness claim.

@@ -1,0 +1,11 @@
+# Core check source-location evidence
+
+This excluded bulk archive preserves all 72 V2 packet members and manifest, exact controls, whole ordinary peer opinion/public receipts, actual RED/GREEN, both build attempts and the exact root reconciliation. No private capture/log/stderr, binary, auth or cache is included. [Path aliases](PATH-ALIASES.json) resolve frozen absolute provenance; archived tasks are not portable launchers.
+
+The [proposed W source](candidate/W-proposed/crates/mori/src/commands/check.rs) is a public DATA copy. W runtime remains UNRUN. Isolated CC had four GREEN calls: Core1/Core2 human rejection headers identify filename:3:3 and source point while preserving code/message; full JSON bytes equal RED and complete frozen objects. General Unicode/EOF/offset fallback runtime is not established.
+
+First build exit124 at90.084690174s did not yield a newly qualified successful binary; this does not claim copied older artifacts were physically absent. A root-selected same90+5 manual continuation retained compiled artifacts and succeeded in74.432258012s. No automatic retry/reset or timeout-cause inference; no pre-pinned on-disk observer driver invented.
+
+The [original review](review/TERMINAL-REVIEW.json) is byte-exact. [Root reconciliation](ROOT-RECONCILIATION.json) retains three wrong citation coordinates/stale narrative references, corrects quote spans separately and adopts exact W source9fe after preintegration checks, with isolatedCC-only runtime. That earlier receipt records shared integration not yet performed. The later [W integration receipt](W-SOURCE-INTEGRATION.json) records root applying exact9fe as the sole tracked source change at HEADad09, with diffcheck0, uncommitted and W runtime still UNRUN. CLI labels do not attest backend identity.
+
+Scope is human rendering for Core errors with an existing valid UTF-8 offset. Full MC01 remains open, including lexer/validator/stage errors with no offset; pending CC/Core3/MCP interfaces, financial, SDK/native, VM, key/proof/wallet/ledger acceptance remain separate. Source-exposed expectations predate repair; exact graphical wrapping was not independently frozen. The concise graph-indexed primary report is docs/utxo/doctorwatson/CORE-CHECK-LOCATION-2026-10-19.md.

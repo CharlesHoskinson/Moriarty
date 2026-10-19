@@ -50,7 +50,22 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         } else {
             match &result {
                 Ok(_) => shell.status("Finished", "bounded core check"),
-                Err(error) => shell.error(error),
+                Err(error) => {
+                    if let Some(offset) = error
+                        .offset
+                        .filter(|offset| source.is_char_boundary(*offset as usize))
+                    {
+                        let diagnostic = MoriDiagnostic::error(error.message.clone())
+                            .with_code(error.code.clone())
+                            .with_label(mori_span::Span::empty(offset).primary_label("here"));
+                        shell.report(&diagnostic.with_source_code(NamedSource::new(
+                            crate::display::text(&name),
+                            source.clone(),
+                        )));
+                    } else {
+                        shell.error(error);
+                    }
+                }
             }
         }
         return Ok(if result.is_ok() {
