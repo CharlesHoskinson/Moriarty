@@ -6,6 +6,7 @@ intervening primary record is retained and checked for continuity/accounting.
 Only declared aligned controls/frame forms are decoded; others fail explicitly.
 """
 from render_input import same, fields, tagged
+from match_scope_evidence import scope_history, selected_event
 
 
 def span(rows, spec):
@@ -17,7 +18,8 @@ def span(rows, spec):
 
 
 class AlignedPrimaryView:
-    def __init__(self, compile_document, ng_program, image):
+    def __init__(self, compile_document, ng_program, image, scope_evidence=None):
+        self.scope_evidence = {} if scope_evidence is None else scope_evidence
         self.source = compile_document["canonicalProgramView"]
         self.program = ng_program
         self.image = image
@@ -111,9 +113,19 @@ class AlignedPrimaryView:
                 raise ValueError("Invoke source origin differs")
             return {"ngApply": {"call_expr_id": origin, "call_occurrence": self.nodes[origin]["occurrence"],
                 "function_name_id": payload["function_name"], "arguments": self.slots(payload["args"])}}
+        if tag == "Cases":
+            fields(payload, ("arms", "saved_env", "value"))
+            origin = self.image["control_origin"]
+            source = self.node(origin, "Match")
+            ids = list(range(payload["arms"]["start"], payload["arms"]["start"] + payload["arms"]["len"]))
+            if ids != [arm["source_arm_id"] for arm in source["arms"]]:
+                raise ValueError("Cases source arm suffix is outside this declared boundary profile")
+            return {"ngChoose": {"match_expr_id": origin, "match_occurrence": self.nodes[origin]["occurrence"],
+                "scrutinee_value": self.value(payload["value"]), "remaining_source_arms": source["arms"],
+                "saved_environment": self.environment(payload["saved_env"])}}
         raise ValueError("No selected aligned control counterpart: " + str(tag))
 
-    def frame(self, frame):
+    def frame(self, frame, frame_index=None):
         tag, payload = tagged(frame)
         origin = payload["origin"]
         occurrence = self.nodes[origin]["occurrence"]
@@ -128,11 +140,16 @@ class AlignedPrimaryView:
                 "body_expr": payload["body"], "saved_environment": saved}}
         if tag == "ScopeF":
             fields(payload, ("origin", "saved_env"))
-            # Match ScopeF needs additional arm identity evidence; it is NOT
-            # guessed from an evaluated body and is outside this prefix.
-            source = self.node(origin, "Let")
-            return {"ngLetScope": {"source_expr": origin, "occurrence": occurrence,
-                "binder": source["binder"], "saved_environment": saved}}
+            if "Let" in self.nodes[origin]["kind"]:
+                source = self.node(origin, "Let")
+                return {"ngLetScope": {"source_expr": origin, "occurrence": occurrence,
+                    "binder": source["binder"], "saved_environment": saved}}
+            self.node(origin, "Match")
+            evidence = self.scope_evidence.get(frame_index)
+            if evidence is None or evidence["match_expr_id"] != origin or not same(evidence["saved_environment"], saved):
+                raise ValueError("Match ScopeF lacks causal source-arm selection evidence")
+            return {"ngArmScope": {"match_expr_id": origin, "match_occurrence": occurrence,
+                "source_arm_id": evidence["source_arm_id"], "saved_environment": saved}}
         if tag == "ArgsF":
             fields(payload, ("completed", "function_name", "origin", "rest", "saved_env"))
             source = self.node(origin, "Call")
@@ -182,7 +199,7 @@ class AlignedPrimaryView:
         if self.image["helper"] is not None:
             raise ValueError("Frozen aligned boundary has a pending primary helper")
         return {"control": self.control(), "environment": self.environment(self.image["env_root"]),
-            "frames_top_first": [self.frame(frame) for frame in reversed(self.image["frames"])]}
+            "frames_top_first": [self.frame(frame, index) for index, frame in reversed(list(enumerate(self.image["frames"])))]}
 
 
 def expand(boundary, compile_document):
@@ -197,6 +214,7 @@ def expand(boundary, compile_document):
 
 
 def relate(compile_document, ng_program, primary_records, schedule, k_states):
+    scope_at, selections = scope_history(compile_document, ng_program, primary_records, AlignedPrimaryView)
     rows, previous = [], compile_document["genesis"]
     if not same(previous["admission"]["view"], compile_document["canonicalProgramView"]):
         raise ValueError("Whole canonical ProgramView differs from actual admission view")
@@ -234,7 +252,7 @@ def relate(compile_document, ng_program, primary_records, schedule, k_states):
     for pair, state in zip(schedule["pairs"], k_states):
         ordinal, recordid = pair["k_state_ordinal"], pair["primary_after_record"]
         image = compile_document["genesis"]["image"] if recordid is None else primary_records[recordid]["after"]["image"]
-        primary = AlignedPrimaryView(compile_document, ng_program, image).shared()
+        primary = AlignedPrimaryView(compile_document, ng_program, image, {} if recordid is None else scope_at[recordid]).shared()
         k_shared = {key: state[key] for key in ("control", "environment", "frames_top_first")}
         rows.append({"k_state_ordinal": ordinal, "primary_after_record": recordid,
             "complete_K_program_equal_input": same(state["program"], ng_program),
@@ -247,10 +265,25 @@ def relate(compile_document, ng_program, primary_records, schedule, k_states):
         endpoint = primary_records[block["primary_last_record"]]["event"]
         ok = (event_tag == block["k_event_tag"] and endpoint["rule_id"] == block["primary_last_rule"]
             and endpoint["source_expr_id"] == block["primary_event_source_expr"])
+        payload_relation = None
+        if event_tag == "ngScrutineeReturned":
+            view = AlignedPrimaryView(compile_document, ng_program, primary_records[block["primary_last_record"]]["after"]["image"])
+            choose = view.control()["ngChoose"]
+            declared_event = {event_tag: {"match_expr_id": choose["match_expr_id"], "match_occurrence": choose["match_occurrence"],
+                "value": choose["scrutinee_value"], "source_arms": choose["remaining_source_arms"],
+                "saved_environment": choose["saved_environment"]}}
+            payload_relation = same(event, declared_event)
+            ok = ok and payload_relation
+        elif event_tag == "ngArmSelected":
+            declared_event = selected_event(selections[block["primary_last_record"]])
+            payload_relation = same(event, declared_event)
+            ok = ok and payload_relation
         protocols.append({"frozen_block": block, "event_source_protocol_equal": ok,
+            "selected_match_full_payload_relation": payload_relation,
             "full_actual_K_event": event, "full_primary_endpoint_event": endpoint})
     return {"status": "PASS" if all(row["complete_K_program_equal_input"] and row["shared_control_environment_frames_equal"] for row in rows)
             and all(row["event_source_protocol_equal"] for row in protocols) else "FAIL",
+        "match_scope_causal_source_evidence": list(selections.values()),
         "boundary_pairs": rows, "event_blocks": protocols, "complete_primary_accounting": accounting,
         "retained_raw_primary_records": len(primary_records), "K_work_carrier": "ABSENT; NO CLOCK/FUEL/WORK EQUALITY CLAIM",
         "remaining_observation_budget": schedule["k_observation_budget"] - (len(k_states) - 1),
