@@ -1,0 +1,12 @@
+// Normal debt registration and a separately selected repayment.
+language "moriarty/1";
+agreement CoreLoanCheck {
+  asset CASH = { network: "local", issuer: "check-loan", reference: "CASH", scale: 0 };
+  action open() {
+    liability("loan", CASH, "borrower", "lender", 40);
+  }
+  action repay(amount: UInt) {
+    transfer(CASH, "borrower", "lender", amount);
+    discharge("loan", amount);
+  }
+}
