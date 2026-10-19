@@ -1,5 +1,12 @@
 # Sherlock implementation loop contract
 
+## Current priority — stagenet recursive proof and Fenrir feasibility benchmark
+
+The October 19 user instruction makes deploying Sherlock on Midnight stagenet and validating a real recursive proof the top priority. Then generate a deterministic Fenrir-derived synthetic rollup and benchmark circuit degree k, proving/local verification costs and observed stagenet inclusion/settlement latency. Follow the [experiment](stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](../../openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md). A saved literal k18 proof is a prerequisite, not recursion evidence.
+
+Select work in this order: saved-bundle independent verify-only → missing Sherlock recursive relation and terminal ledger-9 integration → local rehearsal → stagenet deployment/recursive validation and effects readback → synthetic rollup scale/performance matrix. Source tracing and authoring for the recursive relation, the SDK-transcript/inner-adapter study and dataset preparation may proceed while P14 is pending. Only consumption of its verification result depends on P14; other native checks require their own actual eligibility under existing source/resource rules. Retain Clean, Quint, K, handwritten circuit and documentation work on those exact slices. Graph work is now maintenance supporting implementation, with narrow graph-first recovery and changed-file refresh. No new factory or infrastructure queue displaces this objective. The full active Sherlock goal and all retained acceptance/resource obligations remain in force.
+
+
 Requested by the user on2026-10-17 after final design/spec integration. This uses the existing DoctorWatson factory and existing requirement/evidence records. It is not a new scheduler, campaign, permission system or replacement roadmap.
 
 ## Entry and next actual implementation
@@ -347,3 +354,22 @@ P8 accounting merged after two distinct Opus review roles and three SDK-free tes
 ## October 19 P9 terminal/restoration evidence cut
 
 The completion sequence observed guard exit 0 in 120.323642509 seconds; phase F reports 95.320790359 seconds and Cargo reports 25.69 seconds. Postchecks record 34 build-script run units not reexecuted and 90 host outputs unchanged. The durable receipt records restoration of the original public camino bytes and saved pre-read atime/mtime, with final `lstat` only and changed ctime. Cgroup process lists were empty. The produced backend test executable remains unexecuted and outputs unaccepted pending independent result review. A subsequent separate receipt records 3,566 files and 2,847,459,477 bytes preserved with exact membership/hash/size/nonexecuting-mode checks, successful collection/teardown, absent cgroup, empty execution root and `cleanupOwed: false`. Keep the four permanent implementation lanes active. See the [dated result and remaining work](../results/sherlock-four-lane-progress-20261018/addenda/20261019-p9-terminal-restoration/README.md); this observation changes no EARS acceptance.
+
+
+## October19 P13 saved proof, verify-only next task and graph-first recovery
+
+P13's proving consumer compiled successfully; the later combined operation saved a realk18/3440-byte proof bundle (5ec12ca7) after a source-consistent producer-VK-verified return, then terminated SIGKILL/-9 before the independent verification report. The full test did not pass. Root's18 pure claim checks matched all2077 values/fullmetadata/exactprogramIR to earlier independently accepted SDK artifacts; that is qualified transitive data evidence, not independent cryptographic verification. Next: Opus-owned VERIFY-ONLY consumer of the saved bundle, not a replay of proving or the consumed combined test. Review/source/resource eligibility remains separate from that future result.
+
+Recover all permanent counterparts: CleanB24R3 kernelPASS2.013854957s after preservedR2 syntax failure; Quint/B19 qualified finite6states; K Lt firstcompilePASS15.911s/15outputs/noorphans, with no runtime/neworacle/correspondence closure. Retain Lt's3draftPR288 files unregistered/uncompiled→Opusregistration/nativechecks, unchanged/uncompiledMul17 and website design-log iteration only.
+
+Main Graphify71613 (superseded by the 10:50 UTC update below) was installed with111729nodes/321393edges/206sourcehashes; canonicalCLI queryPASS19nodes24edges. Its output budget is soft: about 2,848 tokens were observed against a requested 1,400. Recover through its current manifest, source-root mapping and bounded query, verify source pins and incrementally refresh changed sources only, then inspect exact required full bodies. The old dated graph context is preserved and a separate small current-proof append is being prepared. Read latest Root receipts/actual process tools for liveness, terminal status and counters; never use static graph status for those facts. The separate advisory Sherlock KG is not Graphify.
+
+See the [latest dated source cut](../results/sherlock-four-lane-progress-20261018/addenda/20261019-proof-consumer-compiled-graph-recovery/STATUS.json). Keep hybridE/S/P1903890457/280862180/1623028271us/residual6 and all old charges; measured method differences remain disclosed. Last measured current10/historical16 is retained, not re-run or newly adopted. Independentverify/stagenet/fullinterpreter/formal/financial/target/release obligations, allcaps and stoppedamendment boundaries stay intact. No framework, retry or new approval ritual is introduced.
+
+### Graphify installation and recovery update — October 19, 10:50 UTC
+
+The current graph is installed at `/home/charl/Moriarty/graphify-out/graph.json`: SHA-256 `833be6cfef8cb6cd67979f525b86bada5e327ad2f4607277b915236acc23e87c`, 111,730 nodes and 321,396 relationships. The latest result adds one node and three relationships; all historical ordered rows and existing metadata remain exact. A fresh source check found all 206 indexed source files unchanged. The dated proof-result node supersedes the earlier “proof not run” snapshot; independent verification remains unfinished. The actual query returned 12 nodes and 17 relationships. Its roughly 2,045-token output exceeded the requested 700-token budget; treat that option as a soft target.
+
+On every recovery, start with `graphify-out/SHERLOCK-CURRENT.md` and `SHERLOCK-CONTEXT.md`, then query the relevant named symbol with its explicit graph and source root. Check the source manifest before relying on line references, extract changed files only, and read the selected source bodies. Use relation filters or single-node lookup for narrow context. A saved graph is not a live process or accounting probe. Preserve separate source roots for historical layers; never resolve all relative source paths against the main checkout.
+
+Clean B24 is merged into the Fenrir fork in PR 31 at `1847c4e6db59c78e05e857941bd4db9581ece8dd`. The primary next task remains a verify-only consumer of the frozen proof, with no repeated proving. Keep Clean, Quint, K and handwritten circuit implementation active. The graph is an index for this work, not another execution framework.

@@ -1,0 +1,57 @@
+//! Input constructors only. No emitter, evaluator, test/assertion or expected output.
+//! NEW cohort after explicit AD-3 failure in cohort01; no old case is changed.
+use mori_core::sherlock::helper_machine::shared::{
+    i128_class::KIntC, BinaryOp, BoundsC, CoreExpr, CoreProgram, CoreValue,
+    FinanceInput, LayoutCapacitiesC, LayoutSchemaC, RunIntC,
+};
+
+pub enum LtInputCase { Increasing, Decreasing, Equal }
+
+pub struct LtReachableInputs {
+    pub program: CoreProgram,
+    pub bounds: BoundsC,
+    pub layout: LayoutSchemaC,
+    pub fuel: RunIntC,
+    pub stack_limit: RunIntC,
+    pub finance: FinanceInput,
+}
+
+pub fn lt_reachable_inputs(case: LtInputCase) -> LtReachableInputs {
+    let (left, right) = match case {
+        LtInputCase::Increasing => (255u128, 256u128),
+        LtInputCase::Decreasing => (256u128, 255u128),
+        LtInputCase::Equal => (256u128, 256u128),
+    };
+    let program = CoreProgram {
+        functions: Vec::new(),
+        entry: CoreExpr::Binary {
+            op: BinaryOp::Lt,
+            left: Box::new(CoreExpr::Literal { value: CoreValue::UInt { n: KIntC::InRange(left) } }),
+            right: Box::new(CoreExpr::Literal { value: CoreValue::UInt { n: KIntC::InRange(right) } }),
+        },
+    };
+    let bounds = BoundsC {
+        code_rows: 16, function_rows: 0, code_child_slots: 16,
+        parameter_slots: 0, pattern_rows: 0, match_plan_rows: 0,
+        match_arm_rows: 0, type_rows: 4, constructor_rows: 0,
+        constructor_field_slots: 0, max_arity: 2, constant_nodes: 8,
+        constant_field_slots: 0, data_nodes: 8, data_field_slots: 0,
+        environment_cells: 8, frames: 8, helper_tasks: 8,
+        serialization_bytes: 16384, max_reference_work: 128,
+        max_helper_work: 128, step_cap: 128,
+    };
+    let layout = LayoutSchemaC {
+        layout_version: ("lt-reachable-input-cohort".into(), "2".into()),
+        field_id: None, widths: None, scalar_layout_id: None,
+        bounds,
+        capacities: LayoutCapacitiesC {
+            name_rows: 8, name_bytes: 64,
+            occurrence_path_slots: 64, value_slots: 128,
+        },
+        ext_capacities: None, boundary_capacities_present: false,
+    };
+    LtReachableInputs {
+        program, bounds, layout, fuel: RunIntC::Nat(64),
+        stack_limit: RunIntC::Nat(8), finance: FinanceInput::Absent,
+    }
+}

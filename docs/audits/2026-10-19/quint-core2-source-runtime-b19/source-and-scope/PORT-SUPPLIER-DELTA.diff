@@ -1,0 +1,19 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch18-core2-owning-event-sequence-20261019/model-port-f1-action-effects-revision03/source/independentCore2SequencePort.qnt
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch19-core2-source-runtime-derivation-20261019/source/independentCore2SequencePort.qnt
+@@ -1,6 +1,6 @@
+ module independentCore2SequencePort {
+   import financialBoundary.* from "./financialBoundary"
+-  import independentCore2SequenceSeed as S from "./independentCore2SequenceSeed"
++  import sourceDerivedCore2SequenceSeed as S from "./sourceDerivedCore2SequenceSeed"
+   // A general finite admitted Invocation list; no fixture IDs or source evaluator.
+   pure val suppliedQueue = S::suppliedInvocations
+ 
+@@ -56,7 +56,7 @@
+       machine.current == suppliedQueue.nth(machine.records.length() - 1) else false
+   }
+   val sequenceInv = and {
+-    queueDomain, allInv, normalDomain(machine.current),
++    S::sourceDerivationSupported, queueDomain, allInv, normalDomain(machine.current),
+     isQueuePrefix(machine.records), linkedPrefix(machine.records), queuePositionInv,
+   }
+     action init: bool = all { suppliedQueue.length() > 0, initInvocation(suppliedQueue.head()) }

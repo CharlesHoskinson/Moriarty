@@ -1,0 +1,92 @@
+```json
+{
+  "verdict": "REQUEST_CHANGES",
+  "reviewer": "fresh non-author Opus 5.5 HIGH (claude-opus-5-5); no tools, no native or chain execution",
+  "scope_reviewed": "AGENTS.md priority entry; implementation-loop.md additions; stagenet-recursive-rollup-experiment.md; sherlock-stagenet-recursive-rollup proposal/requirements/tasks/fenrir-source-cut.json; openspec/README.md; DW118/DW119; Graphify refresh base layer, current-result-addendum-01 and root-actual receipts, as supplied in the readset",
+  "passes": {
+    "dependency_ordering": "MOSTLY_PASS. The order is verify-only P14, then recursive relation and ledger-9 terminal, then local rehearsal, then stagenet, then the rollup matrix. This order is consistent across the loop, the experiment and tasks. See C4 for the parallelism wording and C1 for the missing study task.",
+    "real_recursive_vs_literal": "PASS. The literal k18 bundle is labelled a prerequisite everywhere. SRPOC-002 requires the executed recursive relation and terminal path. Parent digests and host success flags are excluded. Fenrir-only acceptance is excluded.",
+    "ledger9_not_ledger10": "PASS. Older ledger-10 spike material is explicitly excluded.",
+    "workload_scale_planned_not_executed": "PASS. Status is planned, all execution tasks are unchecked, and there is no authorization for new resource classes. Unsupported shapes are retained as results.",
+    "k_meaning": "PASS with C3. k is circuit degree and K is the semantics framework. Padded capacity is not counted as used rows.",
+    "honest_performance_and_negatives": "PASS with C3 and C7. Local verification is separated from RPC inclusion and readback. Validator CPU time is unavailable unless instrumented. No invented thresholds. Censored and failed runs are retained. Fenrir's 8 invalid-transaction and 3 invalid-batch cases are retained. SRPOC-008 forbids silent retry, k increase or profile substitution.",
+    "graphify": "MOSTLY_PASS. The historical ordered prefix and metadata are preserved exactly. The 206-source scope is unchanged with no AST rerun. The topology is one node and three edges, each with a dated, qualified relation. Replay adds 0 or refuses. The 235 MB aggregate stays local-only and the 17-file portable base is immutable. Guidance is graph-first with bounded queries, and liveness and counters come from tools, not from the graph. See C5 and C6 for receipt and budget accuracy.",
+    "exclusions": "PASS. There is no full Sherlock closure. SRPOC is excluded from the original EARS total. There is no cryptographic approval, no wallet material, and no new budgets, native calls, framework or human approval ritual. K50/Quint43 are untouched."
+  },
+  "required_corrections": [
+    {
+      "id": "C1",
+      "file": "docs/sherlock/stagenet-recursive-rollup-experiment.md",
+      "issue": "The text claims the pinned source cut identifies the recursive aggregation lane and the chain harness. fenrir-source-cut.json pins neither. The required pending status of the public SDK transcript vs Fenrir inner-adapter study, and the rule that no compatibility is assumed, are also absent.",
+      "replace": "The pinned [Fenrir source cut](../../openspec/changes/sherlock-stagenet-recursive-rollup/fenrir-source-cut.json) identifies `recursion/stagenet-strawman`: `history/src/generate.rs`, `history/SPEC.md`, the recursive aggregation lane, `decider/src/main.rs`, and the chain harness.",
+      "with": "The pinned [Fenrir source cut](../../openspec/changes/sherlock-stagenet-recursive-rollup/fenrir-source-cut.json) covers `recursion/stagenet-strawman/BUILD-BRIEF.md`, `history/SPEC.md`, `history/src/generate.rs`, `decider/src/main.rs` and `docs/HARDLINES.md`. The recursive aggregation lane, Fenrir's inner adapter and the chain harness are not yet pinned or inspected in this cut. The comparison of the public Midnight SDK proof transcript with Fenrir's inner adapter is pending; no compatibility between Sherlock's literal proofs and Fenrir's recursion is assumed."
+    },
+    {
+      "id": "C1b",
+      "file": "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md",
+      "issue": "Missing task for the pending compatibility study. It must precede adaptation.",
+      "insert_after": "- [ ] Finish fresh Opus source audit, compilation and independent verification of the saved literal bundle through P14; preserve its literal-only scope.",
+      "text": "- [ ] Pin and inspect Fenrir's recursive aggregation lane, inner adapter and chain harness, and compare the public Midnight SDK proof transcript with the inner adapter. Record the exact compatibility result or gap before adapting either side; no compatibility is assumed."
+    },
+    {
+      "id": "C2",
+      "file": "openspec/changes/sherlock-stagenet-recursive-rollup/fenrir-source-cut.json",
+      "issue": "AGENTS.md evidence discipline requires the default branch and retrieval time in a repository pin. Both are absent.",
+      "change": "Add the top-level fields \"default_branch\" and \"retrieved_utc\" with the actually observed values. If a value was not recorded at inspection, set it to \"not_recorded\" rather than inferring it. Do not change existing entries."
+    },
+    {
+      "id": "C3",
+      "file": "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md",
+      "issue": "SRPOC-005 says \"available row/column counts\". This can be read as domain capacity, which contradicts the experiment's rule that padded capacity is not a measured row count.",
+      "replace": "available row/column counts",
+      "with": "used and lookup row counts and column counts where the library exposes them (domain capacity is not a used-row count)"
+    },
+    {
+      "id": "C4",
+      "file": "docs/sherlock/implementation-loop.md",
+      "issue": "The arrow ordering could serialize recursive-relation source work behind P14 and delay the top priority. Only consumption of P14's result and native execution depend on it.",
+      "replace": "Independent dataset/source preparation may run alongside the primary circuit path.",
+      "with": "Source tracing and authoring for the recursive relation, the SDK-transcript/inner-adapter study and dataset preparation may proceed while P14 is pending; consuming the verified literal leaf and any native recursive execution wait for P14's result."
+    },
+    {
+      "id": "C5",
+      "files": [
+        "docs/sherlock/implementation-loop.md",
+        "wiki-llm/doctorwatson-improvement-log.md"
+      ],
+      "issue": "The prose cites a 1,000-token cap. QUERY-RECEIPT.json records --budget 1400. The earlier 71613 paragraph also reads as current, but the 10:50 UTC update supersedes it.",
+      "changes": [
+        "implementation-loop.md: replace \"Its output budget is soft (~2848tokens observed), not a strict1000-token cap.\" with \"Its output budget is soft: about 2,848 tokens were observed against a requested 1,400.\"",
+        "implementation-loop.md: replace \"Main Graphify71613 is actually installed\" with \"Main Graphify71613 (superseded by the 10:50 UTC update below) was installed\"",
+        "doctorwatson-improvement-log.md DW118: replace \"illustrates a soft budget, not a1,000-token guarantee\" with \"illustrates a soft budget against the requested 1,400 tokens\""
+      ]
+    },
+    {
+      "id": "C6",
+      "file": "docs/results/sherlock-graphify-refresh-20261019/root-actual/QUERY-RESULT.json",
+      "issue": "The prose cites a 700-token budget, 12 nodes, 17 edges and about 2,045 tokens. The published receipt lacks argv, budget, seed and counts, unlike QUERY-RECEIPT.json.",
+      "change": "Add the actually executed argv (query text, any --seed, --budget, --graph) and the node and edge counts read from the recorded stdout. If argv was not captured, do not reconstruct it. Instead, qualify the loop and DW prose: \"Root-reported; argv not captured in the receipt\"."
+    },
+    {
+      "id": "C7",
+      "file": "docs/sherlock/stagenet-recursive-rollup-experiment.md",
+      "issue": "Security-owner clarification. With off-chain recursion plus a ledger-9 decider, \"validated on stagenet\" needs an exact predicate. Otherwise an anchor that stores a host-attested digest could be misreported as recursive validation.",
+      "insert_after": "Existing designated security-owner requirements govern composition, statements and rejection tests.",
+      "text": "Security-owner clarification (October 19, Opus 5.5 HIGH, scoped to this experiment): \"validated on stagenet\" means the Midnight ledger itself verified the proof carried by the submitted ledger-9 transaction, and that verified circuit's public statement binds the recursive result: the composed Sherlock relation and inner verifying-key/circuit identities, the predecessor and resulting anchored state roots and heights, and the ordered batch/transaction commitment. Under the reviewed composition relation, ledger acceptance must imply that every included step was verified. A statement that only records a host-supplied digest, success flag or off-chain verifier result does not qualify. The anchor update must require the current anchored root and height, so that a valid proof cannot be replayed or applied to a different predecessor. Within the existing local ledger-9 rehearsal task and its existing resource limits, the rehearsal must reject a tampered inner proof, a mismatched inner verifying key, a mismatched predecessor root or height, an altered or reordered batch commitment and a replayed anchored statement. These cases sit alongside the retained Fenrir invalid-transaction and invalid-batch cases. No additional stagenet spend is required for these cases. Synthetic witnesses are public test data. Deployment wallet seeds, keys and private state never enter the corpus, logs or published receipts, which record only public addresses, transaction IDs, fees and effects. This clarifies, and does not replace or relax, existing security-owner requirements. It adds no human approval step, budget or native authorization, and it is not a cryptographic soundness approval of any candidate."
+    },
+    {
+      "id": "C7b",
+      "file": "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md",
+      "issue": "The EARS must point to the C7 predicate without adding a counted requirement.",
+      "replace": "Existing security-owner requirements remain controlling for recursive validity, statement binding, target authorization and rejection cases.",
+      "with": "Existing security-owner requirements remain controlling for recursive validity, statement binding, target authorization and rejection cases; SRPOC-002 and SRPOC-007 use the stagenet-validation predicate in the experiment's October 19 security-owner clarification."
+    }
+  ],
+  "non_blocking_notes": [
+    "The new loop P13 section and DW118 run words together (e.g. \"realk18/3440-byte\", \"Graphify71613\"). Apply Humanizer spacing when next editing. No semantic change.",
+    "These docs update the loop contract. Updating the actual goal-tool objective is a separate runtime action, and its armed state must be reported from the goal tool, not inferred from this publication.",
+    "The P13 terminal, passive-comparison and accounting receipts remain pending public binding, and the delta node labels them so. Keep it that way until Root publishes them."
+  ],
+  "approval_condition": "APPROVE_PUBLICATION after C1–C7b are applied exactly. These changes are text and metadata only. No source, Graphify graph bytes, budgets or native operations change. A fresh audit of the corrected diff, limited to the corrected hunks, suffices."
+}
+```
