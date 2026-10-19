@@ -1,0 +1,62 @@
+# Security Source Review Opinion: `APPROVED_SOURCE_WITH_LIMITS`
+
+- **Verdict**: `APPROVED_SOURCE_WITH_LIMITS`
+- **Reviewer Role**: `designated_security_owner` (`security_source_review`, independent non-author fallback source-only review; **NOT** test author)
+- **Candidate Guard (`bounded_sdk_compile.py`)**: `96706` bytes, SHA-256 `74063ff1277f1244d5657e59a9da809e84666c6b1c46f926a224e61014316294`
+- **Candidate Helper (`cached_current_build.py`)**: `158235` bytes, SHA-256 `a9a98bdde271a1f37f4159ba7c765f630e0e17a169c9b0324e5dc08a2d2adf6c`
+- **Source Patch (`SOURCE.patch`)**: `14922` bytes, SHA-256 `f3c92c94d415bf2e05781ad796033e12962912c06ec9880f3207ce83ca13e9d1` (10 hunks + mechanical helper digest seal; hunk index 1 callsite literal broadened to `    debit_state = enforce_post_p11_historical_debits(c, guard, at_start=True)`)
+
+---
+
+## 1. Exact Read Coverage (`277304B` Across 3 Lossless Turns in One Context)
+
+All three transport chunks of the exact `277304`-byte source prompt (SHA-256 `b509afca10bd4cd4a1a6b11b30bc075f802ac520f84d5f682d657f84dc1fafc6`) were received and read in full within this single continuous context without truncation or omission:
+1. **Turn 1 (`[0, 91998)`, `91998B`, SHA-256 `0a760884a44600f3a1730819b8140ded61208aaf5203df9b7964bddffcf9c2f6`)**: Full prompt instructions and `bounded_sdk_compile.py` from shebang through `if retained_audit=='r3':` inside `retained_f_audit`.
+2. **Turn 2 (`[91998, 183998)`, `92000B`, SHA-256 `eda6ca4c39ab315086ac212efbad3571ad57715e55e9a9ba6f0d8199398c9be5`)**: Remainder of `bounded_sdk_compile.py` (`retained_f_audit`, `run`, `main`, entrypoint) and `cached_current_build.py` from shebang through `and p6_cnt_obj.get('CargoNeverStarted') is True` inside `enforce_post_r3_historical_debits`.
+3. **Turn 3 (`[183998, 277304)`, `93306B`, SHA-256 `033c6d0f493e96cebda27f676350ca9e347e6ce63cf160f454270cfc159eff11`)**: Remainder of `cached_current_build.py` (`enforce_post_r3_historical_debits` tail, `_json_leaves`, `_verify_p10_receipts`, `enforce_post_p10_historical_debits`, `P11_*` constants, `POST_P11_HISTORICAL_DEBITS`, `_verify_p11_receipts`, `enforce_post_p11_historical_debits`, `cached_current_f`, `GENERATED_INPUT_*`, `_validate_git_control_snapshot_payload`, `_verify_eight_git_control_snapshots`, `P5_*`/`P6_*`/`P7_*`/`P8_*` constants, `_verify_p7_receipts`, `_verify_p8_receipts`, `_verify_p9_receipts`, `prepare_cached_current_f_worker`), plus complete inline JSON/raw records:
+   - `SOURCE FREEZE` (`1237B`), `EXACT MATERIALIZATION` (`1585B`), `MECHANICAL HELPER SEAL` (`788B`), `ALL ACTUAL RECEIPT RAWCPU PIN CHECKS` (`4834B`, SHA-256 `52ab610af2550c87510b9d6dcca1dcf47030fd6f5a0a5be2a7b2d5082b7b0ca2`)
+   - P11 actual receipts & evidence: `outer result` (`922B`, `c8cb1e1b...`), `outer stderr` (`39B`, `9b4078eb...`), `Root cleanup` (`1670B`, `82e136a2...`), `teardown result` (`859B`, `171e95ac...`), `evidence manifest` (`797B`, `131309ba...`), `ONE_SHOT_STARTED` (`9B`, `37cb06c8...`), `packet/F_precheck.stderr` (`112B`, `806a1167...`), `packet/F_precheck.stdout` (`0B`, `e3b0c442...`), `packet/TERMINAL_FAILURE.json` (`111B`, `4fe0c644...`), `packet/USED_LAUNCH_ac016eccddc7f851f05f244b81ac1a86e9e2a0fcfc8bee86ab0195f7826611e8` (`9B`, `6996692e...`), `rawCPU-E` (`142B`, `cdff67af...`), `rawCPU-S` (`141B`, `f00ee4f1...`), `rawCPU-P` (`139B`, `cd52e675...`)
+   - Governance/routing records: `PRESERVED PRIMARY A ABSTAIN NO VERDICT` (`1430B`), `PRIMARY A ACTUAL TERMINAL` (`143B`), `ACTUAL CURRENT GUARD ALLOWED ROUTING AND ROLE` (`1093B`).
+
+**Explicit Non-Claims**: External SDK payloads, historic bulk quarantine trees (`r3`, `P6`–`P10`, `P11` seed copy on disk), and cached binaries were not supplied or read in this turn; their SHA-256 and byte-size pins are verified fail-closed at runtime by the reviewed code. Zero tools or commands were invoked.
+
+---
+
+## 2. Technical Security Verification
+
+1. **Guard-Helper Seal & Sandbox Isolation (`bounded_sdk_compile.py`)**:
+   - `CACHED_CURRENT_BUILD_SHA256` is sealed to `'a9a98bdde271a1f37f4159ba7c765f630e0e17a169c9b0324e5dc08a2d2adf6c'`. Every dynamic load site (`worker` post-compile check, `main` `F_precheck`, and `main` `--cached-current-f` supervisor entry) enforces `regular(helper_path)` and `digest(helper_path) == CACHED_CURRENT_BUILD_SHA256` prior to `exec_module`.
+   - All prior guard invariants (`validate`, `owned_paths`, `executing_identity`, `bound_identities`, `consent`, `_validate_tier_grant`, `quotas`, `sandbox_args`, `Group`, `supervisor_envelope`, `TRAMPOLINE` seccomp notify, `verify_worker_context`, `launch`, `A0`–`F` verifiers, `retained_f_audit`, `run`) remain intact.
+   - `sandbox_args` and `child_mounts` keep `P11_ACTUAL_ROOT` and `P11_EVIDENCE_ROOT` out of worker sandboxes because `enforce_post_p11_historical_debits` runs only in the host supervisor (`cached_current_f`), while `prepare_cached_current_f_worker` runs inside the `F_precheck` leaf cgroup with read-only binds to the required seed/quarantine roots.
+
+2. **Pins-Before-Fields & Actual P11 Failed-Precheck Verification (`_verify_p11_receipts`)**:
+   - Enforces `guard.regular(p)` plus exact `st_size` and `digest(p)` checks across all 5 entries in `P11_RECEIPT_PINS` before parsing JSON.
+   - Verifies `EVIDENCE_SHA256_MANIFEST.json` key membership (`set(files) == set(P11_EVIDENCE_FILE_BYTES)`) and checks `regular`, `st_size`, and manifest SHA-256 for all 5 preserved attempt files before reading `F_precheck.stderr` or `TERMINAL_FAILURE.json`.
+   - Verifies `E-cpu.stat`, `S-cpu.stat`, and `P-cpu.stat` via `guard.regular(p)` and exact full-byte equality against the deterministic `cpu.stat` template parameterized by `P11_RAW_CPU_STAT`.
+   - Properly distinguishes current outer cleanup state (`cleanup['status'] == 'DONE'`, `cleanup['cleanupOwed'] is False`, `all3MountsAbsent is True`, `EandSupervisorAndPhasesAbsent is True`, `noCargoStarted is True`, `noELFProducedOrExecuted is True`, `teardown.actual_exit == 0`) from the nested historical pre-cleanup snapshot (`counts['phase'] == 'F_precheck'`, `counts['oneShotConsumed'] is True`, `CargoStarted/SDKbuild/newELF/nativeOutputsAccepted` all `False`).
+   - Partial `source_home` copies made before row 720 (`registry/index/index.crates.io-1949cf8c6b5b557f/.cache/ca/mi/camino`) failed `A0` digest verification never produced `A0_FREEZE.json`, `SOURCE_HOME_RECONSTITUTION.json`, or `CACHED_TARGET_SEED.json`, and were wiped when the three tmpfs mounts were unmounted during teardown, while `ONE_SHOT_STARTED` and the 4 `packet/` files were preserved in `P11_EVIDENCE_ROOT`.
+
+3. **Exact Resource Accounting, Residual Preservation, and No Double-Debit/Refund (`POST_P11_HISTORICAL_DEBITS`, `enforce_post_p11_historical_debits`, `cached_current_f`)**:
+   - **CPU Microseconds**: Layers retired P11 raw usage (`E=12906928`, `S=9308089`, `P=3598838`) once over `POST_P10_HISTORICAL_DEBITS` (`1079347393 / 242919890 / 836427499`) to yield `E=1092254321`, `S=252227979`, `P=840026337`.
+   - **Independent Node Residual**: Preserves raw cgroup accounting without normalizing `E` to `S + P`: `12906928 - 9308089 - 3598838 = 1` µs, advancing `independent_envelope_minus_supervisor_minus_phases_usec` from `4` to `5` (`4 + 1 = 5`).
+   - **Supervisor CPU Ceiling**: `supervisor_cpu_seconds_ceil = (252227979 + 999999) // 1000000 = 253`s; `remaining_supervisor_cpu_seconds_max = 10800 - 253 = 10547`s. In `cached_current_f`, `max_rem_sup_sec` is `(10800 * 1_000_000 - 252227979) // 1_000_000 = 10547`s and applied via `RLIMIT_CPU`.
+   - **Wall Ceilings**: `ceil(13.15461667800264) = 14`s (`p11_outer_wall_seconds_ceil`) is debited once from both whole-job wall (`5935 - 14 = 5921`s) and Phase F wall (`2035 - 14 = 2021`s).
+   - **Phase F Streams**: `f_stdout_bytes` stays `0 + 0 = 0`; `f_stderr_bytes` advances `59407 + 112 = 59519` (`packet/F_precheck.stderr`). The 39-byte outer controller stderr (`TERMINAL_REFUSAL: phase exit nonzero F\n`) is pinned separately (`p11_outer_controller_stderr_bytes_separate = 39`) and not double-counted into Phase F child stderr.
+   - **Phase F Cgroup CPU Enforcement**: `cached_current_f` wires `enforce_post_p11_historical_debits` at start (`at_start=True`, requiring `eff_p < f_cap`) and end (`at_start=False`, requiring `eff_p <= f_cap`), seeds `Group.prior_cpu = debit_state['effective_phases_usec_at_start']` (`840026337 + live_p`), and checks cumulative `F` stdout/stderr against `POST_P11_HISTORICAL_DEBITS`.
+
+---
+
+## 3. Non-Blocking Observations & Findings
+
+1. **Unchanged Historical `camino` Digest Guard (Expected Fail-Closed Behavior)**: `reconstitute_source_home` retains the strict per-file SHA-256 check against `old_a0['inputs']` (`guard.need(guard.digest(src) == row['sha256'], 'A0 source digest changed: ' + dest_rel)`). Because no waiver or host mutation is introduced here, any future execution will continue to refuse at row 720 (`camino`) unless and until a separately reviewed host maintenance action restores the exact pinned bytes.
+2. **Implicit Digest Pinning of `E/S/P-cpu.stat` via Exact Byte Template**: `_verify_p11_receipts` authenticates `E-cpu.stat`, `S-cpu.stat`, and `P-cpu.stat` via `guard.regular(p)` and full-content equality (`p.read_bytes() == raw.encode()`) rather than listing `(bytes, sha256)` in `P11_RECEIPT_PINS`. Because `raw.encode()` is a fixed byte sequence matching the 142B/141B/139B files and their SHA-256 digests (`cdff67af...`, `f00ee4f1...`, `cd52e675...`), this is equivalent in strength.
+3. **Fallback Routing Literal vs. Actual Primary Interruption Cause**: `consent()` allows the historical fallback tuple literal `('claude-opus-5-5', 'gemini-4-argon-high', 'gemini-4-argon-high', 'high', 'standing_opus_quota_outage_fallback')`. Root's external receipt and audit trail must preserve that primary call A36354 terminated with `ABSTAIN` due to a provider safety-classifier interruption (`claimed: false`, `test_author_scope: NONE_ISSUED`), not a quota outage, and must record the actual returned model identity of this call without relabeling.
+
+---
+
+## 4. Mandatory Scope & Authority Limits
+
+- **Source-Only Opinion**: This `APPROVED_SOURCE_WITH_LIMITS` opinion covers only the static security source review of `bounded_sdk_compile.py` (`74063ff1277f1244d5657e59a9da809e84666c6b1c46f926a224e61014316294`) and `cached_current_build.py` (`a9a98bdde271a1f37f4159ba7c765f630e0e17a169c9b0324e5dc08a2d2adf6c`).
+- **No Test Authoring or Test Approval**: No test module or test selectors are authored or approved by this call. Any Muse-authored test module and bounded ordinary QA command require separate fresh B review before Root selection.
+- **No Preservation of Withheld Primary Output**: Primary A36354's `ABSTAIN` record grants zero read coverage and zero approval.
+- **No Execution, Maintenance, Provisioning, or Product Grant**: This opinion grants no authority to run native builds, modify `/home/charl/.cargo` (`camino`), provision mounts/cgroups, issue tier grants, or accept any compiled artifact.
