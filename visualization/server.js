@@ -18,9 +18,14 @@ const MIME_TYPES = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ttf': 'font/ttf',
+  '.tgz': 'application/gzip',
 };
 
 const COMPRESSIBLE_EXTS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.md', '.svg']);
@@ -139,7 +144,28 @@ function serveStaticFile(req, res, safePath, stats) {
     ETag: etag,
     'Cache-Control': cacheControl,
     Vary: 'Accept-Encoding',
+    'Accept-Ranges': 'bytes',
   };
+
+  const rangeHeader = req.headers.range;
+  if (rangeHeader && (ext === '.mp3' || ext === '.wav')) {
+    const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+    if (match) {
+      const total = cached.raw.length;
+      const start = match[1] ? parseInt(match[1], 10) : 0;
+      const end = match[2] ? Math.min(total - 1, parseInt(match[2], 10)) : total - 1;
+      if (start >= 0 && start <= end && end < total) {
+        const chunk = cached.raw.subarray(start, end + 1);
+        res.writeHead(206, {
+          ...headers,
+          'Content-Range': `bytes ${start}-${end}/${total}`,
+          'Content-Length': chunk.length,
+        });
+        res.end(chunk);
+        return;
+      }
+    }
+  }
 
   if (cached.br && /\bbr\b/.test(acceptEncoding)) {
     headers['Content-Encoding'] = 'br';
@@ -161,29 +187,57 @@ function serveStaticFile(req, res, safePath, stats) {
   res.end(cached.raw);
 }
 
+let bsMatrixRunning = false;
+let bsMatrixLogs = [];
+
+function startBrowserStackMatrixBackground() {
+  if (bsMatrixRunning) return;
+  bsMatrixRunning = true;
+  bsMatrixLogs = [`[${new Date().toISOString()}] Launching 13-platform BrowserStack matrix...`];
+  const scriptPath = path.join(__dirname, 'test', 'browserstack_mobile_matrix.mjs');
+  const child = spawn(process.execPath, [scriptPath], { cwd: __dirname });
+  child.stdout.on('data', (chunk) => {
+    const lines = chunk.toString('utf8').split('\n').filter(Boolean);
+    bsMatrixLogs.push(...lines);
+  });
+  child.stderr.on('data', (chunk) => {
+    const lines = chunk.toString('utf8').split('\n').filter(Boolean);
+    bsMatrixLogs.push(...lines);
+  });
+  child.on('close', (code) => {
+    bsMatrixRunning = false;
+    bsMatrixLogs.push(`[${new Date().toISOString()}] Matrix completed (exit code ${code}).`);
+  });
+}
+
 function handleRequest(req, res, defaultToBs = false) {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
   if (req.method === 'GET' && url.pathname === '/api/browserstack/status') {
     const cfg = readBsConfig();
-    if (!cfg || !cfg.username || !cfg.accessKey) {
+    if (!cfg || (!cfg.username && !cfg.accessKey)) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ configured: false }));
       return;
     }
+    const keyStr = cfg.accessKey || '';
     const maskedKey =
-      cfg.accessKey.length > 6
-        ? `${cfg.accessKey.slice(0, 3)}***${cfg.accessKey.slice(-3)}`
-        : '***';
+      keyStr.length > 6 ? `${keyStr.slice(0, 3)}***${keyStr.slice(-3)}` : '***';
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
-        configured: true,
-        username: cfg.username,
+        configured: Boolean(cfg.username && cfg.accessKey),
+        hasAccessKey: Boolean(cfg.accessKey),
+        username: cfg.username || '',
+        accessKey: cfg.accessKey || '',
         maskedKey,
-        targetUrl: cfg.targetUrl || 'https://charleshoskinson.github.io/Moriarty/visualization/index.html',
+        targetUrl:
+          cfg.targetUrl || 'https://charleshoskinson.github.io/Moriarty/visualization/index.html',
         verified: Boolean(cfg.verified),
         plan: cfg.plan || null,
+        verifyNote: cfg.verifyNote || null,
+        matrixRunning: bsMatrixRunning,
+        matrixLogs: bsMatrixLogs.slice(-30),
       })
     );
     return;
@@ -194,25 +248,36 @@ function handleRequest(req, res, defaultToBs = false) {
     req.on('data', (c) => chunks.push(c));
     req.on('end', async () => {
       try {
+        const prev = readBsConfig() || {};
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-        let username = String(body.username || '').trim();
-        let accessKey = String(body.accessKey || '').trim();
+        const clean = (s) =>
+          String(s || '')
+            .replace(/https?:\/\/127\.0\.0\.1(?::\d+)?\/?/gi, '')
+            .replace(/^\/\/127\.0/, '')
+            .replace(/\.0\.1$/, '')
+            .trim();
+        let username = clean(body.username);
+        let accessKey = clean(body.accessKey);
         const targetUrl = String(
-          body.targetUrl || 'https://charleshoskinson.github.io/Moriarty/visualization/index.html'
+          body.targetUrl ||
+            prev.targetUrl ||
+            'https://charleshoskinson.github.io/Moriarty/visualization/index.html'
         ).trim();
         if (username.includes(':') && !accessKey) {
           const parts = username.split(':');
-          username = parts[0].trim();
-          accessKey = parts.slice(1).join(':').trim();
+          username = clean(parts[0]);
+          accessKey = clean(parts.slice(1).join(':'));
         }
-        if (!username && accessKey) {
-          // If the user only pasted an access key or username in one field, still store it
-          username = process.env.BROWSERSTACK_USERNAME || 'browserstack_user';
+        if (!accessKey && prev.accessKey) {
+          accessKey = prev.accessKey;
         }
-        if (!accessKey && username) {
-          accessKey = username;
+        if (!username && prev.username && prev.username !== 'http') {
+          username = prev.username;
         }
-        const check = await verifyBrowserStackPlan(username, accessKey);
+        const check =
+          username && accessKey
+            ? await verifyBrowserStackPlan(username, accessKey)
+            : { verified: false, verifyNote: 'Need both BrowserStack Username and Access Key' };
         const record = {
           username,
           accessKey,
@@ -223,8 +288,18 @@ function handleRequest(req, res, defaultToBs = false) {
           updatedAt: new Date().toISOString(),
         };
         fs.writeFileSync(BS_CONFIG_PATH, JSON.stringify(record, null, 2), { mode: 0o600 });
+        if (check.verified) {
+          startBrowserStackMatrixBackground();
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, ...check }));
+        res.end(
+          JSON.stringify({
+            ok: true,
+            ...check,
+            matrixRunning: bsMatrixRunning,
+            matrixLogs: bsMatrixLogs.slice(-30),
+          })
+        );
       } catch (e) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: String(e) }));
@@ -307,6 +382,36 @@ function handleRequest(req, res, defaultToBs = false) {
     res.end('Bad Request');
     return;
   }
+  if (reqPath === '/quinelings') {
+    res.writeHead(302, { Location: `/quinelings/${url.search || ''}` });
+    res.end();
+    return;
+  }
+  if (reqPath.startsWith('/quinelings/')) {
+    const quinelingsRoot = '/home/charles/repos/quinelings';
+    const subPath = reqPath === '/quinelings/' ? '/index.html' : reqPath.slice('/quinelings'.length);
+    const qSafePath = path.resolve(quinelingsRoot, `.${subPath}`);
+    if (qSafePath !== quinelingsRoot && !qSafePath.startsWith(quinelingsRoot + path.sep)) {
+      res.writeHead(403);
+      res.end('Forbidden');
+      return;
+    }
+    fs.stat(qSafePath, (err, stats) => {
+      if (err || !stats.isFile()) {
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+      try {
+        serveStaticFile(req, res, qSafePath, stats);
+      } catch (_) {
+        res.writeHead(500);
+        res.end('Internal Server Error');
+      }
+    });
+    return;
+  }
+
   if (reqPath === '/browserstack' || reqPath === '/browserstack/') {
     reqPath = '/browserstack.html';
   } else if (reqPath === '/') {

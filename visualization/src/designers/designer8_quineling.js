@@ -344,7 +344,7 @@ function getTissueSpriteTexture() {
   return sharedTissueSpriteTexture;
 }
 
-function writeRibbonStrip(positions, colors, normals, curveIndex, segments, pointsArray, halfWidth, r, g, b) {
+function writeRibbonStrip(positions, colors, normals, uvs, curveIndex, segments, pointsArray, halfWidth, r, g, b) {
   const baseVertex = curveIndex * segments * 2;
   for (let s = 0; s < segments; s += 1) {
     const p = pointsArray[s];
@@ -405,6 +405,15 @@ function writeRibbonStrip(positions, colors, normals, curveIndex, segments, poin
     colors[v1] = r * glow;
     colors[v1 + 1] = g * glow;
     colors[v1 + 2] = b * glow;
+
+    if (uvs) {
+      const uv0 = (baseVertex + s * 2) * 2;
+      const uv1 = (baseVertex + s * 2 + 1) * 2;
+      uvs[uv0] = u;
+      uvs[uv0 + 1] = 0;
+      uvs[uv1] = u;
+      uvs[uv1 + 1] = 1;
+    }
   }
 }
 
@@ -756,12 +765,14 @@ export function createQuinelingSubsystem() {
   const tissueGeom = new THREE.BufferGeometry();
   const tissuePositions = new Float32Array(TISSUE_BUDGET * 3);
   const tissueColors = new Float32Array(TISSUE_BUDGET * 3);
+  const tissueUvs = new Float32Array(TISSUE_BUDGET * 2);
+  tissueUvs.fill(0.5);
   tissueGeom.setAttribute('position', new THREE.BufferAttribute(tissuePositions, 3));
   tissueGeom.setAttribute('color', new THREE.BufferAttribute(tissueColors, 3));
+  tissueGeom.setAttribute('uv', new THREE.BufferAttribute(tissueUvs, 2));
 
   const tissueMat = new THREE.PointsMaterial({
     size: IS_MOBILE_RUNTIME ? 0.0175 : 0.0148,
-    map: getTissueSpriteTexture(),
     vertexColors: true,
     transparent: true,
     opacity: 0.92,
@@ -836,9 +847,11 @@ export function createQuinelingSubsystem() {
   const sdkRibbonPositions = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
   const sdkRibbonColors = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
   const sdkRibbonNormals = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
+  const sdkRibbonUvs = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 2);
   sdkRibbonGeom.setAttribute('position', new THREE.BufferAttribute(sdkRibbonPositions, 3));
   sdkRibbonGeom.setAttribute('color', new THREE.BufferAttribute(sdkRibbonColors, 3));
   sdkRibbonGeom.setAttribute('normal', new THREE.BufferAttribute(sdkRibbonNormals, 3));
+  sdkRibbonGeom.setAttribute('uv', new THREE.BufferAttribute(sdkRibbonUvs, 2));
   sdkRibbonGeom.setIndex(buildRibbonIndices(SDK_RIBBON_COUNT, SDK_RIBBON_SEGMENTS));
 
   const sdkRibbonMat = new THREE.MeshPhysicalMaterial({
@@ -952,9 +965,11 @@ export function createQuinelingSubsystem() {
   const tendrilPositions = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
   const tendrilColors = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
   const tendrilNormals = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
+  const tendrilUvs = new Float32Array(TENDRIL_VERTEX_COUNT * 2);
   tendrilGeom.setAttribute('position', new THREE.BufferAttribute(tendrilPositions, 3));
   tendrilGeom.setAttribute('color', new THREE.BufferAttribute(tendrilColors, 3));
   tendrilGeom.setAttribute('normal', new THREE.BufferAttribute(tendrilNormals, 3));
+  tendrilGeom.setAttribute('uv', new THREE.BufferAttribute(tendrilUvs, 2));
   tendrilGeom.setIndex(buildRibbonIndices(TENDRIL_CURVE_COUNT, TENDRIL_SEGMENTS));
 
   const tendrilMat = new THREE.MeshPhysicalMaterial({
@@ -1425,6 +1440,7 @@ export function createQuinelingSubsystem() {
             sdkRibbonPositions,
             sdkRibbonColors,
             sdkRibbonNormals,
+            sdkRibbonUvs,
             c,
             SDK_RIBBON_SEGMENTS,
             _sdkPts,
@@ -1441,6 +1457,7 @@ export function createQuinelingSubsystem() {
             sdkRibbonPositions,
             sdkRibbonColors,
             sdkRibbonNormals,
+            sdkRibbonUvs,
             c,
             SDK_RIBBON_SEGMENTS,
             _sdkPts,
@@ -1454,6 +1471,7 @@ export function createQuinelingSubsystem() {
       sdkRibbonGeom.attributes.position.needsUpdate = true;
       sdkRibbonGeom.attributes.color.needsUpdate = true;
       sdkRibbonGeom.attributes.normal.needsUpdate = true;
+      sdkRibbonGeom.attributes.uv.needsUpdate = true;
     }
 
     // ========================================================================
@@ -1604,6 +1622,7 @@ export function createQuinelingSubsystem() {
           tendrilPositions,
           tendrilColors,
           tendrilNormals,
+          tendrilUvs,
           tIdx,
           TENDRIL_SEGMENTS,
           _tendrilPts,
@@ -1616,6 +1635,7 @@ export function createQuinelingSubsystem() {
       tendrilGeom.attributes.position.needsUpdate = true;
       tendrilGeom.attributes.color.needsUpdate = true;
       tendrilGeom.attributes.normal.needsUpdate = true;
+      tendrilGeom.attributes.uv.needsUpdate = true;
     }
   }
 

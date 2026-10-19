@@ -499,10 +499,10 @@
         tideglass: {
           nodes: [
             { id: 's0', op: 'literal', inputs: [] },
-            { id: 's1', op: 'map', inputs: ['s0'] },
-            { id: 's2', op: 'window', inputs: ['s0'] },
-            { id: 's3', op: 'reconcile', inputs: ['s1', 's2'] },
-            { id: 's4', op: 'report', inputs: ['s3'] },
+            { id: 's1', op: 'literal', inputs: [] },
+            { id: 's2', op: 'map', inputs: ['s0'] },
+            { id: 's3', op: 'mean', inputs: ['s1'] },
+            { id: 's4', op: 'report', inputs: ['s2', 's3'] },
           ],
         },
         braidGraph: {
@@ -518,7 +518,7 @@
           nodes: [
             { id: 'a', op: 'literal', inputs: [] },
             { id: 'b', op: 'sum', inputs: ['a'] },
-            { id: 'c', op: 'report', inputs: ['a', 'b'] },
+            { id: 'c', op: 'report', inputs: ['b'] },
           ],
         },
       };
@@ -528,6 +528,15 @@
         return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
       }
 
+      const FALLBACK_PALETTE = [
+        [53, 214, 195],
+        [99, 155, 250],
+        [237, 198, 83],
+        [177, 132, 239],
+        [242, 117, 125],
+        [140, 204, 118],
+      ];
+
       function buildChromaPalette(graph, paletteName, neutral = '#eef2ec', strength = 0.60) {
         const shape = {
           design: {
@@ -535,7 +544,13 @@
           },
           nodes: graph.nodes,
         };
-        return graph.nodes.map((_, idx) => hexToRgb(Chroma.colorFor(shape, idx)));
+        return graph.nodes.map((_, idx) => {
+          try {
+            return hexToRgb(Chroma.colorFor(shape, idx));
+          } catch (_) {
+            return FALLBACK_PALETTE[idx % FALLBACK_PALETTE.length];
+          }
+        });
       }
 
       // Compile all 8 canonical bodies
@@ -691,15 +706,15 @@
           lockedBounds,
           buckets,
           evalFn,
-          getInterpolated(phase, wantCrests) {
+          getInterpolated(phase) {
             const norm = ((phase % TAU) + TAU) % TAU;
             const exact = (norm / TAU) * RING_BUCKETS;
             const idx0 = Math.floor(exact) % RING_BUCKETS;
             const idx1 = (idx0 + 1) % RING_BUCKETS;
             const frac = smootherstep(exact - Math.floor(exact));
 
-            if (!buckets[idx0]) buckets[idx0] = evalFn((idx0 / RING_BUCKETS) * TAU, null, wantCrests);
-            if (!buckets[idx1]) buckets[idx1] = evalFn((idx1 / RING_BUCKETS) * TAU, null, wantCrests);
+            if (!buckets[idx0]) buckets[idx0] = evalFn((idx0 / RING_BUCKETS) * TAU, null, true);
+            if (!buckets[idx1]) buckets[idx1] = evalFn((idx1 / RING_BUCKETS) * TAU, null, true);
             return { bucketA: buckets[idx0], bucketB: buckets[idx1], frac };
           },
         };
@@ -1082,10 +1097,11 @@
         const cosX = Math.cos(smoothTiltY);
         const sinX = Math.sin(smoothTiltY);
 
-        // Asymmetric coupled-harmonic organic breathing scale
-        const breath = 1.0 + 0.014 * (Math.sin(phase) + 0.18 * Math.sin(2 * phase - 0.65));
+        // Asymmetric coupled-harmonic organic breathing scale + smoothDepth coupling
+        const depthFactor = 1.0 + 0.032 * (smoothDepth - 3.0);
+        const breath = (1.0 + 0.014 * (Math.sin(phase) + 0.18 * Math.sin(2 * phase - 0.65))) * depthFactor;
         const effScale = (radiusScale / lockedBounds.span) * breath;
-        const invSpanZ = 1 / lockedBounds.spanZ;
+        const invSpanZ = (1 / lockedBounds.spanZ) * (0.88 + 0.04 * smoothDepth);
 
         for (let b = 0; b < Z_BINS; b++) {
           pointBins[b].length = 0;
@@ -1135,7 +1151,8 @@
             const lineA = rA.line;
             const lineB = rB.line || lineA;
             if (!lineA || lineA.length < 2) continue;
-            const own = (rA.owner || 0) % nPal;
+            const midOwner = lineA[Math.floor(lineA.length / 2)]?.owner;
+            const own = (rA.owner ?? midOwner ?? rIdx) % nPal;
             const nL = lineA.length;
             let chunk = null;
 
@@ -1436,6 +1453,19 @@
           renderSpecimenAt(ring, slide.palette, W * 0.5, H * 0.515, scale, execOutcome, tSec);
         }
       }
+
+      window.QUINELING_MATH_BIBLE = {
+        version: '2.0.0',
+        slides: SLIDES.map((s, idx) => ({
+          plate: idx + 1,
+          title: s.title,
+          subtitle: s.subtitle,
+          mechanism: s.mech,
+          formula: s.formula,
+          proof: s.proof,
+          record: s.body?.record || null,
+        })),
+      };
 
       requestAnimationFrame(animate);
     </script>
