@@ -1,0 +1,13 @@
+    stdout, stderr = (a / 'stdout.bin').read_bytes(), (a / 'stderr.bin').read_bytes()
+    assert stderr == b''
+    assert not re.search(rb'QNT\d+|\[DEBUG\]|error:', stdout, re.I)
+    if op['id'].startswith(('01-', '02-')):
+        assert stdout == b''
+    else:
+        text = stdout.decode()
+        names = re.findall(r'^\s*ok (\w+) passed 1 test\(s\)\s*$', text, re.M)
+        assert names == op['expected']['exactPassingNames']
+        assert len(names) == 5
+        assert re.search(r'^\s*5 passing \(\d+ms\)\s*$', text, re.M)
+        assert len(re.findall(r'^\s*ok ', text, re.M)) == 5
+        assert not re.search(r'failed|ignored|pending', text, re.I)
