@@ -344,7 +344,7 @@ function getTissueSpriteTexture() {
   return sharedTissueSpriteTexture;
 }
 
-function writeRibbonStrip(positions, colors, normals, curveIndex, segments, pointsArray, halfWidth, r, g, b) {
+function writeRibbonStrip(positions, colors, normals, uvs, curveIndex, segments, pointsArray, halfWidth, r, g, b) {
   const baseVertex = curveIndex * segments * 2;
   for (let s = 0; s < segments; s += 1) {
     const p = pointsArray[s];
@@ -405,6 +405,15 @@ function writeRibbonStrip(positions, colors, normals, curveIndex, segments, poin
     colors[v1] = r * glow;
     colors[v1 + 1] = g * glow;
     colors[v1 + 2] = b * glow;
+
+    if (uvs) {
+      const uv0 = (baseVertex + s * 2) * 2;
+      const uv1 = (baseVertex + s * 2 + 1) * 2;
+      uvs[uv0] = u;
+      uvs[uv0 + 1] = 0;
+      uvs[uv1] = u;
+      uvs[uv1 + 1] = 1;
+    }
   }
 }
 
@@ -649,6 +658,7 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
         ribbonCount += 1;
       }
 
+      const lineMax = Math.max(1, line.length - 1);
       for (let j = 0; j < line.length - 1 && segCursor < segCount; j += stepStride) {
         const nextJ = Math.min(line.length - 1, j + stepStride);
         const p0 = line[j];
@@ -658,8 +668,12 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
         const rawA1 = Number.isFinite(p1.alpha) ? p1.alpha : 0.2;
         if (Math.max(rawA0, rawA1) < 0.012) continue;
 
-        const focus0 = isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.35) : clamp(rawA0, 0, 1);
-        const focus1 = isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.35) : clamp(rawA1, 0, 1);
+        const taper0 = 0.24 + 0.76 * Math.pow(Math.max(0, Math.sin((j / lineMax) * Math.PI)), 0.6);
+        const taper1 = 0.24 + 0.76 * Math.pow(Math.max(0, Math.sin((nextJ / lineMax) * Math.PI)), 0.6);
+        const comp0 = 1 + 0.32 * Math.min(1.5, p0.compression || 0);
+        const comp1 = 1 + 0.32 * Math.min(1.5, p1.compression || 0);
+        const focus0 = (isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.35) : clamp(rawA0, 0, 1)) * taper0 * comp0;
+        const focus1 = (isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.35) : clamp(rawA1, 0, 1)) * taper1 * comp1;
 
         normalizeWovenCoord(p0.x, p0.y, p0.z || 0, bounds, mechanism, vecA);
         normalizeWovenCoord(p1.x, p1.y, p1.z || 0, bounds, mechanism, vecB);
@@ -751,12 +765,14 @@ export function createQuinelingSubsystem() {
   const tissueGeom = new THREE.BufferGeometry();
   const tissuePositions = new Float32Array(TISSUE_BUDGET * 3);
   const tissueColors = new Float32Array(TISSUE_BUDGET * 3);
+  const tissueUvs = new Float32Array(TISSUE_BUDGET * 2);
+  tissueUvs.fill(0.5);
   tissueGeom.setAttribute('position', new THREE.BufferAttribute(tissuePositions, 3));
   tissueGeom.setAttribute('color', new THREE.BufferAttribute(tissueColors, 3));
+  tissueGeom.setAttribute('uv', new THREE.BufferAttribute(tissueUvs, 2));
 
   const tissueMat = new THREE.PointsMaterial({
     size: IS_MOBILE_RUNTIME ? 0.0175 : 0.0148,
-    map: getTissueSpriteTexture(),
     vertexColors: true,
     transparent: true,
     opacity: 0.92,
@@ -831,9 +847,11 @@ export function createQuinelingSubsystem() {
   const sdkRibbonPositions = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
   const sdkRibbonColors = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
   const sdkRibbonNormals = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
+  const sdkRibbonUvs = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 2);
   sdkRibbonGeom.setAttribute('position', new THREE.BufferAttribute(sdkRibbonPositions, 3));
   sdkRibbonGeom.setAttribute('color', new THREE.BufferAttribute(sdkRibbonColors, 3));
   sdkRibbonGeom.setAttribute('normal', new THREE.BufferAttribute(sdkRibbonNormals, 3));
+  sdkRibbonGeom.setAttribute('uv', new THREE.BufferAttribute(sdkRibbonUvs, 2));
   sdkRibbonGeom.setIndex(buildRibbonIndices(SDK_RIBBON_COUNT, SDK_RIBBON_SEGMENTS));
 
   const sdkRibbonMat = new THREE.MeshPhysicalMaterial({
@@ -947,9 +965,11 @@ export function createQuinelingSubsystem() {
   const tendrilPositions = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
   const tendrilColors = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
   const tendrilNormals = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
+  const tendrilUvs = new Float32Array(TENDRIL_VERTEX_COUNT * 2);
   tendrilGeom.setAttribute('position', new THREE.BufferAttribute(tendrilPositions, 3));
   tendrilGeom.setAttribute('color', new THREE.BufferAttribute(tendrilColors, 3));
   tendrilGeom.setAttribute('normal', new THREE.BufferAttribute(tendrilNormals, 3));
+  tendrilGeom.setAttribute('uv', new THREE.BufferAttribute(tendrilUvs, 2));
   tendrilGeom.setIndex(buildRibbonIndices(TENDRIL_CURVE_COUNT, TENDRIL_SEGMENTS));
 
   const tendrilMat = new THREE.MeshPhysicalMaterial({
@@ -989,6 +1009,8 @@ export function createQuinelingSubsystem() {
   const _ridgeBaseB = new Float32Array(64);
   const _nodeExecGain = new Float32Array(64);
   const _nodeExecZShift = new Float32Array(64);
+  const _dampedNodeGain = new Float32Array(64).fill(0.75);
+  const _dampedNodeZShift = new Float32Array(64);
   const _vecA = new THREE.Vector3();
   const _vecB = new THREE.Vector3();
   const _dummy = new THREE.Object3D();
@@ -997,6 +1019,8 @@ export function createQuinelingSubsystem() {
 
   let dampedYOffset = 0;
   let dampedBaseY = QUINELING_CORE_Y;
+  let dampedOmega = 1.65;
+  let dampedRotYOffset = 0;
   let accumPhase = 0;
   let stepSurgeVel = 0;
   let lastStepIndex = -1;
@@ -1048,23 +1072,24 @@ export function createQuinelingSubsystem() {
     const isExhausted = ruleLine === 84 || ruleId === 'A084';
     const isInPlaceRewrite = ruleLine === 149 || ruleLine === 145 || ruleLine === 177;
 
-    // Smooth step-transition velocity surge (zero discontinuous phase jumps!)
+    // Smooth laminar step-transition flow (zero sawtooth phase-velocity lurches)
     if (stepIndex !== lastStepIndex) {
       if (lastStepIndex !== -1) {
-        stepSurgeVel = Math.min(2.6, stepSurgeVel + 0.95);
+        stepSurgeVel = Math.min(0.42, stepSurgeVel + 0.14);
       }
       lastStepIndex = stepIndex;
     }
-    stepSurgeVel *= Math.exp(-dt * 5.5);
+    stepSurgeVel *= Math.exp(-dt * 4.2);
 
     // Restore upstream QDL 24x phase timebase (`phaseRate * 24`) + mechanism velocity gain
     const rawPhaseRate = design?.motion?.phaseRate ?? 0.034;
     const qdlPhaseSpeed = rawPhaseRate < 0.15 ? rawPhaseRate * 24.0 : rawPhaseRate * 3.8;
     const mechGain = MECHANISM_VELOCITY_GAIN[mechanism] ?? 2.1;
-    const fuelMod = isExhausted ? 0.28 : 0.72 + 0.48 * liveFuelRatio;
-    const omega = qdlPhaseSpeed * mechGain * fuelMod + stepSurgeVel;
+    const fuelMod = isExhausted ? 0.34 : 0.76 + 0.40 * liveFuelRatio;
+    const targetOmega = qdlPhaseSpeed * mechGain * fuelMod + stepSurgeVel;
+    dampedOmega = lerp(dampedOmega, targetOmega, 1 - Math.exp(-dt * 4.5));
 
-    accumPhase = (accumPhase + dt * omega) % (TAU * 64);
+    accumPhase = (accumPhase + dt * dampedOmega) % (TAU * 64);
     const wovenPhase = evaluateProgramRhythmPhase(design, accumPhase);
 
     const rhythm = design?.motion?.rhythm;
@@ -1087,15 +1112,25 @@ export function createQuinelingSubsystem() {
     const targetYOffset = clamp((callDepth - 1) * 0.014, -0.05, 0.06);
     dampedYOffset = lerp(dampedYOffset, targetYOffset, 1 - Math.exp(-dt * 8.0));
 
-    coreRoot.position.y = dampedBaseY + dampedYOffset + Math.sin(wovenPhase) * breathAmp;
-    coreRoot.rotation.y =
-      ambient * 0.34 +
-      Math.sin(wovenPhase * 0.55) * 0.28 +
-      (isInPlaceRewrite ? Math.sin(q * Math.PI) * 0.14 : 0);
-    coreRoot.rotation.x = Math.cos(wovenPhase * 0.7) * asymTilt * 0.32;
-    coreRoot.rotation.z = Math.sin(wovenPhase * 0.5) * asymTilt * 0.22;
+    const targetRotYOffset = isInPlaceRewrite ? 0.08 : 0.0;
+    dampedRotYOffset = lerp(dampedRotYOffset, targetRotYOffset, 1 - Math.exp(-dt * 4.0));
 
-    const breathScale = 1.0 + Math.sin(wovenPhase) * (rhythm?.breath ?? 0.12) * 0.15;
+    coreRoot.position.y =
+      dampedBaseY +
+      dampedYOffset +
+      (Math.sin(wovenPhase) + 0.18 * Math.sin(2 * wovenPhase - 0.65)) * breathAmp;
+    coreRoot.rotation.y =
+      ambient * 0.32 +
+      Math.sin(wovenPhase * 0.55) * 0.26 +
+      dampedRotYOffset;
+    coreRoot.rotation.x = Math.cos(wovenPhase * 0.7) * asymTilt * 0.30;
+    coreRoot.rotation.z = Math.sin(wovenPhase * 0.5) * asymTilt * 0.20;
+
+    const breathScale =
+      1.0 +
+      (Math.sin(wovenPhase) + 0.16 * Math.sin(2 * wovenPhase - 0.65)) *
+        (rhythm?.breath ?? 0.12) *
+        0.13;
     coreRoot.scale.setScalar(breathScale);
 
     // Primary node color for core studio light
@@ -1126,32 +1161,49 @@ export function createQuinelingSubsystem() {
     // ========================================================================
     // 1. PERSISTENT FUNCTIONAL PHASE RING (`PersistentPhaseRing` over S^1)
     //    Cold buckets are solved at most once every 3 frames during the first
-    //    2π cycle; once warm, `phaseRing.getNearest(wovenPhase)` is an O(1)
-    //    zero-allocation array lookup forever!
+    //    2π cycle; once adjacent buckets (idx0, idx1) are warm, we smoothly
+    //    interpolate between bucketA and bucketB with C^2 quintic blend!
     // ========================================================================
     frameCounter += 1;
     const phaseRing = ensureArtifactPhaseRing(artifact, _frameReuse, _vecA, _vecB);
-    const targetBucketIdx = phaseRing.bucketIndexForPhase(wovenPhase);
-    const isTargetWarm = phaseRing.buckets[targetBucketIdx] !== null;
+    const bCount = phaseRing.bucketCount || PHASE_BUCKET_COUNT;
+    const normPhase = ((wovenPhase % TAU) + TAU) % TAU;
+    const exactBucket = (normPhase / TAU) * bCount;
+    const idx0 = Math.floor(exactBucket) % bCount;
+    const idx1 = (idx0 + 1) % bCount;
+    const rawFrac = exactBucket - Math.floor(exactBucket);
+    const smoothFrac = quinticStep(rawFrac);
 
-    if (isTargetWarm || !currentBucket || frameCounter - lastBucketLookupFrame >= 3) {
-      if (!isTargetWarm) {
+    const warm0 = phaseRing.buckets[idx0];
+    const warm1 = phaseRing.buckets[idx1];
+    if (warm0 !== null || !currentBucket || frameCounter - lastBucketLookupFrame >= 3) {
+      if (warm0 === null) {
         lastBucketLookupFrame = frameCounter;
       }
-      currentBucket = phaseRing.getNearest(wovenPhase).bucket;
+      currentBucket = warm0 || phaseRing.getNearest(wovenPhase).bucket;
+    } else if (warm1 === null && frameCounter - lastBucketLookupFrame >= 3) {
+      lastBucketLookupFrame = frameCounter;
+      phaseRing.getBucket(idx1);
     }
 
-    const baseTissuePos = currentBucket.baseTissuePos;
-    const baseTissueWave = currentBucket.baseTissueWave;
-    const baseTissueExpAlpha = currentBucket.baseTissueExpAlpha;
-    const baseTissuePearl = currentBucket.baseTissuePearl;
-    const baseTissueOwner = currentBucket.baseTissueOwner;
+    const bucketA = warm0 || currentBucket;
+    const bucketB = warm0 && warm1 ? warm1 : bucketA;
+    const useSubBucketBlend = bucketB !== bucketA;
+    const invFrac = 1 - smoothFrac;
+
+    const baseTissuePosA = bucketA.baseTissuePos;
+    const baseTissuePosB = bucketB.baseTissuePos;
+    const baseTissueWave = bucketA.baseTissueWave;
+    const baseTissueExpAlphaA = bucketA.baseTissueExpAlpha;
+    const baseTissueExpAlphaB = bucketB.baseTissueExpAlpha;
+    const baseTissuePearl = bucketA.baseTissuePearl;
+    const baseTissueOwner = bucketA.baseTissueOwner;
     const nodeColors = artifact.nodeColors || [];
     const nodeCount = Math.min(64, Math.max(1, nodeColors.length));
 
     // Precompute per-frame trig for traveling wave sin(k - 2.5*phi) & cos(k - 2.5*phi)
-    const sinPhi = Math.sin(wovenPhase * 2.5);
-    const cosPhi = Math.cos(wovenPhase * 2.5);
+    const sinPhi = Math.sin(wovenPhase * 2.35);
+    const cosPhi = Math.cos(wovenPhase * 2.35);
 
     const nodeBaseR = _nodeBaseR;
     const nodeBaseG = _nodeBaseG;
@@ -1165,17 +1217,17 @@ export function createQuinelingSubsystem() {
       let tr = rgb[0] / 255;
       let tg = rgb[1] / 255;
       let tb = rgb[2] / 255;
-      let rr = tr * 0.86 + 0.902 * 0.14;
-      let rg = tg * 0.86 + 0.973 * 0.14;
-      let rb = tb * 0.86 + 0.929 * 0.14;
+      let rr = tr * 0.86 + 0.933 * 0.14;
+      let rg = tg * 0.86 + 0.949 * 0.14;
+      let rb = tb * 0.86 + 0.925 * 0.14;
 
       if (isFault) {
-        tr = lerp(tr, 0.95, 0.72);
-        tg *= 0.25;
-        tb *= 0.32;
-        rr = lerp(rr, 0.95, 0.72);
-        rg *= 0.25;
-        rb *= 0.32;
+        tr = lerp(tr, 0.92, 0.58);
+        tg *= 0.34;
+        tb *= 0.38;
+        rr = lerp(rr, 0.92, 0.58);
+        rg *= 0.34;
+        rb *= 0.38;
       } else if (isExhausted) {
         const tGray = (tr + tg + tb) * 0.333;
         tr = tGray * 0.55;
@@ -1196,6 +1248,8 @@ export function createQuinelingSubsystem() {
 
     const nodeExecGain = _nodeExecGain;
     const nodeExecZShift = _nodeExecZShift;
+    const dampedNodeGain = _dampedNodeGain;
+    const dampedNodeZShift = _dampedNodeZShift;
     const stepResp =
       typeof WovenBody.stepResponse === 'function' && artifact.wovenBody
         ? WovenBody.stepResponse(artifact.wovenBody, wovenPhase, {
@@ -1208,25 +1262,36 @@ export function createQuinelingSubsystem() {
         : null;
     const gainsArr = stepResp?.ownerGain || stepResp?.ownerGains;
     const zShiftsArr = stepResp?.ownerZShift || stepResp?.ownerZShifts;
+    const nodeDecay = 1 - Math.exp(-dt * 7.5);
     for (let n = 0; n < nodeCount; n += 1) {
-      nodeExecGain[n] = gainsArr && gainsArr[n] !== undefined
+      const targetGain = gainsArr && gainsArr[n] !== undefined
         ? gainsArr[n]
         : n === activeNodeIdx ? 1.14 : 0.72;
-      nodeExecZShift[n] = zShiftsArr && zShiftsArr[n] !== undefined
+      const targetZ = zShiftsArr && zShiftsArr[n] !== undefined
         ? zShiftsArr[n]
         : 0;
+      dampedNodeGain[n] = lerp(dampedNodeGain[n], targetGain, nodeDecay);
+      dampedNodeZShift[n] = lerp(dampedNodeZShift[n], targetZ, nodeDecay);
+      nodeExecGain[n] = dampedNodeGain[n];
+      nodeExecZShift[n] = dampedNodeZShift[n];
     }
 
     // ========================================================================
-    // 2. EVERY-FRAME 60/120FPS 3D TRAVELING-WAVE ADVECTION ON TISSUE CLOUD
+    // 2. EVERY-FRAME 60/120FPS 3D LAMINAR WAVE ADVECTION & AERIAL PERSPECTIVE
     //    Zero transcendental calls inside the loop!
     // ========================================================================
     for (let i = 0; i < TISSUE_BUDGET; i += 1) {
       const p3 = i * 3;
       const p2 = i * 2;
-      const bx = baseTissuePos[p3];
-      const by = baseTissuePos[p3 + 1];
-      const bz = baseTissuePos[p3 + 2];
+      const bx = useSubBucketBlend
+        ? baseTissuePosA[p3] * invFrac + baseTissuePosB[p3] * smoothFrac
+        : baseTissuePosA[p3];
+      const by = useSubBucketBlend
+        ? baseTissuePosA[p3 + 1] * invFrac + baseTissuePosB[p3 + 1] * smoothFrac
+        : baseTissuePosA[p3 + 1];
+      const bz = useSubBucketBlend
+        ? baseTissuePosA[p3 + 2] * invFrac + baseTissuePosB[p3 + 2] * smoothFrac
+        : baseTissuePosA[p3 + 2];
 
       const sinK = baseTissueWave[p2];
       const cosK = baseTissueWave[p2 + 1];
@@ -1235,25 +1300,44 @@ export function createQuinelingSubsystem() {
 
       const ownerIdx = baseTissueOwner[i];
       const execZ = nodeExecZShift[ownerIdx] || 0;
-      const px = bx + bx * 0.044 * waveS - by * 0.032 * waveC;
-      const py = by + by * 0.044 * waveS + bx * 0.032 * waveC;
-      const pz = bz + 0.048 * waveS + 0.022 * waveC + execZ * 0.35;
+      // Divergence-free laminar tangential + normal micro-advection
+      const px = bx + bx * 0.036 * waveS - by * 0.028 * waveC;
+      const py = by + by * 0.036 * waveS + bx * 0.028 * waveC;
+      const pz = bz + 0.042 * waveS + 0.018 * waveC + execZ * 0.32;
 
       tissuePositions[p3] = px;
       tissuePositions[p3 + 1] = py;
       tissuePositions[p3 + 2] = pz;
 
-      const depthShade = clamp(0.76 + pz * 0.68, 0.54, 1.32);
-      const gain = (ownerIdx === activeNodeIdx ? 1.14 : 0.72) * (0.78 + 0.22 * (nodeExecGain[ownerIdx] || 1)) * depthShade;
-      let a = baseTissueExpAlpha[i] * gain;
-      if (a < 0.045) a = 0.045;
-      else if (a > 0.96) a = 0.96;
+      // Aerial perspective depth law: z < 0 attenuates & shifts toward abyssal indigo;
+      // z > 0 catches warm pearlescent Fresnel rim glint; AgX soft-knee prevents blowout
+      const zNorm = clamp(pz * 1.45, -1, 1);
+      const depthShade = zNorm < 0 ? 1.0 + zNorm * 0.46 : 1.0 + zNorm * 0.28;
+      const activeFactor = 0.74 + 0.26 * (nodeExecGain[ownerIdx] || 1);
+      const rawA = useSubBucketBlend
+        ? baseTissueExpAlphaA[i] * invFrac + baseTissueExpAlphaB[i] * smoothFrac
+        : baseTissueExpAlphaA[i];
+      const linearA = rawA * activeFactor * depthShade;
+      // AgX / ACES soft-knee highlight roll-off
+      let a = linearA / Math.sqrt(1 + 0.55 * linearA * linearA);
+      if (a < 0.038) a = 0.038;
+      else if (a > 0.92) a = 0.92;
 
-      const boost = baseTissuePearl[i];
-      const invBoost = 1 - boost;
-      tissueColors[p3] = (nodeBaseR[ownerIdx] * invBoost + 0.902 * boost) * a;
-      tissueColors[p3 + 1] = (nodeBaseG[ownerIdx] * invBoost + 0.973 * boost) * a;
-      tissueColors[p3 + 2] = (nodeBaseB[ownerIdx] * invBoost + 0.929 * boost) * a;
+      const pearlBoost = clamp(baseTissuePearl[i] + (zNorm > 0 ? zNorm * zNorm * 0.22 : 0), 0, 0.46);
+      const indigoShift = zNorm < 0 ? -zNorm * 0.32 : 0;
+      const invPearl = 1 - pearlBoost;
+      let cr = nodeBaseR[ownerIdx] * invPearl + 1.0 * pearlBoost;
+      let cg = nodeBaseG[ownerIdx] * invPearl + 0.969 * pearlBoost;
+      let cb = nodeBaseB[ownerIdx] * invPearl + 0.910 * pearlBoost;
+      if (indigoShift > 0) {
+        const invInd = 1 - indigoShift;
+        cr = cr * invInd + 0.055 * indigoShift;
+        cg = cg * invInd + 0.094 * indigoShift;
+        cb = cb * invInd + 0.220 * indigoShift;
+      }
+      tissueColors[p3] = cr * a;
+      tissueColors[p3 + 1] = cg * a;
+      tissueColors[p3 + 2] = cb * a;
     }
     tissueGeom.attributes.position.needsUpdate = true;
     tissueGeom.attributes.color.needsUpdate = true;
@@ -1262,18 +1346,18 @@ export function createQuinelingSubsystem() {
     // 3. EVERY-FRAME 60/120FPS 3D TRAVELING-WAVE ADVECTION ON CAUSTIC RIDGES
     //    Zero transcendental calls inside the loop!
     // ========================================================================
-    const baseRidgePos = currentBucket.baseRidgePos;
-    const baseRidgeWave = currentBucket.baseRidgeWave;
-    const baseRidgeAlpha = currentBucket.baseRidgeAlpha;
-    const baseRidgeOwner = currentBucket.baseRidgeOwner;
-    const ridgeSegCount = currentBucket.ridgeSegCount;
+    const baseRidgePos = bucketA.baseRidgePos;
+    const baseRidgeWave = bucketA.baseRidgeWave;
+    const baseRidgeAlpha = bucketA.baseRidgeAlpha;
+    const baseRidgeOwner = bucketA.baseRidgeOwner;
+    const ridgeSegCount = bucketA.ridgeSegCount;
 
     for (let segIdx = 0; segIdx < ridgeSegCount; segIdx += 1) {
       const vBase = segIdx * 6;
       const wBase = segIdx * 4;
       const aBase = segIdx * 2;
       const ownerIdx = baseRidgeOwner[segIdx];
-      const execZ = (nodeExecZShift[ownerIdx] || 0) * 0.35;
+      const execZ = (nodeExecZShift[ownerIdx] || 0) * 0.32;
 
       const bx0 = baseRidgePos[vBase];
       const by0 = baseRidgePos[vBase + 1];
@@ -1291,35 +1375,39 @@ export function createQuinelingSubsystem() {
       const waveS1 = sinK1 * cosPhi - cosK1 * sinPhi;
       const waveC1 = cosK1 * cosPhi + sinK1 * sinPhi;
 
-      const pz0 = bz0 + 0.048 * waveS0 + 0.022 * waveC0 + execZ;
-      const pz1 = bz1 + 0.048 * waveS1 + 0.022 * waveC1 + execZ;
+      const pz0 = bz0 + 0.042 * waveS0 + 0.018 * waveC0 + execZ;
+      const pz1 = bz1 + 0.042 * waveS1 + 0.018 * waveC1 + execZ;
 
-      ridgeLinePositions[vBase] = bx0 + bx0 * 0.044 * waveS0 - by0 * 0.032 * waveC0;
-      ridgeLinePositions[vBase + 1] = by0 + by0 * 0.044 * waveS0 + bx0 * 0.032 * waveC0;
+      ridgeLinePositions[vBase] = bx0 + bx0 * 0.036 * waveS0 - by0 * 0.028 * waveC0;
+      ridgeLinePositions[vBase + 1] = by0 + by0 * 0.036 * waveS0 + bx0 * 0.028 * waveC0;
       ridgeLinePositions[vBase + 2] = pz0;
-      ridgeLinePositions[vBase + 3] = bx1 + bx1 * 0.044 * waveS1 - by1 * 0.032 * waveC1;
-      ridgeLinePositions[vBase + 4] = by1 + by1 * 0.044 * waveS1 + bx1 * 0.032 * waveC1;
+      ridgeLinePositions[vBase + 3] = bx1 + bx1 * 0.036 * waveS1 - by1 * 0.028 * waveC1;
+      ridgeLinePositions[vBase + 4] = by1 + by1 * 0.036 * waveS1 + bx1 * 0.028 * waveC1;
       ridgeLinePositions[vBase + 5] = pz1;
 
-      const depthBoost0 = clamp(0.82 + pz0 * 0.65, 0.58, 1.35);
-      const depthBoost1 = clamp(0.82 + pz1 * 0.65, 0.58, 1.35);
-      const activeBoost = (ownerIdx === activeNodeIdx ? 1.48 : 1.12) * (0.85 + 0.15 * (nodeExecGain[ownerIdx] || 1));
+      const zNorm0 = clamp(pz0 * 1.45, -1, 1);
+      const zNorm1 = clamp(pz1 * 1.45, -1, 1);
+      const depthBoost0 = zNorm0 < 0 ? 1.0 + zNorm0 * 0.48 : 1.0 + zNorm0 * 0.34;
+      const depthBoost1 = zNorm1 < 0 ? 1.0 + zNorm1 * 0.48 : 1.0 + zNorm1 * 0.34;
+      const activeBoost = 0.86 + 0.24 * (nodeExecGain[ownerIdx] || 1);
 
-      let a0 = baseRidgeAlpha[aBase] * activeBoost * depthBoost0;
-      if (a0 > 0.96) a0 = 0.96;
-      let a1 = baseRidgeAlpha[aBase + 1] * activeBoost * depthBoost1;
-      if (a1 > 0.96) a1 = 0.96;
+      const linA0 = baseRidgeAlpha[aBase] * activeBoost * depthBoost0;
+      const linA1 = baseRidgeAlpha[aBase + 1] * activeBoost * depthBoost1;
+      const a0 = Math.min(0.92, linA0 / Math.sqrt(1 + 0.55 * linA0 * linA0));
+      const a1 = Math.min(0.92, linA1 / Math.sqrt(1 + 0.55 * linA1 * linA1));
 
       const baseR = ridgeBaseR[ownerIdx];
       const baseG = ridgeBaseG[ownerIdx];
       const baseB = ridgeBaseB[ownerIdx];
+      const glint0 = zNorm0 > 0 ? zNorm0 * 0.18 : 0;
+      const glint1 = zNorm1 > 0 ? zNorm1 * 0.18 : 0;
 
-      ridgeLineColors[vBase] = baseR * a0;
-      ridgeLineColors[vBase + 1] = baseG * a0;
-      ridgeLineColors[vBase + 2] = baseB * a0;
-      ridgeLineColors[vBase + 3] = baseR * a1;
-      ridgeLineColors[vBase + 4] = baseG * a1;
-      ridgeLineColors[vBase + 5] = baseB * a1;
+      ridgeLineColors[vBase] = (baseR * (1 - glint0) + glint0) * a0;
+      ridgeLineColors[vBase + 1] = (baseG * (1 - glint0) + 0.97 * glint0) * a0;
+      ridgeLineColors[vBase + 2] = (baseB * (1 - glint0) + 0.91 * glint0) * a0;
+      ridgeLineColors[vBase + 3] = (baseR * (1 - glint1) + glint1) * a1;
+      ridgeLineColors[vBase + 4] = (baseG * (1 - glint1) + 0.97 * glint1) * a1;
+      ridgeLineColors[vBase + 5] = (baseB * (1 - glint1) + 0.91 * glint1) * a1;
     }
     ridgeLineGeom.setDrawRange(0, ridgeSegCount * 2);
     ridgeLineGeom.attributes.position.needsUpdate = true;
@@ -1328,28 +1416,31 @@ export function createQuinelingSubsystem() {
     // ========================================================================
     // 4. 3D GOSSAMER RIBBON STRIPS (`sdkManifoldRibbonMesh`)
     // ========================================================================
-    if (sdkManifoldRibbonMesh.visible && currentBucket.ribbonPaths) {
-      const rPaths = currentBucket.ribbonPaths;
-      const rOwners = currentBucket.ribbonOwners;
-      const rCount = currentBucket.ribbonCount || 0;
+    if (sdkManifoldRibbonMesh.visible && bucketA.ribbonPaths) {
+      const rPathsA = bucketA.ribbonPaths;
+      const rPathsB = bucketB.ribbonPaths || rPathsA;
+      const rOwners = bucketA.ribbonOwners;
+      const rCount = bucketA.ribbonCount || 0;
+      const canBlendRibbons = useSubBucketBlend && bucketB.ribbonCount === rCount;
       for (let c = 0; c < SDK_RIBBON_COUNT; c += 1) {
         if (c < rCount) {
           const cBase = c * SDK_RIBBON_SEGMENTS * 3;
           for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
             const off = cBase + s * 3;
-            const bx = rPaths[off];
-            const by = rPaths[off + 1];
-            const bz = rPaths[off + 2];
-            const wave = Math.sin(s * 0.35 - wovenPhase * 2.5 + c * 0.6) * 0.016;
-            _sdkPts[s].set(bx + bx * wave, by + by * wave, bz + wave * 1.3);
+            const bx = canBlendRibbons ? rPathsA[off] * invFrac + rPathsB[off] * smoothFrac : rPathsA[off];
+            const by = canBlendRibbons ? rPathsA[off + 1] * invFrac + rPathsB[off + 1] * smoothFrac : rPathsA[off + 1];
+            const bz = canBlendRibbons ? rPathsA[off + 2] * invFrac + rPathsB[off + 2] * smoothFrac : rPathsA[off + 2];
+            const wave = Math.sin(s * 0.35 - wovenPhase * 2.35 + c * 0.6) * 0.014;
+            _sdkPts[s].set(bx + bx * wave, by + by * wave, bz + wave * 1.2);
           }
           const ownerIdx = rOwners[c] % nodeCount;
           const isAct = ownerIdx === activeNodeIdx;
-          const hw = isAct ? 0.0085 : 0.0052;
+          const hw = isAct ? 0.0082 : 0.0050;
           writeRibbonStrip(
             sdkRibbonPositions,
             sdkRibbonColors,
             sdkRibbonNormals,
+            sdkRibbonUvs,
             c,
             SDK_RIBBON_SEGMENTS,
             _sdkPts,
@@ -1366,6 +1457,7 @@ export function createQuinelingSubsystem() {
             sdkRibbonPositions,
             sdkRibbonColors,
             sdkRibbonNormals,
+            sdkRibbonUvs,
             c,
             SDK_RIBBON_SEGMENTS,
             _sdkPts,
@@ -1379,6 +1471,7 @@ export function createQuinelingSubsystem() {
       sdkRibbonGeom.attributes.position.needsUpdate = true;
       sdkRibbonGeom.attributes.color.needsUpdate = true;
       sdkRibbonGeom.attributes.normal.needsUpdate = true;
+      sdkRibbonGeom.attributes.uv.needsUpdate = true;
     }
 
     // ========================================================================
@@ -1529,6 +1622,7 @@ export function createQuinelingSubsystem() {
           tendrilPositions,
           tendrilColors,
           tendrilNormals,
+          tendrilUvs,
           tIdx,
           TENDRIL_SEGMENTS,
           _tendrilPts,
@@ -1541,6 +1635,7 @@ export function createQuinelingSubsystem() {
       tendrilGeom.attributes.position.needsUpdate = true;
       tendrilGeom.attributes.color.needsUpdate = true;
       tendrilGeom.attributes.normal.needsUpdate = true;
+      tendrilGeom.attributes.uv.needsUpdate = true;
     }
   }
 

@@ -1349,8 +1349,7 @@ export function createCinemaSubsystem({
 
   function update(stepState = {}) {
     const ambient = stepState.ambient ?? 0;
-    const dt = clamp(stepState.dt ?? 0.016, 0.001, 0.1);
-    const progress = clamp(stepState.progress ?? 0, 0, 1);
+    const dt = clamp(stepState.dt ?? 0.016, 0.001, 0.05);
     const step = stepState.step || {};
     const phaseMode = resolvePhaseMode(stepState.phase, step.controlKind);
 
@@ -1433,16 +1432,16 @@ export function createCinemaSubsystem({
         }
 
         if (currentPresetName === 'cinema' && !isDragging && activePointers.size === 0) {
-          desiredTheta += dt * 0.18;
-          desiredPhi = 0.82 + Math.sin(ambient * 0.24) * 0.06;
+          desiredTheta += dt * 0.16;
+          desiredPhi = 0.82 + Math.sin(ambient * 0.22) * 0.05;
           desiredRadius =
-            (7.45 + Math.cos(ambient * 0.20 + progress * Math.PI) * 0.38) *
+            (7.45 + Math.cos(ambient * 0.18) * 0.34) *
             currentDistMultiplier *
             userZoomRatio;
 
           const phaseTargetY =
-            phaseMode === 1 ? -0.26 : phaseMode === 2 ? -0.10 : -0.16;
-          desiredTarget.y = lerp(desiredTarget.y, phaseTargetY, dt * 1.6);
+            phaseMode === 1 ? -0.24 : phaseMode === 2 ? -0.11 : -0.16;
+          desiredTarget.y = lerp(desiredTarget.y, phaseTargetY, 1.0 - Math.exp(-dt * 2.2));
         }
 
         currentRadius = lerp(currentRadius, desiredRadius, damp);
