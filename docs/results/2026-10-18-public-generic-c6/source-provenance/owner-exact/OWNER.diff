@@ -1,0 +1,464 @@
+--- a/crates/mori-core/src/sherlock/helper_machine/shared/owner_ext_c_expression.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/shared/owner_ext_c_expression.rs
+@@ -313,6 +313,28 @@
+ pub(super) struct PendingExtC<'s> {
+     pub(super) stage: PendingExtCExpressionStage<'s>,
+     pub(super) continuation: ExtCContinuation<'s>,
+ }
+ 
++/// Literal-slot ownership for the stage checks. C1..C5 own unfilled Literal
++/// slots; C6 binds them in ascending ExprId order; C6 completion and P read
++/// only bound Literal rows. The C2..C5 structural constraints do not vary.
++#[derive(Clone, Copy, PartialEq, Eq)]
++enum LiteralSlotPhase {
++    BeforeC6,
++    DuringC6,
++    AfterC6,
++}
++
++impl LiteralSlotPhase {
++    fn wrong_literal_slot(self) -> &'static str {
++        match self {
++            LiteralSlotPhase::BeforeC6 => "literal slot must remain None prior to C6",
++            LiteralSlotPhase::DuringC6 => {
++                "literal slot is neither unfilled nor a C6 Literal row during C6"
++            }
++            LiteralSlotPhase::AfterC6 => "C6 literal expression row not filled",
++        }
++    }
++}
++
+ impl<'s> PendingExtCExpressionStage<'s> {
+@@ -1160,12 +1182,18 @@
+     fn check_c1_rows_written(&self) -> Result<(), ExtTypeBuildError> {
++        self.check_c1_rows_written_for(LiteralSlotPhase::BeforeC6)
++    }
++
++    fn check_c1_rows_written_for(&self, phase: LiteralSlotPhase) -> Result<(), ExtTypeBuildError> {
+         self.check_all_expressions_reserved()?;
+         for (id, binding) in self.expr_bindings.iter().enumerate() {
+             match (binding.source, self.expressions.get(id)) {
+-                (ExtExpr::Literal { .. }, Some(None)) => {}
++                (ExtExpr::Literal { .. }, Some(None)) if phase != LiteralSlotPhase::AfterC6 => {}
++                (ExtExpr::Literal { .. }, Some(Some(ExpressionRowC::Literal { .. })))
++                    if phase != LiteralSlotPhase::BeforeC6 => {}
+                 (ExtExpr::Literal { .. }, _) => {
+                     return Err(host_expr_err(
+                         HostViolationKind::WrongVariant,
+-                        "literal slot must remain None prior to C6",
++                        phase.wrong_literal_slot(),
+                     ));
+                 }
+                 (_, Some(Some(_))) => {}
+@@ -1182,6 +1210,10 @@
+ 
+     fn check_c2_complete(&self) -> Result<(), ExtTypeBuildError> {
+         self.check_c1_rows_written()?;
++        self.check_c2_code_children_linked()
++    }
++
++    fn check_c2_code_children_linked(&self) -> Result<(), ExtTypeBuildError> {
+         for binding in &self.expr_bindings {
+             if matches!(binding.source, ExtExpr::Call { .. } | ExtExpr::Construct { .. }) {
+                 if binding.code_children_slice.is_none() || !binding.child_slice_linked {
+@@ -1202,6 +1234,10 @@
+ 
+     fn check_c3_complete(&self) -> Result<(), ExtTypeBuildError> {
+         self.check_c2_complete()?;
++        self.check_c3_match_arms_linked()
++    }
++
++    fn check_c3_match_arms_linked(&self) -> Result<(), ExtTypeBuildError> {
+         if self.active_arm.is_some()
+             || self.current_match_expr_id.is_some()
+             || !self.current_match_arm_ids.is_empty()
+@@ -1232,6 +1268,10 @@
+ 
+     fn check_c4_complete(&self) -> Result<(), ExtTypeBuildError> {
+         self.check_c3_complete()?;
++        self.check_c4_occurrences_written()
++    }
++
++    fn check_c4_occurrences_written(&self) -> Result<(), ExtTypeBuildError> {
+         if self.next_occurrence_id != self.expr_bindings.len()
+             || !self.occurrences.iter().all(Option::is_some)
+             || !self
+@@ -2867,79 +2907,265 @@
+-    fn check_c5_complete(&self) -> Result<(), ExtTypeBuildError> {
+-        self.check_c4_complete()?;
++    fn check_c5_functions_written(&self) -> Result<(), ExtTypeBuildError> {
+         if self.active_function.is_some()
+             || self.functions.len() != self.prepared.program.functions.len()
+             || !self.functions.iter().all(Option::is_some)
+         {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,
+                 "C5 function emission incomplete",
+             ));
+         }
+         Ok(())
+     }
+ 
++    fn check_c5_structure_for(&self, phase: LiteralSlotPhase) -> Result<(), ExtTypeBuildError> {
++        self.check_c1_rows_written_for(phase)?;
++        self.check_c2_code_children_linked()?;
++        self.check_c3_match_arms_linked()?;
++        self.check_c4_occurrences_written()?;
++        self.check_c5_functions_written()
++    }
++
++    fn check_c6_in_progress(&self) -> Result<(), ExtTypeBuildError> {
++        self.check_c5_structure_for(LiteralSlotPhase::DuringC6)?;
++        if self.active_literal.is_some() && self.active_nullary_construct.is_some() {
++            return Err(host_expr_err(
++                HostViolationKind::WrongVariant,
++                "both C6 Literal and nullary Construct states active",
++            ));
++        }
++        let mut first_unbound_literal: Option<usize> = None;
++        let mut last_literal_constant: Option<usize> = None;
++        let mut first_unfilled_nullary: Option<usize> = None;
++        let mut first_nullary_constant: Option<usize> = None;
++        let mut last_nullary_constant: Option<usize> = None;
++        for (id, binding) in self.expr_bindings.iter().enumerate() {
++            match (binding.source, self.expressions.get(id)) {
++                (ExtExpr::Literal { .. }, Some(None)) => {
++                    if first_unbound_literal.is_none() {
++                        first_unbound_literal = Some(id);
++                    }
++                }
++                (ExtExpr::Literal { .. }, Some(Some(ExpressionRowC::Literal { constant }))) => {
++                    if first_unbound_literal.is_some() {
++                        return Err(host_expr_err(
++                            HostViolationKind::WrongVariant,
++                            "C6 Literal slots not bound as an ascending ExprId prefix",
++                        ));
++                    }
++                    if *constant >= self.constants.len()
++                        || matches!(last_literal_constant, Some(prev) if *constant <= prev)
++                    {
++                        return Err(host_expr_err(
++                            HostViolationKind::WrongVariant,
++                            "C6 Literal constant out of bounds or out of canonical order",
++                        ));
++                    }
++                    last_literal_constant = Some(*constant);
++                }
++                (ExtExpr::Literal { .. }, _) => {
++                    return Err(host_expr_err(
++                        HostViolationKind::WrongVariant,
++                        LiteralSlotPhase::DuringC6.wrong_literal_slot(),
++                    ));
++                }
++                (
++                    ExtExpr::Construct { fields, .. },
++                    Some(Some(ExpressionRowC::Construct { constant, .. })),
++                ) => {
++                    if !fields.is_empty() {
++                        if constant.is_some() {
++                            return Err(host_expr_err(
++                                HostViolationKind::WrongVariant,
++                                "non-nullary Construct unexpectedly carries constant",
++                            ));
++                        }
++                    } else if let Some(cid) = constant {
++                        if first_unfilled_nullary.is_some() {
++                            return Err(host_expr_err(
++                                HostViolationKind::WrongVariant,
++                                "C6 nullary Construct constants not filled as an ascending ExprId prefix",
++                            ));
++                        }
++                        if *cid >= self.constants.len()
++                            || matches!(last_nullary_constant, Some(prev) if *cid <= prev)
++                        {
++                            return Err(host_expr_err(
++                                HostViolationKind::WrongVariant,
++                                "C6 nullary Construct constant out of bounds or out of canonical order",
++                            ));
++                        }
++                        if first_nullary_constant.is_none() {
++                            first_nullary_constant = Some(*cid);
++                        }
++                        last_nullary_constant = Some(*cid);
++                    } else if first_unfilled_nullary.is_none() {
++                        first_unfilled_nullary = Some(id);
++                    }
++                }
++                (ExtExpr::Construct { .. }, _) => {
++                    return Err(host_expr_err(
++                        HostViolationKind::WrongVariant,
++                        "Construct expression slot is not a Construct row during C6",
++                    ));
++                }
++                _ => {}
++            }
++        }
++        if let Some(first_nullary) = first_nullary_constant {
++            if first_unbound_literal.is_some()
++                || matches!(last_literal_constant, Some(last) if first_nullary <= last)
++            {
++                return Err(host_expr_err(
++                    HostViolationKind::WrongVariant,
++                    "nullary Construct constant filled before C6 literals completed",
++                ));
++            }
++        }
++        if let Some(active) = self.active_literal.as_ref() {
++            if Some(active.expr_id) != first_unbound_literal {
++                return Err(host_expr_err(
++                    HostViolationKind::WrongVariant,
++                    "active C6 Literal is not the first unbound Literal slot",
++                ));
++            }
++        }
++        if let Some(active_nc) = self.active_nullary_construct.as_ref() {
++            if first_unbound_literal.is_some()
++                || Some(active_nc.expr_id) != first_unfilled_nullary
++            {
++                return Err(host_expr_err(
++                    HostViolationKind::WrongVariant,
++                    "active C6 nullary Construct is not the first unfilled nullary Construct",
++                ));
++            }
++        }
++        Ok(())
++    }
++
+     fn check_c6_complete(&self) -> Result<(), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c5_structure_for(LiteralSlotPhase::AfterC6)?;
+         if self.active_literal.is_some() || self.active_nullary_construct.is_some() {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,
+                 "C6 literal or nullary construct emission still active",
+             ));
+         }
+-        for (id, binding) in self.expr_bindings.iter().enumerate() {
+-            match (binding.source, self.expressions.get(id)) {
+-                (ExtExpr::Literal { .. }, Some(Some(ExpressionRowC::Literal { constant }))) => {
+-                    if *constant >= self.constants.len() {
+-                        return Err(host_expr_err(
+-                            HostViolationKind::ReadOutOfBounds,
+-                            "C6 literal constant id out of bounds",
+-                        ));
+-                    }
+-                }
+-                (ExtExpr::Literal { .. }, _) => {
+-                    return Err(host_expr_err(
+-                        HostViolationKind::WrongVariant,
+-                        "C6 literal expression row not filled",
+-                    ));
+-                }
+-                (
+-                    ExtExpr::Construct { fields, .. },
+-                    Some(Some(ExpressionRowC::Construct { constant, .. })),
+-                ) => {
+-                    if fields.is_empty() {
+-                        match constant {
+-                            Some(cid) if *cid < self.constants.len() => {}
+-                            _ => {
+-                                return Err(host_expr_err(
+-                                    HostViolationKind::WrongVariant,
+-                                    "C6 nullary Construct constant not filled",
+-                                ));
+-                            }
+-                        }
+-                    } else if constant.is_some() {
+-                        return Err(host_expr_err(
+-                            HostViolationKind::WrongVariant,
+-                            "non-nullary Construct unexpectedly carries constant",
+-                        ));
+-                    }
+-                }
+-                (_, Some(Some(_))) => {}
+-                _ => {
+-                    return Err(host_expr_err(
+-                        HostViolationKind::WrongVariant,
+-                        "expression slot unfilled after C6",
+-                    ));
+-                }
+-            }
+-        }
++        let mut last_literal_constant: Option<usize> = None;
++        let mut first_nullary_constant: Option<usize> = None;
++        let mut last_nullary_constant: Option<usize> = None;
++        let mut nullary_count = 0usize;
++        for (id, binding) in self.expr_bindings.iter().enumerate() {
++            match (binding.source, self.expressions.get(id)) {
++                (ExtExpr::Literal { value }, Some(Some(ExpressionRowC::Literal { constant }))) => {
++                    let row = self.constants.get(*constant).ok_or_else(|| {
++                        host_expr_err(
++                            HostViolationKind::ReadOutOfBounds,
++                            "C6 literal constant id out of bounds",
++                        )
++                    })?;
++                    if matches!(last_literal_constant, Some(prev) if *constant <= prev) {
++                        return Err(host_expr_err(
++                            HostViolationKind::WrongVariant,
++                            "C6 Literal root constants not in ascending Literal ExprId order",
++                        ));
++                    }
++                    if matches!(value, ExtValue::Constructor { .. })
++                        && !matches!(row, RawConstRow::Constructor { .. })
++                    {
++                        return Err(host_expr_err(
++                            HostViolationKind::WrongVariant,
++                            "C6 constructor Literal root is not a Constructor constant row",
++                        ));
++                    }
++                    last_literal_constant = Some(*constant);
++                }
++                (ExtExpr::Literal { .. }, _) => {
++                    return Err(host_expr_err(
++                        HostViolationKind::WrongVariant,
++                        "C6 literal expression row not filled",
++                    ));
++                }
++                (
++                    ExtExpr::Construct { fields, .. },
++                    Some(Some(ExpressionRowC::Construct {
++                        type_id,
++                        ctor_id,
++                        constant,
++                        ..
++                    })),
++                ) => {
++                    if fields.is_empty() {
++                        let cid = match constant {
++                            Some(cid) if *cid < self.constants.len() => *cid,
++                            _ => {
++                                return Err(host_expr_err(
++                                    HostViolationKind::WrongVariant,
++                                    "C6 nullary Construct constant not filled",
++                                ));
++                            }
++                        };
++                        match self.constants.get(cid) {
++                            Some(RawConstRow::Constructor {
++                                marker_free: true,
++                                type_id: row_type_id,
++                                ctor_id: row_ctor_id,
++                                fields: row_fields,
++                            }) if row_type_id.0 == type_id.0
++                                && row_ctor_id.0 == ctor_id.0
++                                && row_fields.start.0 == 0
++                                && row_fields.len == 0 => {}
++                            _ => {
++                                return Err(host_expr_err(
++                                    HostViolationKind::WrongVariant,
++                                    "C6 nullary Construct constant is not its nullary Constructor row",
++                                ));
++                            }
++                        }
++                        if matches!(last_nullary_constant, Some(prev) if cid <= prev) {
++                            return Err(host_expr_err(
++                                HostViolationKind::WrongVariant,
++                                "C6 nullary Construct constants not in ascending Construct ExprId order",
++                            ));
++                        }
++                        if first_nullary_constant.is_none() {
++                            first_nullary_constant = Some(cid);
++                        }
++                        last_nullary_constant = Some(cid);
++                        nullary_count += 1;
++                    } else if constant.is_some() {
++                        return Err(host_expr_err(
++                            HostViolationKind::WrongVariant,
++                            "non-nullary Construct unexpectedly carries constant",
++                        ));
++                    }
++                }
++                (_, Some(Some(_))) => {}
++                _ => {
++                    return Err(host_expr_err(
++                        HostViolationKind::WrongVariant,
++                        "expression slot unfilled after C6",
++                    ));
++                }
++            }
++        }
++        if let Some(first_nullary) = first_nullary_constant {
++            if matches!(last_literal_constant, Some(last) if first_nullary <= last)
++                || self.constants.len().checked_sub(nullary_count) != Some(first_nullary)
++            {
++                return Err(host_expr_err(
++                    HostViolationKind::WrongVariant,
++                    "C6 nullary Construct constants are not the trailing block after all Literal constants",
++                ));
++            }
++        }
+         Ok(())
+     }
+ 
+     pub(super) fn begin_literal(
+         &mut self,
+         literal: &LiteralOccurrence<'_>,
+     ) -> Result<(), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         if self.active_literal.is_some() || self.active_nullary_construct.is_some() {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,
+@@ -3034,7 +3260,7 @@
+         ordinal: usize,
+         source: &ExtValue,
+     ) -> Result<(), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         let const_limit = self.bounds.constant_nodes;
+         let active = self.active_literal.as_mut().ok_or_else(|| {
+             host_expr_err(
+@@ -3104,7 +3330,7 @@
+         &self,
+         site: T3UseSite,
+     ) -> Result<(TypeIdC, CtorIdC), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         let (owner, expr, value) = match site {
+             T3UseSite::LiteralCtor { owner, expr, value } => (owner, expr, value),
+             _ => {
+@@ -3256,7 +3482,7 @@
+         &mut self,
+         source: &CoreValue,
+     ) -> Result<usize, ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         if self.active_nullary_construct.is_some() {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,
+@@ -3349,7 +3575,7 @@
+         ctor_id: CtorIdC,
+         fields: &[usize],
+     ) -> Result<usize, ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         enum Mode {
+             Literal { ordinal: usize, parent: Option<usize> },
+             NullaryConstruct,
+@@ -3599,7 +3825,7 @@
+         expr_id: usize,
+         constant: usize,
+     ) -> Result<(), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         if self.active_nullary_construct.is_some() {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,
+@@ -3645,7 +3871,7 @@
+         &mut self,
+         source: &NullaryConstructOccurrence,
+     ) -> Result<(), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         if self.active_literal.is_some() || self.active_nullary_construct.is_some() {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,
+@@ -3745,7 +3971,7 @@
+         expr_id: usize,
+         constant: usize,
+     ) -> Result<(), ExtTypeBuildError> {
+-        self.check_c5_complete()?;
++        self.check_c6_in_progress()?;
+         if self.active_literal.is_some() {
+             return Err(host_expr_err(
+                 HostViolationKind::WrongVariant,

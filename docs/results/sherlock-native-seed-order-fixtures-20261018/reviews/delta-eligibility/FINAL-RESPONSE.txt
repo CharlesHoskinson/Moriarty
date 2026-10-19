@@ -1,0 +1,108 @@
+# Delta review: ordinary-four eligibility and seed-metadata consumers
+
+## Read coverage
+
+I used no tools and executed nothing.
+
+**Read in full:**
+- Body 1: my prior opinion, unchanged.
+- Body 2: the prior identity record.
+- Body 3: the corrected operation.
+- Body 4: the predicate-correction record.
+- Body 5: lines 33–46 and the four 6-line neighbor windows.
+- Body 6: the AST attestation.
+- Body 7: the helper seal line.
+- Bodies 8 and 9: the postcheck preimage and current bodies.
+- Body 10: `cached_current_f` (1370–1458) and `prepare_cached_current_f_worker` (1887–1904).
+- Body 11: the complete unselected mock test.
+- Body 12: the facts and whole three-module use inventory.
+
+**Not read:**
+- The prior operation JSON (5078 bytes), which was not resupplied.
+- The guard bodies around `bounded_sdk_compile.py` lines 452, 653–654 and 1156.
+- Test-class body from line 47 up to the first method. This includes `setUp` and `tearDown`.
+
+I spot-checked line numbers against the supplied text and they agree:
+- Seed call at 1900.
+- Seed `jload` at 1414.
+- Legacy tier at 847.
+- Class at 46.
+- Blank slots at 204, 848, 927 and 968, each followed by its `def`.
+
+## Q1: ELIGIBLE_ORDINARY_FOUR (scoped, one stated dependency)
+
+**Exit predicate**
+- The predicate in the Body 3 argv is byte-for-byte the one I authored.
+- `wasSuccessful()` already fails on errors, failures and unexpected successes.
+- The new terms reject skipped tests and expected failures.
+- A name that fails to load becomes an error test, so it also exits nonzero.
+- The `countTestCases() == 4` assert survives, because `-I -B -S` does not imply `-O`.
+
+**Unchanged inputs**
+- The four selectors are unchanged.
+- The bounds are unchanged: `timeout --signal=KILL 30s`, CPU 25:25, AS 1 GiB, FSIZE 1 MiB and core 0. The 35 s supervisor wall is also unchanged.
+- The environment, cwd, staging set and all three source/staged pins (747d…, 82cc…, 8352…) are unchanged.
+
+**Byte accounting**
+- The predicate alone adds 55 bytes. The file grew by only 35 bytes (5078 → 5113).
+- That means about 20 bytes were removed elsewhere, which fits the declared status-metadata change.
+- I could not confirm the removal is limited to `status`, because the prior JSON was not resupplied. Non-blocking.
+
+**Hooks and decorators**
+- Lines 33–46 hold only module helpers and a bare `class CachedCurrentBuildSyntheticTest(unittest.TestCase):`.
+- A blank slot alone does not prove there is no decorator, since Python allows blank lines between a decorator and its `def`. The AST attestation closes this gap: the class and all four methods have empty decorator lists.
+- The attestation also reports no definitions of, or references to, the five module and class hooks.
+- I accept the attestation as an author-produced, hash-matched record. I did not reproduce it.
+- Any class-level skip, including via attributes, would now fail closed under the corrected predicate.
+
+**Dependency (my prior gap, stated rather than waived)**
+- My prior hook list left out the per-test hooks: `setUp`, `tearDown` and `addCleanup`, plus any class-body attributes after line 46.
+- These also run implicitly. `self.root` (used in Body 11) shows that `setUp` exists.
+- This eligibility depends on the frozen prior test closure including `setUp`/`tearDown`, as my prior "everything under TMPDIR" finding implies.
+- If that closure did not include them, the verdict is **NOT_ELIGIBLE**. The remaining material would be:
+  - Those exact bodies.
+  - Lines 47 up to the first method.
+  - A pinned AST check for any overrides of `run`, `__call__` or `__init__`, or a metaclass.
+
+## Q2: The limited consumer abstention is resolved within the three modules; residuals retained
+
+**Resolved**
+- **Postcheck.**
+  - Bodies 8 and 9 are textually identical (3557 bytes, `0d2e3a…`).
+  - So prior predicate 4 now rests on a read, not a recorded claim.
+  - The postcheck compares current mtime and inode against whatever `seeded_files`/`run_unit_snapshots` recorded. It is value-agnostic and makes no assumption about normalized tiers.
+- **Helper seal.** The line reads `'82cc4af9…655b'`, matching the `cached_current_build.py` afterimage. My prior qualification 3 is closed.
+- **`cached_current_f` and `prepare_cached_current_f_worker`.**
+  - They consume the snapshot only for `partition_counts` and to pass it to the postcheck.
+  - They make no mtime-value assumptions.
+- **Unselected mock test.**
+  - It replaces the seed function entirely with a fake.
+  - Its fake snapshot has empty `seeded_files`.
+  - It does not depend on seed mtimes and is unaffected by the change.
+  - It also passes `prior_receipts` with an empty snapshot. That is indirect evidence that `prior_receipts` does not inspect mtime content.
+- **Constant references.**
+  - Per the inventory, `TARGET_MIN_EPOCH_NS` and `TARGET_FINGERPRINT_EPOCH_NS` are referenced only in the test file: test D at line 248, and the test-local legacy oracle at line 847.
+  - Within the three modules, nothing in production reads them any more. They are now dead in production code. This is an observation only; I propose no change.
+- **Impacted-set abstention.**
+  - The only real callers of `verify_and_seed_cached_target` are A (892), C (982) and D (216). The mock test only saves, replaces and restores it (1197, 1259, 1325).
+  - So D is the only impacted old test, and it is selected.
+
+**Retained residuals (non-blocking for this limited scope)**
+1. **Guard references were not read.**
+   - The `CACHED_TARGET_SEED.json` references in `sandbox_args` (452), `prior_receipts` (653–654) and `worker` (1156) appear only at filename level.
+   - The guard does not reference the normalized constants by name, and apart from the same-length seal line it is unchanged.
+   - Even so, a literal-value or key-level use there is not excluded.
+2. **The inventory is limited to filename, function and constant-name tokens.**
+   - It does not track snapshot keys (`seeded_files`, `mtime_ns`), return-value consumers of `prepare_cached_current_f_worker`, or numeric epoch literals.
+3. **Consumers outside the three modules remain unshown and out of scope.**
+   - These include config, the accounting route and historical scripts.
+   - Cargo's own freshness consumption is also excluded; ordering evidence stays limited to the finite R3 join.
+
+## Unchanged limitations
+
+- The original P8 result stays FAILED.
+- The accounting prerequisite and both the broad and narrow refusals remain unresolved and unadjudicated.
+- I make no judgment on native, config, admission, Cargo, ELF, proof or stagenet.
+- I infer no permission from stdout or exit 0.
+- The tests remain INTERFACE_INFORMED_NOT_BLIND (R2 unsatisfied).
+- I propose no source changes.

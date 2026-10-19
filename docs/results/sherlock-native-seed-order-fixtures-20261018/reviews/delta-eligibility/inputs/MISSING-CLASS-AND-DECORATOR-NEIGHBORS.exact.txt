@@ -1,0 +1,48 @@
+# EXACT test_cached_current_build.py 33..46
+
+
+def _sha256_bytes(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def _git_blob_sha1(data):
+    h = hashlib.sha1()
+    h.update(('blob %d\0' % len(data)).encode('ascii'))
+    h.update(data)
+    return h.hexdigest()
+
+
+class CachedCurrentBuildSyntheticTest(unittest.TestCase):
+
+# EXACT test_cached_current_build.py 201..206
+        }
+        Path(c['paths']['packet']).mkdir(parents=True, exist_ok=True)
+        return c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map
+
+    def test_target_partition_excludes_mori_workspace_and_preserves_quarantine_modes(self):
+        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()
+
+# EXACT test_cached_current_build.py 845..850
+            or (rel.startswith('debug/') and rel.count('/') == 1)
+        )
+        return ccb.TARGET_FINGERPRINT_EPOCH_NS if late else ccb.TARGET_MIN_EPOCH_NS
+
+    def test_seed_reapplies_preserved_r3_mtimes_in_dependency_order(self):
+        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()
+
+# EXACT test_cached_current_build.py 924..929
+                ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)
+        finally:
+            ccb.NON_DEBUG_CACHE_CANDIDATES = saved_non_debug
+
+    def test_preserved_seed_mtime_bounds_and_actual_r3_build_dependency_edges(self):
+        lo, hi = ccb.R3_ARCHIVE_MTIME_RANGE_NS
+
+# EXACT test_cached_current_build.py 965..970
+            self.assertGreater(self._legacy_two_tier_mtime_ns(dep_rel), self._legacy_two_tier_mtime_ns(bin_rel), dep_rel)
+        # aws-lc-sys-382f6f2cbe30927c/invoked.timestamp follows its compiled script binary.
+        self.assertLess(aws[1], 1_792_317_342_067_393_428)
+
+    def test_seed_refuses_preserved_mtime_not_newer_than_source_epoch(self):
+        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()
+
