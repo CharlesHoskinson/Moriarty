@@ -1,0 +1,53 @@
+```json
+{
+  "verdict": "APPROVE_COMPILE_DATA",
+  "reviewer": "Independent fresh review B, Opus 5.5 HIGH. No tools were used. Nothing was read from disk, hashed, compiled or executed. Every SHA-256 and byte count below is a cross-document consistency check on Root-supplied text, not a recomputation.",
+  "scope": "Applicability of the unchanged P13 guarded compile class to the P14 data: source, manifest, subject, QOBS, stat capture, config inputs and the remaining Root resource ledger. The verdict covers the single command `cargo test --no-run --frozen -p mori-backend --lib -j4` only. It grants no execution authority by itself, and it does not cover SDK tests, the new ELF, keygen, prove, verify or the prior combined selector.",
+  "bindingChecks": {
+    "sourceToSubject": "PASS. The candidate header is 46803 bytes with SHA f124c901…6bc1. It matches the SOURCE-APPLICATION-RESULT (bytes, sha256, onlyChangedSource), the subject row for crates/mori-backend/src/sherlock_machine/literal_witness_native_tests.rs, and the source-audit `overlay_source`.",
+    "subjectAggregate": "PASS (declared). The subject reports candidate_file_count=474, expected 474, and candidate_total_bytes=8459391. The SOURCE-APPLICATION-RESULT agrees (subjectRows 474, subjectBytes 8459391). I did not sum the 474 rows myself.",
+    "manifestBinding": "PASS. CHECKOUT-SOURCE-MANIFEST.actual.json is 7673184 bytes with SHA d12addb5…03bc6d, and the same pin appears in the SOURCE-APPLICATION-RESULT, subject.source_manifest and config.source_manifest. complete_checkout_file_count is 44969 in both the subject and the source-application result.",
+    "subjectToConfig": "PASS. config.bindings.subject points to COMPILE-SUBJECT.actual.json with SHA 7205234e…a07fe, which matches the SOURCE-APPLICATION-RESULT subject pin.",
+    "head": "PASS. 40d4186894c93d120cf32e2ca1cb372dce902b6b appears as subject.base_head, subject.head, source_provenance.committed_base and the SOURCE-APPLICATION HEAD.",
+    "argvAndCwd": "PASS. proposed_argv is exactly the pinned toolchain cargo (1.99.0, whose SHA appears in executable_pins) followed by `test --no-run --frozen -p mori-backend --lib -j4`. proposed_cwd equals config.paths.worktree.",
+    "runnerGuard": "PASS. config.bindings.runner SHA is 74063ff1…6294, which matches the unchanged guard 74063ff.",
+    "QOBS": "PASS. QOBS.request_sha256 4ad90f01… matches the SETUP-RESULT request pin, and the QOBS file SHA e40fe226… matches SETUP-RESULT.QOBS. The envelope path, cpu.max (500000/100000), memory 20 GiB, swap 0 and pids 1088 match config.cgroup. All three quota_mounts (devices 0:80/0:81/0:83, mount_ids 190/191/240, max_bytes) are identical in QOBS and config.",
+    "statCapture": "PASS. ROOT-STAT-CAPTURE-RESULT reports 735c07a4…4b42 at 1044435 bytes, which matches config.old_home_stat_manifest. It also reports SDKNativeCalls=0.",
+    "toolPins": "PASS. The bwrap, python3, env and timeout realpaths and SHAs agree between QOBS.operator_tool_sha256 and config.executable_pins wherever both list the same tool."
+  },
+  "capsCheck": {
+    "Fcpu": "PASS. 1140026337 = 840026337 (unchanged helper historical P11 prefix) + 300000000 (fresh F). The cap is not raised to RootP+300m.",
+    "Fwall": "PASS. F.wall_seconds = 281 = total_wall_seconds. The outer limit of 300 is external and unchanged.",
+    "supervisor": "PASS. supervisor_cpu_seconds = 120.",
+    "memory": "PASS. F.memory_bytes is 8589934592 (8 GiB), within the phases parent limit of 18534076416 and the envelope limit of 21474836480.",
+    "streams": "PASS. stdout_bytes and stderr_bytes are both 2097152 (2 MiB).",
+    "cpuQuotaAndPids": "PASS. F quota is 400000/100000 (4 CPU), consistent with -j4 and equal to the phases parent cpu.max. F pids 1024 equals the phases parent pids.max (1024), which is within the envelope's 1088.",
+    "mounts": "PASS. F.source_bytes and F.packet_bytes equal the source_home and packet quota mounts exactly.",
+    "noIncreaseOrReset": "PASS. Every F field matches the stated P13 class. No cap was enlarged or reset."
+  },
+  "rootLedgerCheck": {
+    "residual": "PASS. E − S − P = 1903890457 − 280862180 − 1623028271 = 6 µs, which matches the stated residual of 6.",
+    "fit": "PASS. The fresh F budget (300 s CPU, 281 s wall), the outer 300 s and the supervisor 120 s fit inside the remaining floors (whole 4801 s, F 991 s, supervisor 10413 s). The planning-only nominal values are consistent: P 1923028271, whole 4501, F 691, supervisor 10293.",
+    "separation": "PASS. The killed combined proof's 596847982 µs child CPU stays inside the Root aggregate. The helper P11 prefix is treated separately and is not netted against or credited to the Root aggregate."
+  },
+  "dataObservationsNonBlocking": [
+    "1. subject.source_provenance.base_preimage names the worktree path but records 20522 bytes / bb14c25b…, which is the HEAD-40d blob and the historical P12 value. The immediate pre-overlay working-tree state was 32061 bytes / 18fde… (the P13 overlay), and the 32061-byte prefix-exact check is measured against that. The compile binding comes from the candidate row and the full manifest, so this does not affect the compile. Recommendation: the post-run archive should record both the HEAD blob (20522/bb14) and the immediate pre-image (32061/18fde) so the provenance cannot be misread.",
+    "2. F.target_tmp_bytes is 21474836480 (20 GiB), but the target_tmp quota mount enforces max_bytes 8589934592 (8 GiB). The mount is the tighter, effective bound. This is not an increase, assuming it equals the P13 class value; do not 'reconcile' it upward.",
+    "3. The subject.branch ref is docs/sherlock-mul-atlas-and-doctorwatson-111-20261019, while the worktree directory is named sherlock-witness-cache-stream-20261018. This is cosmetic, because HEAD 40d and the five control pins are the binding.",
+    "4. candidate_membership_rule includes .cargo files, but no worktree .cargo rows appear in the subject. This is consistent only if none exist; the full 44969-member readback is stated to confirm that."
+  ],
+  "conditionsBeforeLaunch": [
+    "A. RESOURCE-AND-CARRY-DATA.actualLedgerReceiptPin is null, and its state is ROOT_FILLS_EXACT_CURRENT_HYBRID_LEDGER_RECEIPT. Root must pin the actual ledger receipt, and its E/S/P must exactly equal 1903890457/280862180/1623028271 with residual 6. If any value differs, this review's fit check is void.",
+    "B. The F accounting leaf must start fresh, with only the read-only helper seed of exactly 840026337 µs, so the effective fresh allowance stays 300 s. If the helper instead reads the cumulative phases-cgroup usage (Root P ≈ 1.623e9 µs, already above 1.14e9), the class is mis-applied.",
+    "C. The read-only preflight and prelaunch must re-confirm: no external cargo or rustc (the earlier PID 2464702 lock holder must be gone); both Cargo locks are still held by Root session 92734, or the stat manifest is freshly recaptured; the 44969-member readback, the five control pins and HEAD 40d are unchanged; and all 34 SDK host build-script outputs are present in the cached target."
+  ],
+  "sourceCompileApplicability": {
+    "summary": "No new class, dependency or production edit is needed. The P14 append adds one #[ignore] verify-only test plus helpers, and `--no-run` compiles it without executing it.",
+    "libc": "The new code uses libc::O_NONBLOCK|O_NOFOLLOW behind cfg(unix), matching the existing libc dependency per the source audit.",
+    "imports": "`use std::io::Read` is needed for File::take(...).read_to_end and has no conflicts.",
+    "remainingRisks": "Residual compile risks are type-level only: the field type of `verification.qualification` and json! by-reference behavior. These would show up as a terminal compile failure, which consumes this attempt with no retry, as declared."
+  },
+  "requiredChanges": [],
+  "retainedQualifications": "Compile success would show only that the test target builds against the cached SDK. It is not verification, recursion, Sherlock recursive-proof acceptance, ledger-9 installation or Midnight stagenet evidence. All OPEN_OBLIGATIONS, Am10, C4/R2 and the full goal remain open. A terminal failure consumes this compile attempt. Restoration and teardown are still owed after the compile in every case. Execution of the verify-only test needs a separate fresh resource review."
+}
+```

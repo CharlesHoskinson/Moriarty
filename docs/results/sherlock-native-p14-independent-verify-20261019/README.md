@@ -1,0 +1,9 @@
+# Saved-proof independent verification: timed out
+
+The new P14 ELF listed 122 tests and selected exactly one ignored verify-only test. Both fresh Opus operation reviews approved the unchanged bounded operation with their retained conditions. The selected test timed out at 300.065116 seconds (exit124), after 295.687170 waited-child CPU seconds. It wrote its reconstructed input record but no verification report or error report. This is no cryptographic verdict and does not reject the proof.
+
+The frozen proof bundle, execution copy, quarantine ELF and catalogue-pinned params18 match their pre-run bytes and hashes. The scope is gone, no subject process remains and no cleanup is owed. The kernel observer captured the selected 8GiB/4CPU scope and no OOM event. The one attempt is consumed; no unchanged retry or cap increase was selected. See ROOT-ACTUAL-VERIFY-RESULT.json and ROOT-CURRENT-ACCOUNTING.json for exact scope and retained accounting. The larger observer record is stored as deterministic gzip.
+
+The earlier compile-only archive remains a historical cut. These records establish neither an independent verifier success nor recursion, ledger acceptance, stagenet deployment, requirement closure or a performance bound. The saved P13 proof remains available. Further work follows the source-reviewed Poseidon child path, which uses one k selection and direct stdlib key generation, with separately persisted proof production and independent verification. Its source revision, compile and native results remain pending. Investigate profile and stage costs before selecting further native work.
+
+Local CI only. No binary, SRS, SDK payload or private wallet material is included. Raw opinions remain unchanged; the Root adoption records two reviewer transcription corrections against the supplied source, not new source/resource behavior.

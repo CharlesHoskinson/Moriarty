@@ -1,0 +1,13 @@
+# P14: frozen-bundle verify-only consumer build
+
+The reviewed 46,803-byte source (`f124c901…`) **compiled successfully**: exit 0 in 109.134801217 seconds, with Cargo reporting 21.46 seconds. The old 32,061-byte P13 source is an exact prefix. Root applied the single-file overlay and checked all 44,969 working-file hashes, membership and five control pins before the selected build. Source approval, source application and compilation have separate raw records.
+
+The new 474,023,720-byte ELF (`88a9ad94…`) is preserved and **unexecuted**. The verify-only operation is **not run at this publication cut**; reviews in progress are not a result. Frozen literal-bundle verification is a prerequisite, not a recursive proof. The user’s priority remains a real Sherlock recursive proof on Midnight stagenet. No recursion, stagenet, proof-verification or new EARS acceptance is claimed here.
+
+This compact evidence archive retains the complete source audit, raw data opinions and RC1 provenance correction, actual command/capture records, source manifest and relevant configuration, post-compile receipts/logs, independent accounting and completed cleanup/restoration. Large metadata is exact lossless gzip with raw/compressed identities and round-trip checks. No ELF, target/cache/SDK payload, parameter, key, wallet, provider wire or huge prompt is included. The source replacement is explicitly guarded against the current PUB preimage; all historical P13 raw results remain unchanged.
+
+The build confirmed 34 build-script run units were not reexecuted and 90 host outputs stayed unchanged. Root’s aggregate E/S/P is 2,019,413,681 / 302,211,186 / 1,717,202,489 microseconds, with residual 6. Conservative remaining whole/F/supervisor floors are 4691/881/10391 seconds. These remain separate from the unchanged helper’s historical prefix; no reset or extra resource credit follows from publication. All groups/mounts are gone, the original Camino bytes and recorded metadata are restored, and both Cargo locks are released.
+
+The five supplied [Graphify source-cut files](../sherlock-graphify-refresh-20261019/p14-WW-source-cut-01/P14-WW-SOURCE-CUT.md) are copied exactly as a separate source layer. They do not establish global graph freshness or execution acceptance. See [Root’s build result](actual/ROOT-NATIVE-P14-RESULT.json) and [current scope](CURRENT-STATUS.json). Earlier author-only and owed-state records retain their original wording and are qualified by the later actual records.
+
+Subsequent observation: the one independently reviewed verify-only operation timed out without a cryptographic verdict. See [the later result](../sherlock-native-p14-independent-verify-20261019/README.md). This compile-only archive retains its original source cut.
