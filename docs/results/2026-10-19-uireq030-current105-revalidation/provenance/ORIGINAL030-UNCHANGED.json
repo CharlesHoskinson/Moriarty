@@ -1,0 +1,582 @@
+{
+  "id": "UIREQ-030",
+  "title": "Typed arithmetic component API",
+  "requirementSource": {
+    "path": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b",
+    "heading": "UIREQ-030 Typed arithmetic component API",
+    "scenarioNames": [
+      "Carry, borrow and full product"
+    ],
+    "startLine": 218
+  },
+  "predicate": {
+    "id": "uireq-030_original_clause_and_scenarios",
+    "description": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.",
+    "domain": "Public32/64-bit little-endian typed components and actual selected B-owner Scalar Add/Sub/Mul lowering through run_draft_host_with_word_layout. Named full results retain carry/borrow and the complete256-bit product before exact checked UInt128/error10 selection. Generic implementation independently inspected; three normal and three error10 tests passed across both layouts, with17 original component observations retained.",
+    "applicableEvidenceClasses": [
+      "source",
+      "scoped-observation",
+      "declared-component-correspondence"
+    ],
+    "nativeRequiredByOriginal": false,
+    "allOriginalScenarios": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.\n\n#### Scenario: Carry, borrow and full product\n- **WHEN** b is 32 or 64 and checkedU128Add/Sub/Mul use little-endian limbs.\n- **THEN** addCarry_b(a,bv,carryIn) returns named {low,carryOut}, subBorrow_b(a,bv,borrowIn) returns {low,borrowOut}, and mulWide_b(a,bv) returns {low,high}; carry/borrow bits and multiply-accumulate whole-word carries have distinct types. The wrappers retain K mathematical-result/error10 meaning, including the full up-to-256-bit product before checked UInt128 selection. Independently specified normal results are (2^32−3)+8 = 2^32+5, (2^64+9)−7 = 2^64+2, and (2^48+1)·3 = 3·2^48+3; no layout or row-cost winner is selected."
+  },
+  "implementation": {
+    "status": "complete",
+    "supportedScope": "Public32/64-bit little-endian typed components and actual selected B-owner Scalar Add/Sub/Mul lowering through run_draft_host_with_word_layout. Named full results retain carry/borrow and the complete256-bit product before exact checked UInt128/error10 selection. Generic implementation independently inspected; three normal and three error10 tests passed across both layouts, with17 original component observations retained.",
+    "missing": "None for the whole original030 clause/scenario. Circuit/native/constraint and revision03 refinement obligations remain separate and open.",
+    "sourceRefs": [
+      {
+        "path": "crates/mori-core/src/sherlock/arithmetic_witness.rs",
+        "sha256": "f7f4b25df9cef52eb322ce181dc901469ba04f8889e361d6be63a156cc109eac",
+        "startLine": 1,
+        "endLine": 164
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/reference.rs",
+        "sha256": "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81",
+        "startLine": 1,
+        "endLine": 404
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/word_arithmetic.rs",
+        "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+      },
+      {
+        "path": "crates/mori-core/src/lib.rs",
+        "sha256": "94d4acfb6b34dee481d199222c5ec2f30cae30116fdaa61c4ce8c23061ec9d80"
+      },
+      {
+        "path": "crates/mori-core/src/lib.rs",
+        "sha256": "94d4acfb6b34dee481d199222c5ec2f30cae30116fdaa61c4ce8c23061ec9d80"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/compile_artifact/draft_execution.rs",
+        "sha256": "3c9192fe7239dde42f13ff05210f3eb7b2ccdcfec2ee3f3e6c489e386858f2a4"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/families/mod.rs",
+        "sha256": "1e6923439155cf6ab39e996351f7785d49995d76b0656b2a059f4c869d0f185f"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/families/scalar.rs",
+        "sha256": "f1d0ea6216b28884ee30c159a941ca787943ac8cbc1fb7a7c081689fde05d8ea"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/fragments/scalar.proposed.rs",
+        "sha256": "b80bc107e98e5a35e06cef7e127059a85b8c032e5272a0fd570f199860d843ea"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+        "sha256": "7cd051dfdb38426753a015b52964093a81433a8fa925616c1a5f3d56f504786b"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/word_lowering.rs",
+        "sha256": "a7c366cdb5c1640991a1ad12486203cc40a8be449184e2e7dd6fc4762def734f"
+      },
+      {
+        "path": "crates/mori-core/tests/sherlock_word_lowering.rs",
+        "sha256": "00ff50d3ff928b47fe03d1b412f61192f355868e5cf31b51f8d304a2db5571e5"
+      },
+      {
+        "path": "crates/mori-core/tests/sherlock_word_lowering_error10.rs",
+        "sha256": "339e500e2ba0a36ab60a856051370bd1e86747abeb0b0d4a9ceec02ebb07ee90"
+      }
+    ]
+  },
+  "validation": {
+    "status": "observed",
+    "evidenceRefs": [
+      {
+        "path": "docs/results/sherlock-normal-optimized147-20261017/README.md",
+        "sha256": "62184ab21c84489eb0459724e905108a03eab60be3d2512f6c7d4ff6866d287d",
+        "startLine": 1,
+        "endLine": 11
+      },
+      {
+        "path": "docs/results/sherlock-normal-optimized147-20261017/result.json",
+        "sha256": "3eafd58633e3e6de6f28b80ad66c935ed3ac182ca63db8b6b1b80b80fdfb5649",
+        "startLine": 1,
+        "endLine": 116
+      },
+      {
+        "path": "docs/results/sherlock-normal-optimized147-20261017/selected-tests.txt",
+        "sha256": "df6f4c7c628900e269b3b943ccd0937112e0762684bda9eb30b4fd7d6dce2e4f",
+        "startLine": 1,
+        "endLine": 147
+      },
+      {
+        "path": "docs/results/sherlock-normal-optimized147-20261017/sources.json",
+        "sha256": "009df0293f5b98ddebf1650fead8bcd03b35f3ec9304b3a7d253199d82739d27",
+        "startLine": 1,
+        "endLine": 368
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R197/EXPECTED-NORMAL.json",
+        "sha256": "c887f5237ed1bc90bd58e17faa69d46e3e1fdc28546224475a2652cbd40629bf"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R197/SCOPE-QUALIFICATION.json",
+        "sha256": "dd610798b4e8f7eb3fb0b8fd75fc5fa6d9c15c90c6d3559701815e20a2901dc3"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/harness.rs",
+        "sha256": "4b72517da861e10fe209c6db2f1e57106b32f2fc8e5c11fb44e58a028654f788"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/word_arithmetic.rs",
+        "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/word_arithmetic_tests.rs",
+        "sha256": "3da6aa2b65de89898580d35b7131b2bae9b20f4757682dd5d1561248cdd3d8ee"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/independent.rs",
+        "sha256": "90caacfe658b3cda58883239e31f32883e651452617e45d959987550cfd2f098"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/RESULT.json",
+        "sha256": "b0029a2a46a4863e247e2b061711c4d02807c902014889fe886b42666c7168ca"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/PHASES.json",
+        "sha256": "31df9dde60956af364e2a15caf28490062515fc9ec899e99eb5f321f74b72003"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/MEMBERSHIP.json",
+        "sha256": "f6481e4806bc14495f166a7338260ffcd3551eb6fd7a3a1a0e640835ecba854b"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/fixed17NormalTests.stdout",
+        "sha256": "995a7647e01dd847f57f4f54a1ae587da4b1e89a1387a0a425307460c2965b41"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/build/test.d",
+        "sha256": "fc09eb64c32dbae65fd4cc6a76cc73b32cc4b87704d85f7e71e5263f4f538c61"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/external/public_word_arithmetic_consumer.rs",
+        "sha256": "75b9c857d7a24ce10c58e9705063033ca2826085794f06df3c8673883f037bce"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/external/word_arithmetic_independent_normal_tests.rs",
+        "sha256": "90caacfe658b3cda58883239e31f32883e651452617e45d959987550cfd2f098"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/crates/mori-core/src/lib.rs",
+        "sha256": "89b4d954d035969ee670d245483895d172e17206c3bf25d1b1cc78f76f31a3ed"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/actual-attempt-01/RESULT.json",
+        "sha256": "b03cc53f61bbe5140032382bd95e01b93260d748b3b78efb4f474d337f2238d2"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/actual-attempt-01/PHASES.json",
+        "sha256": "5f935a191151966fd773a476b831b1bbe626405f67db45e04892fac62242e1ac"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/FLAT-INPUT-PINS.json",
+        "sha256": "8ce8040cd19e5e5b0df55157abfde00ec1c5d6f830c996f3b3962016989aecd8"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/actual-attempt-01/GENERATED-OUTPUT-PINS.json",
+        "sha256": "96e652bef9230a04b18c2aff8bbcf2cb8581bdb4cebc2a2df0bae904d8e85321"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/SOURCE-COMPOSITION-PROOF.json",
+        "sha256": "2803350beb68597d9212982cb42a6b7179c510f3d8738655cfdb51742495f1b4"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/normal-five-01/RESULT.json",
+        "sha256": "77555877b21c1001778582b15f691fcc373981fad9fd5f63b96b49b25852ecd7"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/error10-four-01/RESULT.json",
+        "sha256": "947a16baf884402e6db38fce97f1b088b425395b7c54b359d3e0a17cef7b3b78"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/reviews/whole030-and-retained-six/ACTUAL-NINE-OPERATIONS-INDEX.json",
+        "sha256": "e6b4e7670665bb411bebfb2325b1225c416da3a1bcefe1d91031c0fcabbfc970"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/ROOT-COMPILED-SOURCE-EQUALITY.json",
+        "sha256": "e7c91b01bc790aefca3267374af3d29585bfa878f4a6a6b010723d12b2c67938"
+      }
+    ],
+    "countercaseRefs": [
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/error10-four-01/1.stdout",
+        "sha256": "f762633859f6acbea71edf0803b6f54c18146a0ae29b79d58b657591ba1b6fc9"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/error10-four-01/2.stdout",
+        "sha256": "cc6413cb11eee3687b056f46122f2d7c853f4ca208a69352f401c0105bb8d69c"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/error10-four-01/3.stdout",
+        "sha256": "c5a6b9918a9c105a46bd83c654a85f2fba762dc7a8dbf48672dd39ac9ae29e22"
+      }
+    ],
+    "reviewRefs": [
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R203/REPORT.md",
+        "sha256": "dc3e15bc194fc6b11cc3c1527b6914e5e8ccad43c1ab8530ae7025a0557dd17c"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R203/HANDOFF.json",
+        "sha256": "2dc4bdb13da40a91663001ec11427facb002e78d7a6f8d34e9defddc6ea8f8c3"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R203/FACTUAL-QUALIFICATIONS.json",
+        "sha256": "dd07e3c4660e8c92b931aa271399208fd7ed1e94076b9ce3221946b7dd865d89"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/ROOT-FEATURE-ADOPTION.json",
+        "sha256": "84e4808b5f460a47ed8c94504e9ed4474d61c4d47bad541d400f5868dc15295a"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/reviews/whole030-and-retained-six/REPORT.md",
+        "sha256": "8b0e53ff08bcaf388a1ba9da5074be56086ea785a5abd7af5248382890df01f5"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/reviews/whole030-and-retained-six/RESULT.json",
+        "sha256": "c1aaba46490274c276420a4468b95d47be2fbff92950b7d41729e909f1a953dc"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/ROOT-WORD-ADOPTION.json",
+        "sha256": "b270665a42b01405d0680e87e619b5e3d2f17aac7a8cb4e513f4953f65f7ea71"
+      },
+      {
+        "path": "docs/results/sherlock-selected-word-arithmetic-20261018/reviews/independent29-error10/ROOT-PARSED-REVIEW.json",
+        "sha256": "9a080cf60257ca52751c0c8da4f4ac32286eb254365bdce59f7ca36e40badf75"
+      }
+    ],
+    "scenarioCoverage": {
+      "Carry, borrow and full product": {
+        "status": "observed",
+        "observed": "Retained17 original component tests plus actual3 selected normal and3 error10 tests; normal three original equations and carry/borrow/high128 rejection observations for each width.",
+        "publicIntegration": "Actual public selected Word32/Word64 source runs through the same B owner; exact9 source afterimages installed, all141 Core snapshot files equal current source.",
+        "missing": "No original030 predicate missing. No circuit cost or native qualification inferred."
+      }
+    }
+  },
+  "acceptance": {
+    "status": "closed",
+    "proposedStatus": "closed",
+    "scope": "Whole original UIREQ-030 clause and original Carry, borrow and full product scenario; all applicable refinements retained separately.",
+    "reason": "All obligations of the whole original UIREQ-030 clause and its 'Carry, borrow and full product' scenario (BODY01, BODY02, BODY16) are satisfied by generic source inspection plus actual scoped runtime observations: (1) Layout selection and lowering: run_draft_host_with_word_layout -> host_owner_engine_with_word_layout -> WordFamilyPlans -> scalar::dispatch_word -> plan_scalar_with_word_layout -> checked_word_result -> ArithmeticLowering::new(layout, operation).execute(left, right) selects WordLayout::{Word32, Word64} and invokes checked_u128_{add,sub,mul}_{32,64} on real evaluated u128 operands (BODY04, BODY06). (2) Named components and distinct types: word_arithmetic.rs exposes little-endian 32/64-bit add_carry_{32,64} returning AddCarry{32,64}{low, carry_out}, sub_borrow_{32,64} returning SubBorrow{32,64}{low, borrow_out}, mul_wide_{32,64} returning MulWide{32,64}{low, high}, and mul_accumulate_{32,64} returning MulAccumulate{32,64}{low, carry_out} with distinct CarryBit(bool), BorrowBit(bool), and MulCarry32(u32)/MulCarry64(u64) types, verified across 17 passed standalone tests in R201 (BODY15). (3) Full intermediates before checked UInt128 / error10 selection for all general u128 inputs: for every (a, bv) in u128 x u128, checked_u128_add_{32,64} retains the 129-bit sum in FullAdd{32,64}{low, carry_out} and selects Err(10) iff carry_out.0; checked_u128_sub_{32,64} retains FullSub{32,64}{low, borrow_out} and selects Err(10) iff borrow_out.0; checked_u128_mul_{32,64} computes the complete 8x32 or 4x64 256-bit schoolbook product in FullProduct{32,64}{low, high} before checking full.high.iter().any(|&word| word != 0) to select Err(10) or Ok(join_words(full.low)); FullArithmeticResult retains the full typed struct before .checked() projects Result<u128, u8>, and Scalar maps Err(10) to ScalarStaged::PrimError { code: 10 } -> HelperResultC::ScalarError { code: 10 } -> OutcomeC::Rejected { code: 10 }. Runtime correspondence is observed in BODY08, BODY09, and BODY16A across all 4 error10 operations (compile + 3 exact tests covering full intermediates and public Word32/Word64 runs for (2^128-1)+1, 0-1, and (2^128-1)*2). (4) Original normal equations and no winner claim: (2^32-3)+8 = 2^32+5, (2^64+9)-7 = 2^64+2, and (2^48+1)*3 = 3*2^48+3 are verified against frozen R197 expectations (BODY14) in R201 (BODY15) and through the public selected Word32/Word64 lowering path in the 5 passed normal operations (BODY08, BODY09, BODY16A), with no layout or row-cost winner selected.",
+    "adoption": "adopted"
+  },
+  "currentness": {
+    "sourcePins": [
+      {
+        "path": "crates/mori-core/src/sherlock/arithmetic_witness.rs",
+        "sha256": "f7f4b25df9cef52eb322ce181dc901469ba04f8889e361d6be63a156cc109eac",
+        "startLine": 1,
+        "endLine": 164
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/reference.rs",
+        "sha256": "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81",
+        "startLine": 1,
+        "endLine": 404
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/word_arithmetic.rs",
+        "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+      },
+      {
+        "path": "crates/mori-core/src/lib.rs",
+        "sha256": "94d4acfb6b34dee481d199222c5ec2f30cae30116fdaa61c4ce8c23061ec9d80"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/harness.rs",
+        "sha256": "4b72517da861e10fe209c6db2f1e57106b32f2fc8e5c11fb44e58a028654f788"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/word_arithmetic.rs",
+        "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/word_arithmetic_tests.rs",
+        "sha256": "3da6aa2b65de89898580d35b7131b2bae9b20f4757682dd5d1561248cdd3d8ee"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/independent.rs",
+        "sha256": "90caacfe658b3cda58883239e31f32883e651452617e45d959987550cfd2f098"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/crates/mori-core/src/lib.rs",
+        "sha256": "89b4d954d035969ee670d245483895d172e17206c3bf25d1b1cc78f76f31a3ed"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/crates/mori-core/src/sherlock/word_arithmetic.rs",
+        "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/external/public_word_arithmetic_consumer.rs",
+        "sha256": "75b9c857d7a24ce10c58e9705063033ca2826085794f06df3c8673883f037bce"
+      },
+      {
+        "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/external/word_arithmetic_independent_normal_tests.rs",
+        "sha256": "90caacfe658b3cda58883239e31f32883e651452617e45d959987550cfd2f098"
+      },
+      {
+        "path": "crates/mori-core/src/lib.rs",
+        "sha256": "94d4acfb6b34dee481d199222c5ec2f30cae30116fdaa61c4ce8c23061ec9d80"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/compile_artifact/draft_execution.rs",
+        "sha256": "3c9192fe7239dde42f13ff05210f3eb7b2ccdcfec2ee3f3e6c489e386858f2a4"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/families/mod.rs",
+        "sha256": "1e6923439155cf6ab39e996351f7785d49995d76b0656b2a059f4c869d0f185f"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/families/scalar.rs",
+        "sha256": "f1d0ea6216b28884ee30c159a941ca787943ac8cbc1fb7a7c081689fde05d8ea"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/fragments/scalar.proposed.rs",
+        "sha256": "b80bc107e98e5a35e06cef7e127059a85b8c032e5272a0fd570f199860d843ea"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+        "sha256": "7cd051dfdb38426753a015b52964093a81433a8fa925616c1a5f3d56f504786b"
+      },
+      {
+        "path": "crates/mori-core/src/sherlock/word_lowering.rs",
+        "sha256": "a7c366cdb5c1640991a1ad12486203cc40a8be449184e2e7dd6fc4762def734f"
+      },
+      {
+        "path": "crates/mori-core/tests/sherlock_word_lowering.rs",
+        "sha256": "00ff50d3ff928b47fe03d1b412f61192f355868e5cf31b51f8d304a2db5571e5"
+      },
+      {
+        "path": "crates/mori-core/tests/sherlock_word_lowering_error10.rs",
+        "sha256": "339e500e2ba0a36ab60a856051370bd1e86747abeb0b0d4a9ceec02ebb07ee90"
+      }
+    ],
+    "comparedToCurrent": "identical",
+    "limitations": [
+      "Historical results apply to exact recorded source; new metadata/source-only checks are not runtime passes.",
+      "Compiler current tree identity320cdb78815287ca6399490b05eddb8f8a5b0ecf, merged sherlock9dde and draft17420a4fcb0 supplied by Root; no Git command run in this audit.",
+      "R201 remains the original standalone execution input cut; its source header SOURCE_ONLY/UNRUN and R197 uncompiled status describe their frozen preparation stage, superseded only for the exact later R201 observation. R206 is compile-only. New publiclib compatibility is conditional on explicit Root adoption; source equality is not a runtime rerun.",
+      "R235 selective current-source compatibility proposal: existing Core compile_host/artifact/1 bodies, config field projections, ordinary no-selection CLI branch and publication helpers are source-preserved; private draft parser/checker registration and explicit draft selection/artifact/2 are new. Fresh applicable R228 source/result review and explicit Root adoption are required before current reuse. Existing raw runtime/model/reporting evidence stays at its recorded cuts; no new CLI runtime/native or broader acceptance is inferred.",
+      "Root adopted exact reviewed/tested9 source files; all141 compiled Core sources match. Historical comments SOURCE_ONLY/UNRUN record candidate preparation and do not replace later actual receipts. Retained prior receipt scopes unchanged."
+    ]
+  },
+  "nextDiscriminatingCheck": {
+    "consumer": "Retained circuit/native and revision03 arithmetic obligations",
+    "input": "Actual constraint/native integration under retained requirements; reuse observed host arithmetic evidence.",
+    "expected": "Preserve the closed whole original030 clause while establishing separately required circuit/native predicates.",
+    "missingAuthorityOrOwner": "No original030 gap; retained dependent source/resource/correctness boundaries unchanged."
+  },
+  "citations": [
+    {
+      "path": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+      "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b",
+      "startLine": 218,
+      "endLine": 230
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/arithmetic_witness.rs",
+      "sha256": "f7f4b25df9cef52eb322ce181dc901469ba04f8889e361d6be63a156cc109eac",
+      "startLine": 1,
+      "endLine": 164
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/reference.rs",
+      "sha256": "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81",
+      "startLine": 1,
+      "endLine": 404
+    },
+    {
+      "path": "docs/results/sherlock-normal-optimized147-20261017/README.md",
+      "sha256": "62184ab21c84489eb0459724e905108a03eab60be3d2512f6c7d4ff6866d287d",
+      "startLine": 1,
+      "endLine": 11
+    },
+    {
+      "path": "docs/results/sherlock-normal-optimized147-20261017/result.json",
+      "sha256": "3eafd58633e3e6de6f28b80ad66c935ed3ac182ca63db8b6b1b80b80fdfb5649",
+      "startLine": 1,
+      "endLine": 116
+    },
+    {
+      "path": "docs/results/sherlock-normal-optimized147-20261017/selected-tests.txt",
+      "sha256": "df6f4c7c628900e269b3b943ccd0937112e0762684bda9eb30b4fd7d6dce2e4f",
+      "startLine": 1,
+      "endLine": 147
+    },
+    {
+      "path": "docs/results/sherlock-normal-optimized147-20261017/sources.json",
+      "sha256": "009df0293f5b98ddebf1650fead8bcd03b35f3ec9304b3a7d253199d82739d27",
+      "startLine": 1,
+      "endLine": 368
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/word_arithmetic.rs",
+      "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+    },
+    {
+      "path": "crates/mori-core/src/lib.rs",
+      "sha256": "94d4acfb6b34dee481d199222c5ec2f30cae30116fdaa61c4ce8c23061ec9d80"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R197/EXPECTED-NORMAL.json",
+      "sha256": "c887f5237ed1bc90bd58e17faa69d46e3e1fdc28546224475a2652cbd40629bf"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R197/SCOPE-QUALIFICATION.json",
+      "sha256": "dd610798b4e8f7eb3fb0b8fd75fc5fa6d9c15c90c6d3559701815e20a2901dc3"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/harness.rs",
+      "sha256": "4b72517da861e10fe209c6db2f1e57106b32f2fc8e5c11fb44e58a028654f788"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/word_arithmetic.rs",
+      "sha256": "f10af3a35310849cd20c028826583efaa282282980af8e54b25bf2a2aa5c29e1"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/word_arithmetic_tests.rs",
+      "sha256": "3da6aa2b65de89898580d35b7131b2bae9b20f4757682dd5d1561248cdd3d8ee"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/snapshot/independent.rs",
+      "sha256": "90caacfe658b3cda58883239e31f32883e651452617e45d959987550cfd2f098"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/RESULT.json",
+      "sha256": "b0029a2a46a4863e247e2b061711c4d02807c902014889fe886b42666c7168ca"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/PHASES.json",
+      "sha256": "31df9dde60956af364e2a15caf28490062515fc9ec899e99eb5f321f74b72003"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/MEMBERSHIP.json",
+      "sha256": "f6481e4806bc14495f166a7338260ffcd3551eb6fd7a3a1a0e640835ecba854b"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/actual-attempt-01/fixed17NormalTests.stdout",
+      "sha256": "995a7647e01dd847f57f4f54a1ae587da4b1e89a1387a0a425307460c2965b41"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R201/build/test.d",
+      "sha256": "fc09eb64c32dbae65fd4cc6a76cc73b32cc4b87704d85f7e71e5263f4f538c61"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/external/public_word_arithmetic_consumer.rs",
+      "sha256": "75b9c857d7a24ce10c58e9705063033ca2826085794f06df3c8673883f037bce"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/external/word_arithmetic_independent_normal_tests.rs",
+      "sha256": "90caacfe658b3cda58883239e31f32883e651452617e45d959987550cfd2f098"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/snapshot/crates/mori-core/src/lib.rs",
+      "sha256": "89b4d954d035969ee670d245483895d172e17206c3bf25d1b1cc78f76f31a3ed"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/actual-attempt-01/RESULT.json",
+      "sha256": "b03cc53f61bbe5140032382bd95e01b93260d748b3b78efb4f474d337f2238d2"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/actual-attempt-01/PHASES.json",
+      "sha256": "5f935a191151966fd773a476b831b1bbe626405f67db45e04892fac62242e1ac"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/FLAT-INPUT-PINS.json",
+      "sha256": "8ce8040cd19e5e5b0df55157abfde00ec1c5d6f830c996f3b3962016989aecd8"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/actual-attempt-01/GENERATED-OUTPUT-PINS.json",
+      "sha256": "96e652bef9230a04b18c2aff8bbcf2cb8581bdb4cebc2a2df0bae904d8e85321"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R206/SOURCE-COMPOSITION-PROOF.json",
+      "sha256": "2803350beb68597d9212982cb42a6b7179c510f3d8738655cfdb51742495f1b4"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R203/HANDOFF.json",
+      "sha256": "2dc4bdb13da40a91663001ec11427facb002e78d7a6f8d34e9defddc6ea8f8c3"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/evidence/R203/FACTUAL-QUALIFICATIONS.json",
+      "sha256": "dd07e3c4660e8c92b931aa271399208fd7ed1e94076b9ce3221946b7dd865d89"
+    },
+    {
+      "path": "docs/results/sherlock-word-components-20261018/ROOT-FEATURE-ADOPTION.json",
+      "sha256": "84e4808b5f460a47ed8c94504e9ed4474d61c4d47bad541d400f5868dc15295a"
+    },
+    {
+      "path": "crates/mori-core/src/lib.rs",
+      "sha256": "94d4acfb6b34dee481d199222c5ec2f30cae30116fdaa61c4ce8c23061ec9d80"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/compile_artifact/draft_execution.rs",
+      "sha256": "3c9192fe7239dde42f13ff05210f3eb7b2ccdcfec2ee3f3e6c489e386858f2a4"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/families/mod.rs",
+      "sha256": "1e6923439155cf6ab39e996351f7785d49995d76b0656b2a059f4c869d0f185f"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/families/scalar.rs",
+      "sha256": "f1d0ea6216b28884ee30c159a941ca787943ac8cbc1fb7a7c081689fde05d8ea"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/fragments/scalar.proposed.rs",
+      "sha256": "b80bc107e98e5a35e06cef7e127059a85b8c032e5272a0fd570f199860d843ea"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs",
+      "sha256": "7cd051dfdb38426753a015b52964093a81433a8fa925616c1a5f3d56f504786b"
+    },
+    {
+      "path": "crates/mori-core/src/sherlock/word_lowering.rs",
+      "sha256": "a7c366cdb5c1640991a1ad12486203cc40a8be449184e2e7dd6fc4762def734f"
+    },
+    {
+      "path": "crates/mori-core/tests/sherlock_word_lowering.rs",
+      "sha256": "00ff50d3ff928b47fe03d1b412f61192f355868e5cf31b51f8d304a2db5571e5"
+    },
+    {
+      "path": "crates/mori-core/tests/sherlock_word_lowering_error10.rs",
+      "sha256": "339e500e2ba0a36ab60a856051370bd1e86747abeb0b0d4a9ceec02ebb07ee90"
+    },
+    {
+      "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/normal-five-01/RESULT.json",
+      "sha256": "77555877b21c1001778582b15f691fcc373981fad9fd5f63b96b49b25852ecd7"
+    },
+    {
+      "path": "docs/results/sherlock-selected-word-arithmetic-20261018/actual/error10-four-01/RESULT.json",
+      "sha256": "947a16baf884402e6db38fce97f1b088b425395b7c54b359d3e0a17cef7b3b78"
+    },
+    {
+      "path": "docs/results/sherlock-selected-word-arithmetic-20261018/reviews/whole030-and-retained-six/ACTUAL-NINE-OPERATIONS-INDEX.json",
+      "sha256": "e6b4e7670665bb411bebfb2325b1225c416da3a1bcefe1d91031c0fcabbfc970"
+    },
+    {
+      "path": "docs/results/sherlock-selected-word-arithmetic-20261018/ROOT-COMPILED-SOURCE-EQUALITY.json",
+      "sha256": "e7c91b01bc790aefca3267374af3d29585bfa878f4a6a6b010723d12b2c67938"
+    },
+    {
+      "path": "docs/results/sherlock-selected-word-arithmetic-20261018/reviews/whole030-and-retained-six/REPORT.md",
+      "sha256": "8b0e53ff08bcaf388a1ba9da5074be56086ea785a5abd7af5248382890df01f5"
+    },
+    {
+      "path": "docs/results/sherlock-selected-word-arithmetic-20261018/ROOT-WORD-ADOPTION.json",
+      "sha256": "b270665a42b01405d0680e87e619b5e3d2f17aac7a8cb4e513f4953f65f7ea71"
+    },
+    {
+      "path": "docs/results/sherlock-nominal-text-preparation-20261018/ROOT-ADDITIVE-MODULE-COMPATIBILITY.json",
+      "sha256": "385d5d186c73de7a84be218a2652fa082540fafbbc61bdcd15cf0d81b4ba3a3d"
+    }
+  ]
+}

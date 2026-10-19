@@ -1,0 +1,76 @@
+# Verdicts
+
+**WHOLE_MACHINE_ADAPTER_SOURCE_ACCEPT**
+**ONE_DATA_OPERATION_ELIGIBLE**, subject to the three binding checks under "Conditions" below.
+
+This was a source-only review with no tools. I did not read or run any ITF, expected, actual or report bytes, and I could not verify any hash.
+
+# Mandatory defects
+
+**Source: none.**
+
+**Operation: no defect that requires changing the source or argv.** Three binding gaps must be closed by Root checks before and after the run (see Conditions).
+
+# Source findings
+
+**No field omission, state filtering or stutter removal.**
+- `machine_states` maps every `document['states']` entry in order.
+- `_variable` selects only `machine` or `*::machine`, so `#meta` is excluded.
+- `quint_typed_wire` builds new structures, and every record key passes through.
+- `machine_wire` and `record_wire` overwrite only `current` and `records[i].invocation` with re-wired copies. These are taken from the decoded, not-yet-wired inputs, so nothing is double-applied or mutated.
+
+**guardCosts paths are complete.**
+- The declarations reach Invocation only through `Machine.current` and `Record.invocation`, and both are handled.
+- An empty `guardCosts` decodes to `{}`, and iterating it yields `[]`.
+- Sorting by integer site comes from `sorted(value.items())` and is kept through the rename.
+- No other int-keyed map is reachable. If one appeared, it would surface as unrenamed key/value rows and fail closed.
+
+**Map names are not corrupted.**
+- `Snapshot.state` produces name/value rows.
+- `Scenario` has four keys, so it skips the Snapshot branch, and its str-keyed `state`/`inputs` stay ordinary JSON objects.
+- Internal `actionName` is never touched, and no alias function is imported.
+
+**Nullary handling is correct.**
+- The five added tags (`Ready`, `Published`, `NoResult`, `NoPrefix`, `NotAdvanced`) are exactly the Machine-reachable nullaries missing from `Q_NULLARY`.
+- `Balanced` is unreachable because AccountFlow is not referenced from Machine.
+- The new pass collapses a tag only for a single-key dict with an exact `()` payload. Anything else is kept, and tuples serialize as `[]`.
+- No declared record or Scalar value can match that shape spuriously.
+
+**Strict scalar distinction holds.** Comparison is `canonical_bytes ==`, so `True`/`1` and `1`/`1.0` differ. bool, int and str survive decoding unchanged.
+
+**No expected-value synthesis.** The only constants are declared tag names.
+
+**Failure is never masked.** Any exception exits nonzero, and `machineStatesEqual` is a genuine bool.
+
+**Hashes bind what was read.** The report hashes the bytes actually read, so there is no TOCTOU gap between the pin check and consumption.
+
+# Conditions Root must check (binding, not defects)
+
+1. **Interpreter binding.** argv runs `/usr/bin/python3`, but the pin is `/usr/bin/python3.14`. Root must record that `readlink -f /usr/bin/python3` equals `/usr/bin/python3.14` before and after the run.
+2. **Extract fidelity.** The closure I reviewed is a function extract, not the pinned 13,742-byte and 16,774-byte modules. Root must confirm that in the pinned bytes:
+   - these exact definitions are the final import-time bindings, with no later redefinition of `Q_NULLARY`, `quint_typed_wire` or `canonical_bytes` and no monkeypatching;
+   - import-time side effects are limited to imports and definitions;
+   - the modules' own imports resolve only to stdlib or each other. The consumer directory sits ahead of stdlib on `sys.path`, so the "exactly three entries" precondition is load-bearing.
+3. **SAFE copy identity.** The supplied SAFE file is a copy. Root must confirm it is byte-identical to the pinned file (`d1b60d95…`, 8,322 bytes).
+
+# Limits and qualifications (not closed here)
+
+- **Pre-existing `Q_NULLARY` erasure.** It drops payloads for its 11 tags unconditionally. This is sound only under the typechecked-Quint premise. The "unexpected payloads retained" property applies only to the five new tags.
+- **Unit codec evidence.** The supplied codec is the TypeScript `itf.js` path. Whether the frozen ITF came from that path or the Rust evaluator is not shown. If unit is encoded differently, the five tags stay as `{tag: payload}` and the comparison fails closed, so this cannot produce a false positive.
+- **Scenario map representation.** SAFE does not specify how `Scenario.state` and `Scenario.inputs` are represented (`no_extra_maps` covers records only). A convention mismatch would give `false`, never a false `true`.
+- **Pre-existing decoder leniency.** `json.loads` accepts duplicate keys (last one wins) and NaN. `int()` on `#bigint` accepts `_` and surrounding whitespace. Both inputs are pinned, so this is a limit, not a defect.
+- **Equality is not non-emptiness.** The predicate does not assert a non-empty list. Root should note the states length in the report.
+- **Codepoint sort order.** `Snapshot.state` rows are sorted by Python codepoint order, which is assumed to match SAFE's "ascending exact string name".
+- **Unpinned wrappers.** `/usr/bin/timeout` and `/usr/bin/prlimit` are not pinned.
+
+# Operation check
+
+- **Flags.** `-I -B -S` is used with an explicit `sys.path` insert. `runpy.run_path` on a plain file does not alter `sys.path`, and `sys.argv` is set correctly.
+- **Writes.** `-B` with a clean consumer directory means no bytecode is written.
+- **Resource caps.**
+  - Wall time: 30 s KILL, inside a 35 s budget.
+  - Limits: 25 s CPU, 2 GiB address space, 64 MiB file size, no core dumps.
+  - Output: inputs total about 33 KB, so the report should be roughly 50–70 KB, well under the 4 MiB kept per stream.
+- **Encoding.** `C.UTF-8` gives UTF-8 stdout.
+- **Acceptance.** Exit 0, a complete parseable report, unchanged pins, no new cwd files, and `machineStatesEqual` exactly `true`. Anything else is failure, kept unrepaired.
+- **Scope.** This covers only canonical equality of the ordered `expected.states` list against the projected actual states. Root wrapper fields and `commonWire`, and all H2/H3/H4/H6, Error, finance, authentication, consumption, VM, clock, native, proof and EARS claims, remain separate and are not advanced by this result.

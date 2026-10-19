@@ -1,0 +1,103 @@
+# Narrow Rev3 correction review: Core/2 reference contract (finite Start → false-Waiting scope)
+
+## Coverage
+
+**Read in full this turn:** Bodies 1–7, meaning the Rev3 contract, the complete new closure, the condition edits, the dependency ledger, the catalog delta, and both Rev2 opinions. I used no tools.
+
+**Checks I made:**
+- Each `new` string in the conditions file appears verbatim in Body 1.
+- The entire Rev3 body is consistent with the closure supplied here.
+
+**Not read, identity only:**
+- The Rev3 catalog sidecar, the 02→03 diff, and both readset JSONs.
+- The Rev2 contract, the Rev2 catalog and the original 99KB appendix.
+
+**Not verified:**
+- I recomputed no SHA.
+- I cannot confirm "no other prose change" without the Rev2 text or the diff.
+- I did not confirm the claim that the 191 lexer files match the current worktree.
+- `identifier_v2`, `validate_v2`, the parser, `run_segment`, `Admitted::*`, `cost.rs` and the publisher rest on recorded prior coverage. The `runtime::identifier` supplied here is the v1 predicate, which lacks `await` and `when`.
+
+I computed no B17 values, digests, work totals or seeds.
+
+## M1–M5 and nits
+
+**M1 – discharged.**
+- The predicate text matches `validate_liability_reads` exactly:
+  - read names are collected from all of `Program.expressions`, each 1..1024 bytes;
+  - all actions' Liability statements with that name are scanned;
+  - each asset resolves through `validate_asset` by exact declaration name;
+  - the triples must agree and at least one must exist;
+  - names that are never read are not constrained.
+- The string bounds match `validate_v2` (prior coverage) and the lexer's `decoded_len > MAX_STRING_BYTES` check.
+- Nit: "identifier_v2 predicate above" points at an unnamed sentence. Name it there.
+
+**M2 – the text is discharged, with one concrete edge left (mandatory A).** The rest checks out against the scanner:
+- **Whitespace:** SPACE and LF are a subset of the bytes the lexer skips (space, tab, CR, LF).
+- **Strings:** for characters 0x20..0x7E excluding `"` and `\`:
+  - `string_end` finds the delimiter quote;
+  - `decode_with` emits each character unchanged;
+  - the decoded content therefore equals the raw body.
+- **Numbers:** `0|[1-9][0-9]*` passes `number::validate`.
+- **Identifiers:** the lexer's 64-byte check matches.
+- **Token bound:** with at most 8191 bytes, `push` allows at most 8191 non-EOF tokens because it rejects at `len >= 8191`. With EOF that is ≤8192. The bound is correct.
+
+**M3 – discharged.**
+- **False-guard work:** `execute_statement` charges dispatch 1, then `evaluate` runs with a fresh cache.
+  - Evaluation is eager with no short-circuit, so every distinct reachable ID is charged exactly once and cache hits are free.
+  - On success that is exactly `1+|R(guard)|`, and the guard arm returns its value without failing.
+- **Advanced results and the R6 precheck:** these rest on prior coverage of `finish`/`start`/`resume` and `cost`.
+
+**M4 – discharged** against `execute_statement`, `amount` and `move_funds`:
+- The amount is evaluated before the asset is resolved.
+- Both the source row and the recipient row must exist.
+- `checked_sub` checks source sufficiency even for a self-flow.
+- The recipient `checked_add` and both writes happen only when `f != t`, so a self-flow leaves balances unchanged.
+- The gross effect is emitted, and `Step.value` is the amount.
+- The Liability and Discharge arms also match. Non-mandatory nit: Discharge evaluates the amount before looking up the row. Only Error ordering is affected, which is out of scope.
+
+**M5 – sort order discharged; labelling mostly discharged (mandatory B).**
+- Rust `String` `Ord` is bytewise, and the liability insert re-sort uses `name.cmp`.
+- The AssetId field order rests on the catalog and prior coverage.
+
+**C1 nit – discharged.** The new wording "Let/event binding, or an equal caller-supplied input" is correct.
+
+**Catalog nit – discharged by description only.** I did not read the sidecar.
+
+## Mandatory corrections
+
+**A – lexer keyword tokens (an edge that only the new closure reveals).** `TokenKind::keyword` lexes these spellings as keyword kinds, not `Ident`:
+
+`profile`, `uses`, `None`, `SuccessOnly`, `domain`, `account`, `const`, `intent`, `obligation`, `pool`, `instrument`, `observation`, `policy`, `grant`, `stage`, `episode`, `party`, `share_class`
+
+The contract's identifier predicate does not reserve any of them, and a name like `account` is plausible in a financial program. Whether the Core/2 parser accepts a keyword-kind token as a name (`is_word` or a text match, rather than `Ident` only) is decided by parser code. Prior reviewers checked that code without ever seeing this keyword table.
+
+Either append this cohort text:
+
+> "Cohort identifiers additionally are none of the lexer keyword spellings profile, uses, None, SuccessOnly, domain, account, const, intent, obligation, pool, instrument, observation, policy, grant, stage, episode, party, share_class (case-sensitive); this is a cohort boundary only."
+
+or supply the parser's name-token acceptance code for review. The cohort exclusion needs no new closure.
+
+**B – complete the adopted-weights subsection.** As relabelled, the "Separately adopted unit weights only" subsection omits two items:
+- the Await-entry weight of 1;
+- the rule that a denied charge is not counted.
+
+Both now appear only inside the subsection labelled as unadopted proposal text. The Status paragraph correctly lists them as adopted. Add to the adopted subsection:
+
+> "Await entry costs one logical unit; a denied meter charge does not increment used."
+
+The proposal subsection should keep only how those weights combine into segments.
+
+## Verdict
+
+**NARROW_REV3_CONTRACT_REJECT** for the stated finite successfulStart→falseWaiting scope. The rejection rests only on A and B. I would accept once those two exact text edits are applied (or the parser closure is supplied for A). M1, M3, M4 and the nits are discharged; M2 and M5 are discharged apart from A and B. No further closure or design work is needed.
+
+## Retained basis
+
+- **Unchanged clauses:** Muse's Rev2 ACCEPT coverage and Opus's Rev2 discharged items for C1–C9 and G1–G5 still stand, except where the exact condition edits changed text.
+  - The scanner, amount and move_funds closures are now complete for the repository functions they reach.
+  - The std, soa_rs, serde and miette APIs remain unproven external boundaries.
+- **Exclusions:** Error, rejection, parser, runtime, emission-failure and broader lexical cases stay outside equality scope. They are unwaived, and an actual rejection is a mismatch, never a skip.
+- **Adopted weights:** the f510ad… record still adopts only the `/2` weights and their listed semantics. The Rev3 formulas, segment rules and cap rules remain unadopted proposal text.
+
+This review casts no weight vote and gives no capture, security, execution, financial or EARS approval. No operations are selected or allowed. Root alone decides adoption and body-free release.

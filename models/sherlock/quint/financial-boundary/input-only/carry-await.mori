@@ -1,0 +1,15 @@
+language "moriarty/2";
+agreement Core2BoundaryCarryProbe {
+  asset TOKEN = { network: "local", issuer: "core2-b06-carry-probe", reference: "UNIT", scale: 2 };
+  state marker: UInt = 37;
+  state flag: Bool = false;
+  action carry() {
+    let retained = marker;
+    await gate(ready: Bool) when ready;
+    let copied = retained;
+  }
+  action declareDuties() {
+    liability("duty-open", TOKEN, "holder-a", "holder-b", 0);
+    liability("duty-zero", TOKEN, "holder-a", "holder-b", 0);
+  }
+}

@@ -1,0 +1,15 @@
+# Actual C6 K prefix through caller return22
+
+Root executed the exact five frozen operations successfully from the retained actual raw state18. Four new K advances extend the complete tape to23 states and22 cumulative events. The whole six-key wire equals the independently prefrozen expected wire;23 declared partial primary boundaries over all107 raw records pass the relation. Every state retains its complete program, control, effective environment, top-first frames and cumulative events.
+
+The prior passing prefix was retained, never reexecuted. No compile or kast operation was selected. The immutable receipts record all five exit0 outcomes, no timeout, containment breach or remaining process. Root's durable actual freeze precedes child05, the only child that reads populated expected data. Source author and Root did not open that private body themselves. SAFE metadata is published; private expected bodies are not.
+
+The eleven consumer sources are byte-identical to the published prefix18 cut. The selected new-data/operation opinion is Muse Code, muse-wonder-1.0, not the historical Opus source reviewer. It does not reapprove unread source bodies or hidden expected semantics. The full delta request, actual opinion and identity/terminal records are retained. Historical opinions and archives remain unchanged.
+
+The new return/field event relation checks tag, endpoint and source identity; complete K payloads are checked by independent whole-wire equality. The relation is partial and has no K work/fuel carrier or clock equality. State22 enters the last constructor field: recursive sum, final-field completion and whole-case termination remain unobserved here. Physical B/plan equivalence, generic-instance, native, circuit, ledger and global EARS claims remain open. Independent derivation uses the same semantic method; it is not a new cross-model vote.
+
+The initial metadata probe treated an exact-members array as an integer and stopped before F03 import, actual-directory creation, selection or any subject. The factual note records that no separate raw stderr receipt was captured; this archive fabricates none.
+
+ROOT-RESULT and the durable barrier retain Root's stated repeated pin-check procedure. Stream/product hashes and complete per-child receipts are retained; the original inline Root invocation and individual before/after check logs are not published here. Current passive equality checks establish current byte identities, not a reconstructed historical execution log.
+
+The portable map links the existing source and predecessor archives. Historical absolute paths are kept verbatim; compiled definitions/tools and private oracle bodies remain external pins, so this is not a fresh-clone runnable bundle. Deterministic gzip preserves raw Kore/query/carry/request bytes with a byte-exact inverse proof. Actual comparison treats object key sets as unordered, arrays as ordered and scalar kinds as strict; factor_json.exact_json in transport is a distinct key-order-sensitive helper, not the comparator.
