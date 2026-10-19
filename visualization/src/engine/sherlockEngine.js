@@ -10,6 +10,8 @@
  * 2. Live bridge to the compiled native Rust `sherlock-runner` binary via `/api/trace`.
  */
 
+import { annotateTraceWithFunctionalDeltas } from './functionalStructures.js';
+
 export const DRAFT_LANGUAGE = 'moriarty-sherlock-draft/1';
 const MAX_UINT128 = (1n << 128n) - 1n;
 
@@ -2261,6 +2263,9 @@ function getCachedStepTelemetry(trace, stepIndex) {
  * Compute the `stepState` object passed to all 7 Three.js designers on every animation frame.
  */
 export function buildStepState({ trace, playhead = 0, ambient = 0, dt = 0.016 }) {
+  if (trace && !trace._functionalAnnotated) {
+    annotateTraceWithFunctionalDeltas(trace);
+  }
   const steps = trace?.steps || [];
   const totalSteps = Math.max(1, steps.length);
   const maxStepIdx = Math.max(0, steps.length - 1);
@@ -2306,6 +2311,7 @@ export function buildStepState({ trace, playhead = 0, ambient = 0, dt = 0.016 })
     recursion,
     ringTelemetry,
     controlCore,
+    functionalDelta: step?._functionalDelta || null,
     trace,
     step,
   };

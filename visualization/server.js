@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -7,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4377);
+const BS_PORT = Number(process.env.BS_PORT || 4388);
 const RUST_BIN = path.join(__dirname, 'rust-runner', 'sherlock-runner');
+const BS_CONFIG_PATH = path.join(__dirname, '.browserstack.json');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -21,6 +24,57 @@ const MIME_TYPES = {
 };
 
 const COMPRESSIBLE_EXTS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.md', '.svg']);
+
+function readBsConfig() {
+  try {
+    if (fs.existsSync(BS_CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(BS_CONFIG_PATH, 'utf8'));
+    }
+  } catch (_) {}
+  return null;
+}
+
+function verifyBrowserStackPlan(username, accessKey) {
+  return new Promise((resolve) => {
+    const auth = Buffer.from(`${username}:${accessKey}`).toString('base64');
+    const req = https.request(
+      'https://api.browserstack.com/automate/plan.json',
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          Accept: 'application/json',
+        },
+        timeout: 6000,
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+            if (res.statusCode === 200) {
+              resolve({ verified: true, plan: data });
+            } else {
+              resolve({
+                verified: false,
+                verifyNote: data.message || `HTTP ${res.statusCode}`,
+              });
+            }
+          } catch (e) {
+            resolve({ verified: false, verifyNote: String(e) });
+          }
+        });
+      }
+    );
+    req.on('error', (err) => resolve({ verified: false, verifyNote: err.message }));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ verified: false, verifyNote: 'Timeout contacting api.browserstack.com' });
+    });
+    req.end();
+  });
+}
 
 // In-memory LRU cache for `/api/trace` responses (32 entries)
 const traceCache = new Map();
@@ -107,8 +161,77 @@ function serveStaticFile(req, res, safePath, stats) {
   res.end(cached.raw);
 }
 
-const server = http.createServer((req, res) => {
+function handleRequest(req, res, defaultToBs = false) {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+
+  if (req.method === 'GET' && url.pathname === '/api/browserstack/status') {
+    const cfg = readBsConfig();
+    if (!cfg || !cfg.username || !cfg.accessKey) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ configured: false }));
+      return;
+    }
+    const maskedKey =
+      cfg.accessKey.length > 6
+        ? `${cfg.accessKey.slice(0, 3)}***${cfg.accessKey.slice(-3)}`
+        : '***';
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(
+      JSON.stringify({
+        configured: true,
+        username: cfg.username,
+        maskedKey,
+        targetUrl: cfg.targetUrl || 'https://charleshoskinson.github.io/Moriarty/visualization/index.html',
+        verified: Boolean(cfg.verified),
+        plan: cfg.plan || null,
+      })
+    );
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/browserstack/config') {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', async () => {
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+        let username = String(body.username || '').trim();
+        let accessKey = String(body.accessKey || '').trim();
+        const targetUrl = String(
+          body.targetUrl || 'https://charleshoskinson.github.io/Moriarty/visualization/index.html'
+        ).trim();
+        if (username.includes(':') && !accessKey) {
+          const parts = username.split(':');
+          username = parts[0].trim();
+          accessKey = parts.slice(1).join(':').trim();
+        }
+        if (!username && accessKey) {
+          // If the user only pasted an access key or username in one field, still store it
+          username = process.env.BROWSERSTACK_USERNAME || 'browserstack_user';
+        }
+        if (!accessKey && username) {
+          accessKey = username;
+        }
+        const check = await verifyBrowserStackPlan(username, accessKey);
+        const record = {
+          username,
+          accessKey,
+          targetUrl,
+          verified: check.verified,
+          plan: check.plan || null,
+          verifyNote: check.verifyNote || null,
+          updatedAt: new Date().toISOString(),
+        };
+        fs.writeFileSync(BS_CONFIG_PATH, JSON.stringify(record, null, 2), { mode: 0o600 });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ...check }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: String(e) }));
+      }
+    });
+    return;
+  }
 
   if (req.method === 'POST' && url.pathname.endsWith('/api/trace')) {
     const chunks = [];
@@ -184,7 +307,11 @@ const server = http.createServer((req, res) => {
     res.end('Bad Request');
     return;
   }
-  if (reqPath === '/') reqPath = '/index.html';
+  if (reqPath === '/browserstack' || reqPath === '/browserstack/') {
+    reqPath = '/browserstack.html';
+  } else if (reqPath === '/') {
+    reqPath = defaultToBs ? '/browserstack.html' : '/index.html';
+  }
 
   const safePath = path.resolve(__dirname, `.${reqPath}`);
   if (safePath !== __dirname && !safePath.startsWith(__dirname + path.sep)) {
@@ -206,8 +333,15 @@ const server = http.createServer((req, res) => {
       res.end('Internal Server Error');
     }
   });
-});
+}
 
+const server = http.createServer((req, res) => handleRequest(req, res, false));
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`Sherlock Workbench running at http://127.0.0.1:${PORT}`);
+});
+
+const bsServer = http.createServer((req, res) => handleRequest(req, res, true));
+bsServer.on('error', () => {});
+bsServer.listen(BS_PORT, '127.0.0.1', () => {
+  console.log(`BrowserStack Lab Miniapp running at http://127.0.0.1:${BS_PORT}`);
 });
