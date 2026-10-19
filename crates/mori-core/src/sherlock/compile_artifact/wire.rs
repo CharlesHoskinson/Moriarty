@@ -1482,3 +1482,37 @@ pub fn image(value: &ImageObservation<'_>) -> Value {
             "consumed_work":value.seg_base.consumed_work().owner_wire()}
     })
 }
+
+// Nominal preparation reports use the same explicit, output-only owner wire.
+impl OwnerWire for PreparationReportC {
+    fn owner_wire(&self) -> Value {
+        let PreparationReportC { work_map } = self;
+        json!({"work_map": work_map.owner_wire()})
+    }
+}
+
+impl OwnerWire for WorkMapEntryC {
+    fn owner_wire(&self) -> Value {
+        let WorkMapEntryC { source_match, live_arms, field_path, events_per_visit } = self;
+        json!({"source_match": source_match.owner_wire(), "live_arms": live_arms.owner_wire(),
+            "field_path": field_path.owner_wire(), "events_per_visit": events_per_visit.owner_wire()})
+    }
+}
+
+#[cfg(test)]
+mod nominal_preparation_tests {
+    use super::*;
+    #[test]
+    fn preparation_report_retains_nonempty_ordered_work_map() {
+        let report=PreparationReportC {work_map:vec![
+            WorkMapEntryC {source_match:9,live_arms:vec![2,0],field_path:vec![1,3],
+                events_per_visit:vec![RuleIdC::KMachineEvalMatch,RuleIdC::KMachineCasesTry]},
+            WorkMapEntryC {source_match:4,live_arms:vec![],field_path:vec![],events_per_visit:vec![]},
+        ]};
+        assert_eq!(report.owner_wire(),json!({"work_map":[
+            {"source_match":"9","live_arms":["2","0"],"field_path":["1","3"],
+             "events_per_visit":["KMachineEvalMatch","KMachineCasesTry"]},
+            {"source_match":"4","live_arms":[],"field_path":[],"events_per_visit":[]}
+        ]}));
+    }
+}
