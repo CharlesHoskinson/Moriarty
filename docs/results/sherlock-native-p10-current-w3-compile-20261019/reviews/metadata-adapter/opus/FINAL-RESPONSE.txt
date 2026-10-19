@@ -1,0 +1,118 @@
+# R04 review: manifest pin-schema projection, counter carry, and read-only real-consumer diagnostics
+
+**Reviewer:** `claude-opus-5-5`, fresh context, not the author. I used no tools, read no files, ran nothing and recomputed no hashes. I cannot attest my own effort or weighting.
+
+**Basis:** only the supplied text.
+- I read the full new issuer, the full new preflight, both read-only consumer scripts, the exact diff, the guard function excerpts and globals, the helper excerpts, and the equivalence, adoption, counter, raw-cgroup, restoration and marker records.
+- I did not inspect the omitted 43717, 458 or 423 rows, the factored bulk fields, the guard's module tail or `main`, or the helper's earlier receipt validators.
+- I cannot confirm that the inlined text equals the pinned bytes.
+
+## Verdicts
+
+| # | Scope | Verdict |
+|---|---|---|
+| 1 | Source metadata adaptation, equivalence and counter treatment | **APPROVE** |
+| 2 | Immediate read-only check: actual02 consent plus in-memory projected `source_binding` | **ELIGIBLE_CONDITIONAL** |
+| 3 | Final read-only `validate`/`source_binding`/`consent` on actually issued 03, only after Root's actual SHA exists | **ELIGIBLE_CONDITIONAL** |
+| 4 | Issuer plus full preflight with unchanged scope | **ELIGIBLE_CONDITIONAL** (ordinary metadata only) |
+
+None of these authorizes provisioning, native, SDK, Cargo, ELF, test, proof, helper import, `main`/worker/launch, or cgroup or marker mutation. Root's adoption decision is still `UNISSUED`. Nothing here supplies it or stands in for it.
+
+## Item 1: assessment
+
+**The refusal diagnosis is correct.**
+- `source_binding` calls `pin_schema(p)` for each `m['head_files']` entry.
+- `exact(p,'path sha256','pin')` rejects the extra `bytes` key, which produces exactly `schema keys: pin`.
+- The guard never checks a head-file byte count; it checks only the SHA via `check_pin`. Dropping `bytes` therefore loses no guard-enforced integrity, and SHA-256 binds content and size anyway.
+
+**The equivalence is enforced in code, not only asserted by the proof file.**
+- Both the issuer and the preflight assert `after==dict(before,head_files=[{path,sha256}…])`.
+- This is exact equality over all top-level keys, including the full `files` map, `root`, `head` and `excluded_directories`. It also preserves head-file order and forbids extra keys.
+- Both inputs are hash-pinned, so the relation is a durable property of the two hashes. A later TOCTOU cannot break it.
+- Arithmetic cross-check: 7444184 − 7444090 = 94. With `indent=2, sort_keys` at depth 3, each removed `      "bytes": N,\n` line is 6 + 9 + digits + 2 bytes. That gives 19 + 19 + 18 + 19 + 19 = 94, which matches. This is consistency only, not verification of content.
+
+**The review identity is handled truthfully.**
+- The security and nonsecurity receipts keep `source_manifest_sha256` = `1632a29a…`. The issuer asserts this in `observed_review` and in the receipt loop, and the preflight asserts it again.
+- Guard `consent` requires only HEX format plus pair agreement for these receipts. It never tied them to `c['source_manifest']`, so this change introduces no regression.
+- The consumed manifest `1e042df3…` is bound transitively, through `config_inputs`, into the Root and tier receipts.
+- The link between 1632 and 1e042 lives only in the issuer/preflight assertions and Root's adoption record, never in the guard. That is the stated design, and it is acceptable.
+
+**Every refusal comes before the first write.**
+- The adoption-file check and the prephase-raw check both run before the first `put` (`ROOT-CURRENT-STAT-CUT-DIFF.json`). So does the `UNISSUED` `old_home_stats` path assert.
+- In the current state, the issuer therefore refuses with no writes.
+- Post-write asserts still exist, as before: tier templates, the token scan, and the `argv` checks. A failure there leaves a partial `future-actual-03` that must be preserved, and any retry needs a new namespace.
+
+**The counters are correct and counted once.**
+- Effective usage at the cut:
+  - E = 962803819 + 4358085 = 967161904
+  - S = 223293846 + 4358085 = 227651931
+  - P = 739509969
+- Whole wall: ⌈4.411494…⌉ = 5, so 6038 − 5 = 6033. The helper's check 6033 ≤ 6038 passes.
+- F wall stays at 2133. There is no `ONE_SHOT_STARTED`, P_live = 0, and all four markers are absent.
+- Supervisor CPU stays at 10576 in config. The helper's `live_sup ≤ cfgSup·10⁶` check absorbs the 4.358 s already in the same kernel group, so it is not debited twice. The 10571 figure is that check's headroom, not a second configured debit.
+- `RLIMIT_CPU` = min(10576, ⌊(10800·10⁶ − 223293846)/10⁶⌋ = 10576) = 10576. This is unchanged.
+
+**No material defects.**
+
+### Non-blocking hardening (optional, not required for APPROVE)
+
+- **H-a.** The preflight takes `original_review_manifest`, `consumed_manifest` and `proof` from `ROOT-ACTUAL-ADMISSION.json`, and it does not pin that file itself. Adding literal asserts would remove that reliance:
+  - `compat['original_review_manifest']['sha256']=='1632a29a…'`
+  - `compat['consumed_manifest']['sha256']=='1e042df3…'`
+  - `compat['proof']['sha256']=='d638adda…'`
+- **H-b.** The preflight checks `subject['cargo_lock_sha256']==actual['Cargo.lock']` but not the guard's `LOCK` constant (`3fbc2453…`). Items 2 and 3 cover this through the real guard. A literal check would catch a mismatch earlier.
+- **H-c.** The issuer hard-codes `whole_wall_debit_ceil: 5`. It could instead derive this as `ceil(steps[-1]['elapsedSeconds'])` from the pinned raw file. This assumes `RAW-POST-TERMINAL-CGROUPS.json` is the record containing `steps`, which the matching 2783-byte size suggests.
+- **H-d.** `source=c['source_manifest']['sha256']` is now unused dead code. It is harmless.
+
+## Item 2 conditions (immediate read-only actual02 check)
+
+1. **Executed bytes match the pins.**
+   - script `cd42fa01…`, 2139 bytes
+   - guard `30077e57…`
+   - actual02 config `5b946ecc…`
+   - projected manifest `1e042df3…`
+
+   The script self-checks the last three but not its own bytes.
+2. **Module import is side-effect free.** `exec_module` runs the guard's top level. I am relying on the host's AST-closure claim that the top level has no side effects beyond imports, constants and definitions, and that `main` sits only under `__name__=='__main__'`. I have not seen the module tail.
+3. **Exact `argv`.** Use the supplied `argv`: `timeout`/`prlimit`, then `python3 -I -B -S`, with no `-O`. `-B` prevents a new `__pycache__`, given the history of the eight additions.
+4. **Interpreting the result.** A PASS shows only that, at one instant:
+   - actual02 consent passes;
+   - the projected manifest passes the full guard `source_binding`. That includes the W3 walk and the `LOCK`/subject checks, which no actual run has yet reached.
+
+   It is not future03 consent, not adoption, and not native eligibility. A FAIL is a refusal to diagnose, not to retry.
+5. **Recommended order.** Run item 2 before Root decides on adoption or issues 03. A failure then costs no namespace.
+
+## Item 3 conditions (final read-only check on issued 03)
+
+1. **The prerequisite run order has completed.** The issuer has run exactly once with exit 0, and the preflight has passed on the unchanged config.
+2. **Root computes the anchor.** Root computes the `config.final.json` SHA externally and substitutes it for the `UNISSUED_ACTUAL_FINAL_CONFIG_SHA256` placeholder.
+3. **Script bytes are verified.** The script must match `77af17ac…`, 1485 bytes.
+4. **The same constraints as item 2 apply:** `-I -B -S`, the module-import reliance, and an instant-only scope.
+5. **Coverage limit.** A PASS does not cover later guard stages: the rest of `bound_identities`, `old_home_stats`, `owned_paths`, the empty-directory checks, `quotas` and `launch`. A refusal there would cost another whole-wall debit.
+
+## Item 4 conditions (issuer plus preflight)
+
+1. **Root issues the adoption record.** Root itself writes `ROOT-MANIFEST-SCHEMA-ADOPTION.json` with `ADOPTED_METADATA_SHAPE_EQUIVALENCE` and the exact proof pin. Neither this review nor the author may supply it.
+2. **Fresh inputs exist.** These are a fresh held-maintenance stat capture at `future-actual-03/old_home_stat_manifest.current.json`, a completed `ROOT-ACTUAL-INPUTS.json`, and a Root read of the unbounded `statDiffs`.
+3. **The operand list is unique and complete.** It must include all of the following:
+   - issuer self-pin `6479e0bf…`, 32933 bytes
+   - revision04 preflight `66e76dd5…`, 5187 bytes. The issuer does not enforce this pin, so Root must add it.
+   - the four new metadata pins
+   - the adoption file
+   - the retained static pins
+4. **The namespace is unused.** `future-actual-03` must be absent or empty before the run, because of the one-shot `'xb'` writes.
+5. **Run order and flags.** Run the issuer once, then the preflight, with `-I -B` and never `-O`.
+6. **The counter carry is preserved.** The same envelope, supervisor and phases cgroups must persist without being recreated or reset until the next guard start.
+   - If the cgroups are recreated, the 4.358 s would vanish from the helper's live reading. That would undercount, and neither the issuer nor the preflight would detect it.
+   - Root's live prelaunch should confirm that live E/S ≥ 4358085 and P = 0 in the same groups.
+7. **Prior conditions are retained.** These include QOBS currency for the still-mounted quotas, preservation and cleanup still owed, P8/P9 dispositions, and any next refusal producing a new debit and a new namespace.
+
+## Limitations
+
+- **The guard does not enforce the review-to-consumed-manifest link.** Only the hash-pinned equivalence and Root adoption support it.
+- **CPU headroom is enforced only post hoc.** The per-process `RLIMIT_CPU` (10576) is not reduced by the 4.36 s already in the cgroup. The 10571 headroom is enforced only by the helper's end-of-run check, which fails closed after the fact. This is pre-existing behavior and immaterial at the observed scale.
+- **Status of other reviews:**
+  - **R03 Opus:** NO_OPINION. It is not an approval.
+  - **R03 Muse:** its opinion covered only the namespace change.
+  - **D1:** this verdict layers on the prior conditional opinion and replaces none of its prerequisites.
+- **Not audited in this review:** the full guard and helper, the native code, the reviewer identities, and the omitted rows.

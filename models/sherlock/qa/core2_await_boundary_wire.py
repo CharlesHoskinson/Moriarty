@@ -10,11 +10,16 @@ import hashlib
 import json
 from pathlib import Path
 
-from quint_observations import decode_itf
+from quint_observations import canonical_bytes, decode_itf
 
 SCHEMA = 'sherlock-core2-await-boundary-wire/1'
 PROFILE = 'sherlock-quint-core2-boundary/1'
 FORMAT = 'supplied-core2-quint-await-observation/1'
+
+
+def boundary_observations_equal(left, right):
+    """Complete canonical JSON byte equality; Python == conflates True/1, 1/1.0."""
+    return canonical_bytes(left) == canonical_bytes(right)
 
 
 def _row(value, names):
