@@ -1785,3 +1785,21 @@ current owner declaration can pass integrity while not entering the adopted
 subtotal. Inspect both subtotals before publishing a closure count. The035
 metadata correction retained the actual reviewed semantic adoption and all
 source/result pins.
+
+
+## DW106 — Require the consumer, preserve the build, and qualify the whole comparison
+
+A complete-context primary Opus review supplied concrete F1–F12 findings instead of another empty paging acknowledgement. Its later exact five-hunk F1/F2/F4 source approval and the separate metadata pass are progress; neither is an admitted runtime. Keep the nine other findings open. Packet size and a successful compiler return do not substitute for source semantics or actual consumer behavior.
+
+Inspect a new consumer's actual source-path whitelist and imported API before freezing it. Root's exact W2 allowlist/read-only assignment binding edits honored the two original conditional opinions; no postpatch vote was invented. Keep test-build import/type repairs on a separate clean checkout so frozen source and strong assertions survive. P8 then built successfully but failed its audit: preserve both outcomes. The whole diagnostic shows six build-script binary recompiles and eight run-unit reexecutions, not a harmless timestamp discrepancy. Repair the seed-order source under review rather than weaken the guard or rerun unchanged Cargo.
+
+Compare whole formal traces and publish the review's actual read scope. Clean retains typed-plus-byte equality; K retains complete typed equality with different raw bytes. About 30 K states were decoded by the reviewer, about 425 were not individually decoded, and Root's full machine comparison covers all 455. Preserve the independent prefreeze and conditional README/hash-override history instead of promoting partial manual inspection to a full decode. Keep the four source lanes concrete; a combined circuit candidate pending audit supplies no SDK-test or proof result. See the [record](../docs/results/sherlock-four-lane-progress-20261018/addenda/20261018-admission-and-complete-traces/README.md).
+
+
+## DW107 — Provider success is not a complete source delivery
+
+A provider process exited 0 and reported success, but its full 74,931-byte Sub response began inside a source string and failed strict JSON at character 0. The requested delivery was an explicit source/edit object with reconstructible files and exact sequential edits. Comparing the full public response against that schema found no materializable emitter or tests. Do not infer missing code from token metadata, normalize fragments into a candidate, or publish a complete trailing ABI/website-note field as evidence that Sub was written. Preserve the raw response and delivery diagnostic.
+
+The separate composer response did yield four unique source hunks materialized across nine files. Its forty tests are authored source only and remain unrun; the M1 disabled-chain stutter and M2 namespace changes still require fresh independent audit. Materializable source, independent approval and executed checks are different stages. Likewise, the native literal-only request exited 0 but returned an explicit refusal: no edit, vote or accounting-source completion followed. Factual JSON arithmetic does not patch the protected guard/helper. No further rescope is proposed here.
+
+Keep partial formal progress equally precise. Clean's R4 reached the later theorem and failed elaboration; its earlier concrete-history result is not whole-module kernel acceptance. The subsequent R5 receipt also records exit 1. R6 then passed kernel checking in 0.559749247 seconds with empty stdout/stderr; that accepts only nine literal-call/cursor statements, with no full refinement or new EARS/native claim. Quint's six boundary-wire checks passed and publication was committed and PR269 was created; merge completion is outside this cut. Continue all four mandatory lanes—Clean, Quint, K and handwritten circuits—without replacing implementation with delivery bookkeeping. The [dated records](../docs/results/sherlock-four-lane-progress-20261018/addenda/20261018-provider-delivery/README.md) add no framework, circuit iteration or requirement closure.
