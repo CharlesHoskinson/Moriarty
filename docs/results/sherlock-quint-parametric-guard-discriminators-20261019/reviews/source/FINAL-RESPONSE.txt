@@ -1,0 +1,301 @@
+# B23 fresh review: new source and two exact operations (all UNRUN)
+
+## Reviewer identity and scope
+
+- **Model returned:** `claude-opus-5-5` (Opus 5.5). Root should record this independently from the harness.
+- **Effort:** I cannot observe the HIGH setting from inside the session. Record whatever the harness reports.
+- **Independence:** I did not author B23. I have no B22/B23 authoring history. Body 017 (the prior opinion) was read as context only, not as my vote.
+- **Actions:** I ran no tools, Quint, Node, Python, Git or Cargo. This is a reading-only review of bodies 001–026.
+- **Truncation:** No consumed body is truncated.
+- **Referenced but not supplied:** none of these is needed for a decision.
+  - `SOURCE.patch` and its inverse. The full afterimage was supplied as body 009, so Root must bind the file hash `08cf…`, not the patch.
+  - `ROOT-FLAT-PINS.proposed.json` and `INSTALLED-QUINT-TRANSITIVE-STATIC-PINS.json`. They are pinned by hash only, and I did no semantic audit.
+  - The materialization script for the literal images. I checked the literals directly against the model.
+  - `mod.rs`, `fetch.rs`, `literal_bridge.rs` and the witness files. They are not needed for these predicates.
+  - The B22 old test file. It is not a member of B23.
+
+**Cross-body hash consistency (as labelled):**
+
+| Hash | Body / item | Matches |
+|---|---|---|
+| `08cf…` | 009 | freeze, expectations JSON, proposal |
+| `fc79…` | 002 | expectations JSON |
+| `2dec…` | 003 | proposal expectationControl |
+| `7131…` | 020 | proposal and the B22 composition assert |
+| `15ab…` | 017 | the B22 composition's review hash |
+| `2c9e…` / `f633…` | Images / Inputs | B22 unchanged files |
+
+Body 019 (VALIDATION-PROPOSAL, `3a4b…`) is not pinned by any other supplied body.
+
+---
+
+## Source decision: **APPROVE** (D1–D6 retained, plus disclosure D7 below)
+
+I hand-evaluated every conjunct of all 12 runs against bodies 007, 008 and 009. Under my reading:
+
+- Every positive conjunct is true.
+- Every `not(...)` conjunct is false inside the `not`.
+- Each `pInitPair` action is enabled, so no `expect` hits QNT508 vacuously.
+
+This is a reading result, not an observed PASS.
+
+### Per-run verification
+
+**1. `falseBoolLiteralFullImagesTest`**
+
+- **The false Bool row is valid.** `gFalseNode` = (kind 1, type 1, ctor 0, 16 zero bytes, bool 0, 0, 0) satisfies `pScalarConstant`. It replaces Constants row 1. `pBoolBefore` selects Expr 2, which points to Constant 1, so the selected constant really is `gFalseNode`.
+- **The literal step matches.** `pLiteralNext` computes:
+  - fuel bytes (1,0…) − 1 = 0×16, while initialFuel stays (1,0…)
+  - CR0 = (1,0,0,1,0×32) with the other control rows zero
+  - arenas preserved
+  - This equals the literal `gFalseMiddle` (root positions 9..24 zero, 25 = 1, 41..44 zero).
+- **Publication at fuel 0 is enabled.** Space 0 and index 1 < activeConstants 3. There is no fuel gate, which satisfies the A80 fuel-0 requirement.
+- **The publication step matches.** `pPublicationNext` yields root[5] = 0 and (1,0,1,0) at 41..44 with all controls zero. This equals `gFalseDone`.
+- **Size:** 277 = 45 + 66 + 6 + 10 + 8 + 34 + 108.
+- **Fail-closed literals.** Both literal images are compared by whole-value equality against model output, plus a 277 length check. A miscounted literal cell therefore fails the run; it cannot produce a false pass.
+- **Rust grounding.** Real uiValid accepts this row:
+  - kind 1 → type 1
+  - Types[1] = (1,0,0): kind 1 = type 1 and ctorLength 0
+  - bytes zero, fields zero
+  - boolValue is range-only
+
+**2. `scalarColumnDomainRefusalsTest`**
+
+All seven rows keep length 22, and row 1 is active, so padding is irrelevant. Table cells are root-unranged (D6), so −1 and 256 still pass the header. Each row fails `pScalarConstant` on a distinct conjunct:
+
+| Row | Failing conjunct |
+|---|---|
+| Nil | kind-else-false |
+| NonzeroUInt | Bool all-zero bytes |
+| ValueTwo | Bool value ∈ {0,1} |
+| UIntBooleanPayload | UInt `[19] == 0` |
+| UIntWrongType | UInt `[1] == 0` |
+| −1 and 256 | `pByteRow` |
+
+Both subset and literal-enable reject each row. A length-21 slice is a safe slice and is refused by the shape check.
+
+**Constructor Nil is a stricter MODEL refusal, confirmed.** With KF = 0, real uiValid accepts it:
+- Ctors[0] = (2,0,0,0): owner 2 = type 2, ftLen 0, order 0 < Types[2].ctorLength 2
+- The Nil field slice is (0,0)
+- en_f0 = en_f1 = 0, so the `KF == 0` else-branch `gated_eq(0,1,0)` holds
+
+**3. `fixedTablesAndConstantFieldsDomainTest`**
+
+- **Fixed-table mutants.** The Type, Ctor and CFT cell mutants are header-allowed and fail only the fixed-slice equalities.
+- **gCFLayout positive control.** gCFLayout (KF = 1) is layout-valid. `gCFInactive`, which has one zero CF row and activeCF 0, passes the header (padding row zero) and the subset.
+- **gCFActive negative.** `gCFActive` (activeCF 1) passes the header and fails only `root[15] == 0`.
+
+**activeCF is a stricter MODEL refusal, confirmed.** Real uiValid with KF = 1 accepts it:
+- `cf_space` = 0
+- for j = 0, `in_active_cf` holds and index 0 < activeConstants 3
+
+**4. `programInputPaddingGuardTest`**
+
+The mutated cell is Expressions row 3 (inactive, since activeExpressions is 3), column 4. This passes shape and fails only `pPaddingZero` inside `pProgramHeaderAllowed`. The selected row 1 is untouched. The rejection therefore reaches the padding guard with no post-image or join path involved.
+
+Deleting padding from the program header would falsify two conjuncts. This is D1: neither emitter checks Expressions padding, and only the off-chain host `representation` does.
+
+**5. `stateInputPaddingGuardTest`**
+
+The mutated cell is Data row 2 (inactive, since activeData is 2). It is rejected only by the state-header padding, both at literal input (`pWideBefore`) and at publication input (`pWideMiddle`). Neither predicate has any other Data conjunct. This is D1: A102 and A80 emit no Data padding.
+
+**6. `literalAndPublicationEnvelopeRefusalTest`**
+
+- **Positive relations.** `pLiteralNext(pWideBefore)` gives fuel (0,1,…) − 1 = (255,0,…) and CR0 (1,0,0,2), which equals `pWideMiddle`. `pPublicationNext(pWideMiddle)` equals `pWideDone`.
+- **Negatives.** Each of the four envelope negatives alters only the tag or only the charge, and each falsifies only the envelope equality. Both the tag-only and the charge-only weakenings are therefore discriminated.
+
+**7. `literalOutcomeControlGatesTest`**
+
+| Mutant | Header | Rejected by |
+|---|---|---|
+| root[41] = 1 | allowed | outcome-zero slice |
+| root[42] = 1 | allowed | outcome-zero slice |
+| controlLength 2 | allowed (2 ≤ 3, row 2 zero) | `root[5] == 1` only; `pEvalControlAllowed(…, 1)` still holds, as asserted |
+| tag 1 | allowed | `pEvalControlAllowed` |
+| col34 = 1 | allowed | `pEvalControlAllowed` |
+
+The Rust A102 emitter rejects all of these.
+
+**8. `publicationOutcomeControlGatesTest`**
+
+| Mutant | Rejected by |
+|---|---|
+| root[41] | outcome-zero slice |
+| root[43] | outcome-zero slice |
+| controlLength 2 | length conjunct only (the exact-control table check still holds) |
+| tag 0 | exact control check |
+| col34 | exact control check |
+
+All five mutants are header-allowed.
+
+**9. `publicationFrameAndReferenceGatesTest`**
+
+- **Depth 1.** The header passes (1 ≤ 2 and 1 ≤ stackLimit 2, relying on D3, with frames all zero). Only `depth == 0` rejects, so this is isolated.
+- **Frame cell at depth 0.** The header rejects it through padding. The documented redundancy is correctly disclosed.
+- **Negative index.** `−1 < activeConstants` would otherwise pass, and the control equality uses `returnIndex` itself. The `returnIndex >= 0` conjunct is therefore isolated.
+- **Space 2: the expectation is correct, but the conjunct is not isolated (see D7).**
+
+**10. `layoutAndPhysicalShapeRefusalTest`**
+
+- All seven layout negatives fail inside the length-guarded branch.
+- All five shape negatives fail as intended:
+  - program root 15
+  - state root 44
+  - 5 tables (rejected by the `pTablesShape` length guard before any `nth`)
+  - Data width 21
+  - 2 Data rows
+
+**11. `completeStartBoundaryRefusalTest`**
+
+- **Positive.** The complete start with `pEntryConstant2Program` and `pCompleteInit` holds: all tables are zero because selector 0 makes `pEvalRows(0)` all-zero.
+- **gEntryOne.** It passes `pPairStartAllowed` (entry 1 < 3 by D2, and the selector stays 0). It fails only the entry conjunct, so it is isolated.
+- **gUnequalInitialFuel.** It passes pair start and fails only the remaining == initial conjunct, so it is isolated.
+- **gNonemptyInit.** It passes pair start and fails both the root-zero and the tables-zero conjuncts. This non-isolation is disclosed.
+- **Rust grounding.** The composer constrains all three of these conditions.
+
+**12. `middleJoinDiscontinuityRefusalTest`**
+
+- **The right child is valid.** `gRightMiddle`/`gRightDone` (stackLimit 1, which is ≤ the layout bound 2) satisfy `pPublicationRelation` with the same program, context and layout. `pPublicationNext(gRightMiddle)` equals `gRightDone`.
+- **The left child is valid.** It is unchanged.
+- **Only continuity rejects.** `left.after == right.before` is the only failing conjunct, so dropping middle equality is discriminated. **Both children are valid**, as required.
+
+### Safety, parsing and claims
+
+**Index and slice safety.** Every index used is in range:
+- every `gRoot` position: 41, 42, 43, 5, 4, 8, 0, 25 on state roots of length 45; 15 and 0 on program roots of length 16
+- every `pChangeImageCell` and `pSetTableRow` target exists
+- every `slice` satisfies `0 ≤ i ≤ j ≤ len`
+- every model `nth` is guarded by a shape or header check, or by `if` / short-circuit `and`
+
+**Precedence and parse.**
+- `==` binds tighter than `and`.
+- Negative literals, record spread, and `val` inside lambdas follow patterns already present in the B22-passed model and inputs.
+- There are no top-level name collisions: the new `g*` names do not clash with the imported `p*` names or `reference`.
+- Operation 01 decides any residual parse risk.
+
+**Discrimination claims in the derivation hold** for all four named weakenings:
+- `pScalarConstant` → `true`
+- input padding deletion
+- envelope deletion
+- middle-equality deletion
+
+**Rust grounding statements in body 002** match bodies 012, 014, 015 and 016 as source conditions, not as emitter outcomes. In particular, A80 has no positive-fuel gate, and the composer fixes entry 0, selector 0, empty arenas and remaining == initial.
+
+### New disclosure D7 (non-blocking; must accompany any result publication)
+
+**D7. `gReturnSpaceTwo` is overdetermined.**
+
+- In `pWideMiddle`, the return index is 2, and in the space ≠ 0 branch the bound is `activeData` = 2. So `2 < 2` already rejects.
+- Deleting `(returnSpace == 0 or returnSpace == 1)` would still leave the run passing.
+- B22 gap 4's "space = 2" item is therefore **not** discriminated by B23. Report it as remaining.
+
+**Optional exact bounded diff** (not required for this approval). Adopting it creates a new source hash and requires a fresh review:
+
+```diff
+-  pure val gReturnSpaceTwo: PImage = pChangeImageCell(pWideMiddle,5,0,2,2)
++  pure val gReturnSpaceTwo: PImage = pChangeImageCell(pDataReturnBefore,5,0,2,2)
+```
+
+With this change, index 1 < activeData 2, so only the space-domain conjunct rejects. The header remains allowed, and both existing assertions still hold.
+
+---
+
+## Exact operations
+
+| # | Operation | Decision |
+|---|---|---|
+| 01 | `node --max-old-space-size=512 …/cli.js typecheck literalParametricGuardCoverageTest.qnt` (cwd = B23 `source/`) | **ELIGIBLE** |
+| 02 | `… test literalParametricGuardCoverageTest.qnt --main literalParametricGuardCoverageTest --backend typescript --seed 1 --max-samples 1 --match ^(12 names)$` | **ELIGIBLE**, only after 01 is accepted |
+
+**Why these are eligible:**
+- Both reuse the existing operation classes accepted on the same Node v24.21.0 / Quint tree in B22, with the same flag set.
+- The `--match` alternation is anchored and names exactly the 12 `run` definitions in source order. The imported modules contain no runs.
+- No name contains a forbidden substring (`failed|ignored|pending|QNT|DEBUG|error:|truncat`, case-insensitive), and neither does the module header.
+
+### Necessary conditions
+
+1. **Pin the controls before loading them.** Before using any of these files, verify full bytes and SHA-256:
+   - VALIDATION-PROPOSAL `3a4b…`
+   - ROOT-FLAT-PINS `6438592c…` / 1131364 bytes
+   - capture helper `7131…`
+   - EXPECTATIONS JSON `2dec…`
+
+   The B22 composition hashed the helper and the review but did not hash the proposal or the flat pins.
+2. **Run the 4678 raw checks before and after each operation.** Assert exactly 4675 files and 3 symlinks (path, target, resolved path, isDirectory). The flat pins must contain the three B23 source paths with `08cf…`, `2c9e…` and `f633…`. Alternatively, check those three source pins directly before and after each operation.
+3. **Check the source directory and the expectations JSON before and after each operation.** The source directory must have exactly three members. Check the EXPECTATIONS JSON as a separate control from the 4678.
+4. **Use the stated execution parameters.**
+   - exact argv as in body 019
+   - `env = {PATH:/usr/bin:/bin, LANG:C.UTF-8}`
+   - stdin DEVNULL
+   - a new session per child
+   - 60 s wall
+   - `keptBytesPerStream = 4194304`, injected as in B22, because body 019 carries `maxStdoutBytes`/`maxStderrBytes` and the helper reads only `keptBytesPerStream`
+   - the heap bound is the V8 old-space flag only; the helper applies no OS rlimit
+5. **Save before asserting.** Save COMMAND, raw streams and RESULT before any assertion. Phase directories must be created with `exist_ok=False`. Each operation gets one attempt, with fail-stop and no unchanged retry.
+6. **Assertions for 01:**
+   - exit 0
+   - no controller failure
+   - `full_stream_retained` on both streams
+   - stdout and stderr exactly empty
+7. **Assertions for 02.** Use the B22 parser unchanged except for the 8 → 12 count, the names and the header:
+   - ordered `findall` of `^\s*ok (\w+) passed 1 test\(s\)\s*$` equals the 12 names in order
+   - 12 `ok` lines
+   - one `12 passing (\d+ms)` line
+   - no forbidden pattern
+   - the only other non-empty line is `literalParametricGuardCoverageTest`
+   - stderr empty
+   - the global raw `QNT\d+|\[DEBUG\]|error:` refusal is kept
+8. **Select the parser branch by operation ID or index 1.** Do not inherit B22's `i<3`, which would treat 02 as a typecheck. That error would fail closed, but it would be a spurious failure.
+9. **Bind this review, not B22's.** The B22 composition binds the B22 opinion hash `15ab…`. Replace it with this B23 review's identity.
+10. **No other actions.** This review authorizes no canonical copy, run/verify/ITF, Rust, Cargo, Git or cross-layer action. Any later new-file publication requires:
+    - the destination path to be absent (preimage null)
+    - the B22 dependency hashes to be present at the destination
+    - the afterimage hash `08cf…`
+    - no overwrite of any B22 file
+
+---
+
+## Remaining finite coverage limitations (retain with D1–D7)
+
+**B22 gaps 1–6, as now covered by B23:**
+
+- **Gap 1, scalar domain:** closed only as finite samples. Still untested:
+  - non-zero ctorId on scalar kinds
+  - non-zero fieldStart/fieldLength
+  - Bool with typeId ≠ 1
+  - fixed active-count mutants (`root[11..13]`)
+  - activeCF > 1
+  - KF > 1
+- **Gap 2, padding:** only Program Expressions (literal input) and State Data (literal and publication inputs) are sampled. Still untested:
+  - Program padding at publication input
+  - padding in other tables
+  - input Control padding beyond the gate tests
+- **Gap 3, envelopes:** four samples. Closed for those values only.
+- **Gap 4, preconditions:**
+  - outcome lanes 43/44 untested on the literal side; outcome lanes 42/44 untested on publication
+  - the frame-zero conjunct is redundant under D1 at depth 0
+  - **space = 2 remains open (D7)**
+  - A102 fuel > 0 and at-active-length index cases rely on B22 samples
+- **Gap 5, start/layout/join:**
+  - layout cases still untested: K = 0, Q < 4, QF < 5, a negative state capacity, an upper bound on stackLimit
+  - complete-start cases still untested: environment present/index ≠ 0, individual root[1..4]
+  - the nonempty-arena conjunct split is not isolated
+  - the join samples only one discontinuous cell (stackLimit)
+- **Gap 6, formula sharing:** removed only for the false-Bool pair. All other expectations still rely on `pHand*` / source-exposed same-author fixtures.
+
+**What this review does not establish:**
+- actual PASS
+- universal mutation adequacy
+- full uiValid (constructors/DAG), per-lane ranges, F4/prepareA, StepInv/O1–O4, dispatch, error precedence, OBL.G4 bytes, projectA
+- authenticated context
+- Rust or cross-layer correspondence (UNISSUED)
+- native, cryptographic or recursive proof
+- ledger or stagenet behaviour
+- general admission
+- EARS/SCON closure
+
+**Qualified as reported, not verified here:**
+- the parent-reported `34a8593b` / PR294 merge-pending status
+- the WW byte-identity readback of the seven Rust files at the recorded time
+
+Root alone executes, selects and publishes.
