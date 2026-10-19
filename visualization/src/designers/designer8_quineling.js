@@ -1,10 +1,13 @@
 // ============================================================================
 // src/designers/designer8_quineling.js
-// Designer 8: Real Quinelings SDK Integration & 8 Distinct 3D Species Architectures
+// Designer 8: Authentic `nursery.html` Quinelings SDK & `WovenBody` 3D Lifeforms
 // Compiles actual Sherlock programs (`moriarty-sherlock-draft/1` AST + traces)
-// through the upstream Quinelings SDK (`Quinelings.makeTaskProgram`, `QDL`,
-// `WovenBody`, `Morphology`, `Chroma`, `LifeformFamilies`) and renders 8
-// radically distinct 3D procedural lifeforms inside the hollow processor chamber.
+// through the enhanced upstream Quinelings SDK (`Quinelings.makeTaskProgram`,
+// `QDL.fromGraph`, `WovenBody.author`, `Morphology`, `Chroma`, `LifeformFamilies`)
+// and renders the genuine mathematical `WovenBody` shapes (`logarithmic-mantle`,
+// `pleated-braid`, `recursive-affine`, `lorenz-flow`, `phyllotaxis-fan`,
+// `clifford-flow`, `recursive-julia`, `toroidal-weave`) in 3D inside the hollow
+// processor chamber — with program-driven variation in shape, motion, and color.
 // ============================================================================
 import * as THREE from 'three/webgpu';
 import {
@@ -12,7 +15,7 @@ import {
   lerp,
   tagInspectable,
 } from './theme.js';
-import { WovenBody, Morphology } from '../engine/quinelingsSdk.js';
+import { WovenBody, QDL } from '../engine/quinelingsSdk.js';
 import {
   fnv1a32,
   compileSherlockProgramToQuineling,
@@ -21,201 +24,172 @@ import {
 export { fnv1a32 };
 
 const TAU = Math.PI * 2;
-const PHI_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // ~2.399963 rad (137.50776°)
+const PHI_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 // Spatial Anchor & Strict Envelope Constants inside the 3.12 × 3.12 × 3.40 Vault
-export const QUINELING_CORE_Y = -2.05;
-export const QUINELING_MAX_RADIUS = 0.44; // Fits cleanly inside r <= 0.56 open atrium budget
+export const QUINELING_CORE_Y = -2.12;
+export const QUINELING_MAX_RADIUS = 0.42;
 
-const SPORE_COUNT = 64;
-const SDK_RIBBON_COUNT = 16;
-const SDK_RIBBON_SEGMENTS = 16;
+const TISSUE_BUDGET = 8192;
+const MAX_RIDGE_SEGMENTS = 28672;
+const MAX_RIDGE_VERTICES = MAX_RIDGE_SEGMENTS * 2;
+
+const SDK_RIBBON_COUNT = 24;
+const SDK_RIBBON_SEGMENTS = 24;
 const SDK_RIBBON_VERTEX_COUNT = SDK_RIBBON_COUNT * SDK_RIBBON_SEGMENTS * 2;
 
-const TENDRIL_CURVE_COUNT = 16; // 8 floor root tendrils + 8 crown ring tendrils
+const MAX_ANCHOR_NODES = 16;
+const MAX_DEPENDENCY_ARCS = 24;
+const ARC_SEGMENTS = 12;
+const MAX_ARC_VERTICES = MAX_DEPENDENCY_ARCS * (ARC_SEGMENTS - 1) * 2;
+
+const SPORE_COUNT = 64;
+const TENDRIL_CURVE_COUNT = 16;
 const TENDRIL_SEGMENTS = 10;
 const TENDRIL_VERTEX_COUNT = TENDRIL_CURVE_COUNT * TENDRIL_SEGMENTS * 2;
 
-// Quinelings Fixed `roles-1` Semantic Dictionary (`docs/DESIGN-LANGUAGE.md`)
 const ROLES_1_HEX = Object.freeze({
-  inputCyan: 0x35d6c3,     // Cyan: inputs, literals & observations
-  processBlue: 0x639bfa,   // Cerulean Blue: arithmetic, constructors & transforms
-  decisionAmber: 0xedc653, // Amber Gold: If/Match gates & comparisons
-  quoteViolet: 0xb184ef,   // Amethyst Violet: Let/Var lexical quotation & scope
-  actionCoral: 0xf2757d,   // Coral Rose: recursive invocation & fault traps
-  reportGreen: 0x2dd4bf,   // Emerald/Teal: verified return reports & Done(v)
-  pearlCrest: 0xe6f8ed,    // Luminous pearl fold crest (Jacobian compression highlight)
-  faultCrimson: 0xe11d48,  // Rule A082 / A140 / A225 trap spine color
-  exhaustSlate: 0x64748b,  // Rule A084 fuel exhaustion ash-slate
+  inputCyan: 0x35d6c3,
+  processBlue: 0x639bfa,
+  decisionAmber: 0xedc653,
+  quoteViolet: 0xb184ef,
+  actionCoral: 0xf2757d,
+  reportGreen: 0x2dd4bf,
+  pearlCrest: 0xe6f8ed,
+  faultCrimson: 0xe11d48,
+  exhaustSlate: 0x64748b,
 });
 
-/**
- * Fifth-order C2-continuous polynomial step H(z) = 6z^5 - 15z^4 + 10z^3
- */
 function quinticStep(z) {
   const t = clamp(z, 0, 1);
   return t * t * t * (t * (t * 6 - 15) + 10);
 }
 
 /**
- * Canonical 8-Program Quineling Species Profiles (`qdl.js` + `WovenBody` mechanisms)
- * Every program maps to a distinct QDL family, a distinct `WovenBody` mechanism,
- * and a completely distinct 3D macro-anatomical silhouette.
+ * Canonical 8-Program Quineling Species Profiles (`nursery.html` `WovenBody` mechanisms)
+ * Every Sherlock program compiles through the upstream SDK (`WovenBody.author` + `QDL.fromGraph`)
+ * into its authentic mathematical `WovenBody` lifeform.
  */
 export const QUINELING_SPECIES = Object.freeze({
   factorial: {
     id: 'factorial',
-    speciesName: 'Nautilus Arithmeticus',
+    speciesName: 'Logarithmic Mantle',
     binomial: 'Spiralis multiplicata',
-    commonTitle: 'Coiled Nautilus Shell // Spire',
+    commonTitle: 'Logarithmic Mantle // Coiled Ribbon Chart',
     family: 'nautilus',
     mechanism: 'logarithmic-mantle',
-    symmetryOrder: 'C1 Chiral Logarithmic Shell (r = r0·e^(b·θ))',
+    symmetryOrder: 'Two-Parameter Logarithmic Shell Chart + Jacobian Compression',
     gesture: 'glide',
-    growth: 0.232,
-    spread: 0.785,
-    curl: 1.18,
-    asymmetry: 0.21,
-    frequency: 6,
-    lobes: 5,
-    twist: 2.5,
-    whorls: 3,
-    primaryHex: 0xf59e0b,
-    secondaryHex: 0x10b981,
-    accentCss: '#f59e0b',
+    primaryHex: 0x72d9e2,
+    secondaryHex: 0xe6c66a,
+    accentCss: '#72d9e2',
     description:
-      'Coiled 3D golden-ratio conispiral nautilus shell with pearlescent nacre tube and internal chamber septa (fact(N)..fact(0)) that lock from Amber into Gold on Rule A149.',
+      'Genuine WovenBody logarithmic-mantle lifeform authored from convergent multiplicative accumulation, with projected-compression Jacobian caustics and spiral parameter filaments.',
   },
   list_fold: {
     id: 'list_fold',
-    speciesName: 'Taenia Cons-Catenata',
+    speciesName: 'Pleated Braid',
     binomial: 'Vitta catenaria',
-    commonTitle: '3-Pod Siphonophore // Silk Ribbon',
+    commonTitle: 'Pleated Braid // Folded Ribbon Manifold',
     family: 'ribbon',
     mechanism: 'pleated-braid',
-    symmetryOrder: 'C1 Horizontal Undulating 3-Zooid Siphonophore',
+    symmetryOrder: 'Multi-Strand Pleated Braid Immersion + Fold Ridges',
     gesture: 'gather',
-    folds: 5,
-    turns: 1.45,
-    primaryHex: 0x06b6d4,
-    secondaryHex: 0xa855f7,
-    accentCss: '#06b6d4',
+    primaryHex: 0x6ad4a0,
+    secondaryHex: 0xbb91ed,
+    accentCss: '#6ad4a0',
     description:
-      'Wide horizontal undulating S-wave siphonophore silk membrane bearing bioluminescent cons(5, 8, 3) zooid bells that fire sequentially on Rule A214 & A220.',
+      'Genuine WovenBody pleated-braid lifeform authored from sequential cons/nil pipeline folds, weaving core and peripheral ribbon lanes with harmonic fold crests.',
   },
   tree_fold: {
     id: 'tree_fold',
-    speciesName: 'Corallium Arboris',
+    speciesName: 'Recursive Affine',
     binomial: 'Dendron bifurcata',
-    commonTitle: 'Dichotomous Binary Coral // Dendrite',
+    commonTitle: 'Recursive Affine // Contractive Branch Charts',
     family: 'coral',
     mechanism: 'recursive-affine',
-    symmetryOrder: 'D2 Asymmetric Y-Branching Coral Tree',
+    symmetryOrder: 'Contractive Rolled-Scroll Affine Branch Charts + Jacobian Caustics',
     gesture: 'unfurl',
-    folds: 6,
-    turns: 1.65,
-    primaryHex: 0x10b981,
-    secondaryHex: 0xf59e0b,
-    accentCss: '#10b981',
+    primaryHex: 0x88d89f,
+    secondaryHex: 0xefaa73,
+    accentCss: '#88d89f',
     description:
-      'Rooted 3D bifurcating binary coral tree (Root Trunk -> West leaf(7) limb + East branch(leaf(4), leaf(9)) sub-limbs) crowned with glowing polyp rosettes at the leaf tips.',
+      'Genuine WovenBody recursive-affine lifeform authored from hierarchical branch/leaf tree recursion, with contractive rolled-scroll branch charts and exact signed Jacobian caustics.',
   },
   mutual_even_odd: {
     id: 'mutual_even_odd',
-    speciesName: 'Lepidoptera Alternans',
+    speciesName: 'Lorenz Strange Attractor',
     binomial: 'Bimorpha paritatis',
-    commonTitle: 'Twin-Winged Luna Moth // Lorenz Dipole',
+    commonTitle: 'Lorenz Flow // RK4 Strange Attractor',
     family: 'moth',
     mechanism: 'lorenz-flow',
-    symmetryOrder: 'C2 Bilateral Twin-Winged Moth + Figure-8 Lorenz Orbit',
+    symmetryOrder: 'Classical RK4 Lorenz Attractor (σ=10, ρ=28, β=8/3) + Frenet Ribbons',
     gesture: 'hover',
-    folds: 5,
-    turns: 1.8,
-    primaryHex: 0xa855f7,
-    secondaryHex: 0x06b6d4,
-    accentCss: '#a855f7',
+    primaryHex: 0xbb91ed,
+    secondaryHex: 0x72d9e2,
+    accentCss: '#bb91ed',
     description:
-      'Wide bilateral 2-winged Luna Moth (Left Cyan Wing = is_even, Right Violet Wing = is_odd) flapping in counter-phase inside a 3D Figure-8 RK4 Lorenz Strange Attractor tube.',
+      'Genuine WovenBody lorenz-flow lifeform authored from coupled is_even/is_odd parity alternation, integrating a two-wing RK4 Lorenz orbit with Frenet-frame ribbon pleats.',
   },
   lexical_let: {
     id: 'lexical_let',
-    speciesName: 'PhylloCube Umbra',
-    binomial: 'Granum cubicum',
-    commonTitle: '3-Nested Crystal Cubes // 24-Petal Lotus',
-    family: 'seed',
+    speciesName: 'Phyllotaxis Fan',
+    binomial: 'Granum phyllotaxis',
+    commonTitle: 'Phyllotaxis Fan // Golden-Angle Whorls',
+    family: 'bloom',
     mechanism: 'phyllotaxis-fan',
-    symmetryOrder: 'C_phi 24-Petal Golden-Angle Lotus + 3 Nested Cubes',
+    symmetryOrder: 'Golden-Angle (137.5°) Phyllotaxis Ribbon Whorls + Jacobian Compression',
     gesture: 'gather',
-    growth: 0.181,
-    spread: 0.84,
-    curl: 1.487,
-    asymmetry: 0.2,
-    frequency: 6,
-    lobes: 5,
-    twist: 2.5,
-    whorls: 3,
-    primaryHex: 0x8b5cf6,
-    secondaryHex: 0xfbbf24,
-    accentCss: '#8b5cf6',
+    primaryHex: 0xb5e681,
+    secondaryHex: 0x899be8,
+    accentCss: '#b5e681',
     description:
-      'Three concentric tilted crystal cubes (seed=12, sq=144, cb=1728) cradled inside an upward-blooming 24-petal golden-angle (137.5°) lotus rosette.',
+      'Genuine WovenBody phyllotaxis-fan lifeform authored from nested lexical let-scope chains, arranging two-parameter ribbon charts along the golden angle with projected-compression caustics.',
   },
   checked_underflow: {
     id: 'checked_underflow',
-    speciesName: 'Medusa Subtractor',
+    speciesName: 'Clifford Strange Attractor',
     binomial: 'Umbrella fracturae',
-    commonTitle: 'Medusa Jellyfish Bell // 16 Guard Tentacles',
+    commonTitle: 'Clifford Flow // Critical Caustic Web',
     family: 'jelly',
     mechanism: 'clifford-flow',
-    symmetryOrder: 'C16 Hemispherical Medusa Bell + 16 Trailing Tentacles',
+    symmetryOrder: 'Native Clifford Recurrence Map + Forward-Iterated Critical Curves',
     gesture: 'hover',
-    folds: 6,
-    turns: 1.5,
-    primaryHex: 0xf43f5e,
-    secondaryHex: 0xf59e0b,
-    accentCss: '#f43f5e',
+    primaryHex: 0xeb90ba,
+    secondaryHex: 0x77bce9,
+    accentCss: '#eb90ba',
     description:
-      'Pulsing translucent hemispherical Medusa jellyfish umbrella dome at the top of the core with 16 sinuous trailing UInt128 byte-limb tentacles that snap crimson on Rule A225 underflow.',
+      'Genuine WovenBody clifford-flow lifeform authored from guarded subtractive boundary checks, sampling a 2D Clifford attractor density field and its forward-mapped Jacobian zero-determinant critical curves.',
   },
   stack_overflow: {
     id: 'stack_overflow',
-    speciesName: 'Cometa Abyssi',
-    binomial: 'Cauda quintus',
-    commonTitle: 'Ballistic Comet // Horizon Shock Rings',
+    speciesName: 'Quadratic Julia Manifold',
+    binomial: 'Cauda julia',
+    commonTitle: 'Recursive Julia // Escape-Level Contours',
     family: 'comet',
     mechanism: 'recursive-julia',
-    symmetryOrder: 'C5 Diagonal Comet Lance + Pancaked Ceiling Rings',
+    symmetryOrder: 'Complex Quadratic Recurrence z → z² + c + Marching-Squares Contours',
     gesture: 'glide',
-    folds: 6,
-    turns: 1.75,
-    primaryHex: 0xf97316,
-    secondaryHex: 0xe11d48,
-    accentCss: '#fb7185',
+    primaryHex: 0xefaa73,
+    secondaryHex: 0xbb91ed,
+    accentCss: '#efaa73',
     description:
-      'Steeply angled ballistic comet head and tapered plasma tail firing upward into horizontal Julia-contour shockwave rings that pancake against the crimson stackLimit ceiling barrier.',
+      'Genuine WovenBody recursive-julia lifeform authored from divergent self-recursive call fanout, tracing smoothed escape-time tissue and marching-squares level-set contours of z → z² + c.',
   },
   fuel_exhaustion: {
     id: 'fuel_exhaustion',
-    speciesName: 'Cyclopora Exhaurire',
-    binomial: 'Annulus quattuordecim',
-    commonTitle: 'Hollow 14-Segment Tokamak // Braided Torus',
+    speciesName: 'Toroidal Weave',
+    binomial: 'Annulus toroidalis',
+    commonTitle: 'Toroidal Weave // Poloidal Ribbon Field',
     family: 'torus',
     mechanism: 'toroidal-weave',
-    symmetryOrder: 'C14 Hollow Open-Center (1,3) Braided Torus Ring',
+    symmetryOrder: 'Multi-Lobe Toroidal Ribbon Immersion + Parameter Filaments',
     gesture: 'gather',
-    growth: 0.228,
-    spread: 0.767,
-    curl: 1.414,
-    asymmetry: 0.185,
-    frequency: 6,
-    lobes: 5,
-    twist: 2.5,
-    whorls: 3,
-    primaryHex: 0x38bdf8,
-    secondaryHex: 0xf59e0b,
-    accentCss: '#38bdf8',
+    primaryHex: 0x77bce9,
+    secondaryHex: 0xe6c66a,
+    accentCss: '#77bce9',
     description:
-      'Wide, completely hollow open-center doughnut ring divided into radial fuel-cell segments wrapped in a (1,3) poloidal braid that extinguishes cell by cell as fuel drains to 0.',
+      'Genuine WovenBody toroidal-weave lifeform authored from bounded effectful loop schedules, wrapping multi-strand poloidal ribbons around an asymmetric breathing torus.',
   },
 });
 
@@ -234,12 +208,6 @@ const PRESET_ALIAS_TO_ID = Object.freeze({
   fuel_exhaustion: 'fuel_exhaustion',
 });
 
-/**
- * Resolves the compiled Quineling artifact (`compileSherlockProgramToQuineling`)
- * for the current `stepState`, ensuring the actual Sherlock source code (`factorial`,
- * `list_fold`, `tree_fold`, `mutual_even_odd`, `lexical_let`, `checked_underflow`,
- * `stack_overflow`, `fuel_exhaustion`, or custom edits) feeds the real Quinelings SDK.
- */
 export function resolveCompiledQuineling(stepState = {}) {
   const source =
     stepState.source ||
@@ -252,9 +220,6 @@ export function resolveCompiledQuineling(stepState = {}) {
   );
 }
 
-/**
- * Resolves the deterministic Quineling Species profile for any preset or custom Sherlock program.
- */
 export function resolveQuinelingSpecies(stepState = {}) {
   const rawId =
     stepState.presetId ||
@@ -269,11 +234,20 @@ export function resolveQuinelingSpecies(stepState = {}) {
   return artifact.speciesMeta || QUINELING_SPECIES.factorial;
 }
 
+let _lastTelemetryKey = '';
+let _lastTelemetryResult = null;
+
 /**
  * Computes a concise live morphogenesis telemetry object for UI inspector (`#telemetryQdlMorph`)
  */
 export function getQuinelingTelemetry(stepState = {}) {
   const artifact = resolveCompiledQuineling(stepState);
+  const stepIndex = stepState.stepIndex ?? stepState.step?.index ?? 0;
+  const telemetryKey = `${artifact.cacheKey}|step:${stepIndex}`;
+  if (telemetryKey === _lastTelemetryKey && _lastTelemetryResult) {
+    return _lastTelemetryResult;
+  }
+
   const species = artifact.speciesMeta;
   const step = stepState.step ?? null;
   const ruleLine = step?.ruleLine ?? 80;
@@ -284,42 +258,44 @@ export function getQuinelingTelemetry(stepState = {}) {
   const activeCalls = step?.after?.activeCalls ?? [];
   const callDepth = activeCalls.length;
   const controlKind = step?.after?.control?.kind || step?.controlKind || 'Eval';
+  const rhythmMode = artifact.design?.motion?.rhythm?.mode || 'breath-pulse';
 
-  let morphGesture = 'BREATHING AT REST';
-  let morphCss = species.accentCss;
+  let morphGesture = `RHYTHM ${rhythmMode.toUpperCase()}`;
+  let morphCss = artifact.nodeColors?.[0]?.hex || species.accentCss;
 
   if (ruleLine === 80 || ruleId === 'A080') {
-    morphGesture = 'CROWN BLOOM · DONE';
-    morphCss = '#0d9488';
+    morphGesture = `CROWN BLOOM · ${artifact.wovenRecord.mechanism.toUpperCase()} DONE`;
+    morphCss = '#2dd4bf';
   } else if (ruleLine === 82 || ruleLine === 140 || ruleLine === 225) {
-    morphGesture = `FAULT SPINE LOCK · ${ruleId}`;
+    morphGesture = `CAUSTIC FAULT LOCK · ${ruleId}`;
     morphCss = '#e11d48';
   } else if (ruleLine === 84 || ruleId === 'A084') {
-    morphGesture = 'CENTRIPETAL EMBER FADE · 0F';
+    morphGesture = 'TOROIDAL EMBER FADE · 0F';
     morphCss = '#64748b';
   } else if (ruleLine === 149 || ruleLine === 145 || ruleLine === 177) {
-    morphGesture = `IN-PLACE CHIRAL TWIST · ${ruleId}`;
-    morphCss = '#d97706';
+    morphGesture = `CHIRAL PHASE LOCK · ${ruleId}`;
+    morphCss = '#e6c66a';
   } else if (ruleLine === 223) {
-    morphGesture = '16-LIMB ALU CONVERGENCE';
-    morphCss = '#0284c7';
+    morphGesture = `16-LIMB ALU CONVERGENCE · ${rhythmMode.toUpperCase()}`;
+    morphCss = '#72d9e2';
   } else if (frameCount > beforeFrameCount || ruleLine === 135) {
-    morphGesture = `UNFURLING ORGAN #${frameCount} · DEPTH ${callDepth}`;
-    morphCss = species.accentCss;
+    morphGesture = `UNFURLING PATCH #${frameCount} · DEPTH ${callDepth}`;
+    morphCss = artifact.nodeColors?.[frameCount % Math.max(1, artifact.nodeColors.length)]?.hex || species.accentCss;
   } else if (frameCount < beforeFrameCount || controlKind === 'Return') {
-    morphGesture = `SYNTHESIS RETRACT · ${frameCount} OPEN`;
-    morphCss = '#0d9488';
+    morphGesture = `MANIFOLD SYNTHESIS · ${frameCount} OPEN`;
+    morphCss = '#6ad4a0';
   } else {
-    morphGesture = `ACTIVE ${controlKind.toUpperCase()} · ${artifact.graph.nodes.length} QDL NODES`;
+    morphGesture = `${artifact.wovenRecord.mechanism.toUpperCase()} · ${rhythmMode.toUpperCase()}`;
   }
 
-  return {
+  _lastTelemetryKey = telemetryKey;
+  _lastTelemetryResult = {
     speciesId: species.id,
     speciesName: species.speciesName,
     binomial: species.binomial,
     commonTitle: species.commonTitle,
-    family: species.family,
-    mechanism: species.mechanism,
+    family: artifact.design?.family || species.family,
+    mechanism: artifact.wovenRecord?.mechanism || species.mechanism,
     symmetryOrder: species.symmetryOrder,
     morphGesture,
     morphCss,
@@ -327,6 +303,27 @@ export function getQuinelingTelemetry(stepState = {}) {
     quineBytes: artifact.quineBytes,
     nodeCount: artifact.graph.nodes.length,
   };
+  return _lastTelemetryResult;
+}
+
+let sharedTissueSpriteTexture = null;
+function getTissueSpriteTexture() {
+  if (sharedTissueSpriteTexture) return sharedTissueSpriteTexture;
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 1, 32, 32, 31);
+  grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+  grad.addColorStop(0.32, 'rgba(245, 252, 255, 0.82)');
+  grad.addColorStop(0.68, 'rgba(210, 240, 250, 0.26)');
+  grad.addColorStop(1.0, 'rgba(0, 0, 0, 0.0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  sharedTissueSpriteTexture = new THREE.CanvasTexture(canvas);
+  sharedTissueSpriteTexture.needsUpdate = true;
+  return sharedTissueSpriteTexture;
 }
 
 function writeRibbonStrip(positions, colors, normals, curveIndex, segments, pointsArray, halfWidth, r, g, b) {
@@ -361,7 +358,8 @@ function writeRibbonStrip(positions, colors, normals, curveIndex, segments, poin
     const ny = tz * bx - tx * bz;
     const nz = tx * by - ty * bx;
 
-    const taper = Math.sin((s / Math.max(1, segments - 1)) * Math.PI) * 0.65 + 0.35;
+    const u = s / Math.max(1, segments - 1);
+    const taper = Math.sin(u * Math.PI) * 0.72 + 0.28;
     const w = halfWidth * taper;
 
     const v0 = (baseVertex + s * 2) * 3;
@@ -382,7 +380,7 @@ function writeRibbonStrip(positions, colors, normals, curveIndex, segments, poin
     normals[v1 + 1] = ny;
     normals[v1 + 2] = nz;
 
-    const glow = 0.72 + 0.28 * Math.sin((s / Math.max(1, segments - 1)) * Math.PI);
+    const glow = 0.68 + 0.32 * Math.sin(u * Math.PI);
     colors[v0] = r * glow;
     colors[v0 + 1] = g * glow;
     colors[v0 + 2] = b * glow;
@@ -408,199 +406,66 @@ function buildRibbonIndices(curveCount, segments) {
 }
 
 /**
- * Helper to align a unit cylinder (`CylinderGeometry(1, 1, 1, 16)`) between `pA` and `pB`
+ * Evaluates the program-authored QDL `motion.rhythm` phase modulation (`nursery.js` / `visual-capsule.js`)
+ * so each program moves with its own distinct rhythm (`breath-pulse`, `crest-wave`,
+ * `asymmetric-glide`, `harmonic-overtone`).
  */
-function alignCylinderBetween(mesh, pA, pB, radius = 0.025) {
-  const dx = pB.x - pA.x;
-  const dy = pB.y - pA.y;
-  const dz = pB.z - pA.z;
-  const len = Math.max(0.001, Math.hypot(dx, dy, dz));
-  mesh.position.set((pA.x + pB.x) * 0.5, (pA.y + pB.y) * 0.5, (pA.z + pB.z) * 0.5);
-  mesh.scale.set(radius, len, radius);
-  const dir = new THREE.Vector3(dx / len, dy / len, dz / len);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-}
+function evaluateProgramRhythmPhase(design, basePhase) {
+  const mr = design?.motion?.rhythm;
+  if (!mr) return basePhase;
+  const rate = Number.isFinite(mr.rate) ? mr.rate : 1.0;
+  const breath = Number.isFinite(mr.breath) ? mr.breath : 0.14;
+  const wave = Number.isFinite(mr.wave) ? mr.wave : 0.12;
+  const asym = Number.isFinite(mr.asymmetry) ? mr.asymmetry : 0.1;
+  const overtone = Number.isFinite(mr.overtone) ? mr.overtone : 0.08;
+  const t = basePhase * rate;
 
-/**
- * Samples a point `{ x, y, z, owner }` along a Quinelings SDK ridge (`ridge.line`)
- */
-function sampleSdkRidgePoint(ridge, u) {
-  const line = ridge?.line || ridge?.points;
-  if (!Array.isArray(line) || line.length === 0) return null;
-  const idx = Math.min(line.length - 1, Math.floor(clamp(u, 0, 1) * (line.length - 1)));
-  const pt = line[idx];
-  if (!pt) return null;
-  if (Array.isArray(pt)) {
-    return { x: pt[0] || 0, y: pt[1] || 0, z: pt[2] || 0, owner: 0 };
-  }
-  return {
-    x: Number.isFinite(pt.x) ? pt.x : 0,
-    y: Number.isFinite(pt.y) ? pt.y : 0,
-    z: Number.isFinite(pt.z) ? pt.z : 0,
-    owner: Number.isInteger(pt.owner) ? pt.owner : null,
-  };
-}
-
-/**
- * Maps `(u, v)` and SDK manifold Perturbations `(wx, wy, wz)` directly onto the active
- * species' 3D macro-anatomical surface so the SDK caustic ribbons and RGB spores hug
- * the shell, siphonophore wave, coral limbs, moth wings, lotus petals, jellyfish bell,
- * comet shockwave cone, or hollow tokamak torus — zero flat 2D cages!
- */
-function embedOnSpeciesSurface(speciesId, u, v, rIdx = 0, sdkDelta = 0) {
-  switch (speciesId) {
-    case 'factorial': {
-      // Conispiral Nautilus Shell surface (`r <= 0.40`)
-      const theta = u * 2.05 * TAU;
-      const rad = 0.022 * Math.exp(0.215 * theta);
-      const tubeR = Math.max(0.014, rad * 0.36);
-      const roll = (v * 0.5 + 0.5) * TAU + sdkDelta * 0.4;
-      const R = rad + (tubeR + 0.004) * Math.cos(roll);
-      return {
-        x: Math.cos(theta) * R,
-        y: Math.sin(theta) * R * 0.78 + 0.02,
-        z: Math.sin(theta) * rad * 0.22 + (tubeR + 0.004) * Math.sin(roll),
-      };
-    }
-    case 'list_fold': {
-      // Horizontal undulating 3-Zooid Siphonophore wave (`x in [-0.40, +0.40]`)
-      const x = lerp(-0.4, 0.4, u);
-      const waveY = Math.sin(u * TAU * 1.5) * 0.075;
-      const angle = v * Math.PI + u * TAU * 2.0 + sdkDelta;
-      const rad = 0.048 + 0.025 * Math.cos(u * TAU * 3.0);
-      return {
-        x,
-        y: waveY + Math.sin(angle) * rad,
-        z: Math.cos(angle) * rad,
-      };
-    }
-    case 'tree_fold': {
-      // Helical bark filaments climbing the Y-branching coral limbs
-      const branchIdx = rIdx % 3;
-      if (branchIdx === 0) {
-        // Trunk (`y: -0.34 -> -0.06`) + West limb (`(-0.27, +0.16, +0.05)`)
-        const pX = u < 0.45 ? 0 : lerp(0, -0.27, (u - 0.45) / 0.55);
-        const pY = u < 0.45 ? lerp(-0.34, -0.06, u / 0.45) : lerp(-0.06, 0.16, (u - 0.45) / 0.55);
-        const pZ = u < 0.45 ? 0 : lerp(0, 0.05, (u - 0.45) / 0.55);
-        const barkAngle = u * TAU * 2.5 + v * Math.PI;
-        return {
-          x: pX + Math.cos(barkAngle) * 0.036,
-          y: pY,
-          z: pZ + Math.sin(barkAngle) * 0.036,
-        };
-      }
-      const isNorthEast = branchIdx === 1;
-      const endX = isNorthEast ? 0.32 : 0.3;
-      const endY = isNorthEast ? 0.26 : 0.25;
-      const endZ = isNorthEast ? -0.14 : 0.16;
-      const pX = u < 0.4 ? lerp(0, 0.19, u / 0.4) : lerp(0.19, endX, (u - 0.4) / 0.6);
-      const pY = u < 0.4 ? lerp(-0.08, 0.04, u / 0.4) : lerp(0.04, endY, (u - 0.4) / 0.6);
-      const pZ = u < 0.4 ? lerp(0, -0.02, u / 0.4) : lerp(-0.02, endZ, (u - 0.4) / 0.6);
-      const barkAngle = u * TAU * 2.5 + v * Math.PI;
-      return {
-        x: pX + Math.cos(barkAngle) * 0.03,
-        y: pY,
-        z: pZ + Math.sin(barkAngle) * 0.03,
-      };
-    }
-    case 'mutual_even_odd': {
-      // Bilateral Figure-8 Lorenz Wing veins on Left (`-1`) and Right (`+1`) lobes
-      const side = rIdx % 2 === 0 ? -1 : 1;
-      const ang = u * TAU;
-      const rad = 0.13 + 0.06 * Math.abs(v);
-      const tilt = 0.48 * side;
-      return {
-        x: side * 0.16 + Math.cos(ang) * rad,
-        y: Math.sin(ang) * rad * Math.cos(tilt),
-        z: side * 0.04 + Math.sin(ang) * rad * Math.sin(tilt) + sdkDelta * 0.04,
-      };
-    }
-    case 'lexical_let': {
-      // Upward-cupped Golden-Angle Lotus whorls around the 3 nested crystal cubes
-      const angle = rIdx * PHI_GOLDEN_ANGLE + u * 0.85;
-      const ring = rIdx % 3;
-      const rad = lerp(0.08, 0.22 + ring * 0.055, u);
-      const y = lerp(-0.1, 0.14 + ring * 0.05, u * u);
-      return {
-        x: Math.cos(angle) * rad,
-        y,
-        z: Math.sin(angle) * rad,
-      };
-    }
-    case 'checked_underflow': {
-      // Medusa hemispherical umbrella meridians + trailing tentacle spirals
-      if (rIdx < 6) {
-        const phi = (rIdx / 6) * TAU + v * 0.35;
-        const theta = u * Math.PI * 0.56;
-        const R = 0.312;
-        return {
-          x: R * Math.sin(theta) * Math.cos(phi),
-          y: 0.06 + R * Math.cos(theta),
-          z: R * Math.sin(theta) * Math.sin(phi),
-        };
-      }
-      const tIdx = rIdx % 16;
-      const baseA = (tIdx / 16) * TAU;
-      const rad = (tIdx % 2 === 0 ? 0.24 : 0.16) * (1 - 0.18 * u);
-      const twist = baseA + u * 0.9 + sdkDelta * 0.3;
-      return {
-        x: Math.cos(twist) * rad,
-        y: lerp(0.02, -0.38, u),
-        z: Math.sin(twist) * rad,
-      };
-    }
-    case 'stack_overflow': {
-      // Conical ballistic lance vortex rising toward the `y = +0.34` ceiling barrier
-      const y = lerp(-0.24, 0.32, u);
-      const rad = lerp(0.09, 0.31, u);
-      const ang = u * TAU * 2.2 + (rIdx / SDK_RIBBON_COUNT) * TAU;
-      return {
-        x: Math.cos(ang) * rad,
-        y,
-        z: Math.sin(ang) * rad,
-      };
-    }
-    case 'fuel_exhaustion':
-    default: {
-      // Poloidal (1,3) Tokamak Torus surface (`R = 0.32, r = 0.072`) leaving center 100% open!
-      const theta = u * TAU + (rIdx / SDK_RIBBON_COUNT) * TAU;
-      const phi = 3.0 * theta + v * Math.PI;
-      const R = 0.32;
-      const r = 0.074;
-      return {
-        x: (R + r * Math.cos(phi)) * Math.cos(theta),
-        y: (R + r * Math.cos(phi)) * Math.sin(theta),
-        z: r * Math.sin(phi),
-      };
-    }
+  switch (mr.mode) {
+    case 'crest-wave':
+      return t + wave * Math.sin(2 * t) + overtone * Math.cos(3 * t);
+    case 'asymmetric-glide':
+      return t + asym * Math.sin(t + asym * Math.cos(t)) + 0.5 * wave * Math.sin(2 * t);
+    case 'harmonic-overtone':
+      return t + breath * Math.sin(t) + overtone * Math.sin(3 * t + 0.6);
+    case 'breath-pulse':
+    default:
+      return t + breath * Math.sin(t) + 0.35 * wave * Math.cos(2 * t);
   }
 }
 
 /**
- * Builds a scalloped moth wing ExtrudeGeometry (`Lepidoptera Alternans`)
+ * Normalizes a 3D `WovenBody` point `(x, y, z)` into the Hollow Well atrium envelope
+ * (`r <= QUINELING_MAX_RADIUS = 0.44`) while preserving exact `nursery.html` proportions
+ * and giving 2.5D manifolds (`clifford-flow`, `recursive-julia`) volumetric 3D depth.
  */
-function createScallopedWingGeometry(isForewing = true) {
-  const shape = new THREE.Shape();
-  shape.moveTo(0, 0);
-  if (isForewing) {
-    shape.bezierCurveTo(0.08, 0.16, 0.24, 0.22, 0.34, 0.11);
-    shape.bezierCurveTo(0.37, 0.04, 0.31, -0.05, 0.22, -0.08);
-    shape.bezierCurveTo(0.14, -0.1, 0.06, -0.05, 0, 0);
-  } else {
-    shape.bezierCurveTo(0.06, -0.02, 0.22, -0.04, 0.26, -0.14);
-    shape.bezierCurveTo(0.24, -0.22, 0.14, -0.26, 0.08, -0.22);
-    shape.bezierCurveTo(0.04, -0.16, 0.02, -0.08, 0, 0);
+function normalizeWovenCoord(x, y, z, bounds, mechanism, outVec) {
+  const cx = bounds?.cx || 0;
+  const cy = bounds?.cy || 0;
+  const cz = bounds?.cz || 0;
+  const span = Math.max(0.32, bounds?.width || 1.2, bounds?.height || 1.2);
+  const scale = (QUINELING_MAX_RADIUS * 1.88) / span;
+
+  const nx = (x - cx) * scale;
+  // Flip Y because nursery.html / WovenBody uses 2D screen coordinates (+Y downward)
+  const ny = -(y - cy) * scale;
+  let nz = (z - cz) * scale;
+
+  // Give planar/shallow attractors subtle 3D relief under camera orbit without altering their 2D projection
+  if (mechanism === 'clifford-flow' || mechanism === 'recursive-julia') {
+    nz = nz * 2.2 + 0.045 * Math.sin(nx * 5.2 + ny * 4.1);
+  } else if (mechanism === 'recursive-affine') {
+    nz *= 1.5;
   }
-  return new THREE.ExtrudeGeometry(shape, {
-    depth: 0.005,
-    bevelEnabled: false,
-    curveSegments: 18,
-  });
+
+  outVec.set(nx, ny, nz);
+  return outVec;
 }
 
 /**
- * Builds the 3D Procedural QDL Quineling Core Subsystem (`Designer 8`) with
- * 8 unmistakable species sub-groups + surface-embedded Quinelings SDK manifold ribbons & RGB spores.
+ * Builds the 3D `nursery.html` `WovenBody` Quineling Subsystem (`Designer 8`).
+ * Replaces all cartoon animal sculptures with the genuine mathematical `WovenBody`
+ * tissue field, caustic/crest filaments, gossamer manifold ribbons, `WovenBody.anchor`
+ * operation nodes, and `quineling-chroma-1` RGB genome spores.
  */
 export function createQuinelingSubsystem() {
   const group = new THREE.Group();
@@ -611,17 +476,104 @@ export function createQuinelingSubsystem() {
   coreRoot.position.set(0, QUINELING_CORE_Y, 0);
   group.add(coreRoot);
 
-  // Two balanced studio organism lights (Key + Cool Rim) so organic tissue never looks overblown
-  const corePointLight = new THREE.PointLight(0xf59e0b, 0.85, 2.4, 1.5);
+  // Studio illumination for the translucent mathematical tissue
+  const corePointLight = new THREE.PointLight(0x72d9e2, 0.85, 2.4, 1.5);
   corePointLight.position.set(0, 0.06, 0.08);
   coreRoot.add(corePointLight);
 
-  const rimPointLight = new THREE.PointLight(0x9ad7ff, 0.42, 2.4, 1.5);
+  const rimPointLight = new THREE.PointLight(0x9ad7ff, 0.45, 2.4, 1.5);
   rimPointLight.position.set(0.22, 0.18, 0.26);
   coreRoot.add(rimPointLight);
 
+  // Backwards-compatible species sub-groups map for inspection & telemetry hooks
+  const speciesGroups = {};
+  for (const spKey of Object.keys(QUINELING_SPECIES)) {
+    const sg = new THREE.Group();
+    sg.name = `WovenSpecies_${spKey}`;
+    sg.visible = spKey === 'factorial';
+    coreRoot.add(sg);
+    speciesGroups[spKey] = sg;
+  }
+
   // ==========================================================================
-  // 1. REAL QUINELINGS SDK 3D MANIFOLD & CAUSTIC RIBBON WEB (`WovenBody.frame`)
+  // 1. PRIMARY `WovenBody` GOSSAMER TISSUE CLOUD (`THREE.Points`, 8192 samples)
+  // ==========================================================================
+  const tissueGeom = new THREE.BufferGeometry();
+  const tissuePositions = new Float32Array(TISSUE_BUDGET * 3);
+  const tissueColors = new Float32Array(TISSUE_BUDGET * 3);
+  tissueGeom.setAttribute('position', new THREE.BufferAttribute(tissuePositions, 3));
+  tissueGeom.setAttribute('color', new THREE.BufferAttribute(tissueColors, 3));
+
+  const tissueMat = new THREE.PointsMaterial({
+    size: 0.012,
+    map: getTissueSpriteTexture(),
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.78,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const _raycastSphere = new THREE.Sphere(new THREE.Vector3(0, QUINELING_CORE_Y, 0), QUINELING_MAX_RADIUS * 0.82);
+  const _raycastHitPoint = new THREE.Vector3();
+  const NOOP_RAYCAST = () => {};
+
+  const tissuePointsMesh = new THREE.Points(tissueGeom, tissueMat);
+  tissuePointsMesh.name = 'WovenBody_TissueCloud';
+  tissuePointsMesh.frustumCulled = false;
+  tissuePointsMesh.raycast = function fastWovenBodyRaycast(raycaster, intersects) {
+    if (!this.visible) return;
+    _raycastSphere.center.setFromMatrixPosition(this.matrixWorld);
+    _raycastSphere.radius = QUINELING_MAX_RADIUS * 0.82;
+    if (raycaster.ray.intersectSphere(_raycastSphere, _raycastHitPoint)) {
+      intersects.push({
+        distance: raycaster.ray.origin.distanceTo(_raycastHitPoint),
+        point: _raycastHitPoint.clone(),
+        object: this,
+      });
+    }
+  };
+  tagInspectable(tissuePointsMesh, {
+    type: 'quineling-tissue',
+    id: 'woven-body-tissue-cloud',
+    title: 'WovenBody Mathematical Tissue Field',
+    subtitle: 'nursery.html // WovenBody.frame',
+    details: '8,192 real-time points sampled from WovenBody.frame(wovenBody, phase) and colored by Chroma.colorFor(shape, owner).',
+  });
+  coreRoot.add(tissuePointsMesh);
+
+  // ==========================================================================
+  // 2. PRIMARY `WovenBody` CAUSTIC & CREST FILAMENTS (`THREE.LineSegments`)
+  // ==========================================================================
+  const ridgeLineGeom = new THREE.BufferGeometry();
+  const ridgeLinePositions = new Float32Array(MAX_RIDGE_VERTICES * 3);
+  const ridgeLineColors = new Float32Array(MAX_RIDGE_VERTICES * 3);
+  ridgeLineGeom.setAttribute('position', new THREE.BufferAttribute(ridgeLinePositions, 3));
+  ridgeLineGeom.setAttribute('color', new THREE.BufferAttribute(ridgeLineColors, 3));
+  ridgeLineGeom.setDrawRange(0, 0);
+
+  const ridgeLineMat = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.72,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const ridgeLineSegments = new THREE.LineSegments(ridgeLineGeom, ridgeLineMat);
+  ridgeLineSegments.name = 'WovenBody_CausticRidges';
+  ridgeLineSegments.frustumCulled = false;
+  ridgeLineSegments.raycast = NOOP_RAYCAST;
+  tagInspectable(ridgeLineSegments, {
+    type: 'quineling-ridges',
+    id: 'woven-body-caustic-ridges',
+    title: 'WovenBody Caustic & Crest Filaments',
+    subtitle: 'nursery.html // frame.ridges',
+    details: 'Exact mathematical ridges from WovenBody.frame: critical curves, Julia escape contours, Jacobian caustics, and parameter filaments.',
+  });
+  coreRoot.add(ridgeLineSegments);
+
+  // ==========================================================================
+  // 3. 3D `WovenBody` GOSSAMER RIBBON STRIPS (`sdkManifoldRibbonMesh`)
   // ==========================================================================
   const sdkRibbonGeom = new THREE.BufferGeometry();
   const sdkRibbonPositions = new Float32Array(SDK_RIBBON_VERTEX_COUNT * 3);
@@ -635,44 +587,108 @@ export function createQuinelingSubsystem() {
   const sdkRibbonMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
-    emissive: new THREE.Color(0x041018),
-    emissiveIntensity: 0.75,
+    emissive: new THREE.Color(0x030b12),
+    emissiveIntensity: 0.18,
     roughness: 0.38,
-    metalness: 0.04,
+    metalness: 0.02,
     transparent: true,
-    opacity: 0.56,
+    opacity: 0.09,
     side: THREE.DoubleSide,
     depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
   });
   const sdkManifoldRibbonMesh = new THREE.Mesh(sdkRibbonGeom, sdkRibbonMat);
-  sdkManifoldRibbonMesh.name = 'QuinelingSdkManifoldWeb';
+  sdkManifoldRibbonMesh.name = 'WovenBody_GossamerRibbons';
+  sdkManifoldRibbonMesh.frustumCulled = false;
+  sdkManifoldRibbonMesh.visible = false;
+  sdkManifoldRibbonMesh.raycast = NOOP_RAYCAST;
+  tagInspectable(sdkManifoldRibbonMesh, {
+    type: 'quineling-ribbons',
+    id: 'woven-body-gossamer-ribbons',
+    title: 'WovenBody 3D Gossamer Ribbons',
+    subtitle: 'WovenBody // 3D Ribbon Chart',
+    details: 'Translucent 3D ribbon strips tracing the primary mathematical ridges of the active WovenBody manifold.',
+  });
   coreRoot.add(sdkManifoldRibbonMesh);
 
   // ==========================================================================
-  // 2. 64 LOSSLESS RGB GENOME SPORES (`Quinelings.encodeColors(quineProgram)`)
+  // 4. OPERATION ANCHOR NODES (`WovenBody.anchor`) & DEPENDENCY ARCS
   // ==========================================================================
-  const sporeGeom = new THREE.OctahedronGeometry(0.012, 0);
-  const sporeMat = new THREE.MeshBasicMaterial({
+  const anchorNodeGeom = new THREE.SphereGeometry(0.0055, 10, 8);
+  const anchorNodeMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
+    emissive: new THREE.Color(0xffffff),
+    emissiveIntensity: 0.65,
+    roughness: 0.25,
+    metalness: 0.1,
     transparent: true,
-    opacity: 0.88,
+    opacity: 0.62,
+  });
+  const anchorNodeMesh = new THREE.InstancedMesh(anchorNodeGeom, anchorNodeMat, MAX_ANCHOR_NODES);
+  anchorNodeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  anchorNodeMesh.name = 'WovenBody_OperationAnchors';
+  anchorNodeMesh.frustumCulled = false;
+  anchorNodeMesh.visible = false;
+  anchorNodeMesh.raycast = NOOP_RAYCAST;
+  tagInspectable(anchorNodeMesh, {
+    type: 'quineling-anchors',
+    id: 'woven-body-operation-anchors',
+    title: 'Quinelings Operation Territory Anchors',
+    subtitle: 'WovenBody.anchor // Quinelings.describe',
+    details: 'Operation nodes positioned on the 3D manifold via WovenBody.anchor(wovenBody, nodeId, phase) and lit when active in the Sherlock CEK trace.',
+  });
+  coreRoot.add(anchorNodeMesh);
+
+  const depArcGeom = new THREE.BufferGeometry();
+  const depArcPositions = new Float32Array(MAX_ARC_VERTICES * 3);
+  const depArcColors = new Float32Array(MAX_ARC_VERTICES * 3);
+  depArcGeom.setAttribute('position', new THREE.BufferAttribute(depArcPositions, 3));
+  depArcGeom.setAttribute('color', new THREE.BufferAttribute(depArcColors, 3));
+  depArcGeom.setDrawRange(0, 0);
+
+  const depArcMat = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.14,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const depArcLines = new THREE.LineSegments(depArcGeom, depArcMat);
+  depArcLines.name = 'WovenBody_DependencyArcs';
+  depArcLines.frustumCulled = false;
+  depArcLines.visible = false;
+  depArcLines.raycast = NOOP_RAYCAST;
+  coreRoot.add(depArcLines);
+
+  // ==========================================================================
+  // 5. 64 RGB GENOME SPORES (`Quinelings.encodeColors` -> `quineling-chroma-1`)
+  // ==========================================================================
+  const sporeGeom = new THREE.OctahedronGeometry(0.004, 0);
+  const sporeMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: new THREE.Color(0xffffff),
+    emissiveIntensity: 0.55,
+    roughness: 0.3,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.45,
   });
   const sporeMesh = new THREE.InstancedMesh(sporeGeom, sporeMat, SPORE_COUNT);
   sporeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  const sporeColorInit = new THREE.Color(0x38bdf8);
-  for (let i = 0; i < SPORE_COUNT; i += 1) {
-    sporeMesh.setColorAt(i, sporeColorInit);
-  }
-  if (sporeMesh.instanceColor) {
-    sporeMesh.instanceColor.needsUpdate = true;
-  }
+  sporeMesh.name = 'Quineling_ChromaGenomeSpores';
+  sporeMesh.frustumCulled = false;
+  sporeMesh.visible = false;
+  sporeMesh.raycast = NOOP_RAYCAST;
+  tagInspectable(sporeMesh, {
+    type: 'quineling-spores',
+    id: 'quineling-chroma-genome-spores',
+    title: 'quineling-chroma-1 Exact Byte Spores',
+    subtitle: 'Quinelings.encodeColors // quineling-chroma-1',
+    details: '64 exact RGB byte triplets from Quinelings.encodeColors(quineProgram) drifting across the WovenBody manifold.',
+  });
   coreRoot.add(sporeMesh);
 
   // ==========================================================================
-  // 3. VERTICAL CHAMBER TENDRILS (Floor Rule Modules <-> Quineling <-> 6 Rings)
+  // 6. PERIMETER CHAMBER TENDRILS (Connecting Atrium Boundary to Rings/Floor)
   // ==========================================================================
   const tendrilGeom = new THREE.BufferGeometry();
   const tendrilPositions = new Float32Array(TENDRIL_VERTEX_COUNT * 3);
@@ -683,670 +699,71 @@ export function createQuinelingSubsystem() {
   tendrilGeom.setAttribute('normal', new THREE.BufferAttribute(tendrilNormals, 3));
   tendrilGeom.setIndex(buildRibbonIndices(TENDRIL_CURVE_COUNT, TENDRIL_SEGMENTS));
 
-  const tendrilMat = new THREE.MeshBasicMaterial({
+  const tendrilMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
     vertexColors: true,
+    emissive: new THREE.Color(0x050c14),
+    emissiveIntensity: 0.45,
+    roughness: 0.4,
+    metalness: 0.08,
     transparent: true,
-    opacity: 0.34,
+    opacity: 0.28,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
-  const chamberTendrilsMesh = new THREE.Mesh(tendrilGeom, tendrilMat);
-  coreRoot.add(chamberTendrilsMesh);
+  const tendrilMesh = new THREE.Mesh(tendrilGeom, tendrilMat);
+  tendrilMesh.name = 'Quineling_AtriumTendrils';
+  tendrilMesh.frustumCulled = false;
+  tendrilMesh.visible = false;
+  tendrilMesh.raycast = NOOP_RAYCAST;
+  coreRoot.add(tendrilMesh);
 
   // ==========================================================================
-  // 4. EIGHT RADICALLY DISTINCT 3D SPECIES ARCHITECTURES
+  // PREALLOCATED SCRATCH BUFFERS (ZERO PER-FRAME ALLOCATIONS)
   // ==========================================================================
-  const speciesGroups = {};
-
-  // --------------------------------------------------------------------------
-  // SPECIES 1: `factorial` — CONISPIRAL 3D NAUTILUS SHELL TUBE + DYNAMIC SEPTA
-  // --------------------------------------------------------------------------
-  const nautilusGroup = new THREE.Group();
-  nautilusGroup.name = 'Species_Factorial_Nautilus';
-  coreRoot.add(nautilusGroup);
-  speciesGroups.factorial = nautilusGroup;
-
-  const nautilusShellMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfbbf24,
-    emissive: new THREE.Color(0xb45309),
-    emissiveIntensity: 0.34,
-    roughness: 0.22,
-    metalness: 0.18,
-    clearcoat: 0.65,
-    clearcoatRoughness: 0.14,
-    iridescence: 0.85,
-    iridescenceIOR: 1.45,
-    transparent: true,
-    opacity: 0.92,
-  });
-
-  // Conispiral shell tube (`r <= 0.40`) + 18 nacreous growth rings along the tube
-  const nautilusCurvePts = [];
-  for (let i = 0; i <= 72; i += 1) {
-    const u = i / 72;
-    const theta = u * 2.05 * TAU;
-    const rad = 0.022 * Math.exp(0.215 * theta);
-    nautilusCurvePts.push(
-      new THREE.Vector3(
-        Math.cos(theta) * rad,
-        Math.sin(theta) * rad * 0.78 + 0.02,
-        Math.sin(theta) * rad * 0.22
-      )
-    );
-  }
-  const nautilusSpline = new THREE.CatmullRomCurve3(nautilusCurvePts);
-  const nautilusTubeMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(nautilusSpline, 96, 0.028, 16, false),
-    nautilusShellMat
-  );
-  nautilusGroup.add(nautilusTubeMesh);
-
-  const nautilusRibs = [];
-  for (let i = 0; i < 20; i += 1) {
-    const u = (i + 1) / 20;
-    const theta = u * 2.05 * TAU;
-    const rad = 0.022 * Math.exp(0.215 * theta);
-    const tubeR = Math.max(0.015, rad * 0.38);
-    const pt = nautilusSpline.getPointAt(u);
-    const tangent = nautilusSpline.getTangentAt(u);
-    const ribMat = nautilusShellMat.clone();
-    const rib = new THREE.Mesh(new THREE.TorusGeometry(tubeR, tubeR * 0.22, 10, 22), ribMat);
-    rib.position.copy(pt);
-    rib.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent);
-    nautilusGroup.add(rib);
-    nautilusRibs.push({ mesh: rib, mat: ribMat, u, tubeR });
-  }
-
-  // Pool of up to 10 internal pearlescent chamber septa discs (`fact(N)..fact(0)`)
-  const MAX_NAUTILUS_CHAMBERS = 10;
-  const nautilusChambers = [];
-  for (let c = 0; c < MAX_NAUTILUS_CHAMBERS; c += 1) {
-    const sepMat = new THREE.MeshPhysicalMaterial({
-      color: 0x34d399,
-      emissive: new THREE.Color(0x059669),
-      emissiveIntensity: 0.48,
-      roughness: 0.2,
-      metalness: 0.08,
-      transparent: true,
-      opacity: 0.88,
-    });
-    const sep = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.9, 0.012, 20), sepMat);
-    nautilusGroup.add(sep);
-    nautilusChambers.push({ mesh: sep, mat: sepMat, index: c });
-  }
-
-  // Pearlescent Nautilus Aperture Hood at the outer mouth of the shell
-  const nautilusHoodGeom = new THREE.SphereGeometry(0.135, 24, 16, 0, Math.PI * 1.25, 0, Math.PI * 0.62);
-  const nautilusHoodMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfde68a,
-    emissive: new THREE.Color(0xd97706),
-    emissiveIntensity: 0.28,
-    roughness: 0.22,
-    metalness: 0.12,
-    clearcoat: 0.6,
-    iridescence: 0.65,
-    transparent: true,
-    opacity: 0.86,
-    side: THREE.DoubleSide,
-  });
-  const nautilusHood = new THREE.Mesh(nautilusHoodGeom, nautilusHoodMat);
-  nautilusHood.position.copy(nautilusCurvePts[nautilusCurvePts.length - 1]);
-  nautilusHood.rotation.set(0.3, 0.5, -0.8);
-  nautilusGroup.add(nautilusHood);
-
-  // --------------------------------------------------------------------------
-  // SPECIES 2: `list_fold` — CONTINUOUS SILK SIPHONOPHORE + DYNAMIC ZOOID BELLS
-  // --------------------------------------------------------------------------
-  const ribbonGroup = new THREE.Group();
-  ribbonGroup.name = 'Species_ListFold_Siphonophore';
-  coreRoot.add(ribbonGroup);
-  speciesGroups.list_fold = ribbonGroup;
-
-  // Continuous undulating silk membrane (`writeRibbonStrip` instead of flat box cards!)
-  const SILK_STRANDS = 3;
-  const SILK_SEGMENTS = 28;
-  const silkGeom = new THREE.BufferGeometry();
-  const silkPositions = new Float32Array(SILK_STRANDS * SILK_SEGMENTS * 2 * 3);
-  const silkColors = new Float32Array(SILK_STRANDS * SILK_SEGMENTS * 2 * 3);
-  const silkNormals = new Float32Array(SILK_STRANDS * SILK_SEGMENTS * 2 * 3);
-  silkGeom.setAttribute('position', new THREE.BufferAttribute(silkPositions, 3));
-  silkGeom.setAttribute('color', new THREE.BufferAttribute(silkColors, 3));
-  silkGeom.setAttribute('normal', new THREE.BufferAttribute(silkNormals, 3));
-  silkGeom.setIndex(buildRibbonIndices(SILK_STRANDS, SILK_SEGMENTS));
-  const silkMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    vertexColors: true,
-    emissive: new THREE.Color(0x0891b2),
-    emissiveIntensity: 0.42,
-    roughness: 0.28,
-    metalness: 0.05,
-    transparent: true,
-    opacity: 0.84,
-    side: THREE.DoubleSide,
-  });
-  const silkRibbonMesh = new THREE.Mesh(silkGeom, silkMat);
-  ribbonGroup.add(silkRibbonMesh);
-
-  // Pool of up to 6 glowing `cons` Zooid Bells (`[5, 8, 3]` or user-edited list)
-  const MAX_ZOOID_PODS = 6;
-  const listZooidPods = [];
-  for (let zIdx = 0; zIdx < MAX_ZOOID_PODS; zIdx += 1) {
-    const podGroup = new THREE.Group();
-    ribbonGroup.add(podGroup);
-
-    const bellMat = new THREE.MeshPhysicalMaterial({
-      color: zIdx % 2 === 1 ? 0x22d3ee : 0x38bdf8,
-      emissive: new THREE.Color(zIdx % 2 === 1 ? 0x0891b2 : 0x7c3aed),
-      emissiveIntensity: 0.48,
-      roughness: 0.18,
-      metalness: 0.05,
-      clearcoat: 0.5,
-      iridescence: 0.6,
-      transparent: true,
-      opacity: 0.88,
-    });
-    const bell = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 18), bellMat);
-    podGroup.add(bell);
-
-    const ringMat = new THREE.MeshPhysicalMaterial({
-      color: 0xc084fc,
-      emissive: new THREE.Color(0x9333ea),
-      emissiveIntensity: 0.52,
-      roughness: 0.25,
-      metalness: 0.12,
-    });
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.11, 10, 28), ringMat);
-    ring.rotation.y = Math.PI * 0.5;
-    podGroup.add(ring);
-
-    listZooidPods.push({ group: podGroup, bell, bellMat, ring, ringMat, baseX: 0, baseY: 0, radius: 0.08 });
-  }
-
-  // --------------------------------------------------------------------------
-  // SPECIES 3: `tree_fold` — ASYMMETRIC Y-BRANCHING BINARY CORAL TREE (EMERALD/GOLD)
-  // --------------------------------------------------------------------------
-  const coralGroup = new THREE.Group();
-  coralGroup.name = 'Species_TreeFold_CoralTree';
-  coreRoot.add(coralGroup);
-  speciesGroups.tree_fold = coralGroup;
-
-  const coralBranches = [];
-  const coralPolypCrowns = [];
-  const cylUnitGeom = new THREE.CylinderGeometry(0.82, 1.0, 1.0, 16);
-  const treeBranchDefs = [
-    { pA: new THREE.Vector3(0, -0.34, 0.02), pB: new THREE.Vector3(0, -0.07, -0.02), r: 0.042, side: 'root', color: 0x10b981 },
-    { pA: new THREE.Vector3(0, -0.07, -0.02), pB: new THREE.Vector3(-0.26, 0.15, 0.07), r: 0.031, side: 'west', color: 0x34d399 },
-    { pA: new THREE.Vector3(0, -0.07, -0.02), pB: new THREE.Vector3(0.19, 0.04, -0.05), r: 0.032, side: 'east', color: 0xf59e0b },
-    { pA: new THREE.Vector3(0.19, 0.04, -0.05), pB: new THREE.Vector3(0.32, 0.26, -0.15), r: 0.024, side: 'east_left', color: 0xfbbf24 },
-    { pA: new THREE.Vector3(0.19, 0.04, -0.05), pB: new THREE.Vector3(0.3, 0.25, 0.16), r: 0.025, side: 'east_right', color: 0x2dd4bf },
-    { pA: new THREE.Vector3(-0.14, 0.04, 0.03), pB: new THREE.Vector3(-0.17, 0.27, -0.12), r: 0.019, side: 'west', color: 0x34d399 },
-  ];
-  for (const def of treeBranchDefs) {
-    const bMat = new THREE.MeshPhysicalMaterial({
-      color: def.color,
-      emissive: new THREE.Color(def.color).multiplyScalar(0.42),
-      emissiveIntensity: 0.42,
-      roughness: 0.36,
-      metalness: 0.06,
-      clearcoat: 0.35,
-    });
-    const bMesh = new THREE.Mesh(cylUnitGeom, bMat);
-    alignCylinderBetween(bMesh, def.pA, def.pB, def.r);
-    coralGroup.add(bMesh);
-    coralBranches.push({ mesh: bMesh, mat: bMat, def });
-  }
-
-  // Rounded Coral Polyp Rosette Crowns at the leaf tips
-  const leafCrownDefs = [
-    { pos: new THREE.Vector3(-0.26, 0.15, 0.07), side: 'west', color: 0x34d399 },
-    { pos: new THREE.Vector3(0.32, 0.26, -0.15), side: 'east_left', color: 0xfbbf24 },
-    { pos: new THREE.Vector3(0.3, 0.25, 0.16), side: 'east_right', color: 0x2dd4bf },
-    { pos: new THREE.Vector3(-0.17, 0.27, -0.12), side: 'west', color: 0x10b981 },
-  ];
-  const polypPetalGeom = new THREE.SphereGeometry(0.024, 12, 10);
-  polypPetalGeom.scale(1.45, 0.52, 0.78);
-  for (const lc of leafCrownDefs) {
-    const crownSub = new THREE.Group();
-    crownSub.position.copy(lc.pos);
-    const cMat = new THREE.MeshPhysicalMaterial({
-      color: lc.color,
-      emissive: new THREE.Color(lc.color),
-      emissiveIntensity: 0.48,
-      roughness: 0.28,
-      metalness: 0.05,
-      clearcoat: 0.45,
-    });
-    const coreBulb = new THREE.Mesh(new THREE.SphereGeometry(0.044, 16, 12), cMat);
-    crownSub.add(coreBulb);
-    for (let p = 0; p < 6; p += 1) {
-      const a = (p / 6) * TAU;
-      const petal = new THREE.Mesh(polypPetalGeom, cMat);
-      petal.position.set(Math.cos(a) * 0.044, 0.018, Math.sin(a) * 0.044);
-      petal.rotation.y = -a;
-      petal.rotation.z = 0.38;
-      crownSub.add(petal);
-    }
-    coralGroup.add(crownSub);
-    coralPolypCrowns.push({ group: crownSub, mat: cMat, side: lc.side });
-  }
-
-  // --------------------------------------------------------------------------
-  // SPECIES 4: `mutual_even_odd` — SCALLOPED LUNA MOTH + RK4 LORENZ STRANGE ATTRACTOR
-  // --------------------------------------------------------------------------
-  const mothGroup = new THREE.Group();
-  mothGroup.name = 'Species_MutualEvenOdd_LunaMoth';
-  coreRoot.add(mothGroup);
-  speciesGroups.mutual_even_odd = mothGroup;
-
-  const thoraxMat = new THREE.MeshPhysicalMaterial({
-    color: 0xf8fafc,
-    emissive: new THREE.Color(0x6366f1),
-    emissiveIntensity: 0.38,
-    roughness: 0.32,
-    metalness: 0.08,
-  });
-  const thoraxMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.028, 0.24, 8, 16), thoraxMat);
-  mothGroup.add(thoraxMesh);
-
-  const leftWingPivot = new THREE.Group();
-  leftWingPivot.position.set(-0.022, 0.02, 0);
-  mothGroup.add(leftWingPivot);
-
-  const rightWingPivot = new THREE.Group();
-  rightWingPivot.position.set(0.022, 0.02, 0);
-  mothGroup.add(rightWingPivot);
-
-  const leftWingMat = new THREE.MeshPhysicalMaterial({
-    color: 0x06b6d4,
-    emissive: new THREE.Color(0x0891b2),
-    emissiveIntensity: 0.48,
-    roughness: 0.28,
-    metalness: 0.06,
-    iridescence: 0.9,
-    clearcoat: 0.45,
-    transparent: true,
-    opacity: 0.88,
-    side: THREE.DoubleSide,
-  });
-  const rightWingMat = new THREE.MeshPhysicalMaterial({
-    color: 0xa855f7,
-    emissive: new THREE.Color(0x7e22ce),
-    emissiveIntensity: 0.48,
-    roughness: 0.28,
-    metalness: 0.06,
-    iridescence: 0.9,
-    clearcoat: 0.45,
-    transparent: true,
-    opacity: 0.88,
-    side: THREE.DoubleSide,
-  });
-
-  const foreWingExtrude = createScallopedWingGeometry(true);
-  const hindWingExtrude = createScallopedWingGeometry(false);
-
-  const rightFore = new THREE.Mesh(foreWingExtrude, rightWingMat);
-  const rightHind = new THREE.Mesh(hindWingExtrude, rightWingMat);
-  rightWingPivot.add(rightFore, rightHind);
-
-  const leftFore = new THREE.Mesh(foreWingExtrude, leftWingMat);
-  leftFore.scale.x = -1;
-  const leftHind = new THREE.Mesh(hindWingExtrude, leftWingMat);
-  leftHind.scale.x = -1;
-  leftWingPivot.add(leftFore, leftHind);
-
-  // True 3D Figure-8 RK4 Lorenz Strange Attractor Tube around the Moth
-  const lorenzPts = [];
-  let lx = 0.18;
-  let ly = 0.24;
-  let lz = 0.12;
-  const dtL = 0.0055;
-  for (let i = 0; i < 620; i += 1) {
-    const dx = 10 * (ly - lx);
-    const dy = lx * (28 - lz) - ly;
-    const dz = lx * ly - (8 / 3) * lz;
-    lx += dx * dtL;
-    ly += dy * dtL;
-    lz += dz * dtL;
-    if (i >= 180 && i % 2 === 0) {
-      lorenzPts.push(new THREE.Vector3(lx * 0.017, (lz - 25) * 0.012, ly * 0.009));
-    }
-  }
-  const lorenzTubeMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe0e7ff,
-    emissive: new THREE.Color(0x818cf8),
-    emissiveIntensity: 0.65,
-    roughness: 0.2,
-    metalness: 0.1,
-  });
-  const lorenzOrbitMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(lorenzPts), 180, 0.006, 8, false),
-    lorenzTubeMat
-  );
-  mothGroup.add(lorenzOrbitMesh);
-
-  // --------------------------------------------------------------------------
-  // SPECIES 5: `lexical_let` — 3 NESTED CRYSTAL CUBES IN UPWARD-BLOOMING LOTUS
-  // --------------------------------------------------------------------------
-  const seedLotusGroup = new THREE.Group();
-  seedLotusGroup.name = 'Species_LexicalLet_CubeLotus';
-  coreRoot.add(seedLotusGroup);
-  speciesGroups.lexical_let = seedLotusGroup;
-
-  const nestedCubes = [];
-  const cubeSizes = [0.11, 0.2, 0.29]; // seed=12, sq=144, cb=1728
-  const cubeColors = [0x38bdf8, 0xa855f7, 0xfbbf24];
-  for (let c = 0; c < 3; c += 1) {
-    const cSub = new THREE.Group();
-    cSub.rotation.set(Math.PI * 0.25, Math.PI * 0.25, 0);
-    const boxGeom = new THREE.BoxGeometry(cubeSizes[c], cubeSizes[c], cubeSizes[c]);
-    const cMat = new THREE.MeshPhysicalMaterial({
-      color: cubeColors[c],
-      emissive: new THREE.Color(cubeColors[c]),
-      emissiveIntensity: 0.34,
-      roughness: 0.15,
-      metalness: 0.08,
-      clearcoat: 0.65,
-      iridescence: 0.6,
-      transparent: true,
-      opacity: c === 0 ? 0.86 : c === 1 ? 0.32 : 0.18,
-      depthWrite: c === 0,
-    });
-    const cMesh = new THREE.Mesh(boxGeom, cMat);
-    cSub.add(cMesh);
-    seedLotusGroup.add(cSub);
-    nestedCubes.push({ group: cSub, mesh: cMesh, mat: cMat, index: c });
-  }
-
-  // 24 Upward-Blooming Golden-Angle (`137.5°`) Lotus Petals (`rotation.order = 'YXZ'`, tips up!)
-  const lotusPetals = [];
-  const petalConeGeom = new THREE.ConeGeometry(0.044, 0.18, 6);
-  petalConeGeom.scale(1.3, 1.0, 0.32);
-  for (let p = 0; p < 24; p += 1) {
-    const angle = p * PHI_GOLDEN_ANGLE;
-    const ring = Math.floor(p / 8); // 3 whorls of 8 petals
-    const r = 0.11 + ring * 0.068;
-    const pMat = new THREE.MeshPhysicalMaterial({
-      color: cubeColors[ring],
-      emissive: new THREE.Color(cubeColors[ring]),
-      emissiveIntensity: 0.35,
-      roughness: 0.28,
-      metalness: 0.06,
-      clearcoat: 0.4,
-      transparent: true,
-      opacity: 0.88,
-    });
-    const pMesh = new THREE.Mesh(petalConeGeom, pMat);
-    pMesh.position.set(Math.cos(angle) * r, -0.05 + ring * 0.032, Math.sin(angle) * r);
-    pMesh.rotation.order = 'YXZ';
-    pMesh.rotation.y = -angle;
-    pMesh.rotation.z = -0.58 - ring * 0.16; // Tips point UPWARD and outward like a true lotus chalice!
-    seedLotusGroup.add(pMesh);
-    lotusPetals.push({ mesh: pMesh, mat: pMat, ring, angle, r });
-  }
-
-  // --------------------------------------------------------------------------
-  // SPECIES 6: `checked_underflow` — MEDUSA JELLYFISH BELL + 16 SINUOUS TENTACLES
-  // --------------------------------------------------------------------------
-  const jellyGroup = new THREE.Group();
-  jellyGroup.name = 'Species_CheckedUnderflow_MedusaJelly';
-  coreRoot.add(jellyGroup);
-  speciesGroups.checked_underflow = jellyGroup;
-
-  const jellyBellMat = new THREE.MeshPhysicalMaterial({
-    color: 0xf43f5e,
-    emissive: new THREE.Color(0xbe123c),
-    emissiveIntensity: 0.42,
-    roughness: 0.22,
-    metalness: 0.0,
-    clearcoat: 0.65,
-    iridescence: 0.72,
-    transparent: true,
-    opacity: 0.82,
-    side: THREE.DoubleSide,
-  });
-  const jellyBellGeom = new THREE.SphereGeometry(0.3, 32, 18, 0, TAU, 0, Math.PI * 0.58);
-  const jellyBellMesh = new THREE.Mesh(jellyBellGeom, jellyBellMat);
-  jellyBellMesh.position.set(0, 0.06, 0);
-  jellyGroup.add(jellyBellMesh);
-
-  const jellyRimMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfbbf24,
-    emissive: new THREE.Color(0xd97706),
-    emissiveIntensity: 0.48,
-    roughness: 0.28,
-    metalness: 0.08,
-  });
-  const jellyRimMesh = new THREE.Mesh(new THREE.TorusGeometry(0.285, 0.013, 12, 32), jellyRimMat);
-  jellyRimMesh.position.set(0, 0.02, 0);
-  jellyRimMesh.rotation.x = Math.PI * 0.5;
-  jellyGroup.add(jellyRimMesh);
-
-  // 16 Sinuous Curved UInt128 Byte-Limb Tentacles (`writeRibbonStrip` spline ribbons)
-  const JELLY_TENTACLE_COUNT = 16;
-  const JELLY_TENTACLE_SEGMENTS = 10;
-  const jellyTentacleGeom = new THREE.BufferGeometry();
-  const jellyTentaclePos = new Float32Array(JELLY_TENTACLE_COUNT * JELLY_TENTACLE_SEGMENTS * 2 * 3);
-  const jellyTentacleCol = new Float32Array(JELLY_TENTACLE_COUNT * JELLY_TENTACLE_SEGMENTS * 2 * 3);
-  const jellyTentacleNorm = new Float32Array(JELLY_TENTACLE_COUNT * JELLY_TENTACLE_SEGMENTS * 2 * 3);
-  jellyTentacleGeom.setAttribute('position', new THREE.BufferAttribute(jellyTentaclePos, 3));
-  jellyTentacleGeom.setAttribute('color', new THREE.BufferAttribute(jellyTentacleCol, 3));
-  jellyTentacleGeom.setAttribute('normal', new THREE.BufferAttribute(jellyTentacleNorm, 3));
-  jellyTentacleGeom.setIndex(buildRibbonIndices(JELLY_TENTACLE_COUNT, JELLY_TENTACLE_SEGMENTS));
-  const jellyTentacleMat = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    vertexColors: true,
-    emissive: new THREE.Color(0xbe123c),
-    emissiveIntensity: 0.55,
-    roughness: 0.28,
-    metalness: 0.05,
-    side: THREE.DoubleSide,
-  });
-  const jellyTentaclesMesh = new THREE.Mesh(jellyTentacleGeom, jellyTentacleMat);
-  jellyGroup.add(jellyTentaclesMesh);
-
-  // --------------------------------------------------------------------------
-  // SPECIES 7: `stack_overflow` — BALLISTIC COMET + DYNAMIC PANCAKED CEILING RINGS
-  // --------------------------------------------------------------------------
-  const cometGroup = new THREE.Group();
-  cometGroup.name = 'Species_StackOverflow_CometHorizon';
-  coreRoot.add(cometGroup);
-  speciesGroups.stack_overflow = cometGroup;
-
-  const barrierMat = new THREE.MeshPhysicalMaterial({
-    color: 0xe11d48,
-    emissive: new THREE.Color(0xbe123c),
-    emissiveIntensity: 0.58,
-    roughness: 0.22,
-    metalness: 0.12,
-    transparent: true,
-    opacity: 0.52,
-    side: THREE.DoubleSide,
-  });
-  const barrierDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.012, 36), barrierMat);
-  barrierDisc.position.set(0, 0.34, 0);
-  cometGroup.add(barrierDisc);
-
-  const barrierRim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.35, 0.012, 12, 40),
-    new THREE.MeshBasicMaterial({ color: 0xf43f5e })
-  );
-  barrierRim.position.set(0, 0.34, 0);
-  barrierRim.rotation.x = Math.PI * 0.5;
-  cometGroup.add(barrierRim);
-
-  const cometLanceSub = new THREE.Group();
-  cometLanceSub.rotation.z = -0.32;
-  cometGroup.add(cometLanceSub);
-
-  const cometHeadMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfef08a,
-    emissive: new THREE.Color(0xf97316),
-    emissiveIntensity: 0.78,
-    roughness: 0.16,
-    metalness: 0.1,
-  });
-  const cometHeadMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.072, 1), cometHeadMat);
-  cometHeadMesh.position.set(0, 0.22, 0);
-  cometLanceSub.add(cometHeadMesh);
-
-  const cometTailMat = new THREE.MeshPhysicalMaterial({
-    color: 0xf97316,
-    emissive: new THREE.Color(0xe11d48),
-    emissiveIntensity: 0.48,
-    roughness: 0.28,
-    metalness: 0.06,
-    transparent: true,
-    opacity: 0.78,
-  });
-  // Closed tapered cone (`openEnded = false`) so the tail never looks like a hollow sheet!
-  const cometTailMesh = new THREE.Mesh(new THREE.ConeGeometry(0.125, 0.52, 20, 1, false), cometTailMat);
-  cometTailMesh.position.set(0, -0.05, 0);
-  cometLanceSub.add(cometTailMesh);
-
-  // Pool of up to 10 Horizontal Julia-Set Shockwave Rings (`stackLimit` driven)
-  const MAX_COMET_RINGS = 10;
-  const cometShockRings = [];
-  for (let rIdx = 0; rIdx < MAX_COMET_RINGS; rIdx += 1) {
-    const rMat = new THREE.MeshPhysicalMaterial({
-      color: 0xfb923c,
-      emissive: new THREE.Color(0xea580c),
-      emissiveIntensity: 0.5,
-      roughness: 0.24,
-      metalness: 0.12,
-    });
-    const rMesh = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.013, 10, 32), rMat);
-    rMesh.rotation.x = Math.PI * 0.5;
-    cometGroup.add(rMesh);
-    cometShockRings.push({ mesh: rMesh, mat: rMat, index: rIdx });
-  }
-
-  // --------------------------------------------------------------------------
-  // SPECIES 8: `fuel_exhaustion` — HOLLOW OPEN-CENTER 14-SEGMENT TOKAMAK TORUS
-  // --------------------------------------------------------------------------
-  const torusGroup = new THREE.Group();
-  torusGroup.name = 'Species_FuelExhaustion_HollowTorus';
-  torusGroup.rotation.x = 0.28; // Tilted so the open center hole is unmistakable and stays well above the floor
-  torusGroup.rotation.z = 0.16;
-  coreRoot.add(torusGroup);
-  speciesGroups.fuel_exhaustion = torusGroup;
-
-  const torusFuelCells = [];
-  const cellArcGeom = new THREE.TorusGeometry(0.32, 0.066, 16, 12, (TAU / 14) * 0.82);
-  for (let fIdx = 0; fIdx < 14; fIdx += 1) {
-    const angle = (fIdx / 14) * TAU;
-    const cMat = new THREE.MeshPhysicalMaterial({
-      color: 0x38bdf8,
-      emissive: new THREE.Color(0x0284c7),
-      emissiveIntensity: 0.52,
-      roughness: 0.22,
-      metalness: 0.28,
-      clearcoat: 0.65,
-      transparent: true,
-      opacity: 0.92,
-    });
-    const cellMesh = new THREE.Mesh(cellArcGeom, cMat);
-    cellMesh.rotation.z = angle;
-    torusGroup.add(cellMesh);
-    torusFuelCells.push({ mesh: cellMesh, mat: cMat, index: fIdx, angle });
-  }
-
-  // True Poloidal (1,3) Winding Tube hugging the `R = 0.32, r = 0.070` torus surface (`r <= 0.39`)
-  const braidPts = [];
-  for (let i = 0; i <= 180; i += 1) {
-    const a = (i / 180) * TAU;
-    const b = 3.0 * a;
-    const R = 0.32 + 0.072 * Math.cos(b);
-    braidPts.push(new THREE.Vector3(R * Math.cos(a), R * Math.sin(a), 0.072 * Math.sin(b)));
-  }
-  const torusBraidMat = new THREE.MeshPhysicalMaterial({
-    color: 0xfbbf24,
-    emissive: new THREE.Color(0xd97706),
-    emissiveIntensity: 0.48,
-    roughness: 0.24,
-    metalness: 0.35,
-  });
-  const torusBraidMesh = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(braidPts, true), 220, 0.0065, 8, true),
-    torusBraidMat
-  );
-  torusGroup.add(torusBraidMesh);
-
-  function refreshInspectMetadata(artifact, stepState) {
-    const species = artifact.speciesMeta;
-    const tel = getQuinelingTelemetry(stepState);
-    const meta = {
-      designer: 'D8 · QDL Quineling Core Organism',
-      title: `${species.speciesName} (${species.commonTitle})`,
-      Check: `${species.family} · ${species.mechanism} · ${tel.morphGesture}`,
-      body: `${species.description} Compiled from Sherlock AST (${artifact.graph.nodes.length} QDL task nodes, ${artifact.quineBytes}B self-reproducing Quine verified=${artifact.quineVerified}).`,
-    };
-    tagInspectable(coreRoot, meta);
-    tagInspectable(sdkManifoldRibbonMesh, meta);
-  }
-
+  const _frameReuse = {
+    points: new Float32Array(TISSUE_BUDGET * 4),
+    owners: new Uint16Array(TISSUE_BUDGET),
+  };
+  const _sdkPts = Array.from({ length: SDK_RIBBON_SEGMENTS }, () => new THREE.Vector3());
+  const _tendrilPts = Array.from({ length: TENDRIL_SEGMENTS }, () => new THREE.Vector3());
+  const _anchorPositions = Array.from({ length: MAX_ANCHOR_NODES }, () => new THREE.Vector3());
+  const _vecA = new THREE.Vector3();
+  const _vecB = new THREE.Vector3();
   const _dummy = new THREE.Object3D();
   const _color = new THREE.Color();
-  const _sdkPts = Array.from({ length: SDK_RIBBON_SEGMENTS }, () => new THREE.Vector3());
-  const _silkPts = Array.from({ length: SILK_SEGMENTS }, () => new THREE.Vector3());
-  const _tentaclePts = Array.from({ length: JELLY_TENTACLE_SEGMENTS }, () => new THREE.Vector3());
-  const _tendrilPts = Array.from({ length: TENDRIL_SEGMENTS }, () => new THREE.Vector3());
+  const _faultColor = new THREE.Color(0xe11d48);
 
-  let lastCacheKey = '';
-  let lastStepRidgeKey = '';
-  let cachedSdkRidges = [];
-  let lastSpeciesParent = null;
-  let dampedScale = 1.0;
-  let dampedTendrilOpacity = 0.34;
-  let dampedYOffset = 0.0;
+  let dampedYOffset = 0;
+  let lastFrameSampleTime = -1;
+  let lastFrameCacheKey = '';
+  let lastStepIndex = -1;
+  let cachedWovenFrame = null;
 
-  // ==========================================================================
-  // 5. PER-FRAME LIVE EXECUTION MORPHOGENESIS UPDATE (`update(stepState)`)
-  // ==========================================================================
-  function update(stepState = {}) {
-    const ambient = stepState.ambient ?? 0;
-    const dt = clamp(stepState.dt ?? 0.016, 0.001, 0.05);
-    const step = stepState.step ?? null;
-    const stepIndex = stepState.stepIndex ?? step?.stepIndex ?? 0;
-    const stepFraction = clamp(stepState.stepFraction ?? 0, 0, 1);
-    const q = quinticStep(stepFraction);
-
-    // 1. Compile or fetch cached Quineling artifact from the actual Sherlock program source & trace!
+  function update(stepState = {}, ambientArg = 0, dtArg = 0.016) {
+    const ambient = stepState?.ambient ?? ambientArg;
+    const dt = stepState?.dt ?? dtArg;
     const artifact = resolveCompiledQuineling(stepState);
-    const species = artifact.speciesMeta;
+    const species = artifact.speciesMeta || QUINELING_SPECIES.factorial;
     const speciesId = species.id;
-    const entryMorph = artifact.analysis?.entryMorph || {};
+    const mechanism = artifact.wovenRecord?.mechanism || species.mechanism;
+    const bounds = artifact.wovenBounds || { cx: 0, cy: 0, cz: 0, width: 1.2, height: 1.2, depth: 0.4 };
+    const design = artifact.design;
 
-    // Toggle visibility so ONLY the active species' 3D architecture is shown!
-    for (const [key, sGroup] of Object.entries(speciesGroups)) {
-      sGroup.visible = key === speciesId;
+    // Toggle active species marker group
+    for (const [key, sg] of Object.entries(speciesGroups)) {
+      sg.visible = key === speciesId;
     }
 
-    if (artifact.cacheKey !== lastCacheKey) {
-      lastCacheKey = artifact.cacheKey;
-      refreshInspectMetadata(artifact, stepState);
-    }
-
-    // Camera-Lens-Aware Study Scaling (`interior_floor` and `interior_up` keep floor & rings 100% clear!)
-    const activePreset = stepState.activePreset || stepState.cameraPreset || 'overview';
-    const isFloorStudy = activePreset === 'interior_floor';
-    const isUpStudy = activePreset === 'interior_up';
-    const targetScale = isFloorStudy ? 0.58 : isUpStudy ? 0.52 : 1.0;
-    const targetTendrilOp = isFloorStudy ? 0.08 : isUpStudy ? 0.06 : 0.32;
-    const targetYOffset = isUpStudy ? -0.2 : 0.0;
-    const dampMix = 1.0 - Math.exp(-8.0 * dt);
-    dampedScale = lerp(dampedScale, targetScale, dampMix);
-    dampedTendrilOpacity = lerp(dampedTendrilOpacity, targetTendrilOp, dampMix);
-    dampedYOffset = lerp(dampedYOffset, targetYOffset, dampMix);
-
-    coreRoot.scale.setScalar(dampedScale);
-    tendrilMat.opacity = dampedTendrilOpacity;
-
+    const step = stepState.step ?? null;
+    const stepIndex = stepState.stepIndex ?? 0;
+    const rawSub = clamp(stepState.sub ?? 1, 0, 1);
+    const q = quinticStep(rawSub);
     const ruleLine = step?.ruleLine ?? 80;
     const ruleId = step?.ruleId || `A${String(ruleLine).padStart(3, '0')}`;
-    const frames = step?.after?.frames ?? [];
-    const frameCount = frames.length;
     const activeCalls = step?.after?.activeCalls ?? [];
     const callDepth = activeCalls.length;
+
     const preFuel = step?.before?.fuel ?? 20;
     const postFuel = step?.after?.fuel ?? preFuel;
     const initialFuel = Math.max(1, stepState.trace?.steps?.[0]?.before?.fuel ?? 20);
@@ -1356,40 +773,38 @@ export function createQuinelingSubsystem() {
     const isFault = ruleLine === 82 || ruleLine === 140 || ruleLine === 225;
     const isExhausted = ruleLine === 84 || ruleId === 'A084';
     const isInPlaceRewrite = ruleLine === 149 || ruleLine === 145 || ruleLine === 177;
-    const isAluPrim = ruleLine === 223 || ruleLine === 225;
 
-    // Gentle levitation & breathing inside the hollow chamber
-    const breathFreq = 1.3 + liveFuelRatio * 1.1;
-    const breathPhase = ambient * breathFreq;
-    coreRoot.position.y = QUINELING_CORE_Y + dampedYOffset + Math.sin(breathPhase) * 0.022;
-    coreRoot.rotation.y = ambient * 0.22 + (isInPlaceRewrite ? Math.sin(q * Math.PI) * 0.18 : 0);
+    // Program-specific QDL motion rhythm (`breath-pulse`, `crest-wave`, `asymmetric-glide`, `harmonic-overtone`)
+    const phaseRate = design?.motion?.phaseRate ?? 0.34;
+    const rawPhase = ambient * phaseRate * (0.55 + 0.45 * liveFuelRatio) + stepIndex * 0.14;
+    const wovenPhase = evaluateProgramRhythmPhase(design, rawPhase);
 
-    corePointLight.color.setHex(
-      isFault ? ROLES_1_HEX.faultCrimson : isDone ? ROLES_1_HEX.reportGreen : species.primaryHex
-    );
-    corePointLight.intensity = isDone ? 1.15 : isFault ? 1.25 : isExhausted ? 0.35 : 0.8 + callDepth * 0.08;
+    const rhythm = design?.motion?.rhythm;
+    const breathAmp = (rhythm?.breath ?? 0.14) * 0.14;
+    const asymTilt = (rhythm?.asymmetry ?? 0.1) * 0.22;
 
-    // ========================================================================
-    // 2. SAMPLE REAL QUINELINGS SDK 3D MANIFOLD (`WovenBody.frame` + `Morphology`)
-    // ========================================================================
-    const stepRidgeKey = `${artifact.cacheKey}|step:${stepIndex}`;
-    if (stepRidgeKey !== lastStepRidgeKey) {
-      lastStepRidgeKey = stepRidgeKey;
-      const stepPhaseRad = (stepIndex * 0.08) * TAU;
-      const wf = WovenBody.frame(artifact.wovenBody, stepPhaseRad, {
-        budget: 256,
-        crests: true,
-      });
-      if (wf.ridges?.length) {
-        cachedSdkRidges = wf.ridges;
-      } else {
-        const mf = Morphology.surfaceFrame(artifact.shape, stepPhaseRad, true);
-        cachedSdkRidges = mf.ridges || [];
-      }
-    }
-    const ridges = cachedSdkRidges;
-    const nodeColors = artifact.nodeColors || [];
+    const targetYOffset = clamp((callDepth - 1) * 0.014, -0.05, 0.06);
+    dampedYOffset = lerp(dampedYOffset, targetYOffset, clamp(dt * 6.0, 0.05, 1.0));
 
+    coreRoot.position.y = QUINELING_CORE_Y + dampedYOffset + Math.sin(wovenPhase) * breathAmp;
+    coreRoot.rotation.y =
+      Math.sin(ambient * 0.22) * 0.26 +
+      (isInPlaceRewrite ? Math.sin(q * Math.PI) * 0.12 : 0);
+    coreRoot.rotation.x = Math.cos(wovenPhase * 0.7) * asymTilt * 0.28;
+    coreRoot.rotation.z = Math.sin(wovenPhase * 0.5) * asymTilt * 0.18;
+
+    const breathScale = 1.0 + Math.sin(wovenPhase) * (rhythm?.breath ?? 0.12) * 0.14;
+    coreRoot.scale.setScalar(breathScale);
+
+    // Primary node color for core studio light
+    const primaryNodeHex = artifact.nodeColors?.[0]?.hex || species.accentCss;
+    _color.set(primaryNodeHex);
+    if (isFault) _color.setHex(ROLES_1_HEX.faultCrimson);
+    else if (isDone) _color.setHex(ROLES_1_HEX.reportGreen);
+    corePointLight.color.copy(_color);
+    corePointLight.intensity = isDone ? 1.15 : isFault ? 1.25 : isExhausted ? 0.35 : 0.82 + callDepth * 0.06;
+
+    // Active AST expression -> Quinelings operation node ownership highlight
     const activeExprId =
       step?.after?.control?.exprId ??
       step?.before?.control?.exprId ??
@@ -1398,376 +813,361 @@ export function createQuinelingSubsystem() {
       activeExprId !== null && artifact.exprToNodeId?.has(activeExprId)
         ? artifact.exprToNodeId.get(activeExprId)
         : null;
-    const activeNodeIdx = activeNodeId
-      ? artifact.graph.nodes.findIndex((n) => n.id === activeNodeId)
+    const activeNodeEntry =
+      activeNodeId && artifact.nodesById?.has(activeNodeId)
+        ? artifact.nodesById.get(activeNodeId)
+        : null;
+    const activeNodeIdx = activeNodeEntry
+      ? activeNodeEntry.index
       : stepIndex % Math.max(1, artifact.graph.nodes.length);
 
-    for (let rIdx = 0; rIdx < SDK_RIBBON_COUNT; rIdx += 1) {
-      const ridgeIndex = Math.floor((rIdx * Math.max(1, ridges.length)) / SDK_RIBBON_COUNT);
-      const ridge = ridges[ridgeIndex];
-      const vCoord = ((rIdx % 8) / 7) * 2 - 1;
-      const midSample = sampleSdkRidgePoint(ridge, 0.5);
-      const ownerIdx =
-        midSample?.owner !== null && midSample?.owner !== undefined && midSample.owner >= 0
-          ? midSample.owner
-          : rIdx % Math.max(1, nodeColors.length);
-      const cSpec = nodeColors[ownerIdx % Math.max(1, nodeColors.length)];
-      const rgb = cSpec?.rgb || [56, 189, 248];
-      let cr = rgb[0] / 255;
-      let cg = rgb[1] / 255;
-      let cb = rgb[2] / 255;
-
-      if (ownerIdx === activeNodeIdx) {
-        cr = lerp(cr, 1.0, 0.45);
-        cg = lerp(cg, 0.92, 0.45);
-        cb = lerp(cb, 0.55, 0.45);
-      }
-      if (isFault) {
-        cr = lerp(cr, 0.95, 0.7);
-        cg *= 0.25;
-        cb *= 0.35;
-      } else if (isExhausted) {
-        const gray = (cr + cg + cb) / 3;
-        cr = lerp(cr, gray * 0.55, 0.75);
-        cg = lerp(cg, gray * 0.6, 0.75);
-        cb = lerp(cb, gray * 0.68, 0.75);
-      }
-
-      for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
-        const u = s / (SDK_RIBBON_SEGMENTS - 1);
-        const rawPt = sampleSdkRidgePoint(ridge, u);
-        const sdkWave = rawPt
-          ? clamp((rawPt.x + rawPt.y + rawPt.z) * 0.15 + Math.sin(ambient * 1.6 + u * TAU) * 0.04, -0.35, 0.35)
-          : Math.sin(ambient * 1.6 + u * TAU) * 0.04;
-        const pos = embedOnSpeciesSurface(speciesId, u, vCoord, rIdx, sdkWave);
-        _sdkPts[s].set(pos.x, pos.y, pos.z);
-      }
-      writeRibbonStrip(
-        sdkRibbonPositions,
-        sdkRibbonColors,
-        sdkRibbonNormals,
-        rIdx,
-        SDK_RIBBON_SEGMENTS,
-        _sdkPts,
-        ownerIdx === activeNodeIdx ? 0.0055 : 0.0032,
-        cr,
-        cg,
-        cb
-      );
-    }
-    sdkRibbonGeom.attributes.position.needsUpdate = true;
-    sdkRibbonGeom.attributes.color.needsUpdate = true;
-    sdkRibbonGeom.attributes.normal.needsUpdate = true;
-
     // ========================================================================
-    // 3. ANIMATE THE ACTIVE SPECIES' DISTINCT 3D MACRO-ANATOMY
+    // 1. SAMPLE REAL `WovenBody.frame` AT 30Hz (OR IMMEDIATELY ON STEP/PROGRAM CHANGE)
     // ========================================================================
-    if (speciesId === 'factorial') {
-      // COILED 3D NAUTILUS SHELL: Dynamic `N + 1` chamber septa (`fact(4)` = 5, `fact(5)` = 6)
-      const chamberCount = clamp((entryMorph.entryN ?? 4) + 1, 2, MAX_NAUTILUS_CHAMBERS);
-      nautilusGroup.rotation.y = Math.sin(ambient * 0.6) * 0.22;
-      for (let i = 0; i < nautilusRibs.length; i += 1) {
-        const item = nautilusRibs[i];
-        const unlocked = item.u <= clamp((callDepth + 1) / chamberCount, 0.35, 1.0) || isDone;
-        const pulse = unlocked ? 1.0 + 0.06 * Math.sin(ambient * 3.0 - item.u * 6.0) : 0.82;
-        item.mesh.scale.setScalar(pulse);
-        item.mat.color.setHex(isDone ? 0x34d399 : unlocked ? 0xfbbf24 : 0x78350f);
-        item.mat.emissiveIntensity = unlocked ? 0.42 : 0.14;
-      }
-      for (let c = 0; c < MAX_NAUTILUS_CHAMBERS; c += 1) {
-        const ch = nautilusChambers[c];
-        if (c >= chamberCount) {
-          ch.mesh.visible = false;
-          continue;
-        }
-        ch.mesh.visible = true;
-        const u = 0.22 + (c / Math.max(1, chamberCount - 1)) * 0.72;
-        const theta = u * 2.05 * TAU;
-        const rad = 0.022 * Math.exp(0.215 * theta);
-        const tubeR = Math.max(0.016, rad * 0.36);
-        const pt = nautilusSpline.getPointAt(u);
-        const tangent = nautilusSpline.getTangentAt(u);
-        ch.mesh.position.copy(pt);
-        ch.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
-        const activeChamber = c < callDepth || isDone;
-        const lockedGold = c < frameCount && (ruleLine === 149 || controlKindIsReturn(step));
-        ch.mat.color.setHex(isDone ? 0x2dd4bf : lockedGold ? 0xfde047 : activeChamber ? 0xf59e0b : 0x475569);
-        ch.mat.emissiveIntensity = activeChamber ? 0.68 : 0.18;
-        ch.mesh.scale.set(tubeR, 1.0, tubeR);
-      }
-    } else if (speciesId === 'list_fold') {
-      // CONTINUOUS SILK SIPHONOPHORE RIBBON + DYNAMIC `cons` ZOOID BELLS
-      const listVals = entryMorph.listValues?.length ? entryMorph.listValues : [5, 8, 3];
-      const podCount = clamp(listVals.length, 1, MAX_ZOOID_PODS);
-      const activePodIdx = clamp(callDepth - 1, 0, podCount - 1);
+    const needsWovenSample =
+      !cachedWovenFrame ||
+      artifact.cacheKey !== lastFrameCacheKey ||
+      stepIndex !== lastStepIndex ||
+      Math.abs(ambient - lastFrameSampleTime) >= 0.032;
 
-      // Update continuous undulating silk membrane
-      for (let st = 0; st < SILK_STRANDS; st += 1) {
-        const zOff = (st - 1) * 0.032;
-        for (let s = 0; s < SILK_SEGMENTS; s += 1) {
-          const u = s / (SILK_SEGMENTS - 1);
-          const x = lerp(-0.4, 0.4, u);
-          const y = Math.sin(u * Math.PI * podCount - ambient * 2.6 + st * 0.4) * 0.072;
-          const z = zOff + Math.cos(u * TAU * 1.5 - ambient * 2.0) * 0.045;
-          _silkPts[s].set(x, y, z);
-        }
-        _color.setHex(isDone ? 0x2dd4bf : st === 1 ? 0x22d3ee : 0xa855f7);
-        writeRibbonStrip(
-          silkPositions,
-          silkColors,
-          silkNormals,
-          st,
-          SILK_SEGMENTS,
-          _silkPts,
-          0.034,
-          _color.r,
-          _color.g,
-          _color.b
-        );
-      }
-      silkGeom.attributes.position.needsUpdate = true;
-      silkGeom.attributes.color.needsUpdate = true;
-      silkGeom.attributes.normal.needsUpdate = true;
+    if (needsWovenSample) {
+      lastFrameCacheKey = artifact.cacheKey;
+      lastStepIndex = stepIndex;
+      lastFrameSampleTime = ambient;
 
-      for (let zIdx = 0; zIdx < MAX_ZOOID_PODS; zIdx += 1) {
-        const pod = listZooidPods[zIdx];
-        if (zIdx >= podCount) {
-          pod.group.visible = false;
-          continue;
-        }
-        pod.group.visible = true;
-        const u = podCount === 1 ? 0.5 : 0.15 + (zIdx / (podCount - 1)) * 0.7;
-        const val = listVals[zIdx] ?? 5;
-        const bellR = clamp(0.052 + val * 0.0045, 0.052, 0.105);
-        const x = lerp(-0.4, 0.4, u);
-        const y = Math.sin(u * Math.PI * podCount - ambient * 2.6) * 0.072;
-        const z = Math.cos(u * TAU * 1.5 - ambient * 2.0) * 0.045;
-        pod.group.position.set(x, y, z);
-        const isCurrent = zIdx === activePodIdx || isDone;
-        const pulse = isCurrent ? 1.12 + 0.06 * Math.sin(ambient * 4.0) : 0.94;
-        pod.bell.scale.set(bellR * 1.22 * pulse, bellR * 0.92 * pulse, bellR * 0.92 * pulse);
-        pod.ring.scale.setScalar(bellR * pulse);
-        pod.bellMat.color.setHex(isDone ? 0x2dd4bf : isCurrent ? 0x22d3ee : 0x6366f1);
-        pod.bellMat.emissiveIntensity = isCurrent ? 0.68 : 0.28;
-      }
-    } else if (speciesId === 'tree_fold') {
-      // BIFURCATING BINARY CORAL TREE: West `leaf(7)` vs East `branch(leaf(4), leaf(9))`
-      const progress = stepState.progress ?? 0;
-      const westActive = progress < 0.42 || isDone;
-      const eastActive = progress >= 0.35 || isDone;
-      const leafVals = entryMorph.treeLeaves || [7, 4, 9];
-      for (const b of coralBranches) {
-        const lit =
-          b.def.side === 'root' ||
-          (b.def.side === 'west' && westActive) ||
-          (b.def.side.startsWith('east') && eastActive);
-        b.mat.emissiveIntensity = lit ? 0.58 : 0.18;
-      }
-      for (let c = 0; c < coralPolypCrowns.length; c += 1) {
-        const crown = coralPolypCrowns[c];
-        const lit =
-          (crown.side === 'west' && westActive) ||
-          (crown.side.startsWith('east') && eastActive) ||
-          isDone;
-        const val = leafVals[c % leafVals.length] ?? 6;
-        const baseScale = clamp(0.82 + val * 0.035, 0.8, 1.28);
-        const pulse = baseScale * (lit ? 1.08 + 0.06 * Math.sin(ambient * 3.2 + c) : 0.85);
-        crown.group.scale.setScalar(pulse);
-        crown.mat.emissiveIntensity = lit ? 0.68 : 0.2;
-      }
-    } else if (speciesId === 'mutual_even_odd') {
-      // TWIN-WINGED LUNA MOTH + RK4 LORENZ ORBIT: Left (`is_even`) & Right (`is_odd`) counter-flap
-      const topCallName = activeCalls[activeCalls.length - 1]?.fnName || '';
-      const evenActive = topCallName.includes('even') || stepIndex % 2 === 0;
-      const flapAngle = Math.sin(ambient * 4.2 + q * Math.PI) * 0.46;
-      const wingSpanScale = clamp(0.88 + (entryMorph.entryN ?? 4) * 0.03, 0.88, 1.22);
-      leftWingPivot.scale.setScalar(wingSpanScale);
-      rightWingPivot.scale.setScalar(wingSpanScale);
-      leftWingPivot.rotation.y = flapAngle;
-      rightWingPivot.rotation.y = -flapAngle;
-      leftWingMat.emissiveIntensity = isDone ? 0.72 : evenActive ? 0.72 : 0.24;
-      rightWingMat.emissiveIntensity = isDone ? 0.72 : !evenActive ? 0.72 : 0.24;
-      lorenzOrbitMesh.rotation.z = Math.sin(ambient * 0.7) * 0.18;
-    } else if (speciesId === 'lexical_let') {
-      // 3 NESTED CRYSTAL CUBES IN UPWARD-CUPPED 24-PETAL LOTUS
-      const activeScopeDepth = clamp(frameCount + (isDone ? 3 : 0), 1, 3);
-      const seedScale = clamp(0.75 + 0.22 * Math.log10(1 + (entryMorph.seedValue ?? 12)), 0.72, 1.18);
-      for (let c = 0; c < nestedCubes.length; c += 1) {
-        const nc = nestedCubes[c];
-        const dir = c % 2 === 0 ? 1 : -1;
-        nc.group.scale.setScalar(seedScale);
-        nc.group.rotation.y = ambient * 0.45 * dir + c * 0.5;
-        nc.group.rotation.x = Math.PI * 0.25 + Math.sin(ambient * 0.8 + c) * 0.15;
-        const lit = c < activeScopeDepth || isDone;
-        nc.mat.emissiveIntensity = lit ? (isAluPrim ? 0.82 : 0.52) : 0.16;
-      }
-      for (let p = 0; p < lotusPetals.length; p += 1) {
-        const lp = lotusPetals[p];
-        const openMix = lp.ring < activeScopeDepth || isDone ? 1.0 : 0.4;
-        lp.mesh.rotation.z = lerp(-0.38, -0.62 - lp.ring * 0.16, openMix) + Math.sin(ambient * 2 + p * 0.3) * 0.04;
-        lp.mat.emissiveIntensity = openMix > 0.5 ? 0.48 : 0.18;
-      }
-    } else if (speciesId === 'checked_underflow') {
-      // MEDUSA JELLYFISH BELL + 16 SINUOUS SPLINE TENTACLES
-      const gapBoost = clamp((entryMorph.subGap ?? 6) / 16, 0.2, 1.2);
-      const bellPulse = isFault ? 1.18 : 1.0 + (0.06 + 0.04 * gapBoost) * Math.sin(ambient * 3.2);
-      jellyBellMesh.scale.set(bellPulse, 1.0 / Math.sqrt(bellPulse), bellPulse);
-      jellyBellMat.color.setHex(isFault ? 0xe11d48 : 0xf43f5e);
-      jellyBellMat.emissiveIntensity = isFault ? 0.82 : 0.42;
+      cachedWovenFrame = WovenBody.frame(artifact.wovenBody, wovenPhase, {
+        budget: TISSUE_BUDGET,
+        crests: true,
+        reuse: _frameReuse,
+      });
 
-      for (let t = 0; t < JELLY_TENTACLE_COUNT; t += 1) {
-        const baseA = (t / 16) * TAU;
-        const baseRad = t % 2 === 0 ? 0.24 : 0.16;
-        for (let s = 0; s < JELLY_TENTACLE_SEGMENTS; s += 1) {
-          const u = s / (JELLY_TENTACLE_SEGMENTS - 1);
-          const sway = Math.sin(ambient * 2.2 + t * 0.7 + u * 4.0) * (isFault ? 0.045 : 0.022) * u;
-          const flare = isFault ? u * 0.14 : 0;
-          const rad = baseRad + sway + flare;
-          const twist = baseA + Math.cos(ambient * 1.6 + t + u * 3.0) * 0.12 * u;
-          _tentaclePts[s].set(
-            Math.cos(twist) * rad,
-            lerp(0.02, -0.38, u),
-            Math.sin(twist) * rad
+      const pts = cachedWovenFrame.points;
+      const owners = cachedWovenFrame.owners;
+      const nodeColors = artifact.nodeColors || [];
+      const nodeCount = Math.max(1, nodeColors.length);
+
+      // Update 8,192 tissue cloud points & colors using exact `lifeform-webgl.js` premultiplied alpha
+      for (let i = 0; i < TISSUE_BUDGET; i += 1) {
+        const p4 = i * 4;
+        const p3 = i * 3;
+        normalizeWovenCoord(pts[p4], pts[p4 + 1], pts[p4 + 2], bounds, mechanism, _vecA);
+        tissuePositions[p3] = _vecA.x;
+        tissuePositions[p3 + 1] = _vecA.y;
+        tissuePositions[p3 + 2] = _vecA.z;
+
+        const ownerIdx = owners[i] % nodeCount;
+        const cSpec = nodeColors[ownerIdx];
+        const rgb = cSpec?.rgb || [114, 217, 226];
+        const rawPtAlpha = pts[p4 + 3] || 0.04;
+        const isActivePatch = ownerIdx === activeNodeIdx;
+
+        // Exact nursery.html / lifeform-webgl.js exponential density mapping: 1 - exp(-2 * alpha)
+        const baseAlpha = (1 - Math.exp(-2.2 * rawPtAlpha)) * (isActivePatch ? 0.72 : 0.46);
+        const a = clamp(baseAlpha, 0.025, 0.78);
+
+        let r = (rgb[0] / 255) * a;
+        let g = (rgb[1] / 255) * a;
+        let b = (rgb[2] / 255) * a;
+
+        // Subtle pearl highlight on high-compression tissue points
+        if (rawPtAlpha > 0.24) {
+          const boost = clamp((rawPtAlpha - 0.24) * 0.55, 0, 0.28);
+          r = lerp(r, 0.902 * a, boost);
+          g = lerp(g, 0.973 * a, boost);
+          b = lerp(b, 0.929 * a, boost);
+        }
+        if (isFault) {
+          r = lerp(r, 0.95 * a, 0.72);
+          g *= 0.25;
+          b *= 0.32;
+        } else if (isExhausted) {
+          const gray = (r + g + b) * 0.333;
+          r = gray * 0.55;
+          g = gray * 0.6;
+          b = gray * 0.68;
+        }
+
+        tissueColors[p3] = r;
+        tissueColors[p3 + 1] = g;
+        tissueColors[p3 + 2] = b;
+      }
+      tissueGeom.attributes.position.needsUpdate = true;
+      tissueGeom.attributes.color.needsUpdate = true;
+
+      // ======================================================================
+      // 2. UPDATE `WovenBody` CAUSTIC & CREST FILAMENTS (`frame.ridges`)
+      //    Covers 100% of ridges across all strands and uses exact `lifeform-webgl.js`
+      //    premultiplied alpha (`c * 0.88 + pearl * 0.12`) * alpha so quiet parameter
+      //    regions stay whisper-faint and true Jacobian caustics shine!
+      // ======================================================================
+      const ridges = cachedWovenFrame.ridges || [];
+      let totalRawSegments = 0;
+      for (let rIdx = 0; rIdx < ridges.length; rIdx += 1) {
+        const len = ridges[rIdx].line?.length || 0;
+        if (len >= 2) totalRawSegments += len - 1;
+      }
+      const stepStride = totalRawSegments > MAX_RIDGE_SEGMENTS ? 2 : 1;
+      const baseGain = artifact.wovenBody?.cloud
+        ? 0.24
+        : artifact.wovenBody?.familyAdapter
+          ? 0.34
+          : 0.48;
+
+      let segCursor = 0;
+      for (let rIdx = 0; rIdx < ridges.length && segCursor < MAX_RIDGE_SEGMENTS; rIdx += 1) {
+        const line = ridges[rIdx].line;
+        if (!Array.isArray(line) || line.length < 2) continue;
+
+        const isParamFilament = ridges[rIdx].material === 'parameter-filament';
+
+        for (let j = 0; j < line.length - 1 && segCursor < MAX_RIDGE_SEGMENTS; j += stepStride) {
+          const nextJ = Math.min(line.length - 1, j + stepStride);
+          const p0 = line[j];
+          const p1 = line[nextJ];
+
+          const rawA0 = Number.isFinite(p0.alpha) ? p0.alpha : 0.2;
+          const rawA1 = Number.isFinite(p1.alpha) ? p1.alpha : 0.2;
+          if (Math.max(rawA0, rawA1) < 0.012) continue;
+
+          // Suppress quiet non-caustic parameter grid lines in family adapters so caustics stand out
+          const focus0 = isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.45) : clamp(rawA0, 0, 1);
+          const focus1 = isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.45) : clamp(rawA1, 0, 1);
+
+          const vBase = segCursor * 6;
+          normalizeWovenCoord(p0.x, p0.y, p0.z || 0, bounds, mechanism, _vecA);
+          normalizeWovenCoord(p1.x, p1.y, p1.z || 0, bounds, mechanism, _vecB);
+
+          ridgeLinePositions[vBase] = _vecA.x;
+          ridgeLinePositions[vBase + 1] = _vecA.y;
+          ridgeLinePositions[vBase + 2] = _vecA.z;
+          ridgeLinePositions[vBase + 3] = _vecB.x;
+          ridgeLinePositions[vBase + 4] = _vecB.y;
+          ridgeLinePositions[vBase + 5] = _vecB.z;
+
+          const ownerIdx =
+            Number.isInteger(p0.owner) && p0.owner >= 0
+              ? p0.owner % nodeCount
+              : rIdx % nodeCount;
+          const cSpec = nodeColors[ownerIdx];
+          const rgb = cSpec?.rgb || [114, 217, 226];
+          const activeBoost = ownerIdx === activeNodeIdx ? 1.28 : 1.0;
+
+          const a0 = clamp(focus0 * baseGain * activeBoost, 0.004, 0.72);
+          const a1 = clamp(focus1 * baseGain * activeBoost, 0.004, 0.72);
+
+          // Rich Chroma node color (88% Chroma + 12% `#e6f8ed` pearl crest)
+          let baseR = (rgb[0] / 255) * 0.88 + 0.902 * 0.12;
+          let baseG = (rgb[1] / 255) * 0.88 + 0.973 * 0.12;
+          let baseB = (rgb[2] / 255) * 0.88 + 0.929 * 0.12;
+
+          if (isFault) {
+            baseR = lerp(baseR, 0.95, 0.72);
+            baseG *= 0.25;
+            baseB *= 0.32;
+          } else if (isExhausted) {
+            const gray = (baseR + baseG + baseB) * 0.333;
+            baseR = gray * 0.55;
+            baseG = gray * 0.6;
+            baseB = gray * 0.68;
+          }
+
+          ridgeLineColors[vBase] = baseR * a0;
+          ridgeLineColors[vBase + 1] = baseG * a0;
+          ridgeLineColors[vBase + 2] = baseB * a0;
+          ridgeLineColors[vBase + 3] = baseR * a1;
+          ridgeLineColors[vBase + 4] = baseG * a1;
+          ridgeLineColors[vBase + 5] = baseB * a1;
+
+          segCursor += 1;
+        }
+      }
+      ridgeLineGeom.setDrawRange(0, segCursor * 2);
+      ridgeLineGeom.attributes.position.needsUpdate = true;
+      ridgeLineGeom.attributes.color.needsUpdate = true;
+
+      if (sdkManifoldRibbonMesh.visible) {
+        const ribbonSourceCount = Math.max(1, ridges.length);
+        const ribbonHalfWidthBase =
+          0.0018 + 0.0014 * clamp(design?.surface?.spread ?? 0.65, 0.2, 1.4);
+
+        for (let rIdx = 0; rIdx < SDK_RIBBON_COUNT; rIdx += 1) {
+          const ridge = ridges[Math.floor((rIdx * ribbonSourceCount) / SDK_RIBBON_COUNT)];
+          const line = ridge?.line;
+          const ownerIdx =
+            Number.isInteger(line?.[0]?.owner) && line[0].owner >= 0
+              ? line[0].owner % nodeCount
+              : rIdx % nodeCount;
+          const cSpec = nodeColors[ownerIdx];
+          const rgb = cSpec?.rgb || [114, 217, 226];
+          const cr = rgb[0] / 255;
+          const cg = rgb[1] / 255;
+          const cb = rgb[2] / 255;
+
+          if (Array.isArray(line) && line.length >= 4) {
+            for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
+              const u = s / (SDK_RIBBON_SEGMENTS - 1);
+              const ptIdx = Math.min(line.length - 1, Math.floor(u * (line.length - 1)));
+              const rawPt = line[ptIdx];
+              normalizeWovenCoord(rawPt.x, rawPt.y, rawPt.z || 0, bounds, mechanism, _sdkPts[s]);
+            }
+          } else {
+            for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
+              _sdkPts[s].set(0, 0, 0);
+            }
+          }
+
+          writeRibbonStrip(
+            sdkRibbonPositions,
+            sdkRibbonColors,
+            sdkRibbonNormals,
+            rIdx,
+            SDK_RIBBON_SEGMENTS,
+            _sdkPts,
+            Array.isArray(line) && line.length >= 4 ? ribbonHalfWidthBase : 0,
+            cr,
+            cg,
+            cb
           );
         }
-        _color.setHex(isFault ? 0xe11d48 : t % 2 === 0 ? 0xfb7185 : 0xfbbf24);
-        writeRibbonStrip(
-          jellyTentaclePos,
-          jellyTentacleCol,
-          jellyTentacleNorm,
-          t,
-          JELLY_TENTACLE_SEGMENTS,
-          _tentaclePts,
-          0.0075,
-          _color.r,
-          _color.g,
-          _color.b
-        );
+        sdkRibbonGeom.attributes.position.needsUpdate = true;
+        sdkRibbonGeom.attributes.color.needsUpdate = true;
+        sdkRibbonGeom.attributes.normal.needsUpdate = true;
       }
-      jellyTentacleGeom.attributes.position.needsUpdate = true;
-      jellyTentacleGeom.attributes.color.needsUpdate = true;
-      jellyTentacleGeom.attributes.normal.needsUpdate = true;
-    } else if (speciesId === 'stack_overflow') {
-      // BALLISTIC COMET + DYNAMIC `stackLimit` PANCAKED CEILING SHOCK RINGS
-      const ringCount = clamp(artifact.analysis?.stackLimit ?? 5, 2, MAX_COMET_RINGS);
-      const crushRatio = clamp(frameCount / ringCount, 0.15, 1.0);
-      cometLanceSub.position.y = lerp(-0.08, 0.08, crushRatio);
-      barrierMat.opacity = isFault ? 0.84 : 0.36 + crushRatio * 0.32;
-      barrierMat.emissiveIntensity = isFault ? 0.95 : 0.48 + crushRatio * 0.3;
 
-      for (let rIdx = 0; rIdx < MAX_COMET_RINGS; rIdx += 1) {
-        const sr = cometShockRings[rIdx];
-        if (rIdx >= ringCount) {
-          sr.mesh.visible = false;
-          continue;
+      if (anchorNodeMesh.visible) {
+        const shapeNodes = artifact.shape?.nodes || [];
+        const activeAnchorCount = Math.min(MAX_ANCHOR_NODES, shapeNodes.length);
+        anchorNodeMesh.count = activeAnchorCount;
+
+        for (let nIdx = 0; nIdx < activeAnchorCount; nIdx += 1) {
+          const node = shapeNodes[nIdx];
+          let rawAnchor;
+          try {
+            rawAnchor = WovenBody.anchor(artifact.wovenBody, node.id, wovenPhase);
+          } catch (_) {
+            rawAnchor = { x: 0, y: 0, z: 0 };
+          }
+          normalizeWovenCoord(
+            rawAnchor.x || 0,
+            rawAnchor.y || 0,
+            rawAnchor.z || 0,
+            bounds,
+            mechanism,
+            _anchorPositions[nIdx]
+          );
+
+          const isActiveNode = nIdx === activeNodeIdx;
+          _dummy.position.copy(_anchorPositions[nIdx]);
+          _dummy.rotation.set(0, 0, 0);
+          _dummy.scale.setScalar(isActiveNode ? 1.45 : 0.88);
+          _dummy.updateMatrix();
+          anchorNodeMesh.setMatrixAt(nIdx, _dummy.matrix);
+
+          const cSpec = nodeColors[nIdx % nodeCount];
+          const rgb = cSpec?.opRgb || cSpec?.rgb || [114, 217, 226];
+          _color.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
+          if (isActiveNode) _color.lerp(_faultColor, isFault ? 0.7 : 0.0);
+          anchorNodeMesh.setColorAt(nIdx, _color);
         }
-        sr.mesh.visible = true;
-        const u = rIdx / Math.max(1, ringCount - 1);
-        const yBase = lerp(-0.22, 0.28, u);
-        const activeRing = rIdx < frameCount || isFault;
-        const targetY = lerp(yBase, 0.32 - (ringCount - 1 - rIdx) * 0.032, crushRatio * 0.65);
-        const scaleR = lerp(0.65, 1.45, u) * (activeRing ? 1.0 : 0.82);
-        sr.mesh.position.y = targetY;
-        sr.mesh.scale.set(scaleR, scaleR, 1.0 - u * 0.35);
-        sr.mat.color.setHex(isFault ? 0xe11d48 : activeRing ? 0xf97316 : 0x64748b);
-        sr.mat.emissiveIntensity = isFault ? 0.85 : activeRing ? 0.62 : 0.18;
-      }
-    } else if (speciesId === 'fuel_exhaustion') {
-      // HOLLOW 14-SEGMENT TOKAMAK TORUS: 14 radial fuel cells extinguish one by one as fuel drains to 0
-      const litCells = Math.round(liveFuelRatio * 14);
-      torusBraidMesh.rotation.z = ambient * (0.15 + liveFuelRatio * 0.85);
-      torusBraidMat.color.setHex(isExhausted ? 0x475569 : 0xfbbf24);
-      torusBraidMat.emissiveIntensity = isExhausted ? 0.12 : 0.24 + liveFuelRatio * 0.48;
-      for (let fIdx = 0; fIdx < torusFuelCells.length; fIdx += 1) {
-        const cell = torusFuelCells[fIdx];
-        const hasFuel = fIdx < litCells && !isExhausted;
-        cell.mat.color.setHex(hasFuel ? 0x38bdf8 : 0x334155);
-        cell.mat.emissive.setHex(hasFuel ? 0x0284c7 : 0x0f172a);
-        cell.mat.emissiveIntensity = hasFuel ? 0.58 : 0.08;
-        cell.mat.opacity = hasFuel ? 0.92 : 0.42;
+        anchorNodeMesh.instanceMatrix.needsUpdate = true;
+        if (anchorNodeMesh.instanceColor) anchorNodeMesh.instanceColor.needsUpdate = true;
       }
     }
 
-    // ========================================================================
-    // 4. UPDATE 64 RGB GENOME SPORES ON THE SPECIES SURFACE (`encodeColors`)
-    // ========================================================================
-    const rgbPixels = artifact.rgbPixels || [];
-    for (let s = 0; s < SPORE_COUNT; s += 1) {
-      const u = ((s / SPORE_COUNT) + ambient * 0.04 * (0.4 + liveFuelRatio)) % 1;
-      const v = Math.sin(s * PHI_GOLDEN_ANGLE + ambient * 0.8);
-      const surf = embedOnSpeciesSurface(speciesId, u, v, s % 16, 0.03);
-      const outScale = isExhausted ? 0.88 : 1.08;
+    if (sporeMesh.visible) {
+      const rgbPixels = artifact.rgbPixels || [];
+      const pts = cachedWovenFrame.points;
+      const outScale = isExhausted ? 0.92 : 1.04;
 
-      _dummy.position.set(surf.x * outScale, surf.y * outScale, surf.z * outScale);
-      _dummy.rotation.set(ambient + s, ambient * 0.7 + s, 0);
-      _dummy.scale.setScalar(isDone ? 1.15 : isExhausted ? 0.5 : 0.85);
-      _dummy.updateMatrix();
-      sporeMesh.setMatrixAt(s, _dummy.matrix);
-
-      const px = rgbPixels[s % Math.max(1, rgbPixels.length)];
-      if (px && px.length >= 3) {
-        _color.setRGB(px[0] / 255, px[1] / 255, px[2] / 255);
-      } else {
-        _color.setHex(species.primaryHex);
-      }
-      if (isFault) _color.lerp(new THREE.Color(0xe11d48), 0.7);
-      sporeMesh.setColorAt(s, _color);
-    }
-    sporeMesh.instanceMatrix.needsUpdate = true;
-    if (sporeMesh.instanceColor) sporeMesh.instanceColor.needsUpdate = true;
-
-    // ========================================================================
-    // 5. UPDATE VERTICAL CHAMBER TENDRILS (Starting Outside the Organism Envelope)
-    // ========================================================================
-    const floorRelY = -3.38 - QUINELING_CORE_Y; // -1.33
-    const ringsRelY = -0.25 - QUINELING_CORE_Y; // +1.80
-    for (let c = 0; c < TENDRIL_CURVE_COUNT; c += 1) {
-      const isFloorRoot = c < 8;
-      const idx = c % 8;
-      const angle = (idx / 8) * TAU + ambient * 0.1;
-      const startR = QUINELING_MAX_RADIUS + 0.04; // Starts outside the body so rays never stab through the center!
-      const endR = isFloorRoot ? 0.56 : 0.46;
-      const startY = isFloorRoot ? -0.26 : 0.26;
-      const endY = isFloorRoot ? floorRelY : ringsRelY;
-
-      for (let s = 0; s < TENDRIL_SEGMENTS; s += 1) {
-        const t = s / (TENDRIL_SEGMENTS - 1);
-        const rad = lerp(startR, endR, t) + Math.sin(t * Math.PI) * 0.035;
-        const twist = angle + t * (isFloorRoot ? -0.35 : 0.35);
-        _tendrilPts[s].set(
-          Math.cos(twist) * rad,
-          lerp(startY, endY, t),
-          Math.sin(twist) * rad
+      for (let s = 0; s < SPORE_COUNT; s += 1) {
+        const sampleIdx = Math.floor(((s * 61 + Math.floor(wovenPhase * 12)) % TISSUE_BUDGET)) * 4;
+        normalizeWovenCoord(
+          pts[sampleIdx],
+          pts[sampleIdx + 1],
+          pts[sampleIdx + 2],
+          bounds,
+          mechanism,
+          _vecA
         );
+        const radialDrift = 0.014 * Math.sin(wovenPhase * 1.5 + s * PHI_GOLDEN_ANGLE);
+
+        _dummy.position.set(
+          _vecA.x * outScale + radialDrift,
+          _vecA.y * outScale + radialDrift * 0.6,
+          _vecA.z * outScale - radialDrift
+        );
+        _dummy.rotation.set(wovenPhase + s, wovenPhase * 0.7 + s, 0);
+        _dummy.scale.setScalar(isDone ? 1.12 : isExhausted ? 0.52 : 0.84);
+        _dummy.updateMatrix();
+        sporeMesh.setMatrixAt(s, _dummy.matrix);
+
+        const px = rgbPixels[s % Math.max(1, rgbPixels.length)];
+        if (px && px.length >= 3) {
+          _color.setRGB(px[0] / 255, px[1] / 255, px[2] / 255);
+        } else {
+          _color.setHex(species.primaryHex);
+        }
+        if (isFault) _color.lerp(_faultColor, 0.7);
+        sporeMesh.setColorAt(s, _color);
       }
-      _color.setHex(isFault ? 0xe11d48 : isDone ? 0x2dd4bf : isFloorRoot ? species.primaryHex : species.secondaryHex);
-      writeRibbonStrip(
-        tendrilPositions,
-        tendrilColors,
-        tendrilNormals,
-        c,
-        TENDRIL_SEGMENTS,
-        _tendrilPts,
-        0.0036,
-        _color.r,
-        _color.g,
-        _color.b
-      );
+      sporeMesh.instanceMatrix.needsUpdate = true;
+      if (sporeMesh.instanceColor) sporeMesh.instanceColor.needsUpdate = true;
     }
-    tendrilGeom.attributes.position.needsUpdate = true;
-    tendrilGeom.attributes.color.needsUpdate = true;
-    tendrilGeom.attributes.normal.needsUpdate = true;
   }
 
-  function controlKindIsReturn(step) {
-    const ck = step?.after?.control?.kind || step?.controlKind || '';
-    return ck === 'Return' || ck === 'Done';
+  function dispose() {
+    anchorNodeMesh.dispose();
+    sporeMesh.dispose();
+    const resources = [
+      tissueGeom,
+      tissueMat,
+      ridgeLineGeom,
+      ridgeLineMat,
+      sdkRibbonGeom,
+      sdkRibbonMat,
+      anchorNodeGeom,
+      anchorNodeMat,
+      depArcGeom,
+      depArcMat,
+      sporeGeom,
+      sporeMat,
+      tendrilGeom,
+      tendrilMat,
+    ];
+    for (let i = 0; i < resources.length; i += 1) {
+      if (resources[i] && typeof resources[i].dispose === 'function') {
+        resources[i].dispose();
+      }
+    }
+    group.traverse((obj) => {
+      if (obj.geometry && typeof obj.geometry.dispose === 'function') {
+        obj.geometry.dispose();
+      }
+      if (obj.material) {
+        if (Array.isArray(obj.material)) {
+          for (let m = 0; m < obj.material.length; m += 1) {
+            if (obj.material[m] && typeof obj.material[m].dispose === 'function') {
+              obj.material[m].dispose();
+            }
+          }
+        } else if (typeof obj.material.dispose === 'function') {
+          obj.material.dispose();
+        }
+      }
+    });
+    cachedWovenFrame = null;
   }
 
   return {
     group,
     coreRoot,
     speciesGroups,
+    tissuePointsMesh,
+    ridgeLineSegments,
+    sdkManifoldRibbonMesh,
+    anchorNodeMesh,
+    sporeMesh,
     update,
+    dispose,
   };
 }

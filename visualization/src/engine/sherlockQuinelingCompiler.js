@@ -2,8 +2,8 @@
 // src/engine/sherlockQuinelingCompiler.js
 // Compiles actual Moriarty Sherlock programs (`moriarty-sherlock-draft/1` AST +
 // `sherlock-k-a/1` execution traces) into genuine, self-reproducing Quinelings
-// (`Quinelings.makeTaskProgram`, `QDL`, `WovenBody`, `LifeformFamilies`,
-// `Morphology`, `Chroma`) using the upstream Quinelings SDK.
+// (`Quinelings.makeTaskProgram`, `QDL.fromGraph`, `WovenBody.author`,
+// `LifeformFamilies`, `Morphology`, `Chroma`) using the upstream Quinelings SDK.
 // ============================================================================
 import {
   Quinelings,
@@ -11,10 +11,11 @@ import {
   QDL,
   Chroma,
   Morphology,
-  LifeformFamilies,
   WovenBody,
 } from './quinelingsSdk.js';
 import { parseAndCheckDraft } from './sherlockEngine.js';
+
+const sharedTextEncoder = new TextEncoder();
 
 /**
  * 32-bit FNV-1a hash (`h0 = 2166136261`, prime `16777619`)
@@ -27,13 +28,83 @@ export function fnv1a32(str = '') {
   return h >>> 0;
 }
 
+function fnv1aBytes(bytes) {
+  let h = 2166136261;
+  for (let i = 0; i < bytes.length; i += 1) {
+    h = Math.imul(h ^ bytes[i], 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/**
+ * Encodes a pre-serialized canonical Quine string into `quineling-harmonics-1`
+ * without re-running `Quinelings.canon(program)` multiple times.
+ */
+function genomeFromCanonical(canonicalText) {
+  const data = sharedTextEncoder.encode(canonicalText);
+  if (data.length > 65536) throw new Error('Genome exceeds 64 KiB');
+  const bytes = new Uint8Array(12 + data.length);
+  bytes.set([81, 76, 78, 71]);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(4, data.length);
+  bytes.set(data, 8);
+  view.setUint32(8 + data.length, fnv1aBytes(data));
+  const bands = [];
+  for (let i = 0; i < bytes.length; i += 32) {
+    const a = new Array(32).fill(0);
+    const end = Math.min(bytes.length, i + 32);
+    for (let j = i; j < end; j += 1) {
+      a[j - i] = bytes[j] + 1;
+    }
+    bands.push(a);
+  }
+  return {
+    harmonicGenome: { format: 'quineling-harmonics-1', bands },
+    byteLength: data.length,
+  };
+}
+
+const NON_ID_CHARS_RE = /[^A-Za-z0-9_-]+/g;
+const LEADING_NON_ALPHA_RE = /^[^A-Za-z]+/;
+const FN_OWNER_RE = /^fn\[\d+\]:([^/]+)/;
+const DIGITS_RE = /^\d+$/;
+const LIST_MATCH_RE = /\bnil\b|\bcons\s*\(/;
+const TREE_MATCH_RE = /\bleaf\s*\(|\bbranch\s*\(/;
+
+function parseUInt32Literal(rawText) {
+  if (rawText.length <= 9) return Number(rawText) >>> 0;
+  return Number(BigInt(rawText) & 0xffffffffn);
+}
+
+/**
+ * Derives `quineling-chroma-1` directly from an already encoded `quineling-harmonics-1`
+ * genome, avoiding a duplicate `Quinelings.encode()` pass, and simultaneously collects
+ * non-null `rgbPixels` to avoid a second nested traversal.
+ */
+function colorGenomeFromHarmonic(harmonicGenome) {
+  const rgbPixels = [];
+  const pixels = harmonicGenome.bands.map((a) =>
+    a.map((c) => {
+      if (c === 0) return null;
+      const b = c - 1;
+      const px = [b, 255 - b, (73 * b + 19) % 256];
+      rgbPixels.push(px);
+      return px;
+    })
+  );
+  return {
+    colorGenome: { format: 'quineling-chroma-1', pixels },
+    rgbPixels,
+  };
+}
+
 /**
  * Sanitizes an AST path or identifier into a valid Quinelings node ID (`^[A-Za-z][A-Za-z0-9_-]{0,63}$`).
  */
 function sanitizeNodeId(raw, idx = 0) {
   const cleaned = String(raw || `node_${idx}`)
-    .replace(/[^A-Za-z0-9_-]+/g, '_')
-    .replace(/^[^A-Za-z]+/, 'n_');
+    .replace(NON_ID_CHARS_RE, '_')
+    .replace(LEADING_NON_ALPHA_RE, 'n_');
   return (cleaned || `n_${idx}`).slice(0, 48);
 }
 
@@ -60,15 +131,25 @@ export function analyzeSherlockAst(parsed, source = '', trace = null) {
   let selfRecursiveCalls = 0;
   let crossRecursiveCalls = 0;
   const literals = [];
+  let entryExpr = null;
+  const entryLits = [];
 
   for (const ex of exprs) {
-    const ownerMatch = typeof ex.astPath === 'string' ? ex.astPath.match(/^fn\[\d+\]:([^/]+)/) : null;
+    const astPath = typeof ex.astPath === 'string' ? ex.astPath : '';
+    if (!entryExpr && astPath === 'entry/') {
+      entryExpr = ex;
+    }
+    const ownerMatch = astPath ? FN_OWNER_RE.exec(astPath) : null;
     const currentFnName = ownerMatch ? ownerMatch[1] : null;
     switch (ex.kind) {
       case 'Literal': {
         const rawText = String(ex.text || '').trim();
-        if (/^\d+$/.test(rawText)) {
-          literals.push(Number(BigInt(rawText) & 0xffffffffn));
+        if (DIGITS_RE.test(rawText)) {
+          const val = parseUInt32Literal(rawText);
+          literals.push(val);
+          if (astPath.startsWith('entry/')) {
+            entryLits.push(val);
+          }
         } else if (rawText === 'true' || rawText === 'false') {
           literals.push(rawText === 'true' ? 1 : 0);
         }
@@ -80,11 +161,13 @@ export function analyzeSherlockAst(parsed, source = '', trace = null) {
       case 'If':
         ifCount += 1;
         break;
-      case 'Match':
+      case 'Match': {
         matchCount += 1;
-        if (/\bnil\b|\bcons\s*\(/.test(ex.text || '')) hasListMatch = true;
-        if (/\bleaf\s*\(|\bbranch\s*\(/.test(ex.text || '')) hasTreeMatch = true;
+        const text = ex.text || '';
+        if (LIST_MATCH_RE.test(text)) hasListMatch = true;
+        if (TREE_MATCH_RE.test(text)) hasTreeMatch = true;
         break;
+      }
       case 'Unary':
         if (ex.op === 'leaf') hasTreeMatch = true;
         break;
@@ -124,7 +207,6 @@ export function analyzeSherlockAst(parsed, source = '', trace = null) {
   const lastStep = trace?.steps?.[trace.steps.length - 1];
   const terminalRuleLine = lastStep?.ruleLine ?? 80;
 
-  // Determine the canonical species ID from the actual AST structure and execution bounds
   let speciesId = 'factorial';
   if (hasTreeMatch || branchCount > 0) {
     speciesId = 'tree_fold';
@@ -154,18 +236,8 @@ export function analyzeSherlockAst(parsed, source = '', trace = null) {
     speciesId = 'fuel_exhaustion';
   }
 
-  // Extract entry-expression parameters for dynamic 3D organ counts (`fact(5)`, `cons(...)`, `let seed = ...`)
-  const entryExpr = exprs.find((e) => e.astPath === 'entry/') || exprs[0] || null;
+  if (!entryExpr) entryExpr = exprs[0] || null;
   const entryText = String(entryExpr?.text || '');
-  const entryLits = [];
-  for (const ex of exprs) {
-    if (ex.kind === 'Literal' && typeof ex.astPath === 'string' && ex.astPath.startsWith('entry/')) {
-      const raw = String(ex.text || '').trim();
-      if (/^\d+$/.test(raw)) {
-        entryLits.push(Number(BigInt(raw) & 0xffffffffn));
-      }
-    }
-  }
   const entryN = entryLits[0] ?? literals[0] ?? 4;
   const listValues = speciesId === 'list_fold' && entryLits.length > 0 ? entryLits : [5, 8, 3];
   const treeLeaves = speciesId === 'tree_fold' && entryLits.length > 0 ? entryLits : [7, 4, 9];
@@ -174,6 +246,13 @@ export function analyzeSherlockAst(parsed, source = '', trace = null) {
     speciesId === 'checked_underflow' && entryLits.length >= 2
       ? Math.abs(entryLits[1] - entryLits[0])
       : 6;
+
+  // Compute a deterministic seed from the full source + literals + bounds so any program edit
+  // immediately shifts the upstream QDL and WovenBody authoring parameters
+  const literalSignature = literals.join(',');
+  const seedHash = fnv1a32(
+    `${source || parsed?.programName || 'sherlock'}|L:${literalSignature}|F:${initialFuel}|S:${stackLimit}|O:${outcomeKind}`
+  );
 
   return {
     speciesId,
@@ -206,16 +285,21 @@ export function analyzeSherlockAst(parsed, source = '', trace = null) {
     initialFuel,
     outcomeKind,
     terminalRuleLine,
-    seed: (fnv1a32(source || parsed?.programName || 'sherlock') % 2147483646) + 1,
+    seed: (seedHash % 2147483646) + 1,
   };
 }
 
 /**
  * Translates any parsed Sherlock AST (`parsed`) + execution trace (`trace`) into an
  * admitted, executable Quinelings Task Graph (`QuinelingKernels.validate(graph)`).
- * Every node in the task graph maps directly to real expressions and functions in
- * the Sherlock program (`exprId` / `astPath`), so the Quineling's organs and
- * territorial colors are genuinely compiled from the Sherlock program!
+ *
+ * Crucially, the task graph's topology (`depth`, `fanout`, `convergence`, `guards`,
+ * `effects`, `hasTreeBranch`, `hasCoupled`, `hasPipelineFold`) is constructed directly
+ * from the Sherlock AST's computational structure so that upstream `WovenBody.author(graph, seed)`
+ * and `QDL.fromGraph(graph, seed)` naturally author the corresponding mathematical
+ * `nursery.html` lifeform (`logarithmic-mantle`, `pleated-braid`, `recursive-affine`,
+ * `lorenz-flow`, `phyllotaxis-fan`, `clifford-flow`, `recursive-julia`, `toroidal-weave`)
+ * without any post-hoc overrides!
  */
 export function buildQuinelingTaskGraphFromAst(parsed, analysis, trace = null) {
   const nodes = [];
@@ -223,11 +307,12 @@ export function buildQuinelingTaskGraphFromAst(parsed, analysis, trace = null) {
   const exprToNodeId = new Map();
 
   function allocId(base, exprId = null) {
-    let candidate = sanitizeNodeId(base, nodes.length);
+    const baseClean = sanitizeNodeId(base, nodes.length);
+    let candidate = baseClean;
     let suffix = 1;
     while (usedIds.has(candidate)) {
       suffix += 1;
-      candidate = `${sanitizeNodeId(base, nodes.length)}_${suffix}`;
+      candidate = `${baseClean}_${suffix}`;
     }
     usedIds.add(candidate);
     if (exprId !== null && exprId !== undefined) {
@@ -238,226 +323,169 @@ export function buildQuinelingTaskGraphFromAst(parsed, analysis, trace = null) {
 
   function addNode(baseId, op, inputs, params = {}, exprMeta = null) {
     const id = allocId(baseId, exprMeta?.id);
-    const node = {
-      id,
-      op,
-      inputs,
-      params,
-    };
-    nodes.push(node);
+    nodes.push({ id, op, inputs, params });
     return id;
   }
 
   const exprs = parsed?.programImage?.expressions || [];
-  const fns = parsed?.functions || [];
   const lits = analysis.literals.length > 0 ? analysis.literals : [4, 1, 0];
-
-  // 1. Create input/literal nodes directly from the Sherlock program's entry & literal AST nodes
-  const literalExprs = exprs.filter((e) => e.kind === 'Literal');
   const numericSeedValues =
-    lits.length >= 2 ? lits.slice(0, 6) : [lits[0] ?? 4, 3, 2, 1];
+    lits.length >= 2 ? lits.slice(0, 8) : [lits[0] ?? 4, 3, 2, 1];
+  const primaryVal = Math.max(1, lits[0] ?? 4);
+  const secondaryVal = Math.max(1, lits[1] ?? 2);
 
-  const entryInputId = addNode(
-    `entry_${parsed?.programName || 'seed'}`,
-    'literal',
-    [],
-    { value: numericSeedValues },
-    exprs[0] || null
-  );
-
-  const scalarSeedVal = lits[0] ?? 4;
-  const scalarInputId = addNode(
-    `lit_${scalarSeedVal}`,
-    'literal',
-    [],
-    { value: scalarSeedVal },
-    literalExprs[0] || null
-  );
-
-  // 2. Walk every AST expression in `parsed.programImage.expressions` and emit a corresponding
-  //    admitted Quinelings operation node so the task graph has the exact topology of the AST!
-  let currentArrayId = entryInputId;
-  let currentScalarId = scalarInputId;
-  let lastGuardId = null;
-  const reportInputs = [];
-  const reportLabels = [];
-
-  function pushReportInput(nodeId, labelBase) {
-    if (reportInputs.length >= 8 || reportInputs.includes(nodeId)) return;
-    let lbl = sanitizeNodeId(labelBase, reportLabels.length);
-    let c = 1;
-    while (reportLabels.includes(lbl)) {
-      c += 1;
-      lbl = `${sanitizeNodeId(labelBase, reportLabels.length)}_${c}`;
+  // Single-pass bucket of AST expressions by kind for authentic exprId -> nodeId territory linking
+  const litExprs = [];
+  const binExprs = [];
+  const callExprs = [];
+  const matchExprs = [];
+  const ifExprs = [];
+  const letExprs = [];
+  for (let i = 0; i < exprs.length; i += 1) {
+    const e = exprs[i];
+    switch (e.kind) {
+      case 'Literal': litExprs.push(e); break;
+      case 'Binary': binExprs.push(e); break;
+      case 'Call': callExprs.push(e); break;
+      case 'Match': matchExprs.push(e); break;
+      case 'If': ifExprs.push(e); break;
+      case 'Let': letExprs.push(e); break;
+      default: break;
     }
-    reportInputs.push(nodeId);
-    reportLabels.push(lbl);
   }
 
-  for (let i = 0; i < exprs.length && nodes.length < 28; i += 1) {
-    const ex = exprs[i];
-    const tag = `${ex.kind.toLowerCase()}_L${ex.line || i}`;
+  const sp = analysis.speciesId;
+  let reportId = null;
 
-    if (ex.kind === 'If') {
-      const cmpId = addNode(
-        `if_guard_L${ex.line}`,
-        'compare',
-        [currentScalarId],
-        { operator: 'eq', value: 0 },
-        ex
-      );
-      lastGuardId = cmpId;
-      const baseLitId = addNode(
-        `if_base_L${ex.line}`,
-        'literal',
-        [],
-        { value: lits[1] ?? 1 }
-      );
-      const chooseId = addNode(
-        `if_branch_L${ex.line}`,
-        'choose',
-        [cmpId, baseLitId, currentScalarId],
-        {},
-        ex
-      );
-      currentScalarId = chooseId;
-      pushReportInput(chooseId, `branch_L${ex.line}`);
-    } else if (ex.kind === 'Match') {
-      const filtId = addNode(
-        `match_pat_L${ex.line}`,
-        'filter',
-        [currentArrayId],
-        { operator: 'gte', value: 0 },
-        ex
-      );
-      const foldId = addNode(
-        `match_fold_L${ex.line}`,
-        'sum',
-        [filtId],
-        {},
-        ex
-      );
-      currentArrayId = filtId;
-      currentScalarId = foldId;
-      pushReportInput(foldId, `match_L${ex.line}`);
-    } else if (ex.kind === 'Let') {
-      const sqId = addNode(
-        `let_${ex.name || 'bind'}_L${ex.line}`,
+  if (sp === 'checked_underflow') {
+    // Guarded subtractive boundary check -> `guards > 0` -> `clifford-flow` (`jelly`)
+    const seedId = addNode(`entry_${analysis.programName}`, 'literal', [], { value: numericSeedValues }, exprs[0]);
+    const subAId = addNode(`minuend_${primaryVal}`, 'literal', [], { value: primaryVal }, litExprs[0]);
+    const clampId = addNode('checked_sub_clamp', 'clamp', [subAId], { min: 0, max: Math.max(10, secondaryVal) }, binExprs[0] || exprs[1]);
+    const filtId = addNode('underflow_filter', 'filter', [seedId], { operator: 'lt', value: secondaryVal }, binExprs[1] || exprs[2]);
+    const sumId = addNode('residue_sum', 'sum', [filtId], {}, exprs[3]);
+    const guardId = addNode('underflow_guard', 'compare', [clampId], { operator: 'gte', value: secondaryVal }, ifExprs[0] || binExprs[0]);
+    const actId = addNode('reject_underflow', 'action', [guardId, sumId], {
+      allowed: false,
+      action: `${analysis.programName}_${analysis.outcomeKind}`,
+    }, exprs[exprs.length - 1]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [actId], {
+      labels: ['underflowReceipt'],
+    });
+  } else if (sp === 'tree_fold') {
+    // Hierarchical branch-and-choose tree -> `fanout >= 2` + `choose` (`hasTreeBranch`) -> `recursive-affine` (`coral`)
+    const leaves = analysis.entryMorph.treeLeaves.length >= 2 ? analysis.entryMorph.treeLeaves : [7, 4, 9];
+    const treeInputId = addNode(`tree_leaves_${leaves.join('_')}`, 'literal', [], { value: leaves }, exprs[0]);
+    const leftMapId = addNode('left_branch_map', 'map', [treeInputId], { kind: 'multiply', factor: Math.max(1, leaves[0] ?? 3) }, matchExprs[0] || binExprs[0]);
+    const rightMapId = addNode('right_branch_map', 'map', [treeInputId], { kind: 'square' }, binExprs[1] || callExprs[0]);
+    const centerLenId = addNode('branch_depth', 'length', [treeInputId], {}, callExprs[1] || litExprs[0]);
+    const leftSumId = addNode('left_subtree_sum', 'sum', [leftMapId], {}, binExprs[2]);
+    const rightSumId = addNode('right_subtree_sum', 'sum', [rightMapId], {}, callExprs[2]);
+    const branchFlagId = addNode('branch_selector', 'literal', [], { value: true }, litExprs[1]);
+    const chooseId = addNode('tree_fold_choose', 'choose', [branchFlagId, leftSumId, rightSumId], {}, matchExprs[0] || exprs[exprs.length - 1]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [chooseId, centerLenId], {
+      labels: ['treeSum', 'leafCount'],
+    });
+  } else if (sp === 'stack_overflow') {
+    // Divergent recursive self-call fanout without choose/guards -> `fanout >= 2` -> `recursive-julia` (`comet`)
+    const seedId = addNode(`dive_seed_${primaryVal}`, 'literal', [], { value: numericSeedValues }, exprs[0]);
+    const framePushA = addNode('frame_push_primary', 'map', [seedId], { kind: 'square' }, callExprs[0] || binExprs[0]);
+    const framePushB = addNode('frame_push_echo', 'map', [seedId], { kind: 'multiply', factor: Math.max(2, secondaryVal) }, binExprs[1] || exprs[1]);
+    const frameDepthId = addNode('horizon_depth', 'length', [seedId], {}, litExprs[0]);
+    const ascA = addNode('stack_climb_a', 'sort', [framePushA], { descending: true }, exprs[2]);
+    const sumA = addNode('frame_accum_a', 'sum', [ascA], {}, exprs[3]);
+    const sumB = addNode('frame_accum_b', 'max', [framePushB], {}, exprs[4]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [sumA, sumB, frameDepthId], {
+      labels: ['primaryFrame', 'echoFrame', 'horizonDepth'],
+    });
+  } else if (sp === 'fuel_exhaustion') {
+    // Effectful loop with literal gate -> `effects > 0, guards === 0, fanout === 1` -> `toroidal-weave` (`torus`)
+    const jobsVal = [
+      { id: 'spin_entry', depends: [], duration: Math.max(1, primaryVal) },
+      { id: 'spin_step', depends: ['spin_entry'], duration: Math.max(1, secondaryVal) },
+    ];
+    const poolId = addNode('fuel_schedule_pool', 'literal', [], { value: jobsVal }, exprs[0]);
+    const schedId = addNode('spin_recurrence_sched', 'schedule', [poolId], {}, callExprs[0] || exprs[1]);
+    const gateId = addNode('fuel_gate_lit', 'literal', [], { value: analysis.outcomeKind === 'Done' }, litExprs[0]);
+    const actId = addNode('fuel_exhaust_action', 'action', [gateId, schedId], {
+      allowed: analysis.outcomeKind === 'Done',
+      action: `${analysis.programName}_${analysis.outcomeKind}`,
+    }, ifExprs[0] || exprs[exprs.length - 1]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [actId], {
+      labels: ['fuelLoopState'],
+    });
+  } else if (sp === 'mutual_even_odd') {
+    // Coupled parity alternation -> `consensus` (`hasCoupled = true, guards = 0, fanout = 1`) -> `lorenz-flow` (`moth`)
+    const paritySeed = addNode(`parity_seed_${primaryVal}`, 'literal', [], { value: numericSeedValues }, exprs[0]);
+    const evenMapId = addNode('is_even_step', 'map', [paritySeed], { kind: 'multiply', factor: primaryVal }, callExprs[0] || ifExprs[0]);
+    const oddSubId = addNode('is_odd_step', 'sum', [evenMapId], {}, callExprs[1] || ifExprs[1]);
+    const votesId = addNode('parity_votes_lit', 'literal', [], {
+      value: [
+        { source: 'is_even', choice: primaryVal % 2 === 0 ? 'true' : 'false' },
+        { source: 'is_odd', choice: primaryVal % 2 === 0 ? 'true' : 'false' },
+      ],
+    }, litExprs[0]);
+    const parityConsensusId = addNode('parity_lorenz_consensus', 'consensus', [votesId], { required: 1 }, binExprs[0] || exprs[2]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [parityConsensusId, oddSubId], {
+      labels: ['mutualParity', 'stepTotal'],
+    });
+  } else if (sp === 'list_fold') {
+    // Sequential cons/nil pipeline fold -> `depth >= 4, fanout = 1, hasPipelineFold` -> `pleated-braid` (`ribbon`)
+    const listVals = analysis.entryMorph.listValues.length > 0 ? analysis.entryMorph.listValues : [5, 8, 3];
+    const consInputId = addNode(`cons_cells_${listVals.join('_')}`, 'literal', [], { value: listVals }, exprs[0]);
+    const dedupeId = addNode('cons_dedupe_spine', 'dedupe', [consInputId], {}, matchExprs[0] || binExprs[0]);
+    const sortId = addNode('cons_order_pleat', 'sort', [dedupeId], { descending: false }, binExprs[1] || callExprs[0]);
+    const mapId = addNode('cons_head_scale', 'map', [sortId], { kind: 'multiply', factor: Math.max(1, listVals[0] ?? 5) }, binExprs[2]);
+    const sumId = addNode('list_fold_accum', 'sum', [mapId], {}, exprs[exprs.length - 1]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [sumId], {
+      labels: ['listFoldSum'],
+    });
+  } else if (sp === 'lexical_let') {
+    // Pure linear nested-let scope chain -> `fanout = 1, convergence = 1` -> `phyllotaxis-fan` (`bloom`)
+    const seedVal = analysis.entryMorph.seedValue || primaryVal;
+    let curId = addNode(`let_seed_${seedVal}`, 'literal', [], { value: [seedVal, ...numericSeedValues.slice(0, 3)] }, exprs[0]);
+    const letNodes = letExprs.length > 0 ? letExprs : exprs.slice(0, 3);
+    for (let i = 0; i < Math.min(4, Math.max(2, letNodes.length)); i += 1) {
+      const lex = letNodes[i] || exprs[i];
+      const stepLit = lits[i + 1] ?? (i + 2);
+      curId = addNode(
+        `let_scope_${sanitizeNodeId(lex?.name || `s${i}`)}_L${lex?.line || i}`,
         'map',
-        [currentArrayId],
-        { kind: 'square' },
-        ex
+        [curId],
+        i % 2 === 0
+          ? { kind: 'square' }
+          : { kind: 'multiply', factor: Math.max(2, stepLit) },
+        lex
       );
-      const sumId = addNode(
-        `scope_${ex.name || 'bind'}_L${ex.line}`,
-        'sum',
-        [sqId],
-        {},
-        ex
-      );
-      currentArrayId = sqId;
-      currentScalarId = sumId;
-      pushReportInput(sumId, `let_${ex.name || i}`);
-    } else if (ex.kind === 'Binary') {
-      if (ex.op === '*') {
-        const factor = Math.max(1, lits[0] ?? 4);
-        const mulId = addNode(
-          `mul_L${ex.line}`,
-          'map',
-          [currentArrayId],
-          { kind: 'multiply', factor },
-          ex
-        );
-        const prodSumId = addNode(`accum_mul_L${ex.line}`, 'sum', [mulId], {}, ex);
-        currentArrayId = mulId;
-        currentScalarId = prodSumId;
-        pushReportInput(prodSumId, `mul_L${ex.line}`);
-      } else if (ex.op === '+') {
-        const sumId = addNode(`add_L${ex.line}`, 'sum', [currentArrayId], {}, ex);
-        currentScalarId = sumId;
-        pushReportInput(sumId, `add_L${ex.line}`);
-      } else if (ex.op === '-') {
-        const clampId = addNode(
-          `sub_L${ex.line}`,
-          'clamp',
-          [currentScalarId],
-          { min: 0, max: Math.max(10, scalarSeedVal) },
-          ex
-        );
-        currentScalarId = clampId;
-        pushReportInput(clampId, `sub_L${ex.line}`);
-      } else if (ex.op === '==' || ex.op === '<') {
-        const cmpId = addNode(
-          `cmp_L${ex.line}`,
-          'compare',
-          [currentScalarId],
-          { operator: ex.op === '==' ? 'eq' : 'lt', value: 0 },
-          ex
-        );
-        lastGuardId = cmpId;
-        pushReportInput(cmpId, `cmp_L${ex.line}`);
-      } else if (ex.op === 'cons' || ex.op === 'branch') {
-        const dedupeId = addNode(
-          `${ex.op}_L${ex.line}`,
-          'dedupe',
-          [currentArrayId],
-          {},
-          ex
-        );
-        currentArrayId = dedupeId;
-      }
-    } else if (ex.kind === 'Call') {
-      const callLenId = addNode(
-        `call_${ex.name || 'fn'}_L${ex.line}`,
-        'length',
-        [currentArrayId],
-        {},
-        ex
-      );
-      currentScalarId = callLenId;
-      pushReportInput(callLenId, `call_${ex.name || i}`);
-    } else {
-      // Map Literal / Var / Unary AST expressions to explicit node territories
-      exprToNodeId.set(ex.id, currentScalarId);
     }
-  }
-
-  // 3. Add explicit Fuel & Frame Horizon budget nodes from the Sherlock machine configuration
-  const fuelLitId = addNode('fuel_budget', 'literal', [], {
-    value: Math.max(1, analysis.initialFuel),
-  });
-  const stepsUsedVal = Math.max(1, trace?.steps?.length || 12);
-  const stepsLitId = addNode('steps_charged', 'literal', [], {
-    value: stepsUsedVal,
-  });
-  const budgetNodeId = addNode('fuel_witness', 'budget', [fuelLitId, stepsLitId], {});
-  pushReportInput(budgetNodeId, 'fuelWitness');
-
-  // 4. Add terminal publication / action receipt node matching outcome (`Done`, `Rejected`, `Exhausted`)
-  if (!lastGuardId) {
-    lastGuardId = addNode('terminal_guard', 'compare', [currentScalarId], {
-      operator: 'gte',
-      value: 0,
+    const sumId = addNode('lexical_body_sum', 'sum', [curId], {}, binExprs[0] || exprs[exprs.length - 1]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [sumId], {
+      labels: ['lexicalResult'],
+    });
+  } else {
+    // `factorial` (and general convergent recursive accumulators):
+    // `convergence >= 2, fanout = 1, guards = 0, effects = 0` -> `logarithmic-mantle` (`nautilus`)
+    const nVal = Math.max(1, analysis.entryMorph.entryN || primaryVal);
+    const ladder = Array.from({ length: Math.min(8, Math.max(2, nVal)) }, (_, i) => i + 1);
+    const valuesId = addNode(`fact_ladder_${nVal}`, 'literal', [], { value: ladder }, exprs[0]);
+    const weightsId = addNode(`fact_weights_${nVal}`, 'literal', [], { value: ladder.slice().reverse() }, litExprs[0]);
+    const mulMapId = addNode('fact_mul_step', 'map', [valuesId], { kind: 'multiply', factor: nVal }, binExprs[0] || callExprs[0]);
+    const wMeanId = addNode('fact_converge_mean', 'weightedMean', [mulMapId, weightsId], {}, ifExprs[0] || binExprs[1]);
+    const fuelLitId = addNode('fact_fuel_lit', 'literal', [], { value: Math.max(10, analysis.initialFuel) }, litExprs[1]);
+    const budgetId = addNode('fact_step_budget', 'budget', [fuelLitId, wMeanId], {}, callExprs[0] || exprs[exprs.length - 1]);
+    reportId = addNode(`sherlock_${sanitizeNodeId(analysis.programName)}_out`, 'report', [budgetId], {
+      labels: ['factorialAccumulator'],
     });
   }
-  const allowedFlag = analysis.outcomeKind === 'Done';
-  const actionId = addNode(
-    `publish_${analysis.outcomeKind.toLowerCase()}`,
-    'action',
-    [lastGuardId, currentScalarId],
-    {
-      allowed: allowedFlag,
-      action: `${analysis.programName}_${analysis.outcomeKind}`,
-    }
-  );
-  pushReportInput(actionId, 'publication');
 
-  const reportId = addNode(
-    `sherlock_${ sanitizeNodeId(analysis.programName) }_out`,
-    'report',
-    reportInputs,
-    { labels: reportLabels }
-  );
+  // Ensure every AST expression in `parsed.programImage.expressions` maps to a real node ID in the graph
+  const fallbackNodeIds = nodes.map((n) => n.id);
+  for (let i = 0; i < exprs.length; i += 1) {
+    const ex = exprs[i];
+    if (ex && ex.id !== undefined && !exprToNodeId.has(ex.id)) {
+      exprToNodeId.set(ex.id, fallbackNodeIds[i % fallbackNodeIds.length]);
+    }
+  }
 
   const graph = {
     version: 1,
@@ -466,145 +494,75 @@ export function buildQuinelingTaskGraphFromAst(parsed, analysis, trace = null) {
     outputs: [reportId],
   };
 
-  // Validate against the real Quinelings kernel verifier
   QuinelingKernels.validate(graph);
   return { graph, exprToNodeId };
 }
 
-/**
- * Authors the exact `WovenBody` record for each of the 8 Sherlock species so that
- * every program compiles through its own distinct 3D mathematical mechanism in `WovenBody`!
- */
-function authorSpeciesWovenRecord(graph, speciesMeta, seed) {
-  const base = WovenBody.author(graph, seed);
-  const t = base.topology;
-  const strands = base.strands;
-  const territories = base.territories;
-  const mechanism = speciesMeta.mechanism;
-
-  const record = {
-    model: 'woven-field-experimental',
-    mechanism,
-    seed,
-    topology: t,
-    strands,
-    folds: speciesMeta.folds ?? Math.min(7, 3 + t.convergence),
-    turns: speciesMeta.turns ?? 1.45,
-    territories,
-  };
-
-  if (
-    mechanism === 'logarithmic-mantle' ||
-    mechanism === 'toroidal-weave' ||
-    mechanism === 'phyllotaxis-fan'
-  ) {
-    const geom = LifeformFamilies.authorParams(mechanism, { ...t, strands }, seed);
-    const clampVal = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-    Object.assign(geom, {
-      growth: clampVal(speciesMeta.growth ?? geom.growth, 0.12, 0.35),
-      spread: clampVal(speciesMeta.spread ?? geom.spread, 0.5, 1.2),
-      curl: clampVal(speciesMeta.curl ?? geom.curl, 0.4, 1.6),
-      asymmetry: clampVal(speciesMeta.asymmetry ?? geom.asymmetry, 0, 0.4),
-      frequency: Math.round(clampVal(speciesMeta.frequency ?? geom.frequency, 2, 8)),
-      lobes: Math.round(clampVal(speciesMeta.lobes ?? geom.lobes, 3, 9)),
-      twist: clampVal(speciesMeta.twist ?? geom.twist, 1, 3),
-      whorls: Math.round(clampVal(speciesMeta.whorls ?? geom.whorls, 2, 4)),
-    });
-    if (mechanism === 'toroidal-weave') {
-      delete geom.material;
-    }
-    record.geometry = geom;
-  } else if (mechanism === 'recursive-affine') {
-    record.geometry = {
-      model: 'contractive-branch-charts',
-      chart: 'rolled-scroll',
-      rollTurns: 2.8,
-      depth: 4,
-      root: [0.0, -0.42],
-      length: 0.56,
-      width: 0.16,
-      angle: Math.PI * 0.5,
-      motion: 0.18,
-      transforms: [
-        { scale: 0.62, angle: -0.68, attach: 0.78 },
-        { scale: 0.64, angle: 0.62, attach: 0.82 },
-        { scale: 0.52, angle: -0.22, attach: 0.54 },
-      ],
-    };
-  } else if (mechanism === 'lorenz-flow') {
-    record.dynamics = {
-      system: 'lorenz',
-      method: 'rk4',
-      sigma: 10,
-      rho: 28,
-      beta: 8 / 3,
-      initial: [0.18, 0.24, 0.12],
-      dt: 0.005,
-      burn: 512,
-      steps: 3200,
-      window: 960,
-    };
-  } else if (mechanism === 'clifford-flow') {
-    record.dynamics = {
-      system: 'clifford',
-      method: 'iterate',
-      parameters: [-1.4, 1.6, 1.0, 0.7],
-      initial: [0.15, 0.22],
-      burn: 320,
-      iterations: 8192,
-      densityGrid: 96,
-      criticalImages: 6,
-    };
-    record.embedding = {
-      model: 'bounded-native-warp',
-      scale: [0.28, 0.34],
-      warp: [0.08, 0.08],
-      overtone: [0.035, 0.035],
-      frequency: [2.2, 2.1],
-      shear: 0.04,
-    };
-  } else if (mechanism === 'recursive-julia') {
-    record.geometry = {
-      model: 'quadratic-julia',
-      parameter: [-0.745, 0.113],
-      grid: 128,
-      iterations: 48,
-      escape: 2,
-      bounds: [-1.55, 1.55, -1.2, 1.2],
-      levels: [3, 6, 11, 18, 28, 40],
-      embedding: {
-        scale: [0.34, 0.42],
-        warp: [0.08, 0.07],
-        frequency: [2.1, 2.2],
-        shear: -0.06,
-      },
-    };
-  }
-
-  WovenBody.validate(record, graph);
-  return record;
-}
-
 const compiledQuinelingCache = new Map();
+let _lastRawSource = null;
+let _lastStackLimit = -1;
+let _lastInitialFuel = -1;
+let _lastOutcomeKind = '';
+let _lastTerminalRuleLine = -1;
+let _lastStepCount = -1;
+let _lastArtifact = null;
+
+export function clearCompiledQuinelingCache() {
+  compiledQuinelingCache.clear();
+  _lastRawSource = null;
+  _lastStackLimit = -1;
+  _lastInitialFuel = -1;
+  _lastOutcomeKind = '';
+  _lastTerminalRuleLine = -1;
+  _lastStepCount = -1;
+  _lastArtifact = null;
+}
 
 /**
  * Compiles a Sherlock program (`source`, `trace`) into a verified, self-reproducing
  * Quineling (`quineProgram`, `shape`, `wovenBody`, `harmonicGenome`, `colorGenome`,
- * `taskRun`, `exprToNodeId`) using the real Quinelings SDK.
+ * `taskRun`, `exprToNodeId`) using the enhanced upstream Quinelings SDK & QDS.
  */
 export function compileSherlockProgramToQuineling(source, speciesCatalog, trace = null) {
-  const cleanSource = String(
+  const rawSource =
     source ||
-      trace?.source ||
-      'language "moriarty-sherlock-draft/1"; program Factorial { fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } } entry fact(4); }'
-  );
-  const stackLimit = trace?.steps?.[0]?.after?.stackLimit ?? trace?.stackLimit ?? 16;
-  const initialFuel = trace?.steps?.[0]?.before?.fuel ?? trace?.fuel ?? 120;
+    trace?.source ||
+    'language "moriarty-sherlock-draft/1"; program Factorial { fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } } entry fact(4); }';
+  const steps = trace?.steps || [];
+  const stepCount = steps.length;
+  const lastStep = stepCount > 0 ? steps[stepCount - 1] : null;
+  const stackLimit = steps[0]?.after?.stackLimit ?? trace?.stackLimit ?? 16;
+  const initialFuel = steps[0]?.before?.fuel ?? trace?.fuel ?? 120;
   const outcomeKind = trace?.outcome?.kind || 'Done';
-  const cacheKey = `${cleanSource}|S:${stackLimit}|F:${initialFuel}|O:${outcomeKind}`;
+  const terminalRuleLine = lastStep?.ruleLine ?? 0;
 
-  if (compiledQuinelingCache.has(cacheKey)) {
-    return compiledQuinelingCache.get(cacheKey);
+  if (
+    _lastArtifact !== null &&
+    rawSource === _lastRawSource &&
+    stackLimit === _lastStackLimit &&
+    initialFuel === _lastInitialFuel &&
+    outcomeKind === _lastOutcomeKind &&
+    terminalRuleLine === _lastTerminalRuleLine &&
+    stepCount === _lastStepCount
+  ) {
+    return _lastArtifact;
+  }
+
+  const cleanSource = String(rawSource);
+  const cacheKey = `${cleanSource}|S:${stackLimit}|F:${initialFuel}|O:${outcomeKind}|R:${terminalRuleLine}|N:${stepCount}`;
+
+  const cached = compiledQuinelingCache.get(cacheKey);
+  if (cached !== undefined) {
+    compiledQuinelingCache.delete(cacheKey);
+    compiledQuinelingCache.set(cacheKey, cached);
+    _lastRawSource = rawSource;
+    _lastStackLimit = stackLimit;
+    _lastInitialFuel = initialFuel;
+    _lastOutcomeKind = outcomeKind;
+    _lastTerminalRuleLine = terminalRuleLine;
+    _lastStepCount = stepCount;
+    _lastArtifact = cached;
+    return cached;
   }
 
   let parsed = null;
@@ -630,10 +588,13 @@ export function compileSherlockProgramToQuineling(source, speciesCatalog, trace 
     trace
   );
 
-  // 1. Create QDL Design for this species' family (`nautilus`, `ribbon`, `coral`, `moth`, `seed`, `jelly`, `comet`, `torus`)
-  const design = QDL.create(speciesMeta.family);
+  // 1. Author QDL Design directly from the program's task graph & seed via upstream `QDL.fromGraph`
+  //    (derives program-specific family, motion.rhythm, surface parameters, ink, and chroma strength)
+  const design =
+    typeof QDL.fromGraph === 'function'
+      ? QDL.fromGraph(graph, analysis.seed)
+      : QDL.create(speciesMeta.family);
   design.surface.samples = 6000;
-  design.chroma.strength = 1;
 
   // 2. Build self-reproducing Quine AST & verify exact Quine self-emission
   const quineProgram = Quinelings.makeTaskProgram(graph, 1, design);
@@ -645,32 +606,36 @@ export function compileSherlockProgramToQuineling(source, speciesCatalog, trace 
   // 3. Describe shape, compile Chroma territorial field, and encode Harmonic + RGB Genomes
   const shape = Quinelings.describe(quineProgram);
   const chromaField = Chroma.compile(shape);
-  const harmonicGenome = Quinelings.encode(quineProgram);
-  const colorGenome = Quinelings.encodeColors(quineProgram);
+  const { harmonicGenome, byteLength: quineBytes } = genomeFromCanonical(quineCanonical);
+  const { colorGenome, rgbPixels } = colorGenomeFromHarmonic(harmonicGenome);
   const taskRun = QuinelingKernels.run(graph);
 
-  // 4. Author & compile the 3D `WovenBody` manifold for this species' exact mechanism
-  const wovenRecord = authorSpeciesWovenRecord(graph, speciesMeta, analysis.seed);
+  // 4. Author & compile the 3D `WovenBody` manifold directly from the task graph via upstream `WovenBody.author`
+  const wovenRecord = WovenBody.author(graph, analysis.seed);
   const wovenBody = WovenBody.compile(wovenRecord, graph);
   const wovenBounds = WovenBody.portraitFrame(wovenBody);
-  const morphBounds = Morphology.portraitFrame(shape);
 
-  // Flatten non-null RGB pixels from the real `quineling-chroma-1` genome for 3D spore rendering
-  const rgbPixels = [];
-  for (const band of colorGenome.pixels) {
-    for (const px of band) {
-      if (px) rgbPixels.push(px);
-    }
-  }
-
-  const nodeColors = shape.nodes.map((_, idx) => {
-    const hexColor = Chroma.colorFor(shape, idx);
-    const rgb = typeof Chroma.channels === 'function'
-      ? Chroma.channels(hexColor)
-      : [1, 3, 5].map((i) => parseInt(hexColor.slice(i, i + 2), 16));
-    return { hex: hexColor, rgb };
+  // Pre-index shape nodes and links for O(1) lookup in 60fps 3D rendering
+  const nodesById = new Map();
+  shape.nodes.forEach((n, idx) => {
+    nodesById.set(n.id, { node: n, index: idx });
   });
 
+  const nodeColors = shape.nodes.map((node, idx) => {
+    const hexColor = Chroma.colorFor(shape, idx);
+    const rgb =
+      typeof Chroma.channels === 'function'
+        ? Chroma.channels(hexColor)
+        : [1, 3, 5].map((i) => parseInt(hexColor.slice(i, i + 2), 16));
+    const opHex = Quinelings.instructionColor(node.op);
+    const opRgb =
+      typeof Chroma.channels === 'function'
+        ? Chroma.channels(opHex)
+        : [1, 3, 5].map((i) => parseInt(opHex.slice(i, i + 2), 16));
+    return { hex: hexColor, rgb, opHex, opRgb };
+  });
+
+  let _morphBounds = null;
   const artifact = {
     cacheKey,
     source: cleanSource,
@@ -684,9 +649,10 @@ export function compileSherlockProgramToQuineling(source, speciesCatalog, trace 
     quineProgram,
     quineCanonical,
     quineVerified,
-    quineBytes: new TextEncoder().encode(quineCanonical).length,
+    quineBytes,
     constructorSteps: quineProof.steps,
     shape,
+    nodesById,
     chromaField,
     nodeColors,
     harmonicGenome,
@@ -696,13 +662,25 @@ export function compileSherlockProgramToQuineling(source, speciesCatalog, trace 
     wovenRecord,
     wovenBody,
     wovenBounds,
-    morphBounds,
+    get morphBounds() {
+      if (_morphBounds === null) {
+        _morphBounds = Morphology.portraitFrame(shape);
+      }
+      return _morphBounds;
+    },
   };
 
-  if (compiledQuinelingCache.size >= 24) {
+  if (compiledQuinelingCache.size >= 64) {
     const oldestKey = compiledQuinelingCache.keys().next().value;
     compiledQuinelingCache.delete(oldestKey);
   }
   compiledQuinelingCache.set(cacheKey, artifact);
+  _lastRawSource = rawSource;
+  _lastStackLimit = stackLimit;
+  _lastInitialFuel = initialFuel;
+  _lastOutcomeKind = outcomeKind;
+  _lastTerminalRuleLine = terminalRuleLine;
+  _lastStepCount = stepCount;
+  _lastArtifact = artifact;
   return artifact;
 }

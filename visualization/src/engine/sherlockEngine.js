@@ -249,22 +249,41 @@ function uint128ToLeBytes(val) {
   return bytes;
 }
 
+const ZERO_16 = Object.freeze(new Array(16).fill(0));
+const ZERO_17 = Object.freeze(new Array(17).fill(0));
+const ZERO_32 = Object.freeze(new Array(32).fill(0));
+const INACTIVE_ARITHMETIC_WITNESS = Object.freeze({
+  active: false,
+  op: 'none',
+  lhs: '0',
+  rhs: '0',
+  result: '0',
+  overflow: false,
+  lhsBytes: ZERO_16,
+  rhsBytes: ZERO_16,
+  resultBytes: ZERO_16,
+  carries: ZERO_17,
+  borrows: ZERO_17,
+  diagonals: ZERO_32,
+});
+
 export function materializeArithmeticWitness(op, lhsBig, rhsBig) {
+  const active = Boolean(op && lhsBig != null && rhsBig != null);
+  if (!active) return INACTIVE_ARITHMETIC_WITNESS;
   const out = {
-    active: Boolean(op && lhsBig !== null && rhsBig !== null),
+    active: true,
     op: op || 'none',
-    lhs: lhsBig !== null ? String(lhsBig) : '0',
-    rhs: rhsBig !== null ? String(rhsBig) : '0',
+    lhs: String(lhsBig),
+    rhs: String(rhsBig),
     result: '0',
     overflow: false,
-    lhsBytes: lhsBig !== null ? uint128ToLeBytes(lhsBig) : new Array(16).fill(0),
-    rhsBytes: rhsBig !== null ? uint128ToLeBytes(rhsBig) : new Array(16).fill(0),
+    lhsBytes: uint128ToLeBytes(lhsBig),
+    rhsBytes: uint128ToLeBytes(rhsBig),
     resultBytes: new Array(16).fill(0),
     carries: new Array(17).fill(0),
     borrows: new Array(17).fill(0),
     diagonals: new Array(32).fill(0),
   };
-  if (!out.active) return out;
 
   const a = out.lhsBytes;
   const b = out.rhsBytes;
@@ -1686,19 +1705,58 @@ function normalizeTraceFrame(fr) {
   return { ...fr };
 }
 
+const IS_STATIC_HOST =
+  typeof window !== 'undefined' &&
+  window.__SHERLOCK_ENABLE_API_TRACE !== true &&
+  (/\.github\.io$/i.test(window.location.hostname || '') ||
+    window.location.protocol === 'file:' ||
+    window.location.port !== '4377');
+
+let rustBackendAvailable = !IS_STATIC_HOST;
+const clientTraceCache = new Map();
+
+export function clearClientTraceCache() {
+  clientTraceCache.clear();
+}
+
+function rememberClientTrace(key, result) {
+  if (clientTraceCache.has(key)) {
+    clientTraceCache.delete(key);
+  } else if (clientTraceCache.size >= 32) {
+    const oldestKey = clientTraceCache.keys().next().value;
+    clientTraceCache.delete(oldestKey);
+  }
+  clientTraceCache.set(key, result);
+  return result;
+}
+
 /**
  * Runs the program through the native Rust `sherlock-runner` endpoint when available,
- * falling back seamlessly to the in-browser `sherlock-k-a/1` engine.
+ * falling back seamlessly to the in-browser `sherlock-k-a/1` engine (and skipping network
+ * calls altogether on static hosts like GitHub Pages).
  */
-export async function compileAndRunSherlock(source, { fuel = 120, stackLimit = 16, sliceWidth = 4, preferRust = true } = {}) {
-  if (preferRust && typeof fetch === 'function') {
+export async function compileAndRunSherlock(
+  source,
+  { fuel = 120, stackLimit = 16, sliceWidth = 4, preferRust = !IS_STATIC_HOST } = {}
+) {
+  const cacheKey = `${source}|F:${fuel}|S:${stackLimit}|W:${sliceWidth}`;
+  const cached = clientTraceCache.get(cacheKey);
+  if (cached !== undefined) {
+    clientTraceCache.delete(cacheKey);
+    clientTraceCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  if (preferRust && rustBackendAvailable && typeof fetch === 'function') {
     try {
-      const resp = await fetch('/api/trace', {
+      const resp = await fetch('./api/trace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source, fuel, stackLimit, sliceWidth }),
       });
-      if (resp.ok) {
+      if (!resp.ok) {
+        rustBackendAvailable = false;
+      } else {
         const data = await resp.json();
         if (data && data.ok) {
           data.source = source;
@@ -1717,23 +1775,31 @@ export async function compileAndRunSherlock(source, { fuel = 120, stackLimit = 1
                 s.before.frames = rawBefore.map(normalizeTraceFrame);
               }
               if (!s.outcomeKind) {
-                s.outcomeKind = s.ruleLine === 80 ? 'Done' : s.ruleLine === 82 ? 'Rejected' : s.ruleLine === 84 ? 'Exhausted' : 'Pending';
+                s.outcomeKind =
+                  s.ruleLine === 80
+                    ? 'Done'
+                    : s.ruleLine === 82
+                      ? 'Rejected'
+                      : s.ruleLine === 84
+                        ? 'Exhausted'
+                        : 'Pending';
               }
             }
           }
-          return data;
+          return rememberClientTrace(cacheKey, data);
         }
         if (data && !data.ok) {
-          // Return fast human-readable diagnostics from browser parser if needed
           const fallback = compileAndRunInBrowser(source, { fuel, stackLimit, sliceWidth });
-          return { ...fallback, rustError: data.error };
+          return rememberClientTrace(cacheKey, { ...fallback, rustError: data.error });
         }
       }
     } catch (_) {
-      // Offline or static file mode; use in-browser engine
+      // Offline or static file mode; disable further `/api/trace` probes and use in-browser engine
+      rustBackendAvailable = false;
     }
   }
-  return compileAndRunInBrowser(source, { fuel, stackLimit, sliceWidth });
+  const browserResult = compileAndRunInBrowser(source, { fuel, stackLimit, sliceWidth });
+  return rememberClientTrace(cacheKey, browserResult);
 }
 
 // Classification of the 9 Frame variants into 3 semantic families:
@@ -2030,6 +2096,50 @@ export function buildRingTelemetry(trace, stepIndex) {
   };
 }
 
+const traceCallSpansCache = new WeakMap();
+const traceStepTelemetryCache = new WeakMap();
+
+function getTraceBaseCallSpans(trace) {
+  if (!trace || typeof trace !== 'object') return { baseCalls: [], maxDepth: 0 };
+  if (traceCallSpansCache.has(trace)) return traceCallSpansCache.get(trace);
+
+  const steps = trace.steps || [];
+  const baseCalls = [];
+  const openStack = [];
+  let maxDepth = 0;
+
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    const fLen = s.after?.frames?.length || 0;
+    if (fLen > maxDepth) maxDepth = fLen;
+
+    if (s.ruleLine === 200) {
+      const prev = steps[Math.max(0, i - 1)];
+      const raw = prev?.controlSummary || s.controlSummary || 'call()';
+      const label = raw.replace(/^Invoke\((.*)\)$/, '$1').replace(/^Enter\((.*)\)$/, '$1');
+      const callObj = {
+        id: baseCalls.length,
+        label,
+        invokeStep: i,
+        returnStep: null,
+        returnValue: null,
+        depth: openStack.length,
+      };
+      baseCalls.push(callObj);
+      openStack.push(callObj);
+    } else if (s.ruleLine === 185 && openStack.length > 0) {
+      const finished = openStack.pop();
+      finished.returnStep = i;
+      finished.returnValue =
+        s.controlValue?.summary ?? s.controlSummary?.replace(/^Return\((.*)\)$/, '$1') ?? '';
+    }
+  }
+
+  const entry = { baseCalls, maxDepth };
+  traceCallSpansCache.set(trace, entry);
+  return entry;
+}
+
 /**
  * Builds crystal-clear recursion telemetry (call-chain lifecycle + live algebraic
  * hole-substitution equation) directly from the active continuation frame stack.
@@ -2047,49 +2157,24 @@ export function buildRecursionTelemetry(trace, stepIndex) {
     };
   }
 
-  // 1. Extract all function invocations (rule 200 Lookup fn) and match with Return frame pop (rule 185)
-  const calls = [];
-  const openStack = [];
-  let maxDepth = 0;
-
-  for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    const fLen = s.after?.frames?.length || 0;
-    if (fLen > maxDepth) maxDepth = fLen;
-
-    if (s.ruleLine === 200) {
-      // Previous step had Invoke(name(...))
-      const prev = steps[Math.max(0, i - 1)];
-      const raw = prev?.controlSummary || s.controlSummary || 'call()';
-      const label = raw.replace(/^Invoke\((.*)\)$/, '$1').replace(/^Enter\((.*)\)$/, '$1');
-      const callObj = {
-        id: calls.length,
-        label,
-        invokeStep: i,
-        returnStep: null,
-        returnValue: null,
-        depth: openStack.length,
-        status: 'future',
-      };
-      calls.push(callObj);
-      openStack.push(callObj);
-    } else if (s.ruleLine === 185 && openStack.length > 0) {
-      const finished = openStack.pop();
-      finished.returnStep = i;
-      finished.returnValue = s.controlValue?.summary ?? s.controlSummary?.replace(/^Return\((.*)\)$/, '$1') ?? '';
-    }
-  }
-
-  // Classify each call at current stepIndex
+  const { baseCalls, maxDepth } = getTraceBaseCallSpans(trace);
+  const calls = new Array(baseCalls.length);
   const activeOpenCalls = [];
-  for (const c of calls) {
-    if (stepIndex < c.invokeStep) {
-      c.status = 'future';
-    } else if (c.returnStep !== null && stepIndex >= c.returnStep) {
-      c.status = 'returned';
-    } else {
-      c.status = 'waiting';
-      activeOpenCalls.push(c);
+  let anyReturned = false;
+
+  for (let i = 0; i < baseCalls.length; i++) {
+    const bc = baseCalls[i];
+    let status = 'waiting';
+    if (stepIndex < bc.invokeStep) {
+      status = 'future';
+    } else if (bc.returnStep !== null && stepIndex >= bc.returnStep) {
+      status = 'returned';
+      anyReturned = true;
+    }
+    const callClone = { ...bc, status };
+    calls[i] = callClone;
+    if (status === 'waiting') {
+      activeOpenCalls.push(callClone);
     }
   }
   if (activeOpenCalls.length > 0) {
@@ -2109,27 +2194,31 @@ export function buildRecursionTelemetry(trace, stepIndex) {
   }
 
   let exprAcc = `[ ${focusAtom} ]`;
-  // Walk from top (innermost) frame to bottom (outermost) frame
   for (let i = 0; i < frames.length; i++) {
     const fr = frames[i];
     if (fr.kind === 'Right') {
-      // label is e.g. "4 * [hole]" or "5 + [hole]"
-      const prefix = fr.label.replace(/\s*\[hole\].*$/, '').replace(/Mul/g, '×').replace(/Add/g, '+').replace(/Sub/g, '-');
+      const prefix = fr.label
+        .replace(/\s*\[hole\].*$/, '')
+        .replace(/Mul/g, '×')
+        .replace(/Add/g, '+')
+        .replace(/Sub/g, '-');
       exprAcc = `(${prefix} ${exprAcc})`;
     } else if (fr.kind === 'Left') {
-      const suffix = fr.label.replace(/^\[hole\]\s*/, '').replace(/Mul/g, '×').replace(/Add/g, '+').replace(/Sub/g, '-');
+      const suffix = fr.label
+        .replace(/^\[hole\]\s*/, '')
+        .replace(/Mul/g, '×')
+        .replace(/Add/g, '+')
+        .replace(/Sub/g, '-');
       exprAcc = `(${exprAcc} ${suffix})`;
     } else if (fr.kind === 'Let') {
       const varName = fr.label.replace(/^let\s+/, '').replace(/\s*=.*$/, '');
       exprAcc = `let ${varName} = ${exprAcc}`;
     }
   }
-  // Clean outer parens
   if (exprAcc.startsWith('(') && exprAcc.endsWith(')')) {
     exprAcc = exprAcc.slice(1, -1);
   }
 
-  const anyReturned = calls.some((c) => c.status === 'returned');
   let mode = 'UNFOLDING';
   if (step.ruleLine === 80) mode = 'RESOLVED';
   else if (step.ruleLine === 82 || step.ruleLine === 84 || step.controlKind === 'Error') mode = 'FAULT';
@@ -2145,16 +2234,40 @@ export function buildRecursionTelemetry(trace, stepIndex) {
   };
 }
 
+function getCachedStepTelemetry(trace, stepIndex) {
+  if (!trace || typeof trace !== 'object') {
+    return {
+      recursion: buildRecursionTelemetry(trace, stepIndex),
+      ringTelemetry: buildRingTelemetry(trace, stepIndex),
+    };
+  }
+  let stepMap = traceStepTelemetryCache.get(trace);
+  if (!stepMap) {
+    stepMap = new Map();
+    traceStepTelemetryCache.set(trace, stepMap);
+  }
+  let entry = stepMap.get(stepIndex);
+  if (!entry) {
+    entry = {
+      recursion: buildRecursionTelemetry(trace, stepIndex),
+      ringTelemetry: buildRingTelemetry(trace, stepIndex),
+    };
+    stepMap.set(stepIndex, entry);
+  }
+  return entry;
+}
+
 /**
  * Compute the `stepState` object passed to all 7 Three.js designers on every animation frame.
  */
 export function buildStepState({ trace, playhead = 0, ambient = 0, dt = 0.016 }) {
   const steps = trace?.steps || [];
   const totalSteps = Math.max(1, steps.length);
+  const maxStepIdx = Math.max(0, steps.length - 1);
   const clampedPlayhead = Math.max(0, Math.min(totalSteps - 0.0001, playhead));
-  const stepIndex = Math.min(steps.length - 1, Math.floor(clampedPlayhead));
-  const stepFraction = clampedPlayhead - stepIndex;
-  const progress = totalSteps <= 1 ? 1 : stepIndex / (totalSteps - 1);
+  const stepIndex = Math.min(maxStepIdx, Math.floor(clampedPlayhead));
+  const stepFraction = Math.max(0, clampedPlayhead - stepIndex);
+  const progress = totalSteps <= 1 ? 1 : Math.min(1, clampedPlayhead / (totalSteps - 1));
   const step = steps[stepIndex] || steps[0];
 
   let phase = 'DESCEND';
@@ -2178,8 +2291,7 @@ export function buildStepState({ trace, playhead = 0, ambient = 0, dt = 0.016 })
   else if (phase === 'EMBLEM') aperture = 0.68;
   else if (phase === 'ERROR') aperture = 0.85;
 
-  const recursion = buildRecursionTelemetry(trace, stepIndex);
-  const ringTelemetry = buildRingTelemetry(trace, stepIndex);
+  const { recursion, ringTelemetry } = getCachedStepTelemetry(trace, stepIndex);
   const controlCore = ringTelemetry.controlCore;
 
   return {

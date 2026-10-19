@@ -1,4 +1,5 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import katex from 'katex';
@@ -29,4 +30,20 @@ await writeFile(path.join(output,'requirements-source.json'),await readFile(path
 const aliases = {index:'requirements.html',syntax:'language.html#syntax',semantics:'language.html#semantics',kernel:'requirements.html#architecture','zkirv4-requirements':'requirements.html#zkir',recursion:'requirements.html#recursion'};
 for (const [alias,target] of Object.entries(aliases)) {
  await writeFile(path.join(output,`${alias}.html`),`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${target}"><title>Moriarty reference</title></head><body><p>This reference has moved to <a href="${target}">${target}</a>.</p></body></html>`);
+}
+
+const vizSource = path.resolve(root, '..', 'visualization');
+const vizOutput = path.join(root, 'public/visualization');
+if (existsSync(path.join(vizSource, 'index.html'))) {
+  await rm(vizOutput, { recursive: true, force: true });
+  await mkdir(path.join(vizOutput, 'vendor'), { recursive: true });
+  await cp(path.join(vizSource, 'index.html'), path.join(vizOutput, 'index.html'));
+  await cp(path.join(vizSource, 'src'), path.join(vizOutput, 'src'), { recursive: true });
+  for (const vendorFile of ['three.core.js', 'three.webgpu.js', 'three.tsl.js']) {
+    const vf = path.join(vizSource, 'vendor', vendorFile);
+    if (existsSync(vf)) {
+      await cp(vf, path.join(vizOutput, 'vendor', vendorFile));
+    }
+  }
+  console.log('Staged Sherlock 3D visualization into public/visualization.');
 }

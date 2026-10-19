@@ -38,6 +38,10 @@ const state = {
   lastFramesTelemetryHtml: '',
   lastCallsTelemetryHtml: '',
   lastFuelTelemetryHtml: '',
+  requestSeq: 0,
+  appliedRequestSeq: 0,
+  rafId: 0,
+  disposed: false,
 };
 
 const CONTROL_STRIP_SECTORS = [
@@ -115,6 +119,9 @@ const stage = new SherlockStage(els.canvas, {
     els.stageInspectText.textContent = sub ? `${title} — ${sub}` : title;
   },
 });
+if (typeof window !== 'undefined') {
+  window.__sherlockStage = stage;
+}
 
 function escapeHtml(str) {
   return String(str)
@@ -313,18 +320,32 @@ function selectPreset(preset) {
   executeCurrentSource(true);
 }
 
+let presetButtonsMap = null;
+const cameraLensButtons = els.cameraLensBar
+  ? Array.from(els.cameraLensBar.querySelectorAll('button'))
+  : [];
+let editorLineSpans = [];
+
 function renderPresets() {
-  els.presetStrip.innerHTML = '';
-  for (const p of PRESET_PROGRAMS) {
-    const meta = PRESET_EDITORIAL_META[p.id] || { title: p.title, sub: p.badge };
-    const isActive = p.id === state.activePresetId;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `preset-btn ${isActive ? 'active' : ''}`;
+  if (!presetButtonsMap) {
+    presetButtonsMap = new Map();
+    els.presetStrip.innerHTML = '';
+    for (const p of PRESET_PROGRAMS) {
+      const meta = PRESET_EDITORIAL_META[p.id] || { title: p.title, sub: p.badge };
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'preset-btn';
+      btn.dataset.presetId = p.id;
+      btn.innerHTML = `<span>${escapeHtml(meta.title)}</span><small>${escapeHtml(meta.sub)}</small>`;
+      btn.addEventListener('click', () => selectPreset(p));
+      els.presetStrip.appendChild(btn);
+      presetButtonsMap.set(p.id, btn);
+    }
+  }
+  for (const [id, btn] of presetButtonsMap.entries()) {
+    const isActive = id === state.activePresetId;
+    btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', String(isActive));
-    btn.innerHTML = `<span>${escapeHtml(meta.title)}</span><small>${escapeHtml(meta.sub)}</small>`;
-    btn.addEventListener('click', () => selectPreset(p));
-    els.presetStrip.appendChild(btn);
   }
   const activePreset = PRESET_PROGRAMS.find((p) => p.id === state.activePresetId);
   if (activePreset) {
@@ -333,7 +354,8 @@ function renderPresets() {
 }
 
 function updateCameraLensButtons(activePreset) {
-  for (const btn of els.cameraLensBar.querySelectorAll('button')) {
+  for (let i = 0; i < cameraLensButtons.length; i++) {
+    const btn = cameraLensButtons[i];
     const isActive = btn.dataset.preset === activePreset;
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', String(isActive));
@@ -344,31 +366,50 @@ function updateCameraLensButtons(activePreset) {
 }
 
 function updateEditorLineNumbers(activeLine = 1) {
-  const lines = (els.sourceEditor.value || '').split('\n').length;
-  if (lines === state.lastLineCount && activeLine === state.lastActiveLine) {
-    return;
+  const val = els.sourceEditor.value || '';
+  let lines = 1;
+  for (let i = 0; i < val.length; i++) {
+    if (val.charCodeAt(i) === 10) lines++;
   }
-  state.lastLineCount = lines;
-  state.lastActiveLine = activeLine;
-  let html = '';
-  for (let i = 1; i <= lines; i++) {
-    if (i === activeLine) {
-      html += `<span class="active-line">${i}</span>\n`;
-    } else {
-      html += `${i}\n`;
+  if (lines !== state.lastLineCount) {
+    state.lastLineCount = lines;
+    state.lastActiveLine = -1;
+    els.editorLineNumbers.textContent = '';
+    editorLineSpans = new Array(lines);
+    const frag = document.createDocumentFragment();
+    for (let i = 1; i <= lines; i++) {
+      const sp = document.createElement('span');
+      sp.textContent = `${i}\n`;
+      editorLineSpans[i - 1] = sp;
+      frag.appendChild(sp);
     }
+    els.editorLineNumbers.appendChild(frag);
   }
-  els.editorLineNumbers.innerHTML = html;
+  if (activeLine !== state.lastActiveLine) {
+    if (state.lastActiveLine >= 1 && editorLineSpans[state.lastActiveLine - 1]) {
+      editorLineSpans[state.lastActiveLine - 1].classList.remove('active-line');
+    }
+    if (activeLine >= 1 && editorLineSpans[activeLine - 1]) {
+      editorLineSpans[activeLine - 1].classList.add('active-line');
+    }
+    state.lastActiveLine = activeLine;
+  }
 }
 
 async function executeCurrentSource(resetPlayhead = true) {
-  state.source = els.sourceEditor.value;
-  const res = await compileAndRunSherlock(state.source, {
+  const reqId = ++state.requestSeq;
+  const candidateSource = els.sourceEditor.value;
+  const res = await compileAndRunSherlock(candidateSource, {
     fuel: state.fuel,
     stackLimit: state.stackLimit,
     sliceWidth: 4,
     preferRust: true,
   });
+
+  if (reqId < state.appliedRequestSeq) {
+    return;
+  }
+  state.appliedRequestSeq = reqId;
 
   if (!res.ok) {
     els.compileErrorBanner.textContent = res.error || 'Compilation error';
@@ -376,6 +417,7 @@ async function executeCurrentSource(resetPlayhead = true) {
     return;
   }
 
+  state.source = candidateSource;
   els.compileErrorBanner.classList.add('hidden');
   state.trace = res;
 
@@ -557,6 +599,7 @@ function syncStepUI(stepIdx, prebuiltStepState = null) {
     source: state.source,
     trace: state.trace,
     step,
+    stepIndex: clampedIdx,
   });
   if (els.telemetryQdlMorph) {
     const qdlHtml = `<strong>${escapeHtml(qdlTel.speciesName)}</strong> <small>&middot; ${escapeHtml(qdlTel.family)} (${escapeHtml(qdlTel.mechanism)}) &middot; ${escapeHtml(qdlTel.morphGesture)}</small>`;
@@ -838,7 +881,7 @@ els.stepPrevBtn.addEventListener('click', () => {
 els.stepNextBtn.addEventListener('click', () => {
   state.playing = false;
   updatePlayButton();
-  const maxStep = state.trace ? state.trace.steps.length - 1 : 0;
+  const maxStep = state.trace ? Math.max(0, state.trace.steps.length - 1) : 0;
   state.playhead = Math.min(maxStep, Math.floor(state.playhead) + 1);
   els.stepScrubber.value = String(state.playhead);
   syncStepUI(Math.floor(state.playhead));
@@ -876,7 +919,8 @@ for (const btn of els.cameraLensBar.querySelectorAll('button')) {
   });
 }
 
-window.addEventListener('keydown', (ev) => {
+function onWindowKeyDown(ev) {
+  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
   const active = document.activeElement;
   const tag = active?.tagName;
   if (
@@ -885,6 +929,7 @@ window.addEventListener('keydown', (ev) => {
     tag === 'SELECT' ||
     tag === 'BUTTON' ||
     tag === 'SUMMARY' ||
+    active?.isContentEditable ||
     active?.getAttribute?.('role') === 'button'
   ) {
     return;
@@ -905,11 +950,13 @@ window.addEventListener('keydown', (ev) => {
       selectPreset(PRESET_PROGRAMS[idx]);
     }
   }
-});
+}
+
+window.addEventListener('keydown', onWindowKeyDown);
 
 function getOrBuildStepState(stepIdx, stepFraction = 0, dt = 0.016) {
   const totalSteps = state.trace?.steps?.length || 0;
-  const clampedIdx = Math.max(0, Math.min(totalSteps - 1, stepIdx));
+  const clampedIdx = Math.max(0, Math.min(Math.max(0, totalSteps - 1), stepIdx));
   if (
     state.cachedStepState &&
     state.cachedTraceRef === state.trace &&
@@ -944,7 +991,8 @@ function getOrBuildStepState(stepIdx, stepFraction = 0, dt = 0.016) {
 
 // Animation Loop
 function animate(now) {
-  requestAnimationFrame(animate);
+  if (state.disposed) return;
+  state.rafId = requestAnimationFrame(animate);
   const dt = Math.min(0.05, Math.max(0.001, (now - state.lastTick) / 1000));
   state.lastTick = now;
 
@@ -970,8 +1018,24 @@ function animate(now) {
   }
 }
 
+export function disposeApp() {
+  if (state.disposed) return;
+  state.disposed = true;
+  state.playing = false;
+  if (state.rafId) {
+    cancelAnimationFrame(state.rafId);
+    state.rafId = 0;
+  }
+  window.removeEventListener('keydown', onWindowKeyDown);
+  stage.dispose();
+}
+
+if (typeof window !== 'undefined') {
+  window.__sherlockApp = { state, stage, selectPreset, executeCurrentSource, dispose: disposeApp };
+}
+
 // Initialize Workbench
 els.sourceEditor.value = state.source;
 renderPresets();
 executeCurrentSource(true);
-requestAnimationFrame(animate);
+state.rafId = requestAnimationFrame(animate);

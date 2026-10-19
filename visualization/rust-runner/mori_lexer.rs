@@ -152,3 +152,19 @@ pub fn lex(source: &str) -> Result<Tokens, String> {
     spans.push(Span { start: end, end });
     Ok(Tokens { kinds, spans })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TokenLimitedLexError {
+    Lex(String),
+    TokenLimit { limit: usize, observed: usize },
+}
+
+pub fn lex_with_token_limit(source: &str, limit: usize) -> Result<Tokens, TokenLimitedLexError> {
+    let tokens = lex(source).map_err(TokenLimitedLexError::Lex)?;
+    let observed = tokens.len();
+    if observed > limit {
+        return Err(TokenLimitedLexError::TokenLimit { limit, observed });
+    }
+    Ok(tokens)
+}
+
