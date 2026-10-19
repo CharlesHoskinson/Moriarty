@@ -1,0 +1,18 @@
+language "moriarty/2";
+agreement Core2AwaitSequenceProbe {
+  asset TOKEN = { network: "local", issuer: "core2-b06-sequence-probe", reference: "UNIT", scale: 2 };
+  state marker: UInt = 17;
+  state flag: Bool = false;
+  action advance(delta: UInt) {
+    let retained = marker;
+    await gate(ready: Bool) when ready;
+    next marker = retained + delta;
+    next flag = ready;
+    let seen = marker;
+    await finish(accepted: Bool) when accepted;
+  }
+  action declareDuties() {
+    liability("duty-open", TOKEN, "holder-a", "holder-b", 0);
+    liability("duty-zero", TOKEN, "holder-a", "holder-b", 0);
+  }
+}

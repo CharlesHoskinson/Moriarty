@@ -1,0 +1,159 @@
+# Batch 18 F1 revision 03: source review and eligibility of the two operations
+
+## Verdict
+
+| Item | Verdict |
+|---|---|
+| **Source** (revision 03 three-file cut: new port `fe39f9a9…` with model `e3280c09…` and seed `9b1d9d9e…` unchanged) | **ACCEPT.** No source fix is required. |
+| **Op A: `newIndependentSequenceFrontendF1Revision03`** | **ELIGIBLE** with the exact argv, cwd and env in Body 17, under conditions P1–P5 below. |
+| **Op B: `newIndependentSequenceFiveStepCaptureF1Revision03`** | **CONDITIONALLY ELIGIBLE.** Root may run it only after Op A exits 0, all pins and fresh outputs are confirmed, and Root selects it separately (R1–R7). |
+| **P2 count correction** | **Resolved.** It was a wording error, not a coverage gap. |
+
+## Reading record
+
+**Completeness.** I read all 17 bodies in full, and each one has its END marker.
+- Body 7 contains declared line-range excerpts: lines 62–121 and 177–199 of `builtins.js`, 398–435 of `builder.js`, and 883–887 of `ToIrListener.js`.
+- The partial `or` case at line 121 is where the declared range ends, so it is not clipping.
+- I rely on nothing outside those ranges, except where I say so below.
+- There is nothing to ABSTAIN on.
+
+**Pins.** I have no tools, so I verified no SHA256 value or byte count. The cross-references agree:
+
+| Item | Pin | Bodies |
+|---|---|---|
+| New port | `fe39f9a9…` | 1, 4, 14 |
+| Reviewer literal | `03f35787…` | 3, 4 |
+| Preimage | `183dab87…` | 4, and the prior port pin in Body 8 |
+| Model | `e3280c09…` | 14, 8 |
+| Seed | `9b1d9d9e…` | 14, 8, 16 |
+| Failure RESULT | `9aecd427…` | 9, 14 |
+| Postcheck | `f72c49b3…` | 12, 13 |
+| Count correction | `356a083d…` | 13, 17 |
+| Source freeze | `d2aa2805…` | 14, 17 |
+| SAFE | `8d42a748…` | 16, 17 |
+| Installed tree | `f5570251…` | 17, 8 |
+| `builtins.js` / `builder.js` / `ToIrListener.js` | `645aa44d…` / `03eadf0a…` / `7d7fcfe5…` | 7, 13 |
+
+**Byte arithmetic.** The hunk sizes are consistent:
+- 2796 + 616 + 343 = 3755 (preimage)
+- 2796 + 549 + 343 = 3688 (candidate)
+
+**Literal match.** The added lines in Body 2 equal Body 3 byte for byte as displayed, including the four-space indentation. Body 1 contains exactly those lines in place of the old `init`/`advanceInput`. Everything else in Body 1 matches the port I re-read in Body 8's review.
+
+**Private data.** I read no private expected, actual-core or model-output body, and I requested none.
+
+## What the actual frontend failure establishes (Bodies 9–11)
+
+**Failure site.** The failure is QNT000 at `init`'s `ite`. Quint's `ite` effect signature requires both branches to have the same `Update` set. Here `false` is Pure and `initInvocation(…)` is `Update['machine']`. That is exactly the F1 risk.
+
+**What else this settles.**
+- The failure is in effect inference, so parsing and name resolution of all three files passed for the old cut.
+- That settles F2 at the parse and name level: the qualified file import `S` and the double import of `financialBoundary` are accepted.
+- It also confirms there are no top-level name collisions, including `init`.
+
+**What this does not settle.**
+- Only the `init` site is reported. I do **not** read that as evidence that the old `advanceInput`, which used the same `ite` pattern, was accepted.
+- I also do not read it as certifying that type or mode checking passed elsewhere. The analyzer's error aggregation is not in the excerpts.
+- Op A remains the arbiter.
+
+## Source (Bodies 1–6)
+
+**Effects.**
+- `all` combines the update sets of its arguments as a union.
+- The guards are Pure or Read, and each new action has exactly one `machine` update: `initInvocation`, or `beginInvocation`, whose own `all` assigns once.
+- This is the same form as `publishStep`, `beginInvocation` and `terminalStutter` in the byte-identical model, which already passed the B17 frontend.
+- `sequenceStep = any {…}` now receives `Update['machine']` from all three branches.
+- Both `all {a, b}` and the trailing-comma form already appear in source that passed the frontend.
+- The new cut introduces no new identifiers.
+
+**Meaning is equivalent.**
+- `init`: `if (len==0) false else X` is the same as `all {len>0, X}`.
+- `advanceInput`:
+  - The old disabling condition was `phase≠Published ∨ len==0 ∨ len≥|Q|`.
+  - Its negation is `phase==Published ∧ len>0 ∧ len<|Q|`, because list lengths are never negative.
+  - The old `val` bindings were pure and deterministic, so inlining them gives the same values.
+  - The checks keep the same order: `resumeFollows`, then `sameSourceContext`, then `beginInvocation`.
+
+**Nothing else changes.** State, types, assignments, queue, cost, evidence and seed are unchanged, and so are `finalStutter`, `sequenceStep`, `sequenceInv`, `queueLinked` and the witness.
+
+**Schedule.** The schedule is unchanged: publish, advance, publish, advance, publish. That is 5 transitions and 6 full states. The witness first holds at state 5.
+
+**Indentation.** The literal uses four spaces where the surrounding code uses two. Quint ignores layout, so this is cosmetic. I am deliberately not asking for a change.
+
+### Lazy, guard-first evaluation, from the installed source (Body 7)
+
+1. **Closures, not values.** `builder.js` at 398 runs `args = expr.args.map(arg => buildExpr(builder, arg))`. That builds evaluator closures and evaluates nothing.
+2. **`actionAll` gets the closures.** If the opcode is in `lazyOps`, `op(ctx, args)` receives those closures. `lazyOps` includes `actionAll`, `and`, `or` and `ite`. The eager path is only the `else` branch, which handles builtins and user-defined operators.
+3. **Early stop.** `actionAll` calls each closure in turn. On a false result it restores the next-state snapshot and returns false **before invoking any later closure**. On `Left` it returns the error immediately, so a fault is never turned into a disabled guard.
+4. **User-defined arguments run only when reached.** The arguments of a user operator such as `beginInvocation(suppliedQueue.nth(…))`, `resumeFollows(…)` or `initInvocation(head(…))` are evaluated eagerly only when that member's own closure runs. That happens only after the earlier guards have passed.
+
+So no `head` or `nth` call is evaluated before an earlier false `all` guard.
+
+**The one link not shown: argument order.** Source-to-IR argument order depends on `popMany` (`ToIrListener.js` 883–887), and its body is not supplied. That link does not carry the weight within this bound:
+- Laziness alone (points 1–3) rules out the eager failure. Under eager evaluation, `records.nth(-1)` would fault at state 0.
+- Suppose the order were reversed. In states 0–4, `beginInvocation`'s own phase guard either fails first, in Ready states, or every index is in range, in Published states with `len` of 1 or 2. The result would be identical.
+- The only state where order matters is Published with `len==|Q|`, which is state 5. If the simulator evaluated a step there, a reversed order would raise a loud `Left`, not a false pass.
+- The same reasoning applies to F3 (`i == 0 or …`): a reversal would fault loudly in the state-0 invariant.
+
+Under the expected left-to-right order, no out-of-bounds call occurs in any state.
+
+## P2 count correction (Bodies 12–13)
+
+The counts reconcile: 4670 package rows + 2 Node/CLI = 4672 file checks, then + 3 symlinks + 3 sources = 4678. Root's actual pre and post checks covered every row and all passed. The gap I flagged earlier is closed.
+
+For revision 03, the three source rows must use the new `revision03/source` paths and pins: port `fe39f9a9…`, model `e3280c09…` and seed `9b1d9d9e…`. They must be read back fresh before and after each operation.
+
+## Op A: frontend, ELIGIBLE exactly as in Body 17, operation 1
+
+- **P1.** `revision03/source` contains exactly the three files, with no symlinks. Root reads back all three pins before and after.
+- **P2.** Root reads back the full installed closure against `f5570251…` before and after: 4672 file checks, 3 symlinks and the 3 new source rows, all passing.
+- **P3.** Root enforces 60 s wall, 4 MiB per stream, the 512 MiB heap and stdin from `/dev/null`. The stream destinations are fresh and empty, and they are separate from the immutable `after-core-freeze-02/actual-frontend-01`. Root records exit code, time, argv, env, pins and both full streams before interpreting anything.
+- **P4.** A nonzero exit is a recorded failure. There is no in-place fix or retry. **No further fallback is pre-reviewed.** Any new form needs a new cut and a fresh review. I am authoring no alternatives.
+- **P5.** No ITF is written, and Op B is not run in the same selection.
+
+## Op B: five-step capture, CONDITIONALLY ELIGIBLE exactly as in Body 17, operation 2
+
+The flags are correct:
+- `--main independentCore2SequencePort`
+- `--init init --step sequenceStep --invariant sequenceInv --witnesses allInputsPublishedWitness`
+- `--backend typescript --max-samples 1 --max-steps 5 --seed 1`
+
+The inherited `step` is not selected.
+
+- **R0 (gate).** Op A exits 0. All three source pins and the installed-closure pins are unchanged before and after. Root selects Op B separately.
+- **R1.** `revision03/proposed-itf/` and the stream destinations exist and are fresh and empty. After the run, Root enumerates the directory rather than assuming a `{seq}` filename. If no ITF is written, that is an observed failure.
+- **R2.** The installed CLI must accept `--backend` and `--witnesses`. This is still unverified, and an option error is a recorded failure.
+- **R3.** Pass means all of the following:
+  - exit 0;
+  - no invariant violation;
+  - the witness reached in 1 of 1;
+  - exactly 6 complete states, with nothing filtered.
+
+  A short trace, a deadlock, a runtime `Left`, an unreached witness or a cap breach is an observed failure. None of these counts as a passing prefix.
+- **R4.** Root enforces 4 MiB per stream and 64 MiB total ITF. A breach is a recorded failure, not a truncation.
+- **R5.** All pins are read back before and after. The full streams and ITF are fsynced and frozen before any expected, owning, common or Machine body is accessed. Comparators are reviewed separately, only after the full actual Quint freeze.
+- **R6.** Exactly one run. No rerun, and no replay of the old cut or of any prefix.
+- **R7.** The old failed cut and its artifacts stay immutable.
+
+## Finite limits retained
+
+Everything in the prior review that this delta does not touch still stands: the model and seed coverage, F2 at the type level, and the cohort limits.
+
+**Cohort coverage.**
+- The run is cut at the second Await, so Complete, `finish` and Rejected are not exercised.
+- Only State effects occur.
+- `queueLinked` checks only the supplied queue.
+
+**Premises, not verified here.**
+- Source evaluation, runtime evidence and static and runtime costs.
+- R0–R7 admission and `emit_checked`.
+- Continuation authentication and canonicalization.
+- Native and OS-loader behaviour, and EARS.
+
+**Still open.**
+- H2/H3/H4/H6, Error, decoder and financial qualifications.
+- There is no equivalence between the B, K, Quint and helper clocks.
+- Seed independence and the historical method correlation are disclosed premises that I did not audit.
+- The tool closure is static only.
+
+Nothing new is authored here: no finance, security, clock, weight or validation policy, and no design vote.
