@@ -1,0 +1,210 @@
+--- a/models/sherlock/quint/parametric-literal-images/literalParametricGuardCoverageTest.qnt
++++ /dev/null
+@@ -1,207 +0,0 @@
+-module literalParametricGuardCoverageTest {
+-  import literalParametricImages.* from "./literalParametricImages"
+-  import literalParametricInputs.* from "./literalParametricInputs"
+-  // B23 NEW finite discriminators, source-exposed and same-author; not a blind oracle.
+-  // B22 model and inputs are byte-identical dependencies; no old run definitions imported.
+-  pure def gRoot(imageArg: PImage, positionArg: int, valueArg: int): PImage = {
+-    root: pReplace(imageArg.root,positionArg,valueArg), tables: imageArg.tables,
+-  }
+-  pure def gTable(imageArg: PImage, positionArg: int, rowsArg: List[PRow]): PImage = {
+-    val scan = imageArg.tables.foldl({cursor:0,out:List()}, (acc, tableRows) => {
+-      cursor: acc.cursor+1,
+-      out: acc.out.append(if (acc.cursor == positionArg) rowsArg else tableRows),
+-    })
+-    {root:imageArg.root,tables:scan.out}
+-  }
+-  pure val gFalseNode: PRow = List(1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+-  pure val gFalseProgram: PImage = pSetTableRow(pExampleProgram,13,1,gFalseNode)
+-  // Complete literal 45-root + 232-table-cell post-images: no pHand*/p*Next call.
+-  pure val gFalseMiddle: PImage = {root: List(2,0,0,1,0,1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+-    tables: List(List(List(0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)),List(List(0,0),List(0,0),List(0,0)),List(List(0,0,0,0,0),List(0,0,0,0,0)),List(List(1,1),List(0,0),List(0,0),List(0,0)),List(List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)),List(List(1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))}
+-  pure val gFalseDone: PImage = {root: List(2,0,0,1,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0),
+-    tables: List(List(List(0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)),List(List(0,0),List(0,0),List(0,0)),List(List(0,0,0,0,0),List(0,0,0,0,0)),List(List(1,1),List(0,0),List(0,0),List(0,0)),List(List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)),List(List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))}
+-
+-  pure val gConstructorNil: PRow = List(2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+-  pure val gBoolNonzeroUInt: PRow = pReplace(gFalseNode,3,1)
+-  pure val gBoolValueTwo: PRow = pReplace(gFalseNode,19,2)
+-  pure val gUIntBooleanPayload: PRow = pReplace(pDecoyUInt7Node,19,1)
+-  pure val gUIntWrongType: PRow = pReplace(pDecoyUInt7Node,1,1)
+-  pure val gUIntByteNegative: PRow = pReplace(pDecoyUInt7Node,3,-1)
+-  pure val gUIntByte256: PRow = pReplace(pDecoyUInt7Node,3,256)
+-  pure val gScalarRefusalRows: List[PRow] = List(gConstructorNil,gBoolNonzeroUInt,
+-    gBoolValueTwo,gUIntBooleanPayload,gUIntWrongType,gUIntByteNegative,gUIntByte256)
+-  pure val gFixedType: PImage = pChangeImageCell(pExampleProgram,10,1,0,0)
+-  pure val gFixedCtor: PImage = pChangeImageCell(pExampleProgram,11,0,0,3)
+-  pure val gFixedCtorField: PImage = pChangeImageCell(pExampleProgram,12,0,0,1)
+-  pure val gCFLayout: PLayout = {...pExampleLayout,
+-    programRows:pReplace(pExampleLayout.programRows,14,1)}
+-  pure val gCFInactive: PImage = gTable(pExampleProgram,14,List(List(0,0)))
+-  pure val gCFActive: PImage = gRoot(gCFInactive,15,1)
+-  pure val gProgramPadding: PImage = pChangeImageCell(pExampleProgram,4,3,4,1)
+-  pure val gStatePadding: PImage = pChangeImageCell(pWideBefore,0,2,3,1)
+-  pure val gPublicationPadding: PImage = pChangeImageCell(pWideMiddle,0,2,3,1)
+-  pure val gLiteralOutcomeTag: PImage = gRoot(pWideBefore,41,1)
+-  pure val gLiteralOutcomePayload: PImage = gRoot(pWideBefore,42,1)
+-  pure val gLiteralControlLength: PImage = gRoot(pWideBefore,5,2)
+-  pure val gLiteralControlTag: PImage = pChangeImageCell(pWideBefore,5,0,0,1)
+-  pure val gLiteralStrayControl: PImage = pChangeImageCell(pWideBefore,5,0,34,1)
+-  pure val gPublicationOutcomeTag: PImage = gRoot(pWideMiddle,41,1)
+-  pure val gPublicationOutcomePayload: PImage = gRoot(pWideMiddle,43,1)
+-  pure val gPublicationControlLength: PImage = gRoot(pWideMiddle,5,2)
+-  pure val gPublicationControlTag: PImage = pChangeImageCell(pWideMiddle,5,0,0,0)
+-  pure val gPublicationStrayControl: PImage = pChangeImageCell(pWideMiddle,5,0,34,1)
+-  pure val gPublicationDepth: PImage = gRoot(pWideMiddle,4,1)
+-  // This frame mutant is also rejected by D1 input padding at depth zero.
+-  // It cannot isolate the redundant all-frames-zero conjunct under D1 + depth==0.
+-  pure val gPublicationFrame: PImage = pChangeImageCell(pWideMiddle,4,0,0,1)
+-  pure val gReturnSpaceTwo: PImage = pChangeImageCell(pWideMiddle,5,0,2,2)
+-  pure val gReturnNegativeIndex: PImage = pChangeImageCell(pWideMiddle,5,0,3,-1)
+-  pure val gEntryOne: PImage = gRoot(pEntryConstant2Program,0,1)
+-  pure val gUnequalInitialFuel: PImage = gRoot(pCompleteInit,25,2)
+-  pure val gNonemptyInit: PImage = pSetTableRow(gRoot(pCompleteInit,0,1),0,0,
+-    List(0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+-  // Each child relation remains valid; ONLY full middle-image continuity is broken.
+-  pure val gRightMiddle: PImage = gRoot(pWideMiddle,8,1)
+-  pure val gRightDone: PImage = gRoot(pWideDone,8,1)
+-  pure val gDiscontinuousRight: PChild = {program:pExampleProgram,context:pAlpha,
+-    before:gRightMiddle,after:gRightDone,envelope:{ruleTag:0,charge:0}}
+-
+-  run falseBoolLiteralFullImagesTest =
+-    pInitPair(pExampleLayout,gFalseProgram,pBoolBefore,pBeta)
+-      .expect(pScalarConstant(gFalseNode)
+-        and pSelectedConstant(gFalseProgram,pBoolBefore) == gFalseNode)
+-      .then(pStepLiteral)
+-      .expect(reference.states == List(pBoolBefore,gFalseMiddle)
+-        and reference.envelopes == List({ruleTag:3,charge:1})
+-        and pFlatten(gFalseMiddle).length() == 277
+-        and pPublicationEnabled(pExampleLayout,gFalseProgram,gFalseMiddle))
+-      .then(pStepPublication)
+-      .expect(reference.states == List(pBoolBefore,gFalseMiddle,gFalseDone)
+-        and reference.envelopes == List({ruleTag:3,charge:1},{ruleTag:0,charge:0})
+-        and pFlatten(gFalseDone).length() == 277
+-        and gFalseDone.root.slice(9,25) == List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+-        and reference.program == gFalseProgram and reference.context == pBeta)
+-
+-  run scalarColumnDomainRefusalsTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pScalarConstant(gFalseNode) and pScalarConstant(pBoolTrueNode)
+-        and pScalarConstant(pDecoyUInt7Node)
+-        and not(pScalarConstant(gFalseNode.slice(0,21)))
+-        and gScalarRefusalRows.indices().forall(i => {
+-          val badProgram = pSetTableRow(pExampleProgram,13,1,gScalarRefusalRows.nth(i))
+-          not(pScalarConstant(gScalarRefusalRows.nth(i)))
+-            and pProgramHeaderAllowed(pExampleLayout,badProgram)
+-            and not(pScalarProgramSubset(pExampleLayout,badProgram))
+-            and not(pLiteralEnabled(pExampleLayout,badProgram,pBoolBefore))
+-        }))
+-
+-  run fixedTablesAndConstantFieldsDomainTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pScalarProgramSubset(pExampleLayout,pExampleProgram)
+-        and List(gFixedType,gFixedCtor,gFixedCtorField).indices().forall(i => {
+-          val badProgram = List(gFixedType,gFixedCtor,gFixedCtorField).nth(i)
+-          pProgramHeaderAllowed(pExampleLayout,badProgram)
+-            and not(pScalarProgramSubset(pExampleLayout,badProgram))
+-        })
+-        and pScalarProgramSubset(gCFLayout,gCFInactive)
+-        and pProgramHeaderAllowed(gCFLayout,gCFActive)
+-        and not(pScalarProgramSubset(gCFLayout,gCFActive)))
+-
+-  run programInputPaddingGuardTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pProgramShape(pExampleLayout,gProgramPadding)
+-        and pLiteralEnabled(pExampleLayout,pExampleProgram,pWideBefore)
+-        and not(pPaddingZero(gProgramPadding.tables.nth(4),3))
+-        and not(pProgramHeaderAllowed(pExampleLayout,gProgramPadding))
+-        and not(pLiteralEnabled(pExampleLayout,gProgramPadding,pWideBefore)))
+-
+-  run stateInputPaddingGuardTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pStateShape(pExampleLayout,gStatePadding)
+-        and pStateShape(pExampleLayout,gPublicationPadding)
+-        and pStateHeaderAllowed(pExampleLayout,pWideBefore)
+-        and pPublicationEnabled(pExampleLayout,pExampleProgram,pWideMiddle)
+-        and not(pPaddingZero(gStatePadding.tables.nth(0),2))
+-        and not(pStateHeaderAllowed(pExampleLayout,gStatePadding))
+-        and not(pLiteralEnabled(pExampleLayout,pExampleProgram,gStatePadding))
+-        and not(pPublicationEnabled(pExampleLayout,pExampleProgram,gPublicationPadding)))
+-
+-  run literalAndPublicationEnvelopeRefusalTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pLiteralRelation(pExampleLayout,pExampleProgram,pWideBefore,pWideMiddle,{ruleTag:3,charge:1})
+-        and pPublicationRelation(pExampleLayout,pExampleProgram,pWideMiddle,pWideDone,{ruleTag:0,charge:0})
+-        and not(pLiteralRelation(pExampleLayout,pExampleProgram,pWideBefore,pWideMiddle,{ruleTag:3,charge:0}))
+-        and not(pLiteralRelation(pExampleLayout,pExampleProgram,pWideBefore,pWideMiddle,{ruleTag:2,charge:1}))
+-        and not(pPublicationRelation(pExampleLayout,pExampleProgram,pWideMiddle,pWideDone,{ruleTag:0,charge:1}))
+-        and not(pPublicationRelation(pExampleLayout,pExampleProgram,pWideMiddle,pWideDone,{ruleTag:1,charge:0})))
+-
+-  run literalOutcomeControlGatesTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pLiteralEnabled(pExampleLayout,pExampleProgram,pWideBefore)
+-        and pEvalControlAllowed(gLiteralControlLength.tables.nth(5),1)
+-        and List(gLiteralOutcomeTag,gLiteralOutcomePayload,gLiteralControlLength,
+-          gLiteralControlTag,gLiteralStrayControl).indices().forall(i => {
+-          val badState = List(gLiteralOutcomeTag,gLiteralOutcomePayload,gLiteralControlLength,
+-            gLiteralControlTag,gLiteralStrayControl).nth(i)
+-          pStateHeaderAllowed(pExampleLayout,badState)
+-            and not(pLiteralEnabled(pExampleLayout,pExampleProgram,badState))
+-        }))
+-
+-  run publicationOutcomeControlGatesTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pPublicationEnabled(pExampleLayout,pExampleProgram,pWideMiddle)
+-        and List(gPublicationOutcomeTag,gPublicationOutcomePayload,gPublicationControlLength,
+-          gPublicationControlTag,gPublicationStrayControl).indices().forall(i => {
+-          val badState = List(gPublicationOutcomeTag,gPublicationOutcomePayload,gPublicationControlLength,
+-            gPublicationControlTag,gPublicationStrayControl).nth(i)
+-          pStateHeaderAllowed(pExampleLayout,badState)
+-            and not(pPublicationEnabled(pExampleLayout,pExampleProgram,badState))
+-        }))
+-
+-  run publicationFrameAndReferenceGatesTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pPublicationEnabled(pExampleLayout,pExampleProgram,pWideMiddle)
+-        and pStateHeaderAllowed(pExampleLayout,gPublicationDepth)
+-        and not(pPublicationEnabled(pExampleLayout,pExampleProgram,gPublicationDepth))
+-        and pStateShape(pExampleLayout,gPublicationFrame)
+-        and not(pStateHeaderAllowed(pExampleLayout,gPublicationFrame))
+-        and not(pPublicationEnabled(pExampleLayout,pExampleProgram,gPublicationFrame))
+-        and pStateHeaderAllowed(pExampleLayout,gReturnSpaceTwo)
+-        and pStateHeaderAllowed(pExampleLayout,gReturnNegativeIndex)
+-        and not(pPublicationEnabled(pExampleLayout,pExampleProgram,gReturnSpaceTwo))
+-        and not(pPublicationEnabled(pExampleLayout,pExampleProgram,gReturnNegativeIndex)))
+-
+-  run layoutAndPhysicalShapeRefusalTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pLayoutAllowed(pExampleLayout)
+-        and not(pLayoutAllowed({...pExampleLayout,programRows:pExampleLayout.programRows.slice(0,14)}))
+-        and not(pLayoutAllowed({...pExampleLayout,stateRows:pExampleLayout.stateRows.slice(0,5)}))
+-        and not(pLayoutAllowed({...pExampleLayout,programRows:pReplace(pExampleLayout.programRows,0,-1)}))
+-        and not(pLayoutAllowed({...pExampleLayout,programRows:pReplace(pExampleLayout.programRows,4,0)}))
+-        and not(pLayoutAllowed({...pExampleLayout,programRows:pReplace(pExampleLayout.programRows,10,3)}))
+-        and not(pLayoutAllowed({...pExampleLayout,stateRows:pReplace(pExampleLayout.stateRows,5,0)}))
+-        and not(pLayoutAllowed({...pExampleLayout,stackLimit:-1}))
+-        and not(pProgramShape(pExampleLayout,{root:pExampleProgram.root.slice(0,15),tables:pExampleProgram.tables}))
+-        and not(pStateShape(pExampleLayout,{root:pWideBefore.root.slice(0,44),tables:pWideBefore.tables}))
+-        and not(pStateShape(pExampleLayout,{root:pWideBefore.root,tables:pWideBefore.tables.slice(0,5)}))
+-        and not(pStateShape(pExampleLayout,pSetTableRow(pWideBefore,0,0,pZeroRow(21))))
+-        and not(pStateShape(pExampleLayout,gTable(pWideBefore,0,pWideBefore.tables.nth(0).slice(0,2)))))
+-
+-  run completeStartBoundaryRefusalTest =
+-    pInitPair(pExampleLayout,pEntryConstant2Program,pCompleteInit,pAlpha)
+-      .expect(pCompleteStartAllowed(pExampleLayout,pEntryConstant2Program,pCompleteInit,pAlpha)
+-        and pPairStartAllowed(pExampleLayout,gEntryOne,pCompleteInit,pAlpha)
+-        and not(pCompleteStartAllowed(pExampleLayout,gEntryOne,pCompleteInit,pAlpha))
+-        and pPairStartAllowed(pExampleLayout,pEntryConstant2Program,gUnequalInitialFuel,pAlpha)
+-        and not(pCompleteStartAllowed(pExampleLayout,pEntryConstant2Program,gUnequalInitialFuel,pAlpha))
+-        and pPairStartAllowed(pExampleLayout,pEntryConstant2Program,gNonemptyInit,pAlpha)
+-        and not(pCompleteStartAllowed(pExampleLayout,pEntryConstant2Program,gNonemptyInit,pAlpha)))
+-
+-  run middleJoinDiscontinuityRefusalTest =
+-    pInitPair(pExampleLayout,pExampleProgram,pWideBefore,pAlpha)
+-      .expect(pPairJoin(pExampleLayout,pExampleProgram,pAlpha,pLeftChild(pAlpha),pRightChild(pAlpha))
+-        and pLiteralRelation(pExampleLayout,pExampleProgram,pWideBefore,pWideMiddle,{ruleTag:3,charge:1})
+-        and pPublicationRelation(pExampleLayout,pExampleProgram,gRightMiddle,gRightDone,{ruleTag:0,charge:0})
+-        and pWideMiddle != gRightMiddle
+-        and not(pPairJoin(pExampleLayout,pExampleProgram,pAlpha,pLeftChild(pAlpha),gDiscontinuousRight)))
+-}
