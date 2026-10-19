@@ -1,0 +1,215 @@
+# A102 append-only proving consumer: fresh non-author source/API review
+
+**Reviewer identity:** a fresh invocation with no authoring context for this candidate. I cannot prove from inside the session that I am not sourceauthor76811. Root retains the requested and returned identities and the terminal status.
+
+**Scope:** source review only. I made no tool calls, ran nothing, compiled nothing and edited nothing. NATIVE_PROOF_ELIGIBILITY=NOT_ASSESSED.
+
+## Read coverage
+
+- **Read in full:** I read every line of all 16 delivered bodies.
+  - Complete files: 01–06 and 12–15.
+  - Declared regions only: 07–11.
+  - Metadata: 16.
+- **Truncation:** none of the bodies is truncated. Each ends at a syntactically closed item.
+- **Hashes:** I did not recompute any byte counts or SHA-256 values. Matching between delivered and source hashes is attested by Root, not by me.
+- **Not delivered, and not required:** the parts of `proving.rs` that declare `hex` and the `task4_native_driver` child module. Two facts already depend on them:
+  - The already-compiled prefix uses `crate::proving::hex`.
+  - The bridge, `OfflineParameters` and the cfg(test) hook were in the prior ELF.
+  
+  So their existence is shown by the prior build, not by a body delivered here. The new append adds no new dependency on undelivered code.
+
+## NORMAL_API_COMPILE: **APPROVE** (from source only; no compile success claimed)
+
+I checked the appended region item by item against the delivered APIs.
+
+**Imports**
+- Mid-module `use` items are legal Rust.
+- `ProofOptions` and `MAX_K` are `pub` in `proving` (07).
+- `prove_literal_transition`, `verify_literal_transition` and `LiteralProofBundle` are `pub` in `literal_bridge`.
+- `PathBuf` is new. `fs`, `OpenOptions`, `Write`, `Path`, `Digest` and `hex` come from the existing prefix.
+- No import is duplicated and none is unused.
+
+**Environment parsing**
+- `required_env`: `var_os` → `unwrap_or_else(|| panic!(..))` works because `!` coerces to the expected type; `into_string()` returns `Result<String, OsString>`.
+- Format strings capture constants inline (for example `{A102_PROVE_SRS_DIR_ENV}` and `{MAX_K}`). The compiled prefix already uses the same form.
+- `raw_k.parse::<u8>()` works, and `(1..=MAX_K).contains(&max_k)` is well typed on `u8`.
+- The `symlink_metadata` match is exhaustive: NotFound guard, then `Ok`, then any other `Err`.
+
+**File helpers**
+- `fs::File::open(dir).and_then(|d| d.sync_all())` type-checks.
+- `write_synced_artifact` returns a `String` that is ignored in two places. `String` is not `must_use`, so this gives no lint error.
+- `hex(&Sha256::digest(bytes))` is the same pattern as the prefix.
+
+**Ownership and borrowing in the test body**
+- `program.clone()` is used for the preparatory `prepare_a` call, and the original `Arc` is then moved into `build_checked_literal_transition_request`. This is correct.
+- `assert_eq!` borrows its operands, so `program_bytes` is still usable afterwards.
+- `out = inputs.output_dir.as_path()` coexists with shared borrows of `inputs.srs_dir` and `inputs.max_k`.
+- `drop(bundle)` is not followed by any use of `bundle`. Later code uses only `bundle_text`, `bundle_sha256` and `roundtripped`.
+- In `proof_bytes as usize * 2`, `as` binds tighter than `*`, so the arithmetic is correct.
+
+**The `json!` question**
+- serde_json's leaf rule `($other:expr) => $crate::to_value(&$other).unwrap()` takes a reference.
+- So `"verification": verification` does **not** move `verification`, and the later `verification.proof_bytes` in `println!` is valid.
+- `LiteralVerification` derives `Serialize`, and its `&'static str` and `Vec<&'static str>` fields serialize, so `to_value` cannot fail.
+- `claim.*` leaves are taken by reference through `&LiteralClaim`.
+- `claim.public_values.len() + 1` parses as a single `expr` fragment.
+
+**Traits needed by the assertions**
+- Equality and `expect` require `PartialEq` and `Debug` on `LiteralSourceIdentity`, `LiteralClaim` and `Error` (05 and 01), and on `StateFailure` (already used with `expect` in the prefix). All are present.
+- `OPEN_OBLIGATIONS.to_vec()` has type `Vec<&'static str>`, which matches `LiteralVerification::open_obligations`.
+
+**Round-trip of the proof bundle**
+- `from_json` goes through `mori_core::json::parse`, which limits input to 1 MiB, depth 32 and 65,536 nodes.
+- `prove_literal_transition` already rejects any bundle that fails `validate_json_profile`. That check applies the same parser to the export of a maximum-size proof bundle.
+- All content is ASCII, so the `to_string_pretty` text is no longer than the validated export. It therefore parses.
+- `deny_unknown_fields` round-trips exactly.
+
+**Test attributes and selection**
+- `#[ignore = "..."]` with a reason is valid syntax; `task4_native_driver` already uses it.
+- The module is registered under `#[cfg(test)]` in `mod.rs` (06), and that registration predates this candidate.
+- The selector path `sherlock_machine::literal_witness_native_tests::native_a102_literal_proof_roundtrips_and_independently_verifies` is consistent with that registration.
+
+**Dependencies:** none are new (14). `libc` is used only by the existing loader.
+
+## SOURCE_SECURITY: **APPROVE** (with qualifications)
+
+### Explicit inputs and no defaults
+
+**What the source checks**
+- All three variables are required: missing, non-UTF-8 or empty values panic. Every check happens before any host or native work.
+- The SRS directory must be absolute and an existing directory.
+- The degree cap must be 1–2 ASCII digits in the range 1..=19.
+- The output directory must be absolute, must not already exist (any `symlink_metadata` result, including a dangling symlink, refuses), and must not lie lexically under the SRS directory.
+- The source contains no defaults, downloads, retries, fallbacks, cap changes or SRS generation.
+
+**Validation versus permission**
+- The degree-cap check is source validation only.
+- `prepare` refuses when `ir.k()` exceeds the cap, before any SRS load or keygen.
+- A cap of 19 or 17 grants nothing. Root's caps decide what is allowed.
+
+**Qualifications (not mandatory)**
+- The `starts_with` check is lexical: it does not follow symlinks or `..` components. This is an ordinary harness check, consistent with the stated scope.
+- `"07"` is accepted as degree 7.
+
+### SRS loader
+
+The regular loader in `parameters.rs` does the following:
+1. Opens with `O_NONBLOCK` and runs `is_file` on the opened descriptor.
+2. Reads at most 128 MiB + 1.
+3. Requires the pinned SHA-256 for `k` (20 entries, indices 0..=19).
+4. Checks the 4-byte little-endian degree before the unchecked decode.
+5. Requires the decoder to consume the full snapshot.
+
+Given the pinned hash, symlinked SRS paths are harmless. `get_params` refuses any other degree. The test adds no SRS logic of its own.
+
+### Task4 hook (verified independently from the complete body in 15)
+
+**What `charge()` does**
+- It locks `BUDGET` and does work only when the value is `Some`.
+- When it is `None`, there is no slot lookup, no write, no counter and no panic.
+- `.unwrap()` would panic only on a poisoned mutex.
+
+**When `BUDGET` can become `Some`**
+- The only write is in `begin()`.
+- `begin()` is reached only from the ignored `task4_native_resource_gated_entry`.
+- Before calling `begin()`, that entry must find `MORIARTY_TASK4_CASE`, and `begin()` must then match the binary SHA and admission environment values.
+- The new test calls none of this.
+- Every other `BUDGET` access is a read.
+
+**Effect on this test**
+- In a fresh process running only this selector, both `params_load` calls and all three `params_get` calls are no-ops.
+- The only path to a poisoned mutex is through an armed Task4 run, which this selection does not include.
+- The bridge charges nothing for keygen, prove or verify.
+
+This hook closure is complete. No Task4 admission is inherited.
+
+### Call accounting matches the source
+
+- **Consumer:** 1 `prove_literal_transition` and 1 `verify_literal_transition`. It makes no `ir.k()` call of its own (`emit` does not call `k`), no extra keygen, no tampered check, and no replay of `check_literal_transition`, `build_positive_fixture` or either existing SDK selector.
+- **Inside the bridge and SDK:** 4 `ir.k()`, 2 `load`, 3 `get_params`, 1 `keygen`, 1 `prove`, 1 producer `verify`, 1 `keygen_vk`, 1 independent `verify`. These match the author's declaration.
+
+### Honesty of the persisted material
+
+**What is persisted**
+- The bundle is the complete value returned by `prove_literal_transition`: the claim (including 2077 `public_values`) plus the real proof hex.
+- The report states:
+  - the binding is not persisted;
+  - `public_values_are_complete_native_public_input_vector: false`;
+  - no VK was exported;
+  - no extra keygen was run;
+  - `resource_observation: UNESTABLISHED`.
+- I found no fabricated verifying material, no VK export and no second keygen.
+
+**Remarks**
+- The binding is deterministically derivable from the persisted claim through `crate::digest((BINDING_VERSION, claim))`, but the source does not do this and does not claim to.
+- "Independent" verification means fresh `prepare` plus `keygen_vk` over the **same in-process request** and the same SRS file. It does not compare VKs and does not produce the statement independently.
+
+### Cross-checks that are present
+
+These are correct and useful:
+- `public_values` equals the producer statement.
+- The claim identity equals the fixture identity.
+- `context_hash` equals the `context_hex()` of the test's own layout.
+- `zkir_hash` equals the SHA of the persisted zkir. This ties the persisted circuit to the proven circuit, given that emission is deterministic.
+- `circuit_k` is within 1..=`max_k`.
+- The persisted bundle text, the from-JSON round-trip, and the verification fields all agree with the claim.
+
+### Relation and context identity
+
+- The `include_str!` list in `literal_host.rs` (05) covers 9 sources: `mod.rs`, `fetch.rs`, `enabled_fetch.rs`, `literal_host.rs`, `literal_step.rs`, `literal_ui_valid.rs`, `literal_bridge.rs`, `literal_witness.rs` and `MAPPING.md`.
+- `literal_witness_native_tests.rs` is not among them, and `mod.rs` is unchanged.
+- So `relation_hash`, and with it `context_hash` for the same fixture identity, is unaffected by this append. I confirmed this from the include list itself, not only from the freeze assertion.
+- (Pre-existing, not new: the doc comment in `literal_witness.rs` still says "eight" sources. Do not edit it here, because it is itself a relation source.)
+
+## Artifact sequencing and cleanup applicability
+
+**Order of operations**
+1. `create_dir` refuses if the directory already exists, so a race after the earlier existence check is safe.
+2. The parent directory is fsynced.
+3. The L4 program bytes and the zkir are written, each with create-new, file `sync_all`, then directory `sync_all`.
+4. Prove runs.
+5. The bundle is written **before** verification, so the proof is kept if verification fails.
+6. Verify runs.
+7. The report is written only after verify returns Ok and every assertion passes.
+8. If prove or verify returns `Err`, `a102_native_error.json` is written with the stage and the Debug text (which includes the error code, so a k-cap limit, missing parameters or a keygen failure can be told apart), and the test then panics.
+
+**Cleanup**
+- Nothing deletes or overwrites anything; partial artifacts are always kept.
+- The test writes nowhere except the fresh output directory.
+- Root's existing retention can keep these artifacts without any source change.
+
+**Qualifications (not mandatory)**
+- An SDK panic, an abort (for example an allocation failure under `RLIMIT_AS`), or a host assertion failure after the bundle is written produces no error record. Only the captured panic or stderr remains.
+- If `persist_native_error` itself fails, its panic replaces the original native error message.
+
+**Input and setup facts Root must supply (ordinary facts, not new guards)**
+- The output directory's parent must exist and be writable.
+- Both the output directory and the SRS directory should be on a Linux-native filesystem. On this WSL2 host, avoid `/mnt/*` drvfs/9p mounts: directory `File::open` plus `fsync` may fail there and would panic.
+- The SRS directory must hold the pinned `bls_midnight_2p{k}` for whatever `k` `ir.k()` returns. That `k` is unknown before running. If the file is missing, the test records a `parameters` error after the cost-model `ir.k()` and before keygen.
+- Recommended invocation: `--ignored --exact <selector>` with `--test-threads=1`.
+  - Even an unfiltered `--ignored` run could not arm Task4, because `MORIARTY_TASK4_CASE` and the env checks in `begin()` fail first.
+  - It would still add a failing test, so exact selection is the right choice.
+
+## Mandatory issues
+
+**None.**
+
+## Non-mandatory notes (no change is required for this review)
+
+1. The prefix module doc (`//!` at the top) still says the file avoids `ir.k()`, SRS, keygen, proving and verification. The ignored append now does all of these. Because this candidate is append-only, any correction should be a later, separately reviewed edit.
+2. Leading-zero degrees such as `"07"` are accepted. Root should pass the canonical form.
+3. The output-directory and SRS containment check is lexical only. That is acceptable as a harness input check and is not a claim of a filesystem defense.
+
+## Retained qualifications
+
+- Nothing in this source shows that compiling, keygen, proving or verifying will succeed, or that the proof fits within any resource class.
+- The prior nonproving resource class (10 s / CPU 8 / AS 1 GiB / FSIZE 16 MiB) does not carry over to this test.
+- Am10/T3/k17, C4/R2 and all eight `OPEN_OBLIGATIONS` remain open.
+- The fixture `Literal(List([9]))` exercises one A102 step with an empty environment and empty frames. The unused helper bodies do not exercise recursion.
+- The source makes no soundness, ledger or settlement claim.
+- This approval may support a later, separately selected compile. It selects or authorizes no compiler, SRS, ELF, environment or resource operation.
+
+**Verdicts**
+- **SOURCE_SECURITY = APPROVE**
+- **NORMAL_API_COMPILE = APPROVE** (source-level)
+- **NATIVE_PROOF_ELIGIBILITY = NOT_ASSESSED**

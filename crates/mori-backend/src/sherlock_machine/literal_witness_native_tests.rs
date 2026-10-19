@@ -486,3 +486,246 @@ fn semantically_corrupted_a102_transitions_reach_and_fail_sdk_preimage_check() {
     let (produced, checked, _) = build_positive_fixture();
     assert_corrupted_transitions_rejected(&produced, &checked);
 }
+
+use crate::proving::{ProofOptions, MAX_K};
+use crate::sherlock_machine::literal_bridge::{
+    prove_literal_transition, verify_literal_transition, LiteralProofBundle,
+};
+use std::path::PathBuf;
+
+pub const A102_PROVE_SRS_DIR_ENV: &str = "MORIARTY_A102_PROVE_SRS_DIR";
+pub const A102_PROVE_MAX_K_ENV: &str = "MORIARTY_A102_PROVE_MAX_K";
+pub const A102_PROVE_OUTPUT_DIR_ENV: &str = "MORIARTY_A102_PROVE_OUTPUT_DIR";
+pub const A102_PROVE_REPORT_SCHEMA: &str = "moriarty-sherlock-a102-prove-verify-report/1";
+pub const A102_PROOF_BUNDLE_FILENAME: &str = "a102_literal_proof_bundle.json";
+pub const A102_VERIFICATION_REPORT_FILENAME: &str = "a102_literal_verification_report.json";
+pub const A102_NATIVE_ERROR_FILENAME: &str = "a102_native_error.json";
+
+struct A102ProveInputs {
+    srs_dir: PathBuf,
+    max_k: u8,
+    output_dir: PathBuf,
+}
+
+fn required_env(name: &str) -> String {
+    let raw = std::env::var_os(name).unwrap_or_else(|| panic!("{name} must be set explicitly"));
+    let text = raw
+        .into_string()
+        .unwrap_or_else(|_| panic!("{name} must be valid UTF-8"));
+    assert!(!text.is_empty(), "{name} must not be empty");
+    text
+}
+
+/// Reads and validates every explicit native input before any native work.
+/// No defaults, downloads, SRS generation or degree guessing.
+fn read_a102_prove_inputs() -> A102ProveInputs {
+    let srs_dir = PathBuf::from(required_env(A102_PROVE_SRS_DIR_ENV));
+    assert!(srs_dir.is_absolute(), "{A102_PROVE_SRS_DIR_ENV} must be absolute");
+    let srs_meta = fs::metadata(&srs_dir)
+        .unwrap_or_else(|e| panic!("{A102_PROVE_SRS_DIR_ENV} {}: {e}", srs_dir.display()));
+    assert!(srs_meta.is_dir(), "{A102_PROVE_SRS_DIR_ENV} must be an existing directory");
+    let raw_k = required_env(A102_PROVE_MAX_K_ENV);
+    assert!(
+        raw_k.len() <= 2 && raw_k.bytes().all(|b| b.is_ascii_digit()),
+        "{A102_PROVE_MAX_K_ENV} must be a plain decimal degree"
+    );
+    let max_k: u8 = raw_k.parse().expect("validated decimal degree");
+    assert!(
+        (1..=MAX_K).contains(&max_k),
+        "{A102_PROVE_MAX_K_ENV} must be within source validation range 1..={MAX_K}"
+    );
+    let output_dir = PathBuf::from(required_env(A102_PROVE_OUTPUT_DIR_ENV));
+    assert!(output_dir.is_absolute(), "{A102_PROVE_OUTPUT_DIR_ENV} must be absolute");
+    assert!(
+        !output_dir.starts_with(&srs_dir),
+        "{A102_PROVE_OUTPUT_DIR_ENV} must not be inside the SRS directory"
+    );
+    match fs::symlink_metadata(&output_dir) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Ok(_) => panic!("{A102_PROVE_OUTPUT_DIR_ENV} {} already exists", output_dir.display()),
+        Err(e) => panic!("{A102_PROVE_OUTPUT_DIR_ENV} {}: {e}", output_dir.display()),
+    }
+    A102ProveInputs { srs_dir, max_k, output_dir }
+}
+
+fn sync_dir(dir: &Path) {
+    fs::File::open(dir)
+        .and_then(|d| d.sync_all())
+        .unwrap_or_else(|e| panic!("failed to sync directory {}: {e}", dir.display()));
+}
+
+/// create_new write, file sync_all, then directory sync_all; returns the SHA-256.
+fn write_synced_artifact(dir: &Path, name: &str, bytes: &[u8]) -> String {
+    let path = dir.join(name);
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .unwrap_or_else(|e| panic!("failed to create_new {}: {e}", path.display()));
+    file.write_all(bytes)
+        .unwrap_or_else(|e| panic!("failed to write {}: {e}", path.display()));
+    file.sync_all()
+        .unwrap_or_else(|e| panic!("failed to sync {}: {e}", path.display()));
+    drop(file);
+    sync_dir(dir);
+    hex(&Sha256::digest(bytes))
+}
+
+fn persist_native_error(dir: &Path, stage: &str, message: &str) {
+    let record = serde_json::json!({
+        "schema": A102_PROVE_REPORT_SCHEMA,
+        "stage": stage,
+        "returned_ok": false,
+        "error_debug": message,
+        "open_obligations": OPEN_OBLIGATIONS,
+    });
+    let bytes = serde_json::to_vec_pretty(&record).expect("serialize native error record");
+    write_synced_artifact(dir, A102_NATIVE_ERROR_FILENAME, &bytes);
+}
+
+/// One existing-API prove plus one independently reconstructed verify of the
+/// produced Literal(List([9])) transition. Not a soundness, ledger or resource claim.
+#[test]
+#[ignore = "native SRS/keygen/prove/verify; requires explicit MORIARTY_A102_PROVE_* inputs and separate resource admission"]
+fn native_a102_literal_proof_roundtrips_and_independently_verifies() {
+    let inputs = read_a102_prove_inputs();
+
+    assert_eq!(REFERENCE_SOURCE_BYTES.len(), EXPECTED_REFERENCE_SOURCE_BYTES_LEN);
+    let reference_source_sha256 = hex(&Sha256::digest(REFERENCE_SOURCE_BYTES));
+    assert_eq!(reference_source_sha256, EXPECTED_REFERENCE_SOURCE_SHA256);
+    let (program, caps) = fixture_program_and_capacities();
+    let prog_caps = core_program_capacities(&caps).expect("program capacities conversion");
+    let preparatory = prepare_a(program.clone(), prog_caps).expect("preparatory prepare_a");
+    let program_bytes = preparatory
+        .program_bytes()
+        .expect("deterministic PreparedA::program_bytes encoding");
+    assert!(!program_bytes.is_empty());
+    let id = LiteralSourceIdentity {
+        k_source_sha256: K_SOURCE_SHA256.to_string(),
+        reference_source_sha256,
+        program_source_sha256: hex(&Sha256::digest(&program_bytes)),
+    };
+
+    // Single Machine::step production; no SDK check is replayed.
+    let (produced, statement) = build_checked_literal_transition_request(
+        program,
+        &caps,
+        50,
+        12,
+        &id,
+        local_max_statement_lanes(),
+    )
+    .expect("checked request within local_max_statement_lanes");
+    let produced_program_bytes = produced
+        .prepared
+        .program_bytes()
+        .expect("produced PreparedA::program_bytes encoding");
+    assert_eq!(produced_program_bytes, program_bytes);
+    assert_eq!(statement.len(), EXPECTED_STATEMENT_LANES);
+
+    // Host emission only (no ir.k); the bridge re-emits inside prepare.
+    let layout = LiteralLayout::new(
+        &produced.request.capacities,
+        &produced.request.identity,
+        local_max_statement_lanes(),
+    )
+    .expect("layout construction");
+    assert_eq!(layout.statement(&produced.request.values).expect("statement"), statement);
+    let (_, zkir) = layout.emit(CircuitMode::LocalPublic).expect("local circuit emission");
+
+    let out = inputs.output_dir.as_path();
+    fs::create_dir(out).unwrap_or_else(|e| panic!("failed to create {}: {e}", out.display()));
+    sync_dir(out.parent().expect("absolute output directory has a parent"));
+    let program_sha256 = write_synced_artifact(out, A102_PROGRAM_BYTES_FILENAME, &program_bytes);
+    let zkir_sha256 = write_synced_artifact(out, A102_ZKIR_FILENAME, zkir.as_bytes());
+
+    let options = ProofOptions { params_dir: inputs.srs_dir.clone(), max_k: inputs.max_k };
+    // Native call 1 of 2. No retry, fallback or cap change on failure.
+    let bundle = prove_literal_transition(&produced.request, &options).unwrap_or_else(|e| {
+        persist_native_error(out, "prove_literal_transition", &format!("{e:?}"));
+        panic!("prove_literal_transition failed: {e:?}")
+    });
+    let bundle_text = serde_json::to_string_pretty(&bundle).expect("serialize LiteralProofBundle");
+    let bundle_sha256 =
+        write_synced_artifact(out, A102_PROOF_BUNDLE_FILENAME, bundle_text.as_bytes());
+    assert!(!bundle.proof_hex.is_empty() && bundle.proof_hex.len() % 2 == 0);
+    let public_values: Vec<String> = statement.iter().map(u128::to_string).collect();
+    assert_eq!(bundle.claim.public_values, public_values);
+    assert_eq!(bundle.claim.identity, id);
+    assert_eq!(bundle.claim.context_hash, layout.context_hex());
+    assert_eq!(bundle.claim.zkir_hash, zkir_sha256);
+    assert!((1..=inputs.max_k).contains(&bundle.claim.circuit_k));
+
+    let persisted = fs::read_to_string(out.join(A102_PROOF_BUNDLE_FILENAME))
+        .expect("read persisted proof bundle");
+    assert_eq!(persisted, bundle_text);
+    let roundtripped = LiteralProofBundle::from_json(&persisted)
+        .unwrap_or_else(|e| panic!("LiteralProofBundle::from_json failed: {e:?}"));
+    assert_eq!(roundtripped.claim, bundle.claim);
+    assert_eq!(roundtripped.proof_hex, bundle.proof_hex);
+    drop(bundle);
+
+    // Native call 2 of 2: independent reconstruction of claim, circuit and VK.
+    let verification = verify_literal_transition(&produced.request, &roundtripped, &options)
+        .unwrap_or_else(|e| {
+            persist_native_error(out, "verify_literal_transition", &format!("{e:?}"));
+            panic!("verify_literal_transition failed: {e:?}")
+        });
+    let claim = &roundtripped.claim;
+    assert_eq!(verification.context_hash, claim.context_hash);
+    assert_eq!(verification.zkir_hash, claim.zkir_hash);
+    assert_eq!(verification.circuit_k, claim.circuit_k);
+    assert_eq!(verification.proof_bytes as usize * 2, roundtripped.proof_hex.len());
+    assert_eq!(verification.open_obligations, OPEN_OBLIGATIONS.to_vec());
+
+    let report = serde_json::json!({
+        "schema": A102_PROVE_REPORT_SCHEMA,
+        "verify_returned_ok": true,
+        "verification": verification,
+        "identity": {
+            "format": claim.format,
+            "binding": claim.binding,
+            "profile": claim.profile,
+            "scope": claim.scope,
+            "ledger_revision": claim.ledger_revision,
+            "zkir_version": claim.zkir_version,
+            "source": claim.identity,
+            "capacities": claim.capacities,
+            "layout_hash": claim.layout_hash,
+            "relation_hash": claim.relation_hash,
+            "context_hash": claim.context_hash,
+            "zkir_hash": claim.zkir_hash,
+            "circuit_k": claim.circuit_k,
+        },
+        "fixture": {
+            "entry": "Literal(List([9]))",
+            "initial_fuel_dec": "50",
+            "snapshot_stack_limit": 12,
+            "selected_expr_id": produced.selected_expr_id,
+        },
+        "inputs": {"srs_dir": inputs.srs_dir.display().to_string(), "max_k": inputs.max_k},
+        "artifacts": {
+            "program_l4": {"file": A102_PROGRAM_BYTES_FILENAME, "bytes": program_bytes.len(), "sha256": program_sha256},
+            "zkir": {"file": A102_ZKIR_FILENAME, "bytes": zkir.len(), "sha256": zkir_sha256},
+            "proof_bundle": {"file": A102_PROOF_BUNDLE_FILENAME, "bytes": bundle_text.len(), "sha256": bundle_sha256},
+        },
+        "public_input_accounting": {
+            "claim_public_values_lanes": claim.public_values.len(),
+            "native_statement_lanes_with_binding": claim.public_values.len() + 1,
+            "binding_lane": "reconstructed privately inside literal_bridge prepare; not returned or persisted",
+            "public_values_are_complete_native_public_input_vector": false,
+        },
+        "verifier_key": "not exported: VK/PK stay private inside literal_bridge; no extra keygen was run",
+        "native_calls_by_consumer": {"prove_literal_transition": 1, "verify_literal_transition": 1, "extra_ir_k": 0, "tampered_checks": 0},
+        "resource_observation": "UNESTABLISHED",
+        "open_obligations": OPEN_OBLIGATIONS,
+    });
+    let report_bytes = serde_json::to_vec_pretty(&report).expect("serialize verification report");
+    write_synced_artifact(out, A102_VERIFICATION_REPORT_FILENAME, &report_bytes);
+    println!(
+        "A102 prove + independent verify returned Ok: k={} proof_bytes={} out={}",
+        claim.circuit_k,
+        verification.proof_bytes,
+        out.display()
+    );
+}
