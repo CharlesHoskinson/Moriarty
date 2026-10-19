@@ -15,3 +15,5 @@ The real C6 Schedule prefix result is archived in `docs/results/sherlock-actual-
 
 
 The next two raw-state continuation advances and first-arm ScopeF/source-binding relation are recorded in `docs/results/sherlock-actual-c6-k-first-arm18-20261019/README.md` (19 joined states, 2 new advances, no prefix replay). `capture/primary_relation.py` is now the reviewed first-arm revision; the previous prefix16 preimage is retained in that archive. Three new data/relation helpers are colocated with seven unchanged helpers. Private oracle payloads remain unpublished; arm-body/caller return and last-field continuation remain later cuts.
+
+The [caller-return22 archive](../../../../docs/results/sherlock-actual-c6-k-caller-return22-20261019/README.md) records four new advances from actual18 with all23 complete states and23 fixed partial primary boundaries; the last field is entered, not completed. It reuses the eleven prefix18 consumer sources unchanged.

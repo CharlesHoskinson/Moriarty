@@ -1,0 +1,520 @@
+BODY-FREE PUBLIC WIRE CATALOG
+Status: companion to proposed whole reference contract Revision03; whole contract not adopted. Separately adopted unit weights do not adopt this catalog/contract.
+Declaration excerpts preserve fields/serde attributes; serialization conventions are explicitly specified in the proposed prose. Imports and executable bodies are excluded.
+
+crates/mori-core/src/ir.rs:11-13
+/// Unsigned integral atomic units; JSON uses canonical decimal strings.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct UInt(pub u128);
+
+crates/mori-core/src/ir.rs:33-43
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Type {
+    UInt,
+    Bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", content = "value", deny_unknown_fields)]
+pub enum Value {
+    UInt(UInt),
+    Bool(bool),
+}
+
+crates/mori-core/src/ir.rs:52-270
+pub type ExprId = u16;
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    And,
+    Or,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Expr {
+    LiabilityPresent {
+        name: String,
+    },
+    LiabilityAmount {
+        name: String,
+    },
+    Literal {
+        value: Value,
+    },
+    Name {
+        name: String,
+    },
+    Binary {
+        op: BinaryOp,
+        lhs: ExprId,
+        rhs: ExprId,
+    },
+    Not {
+        value: ExprId,
+    },
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StateDecl {
+    pub name: String,
+    pub ty: Type,
+    pub initial: Value,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct InputDecl {
+    pub name: String,
+    pub ty: Type,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(deny_unknown_fields)]
+pub struct AssetId {
+    pub network: String,
+    pub issuer: String,
+    pub reference: String,
+    pub scale: u8,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AssetDecl {
+    pub name: String,
+    pub identity: AssetId,
+}
+/// Serialize-only on the shared type: decoding always goes through the frozen
+/// `v1` wire, so JSON can never yield `Await`.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Statement {
+    Await {
+        label: String,
+        binders: Vec<InputDecl>,
+        guard: ExprId,
+    },
+    Let {
+        name: String,
+        value: ExprId,
+    },
+    Requires {
+        predicate: ExprId,
+    },
+    Ensures {
+        predicate: ExprId,
+    },
+    Next {
+        state: String,
+        value: ExprId,
+    },
+    Emit {
+        name: String,
+        value: ExprId,
+    },
+    Transfer {
+        asset: String,
+        from: String,
+        to: String,
+        amount: ExprId,
+    },
+    Fee {
+        asset: String,
+        from: String,
+        to: String,
+        amount: ExprId,
+    },
+    Liability {
+        name: String,
+        asset: String,
+        debtor: String,
+        creditor: String,
+        amount: ExprId,
+    },
+    Discharge {
+        name: String,
+        amount: ExprId,
+    },
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Action {
+    pub name: String,
+    pub inputs: Vec<InputDecl>,
+    pub statements: Vec<Statement>,
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Program {
+    pub language: String,
+    pub semantics: String,
+    pub name: String,
+    pub states: Vec<StateDecl>,
+    pub assets: Vec<AssetDecl>,
+    pub expressions: Vec<Expr>,
+    pub actions: Vec<Action>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Balance {
+    pub account: String,
+    pub asset: AssetId,
+    pub amount: UInt,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Liability {
+    pub name: String,
+    pub asset: AssetId,
+    pub debtor: String,
+    pub creditor: String,
+    pub amount: UInt,
+}
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Scenario {
+    pub state: BTreeMap<String, Value>,
+    pub inputs: BTreeMap<String, Value>,
+    pub balances: Vec<Balance>,
+    pub liabilities: Vec<Liability>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Snapshot {
+    pub state: BTreeMap<String, Value>,
+    pub balances: Vec<Balance>,
+    pub liabilities: Vec<Liability>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum Effect {
+    State {
+        name: String,
+        before: Value,
+        after: Value,
+    },
+    Transfer {
+        asset: AssetId,
+        from: String,
+        to: String,
+        amount: UInt,
+    },
+    Fee {
+        asset: AssetId,
+        from: String,
+        to: String,
+        amount: UInt,
+    },
+    Liability {
+        name: String,
+        asset: AssetId,
+        debtor: String,
+        creditor: String,
+        before: UInt,
+        after: UInt,
+    },
+    Emit {
+        name: String,
+        value: Value,
+    },
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Step {
+    pub index: u16,
+    pub statement: Statement,
+    pub value: Option<Value>,
+    pub snapshot: Snapshot,
+    pub effects: Vec<Effect>,
+}
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Execution {
+    pub semantics: String,
+    pub action: String,
+    pub pre: Snapshot,
+    pub post: Snapshot,
+    pub steps: Vec<Step>,
+    pub effects: Vec<Effect>,
+}
+
+crates/mori-core/src/ir.rs:466-473
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, thiserror::Error)]
+#[error("{code}: {message}")]
+pub struct Error {
+    pub code: String,
+    pub message: String,
+    pub offset: Option<u32>,
+    pub step: Option<u16>,
+}
+
+crates/mori-core/src/stage/plan.rs:6-25
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Origin {
+    Input,
+    Let,
+    Event,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CaptureSlot {
+    pub name: String,
+    pub ty: Type,
+    pub origin: Origin,
+    pub ordinal: u16,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StageBinder {
+    pub name: String,
+    pub ty: Type,
+}
+
+crates/mori-core/src/stage/plan.rs:31-53
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct AwaitSite {
+    pub site: u16,
+    pub ordinal: u16,
+    pub label: String,
+    pub binders: Vec<StageBinder>,
+    pub captures: Vec<CaptureSlot>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ActionPlan {
+    pub action: String,
+    pub statement_count: u16,
+    pub sites: Vec<AwaitSite>,
+    pub segment_cost: Vec<UInt>,
+    pub committed_before: Vec<UInt>,
+    pub plan_total: UInt,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct StagePlan {
+    pub format: String,
+    pub program_hash: String,
+    pub actions: Vec<ActionPlan>,
+}
+
+crates/mori-core/src/stage/mod.rs:90-134
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NamedValue {
+    pub name: String,
+    pub value: Value,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StageLogical {
+    pub profile: String,
+    /// Mandatory key; `None` is written as `null`.
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub cap: Option<UInt>,
+    pub committed: UInt,
+}
+/// Resume input. `site` and `captures` are the executing action's pending
+/// frame; `boundary` is the legacy Snapshot. Nothing here is authenticated.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Continuation {
+    pub format: String,
+    pub program_hash: String,
+    pub plan_hash: String,
+    pub action: String,
+    pub site: u16,
+    pub captures: Vec<NamedValue>,
+    pub logical: StageLogical,
+    pub boundary: Snapshot,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StageEvent {
+    pub format: String,
+    pub action: String,
+    pub label: String,
+    pub values: Vec<NamedValue>,
+}
+/// Local frame of one action. `site == 0` exactly when `captures` is empty
+/// and the action is idle; no padding is represented locally.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PendingFrame {
+    pub site: u16,
+    pub captures: Vec<NamedValue>,
+}
+
+crates/mori-core/src/stage/mod.rs:143-177
+/// Output only. Segment history is never decoded or trusted on resume, so no
+/// `Deserialize` exists over the shared Await-bearing `Statement`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct StageSegment {
+    pub action: String,
+    pub frame_pre: PendingFrame,
+    pub frame_post: PendingFrame,
+    pub execution: Execution,
+}
+/// `residual` lists every post-boundary liability with a positive amount, in
+/// the existing complete `Liability` representation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum StageOutcome {
+    Waiting {
+        advanced: bool,
+        segment: Option<StageSegment>,
+        continuation: Continuation,
+        attempted: UInt,
+        residual: Vec<Liability>,
+    },
+    Complete {
+        segment: StageSegment,
+        committed: UInt,
+        attempted: UInt,
+        residual: Vec<Liability>,
+    },
+}
+/// A rejected invocation publishes no segment, effects or continuation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, thiserror::Error)]
+#[error("{error}")]
+pub struct StageRejection {
+    pub error: Error,
+    pub attempted: UInt,
+    pub committed: UInt,
+}
+
+crates/mori-core/src/sherlock/financial_projection.rs:21-93
+/// Every field of one existing execution, borrowed without reduction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct ExecutionObservation<'a> {
+    pub semantics: &'a str,
+    pub action: &'a str,
+    pub pre: &'a Snapshot,
+    pub post: &'a Snapshot,
+    pub steps: &'a [Step],
+    pub effects: &'a [Effect],
+}
+
+/// One published successful segment, including both pending frames.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct SegmentObservation<'a> {
+    pub action: &'a str,
+    pub frame_pre: &'a PendingFrame,
+    pub frame_post: &'a PendingFrame,
+    pub execution: ExecutionObservation<'a>,
+}
+
+/// The three cases already represented by the public stage result type.
+///
+/// No absent segment is replaced by an empty execution. In particular a false
+/// await guard retains `segment: None`, while a successful zero-effect segment
+/// remains `Some` and keeps its steps, frames and complete state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum FinancialObservation<'a> {
+    Waiting {
+        advanced: bool,
+        segment: Option<SegmentObservation<'a>>,
+        continuation: &'a Continuation,
+        attempted: UInt,
+        residual: &'a [Liability],
+    },
+    Complete {
+        segment: SegmentObservation<'a>,
+        committed: UInt,
+        attempted: UInt,
+        residual: &'a [Liability],
+    },
+    Rejected {
+        error: &'a Error,
+        attempted: UInt,
+        committed: UInt,
+    },
+}
+
+/// Ordinary field/control view of the actual returned Core/2 await boundary.
+///
+/// `Waiting` borrows one returned continuation's control, committed snapshot and
+/// logical counters, together with that outcome's residual duties and optional
+/// published segment. It is not a universal-machine image or persistent codec.
+/// The complete continuation envelope remains in `FinancialObservation`.
+///
+/// `advanced: false` and `published_segment: None` remain distinct from a
+/// successful segment with no effects. No earlier effects are reconstructed.
+/// Completion and rejection do not acquire a synthetic await checkpoint.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum AwaitPrefixObservation<'a> {
+    Waiting {
+        advanced: bool,
+        action: &'a str,
+        site: u16,
+        captures: &'a [NamedValue],
+        logical: &'a StageLogical,
+        committed_boundary: &'a Snapshot,
+        residual: &'a [Liability],
+        published_segment: Option<SegmentObservation<'a>>,
+        attempted: UInt,
+    },
+    Complete,
+    RejectedNoReturnedCheckpoint,
+}
+
+crates/mori-core/src/sherlock/financial_projection.rs:136-143
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct ResumeFinancialObservation<'a> {
+    pub input: &'a Continuation,
+    pub event: &'a StageEvent,
+    pub cli_action: Option<&'a str>,
+    pub cli_cap: Option<UInt>,
+    pub outcome: FinancialObservation<'a>,
+}
+
+crates/mori-core/src/sherlock/financial_projection.rs:284-333
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum AmountAggregate { Exact(UInt), AboveU128 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum NetFlow { Balanced, Inflow(UInt), Outflow(UInt), Unavailable }
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct AccountFlow<'a> {
+    pub asset: &'a AssetId,
+    pub account: &'a str,
+    pub transfer_debit: AmountAggregate,
+    pub transfer_receipts: AmountAggregate,
+    pub fee_debit: AmountAggregate,
+    pub fee_receipts: AmountAggregate,
+    pub gross_debit: AmountAggregate,
+    pub gross_receipts: AmountAggregate,
+    pub net_flow: NetFlow,
+}
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct AccountingReport<'a> {
+    pub effects: &'a [Effect],
+    pub accounts: Vec<AccountFlow<'a>>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub enum AccountingAvailability<'a> {
+    PublishedSegment(AccountingReport<'a>),
+    NoPublishedSegment,
+    RejectedNoPublishedDelta,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum TentativePublication {
+    PublishedSuccessfulSegment,
+    NoAdvancedSegment,
+    UnavailableFromStageRejection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub enum InvocationInput<'a> {
+    Start { action: &'a str, scenario: &'a Scenario, cap: Option<UInt> },
+    Resume { continuation: &'a Continuation, event: &'a StageEvent,
+        cli_action: Option<&'a str>, cli_cap: Option<UInt> },
+}
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct InvocationObservation<'a> {
+    #[serde(serialize_with = "serialize_staged_program")]
+    pub program: &'a StagedProgram,
+    pub input: InvocationInput<'a>,
+    pub result: &'a Result<StageOutcome, StageRejection>,
+    pub outcome: FinancialObservation<'a>,
+    pub accounting: AccountingAvailability<'a>,
+    pub tentative_publication: TentativePublication,
+}

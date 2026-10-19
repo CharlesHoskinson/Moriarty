@@ -1,0 +1,980 @@
+An example execution:
+
+[State 0]
+{
+  machine:
+    {
+      awaitPrefix: NoPrefix,
+      current:
+        {
+          guardCosts: Map(1 -> 2),
+          identity:
+            {
+              actionName: "carry",
+              planHash:
+                "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+              programHash:
+                "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+              semantics: "moriarty-core/2"
+            },
+          input:
+            ResumeInput({
+              cliAction: NoText,
+              cliCap: NoUInt,
+              continuation:
+                {
+                  actionName: "carry",
+                  boundary:
+                    {
+                      balances:
+                        [
+                          {
+                            account: "holder-a",
+                            amount: 23,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              }
+                          },
+                          {
+                            account: "holder-b",
+                            amount: 0,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              }
+                          }
+                        ],
+                      liabilities:
+                        [
+                          {
+                            amount: 5,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              },
+                            creditor: "holder-b",
+                            debtor: "holder-a",
+                            name: "duty-open"
+                          },
+                          {
+                            amount: 0,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              },
+                            creditor: "holder-b",
+                            debtor: "holder-a",
+                            name: "duty-zero"
+                          }
+                        ],
+                      state:
+                        Map(
+                          "flag" -> BoolValue(false),
+                          "marker" -> UIntValue(37)
+                        )
+                    },
+                  captures: [{ name: "retained", value: UIntValue(37) }],
+                  format: "moriarty-continuation/1",
+                  logical:
+                    {
+                      cap: SomeUInt(64),
+                      committed: 3,
+                      profile: "moriarty-reference-logical-cost/2"
+                    },
+                  planHash:
+                    "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+                  programHash:
+                    "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+                  site: 1
+                },
+              event:
+                {
+                  actionName: "carry",
+                  format: "moriarty-stage-event/1",
+                  label: "gate",
+                  values: [{ name: "ready", value: BoolValue(false) }]
+                }
+            }),
+          plan:
+            {
+              actionName: "carry",
+              committedBefore: [0, 3],
+              planTotal: 7,
+              segmentCosts: [3, 4],
+              sites:
+                [
+                  {
+                    binders: [{ name: "ready", ty: BoolType }],
+                    captures:
+                      [
+                        {
+                          name: "retained",
+                          ordinal: 0,
+                          origin: LetOrigin,
+                          ty: UIntType
+                        }
+                      ],
+                    label: "gate",
+                    ordinal: 1,
+                    site: 1
+                  }
+                ],
+              statementCount: 3
+            },
+          runtime: { attempted: 2, runtimeResult: NotAdvanced },
+          startBoundary:
+            {
+              balances:
+                [
+                  {
+                    account: "holder-a",
+                    amount: 23,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      }
+                  },
+                  {
+                    account: "holder-b",
+                    amount: 0,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      }
+                  }
+                ],
+              liabilities:
+                [
+                  {
+                    amount: 5,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      },
+                    creditor: "holder-b",
+                    debtor: "holder-a",
+                    name: "duty-open"
+                  },
+                  {
+                    amount: 0,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      },
+                    creditor: "holder-b",
+                    debtor: "holder-a",
+                    name: "duty-zero"
+                  }
+                ],
+              state: Map("flag" -> BoolValue(false), "marker" -> UIntValue(37))
+            }
+        },
+      observedAttempted: 0,
+      phase: Ready,
+      records: [],
+      result: NoResult
+    }
+}
+
+[State 1]
+{
+  machine:
+    {
+      awaitPrefix:
+        Prefix(WaitingPrefix({
+          actionName: "carry",
+          advanced: false,
+          attempted: 2,
+          captures: [{ name: "retained", value: UIntValue(37) }],
+          committedBoundary:
+            {
+              balances:
+                [
+                  {
+                    account: "holder-a",
+                    amount: 23,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      }
+                  },
+                  {
+                    account: "holder-b",
+                    amount: 0,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      }
+                  }
+                ],
+              liabilities:
+                [
+                  {
+                    amount: 5,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      },
+                    creditor: "holder-b",
+                    debtor: "holder-a",
+                    name: "duty-open"
+                  },
+                  {
+                    amount: 0,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      },
+                    creditor: "holder-b",
+                    debtor: "holder-a",
+                    name: "duty-zero"
+                  }
+                ],
+              state: Map("flag" -> BoolValue(false), "marker" -> UIntValue(37))
+            },
+          logical:
+            {
+              cap: SomeUInt(64),
+              committed: 3,
+              profile: "moriarty-reference-logical-cost/2"
+            },
+          publishedSegment: NoSegment,
+          residual:
+            [
+              {
+                amount: 5,
+                asset:
+                  {
+                    issuer: "core2-b06-carry-probe",
+                    network: "local",
+                    reference: "UNIT",
+                    scale: 2
+                  },
+                creditor: "holder-b",
+                debtor: "holder-a",
+                name: "duty-open"
+              }
+            ],
+          site: 1
+        })),
+      current:
+        {
+          guardCosts: Map(1 -> 2),
+          identity:
+            {
+              actionName: "carry",
+              planHash:
+                "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+              programHash:
+                "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+              semantics: "moriarty-core/2"
+            },
+          input:
+            ResumeInput({
+              cliAction: NoText,
+              cliCap: NoUInt,
+              continuation:
+                {
+                  actionName: "carry",
+                  boundary:
+                    {
+                      balances:
+                        [
+                          {
+                            account: "holder-a",
+                            amount: 23,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              }
+                          },
+                          {
+                            account: "holder-b",
+                            amount: 0,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              }
+                          }
+                        ],
+                      liabilities:
+                        [
+                          {
+                            amount: 5,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              },
+                            creditor: "holder-b",
+                            debtor: "holder-a",
+                            name: "duty-open"
+                          },
+                          {
+                            amount: 0,
+                            asset:
+                              {
+                                issuer: "core2-b06-carry-probe",
+                                network: "local",
+                                reference: "UNIT",
+                                scale: 2
+                              },
+                            creditor: "holder-b",
+                            debtor: "holder-a",
+                            name: "duty-zero"
+                          }
+                        ],
+                      state:
+                        Map(
+                          "flag" -> BoolValue(false),
+                          "marker" -> UIntValue(37)
+                        )
+                    },
+                  captures: [{ name: "retained", value: UIntValue(37) }],
+                  format: "moriarty-continuation/1",
+                  logical:
+                    {
+                      cap: SomeUInt(64),
+                      committed: 3,
+                      profile: "moriarty-reference-logical-cost/2"
+                    },
+                  planHash:
+                    "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+                  programHash:
+                    "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+                  site: 1
+                },
+              event:
+                {
+                  actionName: "carry",
+                  format: "moriarty-stage-event/1",
+                  label: "gate",
+                  values: [{ name: "ready", value: BoolValue(false) }]
+                }
+            }),
+          plan:
+            {
+              actionName: "carry",
+              committedBefore: [0, 3],
+              planTotal: 7,
+              segmentCosts: [3, 4],
+              sites:
+                [
+                  {
+                    binders: [{ name: "ready", ty: BoolType }],
+                    captures:
+                      [
+                        {
+                          name: "retained",
+                          ordinal: 0,
+                          origin: LetOrigin,
+                          ty: UIntType
+                        }
+                      ],
+                    label: "gate",
+                    ordinal: 1,
+                    site: 1
+                  }
+                ],
+              statementCount: 3
+            },
+          runtime: { attempted: 2, runtimeResult: NotAdvanced },
+          startBoundary:
+            {
+              balances:
+                [
+                  {
+                    account: "holder-a",
+                    amount: 23,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      }
+                  },
+                  {
+                    account: "holder-b",
+                    amount: 0,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      }
+                  }
+                ],
+              liabilities:
+                [
+                  {
+                    amount: 5,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      },
+                    creditor: "holder-b",
+                    debtor: "holder-a",
+                    name: "duty-open"
+                  },
+                  {
+                    amount: 0,
+                    asset:
+                      {
+                        issuer: "core2-b06-carry-probe",
+                        network: "local",
+                        reference: "UNIT",
+                        scale: 2
+                      },
+                    creditor: "holder-b",
+                    debtor: "holder-a",
+                    name: "duty-zero"
+                  }
+                ],
+              state: Map("flag" -> BoolValue(false), "marker" -> UIntValue(37))
+            }
+        },
+      observedAttempted: 2,
+      phase: Published,
+      records:
+        [
+          {
+            awaitPrefix:
+              WaitingPrefix({
+                actionName: "carry",
+                advanced: false,
+                attempted: 2,
+                captures: [{ name: "retained", value: UIntValue(37) }],
+                committedBoundary:
+                  {
+                    balances:
+                      [
+                        {
+                          account: "holder-a",
+                          amount: 23,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            }
+                        },
+                        {
+                          account: "holder-b",
+                          amount: 0,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            }
+                        }
+                      ],
+                    liabilities:
+                      [
+                        {
+                          amount: 5,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            },
+                          creditor: "holder-b",
+                          debtor: "holder-a",
+                          name: "duty-open"
+                        },
+                        {
+                          amount: 0,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            },
+                          creditor: "holder-b",
+                          debtor: "holder-a",
+                          name: "duty-zero"
+                        }
+                      ],
+                    state:
+                      Map("flag" -> BoolValue(false), "marker" -> UIntValue(37))
+                  },
+                logical:
+                  {
+                    cap: SomeUInt(64),
+                    committed: 3,
+                    profile: "moriarty-reference-logical-cost/2"
+                  },
+                publishedSegment: NoSegment,
+                residual:
+                  [
+                    {
+                      amount: 5,
+                      asset:
+                        {
+                          issuer: "core2-b06-carry-probe",
+                          network: "local",
+                          reference: "UNIT",
+                          scale: 2
+                        },
+                      creditor: "holder-b",
+                      debtor: "holder-a",
+                      name: "duty-open"
+                    }
+                  ],
+                site: 1
+              }),
+            invocation:
+              {
+                guardCosts: Map(1 -> 2),
+                identity:
+                  {
+                    actionName: "carry",
+                    planHash:
+                      "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+                    programHash:
+                      "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+                    semantics: "moriarty-core/2"
+                  },
+                input:
+                  ResumeInput({
+                    cliAction: NoText,
+                    cliCap: NoUInt,
+                    continuation:
+                      {
+                        actionName: "carry",
+                        boundary:
+                          {
+                            balances:
+                              [
+                                {
+                                  account: "holder-a",
+                                  amount: 23,
+                                  asset:
+                                    {
+                                      issuer: "core2-b06-carry-probe",
+                                      network: "local",
+                                      reference: "UNIT",
+                                      scale: 2
+                                    }
+                                },
+                                {
+                                  account: "holder-b",
+                                  amount: 0,
+                                  asset:
+                                    {
+                                      issuer: "core2-b06-carry-probe",
+                                      network: "local",
+                                      reference: "UNIT",
+                                      scale: 2
+                                    }
+                                }
+                              ],
+                            liabilities:
+                              [
+                                {
+                                  amount: 5,
+                                  asset:
+                                    {
+                                      issuer: "core2-b06-carry-probe",
+                                      network: "local",
+                                      reference: "UNIT",
+                                      scale: 2
+                                    },
+                                  creditor: "holder-b",
+                                  debtor: "holder-a",
+                                  name: "duty-open"
+                                },
+                                {
+                                  amount: 0,
+                                  asset:
+                                    {
+                                      issuer: "core2-b06-carry-probe",
+                                      network: "local",
+                                      reference: "UNIT",
+                                      scale: 2
+                                    },
+                                  creditor: "holder-b",
+                                  debtor: "holder-a",
+                                  name: "duty-zero"
+                                }
+                              ],
+                            state:
+                              Map(
+                                "flag" -> BoolValue(false),
+                                "marker" -> UIntValue(37)
+                              )
+                          },
+                        captures: [{ name: "retained", value: UIntValue(37) }],
+                        format: "moriarty-continuation/1",
+                        logical:
+                          {
+                            cap: SomeUInt(64),
+                            committed: 3,
+                            profile: "moriarty-reference-logical-cost/2"
+                          },
+                        planHash:
+                          "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+                        programHash:
+                          "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+                        site: 1
+                      },
+                    event:
+                      {
+                        actionName: "carry",
+                        format: "moriarty-stage-event/1",
+                        label: "gate",
+                        values: [{ name: "ready", value: BoolValue(false) }]
+                      }
+                  }),
+                plan:
+                  {
+                    actionName: "carry",
+                    committedBefore: [0, 3],
+                    planTotal: 7,
+                    segmentCosts: [3, 4],
+                    sites:
+                      [
+                        {
+                          binders: [{ name: "ready", ty: BoolType }],
+                          captures:
+                            [
+                              {
+                                name: "retained",
+                                ordinal: 0,
+                                origin: LetOrigin,
+                                ty: UIntType
+                              }
+                            ],
+                          label: "gate",
+                          ordinal: 1,
+                          site: 1
+                        }
+                      ],
+                    statementCount: 3
+                  },
+                runtime: { attempted: 2, runtimeResult: NotAdvanced },
+                startBoundary:
+                  {
+                    balances:
+                      [
+                        {
+                          account: "holder-a",
+                          amount: 23,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            }
+                        },
+                        {
+                          account: "holder-b",
+                          amount: 0,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            }
+                        }
+                      ],
+                    liabilities:
+                      [
+                        {
+                          amount: 5,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            },
+                          creditor: "holder-b",
+                          debtor: "holder-a",
+                          name: "duty-open"
+                        },
+                        {
+                          amount: 0,
+                          asset:
+                            {
+                              issuer: "core2-b06-carry-probe",
+                              network: "local",
+                              reference: "UNIT",
+                              scale: 2
+                            },
+                          creditor: "holder-b",
+                          debtor: "holder-a",
+                          name: "duty-zero"
+                        }
+                      ],
+                    state:
+                      Map("flag" -> BoolValue(false), "marker" -> UIntValue(37))
+                  }
+              },
+            result:
+              Waiting({
+                advanced: false,
+                attempted: 2,
+                continuation:
+                  {
+                    actionName: "carry",
+                    boundary:
+                      {
+                        balances:
+                          [
+                            {
+                              account: "holder-a",
+                              amount: 23,
+                              asset:
+                                {
+                                  issuer: "core2-b06-carry-probe",
+                                  network: "local",
+                                  reference: "UNIT",
+                                  scale: 2
+                                }
+                            },
+                            {
+                              account: "holder-b",
+                              amount: 0,
+                              asset:
+                                {
+                                  issuer: "core2-b06-carry-probe",
+                                  network: "local",
+                                  reference: "UNIT",
+                                  scale: 2
+                                }
+                            }
+                          ],
+                        liabilities:
+                          [
+                            {
+                              amount: 5,
+                              asset:
+                                {
+                                  issuer: "core2-b06-carry-probe",
+                                  network: "local",
+                                  reference: "UNIT",
+                                  scale: 2
+                                },
+                              creditor: "holder-b",
+                              debtor: "holder-a",
+                              name: "duty-open"
+                            },
+                            {
+                              amount: 0,
+                              asset:
+                                {
+                                  issuer: "core2-b06-carry-probe",
+                                  network: "local",
+                                  reference: "UNIT",
+                                  scale: 2
+                                },
+                              creditor: "holder-b",
+                              debtor: "holder-a",
+                              name: "duty-zero"
+                            }
+                          ],
+                        state:
+                          Map(
+                            "flag" -> BoolValue(false),
+                            "marker" -> UIntValue(37)
+                          )
+                      },
+                    captures: [{ name: "retained", value: UIntValue(37) }],
+                    format: "moriarty-continuation/1",
+                    logical:
+                      {
+                        cap: SomeUInt(64),
+                        committed: 3,
+                        profile: "moriarty-reference-logical-cost/2"
+                      },
+                    planHash:
+                      "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+                    programHash:
+                      "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+                    site: 1
+                  },
+                residual:
+                  [
+                    {
+                      amount: 5,
+                      asset:
+                        {
+                          issuer: "core2-b06-carry-probe",
+                          network: "local",
+                          reference: "UNIT",
+                          scale: 2
+                        },
+                      creditor: "holder-b",
+                      debtor: "holder-a",
+                      name: "duty-open"
+                    }
+                  ],
+                segment: NoSegment
+              })
+          }
+        ],
+      result:
+        Result(Waiting({
+          advanced: false,
+          attempted: 2,
+          continuation:
+            {
+              actionName: "carry",
+              boundary:
+                {
+                  balances:
+                    [
+                      {
+                        account: "holder-a",
+                        amount: 23,
+                        asset:
+                          {
+                            issuer: "core2-b06-carry-probe",
+                            network: "local",
+                            reference: "UNIT",
+                            scale: 2
+                          }
+                      },
+                      {
+                        account: "holder-b",
+                        amount: 0,
+                        asset:
+                          {
+                            issuer: "core2-b06-carry-probe",
+                            network: "local",
+                            reference: "UNIT",
+                            scale: 2
+                          }
+                      }
+                    ],
+                  liabilities:
+                    [
+                      {
+                        amount: 5,
+                        asset:
+                          {
+                            issuer: "core2-b06-carry-probe",
+                            network: "local",
+                            reference: "UNIT",
+                            scale: 2
+                          },
+                        creditor: "holder-b",
+                        debtor: "holder-a",
+                        name: "duty-open"
+                      },
+                      {
+                        amount: 0,
+                        asset:
+                          {
+                            issuer: "core2-b06-carry-probe",
+                            network: "local",
+                            reference: "UNIT",
+                            scale: 2
+                          },
+                        creditor: "holder-b",
+                        debtor: "holder-a",
+                        name: "duty-zero"
+                      }
+                    ],
+                  state:
+                    Map("flag" -> BoolValue(false), "marker" -> UIntValue(37))
+                },
+              captures: [{ name: "retained", value: UIntValue(37) }],
+              format: "moriarty-continuation/1",
+              logical:
+                {
+                  cap: SomeUInt(64),
+                  committed: 3,
+                  profile: "moriarty-reference-logical-cost/2"
+                },
+              planHash:
+                "a0ad53aae0b47e2bff7266e0f35dee8f3e9c559816549cf998c111fde50da619",
+              programHash:
+                "c698ee1e1d3742579d2b328171b7257748533cff936e9fb74fb909c835ccbc04",
+              site: 1
+            },
+          residual:
+            [
+              {
+                amount: 5,
+                asset:
+                  {
+                    issuer: "core2-b06-carry-probe",
+                    network: "local",
+                    reference: "UNIT",
+                    scale: 2
+                  },
+                creditor: "holder-b",
+                debtor: "holder-a",
+                name: "duty-open"
+              }
+            ],
+          segment: NoSegment
+        }))
+    }
+}
+
+[ok] No violation found (16ms at 63 traces/second).
+Trace length statistics: max=2, min=2, average=2.00
+You may increase --max-samples and --max-steps.
+Use --verbosity to produce more (or less) output.
+Witnesses:
+publishedWitness was witnessed in 1 trace(s) out of 1 explored (100.00%)

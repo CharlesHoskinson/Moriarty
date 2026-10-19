@@ -1,0 +1,110 @@
+# Designated-owner judgment: UIREQ-030 original clause, currentness against actual105
+
+## Verdict
+
+**I do not grant a rebind of the complete original 030 predicate on this packet.**
+
+I grant two bounded source findings:
+
+1. **Families dispatch layer: admitted, does not interfere.** The `families/mod.rs` and `families/scalar.rs` deltas do not change the Add/Sub/Mul word-lowering path.
+2. **Closed component sub-clause: admitted only if the original digests match.** The typed-component and lowering-wrapper obligations can carry forward from the original evidence. This requires that the original-cut digests of the closed modules equal the current ones (see Gap B).
+
+The end-to-end part of the predicate cannot be rebound from source here. That part is "actual selected B-owner Scalar Add/Sub/Mul lowering through `run_draft_host_with_word_layout`, 3 normal + 3 error10 across both widths". It runs through owner, frontend, admission and publish code that this packet does not show as unchanged. The packet's own `shared.rs` shows that code was materially changed by the ADT integration: the `FamilyPlans` trait, `RuleIdC`, `SiteTag`, `FrameRowC`, `LogicalKind`, `ProgramView` and `BoundsC` are all extended.
+
+## Finding 1: the dispatch delta does not interfere
+
+In `families/scalar.rs` (current), `dispatch_word` gains one arm: `(RuleIdC::BHelperScalarEntry, Some(SiteTag::RetCtorFields))`, which goes to `adt_constructor::scalar_entry`. Every other `(rule, site)` falls through to `plan_scalar_with_word_layout(sel, pre, guards, layout)`. That is the same call, with the same `layout`, as the old body.
+
+The original scenarios reach Scalar arithmetic only through the following steps:
+
+- `BHelperScalarEntry` at `SiteTag::RetRight` reads `FrameRowC::RightF`.
+- Then `BHelperScalarTag`.
+- Then `BHelperScalarArithmetic`.
+- Then `Exit` or `Failure`.
+
+None of these steps uses `RetCtorFields`, so all of them reach the default arm.
+
+In the fragment, `RetCtorFields` previously hit the `_ => Err("Scalar selected site payload")` arm. The new arm therefore takes over a site that used to be an error. It does not reroute any arithmetic site.
+
+`mod.rs` adds only `plan_build` and `plan_plan` forwarding, plus three `mod` lines. `WordFamilyPlans::plan_scalar` is identical, and `WordFamilyPlans::new(layout)` is unchanged.
+
+In the fragment, the word path is gated on `word_layout: Some(layout)` and on mode ∈ {Add, Sub, Mul}. `Lt` stays `reg_a < n`. `checked_word_result` builds `FullArithmeticResult` before calling `.checked()`. `Err(_)` maps only to `PrimError { code: 10 }`. These match the original clause.
+
+## Finding 2: the closed component sub-clause
+
+I re-checked the original acceptance conditions against the current source:
+
+- **Distinct types for carry, borrow and multiply-accumulate carry:** `CarryBit`, `BorrowBit`, `MulCarry32`, `MulCarry64` are separate types.
+- **Named results:** `addCarry_b` returns `{low, carry_out}`, `subBorrow_b` returns `{low, borrow_out}`, `mulWide_b` returns `{low, high}`.
+- **Full intermediate kept before the checked selection:**
+  - 129-bit add with `carry_out`.
+  - Sub as `low − 2^128·borrow_out`.
+  - Full 256-bit product: the `[u32; 8]` and `[u64; 4]` schoolbook arrays are split into `low` and `high`.
+  - The error-10 selection happens after the full result exists.
+- **`word_lowering.rs`:** `execute` then `checked()` projects from the complete result. The six component names map one-to-one to the six components.
+- **Independently specified values, recomputed:**
+  - (2^32−3)+8 = 4294967301 = 2^32+5. 32-bit limbs are `[5,1,0,0]`.
+  - (2^64+9)−7 = 18446744073709551618 = 2^64+2. 32-bit limbs are `[2,0,1,0]`, 64-bit limbs are `[2,1]`.
+  - (2^48+1)·3 = 844424930131971 = 3·2^48+3. 32-bit limbs are `[3,196608,0,0]`, with high limbs all zero.
+- **Negatives:**
+  - Add: `carry_out=true`.
+  - Sub: `borrow_out=true`.
+  - Mul: (2^128−1)·2 gives `low=[U32_MAX−1, U32_MAX×3]` and `high=[1,0,0,0]` (64-bit: `[U64_MAX−1, U64_MAX]` / `[1,0]`).
+  - All three give `Err(10)`.
+
+Both `word_arithmetic.rs` and `word_lowering.rs` depend only on each other, with no other crate-internal or SDK imports. This closed dependency is what makes digest identity a sound basis for carrying the original observations forward under the same toolchain. Digest identity alone would not be enough. This finding does **not** create new acceptance. It only carries the original R201 component observations, and the two `selected_lowering_retains_*` component functions, to the current cut.
+
+## Gaps blocking the complete-predicate rebind
+
+**A. Layout routing in the owner (source; no run can substitute).** By design, `None`, `Word32` and `Word64` produce identical final outcomes. So no end-to-end observation can show that the selected layout was actually used. Routing was originally established by inspection, and it needs a current inspection against the original cut of:
+
+- `shared::owner_host::host_owner_engine_with_word_layout`: it must still construct `WordFamilyPlans::new(layout)` and hand it to the same owner step that `host_owner_engine` uses.
+- The owner's `family_of` mapping: all six `BHelperScalar*` rules must still map to `FamilyId::Scalar` and therefore to `plan_scalar`.
+- The owner's selection of `site` for a Scalar entry under a `RightF` top frame: it must still be `RetRight`.
+
+**B. Original-cut digests (source).** The packet says these files are unchanged but shows only their current digests:
+
+- `word_arithmetic.rs`
+- `word_arithmetic_tests.rs`
+- `word_lowering.rs`
+- `fragments/scalar.proposed.rs`
+- `draft_execution.rs`
+- the two test files
+- `fixtures/draft-compile/{config,target}.json`
+
+The matching input-pin digests must be cited from the R201, normal-five-01 and error10-four-01 receipts. If any closed component file differs, Finding 2 falls back to requiring observation.
+
+**C. Owner, frontend and publish currentness (observation).** These are the remaining parts of the path:
+
+- parse and literal handling for values up to 2^128−1,
+- admission into `ProgramView` and constants,
+- applying the staged `U128`,
+- `ScalarError{10}` → `KMachinePrimitiveError` → `Rejected{10}`.
+
+All of them sit in changed owner code that is not shown here. This needs one bounded observation.
+
+## Minimal discriminator (if Root chooses to dispatch)
+
+- **Library:** the existing actual105 `mori_core` rlib, used as-is. No Core rebuild. Compile only the two existing integration-test crates against it with `rustc --test --extern mori_core=<105 rlib>`, in the same pattern as R201. Pin the fixture digests before and after.
+- **Required selectors:** use `--exact`, `--test-threads=1`.
+  - `sherlock_word_lowering`:
+    - `public_selected32_source_runs_original_add_sub_mul`
+    - `public_selected64_source_runs_original_add_sub_mul`
+  - `sherlock_word_lowering_error10`:
+    - `public_selected32_source_rejects_overflow_underflow_and_high128_mul_with_error10`
+    - `public_selected64_source_rejects_overflow_underflow_and_high128_mul_with_error10`
+  - These cover the existing 12 source inputs (3 normal + 3 error10 per width). No new inputs.
+- **Conditional selectors:** `selected_lowering_retains_original_independent_named_full_results` and `selected_lowering_retains_full_intermediates_before_error10_selection`. These are required only if Gap B shows a digest mismatch in the closed modules. Otherwise they are already covered by Finding 2.
+
+Passing these closes only Gap C. Gap A must still be closed by source inspection, because the run cannot show which layout was used.
+
+## Preserved unchanged
+
+- All original acceptance conditions.
+- The carry, borrow and high-product negatives.
+- `nativeRequiredByOriginal: false`.
+- No layout or row-cost winner is selected.
+- No generic or ADT obligation is added to the host clause. The `RetCtorFields` arm is outside 030, and nothing about it is accepted here.
+- The actual18 compiler, provenance and witness checks are not counted toward 030.
+- The `SOURCE_ONLY / UNRUN` module headers are stale annotations and carry no status in either direction.
+- No 030 restoration is issued by this judgment.
