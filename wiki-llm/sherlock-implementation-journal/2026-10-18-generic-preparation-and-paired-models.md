@@ -80,3 +80,14 @@ tmpfs/shmem charging before Cargo; preservation and cleanup completed. The next
 owner source correction addresses memory placement under unchanged limits.
 Handwritten Scalar completion has returned source, and the next return-right /
 primitive emitter source request is selected. Neither implies native acceptance.
+
+
+## Dated continuation — complete source delivery and retained failures
+
+The composer M1/M2 correction is a materialized nine-file candidate with forty authored tests, all unrun and awaiting independent audit. Sub is different: process success accompanied a 74,931-byte response starting mid-source, so there is no reconstructible Sub emitter/test candidate. A parsed ABI or concept-note tail does not repair that delivery.
+
+The narrow native accounting request returned a full refusal despite exit 0. Its preserved factual reconciliation records usage and cleanup, but the protected source completion remains missing; seed source alone is not native readiness. Clean's R4 and R5 theorem-module receipts preserve failed elaboration; R6 then passed kernel checking for nine literal-call/cursor statements in 0.559749247 seconds with empty streams. Earlier concrete-history observations remain separate. Quint's six positive boundary-wire checks passed and its 30-file publication was committed; PR269 creation is reported, while merge completion is not claimed here.
+
+The [source-delivery supplement](../../docs/results/sherlock-four-lane-progress-20261018/addenda/20261018-provider-delivery/README.md) preserves those distinctions. All four mandatory lanes continue; original acceptance remains 16/35 and all 25 refinements remain open.
+
+A separate F7 source cut has sixteen materialized hunks and twelve authored tests; independent audit and test execution remain outstanding. C6 source delivery is not established by this cut. No provider/model/native action is inferred from those preparation records.
