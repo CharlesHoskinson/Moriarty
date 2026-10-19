@@ -1,0 +1,7 @@
+{"jsonrpc":"2.0","id":"init-oracle-1","method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"moriarty-independent-oracle","version":"1.0.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":101,"method":"ping"}
+{"jsonrpc":"2.0","id":"list-oracle-1","method":"tools/list"}
+{"jsonrpc":"2.0","id":201,"method":"tools/call","params":{"name":"check","arguments":{"source":"language \"moriarty/1\";\nagreement OracleAccumulator {\n  state total: UInt = 4;\n  action add(delta: UInt) {\n    let updated = total + delta;\n    requires updated >= total;\n    next total = updated;\n    ensures total >= delta;\n    emit \"updated\"(total);\n  }\n}\n","displayName":"oracle-uint.mori"}}}
+{"jsonrpc":"2.0","id":"bool-202","method":"tools/call","params":{"name":"check","arguments":{"source":"language \"moriarty/1\";\nagreement OracleGate {\n  state ready: Bool = false;\n  action set(flag: Bool) {\n    requires not ready or flag;\n    next ready = flag;\n    ensures ready == flag;\n    emit \"ready\"(ready);\n  }\n}\n"}}}
+{"jsonrpc":"2.0","id":203,"method":"tools/call","params":{"name":"check","arguments":{"source":"language \"moriarty/1\";\nagreement OracleWrongState {\n  state count: UInt = 0;\n  action update() {\n    next count = true;\n  }\n}\n","displayName":"oracle-type-error.mori"}}}

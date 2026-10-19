@@ -1,0 +1,112 @@
+{
+  "source": "Public pre-implementation API coordination with cold_install_successor_sol; not candidate inspection",
+  "protocolVersion": "2025-06-18",
+  "identity": {
+    "name": "moriarty-rust",
+    "version": "0.1.0"
+  },
+  "initialize": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "tools": {
+        "listChanged": false
+      }
+    },
+    "serverInfo": {
+      "name": "moriarty-rust",
+      "version": "0.1.0"
+    },
+    "instructions": "Read-only source checking only; no execution, proof or ledger qualification."
+  },
+  "toolList": {
+    "tools": [
+      {
+        "name": "check",
+        "description": "Check in-memory source with the existing Rust CLI parser/checker; no execution or proof qualification.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "maxLength": 65536
+            },
+            "displayName": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "source"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "consumer": {
+              "const": "rust-mori-check-source"
+            },
+            "sourceProfile": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "coreProfile": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "qualification": {
+              "const": "source-check-only"
+            },
+            "report": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "consumer",
+            "sourceProfile",
+            "coreProfile",
+            "qualification",
+            "report"
+          ],
+          "additionalProperties": false
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      }
+    ]
+  },
+  "checkEnvelope": {
+    "consumer": "rust-mori-check-source",
+    "sourceProfile": "recognized header for Core; moriarty-beta/1 for Beta",
+    "coreProfile": "program.semantics on Core success; null on rejection/Beta",
+    "qualification": "source-check-only",
+    "report": "complete existing beta_report/core_report"
+  },
+  "toolResult": "One text content containing compact JSON equal to structuredContent; isError iff report.status != accepted",
+  "displayName": {
+    "defaultWhenAbsent": "<mcp>",
+    "emptyStringAllowed": true,
+    "maximumUtf8Bytes": 256
+  },
+  "sourceMaximumUtf8Bytes": 65536,
+  "frameMaximumBytes": 262144,
+  "responseMaximumBytes": 524288,
+  "ping": "empty result; permitted before initialization as corrected by author before implementation",
+  "unknownRequestMethodCode": -32601,
+  "unknownNotifications": "ignored without response",
+  "cursor": "supplied cursor refused with -32602",
+  "preReadyOtherRequestsCode": -32002,
+  "shutdown": "EOF, no shutdown RPC",
+  "qualifications": [
+    "API decisions supplied before implementation; MCP itself does not prescribe identity, tool text, report wrapper or byte limits.",
+    "Only ASCII below-limit normal transcript cases selected."
+  ]
+}
