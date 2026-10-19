@@ -214,6 +214,8 @@ def core2_await_prefix(value):
     if tag != 'Waiting':
         raise ValueError('source prefix outside frozen await observation declaration')
     _row(payload, 'advanced action site captures logical committed_boundary residual published_segment attempted')
+    if type(payload['advanced']) is not bool:
+        raise ValueError('expected Core Bool payload')
     return {'WaitingPrefix': {'advanced': payload['advanced'], 'action': payload['action'], 'site': payload['site'],
             'captures': [_named(item) for item in payload['captures']], 'logical': _logical(payload['logical']),
             'committedBoundary': _snapshot(payload['committed_boundary']),

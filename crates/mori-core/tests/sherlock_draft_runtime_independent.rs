@@ -27,6 +27,10 @@ fn binary(op: BinaryOp) -> &'static str {
         BinaryOp::Eq=>"Eq",BinaryOp::Lt=>"Lt",BinaryOp::Cons=>"Cons",BinaryOp::Branch=>"Branch" }
 }
 fn unary(op: UnaryOp) -> &'static str { match op {UnaryOp::Leaf=>"Leaf",UnaryOp::Not=>"Not"} }
+fn empty_table<T>(field: &str, rows: &[T]) -> Value {
+    assert!(rows.is_empty(), "unexpected nonempty {field} in sealed DedicatedSorts program");
+    json!([])
+}
 // Independent read-only projection of actual admitted tables into the frozen
 // R115 representation. No private production serializer/helper is called.
 fn program_view(view: &ProgramView) -> Value {
@@ -68,6 +72,17 @@ fn program_view(view: &ProgramView) -> Value {
         "occurrence_paths":view.occurrence_paths.iter().map(|n|dec(*n)).collect::<Vec<_>>(),
         "children":view.children.iter().map(|n|dec(*n)).collect::<Vec<_>>(),
         "functions":functions,"parameters":parameters,"arms":arms,"patterns":patterns,
+        "pattern_children":empty_table("pattern_children",&view.pattern_children),
+        "types":empty_table("types",&view.types),
+        "type_args":empty_table("type_args",&view.type_args),
+        "constructors":empty_table("constructors",&view.constructors),
+        "ctor_fields":empty_table("ctor_fields",&view.ctor_fields),
+        "decl_param_counts":empty_table("decl_param_counts",&view.decl_param_counts),
+        "decl_ctor_counts":empty_table("decl_ctor_counts",&view.decl_ctor_counts),
+        "decl_templates":empty_table("decl_templates",&view.decl_templates),
+        "plan_nodes":empty_table("plan_nodes",&view.plan_nodes),
+        "plan_cases":empty_table("plan_cases",&view.plan_cases),
+        "field_paths":empty_table("field_paths",&view.field_paths),
         "constants":constants,"constant_fields":view.constant_fields.iter().map(|n|dec(*n)).collect::<Vec<_>>(),
         "names":view.names})
 }
