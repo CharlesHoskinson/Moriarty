@@ -1,0 +1,127 @@
+# B24 review: environment continuity projection and two operations
+
+**Verdict:** source **ACCEPT**, with the new disclosures D8–D12 below. Operation 01 is **ELIGIBLE**. Operation 02 is **ELIGIBLE** only if Operation 01 comes back clean and the conditions below hold.
+
+I evaluated everything statically. Nothing was executed, and the trace below predicts results; it does not report them.
+
+## Delivery
+
+- **Bodies 1–14 were read in full.** Each one has matching open and close markers.
+- **I did not check the stated SHA-256 values or byte counts.** I had no tools, so Root must check them.
+- **Some referenced files were not supplied:**
+  - SOURCE-ONLY-FREEZE.json
+  - VALIDATION-PROPOSAL.json
+  - capture-helper.FULL.py
+  - the two pin manifests
+  - `state_encode.rs` and `rows.rs`
+  - the K semantics
+  - the full B22/B23 opinions
+- **None of the missing files is needed for this projection's source and API check.** The parts the claim relies on were supplied: the EnvCell schema, `state_decode::environment`/`env_ref`/`check_arenas`, and the A102/A80 preservation loops.
+- **Continuity relative to K is not established here.** It is established only relative to the model and the Rust emitter constraints.
+- **The helper and the pin contents are unreviewed by me.** Operation 02 depends on their prior review.
+
+## Source checks (all satisfied)
+
+### Order and indices
+- The EnvCell lanes are [nameId, valueRef.space, valueRef.index, parent.present, parent.index]. This matches `literal_host.rs` (`env`) and `state.rs` (`EnvCell`/`EnvRoot`).
+- The root positions are activeEnvCells = 2, environment.present = 6, environment.index = 7. They match the schema root order.
+- The table index is 2, which is EnvCells.
+
+### Lookup
+- The lookup starts at Root.environment.
+- The first match wins, which matches `if !env.contains_key(&name)`.
+- A chain that ends at an absent root gives `EAbsent`, which is distinct from `EUnvisited`.
+- Comparing nameIds stands in for comparing name strings only under the stated distinct-Names premise.
+
+### Bound
+- The fold runs active + 1 iterations. That is enough under the decoder's invariants: a present parent's index is below its child's, and the root index is below active.
+- The z lookup needs exactly 4 = active + 1 iterations: row 2, row 1, row 0, then absent. An off-by-one bound would therefore produce `EUnvisited` and fail. The x and y lookups also discriminate the shadowing direction: last-match semantics would give `List(0,0)`.
+
+### Fixture trace
+| Lookup | Path | Result | Expected |
+|---|---|---|---|
+| x | row 2 | `EFound(List(1,0))`, i.e. Data0 | ✓ |
+| y | row 2 → row 1 | `EFound(List(1,1))`, i.e. Data1 | ✓ |
+| z | row 2 → row 1 → row 0 → absent | `EAbsent` | ✓ |
+
+### Fixture against the decoder's Step domain
+- The name IDs are below activeNames = 3, which is why `eProgram` sets Names and NameBytes.
+- Each present parent index is below its child's.
+- Absent parent indices are 0.
+- Constant0 < 3 and Data1 < 2.
+- Padding row 3 is zero.
+
+### Physical view
+- `ePhysical` returns all four capacity rows, including the inactive padding row.
+
+### Start predicates
+- **`pPairStartAllowed` holds:**
+  - The layout and program header pass. The Names capacity is 3 and the EnvCells capacity is 4.
+  - The scalar subset passes.
+  - The state header passes, including EnvCells padding.
+  - The selector is 1 and points at row (0,1,0,2,…).
+  - Fuel is 256 > 0, the context is valid, and depth is 0 with zero frames.
+- **`pCompleteStartAllowed` is false** (see D8 for why).
+- Neither predicate is changed.
+
+### Transitions
+- `pLiteralNext(eProgram, eBefore)` equals `eMiddle`: p256 − 1 = p255, and the control row is (1,0,0,2,…).
+- `pPublicationNext(eMiddle)` equals `eDone`: controlLength becomes 0, the root suffix becomes (1,0,2,0), and the control rows are zeroed.
+- Root positions 2, 6 and 7 and tables 0–4 carry through unchanged.
+- `pPairJoin` holds.
+
+### Full-image assertions
+- All three state assertions compare complete images. That covers Data, DataFields, ValueSlots, FrameSlots and ControlRows.
+- The final assertion also binds both envelopes, the program and the context.
+
+### Rust API
+- The A102 emitter gates post == pre for every root lane except remainingFuel and controlLength, and for every row of tables 0–4.
+- The A80 emitter does the same except for controlLength and the outcome lanes.
+- So environment preservation in the model is consistent with both emitters when each is enabled.
+
+### Syntax and types
+- The sum type, nullary match arms, the `_` wildcard, record spread, `val` blocks, the `foldl` accumulators and the empty `List()` inits all follow patterns already used in the reviewed B22/B23 modules.
+- No new top-level name collides with an existing one.
+- The diamond import of `literalParametricImages` matches the existing Inputs/Test shape.
+- I predict a clean typecheck. The frontend run is the authority on that.
+
+## New disclosures (non-blocking; publish alongside D1–D7)
+
+- **D8. `not(pCompleteStartAllowed)` is overdetermined.**
+  - It already fails at selector 1 ≠ 0.
+  - It also fails on root[0..5] ≠ 0, fuel 256 ≠ 512, and nonzero arenas, regardless of root[6..7].
+  - Body 1's phrase "failing complete-start for its nonempty environment" overstates this. The environment conjuncts are not isolated.
+  - B23 gap 5's "environment present/index ≠ 0" item **remains open**.
+- **D9. The projection assertions after each step add no discrimination of the transitions.**
+  - They are implied by the full-image equalities.
+  - Model continuity holds by construction, because both transitions copy tables[0..5] and the root slices.
+  - The independent content is limited to the hand-specified bindings on this one spine and the lookup helper's behaviour on it.
+- **D10. The lookup does not check `index < active` or `index < capacity`.**
+  - An out-of-capacity index gives a Quint `nth` evaluation error, not `EUnvisited`.
+  - A pointer into a zero padding row could falsely match nameId 0.
+  - `EUnvisited` arises only for an in-range chain that is not exhausted within the bound.
+  - All of these cases are outside the stated premise.
+- **D11. Row 0's Constant-space binding is admissible only in decoder Step mode.** Canonical mode refuses it with "canonical bindings use Data space". This is consistent with the README's non-canonical statement, which should name this case explicitly.
+- **D12. Two further limitations:**
+  - `reference.layout` is never asserted.
+  - The Names/NameBytes contents are not modelled. The decoder uses `prepared.names` metadata instead.
+
+## Operation eligibility
+
+### 01 (frontend): ELIGIBLE
+1. Before running, Root re-hashes the exact four source entries against Body 14 and checks the installed-tree/tool pins.
+2. Run with the argv, cwd, environment, stdin and caps exactly as given in Body 14.
+3. Pass means exit 0 with empty stdout and stderr.
+4. Any other result stops the batch: no retry, no Operation 02, and any source change needs a new hash and a fresh review.
+
+### 02 (one test): ELIGIBLE, conditional
+Conditions:
+1. Operation 01 was clean.
+2. The pins match before and after the run. That is 4,679 checks each time, against the actual historical manifest.
+3. Use the existing, previously reviewed capture helper unchanged, with fresh destinations.
+4. Root selects the run.
+5. Report the outcome as captured. Pass means exactly `nonemptyCallerEnvironmentContinuityTest`, 1 sample, 1 passing, no other names, 0 stderr bytes, no diagnostics or DEBUG output, and no ITF.
+
+My static trace predicts PASS, but that is not evidence of an actual result. A failure is reported as raw output, with no retry.
+
+Do not run the old B21/B22/B23 tests, model capture, native build or provider calls. A pass establishes only the model-sample predicate. It does not establish Rust, decoder-output, canonical, cryptographic or stagenet correspondence, nor any independent oracle.

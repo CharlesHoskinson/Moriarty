@@ -1,0 +1,111 @@
+# Fresh non-author review: empty-K-continuation parser, synthetic test and exact4 tail
+
+**SOURCE: APPROVE.** Mandatory source or test fixes: **0**.
+
+**exact4: CONDITIONAL.** No tool was used and nothing was executed. Children 00, 06, 07 and 08 are all unrun. The source author has not run the unit; it must pass first.
+
+## 1. Body coverage
+
+**Read in full (inline bodies):**
+- ROOT-CAUSE-AND-SCOPE, SOURCE-DELTA-FREEZE, PARSER-GRAMMAR.patch, EXACT-PARSER-FORWARD-INVERSE
+- PROPOSED-TEST-THEN-TAIL4-OPERATIONS, EXACT-TAIL-ARGV-SUBSTITUTIONS, ROOT-TAIL-SELECTION-CONDITIONS
+- The candidate `literal_complete_images.py` and the original `literal_complete_images.py`
+- `balanced_kore.py`, `complete_images_runtime_data.py` and `literal-complete-images.k`
+- `SYNTHETIC-FRAMING-REPROS.json` and `test_empty_continuation.py`
+- ORIGINAL-TERMINAL-FAILURE-FREEZE (59 rows) and the opaque binding metadata
+- The prior FINAL-RESPONSE
+- The full F03 source, the launch callable closure and the import-AST projection
+
+**Scope limits on what I read:**
+- The `.k` model was read but not re-audited semantically; that is out of scope.
+- The import-time F03 top level shows only side-effect-free assignments and a `__main__` guard, so `launch` is safe to import.
+
+**Not inline or not read:**
+- The original SOURCE-FREEZE body. Byte-identity of `balanced_kore.py`, the helper and the `.k` file with the originals therefore rests on SOURCE-DELTA's assertion and the prior review.
+- The 05-print body, the old 06 stderr and the Root receipt bodies.
+- IMPORT-TIME-AST.json in full.
+- The expected body. Per instruction it was not opened, and its values were not derived.
+
+**Checks by reading only (no hash recomputed):**
+- The original and candidate parser files are textually identical apart from the two shown hunks.
+- The byte delta matches. TOKEN adds 7 bytes (`|~>` plus `|\.K`). The branch adds five lines of 77, 77, 51, 31 and 26 bytes, totalling 262. 7 + 262 = 269 = 12882 − 12613.
+
+## 2. Parser change
+
+**Lexer.**
+- The new alternatives only start at `~` or `.`. Any string the original tokenized contains neither character, so on every input the original accepted, tokenization is identical.
+- `\.K` needs `K` immediately after the dot, so `. K` fails tokenization.
+- `.Kjunk` tokenizes as `.K` followed by `junk`, which the exact-tail check then rejects.
+- The whole stripped text is still tokenized before parsing, so stray `<`, `~` or `.` anywhere still fails.
+
+**Parser boundaries.**
+- **Value position:** `~>` or `.K` is neither an integer nor in `ARITIES`, so it raises "unevaluated/unknown constructor".
+- **Inside an open constructor:** `~>` hits "expected comma or closing parenthesis".
+- **The only new acceptance:** `need_value` is false, the stack is empty and a top-level value has been produced, and the remaining tokens are exactly `["~>", ".K"]`. After `break`, the unchanged post-checks still require an empty stack, `not need_value` and a `Term` root, so a bare integer root such as `17 ~> .K` is still rejected.
+
+**Accepted language.** The new language is the original accepted set plus each original-accepted complete tree followed by exactly `~> .K`, with insignificant whitespace (zero or more). The returned `Term` is the unchanged full tree. There is no search, split, truncation, last-term selection or fill.
+
+**Semantics.** `T ~> .K` is `kseq(T, dotk)`, which is exactly the shape `frame` built. Requiring the exact unit tail means "no residual K items". Any unreduced `lcFinish`, `#And` or `<generatedTop>` still rejects.
+
+**Wrapper.** Only one outer `<k>…</k>` is stripped, as before. `<k>T</k> ~> .K` and multiple wrappers both fail tokenization at `<`.
+
+**Consistency with Root's observation.** The reported failure was at offset 37872 of a 37890-byte file. Had a `<generatedTop>` prefix been present, it would have failed at offset 0. The tail beyond the tilde is still unseen by me. If it is anything other than exactly `~> .K`, new06 fails closed; it cannot falsely pass.
+
+**Helper closure.**
+- Under `-B -S`, `complete_images_runtime_data.py` imports its sibling, the candidate `literal_complete_images`.
+- `audit` and `compare` use only the unchanged `request`, `keys`, `image`, `vector`, `logical_layout`, `unique_object` and constants.
+- `balanced_kore` is imported but only `frame` uses it, and 07 and 08 never call `frame`.
+
+## 3. Test script and the 20 cases (traced by hand)
+
+| Cases | Original | Candidate |
+|---|---|---|
+| legacy-nullary, legacy-nested, legacy-wrapper | accept | accept, same AST |
+| empty-compact, empty-spaced, empty-newlines | FormatError at `~` | accept, AST `("lcCell",(17,("lcNoCells",())))` |
+| nonempty, multiple-empty, empty-then-nonempty, missing-tail, extra-text, nonempty-tail-sequence, suffix-junk | FormatError (lexer) | FormatError (tail ≠ exact pair) |
+| missing-arrow | FormatError at `.` | FormatError (tail `[".K"]`) |
+| extra-root | FormatError (trailing tokens) | FormatError (trailing tokens) |
+| prefix-sequence | FormatError | FormatError (value position) |
+| nested-sequence, unbalanced | FormatError | FormatError (expected comma/paren) |
+| multiple-wrappers, split-dot-K | FormatError | FormatError (lexer `<` / `.`) |
+
+The totals are count 20 and `original_rejection_witnesses` 3, matching the predicate.
+
+**Mechanics:**
+- Separate module names give separate `FormatError` classes, each caught against its own module.
+- Any other exception propagates, so the test exits nonzero and fails closed.
+- `sys.modules[name]` is set before `exec_module`, which `@dataclass` needs.
+- `-B` prevents `__pycache__` in either source folder.
+- Every module the test and parsers import is stdlib, and `tests/` contains no shadowing names.
+
+**Optional, non-blocking additions:** `lcCell(.K,lcNoCells())`, `lcNoCells() ~> .K` (the nullary-root route into the branch) and `17 ~> .K`. The first and third are rejected and the second accepted by code paths already verified above.
+
+## 4. exact4 conditions
+
+1. **Run 00 first.** Require all of the following, or stop with 06, 07 and 08 unrun:
+   - exit 0
+   - one stdout JSON with the PASS status, `count` 20, `cases` equal to the repro ids in order, and `original_rejection_witnesses` 3
+   - only `stdout`, `stderr`, `home` and `tmp` at the top level
+2. **Folder membership around every child.** The source folder must be exactly the 4 pinned files and `tests/` exactly the 2 pinned files, with no `__pycache__`. The original source folder must be unchanged.
+3. **Launch and rechecks.** Use F03.launch only, with the frozen argv, environment, fresh 0700 cwd/home/tmp, token and FSIZE 536870912. Keep 30 s wall time, a 3 s sweep, CORE 0 and umask 077. Before and after each child, Root must:
+   - inventory `allowed_top_level`
+   - recheck the 59 pins and the failure freeze
+   - recheck the safe-input pin (07 reads it, and 08 does not re-pin it)
+   - recheck all new outputs
+   - hash the opaque expected file without displaying it
+4. **Durable freeze after 07 and before 08.**
+   - Each of the 89 rows has exactly `{path,bytes,sha256}`.
+   - `actual_observation` has a path string byte-identical to the 08 `--input`, and `actual_audit` is the new 07 product.
+   - `expected_body_reads` is integer 0. It counts phases and the source author, and excludes Root's hash-only checks.
+   - The freeze is written, fsynced and immutable.
+5. **Stop rules.**
+   - Any 00, 06 or 07 failure stops, preserves its outputs, leaves the rest unrun and makes no repair.
+   - An 08 FAIL preserves the receipt and the full actual. No decoder or expected adjustment follows.
+
+## 5. Unobserved qualifications
+
+- No tests were run, no hashes were recomputed and no runtime behaviour was observed.
+- The real tail after the tilde is unseen.
+- Host `/usr/bin/python3` is unpinned.
+- PATH is set to the nix tool bins but is unused by the Python children.
+- A later pass would show only finite logical-image equality under shared mapping contracts. It would not show rule-fired logging, context authentication, refinement, or any native, G4 or StepInv claim. `context_binds_counterpart_source` remains false.
