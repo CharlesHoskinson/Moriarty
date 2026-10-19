@@ -97,18 +97,26 @@ export class SherlockStage {
     this.camera.position.set(3.85, 4.85, 5.35);
     this.camera.lookAt(-0.38, -0.16, 0.05);
 
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isIpadOs =
+      typeof navigator !== 'undefined' &&
+      Number(navigator.maxTouchPoints) > 1 &&
+      /Macintosh/i.test(ua);
+    const isFirefox = /Firefox\//i.test(ua);
+
     this.isMobile =
       typeof navigator !== 'undefined' &&
-      (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+      (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) ||
+        isIpadOs ||
         (typeof window !== 'undefined' &&
           typeof window.matchMedia === 'function' &&
           window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches));
 
-    // Use WebGL2 backend on mobile (matching iOS Safari's 45-60fps WebGLBackend and avoiding
-    // Three.js r170 Dawn-over-Android-Vulkan per-draw descriptor overhead on Adreno/Mali GPUs)
+    // Use WebGL2 backend on mobile/iPadOS and Firefox (avoiding Dawn-over-Android-Vulkan
+    // per-draw overhead and Firefox WebGPU adapter hangs in headless/VM environments)
     this.renderer = new THREE.WebGPURenderer({
       canvas: this.canvas,
-      forceWebGL: this.isMobile,
+      forceWebGL: this.isMobile || isFirefox,
       alpha: false,
       antialias: !this.isMobile,
       powerPreference: 'high-performance',
@@ -162,15 +170,44 @@ export class SherlockStage {
 
   async _initRenderer() {
     try {
-      await this.renderer.init();
+      const initResult = await Promise.race([
+        this.renderer.init().then(() => 'ok'),
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), 3500)),
+      ]);
+      if (initResult === 'timeout') {
+        throw new Error('Renderer init timed out; falling back to WebGL2');
+      }
       if (this._disposed) {
         this.renderer.dispose();
         return;
       }
       this.ready = true;
       this.resize({ immediate: true });
-    } catch (err) {
-      this.ready = false;
+    } catch (_err) {
+      try {
+        this.renderer = new THREE.WebGPURenderer({
+          canvas: this.canvas,
+          forceWebGL: true,
+          alpha: false,
+          antialias: !this.isMobile,
+          powerPreference: 'high-performance',
+        });
+        this.renderer.setPixelRatio(this.currentDpr);
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.06;
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFShadowMap;
+        await this.renderer.init();
+        if (this._disposed) {
+          this.renderer.dispose();
+          return;
+        }
+        this.ready = true;
+        this.resize({ immediate: true });
+      } catch (_fallbackErr) {
+        this.ready = false;
+      }
     }
   }
 
