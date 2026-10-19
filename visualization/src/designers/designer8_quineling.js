@@ -27,22 +27,23 @@ export { fnv1a32 };
 const TAU = Math.PI * 2;
 const PHI_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-// Detect mobile / coarse-pointer devices so Android/iOS CPUs & GPUs run at locked 60 FPS
+// Detect mobile / coarse-pointer / iPadOS devices so Android/iOS CPUs & GPUs run at locked 60 FPS
 const IS_MOBILE_RUNTIME =
   typeof navigator !== 'undefined' &&
   (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+    (Number(navigator.maxTouchPoints) > 1 && /Macintosh/i.test(navigator.userAgent || '')) ||
     (typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches));
 
 // Spatial Anchor & Strict Envelope Constants inside the 3.12 × 3.12 × 3.40 Vault
-export const QUINELING_CORE_Y = -2.12;
-export const QUINELING_MAX_RADIUS = 0.42;
+export const QUINELING_CORE_Y = -2.06;
+export const QUINELING_MAX_RADIUS = 0.54;
 
-const TISSUE_BUDGET = IS_MOBILE_RUNTIME ? 3072 : 8192;
-const MAX_RIDGE_SEGMENTS = IS_MOBILE_RUNTIME ? 8192 : 28672;
+const TISSUE_BUDGET = IS_MOBILE_RUNTIME ? 6144 : 8192;
+const MAX_RIDGE_SEGMENTS = IS_MOBILE_RUNTIME ? 16384 : 28672;
 const MAX_RIDGE_VERTICES = MAX_RIDGE_SEGMENTS * 2;
-const PHASE_BUCKET_COUNT = IS_MOBILE_RUNTIME ? 24 : 36;
+const PHASE_BUCKET_COUNT = IS_MOBILE_RUNTIME ? 48 : 64;
 
 const SDK_RIBBON_COUNT = 24;
 const SDK_RIBBON_SEGMENTS = 24;
@@ -320,18 +321,25 @@ let sharedTissueSpriteTexture = null;
 function getTissueSpriteTexture() {
   if (sharedTissueSpriteTexture) return sharedTissueSpriteTexture;
   if (typeof document === 'undefined') return null;
+  const size = 128;
+  const half = size * 0.5;
   const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext('2d');
-  const grad = ctx.createRadialGradient(32, 32, 1, 32, 32, 31);
+  const grad = ctx.createRadialGradient(half, half, 1.5, half, half, half - 1.5);
   grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-  grad.addColorStop(0.32, 'rgba(245, 252, 255, 0.82)');
-  grad.addColorStop(0.68, 'rgba(210, 240, 250, 0.26)');
+  grad.addColorStop(0.24, 'rgba(248, 253, 255, 0.94)');
+  grad.addColorStop(0.54, 'rgba(218, 244, 252, 0.42)');
+  grad.addColorStop(0.82, 'rgba(165, 224, 242, 0.10)');
   grad.addColorStop(1.0, 'rgba(0, 0, 0, 0.0)');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 64, 64);
+  ctx.fillRect(0, 0, size, size);
   sharedTissueSpriteTexture = new THREE.CanvasTexture(canvas);
+  sharedTissueSpriteTexture.colorSpace = THREE.SRGBColorSpace;
+  sharedTissueSpriteTexture.minFilter = THREE.LinearFilter;
+  sharedTissueSpriteTexture.magFilter = THREE.LinearFilter;
+  sharedTissueSpriteTexture.generateMipmaps = false;
   sharedTissueSpriteTexture.needsUpdate = true;
   return sharedTissueSpriteTexture;
 }
@@ -445,26 +453,35 @@ function evaluateProgramRhythmPhase(design, basePhase) {
 
 /**
  * Normalizes a 3D `WovenBody` point `(x, y, z)` into the Hollow Well atrium envelope
- * (`r <= QUINELING_MAX_RADIUS = 0.44`) while preserving exact `nursery.html` proportions
- * and giving 2.5D manifolds (`clifford-flow`, `recursive-julia`) volumetric 3D depth.
+ * (`r <= QUINELING_MAX_RADIUS = 0.54`) while preserving exact `nursery.html` proportions
+ * and giving all 8 `WovenBody` mechanisms sculptural 3D Z-depth relief under camera orbit.
  */
 function normalizeWovenCoord(x, y, z, bounds, mechanism, outVec) {
   const cx = bounds?.cx || 0;
   const cy = bounds?.cy || 0;
   const cz = bounds?.cz || 0;
   const span = Math.max(0.32, bounds?.width || 1.2, bounds?.height || 1.2);
-  const scale = (QUINELING_MAX_RADIUS * 1.88) / span;
+  const scale = (QUINELING_MAX_RADIUS * 1.92) / span;
 
   const nx = (x - cx) * scale;
   // Flip Y because nursery.html / WovenBody uses 2D screen coordinates (+Y downward)
   const ny = -(y - cy) * scale;
   let nz = (z - cz) * scale;
 
-  // Give planar/shallow attractors subtle 3D relief under camera orbit without altering their 2D projection
+  const r = Math.hypot(nx, ny);
+  const theta = Math.atan2(ny, nx);
+
+  // Give all 8 mechanisms sculptural 3D Z-depth relief while preserving their 2D silhouette
   if (mechanism === 'clifford-flow' || mechanism === 'recursive-julia') {
-    nz = nz * 2.2 + 0.045 * Math.sin(nx * 5.2 + ny * 4.1);
+    nz = nz * 2.8 + 0.11 * Math.sin(nx * 5.4 + ny * 4.2) + 0.06 * Math.cos(r * 7.0 - theta);
   } else if (mechanism === 'recursive-affine') {
-    nz *= 1.5;
+    nz = nz * 2.1 + 0.08 * Math.sin(ny * 5.0 + nx * 3.5);
+  } else if (mechanism === 'logarithmic-mantle' || mechanism === 'phyllotaxis-fan') {
+    nz = nz * 1.65 + 0.09 * Math.cos(r * 5.8 - theta * 2.0);
+  } else if (mechanism === 'pleated-braid') {
+    nz = nz * 1.75 + 0.085 * Math.sin(nx * 6.5) * Math.cos(ny * 4.5);
+  } else {
+    nz = nz * 1.45 + 0.05 * Math.sin(theta * 2.0 + r * 4.0);
   }
 
   outVec.set(nx, ny, nz);
@@ -509,11 +526,15 @@ function computeSpatialWaveAngle(nx, ny, nz, mechanism) {
 /**
  * Returns (or lazily initializes) the functional `PersistentPhaseRing` memo table on `artifact`.
  * Each bucket stores pre-normalized Structure-of-Arrays (SoA) tissue & ridge geometry over S^1 = [0, 2π),
- * plus precomputed spatial wave sin/cos and exponential density alpha so per-frame 60/120fps advection
- * uses zero transcendental calls inside the vertex loop!
+ * plus precomputed spatial wave sin/cos, exponential density alpha, and ribbon paths so per-frame
+ * 60/120fps advection uses zero transcendental calls inside the vertex loop!
  */
 function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
-  if (artifact._phaseRing && artifact._phaseRingBudget === TISSUE_BUDGET) {
+  if (
+    artifact._phaseRing &&
+    artifact._phaseRingBudget === TISSUE_BUDGET &&
+    artifact._phaseRing.bucketCount === PHASE_BUCKET_COUNT
+  ) {
     return artifact._phaseRing;
   }
 
@@ -523,10 +544,10 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
   const nodeColors = artifact.nodeColors || [];
   const nodeCount = Math.max(1, nodeColors.length);
   const baseGain = artifact.wovenBody?.cloud
-    ? 0.24
+    ? 0.34
     : artifact.wovenBody?.familyAdapter
-      ? 0.34
-      : 0.48;
+      ? 0.46
+      : 0.62;
 
   artifact._phaseRingBudget = TISSUE_BUDGET;
   artifact._phaseRing = createPersistentPhaseRing(PHASE_BUCKET_COUNT, (bucketPhase) => {
@@ -562,8 +583,8 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
       baseTissueWave[p2 + 1] = Math.cos(kAngle);
 
       const rawPtAlpha = pts[p4 + 3] || 0.04;
-      baseTissueExpAlpha[i] = 1 - Math.exp(-2.2 * rawPtAlpha);
-      baseTissuePearl[i] = rawPtAlpha > 0.24 ? clamp((rawPtAlpha - 0.24) * 0.55, 0, 0.28) : 0;
+      baseTissueExpAlpha[i] = 1 - Math.exp(-2.6 * rawPtAlpha);
+      baseTissuePearl[i] = rawPtAlpha > 0.20 ? clamp((rawPtAlpha - 0.20) * 0.68, 0, 0.38) : 0;
       baseTissueOwner[i] = owners[i] % nodeCount;
     }
 
@@ -594,11 +615,36 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
     const baseRidgeAlpha = new Float32Array(segCount * 2);
     const baseRidgeOwner = new Uint16Array(segCount);
 
+    // Pre-sample up to SDK_RIBBON_COUNT primary ridge polylines for 3D gossamer ribbons
+    const ribbonPaths = new Float32Array(SDK_RIBBON_COUNT * SDK_RIBBON_SEGMENTS * 3);
+    const ribbonOwners = new Uint16Array(SDK_RIBBON_COUNT);
+    let ribbonCount = 0;
+
     let segCursor = 0;
-    for (let rIdx = 0; rIdx < ridges.length && segCursor < segCount; rIdx += 1) {
+    for (let rIdx = 0; rIdx < ridges.length; rIdx += 1) {
       const line = ridges[rIdx].line;
       if (!Array.isArray(line) || line.length < 2) continue;
       const isParamFilament = ridges[rIdx].material === 'parameter-filament';
+
+      if (ribbonCount < SDK_RIBBON_COUNT && line.length >= 4 && !isParamFilament) {
+        const cBase = ribbonCount * SDK_RIBBON_SEGMENTS * 3;
+        const maxIdx = line.length - 1;
+        for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
+          const sampleIdx = Math.min(maxIdx, Math.floor((s / (SDK_RIBBON_SEGMENTS - 1)) * maxIdx));
+          const pt = line[sampleIdx];
+          normalizeWovenCoord(pt.x, pt.y, pt.z || 0, bounds, mechanism, vecA);
+          const off = cBase + s * 3;
+          ribbonPaths[off] = vecA.x;
+          ribbonPaths[off + 1] = vecA.y;
+          ribbonPaths[off + 2] = vecA.z;
+        }
+        const firstPt = line[0];
+        ribbonOwners[ribbonCount] =
+          Number.isInteger(firstPt?.owner) && firstPt.owner >= 0
+            ? firstPt.owner % nodeCount
+            : rIdx % nodeCount;
+        ribbonCount += 1;
+      }
 
       for (let j = 0; j < line.length - 1 && segCursor < segCount; j += stepStride) {
         const nextJ = Math.min(line.length - 1, j + stepStride);
@@ -609,8 +655,8 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
         const rawA1 = Number.isFinite(p1.alpha) ? p1.alpha : 0.2;
         if (Math.max(rawA0, rawA1) < 0.012) continue;
 
-        const focus0 = isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.45) : clamp(rawA0, 0, 1);
-        const focus1 = isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.45) : clamp(rawA1, 0, 1);
+        const focus0 = isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.35) : clamp(rawA0, 0, 1);
+        const focus1 = isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.35) : clamp(rawA1, 0, 1);
 
         normalizeWovenCoord(p0.x, p0.y, p0.z || 0, bounds, mechanism, vecA);
         normalizeWovenCoord(p1.x, p1.y, p1.z || 0, bounds, mechanism, vecB);
@@ -631,8 +677,8 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
         baseRidgeWave[wBase + 2] = Math.sin(k1);
         baseRidgeWave[wBase + 3] = Math.cos(k1);
 
-        baseRidgeAlpha[segCursor * 2] = clamp(focus0 * baseGain, 0.004, 0.72);
-        baseRidgeAlpha[segCursor * 2 + 1] = clamp(focus1 * baseGain, 0.004, 0.72);
+        baseRidgeAlpha[segCursor * 2] = clamp(focus0 * baseGain, 0.008, 0.92);
+        baseRidgeAlpha[segCursor * 2 + 1] = clamp(focus1 * baseGain, 0.008, 0.92);
         baseRidgeOwner[segCursor] =
           Number.isInteger(p0.owner) && p0.owner >= 0
             ? p0.owner % nodeCount
@@ -653,6 +699,9 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
       baseRidgeAlpha,
       baseRidgeOwner,
       ridgeSegCount: segCursor,
+      ribbonPaths,
+      ribbonOwners,
+      ribbonCount,
     };
   });
 
@@ -703,16 +752,17 @@ export function createQuinelingSubsystem() {
   tissueGeom.setAttribute('color', new THREE.BufferAttribute(tissueColors, 3));
 
   const tissueMat = new THREE.PointsMaterial({
-    size: 0.012,
+    size: IS_MOBILE_RUNTIME ? 0.0175 : 0.0148,
     map: getTissueSpriteTexture(),
     vertexColors: true,
     transparent: true,
-    opacity: 0.78,
+    opacity: 0.92,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     sizeAttenuation: true,
+    toneMapped: false,
   });
-  const _raycastSphere = new THREE.Sphere(new THREE.Vector3(0, QUINELING_CORE_Y, 0), QUINELING_MAX_RADIUS * 0.82);
+  const _raycastSphere = new THREE.Sphere(new THREE.Vector3(0, QUINELING_CORE_Y, 0), QUINELING_MAX_RADIUS * 0.85);
   const _raycastHitPoint = new THREE.Vector3();
   const NOOP_RAYCAST = () => {};
 
@@ -722,7 +772,7 @@ export function createQuinelingSubsystem() {
   tissuePointsMesh.raycast = function fastWovenBodyRaycast(raycaster, intersects) {
     if (!this.visible) return;
     _raycastSphere.center.setFromMatrixPosition(this.matrixWorld);
-    _raycastSphere.radius = QUINELING_MAX_RADIUS * 0.82;
+    _raycastSphere.radius = QUINELING_MAX_RADIUS * 0.85;
     if (raycaster.ray.intersectSphere(_raycastSphere, _raycastHitPoint)) {
       intersects.push({
         distance: raycaster.ray.origin.distanceTo(_raycastHitPoint),
@@ -736,7 +786,7 @@ export function createQuinelingSubsystem() {
     id: 'woven-body-tissue-cloud',
     title: 'WovenBody Mathematical Tissue Field',
     subtitle: 'nursery.html // WovenBody.frame',
-    details: '8,192 real-time points sampled from WovenBody.frame(wovenBody, phase) and colored by Chroma.colorFor(shape, owner).',
+    details: 'High-density real-time points sampled from WovenBody.frame(wovenBody, phase) and colored by Chroma.colorFor(shape, owner).',
   });
   coreRoot.add(tissuePointsMesh);
 
@@ -753,9 +803,10 @@ export function createQuinelingSubsystem() {
   const ridgeLineMat = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.94,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
+    toneMapped: false,
   });
   const ridgeLineSegments = new THREE.LineSegments(ridgeLineGeom, ridgeLineMat);
   ridgeLineSegments.name = 'WovenBody_CausticRidges';
@@ -785,19 +836,19 @@ export function createQuinelingSubsystem() {
   const sdkRibbonMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
-    emissive: new THREE.Color(0x030b12),
-    emissiveIntensity: 0.18,
-    roughness: 0.38,
-    metalness: 0.02,
+    emissive: new THREE.Color(0x0b1f2e),
+    emissiveIntensity: 0.42,
+    roughness: 0.32,
+    metalness: 0.04,
     transparent: true,
-    opacity: 0.09,
+    opacity: 0.24,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
   const sdkManifoldRibbonMesh = new THREE.Mesh(sdkRibbonGeom, sdkRibbonMat);
   sdkManifoldRibbonMesh.name = 'WovenBody_GossamerRibbons';
   sdkManifoldRibbonMesh.frustumCulled = false;
-  sdkManifoldRibbonMesh.visible = false;
+  sdkManifoldRibbonMesh.visible = true;
   sdkManifoldRibbonMesh.raycast = NOOP_RAYCAST;
   tagInspectable(sdkManifoldRibbonMesh, {
     type: 'quineling-ribbons',
@@ -811,21 +862,21 @@ export function createQuinelingSubsystem() {
   // ==========================================================================
   // 4. OPERATION ANCHOR NODES (`WovenBody.anchor`) & DEPENDENCY ARCS
   // ==========================================================================
-  const anchorNodeGeom = new THREE.SphereGeometry(0.0055, 10, 8);
+  const anchorNodeGeom = new THREE.SphereGeometry(0.0085, 10, 8);
   const anchorNodeMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     emissive: new THREE.Color(0xffffff),
-    emissiveIntensity: 0.65,
-    roughness: 0.25,
+    emissiveIntensity: 1.15,
+    roughness: 0.22,
     metalness: 0.1,
     transparent: true,
-    opacity: 0.62,
+    opacity: 0.92,
   });
   const anchorNodeMesh = new THREE.InstancedMesh(anchorNodeGeom, anchorNodeMat, MAX_ANCHOR_NODES);
   anchorNodeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   anchorNodeMesh.name = 'WovenBody_OperationAnchors';
   anchorNodeMesh.frustumCulled = false;
-  anchorNodeMesh.visible = false;
+  anchorNodeMesh.visible = true;
   anchorNodeMesh.raycast = NOOP_RAYCAST;
   tagInspectable(anchorNodeMesh, {
     type: 'quineling-anchors',
@@ -846,35 +897,36 @@ export function createQuinelingSubsystem() {
   const depArcMat = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: 0.14,
+    opacity: 0.52,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
+    toneMapped: false,
   });
   const depArcLines = new THREE.LineSegments(depArcGeom, depArcMat);
   depArcLines.name = 'WovenBody_DependencyArcs';
   depArcLines.frustumCulled = false;
-  depArcLines.visible = false;
+  depArcLines.visible = true;
   depArcLines.raycast = NOOP_RAYCAST;
   coreRoot.add(depArcLines);
 
   // ==========================================================================
   // 5. 64 RGB GENOME SPORES (`Quinelings.encodeColors` -> `quineling-chroma-1`)
   // ==========================================================================
-  const sporeGeom = new THREE.OctahedronGeometry(0.004, 0);
+  const sporeGeom = new THREE.OctahedronGeometry(0.0055, 0);
   const sporeMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     emissive: new THREE.Color(0xffffff),
-    emissiveIntensity: 0.55,
-    roughness: 0.3,
+    emissiveIntensity: 0.95,
+    roughness: 0.25,
     metalness: 0.1,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.82,
   });
   const sporeMesh = new THREE.InstancedMesh(sporeGeom, sporeMat, SPORE_COUNT);
   sporeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   sporeMesh.name = 'Quineling_ChromaGenomeSpores';
   sporeMesh.frustumCulled = false;
-  sporeMesh.visible = false;
+  sporeMesh.visible = true;
   sporeMesh.raycast = NOOP_RAYCAST;
   tagInspectable(sporeMesh, {
     type: 'quineling-spores',
@@ -900,19 +952,19 @@ export function createQuinelingSubsystem() {
   const tendrilMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
-    emissive: new THREE.Color(0x050c14),
-    emissiveIntensity: 0.45,
-    roughness: 0.4,
+    emissive: new THREE.Color(0x0c2135),
+    emissiveIntensity: 0.65,
+    roughness: 0.36,
     metalness: 0.08,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.36,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
   const tendrilMesh = new THREE.Mesh(tendrilGeom, tendrilMat);
   tendrilMesh.name = 'Quineling_AtriumTendrils';
   tendrilMesh.frustumCulled = false;
-  tendrilMesh.visible = false;
+  tendrilMesh.visible = true;
   tendrilMesh.raycast = NOOP_RAYCAST;
   coreRoot.add(tendrilMesh);
 
@@ -926,6 +978,12 @@ export function createQuinelingSubsystem() {
   const _sdkPts = Array.from({ length: SDK_RIBBON_SEGMENTS }, () => new THREE.Vector3());
   const _tendrilPts = Array.from({ length: TENDRIL_SEGMENTS }, () => new THREE.Vector3());
   const _anchorPositions = Array.from({ length: MAX_ANCHOR_NODES }, () => new THREE.Vector3());
+  const _nodeBaseR = new Float32Array(64);
+  const _nodeBaseG = new Float32Array(64);
+  const _nodeBaseB = new Float32Array(64);
+  const _ridgeBaseR = new Float32Array(64);
+  const _ridgeBaseG = new Float32Array(64);
+  const _ridgeBaseB = new Float32Array(64);
   const _vecA = new THREE.Vector3();
   const _vecB = new THREE.Vector3();
   const _dummy = new THREE.Object3D();
@@ -933,6 +991,7 @@ export function createQuinelingSubsystem() {
   const _faultColor = new THREE.Color(0xe11d48);
 
   let dampedYOffset = 0;
+  let dampedBaseY = QUINELING_CORE_Y;
   let accumPhase = 0;
   let stepSurgeVel = 0;
   let lastStepIndex = -1;
@@ -949,6 +1008,16 @@ export function createQuinelingSubsystem() {
     const mechanism = artifact.wovenRecord?.mechanism || species.mechanism;
     const bounds = artifact.wovenBounds || { cx: 0, cy: 0, cz: 0, width: 1.2, height: 1.2, depth: 0.4 };
     const design = artifact.design;
+
+    // Dynamic DPR & viewport-height point size scaling for crisp retina luminance
+    const effDpr = stepState.effectiveDpr || 1.75;
+    const vpHeight = stepState.viewportHeight || 680;
+    const dprBoost = effDpr < 1.6 ? 1.18 : 1.0;
+    const heightBoost = clamp(680 / Math.max(360, vpHeight), 0.92, 1.25);
+    const targetPointSize = (IS_MOBILE_RUNTIME ? 0.0175 : 0.0148) * dprBoost * heightBoost;
+    if (Math.abs(tissueMat.size - targetPointSize) > 0.0004) {
+      tissueMat.size = targetPointSize;
+    }
 
     // Toggle active species marker group
     for (const [key, sg] of Object.entries(speciesGroups)) {
@@ -997,10 +1066,23 @@ export function createQuinelingSubsystem() {
     const breathAmp = (rhythm?.breath ?? 0.14) * 0.16;
     const asymTilt = (rhythm?.asymmetry ?? 0.1) * 0.26;
 
+    // Preset-driven bore levitation:
+    // - In `well` (Top Rings), levitate to y = -0.74 directly beneath the sapphire aperture!
+    // - In `overview`, levitate to y = -0.96 so the Quineling is visible through the open bore!
+    // - In `quineling`, `interior`, `frames`, etc., rest at QUINELING_CORE_Y (-2.06) in the core!
+    const cameraPreset = stepState.cameraPreset || 'overview';
+    const presetBaseY =
+      cameraPreset === 'well'
+        ? -0.74
+        : cameraPreset === 'overview'
+          ? -0.96
+          : QUINELING_CORE_Y;
+    dampedBaseY = lerp(dampedBaseY, presetBaseY, 1 - Math.exp(-dt * 6.5));
+
     const targetYOffset = clamp((callDepth - 1) * 0.014, -0.05, 0.06);
     dampedYOffset = lerp(dampedYOffset, targetYOffset, 1 - Math.exp(-dt * 8.0));
 
-    coreRoot.position.y = QUINELING_CORE_Y + dampedYOffset + Math.sin(wovenPhase) * breathAmp;
+    coreRoot.position.y = dampedBaseY + dampedYOffset + Math.sin(wovenPhase) * breathAmp;
     coreRoot.rotation.y =
       ambient * 0.34 +
       Math.sin(wovenPhase * 0.55) * 0.28 +
@@ -1017,7 +1099,7 @@ export function createQuinelingSubsystem() {
     if (isFault) _color.setHex(ROLES_1_HEX.faultCrimson);
     else if (isDone) _color.setHex(ROLES_1_HEX.reportGreen);
     corePointLight.color.copy(_color);
-    corePointLight.intensity = isDone ? 1.15 : isFault ? 1.25 : isExhausted ? 0.35 : 0.82 + callDepth * 0.06;
+    corePointLight.intensity = isDone ? 1.35 : isFault ? 1.45 : isExhausted ? 0.45 : 1.05 + callDepth * 0.06;
 
     // Active AST expression -> Quinelings operation node ownership highlight
     const activeExprId =
@@ -1060,28 +1142,27 @@ export function createQuinelingSubsystem() {
     const baseTissuePearl = currentBucket.baseTissuePearl;
     const baseTissueOwner = currentBucket.baseTissueOwner;
     const nodeColors = artifact.nodeColors || [];
-    const nodeCount = Math.max(1, nodeColors.length);
+    const nodeCount = Math.min(64, Math.max(1, nodeColors.length));
 
     // Precompute per-frame trig for traveling wave sin(k - 2.5*phi) & cos(k - 2.5*phi)
     const sinPhi = Math.sin(wovenPhase * 2.5);
     const cosPhi = Math.cos(wovenPhase * 2.5);
 
-    // Precompute per-node color tables once per frame (<= 16 entries instead of 36,000x!)
-    const nodeBaseR = new Float32Array(nodeCount);
-    const nodeBaseG = new Float32Array(nodeCount);
-    const nodeBaseB = new Float32Array(nodeCount);
-    const ridgeBaseR = new Float32Array(nodeCount);
-    const ridgeBaseG = new Float32Array(nodeCount);
-    const ridgeBaseB = new Float32Array(nodeCount);
+    const nodeBaseR = _nodeBaseR;
+    const nodeBaseG = _nodeBaseG;
+    const nodeBaseB = _nodeBaseB;
+    const ridgeBaseR = _ridgeBaseR;
+    const ridgeBaseG = _ridgeBaseG;
+    const ridgeBaseB = _ridgeBaseB;
 
     for (let n = 0; n < nodeCount; n += 1) {
       const rgb = nodeColors[n]?.rgb || [114, 217, 226];
       let tr = rgb[0] / 255;
       let tg = rgb[1] / 255;
       let tb = rgb[2] / 255;
-      let rr = tr * 0.88 + 0.902 * 0.12;
-      let rg = tg * 0.88 + 0.973 * 0.12;
-      let rb = tb * 0.88 + 0.929 * 0.12;
+      let rr = tr * 0.86 + 0.902 * 0.14;
+      let rg = tg * 0.86 + 0.973 * 0.14;
+      let rb = tb * 0.86 + 0.929 * 0.14;
 
       if (isFault) {
         tr = lerp(tr, 0.95, 0.72);
@@ -1121,19 +1202,23 @@ export function createQuinelingSubsystem() {
 
       const sinK = baseTissueWave[p2];
       const cosK = baseTissueWave[p2 + 1];
-      // sin(k - 2.5*phi) and cos(k - 2.5*phi)
       const waveS = sinK * cosPhi - cosK * sinPhi;
       const waveC = cosK * cosPhi + sinK * sinPhi;
 
-      tissuePositions[p3] = bx + bx * 0.044 * waveS - by * 0.032 * waveC;
-      tissuePositions[p3 + 1] = by + by * 0.044 * waveS + bx * 0.032 * waveC;
-      tissuePositions[p3 + 2] = bz + 0.042 * waveS + 0.018 * waveC;
+      const px = bx + bx * 0.044 * waveS - by * 0.032 * waveC;
+      const py = by + by * 0.044 * waveS + bx * 0.032 * waveC;
+      const pz = bz + 0.048 * waveS + 0.022 * waveC;
+
+      tissuePositions[p3] = px;
+      tissuePositions[p3 + 1] = py;
+      tissuePositions[p3 + 2] = pz;
 
       const ownerIdx = baseTissueOwner[i];
-      const gain = ownerIdx === activeNodeIdx ? 0.74 : 0.46;
+      const depthShade = clamp(0.76 + pz * 0.68, 0.54, 1.32);
+      const gain = (ownerIdx === activeNodeIdx ? 1.14 : 0.72) * depthShade;
       let a = baseTissueExpAlpha[i] * gain;
-      if (a < 0.025) a = 0.025;
-      else if (a > 0.78) a = 0.78;
+      if (a < 0.045) a = 0.045;
+      else if (a > 0.96) a = 0.96;
 
       const boost = baseTissuePearl[i];
       const invBoost = 1 - boost;
@@ -1175,20 +1260,25 @@ export function createQuinelingSubsystem() {
       const waveS1 = sinK1 * cosPhi - cosK1 * sinPhi;
       const waveC1 = cosK1 * cosPhi + sinK1 * sinPhi;
 
+      const pz0 = bz0 + 0.048 * waveS0 + 0.022 * waveC0;
+      const pz1 = bz1 + 0.048 * waveS1 + 0.022 * waveC1;
+
       ridgeLinePositions[vBase] = bx0 + bx0 * 0.044 * waveS0 - by0 * 0.032 * waveC0;
       ridgeLinePositions[vBase + 1] = by0 + by0 * 0.044 * waveS0 + bx0 * 0.032 * waveC0;
-      ridgeLinePositions[vBase + 2] = bz0 + 0.042 * waveS0 + 0.018 * waveC0;
+      ridgeLinePositions[vBase + 2] = pz0;
       ridgeLinePositions[vBase + 3] = bx1 + bx1 * 0.044 * waveS1 - by1 * 0.032 * waveC1;
       ridgeLinePositions[vBase + 4] = by1 + by1 * 0.044 * waveS1 + bx1 * 0.032 * waveC1;
-      ridgeLinePositions[vBase + 5] = bz1 + 0.042 * waveS1 + 0.018 * waveC1;
+      ridgeLinePositions[vBase + 5] = pz1;
 
       const ownerIdx = baseRidgeOwner[segIdx];
-      const activeBoost = ownerIdx === activeNodeIdx ? 1.28 : 1.0;
+      const depthBoost0 = clamp(0.82 + pz0 * 0.65, 0.58, 1.35);
+      const depthBoost1 = clamp(0.82 + pz1 * 0.65, 0.58, 1.35);
+      const activeBoost = ownerIdx === activeNodeIdx ? 1.48 : 1.12;
 
-      let a0 = baseRidgeAlpha[aBase] * activeBoost;
-      if (a0 > 0.72) a0 = 0.72;
-      let a1 = baseRidgeAlpha[aBase + 1] * activeBoost;
-      if (a1 > 0.72) a1 = 0.72;
+      let a0 = baseRidgeAlpha[aBase] * activeBoost * depthBoost0;
+      if (a0 > 0.96) a0 = 0.96;
+      let a1 = baseRidgeAlpha[aBase + 1] * activeBoost * depthBoost1;
+      if (a1 > 0.96) a1 = 0.96;
 
       const baseR = ridgeBaseR[ownerIdx];
       const baseG = ridgeBaseG[ownerIdx];
@@ -1205,9 +1295,69 @@ export function createQuinelingSubsystem() {
     ridgeLineGeom.attributes.position.needsUpdate = true;
     ridgeLineGeom.attributes.color.needsUpdate = true;
 
+    // ========================================================================
+    // 4. 3D GOSSAMER RIBBON STRIPS (`sdkManifoldRibbonMesh`)
+    // ========================================================================
+    if (sdkManifoldRibbonMesh.visible && currentBucket.ribbonPaths) {
+      const rPaths = currentBucket.ribbonPaths;
+      const rOwners = currentBucket.ribbonOwners;
+      const rCount = currentBucket.ribbonCount || 0;
+      for (let c = 0; c < SDK_RIBBON_COUNT; c += 1) {
+        if (c < rCount) {
+          const cBase = c * SDK_RIBBON_SEGMENTS * 3;
+          for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
+            const off = cBase + s * 3;
+            const bx = rPaths[off];
+            const by = rPaths[off + 1];
+            const bz = rPaths[off + 2];
+            const wave = Math.sin(s * 0.35 - wovenPhase * 2.5 + c * 0.6) * 0.016;
+            _sdkPts[s].set(bx + bx * wave, by + by * wave, bz + wave * 1.3);
+          }
+          const ownerIdx = rOwners[c] % nodeCount;
+          const isAct = ownerIdx === activeNodeIdx;
+          const hw = isAct ? 0.0085 : 0.0052;
+          writeRibbonStrip(
+            sdkRibbonPositions,
+            sdkRibbonColors,
+            sdkRibbonNormals,
+            c,
+            SDK_RIBBON_SEGMENTS,
+            _sdkPts,
+            hw,
+            ridgeBaseR[ownerIdx],
+            ridgeBaseG[ownerIdx],
+            ridgeBaseB[ownerIdx]
+          );
+        } else {
+          for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
+            _sdkPts[s].set(0, 0, 0);
+          }
+          writeRibbonStrip(
+            sdkRibbonPositions,
+            sdkRibbonColors,
+            sdkRibbonNormals,
+            c,
+            SDK_RIBBON_SEGMENTS,
+            _sdkPts,
+            0,
+            0,
+            0,
+            0
+          );
+        }
+      }
+      sdkRibbonGeom.attributes.position.needsUpdate = true;
+      sdkRibbonGeom.attributes.color.needsUpdate = true;
+      sdkRibbonGeom.attributes.normal.needsUpdate = true;
+    }
+
+    // ========================================================================
+    // 5. OPERATION ANCHOR NODES & DEPENDENCY ARCS (`anchorNodeMesh`, `depArcLines`)
+    // ========================================================================
+    const shapeNodes = artifact.shape?.nodes || [];
+    const activeAnchorCount = Math.min(MAX_ANCHOR_NODES, shapeNodes.length);
+
     if (anchorNodeMesh.visible) {
-      const shapeNodes = artifact.shape?.nodes || [];
-      const activeAnchorCount = Math.min(MAX_ANCHOR_NODES, shapeNodes.length);
       anchorNodeMesh.count = activeAnchorCount;
 
       for (let nIdx = 0; nIdx < activeAnchorCount; nIdx += 1) {
@@ -1230,7 +1380,7 @@ export function createQuinelingSubsystem() {
         const isActiveNode = nIdx === activeNodeIdx;
         _dummy.position.copy(_anchorPositions[nIdx]);
         _dummy.rotation.set(0, 0, 0);
-        _dummy.scale.setScalar(isActiveNode ? 1.45 : 0.88);
+        _dummy.scale.setScalar(isActiveNode ? 1.65 : 0.95);
         _dummy.updateMatrix();
         anchorNodeMesh.setMatrixAt(nIdx, _dummy.matrix);
 
@@ -1244,13 +1394,62 @@ export function createQuinelingSubsystem() {
       if (anchorNodeMesh.instanceColor) anchorNodeMesh.instanceColor.needsUpdate = true;
     }
 
+    if (depArcLines.visible && activeAnchorCount >= 2) {
+      const edges = artifact.graph?.edges || [];
+      const arcCount = Math.min(MAX_DEPENDENCY_ARCS, Math.max(activeAnchorCount - 1, edges.length));
+      let arcVertCursor = 0;
+      for (let eIdx = 0; eIdx < arcCount; eIdx += 1) {
+        const srcIdx = eIdx % activeAnchorCount;
+        const dstIdx = (eIdx + 1) % activeAnchorCount;
+        const pStart = _anchorPositions[srcIdx];
+        const pEnd = _anchorPositions[dstIdx];
+        const cIdx = srcIdx % nodeCount;
+        const isEdgeActive = srcIdx === activeNodeIdx || dstIdx === activeNodeIdx;
+        const gain = isEdgeActive ? 0.85 : 0.38;
+        const ar = ridgeBaseR[cIdx] * gain;
+        const ag = ridgeBaseG[cIdx] * gain;
+        const ab = ridgeBaseB[cIdx] * gain;
+
+        for (let s = 0; s < ARC_SEGMENTS - 1; s += 1) {
+          const t0 = s / (ARC_SEGMENTS - 1);
+          const t1 = (s + 1) / (ARC_SEGMENTS - 1);
+          const arch0 = Math.sin(t0 * Math.PI) * 0.065;
+          const arch1 = Math.sin(t1 * Math.PI) * 0.065;
+
+          const vOff = arcVertCursor * 3;
+          depArcPositions[vOff] = lerp(pStart.x, pEnd.x, t0);
+          depArcPositions[vOff + 1] = lerp(pStart.y, pEnd.y, t0) + arch0;
+          depArcPositions[vOff + 2] = lerp(pStart.z, pEnd.z, t0) + arch0 * 0.8;
+
+          depArcPositions[vOff + 3] = lerp(pStart.x, pEnd.x, t1);
+          depArcPositions[vOff + 4] = lerp(pStart.y, pEnd.y, t1) + arch1;
+          depArcPositions[vOff + 5] = lerp(pStart.z, pEnd.z, t1) + arch1 * 0.8;
+
+          depArcColors[vOff] = ar;
+          depArcColors[vOff + 1] = ag;
+          depArcColors[vOff + 2] = ab;
+          depArcColors[vOff + 3] = ar;
+          depArcColors[vOff + 4] = ag;
+          depArcColors[vOff + 5] = ab;
+
+          arcVertCursor += 2;
+        }
+      }
+      depArcGeom.setDrawRange(0, arcVertCursor);
+      depArcGeom.attributes.position.needsUpdate = true;
+      depArcGeom.attributes.color.needsUpdate = true;
+    }
+
+    // ========================================================================
+    // 6. 64 RGB GENOME SPORES & PERIMETER TENDRILS (`sporeMesh`, `tendrilMesh`)
+    // ========================================================================
     if (sporeMesh.visible) {
       const rgbPixels = artifact.rgbPixels || [];
       const outScale = isExhausted ? 0.92 : 1.04;
 
       for (let s = 0; s < SPORE_COUNT; s += 1) {
         const samplePt = Math.floor(((s * 61 + Math.floor(wovenPhase * 12)) % TISSUE_BUDGET)) * 3;
-        const radialDrift = 0.014 * Math.sin(wovenPhase * 1.5 + s * PHI_GOLDEN_ANGLE);
+        const radialDrift = 0.016 * Math.sin(wovenPhase * 1.5 + s * PHI_GOLDEN_ANGLE);
 
         _dummy.position.set(
           tissuePositions[samplePt] * outScale + radialDrift,
@@ -1258,7 +1457,7 @@ export function createQuinelingSubsystem() {
           tissuePositions[samplePt + 2] * outScale - radialDrift
         );
         _dummy.rotation.set(wovenPhase + s, wovenPhase * 0.7 + s, 0);
-        _dummy.scale.setScalar(isDone ? 1.12 : isExhausted ? 0.52 : 0.84);
+        _dummy.scale.setScalar(isDone ? 1.18 : isExhausted ? 0.56 : 0.92);
         _dummy.updateMatrix();
         sporeMesh.setMatrixAt(s, _dummy.matrix);
 
@@ -1273,6 +1472,45 @@ export function createQuinelingSubsystem() {
       }
       sporeMesh.instanceMatrix.needsUpdate = true;
       if (sporeMesh.instanceColor) sporeMesh.instanceColor.needsUpdate = true;
+    }
+
+    if (tendrilMesh.visible) {
+      for (let tIdx = 0; tIdx < TENDRIL_CURVE_COUNT; tIdx += 1) {
+        const angle = (tIdx / TENDRIL_CURVE_COUNT) * TAU + wovenPhase * 0.18;
+        const isUpper = tIdx % 2 === 0;
+        const startR = QUINELING_MAX_RADIUS * 0.62;
+        const endR = isUpper ? 0.56 : 0.72;
+        const startY = isUpper ? 0.16 : -0.16;
+        const endY = isUpper ? 0.58 : -0.56;
+
+        for (let s = 0; s < TENDRIL_SEGMENTS; s += 1) {
+          const u = s / (TENDRIL_SEGMENTS - 1);
+          const sway = Math.sin(u * Math.PI * 1.5 - wovenPhase * 2.2 + tIdx) * 0.036 * u;
+          const r = lerp(startR, endR, u * u) + sway;
+          const theta = angle + sway * 1.4;
+          _tendrilPts[s].set(
+            Math.cos(theta) * r,
+            lerp(startY, endY, u),
+            Math.sin(theta) * r
+          );
+        }
+        const ownerIdx = tIdx % nodeCount;
+        writeRibbonStrip(
+          tendrilPositions,
+          tendrilColors,
+          tendrilNormals,
+          tIdx,
+          TENDRIL_SEGMENTS,
+          _tendrilPts,
+          0.0046,
+          nodeBaseR[ownerIdx],
+          nodeBaseG[ownerIdx],
+          nodeBaseB[ownerIdx]
+        );
+      }
+      tendrilGeom.attributes.position.needsUpdate = true;
+      tendrilGeom.attributes.color.needsUpdate = true;
+      tendrilGeom.attributes.normal.needsUpdate = true;
     }
   }
 
