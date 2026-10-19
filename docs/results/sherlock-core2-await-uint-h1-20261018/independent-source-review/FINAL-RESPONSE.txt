@@ -1,0 +1,64 @@
+# H1 Fresh Non-Author Review: `_uint` canonical Core UInt parser and two new tests
+
+**Reviewer:** fresh Opus 5.5 HIGH, no tools, not resuming author session d588317f.
+
+## Coverage
+- I read Bodies 1–13 in full. None appeared clipped or truncated.
+- I computed no hashes. Byte claims below come from manual arithmetic on the supplied text plus the preparer's own inverse diff.
+- I checked the test file's line count (27, matching `+0,27`). I did not count its bytes.
+
+## Mandatory finding (blocks the exact-candidate claim)
+
+**F1. The candidate consumer is not the exact author hunk applied to base. One blank line outside the hunk was dropped.**
+
+- **Author patch (Body 9):** `@@ -27,4 +27,10 @@` only replaces lines 28–30. It leaves the two blank lines before `def _scalar` alone.
+- **Inverse diff (Body 10):** the preparer's own diff needs a `+` blank line to restore base. So the candidate has one blank line where base had two.
+- **Body 1:** visibly shows a single blank line between `return result` and `def _scalar`. Every other top-level def has two.
+- **Byte arithmetic:**
+  - Removed lines: 79 + 22 = 101 bytes.
+  - Added lines: 84 + 77 + 54 + 72 + 24 + 27 + 57 + 18 = 413 bytes.
+  - Base 11989 + 312 = **12301 expected**, against **12300 pinned**.
+- **Contradicted claims:**
+  - `onlyConsumerChange: "...complete rest byte-identical"`
+  - `sourceChangesAuthoredByPreparer: 0`
+  - the contract predicate "other source bytes preserved"
+- **Likely cause:** a string replacement whose new text lacked the trailing `\n`.
+- **Impact:** none on semantics (Python tolerates it; it is a PEP 8 E302 deviation). It does falsify the provenance/exactness claim. The hash proves bytes, not faithfulness.
+- **Fix:** rematerialize with the blank line restored, expect 12301 bytes, re-pin, and re-freeze. Also regenerate the proof and inverse diff.
+
+## Semantic assessment of `_uint`
+It is equivalent to the Rust `UInt` deserializer (Body 4). Both accept exactly `"0"` ∪ `[1-9][0-9]*` with value < 2¹²⁸, from a JSON string only.
+
+- **Non-string inputs:** `type(value) is not str` rejects int, bool, float, None, bytes and list. JSON yields exact `str`, so excluding subclasses is fine.
+- **Digit check:** `isascii() and isdigit()` together are exactly ASCII `0-9`.
+  - Empty string fails `isdigit`.
+  - Non-ASCII digits (`\u0661`, `\uff11`, `\u00b2`) fail `isascii`.
+  - Sign, whitespace, `_`, `.`, `e` and `x` fail `isdigit` before `int()` can be lenient about them.
+- **Leading zeros:** the check matches the Rust `s.len() > 1 && starts_with('0')`.
+- **Range:** `>= 1 << 128` is the correct bound. `int()` keeps full precision.
+- **Callers:** every UInt site routes through `_uint`: `_scalar`, `_balance`, `_liability`, the `_effect` Transfer/Fee/Liability arms, `_logical` (cap via `_option`, committed), all three `core2_result` arms, and `core2_await_prefix.attempted`. `_error` offset/step still use `int` (H2, open). The Quint path does not use `_uint`; `decode_itf` yields `int`, so the representations align.
+
+## Non-blocking findings and limits
+- **N1. Rejection of `'9'*5000` does not exercise the range branch.**
+  - On Python ≥ 3.11 (or a security backport), `int()` raises `ValueError` from the 4300-digit `int_max_str_digits` limit instead.
+  - The test only checks for `ValueError`, not the message. The range branch is therefore discriminated only by the 2¹²⁸ and 2¹²⁹ cases. This is still adequate, including against `>` vs `>=` mutants.
+  - Suggestion: pre-check `len(value) > 39` and use `assertRaisesRegex`.
+- **N2. Mutation discrimination is otherwise good.**
+  - The old `return int(value)` fails many subtests: `'00'`, `'-1'`, `' 1'`, `'1_000'`, `'\u0661'`, `0`, `True`, `1.0`, `b'1'`.
+  - Dropping `isascii` is caught by `\u0661` and `\uff11`.
+  - Dropping the leading-zero check is caught by `'00'` and `'01'`.
+  - Dropping the type check is caught by `b'1'` (accepted) and `0` (AttributeError).
+  - An off-by-one bound is caught by the MAX and 2¹²⁸ cases.
+- **N3. The tests exercise only the private `_uint`.** No caller-integration assertion exists; caller coverage rests on review alone.
+- **N4. Callers now reject inputs they previously coerced.** That includes JSON numbers. The prior 54298-byte fixture and the six tests were not supplied and are not replayed, so consumer-level regression or compatibility is **unestablished**. This is not a defect of the cut, but it must not be claimed.
+- **N5. H2–H6 remain open and unwaived.** That covers `Bool` values, `index`/`site` fields, `Error` integers, unit shape, diagnostics parity (messages differ from Rust), canonical comparison, and provenance.
+
+## Verdicts
+- **H1 source: REJECT as frozen, solely because of F1.**
+  - The `_uint` logic and the tests are semantically ACCEPTABLE.
+  - The verdict converts to ACCEPT once the exact rematerialization (12301 bytes, restored blank line) is re-pinned and the proof/freeze are corrected.
+- **One operation: INELIGIBLE as pinned**, because the consumer pin `f5eeada6…` is the non-exact artifact.
+  - It becomes **ELIGIBLE** with the same argv, cwd, environment and pass criterion once the consumer pin is replaced by the exact rematerialization and the three-entry directory membership is rechecked.
+  - Membership matters because `-m` puts cwd first on `sys.path`, so a stray `unittest.py` would shadow the stdlib.
+  - The expected outcome on the corrected artifact is 2 tests, OK. The whitespace change does not affect results; the blocker is the pin's provenance.
+- **Self-approval:** none. I executed nothing and modified nothing.

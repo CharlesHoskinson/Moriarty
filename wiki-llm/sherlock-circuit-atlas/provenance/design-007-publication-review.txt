@@ -1,0 +1,46 @@
+## Disposition: **APPROVE for publication**, with three optional non-blocking nits
+
+This is one fresh non-author opinion. It covers ordinary publication and provenance only. It is not a source, security, constraint or design-adoption judgement. Per your instruction I ran no tools, so I compared the texts and the stated digests and byte counts by reading them, not by re-hashing.
+
+## Confirmed
+
+- **Author identity.** `PUBLIC-RESULT.json` matches every identity field in the status file and manifest:
+  - session `a008e5aa-…-b2892fd04a04`
+  - `canonicalModel: claude-opus-5-5`, provider `firstParty`
+  - `terminal_reason: completed`, `subtype: success`, `is_error: false`, `num_turns: 1`
+  - No effort field is returned, so `returned_effort: NOT_REPORTED` is accurate.
+  - Exit 0 and 53.50 s wall time are consistent with `duration_ms` 51223.
+- **Full note preservation.**
+  - The 4963-byte note matches the `result` field line for line, including the raw `2026-10-18 UTC` and the `c4d96eba…8951f` abbreviation.
+  - The raw reply's 6846 bytes and `791770d2…` hash match the manifest, the AUTHORSHIP entry and the PUBLIC-RESULT header.
+  - The gzip parameters are deterministic (mtime 0, level 9), and the proof asserts an exact inverse.
+- **Dates.** Both the author date and the return time are retained and labelled. The return time is written `+00:00` rather than `Z`, which is equivalent. The note text was not rewritten.
+- **Freeze discrepancy.** The status file handles this correctly. The note's abbreviation joins the completion **freeze** prefix (`c4d96eba`) to the completion **source** digest suffix (`…818951f`). The full freeze digest `…a100b7228` is bound in the manifest. Every other abbreviated pin checks out: `3d3b8047…0c0e8e7`, `58122f21…e92c77`, `c507e620…818951f` and `99b0a7b6…f28056`.
+- **Cautious dated scope.** The status file and manifest limit the claims to "at that cut", and they state that later source revisions are not covered. The three-test body is marked as not forwarded and not observed. The return-right/`BINARY_OP_ADD` and Namespace 43-UNRUN claims are attributed to the forwarded context. Closing the private prompt or source is correctly not required.
+- **Concept continuity.** The note continues the series through these elements:
+  - the iteration-003 enable bus
+  - the iteration-006 Add board (option B)
+  - "existing publication sockets"
+  - copper-only palette
+  - a layered assembly history and a selection-only light channel
+
+  The note never names Tron or Three.js. The "Tron/PCB and Three.js" label in the status file is a fair description of the series, and the PCB vocabulary is explicit.
+- **Visitor copy.** It is confident present tense, written as for a finished release, and the creative note keeps it intact. It is consistent with the source observations: the borrow is "smaller than what it owes", and the error codes are 10 and 11.
+- **No-website scope.** The note, status file, manifest, AUTHORSHIP entry and README append all state that there is no website code, scene, deployment, circuit iteration, execution or proof. `latest_actual_circuit_iteration: "005"` is left untouched.
+- **Preservation.**
+  - **README.** The append is pure: 18159 + 952 = 19111, and the old file ends with a newline, so the old bytes are an exact prefix.
+  - **AUTHORSHIP.** It grows 36335 → 38740, a difference of 2405 bytes, which equals the two insertions of 412 and 1993. Both are pure insertions placed before an unchanged closing `}`, so no old line is modified.
+  - The standalone AUTHORSHIP entry file matches the inserted object field for field.
+  - The source-membership README hash equals the current preimage `d9f1ebde…`, so the creative author saw the same README that is being appended to.
+
+## Optional corrections (non-blocking)
+
+1. **README append wording.** "the site goes live when the full Sherlock goal is finished" leaves out **"and accepted"**. The status file and the prior README section both say "finished and accepted". Adding the two words keeps the wording consistent.
+2. **Status file, "Source cut".** The freeze records say `UNADOPTED…UNCOMPILED_UNRUN/UNTESTED`, but the status file and manifest say only "unregistered … SDK tests UNRUN". Adding **"uncompiled"** would carry the frozen status word for word. Also, "raw and decompressed hashes" names the same value twice; it should read **"gzip and raw (decompressed) hashes"**.
+3. **AUTHORSHIP schema.** The prior design entry carries `"native_authority": 0`, and the new design-007 entry has no such field. If downstream tooling filters on that key, add the field to keep the schema consistent.
+
+Any of these edits would change the downstream hashes and byte counts listed in the COPY-MANIFEST, the source manifest, the AUTHORSHIP entry and the preservation proof. None of them would touch the author note's bytes.
+
+## Observation only
+
+The previous README integration entry ends at `2462560a…`, but this new entry starts from `d9f1ebde…`. That suggests a README change in between, probably the Root 006/007 section, recorded somewhere I wasn't shown. It doesn't affect this packet. Root's preimage-verify apply rule already guards against drift.

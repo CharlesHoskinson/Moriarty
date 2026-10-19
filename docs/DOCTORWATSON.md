@@ -187,3 +187,33 @@ stagenet acceptance is required for Sherlock; Preview or Fenrir observations
 cannot replace it. Do not invent Fenrir identities or network versioning.
 All native limits, C4, counters and terminal results remain unchanged. Project
 review does not become permission for a developer to use Moriarty.
+
+
+### October 18: bounded Quint UInt source work and exact patch boundaries
+
+Two broader Opus security-author requests (H1–H6, 126,556 bytes; H1–H3,
+98,991 bytes) timed out after 1,320.545670 and 1,320.600765 seconds without
+source or a vote. Other Opus requests succeeded concurrently; these were not
+provider-outage or fallback evidence. Narrowing to an 18,277-byte request for
+one pure UInt parser and two tests returned 2,080 bytes of literal Opus source
+in 28.476858 seconds. This measured result supports that bounded approach; it
+is not a general provider-speed guarantee.
+
+The independent source reviewer caught F1: materializing the diff dropped one
+newline outside the authored hunk. The initial 12,300-byte candidate's exactness
+claim was false. Preserve line terminators at patch boundaries and verify the
+complete outside-hunk preimage, not only that replacing a chosen substring is
+invertible. Restoring that newline produced the exact 12,301-byte candidate,
+with a 312-byte delta from the published 11,989-byte preimage. No parser logic
+changed during this repair. Root retained the old artifact, installed the
+corrected pin in the exact reviewed three-entry cwd and discharged the
+reviewer's conditional ACCEPT/ELIGIBLE terms.
+
+Root then ran only the two new direct-parser tests: exit 0 in 0.076251225
+seconds, two named `ok` results and `OK`; complete stderr is 386 bytes. No old
+six-test replay occurred. Full consumer/caller integration, compatibility and
+real Core2/B06 common-input traces remain open. H2–H6 stay queued; the next
+bounded Opus source request targets one H2 scalar validation function and two
+tests. This adds no financial, native, B-charge, program or EARS closure. Keep
+the permanent Quint, Clean, K and handwritten-circuit lanes active. See the
+[qualified H1 record](results/sherlock-core2-await-uint-h1-20261018/README.md).

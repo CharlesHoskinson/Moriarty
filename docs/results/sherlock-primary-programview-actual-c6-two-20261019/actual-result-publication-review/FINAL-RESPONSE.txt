@@ -1,0 +1,137 @@
+# Fresh RESULT and EXACT91 publication review: seven ordinary children, five interface cases
+
+## Verdicts
+
+**RESULT = APPROVE.** The approval covers this exact scope only:
+
+- **Seven ordinary F03 children.**
+  - Original campaign: four children, exit codes 0/0/2/0.
+  - New campaign: three children, exit codes 0/0/0.
+  - No child timed out, breached containment or left processes.
+- **Five interface cases.**
+  - Three on hand-authored ProgramSnapshot fixtures.
+  - Two on fixed real C6 `compile.json` captures.
+  - Four produced a non-null `ng_program`. The Sub case produced an explicit unsupported null with a complete carrier, which is the declared outcome.
+- **Two complete-`ng_program` comparisons.** Both recorded PASS. Each matched independently prefrozen interface mappings under strict scalar kinds and values, ordered arrays, and unordered object key sets.
+
+**EXACT91_PUBLICATION = CONDITIONAL_APPROVE.** The copy cut, the 91-target inventory and the raw-history handling are sound. Three new-documentation statements are false or unevidenced as published, and they must be corrected (M1–M3 below). No new model run, re-execution or further pre-review barrier is needed. A Root-applied text change confined to those sentences, followed by a pin and readback rebuild, satisfies the condition.
+
+## What the supplied raw data proves (verified by inspection)
+
+### Containment and exit codes
+
+All seven F03 receipts show `outcome=exited`, `timed_out=false`, `containment_breach=false`, `remaining=[]` and empty `swept`. Every stderr is 0 bytes.
+
+- The unsupported case (phase 03) exited 2 and produced a complete carrier: `status=unhandled`, `ng_program=null`, and a single issue `{expressions/0/op, unsupportedExpression, Sub}`.
+- That diagnostic location satisfies the earlier review's C3 condition for making a Sub-specific claim.
+
+### Freeze ordering, original campaign
+
+- Phase 03 ended at 00:49:16.673.
+- Root's freeze is stamped 00:49:16.752.
+- Phase 04 started at 00:49:16.772.
+- The consumer's own freeze lists the same three actual pins as Root's freeze: `179ff837…/41113`, `583128bb…/31789` and `d316785c…/18955`.
+
+### Freeze ordering, new campaign
+
+- Phase 02 ended at 01:34:02.792.
+- Root's freeze is stamped 01:34:02.864.
+- Phase 03 started at 01:34:02.888.
+- Consumer and Root pins match: `9ac107f2…/164981` and `50e61365…/190657`.
+- The comparator's expected pins (`34105f96…/12556` and `9df0d091…/14887`) equal the manifest pins, `SAFE-BINDINGS` and `SAFE-EXPECTED`.
+- `comparison.actual_freeze` equals the freeze file's pin.
+
+### Root glue (`ROOT-SELECT-EXACT3.py`)
+
+The glue's self-pin in `ROOT-SELECTION` matches the published body, `dd81c27e…/7249`. Reading the code:
+
+- **Pin checks.** `check()` covers old33 plus new20, the `SOURCE-OP-FREEZE` and recipe pins, interpreter resolution, and a source directory containing exactly two entries. It runs before the F03 load, after it, before each child and after each child.
+- **Staging.** It requires an environment of exactly five keys, passed as an explicit dict. It requires directories at mode 0700 and all products absent before each child.
+- **Phase 01/02 acceptance.** It checks exit 0, `status=ported`, `unhandled=[]`, the four `ng_program` keys, the pointer, the `source_file` pin, and a single stdout line whose output pin equals Root's pin.
+- **Durable freeze.** It writes the two-actual freeze with fsync of both file and directory before phase 03.
+- **Post-03 checks.** It matches consumer actual, input, case-id and expected pins, re-pins both actuals, and accepts only (0, PASS) or (1, FAIL).
+- **Expected bodies.** Root opens no expected path.
+
+### Comparator ordering and checks
+
+The comparator writes its exclusive freeze before any expected path is pinned or read.
+
+The values `whole_source_roundtrip_equal` and `origins_input_only_checked` are printed as literals. They are backed by `assert` statements that run before the freeze. Those asserts are effective because the argv has no `-O` and the environment cannot carry `PYTHONOPTIMIZE`.
+
+### Spot traces against the published carriers
+
+I traced the following and found them consistent with the SAFE contract:
+
+- **SCC-min groups.** Capture 1: 2, 3, 4, 5. Capture 2: 2, 3, 4, 4, 6, 7. Fixtures: {4,5}→4.
+- **Nested constant expansions.** Capture 1 constant 8: `Both(Pay(4,Done),Pay(5,Done))`. Capture 2 constant 9: `AToB(23,BToA(AToB(21,BStop),42))`.
+- **Global ArmRow IDs.** The second Match in each program uses IDs 4..6 and 4..7.
+- **Reversed parameter order** in fixture 2 is preserved.
+- **Dropped `Construct.constant` caches** in capture 2 are retained only in `source_document`.
+
+I did not re-derive every `ng_program` row.
+
+### Target inventory
+
+There are 46 + 45 = 91 targets. All 91 bodies were supplied inline and I decoded them as text.
+
+## Mandatory fixes (EXACT91 condition)
+
+### M1. Time-relative statements become false on publication
+
+| Target | Statement | Why it is false at publication |
+|---|---|---|
+| `docs/results/sherlock-primary-programview-actual-c6-two-20261019/README.md` | "Fresh combined result and exact publication review remains pending." | This review is that review. |
+| `docs/results/sherlock-primary-programview-port-three-20261019/README.md` | "This publication proposal has not yet received a fresh actual-result/publication review." | Same reason. |
+| `docs/results/sherlock-primary-programview-port-three-20261019/README.md` | "…their unchanged-port operations and new independent interface mappings are a separate pending selection." | Those operations have now run and passed. |
+
+Two ways to fix this:
+
+- **Option A (preferred).** Edit the three sentences in place. Both READMEs are "new scoped documentation", not historical copies. Also add a pointer to the C6 archive in `models/sherlock/k/primary-programview-port-20261019/README.md`, because that file currently points only to the three-case archive. This makes "old46 byte-exact" false for two or three documentation targets. That is acceptable, but the manifest should then say so.
+- **Option B.** Keep the old46 READMEs byte-exact. Replace the new README sentence with a reference to this review, and add an explicit statement that the two original-README sentences are superseded as of this publication.
+
+### M2. Inaccurate pin-check wording in the new README
+
+The new README says "Root checked those consumer input pins against its durable pins." Root's durable freeze holds actual pins, not input pins.
+
+The glue checks the consumer's actual pins against Root's durable freeze. Separately, it checks input, case-id and expected pins against the static manifest. The sentence should say that.
+
+### M3. Unevidenced pin-check claim in the original README
+
+The original README says "Root recorded all33 static pin checks before/after." Nothing in the supplied original-campaign record shows this:
+
+- The original `ROOT-POSTCHECK` files contain only `pass: true` and a file inventory. They have no pin field.
+- The original campaign's Root glue was neither supplied nor published. Only the new campaign's `ROOT-SELECT-EXACT3.py` exists.
+- `ACTUAL-SEVEN-READBACK` is a passive readback taken now, not a record of checks before each child.
+
+Either qualify the sentence as Root's stated procedure, recorded only as a postcheck pass, or append the original glue as a new target. Under Option B, put this qualification in the new README.
+
+## Retained qualifiers and dissent
+
+- **Hidden mappings are unreviewed.** No reviewer-only expected transport was appended, so I approve nothing about the semantics of the hidden mappings.
+- **PASS shows conformance to a declared contract, not correctness.** It shows conformance to `SAFE-PORT-INTERFACE.md`, which the port lane authored. It does not show that these conventions are correct relative to primary or K semantics: global ArmRow IDs, SCC-min derived groups, dropped `Construct.constant`, no declarations for scalar rows 0/1, and emitted builtin declarations.
+- **Origins and diagnostics.** Origin retention was checked by the subject lane's own consumer, rebuilt from the input. Exact origin and diagnostic golden equality stays UNBOUND.
+- **Coverage gaps.** There is no generic-instance coverage, because both captures have empty `type_args` and zero declaration parameter counts. There is no unsupported-form case on actual inputs. If, Bool and the dedicated builtin forms are not exercised on actual inputs.
+- **Nothing beyond static interface equality is shown.** That includes C6 compiler correctness (its own freeze says "independent equality NOT YET CHECKED"), K evaluation, B→K state, event, frame, clock or work correspondence, and native, circuit or ledger correspondence. The permanent K lane is not retired.
+- **Historical scope literal.** The new comparison's printed "hand-authored inputs" scope string is an inherited literal. `ROOT-ACTUAL-C6-PROVENANCE-SCOPE` and the new `ROOT-RESULT` are the provenance records.
+
+## Non-blocking disclosures
+
+1. **Child cwd was not as the recipe describes.** The recipe says the child's cwd contains only empty `home/` and `tmp/`. In fact the glue writes the per-phase `ROOT-SELECTION.json` into the cwd before launch, and F03 creates `stdout` and `stderr` there. That per-phase file is not re-pinned after the child. Its published content equals the frozen phase descriptor.
+2. **Context the comparison depends on is not published.** This includes `K-PROGRAM-WIRE-DECLARATIONS.json` (the NG schema), `PROGRAM-SNAPSHOT-DECLARATIONS-ONLY.json`, the F03 launch closure or module, `CAPTURE-SELECTION`, `INPUT-AND-REUSE-PINS` and the fixture-side readsets. All are pinned but absent from the 91 targets. A future append would make the archive self-contained.
+3. **Root interpreter isolation is unproven.** The glue's text cannot show how Root itself was invoked, for example whether it ran with `-I`.
+4. **Operational metadata is exposed.** Published receipts include absolute `/home/charl` paths, spent attempt tokens, and the review PUBLIC-RESULT session IDs and cost metadata. These are acceptable as provenance, but they are disclosed by publishing.
+5. **Old manifest body not supplied.** I reviewed the old46 manifest (`e0f90276…`) only through the combined manifest's restatement of its entries.
+
+## Read coverage
+
+- **Decoded in full:**
+  - All 91 target bodies.
+  - The combined and new manifests, `PUBLICATION-READBACK`, `ACTUAL-SEVEN-READBACK` and the source `NEXT-ACTUAL-RUNTIME-CORRESPONDENCE`.
+  - The F03 launch closure and its readback, `SAFE-PORT-INTERFACE`, `PROGRAM-SNAPSHOT-DECLARATIONS-ONLY` and `K-PROGRAM-WIRE-DECLARATIONS`.
+- **Not supplied, so not reviewed:**
+  - Private expected bodies, source-retention ledgers, the two `EXPECTATION-FREEZE` files, and the oracle generator and checker.
+  - The original campaign's Root glue.
+  - The full F03 module and the old46 manifest body.
+- **Not done:**
+  - I computed no hashes or byte counts and executed nothing.
+  - All byte identity, the "absent in W" status and the afterimage-equals-original status rest on Root's readbacks. My cross-pin checks were string comparisons of supplied values.
