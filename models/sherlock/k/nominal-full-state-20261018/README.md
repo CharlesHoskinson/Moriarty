@@ -12,3 +12,6 @@ The case-1 K surface input `01-structural-mutual-three-args-A3-B2-postcaller.ter
 
 
 The real C6 Schedule prefix result is archived in `docs/results/sherlock-actual-c6-k-prefix16-20261019/README.md`: 17 complete K states, independent whole-wire equality and 17 fixed partial primary boundaries over 77 raw primary records. Four new `capture/` consumers are colocated with the unchanged decoder helpers. This scoped result stops before arm selection/caller return/last-field completion; it adds no K/primary work-clock, physical-B, native or full-runtime claim. The prior 455-state provenance qualifications above remain unchanged.
+
+
+The next two raw-state continuation advances and first-arm ScopeF/source-binding relation are recorded in `docs/results/sherlock-actual-c6-k-first-arm18-20261019/README.md` (19 joined states, 2 new advances, no prefix replay). `capture/primary_relation.py` is now the reviewed first-arm revision; the previous prefix16 preimage is retained in that archive. Three new data/relation helpers are colocated with seven unchanged helpers. Private oracle payloads remain unpublished; arm-body/caller return and last-field continuation remain later cuts.
