@@ -25,6 +25,7 @@ use sha2::{Digest, Sha256};
 
 const STEP_SCOPE: &str = "sherlock.a102.step";
 const KEY_LOCATION: &str = "moriarty-sherlock-a102-literal/1";
+const CHECK_KEY_LOCATION: &str = "moriarty-sherlock-a102-literal-check-unqualified/1";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CircuitMode {
@@ -163,6 +164,75 @@ pub struct LiteralVerification {
     pub circuit_k: u8,
     pub proof_bytes: u32,
     pub open_obligations: Vec<&'static str>,
+}
+/// Ordinary nonproving SDK `ProofPreimage::check` result for a `LocalPublic` A102 circuit.
+/// Uses a zero `binding_input` check fixture; does not call `ir.k()`, load SRS
+/// parameters, generate keys, or produce a native proof claim.
+#[derive(Clone, Debug)]
+pub struct LiteralConstraintCheck {
+    pub layout: LiteralLayout,
+    pub ir: IrSource,
+    pub zkir: String,
+    pub zkir_hash: String,
+    pub statement: Vec<u128>,
+    pub public_input_count: usize,
+    pub impact_count: usize,
+    pub output_count: usize,
+    pub pi_skips: Vec<Option<usize>>,
+}
+/// Run the pinned SDK nonproving `ProofPreimage::check` on an explicit `LocalPublic`
+/// statement slice. Both `public_transcript_inputs` and `public_transcript_outputs`
+/// carry `statement`; `inputs` and `private_transcript` are empty; `binding_input`
+/// is zero fixture data only, never a reconstructed `LiteralClaim` or `ir.k()` commitment.
+pub fn check_literal_statement(ir: &IrSource, statement: &[u128]) -> Result<Vec<Option<usize>>, Error> {
+    if statement.is_empty() || statement.len() + 1 > (1usize << VERIFIER_MAX_DEGREE) {
+        return Err(error("limit", "Public statement exceeds the pinned verifier capacity."));
+    }
+    let transcript: Vec<Fr> = statement.iter().copied().map(Fr::from).collect();
+    let preimage = ProofPreimage {
+        inputs: Vec::new(),
+        private_transcript: Vec::new(),
+        public_transcript_inputs: transcript.clone(),
+        public_transcript_outputs: transcript,
+        binding_input: Fr::from(0u64),
+        communications_commitment: None,
+        key_location: KeyLocation(CHECK_KEY_LOCATION.into()),
+    };
+    let pi_skips = preimage.check(ir).map_err(|e| error("proving", e.to_string()))?;
+    if pi_skips.len() != statement.len() || pi_skips.iter().any(Option::is_some) {
+        return Err(error("statement", "Nonproving check returned a different or skipped public statement."));
+    }
+    Ok(pi_skips)
+}
+/// Construct the `LocalPublic` layout, statement and ZKIR for `request` and run
+/// actual SDK `ProofPreimage::check` without calling `ir.k()` or any proving API.
+pub fn check_literal_transition(request: &LiteralTransitionRequest) -> Result<LiteralConstraintCheck, Error> {
+    let layout = LiteralLayout::new(&request.capacities, &request.identity, local_max_statement_lanes())?;
+    let statement = layout.statement(&request.values)?;
+    if statement.len() + 1 > (1usize << VERIFIER_MAX_DEGREE) {
+        return Err(error("limit", "Public statement exceeds the pinned verifier capacity."));
+    }
+    let (ir, zkir) = layout.emit(CircuitMode::LocalPublic)?;
+    let public_input_count = ir.instructions.iter()
+        .filter(|insn| matches!(insn, Instruction::PublicInput { .. }))
+        .count();
+    let impact_count = ir.instructions.iter()
+        .filter(|insn| matches!(insn, Instruction::Impact { .. }))
+        .count();
+    let output_count = ir.outputs.len();
+    let pi_skips = check_literal_statement(&ir, &statement)?;
+    let zkir_hash = hex(&Sha256::digest(zkir.as_bytes()));
+    Ok(LiteralConstraintCheck {
+        layout,
+        ir,
+        zkir,
+        zkir_hash,
+        statement,
+        public_input_count,
+        impact_count,
+        output_count,
+        pi_skips,
+    })
 }
 struct Prepared {
     ir: IrSource,
