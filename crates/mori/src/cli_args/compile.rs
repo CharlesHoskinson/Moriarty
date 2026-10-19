@@ -13,7 +13,7 @@ pub struct Args {
     /// Explicit Sherlock execution profile; omission preserves ordinary Core compilation
     #[arg(long)]
     pub execution_profile: Option<String>,
-    /// Explicit source dialect on the selected Sherlock route; no autodetection
+    /// Explicit source dialect, including nominal-body-typed/1; no autodetection
     #[arg(long, requires = "execution_profile")]
     pub source_profile: Option<String>,
     /// Select the draft or nominal program's sole closed entry; no external inputs

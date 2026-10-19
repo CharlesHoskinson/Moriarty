@@ -34,6 +34,11 @@ pub mod draft_reference;
 pub mod ext_compile;
 #[path = "compile_artifact/nominal_command.rs"]
 pub mod nominal_command;
+// Selected all-body nominal profile; raw nominal command remains structural.
+#[path = "compile_artifact/nominal_body_compile.rs"]
+pub mod nominal_body_compile;
+#[path = "compile_artifact/nominal_body_command.rs"]
+pub mod nominal_body_command;
 #[path = "compile_artifact/draft_simulation_report.rs"]
 pub mod draft_simulation_report;
 #[path = "compile_artifact/draft_diagnostics.rs"]
