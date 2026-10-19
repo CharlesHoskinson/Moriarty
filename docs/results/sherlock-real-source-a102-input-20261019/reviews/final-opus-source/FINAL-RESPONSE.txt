@@ -1,0 +1,193 @@
+```json
+{
+  "reviewer": {
+    "role": "fresh non-author primary Claude Opus 5.5 HIGH reviewer",
+    "mode": "source-only static review; no tools, no compilation, no execution, no source authoring",
+    "not_author_of": [
+      "Opus consumer assertion hunks",
+      "Sol ordinary getter/refactor/labels/expectation",
+      "Root-authorized import integration"
+    ],
+    "reviewed_bytes": {
+      "compile_artifact.rs": "2f88089d6dd4c9e2279e33d40ca9fdf9fd8b0a3580d2b00e3af1b0be0964f092",
+      "draft_reference.rs": "abd07986496139efcf458929cb9e4863d1991753871161110db40ead3a82b92a",
+      "consumer": "e207a0381d5748f6852673c5976cd74db39e85a08a8cd3471a398269d6e4ad17",
+      "expected": "94c1d4ccb2833217d4cfebfb2f3ac454164e6670c94f02bc1f713cf6152b4f28",
+      "inputs": [
+        "9dfa037ef19e4b0d5f0d803c96d43e27d02b6493edfc6030947ff1437257f62a",
+        "0763c35fedd5aa8807bfac55f4d6ea0264cbaf5f6ed587a0fe8e08672e02f50f",
+        "bc57af6199e2bd29d2a2642a33374fc4928d9861f27044e148032aebb06eab03"
+      ]
+    },
+    "overall": "No remaining static or semantic defect found that would doom operation01/02/03. All original Muse objections API-1, API-2, SEC-1, SEC-2, EXP-1 and EXP-2 are closed within finite scope. EXP-3 hash-derived decimals stay ABSTAIN until operation03 actually runs. Approving source is not observing execution: no pass is inferred."
+  },
+
+  "dispositions": {
+    "ordinary_public_api_correctness": "APPROVE",
+    "finite_security_and_statement_limits": "APPROVE",
+    "expectation_quality_and_provenance": "APPROVE (structural/literal semantics and labels); ABSTAIN on hash-derived lanes 0-1 and layout/relation/context SHA values",
+    "operation01_compileNewNormalCore": "APPROVE",
+    "operation02_compileNewSdkFreeConsumer": "APPROVE",
+    "operation03_executeSingleRealSourceA102InputComparison": "APPROVE eligibility; ABSTAIN on outcome"
+  },
+
+  "ordinary_public_api": {
+    "API-1_closed": "DraftReferencePreparation now has two private fields, `preparation` and `pair`. The only constructor is compile_draft_with_reference, which projects `preparation` from that same `pair` via super::project_draft_pair(&pair, ...). The only accessor is `preparation(&self) -> &DraftCompileArtifact`, so no holder, including one with &mut, can desynchronize report and pair. mem::swap of whole values preserves the association.",
+    "API-2_closed": "Both compile_draft_host and compile_draft_with_reference call the same private prepare_draft_pair then project_draft_pair. Child-module access to private parent fns is legal Rust visibility. The order inside prepare_draft_pair is: parse_draft_config ('config' stage on json/serde error); target crate::json::parse ('config'); budget {parser_budget(), max_type_depth.0, copy_budget()}; bounds.owner(); layout.owner(bounds); fuel.owner(); stack.owner(); prepare_checked_draft_bounded (parse/typecheck via draft_source); admit_checked_draft_bounded (copy/admit/admit-run via draft_source). project_draft_pair hashes the exact `source` bytes and maps any HostViolation to stage 'observation' with evaluation_performed=false, events '0', completed=false. Config file_digest is over config_source and target file_digest is over target_source. This matches the documented stage/detail/digest contract. Byte-for-byte equality with the pre-refactor body is taken from the supplied correction proof, which I did not observe.",
+    "type_and_borrow_checks": [
+      "Copy/Clone use in prepare_draft_pair is valid. DraftPreprocessingExtents, Bounds and RunInput are Copy with by-value owner/parser_budget/copy_budget. Layout::owner takes &self. `config` is moved into DraftConfigIdentity only after all projections.",
+      "In compile_draft_with_reference, the DraftCompileArtifact returned by project_draft_pair owns all its data (Value/String/&'static str) and holds no borrow of `pair`, so `pair` may move into the struct afterwards.",
+      "reference_program() returns &self.pair.preparation.draft.program. The pub(crate) chain AdmittedDraftSource.preparation -> PreparedDraftSource.draft -> ParsedDraft.program (pub) is crate-internal. The type is Arc<crate::sherlock::Program>, the same type the parser builds.",
+      "observe_b_genesis(&self) -> Result<HostObservation<'_>, HostViolation> forwards to the existing pub(crate) AdmittedDraftSource::observe -> observe_bound_image. It runs PreImage::bind (Arc::ptr_eq) and implied_seg_base before any read. The output is read-only and borrows self.",
+      "Private-in-public is satisfied. The pub struct has only private fields of pub(crate) type. All public signature types (DraftCompileArtifact, Program, HostObservation, HostViolation, CompileFailure) are pub and reachable. No visibility or reexport change was added.",
+      "Public-field premises from the prior author's remaining_limits are now verified against the supplied DraftCompileArtifact declaration: format, source, config, target and evidence are pub. DraftSourceIdentity, DraftConfigIdentity, TargetDescriptor and Evidence fields are pub."
+    ],
+    "residual_non_blocking": [
+      "reference_program() exposes a clonable Arc<Program> that callers can feed to the unmetered A Machine (H1). This is not a new capability, because Program already has pub fields and is constructible. The H1 warning remains the caller's obligation.",
+      "Bodies not supplied: draft_profile::report, correspondence::report, crate::json::parse, and any other compile_artifact children (draft_execution, draft_simulation_report, ext_compile) that might call removed private helpers. If any of these references a pre-refactor private item, operation01 fails at compile time. That failure is harmless fail-stop, not a semantic risk."
+    ]
+  },
+
+  "public_path_and_trait_validation_for_consumer": {
+    "paths": {
+      "mori_core::sherlock::helper_machine::shared::pure_leaves::{borrowed_bool, borrowed_kind, borrowed_u128, BorrowedValueRow}": "Resolves via lib.rs `pub mod sherlock`, sherlock/mod.rs `pub mod helper_machine`, helper_machine/mod.rs `pub mod shared`, then shared.rs `pub mod pure_leaves` with pub items.",
+      "mori_core::sherlock::helper_machine::shared::{ActiveLengths, AllocCounters, BoundsC, ControlC, DigestC, ExpressionRowC, FinanceInput, GrammarDomain, LayoutCapacitiesC, LogicalKind, OccurrenceRowC, OutcomeC, RunIntC}": "All are pub items in shared.rs.",
+      "mori_core::sherlock::{Expr, Value as ReferenceValue, K_SOURCE_SHA256}": "Resolves via the actual `pub use reference_types::*;` from the private `mod reference_types`; the glob reexports these pub items. There is no competing glob for these names. The Root import correction is therefore correct; the old private path would have failed (E0603). The 17-byte delta (10084 to 10067) equals len(\"reference_types::\").",
+      "mori_core::sherlock_compile_artifact::draft_contract::{ARTIFACT_FORMAT, SOURCE_PROFILE, SOURCE_SEMANTICS}": "Resolves via lib.rs path module `pub mod sherlock_compile_artifact` and `pub mod draft_contract`.",
+      "mori_core::sherlock_compile_artifact::draft_reference::compile_draft_with_reference": "Resolves via `pub mod draft_reference` and its pub fn.",
+      "literal_witness `super::literal_host`": "In the consumer root, super is the crate root, which declares `mod literal_host` via #[path], so this resolves. Neither W3 module uses `crate::` paths."
+    },
+    "BorrowedValueRow": "#[derive(Clone, Copy)], so `constant` can be passed by value three times. Const(&'a raw::ConstRow) is legal public interface, because the private `use` alias resolves to pub type helper_machine::raw::ConstRow in `pub mod raw`. ProgramView.constants is Vec<raw::ConstRow>.",
+    "no_Debug_diagnostics": "CompileFailure derives Serialize only; the panic uses failure.stage plus serde_json::to_string(&failure), which is valid. HostViolation has no derive; the panic formats its pub fields kind (HostViolationKind: Debug), clause (Option<StepInvClauseId>: Debug), rule (Option<RuleIdC>: Debug) and locator (Option<String>), which is valid. literal_host::Error has a thiserror Display, so `{error}` is valid.",
+    "assert_eq_trait_requirements": "Every assert_eq operand pair has PartialEq + Debug. That covers IdentityC, DigestC, GrammarDomain, FinanceInput, BoundsC, LayoutCapacitiesC, (String,String), Option<&(String,String)>, &BoundsC, ControlC, OutcomeC, RunIntC, EnvRootC, AllocCounters, ActiveLengths (with Default), LogicalKind, Option<u128>/Option<bool>, Expr, String vs &str, and the [&str;5]/[u128;3] arrays. matches! on ExpressionRowC (no derives) and OccurrenceRowC slice patterns needs no traits, and the literal sub-patterns are valid under Rust 2024 match ergonomics.",
+    "observation_lifetimes": "HostObservation, AdmissionObservation, LayoutObservation and ImageObservation are Copy and borrow `prepared`. `identity_b`, `bounds`, `layout`, `view` and `genesis` are shared borrows that coexist with the later Arc::clone(prepared.reference_program()). source_sha256 and reference_file_sha256 are moved into LiteralSourceIdentity only after their last borrowed use."
+  },
+
+  "finite_security_and_statement": {
+    "SEC-1_closed": "I traced the actual owner_prepare::admit/admit_run for this exact copied program and config statically. names is empty; one Literal temp; occurrence (false, 0, empty path); one U128 const with marker_free=true; V1-V8 including the V8 decode/re-prepare pass; AD-6 is false. admit_run R3 64<=4096, R4 8<=64 and R5 64<=1024 give genesis_valid. Every asserted value follows: Eval{expr:0}, Running, env None, 64/64/0, stack 8, zero counters, empty arenas, run_id Nat(64)/Nat(8) with identity equal to the admission identity, and implied_seg_base Ok. These assertions exclude the R2 genesis_invalid form (Error{code:1}, fuel 0, stack 0) and any non-LiteralSeven view shape among the asserted tables. The A profile stays separate at fuel 1 / stack 0.",
+    "SEC-1_residual_optional_strengthening": [
+      "Not asserted: view.occurrence_paths, names, types, type_args, constructors, ctor_fields, decl_*, plan_cases and field_paths emptiness; the occurrence path slice; constant marker_free.",
+      "The author's two stated reasons for these gaps are incorrect against the now-supplied API. raw::ConstRow is publicly reachable at mori_core::sherlock::helper_machine::raw::ConstRow, so `ConstRow::U128{marker_free:true, n:7}` could be matched. SegBase derives Clone/Copy/PartialEq/Eq/Debug and has pub const genesis_uncut().",
+      "seg_base == genesis_uncut is already implied by observe_bound_image returning Ok, because implied_seg_base refuses otherwise.",
+      "These are not blockers and should not be authored now."
+    ],
+    "EXP-2_closed": "LiteralSourceIdentity is now built from computed SHA-256 of the exact include_str!/include_bytes! bytes: SOURCE, main.k, and W3 reference.rs. Each is asserted equal to the expected identity strings. K is additionally asserted equal to the Core K_SOURCE_SHA256 constant. report.source.source_digest, config/target file_digest and the parsed target descriptor are tied to the bytes actually compiled. The context limbs are therefore no longer matched by construction from the expected file. The consumer formats with `{:02x}`, which matches the lowercase hex of intent::hash_bytes.",
+    "EXP-2_residual": "The consumer hashes the W3 reference.rs path, while the executed A Machine is compiled from the snapshot reference.rs. Byte equality rests on the supplied three-way pin (cc68879d...) and Root's mandatory before/after rehash of both paths. It is not proven inside the binary. All three digests are ordinary identifiers: not authentication, not source-to-circuit or semantic correspondence, not A/B equivalence.",
+    "SEC-2_closed": "Typed stage plus the full serialized CompileFailure, HostViolation public fields, and literal_host::Error Display are all preserved in the panics. Success stdout is unchanged apart from the qualified line.",
+    "statement_scope": "Operation03 passes only if all of the following hold for one LiteralSeven input:",
+    "statement_scope_checks": [
+      "Same-retained-Arc A program (Arc::ptr_eq) with a single A102 Eval Literal -> Return Constant0 step, outcome Pending.",
+      "Complete padded program/pre/post images and all 252 ordered lanes equal a same-author producer-exposed specification.",
+      "Typed B admission and unstepped genesis content as listed above.",
+      "Report identity and source/K/reference identifier equalities."
+    ],
+    "not_established": "Not A80/P1 Done. Not a B step/run or trace. Not A/B correspondence. Not StepInv, GAP1, H1, G4, projectA, F4 or general39. Not proof, native, key, ledger, network or stagenet acceptance."
+  },
+
+  "expectation_quality_and_provenance": {
+    "EXP-1_closed": "In-bundle status reads SAME_AUTHOR_PRODUCER_EXPOSED_SOURCE_DERIVED_PRE_EXECUTION_SPECIFICATION_FRESH_NONAUTHOR_REVIEW_PENDING. The deriver field states W3 producer exposure. The success stdout says 'same-author specification'.",
+    "EXP-1_residual_cosmetic": "The key name `independent_hash_derivation` and expected.source.path, which points at the older input-bridge directory, survive unchanged. Bytes and SHA are identical to revision04 input. The limits text supersedes any independence reading. No edit is requested.",
+    "independent_semantic_check": "I re-derived the following from source, independently of the expected file.",
+    "independent_semantic_check_findings": [
+      "Capacities [0,0,1,0,1,0,0,0,0,0,4,4,5,1,0]/[0,0,0,0,0,1] with SL 0 pass literal_schema MinimumShape.",
+      "prepare_a gives program root [0,0,0,1,0,1,0,0,0,0,0,4,4,5,1,0].",
+      "Program tables: Occurrences [0,0,0,0]; Expressions 11 zeros; Types [0,0,0],[1,0,0],[2,0,2],[3,2,2]; Constructors [2,0,0,0],[2,1,0,2],[3,0,2,1],[3,1,3,2]; CFT [0],[2],[0],[3],[3]; Constants [0,0,0,7, then 18 zeros]. All other tables are capacity-0 empty.",
+      "Pre state root: controlLength 1, remainingFuel byte0 = 1, initialFuel byte0 = 1, all else 0. Pre ControlRows has 36 zeros (Eval expr0).",
+      "Post state equals pre except remainingFuel byte0 = 0 and CR0 tag 1 with Constant ValueRef {space 0, index 0}.",
+      "Envelope is 3 / 1.",
+      "Lane partition: 2 + (16+4+11+12+16+5+22 = 86) + 2×(45+36 = 81) + 2 = 252.",
+      "Every value is within its literal_schema bit and maximum bounds, and the representation padding/builtin/index checks pass.",
+      "Expected nonzero lane positions and values in complete_expected_ordered_statement agree with this partition. Exact zero-run lengths were reconciled by reading, without tools. Exact 252-lane equality is precisely what operation03 checks."
+    ],
+    "decimal_representation": "Decimal u128 strings are lossless. Image values are small enough that serde_json u128-to-u64 PosInt equality against the parsed expected numbers is sound. The huge limbs only ever pass through ToString, never through json!.",
+    "hash_recipe_review": "The expected recipe text agrees with LiteralLayout::new on these points:",
+    "hash_recipe_points": [
+      "Hasher domain and all `bytes` items use an 8-byte LE length prefix; `num` writes raw 16-byte LE.",
+      "The layout hash covers 21 capacities, stack_limit, and per lane: path, name, bits, boolean, has-max, max.",
+      "The relation hash covers the nine include_str! sources in mod/fetch/enabled_fetch/literal_host/literal_step/literal_ui_valid/literal_bridge/literal_witness/MAPPING.md order.",
+      "The context hash covers nine strings, then 102/3/1, then length-prefixed layout and relation hashes.",
+      "Recipe-consistency (not computation): limb0 and limb1 are consistent with context_sha256 2271d760... under the LE 16-byte split. Magnitudes ≈0x908f47dd…/2^128 and ≈0x9d57b586…/2^128 match, and low-byte residues mod 256 (34, 188) match the decimal tails.",
+      "This does not verify that SHA value itself. I do not invent or approve computed hash results."
+    ],
+    "stale_comment_note": "The literal_witness.rs module doc says eight relation sources and omits literal_ui_valid.rs; the code hashes nine. This is informational only. Editing it would change relation_hash and context, so no change is requested."
+  },
+
+  "operations": {
+    "operation01_compileNewNormalCore": {
+      "verdict": "APPROVE",
+      "basis": "One exact rustc 1.99.0 / edition 2024 rlib compile of snapshot lib.rs with the projected externs, timeout/prlimit, GCC-15/bfd and metadata settings. There is no cfg(test), no mori_sdk_free and no SDK; k256 is an ordinary crypto crate, not a Midnight SDK. The only source deltas are the compile_artifact.rs refactor and the new draft_reference.rs leaf, which were statically checked above.",
+      "conditions": [
+        "Normalized dep-info set must equal normalCore105 exactly, including compile_artifact/draft_reference.rs, recursive_source.rs, shared/owner_host.rs and shared/owner_prepare.rs. Missing or extra paths fail-stop.",
+        "Exit 0 and the rlib/dep-info must exist. Compiler warnings on stderr are not by themselves failure unless Root's existing policy says otherwise.",
+        "Static pins are rehashed before and after; process-group kill on cap; no retry."
+      ]
+    },
+    "operation02_compileNewSdkFreeConsumer": {
+      "verdict": "APPROVE",
+      "basis": "The SDK-free class was verified, not inherited. The consumer compiles only the literal_host.rs and literal_witness.rs root modules via #[path], plus mori_core (op01 rlib), serde, serde_json, sha2 and thiserror. Neither module imports midnight or mori_backend. The literal_host cfg(mori_sdk_free) items stay inactive because no --cfg is passed. The nine relation files are include_str! data only. main.k and reference.rs are include_bytes! data only.",
+      "dep_info_cross_check": "consumerExact16 = consumer + expected JSON + 3 inputs + 9 relation sources + main.k + W3 reference.rs. This matches every include site in the reviewed bytes. include_str! in literal_host resolves relative to its real W3 file location.",
+      "unverified_compile_premises": [
+        "layout_a/limits.rs was not supplied. literal_witness constructs `Locator { expression, function, field, item }` and calls `Locator::field(..)` from outside mori_core, so it needs all four Locator fields pub and a pub associated fn `field`.",
+        "If any of those is private, op02 fails at compile time with E0451/E0624. That is a harmless fail-stop; it must not be patched without separate review."
+      ],
+      "expected_stderr_note": "dead_code warnings are expected for unused W3 items (e.g. CapacityRecord, record(), context_hex, OPEN_OBLIGATIONS, build_literal_transition_request). They do not indicate a defect.",
+      "conditions": [
+        "The exact op01 rlib and dep-info pins must be the generated prerequisite.",
+        "Dep-info must equal consumerExact16 exactly. Any extra compiled crate (midnight/SDK/mori_backend) withdraws SDK-free eligibility."
+      ]
+    },
+    "operation03_executeSingleRealSourceA102InputComparison": {
+      "verdict": "APPROVE eligibility; ABSTAIN on outcome",
+      "basis": "One finite execution under timeout 10s / prlimit cpu 8, AS 1 GiB. I statically traced the full runtime path and found no predicted refusal on this input.",
+      "trace": [
+        "Draft parse: 11 tokens, depth 2, 1 occurrence.",
+        "Typecheck: depth 1.",
+        "Copy: 1 node.",
+        "B admit and genesis as in SEC-1.",
+        "Report projection.",
+        "Getter and B observation.",
+        "LiteralLayout::new: 252 lanes ≤ 252; digests are 64-char lowercase hex.",
+        "prepare_a / Machine::new(fuel 1, stack 0).step(), which gives (102, charge 1).",
+        "encode_observed_a pre: O1-O3 ok; caps.data 0 equals prepared data 0.",
+        "encode_a102_step_post_state: every guard satisfied.",
+        "Image mapping and statement range/representation checks."
+      ],
+      "excluded_activity": "No B step/run, no SDK, proof, key, ledger, network or target.",
+      "conditions": [
+        "The pass claim may be reported only from an actual exit 0 with stdout exactly the expected line plus newline and empty stderr.",
+        "Generated op02 binary/dep-info pins, op01 pins and all static pins must be unchanged before and after.",
+        "An unexpected result fail-stops with all receipts preserved and no rerun without new diagnosis."
+      ],
+      "claim_ceiling": [
+        "Same-author producer-exposed specification agreement for one LiteralSeven A102 transition input.",
+        "Typed unstepped B genesis content.",
+        "Ordinary SHA-256 identifier equalities.",
+        "Nothing about A80 Done, a B trace, A/B correspondence, authentication, StepInv/H1/G4/projectA/GAP1/general39, or native/proof/ledger/stagenet acceptance."
+      ]
+    }
+  },
+
+  "missing_bodies_named": [
+    "layout_a/limits.rs: visibility of Locator fields and Locator::field; Limits::new/reserve/pad behaviour with zero capacities, and retention of capacities.data = 0 in PreparedA. Blocks no disposition; op01/op02 compile and op03 test these.",
+    "crate::json::parse: assumed to yield a serde_json::Value equal to serde_json::from_str for the 146-byte target. Op03 checks this.",
+    "draft_profile::report and correspondence::report: assumed non-refusing. They were already used by compile_draft_host."
+  ],
+
+  "retained_obligations_unchanged": [
+    "Sherlock full goal",
+    "GAP1 / prepareA static typing and uiValid",
+    "H1 host time/heap/stack, including recursive Drop/Clone/Eq",
+    "StepInv / O1-O4",
+    "OBL.G4",
+    "projectA",
+    "F4 canonical least-equal",
+    "general39 dispatch and remaining 38 rule rows",
+    "K invalid-Literal sibling",
+    "B full trace and A/B correspondence",
+    "native SDK correctness, keygen/SRS, proof/verify",
+    "ledger-9 installation, network selection, stagenet settlement"
+  ],
+
+  "final_statement": "APPROVE ordinary public API, finite security/statement limits, expectation provenance and literal semantics, and the eligibility of each exact operation 01, 02 and 03. ABSTAIN on operation03's outcome and on all hash-derived values until an actual run exists. No new policy, gate, source edit or broad acceptance is introduced."
+}
+```
