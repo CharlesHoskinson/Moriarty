@@ -605,7 +605,8 @@ export function createFramesSubsystem() {
       activePreset === 'interior' ||
       activePreset === 'interior_up' ||
       activePreset === 'interior_floor' ||
-      activePreset === 'frames';
+      activePreset === 'frames' ||
+      activePreset === 'quineling';
     const targetBadgeOpacity = showWaferBadges ? 0.96 : 0.0;
     const targetBadgePitch = -0.06 * Math.PI;
 

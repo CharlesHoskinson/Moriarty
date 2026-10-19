@@ -304,7 +304,7 @@ export function createCeramicGrainTexture({
  * Creates (or retrieves from cache) a crisp optical reticle texture.
  */
 export function createReticleTexture({
-  size = 256,
+  size = 512,
   color = '#d4af37',
 } = {}) {
   const key = `${size}|${color}`;
@@ -326,7 +326,7 @@ export function createReticleTexture({
 
   ctx.clearRect(0, 0, size, size);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = Math.max(2, (size / 256) * 2);
 
   ctx.beginPath();
   ctx.arc(half, half, half * 0.78, 0, Math.PI * 2);
@@ -338,6 +338,7 @@ export function createReticleTexture({
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
   tex.needsUpdate = true;
 
   reticleTextureCache.set(key, tex);
@@ -345,8 +346,8 @@ export function createReticleTexture({
 }
 
 /**
- * Creates (or returns from a string-keyed LRU cache) a crisp high-DPI canvas texture
- * for die markings, frame badges, or value labels.
+ * Creates (or returns from a string-keyed LRU cache) a crisp 2x supersampled high-DPI
+ * canvas texture for die markings, frame badges, or value labels.
  */
 export function createPlaqueTexture({
   title = '',
@@ -362,12 +363,14 @@ export function createPlaqueTexture({
   width = 512,
   height = 128,
   border = true,
+  renderScale = 2,
 } = {}) {
   const resolvedAccent = accentHex ?? accent ?? '#d4af37';
   const resolvedBg = bgHex ?? bg ?? 'rgba(22, 29, 41, 0.94)';
   const resolvedFg = textHex ?? fg ?? '#f4f0e8';
+  const scale = clamp(Number.isFinite(renderScale) ? renderScale : 2, 1, 3);
 
-  const cacheKey = `${title}|${subtitle}|${badge}|${resolvedAccent}|${resolvedBg}|${resolvedFg}|${muted}|${width}|${height}|${border ? 1 : 0}`;
+  const cacheKey = `${title}|${subtitle}|${badge}|${resolvedAccent}|${resolvedBg}|${resolvedFg}|${muted}|${width}|${height}|${border ? 1 : 0}|s${scale}`;
 
   if (plaqueTextureCache.has(cacheKey)) {
     const cachedTex = plaqueTextureCache.get(cacheKey);
@@ -385,9 +388,12 @@ export function createPlaqueTexture({
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
   const ctx = canvas.getContext('2d');
+
+  ctx.save();
+  ctx.scale(scale, scale);
 
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = resolvedBg;
@@ -425,10 +431,15 @@ export function createPlaqueTexture({
     ctx.fillText(String(subtitle).slice(0, 44), 22, height - 30);
   }
 
+  ctx.restore();
+
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  tex.userData = { title, subtitle, badge, width, height, sharedPlaque: true };
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = true;
+  tex.anisotropy = 8;
+  tex.userData = { title, subtitle, badge, width, height, renderScale: scale, sharedPlaque: true };
   tex.needsUpdate = true;
 
   if (plaqueTextureCache.size >= MAX_PLAQUE_CACHE_SIZE) {
