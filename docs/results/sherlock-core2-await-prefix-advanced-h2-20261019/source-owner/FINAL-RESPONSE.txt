@@ -1,0 +1,41 @@
+```diff
+--- a/models/sherlock/qa/core2_await_boundary_wire.py
++++ b/models/sherlock/qa/core2_await_boundary_wire.py
+@@ -214,4 +214,6 @@
+     if tag != 'Waiting':
+         raise ValueError('source prefix outside frozen await observation declaration')
+     _row(payload, 'advanced action site captures logical committed_boundary residual published_segment attempted')
++    if type(payload['advanced']) is not bool:
++        raise ValueError('expected Core Bool payload')
+     return {'WaitingPrefix': {'advanced': payload['advanced'], 'action': payload['action'], 'site': payload['site'],
+```
+```diff
+--- /dev/null
++++ b/models/sherlock/qa/test_core2_await_prefix_advanced_h2.py
+@@ -0,0 +1,22 @@
++import unittest
++
++import core2_await_boundary_wire as wire
++
++
++def _waiting(advanced):
++    return {'Waiting': {'advanced': advanced, 'action': 'act', 'site': 7,
++            'captures': [], 'logical': {'profile': 'p', 'cap': None, 'committed': '0'},
++            'committed_boundary': {'state': {}, 'balances': [], 'liabilities': []},
++            'residual': [], 'published_segment': None, 'attempted': '0'}}
++
++
++class Core2AwaitPrefixAdvancedH2Tests(unittest.TestCase):
++    def test_waiting_prefix_preserves_exact_bool(self):
++        self.assertIs(wire.core2_await_prefix(_waiting(True))['WaitingPrefix']['advanced'], True)
++        self.assertIs(wire.core2_await_prefix(_waiting(False))['WaitingPrefix']['advanced'], False)
++
++    def test_waiting_prefix_rejects_non_bool_advanced(self):
++        for bad in (1, 0, 'true', None):
++            with self.assertRaises(ValueError):
++                wire.core2_await_prefix(_waiting(bad))
++
++
++if __name__ == '__main__':
++    unittest.main()
+```
