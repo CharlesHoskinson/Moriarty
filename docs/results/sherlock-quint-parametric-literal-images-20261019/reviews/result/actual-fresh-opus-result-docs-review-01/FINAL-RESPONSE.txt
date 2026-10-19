@@ -1,0 +1,188 @@
+# B22 actual result/readback and bundled ordinary docs: review
+
+## Reviewer identity and actions
+
+- **Model:** `claude-opus-5-5`. I cannot observe the HIGH effort setting. Root should record the identity the harness reports, not this statement.
+- **Independence:** I did not author B22, its result packet or the docs.
+- **Actions:** None. I ran no tools, Quint, Node, Git or provider calls. This review only reads bodies 001–032.
+- **Hashes:** I did not recompute any SHA-256. Hash agreement below is cross-body consistency only.
+- **Byte counts I did recount by hand:**
+  - The test stdout is exactly 543 B: leading blank line, 30 B header, 491 B for the eight `ok` lines, blank line, 20 B summary line.
+  - The navigation append is exactly 684 B, which equals 12,759 − 12,075.
+
+## Bodies absent or truncated
+
+1. **`ACTUAL-CAPTURE-API-CLOSURE.txt` (body 008) is truncated.** It is a 6,800-byte prefix of the 13,595-byte `run_tail_four.py`. It ends mid-`dep_inputs` at `for item in sorted(read):`, so 6,795 bytes are unseen.
+   - `runpy.run_path(..., run_name='capture_only')` executes the whole module.
+   - From the excerpt I therefore cannot exclude two things in the unseen tail: a later rebinding of `capture`, `static_check` or `save`, or unguarded module-level effects.
+2. **`RETAINED-DISCLOSURES-AND-COVERAGE-GAPS.md` is absent.** README body 001 cites it as holding the "full wording", but no body is supplied.
+3. **The archive membership list is absent.** The listed MEMBERSHIP.json describes this packet, not the portable archive.
+
+I accept the following by reference, as framed: `VALIDATION-PROPOSAL.json`, `ROOT-FLAT-PINS.proposed.json`, the eight 740,058-byte receipts, the Images and Inputs `.qnt` bodies, the 13-row docs COPY-MAP and the eight Graphify files.
+
+Items 1 and 2 add conditions to the publication below. They do not block the result decision.
+
+---
+
+## Decision 1: B22 actual result/readback and three-file publication — **APPROVE (scoped)**
+
+### Observed results, as supported by the bodies
+
+| Op | Exit | Wall | stdout | stderr |
+|---|---|---|---|---|
+| 01 typecheck Images | 0 | 3.972360 s | 0 B | 0 B |
+| 02 typecheck Inputs | 0 | 5.409273 s | 0 B | 0 B |
+| 03 typecheck Test | 0 | 4.854896 s | 0 B | 0 B |
+| 04 test, 8 names | 0 | 4.012205 s | 543 B `ae3d5dc3…` | 0 B |
+
+The inline stdout (body 026) has exactly these lines and nothing else:
+- the module header `literalParametricImagesTest`
+- the eight frozen names, in frozen order, each `passed 1 test(s)`
+- `8 passing (186ms)`
+
+There are no failed, ignored, pending, QNT, DEBUG or `error:` lines. All runs are far under the 60 s wall limit and the 4 MiB stream cap.
+
+### What I checked
+
+**Root code (body 007): the source review's conditions are met.**
+- It pins the helper hash and the source-review FINAL-RESPONSE hash, and asserts `providerIsError` is false.
+- Per phase, the sequence is:
+  1. pre-check and save, then assert
+  2. capture, which saves COMMAND and both streams
+  3. save RESULT
+  4. post-check and save
+  5. only then assert exit, failure, full-stream and parser conditions
+
+  So raw records precede assertions.
+- `mkdir(exist_ok=False)` plus `assert` gives fail-stop with no silent same-directory retry.
+- Argv is absolute Node with `--max-old-space-size=512`. Env is `PATH`/`LANG` only and stdin is DEVNULL (hard-coded in `capture`).
+
+**Capture API (visible portion).**
+- `capture` returns exactly the key set seen in all four RESULT.json files: `id`, `actual_exit`, `elapsed_seconds`, `controller_failure`, and `streams[path, bytes, sha256, bytes_seen, bytes_retained, full_stream_retained]`.
+- RESULT byte sizes vary exactly as id/path/float/digit lengths predict: 1027 → 1028 is one extra float digit; +12 is `ImagesTest` × 3; 1006 is −27 for the shorter id plus +6 for `543` × 3.
+- COMMAND sizes behave the same way (886/886/894).
+- The eight pre/post receipts are byte-identical (`3dc223b6…`). That is what `static_check`'s timestamp-free, phase-free output predicts when everything matches.
+
+  This corroborates the excerpt but does not replace the unseen tail (see Q2).
+
+**Parser.**
+- It uses the B21 retained passive-parser logic (body 029), adapted from 5 to 8.
+- It adds stricter refusals (`QNT|DEBUG|error:|truncat`), a full-line whitelist (`other == [header]`) and exact-empty output for all three frontends.
+- None of the eight names collides with a refusal token.
+- This is stricter than B21, not looser, so source-review condition 5 is met in substance. The provenance disclosure is accurate and should stay.
+
+**Source-review condition 3 (flag-set provenance).** This is moot. It was a fail-stop guard against unknown-option failures, and op 04 exited 0 with the expected output.
+
+**Cross-body pins.** These all agree across README, outcome, readback, copy-map and the operation records:
+- test `.qnt` `6311c103…`
+- expectations `18398f45…`
+- Root code `49baceae…`
+- closure `c96c9a96…`
+- raw outcome `797c3541…`
+- all four COMMAND and RESULT pins
+- the empty-stream hash and the 543-byte stdout hash
+
+### Qualifications to keep in the record
+
+- **Q1: the raw outcome booleans are literals, not computed values.**
+  - In body 007, `sourceAndExpectationsUnchanged`, `sourceDirectoryExactThreeMembers` and `pinChecksPerPreAndPost` are hard-coded.
+  - The last two are backed by preceding asserts: `all_match` includes `exactSourceDirectoryMatch`, and 4675 + 3 is asserted.
+  - The "Expectations" half of the first had no runtime check at all during the run.
+  - SOURCE-READBACK's narrowing is therefore correct, and if anything slightly understated. The supported claim is only: frozen review pin = post-readback pin. Nothing in between was checked. Do not rewrite the raw record.
+- **Q2: the closure is an excerpt.** Archive metadata should label body 008 as "byte prefix 0–6,800 of the pinned 13,595-byte helper, through the used definitions", not as a complete closure.
+  - The claim that the executed `capture`, `static_check` and `save` are the shown ones rests on the full helper's hash pin and its prior R435 review, which I have not seen.
+  - Retain the full helper bytes in the archive.
+- **Q3: the 4,678 checks are before/after snapshots.** They do not monitor extra files appearing in tool trees, apart from the exact three-member source directory. The README already says "not continuous immutability".
+- **Q4: the published expectations JSON is a historical record.** It still carries `status: SOURCE_SPECIFIED_ALL_UNRUN_NO_ACTUAL_OUTPUT`. Present it only as the frozen pre-execution record and leave it unedited. The README does this correctly.
+
+### Publication: three files plus archive
+
+**Approved.** Copy-map body 011:
+- The three new files under `models/sherlock/quint/parametric-literal-images/` are byte-identical to the executed pins (`2c9e97ba…`, `6311c103…`, `f6339032…`).
+- Basenames are unchanged, and the `./` relative imports resolve within the same directory.
+- Only the prefix changes, and the original map is retained.
+
+These copy writes were outside the earlier four-operation eligibility. I assess them here as a separate, limited publication. Conditions:
+
+- **P1: copying.**
+  - Each destination must be absent before writing (`preimage: null`).
+  - Root must read back each afterimage against its pin.
+  - Nothing else may be written into that directory.
+  - No B20/B21, ledger or acceptance edits.
+- **P2: the disclosures file.** Publish `RETAINED-DISCLOSURES-AND-COVERAGE-GAPS.md` only if Root verifies it is a verbatim restatement of body 006's D1–D6 and Gaps 1–6 (or of README body 001). Otherwise review it separately.
+  - If it is omitted, change the README pointer to cite only the complete prior opinion.
+  - The README alone already carries D1–D6 and all six gaps, and I checked each against body 006.
+- **P3: archive scope.** This approval covers only archive members whose bodies or pins appear in this packet.
+- **Editorial (optional).** The README's missing spaces matter in one place: "UInt1282^127+260" reads as 1282^127. Use "UInt128 2^127+260". The other fused numbers ("matched4678" and similar) are cosmetic.
+
+**README accuracy.** Every claim I could check matches the bodies:
+- times to six decimals, 543 B, 8 names
+- the 4,678 checks plus exact source membership, and the JSON being outside the phase checks
+- the 373.439621 s prior review
+- A102 charges 1 and A80 charges 0, including 1→0→0
+- 205/277/1042
+- Data1 at fuel 0
+- expression 1→Constant 2 and expression 2→Constant 1, entry 0→Constant 2
+- the complete-layout context wording
+- the UNISSUED cross-layer comparison
+- the parser provenance
+
+---
+
+## Decision 2: exact ordinary docs supplement and currentness — **APPROVE (exact bytes)**
+
+This is an ordinary documentation review against the supplied SOURCE-PINS context. It is not a parent theorem, source or security audit, and not a vote on eligibility or acceptance.
+
+### What I checked
+
+- **Pins, counts and links.**
+  - Parent: 37,710 B `b0443be3…`. S1/S2: 49,991 B `2061d947…`. Anchor: 2,618 B. All match SOURCE-PINS.
+  - The readback's 17 context pins equal the 17 `sources` entries.
+  - The 13-row map is 3 pages + navigation + SOURCE-PINS + 8 Graphify = 13.
+  - Every relative link resolves to a mapped afterimage: reference→`../../results/…/SOURCE-PINS.json`, the how-to and explanation cross-links, and the three navigation links.
+- **Arithmetic.**
+  - Child lanes: 1 + 2 + P + 2S + 2 = P + 2S + 5.
+  - Parent: 16 + 12 = 28. Decider digest: 3 + 16 = 19.
+  - The `trace_c` preimage counts 21 entries, ending with n_steps 2 and work 1.
+  - Work: 1 + 0 = 1.
+  - The statement and accumulator orders equal the change proof's parsed lists.
+- **Required qualifications.** All are present and consistent across the three pages:
+  - MF01–MF06 source-only approval with typed API abstentions
+  - S1/S2 unreviewed and uncompiled, with the manifest/genesis/provenance leaf pending
+  - CLI 17/29 versus parent 28, and the missing `s_g2` wiring
+  - the historical anchor versus a missing integrated anchor and captured Template
+  - 0.8.3/0.8.2 VK/transcript compatibility and same SRS `[τ]₂`
+  - Init and `genesis_root` limits
+  - unmeasured degrees, costs and outputs
+  - the `msm.rs` limitation
+  - no stagenet or benchmark claims
+- **Diataxis structure.** Reference, how-to and explanation are present, and the tutorial is explicitly deferred. No runnable command is invented: the how-to says "There is no ready command to copy", and the shown signatures are API references.
+
+### Non-blocking items
+
+These are all minor. If Root edits any page, the changed bytes need their own confined readback. This approval covers the exact current bytes.
+
+1. **Trace-input wording.** The reference ("All trace inputs are public statement fields or envelope/step constants") and the explanation ("every trace input is already a statement field or constant") miss one case. `h_mid` is neither: it is derived as `h_pre + 1`, as the reference itself says just above. Suggested wording: "…or values derived from them (`h_mid = h_pre + 1`)". The conclusion that the trace provides no independent height binding is unaffected.
+2. **Undefined "P14".** How-to step 6 cites "P14's timeout and unsatisfied saved-bundle verify prerequisite". No P14 record is in SOURCE-PINS or linked, so I cannot assess its currentness. Link its record or drop the clause.
+3. **Out-of-scope governance sentence.** The reference's closing sentence, "No public API requires a Moriarty maintainer's permission…", is not grounded in any pinned source. It sits awkwardly with "add no security policy". Consider removing it.
+4. **Encoder provenance spans two trees.** `accumulator.rs` comes from `api-readset/circuits-Fenrir-patched-7.2.4`. The `msm.rs`, `weierstrass_chip.rs` and `field_chip.rs` excerpts come from `projectfenrir-sherlock-clean-b24-20261019/…/midnight-circuits`. The prose says "pinned" and "exact SDK" chunks without naming which tree, or that the two are the same crate the parent resolves. A one-clause qualification would close this.
+5. **`website_before` not re-read.** The DESIGN-011 atlas pin `b7253cec…` sits outside the 17 re-read sources, so "no website change" has no post-readback. Add it to the readback if that claim is to be published.
+
+The Graphify claim is accepted as eight byte-exact prior-layer copies, not a rebuild.
+
+---
+
+## What neither decision establishes
+
+These remain outside both approvals:
+- emitter equivalence or general admission (D1–D6 stay mandatory)
+- full uiValid with constructors/DAG, per-lane ranges, F4, StepInv, A84, error/dispatch, projectA
+- OBL.G4 byte serialization
+- real context derivation or authentication
+- the complete-layout/A80 cross-layer comparison (UNISSUED)
+- correspondence to the actual Rust code
+- cryptographic, native or recursive proof
+- the parent, terminal or anchor runtime behavior
+- ledger/stagenet behavior, and EARS/SCON closure
+
+The eight passing tests are finite, same-author, source-exposed samples, not a blind oracle. All six coverage gaps still stand. Source approval (prior), observed model checks (decision 1), ordinary docs (decision 2) and production acceptance (not addressed) remain distinct. Root alone publishes and adopts.

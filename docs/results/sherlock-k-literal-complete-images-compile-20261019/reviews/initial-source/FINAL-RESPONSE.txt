@@ -1,0 +1,119 @@
+```json
+{
+  "source_disposition": "CHANGES_REQUIRED",
+  "classification": {
+    "1_k_model_source_and_data_adapter": "Correct within the declared positive finite UInt domain, with one LOW undeclared domain narrowing (F3) and one INFO note (F4). Geometry checks out: Program 16+70=86, State 45+36=81, statement 2+86+3*81+4=335. The root offsets match literal_schema: counts 0..5, env 6..7, stackLimit 8, remainingFuel 9..24, initialFuel 25..40, outcome 41..44. Program and State table widths match. The ControlRows index map (tag0, exprId1, space2, index3, 36 lanes) matches, so lcReturnRow 4+32=36 is correct. LE borrow agrees with the A102 bytewise emitter, including 256->[255,0,..]. A80 sets controlLength0, outcomeTag1, outcomeValue from ControlRows[0], outcomeError0. It preserves fuel and all five arenas, zeroes every allocated ControlRows row and fires at fuel0. Context, capacities and Program are carried unchanged and bound nonlinearly in lcFinish. Budget N>=2 yields the same two-event trace for N=2 and N>=3. Function rules are non-overlapping and terminate on the positive domain. Partial functions fall outside that domain and fail closed: lcRun or lcFinish stays stuck, and the decoder rejects the unknown constructor. Python render and decode constructors and arities agree with the K grammar. Integer parsing is lossless and bool/float values are rejected.",
+    "2_public_source_to_retainedArc_to_complete_pair_producer_api": "Call shapes match the supplied signatures: compile_draft_with_reference(&str,&str,&str), reference_program()->&Arc<Program>, produce_checked_literal_complete_execution_request(Arc<Program>,&LiteralCapacities,u128,usize,&LiteralSourceIdentity,usize)->4-tuple, and LiteralCompleteLayout::context_limbs()->[u128;2]. The scalar capacities pass the literal_schema minimum shape (X=1, K=1, C=1, T=4, Q=4, QF=5). The JSON produced by write_input matches the Python schema exactly. However, one import path is not established by the supplied registrations (F1), and one is unverifiable from the supplied attribution (F2).",
+    "3_one_compile_operation": "ELIGIBLE, independently of the Rust findings; see compile_operation_disposition."
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "HIGH",
+      "file": "models/sherlock/qa/literal_complete_images_from_source.rs",
+      "actual_function_or_region": "use mori_core::sherlock_compile_artifact::draft_reference::compile_draft_with_reference;",
+      "defect": "The supplied registrations do not establish this path. The only mori-core registration supplied is `pub mod sherlock;` at lib.rs:8. Item 07 resolves CompileFailure, prepare_draft_pair and project_draft_pair through `super::` into compile_artifact. Item 20 places that module at crates/mori-core/src/sherlock/compile_artifact.rs, and Item 08 uses the `mori_core::sherlock::...` path family. The supported path would therefore be `mori_core::sherlock::compile_artifact::draft_reference::...`. That path also depends on `pub mod compile_artifact` in sherlock/mod.rs and `pub mod draft_reference` in compile_artifact.rs, and neither declaration was supplied. As written, the consumer is expected to fail to resolve this import.",
+      "required_correction": "Import through the actual public module path. Supply the exact `pub mod`/`pub use` declarations that make draft_reference publicly reachable from outside mori-core. If a `sherlock_compile_artifact` re-export really exists, supply its exact declaration instead."
+    },
+    {
+      "id": "F2",
+      "severity": "MEDIUM",
+      "file": "models/sherlock/qa/literal_complete_images_export.rs; models/sherlock/qa/literal_complete_images_from_source.rs",
+      "actual_function_or_region": "imports literal_complete_bridge::LiteralCompleteExecutionRequest and literal_complete_bridge::produce_checked_literal_complete_execution_request",
+      "defect": "Items 09 and 11 are not attributed to a file. The relation hash includes both literal_complete_execution.rs and literal_complete_bridge.rs, and the K comment cites `complete_bridge::LiteralCompleteLayout`. If LiteralCompleteExecutionRequest (or the producer fn) is defined in literal_complete_execution and is not re-exported with `pub use` from literal_complete_bridge, both files fail to import it. The literal_complete_bridge.rs body is listed as not inline.",
+      "required_correction": "Supply the defining-file attribution and any `pub use` for these items, or import each item from its defining registered module."
+    },
+    {
+      "id": "F3",
+      "severity": "LOW",
+      "file": "models/sherlock/k/literal-complete-images-20261019/literal-complete-images.k",
+      "actual_function_or_region": "rule lcInitRoot(S, SL): `lcGet(S, 8) ==Int SL`",
+      "defect": "The rule equates the Init root stackLimit lane with capacities.stack_limit. The root lane carries the runtime Machine::new stack_limit. Item 08 admits `stack_limit_u128 <= capacities.stack_limit`, and the schema lane is count(stackLimit, capacity) with maximum = capacity. A producer-valid Init with runtime limit < capacity therefore leaves lcRun stuck. This undeclared narrowing is not mentioned in the README's input premise. It does not affect the selected scalar profile, where both values are 0.",
+      "required_correction": "Either use `lcGet(S, 8) <=Int SL`, or keep equality and declare it explicitly as a domain restriction in the README. Decide before the compile so the compiled source hash is not immediately superseded."
+    },
+    {
+      "id": "F4",
+      "severity": "INFO",
+      "file": "models/sherlock/k/literal-complete-images-20261019/literal-complete-images.k",
+      "actual_function_or_region": "lcAdvance (A102 rule) / lcA102",
+      "defect": "The A102 counterpart reads Expressions row 0 (entry), not the row named by ControlRows[0].exprId. This is sound only because lcGoodInput forces all-zero Init tables (exprId=0) and A102 is reachable only from Init.",
+      "required_correction": "None within the declared domain. Optionally add a comment stating this dependency on lcTablesZero/Init-only reachability."
+    },
+    {
+      "id": "F5",
+      "severity": "LOW",
+      "file": "models/sherlock/qa/literal_complete_images.py",
+      "actual_function_or_region": "parse(): `<k>`/`</k>` stripping",
+      "defect": "Only an exact bare `<k>...</k>` wrapper is accepted. A kprint of a full final configuration likely carries an outer `<generatedTop>` wrapper, possibly a `<generatedCounter>` cell, and possibly `~> .K`. Any of these produce a fail-closed FormatError, not a decode. This is safe, but the README's 'optionally within the single <k>' framing is unverified against real output.",
+      "required_correction": "After real kprint framing is observed, add an explicit, separately reviewed framing rule (or a reviewed k-cell extraction step). Do not loosen the tokenizer, and keep the decoder fail-closed."
+    },
+    {
+      "id": "F6",
+      "severity": "LOW",
+      "file": "models/sherlock/qa/literal_complete_images_from_source.rs",
+      "actual_function_or_region": "main(): map_err(|_| ...) on compile_draft_with_reference and on the producer",
+      "defect": "The CompileFailure and the producer error (which already carries `sherlock-witness`/`sherlock-representation` text) are discarded. A refusal is then non-diagnosable, for example a Capacity refusal when the actual source does not fit the fixed profile.",
+      "required_correction": "Propagate or format the underlying error (Debug/Display where implemented) without changing the refuse-on-error behavior."
+    },
+    {
+      "id": "F7",
+      "severity": "LOW",
+      "file": "models/sherlock/k/literal-complete-images-20261019/README.md",
+      "actual_function_or_region": "Real consumer and adapter: K_MAIN positional argument",
+      "defect": "The README does not say which K bytes K_MAIN must be. LiteralSourceIdentity.k_source_sha256 is documented as the 'pinned K semantics in which ruleStartLine 102 resolves', which is the legacy main.k, not this new counterpart. Supplying the new .k would yield an internally consistent but differently bound context.",
+      "required_correction": "State that K_MAIN is the pinned legacy main.k bytes per the LiteralSourceIdentity contract, and that the resulting context does not identify or attest the new counterpart K source."
+    }
+  ],
+  "normal_api_disposition": "CHANGES_REQUIRED",
+  "normal_api_limitations": [
+    "F1 import path is unsupported by the supplied registrations, so the consumer is not coherent as written.",
+    "F2 module attribution of LiteralCompleteExecutionRequest and the producer fn is unverified.",
+    "The backend crate link is SDK-PENDING. It is not declared SDK-free, and neither the backend nor its transitive consumers were reviewed or compiled here.",
+    "No Cargo target or manifest was supplied for the two QA Rust files. The sha2, mori_backend and mori_core dependencies and the edition are unestablished.",
+    "decode_digest's accepted digest-string format is not supplied. sha() emits 64-char lowercase hex, and acceptance is unverified.",
+    "It is unknown whether the actual SOURCE/CONFIG/TARGET Program fits the fixed scalar capacities, including N=0, F=0 and the builtin Types/Constructors/CFT row counts.",
+    "Item 06 excerpts omit derive lines for LiteralCapacities and LiteralSourceIdentity, though Clone is required and used. This looks like an excerpt elision; it was not verified.",
+    "The context is the actual complete-layout context_limbs() hash of caller-asserted digests. It is not authenticated, and it does not bind the new counterpart K source."
+  ],
+  "compile_operation_disposition": "ELIGIBLE",
+  "compile_prerequisites_and_limits": {
+    "eligibility_basis": "The operation consumes only the new .k source plus the pinned builtin/prelude and K jars, with no context, oracle, Rust/backend, SDK, cached definition, kast, kore-exec or kprint. The argv uses --backend haskell, --no-haskell-binary, --main-module MORIARTY-LITERAL-COMPLETE-IMAGES, --syntax-module MORIARTY-LITERAL-COMPLETE-IMAGES-SYNTAX and -I builtin. This matches the declared modules, and `requires \"domains.md\"` resolves through the pinned include. The F03.launch callable closure (Item 19) matches the entry signature: stdout and stderr at cwd/stdout|stderr are opened exclusively, with new session, preexec CORE0/FSIZE/umask077, 30s wait, group kill and token sweep. No source-level compile blocker was found. F1/F2/F6 are Rust-only and outside the compile input, and F3/F7 are not syntax issues.",
+    "prerequisites": [
+      "The pre-check must bind literal-complete-images.k to exactly the reviewed bytes (Item 02, 12842 bytes, sha256 12e89658...b2fa6) and README.md to Item 01 (e27ef6db...2c52). Source-directory membership must be exactly these two files, and the same checks must run after the child.",
+      "Decide F3 (relax to <=Int or declare equality in README) before running. A .k change after the compile supersedes this compile's evidence.",
+      "Phase cwd and output-definition directory absent, with private 0700 cwd/home/tmp created by root. The output parent must exist.",
+      "The 4 tool entries, the 156-JAR exact membership and the 281 conservative closure pins rechecked immediately before and after the run.",
+      "Unchanged F03.launch only: no oldmain/ledger/main()/retry, and no cap raise on failure."
+    ],
+    "limits": "Per-child wall 30s plus sweep 3s, RLIMIT_FSIZE 512MiB, CORE 0, umask 077, and JVM -Xmx512m/-Xss32m/ActiveProcessorCount=2. There is no aggregate CPU/RSS/disk guarantee, and non-JVM tools keep their defaults. 30s may be tight for a cold JVM haskell-backend kompile; a timeout is a recorded non-pass, not grounds for retry.",
+    "success_meaning": "A fresh nonempty definition.kore, with every output member inventoried and hashed, is syntax/definition-generation evidence for this exact source hash only. It is not runtime, 335-lane comparison, nonlinear-matching runtime behavior, refinement, native or EARS evidence.",
+    "compile_risk_notes_not_blockers": "The explicit `syntax KItem ::= LCRun | LCResult` subsort declaration and the parenthesis balance of lcProgramWidths/lcStateWidths are syntax facts this compile itself will establish. The parenthesis balance was not mechanically counted in this review."
+  },
+  "retained_gaps": [
+    "Full-image independent expectation is NOT_ISSUED. The protected nine-cell oracle is excluded and opaque. The source-derived declaration is not a producer-blind oracle, and producer/model-source exposure must be disclosed.",
+    "No actual complete context or input freeze exists.",
+    "The K model does not enforce per-lane L4 ranges beyond <2^128, fuel bytes <256 and constant bytes <256. It also does not enforce Program padding/builtin rows or index columns. These are declared external producer premises, and range checking remains with LiteralCompleteLayout::statement/complete_representation.",
+    "The equivalence of the model's UInt-constant predicate (kind=typeId=ctorId=0, 16 bytes <256, zero tail) with emit_literal_ui_valid is unverified, because literal_ui_valid.rs was not supplied.",
+    "The decoder performs no continuity checks (initial==first.before, previous.after==next.before, last.after==final, statement==flattened images). K's lcFinish nonlinear pattern binds these at emission, but the comparison stage must check them per design.md:93-99.",
+    "Haskell-backend runtime behavior of the nonlinear function-rule LHS (lcPrepend, lcFinish) and stuck-on-partial semantics is not established until an actual reduction.",
+    "Real kprint framing is unobserved (F5).",
+    "Source lines 102/80 are origin metadata only, and no original main.k rule firing is evidenced.",
+    "No refinement to main.k or the backend. No Init/context authentication, hash/field/G4 encoding, full uiValid, projectA/general dispatch, Budget0/error/exhaustion paths, native, target or EARS closure."
+  ],
+  "coverage": {
+    "complete_candidate_files_read": "5 of 5: Items 01-05 read in full. Byte counts and SHA-256 values were not recomputed, since no tools were used.",
+    "complete_context_items_read": "15 of 15 supplied context items (06-20) read as supplied excerpts and projections.",
+    "required_omissions": [
+      "mori-core sherlock/mod.rs and compile_artifact.rs module registrations (blocks resolution of F1)",
+      "literal_complete_bridge.rs / literal_complete_execution.rs file attribution and pub use declarations (F2)",
+      "decode_digest body",
+      "literal_ui_valid.rs (UInt validity equivalence)",
+      "Cargo manifest/target for the QA Rust files",
+      "Full F03 module source beyond the callable closure, plus the import-time AST projection (factored, not read)",
+      "TOOL-ENTRY-PINS.json and EXISTING-K-TOOL-CLOSURE-PINS.json bodies (factored, not read)",
+      "Real kprint output framing"
+    ],
+    "transport_clipped": "No clipping detected in candidate Items 01-05. Item 06 appears to elide derive attributes on LiteralCapacities and LiteralSourceIdentity; this is noted as projection elision, not a candidate defect."
+  }
+}
+```

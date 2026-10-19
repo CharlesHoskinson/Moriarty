@@ -156,3 +156,12 @@ The canonical TypeId migration passed three compiles and ten new tests. Read the
 - Reference: [Offline K capture adapters](reference/offline-k-capture-adapters.md).
 
 These pages describe supplied-file assembly and comparison. The archived eleven guards and four installed-decoder regressions are separate from producer execution and native/target evidence.
+
+
+## Recursive child, parent and terminal handoff — source cut October 19
+
+- Reference: [exact child/parent/terminal interfaces and 16+12 field order](reference/recursive-child-parent-terminal.md).
+- How-to: [inspect the handoff before a local rehearsal](how-to/inspect-recursive-proof-handoff.md).
+- Explanation: [why the parent, terminal and anchor remain separate](explanation/recursive-proof-boundaries.md).
+
+These pages accompany actual source/results publication. They add no accepted recursive proof, deployed target, new EARS closure or separate execution route. A new tutorial is deferred until a connected actual path exists; no fictitious runnable command is introduced.
