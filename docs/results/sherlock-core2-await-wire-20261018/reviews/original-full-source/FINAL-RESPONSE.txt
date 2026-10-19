@@ -1,0 +1,133 @@
+# B11 fresh nonauthor review: Core2/Quint await-boundary consumer, six tests, one-operation eligibility
+
+## 1. Coverage and tool use
+
+- **Tools:** none were used. No filesystem, shell, Python, Quint, provider, Git or network access.
+- **Bodies read:** I read Bodies 1–13 completely, from each BEGIN to each END marker:
+  - Body 1: the 11770 B consumer, every helper.
+  - Body 2: the 8231 B tests, all six methods.
+  - Body 3: the 16774 B unchanged decoder, including `decode_itf`, `_Renderer`, `_adapt`, `observation_bundle` and `main`. Only `decode_itf` is reached from B11.
+  - Body 4: the compact carriers, all four cases.
+  - Body 5: the Core2 API.
+  - Body 6: the B06 types, lines 1–74.
+  - Bodies 7–13: contracts and pins.
+- **Clipping:** Body 5 stops at `financial_projection.rs:126`, so `project_segment` and the function's closing brace are not shown. This does not block the review. `SegmentObservation` and `ExecutionObservation` are declared with plain `derive(Serialize)`, which fixes their wire shape. Not ABSTAIN.
+- **Things I did not verify:**
+  - Any SHA256 or byte count.
+  - That Body 4 (18235 B compact) is a lossless re-serialization of the 54298 B `core2-await-literal-inputs.json` the tests actually load. Only the label says so.
+  - The freeze timestamps (22:49:35 then 22:53:09). These are metadata, not proof that the carriers were frozen before the code.
+
+## 2. Source/API audit
+
+**Core serde forms, all matched:**
+- `FinancialObservation` and `AwaitPrefixObservation` are default externally tagged: `{"Waiting":{…}}`, `"Complete"`, `"RejectedNoReturnedCheckpoint"`.
+- `Value` is adjacently tagged `{type,value}`. `UInt` is a decimal string. `Type` is a unit string.
+- `Statement` and `Effect` are internally tagged on `kind`.
+- `Option` serializes as `null`. `Error.offset`/`step` are JSON numbers (u32/u16) and are correctly converted with `int`.
+
+**Field sets** in `STATEMENT_FIELDS`, `EFFECT_FIELDS` and every `_row` call match `ir.rs` and `stage/mod.rs`. I checked each one.
+
+**B06 mapping:** every StageResult and AwaitPrefix record field and every variant name is checked against Body 6.
+
+**camelCase rename coverage is complete:**
+- `program_hash` → `programHash`
+- `plan_hash` → `planHash`
+- `frame_pre` → `framePre`
+- `frame_post` → `framePost`
+- `committed_boundary` → `committedBoundary`
+- `published_segment` → `publishedSegment`
+
+All other nested keys are single words.
+
+**Other checks:**
+- **Sorting:** Python code-point sort of state names equals Rust `BTreeMap<String>` UTF-8 byte order.
+- **Pass-through:** ExprIds, `site`, `index` and `scale` pass through unexpanded.
+- **No inference:** the code never derives `awaitPrefix`, filters residuals, synthesizes segments or pairs outcome with prefix.
+- **Quint side:** `#map` decodes to a dict and is sorted into rows only inside the Snapshot branch, so user state names cannot collide with `tag`/`value`. Every nullary tag reachable inside result/awaitPrefix is in `Q_NULLARY`.
+
+### Mandatory defects
+
+**M1 — `core2_await_boundary_wire.py`, `supplied_itf_record`: negative indices silently select the wrong record.**
+
+`document['states'][state_ordinal]` and `[...]['records'][record_index]` accept negative Python indices. argparse `type=int` passes them through.
+
+- `--state-ordinal -1` selects the last (terminal) state.
+- The envelope records `rawStateOrdinal: -1`.
+
+This is exactly the implicit terminal selection the predicate forbids ("raw ordinal/record index must remain exact"). It is a concrete counterexample to that predicate.
+
+Correction, placed first in the function:
+```python
+if type(state_ordinal) is not int or type(record_index) is not int or state_ordinal < 0 or record_index < 0:
+    raise ValueError('explicit raw ITF state ordinal and record index must be non-negative integers')
+```
+Also add an `assertRaises(ValueError)` case for `-1` in the tests.
+
+**M2 — `test_core2_await_boundary_wire.py`, `test_handwritten_cross_format_boundary_and_explicit_itf_ordinal`: the test's comments overstate what it checks.**
+
+- (a) The first comment says "No expected value calls either codec". But the assertion's expected side is `wire.core2_observation(core)`, which is a codec call. The test is cross-codec equality over literal inputs.
+- (b) The comment "No stutter removal or terminal/result search changes the selected ordinal" is not discriminated. The fixture has two states and selects the last one, at record index 0. A "last state", "terminal" or "first non-empty records" heuristic would also pass.
+
+Correction:
+- Reword (a).
+- Add a third state after the selected one with a different record list, and select a record index greater than 0. Alternatively, narrow the claim to "selects the given index; does not mutate state 0".
+
+The run can be recorded only with the narrowed claim until this is fixed.
+
+### Hardening (non-blocking; out of scope only because of the stated positive canonical-serializer premise)
+
+- **H1 — `_uint` is far looser than `ir.rs:19-31`.** `int()` accepts floats (truncating `2.5` to 2), `True`, `"1_0"`, `" 7"`, `"+7"`, `"007"` and Unicode digits. It also accepts values ≥ 2¹²⁸. A future real capture that lost precision upstream (a JSON number) would be accepted silently.
+  - Fix: require `type(v) is str` and ASCII `0|[1-9][0-9]*`, and enforce ≤ 2¹²⁸−1. Use `type(v) is int` for `Error` offset/step.
+- **H2 — no type checks on several scalar fields.** `_scalar` Bool, `advanced`, and the ExprId/`site`/`index`/`scale` fields are not type-checked. Python `False == 0`, so bool-as-int would also survive dict equality.
+  - Fix: add `type(...) is bool` and `type(...) is int` checks.
+- **H3 — `quint_typed_wire` drops nullary payloads without checking them.** The payload of `Q_NULLARY` tags is discarded unchecked. Assert that it decodes to `()` or `{}`.
+- **H4 — inconsistent shape diagnostics.** Unknown Core `kind`/`ty` values raise `KeyError`, not `ValueError`. The Quint side does no shape validation at all. Inequality would still surface a mismatch, but it is not diagnosed.
+- **H5 — comparisons should use canonical bytes.** Cross-format comparisons, both in test 6 and in Root's later comparison, should compare `json.dumps(sort_keys=True)` bytes, not Python `==`. This avoids `True==1`, `0==False` and `1==1.0` conflation, which matters because the declarations say "never bool-as-int".
+- **H6 — `selectedRecord` is not a normalized wire.** In that provenance field:
+  - Scenario `state`/`inputs` maps stay as dicts.
+  - A Scenario map whose keys are exactly `{tag, value}` would be misread as a variant.
+  - Non-`Q_NULLARY` unit tags (`NotAdvanced`) render as `{"NotAdvanced": []}`.
+
+  This field is not compared. It should be described as provenance only.
+
+## 3. Test discrimination and evidence limits
+
+| Test | Discriminates | Does not discriminate |
+|---|---|---|
+| `false_none…` | None→NoSegment vs present zero-effect SomeSegment (prefix side); `advanced` as bool via `assertIs` | That the result-side `segment` of CASES[1] is SomeSegment and equals the prefix's `publishedSegment` |
+| `zero_rows…` | Present-zero cap, zero liability row retained, asset fields, capture order, sorted state, Bool tag | Residual "filter positives" recomputation, which gives the same `['owed']`. Needs a carrier whose residual differs from filter(boundary). Balances are never asserted in any test. |
+| `ordered_steps…` | Ten statement and five effect tags in order, Await binder `ty`, Requires scalar payload, self-transfer, NoScalar | Payload completeness of Transfer/Fee/Liability/Discharge statements and effect before/after values. `_row` guards the input but not output drops. |
+| `complete_and_rejected…` | Exact whole-dict equality for Rejected, which is the strongest test. Nullary prefix strings. | Complete `attempted`, `residual` and segment frames |
+| `uint128…` | Float or 1024-clamp at one continuation site | Prefix-side maximum (mutated but not asserted); JSON-number input; values above u128 |
+| `handwritten…` | Whole-object Waiting/continuation/prefix equality across both entries. Because the Quint side is near-identity, Core-side drops or renames of covered fields are detectable. | Some*/UInt scalar/segment/liabilities/balances/Complete/Rejected cross-format; `#bigint` and `{"#tup":[]}` encodings (the fixture uses plain ints and `{}`); Record without `invocation`; ordinal (see M2) |
+
+**Independence and evidence limits:**
+- Everything is same-author. The Core input envelope `{outcome, awaitPrefix}` is defined by the author; no supplied producer emits it.
+- Core itself derives the prefix from the result (`financial_projection.rs:97-126`). Agreement between prefix and result in the carriers is therefore not independent evidence about Core.
+- Not exercised at all:
+  - `main`/CLI (file read, SHA, envelope, `sort_keys`, `ensure_ascii`)
+  - real Core2 captures
+  - real Quint ITF
+  - the B06 typecheck and model operations
+  - actual comparison
+  - B06's `MAX_FINITE_UINT=1024` premise
+- No financial, program-correctness or independent-trace claim follows from these tests.
+
+## 4. Verdicts
+
+**Source verdict: REJECT (narrow).** The Core→B06 representation mapping itself is correct on every field and variant I checked. The rejection rests on M1, a concrete violation of the exact-raw-ordinal predicate, and on M2, test claims that exceed their assertions. After M1 and M2 are fixed, a delta-only nonauthor re-review should suffice. H1–H6 are recommended before any real-capture use.
+
+**One-operation verdict: ELIGIBLE, under the conditions below.** The operation is the exact Body 10 command: `/usr/bin/python3 -B -m unittest -v test_core2_await_boundary_wire`, run in the stated `qa` cwd, with a 60 s timeout and 4 MiB per stream. It is safe and bounded: pure Python, no runtime, model or network calls, and no writes under `-B`.
+
+Conditions:
+1. **Pins first.** Before running, Root checks the Body 12 pins for the three `.py` files, `core2-await-literal-inputs.json` (`2653fb…`) and the Python tool (`52e0a1…`).
+2. **Clean `qa` directory.** It contains nothing that shadows stdlib modules (`json`, `copy`, `unittest`, `pathlib`, `argparse`, `hashlib`) and no stale `__pycache__`.
+3. **Clean environment.** `PYTHONPATH` and `PYTHONHOME` are unset.
+4. **One invocation.** Run exactly once, with no retries.
+5. **Pass criterion.** Exit 0, exactly six named tests each reported `ok`, `Ran 6 tests`, `OK`, and no skips or expected failures. Anything else is recorded verbatim as a failure.
+6. **Pins after.** Recheck the same pins afterwards and confirm no new files were created.
+7. **Scope of evidence.** A pass establishes only these six representation assertions on these exact bytes. It does not turn REJECT into ACCEPT. If the M1/M2 fixes land, the evidence does not carry over to the new pins. My preferred order is: correct, delta review, then run once on the new pins.
+
+## 5. Scope retained
+
+This review covers only the structural comparison of result and awaitPrefix. `rawInput`, the ordinal, the record index and `selectedRecord` are provenance only. It makes no claim about Invocation or program pairing, same-call provenance, admission, runtime, static work or plan. It is not a finance oracle, a production guard, or a native, B-charge or product closure. No source evaluation or old-prefix rerun was performed, and no canonical status is changed.
