@@ -1,0 +1,22 @@
+## Verdict
+
+**Narrow API coverage is now sufficient for the enumerated surfaces. No additional public source is needed for this supplement.**
+
+This verdict covers only the three previously unviewed contract documents against the exact 33-operation delta. It does not prove complete source-body delivery to the prior Gemini run, semantically approve the whole pipeline, or create a new merge or execution gate.
+
+I am Muse Code powered by muse-wonder-1.0, issuing this as a separate read-only supplement. I am not the prior Gemini reviewer. No tools, commands, tests, private goldens, or subject execution were used.
+
+## Coverage findings
+
+- **Trait forwards and carriers:** `FamilyPlans::plan_build` and `plan_plan` have the declared `(&Selected, &dyn PreImageView, &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>` shape. The owner-runtime recording wrapper forwards both to the inner implementation through `finish`. `LayoutSchemaC::ext_capacities` is consistently added as `Option<owner_ext_admit::ExtCapacitiesC>` in the contract and initialized to `None` at the changed construction sites.
+- **Constructor snapshot projection:** `DataRow::Constructor` keeps raw `TypeId`, `CtorId`, and its field slice separate. The owner snapshot expands them to four distinct values: type ID, constructor ID, field-slice start, and field-slice length. The restored projection tests instead use the C-carrier snapshot forms, `TypeIdC`, `adt::CtorIdC`, `ConstFieldsSnapshot`, and `DataFieldsSnapshot`; these are not conflated with the raw carriers. The consumer wire explicitly converts raw IDs through `TypeIdC(type_id.0)` and `adt::CtorIdC(ctor_id.0)`.
+- **Independent expression and pattern representations:** The independent serializers handle `Match { scrutinee, arms, plan }`, `Construct { type_id, ctor_id, fields, constant }`, `PatternRowC::Wildcard`, and `PatternRowC::Constructor { type_id, ctor_id, children }` as independent variants. Type and constructor identifiers remain separate fields; they are not merged or replaced by a sort tag. These independent formats were not treated as substitutes for the production `OwnerWire` implementations.
+- **`ValueNode` and `InputPath`:** `ValueNode::Constructor` preserves `TypeIdC`, `adt::CtorIdC`, and ordered `Vec<usize>` field roots. The delta enumerates exactly the eleven added `InputPath` variants: `PatternChild`, `Type`, `TypeArg`, `Constructor`, `ConstructorField`, `DeclParamCount`, `DeclCtorCount`, `DeclTemplate`, `PlanNode`, `PlanCase`, and `FieldPath`.
+- **`TypeIdC` dedicated-sort handling:** Production `TypeIdC` wire handling retains the dedicated `UInt`, `Bool`, `List`, and `Tree` representations and a distinct generic `TypeId` representation. `SortTag` remains a separate type and serializer. The three independent test serializers changed their helper from `SortTag` to `TypeIdC`, retain the four dedicated arms, and explicitly panic on a generic ID in their sealed dedicated programs rather than silently flattening it into a dedicated sort.
+- **Restored owner test module:** Its directly constructed APIs align with the supplied declarations, including `PlanNodeC::Select` and `NoMatch`, `HelperControlC::Build` and `Plan`, `HelperResultC::BuildDone`, `PlanMatched`, and `PlanNoMatch`, `FrameRowC::ConstructorFieldsF`, `ControlC::Materialize`, `BuildPhase::Copy`, `PlanPhase::Ready`, and `PlanAfterWalk::Test`. Its assertions preserve nominal identity, field order, and repeated occurrences as distinct arena nodes with equal projected values.
+
+## Retained limitations
+
+The original Gemini opinion and its scope remain unchanged. Tool metadata from that run still does not establish that complete returned bodies were delivered, and this packet’s size is not retrospective delivery proof.
+
+The draft-runtime disposition for `Match.plan: null` versus an omitted fixture field remains open. Only the four owner tests are reported as run; the eleven external targets were compiled only. No native, target, generic B-projection, or EARS claim is approved by this supplement.

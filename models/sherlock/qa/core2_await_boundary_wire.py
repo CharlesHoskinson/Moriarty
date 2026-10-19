@@ -186,6 +186,8 @@ def core2_result(value):
     tag, payload = _external_variant(value)
     if tag == 'Waiting':
         _row(payload, 'advanced segment continuation attempted residual')
+        if type(payload['advanced']) is not bool:
+            raise ValueError('expected Core Bool payload')
         body = {'advanced': payload['advanced'], 'segment': _option(payload['segment'], 'Segment', _segment),
                 'continuation': _continuation(payload['continuation']), 'attempted': _uint(payload['attempted']),
                 'residual': [_liability(item) for item in payload['residual']]}
