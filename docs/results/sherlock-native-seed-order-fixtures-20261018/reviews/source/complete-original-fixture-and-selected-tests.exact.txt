@@ -1,0 +1,374 @@
+# EXACT test_cached_current_build.py:47..51 setUp
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.saved_base = guard.BASE
+        self.saved_lock = guard.LOCK
+
+# EXACT test_cached_current_build.py:53..64 tearDown
+    def tearDown(self):
+        guard.BASE = self.saved_base
+        guard.LOCK = self.saved_lock
+        for base, dirs, _ in os.walk(self.root, topdown=True, followlinks=False):
+            bpath = Path(base)
+            if not bpath.is_symlink():
+                os.chmod(bpath, 0o700)
+            for d in dirs:
+                dp = bpath / d
+                if not dp.is_symlink():
+                    os.chmod(dp, 0o700)
+        self.tmp.cleanup()
+
+# EXACT test_cached_current_build.py:66..73 _write
+    def _write(self, path, data=b'data', mode=0o644):
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        raw = data.encode('utf-8') if isinstance(data, str) else data
+        with open(p, 'wb') as f:
+            f.write(raw)
+        os.chmod(p, mode)
+        return p
+
+# EXACT test_cached_current_build.py:75..203 _make_synthetic_quarantine
+    def _make_synthetic_quarantine(self):
+        q_root = self.root / 'quarantine'
+        q_target = q_root / 'target'
+        q_packet = q_root / 'packet'
+        q_proposal = self.root / 'proposal'
+        q_target.mkdir(parents=True, exist_ok=True)
+        q_packet.mkdir(parents=True, exist_ok=True)
+        q_proposal.mkdir(parents=True, exist_ok=True)
+
+        # Workspace rows (must be classified & excluded from seeding)
+        ws_fp = 'debug/.fingerprint/mori-backend-3a2f695515330e5a/dep-lib-mori_backend'
+        ws_dep = 'debug/deps/libmori_backend-3a2f695515330e5a.rlib'
+        ws_inc = 'debug/incremental/mori_backend-1a2b3c4d5e6f7a8b/s-1234-abcd/dep-graph.bin'
+
+        # Third-party rows including non-debug (.rustc_info.json, generated/bincode/*.rs) and host_outputs
+        tp_rustc_info = '.rustc_info.json'
+        tp_bincode = 'generated/bincode/ZkStdLibArchV1_Decode.rs'
+        tp_unit = 'serde-1111222233334444'
+        tp_bs_bin1 = f'debug/build/{tp_unit}/build_script_build-aaaa1111bbbb2222'
+        tp_bs_bin2 = f'debug/build/{tp_unit}/build-script-build'
+        tp_pm_so1 = 'debug/deps/libserde_derive-cccc3333dddd4444.so'
+        tp_pm_so2 = 'debug/libserde_derive-cccc3333dddd4444.so'
+        tp_invoked = f'debug/build/{tp_unit}/invoked.timestamp'
+        tp_out = f'debug/build/{tp_unit}/output'
+        tp_root_out = f'debug/build/{tp_unit}/root-output'
+        tp_stderr = f'debug/build/{tp_unit}/stderr'
+        tp_rlib = 'debug/deps/libserde-5555666677778888.rlib'
+        tp_depinfo = 'debug/deps/libserde-5555666677778888.d'
+
+        target_home = self.root / 'exec' / 'target'
+        source_home = self.root / 'exec' / 'source-home'
+        worktree = self.root / 'worktree'
+        for d in (target_home, source_home, worktree):
+            d.mkdir(parents=True, exist_ok=True)
+        dep_src = self._write(source_home / 'registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.0/src/lib.rs', b'// serde\n', 0o444)
+
+        files_spec = {
+            ws_fp: (b'ws-fp', False),
+            ws_dep: (b'ws-rlib', False),
+            ws_inc: (b'ws-inc', False),
+            tp_rustc_info: (b'{"rustc":1}', False),
+            tp_bincode: (b'// bincode decode\n', False),
+            tp_bs_bin1: (b'\x7fELF-bs1', True),
+            tp_bs_bin2: (b'\x7fELF-bs1', True),
+            tp_pm_so1: (b'\x7fELF-pm1', True),
+            tp_pm_so2: (b'\x7fELF-pm1', True),
+            tp_invoked: (b'timestamp', False),
+            tp_out: (b'cargo:rustc-cfg=feature="std"\n', False),
+            tp_root_out: (str(target_home / f'debug/build/{tp_unit}').encode('utf-8'), False),
+            tp_stderr: (b'', False),
+            tp_rlib: (b'rlib-bytes', False),
+            tp_depinfo: (f'{target_home / tp_rlib}: {dep_src}\n'.encode('utf-8'), False),
+        }
+
+        all_outputs_map = {}
+        copy_map_rows = []
+        host_outputs = []
+        for rel, (payload, is_exec) in files_spec.items():
+            p = self._write(q_target / rel, payload, mode=0o400)
+            st = p.lstat()
+            sha = _sha256_bytes(payload)
+            all_outputs_map[rel] = sha
+            copy_map_rows.append({
+                'relative_path': 'target/' + rel,
+                'origin': str(target_home / rel),
+                'destination': str(p),
+                'sha256': sha,
+                'bytes': len(payload),
+                'source_mode_octal': '755' if is_exec else '644',
+                'device_decimal': str(st.st_dev),
+                'inode': st.st_ino,
+            })
+            if is_exec:
+                host_outputs.append({
+                    'identity': ['serde 1.0.0', 'build-script' if rel.startswith('debug/build/') else 'proc-macro', 'build.rs'],
+                    'kind': 'build-script' if rel.startswith('debug/build/') else 'proc-macro',
+                    'name': 'serde',
+                    'path': rel,
+                    'sha256': sha,
+                    'source_root': str(source_home / 'registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.0'),
+                    'target_name': Path(rel).name,
+                })
+
+        copy_map_path = self._write(q_proposal / 'PRESERVATION-EXACT-COPY-MAP.proposed.json', json.dumps({'files': copy_map_rows}), 0o444)
+        disp_path = self._write(q_proposal / 'ROOT-PRESERVATION-DISPOSITION.json', json.dumps({'status': 'PRESERVED'}), 0o444)
+        self._write(
+            q_packet / 'F_RETAINED_QUARANTINED_OUTPUTS_R3.json',
+            json.dumps({
+                'acceptance': 'quarantined',
+                'all_outputs': all_outputs_map,
+                'build_script_outputs': [],
+                'host_fingerprints': [],
+                'host_outputs': host_outputs,
+            }),
+            0o444,
+        )
+        self._write(
+            q_packet / 'F_RETAINED_AUDIT_R3_RESULT.json',
+            json.dumps({'native_outputs_accepted': False, 'phase': 'F'}),
+            0o444,
+        )
+
+        expected_counts = {
+            'total_preserved_files': len(copy_map_rows),
+            'target_total': len(all_outputs_map),
+            'packet_total': 2,
+            'one_shot_total': 1,
+            'owner_literal_workspace_fingerprint': 1,
+            'owner_literal_workspace_deps': 1,
+            'owner_literal_workspace_incremental': 1,
+            'unadopted_other_cache_candidate': 12,
+            'host_outputs_total': 4,
+            'host_build_script_binaries': 2,
+            'host_proc_macro_dylibs': 2,
+            'build_script_run_units': 1,
+        }
+        c = {
+            'paths': {
+                'worktree': str(worktree),
+                'execution_root': str(self.root / 'exec'),
+                'source_home': str(source_home),
+                'target': str(target_home),
+                'packet': str(self.root / 'exec' / 'packet'),
+            },
+            'limits': {'F': {'packet_bytes': 67108864}},
+            'readonly_tools': [],
+        }
+        Path(c['paths']['packet']).mkdir(parents=True, exist_ok=True)
+        return c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map
+
+# EXACT test_cached_current_build.py:205..252 test_target_partition_excludes_mori_workspace_and_preserves_quarantine_modes
+    def test_target_partition_excludes_mori_workspace_and_preserves_quarantine_modes(self):
+        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()
+        saved_non_debug = copy.deepcopy(ccb.NON_DEBUG_CACHE_CANDIDATES)
+        ccb.NON_DEBUG_CACHE_CANDIDATES = {
+            '.rustc_info.json': all_outputs_map['.rustc_info.json'],
+            'generated/bincode/ZkStdLibArchV1_Decode.rs': all_outputs_map['generated/bincode/ZkStdLibArchV1_Decode.rs'],
+        }
+        try:
+            shutil.rmtree(c['paths']['target'])
+            Path(c['paths']['target']).mkdir(parents=True, exist_ok=True)
+
+            snapshot = ccb.verify_and_seed_cached_target(
+                c,
+                guard,
+                quarantine_root=q_root,
+                copy_map_file=copy_map_path,
+                disposition_file=disp_path,
+                expected_counts=expected_counts,
+            )
+            self.assertEqual(snapshot['partition_counts']['owner_literal_workspace_fingerprint'], 1)
+            self.assertEqual(snapshot['partition_counts']['owner_literal_workspace_deps'], 1)
+            self.assertEqual(snapshot['partition_counts']['owner_literal_workspace_incremental'], 1)
+            self.assertEqual(snapshot['partition_counts']['unadopted_other_cache_candidate'], 12)
+
+            dst_target = Path(c['paths']['target'])
+            self.assertFalse((dst_target / 'debug/deps/libmori_backend-3a2f695515330e5a.rlib').exists())
+            self.assertFalse((dst_target / 'debug/.fingerprint/mori-backend-3a2f695515330e5a').exists())
+            self.assertTrue((dst_target / '.rustc_info.json').is_file())
+            self.assertTrue((dst_target / 'generated/bincode/ZkStdLibArchV1_Decode.rs').is_file())
+
+            for hrel in snapshot['host_outputs_seeded']:
+                self.assertEqual(stat.S_IMODE((dst_target / hrel).lstat().st_mode), 0o755)
+                self.assertEqual(stat.S_IMODE((q_root / 'target' / hrel).lstat().st_mode), 0o400)
+            rlib_rel = 'debug/deps/libserde-5555666677778888.rlib'
+            self.assertEqual(stat.S_IMODE((dst_target / rlib_rel).lstat().st_mode), 0o644)
+            self.assertEqual(stat.S_IMODE((q_root / 'target' / rlib_rel).lstat().st_mode), 0o400)
+
+            self._write(dst_target / 'debug/deps/mori_backend-9999888877776666', b'\x7fELF-new-backend', mode=0o755)
+            post = ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)
+            self.assertEqual(post['host_outputs_verified_unchanged'], 4)
+            self.assertEqual(post['build_script_run_units_verified_not_reexecuted'], 1)
+
+            inv_p = dst_target / 'debug/build/serde-1111222233334444/invoked.timestamp'
+            os.utime(inv_p, ns=(ccb.TARGET_MIN_EPOCH_NS + 9999, ccb.TARGET_MIN_EPOCH_NS + 9999))
+            with self.assertRaises(guard.Refusal):
+                ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)
+        finally:
+            ccb.NON_DEBUG_CACHE_CANDIDATES = saved_non_debug
+
+# EXACT test_cached_current_build.py:840..847 _legacy_two_tier_mtime_ns
+    def _legacy_two_tier_mtime_ns(self, rel):
+        # Replica of the removed P8 tier expression, used only to show each fixture discriminates it.
+        late = (
+            rel.startswith('debug/.fingerprint/')
+            or rel.startswith('debug/deps/')
+            or (rel.startswith('debug/') and rel.count('/') == 1)
+        )
+        return ccb.TARGET_FINGERPRINT_EPOCH_NS if late else ccb.TARGET_MIN_EPOCH_NS
+
+# EXACT test_cached_current_build.py:849..926 test_seed_reapplies_preserved_r3_mtimes_in_dependency_order
+    def test_seed_reapplies_preserved_r3_mtimes_in_dependency_order(self):
+        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()
+        q_target = q_root / 'target'
+        unit = 'debug/build/serde-1111222233334444/'
+        rlib_rel = 'debug/deps/libserde-5555666677778888.rlib'
+        bin_rels = (unit + 'build_script_build-aaaa1111bbbb2222', unit + 'build-script-build')
+        workspace_rels = (
+            'debug/.fingerprint/mori-backend-3a2f695515330e5a/dep-lib-mori_backend',
+            'debug/deps/libmori_backend-3a2f695515330e5a.rlib',
+            'debug/incremental/mori_backend-1a2b3c4d5e6f7a8b/s-1234-abcd/dep-graph.bin',
+        )
+        # Finite supplied mtimes: the rlib->script edge reuses actual r3 autocfg-rlib/num-traits-script values;
+        # marker values follow the dirty build-script sequence (output reset to the invocation time).
+        supplied = {
+            '.rustc_info.json': 1_792_317_334_779_394_537,
+            'generated/bincode/ZkStdLibArchV1_Decode.rs': 1_792_317_334_800_000_000,
+            'debug/deps/libserde_derive-cccc3333dddd4444.so': 1_792_317_335_000_000_000,
+            'debug/libserde_derive-cccc3333dddd4444.so': 1_792_317_335_000_000_000,
+            'debug/deps/libserde-5555666677778888.d': 1_792_317_341_637_385_329,
+            rlib_rel: 1_792_317_341_719_393_475,
+            bin_rels[0]: 1_792_317_341_771_393_467,
+            bin_rels[1]: 1_792_317_341_771_393_467,
+            unit + 'invoked.timestamp': 1_792_317_341_790_000_000,
+            unit + 'output': 1_792_317_341_790_000_000,
+            unit + 'stderr': 1_792_317_341_800_000_000,
+            unit + 'root-output': 1_792_317_341_800_000_000,
+        }
+        for rel in workspace_rels:
+            supplied[rel] = 1_792_317_392_403_385_903
+        self.assertEqual(set(supplied), set(all_outputs_map))
+        for rel, t in supplied.items():
+            p = q_target / rel
+            # Read-only fixture: the owner sets explicit times without any write bit; no chmod is applied.
+            self.assertEqual(stat.S_IMODE(p.lstat().st_mode), 0o400)
+            os.utime(p, ns=(t, t), follow_symlinks=False)
+            self.assertEqual(stat.S_IMODE(p.lstat().st_mode), 0o400)
+        self.assertGreater(self._legacy_two_tier_mtime_ns(rlib_rel), self._legacy_two_tier_mtime_ns(bin_rels[0]))
+        saved_non_debug = copy.deepcopy(ccb.NON_DEBUG_CACHE_CANDIDATES)
+        ccb.NON_DEBUG_CACHE_CANDIDATES = {
+            '.rustc_info.json': all_outputs_map['.rustc_info.json'],
+            'generated/bincode/ZkStdLibArchV1_Decode.rs': all_outputs_map['generated/bincode/ZkStdLibArchV1_Decode.rs'],
+        }
+        try:
+            snapshot = ccb.verify_and_seed_cached_target(
+                c,
+                guard,
+                quarantine_root=q_root,
+                copy_map_file=copy_map_path,
+                disposition_file=disp_path,
+                expected_counts=expected_counts,
+            )
+            dst_target = Path(c['paths']['target'])
+            self.assertEqual(set(snapshot['seeded_files']), set(supplied) - set(workspace_rels))
+            for rel, meta in snapshot['seeded_files'].items():
+                self.assertEqual(meta['mtime_ns'], supplied[rel], rel)
+                self.assertEqual((dst_target / rel).lstat().st_mtime_ns, supplied[rel], rel)
+                self.assertEqual((q_target / rel).lstat().st_mtime_ns, supplied[rel], rel)
+                self.assertEqual(stat.S_IMODE((q_target / rel).lstat().st_mode), 0o400, rel)
+            seeded = {rel: (dst_target / rel).lstat().st_mtime_ns for rel in snapshot['seeded_files']}
+            for b in bin_rels:
+                self.assertLess(seeded[rlib_rel], seeded[b])
+                self.assertLess(seeded[b], seeded[unit + 'invoked.timestamp'])
+            self.assertEqual(seeded[unit + 'output'], seeded[unit + 'invoked.timestamp'])
+            self.assertGreaterEqual(min(seeded[unit + 'stderr'], seeded[unit + 'root-output']), seeded[unit + 'invoked.timestamp'])
+            run = snapshot['run_unit_snapshots']['serde-1111222233334444']
+            self.assertEqual(run['invoked.timestamp']['mtime_ns'], supplied[unit + 'invoked.timestamp'])
+
+            self._write(dst_target / 'debug/deps/mori_backend-9999888877776666', b'new-backend-elf', mode=0o755)
+            post = ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)
+            self.assertEqual(post['host_outputs_verified_unchanged'], 4)
+            self.assertEqual(post['build_script_run_units_verified_not_reexecuted'], 1)
+            # A byte-identical script rewrite with a newer mtime (P8 class) is still refused by the unchanged postcheck.
+            t_new = supplied[bin_rels[1]] + 1
+            os.utime(dst_target / bin_rels[1], ns=(t_new, t_new), follow_symlinks=False)
+            with self.assertRaises(guard.Refusal):
+                ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)
+        finally:
+            ccb.NON_DEBUG_CACHE_CANDIDATES = saved_non_debug
+
+# EXACT test_cached_current_build.py:928..967 test_preserved_seed_mtime_bounds_and_actual_r3_build_dependency_edges
+    def test_preserved_seed_mtime_bounds_and_actual_r3_build_dependency_edges(self):
+        lo, hi = ccb.R3_ARCHIVE_MTIME_RANGE_NS
+        self.assertEqual((lo, hi), (1_792_317_334_779_394_537, 1_792_317_392_403_385_903))
+        probe = self._write(self.root / 'mtime-probe' / 'f', b'x', mode=0o400)
+
+        def seed_mtime(t, mtime_range):
+            os.utime(probe, ns=(t, t), follow_symlinks=False)
+            self.assertEqual(stat.S_IMODE(probe.lstat().st_mode), 0o400)
+            return ccb._preserved_seed_mtime_ns('probe', probe.lstat(), guard, mtime_range)
+
+        for t in (lo, hi):
+            self.assertEqual(seed_mtime(t, (lo, hi)), t)
+        for t in (lo - 1, hi + 1):
+            with self.assertRaises(guard.Refusal):
+                seed_mtime(t, (lo, hi))
+            self.assertEqual(seed_mtime(t, None), t)
+        for t in (ccb.SOURCE_EPOCH_NS - 1, ccb.SOURCE_EPOCH_NS):
+            with self.assertRaises(guard.Refusal):
+                seed_mtime(t, None)
+        self.assertEqual(seed_mtime(ccb.SOURCE_EPOCH_NS + 1, None), ccb.SOURCE_EPOCH_NS + 1)
+
+        # Actual r3 archive mtimes from the all-3498 stat join: build-dependency rlib -> build-script binary.
+        aws = ('debug/build/aws-lc-sys-5469586605af0f08/build_script_main-5469586605af0f08', 1_792_317_342_061_812_584)
+        edges = (
+            (('debug/deps/libversion_check-371b5f2dedfc9d12.rlib', 1_792_317_335_107_394_486),
+             ('debug/build/generic-array-8fd0bbe89c84eca4/build_script_build-8fd0bbe89c84eca4', 1_792_317_335_371_394_444)),
+            (('debug/deps/libautocfg-856175fbd5b6f428.rlib', 1_792_317_341_719_393_475),
+             ('debug/build/num-traits-9996def55c5dad1c/build_script_build-9996def55c5dad1c', 1_792_317_341_771_393_467)),
+            (('debug/deps/libcc-d11016940553e9ef.rlib', 1_792_317_337_383_394_126), aws),
+            (('debug/deps/libcmake-02fd6461bc7a0673.rlib', 1_792_317_340_933_203_205), aws),
+            (('debug/deps/libdunce-9d2697c384b5541b.rlib', 1_792_317_341_311_513_634), aws),
+            (('debug/deps/libfs_extra-7470e21bc61d34fa.rlib', 1_792_317_341_427_393_514), aws),
+        )
+        for (dep_rel, dep_t), (bin_rel, bin_t) in edges:
+            self.assertEqual(seed_mtime(dep_t, (lo, hi)), dep_t)
+            self.assertEqual(seed_mtime(bin_t, (lo, hi)), bin_t)
+            self.assertLess(dep_t, bin_t, dep_rel)
+            self.assertGreater(self._legacy_two_tier_mtime_ns(dep_rel), self._legacy_two_tier_mtime_ns(bin_rel), dep_rel)
+        # aws-lc-sys-382f6f2cbe30927c/invoked.timestamp follows its compiled script binary.
+        self.assertLess(aws[1], 1_792_317_342_067_393_428)
+
+# EXACT test_cached_current_build.py:969..996 test_seed_refuses_preserved_mtime_not_newer_than_source_epoch
+    def test_seed_refuses_preserved_mtime_not_newer_than_source_epoch(self):
+        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()
+        rlib_rel = 'debug/deps/libserde-5555666677778888.rlib'
+        q_rlib = q_root / 'target' / rlib_rel
+        # Read-only fixture: explicit owner utime only; mode stays 0o400.
+        os.utime(q_rlib, ns=(ccb.SOURCE_EPOCH_NS, ccb.SOURCE_EPOCH_NS), follow_symlinks=False)
+        saved_non_debug = copy.deepcopy(ccb.NON_DEBUG_CACHE_CANDIDATES)
+        ccb.NON_DEBUG_CACHE_CANDIDATES = {
+            '.rustc_info.json': all_outputs_map['.rustc_info.json'],
+            'generated/bincode/ZkStdLibArchV1_Decode.rs': all_outputs_map['generated/bincode/ZkStdLibArchV1_Decode.rs'],
+        }
+        try:
+            with self.assertRaises(guard.Refusal) as cm:
+                ccb.verify_and_seed_cached_target(
+                    c,
+                    guard,
+                    quarantine_root=q_root,
+                    copy_map_file=copy_map_path,
+                    disposition_file=disp_path,
+                    expected_counts=expected_counts,
+                )
+            self.assertIn('reconstituted source epoch', str(cm.exception))
+            self.assertIn(rlib_rel, str(cm.exception))
+            self.assertEqual(q_rlib.lstat().st_mtime_ns, ccb.SOURCE_EPOCH_NS)
+            self.assertEqual(stat.S_IMODE(q_rlib.lstat().st_mode), 0o400)
+            self.assertFalse((Path(c['paths']['packet']) / 'CACHED_TARGET_SEED.json').exists())
+        finally:
+            ccb.NON_DEBUG_CACHE_CANDIDATES = saved_non_debug
+
