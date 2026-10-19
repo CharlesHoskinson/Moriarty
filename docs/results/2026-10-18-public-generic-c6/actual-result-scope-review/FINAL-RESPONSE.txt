@@ -1,0 +1,102 @@
+# Result/scope review: public generic C6 actual capture against freeze 08e412c2
+
+**Decision: SUPPORT, scoped as stated below.** There are two non-blocking correction requests (C1, C2) and one producer-route qualification. This is one opinion. It grants no operation and accepts no requirement.
+
+## 1. Eleven-phase ordinary receipts: supported
+
+I read all 11 COMMAND, RESULT and RESULT-ASSESSED records and every stdout/stderr body.
+
+- **Exits and streams.** Every phase has `actual_exit` 0, a null controller failure, and full streams retained under the cap.
+- **Op 01.** stderr holds 22 warnings and no errors. Dep-info is an exact set of 102 files.
+- **Ops 02 and 06.** Each dep-info is an exact set of 3 files. Op 02 pins consumer `10b2e548`, inputs `8d008c96` and wire `28ccff63`. Op 06 resolves the oracle's `independent_public_generic_inputs.rs`, with the same `8d008c96` hash as the consumer copy.
+- **List ops 03 and 07.** They show exactly the 2 and 4 declared names, with no extras.
+- **Runs.** Ops 04 and 05 each show `1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out`. Ops 08–11 each show the same with `3 filtered out`. All match the declared membership.
+
+What this amounts to: 3 compiles and 2 listings, which are not test cases, plus 6 test executions. Those are 2 public runtime captures and 4 author-written positive C6 regressions. The regressions assert only `Ok`, binding and `!evaluation_performed`, so they give no correspondence or hostile-witness credit.
+
+Root-attributed: fresh directories (OC4), the 518-pin postcheck, and the timeline. That timeline is review 00:23:53, then actual freeze 00:26:18, then expected opened 00:28:57.
+
+## 2. Independent table, genesis, value and source-order claims: supported
+
+**Tables (direct inspection).** I compared the actual `compile.json` against `expected-source-tables-and-genesis.json` for both cases:
+
+- every expression row
+- `children`, `occurrence_paths`, `constants`/`constant_fields`, `patterns`/`pattern_children`
+- `types`, `constructors`, `ctor_fields`
+- `plan_nodes`/`plan_cases`/`field_paths`
+- `names`, `functions`, `parameters`, identity, logical genesis
+- the bound work_map fields `source_match`, `field_path` and `events_per_visit`
+
+All values agree. The tables also confirm reviewer finding S6 for these inputs: the duplicated literals stay distinct rows with no interning. Those are constants 9 and 10 (`"0"`) in Schedule, and 4/10 (`21`) and 7/13 (`42`) in Mutual.
+
+**Final value (direct inspection).** I decoded the raw final data arrays myself, without relying on the consumer's decoder.
+- Schedule: Data3 = Observations[Const2 = 4, Data2 = 9].
+- Mutual: the Data0–6 chain yields Envelope(Package(AToB(23, BToA(AToB(21, BStop), 42)), BToA(…), 9), 9).
+
+Both equal the prefrozen nominal values.
+
+**Final scalars and prefrozen predicates (direct inspection).** Control is `Return` with the same Data ref as `Halted`. `control_origin` is 0, `env_root` is null, frames and tasks are empty, helper and result are null, `initial_fuel` is "4096" and `stack_limit` is 64. The relational predicates hold at the final image:
+
+| Case | remaining + consumed | helper_work + reference_cursor | helper_visits ≤ helper_work |
+|---|---|---|---|
+| Schedule | 3693 + 403 = 4096 | 265 + 138 = 403 | 124 ≤ 265 |
+| Mutual | 3389 + 707 = 4096 | 502 + 205 = 707 | 244 ≤ 502 |
+
+Allocations are within bounds. Event and record counts (404/405 and 708/709) are consistent with one uncharged publish plus a Terminal record.
+
+**Source-ID subsequences (direct inspection of the 13 and 25 selected raw rows, in order).**
+
+| Case | Call-start | Call-entry | Constructor-start |
+|---|---|---|---|
+| Schedule | 7, 9, 29, 26, 31, 26 | 7, 9, 29, 26, 31, 26 | [6] |
+| Mutual | 7, 8, 21, 29, 21, 10, 29, 21 | 8, 21, 29, 21, 10, 29, 21, 7 | 19, 28, 19, 27, 28, 19, 27, 34, 13 |
+
+All equal the prefrozen sequences. Each row carries real before/after deltas, and `step_id.ordinal` equals the pre-step `consumed_work`. That the extraction is complete, meaning no further occurrences exist in the external streams, is Root-attributed. These remain source-ID order checks only. Arguments, returns, selected arms, bindings and field completions were not compared.
+
+**How the 60 checks divide.** Root's 30 checks per case split into two kinds:
+- **Prefrozen-oracle checks:** tables, identity, genesis, work_map fields, decoded value, profile literal, `evaluation_performed`, the final scalars, the three projections, and the counter and allocation predicates.
+- **Actual-internal consistency checks:** continuity, record/event counts, unchanged admission, final equals Terminal-after, and the consumer's own invariant flags.
+
+Two checks are close to tautological and should get no correspondence credit:
+- `ownerViewEqualsCanonical`: the actual `canonicalProgramView` is the genesis owner view itself.
+- The configuration check: it largely echoes the consumer's hardcoded input.
+
+## 3. Representation resolutions: they preserve the contract
+
+**Configuration.** `normalize_config_data.py` only regroups the flat fields into `{bounds, layout, domain, fuel, stack}`, duplicates `bounds`, and stringifies five u128 tokens. I checked the actual configuration against that mapping field by field. The mapping leaves no freedom to fit values. `scope` is dropped, which is correct. `locator` moves to the call argument, and the actual `input.json` records `null`.
+
+**Admission marker.** In `consumer.rs::record_boundary`, `same_as` is emitted only after typed equality `actual.admission == genesis.admission`; otherwise the admission is inlined. `compile.json#/genesis/admission` is `genesis.wire().admission`, so expanding the marker is exact. Rev01 to rev02 flips only the two affected flags. No actual, oracle or source data changed.
+
+Qualification: the equality covers observable admission fields only. Private `ext_capacities` are excluded (gap 2).
+
+## 4. Supportable product statement
+
+> For two independently specified closed monomorphic generic-ADT programs, the pinned corrected C6 Core does the following. The programs are recursive ordered nested Schedule matching with separate structural sum, and mutual A/B recursion with a three-argument pack and a post-call caller read. The configuration is the fixed HostOnly/FinanceAbsent fixture.
+>
+> - Through one public `compile_ext_host` call per case, it produces a ProgramView, identity, logical genesis and bound work_map fields equal to the prefrozen independent expectation.
+> - Stepping that same `into_parts` admitted/image pair with `complete_observation::record_step` until Terminal halts with the exact prefrozen nominal value and final scalars.
+> - It reproduces the exact call-start, entry and constructor-start source-ID orders.
+> - The prefrozen relational counter predicates hold. Per Root, they hold at every record.
+
+The statement does **not** claim:
+- that `OwnerEngine::run` was called;
+- full physical B state, helper, frame, clock or cut correspondence;
+- `live_arms` correctness;
+- admitted extension-capacity exactness;
+- Plan status or reason literals;
+- argument, return, arm, binding or field-completion equality;
+- negative, hostile, exhaustion or capacity coverage;
+- grammar, default or security closure;
+- finance, native, proof, target, stagenet or EARS closure.
+
+### Remaining gaps and qualifications
+
+1. **The four original gaps remain open.** `live_arms` was observed only: the actual output appears to use absolute ArmIds and matrix-entry, non-dominance membership, for example Mutual node 1 `[0,3]` and node 4 `[1,2,3]`. This is not promoted. The other three are private ext-capacity observability, Plan literals, and full physical B.
+2. **Producer route.** SAFE-WIRE `runtimeProducer` names `host_owner_engine().run`. The `record_step` route comes from the later addendum. The `complete_observation` and `owner_host` bodies are unread, so whether `record_step` matches `run`'s step loop is unverified.
+3. **Unread bodies and open findings from the prior source opinion still stand.** Unread: `emit_literal`, `check_program_view_ext`, Pass B/D/T and owner genesis. Findings F3 and F5–F12 remain open, and F7 is excluded.
+4. **Correlation.** The tables, the K semantic tape and the inputs share one SAFE source basis. They are not cross-model votes.
+
+### Correction requests (non-blocking)
+
+- **C1.** Root records say "type/key membership/order equality". The actual JSON objects use alphabetically sorted keys, while the expected objects use insertion order. Please state that object key order was ignored and only array order was compared, or correct the claim.
+- **C2.** `SAFE-WIRE-ADDENDUM` is not among the 16 freeze members, although `rglob` would have captured it, and the actual freeze does not pin it either. Its "fixed before actuals" status therefore rests on Root attribution alone. Please supply the pre-00:23 record that pinned `5b067bec`. This does not change any value, because the mapping is mechanical.
