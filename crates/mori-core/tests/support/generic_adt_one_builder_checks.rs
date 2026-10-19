@@ -208,7 +208,7 @@ fn layout(input: &Value) -> shared::LayoutSchemaC {
             name_rows:usize_cell(c,"name_rows"),name_bytes:usize_cell(c,"name_bytes"),
             occurrence_path_slots:usize_cell(c,"occurrence_path_slots"),value_slots:usize_cell(c,"value_slots"),
         },
-        boundary_capacities_present:input["boundary_capacities_present"].as_bool().unwrap(),
+        ext_capacities: None, boundary_capacities_present:input["boundary_capacities_present"].as_bool().unwrap(),
     }
 }
 

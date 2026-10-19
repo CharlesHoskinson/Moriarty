@@ -1883,6 +1883,7 @@ mod sc05_r6_owner_regression_tests {
             field_id: None, widths: None, scalar_layout_id: None, bounds: *b,
             capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
                 occurrence_path_slots: 128, value_slots: 1000 },
+            ext_capacities: None,
             boundary_capacities_present: false }
     }
     fn deps() -> PrepareDeps {
@@ -1939,7 +1940,8 @@ mod sc05_r6_owner_regression_tests {
     // ---------- full MachineImage field snapshot for preservation ---------
     #[derive(Debug, PartialEq)]
     enum SnapDataRow { U128(u128), Bool(bool), Nil,
-        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize) }
+        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize),
+        Constructor(usize, usize, usize, usize) }
     fn snap_data_row(r: &crate::sherlock::helper_machine::raw::DataRow) -> SnapDataRow {
         match r {
             crate::sherlock::helper_machine::raw::DataRow::U128 { n } => SnapDataRow::U128(*n),
@@ -1948,6 +1950,7 @@ mod sc05_r6_owner_regression_tests {
             crate::sherlock::helper_machine::raw::DataRow::Cons { fields } => SnapDataRow::Cons(fields.start.0, fields.len),
             crate::sherlock::helper_machine::raw::DataRow::Leaf { fields } => SnapDataRow::Leaf(fields.start.0, fields.len),
             crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Constructor { type_id, ctor_id, fields } => SnapDataRow::Constructor(type_id.0, ctor_id.0, fields.start.0, fields.len),
         }
     }
     #[derive(Debug, PartialEq)]
@@ -2305,6 +2308,8 @@ mod sc05_r6_owner_regression_tests {
         fn plan_validate(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_validate(s, p, g)) }
         fn plan_equal(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_equal(s, p, g)) }
         fn plan_match(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_match(s, p, g)) }
+        fn plan_build(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_build(s, p, g)) }
+        fn plan_plan(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_plan(s, p, g)) }
         fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
     }
     #[test]

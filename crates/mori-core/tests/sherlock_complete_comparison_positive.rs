@@ -34,7 +34,7 @@ fn initial_snapshot() -> HostSnapshot {
         layout_version:("moriarty".into(), "sherlock-helper-microstep-hostonly/1".into()),
         field_id:None, widths:None, scalar_layout_id:None, bounds,
         capacities:LayoutCapacitiesC { name_rows:32, name_bytes:256, occurrence_path_slots:256, value_slots:1024 },
-        boundary_capacities_present:false,
+        ext_capacities: None, boundary_capacities_present:false,
     };
     let owner = host_owner_engine();
     let admitted = owner.admit(&source, &bounds, &layout)

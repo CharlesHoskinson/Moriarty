@@ -23,7 +23,7 @@ fn independent_nominal_declaration_order_mutual_references_and_fifo_tables() {
         field_id: None, widths: None, scalar_layout_id: None,
         bounds: BoundsC { type_rows:32, constructor_rows:32, constructor_field_slots:64, max_arity:4, ..BoundsC::default() },
         capacities: LayoutCapacitiesC { name_rows:32, name_bytes:256, occurrence_path_slots:0, value_slots:0 },
-        boundary_capacities_present:false,
+        ext_capacities: None, boundary_capacities_present:false,
     };
     let prepared = prepare_nominal_declarations(&decls, &layout, GrammarDomain::GenericNominalExtensionReserved, None)
         .unwrap_or_else(|_| panic!("normal declaration preparation returned an error"));

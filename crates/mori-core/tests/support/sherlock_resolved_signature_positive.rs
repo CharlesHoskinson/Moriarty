@@ -44,7 +44,7 @@ fn fixture_layout() -> (BoundsC, LayoutSchemaC) {
         capacities: LayoutCapacitiesC {
             name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 4096,
         },
-        boundary_capacities_present: false,
+        ext_capacities: None, boundary_capacities_present: false,
     };
     (b, l)
 }

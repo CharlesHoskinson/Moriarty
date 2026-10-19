@@ -1,0 +1,516 @@
+--- a/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security_operator_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security_operator_tests.rs
+@@ -64,6 +64,7 @@
+         scalar_layout_id: None,
+         bounds,
+         capacities,
++        ext_capacities: None,
+         boundary_capacities_present: false,
+     };
+     ConsumerConfig {
+--- a/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_tests.rs
+@@ -40,7 +40,7 @@
+             capacities: LayoutCapacitiesC {
+                 name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 1024,
+             },
+-            boundary_capacities_present: false,
++            ext_capacities: None, boundary_capacities_present: false,
+         },
+         fuel: RunIntC::Nat(1000),
+         stack: RunIntC::Nat(32),
+--- a/crates/mori-core/src/sherlock/helper_machine/core_action_operator_pipeline_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/core_action_operator_pipeline_tests.rs
+@@ -57,7 +57,7 @@
+         scalar_layout_id: None,
+         bounds,
+         capacities,
+-        boundary_capacities_present: false,
++        ext_capacities: None, boundary_capacities_present: false,
+     };
+     ConsumerConfig {
+         bounds,
+--- a/crates/mori-core/src/sherlock/helper_machine/core_action_resource_integration_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/core_action_resource_integration_tests.rs
+@@ -29,7 +29,7 @@
+             capacities: LayoutCapacitiesC {
+                 name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 1024,
+             },
+-            boundary_capacities_present: false,
++            ext_capacities: None, boundary_capacities_present: false,
+         },
+         fuel: RunIntC::Nat(1000),
+         stack: RunIntC::Nat(32),
+--- a/crates/mori-core/src/sherlock/helper_machine/resource_report_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/resource_report_tests.rs
+@@ -56,7 +56,7 @@
+             capacities: LayoutCapacitiesC {
+                 name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 1024,
+             },
+-            boundary_capacities_present: false,
++            ext_capacities: None, boundary_capacities_present: false,
+         },
+         fuel: RunIntC::Nat(1000), stack: RunIntC::Nat(32),
+         profile: ConsumerProfile::SherlockHelperMicrostep1,
+--- a/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/nominal_decl_producer_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/nominal_decl_producer_tests.rs
+@@ -27,7 +27,7 @@
+             occurrence_path_slots: 32,
+             value_slots: 32,
+         },
+-        boundary_capacities_present: false,
++        ext_capacities: None, boundary_capacities_present: false,
+     }
+ }
+ 
+--- a/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/shared/owner_prepare/v4_empty_params_tests.rs
+@@ -40,7 +40,7 @@
+             occurrence_path_slots: 256,
+             value_slots: 4096,
+         },
+-        boundary_capacities_present: false,
++        ext_capacities: None, boundary_capacities_present: false,
+     };
+     (b, l)
+ }
+--- a/crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs
+@@ -1883,6 +1883,7 @@
+             field_id: None, widths: None, scalar_layout_id: None, bounds: *b,
+             capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
+                 occurrence_path_slots: 128, value_slots: 1000 },
++            ext_capacities: None,
+             boundary_capacities_present: false }
+     }
+     fn deps() -> PrepareDeps {
+@@ -1939,7 +1940,8 @@
+     // ---------- full MachineImage field snapshot for preservation ---------
+     #[derive(Debug, PartialEq)]
+     enum SnapDataRow { U128(u128), Bool(bool), Nil,
+-        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize) }
++        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize),
++        Constructor(usize, usize, usize, usize) }
+     fn snap_data_row(r: &crate::sherlock::helper_machine::raw::DataRow) -> SnapDataRow {
+         match r {
+             crate::sherlock::helper_machine::raw::DataRow::U128 { n } => SnapDataRow::U128(*n),
+@@ -1948,6 +1950,7 @@
+             crate::sherlock::helper_machine::raw::DataRow::Cons { fields } => SnapDataRow::Cons(fields.start.0, fields.len),
+             crate::sherlock::helper_machine::raw::DataRow::Leaf { fields } => SnapDataRow::Leaf(fields.start.0, fields.len),
+             crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
++            crate::sherlock::helper_machine::raw::DataRow::Constructor { type_id, ctor_id, fields } => SnapDataRow::Constructor(type_id.0, ctor_id.0, fields.start.0, fields.len),
+         }
+     }
+     #[derive(Debug, PartialEq)]
+@@ -2305,6 +2308,8 @@
+         fn plan_validate(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_validate(s, p, g)) }
+         fn plan_equal(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_equal(s, p, g)) }
+         fn plan_match(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_match(s, p, g)) }
++        fn plan_build(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_build(s, p, g)) }
++        fn plan_plan(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_plan(s, p, g)) }
+         fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
+     }
+     #[test]
+--- a/crates/mori-core/tests/sherlock_complete_comparison_positive.rs
++++ b/crates/mori-core/tests/sherlock_complete_comparison_positive.rs
+@@ -34,7 +34,7 @@
+         layout_version:("moriarty".into(), "sherlock-helper-microstep-hostonly/1".into()),
+         field_id:None, widths:None, scalar_layout_id:None, bounds,
+         capacities:LayoutCapacitiesC { name_rows:32, name_bytes:256, occurrence_path_slots:256, value_slots:1024 },
+-        boundary_capacities_present:false,
++        ext_capacities: None, boundary_capacities_present:false,
+     };
+     let owner = host_owner_engine();
+     let admitted = owner.admit(&source, &bounds, &layout)
+--- a/crates/mori-core/tests/sherlock_complete_observation_positive.rs
++++ b/crates/mori-core/tests/sherlock_complete_observation_positive.rs
+@@ -28,7 +28,7 @@
+         layout_version:("moriarty".into(), "sherlock-helper-microstep-hostonly/1".into()),
+         field_id:None, widths:None, scalar_layout_id:None, bounds,
+         capacities:LayoutCapacitiesC { name_rows:32, name_bytes:256, occurrence_path_slots:256, value_slots:1024 },
+-        boundary_capacities_present:false,
++        ext_capacities: None, boundary_capacities_present:false,
+     };
+     let owner = host_owner_engine();
+     let admitted = owner.admit(&source, &bounds, &layout)
+--- a/crates/mori-core/tests/sherlock_draft_runtime_independent.rs
++++ b/crates/mori-core/tests/sherlock_draft_runtime_independent.rs
+@@ -6,7 +6,7 @@
+ use mori_core::sherlock::helper_machine::shared::{
+     BinaryOp, BoundaryKind, ControlC, EventKind, ExpressionRowC, FinanceInput,
+     GrammarDomain, LocatorC, OutcomeC, OutcomeTagC, PatternRowC, ProgramView,
+-    RefC, RuleIdC, RunIntC, SliceC, SortTag, StepDisposition, StepEventC, UnaryOp,
++    RefC, RuleIdC, RunIntC, SliceC, SortTag, StepDisposition, StepEventC, TypeIdC, UnaryOp,
+ };
+ use serde_json::{json, Value};
+ 
+@@ -19,8 +19,8 @@
+ 
+ fn dec(n: usize) -> String { n.to_string() }
+ fn slice(s: SliceC) -> Value { json!({"start":dec(s.start),"len":dec(s.len)}) }
+-fn sort(s: SortTag) -> &'static str {
+-    match s { SortTag::UInt=>"UInt",SortTag::Bool=>"Bool",SortTag::List=>"List",SortTag::Tree=>"Tree" }
++fn sort(s: TypeIdC) -> &'static str {
++    match s { TypeIdC::UInt=>"UInt",TypeIdC::Bool=>"Bool",TypeIdC::List=>"List",TypeIdC::Tree=>"Tree", _=>panic!("unexpected generic type id in sealed dedicated program") }
+ }
+ fn binary(op: BinaryOp) -> &'static str {
+     match op { BinaryOp::Add=>"Add",BinaryOp::Sub=>"Sub",BinaryOp::Mul=>"Mul",
+@@ -38,7 +38,8 @@
+         ExpressionRowC::Unary{op,operand}=>json!({"Unary":{"op":unary(*op),"operand":dec(*operand)}}),
+         ExpressionRowC::If{cond,then_expr,else_expr}=>json!({"If":{"cond":dec(*cond),"then_expr":dec(*then_expr),"else_expr":dec(*else_expr)}}),
+         ExpressionRowC::Call{function_name,args}=>json!({"Call":{"function_name":dec(*function_name),"args":slice(*args)}}),
+-        ExpressionRowC::Match{scrutinee,arms}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms)}}),
++        ExpressionRowC::Match{scrutinee,arms,plan}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms),"plan":(*plan).map(dec)}}),
++        ExpressionRowC::Construct{type_id,ctor_id,fields,constant}=>json!({"Construct":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"fields":slice(*fields),"constant":(*constant).map(dec)}}),
+     }).collect();
+     let occurrences: Vec<Value> = view.occurrences.iter().map(|r|
+         json!({"owner_is_function":r.owner_is_function,"function":dec(r.function),"path":slice(r.path)})).collect();
+@@ -52,6 +53,8 @@
+         PatternRowC::PCons{x,y}=>json!({"PCons":{"x":dec(*x),"y":dec(*y)}}),
+         PatternRowC::PLeaf{x}=>json!({"PLeaf":{"x":dec(*x)}}),
+         PatternRowC::PBranch{x,y}=>json!({"PBranch":{"x":dec(*x),"y":dec(*y)}}),
++        PatternRowC::Wildcard=>json!("Wildcard"),
++        PatternRowC::Constructor{type_id,ctor_id,children}=>json!({"Constructor":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"children":slice(*children)}}),
+     }).collect();
+     let constants: Vec<Value> = view.constants.iter().map(|r|match r {
+         ConstRow::U128{marker_free,n}=>json!({"U128":{"marker_free":marker_free,"n":n.to_string()}}),
+--- a/crates/mori-core/tests/sherlock_witness_baseline_independent.rs
++++ b/crates/mori-core/tests/sherlock_witness_baseline_independent.rs
+@@ -25,6 +25,7 @@
+         wp::ValueNode::Nil=>json!(["Nil"]),wp::ValueNode::U128OutOfRange=>json!(["U128OutOfRange"]),
+         wp::ValueNode::Cons{head,tail}=>json!(["Cons",head,tail]),wp::ValueNode::Leaf{value}=>json!(["Leaf",value]),
+         wp::ValueNode::Branch{left,right}=>json!(["Branch",left,right]),
++        wp::ValueNode::Constructor{type_id,ctor_id,fields}=>json!(["Constructor",type_id.0,ctor_id.0,fields]),
+     }).collect();
+     json!({"nodes":nodes,"root":v.root})
+ }
+@@ -47,6 +48,11 @@
+         Occurrence(i)=>("occurrence",Some(*i)),OccurrencePath(i)=>("occurrence_path",Some(*i)),Child(i)=>("child",Some(*i)),
+         Frame(i)=>("frame",Some(*i)),ScheduledFrame=>("scheduled_frame",None),Control=>("control",None),
+         Helper=>("helper",None),Task(i)=>("task",Some(*i)),Result=>("result",None),Outcome=>("outcome",None),ValueSlot(i)=>("value_slot",Some(*i)),
++        PatternChild(i)=>("pattern_child",Some(*i)),Type(i)=>("type",Some(*i)),TypeArg(i)=>("type_arg",Some(*i)),
++        Constructor(i)=>("constructor",Some(*i)),ConstructorField(i)=>("constructor_field",Some(*i)),
++        DeclParamCount(i)=>("decl_param_count",Some(*i)),DeclCtorCount(i)=>("decl_ctor_count",Some(*i)),
++        DeclTemplate(i)=>("decl_template",Some(*i)),PlanNode(i)=>("plan_node",Some(*i)),
++        PlanCase(i)=>("plan_case",Some(*i)),FieldPath(i)=>("field_path",Some(*i)),
+     }
+ }
+ fn check_plan(p:&wp::WitnessPlan){
+@@ -128,7 +134,7 @@
+     let n=|name:&str|b[name].as_str().unwrap().parse::<usize>().unwrap();
+     let bounds=BoundsC{code_rows:n("code_rows"),function_rows:n("function_rows"),code_child_slots:n("code_child_slots"),parameter_slots:n("parameter_slots"),pattern_rows:n("pattern_rows"),match_plan_rows:n("match_plan_rows"),match_arm_rows:n("match_arm_rows"),type_rows:n("type_rows"),constructor_rows:n("constructor_rows"),constructor_field_slots:n("constructor_field_slots"),max_arity:n("max_arity"),constant_nodes:n("constant_nodes"),constant_field_slots:n("constant_field_slots"),data_nodes:n("data_nodes"),data_field_slots:n("data_field_slots"),environment_cells:n("environment_cells"),frames:n("frames"),helper_tasks:n("helper_tasks"),serialization_bytes:n("serialization_bytes"),max_reference_work:n("max_reference_work") as u128,max_helper_work:n("max_helper_work") as u128,step_cap:n("step_cap") as u128};
+     let cap=&c["layout"]["capacities"];let k=|name:&str|cap[name].as_str().unwrap().parse::<usize>().unwrap();
+-    let layout=LayoutSchemaC{layout_version:(c["layout"]["layout_version"][0].as_str().unwrap().into(),c["layout"]["layout_version"][1].as_str().unwrap().into()),field_id:None,widths:None,scalar_layout_id:None,bounds,capacities:LayoutCapacitiesC{name_rows:k("name_rows"),name_bytes:k("name_bytes"),occurrence_path_slots:k("occurrence_path_slots"),value_slots:k("value_slots")},boundary_capacities_present:false};(bounds,layout)
++    let layout=LayoutSchemaC{layout_version:(c["layout"]["layout_version"][0].as_str().unwrap().into(),c["layout"]["layout_version"][1].as_str().unwrap().into()),field_id:None,widths:None,scalar_layout_id:None,bounds,capacities:LayoutCapacitiesC{name_rows:k("name_rows"),name_bytes:k("name_bytes"),occurrence_path_slots:k("occurrence_path_slots"),value_slots:k("value_slots")},ext_capacities: None, boundary_capacities_present:false};(bounds,layout)
+ }
+ fn pair(p:&CoreProgram)->(Admitted,MachineImage){
+     let (b,l)=config();let owner=host_owner_engine();let a=owner.admit(p,&b,&l).unwrap_or_else(|_|panic!("fixed positive admission"));
+--- a/crates/mori-core/tests/support/generic_adt_one_builder_checks.rs
++++ b/crates/mori-core/tests/support/generic_adt_one_builder_checks.rs
+@@ -208,7 +208,7 @@
+             name_rows:usize_cell(c,"name_rows"),name_bytes:usize_cell(c,"name_bytes"),
+             occurrence_path_slots:usize_cell(c,"occurrence_path_slots"),value_slots:usize_cell(c,"value_slots"),
+         },
+-        boundary_capacities_present:input["boundary_capacities_present"].as_bool().unwrap(),
++        ext_capacities: None, boundary_capacities_present:input["boundary_capacities_present"].as_bool().unwrap(),
+     }
+ }
+ 
+--- a/crates/mori-core/tests/support/nominal_text_source_positive.rs
++++ b/crates/mori-core/tests/support/nominal_text_source_positive.rs
+@@ -20,7 +20,7 @@
+             constant_field_slots:128,data_nodes:128,data_field_slots:256,environment_cells:128,
+             frames:64,helper_tasks:256,serialization_bytes:65536,max_reference_work:4096,
+             max_helper_work:4096,step_cap:1},
+-        capacities:LayoutCapacitiesC {name_rows:256,name_bytes:4096,occurrence_path_slots:1024,value_slots:256},boundary_capacities_present:false}
++        capacities:LayoutCapacitiesC {name_rows:256,name_bytes:4096,occurrence_path_slots:1024,value_slots:256},ext_capacities: None, boundary_capacities_present:false}
+ }
+ fn ty(t:&TypeExprSrc)->String {
+     match t {
+--- a/crates/mori-core/tests/support/sherlock_core1_provenance_independent.rs
++++ b/crates/mori-core/tests/support/sherlock_core1_provenance_independent.rs
+@@ -11,7 +11,7 @@
+ use mori_core::sherlock::helper_machine::shared::{
+     ActiveLengths, AllocCounters, BinaryOp, ControlC, ExpressionRowC, FinanceInput,
+     GrammarDomain, LocatorC, OutcomeC, PatternRowC, ProgramView, RefC, RuleIdC,
+-    RunIntC, SliceC, SortTag, StepEventC, UnaryOp,
++    RunIntC, SliceC, SortTag, StepEventC, TypeIdC, UnaryOp,
+ };
+ use serde_json::{json, Value};
+ use std::collections::BTreeMap;
+@@ -24,8 +24,8 @@
+ 
+ fn dec(n: usize) -> String { n.to_string() }
+ fn slice(s: SliceC) -> Value { json!({"start":dec(s.start),"len":dec(s.len)}) }
+-fn sort(s: SortTag) -> &'static str {
+-    match s { SortTag::UInt=>"UInt",SortTag::Bool=>"Bool",SortTag::List=>"List",SortTag::Tree=>"Tree" }
++fn sort(s: TypeIdC) -> &'static str {
++    match s { TypeIdC::UInt=>"UInt",TypeIdC::Bool=>"Bool",TypeIdC::List=>"List",TypeIdC::Tree=>"Tree", _=>panic!("unexpected generic type id in sealed dedicated program") }
+ }
+ fn binary(op: BinaryOp) -> &'static str {
+     match op { BinaryOp::Add=>"Add",BinaryOp::Sub=>"Sub",BinaryOp::Mul=>"Mul",
+@@ -43,7 +43,8 @@
+         ExpressionRowC::Unary{op,operand}=>json!({"Unary":{"op":unary(*op),"operand":dec(*operand)}}),
+         ExpressionRowC::If{cond,then_expr,else_expr}=>json!({"If":{"cond":dec(*cond),"then_expr":dec(*then_expr),"else_expr":dec(*else_expr)}}),
+         ExpressionRowC::Call{function_name,args}=>json!({"Call":{"function_name":dec(*function_name),"args":slice(*args)}}),
+-        ExpressionRowC::Match{scrutinee,arms}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms)}}),
++        ExpressionRowC::Match{scrutinee,arms,plan}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms),"plan":(*plan).map(dec)}}),
++        ExpressionRowC::Construct{type_id,ctor_id,fields,constant}=>json!({"Construct":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"fields":slice(*fields),"constant":(*constant).map(dec)}}),
+     }).collect();
+     let occurrences: Vec<Value> = view.occurrences.iter().map(|r|
+         json!({"owner_is_function":r.owner_is_function,"function":dec(r.function),"path":slice(r.path)})).collect();
+@@ -57,6 +58,8 @@
+         PatternRowC::PCons{x,y}=>json!({"PCons":{"x":dec(*x),"y":dec(*y)}}),
+         PatternRowC::PLeaf{x}=>json!({"PLeaf":{"x":dec(*x)}}),
+         PatternRowC::PBranch{x,y}=>json!({"PBranch":{"x":dec(*x),"y":dec(*y)}}),
++        PatternRowC::Wildcard=>json!("Wildcard"),
++        PatternRowC::Constructor{type_id,ctor_id,children}=>json!({"Constructor":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"children":slice(*children)}}),
+     }).collect();
+     let constants: Vec<Value> = view.constants.iter().map(|r|match r {
+         ConstRow::U128{marker_free,n}=>json!({"U128":{"marker_free":marker_free,"n":n.to_string()}}),
+--- a/crates/mori-core/tests/support/sherlock_nominal_declarations_independent.rs
++++ b/crates/mori-core/tests/support/sherlock_nominal_declarations_independent.rs
+@@ -23,7 +23,7 @@
+         field_id: None, widths: None, scalar_layout_id: None,
+         bounds: BoundsC { type_rows:32, constructor_rows:32, constructor_field_slots:64, max_arity:4, ..BoundsC::default() },
+         capacities: LayoutCapacitiesC { name_rows:32, name_bytes:256, occurrence_path_slots:0, value_slots:0 },
+-        boundary_capacities_present:false,
++        ext_capacities: None, boundary_capacities_present:false,
+     };
+     let prepared = prepare_nominal_declarations(&decls, &layout, GrammarDomain::GenericNominalExtensionReserved, None)
+         .unwrap_or_else(|_| panic!("normal declaration preparation returned an error"));
+--- a/crates/mori-core/tests/support/sherlock_provenance_twins_independent.rs
++++ b/crates/mori-core/tests/support/sherlock_provenance_twins_independent.rs
+@@ -6,7 +6,7 @@
+ use mori_core::sherlock::helper_machine::shared::{
+     BinaryOp, ControlC, ExpressionRowC, FinanceInput, GrammarDomain, LocatorC,
+     OutcomeC, PatternRowC, ProgramView, RefC, RuleIdC, RunIntC, SliceC, SortTag,
+-    StepEventC, UnaryOp,
++    StepEventC, TypeIdC, UnaryOp,
+ };
+ use serde_json::{json, Value};
+ use std::io::Write;
+@@ -18,8 +18,8 @@
+ 
+ fn dec(n: usize) -> String { n.to_string() }
+ fn slice(s: SliceC) -> Value { json!({"start":dec(s.start),"len":dec(s.len)}) }
+-fn sort(s: SortTag) -> &'static str {
+-    match s { SortTag::UInt=>"UInt",SortTag::Bool=>"Bool",SortTag::List=>"List",SortTag::Tree=>"Tree" }
++fn sort(s: TypeIdC) -> &'static str {
++    match s { TypeIdC::UInt=>"UInt",TypeIdC::Bool=>"Bool",TypeIdC::List=>"List",TypeIdC::Tree=>"Tree", _=>panic!("unexpected generic type id in sealed dedicated program") }
+ }
+ fn binary(op: BinaryOp) -> &'static str {
+     match op { BinaryOp::Add=>"Add",BinaryOp::Sub=>"Sub",BinaryOp::Mul=>"Mul",
+@@ -37,7 +37,8 @@
+         ExpressionRowC::Unary{op,operand}=>json!({"Unary":{"op":unary(*op),"operand":dec(*operand)}}),
+         ExpressionRowC::If{cond,then_expr,else_expr}=>json!({"If":{"cond":dec(*cond),"then_expr":dec(*then_expr),"else_expr":dec(*else_expr)}}),
+         ExpressionRowC::Call{function_name,args}=>json!({"Call":{"function_name":dec(*function_name),"args":slice(*args)}}),
+-        ExpressionRowC::Match{scrutinee,arms}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms)}}),
++        ExpressionRowC::Match{scrutinee,arms,plan}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms),"plan":(*plan).map(dec)}}),
++        ExpressionRowC::Construct{type_id,ctor_id,fields,constant}=>json!({"Construct":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"fields":slice(*fields),"constant":(*constant).map(dec)}}),
+     }).collect();
+     let occurrences: Vec<Value> = view.occurrences.iter().map(|r|
+         json!({"owner_is_function":r.owner_is_function,"function":dec(r.function),"path":slice(r.path)})).collect();
+@@ -51,6 +52,8 @@
+         PatternRowC::PCons{x,y}=>json!({"PCons":{"x":dec(*x),"y":dec(*y)}}),
+         PatternRowC::PLeaf{x}=>json!({"PLeaf":{"x":dec(*x)}}),
+         PatternRowC::PBranch{x,y}=>json!({"PBranch":{"x":dec(*x),"y":dec(*y)}}),
++        PatternRowC::Wildcard=>json!("Wildcard"),
++        PatternRowC::Constructor{type_id,ctor_id,children}=>json!({"Constructor":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"children":slice(*children)}}),
+     }).collect();
+     let constants: Vec<Value> = view.constants.iter().map(|r|match r {
+         ConstRow::U128{marker_free,n}=>json!({"U128":{"marker_free":marker_free,"n":n.to_string()}}),
+--- a/crates/mori-core/tests/support/sherlock_resolved_signature_positive.rs
++++ b/crates/mori-core/tests/support/sherlock_resolved_signature_positive.rs
+@@ -44,7 +44,7 @@
+         capacities: LayoutCapacitiesC {
+             name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 4096,
+         },
+-        boundary_capacities_present: false,
++        ext_capacities: None, boundary_capacities_present: false,
+     };
+     (b, l)
+ }
+--- a/crates/mori-core/tests/support/sherlock_witness_cache_stream_positive.rs
++++ b/crates/mori-core/tests/support/sherlock_witness_cache_stream_positive.rs
+@@ -38,7 +38,7 @@
+         field_id: None, widths: None, scalar_layout_id: None, bounds,
+         capacities: LayoutCapacitiesC {
+             name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 4096,
+-        }, boundary_capacities_present: false,
++        }, ext_capacities: None, boundary_capacities_present: false,
+     };
+     (bounds, schema)
+ }
+--- /dev/null
++++ b/crates/mori-core/src/sherlock/helper_machine/witness_plan/adt_projection_tests.rs
+@@ -0,0 +1,169 @@
++//! Ordinary raw-observation projection tests; no admission or execution claim.
++use super::*;
++use super::super::complete_observation::{
++    ConstFieldsSnapshot, DataFieldsSnapshot, ImageSnapshot, LayoutSnapshot, ProgramSnapshot,
++};
++
++fn snapshot() -> HostSnapshot {
++    let bounds = BoundsC {
++        code_rows: 32, function_rows: 8, code_child_slots: 32, parameter_slots: 8,
++        pattern_rows: 32, match_plan_rows: 32, match_arm_rows: 8, type_rows: 16,
++        constructor_rows: 16, constructor_field_slots: 32, max_arity: 8,
++        constant_nodes: 32, constant_field_slots: 32, data_nodes: 32, data_field_slots: 32,
++        environment_cells: 16, frames: 16, helper_tasks: 16, serialization_bytes: 4096,
++        max_reference_work: 1024, max_helper_work: 1024, step_cap: 1024,
++    };
++    let identity = IdentityC {
++        profile_id: 2, grammar_domain: GrammarDomain::GenericNominalExtensionReserved,
++        finance: FinanceInput::Absent, layout_version: ("projection".into(), "1".into()),
++        layout_digest: DigestC::Unselected, bounds_digest: DigestC::Unselected,
++        field_id: None, program_membership_digest: DigestC::Unselected,
++    };
++    let view = ProgramSnapshot {
++        entry: 0, expressions: vec![ExpressionSnapshot::Literal { constant: 0 }],
++        occurrences: vec![OccurrenceRowC { owner_is_function: false, function: 0, path: SliceC::empty() }],
++        occurrence_paths: vec![], children: vec![], functions: vec![], parameters: vec![],
++        arms: vec![], patterns: vec![], pattern_children: vec![], types: vec![], type_args: vec![],
++        constructors: vec![], ctor_fields: vec![], decl_param_counts: vec![], decl_ctor_counts: vec![],
++        decl_templates: vec![], plan_nodes: vec![], plan_cases: vec![], field_paths: vec![],
++        constants: vec![ConstantSnapshot::U128 { marker_free: true, n: 17 }],
++        constant_fields: vec![], names: vec!["x".into()],
++    };
++    HostSnapshot {
++        admission: AdmissionSnapshot {
++            identity: identity.clone(), bounds: bounds.clone(), view,
++            layout: LayoutSnapshot { layout_version: ("projection".into(), "1".into()),
++                field_id: None, widths: None, scalar_layout_id: None, bounds,
++                capacities: LayoutCapacitiesC::default(), boundary_capacities_present: false },
++        },
++        image: ImageSnapshot {
++            run_id: RunIdC { identity, fuel_input: RunIntC::Nat(1024), stack_limit_input: RunIntC::Nat(16) },
++            control: ControlC::Return { value: RefC::Const(0) }, control_origin: 0, env_root: None,
++            stack_limit: 16, outcome: OutcomeC::Running, initial_fuel: 1024, remaining_work: 1024,
++            consumed_work: 0, helper_work: 0, helper_visits: 0, reference_cursor: 0,
++            alloc: AllocCounters::default(), active: ActiveLengths::default(), helper: None, result: None,
++            seg_base: SegBase::genesis_uncut(), data: vec![], data_fields: vec![], env: vec![],
++            frames: vec![], tasks: vec![], value_slots: vec![],
++        },
++    }
++}
++fn sequence<'a>(decoded: &'a DecodedSnapshot, field: &str) -> &'a [SlotValue] {
++    let value = &decoded.fields.iter().find(|v| v.field == field).expect("output field").value;
++    let SlotValue::Sequence { items, .. } = value else { panic!("sequence output") };
++    items
++}
++fn value(item: &SlotValue) -> &DecodedValue {
++    let SlotValue::Value(value) = item else { panic!("decoded value") }; value
++}
++fn constructor(node: &ValueNode) -> (TypeIdC, adt::CtorIdC, &[usize]) {
++    let ValueNode::Constructor { type_id, ctor_id, fields } = node else { panic!("constructor") };
++    (*type_id, *ctor_id, fields)
++}
++#[test]
++fn nested_nominal_values_keep_ids_order_and_repeated_occurrences() {
++    let mut input = snapshot();
++    input.admission.view.constants.extend([
++        ConstantSnapshot::Constructor { marker_free: true, type_id: TypeIdC(4), ctor_id: adt::CtorIdC(8), fields: ConstFieldsSnapshot { start: usize::MAX, len: 0 } },
++        ConstantSnapshot::Constructor { marker_free: true, type_id: TypeIdC(5), ctor_id: adt::CtorIdC(9), fields: ConstFieldsSnapshot { start: 0, len: 3 } },
++    ]);
++    input.admission.view.constant_fields = vec![1, 0, 1];
++    input.image.data = vec![DataSnapshot::Constructor { type_id: TypeIdC(6), ctor_id: adt::CtorIdC(10), fields: DataFieldsSnapshot { start: 0, len: 2 } }];
++    input.image.data_fields = vec![RefC::Const(2), RefC::Const(0)];
++    let plan = construct_plan(&input).expect("raw nominal projection");
++    let result = evaluate_uncached(&plan, &input).expect("evaluate projection");
++    let v = value(&sequence(&result.decoded, "constants")[2]);
++    let (ty, ctor, fields) = constructor(&v.nodes[v.root]);
++    assert_eq!((ty, ctor), (TypeIdC(5), adt::CtorIdC(9)));
++    assert_eq!(fields, &[0, 1, 2]);
++    assert_ne!(fields[0], fields[2]);
++    assert_eq!(v.nodes[fields[0]], v.nodes[fields[2]]);
++    assert_eq!(v.nodes[fields[1]], ValueNode::UInt(17));
++    let data = value(&sequence(&result.decoded, "data")[0]);
++    let (_, _, fields) = constructor(&data.nodes[data.root]);
++    let (_, _, inner) = constructor(&data.nodes[fields[0]]);
++    assert_eq!(inner.len(), 3);
++    assert_eq!(data.nodes[fields[1]], ValueNode::UInt(17));
++}
++#[test]
++fn all_generic_tables_are_typed_immutable_inputs_and_outputs() {
++    let mut input = snapshot();
++    let p = &mut input.admission.view;
++    p.pattern_children = vec![3];
++    p.types = vec![adt::TypeRowC { name_id: 0, decl: Some(0), args: SliceC { start: 0, len: 1 }, ctor_start: adt::CtorIdC(0), ctor_len: 1 }];
++    p.type_args = vec![TypeIdC(19)];
++    p.constructors = vec![adt_storage::CtorRowExt { owning_type: TypeIdC(0), name_id: 0, source_order: 0, field_start: 0, field_len: 1 }];
++    p.ctor_fields = vec![adt_storage::CtorFieldRowExt { name_id: 0, type_id: TypeIdC(19) }];
++    p.decl_param_counts = vec![1]; p.decl_ctor_counts = vec![1];
++    p.decl_templates = vec![owner_ext_type_builder::TypeDeclSrc { name: "Box".into(), parameters: vec!["a".into()], ctors: vec![] }];
++    p.plan_nodes = vec![PlanNodeC::NoMatch { source_match: 0 }];
++    p.plan_cases = vec![Some(0), None]; p.field_paths = vec![2, 1];
++    let plan = construct_plan(&input).expect("table projection");
++    let result = evaluate_uncached(&plan, &input).expect("table evaluation");
++    for (name, len) in [("pattern_children",1),("types",1),("type_args",1),("constructors",1),
++        ("ctor_fields",1),("decl_param_counts",1),("decl_ctor_counts",1),("decl_templates",1),
++        ("plan_nodes",1),("plan_cases",2),("field_paths",2)] {
++        assert_eq!(sequence(&result.decoded, name).len(), len, "{name}");
++    }
++    assert_eq!(sequence(&result.decoded,"type_args"), &[SlotValue::Source(InputValue::TypeId(TypeIdC(19)))]);
++    input.admission.view.plan_cases[1] = Some(0);
++    assert!(matches!(evaluate_uncached(&plan, &input), Err(WitnessFailure { kind: FailureKind::InputChanged, .. })));
++}
++#[test]
++fn new_payload_variants_follow_existing_value_expression_and_environment_paths() {
++    let mut input = snapshot();
++    let ty = TypeIdC(0); let ctor = adt::CtorIdC(0);
++    input.admission.view.types = vec![adt::TypeRowC { name_id: 0, decl: None, args: SliceC::empty(), ctor_start: ctor, ctor_len: 1 }];
++    input.admission.view.constructors = vec![adt_storage::CtorRowExt { owning_type: ty, name_id: 0, source_order: 0, field_start: 0, field_len: 0 }];
++    input.admission.view.plan_nodes = vec![PlanNodeC::Select { source_match: 0, arm: 0 }];
++    input.admission.view.arms = vec![ArmRowC { pattern: 0, body: 0 }];
++    input.admission.view.children = vec![0];
++    input.image.value_slots = vec![RefC::Const(0)];
++    input.image.frames = vec![FrameRowC::ConstructorFieldsF { type_id: ty, ctor_id: ctor, index: 0,
++        field_type: ty, checked: true, completed: SliceC { start: 0, len: 1 }, rest: SliceC { start: 0, len: 1 }, saved_env: None, origin: 0 }];
++    input.image.control = ControlC::Materialize { type_id: ty, ctor_id: ctor, fields: SliceC { start: 0, len: 1 } };
++    let common = HelperCommon { site: SiteTag::Materialize, origin_reference_cursor: 0, parent_resume: None };
++    let helpers = [
++        HelperControlC::Build { common, type_id: ty, ctor_id: ctor, src: SliceC { start: 0, len: 1 }, src_cursor: 0, field_start: 0,
++            staged: Some(RefC::Const(0)), node: None, phase: BuildPhase::Copy },
++        HelperControlC::Plan { common, source_match: 0, scrutinee: RefC::Const(0), saved_env: None, partial: None,
++            node: 0, phase: PlanPhase::Ready, after_walk: PlanAfterWalk::Test, cur: RefC::Const(0),
++            path: SliceC { start: usize::MAX, len: 0 }, path_cursor: 0, arm: Some(0), status: TriStatus::Pending },
++    ];
++    for helper in helpers {
++        input.image.helper = Some(helper);
++        for result in [HelperResultC::BuildDone { value: RefC::Const(0) }, HelperResultC::PlanMatched { arm: 0, env: None }, HelperResultC::PlanNoMatch] {
++            input.image.result = Some(result);
++            let projection = materialize(&input).expect("generic payload projection");
++            assert_eq!(projection.raw, input);
++            let field = projection.evaluation.decoded.fields.iter().find(|f|f.field=="helper").unwrap();
++            let SlotValue::Payload(payload) = &field.value else { panic!("helper payload") };
++            assert!(!payload.fields.is_empty());
++        }
++    }
++}
++#[test]
++fn dedicated_values_and_nominal_children_share_existing_occurrence_reconstruction() {
++    let mut input = snapshot();
++    input.admission.view.constants.extend([
++        ConstantSnapshot::Nil { marker_free: true },
++        ConstantSnapshot::Cons { marker_free: true, fields: ConstFieldsSnapshot { start: 0, len: 2 } },
++        ConstantSnapshot::Leaf { marker_free: true, fields: ConstFieldsSnapshot { start: 2, len: 1 } },
++        ConstantSnapshot::Branch { marker_free: true, fields: ConstFieldsSnapshot { start: 3, len: 2 } },
++        ConstantSnapshot::Constructor { marker_free: true, type_id: TypeIdC(41), ctor_id: adt::CtorIdC(73), fields: ConstFieldsSnapshot { start: 5, len: 2 } },
++    ]);
++    input.admission.view.constant_fields = vec![0, 1, 0, 3, 3, 2, 4];
++    let plan = construct_plan(&input).expect("mixed dedicated and nominal rows");
++    let plain = evaluate_uncached(&plan, &input).expect("baseline DAG evaluation");
++    assert_eq!(value(&sequence(&plain.decoded,"constants")[2]).nodes,
++        vec![ValueNode::UInt(17), ValueNode::Nil, ValueNode::Cons { head: 0, tail: 1 }]);
++    let mixed = value(&sequence(&plain.decoded,"constants")[5]);
++    let (ty, ctor, fields) = constructor(&mixed.nodes[mixed.root]);
++    assert_eq!((ty,ctor),(TypeIdC(41),adt::CtorIdC(73)));
++    assert!(matches!(&mixed.nodes[fields[0]], ValueNode::Cons { .. }));
++    assert!(matches!(&mixed.nodes[fields[1]], ValueNode::Branch { .. }));
++    assert_eq!(evaluate_last_use(&plan,&input).unwrap().witness.decoded,plain.decoded);
++    let mut cache = WitnessCache::default();
++    for storage in [SlotStorage::RetainAll, SlotStorage::LastUse] {
++        assert_eq!(evaluate_memoized(&plan,&input,&mut cache,storage).unwrap().witness.decoded,plain.decoded);
++    }
++}

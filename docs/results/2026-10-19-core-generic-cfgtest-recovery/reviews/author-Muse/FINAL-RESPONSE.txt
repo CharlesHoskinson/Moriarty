@@ -1,0 +1,226 @@
+All 13 Task-B introduced sites and the 6 separately-labelled pre-existing sites are covered below. The 11,071-byte missing test source is **approved exact**. No execution was performed.
+
+Base freeze: [SOURCE-FREEZE.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/SOURCE-FREEZE.json) — 2,507 bytes, `b197e30cbe6725722e66978fa6a84b06d1e45cf0c540d65f5a83c060f2b466d7`.
+
+## Decision on missing owner test source
+
+**APPROVE-EXACT-SOURCE**
+
+- Target: [adt_projection_tests.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/core-cfgtest-generic-abi-inventory-20261019/task-B-opus-source-author/provider-ready/actual-fresh-muse-outage-01/cwd/crates/mori-core/src/sherlock/helper_machine/witness_plan/adt_projection_tests.rs)
+- Pin: 11,071 bytes, `1a271a681e17fefd95e42d16abe38588bb3adbf5730c513f3cc2f89d6f758f39`.
+- Reasons: it uses only the supplied `ProgramSnapshot`, `ConstantSnapshot`, `DataSnapshot`, `ImageSnapshot`, `ValueNode::Constructor`, `InputValue::TypeId`, `PlanNodeC`, `HelperControlC::Build/Plan`, `HelperResultC::BuildDone/PlanMatched/PlanNoMatch`, `construct_plan`, `evaluate_uncached`, `evaluate_last_use`, `evaluate_memoized`, `WitnessCache`, `SlotStorage`, and `materialize` surfaces.
+- Its assertions preserve nominal identity, field order, repeated occurrences, table lengths, typed `type_args`, `InputChanged` detection, and dedicated/nominal occurrence reconstruction.
+- Stage it byte-for-byte unchanged. Do not add or alter the existing `#[cfg(test)] #[path = "witness_plan/adt_projection_tests.rs"]` declaration in [witness_plan.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/src/sherlock/helper_machine/witness_plan.rs:318) — 13,605 bytes, `7328c960e7a7f98eca964511f62a2e4d0a9b7b664156c5e0cfc23a83a4571a92`.
+
+## Task-B introduced hunks
+
+### B1–B2: `ext_capacities: None`
+
+[core_action_consumer_security_operator_tests.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_security_operator_tests.rs:57) — 16,845 bytes, `099c2d77ed9bcfe398fb0fa9a610900c4f23f7381622ad85756423dd8b2eba26`
+
+Before:
+
+```rust
+        capacities,
+        boundary_capacities_present: false,
+```
+
+After:
+
+```rust
+        capacities,
+        ext_capacities: None,
+        boundary_capacities_present: false,
+```
+
+[owner_runtime.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:1882) — 186,687 bytes, `69986164a029f48ebc8c03c7db094a84a9e1b36e80f65fa02438b4518aa1b516`
+
+Before:
+
+```rust
+            capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
+                occurrence_path_slots: 128, value_slots: 1000 },
+            boundary_capacities_present: false }
+```
+
+After:
+
+```rust
+            capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
+                occurrence_path_slots: 128, value_slots: 1000 },
+            ext_capacities: None,
+            boundary_capacities_present: false }
+```
+
+Reason: satisfy the new required `LayoutSchemaC::ext_capacities` field with the same neutral value used by Task A. No capacity or guard policy changes.
+
+### B3: raw constructor snapshot
+
+Same [owner_runtime.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:1941) pin as above.
+
+Before:
+
+```rust
+enum SnapDataRow { U128(u128), Bool(bool), Nil,
+        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize) }
+```
+
+After:
+
+```rust
+enum SnapDataRow { U128(u128), Bool(bool), Nil,
+        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize),
+        Constructor(usize, usize, usize, usize) }
+```
+
+Before:
+
+```rust
+            crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
+        }
+```
+
+After:
+
+```rust
+            crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Constructor { type_id, ctor_id, fields } => SnapDataRow::Constructor(type_id.0, ctor_id.0, fields.start.0, fields.len),
+        }
+```
+
+Reason: preserve nominal identity and field slice in the existing snapshot shape. No wildcard arm is added.
+
+### B4–B9: three independent `program_view` serializers
+
+The same two expression/pattern hunks apply in each file below. They keep the local `dec`/`slice` oracle and dedicated JSON shape; they do not call production `owner_wire`.
+
+#### [sherlock_draft_runtime_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/sherlock_draft_runtime_independent.rs:33) — 13,682 bytes, `c6efbd5b9d899d06bea6c79f7cc6a40d12444a6f9ea6c84f375481823c0bd6e8`
+
+#### [sherlock_core1_provenance_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/support/sherlock_core1_provenance_independent.rs:38) — 17,260 bytes, `b4f86c04cac21be81cd741d1eb5e1ce4973cd522ca9a63a562ec99b73c304103`
+
+#### [sherlock_provenance_twins_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/support/sherlock_provenance_twins_independent.rs:32) — 13,391 bytes, `66ee4a1d17ee32d3b131b7f95cc74378717b54798b7ad3733b2095062fd920b9`
+
+Expression before, identical in all three:
+
+```rust
+        ExpressionRowC::Match{scrutinee,arms}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms)}}),
+```
+
+Expression after, identical in all three:
+
+```rust
+        ExpressionRowC::Match{scrutinee,arms,plan}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms),"plan":(*plan).map(dec)}}),
+        ExpressionRowC::Construct{type_id,ctor_id,fields,constant}=>json!({"Construct":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"fields":slice(*fields),"constant":(*constant).map(dec)}}),
+```
+
+Pattern before, identical in all three:
+
+```rust
+        PatternRowC::PBranch{x,y}=>json!({"PBranch":{"x":dec(*x),"y":dec(*y)}}),
+    }).collect();
+```
+
+Pattern after, identical in all three:
+
+```rust
+        PatternRowC::PBranch{x,y}=>json!({"PBranch":{"x":dec(*x),"y":dec(*y)}}),
+        PatternRowC::Wildcard=>json!("Wildcard"),
+        PatternRowC::Constructor{type_id,ctor_id,children}=>json!({"Constructor":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"children":slice(*children)}}),
+    }).collect();
+```
+
+Reason: add the required `Match.plan`, `Construct`, `Wildcard`, and `Constructor` coverage while preserving every existing arm and output field.
+
+### B10–B11: witness baseline
+
+[sherlock_witness_baseline_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/sherlock_witness_baseline_independent.rs:23) — 19,089 bytes, `880e1d6068bd6d191fd87dcda86d921abc1ef48caf17b7bd985508a171072bc0`
+
+Before:
+
+```rust
+        wp::ValueNode::Branch{left,right}=>json!(["Branch",left,right]),
+    }).collect();
+```
+
+After:
+
+```rust
+        wp::ValueNode::Branch{left,right}=>json!(["Branch",left,right]),
+        wp::ValueNode::Constructor{type_id,ctor_id,fields}=>json!(["Constructor",type_id.0,ctor_id.0,fields]),
+    }).collect();
+```
+
+Before:
+
+```rust
+        Frame(i)=>("frame",Some(*i)),ScheduledFrame=>("scheduled_frame",None),Control=>("control",None),
+        Helper=>("helper",None),Task(i)=>("task",Some(*i)),Result=>("result",None),Outcome=>("outcome",None),ValueSlot(i)=>("value_slot",Some(*i)),
+    }
+```
+
+After:
+
+```rust
+        Frame(i)=>("frame",Some(*i)),ScheduledFrame=>("scheduled_frame",None),Control=>("control",None),
+        Helper=>("helper",None),Task(i)=>("task",Some(*i)),Result=>("result",None),Outcome=>("outcome",None),ValueSlot(i)=>("value_slot",Some(*i)),
+        PatternChild(i)=>("pattern_child",Some(*i)),Type(i)=>("type",Some(*i)),TypeArg(i)=>("type_arg",Some(*i)),
+        Constructor(i)=>("constructor",Some(*i)),ConstructorField(i)=>("constructor_field",Some(*i)),
+        DeclParamCount(i)=>("decl_param_count",Some(*i)),DeclCtorCount(i)=>("decl_ctor_count",Some(*i)),
+        DeclTemplate(i)=>("decl_template",Some(*i)),PlanNode(i)=>("plan_node",Some(*i)),
+        PlanCase(i)=>("plan_case",Some(*i)),FieldPath(i)=>("field_path",Some(*i)),
+    }
+```
+
+Reason: preserve tuple-array value shape and `(&'static str, Option<usize>)` path shape for all new variants.
+
+### B12: `HostilePlans`
+
+Same [owner_runtime.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs:2297) pin as above.
+
+Before:
+
+```rust
+        fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
+    }
+```
+
+After:
+
+```rust
+        fn plan_build(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_build(s, p, g)) }
+        fn plan_plan(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_plan(s, p, g)) }
+        fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
+    }
+```
+
+Reason: mirror every sibling forwarding method through `finish`, including the existing hostile mutation path. No invented return is introduced.
+
+### B13: missing module file
+
+Approved exact staging only, as decided above. No hunk text is authored for its body and its body is not echoed.
+
+## Separately labelled pre-existing TypeIdC/SortTag recovery
+
+These six call sites predate the 39-file delta: two per file, namely `sort(r.return_type)` and `sort(r.sort)`. The correction changes each local `sort` helper to accept the actual `TypeIdC` carrier. It preserves the four dedicated string outputs and panics explicitly on a generic ID that the sealed dedicated serializer cannot name. Existing call-site text is unchanged.
+
+In each file, add `TypeIdC` to the existing `shared::{...}` import immediately before `UnaryOp`.
+
+Files and pins: [sherlock_draft_runtime_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/sherlock_draft_runtime_independent.rs:22), [sherlock_core1_provenance_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/support/sherlock_core1_provenance_independent.rs:27), and [sherlock_provenance_twins_independent.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-adt-C6-ABI-F7-S1-canonical-union-source-20261019/snapshot/crates/mori-core/tests/support/sherlock_provenance_twins_independent.rs:21), with the full pins already listed above.
+
+Before, identical in all three:
+
+```rust
+fn sort(s: SortTag) -> &'static str {
+    match s { SortTag::UInt=>"UInt",SortTag::Bool=>"Bool",SortTag::List=>"List",SortTag::Tree=>"Tree" }
+}
+```
+
+After, identical in all three:
+
+```rust
+fn sort(s: TypeIdC) -> &'static str {
+    match s { TypeIdC::UInt=>"UInt",TypeIdC::Bool=>"Bool",TypeIdC::List=>"List",TypeIdC::Tree=>"Tree", _=>panic!("unexpected generic type id in sealed dedicated program") }
+}
+```
+
+No old test, assertion, fixture value, supported case, guard, resource policy, or production serializer was removed or replaced. Root still must compose A+B, re-pin the staged candidate, obtain fresh non-author review, and run the later authorized full retained compilation.
