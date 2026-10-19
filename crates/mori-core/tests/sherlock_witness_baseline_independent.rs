@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use std::mem::discriminant;
 const EXPECTED: &str = include_str!("fixtures/witness-baseline-independent/NORMAL-DECODING-EXPECTATIONS.json");
 const CONFIG: &str = include_str!("fixtures/witness-baseline-independent/CONFIG.json");
-const FIELDS: [&str;21] = ["constants","constant_fields","data","data_fields","environment_cells","current_environment","frames","control","helper","tasks","result","value_slots","outcome","names","expressions","parameters","arms","patterns","occurrences","occurrence_paths","children"];
+const FIELDS: [&str;33] = ["constants","constant_fields","data","data_fields","environment_cells","current_environment","frames","control","helper","tasks","result","value_slots","outcome","names","expressions","parameters","arms","patterns","occurrences","occurrence_paths","children","functions","pattern_children","types","type_args","constructors","ctor_fields","decl_param_counts","decl_ctor_counts","decl_templates","plan_nodes","plan_cases","field_paths"];
 fn field<'a>(fields: &'a [wp::NamedValue], name: &str) -> &'a wp::SlotValue {
     &fields.iter().find(|f| f.field==name).expect("declared required field").value
 }
@@ -92,6 +92,51 @@ fn check_snapshot(m:&wp::MaterializedSnapshot,expected_lifetime:wp::LifetimeUnit
     check_plan(&m.plan);assert_eq!(discriminant(&m.plan.lifetime),discriminant(&expected_lifetime));
     let d=&m.evaluation.decoded;let raw=&m.raw;
     assert_eq!(d.fields.iter().map(|f|f.field).collect::<Vec<_>>(),FIELDS);
+    // Current dedicated inputs have eleven explicit empty ADT/declaration/plan tables.
+    assert_eq!(raw.admission.identity.grammar_domain,GrammarDomain::DedicatedSorts);
+    assert!(raw.admission.view.pattern_children.is_empty(),"dedicated input pattern_children");
+    assert!(raw.admission.view.types.is_empty(),"dedicated input types");
+    assert!(raw.admission.view.type_args.is_empty(),"dedicated input type_args");
+    assert!(raw.admission.view.constructors.is_empty(),"dedicated input constructors");
+    assert!(raw.admission.view.ctor_fields.is_empty(),"dedicated input ctor_fields");
+    assert!(raw.admission.view.decl_param_counts.is_empty(),"dedicated input decl_param_counts");
+    assert!(raw.admission.view.decl_ctor_counts.is_empty(),"dedicated input decl_ctor_counts");
+    assert!(raw.admission.view.decl_templates.is_empty(),"dedicated input decl_templates");
+    assert!(raw.admission.view.plan_nodes.is_empty(),"dedicated input plan_nodes");
+    assert!(raw.admission.view.plan_cases.is_empty(),"dedicated input plan_cases");
+    assert!(raw.admission.view.field_paths.is_empty(),"dedicated input field_paths");
+    let functions=match field(&d.fields,"functions") {
+        wp::SlotValue::Sequence{kind:wp::SequenceKind::Functions,items}=>items,
+        _=>panic!("typed current functions output"),
+    };
+    assert_eq!(functions.len(),raw.admission.view.functions.len());
+    for (decoded,original) in functions.iter().zip(&raw.admission.view.functions) {
+        match decoded {
+            wp::SlotValue::Source(wp::InputValue::Function(row))=>assert_eq!(row,original),
+            _=>panic!("complete ordered FunctionRowC output"),
+        }
+    }
+    for (name,expected_kind) in [
+        ("pattern_children",wp::SequenceKind::Indices),
+        ("types",wp::SequenceKind::Types),
+        ("type_args",wp::SequenceKind::TypeIds),
+        ("constructors",wp::SequenceKind::Constructors),
+        ("ctor_fields",wp::SequenceKind::ConstructorFields),
+        ("decl_param_counts",wp::SequenceKind::Indices),
+        ("decl_ctor_counts",wp::SequenceKind::Indices),
+        ("decl_templates",wp::SequenceKind::DeclTemplates),
+        ("plan_nodes",wp::SequenceKind::PlanNodes),
+        ("plan_cases",wp::SequenceKind::PlanCases),
+        ("field_paths",wp::SequenceKind::Indices),
+    ] {
+        match field(&d.fields,name) {
+            wp::SlotValue::Sequence{kind,items}=>{
+                assert_eq!(*kind,expected_kind,"typed {name} output");
+                assert!(items.is_empty(),"dedicated decoded {name}");
+            },
+            _=>panic!("present typed {name} output"),
+        }
+    }
     assert_eq!(d.metadata.admission,raw.admission);assert_eq!(d.metadata.run_id,raw.image.run_id);
     assert_eq!(d.metadata.control_origin,raw.image.control_origin);assert_eq!(d.metadata.env_root,raw.image.env_root);
     assert_eq!(d.metadata.stack_limit,raw.image.stack_limit);assert_eq!(d.metadata.initial_fuel,raw.image.initial_fuel);
