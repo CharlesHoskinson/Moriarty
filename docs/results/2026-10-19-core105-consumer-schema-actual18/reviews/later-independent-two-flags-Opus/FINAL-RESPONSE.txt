@@ -1,0 +1,87 @@
+# Review: ops 15/16 `--nocapture` → `--show-output` on actual105
+
+**Identity and status.** I was requested as fresh non-author Claude Opus 5.5 HIGH, and this response is from `claude-opus-5-5`. Root must record the returned model keys and terminal status from its own harness.
+
+**Coverage.** I reviewed the delivered packet only. I made no tool calls in this response: no file reads, hashes, shell commands, compiler, test, subject, provider or Git. Every path, size and SHA below is taken as supplied and was not re-verified. I also did not read libtest `pretty.rs` or `--show-output` source; the formatter statements in §2 come from my knowledge of stable libtest behaviour.
+
+## 1. Delta consistency (packet-internal checks only)
+
+- **The two edits are what was described.** Two JSON pointers, `/operations/14/argv/12` and `/operations/15/argv/12`, change `--nocapture` (11 bytes) to `--show-output` (13 bytes). That is +4 bytes, matching 60624 → 60628.
+- **Old and new rows differ only in that token.** Comparing the OLD and NEW rows field by field: binary, selector, `--exact`, `--test-threads=1`, timeout, prlimit values, cwd, environment, outputs, requiredInputs, generatedInputsFrom, stream cap, stdin, expectation, membership-list dependency and outputPolicy are all identical.
+- **The other 16 rows are claimed unchanged.** They are covered by canonical-row SHAs, and the inverse is claimed exact. I accept these as supplied, not re-hashed.
+
+## 2. Formatter semantics under the new argv
+
+I confirm the prior reviewer's basis for libtest's pretty formatter with `--test-threads=1`, `--show-output` and no `RUST_TEST_NOCAPTURE` (the environment is exactly the declared variables). On success, stdout is:
+
+1. `running 1 test`
+2. `test <name> ... ok`. The body's `print!`/`println!`/`eprint!`/`eprintln!` output and panic-hook output are captured per test, so nothing interrupts this line.
+3. A `successes:` section containing `---- <name> stdout ----`, the captured text, then the indented name list.
+4. `test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in …`
+
+**Checked against the exact `test_membership`:**
+
+- **The `running 1 test` regex matches.** libtest uses the singular form for one test.
+- **The result regex yields exactly one tuple, `[(name, "ok")]`.**
+  - Section headers start with `----` and the name list is indented, so neither matches `^test `.
+  - Op 15's captured `actual_compile_only_artifact=…` and op 16's `complete_step_events_debug_path=…` lines (as described in the prior opinion) also do not start with `test `.
+- **The summary regex matches.** The literal `filtered out;` is followed by `finished in`, and the first four groups are `(1,0,0,0)`.
+- **`filtered_out` is 0 for both ops.** List ops 08 and 09 each expect exactly one member, so Root's separate `filtered_out == 0` check holds for 15/16.
+- **There are no ANSI codes.** stdout is a file, not a TTY, and `--color` defaults to auto. This is the same condition the approved ops 11–14 already rely on.
+- **Failure paths fail closed.**
+  - A failing body yields `test <name> ... FAILED` plus a `failures:` block containing the captured output, which is printed regardless of `--show-output`.
+  - The tuple check rejects that output.
+  - A forged `test result: ok…` line inside captured text cannot rescue a failing run, because the tuple check is independent.
+- **Diagnostics are retained.**
+  - On success, captured output now goes to `stdout.bin` in the `successes:` block, so nothing is lost.
+  - Captured `eprintln!` output moves from stderr into that stdout block, so `stderr.bin` will normally be empty on success. No stderr expectation is stated.
+  - The two `create_new` Debug event files are written through the environment-variable paths and are unaffected.
+
+**Remaining uncertainty (each is fail-closed and none can produce a false pass):**
+
+- **U1 — direct stdout writes bypass capture.** Libtest capture only intercepts the print macros and panic output. If either body writes with `std::io::stdout().write_all`/`writeln!(io::stdout(), …)`, or through a raw file descriptor, that text would still land on the result line and the op would fail. The prior opinion describes `println!` output, and I did not re-read the bodies.
+- **U2 — a captured line could match the result regex.** A captured line of the form `test X ... Y` would add a tuple and fail the op. Nothing like that is described.
+- **U3 — the 131072-byte cap.** The summary now follows the captured block, as it did under `--nocapture`, so total stdout volume is essentially unchanged. If the helper's truncation or overflow rule drops the tail, the summary is lost and the op fails. This exposure is not new.
+- **U4 — `--show-output` support.** The flag has been stable since Rust 1.39. An unsupported toolchain would reject it as an unknown option.
+
+## 3. Eligibility
+
+| Op | Decision |
+|---|---|
+| **15** Core1 provenance | **ELIGIBLE** under the unchanged OC controls (10 s/KILL, CPU 8, AS 1 GiB, FSIZE 16 MiB, core 0, 131072-byte streams, exact env, DEVNULL stdin, serial fail-stop/no-retry, fresh `create_new` Debug path), with the exact 1/0/0/0 and filtered-out 0 requirements and dependencies 03 and 08 |
+| **16** Provenance twins | **ELIGIBLE** under the same controls, with dependencies 04 and 09 |
+| 01–14, 17, 18 | Eligibility unchanged from actual41087 |
+
+- **Remaining operation defect:** none blocking. U1–U4 are recorded residuals.
+- **Prior source verdict preserved:** SOURCE_APPROVE stands. Its M1–M8 missing-body names and conditions stay as recorded, and there is no new source review.
+- **Root-glue gate:** none invented. Root's `filtered_out == 0` and expectation-metadata composition are the same mechanism already accepted for ops 11–14.
+
+## 4. D1 disposition
+
+- **The disposition is accepted as recorded:** `D1_RECORDED_EXACT_HISTORICAL_EXECUTED_BYTES_NOT_ESTABLISHED`.
+- **What is preserved:** the delivered defective `materialize.py` (`b90a8c40…`, 10941 B) and its copy, the original claims, receipts, COPYMAP and afterimages. The retraction of any unqualified generation claim also stands.
+- **The restoration is internally consistent.** The one-line restoration `rel=ROOTS[0];s=(W/rel).read_text()` is 35 bytes including the newline, matching 10941 → 10976.
+- **The restoration is not provenance.** It does not show what actually ran.
+- **The restoration must stay unexecuted.** It reads `W/rel` live, so running it against frozen or candidate paths would read already-amended text and could rewrite evidence. Keep it unselected and UNEXECUTED.
+- **The historical generator identity remains unverified.** Source approval rests independently on the directly reviewed afterimages, diffs, COPYMAP and inverse.
+
+## 5. Canonical binding applicability (as reported, not re-verified)
+
+- **Accepted as reported:**
+  - all 403 active pins match after the parent-reported PR280 `d372b7`;
+  - the 105 canonical inputs are byte-identical to the actual105 source and rlib;
+  - the active compiler pin is `2f88089…`, and no active pin names `5da75b…`;
+  - no pin was replaced or refreshed;
+  - the new flat file only adds 13 control pins;
+  - the generated DAG operations are unchanged.
+- **The 104 set stays stale.** Its single `5da75b` → `2f88089` mismatch is dated stale evidence. The 104 proposal stays frozen and unselected, and its currentness is not restored.
+- **No rebuild or replay is selected.** There is no Core rebuild or replay, and `current-evidence.json` stays untouched.
+
+## 6. Retained limits
+
+- **Finite scope:** these 18 operations only, all still **UNRUN**. No outcome is predicted.
+- **Hash binding:** a matching hash binds bytes, not compatibility or results.
+- **Prior receipt:** actual3 remains narrow, same-author, LiteralSeven A102 plus unstepped B genesis.
+- **Not established:** non-native, non-target, non-financial behaviour; generic or full-B projection; a B-clock or full-prefix oracle; A/B correspondence; whole-EARS acceptance.
+- **Not reviewed for security:** UIREQ030 and security admission remain designated-owner only, and the original security and negative requirements stand as recorded.
+- **Not refreshed:** no currentness refresh was made, and none is claimed.

@@ -1,0 +1,211 @@
+# Fresh nonauthor review: W3 `--list` plus 49 `--exact` operations
+
+## Verdicts
+
+| | Verdict | Scope |
+|---|---|---|
+| **SOURCE / APPLICABILITY** | **WITHHOLD** | Whole 49-test union as submitted |
+| **EXECUTION-ELIGIBILITY** | **WITHHOLD** | Submitted unit: op 00 plus ops 01–49 |
+
+**Why WITHHOLD.** The packet says the 13 files contain every emitter implementation the 49 tests reach. That is false. `emit_enabled_fetch_block` (`sherlock_machine/enabled_fetch.rs`) is not among the 13 bodies, and 22 of the 49 selected tests execute it (Finding F1). I cannot complete the full read for those 22, so per the instruction I withhold rather than invent coverage.
+
+**Advisory, for Root to bind or not.** A reduced selection would be CONDITIONAL-eligible under preconditions P1–P10 below. That selection is op 00 plus the 27 operations whose call closure is fully inside the 13 bodies. This advisory is a different exact selection; it is not a verdict on the submitted unit.
+
+Nothing here was compiled, executed, or rehashed. The list, all 49 tests, the executable copy and final teardown remain UNRUN or unobserved.
+
+---
+
+## 1. Read coverage
+
+### Fully read: all 13 inline bodies
+
+| ID | File | What I examined |
+|---|---|---|
+| W3-01 | `b_admin_publication.rs` | `P1` value/error/unified emitter; Add and Sub 5-stage chains; muxes; stutter; ref-cursor binding; namespace checks; local `Emitter` |
+| W3-02 | `b_admin_publication_normal_tests.rs` | u128 interpreter (with `DivModPowerOfTwo`); fixtures; Add/Sub chain builders; SDK JSON round-trip helper; 16 tests |
+| W3-03 | `b_return_right_completion.rs` | return.right (Add), primitive.value, primitive.error; scope/caller checks; post-site contracts |
+| W3-04 | `b_return_right_completion_normal_tests.rs` | Interpreter; legacy fixture; SDK JSON helper; 14 tests |
+| W3-05 | `b_return_right_subtraction.rs` | return.right (Sub); dead-code preimage copies |
+| W3-06 | `b_scalar_arithmetic.rs` | Add arithmetic emitter; public wrapper; `space_read_any_kind`, which calls the unread `emit_enabled_fetch_block` |
+| W3-07 | `b_scalar_arithmetic_normal_tests.rs` | Interpreter without `DivModPowerOfTwo`; SAFE ten-case fixtures; 8 tests |
+| W3-08 | `b_scalar_completion.rs` | exit (Applied/RefusedCapCharged) and failure emitters |
+| W3-09 | `b_scalar_completion_normal_tests.rs` | Interpreter without `DivModPowerOfTwo`; exit/failure fixtures; 8 tests |
+| W3-10 | `b_scalar_subtraction.rs` | Sub arithmetic emitter (also calls the unread `emit_enabled_fetch_block`); `#[path]` registration of `three_tests` |
+| W3-11 | `b_scalar_subtraction_completion.rs` | Sub exit/failure; `BSubPublishState` maps; complement emitter |
+| W3-12 | `b_scalar_subtraction_three_tests.rs` | Interpreter; 3 tests |
+| W3-13 | `mod.rs` | `TableShape::new`, `immediate`, `constrain`; registration of all five cohorts |
+
+I read the inline text only. I did not verify that it is byte- or hash-identical to the frozen `229770` manifest; that identity is Root's assertion.
+
+### Executed by selected tests but not provided
+
+| Body | Reached by | Severity |
+|---|---|---|
+| `enabled_fetch.rs` (`emit_enabled_fetch_block`, `EnabledFetchInputs`, its temporary naming) | 22 tests (F1) | **Blocking** for those 22 |
+| `literal_host.rs` (`ConstructionError` definition, its `PartialEq`/`Eq`/`Debug`) | Constructor tests | Low; type-level (F2) |
+| Crate root `lib.rs` (declares the `sherlock_machine::` prefix) | All 49 names | Checked by op 00, not by source |
+| `Cargo.toml` (panic strategy, harness, dependency features) | All | Native-startup and SDK-assumption residual |
+| `mori_core::Type`, SDK `Fr::from` / `Fr` equality, serde for `Instruction`/`Operand`/`IrSource` | All; ops 29 and 43 for serde | Acknowledged out of scope. Only `IrSource::load` (rawlines 954–989) was read |
+| Runtime-class `ordinary-QA/PROPOSED.json` | Basis for PATH/LANG/TMPDIR/limits | Not provided; I cannot confirm the argv matches that class |
+
+---
+
+## 2. Membership of the 49 literal names (source side)
+
+Every name matches exactly one `#[test] fn` in the stated module. None carries `#[ignore]` or `#[should_panic]`. Each module is registered:
+
+- `#[cfg(test)] mod …` in W3-13 for the first four cohorts.
+- `#[cfg(test)] #[path] mod three_tests` in W3-10 for the fifth.
+
+| Ops | Module | Count | Source match |
+|---|---|---|---|
+| 01–08 | `b_scalar_arithmetic_normal_tests` | 8 | ✓ |
+| 09–16 | `b_scalar_completion_normal_tests` | 8 | ✓ |
+| 17–30 | `b_return_right_completion_normal_tests` | 14 | ✓ |
+| 31–46 | `b_admin_publication_normal_tests` | 16 | ✓ |
+| 47–49 | `b_scalar_subtraction::three_tests` | 3 | ✓ |
+
+The `sherlock_machine::` root prefix and uniqueness in the actual harness are not source-verified (`lib.rs` is unread). Only the op-00 output can establish them.
+
+---
+
+## 3. Mandatory findings
+
+**F1 — Blocking: unread emitter in the call closure of 22 operations.**
+`space_read_any_kind` in W3-06 and in W3-10 calls `emit_enabled_fetch_block`, whose body is absent. Affected operations:
+
+| Ops | Tests | Path to the unread body |
+|---|---|---|
+| 01–08 | Add arithmetic | Includes 08 via `emit_public_b_scalar_arithmetic_add` |
+| 34–37, 40–43 | Add chains | Stage 1 uses Add arithmetic |
+| 44–46 | Sub chains | Stage 1 uses Sub arithmetic |
+| 47–49 | Sub `three_tests` | Sub arithmetic directly |
+
+Consequences:
+
+- **Effects.** The effects class `HOST_EMITTER_EVALUATOR_OR_CONSTRUCTOR_CHECK` for these 22 rests on code nobody has reviewed here.
+- **Interpreter compatibility.** The interpreters in W3-07, W3-09 and W3-12 reject any instruction outside their match arms (no `DivModPowerOfTwo`, no `PublicInput`, and so on). Whether the fetch block emits only supported instructions is unknown.
+- **Assertion relevance.** Op 42 asserts that `%ns_s1_arith.const_fetch.temp.0` and `.data_fetch.temp.0` are emitted names. That depends on naming inside `enabled_fetch.rs`.
+
+To lift: supply the complete `enabled_fetch.rs`, plus anything it calls, for a fresh review.
+
+**F2 — `ConstructionError` definition unread.**
+Ops 07, 16, 38 and 42 compare `Err(…Fetch(ConstructionError::…))` with `assert_eq!`. That relies on `ConstructionError`'s `PartialEq`, whose impl is unread. For ops 16 and 38 in the reduced set, this is precondition P8.
+
+**F3 — `test_membership` cannot be reused verbatim with these operation dicts.**
+The helper reads `op['expected']['exactTest']`, but every frozen op uses the key `expectedMembership`. Called as-is, it raises `KeyError`. Root must declare the exact adapter, for example `dict(op, expected=op['expectedMembership'])`. Also, `test_membership` does not check that `filtered_out == N-1`; that comparison is extra glue Root must state.
+
+**F4 — Stale, contradictory fields in `EXACT-49-OPERATIONS.json`.**
+
+- `"ELF": {"path": null, … "PENDING_ACTUAL_NEW_W3_BUILD_OUTPUT…"}` contradicts the 49 argv, which already name `execution-copy-01/mori_backend-W3-3a2f695515330e5a`.
+- `actualListOperation` uses `/PENDING_NEW_W3_ELF/…` with `--list --format terse`. That differs from `EXACT-LIST-OPERATION.json` (plain `--list`).
+
+Root must record that `EXACT-LIST-OPERATION.json` and `ACTUAL-ELF-AND-EXECUTION-COPY-BINDING.json` are authoritative, and that the embedded stanza is never executed.
+
+**F5 — No existing primitive parses `--list` output, and the list may overflow its stream cap.**
+
+- The helper has no list parser. Root must state the exact predicate. Count only `^(\S+): test$` entries and require each of the 49 names to appear exactly once among them. Read the summary line `^(\d+) tests?, (\d+) benchmarks?$`.
+- Define N as tests plus benchmarks. libtest's `filtered out` counts both, so N−1 is only right with that definition.
+- Each list line is up to about 140 bytes. If the crate has roughly 900 or more tests, `--list` stdout exceeds 131072 bytes. The capture then records a cap overflow and fail-stops before any test runs.
+- That would be a controller outcome, not a test failure. It consumes the attempt, and a different list operation would need fresh review (no cap raise is allowed).
+
+**F6 — The acceptance predicate is spread across prose; the helper's `main` is forbidden.**
+Exit 0, no `controller_failure`, `full_stream_retained` on both streams, membership with N−1, and the post-checks were enforced only in the forbidden `main`. Before selection, Root must write down the exact per-operation predicate and the fail-stop rule as a composition of existing functions.
+
+**F7 — Resource counters are not bound.**
+Only raw debits are supplied, for example `phases` at `usage_usec 96917530` and the ledger root at `116543574`. No remaining allowance is given. Worst-case child consumption:
+
+| Selection | Wall (s) | CPU (s) |
+|---|---|---|
+| Submitted 50 operations | ≈500 | ≈400 |
+| Reduced 28 operations | ≈280 | ≈224 |
+
+Neither cgroup placement nor whether these debits count against an applicable counter is stated. I am not inventing a limit. Root must bind it (P4).
+
+**F8 — Teardown still pending.**
+The raw receipt shows `pids.current 0` in all three cgroups, but `memory.current` is about 4.06 GB in `phases` and the binding says "teardown: Root next". The ordering is unresolved (P3).
+
+**F9 — ELF-to-source linkage is asserted, not reviewed.**
+I cannot confirm the ELF was built from exactly these 13 bodies. Op-00 membership only partly corroborates it.
+
+**F10 — Timeout risk is not a safety issue but would consume the attempt.**
+
+- The binary is a `target/debug` (unoptimized) build.
+- The interpreters in W3-02 and W3-04 decode each immediate by looping `Fr::from(candidate)` over 0..=1024.
+- Chain tests evaluate large instruction streams several times. Op 42 emits about 30 chains; op 43 evaluates 4 chains and round-trips JSON.
+- Under 8 s CPU and 10 s wall, a kill is possible. Under fail-stop it ends the campaign without saying anything about the source. A stack overflow in a debug test thread is similar (process abort). I do not predict either outcome.
+
+**F11 — Effects classification is slightly understated for op 29.**
+Besides `IrSource::load`, op 29 directly calls `serde_json::from_value::<Operand>` on both the accepting and the rejecting path. It is still in-memory SDK serde only, with no I/O. In my read scope no selected test performs file, network, environment or subprocess I/O.
+
+**F12 — Assertion relevance (not soundness).**
+
+- **Interpreter semantics differ from the SDK.** The interpreters use host u128 values with no `Fr` wrap. `ConstrainBits`/`LessThan` with 128 bits are unchecked, and immediates outside 0..=1024 cause rejection. A pass shows only that the emitted stream accepts or rejects under these host semantics.
+- **Some assertions only pin layout.** Op 13 pins instruction indices 142 and 144 and temporaries `.68`/`.70`. Ops 30 and 41–42 pin first-failure ordering and names. These are emitter-layout and token assertions.
+- **Expected values are authored, not independent.** Some come from host `checked_add`/`checked_sub`, the rest are literal. No independent oracle exists for this union.
+
+**F13 — Stale documentation (non-blocking for execution).**
+
+- W3-10's module docs say the Add-specialized completion, return-right and P1 emitters "do not consume this block".
+- W3-11 says return-right "rejects every enabled Sub state".
+- Both are contradicted by W3-05 (`emit_k_machine_return_right_sub_block`) and W3-01 (`emit_b_sub_to_publication_chain`), which now consume these carriers. This should be corrected before any source adoption.
+
+Within the read scope I found no source defect that blocks the 27-operation subset.
+
+---
+
+## 4. Reduced-scope advisory: CONDITIONAL-eligible
+
+**Selection.** Op 00, then ops **09–33, 38, 39** in that order. That is 27 tests plus the list. Each test's full closure, apart from the SDK, std and the `ConstructionError` type, lies in W3-01, -03, -04, -08, -09 and -13. Classification:
+
+- 26 are host emitter/evaluator/constructor tests.
+- Op 29 is emitter plus SDK serde/`IrSource::load`.
+- None touch preprocessing, `ProofPreimage.check`, Halo2, keygen, prove or native verify.
+
+Argv, cwd, env and limits are unchanged from the frozen operations.
+
+**Preconditions Root must bind before op 00.** Missing facts are listed as preconditions, not as observations.
+
+- **P1. Executable copy.**
+  1. Create a fresh, empty `execution-copy-01`.
+  2. Copy the preserved ELF with an O_EXCL byte copy.
+  3. Record bytes = 467781064 and SHA256 = `a70705f0…2b839d`.
+  4. `chmod 0700` the copy only.
+  5. Re-check that the preserved file is still 0644 with the same hash and was never executed.
+  6. Confirm the filesystem allows exec. Otherwise the result is exit 126/127 and fail-stop.
+- **P2. Directories and binaries.**
+  - The cwd `native-W3-new49-execution-metadata-20261019` and its `tmp/` exist. `tmp/` is empty.
+  - Every per-operation capture directory is fresh, because `capture()` opens streams with `'xb'`.
+  - `/usr/bin/timeout` and `/usr/bin/prlimit` are present at their pinned identities.
+- **P3. Teardown.** Final P10 teardown is complete and recorded, or explicitly sequenced. `pids.current == 0` is re-observed immediately before op 00.
+- **P4. Resource binding.** Root records actual remaining counters at or above about 280 s wall and 224 CPU-s for this unit, or a predeclared stop point. No reset, refund or manufactured allowance.
+- **P5. Authoritative files.** Per F4, the authoritative list operation is `EXACT-LIST-OPERATION.json` (plain `--list`). The stale stanza is not executed.
+- **P6. List predicate (F5).**
+  - All 27 selected names, and for transparency all 49, appear exactly once as `: test` entries.
+  - N = tests + benchmarks.
+  - Full stdout is retained under 131072 bytes. Overflow, nonzero exit or any controller failure stops everything.
+- **P7. Per-test predicate (F3, F6).**
+  - Exit 0 and no controller failure.
+  - Both streams fully retained.
+  - Exactly one `running 1 test` and one `test <name> ... ok`.
+  - Summary `1 passed; 0 failed; 0 ignored; 0 measured; N-1 filtered out`.
+  - Raw receipts saved before post-checks.
+  - Post-checks: executable-copy hash and mode, preserved-ELF hash and mode, `tmp/` empty, no new files in cwd.
+  - Serial, no retry; the first non-acceptance stops all later operations.
+- **P8. `ConstructionError` (ops 16, 38).** Root supplies the `ConstructionError` definition and it is a plain enum with derived or side-effect-free `PartialEq`/`Debug`. Otherwise drop ops 16 and 38.
+- **P9. Helper use.** Only `pin`, `save`, `stop_group`, `capture`, `static_check` and an adapted `test_membership` are used, with the adapter declared. The helper's `main` and its frozen-13 orchestration are never used.
+- **P10. Runtime class.** Root confirms that PATH, LANG, TMPDIR and the limits match the existing ordinary-Rust class file, which I did not read.
+
+**Lifting F1 for the full 49.** Supply the complete `enabled_fetch.rs` and its callees for a fresh review. Then the same P1–P10 would apply to the full unit, with the 50-operation worst case in P4.
+
+---
+
+## 5. What this review does not establish
+
+- No test has run, so no result is observed.
+- No pass is predicted.
+- No independent state or witness goldens exist.
+- No claim about SDK constraint satisfaction, Halo2, proofs, or native or ledger behaviour.
+- No safety theorem for linked-binary startup.
+- No source or result adoption, and no acceptance of the whole EARS set.
+- Stopped `Am10/T3/k17`, `C4 OPEN`, `R2 unsatisfied` and all broader obligations are unchanged.
