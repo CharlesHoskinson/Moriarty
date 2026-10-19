@@ -1,0 +1,11 @@
+--- BASE-214b/run_resume
++++ CURRENT/run_resume
+@@ -6,7 +6,7 @@
+         .ok_or_else(|| super::core_io::operation("--resume requires --event"))?;
+     let source = super::core_io::read_source(&args.file)?;
+     let result = (|| -> Result<StageOutcome, StageRejection> {
+-        let program = stage::load(&source).map_err(no_work)?;
++        let program = super::check_source::load_staged_source(&source).map_err(no_work)?;
+         let continuation = decode::read_bounded(
+             resume,
+             decode::MAX_CONTINUATION_BYTES,
