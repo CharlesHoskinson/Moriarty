@@ -1,0 +1,764 @@
+--- a/crates/mori/src/commands/mcp.rs
++++ b/crates/mori/src/commands/mcp.rs
+@@ -1,10 +1,333 @@
++//! Read-only MCP source checking over newline-delimited JSON-RPC stdio.
++//!
++//! This slice supports MCP 2025-06-18 and advertises only the implemented
++//! `check` tool. The source/report consumer is shared with `mori check`;
++//! no scenario, evaluator, target, filesystem source path or proof is accepted.
++
++use std::io::{self, BufRead, Read, Write};
+ use std::process::ExitCode;
+ 
++use mori_diagnostics::MoriDiagnostic;
++use serde_json::{Map, Value, json};
++
+ use crate::shell::Shell;
++
++use super::check_source::{self, SourceCheckConsumer};
++
++const PROTOCOL_VERSION: &str = "2025-06-18";
++const MAX_FRAME_BYTES: usize = 262_144;
++const MAX_RESPONSE_BYTES: usize = 524_288;
++const MAX_SOURCE_BYTES: usize = 65_536;
++const MAX_DISPLAY_BYTES: usize = 256;
+ 
+ #[derive(Debug, clap::Args)]
+ pub struct Args {}
+ 
+ pub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+-    todo!("mori mcp")
+-}
++    serve(io::stdin().lock(), io::stdout().lock()).map_err(super::core_io::operation)?;
++    Ok(ExitCode::SUCCESS)
++}
++
++/// Process one request at a time; EOF terminates the stdio connection.
++fn serve(mut input: impl BufRead, mut output: impl Write) -> io::Result<()> {
++    let mut session = Session::default();
++    let mut line = Vec::new();
++    loop {
++        line.clear();
++        let count = (&mut input)
++            .take((MAX_FRAME_BYTES + 1) as u64)
++            .read_until(b'\n', &mut line)?;
++        if count == 0 {
++            return Ok(());
++        }
++        if line.len() > MAX_FRAME_BYTES || line.last() != Some(&b'\n') {
++            return Err(io::Error::new(
++                io::ErrorKind::InvalidData,
++                "MCP frame exceeds 262144 bytes or is missing its final newline",
++            ));
++        }
++        let reply = match serde_json::from_slice::<Value>(&line) {
++            Ok(request) => session.receive(request),
++            Err(_) => Some(error(Value::Null, -32700, "Parse error")),
++        };
++        if let Some(reply) = reply {
++            send(&mut output, &reply)?;
++        }
++    }
++}
++
++/// Buffer a complete bounded message before writing any bytes to stdout.
++struct ResponseBuffer(Vec<u8>);
++
++impl Write for ResponseBuffer {
++    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
++        if bytes.len() > MAX_RESPONSE_BYTES - 1 - self.0.len() {
++            return Err(io::Error::other("MCP response byte limit"));
++        }
++        self.0.extend_from_slice(bytes);
++        Ok(bytes.len())
++    }
++
++    fn flush(&mut self) -> io::Result<()> {
++        Ok(())
++    }
++}
++
++fn send(output: &mut impl Write, reply: &Value) -> io::Result<()> {
++    let mut buffer = ResponseBuffer(Vec::new());
++    if serde_json::to_writer(&mut buffer, reply).is_err() {
++        buffer.0.clear();
++        let refusal = error(
++            reply["id"].clone(),
++            -32603,
++            "Response exceeds 524288-byte limit",
++        );
++        serde_json::to_writer(&mut buffer, &refusal).map_err(io::Error::other)?;
++    }
++    buffer.0.push(b'\n');
++    output.write_all(&buffer.0)?;
++    output.flush()
++}
++
++#[derive(Default)]
++struct Session {
++    initialized: bool,
++    ready: bool,
++}
++
++#[derive(Clone, Copy)]
++struct RpcError(i32, &'static str);
++
++type RpcResult<T> = Result<T, RpcError>;
++
++fn error(id: Value, code: i32, message: &str) -> Value {
++    json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
++}
++
++fn object(value: Option<&Value>) -> RpcResult<&Map<String, Value>> {
++    value
++        .and_then(Value::as_object)
++        .ok_or(RpcError(-32602, "Invalid params"))
++}
++
++fn empty_or_metadata_params(params: Option<&Value>) -> bool {
++    params.is_none_or(|params| {
++        params.as_object().is_some_and(|params| {
++            // Common MCP metadata is optional and opaque. Only its outer
++            // object shape matters here; no metadata values are interpreted.
++            params
++                .iter()
++                .all(|(key, value)| key == "_meta" && value.is_object())
++        })
++    })
++}
++
++impl Session {
++    fn receive(&mut self, request: Value) -> Option<Value> {
++        let Some(request) = request.as_object() else {
++            return Some(error(Value::Null, -32600, "Invalid Request"));
++        };
++        let method = request.get("method").and_then(Value::as_str);
++        let id = request.get("id");
++        let valid_id = id.is_none_or(|id| id.is_string() || id.is_i64() || id.is_u64());
++        if request.get("jsonrpc").and_then(Value::as_str) != Some("2.0")
++            || method.is_none()
++            || !valid_id
++        {
++            return Some(error(Value::Null, -32600, "Invalid Request"));
++        }
++        let method = method.unwrap();
++        let params = request.get("params");
++        let Some(id) = id else {
++            // Notifications never get responses or execute a tool call.
++            if method == "notifications/initialized"
++                && self.initialized
++                && empty_or_metadata_params(params)
++            {
++                self.ready = true;
++            }
++            return None;
++        };
++        let result = self.request(method, params);
++        Some(match result {
++            Ok(result) => json!({"jsonrpc": "2.0", "id": id, "result": result}),
++            Err(RpcError(code, message)) => error(id.clone(), code, message),
++        })
++    }
++
++    fn request(&mut self, method: &str, params: Option<&Value>) -> RpcResult<Value> {
++        // MCP permits pings during initialization as well as normal operation.
++        if method == "ping" {
++            return if empty_or_metadata_params(params) {
++                Ok(json!({}))
++            } else {
++                Err(RpcError(-32602, "Invalid params"))
++            };
++        }
++        if method == "initialize" {
++            if self.initialized {
++                return Err(RpcError(-32600, "Server already initialized"));
++            }
++            let p = object(params)?;
++            let valid_version = p
++                .get("protocolVersion")
++                .and_then(Value::as_str)
++                .is_some_and(|v| !v.is_empty() && v.len() <= 32);
++            let info = p.get("clientInfo").and_then(Value::as_object);
++            let valid_info = info.is_some_and(|info| {
++                ["name", "version"].iter().all(|key| {
++                    info.get(*key)
++                        .and_then(Value::as_str)
++                        .is_some_and(|v| !v.is_empty())
++                })
++            });
++            if !valid_version || !valid_info || !p.get("capabilities").is_some_and(Value::is_object)
++            {
++                return Err(RpcError(-32602, "Invalid initialize parameters"));
++            }
++            self.initialized = true;
++            // A different requested version gets this server's supported version;
++            // the client must decide whether to continue or disconnect.
++            return Ok(json!({
++                "protocolVersion": PROTOCOL_VERSION,
++                "capabilities": {"tools": {"listChanged": false}},
++                "serverInfo": {"name": "moriarty-rust", "version": env!("CARGO_PKG_VERSION")},
++                "instructions": "Read-only source checking only; no execution, proof or ledger qualification."
++            }));
++        }
++        if !self.initialized {
++            return Err(RpcError(-32002, "Server not initialized"));
++        }
++        if !self.ready {
++            return Err(RpcError(-32002, "Client initialization is incomplete"));
++        }
++        match method {
++            "tools/list" if empty_or_metadata_params(params) => Ok(tools()),
++            "tools/list" => Err(RpcError(-32602, "Invalid params")),
++            "tools/call" => call_tool(params),
++            _ => Err(RpcError(-32601, "Method not found")),
++        }
++    }
++}
++
++fn tools() -> Value {
++    json!({"tools": [{
++        "name": "check",
++        "description": "Check in-memory source with the existing Rust CLI parser/checker; no execution or proof qualification.",
++        "inputSchema": {
++            "type": "object", "properties": {
++                "source": {"type": "string", "maxLength": MAX_SOURCE_BYTES},
++                "displayName": {"type": "string", "maxLength": MAX_DISPLAY_BYTES}
++            }, "required": ["source"], "additionalProperties": false
++        },
++        "outputSchema": {
++            "type": "object", "properties": {
++                "consumer": {"const": "rust-mori-check-source"},
++                "sourceProfile": {"type": ["string", "null"]},
++                "coreProfile": {"type": ["string", "null"]},
++                "qualification": {"const": "source-check-only"},
++                "report": {"type": "object"}
++            }, "required": ["consumer", "sourceProfile", "coreProfile", "qualification", "report"],
++            "additionalProperties": false
++        },
++        "annotations": {"readOnlyHint": true, "destructiveHint": false,
++                        "idempotentHint": true, "openWorldHint": false}
++    }]})
++}
++
++fn call_tool(params: Option<&Value>) -> RpcResult<Value> {
++    let params = object(params)?;
++    if params.get("name").and_then(Value::as_str) != Some("check") {
++        return Err(RpcError(-32602, "Unknown tool"));
++    }
++    let args = object(params.get("arguments"))?;
++    if !args.contains_key("source") || args.keys().any(|k| k != "source" && k != "displayName") {
++        return Err(RpcError(
++            -32602,
++            "Tool arguments must match the closed text schema",
++        ));
++    }
++    let source = args
++        .get("source")
++        .and_then(Value::as_str)
++        .ok_or(RpcError(-32602, "Source must be a string"))?;
++    if source.len() > MAX_SOURCE_BYTES {
++        return Err(RpcError(-32602, "Source exceeds 65536 UTF-8 bytes"));
++    }
++    let display_name = match args.get("displayName") {
++        None => "<mcp>",
++        Some(Value::String(name)) if name.len() <= MAX_DISPLAY_BYTES => name,
++        _ => return Err(RpcError(-32602, "Invalid displayName")),
++    };
++    let result = check_source::dispatch(
++        source,
++        CheckConsumer {
++            source,
++            display_name,
++        },
++    )
++    .map_err(|_| RpcError(-32603, "Could not serialize check report"))?;
++    let text = serde_json::to_string(&result)
++        .map_err(|_| RpcError(-32603, "Could not serialize tool result"))?;
++    Ok(json!({
++        "isError": result["report"]["status"] != "accepted",
++        "content": [{"type": "text", "text": text}], "structuredContent": result
++    }))
++}
++
++struct CheckConsumer<'a> {
++    source: &'a str,
++    display_name: &'a str,
++}
++
++fn qualified(source_profile: Option<&str>, core_profile: Option<&str>, report: Value) -> Value {
++    json!({
++        "consumer": "rust-mori-check-source", "sourceProfile": source_profile,
++        "coreProfile": core_profile, "qualification": "source-check-only", "report": report
++    })
++}
++
++impl SourceCheckConsumer for CheckConsumer<'_> {
++    type Output = Result<Value, serde_json::Error>;
++
++    fn beta(
++        self,
++        checked: Option<&mori_checker::Checked<'_>>,
++        diagnostics: Vec<MoriDiagnostic>,
++    ) -> Self::Output {
++        let report = check_source::beta_report(
++            self.display_name.to_owned(),
++            self.source,
++            checked,
++            &diagnostics,
++        );
++        Ok(qualified(
++            Some(mori_parser::PROFILE),
++            None,
++            serde_json::to_value(report)?,
++        ))
++    }
++
++    fn core(
++        self,
++        result: Result<mori_core::Program, mori_core::Error>,
++        staged: bool,
++    ) -> Self::Output {
++        let (source_profile, core_profile) = match &result {
++            Ok(program) => (
++                Some(program.language.clone()),
++                Some(program.semantics.clone()),
++            ),
++            Err(_) => (
++                mori_core::language(self.source).ok().map(str::to_owned),
++                None,
++            ),
++        };
++        let report = check_source::core_report(self.display_name, self.source, &result, staged);
++        Ok(qualified(
++            source_profile.as_deref(),
++            core_profile.as_deref(),
++            report,
++        ))
++    }
++}
+--- /dev/null
++++ b/crates/mori/tests/mcp_check_stdio.rs
+@@ -0,0 +1,301 @@
++//! Complete normal stdio transcripts for the public Rust `mori mcp` consumer.
++//! Source expectations are literal declarations; these tests invoke no evaluator.
++
++use std::io::Write;
++use std::process::{Command, Stdio};
++
++use serde_json::{Value, json};
++
++const CORE1: &str = "language \"moriarty/1\";\nagreement Example { action go() {} }\n";
++const CORE2: &str = "language \"moriarty/2\";\nagreement Example { action go() {} }\n";
++const BETA: &str = "profile \"moriarty-beta/1\";\nagreement Example {}\n";
++
++fn request(id: Value, method: &str, params: Value) -> Value {
++    json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params})
++}
++
++fn initialize() -> Value {
++    request(
++        json!(1),
++        "initialize",
++        json!({
++            "protocolVersion": "2025-06-18", "capabilities": {},
++            "clientInfo": {"name": "mori-protocol-test", "version": "1"}
++        }),
++    )
++}
++
++fn ready() -> Value {
++    json!({"jsonrpc": "2.0", "method": "notifications/initialized"})
++}
++
++fn response(id: Value, result: Value) -> Value {
++    json!({"jsonrpc": "2.0", "id": id, "result": result})
++}
++
++fn error(id: Value, code: i32, message: &str) -> Value {
++    json!({"jsonrpc": "2.0", "id": id, "error": {"code": code, "message": message}})
++}
++
++fn initialized() -> Value {
++    response(
++        json!(1),
++        json!({
++            "protocolVersion": "2025-06-18",
++            "capabilities": {"tools": {"listChanged": false}},
++            "serverInfo": {"name": "moriarty-rust", "version": "0.1.0"},
++            "instructions": "Read-only source checking only; no execution, proof or ledger qualification."
++        }),
++    )
++}
++
++fn tool_list() -> Value {
++    json!({"tools": [{
++        "name": "check",
++        "description": "Check in-memory source with the existing Rust CLI parser/checker; no execution or proof qualification.",
++        "inputSchema": {
++            "type": "object", "properties": {
++                "source": {"type": "string", "maxLength": 65536},
++                "displayName": {"type": "string", "maxLength": 256}
++            }, "required": ["source"], "additionalProperties": false
++        },
++        "outputSchema": {
++            "type": "object", "properties": {
++                "consumer": {"const": "rust-mori-check-source"},
++                "sourceProfile": {"type": ["string", "null"]},
++                "coreProfile": {"type": ["string", "null"]},
++                "qualification": {"const": "source-check-only"},
++                "report": {"type": "object"}
++            }, "required": ["consumer", "sourceProfile", "coreProfile", "qualification", "report"],
++            "additionalProperties": false
++        },
++        "annotations": {"readOnlyHint": true, "destructiveHint": false,
++                        "idempotentHint": true, "openWorldHint": false}
++    }]})
++}
++
++fn tool_result(source_profile: Value, core_profile: Value, report: Value) -> Value {
++    let is_error = report["status"] != "accepted";
++    let structured = json!({
++        "consumer": "rust-mori-check-source", "sourceProfile": source_profile,
++        "coreProfile": core_profile, "qualification": "source-check-only", "report": report
++    });
++    json!({"content": [{"type": "text", "text": serde_json::to_string(&structured).unwrap()}],
++           "structuredContent": structured, "isError": is_error})
++}
++
++fn accepted_core(profile: &str, hash: &str, file: &str) -> Value {
++    json!({"status": "accepted", "file": file, "source_hash": hash,
++           "language": profile, "agreement": "Example", "diagnostics": [],
++           "actions": [{"name": "go", "inputs": [], "statements": []}]})
++}
++
++fn transcript(input: &[Value], expected: &[Value], sources: &str) {
++    let mut child = Command::new(env!("CARGO_BIN_EXE_mori"))
++        .args(["--color", "never", "mcp"])
++        .stdin(Stdio::piped())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped())
++        .spawn()
++        .expect("spawn public mori mcp");
++    let mut stdin = child.stdin.take().unwrap();
++    for value in input {
++        serde_json::to_writer(&mut stdin, value).unwrap();
++        stdin.write_all(b"\n").unwrap();
++    }
++    drop(stdin); // Finite input: MCP stdio shutdown is EOF, not a shutdown RPC.
++    let output = child
++        .wait_with_output()
++        .expect("collect complete MCP transcript");
++    let mut expected_stdout = Vec::new();
++    for value in expected {
++        serde_json::to_writer(&mut expected_stdout, value).unwrap();
++        expected_stdout.push(b'\n');
++    }
++    assert_eq!(
++        output.status.code(),
++        Some(0),
++        "sources:\n{sources}\n{:?}",
++        output.stderr
++    );
++    assert!(
++        output.stderr.is_empty(),
++        "sources:\n{sources}\n{:?}",
++        output.stderr
++    );
++    assert_eq!(output.stdout, expected_stdout, "sources:\n{sources}");
++}
++
++#[test]
++fn mcp_negotiates_lists_only_check_and_preserves_string_request_id() {
++    let mut init = initialize();
++    init["params"]["protocolVersion"] = json!("2024-11-05");
++    transcript(
++        &[
++            request(json!("early-ping"), "ping", json!({})),
++            init,
++            ready(),
++            request(json!("tool-list"), "tools/list", json!({})),
++            json!({"jsonrpc": "2.0", "method": "notifications/unrecognized"}),
++        ],
++        &[
++            response(json!("early-ping"), json!({})),
++            initialized(),
++            response(json!("tool-list"), tool_list()),
++        ],
++        "no source supplied",
++    );
++}
++
++#[test]
++fn mcp_checks_core1_and_core2_through_the_public_stdio_consumer() {
++    let core1 = accepted_core(
++        "moriarty/1",
++        "d49f4eba1ed6e246b579ff734b0b27f2ad7369eb4ac7b14119cecffd10fd27ce",
++        "<mcp>",
++    );
++    let mut core2 = accepted_core(
++        "moriarty/2",
++        "1d67f9e645473a930e03da7331b0749b26b269630c171f44a0e96877406e79e7",
++        "editor:two",
++    );
++    core2["qualification"] = json!("local-reference-stage");
++    core2["authentication"] = json!("none");
++    core2["consumption"] = json!("untracked");
++    transcript(
++        &[
++            initialize(),
++            ready(),
++            request(
++                json!(2),
++                "tools/call",
++                json!({"name": "check", "arguments": {"source": CORE1}}),
++            ),
++            request(
++                json!(3),
++                "tools/call",
++                json!({"name": "check", "arguments": {"source": CORE2, "displayName": "editor:two"}}),
++            ),
++        ],
++        &[
++            initialized(),
++            response(
++                json!(2),
++                tool_result(json!("moriarty/1"), json!("moriarty-core/1"), core1),
++            ),
++            response(
++                json!(3),
++                tool_result(json!("moriarty/2"), json!("moriarty-core/2"), core2),
++            ),
++        ],
++        &format!("{CORE1}\n{CORE2}"),
++    );
++}
++
++#[test]
++fn mcp_preserves_beta_report_and_returns_core_refusal_as_tool_error() {
++    let refused = "language \"moriarty/1\";\nagreement Empty {}\n";
++    let beta = json!({"status": "accepted", "file": "<mcp>",
++        "source_hash": "35652fcdbd57acefc7f65a6085ca762afaee11cba9e7c98f0c7ca71edc9e9656",
++        "agreement": {"name": "Example", "span": {"start": 37, "end": 44}},
++        "declarations": [], "actions": [], "diagnostics": []});
++    let rejection = json!({"status": "rejected", "file": "<mcp>", "diagnostics": [{
++        "code": "mori::core::program", "message": "Program needs at least one action.",
++        "offset": null, "step": null
++    }]});
++    transcript(
++        &[
++            initialize(),
++            ready(),
++            request(
++                json!(2),
++                "tools/call",
++                json!({"name": "check", "arguments": {"source": BETA}}),
++            ),
++            request(
++                json!(3),
++                "tools/call",
++                json!({"name": "check", "arguments": {"source": refused}}),
++            ),
++        ],
++        &[
++            initialized(),
++            response(
++                json!(2),
++                tool_result(json!("moriarty-beta/1"), Value::Null, beta),
++            ),
++            response(
++                json!(3),
++                tool_result(json!("moriarty/1"), Value::Null, rejection),
++            ),
++        ],
++        &format!("{BETA}\n{refused}"),
++    );
++}
++
++#[test]
++fn mcp_observes_lifecycle_and_closed_check_arguments() {
++    transcript(
++        &[
++            request(json!(1), "tools/list", json!({})),
++            initialize(),
++            request(json!(2), "tools/list", json!({})),
++            ready(),
++            request(json!(3), "inspect", json!({})),
++            request(
++                json!(4),
++                "tools/call",
++                json!({"name": "check", "arguments": {"source": CORE1, "path": "unused.mori"}}),
++            ),
++            request(
++                json!(5),
++                "tools/call",
++                json!({"name": "inspect", "arguments": {"source": CORE1}}),
++            ),
++        ],
++        &[
++            error(json!(1), -32002, "Server not initialized"),
++            initialized(),
++            error(json!(2), -32002, "Client initialization is incomplete"),
++            error(json!(3), -32601, "Method not found"),
++            error(
++                json!(4),
++                -32602,
++                "Tool arguments must match the closed text schema",
++            ),
++            error(json!(5), -32602, "Unknown tool"),
++        ],
++        CORE1,
++    );
++}
++
++#[test]
++fn mcp_accepts_opaque_metadata_during_initialization_ping_and_tool_listing() {
++    transcript(
++        &[
++            initialize(),
++            json!({
++                "jsonrpc": "2.0", "method": "notifications/initialized",
++                "params": {"_meta": {"example.org/client": "mori-normal-metadata-case"}}
++            }),
++            request(
++                json!(2),
++                "ping",
++                json!({"_meta": {"example.org/sequence": 2}}),
++            ),
++            request(
++                json!(3),
++                "tools/list",
++                json!({
++                    "_meta": {"example.org/context": {"editor": "test"}}
++                }),
++            ),
++        ],
++        &[
++            initialized(),
++            response(json!(2), json!({})),
++            response(json!(3), tool_list()),
++        ],
++        "no source supplied; optional metadata remains opaque",
++    );
++}
+--- a/RUST_GUIDELINES.md
++++ b/RUST_GUIDELINES.md
+@@ -267,6 +267,11 @@
+   exposure. These static duty-read shape and admission checks execute no action
+   and establish no financial outcome, compiler Artifact, native-proof or ledger
+   correspondence.
++- The finite `mcp_check_stdio` target compares complete JSON-RPC transcripts
++  through the public `mori mcp` binary with manually frozen literal reports,
++  instead of insta snapshots. Each source assertion includes the complete
++  `.mori` input. It checks protocol dispatch, report preservation, exits and
++  stdio; it runs no agreement and establishes no native or ledger result.
+ - Test programs shared by several crates live in `crates/fixtures/`, which is
+   excluded from the workspace. Nothing under `crates/` reads files outside it;
+   copy anything needed in.
+--- a/crates/mori/src/commands/capabilities.rs
++++ b/crates/mori/src/commands/capabilities.rs
+@@ -13,8 +13,9 @@
+     pub json: bool,
+ }
+ 
+-// Inspection basis for the curated consumer notes, not a binary/build identity.
+-// Update this catalogue when public routing or editor implementations change.
++// Original catalogue inspection baseline, not a binary/build identity.
++// Later consumer updates are qualified in catalogue.note; they are not claimed
++// to have existed at this baseline revision.
+ const SOURCE_REVISION: &str = "e4d7a2b5709caa18a94f5256d03a0302364b8235";
+ 
+ fn profile(
+@@ -82,7 +83,7 @@
+         "catalogue": {
+             "sourceRevision": SOURCE_REVISION, "coverage": "selected-public-profile-consumers",
+             "basis": "source-inspection", "runtimeEvidence": "not-included",
+-            "note": "Curated consumer descriptions use this inspection basis, not an inferred binary revision. Linked profile constants and cfg flags come from the build. Routing/editor changes require a catalogue update."
++            "note": "sourceRevision records the original catalogue inspection baseline, not this binary or all later row updates. The rust-mcp row describes the source-present MCP 2025-06-18 check consumer added after that baseline; it was not present at sourceRevision. Linked profile constants and cfg flags come from the build. Runtime evidence is not included."
+         },
+         "profiles": [
+             profile("rust-core1", LANGUAGE, Some(SEMANTICS), "mori_core::parse", "language", &["UInt", "Bool"]),
+@@ -117,7 +118,12 @@
+             consumer("rust-lsp", "lsp", (None, None, None), None,
+                 ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/lsp.rs"]),
+             consumer("rust-mcp", "mcp", (None, None, None), None,
+-                ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/mcp.rs"])
++                ("source-present", "source-check-only"), &[
++                    "MCP 2025-06-18 over newline-delimited JSON-RPC stdio; only the in-memory check tool is advertised.",
++                    "Shared check_source dispatch admits moriarty-beta/1, moriarty/1 and moriarty/2 source; no moriarty/3 admission.",
++                    "No evaluator, SDK, VM, proof, key, wallet or ledger operations; no inspect, expand or preview tool.",
++                    "Singular input, semantics and output profiles are null for this multi-profile protocol; each check result reports its selected profiles and complete check report.",
++                ], &["crates/mori/src/commands/mcp.rs", "crates/mori/src/commands/check_source.rs"])
+         ],
+         "targets": [{
+             "id": "midnight-ledger9-zkirv3", "consumerIds": ["core1-compile", "core2-compile"],
+--- a/crates/mori/tests/capabilities.rs
++++ b/crates/mori/tests/capabilities.rs
+@@ -113,6 +113,15 @@
+     );
+     assert!(report["producer"]["binarySourceRevision"].is_null());
+     assert_eq!(report["catalogue"]["runtimeEvidence"], "not-included");
++    assert_eq!(
++        report["catalogue"]["sourceRevision"],
++        "e4d7a2b5709caa18a94f5256d03a0302364b8235"
++    );
++    assert_eq!(report["catalogue"]["basis"], "source-inspection");
++    assert_eq!(
++        report["catalogue"]["note"],
++        "sourceRevision records the original catalogue inspection baseline, not this binary or all later row updates. The rust-mcp row describes the source-present MCP 2025-06-18 check consumer added after that baseline; it was not present at sourceRevision. Linked profile constants and cfg flags come from the build. Runtime evidence is not included."
++    );
+     for (name, enabled) in [
+         ("native", cfg!(feature = "native")),
+         ("source6-expansion", cfg!(feature = "source6-expansion")),
+@@ -164,11 +173,47 @@
+     let targeted = row(&report, "consumers", "core2-target-inspect");
+     assert_eq!(targeted["implementation"], "unsupported");
+     assert_eq!(targeted["availableInBuild"], false);
+-    for id in ["rust-lsp", "rust-mcp"] {
+-        let editor = row(&report, "consumers", id);
+-        assert_eq!(editor["implementation"], "stub");
+-        assert_eq!(editor["availableInBuild"], false);
+-    }
++    let lsp = row(&report, "consumers", "rust-lsp");
++    assert_eq!(lsp["implementation"], "stub");
++    assert_eq!(lsp["availableInBuild"], false);
++    assert_eq!(lsp["qualification"], "not-implemented");
++    let mcp = row(&report, "consumers", "rust-mcp");
++    assert_eq!(
++        mcp,
++        &serde_json::json!({
++            "id": "rust-mcp",
++            "entrypoint": "mcp",
++            "inputProfile": null,
++            "semanticsProfile": null,
++            "outputProfile": null,
++            "requiresBuildFeatures": [],
++            "implementation": "source-present",
++            "availableInBuild": true,
++            "qualification": "source-check-only",
++            "limitations": [
++                "MCP 2025-06-18 over newline-delimited JSON-RPC stdio; only the in-memory check tool is advertised.",
++                "Shared check_source dispatch admits moriarty-beta/1, moriarty/1 and moriarty/2 source; no moriarty/3 admission.",
++                "No evaluator, SDK, VM, proof, key, wallet or ledger operations; no inspect, expand or preview tool.",
++                "Singular input, semantics and output profiles are null for this multi-profile protocol; each check result reports its selected profiles and complete check report."
++            ],
++            "sourceRefs": [
++                "crates/mori/src/commands/mcp.rs",
++                "crates/mori/src/commands/check_source.rs"
++            ]
++        })
++    );
++    // MCP is a source-only multi-profile consumer, not a compiler/target row.
++    assert!(mcp["inputProfile"].is_null());
++    assert!(mcp["semanticsProfile"].is_null());
++    assert!(mcp["outputProfile"].is_null());
++    assert!(mcp["requiresBuildFeatures"].as_array().unwrap().is_empty());
++    assert_eq!(
++        mcp["sourceRefs"],
++        serde_json::json!([
++            "crates/mori/src/commands/mcp.rs",
++            "crates/mori/src/commands/check_source.rs"
++        ])
++    );
+     for target in report["targets"].as_array().unwrap() {
+         assert!(target["configuredTarget"].is_null());
+         assert_eq!(target["qualification"], "not-checked");

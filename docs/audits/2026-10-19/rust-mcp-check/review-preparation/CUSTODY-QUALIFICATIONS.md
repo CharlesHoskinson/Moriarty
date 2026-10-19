@@ -1,0 +1,15 @@
+# Source and result custody qualifications
+
+Final subject is an UNCOMMITTED exact five-file overlay on a2d0f968720eda21f5b4d87b184716bead028b45/treee1d993e9edb53382a437284156eb379799f1745e. C01/C02 plus S03/S04/S05 are the five current bodies. S01/S02 are complete historical predecessor bodies; the other three bodies are exact aliases across those stages. No new commit/tree identity is invented.
+
+Earlier A01-A15 record four integration tests and two independent sequential sessions (seven complete responses) on binary763cbfc7e145165159f8cf3331793338fa54b44bf17e072da7b7255e1bd4d63a. Those were root inline-tool Python executions, not pre-pinned on-disk drivers. F01-F08 record the later integrated6 five-file catalogue-corrected subject on61787d6256bde2c9b44b176a8fe132aca6ad1ed3877a884a8d609cfe0650ed3c with actual pre-pinned driver. They remain historical.
+
+R01-R07 record actual metadata RED on61787: exit0/empty stderr/empty owned session/239source pins held; responses match[true,false,false]. This is a real protocol response mismatch, not compiler failure/timeout or a claimed process crash. The frozen INPUT/EXPECTED preceded the metadata handler edit. ListTools permits the object _meta via open params; its generated schema does not explicitly enumerate that property. Complete relevant named definitions plus whole general-fields document are mandatory; unrelated schema families are optional pinned originals.
+
+G01-G09 record FINAL combined7 on4bdc2e742349cba9961e86b2838d41b87ed8a964a9fa2748bd9bab52097c4ebc: exit0/8.195235832987237s,239pins held, empty owned session, two complete summaries2+5. V01-V06 record same-binary sequential metadata GREEN matched[true,true,true], exit0/0.172215446s/empty stderr/session/239pins held, stdout byte-identical frozen EXPECTED33c386c803b5bb5cf034a4a268170708af19a360752e82395f9649d0f61c8d28. The original independent three-program oracle was NOT rerun on this final binary; its earlier subject is not relabeled current.
+
+Final combined7 and RED/GREEN have supplied fixed on-disk drivers. Inspect their actual controls: parent child-wait bounds exclude finite pre/post verification, source/tool hashing and metadata census. No hard aggregate95 wall, broad clippy/workspace certification, cold-build reproducibility or SDK/native acceptance is claimed. ROOT-FORMAT-CHECK covers only four changed Rust files. Public source-pin manifests are identity metadata, not a claim that all239 source bodies were audited.
+
+CACHE-PREPARATION records a copied independent warm ordinary no-native LSP target, original untouched; no native cache or old allocation/result acceptance is transferred. Earlier inline executions have no invented driver hashes. Independent oracle baseline-source exposure and uncertain pre-implementation chronology remain explicit in O08/O09. No prior reviewer opinion directs this review.
+
+Source/result review is ordinary developer tooling only. Full language/financial/composition/proof/target obligations, UNI024/U7/M10 and all original exits remain open. No public developer permission, native result or product acceptance follows from a scoped source opinion or these finite tests.

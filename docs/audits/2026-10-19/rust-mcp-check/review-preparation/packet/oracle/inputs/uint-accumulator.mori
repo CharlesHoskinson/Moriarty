@@ -1,0 +1,11 @@
+language "moriarty/1";
+agreement OracleAccumulator {
+  state total: UInt = 4;
+  action add(delta: UInt) {
+    let updated = total + delta;
+    requires updated >= total;
+    next total = updated;
+    ensures total >= delta;
+    emit "updated"(total);
+  }
+}
