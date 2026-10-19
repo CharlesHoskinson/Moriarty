@@ -1,0 +1,272 @@
+"""Normalize supplied Core2/Quint financial observations; never run an evaluator.
+
+Public serde FinancialObservation and separately supplied AwaitPrefixObservation
+map to the existing B06 declaration wire. No checkpoint/prefix is synthesized.
+This is an offline representation consumer, not admission, a runtime guard, a
+financial oracle, a program/result pairing proof or a source execution harness.
+"""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+from quint_observations import decode_itf
+
+SCHEMA = 'sherlock-core2-await-boundary-wire/1'
+PROFILE = 'sherlock-quint-core2-boundary/1'
+FORMAT = 'supplied-core2-quint-await-observation/1'
+
+
+def _row(value, names):
+    """Frozen declaration shape, not an application-domain/admission decision."""
+    if set(value) != set(names.split()):
+        raise ValueError('supplied observation differs from frozen declaration fields')
+    return value
+
+
+def _uint(value):
+    # Inputs are canonical Core UInt decimal strings under the source premise.
+    # Python int preserves full UInt128 without float/JS precision truncation.
+    return int(value)
+
+
+def _scalar(value):
+    _row(value, 'type value')
+    if value['type'] == 'UInt':
+        return {'UIntValue': _uint(value['value'])}
+    if value['type'] == 'Bool':
+        return {'BoolValue': value['value']}
+    raise ValueError('scalar outside frozen Core2 observation declaration')
+
+
+def _option(value, tag, convert):
+    return 'No' + tag if value is None else {'Some' + tag: convert(value)}
+
+
+def _asset(value):
+    return dict(_row(value, 'network issuer reference scale'))
+
+
+def _named(value):
+    _row(value, 'name value')
+    return {'name': value['name'], 'value': _scalar(value['value'])}
+
+
+def _balance(value):
+    _row(value, 'account asset amount')
+    return {'account': value['account'], 'asset': _asset(value['asset']), 'amount': _uint(value['amount'])}
+
+
+def _liability(value):
+    _row(value, 'name asset debtor creditor amount')
+    return {**value, 'asset': _asset(value['asset']), 'amount': _uint(value['amount'])}
+
+
+def _snapshot(value):
+    _row(value, 'state balances liabilities')
+    return {'state': [{'name': name, 'value': _scalar(scalar)} for name, scalar in sorted(value['state'].items())],
+            'balances': [_balance(item) for item in value['balances']],
+            'liabilities': [_liability(item) for item in value['liabilities']]}
+
+
+def _input_decl(value):
+    _row(value, 'name ty')
+    return {'name': value['name'], 'ty': {'UInt': 'UIntType', 'Bool': 'BoolType'}[value['ty']]}
+
+
+STATEMENT_FIELDS = {
+    'Await': 'label binders guard', 'Let': 'name value', 'Requires': 'predicate',
+    'Ensures': 'predicate', 'Next': 'state value', 'Emit': 'name value',
+    'Transfer': 'asset from to amount', 'Fee': 'asset from to amount',
+    'Liability': 'name asset debtor creditor amount', 'Discharge': 'name amount',
+}
+
+
+def _statement(value):
+    kind = value['kind']
+    _row(value, 'kind ' + STATEMENT_FIELDS[kind])
+    if kind in ('Requires', 'Ensures'):
+        return {kind + 'Statement': value['predicate']}
+    payload = {key: item for key, item in value.items() if key != 'kind'}
+    if kind == 'Await':
+        payload['binders'] = [_input_decl(item) for item in payload['binders']]
+    # ExprIds already are source u16 IDs. Do not expand/evaluate/renumber them.
+    return {kind + 'Statement': payload}
+
+
+EFFECT_FIELDS = {
+    'State': 'name before after', 'Transfer': 'asset from to amount',
+    'Fee': 'asset from to amount', 'Liability': 'name asset debtor creditor before after',
+    'Emit': 'name value',
+}
+
+
+def _effect(value):
+    kind = value['kind']
+    _row(value, 'kind ' + EFFECT_FIELDS[kind])
+    payload = {key: item for key, item in value.items() if key != 'kind'}
+    if kind == 'State':
+        payload.update(before=_scalar(value['before']), after=_scalar(value['after']))
+    elif kind in ('Transfer', 'Fee'):
+        payload.update(asset=_asset(value['asset']), amount=_uint(value['amount']))
+    elif kind == 'Liability':
+        payload.update(asset=_asset(value['asset']), before=_uint(value['before']), after=_uint(value['after']))
+    elif kind == 'Emit':
+        payload['value'] = _scalar(value['value'])
+    return {kind + 'Effect': payload}
+
+
+def _step(value):
+    _row(value, 'index statement value snapshot effects')
+    return {'index': value['index'], 'statement': _statement(value['statement']),
+            'value': _option(value['value'], 'Scalar', _scalar), 'snapshot': _snapshot(value['snapshot']),
+            'effects': [_effect(item) for item in value['effects']]}
+
+
+def _execution(value):
+    _row(value, 'semantics action pre post steps effects')
+    return {'semantics': value['semantics'], 'action': value['action'],
+            'pre': _snapshot(value['pre']), 'post': _snapshot(value['post']),
+            'steps': [_step(item) for item in value['steps']], 'effects': [_effect(item) for item in value['effects']]}
+
+
+def _frame(value):
+    _row(value, 'site captures')
+    return {'site': value['site'], 'captures': [_named(item) for item in value['captures']]}
+
+
+def _segment(value):
+    _row(value, 'action frame_pre frame_post execution')
+    return {'action': value['action'], 'framePre': _frame(value['frame_pre']),
+            'framePost': _frame(value['frame_post']), 'execution': _execution(value['execution'])}
+
+
+def _logical(value):
+    _row(value, 'profile cap committed')
+    return {'profile': value['profile'], 'cap': _option(value['cap'], 'UInt', _uint),
+            'committed': _uint(value['committed'])}
+
+
+def _continuation(value):
+    _row(value, 'format program_hash plan_hash action site captures logical boundary')
+    return {'format': value['format'], 'programHash': value['program_hash'], 'planHash': value['plan_hash'],
+            'action': value['action'], 'site': value['site'], 'captures': [_named(item) for item in value['captures']],
+            'logical': _logical(value['logical']), 'boundary': _snapshot(value['boundary'])}
+
+
+def _error(value):
+    _row(value, 'code message offset step')
+    return {'code': value['code'], 'message': value['message'],
+            'offset': _option(value['offset'], 'UInt', int), 'step': _option(value['step'], 'UInt', int)}
+
+
+def _external_variant(value):
+    if len(value) != 1:
+        raise ValueError('expected frozen externally tagged source observation')
+    return next(iter(value.items()))
+
+
+def core2_result(value):
+    tag, payload = _external_variant(value)
+    if tag == 'Waiting':
+        _row(payload, 'advanced segment continuation attempted residual')
+        body = {'advanced': payload['advanced'], 'segment': _option(payload['segment'], 'Segment', _segment),
+                'continuation': _continuation(payload['continuation']), 'attempted': _uint(payload['attempted']),
+                'residual': [_liability(item) for item in payload['residual']]}
+    elif tag == 'Complete':
+        _row(payload, 'segment committed attempted residual')
+        body = {'segment': _segment(payload['segment']), 'committed': _uint(payload['committed']),
+                'attempted': _uint(payload['attempted']), 'residual': [_liability(item) for item in payload['residual']]}
+    elif tag == 'Rejected':
+        _row(payload, 'error attempted committed')
+        body = {'error': _error(payload['error']), 'attempted': _uint(payload['attempted']),
+                'committed': _uint(payload['committed'])}
+    else:
+        raise ValueError('source result outside frozen financial observation declaration')
+    return {tag: body}
+
+
+def core2_await_prefix(value):
+    # Independent supplied public view; NEVER derive it from result/continuation.
+    if value == 'Complete':
+        return 'CompletePrefix'
+    if value == 'RejectedNoReturnedCheckpoint':
+        return value
+    tag, payload = _external_variant(value)
+    if tag != 'Waiting':
+        raise ValueError('source prefix outside frozen await observation declaration')
+    _row(payload, 'advanced action site captures logical committed_boundary residual published_segment attempted')
+    return {'WaitingPrefix': {'advanced': payload['advanced'], 'action': payload['action'], 'site': payload['site'],
+            'captures': [_named(item) for item in payload['captures']], 'logical': _logical(payload['logical']),
+            'committedBoundary': _snapshot(payload['committed_boundary']),
+            'residual': [_liability(item) for item in payload['residual']],
+            'publishedSegment': _option(payload['published_segment'], 'Segment', _segment),
+            'attempted': _uint(payload['attempted'])}}
+
+
+Q_NULLARY = frozenset({'NoUInt', 'NoText', 'NoScalar', 'NoSegment', 'CompletePrefix',
+                      'RejectedNoReturnedCheckpoint', 'UIntType', 'BoolType',
+                      'InputOrigin', 'LetOrigin', 'EventOrigin'})
+
+
+def quint_typed_wire(value):
+    """Structural sum/map normalization only, with no publication/transition logic."""
+    if type(value) is list:
+        return [quint_typed_wire(item) for item in value]
+    if type(value) is not dict:
+        return value
+    if set(value) == {'tag', 'value'}:
+        tag, payload = value['tag'], value['value']
+        return tag if tag in Q_NULLARY else {tag: quint_typed_wire(payload)}
+    if set(value) == {'state', 'balances', 'liabilities'}:
+        return {'state': [{'name': name, 'value': quint_typed_wire(item)} for name, item in sorted(value['state'].items())],
+                'balances': quint_typed_wire(value['balances']), 'liabilities': quint_typed_wire(value['liabilities'])}
+    # Invocation.guardCosts is retained in selectedRecord provenance, not compared.
+    if value and all(type(key) is int for key in value):
+        return [{'key': key, 'value': quint_typed_wire(item)} for key, item in sorted(value.items())]
+    return {key: quint_typed_wire(item) for key, item in value.items()}
+
+
+def core2_observation(document):
+    return {'schema': SCHEMA, 'profile': PROFILE, 'result': core2_result(document['outcome']),
+            'awaitPrefix': core2_await_prefix(document['awaitPrefix'])}
+
+
+def quint_record_observation(record):
+    return {'schema': SCHEMA, 'profile': PROFILE, 'result': quint_typed_wire(record['result']),
+            'awaitPrefix': quint_typed_wire(record['awaitPrefix'])}
+
+
+def supplied_itf_record(document, state_ordinal, record_index):
+    if type(state_ordinal) is not int or type(record_index) is not int or state_ordinal < 0 or record_index < 0:
+        raise ValueError('explicit raw ITF state ordinal and record index must be non-negative integers')
+    state = document['states'][state_ordinal]
+    names = [name for name in state if name == 'machine' or name.endswith('::machine')]
+    if len(names) != 1:
+        raise ValueError('expected one supplied financial machine variable')
+    return decode_itf(state[names[0]])['records'][record_index]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('kind', choices=('core2', 'quint'))
+    parser.add_argument('input', type=Path)
+    parser.add_argument('--state-ordinal', type=int)
+    parser.add_argument('--record-index', type=int)
+    args = parser.parse_args()
+    raw = args.input.read_bytes()
+    document = json.loads(raw)
+    envelope = {'format': FORMAT, 'inputSha256': hashlib.sha256(raw).hexdigest(), 'rawInput': document}
+    if args.kind == 'core2':
+        envelope['observation'] = core2_observation(document)
+    else:
+        if args.state_ordinal is None or args.record_index is None:
+            parser.error('quint requires explicit raw --state-ordinal and --record-index')
+        record = supplied_itf_record(document, args.state_ordinal, args.record_index)
+        envelope.update(rawStateOrdinal=args.state_ordinal, recordIndex=args.record_index,
+                        selectedRecord=quint_typed_wire(record), observation=quint_record_observation(record))
+    print(json.dumps(envelope, sort_keys=True, separators=(',', ':'), ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()
