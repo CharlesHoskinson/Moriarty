@@ -12,6 +12,9 @@ use crate::sherlock::helper_machine::shared::owner_ext_type_builder::ExtTypeBuil
 use crate::sherlock::helper_machine::shared::owner_host::{
     host_owner_engine, observe_bound_image, HostObservation,
 };
+use crate::sherlock_nominal_source::{
+    parse_nominal_source_bounded, DraftError, DraftParseBudget,
+};
 
 /// Exact caller inputs. The owner interprets every capacity/domain/run input;
 /// this ordinary adapter neither supplies defaults nor preempts its diagnostics.
@@ -29,6 +32,37 @@ pub struct ExtCompileConfig {
 pub enum ExtCompileFailure {
     Preparation(ExtTypeBuildError),
     Genesis(Tooling),
+}
+
+/// Text parsing and the original typed compiler failure remain distinct.
+/// The nested compiler error preserves its preparation/genesis stage and full
+/// owner payload; neither stage is converted into a runtime outcome.
+pub enum NominalCompileFailure {
+    Parse(DraftError),
+    Compile(ExtCompileFailure),
+}
+
+/// Parse bounded nominal source text and compile its actual owned program.
+///
+/// The explicit `moriarty-sherlock-nominal/1` grammar and every caller parser
+/// extent are consumed by the existing bounded parser. Its declarations,
+/// constructor fields, ordered arms and recursive function bodies then enter
+/// [`compile_ext_host`] unchanged. This operation performs no evaluation or
+/// recursive call unfolding and supplies no parser or owner capacity defaults.
+///
+/// The returned artifact is the existing admitted HostOnly tables/genesis pair.
+/// Source name/spans are not added to that typed artifact. CLI selection,
+/// witness/constraint/native export and whole-process H1 bounds remain separate.
+pub fn compile_nominal_host(
+    source: &str,
+    parser_budget: DraftParseBudget,
+    config: ExtCompileConfig,
+    locator: Option<LocatorC>,
+) -> Result<ExtCompileArtifact, NominalCompileFailure> {
+    let parsed = parse_nominal_source_bounded(source, parser_budget)
+        .map_err(NominalCompileFailure::Parse)?;
+    compile_ext_host(parsed.program, config, locator)
+        .map_err(NominalCompileFailure::Compile)
 }
 
 /// Owns only the actual admitted object and its actual unstepped owner image.

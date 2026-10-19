@@ -31,6 +31,10 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
             return Err(CompileFailure::input("select",
                 "draft preparation is compile-only; --observe is unsupported"));
         }
+        if matches!(&selection, SourceSelection::NominalEntry) && args.observe {
+            return Err(CompileFailure::input("select",
+                "nominal preparation is compile-only; --observe is unsupported"));
+        }
         let config_path = args.execution_config.as_deref().ok_or_else(||
             CompileFailure::input("config", "selected Sherlock compilation requires --execution-config"))?;
         let config = core_io::read_source(config_path)
@@ -43,6 +47,8 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
                 host::compile_host(source, action, &config, &target, args.observe)?),
             SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
                 host::compile_draft_host(source, &config, &target)?),
+            SourceSelection::NominalEntry => SelectedSherlockArtifact::Nominal(
+                host::nominal_command::compile(source, &config, &target)?),
         };
         let manifest = artifact.manifest()?;
         Ok((artifact, manifest))
@@ -69,13 +75,15 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
 enum SelectedSherlockArtifact {
     Core(mori_core::sherlock_compile_artifact::CompileArtifact),
     Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
+    Nominal(serde_json::Value),
 }
 impl SelectedSherlockArtifact {
     fn failure(&self, stage: &'static str, message: impl Into<String>)
         -> mori_core::sherlock_compile_artifact::CompileFailure
     {
         match self { Self::Core(value) => value.failure(stage, message),
-            Self::Draft(value) => value.failure(stage, message) }
+            Self::Draft(value) => value.failure(stage, message),
+            Self::Nominal(_) => mori_core::sherlock_compile_artifact::CompileFailure::input(stage, message) }
     }
     fn manifest(&self) -> Result<String, mori_core::sherlock_compile_artifact::CompileFailure> {
         match self {
@@ -83,6 +91,8 @@ impl SelectedSherlockArtifact {
                 .map_err(|error| value.failure("observation", error.to_string())),
             Self::Draft(value) => serde_json::to_string_pretty(value)
                 .map_err(|error| value.failure("serialization", error.to_string())),
+            Self::Nominal(value) => serde_json::to_string_pretty(value)
+                .map_err(|error| self.failure("serialization", error.to_string())),
         }
     }
 }
