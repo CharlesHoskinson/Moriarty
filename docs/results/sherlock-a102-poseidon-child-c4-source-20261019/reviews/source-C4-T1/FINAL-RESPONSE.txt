@@ -1,0 +1,138 @@
+# Fresh non-author review: revision04 native test, T1 and T5 only
+
+I am not the author. I used no tools and executed nothing. I treated the author response, the static AST readback and the Root inverse as context, not as votes. All byte counts and hashes are Root-attested, except the T5 +88 count, which I recounted by hand. This is one opinion across both roles.
+
+## Dispositions
+
+| Track | Disposition |
+|---|---|
+| **SOURCE / SECURITY** (T1 and T5 bytes) | **APPROVE_SOURCE_WITH_LIMITS.** No mandatory fix. |
+| **NORMAL / API** | **SOURCE-COMPILE-PLAUSIBLE.** No API, borrow, type, import or harness defect was found in the supplied bodies. |
+| **CONDITIONAL ONE COMPILE** | **Conditionally applicable.** My review permits the same single `cargo test --no-run --frozen -p mori-backend --lib -j4`, subject to the bindings in section 3. It grants no execute eligibility for any selector. |
+
+## 1. Source and API checks on the changed bytes
+
+### Producer (`native_a102_poseidon_child_producer_proves_and_persists`)
+
+**Lifecycle**
+- The sequence is: `begin_a102_child_output` (creates the directory, syncs the parent, writes `child.input.json`), then `ChildKey::reconstruct`, then the VK, instance and claim files, then `child.phase.1-reconstructed.json`, then `key.prove()`, then `child.proof`, then `child.report.json`, then the assertion.
+- Each name is written exactly once through `write_synced_artifact(dir: &Path, name: &str, bytes: &[u8]) -> String`. That helper does `create_new`, `write_all`, file `sync_all`, `drop`, then `sync_dir`.
+- The revision03 post-prove VK, instance and claim writes are removed, so `create_new` cannot hit a duplicate.
+- On an `Err`, each error path writes `child.error.json` once and then panics.
+
+**What gets serialized**
+- **VK:** `ChildKey::vk_bytes(&self) -> &[u8]`, which is the processed `write_vk` bytes after the round-trip check in `from_prepared`.
+- **Instance:** `key.instance().iter().map(field_hex)`, with `field_hex(&Fr) -> String` imported from `crate::sherlock_child`. This is the same idiom as `SherlockChildProof::instance_hex`, so the bytes equal the serialization the frozen consumer decodes. The consumer applies `decode_digest`, `Fr::from_le_bytes` and a canonical round-trip check.
+- **Claim:** `to_vec_pretty(key.claim())` with `claim(&self) -> &ChildClaim`. Because `ChildClaim` is `Serialize` with fixed field order, the output is deterministic.
+
+**Truthfulness of the phase record**
+- It records `reconstruct_returned_ok: true` and `prove_returned: false`.
+- Its role is "reconstruction outputs only". Both statements are true at the moment it is written.
+
+**Join with the returned child**
+- `prove` returns clones of `p.claim`, `p.instance` and `self.vk_bytes`.
+- `persisted_ok` checks four things against the pre-prove bytes and hash:
+  - child VK bytes equal `key.vk_bytes()`;
+  - the child VK SHA-256 equals `vk_sha256`;
+  - the re-serialized `child.instance_hex()` equals `instance_text`;
+  - the re-serialized `child.claim` equals `claim_text`.
+- `lanes_ok`, `instance_ok` and `claim_ok` (including `public_values`) are retained.
+- `passed` is now a strict superset of the revision03 conjunction.
+
+**No unverified promotion**
+- `child.proof` is written only after `prove` returns `Ok`, which happens only after the internal `self.verify(..)?`.
+- If `prove` errs, panics or times out, the directory holds VK, instance and claim but no proof.
+  - Both frozen consumers call `read_frozen_a102_child`, and `read_bounded_child_file` opens all four files before `begin_a102_child_output` and before any native call.
+  - A missing proof therefore panics on open, before any native work. That is a fail-closed result.
+
+### Negatives (`native_a102_poseidon_child_frozen_negatives_reject_tampering`)
+
+**Three marker files.** Each is unique and synced, and each is written after the call it names returns:
+1. `phase.1` after `reconstruct` returns `Ok`. If the join then fails, the existing `reconstruction-join` error record is written and the test panics, so `phase.2` never appears.
+2. `phase.2` only after the join passes.
+3. `phase.3` after control returns, carrying the actual outcome:
+   - `control.is_ok()`;
+   - `control.as_ref().err().map(|e| json!({"code": e.code, "message": e.message}))`. Here `e` is `&Error`, and the field access is by reference. An `Option<Value>` serializes as `null` or as the object.
+
+**Unchanged.** The control and case semantics, `all_rejected`, and the final assertion are unchanged. `control` is not moved: `.is_ok()` and `.as_ref()` borrow, and `match &control` still follows.
+
+### Macro and API facts relied on
+
+- **`json!` takes values by reference.** It expands each value to `to_value(&expr)`. That is why `vk_sha256`, `instance_sha256`, `claim_sha256` and `phase` stay usable afterwards. Unchanged P13 code already depends on this (`"verification": verification`, then `verification.proof_bytes`). Trailing commas in nested objects are used the same way in the unchanged prefix.
+- **`Error` usage is already established.** The `code` and `message` fields, their `Serialize` use, and `{e:?}` Debug are all used by the unchanged `control_json` and `persist_a102_child_error`.
+- **`persist_a102_child_phase` types.** It takes `(&Path, &str, &str, serde_json::Value)` and returns `String`. Every call site matches, and every return value is bound and used in the reports.
+- **No new imports.** `field_hex`, `hex`, `Sha256`/`Digest` and `Path` are already in scope, and no new unused bindings are introduced.
+
+### T5 top doc
+
+- It is accurate. The ordinary proof-bound test builds a dummy request with empty values and reaches only the R1 size refusal in `verify_sherlock_child`, before `prepare`.
+- **+88 recount:**
+  - The text changes are: remove "and proof-bound " (−16), add "the ordinary … size alone. " (+100), and capitalize they→They (0). Net text change: +84.
+  - The block grows from 3 lines to 4. That adds 5 bytes of `//! ` plus newline, minus 1 joining space: +4.
+  - Total: +88. This matches the 47345 → 47433 prefix exception.
+
+### Non-mandatory findings (none block the compile)
+
+- **N1. `vk_ok` is now tautological.** It compares `vk_sha256`, which is hashed from `key.vk_bytes()`, with `key.vk_sha256()`. The meaningful child-versus-key VK check now lives in `persisted_ok`, so `passed` is not weakened. Only the `host_checks.vk_sha256` label's meaning changed.
+- **N2. `persisted_ok` compares against in-memory written bytes, not a disk readback.** P13 does a readback. The file contents are still assured by successful `write_all` and `sync_all`.
+- **N3. The negatives `phase.1` text "frozen-artifact join not yet evaluated" is ambiguous.** It means the exact key/claim/instance join. The refusal-only `join_frozen_a102_child` host join has already run before output creation.
+- **N4. No per-case marker during the eight tampered verifies.** A kill there leaves only `phase.3`.
+
+## 2. Preservation
+
+- **Diff scope.** The diff touches only the T5 doc, the three constants, the new helper, the producer and negatives bodies, and their doc comments.
+- **Native call counts are unchanged:**
+  - producer: reconstruct ×1, prove ×1;
+  - negatives: reconstruct ×1, verify ×(1+8).
+- **Nothing else changed.** There are no retries, new resources, input-reader, env, cap or guard changes, and the child adapter is byte-identical. The ten selectors and their ignore strings are unchanged per the AST readback, which is not API evidence.
+- **The edit-7 double occurrence is explained.** The phase JSON's 16-space-indented `"vk": {…vk_file_bytes…}` line contains the 12-space NEW row as a substring. Exact byte-span inversion is the right method. Root's full inverse is source-static proof, not my vote.
+- **No whole-old-prefix equality is claimed.**
+
+## 3. Compile applicability
+
+**U1 and U2 are resolved by the actual declarations:**
+- **U1:** `pub mod literal_bridge;` at `sherlock_machine/mod.rs:37`. I recounted the line. `sherlock_child` is a crate-root sibling, so it can reach it.
+- **U2:** `program_bytes(&self) -> Result<Vec<u8>>` at `encoding.rs:28` returns an owned `Vec`, so the temporary chain in `reconstruct_a102_child_request` cannot produce E0716.
+
+**Root must still bind all of the following before the single compile:**
+1. **Exact compile inputs.** The new 84787-byte test plus the four byte-unchanged Moriarty files (child 18176, `lib.rs` 46396, `Cargo.toml` 784, lock 117174) must be integrated exactly over re-checked live preimages, with fresh full source, lock and DAG pins derived. Revision03 or older hashes must not be carried over as current.
+2. **Same tree for the U1/U2 readbacks.** `mod.rs` and `encoding.rs` were read from the `…/sherlock-witness-cache-stream-20261018` worktree. Root must bind that this is the compile tree, or that those files are byte-equal to it.
+3. **Frozen offline build.** `--frozen` with no relock. A lock refusal is fail-closed. All sources must be present offline. Toolchain pin 1.99.0.
+4. **Guard and helper route.** The route is admissible only by the actual dispositions of the LIVE fresh guard reviews A and B. I do not infer or duplicate their verdicts.
+5. **Resource limits.** Limits must stay at or below the historical class and the current floors (whole 4389, F 579, supervisor CPU 10389). Debits come from E 2315336201 / S 302439399 / P 2012896796, with residual 6. No reset or refund.
+6. **One attempt.** A compile error is a falsifier routed back to the author, not a retry. No test, keygen, proof, Fenrir build or fetch.
+
+## 4. Retained gaps (not discharged)
+
+- **T2:** proof bytes are still lost if `prove`'s internal self-verify times out or errs.
+- **T3:** a panic in the SDK `setup_vk`/`setup_pk` or in a write helper, including the new phase writes, leaves no error record.
+- **T4:** the canonical-path check is lexical.
+- Verify-only remains a single opaque `verify_sherlock_child` call with no phase file.
+- The markers attribute nothing inside `reconstruct` (`ir.k`, SRS, `setup_vk`) or inside `prove` (check, `setup_pk`, prove, self-verify). No speedup is claimed.
+- **Frozen-input selection (pre-existing, Root's job):**
+  - Consumers do not check `child.report.json` or `child.error.json`.
+  - Root's frozen-input selection must require `producer_returned_ok` and `host_checks_passed: true`, plus the four artifact identities from that report.
+  - A host-check-failed directory can contain a proof, though the consumer's independent rebuild still fails closed on any mismatch.
+- **Carried obligations:** all 8 `OPEN_OBLIGATIONS` and 4 `CHILD_OPEN_OBLIGATIONS`, Am10, k17, the original P14 timeout (exit 124 after 300.065 s) and other failed operations, Fenrir A2, and no terminal decider.
+- **No authority from this approval.** Source approval grants no resource authority, and no runtime result is inferred.
+
+## Read coverage
+
+**Read:**
+- the full new native test;
+- the full unchanged child adapter;
+- the revision03→04 diff;
+- the author response and the eleven exact edits;
+- the `mod.rs` and `encoding.rs` bodies;
+- the identity, AST and prefix-exception records;
+- the ledger;
+- the prior C3 review.
+
+**Not read (gaps):**
+- `lib.rs`, `Cargo.toml` and `Cargo.lock` bodies this round;
+- `literal_bridge` and `proving` bodies (`hex`, `ProofOptions`, `MAX_K`, `MAX_PROOF_BYTES`);
+- the `Error` definition (field and trait use was inferred from unchanged call sites);
+- the serde_json, SDK and stdlib sources;
+- the guard and helper.
+
+Item-level visibility inside `literal_bridge` rests on the prior qualified opinion. The compile is the falsifier for it.

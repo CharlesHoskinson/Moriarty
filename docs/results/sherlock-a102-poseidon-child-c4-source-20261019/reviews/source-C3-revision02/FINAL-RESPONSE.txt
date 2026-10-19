@@ -1,0 +1,153 @@
+# Fresh non-author source review: P14 prefix + child suffix candidate
+
+**Reviewer status.** I did not author this candidate. I used no tools, ran nothing, and recomputed no hashes. Every byte count and SHA-256 below is Root-attested. Author statements and the P14 audit were treated as context, not as votes. Read coverage: all bodies in the request, both full author finals, the P14 audit and result, and all six integrated afterimages.
+
+## Dispositions
+
+| Track | Disposition |
+|---|---|
+| **Source / security** | **APPROVE_SOURCE_WITH_LIMITS**, plus one mandatory text correction (C1). Within the supplied bodies I found no soundness defect in the producer, carrier, binding or consumer. The scope is one charged A102 transition, and the pairing is deferred. |
+| **Normal / API / Cargo** | **NOT_COMPILE_READY**. M5 `Cargo.lock` is unauthored, which blocks any `--locked` build. Fenrir has one typed ABSTAIN on an API that may not exist in proofs 0.8.2 (A1). The Moriarty side looks compile-plausible at source level, but nothing has been compiled. |
+| **Execution eligibility** | Not assessed. Nothing here transfers from the P14 compile-only PASS, which covered the old f124 ELF only. |
+
+## Source / security
+
+### Relation and statement (Moriarty M1, `sherlock_child.rs`)
+
+- **Same relation, unchanged context.** `prepare` calls the unchanged `LiteralLayout::new → statement → emit(CircuitMode::LocalPublic)`. The child proves the identical `IrSource`.
+  - The context limbs are fixed inside the circuit: `ConstrainEq { a: operands[0].clone(), b: immediate(lo) }`.
+  - So pinning the child VK also pins the context, the layout, the relation hash and the source identities.
+  - None of the nine relation-hash members changes. The adapter is registered in `lib.rs` (`pub mod sherlock_child;`), which is not one of the `include_str!` members in `literal_host.rs::LiteralLayout::new`. `mod.rs` is untouched.
+- **Instance order and count.** The instance is `std::iter::once(binding).chain(statement…)`, which gives 2078 lanes for the fixture.
+  - This matches `IrSource::circuit`: `pi_push(binding_input, …)` first, then one `pi_push` per `Impact`, then `constrain_as_public_input` over all of them.
+  - It also matches the stdlib `verify` check `pi.len() != vk.nb_public_inputs`.
+  - There is no truncation and no digest.
+- **The binding lane is semantically opaque in circuit.** `let binding_input = std.assign(layouter, binding_input_value)?` is a free witness that is only exposed publicly.
+  - On the Moriarty side it binds `ChildClaim`, because `verify_sherlock_child` recomputes it.
+  - On the Fenrir side it is an arbitrary public lane. Fenrir never reconstructs the claim.
+  - This is truthful as written. The child's Fenrir-level meaning is "VK-fixed circuit + 2077 statement lanes", not the claim.
+- **Carrier (`child_witness`).** It fills exactly what the supplied `circuit` body reads:
+  - `PublicInput` reads `preproc.memory.get(output)`;
+  - `pi_push` reads `preproc.pis[idx]`;
+  - `binding_input`;
+  - `comm_comm` stays `None` because `do_communications_commitment` is false.
+
+  It refuses guarded, non-Native or private inputs, non-`Immediate(1)` Impact guards, publication-order mismatch, and skips.
+
+  The sparse memory only removes the debug-level `mem_insert` misalignment checks. Constraint authority stays with the circuit. `pi_skips` is never read by the circuit, which agrees with the inventory.
+
+  The guard comparison `Operand::Immediate(Fr::from(1u64))` against the emitted `immediate(1)` (`Fr::from(1u128)`) compares equal field elements under the derived `PartialEq`.
+- **Proving path.**
+  - The SDK `ProofPreimage::check` runs under the real binding before `setup_pk` and `prove`.
+  - It does not use `prove_unchecked`, does not fork the SDK, and does not interpret instructions in shadow.
+  - It calls `stdlib_prove::<IrSource, ChildTranscript>`, so the type `H` is generic, as the author intended.
+  - The Blake2b literal claim, its binding, its key location and `literal_bridge.rs` are all untouched. The binding domains differ (`CHILD_BINDING_VERSION` vs `BINDING_VERSION`), and the test asserts that.
+- **Key and reconstruction.**
+  - `setup_vk(kzg, &prepared.ir)` runs against the exact-k pinned SRS, followed by a `vk.k() != k` check and a Processed write/read/write round trip.
+  - `verify_sherlock_child` compares claim and instance before any SRS access, then the VK bytes, then runs `verify`.
+  - The independent reconstruction is in-process, so it rests on deterministic recomputation by the same binary, not on a separate run.
+
+### Fenrir consumer (F1, `sherlock_child.rs`)
+
+- **Off circuit.** `verify::<RawInstance, Pos>` (count and transcript), then `inner::verify_offcircuit(.., false)`. Both pass the full instance. `SherlockChild::from_bytes` checks the pinned digest before `vk_from_bytes` and requires the bytes to round-trip.
+- **In circuit.** `SherlockChildRelation::circuit`:
+  1. assigns `n` cells;
+  2. calls `verify_child_incircuit(s, l, &self.child_vk, &self.name(), &inst, proof, false)`;
+  3. constrains the same cells, then `acc`, as public.
+
+  So the public child lanes are the verified instance lanes. No 16-field `NodeRelation` truncation is used.
+
+  `instance()` mirrors this order through `prepare_offcircuit(.., false)`. That is the same resolve-then-collapse sequence, though the `carried=false` in-circuit path has no prior use in the supplied Fenrir code.
+- **What "deferred pairing" means here.**
+  - The wrapper proof only says that the child's KZG check reduces to the published collapsed (A, B).
+  - It is child validity only after a terminal step subgroup-checks A and B and checks `e(A,[τ]₂)·e(B,−[1]₂)=1`, as `DeciderRelation::circuit` steps 2–3 do.
+  - The test `sherlock_child_wrapper_binds_the_child_statement_and_defers_the_pairing` says this honestly. The forged statement case only prints the wrapper MockProver verdict and asserts that the pairing refuses. There is no shortcut that treats the wrapper as validity.
+- **Lane count is not tied to the child VK.** `n_child_instance` is not checked against the child VK's public-input count, and `MidnightVK.nb_public_inputs` has no accessor in the supplied API. The in-circuit gadget's length enforcement is unsupplied.
+  - For this child, a truncated tail fails, because the last lanes (`rule_tag=3`, `charge=1`) are circuit-forced nonzero.
+  - Over-long zero padding would be a representation ambiguity, not a false statement.
+  - Recommended (R4).
+
+### Cross-graph compatibility
+
+The byte boundary is a sound way to keep Fenrir's patched circuits off the Moriarty side, and the patched circuits matter for the wrapper's BLS MSM.
+
+Compatibility itself is **UNOBSERVED** for three things:
+
+- Processed-VK `transcript_repr` and CS reconstruction (`MidnightVK::read` → `ZkStdLib::configure` in Fenrir's graph);
+- Poseidon transcript point hashing across proofs 0.8.3 and 0.8.2;
+- the `truncated-challenges` closure.
+
+The visible mismatch modes fail closed (round-trip, verify or pairing refusal). Fail-closed cannot be proven universally because the proofs and circuits transcript bodies are absent (A2).
+
+## Normal / API / Cargo
+
+- **M3.** The exact pins `=2.3.5`, `=0.8.3` and `=7.2.4` select versions already in the lock projection. `default-features = false` cannot remove unified features. The same crate instances therefore give the trait coherence `IrSource: midnight_zk_stdlib::Relation` and identical `ParamsKZG<Bls12>` and `Fq` types. **M5 is still missing**, and the exact `mori-backend` lock entry was never supplied.
+- **M1 API usage.** At source level all of these type-check against the supplied bodies:
+  - `setup_vk(&ParamsKZG, &R)`, `setup_pk`, `prove(params, &pk, &rel, &inst, witness, rng)`, `verify(vp, &vk, &inst, None, proof)`;
+  - `let kzg: &ParamsKZG<Bls12> = &params.0;` (Arc deref coercion);
+  - `crate::digest`, `crate::parameters::OfflineParameters`, and the `LiteralLayout` pub(crate) fields, all crate-visible.
+
+  The `PoseidonState` `Hashable` and `Sampleable` impls are evidenced only by Fenrir's own `prove::<LeafRelation, Pos>` against patched 7.2.4. On registry 7.2.4 they are inferred from PATCH-REPORT's statement that the patch only touches `weierstrass_chip.rs`, not observed.
+- **Moriarty verifier parameters.** `ChildKey::verify` uses `kzg.verifier_params()` from the k-SRS, not the embedded 2p14 `PARAMS_VERIFIER` that Fenrir and the ledger use. Both come from a pinned SRS, but Moriarty never exercises the consumer's exact verifier parameters (R3).
+- **Error precedence.** `verify_sherlock_child` checks proof bounds only inside `key.verify`, which runs after the SRS load and `setup_vk`. `literal_bridge::verify_literal_transition` refuses a malformed proof (`decode_proof`) before `OfflineParameters::load` (R1).
+- **Fenrir.**
+  - `RawInstance` is used only as a type parameter, so expect a `dead_code` "never constructed" warning (R5).
+  - `Option::is_none_or` needs Rust 1.82 or later, which edition 2024 implies.
+
+## Integrated native-test file (M4, 55037 B)
+
+- **Prefix.** Visually, the P14 prefix runs unchanged through the verify-only test's closing `}`. The suffix starts with a blank line and then `// UNRUN Sherlock A102…`. Byte exactness rests on Root's inverse proof.
+- **Imports.** The suffix adds `Fr`, `Operand`, `IrValue`, `Identifier`, `Instruction` and the `sherlock_child` items. None collides with prefix names (`Value`/`Type`/`Expr` come from `mori_core::sherlock`).
+  - P14's `use std::io::Read;` introduces no ambiguity in the suffix. `raw_k.bytes()` resolves to inherent `str::bytes`, and there is no `.take` on a `Read` receiver.
+  - The reused prefix helpers (`required_env`, `sync_dir`, `write_synced_artifact`, `column_index`, `build_positive_fixture`, `EXPECTED_STATEMENT_LANES`, `PathBuf`, `MAX_K`, `ProofOptions`, `Arc`, `fs`) all exist in the P14 prefix.
+  - The seven test names are distinct.
+- **Ordinary test runs.** The two new non-ignored tests run in any ordinary `cargo test` of this module. Each one calls `build_positive_fixture` (an SDK check over about 4 MB of ZKIR). They are compiled into the test ELF and are UNRUN.
+- **Native child test** (`native_a102_poseidon_child_proves_verifies_and_rejects_tampering`):
+  - In one process it does `ChildKey::reconstruct` (SRS and `setup_vk`), `prove` (check, `setup_pk`, prove, self-verify), then `verify_sherlock_child`, which loads the SRS and runs `setup_vk` a second time while `key` is still alive.
+  - That makes it strictly heavier than the combined prove+verify run that was killed. Because it is the same `IrSource`, the child k equals the literal k (claim-observed 18, not source-established).
+  - The output directory is created only after all native work, with no error record and no parent pre-check. The max-k parse allows a leading zero. `symlink_metadata(&out).is_err()` accepts any error, where P14 matches only `NotFound` (R2).
+
+## Mandatory fixes
+
+**C1 (M4 suffix, text).** The line `// UNRUN Sherlock A102 Poseidon recursive-child cases, appended after the unchanged 32061-byte prefix.` is now false. The prefix is the 46803-byte P14 file. Correct the number or drop it.
+
+- The file is not a relation-hash member, so this changes no identity.
+- It does change the suffix bytes, so it needs an author revision and a new Root inverse proof.
+- The module's top doc ("without invoking `ir.k()`, SRS loading, keygen…") was already stale in P13/P14. It is not newly introduced, but should be corrected in the same pass.
+
+**Pre-build (not a source defect).** M5 must be relocked offline and its diff reviewed. Expected change: only three new edges on `mori-backend`.
+
+## Typed ABSTAINs (bodies needed)
+
+| ID | Missing body | Conclusion it blocks |
+|---|---|---|
+| A1 | `midnight_proofs` 0.8.2 `circuit::Value` | Whether `error_if_known_and` exists (it is used at 0.8.3 by `ir_vm.rs`) for F1 `circuit`'s length guard. Fallback known to exist in Fenrir's 0.8.2 graph: `w.as_ref().map_with_result(\|w\| if w.child_instance.len()==n {Ok(())} else {Err(Error::Synthesis(..))})?` (as in `inner.rs`). |
+| A2 | proofs 0.8.2/0.8.3 transcript, `prepare` and `VerifyingKey` read/write; circuits `PoseidonState` and verifier gadget | Cross-graph compatibility, fail-closed universality, gadget instance-length enforcement, `carried=false` collapse parity |
+| A3 | `task4_native_driver.rs` (`begin`) | That the `charge("params_load"/"params_get")` calls stay no-ops for the child selector |
+| A4 | `mori-ledger source_closure()` | Whether the `lib.rs` change alters that identity |
+| A5 | stdlib `utils::plonk_api::BlstPLONK::verify` | That the single-proof verify enforces transcript EOF (the trailing-byte negative depends on it) |
+
+## Recommended, non-mandatory
+
+- **R1.** In `verify_sherlock_child`, refuse empty or oversized `child.proof` before `ChildKey::from_prepared`.
+- **R2.** In the native child test:
+  - create the output directory and an input record, and check its parent, before native work;
+  - persist an error record on failure;
+  - require canonical `max_k` and `NotFound`;
+  - finish the negatives, capture `vk_sha256`, and `drop(key)` before the independent verify to avoid two resident SRS/key copies.
+- **R3.** Also verify the child against the ledger's 2p14 `PARAMS_VERIFIER`-equivalent parameters on the Moriarty side.
+- **R4.** In Fenrir, tie `n_child_instance` to an honest stdlib `verify` at relation construction, and cap `vk_raw` before hashing.
+- **R5.** Add `#[allow(dead_code)]` on `RawInstance`.
+
+## Finite scope and remaining gaps
+
+- **Child scope.** One charged A102 Eval(Literal)→Return transition (List([9]) fixture). All 8 `OPEN_OBLIGATIONS` plus the 4 `CHILD_OPEN_OBLIGATIONS` remain: StepInv, F4, G4, projectA, the other 38 rule rows, dispatch, continuity, source-digest authentication.
+- **Terminal.** Nothing consumes `SherlockChildRelation`. Stock `DeciderRelation` cannot commit the full child statement:
+  - `read_relation` refuses `if n > 1024 { … "too many stmt fields" }`;
+  - its template and `stmt_fields` are StrawAnchor-specific.
+
+  A terminal for this child therefore needs a new owner design for statement compression and settlement, without subset truncation. It must keep the subgroup and pairing steps.
+- **Recursive and stagenet.** No multi-step recursion, no node composition and no stagenet path exist. No keygen, proof, MockProver run or verify has been observed on either side.
+- **Resources.** Child k, wrapper k (the in-circuit BLS verifier over 2090 public lanes), RSS and wall time are all unestablished. The native child test needs separate resource admission. All existing caps, counters, Am10/T3/k17 and prior failed attempts are unchanged by this review.
+
+Root owns the selected next action.
