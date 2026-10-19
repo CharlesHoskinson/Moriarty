@@ -1,0 +1,134 @@
+"""One-off Root-selected ordinary R435 executor. No imports from product code.
+Uses the already reviewed normal subprocess/timeout/prlimit/capture class.
+No work is staged or run before an explicit Root decision and exact pin checks.
+"""
+from pathlib import Path
+import argparse, datetime, hashlib, json, os, re, selectors, shlex, shutil, signal, subprocess, time
+
+D = Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA')
+E = Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-execution-preparation')
+CAPTURE = E / 'actual-thirteen-01'
+# Filled once during source preparation, not computed from mutable selection.
+FROZEN = {'proposal': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/PROPOSED.json', 'bytes': 29898, 'sha256': '4ad42defa549cef2f5c3a6ac8d688457a8759d3634af8fefd779b1b9dad6d620'}, 'DAG': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/READSET-AND-OUTPUT-DAG.json', 'bytes': 13177, 'sha256': 'f153e2874e422a9195b4d297a5f6053644c4c491bc80c5c55551f6f3dcd3bf97'}, 'flat_inputs': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/FLAT-INPUT-PINS.json', 'bytes': 135220, 'sha256': 'cd49f9e88c82155f46fa0935a53f84fa2069dddb29d6e7060cfcf08379c1b48f'}, 'composition': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/SOURCE-COMPOSITION.json', 'bytes': 167929, 'sha256': 'a95f7361b4fa4d13349fa2fa1541e24089d65f650c65bf72bdbfae5d44136ea6'}}
+
+REVIEW_REPORT = {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/433-generic-resolved-signature-combined-review-preparation/final-review-01/REPORT.md', 'bytes': 31481, 'sha256': '5e4717cdf0677e272b76a03a09671f096ec0eae5467919b16c879af325a498ae'}
+
+def pin(path):
+    path = Path(path)
+    raw = path.read_bytes()
+    return dict(path=str(path), bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest())
+
+
+def check(row):
+    actual = pin(row['path'])
+    assert actual['bytes'] == row['bytes'] and actual['sha256'] == row['sha256'], row['path']
+    return actual
+
+
+def save(path, value):
+    path = Path(path)
+    data = (json.dumps(value, indent=2, ensure_ascii=False) + '\n').encode()
+    temporary = path.with_name(path.name + '.partial')
+    with temporary.open('xb') as stream:
+        stream.write(data)
+    os.replace(temporary, path)
+
+
+def static_check(rows):
+    cache = {}
+    results = []
+    for row in rows:
+        path = Path(row['path'])
+        real = str(path.resolve(strict=True))
+        if real not in cache:
+            cache[real] = pin(path)
+        actual = cache[real]
+        results.append(dict(path=str(path), match=actual['bytes'] == row['bytes'] and actual['sha256'] == row['sha256']))
+    return dict(files=results, all_match=all(row['match'] for row in results))
+
+
+def stop_group(process):
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+def capture(op, phase):
+    """Same finite ordinary pattern: exact argv/env, binary bounded pipes, one child."""
+    save(phase / 'COMMAND.json', op)
+    began = time.monotonic()
+    deadline = began + op['wallSeconds']
+    streams = {}
+    process = None
+    failure = None
+    capture_complete = False
+    poller = selectors.DefaultSelector()
+    try:
+        process = subprocess.Popen(op['argv'], cwd=op['cwd'], env=op['environment'], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True, close_fds=True)
+        for name, pipe in [('stdout', process.stdout), ('stderr', process.stderr)]:
+            out = (phase / (name + '.bin')).open('xb')
+            streams[name] = dict(pipe=pipe, out=out, seen=0, retained=0, path=phase / (name + '.bin'))
+            poller.register(pipe, selectors.EVENT_READ, name)
+        while poller.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 and failure is None:
+                failure = 'wall deadline'
+                stop_group(process)
+                break
+            for key, _ in poller.select(timeout=min(0.1, max(0.0, remaining)) if failure is None else 0.1):
+                record = streams[key.data]
+                block = os.read(key.fileobj.fileno(), 65536)
+                if not block:
+                    poller.unregister(key.fileobj)
+                    key.fileobj.close()
+                    continue
+                record['seen'] += len(block)
+                keep = block[:max(0, op['keptBytesPerStream'] - record['retained'])]
+                record['out'].write(keep)
+                record['retained'] += len(keep)
+                if record['seen'] > op['keptBytesPerStream'] and failure is None:
+                    failure = key.data + ' capture cap exceeded'
+                    stop_group(process)
+            if failure is not None:
+                break
+        capture_complete = not poller.get_map()
+        try:
+            code = process.wait(timeout=max(0.001, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            failure = failure or 'wall deadline'
+            stop_group(process)
+            code = process.poll()
+    except BaseException as error:
+        failure = failure or type(error).__name__ + ': ' + str(error)
+        if process is not None:
+            stop_group(process)
+            try:
+                process.wait(timeout=max(0.001, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                pass
+        code = process.returncode if process is not None else None
+    finally:
+        poller.close()
+        for record in streams.values():
+            record['out'].close()
+            record['pipe'].close()
+    return dict(id=op['id'], actual_exit=code, elapsed_seconds=time.monotonic() - began,
+                controller_failure=failure, streams=[dict(**pin(r['path']), bytes_seen=r['seen'], bytes_retained=r['retained'],
+                full_stream_retained=capture_complete and r['seen'] == r['retained']) for r in streams.values()])
+
+
+def dep_inputs(path, allowed):
+    text = Path(path).read_text().replace('\\\n', ' ')
+    read = set()
+    for line in text.splitlines():
+        if line.startswith('#'):
+            assert not line.startswith('# env-dep:'), 'undeclared env-dep in dep-info'
+            continue
+        _, separator, rest = line.partition(': ')
+        if separator:
+            read.update(shlex.split(rest, comments=False, posix=True))
+    assert read, 'empty dep-info read set'
+    observed = []
+    for item in sorted(read):

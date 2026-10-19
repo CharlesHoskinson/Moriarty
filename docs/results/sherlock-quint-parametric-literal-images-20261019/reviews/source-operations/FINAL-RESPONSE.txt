@@ -1,0 +1,154 @@
+# B22 Fresh Review: Source and Exact Operations (all still UNRUN)
+
+## Reviewer identity
+
+- **Model:** `claude-opus-5-5` (Opus 5.5).
+- **Effort:** I cannot observe the HIGH effort setting myself. Root should record whatever the harness reports, not this statement.
+- **Independence:** I did not author B22, and I have no B20/B21 history in this context.
+- **Actions taken:** I ran no tools, no Quint/Node, and no Git. This is a reading-only review of bodies 001–023.
+- **Missing bodies:** None needed. All 23 bodies are framed as complete, and nothing required for a decision is truncated.
+
+## Source decision: **APPROVE** (with disclosure conditions D1–D6)
+
+I hand-evaluated every `expect` conjunct and every relation in the eight runs against the supplied Quint and Rust bodies. Under my reading, every positive conjunct is true and every negated conjunct is false. This is reading-based, not an observed result.
+
+### What I checked and found correct
+
+**Schema and offsets**
+- Program widths `(2,1,4,1,11,1,6,2,3,2,3,4,1,22,2)` match `literal_schema` exactly.
+- State widths `(22,2,5,2,17,36)` match.
+- Header length 16 and state root length 45 match.
+- Root lane positions match: activeData 0 … controlLength 5, stackLimit 8, remainingFuel 9..24, initialFuel 25..40, outcome 41..44.
+- Expression columns match: tag 0, occurrenceId 1, space 2, index 3. ControlRows columns match: tag 0, exprId 1, space 2, index 3.
+
+**Sizes, recomputed independently**
+- Program: 16 + 12 + 44 + 18 + 20 + 7 + 88 = **205**.
+- State: 45 + 66 + 6 + 10 + 8 + 34 + 108 = **277**.
+- Statement: 2 + 205 + 3·277 + 4 = **1042**.
+
+**Absolute offsets, recomputed independently**
+- 44 = 2 + 28 + 11 + 3 → Expr1.index = 2.
+- 377 = 207 + 169 + 1 → selector 1.
+- 656 = 484 + 172 → middle CR0.index = 2.
+- 804 = 761 + 43 → done outcomeValue.index = 2.
+- Envelopes at 1038..1041 = `(3,1,0,0)`.
+
+All offsets agree with the frozen metadata.
+
+**Wide value**
+- `(4,1,0…0,128)` LE = 2¹²⁷ + 256 + 4 = 170141183460469231731687303715884105988. ✓
+
+**A102 (`pLiteralEnabled`/`pLiteralNext`)**
+- Selects `ControlRows[0].exprId`, not `entryExprId`, and requires it to be below `activeExpressions`.
+- Whole-row equality `(0,sel,0,c,0…)` exactly mirrors the emitter's nine zeroed columns plus `occurrenceId == exprId`.
+- Requires `c < activeConstants`, controlLength 1, Pending outcome, and fuel > 0.
+- Control rows must be all zero except row0.exprId.
+- Post-state matches the emitter: root preserved except fuel, five arenas copied, CR0 = `(1,0,0,c,0…)`, other rows zero.
+- Bytewise borrow subtraction is correct.
+
+**Discriminating fixtures**
+- The decoy Constant0 (UInt7), together with expression→constant mappings 1→2, 2→1 and entry 0→2, defeats both "uses entry" and "identity mapping" bugs.
+
+**A80 (`pPublicationEnabled`/`pPublicationNext`)**
+- Requires depth 0, all frames zero, Pending outcome, and controlLength 1.
+- Requires space ∈ {0,1} and index below `space ? activeData : activeConstants`.
+- Requires the exact one-row Return control (row0.exprId must be 0).
+- Has no fuel predicate. Fuel-0 publication is exercised in both the Bool and the standalone Data1 cases.
+- Post-state: Done(space, index), error 0, controlLength 0, everything else in root[0..41] preserved, arenas preserved, all control cells zero. Matches the emitter.
+
+**Complete start (`pCompleteStartAllowed`)**
+- Faithfully mirrors the composer and `complete_representation`:
+  - entry 0 and selector 0
+  - root[0..5] and environment zero
+  - remaining == initial
+  - all six init tables zero
+- It permits a nonzero selected Constant (2), consistent with `entry_const_idx < activeConstants`.
+- It is not presented as a generalized nonzero-entry interface.
+
+**Context, join and statement**
+- Context is an opaque two-limb parameter and is never computed.
+- Child mismatch rejects.
+- The statement order (context, program, init, intermediate, done, 4 envelope cells) and row-major flattening match the `LiteralCompleteLayout::statement` order.
+
+**Quint semantics**
+- `expect` rolls back to the post-action pre-shift snapshot, and `then` shifts. The chained runs are therefore sound.
+- `.fail()` negates an eagerly evaluated `actionAll`, which restores its snapshot on false. The zero-fuel run ends with no post-fail state claim.
+- Every `nth`/`slice` is guarded by a lazy `if`, by short-circuit `and`, or by sequential `all {}`. I found no out-of-range access on any path the tests evaluate.
+
+**Fixture lane ranges**
+- The fixtures would also satisfy the real host lane bit-widths and maximums for these capacities. This is not claimed and not needed.
+
+### Disclosure conditions: the guard is stronger than the emitters
+
+The README's "checked physical shapes and selected scalar predicates" wording does not enumerate these. Per critical check 1, each must be recorded as a model strengthening or domain restriction, not as emitter equivalence. This can go in Root's review record; it needs no edit to the frozen `.qnt` files.
+
+- **D1. Padding zero for every Program and State table.** This comes from `literal_host::representation`/`complete_representation`, which are host-side and off-chain. The A102 emitter checks only Types/Ctors/CFT/Constants padding (via uiValid). The A80 emitter checks no padding.
+- **D2. `entryExprId < activeExpressions` in `pProgramHeaderAllowed`.** Neither the schema nor either Step emitter has this. It also imposes `activeExpressions ≥ 1` on standalone A80, which the A80 emitter does not require.
+- **D3. `depth ≤ stackLimit` in `pStateHeaderAllowed`.** Neither the schema nor either emitter has this.
+- **D4. `selectedId < O` capacity.** The real `id("occurrenceId", o)` lane enforces only `ceil(log2 O)` bits. With activeExpressions > O, the real system admits rows the model refuses.
+- **D5. `activeConstantFields == 0` unconditionally.** Real uiValid requires this only when KF = 0. When KF > 0 it admits active ConstantFields rows even without constructors. This is a scalar-domain restriction.
+- **D6. Ranges and binding.**
+  - Range checks are root-only: cells must be `< 2¹²⁸`, and table cells are unranged. The real per-lane bit widths and maximums (outcomeTag ≤ 3, booleans, id widths, rule_tag ≤ 38) are external.
+  - `PChild` carries no capacity record. Child capacity binding is only implicit, through the shared `layoutArg`.
+
+### Coverage gaps (non-blocking; finite samples, record as retained)
+
+1. **Scalar guard rejection is never exercised.** No negative covers a constructor Constant, Bool with nonzero bytes, boolValue 2, a wrong fixed table, or activeCF ≠ 0. A mutation of `pScalarConstant` to `true` survives all eight runs. Bool(false) is never sampled.
+2. **The padding predicates never reject.** All three padding mutants reject through full-image equality (including `pMutantProgramTypePadding`, which rejects via `leftChild.program == boundProgram`). Deleting `pPaddingZero` from the header predicates survives all eight runs. This still satisfies check 3 as stated (shape-valid post-padding mutants reject), but the precondition padding guard is not discriminated.
+3. **Envelope-mismatch rejection is untested.** Examples are `(3,0)` and `(0,1)` in the relations. Literal envelopes are asserted only positively.
+4. **Many A102/A80 precondition negatives are absent.** These include non-Pending outcome, controlLength ≠ 1, non-Eval tag, a stray control cell, depth > 0, nonempty frames, space = 2, and negative indices.
+5. **Several start, layout and join negatives are absent.**
+   - `pCompleteStartAllowed`: only the selector/arena case is tested. There are no individual entry ≠ 0, remaining ≠ initial, or nonempty-arena-at-selector-0 cases.
+   - `pLayoutAllowed` and `pTablesShape` are never tested for rejection.
+   - `pPairJoin` with `left.after ≠ right.before` is not tested directly.
+6. **Expectations share structure with the transitions.** `pHandDone` uses the same slice/concat formula as `pPublicationNext`. The independent content is the hand fuel bytes, the constant indices, the fixed arenas and the absolute offsets. This is disclosed as same-author consistency, not a blind oracle.
+
+## Exact operations
+
+| # | Operation | Decision |
+|---|---|---|
+| 01 | `typecheck literalParametricImages.qnt` (direct main, no imports) | **ELIGIBLE** |
+| 02 | `typecheck literalParametricInputs.qnt` (direct main, imports Images) | **ELIGIBLE** |
+| 03 | `typecheck literalParametricImagesTest.qnt` (direct main, imports both) | **ELIGIBLE** |
+| 04 | `test … --main literalParametricImagesTest --backend typescript --seed 1 --max-samples 1 --match ^(8 names)$` | **ELIGIBLE**, conditional on 01–03 each passing |
+
+### Conditions
+
+1. **Pin and source-tree checks, before and after each phase:**
+   - the full raw 4678 pin check (bytes, hash, symlink targets) against the retained, unrefreshed manifest
+   - exactly 3 source entries
+   - the three source hashes `2c9e97ba…`, `f6339032…`, `6311c103…`
+2. **Run order and fail-stop:** run in order 01→04 and stop on the first failure. Do not retry unchanged, do not substitute a B20/B21 cohort, and do not reclassify a failure.
+3. **Argv provenance:** the flag set (`typecheck`; `test --main --backend typescript --seed --max-samples --match`) must be the same flag set already accepted on this same pinned Node v24.21.0 / Quint tree by the prior passing operations. If any flag is new to this tree, an unknown-option or usage failure is a fail-stop and says nothing about the source.
+4. **Stream assertions for 01–03:** exit 0 and empty stdout and stderr. Any stderr, including a Node deprecation or experimental warning, fails per the frozen criterion. Save the full raw receipts and streams before asserting anything.
+5. **Stream assertions for 04:**
+   - stdout has exactly 8 `ok <name> passed 1 test(s)` lines (leading indentation allowed), naming exactly the 8 frozen names.
+   - The only other permitted lines are the module header and an `8 passing (…)` summary. The parser must be the same one used for prior accepted Quint test receipts; do not loosen it.
+   - No `failed`, `ignored`, `QNT`, `error:`, `DEBUG`, truncation marker, or other test name.
+   - stderr is empty.
+   - Limits: 60 s wall, 512 MiB heap, 4 MiB per stream.
+6. **Typecheck parse risks:** pass/fail of 01–03 decides the risks I could not settle by reading:
+   - trailing commas in record types and literals
+   - `_` lambda parameters
+   - `{ val … record }` blocks inside lambdas
+   - Images reachable both directly and through Inputs, which carries the `var reference`
+
+   I found no name collisions or shadowing of top-level or builtin names across the three modules.
+7. **Scope of these approvals:**
+   - No run/verify/ITF/SDK/native/Cargo/Git/canonical copy is authorized by this review.
+   - The `SOURCE-COPYMAP` destination writes are not among the four operations and are not approved here.
+   - Any later publication must carry D1–D6 and the gaps above.
+
+## Retained gaps (unchanged by this review)
+
+Even if the operations pass, this review establishes none of the following:
+
+- actual PASS
+- general admission, full uiValid (constructors/DAG), per-lane ranges, F4/prepareA, StepInv/O1–O4, A84 exhaustion, error precedence, 39-row dispatch, projectA/canonical boundary
+- OBL.G4 byte serialization
+- real context derivation or authentication, or producer binding
+- the actual complete-layout/A80 cross-layer comparison, including any pending revision (UNISSUED)
+- cryptographic, recursive or native proof
+- ledger/stagenet behavior, or EARS/SCON closure
+
+Finite named mutants are samples, not proofs of universal rejection. No acceptance-ledger edit is proposed. Root alone executes and decides publication.
