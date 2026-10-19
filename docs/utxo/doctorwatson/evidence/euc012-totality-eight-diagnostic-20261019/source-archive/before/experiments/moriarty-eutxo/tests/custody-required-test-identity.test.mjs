@@ -1,0 +1,144 @@
+/**
+ * EUC-012 F01: required Aiken test identity in the REAL exported compileCustody.
+ * Replacement of the original 6291B harness (b5f857f64740470ee3be04393fb76f36b1e7db36185a1561a19d56e555502997).
+ * Original TWO tests / THREE compile calls and genuine Node assertions preserved:
+ * misleading bare suffix must not satisfy an absent required title; qualified-all
+ * positive control and qualified-missing negative remain. Producer is loaded whole
+ * through tests/support/custody-module-loader.mjs; F01_PRODUCER_VARIANT selects the
+ * separately pinned genuine OLD (expected RED) or CURRENT (expected GREEN) producer.
+ * No Aiken process runs: check/build are injected through compileCustody aikenRun.
+ * Controlled dependencies exercise producer control flow only; they are not
+ * financial-evaluator, Aiken, SDK, native or ledger conformance evidence.
+ */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadCustodyModule } from './support/custody-module-loader.mjs';
+import { createCustodyFixtureWorld } from './support/custody-fixture-world.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, '..');
+const variant = process.env.F01_PRODUCER_VARIANT || 'current';
+assert.ok(variant === 'current' || variant === 'old', `unknown F01_PRODUCER_VARIANT ${variant}`);
+const PRODUCERS = {
+  // ROOT-CUSTODY-REFRESH: root mechanically replaces this unique current bytes/sha256 pair with the assembled producer byte length and SHA-256 from exact post-assembly bytes; the frozen old pair below is never refreshed.
+  current: { bytes: 31818, sha256: '5a3b6837a5b0f7315415e028f2c2fdf38947dbf252b893e3aeebcb2e90922831', path: join(root, 'src', 'compile-custody.mjs') },
+  old: { bytes: 20622, sha256: '4e5b5a393ae9e11edc43ff68d47486f191f67317866553058bb65d650ff759e3', path: join(here, 'fixtures', 'f01', 'compile-custody.original-b5c1.mjs.txt') },
+};
+const PUBLICATION = { bytes: 529, sha256: 'a87a4ba2bfd2a7ee19c6e433ede509ffc32535788fbf94d2b1d3db338dba6a4a', path: join(root, 'src', 'custody-publication.mjs') };
+const FIX = join(here, 'fixtures', 'f01', 'designers', '02-escrow-time');
+const ORACLE_PATH = join(here, 'fixtures', 'f01', 't1-independent-oracles-19', 'RESULTS.json');
+const FILES = {
+  designer: { path: join(FIX, 'escrow-custody-v5.mori'), bytes: 2907, sha256: '00c9893ee5d2cbf41adb619bbe2a4b37e4e3f4de64889aa4567bbfe0174ec957' },
+  seed: { path: join(FIX, 'financial-seed-custody-v5.json'), bytes: 587, sha256: 'e31a3a7a808c1cecf36768be52cd93d279617d80de7d6f075c3dbb8dd0d471a6' },
+  residual: { path: join(FIX, 'financial-residual-custody-v5.json'), bytes: 1208, sha256: '5ab8453e9d22651777600c37984e60553499acc65680fc0ec909c03ce0b8ebd6' },
+  cases: { path: join(FIX, 'cases.json'), bytes: 53983, sha256: 'b3e74aba4d06402679421f42fb4bb87ea2bf7ed813390ac0faeab3ceeee76cf3' },
+  expectedRelease: { path: join(FIX, 'E13-release-real-custody.expected.json'), bytes: 1173, sha256: '02efee11c65eb6f684523479ef6e8a39d0498b2be79bc5611426e39cee4404e8' },
+  expectedRefund: { path: join(FIX, 'E11-refund-real-custody.expected.json'), bytes: 1172, sha256: '6218ba8da1bb67fb660cb486b8376bb774688217a6549c2e5acaf6d8dc159149' },
+  oracle: { path: ORACLE_PATH, bytes: 166136, sha256: '3ebe82c927e5693b5714a7133b7a1bcb79df76d6bcd5f84529c1a1db5c9521d8' },
+};
+const OMITTED = 'release_missing_lender_row';
+const SHADOW = 'oracle_release_missing_lender_row';
+const SUCCESS_NAMES = ['plutus.json', 'plutus.applied.json', 'cash.script.json', 'apply-report.json'];
+function sha256Hex(bytes) { return createHash('sha256').update(bytes).digest('hex'); }
+function readPinned(spec, label) {
+  const bytes = readFileSync(spec.path);
+  assert.strictEqual(bytes.length, spec.bytes, `${label} byte length`);
+  assert.strictEqual(sha256Hex(bytes), spec.sha256, `${label} SHA-256 pin`);
+  const text = bytes.toString('utf8');
+  assert.strictEqual(Buffer.byteLength(text, 'utf8'), spec.bytes, `${label} must be valid UTF-8 without lossy replacement`);
+  return text;
+}
+const producerSpec = PRODUCERS[variant];
+const producerSource = readPinned(producerSpec, `${variant} producer`);
+const publicationSource = readPinned(PUBLICATION, 'publication');
+const texts = {};
+for (const [key, spec] of Object.entries(FILES)) texts[key] = readPinned(spec, key);
+function unitManifest() {
+  return {
+    schema: 'moriarty-t1-custody-manifest/1', nativePins: false, unitFixture: true, production: false,
+    domainNetwork: 'yaci-isolated-t1', domainDeployment: 't1-custody-revision03',
+    threadPolicyId: 'e5'.repeat(28), cashPolicyId: 'b2'.repeat(28), lenderVkh: 'c3'.repeat(28),
+    borrowerVkh: 'd4'.repeat(28), scriptHash: 'e5'.repeat(28), threadAssetNameHex: '48656164',
+    cashAssetNameHex: '43617368', quantum: '1',
+  };
+}
+const clone = (value) => JSON.parse(JSON.stringify(value));
+let world;
+let loaded;
+async function setup() {
+  if (loaded) return;
+  world = createCustodyFixtureWorld({ designerSource: texts.designer, seedText: texts.seed, casesText: texts.cases, expectedReleaseText: texts.expectedRelease, expectedRefundText: texts.expectedRefund, residualText: texts.residual, oracleText: texts.oracle });
+  loaded = await loadCustodyModule({ producerSource, publicationSource, dependencies: world.dependencies, expectedProducerSha256: producerSpec.sha256, expectedPublicationSha256: PUBLICATION.sha256 });
+  assert.strictEqual(loaded.compileCustody, loaded.producerNamespace.compileCustody, 'returned compileCustody is the evaluated producer export');
+  assert.strictEqual(typeof loaded.compileCustody, 'function');
+}
+let outCounter = 0;
+function compileWith(runner) {
+  outCounter += 1;
+  const outDir = `/world/out-${outCounter}`;
+  world.fs.mkdirSync(outDir, { recursive: true });
+  for (const name of SUCCESS_NAMES) world.fs.writeFileSync(join(outDir, name), 'STALE\n');
+  const result = loaded.compileCustody({
+    sourcePath: '/world/designer/escrow-custody-v5.mori', seedPath: '/world/designer/financial-seed-custody-v5.json',
+    casesPath: '/world/designer/cases.json', expectedReleasePath: '/world/designer/E13-release-real-custody.expected.json',
+    expectedRefundPath: '/world/designer/E11-refund-real-custody.expected.json', residualPath: '/world/designer/financial-residual-custody-v5.json',
+    manifest: unitManifest(), outDir, oracleResultsPath: '/world/oracle/RESULTS.json', aikenRun: runner.aikenRun,
+  });
+  return { outDir, result };
+}
+function assertGateReached(runner, result) {
+  assert.equal(runner.seen.check, 1, `check not reached: ${result?.code} ${result?.detail}`);
+  assert.equal(runner.seen.build, 1);
+  assert.ok(runner.seen.generated.includes(OMITTED), `${OMITTED} was not generated`);
+  assert.ok(runner.seen.generated.includes(SHADOW), `${SHADOW} was not generated`);
+}
+function assertNoSuccessArtifact(outDir, result) {
+  assert.notEqual(result?.ok, true);
+  assert.equal(result?.blueprintPath ?? null, null);
+  for (const name of SUCCESS_NAMES) assert.equal(world.fs.existsSync(join(outDir, name)), false, `${name} survived a failed compile`);
+}
+test('EUC-012 F01 an absent required test is not satisfied by a longer title with the same suffix', async () => {
+  await setup();
+  const runner = world.createFakeAiken({ omit: OMITTED });
+  const { outDir, result } = compileWith(runner);
+  assertGateReached(runner, result);
+  const reported = clone(result.check.tests).map((item) => item.title);
+  assert.equal(reported.includes(OMITTED), false);
+  assert.equal(reported.includes(SHADOW), true);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'AIKEN_CHECK');
+  assert.deepEqual(clone(result.missingTests), [OMITTED]);
+  assert.equal(result.detail, OMITTED);
+  assert.equal(result.checkStatus, 1);
+  assert.equal(result.buildStatus, 0);
+  assert.equal(result.applied, null);
+  assertNoSuccessArtifact(outDir, result);
+  const admission = JSON.parse(world.fs.readFileSync(join(outDir, 'admission.json'), 'utf8'));
+  assert.equal(admission.ok, false);
+  assert.equal(admission.code, 'AIKEN_CHECK');
+  assert.deepEqual(clone(admission.missingTests), [OMITTED]);
+  assert.equal(admission.checkStatus, 1);
+});
+test('EUC-012 F01 module-qualified titles satisfy required tests and the same omission is still caught', async () => {
+  await setup();
+  const all = world.createFakeAiken({ qualify: true });
+  const present = compileWith(all);
+  assertGateReached(all, present.result);
+  assert.deepEqual(clone(present.result.missingTests), []);
+  assert.equal(present.result.checkStatus, 0);
+  assert.equal(present.result.applied?.ok, false);
+  assert.equal(present.result.applied?.detail, 'blueprint titles');
+  assertNoSuccessArtifact(present.outDir, present.result);
+  const omitted = world.createFakeAiken({ omit: OMITTED, qualify: true });
+  const absent = compileWith(omitted);
+  assertGateReached(omitted, absent.result);
+  assert.equal(absent.result.code, 'AIKEN_CHECK');
+  assert.deepEqual(clone(absent.result.missingTests), [OMITTED]);
+  assert.equal(absent.result.checkStatus, 1);
+  assert.equal(absent.result.applied, null);
+  assertNoSuccessArtifact(absent.outDir, absent.result);
+});

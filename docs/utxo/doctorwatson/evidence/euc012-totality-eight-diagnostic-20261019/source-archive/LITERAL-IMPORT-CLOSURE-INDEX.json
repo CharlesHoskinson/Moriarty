@@ -1,0 +1,435 @@
+{
+  "classification": "Literal source navigation only, not selected graph/effects judgment",
+  "files": [
+    {
+      "path": "experiments/moriarty-eutxo/src/cli.mjs",
+      "sha256": "102bf1535bf6279d70833f2e4aeac0209af664bd908f7093a134d3369621484b",
+      "importLines": [
+        {
+          "line": 2,
+          "text": "import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';"
+        },
+        {
+          "line": 3,
+          "text": "import { dirname, join, resolve } from 'node:path';"
+        },
+        {
+          "line": 4,
+          "text": "import { fileURLToPath } from 'node:url';"
+        },
+        {
+          "line": 5,
+          "text": "import { compilePublic } from './compile-public.mjs';"
+        },
+        {
+          "line": 6,
+          "text": "import { compileCustody, verifyCustodyPublication } from './compile-custody.mjs';"
+        },
+        {
+          "line": 7,
+          "text": "import { validateDesigners } from './designers.mjs';"
+        },
+        {
+          "line": 8,
+          "text": "import { runNativeCaller } from './native-caller.mjs';"
+        },
+        {
+          "line": 9,
+          "text": "import { inspectLauncher, runNativeCase } from './native-consumer.mjs';"
+        },
+        {
+          "line": 10,
+          "text": "import { resolveOutputPath } from './native-runtime.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/src/compile-custody.mjs",
+      "sha256": "c7ebdd08fdb35dd0aa4bd13092021c50ba929bc473bc9817317a497253e9bc4b",
+      "importLines": [
+        {
+          "line": 5,
+          "text": "import { Buffer } from 'node:buffer';"
+        },
+        {
+          "line": 6,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 7,
+          "text": "import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';"
+        },
+        {
+          "line": 8,
+          "text": "import { tmpdir } from 'node:os';"
+        },
+        {
+          "line": 9,
+          "text": "import { join } from 'node:path';"
+        },
+        {
+          "line": 10,
+          "text": "import { deepStrictEqual } from 'node:assert';"
+        },
+        {
+          "line": 11,
+          "text": "import { createFinancialAgreementSourceV5 } from '../../moriarty-language/src/successor/financial-agreement-source-v5.ts';"
+        },
+        {
+          "line": 12,
+          "text": "import { canonicalEncode } from '../../moriarty-language/src/codec.ts';"
+        },
+        {
+          "line": 13,
+          "text": "import { admitCustody, fenceLifecycle } from './admit-custody.mjs';"
+        },
+        {
+          "line": 14,
+          "text": "import { bindOracleSpends } from './custody-oracle-bind.mjs';"
+        },
+        {
+          "line": 15,
+          "text": "import { bindCapacity } from './custody-capacity.mjs';"
+        },
+        {
+          "line": 16,
+          "text": "import { actionTimeGuards, isFixedUtxoProbe, isProductionProbeTime, substituteTimeGuards } from './custody-time.mjs';"
+        },
+        {
+          "line": 17,
+          "text": "import { lowerCustody, LowerError } from './lower-custody.mjs';"
+        },
+        {
+          "line": 18,
+          "text": "import { parseAikenCheckJson, ROOT, runAiken } from './compile-public.mjs';"
+        },
+        {
+          "line": 19,
+          "text": "import { applyUnitParameters, CASH_VALIDATOR, STDLIB_TREE, STDLIB_TREE_SHA256, stdlibTreeSha256 } from './apply-head.mjs';"
+        },
+        {
+          "line": 21,
+          "text": "import { shouldApply, shouldPublish, SUCCESS_ARTIFACTS } from './custody-publication.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/src/custody-publication.mjs",
+      "sha256": "a87a4ba2bfd2a7ee19c6e433ede509ffc32535788fbf94d2b1d3db338dba6a4a",
+      "importLines": []
+    },
+    {
+      "path": "experiments/moriarty-eutxo/src/native-caller.mjs",
+      "sha256": "7fad3b3866f366148859d9ba9f3b8899793ff161b3b87566eb3f59958cdd1ec6",
+      "importLines": [
+        {
+          "line": 10,
+          "text": "import { spawnSync } from 'node:child_process';"
+        },
+        {
+          "line": 11,
+          "text": "import { createHash, randomBytes } from 'node:crypto';"
+        },
+        {
+          "line": 12,
+          "text": "import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';"
+        },
+        {
+          "line": 13,
+          "text": "import { tmpdir } from 'node:os';"
+        },
+        {
+          "line": 14,
+          "text": "import { dirname, join } from 'node:path';"
+        },
+        {
+          "line": 15,
+          "text": "import { fileURLToPath } from 'node:url';"
+        },
+        {
+          "line": 16,
+          "text": "import { admitCustody } from './admit-custody.mjs';"
+        },
+        {
+          "line": 17,
+          "text": "import { compileCustody, verifyCustodyPublication } from './compile-custody.mjs';"
+        },
+        {
+          "line": 18,
+          "text": "import { applyHeadToCashPolicy, buildApprovedCashPolicy, STDLIB_TREE, STDLIB_TREE_SHA256, stdlibTreeSha256 } from './apply-head.mjs';"
+        },
+        {
+          "line": 19,
+          "text": "import { bindSpendTime, isFixedUtxoProbe, isAuthenticProductionAdmission, planWindows, productionParityGate } from './custody-time.mjs';"
+        },
+        {
+          "line": 20,
+          "text": "import { executeParityCapture } from './posix-parity-harness.mjs';"
+        },
+        {
+          "line": 21,
+          "text": "import { bindWitness, encodeSpendBody, encodeUnsignedBody, genesisMagicText, paymentKeyHashOfVkeyCbor } from './native-body.mjs';"
+        },
+        {
+          "line": 22,
+          "text": "import { bindReceipt, buildConcurrentPair, RECEIPT_HELPER_PATH } from './native-consumer.mjs';"
+        },
+        {
+          "line": 23,
+          "text": "import { compareFinancialFrame, datumFromPost, expectedFrame, judgeEconomicAction, loadSourceTerminals, readKernelQuantity } from './native-financial.mjs';"
+        },
+        {
+          "line": 24,
+          "text": "import {"
+        },
+        {
+          "line": 39,
+          "text": "import { parseJsonExact, readWord64Coin } from './native-bootstrap.mjs';"
+        },
+        {
+          "line": 40,
+          "text": "import { consumePlutusCost, dispatchOwnedProducer, observeOwnedClock, plutusCostArgv, realProducerSpawn, selectOwnedFunder } from './native-producer.mjs';"
+        },
+        {
+          "line": 41,
+          "text": "import { bindSignedWitnessCount, compareClockParity, recomputeScriptDataHash, redeemerPointerAccepts } from './native-integrate.mjs';"
+        },
+        {
+          "line": 42,
+          "text": "import { OutputFeeError, calculateBodyMinimumFee, calculateOutputMinimum } from './output-fee.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/custody-failure-isolation.test.mjs",
+      "sha256": "fcc7885aefe0e2f6687998bfbbe9e4ff2569cd5f2e22ed3577cc33a46e60e9aa",
+      "importLines": [
+        {
+          "line": 10,
+          "text": "import test from 'node:test';"
+        },
+        {
+          "line": 11,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 12,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 13,
+          "text": "import { readFileSync } from 'node:fs';"
+        },
+        {
+          "line": 14,
+          "text": "import { dirname, join } from 'node:path';"
+        },
+        {
+          "line": 15,
+          "text": "import { fileURLToPath } from 'node:url';"
+        },
+        {
+          "line": 16,
+          "text": "import { loadCustodyModule } from './support/custody-module-loader.mjs';"
+        },
+        {
+          "line": 17,
+          "text": "import { createCustodyFixtureWorld } from './support/custody-fixture-world.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/custody-module-loader.test.mjs",
+      "sha256": "94e17c1cbe90325df42c5d061ae2e33826d7ad945233a8752e37132b7933b6b8",
+      "importLines": [
+        {
+          "line": 23,
+          "text": "import assert from 'node:assert';"
+        },
+        {
+          "line": 24,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 25,
+          "text": "import { readFileSync } from 'node:fs';"
+        },
+        {
+          "line": 26,
+          "text": "import { join } from 'node:path';"
+        },
+        {
+          "line": 27,
+          "text": "import { fileURLToPath } from 'node:url';"
+        },
+        {
+          "line": 28,
+          "text": "import { dirname } from 'node:path';"
+        },
+        {
+          "line": 30,
+          "text": "import {"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/custody-publication.test.mjs",
+      "sha256": "45ad78b5858f5ee2d50e06cc54eed73361f327bacb72d515d27d2593667382c2",
+      "importLines": [
+        {
+          "line": 6,
+          "text": "import test from 'node:test';"
+        },
+        {
+          "line": 7,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 8,
+          "text": "import { shouldApply, shouldPublish, SUCCESS_ARTIFACTS } from '../src/custody-publication.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/custody-required-test-identity.test.mjs",
+      "sha256": "4af6febcafbd619660e981fb8f9b7d8eef81878813075c316a412cc51604610d",
+      "importLines": [
+        {
+          "line": 13,
+          "text": "import test from 'node:test';"
+        },
+        {
+          "line": 14,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 15,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 16,
+          "text": "import { readFileSync } from 'node:fs';"
+        },
+        {
+          "line": 17,
+          "text": "import { dirname, join } from 'node:path';"
+        },
+        {
+          "line": 18,
+          "text": "import { fileURLToPath } from 'node:url';"
+        },
+        {
+          "line": 19,
+          "text": "import { loadCustodyModule } from './support/custody-module-loader.mjs';"
+        },
+        {
+          "line": 20,
+          "text": "import { createCustodyFixtureWorld } from './support/custody-fixture-world.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/fixtures/f01/compile-custody.original-b5c1.mjs.txt",
+      "sha256": "4e5b5a393ae9e11edc43ff68d47486f191f67317866553058bb65d650ff759e3",
+      "importLines": [
+        {
+          "line": 5,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 6,
+          "text": "import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';"
+        },
+        {
+          "line": 7,
+          "text": "import { tmpdir } from 'node:os';"
+        },
+        {
+          "line": 8,
+          "text": "import { join } from 'node:path';"
+        },
+        {
+          "line": 9,
+          "text": "import { deepStrictEqual } from 'node:assert';"
+        },
+        {
+          "line": 10,
+          "text": "import { createFinancialAgreementSourceV5 } from '../../moriarty-language/src/successor/financial-agreement-source-v5.ts';"
+        },
+        {
+          "line": 11,
+          "text": "import { canonicalEncode } from '../../moriarty-language/src/codec.ts';"
+        },
+        {
+          "line": 12,
+          "text": "import { admitCustody, fenceLifecycle } from './admit-custody.mjs';"
+        },
+        {
+          "line": 13,
+          "text": "import { bindOracleSpends } from './custody-oracle-bind.mjs';"
+        },
+        {
+          "line": 14,
+          "text": "import { bindCapacity } from './custody-capacity.mjs';"
+        },
+        {
+          "line": 15,
+          "text": "import { actionTimeGuards, isFixedUtxoProbe, isProductionProbeTime, substituteTimeGuards } from './custody-time.mjs';"
+        },
+        {
+          "line": 16,
+          "text": "import { lowerCustody, LowerError } from './lower-custody.mjs';"
+        },
+        {
+          "line": 17,
+          "text": "import { parseAikenCheckJson, ROOT, runAiken } from './compile-public.mjs';"
+        },
+        {
+          "line": 18,
+          "text": "import { applyUnitParameters, CASH_VALIDATOR, STDLIB_TREE, STDLIB_TREE_SHA256, stdlibTreeSha256 } from './apply-head.mjs';"
+        },
+        {
+          "line": 19,
+          "text": "import { shouldApply, shouldPublish, SUCCESS_ARTIFACTS } from './custody-publication.mjs';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/support/custody-fixture-world.mjs",
+      "sha256": "c01941c8984f60e4e3152f36e12517fe50db3b6e0fdba9e3927079192cdc6fba",
+      "importLines": [
+        {
+          "line": 19,
+          "text": "import assert from 'node:assert';"
+        },
+        {
+          "line": 20,
+          "text": "import { Buffer } from 'node:buffer';"
+        },
+        {
+          "line": 21,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 22,
+          "text": "import { join } from 'node:path';"
+        }
+      ]
+    },
+    {
+      "path": "experiments/moriarty-eutxo/tests/support/custody-module-loader.mjs",
+      "sha256": "14ddf48598c5512606dd7c98ce3930290e0a0f5a22a8498337159cfdb2e24f04",
+      "importLines": [
+        {
+          "line": 82,
+          "text": "import { createHash } from 'node:crypto';"
+        },
+        {
+          "line": 83,
+          "text": "import { createContext, SourceTextModule, SyntheticModule } from 'node:vm';"
+        }
+      ]
+    }
+  ],
+  "candidateRuntimeUNRUN": true
+}
