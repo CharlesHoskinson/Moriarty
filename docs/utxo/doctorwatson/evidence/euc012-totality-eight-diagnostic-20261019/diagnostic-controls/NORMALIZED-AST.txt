@@ -1,0 +1,1731 @@
+Module(
+  body=[
+    Expr(
+      value=Constant(value='ONE root-owned ordinary capture. Subject executes ONLY with --execute-once.\nNo baseline script exists: previous root capture was inline. Whole new source supplied.\n')),
+    ImportFrom(
+      module='pathlib',
+      names=[
+        alias(name='Path')],
+      level=0),
+    Import(
+      names=[
+        alias(name='argparse'),
+        alias(name='datetime'),
+        alias(name='hashlib'),
+        alias(name='json'),
+        alias(name='os'),
+        alias(name='signal'),
+        alias(name='subprocess'),
+        alias(name='time')]),
+    Assign(
+      targets=[
+        Name(id='D', ctx=Store())],
+      value=Attribute(
+        value=Call(
+          func=Attribute(
+            value=Call(
+              func=Name(id='Path', ctx=Load()),
+              args=[
+                Name(id='__file__', ctx=Load())]),
+            attr='resolve',
+            ctx=Load())),
+        attr='parent',
+        ctx=Load())),
+    Assign(
+      targets=[
+        Name(id='PLAN_SHA256', ctx=Store())],
+      value=Constant(value='<EXACT_NEW_PLAN_SHA256>')),
+    FunctionDef(
+      name='sha',
+      args=arguments(
+        args=[
+          arg(arg='raw')]),
+      body=[
+        Return(
+          value=Call(
+            func=Attribute(
+              value=Call(
+                func=Attribute(
+                  value=Name(id='hashlib', ctx=Load()),
+                  attr='sha256',
+                  ctx=Load()),
+                args=[
+                  Name(id='raw', ctx=Load())]),
+              attr='hexdigest',
+              ctx=Load())))]),
+    FunctionDef(
+      name='now',
+      args=arguments(),
+      body=[
+        Return(
+          value=Call(
+            func=Attribute(
+              value=Call(
+                func=Attribute(
+                  value=Attribute(
+                    value=Name(id='datetime', ctx=Load()),
+                    attr='datetime',
+                    ctx=Load()),
+                  attr='now',
+                  ctx=Load()),
+                args=[
+                  Attribute(
+                    value=Attribute(
+                      value=Name(id='datetime', ctx=Load()),
+                      attr='timezone',
+                      ctx=Load()),
+                    attr='utc',
+                    ctx=Load())]),
+              attr='isoformat',
+              ctx=Load())))]),
+    FunctionDef(
+      name='write',
+      args=arguments(
+        args=[
+          arg(arg='path'),
+          arg(arg='value')]),
+      body=[
+        Assign(
+          targets=[
+            Name(id='data', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=BinOp(
+                left=Call(
+                  func=Attribute(
+                    value=Name(id='json', ctx=Load()),
+                    attr='dumps',
+                    ctx=Load()),
+                  args=[
+                    Name(id='value', ctx=Load())],
+                  keywords=[
+                    keyword(
+                      arg='indent',
+                      value=Constant(value=2))]),
+                op=Add(),
+                right=Constant(value='\n')),
+              attr='encode',
+              ctx=Load()))),
+        Assign(
+          targets=[
+            Name(id='temp', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='path', ctx=Load()),
+              attr='with_name',
+              ctx=Load()),
+            args=[
+              BinOp(
+                left=Attribute(
+                  value=Name(id='path', ctx=Load()),
+                  attr='name',
+                  ctx=Load()),
+                op=Add(),
+                right=Constant(value='.tmp'))])),
+        With(
+          items=[
+            withitem(
+              context_expr=Call(
+                func=Attribute(
+                  value=Name(id='temp', ctx=Load()),
+                  attr='open',
+                  ctx=Load()),
+                args=[
+                  Constant(value='xb')]),
+              optional_vars=Name(id='f', ctx=Store()))],
+          body=[
+            Expr(
+              value=Call(
+                func=Attribute(
+                  value=Name(id='f', ctx=Load()),
+                  attr='write',
+                  ctx=Load()),
+                args=[
+                  Name(id='data', ctx=Load())]))]),
+        Expr(
+          value=Call(
+            func=Attribute(
+              value=Name(id='os', ctx=Load()),
+              attr='replace',
+              ctx=Load()),
+            args=[
+              Name(id='temp', ctx=Load()),
+              Name(id='path', ctx=Load())]))]),
+    FunctionDef(
+      name='pins_status',
+      args=arguments(
+        args=[
+          arg(arg='plan')]),
+      body=[
+        Assign(
+          targets=[
+            Name(id='rows', ctx=Store())],
+          value=List(ctx=Load())),
+        For(
+          target=Name(id='x', ctx=Store()),
+          iter=Subscript(
+            value=Name(id='plan', ctx=Load()),
+            slice=Constant(value='pins'),
+            ctx=Load()),
+          body=[
+            Try(
+              body=[
+                Assign(
+                  targets=[
+                    Name(id='p', ctx=Store())],
+                  value=Call(
+                    func=Name(id='Path', ctx=Load()),
+                    args=[
+                      Subscript(
+                        value=Name(id='x', ctx=Load()),
+                        slice=Constant(value='path'),
+                        ctx=Load())])),
+                Assign(
+                  targets=[
+                    Name(id='b', ctx=Store())],
+                  value=Call(
+                    func=Attribute(
+                      value=Name(id='p', ctx=Load()),
+                      attr='read_bytes',
+                      ctx=Load()))),
+                Assign(
+                  targets=[
+                    Name(id='actual', ctx=Store())],
+                  value=Call(
+                    func=Name(id='sha', ctx=Load()),
+                    args=[
+                      Name(id='b', ctx=Load())])),
+                Assign(
+                  targets=[
+                    Name(id='match', ctx=Store())],
+                  value=BoolOp(
+                    op=And(),
+                    values=[
+                      Compare(
+                        left=Call(
+                          func=Name(id='len', ctx=Load()),
+                          args=[
+                            Name(id='b', ctx=Load())]),
+                        ops=[
+                          Eq()],
+                        comparators=[
+                          Subscript(
+                            value=Name(id='x', ctx=Load()),
+                            slice=Constant(value='bytes'),
+                            ctx=Load())]),
+                      Compare(
+                        left=Name(id='actual', ctx=Load()),
+                        ops=[
+                          Eq()],
+                        comparators=[
+                          Subscript(
+                            value=Name(id='x', ctx=Load()),
+                            slice=Constant(value='sha256'),
+                            ctx=Load())])])),
+                Expr(
+                  value=Call(
+                    func=Attribute(
+                      value=Name(id='rows', ctx=Load()),
+                      attr='append',
+                      ctx=Load()),
+                    args=[
+                      Dict(
+                        keys=[
+                          Constant(value='path'),
+                          Constant(value='expectedSha256'),
+                          Constant(value='actualSha256'),
+                          Constant(value='bytes'),
+                          Constant(value='match')],
+                        values=[
+                          Call(
+                            func=Name(id='str', ctx=Load()),
+                            args=[
+                              Name(id='p', ctx=Load())]),
+                          Subscript(
+                            value=Name(id='x', ctx=Load()),
+                            slice=Constant(value='sha256'),
+                            ctx=Load()),
+                          Name(id='actual', ctx=Load()),
+                          Call(
+                            func=Name(id='len', ctx=Load()),
+                            args=[
+                              Name(id='b', ctx=Load())]),
+                          Name(id='match', ctx=Load())])]))],
+              handlers=[
+                ExceptHandler(
+                  type=Name(id='OSError', ctx=Load()),
+                  name='e',
+                  body=[
+                    Expr(
+                      value=Call(
+                        func=Attribute(
+                          value=Name(id='rows', ctx=Load()),
+                          attr='append',
+                          ctx=Load()),
+                        args=[
+                          Dict(
+                            keys=[
+                              Constant(value='path'),
+                              Constant(value='match'),
+                              Constant(value='exceptionClass')],
+                            values=[
+                              Subscript(
+                                value=Name(id='x', ctx=Load()),
+                                slice=Constant(value='path'),
+                                ctx=Load()),
+                              Constant(value=False),
+                              Attribute(
+                                value=Call(
+                                  func=Name(id='type', ctx=Load()),
+                                  args=[
+                                    Name(id='e', ctx=Load())]),
+                                attr='__name__',
+                                ctx=Load())])]))])])]),
+        Return(
+          value=Name(id='rows', ctx=Load()))]),
+    FunctionDef(
+      name='preflight',
+      args=arguments(),
+      body=[
+        Assign(
+          targets=[
+            Name(id='raw', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=BinOp(
+                left=Name(id='D', ctx=Load()),
+                op=Div(),
+                right=Constant(value='PLAN.json')),
+              attr='read_bytes',
+              ctx=Load()))),
+        Assert(
+          test=Compare(
+            left=Call(
+              func=Name(id='sha', ctx=Load()),
+              args=[
+                Name(id='raw', ctx=Load())]),
+            ops=[
+              Eq()],
+            comparators=[
+              Name(id='PLAN_SHA256', ctx=Load())])),
+        Assign(
+          targets=[
+            Name(id='plan', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='json', ctx=Load()),
+              attr='loads',
+              ctx=Load()),
+            args=[
+              Name(id='raw', ctx=Load())])),
+        Assign(
+          targets=[
+            Name(id='cmd', ctx=Store())],
+          value=Subscript(
+            value=Name(id='plan', ctx=Load()),
+            slice=Constant(value='command'),
+            ctx=Load())),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Compare(
+                left=Subscript(
+                  value=Name(id='plan', ctx=Load()),
+                  slice=Constant(value='maxAttempts'),
+                  ctx=Load()),
+                ops=[
+                  Eq(),
+                  Eq()],
+                comparators=[
+                  Subscript(
+                    value=Name(id='cmd', ctx=Load()),
+                    slice=Constant(value='maxAttempts'),
+                    ctx=Load()),
+                  Constant(value=1)]),
+              Compare(
+                left=Call(
+                  func=Name(id='len', ctx=Load()),
+                  args=[
+                    Subscript(
+                      value=Name(id='plan', ctx=Load()),
+                      slice=Constant(value='pins'),
+                      ctx=Load())]),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=22)]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='plan', ctx=Load()),
+                  slice=Constant(value='sourceFiles'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=20)]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='plan', ctx=Load()),
+                  slice=Constant(value='tools'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=2)])])),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Compare(
+                left=Subscript(
+                  value=Name(id='plan', ctx=Load()),
+                  slice=Constant(value='innerChildBoundSeconds'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=95)]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='plan', ctx=Load()),
+                  slice=Constant(value='parentCommunicateCaptureTimeoutSeconds'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=100)])])),
+        Assert(
+          test=Compare(
+            left=Subscript(
+              value=Name(id='cmd', ctx=Load()),
+              slice=Constant(value='argv'),
+              ctx=Load()),
+            ops=[
+              Eq()],
+            comparators=[
+              List(
+                elts=[
+                  Constant(value='/usr/bin/timeout'),
+                  Constant(value='--signal=TERM'),
+                  Constant(value='--kill-after=5s'),
+                  Constant(value='90s'),
+                  Constant(value='/home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node'),
+                  Constant(value='--experimental-vm-modules'),
+                  Constant(value='--test'),
+                  Constant(value='tests/custody-failure-isolation.test.mjs')],
+                ctx=Load())])),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Compare(
+                left=Subscript(
+                  value=Name(id='cmd', ctx=Load()),
+                  slice=Constant(value='env'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Dict(
+                    keys=[
+                      Constant(value='PATH'),
+                      Constant(value='LANG')],
+                    values=[
+                      Constant(value='/usr/bin:/bin'),
+                      Constant(value='C.UTF-8')])]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='cmd', ctx=Load()),
+                  slice=Constant(value='inheritEnvironment'),
+                  ctx=Load()),
+                ops=[
+                  Is()],
+                comparators=[
+                  Constant(value=False)])])),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Compare(
+                left=Subscript(
+                  value=Name(id='cmd', ctx=Load()),
+                  slice=Constant(value='wallSeconds'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=90)]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='cmd', ctx=Load()),
+                  slice=Constant(value='terminationGraceSeconds'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=5)]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='cmd', ctx=Load()),
+                  slice=Constant(value='parentBoundSeconds'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Constant(value=95)])])),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Compare(
+                left=Call(
+                  func=Name(id='sha', ctx=Load()),
+                  args=[
+                    Call(
+                      func=Attribute(
+                        value=Call(
+                          func=Name(id='Path', ctx=Load()),
+                          args=[
+                            Subscript(
+                              value=Name(id='plan', ctx=Load()),
+                              slice=Constant(value='commandSource'),
+                              ctx=Load())]),
+                        attr='read_bytes',
+                        ctx=Load()))]),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Subscript(
+                    value=Name(id='plan', ctx=Load()),
+                    slice=Constant(value='commandSourceSha256'),
+                    ctx=Load())]),
+              Compare(
+                left=Call(
+                  func=Name(id='sha', ctx=Load()),
+                  args=[
+                    Call(
+                      func=Attribute(
+                        value=Call(
+                          func=Name(id='Path', ctx=Load()),
+                          args=[
+                            Subscript(
+                              value=Name(id='plan', ctx=Load()),
+                              slice=Constant(value='assemblySource'),
+                              ctx=Load())]),
+                        attr='read_bytes',
+                        ctx=Load()))]),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Subscript(
+                    value=Name(id='plan', ctx=Load()),
+                    slice=Constant(value='assemblySha256'),
+                    ctx=Load())])])),
+        Assign(
+          targets=[
+            Name(id='source', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='json', ctx=Load()),
+              attr='loads',
+              ctx=Load()),
+            args=[
+              Call(
+                func=Attribute(
+                  value=Call(
+                    func=Name(id='Path', ctx=Load()),
+                    args=[
+                      Subscript(
+                        value=Name(id='plan', ctx=Load()),
+                        slice=Constant(value='commandSource'),
+                        ctx=Load())]),
+                  attr='read_bytes',
+                  ctx=Load()))])),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Compare(
+                left=Name(id='cmd', ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Subscript(
+                    value=Subscript(
+                      value=Name(id='source', ctx=Load()),
+                      slice=Constant(value='commands'),
+                      ctx=Load()),
+                    slice=Constant(value=0),
+                    ctx=Load())]),
+              Compare(
+                left=Subscript(
+                  value=Name(id='plan', ctx=Load()),
+                  slice=Constant(value='cwd'),
+                  ctx=Load()),
+                ops=[
+                  Eq()],
+                comparators=[
+                  Subscript(
+                    value=Name(id='source', ctx=Load()),
+                    slice=Constant(value='cwd'),
+                    ctx=Load())])])),
+        Assign(
+          targets=[
+            Name(id='rows', ctx=Store())],
+          value=Call(
+            func=Name(id='pins_status', ctx=Load()),
+            args=[
+              Name(id='plan', ctx=Load())])),
+        Assert(
+          test=Call(
+            func=Name(id='all', ctx=Load()),
+            args=[
+              GeneratorExp(
+                elt=Subscript(
+                  value=Name(id='x', ctx=Load()),
+                  slice=Constant(value='match'),
+                  ctx=Load()),
+                generators=[
+                  comprehension(
+                    target=Name(id='x', ctx=Store()),
+                    iter=Name(id='rows', ctx=Load()),
+                    is_async=0)])])),
+        Assert(
+          test=BoolOp(
+            op=And(),
+            values=[
+              Call(
+                func=Attribute(
+                  value=Call(
+                    func=Name(id='Path', ctx=Load()),
+                    args=[
+                      Subscript(
+                        value=Name(id='plan', ctx=Load()),
+                        slice=Constant(value='cwd'),
+                        ctx=Load())]),
+                  attr='is_dir',
+                  ctx=Load())),
+              UnaryOp(
+                op=Not(),
+                operand=Call(
+                  func=Attribute(
+                    value=Call(
+                      func=Name(id='Path', ctx=Load()),
+                      args=[
+                        Subscript(
+                          value=Name(id='plan', ctx=Load()),
+                          slice=Constant(value='outputDirectory'),
+                          ctx=Load())]),
+                    attr='exists',
+                    ctx=Load())))])),
+        Return(
+          value=Tuple(
+            elts=[
+              Name(id='plan', ctx=Load()),
+              Name(id='rows', ctx=Load())],
+            ctx=Load()))]),
+    FunctionDef(
+      name='census',
+      args=arguments(
+        args=[
+          arg(arg='pgid'),
+          arg(arg='sid')]),
+      body=[
+        Assign(
+          targets=[
+            Name(id='raw', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='subprocess', ctx=Load()),
+              attr='check_output',
+              ctx=Load()),
+            args=[
+              List(
+                elts=[
+                  Constant(value='/usr/bin/ps'),
+                  Constant(value='-eo'),
+                  Constant(value='pid=,pgid=,sid=')],
+                ctx=Load())],
+            keywords=[
+              keyword(
+                arg='timeout',
+                value=Constant(value=2)),
+              keyword(
+                arg='text',
+                value=Constant(value=True))])),
+        Return(
+          value=ListComp(
+            elt=Dict(
+              keys=[
+                Constant(value='pid'),
+                Constant(value='pgid'),
+                Constant(value='sid')],
+              values=[
+                Call(
+                  func=Name(id='int', ctx=Load()),
+                  args=[
+                    Name(id='p', ctx=Load())]),
+                Call(
+                  func=Name(id='int', ctx=Load()),
+                  args=[
+                    Name(id='g', ctx=Load())]),
+                Call(
+                  func=Name(id='int', ctx=Load()),
+                  args=[
+                    Name(id='s', ctx=Load())])]),
+            generators=[
+              comprehension(
+                target=Tuple(
+                  elts=[
+                    Name(id='p', ctx=Store()),
+                    Name(id='g', ctx=Store()),
+                    Name(id='s', ctx=Store())],
+                  ctx=Store()),
+                iter=GeneratorExp(
+                  elt=Call(
+                    func=Attribute(
+                      value=Name(id='line', ctx=Load()),
+                      attr='split',
+                      ctx=Load())),
+                  generators=[
+                    comprehension(
+                      target=Name(id='line', ctx=Store()),
+                      iter=Call(
+                        func=Attribute(
+                          value=Name(id='raw', ctx=Load()),
+                          attr='splitlines',
+                          ctx=Load())),
+                      is_async=0)]),
+                ifs=[
+                  BoolOp(
+                    op=Or(),
+                    values=[
+                      Compare(
+                        left=Call(
+                          func=Name(id='int', ctx=Load()),
+                          args=[
+                            Name(id='g', ctx=Load())]),
+                        ops=[
+                          Eq()],
+                        comparators=[
+                          Name(id='pgid', ctx=Load())]),
+                      Compare(
+                        left=Call(
+                          func=Name(id='int', ctx=Load()),
+                          args=[
+                            Name(id='s', ctx=Load())]),
+                        ops=[
+                          Eq()],
+                        comparators=[
+                          Name(id='sid', ctx=Load())])])],
+                is_async=0)]))]),
+    FunctionDef(
+      name='kill_group',
+      args=arguments(
+        args=[
+          arg(arg='pgid')]),
+      body=[
+        Try(
+          body=[
+            Expr(
+              value=Call(
+                func=Attribute(
+                  value=Name(id='os', ctx=Load()),
+                  attr='killpg',
+                  ctx=Load()),
+                args=[
+                  Name(id='pgid', ctx=Load()),
+                  Attribute(
+                    value=Name(id='signal', ctx=Load()),
+                    attr='SIGKILL',
+                    ctx=Load())]))],
+          handlers=[
+            ExceptHandler(
+              type=Name(id='ProcessLookupError', ctx=Load()),
+              body=[
+                Pass()])])]),
+    FunctionDef(
+      name='run',
+      args=arguments(
+        args=[
+          arg(arg='plan'),
+          arg(arg='prepins')]),
+      body=[
+        Assign(
+          targets=[
+            Name(id='out', ctx=Store())],
+          value=Call(
+            func=Name(id='Path', ctx=Load()),
+            args=[
+              Subscript(
+                value=Name(id='plan', ctx=Load()),
+                slice=Constant(value='outputDirectory'),
+                ctx=Load())])),
+        Expr(
+          value=Call(
+            func=Attribute(
+              value=Name(id='out', ctx=Load()),
+              attr='mkdir',
+              ctx=Load()),
+            keywords=[
+              keyword(
+                arg='mode',
+                value=Constant(value=448)),
+              keyword(
+                arg='exist_ok',
+                value=Constant(value=False))])),
+        Expr(
+          value=Call(
+            func=Name(id='write', ctx=Load()),
+            args=[
+              BinOp(
+                left=Name(id='out', ctx=Load()),
+                op=Div(),
+                right=Constant(value='START.json')),
+              Dict(
+                keys=[
+                  Constant(value='startedAt'),
+                  Constant(value='planSha256'),
+                  Constant(value='argv'),
+                  Constant(value='cwd'),
+                  Constant(value='env'),
+                  Constant(value='inheritEnvironment'),
+                  Constant(value='pins'),
+                  Constant(value='attemptsConsumed'),
+                  Constant(value='attemptsRemaining'),
+                  Constant(value='scope')],
+                values=[
+                  Call(
+                    func=Name(id='now', ctx=Load())),
+                  Name(id='PLAN_SHA256', ctx=Load()),
+                  Subscript(
+                    value=Subscript(
+                      value=Name(id='plan', ctx=Load()),
+                      slice=Constant(value='command'),
+                      ctx=Load()),
+                    slice=Constant(value='argv'),
+                    ctx=Load()),
+                  Subscript(
+                    value=Name(id='plan', ctx=Load()),
+                    slice=Constant(value='cwd'),
+                    ctx=Load()),
+                  Subscript(
+                    value=Subscript(
+                      value=Name(id='plan', ctx=Load()),
+                      slice=Constant(value='command'),
+                      ctx=Load()),
+                    slice=Constant(value='env'),
+                    ctx=Load()),
+                  Constant(value=False),
+                  Name(id='prepins', ctx=Load()),
+                  Constant(value=1),
+                  Constant(value=0),
+                  Subscript(
+                    value=Name(id='plan', ctx=Load()),
+                    slice=Constant(value='scope'),
+                    ctx=Load())])])),
+        Assign(
+          targets=[
+            Name(id='p', ctx=Store())],
+          value=Constant(value=None)),
+        Assign(
+          targets=[
+            Name(id='start', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='time', ctx=Load()),
+              attr='monotonic',
+              ctx=Load()))),
+        Assign(
+          targets=[
+            Name(id='stdout', ctx=Store())],
+          value=Constant(value=b'')),
+        Assign(
+          targets=[
+            Name(id='stderr', ctx=Store())],
+          value=Constant(value=b'')),
+        Assign(
+          targets=[
+            Name(id='eof', ctx=Store())],
+          value=Constant(value=False)),
+        Assign(
+          targets=[
+            Name(id='captureTimedOut', ctx=Store())],
+          value=Constant(value=False)),
+        Assign(
+          targets=[
+            Name(id='captureError', ctx=Store())],
+          value=Constant(value=None)),
+        Assign(
+          targets=[
+            Name(id='exitcode', ctx=Store())],
+          value=Constant(value=None)),
+        Try(
+          body=[
+            Assign(
+              targets=[
+                Name(id='p', ctx=Store())],
+              value=Call(
+                func=Attribute(
+                  value=Name(id='subprocess', ctx=Load()),
+                  attr='Popen',
+                  ctx=Load()),
+                args=[
+                  Subscript(
+                    value=Subscript(
+                      value=Name(id='plan', ctx=Load()),
+                      slice=Constant(value='command'),
+                      ctx=Load()),
+                    slice=Constant(value='argv'),
+                    ctx=Load())],
+                keywords=[
+                  keyword(
+                    arg='cwd',
+                    value=Subscript(
+                      value=Name(id='plan', ctx=Load()),
+                      slice=Constant(value='cwd'),
+                      ctx=Load())),
+                  keyword(
+                    arg='env',
+                    value=Subscript(
+                      value=Subscript(
+                        value=Name(id='plan', ctx=Load()),
+                        slice=Constant(value='command'),
+                        ctx=Load()),
+                      slice=Constant(value='env'),
+                      ctx=Load())),
+                  keyword(
+                    arg='stdin',
+                    value=Attribute(
+                      value=Name(id='subprocess', ctx=Load()),
+                      attr='DEVNULL',
+                      ctx=Load())),
+                  keyword(
+                    arg='stdout',
+                    value=Attribute(
+                      value=Name(id='subprocess', ctx=Load()),
+                      attr='PIPE',
+                      ctx=Load())),
+                  keyword(
+                    arg='stderr',
+                    value=Attribute(
+                      value=Name(id='subprocess', ctx=Load()),
+                      attr='PIPE',
+                      ctx=Load())),
+                  keyword(
+                    arg='start_new_session',
+                    value=Constant(value=True))])),
+            Expr(
+              value=Call(
+                func=Name(id='write', ctx=Load()),
+                args=[
+                  BinOp(
+                    left=Name(id='out', ctx=Load()),
+                    op=Div(),
+                    right=Constant(value='CHILD.json')),
+                  Dict(
+                    keys=[
+                      Constant(value='pid'),
+                      Constant(value='ownedPGID'),
+                      Constant(value='ownedSID')],
+                    values=[
+                      Attribute(
+                        value=Name(id='p', ctx=Load()),
+                        attr='pid',
+                        ctx=Load()),
+                      Attribute(
+                        value=Name(id='p', ctx=Load()),
+                        attr='pid',
+                        ctx=Load()),
+                      Attribute(
+                        value=Name(id='p', ctx=Load()),
+                        attr='pid',
+                        ctx=Load())])])),
+            Try(
+              body=[
+                Assign(
+                  targets=[
+                    Tuple(
+                      elts=[
+                        Name(id='stdout', ctx=Store()),
+                        Name(id='stderr', ctx=Store())],
+                      ctx=Store())],
+                  value=Call(
+                    func=Attribute(
+                      value=Name(id='p', ctx=Load()),
+                      attr='communicate',
+                      ctx=Load()),
+                    keywords=[
+                      keyword(
+                        arg='timeout',
+                        value=Constant(value=100))])),
+                Assign(
+                  targets=[
+                    Name(id='eof', ctx=Store())],
+                  value=Constant(value=True))],
+              handlers=[
+                ExceptHandler(
+                  type=Attribute(
+                    value=Name(id='subprocess', ctx=Load()),
+                    attr='TimeoutExpired',
+                    ctx=Load()),
+                  body=[
+                    Assign(
+                      targets=[
+                        Name(id='captureTimedOut', ctx=Store())],
+                      value=Constant(value=True)),
+                    Expr(
+                      value=Call(
+                        func=Name(id='kill_group', ctx=Load()),
+                        args=[
+                          Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='pid',
+                            ctx=Load())])),
+                    Try(
+                      body=[
+                        Assign(
+                          targets=[
+                            Tuple(
+                              elts=[
+                                Name(id='stdout', ctx=Store()),
+                                Name(id='stderr', ctx=Store())],
+                              ctx=Store())],
+                          value=Call(
+                            func=Attribute(
+                              value=Name(id='p', ctx=Load()),
+                              attr='communicate',
+                              ctx=Load()),
+                            keywords=[
+                              keyword(
+                                arg='timeout',
+                                value=Constant(value=2))])),
+                        Assign(
+                          targets=[
+                            Name(id='eof', ctx=Store())],
+                          value=Constant(value=True))],
+                      handlers=[
+                        ExceptHandler(
+                          type=Attribute(
+                            value=Name(id='subprocess', ctx=Load()),
+                            attr='TimeoutExpired',
+                            ctx=Load()),
+                          name='e',
+                          body=[
+                            Assign(
+                              targets=[
+                                Name(id='stdout', ctx=Store())],
+                              value=BoolOp(
+                                op=Or(),
+                                values=[
+                                  Attribute(
+                                    value=Name(id='e', ctx=Load()),
+                                    attr='output',
+                                    ctx=Load()),
+                                  Constant(value=b'')])),
+                            Assign(
+                              targets=[
+                                Name(id='stderr', ctx=Store())],
+                              value=BoolOp(
+                                op=Or(),
+                                values=[
+                                  Attribute(
+                                    value=Name(id='e', ctx=Load()),
+                                    attr='stderr',
+                                    ctx=Load()),
+                                  Constant(value=b'')])),
+                            Assign(
+                              targets=[
+                                Name(id='captureError', ctx=Store())],
+                              value=Constant(value='CAPTURE_EOF_NOT_REACHED_AFTER_OWNED_KILL')),
+                            Expr(
+                              value=Call(
+                                func=Attribute(
+                                  value=Attribute(
+                                    value=Name(id='p', ctx=Load()),
+                                    attr='stdout',
+                                    ctx=Load()),
+                                  attr='close',
+                                  ctx=Load()))),
+                            Expr(
+                              value=Call(
+                                func=Attribute(
+                                  value=Attribute(
+                                    value=Name(id='p', ctx=Load()),
+                                    attr='stderr',
+                                    ctx=Load()),
+                                  attr='close',
+                                  ctx=Load())))])]),
+                    If(
+                      test=Compare(
+                        left=Call(
+                          func=Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='poll',
+                            ctx=Load())),
+                        ops=[
+                          Is()],
+                        comparators=[
+                          Constant(value=None)]),
+                      body=[
+                        Expr(
+                          value=Call(
+                            func=Attribute(
+                              value=Name(id='p', ctx=Load()),
+                              attr='wait',
+                              ctx=Load()),
+                            keywords=[
+                              keyword(
+                                arg='timeout',
+                                value=Constant(value=1))]))])])]),
+            Assign(
+              targets=[
+                Name(id='exitcode', ctx=Store())],
+              value=Attribute(
+                value=Name(id='p', ctx=Load()),
+                attr='returncode',
+                ctx=Load()))],
+          handlers=[
+            ExceptHandler(
+              type=Name(id='Exception', ctx=Load()),
+              name='e',
+              body=[
+                Assign(
+                  targets=[
+                    Name(id='captureError', ctx=Store())],
+                  value=Attribute(
+                    value=Call(
+                      func=Name(id='type', ctx=Load()),
+                      args=[
+                        Name(id='e', ctx=Load())]),
+                    attr='__name__',
+                    ctx=Load())),
+                If(
+                  test=Compare(
+                    left=Name(id='p', ctx=Load()),
+                    ops=[
+                      IsNot()],
+                    comparators=[
+                      Constant(value=None)]),
+                  body=[
+                    Expr(
+                      value=Call(
+                        func=Name(id='kill_group', ctx=Load()),
+                        args=[
+                          Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='pid',
+                            ctx=Load())])),
+                    Try(
+                      body=[
+                        Assign(
+                          targets=[
+                            Tuple(
+                              elts=[
+                                Name(id='stdout', ctx=Store()),
+                                Name(id='stderr', ctx=Store())],
+                              ctx=Store())],
+                          value=Call(
+                            func=Attribute(
+                              value=Name(id='p', ctx=Load()),
+                              attr='communicate',
+                              ctx=Load()),
+                            keywords=[
+                              keyword(
+                                arg='timeout',
+                                value=Constant(value=2))])),
+                        Assign(
+                          targets=[
+                            Name(id='eof', ctx=Store())],
+                          value=Constant(value=True))],
+                      handlers=[
+                        ExceptHandler(
+                          type=Attribute(
+                            value=Name(id='subprocess', ctx=Load()),
+                            attr='TimeoutExpired',
+                            ctx=Load()),
+                          name='late',
+                          body=[
+                            Assign(
+                              targets=[
+                                Name(id='stdout', ctx=Store())],
+                              value=BoolOp(
+                                op=Or(),
+                                values=[
+                                  Attribute(
+                                    value=Name(id='late', ctx=Load()),
+                                    attr='output',
+                                    ctx=Load()),
+                                  Constant(value=b'')])),
+                            Assign(
+                              targets=[
+                                Name(id='stderr', ctx=Store())],
+                              value=BoolOp(
+                                op=Or(),
+                                values=[
+                                  Attribute(
+                                    value=Name(id='late', ctx=Load()),
+                                    attr='stderr',
+                                    ctx=Load()),
+                                  Constant(value=b'')])),
+                            Expr(
+                              value=Call(
+                                func=Attribute(
+                                  value=Attribute(
+                                    value=Name(id='p', ctx=Load()),
+                                    attr='stdout',
+                                    ctx=Load()),
+                                  attr='close',
+                                  ctx=Load()))),
+                            Expr(
+                              value=Call(
+                                func=Attribute(
+                                  value=Attribute(
+                                    value=Name(id='p', ctx=Load()),
+                                    attr='stderr',
+                                    ctx=Load()),
+                                  attr='close',
+                                  ctx=Load())))]),
+                        ExceptHandler(
+                          type=Name(id='Exception', ctx=Load()),
+                          body=[
+                            Pass()])]),
+                    If(
+                      test=Compare(
+                        left=Call(
+                          func=Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='poll',
+                            ctx=Load())),
+                        ops=[
+                          Is()],
+                        comparators=[
+                          Constant(value=None)]),
+                      body=[
+                        Try(
+                          body=[
+                            Expr(
+                              value=Call(
+                                func=Attribute(
+                                  value=Name(id='p', ctx=Load()),
+                                  attr='wait',
+                                  ctx=Load()),
+                                keywords=[
+                                  keyword(
+                                    arg='timeout',
+                                    value=Constant(value=1))]))],
+                          handlers=[
+                            ExceptHandler(
+                              type=Attribute(
+                                value=Name(id='subprocess', ctx=Load()),
+                                attr='TimeoutExpired',
+                                ctx=Load()),
+                              body=[
+                                Pass()])])]),
+                    Assign(
+                      targets=[
+                        Name(id='exitcode', ctx=Store())],
+                      value=Attribute(
+                        value=Name(id='p', ctx=Load()),
+                        attr='returncode',
+                        ctx=Load()))])])]),
+        Assign(
+          targets=[
+            Name(id='elapsed', ctx=Store())],
+          value=BinOp(
+            left=Call(
+              func=Attribute(
+                value=Name(id='time', ctx=Load()),
+                attr='monotonic',
+                ctx=Load())),
+            op=Sub(),
+            right=Name(id='start', ctx=Load()))),
+        With(
+          items=[
+            withitem(
+              context_expr=Call(
+                func=Attribute(
+                  value=BinOp(
+                    left=Name(id='out', ctx=Load()),
+                    op=Div(),
+                    right=Constant(value='stdout.txt')),
+                  attr='open',
+                  ctx=Load()),
+                args=[
+                  Constant(value='xb')]),
+              optional_vars=Name(id='f', ctx=Store()))],
+          body=[
+            Expr(
+              value=Call(
+                func=Attribute(
+                  value=Name(id='f', ctx=Load()),
+                  attr='write',
+                  ctx=Load()),
+                args=[
+                  Name(id='stdout', ctx=Load())]))]),
+        With(
+          items=[
+            withitem(
+              context_expr=Call(
+                func=Attribute(
+                  value=BinOp(
+                    left=Name(id='out', ctx=Load()),
+                    op=Div(),
+                    right=Constant(value='stderr.txt')),
+                  attr='open',
+                  ctx=Load()),
+                args=[
+                  Constant(value='xb')]),
+              optional_vars=Name(id='f', ctx=Store()))],
+          body=[
+            Expr(
+              value=Call(
+                func=Attribute(
+                  value=Name(id='f', ctx=Load()),
+                  attr='write',
+                  ctx=Load()),
+                args=[
+                  Name(id='stderr', ctx=Load())]))]),
+        Assign(
+          targets=[
+            Name(id='result', ctx=Store())],
+          value=Dict(
+            keys=[
+              Constant(value='recordedAt'),
+              Constant(value='exitCode'),
+              Constant(value='elapsedSeconds'),
+              Constant(value='captureReachedEOF'),
+              Constant(value='stdoutReachedEOF'),
+              Constant(value='stderrReachedEOF'),
+              Constant(value='captureTimedOut'),
+              Constant(value='captureError'),
+              Constant(value='stdoutBytes'),
+              Constant(value='stdoutSha256'),
+              Constant(value='stderrBytes'),
+              Constant(value='stderrSha256'),
+              Constant(value='attemptsConsumed'),
+              Constant(value='attemptsRemaining'),
+              Constant(value='validationComplete'),
+              Constant(value='sourceApprovalOrAll13Closure')],
+            values=[
+              Call(
+                func=Name(id='now', ctx=Load())),
+              Name(id='exitcode', ctx=Load()),
+              Name(id='elapsed', ctx=Load()),
+              Name(id='eof', ctx=Load()),
+              Name(id='eof', ctx=Load()),
+              Name(id='eof', ctx=Load()),
+              Name(id='captureTimedOut', ctx=Load()),
+              Name(id='captureError', ctx=Load()),
+              Call(
+                func=Name(id='len', ctx=Load()),
+                args=[
+                  Name(id='stdout', ctx=Load())]),
+              Call(
+                func=Name(id='sha', ctx=Load()),
+                args=[
+                  Name(id='stdout', ctx=Load())]),
+              Call(
+                func=Name(id='len', ctx=Load()),
+                args=[
+                  Name(id='stderr', ctx=Load())]),
+              Call(
+                func=Name(id='sha', ctx=Load()),
+                args=[
+                  Name(id='stderr', ctx=Load())]),
+              Constant(value=1),
+              Constant(value=0),
+              Constant(value=False),
+              Constant(value=False)])),
+        Expr(
+          value=Call(
+            func=Name(id='write', ctx=Load()),
+            args=[
+              BinOp(
+                left=Name(id='out', ctx=Load()),
+                op=Div(),
+                right=Constant(value='RESULT.json')),
+              Name(id='result', ctx=Load())])),
+        Assign(
+          targets=[
+            Name(id='validationErrors', ctx=Store())],
+          value=List(ctx=Load())),
+        Assign(
+          targets=[
+            Name(id='remaining', ctx=Store())],
+          value=Constant(value=None)),
+        If(
+          test=Compare(
+            left=Name(id='p', ctx=Load()),
+            ops=[
+              IsNot()],
+            comparators=[
+              Constant(value=None)]),
+          body=[
+            Try(
+              body=[
+                Assign(
+                  targets=[
+                    Name(id='remaining', ctx=Store())],
+                  value=Call(
+                    func=Name(id='census', ctx=Load()),
+                    args=[
+                      Attribute(
+                        value=Name(id='p', ctx=Load()),
+                        attr='pid',
+                        ctx=Load()),
+                      Attribute(
+                        value=Name(id='p', ctx=Load()),
+                        attr='pid',
+                        ctx=Load())])),
+                If(
+                  test=Name(id='remaining', ctx=Load()),
+                  body=[
+                    Expr(
+                      value=Call(
+                        func=Name(id='kill_group', ctx=Load()),
+                        args=[
+                          Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='pid',
+                            ctx=Load())])),
+                    Expr(
+                      value=Call(
+                        func=Attribute(
+                          value=Name(id='time', ctx=Load()),
+                          attr='sleep',
+                          ctx=Load()),
+                        args=[
+                          Constant(value=0.05)])),
+                    Assign(
+                      targets=[
+                        Name(id='remaining', ctx=Store())],
+                      value=Call(
+                        func=Name(id='census', ctx=Load()),
+                        args=[
+                          Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='pid',
+                            ctx=Load()),
+                          Attribute(
+                            value=Name(id='p', ctx=Load()),
+                            attr='pid',
+                            ctx=Load())]))])],
+              handlers=[
+                ExceptHandler(
+                  type=Name(id='Exception', ctx=Load()),
+                  name='e',
+                  body=[
+                    Expr(
+                      value=Call(
+                        func=Attribute(
+                          value=Name(id='validationErrors', ctx=Load()),
+                          attr='append',
+                          ctx=Load()),
+                        args=[
+                          BinOp(
+                            left=Constant(value='ownedCensus:'),
+                            op=Add(),
+                            right=Attribute(
+                              value=Call(
+                                func=Name(id='type', ctx=Load()),
+                                args=[
+                                  Name(id='e', ctx=Load())]),
+                              attr='__name__',
+                              ctx=Load()))]))])])],
+          orelse=[
+            Assign(
+              targets=[
+                Name(id='remaining', ctx=Store())],
+              value=List(ctx=Load()))]),
+        Assign(
+          targets=[
+            Name(id='postpins', ctx=Store())],
+          value=Call(
+            func=Name(id='pins_status', ctx=Load()),
+            args=[
+              Name(id='plan', ctx=Load())])),
+        Assign(
+          targets=[
+            Name(id='postok', ctx=Store())],
+          value=Call(
+            func=Name(id='all', ctx=Load()),
+            args=[
+              GeneratorExp(
+                elt=Subscript(
+                  value=Name(id='x', ctx=Load()),
+                  slice=Constant(value='match'),
+                  ctx=Load()),
+                generators=[
+                  comprehension(
+                    target=Name(id='x', ctx=Store()),
+                    iter=Name(id='postpins', ctx=Load()),
+                    is_async=0)])])),
+        Expr(
+          value=Call(
+            func=Name(id='write', ctx=Load()),
+            args=[
+              BinOp(
+                left=Name(id='out', ctx=Load()),
+                op=Div(),
+                right=Constant(value='POST-PINS.json')),
+              Dict(
+                keys=[
+                  Constant(value='all22PinsUnchanged'),
+                  Constant(value='pins')],
+                values=[
+                  Name(id='postok', ctx=Load()),
+                  Name(id='postpins', ctx=Load())])])),
+        Expr(
+          value=Call(
+            func=Name(id='write', ctx=Load()),
+            args=[
+              BinOp(
+                left=Name(id='out', ctx=Load()),
+                op=Div(),
+                right=Constant(value='CLEANUP.json')),
+              Dict(
+                keys=[
+                  Constant(value='recordedAt'),
+                  Constant(value='ownedPGID'),
+                  Constant(value='ownedSID'),
+                  Constant(value='ownedGroupAndSIDRemaining'),
+                  Constant(value='ownedCleanupComplete'),
+                  Constant(value='captureReachedEOF'),
+                  Constant(value='errors')],
+                values=[
+                  Call(
+                    func=Name(id='now', ctx=Load())),
+                  IfExp(
+                    test=Name(id='p', ctx=Load()),
+                    body=Attribute(
+                      value=Name(id='p', ctx=Load()),
+                      attr='pid',
+                      ctx=Load()),
+                    orelse=Constant(value=None)),
+                  IfExp(
+                    test=Name(id='p', ctx=Load()),
+                    body=Attribute(
+                      value=Name(id='p', ctx=Load()),
+                      attr='pid',
+                      ctx=Load()),
+                    orelse=Constant(value=None)),
+                  Name(id='remaining', ctx=Load()),
+                  Compare(
+                    left=Name(id='remaining', ctx=Load()),
+                    ops=[
+                      Eq()],
+                    comparators=[
+                      List(ctx=Load())]),
+                  Name(id='eof', ctx=Load()),
+                  Name(id='validationErrors', ctx=Load())])])),
+        Expr(
+          value=Call(
+            func=Attribute(
+              value=Name(id='result', ctx=Load()),
+              attr='update',
+              ctx=Load()),
+            keywords=[
+              keyword(
+                arg='validationComplete',
+                value=Constant(value=True)),
+              keyword(
+                arg='postPinsUnchanged',
+                value=Name(id='postok', ctx=Load())),
+              keyword(
+                arg='ownedGroupAndSIDRemaining',
+                value=Name(id='remaining', ctx=Load())),
+              keyword(
+                arg='ownedCleanupComplete',
+                value=Compare(
+                  left=Name(id='remaining', ctx=Load()),
+                  ops=[
+                    Eq()],
+                  comparators=[
+                    List(ctx=Load())])),
+              keyword(
+                arg='validationErrors',
+                value=Name(id='validationErrors', ctx=Load()))])),
+        Expr(
+          value=Call(
+            func=Name(id='write', ctx=Load()),
+            args=[
+              BinOp(
+                left=Name(id='out', ctx=Load()),
+                op=Div(),
+                right=Constant(value='RESULT.json')),
+              Name(id='result', ctx=Load())])),
+        Expr(
+          value=Call(
+            func=Name(id='print', ctx=Load()),
+            args=[
+              Call(
+                func=Attribute(
+                  value=Name(id='json', ctx=Load()),
+                  attr='dumps',
+                  ctx=Load()),
+                args=[
+                  Name(id='result', ctx=Load())],
+                keywords=[
+                  keyword(
+                    arg='indent',
+                    value=Constant(value=2))])])),
+        Return(
+          value=IfExp(
+            test=BoolOp(
+              op=And(),
+              values=[
+                Compare(
+                  left=Name(id='exitcode', ctx=Load()),
+                  ops=[
+                    Eq()],
+                  comparators=[
+                    Constant(value=0)]),
+                Name(id='eof', ctx=Load()),
+                Compare(
+                  left=Name(id='remaining', ctx=Load()),
+                  ops=[
+                    Eq()],
+                  comparators=[
+                    List(ctx=Load())]),
+                Name(id='postok', ctx=Load()),
+                UnaryOp(
+                  op=Not(),
+                  operand=Name(id='validationErrors', ctx=Load())),
+                Compare(
+                  left=Name(id='captureError', ctx=Load()),
+                  ops=[
+                    Is()],
+                  comparators=[
+                    Constant(value=None)])]),
+            body=Constant(value=0),
+            orelse=Constant(value=1)))]),
+    FunctionDef(
+      name='main',
+      args=arguments(),
+      body=[
+        Assign(
+          targets=[
+            Name(id='a', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='argparse', ctx=Load()),
+              attr='ArgumentParser',
+              ctx=Load()))),
+        Expr(
+          value=Call(
+            func=Attribute(
+              value=Name(id='a', ctx=Load()),
+              attr='add_argument',
+              ctx=Load()),
+            args=[
+              Constant(value='--preflight')],
+            keywords=[
+              keyword(
+                arg='action',
+                value=Constant(value='store_true'))])),
+        Expr(
+          value=Call(
+            func=Attribute(
+              value=Name(id='a', ctx=Load()),
+              attr='add_argument',
+              ctx=Load()),
+            args=[
+              Constant(value='--execute-once')],
+            keywords=[
+              keyword(
+                arg='action',
+                value=Constant(value='store_true'))])),
+        Assign(
+          targets=[
+            Name(id='args', ctx=Store())],
+          value=Call(
+            func=Attribute(
+              value=Name(id='a', ctx=Load()),
+              attr='parse_args',
+              ctx=Load()))),
+        Assert(
+          test=Compare(
+            left=Attribute(
+              value=Name(id='args', ctx=Load()),
+              attr='preflight',
+              ctx=Load()),
+            ops=[
+              NotEq()],
+            comparators=[
+              Attribute(
+                value=Name(id='args', ctx=Load()),
+                attr='execute_once',
+                ctx=Load())])),
+        Assign(
+          targets=[
+            Tuple(
+              elts=[
+                Name(id='plan', ctx=Store()),
+                Name(id='rows', ctx=Store())],
+              ctx=Store())],
+          value=Call(
+            func=Name(id='preflight', ctx=Load()))),
+        If(
+          test=Attribute(
+            value=Name(id='args', ctx=Load()),
+            attr='preflight',
+            ctx=Load()),
+          body=[
+            Expr(
+              value=Call(
+                func=Name(id='print', ctx=Load()),
+                args=[
+                  Call(
+                    func=Attribute(
+                      value=Name(id='json', ctx=Load()),
+                      attr='dumps',
+                      ctx=Load()),
+                    args=[
+                      Dict(
+                        keys=[
+                          Constant(value='status'),
+                          Constant(value='pins'),
+                          Constant(value='outputAbsent'),
+                          Constant(value='subjectExecuted'),
+                          Constant(value='commandIndex'),
+                          Constant(value='maxAttempts'),
+                          Constant(value='planSha256')],
+                        values=[
+                          Constant(value='PREFLIGHT_ONLY'),
+                          Call(
+                            func=Name(id='len', ctx=Load()),
+                            args=[
+                              Name(id='rows', ctx=Load())]),
+                          Constant(value=True),
+                          Constant(value=False),
+                          Constant(value=1),
+                          Constant(value=1),
+                          Name(id='PLAN_SHA256', ctx=Load())])],
+                    keywords=[
+                      keyword(
+                        arg='indent',
+                        value=Constant(value=2))])])),
+            Return(
+              value=Constant(value=0))]),
+        Return(
+          value=Call(
+            func=Name(id='run', ctx=Load()),
+            args=[
+              Name(id='plan', ctx=Load()),
+              Name(id='rows', ctx=Load())]))]),
+    If(
+      test=Compare(
+        left=Name(id='__name__', ctx=Load()),
+        ops=[
+          Eq()],
+        comparators=[
+          Constant(value='__main__')]),
+      body=[
+        Raise(
+          exc=Call(
+            func=Name(id='SystemExit', ctx=Load()),
+            args=[
+              Call(
+                func=Name(id='main', ctx=Load()))]))])])
