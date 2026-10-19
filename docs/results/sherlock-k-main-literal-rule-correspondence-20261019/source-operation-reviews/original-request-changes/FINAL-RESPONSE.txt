@@ -1,0 +1,131 @@
+# Review: main_literal_relation.py, synthetic tests, and exact16 operation plan
+
+## Verdict
+
+- **SOURCE = REQUEST_CHANGES.** The fixes are small and bounded. By inspection, none of the defects creates a false-pass path in the current code. Each one is a stated property that the code does not actually enforce, or a binding that only Root enforces.
+- **EXACT16 = CONDITIONAL.** It cannot be selected at the current pins. Once the fixes and the plan corrections below are applied, re-pinned and delta-reviewed, it is eligible.
+
+## Coverage
+
+I read every inline body in full:
+- README, DESIGN, SOURCE-EXACT16-FREEZE, PROPOSED-EXACT16 (all 16 phases), ROOT-EXACT16 conditions, STATIC pins, expected binding.
+- The six reused modules, main.k, main_literal_relation.py, the test, UNCHANGED copies.
+- The compiled span inventory, compiled pins, opaque carrier pin, GRAPH readback, TEST-FIRST.
+- The contract, the SAFE input, the readset, the handoff.
+- F03 source, callable closure and import projection.
+- Tool and K closure pins, prior ROOT-OUTCOME, host RESULT.
+
+How I checked things:
+- I counted main.k lines by hand. Spans 74:8-77:41 (startup), 80:8-81:45 (publication), 102:8-104:41 (literal) and 89–99 (uiTerminal) match the inventory rows.
+- I traced the synthetic test by hand. Every positive and mutation case should behave as intended. This is a manual trace, not an execution.
+- I recomputed no hashes. Every pin above is taken as declared.
+
+Not available to me: the expected body, its private freeze, the old carrier body, any constructor or host capture, compiled definition bodies, IMPORT-TIME-AST.json, READ-IMPORT-PINS, the old 15-plan and conditions bodies, and the consumer's own test file.
+
+## Confirmed source predicates
+
+- **render derives everything from SAFE.** The literal value comes from `table13[0][3:19]` as little-endian bytes (7). Fuel comes from `root[9:25]` and must equal `root[25:41]` (fuel 1). The limit comes from `root[8]` (0). There is no fixed-7 branch. The test contrasts this with literal 11 and fuel 256.
+- **frame matches F03.** Its prefix and suffix are byte-identical to F03 `INIT_PREFIX`/`INIT_SUFFIX`.
+- **Phase argv matches F03.** The 02c/03/05/07/09 argv equal F03 `exec_command`, apart from the `result.kore` output name. The kprint argv equal F03 `kprint_command`. The kast argv and JVM flags equal F03 `kast_command`.
+- **The decode chain is strict.**
+  - Whole log lines are claimed.
+  - Each rule is a single full span found in the inventory.
+  - Each rewrite step has a warning at the declared depth 1 and ends with exec depth 1.
+  - The terminal probe shows the explicit no-rule variant at depth 0, with unchanged raw Kore and unchanged kprint text.
+  - Each logged On-configuration equals the predecessor's raw Kore.
+  - Pattern/output paths chain correctly and the command templates are identical.
+  - All nine cells are decoded with strict integers.
+  - The run input is checked against the K-observed code, initial fuel and stack limit.
+- **No Python transitions.** No model transition or image afterstate is computed in Python. relate only asserts fixed-profile predicates over the retained carrier.
+- **Carrier source_line is never used as rule evidence.** Identities come only from logged spans; audit checks the carrier envelopes against constants.
+
+## Mandatory source fixes
+
+- **M1 – decode must consume its declared `--input`.**
+  - Today `decode` ignores the `query.ui` bytes named in phase 11's argv and input_paths, and recomputes `render(SAFE)` instead.
+  - Required: read `a.input` bytes, require them to equal `render(SAFE).encode()`, pass those actual bytes to `run_input`, and record the pin.
+- **M2 – frame must carry F03's `parsed_problem` gate, or drop the "existing recipe" claim.**
+  - Port the F03 gate verbatim before framing: ASCII/printable only, size at most 64 KiB, no `:` variables, no matching-logic connective other than `\dv`, exactly one closed application.
+  - Today only a balanced 4-argument `uiRun` head is checked.
+- **M3 – relate must bind its inputs by identity.**
+  - Require `pin(--complete-image)` == {old carrier path, 6886 bytes, 4191998…}.
+  - Emit pins of the SAFE input, the spans document, the decoded observation and the carrier in the relation output. Today "retained unchanged" holds only at the typed level, with no byte identity recorded.
+  - Also require that `decoded['startup_probe']['rule']` equals the inventory row 74:8-77:41. Today the startup span is bound only indirectly, through the post-startup initial-state check.
+- **M4 – compare must enforce the barrier shape inside the script.**
+  - Require the exact top-level key set `{expected_body_reads, actual_main, actual_relation, safe_input, products_streams_receipts}`.
+  - Require `f['safe_input']` == the original SAFE pin as a constant (original path, 751 bytes, 31e8ee…).
+  - Pin-check the binding file (7cba03…, 1204 bytes) before reading it.
+- **M5 – add a synthetic rejection test for each check added in M1–M4.**
+  - At minimum: query mismatch, gated kast term, wrong carrier pin, wrong startup span, an extra barrier key, a non-original SAFE pin, and a binding pin mismatch.
+
+## Remaining exact16 preconditions
+
+1. **Re-freeze and delta review.** Apply M1–M5, re-freeze the sources and tests, regenerate SOURCE and STATIC freezes, and have a non-author review the diff.
+2. **Fix the PATH mismatch.** Every one of the 16 phases uses the full four-root PATH. F03 used `KORE_EXEC_PATH` (z3 bin only) for kore-exec, no PATH for kprint, and had no Python children. Either align each tool's PATH to F03 (Python with no PATH), or record a Root-accepted deviation. Then re-hash the plan. As frozen, "same F03 controls" is false on this point.
+3. **Complete the declared input_paths.**
+   - Phase 11 also reads the plan, `ROOT-RECEIPTS/{03..10}` COMMAND and LAUNCH-RESULT files, and the stdout, stderr and products of phases 03..10.
+   - Phase 13 also reads the relation, every freeze member, and the expected body.
+   - Either declare these in the plan, or have Root record the actual readset in each phase's receipt.
+4. **Bind source to the compiled definition, or say it is historical.** Pin `compile-input/models/sherlock/k/main.k` (16249 bytes, b3746…) and attempt-compile-01 `receipt.json` and its ledger. Otherwise state explicitly that the main.k-to-definition.kore link rests only on the historical compile receipt. The spans document's `main_sha256` field is a declaration, not a check.
+5. **Root launch conditions.**
+   - Root's hard `RLIMIT_FSIZE` must be at least 512 MiB. Otherwise F03.launch preexec fails, which is fail-stop but must be recorded as such.
+   - LAUNCH-RESULT must carry `id` plus the full F03 record.
+   - COMMAND.json argv must equal the plan argv exactly.
+6. **Run order and freeze.**
+   - The unit test runs first, then the remaining phases in order, stopping at the first failure. No grammar or cap changes in flight.
+   - Validate static pins, the 15 compiled files, tool4/JAR156 and Kregular281, and opaque-hash both the old carrier and the expected body, before and after each child.
+   - Fsync and freeze everything from phases 00–12, including the old carrier pin, the plan and the static freezes, before phase 13.
+   - Only phase 13 may open the expected body.
+
+## Synthetic test adequacy
+
+The tests are adequate for interface-level checks:
+- render contrast (11 / fuel 256)
+- five profile rejections
+- four malformed frames
+- strict-type `same`
+- the relation positive case plus eight mutations
+
+They are inadequate as evidence about the real run:
+- No coverage of `decode`, `successful` or `probe` wiring (argv mismatch, nonzero result, timeout, containment).
+- No coverage of the compare barrier.
+- No frame test with a wrong head or wrong arity.
+- No test with swapped rule order or a span that differs only in column.
+- Broad `except (ValueError, KeyError)` can mask an unrelated error; assert the messages.
+
+The reused consumer is the a80-link revision (42838 bytes, 85e4e7…). That is not F03's pinned consumer (41478 bytes, 2260eb…), and its own test suite is neither pinned nor run in exact16. Only `k_observations` and `k_terms` match F03's pins. Actual kore-exec and kprint formats are tested only by phase 03 onward.
+
+## Qualifications
+
+**Rule identity**
+- Identity is a logged full span that matches a supplied inventory row. The UniqueId comes from the inventory, not the log.
+- Rewrite rules and equations are not distinguished.
+- `uiValid` side-condition and helper evaluations are not logged, so "firing" means the rewrite level only.
+- The source path names the compile-input file, which is unpinned in this lane (precondition 4).
+
+**Complete state**
+- All nine cells come from kprint text, so the printer is trusted.
+- `generatedCounter` is retained raw only, not projected.
+- `entry_k` is decoder-supplied and `charged_steps` is derived; neither is observed.
+- Pre-startup state exists only as logged Kore.
+- The 02c depth-0 output is linked to phase 03 by path and Root pin only; it is not compared with phase 03's logged configuration.
+
+**Image relation**
+- The Eval/Return/Done lane checks (`root[5]`, `root[41:45]`, `tables[5][0]`, ValueRef zeros meaning Constant/0) are hand-coded per profile.
+- The 335-lane concatenation is checked against the carrier's own states, and the carrier against SAFE context, capacities and program.
+- Physical tables, padding and context remain unpaired, as do B work/clock, admission, authentication and refinement.
+
+## Independence and raw-byte limits
+
+**Independence**
+- The natural contract is shared and very prescriptive: column mapping, rule lines 102/80, rendering with ", ".
+- The oracle owner has prior NG-mapping exposure.
+- The SAFE-to-uiRun mapping is used by render, by the oracle and by the carrier relation alike. A shared mapping error would therefore pass, and the mapping itself is not independently validated.
+- What the comparison does test independently is K's execution of a given rendered input against a hand derivation.
+
+**Raw-byte authenticity**
+- Receipts are written by Root and are unauthenticated.
+- The consumer's engine and print hash checks are self-consistent by construction, since they are computed from the same files.
+- Process identity is not attested at runtime; binaries are covered only by static before/after pins.
+- `context_binds_counterpart_source=false` stands.
+- No native, proof, stagenet, recursion or EARS claim is made.
