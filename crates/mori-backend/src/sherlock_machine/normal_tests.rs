@@ -159,3 +159,9 @@ fn frozen_normal_expectations_are_kept_for_future_actual_comparison() {
     assert_eq!(expected["cases"][2]["selected"], serde_json::json!(["12", true]));
     assert_eq!(expected["rows"], expected["preserved_input_rows"]);
 }
+
+
+// Nonproving public-source capture is a child of this existing test-only module.
+// Keep all production relation/context source-closure members unchanged.
+#[path = "literal_complete_public_source_capture_normal_tests.rs"]
+mod literal_complete_public_source_capture_normal_tests;
