@@ -1,0 +1,99 @@
+# H5 review: canonical-bytes equality helper and two new tests
+
+## Coverage
+
+I read all 12 bodies in full: the afterimage consumer, the new test, the unchanged decoder, the preimage, the author diff, the identity receipt, the materialization proof, the patch AST, the full inverse, the proposed operation, the H5 finding and the wire declarations.
+
+I could not recompute SHA-256 or byte counts without tools, so the pins are taken as supplied. I did verify the structure and arithmetic:
+
+- **Hunk 1 header `-10,11 +10,16`.** The hunk starts at line 10 (`import json`). The 11 old lines and 16 new lines match the payload.
+- **Byte arithmetic.** The import line grows by 17 bytes. The inserted lines are 1+1+46+84+59 = 191 bytes. That gives the 208-byte delta, and 12922 + 208 = 13130.
+- **Offsets.** The prefix (docstring plus two imports) is 436 bytes. The old hunk region is 38+42+1+48+44+52+2+24 = 251 bytes. 436 + 251 + 12235 = 12922.
+- **Outside the hunk.** Comparing the preimage and afterimage line by line, I found no textual difference outside the hunk. This was a visual comparison, not a byte comparison.
+- **Hunk 2 `-0,0 +1,32`.** All 32 lines match the test body line for line, and the file ends with `    unittest.main()\n`.
+- **Author bytes.** The author's diff, the AST payload and the afterimage hunk agree exactly.
+- **Inverse.** It swaps both headers (`-10,16 +10,11` and `-1,32 +0,0`) and restores the preimage import. Its `b/`→`a/` labels are cosmetic.
+- **Decoder.** `canonical_bytes` is defined only in the unchanged `quint_observations.py`. The consumer has no other definition that could shadow it.
+- **Import closure.** Both modules import only the standard library (`argparse`, `copy`, `hashlib`, `json`, `pathlib`) plus each other. None of the QA filenames shadows a stdlib module.
+
+## Source verdict: ACCEPT, scoped to H5
+
+`canonical_bytes` is `json.dumps(sort_keys=True, separators=(',',':'), ensure_ascii=False).encode()`. On JSON-native values (str-keyed dicts, lists, str, int, float, bool, None) it is deterministic and injective:
+
+- **Type differences are kept.** `true`/`1`, `false`/`0` and `1`/`1.0` all produce different bytes.
+- **Fields and nulls are kept.** `null` differs from an absent key.
+- **Array order is kept.**
+- **Object order is irrelevant at every depth**, because `sort_keys` applies recursively.
+- **Strings are escaped unambiguously**, and float `repr` round-trips.
+- **Non-JSON input fails closed.** Sets, bytes, Decimal, mixed int/str keys, cycles and lone surrogates all raise.
+- **The existing helper is reused**, not reimplemented.
+
+**Mandatory corrections: none.**
+
+Non-blocking notes, documented here rather than turned into guard policy:
+
+1. **"Complete" holds only for JSON-native input.** Outside that domain the helper conflates some values that Python `==` would distinguish:
+   - an int key `1` with a str key `"1"`;
+   - a bool key `True` with the str key `"true"`;
+   - a tuple with a list.
+   
+   Tuple/list equality is the intended JSON-level result for Core-vs-Quint comparison, since `decode_itf` produces tuples. Int-keyed maps are reachable only if a caller skips `quint_typed_wire`, which turns all-int maps into entry arrays. Bool-keyed maps would stay as dicts.
+2. **All NaN values compare byte-equal** (as `NaN`). Separately, upstream `json.loads` accepts `NaN` and `Infinity` in Core pass-through fields. That is a parsing and provenance issue, not part of H5.
+3. **`main()` still calls `json.dumps` inline** with the same parameters. I left that refactor out of scope deliberately.
+
+## The two tests
+
+I checked by hand whether each test passes and whether it detects the relevant mutations.
+
+**Test 1 (type confusion).** For each pair, `assertEqual` first confirms the fixture really does fool Python `==`, which is the point of H5. The nested case `[{'value':{'BoolValue':True}}]` versus `1` covers the declared "never bool-as-int". The positive self-equality check stops a helper that always returns False from passing. A helper that falls back to `==` fails this test.
+
+**Test 2 (fields and order).** Each mutation is caught:
+
+| Fixture | What it shows | Helper mutation it catches |
+|---|---|---|
+| Reordered top level | Object order is ignored | Dropping `sort_keys` |
+| Swapped residual | Array order is kept | Sorting arrays |
+| Dropped key | Missing fields are detected | — |
+| `extra: None` | `null` differs from absent | Stripping null values |
+| `awaitPrefix: None` | Null differs from a string value | Stripping null values |
+
+Every mismatch is checked in both directions.
+
+Minor gaps, none blocking:
+- Nested object reordering isn't exercised.
+- Tuple/list and int-key behaviour isn't pinned.
+- The fixtures are generic JSON in the post-normalization wire shape. They are not real Core or Quint observations.
+
+## Exact operation: ELIGIBLE, with conditions
+
+The invocation itself is sound:
+- `-B` prevents bytecode, so the cwd can keep exactly 3 entries.
+- With `-m`, the cwd goes first on `sys.path`, so the sibling imports resolve. `-I`/`-P` are correctly absent.
+- Running two named methods in the given order is valid `unittest` syntax.
+- The environment is only `PATH=/usr/bin:/bin` and `LANG=C.UTF-8`, so no `PYTHONPATH` or `PYTHONHOME` leaks in.
+- stdin is `/dev/null`, the timeout is 60 s and each stream is capped at 4 MiB.
+
+Conditions Root should enforce:
+
+1. **Pins before and after the run.** Check all three source files and the interpreter. `/usr/bin/python3` is a symlink, so also check that it still resolves to `/usr/bin/python3.14` and that the target's bytes and hash are unchanged.
+2. **Cwd contents before and after.** Exactly the three named entries, with no `__pycache__` and no new files.
+3. **Pass only if all of these hold:**
+   - exit code 0;
+   - exactly two `... ok` lines, one for each named method;
+   - `Ran 2 tests` followed by `OK`;
+   - no skips, expected failures or errors;
+   - neither stream truncated, since hitting a cap counts as a failure;
+   - on timeout, the whole process group is killed and the run counts as a failure.
+4. **Unpinned trust premises.** The stdlib, system site-packages `.pth` files, Debian `sitecustomize`, and any user site directory (resolved through `pwd` even with `HOME` unset) are not pinned. Adding `-s` after `-B` closes the user-site path. I consider that one-flag variant equally eligible, and otherwise Root should record these as residual premises.
+5. **What a pass means.** It shows only these representation properties of the helper on synthetic JSON. It is not a semantic or financial golden.
+
+## Retained scope gaps
+
+These are not waived by this review:
+
+- **H2, H3, H4 and H6 stay open.**
+- **The helper is not wired into anything yet.** A future common-trace comparator must call `boundary_observations_equal`, not `==`, and must feed it only the normalized outputs of `core2_observation` and `quint_record_observation`.
+- **No real data has been compared.** There is no actual Core2 producer trace, no independent golden fixed before execution, and no qualified raw provenance or same-call pairing.
+- **Older tests are not replayed.** The original six tests and the H1/H2 tests have not been rerun.
+- **Wider correspondence is not established.** That includes capture authorization and correspondence with the consumer, finance, program, EARS and native code.
+- **Author provenance rests on the receipt.** I take the author's identity from the supplied receipt and did not verify it independently. I did not author this patch.

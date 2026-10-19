@@ -1,0 +1,55 @@
+--- b/models/sherlock/qa/core2_await_boundary_wire.py
++++ a/models/sherlock/qa/core2_await_boundary_wire.py
+@@ -10,16 +10,11 @@
+ import json
+ from pathlib import Path
+ 
+-from quint_observations import canonical_bytes, decode_itf
++from quint_observations import decode_itf
+ 
+ SCHEMA = 'sherlock-core2-await-boundary-wire/1'
+ PROFILE = 'sherlock-quint-core2-boundary/1'
+ FORMAT = 'supplied-core2-quint-await-observation/1'
+-
+-
+-def boundary_observations_equal(left, right):
+-    """Complete canonical JSON byte equality; Python == conflates True/1, 1/1.0."""
+-    return canonical_bytes(left) == canonical_bytes(right)
+ 
+ 
+ def _row(value, names):
+--- b/models/sherlock/qa/test_core2_await_boundary_equality_h5.py
++++ /dev/null
+@@ -1,32 +0,0 @@
+-import unittest
+-
+-import core2_await_boundary_wire as wire
+-
+-
+-class BoundaryObservationEqualityH5Test(unittest.TestCase):
+-    def test_python_equal_type_confusion_has_distinct_bytes(self):
+-        for left, right in (({'advanced': True}, {'advanced': 1}),
+-                            ({'advanced': False}, {'advanced': 0}),
+-                            ({'step': 1}, {'step': 1.0}),
+-                            ([{'value': {'BoolValue': True}}], [{'value': {'BoolValue': 1}}])):
+-            self.assertEqual(left, right)
+-            self.assertFalse(wire.boundary_observations_equal(left, right))
+-        self.assertTrue(wire.boundary_observations_equal({'advanced': True}, {'advanced': True}))
+-
+-    def test_complete_object_array_order_and_fields_discriminate(self):
+-        base = {'schema': wire.SCHEMA, 'profile': wire.PROFILE,
+-                'result': {'Complete': {'residual': [{'name': 'a'}, {'name': 'b'}], 'attempted': 2}},
+-                'awaitPrefix': 'CompletePrefix'}
+-        reordered = {key: base[key] for key in reversed(list(base))}
+-        self.assertTrue(wire.boundary_observations_equal(base, reordered))
+-        swapped = {**base, 'result': {'Complete': {'residual': [{'name': 'b'}, {'name': 'a'}], 'attempted': 2}}}
+-        dropped = {key: base[key] for key in base if key != 'awaitPrefix'}
+-        extra = {**base, 'extra': None}
+-        nulled = {**base, 'awaitPrefix': None}
+-        for other in (swapped, dropped, extra, nulled):
+-            self.assertFalse(wire.boundary_observations_equal(base, other))
+-            self.assertFalse(wire.boundary_observations_equal(other, base))
+-
+-
+-if __name__ == '__main__':
+-    unittest.main()

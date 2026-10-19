@@ -1,0 +1,11 @@
+P10 compiled the exact W3 backend test binary and completed the guard post-audit. The outer call exited 0 in 97.064814823 seconds; phase F took 82.368223282 seconds. Cargo reported `test --no-run` completed in 24.01 seconds, with 15 warnings. The actual postcheck records 34 build-script units not re-executed and 90 host outputs unchanged.
+
+The 467,781,064-byte backend test ELF was produced but was not executed or listed. No test body, proof, key operation or stagenet action is established. The source fact is limited to W3 HEAD `229770592adbf3fffdf5fe77f8fa82c8c3aee194`, the frozen source manifest and selected subject; it does not assert that a later primary checkout was built.
+
+Root preserved 3,574 generated files totaling 2,916,032,469 bytes and verified hashes, membership and non-executable modes. Some modes are 0644, so “non-executable” does not mean universally read-only. The binary and SDK payloads are omitted from this public packet; the complete preservation metadata is supplied as lossless gzip with original-byte hashes. The author did not rehash binaries.
+
+The original 20,024-byte cache file was restored in place with its original metadata; ctime changed as recorded. Collection passed. An initial unprivileged teardown refused before mutation; the existing `sudo -n` form then passed. Root's receipt records all three mounts and the cgroup absent, with `cleanupOwed:false` and `restorationOwed:false`.
+
+Raw terminal counters are E=116,543,574, S=19,626,044 and P=96,917,530 microseconds. They already include the earlier prephase refusal. The historical P9 totals are added once, independently; the earlier live reading is not charged again. Internal helper and final raw snapshots are separate endpoints, both retained.
+
+The original manifest and its pin-schema projection differ only by five auxiliary byte-count keys. Historical source-review identities remain bound to the original manifest; Root explicitly adopted the equivalent consumed projection. R04 Opus and Muse opinions cover metadata source and ordinary read-only operations. They are not represented as post-P10 result reviews. This packet proposes only the observed compile fact for Root's adoption. Native outputs remain unaccepted, and no requirement or release status changes here.
