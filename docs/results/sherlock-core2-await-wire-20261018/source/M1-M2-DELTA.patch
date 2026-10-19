@@ -1,0 +1,54 @@
+--- revision01/core2_await_boundary_wire.py
++++ revision02/core2_await_boundary_wire.py
+@@ -238,6 +238,8 @@
+ 
+ 
+ def supplied_itf_record(document, state_ordinal, record_index):
++    if type(state_ordinal) is not int or type(record_index) is not int or state_ordinal < 0 or record_index < 0:
++        raise ValueError('explicit raw ITF state ordinal and record index must be non-negative integers')
+     state = document['states'][state_ordinal]
+     names = [name for name in state if name == 'machine' or name.endswith('::machine')]
+     if len(names) != 1:
+--- revision01/test_core2_await_boundary_wire.py
++++ revision02/test_core2_await_boundary_wire.py
+@@ -79,7 +79,7 @@
+         self.assertIs(result['awaitPrefix']['WaitingPrefix']['committedBoundary']['state'][1]['value']['BoolValue'], False)
+ 
+     def test_handwritten_cross_format_boundary_and_explicit_itf_ordinal(self):
+-        # Literal declaration-only pair. No expected value calls either codec.
++        # Literal inputs compared by both codecs; not independent expected output.
+         def variant(tag, value=None):
+             return {'tag': tag, 'value': {} if value is None else value}
+         core_snapshot = {'state': {'flag': {'type': 'Bool', 'value': False}}, 'balances': [], 'liabilities': []}
+@@ -105,12 +105,26 @@
+                                            'logical': q_logical, 'committedBoundary': q_snapshot, 'residual': [],
+                                            'publishedSegment': variant('NoSegment'), 'attempted': 1})
+         record = {'result': q_result, 'awaitPrefix': q_prefix}
+-        document = {'states': [{'financialBoundary::machine': {'records': []}},
+-                               {'financialBoundary::machine': {'records': [record]}}]}
+-        selected = wire.supplied_itf_record(document, 1, 0)
++        before_record = copy.deepcopy(record)
++        before_record['result']['value']['attempted'] = 41
++        before_record['awaitPrefix']['value']['attempted'] = 41
++        after_record = copy.deepcopy(record)
++        after_record['result']['value']['attempted'] = 73
++        after_record['awaitPrefix']['value']['attempted'] = 73
++        document = {'states': [
++            {'financialBoundary::machine': {'records': [before_record]}},
++            {'financialBoundary::machine': {'records': [before_record, record, after_record]}},
++            {'financialBoundary::machine': {'records': [after_record]}}]}
++        selected = wire.supplied_itf_record(document, 1, 1)
+         self.assertEqual(wire.quint_record_observation(selected), wire.core2_observation(core))
+-        self.assertEqual(document['states'][0]['financialBoundary::machine']['records'], [])
+-        # No stutter removal or terminal/result search changes the selected ordinal.
++        # Different records on both sides distinguish first/last state or record shortcuts.
++        self.assertEqual(selected['result']['value']['attempted'], 1)
++        self.assertEqual(document['states'][0]['financialBoundary::machine']['records'], [before_record])
++        self.assertEqual(document['states'][2]['financialBoundary::machine']['records'], [after_record])
++        with self.assertRaises(ValueError):
++            wire.supplied_itf_record(document, -1, 0)
++        with self.assertRaises(ValueError):
++            wire.supplied_itf_record(document, 1, -1)
+         self.assertEqual(selected['result']['value']['continuation']['boundary']['state'],
+                          {'flag': variant('BoolValue', False)})
+         self.assertEqual(record['result']['value']['continuation']['boundary']['state'],
