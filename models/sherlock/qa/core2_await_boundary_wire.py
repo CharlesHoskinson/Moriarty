@@ -41,6 +41,8 @@ def _scalar(value):
     if value['type'] == 'UInt':
         return {'UIntValue': _uint(value['value'])}
     if value['type'] == 'Bool':
+        if type(value['value']) is not bool:
+            raise ValueError('expected Core Bool payload')
         return {'BoolValue': value['value']}
     raise ValueError('scalar outside frozen Core2 observation declaration')
 
@@ -162,8 +164,16 @@ def _continuation(value):
 
 def _error(value):
     _row(value, 'code message offset step')
+    def _uint32(v):
+        if type(v) is not int or not 0 <= v <= 4294967295:
+            raise ValueError('error offset outside u32')
+        return v
+    def _uint16(v):
+        if type(v) is not int or not 0 <= v <= 65535:
+            raise ValueError('error step outside u16')
+        return v
     return {'code': value['code'], 'message': value['message'],
-            'offset': _option(value['offset'], 'UInt', int), 'step': _option(value['step'], 'UInt', int)}
+            'offset': _option(value['offset'], 'UInt', _uint32), 'step': _option(value['step'], 'UInt', _uint16)}
 
 
 def _external_variant(value):
