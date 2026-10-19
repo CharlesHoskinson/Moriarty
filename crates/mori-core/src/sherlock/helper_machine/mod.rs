@@ -11,6 +11,8 @@ pub mod source_input_bridge;
 
 // Complete owned observations around the existing fixed host owner step.
 pub mod complete_observation;
+pub mod c6_phys;
+pub mod c6_phys_program;
 pub mod witness_plan;
 pub mod complete_comparison;
 
