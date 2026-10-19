@@ -1,0 +1,124 @@
+module literalJoinRefusalTest {
+  import literalCompleteImages.* from "./literalCompleteImages"
+  import literalCompleteInputs.* from "./literalCompleteInputs"
+  import literalJoinRefusal.* from "./literalJoinRefusal"
+  // Same-author expectations frozen before execution. No producer/ITF oracle.
+  pure val zeroFuelBytes: Row = List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+  // These two whole-image expected constructors are copied VERBATIM from B20r2
+  // test source. They never call literalAfter/publicationAfter or the new join.
+  pure def expectedMiddle(initialImage: Image, remainingBytes: Row): Image = {
+    val controls = List(
+      List(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),
+      List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+    {root: initialImage.root.slice(0, 9).concat(remainingBytes)
+        .concat(initialImage.root.slice(25, 45)),
+      tables: initialImage.tables.slice(0, 5).append(controls)}
+  }
+  pure def expectedDone(initialImage: Image, remainingBytes: Row): Image = {
+    root: List(0,0,0,0,0,0,0,0,2).concat(remainingBytes)
+      .concat(initialImage.root.slice(25, 41)).concat(List(1,0,0,0)),
+    tables: zeroTables,
+  }
+  pure val expectedIntermediate: Image = expectedMiddle(uintInit, zeroFuelBytes)
+  pure val expectedTerminal: Image = expectedDone(uintInit, zeroFuelBytes)
+  pure val zeroFuelInitial: Image = initFor(zeroFuelBytes)
+  pure val positiveLeft: ImageStep = {program: uintProgram, before: uintInit,
+    after: expectedIntermediate, envelope: literalEnvelope}
+  pure val positiveRight: ImageStep = {program: uintProgram, before: expectedIntermediate,
+    after: expectedTerminal, envelope: returnEnvelope}
+
+  // Structural test helper only: replace ONE allocated scalar cell; no admission API.
+  pure def changeTableCell(image: Image, tableIndex: int, rowIndex: int,
+      columnIndex: int, replacement: int): Image = {
+    val changedRows = image.tables.nth(tableIndex).foldl(
+      {cursor: 0, out: List()}, (acc, oldRow) => {
+        cursor: acc.cursor + 1,
+        out: acc.out.append(if (acc.cursor == rowIndex)
+          replaceCell(oldRow, columnIndex, replacement) else oldRow),
+      })
+    val changedTables = image.tables.foldl({cursor: 0, out: List()}, (acc, oldTable) => {
+      cursor: acc.cursor + 1,
+      out: acc.out.append(if (acc.cursor == tableIndex) changedRows.out else oldTable),
+    })
+    {...image, tables: changedTables.out}
+  }
+  // UInt8 has the SAME physical state/ref0 equations but a different whole Program.
+  // It is a named join-mismatch candidate, not a new admitted/observed fixture claim.
+  pure val mutantProgramUInt8: Image = programFor(
+    List(0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+  pure val mutantBoundProgramUInt8: Image = mutantProgramUInt8
+  pure val mutantLeftProgramUInt8: ImageStep = {...positiveLeft, program: mutantProgramUInt8}
+  pure val mutantRightProgramUInt8: ImageStep = {...positiveRight, program: mutantProgramUInt8}
+
+  pure val mutantRightPreStackLimit: Image = {...expectedIntermediate,
+    root: replaceCell(expectedIntermediate.root, 8, 3)}
+  pure val mutantRightPreFuel: Image = {...expectedIntermediate,
+    root: replaceCell(expectedIntermediate.root, 9, 1)}
+  pure val mutantRightPreDataInactive: Image = changeTableCell(expectedIntermediate, 0, 1, 21, 1)
+  pure val mutantRightPreDataFieldsInactive: Image = changeTableCell(expectedIntermediate, 1, 1, 1, 1)
+  pure val mutantRightPreEnvironmentInactive: Image = changeTableCell(expectedIntermediate, 2, 1, 4, 1)
+  pure val mutantRightPreValueSlotsInactive: Image = changeTableCell(expectedIntermediate, 3, 1, 1, 1)
+  pure val mutantRightPreFramesInactive: Image = changeTableCell(expectedIntermediate, 4, 1, 16, 1)
+  pure val mutantRightPreControlsInactive: Image = changeTableCell(expectedIntermediate, 5, 1, 35, 1)
+  pure val stateMutants: List[Image] = List(mutantRightPreStackLimit, mutantRightPreFuel,
+    mutantRightPreDataInactive, mutantRightPreDataFieldsInactive,
+    mutantRightPreEnvironmentInactive, mutantRightPreValueSlotsInactive,
+    mutantRightPreFramesInactive, mutantRightPreControlsInactive)
+  pure val stateMutantNames: List[str] = List("mutantRightPreStackLimit", "mutantRightPreFuel",
+    "mutantRightPreDataInactive", "mutantRightPreDataFieldsInactive",
+    "mutantRightPreEnvironmentInactive", "mutantRightPreValueSlotsInactive",
+    "mutantRightPreFramesInactive", "mutantRightPreControlsInactive")
+
+  run positiveCheckedLiteralJoinTest = initChecked(uintProgram, uintInit, contextInput)
+    .expect(checkedLiteralReady and execution.states == List(uintInit)
+      and execution.envelopes == List())
+    .then(literalStepChecked)
+    .expect(checkedPublicationReady and execution.states == List(uintInit, expectedIntermediate)
+      and fuelBytes(execution.states.nth(1)) == zeroFuelBytes)
+    .then(publicationStepChecked)
+    .expect(execution.states == List(uintInit, expectedIntermediate, expectedTerminal)
+      and execution.envelopes == List(literalEnvelope, returnEnvelope)
+      and completeJoinAllowed(execution.program,
+        {program: execution.program, before: execution.states.nth(0),
+          after: execution.states.nth(1), envelope: execution.envelopes.nth(0)},
+        {program: execution.program, before: execution.states.nth(1),
+          after: execution.states.nth(2), envelope: execution.envelopes.nth(1)}, execution.context))
+
+  // fail() is TERMINAL: it negates disabled action, not a stuttering successor.
+  // Do not shift/read an unassigned next execution after the refusal check.
+  run zeroFuelCheckedInitRefusalTest = initChecked(uintProgram, uintInit, contextInput)
+    .expect(smallFixtureStateShape(zeroFuelInitial)
+      and fuelNumber(fuelBytes(zeroFuelInitial)) == 0
+      and not(literalStartAllowed(uintProgram, zeroFuelInitial, contextInput)))
+    .expect(execution == {program: uintProgram, context: contextInput,
+      states: List(uintInit), envelopes: List()})
+    .then(initChecked(uintProgram, zeroFuelInitial, contextInput).fail())
+
+  // Deliberately bypass checked init to exercise the NEW step guard separately.
+  // The old unguarded initWith is setup only, not claimed to refuse zero fuel.
+  run zeroFuelCheckedLiteralStepRefusalTest = initWith(uintProgram, zeroFuelInitial, contextInput)
+    .expect(not(checkedLiteralReady) and not(initPremise(uintProgram, zeroFuelInitial)))
+    .expect(execution == {program: uintProgram, context: contextInput,
+      states: List(zeroFuelInitial), envelopes: List()})
+    .then(literalStepChecked.fail())
+
+  run completeJoinBoundProgramMutantsRejectTest = initChecked(uintProgram, uintInit, contextInput)
+    .expect(completeJoinAllowed(uintProgram, positiveLeft, positiveRight, contextInput)
+      and mutantProgramUInt8 != uintProgram and smallFixtureProgramShape(mutantProgramUInt8)
+      and not(completeJoinAllowed(mutantBoundProgramUInt8, positiveLeft, positiveRight, contextInput))
+      and not(completeJoinAllowed(uintProgram, mutantLeftProgramUInt8, positiveRight, contextInput))
+      and not(completeJoinAllowed(uintProgram, positiveLeft, mutantRightProgramUInt8, contextInput)))
+
+  run completeJoinEveryStateTableMutantRejectTest = initChecked(uintProgram, uintInit, contextInput)
+    .expect(completeJoinAllowed(uintProgram, positiveLeft, positiveRight, contextInput)
+      and stateMutantNames == List("mutantRightPreStackLimit", "mutantRightPreFuel",
+        "mutantRightPreDataInactive", "mutantRightPreDataFieldsInactive",
+        "mutantRightPreEnvironmentInactive", "mutantRightPreValueSlotsInactive",
+        "mutantRightPreFramesInactive", "mutantRightPreControlsInactive")
+      and stateMutants.length() == 8 and stateMutantNames.length() == stateMutants.length()
+      and stateMutants.foldl(true, (ok, candidatePre) => ok
+        and candidatePre != expectedIntermediate and smallFixtureStateShape(candidatePre)
+        and stateFuelBytesInRange(candidatePre)
+        and not(completeJoinAllowed(uintProgram, positiveLeft,
+          {...positiveRight, before: candidatePre}, contextInput))))
+}
