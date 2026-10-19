@@ -1,0 +1,10 @@
+def test_membership(op, phase):
+    expected = op['expected']['exactTest']
+    text = (phase / 'stdout.bin').read_text()
+    results = re.findall(r'(?m)^test (\S+) \.\.\. (\S+)$', text)
+    assert re.search(r'(?m)^running 1 test\s*$', text), 'missing exact one-test announcement'
+    assert results == [(expected, 'ok')], 'test selector/result mismatch or zero tests'
+    summary = re.search(r'(?m)^test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out;', text)
+    assert summary and tuple(map(int, summary.groups()[:4])) == (1, 0, 0, 0), 'not exactly one passing selected test'
+    return dict(exactTest=expected, selected=1, passed=1, failed=0, ignored=0, measured=0,
+                filtered_out=int(summary.group(5)))

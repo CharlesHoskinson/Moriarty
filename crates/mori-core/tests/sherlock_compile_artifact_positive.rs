@@ -49,6 +49,9 @@ fn common_contract(artifact: &CompileArtifact) {
     assert_eq!(keys(view), BTreeSet::from([
         "entry", "expressions", "occurrences", "occurrence_paths", "children", "functions",
         "parameters", "arms", "patterns", "constants", "constant_fields", "names",
+        "pattern_children", "types", "type_args", "constructors",
+        "ctor_fields", "decl_param_counts", "decl_ctor_counts", "decl_templates",
+        "plan_nodes", "plan_cases", "field_paths",
     ]));
     assert_eq!(keys(&artifact.admission["identity"]), BTreeSet::from([
         "profile_id", "grammar_domain", "finance", "layout_version", "layout_digest",
@@ -58,6 +61,15 @@ fn common_contract(artifact: &CompileArtifact) {
         "layout_version", "field_id", "widths", "scalar_layout_id", "bounds", "capacities",
         "boundary_capacities_present",
     ]));
+    // Dedicated Core/1 preparation initializes these eleven current tables empty.
+    for field in [
+        "pattern_children", "types", "type_args", "constructors",
+        "ctor_fields", "decl_param_counts", "decl_ctor_counts", "decl_templates",
+        "plan_nodes", "plan_cases", "field_paths",
+    ] {
+        assert!(view[field].as_array().expect("present current ProgramView table").is_empty(),
+            "unexpected nonempty {field} in dedicated compiler fixture");
+    }
     assert!(view["arms"].as_array().unwrap().is_empty());
     assert!(view["patterns"].as_array().unwrap().is_empty());
     assert_eq!(artifact.admission["status"], "admitted");
