@@ -1,0 +1,58 @@
+**Reviewer basis:** fresh source-only review under the actual returned `muse-wonder-1.0` session. No compilation, evaluator, SDK, Fr/Halo2, proof, or test execution was performed or assumed. All three new test bodies remain UNRUN.
+
+## Decisions
+
+### (1) Security / constraint-consumer correctness: **REJECT as claimed-isolation evidence**
+
+The three positive branches are semantically well-formed against the supplied producers, but their negative witnesses prove only generic `ConstrainEq` rejection, not the specific guard or first failure claimed for each mutation.
+
+### (2) Normal Rust/API, typed-fixture, and truthful-coverage review: **APPROVE at source level**
+
+The appended adapter, fixture, chain fields, and literal branch expectations match the supplied Sub, completion, return-right, primitive, and P1 APIs. Coverage is truthfully limited to the three stated branches and must not be expanded.
+
+## Positive-branch findings
+
+- In [sub_chain_checked_difference_applied_reaches_p1_halted_data_at_depth_zero](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/handwritten-sub-chain-three-branch-test-independent-source-review-20261019/actual-fresh-muse-outage-01/cwd:1541), `25 - 7 = 18`, `b_is_uint == 1`, `underflow == 0`, `exit_block.applied == 1`, `cap_refused == 0`, both primitive/P1 enables select value, and the published value is `Data(1)`. The final row byte assertion is `eval["%sb.s5.data.r1.n.0"] == 18`.
+- In [sub_chain_genuine_underflow_error10_reaches_p1_rejected10](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/handwritten-sub-chain-three-branch-test-independent-source-review-20261019/actual-fresh-muse-outage-01/cwd:1573), `7 - 25` produces `underflow == 1`, `failure_block.error_code == PRIM_ERROR_ARITH_OVERFLOW`, `published_error_code == 10`, `OUTCOME_TAG_REJECTED`, and `s3.ctrl.pec == 10`.
+- In [sub_chain_non_uint_operand_b_error11_reaches_p1_rejected11](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/handwritten-sub-chain-three-branch-test-independent-source-review-20261019/actual-fresh-muse-outage-01/cwd:1601), the Bool operand gives `b_is_uint == 0`, `failure_block.error_code == PRIM_ERROR_SORT_MISMATCH`, `is_sort_mismatch_11 == 1`, and published/rejected code `11`. The Bool payload is not used as a `U128.n` operand: the fixture Bool row has `n = 0`, and the arithmetic emitter forces non-UInt `read_n` lanes to zero.
+
+These agree independently with the supplied K rules: `uiBinaryResult(uiSub(), uiU(A), uiU(B)) => uiChecked(A -Int B)`, negative checked results give `uiPrimError(10)`, and a non-UInt operand gives `uiPrimError(11)`.
+
+## Fixture and earliest-stage review
+
+No first-stage fixture obstruction was found for the three supplied scenarios:
+
+- `state0` uses `SITE_RET_RIGHT`, `SCALAR_PHASE_SECOND`, the actual Sub helper carrier, `mode = super::b_scalar_subtraction::SCALAR_MODE_SUB`, operand A `Const(0)`, operand B `Data(0)`, `reg_a = lhs`, staged `None`, and a one-frame `RightF` whose `right_op` is explicitly changed to `BINARY_OP_SUB`. This is a genuine Sub fixture, not an Add fixture relabelled after computing an Add result.
+- The Sub arithmetic relation uses the 16-byte borrow chain and checked staged outcomes. The applied, underflow, and sort-mismatch staged tags/codes in `state1` match those relations.
+- Applied `state2` clears the helper, allocates `Data(1)`, writes the difference row, increments `active.data` and `alloc_data_nodes`, and returns `ScalarValue(Data(1))`. Error `state2` clears the helper, preserves data/allocation, and returns `ScalarError(10|11)`. Disabled exit/failure posts are bound to `state1`.
+- `state3` pops the single frame to depth `0`, sets `control_origin = 808`, clears the result, and converts the result to `PrimResult` value/error. Return-right is the actual Sub producer requiring `BINARY_OP_SUB`.
+- Disabled primitive posts stutter from `state3`; enabled posts produce `Return(Data(1))` or `Error(10|11)`. `state4` preserves frames, control origin, outcome/data lanes, inactive control zeros, and reference cursor increments through stages 3–4.
+- Work is `4 -> 3 -> 2 -> 1 -> 0`, after which zero-charge P1 runs. The P1 preconditions—helper/result absent, running outcome, task-live zero, correct control union, valid value reference or error domain, and all-zero inactive lanes—are satisfied by the fixtures.
+
+The typed adapter is also source-compatible: `bind_sub_publish_state` uses the Sub `BScalarArithmeticRegister`, `BScalarHelperRestLanes`, `BScalarStagedLanes`, and `BScalarSubCompletionCounters`, while using the common outcome/control/result/data/frame carriers required by `BSubPublishState`. `pv.to_legacy_handoff().state` and `pe.to_legacy_handoff().state` supply the exact `BLegacyCompletionState` type consumed by return-right/primitive stages.
+
+## Mandatory security issue
+
+Each negative checks only:
+
+> `err.contains("ConstrainEq failed")`
+
+The harness formats every failed equality as `step {index}: ConstrainEq failed ({va} != {vb})`. Therefore:
+
+- Forging `%sb.s1.h.st.u128.0` to `19` shows that some equality rejects it, but does not prove that the Sub arithmetic staged-difference check is the first or specific rejecting relation.
+- Forging `%sb.s3.ctrl.pec` from `10` to `11` shows inconsistency somewhere in the return-right/primitive/P1 chain. It does not isolate the intended typed handoff, especially because `11` remains a domain-valid primitive error code.
+- Forging `%sb.s5.out.rej` from `11` to `10` shows some equality rejects the final state. Source tracing limits `s5` consumption to P1, but the assertion itself still does not encode the P1 guard, expected pair, or first failure.
+
+The positive baseline is evaluated before each mutation, and each mutation changes one lane, so these are meaningful generic non-vacuity witnesses. They are **not** exact guard-isolation witnesses.
+
+**Mandatory correction before approving the claimed security isolation:** pin each negative to its actual exact first-failure values/step or another assertion that uniquely identifies the intended relation. The correct exact strings must be established from the real emitted instruction order, not guessed in this review. Until then, the supportable claim is only “a single-lane forged witness is rejected by some `ConstrainEq`.”
+
+## Nonblocking gaps and abstentions
+
+- `build_sub_chain_fixture`’s `applied` does not model cap refusal: it is `difference.is_some()`, with no `Exhausted(DataNodes)` branch. This does not break the three supplied cases, which use `bounds_data_nodes = 5` and `alloc_data_nodes = 1`, but the helper must not be reused for a Sub cap-refusal test without extending it.
+- Expected results are author-computed using `checked_sub` and author literals; they are not an independent golden oracle. Cross-checking against the supplied K text supports these three literal outcomes, but no broader oracle claim follows.
+- The `u128` evaluator, small-immediate scan, and checked host operations do not establish Fr/Halo2 circuit semantics, SDK loading/checking, proof generation, or proof acceptance.
+- Not covered or closed: Sub cap refusal, disabled-chain Sub stutter, depth-`>0` dispatch, reserved frame tags, source/namespace freshness beyond these calls, constructor shape negatives for the Sub chain, all 39-step/B96/StepInv/financial/formal/native/ledger obligations, and the other UNRUN SDK test cohorts.
+- Rust type/API compatibility above is a literal source reading against the supplied complete declarations. Compilation and test passage remain expressly UNRUN and unclaimed.
+
+**Bottom line:** positives and typed Sub fixture wiring pass source review; the security decision fails only because the three negatives are generic-relation rejections, not proven isolated guard coverage.
