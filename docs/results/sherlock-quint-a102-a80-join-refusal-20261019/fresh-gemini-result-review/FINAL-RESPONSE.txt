@@ -1,0 +1,86 @@
+# B21 Fresh Non-Author Actual-Result & Qualified Publication Review
+
+## Reviewer Identity and Coverage Statement
+
+- **Actual reviewer identity:** Gemini 4 Argon (High), acting as the authorized non-author fallback reviewer following the terminal Opus CLI session-limit outage (not Opus).
+- **Execution and tool discipline:** Tools were not used. No files were read from disk, no commands or code were executed, no hashes or byte lengths were independently recomputed, and no network calls were made.
+- **Body completeness:** All twenty-eight inline bodies (`BODY 001` through `BODY 028`) supplied in the request are present, complete, and untruncated. Full raw `ROOT-PRECHECK.json`, `ROOT-POSTCHECK.json`, and `ROOT-FLAT-PINS.proposed.json` array payloads are not inline by design; they are evaluated through the supplied passive readback summary (`BODY 012`) with explicit scope qualifications below.
+- **Prior source audit reuse:** In accordance with instructions, this review reuses the preserved pre-execution source and operation-eligibility opinion (`actual-fresh-opus-source-operation-review-01`, `claude-opus-5-5` HIGH, `BODY 007`–`BODY 009`) via exact source byte/digest bindings rather than repeating unchanged Quint CLI or Rust source-body audits.
+
+---
+
+## Final Verdict: **APPROVE** (Scoped Actual-Result and Qualified Publication Scope)
+
+The supplied actual execution records for the three reviewed operations (`01-newJoinRefusalModelFrontend`, `02-newJoinRefusalTestFrontend`, `03-fiveNewJoinRefusalTests`) satisfy all finite pre/post pin, command, resource, stream, diagnostic, and test-count conditions established in the prior source/operation opinion (`BODY 009`) and `VALIDATION-PROPOSAL.json` (`BODY 010`). The isolated J5 metadata wording correction (`BODY 013`–`BODY 016`) and the proposed result summary and publication scope (`README.proposed.md`, `BODY 001`) are accurate and properly bounded. Root alone decides adoption and publication.
+
+---
+
+## Finite Condition and Evidence Verification
+
+### 1. Source Identities and Frozen Expectations (`BODY 002`–`BODY 006`, `BODY 010`, `BODY 012`)
+All four Quint source files and the pre-execution frozen expectations file match their exact declared byte lengths and SHA256 digests across the inline bodies, `VALIDATION-PROPOSAL.json` (`BODY 010`), and `ACTUAL-RESULT-AND-SOURCE-READBACK.json` (`BODY 012`, including `priorInlineSourceBodyMatch` indices 2–5):
+- `source/literalCompleteImages.qnt` (`BODY 002`): `10905` bytes, `sha256=776f3c0474d330fba2f2236622ae654b6cd8180a49a34bf6d23a698edff0398a` (unchanged B20 model base).
+- `source/literalCompleteInputs.qnt` (`BODY 003`): `2412` bytes, `sha256=f73cd995c9cc9101e462979935f375c617f3bb13d4c587e139eb1384b8b54335` (unchanged B20 input fixtures).
+- `source/literalJoinRefusal.qnt` (`BODY 004`): `3383` bytes, `sha256=5c44031a221b58b9be9962f64c937db58ef80d5798e5c482b5121fcaa0b587f4` (new B21 model-only guards and explicit two-child join predicate).
+- `source/literalJoinRefusalTest.qnt` (`BODY 005`): `8076` bytes, `sha256=312a4afa579ef0a0f00ad4437e84c62cea2876c76d5202f89d4287dd8a5c711c` (new B21 five-test suite and eleven named mutants; `expectedMiddle` and `expectedDone` copied verbatim from B20r2 test source).
+- `EXPECTATIONS-FROZEN-BEFORE-EXECUTION.json` (`BODY 006`): `3359` bytes, `sha256=fe8de1984936e68f90c5e958f8e00aba7ba0cdd23b066981cf8d41f16c3c3d07` (preserved dated pre-execution artifact with `"status": "FROZEN_SOURCE_PROPOSAL_ALL_UNRUN"`).
+
+### 2. Command Selection, Resource Caps, Streams, and Pre/Post Receipts (`BODY 010`–`BODY 012`, `BODY 017`–`BODY 028`)
+- **Exact command and resource selection:** Each actual `COMMAND.json` (`BODY 017`, `BODY 021`, `BODY 025`) matches `VALIDATION-PROPOSAL.json` (`BODY 010`) in `cwd`, `environment` (`PATH: "/usr/bin:/bin"`, `LANG: "C.UTF-8"`), `stdin` (`"DEVNULL"`), `wallSeconds` (`60`), Node heap cap (`--max-old-space-size=512`), stream caps (`maxStdoutBytes: 4194304`, `maxStderrBytes: 4194304`), and `argv`, with only the declared capture-cap field `"keptBytesPerStream": 4194304` added.
+- **Operation 01 (`01-newJoinRefusalModelFrontend`, `BODY 017`–`BODY 020`):**
+  - `typecheck literalJoinRefusal.qnt` completed with `actual_exit: 0`, `controller_failure: null`, elapsed `3.10415435199684s`.
+  - `stdout.bin` (`BODY 019`) and `stderr.bin` (`BODY 020`) are both exactly `0` bytes (`sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`), `full_stream_retained: true`, with zero QNT diagnostics and zero `[DEBUG]` output.
+- **Operation 02 (`02-newJoinRefusalTestFrontend`, `BODY 021`–`BODY 024`):**
+  - `typecheck literalJoinRefusalTest.qnt` completed with `actual_exit: 0`, `controller_failure: null`, elapsed `3.475417676003417s`.
+  - `stdout.bin` (`BODY 023`) and `stderr.bin` (`BODY 024`) are both exactly `0` bytes (`sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`), `full_stream_retained: true`, with zero QNT diagnostics and zero `[DEBUG]` output.
+- **Operation 03 (`03-fiveNewJoinRefusalTests`, `BODY 025`–`BODY 028`):**
+  - `test literalJoinRefusalTest.qnt --main literalJoinRefusalTest --backend typescript --seed 1 --max-samples 1 --match ^(positiveCheckedLiteralJoinTest|zeroFuelCheckedInitRefusalTest|zeroFuelCheckedLiteralStepRefusalTest|completeJoinBoundProgramMutantsRejectTest|completeJoinEveryStateTableMutantRejectTest)$` completed with `actual_exit: 0`, `controller_failure: null`, elapsed `3.0554355639906134s`.
+  - `stdout.bin` (`BODY 027`, `352` bytes, `sha256=a92c4dbb94cb60f599770ed5d51827fc423d7dd9be195f5af8778e005b9d2a49`, `full_stream_retained: true`) contains:
+    - Exact five passing test lines (`passed 1 test(s)` each):
+      1. `positiveCheckedLiteralJoinTest`
+      2. `zeroFuelCheckedInitRefusalTest`
+      3. `zeroFuelCheckedLiteralStepRefusalTest`
+      4. `completeJoinBoundProgramMutantsRejectTest`
+      5. `completeJoinEveryStateTableMutantRejectTest`
+    - Summary line `5 passing (88ms)`, with `0` failed, ignored, or other tests, `0` QNT diagnostic codes (`QNT508`/`QNT513`/etc.), `0` `[DEBUG]` lines, and `0` ITF files requested or emitted.
+  - `stderr.bin` (`BODY 028`) is `0` bytes (`sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`).
+- **Pre/post pin readback (`BODY 011`, `BODY 012`):**
+  - Across all six pre/post check phases (before and after each of operations 01, 02, and 03), the passive readback reports identical receipt size (`740219` bytes) and digest (`sha256=e127642ca63a02632b04dc104eacb1307a706decf3a6e38807bc69f33a7c1df6`), with `4679` raw checks (`4676` file match rows + `3` symlink match rows), `allMatch: true`, `exactSourceDirectoryMatch: true` (exact four `.qnt` files in `source/`), and `fullPathSequenceMatchesExpectedFlatPins: true` against `ROOT-FLAT-PINS.proposed.json` (`1132334` bytes, `sha256=584e3386e68fed14bc320c93eed50dca301e49ae251dadd769139b4a6aa20cb9`).
+  - *Scope qualification:* As stated in `BODY 012`, raw receipts record discrete before/after path+match observations and exact directory membership against the flattened pin manifest; they do not establish continuous runtime immutability or complete host-access tracing.
+
+### 3. Semantic Coverage of Observed Model Tests (`BODY 004`, `BODY 005`, `BODY 027`)
+- **Positive checked path (`positiveCheckedLiteralJoinTest`):** Starts from `initChecked(uintProgram, uintInit, contextInput)` at initial fuel `1` (`oneFuel`), executes `literalStepChecked` (A102, `literalEnvelope = {ruleTag: 3, charge: 1}`, decrementing fuel `1 -> 0` in `expectedIntermediate` with `checkedPublicationReady` holding at zero remaining fuel), then executes `publicationStepChecked` (A80, `returnEnvelope = {ruleTag: 0, charge: 0}`, preserving fuel `0 -> 0` in `expectedTerminal`), and verifies `completeJoinAllowed` over the resulting two-step execution.
+- **Two zero-fuel refusals (`zeroFuelCheckedInitRefusalTest`, `zeroFuelCheckedLiteralStepRefusalTest`):** Verify that `zeroFuelInitial` has valid shape and `fuelNumber == 0`, fails `literalStartAllowed` / `initPremise` / `checkedLiteralReady`, and is refused by terminal `.fail()` on both `initChecked` and `literalStepChecked` (after raw `initWith` setup).
+- **Three Program and eight State negatives (`completeJoinBoundProgramMutantsRejectTest`, `completeJoinEveryStateTableMutantRejectTest`):** Verify that `completeJoinAllowed` accepts the positive UInt7 pair and rejects all three `mutantProgramUInt8` mismatch placements (`boundProgram`, `leftImageStep.program`, `rightImageStep.program`) as well as all eight named single-cell `right.before` State mutants (`mutantRightPreStackLimit` at root[8]=3, `mutantRightPreFuel` at root[9]=1, and inactive row 1 cells across all six state tables: Data `[0][1][21]`, DataFields `[1][1][1]`, Environment `[2][1][4]`, ValueSlots `[3][1][1]`, Frames `[4][1][16]`, Controls `[5][1][35]`).
+
+### 4. J5 Metadata Wording Correction and `README.proposed.md` (`BODY 001`, `BODY 013`–`BODY 016`)
+- **J5 correction (`BODY 013`–`BODY 016`):** `METADATA.patch` (`BODY 015`) and `METADATA.inverse.patch` (`BODY 016`) confirm a single-line change in `EARS-PREDICATE-MAPPING` under `UIREQ-016 / SCON-007`. The revised text (`BODY 014`) cleanly distinguishes the model predicate's full structural equality (`left.after == right.before` across all 213 allocated State cells and `left.program == boundProgram`, `right.program == boundProgram`) from the finite runtime test sample (eight single-cell `right.before` mutants and three Program mismatch cases using one changed Constants cell, with no `left.after`, `right.after`, envelope, or context negatives). `SCON-017` retains its historical pre-execution string in that mapping file while `status: "SOURCE_COUNTERPART_MAPPING_ONLY_NO_CLOSURE"` and `allOriginalPredicatesAcceptanceUnchanged: true` are preserved.
+- **`README.proposed.md` (`BODY 001`):** Accurately states all timing, stream, pin, and test outcomes; preserves all `J1`–`J6` and `N1` findings; explains the dated pre-execution `UNRUN` artifacts vs. current actual observations; and restricts the publication proposal to adding only the two new canonical model/test files plus a qualified public result archive (retaining all four sources in the archive without overwriting existing canonical dependency files or altering any acceptance/current-evidence ledger).
+
+---
+
+## Mandatory Three-Way Scope Distinction
+
+### (a) Source Approval Already Recorded (`BODY 007`–`BODY 009`)
+- Prior fresh non-author review (`claude-opus-5-5` HIGH, `exitCode: 0`, `326.931138s`) approved the unchanged two-file B21 Quint source (`literalJoinRefusal.qnt`, `literalJoinRefusalTest.qnt`) over unchanged B20 imports (`literalCompleteImages.qnt`, `literalCompleteInputs.qnt`) and approved pre-execution eligibility of operations 01–03.
+- Preserved non-blocking findings and qualifications from that review remain in force:
+  - **J1 (LOW):** Envelope checks reference B20 constants `literalEnvelope`/`returnEnvelope` defined in pinned `literalCompleteImages.qnt`.
+  - **J2 (LOW):** Single-scalar mutation holds by source construction and `!= expectedIntermediate`, not a runtime cell-diff counter; `stateMutantNames` binds by list position.
+  - **J3 (LOW):** `mutantBoundProgramUInt8` rejection is overdetermined (`literalStartAllowed` pin to `uintProgram` plus child equalities), whereas the left and right Program mutant cases isolate the child equalities individually.
+  - **J4 (LOW):** Absence of a positive-fuel guard on A80 is grounded indirectly via the composer/bridge equations and step-2 charge-0 constants rather than an inline `return_publication_step.rs` body.
+  - **J5 (LOW, resolved in metadata by `BODY 014`/`015`):** Predicate-level 213-cell equality is distinct from the finite 8-State / 3-Program negative test samples.
+  - **J6 (INFO):** Terminal `.fail()` and eager-builtin left-propagation behavior rely on the pinned Quint 0.32 TypeScript runtime/evaluator premise.
+  - **N1 / F2 / N4:** Unchanged imported modules (`literalCompleteImages.qnt`, `literalCompleteInputs.qnt`) are not parsed as direct CLI mains in B21; `exprId == 0` and `valueRef == (0,0)` leave selection/copy/publication insensitive to non-zero indices, and `UInt8` vs `UInt7` is distinguished only by full Program equality.
+
+### (b) Newly Observed Actual Model Checks (`BODY 011`, `BODY 012`, `BODY 017`–`BODY 028`)
+- Direct `quint typecheck` passed with exit 0 and 0-byte stdout/stderr on both `literalJoinRefusal.qnt` (`3.104154s`) and `literalJoinRefusalTest.qnt` (`3.475418s`).
+- Direct `quint test` (`--backend typescript --seed 1 --max-samples 1`) passed with exit 0 (`3.055436s`), 0-byte stderr, and 352-byte stdout printing the exact five frozen test names (`5 passing`, 1 sample each, 0 failed/ignored/other, 0 QNT diagnostics, 0 `[DEBUG]`).
+- On the pinned tool/host, the new model-only checked actions execute the UInt7 positive path (`A102` charge 1 at `fuel 1 -> 0` followed by `A80` charge 0 at `fuel 0 -> 0`), refuse zero-fuel `initChecked` and `literalStepChecked` via `.fail()`, and reject the 3 `mutantProgramUInt8` mismatch cases and 8 sampled `right.before` single-cell State mutants under `completeJoinAllowed`.
+- All six pre/post check snapshots matched 4,679 expected file/symlink pins and exact four-file `source/` membership before and after each operation.
+
+### (c) Unestablished Production, Rust, Native, Recursive, and EARS Correspondence
+- **Model-only seam:** B20's unchecked `init`, `initWith`, `literalStep`, and `step` remain enabled at zero fuel; B21's checked actions are not wired into general simulation `init`/`step` and are pinned to `uintProgram` and `contextInput = [17, 29]`.
+- **No A84 or general admission:** Refusal of `initChecked` / `literalStepChecked` at zero fuel is a disabled model guard, not an implementation of A84 `Exhausted(Fuel)`, startup exhaustion outcomes, terminal/error precedence, or general `uiValid`/image admission.
+- **No production or Rust join API correspondence:** `completeJoinAllowed` is a bounded model-only two-child predicate; the Rust composer aliases a single intermediate image rather than exposing this two-child join API, and SCON-007 generic stream continuity (independent initial/returned state bindings, explicit charge-sum validation, first-discontinuity reporting, canonical renumbering) remains unestablished.
+- **Finite negative sampling and same-author expectations:** Expectations were authored from the same source definitions and copied verbatim from B20r2 test source without an independent blind oracle, ITF trace comparison, or live Rust producer capture. No `left.after`, `right.after`, envelope, or context negatives are tested, and normal execution from all-zero `Init` remains insensitive to arena preservation vs. zeroing.
+- **Broader roadmap and specification gates remain open:** No other interpreter rules (37 remaining rules/dispatch), `StepInv`/`OBL.G4`/`prepareA`/`projectA`, recursive proof composition, native/Halo2 prover execution, ledger/Preview settlement, ACTUS/DeFi financial conformance (`F01`/`F02`), or EARS/SCON requirement closure (`UIREQ-012`, `UIREQ-016`, `SCON-007`, `SCON-017`) is established or adopted by this review.
