@@ -74,7 +74,7 @@ fn k_prim(pre: &PreImage, mode: ScalarMode, a: &RefC, b: Option<&RefC>) -> Resul
 fn selector_of(pre: &PreImage, v: &RefC) -> Result<BoolSelector, HostViolation> {
     Ok(if pre.kind_of(v)? == LogicalKind::Bool { if pre.bool_of(v)? { BoolSelector::True } else { BoolSelector::False } } else { BoolSelector::NotBool })
 }
-fn has_type(pre: &PreImage, v: &RefC, t: TypeIdC) -> Result<bool, HostViolation> { Ok(pure_leaves::sort_of_kind(pre.kind_of(v)?) == Some(t)) }
+fn has_type(pre: &PreImage, v: &RefC, t: TypeIdC) -> Result<bool, HostViolation> { pre.scalar_test_type_ok(v, &t) }
 
 // ---- Scalar: the payload b.helper.Scalar.entry installs from site, top and v.
 struct ScalarEntry { site: SiteTag, mode: ScalarMode, a: RefC, b: Option<RefC>, expected: Option<TypeIdC> }
@@ -85,6 +85,7 @@ fn scalar_entry(pre: &PreImage) -> Option<ScalarEntry> {
         FrameRowC::UnaryF { op, .. } => Some(ScalarEntry { site: SiteTag::RetUnary, mode: unary_mode(*op), a: v, b: None, expected: None }),
         FrameRowC::IfF { .. } => Some(ScalarEntry { site: SiteTag::RetIf, mode: ScalarMode::TestBool, a: v, b: None, expected: None }),
         FrameRowC::ReturnF { return_type, .. } => Some(ScalarEntry { site: SiteTag::RetCall, mode: ScalarMode::TestType, a: v, b: None, expected: Some(*return_type) }),
+        FrameRowC::ConstructorFieldsF { field_type, checked: false, .. } => Some(ScalarEntry { site: SiteTag::RetCtorFields, mode: ScalarMode::TestType, a: v, b: None, expected: Some(*field_type) }),
         _ => None,
     }
 }
@@ -134,7 +135,10 @@ fn find_si21(pre: &PreImage) -> Result<bool, HostViolation> {
 fn append_si21(pre: &PreImage) -> Result<bool, HostViolation> {
     let (src, value, src_cursor, dest_start, staged, phase) = match pre.helper() {
         Some(HelperControlC::Append { src, value, src_cursor, dest_start, staged, phase, .. }) => (*src, *value, *src_cursor, *dest_start, *staged, *phase), _ => return Err(cv("Append helper absent")) };
-    let completed = match pre.top_frame() { Some(FrameRowC::ArgsF { completed, .. }) => *completed, _ => return Ok(false) };
+    let completed = match pre.top_frame() {
+        Some(FrameRowC::ArgsF { completed, .. } | FrameRowC::ConstructorFieldsF { completed, checked: true, .. }) => *completed,
+        _ => return Ok(false),
+    };
     if src != completed || Some(value) != ret_value(pre) || src_cursor > src.len { return Ok(false); }
     let dest = SliceC { start: dest_start, len: src_cursor.checked_add(if phase == AppendPhase::Done { 1 } else { 0 }).ok_or_else(|| arith("append dest len"))? };
     let mut i = 0usize;
@@ -163,6 +167,7 @@ pub(super) fn si21_helper_ok(pre: &PreImage) -> Result<bool, HostViolation> {
         Some(HelperControlC::EnvPut { .. }) => envput_si21(pre), Some(HelperControlC::Find { .. }) => find_si21(pre),
         Some(HelperControlC::Append { .. }) => append_si21(pre), Some(HelperControlC::Validate { .. }) => validate_si21(pre),
         Some(HelperControlC::Equal { .. }) => equal_si21(pre),
+        Some(h @ (HelperControlC::Build { .. } | HelperControlC::Plan { .. })) => si21_adt_helper_ok(pre, h),
         Some(HelperControlC::Bind { .. } | HelperControlC::Match { .. }) => Err(cv("Bind/Match SI-21 is owner_si21_bind_match")),
         None => Err(cv("SI-21 without helper")),
     }
@@ -203,7 +208,7 @@ pub(super) fn si21_result_ok(pre: &PreImage, r: &HelperResultC) -> Result<bool, 
         HelperResultC::FindFound { function } => match invoke_name(pre) { Some(n) => least_row_named(pre, n)? == Some(*function), None => false },
         HelperResultC::FindMissing => match invoke_name(pre) { Some(n) => least_row_named(pre, n)?.is_none(), None => false },
         HelperResultC::AppendDone { seq } => match (pre.top_frame(), ret_value(pre)) {
-            (Some(FrameRowC::ArgsF { completed, .. }), Some(v)) => {
+            (Some(FrameRowC::ArgsF { completed, .. } | FrameRowC::ConstructorFieldsF { completed, checked: true, .. }), Some(v)) => {
                 if completed.len.checked_add(1) != Some(seq.len) || seq.start.checked_add(seq.len) != Some(pre.active().value_slots) { return Ok(false); }
                 let mut i = 0usize;
                 while i < completed.len { if slot_at(pre, seq, i)? != slot_at(pre, completed, i)? { return Ok(false); } i += 1; }
@@ -215,12 +220,16 @@ pub(super) fn si21_result_ok(pre: &PreImage, r: &HelperResultC) -> Result<bool, 
         HelperResultC::ScalarSelector { sel } => match (pre.top_frame(), ret_value(pre)) {
             (Some(FrameRowC::IfF { .. }), Some(v)) => selector_of(pre, &v)? == *sel, _ => false },
         HelperResultC::ScalarTypeTest { ok } => match (pre.top_frame(), ret_value(pre)) {
-            (Some(FrameRowC::ReturnF { return_type, .. }), Some(v)) => has_type(pre, &v, *return_type)? == *ok, _ => false },
+            (Some(FrameRowC::ReturnF { return_type: want, .. } | FrameRowC::ConstructorFieldsF { field_type: want, checked: false, .. }), Some(v)) =>
+                has_type(pre, &v, *want)? == *ok,
+            _ => false },
         HelperResultC::EqualDone { value } => match (newest_data(pre, value), pre.top_frame(), ret_value(pre)) {
             (Some(j), Some(FrameRowC::RightF { op: BinaryOp::Eq, left, .. }), Some(v)) => {
                 let r0 = RefC::Data(j);
                 pre.kind_of(&r0)? == LogicalKind::Bool && pre.bool_of(&r0)? == structurally_equal(pre, *left, v)? }
             _ => false },
+        HelperResultC::BuildDone { .. } | HelperResultC::PlanMatched { .. } | HelperResultC::PlanNoMatch =>
+            si21_adt_result_ok(pre, r)?,
         HelperResultC::BindOk { .. } | HelperResultC::BindBad | HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch =>
             return Err(cv("Bind/Match SI-21R is owner_si21_bind_match")),
     })
@@ -312,5 +321,6 @@ pub(super) fn si22_helper_ok(pre: &PreImage) -> Result<bool, HostViolation> {
         HelperControlC::Validate { status, .. } => match status { TriStatus::Positive => tl == 0, TriStatus::Negative => true, TriStatus::Pending => tasks_ok(pre, false)? },
         HelperControlC::Equal { status, .. } => match status { TriStatus::Positive => tl == 0, TriStatus::Negative => true, TriStatus::Pending => tasks_ok(pre, true)? },
         HelperControlC::Match { .. } => tl == 0 && match_state_ok(pre, &h)?,
+        HelperControlC::Build { .. } | HelperControlC::Plan { .. } => tl == 0 && si22_adt_helper_ok(pre, &h)?,
     })
 }

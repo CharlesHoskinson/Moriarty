@@ -42,13 +42,19 @@ pub enum BoundaryKind { None, Terminal, TechnicalCut,
     SourceSuspensionExtensionReserved } // L1 restored; still refused in B-core
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LogicalKind { UInt, Bool, Nil, Cons, Leaf, Branch, Marker,
-    ConstructorExtensionReserved }
+    ConstructorExtensionReserved, Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC } }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ScalarMode { Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ScalarPhase { First, Second, Done }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum NodeKind { Cons, Leaf, Branch }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BuildPhase { Copy, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlanPhase { Walk, Test, Bind, Ready, NoMatchReady, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlanAfterWalk { Test, Bind }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BoolSelector { True, False, NotBool }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -62,10 +68,10 @@ pub enum AppendPhase { Copy, Tail, Done }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MatchPhase { Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum HelperKind { Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match }
+pub enum HelperKind { Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match, Plan, Build }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FamilyId { Legacy, Scalar, EnvGet, EnvPut, Find, Bind, Append,
-    Validate, Equal, Match, BookkeepingRelease }
+    Validate, Equal, Match, BookkeepingRelease, Build, Plan }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EventKind { LegacyComplete, HelperEnter, HelperVisit, HelperExit,
     HelperFail, Bookkeeping, Publish, Startup }
@@ -73,7 +79,7 @@ pub enum EventKind { LegacyComplete, HelperEnter, HelperVisit, HelperExit,
 pub enum SiteTag { EvalLiteral, EvalVar, EvalLet, EvalBinary, EvalUnary, EvalIf,
     EvalMatch, EvalCall, Push, RetLet, RetLeft, RetRight, RetUnary, RetIf,
     RetMatch, RetArgs, RetCall, RetScope, Invoke, Enter, Bound, Cases,
-    CaseResult, Prim }
+    CaseResult, Prim, EvalConstruct, RetCtorFields, Materialize }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum StepInvClauseId { SI01, SI02, SI03, SI04, SI05, SI06, SI07, SI08,
     SI09, SI10, SI11, SI12, SI13, SI14, SI15, SI16, SI17, SI18, SI19, SI20,
@@ -104,7 +110,7 @@ pub enum HostViolationKind { StepInvViolated, SelectUndefined, ReadOutOfBounds,
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum GuardId { GScalarAllocNode, GScalarFields1, GScalarFields2,
     GValidateOccLeaf, GValidateFieldNontail, GEqualPairLeaf,
-    GEqualFieldNontail, GBindTypeReject, GBindDupHit }
+    GEqualFieldNontail, GBindTypeReject, GBindDupHit, GBuildLast }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CapKind { DataNodes, DataFields, EnvironmentCells, HelperTasks }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -119,7 +125,7 @@ pub enum RunIntC { Negative, Nat(u128), NatAboveU128 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TaskVisitC { Unvisited, Fields }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum RuleIdC { KMachineEvalLiteralValid,KMachineEvalLiteralInvalid,KMachineEvalVariablePresent,KMachineEvalVariableAbsent,KMachineEvalLet,KMachineEvalBinary,KMachineEvalUnary,KMachineEvalIf,KMachineEvalMatch,KMachineEvalCallEmpty,KMachineEvalCallArguments,KMachinePushAccept,KMachinePushRefuse,KMachineReturnLet,KMachineReturnLeft,KMachineReturnRight,KMachineReturnUnary,KMachineReturnIfTrue,KMachineReturnIfFalse,KMachineReturnIfInvalid,KMachineReturnMatch,KMachineReturnArgumentsNext,KMachineReturnArgumentsFinal,KMachineReturnCallValid,KMachineReturnCallInvalid,KMachineReturnScope,KMachineInvokeFind,KMachineEnterMissing,KMachineEnterBind,KMachineBoundInvalid,KMachineBoundValid,KMachineCasesEmpty,KMachineCasesTry,KMachineCasesMiss,KMachineCasesHit,KMachinePrimitiveValue,KMachinePrimitiveError,BHelperScalarEntry,BHelperScalarTag,BHelperScalarArithmetic,BHelperScalarConstruct,BHelperScalarExit,BHelperScalarFailure,BHelperEnvGetEntry,BHelperEnvGetCell,BHelperEnvGetEmpty,BHelperEnvGetExit,BHelperEnvGetFailure,BHelperEnvPutEntry,BHelperEnvPutCell,BHelperEnvPutInsert,BHelperEnvPutEmpty,BHelperEnvPutExit,BHelperEnvPutFailure,BHelperFindEntry,BHelperFindRow,BHelperFindEmpty,BHelperFindExit,BHelperFindFailure,BHelperBindEntry,BHelperBindPair,BHelperBindEmpty,BHelperBindArity,BHelperBindType,BHelperBindDuplicate,BHelperBindInsert,BHelperBindPropagate,BHelperBindExit,BHelperBindFailure,BHelperAppendEntry,BHelperAppendCell,BHelperAppendEmpty,BHelperAppendTail,BHelperAppendCopy,BHelperAppendExit,BHelperAppendFailure,BHelperValidateEntry,BHelperValidateOccurrence,BHelperValidateField,BHelperValidateDeclaration,BHelperValidateEmpty,BHelperValidateInvalid,BHelperValidateExit,BHelperValidateFailure,BHelperEqualEntry,BHelperEqualPair,BHelperEqualField,BHelperEqualEmpty,BHelperEqualDifferent,BHelperEqualExit,BHelperEqualFailure,BHelperMatchEntry,BHelperMatchArm,BHelperMatchOccurrence,BHelperMatchField,BHelperMatchBinding,BHelperMatchDistinct,BHelperMatchDiscard,BHelperMatchNext,BHelperMatchSelected,BHelperMatchEmpty,BHelperMatchExit,BHelperMatchFailure,BBookkeepingTaskEnqueue,BBookkeepingTaskRelease,BBookkeepingResumeStore,BBookkeepingResumeRestore,KAdminStartupValid,KAdminStartupInvalid,KAdminPublishValue,KAdminPublishError,KAdminPublishExhausted }
+pub enum RuleIdC { KMachineEvalLiteralValid,KMachineEvalLiteralInvalid,KMachineEvalVariablePresent,KMachineEvalVariableAbsent,KMachineEvalLet,KMachineEvalBinary,KMachineEvalUnary,KMachineEvalIf,KMachineEvalMatch,KMachineEvalCallEmpty,KMachineEvalCallArguments,KMachinePushAccept,KMachinePushRefuse,KMachineReturnLet,KMachineReturnLeft,KMachineReturnRight,KMachineReturnUnary,KMachineReturnIfTrue,KMachineReturnIfFalse,KMachineReturnIfInvalid,KMachineReturnMatch,KMachineReturnArgumentsNext,KMachineReturnArgumentsFinal,KMachineReturnCallValid,KMachineReturnCallInvalid,KMachineReturnScope,KMachineInvokeFind,KMachineEnterMissing,KMachineEnterBind,KMachineBoundInvalid,KMachineBoundValid,KMachineCasesEmpty,KMachineCasesTry,KMachineCasesMiss,KMachineCasesHit,KMachinePrimitiveValue,KMachinePrimitiveError,BHelperScalarEntry,BHelperScalarTag,BHelperScalarArithmetic,BHelperScalarConstruct,BHelperScalarExit,BHelperScalarFailure,BHelperEnvGetEntry,BHelperEnvGetCell,BHelperEnvGetEmpty,BHelperEnvGetExit,BHelperEnvGetFailure,BHelperEnvPutEntry,BHelperEnvPutCell,BHelperEnvPutInsert,BHelperEnvPutEmpty,BHelperEnvPutExit,BHelperEnvPutFailure,BHelperFindEntry,BHelperFindRow,BHelperFindEmpty,BHelperFindExit,BHelperFindFailure,BHelperBindEntry,BHelperBindPair,BHelperBindEmpty,BHelperBindArity,BHelperBindType,BHelperBindDuplicate,BHelperBindInsert,BHelperBindPropagate,BHelperBindExit,BHelperBindFailure,BHelperAppendEntry,BHelperAppendCell,BHelperAppendEmpty,BHelperAppendTail,BHelperAppendCopy,BHelperAppendExit,BHelperAppendFailure,BHelperValidateEntry,BHelperValidateOccurrence,BHelperValidateField,BHelperValidateDeclaration,BHelperValidateEmpty,BHelperValidateInvalid,BHelperValidateExit,BHelperValidateFailure,BHelperEqualEntry,BHelperEqualPair,BHelperEqualField,BHelperEqualEmpty,BHelperEqualDifferent,BHelperEqualExit,BHelperEqualFailure,BHelperMatchEntry,BHelperMatchArm,BHelperMatchOccurrence,BHelperMatchField,BHelperMatchBinding,BHelperMatchDistinct,BHelperMatchDiscard,BHelperMatchNext,BHelperMatchSelected,BHelperMatchEmpty,BHelperMatchExit,BHelperMatchFailure,BBookkeepingTaskEnqueue,BBookkeepingTaskRelease,BBookkeepingResumeStore,BBookkeepingResumeRestore,KAdminStartupValid,KAdminStartupInvalid,KAdminPublishValue,KAdminPublishError,KAdminPublishExhausted,XAdtEvalConstructNullary,XAdtEvalConstructFields,XAdtReturnCtorFieldsTyped,XAdtReturnCtorFieldsMistyped,XAdtReturnCtorFieldsNext,XAdtReturnCtorFieldsFinal,XAdtMaterializeDone,XAdtCasesPlanHit,XAdtCasesPlanMiss,XAdtHelperBuildEntry,XAdtHelperBuildCell,XAdtHelperBuildField,XAdtHelperBuildExit,XAdtHelperPlanEntry,XAdtHelperPlanWalk,XAdtHelperPlanSwitch,XAdtHelperPlanBind,XAdtHelperPlanSelect,XAdtHelperPlanNoMatch,XAdtHelperPlanExit,XAdtHelperPlanFailure }
     // Copy shared rule carrier in R4 RuleId order. Owner alone maps &RawRuleId<->RuleIdC exhaustively; raw pin unchanged. Families match RuleIdC exhaustively; for a foreign RuleIdC they use the sole foreign-rule rendering at FamilyPlans and do not copy that RuleIdC into HostViolation.rule.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DigestC { Unselected, Selected { format: (String, String), bytes: Vec<u8> } }
@@ -131,11 +137,11 @@ pub struct RunIdC { pub identity: IdentityC, pub fuel_input: RunIntC, pub stack_
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExpandedStepIdC { pub run_id: std::sync::Arc<RunIdC>, pub ordinal: u128 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum HelperResultTagC { Validated,EnvFound,EnvMissing,EnvUpdated,FindFound,FindMissing,BindOk,BindBad,AppendDone,ScalarValue,ScalarError,ScalarSelector,ScalarTypeTest,EqualDone,MatchMatched,MatchNoMatch }
+pub enum HelperResultTagC { Validated,EnvFound,EnvMissing,EnvUpdated,FindFound,FindMissing,BindOk,BindBad,AppendDone,ScalarValue,ScalarError,ScalarSelector,ScalarTypeTest,EqualDone,MatchMatched,MatchNoMatch,PlanMatched,PlanNoMatch,BuildDone }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OutcomeTagC { Running, Halted, Rejected, Exhausted }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum HelperPhaseSummaryC { Scalar(ScalarPhase), Tri(TriStatus), Bind(BindPhase), Append(AppendPhase), Match(MatchPhase) }
+pub enum HelperPhaseSummaryC { Scalar(ScalarPhase), Tri(TriStatus), Bind(BindPhase), Append(AppendPhase), Match(MatchPhase), Build(BuildPhase), Plan(PlanPhase) }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AllocDeltasC { pub data_nodes: i64, pub data_fields: i64, pub environment_cells: i64 }
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -209,10 +215,16 @@ pub enum HelperControlC {
         saved_env: EnvRootC, partial: EnvRootC, pat_tag: PatternTag,
         x: usize, y: usize, field_idx: u8, staged: Option<RefC>,
         phase: MatchPhase, status: TriStatus },
+    Plan { common: HelperCommon, source_match: usize, scrutinee: RefC,
+        saved_env: EnvRootC, partial: EnvRootC, node: usize, phase: PlanPhase,
+        after_walk: PlanAfterWalk, cur: RefC, path: SliceC, path_cursor: usize,
+        arm: Option<usize>, status: TriStatus },
+    Build { common: HelperCommon, type_id: TypeIdC, ctor_id: adt::CtorIdC,
+        src: ValSliceC, src_cursor: usize, field_start: usize,
+        staged: Option<RefC>, node: Option<RefC>, phase: BuildPhase },
 }
-// FrameRow: exactly 9 core variants. ConstructorFields is NOT a variant:
-// a reserved ConstructorFields tag at any owner boundary is refused
-// HostViolation{WrongVariant}/C-INV, its payload is never carried here.
+// The nine dedicated Core frames remain. The generic continuation is carried
+// explicitly; activation, tag mapping and invariants remain owner dependencies.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum FrameRowC {
     LetF { binder: usize, body: usize, saved_env: EnvRootC, origin: usize },
@@ -225,6 +237,9 @@ pub enum FrameRowC {
         saved_env: EnvRootC, origin: usize },
     ReturnF { return_type: TypeIdC, saved_env: EnvRootC, origin: usize },
     ScopeF { saved_env: EnvRootC, origin: usize },
+    ConstructorFieldsF { type_id: TypeIdC, ctor_id: adt::CtorIdC, index: usize,
+        field_type: TypeIdC, checked: bool, completed: ValSliceC,
+        rest: SliceC, saved_env: EnvRootC, origin: usize },
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BoundBinding { Bad, Ok { env: EnvRootC } }
@@ -241,7 +256,8 @@ pub enum ControlC { Eval { expr: usize }, Return { value: RefC },
     Cases { value: RefC, arms: SliceC, saved_env: EnvRootC },
     CaseResult { matching: CaseMatching, value: RefC, body: usize,
         rest: SliceC, saved_env: EnvRootC },
-    PrimResult { result: PrimOutcome }, Error { code: u8 } }
+    PrimResult { result: PrimOutcome }, Error { code: u8 },
+    Materialize { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: ValSliceC } }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum HelperTaskC {
     ValidateTask { r: RefC, visit: TaskVisitC, cursor: usize },
@@ -254,7 +270,8 @@ pub enum HelperResultC { Validated { ok: bool }, EnvFound { value: RefC },
     FindMissing, BindOk { env: EnvRootC }, BindBad, AppendDone { seq: ValSliceC },
     ScalarValue { value: RefC }, ScalarError { code: u8 },
     ScalarSelector { sel: BoolSelector }, ScalarTypeTest { ok: bool },
-    EqualDone { value: RefC }, MatchMatched { env: EnvRootC }, MatchNoMatch }
+    EqualDone { value: RefC }, MatchMatched { env: EnvRootC }, MatchNoMatch,
+    PlanMatched { arm: usize, env: EnvRootC }, PlanNoMatch, BuildDone { value: RefC } }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OutcomeC { Running, Halted { value: RefC }, Rejected { code: u8 },
     Exhausted { reason: ExhaustReason } }
@@ -298,7 +315,9 @@ pub enum ExpressionRowC { Literal { constant: usize }, Var { binder: usize },
     Unary { op: UnaryOp, operand: usize },
     If { cond: usize, then_expr: usize, else_expr: usize },
     Call { function_name: usize, args: SliceC },
-    Match { scrutinee: usize, arms: SliceC } }
+    Match { scrutinee: usize, arms: SliceC, plan: Option<usize> },
+    Construct { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: SliceC,
+        constant: Option<usize> } }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FunctionRowC { pub function_name: usize, pub params: SliceC, pub return_type: TypeIdC, pub body: usize }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -306,7 +325,17 @@ pub struct ParameterRowC { pub binder: usize, pub sort: TypeIdC }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ArmRowC { pub pattern: usize, pub body: usize }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum PatternRowC { PVar { x: usize }, PNil, PCons { x: usize, y: usize }, PLeaf { x: usize }, PBranch { x: usize, y: usize } }
+pub enum PatternRowC { PVar { x: usize }, PNil, PCons { x: usize, y: usize },
+    PLeaf { x: usize }, PBranch { x: usize, y: usize }, Wildcard,
+    Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC, children: SliceC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlanNodeC {
+    Switch { source_match: usize, path: SliceC, type_id: TypeIdC,
+        cases: SliceC, default: usize },
+    Bind { source_match: usize, path: SliceC, binder: usize, next: usize },
+    Select { source_match: usize, arm: usize },
+    NoMatch { source_match: usize },
+}
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct OccurrenceRowC { pub owner_is_function: bool, pub function: usize, pub path: SliceC }
     // owner_is_function=false is Entry with function=0; path slices occurrence_paths.
@@ -315,7 +344,16 @@ pub struct ProgramView {
     pub expressions: Vec<ExpressionRowC>, pub occurrences: Vec<OccurrenceRowC>, pub occurrence_paths: Vec<usize>,
     pub children: Vec<usize>, pub functions: Vec<FunctionRowC>,
     pub parameters: Vec<ParameterRowC>, pub arms: Vec<ArmRowC>,
-    pub patterns: Vec<PatternRowC>,
+    pub patterns: Vec<PatternRowC>, pub pattern_children: Vec<usize>,
+    pub types: Vec<adt::TypeRowC>, pub type_args: Vec<TypeIdC>,
+    pub constructors: Vec<adt_storage::CtorRowExt>,
+    pub ctor_fields: Vec<adt_storage::CtorFieldRowExt>,
+    pub decl_param_counts: Vec<usize>, pub decl_ctor_counts: Vec<usize>,
+    // Original source templates are required by the owner's V14 round trip;
+    // resolved monomorphic field IDs cannot recover parameterized templates.
+    pub decl_templates: Vec<owner_ext_type_builder::TypeDeclSrc>,
+    pub plan_nodes: Vec<PlanNodeC>, pub plan_cases: Vec<Option<usize>>,
+    pub field_paths: Vec<usize>,
     pub constants: Vec<RawConstRow>, pub constant_fields: Vec<usize>,
     pub names: Vec<String>,
 }
@@ -348,6 +386,7 @@ pub struct LayoutSchemaC { pub layout_version: (String, String),
     pub field_id: Option<(String, String)>, pub widths: Option<WidthTable>,
     pub scalar_layout_id: Option<(String, String)>, pub bounds: BoundsC,
     pub capacities: LayoutCapacitiesC,
+    pub ext_capacities: Option<owner_ext_admit::ExtCapacitiesC>,
     pub boundary_capacities_present: bool } // must be false in B-core (AD-6)
 
 // ---------- errors / selection: no derives over raw, moved RawRuleId ----
@@ -393,9 +432,13 @@ pub struct MachineImage {
     initial_fuel: u128, remaining_work: u128, consumed_work: u128,
     helper_work: u128, helper_visits: u128, reference_cursor: u128,
     alloc: AllocCounters, active: ActiveLengths,
+    seg_base: host_implied_prefix::SegBase,
     helper: Option<HelperControlC>, result: Option<HelperResultC>,
     data: Vec<RawDataRow>, data_fields: Vec<RefC>, env: Vec<EnvCellC>, frames: Vec<FrameRowC>,
     tasks: Vec<HelperTaskC>, value_slots: Vec<RefC>,
+}
+impl MachineImage {
+    pub fn seg_base(&self) -> host_implied_prefix::SegBase { self.seg_base }
 }
 impl MachineImage {
     pub fn depth(&self) -> usize { self.frames.len() }
@@ -446,6 +489,10 @@ pub mod pure_leaves {
                 RawConstRow::Cons { .. } => LogicalKind::Cons,
                 RawConstRow::Leaf { .. } => LogicalKind::Leaf,
                 RawConstRow::Branch { .. } => LogicalKind::Branch,
+                RawConstRow::Constructor { type_id, ctor_id, .. } => LogicalKind::Constructor {
+                    type_id: super::TypeIdC(type_id.0),
+                    ctor_id: super::adt::CtorIdC(ctor_id.0),
+                },
                 RawConstRow::U128OutOfRange { .. } => LogicalKind::Marker,
             },
             BorrowedValueRow::Data(d) => match d {
@@ -455,6 +502,10 @@ pub mod pure_leaves {
                 RawDataRow::Cons { .. } => LogicalKind::Cons,
                 RawDataRow::Leaf { .. } => LogicalKind::Leaf,
                 RawDataRow::Branch { .. } => LogicalKind::Branch,
+                RawDataRow::Constructor { type_id, ctor_id, .. } => LogicalKind::Constructor {
+                    type_id: super::TypeIdC(type_id.0),
+                    ctor_id: super::adt::CtorIdC(ctor_id.0),
+                },
             },
         }
     }
@@ -474,12 +525,14 @@ pub mod pure_leaves {
         match k { LogicalKind::UInt | LogicalKind::Bool | LogicalKind::Nil => Some(0),
             LogicalKind::Cons | LogicalKind::Branch => Some(2),
             LogicalKind::Leaf => Some(1),
-            LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => None } }
+            LogicalKind::Constructor { .. }
+            | LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => None } }
     pub fn sort_of_kind(k: LogicalKind) -> Option<SortTag> {
         match k { LogicalKind::UInt => Some(SortTag::UInt),
             LogicalKind::Bool => Some(SortTag::Bool),
             LogicalKind::Nil | LogicalKind::Cons => Some(SortTag::List),
             LogicalKind::Leaf | LogicalKind::Branch => Some(SortTag::Tree),
+            LogicalKind::Constructor { type_id, .. } => Some(type_id),
             LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => None } }
     // Marker/reserved arity or sort = None here; the OWNER maps None to
     // HostViolation{ArithmeticUndefined} / staged PrimError as the row requires.
@@ -493,6 +546,8 @@ pub mod pure_leaves {
 
 // ---------- family-facing checked view: NO raw table escape (SEC-06) ---
 pub trait PreImageView {
+    // Concrete owner/recording implementations supply checked ADT projections.
+    fn adt_reads(&self) -> &dyn adt_runtime::AdtRuntimeReads;
     fn control(&self) -> &ControlC;
     fn control_origin(&self) -> usize;
     fn env_root(&self) -> EnvRootC;
@@ -574,6 +629,13 @@ impl AllocDataWrite {
             AllocDataWrite::Leaf { .. } => 1,
             AllocDataWrite::Cons { .. } | AllocDataWrite::Branch { .. } => 2 } }
 }
+// A Build field event appends its final field before this constructor node.
+// Owner validates this slice against the retained helper-owned pending block;
+// this payload cannot choose a different arena or mint an arbitrary value.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ConstructorNodeWriteC {
+    pub type_id: TypeIdC, pub ctor_id: adt::CtorIdC, pub fields: SliceC,
+}
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct PlanDelta { // allocation/depth/task/slot assertion only
     pub alloc_data_nodes: i64, pub alloc_data_fields: i64,
@@ -586,7 +648,8 @@ pub struct PlannedWrites {
     pub helper: Write<Option<HelperControlC>>, pub frame: Option<FrameWrite>,
     pub task_rewrite_top: Option<HelperTaskC>, pub task_op: TaskOp,
     pub alloc_data: Option<AllocDataWrite>, pub alloc_env: Option<EnvCellC>,
-    pub alloc_value_slot: Option<RefC> }
+    pub alloc_value_slot: Option<RefC>,
+    pub alloc_data_field: Option<RefC>, pub alloc_constructor: Option<ConstructorNodeWriteC> }
 pub struct EffectPlan { pub delta_assert: PlanDelta, pub writes: PlannedWrites }
     // No rule/event/eligible/visits/cap list: Selected (owner) is sole source;
 // owner derives CapKinds from delta_assert; charges/visits/cursor fire once.
@@ -606,6 +669,8 @@ impl ValidatedPlan {
 // The same literal rendering applies to private family free functions. Families never
 // recompute site/helper-plan/dispatch, charges, caps, or refusals.
 pub trait FamilyPlans {
+    fn plan_build(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
+    fn plan_plan(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
     fn plan_legacy(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
     fn plan_scalar(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
     fn plan_env_get(&self, sel: &Selected, pre: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation>;
@@ -650,19 +715,30 @@ pub trait OwnerEngine {
 
 // Root module placement only; owner body above unchanged.
 pub mod adt;
+pub mod adt_runtime;
 pub mod adt_storage;
 pub mod ext_pass_b_walk;
 pub mod ext_source_traversal;
 pub mod nominal_declaration_order;
+pub mod owner_ext_admit;
 pub mod owner_ext_prepare_types;
 pub mod owner_ext_source_program;
 pub mod owner_ext_t3_uses;
 pub mod owner_ext_type_builder;
+mod ext_program_c;
+mod ext_program_c6;
+mod ext_program_p;
+mod owner_ext_c_expression;
+mod owner_ext_c_slots;
 mod owner_prepare;
 mod owner_runtime;
 pub mod owner_host;
 pub mod host_implied_prefix;
 
+pub use owner_ext_admit::{
+    ExtCapacitiesC, PreparationReportC, WorkMapEntryC, admit_ext, admit_ext_program,
+    check_program_view_ext, prepare_ext_program,
+};
 pub use owner_prepare::{
     prepare_ext_program_types, prepare_nominal_declarations, prepare_program_nominal_declarations,
     PassTOutput, PassTSession, PreparedDeclarationScope, PreparedExtProgramSource,

@@ -5,6 +5,9 @@ mod legacy;
 mod scalar;
 mod environment;
 mod structural;
+mod adt_constructor;
+mod adt_build;
+mod adt_plan;
 
 pub struct HostFamilyPlans;
 
@@ -58,6 +61,16 @@ impl FamilyPlans for HostFamilyPlans {
         -> Result<EffectPlan, HostViolation>
     {
         structural::plan_match(sel, pre, guards)
+    }
+    fn plan_build(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        adt_build::dispatch(sel, pre, guards)
+    }
+    fn plan_plan(&self, sel: &Selected, pre: &dyn PreImageView, _guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        adt_plan::dispatch(sel, pre)
     }
     fn plan_bookkeeping_release(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
         -> Result<EffectPlan, HostViolation>
@@ -122,6 +135,16 @@ impl FamilyPlans for WordFamilyPlans {
         -> Result<EffectPlan, HostViolation>
     {
         structural::plan_match(sel, pre, guards)
+    }
+    fn plan_build(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        adt_build::dispatch(sel, pre, guards)
+    }
+    fn plan_plan(&self, sel: &Selected, pre: &dyn PreImageView, _guards: &dyn GuardEvaluator)
+        -> Result<EffectPlan, HostViolation>
+    {
+        adt_plan::dispatch(sel, pre)
     }
     fn plan_bookkeeping_release(&self, sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
         -> Result<EffectPlan, HostViolation>

@@ -91,19 +91,76 @@ pub(super) fn si21_bind_result_ok(pre: &PreImage, r: &HelperResultC) -> Result<b
 }
 enum MatchDen { NoMatch, Matched(Vec<(usize, RefC)>) }
 fn match_denotation(pre: &PreImage, pat: &PatternRowC, scrutinee: &RefC) -> Result<MatchDen, HostViolation> {
-    let kind = pre.kind_of(scrutinee)?;
-    Ok(match pat {
-        PatternRowC::PVar { x } => MatchDen::Matched(vec![(*x, *scrutinee)]),
-        PatternRowC::PNil => if kind == LogicalKind::Nil { MatchDen::Matched(Vec::new()) } else { MatchDen::NoMatch },
-        PatternRowC::PCons { x, y } => if kind != LogicalKind::Cons || x == y { MatchDen::NoMatch } else { MatchDen::Matched(vec![(*x, pre.field_at(scrutinee, &0)?), (*y, pre.field_at(scrutinee, &1)?)]) },
-        PatternRowC::PLeaf { x } => if kind != LogicalKind::Leaf { MatchDen::NoMatch } else { MatchDen::Matched(vec![(*x, pre.field_at(scrutinee, &0)?)]) },
-        PatternRowC::PBranch { x, y } => if kind != LogicalKind::Branch || x == y { MatchDen::NoMatch } else { MatchDen::Matched(vec![(*x, pre.field_at(scrutinee, &0)?), (*y, pre.field_at(scrutinee, &1)?)]) },
-    })
+    let view = &pre.admitted.body.view;
+    let mut stack: Vec<(PatternRowC, RefC)> = vec![(*pat, *scrutinee)];
+    let mut bindings: Vec<(usize, RefC)> = Vec::new();
+    let mut budget = view.patterns.len().saturating_add(1);
+    while let Some((cur_pat, cur_val)) = stack.pop() {
+        if budget == 0 { return Err(bv("pattern tree bound")); }
+        budget -= 1;
+        let kind = pre.kind_of(&cur_val)?;
+        match cur_pat {
+            PatternRowC::Wildcard => {}
+            PatternRowC::PVar { x } => {
+                if bindings.iter().any(|(b, _)| *b == x) { return Ok(MatchDen::NoMatch); }
+                bindings.push((x, cur_val));
+            }
+            PatternRowC::PNil => if kind != LogicalKind::Nil { return Ok(MatchDen::NoMatch); },
+            PatternRowC::PCons { x, y } => {
+                if kind != LogicalKind::Cons || x == y
+                    || bindings.iter().any(|(b, _)| *b == x || *b == y)
+                {
+                    return Ok(MatchDen::NoMatch);
+                }
+                bindings.push((x, pre.field_at(&cur_val, &0)?));
+                bindings.push((y, pre.field_at(&cur_val, &1)?));
+            }
+            PatternRowC::PLeaf { x } => {
+                if kind != LogicalKind::Leaf || bindings.iter().any(|(b, _)| *b == x) {
+                    return Ok(MatchDen::NoMatch);
+                }
+                bindings.push((x, pre.field_at(&cur_val, &0)?));
+            }
+            PatternRowC::PBranch { x, y } => {
+                if kind != LogicalKind::Branch || x == y
+                    || bindings.iter().any(|(b, _)| *b == x || *b == y)
+                {
+                    return Ok(MatchDen::NoMatch);
+                }
+                bindings.push((x, pre.field_at(&cur_val, &0)?));
+                bindings.push((y, pre.field_at(&cur_val, &1)?));
+            }
+            PatternRowC::Constructor { type_id, ctor_id, children } => {
+                let kind_matches = match kind {
+                    LogicalKind::Nil => type_id == TypeIdC::List && ctor_id.0 == 0,
+                    LogicalKind::Cons => type_id == TypeIdC::List && ctor_id.0 == 1,
+                    LogicalKind::Leaf => type_id == TypeIdC::Tree && ctor_id.0 == 2,
+                    LogicalKind::Branch => type_id == TypeIdC::Tree && ctor_id.0 == 3,
+                    LogicalKind::Constructor { type_id: kt, ctor_id: kc } =>
+                        kt == type_id && kc == ctor_id,
+                    _ => false,
+                };
+                if !kind_matches { return Ok(MatchDen::NoMatch); }
+                let arity = pre.checked_arity(&kind)?;
+                if children.len != arity { return Err(bv("pattern constructor arity")); }
+                let end = children.start.checked_add(children.len).ok_or_else(|| arith("pattern children end"))?;
+                let slice = view.pattern_children.get(children.start..end).ok_or_else(|| oob("prog.patternChildren"))?;
+                for idx in (0..children.len).rev() {
+                    let child_pat = *pre.pattern(&slice[idx])?;
+                    let child_val = pre.field_at(&cur_val, &idx)?;
+                    stack.push((child_pat, child_val));
+                }
+            }
+        }
+    }
+    Ok(MatchDen::Matched(bindings))
 }
 fn match_context(pre: &PreImage) -> Result<Option<(RefC, usize, EnvRootC, PatternRowC, Vec<(usize, RefC)>, bool)>, HostViolation> {
-    let (scrutinee, arm, saved, partial) = match pre.helper() { Some(HelperControlC::Match { scrutinee, arm, saved_env, partial, .. }) => (*scrutinee, *arm, *saved_env, *partial), _ => return Ok(None) };
+    let (scrutinee, arm, saved, _partial) = match pre.helper() { Some(HelperControlC::Match { scrutinee, arm, saved_env, partial, .. }) => (*scrutinee, *arm, *saved_env, *partial), _ => return Ok(None) };
     match pre.control() { ControlC::Cases { value, arms, saved_env } if *value == scrutinee && arms.start == arm && *saved_env == saved => {}, _ => return Ok(None) }
+    if !matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: None, .. }) { return Ok(None); }
     let pat = *pre.pattern(&pre.arm(&arm)?.pattern)?;
+    if matches!(pat, PatternRowC::Wildcard | PatternRowC::Constructor { .. }) { return Ok(None); }
     match match_denotation(pre, &pat, &scrutinee)? { MatchDen::Matched(b) => Ok(Some((scrutinee, arm, saved, pat, b, true))), MatchDen::NoMatch => Ok(Some((scrutinee, arm, saved, pat, Vec::new(), false))) }
 }
 pub(super) fn si21_match_helper_ok(pre: &PreImage) -> Result<bool, HostViolation> {
@@ -112,7 +169,7 @@ pub(super) fn si21_match_helper_ok(pre: &PreImage) -> Result<bool, HostViolation
     let (scrutinee, _, saved2, pat, bindings, matched) = match match_context(pre)? { Some(v) => v, None => return Ok(false) };
     if saved != saved2 { return Ok(false); }
     if phase == MatchPhase::Arm { return Ok(status == TriStatus::Pending && pat_tag == PatternTag::PVar && x == 0 && y == 0 && field_idx == 0 && staged.is_none() && partial == saved); }
-    let (etag, ex, ey) = match pat { PatternRowC::PVar { x } => (PatternTag::PVar, x, 0), PatternRowC::PNil => (PatternTag::PNil, 0, 0), PatternRowC::PCons { x, y } => (PatternTag::PCons, x, y), PatternRowC::PLeaf { x } => (PatternTag::PLeaf, x, 0), PatternRowC::PBranch { x, y } => (PatternTag::PBranch, x, y) };
+    let (etag, ex, ey) = match pat { PatternRowC::PVar { x } => (PatternTag::PVar, x, 0), PatternRowC::PNil => (PatternTag::PNil, 0, 0), PatternRowC::PCons { x, y } => (PatternTag::PCons, x, y), PatternRowC::PLeaf { x } => (PatternTag::PLeaf, x, 0), PatternRowC::PBranch { x, y } => (PatternTag::PBranch, x, y), PatternRowC::Wildcard | PatternRowC::Constructor { .. } => return Ok(false) };
     if pat_tag != etag || x != ex || y != ey { return Ok(false); }
     let made: usize = match phase { MatchPhase::Arm | MatchPhase::Tag | MatchPhase::Distinct | MatchPhase::NoMatchReady => 0, MatchPhase::Field => usize::from(field_idx), MatchPhase::Bind => if etag == PatternTag::PVar { 0 } else { usize::from(field_idx) }, MatchPhase::Ready => bindings.len(), MatchPhase::Done => if status == TriStatus::Positive { bindings.len() } else { 0 }, };
     if !segment_matches(pre, partial, saved, &bindings[..made.min(bindings.len())])? { return Ok(false); }
@@ -129,7 +186,9 @@ pub(super) fn si21_match_helper_ok(pre: &PreImage) -> Result<bool, HostViolation
 }
 pub(super) fn si21_match_result_ok(pre: &PreImage, r: &HelperResultC) -> Result<bool, HostViolation> {
     let (scrutinee, arms, saved) = match pre.control() { ControlC::Cases { value, arms, saved_env } if arms.len > 0 => (*value, *arms, *saved_env), _ => return Ok(false) };
+    if !matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: None, .. }) { return Ok(false); }
     let pat = *pre.pattern(&pre.arm(&arms.start)?.pattern)?;
+    if matches!(pat, PatternRowC::Wildcard | PatternRowC::Constructor { .. }) { return Ok(false); }
     match match_denotation(pre, &pat, &scrutinee)? {
         MatchDen::Matched(bindings) => match r { HelperResultC::MatchMatched { env } => segment_matches(pre, *env, saved, &bindings), _ => Ok(false) },
         MatchDen::NoMatch => Ok(matches!(r, HelperResultC::MatchNoMatch)),

@@ -579,6 +579,27 @@ pub enum RuleId {
     KAdminPublishValue,
     KAdminPublishError,
     KAdminPublishExhausted,
+    XAdtEvalConstructNullary,
+    XAdtEvalConstructFields,
+    XAdtReturnCtorFieldsTyped,
+    XAdtReturnCtorFieldsMistyped,
+    XAdtReturnCtorFieldsNext,
+    XAdtReturnCtorFieldsFinal,
+    XAdtMaterializeDone,
+    XAdtCasesPlanHit,
+    XAdtCasesPlanMiss,
+    XAdtHelperBuildEntry,
+    XAdtHelperBuildCell,
+    XAdtHelperBuildField,
+    XAdtHelperBuildExit,
+    XAdtHelperPlanEntry,
+    XAdtHelperPlanWalk,
+    XAdtHelperPlanSwitch,
+    XAdtHelperPlanBind,
+    XAdtHelperPlanSelect,
+    XAdtHelperPlanNoMatch,
+    XAdtHelperPlanExit,
+    XAdtHelperPlanFailure,
 }
 
 // schema /bounds/fields
@@ -673,6 +694,12 @@ pub struct EnvCell {
     pub previous: Option<EnvId>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct TypeId(pub usize);
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct CtorId(pub usize);
+
 // schema /records/ConstRow
 pub enum ConstRow {
     U128 { marker_free: Bool, n: UInt128 },
@@ -681,6 +708,7 @@ pub enum ConstRow {
     Cons { marker_free: Bool, fields: ConstFieldSlice },
     Leaf { marker_free: Bool, fields: ConstFieldSlice },
     Branch { marker_free: Bool, fields: ConstFieldSlice },
+    Constructor { marker_free: Bool, type_id: TypeId, ctor_id: CtorId, fields: ConstFieldSlice },
     U128OutOfRange { marker_free: Bool },
 }
 
@@ -692,6 +720,7 @@ pub enum DataRow {
     Cons { fields: FieldSlice },
     Leaf { fields: FieldSlice },
     Branch { fields: FieldSlice },
+    Constructor { type_id: TypeId, ctor_id: CtorId, fields: FieldSlice },
 }
 
 // schema /records/FieldSlot/type

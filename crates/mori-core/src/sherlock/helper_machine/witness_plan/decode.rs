@@ -187,6 +187,18 @@ impl<'a> Builder<'a> {
     fn arms_field(&mut self, f: &mut Vec<FieldBinding>, name: &'static str, value: SliceC, at: Location) -> Result<(), WitnessFailure> {
         let id = self.arm_slice(value, at)?; f.push(self.field(name, id)); Ok(())
     }
+    fn field_path_slice(&mut self, slice: SliceC, at: Location) -> Result<NodeId, WitnessFailure> {
+        let indices = self.indices(slice.start, slice.len, self.input.admission.view.field_paths.len(), at)?;
+        self.source_sequence(SequenceKind::Indices, SourceType::Index,
+            indices.map(InputPath::FieldPath).collect(), at)
+    }
+    fn constructor_fields(&mut self, type_id: TypeIdC, ctor_id: adt::CtorIdC,
+        f: &mut Vec<FieldBinding>, at: Location) -> Result<(), WitnessFailure>
+    {
+        self.source_field(f,"type_id",InputPath::Type(type_id.0),at)?;
+        self.source_field(f,"ctor_id",InputPath::Constructor(ctor_id.0),at)?;
+        Ok(())
+    }
     fn frame_fields(&mut self, frame: FrameRowC, f: &mut Vec<FieldBinding>, at: Location) -> Result<(), WitnessFailure> {
         match frame {
             FrameRowC::LetF { binder, body, saved_env, origin } => {
@@ -217,6 +229,14 @@ impl<'a> Builder<'a> {
             }
             FrameRowC::ArgsF { function_name, completed, rest, saved_env, origin } => {
                 self.source_field(f,"function_name",InputPath::Name(function_name),at)?;
+                self.values_field(f,"completed",completed,at)?;
+                self.expressions_field(f,"rest",rest,at)?;
+                self.env_field(f,"saved_env",saved_env,at)?;
+                self.source_field(f,"origin",InputPath::Occurrence(origin),at)?;
+            }
+            FrameRowC::ConstructorFieldsF { type_id, ctor_id, field_type, completed, rest, saved_env, origin, .. } => {
+                self.constructor_fields(type_id,ctor_id,f,at)?;
+                self.source_field(f,"field_type",InputPath::Type(field_type.0),at)?;
                 self.values_field(f,"completed",completed,at)?;
                 self.expressions_field(f,"rest",rest,at)?;
                 self.env_field(f,"saved_env",saved_env,at)?;
@@ -264,6 +284,10 @@ impl<'a> Builder<'a> {
             ControlC::PrimResult { result } => match result {
                 PrimOutcome::Value { value } => self.value_field(f,"value",value,at)?, PrimOutcome::Error { .. } => (),
             },
+            ControlC::Materialize { type_id, ctor_id, fields } => {
+                self.constructor_fields(type_id,ctor_id,f,at)?;
+                self.values_field(f,"fields",fields,at)?;
+            }
             ControlC::Error { .. } => (),
         }
         Ok(())
@@ -319,6 +343,22 @@ impl<'a> Builder<'a> {
                 } }
                 if let Some(value) = staged { self.value_field(f,"staged",value,at)?; }
             }
+            HelperControlC::Build { type_id, ctor_id, src, staged, node, .. } => {
+                self.constructor_fields(type_id,ctor_id,f,at)?;
+                self.values_field(f,"src",src,at)?;
+                if let Some(value) = staged { self.value_field(f,"staged",value,at)?; }
+                if let Some(value) = node { self.value_field(f,"node",value,at)?; }
+            }
+            HelperControlC::Plan { source_match, scrutinee, saved_env, partial, node, cur, path, arm, .. } => {
+                self.source_field(f,"source_match",InputPath::Expression(source_match),at)?;
+                self.value_field(f,"scrutinee",scrutinee,at)?;
+                self.env_field(f,"saved_env",saved_env,at)?;
+                self.env_field(f,"partial",partial,at)?;
+                self.source_field(f,"node",InputPath::PlanNode(node),at)?;
+                self.value_field(f,"cur",cur,at)?;
+                let id = self.field_path_slice(path,at)?; f.push(self.field("path",id));
+                if let Some(index) = arm { self.source_field(f,"arm",InputPath::Arm(index),at)?; }
+            }
         }
         Ok(())
     }
@@ -338,10 +378,16 @@ impl<'a> Builder<'a> {
     fn result_fields(&mut self, result: Option<HelperResultC>, f: &mut Vec<FieldBinding>, at: Location) -> Result<(), WitnessFailure> {
         let Some(result) = result else { return Ok(()); };
         match result {
+            HelperResultC::BuildDone { value } |
             HelperResultC::EnvFound { value } | HelperResultC::ScalarValue { value } | HelperResultC::EqualDone { value } => self.value_field(f,"value",value,at)?,
             HelperResultC::EnvUpdated { cell } => self.env_field(f,"cell",Some(cell),at)?,
             HelperResultC::FindFound { function } => self.source_field(f,"function",InputPath::Function(function),at)?,
             HelperResultC::BindOk { env } | HelperResultC::MatchMatched { env } => self.env_field(f,"env",env,at)?,
+            HelperResultC::PlanMatched { arm, env } => {
+                self.source_field(f,"arm",InputPath::Arm(arm),at)?;
+                self.env_field(f,"env",env,at)?;
+            }
+            HelperResultC::PlanNoMatch => (),
             HelperResultC::AppendDone { seq } => self.values_field(f,"seq",seq,at)?,
             HelperResultC::Validated { .. } | HelperResultC::EnvMissing | HelperResultC::FindMissing |
             HelperResultC::BindBad | HelperResultC::ScalarError { .. } | HelperResultC::ScalarSelector { .. } |
@@ -357,11 +403,13 @@ fn shape(atom: &InputValue, at: Location) -> Result<(usize, Option<(usize, usize
         InputValue::Constant(value) => match value {
             ConstantSnapshot::Cons { fields, .. } | ConstantSnapshot::Branch { fields, .. } => (2,Some((fields.start,fields.len))),
             ConstantSnapshot::Leaf { fields, .. } => (1,Some((fields.start,fields.len))),
+            ConstantSnapshot::Constructor { fields, .. } => (fields.len,Some((fields.start,fields.len))),
             ConstantSnapshot::U128 { .. } | ConstantSnapshot::Bool { .. } | ConstantSnapshot::Nil { .. } | ConstantSnapshot::U128OutOfRange { .. } => (0,None),
         },
         InputValue::Data(value) => match value {
             DataSnapshot::Cons { fields } | DataSnapshot::Branch { fields } => (2,Some((fields.start,fields.len))),
             DataSnapshot::Leaf { fields } => (1,Some((fields.start,fields.len))),
+            DataSnapshot::Constructor { fields, .. } => (fields.len,Some((fields.start,fields.len))),
             DataSnapshot::U128 { .. } | DataSnapshot::Bool { .. } | DataSnapshot::Nil => (0,None),
         },
         _ => return Err(fail(at, FailureKind::WrongOperation)),
@@ -408,6 +456,18 @@ pub(super) fn build(input: &HostSnapshot, lifetime: LifetimeUnit) -> Result<Witn
         ("occurrences",SequenceKind::Occurrences,SourceType::Occurrence,(0..p.occurrences.len()).map(InputPath::Occurrence).collect()),
         ("occurrence_paths",SequenceKind::Indices,SourceType::Index,(0..p.occurrence_paths.len()).map(InputPath::OccurrencePath).collect()),
         ("children",SequenceKind::Indices,SourceType::Index,(0..p.children.len()).map(InputPath::Child).collect()),
+        ("functions",SequenceKind::Functions,SourceType::Function,(0..p.functions.len()).map(InputPath::Function).collect()),
+        ("pattern_children",SequenceKind::Indices,SourceType::Index,(0..p.pattern_children.len()).map(InputPath::PatternChild).collect()),
+        ("types",SequenceKind::Types,SourceType::Type,(0..p.types.len()).map(InputPath::Type).collect()),
+        ("type_args",SequenceKind::TypeIds,SourceType::TypeId,(0..p.type_args.len()).map(InputPath::TypeArg).collect()),
+        ("constructors",SequenceKind::Constructors,SourceType::Constructor,(0..p.constructors.len()).map(InputPath::Constructor).collect()),
+        ("ctor_fields",SequenceKind::ConstructorFields,SourceType::ConstructorField,(0..p.ctor_fields.len()).map(InputPath::ConstructorField).collect()),
+        ("decl_param_counts",SequenceKind::Indices,SourceType::Index,(0..p.decl_param_counts.len()).map(InputPath::DeclParamCount).collect()),
+        ("decl_ctor_counts",SequenceKind::Indices,SourceType::Index,(0..p.decl_ctor_counts.len()).map(InputPath::DeclCtorCount).collect()),
+        ("decl_templates",SequenceKind::DeclTemplates,SourceType::DeclTemplate,(0..p.decl_templates.len()).map(InputPath::DeclTemplate).collect()),
+        ("plan_nodes",SequenceKind::PlanNodes,SourceType::PlanNode,(0..p.plan_nodes.len()).map(InputPath::PlanNode).collect()),
+        ("plan_cases",SequenceKind::PlanCases,SourceType::PlanCase,(0..p.plan_cases.len()).map(InputPath::PlanCase).collect()),
+        ("field_paths",SequenceKind::Indices,SourceType::Index,(0..p.field_paths.len()).map(InputPath::FieldPath).collect()),
     ] {
         let id = b.source_sequence(kind,ty,paths,at)?; fields.push(b.field(name,id));
     }
@@ -428,6 +488,9 @@ fn shifted(node: &ValueNode, offset: usize, at: Location) -> Result<ValueNode, W
         ValueNode::Cons { head,tail } => ValueNode::Cons { head:add(head)?,tail:add(tail)? },
         ValueNode::Leaf { value } => ValueNode::Leaf { value:add(value)? },
         ValueNode::Branch { left,right } => ValueNode::Branch { left:add(left)?,right:add(right)? },
+        ValueNode::Constructor { type_id,ctor_id,ref fields } => ValueNode::Constructor {
+            type_id,ctor_id,fields:fields.iter().map(|index|add(*index)).collect::<Result<Vec<_>,_>>()?,
+        },
     })
 }
 pub(super) fn evaluate_value(plan: &WitnessPlan, node: &Node, source: RefC, arity: usize, args: &[&SlotValue]) -> Result<DecodedValue, WitnessFailure> {
@@ -464,6 +527,10 @@ pub(super) fn evaluate_value(plan: &WitnessPlan, node: &Node, source: RefC, arit
         InputValue::Constant(ConstantSnapshot::Cons { .. }) | InputValue::Data(DataSnapshot::Cons { .. }) => ValueNode::Cons { head:roots[0],tail:roots[1] },
         InputValue::Constant(ConstantSnapshot::Leaf { .. }) | InputValue::Data(DataSnapshot::Leaf { .. }) => ValueNode::Leaf { value:roots[0] },
         InputValue::Constant(ConstantSnapshot::Branch { .. }) | InputValue::Data(DataSnapshot::Branch { .. }) => ValueNode::Branch { left:roots[0],right:roots[1] },
+        InputValue::Constant(ConstantSnapshot::Constructor { type_id,ctor_id,.. }) |
+        InputValue::Data(DataSnapshot::Constructor { type_id,ctor_id,.. }) => ValueNode::Constructor {
+            type_id:*type_id,ctor_id:*ctor_id,fields:roots,
+        },
         _ => return Err(fail(at,FailureKind::WrongOperation)),
     };
     let sort = |index:usize| match nodes.get(index) {

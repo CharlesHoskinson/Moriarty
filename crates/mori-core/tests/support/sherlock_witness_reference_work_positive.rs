@@ -95,7 +95,7 @@ fn layout() -> (BoundsC, LayoutSchemaC) {
         field_id: None, widths: None, scalar_layout_id: None, bounds,
         capacities: LayoutCapacitiesC {
             name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 4096,
-        }, boundary_capacities_present: false,
+        }, ext_capacities: None, boundary_capacities_present: false,
     };
     (bounds, schema)
 }
@@ -220,6 +220,15 @@ fn b_rule_id(rule:RuleIdC)->&'static str {match rule {
     RuleIdC::KAdminPublishValue=>"k.admin.publish.value",
     RuleIdC::KAdminPublishError=>"k.admin.publish.error",
     RuleIdC::KAdminPublishExhausted=>"k.admin.publish.exhausted",
+    // Generic ADT rules are outside this dedicated B0 inventory. Their normative
+    // strings are not supplied here, so they are refused rather than invented.
+    RuleIdC::XAdtEvalConstructNullary|RuleIdC::XAdtEvalConstructFields|RuleIdC::XAdtReturnCtorFieldsTyped
+    |RuleIdC::XAdtReturnCtorFieldsMistyped|RuleIdC::XAdtReturnCtorFieldsNext|RuleIdC::XAdtReturnCtorFieldsFinal
+    |RuleIdC::XAdtMaterializeDone|RuleIdC::XAdtCasesPlanHit|RuleIdC::XAdtCasesPlanMiss
+    |RuleIdC::XAdtHelperBuildEntry|RuleIdC::XAdtHelperBuildCell|RuleIdC::XAdtHelperBuildField|RuleIdC::XAdtHelperBuildExit
+    |RuleIdC::XAdtHelperPlanEntry|RuleIdC::XAdtHelperPlanWalk|RuleIdC::XAdtHelperPlanSwitch|RuleIdC::XAdtHelperPlanBind
+    |RuleIdC::XAdtHelperPlanSelect|RuleIdC::XAdtHelperPlanNoMatch|RuleIdC::XAdtHelperPlanExit|RuleIdC::XAdtHelperPlanFailure
+        =>panic!("generic ADT rule outside the dedicated B0 inventory: {rule:?}"),
 }}
 
 

@@ -118,7 +118,7 @@ fn plan_legacy(sel: &Selected, pre: &dyn PreImageView, _g: &dyn GuardEvaluator)
         // ROW k.machine.eval.match
         RuleIdC::KMachineEvalMatch => {
             let (origin, x) = legacy_eval_expr(pre)?;
-            let (scrutinee, arms) = match x { ExpressionRowC::Match { scrutinee, arms } => (*scrutinee, *arms),
+            let (scrutinee, arms) = match x { ExpressionRowC::Match { scrutinee, arms, .. } => (*scrutinee, *arms),
                 _ => return Err(legacy_payload_error(HostViolationKind::WrongVariant, "Match expression")) };
             writes.control = Write::Set(ControlC::ScheduleNext {
                 frame: FrameRowC::MatchF { arms, saved_env: pre.env_root(), origin },

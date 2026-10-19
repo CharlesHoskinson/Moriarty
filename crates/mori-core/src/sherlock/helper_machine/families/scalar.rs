@@ -5,11 +5,19 @@ include!("../fragments/scalar.proposed.rs");
 pub(super) fn dispatch(sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator)
     -> Result<EffectPlan, HostViolation>
 {
-    plan_scalar(sel, pre, guards)
+    match (sel.rule, sel.site) {
+        (RuleIdC::BHelperScalarEntry, Some(SiteTag::RetCtorFields)) =>
+            super::adt_constructor::scalar_entry(sel, pre),
+        _ => plan_scalar(sel, pre, guards),
+    }
 }
 
 pub(super) fn dispatch_word(sel: &Selected, pre: &dyn PreImageView, guards: &dyn GuardEvaluator,
     layout: WordLayout) -> Result<EffectPlan, HostViolation>
 {
-    plan_scalar_with_word_layout(sel, pre, guards, layout)
+    match (sel.rule, sel.site) {
+        (RuleIdC::BHelperScalarEntry, Some(SiteTag::RetCtorFields)) =>
+            super::adt_constructor::scalar_entry(sel, pre),
+        _ => plan_scalar_with_word_layout(sel, pre, guards, layout),
+    }
 }
