@@ -1,0 +1,52 @@
+I'll do a few read-only checks before deciding. I'll verify the ledger preimage and the delta's JSON pointers, re-hash the published afterimages, and check whether req 29's other pins still match current bytes. I won't write anything.
+
+
+<invoke name="Bash">
+<parameter name="command">L=/home/charl/Moriarty/.worktrees/sherlock-witness-cache-stream-20261018/openspec/changes/sherlock-completion-convergence/current-evidence.json
+stat -c '%s' "$L"; sha256sum "$L" | cut -c1-64
+python3 -I - "$L" <<'EOF'
+import json,sys
+d=json.load(open(sys.argv[1])); r=d["requirements"][29]
+print("id:", r.get("id") or r.get("requirementId") or list(r.keys())[:6])
+print("len evidenceRefs", len(r["validation"]["evidenceRefs"]), "reviewRefs", len(r["validation"]["reviewRefs"]),
+      "sourcePins", len(r["currentness"]["sourcePins"]), "limitations", len(r["currentness"]["limitations"]),
+      "has conditional030", "conditional030ResultRevalidation" in r["currentness"])
+for p in [("implementation","sourceRefs",6),("implementation","sourceRefs",7),("currentness","sourcePins",14),("currentness","sourcePins",15),("citations",None,33),("citations",None,34)]:
+    v = r[p[0]][p[2]] if p[1] is None else r[p[0]][p[1]][p[2]]
+    print(p, v.get("path"), v.get("sha256"))
+print("currentness keys:", list(r["currentness"].keys()))
+seen=set()
+for grp in [r["implementation"]["sourceRefs"], r["currentness"]["sourcePins"], r["citations"]]:
+    for e in grp:
+        if isinstance(e,dict) and "path" in e and "sha256" in e: seen.add((e["path"],e["sha256"]))
+print("UNIQUE_PINS", len(seen))
+for p,h in sorted(seen): print("PIN", h, p)
+EOF</parameter>
+<parameter name="description">Verify ledger preimage, req 29 pointers and pin set (read-only)</parameter>
+</invoke>
+
+<invoke name="Bash">
+<parameter name="command">P=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/uireq030-current105-actual8-publication-proposal-20261019/publication-afterimages
+cd "$P" && sha256sum actual/ROOT-RESULT.json ACTUAL-8-PORTABLE-INDEX.json REVIEW-IDENTITIES-AND-TIMING.json reviews/*/FINAL-RESPONSE.txt reviews/failed-Opus-attempt/terminal-result.json provenance/*.json controls/*.gz actual/*/stdout.bin actual/*/stderr.bin 2>&1; stat -c '%s %n' actual/ROOT-RESULT.json reviews/Muse-fallback-source-and-operations/FINAL-RESPONSE.txt 2>&1</parameter>
+<parameter name="description">Re-hash published afterimages and streams (read-only)</parameter>
+</invoke>
+
+<invoke name="Bash">
+<parameter name="command">C=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/uireq030-current105-gapABC-revalidation-20261019/consumer
+ls "$C" 2>&1 | head; L=/home/charl/Moriarty/.worktrees/sherlock-witness-cache-stream-20261018/openspec/changes/sherlock-completion-convergence/current-evidence.json
+python3 -I - "$L" "$C" <<'EOF'
+import json,sys,hashlib,os
+d=json.load(open(sys.argv[1])); r=d["requirements"][29]; C=sys.argv[2]
+seen=set()
+for grp in [r["implementation"]["sourceRefs"], r["currentness"]["sourcePins"], r["citations"]]:
+    for e in grp:
+        if isinstance(e,dict) and "path" in e and "sha256" in e: seen.add((e["path"],e["sha256"]))
+for p,h in sorted(seen):
+    f=os.path.join(C,p)
+    if os.path.isfile(f):
+        c=hashlib.sha256(open(f,'rb').read()).hexdigest()
+        print("MATCH" if c==h else "DIFF ", p, "" if c==h else c)
+    else: print("ABSENT", p)
+EOF</parameter>
+<parameter name="description">Compare req 29 pins to current105 consumer bytes (read-only)</parameter>
+</invoke>

@@ -1,0 +1,106 @@
+# Review: B06 model, port and seed (Opus 5.5, static source review, no execution)
+
+## Verdicts
+
+| Item | Verdict |
+|---|---|
+| Model/port/seed source for these two operations | **MODEL_SOURCE_ACCEPT** |
+| `newIndependentBoundaryFrontend` | **ELIGIBLE** |
+| `newIndependentBoundaryOnePublication` | **ELIGIBLE**, but only if all conditions under "Run acceptance" hold |
+
+**Mandatory source fixes: none.** Do not edit the frozen files. If the frontend fails, record the failure. Any rename or other edit becomes a new revision with new hashes and needs a fresh review.
+
+## What I checked in the source
+
+**Pins.** The freeze records are internally consistent:
+- Model: 16623 B, `090ab475…`, equal to the batch06 revision02 preimage.
+- Port: 542 B, `511d9c9b…`, equal to the unchanged original port.
+- Seed: 4604 B, `02147483…`, equal to `opaque_B06_seed_module` in SAFE-BINDINGS.
+- The source directory holds exactly the three files.
+- The ITF target `proposed-itf/` is a sibling of `model/` and outside the working directory.
+
+**Imports.**
+- The seed imports `financialBoundary.* from "./financialBoundary"`.
+- The port imports the model unqualified and the seed `as S`. This is a diamond import of one module, not an instance, so `var machine` is defined once and there is no name collision.
+- The port defines only `init`, `publishOnly`, `captureInv` and `publishedWitness`; none of these clash with the model or seed. `S::suppliedInvocation` resolves.
+
+**Variant constructors.** All 49 constructors are unique within the module. None collide with a type name or builtin. `Result`, `Ready`, `Published` and `NotAdvanced` are ordinary identifiers.
+
+**Builtins.** Every builtin used is valid in Quint 0.32 with matching arity: `foldl`, `select`, `slice`, `length`, `nth`, `append`, `keys`, `contains`, `get`, `not`, `implies`, `and{}`, `all{}`, `any{}`, `List()`, `Map(k -> v)`.
+
+**Syntax.**
+- Record spread, trailing commas, nested `val x: T =` inside blocks, nested `match` inside braces, and `_` patterns are all used correctly.
+- Every `match` is exhaustive or ends with a wildcard.
+- `(a) implies b == c` parses as intended.
+
+**Modes and effects.**
+- All `pure def` / `pure val` definitions read no state.
+- Only the non-pure `val`s and the actions touch `machine`.
+- Every action assigns `machine'` exactly once.
+
+**Seed against the `Invocation` type.**
+- Every record has exactly the declared fields, with no extra or missing labels: Identity, ActionPlan, AwaitSite, CaptureSlot, InputDecl, ResumeInput, Continuation, StageLogical, StageEvent, Snapshot, Balance, Liability, AssetId and RuntimeEvidence.
+- Map types (`str -> Scalar`, `int -> int`) and the variant payloads (`ResumeInput`, `UIntValue`, `BoolValue`, `SomeUInt`, `NoText`, `NoUInt`, `LetOrigin`, `BoolType`, `UIntType`, `NotAdvanced`) all match.
+
+## Hand trace of the selected run
+
+**`normalDomain(seed)` holds:**
+- entry = 1
+- 0 ≤ 1 ≤ |sites| = 1
+- |segmentCosts| = 2 = |sites| + 1
+- |committedBefore| = 2
+- plan.action = identity.action = `carry`
+- 0 ≤ attempted = 2 ≤ 1024
+- NotAdvanced on ResumeInput, guardCosts contains key 1, and attempted = guardCosts[1] = 2
+
+**State 0.** Phase Ready, NoResult, NoPrefix, no records, observed 0. `captureInv` holds.
+
+**State 1.** `publishStep` is enabled. It produces:
+- Waiting with advanced false, NoSegment, the exact input continuation, attempted 2, and residual equal to the `duty-open` row of 5. The zero row stays only in the boundary.
+- A WaitingPrefix copied from the continuation and result.
+- One record, with observed = 2.
+
+Every conjunct of `captureInv` holds, and `publishedWitness` is true.
+
+**Consistency with the adopted contract.** The seed's plan arithmetic matches the contract's formulas:
+- segment costs [3, 4], committedBefore [0, 3], planTotal 7
+- false-guard attempted = 1 + |R(guard)| = 2
+- R6 holds: committed 3 = committedBefore[1], and 3 + 4 ≤ cap 64
+
+This is a check only; I am not voting on the seed's values.
+
+## Run acceptance (needed for the run to be ELIGIBLE)
+
+These rules decide how the run's outcome is read; they do not change the source.
+
+1. **Preconditions.** Frontend PASS means exit 0, no type or parse errors, and stderr preserved and classified. All three sources, the Node binary, `cli.js` and the inventory/resolution pins must be reread and unchanged. `proposed-itf/` must already exist and be empty; do not count on Quint creating it.
+2. **PASS requires all of the following:**
+   - exit 0
+   - no `captureInv` violation
+   - `publishedWitness` witnessed in 1 of 1 explored traces
+   - exactly one ITF file in `proposed-itf/`
+   - that ITF has exactly 2 states
+   - state 1 has `machine.phase` = Published and `records` of length 1
+
+   Anything else is FAIL, including an early stop with one state or 0% witnessed.
+3. **ITF filename.** Do not depend on how Quint substitutes `{seq}` in `--out-itf`. Record the actual filename and accept exactly one file.
+4. **Failure handling.** No retry with a different seed, flags or backend, and no fallback to old fixtures.
+
+## Bounded limitations
+
+- **Unresolved lexical question.** The record labels `action` and `from`, and the field accesses `.action` and `.from`, are spelled like Quint keywords. From source alone I cannot confirm that Quint 0.32 accepts keyword-spelled labels in record and field positions. The frontend operation is what decides this. Prior passing results were deliberately not relied on. `to` is a builtin, not a keyword; `e.to` without parentheses is a field access and is safe.
+- **What the run does and does not establish.** `captureInv`'s `falseAwaitPreserved` largely restates `publish`, so it is a self-consistency check, not an independent oracle. The run establishes:
+  - the seed is accepted against the B06 types
+  - `normalDomain` admits it
+  - one atomic publication with no source runtime charge
+  - a complete raw ITF for later comparison
+
+  It does not establish equality with the expected B06, owning or common-wire bodies. Those comparisons stay separate and later.
+- **Coverage.** Only the NotAdvanced/ResumeInput path is executed. The Ran, Failed, Start, `beginInvocation`, `accountFlow` and other witness definitions are only typechecked.
+- **Model scope.**
+  - No R0–R7, digest or cap checks; hashes are opaque carriers.
+  - `MAX_FINITE_UINT` is 1024 work units.
+  - `startBoundary` is unused on Resume.
+  - The model omits the envelope fields, accounting, `AboveU128`/`Unavailable`, and the Waiting `committed` field.
+- **Host premises.** Node and system native dependencies are assumed. HOME is unset; the TypeScript backend should not need it. Any Node deprecation output on stderr must be preserved.
+- **Not covered at all.** Evaluator, VM, clock, financial, security and EARS closure, and H2/H3/H4/H6/Error. The seed's independence is correlated with its source (same author and method), as already disclosed.

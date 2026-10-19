@@ -1,0 +1,69 @@
+module financialBoundary {
+  // General Core/2 source-boundary publication relation, not an expression VM.
+  // Admission, runtime evaluation, static costs and emit_checked are premises.
+  type Scalar = UIntValue(int) | BoolValue(bool)
+  type ScalarType = UIntType | BoolType
+  type OptionalUInt = NoUInt | SomeUInt(int)
+  type OptionalText = NoText | SomeText(str)
+  type OptionalScalar = NoScalar | SomeScalar(Scalar)
+  type NamedValue = {name: str, value: Scalar}
+  type AssetId = {network: str, issuer: str, reference: str, scale: int}
+  type Balance = {account: str, asset: AssetId, amount: int}
+  type Liability = {name: str, asset: AssetId, debtor: str, creditor: str, amount: int}
+  type Snapshot = {state: str -> Scalar, balances: List[Balance], liabilities: List[Liability]}
+  type Scenario = {state: str -> Scalar, inputs: str -> Scalar, balances: List[Balance], liabilities: List[Liability]}
+  type Effect = StateEffect({name: str, before: Scalar, after: Scalar})
+    | TransferEffect({asset: AssetId, from: str, to: str, amount: int})
+    | FeeEffect({asset: AssetId, from: str, to: str, amount: int})
+    | LiabilityEffect({name: str, asset: AssetId, debtor: str, creditor: str, before: int, after: int})
+    | EmitEffect({name: str, value: Scalar})
+  type NetFlow = Balanced | Inflow(int) | Outflow(int)
+  type AccountFlow = {asset: AssetId, account: str, transferDebit: int, transferReceipts: int,
+    feeDebit: int, feeReceipts: int, grossDebit: int, grossReceipts: int, netFlow: NetFlow}
+  type InputDecl = {name: str, ty: ScalarType}
+  type Statement = AwaitStatement({label: str, binders: List[InputDecl], guard: int})
+    | LetStatement({name: str, value: int}) | RequiresStatement(int) | EnsuresStatement(int)
+    | NextStatement({state: str, value: int}) | EmitStatement({name: str, value: int})
+    | TransferStatement({asset: str, from: str, to: str, amount: int})
+    | FeeStatement({asset: str, from: str, to: str, amount: int})
+    | LiabilityStatement({name: str, asset: str, debtor: str, creditor: str, amount: int})
+    | DischargeStatement({name: str, amount: int})
+  type Step = {index: int, statement: Statement, value: OptionalScalar, snapshot: Snapshot, effects: List[Effect]}
+  type Execution = {semantics: str, actionName: str, pre: Snapshot, post: Snapshot, steps: List[Step], effects: List[Effect]}
+  type PendingFrame = {site: int, captures: List[NamedValue]}
+  type Segment = {actionName: str, framePre: PendingFrame, framePost: PendingFrame, execution: Execution}
+  type StageLogical = {profile: str, cap: OptionalUInt, committed: int}
+  type Continuation = {format: str, programHash: str, planHash: str, actionName: str,
+    site: int, captures: List[NamedValue], logical: StageLogical, boundary: Snapshot}
+  type StageEvent = {format: str, actionName: str, label: str, values: List[NamedValue]}
+  type SourceError = {code: str, message: str, offset: OptionalUInt, step: OptionalUInt}
+  type OptionalSegment = NoSegment | SomeSegment(Segment)
+  type StageResult = Waiting({advanced: bool, segment: OptionalSegment, continuation: Continuation, attempted: int, residual: List[Liability]})
+    | Complete({segment: Segment, committed: int, attempted: int, residual: List[Liability]})
+    | Rejected({error: SourceError, attempted: int, committed: int})
+  type AwaitPrefix = WaitingPrefix({advanced: bool, actionName: str, site: int,
+      captures: List[NamedValue], logical: StageLogical, committedBoundary: Snapshot,
+      residual: List[Liability], publishedSegment: OptionalSegment, attempted: int})
+    | CompletePrefix | RejectedNoReturnedCheckpoint
+  type CaptureOrigin = InputOrigin | LetOrigin | EventOrigin
+  type CaptureSlot = {name: str, ty: ScalarType, origin: CaptureOrigin, ordinal: int}
+  type AwaitSite = {site: int, ordinal: int, label: str, binders: List[InputDecl], captures: List[CaptureSlot]}
+  type ActionPlan = {actionName: str, statementCount: int, sites: List[AwaitSite],
+    segmentCosts: List[int], committedBefore: List[int], planTotal: int}
+  type Identity = {programHash: str, planHash: str, actionName: str, semantics: str}
+  type InvocationInput = StartInput({actionName: str, scenario: Scenario, cap: OptionalUInt})
+    | ResumeInput({continuation: Continuation, event: StageEvent, cliAction: OptionalText, cliCap: OptionalUInt})
+  // Runtime carries no tentative state on failure. Do not synthesize one.
+  type RuntimeRun = NotAdvanced
+    | Ran({execution: Execution, exitSite: int, capturesOut: List[NamedValue]})
+    | Failed(SourceError)
+  type RuntimeEvidence = {runtimeResult: RuntimeRun, attempted: int}
+  type Invocation = {identity: Identity, plan: ActionPlan, guardCosts: int -> int,
+    input: InvocationInput, startBoundary: Snapshot, runtime: RuntimeEvidence}
+  type OptionalResult = NoResult | Result(StageResult)
+  type OptionalPrefix = NoPrefix | Prefix(AwaitPrefix)
+  type Record = {invocation: Invocation, result: StageResult, awaitPrefix: AwaitPrefix}
+  type Phase = Ready | Published
+  type Machine = {current: Invocation, phase: Phase, result: OptionalResult,
+    awaitPrefix: OptionalPrefix, records: List[Record], observedAttempted: int}
+  var machine: Machine

@@ -257,9 +257,24 @@ def core2_observation(document):
             'awaitPrefix': core2_await_prefix(document['awaitPrefix'])}
 
 
+def _canonical_action_keys(value):
+    """Restore B06's lexical alias in normalized result/prefix records only.
+
+    Snapshot state maps already are name/value rows. This is not applied to raw
+    records or Invocation input maps, whose user-chosen keys stay unchanged.
+    """
+    if type(value) is list:
+        return [_canonical_action_keys(item) for item in value]
+    if type(value) is not dict:
+        return value
+    return {'action' if key == 'actionName' else key: _canonical_action_keys(item)
+            for key, item in value.items()}
+
+
 def quint_record_observation(record):
-    return {'schema': SCHEMA, 'profile': PROFILE, 'result': quint_typed_wire(record['result']),
-            'awaitPrefix': quint_typed_wire(record['awaitPrefix'])}
+    return {'schema': SCHEMA, 'profile': PROFILE,
+            'result': _canonical_action_keys(quint_typed_wire(record['result'])),
+            'awaitPrefix': _canonical_action_keys(quint_typed_wire(record['awaitPrefix']))}
 
 
 def supplied_itf_record(document, state_ordinal, record_index):
