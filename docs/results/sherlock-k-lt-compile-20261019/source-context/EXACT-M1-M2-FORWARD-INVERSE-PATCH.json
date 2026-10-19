@@ -1,0 +1,112 @@
+{
+  "changes": [
+    {
+      "file": "context/PUBLIC-LT-API.json",
+      "pointer": "/events_granularity",
+      "op": "replace",
+      "old": "Exactly one appended operation-specific event per advancing ngStep; terminal Halted/OutsideModel ngStep is unchanged. ngAdvance observer count is not A/B/fuel/work. Add/Call/Match/Construct each have explicit start events; fields/args/scrutinee/body/function returns are separate events. Arm selection attempts one source arm per ngStep, emitting miss or selected; selected body actually evaluated. ngFinished publishes top-level Return without claiming A80 charge.",
+      "new": "Exactly one appended operation-specific event per advancing ngStep; terminal ngHalted(_), ngOutsideModel(_) and ngLtError(_,_,11) ngStep is the identical complete state with no appended event; ngAdvance at these terminals also preserves state (including any positive observation bound), and ngObserve stops without a terminal-stutter row. ngAdvance observer count is not A/B/fuel/work. Add/Call/Match/Construct each have explicit start events; fields/args/scrutinee/body/function returns are separate events. Arm selection attempts one source arm per ngStep, emitting miss or selected; selected body actually evaluated. ngFinished publishes top-level Return without claiming A80 charge."
+    },
+    {
+      "file": "context/PUBLIC-LT-API.json",
+      "pointer": "/extension_profile/terminal_controls",
+      "op": "add",
+      "new": [
+        "ngHalted(_)",
+        "ngOutsideModel(_)",
+        "ngLtError(_,_,11)"
+      ]
+    },
+    {
+      "file": "context/PUBLIC-LT-API.json",
+      "pointer": "/extension_profile/Lt_error_boundary_stutter",
+      "op": "add",
+      "new": {
+        "ngStep": "ngStep(ngState(P,ngLtError(E,O,11),Rho,Fs,Es)) is exactly ngState(P,ngLtError(E,O,11),Rho,Fs,Es); no event appended.",
+        "ngAdvance": "ngAdvance at bound0 returns exact input; any positive bound on ngLtError(E,O,11) returns the identical complete state; no event appended.",
+        "ngObserve": "Stops upon ngTerminal(ngLtError(E,O,11)) and returns the complete tape without invoking ngStep on that boundary and without a terminal-stutter state row.",
+        "scope": "Error-control observation boundary only, not P1 Rejected publication."
+      }
+    },
+    {
+      "file": "context/PUBLIC-LT-API.json",
+      "pointer": "/extension_profile/nonterminal_Lt_controls",
+      "op": "add",
+      "new": {
+        "ngLtPrimitiveValue(E,O,V)": "Always nonterminal. Bool V steps to ngReturn(V) with ngLtPrimitiveReturned event; non-Bool V steps to OutsideModel using declared reason token.",
+        "ngLtPrimitiveError(E,O,Code)": "Always nonterminal. Code11 steps to terminal ngLtError(E,O,11) with ngLtPrimitiveFailed event; any other code steps to OutsideModel using declared reason token.",
+        "ngLtError(E,O,Code) when Code != 11": "Nonterminal; one ngStep goes to OutsideModel using declared reason token."
+      }
+    },
+    {
+      "file": "context/PUBLIC-LT-API.json",
+      "pointer": "/extension_profile/OutsideModel_reason_tokens",
+      "op": "add",
+      "new": {
+        "malformed_scalar_operand": "lt_operand_outside_UInt128_admitted_domain",
+        "nonBool_primitive_value_carrier": "lt_primitive_value_carrier_not_Bool",
+        "non11_primitive_error_carrier": "lt_primitive_error_code_outside_profile",
+        "non11_error_boundary_carrier": "lt_error_boundary_code_outside_profile"
+      }
+    },
+    {
+      "file": "FINITE-VALIDATION-PROPOSAL.json",
+      "pointer": "/finite_falsifiable_predicates",
+      "op": "replace",
+      "old": [
+        "Only compare canonical UInt128 by mathematical unsigned order and strict Bool result; no overflow10.",
+        "Wrong canonical kind -> error11 completion/primitive/error-boundary, not OutsideModel malformed or P1 rejection.",
+        "Scalar out-of-range and malformed internal result carrier -> explicit OutsideModel, with pending/outer full frames/maps/program preserved.",
+        "Bool success under typed function-return and pending Bool constructor field preserves caller source identities/ordered fields; subsequent base return restores caller map.",
+        "Error boundary retains ALL outer frames/current saved Lt environment; no fake success return or caller unwind.",
+        "Complete decoded states retain every program/map/frame/event/source occurrence; no result-only normalization.",
+        "Observer stops once at stable ngLtError11 and does not append terminal stutters.",
+        "Baseline old program forms remain available through unchanged imports; no old passing corpus replay authorized."
+      ],
+      "new": [
+        "Only compare canonical UInt128 by mathematical unsigned order and strict Bool result; no overflow10.",
+        "Wrong canonical kind -> error11 completion/primitive/error-boundary, not OutsideModel malformed or P1 rejection.",
+        "Using the existing ngObserve(ngInitial(...),budget) renderer envelope, renderable UInt values >=2^128 can exercise the scalar-malformed rule: OutsideModel with pending LtRight and complete outer frames/map/program retained. Negative raw UInt and malformed internal completion controls are source-reviewed only, not runtime-falsified in this envelope.",
+        "Bool success under typed function-return and pending Bool constructor field preserves caller source identities/ordered fields; subsequent base return restores caller map.",
+        "Error boundary retains ALL outer frames/current saved Lt environment; no fake success return or caller unwind.",
+        "Complete decoded states retain every program/map/frame/event/source occurrence; no result-only normalization.",
+        "Observer stops once at stable ngLtError11 and does not append terminal stutters.",
+        "Baseline old program forms remain available through unchanged imports; no old passing corpus replay authorized."
+      ]
+    },
+    {
+      "file": "FINITE-VALIDATION-PROPOSAL.json",
+      "pointer": "/query_envelope_scope",
+      "op": "add",
+      "new": {
+        "current_only_query": "ngObserve(ngInitial(NGProgram,Map),nonnegative observation_budget)",
+        "render_input_numeric_domain": "nat() rejects negative integers; only nonnegative UInt >=2^128 can exercise out-of-range scalar definedness in this envelope.",
+        "observer_terminal_behavior": "Observer can test stopping at reachable ngLtError11; it does not invoke ngStep/ngAdvance on a terminal and therefore cannot runtime-falsify stutter.",
+        "future_execution_status": "All listed runtime predicates remain prospective/unrun; the immediate separate proposal selects compile only, with no renderer/kast/reduce/observer/expected-body read."
+      }
+    },
+    {
+      "file": "FINITE-VALIDATION-PROPOSAL.json",
+      "pointer": "/source_review_only_not_runtime_falsified",
+      "op": "add",
+      "new": [
+        "ngStep/ngAdvance identical-state/no-event stutter at ngLtError11: observer stops before invoking these.",
+        "Negative raw ngUInt branch: current nat() serializer rejects negative integers.",
+        "Non-Bool ngLtPrimitiveValue, non-11 ngLtPrimitiveError and non-11 ngLtError carriers: unreachable from ngInitial by the current rules. Their OutsideModel reasons/behavior are source reviewed only."
+      ]
+    },
+    {
+      "file": "FINITE-VALIDATION-PROPOSAL.json",
+      "pointer": "/direct_state_query_status",
+      "op": "add",
+      "new": "NOT PROPOSED. Any direct-state query capable of these source-only cases would need a separately specified and reviewed operation envelope; no runner/direct-state extension is made here."
+    }
+  ],
+  "forward_whole_JSON_equal": true,
+  "inverse_whole_JSON_equal": true,
+  "serialization_rule": "json.dumps(indent=2,ensure_ascii=False)+newline reconstructs original and revised exactbytes",
+  "only_changed_candidate_paths": [
+    "context/PUBLIC-LT-API.json",
+    "FINITE-VALIDATION-PROPOSAL.json"
+  ]
+}

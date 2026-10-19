@@ -1,0 +1,111 @@
+# SOURCE = REQUEST_CHANGES
+
+**The K rule bodies need no changes.** The three new `.k` files are approvable as written. The two mandatory fixes are in the public API and the validation proposal. As written, those artifacts would mislead the independent oracle author and claim runtime falsification that the proposed envelope cannot deliver. Once those two document fixes land, this converts to APPROVE without re-review of the K bodies.
+
+**Scope of this judgment.** This is a source-only reading of the bodies exactly as pasted. I did not recompute any byte counts or sha256 digests. I did not compile, parse, reduce, or run anything. This is not K validation, eligibility for any operation, B/native correspondence, or global acceptance.
+
+---
+
+## Verified in source
+
+**Syntax and module structure**
+- `SHERLOCK-NOMINAL-LT-SYNTAX` only adds new constructors to `NGExpr`, `NGFrame`, `NGControl` and `NGEvent`. No existing constructor is redeclared.
+- Both semantic modules import `PRODUCT-SYNTAX`. This diamond import is harmless, and a repeated `requires` of the same file is deduplicated.
+- Adding rules in a new module to the base's `[function]` symbols (`ngOccurrence`, `ngEvaluate`, `ngStep`, `ngTerminal`, `ngAdvance`) is legitimate K.
+- `ngOccurrence` is the only base function that needed an `ngLt` case. That case is needed by `ngLetBound`, `ngBranchSelected` and `ngConstructorFieldReturned` when the active or bound expression is an Lt.
+
+**No overlap with existing rules**
+- New `ngStep` rules match only on the new frames (`ngLtLeft`, `ngLtRight`) or the new controls. None overlaps a base rule.
+- `ngAdvance` on `ngLtError(_,_,11)` is disjoint from the base generic rule because `ngTerminal` is true there.
+- The rules for code 11 and for any other code are disjoint in all three places they appear: `ngTerminal`, `ngStep` on `ngLtError`, and `ngStep` on `ngLtPrimitiveError`.
+
+**`ngCompleteLt` is a total, disjoint partition**
+- **Success (A):** both operands are `ngUInt` in [0, 2^128).
+- **Sort error 11 (B):** neither operand is malformed, and they are not both `UInt`.
+- **OutsideModel (C):** at least one operand is malformed.
+- A ∧ C and B ∧ C are excluded by the range and malformedness guards. A ∧ B is excluded because B requires not-both-`UInt`.
+- Coverage: if neither operand is malformed and both are `UInt`, they are in range, so A applies.
+- `ngLtMalformedUInt` and `ngIsUInt` are total over the three `NGValue` constructors.
+- There is no overflow-10 path.
+- The comparison is unsigned mathematical `<Int`.
+- No fixture or case IDs appear in any semantic rule. 2^128 is the only constant.
+
+**Operand order matches the normative B behaviour**
+- Both operands are evaluated before any kind check. This matches B, where the Scalar helper runs only at `RetRight`.
+
+**Source identity, environment and frame retention**
+- Completion pops only the Lt frame. Success, sort error and the primitive steps all keep the full outer frame stack `Fs`.
+- The `ngState` program component is never rewritten.
+- On success, `ngReturn(ngBool)` reaches the unchanged typed `FunctionReturn`, `ConstructorFields`, `Condition`, `LetValue` and `ArmScope` rules, and `ngNoFrames` then halts.
+- The error path stops at `ngLtError(E,O,11)`. It keeps the saved Lt environment and every outer frame, does not unwind, and does not fake a return.
+
+**Terminal stutter and observer**
+- **Stutter:** on `ngLtError` with code 11, `ngStep` and `ngAdvance(N>0)` both return the identical state and append no event.
+- **Observer:** `SHERLOCK-NOMINAL-PRODUCT-OBSERVATIONS` is reused unchanged and sees the new `ngTerminal` rules through the main module. It stops exactly once at the error boundary.
+- **Event count:** every advancing step appends exactly one event; for `ngOutside`, that event is `ngOutsideEvent`.
+
+**API, registry and adapter coverage**
+- I checked by hand that the API's frame, control and event lists match the combined syntax file in names, counts and arities:
+  - frames: 12 of 12
+  - controls: 10 of 10
+  - events: 30 of 30
+- Every new event payload in the rules uses the same field order as the API.
+- `complete_k_wire` decodes `ngLt` and treats only code 11 as terminal, consistent with K.
+- `render_input` encodes `Lt` and keeps its exact-key checks.
+- The combined syntax snapshot's size (6161 = 5090 + 1 + 1070) is consistent with the two compiled syntax files plus a separator line.
+
+---
+
+## Mandatory fixes
+
+**M1. `PUBLIC-LT-API.json` contradicts the new terminal set and leaves the oracle under-specified.**
+- `events_granularity` still says "terminal Halted/OutsideModel ngStep is unchanged".
+- `extension_profile` does not declare:
+  - that `ngLtError(_,_,11)` is terminal;
+  - the exact `ngStep`/`ngAdvance` stutter with no event;
+  - that `ngObserve` stops there without a stutter row;
+  - that non-11 `ngLtError`, non-11 `ngLtPrimitiveError` and non-Bool `ngLtPrimitiveValue` are non-terminal and step to OutsideModel.
+- The oracle author is meant to work only from this API and natural contracts. They also need the four new OutsideModel reason strings as declared tokens:
+  - `lt_operand_outside_UInt128_admitted_domain`
+  - `lt_primitive_value_carrier_not_Bool`
+  - `lt_primitive_error_code_outside_profile`
+  - `lt_error_boundary_code_outside_profile`
+- Without those strings they cannot freeze complete expected OutsideModel states.
+- **Fix:** add these declarations to the API's extension profile. They are declarations, not expected outputs.
+
+**M2. `FINITE-VALIDATION-PROPOSAL.json` claims predicates that cannot be falsified in the only proposed envelope.**
+The only query `render_input` emits is `ngObserve(ngInitial(..), budget)`. Within that envelope:
+- A non-Bool `ngLtPrimitiveValue`, a non-11 `ngLtPrimitiveError` and a non-11 `ngLtError` are unreachable from `ngInitial`.
+- The `ngStep`/`ngAdvance` stutter is never invoked, because the observer stops before stepping a terminal state.
+- Negative raw `ngUInt` cannot be rendered, because `nat()` rejects it. Only values ≥ 2^128 can exercise the malformed-scalar rule.
+
+**Fix:** mark these behaviours as reviewed in source only and not runtime-falsified. Restrict the out-of-range predicate to ≥ 2^128. Alternatively, propose a separately reviewed direct-state query, but that would be a runner change, which this packet disclaims.
+
+---
+
+## Pre-compile freeze conditions (Root, not source fixes)
+
+- The adapter registry is built from `context/COMPLETE-LT-CONSTRUCTOR-SYNTAX.k.txt`, but K compiles the two separate syntax files.
+  - Add a byte-equality readback: combined file == `nominal-product-syntax.k` + `"\n"` + `normal-lt-syntax.k`.
+  - Pin `--syntax` to the combined file in the frozen argv.
+- The new main module has no `-SYNTAX` companion module. Freeze the exact kompile syntax-module behaviour, so the parser sees `ngLt`, `ngObserve` and `ngInitial`, using the same convention as the base compile.
+
+---
+
+## Non-blocking
+
+1. **Rule C rebuilds the pre-step state using `Saved` for the environment instead of the actual pre-step environment.** This matches the precedent in `ngFinishAdd`. I traced the invariant that every `ngReturn` carries the environment that was current at the matching `ngEval`, across all 9 expression forms and all frame kinds. So the two are equal on every state reachable from `ngInitial`. Binding the actual environment instead of `_` would remove the dependence on that invariant.
+2. **`nominal_trace_codec.encode`/`decode` gained `Lt` but still lack `Let`/`If`.** They are unselected, since `render_input` uses only `configure`, `API`, `REG` and `parse_printed`. Either revert the `Lt` additions or label both helpers obsolete, so that no future runner picks up a partial path.
+3. **`CompleteKWire.__init__` checks only API ⊆ registry.** Adding the reverse check (registry constructors in each group ⊆ API) would make the coverage I checked by hand mechanical.
+4. **The normative packet omits the phase-First binary visit row.** The claim that a wrong-kind *left* operand gives error 11 therefore rests on S6 and `site_result_sets`, not on an included transition row.
+
+---
+
+## Unobserved limitations
+
+- No K compile, parse or reduction has been done. Everything new is uncompiled, and the old compiled definition cannot be reused.
+- No ProgramView→NGProgram Lt port, primary/K Lt boundary relation, physical-B projection, or K/B clock, work, fuel or cost identity.
+- P1 `Rejected(11)` publication is not modelled. `ngLtError` is only an observation boundary.
+- Nominal canonicality and admission are input premises. No malformed-nominal, admission or guard claim is made.
+- No independent oracle exists yet. The author's earlier Lt ledgers are same-author and method-correlated. A different author must freeze expectations from the API (with M1 applied) before any execution.
+- The queued 12-source / 21-operation packet is untouched and not replayed. This review grants no acceptance of it.

@@ -1,3 +1,7 @@
+## Current user priority — October 19 stagenet recursion
+
+Deploy Sherlock to Midnight stagenet and validate a real recursive proof. Use a Fenrir-derived synthetic rollup as the main feasibility/performance experiment; measure actual circuit degree k and per-layer resource/validation performance. Recover the [current loop](docs/sherlock/implementation-loop.md), [experiment](docs/sherlock/stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md) before historical queues. A literal proof is a prerequisite and does not establish recursion. Maintain the existing full goal, source/resource rules, permanent formal/handwritten lanes, local CI and graph-first recovery.
+
 ## Narrow native P9 reviewer exception — October19UTC
 
 The user authorizes fresh Gemini or Muse review of the prepared native-build public-cache recovery and exact metadata-issuer items after three Opus interruptions returned no verdict. This changes only those two reviewer routes. See [the scoped assignment](raw/assignments/sherlock-native-p9-reviewer-exception-2026-10-19.md). All other security ownership, source, limits and acceptance requirements remain unchanged.
