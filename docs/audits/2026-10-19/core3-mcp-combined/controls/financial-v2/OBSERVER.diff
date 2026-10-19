@@ -1,0 +1,267 @@
+--- prior-four-normal-observe.py
++++ new-six-financial-observe.py
+@@ -1,41 +1,224 @@
++"""Six fixed ordinary public observations; preparation never executes this driver."""
+ from pathlib import Path
+-import datetime,hashlib,json,os,signal,subprocess,time
+-D=Path(__file__).resolve().parent
+-sha=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
+-write=lambda n,o:(D/n).write_text(json.dumps(o,indent=2)+'\n')
+-p=json.loads((D/'PLAN.json').read_bytes());assert sha(__file__)==p['driverSha256']
+-source=json.loads(Path(p['sourcePins']).read_bytes());expected=[]
+-def verify():
+- assert sha(p['binary'])==p['binarySha256']
+- assert sha(Path(p['oracle'])/'FREEZE-MANIFEST.json')==p['oracleFreezeSha256']
+- for x in source:
+-  f=Path(p['checkout'])/x['path'];assert f.stat().st_size==x['bytes'] and sha(f)==x['sha256'],x['path']
+- for x in p['inputs']:
+-  f=Path(p['cwd'])/x['name'];assert f.stat().st_size==x['bytes'] and sha(f)==x['sha256']
+- for x in json.loads((Path(p['oracle'])/'FREEZE-MANIFEST.json').read_bytes())['artifacts']:
+-  f=Path(p['oracle'])/x['path'];assert f.stat().st_size==x['bytes'] and sha(f)==x['sha256']
+-verify();assert not (D/'START.json').exists();write('START.json',{'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'planSha256':sha(D/'PLAN.json'),'attemptConsumed':True})
+-rows=[]
+-for spec in p['cases']:
+- folder=D/spec['id'];folder.mkdir();started=time.monotonic();expired=False
+- argv=['/usr/bin/timeout','--signal=TERM','--kill-after=2s','10s',p['binary'],'--color','never',*spec['args']]
+- with (folder/'stdout.log').open('wb') as out,(folder/'stderr.log').open('wb') as err:
+-  c=subprocess.Popen(argv,cwd=p['cwd'],env=p['environment'],stdin=subprocess.DEVNULL,stdout=out,stderr=err,start_new_session=True)
+-  write(spec['id']+'/CHILD.json',{'pid':c.pid,'ownedSession':c.pid})
+-  try:c.wait(timeout=12)
+-  except subprocess.TimeoutExpired:
+-   expired=True
+-   try:os.killpg(c.pid,signal.SIGKILL)
+-   except ProcessLookupError:pass
+-   c.wait(timeout=2)
+- census=subprocess.run(['/usr/bin/ps','--sid',str(c.pid),'-o','pid=,sid=,stat='],capture_output=True,text=True,timeout=1);assert census.returncode in (0,1)
+- raw=(folder/'stdout.log').read_bytes();expect=json.loads((Path(p['oracle'])/spec['object']).read_bytes())
+- parse_error=None
+- try:actual=json.loads(raw);object_match=actual==expect
+- except Exception as e:parse_error=type(e).__name__;actual=None;object_match=False
+- wire_match=None if spec['wire'] is None else raw==(Path(p['oracle'])/spec['wire']).read_bytes()
+- row={'id':spec['id'],'argv':argv,'exit':c.returncode,'wallSeconds':time.monotonic()-started,'parentDeadlineExceeded':expired,'ownedSessionRemaining':census.stdout.splitlines(),'parseError':parse_error,'completeObjectMatch':object_match,'predictedRawStdoutMatch':wire_match,'stderrBytes':(folder/'stderr.log').stat().st_size,'stdoutSha256':sha(folder/'stdout.log'),'stderrSha256':sha(folder/'stderr.log'),'actual':actual,'scope':'Conditional proposed D1/D2/D3 object comparison, not adopted source/runtime conformance or native acceptance'}
+- write(spec['id']+'/RESULT.json',row);rows.append(row)
+-verify();result={'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'binarySha256':p['binarySha256'],'sourcePinsBeforeAfter':len(source),'oracleFreezeSha256':p['oracleFreezeSha256'],'cases':rows,'allFourCompleteObjectsMatch':all(x['exit']==0 and x['completeObjectMatch'] and x['parseError'] is None and not x['ownedSessionRemaining'] for x in rows),'allPredictedRawBytesMatch':all(x['predictedRawStdoutMatch'] is not False for x in rows),'scope':'Complete conditional empty check/inspect/start/manifest observations only. Start/manifest wire predicted; check/inspect raw wire and nonquietmanifeststderr not independentlyspecified. Fullfinancial/compiler/native/parentexits unchanged.'}
+-write('RESULT.json',result);print(json.dumps(result,indent=2))
+-assert result['allFourCompleteObjectsMatch'] and result['allPredictedRawBytesMatch']
++import argparse
++import datetime
++import hashlib
++import json
++import os
++import shutil
++import signal
++import subprocess
++import tempfile
++import time
++
++D = Path(__file__).resolve().parent
++
++
++def sha(path):
++    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
++
++
++def now():
++    return datetime.datetime.now(datetime.timezone.utc).isoformat()
++
++
++def write(path, value):
++    Path(path).write_text(json.dumps(value, indent=2, ensure_ascii=True) + '\n')
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--plan-sha', required=True)
++    args = parser.parse_args()
++    assert sha(D / 'PLAN.json') == args.plan_sha
++    plan = json.loads((D / 'PLAN.json').read_bytes())
++    assert plan['ready'] is True, 'Root must bind actual combined binary/build/source identities first.'
++    assert sha(__file__) == plan['driverSha256']
++    checkout = Path(plan['checkout'])
++    oracle = Path(plan['oracle'])
++    cycle = Path(plan['actualOutput'])
++    assert checkout.is_absolute() and cycle.parent == D.parent and not cycle.exists()
++    tools = {t['name']: t for t in plan['toolPins']}
++    assert str(Path(os.sys.executable).resolve()) == tools['python']['resolved']
++    source_record = Path(plan['sourcePins'])
++    source_value = json.loads(source_record.read_bytes())
++    source = source_value['files'] if isinstance(source_value, dict) else source_value
++    oracle_manifest = json.loads((oracle / 'FREEZE-MANIFEST.json').read_bytes())
++    assert len(plan['calls']) == 6 and len(oracle_manifest['artifacts']) == 59
++
++    def verify():
++        assert sha(D / 'PLAN.json') == args.plan_sha
++        assert sha(__file__) == plan['driverSha256']
++        assert sha(source_record) == plan['sourcePinsSha256']
++        assert sha(plan['binary']) == plan['binarySha256']
++        for tool in tools.values():
++            assert str(Path(tool['path']).resolve()) == tool['resolved']
++            assert sha(tool['resolved']) == tool['sha256']
++        for row in plan['controlPins']:
++            assert sha(row['path']) == row['sha256']
++        assert sha(oracle / 'FREEZE-MANIFEST.json') == plan['oracleFreezeSha256']
++        for row in oracle_manifest['artifacts']:
++            q = oracle / row['path']
++            assert q.stat().st_size == row['bytes'] and sha(q) == row['sha256']
++        pinned_paths = {row['path'] for row in source}
++        assert plan['sourceCoverageRoots']
++        for relative in plan['sourceCoverageRoots']:
++            for q in (checkout / relative).rglob('*'):
++                if q.is_file():
++                    assert str(q.relative_to(checkout)) in pinned_paths, str(q)
++        for row in source:
++            q = checkout / row['path']
++            assert q.stat().st_size == row['bytes'] and sha(q) == row['sha256']
++        return {'at': now(), 'sourceFiles': len(source), 'oracleArtifacts': 59,
++                'binarySha256': plan['binarySha256'], 'fullPinsVerified': True}
++
++    before = verify()  # No subject process or owned output exists on failed preflight.
++    cycle.mkdir(exist_ok=False)
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-core3-financial-observer-'))
++    cwd = root / 'cwd'
++    for name in ['cwd', 'tmp', 'cargo-home']:
++        (root / name).mkdir()
++    for row in plan['copyFiles']:
++        target = cwd / row['target']
++        target.parent.mkdir(parents=True, exist_ok=True)
++        target.write_bytes((oracle / row['oracle']).read_bytes())
++        assert sha(target) == row['sha256']
++    (cwd / 'actual').mkdir()
++    environment = dict(plan['environmentTemplate'])
++    environment = {k: v.replace('{OWNED_ROOT}', str(root)) for k, v in environment.items()}
++    assert len(environment) == 13 and not any(k.startswith('MORI_') for k in environment)
++    write(cycle / 'START.json', {'at': now(), 'planSha256': args.plan_sha,
++          'sourceBefore': before, 'ownedRoot': str(root), 'environment': environment,
++          'subjectCalls': 0, 'noAutomaticRetry': True})
++    rows = []
++    chain = {}
++    all_owned_empty = True
++    top_error = None
++    after = None
++
++    def observe(spec):
++        nonlocal all_owned_empty
++        folder = cycle / spec['id']
++        folder.mkdir()
++        if spec.get('requiresActual') and spec['requiresActual'] not in chain:
++            row = {'id': spec['id'], 'subjectStarted': False,
++                   'blocked': 'Required actual prior stdout continuation unavailable; no expected replacement.'}
++            write(folder / 'RESULT.json', row)
++            return row, None
++        argv = [tools['timeout']['path'], '--signal=TERM', '--kill-after=2s', '10s',
++                plan['binary'], '--color', 'never', *spec['args']]
++        write(folder / 'PLAN.json', {'at': now(), 'argv': argv, 'cwd': str(cwd),
++              'environment': environment, 'actualContinuationInput': chain.get(spec.get('requiresActual'))})
++        child = None
++        expired = False
++        reaped = False
++        phase_error = None
++        started = time.monotonic()
++        with (folder / 'stdout.log').open('wb') as out, (folder / 'stderr.log').open('wb') as err:
++            try:
++                child = subprocess.Popen(argv, cwd=cwd, env=environment, stdin=subprocess.DEVNULL,
++                                         stdout=out, stderr=err, start_new_session=True)
++                write(folder / 'CHILD.json', {'pid': child.pid, 'ownedSession': child.pid})
++                try:
++                    child.wait(timeout=12)
++                    reaped = True
++                except subprocess.TimeoutExpired:
++                    expired = True
++                    try:
++                        os.killpg(child.pid, signal.SIGKILL)
++                    except ProcessLookupError:
++                        pass
++                    child.wait(timeout=2)  # Existing observer's bounded kill collection, no retry.
++                    reaped = True
++            except BaseException as error:
++                phase_error = {'type': type(error).__name__, 'message': str(error)}
++        terminal = {'id': spec['id'], 'at': now(), 'argv': argv,
++                    'subjectStarted': child is not None, 'exit': child.returncode if child else None,
++                    'wallSeconds': time.monotonic() - started, 'parentDeadlineExceeded': expired,
++                    'directChildReaped': reaped, 'phaseError': phase_error,
++                    'stdoutPath': str(folder / 'stdout.log'), 'stderrPath': str(folder / 'stderr.log')}
++        write(folder / 'TERMINAL.json', terminal)  # Before census, parsing, comparison or hashes.
++        write(folder / 'RESULT.json', terminal)
++        members = [] if child is None else None
++        census_error = None
++        if child is not None:
++            try:
++                census = subprocess.run([tools['ps']['path'], '--sid', str(child.pid), '-o', 'pid=,sid=,stat='],
++                                        env=environment, capture_output=True, text=True, timeout=1)
++                assert census.returncode in (0, 1)
++                members = census.stdout.splitlines()
++            except BaseException as error:
++                census_error = type(error).__name__
++            if members != []:
++                try:
++                    os.killpg(child.pid, signal.SIGKILL)
++                except ProcessLookupError:
++                    pass
++                except OSError as error:
++                    census_error = type(error).__name__
++        clean = members == [] and (child is None or reaped)
++        all_owned_empty &= clean
++        raw = (folder / 'stdout.log').read_bytes()
++        stderr = (folder / 'stderr.log').read_bytes()
++        actual = None
++        parse_error = None
++        try:
++            actual = json.loads(raw)
++        except Exception as error:
++            parse_error = {'type': type(error).__name__, 'message': str(error)}
++        expected = json.loads((oracle / spec['object']).read_bytes())
++        wire_match = raw == (oracle / spec['wire']).read_bytes()
++        row = dict(terminal, ownedSessionRemaining=members, censusError=census_error,
++                   stdoutSha256=sha(folder / 'stdout.log'), stderrSha256=sha(folder / 'stderr.log'),
++                   stderrBytes=len(stderr), parseError=parse_error, actual=actual,
++                   completeObjectMatch=actual == expected, exactRawStdoutMatch=wire_match,
++                   expectedExitMatch=terminal['exit'] == spec['exit'],
++                   stderrMatch=None if spec['stderr'] is None else stderr == spec['stderr'].encode('utf-8'),
++                   scope='Whole conditional financial report/wire observation; not adoption or acceptance.')
++        write(folder / 'RESULT.json', row)
++        if (spec.get('saveActual') and child is not None and terminal['exit'] == 0 and not expired
++                and clean and isinstance(actual, dict) and isinstance(actual.get('continuation'), dict)):
++            # Only actual stdout supplies successor state; expected values never enter this branch.
++            target = cwd / spec['saveActual']
++            encoded = (json.dumps(actual['continuation'], sort_keys=True, ensure_ascii=True) + '\n').encode('ascii')
++            target.write_bytes(encoded)
++            (folder / 'actual-continuation.json').write_bytes(encoded)
++            provenance = {'fromActualStdout': str(folder / 'stdout.log'), 'stdoutSha256': sha(folder / 'stdout.log'),
++                          'jsonPointer': '/continuation', 'stagedPath': str(target), 'sha256': sha(target),
++                          'hostSerializationOnly': True, 'expectedContinuationUsed': False}
++            write(folder / 'CONTINUATION-CUSTODY.json', provenance)
++            chain[spec['saveActual']] = provenance
++        return row, actual
++
++    try:
++        for spec in plan['calls']:
++            row, _ = observe(spec)
++            rows.append(row)
++            write(cycle / 'ROWS.json', rows)  # Preserve each result regardless later mismatches.
++        after = verify()
++        for row in plan['copyFiles']:
++            assert sha(cwd / row['target']) == row['sha256']
++    except BaseException as error:
++        top_error = {'type': type(error).__name__, 'message': str(error)}
++    finally:
++        if all_owned_empty:
++            shutil.rmtree(root)
++        good = len(rows) == 6 and all(
++            row.get('subjectStarted') and row.get('exit') == 0 and row.get('directChildReaped')
++            and not row.get('parentDeadlineExceeded') and not row.get('phaseError')
++            and row.get('ownedSessionRemaining') == [] and not row.get('parseError')
++            and row.get('completeObjectMatch') and row.get('exactRawStdoutMatch')
++            and row.get('stderrMatch') is not False for row in rows)
++        result = {'at': now(), 'planSha256': args.plan_sha, 'sourceBefore': before, 'sourceAfter': after,
++                  'rows': rows, 'subjectCalls': sum(bool(row.get('subjectStarted')) for row in rows),
++                  'allSixWholeObjectsAndRawStdoutMatch': bool(good and not top_error),
++                  'ownedRoot': str(root), 'ownedRootExistsAfter': root.exists(), 'topError': top_error,
++                  'manifestStderrIndependentlySpecified': False, 'noAutomaticRetry': True,
++                  'scope': plan['scope']}
++        write(cycle / 'RESULT.json', result)
++        print(json.dumps(result, indent=2))
++    assert result['allSixWholeObjectsAndRawStdoutMatch'] and not root.exists(), 'Retained mismatch/failed observation; no retry.'
++
++
++if __name__ == '__main__':
++    main()

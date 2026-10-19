@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fixed six ordinary Core3 public financial observations",
+  "type": "object",
+  "required": [
+    "ready",
+    "driverSha256",
+    "checkout",
+    "binary",
+    "binarySha256",
+    "sourcePins",
+    "sourcePinsSha256",
+    "sourceCoverageRoots",
+    "controlPins",
+    "actualOutput",
+    "oracle",
+    "oracleFreezeSha256",
+    "toolPins",
+    "copyFiles",
+    "environmentTemplate",
+    "calls",
+    "scope"
+  ],
+  "properties": {
+    "ready": {
+      "type": "boolean"
+    },
+    "driverSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "binary": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "binarySha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourcePins": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourcePinsSha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "calls": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "environmentTemplate": {
+      "type": "object",
+      "minProperties": 13,
+      "maxProperties": 13
+    },
+    "toolPins": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "sourceCoverageRoots": {
+      "type": "array"
+    },
+    "controlPins": {
+      "type": "array"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ready": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "binary": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "binarySha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "sourcePins": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "sourcePinsSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "sourceCoverageRoots": {
+            "minItems": 1
+          },
+          "controlPins": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}
