@@ -1,0 +1,206 @@
+--- revision01/source/literalCompleteImages.qnt
++++ revision02/source/literalCompleteImages.qnt
+@@ -14,7 +14,7 @@
+   type Execution = {
+     program: Image, context: Row, states: List[Image], envelopes: List[Envelope],
+   }
+-  pure val PROFILE = "sherlock-a102-a80-complete-raw-images/1"
++  pure val MODEL_PROFILE = "sherlock-a102-a80-complete-raw-images/1"
+   pure val STATEMENT_FORMAT = "moriarty-sherlock-a102-a80-literal-complete-statement/1"
+   pure val literalEnvelope: Envelope = {ruleTag: 3, charge: 1}
+   pure val returnEnvelope: Envelope = {ruleTag: 0, charge: 0}
+@@ -84,22 +84,22 @@
+   }
+   pure def flattenImage(image: Image): Row = image.tables.foldl(image.root,
+     (acc, tableRows) => tableRows.foldl(acc, (cells, rowValues) => cells.concat(rowValues)))
+-  pure def statementVector(contextLimbs: Row, complete: Complete): Row =
+-    contextLimbs.concat(flattenImage(complete.program))
+-      .concat(flattenImage(complete.origin)).concat(flattenImage(complete.intermediate))
+-      .concat(flattenImage(complete.done)).concat(List(
+-        complete.literalEnvelope.ruleTag, complete.literalEnvelope.charge,
+-        complete.returnEnvelope.ruleTag, complete.returnEnvelope.charge))
++  pure def statementVector(contextLimbs: Row, bundle: Complete): Row =
++    contextLimbs.concat(flattenImage(bundle.program))
++      .concat(flattenImage(bundle.origin)).concat(flattenImage(bundle.intermediate))
++      .concat(flattenImage(bundle.done)).concat(List(
++        bundle.literalEnvelope.ruleTag, bundle.literalEnvelope.charge,
++        bundle.returnEnvelope.ruleTag, bundle.returnEnvelope.charge))
+ 
+-  // Relational check independent of the two update functions: exact image-wide
+-  // continuity, all preserved cells, each changed root/control lane, actual charge.
+-  pure def relation(complete: Complete): bool = {
+-    val beforeImage = complete.origin
+-    val middleImage = complete.intermediate
+-    val doneImage = complete.done
+-    val literalRow = selectedLiteral(complete.program, beforeImage)
++  // Separate post-equations, sharing selectedLiteral/fuelBytes/fuelNumber helpers.
++  // These are internal consistency checks, not an independent producer oracle.
++  pure def relation(bundle: Complete): bool = {
++    val beforeImage = bundle.origin
++    val middleImage = bundle.intermediate
++    val doneImage = bundle.done
++    val literalRow = selectedLiteral(bundle.program, beforeImage)
+     val firstControl = middleImage.tables.nth(5).nth(0)
+-    complete.literalEnvelope == literalEnvelope and complete.returnEnvelope == returnEnvelope
++    bundle.literalEnvelope == literalEnvelope and bundle.returnEnvelope == returnEnvelope
+       and beforeImage.root.indices().forall(i =>
+         if (9 <= i and i < 25) true else beforeImage.root.nth(i) == middleImage.root.nth(i))
+       and fuelNumber(fuelBytes(middleImage)) == fuelNumber(fuelBytes(beforeImage)) - 1
+@@ -119,8 +119,44 @@
+         rowValues.foldl(true, (rowOk, cellValue) => rowOk and cellValue == 0))
+   }
+ 
++  // Observed premises for this fixed small two-scalar fixture domain only.
++  // Schema widths/capacities are literal_host::literal_schema columns, not hashes.
++  // No arbitrary-image admission, full uiValid or StepInv claim is made here.
++  pure def rowsHaveShape(tableRows: List[Row], rowCount: int, rowWidth: int): bool =
++    tableRows.length() == rowCount and tableRows.foldl(true,
++      (ok, rowValues) => ok and rowValues.length() == rowWidth)
++  pure def smallFixtureProgramShape(programImage: Image): bool = {
++    val rowCounts = List(0,0,1,0,1,0,0,0,0,0,4,4,5,1,0)
++    val rowWidths = List(2,1,4,1,11,1,6,2,3,2,3,4,1,22,2)
++    programImage.root.length() == 16 and programImage.tables.length() == 15
++      and rowCounts.indices().forall(i => rowsHaveShape(
++        programImage.tables.nth(i), rowCounts.nth(i), rowWidths.nth(i)))
++  }
++  pure def smallFixtureStateShape(image: Image): bool = {
++    val rowWidths = List(22,2,5,2,17,36)
++    image.root.length() == 45 and image.tables.length() == 6
++      and rowWidths.indices().forall(i => rowsHaveShape(image.tables.nth(i), 2, rowWidths.nth(i)))
++  }
++  pure def initPremise(programImage: Image, initialImage: Image): bool =
++    if (smallFixtureProgramShape(programImage) and smallFixtureStateShape(initialImage)) {
++      programImage.root.nth(0) == 0 and programImage.root.nth(5) == 1
++        and programImage.root.nth(14) == 1
++        and programImage.tables.nth(4).nth(0) == List(0,0,0,0,0,0,0,0,0,0,0)
++        and initialImage.root.slice(0, 5).foldl(true, (ok, cellValue) => ok and cellValue == 0)
++        and initialImage.root.nth(5) == 1 and initialImage.root.nth(6) == 0
++        and initialImage.root.nth(7) == 0 and initialImage.root.nth(8) == 2
++        and initialImage.root.slice(41, 45) == List(0,0,0,0)
++        and fuelBytes(initialImage) == initialImage.root.slice(25, 41)
++        and fuelBytes(initialImage).foldl(true,
++          (ok, byteValue) => ok and 0 <= byteValue and byteValue < 256)
++        and fuelNumber(fuelBytes(initialImage)) > 0
++        and initialImage.tables.foldl(true, (ok, tableRows) => ok and
++          tableRows.foldl(true, (tableOk, rowValues) => tableOk and
++            rowValues.foldl(true, (rowOk, cellValue) => rowOk and cellValue == 0)))
++    } else false
++
+   var execution: Execution
+-  action initWith(programImage: Image, initialImage: Image, contextLimbs: Row) =
++  action initWith(programImage: Image, initialImage: Image, contextLimbs: Row): bool =
+     execution' = {program: programImage, context: contextLimbs,
+       states: List(initialImage), envelopes: List()}
+   action literalStep = all {
+@@ -152,5 +188,11 @@
+     publicStatement.length() == 6 + flattenImage(execution.program).length()
+       + execution.states.foldl(0, (acc, image) => acc + flattenImage(image).length())
+     else true
+-  val compositionInv = terminalRelation and exactStatementLength and fuelWorkAgreement
++  val observedFixturePremise = initPremise(execution.program, execution.states.nth(0))
++    and execution.context.length() == 2
++    and execution.states.foldl(true, (ok, image) => ok and smallFixtureStateShape(image)
++      and fuelBytes(image).foldl(true,
++        (rangeOk, byteValue) => rangeOk and 0 <= byteValue and byteValue < 256))
++  val compositionInv = observedFixturePremise and terminalRelation
++    and exactStatementLength and fuelWorkAgreement
+ }
+--- revision01/source/literalCompleteImagesTest.qnt
++++ revision02/source/literalCompleteImagesTest.qnt
+@@ -1,4 +1,5 @@
+ module literalCompleteImagesTest {
++  import literalCompleteImages.* from "./literalCompleteImages"
+   import literalCompleteInputs.* from "./literalCompleteInputs"
+   // Same-author assertions. No independent expected-data or actual-image reads.
+   pure val zeroFuel: Row = List(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+@@ -18,7 +19,7 @@
+       .concat(initialImage.root.slice(25, 41)).concat(List(1,0,0,0)),
+     tables: zeroTables,
+   }
+-  // Assert each entire public-vector span, not just its length or final value.
++  // Shared-helper span consistency, supplemented by handwritten absolute spans below.
+   pure def allStatementSpans(vector: Row, programImage: Image, images: List[Image]): bool = {
+     val programCells = flattenImage(programImage)
+     val first = flattenImage(images.nth(0))
+@@ -36,8 +37,51 @@
+       and vector.slice(afterLast, vector.length()) == List(3,1,0,0)
+       and vector.length() == afterLast + 4
+   }
++  // Handwritten schema offsets: Program86, State213, statement731 logical lanes.
++  // No call to flattenImage or dynamically computed block length occurs here.
++  pure def absoluteProgramSpans(vector: Row, programImage: Image): bool =
++    vector.slice(2, 18) == programImage.root
++      and vector.slice(18, 22) == programImage.tables.nth(2).nth(0)
++      and vector.slice(22, 33) == programImage.tables.nth(4).nth(0)
++      and vector.slice(33, 36) == programImage.tables.nth(10).nth(0)
++      and vector.slice(36, 39) == programImage.tables.nth(10).nth(1)
++      and vector.slice(39, 42) == programImage.tables.nth(10).nth(2)
++      and vector.slice(42, 45) == programImage.tables.nth(10).nth(3)
++      and vector.slice(45, 49) == programImage.tables.nth(11).nth(0)
++      and vector.slice(49, 53) == programImage.tables.nth(11).nth(1)
++      and vector.slice(53, 57) == programImage.tables.nth(11).nth(2)
++      and vector.slice(57, 61) == programImage.tables.nth(11).nth(3)
++      and vector.slice(61, 62) == programImage.tables.nth(12).nth(0)
++      and vector.slice(62, 63) == programImage.tables.nth(12).nth(1)
++      and vector.slice(63, 64) == programImage.tables.nth(12).nth(2)
++      and vector.slice(64, 65) == programImage.tables.nth(12).nth(3)
++      and vector.slice(65, 66) == programImage.tables.nth(12).nth(4)
++      and vector.slice(66, 88) == programImage.tables.nth(13).nth(0)
++  pure def absoluteStateSpan(vector: Row, begin: int, image: Image): bool =
++    vector.slice(begin, begin + 45) == image.root
++      and vector.slice(begin + 45, begin + 67) == image.tables.nth(0).nth(0)
++      and vector.slice(begin + 67, begin + 89) == image.tables.nth(0).nth(1)
++      and vector.slice(begin + 89, begin + 91) == image.tables.nth(1).nth(0)
++      and vector.slice(begin + 91, begin + 93) == image.tables.nth(1).nth(1)
++      and vector.slice(begin + 93, begin + 98) == image.tables.nth(2).nth(0)
++      and vector.slice(begin + 98, begin + 103) == image.tables.nth(2).nth(1)
++      and vector.slice(begin + 103, begin + 105) == image.tables.nth(3).nth(0)
++      and vector.slice(begin + 105, begin + 107) == image.tables.nth(3).nth(1)
++      and vector.slice(begin + 107, begin + 124) == image.tables.nth(4).nth(0)
++      and vector.slice(begin + 124, begin + 141) == image.tables.nth(4).nth(1)
++      and vector.slice(begin + 141, begin + 177) == image.tables.nth(5).nth(0)
++      and vector.slice(begin + 177, begin + 213) == image.tables.nth(5).nth(1)
++  pure def absoluteLayoutChecks(vector: Row, programImage: Image, images: List[Image]): bool =
++    vector.length() == 731 and vector.slice(0, 2) == List(17,29)
++      and absoluteProgramSpans(vector, programImage)
++      and absoluteStateSpan(vector, 88, images.nth(0))
++      and absoluteStateSpan(vector, 301, images.nth(1))
++      and absoluteStateSpan(vector, 514, images.nth(2))
++      and vector.nth(306) == 1 and vector.nth(442) == 1
++      and vector.nth(519) == 0 and vector.nth(555) == 1
++      and vector.slice(727, 731) == List(3,1,0,0)
+   run uintFuel1CompleteImageTest = initWith(uintProgram, uintInit, contextInput)
+-    .expect(execution.states == List(uintInit))
++    .expect(execution.states == List(uintInit) and observedFixturePremise)
+     .then(literalStep)
+     .expect(execution.states == List(uintInit, expectedMiddle(uintInit, zeroFuel)))
+     .then(publicationStep)
+@@ -45,8 +89,14 @@
+       expectedDone(uintInit, zeroFuel)))
+     .expect(execution.envelopes == List(literalEnvelope, returnEnvelope)
+       and terminalWitness and terminalRelation and exactStatementLength and fuelWorkAgreement
+-      and allStatementSpans(publicStatement, uintProgram, execution.states))
++      and allStatementSpans(publicStatement, uintProgram, execution.states)
++      and observedFixturePremise and absoluteLayoutChecks(publicStatement, uintProgram, execution.states)
++      and publicStatement.nth(66) == 0 and publicStatement.nth(69) == 7
++      and publicStatement.nth(97) == 1 and publicStatement.nth(98) == 0
++      and publicStatement.nth(310) == 0 and publicStatement.nth(311) == 0
++      and publicStatement.nth(523) == 0 and publicStatement.nth(524) == 0)
+   run boolFuel256BorrowCompleteImageTest = initWith(boolProgram, boolInit, contextInput)
++    .expect(observedFixturePremise)
+     .then(literalStep)
+     .expect(execution.states == List(boolInit, expectedMiddle(boolInit, afterBorrow)))
+     .then(publicationStep)
+@@ -54,5 +104,11 @@
+       expectedDone(boolInit, afterBorrow)))
+     .expect(execution.envelopes == List(literalEnvelope, returnEnvelope)
+       and terminalWitness and terminalRelation and exactStatementLength and fuelWorkAgreement
+-      and allStatementSpans(publicStatement, boolProgram, execution.states))
++      and allStatementSpans(publicStatement, boolProgram, execution.states)
++      and observedFixturePremise and absoluteLayoutChecks(publicStatement, boolProgram, execution.states)
++      and publicStatement.nth(66) == 1 and publicStatement.nth(67) == 1
++      and publicStatement.nth(69) == 0
++      and publicStatement.nth(97) == 0 and publicStatement.nth(98) == 1
++      and publicStatement.nth(310) == 255 and publicStatement.nth(311) == 0
++      and publicStatement.nth(523) == 255 and publicStatement.nth(524) == 0)
+ }
