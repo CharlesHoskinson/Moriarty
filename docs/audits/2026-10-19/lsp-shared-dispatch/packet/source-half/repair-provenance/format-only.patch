@@ -1,0 +1,29 @@
+--- a/crates/mori/tests/lsp.rs
++++ b/crates/mori/tests/lsp.rs
+@@ -103,7 +103,9 @@
+             stdin.write_all(&body).unwrap();
+         }
+     }
+-    child.wait_with_output().expect("collect LSP parity session")
++    child
++        .wait_with_output()
++        .expect("collect LSP parity session")
+ }
+ 
+ #[test]
+@@ -136,7 +138,14 @@
+             .unwrap();
+             Command::new(env!("CARGO_BIN_EXE_mori"))
+                 .current_dir(&directory.0)
+-                .args(["--color", "never", "--quiet", "check", "parity.mori", "--json"])
++                .args([
++                    "--color",
++                    "never",
++                    "--quiet",
++                    "check",
++                    "parity.mori",
++                    "--json",
++                ])
+                 .output()
+                 .expect("run public parity check")
+         })

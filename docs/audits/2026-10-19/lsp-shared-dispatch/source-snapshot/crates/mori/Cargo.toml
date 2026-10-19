@@ -1,0 +1,115 @@
+[package]
+name = "mori"
+version = "0.1.0"
+description = "Command-line interface for the Moriarty toolchain"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+core2-disjoint-draft = ["mori-core/core2-disjoint-draft"]
+default = ["native"]
+source6-expansion = ["dep:mori-source6", "mori-source6/source6-transfer-slice"]
+native = [
+    "dep:mori-backend",
+    "dep:mori-ledger",
+    "dep:futures",
+    "dep:rand",
+    "dep:midnight-ledger",
+    "dep:midnight-base-crypto",
+    "dep:midnight-coin-structure",
+    "dep:midnight-onchain-state",
+    "dep:midnight-onchain-runtime",
+    "dep:midnight-storage",
+    "dep:midnight-transient-crypto",
+    "dep:midnight-serialize",
+]
+
+[dependencies]
+anstream.workspace = true
+anstyle.workspace = true
+clap.workspace = true
+ignore.workspace = true
+lsp-server.workspace = true
+lsp-types.workspace = true
+mori-ast.workspace = true
+mori-checker.workspace = true
+mori-core.workspace = true
+mori-backend = { workspace = true, optional = true }
+mori-ledger = { workspace = true, optional = true }
+mori-diagnostics = { workspace = true, features = ["fancy"] }
+mori-fmt.workspace = true
+mori-lexer.workspace = true
+mori-parser.workspace = true
+mori-source6 = { workspace = true, optional = true }
+mori-span.workspace = true
+rayon.workspace = true
+futures = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+terminal_size.workspace = true
+thiserror.workspace = true
+
+midnight-ledger = { workspace = true, optional = true }
+midnight-base-crypto = { workspace = true, optional = true }
+midnight-coin-structure = { workspace = true, optional = true }
+midnight-onchain-state = { workspace = true, optional = true }
+midnight-onchain-runtime = { workspace = true, optional = true }
+midnight-storage = { workspace = true, optional = true }
+midnight-transient-crypto = { workspace = true, optional = true }
+midnight-serialize = { workspace = true, optional = true }
+
+[dev-dependencies]
+indoc.workspace = true
+insta.workspace = true
+
+[[test]]
+name = "check_compile_io"
+required-features = ["native"]
+
+[[test]]
+name = "check_static_compile_io"
+required-features = ["native"]
+
+[[test]]
+name = "prepare_call"
+required-features = ["native"]
+
+[[test]]
+name = "installed_call"
+required-features = ["native"]
+
+[[test]]
+name = "signed_installed_call"
+required-features = ["native"]
+
+[[test]]
+name = "native_proofs"
+required-features = ["native"]
+
+[[test]]
+name = "signed_intents"
+required-features = ["native"]
+
+[[test]]
+name = "replay"
+required-features = ["native"]
+
+[[test]]
+name = "replay_challenge"
+required-features = ["native"]
+
+[[test]]
+name = "enforcement_report"
+required-features = ["native"]
+
+[[test]]
+name = "mapped_role_static_io"
+required-features = ["native"]
+
+[[test]]
+name = "source6_expand"
+required-features = ["source6-expansion"]
