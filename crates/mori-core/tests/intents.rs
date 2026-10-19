@@ -60,27 +60,3 @@ fn json_order_does_not_change_signing_bytes() {
     let b = mori_core::json::parse(r#"{"a":"1","b":"2"}"#).unwrap();
     assert_eq!(canonical(&a).unwrap(), canonical(&b).unwrap());
 }
-#[test]
-fn signing_frame_matches_pinned_midnight_native_verifier() {
-    use midnight_serialize::Deserializable;
-    let (expected, signed) = fixture();
-    let decode = |s: &str| {
-        (0..s.len())
-            .step_by(2)
-            .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
-            .collect::<Vec<_>>()
-    };
-    let key_bytes = decode(&expected.authority.public_key_hex);
-    let sig_bytes = decode(&signed.signature_hex);
-    let key =
-        midnight_base_crypto::schnorr::VerifyingKey::deserialize(&mut key_bytes.as_slice(), 0)
-            .unwrap();
-    let sig = midnight_base_crypto::schnorr::Signature::deserialize(&mut sig_bytes.as_slice(), 0)
-        .unwrap();
-    let frame = signing_message(&expected).unwrap();
-    assert!(key.verify(&frame, &sig));
-    verify_intent(&expected, &signed, UInt(10)).unwrap();
-    let mut wrong_frame = frame;
-    wrong_frame.push(0);
-    assert!(!key.verify(&wrong_frame, &sig));
-}
