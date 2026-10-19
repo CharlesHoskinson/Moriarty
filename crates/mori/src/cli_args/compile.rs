@@ -16,7 +16,7 @@ pub struct Args {
     /// Explicit source dialect on the selected Sherlock route; no autodetection
     #[arg(long, requires = "execution_profile")]
     pub source_profile: Option<String>,
-    /// Select the draft program's sole closed entry; no external inputs
+    /// Select the draft or nominal program's sole closed entry; no external inputs
     #[arg(long, requires = "execution_profile", conflicts_with = "action")]
     pub entry: bool,
     /// Exact parameter-free source action for selected Sherlock preparation

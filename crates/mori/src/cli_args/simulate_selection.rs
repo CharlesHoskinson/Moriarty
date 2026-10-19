@@ -24,7 +24,8 @@ pub fn selection(args: &Args) -> Result<(&Path, &Path), CompileFailure> {
         CompileFailure::input("select", "selected Sherlock simulation requires explicit --source-profile"))?;
     match host::draft_contract::select_source(Some(source_profile), None, args.entry) {
         Ok(host::draft_contract::SourceSelection::DraftEntry) => {}
-        Ok(host::draft_contract::SourceSelection::CoreAction(_)) => {
+        Ok(host::draft_contract::SourceSelection::CoreAction(_)
+            | host::draft_contract::SourceSelection::NominalEntry) => {
             return Err(CompileFailure::input("select", "selected Sherlock simulation supports the explicit dedicated draft entry"));
         }
         Err(error) => {
