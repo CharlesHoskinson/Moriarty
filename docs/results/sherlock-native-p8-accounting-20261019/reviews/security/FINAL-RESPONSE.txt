@@ -1,0 +1,221 @@
+# Fresh Independent Opus 5.5 Security Review: Frozen P8 Receipt-Bound Accounting Candidate
+
+## 0. Identity, scope and record status
+
+| Item | Value |
+|---|---|
+| Requested reviewer | Fresh independent non-author Opus 5.5, high effort |
+| Returned model | `claude-opus-5-5` (Opus 5.5). I cannot observe the effort setting. |
+| Author routing record | **Present.** The canonical actual-user assignment is attached at the top of the request: recorded 2026-10-19T00:47:39Z, answer "Sol writes; Opus audits", scope limited to this P8 accounting update, its tests and the helper seal. Its proposal path matches the clause `proposal_record`. I treat it as Root-attached and did not verify its provenance. |
+| Candidate (as declared) | `cached_current_build.py` 105629 B `f88474ea…02f2`; `bounded_sdk_compile.py` 96012 B `f0ee869f…9000`; `test_cached_current_build.py` 82365 B `15d32a34…711b`; freeze 4305 B `431aba9f…e5d3c` |
+| Review method | Text-only review of the attached packet. I opened, hashed, imported, compiled and executed nothing. All hashes above are as supplied, not recomputed. Byte-level hash reconciliation remains Root's mechanical step. |
+| Terminal status | **REVIEW COMPLETED.** Source verdict, eligibility verdict and expected outcomes are below. |
+
+---
+
+## 1. Source verdict: **APPROVE**
+
+There are no blocking defects. The approval is conditioned on the two missing-context items in §1.6. Both fail closed if wrong: production would refuse at start rather than undercharge.
+
+### 1.1 Immutable P8 pins vs. the attached actual receipts (obligation 1)
+
+I compared each predicate in `_verify_p8_receipts` (`cached_current_build.py:1942–2077`) against fact inputs 07–10 and 02.
+
+**Attempt (fact 07)**
+- id, `actual_exit 2`, `controller_failure null` all match.
+- elapsed `132.46132113799104` matches. `int(-(-e//1))` gives 133, which equals `p8_outer_wall_seconds_ceil`.
+- Streams match: 2990/`5b12a9…` and 39/`9b4078…`, both `full_stream_retained` true.
+
+**Terminal (fact 10)**
+- Exact dict equality holds.
+- I counted the serialized length: 110 characters plus a newline is 111 B, which matches `P8_TERMINAL_FAILURE_BYTES`.
+- The path sits under the P8 quarantine `packet/`.
+
+**Raw (fact 08)**
+- First `cpu.stat` lines match: E `usage_usec 198086463`, S `12326620`, P `185759842`.
+- Every node shows `populated 0`, empty procs, `pids.current 0\n`, and `oom 0` / `oom_kill 0` in both events files.
+- All three memory peaks match: 5911670784 / 71958528 / 5859758080.
+- Flags match: `cleanupOwed true` (pre-cleanup snapshot), CargoDidStart, CargoCompileReportedFinished, `nativeOutputsAccepted false`, `ELFExecuted false`, and the exact `postAuditFailure` string.
+
+**Cleanup (fact 09)**
+- Status `P8_PRESERVED_AND_CLEANED`, `cleanupOwed false`, not accepted, no ELF.
+- Cargo fields match: started, reported success, 55.6 s.
+- `guardPostAudit` FAILED string matches.
+- Counts match: 3548 / 3565 / 2847417755 bytes. Quarantine root matches.
+- `cgroupAbsent true` and `executionRootEmpty true` hold. These matter because they are what makes "live counters start at 0, no double charge" true.
+- Seven steps. Step 4 shows membership true with 3565 files. Step 5 is 165 B `8527…`, step 6 is 128 B `8459…`. All other exits are 0.
+
+**Historical predicates**
+- P3, P4, P5 and P6 predicates (6526/2522; 6511/2522/10696; 6471/2522/10659; 6427/2522/10620; P6 E/S/P) are untouched by the delta.
+- `_verify_p7_receipts` is untouched. It still binds only the `retired_p7_*` values and `p7_outer 135`, so no old receipt is compared against post-P8 totals.
+- P8 stays failed and unaccepted. There is no fallback path and no retroactive pass.
+
+### 1.2 Independent arithmetic (obligation 2)
+
+| Quantity | Derivation | Result |
+|---|---|---|
+| P8 S+P | 12326620 + 185759842 | 198086462, so **E−(S+P)=1** |
+| Post-P8 E | 637394256 + 198086463 | **835480719** |
+| Post-P8 S | 195151731 + 12326620 | **207478351** |
+| Post-P8 P | 442242523 + 185759842 | **628002365** |
+| Cumulative E−(S+P) | 835480719 − 835480716 | **3** |
+| Retired cached E | 13455030 + 13735290 + 37863695 + 39019876 + 187121653 + 198086463 | 489282007 |
+| Retired cached S | 13455030 + 13735290 + 37863695 + 39019876 + 15162810 + 12326620 | 131563321 |
+| Retired cached P | 171958842 + 185759842 | 357718684 |
+| Prior post-r3 + retired | 346198712+489282007 / 75915030+131563321 / 270283681+357718684 | matches each total |
+| Frozen post-P7 readback | E−P8, S−P8, P−P8 | 637394256 / 195151731 / 442242523 |
+| Frozen post-P6 readback | additionally − P7 | 450272603 / 179988921 / 270283681 |
+| Supervisor ceil | (207478351 + 999999) // 10⁶ | **208** |
+| Remaining supervisor | 10800 − 208 | **10592** (gross 10800 unchanged) |
+| Remaining whole / F | 6292−133 / 2387−133 | **6159 / 2254** |
+| RLIMIT_CPU in `cached_current_f` | min(10592, (10800·10⁶ − 207478351)//10⁶ = 10592) | **10592** |
+
+There is no normalization, refund, reset or duplicate charge. E stays the independently recorded sum. The invariant block at `cached_current_build.py:1316–1338` pins every one of these values. The 133 debit is commented as an outer-sequence ceiling, not a measured F wall (`:137–138`).
+
+### 1.3 Production consumer enforcement (obligation 3)
+
+- **P8 verifier is reached.** `_verify_p8_receipts(debits, guard)` is called at `cached_current_build.py:1280`, inside the `cleanup_receipt_file is not None` branch. `cached_current_f` calls `enforce_post_r3_historical_debits` with the default `POST_CLEANUP_RESULT_PATH` both at start and at end, so the P8 receipts are bound twice per run. `cleanup_receipt_file=None` is only the pre-existing synthetic bypass, and no production caller passes it.
+- **Live counters.** `effective = debits + live` at both start and end. Historical totals enter once per evaluation and are never accumulated across calls; the test checks `state_again`.
+- **`Group.prior_cpu`.** It equals `effective_phases_usec_at_start`, which is 628002365 when live is 0. `Group.check` enforces `prior + leaf ≤ cpu_time_us`.
+- **Supervisor RLIMIT.** It derives from `HISTORICAL_POST_R3_DEBITS['supervisor_usec']`, giving 10592.
+- **F stream cap.** The post-launch check uses `34201 + log_bytes['stderr'] ≤ stderr_bytes` and `0 + stdout ≤ stdout_bytes`.
+
+### 1.4 Log basis (obligation 4)
+
+- Rows are exactly `['r3','P7','P8']` with 12 + 4 + 6 = **22** files, matching fact 02.
+- Per-row stderr subtotals:
+  - r3: 10237 + 47 + 0 + 47 + 75 + 0 = 10406
+  - P7: 12829
+  - P8: 10829 + 137 + 0 = 10966
+- Every row's stdout is 0.
+- Total: 10406 + 12829 + 10829 + 137 = **34201**. This is enforced against the basis fields, the debits, and the literal invariant at `:1330`.
+- Each file must pass: no symlink, `stat` size equals declared size, and live SHA-256 equals the declared hash. Mutable byte tampering is detected.
+- Duplicate paths are rejected by resolved path (`:2059–2061`). Two distinct r3 files with identical content (both 47 B `78ee12…`) are correctly counted separately.
+- An omitted P7 or P8 audit row fails on membership count, subtotal, or the cumulative total.
+
+### 1.5 Baseline preservation (obligation 5)
+
+**Hunk accounting.** The attached delta has 12 hunks, matching the declared 12:
+- `cached_current_build.py`: 5 hunks (`@@ -109`, `-1035`, `-1268`, `-1352`, `-1882`)
+- `bounded_sdk_compile.py`: 1 hunk
+- `test_cached_current_build.py`: 6 hunks
+
+Line offsets are internally consistent (+6, then +22 for the helper; +8, +37, +174 for the tests).
+
+**Unchanged source.** No hunk touches the seed, H1–H4, `verify_post_compile_no_script_reexec`, `cached_current_f`, `_verify_p7_receipts`, or any cache, refusal or cleanup code.
+
+**Guard.** The only guard change is the `CACHED_CURRENT_BUILD_SHA256` literal. It is the same length, so the byte count stays 96012, and it equals the declared helper afterimage hash.
+
+**Tests.**
+- The P7 fixture is untouched.
+- In `test_post_r3`, the original P7 double-charge, normalization and `retired_p7` cases are retained with updated totals, and the post-P6 ceiling refusals are retained.
+- In the lifecycle test, only literals changed.
+
+**Status flags.** Am10/T3/k17 STOPPED, C4 OPEN and R2 UNSATISFIED are unaffected. Nothing in the candidate grants native outcome or target acceptance.
+
+### 1.6 Missing context (conditions on the approval)
+
+1. **`P7_MARKER_PATH` / `P7_MARKER_BYTES` / `P7_MARKER_SHA256`**, reused at `cached_current_build.py:1995`.
+   - The P8 raw marker is `…/sherlock-sdk-compile-20261018-06/ONE_SHOT_STARTED`, 9 B, `37cb06…`. I could not see the P7 constant values.
+   - The unchanged P7 fixture uses 9 B and `37cb06…`, which supports the bytes and hash but not the path.
+   - Root should mechanically confirm the path matches. If it does not, production refuses; it does not undercharge.
+2. **`P7_CLEANUP_STEPS`**, reused at `:2029`.
+   - It must equal the seven step names in fact 09. Its value was not supplied.
+   - Like item 1, a mismatch fails closed.
+3. **Unchanged bodies not supplied:** `_cg_text`, `cg_fs`, `phase_cgroup`, `need`/`Refusal`, `json_bytes`, `write_new`, `receipt`, `child_mounts`, `consent`, `prepare_cached_current_f_worker`, `stable_stat`, `absolute`. I relied on the declaration that these are byte-identical to the seed.
+
+### 1.7 Non-blocking findings
+
+| Location | Observation |
+|---|---|
+| `cached_current_build.py:1909` | `P8_INTEGRATION_METADATA_ROOT` is defined but never used. |
+| `:2034`, `:2036` | Collect and teardown byte counts are inline literals 165/128. P7 uses named `_BYTES` constants. This is a style inconsistency only. |
+| `:2057–2058` | Stream paths are not bound to their r3/P7/P8 quarantine roots or to the `F*.std{out,err}` names. The SHA-pinned basis makes this defense-in-depth only. |
+| `:2059` | Dedup is by resolved path, not `(st_dev, st_ino)`. A hardlinked pair would overcount, which is conservative and would fail against the fixed 34201. |
+| `:2033–2036` | `steps[n].get('streams',[{}])[0]` raises `IndexError` rather than `Refusal` on an empty list. This pattern predates the candidate and still fails closed. |
+| Tests | No test confirms that the default-path `enforce` actually invokes `_verify_p8_receipts`. The wiring at `:1280` is verified only by inspection. Adding such a test is a future recommendation, not a change to make in this candidate. |
+| Pre-existing | Inside `launch`, the stderr cap is per-run. Historical bytes are only charged in the post-launch cumulative check, so a run can overshoot by up to 34201 B before refusal. This is unchanged design. |
+| Pre-existing | Several refusal messages still say "post-r3 historical debit" for the phases cap. Cosmetic. |
+
+---
+
+## 2. Execution eligibility for the three proposed methods: **APPROVE**
+
+**Isolation.**
+- `test_post_r3`: `cleanup_receipt_file=None`, temporary `cpu.stat` files, `guard.cg_fs` patched and restored.
+- `test_p8`: all five P8 path/sha/bytes constants are re-pinned to temp files before any verifier call and restored in `finally`. No production receipt or quarantine path is read.
+- Lifecycle test:
+  - The `enforce` wrapper forces `None`.
+  - `launch` is mocked, so there is no bwrap, cgroup creation, `Group.create` or `join_child`.
+  - `resource.setrlimit` is mocked, so the test process RLIMIT is not altered.
+  - Consent, identity, quota and owned-path checks are mocked. Everything is restored in `finally`, and `Group.__init__` is restored by `cached_current_f`'s own `finally`.
+
+**Hazards ruled out.** No real SDK, Cargo, ELF, privilege, network or Git path is touched. Module import loads both helpers from the test file's directory, which is `afterimages/`.
+
+**Residual side effects (pre-existing).**
+- A real `ITIMER_REAL` of 6159 s is set and cleared on both paths.
+- The SIGALRM handler is left installed after the test.
+- `child_mounts` may stat the listed host toolchain paths read-only.
+
+**Scope.** Run only these three methods under Root's existing SDK-free invocation, timeout and resource contract. The four seed fixtures and the P7 fixture are not scheduled.
+
+---
+
+## 3. Independent expected outcomes (unrun predictions)
+
+**`test_post_r3_historical_debits_enforced` → OK**
+- At start, effective E/S/P is 835480719 / 207478351 / 628002365, and E−S−P = 3.
+- Debits read back: ceil 208, remaining 6159 / 2254 / 10592, P8 133, stderr 34201.
+- With live counters at 4e8 / 1e8 / 3e8: 1235480719 / 307478351 / 928002365, and the repeated call gives identical results.
+- Ceiling refusals:
+  - 6160 → wall (6159s) message
+  - 2255 → F (2254s) message
+  - 10593 → supervisor (10592s) message
+  - post-P6 6427 / 10620 / 2522 → refused
+  - post-P7 6292 / 10604 / 2387 → refused
+- All 21 mutated-debits cases raise `Refusal` with "internal historical debit sum invariant violated". These include the duplicate-P7 and duplicate-P8 cases, the P8 refunds, E=S+P normalization, the P8 component zeroing, the refund ceilings, gross 10801, P8 ceil 0, and the two stderr undercounts.
+
+**`test_p8_receipts_once_only_pinned_and_tamper_refused` → OK**
+- The baseline verifier passes twice, and `HISTORICAL_POST_R3_DEBITS` is unchanged.
+- All 26 semantic subtests raise `Refusal`:
+  - attempt → "P8 failed attempt result receipt content mismatch"
+  - E/S/P usage, populated, oom, marker, postAudit, native → raw mismatch
+  - cleanupOwed, native, ELF, cgroupAbsent, executionRootEmpty, guardPostAudit, step 6 exit, step 4 membership → cleanup invalid
+  - native and type → terminal mismatch
+  - rows[1]='P8' → "attempts invalid"
+  - truncated P8 files → "membership count mismatch"
+  - P7 stdout substituted into the P8 row → "counted more than once" (the dedup logic is what discriminates this case)
+  - subtotal 10829 → "subtotal mismatch"
+  - cumulative 34064 → "arithmetic mismatch"
+- A same-size byte change to the 137 B audit file → "P8 F stream SHA-256 or byte size mismatch".
+- Each of the 5 zeroed SHA pins → "… receipt SHA-256 or byte size mismatch".
+- `f_stderr_bytes=21372` → arithmetic mismatch.
+- `retired_p8_envelope_usec=198086462` → raw mismatch.
+- The final pass succeeds, and the debits are unchanged.
+
+**`test_cached_current_f_phase_leaf_placement_and_lifecycle` → OK**
+- `rlimit_calls == [(RLIMIT_CPU, (10592, 10592))]`.
+- `Group(F).prior_cpu == 628002365`.
+- `call_order == ['reconstitute','seed']`.
+- Start phases 628002365. End phases / supervisor / envelope: 678002365 / 217478351 / 895480719.
+- Cumulative stderr 34301 ≤ 16777216.
+- `F_CACHED_CURRENT_RESULT.json` exists.
+
+**Expected aggregate:** 3 run, 0 failures, 0 errors, 0 skips.
+
+These predictions depend on the unchanged closure in §1.6 item 3 behaving as it did before. The readiness record shows only the four seed fixtures were observed passing on this seed. I have no observation that the earlier versions of these two modified methods passed against it, so a failure in an unchanged section calls for diagnosis, not an edit.
+
+---
+
+## 4. Risks, limitations and separation
+
+**Risks and limitations**
+- **First real bind of production pins.** The production P8 SHA and byte pins against the real files are never exercised by these tests. The first real exercise is the next production `enforce` call. My reconciliation matched source literals against the attached fact text, assuming those attachments are faithful copies.
+- **Marker hash.** The marker content `no retry\n` is generic across attempts. The hash proves presence and content, not which attempt created it. This is pre-existing.
+- **Unconfirmed constants.** The `P7_MARKER_PATH` and `P7_CLEANUP_STEPS` values (§1.6) are unconfirmed.
+
+**Separation of what this review establishes**
+- **Source review.** This document. It approves only the frozen candidate hashes listed above.
+- **Unrun test observations.** None exist. §3 is a prediction, not evidence.
+- **Operational admission.** Not granted. It requires Root's mechanical hash and constant reconciliation, then an actual run of the three methods.
+- **Native and target acceptance.** None. P8 remains FAILED, no-script-reexec VIOLATED, outputs UNACCEPTED. There is no offline fallback. Am10/T3/k17 STOPPED, C4 OPEN, R2 UNSATISFIED.
