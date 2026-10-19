@@ -1,0 +1,9 @@
+# Handwritten UInt128 Lt circuit source — draft integration
+
+These three staged Rust modules implement the local mode-3 UInt128 Lt relation, Bool completion/failure-11, and typed op4 ReturnRight adapter. They are source-reviewed components awaiting module registration and compilation. No SDK evaluation, constraint test, proof or native result is claimed for this cohort.
+
+The independent primary Opus HIGH opinions are preserved in full under `lt-two-modules/` and `lt-return-right/`, with their actual execution metadata. The ReturnRight opinion approved constraints with limits and conditioned normal/API approval on removing three unused imports. The new ReturnRight file differs from the reviewed source only by those prescribed deletions; N1 proof/applicability metadata preserves both hashes. The arithmetic and Bool-completion files are exact copies of their reviewed revision02 cut.
+
+Caller conditions remain substantive. Only the constrained Lt Bool exit or failure-11 result may feed this adapter; feeding an Add-mode UInt result would be accepted locally and must be excluded by the chain. Frames must preserve op4/mode3 coherence, tables must alias the same arenas, namespaces must be owned globally, Running payloads must be canonical, and omitted full-image lanes must be framed. The complete opinions retain these conditions and the unexecuted test requirements. The typed wrapper preserves its represented complement and binds scalar cursor/byte lanes; it is not a complete physical B image or P1 composer.
+
+Original SI-03 local input and AD-3 cohort01 failures remain historical. The independent cohort02 freeze establishes finite normative logical satisfiability only. Actual input production, admission, emitted constraints, whole-state comparisons and global StepInv observation remain open. No old Mul/W3/native receipts transfer to these new sources.
