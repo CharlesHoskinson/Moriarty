@@ -1,0 +1,46 @@
+```diff
+--- a/models/sherlock/qa/core2_await_boundary_wire.py
++++ b/models/sherlock/qa/core2_await_boundary_wire.py
+@@ -39,7 +39,9 @@
+ def _scalar(value):
+     _row(value, 'type value')
+     if value['type'] == 'UInt':
+         return {'UIntValue': _uint(value['value'])}
+     if value['type'] == 'Bool':
++        if type(value['value']) is not bool:
++            raise ValueError('expected Core Bool payload')
+         return {'BoolValue': value['value']}
+     raise ValueError('scalar outside frozen Core2 observation declaration')
+```
+
+```diff
+--- /dev/null
++++ b/models/sherlock/qa/test_core2_await_scalar_h2.py
+@@ -0,0 +1,24 @@
++import unittest
++
++from models.sherlock.qa import core2_await_boundary_wire as wire
++
++
++class Core2AwaitScalarH2Test(unittest.TestCase):
++    def test_core_bool_exact_and_uint_preserved(self):
++        for payload in (True, False):
++            result = wire._scalar({'type': 'Bool', 'value': payload})
++            self.assertEqual(result, {'BoolValue': payload})
++            self.assertIs(result['BoolValue'], payload)
++        top = (1 << 128) - 1
++        self.assertEqual(wire._scalar({'type': 'UInt', 'value': str(top)}), {'UIntValue': top})
++        self.assertEqual(wire._scalar({'type': 'UInt', 'value': '0'}), {'UIntValue': 0})
++
++    def test_core_bool_nonbool_payload_rejected(self):
++        for payload in (0, 1, 1.0, 'true', 'True', None, [], {}):
++            with self.subTest(payload=payload):
++                with self.assertRaises(ValueError):
++                    wire._scalar({'type': 'Bool', 'value': payload})
++
++
++if __name__ == '__main__':
++    unittest.main()
+```
+
+Note: the import path `models.sherlock.qa` is an assumption. Match it to the import form the existing H1 tests use.

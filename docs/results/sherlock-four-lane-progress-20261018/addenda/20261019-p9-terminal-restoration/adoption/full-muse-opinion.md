@@ -1,0 +1,30 @@
+**Disposition: SCOPED ACCEPT — compile result only.**
+
+This review accepts exactly one fact: a cached-current `cargo test --no-run --frozen -p mori-backend --lib -j4` compile, bound to W2 HEAD `539ab417d92cf7f4dfe865ffea810ea5d2a41c89` and source-manifest `6424ebe9…`, config `940e16ae…`, completed successfully, produced the pinned executable, passed the 34-unit/90-output no-reexecution postcheck, and its outputs were preserved byte-exact before cleanup. Everything beyond that remains unaccepted. CLI exit 0 was never treated as approval here; this reviewer judgment is the acceptance act for the scoped compile fact, and adoption/promotion remains Root's alone.
+
+**What the bodies establish**
+
+- **Compile.** The F receipt (Body 11, losslessly prefix-factored from the 43,668-byte original `e897099d…`; Body 10 proves byte-exact inverse) shows three sandboxed processes, all `child_exit: 0`, F wall 95.32 s. The inner Cargo argv is the frozen `--no-run` lib build. F.stderr (8,880 bytes, Body 13) shows mori-span, mori-diagnostics, mori-lexer, mori-core and mori-backend compiled, warnings only (11 in mori-core; 5 `unexpected cfg mori_sdk_free` warnings in the backend test build), then `Finished test profile in 25.69s` — matching Body 2's `CargoBuildSecondsReported: 25.69` — and names the produced executable. F.stdout and the precheck/audit streams are empty (Bodies 14–18).
+- **Executable.** `debug/deps/mori_backend-3a2f695515330e5a`, 454,214,504 bytes, `65d818d5…` (Bodies 11, 12, 5). The unchanged postcheck code (Body 31) rejects that relative path only if it also carried the old ELF hash, and requires ≥1 fresh backend binary; the guard reported PASS.
+- **34/90 postcheck.** Bodies 19–20 factor all 34 build-script association rows and all 90 host-output rows losslessly (unit dictionary of 55 units, original order retained, `machine_join_missing: []`). The duplicated unit-15 (two libc fingerprint dirs) is preserved per-row, so the factoring is not hiding a merge. Each association keeps its files-dictionary count and canonical hash (e.g. aws-lc-sys 476 files); the full 3,548-output / 180-fingerprint / 2,843-seeded tables remain byte-exact externally at `F_QUARANTINED_OUTPUTS.json` (`60a0744c…`, 681,779 bytes).
+- **Restoration and counters.** The camino index swap was reversed: `RESTORATION_COMPLETED.json` (Body 26) shows inode 557166, size 20,024, atime/mtime restored, SHA verified before final utime, `restorationOwed: false` — with the honestly disclosed ctime change. Raw cgroup records (Body 21) show `populated 0`, zero OOM/throttle events across envelope/phases/supervisor, marker `no retry`, `guardTerminal: true`, `guardExit: 0`, `noELFExecuted: true`. Prelauch lock stat records and distinct-device empty-source invariants (Body 22) discharge the non-alias point as pinned-code proof. Phase CPU (111,507,604 µs) matches the live phase counter exactly; envelope/supervisor meters differ by single-µs cross-meter rounding, which is not material.
+- **Preservation/cleanup.** Body 2 shows a fresh `0700` quarantine, copy of 3,566 files (3,548 target files, 2,847,459,477 bytes), write/execute bits stripped, `sha256sum --check --strict` exit 0, then collect-evidence and teardown exit 0, `executionRootEmpty: true`, `cgroupAbsent: true`, `cleanupOwed: false`. Body 3 independently restates the verified quarantine. The Root-caught two-literal projector correction (Body 4) was pre-execution, inverse-exact, AST-parse-only; the erroneous source is preserved unexecuted.
+- **History preserved.** Original P8 remains permanently FAILED with outputs unaccepted (Bodies 27, 5); nothing rewrites it. The outer maintenance sequence (Bodies 6–9) was metadata-only and is not conflated with the inner Cargo run.
+
+**Missing facts — stated honestly, and why they do not block this scoped accept**
+
+- The bulk hash dictionaries (3,548 outputs, full per-unit file dictionaries, `SHA256SUMS.expected` and its 294,635-byte check stdout, `EXTERNAL-METADATA-PINS.json`, config bulk fields: 579 generated files, 423 registry roots, 40 includes, the full stat-diff record) are **externally pinned and mechanically joined, not read by this reviewer**. Bodies 19, 20 and 30 say so explicitly and claim nothing more. Acceptance of the 34/90 and preservation facts therefore rests on the guard's PASS, the strict hash-check exit 0, and the roundtrip/join proofs — not on reviewer re-derivation of every hash.
+- The normal/security source opinions themselves are not in these bodies; only their pins and Root's adoption decisions (`APPROVED_NORMAL_SOURCE`, `APPROVED_SOURCE_WITH_LIMITS`) are. The specific security limits are not restated here, so this accept inherits them from Root's frozen receipts rather than re-reviewing source.
+- The old-ELF hash constant in the guard code is outside the quoted lines 976–1037, so stale-ELF distinctness rests on the guard PASS plus the fresh compile log, not on a reviewer-visible old hash.
+- The actual returned model for this review call is recorded as pending in Body 1; this review is issued under the standing fallback after the documented actual Opus 429 (exit 1, `usage_limit_reached`), and no Opus identity is claimed for it.
+
+**Explicit non-claims**
+
+No test execution, no ELF execution, no SDK emission, no proof, no C4/R2 acceptance, and no readiness claim for any newer unbound Sherlock circuits or latest HEAD. `nativeOutputsAccepted` was false in every body; this scoped accept covers the compile result, not promotion of the binary to any use.
+
+**Minimum remaining obligations (Root's, not blockers to this accept)**
+
+1. Root adoption decision on this scoped accept; until then outputs stay unaccepted.
+2. Retain the persistent quarantine (`native06-p9-persistent-quarantine-20261019-01`, 3,566 files) as the sole preserved copy, since the execution root is empty; any disposal is a separate Root decision.
+3. Any future ELF/test/proof step requires its own authorization; the `no retry` marker stands.
+4. P8's FAILED status and the security opinion's limits carry forward unchanged into whatever Root does next.

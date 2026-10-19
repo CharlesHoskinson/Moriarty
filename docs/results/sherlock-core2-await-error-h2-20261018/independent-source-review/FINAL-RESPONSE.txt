@@ -1,0 +1,41 @@
+## Verdicts
+
+- **Selected source: ACCEPT**
+- **Exact-one new-test operation: ELIGIBLE**, subject to the mandatory conditions below
+- **No ABSTAIN:** all 16 supplied bodies were visible in full, with their stated end markers. This review used no tools and performed no execution.
+
+## Source audit
+
+The candidate `_error` in [Body 1 candidate consumer](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch14-core2-await-h2-error/revision01-muse/afterimages/models/sherlock/qa/core2_await_boundary_wire.py) correctly implements the declaration in [Body 5 Core `Error` serde declaration](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/formal-b14-core2-await-h2-error-opus-source-request-20261018/context/CORE-ERROR-SERDE-DECLARATION.txt):
+
+- `offset: Option<u32>` and `step: Option<u16>` are kept distinct.
+- `None` maps through the unchanged `_option(..., 'UInt', ...)` to `'NoUInt'`.
+- Non-`None` values map to `{'SomeUInt': exact_int}`.
+- `type(v) is not int` rejects `bool`, `float`, and `str`. In particular, `True`/`False` do not count as integers.
+- Range checks reject negatives and overflow: offset maximum `4294967295`, step maximum `65535`.
+- This correctly uses JSON integer numbers/null for `Error.offset`/`Error.step`, not the canonical decimal strings required by the separate `_uint` path.
+
+Comparison of Bodies 1 and 3, corroborated by Bodies 12 and 13, shows the only consumer change is the `_error` body replacement. `_uint`, `_scalar`, `_option`, `_row`, and every other consumer function remain at the 12405-byte preimage. The decoder in Body 4 is unchanged closure material.
+
+The two tests in [Body 2 new tests](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch14-core2-await-h2-error/revision01-muse/afterimages/models/sherlock/qa/test_core2_await_error_h2.py) cover:
+
+- Accepted: `None`, `0`, and both maxima for both fields.
+- Rejected for each field: `True`, `False`, `1.0`, `'1'`, `-1`, and maximum-plus-one.
+
+That is adequate for the stated private `_error` predicate. It does not test integration through `core2_result`'s `Rejected` branch.
+
+## Mandatory findings
+
+1. **Raw author patch remains defective.** Body 6/Body 11 declare `@@ -165,4 +165,10 @@`, but the explicit new body has 12 lines. The raw patch must not be treated as a cleanly applicable patch. Acceptance applies only to the materialized candidate and the normalized selected diff in Body 12, with the original defect retained as disclosed in Body 9.
+
+2. **Operation must remain exactly Body 15.** One run only: `/usr/bin/python3 -B -m unittest -v test_core2_await_error_h2`, in the specified QA directory, with the environment replaced by exactly `PATH` and `LANG`, the pinned Python, exactly the three QA entries, and source/Python pins checked before and after. Success requires exit 0, exactly the two named methods each `ok`, `Ran 2 tests`, `OK`, and no skips or expected failures. Full streams must be preserved. Any deviation makes that run non-conforming; this review authorizes no substitute or additional operation.
+
+3. **Receipt-format defect stays disclosed.** Bodies 7 and 8 contain a terminal literal `\n` after the JSON. Raw bytes must be retained; stripping that exact suffix is permissible only for preparer metadata parsing, not as silent receipt mutation.
+
+4. **Scope remains narrow.** This acceptance covers only the private `_error` offset/step primitive representation. It does not establish full consumer integration, CLI behavior, real Core2/B06 trace compatibility, remaining H2 advanced/numerics/Quint work, H3–H6, or any financial, program, effects, admission, native, B, or EARS claim.
+
+## Coverage and limitations
+
+Bodies 1–16 were read as supplied: candidate consumer, new tests, 12405 preimage, decoder, serde declaration, author response, author result, author command, defect note, materialization proof, raw patch, selected diff, inverse diff, source freeze, proposed operation, and review contract.
+
+Limitations: hashes were treated only as supplied identifiers, not as proof of readability; the opaque `EVENTS.ndjson` body was not inspected; filesystem state, byte counts, and pins were not independently verified; and no test execution result is claimed or judged.

@@ -1,0 +1,11 @@
+--- a/models/sherlock/qa/core2_await_boundary_wire.py
++++ b/models/sherlock/qa/core2_await_boundary_wire.py
+@@ -41,6 +41,8 @@
+     if value['type'] == 'UInt':
+         return {'UIntValue': _uint(value['value'])}
+     if value['type'] == 'Bool':
++        if type(value['value']) is not bool:
++            raise ValueError('expected Core Bool payload')
+         return {'BoolValue': value['value']}
+     raise ValueError('scalar outside frozen Core2 observation declaration')
+ 
