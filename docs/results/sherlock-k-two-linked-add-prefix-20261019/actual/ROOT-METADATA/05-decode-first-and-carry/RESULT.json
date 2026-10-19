@@ -1,0 +1,31 @@
+{
+  "id": "05-decode-first-and-carry",
+  "kind": "data-decode-raw-carry",
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "-c",
+    "RAW_HELPER='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/actual-c6-schedule-first-arm-continuation-20261019/source/kore_continuation.py'\nRAW_FIRST='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/03-reduce-first-window/result.kore'\nNEXT_QUERY='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/05-decode-first-and-carry/second.query.kore'\nCARRY_RECEIPT='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/05-decode-first-and-carry/carry-receipt.json'\nADAPTER='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/generic-nominal-lt-operational-counterpart-20261019/revision02-metadata-corrections/adapter'\nAPI='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-uncharged-boundaries-20261019/context/PUBLIC-LT-API.json'\nSYNTAX='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-uncharged-boundaries-20261019/context/COMPLETE-LT-CONSTRUCTOR-SYNTAX.k.txt'\nINPUT='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-uncharged-boundaries-20261019/safe-inputs/ADD-ENTRY.input.json'\nPRINTED='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/04-print-first-window/stdout'\nOUTPUT='/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/05-decode-first-and-carry/first.complete-wire.json'\nimport sys,json,importlib.util\nfrom pathlib import Path\nsys.path.insert(0,ADAPTER)\nimport nominal_trace_codec as parser\nfrom complete_k_wire import CompleteKWire\nparser.configure(Path(API),Path(SYNTAX))\nspec=json.loads(Path(INPUT).read_bytes())\ntape=parser.parse_printed(Path(PRINTED).read_text())\nadapter=CompleteKWire(parser.API,parser.REG)\nstates=adapter.complete_states(tape)\nwire=adapter.bind_shared_wire(states,case_id=spec['case_id'],profile=spec['profile'],terminal_step_contract=spec['terminalStepContract'],observer_cuts=list(range(len(states))))\nraw=(json.dumps(wire,indent=2,ensure_ascii=False,allow_nan=False)+'\\n').encode()\nwith Path(OUTPUT).open('xb') as f:f.write(raw)\n\ns=importlib.util.spec_from_file_location('existing_kore_continuation',RAW_HELPER)\nm=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nquery,receipt=m.resume_query(Path(RAW_FIRST).read_bytes(),1)\nwith Path(NEXT_QUERY).open('xb') as f:f.write(query)\nwith Path(CARRY_RECEIPT).open('x') as f:json.dump(receipt,f,indent=2);f.write('\\n')\n"
+  ],
+  "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/05-decode-first-and-carry",
+  "environment": {
+    "HOME": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/05-decode-first-and-carry/home",
+    "TMPDIR": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-two-linked-Add-independent-oracle-and-runtime-task-20261019/actual-attempt-01/05-decode-first-and-carry/tmp",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "SHERLOCK_K_ATTEMPT_TOKEN": "d756f97a24695d6086a35fd6c699cbee"
+  },
+  "started_utc": "2026-10-19T13:11:31.756554+00:00",
+  "pid": 2737094,
+  "elapsed_seconds": 0.123,
+  "ended_utc": "2026-10-19T13:11:31.879566+00:00",
+  "returncode": 0,
+  "timed_out": false,
+  "outcome": "exited",
+  "group_members_after_exit": [],
+  "swept": [],
+  "remaining": [],
+  "containment_breach": false
+}

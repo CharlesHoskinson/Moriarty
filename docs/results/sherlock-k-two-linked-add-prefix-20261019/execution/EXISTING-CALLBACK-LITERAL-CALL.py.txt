@@ -1,0 +1,23 @@
+# Root runs this small literal call in its existing capture process using pinned /usr/bin/python3 -I -B -S.
+# Existing native preservation/cleanup has priority; do not hold Cargo locks or delay it for K.
+import sys, os, threading, types, hashlib
+from pathlib import Path
+sys.dont_write_bytecode = True
+# Record actual sys.executable/sys.version_info once; require pinnedpython and version >=3.10.
+assert sys.version_info >= (3, 10)
+assert threading.active_count() == 1 and len(list(Path('/proc/self/task').iterdir())) == 1
+source_path = Path(F03_SOURCE_PATH)
+source_bytes = source_path.read_bytes()
+assert hashlib.sha256(source_bytes).hexdigest() == F03_SOURCE_SHA256
+F03 = types.ModuleType('k_two_add_existing_f03_callback')
+F03.__file__ = str(source_path)
+exec(compile(source_bytes, str(source_path), 'exec'), F03.__dict__)
+# phase is the exact dictionary from reviewed plan['phases']; perform existing prechecks/freshstage first.
+record = {'id': phase['id'], 'kind': phase['kind'], 'argv': phase['argv'], 'cwd': phase['cwd']}
+F03.launch(record, phase['argv'], dict(phase['environment']), phase['cwd'],
+           phase['environment']['SHERLOCK_K_ATTEMPT_TOKEN'], 536870912)
+# Save exactrecord/rawstreams immediately, then require actualcallbackfields below (missingfieldfails).
+assert record['returncode'] == 0
+assert record['timed_out'] is False and record['outcome'] == 'exited'
+assert record['remaining'] == [] and record['containment_breach'] is False
+# Existing Rootpostpin/membership/fsync checks follow; nextphase is neverselectedonfailure.

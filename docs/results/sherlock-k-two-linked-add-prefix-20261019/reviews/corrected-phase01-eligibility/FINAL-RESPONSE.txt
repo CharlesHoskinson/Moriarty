@@ -1,0 +1,126 @@
+# Fresh review: phase 01 import correction and supplied API premises
+
+**Reviewer:** claude-opus-5-5. I can't observe my own effort setting. I used no tools, shell, subcalls, edits or execution, and read inline bodies 1–18 once. I did not request, open or derive any protected oracle body.
+
+## Headline
+
+**All 10 phases are ELIGIBLE, conditional on the Root obligations in body 13 plus the premises listed under Q2.** The phase 01 blocker is resolved. I found no new source bug in phases 02–10. What remains are explicit host premises, not defects.
+
+---
+
+## 1. Phase 01 corrected argv: ELIGIBLE
+
+**Import path under `-I -B -S -c`**
+- `sys.path.insert(0, ADAPTER)` runs before `import render_input`.
+- `render_input`'s top-level imports then resolve from the adapter directory:
+  - `nominal_trace_codec`
+  - `complete_k_wire`
+  - the stdlib modules `argparse`, `hashlib`, `json` and `pathlib`
+- The second-level imports `dataclasses`, `re` and `typing` come from the stdlib.
+- The adapter holds exactly 3 files (body 10). None of their names shadows a stdlib module, and there is no `__pycache__`. `-B` prevents creating one.
+- `-S` removes only site-packages. The stdlib paths come from getpath, not `site`.
+- Under `-I`, `-c` does not add `''`. Even if it did, cwd is the fresh stage directory with no `.py` files.
+
+**Execution**
+- `sys.argv` is reassigned before `main()` calls `parse_args()`. The four required options match the old argv exactly: `--input`, `--api`, `--syntax`, `--output-dir`.
+- `render_input` is imported, not run as `__main__`, so its guard does not fire. `main()` runs exactly once through the explicit call.
+- On success the process exits 0. Any exception produces a traceback on stderr and exit 1, which is fail-closed.
+
+**Products**
+- `initial.ng` and `query.term` are created with `open('xb')` in the stage directory, which is correct.
+- `stdout` will contain the `PASS_COMPLETE_INPUT_SERIALIZATION_INVERSE` JSON line, so it is non-empty by design.
+- Recommended cheap cross-check: Root confirms that the `initial`/`query` pins printed in stdout equal its own hashes of the two products.
+- The phase 02 input path `01-render-first-window/query.term` matches.
+
+**Inverse and preservation**
+- Body 3's test/replace and its inverse are exact mirrors:
+  - forward test = old phase 01 = inverse replace;
+  - forward replace = new phase 01 = inverse test.
+- Body 4's diff touches only phase 01's argv and products. Model, expected, adapter, raw helper, linker and phases 02–10 are unchanged per bodies 3 and 4.
+- The serializer's own inverse check (typed `same()` on Program and Map) is preserved, with no expected input.
+- I accepted the 29314→29765 byte and SHA identities as stated. I did not recompute them.
+
+**New premise (not a phase 01 bug).** `complete_k_wire.py` contains the annotation `name: str | None`, which Python evaluates when the function is defined.
+- This requires `/usr/bin/python3` (pinned `52e0a13e…`) to be **version 3.10 or later**.
+- On 3.9 or earlier, phases 01, 05 and 08 would fail at import with `TypeError`. That is fail-closed but blocking.
+- No supplied body states the interpreter version. Root should record `sys.version_info` once, using the pinned binary, before phase 01.
+
+## 2. Do the supplied premises close the previous gaps for 02–10?
+
+| Previous gap | Status |
+|---|---|
+| F03 command builders (body 5 vs plan) | **Closed.** Kast matches the builder exactly: JVM flags, classpath, and PATH = `JAVA_PATH` in TOOL_ROOTS order. The substitutions (definition, module, sort, input, stage) are as stated. Kore-exec matches the builder minus `--log-entries`, and PATH = `KORE_EXEC_PATH`. Kprint matches `(KPRINT, COMPILED, state, false, false)`. |
+| Full import-time AST (body 7) | **Closed.** Top-level statements are only stdlib imports, pure literal/concatenation assignments, one `re.compile`, function defs and a `__main__` guard. There is no import-time I/O. Selected globals are 30, 3 and the token name, consistent with body 17. |
+| `launch` semantics (body 17) | **Closed as source.** Its 6-argument signature matches the plan's entry. A launch error leaves `returncode`, `timed_out`, `remaining` and `containment_breach` unset, so body 13's "a missing field fails" rule is required and correct. The cleanup sweep is scoped by token and process group, and all 10 tokens are distinct. A host-wide PID-absence check is unnecessary; I agree with omitting it. |
+| kore-38afc81 PATH (body 11) | **Closed.** All 16 entries are resolved and hashed. Two cross-checks hold: `.kore-exec-wrapped` resolves to SHA `4ebe3cd5…`, which equals `KORE_EXEC_SHA256`, and `kore-exec` resolves to 395 bytes / `f7376898…`, which equals the `KORE_EXEC_WRAPPER` primary pin. |
+| Raw-helper labels (body 12) | **Closed** for byte presence. OBSERVE, TAPE and STATE are declared with arities 2, 3 and 5. `definition.kore` is 1903957 bytes, matching the body 10 listing. I did not re-read `kore_continuation.py` this round and rely on the prior review that it only slices bytes. |
+| Adapter, raw-helper and kompiled listings (body 10) | **Closed as a snapshot.** Adapter, raw-helper and render-input byte counts match bodies 12 and 14–16. Root must re-list each directory immediately before every phase that imports or reads it (body 13). |
+| READ-IMPORT-PINS (bodies 8, 9) | **Partly closed.** The passive 514-row projection is historical and mostly unselected. Its `/usr/bin/python3` pin is consistent with `INTERPRETER_SHA256`. |
+
+**Remaining host premises (not source bugs)**
+
+1. **Python version.** The interpreter must be 3.10 or later (see Q1).
+2. **JAR membership.** The classpath uses `lib/kframework/java/*`, but `PINNED_FILES` pins only `k-frontend-1.0-SNAPSHOT.jar`. Directory membership and the other JARs' pins rely on the unsupplied original manifest (`2427379d…`, 1274580 bytes), so Root must check against it.
+3. **kprint pin.** `KPRINT` is not in `PINNED_FILES`. F03 used dynamic `kprint_linkage` evidence instead. No body supplies a kprint binary SHA, so Root must pin it at the first pre-check and hold it constant through phase 07.
+4. **Root's own import of F03.** Root should import F03 with `dont_write_bytecode` (or `-B`) so it cannot create `__pycache__` beside `k_engine_attempt_f03_01.py`.
+   - Root should also call `launch` from a single-threaded parent, because `preexec_fn` is unsafe with threads.
+5. **Dynamic libraries and stdlib.** The dynamic-library, JDK and Python stdlib basis remains an explicitly trusted local premise. There is no whole-host attestation.
+6. **Unchanged earlier premises.**
+   - kore-exec's bare-`ngTape` output form (fail-closed in the parser and helper).
+   - Kast not mutating the kompiled directory (full 15-file before/after check).
+   - Kast cleaning up its temporary files; a leftover file stops the run.
+   - The kprint environment is PATH-less. F03's `environment()` body was not supplied, so this cannot be compared to F03.
+
+**Benign deviation.** Omitting `--log-entries` changes only the stderr content. Because every rule is a `[function]` rule, the evidence is the output term, not rule-application logs. This matches the prior semantic verdict.
+
+**Recommended pre-check.** Phase 01 uses `ADD-ENTRY.first-window.input.json`, while phases 05, 08 and 09 use the budget-2 `ADD-ENTRY.input.json`. Before phase 01, Root should confirm the two are identical except for `observation_budget` (1 vs 2). Phase 10 would catch a mismatch anyway, but only after both windows have run.
+
+**Eligibility after the phase 01 correction**
+
+| Phase | Verdict |
+|---|---|
+| 01 | ELIGIBLE, conditional on Python ≥ 3.10 and the adapter directory being rechecked before launch |
+| 02–04 | ELIGIBLE (conditional) |
+| 05–09 | ELIGIBLE |
+| 10 | ELIGIBLE only after the barrier |
+
+I reuse the prior semantic and source verdict only for the unchanged, exactly pinned phases 02–10 and helper closure, not on hash identity alone.
+
+## 3. Scope
+
+**What a pass shows (more than boundary identity):**
+- two actual kore-exec windows from the compiled Lt definition;
+- a raw byte carry of the full first-final `NGState` into the second query, cross-checked against the receipt SHAs;
+- whole-typed equality of the join;
+- a post-freeze, independent comparison of the whole 3-position trace.
+
+**What it does not establish:**
+- the Add result, or terminal stutter (carried as metadata only);
+- an A/B charge, Kwork or fuel;
+- recursive or proof validity;
+- a production endpoint;
+- host/K equivalence;
+- native or EARS adoption.
+
+## 4. Coverage, dissent, abstention
+
+**Read in full:** bodies 1–18.
+- Body 8 was checked for structure and the interpreter pin. I did not audit its historical rows individually because they are unselected.
+- I accepted all byte and SHA identities without recomputing them.
+
+**Not available:**
+- the original 1.27 MB `READ-IMPORT-PINS`;
+- the kprint SHA;
+- F03's `environment()` and `stage_problems` bodies;
+- the K sources, input contents and linker source (this round);
+- the Root driver code;
+- dynamic-library closures.
+
+**Abstained:** all protected oracle bodies. Only SAFE-HANDOFF metadata (body 18) was read.
+
+**Dissent preserved:** I do not approve from identities, hashes or counts. Eligibility depends on:
+- body 13's pre/post checks and stop rules;
+- the Python ≥ 3.10 check;
+- kprint and JAR pinning by Root.
+
+No execution has occurred, and this review grants no authority.
