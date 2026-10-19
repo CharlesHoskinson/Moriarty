@@ -1,0 +1,241 @@
+```json
+{
+  "source_disposition": {
+    "verdict": "CHANGES_REQUIRED",
+    "scope": "Static source review of the three frozen B20 Quint files (literalCompleteImages.qnt sha256 32b7c56f…, literalCompleteImagesTest.qnt 5e30161e…, literalCompleteInputs.qnt f73cd995…). The review checks them against the supplied literal_host/literal_step/literal_ui_valid/return_publication_step/literal_complete_execution/literal_complete_bridge sources and the installed Quint 0.32 API context. Nothing was executed. This verdict is not an actual-result approval, a production correspondence, or any EARS/SCON/UIREQ closure.",
+    "reasons": [
+      "Blocking (F1): literalCompleteImagesTest uses about fifteen names (Row, Image, flattenImage, initWith, execution, literalStep, publicationStep, literalEnvelope, returnEnvelope, terminalWitness, terminalRelation, exactStatementLength, fuelWorkAgreement, publicStatement) that are declared only in literalCompleteImages. Its only import is literalCompleteInputs.*, and literalCompleteInputs imports literalCompleteImages without any `export`. Under Quint module semantics, imports are not re-exported without `export`. The test module's name closure is therefore defective as written.",
+      "The core equations in literalCompleteImages are correct for the admitted normal domain. Specifically:",
+      "- The A102 post-equations (fuel lanes 9..24 bytewise LE decrement; CR0 = Return(valueRef copied from Expressions[exprId] lanes 2/3); all other control cells zeroed; arenas 0..4 and all other root lanes preserved) are correct.",
+      "- The A80 post-equations (controlLength 0; outcome Done(1, CR0.space, CR0.index, 0); all controls zeroed; fuel and arenas preserved; no fuel guard, so publication at remainingFuel 0 is permitted) are correct.",
+      "- Flattening order (root, then each table row-major) and statement order (2 context limbs, Program, init, intermediate, done, then 3,1,0,0) are correct.",
+      "Since a revision is needed anyway, the recommended low-cost fixes (F4, F5) should go in the same new freeze. Every edit produces new hashes and requires a fresh review."
+    ],
+    "confirmed_correct_static": [
+      "Root lane indices match literal_schema exactly: activeData0, activeDataFields1, activeEnvCells2, activeValueSlots3, depth4, controlLength5, environment.present6, environment.index7, stackLimit8, remainingFuel9..24, initialFuel25..40, outcomeTag41, outcomeValue.space42, outcomeValue.index43, outcomeError44 (45 lanes).",
+      "ControlRows lanes tag0/exprId1/valueRef.space2/valueRef.index3 out of 36. Expressions lanes valueRef.space2/valueRef.index3 out of 11. selectedLiteral reads tables[5][0][1] (exprId) and then Program tables[4] (Expressions).",
+      "decrementFuel implements the same per-byte borrow chain as emit_literal_step. Hand traces: oneFuel [1,0..] → [0,..]; borrowFuel [0,1,0..] (256) → [255,0,..].",
+      "publicationAfter matches emit_return_publication_step's post equations, including preservation of all 16 remainingFuel bytes.",
+      "flattenImage equals Rust `root.iter().chain(tables.flatten().flatten())`. statementVector matches LiteralCompleteLayout::statement and complete_statement_lane_count (program + 3·state + 6).",
+      "Shared immutable Program: execution.program is never reassigned by the record spreads. The intermediate is the same value states.nth(1) that A80 consumes and that the statement serializes, so the alias holds by construction.",
+      "Guards: literalStep requires states.length()==1 and publicationStep requires ==2. These are mutually exclusive, so `any{}` is deterministic regardless of TS shuffling. The run is exactly 2 transitions and 3 raw states, with cumulative states lengths 1/2/3 and envelope lists [], [(3,1)], [(3,1),(0,0)].",
+      "`val complete` calls nth(2)/nth(1) on short lists in non-terminal states, but every use (terminalRelation, exactStatementLength, fuelWorkAgreement) sits under a lazy `ite` on terminalWitness. The TS `ite`/`and` builtins are lazy per builtins.js, so states 0 and 1 never force it.",
+      "`A.expect(P).then(B)` chaining is valid under builtins.js `expect`, which restores the pending-next snapshot and drops the trace before `then` shifts.",
+      "Fixture inputs satisfy the supplied host checks:",
+      "- complete_representation: padding, builtin Types/Constructors/ConstructorFieldTypes rows, entryExprId 0, activeExpressions 1, activeConstants 1, entry Literal with Constant-space index 0, Init zero equations, controlLength 1, init tables zero, rem==ini fuel.",
+      "- The uiValid subset read from literal_ui_valid.rs: UInt row kind0/type0; Bool(false) row kind1/type1 with bool lane 0; Types[k].kind==typeId; ctorLength 0; KF=0 implies activeConstantFields 0.",
+      "- Init matches Machine::new as encoded by emit_literal_complete_execution init_instructions."
+    ]
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "HIGH",
+      "class": "source / import-closure (blocking)",
+      "evidence": [
+        "literalCompleteImagesTest.qnt: `import literalCompleteInputs.* from \"./literalCompleteInputs\"` is its only import.",
+        "It references: `pure val zeroFuel: Row`, `expectedMiddle(...): Image`, `flattenImage(programImage)`, `initWith(uintProgram, uintInit, contextInput)`, `execution.states`, `.then(literalStep)`, `.then(publicationStep)`, `literalEnvelope`, `returnEnvelope`, `terminalWitness`, `terminalRelation`, `exactStatementLength`, `fuelWorkAgreement`, `publicStatement`.",
+        "literalCompleteInputs.qnt: `import literalCompleteImages.* from \"./literalCompleteImages\"`, with no `export` line."
+      ],
+      "explanation": "Quint imports bring definitions into the importing module only. Re-exporting to downstream importers requires `export M.*`, which exists in the language for this purpose. IMPORT-CLOSURE.json 'all explicit Quint imports resolve' establishes file-path resolution, not name visibility. STATIC-READBACK compared binders only against builtin.qnt.",
+      "basis_qualification": "The installed Quint name-resolution/import/export implementation bodies were not supplied. This finding rests on Quint language semantics, not on read resolver code. Either fix below removes the question regardless of resolver behavior.",
+      "required_fix": "Preferred: add `import literalCompleteImages.* from \"./literalCompleteImages\"` to literalCompleteImagesTest. This is a diamond import of one module, not an instance, so it leaves literalCompleteImages.qnt and literalCompleteInputs.qnt bytes unchanged. Alternative: add `export literalCompleteImages.*` to literalCompleteInputs, which changes that file's pin."
+    },
+    {
+      "id": "F2",
+      "severity": "MEDIUM",
+      "class": "test sufficiency (wrong-output insensitivity)",
+      "evidence": [
+        "Both fixtures use Expressions row `List(0,0,0,0,0,0,0,0,0,0,0)`, so valueRef = (space 0, index 0).",
+        "expectedMiddle CR0 = `List(1,0,0,0,…)`. expectedDone outcome tail = `List(1,0,0,0)`.",
+        "relation() takes lanes 2/3 from the same selectedLiteral, which yields 0."
+      ],
+      "explanation": [
+        "The selected-literal-reference copy (CR0 lanes 2/3) and the A80 publication of that reference (root lanes 42/43) cannot be distinguished from zero padding. A model that zeroed those lanes would satisfy every assertion and relation().",
+        "uintInit and boolInit differ only in fuel, and the two Programs differ only in an unchanged Constants row. So 'UInt7' versus 'Bool(false)' exercises Program pass-through and the statement Program span. It does not exercise any transition lane.",
+        "Arena preservation versus zeroing is likewise indistinguishable, but that is inherent to the Init domain, where Machine::new arenas are all zero."
+      ],
+      "recommendation": "Within the normal domain, a scalar entry literal always gets Constant index 0. Index sensitivity therefore needs a constructor literal whose root constant is not row 0, e.g. Leaf(7) with Constants [UInt7, Leaf] (root index 1) and KF≥1. If this is not added, do not claim selected-reference or publication-reference sensitivity for B20."
+    },
+    {
+      "id": "F3",
+      "severity": "MEDIUM",
+      "class": "scope / oracle completeness (non-blocking under declared premise)",
+      "evidence": "relation() and compositionInv contain only post-equations. They never check:",
+      "unchecked": [
+        "literal_complete_execution init_instructions: entryExprId==0==init CR0.exprId; the eleven zero root lanes; controlLength==1; init remainingFuel==initialFuel per byte; all six init tables zero.",
+        "emit_literal_step guards: pre Pending, CR0 Eval with other columns zero, selected Expressions row tag/unused columns zero, occurrenceId==exprId, index<activeConstants, uiValid.",
+        "emit_return_publication_step pre-guards: depth==0, all FrameSlots zero, CR0.tag==1, index < active length of the selected space."
+      ],
+      "explanation": "Under the explicit premise this is not a defect. However, compositionInv would hold for an Init that violates the premise, so the run does not even observe that the selected input satisfies it.",
+      "recommendation": "Add a pure `initPremise(program, init)` predicate, and optionally `a102Guard`/`a80Guard` predicates, encoding these equations. Conjoin them into compositionInv at the terminal state. This is cheap, and it makes the premise for the chosen fixture observed rather than assumed."
+    },
+    {
+      "id": "F4",
+      "severity": "LOW",
+      "class": "test / shared-helper blind spot",
+      "evidence": [
+        "exactStatementLength computes `6 + flattenImage(program).length() + Σ flattenImage(state).length()` against a vector that statementVector builds from the same flattenImage. It is tautological apart from the context length being 2.",
+        "allStatementSpans derives every expected span from flattenImage, so a flattening-order or omission bug is invisible. Only the context and the envelope tail List(3,1,0,0) are independent."
+      ],
+      "recommendation": "Add handwritten absolute checks for this fixture, derived from the schema rather than from flattenImage. Sizes: Program 86 cells (16 + 4 + 11 + 12 + 16 + 5 + 22), state 213 cells (45 + 44 + 4 + 10 + 4 + 34 + 72).",
+      "suggested_absolute_checks": [
+        "length 731",
+        "Program span 2..87; init 88..300; intermediate 301..513; done 514..726; envelopes 727..730",
+        "vector[69]==7 for UInt (Constants offset 64, uintBytes.0)",
+        "vector[97] = init remainingFuel.0 (1 for UInt, 0 for Bool); vector[98]==1 for Bool",
+        "vector[306]==1 (intermediate controlLength)",
+        "vector[442]==1 (intermediate CR0.tag; ControlRows offset 141)",
+        "vector[519]==0 (done controlLength)",
+        "vector[555]==1 (done outcomeTag)"
+      ]
+    },
+    {
+      "id": "F5",
+      "severity": "LOW",
+      "class": "source risk",
+      "evidence": "`pure def statementVector(contextLimbs: Row, complete: Complete)` and `pure def relation(complete: Complete)` both bind a parameter named `complete`, which shadows the module-level non-pure `val complete` in the same module. The static readback scanned builtin binders only.",
+      "recommendation": "Rename the parameter (e.g. `bundle`). This removes any dependence on Quint 0.32 shadowing and mode-resolution behavior, which was not verifiable from supplied source."
+    },
+    {
+      "id": "F6",
+      "severity": "LOW",
+      "class": "scope (premise-equivalent divergences from Rust)",
+      "evidence": [
+        "literalAfter preserves pre controlLength, whereas Rust constrains post controlLength==1. The two are equal only under the pre==1 premise.",
+        "decrementFuel has no all-zero refusal or final-borrow==0 check, whereas Rust emits `gated_eq(all_zero,0)` and `eq(borrow,0)`. For zero fuel the model silently yields all-255. relation() catches this numerically through fuelNumber but no test exercises it.",
+        "relation's fuel check is numeric (fuelNumber(mid)==fuelNumber(pre)-1) with no per-byte 0..255 range.",
+        "relation does not check table count or row lengths of the intermediate/done images, so extra tables or lanes would escape. Model outputs are well-formed, so this only weakens relation as an oracle."
+      ]
+    },
+    {
+      "id": "F7",
+      "severity": "LOW",
+      "class": "documentation accuracy",
+      "evidence": [
+        "The comment 'Relational check independent of the two update functions' overstates: relation shares selectedLiteral, fuelBytes and fuelNumber with literalAfter and fuelWorkAgreement.",
+        "README says the tests 'compare … every complete statement span', but the spans are computed via the shared flattenImage.",
+        "`pure val PROFILE = \"sherlock-a102-a80-complete-raw-images/1\"` is a model-local label distinct from the execution profile COMPLETE_PROFILE = sherlock-k-a/1. SCON-001 requires naming these separately."
+      ],
+      "recommendation": "Qualify the comment and README wording, and rename PROFILE to something like MODEL_PROFILE."
+    }
+  ],
+  "expectation_provenance_and_sufficiency": {
+    "provenance": [
+      "The expectations are same-author, handwritten, source-shaped images.",
+      "expectedMiddle copies initialImage.root.slice(0,9), slice(25,45) and tables.slice(0,5) from the same handwritten input. Only the fuel bytes and the two 36-lane control rows are written out by hand.",
+      "expectedDone hard-codes root lanes 0..8, slices initialFuel from the input, writes the outcome tail [1,0,0,0] by hand, and uses zeroTables.",
+      "Spans use the shared flattenImage. There is no blind independent oracle and no frozen production correspondence. Both fixtures are new test cases."
+    ],
+    "sensitive": [
+      "LE fuel decrement, including the byte-boundary borrow (256→255)",
+      "Publication at remainingFuel 0 (zero-charge A80)",
+      "initialFuel and stackLimit preservation",
+      "controlLength 1→1→0",
+      "CR0 tag Return and outcomeTag Done",
+      "Envelope order and values (3,1),(0,0)",
+      "Context limbs [17,29] placement",
+      "Program span equality"
+    ],
+    "insensitive": [
+      "Selected literal reference copy and publication (F2)",
+      "Arena preservation versus zeroing (inherent to Init)",
+      "Flattening order and table omission (F4)",
+      "Init/guard premise violations (F3)"
+    ],
+    "capture_coverage": "The single proposed ITF capture initializes UInt7/fuel1 only. Bool(false)/fuel256 borrow evidence would exist only as a test pass/fail line in stdout, with no raw image observation. This is stated as a gap; no second capture is proposed here.",
+    "sufficiency_judgment": "Sufficient as same-author internal self-consistency evidence for the fuel and envelope composition once F1 is fixed. Not sufficient for any claim about reference-selection sensitivity, flattening-order correctness, or premise satisfaction. No wrong-output sensitivity analysis or independent production comparison has been performed."
+  },
+  "per_operation": [
+    {
+      "id": "newCompleteImageCompositionFrontend",
+      "classification": "NOT_ELIGIBLE",
+      "reasons": [
+        "It targets literalCompleteImagesTest.qnt, whose name closure is defective by static reading (F1).",
+        "The fix changes that file's pin, so a typecheck of the current freeze cannot satisfy the frontend precondition for any later selected operation."
+      ],
+      "conditions_for_re_proposal": [
+        "The same argv, env {PATH=/usr/bin:/bin, LANG=C.UTF-8}, stdin DEVNULL, 60 s wall, 512 MiB heap, 4 MiB per stream and fail-stop rules are acceptable against a corrected freeze after a fresh review.",
+        "Typecheck has no backend, writes no files, and loads all three modules through the import chain."
+      ],
+      "optional_diagnostic_note": "Root may instead choose to run this typecheck against the current bytes, explicitly labeled as a diagnostic of the F1 basis. That run would not satisfy any precondition, and its raw streams and exit code must be preserved."
+    },
+    {
+      "id": "newTwoCompleteImageTests",
+      "classification": "NOT_ELIGIBLE",
+      "reasons": [
+        "It depends on the F1-defective test module and on the frontend precondition."
+      ],
+      "notes_for_re_proposal": [
+        "The argv is otherwise sound: explicit `--backend typescript` (avoids the default rust backend download), `--seed 1`, `--max-samples 1`, and the anchored `--match ^(uintFuel1CompleteImageTest|boolFuel256BorrowCompleteImageTest)$`, which selects only the two new runs.",
+        "No old corpus is imported.",
+        "Tests write no ITF, so the evidence is limited to per-test pass/fail lines and the exit code."
+      ]
+    },
+    {
+      "id": "newTwoStepCompleteImageCapture",
+      "classification": "NOT_ELIGIBLE",
+      "reasons": [
+        "Its declared precondition requires a frontend and two-test exit 0 on an unchanged freeze, and the freeze must change for F1.",
+        "Its own closure (main literalCompleteInputs directly importing literalCompleteImages; `init` local; `step`, `compositionInv` and `terminalWitness` visible in the main module) does not depend on F1."
+      ],
+      "conditions_for_re_proposal": [
+        "Re-propose the identical argv against the corrected freeze. If F1 is fixed by changing only the test file, literalCompleteImages.qnt and literalCompleteInputs.qnt keep their current pins.",
+        "proposed-itf must be freshly created and empty. Quint's writeFileSync does not create directories.",
+        "PASS requires all of: exit 0; no compositionInv violation; terminalWitness reported in 1 of 1 traces; exactly one ITF file (record the actual `{seq}` expansion); exactly 3 states.",
+        "Raw ITF observation: execution.states lengths 1/2/3, envelopes [], [(3,1)], [(3,1),(0,0)], with the same execution.program and context [17,29] in every state."
+      ],
+      "capture_and_limit_gaps": [
+        "cliReporting.prepareOnTrace logs 'ITF conversion failed' to stderr and continues, so exit 0 does not imply an ITF was written. A missing or extra ITF must be treated as FAIL.",
+        "The 64 MiB ITF cap, wall and memory limits are enforced only by Root's collector, not by Quint. The ITF cap can only be checked after the write. Expected size is small: 86-cell Program plus at most three 213-cell images per state.",
+        "ITF records only the state variable `execution`, with integers as #bigint. The invariant and witness values per state are not in the ITF and must be re-evaluated by Root from the frozen observation.",
+        "With --max-steps 2 there is no padding step. Root must still verify the state count rather than infer it."
+      ]
+    }
+  ],
+  "required_actual_readback": [
+    "Pre/post pins for all three source files, Node, cli.js, the installed tree, and the three symlinks.",
+    "Source directory contains exactly the three regular .qnt files.",
+    "Exact argv, env, cwd, start/end time, and exit code for each operation.",
+    "Complete stdout/stderr bytes (≤4 MiB each) with no truncation.",
+    "For the tests: per-test pass/fail lines naming exactly the two selected runs, with no other tests selected.",
+    "For the capture: the ITF filename, byte count and sha256 under the cap, fsynced before any comparison.",
+    "From the ITF, check:",
+    "- exactly 3 states and the full program, context, states and envelopes in each state;",
+    "- states lengths 1/2/3 and envelope lists as observed;",
+    "- state1.states[1] == state2.states[1] (intermediate unchanged);",
+    "- program identical across all states.",
+    "Root's own re-evaluation of compositionInv and terminalWitness from the frozen ITF, kept separate from the simulator's '[ok]'/witness stdout lines.",
+    "No expected data may be used to fill any actual field. Failures are recorded once, with no unchanged retry."
+  ],
+  "retained_gaps": [
+    "Owner admission, shape/ranges, uiValid, Init/Machine::new and guard satisfaction are premises; they are not observed by compositionInv (F3).",
+    "Context limbs [17,29] are opaque atoms. There is no LiteralCompleteLayout context/layout/relation hash, source-identity authentication, or digest.",
+    "Selected-reference and publication-reference sensitivity are absent (F2). Flattening order is independent only if F4's absolute checks are added.",
+    "Bool(false)/256 has no raw capture.",
+    "No byte, range or circuit correspondence: OBL.G4, StepInv/O1–O4, F4/prepareA, projectA/canonical checkpoint, the other 37 rule rows and dispatch, and line-84 exhaustion remain open.",
+    "Also open: native compile/keygen/prove/verify, the ledger-9 carrier seam, stagenet/Fenrir, and recursive composition.",
+    "No independent blind expected images exist and no actual producer (produce_checked_literal_complete_execution_request) comparison has been made. Any later comparison needs separately frozen inputs and independent expectations.",
+    "Host premises: native Node and system loader. No hermetic network or sandbox claim is made.",
+    "No EARS, SCON-017/018, UIREQ or full-completion claim."
+  ],
+  "coverage": {
+    "read_in_full": [
+      "Items 1–3 (all three candidate .qnt files)",
+      "Items 4–16 (freeze, proposal, source-to-model, readset, readbacks, README, review task, handoff, expected-trace contract, import closure, currentness, limits)",
+      "Items 17–23 (literal_host, literal_step, literal_ui_valid, return_publication_step, literal_complete_execution, literal_complete_bridge (whole file, including complete_representation), literal_witness)",
+      "Items 24–29 (MAPPING.md, interfaces.md, design.md, universal-interpreter spec, completion spec, product contract)",
+      "Items 30–32 (closure summary, dependency resolution, prior exact-two-operations)",
+      "Items 33–38 (Quint package.json, cli.js, cliCommands.js, cliReporting.js, builtin.qnt, runtime builtins.js)",
+      "Items 39–41 (prior review command/result/response, used only as limit provenance, not as B20 approval)"
+    ],
+    "explicit_factored_omissions": [
+      "Installed Quint parser, name-resolution, import/export, flattening, evaluator.simulate/test, itf.js and cliHelpers.js (expandOutputTemplate, isMatchingTest, getInvariants, toExpr) bodies were not supplied. F1, F5, simulator step counting and `{seq}` expansion rest on Quint language semantics and the supplied CLI glue, not on read resolver or evaluator code.",
+      "The whole 4670-file installed tree was not read; pins are treated as source-available only.",
+      "Rust mod.rs, fetch.rs, enabled_fetch.rs, literal_bridge.rs, return_publication_witness.rs and the mori_core layout_a/Machine sources were not supplied, nor were the K and reference sources.",
+      "The scalarLiteralStepTest and kProfileMachine bodies, and any B18/B19 data, were not supplied and were not used.",
+      "No actual outputs exist; none were read, manufactured or assumed."
+    ]
+  }
+}
+```

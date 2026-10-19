@@ -206,3 +206,23 @@ assets, rendered scene or deployment.
 ## October19: Lt switchyard and checked-statement history
 
 [Design010](DESIGN-010-LT-SWITCHYARD-AND-CHECKED-STATEMENT.md) is the fresh Opus concept for the three handwritten Lt modules and a separate A102 check-history gallery. Apply its [status and factual corrections](DESIGN-010-STATUS-AND-PROVENANCE.md), including four distinct corruptions across seven rejecting calls. [Update015](UPDATE-015-MUL-SOURCE-COHORT-AND-DOCUMENTATION.md) retains the preceding historical Mul source cut. The finished website remains tied to full Sherlock completion.
+
+## Design companion 011 — child binding and anchored return
+
+[Design011: child binding and anchored return](DESIGN-011-CHILD-BINDING-AND-ANCHORED-RETURN.md) is the Opus5.5 HIGH creative companion for the recursive return spine. It covers:
+
+- a whole statement ribbon headed by the child binding, with no digest stand-in;
+- a create-once phase shelf written before proving;
+- the A102→A80 splice;
+- the parent and terminal-anchor bays;
+- a separate K-state bench that is never wired to the proof path.
+
+Its internal register separates three source states:
+
+- the installed T1 child source, with no native run;
+- the delivered A80/link module, which is unapplied, unreviewed and uncompiled;
+- the still-missing Fenrir parent, terminal and harness scope.
+
+No proof, verifier result or recursive endpoint is claimed. Root records actual authorship and hashes in `AUTHORSHIP.json` separately. This companion adds no circuit-source iteration or website code. The finished site launches once the full Sherlock goal is complete and accepted.
+
+Sol factual addendum — October 19: the separate [DESIGN011 status and provenance](DESIGN-011-STATUS-AND-PROVENANCE.md) records later review, source and prelaunch facts; the Opus note and navigation above remain verbatim at their earlier cut.
