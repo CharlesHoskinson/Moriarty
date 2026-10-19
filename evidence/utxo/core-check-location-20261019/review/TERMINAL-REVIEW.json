@@ -1,0 +1,224 @@
+{
+  "actualAssessment": "The actual runtime evidence supports the scoped human source-location and complete JSON observations on the isolated SDK-free CC checkout for the two exercised ASCII fixtures (`unsupported-core1.mori` and `unsupported-core2.mori`), subject to explicit build, baseline, and coverage qualifications:\n\n1. **Expectation Provenance (`E01`-`E06`)**: `E05` (`2026-10-19T17:15:15Z`) and `E04` (`2026-10-19T17:15:35Z`) freeze `E01`-`E03` prior to repair integration (`B17` at `17:24:55Z`). `E01` explicitly records that expectations were derived from `N01` (`MC01` Invalid authoring) and baseline source inspection (`stage/mod.rs:34-38` and `simulate.rs:141-146`), not before-baseline blindness. In both 64-byte fixtures (`E02`, `E03`), `while` starts at UTF-8 byte offset `53` (line 3, column 3).\n2. **Proper RED Observations (`R01`-`R10`)**: Executed at `17:20:32Z` using the root-supplied earlier SDK-free CC binary `ce8f052ef5e8af200e7dc4d7bb90e6b0993f064ace175841398977135af61f68` (`R02`). Both human invocations (`mori --quiet --color never check unsupported-core1.mori` and `unsupported-core2.mori`) exited `1` with empty `stdout` (`R04`, `R08`) and `stderr` equal to `error: mori::core::unsupported: Expected state, asset or action declaration; loops and native calls are unsupported.\\n` (`R03`, `R07`), demonstrating the missing source location without build or runtime crashes. Both `--json` invocations (`R06`, `R10`) exited `1` with empty `stderr` (`R05`, `R09`) and matched `E01`'s complete expected JSON objects (`0fb1fc94...` and `3178676d...`).\n3. **Source Integration, Formatting, First Build Timeout, and Manual Continuation (`B01`-`B17`, `H01`, `F01`)**:\n   - Cache setup (`B12`-`B16`) completed with `exit: 0` in `35.272138618s`.\n   - `B17` (`17:24:55Z`) integrated unformatted `H01` (`095ecd6c...`) into the isolated checkout `/home/charl/Moriarty/.worktrees/core-check-location-local-20261019` without modifying original `W`, `C`, or `CC`.\n   - `B11` (`17:25:42Z`) records that initial `rustfmt --check` exited `1` and formatting produced `S04` (`66691dea...`, 4542 bytes), a whitespace-only line wrap verified against `H01` and `F01`, pinned under `sourcePinsSha256: 4c322d46b84f4729d779cf95f6337dba255bcb8be53049545c8b6893239dd955`.\n   - The first offline SDK-free build (`B06`-`B10`, `cargo build ... --frozen --offline -j1 -p mori --no-default-features --bin mori` under a `90s` timeout + `5s` kill grace) genuinely timed out with `exit: 124` at `90.084690174s` (`B07`) while compiling `mori-core` (`B09`), producing no binary (`binarySha256: null`).\n   - One manually selected continuation (`B01`-`B05`) under the same `90s` + `5s` bound retained the compiled dependency artifacts in the warm target directory, compiled `mori-core`, `mori-checker`, and `mori` (`B04`), and succeeded with `exit: 0` in `74.432258012s` (`B02`), producing binary `7d7dcb01a3291b67a0f92f5ec5b878588e8500f9b2e30e5c4bb9028e12201573`. No automatic retry, native counter reset, or timeout root cause is inferred.\n4. **GREEN Observations (`G01`-`G10`)**: Executed at `17:31:41Z` with binary `7d7dcb01...` (`G02`).\n   - Human cases (`G03`, `G07`): Exit code `1`, `stdout` empty (`G04`, `G08`), `stderr` renders `mori::core::unsupported`, the exact message words in order (`Expected state, asset or action declaration; loops and native calls are` / `unsupported.`) wrapped by `miette`'s graphical frame, header `\u256d\u2500[unsupported-core1.mori:3:3]` / `\u256d\u2500[unsupported-core2.mori:3:3]`, source line `3 \u2502   while {}`, and zero-length primary point marker `\u25b2` with label `here` at column 3 (derived from UTF-8 byte offset `53`). Exact graphical layout was not independently frozen prior to execution.\n   - JSON cases (`G06`, `G10`): Exit code `1`, `stderr` empty (`G05`, `G09`), and complete `stdout` bytes (`0fb1fc940206d2c2872fb79f3d250627179cc19000c4ffbcfae570cf8b9821af`, 284 bytes for Core1; `3178676d74eb88f850a5b45d02453efdeaf41ca117f34f622f4d1bd273edfd84`, 386 bytes for Core2) are byte-for-byte identical to RED (`R06`, `R10`) and match `E01`'s full JSON objects including all three `STAGE_LABELS` (`authentication`, `consumption`, `qualification`) on Core2.\n5. **Runtime Scope Boundary**: Only the two ASCII `--quiet --color never` Core1/Core2 cases on isolated `CC` were executed at runtime. `W` (`S01`/`S02`) is unrun, and multi-byte UTF-8 boundary filtering, `None`/out-of-range offset fallback, EOF point rendering, filename escaping, normal/verbose status lines, accepted Core inputs, Core3, and Beta paths are established by source inspection rather than runtime execution in this packet.",
+  "actualVerdict": "supports-scoped-location-and-json-observations",
+  "broaderAcceptanceQualification": "Approval of the scoped source repair (`S02` and `S04`) and confirmation of the four isolated SDK-free CLI observations (`R01`-`R10`, `G01`-`G10`) apply strictly to human CLI rendering of `mori_core::Error` values that already carry a valid UTF-8 byte `offset` in `mori check`. This review does NOT approve or adopt `Core3` (`moriarty/3`), MCP, library modules (`I01`-`I17`), security/escape policies outside the inspected call site, or any `W` runtime claim; does NOT establish any native, Midnight SDK, VM, ZKIRv3 circuit, keygen, proof, signature, wallet, or ledger capability; and does NOT close `MC01` (`N01`) or any parent language, lexer/validator Core offset population, successor profile, K semantics, or financial challenge obligation.",
+  "dissent": [],
+  "findings": [
+    {
+      "evidence": [
+        {
+          "endLine": 123,
+          "exactQuote": "                Err(error) => {\n                    if let Some(offset) = error\n                        .offset\n                        .filter(|offset| self.source.is_char_boundary(*offset as usize))\n                    {\n                        let diagnostic = MoriDiagnostic::error(error.message.clone())\n                            .with_code(error.code.clone())\n                            .with_label(mori_span::Span::empty(offset).primary_label(\"here\"));\n                        self.shell\n                            .report(&diagnostic.with_source_code(NamedSource::new(\n                                crate::display::text(self.name),\n                                self.source.to_owned(),\n                            )));\n                    } else {\n                        self.shell.error(error);\n                    }\n                }",
+          "fileId": "S04",
+          "startLine": 107,
+          "supports": "Shows the actual formatted isolated CC repair checking `is_char_boundary`, building a `MoriDiagnostic` with existing `message` and `code` and a zero-length primary label at `offset`, escaping the display filename via `crate::display::text`, and falling back to `self.shell.error(error)` when `offset` is absent or invalid."
+        },
+        {
+          "endLine": 65,
+          "exactQuote": "                Err(error) => {\n                    if let Some(offset) = error\n                        .offset\n                        .filter(|offset| source.is_char_boundary(*offset as usize))\n                    {\n                        let diagnostic = MoriDiagnostic::error(error.message.clone())\n                            .with_code(error.code.clone())\n                            .with_label(mori_span::Span::empty(offset).primary_label(\"here\"));\n                        shell.report(&diagnostic.with_source_code(NamedSource::new(\n                            crate::display::text(&name),\n                            source.clone(),\n                        )));\n                    } else {\n                        shell.error(error);\n                    }\n                }",
+          "fileId": "S02",
+          "startLine": 50,
+          "supports": "Shows the equivalent proposed repair in unrun W (`S02`)."
+        },
+        {
+          "endLine": 11,
+          "exactQuote": "mori::core::unsupported\n\n  \u00d7 Expected state, asset or action declaration; loops and native calls are\n  \u2502 unsupported.\n   \u256d\u2500[unsupported-core1.mori:3:3]\n 2 \u2502 agreement MissingLocation {\n 3 \u2502   while {}\n   \u00b7   \u25b2\n   \u00b7   \u2570\u2500\u2500 here\n 4 \u2502 }\n   \u2570\u2500\u2500\u2500\u2500",
+          "fileId": "G03",
+          "startLine": 1,
+          "supports": "Demonstrates the GREEN human stderr output for `unsupported-core1.mori` with code, wrapped message words in order, `unsupported-core1.mori:3:3` header, source line, and zero-length point marker at byte offset 53."
+        },
+        {
+          "endLine": 11,
+          "exactQuote": "mori::core::unsupported\n\n  \u00d7 Expected state, asset or action declaration; loops and native calls are\n  \u2502 unsupported.\n   \u256d\u2500[unsupported-core2.mori:3:3]\n 2 \u2502 agreement MissingLocation {\n 3 \u2502   while {}\n   \u00b7   \u25b2\n   \u00b7   \u2570\u2500\u2500 here\n 4 \u2502 }\n   \u2570\u2500\u2500\u2500\u2500",
+          "fileId": "G07",
+          "startLine": 1,
+          "supports": "Demonstrates the GREEN human stderr output for `unsupported-core2.mori` with code, wrapped message words in order, `unsupported-core2.mori:3:3` header, source line, and zero-length point marker at byte offset 53."
+        }
+      ],
+      "finding": "Both proposed W (`S02`) and actual formatted CC (`S04`) accurately repair the human `mori check` Core rejection path when `error.offset` is a valid UTF-8 boundary, and GREEN runtime observations (`G03`, `G07`) confirm the rendered source location on Core1 and Core2 ASCII fixtures.",
+      "requiredChangeOrUnknown": "None within the scoped human CLI branch; non-ASCII UTF-8 boundary cases, `None`/out-of-range fallback, EOF point rendering, filename escaping, and normal/verbose status lines are verified by static source reasoning rather than runtime test execution in this packet.",
+      "severity": "qualification"
+    },
+    {
+      "evidence": [
+        {
+          "endLine": 103,
+          "exactQuote": "        if self.json {\n            let report = check_source::core_report(self.name, self.source, &result, staged);\n            super::core_io::print(&report)?;",
+          "fileId": "S04",
+          "startLine": 101,
+          "supports": "Confirms the `--json` Core branch in `S04` is unchanged from `S03`."
+        },
+        {
+          "endLine": 12,
+          "exactQuote": "{\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::core::unsupported\",\n      \"message\": \"Expected state, asset or action declaration; loops and native calls are unsupported.\",\n      \"offset\": 53,\n      \"step\": null\n    }\n  ],\n  \"file\": \"unsupported-core1.mori\",\n  \"status\": \"rejected\"\n}",
+          "fileId": "G06",
+          "startLine": 1,
+          "supports": "Shows complete GREEN Core1 JSON output matching `R06` (`sha256: 0fb1fc94...`) and `E01`."
+        },
+        {
+          "endLine": 15,
+          "exactQuote": "{\n  \"authentication\": \"none\",\n  \"consumption\": \"untracked\",\n  \"diagnostics\": [\n    {\n      \"code\": \"mori::core::unsupported\",\n      \"message\": \"Expected state, asset or action declaration; loops and native calls are unsupported.\",\n      \"offset\": 53,\n      \"step\": null\n    }\n  ],\n  \"file\": \"unsupported-core2.mori\",\n  \"qualification\": \"local-reference-stage\",\n  \"status\": \"rejected\"\n}",
+          "fileId": "G10",
+          "startLine": 1,
+          "supports": "Shows complete GREEN Core2 JSON output matching `R10` (`sha256: 3178676d...`) and `E01`, including all three `STAGE_LABELS`."
+        }
+      ],
+      "finding": "The `--json` branch is untouched in source (`S02`, `S04`, `I01`), and complete RED and GREEN JSON outputs (`R06`/`G06`, `R10`/`G10`) are byte-for-byte identical and include all Core2 `STAGE_LABELS`.",
+      "requiredChangeOrUnknown": "None.",
+      "severity": "qualification"
+    },
+    {
+      "evidence": [
+        {
+          "endLine": 52,
+          "exactQuote": "    let lexed = mori_lexer::lex(source).map_err(|e| Error::new(\"lex\", e.to_string()))?;",
+          "fileId": "I09",
+          "startLine": 52,
+          "supports": "Shows `mori_core::parser::parse_profile` discarding the lexer span and constructing `Error` with `offset: None` when lexing fails after the leading `language` token."
+        },
+        {
+          "endLine": 530,
+          "exactQuote": "    pub(crate) fn new(code: &str, message: impl Into<String>) -> Self {\n        Self {\n            code: format!(\"mori::core::{code}\"),\n            message: message.into(),\n            offset: None,\n            step: None,\n        }\n    }",
+          "fileId": "I10",
+          "startLine": 523,
+          "supports": "Shows `mori_core::Error::new` initializing `offset: None` by default unless explicitly set by `Parser::error`."
+        },
+        {
+          "endLine": 105,
+          "exactQuote": "  \"scope\": \"This addresses Core parser errors that already carry a valid offset, not every MC01 lexical/semantic diagnostic or full frontend acceptance.\",",
+          "fileId": "E01",
+          "startLine": 105,
+          "supports": "Confirms that the scope of this repair is restricted to Core parser errors that already carry a valid `offset`."
+        },
+        {
+          "endLine": 14,
+          "exactQuote": "#### Scenario: Invalid authoring\n- **WHEN** source contains recursion, ambiguous assets, unbounded collections, malformed encodings, or unsupported operations\n- **THEN** the frontend rejects it before signing and reports the source location.",
+          "fileId": "N01",
+          "startLine": 12,
+          "supports": "Shows the broader `MC01` Invalid authoring requirement that remains open beyond this single CLI rendering branch."
+        }
+      ],
+      "finding": "`S02` and `S04` render source locations only for `mori_core::Error` values where `offset` is already `Some(...)`; Core lexing errors after the first token (`I09` lines 52, 441) and Core validation/stage errors still carry `offset: None` and fall back to locationless `shell.error(error)`, leaving full `MC01` Invalid authoring source-location coverage open.",
+      "requiredChangeOrUnknown": "Broader `MC01` diagnostic location obligations in `mori-core` lexing/validation remain open outside this single-branch CLI repair.",
+      "severity": "qualification"
+    },
+    {
+      "evidence": [
+        {
+          "endLine": 10,
+          "exactQuote": "{\n  \"at\": \"2026-10-19T17:25:42.663320+00:00\",\n  \"source\": \"/home/charl/Moriarty/.worktrees/core-check-location-local-20261019/crates/mori/src/commands/check.rs\",\n  \"bytes\": 4542,\n  \"sha256\": \"66691dea7258e8869fca522fc0ffe01eaf4e4f205f421a5b109ddd251d37ea90\",\n  \"formattingOnlyComparedPrepared\": true,\n  \"initialRustfmtCheckExit\": 1,\n  \"reason\": \"Existing report chain needs one standard rustfmt line wrap; only whitespace changed.\",\n  \"formatterWriteExit\": 0\n}",
+          "fileId": "B11",
+          "startLine": 1,
+          "supports": "Documents the formatting transition from prepared `095ecd6c...` (`B17`, `H01`) to actual formatted `66691dea...` (`S04`)."
+        },
+        {
+          "endLine": 11,
+          "exactQuote": "  \"exit\": 124,\n  \"elapsedSeconds\": 90.08469017400057,\n  \"all264SourceAndToolsConfigVendorPinsHeld\": true,\n  \"ownedSession\": 3378139,\n  \"ownedSessionRemaining\": [],\n  \"stdoutSha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"stderrSha256\": \"6b6dc79e1bac6f4ed3714957428fb59eecedcd6776f6942ba365458004f69c79\",\n  \"binaryPath\": \"/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori\",\n  \"binarySha256\": null",
+          "fileId": "B07",
+          "startLine": 3,
+          "supports": "Records that the first 90s build timed out with exit code 124 and produced no binary."
+        },
+        {
+          "endLine": 12,
+          "exactQuote": "  \"exit\": 0,\n  \"elapsedSeconds\": 74.43225801197696,\n  \"all264SourcePinsHeld\": true,\n  \"ownedSession\": 3392947,\n  \"ownedSessionRemaining\": [],\n  \"stdoutSha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"stderrSha256\": \"1a304e7b775bbbca04355bd8a921b714269697aef8fdb12e956eb77d9ea54828\",\n  \"binaryPath\": \"/home/charl/moriarty-c2-opus55-restored-20261017/core-check-location-local-build-20261019/owned/target/debug/mori\",\n  \"binarySha256\": \"7d7dcb01a3291b67a0f92f5ec5b878588e8500f9b2e30e5c4bb9028e12201573\",\n  \"firstBuildRemainsFailed\": true",
+          "fileId": "B02",
+          "startLine": 3,
+          "supports": "Records that the manual continuation under the same 90s+5s limit succeeded in 74.432258012s using retained warm build artifacts and produced binary `7d7dcb01...`."
+        }
+      ],
+      "finding": "Build and source-pin provenance are internally consistent across `B01`-`B17`, `H01`, and `F01`, but remain qualified by the first build timeout (`exit: 124` at `90.084690174s`), the warm-cache manual continuation (`exit: 0` at `74.432258012s`), root-supplied RED binary identity (`ce8f052e...`), and the absence of a pre-pinned on-disk execution observer script.",
+      "requiredChangeOrUnknown": "Cause of the first build timeout is unknown from the compiler progress log; no executed driver hash or strict aggregate wall-clock guarantee is established.",
+      "severity": "qualification"
+    }
+  ],
+  "limitations": [
+    "`W` (`S01`/`S02`) is unexecuted (`UNRUN`); all runtime observations come solely from the isolated SDK-free `CC` checkout (`S04`, binary `7d7dcb01...`) and the earlier root-supplied `CC` binary (`ce8f052e...`).",
+    "Runtime observations (`R01`-`R10`, `G01`-`G10`) cover only two ASCII rejection fixtures (`unsupported-core1.mori` and `unsupported-core2.mori`) under `--quiet --color never`; multi-byte UTF-8 boundary filtering (`is_char_boundary`), `error.offset == None` or out-of-range fallback to `shell.error(error)`, EOF zero-length point rendering, hostile filename escaping (`crate::display::text`), normal/verbose status output, accepted Core programs, Core3 (`moriarty/3`), and Beta paths are established by static source inspection only.",
+    "Expectations (`E01`-`E05`) were frozen before authoring the repair (`B17`) but were derived with exposure to baseline source (`stage/mod.rs` and `simulate.rs`), not under before-baseline blindness, and exact graphical miette frame layout was not independently frozen.",
+    "The first build attempt (`B07`) timed out (`exit: 124`, `90.084690174s`) with no output binary; the second build (`B02`, `B03`) was a manually selected continuation under the same `90s` + `5s` per-child timeout that succeeded (`74.432258012s`) by reusing compiled dependency artifacts in the warm target directory, with the underlying cause of the first timeout unknown.",
+    "No pre-pinned on-disk execution observer was supplied for the build/RED/GREEN invocations, and `B18`/`B19` (the 264-row source pin JSON manifests) were treated as manifest-pinned mechanical provenance data rather than semantically read in full.",
+    "Core errors that do not populate `error.offset` (such as `mori_core` lexer errors after the first token and `mori_core` semantic/stage validation errors) still fall back to locationless `shell.error(error)`, so full `MC01` Invalid authoring location coverage remains open."
+  ],
+  "readCoverage": {
+    "partial": [],
+    "unread": [
+      "B18",
+      "B19"
+    ],
+    "whole": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "H01",
+      "F01",
+      "I01",
+      "I02",
+      "I03",
+      "I04",
+      "I05",
+      "I06",
+      "I07",
+      "I08",
+      "I09",
+      "I10",
+      "I11",
+      "I12",
+      "I13",
+      "I14",
+      "I15",
+      "I16",
+      "I17",
+      "N01",
+      "N02",
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "E06",
+      "R01",
+      "R02",
+      "R03",
+      "R04",
+      "R05",
+      "R06",
+      "R07",
+      "R08",
+      "R09",
+      "R10",
+      "G01",
+      "G02",
+      "G03",
+      "G04",
+      "G05",
+      "G06",
+      "G07",
+      "G08",
+      "G09",
+      "G10",
+      "B01",
+      "B02",
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B07",
+      "B08",
+      "B09",
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14",
+      "B15",
+      "B16",
+      "B17",
+      "Q01"
+    ]
+  },
+  "reviewToken": "core-check-location-source-actual-agy-review-20261019-a1",
+  "sourceAssessment": "Both the proposed W source delta (`S01` -> `S02`) and the actual formatted isolated CC source delta (`S03` -> `H01` -> `S04`, with `F01` / `B11` establishing that `H01` -> `S04` is a single `rustfmt` line-wrap whitespace change) are sound, minimal, and faithful to the existing CLI and diagnostic architecture:\n\n1. **Diagnostic Code, Message, and Point Label**: In `S02` (lines 51-61) and `S04` (lines 108-119), when `mori check` runs without `--json` on a Core source and `result` is `Err(error)` carrying `Some(offset)` on a valid UTF-8 character boundary, it constructs `MoriDiagnostic::error(error.message.clone()).with_code(error.code.clone()).with_label(mori_span::Span::empty(offset).primary_label(\"here\"))`. This preserves `error.code` and `error.message` verbatim and attaches a zero-length primary point span `[offset, offset)` (`I13` lines 19-21, 39-48) without fabricating a token length (`mori_core::Error` in `I10` lines 506-511 and `Parser::error` in `I09` lines 253-257 store only `offset: Option<u32>`) and without computing UTF-16 or LSP positions.\n2. **UTF-8 Boundary Validation, EOF, and Fallback**: Filtering via `.filter(|offset| source.is_char_boundary(*offset as usize))` (`S02` line 53, `S04` line 110) guarantees in Rust `std` that `offset as usize <= source.len()` and lies on a UTF-8 scalar boundary before `miette` slices `source`. At EOF (`offset as usize == source.len()`, as produced by `TokenKind::Eof` in `I14` lines 97-100), `is_char_boundary` is `true` and `Span::empty(offset)` yields a valid zero-length EOF point span. When `error.offset` is `None` (e.g., Core lex errors in `I09` lines 52 and 441, or semantic/stage errors) or out-of-range/mid-codepoint, the filter yields `None` and the `else` branch executes `shell.error(error)` (`S02` line 63, `S04` line 121), preserving exact baseline fallback behavior.\n3. **Display-Name Escaping and Verbosity**: Both `S02` (line 59) and `S04` (line 117) pass `crate::display::text(...)` (`I05` lines 2-12) to `NamedSource::new(...)`, escaping ASCII control characters and non-ASCII characters via `char::escape_default()` before `miette` renders the header, matching `finish()` (`S01` line 133, `S03` line 134, `S04` line 149). Under `--quiet` (`Verbosity::Quiet`), `shell.status(\"Checking\", ...)` and `shell.status(\"Finished\", ...)` are suppressed (`I04` lines 40-44), while `shell.report(...)` and `shell.error(...)` still write to `stderr` (`I04` lines 65-75) and `run()` returns `ExitCode::FAILURE`.\n4. **Unchanged Beta and Complete JSON**: The `--json` branch (`S02` lines 35-47, `S04` lines 101-103, `I01` lines 91-121) and the Beta parsing/checking path (`S02` lines 75-143, `S04` lines 39-49, 80-94, 134-159, `I03`) are completely untouched.",
+  "sourceVerdict": "approve-scoped-source",
+  "summary": "Independent non-author SOURCE+ACTUAL review (`core-check-location-source-actual-agy-review-20261019-a1`) of the single human `mori check` Core source-location repair (`S01`->`S02` in unrun `W`; `S03`->`H01`->`S04` via `F01` in isolated `CC`). Source verdict: `approve-scoped-source`. Actual verdict: `supports-scoped-location-and-json-observations`. Both `S02` and `S04` properly validate `error.offset` with `str::is_char_boundary(*offset as usize)`, render a zero-length primary point label (`Span::empty(offset).primary_label(\"here\")`) with existing `error.code` and `error.message` through `MoriDiagnostic` and `NamedSource::new(crate::display::text(...), ...)`, fall back to `shell.error(error)` when `offset` is absent or not a UTF-8 boundary, and leave the `--json` and Beta paths untouched. Actual RED/GREEN executions on the isolated SDK-free `CC` binary (`7d7dcb01...` vs root-supplied earlier `ce8f052e...`) confirm the human location rendering and byte-identical full JSON outputs (including all Core2 `STAGE_LABELS`) for the two exercised ASCII fixtures, qualified by static-only verification of non-ASCII/EOF/fallback/escaping paths, the first build timeout (`124` at `90.08s`) followed by one manual warm-cache continuation (`0` at `74.43s`), and all open parent `MC01`/language/financial/native obligations."
+}
