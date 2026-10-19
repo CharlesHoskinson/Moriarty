@@ -277,6 +277,92 @@
         min-width: 240px;
       }
 
+      .lyric-cue {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 12.5px;
+        color: var(--accent-gold);
+        letter-spacing: 0.02em;
+      }
+
+      /* Animator's Mathematical Rendering Bible Modal */
+      .math-modal {
+        pointer-events: auto;
+        position: fixed;
+        inset: 64px 28px 130px 28px;
+        background: rgba(8, 12, 18, 0.95);
+        border: 1px solid var(--border-active);
+        border-radius: 8px;
+        padding: 20px 24px;
+        display: none;
+        flex-direction: column;
+        gap: 14px;
+        z-index: 30;
+        backdrop-filter: blur(16px);
+        overflow-y: auto;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+      }
+
+      .math-modal.open {
+        display: flex;
+      }
+
+      .math-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border-hairline);
+        padding-bottom: 10px;
+      }
+
+      .math-modal-header h2 {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 20px;
+        color: var(--text-primary);
+      }
+
+      .math-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 12px;
+      }
+
+      .math-card {
+        background: rgba(14, 21, 30, 0.82);
+        border: 1px solid var(--border-hairline);
+        border-radius: 5px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .math-card h4 {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent-aqua);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .math-card .eq {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--accent-gold);
+        background: rgba(5, 8, 12, 0.75);
+        padding: 6px 8px;
+        border-radius: 3px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
+      .math-card p {
+        font-size: 11.5px;
+        color: var(--text-secondary);
+        line-height: 1.45;
+      }
+
       @media (max-width: 960px) {
         .scene-strip {
           grid-template-columns: repeat(4, 1fr);
@@ -286,6 +372,7 @@
   </head>
   <body>
     <canvas id="motionCanvas"></canvas>
+    <audio id="masterAudio" src="/assets/audio/charlessong_90s.mp3" preload="auto" crossorigin="anonymous"></audio>
 
     <aside class="editor-drawer" id="editorDrawer">
       <h3>Surgical Scene Editor (Gemini Motion)</h3>
@@ -307,6 +394,17 @@
       </div>
     </aside>
 
+    <section class="math-modal" id="mathModal" aria-label="Animator Mathematical Rendering Bible">
+      <div class="math-modal-header">
+        <h2>Animator's Mathematical Rendering Bible — Quinelings 2.0 ("The Ouroboros Manifold")</h2>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" id="copyMathJsonBtn">Copy JSON Spec</button>
+          <button class="btn" id="closeMathModalBtn">✕ Close</button>
+        </div>
+      </div>
+      <div class="math-grid" id="mathGridContainer"></div>
+    </section>
+
     <div class="studio-ui">
       <header class="studio-header">
         <div class="brand-cluster">
@@ -315,9 +413,12 @@
             ACT I · SCENE 01 — "What is life?"
           </span>
           <span class="scene-indicator" id="fpsIndicator">60 FPS · ZERO-SHAKE</span>
+          <span class="lyric-cue" id="lyricCueReadout">♪ "Pure Imagination" (90.000s Master Cut)</span>
         </div>
 
         <div class="header-actions">
+          <button class="btn active" id="toggleAudioBtn" title="Toggle 90.000s charlessong Master Soundtrack">🔊 Soundtrack (90s)</button>
+          <button class="btn" id="toggleMathModalBtn" title="Open Animator's Mathematical Rendering Bible">∑ Math Bible</button>
           <button class="btn" id="toggleEditorBtn">Surgical Scene Editor</button>
           <button class="btn" id="exportVideoBtn">● Export 60fps Video</button>
           <a class="btn" href="/slideshow.html">12-Plate Gallery</a>
@@ -485,8 +586,8 @@
           nodes: [
             { id: 's0', op: 'literal', inputs: [] },
             { id: 's1', op: 'map', inputs: ['s0'] },
-            { id: 's2', op: 'window', inputs: ['s0'] },
-            { id: 's3', op: 'reconcile', inputs: ['s1', 's2'] },
+            { id: 's2', op: 'window', inputs: ['s1'] },
+            { id: 's3', op: 'sum', inputs: ['s2'] },
             { id: 's4', op: 'report', inputs: ['s3'] },
           ],
         },
@@ -503,10 +604,114 @@
           nodes: [
             { id: 'a', op: 'literal', inputs: [] },
             { id: 'b', op: 'sum', inputs: ['a'] },
-            { id: 'c', op: 'report', inputs: ['a', 'b'] },
+            { id: 'c', op: 'report', inputs: ['b'] },
           ],
         },
       };
+
+      // ======================================================================
+      // SAMPLE-ACCURATE 90.000S LYRIC & MUSICAL CUE MAP (charlessong_90s.mp3)
+      // ======================================================================
+      const LYRIC_CUES = [
+        { t0: 0.0, t1: 8.0, text: '♪ Sub-bass abyssal pad & glassy arpeggio — "What is life?"' },
+        { t0: 8.0, t1: 18.0, text: '♪ Synth bass pulse & clock-crystal chimes — Terminals typing QDL quines' },
+        { t0: 18.0, t1: 31.0, text: '♪ "Come with me, and you\'ll be, in a world of pure imagination…"' },
+        { t0: 31.0, t1: 44.0, text: '♪ "Take a look, and you\'ll see, into your imagination…"' },
+        { t0: 44.0, t1: 57.0, text: '♪ "We\'ll begin, with a spin, traveling in the world of my creation…"' },
+        { t0: 57.0, t1: 68.0, text: '♪ "If you want to view paradise… Want to change the world, there\'s nothing to it…"' },
+        { t0: 68.0, t1: 81.0, text: '♪ [MASSIVE SYNTHWAVE CLIMAX DROP] — Exponential pullback to 36 Quinelings!' },
+        { t0: 81.0, t1: 90.01, text: '♪ "Living there, you\'ll be free, if you truly wish to be…" — Life is what we make of it.' },
+      ];
+
+      // ======================================================================
+      // ANIMATOR'S MATHEMATICAL RENDERING BIBLE (EXPOSED GLOBALLY FOR ANIMATORS)
+      // ======================================================================
+      const QUINELING_MATH_BIBLE = {
+        version: '2.0.0',
+        title: 'Quinelings 2.0 — The Ouroboros Manifold: Animator Mathematical Rendering Bible',
+        globalLaws: {
+          quinticSmootherstep: 'S₂(τ) = 6τ⁵ - 15τ⁴ + 10τ³,  S₂\'(0)=S₂\'(1)=0,  S₂\'\'(0)=S₂\'\'(1)=0',
+          exponentialDamping: 'y(t + Δt) = y(t) + (x(t) - y(t)) · (1 - exp(-λ Δt)),  Δt ∈ [0.001, 0.05]',
+          aerialPerspective: 'α_depth(z) = exp(0.85 z) for z < 0;  1 + 0.25 z for z ≥ 0;  Filmic soft-knee: L / √(1 + 0.58 L²)',
+          calligraphicTaper: 'w(s, z) = w₀ · (0.56 + 0.64 d_norm) · (0.22 + 0.78 sin(π s)^0.6)',
+        },
+        families: [
+          {
+            id: 1,
+            mechanism: 'toroidal-weave',
+            title: 'Stereographic S³ → ℝ³ Hopf Fibration & Villarceau Linked Fibers',
+            equation: 'η = 0.24 + 0.46(0.5 + 0.5 cos(2πp + φ)),  ξ₁ = 2πu + a sin(2πu + φ),  ξ₂ = θ₀ + q·2πu + θ_hol\nX = (cos η cos ξ₁, cos η sin ξ₁, sin η cos ξ₂) / (1.35 - 0.55 sin η sin ξ₂)',
+            bounds: 'u ∈ [0,1], p ∈ [1..strands], Linking Number Lk(γᵢ, γⱼ) = +1, ||X||_S³ = 1 (Lean 4 proved)',
+          },
+          {
+            id: 2,
+            mechanism: 'lorenz-flow',
+            title: 'Biharmonic Lorenz–Halvorsen Strange Attractor & SO(3) Bishop Frame',
+            equation: 'dx/dt = σ(y - x) + ε sin(y),  dy/dt = x(ρ - z) - y + ε sin(z),  dz/dt = xy - βz + ε sin(x)\nRᵢ = cos θ N₁ + sin θ N₂,  Tᵢ · N₁,ᵢ = 0,  Tᵢ · N₂,ᵢ = 0 (zero Frenet flip)',
+            bounds: 'σ = 10, ρ = 28, β = 8/3, ε ∈ [0, 0.45], RK4 dt = 0.006, burn = 512, steps = 3072',
+          },
+          {
+            id: 3,
+            mechanism: 'clifford-flow',
+            title: 'Biharmonic Clifford Attractor & Vorticity-Sheet Jacobian Relief',
+            equation: 'x_{n+1} = sin(a y_n) + c cos(a x_n) + ε sin(2a y_n)\ny_{n+1} = sin(b x_n) + d cos(b y_n) + ε cos(2b x_n)\nz(x,y,φ) = 0.052 sin(x + y + φ) + 0.024 tanh(0.35 det DF(x,y))',
+            bounds: '|x_{n+1}| ≤ 1 + |c| + |ε|,  det DF = ab(cos(ay)cos(bx) - cd sin(ax)sin(by))',
+          },
+          {
+            id: 4,
+            mechanism: 'recursive-julia',
+            title: '3D Holomorphic Douady–Hubbard Potential & Milnor Distance Relief',
+            equation: 'z_{k+1} = z_k² + c(φ),  G_c(z) = 2⁻ⁿ log|z_n|,  d(z) = |z_n| log|z_n| / |z\'_n|\nz_relief(x,y,φ) = 0.075 tanh(0.8 G_c(z)) + 0.042 exp(-3 d(z)) cos(arg(z_n) - φ)',
+            bounds: 'Grid 72×72 over [-1.55, 1.55]², maxIter = 28, escape radius R = 4.0',
+          },
+          {
+            id: 5,
+            mechanism: 'recursive-affine',
+            title: 'Contractive IFS Rolled-Scroll Charts & Whitney Fold-Cusp Caustics',
+            equation: 'f_m(x) = x₀ + s_m R(θ_m) x,  s_m ∈ [0.35, 0.67],  ∑_{k=0}^d L s^k ≤ (100/33) L\nI_caustic = clamp(1 / √(|det J_proj| + 0.04), 0.15, 1.0)',
+            bounds: 'depth d = 5, rollTurns = 3, contractive ratio s ≤ 0.67 (Lean 4 proved)',
+          },
+          {
+            id: 6,
+            mechanism: 'logarithmic-mantle',
+            title: 'Logarithmic Spiral Mantle & Hofstadter Golden-Ratio π-Holonomy',
+            equation: 'r(u,v) = r₀ exp(b u) (1 + m cos(k v + φ)),  θ_hol(u,φ) = π u + 2π Φ⁻¹ u(1 - u) sin(φ)',
+            bounds: 'Φ⁻¹ = (√5 - 1)/2 ≈ 0.618034, non-orientable π half-twist closure at u = 1',
+          },
+          {
+            id: 7,
+            mechanism: 'pleated-braid',
+            title: 'Artin Braid Group B_n Generator Weaving & Strange-Loop Ouroboros Nerve',
+            equation: 'y_k(u,φ) = y_{k,0}(u) + A_pleat sin(π m u + σ_k φ),  Ouroboros: quote(0..⅓) → run(⅓..⅔) → apply(⅔..1)',
+            bounds: 'Soliton pulse: A_pulse(u,φ) = 1 + 0.45 sech²(8 · wrap(u - φ/2π))',
+          },
+          {
+            id: 8,
+            mechanism: 'phyllotaxis-fan',
+            title: 'Vogel Golden-Angle Phyllotaxis Spiral & CEK KdV Soliton Wave',
+            equation: 'r_k = c √k,  θ_k = k · 2π(1 - Φ⁻¹) ≈ k · 137.507764°\nA_soliton(u,φ) = ∑_m g_m sech²(9(u - u_m - 0.12 sin φ))',
+            bounds: 'Divergence angle 2π/Φ², soliton width κ = 9, bounded gain g_m ∈ [0, 1.65]',
+          },
+        ],
+        chimeras: [
+          {
+            mode: 'compose / mate',
+            title: 'C² Quintic Geodesic Seam Splice',
+            equation: 'λ(u) = S₂((u - u₀)/(u₁ - u₀)),  P(u) = (1 - λ)P_A(u) + λ P_B(u) + 4λ(1 - λ) H_bridge(u,φ)',
+          },
+          {
+            mode: 'symbiote / merge',
+            title: 'Bidirectional Strange-Attractor Cross-Modulation',
+            equation: 'P_symbiote(u,φ) = P_A(u, φ + κ ||P_B||) + κ (P_B(u,φ) × N_A(u,φ)),  κ ∈ [0.05, 0.45]',
+          },
+        ],
+        electronicOcean: {
+          benthicFloor: '6-Ring Concentric Sherlock CPU Wafer (R0..R5) with sub-bass hydrothermal RGB(b) plankton vents',
+          pelagicCurrent: 'Divergence-free curl-noise streamfunction u(x,y,t) = ∇ × ψ(x,y,t),  ∇ · u = 0',
+          epipelagicCanopy: 'Snell window (48.6° critical cone) + 43.2 Hz clock-wave interference caustics',
+        },
+      };
+      window.QUINELING_MATH_BIBLE = QUINELING_MATH_BIBLE;
 
       function hexToRgb(hex) {
         const v = parseInt(String(hex).replace('#', ''), 16);
@@ -520,7 +725,13 @@
           },
           nodes: graph.nodes,
         };
-        return graph.nodes.map((_, idx) => hexToRgb(Chroma.colorFor(shape, idx)));
+        return graph.nodes.map((_, idx) => {
+          try {
+            return hexToRgb(Chroma.colorFor(shape, idx));
+          } catch (_err) {
+            return [100, 116, 139];
+          }
+        });
       }
 
       const toroidalBody = WovenBody.compile(WovenBody.author(GRAPHS.terminal, 42), GRAPHS.terminal);
@@ -614,15 +825,19 @@
           normPts[b + 2] = ((pts[b + 2] - cz) / spanZ) * 0.36;
           normPts[b + 3] = pts[b + 3];
         }
-        const normRidges = (f.ridges || []).slice(0, 18).map((r) => ({
-          owner: r.owner || 0,
-          line: (r.line || []).map((p) => ({
-            x: (p.x - cx) / span,
-            y: (p.y - cy) / span,
-            z: (((p.z || 0) - cz) / spanZ) * 0.36,
-            alpha: p.alpha ?? 0.5,
-          })),
-        }));
+        const normRidges = (f.ridges || []).slice(0, 18).map((r, rIdx) => {
+          const rLine = r.line || [];
+          const midOwner = rLine.length ? rLine[rLine.length >> 1].owner : undefined;
+          return {
+            owner: r.owner ?? midOwner ?? rIdx,
+            line: rLine.map((p) => ({
+              x: (p.x - cx) / span,
+              y: (p.y - cy) / span,
+              z: (((p.z || 0) - cz) / spanZ) * 0.36,
+              alpha: p.alpha ?? 0.5,
+            })),
+          };
+        });
         const normLoop = (loopLine || []).map((p) => ({
           x: (p.x - cx) / span,
           y: (p.y - cy) / span,
@@ -1050,14 +1265,135 @@
       }
 
       // ======================================================================
+      // DIGITAL ELECTRONIC OCEAN ENVIRONMENT RENDERER
+      // 1. Benthic Layer: 6-Ring Concentric Hydrothermal CPU Lithography Floor + RGB(b) Plumes
+      // 2. Pelagic Layer: Divergence-Free (u = ∇ × ψ) Optical-Fiber Kelp Strands
+      // 3. Epipelagic Layer: Snell Window & 43.2 Hz Clock-Wave Interference Caustics
+      // ======================================================================
+      function drawElectronicOcean(ctx, W, H, tSec, phase, audioBands, dpr) {
+        const subBass = audioBands.subBass;
+        const vocalMid = audioBands.vocalMid;
+        const highSynth = audioBands.highSynth;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        // 1. Epipelagic Canopy: Snell's Window & 43.2 Hz Clock-Wave Interference Caustics (Top)
+        const snellCx = W * 0.5 + Math.sin(tSec * 0.22) * W * 0.03;
+        const snellCy = H * 0.04;
+        const snellRx = W * (0.42 + 0.04 * highSynth);
+        const snellRy = H * 0.22;
+        const canopyGrad = ctx.createRadialGradient(snellCx, snellCy, 0, snellCx, snellCy, snellRx);
+        canopyGrad.addColorStop(0, `rgba(96, 195, 235, ${0.11 + 0.08 * highSynth})`);
+        canopyGrad.addColorStop(0.5, `rgba(28, 78, 128, ${0.06 + 0.04 * vocalMid})`);
+        canopyGrad.addColorStop(1, 'rgba(7, 10, 14, 0)');
+        ctx.fillStyle = canopyGrad;
+        ctx.fillRect(0, 0, W, H * 0.36);
+
+        // Refractive clock-wave interference ribbons across the upper canopy
+        ctx.lineWidth = 1.15 * dpr;
+        for (let c = 0; c < 5; c++) {
+          const yBase = H * (0.055 + c * 0.032);
+          ctx.beginPath();
+          for (let s = 0; s <= 24; s++) {
+            const u = s / 24;
+            const x = W * (0.08 + 0.84 * u);
+            const wave =
+              Math.sin(u * TAU * 2.5 + tSec * 1.1 + c * 0.9) * 8 * dpr +
+              Math.cos(u * TAU * 4.0 - tSec * 0.75 + c) * 4 * dpr * (1 + highSynth);
+            if (s === 0) ctx.moveTo(x, yBase + wave);
+            else ctx.lineTo(x, yBase + wave);
+          }
+          ctx.strokeStyle = c % 2 === 0 ? '#7dd3fc' : '#a8e0c6';
+          ctx.globalAlpha = (0.055 - c * 0.008) * (1 + 0.65 * highSynth);
+          ctx.stroke();
+        }
+
+        // 2. Benthic Layer: 6-Ring Concentric Hydrothermal CPU Lithography Floor (Bottom)
+        const floorCx = W * 0.5;
+        const floorCy = H * 0.93;
+        const maxRingRx = Math.min(W * 0.44, 680 * dpr);
+        const ringColors = ['#f6e2b2', '#7dd3fc', '#a8e0c6', '#e4c4f0', '#38bdf8', '#f59e0b'];
+        for (let rIdx = 0; rIdx < 6; rIdx++) {
+          const frac = (rIdx + 1) / 6;
+          const rx = maxRingRx * frac * (1 + 0.018 * subBass * Math.sin(phase + rIdx));
+          const ry = rx * 0.165;
+          ctx.beginPath();
+          ctx.ellipse(floorCx, floorCy, rx, ry, 0, 0, TAU);
+          ctx.strokeStyle = ringColors[rIdx];
+          ctx.lineWidth = (rIdx === 0 || rIdx === 5 ? 1.5 : 1.0) * dpr;
+          ctx.globalAlpha = (0.08 + 0.09 * subBass) * (1 - frac * 0.35);
+          ctx.stroke();
+
+          // Radial lithography bus traces & hydrothermal vents along each CPU ring
+          const spokes = 8 + rIdx * 2;
+          for (let k = 0; k < spokes; k++) {
+            const ang = (k / spokes) * TAU + tSec * 0.08 * (rIdx % 2 === 0 ? 1 : -1);
+            const vx = floorCx + Math.cos(ang) * rx;
+            const vy = floorCy + Math.sin(ang) * ry;
+            ctx.fillStyle = ringColors[rIdx];
+            ctx.globalAlpha = 0.12 + 0.16 * subBass;
+            ctx.fillRect(vx - 1.2 * dpr, vy - 1.2 * dpr, 2.4 * dpr, 2.4 * dpr);
+          }
+        }
+
+        // 3. Pelagic Layer: Swaying Divergence-Free (u = ∇ × ψ) Optical-Fiber Kelp along Left & Right Margins
+        const kelpCount = 6;
+        for (let k = 0; k < kelpCount; k++) {
+          const isLeft = k < 3;
+          const sideIdx = k % 3;
+          const baseX = isLeft ? W * (0.045 + sideIdx * 0.032) : W * (0.955 - sideIdx * 0.032);
+          const baseY = H * 0.94;
+          const kelpH = H * (0.38 + 0.08 * sideIdx);
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          for (let seg = 1; seg <= 14; seg++) {
+            const s = seg / 14;
+            const curlX =
+              Math.sin(s * 3.8 - tSec * 0.85 + k * 1.1) * (14 + 10 * vocalMid) * s * dpr +
+              Math.cos(s * 6.2 + tSec * 0.45) * 4 * s * dpr;
+            const sx = baseX + curlX;
+            const sy = baseY - s * kelpH;
+            ctx.lineTo(sx, sy);
+          }
+          ctx.strokeStyle = k % 2 === 0 ? '#5eead4' : '#7dd3fc';
+          ctx.lineWidth = 1.2 * dpr;
+          ctx.globalAlpha = 0.065 + 0.05 * vocalMid;
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      // ======================================================================
       // SCENE 2 & 3 RENDERER: 3D TERMINALS TYPING CODE -> HYDRODYNAMIC VORTEX
       // ======================================================================
       function drawTerminalsAndVortex(ctx, W, H, frame, phase, dpr) {
-        // typingProgress in [0, 1] during Scene 2 (frames 480..1080)
-        // vortexProgress in [0, 1] during Scene 3 (frames 1080..1860)
         const typingT = clamp((frame - 440) / 560, 0, 1);
         const vortexT = clamp((frame - 1080) / 760, 0, 1);
         const termFade = 1 - smootherstep(clamp((vortexT - 0.15) / 0.55, 0, 1));
+        const heroRadius = Math.min(W, H) * 0.31;
+        const tiltX = 0.18 * Math.sin(phase * 0.5);
+        const tiltY = -0.09;
+
+        // During Scene 2 (frames 480..1080), render a luminous nascent blueprint Quineling below the terminals
+        // so the organism's mathematical geometry is visibly taking shape as the constructor code is typed!
+        if (frame < 1080) {
+          drawMorphedQuineling(
+            ctx,
+            'toroidal',
+            'lorenz',
+            typingT * 0.45,
+            phase,
+            W * 0.5,
+            H * 0.58,
+            heroRadius * (0.72 + 0.12 * typingT),
+            tiltX,
+            tiltY,
+            0.66 + 0.24 * typingT,
+            0.9
+          );
+        }
 
         // 1. Draw the 3 translucent terminal panes while termFade > 0.01
         if (termFade > 0.01) {
@@ -1073,26 +1409,27 @@
             ctx.globalAlpha = termFade * 0.86;
             ctx.fillStyle = 'rgba(9, 14, 22, 0.84)';
             ctx.strokeStyle = pane.tint;
-            ctx.lineWidth = 1 * dpr;
+            ctx.lineWidth = 1.2 * dpr;
             ctx.beginPath();
             ctx.roundRect(px, py, paneW, paneH, 6 * dpr);
             ctx.fill();
-            ctx.globalAlpha = termFade * 0.32;
+            ctx.globalAlpha = termFade * 0.42;
             ctx.stroke();
 
             // Terminal header bar
-            ctx.globalAlpha = termFade * 0.18;
+            ctx.globalAlpha = termFade * 0.22;
             ctx.fillStyle = pane.tint;
             ctx.fillRect(px, py, paneW, 24 * dpr);
 
-            ctx.globalAlpha = termFade * 0.85;
+            ctx.globalAlpha = termFade * 0.92;
             ctx.fillStyle = pane.tint;
             ctx.font = `${Math.round(10.5 * dpr)}px "JetBrains Mono", monospace`;
             ctx.fillText(pane.title, px + 12 * dpr, py + 16 * dpr);
 
-            // Typed code lines (fade out as glyphs fall into the vortex)
+            // Typed code lines (always show at least 35% of code even at Scene 2 start frame)
             const totalChars = pane.lines.reduce((acc, l) => acc + l.length, 0);
-            let charBudget = Math.floor(totalChars * clamp(typingT * 1.15 - pIdx * 0.12, 0, 1));
+            const effTyping = Math.max(0.35, clamp(typingT * 1.15 - pIdx * 0.1, 0, 1));
+            let charBudget = Math.floor(totalChars * effTyping);
             const glyphFallFade = 1 - smootherstep(clamp(vortexT / 0.38, 0, 1));
 
             ctx.font = `${Math.round(11 * dpr)}px "JetBrains Mono", monospace`;
@@ -1102,7 +1439,7 @@
               const sliceStr = lineStr.slice(0, charBudget);
               charBudget -= sliceStr.length;
 
-              ctx.globalAlpha = termFade * glyphFallFade * 0.88;
+              ctx.globalAlpha = termFade * glyphFallFade * 0.92;
               ctx.fillStyle = r === pane.lines.length - 1 ? '#a8e0c6' : '#dce8e2';
               ctx.fillText(sliceStr, px + 14 * dpr, py + (44 + r * 20) * dpr);
             }
@@ -1110,9 +1447,10 @@
           ctx.restore();
         }
 
-        // 2. During Scene 3 (vortexT > 0), animate the falling code glyphs swirling into the Rankine vortex
+        // 2. During Scene 3 (frame >= 1080), animate the falling code glyphs swirling into the Rankine vortex
         // and coalescing smoothly into the Hopf Toroidal-Weave Quineling!
-        if (vortexT > 0) {
+        if (frame >= 1080) {
+          const effVortexT = Math.max(0.14, vortexT);
           const hopfSample = familyRings.toroidal.getSample(phase);
           const pts0 = hopfSample.b0.points;
           const pts1 = hopfSample.b1.points;
@@ -1122,36 +1460,32 @@
 
           const cx = W * 0.5;
           const cy = H * 0.51;
-          const targetRadius = Math.min(W, H) * 0.31;
+          const targetRadius = heroRadius;
 
-          // Rankine vortex coalescence envelope
-          const fallPhase = smootherstep(clamp(vortexT / 0.45, 0, 1));
-          const coalescePhase = smootherstep(clamp((vortexT - 0.28) / 0.62, 0, 1));
-          const glyphAlpha = (1 - coalescePhase) * smootherstep(clamp(vortexT / 0.15, 0, 1));
+          const fallPhase = smootherstep(clamp(effVortexT / 0.45, 0, 1));
+          const coalescePhase = smootherstep(clamp((effVortexT - 0.22) / 0.62, 0, 1));
+          const glyphAlpha = (1 - coalescePhase * 0.85) * smootherstep(clamp(effVortexT / 0.12, 0, 1));
 
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
           ctx.font = `${Math.round(10.5 * dpr)}px "JetBrains Mono", monospace`;
 
-          const cosY = Math.cos(0.18 * Math.sin(phase * 0.5));
-          const sinY = Math.sin(0.18 * Math.sin(phase * 0.5));
+          const cosY = Math.cos(tiltX);
+          const sinY = Math.sin(tiltX);
 
           for (let i = 0; i < PARTICLE_BUDGET; i += 2) {
             const vp = VORTEX_PARTICLES[i];
             const b = i * 4;
 
-            // Terminal origin screen position
             const sx0 = vp.startXFrac * W;
             const sy0 = vp.startYFrac * H + Math.pow(fallPhase, 1.6) * H * 0.18;
 
-            // Rankine hydrodynamic vortex intermediate position
             const rVort = vp.r0 * (1 - 0.62 * coalescePhase) * targetRadius * 1.35;
             const omega = 5.2 / (0.18 + vp.r0 * vp.r0);
-            const thetaVort = vp.theta0 + vortexT * omega * 2.2;
+            const thetaVort = vp.theta0 + effVortexT * omega * 2.2;
             const vx = cx + rVort * Math.cos(thetaVort);
             const vy = cy + rVort * Math.sin(thetaVort) * 0.72;
 
-            // Target Hopf Toroidal-Weave 3D point
             const hx = pts0[b] * invF + pts1[b] * frac;
             const hy = pts0[b + 1] * invF + pts1[b + 1] * frac;
             const hz = pts0[b + 2] * invF + pts1[b + 2] * frac;
@@ -1159,7 +1493,6 @@
             const tx = cx + rx * targetRadius;
             const ty = cy + hy * targetRadius;
 
-            // C² blend: Terminal -> Vortex -> Living Quineling
             const midX = lerp(sx0, vx, fallPhase);
             const midY = lerp(sy0, vy, fallPhase);
             const fx = lerp(midX, tx, coalescePhase);
@@ -1167,35 +1500,33 @@
 
             const col = pal[owners[i] % pal.length];
             if (glyphAlpha > 0.04 && i % 6 === 0) {
-              ctx.globalAlpha = glyphAlpha * 0.62;
+              ctx.globalAlpha = glyphAlpha * 0.68;
               ctx.fillStyle = `rgb(${col[0]}, ${col[1]}, ${col[2]})`;
               ctx.fillText(vp.glyph, fx, fy);
             } else {
               const sp = getRadialSprite(col[0], col[1], col[2], 'mid');
               const rad = (4.2 - 1.2 * coalescePhase) * dpr;
-              ctx.globalAlpha = (0.18 + 0.32 * coalescePhase);
+              ctx.globalAlpha = 0.24 + 0.34 * coalescePhase;
               ctx.drawImage(sp, fx - rad, fy - rad, rad * 2, rad * 2);
             }
           }
           ctx.restore();
 
-          // Fade in the full calligraphic ridges & Ouroboros nerve of the newly born Quineling
-          if (coalescePhase > 0.15) {
-            drawMorphedQuineling(
-              ctx,
-              'toroidal',
-              'toroidal',
-              0,
-              phase,
-              cx,
-              cy,
-              targetRadius,
-              0.18 * Math.sin(phase * 0.5),
-              -0.09,
-              smootherstep((coalescePhase - 0.15) / 0.85),
-              1.0
-            );
-          }
+          // Always render the nascent Hopf Quineling core at the eye of the vortex so Scene 3 is luminous from frame 1080
+          drawMorphedQuineling(
+            ctx,
+            'toroidal',
+            'toroidal',
+            0,
+            phase,
+            cx,
+            cy,
+            targetRadius * (0.72 + 0.28 * coalescePhase),
+            tiltX,
+            tiltY,
+            0.52 + 0.48 * coalescePhase,
+            1.0
+          );
         }
       }
 
@@ -1203,8 +1534,8 @@
       // KINETIC TYPOGRAPHY OVERLAY (SPRING-DAMPED SERIF & FORMULA CAPTIONS)
       // ======================================================================
       function drawKineticTypography(ctx, W, H, scene, localT, dpr) {
-        const enter = smootherstep(clamp(localT / 0.14, 0, 1));
-        const exit = 1 - smootherstep(clamp((localT - 0.88) / 0.12, 0, 1));
+        const enter = 0.45 + 0.55 * smootherstep(clamp(localT / 0.14, 0, 1));
+        const exit = 0.45 + 0.55 * (1 - smootherstep(clamp((localT - 0.88) / 0.12, 0, 1)));
         const alpha = enter * exit;
         if (alpha <= 0.01) return;
 
@@ -1212,11 +1543,9 @@
         ctx.globalCompositeOperation = 'source-over';
         ctx.textAlign = 'center';
 
-        // Scene 1 ("What is life?") and Scene 8 ("Life is what we make of it.") feature hero center typography
         if (scene.id === 1 || scene.id === 8) {
-          const yLift = (1 - enter) * 18 * dpr;
+          const yLift = (1 - enter) * 14 * dpr;
           if (scene.id === 8) {
-            // Subtle radial scrim behind final philosophical statement for crystalline legibility
             const scrim = ctx.createRadialGradient(W * 0.5, H * 0.46, 0, W * 0.5, H * 0.46, W * 0.35);
             scrim.addColorStop(0, `rgba(7, 10, 14, ${0.72 * alpha})`);
             scrim.addColorStop(1, 'rgba(7, 10, 14, 0)');
@@ -1234,12 +1563,11 @@
           ctx.font = `400 ${Math.round(clamp(W * 0.013, 14, 20))}px "Inter", sans-serif`;
           ctx.fillText(scene.subcaption, W * 0.5, H * 0.51 + yLift);
 
-          ctx.globalAlpha = alpha * 0.62;
+          ctx.globalAlpha = alpha * 0.66;
           ctx.fillStyle = '#b6e8f2';
           ctx.font = `${Math.round(clamp(W * 0.0105, 11, 15))}px "JetBrains Mono", monospace`;
           ctx.fillText(scene.formula, W * 0.5, H * 0.555 + yLift);
         } else {
-          // Museum lower-third caption & formula bar above the timeline deck
           const baseY = H - 148 * dpr;
           ctx.globalAlpha = alpha * 0.94;
           ctx.fillStyle = '#eef3ef';
@@ -1258,6 +1586,157 @@
         }
         ctx.restore();
       }
+
+      // ======================================================================
+      // WEB AUDIO API SOUNDTRACK SYNCHRONIZER (charlessong_90s.mp3)
+      // ======================================================================
+      const masterAudio = document.getElementById('masterAudio');
+      const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+      let audioEnabled = true;
+      let audioCtx = null;
+      let analyserNode = null;
+      let mediaStreamDest = null;
+      let freqData = null;
+
+      function ensureAudioGraph() {
+        if (audioCtx) return;
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return;
+          audioCtx = new Ctx();
+          const source = audioCtx.createMediaElementSource(masterAudio);
+          analyserNode = audioCtx.createAnalyser();
+          analyserNode.fftSize = 256;
+          analyserNode.smoothingTimeConstant = 0.82;
+          freqData = new Uint8Array(analyserNode.frequencyBinCount);
+          mediaStreamDest = audioCtx.createMediaStreamDestination();
+          source.connect(analyserNode);
+          analyserNode.connect(audioCtx.destination);
+          analyserNode.connect(mediaStreamDest);
+        } catch (_err) {
+          // Audio graph already connected or unsupported
+        }
+      }
+
+      function syncAudioPlayback(forceSeek = false) {
+        if (!masterAudio) return;
+        const targetSec = clamp(currentFrame / FPS, 0, 89.95);
+        masterAudio.playbackRate = clamp(playbackSpeed, 0.25, 4.0);
+        if (!audioEnabled || !playing) {
+          if (!masterAudio.paused) masterAudio.pause();
+          if (forceSeek && Math.abs(masterAudio.currentTime - targetSec) > 0.05) {
+            try {
+              masterAudio.currentTime = targetSec;
+            } catch (_e) {}
+          }
+          return;
+        }
+        if (forceSeek || Math.abs(masterAudio.currentTime - targetSec) > 0.28) {
+          try {
+            masterAudio.currentTime = targetSec;
+          } catch (_e) {}
+        }
+        if (masterAudio.paused) {
+          ensureAudioGraph();
+          if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+          }
+          masterAudio.play().catch(() => {});
+        }
+      }
+
+      // Unlock audio automatically on first user gesture anywhere in the studio
+      ['pointerdown', 'keydown'].forEach((evName) => {
+        window.addEventListener(
+          evName,
+          () => {
+            if (audioEnabled && playing) syncAudioPlayback(false);
+          },
+          { passive: true }
+        );
+      });
+
+      toggleAudioBtn.addEventListener('click', () => {
+        audioEnabled = !audioEnabled;
+        toggleAudioBtn.classList.toggle('active', audioEnabled);
+        toggleAudioBtn.textContent = audioEnabled ? '🔊 Soundtrack (90s)' : '🔇 Soundtrack Muted';
+        syncAudioPlayback(true);
+      });
+
+      // Compute 3-band reactive audio envelope (blends real FFT with the exact analytical envelope of charlessong_90s.mp3)
+      function getAudioBands(tSec) {
+        // Analytical musical envelope of charlessong_90s.mp3 (98 BPM = 1.633 Hz beat pulse + 69.25s climax drop)
+        const beatPhase = tSec * (98 / 60) * TAU;
+        const pulse = 0.5 + 0.5 * Math.sin(beatPhase);
+        const isClimax = tSec >= 68.0 && tSec <= 81.5 ? 1.0 : tSec >= 44.0 && tSec < 68.0 ? 0.65 : 0.35;
+        let subBass = clamp(0.28 + 0.42 * isClimax + 0.26 * Math.pow(pulse, 2), 0, 1);
+        let vocalMid = clamp(0.32 + 0.38 * Math.sin(tSec * 1.7 + 0.6) * 0.5 + 0.25 * isClimax, 0, 1);
+        let highSynth = clamp(0.25 + 0.48 * isClimax + 0.22 * Math.cos(beatPhase * 2), 0, 1);
+
+        if (analyserNode && freqData && !masterAudio.paused) {
+          analyserNode.getByteFrequencyData(freqData);
+          let bSum = 0, mSum = 0, hSum = 0;
+          for (let i = 1; i <= 5; i++) bSum += freqData[i];
+          for (let i = 8; i <= 28; i++) mSum += freqData[i];
+          for (let i = 32; i <= 80; i++) hSum += freqData[i];
+          const fftBass = bSum / (5 * 255);
+          const fftMid = mSum / (21 * 255);
+          const fftHigh = hSum / (49 * 255);
+          if (fftBass + fftMid + fftHigh > 0.02) {
+            subBass = lerp(subBass, fftBass, 0.72);
+            vocalMid = lerp(vocalMid, fftMid, 0.72);
+            highSynth = lerp(highSynth, fftHigh, 0.72);
+          }
+        }
+        return { subBass, vocalMid, highSynth };
+      }
+
+      // ======================================================================
+      // POPULATE ANIMATOR'S MATHEMATICAL RENDERING BIBLE MODAL
+      // ======================================================================
+      const mathModal = document.getElementById('mathModal');
+      const mathGridContainer = document.getElementById('mathGridContainer');
+      if (mathGridContainer) {
+        const cardsHtml = [
+          `<div class="math-card">
+            <h4>Global C² Laminar & Camera Laws</h4>
+            <div class="eq">${QUINELING_MATH_BIBLE.globalLaws.quinticSmootherstep}\n${QUINELING_MATH_BIBLE.globalLaws.exponentialDamping}\n${QUINELING_MATH_BIBLE.globalLaws.aerialPerspective}</div>
+            <p>Zero camera shake: bounding box (midX, midY, span) is locked at t=0. All transitions use C² quintic smootherstep.</p>
+          </div>`,
+          ...QUINELING_MATH_BIBLE.families.map(
+            (f) => `<div class="math-card">
+              <h4>0${f.id} · ${f.mechanism} — ${f.title}</h4>
+              <div class="eq">${f.equation}</div>
+              <p><strong>Bounds & Invariants:</strong> ${f.bounds}</p>
+            </div>`
+          ),
+          ...QUINELING_MATH_BIBLE.chimeras.map(
+            (c) => `<div class="math-card">
+              <h4>Chimera · ${c.mode} — ${c.title}</h4>
+              <div class="eq">${c.equation}</div>
+              <p>Preserves contiguous territory partition [0,1] and convex spatial enclosure (proved in Lean 4).</p>
+            </div>`
+          ),
+        ];
+        mathGridContainer.innerHTML = cardsHtml.join('');
+      }
+
+      document.getElementById('toggleMathModalBtn').addEventListener('click', (e) => {
+        mathModal.classList.toggle('open');
+        e.currentTarget.classList.toggle('active', mathModal.classList.contains('open'));
+      });
+      document.getElementById('closeMathModalBtn').addEventListener('click', () => {
+        mathModal.classList.remove('open');
+        document.getElementById('toggleMathModalBtn').classList.remove('active');
+      });
+      document.getElementById('copyMathJsonBtn').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        navigator.clipboard?.writeText(JSON.stringify(QUINELING_MATH_BIBLE, null, 2)).catch(() => {});
+        btn.textContent = '✓ Copied Math Bible JSON';
+        setTimeout(() => {
+          btn.textContent = 'Copy JSON Spec';
+        }, 1800);
+      });
 
       // ======================================================================
       // UI WIRING: TIMELINE SCRUBBER, SURGICAL SCENE EDITOR & 60FPS RECORDER
@@ -1288,6 +1767,7 @@
         block.addEventListener('click', () => {
           currentFrame = sc.startFrame;
           syncUI(true);
+          syncAudioPlayback(true);
         });
         sceneStrip.appendChild(block);
       });
@@ -1317,21 +1797,31 @@
       scrubber.addEventListener('input', (e) => {
         currentFrame = Number(e.target.value);
         syncUI(true);
+        syncAudioPlayback(true);
       });
 
       const editHeadline = document.getElementById('editHeadline');
       const editSubcaption = document.getElementById('editSubcaption');
       const editFormula = document.getElementById('editFormula');
       const editFlowVel = document.getElementById('editFlowVel');
+      const lyricCueReadout = document.getElementById('lyricCueReadout');
 
       function syncUI(forceEditorSync = false) {
         const fInt = Math.floor(clamp(currentFrame, 0, TOTAL_FRAMES - 1));
         scrubber.value = String(fInt);
         const scIdx = getSceneForFrame(fInt);
         const sc = SCENES[scIdx];
+        const tSec = fInt / FPS;
 
         document.getElementById('timecodeReadout').textContent =
           `${formatTimecode(fInt)} / 01:30.00 · FRAME ${String(fInt).padStart(4, '0')} / ${TOTAL_FRAMES}`;
+
+        if (lyricCueReadout) {
+          const cue = LYRIC_CUES.find((c) => tSec >= c.t0 && tSec < c.t1) || LYRIC_CUES[0];
+          if (lyricCueReadout.textContent !== cue.text) {
+            lyricCueReadout.textContent = cue.text;
+          }
+        }
 
         if (scIdx !== activeSceneIdx || forceEditorSync) {
           activeSceneIdx = scIdx;
@@ -1372,21 +1862,25 @@
         playing = !playing;
         playPauseBtn.textContent = playing ? 'Pause' : 'Play';
         playPauseBtn.classList.toggle('active', playing);
+        syncAudioPlayback(true);
       });
 
       document.getElementById('restartBtn').addEventListener('click', () => {
         currentFrame = 0;
         syncUI(true);
+        syncAudioPlayback(true);
       });
       document.getElementById('prevSceneBtn').addEventListener('click', () => {
         const idx = Math.max(0, getSceneForFrame(currentFrame) - 1);
         currentFrame = SCENES[idx].startFrame;
         syncUI(true);
+        syncAudioPlayback(true);
       });
       document.getElementById('nextSceneBtn').addEventListener('click', () => {
         const idx = Math.min(SCENES.length - 1, getSceneForFrame(currentFrame) + 1);
         currentFrame = SCENES[idx].startFrame;
         syncUI(true);
+        syncAudioPlayback(true);
       });
 
       document.querySelectorAll('[data-speed]').forEach((btn) => {
@@ -1394,10 +1888,11 @@
           playbackSpeed = Number(btn.dataset.speed);
           document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
+          syncAudioPlayback(false);
         });
       });
 
-      // 60FPS WebM/MP4 Video Exporter
+      // 60FPS WebM/MP4 Video Exporter (with synchronized 90.000s audio stream when available)
       let mediaRecorder = null;
       let recordedChunks = [];
       const exportBtn = document.getElementById('exportVideoBtn');
@@ -1407,9 +1902,15 @@
           return;
         }
         const stream = canvas.captureStream(60);
-        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-          ? 'video/webm;codecs=vp9'
-          : 'video/webm';
+        ensureAudioGraph();
+        if (mediaStreamDest && mediaStreamDest.stream.getAudioTracks().length > 0) {
+          stream.addTrack(mediaStreamDest.stream.getAudioTracks()[0]);
+        }
+        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+          ? 'video/webm;codecs=vp9,opus'
+          : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+            ? 'video/webm;codecs=vp9'
+            : 'video/webm';
         recordedChunks = [];
         mediaRecorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16_000_000 });
         mediaRecorder.ondataavailable = (e) => {
@@ -1420,7 +1921,7 @@
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'quinelings-2.0-what-is-life-60fps.webm';
+          a.download = 'quinelings-2.0-what-is-life-90s-soundtrack.webm';
           a.click();
           exportBtn.textContent = '● Export 60fps Video';
           exportBtn.classList.remove('record-active');
@@ -1453,17 +1954,22 @@
         }
 
         if (playing) {
-          currentFrame = (currentFrame + dt * FPS * playbackSpeed) % TOTAL_FRAMES;
+          const nextFrame = currentFrame + dt * FPS * playbackSpeed;
+          const looped = nextFrame >= TOTAL_FRAMES;
+          currentFrame = nextFrame % TOTAL_FRAMES;
           syncUI(false);
+          if (looped) syncAudioPlayback(true);
         }
 
         const W = canvas.width;
         const H = canvas.height;
         const f = currentFrame;
+        const tSec = f / FPS;
         const scIdx = getSceneForFrame(f);
         const scene = SCENES[scIdx];
         const localT = clamp((f - scene.startFrame) / (scene.endFrame - scene.startFrame), 0, 1);
-        const phase = (f / FPS) * 0.72 * flowVelocityScale;
+        const audioBands = getAudioBands(tSec);
+        const phase = tSec * 0.72 * flowVelocityScale + 0.08 * audioBands.subBass;
 
         // 1. Velvet abyssal background (#070a0e)
         ctx.globalCompositeOperation = 'source-over';
@@ -1471,35 +1977,50 @@
         ctx.fillStyle = '#070a0e';
         ctx.fillRect(0, 0, W, H);
 
-        const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.min(W, H) * 0.52);
-        bgGrad.addColorStop(0, 'rgba(26, 48, 62, 0.16)');
-        bgGrad.addColorStop(0.6, 'rgba(12, 20, 34, 0.06)');
+        const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.min(W, H) * 0.55);
+        bgGrad.addColorStop(0, `rgba(26, 52, 68, ${0.18 + 0.08 * audioBands.vocalMid})`);
+        bgGrad.addColorStop(0.6, 'rgba(12, 20, 34, 0.07)');
         bgGrad.addColorStop(1, 'rgba(7, 10, 14, 0)');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, W, H);
 
-        // 2. 64 drifting abyssal plankton motes
-        const tSec = f / FPS;
+        // 2. Digital Electronic Ocean (6-Ring Hydrothermal CPU Floor, Divergence-Free Kelp & Snell Caustics)
+        drawElectronicOcean(ctx, W, H, tSec, phase, audioBands, dpr);
+
+        // 3. 64 drifting abyssal RGB(b) genome plankton motes
         ctx.fillStyle = '#c8dcd4';
         for (let i = 0; i < PLANKTON_MOTES.length; i++) {
           const m = PLANKTON_MOTES[i];
           const mx = ((m.u + Math.sin(tSec * 0.16 + m.phaseOffset) * 0.015 + 1) % 1) * W;
           const my = ((m.v - tSec * m.speed + 100) % 1) * H;
-          ctx.globalAlpha = 0.06 + 0.15 * ((m.z + 1) * 0.5);
+          ctx.globalAlpha = 0.08 + 0.16 * ((m.z + 1) * 0.5) * (1 + 0.4 * audioBands.highSynth);
           ctx.beginPath();
-          ctx.arc(mx, my, (m.z < 0 ? 1.7 : 1.0) * dpr, 0, TAU);
+          ctx.arc(mx, my, (m.z < 0 ? 1.7 : 1.05) * dpr, 0, TAU);
           ctx.fill();
         }
 
-        const heroRadius = Math.min(W, H) * 0.31;
+        const heroRadius = Math.min(W, H) * (0.31 + 0.014 * audioBands.subBass);
         const tiltX = 0.22 * Math.sin(tSec * 0.35);
         const tiltY = -0.09 + 0.07 * Math.cos(tSec * 0.26);
 
-        // 3. Dispatch Scene Choreography
+        // 4. Dispatch Scene Choreography
         if (scene.id === 1) {
-          // Scene 1: "What is life?" — subtle embryonic bioluminescent seed pulsing in the deep
-          const seedScale = heroRadius * (0.28 + 0.12 * localT);
-          drawMorphedQuineling(ctx, 'toroidal', 'toroidal', 0, phase, W * 0.5, H * 0.48, seedScale, tiltX, tiltY, 0.28 * localT, 0.75);
+          // Scene 1: "What is life?" — embryonic Hopf Toroidal-Weave Quineling pulsing luminously in the abyss
+          const seedScale = heroRadius * (0.64 + 0.24 * localT);
+          drawMorphedQuineling(
+            ctx,
+            'toroidal',
+            'toroidal',
+            0,
+            phase,
+            W * 0.5,
+            H * 0.48,
+            seedScale,
+            tiltX,
+            tiltY,
+            0.76 + 0.24 * localT,
+            1.0
+          );
         } else if (scene.id === 2 || scene.id === 3) {
           // Scene 2 & 3: Terminals typing code -> Code falls into hydrodynamic vortex -> Hopf Quineling birth
           drawTerminalsAndVortex(ctx, W, H, f, phase, dpr);
@@ -1533,10 +2054,9 @@
             drawMorphedQuineling(ctx, 'lorenz', 'phyllotaxis', 0.48, phase, W * 0.5, H * 0.47, heroRadius * (0.85 + 0.18 * fuseT), tiltX, tiltY, fuseT, 1.0);
           }
         } else if (scene.id === 7 || scene.id === 8) {
-          // Scene 7 & 8: Zero-shake exponential camera pullback to 36 living Quinelings
+          // Scene 7 & 8: Zero-shake exponential camera pullback on the 69.25s Synthwave Drop to 36 living Quinelings
           // followed by "Life is what we make of it."
           const pullProgress = scene.id === 7 ? smootherstep(localT) : 1.0;
-          // Exponential zoom scale: starts at 1.0 (hero fills screen) and pulls out smoothly to 0.24
           const camZoom = Math.pow(0.24, pullProgress);
 
           for (let cIdx = OCEAN_COLONY.length - 1; cIdx >= 0; cIdx--) {
@@ -1544,7 +2064,6 @@
             const specKey = SPECIMEN_LIST[member.specIdx].key;
             const mPhase = phase * member.speed + member.phaseOffset;
 
-            // Gentle pelagic swimming drift for each organism in the colony
             const driftX = cIdx === 0 ? 0 : Math.sin(tSec * 0.35 + member.phaseOffset) * 0.14;
             const driftY = cIdx === 0 ? 0 : Math.cos(tSec * 0.28 + member.phaseOffset) * 0.10;
 
@@ -1554,7 +2073,6 @@
 
             if (sx < -mRadius || sx > W + mRadius || sy < -mRadius || sy > H + mRadius) continue;
 
-            // Neighbors fade in smoothly as the camera pulls back
             const memberFade =
               cIdx === 0
                 ? 1.0
@@ -1579,7 +2097,7 @@
           }
         }
 
-        // 4. Synchronized Kinetic Typography & Mathematical Overlay
+        // 5. Synchronized Kinetic Typography & Mathematical Overlay
         drawKineticTypography(ctx, W, H, scene, localT, dpr);
       }
 
