@@ -588,7 +588,10 @@ function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
       baseTissueOwner[i] = owners[i] % nodeCount;
     }
 
-    const ridges = rawFrame.ridges || [];
+    const ridges = rawFrame.ridges ? rawFrame.ridges.slice() : [];
+    if (typeof WovenBody.strangeLoop === 'function' && artifact.wovenBody) {
+      ridges.push(WovenBody.strangeLoop(artifact.wovenBody, bucketPhase, { samples: 64 }));
+    }
     let totalRawSegments = 0;
     for (let rIdx = 0; rIdx < ridges.length; rIdx += 1) {
       const len = ridges[rIdx].line?.length || 0;
@@ -984,6 +987,8 @@ export function createQuinelingSubsystem() {
   const _ridgeBaseR = new Float32Array(64);
   const _ridgeBaseG = new Float32Array(64);
   const _ridgeBaseB = new Float32Array(64);
+  const _nodeExecGain = new Float32Array(64);
+  const _nodeExecZShift = new Float32Array(64);
   const _vecA = new THREE.Vector3();
   const _vecB = new THREE.Vector3();
   const _dummy = new THREE.Object3D();
@@ -1189,6 +1194,29 @@ export function createQuinelingSubsystem() {
       ridgeBaseB[n] = rb;
     }
 
+    const nodeExecGain = _nodeExecGain;
+    const nodeExecZShift = _nodeExecZShift;
+    const stepResp =
+      typeof WovenBody.stepResponse === 'function' && artifact.wovenBody
+        ? WovenBody.stepResponse(artifact.wovenBody, wovenPhase, {
+            activeOwner: activeNodeIdx,
+            callDepth,
+            fuelRatio: liveFuelRatio,
+            outcome: isFault ? 'Rejected' : isExhausted ? 'Exhausted' : isDone ? 'Done' : 'Running',
+            stepIndex,
+          })
+        : null;
+    const gainsArr = stepResp?.ownerGain || stepResp?.ownerGains;
+    const zShiftsArr = stepResp?.ownerZShift || stepResp?.ownerZShifts;
+    for (let n = 0; n < nodeCount; n += 1) {
+      nodeExecGain[n] = gainsArr && gainsArr[n] !== undefined
+        ? gainsArr[n]
+        : n === activeNodeIdx ? 1.14 : 0.72;
+      nodeExecZShift[n] = zShiftsArr && zShiftsArr[n] !== undefined
+        ? zShiftsArr[n]
+        : 0;
+    }
+
     // ========================================================================
     // 2. EVERY-FRAME 60/120FPS 3D TRAVELING-WAVE ADVECTION ON TISSUE CLOUD
     //    Zero transcendental calls inside the loop!
@@ -1205,17 +1233,18 @@ export function createQuinelingSubsystem() {
       const waveS = sinK * cosPhi - cosK * sinPhi;
       const waveC = cosK * cosPhi + sinK * sinPhi;
 
+      const ownerIdx = baseTissueOwner[i];
+      const execZ = nodeExecZShift[ownerIdx] || 0;
       const px = bx + bx * 0.044 * waveS - by * 0.032 * waveC;
       const py = by + by * 0.044 * waveS + bx * 0.032 * waveC;
-      const pz = bz + 0.048 * waveS + 0.022 * waveC;
+      const pz = bz + 0.048 * waveS + 0.022 * waveC + execZ * 0.35;
 
       tissuePositions[p3] = px;
       tissuePositions[p3 + 1] = py;
       tissuePositions[p3 + 2] = pz;
 
-      const ownerIdx = baseTissueOwner[i];
       const depthShade = clamp(0.76 + pz * 0.68, 0.54, 1.32);
-      const gain = (ownerIdx === activeNodeIdx ? 1.14 : 0.72) * depthShade;
+      const gain = (ownerIdx === activeNodeIdx ? 1.14 : 0.72) * (0.78 + 0.22 * (nodeExecGain[ownerIdx] || 1)) * depthShade;
       let a = baseTissueExpAlpha[i] * gain;
       if (a < 0.045) a = 0.045;
       else if (a > 0.96) a = 0.96;
@@ -1243,6 +1272,8 @@ export function createQuinelingSubsystem() {
       const vBase = segIdx * 6;
       const wBase = segIdx * 4;
       const aBase = segIdx * 2;
+      const ownerIdx = baseRidgeOwner[segIdx];
+      const execZ = (nodeExecZShift[ownerIdx] || 0) * 0.35;
 
       const bx0 = baseRidgePos[vBase];
       const by0 = baseRidgePos[vBase + 1];
@@ -1260,8 +1291,8 @@ export function createQuinelingSubsystem() {
       const waveS1 = sinK1 * cosPhi - cosK1 * sinPhi;
       const waveC1 = cosK1 * cosPhi + sinK1 * sinPhi;
 
-      const pz0 = bz0 + 0.048 * waveS0 + 0.022 * waveC0;
-      const pz1 = bz1 + 0.048 * waveS1 + 0.022 * waveC1;
+      const pz0 = bz0 + 0.048 * waveS0 + 0.022 * waveC0 + execZ;
+      const pz1 = bz1 + 0.048 * waveS1 + 0.022 * waveC1 + execZ;
 
       ridgeLinePositions[vBase] = bx0 + bx0 * 0.044 * waveS0 - by0 * 0.032 * waveC0;
       ridgeLinePositions[vBase + 1] = by0 + by0 * 0.044 * waveS0 + bx0 * 0.032 * waveC0;
@@ -1270,10 +1301,9 @@ export function createQuinelingSubsystem() {
       ridgeLinePositions[vBase + 4] = by1 + by1 * 0.044 * waveS1 + bx1 * 0.032 * waveC1;
       ridgeLinePositions[vBase + 5] = pz1;
 
-      const ownerIdx = baseRidgeOwner[segIdx];
       const depthBoost0 = clamp(0.82 + pz0 * 0.65, 0.58, 1.35);
       const depthBoost1 = clamp(0.82 + pz1 * 0.65, 0.58, 1.35);
-      const activeBoost = ownerIdx === activeNodeIdx ? 1.48 : 1.12;
+      const activeBoost = (ownerIdx === activeNodeIdx ? 1.48 : 1.12) * (0.85 + 0.15 * (nodeExecGain[ownerIdx] || 1));
 
       let a0 = baseRidgeAlpha[aBase] * activeBoost * depthBoost0;
       if (a0 > 0.96) a0 = 0.96;
