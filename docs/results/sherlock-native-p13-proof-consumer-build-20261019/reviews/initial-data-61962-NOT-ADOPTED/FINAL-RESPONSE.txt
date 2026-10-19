@@ -1,0 +1,67 @@
+# Judgment: not supported as pinned. One hard source barrier, one data correction.
+
+## 1. Hard barrier: the pinned guard bytes are not on disk
+
+The exact `bindings.runner` path no longer matches its pin. The helper still matches.
+
+| File | Pin | On disk now |
+|---|---|---|
+| `…/afterimages/bounded_sdk_compile.py` | `74063ff1…6294` | **`d4c1c3f9…8a71`**, same 96,706 bytes, mtime **2026-10-19 21:47:12** |
+| `…/afterimages/cached_current_build.py` | `a9a98bdd…adf6c` | matches (rewritten at the same second with identical bytes) |
+
+Diffing against the P12 archive copy (`native-p12-…/actual-one-current-WW-cached-current-F-01/archive/bounded_sdk_compile.py`, which does hash to `74063ff1`) shows a single same-length inversion at `bounded_sdk_compile.py:1035` inside `run()`:
+
+```
+-        need(digest(packet/'A0_FREEZE.json')==a0['sha256'],'A0 freeze digest changed')
++        need(digest(packet/'A0_FREEZE.json')!=a0['sha256'],'A0 freeze digest changed')
+```
+
+What this means:
+- Nothing else under the runtime tree changed in the 21:40–21:55 window besides these two files.
+- `--cached-current-f` does not call `run()`, so the edit is not on this route's logic path. On the non-cached path it makes the normal case refuse. It is not a bypass, because the re-check at line 1037 still requires `==`.
+- `executing_identity` would refuse the current bytes against a `74063ff1` runner pin before any phase starts. So this fails closed. It is still disqualifying for this judgment:
+  - The report's statement "No guard, helper … source was changed" is false for the guard as observed now.
+  - Its origin is unknown: no receipt and no author.
+  - The source-only opinion 65847 and all of my reasoning below apply to `74063ff1`, not to what currently sits at the bound path.
+
+**Smallest fix:** Root investigates who or what rewrote both afterimages at 21:47. Root then restores `74063ff1` at the pinned path from the P12 archive copy, re-pins it, and records a receipt for both actions. Alternatively, Root explicitly rebinds `runner` to the archive copy, but `main()` loads the helper from the runner's own directory, so restoring in place is simpler. I have not modified either file.
+
+## 2. Data correction: the outer and internal timer ordering is inverted
+
+P12 ran with outer `wallSeconds` **2,040** above internal `total_wall_seconds` and F wall **2,021**. It had `killMode: process-group-SIGKILL` and finished in 89.37 s. The candidate sets all three to **300**.
+
+The helper installs its `ITIMER_REAL` only after `consent`, `supervisor_envelope` and `enforce_post_p11_historical_debits` have run. With equal caps, the outer SIGKILL therefore always fires first. That skips the following:
+- `Group.close`
+- the `TERMINAL_FAILURE.json` receipt
+- the guard's own cleanup
+
+**Data-only fix:** keep outer at 300 and lower `total_wall_seconds` and `limits.F.wall_seconds` to **281**, which preserves P12's 19 s margin.
+- The worst-case debits stay at the report's 300-based figures: 5,531 / 1,631 / 10,414.
+- 281 s is still more than 3× P12's observed elapsed time.
+- The F wall and helper post-P11 checks only need the value to be ≤, so 281 passes.
+
+## 3. Everything else fits (assuming `74063ff1` is restored)
+
+- **Additional bodies I checked that were not in the packet:**
+  - Post-P10 accounting at `cached_current_build.py:1963-1979` uses only ≤ checks, and the P10 prefix sits below `f_cap`.
+  - `supervisor_envelope` checks `live_s ≤ 120e6` at entry.
+  - `_validate_tier_grant` requires the grant maxima to be ≥ the config values and binds the fresh `config_inputs` hash, which is already listed as pending.
+  - No equality constraint blocks the lower caps.
+- **Phase CPU:**
+  - `prior_cpu = 840,026,337 + live_p` holds for all three F variants in one leaf, which gives a fresh bound of ≤300,000,000 µs.
+  - Current Root plus that bound is 1,230,907,465 µs.
+  - The E inequality arithmetic (10,847,772,016 / 12,043,713,008) is correct, and keeping it separate from S+P is right.
+- **Stderr worst case is understated:**
+  - `launch` allows up to the full 2,097,152 bytes on disk. The 59,519-byte historical prefix is only enforced afterwards, as a refusal.
+  - The worst-case Root F-stderr debit is therefore **79,686 + 2,097,152 = 2,176,838**, not 2,117,319.
+  - This is still far below 16 MiB, so it does not change the verdict.
+- **Source reviews:** a single report can technically back both the `security` and `nonsecurity` receipts. Whether 65847 satisfies the `designated_security_owner` role, and whether its qualifications are discharged, is a Root policy call that the code cannot settle.
+- **Pending fresh data:** the receipt chain, QOBS, the held-lock stat manifest, the applied full-tree match and the absent marker are correctly listed as pending.
+
+## Verdict
+
+The existing P12 pair supports this one smaller compile-only route **only after** two things happen:
+1. `74063ff1` is restored and re-verified at the bound path, with the 21:47 rewrite explained.
+2. The internal wall caps are set to 281 s under the 300 s outer cap.
+
+This is a judgment, not execution authority. Nothing was launched, invoked or written.
