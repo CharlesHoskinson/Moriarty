@@ -378,6 +378,19 @@ export function createCinemaSubsystem({
     }
 
     if (wasInterior && camera) {
+      const cosP = Math.cos(interiorPitch);
+      currentTarget.set(
+        interiorEye.x + Math.sin(interiorYaw) * cosP * 0.45,
+        interiorEye.y + Math.sin(interiorPitch) * 0.45,
+        interiorEye.z - Math.cos(interiorYaw) * cosP * 0.45
+      );
+      _scratchOffset.copy(camera.position).sub(currentTarget);
+      if (_scratchOffset.lengthSq() > 1e-6) {
+        _scratchSpherical.setFromVector3(_scratchOffset);
+        currentRadius = clamp(_scratchSpherical.radius, MIN_ORBIT_DISTANCE, MAX_ORBIT_DISTANCE);
+        currentPhi = clamp(_scratchSpherical.phi, MIN_PHI, Math.PI * 0.96);
+        currentTheta = _scratchSpherical.theta;
+      }
       camera.near = 0.025;
       if (typeof camera.updateProjectionMatrix === 'function') {
         camera.updateProjectionMatrix();

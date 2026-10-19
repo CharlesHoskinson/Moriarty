@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sherlock × BrowserStack Mobile Lab</title>
+    <style>
+      :root {
+        --bg: #0b0e14;
+        --panel: #131822;
+        --border: rgba(148, 163, 184, 0.18);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --emerald: #10b981;
+        --amber: #f59e0b;
+        --rose: #f43f5e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+        background: radial-gradient(circle at 50% 0%, #172033 0%, var(--bg) 70%);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 720px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+      .badge {
+        font-size: 11px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.12);
+        color: var(--accent);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+      }
+      .badge.ok {
+        background: rgba(16, 185, 129, 0.14);
+        color: var(--emerald);
+        border-color: rgba(16, 185, 129, 0.35);
+      }
+      p.sub {
+        margin: 0 0 20px;
+        color: var(--muted);
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 600px) {
+        .field-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input[type='text'],
+      input[type='password'] {
+        width: 100%;
+        padding: 11px 13px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.75);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+      input:focus {
+        border-color: var(--accent);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      button {
+        cursor: pointer;
+        border: none;
+        border-radius: 10px;
+        padding: 11px 18px;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.15s ease;
+      }
+      button.primary {
+        background: linear-gradient(135deg, #38bdf8, #0284c7);
+        color: #04111d;
+      }
+      button.primary:hover {
+        filter: brightness(1.08);
+      }
+      button.secondary {
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      button.secondary:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .status-box {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid var(--border);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        color: #cbd5e1;
+      }
+      .device-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .pill {
+        font-size: 11.5px;
+        padding: 5px 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      a.back {
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 12.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <h1>Sherlock × BrowserStack Real-Device Lab</h1>
+        <span id="statusBadge" class="badge">Awaiting Credentials</span>
+      </div>
+      <p class="sub">
+        Enter your BrowserStack Automate credentials below. Tip: you can paste
+        <code>username:access_key</code> directly into either box and it will split automatically.
+        Credentials are saved locally to <code>.browserstack.json</code> (gitignored, mode 0600) so
+        the agent can immediately run real Android &amp; iOS browser telemetry tests.
+      </p>
+
+      <form id="bsForm">
+        <div class="field-grid">
+          <div>
+            <label for="username">BrowserStack Username (or username:key)</label>
+            <input
+              id="username"
+              type="text"
+              placeholder="e.g. charleshoskinson_xxxxx"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <div>
+            <label for="accessKey">BrowserStack Access Key</label>
+            <input
+              id="accessKey"
+              type="password"
+              placeholder="e.g. xxxxxxxxxxxxxxxxxxxx"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+        <div>
+          <label for="targetUrl">Target URL to Test on Mobile Devices</label>
+          <input
+            id="targetUrl"
+            type="text"
+            value="https://charleshoskinson.github.io/Moriarty/visualization/index.html"
+          />
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary" id="saveBtn">
+            Save &amp; Verify BrowserStack Key
+          </button>
+          <button type="button" class="secondary" id="toggleShowBtn">Show / Hide Key</button>
+          <a href="/" class="back" style="margin-left: auto; align-self: center">
+            ← Back to Sherlock Workbench
+          </a>
+        </div>
+      </form>
+
+      <div class="device-pills">
+        <span class="pill">📱 Samsung Galaxy S24 Ultra (Android 14 · Chrome)</span>
+        <span class="pill">📱 Google Pixel 8 Pro (Android 14 · Chrome)</span>
+        <span class="pill">📱 Samsung Galaxy S23 (Android 13 · Chrome)</span>
+        <span class="pill">📱 iPhone 15 Pro (iOS 17 · Safari)</span>
+        <span class="pill">📱 iPad Pro 12.9 (iPadOS 17 · Safari)</span>
+      </div>
+
+      <div id="statusBox" class="status-box">Checking local .browserstack.json status...</div>
+    </div>
+
+    <script>
+      const userEl = document.getElementById('username');
+      const keyEl = document.getElementById('accessKey');
+      const urlEl = document.getElementById('targetUrl');
+      const statusBox = document.getElementById('statusBox');
+      const statusBadge = document.getElementById('statusBadge');
+      const toggleShowBtn = document.getElementById('toggleShowBtn');
+
+      function handlePasteSplit(e) {
+        setTimeout(() => {
+          const val = e.target.value.trim();
+          if (val.includes(':')) {
+            const [u, k] = val.split(':');
+            if (u && k) {
+              userEl.value = u.trim();
+              keyEl.value = k.trim();
+            }
+          }
+        }, 10);
+      }
+      userEl.addEventListener('input', handlePasteSplit);
+      keyEl.addEventListener('input', handlePasteSplit);
+
+      toggleShowBtn.addEventListener('click', () => {
+        keyEl.type = keyEl.type === 'password' ? 'text' : 'password';
+      });
+
+      async function checkStatus() {
+        try {
+          const res = await fetch('/api/browserstack/status');
+          const data = await res.json();
+          if (data.configured) {
+            userEl.value = data.username || '';
+            if (data.targetUrl) urlEl.value = data.targetUrl;
+            statusBadge.textContent = data.verified ? 'Verified ✓' : 'Configured';
+            statusBadge.className = 'badge ok';
+            statusBox.textContent =
+              `✓ Credentials saved for user "${data.username}" (${data.maskedKey})\n` +
+              (data.plan
+                ? `Plan: ${data.plan.automate_plan || 'Automate'} | Parallel Sessions: ${data.plan.parallel_sessions_running}/${data.plan.parallel_sessions_max_allowed}`
+                : 'Ready for agent BrowserStack execution.');
+          } else {
+            statusBox.textContent = 'Waiting for BrowserStack Username & Access Key...';
+          }
+        } catch (err) {
+          statusBox.textContent = 'Error checking status: ' + err.message;
+        }
+      }
+
+      document.getElementById('bsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        let username = userEl.value.trim();
+        let accessKey = keyEl.value.trim();
+        if (username.includes(':') && !accessKey) {
+          const parts = username.split(':');
+          username = parts[0].trim();
+          accessKey = parts.slice(1).join(':').trim();
+          userEl.value = username;
+          keyEl.value = accessKey;
+        }
+        if (!accessKey && username) {
+          statusBox.textContent = 'Please provide both Username and Access Key (or paste username:key).';
+          return;
+        }
+        statusBox.textContent = 'Saving and verifying with BrowserStack Automate API...';
+        try {
+          const res = await fetch('/api/browserstack/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username,
+              accessKey,
+              targetUrl: urlEl.value.trim(),
+            }),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            statusBadge.textContent = data.verified ? 'Verified ✓' : 'Saved ✓';
+            statusBadge.className = 'badge ok';
+            statusBox.textContent =
+              `✓ Saved to .browserstack.json!\n` +
+              (data.plan
+                ? `BrowserStack Plan: ${data.plan.automate_plan || 'Active'}\nParallel limit: ${data.plan.parallel_sessions_max_allowed}\n`
+                : `Note: ${data.verifyNote || 'Saved locally'}\n`) +
+              `\nThe agent can now automatically run the Android & iOS mobile device suite!`;
+          } else {
+            statusBox.textContent = `✗ Error: ${data.error || 'Failed to save'}`;
+          }
+        } catch (err) {
+          statusBox.textContent = `✗ Request failed: ${err.message}`;
+        }
+      });
+
+      checkStatus();
+    </script>
+  </body>
+</html>

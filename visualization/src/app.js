@@ -494,6 +494,103 @@ function resolveChronoEnvHint(chronoFrames, chronoIdx, activeBindings) {
   return '';
 }
 
+let ringsDomCache = null;
+
+function ensureRingsDomBuilt() {
+  if (ringsDomCache || !els.sixRingsGauge) return ringsDomCache;
+  els.sixRingsGauge.textContent = '';
+  const frag = document.createDocumentFragment();
+  const ringNodes = [];
+
+  for (let r = 0; r < 6; r++) {
+    const idxA = r * 2;
+    const idxB = r * 2 + 1;
+    const slotLo = String(idxA + 1).padStart(2, '0');
+    const slotHi = String(idxB + 1).padStart(2, '0');
+
+    const pill = document.createElement('div');
+    pill.className = 'ring-pill ring-idle';
+
+    const top = document.createElement('div');
+    top.className = 'ring-pill-top';
+    const ringId = document.createElement('span');
+    ringId.className = 'ring-id';
+    ringId.textContent = `R${r + 1} (${slotHi})`;
+    const slotsIdx = document.createElement('span');
+    slotsIdx.className = 'ring-slots-idx';
+    slotsIdx.textContent = `${slotLo}–${slotHi}`;
+    top.append(ringId, slotsIdx);
+
+    const rowA = document.createElement('div');
+    rowA.className = 'ring-slot-row slot-idle';
+    const mainA = document.createElement('span');
+    mainA.className = 'slot-main';
+    const keyA = document.createElement('span');
+    keyA.className = 'slot-key';
+    keyA.textContent = 'West A:';
+    const valA = document.createElement('span');
+    valA.className = 'slot-val';
+    valA.textContent = '—';
+    mainA.append(keyA, valA);
+    rowA.appendChild(mainA);
+
+    const rowB = document.createElement('div');
+    rowB.className = 'ring-slot-row slot-idle';
+    const mainB = document.createElement('span');
+    mainB.className = 'slot-main';
+    const keyB = document.createElement('span');
+    keyB.className = 'slot-key';
+    keyB.textContent = 'East B:';
+    const valB = document.createElement('span');
+    valB.className = 'slot-val';
+    valB.textContent = '—';
+    mainB.append(keyB, valB);
+    rowB.appendChild(mainB);
+
+    let overflowBadge = null;
+    if (r === 5) {
+      overflowBadge = document.createElement('span');
+      overflowBadge.className = 'overflow-badge hidden';
+      overflowBadge.style.display = 'none';
+      rowB.appendChild(overflowBadge);
+    }
+
+    pill.append(top, rowA, rowB);
+    frag.appendChild(pill);
+    ringNodes.push({ slotLo, slotHi, pill, rowA, valA, rowB, valB, overflowBadge });
+  }
+
+  const strip = document.createElement('div');
+  strip.className = 'control-sector-strip';
+  strip.setAttribute('aria-label', '10-Sector Control Stator');
+
+  const stripTop = document.createElement('div');
+  stripTop.className = 'control-strip-top';
+  const stripLabel = document.createElement('span');
+  stripLabel.textContent = '10-Sector Control Stator';
+  const needleStrong = document.createElement('strong');
+  needleStrong.textContent = 'Needle → Center (0 frames)';
+  stripTop.append(stripLabel, needleStrong);
+
+  const sectorGrid = document.createElement('div');
+  sectorGrid.className = 'control-sector-grid';
+  const sectorChips = CONTROL_STRIP_SECTORS.map((sec) => {
+    const chip = document.createElement('span');
+    chip.className = 'control-sector-chip';
+    chip.title = sec.title;
+    chip.textContent = sec.badge;
+    sectorGrid.appendChild(chip);
+    return { keyLower: sec.key.toLowerCase(), isErrorKey: sec.key === 'Error', chip };
+  });
+
+  strip.append(stripTop, sectorGrid);
+  frag.appendChild(strip);
+  els.sixRingsGauge.appendChild(frag);
+
+  ringsDomCache = { ringNodes, needleStrong, sectorChips };
+  return ringsDomCache;
+}
+
 function syncStepUI(stepIdx, prebuiltStepState = null) {
   if (!state.trace || !state.trace.steps.length) return;
   const totalSteps = state.trace.steps.length;
@@ -542,7 +639,8 @@ function syncStepUI(stepIdx, prebuiltStepState = null) {
 
   // 3. Active Source Line & Provenance
   const origin = step.after.controlOrigin;
-  if (els.activeAstBadge) {
+  if (els.activeAstBadge && state.cachedTraceForAstBadge !== state.trace) {
+    state.cachedTraceForAstBadge = state.trace;
     const activeMeta = PRESET_EDITORIAL_META[state.activePresetId];
     const title = activeMeta?.title || state.trace.programName || 'Sherlock Program';
     const entryExpr = state.trace.programImage?.expressions?.find((e) => e.astPath === 'entry/');
@@ -635,7 +733,7 @@ function syncStepUI(stepIdx, prebuiltStepState = null) {
     }
   }
 
-  // 5. 6 Stacked Horizontal Split-Arc Ring Rows (West Slot A | East Slot B) + 10-Sector Control Strip
+  // 5. 6 Stacked Horizontal Split-Arc Ring Rows (West Slot A | East Slot B) + 10-Sector Control Strip (Zero-Allocation In-Place DOM Update)
   if (els.sixRingsGauge && els.ringsSummaryBadge) {
     const visibleSlots = Math.min(12, chronoFrames.length);
     els.ringsSummaryBadge.textContent =
@@ -645,89 +743,83 @@ function syncStepUI(stepIdx, prebuiltStepState = null) {
 
     const frontierChronoIdx = chronoFrames.length > 0 ? Math.min(11, chronoFrames.length - 1) : -1;
     const activeRingIdx = frontierChronoIdx >= 0 ? Math.floor(frontierChronoIdx / 2) : -1;
+    const dom = ensureRingsDomBuilt();
 
-    let ringsHtml = '';
-    for (let r = 0; r < 6; r++) {
-      const idxA = r * 2;
-      const idxB = r * 2 + 1;
-      const slotLo = String(idxA + 1).padStart(2, '0');
-      const slotHi = String(idxB + 1).padStart(2, '0');
-      const fA = chronoFrames[idxA];
-      const fB = chronoFrames[idxB];
-      const fill = (fA ? 1 : 0) + (fB ? 1 : 0);
-      const hintA = resolveChronoEnvHint(chronoFrames, idxA, activeBindings);
-      const hintB = resolveChronoEnvHint(chronoFrames, idxB, activeBindings);
-      const metaA = getFrameSlotMeta(fA, hintA);
-      const metaB = getFrameSlotMeta(fB, hintB);
-      const isFocusRing = r === activeRingIdx;
-      const isFrontierA = idxA === frontierChronoIdx;
-      const isFrontierB = idxB === frontierChronoIdx;
-      const isSlotBOverflow = r === 5 && overflowFrames > 0;
-      const ringStateCls = fill === 0 ? 'ring-idle' : isFocusRing ? 'ring-active' : 'ring-occupied';
-      const titleText = `Ring R${r + 1} (Chrono Slots ${slotLo}–${slotHi}) · West A: ${metaA.readout} | East B: ${metaB.readout}`;
+    if (dom) {
+      for (let r = 0; r < 6; r++) {
+        const rn = dom.ringNodes[r];
+        const idxA = r * 2;
+        const idxB = r * 2 + 1;
+        const fA = chronoFrames[idxA];
+        const fB = chronoFrames[idxB];
+        const fill = (fA ? 1 : 0) + (fB ? 1 : 0);
+        const hintA = resolveChronoEnvHint(chronoFrames, idxA, activeBindings);
+        const hintB = resolveChronoEnvHint(chronoFrames, idxB, activeBindings);
+        const metaA = getFrameSlotMeta(fA, hintA);
+        const metaB = getFrameSlotMeta(fB, hintB);
+        const isFocusRing = r === activeRingIdx;
+        const isFrontierA = idxA === frontierChronoIdx;
+        const isFrontierB = idxB === frontierChronoIdx;
+        const isSlotBOverflow = r === 5 && overflowFrames > 0;
+        const ringStateCls = fill === 0 ? 'ring-idle' : isFocusRing ? 'ring-active' : 'ring-occupied';
 
-      ringsHtml += `
-        <div class="ring-pill ${ringStateCls}" title="${escapeHtml(titleText)}">
-          <div class="ring-pill-top">
-            <span class="ring-id">R${r + 1} (${slotHi})</span>
-            <span class="ring-slots-idx">${slotLo}–${slotHi}</span>
-          </div>
-          <div class="ring-slot-row ${metaA.cls} ${isFrontierA ? 'slot-frontier' : ''}" ${isFrontierA ? 'aria-current="true"' : ''} title="West Slot A (#${slotLo}): ${escapeHtml(metaA.tooltip)}">
-            <span class="slot-main">
-              <span class="slot-key">West A:</span>
-              <span class="slot-val">${escapeHtml(metaA.readout)}</span>
-            </span>
-          </div>
-          <div class="ring-slot-row ${metaB.cls} ${isFrontierB ? 'slot-frontier' : ''} ${isSlotBOverflow ? 'slot-overflow' : ''}" ${isFrontierB ? 'aria-current="true"' : ''} title="East Slot B (#${slotHi}): ${escapeHtml(metaB.tooltip)}${isSlotBOverflow ? ` (+${overflowFrames} overflow beyond 12-slot window)` : ''}">
-            <span class="slot-main">
-              <span class="slot-key">East B:</span>
-              <span class="slot-val">${escapeHtml(metaB.readout)}</span>
-            </span>
-            ${isSlotBOverflow ? `<span class="overflow-badge" title="${overflowFrames} additional frame(s) beyond the 12-slot window">+${overflowFrames} overflow</span>` : ''}
-          </div>
-        </div>
-      `;
-    }
+        rn.pill.className = `ring-pill ${ringStateCls}`;
+        rn.pill.title = `Ring R${r + 1} (Chrono Slots ${rn.slotLo}–${rn.slotHi}) · West A: ${metaA.readout} | East B: ${metaB.readout}`;
 
-    // 10-Sector Control Stator Strip below R6 (innermost ring -> center stator)
-    const activeSectorKey =
-      statusInfo.label === 'Done'
-        ? 'Return'
-        : statusInfo.label === 'Rejected' || statusInfo.label === 'Exhausted'
-          ? 'Error'
-          : rawCtrlKind;
-    const needleHemisphere =
-      frontierChronoIdx < 0
-        ? 'Center (0 frames)'
-        : frontierChronoIdx % 2 === 0
-          ? `West Slot A (R${activeRingIdx + 1}·A)`
-          : `East Slot B (R${activeRingIdx + 1}·B)`;
+        rn.rowA.className = `ring-slot-row ${metaA.cls}${isFrontierA ? ' slot-frontier' : ''}`;
+        if (isFrontierA) rn.rowA.setAttribute('aria-current', 'true');
+        else rn.rowA.removeAttribute('aria-current');
+        rn.rowA.title = `West Slot A (#${rn.slotLo}): ${metaA.tooltip}`;
+        if (rn.valA.textContent !== metaA.readout) rn.valA.textContent = metaA.readout;
 
-    const sectorsHtml = CONTROL_STRIP_SECTORS.map((sec) => {
-      const isSecActive = sec.key.toLowerCase() === activeSectorKey.toLowerCase();
-      const toneCls = isSecActive
-        ? statusInfo.label === 'Done'
-          ? 'is-done'
-          : statusInfo.label === 'Rejected' || statusInfo.label === 'Exhausted' || sec.key === 'Error'
-            ? 'is-fault'
-            : ''
-        : '';
-      return `<span class="control-sector-chip ${isSecActive ? 'active' : ''} ${toneCls}" ${isSecActive ? 'aria-current="step"' : ''} title="${escapeHtml(sec.title)}">${sec.badge}</span>`;
-    }).join('');
+        rn.rowB.className = `ring-slot-row ${metaB.cls}${isFrontierB ? ' slot-frontier' : ''}${isSlotBOverflow ? ' slot-overflow' : ''}`;
+        if (isFrontierB) rn.rowB.setAttribute('aria-current', 'true');
+        else rn.rowB.removeAttribute('aria-current');
+        rn.rowB.title = `East Slot B (#${rn.slotHi}): ${metaB.tooltip}${isSlotBOverflow ? ` (+${overflowFrames} overflow beyond 12-slot window)` : ''}`;
+        if (rn.valB.textContent !== metaB.readout) rn.valB.textContent = metaB.readout;
 
-    ringsHtml += `
-      <div class="control-sector-strip" aria-label="10-Sector Control Stator">
-        <div class="control-strip-top">
-          <span>10-Sector Control Stator</span>
-          <strong>Needle &rarr; ${escapeHtml(needleHemisphere)}</strong>
-        </div>
-        <div class="control-sector-grid">${sectorsHtml}</div>
-      </div>
-    `;
+        if (rn.overflowBadge) {
+          if (isSlotBOverflow) {
+            rn.overflowBadge.style.display = '';
+            rn.overflowBadge.className = 'overflow-badge';
+            rn.overflowBadge.textContent = `+${overflowFrames} overflow`;
+            rn.overflowBadge.title = `${overflowFrames} additional frame(s) beyond the 12-slot window`;
+          } else {
+            rn.overflowBadge.style.display = 'none';
+          }
+        }
+      }
 
-    if (ringsHtml !== state.lastRingsHtml) {
-      state.lastRingsHtml = ringsHtml;
-      els.sixRingsGauge.innerHTML = ringsHtml;
+      const activeSectorKey = (
+        statusInfo.label === 'Done'
+          ? 'Return'
+          : statusInfo.label === 'Rejected' || statusInfo.label === 'Exhausted'
+            ? 'Error'
+            : rawCtrlKind
+      ).toLowerCase();
+
+      const needleHemisphere =
+        frontierChronoIdx < 0
+          ? 'Center (0 frames)'
+          : frontierChronoIdx % 2 === 0
+            ? `West Slot A (R${activeRingIdx + 1}·A)`
+            : `East Slot B (R${activeRingIdx + 1}·B)`;
+      dom.needleStrong.textContent = `Needle → ${needleHemisphere}`;
+
+      for (let s = 0; s < dom.sectorChips.length; s++) {
+        const sc = dom.sectorChips[s];
+        const isSecActive = sc.keyLower === activeSectorKey;
+        const toneCls = isSecActive
+          ? statusInfo.label === 'Done'
+            ? ' is-done'
+            : statusInfo.label === 'Rejected' || statusInfo.label === 'Exhausted' || sc.isErrorKey
+              ? ' is-fault'
+              : ''
+          : '';
+        sc.chip.className = `control-sector-chip${isSecActive ? ' active' : ''}${toneCls}`;
+        if (isSecActive) sc.chip.setAttribute('aria-current', 'step');
+        else sc.chip.removeAttribute('aria-current');
+      }
     }
   }
 
@@ -778,7 +870,7 @@ function syncStepUI(stepIdx, prebuiltStepState = null) {
       rec.mode === 'RESOLVED'
         ? 'Resolved'
         : rec.mode === 'UNWINDING'
-           ? 'Unwinding'
+          ? 'Unwinding'
           : rec.mode === 'BASE CASE'
             ? 'Base case'
             : rec.mode === 'FAULT'
@@ -952,7 +1044,18 @@ function onWindowKeyDown(ev) {
   }
 }
 
+function onVisibilityChange() {
+  if (!document.hidden) {
+    const now = performance.now();
+    state.lastTick = now;
+    if (stage) stage.lastTime = now;
+  }
+}
+
 window.addEventListener('keydown', onWindowKeyDown);
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('visibilitychange', onVisibilityChange);
+}
 
 function getOrBuildStepState(stepIdx, stepFraction = 0, dt = 0.016) {
   const totalSteps = state.trace?.steps?.length || 0;
@@ -964,14 +1067,25 @@ function getOrBuildStepState(stepIdx, stepFraction = 0, dt = 0.016) {
   ) {
     const cached = state.cachedStepState;
     cached.stepFraction = stepFraction;
+    cached.sub = stepFraction;
     cached.progress =
       totalSteps > 1
         ? Math.min(1, Math.max(0, (clampedIdx + stepFraction) / (totalSteps - 1)))
         : 1;
+    const livePhase =
+      clampedIdx === 0 && stepFraction < 0.45 ? 'INGEST' : cached._basePhase || cached.phase;
+    cached.phase = livePhase;
+    cached.aperture =
+      livePhase === 'INGEST'
+        ? Math.min(1, 0.38 + stepFraction * 0.54)
+        : livePhase === 'ERROR'
+          ? 1.0
+          : 0.92;
     cached.ambient = stage.ambient;
     cached.dt = dt;
     cached.presetId = state.activePresetId;
     cached.source = state.source;
+    cached.playing = state.playing;
     return cached;
   }
 
@@ -981,8 +1095,19 @@ function getOrBuildStepState(stepIdx, stepFraction = 0, dt = 0.016) {
     ambient: stage.ambient,
     dt,
   });
+  built._basePhase =
+    clampedIdx === 0
+      ? buildStepState({
+          trace: state.trace,
+          playhead: 0.5,
+          ambient: stage.ambient,
+          dt,
+        }).phase
+      : built.phase;
+  built.sub = stepFraction;
   built.presetId = state.activePresetId;
   built.source = state.source;
+  built.playing = state.playing;
   state.cachedStepState = built;
   state.cachedTraceRef = state.trace;
   state.cachedStepIdx = clampedIdx;
@@ -1010,11 +1135,11 @@ function animate(now) {
     const stepFraction = clampedPlayhead - currentIdx;
     const stepState = getOrBuildStepState(currentIdx, stepFraction, dt);
 
+    stage.render(stepState);
+
     if (currentIdx !== state.lastRenderedStepIdx) {
       syncStepUI(currentIdx, stepState);
     }
-
-    stage.render(stepState);
   }
 }
 
@@ -1027,6 +1152,9 @@ export function disposeApp() {
     state.rafId = 0;
   }
   window.removeEventListener('keydown', onWindowKeyDown);
+  if (typeof document !== 'undefined' && document.removeEventListener) {
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  }
   stage.dispose();
 }
 

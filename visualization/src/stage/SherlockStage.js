@@ -94,12 +94,20 @@ export class SherlockStage {
     this.camera.position.set(3.85, 4.85, 5.35);
     this.camera.lookAt(-0.38, -0.16, 0.05);
 
+    this.isMobile =
+      typeof navigator !== 'undefined' &&
+      (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+        (typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches));
+
     this.renderer = new THREE.WebGPURenderer({
       canvas: this.canvas,
-      antialias: true,
+      antialias: !this.isMobile,
       powerPreference: 'high-performance',
     });
-    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+    const maxDpr = this.isMobile ? 1.25 : 2;
+    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, maxDpr) : 1;
     this.renderer.setPixelRatio(dpr);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -146,11 +154,12 @@ export class SherlockStage {
     const hemi = new THREE.HemisphereLight(0xfffbf2, 0xc9c2b4, 0.52);
     this.scene.add(hemi);
 
-    // 2. Warm Daylight Key Light with tightened 2048x2048 shadow frustum covering chip & West Chiplets
+    // 2. Warm Daylight Key Light with tightened shadow frustum covering chip & West Chiplets
+    const shadowRes = this.isMobile ? 1024 : 2048;
     const keyLight = new THREE.DirectionalLight(0xfff7ea, 2.05);
     keyLight.position.set(6.0, 10.5, 5.4);
     keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.mapSize.set(shadowRes, shadowRes);
     keyLight.shadow.camera.near = 4.5;
     keyLight.shadow.camera.far = 19.0;
     keyLight.shadow.camera.left = -3.6;
@@ -159,9 +168,11 @@ export class SherlockStage {
     keyLight.shadow.camera.bottom = -2.8;
     keyLight.shadow.bias = -0.00012;
     keyLight.shadow.normalBias = 0.004;
+    keyLight.shadow.autoUpdate = false;
+    keyLight.shadow.needsUpdate = true;
     this.keyLight = keyLight;
     this._lastShadowStepKey = '';
-    this._shadowFramesRemaining = 4;
+    this._shadowFramesRemaining = 2;
     this.scene.add(keyLight);
 
     // 3. Cool Sky Specular Fill Light for silky metallic reflections across machined stainless & gold rings
@@ -293,7 +304,11 @@ export class SherlockStage {
   render(stepState) {
     if (this._disposed) return;
     const now = performance.now();
-    const dt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) / 1000));
+    const rawDt =
+      stepState && Number.isFinite(stepState.dt) && stepState.dt > 0
+        ? stepState.dt
+        : (now - this.lastTime) / 1000;
+    const dt = Math.min(0.05, Math.max(0.001, rawDt));
     this.lastTime = now;
     this.ambient += dt;
 
@@ -315,6 +330,7 @@ export class SherlockStage {
     fullState.dt = dt;
     fullState.activePreset = activePreset;
     fullState.cutawayMix = this._cutawayMix;
+    fullState.playing = Boolean(stepState?.playing);
 
     // Dynamic point light color based on active semantic transition & ruleLine (zero heap allocation via _scratchColor)
     const phase = fullState.semanticTransition || fullState.phase || 'DESCEND';
@@ -367,16 +383,23 @@ export class SherlockStage {
     }
 
     if (this.ready === true) {
-      const shadowKey = `${fullState.stepIndex ?? 0}|${Math.round((fullState.stepFraction ?? 0) * 20)}|${Math.round(this._cutawayMix * 50)}`;
-      if (shadowKey !== this._lastShadowStepKey || Math.abs(this._cutawayMix - prevCutaway) > 0.001) {
+      const callLen = fullState.recursion?.calls?.length ?? 0;
+      const frameLen = fullState.step?.after?.frames?.length ?? 0;
+      const shadowKey = this.isMobile
+        ? `${fullState.presetId || ''}|${Math.round(this._cutawayMix * 10)}`
+        : `${fullState.presetId || ''}|${callLen}|${frameLen}|${Math.round(this._cutawayMix * 25)}`;
+      if (shadowKey !== this._lastShadowStepKey || Math.abs(this._cutawayMix - prevCutaway) > 0.002) {
         this._lastShadowStepKey = shadowKey;
-        this._shadowFramesRemaining = Math.max(this._shadowFramesRemaining || 0, 2);
+        this._shadowFramesRemaining = Math.max(this._shadowFramesRemaining || 0, 1);
       }
       if (this.keyLight?.shadow) {
+        this.keyLight.shadow.autoUpdate = false;
         this.renderer.shadowMap.autoUpdate = false;
         if (this._shadowFramesRemaining > 0) {
           this.keyLight.shadow.needsUpdate = true;
           this._shadowFramesRemaining -= 1;
+        } else {
+          this.keyLight.shadow.needsUpdate = false;
         }
       }
       this.renderer.render(this.scene, this.camera);
