@@ -1,5 +1,7 @@
 # Moriarty specifications
 
+The proposed [Sherlock circuit optimizations](changes/sherlock-circuit-optimizations/proposal.md) specify source sharing and measured follow-up experiments with 16 EARS clauses/32 scenarios; all remain draft and retain the existing Sherlock requirements.
+
 The current [Sherlock stagenet recursion and Fenrir rollup experiment](changes/sherlock-stagenet-recursive-rollup/proposal.md) prioritizes actual recursive-proof acceptance on Midnight stagenet and measured circuit degree k/performance. Its additive SRPOC requirements and tasks preserve the full original requirements and separate literal, recursive, local and ledger evidence.
 
 
