@@ -1,0 +1,84 @@
+# Verdict: **CONDITIONAL_APPROVE_DATA_FIT**
+
+**Native proof / keygen / stagenet eligibility: NOT_ASSESSED.**
+
+This is limited delta reasoning on the 281/281-under-300 amendment, using the bodies supplied in this packet. It is not a fresh full guard, security or body-coverage review. I ran no tools and made no observations, and I have no independent hash readback. The pin facts below are Root's stated readback, accepted as a premise.
+
+## 0. Disposition of the prior opinion's §1
+
+- **The §1 host findings are unsupported.** That reviewer ran with an empty `--tools` argument, so it could not have observed a disk hash, an mtime, a file rewrite or a diff.
+- **The supplied source contradicts it.** Line 1035 of the guard is `if not line or line.startswith('# env-dep:'):continue` inside `parse_depinfo` (1032–1045). It is not an `A0_FREEZE` check in `run()`.
+- **I exclude §1 entirely as a premise.** Its remediation is moot, and no source restore is needed or implied.
+- **Other prior specifics are also excluded as premises.** These are:
+  - the reference to `cached_current_build.py:1963-1979`
+  - the internals of `supervisor_envelope` and `_validate_tier_grant`
+  - the P12 figures 2,040, 2,021 and 89.37 s
+
+  The packet does not supply bodies or receipts for any of them. Nothing below depends on them.
+- **The prior §2 timer-ordering point stands independently.** The `cached_current_f` body supplied here shows it directly.
+
+## 1. Why 281/281 under 300 fits (from the supplied bodies)
+
+**Timer ordering**
+- `consent`, `supervisor_envelope` and `enforce_post_p11_historical_debits(at_start=True)` all run before `setitimer(ITIMER_REAL, total_wall_seconds)`.
+- So the whole-job timer fires at outer-relative time T_pre + 281, where T_pre is the time from the start of the outer cap to the `setitimer` call.
+- At 300/300, the outer SIGKILL would always win. With 281, the in-process refusal path is reachable whenever T_pre < 19 s.
+
+**F wall is redundant**
+- In `launch`, `start=time.monotonic()` is taken after `setitimer` and after the pre-launch checks.
+- So F wall 281 can never expire before the whole-job timer. The total timer is the effective cap.
+- Setting both to 281 is consistent and only needs the ≤ relation. It changes no logic.
+
+**Phase CPU**
+- `debited_group_init` sets `prior_cpu = debit_state['effective_phases_usec_at_start']` for phase F.
+- `launch(..., retained_audit=False)` does not overwrite it.
+- With an F cap of 1,140,026,337 and an effective prior of 840,026,337, the fresh allowance is 300,000,000 µs. A larger prior shrinks it, which is safe.
+
+**Stderr**
+- `counts` is shared across all three F variants.
+- In the main loop, `need(counts<=cap)` runs before `log.write`. In the drain path, `take` clamps writes to the cap.
+- So the on-disk F stderr is at most 2,097,152 bytes. The helper's historical-prefix check only refuses after capture.
+- Worst-case Root debit: 79,686 + 2,097,152 = **2,176,838 < 16,777,216**. Correct.
+
+**Arithmetic**
+- Remaining: 5,831 − 300 = 5,531; 1,931 − 300 = 1,631; 10,534 − 120 = 10,414. Correct.
+- P: 930,907,465 + 300,000,000 = 1,230,907,465 nominal.
+- E/S cap totals are not in this packet. I check only the stated appends, not the headroom against those caps.
+
+## 2. Honest limitations (existing, unchanged by the amendment)
+
+1. **The 19 s is not a guaranteed cleanup window.** Real cleanup headroom is 19 s − T_pre − launcher latency. The cleanup path after SIGALRM is:
+   - `group.kill`
+   - `proc.wait(timeout=5)`
+   - `group.close` (body not supplied, duration unbounded as far as I can see)
+   - the `TERMINAL_FAILURE` receipt
+
+   Nothing in the supplied code bounds that total under 19 s. If it overruns, the outer SIGKILL lands mid-cleanup: no receipt, and the leaf may be unclosed.
+2. **A `TimeoutExpired` from `proc.wait(timeout=5)` replaces the `Refusal`.** It also skips the rest of the inner `finally`. The outer `finally` (`group.close`) and the receipt attempt still run.
+3. **The drain path can outlast the alarm.** If SIGALRM lands before the listener handoff, the drain loop is bounded by `start`+281, not by the alarm. It can therefore run past the alarm by up to the gap between `setitimer` and `start`. In practice it ends at EOF after `group.kill`.
+4. **The whole-job timer also covers post-compile work.** That includes post-compile verification, `enforce_post_p11_historical_debits(at_start=False)` and the result receipt. A compile that succeeds late can still end in refusal, which is fail-closed.
+5. **`RLIMIT_CPU` with soft == hard ends in SIGKILL with no Python cleanup.** The limit is inherited per process by bwrap, cargo and rustc. A child that hits it exits nonzero, which leads to a clean refusal. The supervisor hitting it means no receipt.
+6. **The phase CPU limit is a polled `Group.check`** (body not supplied), checked about every 50 ms. Unless `quotas` installs a kernel cap, the actual figure can overshoot 300e6 by up to poll interval × CPUs. If the supervisor is SIGKILLed, an orphaned leaf could keep consuming CPU. So 300e6 is a planning bound, not a ledger value.
+
+All of these fail closed with respect to native output acceptance. They only weaken receipt and cleanup completeness, which the conditions below address.
+
+## 3. Literal conditions
+
+1. **Pins.** At prelaunch, a fresh readback must show:
+   - `bindings.runner` = 96,706 B, SHA `74063ff1277f1244d5657e59a9da809e84666c6b1c46f926a224e61014316294`
+   - the helper = 158,235 B, SHA `a9a98bdde271a1f37f4159ba7c765f630e0e17a169c9b0324e5dc08a2d2adf6c`
+
+   Any mismatch means WITHHOLD. No source restore is part of this approval.
+2. **Config delta only.** Relative to the reviewed candidate, the only changes are `total_wall_seconds=281` and `limits.F.wall_seconds=281`. The outer cap stays 300, supervisor CPU stays 120, and F `cpu_time_us`=1,140,026,337. There is no other change to quotas, guards, seed, native command or code, and no reset, refund or extra allowance.
+3. **Fresh config-hash bindings.** Every grant, `config_inputs` hash or receipt that binds the config SHA must be regenerated against the amended config. A fresh prelaunch must confirm that the existing `consent`/`quotas`/grant validation accepts 281. I have not freshly read those bodies, and `quotas(c,'F')` first runs after `ONE_SHOT_STARTED`. So a rejection there would burn the one-shot.
+4. **Prior CPU at start.** The recorded `debit_state.effective_phases_usec_at_start` is ≥ 840,026,337. If it is larger, the fresh allowance is smaller, never larger.
+5. **Root ledger is append-only and separate.**
+   - Root E 1,195,940,992 / S 265,033,522 / P 930,907,465 are never replaced by the helper's P11 prefix.
+   - Root appends the *measured actual* new debits: phase usage_usec from the leaf after termination, actual supervisor CPU, and actual on-disk F stdout/stderr bytes.
+   - Worst-case planning figures are 300/300/120 → 5,531/1,631/10,414 remaining, and 2,176,838 cumulative F stderr.
+   - If the measured actuals exceed the planning figures (CPU overshoot or an orphaned leaf), the measured value governs.
+6. **Post-termination observation on any non-success exit.** This includes outer SIGKILL, missing `TERMINAL_FAILURE.json` and RLIMIT kill. Root must observe that the F leaf is unpopulated, and take its final `usage_usec`, before any further action. A missing receipt counts as failure, never as success.
+7. **Fresh actual prelaunch conditions remain open:** QOBS, the held-lock stat manifest, overlay/projection, the receipt chain, current pins, an absent `ONE_SHOT_STARTED` marker, and fresh empty owned paths.
+8. **Scope.** This is compile-only data-fit for the one cached-current-F route. It grants no proof, keygen or stagenet authority, and it is not launch authorization.
+
+**Bottom line:** a conditional data-fit opinion on the verified pins plus the 281/281 amendment is supported without any source restore. The prior §1 is not a valid barrier.
