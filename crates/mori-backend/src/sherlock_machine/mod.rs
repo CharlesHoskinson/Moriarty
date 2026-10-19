@@ -287,3 +287,87 @@ mod error_publication_step_normal_tests;
 
 #[cfg(test)]
 mod fuel_exhaustion_step_normal_tests;
+
+pub mod b_scalar_arithmetic;
+pub use b_scalar_arithmetic::{
+    emit_b_scalar_arithmetic_add, emit_public_b_scalar_arithmetic_add, u128_to_le_immediates,
+    BChargedCounters, BOptValueRef, BScalarArithmeticAddBlock, BScalarArithmeticAddInputs,
+    BScalarArithmeticConstructionError, BScalarArithmeticField, BScalarArithmeticFieldRole,
+    BScalarArithmeticRegister, BScalarArithmeticWitness, BScalarHelperRestLanes,
+    BScalarStagedLanes, BU128Lanes, BValueRef, BValueRowLanes, BValueSpace, BValueTableRead,
+    EmittedBScalarArithmeticAdd, CONST_TAG_U128, DATA_TAG_U128, HELPER_KIND_SCALAR,
+    HELPER_PRESENT, OPT_ABSENT, OPT_PRESENT, PRIM_ERROR_ARITH_OVERFLOW, PRIM_ERROR_SORT_MISMATCH,
+    SCALAR_MODE_ADD, SCALAR_PHASE_DONE, SCALAR_PHASE_FIRST, SCALAR_PHASE_SECOND,
+    SCALAR_STAGED_TAG_BOOL_VALUE, SCALAR_STAGED_TAG_NONE, SCALAR_STAGED_TAG_PENDING_NODE,
+    SCALAR_STAGED_TAG_PRIM_ERROR, SCALAR_STAGED_TAG_SELECTOR, SCALAR_STAGED_TAG_TYPE_TEST,
+    SCALAR_STAGED_TAG_U128_VALUE, SITE_RET_RIGHT, VALID_VALUE_TAG_COUNT, VALUE_TAG_BOOL,
+    VALUE_TAG_BRANCH, VALUE_TAG_CONS, VALUE_TAG_LEAF, VALUE_TAG_NIL, VALUE_TAG_U128,
+};
+
+#[cfg(test)]
+mod b_scalar_arithmetic_normal_tests;
+
+pub mod b_scalar_subtraction;
+pub use b_scalar_subtraction::{
+    emit_b_scalar_arithmetic_sub, emit_public_b_scalar_arithmetic_sub,
+    BScalarArithmeticSubBlock, BScalarArithmeticSubInputs, EmittedBScalarArithmeticSub,
+    SCALAR_MODE_SUB,
+};
+
+pub mod b_scalar_completion;
+pub use b_scalar_completion::{
+    emit_b_scalar_exit_add_u128, emit_b_scalar_failure_add, BDataRowLanes, BDataTableLanes,
+    BHelperResultLanes, BOutcomeLanes, BScalarCompletionConstructionError,
+    BScalarCompletionCounters, BScalarExitAddU128Block, BScalarExitAddU128Inputs,
+    BScalarFailureAddBlock, BScalarFailureAddInputs, EXHAUST_REASON_DATA_FIELDS,
+    EXHAUST_REASON_DATA_NODES, EXHAUST_REASON_ENVIRONMENT_CELLS, EXHAUST_REASON_FUEL,
+    EXHAUST_REASON_HELPER_TASKS, EXHAUST_REASON_HELPER_WORK,
+    EXHAUST_REASON_SERIALIZATION_BYTES, HELPER_RESULT_TAG_APPEND_DONE,
+    HELPER_RESULT_TAG_BIND_BAD, HELPER_RESULT_TAG_BIND_OK, HELPER_RESULT_TAG_ENV_FOUND,
+    HELPER_RESULT_TAG_ENV_MISSING, HELPER_RESULT_TAG_ENV_UPDATED, HELPER_RESULT_TAG_EQUAL_DONE,
+    HELPER_RESULT_TAG_FIND_FOUND, HELPER_RESULT_TAG_FIND_MISSING,
+    HELPER_RESULT_TAG_MATCH_MATCHED, HELPER_RESULT_TAG_MATCH_NO_MATCH,
+    HELPER_RESULT_TAG_SCALAR_ERROR, HELPER_RESULT_TAG_SCALAR_SELECTOR,
+    HELPER_RESULT_TAG_SCALAR_TYPE_TEST, HELPER_RESULT_TAG_SCALAR_VALUE,
+    HELPER_RESULT_TAG_VALIDATED, OUTCOME_TAG_EXHAUSTED, OUTCOME_TAG_HALTED,
+    OUTCOME_TAG_REJECTED, OUTCOME_TAG_RUNNING, VALUE_SPACE_CONST, VALUE_SPACE_DATA,
+};
+pub mod b_scalar_subtraction_completion;
+pub use b_scalar_subtraction_completion::{
+    emit_b_scalar_exit_sub_u128, emit_b_scalar_failure_sub, BScalarExitSubU128Block,
+    BScalarExitSubU128Inputs, BScalarFailureSubBlock, BScalarFailureSubInputs,
+    BScalarSubCompletionConstructionError, BScalarSubCompletionCounters, BSubPublishState,
+};
+pub mod b_return_right_completion;
+pub use b_return_right_completion::{
+    emit_k_machine_primitive_error, emit_k_machine_primitive_value,
+    emit_k_machine_return_right_add, BControlRow, BFrameRow, BLegacyCompletionState,
+    BReturnRightCompletionEmitError, BINARY_OP_ADD, BINARY_OP_BRANCH, BINARY_OP_CONS,
+    BINARY_OP_EQ, BINARY_OP_LT, BINARY_OP_MUL, BINARY_OP_SUB, CONTROL_TAG_BOUND,
+    CONTROL_TAG_CASES, CONTROL_TAG_CASE_RESULT, CONTROL_TAG_ENTER, CONTROL_TAG_ERROR,
+    CONTROL_TAG_EVAL, CONTROL_TAG_INVOKE, CONTROL_TAG_PRIM_RESULT, CONTROL_TAG_RETURN,
+    CONTROL_TAG_SCHEDULE_NEXT, FRAME_TAG_ARGS_F,
+    FRAME_TAG_CONSTRUCTOR_FIELDS_EXTENSION_RESERVED, FRAME_TAG_IF_F, FRAME_TAG_LEFT_F,
+    FRAME_TAG_LET_F, FRAME_TAG_MATCH_F, FRAME_TAG_RETURN_F, FRAME_TAG_RIGHT_F,
+    FRAME_TAG_SCOPE_F, FRAME_TAG_UNARY_F, PRIM_OUTCOME_TAG_ERROR, PRIM_OUTCOME_TAG_VALUE,
+    SITE_PRIM,
+};
+pub mod b_return_right_subtraction;
+pub use b_return_right_subtraction::{
+    emit_k_machine_return_right_sub, emit_k_machine_return_right_sub_block,
+};
+pub mod b_admin_publication;
+pub use b_admin_publication::{
+    emit_b_add_to_publication_chain, emit_b_admin_publish_p1, emit_b_sub_to_publication_chain,
+    emit_k_admin_publish_error, emit_k_admin_publish_value, BAddToPublicationChainBlock,
+    BAddToPublicationChainInputs, BAdminPublicationError, BAdminPublishBlock,
+    BAdminPublishInputs, BAdminPublishState, BSubToPublicationChainBlock,
+    BSubToPublicationChainInputs, ADMIN_PUBLISH_CHARGE, ERROR_CODE_MAX, ERROR_CODE_MIN,
+};
+
+#[cfg(test)]
+mod b_scalar_completion_normal_tests;
+#[cfg(test)]
+mod b_return_right_completion_normal_tests;
+#[cfg(test)]
+mod b_admin_publication_normal_tests;

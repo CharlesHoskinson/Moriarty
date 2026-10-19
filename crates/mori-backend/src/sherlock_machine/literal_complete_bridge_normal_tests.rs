@@ -18,7 +18,6 @@
 use super::literal_bridge::{CircuitMode, LiteralLayout};
 use super::literal_complete_bridge::*;
 use super::*;
-use mori_core::UInt;
 use mori_core::sherlock::{Expr, Program, Value as SherlockValue};
 use std::sync::Arc;
 
@@ -41,7 +40,7 @@ fn specimen_identity() -> LiteralSourceIdentity {
 fn specimen_uint_program(val: u128) -> Arc<Program> {
     Arc::new(Program {
         functions: Vec::new(),
-        entry: Arc::new(Expr::Literal(SherlockValue::UInt(UInt(val)))),
+        entry: Arc::new(Expr::Literal(SherlockValue::UInt(val))),
     })
 }
 
