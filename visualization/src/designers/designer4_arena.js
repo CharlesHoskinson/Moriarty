@@ -496,6 +496,13 @@ export function createArenaSubsystem() {
     for (let i = 0; i < disposableTextures.length; i += 1) {
       disposableTextures[i].dispose();
     }
+    disposableGeometries.length = 0;
+    disposableMaterials.length = 0;
+    disposableTextures.length = 0;
+    _cachedTraceRef = null;
+    _cachedTraceKey = '';
+    _cachedAllCalls = [];
+    _visibleCallsScratch.length = 0;
   }
 
   update({ ambient: 0, dt: 0.016, stepFraction: 0 });

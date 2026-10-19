@@ -10,6 +10,7 @@ Moriarty is experimental. Developers can author and simulate supported source pr
 
 - [Requirements: Moriarty Programming Language Requirements (MPLRs), proposed ZKIRv4 and recursion](https://charleshoskinson.github.io/Moriarty/docs/requirements.html): the language requirements, native backend obligations, recursion refinements and consolidated delivery direction.
 - [Current formal syntax and semantics](https://charleshoskinson.github.io/Moriarty/docs/language.html): versioned source profiles, grammar, static judgments and operational rules.
+- [Sherlock Universal Interpreter 3D Visualization](https://charleshoskinson.github.io/Moriarty/visualization/index.html) ([local source](visualization/index.html)): interactive Three.js WebGPU horological visualization of the 39-rule `sherlock-k-a/1` CEK continuation machine, 6-ring / 12-slot split-arc frame stack, 128-bit arithmetic & fuel witnesses, and self-reproducing Quinelings `WovenBody` morphogenesis across eight canonical `moriarty-sherlock-draft/1` programs.
 
 The [local ledger call examples](examples/core/ledger-call/README.md) exercise
 `mori prepare-call`: source-derived real VM execution, guaranteed transcripts,

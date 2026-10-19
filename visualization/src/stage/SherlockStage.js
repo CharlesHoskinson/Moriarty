@@ -159,6 +159,9 @@ export class SherlockStage {
     keyLight.shadow.camera.bottom = -2.8;
     keyLight.shadow.bias = -0.00012;
     keyLight.shadow.normalBias = 0.004;
+    this.keyLight = keyLight;
+    this._lastShadowStepKey = '';
+    this._shadowFramesRemaining = 4;
     this.scene.add(keyLight);
 
     // 3. Cool Sky Specular Fill Light for silky metallic reflections across machined stainless & gold rings
@@ -239,6 +242,7 @@ export class SherlockStage {
     if (this.subsystems[id]?.group) {
       this.subsystems[id].group.visible = this.layerVisibility[id];
     }
+    this._shadowFramesRemaining = Math.max(this._shadowFramesRemaining || 0, 2);
   }
 
   toggleLayer(id) {
@@ -283,9 +287,11 @@ export class SherlockStage {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
+    this._shadowFramesRemaining = Math.max(this._shadowFramesRemaining || 0, 2);
   }
 
   render(stepState) {
+    if (this._disposed) return;
     const now = performance.now();
     const dt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) / 1000));
     this.lastTime = now;
@@ -293,6 +299,7 @@ export class SherlockStage {
 
     const activePreset = this.getCameraPreset();
     const targetCutaway = activePreset === 'frames' ? 1.0 : 0.0;
+    const prevCutaway = this._cutawayMix;
     this._cutawayMix = lerp(this._cutawayMix, targetCutaway, 1.0 - Math.exp(-12.0 * dt));
     if (Math.abs(this._cutawayMix - targetCutaway) < 0.005) {
       this._cutawayMix = targetCutaway;
@@ -360,6 +367,18 @@ export class SherlockStage {
     }
 
     if (this.ready === true) {
+      const shadowKey = `${fullState.stepIndex ?? 0}|${Math.round((fullState.stepFraction ?? 0) * 20)}|${Math.round(this._cutawayMix * 50)}`;
+      if (shadowKey !== this._lastShadowStepKey || Math.abs(this._cutawayMix - prevCutaway) > 0.001) {
+        this._lastShadowStepKey = shadowKey;
+        this._shadowFramesRemaining = Math.max(this._shadowFramesRemaining || 0, 2);
+      }
+      if (this.keyLight?.shadow) {
+        this.renderer.shadowMap.autoUpdate = false;
+        if (this._shadowFramesRemaining > 0) {
+          this.keyLight.shadow.needsUpdate = true;
+          this._shadowFramesRemaining -= 1;
+        }
+      }
       this.renderer.render(this.scene, this.camera);
     }
   }
@@ -372,6 +391,12 @@ export class SherlockStage {
     for (let i = 0; i < SUBSYSTEM_KEYS.length; i++) {
       const sub = this.subsystems[SUBSYSTEM_KEYS[i]];
       if (sub && typeof sub.dispose === 'function') sub.dispose();
+    }
+    if (this.keyLight?.shadow?.map) {
+      this.keyLight.shadow.map.dispose();
+    }
+    if (this.keyLight && typeof this.keyLight.dispose === 'function') {
+      this.keyLight.dispose();
     }
     if (this.ready && this.renderer) {
       this.renderer.dispose();
