@@ -1,0 +1,29 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Family {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Other, id: \"usd\", scale: 2, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  share_class shares = { domain: Other, id: \"shares\", backing: USD };\n  const deposit = staking.deposit(owner: alice, shares: shares, backing: 5 USD);\n}\n"
+---
+mori::check::different_domains
+
+  × `shares` is on `Other`, but `owner` is on `Preview`.
+   ╭─[test.mori:8:57]
+ 7 │   share_class shares = { domain: Other, id: "shares", backing: USD };
+ 8 │   const deposit = staking.deposit(owner: alice, shares: shares, backing: 5 USD);
+   ·                                          ──┬──          ───┬──
+   ·                                            │               ╰── on `Other`
+   ·                                            ╰── on `Preview`
+ 9 │ }
+   ╰────
+  help: Everything an operation touches must be on one domain.
+
+mori::check::different_domains
+
+  × `backing` is on `Other`, but `owner` is on `Preview`.
+   ╭─[test.mori:8:74]
+ 7 │   share_class shares = { domain: Other, id: "shares", backing: USD };
+ 8 │   const deposit = staking.deposit(owner: alice, shares: shares, backing: 5 USD);
+   ·                                          ──┬──                           ──┬──
+   ·                                            │                               ╰── on `Other`
+   ·                                            ╰── on `Preview`
+ 9 │ }
+   ╰────
+  help: Everything an operation touches must be on one domain.

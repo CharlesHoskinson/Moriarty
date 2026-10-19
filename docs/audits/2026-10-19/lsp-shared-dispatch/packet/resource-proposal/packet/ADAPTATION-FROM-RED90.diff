@@ -1,0 +1,379 @@
+--- preserved-red90/run_red_check.py
++++ proposed-one600/run_batch.py
+@@ -1,172 +1,211 @@
+ from pathlib import Path
+-import datetime, hashlib, json, shutil, subprocess, tarfile, tempfile, time, tomllib, os, signal, re
+-
+-R = Path('/home/charl/moriarty-c2-opus55-restored-20261017')
++import datetime, hashlib, json, os, re, signal, subprocess, sys, tarfile, tempfile, time, tomllib
++P = Path(__file__).resolve().parent
++D = P.parent
++R = D.parent
+ I = Path('/home/charl/Moriarty/.worktrees/utxo-main-merge-20261017')
+-P = R / 'lsp-shared-dispatch-red-check-preparation-20261018'
+-C = R / 'lsp-shared-dispatch-red-check-cycle-20261018'
+-C.mkdir(exist_ok=False)
++C = R / 'lsp-shared-dispatch-red-green-one600-check-cycle-20261018'
++REL = 'crates/mori/src/commands/lsp/diagnostics.rs'
+ def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+ def now(): return datetime.datetime.now(datetime.timezone.utc).isoformat()
+-def write(p, value): p.write_text(json.dumps(value, indent=2) + '\n')
+-def git(*args): return subprocess.check_output(['git', '--no-optional-locks', '-C', str(I), *args]).decode().strip()
+-subject_file = P / 'CURRENT-CANDIDATE.json'
+-subject_digest = sha(subject_file)
+-subject = json.loads(subject_file.read_text())
+-prepared_pins = P / 'SOURCE-PINS.json'
+-assert sha(prepared_pins) == subject['sourcePinsSha256']
+-pins = json.loads(prepared_pins.read_text())['files']
+-def verify():
+-    assert git('rev-parse', 'HEAD') == subject['head'] and git('rev-parse', 'HEAD^{tree}') == subject['tree']
+-    assert not git('status', '--porcelain=v1')
+-    assert sha(subject_file) == subject_digest and sha(Path(__file__)) == subject['driverSha256']
+-    assert sha(prepared_pins) == subject['sourcePinsSha256']
+-    for row in pins: assert sha(I / row['path']) == row['sha256'], row['path']
+-    for tool in subject['toolPins']: assert sha(Path(tool['path']).resolve()) == tool['sha256'], tool['path']
+-verify()
+-write(C / 'SOURCE-PINS.json', json.loads(prepared_pins.read_text()))
+-root = Path(tempfile.mkdtemp(prefix='doctorwatson-lsp-normal-'))
+-for name in ['cwd', 'tmp', 'cargo-home', 'vendor']: (root / name).mkdir()
+-home = root / 'cargo-home'
+-(home / 'git').symlink_to('/home/charl/.cargo/git', target_is_directory=True)
+-toolchain = Path('/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin')
+-toolpins = subject['toolPins']
+-env = {'PATH': str(toolchain) + ':/usr/bin:/bin', 'RUSTC': str(toolchain / 'rustc'),
+-    'RUSTDOC': str(toolchain / 'rustdoc'), 'CARGO_HOME': str(home),
+-    'CARGO_TARGET_DIR': str(root / 'target'), 'CARGO_NET_OFFLINE': 'true',
+-    'CARGO_INCREMENTAL': '0', 'CARGO_CACHE_AUTO_CLEAN_FREQUENCY': 'never',
+-    'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
+-    'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp')}
+-argv = ['/usr/bin/timeout', '--signal=TERM', '--kill-after=5s', '90s',
+-    str(toolchain / 'cargo'), 'test', '--manifest-path', str(I / 'Cargo.toml'),
+-    '--frozen', '-j1', '-p', 'mori', '--no-default-features', '--test', 'lsp',
+-    '--', subject['expectedSelectedTest'], '--exact', '--test-threads=1']
+-write(C / 'CHECK-PLAN.json', {'preparedAt': now(), 'source': subject, 'argv': argv,
+-    'cwd': str(root / 'cwd'), 'environment': env, 'toolPins': toolpins,
+-    'attempts': 1, 'timeoutSeconds': 90, 'killGraceSeconds': 5,
+-    'scope': 'One selected RED ordinary native-OFF LSP/check parity test;12input/10expectedsemanticmessages+4publiccheckprojections. No SDK/native/proof/key/wallet/ledger or security claim; no auto green/retry.',
+-    'expected': 'RED only: actual selected assertion difference between old Core1-only header message and frozen both-profile message; compilation failure/timeout is not expected red. Original full normal-session test is filtered, not executed.',
+-    'sourceSet': 'Original locked registry identities plus three actual Cargo-selected new identities. All archives verified against lock; temporary directory-source replacement, no global source/cache/index mutation.',
+-    'cleanupScope': 'Owned process session census and temporary root only; no detached-process/kernel-level exclusion claim.'})
+-result = {'startedAt': now(), 'attemptConsumed': False, 'expectedRedAssertionObserved': False}
+-owned_sid, census_empty, group_stopped = None, None, False
+-try:
+-    configs = []
+-    for directory in [I, *I.parents, root / 'cwd', *(root / 'cwd').parents]:
+-        for name in ['config', 'config.toml']:
+-            p = directory / '.cargo' / name
+-            assert not p.exists(), str(p)
+-            configs.append(str(p))
+-    write(C / 'ABSENT-ANCESTOR-CONFIGS.json', configs)
+-    cache = Path('/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f')
+-    src = Path('/home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f')
+-    platform = R / 'lsp-locked-platform-dependency-custody-20261018'
+-    additions = R / 'rust-lsp-public-dependency-custody'
+-    acquired = {x['name'] + '-' + x['version']: x for x in json.loads((additions / 'PACKAGES.json').read_text())}
+-    packages = []
+-    for pkg in tomllib.loads((I / 'Cargo.lock').read_text())['package']:
+-        if not pkg.get('source', '').startswith('registry+'): continue
+-        name = pkg['name'] + '-' + pkg['version']
+-        archive, source = cache / (name + '.crate'), src / name
+-        if not archive.is_file():
+-            if name in acquired:
+-                archive = additions / acquired[name]['archive']['path']
+-                source = additions / 'source' / name
+-            else:
+-                archive = platform / 'archives' / (name + '.crate')
+-                source = platform / 'source' / name
+-        assert sha(archive) == pkg['checksum'], name
+-        dest = root / 'vendor' / name
+-        dest.mkdir()
+-        filehashes = {}
+-        with tarfile.open(archive, 'r:gz') as tf:
+-            for member in tf.getmembers():
+-                if not member.isfile(): continue
+-                relative = Path(member.name).relative_to(name)
+-                assert not relative.is_absolute() and '..' not in relative.parts
+-                body = tf.extractfile(member).read()
+-                filehashes[str(relative)] = hashlib.sha256(body).hexdigest()
+-                if str(relative) == 'Cargo.toml': assert (source / relative).read_bytes() == body, name
+-        for child in source.iterdir():
+-            if child.name not in ['.cargo-checksum.json', '.cargo-ok']:
+-                (dest / child.name).symlink_to(child, target_is_directory=child.is_dir())
+-        write(dest / '.cargo-checksum.json', {'files': filehashes, 'package': pkg['checksum']})
+-        packages.append({'identity': name, 'archive': str(archive), 'sha256': pkg['checksum'],
+-            'source': str(source), 'archiveFileHashes': len(filehashes)})
+-    assert len(packages) == subject['registryPackageCount'] == 426
+-    write(C / 'PACKAGE-SOURCE-PINS.json', packages)
+-    config = '[source.crates-io]\nreplace-with = "scrapling-custody"\n[source.scrapling-custody]\ndirectory = ' + json.dumps(str(root / 'vendor')) + '\n'
+-    (home / 'config.toml').write_text(config)
+-    (C / 'CARGO-CONFIG.toml').write_text(config)
+-    verify()
+-    assert len(env) == 13
+-    result.update(startedAt=now(), attemptConsumed=True)
+-    start = time.monotonic()
+-    deadline = start + 95
+-    expired, reaped = False, False
++def write(p, v): p.write_text(json.dumps(v, indent=2) + '\n')
++contract = json.loads((P / 'RESOURCE-CONTRACT.json').read_text())
++tools = json.loads((P / 'TOOL-PINS.json').read_text())
++tool = {x.get('name', Path(x['path']).name): x['path'] for x in tools}
++def git(*args): return subprocess.check_output([tool['git'], '--no-optional-locks', '-C', str(I), *args]).decode()
++def verify_packet():
++    manifest = json.loads((P / 'MANIFEST.json').read_text())
++    for row in manifest['files']: assert sha(P / row['path']) == row['sha256'], row['path']
++    for row in tools: assert sha(Path(row['path']).resolve()) == row['sha256'], row['path']
++def gate():
++    verify_packet()
++    adoption = json.loads((D / 'ROOT-ADOPTION.json').read_text())
++    assert adoption['decision'] == 'adopt-exact-resource-proposal'
++    assert adoption['contractSha256'] == sha(P / 'RESOURCE-CONTRACT.json')
++    assert adoption['packetManifestSha256'] == sha(P / 'MANIFEST.json')
++    votes = adoption['votes']; assert len(votes) == 2
++    assert {x['reviewToken'] for x in votes} == set(contract['expectedVoteTokens'])
++    for vote in votes:
++        assert vote['identityQualifiedByRoot'] is True and vote['independentNonAuthor'] is True
++        f = Path(vote['wholeOpinionPath']); assert sha(f) == vote['wholeOpinionSha256']
++        whole = json.loads(f.read_text())
++        assert whole['reviewToken'] == vote['reviewToken']
++        assert whole['reviewedContractSha256'] == adoption['contractSha256']
++        assert whole['verdict'] == 'approve-exact-one-batch'
++    return adoption
++pins = json.loads((P / 'prior90/SOURCE-PINS.json').read_text())['files']
++green = P / 'frozen-green' / REL
++red_hash = next(x['sha256'] for x in pins if x['path'] == REL)
++def verify_source(phase):
++    assert git('rev-parse', 'HEAD').strip() == contract['head']
++    assert git('rev-parse', 'HEAD^{tree}').strip() == contract['tree']
++    expected_status = '' if phase == 'RED' else ' M ' + REL + '\n'
++    assert git('status', '--porcelain=v1') == expected_status
++    for row in pins:
++        expected = sha(green) if phase == 'GREEN' and row['path'] == REL else row['sha256']
++        assert sha(I / row['path']) == expected, row['path']
++    verify_packet()
++def command(selected):
++    argv = [tool['cargo'], 'test', '--manifest-path', str(I / 'Cargo.toml'), '--frozen', '-j1', '-p', 'mori', '--no-default-features', '--test', 'lsp', '--']
++    if selected: argv += [contract['selectedTest'], '--exact']
++    return argv + ['--test-threads=1']
++def run_phase(label, selected, env, root):
++    q = C / label; q.mkdir()
++    argv = command(selected); start = time.monotonic()
++    write(q / 'START.json', {'at': now(), 'argv': argv, 'environment': env, 'sameOuterSession': os.getsid(0), 'noPhaseDeadlineRenewal': True})
++    with (q / 'STDOUT.log').open('wb') as out, (q / 'STDERR.log').open('wb') as err:
++        child = subprocess.Popen(argv, cwd=root / 'cwd', env=env, stdout=out, stderr=err)
++        write(q / 'CHILD.json', {'pid': child.pid, 'session': os.getsid(child.pid)})
++        child.wait()  # Sole outer600+5 wrapper terminates this inherited session; no phase timeout/retry.
++    result = {'at': now(), 'exitCode': child.returncode, 'wallSeconds': time.monotonic() - start,
++        'stdoutPath': str(q / 'STDOUT.log'), 'stderrPath': str(q / 'STDERR.log')}
++    write(q / 'RESULT.json', result)  # Terminal facts/streams before hashes and source/tool postchecks.
++    text = (q / 'STDOUT.log').read_text(errors='replace') + (q / 'STDERR.log').read_text(errors='replace')
++    match = re.search(r'test result: (ok|FAILED)\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out', text)
++    summary = dict(zip(['passed', 'failed', 'ignored', 'measured', 'filtered'], map(int, match.groups()[1:]))) if match else None
++    result.update(rustSummary=summary, stdoutSha256=sha(q / 'STDOUT.log'), stderrSha256=sha(q / 'STDERR.log'))
++    if label == 'RED':
++        messages = ['Expected language "moriarty/1"; found "moriarty/99".', 'Expected language "moriarty/1" or "moriarty/2"; found "moriarty/99".']
++        matches = [[s for s in [msg, json.dumps(msg)[1:-1]] if s in text] for msg in messages]
++        result.update(headerMessageMatches=matches, expectedPredicate=(child.returncode == 101 and summary == contract['redSummary'] and match.group(1) == 'FAILED'
++            and contract['selectedTest'] in text and 'assertion `left == right` failed' in text and all(matches)))
++    else:
++        names = [contract['selectedTest'], 'full_sync_diagnostics_follow_public_checker_and_clear_after_edit']
++        result['expectedPredicate'] = child.returncode == 0 and summary == contract['greenSummary'] and match.group(1) == 'ok' and all('test ' + x + ' ... ok' in text for x in names)
++    write(q / 'RESULT.json', result)
++    verify_source(label)
++    result['sourceTaskToolPinsVerifiedAfter'] = True; write(q / 'RESULT.json', result)
++    assert result['expectedPredicate'], label + ': compile/timeout/other assertion is not expected evidence'
++    return result
++
++def body():
++    start = json.loads((C / 'START.json').read_text())
++    assert os.getsid(0) == start['ownedSession'] and os.getpid() != start['parentPid']
++    assert sha(D / 'ROOT-ADOPTION.json') == start['rootAdoptionSha256']
++    gate(); verify_source('RED')
++    root = Path(start['ownedRoot']); home = root / 'cargo-home'
++    env = json.loads((C / 'ENVIRONMENT.json').read_text()); assert len(env) == 13
++    result = {'startedAt': now(), 'status': 'FAILED', 'sourceTransitionApplied': False, 'ownedRoot': str(root)}
++    try:
++        configs = []
++        for directory in [I, *I.parents, root / 'cwd', *(root / 'cwd').parents]:
++            for name in ['config', 'config.toml']:
++                p = directory / '.cargo' / name
++                assert not p.exists(), str(p)
++                configs.append(str(p))
++        write(C / 'ABSENT-ANCESTOR-CONFIGS.json', configs)
++        cache = Path('/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f')
++        src = Path('/home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f')
++        platform = R / 'lsp-locked-platform-dependency-custody-20261018'
++        additions = R / 'rust-lsp-public-dependency-custody'
++        acquired = {x['name'] + '-' + x['version']: x for x in json.loads((additions / 'PACKAGES.json').read_text())}
++        packages = []
++        for pkg in tomllib.loads((I / 'Cargo.lock').read_text())['package']:
++            if not pkg.get('source', '').startswith('registry+'): continue
++            name = pkg['name'] + '-' + pkg['version']
++            archive, source = cache / (name + '.crate'), src / name
++            if not archive.is_file():
++                if name in acquired:
++                    archive = additions / acquired[name]['archive']['path']; source = additions / 'source' / name
++                else:
++                    archive = platform / 'archives' / (name + '.crate'); source = platform / 'source' / name
++            assert sha(archive) == pkg['checksum'], name
++            dest = root / 'vendor' / name; dest.mkdir(); filehashes = {}
++            with tarfile.open(archive, 'r:gz') as tf:
++                for member in tf.getmembers():
++                    if not member.isfile(): continue
++                    relative = Path(member.name).relative_to(name)
++                    assert not relative.is_absolute() and '..' not in relative.parts
++                    body_bytes = tf.extractfile(member).read(); filehashes[str(relative)] = hashlib.sha256(body_bytes).hexdigest()
++                    if str(relative) == 'Cargo.toml': assert (source / relative).read_bytes() == body_bytes, name
++            for child in source.iterdir():
++                if child.name not in ['.cargo-checksum.json', '.cargo-ok']:
++                    (dest / child.name).symlink_to(child, target_is_directory=child.is_dir())
++            write(dest / '.cargo-checksum.json', {'files': filehashes, 'package': pkg['checksum']})
++            packages.append({'identity': name, 'archive': str(archive), 'sha256': pkg['checksum'], 'source': str(source), 'archiveFileHashes': len(filehashes)})
++        assert len(packages) == 426
++        write(C / 'PACKAGE-SOURCE-PINS.json', packages)
++        config = '[source.crates-io]\nreplace-with = "scrapling-custody"\n[source.scrapling-custody]\ndirectory = ' + json.dumps(str(root / 'vendor')) + '\n'
++        (home / 'config.toml').write_text(config); (C / 'CARGO-CONFIG.toml').write_text(config)
++        verify_source('RED'); run_phase('RED', True, env, root)
++        verify_source('RED')
++        before = (I / REL).read_bytes(); after = green.read_bytes()
++        assert hashlib.sha256(before).hexdigest() == red_hash and sha(green) == contract['greenSha256']
++        (C / 'DIAGNOSTICS-BEFORE.rs').write_bytes(before); (C / 'DIAGNOSTICS-AFTER.rs').write_bytes(after)
++        write(C / 'SOURCE-TRANSITION.json', {'at': now(), 'path': REL, 'beforeSha256': red_hash, 'beforeBytes': len(before), 'afterSha256': sha(green), 'afterBytes': len(after), 'beforeBody': str(C / 'DIAGNOSTICS-BEFORE.rs'), 'afterBody': str(C / 'DIAGNOSTICS-AFTER.rs'), 'intent': 'Root-invoked exact one-file replacement after observed RED; no restore/reset/commit.'})
++        (I / REL).write_bytes(after)
++        result['sourceTransitionApplied'] = True; write(C / 'BATCH-RESULT.json', result)
++        verify_source('GREEN')
++        transition = json.loads((C / 'SOURCE-TRANSITION.json').read_text()); transition.update(actualAfterSha256=sha(I / REL), actualAfterBytes=(I / REL).stat().st_size, exactOneFileDirtyState=git('status', '--porcelain=v1'))
++        write(C / 'SOURCE-TRANSITION.json', transition)
++        run_phase('GREEN', False, env, root); verify_source('GREEN')
++        result.update(status='SUCCESS', bothPhasePredicates=True)
++    except BaseException as error:
++        result.update(errorClass=type(error).__name__, error=str(error)); raise
++    finally:
++        result.update(finishedAt=now(), actualDiagnosticsSha256=sha(I / REL), actualDiagnosticsBytes=(I / REL).stat().st_size, actualStatus=git('status', '--porcelain=v1'), artifactsRetained=True, automaticRestore=False)
++        write(C / 'BATCH-RESULT.json', result)
++
++def parent():
++    adoption = gate(); verify_source('RED')
++    C.mkdir(exist_ok=False)
++    root = Path(tempfile.mkdtemp(prefix='doctorwatson-lsp-one600-'))
++    for name in ['cwd', 'tmp', 'cargo-home', 'vendor']: (root / name).mkdir()
++    home = root / 'cargo-home'; (home / 'git').symlink_to('/home/charl/.cargo/git', target_is_directory=True)
++    toolchain = Path(tool['cargo']).parent
++    env = {'PATH': str(toolchain) + ':/usr/bin:/bin', 'RUSTC': tool['rustc'], 'RUSTDOC': tool['rustdoc'], 'CARGO_HOME': str(home),
++        'CARGO_TARGET_DIR': str(root / 'target'), 'CARGO_NET_OFFLINE': 'true', 'CARGO_INCREMENTAL': '0', 'CARGO_CACHE_AUTO_CLEAN_FREQUENCY': 'never',
++        'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8', 'TMPDIR': str(root / 'tmp')}
++    assert len(env) == 13 and not (root / 'target').exists()
++    write(C / 'ENVIRONMENT.json', env)
++    argv = [tool['timeout'], '--signal=TERM', '--kill-after=5s', '600s', tool['python'], str(Path(__file__).resolve()), '--body']
++    result = {'startedAt': now(), 'argv': argv, 'attemptConsumed': True, 'sourceTransitionStatus': 'Read actual source receipt; no automatic reset.'}
++    start = time.monotonic(); deadline = start + 605; expired = False; reaped = False; stop_sent = False
+     with (C / 'STDOUT.log').open('wb') as out, (C / 'STDERR.log').open('wb') as err:
+-        child = subprocess.Popen(argv, cwd=root / 'cwd', env=env, stdout=out, stderr=err, start_new_session=True)
+-        owned_sid = child.pid
+-        write(C / 'CHILD.json', {'pid': child.pid, 'session': child.pid, 'startedAt': now(), 'parentMaximumSeconds': 95})
++        child = subprocess.Popen(argv, cwd=root / 'cwd', env=env, stdout=out, stderr=err, stdin=subprocess.PIPE, start_new_session=True)
+         try:
+-            child.wait(timeout=max(0, deadline - time.monotonic()))
+-            reaped = True
+-        except subprocess.TimeoutExpired:
+-            expired = True
+-            try: os.killpg(owned_sid, signal.SIGKILL); group_stopped = True
+-            except ProcessLookupError: group_stopped = True
+-            child.poll()  # Nonblocking reap; no added cleanup grace/wait after95s.
+-            reaped = child.returncode is not None
+-    result.update(exitCode=child.returncode, wallSeconds=time.monotonic() - start, finishedAt=now(),
+-        parentDeadlineExceeded=expired, ownedGroupStopSent=group_stopped, directChildReaped=reaped,
+-        stdoutPath=str(C / 'STDOUT.log'), stderrPath=str(C / 'STDERR.log'))
+-    write(C / 'RESULT.json', result)  # Terminal facts/streams persist before census and heavy postchecks.
+-    members, census_error = None, None
+-    if expired or time.monotonic() >= deadline:
+-        census_error = 'Parent deadline exhausted; remaining members unknown, no added wait.'
++            write(C / 'START.json', {'at': now(), 'parentPid': os.getpid(), 'ownedSession': child.pid, 'ownedRoot': str(root), 'parentMaximumSeconds': 605, 'rootAdoptionSha256': sha(D / 'ROOT-ADOPTION.json'), 'contractSha256': sha(P / 'RESOURCE-CONTRACT.json'), 'packetManifestSha256': sha(P / 'MANIFEST.json')})
++            child.stdin.write(b'1'); child.stdin.close()  # START precedes body; same outer deadline.
++            child.wait(timeout=max(0, deadline - time.monotonic())); reaped = True
++        except BaseException as error:
++            expired = isinstance(error, subprocess.TimeoutExpired)
++            result['parentControlError'] = type(error).__name__
++            try: os.killpg(child.pid, signal.SIGKILL); stop_sent = True
++            except ProcessLookupError: stop_sent = True
++            child.poll(); reaped = child.returncode is not None  # Nonblocking; no extra cleanup grace.
++        finally:
++            if not child.stdin.closed: child.stdin.close()
++    result.update(exitCode=child.returncode, wallSeconds=time.monotonic()-start, finishedAt=now(), parentDeadlineExceeded=expired, directChildReaped=reaped, stdoutPath=str(C/'STDOUT.log'), stderrPath=str(C/'STDERR.log'))
++    write(C / 'RESULT.json', result)  # Terminal facts/streams precede census and heavy postchecks.
++    members = None; census_error = None
++    if not expired and time.monotonic() < deadline:
++        try:
++            census = subprocess.run([tool['ps'], '--sid', str(child.pid), '-o', 'pid=,sid=,stat='], capture_output=True, text=True, timeout=min(.25, deadline-time.monotonic()))
++            assert census.returncode in (0, 1); members = census.stdout.splitlines()
++        except (OSError, subprocess.TimeoutExpired, AssertionError) as error: census_error = type(error).__name__
++    else: census_error = 'Parent605 exhausted; remaining members unknown; no extra wait.'
++    if members != [] and not stop_sent:
++        try: os.killpg(child.pid, signal.SIGKILL); stop_sent = True
++        except ProcessLookupError: stop_sent = True
++    write(C / 'PROCESS-CLEANUP.json', {'ownedSession': child.pid, 'remainingMembers': members, 'censusError': census_error, 'ownedGroupStopSent': stop_sent, 'noAddedWaitOrGrace': True, 'ownedRootRetained': str(root)})
++    result.update(remainingMembers=members, censusError=census_error, ownedGroupStopSent=stop_sent)
++    write(C / 'RESULT.json', result)
++    try:
++        phase = 'GREEN' if sha(I / REL) == contract['greenSha256'] else 'RED'
++        verify_source(phase); result.update(finalPinsVerified=True, actualSourcePhase=phase, actualStatus=git('status', '--porcelain=v1'))
++    except BaseException as error: result.update(finalPinsVerified=False, finalPinError=type(error).__name__)
++    result.update(stdoutSha256=sha(C/'STDOUT.log'), stderrSha256=sha(C/'STDERR.log'), artifactsRetained=True, automaticRestore=False)
++    batch = json.loads((C/'BATCH-RESULT.json').read_text()) if (C/'BATCH-RESULT.json').exists() else {}
++    result['bothPhasePredicatesObserved'] = child.returncode == 0 and not expired and reaped and members == [] and result['finalPinsVerified'] and not result.get('parentControlError') and batch.get('status') == 'SUCCESS'
++    write(C/'RESULT.json', result); print(json.dumps(result), flush=True)
++    assert result['bothPhasePredicatesObserved'], 'Batch failed or unknown; retain actual working state/artifacts for root.'
++
++if __name__ == '__main__':
++    if sys.argv[1:] == ['--body']:
++        # Parent writes START immediately after spawn; avoid a race without adding an unbounded wait.
++        # Handshake is inherited stdin: parent-only entry must provide START before allowing body.
++        assert sys.stdin.read(1) == '1'
++        body()
+     else:
+-        try:
+-            ps = subprocess.run(['/bin/ps', '--sid', str(owned_sid), '-o', 'pid=,sid=,stat='],
+-                capture_output=True, text=True, timeout=min(0.25, deadline-time.monotonic()))
+-            assert ps.returncode in (0, 1), ps.returncode
+-            members = ps.stdout.splitlines()
+-            census_empty = not members
+-        except (OSError, subprocess.TimeoutExpired, AssertionError) as error: census_error = type(error).__name__
+-    if census_empty is not True and not group_stopped:
+-        try: os.killpg(owned_sid, signal.SIGKILL); group_stopped = True
+-        except ProcessLookupError: group_stopped = True
+-    write(C / 'PROCESS-CLEANUP.json', {'ownedSession': owned_sid, 'remainingMembers': members,
+-        'censusError': census_error, 'ownedGroupStopSent': group_stopped, 'noAddedWaitOrGrace': True})
+-    result.update(remainingMembers=members, censusError=census_error, ownedGroupStopSent=group_stopped,
+-        stdoutSha256=sha(C / 'STDOUT.log'), stderrSha256=sha(C / 'STDERR.log'))
+-    write(C / 'RESULT.json', result)
+-    verify()  # Complete source/task/four-tool checks after immediate owned-session assessment, including nonzero exit.
+-    result.update(sourceCommitAfter=git('rev-parse', 'HEAD'), sourceTreeAfter=git('rev-parse', 'HEAD^{tree}'),
+-        sourceStatusAfter=git('status', '--porcelain=v1'), sourceTaskToolPinsVerifiedAfter=True)
+-    text = (C/'STDOUT.log').read_text(errors='replace') + (C/'STDERR.log').read_text(errors='replace')
+-    summary = re.search(r'test result: FAILED\. (\d+) passed; (\d+) failed; (\d+) ignored; (\d+) measured; (\d+) filtered out', text)
+-    observed = dict(zip(['passed','failed','ignored','measured','filtered'], map(int,summary.groups()))) if summary else None
+-    old_message = 'Expected language "moriarty/1"; found "moriarty/99".'
+-    frozen_message = 'Expected language "moriarty/1" or "moriarty/2"; found "moriarty/99".'
+-    forms = lambda message: [message, json.dumps(message)[1:-1]]
+-    matches = {label: [form for form in forms(message) if form in text]
+-        for label,message in [('actualOldHeader',old_message),('frozenBothProfiles',frozen_message)]}
+-    result.update(observedRustSummary=observed, headerAssertionTextMatches=matches,
+-        expectedRedAssertionObserved=(child.returncode == 101 and not expired and reaped
+-            and observed == subject['expectedRedSummary'] and subject['expectedSelectedTest'] in text
+-            and 'assertion `left == right` failed' in text and all(matches.values())))
+-    write(C / 'RESULT.json', result)
+-    assert result['expectedRedAssertionObserved'], 'Compilation/timeout/other failure is not the expected RED assertion.'
+-    assert census_empty is True, 'Owned session cleanup not established.'
+-finally:
+-    if owned_sid is not None and census_empty is not True and not group_stopped:
+-        try: os.killpg(owned_sid, signal.SIGKILL); group_stopped = True
+-        except ProcessLookupError: group_stopped = True
+-    if owned_sid is None or census_empty is True: shutil.rmtree(root)
+-    try: verify(); result['finalSourceTaskToolPinsVerified'] = True
+-    except BaseException as error: result['finalSourceTaskToolPinsVerified'] = False; result['finalPinError'] = type(error).__name__
+-    write(C / 'CLEANUP.json', {'at': now(), 'ownedRoot': str(root), 'existsAfter': root.exists(),
+-        'knownOwnedSessionEmpty': census_empty, 'ownedGroupStopSent': group_stopped, 'noAddedWaitOrGrace': True})
+-    result['ownedRootExistsAfter'] = root.exists()
+-    write(C / 'RESULT.json', result)
+-    print(json.dumps(result), flush=True)
++        assert not sys.argv[1:]
++        parent()

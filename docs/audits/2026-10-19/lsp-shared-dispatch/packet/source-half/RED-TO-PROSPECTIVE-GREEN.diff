@@ -1,0 +1,74 @@
+--- red-before/crates/mori/src/commands/lsp/diagnostics.rs
++++ candidate-prospective-green/crates/mori/src/commands/lsp/diagnostics.rs
+@@ -3,29 +3,52 @@
+ };
+ use mori_diagnostics::{Diagnostic as _, MoriDiagnostic, Severity};
+ 
+-/// Match the public check command's source-profile dispatch without running an action.
++use super::super::check_source::{self, SourceCheckConsumer};
++
++/// Consume the public check command's source-profile dispatch without running an action.
+ pub(super) fn check(uri: &Uri, source: &str, related: bool) -> Vec<Diagnostic> {
+-    if mori_lexer::first_token_text(source).is_ok_and(|token| token == "language") {
+-        let staged = mori_core::language(source).is_ok_and(|language| language == "moriarty/2");
+-        let error = if staged {
+-            mori_core::stage::load(source).err()
+-        } else {
+-            mori_core::parse(source).err()
+-        };
++    check_source::dispatch(
++        source,
++        LspConsumer {
++            uri,
++            source,
++            related,
++        },
++    )
++}
++
++struct LspConsumer<'a> {
++    uri: &'a Uri,
++    source: &'a str,
++    related: bool,
++}
++
++impl SourceCheckConsumer for LspConsumer<'_> {
++    type Output = Vec<Diagnostic>;
++
++    fn beta(
++        self,
++        _checked: Option<&mori_checker::Checked<'_>>,
++        diagnostics: Vec<MoriDiagnostic>,
++    ) -> Self::Output {
++        diagnostics
++            .iter()
++            .map(|diagnostic| legacy(self.uri, self.source, diagnostic, self.related))
++            .collect()
++    }
++
++    fn core(
++        self,
++        result: Result<mori_core::Program, mori_core::Error>,
++        staged: bool,
++    ) -> Self::Output {
+         let profile = if staged { "moriarty/2" } else { "moriarty/1" };
+-        return error
+-            .map(|error| core(source, profile, error))
++        result
++            .err()
++            .map(|error| core(self.source, profile, error))
+             .into_iter()
+-            .collect();
++            .collect()
+     }
+-    let diagnostics = match mori_parser::parse(source) {
+-        Err(error) => vec![error],
+-        Ok(ast) => mori_checker::check(&ast).diagnostics,
+-    };
+-    diagnostics
+-        .iter()
+-        .map(|diagnostic| legacy(uri, source, diagnostic, related))
+-        .collect()
+ }
+ 
+ fn core(source: &str, profile: &str, error: mori_core::Error) -> Diagnostic {
