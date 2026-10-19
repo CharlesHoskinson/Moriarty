@@ -36,7 +36,7 @@ pub struct NominalPreprocessing {
     pub max_structural_ast_depth: UsizeDecimal,
 }
 impl NominalPreprocessing {
-    fn parser_budget(self)->DraftParseBudget {
+    pub(super) fn parser_budget(self)->DraftParseBudget {
         DraftParseBudget { max_source_bytes:self.max_source_bytes.0,max_tokens:self.max_tokens.0,
             max_functions:self.max_functions.0,max_parameters_per_function:self.max_parameters_per_function.0,
             max_total_parameters:self.max_total_parameters.0,max_ast_occurrences:self.max_ast_nodes.0,
@@ -93,7 +93,7 @@ pub struct NominalConfig {
     pub fuel:RunInput,pub stack:RunInput,pub preprocessing:NominalPreprocessing,
 }
 impl NominalConfig {
-    fn owner(&self)->ExtCompileConfig {
+    pub(super) fn owner(&self)->ExtCompileConfig {
         let bounds=self.bounds.owner();
         let mut layout=self.layout.owner(bounds);
         layout.ext_capacities=Some(self.extension_capacities.owner());
