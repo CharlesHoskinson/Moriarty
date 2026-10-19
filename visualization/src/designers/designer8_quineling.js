@@ -27,10 +27,11 @@ export { fnv1a32 };
 const TAU = Math.PI * 2;
 const PHI_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
-// Detect mobile / coarse-pointer devices so Android/iOS CPUs & GPUs run at locked 60 FPS
+// Detect mobile / coarse-pointer / iPadOS devices so Android/iOS CPUs & GPUs run at locked 60 FPS
 const IS_MOBILE_RUNTIME =
   typeof navigator !== 'undefined' &&
   (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+    (Number(navigator.maxTouchPoints) > 1 && /Macintosh/i.test(navigator.userAgent || '')) ||
     (typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches));
