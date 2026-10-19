@@ -201,3 +201,8 @@ assets, rendered scene or deployment.
 ## Design companion 009 — full product and typed completion
 
 [Design 009: full product and typed completion](DESIGN-009-FULL-PRODUCT-AND-TYPED-COMPLETION.md) preserves the exact Muse creative reply: an 8×8 limb-product field, separate low/high rails and typed completion dock. Its [status and provenance](DESIGN-009-STATUS-AND-PROVENANCE.md) retain the actual configured/contributor identity, historical source gaps and later dated fixture/review facts. The [source manifest](provenance/design-009-source-manifest.json) binds the exact note and public reply. This companion adds no circuit iteration or website implementation. The finished site launches only after the whole Sherlock goal is finished and accepted.
+
+
+## October19: Lt switchyard and checked-statement history
+
+[Design010](DESIGN-010-LT-SWITCHYARD-AND-CHECKED-STATEMENT.md) is the fresh Opus concept for the three handwritten Lt modules and a separate A102 check-history gallery. Apply its [status and factual corrections](DESIGN-010-STATUS-AND-PROVENANCE.md), including four distinct corruptions across seven rejecting calls. [Update015](UPDATE-015-MUL-SOURCE-COHORT-AND-DOCUMENTATION.md) retains the preceding historical Mul source cut. The finished website remains tied to full Sherlock completion.

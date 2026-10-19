@@ -11,3 +11,6 @@ The first output-copy pass stopped after 15 files because a source-single-link a
 Raw E/S/P usage was 97,868,782 / 12,805,543 / 85,063,239 microseconds. Carried totals are 1,190,123,103 / 265,033,522 / 925,089,576, retaining the independent 5 microsecond residual. Root records conservative next whole/F/supervisor ceilings 5837/1937/10534 and cumulative stderr 79686 B; this archive issues no next operation.
 
 Earlier raw records intentionally retain their original proposed/unreviewed/owed wording. The final [current status](CURRENT-STATUS.json) and actual Root result qualify those historical cuts; source approval, ordinary tests, configuration admission, compilation and later SDK/proof results remain separate.
+
+
+Later result: the current executable subsequently passed the [SDK check and full independent comparison](sdk-check/CURRENT-RESULT.md). The build-only freeze above remains historical. This adds nonproving constraint checking, not a proof or deployment.
