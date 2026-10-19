@@ -1,5 +1,5 @@
 //! SOURCE_ONLY / UNRUN. Written before the R218 public producer body.
-//! R115 EXPECTED is independently sealed; no subject outputs define expectations.
+//! Original R115 values are retained; current schema additions are source-derived before execution.
 use mori_core::sherlock_compile_artifact::compile_draft_host;
 use serde_json::{json, Value};
 
@@ -18,7 +18,7 @@ fn compare_public_preparation(source: &str, case: &str) {
         Err(failure) => panic!("public draft preparation failed: {}",
             serde_json::to_string(&failure).expect("failure serialization")),
     };
-    // The complete four R112 comparison fields, including all12 ProgramView
+    // The complete four R112 comparison fields, including all23 current ProgramView
     // fields and every nested ordered cell; no context stripping or defaults.
     assert_eq!(artifact.source.source_digest, expected["source_digest"].as_str().unwrap());
     assert_eq!(serde_json::to_value(&artifact.source).unwrap(), expected["source"]);
