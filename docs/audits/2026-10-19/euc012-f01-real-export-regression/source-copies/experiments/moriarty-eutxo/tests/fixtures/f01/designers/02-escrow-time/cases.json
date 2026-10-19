@@ -1,0 +1,1580 @@
+{
+  "schemaVersion": "moriarty-eutxo-designed-cases/1",
+  "designer": "02-escrow-time",
+  "vote": "B",
+  "expectationOrigin": "cash conservation, escrow branch requirements, inclusive integer interval/freshness arithmetic, and residual duties; frozen before evaluator observation",
+  "cases": [
+    {
+      "id": "E01-release",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "release",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Lender\",\"lower\":\"1000\",\"recipient\":\"Lender\",\"transferId\":\"Release1\",\"upper\":\"1099\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Release1",
+            "from": "Borrower",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Borrower": "0",
+            "Lender": "100"
+          },
+          "allowanceBorrowerRemaining": "0",
+          "allowanceBorrowerSpent": "100",
+          "appendUsedTransferId": "Release1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Release1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "975",
+            "spent": "49"
+          }
+        },
+        "workRemaining": "975",
+        "constructorWorkCount": 49
+      },
+      "reason": "100 cash to beneficiary before exclusive timeout 1100"
+    },
+    {
+      "id": "E02-wrong-recipient",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "release",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Lender\",\"lower\":\"1000\",\"recipient\":\"Attacker\",\"transferId\":\"Release1\",\"upper\":\"1099\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "E03-wrong-actor",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "release",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1000\",\"recipient\":\"Lender\",\"transferId\":\"Release1\",\"upper\":\"1099\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "E04-release-at-timeout",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "release",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Lender\",\"lower\":\"1000\",\"recipient\":\"Lender\",\"transferId\":\"Release1\",\"upper\":\"1100\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "E05-straddles-timeout",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "release",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Lender\",\"lower\":\"1099\",\"recipient\":\"Lender\",\"transferId\":\"Release1\",\"upper\":\"1101\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "E06-refund-boundary",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "refund",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1100\",\"recipient\":\"Borrower\",\"transferId\":\"Refund1\",\"upper\":\"1100\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Refund1",
+            "from": "Borrower",
+            "to": "Borrower",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Borrower": "100",
+            "Lender": "0"
+          },
+          "allowanceBorrowerRemaining": "0",
+          "allowanceBorrowerSpent": "100",
+          "appendUsedTransferId": "Refund1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Refund1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "975",
+            "spent": "49"
+          }
+        },
+        "workRemaining": "975",
+        "constructorWorkCount": 49
+      },
+      "reason": "unlock/refund owner cash; self Transfer counts gross debit100, net cash remains100",
+      "expectedSourceLimitation": {
+        "status": "Rejected",
+        "code": "SELF_TRANSFER",
+        "explanation": "Frozen Transfer rejects self-transfer; intended owner payout needs native custody movement distinct from logical owner balance delta."
+      }
+    },
+    {
+      "id": "E07-refund-early",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "refund",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1099\",\"recipient\":\"Borrower\",\"transferId\":\"Refund1\",\"upper\":\"1099\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "E08-cancel-residual",
+      "pattern": "escrow-time",
+      "source": "escrow-time.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "cancel",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1050\",\"recipient\":\"Borrower\",\"transferId\":\"Cancel1\",\"upper\":\"1051\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-residual.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Cancel1",
+            "from": "Borrower",
+            "to": "Borrower",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Borrower": "100",
+            "Lender": "0"
+          },
+          "allowanceBorrowerRemaining": "0",
+          "allowanceBorrowerSpent": "100",
+          "appendUsedTransferId": "Cancel1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [
+            {
+              "accrualTerms": {
+                "denominator": "1",
+                "firstPeriodStart": "1000",
+                "numerator": "0",
+                "periodSeconds": "60",
+                "rounding": "floor"
+              },
+              "accrued": "0",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "rounding": "none",
+                "scale": "0"
+              },
+              "creditor": "Lender",
+              "debtor": "Borrower",
+              "denomination": "Cash",
+              "id": "ResidualDuty",
+              "initialPrincipal": "40",
+              "lastAccruedPeriod": "0",
+              "liabilityIncurred": "40",
+              "nextAccrualAt": "1060",
+              "nominalLiabilityCap": "40",
+              "originationId": "PriorOrigination",
+              "originationTransferId": "PriorTransfer",
+              "outstanding": "40",
+              "principal": "40",
+              "settlementAsset": "Cash",
+              "status": "Outstanding"
+            }
+          ],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [
+            "PriorOrigination"
+          ],
+          "usedTransferIds": [
+            "PriorTransfer",
+            "Cancel1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "975",
+            "spent": "49"
+          }
+        },
+        "workRemaining": "975",
+        "constructorWorkCount": 49
+      },
+      "reason": "release escrow lock only; separate40 residual obligation is not forgiven",
+      "expectedSourceLimitation": {
+        "status": "Rejected",
+        "code": "SELF_TRANSFER",
+        "explanation": "Frozen Transfer rejects self-transfer; intended owner payout needs native custody movement distinct from logical owner balance delta."
+      }
+    },
+    {
+      "id": "T01-last-tick",
+      "pattern": "interval-boundary",
+      "source": "interval-boundary.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "step",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"lower\":\"1099\",\"transferId\":\"Boundary1\",\"upper\":\"1099\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Boundary1",
+            "from": "Borrower",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Borrower": "0",
+            "Lender": "100"
+          },
+          "allowanceBorrowerRemaining": "0",
+          "allowanceBorrowerSpent": "100",
+          "appendUsedTransferId": "Boundary1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Boundary1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "983",
+            "spent": "41"
+          }
+        },
+        "workRemaining": "983",
+        "constructorWorkCount": 41
+      },
+      "reason": ""
+    },
+    {
+      "id": "T02-timeout-tick",
+      "pattern": "interval-boundary",
+      "source": "interval-boundary.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "step",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"lower\":\"1100\",\"transferId\":\"Boundary1\",\"upper\":\"1100\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "T03-reversed",
+      "pattern": "interval-boundary",
+      "source": "interval-boundary.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "step",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"lower\":\"1050\",\"transferId\":\"Boundary1\",\"upper\":\"1049\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "T04-wide-window",
+      "pattern": "interval-boundary",
+      "source": "interval-boundary.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "step",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"lower\":\"1000\",\"transferId\":\"Boundary1\",\"upper\":\"1200\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "O01-fresh-entire-window",
+      "pattern": "oracle-observation",
+      "source": "oracle-observation.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "observeRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"feed\":\"USD_Cash\",\"lower\":\"1010\",\"observedPrice\":\"10\",\"publishedAt\":\"1000\",\"publisher\":\"ApprovedFeed\",\"transferId\":\"Oracle1\",\"upper\":\"1020\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Oracle1",
+            "from": "Borrower",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Borrower": "0",
+            "Lender": "100"
+          },
+          "allowanceBorrowerRemaining": "0",
+          "allowanceBorrowerSpent": "100",
+          "appendUsedTransferId": "Oracle1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Oracle1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "961",
+            "spent": "63"
+          }
+        },
+        "workRemaining": "961",
+        "constructorWorkCount": 63
+      },
+      "reason": ""
+    },
+    {
+      "id": "O02-stale-upper",
+      "pattern": "oracle-observation",
+      "source": "oracle-observation.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "observeRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"feed\":\"USD_Cash\",\"lower\":\"1010\",\"observedPrice\":\"10\",\"publishedAt\":\"1000\",\"publisher\":\"ApprovedFeed\",\"transferId\":\"Oracle1\",\"upper\":\"1021\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "O03-future-update",
+      "pattern": "oracle-observation",
+      "source": "oracle-observation.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "observeRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"feed\":\"USD_Cash\",\"lower\":\"1010\",\"observedPrice\":\"10\",\"publishedAt\":\"1011\",\"publisher\":\"ApprovedFeed\",\"transferId\":\"Oracle1\",\"upper\":\"1020\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "O04-wrong-feed",
+      "pattern": "oracle-observation",
+      "source": "oracle-observation.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "observeRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"feed\":\"OtherFeed\",\"lower\":\"1010\",\"observedPrice\":\"10\",\"publishedAt\":\"1000\",\"publisher\":\"ApprovedFeed\",\"transferId\":\"Oracle1\",\"upper\":\"1020\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "O05-wrong-publisher",
+      "pattern": "oracle-observation",
+      "source": "oracle-observation.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "observeRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"feed\":\"USD_Cash\",\"lower\":\"1010\",\"observedPrice\":\"10\",\"publishedAt\":\"1000\",\"publisher\":\"Attacker\",\"transferId\":\"Oracle1\",\"upper\":\"1020\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "O06-price-below-threshold",
+      "pattern": "oracle-observation",
+      "source": "oracle-observation.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "observeRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"feed\":\"USD_Cash\",\"lower\":\"1010\",\"observedPrice\":\"9\",\"publishedAt\":\"1000\",\"publisher\":\"ApprovedFeed\",\"transferId\":\"Oracle1\",\"upper\":\"1020\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "R01-joint-labels",
+      "pattern": "joint-role",
+      "source": "joint-role.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "jointRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"beneficiary\":\"Lender\",\"owner\":\"Borrower\",\"recipient\":\"Lender\",\"transferId\":\"Joint1\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Joint1",
+            "from": "Borrower",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Borrower": "0",
+            "Lender": "100"
+          },
+          "allowanceBorrowerRemaining": "0",
+          "allowanceBorrowerSpent": "100",
+          "appendUsedTransferId": "Joint1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Joint1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "978",
+            "spent": "46"
+          }
+        },
+        "workRemaining": "978",
+        "constructorWorkCount": 46
+      },
+      "reason": "two distinct role labels; signature authentication remains unsupported"
+    },
+    {
+      "id": "R02-role-substitution",
+      "pattern": "joint-role",
+      "source": "joint-role.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "jointRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"beneficiary\":\"Lender\",\"owner\":\"Lender\",\"recipient\":\"Lender\",\"transferId\":\"Joint1\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "R03-beneficiary-substitution",
+      "pattern": "joint-role",
+      "source": "joint-role.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "jointRelease",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"beneficiary\":\"Attacker\",\"owner\":\"Borrower\",\"recipient\":\"Lender\",\"transferId\":\"Joint1\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "Rejected",
+        "code": "GUARD_FAILED",
+        "noPublishedFields": [
+          "post",
+          "financialPost",
+          "effects"
+        ]
+      },
+      "reason": ""
+    },
+    {
+      "id": "E09-refund-unlock-only",
+      "pattern": "escrow-time",
+      "source": "escrow-unlock.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "refund",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1100\",\"recipient\":\"Borrower\",\"transferId\":\"Refund1\",\"upper\":\"1100\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [],
+        "financialDelta": {
+          "allFinancialFields": "preserved except work; no monetary effects means no cap debit or used transfer ID"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "100",
+              "spent": "0"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "984",
+            "spent": "40"
+          }
+        },
+        "workRemaining": "984",
+        "constructorWorkCount": 40
+      },
+      "reason": "unlock/refund owner cash; self Transfer counts gross debit100, net cash remains100",
+      "sourceScope": "semantic unlock only; native script-custody owner payout remains unsupported",
+      "expectedSourceLimitation": {
+        "status": "Rejected",
+        "code": "EMPTY_BATCH",
+        "explanation": "funded lifecycle requires nonempty operation batch; unlocking without cash effect cannot be evaluated"
+      }
+    },
+    {
+      "id": "E10-cancel-preserves-residual",
+      "pattern": "escrow-time",
+      "source": "escrow-unlock.mori",
+      "profile": "moriarty-financial-agreement-source/6",
+      "action": "cancel",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1050\",\"recipient\":\"Borrower\",\"transferId\":\"Cancel1\",\"upper\":\"1051\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-residual.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [],
+        "financialDelta": {
+          "allFinancialFields": "preserved except work; no monetary effects means no cap debit or used transfer ID"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "100",
+              "spent": "0"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "authority": {
+            "debtor": {
+              "capability": "c722ca82f9295fc98f35e701dda78196601f2772b4b96be1f0600ecfe882e8e3",
+              "party": "Borrower"
+            },
+            "lender": {
+              "capability": "511fcc49b61f73739d5d387e572521fcffdb4091a75913838be1b445c4bc0b82",
+              "party": "Lender"
+            },
+            "networkTag": "33660d88e2fc5087407dc85058a3375a3ca687487f060065dc0f11f5f4f03b71",
+            "outcomeIntent": {
+              "grossCaps": [
+                {
+                  "actor": "Borrower",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "100"
+                },
+                {
+                  "actor": "Lender",
+                  "asset": "Cash",
+                  "maximumLedgerAmount": "0"
+                }
+              ],
+              "minimumNetCredits": []
+            },
+            "programDigest": "f5e6e5297e119a7b30a8734d722c202f783152494703c1f42d8c69ec53583f50"
+          },
+          "balances": [
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [
+            {
+              "accrualTerms": {
+                "denominator": "1",
+                "firstPeriodStart": "1000",
+                "numerator": "0",
+                "periodSeconds": "60",
+                "rounding": "floor"
+              },
+              "accrued": "0",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "rounding": "none",
+                "scale": "0"
+              },
+              "creditor": "Lender",
+              "debtor": "Borrower",
+              "denomination": "Cash",
+              "id": "ResidualDuty",
+              "initialPrincipal": "40",
+              "lastAccruedPeriod": "0",
+              "liabilityIncurred": "40",
+              "nextAccrualAt": "1060",
+              "nominalLiabilityCap": "40",
+              "originationId": "PriorOrigination",
+              "originationTransferId": "PriorTransfer",
+              "outstanding": "40",
+              "principal": "40",
+              "settlementAsset": "Cash",
+              "status": "Outstanding"
+            }
+          ],
+          "schemaVersion": "moriarty-financial-lifecycle-state/2",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [
+            "PriorOrigination"
+          ],
+          "usedTransferIds": [
+            "PriorTransfer"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "984",
+            "spent": "40"
+          }
+        },
+        "workRemaining": "984",
+        "constructorWorkCount": 40
+      },
+      "reason": "release escrow lock only; separate40 residual obligation is not forgiven",
+      "sourceScope": "semantic unlock only; native script-custody owner payout remains unsupported",
+      "expectedSourceLimitation": {
+        "status": "Rejected",
+        "code": "EMPTY_BATCH",
+        "explanation": "funded lifecycle requires nonempty operation batch; unlocking without cash effect cannot be evaluated"
+      }
+    },
+    {
+      "id": "E11-refund-real-custody",
+      "pattern": "escrow-time",
+      "source": "escrow-custody-v5.mori",
+      "profile": "moriarty-financial-agreement-source/5",
+      "action": "refund",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1100\",\"recipient\":\"Borrower\",\"transferId\":\"Refund1\",\"upper\":\"1100\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed-custody-v5.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Refund1",
+            "from": "Escrow",
+            "to": "Borrower",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Escrow": "0",
+            "Borrower": "100",
+            "Lender": "0"
+          },
+          "appendUsedTransferId": "Refund1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit",
+          "debitParty": "Escrow",
+          "allowanceEscrowRemaining": "0",
+          "allowanceEscrowSpent": "100"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Escrow",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "0"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Escrow"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Refund1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "975",
+            "spent": "49"
+          }
+        },
+        "workRemaining": "975",
+        "constructorWorkCount": 49
+      },
+      "reason": "Custody Cash moves from distinct funded Escrow account to authorized owner; existing /5 supports third-party custody and preserves residual duties"
+    },
+    {
+      "id": "E12-cancel-preserves-duty",
+      "pattern": "escrow-time",
+      "source": "escrow-custody-v5.mori",
+      "profile": "moriarty-financial-agreement-source/5",
+      "action": "cancel",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Borrower\",\"lower\":\"1050\",\"recipient\":\"Borrower\",\"transferId\":\"Cancel1\",\"upper\":\"1051\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-residual-custody-v5.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Cancel1",
+            "from": "Escrow",
+            "to": "Borrower",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Escrow": "0",
+            "Borrower": "100",
+            "Lender": "0"
+          },
+          "appendUsedTransferId": "Cancel1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit",
+          "debitParty": "Escrow",
+          "allowanceEscrowRemaining": "0",
+          "allowanceEscrowSpent": "100"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Escrow",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "0"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Escrow"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [
+            {
+              "accrualTerms": {
+                "denominator": "1",
+                "firstPeriodStart": "1000",
+                "numerator": "0",
+                "periodSeconds": "60",
+                "rounding": "floor"
+              },
+              "accrued": "0",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "rounding": "none",
+                "scale": "0"
+              },
+              "creditor": "Lender",
+              "debtor": "Borrower",
+              "denomination": "Cash",
+              "id": "ResidualDuty",
+              "initialPrincipal": "40",
+              "lastAccruedPeriod": "0",
+              "liabilityIncurred": "40",
+              "nextAccrualAt": "1060",
+              "nominalLiabilityCap": "40",
+              "originationId": "PriorOrigination",
+              "originationTransferId": "PriorTransfer",
+              "outstanding": "40",
+              "principal": "40",
+              "settlementAsset": "Cash",
+              "status": "Outstanding"
+            }
+          ],
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [
+            "PriorOrigination"
+          ],
+          "usedTransferIds": [
+            "PriorTransfer",
+            "Cancel1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "975",
+            "spent": "49"
+          }
+        },
+        "workRemaining": "975",
+        "constructorWorkCount": 49
+      },
+      "reason": "Custody Cash moves from distinct funded Escrow account to authorized owner; existing /5 supports third-party custody and preserves residual duties"
+    },
+    {
+      "id": "E13-release-real-custody",
+      "pattern": "escrow-time",
+      "source": "escrow-custody-v5.mori",
+      "profile": "moriarty-financial-agreement-source/5",
+      "action": "release",
+      "ordinaryInputCanonicalJSON": "{\"Args\":{\"actor\":\"Lender\",\"lower\":\"1000\",\"recipient\":\"Lender\",\"transferId\":\"Release1\",\"upper\":\"1099\"},\"Obs\":{},\"Pre\":{\"locked\":\"1\",\"revision\":\"0\"},\"workInitial\":\"1024\"}",
+      "financialInput": "financial-seed-custody-v5.json",
+      "expected": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "locked": "0",
+          "revision": "1"
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "Release1",
+            "from": "Escrow",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          }
+        ],
+        "financialDelta": {
+          "balances": {
+            "Escrow": "0",
+            "Borrower": "0",
+            "Lender": "100"
+          },
+          "appendUsedTransferId": "Release1",
+          "obligations": "byte-for-byte preserved",
+          "allOtherFields": "preserved except work; derived constructor debit plus one Transfer kernel unit",
+          "debitParty": "Escrow",
+          "allowanceEscrowRemaining": "0",
+          "allowanceEscrowSpent": "100"
+        },
+        "financialPost": {
+          "allowances": [
+            {
+              "asset": "Cash",
+              "party": "Escrow",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "asset": "Cash",
+              "party": "Borrower",
+              "remaining": "0",
+              "spent": "0"
+            },
+            {
+              "asset": "Cash",
+              "party": "Lender",
+              "remaining": "0",
+              "spent": "0"
+            }
+          ],
+          "balances": [
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Escrow"
+            },
+            {
+              "amount": "0",
+              "asset": "Cash",
+              "party": "Borrower"
+            },
+            {
+              "amount": "100",
+              "asset": "Cash",
+              "party": "Lender"
+            }
+          ],
+          "obligations": [],
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "usedAccrualIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedTransferIds": [
+            "Release1"
+          ],
+          "work": {
+            "closureReserve": "16",
+            "remaining": "975",
+            "spent": "49"
+          }
+        },
+        "workRemaining": "975",
+        "constructorWorkCount": 49
+      },
+      "reason": "Custody Cash moves from distinct funded Escrow account to authorized beneficiary; existing /5 supports third-party custody and preserves residual duties"
+    }
+  ],
+  "nativeLimitationCases": [
+    {
+      "id": "N01-forged-interval",
+      "pattern": "interval-boundary",
+      "mutate": "actual ledger interval [1000,1200], Args remains [1099,1099]",
+      "expectedNative": "Reject",
+      "sourceDisposition": "accepted because no transaction context is admitted"
+    },
+    {
+      "id": "N02-reference-pretending-spend",
+      "pattern": "oracle-observation",
+      "mutate": "state head placed only in referenceInputs, oracle reference valid",
+      "expectedNative": "Reject",
+      "sourceDisposition": "not representable; no spending/reference input distinction"
+    },
+    {
+      "id": "N03-forged-feed",
+      "pattern": "oracle-observation",
+      "mutate": "Args publisher ApprovedFeed but actual reference contains attacker policy/key",
+      "expectedNative": "Reject",
+      "sourceDisposition": "accepted textual identity; publisher signature/policy not authenticated"
+    },
+    {
+      "id": "N04-reference-role-token",
+      "pattern": "joint-role",
+      "mutate": "role token only referenced, never spent",
+      "expectedNative": "Reject",
+      "sourceDisposition": "not representable; no role asset input predicate"
+    },
+    {
+      "id": "N05-missing-one-required-signer",
+      "pattern": "joint-role",
+      "mutate": "both labels supplied, owner witness absent or not in required signer hashes",
+      "expectedNative": "Reject",
+      "sourceDisposition": "accepted labels; no signature verification"
+    },
+    {
+      "id": "N06-drop-residual",
+      "pattern": "escrow-time",
+      "mutate": "cancellation successor drops ResidualDuty40",
+      "expectedNative": "Reject",
+      "sourceDisposition": "financial evaluator preserves duty; candidate transaction poststate admission not available"
+    },
+    {
+      "id": "N07-false-closure",
+      "pattern": "escrow-time",
+      "mutate": "cancel with residual40 omits all successor state",
+      "expectedNative": "Reject",
+      "sourceDisposition": "not representable; ordinary locked0 is not full agreement closure"
+    }
+  ]
+}

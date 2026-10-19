@@ -1,0 +1,13 @@
+--- original-b5c1/experiments/moriarty-eutxo/src/compile-custody.mjs
++++ current-b8F01/experiments/moriarty-eutxo/src/compile-custody.mjs
+@@ -334,7 +334,9 @@
+     const parsed = parseAikenCheckJson(check.stdout, check.stderr);
+     const missing = [];
+     for (const exp of expectedTests) {
+-      const found = (parsed.tests || []).find((item) => item.title === exp.title || item.title.endsWith(exp.title));
++      // Exact or module-qualified identity only. A bare suffix let oracle_release_missing_lender_row
++      // stand in for an absent release_missing_lender_row.
++      const found = (parsed.tests || []).find((item) => item.title === exp.title || item.title.endsWith(`.${exp.title}`));
+       if (!found) missing.push(exp.title);
+       else if (found.status !== 'success') missing.push(`${exp.title}:${found.status}`);
+     }

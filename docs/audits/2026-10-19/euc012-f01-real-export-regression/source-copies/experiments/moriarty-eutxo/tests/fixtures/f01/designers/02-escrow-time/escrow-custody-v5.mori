@@ -1,0 +1,60 @@
+profile "moriarty-financial-agreement-source/5";
+agreement EscrowValidation {
+  unit Cash;
+  asset Cash: Asset;
+  record TransferFields {
+    id: Text;
+    from: Text;
+    to: Text;
+    settlementAsset: Text;
+    transferAmount: Amount<Cash>;
+  }
+  record RepayFields {
+    allocationId: Text;
+    transferId: Text;
+    obligationId: Text;
+    payer: Text;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+  }
+  record ConversionFields {
+    mantissa: UInt128;
+    scale: UInt128;
+    rounding: Text;
+  }
+  record AccrualTermsFields {
+    numerator: UInt128;
+    denominator: UInt128;
+    rounding: Text;
+    periodSeconds: UInt64;
+    firstPeriodStart: UInt64;
+  }
+  record OriginateFields {
+    obligationId: Text;
+    transferId: Text;
+    originationId: Text;
+    debtor: Text;
+    creditor: Text;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+    denomination: Text;
+    settlementAsset: Text;
+    conversion: Record<ConversionFields>;
+    allocationRule: Text;
+    accrualTerms: Record<AccrualTermsFields>;
+    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;
+  }
+  record AccrueFields {
+    accrualId: Text;
+    obligationId: Text;
+    periodIndex: UInt64;
+    observedTime: UInt64;
+  }
+  operation Transfer: TransferFields;
+  operation Repay: RepayFields;
+  operation Originate: OriginateFields;
+  operation Accrue: AccrueFields;
+  state locked: UInt128;
+  state revision: UInt128;
+  action release(actor: Text, recipient: Text, transferId: Text, lower: UInt128, upper: UInt128) { requires pre.locked == 1; requires actor == "Lender"; requires recipient == "Lender"; requires lower <= upper; requires lower >= 1000; requires upper < 1100; emit Transfer { id: transferId, from: "Escrow", to: recipient, settlementAsset: "Cash", transferAmount: amount<Cash>(100) }; next.locked = 0; next.revision = pre.revision + 1; ensures post.locked == 0; ensures post.revision == pre.revision + 1; }
+  action refund(actor: Text, recipient: Text, transferId: Text, lower: UInt128, upper: UInt128) { requires pre.locked == 1; requires actor == "Borrower"; requires recipient == "Borrower"; requires lower <= upper; requires lower >= 1100; requires upper <= 1200; emit Transfer { id: transferId, from: "Escrow", to: recipient, settlementAsset: "Cash", transferAmount: amount<Cash>(100) }; next.locked = 0; next.revision = pre.revision + 1; ensures post.locked == 0; ensures post.revision == pre.revision + 1; }
+  action cancel(actor: Text, recipient: Text, transferId: Text, lower: UInt128, upper: UInt128) { requires pre.locked == 1; requires actor == "Borrower"; requires recipient == "Borrower"; requires lower <= upper; requires lower >= 1000; requires upper < 1100; emit Transfer { id: transferId, from: "Escrow", to: recipient, settlementAsset: "Cash", transferAmount: amount<Cash>(100) }; next.locked = 0; next.revision = pre.revision + 1; ensures post.locked == 0; ensures post.revision == pre.revision + 1; }
+}
