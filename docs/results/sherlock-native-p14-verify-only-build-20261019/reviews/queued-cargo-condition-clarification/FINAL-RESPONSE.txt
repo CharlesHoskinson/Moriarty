@@ -1,0 +1,25 @@
+```json
+{
+  "verdict": "YES_PROCEED_WITH_QUEUED_WAITERS_PERMITTED",
+  "reviewer": "Fresh Opus 5.5 HIGH clarification. No tools were used and nothing was read, hashed or executed. This judges only the stated operational condition, on the Root-supplied observation.",
+  "question": "Can the unchanged reviewed P14 compile (`cargo test --no-run --frozen -p mori-backend --lib -j4`, config e3ecc3e2…) proceed while unrelated external cargo processes are blocked on the Root-held ~/.cargo locks?",
+  "answer": "Yes. The proposed resolution satisfies the substantive invariant behind condition C.",
+  "rationale": [
+    "1. The old condition protected one invariant: the host ~/.cargo cache stays unmutated between the before and after stat pins, and nothing else is writing to it or compiling against it during the window. Process absence was a proxy for that, chosen while an external PID (2464702) held the lock and Root's exclusivity was not established.",
+    "2. Root PID 2476376, in session 92734, now holds both .package-cache and .package-cache-mutate as exclusive WRITE flocks. That is cargo's mutate-exclusive state. Cargo honors these locks, so the two waiters cannot read-modify or write the cache until Root releases.",
+    "3. PIDs 2476994 and 2477888 are in state S with wchan locks_lock_inode_wait and WRITE* (pending) entries only. They hold no lock on either cache file, use no CPU, and cannot spawn rustc while blocked before the cache acquisition. They are queued, not active.",
+    "4. The native cargo runs with its private copied CARGO_HOME, so its locks are on separate inodes. It cannot deadlock with the waiters or with Root, and the waiters cannot block it.",
+    "5. Requiring the waiters to be absent while Root keeps the locks is circular. They can only exit once Root unlocks, and Root unlocks only after the compile. That turns unrelated user work into a deadlock without strengthening the invariant.",
+    "6. The unchanged before/after old-home stat pins remain the backstop. Any violation of advisory locking, or any unexpected lock loss, shows up as a stat mismatch and voids the attempt under the existing rules. No new detection is needed."
+  ],
+  "conditionsAsRestated": [
+    "A. At preflight and prelaunch, both locks must still be held exclusively by Root session 92734, specifically holder PID 2476376 or its documented successor in that session.",
+    "B. No external rustc may be running.",
+    "C. Every external cargo process must be blocked: wchan locks_lock_inode_wait, with only pending WRITE* entries on the Root-held cache paths. Any external cargo that is running and not lock-blocked fails the check, because it could be compiling without needing the cache.",
+    "D. Order of operations: compile ends, then the after-stat pin check of the old home completes, then restoration, then Root unlocks. The after-stat check must come before unlock, because the waiters will legitimately mutate ~/.cargo once released."
+  ],
+  "unchanged": "Fixed class, F/supervisor/wall caps, quota mounts, QOBS, source/subject/manifest pins, the ledger receipt and the six preflight checks are untouched. This changes only how process presence is evaluated (active versus queued). It adds no process-absence ceremony.",
+  "residualNote": "This applies to waiters observed at launch. A new external process that does not need the cache could start mid-window and compete for host CPU against the 281 s wall. That is ordinary host contention, not a cache-invariant breach. It is covered by the existing terminal-failure-consumes-attempt rule and does not block launch.",
+  "retainedQualifications": "This permits compile only. It is not test execution, verification, proof, recursive acceptance or stagenet evidence. Restoration and teardown are still owed in every case."
+}
+```

@@ -1,0 +1,203 @@
+# Reviewer B: P14 frozen-bundle verify-only operation and ELF listing
+
+**VERDICT: APPROVE_OPERATIONS**
+
+This vote is from a fresh non-author, Opus 5.5 HIGH. I used no tools and executed, read from disk or hashed nothing. Every byte count and SHA-256 below is Root-attested; I did not recompute any of them. From inside this session I cannot prove I am not the author.
+
+**What the vote covers:**
+- The two operations exactly as written: `PROPOSED-VERIFY-OPERATION.json` (4787 B) and `PROPOSED-LIST-OPERATION.json` (1210 B).
+- Run under Root's stated procedure and the supplied `capture()` class.
+- Subject to bindings B1–B6 in section 4. If Root cannot adopt them, read this vote as REQUEST_CHANGES with B1–B6 as the blockers.
+
+No edit to either operation file is required. This vote is not an authorization source, and it makes no compile, proof, recursion or stagenet claim.
+
+---
+
+## 1. Current applicability
+
+**The test, the ELF and the bundle line up.**
+- The test source is 46803 B, `f124c901…`. That equals the P14 compiled source in `ROOT-NATIVE-P14-RESULT.json`, and the ELF built from it is 474023720 B, `88a9ad94…`. The ELF is recorded as never executed.
+- The in-binary constants match the supplied frozen bundle claim:
+  - bundle: 31390 B, `5ec12ca7…`
+  - ZKIR: `0dc0f0f4…`
+  - program: `4da320d5…`
+  - reference: `cc68879d…`
+  - capacities `[10,64,…,6]/[18,9,8,4,4,3]`, `stack_limit` `"32"`
+  - `circuit_k` 18
+  - last two lanes `3,1` (rule_tag, charge)
+
+**The SRS file is consistent with its pin.** The params18 size of 50332036 B decomposes as 4 + 2¹⁸·192 + 384, which fits the degree-prefixed format `OfflineParameters::load` checks. The 128 MiB cap holds. Only `bls_midnight_2p18` can be loaded, because k comes from the reconstructed claim and `MAX_K=18`. params19 is not touched: `ir.k()==19` is refused in `prepare` before any load.
+
+**Expected work.** The work is a subset of what the P13 prove already completed under the same scope class. P13 did keygen of PK+VK, then prove, then a producer-side `vk.verify(&PARAMS_VERIFIER)`. This run does prepare, `ir.k()` twice, one SRS load, one `get_params` clone, `keygen_vk` and one `verify`. Peak memory should therefore be well below P13's prove. A fresh process also removes any heap retained after prove in the killed combined run.
+
+**Unknowns.** CPU cost is unknown. This is a dev-profile ELF and the per-package opt levels were not supplied, so 300 CPU-s may not be enough. That is an accepted failure mode.
+
+**Ledger arithmetic checks.**
+- Before: 280862180 + 1623028271 = 1903890451, so residual = 6.
+- Delta: 21349006 + 94174218 = 115523224 = E delta.
+- After: 2019413681 / 302211186 / 1717202489, so residual = 6.
+- The worst case here is about 330 + 10 s wall plus copy and hash, and about 308 s child CPU plus supervisor overhead. That fits whole 4691, F 881 and supervisorCPU 10391.
+
+## 2. Exact process and resource envelope
+
+### Verify chain
+
+1. The harness `Popen` uses `start_new_session=True`.
+2. `systemd-run --user --scope` registers the scope over the user bus, then execs, keeping the same PID.
+3. `timeout` is the session leader. Its `setpgid(0,0)` is a no-op, so harness `killpg` still reaches the whole chain.
+4. `timeout` forks; the child runs `prlimit`, which sets the limits on itself and execs.
+5. `env -i` runs, then the ELF.
+
+### Limits on the ELF
+
+| Limit | Effect |
+|---|---|
+| `RLIMIT_CPU` 300:300 | Process-wide across all threads; at 4 threads it can be hit after about 75 s wall. Because soft equals hard, the kernel sends SIGKILL, which is not a core-dumping signal. |
+| `RLIMIT_AS` 8 GiB | Counts virtual reservations: glibc arenas, thread stacks, and the PT_LOAD segments of the debug ELF. A hit shows as `memory allocation of N bytes failed` followed by SIGABRT. That is not an OOM and not a verifier Err. |
+| `RLIMIT_FSIZE` 64 MiB | Outputs are KB-scale. |
+| `RLIMIT_CORE` 0 | No core file through the normal path. |
+| Scope | MemoryMax 8G, MemorySwapMax 0, TasksMax 1024, CPUQuota 400%. |
+| Wall | TERM at 300 s, KILL at 310 s, harness deadline 330 s, leaving a 20 s margin. |
+
+### Binary environment
+
+The ELF gets exactly eight variables: PATH, LANG, LC_ALL, TMPDIR, RAYON_NUM_THREADS=4 and the four `MORIARTY_A102_VERIFY_*` variables. HOME, USER, DBUS and XDG are absent, so the environment gives no path to the session bus, a wallet or secrets. Only `systemd-run` sees DBUS/XDG.
+
+### File I/O
+
+- **Reads:**
+  - the bundle: `O_NOFOLLOW|O_NONBLOCK`, read-only, at most cap+1 bytes, then exact size, SHA and parse
+  - `2p18`, through the pinned catalogue hash and degree prefix
+  - the ELF
+- **Writes:**
+  - `create_dir` of `actual-verified-output-01`, whose parent exists
+  - at most three `create_new` files
+
+### Network
+
+None of the supplied sources has a network path. `PARAMS_VERIFIER` internals were not supplied, but the same static was exercised successfully by the P13 producer-side verify.
+
+### Defense in depth
+
+If the user manager on WSL2 does not delegate the memory, cpu or pids controllers, the scope properties would not be enforced. The rlimits and timeout would still bound the run to 300 CPU-s, 8 GiB of address space and 310 s wall. See B2.
+
+### Listing
+
+The listing runs with no scope. Its limits are `prlimit` CPU 8, AS 1 GiB, FSIZE 16 MiB, CORE 0, plus timeout KILL at 10 s and a 10 s harness deadline. Its environment has no `MORIARTY_*` variables.
+
+`--list` runs no test bodies. It is the first exec of the copy, so it doubles as a loader and dynamic-linking check. 1 GiB of address space is enough, because debug sections are not in PT_LOAD segments.
+
+## 3. Selector eligibility and joins
+
+**Why exactly one test runs.**
+- `--exact` matches the full name `sherlock_machine::literal_witness_native_tests::native_a102_frozen_bundle_verify_only_independently_reconstructs_and_verifies`.
+- `--ignored` keeps only ignored entries.
+- Together they select exactly one test. The old combined ignored test and the Task4 entries cannot be co-selected, so `BUDGET` stays `None`.
+- `--test-threads=1` is set.
+
+**Listing join.** All of the following must hold:
+- exit 0
+- stderr empty
+- stdout ends with `N tests, M benchmarks`
+- the count of `<name>: test|bench` lines equals N+M
+- `<selector>: test` appears exactly once
+
+N comes from this output, not from an assumed value.
+
+**Positive-run join.**
+- stdout contains `running 1 test`.
+- stdout contains `test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; F filtered out`, where F = N+M−1. libtest counts filtered-out tests over every listed entry.
+- Under `--nocapture`, the line `A102 frozen-bundle verify-only returned Ok: k=18 proof_bytes=P out=<OUT>` sits between `test <sel> ... ` and `ok`.
+- The run uses a new exact parser; the `run_tail_four` parser does not apply.
+
+## 4. Bindings (conditions of this vote)
+
+### B1. Pre-run checks
+
+- The execution copy is its own regular inode, not a hardlink, with exact bytes and SHA, mode 0500 on the copy only.
+- OUT is absent immediately before invocation.
+- TMPDIR exists and is empty.
+- The bundle (31390 B / `5ec12ca7…`) is re-pinned.
+- `2p18` is re-pinned against `PINNED_HASHES[18]` `4a9ef6c7…`.
+- The unit `sherlock-a102-p14-verifyonly-20261019-r01.scope` is not already loaded.
+- `/proc/sys/kernel/core_pattern` is recorded.
+
+### B2. Scope observation, while the scope exists
+
+**At start, record:**
+- `cgroup.controllers`
+- the effective `memory.max`, `memory.swap.max`, `pids.max` and `cpu.max`
+
+**On kill, or at the last observation, record:**
+- `memory.peak`
+- `memory.events`, specifically `oom_kill`
+- `cpu.stat`
+
+If any of these cannot be observed, report the envelope as "rlimit + timeout only" and do not claim cgroup enforcement. The post-GC systemd `Result` is never the outcome.
+
+### B3. Accounting in kill paths
+
+A `RUSAGE_CHILDREN` delta includes the ELF only if `timeout` reaped it. That covers a normal exit, a 300/310 s timeout, RLIMIT_CPU and an OOM kill of the ELF alone.
+
+The ELF may instead be reaped by a subreaper, and its CPU will then be missing from the waited-child delta, in these cases:
+- the harness ran `killpg` at the 330 s wall or on the stream cap
+- Root killed the scope
+- systemd OOMPolicy stopped the whole scope
+
+In those cases:
+- mark the measured CPU as a lower bound
+- charge the cap conservatively: 300 s for verify, 8 s for listing
+- never refund
+
+Root must reap explicitly, because the `capture()` `wait(0.001)` can return `None`. Append to the retained hybrid ledger, keep residual 6, and keep these deltas separate from the earlier raw cgroup counters.
+
+### B4. Post-run checks
+
+- No subject PIDs remain and the scope is gone.
+- The bundle, `2p18` and the quarantine ELF are unchanged by bytes and SHA.
+- TMPDIR contents are recorded.
+- Every OUT file, including partial ones, and both streams are preserved.
+
+### B5. Attributing a SIGKILL (-9)
+
+| Evidence | Attribution |
+|---|---|
+| Child CPU of about 300 s | `RLIMIT_CPU` |
+| `oom_kill` incremented (from B2) | Cgroup OOM |
+| Root sent the kill | Root kill |
+| None of the above | "SIGKILL, cause unresolved" |
+
+### B6. One attempt
+
+There is one attempt. No retry, cap change or replay follows, even after a pre-native refusal or an infrastructure failure.
+
+## 5. Outcome classification
+
+| Observation | Classification |
+|---|---|
+| Exit 0, no controller failure, full streams, stdout joins hold, and OUT holds exactly `a102_verify_only_input.json` + `a102_verify_only_report.json`. The report must show: `record` `verify-only-returned-ok`; `bundle_input.sha256` = `5ec12ca7…`; `circuit_k` 18; `proof_bytes·2` = `proof_hex_chars`; `zkir.sha256` `0dc0f0f4…`; `context_hash` = claim `8d3ba6cf…`; `input_record.sha256` = actual input-file SHA; `open_obligations` unchanged. | **PASS** |
+| Exit 101, OUT absent | Pre-native refusal (environment, bundle, drift, pin or join). No verifier evidence. |
+| Exit 101, input + error file | Verify returned Err. Classify by the code in `error_debug` (expected form `mori::backend::<kind>`, though the code strings in lib.rs were not supplied): `claim`, `limit`, `proof`, `parameters` and `keygen` are non-verdicts. **Only `verification` is a verifier rejection.** |
+| Exit 101, input present, no error file, report missing or partial | Ok returned but the joins or the write failed. **Not PASS.** |
+| 124, 137, −9, −6, or a harness wall/cap failure | Resource or external termination. No verdict either way. |
+| `systemd-run` fails before exec | Infrastructure failure. The attempt is consumed, and it is reported as non-native. |
+
+## 6. Limits of result claims
+
+**A PASS shows only the following.** This ELF, with max_k 18 and the pinned 2p18 SRS, rebuilt the A102 request from host fixtures without reading the bundle claim. It reproduced the claim exactly, derived the VK with `keygen_vk`, and the Midnight verifier accepted the frozen proof for the binding plus the 2077-lane statement.
+
+**A PASS does not show any of the following:**
+- **Implementation independence.** "Independent" means independent of the bundle's data, not of its code. The same `LiteralLayout`/`emit`/`prepare` code and the same binding derivation produced the original claim.
+- **No check replay inside the request builder.** "No check replay" holds at consumer level only. `literal_witness.rs`, which contains `build_checked_literal_transition_request`, was not supplied to me.
+- **Wider guarantees.** It is not evidence of soundness, refinement, closure of `OPEN_OBLIGATIONS` / Am10 / T3 / k17 / C4 / R2, ledger-9, stagenet, or recursion.
+- **A benchmark.** Resource figures from this run are a single observation, not a benchmark.
+- **The cause of the P13 kill.** At most it shows that verify alone fits this envelope in a fresh process.
+
+**On failure:** only the `verification` class is negative evidence about the frozen proof. Even then, this operation cannot separate a bad proof from dependency drift between the P13 and P14 ELFs.
+
+## 7. Non-blocking notes
+
+- **N1.** Setting AS equal to MemoryMax adds an abort mode, and an abort is a core-dumping signal. For pipe-based `core_pattern` handlers, the kernel ignores `RLIMIT_CORE=0`, so capture depends on the handler (WSL may use its own). The probability is low because verify needs much less memory than prove. Do **not** set CPU soft below hard: that would introduce a core-dumping SIGXCPU.
+- **N2.** Re-hash the copy after listing and before the positive run. It is cheap.
+- **N3.** The scope has no network isolation. That is acceptable given the sources; record it.
+- **N4.** On PASS, record stderr; it should contain no panic or abort text. Treat empty stderr as expected rather than as a gate unless Root decides otherwise.

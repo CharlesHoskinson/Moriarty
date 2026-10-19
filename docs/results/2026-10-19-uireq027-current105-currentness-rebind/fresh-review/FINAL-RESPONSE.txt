@@ -1,0 +1,176 @@
+# Fresh review: whole original UIREQ-027 on current WW40d / actual105
+
+## Verdict
+
+**APPROVE_CURRENT027_REBIND**, subject to the finite mechanical conditions in §6. This verdict covers the whole literal UIREQ-027 clause and its single scenario only. No predicate is waived or narrowed.
+
+**Identity and coverage**
+- I was requested as fresh non-author Opus 5.5 HIGH. This response is from `claude-opus-5-5`; Root must record the identity and terminal status from its own harness.
+- I used no tools and ran nothing. All hashes and identities in B001–B096 are taken as supplied premises.
+- Every body B001–B096 was delivered complete with no visible truncation.
+- Bodies not delivered are listed in §5, with the reason each is or is not required.
+
+**This is my own judgment, not a carried vote.** B007 (Gemini4Argon fallback) and B010 (prior81974) are treated as evidence only.
+
+## 1. The two changed items: literal deltas (B044–B047)
+
+### `prepare_core` (B045)
+There are exactly three changes:
+- dedicated `Match` rows gain `plan: None`;
+- parameter sorts and return types pass through `TypeIdC::from_source_sort`;
+- `ProgramView` gains 11 extension tables, each initialised to `Vec::new()`.
+
+None of these touches the parts that carry the predicates:
+- C1 preorder traversal and occurrence-row allocation;
+- C2 child slots, filled by iterating `child_ids` in argument order;
+- C3 arm and pattern order;
+- C4 occurrence paths;
+- C5 function and parameter table construction, which enumerates `p.functions` in source order, keeps every row, and only interns names through the sorted, deduplicated name table;
+- C6 literal constants;
+- the representation of calls as `Call{function_name, args}`.
+
+`from_source_sort` takes only a `SortTag` and has no access to the program or any image, so it cannot evaluate anything. The builtin sorts map to type ids 0–3. This follows from the current checker: dedicated views use `n_types = 4`, constructor constants must have `type_id.0 >= 4`, and `decode_source_sort` matches the four builtin constants.
+
+### `check_program_view` (B047)
+Every addition falls into one of three groups:
+- **Generic diversion.** An `is_generic` branch diverts to `check_program_view_ext`.
+- **Rejections of extended content in a dedicated view.** These cover a match plan, `Construct`, `Wildcard`, `Constructor` patterns, constructor constants, and sorts ≥ 4.
+- **Checks `prepare_core` output already satisfies.** These are the `params ≤ max_arity` check, the return/parameter sort range check, and the orphan-pattern check.
+
+For any `prepare_core` output, all 11 tables are empty, `plan` is `None`, and no extended rows exist. The generic branch is therefore unreachable on the dedicated routes.
+
+For dedicated views, the original checks are retained:
+- V2 child ordering and the single-parent rule;
+- V3 owner and path equality;
+- V4 contiguous parameters and function-root checks;
+- V5 `patterns == arms`;
+- V7 strictly ascending names, no unused name;
+- the V8 round trip `view == prepare_core(decode(view))`.
+
+The delta adds no function-name uniqueness check, no reordering, and no evaluator call.
+
+### Observation
+Ops 15/16 directly observe both changed items on these programs:
+- admission succeeded;
+- both the wire projection and the independent projection equal the frozen `program_view`;
+- each of the 11 tables is asserted empty by `empty_table` before projection.
+
+## 2. Routes and call edges
+
+**Dedicated draft route**
+1. `compile_draft_host` → `prepare_draft_pair` (B027, current).
+2. `prepare_checked_draft_bounded` → `parse_draft_source_bounded`. In B040 (identical), functions are pushed in a `while fn` loop with no deduplication. Then `check_program_types_bounded` (B024, identical).
+3. `admit_checked_draft_bounded` → `from_program_bounded` (B026, identical). This zips functions and arguments in source order and keeps `Call` nodes named.
+4. `host_owner_engine().admit` → `PrepareDeps.admit = owner_prepare::admit` (B043, identical) → `prepare_core` → `check_program_view` → `Admitted`.
+5. `admit_run` (identical) → `genesis`, a struct literal.
+6. `project_draft_pair` → `draft_report::project_admitted_preparation`. `draft_report.rs` (`2fba`) is unchanged since the original adoption. It reads through `observe_bound_image` (identical) and `wire` (current, delivered, pure serialisers).
+7. `run_draft_host` (B038, identical) projects the preparation from the pair *before* calling `.run`.
+
+**Core/1 route**
+- `compile_host(observe=false)` (B027) → `prepare_scalar_action_host` (B041, identical) → `preflight_source` → `prepare_scalar_action` (B025, identical; it evaluates no expression) → `check_generated` → `from_program` → `admit` → `admit_run` → `observe` → `wire::admission`.
+- The `false` branch never calls `run_scalar_action`. That is visible in the current body.
+
+**ProgramImage route**
+- `prepare_program_image` (B023): the full file is byte-identical (`d06baba`). It is `#[cfg(test)]` only (B016).
+- Its evidence is the historical, qualified, not-rerun cfg(test) tests.
+- `source_input_bridge`, which is identical and compiled at 105, matches the A `Expr` exhaustively. This constrains the AST shape `program_image` consumes: no new variant exists.
+
+## 3. Predicate-by-predicate
+
+| # | Original predicate | Current source basis | actual105 observation | Result |
+|---|---|---|---|---|
+| 1 | Source membership | Parser, bridge and C5 retain every declaration (including unused ones) plus the entry. C1 indexes the entry, then each body. | Twins: three function rows `[unused_before, down, unused_after]` with bodies 5/6/15, both unused bodies indexed and never executed (ids 5 and 15 are asserted absent from events). Core1: the wrapper plus the generated function. | Supported |
+| 2 | Original function-table order | Order is preserved at every stage: C5 `enumerate()`, the `fn_body_ids` order, bridge zip order, and the parser loop. | Twins `functions` names 3/0/2 against sorted names, matching source order. | Supported |
+| 3 | SourceOccurrenceId provenance | C1/C4 give one `OccurrenceRowC{owner, function, path}` per expression id. V3 re-derives each path from parent links. | Every static site joins the frozen locator. | Supported |
+| 4 | Distinct ids for equal syntax | C1 allocates per visit with no hash-consing; the bridge has no pointer caching; `constants.push` is per literal. | `down(1)` at ids 1 and 3, with paths `[0]` and `[1]`. `call_origins[0] != call_origins[2]` is asserted. Literal `1` appears at ids 2, 4, 10 and 14. | Supported |
+| 5 | Recursive calls remain table references, no unrolling | Calls are `Call{name_id, args}` whose only children are arguments. `prepare_core` never looks up bodies. Typecheck inspects the callee signature only. V8 decodes rows. | Id 11 is a single `Call{0,(2,1)}`. There are 16 expressions in total. `call_origins[1] == call_origins[3]`. | Supported |
+| 6 | Expanded step ids map to sites | The `StepEventC` carrier is in B018. Runtime emission sits in undelivered runtime files (§5). | Every one of 260 twins events and 58 Core1 events is asserted to satisfy all of: `run_id` equal, ordinal equal to prior work, `source_expr_id` and full locator joined, Core1 generated lowering sites joined to Core expression 2. Call ordinals are 2, 51, 128, 177. | Supported for the scenario by current observation |
+| 7 | Ordered child/parameter slices | C2 fills `children` from `child_ids[i]` with arguments pushed in reverse, giving preorder. C5 builds `parameters` with `SliceC::normalized`. The bridge preserves order. V2/V4 still check. | Twins `children [2,4,12]` and parameters `(0,1)`. Arity ≥ 2 is not observed at 105; it rests on source. | Supported (source) |
+| 8 | First-match lookup as in source, no unique-function profile | See below. | Unique-name lookup observed (4 Find/Bind/Return events, result 2). No duplicate-name observation exists at 105. | Supported (source) |
+| 9 | Preparation does not evaluate the selected path | See below. | Twins and Core1 genesis match exactly: `Eval{0}`, zero counters, empty arenas and frames, no helper; `evaluation_performed: false`. Constants are source literals only (no folded `2` or `true`). | Supported |
+
+**Predicate 8 in detail (first-match lookup).**
+- **Preparation.** Duplicate declarations survive every stage:
+  - nothing on the draft path rejects them (parser, `check_program_types`, bridge, `collect_names`, `admit`);
+  - `check_program_view` has no uniqueness check in either version;
+  - C5 keeps duplicate rows in source order under one shared `name_id`;
+  - nothing applies a unique-function profile; the observed report states "first declaration lookup is preserved, not a unique-name guarantee".
+- **Consumer bodies.** All are byte-identical (B048):
+  - typecheck uses `.find` (first match);
+  - `find_entry` starts with `row_cursor := 0`;
+  - `find_row` advances only on a mismatch and, on a match, sets `found = row_cursor` without advancing;
+  - `find_exit` returns `found`;
+  - `least_row_named` and `find_si21` encode first-match as a check.
+- **Structural consequence.** Because the cursor never moves past a matching row, any `FindFound` carries the least matching row for any schedule built from these family effects.
+
+**Predicate 9 in detail (no evaluation).**
+- `prepare_core` and `check_program_view` take no `MachineImage`, so they cannot step one.
+- `admit` (identical) only runs AD checks, then `prepare_core`, then `check_program_view`.
+- `admit_run` (identical) only runs R1–R6, then `genesis`.
+- No current preparation body calls `step` or `run`.
+
+**Whole scenario.** The twins program is the literal WHEN: two identical sites plus a self-recursive named function. Every THEN sentence is covered above.
+
+## 4. What resolves B010's two gaps
+
+**First-match lookup**
+- The `owner_prepare` change is confined to the three `prepare_core` edits and the `check_program_view` additions. None affects membership, order, duplicate retention or name interning.
+- The `environment.rs` change does not touch the Find items, which are byte-identical. Only `plan_append` gains a `RetCtorFields` route.
+
+**Pure preparation**
+- `admit` and `admit_run` are now delivered in full and are identical.
+- The bodies of the two changed callees were reviewed directly.
+
+## 5. Delivery extent and residuals
+
+**Delivered and read in full:** B001–B096.
+
+**Changed but not delivered:**
+- `owner_runtime.rs` (`f3bb`): the `OwnerEngine` wrapper, the Find selector, the `PreImageView::function_row` and `admitted_function_count` implementations, `check_step_inv`, and `build_event`;
+- `families/mod.rs` (`7429`);
+- `legacy.rs` and `legacy.proposed.rs`;
+- `structural.rs`, `scalar.rs`, `owner_si21_bind_match.rs`;
+- `host_implied_prefix.rs`;
+- `v4_empty_params_tests.rs` (`b2cd`).
+
+**Unchanged but not delivered:** `draft_report.rs`, `draft_profile.rs`, `adt.rs`.
+
+None of these is required for a literal predicate, for these reasons:
+- **The two disputed properties are preparation properties.** They are fixed by the delivered preparation bodies.
+- **The runtime wrapper cannot have stepped preparation.** Any charged evaluation step between `admit` and observation would change the exactly-observed genesis.
+- **Origin mapping is directly observed** for the scenario program at 105.
+- **Runtime first-match under the changed dispatch is limited, not unsupported.** The identical family bodies constrain any `FindFound`. However, the changed dispatcher and selector themselves are not re-reviewed, and no duplicate-name B run exists at 105. This is recorded as a limit, not a gap.
+
+**Factual corrections to the historical B007 opinion:**
+- `ProgramImage::lookup_function_first_match` does not exist in `program_image.rs` `d06baba` (B023).
+- The duplicate-function test names B007 cites do not appear in the delivered `program_image_tests.rs` `34defc` (B033).
+
+Neither claim is relied on here.
+
+## 6. Finite mechanical conditions for Root
+
+1. **Apply exactly B004 (33 operations), with B005 as the exact inverse.** Do so only after the existing canonical checker passes. Retain the actual counts and findings. If the checker fails, apply nothing and keep 10/35.
+2. **Fix the stale line span on `sourceRefs/1`.** It keeps `startLine 1 / endLine 670` while pinning `a71299`; prior records report that file as 746 lines. Either:
+   - add a matching replace/inverse pair after verifying the line count, or
+   - record in the conditional `limits` that this span is stale.
+3. **Add a limit for the V4 regressions.** The five V4 regression PASS results (`scenarioCoverage` case 3) bind to the earlier test bytes. They do not apply to the newly pinned, unexecuted `v4_empty_params_tests.rs` `b2cd`, and this approval does not rely on them.
+4. **Remove the PENDING marker on adoption.** Replace or annotate `conditionalOriginal027Current105Rebind.status` with the actual `decisionRef`, so no PENDING marker remains in the row.
+5. **Confirm publication of the new evidence.** The six new `evidenceRefs` under `docs/results/2026-10-19-core105-...` must exist at the published commit before application (B010 X2).
+6. **Preserve all retained qualifications.** These are:
+   - D1 unverified;
+   - the §5 B007 corrections;
+   - the B096 Debug artifacts, which were not relied on.
+
+## 7. Limits retained
+
+- No duplicate-name B-runtime observation at 105.
+- The changed runtime dispatch, selector and emission bodies were not re-reviewed.
+- Arity ≥ 2 rests on source only.
+- ProgramImage evidence is historical cfg(test) only.
+- Not established:
+  - generic or nominal ADT provenance, including the A102 sibling;
+  - a B-clock or full-prefix oracle;
+  - native, formal, financial or target behaviour;
+  - security or UIREQ030;
+  - any refinement predicate.
+- The count stays 10/35 until Root adopts and the checker passes.

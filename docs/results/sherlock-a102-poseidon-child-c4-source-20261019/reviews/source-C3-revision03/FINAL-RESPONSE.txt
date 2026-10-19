@@ -1,0 +1,185 @@
+# Focused non-author review: Moriarty child source, API and lock (revision 03), plus the one-compile source classification
+
+**How this review was done.** I am not the author of this candidate. I used no tools and executed nothing. Every byte count and SHA-256 below is Root-attested, except the lock-line arithmetic, which I recounted by hand from the edit lines. Author dispositions, the prior review, and the static-AST readback are context, not votes.
+
+**Read coverage.** I read the full afterimages of `sherlock_child.rs` (18176), `literal_witness_native_tests.rs` (79963), `Cargo.lock` (117174), `lib.rs` and the `Cargo.toml` manifest. I also read every called API body that was supplied.
+
+**What I do not claim.** I make no claim of whole-prefix byte equality. The C1a exception rests on Root's proof.
+
+## Dispositions
+
+| Track | Disposition |
+|---|---|
+| **SOURCE / SECURITY (scoped)** | **APPROVE_SOURCE_WITH_LIMITS.** There is no mandatory fix. The R1 edit is correct and security-neutral. The scope is the prior qualified scope: one charged A102 transition as a child, with the pairing deferred. |
+| **NORMAL / API / LOCK** | **SOURCE-COMPILE-PLAUSIBLE; LOCK EDIT CONSISTENT.** No API defect was found in the supplied bodies. Two compile-time unknowns are named below. The compiler is the falsifier for both, and neither blocks the compile. |
+| **TESTSOURCE** | **APPROVE_WITH_FINDINGS.** The R2 split, environment contract, bounded reads and records are sound. Phase observability is **insufficient** to diagnose a timeout. That is a native-eligibility matter, not a compile blocker. |
+| **CONDITIONAL_MORIARTY_COMPILE_SOURCE** | **CONDITIONALLY SOURCE-ELIGIBLE** for exactly one `cargo test --no-run --frozen -p mori-backend --lib -j4`. This depends on the Root bindings listed at the end. It grants no runtime, keygen, proof or verification authority. |
+
+## R1: early proof-size refusal (`sherlock_child.rs::verify_sherlock_child`)
+
+- **The bound runs first.** The first statement is `if child.proof.is_empty() || child.proof.len() > MAX_PROOF_BYTES { return Err(error("proof", ...)) }`. It runs before `prepare`, so before `LiteralLayout::new`, `ir.k()`, the SRS load and `setup_vk`. `ChildKey::verify` repeats the check, which is harmless.
+- **The test locks the ordering.** In `a102_child_verify_refuses_unbounded_proof_before_reconstruction`, both cases (empty and `MAX_PROOF_BYTES + 1`) assert `err.code == "mori::backend::proof"`.
+  - If the bound regressed, `prepare` would reach `LiteralLayout::new → decode_digest("")`. That call fails with `unhex`'s `"signature"` code, so the test would fail before any `ir.k()` or SRS access.
+  - The test itself does no native work.
+- **Identity effect.** The edit changes `ADAPTER_SOURCE`, which changes `adapter_source_sha256` and therefore instance lane 0. The child VK is a function of `IrSource`, architecture, k and SRS, so by source it is unaffected. No child artifact exists yet.
+- **Optional, not mandatory (R1b).** A garbled claim still pays for `ir.k()` (stdlib `optimal_k`, a loop of `cost_model` calls) before it is refused.
+  - Comparing the k-independent claim fields before `ir.k()` would refuse earlier.
+  - The test path already does these joins before native work (`join_frozen_a102_child`), so this only matters for other API callers.
+
+## Security re-check of the adapter
+
+- **Carrier matches what the circuit reads.** `child_witness` fills exactly what `IrSource::circuit` reads:
+  - `PublicInput` reads `preproc.memory.get(output)`;
+  - `pi_push` checks `preproc.pis[idx]`, with index 0 holding the binding;
+  - `binding_input`;
+  - `comm_comm: None`, matching `do_communications_commitment == false`.
+- **Sparse memory is safe.** `mem_insert` only compares ids that are present in memory, so leaving other ids out only skips debug alignment checks. Constraint authority stays with the circuit.
+- **Instance order is consistent.** `once(binding).chain(statement)` is used by `prepare`, by `prove` (through `scalars`) and by `verify`.
+- **Guard comparison is valid.** `*guard != Operand::Immediate(Fr::from(1u64))` compares field equality against the emitted `immediate(1)`.
+- **The consumer reconstructs independently.** It rebuilds the claim and instance, compares them before the SRS, then rebuilds the VK and compares it bytewise, then calls stdlib `verify`. That function enforces `pi.len() != vk.nb_public_inputs` and transcript EOF (`BlstPLONK::verify` calls `transcript.assert_empty()`).
+- **Unchanged.** The relation's nine `include_str!` members, `literal_bridge`, the Blake2b claim and its key location are unchanged. A2 cross-graph compatibility remains **UNOBSERVED** and is not a prerequisite here.
+
+## API, borrow and visibility (source level, not compiled)
+
+These all check out against the supplied bodies:
+
+- **Crate-private items.** `crate::digest` is a root-private function and visible to descendants. `crate::parameters::OfflineParameters` is `pub(crate)` inside the private `mod parameters`. `crate::proving::{hex, validate_json_profile}` are `pub(crate)`. The `pub(crate)` `LiteralLayout` fields are reachable.
+- **SRS reference.** `&params.0` coerces from `Arc` to `&ParamsKZG<Bls12>`. The borrow ends before `params` moves into `Self`.
+- **VK round trip.** `MidnightVK::read(&mut &vk_bytes[..], Processed)` type-checks.
+- **Turbofish with `impl Trait` arguments.** `stdlib_prove::<IrSource, ChildTranscript>(…, rand::rngs::OsRng)` is fine. Explicit generics alongside `impl Trait` arguments have been stable since Rust 1.63, and the stdlib doc example uses the same form.
+- **Transcript bounds.** The `Hashable<PoseidonState<Fq>>` and `Sampleable` impls exist in registry circuits 7.2.4 `poseidon_cpu.rs`.
+- **Test file.**
+  - `read_a102_child_inputs`: `disjoint` is a `Copy` closure that only captures `&output_dir`. It is used before `output_dir` moves. `Option::is_none_or` needs Rust 1.82 or later; the toolchain is 1.99.
+  - `read_frozen_a102_child`: the `FnMut` `read` closure's borrow of `files` ends before `Value::Object(files)`.
+  - Negatives: `drop(key)` sits inside a diverging branch, so the later `key.verify` use is fine.
+  - Every `json!` value is taken by reference, so later field uses are fine.
+- **Names and imports.** The suffix imports (`Fr`, `Operand`, `IrValue`, `Identifier`, `Instruction`, `Component`, `decode_digest`, the child items, `CapacityRecord`, `LiteralTransitionRequest`, `LiteralValues`, `MAX_PROOF_BYTES`) do not collide with the prefix. `ImageValues` is already imported by the prefix. The ten test names are distinct.
+
+**Compile-time unknowns.** The bodies are not supplied. The single compile settles both, and neither requires another review first.
+
+| ID | Unsupplied body | What it decides |
+|---|---|---|
+| U1 | `crates/mori-backend/src/sherlock_machine/mod.rs` | Whether `literal_bridge` is visible from `crate::sherlock_child`, which sits outside `sherlock_machine`. Nothing in the supplied bodies establishes this. The test file is inside `sherlock_machine` and proves nothing about it. |
+| U2 | Signature of `mori_core::sherlock::layout_a::PreparedA::program_bytes` | `reconstruct_a102_child_request` chains `prepare_a(..).expect(..).program_bytes().expect(..)` on a temporary. If the method returns borrowed data, that is E0716. The mechanical fix is to bind the `PreparedA` to a local first. "Encoding" plus `Result` suggests an owned `Vec`, but that is not established. |
+
+## LOCK (M5) and manifest
+
+- **Only the stanza changes.** The three inserted lines in the `mori-backend` stanza (`"midnight-circuits 7.2.4"`, `"midnight-proofs 0.8.3"`, `"midnight-zk-stdlib 2.3.5"`) are the only edit.
+- **Name form.** Each package already has two registry versions in the lock, so Cargo writes the `name version` form. This matches the existing stdlib-2.3.5 and zkir-v3 stanzas.
+- **Ordering follows `EncodablePackageId` order.** The newly adjacent pairs are:
+  - `circuits < curves`, because `i` < `u`;
+  - `proofs < transient`;
+  - `zk-stdlib < zkir-v3`, because `-` (0x2d) < `i` (0x69).
+- **Byte delta.** 28 + 26 + 29 = +83, which gives 117174. This matches Root's attestation.
+- **No other lock change.** No new package, version or checksum is introduced. The direct dependencies use `default-features = false` and request no features, so neither the feature union nor the optional-dependency set changes.
+- **Fails closed.** If Cargo would serialize the lock differently, `--frozen` refuses. That is a closed compile failure, not a reason to relock inside the operation.
+- **Identity effects.**
+  - The `mori-ledger` `source_closure()` includes `../../mori-backend/Cargo.toml`, `src/lib.rs` and `../../../Cargo.lock`, so its identity changes. Root must rebind it exactly, and no ledger key or descriptor tied to the old closure may be reused.
+  - The compile does not build `mori-ledger`.
+  - `sherlock_child.rs` and the test file are outside `source_closure`. Only the child claim commits to the adapter.
+
+## TESTSOURCE (R2)
+
+**Sound as written**
+
+- **Selector split.** The three ignored selectors are:
+  - producer: reconstruct, then prove including self-verify;
+  - frozen verify-only: one `verify_sherlock_child`;
+  - frozen negatives: one reconstruct, a join, one honest control and eight tampered cases.
+- **Environment contract.**
+  - Canonical `max_k`: at most 2 digits, no leading zero, in 1..=19.
+  - Output directory: `symlink_metadata` must be exactly `NotFound`.
+  - Output parent: canonical, an existing directory, not readonly.
+  - Disjointness from the SRS and input directories in both directions.
+- **Bounded reads.** Reads use `O_NOFOLLOW|O_NONBLOCK`, require a regular nonempty file, and read through `take(cap + 1)`. The caps are: VK 1 MiB, proof 262144, JSON 1 MiB. Lanes must be canonical LE hex.
+- **Artifact lifecycle.**
+  - Writes use `create_new`, then file sync, then directory sync.
+  - The input record is written before native work.
+  - Public artifacts are written before host assertions, and the report before the assertion.
+  - `child.error.json` is written when a native call returns `Err`.
+  - Keys are dropped before the report.
+
+**Findings (none mandatory for compile)**
+
+**T1. Phase progress is insufficient for a bounded retry.**
+- In `native_a102_poseidon_child_producer_proves_and_persists`, `ChildKey::reconstruct(..)` is followed directly by `key.prove()`. Nothing is persisted between them.
+- `verify_sherlock_child` is a single opaque call.
+- So a timeout reproduces P14's information state: only `child.input.json` survives. Nothing distinguishes which phase was running:
+  - `ir.k()`
+  - SRS load
+  - `setup_vk`
+  - SDK check
+  - `setup_pk`
+  - prove
+  - self-verify
+- libtest captures stdout and stderr by default and prints them only when a test finishes, so markers printed with `println!` are lost on a kill unless the argv includes `--nocapture`. Only synced file markers are durable.
+- **Test-only fix.** It changes no adapter, relation or ledger identity:
+  - In the producer, write `child.vk` (from `key.vk_bytes()`) and `child.claim.json`/`child.instance.json` (from `key.claim()`/`key.instance()`), plus a small synced phase record, right after `reconstruct` returns and before `prove`.
+  - Then remove the later writes of those files, because `create_new` would panic on a duplicate.
+  - In negatives, add a synced phase record after the reconstruct/join and after the control verify.
+- **Verify-only has no test-level boundary** unless the test bypasses the public API. The negatives selector's control verify is effectively the phase-observable consumer.
+- **Owner decision.** If Root wants this before the native producer runs, apply it before the single compile so a second compile is not needed.
+
+**T2. Proof salvage stops at self-verify.**
+- `ChildKey::prove` executes `self.verify(&p.instance, &proof)?;` before it returns the proof. A timeout or `Err` during self-verify therefore loses completed proof bytes.
+- Fixing this needs an adapter API split (for example a `prove_unverified` returning the bytes, followed by a separate `verify`). That changes `adapter_source_sha256`.
+- Optional. The independent consumer verifies anyway.
+
+**T3. Panics leave no error record.**
+- The SDK panics inside `setup_vk` (`expect("keygen_vk should not fail")`) and `setup_pk` (`expect("keygen_pk should not fail")`). Write-helper panics behave the same way.
+- These leave only the input record plus the panic text in captured output, which libtest does print when a test fails.
+- Optional fix: `catch_unwind(AssertUnwindSafe(..))` around the native calls to persist `child.error.json`, as `task4_native_resource_gated_entry` does.
+
+**T4. The canonical-path check is lexical, not textual.**
+- `assert_canonical_absolute` uses `path.components()`, which normalizes away interior `.`, `//` and a trailing `/`.
+- It then compares `real.as_path() == path`, which also compares by components.
+- So `/a/./b`, `/a//b` and `/a/b/` pass, even though the doc says "without `.` or `..`".
+- These forms resolve to the same location, but the recorded `display()` strings could be non-canonical text.
+- Optional fix: compare `as_os_str()` bytes against the canonicalized path.
+
+**T5. Doc nit in the C1a top doc.**
+- The top doc says "the Sherlock child carrier and proof-bound cases, exercise the real A102 witness producer on positive and semantically corrupted transitions…".
+- The proof-bound case uses neither the producer nor a corrupted transition.
+- The rest of the C1a text is accurate:
+  - `ir.k()`, SRS, keygen and verify for all ignored native selectors;
+  - prove only in the two producer selectors.
+- Fix only if the file is being touched anyway.
+
+**T6. Informational.**
+- The verify-only selector and the negatives control both pay for `ir.k()`, the SRS load and `setup_vk`.
+- The ordinary carrier tests each run `build_positive_fixture` (SDK check over about 4 MB of ZKIR).
+- All new selectors, ordinary and ignored, are UNRUN. The author fixtures and frozen P14 identities are input identities, not independent goldens.
+
+**Source facts, not performance claims.**
+- The child path calls `ir.k()` once in `prepare` and then calls stdlib `setup_vk` directly. The P14 literal verify path called it twice.
+- `optimal_k` iterates `cost_model` from k = 9 until `rows < 2^k`.
+- No speedup, phase attribution, RSS, wall time or native eligibility follows from this.
+
+## CONDITIONAL_MORIARTY_COMPILE_SOURCE: conditions Root must bind
+
+These are needed before the single compile of one union cfg(test) ELF. No tests, keygen, proofs, verification, Fenrir build or fetch are involved.
+
+1. Integrate the seven afterimages exactly, on top of re-checked live preimages:
+   - lock `3fbc…`
+   - tests `f124…`
+   - `lib.rs` `7b04…`
+   - `Cargo.toml` `ffc9…`
+
+   Then derive fresh full source, lock and DAG pins. The old P14 config path and hash are historical only.
+2. Run under `--frozen` with the M5 lock as authored. No `cargo update` or `generate-lockfile` inside the operation. A lock refusal is a fail-closed result.
+3. Confirm all registry and git sources are present offline. The three direct dependencies were already transitive in the P14 graph. Use the same toolchain pin, 1.99.0.
+4. Use the existing guard and helper as the accepted, external, unchanged boundary. I did not re-audit them here. Keep host inventory, mounts, cgroups, locks, consent and cleanup conditions per the existing class.
+5. Limits must not exceed the historical class (outer wall 300, F wall 281, supervisor CPU 120, …) or the current remaining floors (whole 4389, F 579, supervisor CPU 10389). Deduct from aggregate E 2315336201 / S 302439399 / P 2012896796 with residual 6 preserved. No reset or refund. Root derives the exact deductions.
+6. One attempt. A compile error is a falsifier to route back to the author (for example U1 or U2), not a reason to retry.
+7. If Root wants T1 before native, apply it before this compile.
+
+**Retained and not discharged:**
+- all 8 `OPEN_OBLIGATIONS` and 4 `CHILD_OPEN_OBLIGATIONS`;
+- Am10, T3, k17;
+- caps, counters and prior failures (including the P14 timeout of exit 124 after 300.065 s with no verifier verdict);
+- formal and financial obligations;
+- Fenrir A2;
+- no terminal decider;
+- no full-soundness, whole-interpreter, recursive or stagenet claim.
+
+Root owns the next action.
