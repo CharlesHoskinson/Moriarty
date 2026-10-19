@@ -20,19 +20,29 @@ import {
   fnv1a32,
   compileSherlockProgramToQuineling,
 } from '../engine/sherlockQuinelingCompiler.js';
+import { createPersistentPhaseRing } from '../engine/functionalStructures.js';
 
 export { fnv1a32 };
 
 const TAU = Math.PI * 2;
 const PHI_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
+// Detect mobile / coarse-pointer devices so Android/iOS CPUs & GPUs run at locked 60 FPS
+const IS_MOBILE_RUNTIME =
+  typeof navigator !== 'undefined' &&
+  (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+    (typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches));
+
 // Spatial Anchor & Strict Envelope Constants inside the 3.12 × 3.12 × 3.40 Vault
 export const QUINELING_CORE_Y = -2.12;
 export const QUINELING_MAX_RADIUS = 0.42;
 
-const TISSUE_BUDGET = 8192;
-const MAX_RIDGE_SEGMENTS = 28672;
+const TISSUE_BUDGET = IS_MOBILE_RUNTIME ? 3072 : 8192;
+const MAX_RIDGE_SEGMENTS = IS_MOBILE_RUNTIME ? 8192 : 28672;
 const MAX_RIDGE_VERTICES = MAX_RIDGE_SEGMENTS * 2;
+const PHASE_BUCKET_COUNT = IS_MOBILE_RUNTIME ? 24 : 36;
 
 const SDK_RIBBON_COUNT = 24;
 const SDK_RIBBON_SEGMENTS = 24;
@@ -461,6 +471,194 @@ function normalizeWovenCoord(x, y, z, bounds, mechanism, outVec) {
   return outVec;
 }
 
+const MECHANISM_VELOCITY_GAIN = Object.freeze({
+  'logarithmic-mantle': 2.2,
+  'pleated-braid': 1.85,
+  'recursive-affine': 2.0,
+  'lorenz-flow': 2.45,
+  'phyllotaxis-fan': 2.35,
+  'clifford-flow': 2.1,
+  'recursive-julia': 2.05,
+  'toroidal-weave': 2.3,
+});
+
+function computeSpatialWaveAngle(nx, ny, nz, mechanism) {
+  const r = Math.hypot(nx, ny);
+  const theta = Math.atan2(ny, nx);
+  switch (mechanism) {
+    case 'logarithmic-mantle':
+      return r * 13.5 - theta * 2.0;
+    case 'pleated-braid':
+      return nx * 9.5 + ny * 5.5;
+    case 'recursive-affine':
+      return r * 11.0 + theta - ny * 4.0;
+    case 'lorenz-flow':
+      return r * 11.0 + (nx >= 0 ? 0 : 1.57);
+    case 'phyllotaxis-fan':
+      return r * 15.0 - theta * 5.0;
+    case 'clifford-flow':
+      return nx * 9.5 + ny * 7.5;
+    case 'recursive-julia':
+      return r * 14.0 + theta * 2.0;
+    case 'toroidal-weave':
+    default:
+      return r * 12.5 + theta * 3.0 + nz * 4.0;
+  }
+}
+
+/**
+ * Returns (or lazily initializes) the functional `PersistentPhaseRing` memo table on `artifact`.
+ * Each bucket stores pre-normalized Structure-of-Arrays (SoA) tissue & ridge geometry over S^1 = [0, 2π),
+ * plus precomputed spatial wave sin/cos and exponential density alpha so per-frame 60/120fps advection
+ * uses zero transcendental calls inside the vertex loop!
+ */
+function ensureArtifactPhaseRing(artifact, frameReuse, vecA, vecB) {
+  if (artifact._phaseRing && artifact._phaseRingBudget === TISSUE_BUDGET) {
+    return artifact._phaseRing;
+  }
+
+  const species = artifact.speciesMeta || QUINELING_SPECIES.factorial;
+  const mechanism = artifact.wovenRecord?.mechanism || species.mechanism;
+  const bounds = artifact.wovenBounds || { cx: 0, cy: 0, cz: 0, width: 1.2, height: 1.2, depth: 0.4 };
+  const nodeColors = artifact.nodeColors || [];
+  const nodeCount = Math.max(1, nodeColors.length);
+  const baseGain = artifact.wovenBody?.cloud
+    ? 0.24
+    : artifact.wovenBody?.familyAdapter
+      ? 0.34
+      : 0.48;
+
+  artifact._phaseRingBudget = TISSUE_BUDGET;
+  artifact._phaseRing = createPersistentPhaseRing(PHASE_BUCKET_COUNT, (bucketPhase) => {
+    const rawFrame = WovenBody.frame(artifact.wovenBody, bucketPhase, {
+      budget: TISSUE_BUDGET,
+      crests: true,
+      reuse: frameReuse,
+    });
+
+    const pts = rawFrame.points;
+    const owners = rawFrame.owners;
+
+    const baseTissuePos = new Float32Array(TISSUE_BUDGET * 3);
+    const baseTissueWave = new Float32Array(TISSUE_BUDGET * 2);
+    const baseTissueExpAlpha = new Float32Array(TISSUE_BUDGET);
+    const baseTissuePearl = new Float32Array(TISSUE_BUDGET);
+    const baseTissueOwner = new Uint16Array(TISSUE_BUDGET);
+
+    for (let i = 0; i < TISSUE_BUDGET; i += 1) {
+      const p4 = i * 4;
+      const p3 = i * 3;
+      const p2 = i * 2;
+      normalizeWovenCoord(pts[p4], pts[p4 + 1], pts[p4 + 2], bounds, mechanism, vecA);
+      const nx = vecA.x;
+      const ny = vecA.y;
+      const nz = vecA.z;
+      baseTissuePos[p3] = nx;
+      baseTissuePos[p3 + 1] = ny;
+      baseTissuePos[p3 + 2] = nz;
+
+      const kAngle = computeSpatialWaveAngle(nx, ny, nz, mechanism);
+      baseTissueWave[p2] = Math.sin(kAngle);
+      baseTissueWave[p2 + 1] = Math.cos(kAngle);
+
+      const rawPtAlpha = pts[p4 + 3] || 0.04;
+      baseTissueExpAlpha[i] = 1 - Math.exp(-2.2 * rawPtAlpha);
+      baseTissuePearl[i] = rawPtAlpha > 0.24 ? clamp((rawPtAlpha - 0.24) * 0.55, 0, 0.28) : 0;
+      baseTissueOwner[i] = owners[i] % nodeCount;
+    }
+
+    const ridges = rawFrame.ridges || [];
+    let totalRawSegments = 0;
+    for (let rIdx = 0; rIdx < ridges.length; rIdx += 1) {
+      const len = ridges[rIdx].line?.length || 0;
+      if (len >= 2) totalRawSegments += len - 1;
+    }
+    const stepStride = totalRawSegments > MAX_RIDGE_SEGMENTS ? 2 : 1;
+
+    // First pass: count active segments
+    let segCount = 0;
+    for (let rIdx = 0; rIdx < ridges.length && segCount < MAX_RIDGE_SEGMENTS; rIdx += 1) {
+      const line = ridges[rIdx].line;
+      if (!Array.isArray(line) || line.length < 2) continue;
+      for (let j = 0; j < line.length - 1 && segCount < MAX_RIDGE_SEGMENTS; j += stepStride) {
+        const nextJ = Math.min(line.length - 1, j + stepStride);
+        const rawA0 = Number.isFinite(line[j].alpha) ? line[j].alpha : 0.2;
+        const rawA1 = Number.isFinite(line[nextJ].alpha) ? line[nextJ].alpha : 0.2;
+        if (Math.max(rawA0, rawA1) < 0.012) continue;
+        segCount += 1;
+      }
+    }
+
+    const baseRidgePos = new Float32Array(segCount * 6);
+    const baseRidgeWave = new Float32Array(segCount * 4);
+    const baseRidgeAlpha = new Float32Array(segCount * 2);
+    const baseRidgeOwner = new Uint16Array(segCount);
+
+    let segCursor = 0;
+    for (let rIdx = 0; rIdx < ridges.length && segCursor < segCount; rIdx += 1) {
+      const line = ridges[rIdx].line;
+      if (!Array.isArray(line) || line.length < 2) continue;
+      const isParamFilament = ridges[rIdx].material === 'parameter-filament';
+
+      for (let j = 0; j < line.length - 1 && segCursor < segCount; j += stepStride) {
+        const nextJ = Math.min(line.length - 1, j + stepStride);
+        const p0 = line[j];
+        const p1 = line[nextJ];
+
+        const rawA0 = Number.isFinite(p0.alpha) ? p0.alpha : 0.2;
+        const rawA1 = Number.isFinite(p1.alpha) ? p1.alpha : 0.2;
+        if (Math.max(rawA0, rawA1) < 0.012) continue;
+
+        const focus0 = isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.45) : clamp(rawA0, 0, 1);
+        const focus1 = isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.45) : clamp(rawA1, 0, 1);
+
+        normalizeWovenCoord(p0.x, p0.y, p0.z || 0, bounds, mechanism, vecA);
+        normalizeWovenCoord(p1.x, p1.y, p1.z || 0, bounds, mechanism, vecB);
+
+        const vBase = segCursor * 6;
+        baseRidgePos[vBase] = vecA.x;
+        baseRidgePos[vBase + 1] = vecA.y;
+        baseRidgePos[vBase + 2] = vecA.z;
+        baseRidgePos[vBase + 3] = vecB.x;
+        baseRidgePos[vBase + 4] = vecB.y;
+        baseRidgePos[vBase + 5] = vecB.z;
+
+        const wBase = segCursor * 4;
+        const k0 = computeSpatialWaveAngle(vecA.x, vecA.y, vecA.z, mechanism);
+        const k1 = computeSpatialWaveAngle(vecB.x, vecB.y, vecB.z, mechanism);
+        baseRidgeWave[wBase] = Math.sin(k0);
+        baseRidgeWave[wBase + 1] = Math.cos(k0);
+        baseRidgeWave[wBase + 2] = Math.sin(k1);
+        baseRidgeWave[wBase + 3] = Math.cos(k1);
+
+        baseRidgeAlpha[segCursor * 2] = clamp(focus0 * baseGain, 0.004, 0.72);
+        baseRidgeAlpha[segCursor * 2 + 1] = clamp(focus1 * baseGain, 0.004, 0.72);
+        baseRidgeOwner[segCursor] =
+          Number.isInteger(p0.owner) && p0.owner >= 0
+            ? p0.owner % nodeCount
+            : rIdx % nodeCount;
+
+        segCursor += 1;
+      }
+    }
+
+    return {
+      baseTissuePos,
+      baseTissueWave,
+      baseTissueExpAlpha,
+      baseTissuePearl,
+      baseTissueOwner,
+      baseRidgePos,
+      baseRidgeWave,
+      baseRidgeAlpha,
+      baseRidgeOwner,
+      ridgeSegCount: segCursor,
+    };
+  });
+
+  return artifact._phaseRing;
+}
+
 /**
  * Builds the 3D `nursery.html` `WovenBody` Quineling Subsystem (`Designer 8`).
  * Replaces all cartoon animal sculptures with the genuine mathematical `WovenBody`
@@ -735,14 +933,16 @@ export function createQuinelingSubsystem() {
   const _faultColor = new THREE.Color(0xe11d48);
 
   let dampedYOffset = 0;
-  let lastFrameSampleTime = -1;
-  let lastFrameCacheKey = '';
+  let accumPhase = 0;
+  let stepSurgeVel = 0;
   let lastStepIndex = -1;
-  let cachedWovenFrame = null;
+  let lastBucketLookupFrame = -10;
+  let frameCounter = 0;
+  let currentBucket = null;
 
   function update(stepState = {}, ambientArg = 0, dtArg = 0.016) {
     const ambient = stepState?.ambient ?? ambientArg;
-    const dt = stepState?.dt ?? dtArg;
+    const dt = clamp(stepState?.dt ?? dtArg, 0.001, 0.05);
     const artifact = resolveCompiledQuineling(stepState);
     const species = artifact.speciesMeta || QUINELING_SPECIES.factorial;
     const speciesId = species.id;
@@ -774,26 +974,41 @@ export function createQuinelingSubsystem() {
     const isExhausted = ruleLine === 84 || ruleId === 'A084';
     const isInPlaceRewrite = ruleLine === 149 || ruleLine === 145 || ruleLine === 177;
 
-    // Program-specific QDL motion rhythm (`breath-pulse`, `crest-wave`, `asymmetric-glide`, `harmonic-overtone`)
-    const phaseRate = design?.motion?.phaseRate ?? 0.34;
-    const rawPhase = ambient * phaseRate * (0.55 + 0.45 * liveFuelRatio) + stepIndex * 0.14;
-    const wovenPhase = evaluateProgramRhythmPhase(design, rawPhase);
+    // Smooth step-transition velocity surge (zero discontinuous phase jumps!)
+    if (stepIndex !== lastStepIndex) {
+      if (lastStepIndex !== -1) {
+        stepSurgeVel = Math.min(2.6, stepSurgeVel + 0.95);
+      }
+      lastStepIndex = stepIndex;
+    }
+    stepSurgeVel *= Math.exp(-dt * 5.5);
+
+    // Restore upstream QDL 24x phase timebase (`phaseRate * 24`) + mechanism velocity gain
+    const rawPhaseRate = design?.motion?.phaseRate ?? 0.034;
+    const qdlPhaseSpeed = rawPhaseRate < 0.15 ? rawPhaseRate * 24.0 : rawPhaseRate * 3.8;
+    const mechGain = MECHANISM_VELOCITY_GAIN[mechanism] ?? 2.1;
+    const fuelMod = isExhausted ? 0.28 : 0.72 + 0.48 * liveFuelRatio;
+    const omega = qdlPhaseSpeed * mechGain * fuelMod + stepSurgeVel;
+
+    accumPhase = (accumPhase + dt * omega) % (TAU * 64);
+    const wovenPhase = evaluateProgramRhythmPhase(design, accumPhase);
 
     const rhythm = design?.motion?.rhythm;
-    const breathAmp = (rhythm?.breath ?? 0.14) * 0.14;
-    const asymTilt = (rhythm?.asymmetry ?? 0.1) * 0.22;
+    const breathAmp = (rhythm?.breath ?? 0.14) * 0.16;
+    const asymTilt = (rhythm?.asymmetry ?? 0.1) * 0.26;
 
     const targetYOffset = clamp((callDepth - 1) * 0.014, -0.05, 0.06);
-    dampedYOffset = lerp(dampedYOffset, targetYOffset, clamp(dt * 6.0, 0.05, 1.0));
+    dampedYOffset = lerp(dampedYOffset, targetYOffset, 1 - Math.exp(-dt * 8.0));
 
     coreRoot.position.y = QUINELING_CORE_Y + dampedYOffset + Math.sin(wovenPhase) * breathAmp;
     coreRoot.rotation.y =
-      Math.sin(ambient * 0.22) * 0.26 +
-      (isInPlaceRewrite ? Math.sin(q * Math.PI) * 0.12 : 0);
-    coreRoot.rotation.x = Math.cos(wovenPhase * 0.7) * asymTilt * 0.28;
-    coreRoot.rotation.z = Math.sin(wovenPhase * 0.5) * asymTilt * 0.18;
+      ambient * 0.34 +
+      Math.sin(wovenPhase * 0.55) * 0.28 +
+      (isInPlaceRewrite ? Math.sin(q * Math.PI) * 0.14 : 0);
+    coreRoot.rotation.x = Math.cos(wovenPhase * 0.7) * asymTilt * 0.32;
+    coreRoot.rotation.z = Math.sin(wovenPhase * 0.5) * asymTilt * 0.22;
 
-    const breathScale = 1.0 + Math.sin(wovenPhase) * (rhythm?.breath ?? 0.12) * 0.14;
+    const breathScale = 1.0 + Math.sin(wovenPhase) * (rhythm?.breath ?? 0.12) * 0.15;
     coreRoot.scale.setScalar(breathScale);
 
     // Primary node color for core studio light
@@ -822,279 +1037,225 @@ export function createQuinelingSubsystem() {
       : stepIndex % Math.max(1, artifact.graph.nodes.length);
 
     // ========================================================================
-    // 1. SAMPLE REAL `WovenBody.frame` AT 30Hz (OR IMMEDIATELY ON STEP/PROGRAM CHANGE)
+    // 1. PERSISTENT FUNCTIONAL PHASE RING (`PersistentPhaseRing` over S^1)
+    //    Cold buckets are solved at most once every 3 frames during the first
+    //    2π cycle; once warm, `phaseRing.getNearest(wovenPhase)` is an O(1)
+    //    zero-allocation array lookup forever!
     // ========================================================================
-    const needsWovenSample =
-      !cachedWovenFrame ||
-      artifact.cacheKey !== lastFrameCacheKey ||
-      stepIndex !== lastStepIndex ||
-      Math.abs(ambient - lastFrameSampleTime) >= 0.032;
+    frameCounter += 1;
+    const phaseRing = ensureArtifactPhaseRing(artifact, _frameReuse, _vecA, _vecB);
+    const targetBucketIdx = phaseRing.bucketIndexForPhase(wovenPhase);
+    const isTargetWarm = phaseRing.buckets[targetBucketIdx] !== null;
 
-    if (needsWovenSample) {
-      lastFrameCacheKey = artifact.cacheKey;
-      lastStepIndex = stepIndex;
-      lastFrameSampleTime = ambient;
-
-      cachedWovenFrame = WovenBody.frame(artifact.wovenBody, wovenPhase, {
-        budget: TISSUE_BUDGET,
-        crests: true,
-        reuse: _frameReuse,
-      });
-
-      const pts = cachedWovenFrame.points;
-      const owners = cachedWovenFrame.owners;
-      const nodeColors = artifact.nodeColors || [];
-      const nodeCount = Math.max(1, nodeColors.length);
-
-      // Update 8,192 tissue cloud points & colors using exact `lifeform-webgl.js` premultiplied alpha
-      for (let i = 0; i < TISSUE_BUDGET; i += 1) {
-        const p4 = i * 4;
-        const p3 = i * 3;
-        normalizeWovenCoord(pts[p4], pts[p4 + 1], pts[p4 + 2], bounds, mechanism, _vecA);
-        tissuePositions[p3] = _vecA.x;
-        tissuePositions[p3 + 1] = _vecA.y;
-        tissuePositions[p3 + 2] = _vecA.z;
-
-        const ownerIdx = owners[i] % nodeCount;
-        const cSpec = nodeColors[ownerIdx];
-        const rgb = cSpec?.rgb || [114, 217, 226];
-        const rawPtAlpha = pts[p4 + 3] || 0.04;
-        const isActivePatch = ownerIdx === activeNodeIdx;
-
-        // Exact nursery.html / lifeform-webgl.js exponential density mapping: 1 - exp(-2 * alpha)
-        const baseAlpha = (1 - Math.exp(-2.2 * rawPtAlpha)) * (isActivePatch ? 0.72 : 0.46);
-        const a = clamp(baseAlpha, 0.025, 0.78);
-
-        let r = (rgb[0] / 255) * a;
-        let g = (rgb[1] / 255) * a;
-        let b = (rgb[2] / 255) * a;
-
-        // Subtle pearl highlight on high-compression tissue points
-        if (rawPtAlpha > 0.24) {
-          const boost = clamp((rawPtAlpha - 0.24) * 0.55, 0, 0.28);
-          r = lerp(r, 0.902 * a, boost);
-          g = lerp(g, 0.973 * a, boost);
-          b = lerp(b, 0.929 * a, boost);
-        }
-        if (isFault) {
-          r = lerp(r, 0.95 * a, 0.72);
-          g *= 0.25;
-          b *= 0.32;
-        } else if (isExhausted) {
-          const gray = (r + g + b) * 0.333;
-          r = gray * 0.55;
-          g = gray * 0.6;
-          b = gray * 0.68;
-        }
-
-        tissueColors[p3] = r;
-        tissueColors[p3 + 1] = g;
-        tissueColors[p3 + 2] = b;
+    if (isTargetWarm || !currentBucket || frameCounter - lastBucketLookupFrame >= 3) {
+      if (!isTargetWarm) {
+        lastBucketLookupFrame = frameCounter;
       }
-      tissueGeom.attributes.position.needsUpdate = true;
-      tissueGeom.attributes.color.needsUpdate = true;
+      currentBucket = phaseRing.getNearest(wovenPhase).bucket;
+    }
 
-      // ======================================================================
-      // 2. UPDATE `WovenBody` CAUSTIC & CREST FILAMENTS (`frame.ridges`)
-      //    Covers 100% of ridges across all strands and uses exact `lifeform-webgl.js`
-      //    premultiplied alpha (`c * 0.88 + pearl * 0.12`) * alpha so quiet parameter
-      //    regions stay whisper-faint and true Jacobian caustics shine!
-      // ======================================================================
-      const ridges = cachedWovenFrame.ridges || [];
-      let totalRawSegments = 0;
-      for (let rIdx = 0; rIdx < ridges.length; rIdx += 1) {
-        const len = ridges[rIdx].line?.length || 0;
-        if (len >= 2) totalRawSegments += len - 1;
+    const baseTissuePos = currentBucket.baseTissuePos;
+    const baseTissueWave = currentBucket.baseTissueWave;
+    const baseTissueExpAlpha = currentBucket.baseTissueExpAlpha;
+    const baseTissuePearl = currentBucket.baseTissuePearl;
+    const baseTissueOwner = currentBucket.baseTissueOwner;
+    const nodeColors = artifact.nodeColors || [];
+    const nodeCount = Math.max(1, nodeColors.length);
+
+    // Precompute per-frame trig for traveling wave sin(k - 2.5*phi) & cos(k - 2.5*phi)
+    const sinPhi = Math.sin(wovenPhase * 2.5);
+    const cosPhi = Math.cos(wovenPhase * 2.5);
+
+    // Precompute per-node color tables once per frame (<= 16 entries instead of 36,000x!)
+    const nodeBaseR = new Float32Array(nodeCount);
+    const nodeBaseG = new Float32Array(nodeCount);
+    const nodeBaseB = new Float32Array(nodeCount);
+    const ridgeBaseR = new Float32Array(nodeCount);
+    const ridgeBaseG = new Float32Array(nodeCount);
+    const ridgeBaseB = new Float32Array(nodeCount);
+
+    for (let n = 0; n < nodeCount; n += 1) {
+      const rgb = nodeColors[n]?.rgb || [114, 217, 226];
+      let tr = rgb[0] / 255;
+      let tg = rgb[1] / 255;
+      let tb = rgb[2] / 255;
+      let rr = tr * 0.88 + 0.902 * 0.12;
+      let rg = tg * 0.88 + 0.973 * 0.12;
+      let rb = tb * 0.88 + 0.929 * 0.12;
+
+      if (isFault) {
+        tr = lerp(tr, 0.95, 0.72);
+        tg *= 0.25;
+        tb *= 0.32;
+        rr = lerp(rr, 0.95, 0.72);
+        rg *= 0.25;
+        rb *= 0.32;
+      } else if (isExhausted) {
+        const tGray = (tr + tg + tb) * 0.333;
+        tr = tGray * 0.55;
+        tg = tGray * 0.6;
+        tb = tGray * 0.68;
+        const rGray = (rr + rg + rb) * 0.333;
+        rr = rGray * 0.55;
+        rg = rGray * 0.6;
+        rb = rGray * 0.68;
       }
-      const stepStride = totalRawSegments > MAX_RIDGE_SEGMENTS ? 2 : 1;
-      const baseGain = artifact.wovenBody?.cloud
-        ? 0.24
-        : artifact.wovenBody?.familyAdapter
-          ? 0.34
-          : 0.48;
+      nodeBaseR[n] = tr;
+      nodeBaseG[n] = tg;
+      nodeBaseB[n] = tb;
+      ridgeBaseR[n] = rr;
+      ridgeBaseG[n] = rg;
+      ridgeBaseB[n] = rb;
+    }
 
-      let segCursor = 0;
-      for (let rIdx = 0; rIdx < ridges.length && segCursor < MAX_RIDGE_SEGMENTS; rIdx += 1) {
-        const line = ridges[rIdx].line;
-        if (!Array.isArray(line) || line.length < 2) continue;
+    // ========================================================================
+    // 2. EVERY-FRAME 60/120FPS 3D TRAVELING-WAVE ADVECTION ON TISSUE CLOUD
+    //    Zero transcendental calls inside the loop!
+    // ========================================================================
+    for (let i = 0; i < TISSUE_BUDGET; i += 1) {
+      const p3 = i * 3;
+      const p2 = i * 2;
+      const bx = baseTissuePos[p3];
+      const by = baseTissuePos[p3 + 1];
+      const bz = baseTissuePos[p3 + 2];
 
-        const isParamFilament = ridges[rIdx].material === 'parameter-filament';
+      const sinK = baseTissueWave[p2];
+      const cosK = baseTissueWave[p2 + 1];
+      // sin(k - 2.5*phi) and cos(k - 2.5*phi)
+      const waveS = sinK * cosPhi - cosK * sinPhi;
+      const waveC = cosK * cosPhi + sinK * sinPhi;
 
-        for (let j = 0; j < line.length - 1 && segCursor < MAX_RIDGE_SEGMENTS; j += stepStride) {
-          const nextJ = Math.min(line.length - 1, j + stepStride);
-          const p0 = line[j];
-          const p1 = line[nextJ];
+      tissuePositions[p3] = bx + bx * 0.044 * waveS - by * 0.032 * waveC;
+      tissuePositions[p3 + 1] = by + by * 0.044 * waveS + bx * 0.032 * waveC;
+      tissuePositions[p3 + 2] = bz + 0.042 * waveS + 0.018 * waveC;
 
-          const rawA0 = Number.isFinite(p0.alpha) ? p0.alpha : 0.2;
-          const rawA1 = Number.isFinite(p1.alpha) ? p1.alpha : 0.2;
-          if (Math.max(rawA0, rawA1) < 0.012) continue;
+      const ownerIdx = baseTissueOwner[i];
+      const gain = ownerIdx === activeNodeIdx ? 0.74 : 0.46;
+      let a = baseTissueExpAlpha[i] * gain;
+      if (a < 0.025) a = 0.025;
+      else if (a > 0.78) a = 0.78;
 
-          // Suppress quiet non-caustic parameter grid lines in family adapters so caustics stand out
-          const focus0 = isParamFilament ? Math.pow(clamp(rawA0, 0, 1), 1.45) : clamp(rawA0, 0, 1);
-          const focus1 = isParamFilament ? Math.pow(clamp(rawA1, 0, 1), 1.45) : clamp(rawA1, 0, 1);
+      const boost = baseTissuePearl[i];
+      const invBoost = 1 - boost;
+      tissueColors[p3] = (nodeBaseR[ownerIdx] * invBoost + 0.902 * boost) * a;
+      tissueColors[p3 + 1] = (nodeBaseG[ownerIdx] * invBoost + 0.973 * boost) * a;
+      tissueColors[p3 + 2] = (nodeBaseB[ownerIdx] * invBoost + 0.929 * boost) * a;
+    }
+    tissueGeom.attributes.position.needsUpdate = true;
+    tissueGeom.attributes.color.needsUpdate = true;
 
-          const vBase = segCursor * 6;
-          normalizeWovenCoord(p0.x, p0.y, p0.z || 0, bounds, mechanism, _vecA);
-          normalizeWovenCoord(p1.x, p1.y, p1.z || 0, bounds, mechanism, _vecB);
+    // ========================================================================
+    // 3. EVERY-FRAME 60/120FPS 3D TRAVELING-WAVE ADVECTION ON CAUSTIC RIDGES
+    //    Zero transcendental calls inside the loop!
+    // ========================================================================
+    const baseRidgePos = currentBucket.baseRidgePos;
+    const baseRidgeWave = currentBucket.baseRidgeWave;
+    const baseRidgeAlpha = currentBucket.baseRidgeAlpha;
+    const baseRidgeOwner = currentBucket.baseRidgeOwner;
+    const ridgeSegCount = currentBucket.ridgeSegCount;
 
-          ridgeLinePositions[vBase] = _vecA.x;
-          ridgeLinePositions[vBase + 1] = _vecA.y;
-          ridgeLinePositions[vBase + 2] = _vecA.z;
-          ridgeLinePositions[vBase + 3] = _vecB.x;
-          ridgeLinePositions[vBase + 4] = _vecB.y;
-          ridgeLinePositions[vBase + 5] = _vecB.z;
+    for (let segIdx = 0; segIdx < ridgeSegCount; segIdx += 1) {
+      const vBase = segIdx * 6;
+      const wBase = segIdx * 4;
+      const aBase = segIdx * 2;
 
-          const ownerIdx =
-            Number.isInteger(p0.owner) && p0.owner >= 0
-              ? p0.owner % nodeCount
-              : rIdx % nodeCount;
-          const cSpec = nodeColors[ownerIdx];
-          const rgb = cSpec?.rgb || [114, 217, 226];
-          const activeBoost = ownerIdx === activeNodeIdx ? 1.28 : 1.0;
+      const bx0 = baseRidgePos[vBase];
+      const by0 = baseRidgePos[vBase + 1];
+      const bz0 = baseRidgePos[vBase + 2];
+      const sinK0 = baseRidgeWave[wBase];
+      const cosK0 = baseRidgeWave[wBase + 1];
+      const waveS0 = sinK0 * cosPhi - cosK0 * sinPhi;
+      const waveC0 = cosK0 * cosPhi + sinK0 * sinPhi;
 
-          const a0 = clamp(focus0 * baseGain * activeBoost, 0.004, 0.72);
-          const a1 = clamp(focus1 * baseGain * activeBoost, 0.004, 0.72);
+      const bx1 = baseRidgePos[vBase + 3];
+      const by1 = baseRidgePos[vBase + 4];
+      const bz1 = baseRidgePos[vBase + 5];
+      const sinK1 = baseRidgeWave[wBase + 2];
+      const cosK1 = baseRidgeWave[wBase + 3];
+      const waveS1 = sinK1 * cosPhi - cosK1 * sinPhi;
+      const waveC1 = cosK1 * cosPhi + sinK1 * sinPhi;
 
-          // Rich Chroma node color (88% Chroma + 12% `#e6f8ed` pearl crest)
-          let baseR = (rgb[0] / 255) * 0.88 + 0.902 * 0.12;
-          let baseG = (rgb[1] / 255) * 0.88 + 0.973 * 0.12;
-          let baseB = (rgb[2] / 255) * 0.88 + 0.929 * 0.12;
+      ridgeLinePositions[vBase] = bx0 + bx0 * 0.044 * waveS0 - by0 * 0.032 * waveC0;
+      ridgeLinePositions[vBase + 1] = by0 + by0 * 0.044 * waveS0 + bx0 * 0.032 * waveC0;
+      ridgeLinePositions[vBase + 2] = bz0 + 0.042 * waveS0 + 0.018 * waveC0;
+      ridgeLinePositions[vBase + 3] = bx1 + bx1 * 0.044 * waveS1 - by1 * 0.032 * waveC1;
+      ridgeLinePositions[vBase + 4] = by1 + by1 * 0.044 * waveS1 + bx1 * 0.032 * waveC1;
+      ridgeLinePositions[vBase + 5] = bz1 + 0.042 * waveS1 + 0.018 * waveC1;
 
-          if (isFault) {
-            baseR = lerp(baseR, 0.95, 0.72);
-            baseG *= 0.25;
-            baseB *= 0.32;
-          } else if (isExhausted) {
-            const gray = (baseR + baseG + baseB) * 0.333;
-            baseR = gray * 0.55;
-            baseG = gray * 0.6;
-            baseB = gray * 0.68;
-          }
+      const ownerIdx = baseRidgeOwner[segIdx];
+      const activeBoost = ownerIdx === activeNodeIdx ? 1.28 : 1.0;
 
-          ridgeLineColors[vBase] = baseR * a0;
-          ridgeLineColors[vBase + 1] = baseG * a0;
-          ridgeLineColors[vBase + 2] = baseB * a0;
-          ridgeLineColors[vBase + 3] = baseR * a1;
-          ridgeLineColors[vBase + 4] = baseG * a1;
-          ridgeLineColors[vBase + 5] = baseB * a1;
+      let a0 = baseRidgeAlpha[aBase] * activeBoost;
+      if (a0 > 0.72) a0 = 0.72;
+      let a1 = baseRidgeAlpha[aBase + 1] * activeBoost;
+      if (a1 > 0.72) a1 = 0.72;
 
-          segCursor += 1;
+      const baseR = ridgeBaseR[ownerIdx];
+      const baseG = ridgeBaseG[ownerIdx];
+      const baseB = ridgeBaseB[ownerIdx];
+
+      ridgeLineColors[vBase] = baseR * a0;
+      ridgeLineColors[vBase + 1] = baseG * a0;
+      ridgeLineColors[vBase + 2] = baseB * a0;
+      ridgeLineColors[vBase + 3] = baseR * a1;
+      ridgeLineColors[vBase + 4] = baseG * a1;
+      ridgeLineColors[vBase + 5] = baseB * a1;
+    }
+    ridgeLineGeom.setDrawRange(0, ridgeSegCount * 2);
+    ridgeLineGeom.attributes.position.needsUpdate = true;
+    ridgeLineGeom.attributes.color.needsUpdate = true;
+
+    if (anchorNodeMesh.visible) {
+      const shapeNodes = artifact.shape?.nodes || [];
+      const activeAnchorCount = Math.min(MAX_ANCHOR_NODES, shapeNodes.length);
+      anchorNodeMesh.count = activeAnchorCount;
+
+      for (let nIdx = 0; nIdx < activeAnchorCount; nIdx += 1) {
+        const node = shapeNodes[nIdx];
+        let rawAnchor;
+        try {
+          rawAnchor = WovenBody.anchor(artifact.wovenBody, node.id, wovenPhase);
+        } catch (_) {
+          rawAnchor = { x: 0, y: 0, z: 0 };
         }
+        normalizeWovenCoord(
+          rawAnchor.x || 0,
+          rawAnchor.y || 0,
+          rawAnchor.z || 0,
+          bounds,
+          mechanism,
+          _anchorPositions[nIdx]
+        );
+
+        const isActiveNode = nIdx === activeNodeIdx;
+        _dummy.position.copy(_anchorPositions[nIdx]);
+        _dummy.rotation.set(0, 0, 0);
+        _dummy.scale.setScalar(isActiveNode ? 1.45 : 0.88);
+        _dummy.updateMatrix();
+        anchorNodeMesh.setMatrixAt(nIdx, _dummy.matrix);
+
+        const cSpec = nodeColors[nIdx % nodeCount];
+        const rgb = cSpec?.opRgb || cSpec?.rgb || [114, 217, 226];
+        _color.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
+        if (isActiveNode) _color.lerp(_faultColor, isFault ? 0.7 : 0.0);
+        anchorNodeMesh.setColorAt(nIdx, _color);
       }
-      ridgeLineGeom.setDrawRange(0, segCursor * 2);
-      ridgeLineGeom.attributes.position.needsUpdate = true;
-      ridgeLineGeom.attributes.color.needsUpdate = true;
-
-      if (sdkManifoldRibbonMesh.visible) {
-        const ribbonSourceCount = Math.max(1, ridges.length);
-        const ribbonHalfWidthBase =
-          0.0018 + 0.0014 * clamp(design?.surface?.spread ?? 0.65, 0.2, 1.4);
-
-        for (let rIdx = 0; rIdx < SDK_RIBBON_COUNT; rIdx += 1) {
-          const ridge = ridges[Math.floor((rIdx * ribbonSourceCount) / SDK_RIBBON_COUNT)];
-          const line = ridge?.line;
-          const ownerIdx =
-            Number.isInteger(line?.[0]?.owner) && line[0].owner >= 0
-              ? line[0].owner % nodeCount
-              : rIdx % nodeCount;
-          const cSpec = nodeColors[ownerIdx];
-          const rgb = cSpec?.rgb || [114, 217, 226];
-          const cr = rgb[0] / 255;
-          const cg = rgb[1] / 255;
-          const cb = rgb[2] / 255;
-
-          if (Array.isArray(line) && line.length >= 4) {
-            for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
-              const u = s / (SDK_RIBBON_SEGMENTS - 1);
-              const ptIdx = Math.min(line.length - 1, Math.floor(u * (line.length - 1)));
-              const rawPt = line[ptIdx];
-              normalizeWovenCoord(rawPt.x, rawPt.y, rawPt.z || 0, bounds, mechanism, _sdkPts[s]);
-            }
-          } else {
-            for (let s = 0; s < SDK_RIBBON_SEGMENTS; s += 1) {
-              _sdkPts[s].set(0, 0, 0);
-            }
-          }
-
-          writeRibbonStrip(
-            sdkRibbonPositions,
-            sdkRibbonColors,
-            sdkRibbonNormals,
-            rIdx,
-            SDK_RIBBON_SEGMENTS,
-            _sdkPts,
-            Array.isArray(line) && line.length >= 4 ? ribbonHalfWidthBase : 0,
-            cr,
-            cg,
-            cb
-          );
-        }
-        sdkRibbonGeom.attributes.position.needsUpdate = true;
-        sdkRibbonGeom.attributes.color.needsUpdate = true;
-        sdkRibbonGeom.attributes.normal.needsUpdate = true;
-      }
-
-      if (anchorNodeMesh.visible) {
-        const shapeNodes = artifact.shape?.nodes || [];
-        const activeAnchorCount = Math.min(MAX_ANCHOR_NODES, shapeNodes.length);
-        anchorNodeMesh.count = activeAnchorCount;
-
-        for (let nIdx = 0; nIdx < activeAnchorCount; nIdx += 1) {
-          const node = shapeNodes[nIdx];
-          let rawAnchor;
-          try {
-            rawAnchor = WovenBody.anchor(artifact.wovenBody, node.id, wovenPhase);
-          } catch (_) {
-            rawAnchor = { x: 0, y: 0, z: 0 };
-          }
-          normalizeWovenCoord(
-            rawAnchor.x || 0,
-            rawAnchor.y || 0,
-            rawAnchor.z || 0,
-            bounds,
-            mechanism,
-            _anchorPositions[nIdx]
-          );
-
-          const isActiveNode = nIdx === activeNodeIdx;
-          _dummy.position.copy(_anchorPositions[nIdx]);
-          _dummy.rotation.set(0, 0, 0);
-          _dummy.scale.setScalar(isActiveNode ? 1.45 : 0.88);
-          _dummy.updateMatrix();
-          anchorNodeMesh.setMatrixAt(nIdx, _dummy.matrix);
-
-          const cSpec = nodeColors[nIdx % nodeCount];
-          const rgb = cSpec?.opRgb || cSpec?.rgb || [114, 217, 226];
-          _color.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
-          if (isActiveNode) _color.lerp(_faultColor, isFault ? 0.7 : 0.0);
-          anchorNodeMesh.setColorAt(nIdx, _color);
-        }
-        anchorNodeMesh.instanceMatrix.needsUpdate = true;
-        if (anchorNodeMesh.instanceColor) anchorNodeMesh.instanceColor.needsUpdate = true;
-      }
+      anchorNodeMesh.instanceMatrix.needsUpdate = true;
+      if (anchorNodeMesh.instanceColor) anchorNodeMesh.instanceColor.needsUpdate = true;
     }
 
     if (sporeMesh.visible) {
       const rgbPixels = artifact.rgbPixels || [];
-      const pts = cachedWovenFrame.points;
       const outScale = isExhausted ? 0.92 : 1.04;
 
       for (let s = 0; s < SPORE_COUNT; s += 1) {
-        const sampleIdx = Math.floor(((s * 61 + Math.floor(wovenPhase * 12)) % TISSUE_BUDGET)) * 4;
-        normalizeWovenCoord(
-          pts[sampleIdx],
-          pts[sampleIdx + 1],
-          pts[sampleIdx + 2],
-          bounds,
-          mechanism,
-          _vecA
-        );
+        const samplePt = Math.floor(((s * 61 + Math.floor(wovenPhase * 12)) % TISSUE_BUDGET)) * 3;
         const radialDrift = 0.014 * Math.sin(wovenPhase * 1.5 + s * PHI_GOLDEN_ANGLE);
 
         _dummy.position.set(
-          _vecA.x * outScale + radialDrift,
-          _vecA.y * outScale + radialDrift * 0.6,
-          _vecA.z * outScale - radialDrift
+          tissuePositions[samplePt] * outScale + radialDrift,
+          tissuePositions[samplePt + 1] * outScale + radialDrift * 0.6,
+          tissuePositions[samplePt + 2] * outScale - radialDrift
         );
         _dummy.rotation.set(wovenPhase + s, wovenPhase * 0.7 + s, 0);
         _dummy.scale.setScalar(isDone ? 1.12 : isExhausted ? 0.52 : 0.84);
@@ -1155,7 +1316,7 @@ export function createQuinelingSubsystem() {
         }
       }
     });
-    cachedWovenFrame = null;
+    currentBucket = null;
   }
 
   return {

@@ -89,10 +89,14 @@ export function createLoomSubsystem() {
     details: '32-segment execution progress bar grouped by ReferenceSlice width and inset flush into a dark sapphire-slate track on the rear brushed silver-platinum deck (y = 0.1052).',
   });
 
+  const _pendingColor = new THREE.Color(PENDING_SAPPHIRE_SLOT_HEX);
+  const _activeColor = new THREE.Color(LUMINOUS_GOLD_HEX);
+  const _doneColor = new THREE.Color(CYAN_TEAL_HEX);
   let lastSegmentCount = -1;
   let lastSliceWidth = -1;
   let lastActiveSeg = -1;
   let lastPhase = '';
+  let lastFracBucket = -1;
 
   function update(stepState = {}) {
     const rawSteps = stepState.trace?.steps;
@@ -103,11 +107,16 @@ export function createLoomSubsystem() {
     const segmentCount = clamp(rawTotalSteps, 1, MAX_STEPS);
     const sliceWidth = clamp(Number(stepState.trace?.sliceWidth) || 4, 1, 16);
     const rawStepIndex = clamp(Number(stepState.stepIndex) || 0, 0, rawTotalSteps - 1);
-    const progress = rawTotalSteps <= 1 ? 1 : rawStepIndex / (rawTotalSteps - 1);
-    const activeSegment =
+    const stepFraction = clamp(Number(stepState.stepFraction ?? stepState.sub ?? 0), 0, 1);
+    const continuousStep = Math.min(rawTotalSteps - 1, rawStepIndex + stepFraction);
+    const progress = rawTotalSteps <= 1 ? 1 : continuousStep / (rawTotalSteps - 1);
+    const exactSeg =
       rawTotalSteps <= MAX_STEPS
-        ? rawStepIndex
-        : clamp(Math.floor(progress * segmentCount), 0, segmentCount - 1);
+        ? continuousStep
+        : clamp(progress * segmentCount, 0, segmentCount - 1);
+    const activeSegment = Math.floor(exactSeg);
+    const segFraction = exactSeg - activeSegment;
+    const fracBucket = Math.round(segFraction * 24);
     const phase = stepState.phase || 'DESCEND';
 
     // Recompute segment widths & slice-grouped positions only when segmentCount or sliceWidth changes
@@ -141,23 +150,40 @@ export function createLoomSubsystem() {
       progressInstanced.instanceMatrix.needsUpdate = true;
       progressInstanced.computeBoundingSphere();
       lastActiveSeg = -1;
+      lastFracBucket = -1;
     }
 
-    if (activeSegment !== lastActiveSeg || phase !== lastPhase) {
+    if (activeSegment !== lastActiveSeg || phase !== lastPhase || fracBucket !== lastFracBucket) {
+      const segStepChanged = activeSegment !== lastActiveSeg || phase !== lastPhase;
       lastActiveSeg = activeSegment;
       lastPhase = phase;
+      lastFracBucket = fracBucket;
 
       const activeHex = phase === 'ERROR' ? PALETTE.errorRed : LUMINOUS_GOLD_HEX;
+      _activeColor.setHex(activeHex);
       let colorChanged = false;
 
       for (let i = 0; i < MAX_STEPS; i++) {
+        if (i === activeSegment && i < segmentCount) {
+          _tmpColor.copy(_activeColor).lerp(_doneColor, segFraction * 0.35);
+          progressInstanced.setColorAt(i, _tmpColor);
+          lastSegHex[i] = 0xffffffff;
+          colorChanged = true;
+          continue;
+        }
+        if (i === activeSegment + 1 && i < segmentCount && segFraction > 0.02) {
+          _tmpColor.copy(_pendingColor).lerp(_activeColor, segFraction * 0.65);
+          progressInstanced.setColorAt(i, _tmpColor);
+          lastSegHex[i] = 0xfffffffe;
+          colorChanged = true;
+          continue;
+        }
+
         let nextHex = PENDING_SAPPHIRE_SLOT_HEX;
         if (i >= segmentCount) {
           nextHex = DARK_SAPPHIRE_SLATE_HEX;
         } else if (i < activeSegment) {
           nextHex = CYAN_TEAL_HEX;
-        } else if (i === activeSegment) {
-          nextHex = activeHex;
         }
 
         if (lastSegHex[i] !== nextHex) {
@@ -172,7 +198,9 @@ export function createLoomSubsystem() {
         progressInstanced.instanceColor.needsUpdate = true;
       }
 
-      group.userData.subtitle = `Step ${rawStepIndex + 1} / ${rawTotalSteps} (Slice ×${sliceWidth}) · ${phase}`;
+      if (segStepChanged) {
+        group.userData.subtitle = `Step ${rawStepIndex + 1} / ${rawTotalSteps} (Slice ×${sliceWidth}) · ${phase}`;
+      }
     }
   }
 

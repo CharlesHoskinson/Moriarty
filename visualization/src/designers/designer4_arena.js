@@ -391,6 +391,13 @@ export function createArenaSubsystem() {
       bodyMat,
       edgeMat,
       plaque,
+      currentZ: 0,
+      targetZ: 0,
+      currentY: -0.02,
+      targetY: 0,
+      currentScale: 0.85,
+      targetScale: 1.0,
+      wasVisible: false,
       lastSignature: '',
       lastMetaCallIndex: -1,
       lastMetaStatus: '',
@@ -401,87 +408,117 @@ export function createArenaSubsystem() {
   let lastStepIndex = -1;
   let lastTraceRef = null;
   let lastPhase = '';
+  let cachedStepEval = { visibleCalls: [], isError: false };
 
   function update(stepState = {}) {
     const stepIdx = stepState.stepIndex ?? 0;
     const traceRef = stepState.trace ?? null;
     const phaseStr = stepState.phase ?? '';
-    if (
-      stepIdx === lastStepIndex &&
-      traceRef === lastTraceRef &&
-      phaseStr === lastPhase
-    ) {
-      return;
+    const dt = clamp(stepState.dt ?? 0.016, 0.001, 0.05);
+    const damp = 1.0 - Math.exp(-dt * 15.0);
+
+    const stepChanged =
+      stepIdx !== lastStepIndex ||
+      traceRef !== lastTraceRef ||
+      phaseStr !== lastPhase;
+
+    if (stepChanged) {
+      lastStepIndex = stepIdx;
+      lastTraceRef = traceRef;
+      lastPhase = phaseStr;
+      cachedStepEval = evaluateCallTilesAtStep(stepState);
+
+      const { visibleCalls, isError } = cachedStepEval;
+      const count = visibleCalls.length;
+      const spacing = count <= 1 ? 0 : Math.min(0.62, 3.10 / Math.max(1, count));
+      const startZ = -((count - 1) * spacing) * 0.5;
+
+      for (let i = 0; i < MAX_CALL_TILES; i += 1) {
+        const tile = callTiles[i];
+        if (i >= count) {
+          tile.targetScale = 0.0;
+          tile.targetY = -0.025;
+          continue;
+        }
+
+        const call = visibleCalls[i];
+        const nextZ = startZ + i * spacing;
+        if (!tile.wasVisible) {
+          tile.currentZ = nextZ;
+          tile.currentY = -0.022;
+          tile.currentScale = 0.82;
+          tile.wasVisible = true;
+        }
+        tile.group.visible = true;
+        tile.targetZ = nextZ;
+        tile.targetY = call.status === 'active' ? 0.010 : call.status === 'resolved' ? 0.003 : 0.0;
+        tile.targetScale = call.status === 'active' ? 1.03 : 1.0;
+
+        const ringNum = resolveCallRingNumber(call);
+        const ringTag = `R${ringNum}`;
+        const retVal = call.status === 'resolved' ? call.returnValue || 'ok' : '';
+
+        if (call.status === 'resolved') {
+          tile.bodyMat.color.setHex(HEX_TILE_RETURNED);
+          tile.edgeMat.color.setHex(HEX_RIM_RETURNED);
+          tile.edgeMat.emissive.setHex(HEX_RIM_RETURNED);
+          tile.edgeMat.emissiveIntensity = 0.72;
+        } else if (call.status === 'active') {
+          const activeEdge = isError ? PALETTE.errorRed : HEX_RIM_ACTIVE;
+          tile.bodyMat.color.setHex(isError ? HEX_TILE_FAULT : HEX_TILE_ACTIVE);
+          tile.edgeMat.color.setHex(activeEdge);
+          tile.edgeMat.emissive.setHex(activeEdge);
+          tile.edgeMat.emissiveIntensity = 0.90;
+        } else if (call.status === 'waiting') {
+          tile.bodyMat.color.setHex(HEX_TILE_IDLE);
+          tile.edgeMat.color.setHex(HEX_RIM_WAITING);
+          tile.edgeMat.emissive.setHex(HEX_RIM_WAITING);
+          tile.edgeMat.emissiveIntensity = 0.38;
+        } else {
+          tile.bodyMat.color.setHex(HEX_TILE_IDLE);
+          tile.edgeMat.color.setHex(HEX_RIM_IDLE);
+          tile.edgeMat.emissive.setHex(0x000000);
+          tile.edgeMat.emissiveIntensity = 0.0;
+        }
+
+        const sig = `${call.callExpr}|${retVal}|${call.status}|${ringTag}`;
+        if (sig !== tile.lastSignature) {
+          tile.lastSignature = sig;
+          paintCleanCallTile(tile.plaque, call.callExpr, retVal, call.status, ringTag);
+        }
+
+        if (
+          tile.lastMetaCallIndex !== call.index ||
+          tile.lastMetaStatus !== call.status ||
+          tile.lastMetaReturn !== retVal
+        ) {
+          tile.lastMetaCallIndex = call.index;
+          tile.lastMetaStatus = call.status;
+          tile.lastMetaReturn = retVal;
+          tile.group.userData.id = `call-tile-${call.index}`;
+          tile.group.userData.ringNumber = ringNum;
+          tile.group.userData.title = `${ringTag} · Call #${call.index}: ${call.rawCall}`;
+          tile.group.userData.subtitle =
+            call.status === 'resolved'
+              ? `Ring ${ringTag} · Returned → ${retVal} (step ${call.returnStep})`
+              : `Ring ${ringTag} (Slots ${ringTag}·A / ${ringTag}·B) · Status: ${call.status.toUpperCase()}`;
+        }
+      }
     }
-    lastStepIndex = stepIdx;
-    lastTraceRef = traceRef;
-    lastPhase = phaseStr;
 
-    const { visibleCalls, isError } = evaluateCallTilesAtStep(stepState);
-    const count = visibleCalls.length;
-    const spacing = count <= 1 ? 0 : Math.min(0.62, 3.10 / Math.max(1, count));
-    const startZ = -((count - 1) * spacing) * 0.5;
-
+    const visibleCount = cachedStepEval.visibleCalls.length;
     for (let i = 0; i < MAX_CALL_TILES; i += 1) {
       const tile = callTiles[i];
-      if (i >= count) {
+      if (!tile.group.visible) continue;
+      tile.currentZ += (tile.targetZ - tile.currentZ) * damp;
+      tile.currentY += (tile.targetY - tile.currentY) * damp;
+      tile.currentScale += (tile.targetScale - tile.currentScale) * damp;
+      tile.group.position.set(0, tile.currentY, tile.currentZ);
+      const s = Math.max(0.001, tile.currentScale);
+      tile.group.scale.setScalar(s);
+      if (i >= visibleCount && tile.currentScale < 0.05) {
         tile.group.visible = false;
-        continue;
-      }
-
-      tile.group.visible = true;
-      const call = visibleCalls[i];
-      const targetZ = startZ + i * spacing;
-      tile.group.position.set(0, 0, targetZ);
-
-      const ringNum = resolveCallRingNumber(call);
-      const ringTag = `R${ringNum}`;
-      const retVal = call.status === 'resolved' ? call.returnValue || 'ok' : '';
-
-      if (call.status === 'resolved') {
-        tile.bodyMat.color.setHex(HEX_TILE_RETURNED);
-        tile.edgeMat.color.setHex(HEX_RIM_RETURNED);
-        tile.edgeMat.emissive.setHex(HEX_RIM_RETURNED);
-        tile.edgeMat.emissiveIntensity = 0.72;
-      } else if (call.status === 'active') {
-        const activeEdge = isError ? PALETTE.errorRed : HEX_RIM_ACTIVE;
-        tile.bodyMat.color.setHex(isError ? HEX_TILE_FAULT : HEX_TILE_ACTIVE);
-        tile.edgeMat.color.setHex(activeEdge);
-        tile.edgeMat.emissive.setHex(activeEdge);
-        tile.edgeMat.emissiveIntensity = 0.90;
-      } else if (call.status === 'waiting') {
-        tile.bodyMat.color.setHex(HEX_TILE_IDLE);
-        tile.edgeMat.color.setHex(HEX_RIM_WAITING);
-        tile.edgeMat.emissive.setHex(HEX_RIM_WAITING);
-        tile.edgeMat.emissiveIntensity = 0.38;
-      } else {
-        tile.bodyMat.color.setHex(HEX_TILE_IDLE);
-        tile.edgeMat.color.setHex(HEX_RIM_IDLE);
-        tile.edgeMat.emissive.setHex(0x000000);
-        tile.edgeMat.emissiveIntensity = 0.0;
-      }
-
-      const sig = `${call.callExpr}|${retVal}|${call.status}|${ringTag}`;
-      if (sig !== tile.lastSignature) {
-        tile.lastSignature = sig;
-        paintCleanCallTile(tile.plaque, call.callExpr, retVal, call.status, ringTag);
-      }
-
-      if (
-        tile.lastMetaCallIndex !== call.index ||
-        tile.lastMetaStatus !== call.status ||
-        tile.lastMetaReturn !== retVal
-      ) {
-        tile.lastMetaCallIndex = call.index;
-        tile.lastMetaStatus = call.status;
-        tile.lastMetaReturn = retVal;
-        tile.group.userData.id = `call-tile-${call.index}`;
-        tile.group.userData.ringNumber = ringNum;
-        tile.group.userData.title = `${ringTag} · Call #${call.index}: ${call.rawCall}`;
-        tile.group.userData.subtitle =
-          call.status === 'resolved'
-            ? `Ring ${ringTag} · Returned → ${retVal} (step ${call.returnStep})`
-            : `Ring ${ringTag} (Slots ${ringTag}·A / ${ringTag}·B) · Status: ${call.status.toUpperCase()}`;
+        tile.wasVisible = false;
       }
     }
   }
