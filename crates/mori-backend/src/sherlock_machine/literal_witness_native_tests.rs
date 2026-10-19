@@ -729,3 +729,294 @@ fn native_a102_literal_proof_roundtrips_and_independently_verifies() {
         out.display()
     );
 }
+
+use std::io::Read;
+
+pub const A102_VERIFY_BUNDLE_PATH_ENV: &str = "MORIARTY_A102_VERIFY_BUNDLE_PATH";
+pub const A102_VERIFY_SRS_DIR_ENV: &str = "MORIARTY_A102_VERIFY_SRS_DIR";
+pub const A102_VERIFY_MAX_K_ENV: &str = "MORIARTY_A102_VERIFY_MAX_K";
+pub const A102_VERIFY_OUTPUT_DIR_ENV: &str = "MORIARTY_A102_VERIFY_OUTPUT_DIR";
+pub const A102_VERIFY_SCHEMA: &str = "moriarty-sherlock-a102-verify-only/1";
+pub const A102_VERIFY_INPUT_FILENAME: &str = "a102_verify_only_input.json";
+pub const A102_VERIFY_REPORT_FILENAME: &str = "a102_verify_only_report.json";
+pub const A102_VERIFY_ERROR_FILENAME: &str = "a102_verify_only_error.json";
+/// The existing 1 MiB bounded JSON profile (mori_core::json).
+const A102_BUNDLE_READ_CAP: u64 = 1_048_576;
+// Frozen prior-run byte identities: input identity only, never semantic goldens.
+const A102_FROZEN_BUNDLE_BYTES: usize = 31_390;
+const A102_FROZEN_BUNDLE_SHA256: &str =
+    "5ec12ca7495db2201e9fafcf4af50a2478794910b33c499412541f1ca728b4bc";
+const A102_FROZEN_ZKIR_BYTES: usize = 3_972_464;
+const A102_FROZEN_ZKIR_SHA256: &str =
+    "0dc0f0f4cc76ee0bad8c419ab06bfd906861e7605024622b7d39b43c92617ead";
+const A102_FROZEN_PROGRAM_BYTES: usize = 707;
+const A102_FROZEN_PROGRAM_SHA256: &str =
+    "4da320d50aa736af5c03bb1ba74810b0e2b93c01e71fa5fb330c43225be1fedc";
+
+struct A102VerifyInputs {
+    bundle_path: PathBuf,
+    srs_dir: PathBuf,
+    max_k: u8,
+    output_dir: PathBuf,
+}
+
+/// Reads and validates every explicit verify-only input before any native work.
+/// No defaults, downloads, SRS generation or degree guessing.
+fn read_a102_verify_inputs() -> A102VerifyInputs {
+    let bundle_path = PathBuf::from(required_env(A102_VERIFY_BUNDLE_PATH_ENV));
+    assert!(bundle_path.is_absolute(), "{A102_VERIFY_BUNDLE_PATH_ENV} must be absolute");
+    let bundle_meta = fs::symlink_metadata(&bundle_path)
+        .unwrap_or_else(|e| panic!("{A102_VERIFY_BUNDLE_PATH_ENV} {}: {e}", bundle_path.display()));
+    assert!(
+        bundle_meta.file_type().is_file(),
+        "{A102_VERIFY_BUNDLE_PATH_ENV} must be an existing regular file, not a symlink"
+    );
+    let srs_dir = PathBuf::from(required_env(A102_VERIFY_SRS_DIR_ENV));
+    assert!(srs_dir.is_absolute(), "{A102_VERIFY_SRS_DIR_ENV} must be absolute");
+    let srs_meta = fs::metadata(&srs_dir)
+        .unwrap_or_else(|e| panic!("{A102_VERIFY_SRS_DIR_ENV} {}: {e}", srs_dir.display()));
+    assert!(srs_meta.is_dir(), "{A102_VERIFY_SRS_DIR_ENV} must be an existing directory");
+    let raw_k = required_env(A102_VERIFY_MAX_K_ENV);
+    assert!(
+        raw_k.len() <= 2 && raw_k.bytes().all(|b| b.is_ascii_digit()) && !raw_k.starts_with('0'),
+        "{A102_VERIFY_MAX_K_ENV} must be a canonical decimal degree"
+    );
+    let max_k: u8 = raw_k.parse().expect("validated decimal degree");
+    assert!(
+        (1..=MAX_K).contains(&max_k),
+        "{A102_VERIFY_MAX_K_ENV} must be within source validation range 1..={MAX_K}"
+    );
+    let output_dir = PathBuf::from(required_env(A102_VERIFY_OUTPUT_DIR_ENV));
+    assert!(output_dir.is_absolute(), "{A102_VERIFY_OUTPUT_DIR_ENV} must be absolute");
+    let bundle_dir = bundle_path.parent().expect("absolute bundle path has a parent");
+    assert!(
+        !output_dir.starts_with(&srs_dir) && !output_dir.starts_with(bundle_dir),
+        "{A102_VERIFY_OUTPUT_DIR_ENV} must be outside the SRS and bundle directories"
+    );
+    match fs::symlink_metadata(&output_dir) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Ok(_) => panic!("{A102_VERIFY_OUTPUT_DIR_ENV} {} already exists", output_dir.display()),
+        Err(e) => panic!("{A102_VERIFY_OUTPUT_DIR_ENV} {}: {e}", output_dir.display()),
+    }
+    let parent = output_dir.parent().expect("absolute output directory has a parent");
+    let parent_meta = fs::metadata(parent)
+        .unwrap_or_else(|e| panic!("{A102_VERIFY_OUTPUT_DIR_ENV} parent {}: {e}", parent.display()));
+    assert!(
+        parent_meta.is_dir() && !parent_meta.permissions().readonly(),
+        "{A102_VERIFY_OUTPUT_DIR_ENV} parent must be an existing writable directory"
+    );
+    A102VerifyInputs { bundle_path, srs_dir, max_k, output_dir }
+}
+
+/// Read-only bounded read: opened regular file, at most cap + 1 bytes, then the
+/// exact frozen size and SHA-256. Returns (text, sha256, permissions_readonly).
+fn read_frozen_a102_bundle(path: &Path) -> (String, String, bool) {
+    #[cfg(unix)]
+    let opened = {
+        use std::os::unix::fs::OpenOptionsExt;
+        OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+            .open(path)
+    };
+    #[cfg(not(unix))]
+    let opened = fs::File::open(path);
+    let file = opened.unwrap_or_else(|e| panic!("failed to open {}: {e}", path.display()));
+    let meta = file
+        .metadata()
+        .unwrap_or_else(|e| panic!("failed to stat {}: {e}", path.display()));
+    assert!(meta.is_file(), "frozen bundle must be a regular file");
+    assert!(meta.len() <= A102_BUNDLE_READ_CAP, "frozen bundle exceeds the 1 MiB profile");
+    let permissions_readonly = meta.permissions().readonly();
+    let mut bytes = Vec::new();
+    file.take(A102_BUNDLE_READ_CAP + 1)
+        .read_to_end(&mut bytes)
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+    assert!(bytes.len() as u64 <= A102_BUNDLE_READ_CAP, "frozen bundle read overflowed the cap");
+    assert_eq!(bytes.len(), A102_FROZEN_BUNDLE_BYTES, "frozen bundle byte length");
+    let sha256 = hex(&Sha256::digest(&bytes));
+    assert_eq!(sha256, A102_FROZEN_BUNDLE_SHA256, "frozen bundle SHA-256");
+    let text = String::from_utf8(bytes).expect("frozen bundle must be UTF-8");
+    (text, sha256, permissions_readonly)
+}
+
+fn persist_a102_verify_error(dir: &Path, message: &str) {
+    let record = serde_json::json!({
+        "schema": A102_VERIFY_SCHEMA,
+        "record": "verify-only-returned-err",
+        "stage": "verify_literal_transition",
+        "returned_ok": false,
+        "error_debug": message,
+        "open_obligations": OPEN_OBLIGATIONS,
+    });
+    let bytes = serde_json::to_vec_pretty(&record).expect("serialize verify-only error record");
+    write_synced_artifact(dir, A102_VERIFY_ERROR_FILENAME, &bytes);
+}
+
+/// One existing-API verify of the frozen A102 bundle against an independently
+/// reconstructed request. No proving, PK keygen or check replay. Not a soundness,
+/// ledger or resource claim.
+#[test]
+#[ignore = "native SRS/keygen_vk/verify of a frozen A102 bundle; requires explicit MORIARTY_A102_VERIFY_* inputs and separate resource admission"]
+fn native_a102_frozen_bundle_verify_only_independently_reconstructs_and_verifies() {
+    let inputs = read_a102_verify_inputs();
+    let (bundle_text, bundle_sha256, permissions_readonly) =
+        read_frozen_a102_bundle(&inputs.bundle_path);
+    let bundle = LiteralProofBundle::from_json(&bundle_text)
+        .unwrap_or_else(|e| panic!("LiteralProofBundle::from_json failed: {e:?}"));
+
+    // Request reconstruction never reads the bundle claim.
+    assert_eq!(REFERENCE_SOURCE_BYTES.len(), EXPECTED_REFERENCE_SOURCE_BYTES_LEN);
+    let reference_source_sha256 = hex(&Sha256::digest(REFERENCE_SOURCE_BYTES));
+    assert_eq!(reference_source_sha256, EXPECTED_REFERENCE_SOURCE_SHA256);
+    let (program, caps) = fixture_program_and_capacities();
+    let prog_caps = core_program_capacities(&caps).expect("program capacities conversion");
+    let preparatory = prepare_a(program.clone(), prog_caps).expect("preparatory prepare_a");
+    let program_bytes = preparatory
+        .program_bytes()
+        .expect("deterministic PreparedA::program_bytes encoding");
+    assert_eq!(program_bytes.len(), A102_FROZEN_PROGRAM_BYTES);
+    let program_sha256 = hex(&Sha256::digest(&program_bytes));
+    assert_eq!(program_sha256, A102_FROZEN_PROGRAM_SHA256);
+    let id = LiteralSourceIdentity {
+        k_source_sha256: K_SOURCE_SHA256.to_string(),
+        reference_source_sha256,
+        program_source_sha256: program_sha256.clone(),
+    };
+    let (produced, statement) = build_checked_literal_transition_request(
+        program,
+        &caps,
+        50,
+        12,
+        &id,
+        local_max_statement_lanes(),
+    )
+    .expect("checked request within local_max_statement_lanes");
+    let produced_program_bytes = produced
+        .prepared
+        .program_bytes()
+        .expect("produced PreparedA::program_bytes encoding");
+    assert_eq!(produced_program_bytes, program_bytes);
+    assert_eq!(statement.len(), EXPECTED_STATEMENT_LANES);
+    let layout = LiteralLayout::new(
+        &produced.request.capacities,
+        &produced.request.identity,
+        local_max_statement_lanes(),
+    )
+    .expect("layout construction");
+    assert_eq!(layout.statement(&produced.request.values).expect("statement"), statement);
+    // Host emission only (no ir.k); the bridge re-emits inside prepare.
+    let (_, zkir) = layout.emit(CircuitMode::LocalPublic).expect("local circuit emission");
+    let zkir_sha256 = hex(&Sha256::digest(zkir.as_bytes()));
+    assert_eq!(zkir.len(), A102_FROZEN_ZKIR_BYTES);
+    assert_eq!(zkir_sha256, A102_FROZEN_ZKIR_SHA256);
+
+    // Refusal-only host joins before native work; verify's exact claim match stays authority.
+    let claim = &bundle.claim;
+    let public_values: Vec<String> = statement.iter().map(u128::to_string).collect();
+    assert_eq!(claim.public_values, public_values);
+    assert_eq!(claim.identity, id);
+    assert_eq!(claim.capacities, layout.record());
+    assert_eq!(claim.layout_hash, hex(&layout.layout_hash));
+    assert_eq!(claim.relation_hash, hex(&layout.relation_hash));
+    assert_eq!(claim.context_hash, layout.context_hex());
+    assert_eq!(claim.zkir_hash, zkir_sha256);
+    assert!((1..=inputs.max_k).contains(&claim.circuit_k), "claim circuit_k exceeds the explicit cap");
+    let proof_hex = &bundle.proof_hex;
+    assert!(
+        !proof_hex.is_empty()
+            && proof_hex.len() % 2 == 0
+            && proof_hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
+        "proof hex must be nonempty even-length lowercase"
+    );
+
+    let reconstructed = serde_json::json!({
+        "source_identity": id,
+        "capacities": layout.record(),
+        "profile": PROFILE,
+        "layout_hash": hex(&layout.layout_hash),
+        "relation_hash": hex(&layout.relation_hash),
+        "context_hash": layout.context_hex(),
+        "program_l4": {"bytes": program_bytes.len(), "sha256": program_sha256},
+        "zkir": {"bytes": zkir.len(), "sha256": zkir_sha256},
+        "statement_lanes": statement.len(),
+        "fixture": {
+            "entry": "Literal(List([9]))",
+            "initial_fuel_dec": "50",
+            "snapshot_stack_limit": 12,
+            "capacity_stack_limit_dec": caps.stack_limit.to_string(),
+            "selected_expr_id": produced.selected_expr_id,
+        },
+    });
+    let bundle_input = serde_json::json!({
+        "path": inputs.bundle_path.display().to_string(),
+        "bytes": bundle_text.len(),
+        "sha256": bundle_sha256,
+        "read_cap_bytes": A102_BUNDLE_READ_CAP,
+        "permissions_readonly": permissions_readonly,
+        "identity_role": "frozen input byte identity, not a semantic golden; opened read-only, never rewritten or copied",
+        "claim_circuit_k": claim.circuit_k,
+        "proof_hex_chars": proof_hex.len(),
+    });
+    let inputs_json = serde_json::json!({
+        "srs_dir": inputs.srs_dir.display().to_string(),
+        "max_k": inputs.max_k,
+    });
+
+    let out = inputs.output_dir.as_path();
+    fs::create_dir(out).unwrap_or_else(|e| panic!("failed to create {}: {e}", out.display()));
+    sync_dir(out.parent().expect("absolute output directory has a parent"));
+    let setup = serde_json::json!({
+        "schema": A102_VERIFY_SCHEMA,
+        "record": "input-identity-before-native-call; not a result",
+        "bundle_input": bundle_input,
+        "reconstructed": reconstructed,
+        "inputs": inputs_json,
+        "planned_consumer_calls": {"verify_literal_transition": 1, "prove_literal_transition": 0, "check_literal_transition": 0, "extra_ir_k": 0, "tampered_checks": 0},
+        "open_obligations": OPEN_OBLIGATIONS,
+    });
+    let setup_bytes = serde_json::to_vec_pretty(&setup).expect("serialize verify-only input record");
+    let setup_sha256 = write_synced_artifact(out, A102_VERIFY_INPUT_FILENAME, &setup_bytes);
+
+    let options = ProofOptions { params_dir: inputs.srs_dir.clone(), max_k: inputs.max_k };
+    // Sole native call. No retry, fallback or cap change on failure.
+    let verification = verify_literal_transition(&produced.request, &bundle, &options)
+        .unwrap_or_else(|e| {
+            persist_a102_verify_error(out, &format!("{e:?}"));
+            panic!("verify_literal_transition failed: {e:?}")
+        });
+    assert_eq!(verification.qualification, "local-native-a102-literal-transition-proof-unqualified");
+    assert_eq!(verification.context_hash, layout.context_hex());
+    assert_eq!(verification.zkir_hash, zkir_sha256);
+    assert_eq!(verification.circuit_k, claim.circuit_k);
+    assert!((1..=inputs.max_k).contains(&verification.circuit_k));
+    assert_eq!(verification.proof_bytes as usize * 2, proof_hex.len());
+    assert_eq!(verification.open_obligations, OPEN_OBLIGATIONS.to_vec());
+
+    let report = serde_json::json!({
+        "schema": A102_VERIFY_SCHEMA,
+        "record": "verify-only-returned-ok",
+        "verify_returned_ok": true,
+        "qualification": "independently reconstructed local native verify of a frozen A102 bundle; not full soundness, refinement, ledger or stagenet",
+        "verification": verification,
+        "profile": PROFILE,
+        "circuit_k": verification.circuit_k,
+        "bundle_input": bundle_input,
+        "reconstructed": reconstructed,
+        "input_record": {"file": A102_VERIFY_INPUT_FILENAME, "bytes": setup_bytes.len(), "sha256": setup_sha256},
+        "inputs": inputs_json,
+        "binding_lane": "reconstructed privately inside literal_bridge prepare; not returned or persisted",
+        "verifier_key": "not exported: VK stays private inside verify_literal_transition; no extra keygen",
+        "native_calls_by_consumer": {"verify_literal_transition": 1, "prove_literal_transition": 0, "extra_ir_k": 0, "tampered_checks": 0},
+        "resource_observation": "UNESTABLISHED",
+        "open_obligations": OPEN_OBLIGATIONS,
+    });
+    let report_bytes = serde_json::to_vec_pretty(&report).expect("serialize verify-only report");
+    write_synced_artifact(out, A102_VERIFY_REPORT_FILENAME, &report_bytes);
+    println!(
+        "A102 frozen-bundle verify-only returned Ok: k={} proof_bytes={} out={}",
+        verification.circuit_k,
+        verification.proof_bytes,
+        out.display()
+    );
+}
