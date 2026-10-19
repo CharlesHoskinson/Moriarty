@@ -533,10 +533,13 @@ export function createCinemaSubsystem({
     inspectCallback(extractInspectMeta(obj, pinned));
   }
 
+  const _raycastHits = [];
+
   function performRaycast() {
     if (!camera || !scene || !pointerInside || isDragging) return null;
     raycaster.setFromCamera(pointerNDC, camera);
-    const hits = raycaster.intersectObjects(scene.children, true);
+    _raycastHits.length = 0;
+    const hits = raycaster.intersectObjects(scene.children, true, _raycastHits);
     const target = findInspectableTarget(hits);
 
     if (target !== hoveredObject) {
@@ -563,10 +566,36 @@ export function createCinemaSubsystem({
     pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   }
 
+  let activePointerId = null;
+
+  function releaseDragState(pointerIdToRelease = activePointerId) {
+    if (
+      domElement &&
+      domElement.releasePointerCapture &&
+      pointerIdToRelease !== null &&
+      pointerIdToRelease !== undefined
+    ) {
+      try {
+        if (!domElement.hasPointerCapture || domElement.hasPointerCapture(pointerIdToRelease)) {
+          domElement.releasePointerCapture(pointerIdToRelease);
+        }
+      } catch (_) {
+        // Ignore release errors
+      }
+    }
+    activePointerId = null;
+    isDragging = false;
+    isPanning = false;
+    if (domElement) {
+      domElement.style.cursor = hoveredObject ? 'pointer' : 'grab';
+    }
+  }
+
   function onPointerDown(event) {
     if (!domElement) return;
     isDragging = true;
     isPanning = event.button === 2 || event.button === 1 || event.shiftKey;
+    activePointerId = event.pointerId ?? null;
     dragMovedDistance = 0;
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
@@ -584,6 +613,10 @@ export function createCinemaSubsystem({
 
   function onPointerMove(event) {
     pointerInside = true;
+
+    if (isDragging && event.pointerType === 'mouse' && event.buttons === 0) {
+      releaseDragState(event.pointerId);
+    }
 
     if (isDragging) {
       const dx = event.clientX - lastPointerX;
@@ -649,16 +682,8 @@ export function createCinemaSubsystem({
   }
 
   function onPointerUp(event) {
-    if (domElement && domElement.releasePointerCapture && event.pointerId !== undefined) {
-      try {
-        domElement.releasePointerCapture(event.pointerId);
-      } catch (_) {
-        // Ignore release errors
-      }
-    }
     const wasClick = isDragging && dragMovedDistance < 5.0 && event.button === 0;
-    isDragging = false;
-    isPanning = false;
+    releaseDragState(event.pointerId);
 
     if (wasClick) {
       updatePointerNDC(event);
@@ -680,6 +705,16 @@ export function createCinemaSubsystem({
       }
     } else if (domElement) {
       domElement.style.cursor = hoveredObject ? 'pointer' : 'grab';
+    }
+  }
+
+  function onPointerCancel(event) {
+    releaseDragState(event?.pointerId);
+  }
+
+  function onWindowBlur() {
+    if (isDragging) {
+      releaseDragState();
     }
   }
 
@@ -739,9 +774,14 @@ export function createCinemaSubsystem({
     domElement.addEventListener('pointerdown', onPointerDown);
     domElement.addEventListener('pointermove', onPointerMove);
     domElement.addEventListener('pointerup', onPointerUp);
+    domElement.addEventListener('pointercancel', onPointerCancel);
+    domElement.addEventListener('lostpointercapture', onPointerCancel);
     domElement.addEventListener('pointerleave', onPointerLeave);
     domElement.addEventListener('wheel', onWheel, { passive: false });
     domElement.addEventListener('contextmenu', onContextMenu);
+  }
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('blur', onWindowBlur);
   }
 
   function isHierarchyVisible(obj) {
@@ -910,14 +950,26 @@ export function createCinemaSubsystem({
   }
 
   function dispose() {
+    releaseDragState();
     if (domElement && domElement.removeEventListener) {
       domElement.removeEventListener('pointerdown', onPointerDown);
       domElement.removeEventListener('pointermove', onPointerMove);
       domElement.removeEventListener('pointerup', onPointerUp);
+      domElement.removeEventListener('pointercancel', onPointerCancel);
+      domElement.removeEventListener('lostpointercapture', onPointerCancel);
       domElement.removeEventListener('pointerleave', onPointerLeave);
-      domElement.removeEventListener('wheel', onWheel);
+      domElement.removeEventListener('wheel', onWheel, { passive: false });
       domElement.removeEventListener('contextmenu', onContextMenu);
     }
+    if (typeof window !== 'undefined' && window.removeEventListener) {
+      window.removeEventListener('blur', onWindowBlur);
+    }
+    floorRuleProxyCache.clear();
+    _raycastHits.length = 0;
+    hoveredObject = null;
+    pinnedObject = null;
+    lastBoxTarget = null;
+    inspectCallback = null;
     reticle.dispose();
   }
 
