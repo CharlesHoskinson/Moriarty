@@ -1,3 +1,7 @@
+## Narrow native P9 reviewer exception — October19UTC
+
+The user authorizes fresh Gemini or Muse review of the prepared native-build public-cache recovery and exact metadata-issuer items after three Opus interruptions returned no verdict. This changes only those two reviewer routes. See [the scoped assignment](raw/assignments/sherlock-native-p9-reviewer-exception-2026-10-19.md). All other security ownership, source, limits and acceptance requirements remain unchanged.
+
 ## Narrow P8 accounting authoring exception — October19UTC
 
 The user answered **“Sol writes; Opus audits”** for the prepared receipt-bound P8 accounting update. Sol6.1HIGH may implement that update, necessary focused tests and helper hash seal; fresh independent Opus5.5HIGH review is required before executing the candidate. All other security authorship and native resource/correctness/cleanup/acceptance requirements remain unchanged. See [the exact scoped assignment](raw/assignments/sherlock-p8-accounting-sol-authoring-2026-10-19.md).
