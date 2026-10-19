@@ -1,0 +1,231 @@
+--- /home/charl/moriarty-c2-opus55-restored-20261017/rust-core-external-starter-preparation-20261019-a2/run_once.py
++++ /home/charl/moriarty-c2-opus55-restored-20261017/rust-core-external-starter-one600-successor-preparation-20261019/run_once.py
+@@ -1,6 +1,6 @@
+-"""PREPARED ONLY: complete nine-command Core1 journey, existing normal90 controls.
+-
+-Do not import/run as a documentary check. Root selects one actual invocation.
++"""PREPARED ONLY: UNRUN/UNADOPTED proposed one600 plus eight90 Core1 journey.
++
++Do not import/run as a documentary check. Root must adopt the resource proposal and inspect this exact successor first.
+ Frozen original inputs, all commands and financial/wire expectations are retained.
+ """
+ from pathlib import Path
+@@ -16,7 +16,9 @@
+ import time
+ 
+ D = Path(__file__).resolve().parent
+-O = D / 'inputs'
++A = Path('/home/charl/moriarty-c2-opus55-restored-20261017/rust-core-external-starter-preparation-20261019-a2')
++P = Path('/home/charl/moriarty-c2-opus55-restored-20261017/rust-core-external-starter-one600-resource-choice-20261019')
++O = A / 'inputs'
+ K = Path('/home/charl/Moriarty/.worktrees/utxo-guarded-full-prefix-main-20261018')
+ GIT_ENV = {'PATH': '/usr/bin:/bin', 'GIT_CONFIG_NOSYSTEM': '1',
+            'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_SYSTEM': '/dev/null', 'LANG': 'C.UTF-8'}
+@@ -39,8 +41,8 @@
+                                    env=GIT_ENV).decode().strip()
+ 
+ 
+-def run_selected(argv, working_directory, env, cycle, tools, session_records, name):
+-    # Extracted existing normal90 control block; see CONTROL-REUSE.json.
++def run_selected(argv, working_directory, env, cycle, tools, session_records, name, parent_seconds):
++    # Existing terminal-first control block; only the plan-bound parent deadline varies.
+     git_env = GIT_ENV
+     result = {'name': name, 'attemptConsumed': False}
+     child = None
+@@ -49,7 +51,7 @@
+     phase_error = None
+     state = {'pid': None, 'remainingMembers': None, 'directChildReaped': False}
+     start = time.monotonic()
+-    deadline = start + 95
++    deadline = start + parent_seconds
+     with (cycle / 'STDOUT.log').open('wb') as out, (cycle / 'STDERR.log').open('wb') as err:
+         try:
+             child = subprocess.Popen(argv, cwd=working_directory, env=env, stdin=subprocess.DEVNULL,
+@@ -71,7 +73,7 @@
+                     stop_sent = True
+                 except OSError as stop_error:
+                     result['ownedStopError'] = type(stop_error).__name__
+-                child.poll()  # Nonblocking; never add wait/grace after95.
++                child.poll()  # Nonblocking; never add wait/grace after the selected parent deadline.
+                 reaped = child.returncode is not None
+     # Persist actual terminal facts/paths BEFORE stream hashes, census or source postchecks.
+     result.update(finishedAt=now(), exitCode=child.returncode if child is not None else None, wallSeconds=time.monotonic() - start,
+@@ -91,7 +93,7 @@
+         except (OSError, subprocess.TimeoutExpired, AssertionError, ValueError) as error:
+             census_error = type(error).__name__
+     else:
+-        census_error = 'Parent95 exhausted; owned membership unknown; no extra wait.'
++        census_error = f'Parent{parent_seconds} exhausted; owned membership unknown; no extra wait.'
+     if child is not None and members != [] and not stop_sent:
+         try:
+             os.killpg(child.pid, signal.SIGKILL)
+@@ -115,18 +117,48 @@
+     args = parser.parse_args()
+     assert sha(D / 'BOUND-CANDIDATE.json') == args.binding_sha
+     binding = json.loads((D / 'BOUND-CANDIDATE.json').read_bytes())
+-    plan = json.loads((O / 'CHECK-PLAN.json').read_bytes())
++    references = json.loads((D / 'INPUT-REFERENCES.json').read_bytes())
++    for ref in references['files']:
++        p = Path(ref['path'])
++        assert p.stat().st_size == ref['bytes'] and sha(p) == ref['sha256'], str(p)
++    plan = json.loads((P / 'PROPOSED-CHECK-PLAN.json').read_bytes())
+     freeze = json.loads((O / 'EXPECTED-FREEZE.json').read_bytes())
+     source = json.loads((O / 'WORKSPACE-EXPORT-PINS.json').read_bytes())
+     context = json.loads((O / 'SOURCE-PINS.json').read_bytes())
+     tools = json.loads((O / 'TOOL-PINS.json').read_bytes())['tools']
+     reg = json.loads((O / 'REGISTRY-SOURCE-PINS.json').read_bytes())
+     closure = json.loads((O / 'MANIFEST-CLOSURE.json').read_bytes())
+-    membership = json.loads((D / 'INPUT-MEMBERSHIP.json').read_bytes())
++    membership = json.loads((A / 'INPUT-MEMBERSHIP.json').read_bytes())
++    rebinding = json.loads((P / 'PATH-REBINDING.json').read_bytes())
++    overlay = {row['expectationPath']: P / row['after']['path'] for row in rebinding['expectedFileChanges']}
+     ROOT = Path(plan['ownedRoot'])
+-    C = D / 'actual-a1'
++    C = Path(plan['actualOutput'])
+     allowed_manifests = {str((Path(pkg['sourceRoot']) / 'Cargo.toml').resolve()) for pkg in reg['packages']} | {
+         str((ROOT / 'source/crates' / n / 'Cargo.toml').resolve()) for n in closure['localNormalClosure']}
++
++    def expectation(template, name):
++        relative = f'expected/{template}/{name}'
++        return overlay.get(relative, O / relative)
++
++    def verify_expectations():
++        # Keep all original freeze bodies immutable; only four transport wires differ.
++        for row in freeze['files']:
++            p = O / row['path']
++            assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256'], row['path']
++        count = 0
++        for row in rebinding['expectedFileChanges']:
++            before, after = O / row['expectationPath'], P / row['after']['path']
++            b = before.read_bytes()
++            assert sha(before) == row['before']['sha256'] and len(b) == row['before']['bytes']
++            assert b.count(rebinding['oldRoot'].encode()) == row['occurrences']
++            assert after.read_bytes() == b.replace(rebinding['oldRoot'].encode(), rebinding['newRoot'].encode())
++            assert sha(after) == row['after']['sha256'] and after.stat().st_size == row['after']['bytes']
++            count += row['occurrences']
++        assert len(overlay) == 4 and count == 8 and len(freeze['files']) == 24
++        assert {r['path'] for r in rebinding['unchangedExpectedFiles']} == {r['path'] for r in freeze['files']} - set(overlay)
++        for row in rebinding['unchangedExpectedFiles']:
++            p = O / row['path']
++            assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256'], row['path']
+ 
+     def configs():
+         paths = set()
+@@ -144,6 +176,9 @@
+         assert sha(Path(__file__).resolve()) == binding['driverSha256']
+         for name, digest in binding['controlHashes'].items():
+             assert sha(D / name) == digest, name
++        for ref in references['files']:
++            p = Path(ref['path'])
++            assert p.stat().st_size == ref['bytes'] and sha(p) == ref['sha256'], str(p)
+         for row in membership['files']:
+             p = O / row['path']
+             assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256'], str(p)
+@@ -164,8 +199,7 @@
+                 p = ROOT / 'source' / row['path']
+                 assert p.stat().st_size == row['bytes'] and sha(p) == row['sha256'], str(p)
+             assert not (ROOT / 'source/.git').exists() and not (ROOT / 'source/.moriarty-dev').exists()
+-        for row in freeze['files']:
+-            assert sha(O / row['path']) == row['sha256'], row['path']
++        verify_expectations()
+         for pkg in reg['packages']:
+             assert sha(Path(pkg['archivePath'])) == pkg['archiveSha256'], pkg['archivePath']
+             for row in pkg['files']:
+@@ -178,9 +212,13 @@
+                 'exportedSourceVerified': exported, 'absentConfigs': configs()}
+ 
+     # Preparation never invokes this entry point. Actual root-selected preflight consumes no product attempt.
+-    assert not C.exists() and not ROOT.exists()
++    assert not C.exists() and not C.is_symlink() and not ROOT.exists() and not ROOT.is_symlink()
++    assert not Path(plan['oneInitiallyAbsentColdTarget']).exists() and not Path(plan['oneInitiallyAbsentColdTarget']).is_symlink()
+     assert len(plan['steps']) == 9 and len(plan['environmentExact13']) == 13
+-    assert all(s['wallSeconds'] == 90 and s['killGraceSeconds'] == 5 and s['attempts'] == 1 for s in plan['steps'])
++    assert [s['wallSeconds'] for s in plan['steps']] == [600] + [90] * 8
++    assert [s['parentMaximumSeconds'] for s in plan['steps']] == [605] + [95] * 8
++    assert all(s['killGraceSeconds'] == 5 and s['attempts'] == 1 for s in plan['steps'])
++    assert plan['finiteMaximumSelectedCommandWallSeconds'] == 1365
+     before = verify()
+     C.mkdir(exist_ok=False)
+     ROOT.mkdir(exist_ok=False)
+@@ -204,38 +242,36 @@
+                 (ROOT / 'cargo-home' / name).symlink_to(path, target_is_directory=True)
+         env = plan['environmentExact13']
+         write(C / 'START.json', {'startedAt': now(), 'bindingSha256': args.binding_sha,
+-              'planSha256': sha(O / 'CHECK-PLAN.json'), 'expectationsSha256': sha(O / 'EXPECTED-FREEZE.json'),
++              'planSha256': sha(P / 'PROPOSED-CHECK-PLAN.json'), 'expectationsSha256': sha(O / 'EXPECTED-FREEZE.json'),
+               'environment': env, 'absentConfigs': configs(), 'ownedRoot': str(ROOT),
+               'head': plan['head'], 'tree': plan['tree'], 'sourceBefore': before, 'state': 'ONE SHOT; NO RETRIES'})
+         for step in plan['steps']:
+             assert git('rev-parse', 'HEAD') == plan['head'] and not git('status', '--porcelain=v1')
+             for row in source['files']:
+                 assert sha(ROOT / 'source' / row['path']) == row['sha256']
+-            for row in freeze['files']:
+-                assert sha(O / row['path']) == row['sha256']
++            verify_expectations()
+             name = step['name']
+             d = C / name
+             d.mkdir()
+             expected = None
+             if 'expectation' in step:
+                 template, kind = step['expectation'].split('/')
+-                E = O / 'expected' / template
+                 if kind != 'init':
+                     actual_files = {p.name for p in Path(step['cwd']).iterdir()}
+                     assert actual_files == {'README.md', 'source.mori', 'scenario.json', 'mori-tests.json'}
+                     for n in actual_files:
+-                        assert (Path(step['cwd']) / n).read_bytes() == (E / n).read_bytes()
+-                expected = E / kind
++                        assert (Path(step['cwd']) / n).read_bytes() == expectation(template, n).read_bytes()
++                expected = {stream: expectation(template, kind + '.' + stream) for stream in ['stdout', 'stderr']}
+             if 'argvFromFrozenGeneratedReadme' in step:
+-                line = next(l for l in (E / 'README.md').read_text().splitlines() if l.startswith("'") and (' ' + kind + ' ') in l)
++                line = next(l for l in expectation(template, 'README.md').read_text().splitlines() if l.startswith("'") and (' ' + kind + ' ') in l)
+                 cmd = ['/usr/bin/sh', '-c', line]
+             else:
+                 cmd = step['argv']
+-            argv = ['/usr/bin/timeout', '--signal=TERM', '--kill-after=5s', '90s', *cmd]
++            argv = ['/usr/bin/timeout', '--signal=TERM', '--kill-after=5s', f"{step['wallSeconds']}s", *cmd]
+             write(d / 'START.json', {'startedAt': now(), 'argv': argv, 'cwd': step['cwd'], 'environment': env, 'attempt': 1})
+             row = run_selected(argv, Path(step['cwd']), env, d,
+-                               {'ps': next(t for t in tools if t['path'] == '/usr/bin/ps')}, sessions, name)
+-            # The unchanged normal90 block already wrote terminal facts before this work.
++                               {'ps': next(t for t in tools if t['path'] == '/usr/bin/ps')}, sessions, name, step['parentMaximumSeconds'])
++            # The terminal-first control block already wrote terminal facts before this work.
+             row['exit'] = row['exitCode']
+             results.append(row)
+             row['stdoutSha256'] = sha(d / 'STDOUT.log')
+@@ -243,13 +279,13 @@
+             write(d / 'RESULT.json', row)
+             assert row['exit'] == 0 and row['directChildReaped'] and not row['parentDeadlineExceeded'] and not row['phaseError'] and row['remainingOwnedSessionMembers'] == [], row
+             if expected:
+-                assert (d / 'STDOUT.log').read_bytes() == expected.with_suffix('.stdout').read_bytes()
+-                assert (d / 'STDERR.log').read_bytes() == expected.with_suffix('.stderr').read_bytes()
++                assert (d / 'STDOUT.log').read_bytes() == expected['stdout'].read_bytes()
++                assert (d / 'STDERR.log').read_bytes() == expected['stderr'].read_bytes()
+                 if kind == 'init':
+                     actual_dir = ROOT / 'projects' / template
+                     assert {p.name for p in actual_dir.iterdir()} == {'README.md', 'source.mori', 'scenario.json', 'mori-tests.json'}
+                     for n in ['README.md', 'source.mori', 'scenario.json', 'mori-tests.json']:
+-                        assert (actual_dir / n).read_bytes() == (E / n).read_bytes()
++                        assert (actual_dir / n).read_bytes() == expectation(template, n).read_bytes()
+             else:
+                 messages = [json.loads(l) for l in (d / 'STDOUT.log').read_text().splitlines() if l.strip()]
+                 artifacts = [v for v in messages if v.get('reason') == 'compiler-artifact']
+@@ -265,7 +301,7 @@
+                 project = ROOT / 'projects' / template
+                 assert {p.name for p in project.iterdir()} == {'README.md', 'source.mori', 'scenario.json', 'mori-tests.json'}
+                 for n in ['README.md', 'source.mori', 'scenario.json', 'mori-tests.json']:
+-                    assert (project / n).read_bytes() == (E / n).read_bytes()
++                    assert (project / n).read_bytes() == expectation(template, n).read_bytes()
+                 write(d / 'PROJECT-BYTES.json', {'files': [{'name': n, 'sha256': sha(project / n), 'bytes': (project / n).stat().st_size} for n in sorted(p.name for p in project.iterdir())], 'completeExpectedEquality': True})
+             row['expectationsMatched'] = True
+             write(d / 'RESULT.json', row)
+@@ -276,7 +312,7 @@
+         raise
+     finally:
+         # No additional product work, wait, census deadline or cleanup grace is allocated.
+-        # Each owned session was censused within its original parent95 window. A stop
++        # Each owned session was censused within its selected plan-bound parent window. A stop
+         # after nonempty/unknown census does not turn that observation into empty.
+         try:
+             after = verify(exported=exported)

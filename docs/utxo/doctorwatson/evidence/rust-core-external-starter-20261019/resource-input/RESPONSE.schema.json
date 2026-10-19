@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decision": {"type": "string", "enum": ["accept", "revise", "reject"]},
+    "resourceAndEffectAssessment": {"type": "string"},
+    "changesIfRevised": {"type": ["string", "null"]},
+    "wholeRead": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string"},
+          "sha256": {"type": "string"},
+          "complete": {"type": "boolean"}
+        },
+        "required": ["path", "sha256", "complete"]
+      }
+    },
+    "unreadOrPartial": {"type": "array", "items": {"type": "string"}},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file": {"type": "string"},
+          "location": {"type": "string"},
+          "finding": {"type": "string"}
+        },
+        "required": ["file", "location", "finding"]
+      }
+    },
+    "caveats": {"type": "array", "items": {"type": "string"}},
+    "requestedIdentity": {"type": ["string", "null"]},
+    "reportedIdentity": {"type": ["string", "null"]},
+    "identityCaveat": {"type": "string"}
+  },
+  "required": ["decision", "resourceAndEffectAssessment", "changesIfRevised", "wholeRead", "unreadOrPartial", "evidence", "caveats", "requestedIdentity", "reportedIdentity", "identityCaveat"]
+}

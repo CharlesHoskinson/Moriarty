@@ -1,0 +1,425 @@
+{
+  "schema": "moriarty-fresh-input-only-financial-oracle/1",
+  "language": "moriarty/1",
+  "semantics": "moriarty-core/1",
+  "template": "repay",
+  "action": "repay",
+  "source_input_binding": {
+    "source_file": "/home/charl/moriarty-c2-opus55-restored-20261017/clean-devex-starter-inputs/repay.mori",
+    "source_sha256": "f619527f31a8d535e9a5708971345e4844752c1dbb5356e326f0a079f9fe37be",
+    "scenario_file": "/home/charl/moriarty-c2-opus55-restored-20261017/clean-devex-starter-inputs/repay.scenario.json",
+    "scenario_sha256": "993c5dcc41da52330259c93572ec14641b638e95b7c7d34e22fa5e8db2a7f9ad",
+    "input_amount": "30"
+  },
+  "predicted_status": "successful local Core/1 action under the supplied complete scenario",
+  "pre": {
+    "state": {},
+    "balances": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "100"
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "0"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "100"
+      }
+    ]
+  },
+  "post": {
+    "state": {},
+    "balances": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "70"
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "amount": "30"
+      }
+    ],
+    "liabilities": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "70"
+      }
+    ]
+  },
+  "effects": [
+    {
+      "kind": "Transfer",
+      "asset": {
+        "network": "local",
+        "issuer": "mori-init-example",
+        "reference": "TEST",
+        "scale": 0
+      },
+      "from": "alice",
+      "to": "bob",
+      "amount": "30"
+    },
+    {
+      "kind": "Liability",
+      "name": "debt",
+      "asset": {
+        "network": "local",
+        "issuer": "mori-init-example",
+        "reference": "TEST",
+        "scale": 0
+      },
+      "debtor": "alice",
+      "creditor": "bob",
+      "before": "100",
+      "after": "70"
+    }
+  ],
+  "ordered_financial_statement_observations": [
+    {
+      "ordinal": 1,
+      "source_statement": "requires amount > 0;",
+      "asserted_value": {
+        "type": "Bool",
+        "value": true
+      },
+      "snapshot": {
+        "state": {},
+        "balances": [
+          {
+            "account": "alice",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "amount": "100"
+          },
+          {
+            "account": "bob",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "amount": "0"
+          }
+        ],
+        "liabilities": [
+          {
+            "name": "debt",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "debtor": "alice",
+            "creditor": "bob",
+            "amount": "100"
+          }
+        ]
+      },
+      "effects": []
+    },
+    {
+      "ordinal": 2,
+      "source_statement": "transfer(TEST, \"alice\", \"bob\", amount);",
+      "snapshot": {
+        "state": {},
+        "balances": [
+          {
+            "account": "alice",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "amount": "70"
+          },
+          {
+            "account": "bob",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "amount": "30"
+          }
+        ],
+        "liabilities": [
+          {
+            "name": "debt",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "debtor": "alice",
+            "creditor": "bob",
+            "amount": "100"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "asset": {
+            "network": "local",
+            "issuer": "mori-init-example",
+            "reference": "TEST",
+            "scale": 0
+          },
+          "from": "alice",
+          "to": "bob",
+          "amount": "30"
+        }
+      ]
+    },
+    {
+      "ordinal": 3,
+      "source_statement": "discharge(\"debt\", amount);",
+      "snapshot": {
+        "state": {},
+        "balances": [
+          {
+            "account": "alice",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "amount": "70"
+          },
+          {
+            "account": "bob",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "amount": "30"
+          }
+        ],
+        "liabilities": [
+          {
+            "name": "debt",
+            "asset": {
+              "network": "local",
+              "issuer": "mori-init-example",
+              "reference": "TEST",
+              "scale": 0
+            },
+            "debtor": "alice",
+            "creditor": "bob",
+            "amount": "70"
+          }
+        ]
+      },
+      "effects": [
+        {
+          "kind": "Liability",
+          "name": "debt",
+          "asset": {
+            "network": "local",
+            "issuer": "mori-init-example",
+            "reference": "TEST",
+            "scale": 0
+          },
+          "debtor": "alice",
+          "creditor": "bob",
+          "before": "100",
+          "after": "70"
+        }
+      ]
+    }
+  ],
+  "complete_frame": {
+    "state_names": [],
+    "balance_domain": [
+      {
+        "account": "alice",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        }
+      },
+      {
+        "account": "bob",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        }
+      }
+    ],
+    "liability_names": [
+      "debt"
+    ],
+    "balance_rows_exact": true,
+    "liability_rows_exact": true,
+    "present_zero_balance_rows_pre": [
+      "bob"
+    ],
+    "present_zero_balance_rows_post": [],
+    "present_zero_liability_rows_pre": [],
+    "present_zero_liability_rows_post": [],
+    "absent_liabilities": "all names other than debt",
+    "absent_other_balances": true,
+    "unmentioned_state_rows": [],
+    "other_effects": [],
+    "mint_burn_effects": [],
+    "reserve_or_custody_rows": [],
+    "reserve_dust_rows": []
+  },
+  "financial_accounting": {
+    "asset": {
+      "network": "local",
+      "issuer": "mori-init-example",
+      "reference": "TEST",
+      "scale": 0
+    },
+    "opening_total_balance": "100",
+    "closing_total_balance": "100",
+    "alice": {
+      "opening_balance": "100",
+      "gross_debit": "30",
+      "gross_transfer_debit": "30",
+      "fee_debit": "0",
+      "gross_receipt": "0",
+      "net_change": "-30",
+      "closing_balance": "70"
+    },
+    "bob": {
+      "opening_balance": "0",
+      "gross_debit": "0",
+      "fee_debit": "0",
+      "gross_receipt": "30",
+      "net_receipt": "30",
+      "net_change": "30",
+      "closing_balance": "30"
+    },
+    "explicit_fee_total": "0",
+    "fee_recipients": [],
+    "liability_evolution": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "opening": "100",
+        "created": "0",
+        "accrued": "0",
+        "discharged": "30",
+        "closing": "70",
+        "present_after": true
+      }
+    ],
+    "residual_duties": [
+      {
+        "name": "debt",
+        "asset": {
+          "network": "local",
+          "issuer": "mori-init-example",
+          "reference": "TEST",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob",
+        "amount": "70"
+      }
+    ],
+    "scope": "Atomic units and explicit local Core/1 accounting only. No target/network economic fee is inferred."
+  },
+  "logical_work": {
+    "assertion_status": "derived from pinned normative primitive-meter prose",
+    "profile": "moriarty-reference-logical-cost/1",
+    "used": "8",
+    "statement_costs": [
+      {
+        "ordinal": 1,
+        "statement": "1",
+        "uncached_expression_nodes": "3",
+        "total": "4"
+      },
+      {
+        "ordinal": 2,
+        "statement": "1",
+        "uncached_expression_nodes": "1",
+        "total": "2"
+      },
+      {
+        "ordinal": 3,
+        "statement": "1",
+        "uncached_expression_nodes": "1",
+        "total": "2"
+      }
+    ],
+    "cap": null,
+    "cap_status": "unasserted; packet provides no cap; metered success requires cap >= used",
+    "unmetered_execution_cost_field": "unasserted; this is a separate logical prediction"
+  },
+  "limits": [
+    "This payload predicts pre/post/effects and per-statement financial snapshots, not exact complete Execution wire bytes, ExprId allocation, trace value nullability or CLI rendering.",
+    "No SDK, evaluator, parser, compiler, consumer, Cargo, proof or ledger execution was used to derive these values.",
+    "No native DUST, service fee, recovery reservation, wall-clock, allocation, compiled circuit cost, target qualification or deployment outcome is asserted."
+  ]
+}

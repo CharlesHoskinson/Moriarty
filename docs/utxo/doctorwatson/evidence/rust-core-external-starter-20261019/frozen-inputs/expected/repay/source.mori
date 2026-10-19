@@ -1,0 +1,10 @@
+language "moriarty/1";
+agreement StarterRepay {
+  asset TEST = { network: "local", issuer: "mori-init-example", reference: "TEST", scale: 0 };
+  action seed(amount: UInt) { liability("debt", TEST, "alice", "bob", amount); }
+  action repay(amount: UInt) {
+    requires amount > 0;
+    transfer(TEST, "alice", "bob", amount);
+    discharge("debt", amount);
+  }
+}
