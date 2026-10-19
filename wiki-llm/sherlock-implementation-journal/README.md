@@ -2,6 +2,8 @@
 
 This journal records implementation findings, design decisions, short rationales, measured results and open questions as Sherlock develops. It is a working narrative in `wiki-llm/`, separate from the canonical `wiki/` source/claim ledger and the acceptance roadmap. It contains no private reasoning transcripts or private-fork material.
 
+- [October19: body-typed nominal normal Core and selected handler](2026-10-19-nominal-body-typed-handler.md) — actual24-operation qualification; whole backend-linked executable/native/target work remains open.
+
 - [October 16: complete observations and the first implementation comparisons](2026-10-16.md)
 - [Implementation plan](../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md)
 - [Correctness loop](../../docs/SHERLOCK-CORRECTNESS-LOOP.md)

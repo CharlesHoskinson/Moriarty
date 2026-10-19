@@ -10,6 +10,8 @@ pub const ARTIFACT_FORMAT: &str = "sherlock-host-artifact/2";
 
 /// Selection on the already-selected Sherlock compile route only.
 /// Omitted source profile keeps Core action selection and never tries draft parsing.
+// NominalEntry selects grammar; the caller retains the explicit source profile
+// to distinguish structural preparation from body-typed preparation.
 pub enum SourceSelection<'a> { CoreAction(&'a str), DraftEntry, NominalEntry }
 #[derive(Debug, PartialEq, Eq)]
 pub enum SelectionError { UnknownProfile, MissingAction, MissingEntry, ConflictingSelection }
@@ -26,7 +28,8 @@ pub fn select_source<'a>(profile: Option<&str>, action: Option<&'a str>, entry: 
             if !entry { return Err(SelectionError::MissingEntry); }
             Ok(SourceSelection::DraftEntry)
         }
-        Some(crate::sherlock_nominal_source::NOMINAL_LANGUAGE) => {
+        Some(crate::sherlock_nominal_source::NOMINAL_LANGUAGE)
+        | Some(super::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE) => {
             if action.is_some() { return Err(SelectionError::ConflictingSelection); }
             if !entry { return Err(SelectionError::MissingEntry); }
             Ok(SourceSelection::NominalEntry)

@@ -15,6 +15,8 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
         if profile != host::EXECUTION_PROFILE {
             return Err(CompileFailure::input("select", format!("unsupported execution profile: {profile}")));
         }
+        let body_typed_nominal = args.source_profile.as_deref()
+            == Some(host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE);
         let selection = select_source(args.source_profile.as_deref(), args.action.as_deref(), args.entry)
             .map_err(|error| match error {
                 host::draft_contract::SelectionError::MissingAction =>
@@ -47,8 +49,13 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
                 host::compile_host(source, action, &config, &target, args.observe)?),
             SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
                 host::compile_draft_host(source, &config, &target)?),
-            SourceSelection::NominalEntry => SelectedSherlockArtifact::Nominal(
-                host::nominal_command::compile(source, &config, &target)?),
+            SourceSelection::NominalEntry => if body_typed_nominal {
+                SelectedSherlockArtifact::NominalBodyTyped(
+                    host::nominal_body_command::compile(source, &config, &target)?)
+            } else {
+                SelectedSherlockArtifact::Nominal(
+                    host::nominal_command::compile(source, &config, &target)?)
+            },
         };
         let manifest = artifact.manifest()?;
         Ok((artifact, manifest))
@@ -76,6 +83,7 @@ enum SelectedSherlockArtifact {
     Core(mori_core::sherlock_compile_artifact::CompileArtifact),
     Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
     Nominal(serde_json::Value),
+    NominalBodyTyped(serde_json::Value),
 }
 impl SelectedSherlockArtifact {
     fn failure(&self, stage: &'static str, message: impl Into<String>)
@@ -83,7 +91,16 @@ impl SelectedSherlockArtifact {
     {
         match self { Self::Core(value) => value.failure(stage, message),
             Self::Draft(value) => value.failure(stage, message),
-            Self::Nominal(_) => mori_core::sherlock_compile_artifact::CompileFailure::input(stage, message) }
+            Self::Nominal(_) => mori_core::sherlock_compile_artifact::CompileFailure::input(stage, message),
+            // This private variant is constructed only after the actual typed
+            // command succeeds. Retain its observed body disposition on later
+            // serialization/publication errors; runtime completion stays false.
+            Self::NominalBodyTyped(value) => mori_core::sherlock_compile_artifact::CompileFailure {
+                stage, actual_error: serde_json::json!({"message": message.into(),
+                    "source_profile": value["source_profile"],
+                    "body_typechecking": value["body_typechecking"]}),
+                evaluation_performed: false, events_forwarded: "0".into(), completed: false,
+            } }
     }
     fn manifest(&self) -> Result<String, mori_core::sherlock_compile_artifact::CompileFailure> {
         match self {
@@ -91,7 +108,7 @@ impl SelectedSherlockArtifact {
                 .map_err(|error| value.failure("observation", error.to_string())),
             Self::Draft(value) => serde_json::to_string_pretty(value)
                 .map_err(|error| value.failure("serialization", error.to_string())),
-            Self::Nominal(value) => serde_json::to_string_pretty(value)
+            Self::Nominal(value) | Self::NominalBodyTyped(value) => serde_json::to_string_pretty(value)
                 .map_err(|error| self.failure("serialization", error.to_string())),
         }
     }

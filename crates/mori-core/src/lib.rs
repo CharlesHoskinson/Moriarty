@@ -55,3 +55,7 @@ pub mod sherlock_word_lowering;
 // Explicit nominal text source -> existing owner type preparation, no evaluation.
 #[path = "sherlock/nominal_source.rs"]
 pub mod sherlock_nominal_source;
+
+// Additive owner-prepared nominal body typing proposal; no public path adoption.
+#[path = "sherlock/nominal_body_typecheck.rs"]
+pub mod sherlock_nominal_body_types;
