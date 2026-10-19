@@ -1,0 +1,114 @@
+# H2 Core Bool `_scalar` Review: Fresh Non-Author, No Tools
+
+## 1. Body coverage and limitations
+
+| Body | Content | Read | Notes |
+|---|---|---|---|
+| 1 | Candidate consumer, 12405 B | Complete | Every function and all callers read. |
+| 2 | New test, 943 B | Complete | 24 lines. |
+| 3 | H1 preimage, 12301 B | Complete | Compared section by section against Body 1. |
+| 4 | `quint_observations.py`, 16774 B | Complete | Import closure. |
+| 5 | Rust `UInt`/`Type`/`Value` serde | Complete | |
+| 6 | Author final response | Complete | |
+| 7, 8 | Author receipt and public result | Complete | Metadata only. |
+| 9 | Materialization proof | Complete | Claims only. |
+| 10, 11 | Delta and inverse diffs | Complete | |
+| 12 | Import-adaptation diff | Complete | |
+| 13 | Source freeze | Complete | |
+| 14 | Proposed operation | Complete | |
+| 15 | Review contract | Complete | |
+
+All 15 BEGIN/END pairs and the final terminator are present. I saw no clipping.
+
+Limitations:
+- I computed no hashes or byte counts with tools. Hashes in the bodies are treated as labels, not as proof that a file was read.
+- Two checks were done by hand, and both are consistent:
+  - The added lines total 45 + 59 = 104 B, which equals 12405 − 12301.
+  - The removed import prefix `from models.sherlock.qa ` is 24 B, which equals 967 − 943.
+- **ABSTAIN** on the content of these unsupplied files:
+  - `AUTHOR-LITERAL-TEST.py.txt` (the diff form in Body 6 was read instead)
+  - `test_core2_await_uint_h1.py`, so I cannot independently confirm the H1 import form
+  - `PROMPT.proposed.txt`
+  - Any earlier decoder version, so I cannot independently confirm "decoderUnchanged"
+- The Python version of `/usr/bin/python3` is not stated.
+
+## 2. Source verdict: ACCEPT, scoped to H2 Core Bool `_scalar` only
+
+**Diff identity.** Comparing Body 1 to Body 3 by eye, the only difference is the two guard lines in the Bool branch. Every other function is text-identical, including `_uint`, every caller, `quint_typed_wire`, `Q_NULLARY` and `main`. The hunk line numbers check out against the preimage: `def _scalar` is line 39 and the `UInt` check is line 41. Both the author's `-39,7` header and the selected `-41,6` header are correct.
+
+**Semantics against Core serde (Body 5).**
+- `Value` is adjacently tagged with `deny_unknown_fields`, and `Bool(bool)` is the Bool variant. serde_json accepts only a JSON `true` or `false` for that variant.
+- Python's `json.loads` maps exactly those two values to `bool`.
+- `type(x) is bool` is exact, and Python does not allow subclassing `bool`. So the guard accepts exactly what the Rust side accepts and rejects everything else: `int`, `float` (including NaN and Infinity from `json.loads`), `str`, `None`, `list` and `dict`.
+- This fixes a real defect in the preimage. Because `1 == True` in Python, the old code passed through `{'BoolValue': 1}`, and that value compares equal to `{'BoolValue': True}`.
+
+**Ordering is unchanged.** `_row` still raises its shape error first. The `UInt` branch and the unknown-type `raise` behave exactly as before. The returned object is the input `bool` itself.
+
+**Idiom.** The guard matches the style of `_uint` (`type(value) is not str`) and the decoder's `tag == 'BoolValue' and type(value) is bool`. Its error message also follows the existing style.
+
+**All callers.** Every caller of `_scalar` now gets strict Bool checking:
+- `_named` (frame captures, continuation captures, prefix captures)
+- `_snapshot.state` (pre/post/boundary/committed_boundary/step snapshots)
+- `_effect` State `before`/`after` and Emit `value`
+- `_step.value` via `_option`, where `None` becomes `'NoScalar'` before `_scalar` is called
+
+Real Core serde output never contains a non-bool Bool payload, so genuine producer output should behave the same as before. Full caller compatibility remains **UNESTABLISHED**, as the scope already states.
+
+### Mandatory findings
+
+None of these blocks this slice.
+
+- **F1 (scope).** The Quint path (`quint_typed_wire`) passes `BoolValue` payloads through without a type check. This is part of the still-open H2 Quint work.
+- **F2 (pre-existing, H4).** `_row` accepts any iterable whose set of elements equals `{'type', 'value'}`. A list `['type', 'value']` therefore reaches `value['type']` and raises `TypeError` instead of `ValueError`. Similarly, `_input_decl` raises `KeyError`. Both are untouched by this change.
+- **F3 (pre-existing, H4/H5).** Duplicate-key JSON is resolved last-wins by `json.loads`, which may not match serde's duplicate-field handling. This is untouched.
+
+## 3. Test discrimination
+
+**`test_core_bool_exact_and_uint_preserved`**
+- This test preserves behaviour; it does not discriminate. It passes on both the preimage and the candidate.
+- `assertIs` is the right check: it catches an `int` posing as a `bool`, which `assertEqual` would not.
+- The `UInt` cases (2¹²⁸−1 and `'0'`) correctly exercise the unchanged `_uint` through the current `_scalar`. This is not an H1 replay.
+
+**`test_core_bool_nonbool_payload_rejected`**
+- This test discriminates.
+- On the preimage, every payload returns `{'BoolValue': payload}` and no exception is raised, so all 8 subtests fail.
+- On the candidate, `_row` passes (the keys are exact) and `type == 'Bool'`. The only possible `ValueError` therefore comes from the new guard, so all 8 subtests pass.
+
+**F4 (minor).** The rejection test uses `assertRaises(ValueError)` and does not check the message. For this input set, no other source of `ValueError` is reachable, so discrimination holds. `assertRaisesRegex(..., 'Core Bool')` would make that independent of the input set.
+
+**F5 (independence).** The source and the tests come from the same author (SID 21a2…). The discrimination analysis above is my own; it does not rely on the author's tests. No tests cover integration through the callers, which is consistent with the stated scope.
+
+## 4. Import adaptation
+
+- The literal import `from models.sherlock.qa import …` would fail with the selected cwd, because no `models` package is reachable from there.
+- The adapted import `import core2_await_boundary_wire as wire` resolves through `sys.path[0]`, which is the cwd under `-m`.
+- The adaptation changes only that single line. The assertions and the guard are byte-for-byte the author's.
+- Whether this matches the H1 test's actual import is ABSTAIN, since that file was not supplied. That fact does not matter for whether the operation works.
+
+## 5. Proposed operation: ELIGIBLE, with conditions
+
+**Import closure check.**
+- The cwd contains exactly three entries, and none of them shadows `unittest`, `argparse`, `copy`, `hashlib`, `json` or `pathlib`.
+- `quint_observations` has only stdlib imports. `zip(strict=True)` appears only inside `main()`, so it causes no error at import time.
+- `-B` prevents a `__pycache__` directory from being created.
+
+Conditions, which the operator must meet:
+
+1. **Environment.** The environment must be replaced so it contains exactly `PATH` and `LANG`, not merged into the parent environment. `PYTHONSAFEPATH`, `PYTHONPYCACHEPREFIX`, `PYTHONWARNINGS` and similar variables must be absent. `PYTHONSAFEPATH` in particular would break the import.
+2. **Pins.** Verify the source and Python pins plus the exact three-entry listing (no `__pycache__`) both before and after the run.
+3. **Pass criterion.** Match the method lines in a way that works for the `-v` output format of the installed Python version, which changes at 3.11. The run must show `Ran 2 tests`, `OK`, and no skips or expected failures.
+
+**F6 (recommended hardening, not blocking).** No `-s` flag is given, so user and system site-packages `.pth` files can run code at startup. This applies even with `HOME` unset, because `~` falls back to the passwd entry. Adding `-s` (and `-E`, which costs nothing here) would prevent that. Do not use `-I`, because `-P` would drop the cwd from the path and the import would fail.
+
+## 6. Scope
+
+This review covers only the H2 Core Bool `_scalar` slice. The following remain OPEN:
+- Other H2 fields: advanced, numeric, Error, Quint
+- H3 through H6
+
+These remain UNESTABLISHED:
+- Full consumer and caller compatibility
+- CLI behaviour
+- Real Core2/B06 trace captures
+
+This review makes no claims about H1 replay, financial, program, effects, same-call, admission, native, B or EARS.
