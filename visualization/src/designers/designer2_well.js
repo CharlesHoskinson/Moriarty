@@ -2623,30 +2623,34 @@ export function createWellSubsystem() {
         if (slot.lowerPlaqueMesh) slot.lowerPlaqueMesh.visible = false;
       }
 
-      // Update inspectable metadata & downward-facing underside expression plaque when slot content changes
-      const resolvedEnv = formatSlotEnvCompact(_chronoFramesBuffer, s, activeBindings);
-      const envSummary =
-        resolvedEnv !== 'root' ? resolvedEnv : (slotTel?.envText || resolvedEnv);
-      const plaqueKey = frame
-        ? `${slot.slotCode}|${frame.kind}|${frame.label}|${envSummary}|${isTopOfStack ? 1 : 0}`
-        : `${slot.slotCode}|IDLE`;
+      // O(1) persistent Merkle hash fast-path: skip string formatting when slot & env hash unchanged
+      const slotHash = stepState.functionalDelta?.slotHashes?.[s];
+      if (slotHash === undefined || slotHash !== slot.lastSlotHash) {
+        slot.lastSlotHash = slotHash;
+        const resolvedEnv = formatSlotEnvCompact(_chronoFramesBuffer, s, activeBindings);
+        const envSummary =
+          resolvedEnv !== 'root' ? resolvedEnv : (slotTel?.envText || resolvedEnv);
+        const plaqueKey = frame
+          ? `${slot.slotCode}|${frame.kind}|${frame.label}|${envSummary}`
+          : `${slot.slotCode}|IDLE`;
 
-      if (plaqueKey !== slot.lastPlaqueKey) {
-        slot.lastPlaqueKey = plaqueKey;
-        const copy = formatHalfArcPlaqueCopy(slot.slotCode, frame, envSummary);
-        slot.group.userData.title = copy.title;
-        slot.group.userData.subtitle = copy.subtitle;
-        if (frame) {
-          slot.plaqueMat.map = createPlaqueTexture({
-            title: copy.title,
-            subtitle: copy.subtitle,
-            badge: copy.badge,
-            accent: getFrameSemanticCss(frame),
-            dark: true,
-            width: 384,
-            height: 96,
-          });
-          slot.plaqueMat.needsUpdate = true;
+        if (plaqueKey !== slot.lastPlaqueKey) {
+          slot.lastPlaqueKey = plaqueKey;
+          const copy = formatHalfArcPlaqueCopy(slot.slotCode, frame, envSummary);
+          slot.group.userData.title = copy.title;
+          slot.group.userData.subtitle = copy.subtitle;
+          if (frame) {
+            slot.plaqueMat.map = createPlaqueTexture({
+              title: copy.title,
+              subtitle: copy.subtitle,
+              badge: copy.badge,
+              accent: getFrameSemanticCss(frame),
+              dark: true,
+              width: 384,
+              height: 96,
+            });
+            slot.plaqueMat.needsUpdate = true;
+          }
         }
       }
 
@@ -2780,23 +2784,24 @@ export function createWellSubsystem() {
     lowerNeedleStemMesh.position.x = pointerRadialReach - 0.034;
 
     // Central Open Sapphire Live Readout Lens & `outputWave`
-    const coreKey = `${stepIndex}|${rawControlKind}|${activeRuleId}|${isDoneState ? 1 : 0}|${isErrorState ? 1 : 0}`;
+    const lensCopy = formatControlCoreLensCopy(
+      step,
+      activeSectorMeta,
+      isDoneState,
+      isErrorState,
+      stepState.trace?.outcome
+    );
+    const lensAccent = activeSectorMeta.css || CSS_OP_GOLD;
+    const coreKey = `${lensCopy.title}|${lensCopy.subtitle}|${lensCopy.badge}|${lensAccent}`;
     if (coreKey !== lastCorePlaqueKey) {
       lastCorePlaqueKey = coreKey;
-      const lensCopy = formatControlCoreLensCopy(
-        step,
-        activeSectorMeta,
-        isDoneState,
-        isErrorState,
-        stepState.trace?.outcome
-      );
       controlCoreGroup.userData.title = lensCopy.title;
       controlCoreGroup.userData.subtitle = `${lensCopy.badge} · ${lensCopy.subtitle}`;
       lensPlaqueMat.map = createPlaqueTexture({
         title: lensCopy.title,
         subtitle: lensCopy.subtitle,
         badge: lensCopy.badge,
-        accent: activeSectorMeta.css || CSS_OP_GOLD,
+        accent: lensAccent,
         dark: true,
         width: 384,
         height: 108,
