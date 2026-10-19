@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Sherlock — The execution engine at the center of Moriarty</title>
   <meta name="description" content="Sherlock is the execution engine at the center of Moriarty: a small computer whose internal workings are intentionally visible so every step can be accounted for and proved." />
   <link rel="icon" href="data:," />
@@ -118,9 +118,33 @@
 
       <!-- CENTER FOCAL PANE: 3D Chip Viewport, Quiet Stage Caption Bar, Transport & M3 Segmented Camera Bar -->
       <section class="stage-column" aria-label="3D Interpreter Die">
+        <!-- Mobile Stage-Top Horizontal Preset Strip (Synced with #presetStrip) -->
+        <div class="stage-preset-strip" id="stagePresetStrip" role="group" aria-label="Quick preset switcher"></div>
+
         <div class="stage-viewport-card">
           <div class="canvas-holder">
             <canvas id="sherlockCanvas"></canvas>
+          </div>
+
+          <!-- Floating On-Canvas Touch Control Cluster -->
+          <div class="stage-touch-hud" id="stageTouchHud" role="toolbar" aria-label="3D Camera Touch Controls">
+            <button type="button" class="touch-hud-btn" id="touchZoomInBtn" title="Zoom in" aria-label="Zoom in">
+              <span class="touch-hud-glyph" aria-hidden="true">+</span>
+            </button>
+            <button type="button" class="touch-hud-btn" id="touchZoomOutBtn" title="Zoom out" aria-label="Zoom out">
+              <span class="touch-hud-glyph" aria-hidden="true">&minus;</span>
+            </button>
+            <button type="button" class="touch-hud-btn touch-hud-btn-label" id="touchResetViewBtn" title="Reset camera view" aria-label="Reset camera view">
+              Reset
+            </button>
+            <div class="touch-hud-bore-group hidden" id="touchBoreGroup" role="group" aria-label="Interior Bore Elevator">
+              <button type="button" class="touch-hud-btn touch-hud-btn-label" id="touchBoreUpBtn" title="Rise toward 6 Rings" aria-label="Rise toward 6 Rings">
+                &uarr; Rings
+              </button>
+              <button type="button" class="touch-hud-btn touch-hud-btn-label" id="touchBoreDownBtn" title="Descend toward 39-Rule Floor" aria-label="Descend toward 39-Rule Floor">
+                &darr; Floor
+              </button>
+            </div>
           </div>
         </div>
 
@@ -133,7 +157,7 @@
             <span class="stage-equation" id="recursionEquationText">fact(4)</span>
           </div>
           <div class="stage-caption-meta" id="stageInspectText" title="Hover or click any 3D element on the die to inspect">
-            Drag to orbit &middot; Scroll or pinch to zoom
+            Drag to orbit &middot; Pinch to zoom &middot; 2-finger pan
           </div>
         </div>
 
@@ -170,6 +194,7 @@
           <span class="bar-label">Camera view</span>
           <div class="lens-buttons" id="cameraLensBar" role="group" aria-label="Camera views">
             <button type="button" data-preset="overview" class="active" aria-pressed="true">Overview</button>
+            <button type="button" data-preset="quineling" aria-pressed="false">Quineling</button>
             <button type="button" data-preset="interior" aria-pressed="false">Inside Chip</button>
             <button type="button" data-preset="interior_floor" aria-pressed="false">39 Floor</button>
             <button type="button" data-preset="interior_up" aria-pressed="false">Look Up</button>
