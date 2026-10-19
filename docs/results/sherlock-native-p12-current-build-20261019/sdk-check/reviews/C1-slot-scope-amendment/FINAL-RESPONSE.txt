@@ -1,0 +1,89 @@
+# C1 scope review: shared host
+
+## Disposition: **CLARIFIED_ELIGIBLE_SHARED_HOST**, issued as **CONDITION_C1_SCOPED_AMENDMENT**
+
+The pair is eligible on this shared host only under amended C1 (C1′) below. If any C1′ selection gate fails, the selection is **deferred, not consumed**. Nothing has run, so observing again later is not a retry.
+
+## 1. What the original C1 said
+
+The original C1 does not support the narrow reading on its own terms.
+
+- **The literal enumeration is unscoped.** "No other build, test, native or provider process" has no "Root's" or "Moriarty" qualifier.
+- **The current host fails a literal reading.** `cargo-bolero` and its `mysticeti_dag` fuzz target are build and test processes. The three `quint_evaluator` processes are plausibly test or model-checking processes.
+- **"Check slot" pulls the other way.** It points toward Root's own queue, and Root cannot control the host anyway.
+
+So the original text was **ambiguous, and its plain enumeration leans whole-host**. I do not claim it already excluded Fenrir work. C1′ is a narrowing amendment, and the record should say so.
+
+## 2. Why narrowing is acceptable here
+
+Each cap and protection reacts differently to unrelated host load:
+
+| Cap / protection | Sensitivity to unrelated host load |
+|---|---|
+| AS 1 GiB, FSIZE 16 MiB, core 0, 131072 B streams | Per-process or per-file. **Unaffected.** |
+| CPU 8 s | Counts the child's own CPU time, so it is **mostly unaffected**. Residual inflation is possible from SMT-sibling sharing, cache and memory-bandwidth contention, and possibly WSL2 steal accounting. That effect is small and its size is unknown. |
+| Wall 10 s | **Directly contention-sensitive.** This is the real cost of C1′. |
+| Integrity of the ELF copy and outputs | The Fenrir processes run as the same UID, so they *could* touch Moriarty paths. Their cwd and exe are disjoint from the Moriarty tree, and nothing suggests they target it. This is bounded by the hash and file-set checks below, not excluded. |
+| Root's own slot and accounting | This is the core purpose of C1 and **stays strict**. |
+
+Requiring the whole host to be quiet would block selection on work Root cannot stop, without protecting anything the per-process caps don't already cover, except clean wall-time attribution. C1′ gives up that attribution openly rather than pretending it is still there.
+
+## 3. Contention in the current observation
+
+- **Load is 6.12 / 4.12 / 2.89 and rising.** The quint PIDs (2279939 and later) sit close to the last PID 2280280, so they started recently. They may be a short burst, or a sustained run.
+  - A libFuzzer-style target typically uses about one core continuously.
+  - Seven runnable tasks were observed.
+- **CPU count is not in the observation.** Without it, the load figure cannot be judged. On 4 logical CPUs, load 6 means a single-threaded debug child likely queues, and its wall time inflates. On 16 or more, there is ample headroom. **The current snapshot alone does not show C1′ is met.**
+- **Memory is sufficient.** MemAvailable is about 30 GiB against a 1 GiB child cap. The new risk is the host OOM-killer if Fenrir memory grows. That shows up as SIGKILL (exit 137), which looks identical to a timeout KILL or a CPU-hard-limit KILL unless the evidence below is recorded.
+- **Unattributed agent processes.** `claude` 2329 and 3033 and `agy` 1687552 all have cwd `/home/charl`. Names and cwd cannot show what they will spawn later.
+
+## 4. C1′ text (replaces C1; C2–C9, the caps, argv and one-shot fail-stop are unchanged)
+
+**C1′. Exclusive Moriarty slot on a disclosed shared host.**
+
+**(a) Root slot is strict.** At selection, and again immediately before op 01:
+- no Root or Moriarty build, test, native or provider process exists;
+- no process other than Root's controller (and, during an op, its own timeout/prlimit/child chain) has exe or cwd under `/home/charl/Moriarty`;
+- the review98611 and holder80712 terminal-0 states are confirmed.
+
+If this fails before op 00, the selection is deferred. If it fails before op 01, stop: op 01 is UNRUN, nothing is retried, and any later attempt needs a fresh selection review.
+
+**(b) Unrelated host work may continue** if it is disclosed and passes these gates, evaluated once immediately before op 00:
+- `nproc` (online logical CPUs) is recorded, and 1-minute load < `nproc − 1`;
+- MemAvailable ≥ 4 GiB.
+
+If either gate fails or `nproc` is unknown, the selection is deferred. The gates must not be loosened after seeing any result.
+
+**(c) No interference.** Root does not signal, renice or otherwise interfere with non-Moriarty processes, and does not take extra global resource allowance.
+
+## 5. Failure attribution under C1′
+
+A truthful bounded failure is acceptable, and **it consumes the attempt** as C7 says, with no retry and no cap change. Classify a failure only from the evidence:
+
+| Evidence | Classification |
+|---|---|
+| Exit 137, controller wall ≈ 10 s, child CPU well below 8 s | `WALL_KILL_UNDER_DISCLOSED_SHARED_HOST_CONTENTION`. Intrinsic fit is **undetermined**. Not evidence of non-fit, and **not grounds for a retry**. |
+| Child CPU ≈ 8 s | CPU-cap termination. Mostly intrinsic, with a small contention component noted. |
+| SIGKILL with an OOM-killer kernel record | Host OOM, attributed to shared-host pressure. |
+| SIGKILL, kernel log not readable | `OOM attribution unavailable`. Not collapsed into "timeout". |
+| Child rusage lost (e.g. the KILL reaped the grandchild outside Root's controller) | Record it as missing. Do not infer CPU from wall. |
+
+If the run passes, wall time is only an upper bound under contention. Child user+sys CPU is the fit figure to cite.
+
+## 6. Required recording facts
+
+**At selection:**
+1. Literal text: `CONDITION_C1_SCOPED_AMENDMENT`. Original C1 was ambiguous and its literal enumeration was not satisfied on this shared host. C1′ narrows the exclusivity to the Moriarty/Root slot plus the gates above.
+2. UTC timestamp, `nproc`, the full `/proc/loadavg` line, MemTotal, MemAvailable, and SwapTotal/SwapFree. Also `/proc/pressure/cpu` and `/proc/pressure/memory` if present, otherwise "PSI unavailable".
+3. The disclosed process list (PID, comm, exe, cwd, no environment or arguments), including the Fenrir `cargo-bolero`/`mysticeti_dag` and three `quint_evaluator` processes. State which PID, if any, is Root's own controller. Label the other `claude`/`agy` PIDs as unattributed same-UID processes, observed with no exe or cwd in the Moriarty tree.
+4. The C1′(a) assertion with process-scan evidence, and the outcome of both gates.
+
+**Between op 00 and op 01:** a repeated C1′(a) scan, plus loadavg and MemAvailable (for disclosure only, not a gate).
+
+**After op 01, or after a stop:**
+5. Loadavg, MemAvailable and process list again.
+6. Controller start and end timestamps per child, the exit status, child rusage (user, sys, maxrss) or "unavailable", and any OOM-killer kernel record or "kernel log unreadable".
+7. A re-hash of `execution-copy-01` (expected `5d97…bfca`) and its mode. Root's hashing cost is recorded separately, as in C9.
+8. If a failure occurs, the classification from §5.
+
+**Unchanged:** C2–C9; exactly 10 s wall, CPU 8 s, AS 1 GiB, FSIZE 16 MiB, core 0 and 131072 B per stream; serial list-then-one-check; one shot, fail-stop, no retry, no credit; no source, argv, fixture or oracle change.
