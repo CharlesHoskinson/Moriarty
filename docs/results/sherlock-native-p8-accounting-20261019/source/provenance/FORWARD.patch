@@ -1,0 +1,746 @@
+--- beforeimages/cached_current_build.py
++++ afterimages/cached_current_build.py
+@@ -109,32 +109,38 @@
+     'retired_p6_supervisor_usec': 39019876,
+     'retired_p6_phases_usec': 0,
+     'retired_p7_envelope_usec': 187121653,
+     'retired_p7_supervisor_usec': 15162810,
+     'retired_p7_phases_usec': 171958842,
+-    'retired_cached_attempts_envelope_usec': 291195544,
+-    'retired_cached_attempts_supervisor_usec': 119236701,
+-    'retired_cached_attempts_phases_usec': 171958842,
+-    'envelope_usec': 637394256,
+-    'supervisor_usec': 195151731,
+-    'supervisor_cpu_seconds_ceil': 196,
+-    'phases_usec': 442242523,
++    'retired_p8_envelope_usec': 198086463,
++    'retired_p8_supervisor_usec': 12326620,
++    'retired_p8_phases_usec': 185759842,
++    'retired_cached_attempts_envelope_usec': 489282007,
++    'retired_cached_attempts_supervisor_usec': 131563321,
++    'retired_cached_attempts_phases_usec': 357718684,
++    'envelope_usec': 835480719,
++    'supervisor_usec': 207478351,
++    'supervisor_cpu_seconds_ceil': 208,
++    'phases_usec': 628002365,
+     'f_stdout_bytes': 0,
+-    'f_stderr_bytes': 10406,
++    # Count each distinct attempt packet once, including the P8 audit stream.
++    'f_stderr_bytes': 34201,
+     'r3_outer_wall_seconds_ceil': 24,
+     'r3_inner_wall_seconds_ceil': 13,
+     'prior_a0_to_e_wall_seconds_ceil': 40,
+     'p2_refusal_wall_seconds_ceil': 5,
+     'p3_refusal_wall_seconds_ceil': 11,
+     'p4_refusal_wall_seconds_ceil': 15,
+     'p5_refusal_wall_seconds_ceil': 40,
+     'p6_refusal_wall_seconds_ceil': 44,
+     # P7: 135 is the full outer-sequence elapsed ceil (Root-chosen F debit), not a measured F launch wall.
+     'p7_outer_wall_seconds_ceil': 135,
+-    'remaining_total_wall_seconds_max': 6292,
+-    'remaining_f_wall_seconds_max': 2387,
+-    'remaining_supervisor_cpu_seconds_max': 10604,
++    # P8: 133 is the selected conservative outer-sequence ceil, not measured F launch wall.
++    'p8_outer_wall_seconds_ceil': 133,
++    'remaining_total_wall_seconds_max': 6159,
++    'remaining_f_wall_seconds_max': 2254,
++    'remaining_supervisor_cpu_seconds_max': 10592,
+     'gross_supervisor_cpu_seconds_max': 10800,
+ }
+ 
+ WORKSPACE_CRATE_PREFIXES = (
+     'mori-ast-',
+@@ -1035,11 +1041,11 @@
+     """Delegate directly to guard._validate_tier_grant so production and helper share one implementation."""
+     return guard._validate_tier_grant(c, records, tier)
+ 
+ 
+ def enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=POST_CLEANUP_RESULT_PATH, at_start=True):
+-    """Enforce post-r3 + retired P2/P3 + retired P4 + retired P5 + retired P6 remaining wall/CPU ceilings and carry forward historical debits."""
++    """Carry forward post-r3 and retired P2 through P8 debits once, enforcing remaining ceilings."""
+     debits = HISTORICAL_POST_R3_DEBITS
+     if cleanup_receipt_file is not None:
+         cleanup_p = Path(cleanup_receipt_file)
+         guard.regular(cleanup_p)
+         guard.need(guard.digest(cleanup_p) == POST_CLEANUP_RESULT_SHA256, 'post-cleanup receipt SHA-256 mismatch')
+@@ -1268,81 +1274,97 @@
+             and p6_steps[1].get('streams', [{}])[0].get('bytes') == P6_TEARDOWN_STDOUT_BYTES,
+             'P6 preserve/cleanup receipt status invalid',
+         )
+         # P7 Cargo did start: bind its exact receipts; its independent E/S/P are debited exactly once.
+         _verify_p7_receipts(debits, guard)
++        # P8 remains failed and unaccepted; its consumed resources cannot be refunded.
++        _verify_p8_receipts(debits, guard)
+ 
+     guard.need(
+         debits['retired_cached_attempts_envelope_usec']
+         == (
+             debits['retired_p2_p3_envelope_usec']
+             + debits['retired_p4_envelope_usec']
+             + debits['retired_p5_envelope_usec']
+             + debits['retired_p6_envelope_usec']
+             + debits['retired_p7_envelope_usec']
++            + debits['retired_p8_envelope_usec']
+         )
+         and debits['retired_cached_attempts_supervisor_usec']
+         == (
+             debits['retired_p2_p3_supervisor_usec']
+             + debits['retired_p4_supervisor_usec']
+             + debits['retired_p5_supervisor_usec']
+             + debits['retired_p6_supervisor_usec']
+             + debits['retired_p7_supervisor_usec']
++            + debits['retired_p8_supervisor_usec']
+         )
+         and debits['retired_cached_attempts_phases_usec']
+         == (
+             debits['retired_p2_p3_phases_usec']
+             + debits['retired_p4_phases_usec']
+             + debits['retired_p5_phases_usec']
+             + debits['retired_p6_phases_usec']
+             + debits['retired_p7_phases_usec']
++            + debits['retired_p8_phases_usec']
+         )
+         and debits['envelope_usec'] == debits['prior_post_r3_envelope_usec'] + debits['retired_cached_attempts_envelope_usec']
+         and debits['supervisor_usec'] == debits['prior_post_r3_supervisor_usec'] + debits['retired_cached_attempts_supervisor_usec']
+         and debits['phases_usec'] == debits['prior_post_r3_phases_usec'] + debits['retired_cached_attempts_phases_usec']
+-        # Post-P7 totals are the frozen post-P6 totals plus P7 exactly once; E is never recomputed as S+P.
+-        and debits['envelope_usec'] - debits['retired_p7_envelope_usec'] == 450272603
+-        and debits['supervisor_usec'] - debits['retired_p7_supervisor_usec'] == 179988921
+-        and debits['phases_usec'] - debits['retired_p7_phases_usec'] == 270283681
+-        and debits['envelope_usec'] == 637394256
+-        and debits['supervisor_usec'] == 195151731
+-        and debits['phases_usec'] == 442242523
++        # Post-P8 totals retain frozen post-P7 and post-P6 readings; E is never normalized to S+P.
++        and debits['envelope_usec'] - debits['retired_p8_envelope_usec'] == 637394256
++        and debits['supervisor_usec'] - debits['retired_p8_supervisor_usec'] == 195151731
++        and debits['phases_usec'] - debits['retired_p8_phases_usec'] == 442242523
++        and debits['envelope_usec'] - debits['retired_p8_envelope_usec'] - debits['retired_p7_envelope_usec'] == 450272603
++        and debits['supervisor_usec'] - debits['retired_p8_supervisor_usec'] - debits['retired_p7_supervisor_usec'] == 179988921
++        and debits['phases_usec'] - debits['retired_p8_phases_usec'] - debits['retired_p7_phases_usec'] == 270283681
++        and debits['retired_p8_envelope_usec'] == 198086463
++        and debits['retired_p8_supervisor_usec'] == 12326620
++        and debits['retired_p8_phases_usec'] == 185759842
++        and debits['envelope_usec'] == 835480719
++        and debits['supervisor_usec'] == 207478351
++        and debits['phases_usec'] == 628002365
++        and debits['f_stdout_bytes'] == 0
++        and debits['f_stderr_bytes'] == 10406 + 12829 + 10829 + 137
++        and debits['p7_outer_wall_seconds_ceil'] == 135
++        and debits['p8_outer_wall_seconds_ceil'] == 133
++        and debits['gross_supervisor_cpu_seconds_max'] == 10800
+         and debits['supervisor_cpu_seconds_ceil'] == (debits['supervisor_usec'] + 999999) // 1000000
+-        and debits['remaining_total_wall_seconds_max'] == 6427 - debits['p7_outer_wall_seconds_ceil']
+-        and debits['remaining_f_wall_seconds_max'] == 2522 - debits['p7_outer_wall_seconds_ceil']
++        and debits['remaining_total_wall_seconds_max'] == 6292 - debits['p8_outer_wall_seconds_ceil']
++        and debits['remaining_f_wall_seconds_max'] == 2387 - debits['p8_outer_wall_seconds_ceil']
+         and debits['remaining_supervisor_cpu_seconds_max']
+         == debits['gross_supervisor_cpu_seconds_max'] - debits['supervisor_cpu_seconds_ceil'],
+         'internal historical debit sum invariant violated',
+     )
+     guard.need(
+         c['total_wall_seconds'] <= debits['remaining_total_wall_seconds_max'],
+-        'total_wall_seconds exceeds post-P7 remaining wall ceiling (6292s)',
++        'total_wall_seconds exceeds post-P8 remaining wall ceiling (6159s)',
+     )
+     guard.need(
+         c['limits']['F']['wall_seconds'] <= debits['remaining_f_wall_seconds_max'],
+-        'limits.F.wall_seconds exceeds post-P7 remaining F wall ceiling (2387s)',
++        'limits.F.wall_seconds exceeds post-P8 remaining F wall ceiling (2254s)',
+     )
+     guard.need(
+         c['supervisor_cpu_seconds'] <= debits['remaining_supervisor_cpu_seconds_max'],
+-        'supervisor_cpu_seconds exceeds post-P7 remaining supervisor CPU ceiling (10604s)',
++        'supervisor_cpu_seconds exceeds post-P8 remaining supervisor CPU ceiling (10592s)',
+     )
+ 
+     e_ns, l_ns, p_ns = guard.cg_paths(c)
+     e_dir, l_dir, p_dir = (guard.cg_fs(ns) for ns in (e_ns, l_ns, p_ns))
+     live_env_usec = guard.read_numbers(e_dir / 'cpu.stat').get('usage_usec', 0)
+     live_sup_usec = guard.read_numbers(l_dir / 'cpu.stat').get('usage_usec', 0)
+     live_phases_usec = guard.read_numbers(p_dir / 'cpu.stat').get('usage_usec', 0)
+ 
+-    # Post-cleanup cgroups start at 0 in the kernel; all retired post-r3 + P2/P3 + P4 + P5 + P6 debits are always added.
++    # Post-cleanup cgroups start at 0 in the kernel; all historical debits through P8 are always added.
+     effective_env_usec = debits['envelope_usec'] + live_env_usec
+     effective_sup_usec = debits['supervisor_usec'] + live_sup_usec
+     effective_phases_usec = debits['phases_usec'] + live_phases_usec
+     gross_sup_cap_usec = debits['gross_supervisor_cpu_seconds_max'] * 1_000_000
+ 
+     guard.need(
+         live_sup_usec <= c['supervisor_cpu_seconds'] * 1_000_000 and effective_sup_usec <= gross_sup_cap_usec,
+-        'cumulative supervisor CPU (including post-r3, P2/P3, P4, P5, and P6 historical debits) exceeds cap',
++        'cumulative supervisor CPU (including all historical debits through P8) exceeds cap',
+     )
+     if at_start:
+         guard.need(
+             effective_phases_usec < c['limits']['F']['cpu_time_us'],
+             'cumulative phases CPU (including post-r3 historical debit) exceeds F cpu_time_us cap',
+@@ -1352,11 +1374,11 @@
+             effective_phases_usec <= c['limits']['F']['cpu_time_us'],
+             'cumulative phases CPU (including post-r3 historical debit) exceeds F cpu_time_us cap',
+         )
+     guard.need(
+         effective_env_usec <= (gross_sup_cap_usec + c['limits']['F']['cpu_time_us']),
+-        'cumulative envelope CPU (including post-r3, P2/P3, P4, P5, and P6 historical debits) exceeds combined CPU cap',
++        'cumulative envelope CPU (including all historical debits through P8) exceeds combined CPU cap',
+     )
+     return {
+         'historical_debits': copy.deepcopy(debits),
+         'live_envelope_usec_at_start': live_env_usec,
+         'live_supervisor_usec_at_start': live_sup_usec,
+@@ -1882,10 +1904,181 @@
+         and steps[6].get('streams', [{}])[0].get('bytes') == P7_TEARDOWN_STDOUT_BYTES,
+         'P7 preserve/cleanup receipt status invalid',
+     )
+ 
+ 
++P8_INTEGRATION_METADATA_ROOT = (
++    '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/'
++    'native06-current-cached-p8-integration-metadata-20261018'
++)
++P8_PERSISTENT_QUARANTINE_ROOT = (
++    '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/'
++    'native06-p8-persistent-quarantine-20261018-01'
++)
++P8_ATTEMPT_RESULT_PATH = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-current-cached-p8-integration-metadata-20261018/actual-sequence-01/RESULT.json'
++P8_ATTEMPT_RESULT_SHA256 = '1747fbf1091b4096c4ea276e3e143ebc474f08f60e535aba072022889d01d38a'
++P8_ATTEMPT_RESULT_BYTES = 953
++P8_RAW_BEFORE_CLEANUP_PATH = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-current-cached-p8-integration-metadata-20261018/post-terminal-actual-01/RAW-CGROUP-AND-MARKER.json'
++P8_RAW_BEFORE_CLEANUP_SHA256 = 'c1195a3551e9ba4119a37cb2a9549462f7509d3e3bff01e0cfce0db382350f44'
++P8_RAW_BEFORE_CLEANUP_BYTES = 5899
++P8_PRESERVE_CLEANUP_RESULT_PATH = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-current-cached-p8-integration-metadata-20261018/actual-p8-preserve-and-cleanup-01/RESULT.json'
++P8_PRESERVE_CLEANUP_RESULT_SHA256 = 'cb7febe2e98c2a600a273cc2817b5a02e99b2ff497594c184db9354742ca952b'
++P8_PRESERVE_CLEANUP_RESULT_BYTES = 9014
++P8_TERMINAL_FAILURE_PATH = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-p8-persistent-quarantine-20261018-01/packet/TERMINAL_FAILURE.json'
++P8_TERMINAL_FAILURE_SHA256 = '4fe0c644ddeeeb6c9919311ba1cef8355f8de87539c5b20d5f7818c458c94a52'
++P8_TERMINAL_FAILURE_BYTES = 111
++P8_LOG_BASIS_PATH = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native06-p8-once-only-accounting-completion-opus-source-request-20261018/inputs/ACTUAL-CUMULATIVE-F-LOG-BYTE-BASIS.json'
++P8_LOG_BASIS_SHA256 = '2359c49bca5d66383cab427efdfd26246c0d415a4aab94e48a7408eff7f94ccc'
++P8_LOG_BASIS_BYTES = 7739
++P8_ATTEMPT_ELAPSED_SECONDS = 132.46132113799104
++P8_ATTEMPT_STDOUT_SHA256 = '5b12a998da8bfa80df2ab35a51d761d3018fb7394b144178507e5c7c51c86ba9'
++P8_ATTEMPT_STDOUT_BYTES = 2990
++P8_ATTEMPT_STDERR_SHA256 = '9b4078eb89bbadd2597138fa1536d7732ccfa032574ab7218427a91f1a3a28bd'
++P8_ATTEMPT_STDERR_BYTES = 39
++P8_COLLECT_STDOUT_SHA256 = '8527b3723c3feaee209027a88fbb123a1d7cf1f7ce39614eb7fa99b50477c7df'
++P8_TEARDOWN_STDOUT_SHA256 = '845999dd73a18885b43917a80a6cc7c77841126bc27a06c96f5a754e03acbc22'
++P8_POST_AUDIT_FAILURE = 'third-party host output mtime changed during cached Phase F: debug/build/aws-lc-sys-5469586605af0f08/build-script-main'
++
++
++def _verify_p8_receipts(debits, guard):
++    """Bind the failed P8 once-only charge to its immutable terminal, CPU, cleanup and stream receipts."""
++    objs = []
++    for path, size, sha, what in (
++        (P8_ATTEMPT_RESULT_PATH, P8_ATTEMPT_RESULT_BYTES, P8_ATTEMPT_RESULT_SHA256, 'P8 attempt result'),
++        (P8_RAW_BEFORE_CLEANUP_PATH, P8_RAW_BEFORE_CLEANUP_BYTES, P8_RAW_BEFORE_CLEANUP_SHA256, 'P8 raw cgroup/marker'),
++        (P8_PRESERVE_CLEANUP_RESULT_PATH, P8_PRESERVE_CLEANUP_RESULT_BYTES, P8_PRESERVE_CLEANUP_RESULT_SHA256, 'P8 preserve/cleanup'),
++        (P8_TERMINAL_FAILURE_PATH, P8_TERMINAL_FAILURE_BYTES, P8_TERMINAL_FAILURE_SHA256, 'P8 terminal failure'),
++        (P8_LOG_BASIS_PATH, P8_LOG_BASIS_BYTES, P8_LOG_BASIS_SHA256, 'P8 cumulative F log basis'),
++    ):
++        p = Path(path)
++        guard.regular(p)
++        guard.need(p.stat().st_size == size and guard.digest(p) == sha, what + ' receipt SHA-256 or byte size mismatch')
++        objs.append(guard.jload(p))
++    res, raw_obj, cln, terminal, basis = objs
++    streams = res.get('streams') if isinstance(res, dict) else None
++    elapsed = res.get('elapsed_seconds') if isinstance(res, dict) else None
++    guard.need(
++        isinstance(res, dict)
++        and res.get('id') == 'P8-fresh-setup-current-stat-issued-DAG-and-two-test-fixed-native-compile'
++        and res.get('actual_exit') == 2
++        and 'controller_failure' in res
++        and res['controller_failure'] is None
++        and type(elapsed) is float
++        and elapsed == P8_ATTEMPT_ELAPSED_SECONDS
++        and int(-(-elapsed // 1)) == debits['p8_outer_wall_seconds_ceil']
++        and isinstance(streams, list)
++        and len(streams) == 2
++        and all(isinstance(st, dict) and st.get('full_stream_retained') is True for st in streams)
++        and [(st.get('bytes'), st.get('sha256')) for st in streams] == [
++            (P8_ATTEMPT_STDOUT_BYTES, P8_ATTEMPT_STDOUT_SHA256),
++            (P8_ATTEMPT_STDERR_BYTES, P8_ATTEMPT_STDERR_SHA256),
++        ],
++        'P8 failed attempt result receipt content mismatch',
++    )
++    guard.need(
++        terminal == {'message': 'phase exit nonzero F', 'native_outputs_accepted': False,
++                     'route': 'cached-current-f', 'type': 'Refusal'},
++        'P8 terminal failure receipt content mismatch',
++    )
++    raw = raw_obj.get('raw') if isinstance(raw_obj, dict) else None
++    nodes = [raw.get(k) for k in ('E', 'S', 'P')] if isinstance(raw, dict) else []
++    usages = (debits['retired_p8_envelope_usec'], debits['retired_p8_supervisor_usec'], debits['retired_p8_phases_usec'])
++    guard.need(
++        isinstance(raw_obj, dict)
++        and raw_obj.get('cleanupOwed') is True
++        and raw_obj.get('CargoDidStart') is True
++        and raw_obj.get('CargoCompileReportedFinished') is True
++        and raw_obj.get('nativeOutputsAccepted') is False
++        and raw_obj.get('ELFExecuted') is False
++        and raw_obj.get('postAuditFailure') == P8_POST_AUDIT_FAILURE
++        and len(nodes) == 3
++        and all(isinstance(n, dict) for n in nodes)
++        and raw.get('marker') == {'path': P7_MARKER_PATH, 'bytes': P7_MARKER_BYTES, 'sha256': P7_MARKER_SHA256}
++        and all(
++            str(n.get('cpu.stat', '')).splitlines()[:1] == ['usage_usec ' + str(u)]
++            and str(n.get('cgroup.events', '')).splitlines()[:1] == ['populated 0']
++            and n.get('cgroup.procs') == ''
++            and n.get('pids.current') == '0\n'
++            and '\noom 0\n' in str(n.get('memory.events', ''))
++            and '\noom_kill 0\n' in str(n.get('memory.events', ''))
++            and '\noom_kill 0\n' in str(n.get('memory.events.local', ''))
++            for n, u in zip(nodes, usages)
++        )
++        and [str(n.get('memory.peak', '')).strip() for n in nodes] == ['5911670784', '71958528', '5859758080'],
++        'P8 raw cgroup/marker receipt content mismatch against historical debits',
++    )
++    steps = cln.get('steps') if isinstance(cln, dict) else None
++    guard.need(
++        isinstance(cln, dict)
++        and cln.get('status') == 'P8_PRESERVED_AND_CLEANED'
++        and cln.get('cleanupOwed') is False
++        and cln.get('nativeOutputsAccepted') is False
++        and cln.get('ELFExecuted') is False
++        and cln.get('CargoDidStart') is True
++        and cln.get('CargoCompileReportedSuccess') is True
++        and cln.get('CargoBuildSecondsReported') == 55.6
++        and cln.get('guardPostAudit') == 'FAILED aws-lc-sys build-script-main mtime changed'
++        and cln.get('targetFilesPreserved') == 3548
++        and cln.get('allFilesPreserved') == 3565
++        and cln.get('totalBytesPreserved') == 2847417755
++        and cln.get('quarantine') == P8_PERSISTENT_QUARANTINE_ROOT
++        and cln.get('cgroupAbsent') is True
++        and cln.get('executionRootEmpty') is True
++        and isinstance(steps, list)
++        and len(steps) == len(P7_CLEANUP_STEPS)
++        and all(isinstance(st, dict) for st in steps)
++        and tuple(st.get('step') for st in steps) == P7_CLEANUP_STEPS
++        and all(st.get('actualExit') == 0 for i, st in enumerate(steps) if i != 4)
++        and steps[4].get('exactMembershipHashesSizesAndNonexecModes') is True
++        and steps[4].get('files') == 3565
++        and steps[5].get('streams', [{}])[0].get('sha256') == P8_COLLECT_STDOUT_SHA256
++        and steps[5].get('streams', [{}])[0].get('bytes') == 165
++        and steps[6].get('streams', [{}])[0].get('sha256') == P8_TEARDOWN_STDOUT_SHA256
++        and steps[6].get('streams', [{}])[0].get('bytes') == 128,
++        'P8 preserve/cleanup receipt status invalid',
++    )
++    rows = basis.get('rows') if isinstance(basis, dict) else None
++    guard.need(
++        isinstance(basis, dict)
++        and basis.get('status') == 'SAVED_PUBLIC_STREAM_BYTE_PINS_AND_ARITHMETIC_NOT_SOURCE_APPROVAL'
++        and isinstance(rows, list)
++        and len(rows) == 3
++        and all(isinstance(row, dict) for row in rows)
++        and [row.get('attempt') for row in rows] == ['r3', 'P7', 'P8'],
++        'P8 cumulative F stream basis attempts invalid',
++    )
++    totals = {'stdout': 0, 'stderr': 0}
++    seen = set()
++    for row, expected_count, stderr_bytes in zip(rows, (12, 4, 6), (10406, 12829, 10966)):
++        files = row.get('stream_files')
++        guard.need(isinstance(files, list) and len(files) == expected_count, 'P8 F stream membership count mismatch')
++        subtotal = {'stdout': 0, 'stderr': 0}
++        for stream in files:
++            guard.need(isinstance(stream, dict) and isinstance(stream.get('path'), str), 'P8 F stream row invalid')
++            sp = Path(stream['path'])
++            guard.regular(sp)
++            resolved = str(sp.resolve(strict=True))
++            guard.need(resolved not in seen, 'P8 F stream counted more than once')
++            seen.add(resolved)
++            kind = sp.suffix.lstrip('.')
++            guard.need(kind in subtotal, 'P8 F stream kind invalid')
++            size = stream.get('bytes')
++            guard.need(type(size) is int and size >= 0 and sp.stat().st_size == size
++                       and guard.digest(sp) == stream.get('sha256'), 'P8 F stream SHA-256 or byte size mismatch')
++            subtotal[kind] += size
++        guard.need(subtotal == {'stdout': 0, 'stderr': stderr_bytes} and row.get('subtotal') == subtotal,
++                   'P8 F stream subtotal mismatch')
++        for kind in totals:
++            totals[kind] += subtotal[kind]
++    guard.need(
++        totals == {'stdout': 0, 'stderr': 34201}
++        and basis.get('new_cumulative_all_F_stdout') == totals['stdout'] == debits['f_stdout_bytes']
++        and basis.get('new_cumulative_all_F_stderr') == totals['stderr'] == debits['f_stderr_bytes'],
++        'P8 cumulative F stream arithmetic mismatch against historical debits',
++    )
++
++
+ def prepare_cached_current_f_worker(c, guard):
+     """Execute source_home reconstitution and target cache seeding inside the bounded F_precheck phase leaf."""
+     expected_cg = '0::' + guard.phase_cgroup(c, 'F')
+     actual_cg = guard._cg_text('/proc/self/cgroup').strip()
+     guard.need(
+--- beforeimages/bounded_sdk_compile.py
++++ afterimages/bounded_sdk_compile.py
+@@ -621,11 +621,11 @@
+     'USED_LAUNCH_183c19e3bb8f12d2b527d4decdf5844995b4d5bc2e0ff0fb45e5d3c32a579ff8': '6996692eb1c89d9bcf83ac52ecd63d76df3902b6bb6bc3978a353431fbfef8c8',
+ }
+ 
+ BETA_ASSIGNMENT_PATH = '/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md'
+ BETA_ASSIGNMENT_SHA256 = 'bcb1e016dd4a87ee31ddc1073405963d0860643667e2c259ebba4b706c26fabd'
+-CACHED_CURRENT_BUILD_SHA256 = '82cc4af9faa5fe2b151ef79cf75abc6bdff3504538ee935da7626f539827655b'
++CACHED_CURRENT_BUILD_SHA256 = 'f88474ea30cd2c9eae49c9103ecdf22944f43ffa31cf38ef31ba8e0a5c9602f2'
+ 
+ def _validate_tier_grant(c,records,tier):
+     r=records['tier'+str(tier)];kind=r.get('kind')
+     if kind=='user_tier'+str(tier)+'_grant':
+         keys='schema_version kind tier decision root_receipt_sha256 config_inputs_sha256 amendments_sha256 authority_granted_by_this_file_alone'
+--- beforeimages/test_cached_current_build.py
++++ afterimages/test_cached_current_build.py
+@@ -660,68 +660,76 @@
+ 
+         saved_cg_fs = guard.cg_fs
+         guard.cg_fs = lambda ns: cg_base / ns.lstrip('/')
+         try:
+             c = {
+-                'total_wall_seconds': 6292,
+-                'supervisor_cpu_seconds': 10604,
+-                'limits': {'F': {'wall_seconds': 2387, 'cpu_time_us': 10800000000}},
++                'total_wall_seconds': 6159,
++                'supervisor_cpu_seconds': 10592,
++                'limits': {'F': {'wall_seconds': 2254, 'cpu_time_us': 10800000000}},
+                 'cgroup': {
+                     'envelope_path': '/moriarty-sherlock-ledger9-20261018-06',
+                     'supervisor_leaf_name': 'supervisor',
+                     'phase_parent_name': 'phases',
+                 },
+             }
+             state = ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None)
+-            self.assertEqual(state['effective_envelope_usec_at_start'], 637394256)
+-            self.assertEqual(state['effective_supervisor_usec_at_start'], 195151731)
+-            self.assertEqual(state['effective_phases_usec_at_start'], 442242523)
++            self.assertEqual(state['effective_envelope_usec_at_start'], 835480719)
++            self.assertEqual(state['effective_supervisor_usec_at_start'], 207478351)
++            self.assertEqual(state['effective_phases_usec_at_start'], 628002365)
+             self.assertEqual(state['historical_debits']['retired_p5_envelope_usec'], 37863695)
+             self.assertEqual(state['historical_debits']['retired_p5_supervisor_usec'], 37863695)
+             self.assertEqual(state['historical_debits']['retired_p5_phases_usec'], 0)
+             self.assertEqual(state['historical_debits']['retired_p6_envelope_usec'], 39019876)
+             self.assertEqual(state['historical_debits']['retired_p6_supervisor_usec'], 39019876)
+             self.assertEqual(state['historical_debits']['retired_p6_phases_usec'], 0)
+-            self.assertEqual(state['historical_debits']['retired_cached_attempts_envelope_usec'], 291195544)
+-            self.assertEqual(state['historical_debits']['retired_cached_attempts_supervisor_usec'], 119236701)
+-            self.assertEqual(state['historical_debits']['retired_cached_attempts_phases_usec'], 171958842)
++            self.assertEqual(state['historical_debits']['retired_cached_attempts_envelope_usec'], 489282007)
++            self.assertEqual(state['historical_debits']['retired_cached_attempts_supervisor_usec'], 131563321)
++            self.assertEqual(state['historical_debits']['retired_cached_attempts_phases_usec'], 357718684)
+             self.assertEqual(state['historical_debits']['retired_p7_envelope_usec'], 187121653)
+             self.assertEqual(state['historical_debits']['retired_p7_supervisor_usec'], 15162810)
+             self.assertEqual(state['historical_debits']['retired_p7_phases_usec'], 171958842)
+             self.assertEqual(state['historical_debits']['p5_refusal_wall_seconds_ceil'], 40)
+             self.assertEqual(state['historical_debits']['p6_refusal_wall_seconds_ceil'], 44)
+             self.assertEqual(state['historical_debits']['p7_outer_wall_seconds_ceil'], 135)
+-            self.assertEqual(state['historical_debits']['supervisor_cpu_seconds_ceil'], 196)
+-            self.assertEqual(state['historical_debits']['remaining_total_wall_seconds_max'], 6292)
+-            self.assertEqual(state['historical_debits']['remaining_f_wall_seconds_max'], 2387)
+-            self.assertEqual(state['historical_debits']['remaining_supervisor_cpu_seconds_max'], 10604)
+-
+-            # Verify historical debits (prior post-r3 + retired P2/P3 + retired P4 + retired P5 + retired P6 once) are added when live usage > 0.
++            self.assertEqual(state['historical_debits']['retired_p8_envelope_usec'], 198086463)
++            self.assertEqual(state['historical_debits']['retired_p8_supervisor_usec'], 12326620)
++            self.assertEqual(state['historical_debits']['retired_p8_phases_usec'], 185759842)
++            self.assertEqual(state['historical_debits']['p8_outer_wall_seconds_ceil'], 133)
++            self.assertEqual(state['historical_debits']['f_stdout_bytes'], 0)
++            self.assertEqual(state['historical_debits']['f_stderr_bytes'], 34201)
++            self.assertEqual(state['effective_envelope_usec_at_start'] - state['effective_supervisor_usec_at_start']
++                             - state['effective_phases_usec_at_start'], 3)
++            self.assertEqual(state['historical_debits']['supervisor_cpu_seconds_ceil'], 208)
++            self.assertEqual(state['historical_debits']['remaining_total_wall_seconds_max'], 6159)
++            self.assertEqual(state['historical_debits']['remaining_f_wall_seconds_max'], 2254)
++            self.assertEqual(state['historical_debits']['remaining_supervisor_cpu_seconds_max'], 10592)
++
++            # Verify historical debits (prior post-r3 + retired P2/P3 + retired P4 + retired P5 + retired P6 + retired P7 + retired P8 once) are added when live usage > 0.
+             self._write(env_cg / 'cpu.stat', 'usage_usec 400000000\n', 0o644)
+             self._write(sup_cg / 'cpu.stat', 'usage_usec 100000000\n', 0o644)
+             self._write(ph_cg / 'cpu.stat', 'usage_usec 300000000\n', 0o644)
+             state_post = ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None, at_start=False)
+-            self.assertEqual(state_post['effective_envelope_usec_at_start'], 637394256 + 400000000)
+-            self.assertEqual(state_post['effective_supervisor_usec_at_start'], 195151731 + 100000000)
+-            self.assertEqual(state_post['effective_phases_usec_at_start'], 442242523 + 300000000)
+-            # A repeated call re-reads live counters and never re-adds P7 (debited exactly once).
++            self.assertEqual(state_post['effective_envelope_usec_at_start'], 835480719 + 400000000)
++            self.assertEqual(state_post['effective_supervisor_usec_at_start'], 207478351 + 100000000)
++            self.assertEqual(state_post['effective_phases_usec_at_start'], 628002365 + 300000000)
++            # A repeated call re-reads live counters and never re-adds P7 or P8 (each debited exactly once).
+             state_again = ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None, at_start=False)
+-            self.assertEqual(state_again['effective_phases_usec_at_start'], 442242523 + 300000000)
++            self.assertEqual(state_again['effective_phases_usec_at_start'], 628002365 + 300000000)
+             self.assertEqual(state_again['historical_debits'], state_post['historical_debits'])
+ 
+             c_over_wall = copy.deepcopy(c)
+-            c_over_wall['total_wall_seconds'] = 6293
++            c_over_wall['total_wall_seconds'] = 6160
+             with self.assertRaises(guard.Refusal):
+                 ccb.enforce_post_r3_historical_debits(c_over_wall, guard, cleanup_receipt_file=None)
+ 
+             c_over_f = copy.deepcopy(c)
+-            c_over_f['limits']['F']['wall_seconds'] = 2388
++            c_over_f['limits']['F']['wall_seconds'] = 2255
+             with self.assertRaises(guard.Refusal):
+                 ccb.enforce_post_r3_historical_debits(c_over_f, guard, cleanup_receipt_file=None)
+ 
+             c_over_sup = copy.deepcopy(c)
+-            c_over_sup['supervisor_cpu_seconds'] = 10605
++            c_over_sup['supervisor_cpu_seconds'] = 10593
+             with self.assertRaises(guard.Refusal):
+                 ccb.enforce_post_r3_historical_debits(c_over_sup, guard, cleanup_receipt_file=None)
+ 
+             # Retained post-P6 ceilings (6427/2522/10620) are now over cap.
+             for key, value in (('total_wall_seconds', 6427), ('supervisor_cpu_seconds', 10620), ('F', 2522)):
+@@ -731,17 +739,46 @@
+                 else:
+                     c_old[key] = value
+                 with self.assertRaises(guard.Refusal):
+                     ccb.enforce_post_r3_historical_debits(c_old, guard, cleanup_receipt_file=None)
+ 
+-            # Double-counted P7 or E normalized to S+P breaks the once-only invariant.
++            # Earlier post-P7 ceilings also cannot refund the consumed P8 budget.
++            for key, value in (('total_wall_seconds', 6292), ('supervisor_cpu_seconds', 10604), ('F', 2387)):
++                c_old = copy.deepcopy(c)
++                if key == 'F':
++                    c_old['limits']['F']['wall_seconds'] = value
++                else:
++                    c_old[key] = value
++                with self.assertRaises(guard.Refusal):
++                    ccb.enforce_post_r3_historical_debits(c_old, guard, cleanup_receipt_file=None)
++
++            # Preserve P7 double-charge/normalization cases and add P8 refunds and duplicate debits.
+             saved_debits = ccb.HISTORICAL_POST_R3_DEBITS
+             try:
+                 for key, value in (
+-                    ('envelope_usec', 637394256 + 187121653),
+-                    ('phases_usec', 442242523 + 171958842),
++                    ('envelope_usec', 835480719 + 187121653),
++                    ('phases_usec', 628002365 + 171958842),
+                     ('retired_p7_envelope_usec', 15162810 + 171958842),
++                    ('envelope_usec', 835480719 + 198086463),
++                    ('supervisor_usec', 207478351 + 12326620),
++                    ('phases_usec', 628002365 + 185759842),
++                    ('envelope_usec', 835480719 - 198086463),
++                    ('supervisor_usec', 207478351 - 12326620),
++                    ('phases_usec', 628002365 - 185759842),
++                    ('envelope_usec', 207478351 + 628002365),
++                    ('retired_p8_envelope_usec', 12326620 + 185759842),
++                    ('retired_p8_supervisor_usec', 0),
++                    ('retired_p8_phases_usec', 0),
++                    ('retired_cached_attempts_envelope_usec', 489282007 - 198086463),
++                    ('remaining_total_wall_seconds_max', 6292),
++                    ('remaining_f_wall_seconds_max', 2387),
++                    ('remaining_supervisor_cpu_seconds_max', 10604),
++                    ('gross_supervisor_cpu_seconds_max', 10801),
++                    ('p8_outer_wall_seconds_ceil', 0),
++                    ('f_stderr_bytes', 34201 - 137),
++                    ('f_stderr_bytes', 34201 - 12829),
++
+                 ):
+                     ccb.HISTORICAL_POST_R3_DEBITS = dict(saved_debits, **{key: value})
+                     with self.assertRaises(guard.Refusal):
+                         ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None)
+             finally:
+@@ -834,10 +871,147 @@
+             with self.assertRaises(guard.Refusal):
+                 ccb._verify_p7_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+         finally:
+             for key, value in saved.items():
+                 setattr(ccb, 'P7_' + key, value)
++
++    def test_p8_receipts_once_only_pinned_and_tamper_refused(self):
++        names = ('ATTEMPT_RESULT', 'RAW_BEFORE_CLEANUP', 'PRESERVE_CLEANUP_RESULT', 'TERMINAL_FAILURE', 'LOG_BASIS')
++        saved = {n + s: getattr(ccb, 'P8_' + n + s) for n in names for s in ('_PATH', '_SHA256', '_BYTES')}
++
++        def pin(name, obj):
++            p = self._write(self.root / 'p8' / (name + '.json'), guard.json_bytes(obj), 0o644)
++            setattr(ccb, 'P8_' + name + '_PATH', str(p))
++            setattr(ccb, 'P8_' + name + '_SHA256', guard.digest(p))
++            setattr(ccb, 'P8_' + name + '_BYTES', p.stat().st_size)
++
++        def node(usage, peak):
++            events = 'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n'
++            return {'cpu.stat': 'usage_usec %d\nuser_usec 1\n' % usage,
++                    'cgroup.events': 'populated 0\nfrozen 0\n', 'cgroup.procs': '',
++                    'memory.events': events, 'memory.events.local': events,
++                    'memory.peak': '%d\n' % peak, 'pids.current': '0\n'}
++
++        attempt = {
++            'id': 'P8-fresh-setup-current-stat-issued-DAG-and-two-test-fixed-native-compile',
++            'actual_exit': 2, 'controller_failure': None, 'elapsed_seconds': 132.46132113799104,
++            'streams': [
++                {'bytes': 2990, 'sha256': '5b12a998da8bfa80df2ab35a51d761d3018fb7394b144178507e5c7c51c86ba9', 'full_stream_retained': True},
++                {'bytes': 39, 'sha256': '9b4078eb89bbadd2597138fa1536d7732ccfa032574ab7218427a91f1a3a28bd', 'full_stream_retained': True},
++            ],
++        }
++        raw = {
++            'raw': {'E': node(198086463, 5911670784), 'S': node(12326620, 71958528),
++                    'P': node(185759842, 5859758080),
++                    'marker': {'path': ccb.P7_MARKER_PATH, 'bytes': 9,
++                               'sha256': '37cb06c8f02da9953c59a7186a4bbdca294494149fdf65f831d8b493ae5bcf67'}},
++            'cleanupOwed': True, 'nativeOutputsAccepted': False, 'CargoDidStart': True,
++            'CargoCompileReportedFinished': True, 'ELFExecuted': False,
++            'postAuditFailure': 'third-party host output mtime changed during cached Phase F: debug/build/aws-lc-sys-5469586605af0f08/build-script-main',
++        }
++        steps = [{'step': st, 'actualExit': 0} for st in ccb.P7_CLEANUP_STEPS]
++        steps[4] = {'step': ccb.P7_CLEANUP_STEPS[4], 'exactMembershipHashesSizesAndNonexecModes': True, 'files': 3565}
++        steps[5]['streams'] = [{'bytes': 165, 'sha256': '8527b3723c3feaee209027a88fbb123a1d7cf1f7ce39614eb7fa99b50477c7df'}]
++        steps[6]['streams'] = [{'bytes': 128, 'sha256': '845999dd73a18885b43917a80a6cc7c77841126bc27a06c96f5a754e03acbc22'}]
++        cleanup = {
++            'status': 'P8_PRESERVED_AND_CLEANED', 'steps': steps, 'cleanupOwed': False,
++            'nativeOutputsAccepted': False, 'ELFExecuted': False, 'CargoDidStart': True,
++            'CargoCompileReportedSuccess': True, 'CargoBuildSecondsReported': 55.6,
++            'guardPostAudit': 'FAILED aws-lc-sys build-script-main mtime changed',
++            'targetFilesPreserved': 3548, 'allFilesPreserved': 3565, 'totalBytesPreserved': 2847417755,
++            'quarantine': ccb.P8_PERSISTENT_QUARANTINE_ROOT, 'cgroupAbsent': True, 'executionRootEmpty': True,
++        }
++        terminal = {'message': 'phase exit nonzero F', 'native_outputs_accepted': False,
++                    'route': 'cached-current-f', 'type': 'Refusal'}
++        # Synthetic ordinary files have the independent historical byte counts, no SDK or captured payloads.
++        specs = (
++            ('r3', (('F', 10237), ('F_audit', 47), ('F_precheck', 0),
++                    ('F_retained_audit', 47), ('F_retained_audit_r2', 75), ('F_retained_audit_r3', 0))),
++            ('P7', (('F', 12829), ('F_precheck', 0))),
++            ('P8', (('F', 10829), ('F_audit', 137), ('F_precheck', 0))),
++        )
++        rows = []
++        for label, launches in specs:
++            files = []
++            for launch, size in launches:
++                for kind, count in (('stdout', 0), ('stderr', size)):
++                    p = self._write(self.root / 'streams' / label / (launch + '.' + kind), b'x' * count)
++                    files.append({'path': str(p), 'bytes': count, 'sha256': guard.digest(p)})
++            rows.append({'attempt': label, 'stream_files': files,
++                         'subtotal': {'stdout': 0, 'stderr': sum(n for _, n in launches)}})
++        basis = {'status': 'SAVED_PUBLIC_STREAM_BYTE_PINS_AND_ARITHMETIC_NOT_SOURCE_APPROVAL', 'rows': rows,
++                 'new_cumulative_all_F_stdout': 0, 'new_cumulative_all_F_stderr': 34201}
++        fixtures = {'ATTEMPT_RESULT': attempt, 'RAW_BEFORE_CLEANUP': raw, 'PRESERVE_CLEANUP_RESULT': cleanup,
++                    'TERMINAL_FAILURE': terminal, 'LOG_BASIS': basis}
++        try:
++            for name, obj in fixtures.items():
++                pin(name, obj)
++            before = copy.deepcopy(ccb.HISTORICAL_POST_R3_DEBITS)
++            ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
++            ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
++            self.assertEqual(ccb.HISTORICAL_POST_R3_DEBITS, before)
++            # Re-pin altered receipts to exercise semantics independently of immutable production digests.
++            for name, keys, value in (
++                ('ATTEMPT_RESULT', ('actual_exit',), 0),
++                ('ATTEMPT_RESULT', ('elapsed_seconds',), 131.5),
++                ('ATTEMPT_RESULT', ('streams', 0, 'full_stream_retained'), False),
++                ('RAW_BEFORE_CLEANUP', ('raw', 'E', 'cpu.stat'), 'usage_usec 198086462\n'),
++                ('RAW_BEFORE_CLEANUP', ('raw', 'S', 'cpu.stat'), 'usage_usec 0\n'),
++                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'cpu.stat'), 'usage_usec 0\n'),
++                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'cgroup.events'), 'populated 1\n'),
++                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'memory.events'), 'low 0\noom 1\noom_kill 1\n'),
++                ('RAW_BEFORE_CLEANUP', ('raw', 'marker', 'sha256'), '00' * 32),
++                ('RAW_BEFORE_CLEANUP', ('postAuditFailure',), None),
++                ('RAW_BEFORE_CLEANUP', ('nativeOutputsAccepted',), True),
++                ('PRESERVE_CLEANUP_RESULT', ('cleanupOwed',), True),
++                ('PRESERVE_CLEANUP_RESULT', ('nativeOutputsAccepted',), True),
++                ('PRESERVE_CLEANUP_RESULT', ('ELFExecuted',), True),
++                ('PRESERVE_CLEANUP_RESULT', ('cgroupAbsent',), False),
++                ('PRESERVE_CLEANUP_RESULT', ('executionRootEmpty',), False),
++                ('PRESERVE_CLEANUP_RESULT', ('guardPostAudit',), 'PASS'),
++                ('PRESERVE_CLEANUP_RESULT', ('steps', 6, 'actualExit'), 2),
++                ('PRESERVE_CLEANUP_RESULT', ('steps', 4, 'exactMembershipHashesSizesAndNonexecModes'), False),
++                ('TERMINAL_FAILURE', ('native_outputs_accepted',), True),
++                ('TERMINAL_FAILURE', ('type',), 'Success'),
++                ('LOG_BASIS', ('rows', 1, 'attempt'), 'P8'),
++                ('LOG_BASIS', ('rows', 2, 'stream_files'), rows[2]['stream_files'][:-2]),
++                ('LOG_BASIS', ('rows', 2, 'stream_files', 0), rows[1]['stream_files'][0]),
++                ('LOG_BASIS', ('rows', 2, 'subtotal', 'stderr'), 10829),
++                ('LOG_BASIS', ('new_cumulative_all_F_stderr',), 34201 - 137),
++            ):
++                with self.subTest(receipt=name, keys=keys):
++                    bad = copy.deepcopy(fixtures[name])
++                    target = bad
++                    for key in keys[:-1]:
++                        target = target[key]
++                    target[keys[-1]] = value
++                    pin(name, bad)
++                    with self.assertRaises(guard.Refusal):
++                        ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
++                    pin(name, fixtures[name])
++            # A real retained-file byte change must reject without changing its receipt.
++            audit_path = Path(rows[2]['stream_files'][3]['path'])
++            old_bytes = audit_path.read_bytes()
++            self._write(audit_path, b'y' * len(old_bytes))
++            with self.assertRaises(guard.Refusal):
++                ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
++            self._write(audit_path, old_bytes)
++            for name in names:
++                with self.subTest(pin=name):
++                    setattr(ccb, 'P8_' + name + '_SHA256', '00' * 32)
++                    with self.assertRaises(guard.Refusal):
++                        ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
++                    pin(name, fixtures[name])
++            with self.assertRaises(guard.Refusal):
++                ccb._verify_p8_receipts(dict(before, f_stderr_bytes=34201 - 12829), guard)
++            with self.assertRaises(guard.Refusal):
++                ccb._verify_p8_receipts(dict(before, retired_p8_envelope_usec=198086462), guard)
++            ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
++            self.assertEqual(ccb.HISTORICAL_POST_R3_DEBITS, before)
++        finally:
++            for key, value in saved.items():
++                setattr(ccb, 'P8_' + key, value)
+ 
+     def _legacy_two_tier_mtime_ns(self, rel):
+         # Replica of the removed P8 tier expression, used only to show each fixture discriminates it.
+         late = (
+             rel.startswith('debug/.fingerprint/')
+@@ -1156,20 +1330,20 @@
+             if k != 'config':
+                 Path(v).mkdir(parents=True, exist_ok=True)
+ 
+         c = {
+             'mode': 'tier1-and-compile',
+-            'total_wall_seconds': 6292,
+-            'supervisor_cpu_seconds': 10604,
++            'total_wall_seconds': 6159,
++            'supervisor_cpu_seconds': 10592,
+             'paths': paths,
+             'readonly_tools': ['/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu'],
+             'source_copy_mounts': ['/home/charl/.cargo'],
+             'masks': ['/home/charl', '/home/charl/.cargo'],
+             'limits': {
+                 'D': {'packet_bytes': 67108864},
+                 'F': {
+-                    'wall_seconds': 2387,
++                    'wall_seconds': 2254,
+                     'cpu_time_us': 10800000000,
+                     'cpu_quota_us': 400000,
+                     'cpu_period_us': 100000,
+                     'memory_bytes': 8589934592,
+                     'file_bytes': 4294967296,
+@@ -1272,11 +1446,11 @@
+                 # Supervisor S must not have created any files in source_home or target before launch.
+                 self.assertEqual(list(Path(cfg['paths']['source_home']).iterdir()), [])
+                 self.assertEqual(list(Path(cfg['paths']['target']).iterdir()), [])
+                 self.assertTrue((Path(cfg['paths']['execution_root']) / 'ONE_SHOT_STARTED').is_file())
+                 grp = guard.Group(cfg, 'F')
+-                self.assertEqual(getattr(grp, 'prior_cpu', None), 442242523)
++                self.assertEqual(getattr(grp, 'prior_cpu', None), 628002365)
+                 guard._cg_text = lambda p: (
+                     '0::/moriarty-sherlock-ledger9-20261018-06/phases/sdk-once-F\n'
+                     if str(p) == '/proc/self/cgroup'
+                     else saved_cg_text(p)
+                 )
+@@ -1309,16 +1483,16 @@
+                 return {'phase': 'F', 'wall_seconds': 12.5, 'log_bytes': {'stdout': 0, 'stderr': 100}}
+ 
+             resource.setrlimit = lambda kind, lims: rlimit_calls.append((kind, lims))
+             guard.launch = fake_launch
+             res = ccb.cached_current_f(c, 'a' * 64, guard)
+-            self.assertEqual(rlimit_calls, [(resource.RLIMIT_CPU, (10604, 10604))])
++            self.assertEqual(rlimit_calls, [(resource.RLIMIT_CPU, (10592, 10592))])
+             self.assertEqual(call_order, ['reconstitute', 'seed'])
+-            self.assertEqual(res['historical_debit_state_start']['effective_phases_usec_at_start'], 442242523)
+-            self.assertEqual(res['historical_debit_state_end']['effective_phases_usec_at_start'], 442242523 + 50000000)
+-            self.assertEqual(res['historical_debit_state_end']['effective_supervisor_usec_at_start'], 195151731 + 10000000)
+-            self.assertEqual(res['historical_debit_state_end']['effective_envelope_usec_at_start'], 637394256 + 60000000)
++            self.assertEqual(res['historical_debit_state_start']['effective_phases_usec_at_start'], 628002365)
++            self.assertEqual(res['historical_debit_state_end']['effective_phases_usec_at_start'], 628002365 + 50000000)
++            self.assertEqual(res['historical_debit_state_end']['effective_supervisor_usec_at_start'], 207478351 + 10000000)
++            self.assertEqual(res['historical_debit_state_end']['effective_envelope_usec_at_start'], 835480719 + 60000000)
+             self.assertTrue((Path(paths['packet']) / 'F_CACHED_CURRENT_RESULT.json').is_file())
+         finally:
+             guard.cg_fs = saved_cg_fs
+             guard._cg_text = saved_cg_text
+             ccb.reconstitute_source_home = saved_reconstitute

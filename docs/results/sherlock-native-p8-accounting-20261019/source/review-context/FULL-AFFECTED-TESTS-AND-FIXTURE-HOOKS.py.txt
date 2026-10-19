@@ -1,0 +1,652 @@
+#!/usr/bin/env python3
+"""SDK-free synthetic unit tests for cached_current_build and bounded_sdk_compile hooks."""
+
+import copy
+import hashlib
+import importlib.util
+import io
+import json
+import os
+import shutil
+import stat
+import sys
+import tarfile
+import tempfile
+import unittest
+from pathlib import Path
+
+DIR = Path(__file__).resolve().parent
+if str(DIR) not in sys.path:
+    sys.path.insert(0, str(DIR))
+
+
+def _load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+guard = _load_module('bounded_sdk_compile', DIR / 'bounded_sdk_compile.py')
+ccb = _load_module('cached_current_build', DIR / 'cached_current_build.py')
+
+
+def _sha256_bytes(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def _git_blob_sha1(data):
+    h = hashlib.sha1()
+    h.update(('blob %d\0' % len(data)).encode('ascii'))
+    h.update(data)
+    return h.hexdigest()
+
+
+
+class CachedCurrentBuildSyntheticTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.saved_base = guard.BASE
+        self.saved_lock = guard.LOCK
+
+
+    def tearDown(self):
+        guard.BASE = self.saved_base
+        guard.LOCK = self.saved_lock
+        for base, dirs, _ in os.walk(self.root, topdown=True, followlinks=False):
+            bpath = Path(base)
+            if not bpath.is_symlink():
+                os.chmod(bpath, 0o700)
+            for d in dirs:
+                dp = bpath / d
+                if not dp.is_symlink():
+                    os.chmod(dp, 0o700)
+        self.tmp.cleanup()
+
+
+    def _write(self, path, data=b'data', mode=0o644):
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        raw = data.encode('utf-8') if isinstance(data, str) else data
+        with open(p, 'wb') as f:
+            f.write(raw)
+        os.chmod(p, mode)
+        return p
+
+
+    def test_p7_receipts_once_only_pinned_and_tamper_refused(self):
+        names = ('ATTEMPT_RESULT', 'RAW_BEFORE_CLEANUP', 'PRESERVE_CLEANUP_RESULT')
+        saved = {n + s: getattr(ccb, 'P7_' + n + s) for n in names for s in ('_PATH', '_SHA256', '_BYTES')}
+
+        def pin(name, obj):
+            p = self._write(self.root / 'p7' / (name + '.json'), guard.json_bytes(obj), 0o644)
+            setattr(ccb, 'P7_' + name + '_PATH', str(p))
+            setattr(ccb, 'P7_' + name + '_SHA256', guard.digest(p))
+            setattr(ccb, 'P7_' + name + '_BYTES', p.stat().st_size)
+
+        def node(usage, peak):
+            events = 'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n'
+            return {
+                'cpu.stat': 'usage_usec %d\nuser_usec 1\n' % usage,
+                'cgroup.events': 'populated 0\nfrozen 0\n',
+                'cgroup.procs': '',
+                'memory.events': events,
+                'memory.events.local': events,
+                'memory.peak': '%d\n' % peak,
+                'pids.current': '0\n',
+            }
+
+        attempt = {
+            'id': 'P7-fresh-setup-current-stat-issued-DAG-and-changed-native-compile',
+            'actual_exit': 2,
+            'elapsed_seconds': 134.75891540400335,
+            'controller_failure': None,
+            'streams': [
+                {'bytes': 2956, 'sha256': '593a73e0c81284b558ec8b07b4fad37bc3ac45da7ba4788121c162d91593cec5', 'full_stream_retained': True},
+                {'bytes': 39, 'sha256': '9b4078eb89bbadd2597138fa1536d7732ccfa032574ab7218427a91f1a3a28bd', 'full_stream_retained': True},
+            ],
+        }
+        raw = {
+            'raw': {
+                'E': node(187121653, 5701033984),
+                'S': node(15162810, 80003072),
+                'P': node(171958842, 5649174528),
+                'marker': {'path': ccb.P7_MARKER_PATH, 'bytes': 9, 'sha256': '37cb06c8f02da9953c59a7186a4bbdca294494149fdf65f831d8b493ae5bcf67'},
+            },
+            'cleanupOwed': True,
+            'nativeOutputsAccepted': False,
+            'CargoDidStart': True,
+        }
+        steps = [{'step': s, 'actualExit': 0} for s in ccb.P7_CLEANUP_STEPS]
+        steps[4] = {'step': ccb.P7_CLEANUP_STEPS[4], 'exactMembershipHashesSizesAndNonexecModes': True, 'files': 3299}
+        steps[5]['streams'] = [{'bytes': 165, 'sha256': 'bc21db5edf04a7b73e3c813e0fc2d73db4610576ac39775953c3c08d99783a32'}]
+        steps[6]['streams'] = [{'bytes': 128, 'sha256': '711c09e6d455edcc1a5c02ef433342689ce283699cc5ebf2541f4af664a18c41'}]
+        cleanup = {
+            'status': 'P7_PRESERVED_AND_CLEANED',
+            'steps': steps,
+            'cleanupOwed': False,
+            'nativeOutputsAccepted': False,
+            'ELFExecuted': False,
+            'targetFilesPreserved': 3286,
+            'allFilesPreserved': 3299,
+            'quarantine': ccb.P7_PERSISTENT_QUARANTINE_ROOT,
+            'totalBytesPreserved': 1985171956,
+            'CargoDidStart': True,
+            'ordinaryRustCompilerErrors': 2,
+        }
+        fixtures = {'ATTEMPT_RESULT': attempt, 'RAW_BEFORE_CLEANUP': raw, 'PRESERVE_CLEANUP_RESULT': cleanup}
+        try:
+            for name, obj in fixtures.items():
+                pin(name, obj)
+            ccb._verify_p7_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+            for name, keys, value in (
+                ('RAW_BEFORE_CLEANUP', ('raw', 'E', 'cpu.stat'), 'usage_usec %d\n' % (15162810 + 171958842)),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'memory.events'), 'low 0\noom 1\noom_kill 1\n'),
+                ('ATTEMPT_RESULT', ('elapsed_seconds',), 135.5),
+                ('PRESERVE_CLEANUP_RESULT', ('cleanupOwed',), True),
+            ):
+                bad = copy.deepcopy(fixtures[name])
+                target = bad
+                for k in keys[:-1]:
+                    target = target[k]
+                target[keys[-1]] = value
+                pin(name, bad)
+                with self.assertRaises(guard.Refusal):
+                    ccb._verify_p7_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+                pin(name, fixtures[name])
+            ccb._verify_p7_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+            ccb.P7_PRESERVE_CLEANUP_RESULT_SHA256 = '00' * 32
+            with self.assertRaises(guard.Refusal):
+                ccb._verify_p7_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+        finally:
+            for key, value in saved.items():
+                setattr(ccb, 'P7_' + key, value)
+
+
+    def test_post_r3_historical_debits_enforced(self):
+        cg_base = self.root / 'cgroup_fs'
+        env_cg = cg_base / 'moriarty-sherlock-ledger9-20261018-06'
+        sup_cg = env_cg / 'supervisor'
+        ph_cg = env_cg / 'phases'
+        sup_cg.mkdir(parents=True, exist_ok=True)
+        ph_cg.mkdir(parents=True, exist_ok=True)
+        self._write(env_cg / 'cpu.stat', 'usage_usec 0\n', 0o644)
+        self._write(sup_cg / 'cpu.stat', 'usage_usec 0\n', 0o644)
+        self._write(ph_cg / 'cpu.stat', 'usage_usec 0\n', 0o644)
+
+        saved_cg_fs = guard.cg_fs
+        guard.cg_fs = lambda ns: cg_base / ns.lstrip('/')
+        try:
+            c = {
+                'total_wall_seconds': 6159,
+                'supervisor_cpu_seconds': 10592,
+                'limits': {'F': {'wall_seconds': 2254, 'cpu_time_us': 10800000000}},
+                'cgroup': {
+                    'envelope_path': '/moriarty-sherlock-ledger9-20261018-06',
+                    'supervisor_leaf_name': 'supervisor',
+                    'phase_parent_name': 'phases',
+                },
+            }
+            state = ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None)
+            self.assertEqual(state['effective_envelope_usec_at_start'], 835480719)
+            self.assertEqual(state['effective_supervisor_usec_at_start'], 207478351)
+            self.assertEqual(state['effective_phases_usec_at_start'], 628002365)
+            self.assertEqual(state['historical_debits']['retired_p5_envelope_usec'], 37863695)
+            self.assertEqual(state['historical_debits']['retired_p5_supervisor_usec'], 37863695)
+            self.assertEqual(state['historical_debits']['retired_p5_phases_usec'], 0)
+            self.assertEqual(state['historical_debits']['retired_p6_envelope_usec'], 39019876)
+            self.assertEqual(state['historical_debits']['retired_p6_supervisor_usec'], 39019876)
+            self.assertEqual(state['historical_debits']['retired_p6_phases_usec'], 0)
+            self.assertEqual(state['historical_debits']['retired_cached_attempts_envelope_usec'], 489282007)
+            self.assertEqual(state['historical_debits']['retired_cached_attempts_supervisor_usec'], 131563321)
+            self.assertEqual(state['historical_debits']['retired_cached_attempts_phases_usec'], 357718684)
+            self.assertEqual(state['historical_debits']['retired_p7_envelope_usec'], 187121653)
+            self.assertEqual(state['historical_debits']['retired_p7_supervisor_usec'], 15162810)
+            self.assertEqual(state['historical_debits']['retired_p7_phases_usec'], 171958842)
+            self.assertEqual(state['historical_debits']['p5_refusal_wall_seconds_ceil'], 40)
+            self.assertEqual(state['historical_debits']['p6_refusal_wall_seconds_ceil'], 44)
+            self.assertEqual(state['historical_debits']['p7_outer_wall_seconds_ceil'], 135)
+            self.assertEqual(state['historical_debits']['retired_p8_envelope_usec'], 198086463)
+            self.assertEqual(state['historical_debits']['retired_p8_supervisor_usec'], 12326620)
+            self.assertEqual(state['historical_debits']['retired_p8_phases_usec'], 185759842)
+            self.assertEqual(state['historical_debits']['p8_outer_wall_seconds_ceil'], 133)
+            self.assertEqual(state['historical_debits']['f_stdout_bytes'], 0)
+            self.assertEqual(state['historical_debits']['f_stderr_bytes'], 34201)
+            self.assertEqual(state['effective_envelope_usec_at_start'] - state['effective_supervisor_usec_at_start']
+                             - state['effective_phases_usec_at_start'], 3)
+            self.assertEqual(state['historical_debits']['supervisor_cpu_seconds_ceil'], 208)
+            self.assertEqual(state['historical_debits']['remaining_total_wall_seconds_max'], 6159)
+            self.assertEqual(state['historical_debits']['remaining_f_wall_seconds_max'], 2254)
+            self.assertEqual(state['historical_debits']['remaining_supervisor_cpu_seconds_max'], 10592)
+
+            # Verify historical debits (prior post-r3 + retired P2/P3 + retired P4 + retired P5 + retired P6 + retired P7 + retired P8 once) are added when live usage > 0.
+            self._write(env_cg / 'cpu.stat', 'usage_usec 400000000\n', 0o644)
+            self._write(sup_cg / 'cpu.stat', 'usage_usec 100000000\n', 0o644)
+            self._write(ph_cg / 'cpu.stat', 'usage_usec 300000000\n', 0o644)
+            state_post = ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None, at_start=False)
+            self.assertEqual(state_post['effective_envelope_usec_at_start'], 835480719 + 400000000)
+            self.assertEqual(state_post['effective_supervisor_usec_at_start'], 207478351 + 100000000)
+            self.assertEqual(state_post['effective_phases_usec_at_start'], 628002365 + 300000000)
+            # A repeated call re-reads live counters and never re-adds P7 or P8 (each debited exactly once).
+            state_again = ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None, at_start=False)
+            self.assertEqual(state_again['effective_phases_usec_at_start'], 628002365 + 300000000)
+            self.assertEqual(state_again['historical_debits'], state_post['historical_debits'])
+
+            c_over_wall = copy.deepcopy(c)
+            c_over_wall['total_wall_seconds'] = 6160
+            with self.assertRaises(guard.Refusal):
+                ccb.enforce_post_r3_historical_debits(c_over_wall, guard, cleanup_receipt_file=None)
+
+            c_over_f = copy.deepcopy(c)
+            c_over_f['limits']['F']['wall_seconds'] = 2255
+            with self.assertRaises(guard.Refusal):
+                ccb.enforce_post_r3_historical_debits(c_over_f, guard, cleanup_receipt_file=None)
+
+            c_over_sup = copy.deepcopy(c)
+            c_over_sup['supervisor_cpu_seconds'] = 10593
+            with self.assertRaises(guard.Refusal):
+                ccb.enforce_post_r3_historical_debits(c_over_sup, guard, cleanup_receipt_file=None)
+
+            # Retained post-P6 ceilings (6427/2522/10620) are now over cap.
+            for key, value in (('total_wall_seconds', 6427), ('supervisor_cpu_seconds', 10620), ('F', 2522)):
+                c_old = copy.deepcopy(c)
+                if key == 'F':
+                    c_old['limits']['F']['wall_seconds'] = value
+                else:
+                    c_old[key] = value
+                with self.assertRaises(guard.Refusal):
+                    ccb.enforce_post_r3_historical_debits(c_old, guard, cleanup_receipt_file=None)
+
+            # Earlier post-P7 ceilings also cannot refund the consumed P8 budget.
+            for key, value in (('total_wall_seconds', 6292), ('supervisor_cpu_seconds', 10604), ('F', 2387)):
+                c_old = copy.deepcopy(c)
+                if key == 'F':
+                    c_old['limits']['F']['wall_seconds'] = value
+                else:
+                    c_old[key] = value
+                with self.assertRaises(guard.Refusal):
+                    ccb.enforce_post_r3_historical_debits(c_old, guard, cleanup_receipt_file=None)
+
+            # Preserve P7 double-charge/normalization cases and add P8 refunds and duplicate debits.
+            saved_debits = ccb.HISTORICAL_POST_R3_DEBITS
+            try:
+                for key, value in (
+                    ('envelope_usec', 835480719 + 187121653),
+                    ('phases_usec', 628002365 + 171958842),
+                    ('retired_p7_envelope_usec', 15162810 + 171958842),
+                    ('envelope_usec', 835480719 + 198086463),
+                    ('supervisor_usec', 207478351 + 12326620),
+                    ('phases_usec', 628002365 + 185759842),
+                    ('envelope_usec', 835480719 - 198086463),
+                    ('supervisor_usec', 207478351 - 12326620),
+                    ('phases_usec', 628002365 - 185759842),
+                    ('envelope_usec', 207478351 + 628002365),
+                    ('retired_p8_envelope_usec', 12326620 + 185759842),
+                    ('retired_p8_supervisor_usec', 0),
+                    ('retired_p8_phases_usec', 0),
+                    ('retired_cached_attempts_envelope_usec', 489282007 - 198086463),
+                    ('remaining_total_wall_seconds_max', 6292),
+                    ('remaining_f_wall_seconds_max', 2387),
+                    ('remaining_supervisor_cpu_seconds_max', 10604),
+                    ('gross_supervisor_cpu_seconds_max', 10801),
+                    ('p8_outer_wall_seconds_ceil', 0),
+                    ('f_stderr_bytes', 34201 - 137),
+                    ('f_stderr_bytes', 34201 - 12829),
+
+                ):
+                    ccb.HISTORICAL_POST_R3_DEBITS = dict(saved_debits, **{key: value})
+                    with self.assertRaises(guard.Refusal):
+                        ccb.enforce_post_r3_historical_debits(c, guard, cleanup_receipt_file=None)
+            finally:
+                ccb.HISTORICAL_POST_R3_DEBITS = saved_debits
+        finally:
+            guard.cg_fs = saved_cg_fs
+
+
+    def test_cached_current_f_phase_leaf_placement_and_lifecycle(self):
+        cg_base = self.root / 'cgroup_fs'
+        env_cg = cg_base / 'moriarty-sherlock-ledger9-20261018-06'
+        sup_cg = env_cg / 'supervisor'
+        ph_cg = env_cg / 'phases'
+        sup_cg.mkdir(parents=True, exist_ok=True)
+        ph_cg.mkdir(parents=True, exist_ok=True)
+        self._write(env_cg / 'cpu.stat', 'usage_usec 0\n', 0o644)
+        self._write(sup_cg / 'cpu.stat', 'usage_usec 0\n', 0o644)
+        self._write(ph_cg / 'cpu.stat', 'usage_usec 0\n', 0o644)
+
+        exec_root = self.root / 'exec'
+        paths = {
+            'execution_root': str(exec_root),
+            'source_home': str(exec_root / 'source-home'),
+            'target': str(exec_root / 'target'),
+            'tmp': str(exec_root / 'tmp'),
+            'packet': str(exec_root / 'packet'),
+            'empty_home': str(exec_root / 'empty-home'),
+            'mask_empty': str(exec_root / 'mask-empty'),
+            'worktree': str(self.root / 'worktree'),
+            'config': str(self.root / 'config.final.json'),
+        }
+        for k, v in paths.items():
+            if k != 'config':
+                Path(v).mkdir(parents=True, exist_ok=True)
+
+        c = {
+            'mode': 'tier1-and-compile',
+            'total_wall_seconds': 6159,
+            'supervisor_cpu_seconds': 10592,
+            'paths': paths,
+            'readonly_tools': ['/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu'],
+            'source_copy_mounts': ['/home/charl/.cargo'],
+            'masks': ['/home/charl', '/home/charl/.cargo'],
+            'limits': {
+                'D': {'packet_bytes': 67108864},
+                'F': {
+                    'wall_seconds': 2254,
+                    'cpu_time_us': 10800000000,
+                    'cpu_quota_us': 400000,
+                    'cpu_period_us': 100000,
+                    'memory_bytes': 8589934592,
+                    'file_bytes': 4294967296,
+                    'pids': 1024,
+                    'packet_bytes': 67108864,
+                    'stdout_bytes': 16777216,
+                    'stderr_bytes': 16777216,
+                    'namespace_tmpfs_bytes': 67108864,
+                },
+            },
+            'cgroup': {
+                'envelope_path': '/moriarty-sherlock-ledger9-20261018-06',
+                'supervisor_leaf_name': 'supervisor',
+                'phase_parent_name': 'phases',
+            },
+        }
+
+        # 1. Before D_FREEZE.json exists, F precheck mount/predecessor contracts allow source_home write in phase F leaf.
+        self.assertEqual(guard.child_mounts(c, 'F', False)[paths['source_home']], 'rw')
+        self.assertEqual(guard.prior_receipts(c, 'F', True, False), {})
+
+        saved_cg_fs = guard.cg_fs
+        saved_cg_text = guard._cg_text
+        saved_reconstitute = ccb.reconstitute_source_home
+        saved_seed = ccb.verify_and_seed_cached_target
+        saved_enforce = ccb.enforce_post_r3_historical_debits
+        saved_consent = getattr(guard, 'consent', None)
+        saved_sup_env = guard.supervisor_envelope
+        saved_bound = getattr(guard, 'bound_identities', None)
+        saved_owned = getattr(guard, 'owned_paths', None)
+        saved_quotas = getattr(guard, 'quotas', None)
+        saved_launch = guard.launch
+        import resource
+        saved_setrlimit = resource.setrlimit
+        rlimit_calls = []
+        try:
+            guard.cg_fs = lambda ns: cg_base / ns.lstrip('/')
+
+            # 2. prepare_cached_current_f_worker refuses if called in supervisor leaf S before any write.
+            guard._cg_text = lambda p: (
+                '0::/moriarty-sherlock-ledger9-20261018-06/supervisor\n'
+                if str(p) == '/proc/self/cgroup'
+                else saved_cg_text(p)
+            )
+            with self.assertRaises(guard.Refusal):
+                ccb.prepare_cached_current_f_worker(c, guard)
+            self.assertEqual(list(Path(paths['source_home']).iterdir()), [])
+            self.assertEqual(list(Path(paths['target']).iterdir()), [])
+
+            # 3. Inside phase F leaf, prepare_cached_current_f_worker runs before first page-creating write.
+            call_order = []
+
+            def fake_reconstitute(cfg, g):
+                self.assertEqual(
+                    g._cg_text('/proc/self/cgroup').strip(),
+                    '0::/moriarty-sherlock-ledger9-20261018-06/phases/sdk-once-F',
+                )
+                call_order.append('reconstitute')
+                self._write(Path(cfg['paths']['source_home']) / 'marker.txt', 'ok\n', 0o444)
+                for fn in (
+                    'A0_FREEZE.json',
+                    'C_RAW_IDENTITIES.json',
+                    'D_FREEZE.json',
+                    'E_RESOLVED.json',
+                    'SOURCE_HOME_RECONSTITUTION.json',
+                ):
+                    self._write(Path(cfg['paths']['packet']) / fn, '{"ok":true}\n', 0o444)
+                return {'status': 'reconstituted'}
+
+            def fake_seed(cfg, g):
+                self.assertEqual(
+                    g._cg_text('/proc/self/cgroup').strip(),
+                    '0::/moriarty-sherlock-ledger9-20261018-06/phases/sdk-once-F',
+                )
+                call_order.append('seed')
+                self._write(Path(cfg['paths']['target']) / 'seeded.txt', 'ok\n', 0o644)
+                snap = {
+                    'partition_counts': dict(ccb.PRODUCTION_PARTITION_COUNTS),
+                    'host_outputs_seeded': {},
+                    'run_unit_snapshots': {},
+                    'seeded_files': {},
+                }
+                self._write(Path(cfg['paths']['packet']) / 'CACHED_TARGET_SEED.json', json.dumps(snap) + '\n', 0o444)
+                return snap
+
+            ccb.reconstitute_source_home = fake_reconstitute
+            ccb.verify_and_seed_cached_target = fake_seed
+            ccb.enforce_post_r3_historical_debits = lambda cfg, g, cleanup_receipt_file=None, at_start=True: saved_enforce(
+                cfg, g, cleanup_receipt_file=None, at_start=at_start
+            )
+            guard.BASE = 'f935febac3f9158c3ce02812ac3b3c4adb986714'
+            guard.consent = lambda cfg: None
+            guard.supervisor_envelope = lambda cfg: None
+            guard.bound_identities = lambda cfg, host_originals=True: None
+            guard.owned_paths = lambda cfg: None
+            guard.quotas = lambda cfg, ph: None
+
+            def fake_launch(cfg, ph, cfg_sha, retained_audit=False):
+                self.assertEqual(ph, 'F')
+                # Supervisor S must not have created any files in source_home or target before launch.
+                self.assertEqual(list(Path(cfg['paths']['source_home']).iterdir()), [])
+                self.assertEqual(list(Path(cfg['paths']['target']).iterdir()), [])
+                self.assertTrue((Path(cfg['paths']['execution_root']) / 'ONE_SHOT_STARTED').is_file())
+                grp = guard.Group(cfg, 'F')
+                self.assertEqual(getattr(grp, 'prior_cpu', None), 628002365)
+                guard._cg_text = lambda p: (
+                    '0::/moriarty-sherlock-ledger9-20261018-06/phases/sdk-once-F\n'
+                    if str(p) == '/proc/self/cgroup'
+                    else saved_cg_text(p)
+                )
+                ccb.prepare_cached_current_f_worker(cfg, guard)
+                # Once D_FREEZE and CACHED_TARGET_SEED exist, F mount mode is ro and predecessors include all 8 files.
+                self._write(Path(cfg['paths']['packet']) / 'F.stdout', '', 0o444)
+                self._write(Path(cfg['paths']['packet']) / 'F.stderr', '', 0o444)
+                self.assertEqual(guard.child_mounts(cfg, 'F', False)[cfg['paths']['source_home']], 'ro')
+                self.assertEqual(
+                    set(guard.prior_receipts(cfg, 'F', False, False).keys()),
+                    {
+                        'A0_FREEZE.json',
+                        'C_RAW_IDENTITIES.json',
+                        'D_FREEZE.json',
+                        'E_RESOLVED.json',
+                        'SOURCE_HOME_RECONSTITUTION.json',
+                        'CACHED_TARGET_SEED.json',
+                        'F.stdout',
+                        'F.stderr',
+                    },
+                )
+                self._write(
+                    Path(cfg['paths']['packet']) / 'CACHED_POST_COMPILE_CHECK.json',
+                    '{"host_outputs_verified_unchanged":90}\n',
+                    0o444,
+                )
+                self._write(env_cg / 'cpu.stat', 'usage_usec 60000000\n', 0o644)
+                self._write(sup_cg / 'cpu.stat', 'usage_usec 10000000\n', 0o644)
+                self._write(ph_cg / 'cpu.stat', 'usage_usec 50000000\n', 0o644)
+                return {'phase': 'F', 'wall_seconds': 12.5, 'log_bytes': {'stdout': 0, 'stderr': 100}}
+
+            resource.setrlimit = lambda kind, lims: rlimit_calls.append((kind, lims))
+            guard.launch = fake_launch
+            res = ccb.cached_current_f(c, 'a' * 64, guard)
+            self.assertEqual(rlimit_calls, [(resource.RLIMIT_CPU, (10592, 10592))])
+            self.assertEqual(call_order, ['reconstitute', 'seed'])
+            self.assertEqual(res['historical_debit_state_start']['effective_phases_usec_at_start'], 628002365)
+            self.assertEqual(res['historical_debit_state_end']['effective_phases_usec_at_start'], 628002365 + 50000000)
+            self.assertEqual(res['historical_debit_state_end']['effective_supervisor_usec_at_start'], 207478351 + 10000000)
+            self.assertEqual(res['historical_debit_state_end']['effective_envelope_usec_at_start'], 835480719 + 60000000)
+            self.assertTrue((Path(paths['packet']) / 'F_CACHED_CURRENT_RESULT.json').is_file())
+        finally:
+            guard.cg_fs = saved_cg_fs
+            guard._cg_text = saved_cg_text
+            ccb.reconstitute_source_home = saved_reconstitute
+            ccb.verify_and_seed_cached_target = saved_seed
+            ccb.enforce_post_r3_historical_debits = saved_enforce
+            if saved_consent is not None:
+                guard.consent = saved_consent
+            guard.supervisor_envelope = saved_sup_env
+            if saved_bound is not None:
+                guard.bound_identities = saved_bound
+            if saved_owned is not None:
+                guard.owned_paths = saved_owned
+            if saved_quotas is not None:
+                guard.quotas = saved_quotas
+            guard.launch = saved_launch
+            resource.setrlimit = saved_setrlimit
+
+
+    def test_p8_receipts_once_only_pinned_and_tamper_refused(self):
+        names = ('ATTEMPT_RESULT', 'RAW_BEFORE_CLEANUP', 'PRESERVE_CLEANUP_RESULT', 'TERMINAL_FAILURE', 'LOG_BASIS')
+        saved = {n + s: getattr(ccb, 'P8_' + n + s) for n in names for s in ('_PATH', '_SHA256', '_BYTES')}
+
+        def pin(name, obj):
+            p = self._write(self.root / 'p8' / (name + '.json'), guard.json_bytes(obj), 0o644)
+            setattr(ccb, 'P8_' + name + '_PATH', str(p))
+            setattr(ccb, 'P8_' + name + '_SHA256', guard.digest(p))
+            setattr(ccb, 'P8_' + name + '_BYTES', p.stat().st_size)
+
+        def node(usage, peak):
+            events = 'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n'
+            return {'cpu.stat': 'usage_usec %d\nuser_usec 1\n' % usage,
+                    'cgroup.events': 'populated 0\nfrozen 0\n', 'cgroup.procs': '',
+                    'memory.events': events, 'memory.events.local': events,
+                    'memory.peak': '%d\n' % peak, 'pids.current': '0\n'}
+
+        attempt = {
+            'id': 'P8-fresh-setup-current-stat-issued-DAG-and-two-test-fixed-native-compile',
+            'actual_exit': 2, 'controller_failure': None, 'elapsed_seconds': 132.46132113799104,
+            'streams': [
+                {'bytes': 2990, 'sha256': '5b12a998da8bfa80df2ab35a51d761d3018fb7394b144178507e5c7c51c86ba9', 'full_stream_retained': True},
+                {'bytes': 39, 'sha256': '9b4078eb89bbadd2597138fa1536d7732ccfa032574ab7218427a91f1a3a28bd', 'full_stream_retained': True},
+            ],
+        }
+        raw = {
+            'raw': {'E': node(198086463, 5911670784), 'S': node(12326620, 71958528),
+                    'P': node(185759842, 5859758080),
+                    'marker': {'path': ccb.P7_MARKER_PATH, 'bytes': 9,
+                               'sha256': '37cb06c8f02da9953c59a7186a4bbdca294494149fdf65f831d8b493ae5bcf67'}},
+            'cleanupOwed': True, 'nativeOutputsAccepted': False, 'CargoDidStart': True,
+            'CargoCompileReportedFinished': True, 'ELFExecuted': False,
+            'postAuditFailure': 'third-party host output mtime changed during cached Phase F: debug/build/aws-lc-sys-5469586605af0f08/build-script-main',
+        }
+        steps = [{'step': st, 'actualExit': 0} for st in ccb.P7_CLEANUP_STEPS]
+        steps[4] = {'step': ccb.P7_CLEANUP_STEPS[4], 'exactMembershipHashesSizesAndNonexecModes': True, 'files': 3565}
+        steps[5]['streams'] = [{'bytes': 165, 'sha256': '8527b3723c3feaee209027a88fbb123a1d7cf1f7ce39614eb7fa99b50477c7df'}]
+        steps[6]['streams'] = [{'bytes': 128, 'sha256': '845999dd73a18885b43917a80a6cc7c77841126bc27a06c96f5a754e03acbc22'}]
+        cleanup = {
+            'status': 'P8_PRESERVED_AND_CLEANED', 'steps': steps, 'cleanupOwed': False,
+            'nativeOutputsAccepted': False, 'ELFExecuted': False, 'CargoDidStart': True,
+            'CargoCompileReportedSuccess': True, 'CargoBuildSecondsReported': 55.6,
+            'guardPostAudit': 'FAILED aws-lc-sys build-script-main mtime changed',
+            'targetFilesPreserved': 3548, 'allFilesPreserved': 3565, 'totalBytesPreserved': 2847417755,
+            'quarantine': ccb.P8_PERSISTENT_QUARANTINE_ROOT, 'cgroupAbsent': True, 'executionRootEmpty': True,
+        }
+        terminal = {'message': 'phase exit nonzero F', 'native_outputs_accepted': False,
+                    'route': 'cached-current-f', 'type': 'Refusal'}
+        # Synthetic ordinary files have the independent historical byte counts, no SDK or captured payloads.
+        specs = (
+            ('r3', (('F', 10237), ('F_audit', 47), ('F_precheck', 0),
+                    ('F_retained_audit', 47), ('F_retained_audit_r2', 75), ('F_retained_audit_r3', 0))),
+            ('P7', (('F', 12829), ('F_precheck', 0))),
+            ('P8', (('F', 10829), ('F_audit', 137), ('F_precheck', 0))),
+        )
+        rows = []
+        for label, launches in specs:
+            files = []
+            for launch, size in launches:
+                for kind, count in (('stdout', 0), ('stderr', size)):
+                    p = self._write(self.root / 'streams' / label / (launch + '.' + kind), b'x' * count)
+                    files.append({'path': str(p), 'bytes': count, 'sha256': guard.digest(p)})
+            rows.append({'attempt': label, 'stream_files': files,
+                         'subtotal': {'stdout': 0, 'stderr': sum(n for _, n in launches)}})
+        basis = {'status': 'SAVED_PUBLIC_STREAM_BYTE_PINS_AND_ARITHMETIC_NOT_SOURCE_APPROVAL', 'rows': rows,
+                 'new_cumulative_all_F_stdout': 0, 'new_cumulative_all_F_stderr': 34201}
+        fixtures = {'ATTEMPT_RESULT': attempt, 'RAW_BEFORE_CLEANUP': raw, 'PRESERVE_CLEANUP_RESULT': cleanup,
+                    'TERMINAL_FAILURE': terminal, 'LOG_BASIS': basis}
+        try:
+            for name, obj in fixtures.items():
+                pin(name, obj)
+            before = copy.deepcopy(ccb.HISTORICAL_POST_R3_DEBITS)
+            ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+            ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+            self.assertEqual(ccb.HISTORICAL_POST_R3_DEBITS, before)
+            # Re-pin altered receipts to exercise semantics independently of immutable production digests.
+            for name, keys, value in (
+                ('ATTEMPT_RESULT', ('actual_exit',), 0),
+                ('ATTEMPT_RESULT', ('elapsed_seconds',), 131.5),
+                ('ATTEMPT_RESULT', ('streams', 0, 'full_stream_retained'), False),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'E', 'cpu.stat'), 'usage_usec 198086462\n'),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'S', 'cpu.stat'), 'usage_usec 0\n'),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'cpu.stat'), 'usage_usec 0\n'),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'cgroup.events'), 'populated 1\n'),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'P', 'memory.events'), 'low 0\noom 1\noom_kill 1\n'),
+                ('RAW_BEFORE_CLEANUP', ('raw', 'marker', 'sha256'), '00' * 32),
+                ('RAW_BEFORE_CLEANUP', ('postAuditFailure',), None),
+                ('RAW_BEFORE_CLEANUP', ('nativeOutputsAccepted',), True),
+                ('PRESERVE_CLEANUP_RESULT', ('cleanupOwed',), True),
+                ('PRESERVE_CLEANUP_RESULT', ('nativeOutputsAccepted',), True),
+                ('PRESERVE_CLEANUP_RESULT', ('ELFExecuted',), True),
+                ('PRESERVE_CLEANUP_RESULT', ('cgroupAbsent',), False),
+                ('PRESERVE_CLEANUP_RESULT', ('executionRootEmpty',), False),
+                ('PRESERVE_CLEANUP_RESULT', ('guardPostAudit',), 'PASS'),
+                ('PRESERVE_CLEANUP_RESULT', ('steps', 6, 'actualExit'), 2),
+                ('PRESERVE_CLEANUP_RESULT', ('steps', 4, 'exactMembershipHashesSizesAndNonexecModes'), False),
+                ('TERMINAL_FAILURE', ('native_outputs_accepted',), True),
+                ('TERMINAL_FAILURE', ('type',), 'Success'),
+                ('LOG_BASIS', ('rows', 1, 'attempt'), 'P8'),
+                ('LOG_BASIS', ('rows', 2, 'stream_files'), rows[2]['stream_files'][:-2]),
+                ('LOG_BASIS', ('rows', 2, 'stream_files', 0), rows[1]['stream_files'][0]),
+                ('LOG_BASIS', ('rows', 2, 'subtotal', 'stderr'), 10829),
+                ('LOG_BASIS', ('new_cumulative_all_F_stderr',), 34201 - 137),
+            ):
+                with self.subTest(receipt=name, keys=keys):
+                    bad = copy.deepcopy(fixtures[name])
+                    target = bad
+                    for key in keys[:-1]:
+                        target = target[key]
+                    target[keys[-1]] = value
+                    pin(name, bad)
+                    with self.assertRaises(guard.Refusal):
+                        ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+                    pin(name, fixtures[name])
+            # A real retained-file byte change must reject without changing its receipt.
+            audit_path = Path(rows[2]['stream_files'][3]['path'])
+            old_bytes = audit_path.read_bytes()
+            self._write(audit_path, b'y' * len(old_bytes))
+            with self.assertRaises(guard.Refusal):
+                ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+            self._write(audit_path, old_bytes)
+            for name in names:
+                with self.subTest(pin=name):
+                    setattr(ccb, 'P8_' + name + '_SHA256', '00' * 32)
+                    with self.assertRaises(guard.Refusal):
+                        ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+                    pin(name, fixtures[name])
+            with self.assertRaises(guard.Refusal):
+                ccb._verify_p8_receipts(dict(before, f_stderr_bytes=34201 - 12829), guard)
+            with self.assertRaises(guard.Refusal):
+                ccb._verify_p8_receipts(dict(before, retired_p8_envelope_usec=198086462), guard)
+            ccb._verify_p8_receipts(ccb.HISTORICAL_POST_R3_DEBITS, guard)
+            self.assertEqual(ccb.HISTORICAL_POST_R3_DEBITS, before)
+        finally:
+            for key, value in saved.items():
+                setattr(ccb, 'P8_' + key, value)
+
