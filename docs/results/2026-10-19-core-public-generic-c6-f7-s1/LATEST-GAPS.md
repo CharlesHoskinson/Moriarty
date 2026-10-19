@@ -1,0 +1,9 @@
+# Remaining scope after the passing integration
+
+- Broad Core `cfg(test)` compilation is UNCHECKED. Inventory is classifying baseline versus introduced gaps: missing `LayoutSchemaC.ext_capacities` fixture fields, two `HostilePlans` methods, a `snap_data_row` Constructor arm, and the missing `witness_plan/adt_projection_tests.rs` registration/file (owned R source exists). Classification and any required scoped correction remain open before merge. No full test-target pass is claimed.
+- Full generic B-to-source projection remains open: nominal value meaning and membership, planned-match/PlanNode semantics, constructor continuations, Materialize control and normative XAdt rule mapping. GenericProfile is an explicit diagnostic refusal.
+- Four of the nine existing035 tests remain unrun for this union: let/leaf contrast, list B0 work, tree B0 work and the valid-program/layout/run-input cache contrast. The five selected passes do not establish whole035/UIREQ035 closure.
+- Wildcard, ConstructorPattern, ConstructorConstant, ConstructorFieldsFrame and Materialize refusal branches remain masked or unexercised. DedicatedSorts with nonempty ADT tables is not exercised through a public construction. The signature-refusal row diagnostic S4 remains optional work.
+- The retained nominal text-source module is compiled in the normal closure; no behaviour selector for that module was run here.
+- Prior F3/F5/F6/F8/F9/F10/F11/F12 and N1/N3/N4 findings remain open. Exact raw equality preserves the earlier selected independent result; this integration adds no independent oracle passes or broad correspondence claim.
+- Host resource/untrusted-input guarantees, full financial conformance, native ZKIRv3/proof/ledger and target qualification, recursion, EARS and parent acceptance remain separate obligations. No defaults, capacities, counters or acceptance rules changed.

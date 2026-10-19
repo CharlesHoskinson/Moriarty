@@ -436,6 +436,9 @@ pub fn plan_match(sel: &Selected, pre: &dyn PreImageView,
     match sel.rule {
         BHelperMatchEntry => match_entry_payload(sel, pre, pre.reference_cursor()),
         BHelperMatchArm => {
+            if !matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: None, .. }) {
+                return Err(wrong_variant());
+            }
             let HelperControlC::Match { arm, .. } = helper_copy(pre)?
                 else { return Err(wrong_variant()); };
             let arm_row = pre.arm(&arm)?;
@@ -445,6 +448,7 @@ pub fn plan_match(sel: &Selected, pre: &dyn PreImageView,
                 PatternRowC::PCons { x, y } => (PatternTag::PCons, x, y),
                 PatternRowC::PLeaf { x } => (PatternTag::PLeaf, x, 0),
                 PatternRowC::PBranch { x, y } => (PatternTag::PBranch, x, y),
+                PatternRowC::Wildcard | PatternRowC::Constructor { .. } => return Err(wrong_variant()),
             };
             match_arm_payload(sel, pre, p)
         }

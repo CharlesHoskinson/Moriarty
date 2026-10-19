@@ -6,7 +6,7 @@ use mori_core::sherlock::helper_machine::raw::{ConstRow, DataRow};
 use mori_core::sherlock::helper_machine::shared::{
     BinaryOp, BoundaryKind, ControlC, EventKind, ExpressionRowC, FinanceInput,
     GrammarDomain, LocatorC, OutcomeC, OutcomeTagC, PatternRowC, ProgramView,
-    RefC, RuleIdC, RunIntC, SliceC, SortTag, StepDisposition, StepEventC, UnaryOp,
+    RefC, RuleIdC, RunIntC, SliceC, SortTag, StepDisposition, StepEventC, TypeIdC, UnaryOp,
 };
 use serde_json::{json, Value};
 
@@ -19,8 +19,8 @@ const TARGET_SHA: &str = "b7b9069acc831ae962d941c75a75c7bc2780e4029a569209458601
 
 fn dec(n: usize) -> String { n.to_string() }
 fn slice(s: SliceC) -> Value { json!({"start":dec(s.start),"len":dec(s.len)}) }
-fn sort(s: SortTag) -> &'static str {
-    match s { SortTag::UInt=>"UInt",SortTag::Bool=>"Bool",SortTag::List=>"List",SortTag::Tree=>"Tree" }
+fn sort(s: TypeIdC) -> &'static str {
+    match s { TypeIdC::UInt=>"UInt",TypeIdC::Bool=>"Bool",TypeIdC::List=>"List",TypeIdC::Tree=>"Tree", _=>panic!("unexpected generic type id in sealed dedicated program") }
 }
 fn binary(op: BinaryOp) -> &'static str {
     match op { BinaryOp::Add=>"Add",BinaryOp::Sub=>"Sub",BinaryOp::Mul=>"Mul",
@@ -38,7 +38,8 @@ fn program_view(view: &ProgramView) -> Value {
         ExpressionRowC::Unary{op,operand}=>json!({"Unary":{"op":unary(*op),"operand":dec(*operand)}}),
         ExpressionRowC::If{cond,then_expr,else_expr}=>json!({"If":{"cond":dec(*cond),"then_expr":dec(*then_expr),"else_expr":dec(*else_expr)}}),
         ExpressionRowC::Call{function_name,args}=>json!({"Call":{"function_name":dec(*function_name),"args":slice(*args)}}),
-        ExpressionRowC::Match{scrutinee,arms}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms)}}),
+        ExpressionRowC::Match{scrutinee,arms,plan}=>json!({"Match":{"scrutinee":dec(*scrutinee),"arms":slice(*arms),"plan":(*plan).map(dec)}}),
+        ExpressionRowC::Construct{type_id,ctor_id,fields,constant}=>json!({"Construct":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"fields":slice(*fields),"constant":(*constant).map(dec)}}),
     }).collect();
     let occurrences: Vec<Value> = view.occurrences.iter().map(|r|
         json!({"owner_is_function":r.owner_is_function,"function":dec(r.function),"path":slice(r.path)})).collect();
@@ -52,6 +53,8 @@ fn program_view(view: &ProgramView) -> Value {
         PatternRowC::PCons{x,y}=>json!({"PCons":{"x":dec(*x),"y":dec(*y)}}),
         PatternRowC::PLeaf{x}=>json!({"PLeaf":{"x":dec(*x)}}),
         PatternRowC::PBranch{x,y}=>json!({"PBranch":{"x":dec(*x),"y":dec(*y)}}),
+        PatternRowC::Wildcard=>json!("Wildcard"),
+        PatternRowC::Constructor{type_id,ctor_id,children}=>json!({"Constructor":{"type_id":dec(type_id.0),"ctor_id":dec(ctor_id.0),"children":slice(*children)}}),
     }).collect();
     let constants: Vec<Value> = view.constants.iter().map(|r|match r {
         ConstRow::U128{marker_free,n}=>json!({"U128":{"marker_free":marker_free,"n":n.to_string()}}),

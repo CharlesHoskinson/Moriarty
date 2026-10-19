@@ -64,6 +64,7 @@ fn proposed_operator_config() -> ConsumerConfig {
         scalar_layout_id: None,
         bounds,
         capacities,
+        ext_capacities: None,
         boundary_capacities_present: false,
     };
     ConsumerConfig {

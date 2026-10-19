@@ -40,7 +40,7 @@ fn default_bounds_and_layout() -> (BoundsC, LayoutSchemaC) {
             occurrence_path_slots: 256,
             value_slots: 4096,
         },
-        boundary_capacities_present: false,
+        ext_capacities: None, boundary_capacities_present: false,
     };
     (b, l)
 }

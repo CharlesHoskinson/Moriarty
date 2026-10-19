@@ -6,7 +6,7 @@ use super::super::shared::{
     AppendPhase, ControlC, EffectPlan, EnvCellC, ExpressionRowC, FrameRowC,
     HelperCommon, HelperControlC, HelperResultC, HostViolation,
     HostViolationKind, GuardEvaluator, PlanDelta, PlannedWrites, PreImageView, RuleIdC,
-    Selected, SliceC, TaskOp, TriStatus, Write,
+    Selected, SiteTag, SliceC, TaskOp, TriStatus, Write,
 };
 
 fn effect_error(kind: HostViolationKind, locator: &str) -> HostViolation {
@@ -34,7 +34,8 @@ fn preserved_effects() -> EffectPlan {
         writes: PlannedWrites { control: Write::Keep, control_origin: Write::Keep,
             env_root: Write::Keep, result: Write::Keep, helper: Write::Keep,
             frame: None, task_rewrite_top: None, task_op: TaskOp::None,
-            alloc_data: None, alloc_env: None, alloc_value_slot: None },
+            alloc_data: None, alloc_env: None, alloc_value_slot: None,
+            alloc_data_field: None, alloc_constructor: None },
     }
 }
 fn helper_copy(pre: &dyn PreImageView) -> Result<HelperControlC, HostViolation> {
@@ -346,6 +347,11 @@ pub fn plan_find(sel: &Selected, pre: &dyn PreImageView,
 
 pub fn plan_append(sel: &Selected, pre: &dyn PreImageView,
     _g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> {
+    match (sel.rule, sel.site) {
+        (RuleIdC::BHelperAppendEntry, Some(SiteTag::RetCtorFields)) =>
+            return super::adt_constructor::append_entry(sel, pre),
+        _ => {}
+    }
     match &sel.rule {
         RuleIdC::BHelperAppendEntry => append_entry(pre, entry_common(sel, pre)?),
         RuleIdC::BHelperAppendCell => append_cell(pre),

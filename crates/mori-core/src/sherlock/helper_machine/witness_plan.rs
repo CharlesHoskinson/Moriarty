@@ -58,11 +58,14 @@ pub(super) fn fail(location: Location, kind: FailureKind) -> WitnessFailure {
 /// One flat, fully unfolded occurrence tree. Child indices precede parents;
 /// repeated raw references produce repeated semantic occurrences, not sharing.
 /// Vec ownership avoids recursive construction, traversal and recursive Drop.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ValueNode {
     UInt(u128), Bool(bool), Nil, U128OutOfRange,
     Cons { head: usize, tail: usize }, Leaf { value: usize },
     Branch { left: usize, right: usize },
+    /// Canonical nominal identity with ordered roots in this occurrence arena.
+    /// This diagnostic projection does not authenticate constructor membership.
+    Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: Vec<usize> },
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DecodedValue { pub nodes: Vec<ValueNode>, pub root: usize }
@@ -104,12 +107,16 @@ pub enum InputPath {
     Parameter(usize), Arm(usize), Pattern(usize), Occurrence(usize),
     OccurrencePath(usize), Child(usize), Frame(usize), ScheduledFrame,
     Control, Helper, Task(usize), Result, Outcome, ValueSlot(usize),
+    PatternChild(usize), Type(usize), TypeArg(usize), Constructor(usize),
+    ConstructorField(usize), DeclParamCount(usize), DeclCtorCount(usize),
+    DeclTemplate(usize), PlanNode(usize), PlanCase(usize), FieldPath(usize),
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SourceType {
     Metadata, Constant, Data, Reference, Environment, Name, Expression, Function,
     Parameter, Arm, Pattern, Occurrence, Index, Frame, Control, Helper, Task,
-    Result, Outcome,
+    Result, Outcome, Type, TypeId, Constructor, ConstructorField,
+    DeclTemplate, PlanNode, PlanCase,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InputValue {
@@ -119,6 +126,10 @@ pub enum InputValue {
     Arm(ArmRowC), Pattern(PatternRowC), Occurrence(OccurrenceRowC), Index(usize),
     Frame(FrameRowC), Control(ControlC), Helper(Option<HelperControlC>),
     Task(HelperTaskC), Result(Option<HelperResultC>), Outcome(OutcomeC),
+    Type(adt::TypeRowC), TypeId(TypeIdC), Constructor(adt_storage::CtorRowExt),
+    ConstructorField(adt_storage::CtorFieldRowExt),
+    DeclTemplate(owner_ext_type_builder::TypeDeclSrc), PlanNode(PlanNodeC),
+    PlanCase(Option<usize>),
 }
 impl InputValue {
     pub fn source_type(&self) -> SourceType {
@@ -133,13 +144,19 @@ impl InputValue {
             Self::Control(_) => SourceType::Control, Self::Helper(_) => SourceType::Helper,
             Self::Task(_) => SourceType::Task, Self::Result(_) => SourceType::Result,
             Self::Outcome(_) => SourceType::Outcome,
+            Self::Type(_) => SourceType::Type, Self::TypeId(_) => SourceType::TypeId,
+            Self::Constructor(_) => SourceType::Constructor,
+            Self::ConstructorField(_) => SourceType::ConstructorField,
+            Self::DeclTemplate(_) => SourceType::DeclTemplate,
+            Self::PlanNode(_) => SourceType::PlanNode, Self::PlanCase(_) => SourceType::PlanCase,
         }
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PayloadKind { Frame, Control, Helper, Task, Result, Outcome }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SequenceKind { Values, Environments, Frames, Tasks, Names, Expressions, Parameters, Arms, Patterns, Occurrences, Indices, References }
+pub enum SequenceKind { Values, Environments, Frames, Tasks, Names, Expressions, Parameters, Arms, Patterns, Occurrences, Indices, References,
+    Functions, Types, TypeIds, Constructors, ConstructorFields, DeclTemplates, PlanNodes, PlanCases }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ValueType {
     Source(SourceType), Value, Environment, Payload(PayloadKind),
@@ -297,3 +314,7 @@ pub use stream::{
     StrategyMaterializedSnapshot, StrategyObservedStep, StrategyStepError,
     WitnessRecordCache, StreamAction, StreamStop,
 };
+
+#[cfg(test)]
+#[path = "witness_plan/adt_projection_tests.rs"]
+mod adt_projection_tests;

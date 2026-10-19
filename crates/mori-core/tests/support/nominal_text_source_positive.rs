@@ -20,7 +20,7 @@ fn layout()->LayoutSchemaC {
             constant_field_slots:128,data_nodes:128,data_field_slots:256,environment_cells:128,
             frames:64,helper_tasks:256,serialization_bytes:65536,max_reference_work:4096,
             max_helper_work:4096,step_cap:1},
-        capacities:LayoutCapacitiesC {name_rows:256,name_bytes:4096,occurrence_path_slots:1024,value_slots:256},boundary_capacities_present:false}
+        capacities:LayoutCapacitiesC {name_rows:256,name_bytes:4096,occurrence_path_slots:1024,value_slots:256},ext_capacities: None, boundary_capacities_present:false}
 }
 fn ty(t:&TypeExprSrc)->String {
     match t {

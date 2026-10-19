@@ -25,6 +25,7 @@ fn flat(v: &wp::SlotValue) -> Value {
         wp::ValueNode::Nil=>json!(["Nil"]),wp::ValueNode::U128OutOfRange=>json!(["U128OutOfRange"]),
         wp::ValueNode::Cons{head,tail}=>json!(["Cons",head,tail]),wp::ValueNode::Leaf{value}=>json!(["Leaf",value]),
         wp::ValueNode::Branch{left,right}=>json!(["Branch",left,right]),
+        wp::ValueNode::Constructor{type_id,ctor_id,fields}=>json!(["Constructor",type_id.0,ctor_id.0,fields]),
     }).collect();
     json!({"nodes":nodes,"root":v.root})
 }
@@ -47,6 +48,11 @@ fn path(p: &wp::InputPath)->(&'static str,Option<usize>){
         Occurrence(i)=>("occurrence",Some(*i)),OccurrencePath(i)=>("occurrence_path",Some(*i)),Child(i)=>("child",Some(*i)),
         Frame(i)=>("frame",Some(*i)),ScheduledFrame=>("scheduled_frame",None),Control=>("control",None),
         Helper=>("helper",None),Task(i)=>("task",Some(*i)),Result=>("result",None),Outcome=>("outcome",None),ValueSlot(i)=>("value_slot",Some(*i)),
+        PatternChild(i)=>("pattern_child",Some(*i)),Type(i)=>("type",Some(*i)),TypeArg(i)=>("type_arg",Some(*i)),
+        Constructor(i)=>("constructor",Some(*i)),ConstructorField(i)=>("constructor_field",Some(*i)),
+        DeclParamCount(i)=>("decl_param_count",Some(*i)),DeclCtorCount(i)=>("decl_ctor_count",Some(*i)),
+        DeclTemplate(i)=>("decl_template",Some(*i)),PlanNode(i)=>("plan_node",Some(*i)),
+        PlanCase(i)=>("plan_case",Some(*i)),FieldPath(i)=>("field_path",Some(*i)),
     }
 }
 fn check_plan(p:&wp::WitnessPlan){
@@ -128,7 +134,7 @@ fn config()->(BoundsC,LayoutSchemaC){
     let n=|name:&str|b[name].as_str().unwrap().parse::<usize>().unwrap();
     let bounds=BoundsC{code_rows:n("code_rows"),function_rows:n("function_rows"),code_child_slots:n("code_child_slots"),parameter_slots:n("parameter_slots"),pattern_rows:n("pattern_rows"),match_plan_rows:n("match_plan_rows"),match_arm_rows:n("match_arm_rows"),type_rows:n("type_rows"),constructor_rows:n("constructor_rows"),constructor_field_slots:n("constructor_field_slots"),max_arity:n("max_arity"),constant_nodes:n("constant_nodes"),constant_field_slots:n("constant_field_slots"),data_nodes:n("data_nodes"),data_field_slots:n("data_field_slots"),environment_cells:n("environment_cells"),frames:n("frames"),helper_tasks:n("helper_tasks"),serialization_bytes:n("serialization_bytes"),max_reference_work:n("max_reference_work") as u128,max_helper_work:n("max_helper_work") as u128,step_cap:n("step_cap") as u128};
     let cap=&c["layout"]["capacities"];let k=|name:&str|cap[name].as_str().unwrap().parse::<usize>().unwrap();
-    let layout=LayoutSchemaC{layout_version:(c["layout"]["layout_version"][0].as_str().unwrap().into(),c["layout"]["layout_version"][1].as_str().unwrap().into()),field_id:None,widths:None,scalar_layout_id:None,bounds,capacities:LayoutCapacitiesC{name_rows:k("name_rows"),name_bytes:k("name_bytes"),occurrence_path_slots:k("occurrence_path_slots"),value_slots:k("value_slots")},boundary_capacities_present:false};(bounds,layout)
+    let layout=LayoutSchemaC{layout_version:(c["layout"]["layout_version"][0].as_str().unwrap().into(),c["layout"]["layout_version"][1].as_str().unwrap().into()),field_id:None,widths:None,scalar_layout_id:None,bounds,capacities:LayoutCapacitiesC{name_rows:k("name_rows"),name_bytes:k("name_bytes"),occurrence_path_slots:k("occurrence_path_slots"),value_slots:k("value_slots")},ext_capacities: None, boundary_capacities_present:false};(bounds,layout)
 }
 fn pair(p:&CoreProgram)->(Admitted,MachineImage){
     let (b,l)=config();let owner=host_owner_engine();let a=owner.admit(p,&b,&l).unwrap_or_else(|_|panic!("fixed positive admission"));
