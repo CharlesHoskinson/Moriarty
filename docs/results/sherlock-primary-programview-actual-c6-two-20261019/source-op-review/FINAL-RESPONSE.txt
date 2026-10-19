@@ -1,0 +1,187 @@
+# Exact-three review: unchanged port and comparator on two actual C6 `compile.json` captures
+
+## Verdicts
+
+- **SOURCE = APPROVE.** No mandatory source fixes. Both files are pinned byte-identical to the previously reviewed sources: `ab740899…`/26468 and `cb7a8899…`/9419.
+- **EXACT3_OPERATIONS = ELIGIBLE**, conditional on Root preconditions P1–P10 below. None of them changes the frozen argv, environment, caps, runner, manifest or scope literal.
+
+This is a prospective eligibility opinion only. All three children remain UNRUN. The prior actual4 PASS is context, not evidence for these inputs.
+
+## Source assessment against the two actual captures
+
+I traced `program_view_to_ngprogram.py` through every table of both `/canonicalProgramView` values. These are predictions about the subject, not about the hidden oracle.
+
+**Shape**
+- Each view has exactly the 23 `PROGRAM_FIELDS` keys, so `record()` passes.
+- `occurrences` and `expressions` row counts agree: 33/33 and 38/38.
+- Every naturals table is integers only, and `names` is strings only.
+- `type_args` is `[]` and every `decl_param_counts` entry is 0 in both captures.
+
+**Slice bounds**
+- Every slice ends within its table. The tightest are:
+  - `occurrence_paths`: 62+3=65 and 83+1=84
+  - `ctor_fields`: 9+2=11 and 12+2=14
+  - `children`: 8+1=9 and 13+3=16
+  - `constant_fields`: 4+2=6 and 8+2=10
+  - `pattern_children`: 10+2=12 and 6+2=8
+- `Match.plan` references 0/11 and 0/7 are within the `plan_nodes` tables (20 and 14 rows).
+
+**Expression forms present**
+- The captures use only Let, Literal, Var, Call, Match, Construct and `Binary.Add` (Add appears in capture 1 only).
+- There is no If, Unary, other Binary op, or dedicated builtin form.
+- Predicted result: zero issues, `status = ported`, exit 0 for both 01 and 02.
+
+**Constants**
+- All constant rows are marker-free U128 decimal strings or `Constructor` rows, and the constant graphs are acyclic.
+- In capture 1, constant 8 is `Both(Pay(4,Done), Pay(5,Done))`.
+- In capture 2, constants 15–20 are reachable only through `Construct.constant` caches. They are ported as rows but do not appear in `ng_program`, consistent with the SAFE disposition "cached reference unmappable, retained".
+
+**Patterns and arms**
+- **Recursive Wildcard and Bind patterns.** These are present and preserved in order:
+  - Capture 1, arm 0: `C(4,6,[C(4,5,[Bind14,Wildcard]),Wildcard])`.
+  - Capture 2, arm 2: `C(4,5,[W,W])`. It is shadowed by arm 1 under the plan (no `Select` targets arm 2), but it is retained as source data. No reachability claim is made.
+  - Top-level `Bind23` arms: capture 2, arms 3 and 7.
+  - Nullary constructor arms: capture 1, arms 3 and 4; capture 2, arms 0 and 4.
+- **Global ArmRow caveat.** This is genuinely exercised: the second `Match` in each capture starts at arm row 4, so `source_arm_id` is 4..6 or 4..7, not local ordinals.
+
+**Functions**
+- Nonzero parameter slices are present: `params (1,1)`, and `(2,3)` for the three-argument `pack` with sorts 4, 5 and 0.
+- Return type IDs are 0, and 4, 5, 6.
+
+**Declarations and SCC-min groups**
+- Type-slice ownership agrees with constructor `owning_type` in both captures, so the R1 inconsistency risk from the prior review is absent here.
+- Builtin rows 2 and 3 have `decl = null`, and constructors 0–3 match the builder (Nil, Cons, Leaf, Branch).
+- I traced the iterative Kosaraju on capture 2. The finish order is `[0,1,2,3,5,4,6,7]`, and the reverse pass gives `{4,5}→4`.
+- Predicted groups: capture 1 → 2, 3, 4, 5 (all singletons); capture 2 → 2, 3, 4, 4, 6, 7.
+- Capture 2 is the only nontrivial SCC exercised.
+
+**Retention**
+- `source_document` is the entire 12-key wrapper (canonicalProgramView, configuration, factory, genesis, genesisLogicalImage, identity, preparation, qualification, report, report_owner_equals_genesis, schema, unbound), retained as typed JSON. No projection or fixture-ID logic exists.
+- No floats are present. Large integers are exact in Python.
+
+## Comparator assessment
+
+- `exact()` enforces strict `type()` identity (bool ≠ int), unordered object key sets and ordered arrays over the whole `ng_program`. It reports a path and a kind only, never a cell value.
+- `pin()` hashes the same raw bytes it then parses, for inputs, actuals and expected bodies. This means the freeze pins attest exactly what was compared.
+- Before the exclusive freeze write, it checks:
+  - The whole `source_document` against the pin-verified input
+  - The pointer and `source_file` pin
+  - The 23-field inventory against the input's key set
+  - The complete input-only origin rows: expressions, owner rows, paths, patterns, constants, functions with ordered parameters, declarations with type arguments, constructors with fields, and the whole ordered arm list
+- It opens no expected path before that write.
+- Both expectations are positive (`{ng_program: NGProgram}`), so the null-expectation branch is not reached.
+- If an expected body's shape is wrong, the comparator raises a `KeyError` after the freeze. That is a fail-closed abort, not a PASS.
+
+## Scope literal
+
+The unchanged comparator will print `"Interface-only independently hand-authored inputs; NOT admitted compiler/runtime/model evidence"`. For this campaign:
+- The phrase "hand-authored inputs" is factually inherited text. It describes the original fixture campaign, not these inputs.
+- The phrase "NOT … runtime/model evidence" remains accurate.
+
+`ROOT-ACTUAL-C6-PROVENANCE-SCOPE.json` (`cf8c55e4…`) is the binding provenance record. The literal must not be edited, and must not be cited as provenance either way (see P9).
+
+## Mandatory fixes
+
+None to source or frozen operations.
+
+## Root preconditions
+
+- **P1. Pins before each child.**
+  - Recheck old33 plus new20.
+  - Also recheck `SOURCE-OP-FREEZE.json` (2663/`a2e28a9c…`) and `ROOT-OPERATION-RECIPE.md` (3126/`41057b82…`). This opinion binds both, but neither is in either pin list.
+  - `realpath(/usr/bin/python3)` must equal the pinned `/usr/bin/python3.14`.
+  - `source/` must contain exactly the two pinned files, with no `__pycache__` and no other entries. The argv has `-B` but not `-I`, so `sys.path[0]` is `source/`.
+- **P2. Environment.**
+  - It must be exactly the five frozen keys, with nothing inherited.
+  - In particular there must be no `PYTHONOPTIMIZE`: the comparator's checks are `assert` statements and `-O` would silently remove them.
+  - There must also be no `PYTHONPATH`, `PYTHONHOME`, `PYTHONSTARTUP` or `PYTHONUSERBASE`.
+  - HOME must be fresh and empty, so there is no user site.
+- **P3. Directories.**
+  - The `actual/` parent and the three phase directories must be 0700, with only empty 0700 `home/` and `tmp/` inside.
+  - `stdout`, `stderr`, `port.json`, the freeze file and the comparison file must all be absent.
+- **P4. F03.**
+  - Load F03 as an isolated Root module and call only `launch(...)`, with the descriptor token and `fsize = 536870912`.
+  - If the hard `RLIMIT_FSIZE` is below 512 MiB, the resulting launch error is a stop, never a cap change.
+  - I did not re-read the full 73962-byte module this time. This step relies on its unchanged pin and the prior full read.
+- **P5. Acceptance for 01 and 02.**
+  - The F03 record must show `outcome = exited`, `returncode = 0`, `timed_out = false`, `containment_breach = false` and `remaining = []`.
+  - `port.json` must parse with:
+    - `status == "ported"`
+    - a non-null `ng_program` with exactly the keys `declarations`, `expressions`, `functions` and `entry`
+    - `unhandled == []` and `partial_counterpart == true`
+    - `program_pointer == "/canonicalProgramView"`
+    - `source_file` equal to the static input pin
+  - Port stdout must be one JSON line whose `output_bytes` and `output_sha256` equal Root's pin of `port.json`, with `unhandled_count == 0`.
+  - Record stderr in full; it is expected to be empty.
+  - Anything else is a stop, and 03 is not selected.
+- **P6. Durable freeze before 03.**
+  - Write and fsync (file and directory) both `port.json` pins, all stream pins, both F03 records and the post-child trees.
+  - Then recheck P1 and confirm both 03 products are absent.
+  - Root opens no expected body, source-retention ledger, `EXPECTATION-FREEZE.json`, `derive_expectations.py` or `check_frozen_artifacts.py`.
+- **P7. Classification for 03.**
+  - Exit 0 with a comparison of status PASS is an observed PASS.
+  - Exit 1 with the comparison written and status FAIL is a valid comparison failure.
+  - Exit 1 without the comparison is a fail-closed abort. Preserve everything.
+  - `expected_exit_code: 0` is a prediction, not an invariant.
+- **P8. After 03.** Require:
+  - The freeze's `actuals[i].actual` equals Root's P6 pins, and `actuals[i].input` equals the static input pins.
+  - The case IDs and their order match the manifest.
+  - `comparison.actual_freeze` equals the on-disk freeze pin.
+  - Each `results[i].expected_pin` equals its SAFE pin.
+  - Both `port.json` files re-pin unchanged.
+  - P5's containment conditions hold for child 03.
+- **P9. Result record.**
+  - Bind the provenance-scope pin.
+  - State that the comparator's printed scope string is a preserved historical literal.
+  - Carry the qualifiers: global ArmRow IDs, SCC-min derived groups, no generic-instance coverage, and no K/runtime/physical-B inference.
+- **P10.** No retry, repair, normalization, cap change, new runner, or model/compiler call. A FAIL is preserved, not explained away.
+
+## Hidden-oracle qualification
+
+PASS would establish only that each complete `ng_program` typed-equals an independently derived, digest-prefrozen expectation on these two inputs.
+
+**How the prefreeze is bound.** Both expected digests (`34105f96…`/12556 and `9df0d091…`/14887) appear in the pinned manifest, `SAFE-BINDINGS` and `SAFE-EXPECTED`, and are re-verified by the comparator. The opaque `EXPECTATION-FREEZE.json` is not rechecked by anyone; that is acceptable because the bodies themselves are digest-bound. If Root's policy permits it, a digest-only check (hash, no parse, no display) is optional.
+
+**What PASS does not cover.**
+- The oracle author worked from `SAFE-PORT-INTERFACE.md`, which the port lane wrote. Agreement therefore certifies conformance to that declared contract, not that the conventions (global ArmRow IDs, SCC-min groups, dropped `Construct.constant`, omitted declarations for scalar rows 0/1, emitted builtin declarations) are semantically right relative to primary or K.
+- Origin checks are reconstructed from the input by the subject lane's own consumer, not compared to the oracle. The source-retention ledgers are not selected, and diagnostic equality is unbound.
+- I have not seen the bodies or the generator. I approve nothing about hidden mapping semantics.
+
+## Non-blocking disclosures and coverage gaps
+
+- **No negative case in exact3.** The "unsupported form yields no partial NGProgram" behaviour is not re-exercised on actual inputs.
+- **Forms not covered:**
+  - If and Bool
+  - Dedicated builtin forms: PNil, PCons, PLeaf, PBranch, Cons/Leaf/Branch constants, `Binary.Cons`/`Branch`, `Unary.Leaf`
+  - Use of List and Tree values
+  - Generics: `type_args` and parameterized declarations
+  - Unused table rows
+- **`canonicalProgramView` is not cross-checked against `genesis.admission.view` or `report.owner.admission.view`.** `report_owner_equals_genesis: true` is the capture's own claim.
+- **Let shadowing of binder 20** in capture 2 (expressions 0 and 4) is retained and not interpreted. No binder or evaluation semantics are claimed.
+- **Prior items persist:**
+  - A post-freeze abort loses per-case results.
+  - The scripts do not fsync; Root's fsync covers this.
+  - The argv has no `-I`.
+  - Duplicate JSON keys follow last-wins on both sides, so they would go undetected. This is unlikely for serde output and I did not verify it.
+- **The C6 captures carry no independent verification.** `ROOT-COMPLETE-ACTUAL-FREEZE` itself says "independent equality NOT YET CHECKED", so this campaign takes them as fixed inputs and says nothing about compiler correctness.
+
+## Read coverage
+
+**Read in full, inline:**
+- `SOURCE-OP-FREEZE`, `PROPOSED-OPERATIONS`, `COMPARISON-MANIFEST`, `STATIC-PINS` (new and old33), `ROOT-ACTUAL-C6-PROVENANCE-SCOPE`, `ROOT-OPERATION-RECIPE`, `PREPARATION-READBACK`
+- Both Python sources
+- `CAPTURE-SELECTION`, `INPUT-AND-REUSE-PINS`, the C6 `RESULT.json` and `ROOT-COMPLETE-ACTUAL-FREEZE`
+- `SAFE-PORT-INTERFACE`, `PROGRAM-SNAPSHOT-DECLARATIONS-ONLY`, `K-PROGRAM-WIRE-DECLARATIONS`
+- The F03 launch closure
+- Both complete `compile.json` captures. I traced all 23 tables of each `canonicalProgramView`. The wrapper sections were read but not semantically cross-checked.
+- `SAFE-HANDOFF`, `SAFE-BINDINGS`, `SAFE-EXPECTED-INTERFACE-BINDINGS`
+- The old `ROOT-RESULT` and the prior exact4 `FINAL-RESPONSE`, as context only
+
+**Cross-document checks by inspection:** pin consistency, all 22 table counts and the 12 wrapper keys for both captures.
+
+**Not read:**
+- The private expected bodies, source-retention ledgers, `EXPECTATION-FREEZE.json`, the oracle generator and checker, and `ORACLE-LOCAL-READBACK`
+- The full F03 module (this time), the `.rs` declaration sources, the factory `input.json` files, `final.json` and `records.jsonl`, and the actual-eleven `COMMAND`/`RESULT` files
+- The Python binary and stdlib
+
+**Not done:** I computed no hashes or byte counts and executed nothing. Byte identity rests on Root's pin rechecks.

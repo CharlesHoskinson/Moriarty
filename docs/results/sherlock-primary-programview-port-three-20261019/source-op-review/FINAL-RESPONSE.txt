@@ -1,0 +1,192 @@
+# Fresh review: ProgramSnapshot → NGProgram port, comparator, and exact four operations
+
+## Verdicts
+
+- **SOURCE = APPROVE.** No mandatory source fixes. The non-blocking disclosures and recommendations below apply.
+- **EXACT4_OPERATIONS = ELIGIBLE**, conditional on the Root preconditions C1–C8 below. These conditions do not change the frozen argv, environment, caps or runner.
+
+This is a prospective source and operation eligibility opinion only. It is not an execution result, comparison result or production acceptance.
+
+**Expected-body disclosure.** The three populated expected documents and `EXPECTATION-FREEZE.json` were not inspected. I assessed them only through `SAFE-EXPECTED-INTERFACE-BINDINGS.json`, `SAFE-BINDINGS.json` and the SAFE oracle interface addendum that Root appended. That addendum is present, so this review does not qualify the expectation interface as missing. The opaque hashes (`fc2a…`, `faea…`, `b0ad…`) match across `STATIC-PINS`, `COMPARISON-MANIFEST` and the SAFE metadata. They bind byte selection and provenance only and approve nothing about the semantics of the hidden mappings.
+
+## Source questions: `program_view_to_ngprogram.py`
+
+**23-field and whole-document retention.**
+- `PROGRAM_FIELDS` matches the `obs::ProgramSnapshot` declaration order exactly.
+- `record()` enforces an exact key set.
+- `source_document` is the entire parsed input document, re-emitted as typed JSON.
+- Retention is typed JSON with Python last-wins duplicate keys, not byte retention. This is declared in PREMISES. I saw no duplicate keys in the three inputs I read.
+
+**Table IDs and aligned occurrences.**
+- Each expression is emitted as `id = occurrence = row index`, with an enforced equal-length check.
+- Each occurrence row, its root-first `occurrence_paths` slice and its owner function row (or `null` for entry) are emitted in origins.
+
+**ArmRow caveat.**
+- `source_arm_id` is `arms.start + local`, the global ArmRow index.
+- It is disclosed as not being an original AST arm ID.
+
+**Recursive Wildcard/Bind and duplicate ordered arms.**
+- Pattern traversal uses an explicit stack. `PVar → {"Bind": x}`, `Wildcard → {"Wildcard": {}}`, and `Constructor` follows `pattern_children` in order.
+- I traced the stack discipline: `active` is exactly the current DFS ancestor set, so cycle detection is sound and shared children are handled.
+- I traced fixture 1:
+  - Arms 0 and 1 are structurally identical patterns `C(4,5,[Bind,C(5,7,[C(4,4,[]),Wildcard])])` with binders 13 and 14.
+  - Arm 2 is a top-level Wildcard.
+  - Order and duplication are preserved.
+
+**Ordering.**
+- Declarations are emitted in TypeRow order (index ≥ 2).
+- Constructors follow each type's slice order. Field types, parameters, arguments, arms, pattern children and constant fields all keep slice order.
+- Fixture 2's reversed parameters (12 then 11) and its nonzero second parameter slice `(2,1)` are retained.
+
+**Monomorphic types and sidecars.**
+- Concrete TypeIds are used as-is, with no substitution. For example, `Box<UInt>=6` and `Box<Bool>=7`, with field types 0 and 1.
+- Templates, `decl_*` counts and names stay in `source_document`. Each type's `source_type_arguments` appears in origins.
+
+**SCC-min derived group.**
+- I checked the iterative Kosaraju implementation.
+  - Pass 1 marks nodes on pop and pushes the exit marker before children, which is equivalent to recursive DFS.
+  - Pass 2 walks the reverse graph in decreasing finish order and skips already-labelled nodes.
+- Labels are `min(component)`. Edges come only from constructor fields; type arguments are excluded.
+- Fixture result: 2→2, 3→3, {4,5}→4, 6→6, 7→7.
+- The convention is disclosed as derived, not canonical.
+
+**All expression, constant and pattern rows visited, including unused rows.**
+- Yes. Each table is looped in full with per-row work stacks. Fixture 1's unused constants 7 and 8 and standalone pattern rows 1–10 are all processed.
+- Arm, parameter and `ctor_field` rows are validated only through referencing slices. Unreferenced rows of those tables are retained but not validated. This is not required by the question and is disclosed here.
+
+**Dedicated builtin desugaring.**
+- `PNil/PCons/PLeaf/PBranch`, `Nil/Cons/Leaf/Branch` constants, `Binary.Cons/Branch` and `Unary.Leaf` map to `(2,0)`, `(2,1)`, `(3,2)`, `(3,3)`.
+- These IDs match `OwnerExtTypeBuilder::new_checked` exactly.
+- The binding is by the builder's fixed-ID convention plus bounds checks on `types[2|3]` and `constructors[0..3]`. Row content is not cross-checked (owning type, source order, field arity, `decl == null`).
+- None of the four fixtures exercises these forms.
+- This is acceptable under the declared valid-reference premise. Hardening is recommended in R1.
+
+**Unsupported forms produce no partial NGProgram.**
+- `Sub/Mul/Eq/Lt/Not`, unknown expression, pattern and constant tags, `U128OutOfRange`, marker-bearing constants, cyclic data, shape errors and reference errors are all handled the same way: they become issues, and `run()` returns `None` if any issue exists.
+- For fixture 3, the only issue is `{"path": "expressions/0/op", "code": "unsupportedExpression", "detail": "Sub"}`, giving exit 2 and a full carrier.
+- I found no path in which a non-`PortError` exception occurs on these inputs. Every subscript is preceded by its `record`/`sliced` validation.
+
+**Plan tables.** `plan_nodes`, `plan_cases` and `field_paths` are retained unchanged. Only the `Match.plan` reference bounds are checked. There is no MatchPlan, workMap or equivalence claim.
+
+**Mental execution.**
+- I traced all three inputs through every table.
+- Expected results: phase 01 exits 0, phase 02 exits 0, phase 03 exits 2 with product.
+- All slices, including the empty edge slices `(4,0)`, `(8,0)`, `(2,0)`, `(12,0)` and `(14,0)`, are within bounds.
+
+## Consumer questions: `compare_interface_ports.py`
+
+**Strict comparison.**
+- `exact()` checks `type()` identity, so bool is distinct from int.
+- It compares object key sets without regard to order and compares arrays by length and position.
+- It reports JSON-pointer paths only, without values. It applies to the whole `ng_program` with no projection.
+
+**Whole-source retention.** This is checked separately, before the freeze, against the pin-verified input, along with the pointer, `source_file` pin and field-inventory checks.
+
+**Input-only origin ledgers.**
+- Expressions, patterns, constants, functions (including ordered parameters), declarations (including type arguments), constructor rows (including fields) and arms are each checked by length and by row predicates rebuilt from the input.
+- Arms are compared as a whole list.
+- Only the fields the comparator needs are read, so extra per-row keys would go undetected. The origin envelope is unbound, so this is acceptable.
+- Origins are checked only when an `ng_program` is emitted.
+
+**Read ordering.**
+- Freeze precedes expected reads: all three actuals are parsed and checked, then `ALL-ACTUALS-FROZEN-BEFORE-EXPECTED.json` is written exclusively with `"xb"`.
+- No expected path is opened or stat'ed before that write.
+
+**Expected binding scope.**
+- The expected documents bind only `ng_program` and, for the Sub case, the locator/variant pair together with "some unsupported-prefixed diagnostic".
+- Diagnostic and origin equality are explicitly reported as UNBOUND.
+- No expected field is filled from actual output.
+
+**No children or new runner.** Neither file imports `subprocess` or launches anything.
+
+## Non-blocking disclosures
+
+1. **Post-freeze assertion paths abort without writing `COMPLETE-INTERFACE-COMPARISON.json`.** This covers the unsupported locator/variant check, the "unsupported diagnostic present" check, `KeyError`s on the expected shape, and expected pin drift.
+   - These paths fail closed: there is no false PASS, and tracebacks contain labels and paths but no cells.
+   - However, the results for cases 1 and 2 would be lost, which contradicts the recipe's "preserve the complete comparison even if the comparison fails".
+   - The locator check assumes `unsupported_variant` equals the typed value at the locator. SAFE implies this ("input_variant_field") but does not state it literally.
+2. **Exit codes for phase 04 are ambiguous.** Exit 1 means either comparison FAIL (with the product written) or an uncaught exception (without it). `expected_exit_code: 0` for phase 04 is in effect a predicted PASS, not an operation invariant. See C5.
+3. **The comparator does not verify that the actuals it reads match Root's post-phase pins.** The manifest predates the actuals. See C4.
+4. **Durability.** No `fsync` is performed on `port.json`, the freeze file or the comparison file.
+5. **Python import closure.** `sys.path[0]` is the `source/` directory because the argv has no `-I`. The interpreter's stdlib and system site-packages are unpinned; only `/usr/bin/python3.14` is pinned. See C1.
+
+## Mandatory Root preconditions for EXACT4 eligibility
+
+- **C1. Pins before every child.**
+  - Recheck all 33 static pins.
+  - Confirm that `/usr/bin/python3` resolves to the pinned `/usr/bin/python3.14`.
+  - Confirm that `source/` contains exactly the two pinned `.py` files, with no other modules and no `__pycache__`.
+  - Use the exact frozen environment with nothing inherited (no `PYTHON*` variables or `PATH`).
+- **C2. Load F03 without side effects.**
+  - Load F03 via `spec_from_file_location` / `exec_module` only, from an isolated (`-I`) Root interpreter.
+  - I read the full 73962-byte module. Its top level only defines constants and functions, and `__main__` is not triggered under the chosen module name.
+  - Call only `launch` with the descriptor's token and `fsize = 536870912`.
+  - If the hard `RLIMIT_FSIZE` is below 512 MiB, the launch error is a stop (fail-closed), never a cap change.
+- **C3. Phase 03 acceptance.**
+  - Exit 2 alone is not sufficient.
+  - Require `port.json` to exist with `status == "unhandled"`, `ng_program == null`, `source_document` typed-equal to the input, and a non-empty `unhandled` containing an `unsupported*` code.
+  - Record the full issue list.
+  - An argparse-style exit 2 with no product, or any other diagnostic set without an unsupported code, is a failure.
+  - A Sub-specific diagnostic claim may be made later only if the recorded issue is at `expressions/0/op`.
+- **C4. Freeze before phase 04.**
+  - Durably write the phase 01–03 receipts and the `port.json` pins before selecting phase 04.
+  - Re-require that both phase 04 products are absent.
+  - After phase 04, require that the actual pins recorded in `ALL-ACTUALS-FROZEN-BEFORE-EXPECTED.json` equal Root's phase 01–03 pins.
+- **C5. Phase 04 classification.**
+  - Exit 0 with a comparison product of status PASS is a recorded PASS.
+  - Exit 1 with the product written and status FAIL is a valid recorded comparison failure. Preserve it; it is not a containment failure.
+  - Exit 1 without the product is a fail-closed consumer abort. Preserve the freeze file, stdout and stderr, and do not relabel it as a result.
+  - No retry.
+- **C6. Containment.** Require no timeout, `containment_breach == false` and an empty `remaining` list for every child. Stop on any other launch outcome.
+- **C7. Post-child records.** Record each phase directory's post-child tree, including `home`/`tmp` residue and stderr content.
+- **C8. Expected-body handling.** Root does not open any expected body outside phase 04. The source author stays blind.
+
+## Recommended changes (non-blocking; any adoption requires re-freeze and fresh review)
+
+- **R1.** Cross-check the builtin rows before desugaring: owning type, source order, field count and field types of constructors 0–3, and `decl == null` / ctor slices for types 2 and 3. Also cross-check that each type's ctor slice agrees with the constructors' `owning_type`, since the SCC computation uses `owning_type` while declarations use the type slices.
+- **R2.** After the freeze, record every per-case check (pin, shape, locator, diagnostic) as a result field and always write the comparison. Use a distinct exit code for FAIL, separate from the crash code 1.
+- **R3.** Reject duplicate JSON keys (`object_pairs_hook`) in both scripts. Make the variant parser strict, so unit variants must be strings and U128 values have no leading zeros.
+- **R4.** Use `fsync` for the products. In a future argv revision, use `-I`.
+
+## Explicit premises and unsupported production correspondence
+
+The inputs are hand-authored, structurally coherent fixtures. They are not compiler output and are not admitted or authenticated captures.
+
+The following remain unestablished:
+- Source authenticity and admission
+- Typing and binder linearity
+- In-range Add behaviour
+- Builtin rows 0–3 conforming to the builder
+
+The following are not claimed:
+- Correspondence between the primary C6 path and production (the literal `None` assertion defect is pending)
+- B→K state, event, frame or work-clock projection
+- MatchPlan/workMap equivalence
+- Native, admission or proof correspondence
+- Mapping of the other public capture types
+- Rerunning or reinterpreting the K455, seven/five/four-cohort or older K examples
+- Any aggregate CPU, RSS or disk cap
+
+## Actual read coverage
+
+**Read in full, inline:**
+- `SOURCE-FREEZE`, `STATIC-PINS`, `ROOT-OPERATION-RECIPE`, `PREPARATION-READBACK`, the port README, `COMPARISON-MANIFEST`, `PROPOSED-OPERATIONS`
+- Both source files
+- `EXISTING-F03-LAUNCH-CLOSURE`, `F03-CLOSURE-READBACK`, `PASSIVE-SOURCE-READBACK`, `SAFE-PORT-INTERFACE`, `SOURCE-INTERFACE-READSET`
+- `SAFE-BINDINGS`, `SAFE-EXPECTED-INTERFACE-BINDINGS`, the fixture README, `SOURCE-DECLARATION-READSET`, `INPUT-DATA-CONSISTENCY`
+- All three inputs
+- `PROGRAM-SNAPSHOT-DECLARATIONS-ONLY`, `WIRE-DECLARATION-INVENTORY`, `INTERFACES-AND-CAPTURE`, `wire.rs`
+- `K-PROGRAM-WIRE-DECLARATIONS`, `PUBLIC-API`
+- `shared.rs`, `complete_observation.rs`, `adt.rs`, `adt_storage.rs`, `ext_program_c.rs`, `owner_ext_type_builder.rs`, `owner_ext_source_program.rs`
+- The full `k_engine_attempt_f03_01.py`
+- The SAFE oracle interface addendum
+
+**Not read:**
+- The three private expected bodies and `EXPECTATION-FREEZE.json`
+- `next-consumer-normative.compact.json`
+- `PUBLIC-MATCH-WIRE-DECLARATIONS.json`
+- `ext_program_c6.rs`, `owner_ext_admit.rs`, `owner_ext_t3_uses.rs`, `owner_prepare`, `raw.rs`, `ext_compile.rs`
+- K model sources
+- The Python binary and stdlib
+
+**Not verified:** I computed no hashes or byte counts and executed nothing. I checked cross-document pin consistency by inspection. Byte identity rests on Root's pin readbacks.
