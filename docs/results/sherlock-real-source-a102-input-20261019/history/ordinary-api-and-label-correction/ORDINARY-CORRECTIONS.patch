@@ -1,0 +1,151 @@
+--- a/crates/mori-core/src/sherlock/compile_artifact.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact.rs
+@@ -263,6 +263,19 @@
+     config_source: &str,
+     target_source: &str,
+ ) -> Result<draft_report::DraftCompileArtifact, CompileFailure> {
++    let (pair, config, target) = prepare_draft_pair(source, config_source, target_source)?;
++    project_draft_pair(&pair, source, config, target)
++}
++
++// Both public consumers share the same bounded source/admission sequence.
++// This helper introduces no alternate admission, budgets, errors or defaults.
++fn prepare_draft_pair(
++    source: &str, config_source: &str, target_source: &str,
++) -> Result<(
++    recursive_source::AdmittedDraftSource,
++    draft_contract::DraftConfigIdentity,
++    TargetDescriptor,
++), CompileFailure> {
+     let config = parse_draft_config(config_source)?;
+     let target_descriptor = crate::json::parse(target_source)
+         .map_err(|error| CompileFailure::core("config", error))?;
+@@ -281,11 +294,8 @@
+     let admitted = recursive_source::admit_checked_draft_bounded(
+         checked, &budget.copy, &bounds, &layout, &fuel, &stack,
+     ).map_err(CompileFailure::draft_source)?;
+-    // Project precisely this fresh pair before any execution. No separately
+-    // prepared identity, fabricated view or second admission is substituted.
+-    draft_report::project_admitted_preparation(
+-        &admitted,
+-        crate::intent::hash_bytes(source.as_bytes()),
++    Ok((
++        admitted,
+         draft_contract::DraftConfigIdentity {
+             fields: config,
+             file_digest: crate::intent::hash_bytes(config_source.as_bytes()),
+@@ -294,8 +304,20 @@
+             descriptor: target_descriptor,
+             file_digest: crate::intent::hash_bytes(target_source.as_bytes()),
+         },
++    ))
++}
++
++// Project this actual pair, with identical source digests and error staging.
++fn project_draft_pair(
++    pair: &recursive_source::AdmittedDraftSource,
++    source: &str,
++    config: draft_contract::DraftConfigIdentity,
++    target: TargetDescriptor,
++) -> Result<draft_report::DraftCompileArtifact, CompileFailure> {
++    draft_report::project_admitted_preparation(
++        pair, crate::intent::hash_bytes(source.as_bytes()), config, target,
+     ).map_err(|error| CompileFailure {
+-        stage:"observation", actual_error:error.owner_wire(),
+-        evaluation_performed:false, events_forwarded:"0".into(), completed:false,
++        stage: "observation", actual_error: error.owner_wire(),
++        evaluation_performed: false, events_forwarded: "0".into(), completed: false,
+     })
+ }
+--- a/crates/mori-core/src/sherlock/compile_artifact/draft_reference.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact/draft_reference.rs
+@@ -5,20 +5,22 @@
+ use crate::sherlock::Program;
+ use crate::sherlock::helper_machine::shared::HostViolation;
+ use crate::sherlock::helper_machine::shared::owner_host::HostObservation;
+-use super::{CompileFailure, TargetDescriptor, parse_draft_config};
+-use super::draft_contract::DraftConfigIdentity;
+-use super::draft_report::{self, DraftCompileArtifact};
+-use super::recursive_source::{self, AdmittedDraftSource, DraftPreparationBudget};
+-use super::wire::OwnerWire;
++use super::CompileFailure;
++use super::draft_report::DraftCompileArtifact;
++use super::recursive_source::AdmittedDraftSource;
+ 
+ /// The same syntax that the existing bounded A-to-B copier consumed, plus the
+ /// same unstepped owner pair from which `preparation` was projected.
+ /// The A reference syntax is not an admitted A machine capability or B image.
+ pub struct DraftReferencePreparation {
+-    pub preparation: DraftCompileArtifact,
++    preparation: DraftCompileArtifact,
+     pair: AdmittedDraftSource,
+ }
+ impl DraftReferencePreparation {
++    /// Immutable report projected from this retained pair at construction.
++    pub fn preparation(&self) -> &DraftCompileArtifact {
++        &self.preparation
++    }
+     pub fn reference_program(&self) -> &Arc<Program> {
+         &self.pair.preparation.draft.program
+     }
+@@ -27,45 +29,13 @@
+     }
+ }
+ 
+-/// Same bounded parse/typecheck/copy/owner preparation as `compile_draft_host`.
+-/// Returns the retained source `Arc<Program>` for an explicitly selected
+-/// reference consumer. No compiler output is evaluated into a substitute literal.
+-/// All H1/copy/Drop/report and semantic correspondence limitations remain.
++/// Same private bounded preparation and report projection as compile_draft_host.
++/// No compiler output is evaluated into a substitute literal. All existing
++/// H1/copy/Drop/report and semantic correspondence limitations remain.
+ pub fn compile_draft_with_reference(
+     source: &str, config_source: &str, target_source: &str,
+ ) -> Result<DraftReferencePreparation, CompileFailure> {
+-    let config = parse_draft_config(config_source)?;
+-    let target_descriptor = crate::json::parse(target_source)
+-        .map_err(|error| CompileFailure::core("config", error))?;
+-    let budget = DraftPreparationBudget {
+-        parse: config.preprocessing.parser_budget(),
+-        max_type_depth: config.preprocessing.max_type_depth.0,
+-        copy: config.preprocessing.copy_budget(),
+-    };
+-    let bounds = config.bounds.owner();
+-    let layout = config.layout.owner(bounds);
+-    let fuel = config.fuel.owner();
+-    let stack = config.stack.owner();
+-    let checked = recursive_source::prepare_checked_draft_bounded(
+-        source, budget.parse, budget.max_type_depth,
+-    ).map_err(CompileFailure::draft_source)?;
+-    let pair = recursive_source::admit_checked_draft_bounded(
+-        checked, &budget.copy, &bounds, &layout, &fuel, &stack,
+-    ).map_err(CompileFailure::draft_source)?;
+-    let preparation = draft_report::project_admitted_preparation(
+-        &pair,
+-        crate::intent::hash_bytes(source.as_bytes()),
+-        DraftConfigIdentity {
+-            fields: config,
+-            file_digest: crate::intent::hash_bytes(config_source.as_bytes()),
+-        },
+-        TargetDescriptor {
+-            descriptor: target_descriptor,
+-            file_digest: crate::intent::hash_bytes(target_source.as_bytes()),
+-        },
+-    ).map_err(|error| CompileFailure {
+-        stage: "observation", actual_error: error.owner_wire(),
+-        evaluation_performed: false, events_forwarded: "0".into(), completed: false,
+-    })?;
++    let (pair, config, target) = super::prepare_draft_pair(source, config_source, target_source)?;
++    let preparation = super::project_draft_pair(&pair, source, config, target)?;
+     Ok(DraftReferencePreparation { preparation, pair })
+ }
+--- a/consumer/real_source_a102_input.rs
++++ b/consumer/real_source_a102_input.rs
+@@ -15,6 +15,7 @@
+         include_str!("../inputs/draft-config.json"),
+         include_str!("../inputs/target.json"),
+     ).unwrap_or_else(|_| panic!("real public draft source preparation refused"));
++    let _preparation_report = prepared.preparation();
+     let _actual_b_genesis = prepared.observe_b_genesis()
+         .unwrap_or_else(|_| panic!("actual admitted B genesis observation refused"));
+     let expected: Value = serde_json::from_str(include_str!("../EXPECTED-A102-INPUT-AND-STATEMENT.json")).unwrap();

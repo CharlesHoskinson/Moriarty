@@ -26,6 +26,9 @@ pub mod draft_report;
 pub mod draft_profile;
 #[path = "compile_artifact/draft_execution.rs"]
 pub mod draft_execution;
+// Retained checked source and actual B genesis for explicit reference consumers.
+#[path = "compile_artifact/draft_reference.rs"]
+pub mod draft_reference;
 // Public typed ExtProgram compiler using the actual checked owner admission ABI.
 #[path = "compile_artifact/ext_compile.rs"]
 pub mod ext_compile;
@@ -260,6 +263,19 @@ pub fn compile_draft_host(
     config_source: &str,
     target_source: &str,
 ) -> Result<draft_report::DraftCompileArtifact, CompileFailure> {
+    let (pair, config, target) = prepare_draft_pair(source, config_source, target_source)?;
+    project_draft_pair(&pair, source, config, target)
+}
+
+// Both public consumers share the same bounded source/admission sequence.
+// This helper introduces no alternate admission, budgets, errors or defaults.
+fn prepare_draft_pair(
+    source: &str, config_source: &str, target_source: &str,
+) -> Result<(
+    recursive_source::AdmittedDraftSource,
+    draft_contract::DraftConfigIdentity,
+    TargetDescriptor,
+), CompileFailure> {
     let config = parse_draft_config(config_source)?;
     let target_descriptor = crate::json::parse(target_source)
         .map_err(|error| CompileFailure::core("config", error))?;
@@ -278,11 +294,8 @@ pub fn compile_draft_host(
     let admitted = recursive_source::admit_checked_draft_bounded(
         checked, &budget.copy, &bounds, &layout, &fuel, &stack,
     ).map_err(CompileFailure::draft_source)?;
-    // Project precisely this fresh pair before any execution. No separately
-    // prepared identity, fabricated view or second admission is substituted.
-    draft_report::project_admitted_preparation(
-        &admitted,
-        crate::intent::hash_bytes(source.as_bytes()),
+    Ok((
+        admitted,
         draft_contract::DraftConfigIdentity {
             fields: config,
             file_digest: crate::intent::hash_bytes(config_source.as_bytes()),
@@ -291,8 +304,20 @@ pub fn compile_draft_host(
             descriptor: target_descriptor,
             file_digest: crate::intent::hash_bytes(target_source.as_bytes()),
         },
+    ))
+}
+
+// Project this actual pair, with identical source digests and error staging.
+fn project_draft_pair(
+    pair: &recursive_source::AdmittedDraftSource,
+    source: &str,
+    config: draft_contract::DraftConfigIdentity,
+    target: TargetDescriptor,
+) -> Result<draft_report::DraftCompileArtifact, CompileFailure> {
+    draft_report::project_admitted_preparation(
+        pair, crate::intent::hash_bytes(source.as_bytes()), config, target,
     ).map_err(|error| CompileFailure {
-        stage:"observation", actual_error:error.owner_wire(),
-        evaluation_performed:false, events_forwarded:"0".into(), completed:false,
+        stage: "observation", actual_error: error.owner_wire(),
+        evaluation_performed: false, events_forwarded: "0".into(), completed: false,
     })
 }
