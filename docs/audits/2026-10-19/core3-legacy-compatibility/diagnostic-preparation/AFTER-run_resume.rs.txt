@@ -1,0 +1,31 @@
+fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
+    use mori_core::stage::{self, StageOutcome, StageRejection, decode};
+    let event_path = args
+        .event
+        .as_deref()
+        .ok_or_else(|| super::core_io::operation("--resume requires --event"))?;
+    let source = super::core_io::read_source(&args.file)?;
+    let result = (|| -> Result<StageOutcome, StageRejection> {
+        let program = super::check_source::load_staged_source(&source).map_err(no_work)?;
+        let continuation = decode::read_bounded(
+            resume,
+            decode::MAX_CONTINUATION_BYTES,
+            decode::CONTINUATION_TOO_LARGE,
+        )
+        .and_then(|text| decode::continuation(&text))
+        .map_err(no_work)?;
+        let event =
+            decode::read_bounded(event_path, decode::MAX_EVENT_BYTES, decode::EVENT_TOO_LARGE)
+                .and_then(|text| decode::event(&text))
+                .map_err(no_work)?;
+        stage::resume(
+            &program,
+            continuation,
+            event,
+            args.action.as_deref(),
+            args.logical_cap,
+        )
+    })();
+    print_stage_result(result)
+}
+

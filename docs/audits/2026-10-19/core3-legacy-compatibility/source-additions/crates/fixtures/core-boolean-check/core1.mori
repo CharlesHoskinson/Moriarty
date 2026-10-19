@@ -1,0 +1,14 @@
+language "moriarty/1";
+agreement BooleanChoice {
+  state result: Bool = false;
+  action choose(limit: UInt, enabled: Bool) {
+    let smaller = 2 < limit;
+    requires smaller or enabled and not false;
+    next result = smaller or not enabled;
+    ensures result or not enabled;
+    emit "decision"(result);
+  }
+  action inspect_limit(limit: UInt) {
+    requires limit > 0;
+  }
+}

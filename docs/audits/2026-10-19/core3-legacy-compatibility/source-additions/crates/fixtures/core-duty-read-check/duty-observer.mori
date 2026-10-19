@@ -1,0 +1,17 @@
+language "moriarty/2";
+agreement DutyObserver {
+  asset CASH = { network: "local", issuer: "source-coverage", reference: "cash", scale: 2 };
+  state observed: UInt = 0;
+  action register() {
+    liability("invoice", CASH, "payer", "seller", 0);
+  }
+  action observe(minimum: UInt) {
+    input maximum: UInt;
+    requires liability_present("invoice");
+    let opening = liability_amount("invoice");
+    await confirmed(accepted: Bool) when accepted and liability_present("invoice");
+    next observed = liability_amount("invoice");
+    ensures observed >= minimum and observed <= maximum;
+    emit "observed"(opening);
+  }
+}
