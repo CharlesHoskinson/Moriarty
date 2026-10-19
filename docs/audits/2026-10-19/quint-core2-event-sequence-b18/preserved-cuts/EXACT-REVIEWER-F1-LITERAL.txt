@@ -1,0 +1,9 @@
+    action init: bool = all { suppliedQueue.length() > 0, initInvocation(suppliedQueue.head()) }
+    action advanceInput: bool = all {
+      machine.phase == Published, machine.records.length() > 0,
+      machine.records.length() < suppliedQueue.length(),
+      resumeFollows(machine.records.nth(machine.records.length() - 1).result,
+        suppliedQueue.nth(machine.records.length())),
+      sameSourceContext(machine.current, suppliedQueue.nth(machine.records.length())),
+      beginInvocation(suppliedQueue.nth(machine.records.length())),
+    }

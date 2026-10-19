@@ -1,0 +1,19 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch18-core2-owning-event-sequence-20261019/source/quint/independentCore2SequencePort.qnt
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch18-core2-owning-event-sequence-20261019/model-port-after-core-freeze-01/source/independentCore2SequencePort.qnt
+@@ -20,10 +20,16 @@
+       }
+     | _ => false
+   }
++  pure val queueLinked = suppliedQueue.indices().forall(i => i == 0 or
++    match publish(suppliedQueue.nth(i - 1)) {
++      | Result(previousResult) => resumeFollows(previousResult, suppliedQueue.nth(i))
++      | NoResult => false
++    })
+   pure val queueDomain = if (suppliedQueue.length() == 0) false else and {
+     startsAtIdle(suppliedQueue.head()),
+     suppliedQueue.foldl(true, (ok, invocation) => ok and normalDomain(invocation)
+       and sameSourceContext(suppliedQueue.head(), invocation)),
++    queueLinked,
+   }
+   pure def isQueuePrefix(rows: List[Record]): bool = {
+     if (rows.length() > suppliedQueue.length()) false else {
