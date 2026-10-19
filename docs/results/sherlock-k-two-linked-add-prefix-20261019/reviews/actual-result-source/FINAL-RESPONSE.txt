@@ -1,0 +1,196 @@
+# Fresh review: two linked uncharged K Add-prefix windows (actual result and publication)
+
+**Reviewer and method.** The environment identifies me as claude-opus-5-5; I cannot observe my effort setting. I used no tools, shell, subcalls or edits. I read items 1–100 once, inline.
+
+**Verification limits.** I recomputed no SHA-256 values; every hash identity is accepted as stated. I did byte-size arithmetic only where noted.
+
+**Exposure.** Protected expected bodies were supplied post-barrier. I read them only as already-frozen data.
+
+```json
+{
+  "source_interface": "APPROVE (scoped to the exercised Add-start and Literal rules plus observer/decoder/carry/linker paths)",
+  "actual_ten_results_and_complete_independent_equality": "APPROVE (scoped)",
+  "oracle_adequacy_and_provenance": "APPROVE with qualifications (contract-conformance oracle; author request body unsupplied)",
+  "canonical_source_content_copy": "APPROVE (byte-exact six-file copy, isolated directory)",
+  "publication_install_record": "CHANGES_REQUIRED (metadata only: F9, F10, F11; no source, runner or result change)",
+  "new_operation_eligibility": "NOT REQUESTED / NOT GRANTED",
+  "public_proof_native_EARS_claims": "ABSENT"
+}
+```
+
+---
+
+## 1. Source and interface: APPROVE (scoped)
+
+I derived the trace independently from the literal rules before comparing it to the actual output.
+
+**Window 1: `ngObserve(ngInitial(P, 900|->UInt7), 1)`.**
+- `ngInitial` produces `ngState(P, ngEval(10), Rho, ngNoFrames, ngNoEvents)`.
+- `ngObserveLoop` with N=1: `ngTerminal(ngEval)` is false, so the next state is `ngObserveNext(S0, ngStep(S0), [], 0)`.
+- `ngStep(ngEval(10))` calls `ngEvaluate(ngFindExpr(10, …))`. Node 10 matches on the first row and yields `ngAdd(10010, 11, 12)`. The Add rule:
+  - sets control to `ngEval(11)`;
+  - pushes `ngAddLeft(10, 10010, 12, Rho)`;
+  - appends `ngAddStarted(10, 10010, 11, 12, Rho)`.
+- `ngObserveLoop` with N=0 returns `ngTape(S0, [S1], S1)`.
+- This matches `result.kore` (item 51) and the kprint output (item 56) exactly.
+
+**Window 2: from S1.**
+- `ngFindExpr(11)` skips node 10 because 11 ≠ 10, then matches node 11, `ngLiteral(10011, ngUInt(17))`.
+- The Literal rule sets control to `ngReturn(ngUInt(17))`. Rho and frames are unchanged, so `ngAddLeft` is still pending.
+- It appends `ngLiteralEvaluated(11, 10011, ngUInt(17))`.
+- The budget is then 0, so the run stops. The `ngAddLeft`-consuming Return rule (`ngAddRightRequested`) is never reached.
+- This matches items 64 and 69.
+
+**Unexercised rules.** I read every rule in items 2, 5 and 6, including:
+- all 12 frame kinds' Return consumers;
+- the `ngFinishAdd`, `ngCompleteLt` and `ngChooseBranch` partitions;
+- the Lt terminal/stutter rules;
+- the `ngAdvance` terminal guards.
+
+I found no blocking defect. The rule partitions use complementary `requires` clauses. These rules are reviewed but not covered by this input.
+
+**Interface checks.**
+- The syntax file in item 17 is visually item 1 + `\n` + item 4.
+- The arity checks in `CompleteKWire.__init__` pass for every API variant.
+- `ngObserve` and unevaluated `ngInitial` residue would fail closed:
+  - `ngObserve` is not registered in REG.
+  - `ngInitial` is registered as NGState, but the record branch of `_args` requires the name `ngState`.
+
+## 2. Actual ten results and complete independent equality: APPROVE (scoped)
+
+**Phase records.** All ten records carry the required callback keys: `returncode` 0, `timed_out` false, `outcome` exited, `remaining` [], `containment_breach` false. All streams and products are supplied.
+
+**Serializer (phase 01).**
+- `initial.ng` is 191 B and `query.term` is 204 B. Check: 10 + 190 + 3 + 1 = 204.
+- The pins printed in stdout (item 46) equal those in the retained `SERIALIZER-STDOUT` (item 86) and the product sizes.
+
+**Inputs.** Items 13 and 18 are identical except `observation_budget` (2 vs 1), which closes the earlier recommended pre-check.
+
+**Kast (phase 02).**
+- The kast Kore uses the expected labels.
+- The Map is `Lbl'UndsPipe'-'-GT-Unds'(900, ngUInt(7))`.
+- The bound is `\dv{SortInt{}}("1")`.
+
+**Raw carry (phase 05).**
+- The `TAPE` and `STATE` constants in `resume_query` match the actual `result.kore` heads.
+- The receipt span 8685–13623 (4938 B) is consistent with a 13625 B file with no trailing newline: the trim drops the `\n` before the outer `)`.
+- The `second.query.kore` size checks out exactly: OBSERVE head 111 + `(` 1 + 4938 + `,` 1 + bound 19 + `)` 1 = **5071**.
+- Its visible text is head + `(` + verbatim state + `,\dv{SortInt{}}("1"))`.
+- Phase 06's argv consumes exactly that file.
+
+**Continuity.**
+- The decoded first final equals the decoded second initial in all five fields:
+  - program;
+  - `ngEval(11)`;
+  - `[{900, UInt7}]`;
+  - one `ngAddLeft(10, 10010, 12, [900→7])`;
+  - one `ngAddStarted`.
+- Event lengths are 0→1→2 and frame lengths 0→1→1.
+- Source IDs 10/11/12 and occurrences 10010/10011/10012 are retained everywhere.
+- The final control is `ngReturn(UInt17)` with the frame pending. It is not Halted.
+
+**Equality.**
+- By inspection, item 59 is textually identical to item 19, and item 71 to item 20.
+- Item 76 and item 21 are typed-equal. The only difference is root key order: the linker emits `terminalStepContract` before `states`.
+- `same()` uses `dict.keys() ==`, which is order-insensitive (set-like), so phase 10's PASS is correct.
+- The joined files are not byte-equal and no canonical serialization is claimed. Both sizes being 5006 B is consistent with a pure reordering.
+
+**Freeze manifest.**
+- I enumerated the 67 files: 28 stage files plus 39 ROOT-METADATA files (5 + 4×8 + 2).
+- Timestamps are ordered: phase 09 ended 13:11:39.22, freeze 13:11:40.33, oracle open 13:12:10.385, phase 10 start 13:12:10.897.
+- Item 85 (`903bd8f…`) is not in the freeze. It is a later passive record only.
+
+## 3. Oracle adequacy and provenance: APPROVE with qualifications
+
+**Separation evidence.**
+- The readset (item 26) allows only five safe bodies.
+- The freeze's `retained-safe-inputs` hashes equal those five pins. This reconciles the limitation "two bodies lacked separate original pins".
+- Mild positive evidence (F8): EXPECTED-JOINED uses the declared `root_fields` order, not the linker's order, so the expected joined file was not produced by the linker.
+- The byte-equality of the two windows follows from the declared field order plus the common `json.dumps(indent=2)` + `\n` convention. It is not extra evidence of independence.
+- Precommitment: the pre-execution review (item 36) already names EXPECTED-JOINED as 5006 B / `7b78…`. None of the freeze, handoff or review records carries a UTC timestamp, so the ordering remains a Root-recorded fact.
+
+**Qualifications**
+- **F6. Contract-conformance oracle.** Three supplied texts nearly determine both after-states:
+  - item 15's `initial_declarations`;
+  - item 16's `events_granularity`;
+  - the `constructor_convention` text "A Return control before consume retains this frame unchanged".
+
+  The oracle's discriminating power is therefore limited to payload order and values, environment carriage, source-ID retention and frame persistence. That is real, but narrow.
+- **F7. Unsupplied author request.** `INDEPENDENT-ORACLE-AUTHOR-REQUEST.txt` (28922 B, `db839a97…`) is not supplied.
+  - About 2270 B of it go beyond the five embedded safe bodies (26652 B), and that instruction text is unreviewed.
+  - The exposures to the installed SKILL.md, AGENTS.md and product contract are self-reported and unreviewed.
+  - Independence remains qualified provenance; no hash proves it.
+
+## 4. Canonical source and publication
+
+**Source content copy: APPROVE.**
+- All six files keep relative `requires` paths within one directory.
+- `domains.md` resolves from the K builtin include path.
+- No overwrite of the old model is proposed.
+- Relocation is not an observed compile.
+
+**Publication and install record: CHANGES_REQUIRED (metadata only).**
+- **F9 (medium): module-name and Kore-label collision.**
+  - The existing `models/sherlock/k/nominal-product/` family very likely declares the same modules: `SHERLOCK-NOMINAL-PRODUCT-SYNTAX`, `SHERLOCK-NOMINAL-PRODUCT` and `SHERLOCK-NOMINAL-PRODUCT-OBSERVATIONS`. This is an inference, because those bodies are not supplied. The evidence:
+    - three basenames are the same;
+    - the earlier c6-run helper (item 10) hard-codes these module labels.
+  - Consequences:
+    - the two families cannot share one kompile, or an include path that reaches both;
+    - raw Kore artifacts from the two families are label-indistinguishable, so published raw results bind to `definition.kore` `456fdb3b…` only through argv and pins.
+  - Required fix: record both of these as install constraints.
+- **F10 (low): absent targets recorded as differing.** For the three `normal-lt-*` files, `existingPin: null` is paired with `existingEqualsCandidate: false` and an `existingDifferentFamilyPath`. This conflates "absent" with "differs". Required fix: mark these targets as absent.
+- **F11 (low): incomplete omission list.** Only `cache.bin`, `compiled.bin` and `scanner` are listed as omitted. The record must state whether the other 12 compiled files are packaged: `definition.kore`, `syntaxDefinition.kore`, `parsed.txt`, `allRules.txt`, and the rest.
+- **F12 (hygiene, non-blocking).** Published receipts embed absolute local paths, PIDs and per-stage tokens. The tokens are cleanup markers with no lasting authority. This is acceptable if intended.
+
+## 5. Other findings
+
+- **F2 (low).** `kore_continuation.application` is not a Kore lexer and does not skip `/* … */` comments.
+  - It worked here only because kore-exec's comments (`/* InternalMap: */`, `/* concrete element: */`, `/* Inj: */`) contain none of `( ) , " { }`.
+  - That is a reuse premise, not a defect in this run.
+- **F3 (low, retained from prior review).** The linker receipt's `observerCuts_derived_from_actual: true` overstates. `[0,1,2]` is a constant, valid only because of the two-state check in `checked_window`.
+- **F4 (qualification).** The JSON wires decode kprint text, while the carry uses raw Kore.
+  - The middle-state equality compares `kprint1(raw1.final)` with `kprint2(raw2.initial)`, so a symmetric kprint defect would pass.
+  - kprint fidelity is a toolchain premise.
+  - Only a single-binding Map is exercised.
+- **F5.** The raw2.initial == raw1.final byte identity is a pretty-printer consequence of identical nesting depth. The substantive checks are the query construction and typed continuity.
+- **F13 (info).**
+  - The compile warning about unused `O` at `nominal-product.k:166` is harmless and unexercised.
+  - `nominal_trace_codec.encode`, `decode` and `expanded_expected` lack Let/If. They are unused here (the pipeline uses `render_input` and `CompleteKWire`), but they would be published as legacy consumer code.
+- **F14 (TOCTOU).** The phase-10 process does not hash its own inputs.
+  - Root hashed them 0.5 s earlier, but ROOT-OUTCOME shows no post-10 rehash of EXPECTED-JOINED.
+  - My inspection of the supplied bodies confirms typed equality, assuming the supplied bytes are the pinned bytes.
+
+## 6. Retained gaps (not closed by this pass)
+
+- **Semantics not exercised:**
+  - the Add right operand, `ngAddRightRequested`, `ngAdded` and the result 42;
+  - `ngFinished`, Halted and terminal stutter;
+  - variable lookup;
+  - Let, If, Call, Match, Construct and all Lt branches.
+- **Equivalence and charging not established:**
+  - charged A/B steps, Kwork and fuel;
+  - host/Rust endpoint equivalence;
+  - recursive proof, circuit, native or target behaviour;
+  - EARS/SCON closure.
+- **Root-recorded, not independently verified:**
+  - fsync, and the absence of earlier protected access;
+  - before/after pins, which are not continuous immutability;
+  - the dynamic libraries, Python stdlib, JDK and host;
+  - the 3.14 `.pyc` reads by the existing F03 module (bypassed by the `exec`-of-source load).
+- **Relocated sources:** an observed compile from the new location, and its `definition.kore` identity, remain open.
+
+## 7. Coverage
+
+**Read in full:** items 1–100.
+
+**Named factored omissions, accepted as Root records and not read:**
+- PRECHECK/POSTCHECK bodies (86718 / 86499 B), FILE-PINS, ROOT-SELECTION and ROOT-FINAL-STATIC;
+- the full compiled contents, including `definition.kore` and the binaries;
+- the tool and JAR binaries, and READ-IMPORT-PINS;
+- the existing nominal-product bodies;
+- `AUTHOR-EXPECTED.py`, SOURCE-RETENTION-LEDGER, AUTHORING-VALIDATION and the author request;
+- the original plan JSONs.
+
+**Not relied on as evidence:**
+- the passive check counts (6839), the readback booleans and prior eligibility opinions;
+- the earlier CHANGES_REQUIRED review, which is preserved as history. No failed subject receipt exists or is implied.
