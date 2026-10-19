@@ -1,0 +1,11 @@
+# Core2 boundary JSON equality helper: scoped actual result
+
+The Opus-authored `boundary_observations_equal` reuses the existing `canonical_bytes` function to compare complete normalized JSON values. The source change is one import extension and the pure helper; the new file contains two focused same-author generic JSON tests. The current decoder is unchanged and is a required dependency, not a copied replacement.
+
+A fresh independent Opus5.5 HIGH review accepted this exact source with no mandatory corrections and found the ordinary two-method operation eligible subject to stated pins/cwd/caps. Root used the explicitly equally eligible `-B -s` variant, then ran only the two new named methods. Actual exit0 in 0.057810938s; stdout0B and full stderr478B contain both named `ok` results, `Ran 2 tests` and `OK`. Root's postcheck records source/Python pins unchanged, exactly three QA entries and no bytecode. The reviewer did not execute tests; the separate Root receipts establish the actual run. Author/reviewer actual identities and full raw opinions/receipts are preserved below.
+
+The literal hunk counts match (11→16 lines and new32lines). The materialization proof/inverse preserves every byte outside the unique hunk and EOF newlines. Canonical source preimage12922B becomes13130B; new test1656B. No source correction was made after the author's hunks. This is source-derived representation evidence on synthetic JSON, not a real Core or Quint observation, independent financial golden, whole consumer integration, program/financial/native correspondence or EARS closure.
+
+H2/H3/H4/H6 remain open. The full review retains outside-domain/NaN/parsing/provenance and unpinned stdlib/system-site premises; the narrow pass does not resolve them. A future common-trace comparator must consume this exact reviewed helper on normalized outputs from `core2_observation` and `quint_record_observation`, retain raw input/provenance and use independently prefrozen expectations. No actual trace comparison is claimed here. Older original-six/H1/H2 checks were not replayed.
+
+The publication is an additive proposal for Root integration. Runtime receipt paths retain their original capture locations. These files do not certify a later changed source tree or close the independent reference-contract adoption/prefreeze prerequisites.
