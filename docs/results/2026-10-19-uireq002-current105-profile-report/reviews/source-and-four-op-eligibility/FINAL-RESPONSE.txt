@@ -1,0 +1,137 @@
+# Fresh Opus 002 review: source applicability and eligibility of the four operations
+
+**Reviewer:** claude-opus-5-5, fresh and non-author.
+
+**What I did not do:** I made no tool calls. I did not read, hash, list or execute anything on disk, and I changed nothing.
+
+**What this is:** an opinion on source applicability and eligibility only. It is not a result, a closure or an adoption.
+
+## Verdicts
+
+| Item | Verdict |
+|---|---|
+| Source applicability of the original 002 predicate to these two tests | **APPLICABLE (scoped)** |
+| `01-link-current105-profile002` | **ELIGIBLE** |
+| `02-list-current105-profile002` | **ELIGIBLE** |
+| `03-check-public_admitted_first_order_fragment_reports_complete_supported_profile` | **CHANGES_REQUIRED** (Root composition only, see C1) |
+| `04-check-public_profile_reports_this_invocations_distinct_declared_extents` | **CHANGES_REQUIRED** (Root composition only, see C1) |
+
+## Source applicability
+
+I traced the call path in full from the inline bytes:
+
+`compile_draft_host` → `prepare_draft_pair` → `parse_draft_config` → `prepare_checked_draft_bounded` → `admit_checked_draft_bounded` → owner `admit` → owner `admit_run` → `project_draft_pair` → `project_admitted_preparation` → `prepared.observe()` → `draft_profile::report(&config.fields)`.
+
+**The report is only produced after admission succeeds.** `project_admitted_preparation` is reached only after parse, typecheck, copy, `admit` and `admit_run` all return `Ok`, and after `observe_bound_image` succeeds. Any `Tooling` or `HostViolation` error returns a `CompileFailure` and produces no report. This matches the clause's "WHEN a program is admitted".
+
+**`supported_profile` depends only on the parsed config and static literals.** It is a pure function of `DraftExecutionConfig`: `profile`, `grammar`, `bounds`, `layout` (the wire struct), `fuel`, `stack` and `preprocessing`. It does not read the source, the admitted pair, the target or `LayoutSchemaC`.
+
+**The `ext_capacities` change cannot appear in the report.** This addresses item (b) of the prior WITHHOLD.
+- `Layout::owner` hard-codes `ext_capacities: None`.
+- The wire `Layout` struct has no such field and uses `deny_unknown_fields`, so a draft config cannot supply one.
+- The report serializes the wire `Layout`, not `LayoutSchemaC`.
+- `LayoutObservation` also has no `ext_capacities` member.
+
+`config.rs` has now been read, so it belongs in 002's pinned set.
+
+**The static report matches the frozen expectations.** I compared `report()` against `EXPECTED.json` (`d76b87`) field by field:
+- All static strings, all four lists and the `UInt` upper bound 2¹²⁸−1 are identical.
+- Field names are identical, including the non-snake-case numeric-domain keys.
+- The serializers give the expected shapes:
+  - `UsizeDecimal` and `U128Decimal` serialize as strings.
+  - `RequiredNull` serializes as `null`.
+  - `RunInput` serializes as `{"kind":"Nat","value":…}`.
+- `config.json` agrees with every value in `EXPECTED` `extents`.
+
+This is a prediction from reading the source, not an observation.
+
+**Admission prerequisites hold for both configurations.**
+- `l.bounds == *b` holds, because the layout is built from the same `bounds` value.
+- `step_cap ≥ 1`.
+- `widths` is `null`, so AD-2 is skipped.
+- `max_arity` (8 and 139) is at least 2.
+- `boundary_capacities_present` is false.
+- `fuel ≤ max_reference_work`: 64 ≤ 4096 and 73 ≤ 8191.
+- `stack ≤ frames`: 8 ≤ 64 and 11 ≤ 173.
+- `fuel ≤ value_slots`: 64 and 73 are both ≤ 1024.
+
+**The scenario coverage matches what the report names.**
+- The fragment uses a named call, UInt128, Bool, `cons`/`nil` and `match`.
+- The report names the code, data, frame, environment, serialization and helper-work bounds.
+- It names closed-body and unique-function admission as explicit remaining work.
+- It names closures and letrec as extensions.
+- It names `AdmissionRejected` and `UnsupportedFeature` separately from runtime `Outcome`.
+
+**Why a new observation is justified.** The facade and config changed, and ops 11/12 never compared `supported_profile`. Test 2 shows that the reported extents and `admission.bounds` come from this invocation's config, not from constants. The membership correction is also right: with an exact two-name list, each exact selector filters out 1 test, not 0.
+
+**Scope limits.** These are not corrections. The `grammar` and `dispositions` entries are declared text compared against a frozen literal. This does not prove that the parser accepts exactly that grammar, that any bound is enforced, or that any of the 26 correspondences hold. No rejection path is exercised. This matches the packet's own wording.
+
+## C1: required correction for ops 03 and 04
+
+This is a composition change only. It does not touch argv, source, tests, expectations or `PROPOSED.json`.
+
+**The defect.** `run_selected_13.py:test_membership` reads `op['expected']['exactTest']`, but ops 03 and 04 carry the key `expectation`. If these op records are passed in as they are, the call raises `KeyError` after the test binary has already run. Under serial fail-stop with no retry, that ends the single attempt with nothing accepted. It fails closed, but the attempt is lost.
+
+**The helper also never checks `filtered_out`.** It returns the value without asserting it.
+
+**What the composition must do.**
+1. Call `test_membership(dict(op, expected=op['expectation']), phase)`.
+2. Assert that the returned dict equals exactly:
+   `{exactTest: <name>, selected: 1, passed: 1, failed: 0, ignored: 0, measured: 0, filtered_out: 1}`
+3. Before checking 03 or 04, require that the frozen output of op 02 contains that exact name.
+
+## Notes for Root (non-blocking)
+
+**Op 01**
+- **Missing search path:** the `-L` list does not include the A102 build directory. If `mori_core`'s transitive rlibs live only there, or `serde_json-76dc87` is not the serde instance `mori_core` was built against, the link fails. It fails closed. Root may wish to confirm that this `-L` set matches the one that linked the actual18 consumers.
+- **Dep-info count:** the expectation of 5 entries assumes default rustc dep-info, which lists no `--extern` binaries (binary dep-info is `-Z`-only). Any deviation fails closed.
+- **Helper check scope:** `dep_inputs` only checks that every dep-info entry is a subset of the allowed pins and that there is no `env-dep`. Root's composition must enforce the exact five resolved paths.
+- **Unpinned fixtures:** the packet shows no SHA for the consumer copies of `config.json` and `target.json`, and none for the review-source copies. Root's static pins must cover all of them. The packet's "unchanged 5-file closure" claim is not visible inline for those two files.
+
+**Op 02**
+- No helper parses `--list` output.
+- Root must check exactly two lines of the form `<name>: test` and the line `2 tests, 0 benchmarks`. No bodies are run by a list.
+
+**Stale comments in compiled source.** These do not affect behavior:
+- `owner_host.rs` says "PROPOSED, source-only, uncompiled".
+- `recursive_source.rs` says "no registered public dispatcher".
+- `draft_report.rs` and `draft_contract.rs` carry similar text.
+
+**The helper module.** It defines hard-coded constants for the 435 run (`D`, `E`, `CAPTURE`, `FROZEN`). Importing it for its functions under `-B` has no side effects, because `main` is behind the `__name__` guard.
+
+## Read extent
+
+**Read in full, inline:**
+- `ORIGINAL002-CONTEXT.json`
+- `INDEPENDENT-ORIGINAL-EXPECTATION-BINDING.json`
+- `EXPECTATIONS-FIRST-FREEZE.json`
+- `PROPOSED.json`
+- the prior WITHHOLD excerpt
+- the `owner_prepare.admit` and `admit_run` items
+- `compile_artifact.rs`
+- `draft_report.rs`
+- `recursive_source.rs`
+- `config.rs`
+- `draft_profile.rs`
+- `draft_contract.rs`
+- `owner_host.rs`
+- the test file
+- `EXPECTED.json`
+- `fragment.mori`
+- `config.json`
+- `target.json`
+- `run_selected_13.py`
+
+**Not read, relied on through the declared 105 byte-binding:**
+- `draft_correspondence.rs`, which test 1's `correspondence.proof` assertion depends on.
+- `wire.rs` (`admission` and `image`), which the `admission.identity.profile_id` and `admission.bounds` assertions depend on.
+- The `lib.rs` re-export `sherlock_compile_artifact`.
+- `owner_runtime::CheckedOwnerEngine`.
+- `prepare_core` and `check_program_view`.
+- `PreImage::bind`, `implied_seg_base` and `genesis`.
+- The parser, typechecker, `from_program_bounded`, `crate::json::parse` and `draft_diagnostics`.
+- `ALL105-CANONICAL-SOURCE-PINS.json`, `SOURCE-CLOSURES.json` and the 379 static pins.
+
+None of these is on the computation path of `supported_profile`, so the scoped reuse is sufficient for the 002 report claim. The run itself observes the auxiliary assertions in the tests.
+
+**Not claimed:** a fresh whole-105 audit, any hashing of mine, or any outcome of execution.
