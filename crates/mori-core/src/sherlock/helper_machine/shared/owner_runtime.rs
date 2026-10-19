@@ -5,7 +5,13 @@
 // (pure row effects, other work already supplied), `guards: &OwnerGuards`,
 // and, for SI-24 only, the prepare lane's `check_program_view` function.
 use super::*;
-use super::super::raw::{ConstRow as RawConstRow, DataRow as RawDataRow, RuleId as RawRuleId};
+use super::super::raw::{
+    ConstRow as RawConstRow, CtorId as RawCtorId, DataRow as RawDataRow, RuleId as RawRuleId,
+    TypeId as RawTypeId,
+};
+mod owner_adt_runtime;
+use owner_adt_runtime::*;
+pub(super) use owner_adt_runtime::check_generic_program_view;
 mod owner_si21_bind_match;
 use owner_si21_bind_match::{si21_bind_helper_ok, si21_bind_result_ok, si21_match_helper_ok, si21_match_result_ok};
 mod owner_si21_closure;
@@ -17,7 +23,7 @@ fn hv(kind: HostViolationKind, clause: Option<StepInvClauseId>, rule: Option<Rul
 fn wrong(loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, loc) }
 fn oob(loc: &str) -> HostViolation { hv(HostViolationKind::ReadOutOfBounds, None, None, loc) }
 fn arith(loc: &str) -> HostViolation { hv(HostViolationKind::ArithmeticUndefined, None, None, loc) }
-fn invalid_plan(loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, "invalid plan") }
+fn invalid_plan(_loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, "invalid plan") }
 fn siv(clause: StepInvClauseId, loc: &str, detail: &str) -> StepInvViolation {
     StepInvViolation { clause, locator: Some(loc.to_string()), detail: detail.to_string() }
 }
@@ -39,14 +45,18 @@ fn check_enabled(r: &RuleIdC) -> Result<(), HostViolation> {
 // ================= PreImageView over const/data/program tables =================
 fn const_fields(r: &RawConstRow) -> (usize, usize) {
     match r {
-        RawConstRow::Cons { fields, .. } | RawConstRow::Branch { fields, .. } => (fields.start.0, fields.len),
+        RawConstRow::Cons { fields, .. }
+        | RawConstRow::Branch { fields, .. }
+        | RawConstRow::Constructor { fields, .. } => (fields.start.0, fields.len),
         RawConstRow::Leaf { fields, .. } => (fields.start.0, fields.len),
         _ => (0, 0),
     }
 }
 fn data_fields(r: &RawDataRow) -> (usize, usize) {
     match r {
-        RawDataRow::Cons { fields } | RawDataRow::Branch { fields } => (fields.start.0, fields.len),
+        RawDataRow::Cons { fields }
+        | RawDataRow::Branch { fields }
+        | RawDataRow::Constructor { fields, .. } => (fields.start.0, fields.len),
         RawDataRow::Leaf { fields } => (fields.start.0, fields.len),
         _ => (0, 0),
     }
@@ -56,10 +66,12 @@ fn raw_marker_free(r: &RawConstRow) -> bool {
         RawConstRow::U128 { marker_free, .. } | RawConstRow::Bool { marker_free, .. }
         | RawConstRow::Nil { marker_free } | RawConstRow::Cons { marker_free, .. }
         | RawConstRow::Leaf { marker_free, .. } | RawConstRow::Branch { marker_free, .. }
+        | RawConstRow::Constructor { marker_free, .. }
         | RawConstRow::U128OutOfRange { marker_free } => *marker_free,
     }
 }
 impl<'a> PreImageView for PreImage<'a> {
+    fn adt_reads(&self) -> &dyn adt_runtime::AdtRuntimeReads { self }
     fn control(&self) -> &ControlC { &self.img.control }
     fn control_origin(&self) -> usize { self.img.control_origin }
     fn env_root(&self) -> EnvRootC { self.img.env_root }
@@ -155,10 +167,18 @@ impl<'a> PreImageView for PreImage<'a> {
         pure_leaves::borrowed_bool(self.deref_borrowed(r)?).ok_or_else(|| arith("bool payload"))
     }
     fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation> {
-        pure_leaves::arity_of(*k).ok_or_else(|| arith("arity undefined"))
+        match *k {
+            LogicalKind::Constructor { type_id, ctor_id } =>
+                adt_checked_ctor_arity(&self.admitted.body.view, type_id, ctor_id),
+            _ => pure_leaves::arity_of(*k).ok_or_else(|| arith("arity undefined")),
+        }
     }
     fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation> {
-        pure_leaves::sort_of_kind(*k).ok_or_else(|| arith("sort undefined"))
+        match *k {
+            LogicalKind::Constructor { type_id, ctor_id } =>
+                adt_checked_ctor_sort(&self.admitted.body.view, type_id, ctor_id),
+            _ => pure_leaves::sort_of_kind(*k).ok_or_else(|| arith("sort undefined")),
+        }
     }
     fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation> {
         let k = self.kind_of(r)?;
@@ -173,14 +193,16 @@ fn helper_common(h: &HelperControlC) -> HelperCommon {
         | HelperControlC::EnvPut { common, .. } | HelperControlC::Find { common, .. }
         | HelperControlC::Bind { common, .. } | HelperControlC::Append { common, .. }
         | HelperControlC::Validate { common, .. } | HelperControlC::Equal { common, .. }
-        | HelperControlC::Match { common, .. } => *common }
+        | HelperControlC::Match { common, .. } | HelperControlC::Build { common, .. }
+        | HelperControlC::Plan { common, .. } => *common }
 }
 fn helper_kind_of(h: &HelperControlC) -> HelperKind {
     match h { HelperControlC::Scalar { .. } => HelperKind::Scalar, HelperControlC::EnvGet { .. } => HelperKind::EnvGet,
         HelperControlC::EnvPut { .. } => HelperKind::EnvPut, HelperControlC::Find { .. } => HelperKind::Find,
         HelperControlC::Bind { .. } => HelperKind::Bind, HelperControlC::Append { .. } => HelperKind::Append,
         HelperControlC::Validate { .. } => HelperKind::Validate, HelperControlC::Equal { .. } => HelperKind::Equal,
-        HelperControlC::Match { .. } => HelperKind::Match }
+        HelperControlC::Match { .. } => HelperKind::Match, HelperControlC::Build { .. } => HelperKind::Build,
+        HelperControlC::Plan { .. } => HelperKind::Plan }
 }
 impl GuardEvaluator for OwnerGuards {
     fn eval_guard(&self, g: &GuardId, pre: &dyn PreImageView) -> Result<bool, HostViolation> {
@@ -214,6 +236,10 @@ impl GuardEvaluator for OwnerGuards {
                         (dup_cursor.ok_or_else(|| wrong("GBindDupHit dupCursor"))?, *binder),
                     _ => return Err(wrong("GBindDupHit state")) };
                 Ok(pre.env_cell(&dup)?.binder == binder) }
+            GuardId::GBuildLast => match pre.helper() {
+                Some(HelperControlC::Build { src, src_cursor, phase: BuildPhase::Copy, .. }) =>
+                    Ok(src_cursor.checked_add(1).ok_or_else(|| arith("build cursor+1"))? == src.len),
+                _ => Err(wrong("GBuildLast state")) },
         }
     }
     fn eval_select_when(&self, rule: &RuleIdC, pre: &dyn PreImageView) -> Result<bool, HostViolation> {
@@ -227,11 +253,14 @@ impl GuardEvaluator for OwnerGuards {
             | RuleIdC::KMachineReturnIfTrue | RuleIdC::KMachineReturnIfFalse | RuleIdC::KMachineReturnIfInvalid
             | RuleIdC::KMachineReturnArgumentsNext | RuleIdC::KMachineReturnArgumentsFinal
             | RuleIdC::KMachineReturnCallValid | RuleIdC::KMachineReturnCallInvalid
-            | RuleIdC::KMachineInvokeFind | RuleIdC::KMachineEnterBind | RuleIdC::KMachineCasesTry)
+            | RuleIdC::KMachineInvokeFind | RuleIdC::KMachineEnterBind | RuleIdC::KMachineCasesTry
+            | RuleIdC::XAdtReturnCtorFieldsTyped | RuleIdC::XAdtReturnCtorFieldsMistyped
+            | RuleIdC::XAdtReturnCtorFieldsNext | RuleIdC::XAdtReturnCtorFieldsFinal
+            | RuleIdC::XAdtMaterializeDone | RuleIdC::XAdtCasesPlanHit | RuleIdC::XAdtCasesPlanMiss)
     }
 }
 fn res(pre: &dyn PreImageView) -> Option<HelperResultC> { pre.result().copied() }
-fn owner_select_when(rule: &RuleIdC, pre: &dyn PreImageView, g: &OwnerGuards) -> Result<bool, HostViolation> {
+fn owner_select_when(rule: &RuleIdC, pre: &dyn PreImageView, _g: &OwnerGuards) -> Result<bool, HostViolation> {
     use RuleIdC::*;
     Ok(match rule {
         // Legacy (37): select_when verbatim from rows-supplement legacy instances.
@@ -264,15 +293,38 @@ fn owner_select_when(rule: &RuleIdC, pre: &dyn PreImageView, g: &OwnerGuards) ->
         KMachineEnterBind => matches!(res(pre), Some(HelperResultC::BindOk { .. } | HelperResultC::BindBad)),
         KMachineBoundInvalid => matches!(pre.control(), ControlC::Bound { binding: BoundBinding::Bad, .. }),
         KMachineBoundValid => matches!(pre.control(), ControlC::Bound { binding: BoundBinding::Ok { .. }, .. }),
-        KMachineCasesEmpty => matches!(pre.control(), ControlC::Cases { arms, .. } if arms.len == 0),
-        KMachineCasesTry => matches!(res(pre), Some(HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch)),
+        KMachineCasesEmpty => matches!(pre.control(), ControlC::Cases { arms, .. } if arms.len == 0)
+            && matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: None, .. }),
+        KMachineCasesTry => matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: None, .. })
+            && matches!(res(pre), Some(HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch)),
         KMachineCasesMiss => matches!(pre.control(), ControlC::CaseResult { matching: CaseMatching::NoMatch, .. }),
         KMachineCasesHit => matches!(pre.control(), ControlC::CaseResult { matching: CaseMatching::Matched { .. }, .. }),
         KMachinePrimitiveValue => matches!(pre.control(), ControlC::PrimResult { result: PrimOutcome::Value { .. } }),
         KMachinePrimitiveError => matches!(pre.control(), ControlC::PrimResult { result: PrimOutcome::Error { .. } }),
+        XAdtEvalConstructNullary => match pre.control() { ControlC::Eval { expr } =>
+            matches!(pre.expr(expr)?, ExpressionRowC::Construct { fields, constant: Some(_), .. } if fields.len == 0), _ => false },
+        XAdtEvalConstructFields => match pre.control() { ControlC::Eval { expr } =>
+            matches!(pre.expr(expr)?, ExpressionRowC::Construct { fields, constant: None, .. } if fields.len > 0), _ => false },
+        XAdtReturnCtorFieldsTyped => matches!(pre.top_frame(), Some(FrameRowC::ConstructorFieldsF { checked: false, .. }))
+            && matches!(res(pre), Some(HelperResultC::ScalarTypeTest { ok: true })),
+        XAdtReturnCtorFieldsMistyped => matches!(pre.top_frame(), Some(FrameRowC::ConstructorFieldsF { checked: false, .. }))
+            && matches!(res(pre), Some(HelperResultC::ScalarTypeTest { ok: false })),
+        XAdtReturnCtorFieldsNext => matches!(pre.top_frame(), Some(FrameRowC::ConstructorFieldsF { checked: true, rest, .. }) if rest.len > 0)
+            && matches!(res(pre), Some(HelperResultC::AppendDone { .. })),
+        XAdtReturnCtorFieldsFinal => matches!(pre.top_frame(), Some(FrameRowC::ConstructorFieldsF { checked: true, rest, .. }) if rest.len == 0)
+            && matches!(res(pre), Some(HelperResultC::AppendDone { .. })),
+        XAdtMaterializeDone => matches!(pre.control(), ControlC::Materialize { .. })
+            && matches!(res(pre), Some(HelperResultC::BuildDone { .. })),
+        XAdtCasesPlanHit => matches!(pre.control(), ControlC::Cases { .. })
+            && matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: Some(_), .. })
+            && matches!(res(pre), Some(HelperResultC::PlanMatched { .. })),
+        XAdtCasesPlanMiss => matches!(pre.control(), ControlC::Cases { .. })
+            && matches!(pre.expr(&pre.control_origin())?, ExpressionRowC::Match { plan: Some(_), .. })
+            && matches!(res(pre), Some(HelperResultC::PlanNoMatch)),
         // Helper entries: selected only by dispatch step 3 (helperPlan), never by group scan.
         BHelperScalarEntry | BHelperEnvGetEntry | BHelperEnvPutEntry | BHelperFindEntry | BHelperBindEntry
-        | BHelperAppendEntry | BHelperValidateEntry | BHelperEqualEntry | BHelperMatchEntry => false,
+        | BHelperAppendEntry | BHelperValidateEntry | BHelperEqualEntry | BHelperMatchEntry
+        | XAdtHelperBuildEntry | XAdtHelperPlanEntry => false,
         BHelperScalarTag => matches!(pre.helper(), Some(HelperControlC::Scalar { phase: ScalarPhase::First, mode, .. })
             if !matches!(mode, ScalarMode::Leaf | ScalarMode::Not)),
         BHelperScalarArithmetic => matches!(pre.helper(), Some(HelperControlC::Scalar { phase, mode, .. })
@@ -346,6 +398,21 @@ fn owner_select_when(rule: &RuleIdC, pre: &dyn PreImageView, g: &OwnerGuards) ->
         BHelperMatchSelected => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Ready, .. })),
         BHelperMatchExit => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Done, status: TriStatus::Positive, .. })),
         BHelperMatchFailure => matches!(pre.helper(), Some(HelperControlC::Match { phase: MatchPhase::Done, status: TriStatus::Negative, .. })),
+        XAdtHelperBuildCell => matches!(pre.helper(), Some(HelperControlC::Build { phase: BuildPhase::Copy, staged: None, src, src_cursor, .. })
+            if *src_cursor < src.len),
+        XAdtHelperBuildField => matches!(pre.helper(), Some(HelperControlC::Build { phase: BuildPhase::Copy, staged: Some(_), src, src_cursor, .. })
+            if *src_cursor < src.len),
+        XAdtHelperBuildExit => matches!(pre.helper(), Some(HelperControlC::Build { phase: BuildPhase::Done, node: Some(_), .. })),
+        XAdtHelperPlanWalk => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::Walk, path, path_cursor, .. })
+            if *path_cursor < path.len),
+        XAdtHelperPlanSwitch => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::Test, after_walk: PlanAfterWalk::Test, path, path_cursor, .. })
+            if *path_cursor == path.len),
+        XAdtHelperPlanBind => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::Bind, after_walk: PlanAfterWalk::Bind, path, path_cursor, .. })
+            if *path_cursor == path.len),
+        XAdtHelperPlanSelect => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::Ready, status: TriStatus::Pending, arm: Some(_), .. })),
+        XAdtHelperPlanNoMatch => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::NoMatchReady, status: TriStatus::Pending, arm: None, .. })),
+        XAdtHelperPlanExit => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::Done, status: TriStatus::Positive, arm: Some(_), .. })),
+        XAdtHelperPlanFailure => matches!(pre.helper(), Some(HelperControlC::Plan { phase: PlanPhase::Done, status: TriStatus::Negative, .. })),
         BBookkeepingTaskRelease => matches!(pre.helper(),
             Some(HelperControlC::Validate { status: TriStatus::Negative, .. } | HelperControlC::Equal { status: TriStatus::Negative, .. }))
             && pre.task_live() > 0,
@@ -361,7 +428,8 @@ pub fn owner_site(pre: &PreImage) -> Result<SiteTag, HostViolation> {
             ExpressionRowC::Literal { .. } => SiteTag::EvalLiteral, ExpressionRowC::Var { .. } => SiteTag::EvalVar,
             ExpressionRowC::Let { .. } => SiteTag::EvalLet, ExpressionRowC::Binary { .. } => SiteTag::EvalBinary,
             ExpressionRowC::Unary { .. } => SiteTag::EvalUnary, ExpressionRowC::If { .. } => SiteTag::EvalIf,
-            ExpressionRowC::Call { .. } => SiteTag::EvalCall, ExpressionRowC::Match { .. } => SiteTag::EvalMatch }),
+            ExpressionRowC::Call { .. } => SiteTag::EvalCall, ExpressionRowC::Match { .. } => SiteTag::EvalMatch,
+            ExpressionRowC::Construct { .. } => SiteTag::EvalConstruct }),
         ControlC::ScheduleNext { .. } => Ok(SiteTag::Push),
         ControlC::Return { .. } => {
             if pre.depth() == 0 { return Err(hv(HostViolationKind::SelectUndefined, None, None, "Return at depth 0")); }
@@ -370,11 +438,13 @@ pub fn owner_site(pre: &PreImage) -> Result<SiteTag, HostViolation> {
                 FrameRowC::RightF { .. } => SiteTag::RetRight, FrameRowC::UnaryF { .. } => SiteTag::RetUnary,
                 FrameRowC::IfF { .. } => SiteTag::RetIf, FrameRowC::MatchF { .. } => SiteTag::RetMatch,
                 FrameRowC::ArgsF { .. } => SiteTag::RetArgs, FrameRowC::ReturnF { .. } => SiteTag::RetCall,
-                FrameRowC::ScopeF { .. } => SiteTag::RetScope })
+                FrameRowC::ScopeF { .. } => SiteTag::RetScope,
+                FrameRowC::ConstructorFieldsF { .. } => SiteTag::RetCtorFields })
         }
         ControlC::Invoke { .. } => Ok(SiteTag::Invoke), ControlC::Enter { .. } => Ok(SiteTag::Enter),
         ControlC::Bound { .. } => Ok(SiteTag::Bound), ControlC::Cases { .. } => Ok(SiteTag::Cases),
         ControlC::CaseResult { .. } => Ok(SiteTag::CaseResult), ControlC::PrimResult { .. } => Ok(SiteTag::Prim),
+        ControlC::Materialize { .. } => Ok(SiteTag::Materialize),
         ControlC::Error { .. } => Err(hv(HostViolationKind::SelectUndefined, None, None, "Error control in select")),
     }
 }
@@ -385,9 +455,18 @@ pub fn owner_helper_plan(site: SiteTag, pre: &PreImage) -> Option<HelperKind> {
         SiteTag::RetRight => match pre.top_frame() { Some(FrameRowC::RightF { op, .. }) =>
             Some(if *op == BinaryOp::Eq { HelperKind::Equal } else { HelperKind::Scalar }), _ => None },
         SiteTag::RetUnary | SiteTag::RetIf | SiteTag::RetCall => Some(HelperKind::Scalar),
-        SiteTag::RetArgs => Some(HelperKind::Append), SiteTag::Invoke => Some(HelperKind::Find),
+        SiteTag::RetArgs => Some(HelperKind::Append),
+        SiteTag::RetCtorFields => match pre.top_frame() {
+            Some(FrameRowC::ConstructorFieldsF { checked, .. }) =>
+                Some(if *checked { HelperKind::Append } else { HelperKind::Scalar }),
+            _ => None },
+        SiteTag::Materialize => Some(HelperKind::Build),
+        SiteTag::Invoke => Some(HelperKind::Find),
         SiteTag::Enter => match pre.img.control { ControlC::Enter { function: Some(_), .. } => Some(HelperKind::Bind), _ => None },
-        SiteTag::Cases => match pre.img.control { ControlC::Cases { arms, .. } if arms.len > 0 => Some(HelperKind::Match), _ => None },
+        SiteTag::Cases => match (pre.img.control, pre.expr(&pre.img.control_origin).ok()) {
+            (ControlC::Cases { .. }, Some(ExpressionRowC::Match { plan: Some(_), .. })) => Some(HelperKind::Plan),
+            (ControlC::Cases { arms, .. }, Some(ExpressionRowC::Match { plan: None, .. })) if arms.len > 0 => Some(HelperKind::Match),
+            _ => None },
         _ => None,
     }
 }
@@ -395,18 +474,19 @@ fn entry_rule(k: HelperKind) -> RuleIdC { match k { HelperKind::Scalar => RuleId
     HelperKind::EnvGet => RuleIdC::BHelperEnvGetEntry, HelperKind::EnvPut => RuleIdC::BHelperEnvPutEntry,
     HelperKind::Find => RuleIdC::BHelperFindEntry, HelperKind::Bind => RuleIdC::BHelperBindEntry,
     HelperKind::Append => RuleIdC::BHelperAppendEntry, HelperKind::Validate => RuleIdC::BHelperValidateEntry,
-    HelperKind::Equal => RuleIdC::BHelperEqualEntry, HelperKind::Match => RuleIdC::BHelperMatchEntry } }
+    HelperKind::Equal => RuleIdC::BHelperEqualEntry, HelperKind::Match => RuleIdC::BHelperMatchEntry,
+    HelperKind::Plan => RuleIdC::XAdtHelperPlanEntry, HelperKind::Build => RuleIdC::XAdtHelperBuildEntry } }
 fn event_kind_of(r: &RuleIdC) -> EventKind {
     use RuleIdC::*;
     match r {
-        BHelperScalarEntry | BHelperEnvGetEntry | BHelperEnvPutEntry | BHelperFindEntry | BHelperBindEntry | BHelperAppendEntry | BHelperValidateEntry | BHelperEqualEntry | BHelperMatchEntry => EventKind::HelperEnter,
-        BHelperScalarExit | BHelperEnvGetExit | BHelperEnvPutExit | BHelperFindExit | BHelperBindExit | BHelperAppendExit | BHelperValidateExit | BHelperEqualExit | BHelperMatchExit => EventKind::HelperExit,
-        BHelperScalarFailure | BHelperEnvGetFailure | BHelperFindFailure | BHelperBindFailure | BHelperValidateFailure | BHelperMatchFailure => EventKind::HelperFail,
+        BHelperScalarEntry | BHelperEnvGetEntry | BHelperEnvPutEntry | BHelperFindEntry | BHelperBindEntry | BHelperAppendEntry | BHelperValidateEntry | BHelperEqualEntry | BHelperMatchEntry | XAdtHelperBuildEntry | XAdtHelperPlanEntry => EventKind::HelperEnter,
+        BHelperScalarExit | BHelperEnvGetExit | BHelperEnvPutExit | BHelperFindExit | BHelperBindExit | BHelperAppendExit | BHelperValidateExit | BHelperEqualExit | BHelperMatchExit | XAdtHelperBuildExit | XAdtHelperPlanExit => EventKind::HelperExit,
+        BHelperScalarFailure | BHelperEnvGetFailure | BHelperFindFailure | BHelperBindFailure | BHelperValidateFailure | BHelperMatchFailure | XAdtHelperPlanFailure => EventKind::HelperFail,
         BBookkeepingTaskRelease => EventKind::Bookkeeping,
         KAdminPublishValue | KAdminPublishError | KAdminPublishExhausted => EventKind::Publish,
         KAdminStartupValid | KAdminStartupInvalid => EventKind::Startup,
-        KMachineEvalLiteralValid | KMachineEvalLiteralInvalid | KMachineEvalVariablePresent | KMachineEvalVariableAbsent | KMachineEvalLet | KMachineEvalBinary | KMachineEvalUnary | KMachineEvalIf | KMachineEvalMatch | KMachineEvalCallEmpty | KMachineEvalCallArguments | KMachinePushAccept | KMachinePushRefuse | KMachineReturnLet | KMachineReturnLeft | KMachineReturnRight | KMachineReturnUnary | KMachineReturnIfTrue | KMachineReturnIfFalse | KMachineReturnIfInvalid | KMachineReturnMatch | KMachineReturnArgumentsNext | KMachineReturnArgumentsFinal | KMachineReturnCallValid | KMachineReturnCallInvalid | KMachineReturnScope | KMachineInvokeFind | KMachineEnterMissing | KMachineEnterBind | KMachineBoundInvalid | KMachineBoundValid | KMachineCasesEmpty | KMachineCasesTry | KMachineCasesMiss | KMachineCasesHit | KMachinePrimitiveValue | KMachinePrimitiveError => EventKind::LegacyComplete,
-        BHelperScalarTag | BHelperScalarArithmetic | BHelperScalarConstruct | BHelperEnvGetCell | BHelperEnvGetEmpty | BHelperEnvPutInsert | BHelperFindRow | BHelperFindEmpty | BHelperBindPair | BHelperBindEmpty | BHelperBindArity | BHelperBindType | BHelperBindDuplicate | BHelperBindInsert | BHelperBindPropagate | BHelperAppendCell | BHelperAppendEmpty | BHelperAppendTail | BHelperAppendCopy | BHelperValidateOccurrence | BHelperValidateField | BHelperValidateEmpty | BHelperValidateInvalid | BHelperEqualPair | BHelperEqualField | BHelperEqualEmpty | BHelperEqualDifferent | BHelperMatchArm | BHelperMatchOccurrence | BHelperMatchField | BHelperMatchBinding | BHelperMatchDistinct | BHelperMatchNext | BHelperMatchSelected => EventKind::HelperVisit,
+        KMachineEvalLiteralValid | KMachineEvalLiteralInvalid | KMachineEvalVariablePresent | KMachineEvalVariableAbsent | KMachineEvalLet | KMachineEvalBinary | KMachineEvalUnary | KMachineEvalIf | KMachineEvalMatch | KMachineEvalCallEmpty | KMachineEvalCallArguments | KMachinePushAccept | KMachinePushRefuse | KMachineReturnLet | KMachineReturnLeft | KMachineReturnRight | KMachineReturnUnary | KMachineReturnIfTrue | KMachineReturnIfFalse | KMachineReturnIfInvalid | KMachineReturnMatch | KMachineReturnArgumentsNext | KMachineReturnArgumentsFinal | KMachineReturnCallValid | KMachineReturnCallInvalid | KMachineReturnScope | KMachineInvokeFind | KMachineEnterMissing | KMachineEnterBind | KMachineBoundInvalid | KMachineBoundValid | KMachineCasesEmpty | KMachineCasesTry | KMachineCasesMiss | KMachineCasesHit | KMachinePrimitiveValue | KMachinePrimitiveError | XAdtEvalConstructNullary | XAdtEvalConstructFields | XAdtReturnCtorFieldsTyped | XAdtReturnCtorFieldsMistyped | XAdtReturnCtorFieldsNext | XAdtReturnCtorFieldsFinal | XAdtMaterializeDone | XAdtCasesPlanHit | XAdtCasesPlanMiss => EventKind::LegacyComplete,
+        BHelperScalarTag | BHelperScalarArithmetic | BHelperScalarConstruct | BHelperEnvGetCell | BHelperEnvGetEmpty | BHelperEnvPutInsert | BHelperFindRow | BHelperFindEmpty | BHelperBindPair | BHelperBindEmpty | BHelperBindArity | BHelperBindType | BHelperBindDuplicate | BHelperBindInsert | BHelperBindPropagate | BHelperAppendCell | BHelperAppendEmpty | BHelperAppendTail | BHelperAppendCopy | BHelperValidateOccurrence | BHelperValidateField | BHelperValidateEmpty | BHelperValidateInvalid | BHelperEqualPair | BHelperEqualField | BHelperEqualEmpty | BHelperEqualDifferent | BHelperMatchArm | BHelperMatchOccurrence | BHelperMatchField | BHelperMatchBinding | BHelperMatchDistinct | BHelperMatchNext | BHelperMatchSelected | XAdtHelperBuildCell | XAdtHelperBuildField | XAdtHelperPlanWalk | XAdtHelperPlanSwitch | XAdtHelperPlanBind | XAdtHelperPlanSelect | XAdtHelperPlanNoMatch => EventKind::HelperVisit,
         BHelperEnvPutCell | BHelperEnvPutEmpty | BHelperEnvPutFailure | BHelperAppendFailure | BHelperEqualFailure | BHelperMatchEmpty | BHelperValidateDeclaration | BHelperMatchDiscard | BBookkeepingTaskEnqueue | BBookkeepingResumeStore | BBookkeepingResumeRestore => EventKind::HelperVisit
     }
 }
@@ -417,7 +497,9 @@ fn visits_of(r: &RuleIdC) -> u8 {
         | BHelperBindInsert | BHelperBindPropagate | BHelperAppendCell | BHelperAppendTail | BHelperAppendCopy
         | BHelperValidateOccurrence | BHelperValidateField | BHelperValidateInvalid | BHelperEqualPair
         | BHelperEqualField | BHelperEqualDifferent | BHelperMatchArm | BHelperMatchOccurrence
-        | BHelperMatchField | BHelperMatchBinding | BHelperMatchDistinct => 1, _ => 0 }
+        | BHelperMatchField | BHelperMatchBinding | BHelperMatchDistinct
+        | XAdtHelperBuildCell | XAdtHelperBuildField | XAdtHelperPlanWalk | XAdtHelperPlanSwitch
+        | XAdtHelperPlanBind | XAdtHelperPlanSelect | XAdtHelperPlanNoMatch => 1, _ => 0 }
 }
 fn family_of_rule(r: &RuleIdC) -> FamilyId {
     use RuleIdC::*;
@@ -434,6 +516,9 @@ fn family_of_rule(r: &RuleIdC) -> FamilyId {
         BHelperEqualEntry | BHelperEqualPair | BHelperEqualField | BHelperEqualEmpty | BHelperEqualDifferent | BHelperEqualExit => FamilyId::Equal,
         BHelperMatchEntry | BHelperMatchArm | BHelperMatchOccurrence | BHelperMatchField | BHelperMatchBinding
         | BHelperMatchDistinct | BHelperMatchNext | BHelperMatchSelected | BHelperMatchExit | BHelperMatchFailure => FamilyId::Match,
+        XAdtHelperBuildEntry | XAdtHelperBuildCell | XAdtHelperBuildField | XAdtHelperBuildExit => FamilyId::Build,
+        XAdtHelperPlanEntry | XAdtHelperPlanWalk | XAdtHelperPlanSwitch | XAdtHelperPlanBind
+        | XAdtHelperPlanSelect | XAdtHelperPlanNoMatch | XAdtHelperPlanExit | XAdtHelperPlanFailure => FamilyId::Plan,
         BBookkeepingTaskRelease => FamilyId::BookkeepingRelease, _ => FamilyId::Legacy }
 }
 fn selected_for(pre: &PreImage, rule: RuleIdC) -> Result<Selected, HostViolation> {
@@ -446,6 +531,7 @@ fn selected_for(pre: &PreImage, rule: RuleIdC) -> Result<Selected, HostViolation
             FamilyId::EnvPut => HelperKind::EnvPut, FamilyId::Find => HelperKind::Find, FamilyId::Bind => HelperKind::Bind,
             FamilyId::Append => HelperKind::Append, FamilyId::Validate => HelperKind::Validate,
             FamilyId::Equal => HelperKind::Equal, FamilyId::Match => HelperKind::Match,
+            FamilyId::Build => HelperKind::Build, FamilyId::Plan => HelperKind::Plan,
             FamilyId::BookkeepingRelease => HelperKind::Validate, FamilyId::Legacy => HelperKind::Scalar }) };
     let hk = if event_kind_of(&rule) == EventKind::Bookkeeping {
         pre.helper().map(helper_kind_of) } else { hk };
@@ -463,7 +549,9 @@ fn helper_group(k: HelperKind) -> &'static [RuleIdC] {
         HelperKind::Append => &[BHelperAppendCopy, BHelperAppendCell, BHelperAppendEmpty, BHelperAppendTail, BHelperAppendExit],
         HelperKind::Validate => &[BBookkeepingTaskRelease, BHelperValidateFailure, BHelperValidateExit, BHelperValidateEmpty, BHelperValidateInvalid, BHelperValidateOccurrence, BHelperValidateField],
         HelperKind::Equal => &[BBookkeepingTaskRelease, BHelperEqualExit, BHelperEqualEmpty, BHelperEqualDifferent, BHelperEqualPair, BHelperEqualField],
-        HelperKind::Match => &[BHelperMatchExit, BHelperMatchFailure, BHelperMatchArm, BHelperMatchOccurrence, BHelperMatchDistinct, BHelperMatchField, BHelperMatchBinding, BHelperMatchSelected, BHelperMatchNext] }
+        HelperKind::Match => &[BHelperMatchExit, BHelperMatchFailure, BHelperMatchArm, BHelperMatchOccurrence, BHelperMatchDistinct, BHelperMatchField, BHelperMatchBinding, BHelperMatchSelected, BHelperMatchNext],
+        HelperKind::Build => &[XAdtHelperBuildField, XAdtHelperBuildCell, XAdtHelperBuildExit],
+        HelperKind::Plan => &[XAdtHelperPlanExit, XAdtHelperPlanFailure, XAdtHelperPlanWalk, XAdtHelperPlanSwitch, XAdtHelperPlanBind, XAdtHelperPlanSelect, XAdtHelperPlanNoMatch] }
 }
 fn legacy_group(site: SiteTag) -> &'static [RuleIdC] {
     use RuleIdC::*; use SiteTag::*;
@@ -471,13 +559,17 @@ fn legacy_group(site: SiteTag) -> &'static [RuleIdC] {
         EvalVar => &[KMachineEvalVariablePresent, KMachineEvalVariableAbsent], EvalLet => &[KMachineEvalLet],
         EvalBinary => &[KMachineEvalBinary], EvalUnary => &[KMachineEvalUnary], EvalIf => &[KMachineEvalIf],
         EvalMatch => &[KMachineEvalMatch], EvalCall => &[KMachineEvalCallEmpty, KMachineEvalCallArguments],
+        EvalConstruct => &[XAdtEvalConstructNullary, XAdtEvalConstructFields],
         Push => &[KMachinePushAccept, KMachinePushRefuse], RetLet => &[KMachineReturnLet], RetLeft => &[KMachineReturnLeft],
         RetRight => &[KMachineReturnRight], RetUnary => &[KMachineReturnUnary],
         RetIf => &[KMachineReturnIfTrue, KMachineReturnIfFalse, KMachineReturnIfInvalid], RetMatch => &[KMachineReturnMatch],
         RetArgs => &[KMachineReturnArgumentsNext, KMachineReturnArgumentsFinal],
         RetCall => &[KMachineReturnCallValid, KMachineReturnCallInvalid], RetScope => &[KMachineReturnScope],
+        RetCtorFields => &[XAdtReturnCtorFieldsTyped, XAdtReturnCtorFieldsMistyped, XAdtReturnCtorFieldsNext, XAdtReturnCtorFieldsFinal],
+        Materialize => &[XAdtMaterializeDone],
         Invoke => &[KMachineInvokeFind], Enter => &[KMachineEnterMissing, KMachineEnterBind],
-        Bound => &[KMachineBoundInvalid, KMachineBoundValid], Cases => &[KMachineCasesEmpty, KMachineCasesTry],
+        Bound => &[KMachineBoundInvalid, KMachineBoundValid],
+        Cases => &[KMachineCasesEmpty, KMachineCasesTry, XAdtCasesPlanHit, XAdtCasesPlanMiss],
         CaseResult => &[KMachineCasesMiss, KMachineCasesHit], Prim => &[KMachinePrimitiveValue, KMachinePrimitiveError] }
 }
 /// AB is already enforced by `PreImage::bind`; a non-Running image fails SI-18 here.
@@ -546,7 +638,17 @@ pub fn owner_rule_id_of(raw: &RawRuleId) -> RuleIdC {
         R::BBookkeepingTaskEnqueue => C::BBookkeepingTaskEnqueue, R::BBookkeepingTaskRelease => C::BBookkeepingTaskRelease,
         R::BBookkeepingResumeStore => C::BBookkeepingResumeStore, R::BBookkeepingResumeRestore => C::BBookkeepingResumeRestore,
         R::KAdminStartupValid => C::KAdminStartupValid, R::KAdminStartupInvalid => C::KAdminStartupInvalid, R::KAdminPublishValue => C::KAdminPublishValue,
-        R::KAdminPublishError => C::KAdminPublishError, R::KAdminPublishExhausted => C::KAdminPublishExhausted }
+        R::KAdminPublishError => C::KAdminPublishError, R::KAdminPublishExhausted => C::KAdminPublishExhausted,
+        R::XAdtEvalConstructNullary => C::XAdtEvalConstructNullary, R::XAdtEvalConstructFields => C::XAdtEvalConstructFields,
+        R::XAdtReturnCtorFieldsTyped => C::XAdtReturnCtorFieldsTyped, R::XAdtReturnCtorFieldsMistyped => C::XAdtReturnCtorFieldsMistyped,
+        R::XAdtReturnCtorFieldsNext => C::XAdtReturnCtorFieldsNext, R::XAdtReturnCtorFieldsFinal => C::XAdtReturnCtorFieldsFinal,
+        R::XAdtMaterializeDone => C::XAdtMaterializeDone, R::XAdtCasesPlanHit => C::XAdtCasesPlanHit, R::XAdtCasesPlanMiss => C::XAdtCasesPlanMiss,
+        R::XAdtHelperBuildEntry => C::XAdtHelperBuildEntry, R::XAdtHelperBuildCell => C::XAdtHelperBuildCell,
+        R::XAdtHelperBuildField => C::XAdtHelperBuildField, R::XAdtHelperBuildExit => C::XAdtHelperBuildExit,
+        R::XAdtHelperPlanEntry => C::XAdtHelperPlanEntry, R::XAdtHelperPlanWalk => C::XAdtHelperPlanWalk,
+        R::XAdtHelperPlanSwitch => C::XAdtHelperPlanSwitch, R::XAdtHelperPlanBind => C::XAdtHelperPlanBind,
+        R::XAdtHelperPlanSelect => C::XAdtHelperPlanSelect, R::XAdtHelperPlanNoMatch => C::XAdtHelperPlanNoMatch,
+        R::XAdtHelperPlanExit => C::XAdtHelperPlanExit, R::XAdtHelperPlanFailure => C::XAdtHelperPlanFailure }
 }
 pub fn owner_raw_rule_id(rule: &RuleIdC) -> RawRuleId {
     use RawRuleId as R; use RuleIdC as C;
@@ -588,7 +690,17 @@ pub fn owner_raw_rule_id(rule: &RuleIdC) -> RawRuleId {
         C::BBookkeepingTaskEnqueue => R::BBookkeepingTaskEnqueue, C::BBookkeepingTaskRelease => R::BBookkeepingTaskRelease,
         C::BBookkeepingResumeStore => R::BBookkeepingResumeStore, C::BBookkeepingResumeRestore => R::BBookkeepingResumeRestore,
         C::KAdminStartupValid => R::KAdminStartupValid, C::KAdminStartupInvalid => R::KAdminStartupInvalid, C::KAdminPublishValue => R::KAdminPublishValue,
-        C::KAdminPublishError => R::KAdminPublishError, C::KAdminPublishExhausted => R::KAdminPublishExhausted }
+        C::KAdminPublishError => R::KAdminPublishError, C::KAdminPublishExhausted => R::KAdminPublishExhausted,
+        C::XAdtEvalConstructNullary => R::XAdtEvalConstructNullary, C::XAdtEvalConstructFields => R::XAdtEvalConstructFields,
+        C::XAdtReturnCtorFieldsTyped => R::XAdtReturnCtorFieldsTyped, C::XAdtReturnCtorFieldsMistyped => R::XAdtReturnCtorFieldsMistyped,
+        C::XAdtReturnCtorFieldsNext => R::XAdtReturnCtorFieldsNext, C::XAdtReturnCtorFieldsFinal => R::XAdtReturnCtorFieldsFinal,
+        C::XAdtMaterializeDone => R::XAdtMaterializeDone, C::XAdtCasesPlanHit => R::XAdtCasesPlanHit, C::XAdtCasesPlanMiss => R::XAdtCasesPlanMiss,
+        C::XAdtHelperBuildEntry => R::XAdtHelperBuildEntry, C::XAdtHelperBuildCell => R::XAdtHelperBuildCell,
+        C::XAdtHelperBuildField => R::XAdtHelperBuildField, C::XAdtHelperBuildExit => R::XAdtHelperBuildExit,
+        C::XAdtHelperPlanEntry => R::XAdtHelperPlanEntry, C::XAdtHelperPlanWalk => R::XAdtHelperPlanWalk,
+        C::XAdtHelperPlanSwitch => R::XAdtHelperPlanSwitch, C::XAdtHelperPlanBind => R::XAdtHelperPlanBind,
+        C::XAdtHelperPlanSelect => R::XAdtHelperPlanSelect, C::XAdtHelperPlanNoMatch => R::XAdtHelperPlanNoMatch,
+        C::XAdtHelperPlanExit => R::XAdtHelperPlanExit, C::XAdtHelperPlanFailure => R::XAdtHelperPlanFailure }
 }
 
 // Owner-observed SC-07 read provenance for one PS family-plan call.
@@ -600,14 +712,15 @@ impl<'a> RecordingPreImageView<'a> {
     fn record(&self, r: RefC) { let mut v = self.reads.borrow_mut(); if !v.contains(&r) { v.push(r); } }
     fn record_env(&self, e: EnvRootC) { if let Some(id) = e { let mut v = self.env_ids.borrow_mut(); if !v.contains(&id) { v.push(id); } } }
     fn record_slice(&self, s: SliceC) { if s.len > 0 { let mut v = self.slot_slices.borrow_mut(); if !v.contains(&s) { v.push(s); } } }
-    fn record_control(&self, c: &ControlC) { let mut refs = Vec::new(); control_refs(c, &mut refs); for r in refs { self.record(r); } match c { ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } => self.record_slice(*args), ControlC::ScheduleNext { frame, env, .. } => { self.record_frame(frame); self.record_env(*env); } ControlC::Bound { binding: BoundBinding::Ok { env }, .. } => self.record_env(*env), ControlC::Cases { saved_env, .. } => self.record_env(*saved_env), ControlC::CaseResult { matching, saved_env, .. } => { self.record_env(*saved_env); if let CaseMatching::Matched { env } = matching { self.record_env(*env); } } _ => {} } }
-    fn record_frame(&self, f: &FrameRowC) { let mut refs = Vec::new(); frame_refs(f, &mut refs); for r in refs { self.record(r); } self.record_env(frame_env(f)); if let FrameRowC::ArgsF { completed, .. } = f { self.record_slice(*completed); } }
-    fn record_helper(&self, h: &HelperControlC) { let mut refs = Vec::new(); let mut exempt = Vec::new(); helper_refs(h, &mut refs, &mut exempt); for r in refs.into_iter().chain(exempt) { self.record(r); } match h { HelperControlC::EnvGet { cursor, .. } => self.record_env(*cursor), HelperControlC::EnvPut { base, new_root, .. } => { self.record_env(*base); self.record_env(*new_root); } HelperControlC::Bind { args, partial, dup_cursor, .. } => { self.record_slice(*args); self.record_env(*partial); self.record_env(*dup_cursor); } HelperControlC::Append { src, .. } => self.record_slice(*src), HelperControlC::Match { saved_env, partial, .. } => { self.record_env(*saved_env); self.record_env(*partial); } _ => {} } }
-    fn record_result(&self, r: &HelperResultC) { let mut refs = Vec::new(); result_refs(r, &mut refs); for x in refs { self.record(x); } match r { HelperResultC::EnvUpdated { cell } => self.record_env(Some(*cell)), HelperResultC::BindOk { env } | HelperResultC::MatchMatched { env } => self.record_env(*env), HelperResultC::AppendDone { seq } => self.record_slice(*seq), _ => {} } }
+    fn record_control(&self, c: &ControlC) { let mut refs = Vec::new(); control_refs(c, &mut refs); for r in refs { self.record(r); } match c { ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } | ControlC::Materialize { fields: args, .. } => self.record_slice(*args), ControlC::ScheduleNext { frame, env, .. } => { self.record_frame(frame); self.record_env(*env); } ControlC::Bound { binding: BoundBinding::Ok { env }, .. } => self.record_env(*env), ControlC::Cases { saved_env, .. } => self.record_env(*saved_env), ControlC::CaseResult { matching, saved_env, .. } => { self.record_env(*saved_env); if let CaseMatching::Matched { env } = matching { self.record_env(*env); } } _ => {} } }
+    fn record_frame(&self, f: &FrameRowC) { let mut refs = Vec::new(); frame_refs(f, &mut refs); for r in refs { self.record(r); } self.record_env(frame_env(f)); if let FrameRowC::ArgsF { completed, .. } | FrameRowC::ConstructorFieldsF { completed, .. } = f { self.record_slice(*completed); } }
+    fn record_helper(&self, h: &HelperControlC) { let mut refs = Vec::new(); let mut exempt = Vec::new(); helper_refs(h, &mut refs, &mut exempt); for r in refs.into_iter().chain(exempt) { self.record(r); } match h { HelperControlC::EnvGet { cursor, .. } => self.record_env(*cursor), HelperControlC::EnvPut { base, new_root, .. } => { self.record_env(*base); self.record_env(*new_root); } HelperControlC::Bind { args, partial, dup_cursor, .. } => { self.record_slice(*args); self.record_env(*partial); self.record_env(*dup_cursor); } HelperControlC::Append { src, .. } | HelperControlC::Build { src, .. } => self.record_slice(*src), HelperControlC::Match { saved_env, partial, .. } | HelperControlC::Plan { saved_env, partial, .. } => { self.record_env(*saved_env); self.record_env(*partial); } _ => {} } }
+    fn record_result(&self, r: &HelperResultC) { let mut refs = Vec::new(); result_refs(r, &mut refs); for x in refs { self.record(x); } match r { HelperResultC::EnvUpdated { cell } => self.record_env(Some(*cell)), HelperResultC::BindOk { env } | HelperResultC::MatchMatched { env } | HelperResultC::PlanMatched { env, .. } => self.record_env(*env), HelperResultC::AppendDone { seq } => self.record_slice(*seq), _ => {} } }
     fn record_task(&self, t: &HelperTaskC) { let mut refs = Vec::new(); let mut exempt = Vec::new(); task_refs(t, &mut refs, &mut exempt); for r in refs.into_iter().chain(exempt) { self.record(r); } }
     fn slot_contains(&self, pos: &usize) -> bool { self.slot_slices.borrow().iter().any(|s| *pos >= s.start && s.start.checked_add(s.len).map_or(false, |e| *pos < e)) }
 }
 impl<'a> PreImageView for RecordingPreImageView<'a> {
+    fn adt_reads(&self) -> &dyn adt_runtime::AdtRuntimeReads { self }
     fn control(&self) -> &ControlC { let c = self.inner.control(); self.record_control(c); c }
     fn control_origin(&self) -> usize { self.inner.control_origin() }
     fn env_root(&self) -> EnvRootC { let e = self.inner.env_root(); self.record_env(e); e }
@@ -651,7 +764,7 @@ impl<'a> PreImageView for RecordingPreImageView<'a> {
     fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation> { self.inner.scalar_test_type_ok(r, expected) }
 }
 fn check_copied_refs(pre: &PreImage, w: &PlannedWrites, reads: &[RefC]) -> Result<(), HostViolation> {
-    let fresh = if w.alloc_data.is_some() { Some(RefC::Data(pre.img.active.data)) } else { None };
+    let fresh = if w.alloc_data.is_some() || w.alloc_constructor.is_some() { Some(RefC::Data(pre.img.active.data)) } else { None };
     let mut written: Vec<RefC> = Vec::new();
     if let Write::Set(c) = &w.control { control_refs(c, &mut written); }
     if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => frame_refs(x, &mut written), FrameWrite::Pop => {} } }
@@ -660,6 +773,7 @@ fn check_copied_refs(pre: &PreImage, w: &PlannedWrites, reads: &[RefC]) -> Resul
     if let Some(t) = &w.task_rewrite_top { let mut exempt = Vec::new(); task_refs(t, &mut written, &mut exempt); written.extend(exempt); }
     if let TaskOp::Push(t) = &w.task_op { let mut exempt = Vec::new(); task_refs(t, &mut written, &mut exempt); written.extend(exempt); }
     if let Some(a) = &w.alloc_data { for f in match a { AllocDataWrite::Cons { fields } | AllocDataWrite::Branch { fields } => fields.as_slice(), AllocDataWrite::Leaf { field } => std::slice::from_ref(field), _ => &[] } { written.push(*f); } }
+    if let Some(f) = &w.alloc_data_field { if !reads.contains(f) { return Err(invalid_plan("SC-07 copied reference provenance")); } }
     if let Some(cell) = &w.alloc_env { written.push(cell.value); }
     if let Some(slot) = &w.alloc_value_slot { written.push(*slot); }
     for r in written { if Some(r) != fresh && !reads.contains(&r) { return Err(invalid_plan("SC-07 copied reference provenance")); } }
@@ -682,11 +796,11 @@ fn check_copied_envs(pre: &PreImage, w: &PlannedWrites, envs: &[usize]) -> Resul
         HelperControlC::EnvGet { cursor, .. } => written.push(*cursor),
         HelperControlC::EnvPut { base, new_root, .. } => { written.push(*base); written.push(*new_root); }
         HelperControlC::Bind { partial, dup_cursor, .. } => { written.push(*partial); written.push(*dup_cursor); }
-        HelperControlC::Match { saved_env, partial, .. } => { written.push(*saved_env); written.push(*partial); }
+        HelperControlC::Match { saved_env, partial, .. } | HelperControlC::Plan { saved_env, partial, .. } => { written.push(*saved_env); written.push(*partial); }
         _ => {} } }
     if let Write::Set(Some(r)) = &w.result { match r {
         HelperResultC::EnvUpdated { cell } => written.push(Some(*cell)),
-        HelperResultC::BindOk { env } | HelperResultC::MatchMatched { env } => written.push(*env),
+        HelperResultC::BindOk { env } | HelperResultC::MatchMatched { env } | HelperResultC::PlanMatched { env, .. } => written.push(*env),
         _ => {} } }
     let copied = |id: usize| id < pre.img.active.env && envs.contains(&id);
     for id in written.into_iter().flatten() { if Some(id) != fresh && !copied(id) { return Err(invalid_plan("SC-07 copied environment provenance")); } }
@@ -702,7 +816,16 @@ fn frame_code_ids(f: &FrameRowC, exprs: &mut Vec<usize>, names: &mut Vec<usize>)
         FrameRowC::LeftF { right, .. } => exprs.push(*right),
         FrameRowC::IfF { then_expr, else_expr, .. } => { exprs.push(*then_expr); exprs.push(*else_expr); }
         FrameRowC::ArgsF { function_name, .. } => names.push(*function_name),
-        FrameRowC::RightF { .. } | FrameRowC::UnaryF { .. } | FrameRowC::MatchF { .. } | FrameRowC::ReturnF { .. } | FrameRowC::ScopeF { .. } => {} }
+        FrameRowC::RightF { .. } | FrameRowC::UnaryF { .. } | FrameRowC::MatchF { .. }
+        | FrameRowC::ConstructorFieldsF { .. } | FrameRowC::ReturnF { .. } | FrameRowC::ScopeF { .. } => {} }
+}
+fn check_written_frame_adt_ids(view: &ProgramView, f: &FrameRowC) -> Result<(), HostViolation> {
+    if let FrameRowC::ConstructorFieldsF { type_id, ctor_id, field_type, .. } = f {
+        if adt_checked_ctor_arity(view, *type_id, *ctor_id).is_err() || field_type.0 >= view.types.len() {
+            return Err(invalid_plan("SC-05 written code id"));
+        }
+    }
+    Ok(())
 }
 fn check_written_code_ids(pre: &PreImage, w: &PlannedWrites) -> Result<(), HostViolation> {
     let view = &pre.admitted.body.view;
@@ -710,12 +833,25 @@ fn check_written_code_ids(pre: &PreImage, w: &PlannedWrites) -> Result<(), HostV
     let mut arms: Vec<usize> = Vec::new(); let mut refs: Vec<RefC> = Vec::new();
     if let Write::Set(c) = &w.control { control_refs(c, &mut refs); match c {
         ControlC::Eval { expr } => exprs.push(*expr),
-        ControlC::ScheduleNext { frame, next, .. } => { frame_code_ids(frame, &mut exprs, &mut names); exprs.push(*next); }
+        ControlC::ScheduleNext { frame, next, .. } => {
+            check_written_frame_adt_ids(view, frame)?;
+            frame_code_ids(frame, &mut exprs, &mut names);
+            exprs.push(*next);
+        }
         ControlC::Invoke { function_name, .. } => names.push(*function_name),
         ControlC::Enter { function, .. } => fns.extend(*function),
+        ControlC::Materialize { type_id, ctor_id, .. } => {
+            if adt_checked_ctor_arity(view, *type_id, *ctor_id).is_err() {
+                return Err(invalid_plan("SC-05 written code id"));
+            }
+        }
         ControlC::Bound { body, .. } | ControlC::CaseResult { body, .. } => exprs.push(*body),
         ControlC::Return { .. } | ControlC::Cases { .. } | ControlC::PrimResult { .. } | ControlC::Error { .. } => {} } }
-    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => { frame_refs(x, &mut refs); frame_code_ids(x, &mut exprs, &mut names); } FrameWrite::Pop => {} } }
+    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => {
+        check_written_frame_adt_ids(view, x)?;
+        frame_refs(x, &mut refs);
+        frame_code_ids(x, &mut exprs, &mut names);
+    } FrameWrite::Pop => {} } }
     if let Write::Set(Some(h)) = &w.helper { let mut exempt = Vec::new(); helper_refs(h, &mut refs, &mut exempt); refs.extend(exempt); match h {
         HelperControlC::EnvGet { binder, .. } | HelperControlC::EnvPut { binder, .. } => names.push(*binder),
         HelperControlC::Find { function_name, found, .. } => { names.push(*function_name); fns.extend(*found); }
@@ -724,12 +860,35 @@ fn check_written_code_ids(pre: &PreImage, w: &PlannedWrites) -> Result<(), HostV
             PatternTag::PVar | PatternTag::PLeaf => names.push(*x),
             PatternTag::PCons | PatternTag::PBranch => { names.push(*x); names.push(*y); }
             PatternTag::PNil | PatternTag::WildcardExtensionReserved | PatternTag::ConstructorExtensionReserved => {} } } }
+        HelperControlC::Plan { source_match, node, arm, .. } => {
+            exprs.push(*source_match);
+            if *node >= view.plan_nodes.len() { return Err(invalid_plan("SC-05 written code id")); }
+            arms.extend(*arm);
+        }
+        HelperControlC::Build { type_id, ctor_id, .. } => {
+            if adt_checked_ctor_arity(view, *type_id, *ctor_id).is_err() {
+                return Err(invalid_plan("SC-05 written code id"));
+            }
+        }
         HelperControlC::Scalar { .. } | HelperControlC::Append { .. } | HelperControlC::Validate { .. } | HelperControlC::Equal { .. } => {} } }
-    if let Write::Set(Some(r)) = &w.result { result_refs(r, &mut refs); if let HelperResultC::FindFound { function } = r { fns.push(*function); } }
+    if let Write::Set(Some(r)) = &w.result {
+        result_refs(r, &mut refs);
+        match r {
+            HelperResultC::FindFound { function } => fns.push(*function),
+            HelperResultC::PlanMatched { arm, .. } => arms.push(*arm),
+            _ => {}
+        }
+    }
     let pushed = match &w.task_op { TaskOp::Push(t) => Some(t), TaskOp::None | TaskOp::Pop => None };
     for t in w.task_rewrite_top.iter().chain(pushed) { let mut exempt = Vec::new(); task_refs(t, &mut refs, &mut exempt); refs.extend(exempt);
         if let HelperTaskC::PairTask { binder, .. } = t { names.push(*binder); } }
     if let Some(a) = &w.alloc_data { for f in match a { AllocDataWrite::Cons { fields } | AllocDataWrite::Branch { fields } => fields.as_slice(), AllocDataWrite::Leaf { field } => std::slice::from_ref(field), _ => &[] } { refs.push(*f); } }
+    if let Some(f) = &w.alloc_data_field { refs.push(*f); }
+    if let Some(c) = &w.alloc_constructor {
+        if adt_checked_ctor_arity(view, c.type_id, c.ctor_id).is_err() {
+            return Err(invalid_plan("SC-05 written code id"));
+        }
+    }
     if let Some(cell) = &w.alloc_env { names.push(cell.binder); refs.push(cell.value); }
     if let Some(slot) = &w.alloc_value_slot { refs.push(*slot); }
     let n_const = view.constants.len();
@@ -744,8 +903,8 @@ fn slice_ok(s: SliceC, active: usize) -> bool {
     if s.len == 0 { s.start == 0 } else { s.start.checked_add(s.len).map_or(false, |e| e <= active) }
 }
 fn derived_delta(w: &PlannedWrites) -> PlanDelta {
-    PlanDelta { alloc_data_nodes: if w.alloc_data.is_some() { 1 } else { 0 },
-        alloc_data_fields: w.alloc_data.map_or(0, |a| a.field_len() as i64),
+    PlanDelta { alloc_data_nodes: if w.alloc_data.is_some() || w.alloc_constructor.is_some() { 1 } else { 0 },
+        alloc_data_fields: w.alloc_data.map_or(0, |a| a.field_len() as i64) + if w.alloc_data_field.is_some() { 1 } else { 0 },
         alloc_environment_cells: if w.alloc_env.is_some() { 1 } else { 0 },
         depth: match w.frame { Some(FrameWrite::Push(_)) => 1, Some(FrameWrite::Pop) => -1, _ => 0 },
         task_live: match w.task_op { TaskOp::Push(_) => 1, TaskOp::Pop => -1, TaskOp::None => 0 },
@@ -759,20 +918,31 @@ fn check_ref(pre: &PreImage, r: &RefC, allow_new_data: bool) -> Result<(), HostV
         RefC::Data(id) => if *id < pre.img.active.data || (allow_new_data && *id == pre.img.active.data) { Ok(()) } else { Err(invalid_plan("data ref")) } }
 }
 fn check_any_ref(pre: &PreImage, r: &RefC) -> Result<(), HostViolation> { check_ref(pre, r, true) }
-fn validate_slices_in_control(pre: &PreImage, c: &ControlC) -> Result<(), HostViolation> {
+fn post_slot_len(pre: &PreImage, w: &PlannedWrites) -> Result<usize, HostViolation> {
+    if w.alloc_value_slot.is_some() {
+        pre.img.active.value_slots.checked_add(1).ok_or_else(|| invalid_plan("slice normalization"))
+    } else {
+        Ok(pre.img.active.value_slots)
+    }
+}
+fn validate_slices_in_control(pre: &PreImage, w: &PlannedWrites, c: &ControlC) -> Result<(), HostViolation> {
     match c { ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } => check_slice(*args, pre.img.active.value_slots),
+        ControlC::Materialize { fields, .. } => check_slice(*fields, post_slot_len(pre, w)?),
         ControlC::Cases { arms, .. } => check_slice(*arms, pre.admitted.body.view.arms.len()),
         ControlC::CaseResult { rest, .. } => check_slice(*rest, pre.admitted.body.view.arms.len()),
-        ControlC::ScheduleNext { frame, .. } => validate_slices_in_frame(pre, frame), _ => Ok(()) }
+        ControlC::ScheduleNext { frame, .. } => validate_slices_in_frame(pre, w, frame), _ => Ok(()) }
 }
-fn validate_slices_in_frame(pre: &PreImage, f: &FrameRowC) -> Result<(), HostViolation> {
+fn validate_slices_in_frame(pre: &PreImage, w: &PlannedWrites, f: &FrameRowC) -> Result<(), HostViolation> {
     match f { FrameRowC::MatchF { arms, .. } => check_slice(*arms, pre.admitted.body.view.arms.len()),
         FrameRowC::ArgsF { completed, rest, .. } => { check_slice(*completed, pre.img.active.value_slots)?; check_slice(*rest, pre.admitted.body.view.children.len()) }
+        FrameRowC::ConstructorFieldsF { completed, rest, .. } => { check_slice(*completed, post_slot_len(pre, w)?)?; check_slice(*rest, pre.admitted.body.view.children.len()) }
         _ => Ok(()) }
 }
 fn validate_slices_in_helper(pre: &PreImage, h: &HelperControlC) -> Result<(), HostViolation> {
     match h { HelperControlC::Bind { params, args, .. } => { check_slice(*params, pre.admitted.body.view.parameters.len())?; check_slice(*args, pre.img.active.value_slots) }
-        HelperControlC::Append { src, .. } => check_slice(*src, pre.img.active.value_slots), _ => Ok(()) }
+        HelperControlC::Append { src, .. } | HelperControlC::Build { src, .. } => check_slice(*src, pre.img.active.value_slots),
+        HelperControlC::Plan { path, .. } => check_slice(*path, pre.admitted.body.view.field_paths.len()),
+        _ => Ok(()) }
 }
 pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, read_provenance: &[RefC], read_env_provenance: &[usize]) -> Result<ValidatedPlan, HostViolation> {
     check_enabled(&sel.rule)?;
@@ -789,8 +959,8 @@ pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, rea
     if (w.task_rewrite_top.is_some() || matches!(w.task_op, TaskOp::Pop)) && pre.task_live() == 0 {
         return Err(invalid_plan("task existence")); }
     // Slice normalization everywhere a slice is written.
-    if let Write::Set(c) = &w.control { validate_slices_in_control(pre, c)?; }
-    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => validate_slices_in_frame(pre, x)?, FrameWrite::Pop => {} } }
+    if let Write::Set(c) = &w.control { validate_slices_in_control(pre, w, c)?; }
+    if let Some(f) = &w.frame { match f { FrameWrite::Push(x) | FrameWrite::RewriteTop(x) => validate_slices_in_frame(pre, w, x)?, FrameWrite::Pop => {} } }
     if let Write::Set(Some(h)) = &w.helper {
         validate_slices_in_helper(pre, h)?;
         if helper_common(h).parent_resume.is_some() {
@@ -799,10 +969,34 @@ pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, rea
             return Err(invalid_plan("helper kind")); } }
     }
     if let Write::Set(Some(HelperResultC::AppendDone { seq })) = &w.result { check_slice(*seq, pre.img.active.value_slots.checked_add(1).ok_or_else(|| invalid_plan("slice normalization"))?)?; }
-    // New identities are exactly the pre-image active lengths.
+    // New identities are exactly the pre-image active lengths; split constructor writes obey the Build schedule.
+    if w.alloc_data.is_some() && (w.alloc_data_field.is_some() || w.alloc_constructor.is_some()) {
+        return Err(invalid_plan("conflicting data alloc"));
+    }
     if let Some(a) = &w.alloc_data {
         for f in match a { AllocDataWrite::Cons { fields } | AllocDataWrite::Branch { fields } => fields.as_slice(),
             AllocDataWrite::Leaf { field } => std::slice::from_ref(field), _ => &[] } { check_ref(pre, f, false)?; }
+    }
+    if let Some(df) = &w.alloc_data_field {
+        check_ref(pre, df, false)?;
+        if sel.rule != RuleIdC::XAdtHelperBuildField { return Err(invalid_plan("alloc_data_field rule")); }
+        match pre.helper() {
+            Some(HelperControlC::Build { src, src_cursor, field_start, staged: Some(st), node: None, phase: BuildPhase::Copy, .. })
+                if *st == *df && *src_cursor < src.len
+                    && field_start.checked_add(*src_cursor) == Some(pre.img.active.data_fields)
+                    && ((*src_cursor + 1 == src.len) == w.alloc_constructor.is_some()) => {}
+            _ => return Err(invalid_plan("alloc_data_field state")),
+        }
+    }
+    if let Some(cw) = &w.alloc_constructor {
+        match (&sel.rule, pre.helper()) {
+            (RuleIdC::XAdtHelperBuildField, Some(HelperControlC::Build {
+                type_id, ctor_id, src, src_cursor, field_start, staged: Some(_), node: None, phase: BuildPhase::Copy, ..
+            })) if w.alloc_data_field.is_some() && src_cursor.checked_add(1) == Some(src.len)
+                && cw.type_id == *type_id && cw.ctor_id == *ctor_id
+                && cw.fields == SliceC::normalized(*field_start, src.len) => {}
+            _ => return Err(invalid_plan("alloc_constructor state")),
+        }
     }
     if let Write::Set(Some(r)) = &w.result {
         match r { HelperResultC::ScalarValue { value } | HelperResultC::EqualDone { value } if w.alloc_data.is_some() =>
@@ -813,8 +1007,12 @@ pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, rea
     }
     if let Write::Set(Some(h)) = &w.helper {
         match h { HelperControlC::EnvPut { new_root: Some(n), .. } | HelperControlC::Bind { partial: Some(n), .. }
-            | HelperControlC::Match { partial: Some(n), .. } if w.alloc_env.is_some() && *n != pre.img.active.env =>
-            return Err(invalid_plan("new env id in helper")), _ => {} }
+            | HelperControlC::Match { partial: Some(n), .. } | HelperControlC::Plan { partial: Some(n), .. }
+            if w.alloc_env.is_some() && *n != pre.img.active.env =>
+            return Err(invalid_plan("new env id in helper")),
+            HelperControlC::Build { node: Some(n), .. } if w.alloc_constructor.is_some() && *n != RefC::Data(pre.img.active.data) =>
+            return Err(invalid_plan("new constructor data id in helper")),
+            _ => {} }
     }
     // Error-code ranges carried by writes.
     if let Write::Set(ControlC::Error { code }) = &w.control { if !(1..=11).contains(code) { return Err(invalid_plan("error code")); } }
@@ -839,7 +1037,10 @@ pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, rea
             | RuleIdC::KMachineReturnRight | RuleIdC::KMachineReturnUnary | RuleIdC::KMachineReturnIfTrue
             | RuleIdC::KMachineReturnIfFalse | RuleIdC::KMachineReturnIfInvalid | RuleIdC::KMachineReturnArgumentsNext
             | RuleIdC::KMachineReturnArgumentsFinal | RuleIdC::KMachineReturnCallValid | RuleIdC::KMachineReturnCallInvalid
-            | RuleIdC::KMachineInvokeFind | RuleIdC::KMachineEnterBind | RuleIdC::KMachineCasesTry);
+            | RuleIdC::KMachineInvokeFind | RuleIdC::KMachineEnterBind | RuleIdC::KMachineCasesTry
+            | RuleIdC::XAdtReturnCtorFieldsTyped | RuleIdC::XAdtReturnCtorFieldsMistyped
+            | RuleIdC::XAdtReturnCtorFieldsNext | RuleIdC::XAdtReturnCtorFieldsFinal
+            | RuleIdC::XAdtMaterializeDone | RuleIdC::XAdtCasesPlanHit | RuleIdC::XAdtCasesPlanMiss);
         if reads_r && !matches!(&w.result, Write::Set(None)) { return Err(invalid_plan("result not cleared")); }
         if pre.helper().is_some() { return Err(invalid_plan("legacy with helper")); }
     }
@@ -856,7 +1057,7 @@ pub fn owner_cap_refusal(v: &ValidatedPlan) -> Option<CapKind> { v.cap_first }
 pub fn owner_physical_check(pre: &PreImage, v: &ValidatedPlan) -> Result<(), HostViolation> {
     if v.cap_first.is_some() { return Ok(()); } // P6 refusal: no physical check applies.
     let b = &pre.admitted.body.bounds; let w = &v.writes;
-    let bad = (w.alloc_data.is_some() && pre.img.active.data >= b.data_nodes)
+    let bad = ((w.alloc_data.is_some() || w.alloc_constructor.is_some()) && pre.img.active.data >= b.data_nodes)
         || (v.delta.alloc_data_fields > 0 && pre.img.active.data_fields.checked_add(v.delta.alloc_data_fields as usize).map_or(true, |n| n > b.data_field_slots))
         || (w.alloc_env.is_some() && pre.img.active.env >= b.environment_cells)
         || (w.alloc_value_slot.is_some() && pre.img.active.value_slots >= pre.admitted.body.layout.capacities.value_slots)
@@ -884,15 +1085,18 @@ fn phase_of(h: &HelperControlC) -> HelperPhaseSummaryC { match h {
     HelperControlC::Bind { phase, .. } => HelperPhaseSummaryC::Bind(*phase),
     HelperControlC::Append { phase, .. } => HelperPhaseSummaryC::Append(*phase),
     HelperControlC::Match { phase, .. } => HelperPhaseSummaryC::Match(*phase),
+    HelperControlC::Plan { phase, .. } => HelperPhaseSummaryC::Plan(*phase),
+    HelperControlC::Build { phase, .. } => HelperPhaseSummaryC::Build(*phase),
     HelperControlC::EnvGet { status, .. } | HelperControlC::EnvPut { status, .. } | HelperControlC::Find { status, .. }
     | HelperControlC::Validate { status, .. } | HelperControlC::Equal { status, .. } => HelperPhaseSummaryC::Tri(*status) } }
 fn cursor_of(h: &HelperControlC, tasks: usize) -> Option<usize> { match h {
     HelperControlC::Scalar { phase, .. } => Some(match phase { ScalarPhase::First => 0, ScalarPhase::Second => 1, ScalarPhase::Done => 2 }),
     HelperControlC::EnvGet { cursor, .. } => *cursor, HelperControlC::EnvPut { new_root, .. } => *new_root,
     HelperControlC::Find { row_cursor, .. } => Some(*row_cursor), HelperControlC::Bind { p_cursor, .. } => Some(*p_cursor),
-    HelperControlC::Append { src_cursor, .. } => Some(*src_cursor),
+    HelperControlC::Append { src_cursor, .. } | HelperControlC::Build { src_cursor, .. } => Some(*src_cursor),
     HelperControlC::Validate { .. } | HelperControlC::Equal { .. } => Some(tasks),
-    HelperControlC::Match { field_idx, .. } => Some(usize::from(*field_idx)) } }
+    HelperControlC::Match { field_idx, .. } => Some(usize::from(*field_idx)),
+    HelperControlC::Plan { node, .. } => Some(*node) } }
 fn result_tag(r: &HelperResultC) -> HelperResultTagC { match r { HelperResultC::Validated { .. } => HelperResultTagC::Validated,
     HelperResultC::EnvFound { .. } => HelperResultTagC::EnvFound, HelperResultC::EnvMissing => HelperResultTagC::EnvMissing,
     HelperResultC::EnvUpdated { .. } => HelperResultTagC::EnvUpdated, HelperResultC::FindFound { .. } => HelperResultTagC::FindFound,
@@ -901,7 +1105,8 @@ fn result_tag(r: &HelperResultC) -> HelperResultTagC { match r { HelperResultC::
     HelperResultC::ScalarValue { .. } => HelperResultTagC::ScalarValue, HelperResultC::ScalarError { .. } => HelperResultTagC::ScalarError,
     HelperResultC::ScalarSelector { .. } => HelperResultTagC::ScalarSelector, HelperResultC::ScalarTypeTest { .. } => HelperResultTagC::ScalarTypeTest,
     HelperResultC::EqualDone { .. } => HelperResultTagC::EqualDone, HelperResultC::MatchMatched { .. } => HelperResultTagC::MatchMatched,
-    HelperResultC::MatchNoMatch => HelperResultTagC::MatchNoMatch } }
+    HelperResultC::MatchNoMatch => HelperResultTagC::MatchNoMatch, HelperResultC::PlanMatched { .. } => HelperResultTagC::PlanMatched,
+    HelperResultC::PlanNoMatch => HelperResultTagC::PlanNoMatch, HelperResultC::BuildDone { .. } => HelperResultTagC::BuildDone } }
 fn outcome_tag(o: &OutcomeC) -> OutcomeTagC { match o { OutcomeC::Running => OutcomeTagC::Running,
     OutcomeC::Halted { .. } => OutcomeTagC::Halted, OutcomeC::Rejected { .. } => OutcomeTagC::Rejected,
     OutcomeC::Exhausted { .. } => OutcomeTagC::Exhausted } }
@@ -949,8 +1154,8 @@ pub fn owner_apply_validated(img: &mut MachineImage, v: ValidatedPlan, sel: &Sel
     let adm = img.admission.clone();
     let pre = snap(&PreImage::bind(&adm, img)?)?; // before any write; on the owner_step path site(pre) already succeeded in PS select
     let ordinal = pre.consumed.checked_sub(1).ok_or_else(|| arith("event ordinal consumedWork - 1"))?;
-    let next_alloc_data_nodes = if v.writes.alloc_data.is_some() { img.alloc.data_nodes.checked_add(1).ok_or_else(|| arith("P7 alloc.dataNodes + 1"))? } else { img.alloc.data_nodes };
-    let next_alloc_data_fields = if v.writes.alloc_data.is_some() { img.alloc.data_fields.checked_add(v.writes.alloc_data.map_or(0, |x| x.field_len())).ok_or_else(|| arith("P7 alloc.dataFields + fieldLen"))? } else { img.alloc.data_fields };
+    let next_alloc_data_nodes = if v.delta.alloc_data_nodes > 0 { img.alloc.data_nodes.checked_add(v.delta.alloc_data_nodes as usize).ok_or_else(|| arith("P7 alloc.dataNodes + 1"))? } else { img.alloc.data_nodes };
+    let next_alloc_data_fields = if v.delta.alloc_data_fields > 0 { img.alloc.data_fields.checked_add(v.delta.alloc_data_fields as usize).ok_or_else(|| arith("P7 alloc.dataFields + fieldLen"))? } else { img.alloc.data_fields };
     let next_alloc_environment_cells = if v.writes.alloc_env.is_some() { img.alloc.environment_cells.checked_add(1).ok_or_else(|| arith("P7 alloc.environmentCells + 1"))? } else { img.alloc.environment_cells };
     let next_helper_visits = img.helper_visits.checked_add(u128::from(sel.helper_visits)).ok_or_else(|| arith("P7 helperVisits + visits"))?;
     let next_reference_cursor = if sel.event_kind == EventKind::LegacyComplete { img.reference_cursor.checked_add(1).ok_or_else(|| arith("P7 referenceCursor + 1"))? } else { img.reference_cursor };
@@ -977,6 +1182,17 @@ pub fn owner_apply_validated(img: &mut MachineImage, v: ValidatedPlan, sel: &Sel
             AllocDataWrite::Branch { .. } => RawDataRow::Branch { fields: super::super::raw::FieldSlice {
                 start: super::super::raw::FieldPos(slice.start), len: slice.len } } };
         img.data.push(row); let _ = data_start; let _ = env_start;
+    }
+    if let Some(df) = w.alloc_data_field { img.data_fields.push(df); }
+    if let Some(cw) = w.alloc_constructor {
+        img.data.push(RawDataRow::Constructor {
+            type_id: RawTypeId(cw.type_id.0),
+            ctor_id: RawCtorId(cw.ctor_id.0),
+            fields: super::super::raw::FieldSlice {
+                start: super::super::raw::FieldPos(cw.fields.start),
+                len: cw.fields.len,
+            },
+        });
     }
     if let Some(cell) = w.alloc_env { img.env.push(cell); }
     if let Some(slot) = w.alloc_value_slot { img.value_slots.push(slot); }
@@ -1014,7 +1230,8 @@ fn call_family(families: &dyn FamilyPlans, sel: &Selected, pre: &PreImage, g: &d
         FamilyId::EnvPut => families.plan_env_put(sel, &recording, g), FamilyId::Find => families.plan_find(sel, &recording, g),
         FamilyId::Bind => families.plan_bind(sel, &recording, g), FamilyId::Append => families.plan_append(sel, &recording, g),
         FamilyId::Validate => families.plan_validate(sel, &recording, g), FamilyId::Equal => families.plan_equal(sel, &recording, g),
-        FamilyId::Match => families.plan_match(sel, &recording, g), FamilyId::BookkeepingRelease => families.plan_bookkeeping_release(sel, &recording, g) }?;
+        FamilyId::Match => families.plan_match(sel, &recording, g), FamilyId::Build => families.plan_build(sel, &recording, g),
+        FamilyId::Plan => families.plan_plan(sel, &recording, g), FamilyId::BookkeepingRelease => families.plan_bookkeeping_release(sel, &recording, g) }?;
     Ok((plan, recording.recorded(), recording.recorded_envs()))
 }
 fn publish_event(a: &Admitted, pre: &Snap, img: &MachineImage, rule: RuleIdC, disp: StepDisposition,
@@ -1120,11 +1337,13 @@ fn ref_in_bounds(pre: &PreImage, r: &RefC) -> bool {
 fn frame_origin(f: &FrameRowC) -> usize {
     match f { FrameRowC::LetF { origin, .. } | FrameRowC::LeftF { origin, .. } | FrameRowC::RightF { origin, .. }
         | FrameRowC::UnaryF { origin, .. } | FrameRowC::IfF { origin, .. } | FrameRowC::MatchF { origin, .. }
-        | FrameRowC::ArgsF { origin, .. } | FrameRowC::ReturnF { origin, .. } | FrameRowC::ScopeF { origin, .. } => *origin }
+        | FrameRowC::ArgsF { origin, .. } | FrameRowC::ConstructorFieldsF { origin, .. }
+        | FrameRowC::ReturnF { origin, .. } | FrameRowC::ScopeF { origin, .. } => *origin }
 }
 fn frame_env(f: &FrameRowC) -> EnvRootC {
     match f { FrameRowC::LetF { saved_env, .. } | FrameRowC::LeftF { saved_env, .. } | FrameRowC::IfF { saved_env, .. }
-        | FrameRowC::MatchF { saved_env, .. } | FrameRowC::ArgsF { saved_env, .. } | FrameRowC::ReturnF { saved_env, .. }
+        | FrameRowC::MatchF { saved_env, .. } | FrameRowC::ArgsF { saved_env, .. }
+        | FrameRowC::ConstructorFieldsF { saved_env, .. } | FrameRowC::ReturnF { saved_env, .. }
         | FrameRowC::ScopeF { saved_env, .. } => *saved_env,
         FrameRowC::RightF { .. } | FrameRowC::UnaryF { .. } => None }
 }
@@ -1146,13 +1365,16 @@ fn helper_refs(h: &HelperControlC, refs: &mut Vec<RefC>, exempt: &mut Vec<RefC>)
         HelperControlC::EnvPut { value, .. } => refs.push(*value),
         HelperControlC::Find { .. } | HelperControlC::Bind { .. } => {}
         HelperControlC::Append { value, staged, .. } => { refs.push(*value); if let Some(s) = staged { refs.push(*s); } }
+        HelperControlC::Build { staged, node, .. } => { if let Some(s) = staged { refs.push(*s); } if let Some(n) = node { refs.push(*n); } }
         HelperControlC::Validate { root, .. } => exempt.push(*root),
         HelperControlC::Equal { left, right, .. } => { refs.push(*left); refs.push(*right); }
         HelperControlC::Match { scrutinee, staged, .. } => { refs.push(*scrutinee); if let Some(s) = staged { refs.push(*s); } }
+        HelperControlC::Plan { scrutinee, cur, .. } => { refs.push(*scrutinee); refs.push(*cur); }
     }
 }
 fn result_refs(r: &HelperResultC, refs: &mut Vec<RefC>) {
-    match r { HelperResultC::EnvFound { value } | HelperResultC::ScalarValue { value } | HelperResultC::EqualDone { value } => refs.push(*value),
+    match r { HelperResultC::EnvFound { value } | HelperResultC::ScalarValue { value }
+        | HelperResultC::EqualDone { value } | HelperResultC::BuildDone { value } => refs.push(*value),
         _ => {} }
 }
 fn task_refs(t: &HelperTaskC, refs: &mut Vec<RefC>, exempt: &mut Vec<RefC>) {
@@ -1175,11 +1397,13 @@ fn env_holders(img: &MachineImage, out: &mut Vec<EnvRootC>) {
         Some(HelperControlC::EnvGet { cursor, .. }) => out.push(*cursor),
         Some(HelperControlC::EnvPut { base, new_root, .. }) => { out.push(*base); out.push(*new_root); }
         Some(HelperControlC::Bind { partial, dup_cursor, .. }) => { out.push(*partial); out.push(*dup_cursor); }
-        Some(HelperControlC::Match { saved_env, partial, .. }) => { out.push(*saved_env); out.push(*partial); }
+        Some(HelperControlC::Match { saved_env, partial, .. })
+        | Some(HelperControlC::Plan { saved_env, partial, .. }) => { out.push(*saved_env); out.push(*partial); }
         _ => {} }
     match &img.result {
         Some(HelperResultC::EnvUpdated { cell }) => out.push(Some(*cell)),
-        Some(HelperResultC::BindOk { env }) | Some(HelperResultC::MatchMatched { env }) => out.push(*env),
+        Some(HelperResultC::BindOk { env }) | Some(HelperResultC::MatchMatched { env })
+        | Some(HelperResultC::PlanMatched { env, .. }) => out.push(*env),
         _ => {} }
 }
 // MCL F2 suffix rule over normalized slices: the empty slice (0,0) is a suffix of every slice.
@@ -1192,17 +1416,35 @@ fn is_suffix(inner: SliceC, outer: SliceC) -> bool {
 fn si11_row_ok(pre: &PreImage, j: usize, row: &RawDataRow) -> Result<bool, HostViolation> {
     let k = pure_leaves::borrowed_kind(pure_leaves::BorrowedValueRow::Data(row));
     let (start, len) = data_fields(row);
-    if pure_leaves::arity_of(k) != Some(len) { return Ok(false); }
-    if len > 0 && start.checked_add(len).map_or(true, |e| e > pre.img.active.data_fields) { return Ok(false); }
+    if !slice_ok(SliceC { start, len }, pre.img.active.data_fields) { return Ok(false); }
     let r = RefC::Data(j);
     let kind_at = |i: usize| -> Result<LogicalKind, HostViolation> { pre.kind_of(&pre.field_at(&r, &i)?) };
-    Ok(match k {
-        LogicalKind::Cons => kind_at(0)? == LogicalKind::UInt && matches!(kind_at(1)?, LogicalKind::Nil | LogicalKind::Cons),
-        LogicalKind::Leaf => kind_at(0)? == LogicalKind::UInt,
-        LogicalKind::Branch => matches!(kind_at(0)?, LogicalKind::Leaf | LogicalKind::Branch)
-            && matches!(kind_at(1)?, LogicalKind::Leaf | LogicalKind::Branch),
-        LogicalKind::UInt | LogicalKind::Bool | LogicalKind::Nil => true,
-        LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => false })
+    match k {
+        LogicalKind::UInt | LogicalKind::Bool | LogicalKind::Nil => Ok(len == 0),
+        LogicalKind::Leaf => Ok(len == 1 && kind_at(0)? == LogicalKind::UInt),
+        LogicalKind::Cons => Ok(len == 2 && kind_at(0)? == LogicalKind::UInt && matches!(kind_at(1)?, LogicalKind::Nil | LogicalKind::Cons)),
+        LogicalKind::Branch => Ok(len == 2 && matches!(kind_at(0)?, LogicalKind::Leaf | LogicalKind::Branch)
+            && matches!(kind_at(1)?, LogicalKind::Leaf | LogicalKind::Branch)),
+        LogicalKind::Constructor { type_id, ctor_id } => {
+            let view = &pre.admitted.body.view;
+            if type_id.0 < 4 { return Ok(false); }
+            let Some(trow) = view.types.get(type_id.0) else { return Ok(false); };
+            if ctor_id.0 < trow.ctor_start.0 || ctor_id.0 - trow.ctor_start.0 >= trow.ctor_len { return Ok(false); }
+            let Some(crow) = view.constructors.get(ctor_id.0) else { return Ok(false); };
+            if crow.owning_type != type_id || crow.field_len != len { return Ok(false); }
+            let Some(f_end) = crow.field_start.checked_add(len) else { return Ok(false); };
+            if f_end > view.ctor_fields.len() { return Ok(false); }
+            let mut i = 0usize;
+            while i < len {
+                let expected_ty = view.ctor_fields[crow.field_start + i].type_id;
+                if expected_ty.0 >= view.types.len() { return Ok(false); }
+                if pure_leaves::sort_of_kind(kind_at(i)?) != Some(expected_ty) { return Ok(false); }
+                i += 1;
+            }
+            Ok(true)
+        }
+        LogicalKind::Marker | LogicalKind::ConstructorExtensionReserved => Ok(false),
+    }
 }
 // SI-15 for one frame (also SI-16 ScheduleNext.frame): origin and frame ExprIds in range, FrameRow origin_tag,
 // MatchF.arms = expr(origin).arms, ArgsF.rest suffix of expr(origin).args with completed.len + rest.len + 1 = args.len,
@@ -1226,7 +1468,38 @@ fn si15_frame_ok(pre: &PreImage, f: &FrameRowC) -> Result<bool, HostViolation> {
                 ExpressionRowC::Call { args, .. } => is_suffix(*rest, *args)
                     && completed.len.checked_add(rest.len).and_then(|s| s.checked_add(1)) == Some(args.len),
                 _ => false },
-        FrameRowC::ReturnF { .. } => matches!(e, ExpressionRowC::Call { .. }),
+        FrameRowC::ConstructorFieldsF { type_id, ctor_id, index, field_type, completed, rest, .. } => {
+            if !slice_ok(*completed, pre.img.active.value_slots) || !slice_ok(*rest, view.children.len()) || type_id.0 < 4 {
+                return Ok(false);
+            }
+            let ExpressionRowC::Construct { type_id: et, ctor_id: ec, fields, constant: None } = e else {
+                return Ok(false);
+            };
+            if et != type_id || ec != ctor_id || *index != completed.len || !is_suffix(*rest, *fields)
+                || completed.len.checked_add(rest.len).and_then(|s| s.checked_add(1)) != Some(fields.len)
+            {
+                return Ok(false);
+            }
+            let Some(trow) = view.types.get(type_id.0) else { return Ok(false); };
+            if ctor_id.0 < trow.ctor_start.0 || ctor_id.0 - trow.ctor_start.0 >= trow.ctor_len { return Ok(false); }
+            let Some(crow) = view.constructors.get(ctor_id.0) else { return Ok(false); };
+            let Some(f_end) = crow.field_start.checked_add(crow.field_len) else { return Ok(false); };
+            if crow.owning_type != *type_id || crow.field_len != fields.len || *index >= crow.field_len || f_end > view.ctor_fields.len() {
+                return Ok(false);
+            }
+            if view.ctor_fields[crow.field_start + *index].type_id != *field_type || field_type.0 >= view.types.len() {
+                return Ok(false);
+            }
+            let mut k = 0usize;
+            while k < completed.len {
+                let vref = pre.value_slot(&(completed.start + k))?;
+                let exp_ty = view.ctor_fields[crow.field_start + k].type_id;
+                if pure_leaves::sort_of_kind(pre.kind_of(&vref)?) != Some(exp_ty) { return Ok(false); }
+                k += 1;
+            }
+            true
+        }
+        FrameRowC::ReturnF { return_type, .. } => return_type.0 < view.types.len().max(4) && matches!(e, ExpressionRowC::Call { .. }),
         FrameRowC::ScopeF { .. } => matches!(e, ExpressionRowC::Let { .. } | ExpressionRowC::Match { .. }),
     })
 }
@@ -1245,6 +1518,11 @@ fn si20_return_ok(pre: &PreImage, top: &FrameRowC, origin: usize) -> Result<bool
         (FrameRowC::ArgsF { completed, .. }, ExpressionRowC::Call { args, .. }) => {
             if completed.len >= args.len { return Ok(false); }
             let pos = args.start.checked_add(completed.len).ok_or_else(|| arith("SI-20 ArgsF child pos"))?;
+            work.push(pre.child(&pos)?);
+        }
+        (FrameRowC::ConstructorFieldsF { index, completed, .. }, ExpressionRowC::Construct { fields, .. }) => {
+            if *index != completed.len || completed.len >= fields.len { return Ok(false); }
+            let pos = fields.start.checked_add(completed.len).ok_or_else(|| arith("SI-20 ConstructorFieldsF child pos"))?;
             work.push(pre.child(&pos)?);
         }
         (FrameRowC::ReturnF { .. }, ExpressionRowC::Call { function_name, .. }) => {
@@ -1273,12 +1551,17 @@ fn si20_return_ok(pre: &PreImage, top: &FrameRowC, origin: usize) -> Result<bool
 fn si23_live_slices_ok(img: &MachineImage, max_arity: usize) -> bool {
     let live = |s: &SliceC| slice_ok(*s, img.active.value_slots) && s.len <= max_arity;
     let control_ok = match &img.control {
-        ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } => live(args),
-        ControlC::ScheduleNext { frame: FrameRowC::ArgsF { completed, .. }, .. } => live(completed),
+        ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } | ControlC::Materialize { fields: args, .. } => live(args),
+        ControlC::ScheduleNext { frame: FrameRowC::ArgsF { completed, .. } | FrameRowC::ConstructorFieldsF { completed, .. }, .. } => live(completed),
         _ => true };
-    let frames_ok = img.frames.iter().all(|f| match f { FrameRowC::ArgsF { completed, .. } => live(completed), _ => true });
+    let frames_ok = img.frames.iter().all(|f| match f {
+        FrameRowC::ArgsF { completed, .. } | FrameRowC::ConstructorFieldsF { completed, .. } => live(completed),
+        _ => true
+    });
     let helper_ok = match &img.helper {
-        Some(HelperControlC::Bind { args, .. }) => live(args), Some(HelperControlC::Append { src, .. }) => live(src), _ => true };
+        Some(HelperControlC::Bind { args, .. }) => live(args),
+        Some(HelperControlC::Append { src, .. }) | Some(HelperControlC::Build { src, .. }) => live(src),
+        _ => true };
     let result_ok = match &img.result { Some(HelperResultC::AppendDone { seq }) => live(seq), _ => true };
     control_ok && frames_ok && helper_ok && result_ok
 }
@@ -1287,16 +1570,22 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
     check_view: &dyn Fn(&ProgramView, &BoundsC, &LayoutSchemaC) -> Result<(), ProgramViewViolation>)
     -> Result<(), Vec<StepInvViolation>> {
     if !std::sync::Arc::ptr_eq(&a.body, &img.admission.body) {
-        return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "admitted instance mismatch")]); } // AB first, alone.
+        return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "admitted instance mismatch")]); }
     let pre = match PreImage::bind(a, img) { Ok(p) => p, Err(_) =>
         return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "bind failed")]) };
     let b = &a.body.bounds; let view = &a.body.view; let mut v: Vec<StepInvViolation> = Vec::new();
     let mut push = |c: StepInvClauseId, l: &str, d: &str, bad: bool, vv: &mut Vec<StepInvViolation>| {
         if bad { vv.push(siv(c, l, d)); } };
+    let has_ext = !view.types.is_empty() || !view.constructors.is_empty() || !view.plan_nodes.is_empty()
+        || !view.pattern_children.is_empty() || view.expressions.iter().any(|e| matches!(e, ExpressionRowC::Construct { .. } | ExpressionRowC::Match { plan: Some(_), .. }));
     // SI-01 identity profile/domain/finance.
-    push(StepInvClauseId::SI01, "identity", "profile/domain/finance",
-        !(a.body.identity.profile_id == 2 && a.body.identity.grammar_domain == GrammarDomain::DedicatedSorts
-            && a.body.identity.finance == FinanceInput::Absent), &mut v);
+    let si01_ok = if has_ext {
+        a.body.identity.profile_id == 2
+    } else {
+        a.body.identity.profile_id == 2 && a.body.identity.grammar_domain == GrammarDomain::DedicatedSorts
+            && a.body.identity.finance == FinanceInput::Absent
+    };
+    push(StepInvClauseId::SI01, "identity", "profile/domain/finance", !si01_ok, &mut v);
     // SI-02 outcome payload.
     let si02 = match img.outcome { OutcomeC::Halted { value } => !ref_in_bounds(&pre, &value),
         OutcomeC::Rejected { code } => !(1..=11).contains(&code),
@@ -1310,7 +1599,7 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
             && img.initial_fuel <= a.body.layout.capacities.value_slots as u128), &mut v);
     push(StepInvClauseId::SI04, "reg.referenceCursor", "cursor = consumed - helper",
         img.consumed_work.checked_sub(img.helper_work) != Some(img.reference_cursor), &mut v);
-    // SI-05 active == alloc (segment base is absent from the carrier; B-core base is zero by construction).
+    // SI-05 active == alloc.
     push(StepInvClauseId::SI05, "alloc/active", "active != alloc",
         !(img.active.data == img.alloc.data_nodes && img.active.data_fields == img.alloc.data_fields
             && img.active.env == img.alloc.environment_cells && img.alloc.data_nodes <= b.data_nodes
@@ -1340,6 +1629,8 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
     if let Some(r) = &img.result {
         let allowed = owner_site(&pre).map_or(false, |s| {
             let top_op = match pre.top_frame() { Some(FrameRowC::RightF { op, .. }) => Some(*op), _ => None };
+            let ctor_checked = match pre.top_frame() { Some(FrameRowC::ConstructorFieldsF { checked, .. }) => Some(*checked), _ => None };
+            let has_plan = matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Match { plan: Some(_), .. }));
             match (s, r) { (SiteTag::EvalLiteral, HelperResultC::Validated { .. }) => true,
                 (SiteTag::EvalVar, HelperResultC::EnvFound { .. } | HelperResultC::EnvMissing) => true,
                 (SiteTag::RetLet, HelperResultC::EnvUpdated { .. }) => true,
@@ -1348,33 +1639,43 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
                 (SiteTag::RetUnary, HelperResultC::ScalarValue { .. } | HelperResultC::ScalarError { .. }) => true,
                 (SiteTag::RetIf, HelperResultC::ScalarSelector { .. }) => true,
                 (SiteTag::RetArgs, HelperResultC::AppendDone { .. }) => true,
+                (SiteTag::RetCtorFields, HelperResultC::ScalarTypeTest { .. }) => ctor_checked == Some(false),
+                (SiteTag::RetCtorFields, HelperResultC::AppendDone { .. }) => ctor_checked == Some(true),
                 (SiteTag::RetCall, HelperResultC::ScalarTypeTest { .. }) => true,
                 (SiteTag::Invoke, HelperResultC::FindFound { .. } | HelperResultC::FindMissing) => true,
                 (SiteTag::Enter, HelperResultC::BindOk { .. } | HelperResultC::BindBad) => true,
-                (SiteTag::Cases, HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch) => true, _ => false } });
+                (SiteTag::Materialize, HelperResultC::BuildDone { .. }) => true,
+                (SiteTag::Cases, HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch) => !has_plan,
+                (SiteTag::Cases, HelperResultC::PlanMatched { .. } | HelperResultC::PlanNoMatch) => has_plan,
+                _ => false } });
         push(StepInvClauseId::SI09, "reg.result", "result membership",
             !(img.helper.is_none() && img.tasks.is_empty() && allowed), &mut v);
     }
-    // SI-10: Vec lengths are the sole active lengths; no beyond-length row is observable in this carrier.
+    // SI-10: Vec lengths are the sole active lengths.
     push(StepInvClauseId::SI10, "zero storage", "active length mismatch",
         !(img.active.data == img.data.len() && img.active.value_slots == img.value_slots.len()), &mut v);
-    // SI-11 data typing: per row tag/arity, field block below active.dataFields, records.DataRow.field_kinds over kind().
+    // SI-11 data typing.
     let mut si11 = false;
     for (j, row) in img.data.iter().enumerate() {
         if !matches!(si11_row_ok(&pre, j, row), Ok(true)) { si11 = true; } }
     push(StepInvClauseId::SI11, "img.data", "data typing", si11, &mut v);
-    // SI-12 field-block ownership (G1): each field-bearing row owns the next contiguous block in row order; arity-0 rows own none.
+    // SI-12 field-block ownership (G1), accounting for pending Build field slice prior to final Constructor node.
     let mut si12 = false; let mut field_cursor = 0usize;
     for row in &img.data {
         let (start, len) = data_fields(row);
         if len > 0 {
             if start != field_cursor { si12 = true; }
             match field_cursor.checked_add(len) { Some(c) => field_cursor = c, None => { si12 = true; break; } } } }
-    if field_cursor != img.data_fields.len() { si12 = true; }
+    let pending_build_fields = match &img.helper {
+        Some(HelperControlC::Build { src, src_cursor, field_start, node: None, phase: BuildPhase::Copy, .. }) if *src_cursor > 0 => {
+            if field_cursor != *field_start || *src_cursor >= src.len { si12 = true; }
+            *src_cursor
+        }
+        _ => 0,
+    };
+    if field_cursor.checked_add(pending_build_fields) != Some(img.data_fields.len()) { si12 = true; }
     push(StepInvClauseId::SI12, "img.dataFields", "field ownership", si12, &mut v);
-    // SI-13 references: data field slots point below their owner and are in bounds; every ref held in a register
-    // (control incl. a ScheduleNext frame, outcome, helper payload, result), frame, env cell, value slot or task is in
-    // bounds; every EnvId-valued holder is below active.env.
+    // SI-13 references.
     let mut si13 = false;
     for (owner, row) in img.data.iter().enumerate() {
         let (start, len) = data_fields(row); let mut i = 0usize;
@@ -1402,8 +1703,7 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
     push(StepInvClauseId::SI14, "img.env", "env cell",
         img.env.iter().enumerate().any(|(i, c)| !(c.binder < view.names.len()
             && c.previous.map_or(true, |p| p < i) && ref_in_bounds(&pre, &c.value))), &mut v);
-    // SI-15 frames and code ids: per-frame origin_tag, frame ExprIds, MatchF.arms, ArgsF suffix/count and slices;
-    // controlOrigin and non-origin control ExprIds; every FunctionRowId held in control, helper or result; Bind.params slice.
+    // SI-15 frames and code ids.
     let n_expr = view.expressions.len(); let n_fn = view.functions.len();
     let mut si15 = img.control_origin >= n_expr
         || img.frames.iter().any(|f| !matches!(si15_frame_ok(&pre, f), Ok(true)));
@@ -1411,14 +1711,23 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
         ControlC::Eval { expr } => *expr >= n_expr,
         ControlC::ScheduleNext { next, .. } => *next >= n_expr,
         ControlC::Enter { function: Some(fid), .. } => *fid >= n_fn,
-        ControlC::Bound { body, .. } | ControlC::CaseResult { body, .. } => *body >= n_expr,
+        ControlC::Bound { return_type, body, .. } => *body >= n_expr || return_type.0 >= view.types.len().max(4),
+        ControlC::CaseResult { body, .. } => *body >= n_expr,
+        ControlC::Materialize { type_id, ctor_id, .. } => adt_checked_ctor_arity(view, *type_id, *ctor_id).is_err(),
         _ => false };
     si15 |= match &img.helper {
         Some(HelperControlC::Bind { function, params, .. }) => *function >= n_fn || !slice_ok(*params, view.parameters.len()),
         Some(HelperControlC::Find { found: Some(fid), .. }) => *fid >= n_fn,
+        Some(HelperControlC::Plan { source_match, node, path, arm, .. }) =>
+            *source_match >= n_expr || *node >= view.plan_nodes.len() || !slice_ok(*path, view.field_paths.len())
+                || arm.map_or(false, |a| a >= view.arms.len()),
+        Some(HelperControlC::Build { type_id, ctor_id, .. }) => adt_checked_ctor_arity(view, *type_id, *ctor_id).is_err(),
         _ => false };
-    si15 |= matches!(&img.result, Some(HelperResultC::FindFound { function }) if *function >= n_fn);
-    // SI-20 controlOrigin coherence, including Return at depth > 0 against tailClosure(expectedChild(top)).
+    si15 |= match &img.result {
+        Some(HelperResultC::FindFound { function }) => *function >= n_fn,
+        Some(HelperResultC::PlanMatched { arm, .. }) => *arm >= view.arms.len(),
+        _ => false };
+    // SI-20 controlOrigin coherence.
     let si20 = match &img.control {
         ControlC::Eval { expr } => img.control_origin != *expr,
         ControlC::ScheduleNext { frame, .. } => img.control_origin != frame_origin(frame),
@@ -1426,6 +1735,8 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
             !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Call { .. })),
         ControlC::Cases { .. } | ControlC::CaseResult { .. } =>
             !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Match { .. })),
+        ControlC::Materialize { type_id, ctor_id, .. } =>
+            !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Construct { type_id: et, ctor_id: ec, constant: None, .. }) if et == type_id && ec == ctor_id),
         ControlC::PrimResult { .. } =>
             !matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Binary { .. } | ExpressionRowC::Unary { .. })),
         ControlC::Return { .. } => match img.frames.last() {
@@ -1434,8 +1745,7 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
         ControlC::Error { .. } => false };
     push(StepInvClauseId::SI15, "frames", "frame code ids", si15, &mut v);
     push(StepInvClauseId::SI20, "reg.controlOrigin", "origin coherence", si20, &mut v);
-    // SI-16 control payload: ScheduleNext.frame per SI-15; Cases.arms and CaseResult.rest suffixes of expr(controlOrigin).arms;
-    // Invoke/Enter args; Invoke NameId; PrimResult Error code in {10, 11}; Error code in 1..11.
+    // SI-16 control payload.
     let n_arms = view.arms.len();
     let origin_arms_suffix = |s: &SliceC| slice_ok(*s, n_arms)
         && matches!(pre.expr(&img.control_origin), Ok(ExpressionRowC::Match { arms, .. }) if is_suffix(*s, *arms));
@@ -1443,6 +1753,22 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
         ControlC::Invoke { function_name, args } =>
             *function_name >= view.names.len() || !slice_ok(*args, img.active.value_slots) || args.len > b.max_arity,
         ControlC::Enter { args, .. } => !slice_ok(*args, img.active.value_slots) || args.len > b.max_arity,
+        ControlC::Materialize { type_id, ctor_id, fields } => {
+            if !slice_ok(*fields, img.active.value_slots) || fields.len == 0 || fields.len > b.max_arity {
+                true
+            } else if !matches!(adt_checked_ctor_arity(view, *type_id, *ctor_id), Ok(arity) if arity == fields.len) {
+                true
+            } else {
+                let crow = &view.constructors[ctor_id.0];
+                (0..fields.len).any(|k| {
+                    let exp_ty = view.ctor_fields[crow.field_start + k].type_id;
+                    match pre.value_slot(&(fields.start + k)).and_then(|r| pre.kind_of(&r)) {
+                        Ok(knd) => pure_leaves::sort_of_kind(knd) != Some(exp_ty),
+                        Err(_) => true,
+                    }
+                })
+            }
+        }
         ControlC::ScheduleNext { frame, .. } => !matches!(si15_frame_ok(&pre, frame), Ok(true)),
         ControlC::Cases { arms, .. } => !origin_arms_suffix(arms),
         ControlC::CaseResult { rest, .. } => !origin_arms_suffix(rest),
@@ -1451,16 +1777,15 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
         ControlC::Eval { .. } | ControlC::Return { .. } | ControlC::Bound { .. }
         | ControlC::PrimResult { result: PrimOutcome::Value { .. } } => false };
     push(StepInvClauseId::SI16, "reg.control", "control payload", si16, &mut v);
-    // SI-17 marker placement: a markerFree=false Const ref may be held only at helper Validate.root and ValidateTask.ref
-    // (positional exemption); every other holder above and every data field slot is scanned; a read failure is a violation.
+    // SI-17 marker placement.
     let si17 = held.iter().chain(img.data_fields.iter()).any(|r| match r {
         RefC::Const(id) => !matches!(pre.marker_free(id), Ok(true)), RefC::Data(_) => false });
     push(StepInvClauseId::SI17, "markers", "marker placement", si17, &mut v);
-    // SI-18 terminal coherence. SI-19 has no segBase field in this carrier (zero by construction).
+    // SI-18 terminal coherence.
     push(StepInvClauseId::SI18, "terminal", "terminal coherence",
         matches!(img.outcome, OutcomeC::Halted { .. } | OutcomeC::Rejected { .. })
             && !(img.helper.is_none() && img.result.is_none() && img.tasks.is_empty()), &mut v);
-    // SI-21 per-kind helper coherence: Bind/Match in owner_si21_bind_match.rs, all other kinds in owner_si21_closure.rs. A checker Err is a violation, never a pass.
+    // SI-21 per-kind helper coherence.
     if let Some(h) = &img.helper {
         let si21 = match h { HelperControlC::Bind { .. } => si21_bind_helper_ok(&pre), HelperControlC::Match { .. } => si21_match_helper_ok(&pre), _ => si21_helper_ok(&pre) };
         push(StepInvClauseId::SI21, "helper coherence", "SI-21", !matches!(si21, Ok(true)), &mut v);
@@ -1470,19 +1795,28 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
             HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch => si21_match_result_ok(&pre, r), _ => si21_result_ok(&pre, r) };
         push(StepInvClauseId::SI21, "result coherence", "SI-21R", !matches!(si21r, Ok(true)), &mut v);
     }
-    // SI-22 helper_state_space: every listed state conjunct for all nine kinds (owner_si21_closure.rs).
+    // SI-22 helper_state_space.
     if img.helper.is_some() {
         push(StepInvClauseId::SI22, "helper state space", "SI-22", !matches!(si22_helper_ok(&pre), Ok(true)), &mut v);
     }
-    // SI-23 value slots, including every live ValSlice in control, frames, helper and result.
+    // SI-23 value slots.
     push(StepInvClauseId::SI23, "img.valueSlots", "value slots",
         !(img.active.value_slots as u128 <= img.consumed_work
             && img.active.value_slots <= a.body.layout.capacities.value_slots
             && img.value_slots.iter().all(|r| ref_in_bounds(&pre, r))
             && si23_live_slices_ok(img, b.max_arity)), &mut v);
-    // SI-24 via the prepare lane's checker (explicit cross-lane dependency).
-    if check_view(view, b, &a.body.layout).is_err() {
-        v.push(siv(StepInvClauseId::SI24, "program view", "check_program_view failed")); }
+    // SI-24 dispatched by the admitted grammar domain: GenericNominal takes the
+    // V1..V17 checker under the admitted ExtDomain; DedicatedSorts must carry no
+    // extension rows and pass the prepare lane's R4 checker.
+    let si24 = match a.body.identity.grammar_domain {
+        GrammarDomain::GenericNominalExtensionReserved => super::owner_ext_admit::check_program_view_ext(
+            view, None,
+            super::owner_ext_source_program::ExtDomain {
+                grammar_domain: a.body.identity.grammar_domain, finance: a.body.identity.finance },
+            b, &a.body.layout).is_err(),
+        GrammarDomain::DedicatedSorts => has_ext || check_view(view, b, &a.body.layout).is_err(),
+    };
+    push(StepInvClauseId::SI24, "program view", "check_program_view failed", si24, &mut v);
     if v.is_empty() { Ok(()) } else { Err(v) }
 }
 
@@ -1549,6 +1883,7 @@ mod sc05_r6_owner_regression_tests {
             field_id: None, widths: None, scalar_layout_id: None, bounds: *b,
             capacities: LayoutCapacitiesC { name_rows: 16, name_bytes: 128,
                 occurrence_path_slots: 128, value_slots: 1000 },
+            ext_capacities: None,
             boundary_capacities_present: false }
     }
     fn deps() -> PrepareDeps {
@@ -1605,7 +1940,8 @@ mod sc05_r6_owner_regression_tests {
     // ---------- full MachineImage field snapshot for preservation ---------
     #[derive(Debug, PartialEq)]
     enum SnapDataRow { U128(u128), Bool(bool), Nil,
-        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize) }
+        Cons(usize, usize), Leaf(usize, usize), Branch(usize, usize),
+        Constructor(usize, usize, usize, usize) }
     fn snap_data_row(r: &crate::sherlock::helper_machine::raw::DataRow) -> SnapDataRow {
         match r {
             crate::sherlock::helper_machine::raw::DataRow::U128 { n } => SnapDataRow::U128(*n),
@@ -1614,6 +1950,7 @@ mod sc05_r6_owner_regression_tests {
             crate::sherlock::helper_machine::raw::DataRow::Cons { fields } => SnapDataRow::Cons(fields.start.0, fields.len),
             crate::sherlock::helper_machine::raw::DataRow::Leaf { fields } => SnapDataRow::Leaf(fields.start.0, fields.len),
             crate::sherlock::helper_machine::raw::DataRow::Branch { fields } => SnapDataRow::Branch(fields.start.0, fields.len),
+            crate::sherlock::helper_machine::raw::DataRow::Constructor { type_id, ctor_id, fields } => SnapDataRow::Constructor(type_id.0, ctor_id.0, fields.start.0, fields.len),
         }
     }
     #[derive(Debug, PartialEq)]
@@ -1971,6 +2308,8 @@ mod sc05_r6_owner_regression_tests {
         fn plan_validate(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_validate(s, p, g)) }
         fn plan_equal(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_equal(s, p, g)) }
         fn plan_match(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_match(s, p, g)) }
+        fn plan_build(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_build(s, p, g)) }
+        fn plan_plan(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_plan(s, p, g)) }
         fn plan_bookkeeping_release(&self, s: &Selected, p: &dyn PreImageView, g: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> { self.finish(self.inner.plan_bookkeeping_release(s, p, g)) }
     }
     #[test]

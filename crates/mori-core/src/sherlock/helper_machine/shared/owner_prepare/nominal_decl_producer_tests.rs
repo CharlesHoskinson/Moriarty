@@ -27,7 +27,7 @@ fn test_layout() -> LayoutSchemaC {
             occurrence_path_slots: 32,
             value_slots: 32,
         },
-        boundary_capacities_present: false,
+        ext_capacities: None, boundary_capacities_present: false,
     }
 }
 

@@ -40,7 +40,7 @@ fn normal_config() -> ConsumerConfig {
             capacities: LayoutCapacitiesC {
                 name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 1024,
             },
-            boundary_capacities_present: false,
+            ext_capacities: None, boundary_capacities_present: false,
         },
         fuel: RunIntC::Nat(1000),
         stack: RunIntC::Nat(32),

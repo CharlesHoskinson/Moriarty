@@ -9,6 +9,154 @@ use super::shared::*;
 use super::shared::host_implied_prefix::SegBase;
 use super::shared::owner_host::{host_owner_engine, observe_bound_image, HostObservation};
 
+fn clone_type_expr_iterative(root: &owner_ext_type_builder::TypeExprSrc) -> owner_ext_type_builder::TypeExprSrc {
+    use owner_ext_type_builder::TypeExprSrc;
+    enum Frame<'a> {
+        Enter(&'a TypeExprSrc),
+        BuildApply { name: String, arity: usize },
+    }
+    let mut work: Vec<Frame<'_>> = vec![Frame::Enter(root)];
+    let mut out: Vec<TypeExprSrc> = Vec::new();
+    while let Some(frame) = work.pop() {
+        match frame {
+            Frame::Enter(TypeExprSrc::UInt) => out.push(TypeExprSrc::UInt),
+            Frame::Enter(TypeExprSrc::Bool) => out.push(TypeExprSrc::Bool),
+            Frame::Enter(TypeExprSrc::List) => out.push(TypeExprSrc::List),
+            Frame::Enter(TypeExprSrc::Tree) => out.push(TypeExprSrc::Tree),
+            Frame::Enter(TypeExprSrc::Named { name }) => out.push(TypeExprSrc::Named { name: name.clone() }),
+            Frame::Enter(TypeExprSrc::Param { name }) => out.push(TypeExprSrc::Param { name: name.clone() }),
+            Frame::Enter(TypeExprSrc::Apply { name, args }) => {
+                work.push(Frame::BuildApply { name: name.clone(), arity: args.len() });
+                for arg in args.iter().rev() {
+                    work.push(Frame::Enter(arg));
+                }
+            }
+            Frame::BuildApply { name, arity } => {
+                let split = out.len().saturating_sub(arity);
+                let args = out.split_off(split);
+                out.push(TypeExprSrc::Apply { name, args });
+            }
+        }
+    }
+    out.pop().unwrap_or(TypeExprSrc::UInt)
+}
+
+fn eq_type_expr_iterative(a: &owner_ext_type_builder::TypeExprSrc, b: &owner_ext_type_builder::TypeExprSrc) -> bool {
+    use owner_ext_type_builder::TypeExprSrc;
+    let mut stack: Vec<(&TypeExprSrc, &TypeExprSrc)> = vec![(a, b)];
+    while let Some((x, y)) = stack.pop() {
+        match (x, y) {
+            (TypeExprSrc::UInt, TypeExprSrc::UInt)
+            | (TypeExprSrc::Bool, TypeExprSrc::Bool)
+            | (TypeExprSrc::List, TypeExprSrc::List)
+            | (TypeExprSrc::Tree, TypeExprSrc::Tree) => {}
+            (TypeExprSrc::Named { name: nx }, TypeExprSrc::Named { name: ny })
+            | (TypeExprSrc::Param { name: nx }, TypeExprSrc::Param { name: ny }) => {
+                if nx != ny { return false; }
+            }
+            (TypeExprSrc::Apply { name: nx, args: ax }, TypeExprSrc::Apply { name: ny, args: ay }) => {
+                if nx != ny || ax.len() != ay.len() { return false; }
+                for (cx, cy) in ax.iter().zip(ay.iter()).rev() {
+                    stack.push((cx, cy));
+                }
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+fn fmt_type_expr_iterative(root: &owner_ext_type_builder::TypeExprSrc, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    use owner_ext_type_builder::TypeExprSrc;
+    enum FmtFrame<'a> {
+        Enter(&'a TypeExprSrc),
+        Text(&'static str),
+    }
+    let mut stack: Vec<FmtFrame<'_>> = vec![FmtFrame::Enter(root)];
+    while let Some(frame) = stack.pop() {
+        match frame {
+            FmtFrame::Text(s) => f.write_str(s)?,
+            FmtFrame::Enter(TypeExprSrc::UInt) => f.write_str("UInt")?,
+            FmtFrame::Enter(TypeExprSrc::Bool) => f.write_str("Bool")?,
+            FmtFrame::Enter(TypeExprSrc::List) => f.write_str("List")?,
+            FmtFrame::Enter(TypeExprSrc::Tree) => f.write_str("Tree")?,
+            FmtFrame::Enter(TypeExprSrc::Named { name }) => write!(f, "Named({:?})", name)?,
+            FmtFrame::Enter(TypeExprSrc::Param { name }) => write!(f, "Param({:?})", name)?,
+            FmtFrame::Enter(TypeExprSrc::Apply { name, args }) => {
+                write!(f, "Apply({:?}, [", name)?;
+                stack.push(FmtFrame::Text("])"));
+                for (idx, arg) in args.iter().enumerate().rev() {
+                    if idx > 0 {
+                        stack.push(FmtFrame::Enter(arg));
+                        stack.push(FmtFrame::Text(", "));
+                    } else {
+                        stack.push(FmtFrame::Enter(arg));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+impl Clone for owner_ext_type_builder::TypeExprSrc {
+    fn clone(&self) -> Self { clone_type_expr_iterative(self) }
+}
+impl PartialEq for owner_ext_type_builder::TypeExprSrc {
+    fn eq(&self, other: &Self) -> bool { eq_type_expr_iterative(self, other) }
+}
+impl Eq for owner_ext_type_builder::TypeExprSrc {}
+impl std::fmt::Debug for owner_ext_type_builder::TypeExprSrc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { fmt_type_expr_iterative(self, f) }
+}
+
+impl Clone for owner_ext_type_builder::CtorFieldSrc {
+    fn clone(&self) -> Self { Self { name: self.name.clone(), ty: clone_type_expr_iterative(&self.ty) } }
+}
+impl PartialEq for owner_ext_type_builder::CtorFieldSrc {
+    fn eq(&self, other: &Self) -> bool { self.name == other.name && eq_type_expr_iterative(&self.ty, &other.ty) }
+}
+impl Eq for owner_ext_type_builder::CtorFieldSrc {}
+impl std::fmt::Debug for owner_ext_type_builder::CtorFieldSrc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CtorFieldSrc").field("name", &self.name).field("ty", &self.ty).finish()
+    }
+}
+
+impl Clone for owner_ext_type_builder::CtorDeclSrc {
+    fn clone(&self) -> Self { Self { name: self.name.clone(), fields: self.fields.clone() } }
+}
+impl PartialEq for owner_ext_type_builder::CtorDeclSrc {
+    fn eq(&self, other: &Self) -> bool { self.name == other.name && self.fields == other.fields }
+}
+impl Eq for owner_ext_type_builder::CtorDeclSrc {}
+impl std::fmt::Debug for owner_ext_type_builder::CtorDeclSrc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CtorDeclSrc").field("name", &self.name).field("fields", &self.fields).finish()
+    }
+}
+
+impl Clone for owner_ext_type_builder::TypeDeclSrc {
+    fn clone(&self) -> Self {
+        Self { name: self.name.clone(), parameters: self.parameters.clone(), ctors: self.ctors.clone() }
+    }
+}
+impl PartialEq for owner_ext_type_builder::TypeDeclSrc {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.parameters == other.parameters && self.ctors == other.ctors
+    }
+}
+impl Eq for owner_ext_type_builder::TypeDeclSrc {}
+impl std::fmt::Debug for owner_ext_type_builder::TypeDeclSrc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TypeDeclSrc")
+            .field("name", &self.name)
+            .field("parameters", &self.parameters)
+            .field("ctors", &self.ctors)
+            .finish()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WidthsSnapshot {
     pub index_widths: Vec<(String, u32)>,
@@ -36,7 +184,8 @@ pub enum ExpressionSnapshot {
     Unary { op: UnaryOp, operand: usize },
     If { cond: usize, then_expr: usize, else_expr: usize },
     Call { function_name: usize, args: SliceC },
-    Match { scrutinee: usize, arms: SliceC },
+    Match { scrutinee: usize, arms: SliceC, plan: Option<usize> },
+    Construct { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: SliceC, constant: Option<usize> },
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConstFieldsSnapshot { pub start: usize, pub len: usize }
@@ -50,6 +199,7 @@ pub enum ConstantSnapshot {
     Cons { marker_free: bool, fields: ConstFieldsSnapshot },
     Leaf { marker_free: bool, fields: ConstFieldsSnapshot },
     Branch { marker_free: bool, fields: ConstFieldsSnapshot },
+    Constructor { marker_free: bool, type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: ConstFieldsSnapshot },
     U128OutOfRange { marker_free: bool },
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -60,6 +210,7 @@ pub enum DataSnapshot {
     Cons { fields: DataFieldsSnapshot },
     Leaf { fields: DataFieldsSnapshot },
     Branch { fields: DataFieldsSnapshot },
+    Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: DataFieldsSnapshot },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -73,6 +224,17 @@ pub struct ProgramSnapshot {
     pub parameters: Vec<ParameterRowC>,
     pub arms: Vec<ArmRowC>,
     pub patterns: Vec<PatternRowC>,
+    pub pattern_children: Vec<usize>,
+    pub types: Vec<adt::TypeRowC>,
+    pub type_args: Vec<TypeIdC>,
+    pub constructors: Vec<adt_storage::CtorRowExt>,
+    pub ctor_fields: Vec<adt_storage::CtorFieldRowExt>,
+    pub decl_param_counts: Vec<usize>,
+    pub decl_ctor_counts: Vec<usize>,
+    pub decl_templates: Vec<owner_ext_type_builder::TypeDeclSrc>,
+    pub plan_nodes: Vec<PlanNodeC>,
+    pub plan_cases: Vec<Option<usize>>,
+    pub field_paths: Vec<usize>,
     pub constants: Vec<ConstantSnapshot>,
     pub constant_fields: Vec<usize>,
     pub names: Vec<String>,
@@ -130,7 +292,9 @@ fn expression(value: &ExpressionRowC) -> ExpressionSnapshot {
         ExpressionRowC::Unary { op, operand } => ExpressionSnapshot::Unary { op:*op, operand:*operand },
         ExpressionRowC::If { cond, then_expr, else_expr } => ExpressionSnapshot::If { cond:*cond, then_expr:*then_expr, else_expr:*else_expr },
         ExpressionRowC::Call { function_name, args } => ExpressionSnapshot::Call { function_name:*function_name, args:*args },
-        ExpressionRowC::Match { scrutinee, arms } => ExpressionSnapshot::Match { scrutinee:*scrutinee, arms:*arms },
+        ExpressionRowC::Match { scrutinee, arms, plan } => ExpressionSnapshot::Match { scrutinee:*scrutinee, arms:*arms, plan:*plan },
+        ExpressionRowC::Construct { type_id, ctor_id, fields, constant } => ExpressionSnapshot::Construct {
+            type_id:*type_id, ctor_id:*ctor_id, fields:*fields, constant:*constant },
     }
 }
 fn constant(value: &ConstRow) -> ConstantSnapshot {
@@ -144,6 +308,9 @@ fn constant(value: &ConstRow) -> ConstantSnapshot {
             fields:ConstFieldsSnapshot { start:fields.start.0, len:fields.len } },
         ConstRow::Branch { marker_free, fields } => ConstantSnapshot::Branch { marker_free:*marker_free,
             fields:ConstFieldsSnapshot { start:fields.start.0, len:fields.len } },
+        ConstRow::Constructor { marker_free, type_id, ctor_id, fields } => ConstantSnapshot::Constructor {
+            marker_free:*marker_free, type_id:TypeIdC(type_id.0), ctor_id:adt::CtorIdC(ctor_id.0),
+            fields:ConstFieldsSnapshot { start:fields.start.0, len:fields.len } },
         ConstRow::U128OutOfRange { marker_free } => ConstantSnapshot::U128OutOfRange { marker_free:*marker_free },
     }
 }
@@ -155,6 +322,9 @@ fn data(value: &DataRow) -> DataSnapshot {
         DataRow::Cons { fields } => DataSnapshot::Cons { fields:DataFieldsSnapshot { start:fields.start.0, len:fields.len } },
         DataRow::Leaf { fields } => DataSnapshot::Leaf { fields:DataFieldsSnapshot { start:fields.start.0, len:fields.len } },
         DataRow::Branch { fields } => DataSnapshot::Branch { fields:DataFieldsSnapshot { start:fields.start.0, len:fields.len } },
+        DataRow::Constructor { type_id, ctor_id, fields } => DataSnapshot::Constructor {
+            type_id:TypeIdC(type_id.0), ctor_id:adt::CtorIdC(ctor_id.0),
+            fields:DataFieldsSnapshot { start:fields.start.0, len:fields.len } },
     }
 }
 
@@ -166,6 +336,17 @@ pub fn copy_observation(value: HostObservation<'_>) -> HostSnapshot {
     let layout = admission.layout;
     let view = admission.view;
     let image = value.image;
+    let decl_templates = view.decl_templates.iter().map(|d| owner_ext_type_builder::TypeDeclSrc {
+        name: d.name.clone(),
+        parameters: d.parameters.clone(),
+        ctors: d.ctors.iter().map(|c| owner_ext_type_builder::CtorDeclSrc {
+            name: c.name.clone(),
+            fields: c.fields.iter().map(|f| owner_ext_type_builder::CtorFieldSrc {
+                name: f.name.clone(),
+                ty: clone_type_expr_iterative(&f.ty),
+            }).collect(),
+        }).collect(),
+    }).collect();
     HostSnapshot {
         admission:AdmissionSnapshot {
             identity:(*admission.identity).clone(), bounds:*admission.bounds,
@@ -174,6 +355,12 @@ pub fn copy_observation(value: HostObservation<'_>) -> HostSnapshot {
                 occurrences:view.occurrences.clone(), occurrence_paths:view.occurrence_paths.clone(),
                 children:view.children.clone(), functions:view.functions.clone(),
                 parameters:view.parameters.clone(), arms:view.arms.clone(), patterns:view.patterns.clone(),
+                pattern_children:view.pattern_children.clone(), types:view.types.clone(),
+                type_args:view.type_args.clone(), constructors:view.constructors.clone(),
+                ctor_fields:view.ctor_fields.clone(), decl_param_counts:view.decl_param_counts.clone(),
+                decl_ctor_counts:view.decl_ctor_counts.clone(), decl_templates,
+                plan_nodes:view.plan_nodes.clone(), plan_cases:view.plan_cases.clone(),
+                field_paths:view.field_paths.clone(),
                 constants:view.constants.iter().map(constant).collect(),
                 constant_fields:view.constant_fields.clone(), names:view.names.clone(),
             },

@@ -7,7 +7,9 @@
 //! Raw B snapshots and helper intervals remain available separately. A logical
 //! reference fuel input is explicit; B remaining/helper work is never renamed A
 //! fuel. Unmapped/incomplete/resource-divergent observations return typed gaps.
-use super::complete_observation::{AdmissionSnapshot, CompleteStepRecord, ExpressionSnapshot, HostSnapshot};
+//! Generic nominal constructs, planned matches and constructor state are outside
+//! the dedicated `sherlock-k-a/1` grammar and return explicit UnsupportedGeneric.
+use super::complete_observation::{AdmissionSnapshot, CompleteStepRecord, ConstantSnapshot, ExpressionSnapshot, HostSnapshot, ProgramSnapshot};
 use super::shared::*;
 use super::witness_plan::{self as wp, DecodedPayload, DecodedSnapshot, DecodedValue, InputValue, SlotValue, ValueNode};
 use crate::sherlock as a;
@@ -29,11 +31,34 @@ pub enum ProjectionGap {
     UnappliedSourceRule,
     IncompleteInterval,
     BResourceOutcome,
+    /// A generic nominal form this finite dedicated A projection cannot represent.
+    UnsupportedGeneric(GenericGap),
+}
+/// Generic forms outside the dedicated A value/expression/pattern/frame/control
+/// grammar. Nominal identities are retained, never flattened into List/Tree; a
+/// full generic reference projection remains a separate open obligation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GenericGap {
+    ConstructExpression { row: usize, type_id: TypeIdC, ctor_id: adt::CtorIdC },
+    PlannedMatch { row: usize, plan: usize },
+    WildcardPattern { row: usize },
+    ConstructorPattern { row: usize, type_id: TypeIdC, ctor_id: adt::CtorIdC },
+    ConstructorConstant { row: usize, type_id: TypeIdC, ctor_id: adt::CtorIdC },
+    ConstructorValue { type_id: TypeIdC, ctor_id: adt::CtorIdC, arity: usize },
+    ConstructorFieldsFrame { type_id: TypeIdC, ctor_id: adt::CtorIdC, index: usize },
+    MaterializeControl { type_id: TypeIdC, ctor_id: adt::CtorIdC, arity: usize },
+    /// Residual profile refusal: the actual admission identity is not
+    /// DedicatedSorts or an ADT/declaration/plan table is nonempty. Every count
+    /// is retained; declarations are never skipped as unused.
+    GenericProfile { grammar_domain: GrammarDomain, types: usize, type_args: usize, constructors: usize,
+        ctor_fields: usize, decl_param_counts: usize, decl_ctor_counts: usize, decl_templates: usize,
+        plan_nodes: usize, plan_cases: usize, field_paths: usize, pattern_children: usize },
 }
 type Result<T> = std::result::Result<T, ProjectionGap>;
 fn source_gap(section: &'static str, row: usize) -> ProjectionGap {
     ProjectionGap::SourceAssociation { section, row }
 }
+fn generic(gap: GenericGap) -> ProjectionGap { ProjectionGap::UnsupportedGeneric(gap) }
 fn bin(op: BinaryOp) -> a::BinaryOp { match op {
     BinaryOp::Add => a::BinaryOp::Add, BinaryOp::Sub => a::BinaryOp::Sub,
     BinaryOp::Mul => a::BinaryOp::Mul, BinaryOp::Eq => a::BinaryOp::Eq,
@@ -47,6 +72,41 @@ fn ty(id: TypeIdC) -> Result<a::Type> { Ok(match id.0 {
     0 => a::Type::UInt, 1 => a::Type::Bool, 2 => a::Type::List, 3 => a::Type::Tree,
     n => return Err(ProjectionGap::UnsupportedNominalType(n)),
 }) }
+/// Profile pre-scan over the full observed program: generic rows are refused
+/// before any caller-supplied A source association, never as a source mismatch.
+fn generic_rows(view: &ProgramSnapshot) -> Result<()> {
+    for (row, expression) in view.expressions.iter().enumerate() { match *expression {
+        ExpressionSnapshot::Construct { type_id, ctor_id, .. } => return Err(generic(GenericGap::ConstructExpression { row, type_id, ctor_id })),
+        ExpressionSnapshot::Match { plan: Some(plan), .. } => return Err(generic(GenericGap::PlannedMatch { row, plan })),
+        ExpressionSnapshot::Literal { .. } | ExpressionSnapshot::Var { .. } | ExpressionSnapshot::Let { .. } | ExpressionSnapshot::Binary { .. }
+        | ExpressionSnapshot::Unary { .. } | ExpressionSnapshot::If { .. } | ExpressionSnapshot::Call { .. } | ExpressionSnapshot::Match { plan: None, .. } => {}
+    } }
+    for (row, pattern) in view.patterns.iter().enumerate() { match *pattern {
+        PatternRowC::Wildcard => return Err(generic(GenericGap::WildcardPattern { row })),
+        PatternRowC::Constructor { type_id, ctor_id, .. } => return Err(generic(GenericGap::ConstructorPattern { row, type_id, ctor_id })),
+        PatternRowC::PVar { .. } | PatternRowC::PNil | PatternRowC::PCons { .. } | PatternRowC::PLeaf { .. } | PatternRowC::PBranch { .. } => {}
+    } }
+    for (row, constant) in view.constants.iter().enumerate() {
+        if let ConstantSnapshot::Constructor { type_id, ctor_id, .. } = *constant { return Err(generic(GenericGap::ConstructorConstant { row, type_id, ctor_id })); }
+    }
+    for function in &view.functions { ty(function.return_type)?; }
+    for parameter in &view.parameters { ty(parameter.sort)?; }
+    Ok(())
+}
+/// Residual profile check, run after the specific row/signature scans: the
+/// actual admission identity must be DedicatedSorts and every ADT, declaration
+/// and plan table empty. Runs before any caller-supplied A source association.
+fn generic_profile(admission: &AdmissionSnapshot) -> Result<()> {
+    let (grammar_domain, view) = (admission.identity.grammar_domain, &admission.view);
+    let counts = [view.types.len(), view.type_args.len(), view.constructors.len(), view.ctor_fields.len(),
+        view.decl_param_counts.len(), view.decl_ctor_counts.len(), view.decl_templates.len(),
+        view.plan_nodes.len(), view.plan_cases.len(), view.field_paths.len(), view.pattern_children.len()];
+    if grammar_domain == GrammarDomain::DedicatedSorts && counts.iter().all(|&n| n == 0) { return Ok(()); }
+    let [types, type_args, constructors, ctor_fields, decl_param_counts, decl_ctor_counts, decl_templates,
+        plan_nodes, plan_cases, field_paths, pattern_children] = counts;
+    Err(generic(GenericGap::GenericProfile { grammar_domain, types, type_args, constructors, ctor_fields,
+        decl_param_counts, decl_ctor_counts, decl_templates, plan_nodes, plan_cases, field_paths, pattern_children }))
+}
 fn field<'a>(fields: &'a [wp::NamedValue], name: &'static str) -> Result<&'a SlotValue> {
     fields.iter().find(|f| f.field == name).map(|f| &f.value).ok_or(ProjectionGap::MissingField(name))
 }
@@ -77,6 +137,7 @@ pub fn reference_value(value: &DecodedValue) -> Result<a::Value> {
                 a::Value::Tree(a::Tree::Branch(Arc::new(l), Arc::new(r)))
             }
             ValueNode::U128OutOfRange => return Err(ProjectionGap::UnrepresentableValue),
+            ValueNode::Constructor { type_id, ctor_id, ref fields } => return Err(generic(GenericGap::ConstructorValue { type_id, ctor_id, arity: fields.len() })),
         };
         nodes.push(result);
     }
@@ -108,6 +169,8 @@ pub struct ReferenceSource {
 impl ReferenceSource {
     pub fn new(program: Arc<a::Program>, initial: &HostSnapshot) -> Result<Self> {
         let view = &initial.admission.view;
+        generic_rows(view)?;
+        generic_profile(&initial.admission)?;
         if view.expressions.len() != view.occurrences.len() || view.functions.len() != program.functions.len() {
             return Err(source_gap("program", 0));
         }
@@ -147,7 +210,7 @@ impl ReferenceSource {
                 (ExpressionSnapshot::Unary {op,operand},a::Expr::Unary(o,x)) => unary(*op)==*o && result.expr(*operand)?==*x,
                 (ExpressionSnapshot::If {cond,then_expr,else_expr},a::Expr::If(x,y,z)) => result.expr(*cond)?==*x && result.expr(*then_expr)?==*y && result.expr(*else_expr)?==*z,
                 (ExpressionSnapshot::Call {function_name,args},a::Expr::Call(n,xs)) => result.name(*function_name)?==*n && result.exprs(*args)?==*xs,
-                (ExpressionSnapshot::Match {scrutinee,arms: slice},a::Expr::Match(x,source_arms)) => {
+                (ExpressionSnapshot::Match {scrutinee,arms: slice,plan: None},a::Expr::Match(x,source_arms)) => {
                     if result.expr(*scrutinee)? != *x || slice.len != source_arms.len() { false } else {
                         for (offset, arm) in source_arms.iter().enumerate() {
                             let at = slice.start.checked_add(offset).ok_or(source_gap("arms",i))?;
@@ -191,6 +254,8 @@ impl ReferenceSource {
         PatternRowC::PVar{x}=>a::Pattern::Var(self.name(x)?), PatternRowC::PNil=>a::Pattern::Nil,
         PatternRowC::PCons{x,y}=>a::Pattern::Cons(self.name(x)?,self.name(y)?), PatternRowC::PLeaf{x}=>a::Pattern::Leaf(self.name(x)?),
         PatternRowC::PBranch{x,y}=>a::Pattern::Branch(self.name(x)?,self.name(y)?),
+        PatternRowC::Wildcard=>return Err(generic(GenericGap::WildcardPattern{row:id})),
+        PatternRowC::Constructor{type_id,ctor_id,..}=>return Err(generic(GenericGap::ConstructorPattern{row:id,type_id,ctor_id})),
     }) }
     fn frame(&self,p:&DecodedPayload)->Result<a::Frame> {
         let InputValue::Frame(raw)=&p.raw else { return Err(ProjectionGap::WrongPayload("frame")); };
@@ -205,6 +270,7 @@ impl ReferenceSource {
             FrameRowC::ArgsF{function_name,rest,..}=>a::Frame::Args(self.name(function_name)?,values(get("completed")?)?,self.exprs(rest)?,environment(get("saved_env")?)?),
             FrameRowC::ReturnF{return_type,..}=>a::Frame::Return(ty(return_type)?,environment(get("saved_env")?)?),
             FrameRowC::ScopeF{..}=>a::Frame::Scope(environment(get("saved_env")?)?),
+            FrameRowC::ConstructorFieldsF{type_id,ctor_id,index,..}=>return Err(generic(GenericGap::ConstructorFieldsFrame{type_id,ctor_id,index})),
         })
     }
     fn control(&self,p:&DecodedPayload)->Result<a::Control> {
@@ -221,6 +287,7 @@ impl ReferenceSource {
             ControlC::CaseResult{matching,body,rest,..}=>a::Control::CaseResult(match matching {CaseMatching::NoMatch=>None,CaseMatching::Matched{..}=>Some(environment(get("matching")?)?)},value(get("value")?)?,self.expr(body)?,self.arms(rest)?,environment(get("saved_env")?)?),
             ControlC::PrimResult{result}=>a::Control::PrimitiveResult(match result {PrimOutcome::Value{..}=>Ok(value(get("value")?)?),PrimOutcome::Error{code}=>Err(code)}),
             ControlC::Error{code}=>a::Control::Error(code),
+            ControlC::Materialize{type_id,ctor_id,fields}=>return Err(generic(GenericGap::MaterializeControl{type_id,ctor_id,arity:fields.len})),
         })
     }
     fn snapshot(&self,raw:&HostSnapshot,decoded:&DecodedSnapshot,initial:u128,remaining:u128)->Result<a::Snapshot> {

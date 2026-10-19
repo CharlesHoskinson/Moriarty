@@ -225,6 +225,7 @@ impl Layout {
                 occurrence_path_slots: self.capacities.occurrence_path_slots.0,
                 value_slots: self.capacities.value_slots.0,
             },
+            ext_capacities: None,
             boundary_capacities_present: self.boundary_capacities_present,
         }
     }

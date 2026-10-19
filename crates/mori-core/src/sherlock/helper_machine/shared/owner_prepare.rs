@@ -49,13 +49,15 @@ fn marker_of(row: &RawConstRow) -> bool {
         RawConstRow::U128 { marker_free, .. } | RawConstRow::Bool { marker_free, .. }
         | RawConstRow::Nil { marker_free } | RawConstRow::Cons { marker_free, .. }
         | RawConstRow::Leaf { marker_free, .. } | RawConstRow::Branch { marker_free, .. }
+        | RawConstRow::Constructor { marker_free, .. }
         | RawConstRow::U128OutOfRange { marker_free } => *marker_free,
     }
 }
 fn const_fields_of(row: &RawConstRow) -> SliceC {
     match row {
         RawConstRow::Cons { fields, .. } | RawConstRow::Leaf { fields, .. }
-        | RawConstRow::Branch { fields, .. } => SliceC::normalized(fields.start.0, fields.len),
+        | RawConstRow::Branch { fields, .. }
+        | RawConstRow::Constructor { fields, .. } => SliceC::normalized(fields.start.0, fields.len),
         _ => SliceC::empty(),
     }
 }
@@ -67,6 +69,10 @@ fn const_kind_of(row: &RawConstRow) -> LogicalKind {
         RawConstRow::Cons { .. } => LogicalKind::Cons,
         RawConstRow::Leaf { .. } => LogicalKind::Leaf,
         RawConstRow::Branch { .. } => LogicalKind::Branch,
+        RawConstRow::Constructor { type_id, ctor_id, .. } => LogicalKind::Constructor {
+            type_id: TypeIdC(type_id.0),
+            ctor_id: adt::CtorIdC(ctor_id.0),
+        },
         RawConstRow::U128OutOfRange { .. } => LogicalKind::Marker,
     }
 }
@@ -87,6 +93,7 @@ impl Clone for LayoutSchemaC {
             field_id: self.field_id.clone(), widths: self.widths.clone(),
             scalar_layout_id: self.scalar_layout_id.clone(), bounds: self.bounds,
             capacities: self.capacities,
+            ext_capacities: self.ext_capacities,
             boundary_capacities_present: self.boundary_capacities_present }
     }
 }
@@ -797,7 +804,7 @@ enum ConstTask<'a> { Value(&'a CoreValue), Tree(&'a CoreTree),
 enum DecodedConst { Scalar(i128_class::KIntC), BoolVal(bool),
     List(Vec<i128_class::KIntC>), Tree(CoreTree) }
 
-fn emit_literal(value: &CoreValue, constants: &mut Vec<RawConstRow>,
+pub(super) fn emit_literal(value: &CoreValue, constants: &mut Vec<RawConstRow>,
     fields_out: &mut Vec<usize>, b: &BoundsC) -> Result<usize, Tooling> {
     // Iterative post-order over the uniquely-owned literal tree (no recursion).
     let mut results: Vec<usize> = Vec::new();
@@ -955,7 +962,7 @@ pub fn prepare_core(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
             CoreExpr::Call { name, .. } => ExpressionRowC::Call {
                 function_name: name_id(&names, name)?, args: SliceC::empty() },
             CoreExpr::Match { .. } => ExpressionRowC::Match {
-                scrutinee: t.child_ids[0], arms: SliceC::empty() },
+                scrutinee: t.child_ids[0], arms: SliceC::empty(), plan: None },
         });
     }
     // ---- C2: children slots in ExprId order.
@@ -1060,7 +1067,12 @@ pub fn prepare_core(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
         }
     }
     Ok(ProgramView { entry: 0, expressions, occurrences, occurrence_paths, children,
-        functions, parameters, arms, patterns, constants, constant_fields, names })
+        functions, parameters, arms, patterns, pattern_children: Vec::new(),
+        types: Vec::new(), type_args: Vec::new(), constructors: Vec::new(),
+        ctor_fields: Vec::new(), decl_param_counts: Vec::new(),
+        decl_ctor_counts: Vec::new(), decl_templates: Vec::new(),
+        plan_nodes: Vec::new(), plan_cases: Vec::new(), field_paths: Vec::new(),
+        constants, constant_fields, names })
 }
 
 // --------------------------------------------------------- check_program_view
@@ -1094,6 +1106,14 @@ fn decode_const_value(root: usize, v: &ProgramView, max_const_nodes: usize)
                         stack.push(Frame::Enter(fids[0])); }
                     RawConstRow::Branch { .. } => { stack.push(Frame::Branch);
                         stack.push(Frame::Enter(fids[1])); stack.push(Frame::Enter(fids[0])); }
+                    RawConstRow::Constructor { .. } => {
+                        return Err(pv_err(
+                            ViewCheck::V8,
+                            "constants",
+                            Some(id),
+                            "constructor constant in dedicated Core decode",
+                        ));
+                    }
                 }
             }
             Frame::Cons => {
@@ -1147,6 +1167,12 @@ fn views_equal(a: &ProgramView, b: &ProgramView) -> bool {
         && a.occurrences == b.occurrences && a.occurrence_paths == b.occurrence_paths
         && a.children == b.children && a.functions == b.functions
         && a.parameters == b.parameters && a.arms == b.arms && a.patterns == b.patterns
+        && a.pattern_children == b.pattern_children && a.types == b.types
+        && a.type_args == b.type_args && a.constructors == b.constructors
+        && a.ctor_fields == b.ctor_fields && a.decl_param_counts == b.decl_param_counts
+        && a.decl_ctor_counts == b.decl_ctor_counts && a.decl_templates == b.decl_templates
+        && a.plan_nodes == b.plan_nodes && a.plan_cases == b.plan_cases
+        && a.field_paths == b.field_paths
         && a.names == b.names && a.constant_fields == b.constant_fields
         && a.constants.len() == b.constants.len()
         && a.constants.iter().zip(b.constants.iter()).all(|(x, y)| const_row_eq(x, y))
@@ -1166,8 +1192,11 @@ fn expr_eq(a: &ExpressionRowC, b: &ExpressionRowC) -> bool {
             => p == s && q == t && r == u,
         (E::Call { function_name: p, args: q }, E::Call { function_name: s, args: t })
             => p == s && q == t,
-        (E::Match { scrutinee: p, arms: q }, E::Match { scrutinee: s, arms: t })
-            => p == s && q == t,
+        (E::Match { scrutinee: p, arms: q, plan: r }, E::Match { scrutinee: s, arms: t, plan: u })
+            => p == s && q == t && r == u,
+        (E::Construct { type_id: t1, ctor_id: c1, fields: f1, constant: k1 },
+         E::Construct { type_id: t2, ctor_id: c2, fields: f2, constant: k2 })
+            => t1 == t2 && c1 == c2 && f1 == f2 && k1 == k2,
         _ => false,
     }
 }
@@ -1177,7 +1206,16 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
     // V1 header + capacities (Vec lengths are the sole active lengths).
     if v.entry != 0 { return Err(pv_err(ViewCheck::V1, "header", None, "entry != 0")); }
     if v.expressions.is_empty() { return Err(pv_err(ViewCheck::V1, "expressions", None, "empty")); }
-    let caps: [(&str, usize, u128); 11] = [
+    let is_generic = !v.pattern_children.is_empty() || !v.types.is_empty() || !v.type_args.is_empty()
+        || !v.constructors.is_empty() || !v.ctor_fields.is_empty() || !v.decl_param_counts.is_empty()
+        || !v.decl_ctor_counts.is_empty() || !v.decl_templates.is_empty()
+        || !v.plan_nodes.is_empty() || !v.plan_cases.is_empty() || !v.field_paths.is_empty()
+        || v.expressions.iter().any(|e| matches!(e, ExpressionRowC::Construct { .. } | ExpressionRowC::Match { plan: Some(_), .. }))
+        || v.patterns.iter().any(|p| matches!(p, PatternRowC::Wildcard | PatternRowC::Constructor { .. }))
+        || v.constants.iter().any(|c| matches!(c, RawConstRow::Constructor { .. }))
+        || v.parameters.iter().any(|p| p.sort.0 >= 4)
+        || v.functions.iter().any(|f| f.return_type.0 >= 4);
+    let caps: [(&str, usize, u128); 15] = [
         ("expressions", v.expressions.len(), b.code_rows as u128),
         ("occurrences", v.occurrences.len(), b.code_rows as u128),
         ("occurrence_paths", v.occurrence_paths.len(), l.capacities.occurrence_path_slots as u128),
@@ -1189,16 +1227,32 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
         ("constants", v.constants.len(), b.constant_nodes as u128),
         ("constant_fields", v.constant_fields.len(), b.constant_field_slots as u128),
         ("names", v.names.len(), l.capacities.name_rows as u128),
+        ("types", v.types.len(), if is_generic { b.type_rows as u128 } else { 0 }),
+        ("constructors", v.constructors.len(), if is_generic { b.constructor_rows as u128 } else { 0 }),
+        ("ctor_fields", v.ctor_fields.len(), if is_generic { b.constructor_field_slots as u128 } else { 0 }),
+        ("plan_nodes", v.plan_nodes.len(), if is_generic { b.match_plan_rows as u128 } else { 0 }),
     ];
     for (t, len, cap) in caps { if len as u128 > cap {
         return Err(pv_err(ViewCheck::V1, t, None, "active length exceeds capacity")); } }
+    if is_generic {
+        // Generic views take the single V1..V17 route (V14 decode/reprepare). A
+        // ProgramView carries no finance tables and finance is refused throughout
+        // preparation, so GenericNominal/Absent is the only preparing domain.
+        return super::owner_ext_admit::check_program_view_ext(
+            v, None, super::owner_ext_source_program::ExtDomain::GENERIC_ABSENT, b, l)
+            .map_err(|e| match e {
+                super::owner_ext_type_builder::ExtTypeBuildError::CoreTooling(
+                    Tooling::AdmissionRejected { detail, .. }) =>
+                    pv_err(ViewCheck::V8, "program", None, &detail),
+                _ => pv_err(ViewCheck::V8, "program", None, "check_program_view_ext failed"),
+            });
+    }
     let n_expr = v.expressions.len();
-    // Parent/child-position map derived once, used by V2/V3.
     let mut parent: Vec<Option<usize>> = vec![None; n_expr];
     let mut child_pos: Vec<usize> = vec![0; n_expr];
     // V2 expressions.
     for (i, e) in v.expressions.iter().enumerate() {
-        let mut kids: Vec<(usize, usize)> = Vec::new(); // (child, position)
+        let mut kids: Vec<(usize, usize)> = Vec::new();
         match e {
             ExpressionRowC::Literal { constant } => if *constant >= v.constants.len() {
                 return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "constant out of range")); },
@@ -1221,12 +1275,24 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
                     kids.push((*cid, k));
                 }
             }
-            ExpressionRowC::Match { scrutinee, arms } => {
+            ExpressionRowC::Match { scrutinee, arms, plan } => {
+                if !is_generic && plan.is_some() { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "match plan in dedicated view")); }
                 if !slice_inside(arms, v.arms.len()) { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "arms slice")); }
                 kids.push((*scrutinee, 0));
                 if arms.len > 0 { for (k, aid) in (arms.start..arms.start + arms.len).enumerate() {
                     kids.push((v.arms[aid].body, k + 1));
                 } }
+            }
+            ExpressionRowC::Construct { fields, .. } => {
+                if !is_generic {
+                    return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "construct in dedicated view"));
+                }
+                if !slice_inside(fields, v.children.len()) { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "construct fields slice")); }
+                if fields.len > b.max_arity { return Err(pv_err(ViewCheck::V2, "expressions", Some(i), "construct arity")); }
+                for (k, cid) in v.children[if fields.len == 0 { 0 } else { fields.start }..
+                    if fields.len == 0 { 0 } else { fields.start + fields.len }].iter().enumerate() {
+                    kids.push((*cid, k));
+                }
             }
         }
         for (c, pos) in kids {
@@ -1269,20 +1335,23 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
     }
     // V4 functions: contiguous params, body root, names in range.
     let mut expect_start: usize = 0;
+    let n_types = if is_generic { v.types.len() } else { 4 };
     for (fi, f) in v.functions.iter().enumerate() {
         if f.function_name >= v.names.len() { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "name")); }
         if !slice_inside(&f.params, v.parameters.len()) || (f.params.len > 0 && f.params.start != expect_start) {
             return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "params not contiguous")); }
+        if f.params.len > b.max_arity { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "params max_arity")); }
         expect_start = expect_start.checked_add(f.params.len).ok_or_else(|| pv_err(ViewCheck::V4, "functions", Some(fi), "parameter offset overflow"))?;
         if f.body >= n_expr || parent[f.body].is_some() || fn_of_root[f.body] != Some(fi) {
             return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "body not function root")); }
+        if f.return_type.0 >= n_types { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "return_type")); }
         if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {
-            if v.parameters[pid].binder >= v.names.len() {
-                return Err(pv_err(ViewCheck::V4, "parameters", Some(pid), "binder")); } } }
+            if v.parameters[pid].binder >= v.names.len() || v.parameters[pid].sort.0 >= n_types {
+                return Err(pv_err(ViewCheck::V4, "parameters", Some(pid), "binder/sort")); } } }
     }
     if expect_start != v.parameters.len() { return Err(pv_err(ViewCheck::V4, "parameters", None, "trailing parameters")); }
-    // V5 patterns: one per arm, binder ranges.
-    if v.patterns.len() != v.arms.len() { return Err(pv_err(ViewCheck::V5, "patterns", None, "count != arms")); }
+    // V5 patterns.
+    if !is_generic && v.patterns.len() != v.arms.len() { return Err(pv_err(ViewCheck::V5, "patterns", None, "count != arms")); }
     let mut seen_pat = vec![false; v.patterns.len()];
     for (ai, a) in v.arms.iter().enumerate() {
         if a.pattern >= v.patterns.len() || seen_pat[a.pattern] {
@@ -1291,22 +1360,57 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
         if a.body >= n_expr { return Err(pv_err(ViewCheck::V5, "arms", Some(ai), "body")); }
     }
     for (pi, pat) in v.patterns.iter().enumerate() {
-        let ids: &[usize] = match pat { PatternRowC::PVar { x } | PatternRowC::PLeaf { x } => &[*x],
-            PatternRowC::PCons { x, y } | PatternRowC::PBranch { x, y } => &[*x, *y],
-            PatternRowC::PNil => &[] };
-        for id in ids { if *id >= v.names.len() {
-            return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "binder")); } }
+        match pat {
+            PatternRowC::PVar { x } | PatternRowC::PLeaf { x } => if *x >= v.names.len() {
+                return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "binder")); },
+            PatternRowC::PCons { x, y } | PatternRowC::PBranch { x, y } => if *x >= v.names.len() || *y >= v.names.len() {
+                return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "binder")); },
+            PatternRowC::PNil => {}
+            PatternRowC::Wildcard => if !is_generic {
+                return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "extended pattern in dedicated view"));
+            },
+            PatternRowC::Constructor { children, .. } => {
+                if !is_generic {
+                    return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "extended pattern in dedicated view"));
+                }
+                if !slice_inside(children, v.pattern_children.len()) {
+                    return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "pattern_children slice"));
+                }
+                if children.len > 0 {
+                    for pos in children.start..children.start + children.len {
+                        let cp = v.pattern_children[pos];
+                        if cp >= pi || seen_pat[cp] {
+                            return Err(pv_err(ViewCheck::V5, "patterns", Some(pi), "pattern child tree"));
+                        }
+                        seen_pat[cp] = true;
+                    }
+                }
+            }
+        }
     }
+    if seen_pat.iter().any(|s| !*s) { return Err(pv_err(ViewCheck::V5, "patterns", None, "orphan pattern row")); }
     // V6 constants: fields < j, kinds, markerFree recomputed ascending.
     let mut mf: Vec<bool> = Vec::new();
     for (j, row) in v.constants.iter().enumerate() {
         let fs = const_fields_of(row);
         if !slice_inside(&fs, v.constant_fields.len()) {
             return Err(pv_err(ViewCheck::V6, "constants", Some(j), "field slice")); }
-        let arity = match const_kind_of(row) { LogicalKind::UInt | LogicalKind::Bool
-            | LogicalKind::Nil | LogicalKind::Marker => 0, LogicalKind::Leaf => 1,
+        let arity = match const_kind_of(row) {
+            LogicalKind::UInt | LogicalKind::Bool | LogicalKind::Nil | LogicalKind::Marker => 0,
+            LogicalKind::Leaf => 1,
             LogicalKind::Cons | LogicalKind::Branch => 2,
-            LogicalKind::ConstructorExtensionReserved => 99 };
+            LogicalKind::Constructor { type_id, ctor_id } => {
+                if !is_generic || type_id.0 < 4 || type_id.0 >= v.types.len() {
+                    return Err(pv_err(ViewCheck::V6, "constants", Some(j), "constructor constant type"));
+                }
+                let trow = &v.types[type_id.0];
+                if ctor_id.0 < trow.ctor_start.0 || ctor_id.0 - trow.ctor_start.0 >= trow.ctor_len {
+                    return Err(pv_err(ViewCheck::V6, "constants", Some(j), "constructor constant ctor"));
+                }
+                v.constructors[ctor_id.0].field_len
+            }
+            LogicalKind::ConstructorExtensionReserved => return Err(pv_err(ViewCheck::V6, "constants", Some(j), "reserved kind")),
+        };
         if fs.len != arity { return Err(pv_err(ViewCheck::V6, "constants", Some(j), "arity")); }
         let fids: Vec<usize> = if fs.len == 0 { Vec::new() } else {
             v.constant_fields[fs.start..fs.start + fs.len].to_vec() };
@@ -1319,6 +1423,14 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
                     && matches!(kinds[1], LogicalKind::Nil | LogicalKind::Cons),
                 LogicalKind::Leaf => matches!(kinds[0], LogicalKind::UInt | LogicalKind::Marker),
                 LogicalKind::Branch => kinds.iter().all(|k| matches!(k, LogicalKind::Leaf | LogicalKind::Branch)),
+                LogicalKind::Constructor { ctor_id, .. } => {
+                    let crow = &v.constructors[ctor_id.0];
+                    (0..fs.len).all(|k| {
+                        let exp_ty = v.ctor_fields[crow.field_start + k].type_id;
+                        pure_leaves::sort_of_kind(kinds[k]) == Some(exp_ty)
+                            || (exp_ty == TypeIdC::UInt && kinds[k] == LogicalKind::Marker)
+                    })
+                }
                 _ => true,
             };
             if !ok { return Err(pv_err(ViewCheck::V6, "constants", Some(j), "field kind")); }
@@ -1344,13 +1456,19 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
     for pat in &v.patterns { match pat {
         PatternRowC::PVar { x } | PatternRowC::PLeaf { x } => used[*x] = true,
         PatternRowC::PCons { x, y } | PatternRowC::PBranch { x, y } => { used[*x] = true; used[*y] = true; }
-        PatternRowC::PNil => {} } }
-    for (i, u) in used.iter().enumerate() { if !u {
+        PatternRowC::PNil | PatternRowC::Wildcard | PatternRowC::Constructor { .. } => {} } }
+    if is_generic {
+        for t in &v.types { if t.name_id < used.len() { used[t.name_id] = true; } }
+        for c in &v.constructors { if c.name_id < used.len() { used[c.name_id] = true; } }
+        for cf in &v.ctor_fields { if cf.name_id < used.len() { used[cf.name_id] = true; } }
+        for pn in &v.plan_nodes { if let PlanNodeC::Bind { binder, .. } = pn { if *binder < used.len() { used[*binder] = true; } } }
+    }
+    for (i, u) in used.iter().enumerate() { if !u && !is_generic {
         return Err(pv_err(ViewCheck::V7, "names", Some(i), "unused name")); } }
-    // V8: decode iteratively (reverse ExprId order; children have larger ids),
-    // re-prepare, compare bit-for-bit. Constant unfolding is refused
-    // incrementally at bounds.constant_nodes (the C6 declared capacity,
-    // D-36); any field-shared hand view then also fails bit equality.
+    if is_generic {
+        return Ok(());
+    }
+    // V8 dedicated Core round-trip.
     let mut decoded: Vec<Option<CoreExpr>> = (0..n_expr).map(|_| None).collect();
     for i in (0..n_expr).rev() {
         let e = match &v.expressions[i] {
@@ -1379,7 +1497,8 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
                 if args.len > 0 { for cid in &v.children[args.start..args.start + args.len] {
                     argv.push(decoded[*cid].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "call arg"))?); } }
                 CoreExpr::Call { name: v.names[*function_name].clone(), args: argv } }
-            ExpressionRowC::Match { scrutinee, arms } => {
+            ExpressionRowC::Match { scrutinee, arms, plan } => {
+                if plan.is_some() { return Err(pv_err(ViewCheck::V8, "expressions", Some(i), "match plan")); }
                 let scr = decoded[*scrutinee].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "scrutinee"))?;
                 let mut out: Vec<CoreArm> = Vec::new();
                 if arms.len > 0 { for aid in arms.start..arms.start + arms.len {
@@ -1392,10 +1511,16 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
                         PatternRowC::PLeaf { x } => CorePattern::PLeaf { x: v.names[*x].clone() },
                         PatternRowC::PBranch { x, y } => CorePattern::PBranch {
                             x: v.names[*x].clone(), y: v.names[*y].clone() },
+                        PatternRowC::Wildcard | PatternRowC::Constructor { .. } => {
+                            return Err(pv_err(ViewCheck::V8, "patterns", Some(arow.pattern), "extended pattern"));
+                        }
                     };
                     let bod = decoded[arow.body].take().ok_or_else(|| pv_err(ViewCheck::V8, "expressions", Some(i), "arm body"))?;
                     out.push(CoreArm { pattern: pat, body: bod }); } }
                 CoreExpr::Match { scrutinee: Box::new(scr), arms: out } }
+            ExpressionRowC::Construct { .. } => {
+                return Err(pv_err(ViewCheck::V8, "expressions", Some(i), "construct"));
+            }
         };
         decoded[i] = Some(e);
     }
@@ -1530,7 +1655,7 @@ pub fn admit(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
 // ---------------------------------------------------------------- admit_run
 // Both genesis forms store the one RunIdC that admit_run built from the
 // original fuel/stack RunIntC inputs; registers below carry converted values.
-fn genesis(a: &Admitted, run_id: Arc<RunIdC>, valid: bool, fuel: u128, stack: usize) -> MachineImage {
+pub(super) fn genesis(a: &Admitted, run_id: Arc<RunIdC>, valid: bool, fuel: u128, stack: usize) -> MachineImage {
     MachineImage {
         admission: Admitted { body: Arc::clone(&a.body) }, run_id,
         control: if valid { ControlC::Eval { expr: 0 } } else { ControlC::Error { code: 1 } },
@@ -1540,6 +1665,7 @@ fn genesis(a: &Admitted, run_id: Arc<RunIdC>, valid: bool, fuel: u128, stack: us
         remaining_work: if valid { fuel } else { 0 },
         consumed_work: 0, helper_work: 0, helper_visits: 0, reference_cursor: 0,
         alloc: AllocCounters::default(), active: ActiveLengths::default(),
+        seg_base: host_implied_prefix::SegBase::genesis_uncut(),
         helper: None, result: None,
         data: Vec::new(), data_fields: Vec::new(), env: Vec::new(),
         frames: Vec::new(), tasks: Vec::new(), value_slots: Vec::new(),

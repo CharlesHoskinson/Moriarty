@@ -26,6 +26,9 @@ pub mod draft_report;
 pub mod draft_profile;
 #[path = "compile_artifact/draft_execution.rs"]
 pub mod draft_execution;
+// Public typed ExtProgram compiler using the actual checked owner admission ABI.
+#[path = "compile_artifact/ext_compile.rs"]
+pub mod ext_compile;
 #[path = "compile_artifact/draft_simulation_report.rs"]
 pub mod draft_simulation_report;
 #[path = "compile_artifact/draft_diagnostics.rs"]

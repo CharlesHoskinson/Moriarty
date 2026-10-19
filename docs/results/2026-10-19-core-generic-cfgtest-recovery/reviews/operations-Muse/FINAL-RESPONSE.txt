@@ -1,0 +1,96 @@
+### Verdict: `APPROVE`
+
+Corrected exact 19 operations are approved for Root's normal execution, subject to the execution conditions below.
+
+Both concrete metadata blockers are resolved. No remaining actual metadata or closure defect in the packet blocks Root execution.
+
+This is operations/metadata approval only. It is not compilation, native, target, or whole-language acceptance. All 19 operations remain `UNRUN`.
+
+#### 1. Reviewer identity and retained source scope
+
+- Prior opinion identity is retained exactly: requested `Opus5.5 HIGH` (`claude-opus-5`, effort `high`); actually returned `gemini-4-argon-high` at `high` effort under the Opus outage fallback. It is not relabelled as Opus.
+- This decision is by a fresh nonauthor operations-only follow-up reviewer: Muse Code powered by `muse-wonder-1.0`. It is independent of the source author session.
+- Prior source approval is retained without re-review or expansion: exact 369-file snapshot, all 20 changed/new source files, and all 33 literal operations remain **SOURCE-APPROVED** and unchanged.
+- Source snapshot, `SOURCE-FREEZE`, original proposal/closures/flat pins, assertions, fixtures, and resources are unchanged. Original ordinary-QA files remain immutable. Future Root receipts must refer to the corrected afterimages.
+
+#### 2. QA-BLOCKER-1 — resolved
+
+Op07 now compiles the actual existing parent root:
+
+- `argv`, `sourceRoot`: `.../snapshot/crates/mori-core/tests/support/generic_adt_one_builder_positive.rs`.
+- That parent imports `checks` and `independent_inputs`:
+  - `#[path = "generic_adt_one_builder_checks.rs"] mod checks;`
+  - `#[path = "one_builder_independent_inputs.rs"] mod independent_inputs;`
+- Corrected closure `externalTests.generic_adt_one_builder_positive` is exactly six files:
+  1. `generic_adt_one_builder_positive.rs`
+  2. `generic_adt_one_builder_checks.rs`
+  3. `one_builder_independent_inputs.rs`
+  4. `FIXTURE-LAYOUT-AND-DOMAIN.json`
+  5. `expectations/generic_fifo_after_signature.json`
+  6. `expectations/signature_only_reuse.json`
+- Its five literal `sourceEdges` are complete: parent → `checks` (`mod`), parent → `independent_inputs` (`mod`), parent → both expectation JSON files (`include_str`), and `checks` → `FIXTURE-LAYOUT-AND-DOMAIN.json` (`include_str`).
+- `requiredInputs` for op07 equals those six files plus the two direct extern inputs below.
+- `expectedDepMembership` correctly names `externalTests.generic_adt_one_builder_positive`.
+- The `E0742` cause is removed: the file containing `pub(super)` is no longer compiled as crate root.
+- Legacy operation id `07-external-generic_adt_one_builder_checks`, crate name `qa_07_external_generic_adt_one_builder_checks`, and output basenames `07-external-generic_adt_one_builder_checks{,.d}` deliberately remain unchanged. That naming retention is cosmetic metadata minimalism, not an execution defect.
+- No test, helper, or fixture source is edited.
+
+#### 3. QA-BLOCKER-2 — resolved
+
+For every op03–op13, `requiredInputs` now equals its actual source/include closure plus exactly the two direct extern inputs used by `argv`:
+
+- generated: `.../ordinary-QA/build/libmori_core_cfgtest_AB.rlib`, produced by op01 (normal-Core rlib build; `--crate-name mori_core --crate-type=rlib`, output basename retained)
+- static: `.../24-compiler-qa/proposed-run/core-target/debug/deps/libserde_json-76dc87088753b61e.rlib`
+
+Per-operation check against corrected closures (`normal104 / cfgtest173 / external 1/1/7/3/6/4/5/3/5/4/1`):
+
+| Op | Closure files | `requiredInputs` |
+|---|---|---|
+| 03 comparison | 1 | closure + 2 externs |
+| 04 observation | 1 | closure + 2 externs |
+| 05 draft-runtime | 7 | closure + 2 externs |
+| 06 witness-baseline | 3 | closure + 2 externs |
+| 07 generic-ADT positive | 6 | closure + 2 externs |
+| 08 nominal-text-source | 4 | closure + 2 externs |
+| 09 core1-provenance | 5 | closure + 2 externs |
+| 10 nominal-declarations | 3 | closure + 2 externs |
+| 11 provenance-twins | 5 | closure + 2 externs |
+| 12 resolved-signature | 4 | closure + 2 externs |
+| 13 witness-cache-stream | 1 | closure + 2 externs |
+
+- All four stale inputs (three old consumer paths and the old `libmori_core_generic_corrected.rlib`) are removed from every op03–op13.
+- Every non-generated required path is present in the unchanged 621 static pins (`FLAT-STATIC-INPUT-PINS.json`, 204756 bytes, `bb508aacd4737b1561b845f39fb8d21f0a6831766908a6e9c6f378815761ef13`). The generated rlib is the correctly ordered op01 product, not a static pin and not a prior artifact.
+- `PROPOSED.sourceClosures` now points to the corrected afterimage pin: `revision02-metadata-corrections/afterimages/SOURCE-CLOSURES.json`, 217923 bytes, `37c34c7bba041981e9b9b963b96d31e97a499b5a05f0dcf77130f0b6e9bb3776`. Corrected `PROPOSED.json` afterimage: 78686 bytes, `1194c5c53f64e10a6320398857cd572b5ec62ac169908b58587123c5033cff00`. Metadata inverse by exact preimages is recorded; source bytes changed: 0.
+- Everything else in the original 19 operations is byte/JSON-value unchanged, including the other ten external closures, Core104/Corecfgtest173, resource/env/output/assertion metadata.
+- Compact views were treated only as reversible views: `@D@`, `@R@`, `@TC@` expand per the legend, with `expandedSemanticInverseExact: true` for all three views. They are not projected subsets.
+
+#### 4. Explicit resource-prose discrepancy — assessed, no amendment
+
+The prior opinion's section 4 prose (120s/8GiB and 30s/4GiB caps, extra env) does not describe the actual original or corrected proposal. The full prior opinion is preserved, but the actual corrected argv are authoritative:
+
+- Compiles (ops01–13): `timeout --signal=KILL 30s`, `prlimit --cpu=25:25 --as=2147483648:2147483648 --fsize=67108864:67108864 --core=0:0`, `wallSeconds: 30`.
+- Lists/runs (ops14–19): `timeout --signal=KILL 10s`, `prlimit --cpu=8:8 --as=1073741824:1073741824 --fsize=16777216:16777216 --core=0:0`, `wallSeconds: 10`.
+- Each stream kept at 131072 bytes. Environment is exactly `PATH=/usr/bin:/bin`, `LANG=C.UTF-8`, `TMPDIR=@D@/ordinary-QA/tmp`, with no inherited environment.
+- Resource termination remains an operational failure. No resource amendment is made or required.
+
+#### 5. Retained limitations and future gap
+
+- Section 5.2 gap is retained: the old draft-runtime fixture omits `Match.plan` while production and independent serializers emit `"plan": null`.
+- Op05 remains compile-only in this packet. No runtime execution of `sherlock_draft_runtime_independent`, no oracle-fitting, fixture, or projection correction is included or approved here. Future runtime use still requires explicit fixture/projection disposition.
+- No private expected/comparison arrays or populated fixture bodies were supplied or read.
+- Old scoped-18/raw-10 comparison evidence stays historically qualified.
+- Approval establishes no generic B reference projection, no target/native proof (MC05/SP01), no whole-Core or eleven-external runtime replay, and no whole-language completion.
+
+#### 6. Necessary execution conditions for Root
+
+1. Use only the corrected afterimages pinned above. Do not execute from the original ordinary-QA `PROPOSED.json`/`SOURCE-CLOSURES.json`.
+2. Compose Root glue in the already-reviewed same class, using only the existing helper functions `pin`, `save`, `static_check`, `stop_group`, `capture`, `dep_inputs`, `test_membership` from the pinned capture helper (15371 bytes, `ce0482fdc12e4146500fa4421f7e4333b14321bdaa207c123a09ee6cb34c9932`). Never invoke its historical `main` or old 13/18 commands. No separate glue-source review gate is introduced.
+3. Pin and save the actual 19-op glue and selection before any command runs. Persist each raw returned capture result and full stdout/stderr immediately, before any postcheck. Pin partial artifacts on failure.
+4. Before op01, `build/` and `tmp/` must be fresh and empty. Every declared output must be absent before its creating operation.
+5. Verify all 621 static pins and all generated-artifact pins before and after each operation. Generated pins are created only after actual creation.
+6. Enforce generated ordering and bindings: op01 rlib → ops03–13 only; op02 cfgtest binary → ops14–19 only. No reuse of any earlier rlib/binary as current-candidate evidence.
+7. After every successful compile (all 13), require exact canonical dep-info set equality against its corrected `SOURCE-CLOSURES` set and declared count, with alias normalization and unknown/env-dep rejection.
+8. Op14 must freeze the complete finite unique Core test list, no benchmarks, containing each of the four owner selectors exactly once. Op15 must equal exactly the four owner names. Ops16–19 each require exactly one passed test, zero failed/ignored/measured, and `filtered_out` equal to the frozen op14 total minus one. Only those four owner tests are run.
+9. Serial fail-stop, no retry, no alternate flags. Any failure, resource termination, or stream truncation marks all later operations `UNRUN` and preserves created artifacts.
+
+Subject to those conditions, Root may execute the corrected exact 19 operations.

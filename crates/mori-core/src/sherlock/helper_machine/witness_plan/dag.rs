@@ -7,6 +7,9 @@ pub(super) const OUTPUT_FIELDS: &[&str] = &[
     "current_environment", "frames", "control", "helper", "tasks", "result",
     "value_slots", "outcome", "names", "expressions", "parameters", "arms",
     "patterns", "occurrences", "occurrence_paths", "children",
+    "functions", "pattern_children", "types", "type_args", "constructors",
+    "ctor_fields", "decl_param_counts", "decl_ctor_counts", "decl_templates",
+    "plan_nodes", "plan_cases", "field_paths",
 ];
 
 pub(super) fn read(input: &HostSnapshot, path: InputPath, at: Location)
@@ -39,6 +42,17 @@ pub(super) fn read(input: &HostSnapshot, path: InputPath, at: Location)
         InputPath::Occurrence(n) => InputValue::Occurrence(p.occurrences.get(n).ok_or_else(missing)?.clone()),
         InputPath::OccurrencePath(n) => InputValue::Index(*p.occurrence_paths.get(n).ok_or_else(missing)?),
         InputPath::Child(n) => InputValue::Index(*p.children.get(n).ok_or_else(missing)?),
+        InputPath::PatternChild(n) => InputValue::Index(*p.pattern_children.get(n).ok_or_else(missing)?),
+        InputPath::Type(n) => InputValue::Type(*p.types.get(n).ok_or_else(missing)?),
+        InputPath::TypeArg(n) => InputValue::TypeId(*p.type_args.get(n).ok_or_else(missing)?),
+        InputPath::Constructor(n) => InputValue::Constructor(p.constructors.get(n).ok_or_else(missing)?.clone()),
+        InputPath::ConstructorField(n) => InputValue::ConstructorField(p.ctor_fields.get(n).ok_or_else(missing)?.clone()),
+        InputPath::DeclParamCount(n) => InputValue::Index(*p.decl_param_counts.get(n).ok_or_else(missing)?),
+        InputPath::DeclCtorCount(n) => InputValue::Index(*p.decl_ctor_counts.get(n).ok_or_else(missing)?),
+        InputPath::DeclTemplate(n) => InputValue::DeclTemplate(p.decl_templates.get(n).ok_or_else(missing)?.clone()),
+        InputPath::PlanNode(n) => InputValue::PlanNode(*p.plan_nodes.get(n).ok_or_else(missing)?),
+        InputPath::PlanCase(n) => InputValue::PlanCase(*p.plan_cases.get(n).ok_or_else(missing)?),
+        InputPath::FieldPath(n) => InputValue::Index(*p.field_paths.get(n).ok_or_else(missing)?),
         InputPath::Frame(n) => InputValue::Frame(*i.frames.get(n).ok_or_else(missing)?),
         InputPath::ScheduledFrame => match i.control {
             ControlC::ScheduleNext { frame, .. } => InputValue::Frame(frame),

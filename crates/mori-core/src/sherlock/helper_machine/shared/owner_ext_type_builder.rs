@@ -84,6 +84,25 @@ pub enum ExtTypeCapKind {
     TypeRows,
     ConstructorRows,
     ConstructorFieldSlots,
+    PatternChildSlots,
+    MatchPlanRows,
+    PlanCaseSlots,
+    FieldPathSlots,
+    InputRows,
+    AssetRows,
+    StateRows,
+    AccountRows,
+    LiabilityRows,
+    AwaitSiteRows,
+    AwaitBinderSlots,
+    BalanceCells,
+    JournalRows,
+    PendingOpRows,
+    ObservationsPerInvocation,
+    MaxLifetimeWork,
+    ResumeRows,
+    EffectOrdinalWidth,
+    SegmentOrdinalWidth,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExtTypeRejectReason {
@@ -97,6 +116,8 @@ pub enum ExtTypeRejectReason {
     UnknownCtor,
     BuiltinConstruct,
     PatternArity,
+    DuplicatePatternBinder,
+    ConstantFieldType,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExtTypeFeatureKind {
