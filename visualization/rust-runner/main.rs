@@ -91,7 +91,7 @@ pub mod sherlock {
                 84 => "Exhausted (Free Publication)",
                 102 => "Literal",
                 108 => "Var found",
-                111 => "Var missing -> error(1)",
+                111 => "Var missing -> error(3)",
                 114 => "Let",
                 117 => "Binary left",
                 120 => "Unary",
@@ -299,7 +299,7 @@ pub mod sherlock {
                 name_bytes: 16384,
             };
 
-            let max_host_steps = 1024usize;
+            let max_host_steps = 4096usize;
             let mut step_idx = 0usize;
             while step_idx < max_host_steps {
                 let Some(record) = machine.step() else {

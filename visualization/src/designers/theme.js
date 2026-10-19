@@ -130,11 +130,22 @@ export function easeInOutCubic(t) {
  * Bounded LRU texture caches to eliminate per-frame DOM `<canvas>` creation and GPU texture uploads.
  */
 const MAX_PLAQUE_CACHE_SIZE = 1024;
+const MAX_MATERIAL_CACHE_SIZE = 64;
 const plaqueTextureCache = new Map();
 const metalTextureCache = new Map();
 const reticleTextureCache = new Map();
 let ceramicGrainSingleton = null;
 const ceramicTextureCache = new Map();
+
+function setBoundedTextureCache(cache, maxEntries, key, tex) {
+  if (cache.size >= maxEntries && !cache.has(key)) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) {
+      cache.delete(oldestKey);
+    }
+  }
+  cache.set(key, tex);
+}
 
 /**
  * Creates (or retrieves from cache) a high-key neutral silver-white (`#f4f6fa` base with
@@ -245,7 +256,9 @@ export function createCeramicGrainTexture({
   ctx.fillStyle = resolvedBase;
   ctx.fillRect(0, 0, size, size);
 
-  // Deterministic high-key mineral micro-pebble grain (#fafafa..#ffffff with subtle #f0ede6 flecks)
+  // Deterministic high-key mineral micro-pebble grain via single ImageData buffer pass
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const data = imgData.data;
   const step = 2;
   for (let y = 0; y < size; y += step) {
     for (let x = 0; x < size; x += step) {
@@ -256,12 +269,21 @@ export function createCeramicGrainTexture({
         const r = isWarmLight ? 255 : 242;
         const g = isWarmLight ? 255 : 239;
         const b = isWarmLight ? 254 : 233;
-        const a = grainAlpha * (0.4 + (norm - 0.35) * 0.9);
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a.toFixed(4)})`;
-        ctx.fillRect(x, y, step, step);
+        const a = Math.min(1, grainAlpha * (0.4 + (norm - 0.35) * 0.9));
+        const invA = 1 - a;
+        for (let dy = 0; dy < step && y + dy < size; dy++) {
+          const rowBase = (y + dy) * size;
+          for (let dx = 0; dx < step && x + dx < size; dx++) {
+            const p = (rowBase + x + dx) * 4;
+            data[p] = Math.round(data[p] * invA + r * a);
+            data[p + 1] = Math.round(data[p + 1] * invA + g * a);
+            data[p + 2] = Math.round(data[p + 2] * invA + b * a);
+          }
+        }
       }
     }
   }
+  ctx.putImageData(imgData, 0, 0);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
@@ -555,5 +577,22 @@ export function createStudioEnvironmentMap({ width = 512, height = 256 } = {}) {
 
   studioEnvMapSingleton = envTex;
   return envTex;
+}
+
+export function disposeThemeCaches() {
+  for (const cache of [plaqueTextureCache, metalTextureCache, reticleTextureCache, ceramicTextureCache]) {
+    for (const tex of cache.values()) {
+      if (tex && typeof tex.dispose === 'function') tex.dispose();
+    }
+    cache.clear();
+  }
+  if (ceramicGrainSingleton && typeof ceramicGrainSingleton.dispose === 'function') {
+    ceramicGrainSingleton.dispose();
+  }
+  ceramicGrainSingleton = null;
+  if (studioEnvMapSingleton && typeof studioEnvMapSingleton.dispose === 'function') {
+    studioEnvMapSingleton.dispose();
+  }
+  studioEnvMapSingleton = null;
 }
 

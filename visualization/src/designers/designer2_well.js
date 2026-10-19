@@ -2410,6 +2410,7 @@ export function createWellSubsystem() {
   let pointerAngle = Math.PI; // Starts pointing West (Slot A = 0)
   let pointerRadialReach = 0.196;
   let lastCorePlaqueKey = '';
+  let lastActiveSectorIdx = -1;
 
   // ==========================================================================
   // 6. DYNAMIC `.update(stepState)` — ZERO HEAP ALLOCATIONS
@@ -2701,12 +2702,15 @@ export function createWellSubsystem() {
         ? clamp(coreTel.sectorIndex, 0, STATOR_SECTOR_COUNT - 1)
         : resolveControlSectorIndex(rawControlKind, isDoneState, isErrorState);
     const activeSectorMeta = CONTROL_STATOR_SECTORS[activeSectorIdx] || CONTROL_STATOR_SECTORS[0];
+    const sectorSwitched = activeSectorIdx !== lastActiveSectorIdx;
+    lastActiveSectorIdx = activeSectorIdx;
 
     for (let i = 0; i < STATOR_SECTOR_COUNT; i += 1) {
-      const sector = CONTROL_STATOR_SECTORS[i];
       const isSectorActive = i === activeSectorIdx;
-      const theta = Math.PI * 0.5 - i * sectorStep;
+      if (!isSectorActive && !sectorSwitched) continue;
 
+      const sector = CONTROL_STATOR_SECTORS[i];
+      const theta = Math.PI * 0.5 - i * sectorStep;
       const padY = isSectorActive ? 0.010 : 0.003;
 
       _scratchPos.set(0, padY, 0);
@@ -2940,6 +2944,7 @@ export function createWellSubsystem() {
       tracePrevCell && tracePrevCell !== activeCell ? tracePrevCell : prevTrailCell;
 
     _scratchQuat.identity();
+    let floorMutated = false;
 
     for (let i = 0; i < ruleCells.length; i += 1) {
       const cell = ruleCells[i];
@@ -2953,6 +2958,13 @@ export function createWellSubsystem() {
       } else {
         cell.trail = Math.max(0, cell.trail - dt * 3.5);
       }
+
+      const isHot = isActive || cell.trail > 0.04;
+      if (!isHot && cell.wasSettled) {
+        continue;
+      }
+      cell.wasSettled = !isHot;
+      floorMutated = true;
 
       if (isActive) {
         const pulse = 0.92 + 0.25 * Math.sin(ambient * 6.0);
@@ -3013,21 +3025,39 @@ export function createWellSubsystem() {
       ruleBeaconPostInstancedMesh.setColorAt(i, _scratchColor);
     }
 
-    ruleTilesInstancedMesh.instanceMatrix.needsUpdate = true;
-    if (ruleTilesInstancedMesh.instanceColor) {
-      ruleTilesInstancedMesh.instanceColor.needsUpdate = true;
-    }
-    ruleBeaconInstancedMesh.instanceMatrix.needsUpdate = true;
-    if (ruleBeaconInstancedMesh.instanceColor) {
-      ruleBeaconInstancedMesh.instanceColor.needsUpdate = true;
-    }
-    ruleBeaconPostInstancedMesh.instanceMatrix.needsUpdate = true;
-    if (ruleBeaconPostInstancedMesh.instanceColor) {
-      ruleBeaconPostInstancedMesh.instanceColor.needsUpdate = true;
+    if (floorMutated) {
+      ruleTilesInstancedMesh.instanceMatrix.needsUpdate = true;
+      if (ruleTilesInstancedMesh.instanceColor) {
+        ruleTilesInstancedMesh.instanceColor.needsUpdate = true;
+      }
+      ruleBeaconInstancedMesh.instanceMatrix.needsUpdate = true;
+      if (ruleBeaconInstancedMesh.instanceColor) {
+        ruleBeaconInstancedMesh.instanceColor.needsUpdate = true;
+      }
+      ruleBeaconPostInstancedMesh.instanceMatrix.needsUpdate = true;
+      if (ruleBeaconPostInstancedMesh.instanceColor) {
+        ruleBeaconPostInstancedMesh.instanceColor.needsUpdate = true;
+      }
     }
   }
 
   function dispose() {
+    const instancedMeshes = [
+      fuelInstancedMesh,
+      bridgeClaspsInstancedMesh,
+      statorSectorsInstancedMesh,
+      vaultRibsInstancedMesh,
+      southVaultRibsInstancedMesh,
+      ruleBezelInstancedMesh,
+      ruleTilesInstancedMesh,
+      ruleBeaconInstancedMesh,
+      ruleBeaconPostInstancedMesh,
+    ];
+    for (let i = 0; i < instancedMeshes.length; i += 1) {
+      if (instancedMeshes[i] && typeof instancedMeshes[i].dispose === 'function') {
+        instancedMeshes[i].dispose();
+      }
+    }
     for (let i = 0; i < disposableGeometries.length; i += 1) {
       disposableGeometries[i].dispose();
     }
@@ -3037,6 +3067,9 @@ export function createWellSubsystem() {
     for (let i = 0; i < disposableTextures.length; i += 1) {
       disposableTextures[i].dispose();
     }
+    disposableGeometries.length = 0;
+    disposableMaterials.length = 0;
+    disposableTextures.length = 0;
   }
 
   update({ ambient: 0, dt: 0.016, stepFraction: 0 });
