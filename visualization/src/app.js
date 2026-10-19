@@ -59,6 +59,7 @@ const CONTROL_STRIP_SECTORS = [
 
 const els = {
   presetStrip: document.getElementById('presetStrip'),
+  stagePresetStrip: document.getElementById('stagePresetStrip'),
   presetDescription: document.getElementById('presetDescription'),
   sourceEditor: document.getElementById('sourceEditor'),
   editorLineNumbers: document.getElementById('editorLineNumbers'),
@@ -83,6 +84,12 @@ const els = {
   stepScrubber: document.getElementById('stepScrubber'),
   speedSelect: document.getElementById('speedSelect'),
   cameraLensBar: document.getElementById('cameraLensBar'),
+  touchZoomInBtn: document.getElementById('touchZoomInBtn'),
+  touchZoomOutBtn: document.getElementById('touchZoomOutBtn'),
+  touchResetViewBtn: document.getElementById('touchResetViewBtn'),
+  touchBoreGroup: document.getElementById('touchBoreGroup'),
+  touchBoreUpBtn: document.getElementById('touchBoreUpBtn'),
+  touchBoreDownBtn: document.getElementById('touchBoreDownBtn'),
   telemetryRuleBadge: document.getElementById('telemetryRuleBadge'),
   telemetryStatus: document.getElementById('telemetryStatus'),
   telemetryTransition: document.getElementById('telemetryTransition'),
@@ -102,9 +109,9 @@ const els = {
 
 function getDefaultStageHint(preset = stage?.activePreset) {
   if (typeof preset === 'string' && preset.startsWith('interior')) {
-    return 'Drag up/down to see Rings & 3D Floor · Scroll to rise/descend · Shift-drag to move';
+    return 'Drag to look · Pinch or ↑/↓ to rise/descend · 2-finger pan · Double-tap reset';
   }
-  return 'Drag to orbit · Scroll or pinch to zoom';
+  return 'Drag to orbit · Pinch to zoom · 2-finger pan · Double-tap reset';
 }
 
 const stage = new SherlockStage(els.canvas, {
@@ -321,15 +328,28 @@ function selectPreset(preset) {
 }
 
 let presetButtonsMap = null;
+let stagePresetButtonsMap = null;
 const cameraLensButtons = els.cameraLensBar
   ? Array.from(els.cameraLensBar.querySelectorAll('button'))
   : [];
 let editorLineSpans = [];
 
+function scrollActivePillIntoStrip(container, btn) {
+  if (!container || !btn || container.scrollWidth <= container.clientWidth) return;
+  const targetLeft =
+    btn.offsetLeft - container.clientWidth * 0.5 + btn.offsetWidth * 0.5;
+  container.scrollTo({
+    left: Math.max(0, targetLeft),
+    behavior: 'smooth',
+  });
+}
+
 function renderPresets() {
   if (!presetButtonsMap) {
     presetButtonsMap = new Map();
-    els.presetStrip.innerHTML = '';
+    stagePresetButtonsMap = new Map();
+    if (els.presetStrip) els.presetStrip.innerHTML = '';
+    if (els.stagePresetStrip) els.stagePresetStrip.innerHTML = '';
     for (const p of PRESET_PROGRAMS) {
       const meta = PRESET_EDITORIAL_META[p.id] || { title: p.title, sub: p.badge };
       const btn = document.createElement('button');
@@ -338,8 +358,19 @@ function renderPresets() {
       btn.dataset.presetId = p.id;
       btn.innerHTML = `<span>${escapeHtml(meta.title)}</span><small>${escapeHtml(meta.sub)}</small>`;
       btn.addEventListener('click', () => selectPreset(p));
-      els.presetStrip.appendChild(btn);
+      if (els.presetStrip) els.presetStrip.appendChild(btn);
       presetButtonsMap.set(p.id, btn);
+
+      if (els.stagePresetStrip) {
+        const sBtn = document.createElement('button');
+        sBtn.type = 'button';
+        sBtn.className = 'preset-btn preset-chip';
+        sBtn.dataset.presetId = p.id;
+        sBtn.innerHTML = `<span class="chip-title">${escapeHtml(meta.title)}</span><small class="chip-sub">${escapeHtml(meta.sub)}</small>`;
+        sBtn.addEventListener('click', () => selectPreset(p));
+        els.stagePresetStrip.appendChild(sBtn);
+        stagePresetButtonsMap.set(p.id, sBtn);
+      }
     }
   }
   for (const [id, btn] of presetButtonsMap.entries()) {
@@ -347,8 +378,18 @@ function renderPresets() {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', String(isActive));
   }
+  if (stagePresetButtonsMap) {
+    for (const [id, sBtn] of stagePresetButtonsMap.entries()) {
+      const isActive = id === state.activePresetId;
+      sBtn.classList.toggle('active', isActive);
+      sBtn.setAttribute('aria-pressed', String(isActive));
+      if (isActive) {
+        scrollActivePillIntoStrip(els.stagePresetStrip, sBtn);
+      }
+    }
+  }
   const activePreset = PRESET_PROGRAMS.find((p) => p.id === state.activePresetId);
-  if (activePreset) {
+  if (activePreset && els.presetDescription) {
     els.presetDescription.textContent = activePreset.description;
   }
 }
@@ -359,6 +400,13 @@ function updateCameraLensButtons(activePreset) {
     const isActive = btn.dataset.preset === activePreset;
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', String(isActive));
+    if (isActive) {
+      scrollActivePillIntoStrip(els.cameraLensBar, btn);
+    }
+  }
+  if (els.touchBoreGroup) {
+    const isInterior = typeof activePreset === 'string' && activePreset.startsWith('interior');
+    els.touchBoreGroup.classList.toggle('hidden', !isInterior);
   }
   if (els.stageInspectText) {
     els.stageInspectText.textContent = getDefaultStageHint(activePreset);
@@ -1008,6 +1056,59 @@ for (const btn of els.cameraLensBar.querySelectorAll('button')) {
     const preset = btn.dataset.preset;
     stage.setCameraPreset(preset);
     updateCameraLensButtons(preset);
+  });
+}
+
+function dispatchCanvasWheelStep(deltaY) {
+  if (!els.canvas) return;
+  els.canvas.dispatchEvent(
+    new WheelEvent('wheel', {
+      deltaY,
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+}
+
+function bindHoldableHudButton(btn, stepFn) {
+  if (!btn) return;
+  let holdTimer = null;
+  const stopHold = () => {
+    if (holdTimer !== null) {
+      clearInterval(holdTimer);
+      holdTimer = null;
+    }
+  };
+  btn.addEventListener('pointerdown', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    stepFn();
+    stopHold();
+    holdTimer = setInterval(stepFn, 95);
+  });
+  btn.addEventListener('pointerup', stopHold);
+  btn.addEventListener('pointercancel', stopHold);
+  btn.addEventListener('pointerleave', stopHold);
+  btn.addEventListener('click', (ev) => {
+    if (ev.detail === 0) stepFn();
+  });
+}
+
+bindHoldableHudButton(els.touchZoomInBtn, () => dispatchCanvasWheelStep(-180));
+bindHoldableHudButton(els.touchZoomOutBtn, () => dispatchCanvasWheelStep(180));
+bindHoldableHudButton(els.touchBoreUpBtn, () => dispatchCanvasWheelStep(-160));
+bindHoldableHudButton(els.touchBoreDownBtn, () => dispatchCanvasWheelStep(160));
+
+if (els.touchResetViewBtn) {
+  els.touchResetViewBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const activePreset = stage.activePreset || 'overview';
+    if (typeof stage.subsystems?.cinema?.resetCamera === 'function') {
+      stage.subsystems.cinema.resetCamera();
+    } else {
+      stage.setCameraPreset(activePreset);
+    }
+    updateCameraLensButtons(activePreset);
   });
 }
 

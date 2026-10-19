@@ -2583,13 +2583,13 @@ export function createWellSubsystem() {
 
       // Physical elevation & in-place rewrite lock-pulse
       const targetY = isOccupied
-        ? slot.baseY + 0.012 + slot.rewritePulse * 0.011
-        : slot.baseY - 0.016 + (slot.popPulse || 0) * 0.010;
+        ? slot.baseY + (isTopOfStack ? 0.022 : 0.015) + slot.rewritePulse * 0.018
+        : slot.baseY - 0.016 + (slot.popPulse || 0) * 0.014;
       slot.currentY = lerp(slot.currentY, targetY, alpha14);
       slot.group.position.y = slot.currentY;
 
       const direction = slot.isEast ? 1 : -1;
-      const targetRotY = slot.rewritePulse * direction * 0.042 * Math.sin(slot.rewritePulse * Math.PI);
+      const targetRotY = slot.rewritePulse * direction * 0.048 * Math.sin(slot.rewritePulse * Math.PI);
       slot.currentRotY = lerp(slot.currentRotY, targetRotY, alpha16);
       slot.group.rotation.y = slot.currentRotY;
 
@@ -2599,26 +2599,26 @@ export function createWellSubsystem() {
         const breath = 0.5 + 0.5 * Math.sin(ambient * 4.2 + s * 0.6);
         slot.lightPipeMat.color.setHex(semanticHex);
         slot.lightPipeMat.emissive.setHex(semanticHex);
-        const baseIntensity = isTopOfStack ? 1.45 : 0.85;
+        const baseIntensity = isTopOfStack ? 1.85 : 1.05;
         slot.lightPipeMat.emissiveIntensity =
-          baseIntensity + slot.rewritePulse * 0.85 + breath * 0.15;
-        slot.dialMat.opacity = isTopOfStack ? 0.95 : 0.84;
-        slot.plaqueMat.opacity = isTopOfStack ? 1.0 : 0.92;
+          baseIntensity + slot.rewritePulse * 1.15 + breath * 0.22;
+        slot.dialMat.opacity = isTopOfStack ? 0.98 : 0.88;
+        slot.plaqueMat.opacity = isTopOfStack ? 1.0 : 0.94;
         if (slot.lowerPlaqueMesh) slot.lowerPlaqueMesh.visible = true;
       } else if ((slot.popPulse || 0) > 0.02) {
         const popHex = getFrameSemanticHex({ kind: slot.poppedKind || 'Return' });
         _scratchColor.setHex(popHex).lerp(_scratchColorB.setHex(HEX_ENV_CYAN), 0.45);
         slot.lightPipeMat.color.copy(_scratchColor);
         slot.lightPipeMat.emissive.copy(_scratchColor);
-        slot.lightPipeMat.emissiveIntensity = 0.12 + slot.popPulse * 1.15;
-        slot.dialMat.opacity = 0.45 + slot.popPulse * 0.35;
-        slot.plaqueMat.opacity = 0.46 + slot.popPulse * 0.35;
+        slot.lightPipeMat.emissiveIntensity = 0.24 + slot.popPulse * 1.35;
+        slot.dialMat.opacity = 0.52 + slot.popPulse * 0.35;
+        slot.plaqueMat.opacity = 0.52 + slot.popPulse * 0.35;
         if (slot.lowerPlaqueMesh) slot.lowerPlaqueMesh.visible = true;
       } else {
-        slot.lightPipeMat.color.setHex(HEX_IDLE_SLATE);
-        slot.lightPipeMat.emissive.setHex(HEX_IDLE_SLATE);
-        slot.lightPipeMat.emissiveIntensity = 0.06;
-        slot.dialMat.opacity = 0.45;
+        slot.lightPipeMat.color.setHex(0x334155);
+        slot.lightPipeMat.emissive.setHex(0x334155);
+        slot.lightPipeMat.emissiveIntensity = 0.22;
+        slot.dialMat.opacity = 0.54;
         slot.plaqueMat.opacity = 0.0;
         if (slot.lowerPlaqueMesh) slot.lowerPlaqueMesh.visible = false;
       }
@@ -2684,7 +2684,7 @@ export function createWellSubsystem() {
       if (isOccupied) {
         _scratchColor.setHex(semanticHex);
       } else {
-        _scratchColor.setHex(0x334155);
+        _scratchColor.setHex(0x475569);
       }
       bridgeClaspsInstancedMesh.setColorAt(claspIdx0, _scratchColor);
       bridgeClaspsInstancedMesh.setColorAt(claspIdx1, _scratchColor);
@@ -2715,20 +2715,20 @@ export function createWellSubsystem() {
 
       const sector = CONTROL_STATOR_SECTORS[i];
       const theta = Math.PI * 0.5 - i * sectorStep;
-      const padY = isSectorActive ? 0.010 : 0.003;
+      const padY = isSectorActive ? 0.012 : 0.003;
 
       _scratchPos.set(0, padY, 0);
       _scratchEuler.set(0, theta, 0);
       _scratchQuat.setFromEuler(_scratchEuler);
-      _scratchScale.set(1.0, isSectorActive ? 1.35 : 1.0, 1.0);
+      _scratchScale.set(1.0, isSectorActive ? 1.45 : 1.0, 1.0);
       _scratchMat4.compose(_scratchPos, _scratchQuat, _scratchScale);
       statorSectorsInstancedMesh.setMatrixAt(i, _scratchMat4);
 
       if (isSectorActive) {
-        const pulse = 1.05 + 0.25 * Math.sin(ambient * 6.0);
+        const pulse = 1.15 + 0.28 * Math.sin(ambient * 6.0);
         _scratchColor.setHex(sector.color).multiplyScalar(pulse);
       } else {
-        _scratchColor.setHex(0x1e293b);
+        _scratchColor.setHex(0x1e293b).lerp(_scratchColorB.setHex(sector.color), 0.38);
       }
       statorSectorsInstancedMesh.setColorAt(i, _scratchColor);
     }
@@ -2972,18 +2972,18 @@ export function createWellSubsystem() {
       floorMutated = true;
 
       if (isActive) {
-        const pulse = 0.92 + 0.25 * Math.sin(ambient * 6.0);
+        const pulse = 0.98 + 0.28 * Math.sin(ambient * 6.0);
         _scratchColor.setHex(cell.rule.color).multiplyScalar(pulse);
-        _scratchPos.set(cell.x, WELL_FLOOR_Y + 0.054, cell.z);
-        _scratchScale.set(1.03, 1.38, 1.03);
+        _scratchPos.set(cell.x, WELL_FLOOR_Y + 0.068, cell.z);
+        _scratchScale.set(1.04, 1.72, 1.04);
       } else if (cell.trail > 0.04) {
         _scratchColor
           .setHex(0x1b2536)
-          .lerp(_scratchColorB.setHex(cell.rule.color), 0.16 + cell.trail * 0.56);
-        _scratchPos.set(cell.x, WELL_FLOOR_Y + 0.036, cell.z);
-        _scratchScale.set(1, 1.08, 1);
+          .lerp(_scratchColorB.setHex(cell.rule.color), 0.24 + cell.trail * 0.62);
+        _scratchPos.set(cell.x, WELL_FLOOR_Y + 0.042, cell.z);
+        _scratchScale.set(1, 1.18, 1);
       } else {
-        _scratchColor.setHex(0x1b2536).lerp(_scratchColorB.setHex(cell.rule.color), 0.16);
+        _scratchColor.setHex(0x1b2536).lerp(_scratchColorB.setHex(cell.rule.color), 0.22);
         _scratchPos.set(cell.x, WELL_FLOOR_Y + 0.030, cell.z);
         _scratchScale.set(1, 1, 1);
       }
@@ -2994,37 +2994,37 @@ export function createWellSubsystem() {
 
       // Update south-lip beacon bar height & unlit emissive color
       const beaconY = isActive
-        ? WELL_FLOOR_Y + 0.084
+        ? WELL_FLOOR_Y + 0.098
         : cell.trail > 0.04
-          ? WELL_FLOOR_Y + 0.058
+          ? WELL_FLOOR_Y + 0.064
           : WELL_FLOOR_Y + 0.050;
       _scratchPos.set(cell.x, beaconY, cell.z + gridConfig.cellD * 0.46);
-      _scratchScale.set(1.0, isActive ? 1.55 : 1.0, 1.0);
+      _scratchScale.set(1.0, isActive ? 1.85 : 1.0, 1.0);
       _scratchMat4.compose(_scratchPos, _scratchQuat, _scratchScale);
       ruleBeaconInstancedMesh.setMatrixAt(i, _scratchMat4);
 
       if (isActive) {
-        _scratchColor.setHex(cell.rule.color).multiplyScalar(1.35);
+        _scratchColor.setHex(cell.rule.color).multiplyScalar(1.65);
       } else if (cell.trail > 0.04) {
-        _scratchColor.setHex(cell.rule.color).multiplyScalar(0.32 + cell.trail * 0.65);
+        _scratchColor.setHex(cell.rule.color).multiplyScalar(0.42 + cell.trail * 0.75);
       } else {
-        _scratchColor.setHex(cell.rule.color).multiplyScalar(0.32);
+        _scratchColor.setHex(cell.rule.color).multiplyScalar(0.38);
       }
       ruleBeaconInstancedMesh.setColorAt(i, _scratchColor);
 
       // Update corner optical beacon post
-      const postScaleY = isActive ? 1.45 : cell.trail > 0.04 ? 0.72 : 0.35;
+      const postScaleY = isActive ? 1.85 : cell.trail > 0.04 ? 0.85 : 0.42;
       const postY = isActive
-        ? WELL_FLOOR_Y + 0.088
+        ? WELL_FLOOR_Y + 0.104
         : cell.trail > 0.04
-          ? WELL_FLOOR_Y + 0.056
-          : WELL_FLOOR_Y + 0.044;
+          ? WELL_FLOOR_Y + 0.062
+          : WELL_FLOOR_Y + 0.046;
       _scratchPos.set(
         cell.x + gridConfig.cellW * 0.42,
         postY,
         cell.z + gridConfig.cellD * 0.40
       );
-      _scratchScale.set(isActive ? 1.35 : 1.0, postScaleY, isActive ? 1.35 : 1.0);
+      _scratchScale.set(isActive ? 1.45 : 1.0, postScaleY, isActive ? 1.45 : 1.0);
       _scratchMat4.compose(_scratchPos, _scratchQuat, _scratchScale);
       ruleBeaconPostInstancedMesh.setMatrixAt(i, _scratchMat4);
       ruleBeaconPostInstancedMesh.setColorAt(i, _scratchColor);
