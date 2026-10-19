@@ -1,3 +1,7 @@
+## Narrow P8 accounting authoring exception — October19UTC
+
+The user answered **“Sol writes; Opus audits”** for the prepared receipt-bound P8 accounting update. Sol6.1HIGH may implement that update, necessary focused tests and helper hash seal; fresh independent Opus5.5HIGH review is required before executing the candidate. All other security authorship and native resource/correctness/cleanup/acceptance requirements remain unchanged. See [the exact scoped assignment](raw/assignments/sherlock-p8-accounting-sol-authoring-2026-10-19.md).
+
 ## Persistent handwritten-circuit lane — October 18
 
 Continue writing handwritten Sherlock circuits alongside the primary compiler/runtime

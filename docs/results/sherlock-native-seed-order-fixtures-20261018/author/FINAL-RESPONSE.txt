@@ -1,0 +1,286 @@
+# P8 seed-order repair: deciding clause, source edits and tests
+
+**Status.** This is source authorship only. Nothing was executed, parsed, imported or tested. I am the author, not the approver. P8 stays `guard_pass=FALSE`, `no_script_reexec=VIOLATED`, `native_outputs_accepted=false`, `elf_executed=false`. None of this is retroactive.
+
+## 1. Adoption question: the answer is (a)
+
+**Correction to my prior diagnosis.** That diagnosis said the README and the docstring "favour (b)". That reading was not grounded in an adoption clause, and I withdraw it.
+
+The deciding clauses all come from records supplied in this packet:
+
+1. **Original cached source contract** (`c532f302…`, `required_source_behavior_questions`). Bullet 1 says: *"Otherartifactseed/load/hostunit conditions must be exact and matchapprovedscope; mtime alone is not a no-exec proof."* Bullet 3 says: *"…plus preservedexisting prechecks/frozen_source/postcompileaudit/… no silent skipping/checkremoval."* The post-compile audit is part of the required route, not an optional characterization.
+
+2. **Code bound by the P8 Root admission** (`94c34086…`). Its `source_materialization` pins helper `4d34…` and guard `f1c9…`, and its scope is *"ONE changed cached-current-f compile"*. In that code:
+   - `cached_current_f` writes `F_CACHED_CURRENT_RESULT.json` only after `verify_post_compile_no_script_reexec(c, guard, seed_snapshot)` returns.
+   - On any exception it writes `TERMINAL_FAILURE.json` with `native_outputs_accepted: False` and re-raises.
+   - Guard `worker('F')` runs `output_check(...)`. Then, whenever `CACHED_TARGET_SEED.json` exists, it unconditionally calls `mod.verify_post_compile_no_script_reexec(...)`.
+   - No branch anywhere returns cached outputs without that postcheck. Your record-scope file (`9f3f87e8…`) confirms this: *"No offlinefallback/passpath is implemented in those functions."*
+
+3. **Absence of a fallback clause.** README base-F (*"F runs the backend no-run command once…"*) describes the original R5 runner's own A0–F route, which has its own consent and tier contract. It contains no clause letting the cached route degrade to base-F provenance. It also states that it is *"not a proof of absence of unobserved effects."* Per your instruction, I do not infer a grant from it.
+
+So the no-script-reexec postcheck is an **admission precondition** for a cached-F result. P8 must abstain, and the eligible next step is a source-changed seeding fix. Option (b) is not selected, and no offline classifier is proposed.
+
+## 2. What the fix changes
+
+**Root cause.** The seed replaced every file's mtime with one of two normalized tiers:
+- build scripts and markers at …010 s;
+- deps and fingerprints at …020 s.
+
+That inverts real build-dependency edges. Each build-dependency rlib ended up newer than the script binary that depends on it.
+
+**Supplied actual archive data shows the original order is correct.** In each case the preserved r3 mtimes have the dependency older than the binary:
+- `libversion_check…rlib` `…335.107394486` < generic-array script `…335.371394444`
+- `libautocfg…rlib` `…341.719393475` < num-traits script `…341.771393467`
+- The cc, cmake, dunce and fs_extra rlibs (≤ `…341.427393514`) < aws-lc-sys script `…342.061812584` < its run `invoked.timestamp` `…342.067393428`
+
+**The repair.** Each seeded copy gets back its own preserved successful-r3 mtime (the archive's `lstat` value, which Root's all-3498 join verified). This reproduces the relative order of the build that produced those bytes. Three new checks fail closed:
+- The mtime must be strictly newer than `SOURCE_EPOCH_NS`.
+- In production, it must lie inside the verified r3 range.
+- The source mtime must be unchanged after the copy, and the destination mtime must equal it.
+
+**Left unchanged.** `verify_post_compile_no_script_reexec` is unchanged and still strict. So are all hash, size, mode, partition, count, host-output, dep-info and run-unit checks, the old-ELF exclusion, and the receipt schema. `TARGET_MIN_EPOCH_NS` and `TARGET_FINGERPRINT_EPOCH_NS` stay defined, so no name is removed.
+
+## 3. Exact edits
+
+**Application rule:**
+- `text = "\n".join(lines)`; no trailing newline is added.
+- Each `old` must occur exactly once in its preimage, otherwise refuse.
+- Replace with `new` and change no other byte.
+- Edits do not overlap; apply them in the order listed.
+
+```json
+[
+ {"id":"H1","file":"cached_current_build.py","preimage_sha256":"4d34b89951261967409a6a35ddbac4b071a24157d87d3d7c0cd61ea5cae984d3","preimage_bytes":93065,
+  "old_lines":["TARGET_FINGERPRINT_EPOCH_NS = 1_760_000_020_000_000_000"],
+  "new_lines":["TARGET_FINGERPRINT_EPOCH_NS = 1_760_000_020_000_000_000","","# Verified span of successful-r3 per-file mtimes preserved in the read-only quarantine (Root all-3498 stat join).","R3_ARCHIVE_MTIME_RANGE_NS = (1_792_317_334_779_394_537, 1_792_317_392_403_385_903)"]},
+ {"id":"H2","file":"cached_current_build.py",
+  "old_lines":["def verify_and_seed_cached_target("],
+  "new_lines":["def _preserved_seed_mtime_ns(rel, src_st, guard, mtime_range):","    \"\"\"Return the preserved successful-r3 mtime of a quarantine source file; never a normalized tier.\"\"\"","    mtime_ns = src_st.st_mtime_ns","    guard.need(mtime_ns > SOURCE_EPOCH_NS, 'preserved target mtime not newer than reconstituted source epoch: ' + rel)","    if mtime_range is not None:","        guard.need(","            mtime_range[0] <= mtime_ns <= mtime_range[1],","            'preserved target mtime outside verified r3 archive range: ' + rel,","        )","    return mtime_ns","","","def verify_and_seed_cached_target("]},
+ {"id":"H3","file":"cached_current_build.py",
+  "old_lines":["        is_late_tier = (","            rel.startswith('debug/.fingerprint/')","            or rel.startswith('debug/deps/')","            or (rel.startswith('debug/') and rel.count('/') == 1)","        )","        mtime_ns = TARGET_FINGERPRINT_EPOCH_NS if is_late_tier else TARGET_MIN_EPOCH_NS","        os.utime(dst_p, ns=(mtime_ns, mtime_ns), follow_symlinks=False)"],
+  "new_lines":["        # Reapply the preserved successful-r3 mtime so dependency/output order matches the build that produced it.","        mtime_ns = _preserved_seed_mtime_ns(rel, src_st_before, guard, R3_ARCHIVE_MTIME_RANGE_NS if expected_counts is None else None)","        os.utime(dst_p, ns=(mtime_ns, mtime_ns), follow_symlinks=False)"]},
+ {"id":"H4","file":"cached_current_build.py",
+  "old_lines":["        # Confirm quarantine source file mode and inode were not mutated.","        src_st_after = src_p.lstat()","        guard.need(","            src_st_after.st_ino == src_st_before.st_ino and stat.S_IMODE(src_st_after.st_mode) == stat.S_IMODE(src_st_before.st_mode),","            'quarantine source mutated during seeding: ' + rel,","        )","","        dst_st = dst_p.lstat()"],
+  "new_lines":["        # Confirm quarantine source file mode, inode and preserved mtime were not mutated.","        src_st_after = src_p.lstat()","        guard.need(","            src_st_after.st_ino == src_st_before.st_ino","            and stat.S_IMODE(src_st_after.st_mode) == stat.S_IMODE(src_st_before.st_mode)","            and src_st_after.st_mtime_ns == src_st_before.st_mtime_ns,","            'quarantine source mutated during seeding: ' + rel,","        )","","        dst_st = dst_p.lstat()","        guard.need(dst_st.st_mtime_ns == mtime_ns, 'seeded target mtime differs from preserved r3 mtime: ' + rel)"]},
+ {"id":"T1","file":"test_cached_current_build.py","preimage_sha256":"4a79a7e46bf1bd08b1d78ac90c18edbacd5ac3526c228ec1a6d37fb86a4018ea","preimage_bytes":60978,
+  "old_lines":["    def test_workspace_member_alias_partition_and_closed_counts(self):"],
+  "new_lines":[
+"    def _legacy_two_tier_mtime_ns(self, rel):",
+"        # Replica of the removed P8 tier expression, used only to show each fixture discriminates it.",
+"        late = (",
+"            rel.startswith('debug/.fingerprint/')",
+"            or rel.startswith('debug/deps/')",
+"            or (rel.startswith('debug/') and rel.count('/') == 1)",
+"        )",
+"        return ccb.TARGET_FINGERPRINT_EPOCH_NS if late else ccb.TARGET_MIN_EPOCH_NS",
+"",
+"    def test_seed_reapplies_preserved_r3_mtimes_in_dependency_order(self):",
+"        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()",
+"        q_target = q_root / 'target'",
+"        unit = 'debug/build/serde-1111222233334444/'",
+"        rlib_rel = 'debug/deps/libserde-5555666677778888.rlib'",
+"        bin_rels = (unit + 'build_script_build-aaaa1111bbbb2222', unit + 'build-script-build')",
+"        workspace_rels = (",
+"            'debug/.fingerprint/mori-backend-3a2f695515330e5a/dep-lib-mori_backend',",
+"            'debug/deps/libmori_backend-3a2f695515330e5a.rlib',",
+"            'debug/incremental/mori_backend-1a2b3c4d5e6f7a8b/s-1234-abcd/dep-graph.bin',",
+"        )",
+"        # Finite supplied mtimes: the rlib->script edge reuses actual r3 autocfg-rlib/num-traits-script values;",
+"        # marker values follow the dirty build-script sequence (output reset to the invocation time).",
+"        supplied = {",
+"            '.rustc_info.json': 1_792_317_334_779_394_537,",
+"            'generated/bincode/ZkStdLibArchV1_Decode.rs': 1_792_317_334_800_000_000,",
+"            'debug/deps/libserde_derive-cccc3333dddd4444.so': 1_792_317_335_000_000_000,",
+"            'debug/libserde_derive-cccc3333dddd4444.so': 1_792_317_335_000_000_000,",
+"            'debug/deps/libserde-5555666677778888.d': 1_792_317_341_637_385_329,",
+"            rlib_rel: 1_792_317_341_719_393_475,",
+"            bin_rels[0]: 1_792_317_341_771_393_467,",
+"            bin_rels[1]: 1_792_317_341_771_393_467,",
+"            unit + 'invoked.timestamp': 1_792_317_341_790_000_000,",
+"            unit + 'output': 1_792_317_341_790_000_000,",
+"            unit + 'stderr': 1_792_317_341_800_000_000,",
+"            unit + 'root-output': 1_792_317_341_800_000_000,",
+"        }",
+"        for rel in workspace_rels:",
+"            supplied[rel] = 1_792_317_392_403_385_903",
+"        self.assertEqual(set(supplied), set(all_outputs_map))",
+"        for rel, t in supplied.items():",
+"            p = q_target / rel",
+"            # Read-only fixture: the owner sets explicit times without any write bit; no chmod is applied.",
+"            self.assertEqual(stat.S_IMODE(p.lstat().st_mode), 0o400)",
+"            os.utime(p, ns=(t, t), follow_symlinks=False)",
+"            self.assertEqual(stat.S_IMODE(p.lstat().st_mode), 0o400)",
+"        self.assertGreater(self._legacy_two_tier_mtime_ns(rlib_rel), self._legacy_two_tier_mtime_ns(bin_rels[0]))",
+"        saved_non_debug = copy.deepcopy(ccb.NON_DEBUG_CACHE_CANDIDATES)",
+"        ccb.NON_DEBUG_CACHE_CANDIDATES = {",
+"            '.rustc_info.json': all_outputs_map['.rustc_info.json'],",
+"            'generated/bincode/ZkStdLibArchV1_Decode.rs': all_outputs_map['generated/bincode/ZkStdLibArchV1_Decode.rs'],",
+"        }",
+"        try:",
+"            snapshot = ccb.verify_and_seed_cached_target(",
+"                c,",
+"                guard,",
+"                quarantine_root=q_root,",
+"                copy_map_file=copy_map_path,",
+"                disposition_file=disp_path,",
+"                expected_counts=expected_counts,",
+"            )",
+"            dst_target = Path(c['paths']['target'])",
+"            self.assertEqual(set(snapshot['seeded_files']), set(supplied) - set(workspace_rels))",
+"            for rel, meta in snapshot['seeded_files'].items():",
+"                self.assertEqual(meta['mtime_ns'], supplied[rel], rel)",
+"                self.assertEqual((dst_target / rel).lstat().st_mtime_ns, supplied[rel], rel)",
+"                self.assertEqual((q_target / rel).lstat().st_mtime_ns, supplied[rel], rel)",
+"                self.assertEqual(stat.S_IMODE((q_target / rel).lstat().st_mode), 0o400, rel)",
+"            seeded = {rel: (dst_target / rel).lstat().st_mtime_ns for rel in snapshot['seeded_files']}",
+"            for b in bin_rels:",
+"                self.assertLess(seeded[rlib_rel], seeded[b])",
+"                self.assertLess(seeded[b], seeded[unit + 'invoked.timestamp'])",
+"            self.assertEqual(seeded[unit + 'output'], seeded[unit + 'invoked.timestamp'])",
+"            self.assertGreaterEqual(min(seeded[unit + 'stderr'], seeded[unit + 'root-output']), seeded[unit + 'invoked.timestamp'])",
+"            run = snapshot['run_unit_snapshots']['serde-1111222233334444']",
+"            self.assertEqual(run['invoked.timestamp']['mtime_ns'], supplied[unit + 'invoked.timestamp'])",
+"",
+"            self._write(dst_target / 'debug/deps/mori_backend-9999888877776666', b'new-backend-elf', mode=0o755)",
+"            post = ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)",
+"            self.assertEqual(post['host_outputs_verified_unchanged'], 4)",
+"            self.assertEqual(post['build_script_run_units_verified_not_reexecuted'], 1)",
+"            # A byte-identical script rewrite with a newer mtime (P8 class) is still refused by the unchanged postcheck.",
+"            t_new = supplied[bin_rels[1]] + 1",
+"            os.utime(dst_target / bin_rels[1], ns=(t_new, t_new), follow_symlinks=False)",
+"            with self.assertRaises(guard.Refusal):",
+"                ccb.verify_post_compile_no_script_reexec(c, guard, snapshot)",
+"        finally:",
+"            ccb.NON_DEBUG_CACHE_CANDIDATES = saved_non_debug",
+"",
+"    def test_preserved_seed_mtime_bounds_and_actual_r3_build_dependency_edges(self):",
+"        lo, hi = ccb.R3_ARCHIVE_MTIME_RANGE_NS",
+"        self.assertEqual((lo, hi), (1_792_317_334_779_394_537, 1_792_317_392_403_385_903))",
+"        probe = self._write(self.root / 'mtime-probe' / 'f', b'x', mode=0o400)",
+"",
+"        def seed_mtime(t, mtime_range):",
+"            os.utime(probe, ns=(t, t), follow_symlinks=False)",
+"            self.assertEqual(stat.S_IMODE(probe.lstat().st_mode), 0o400)",
+"            return ccb._preserved_seed_mtime_ns('probe', probe.lstat(), guard, mtime_range)",
+"",
+"        for t in (lo, hi):",
+"            self.assertEqual(seed_mtime(t, (lo, hi)), t)",
+"        for t in (lo - 1, hi + 1):",
+"            with self.assertRaises(guard.Refusal):",
+"                seed_mtime(t, (lo, hi))",
+"            self.assertEqual(seed_mtime(t, None), t)",
+"        for t in (ccb.SOURCE_EPOCH_NS - 1, ccb.SOURCE_EPOCH_NS):",
+"            with self.assertRaises(guard.Refusal):",
+"                seed_mtime(t, None)",
+"        self.assertEqual(seed_mtime(ccb.SOURCE_EPOCH_NS + 1, None), ccb.SOURCE_EPOCH_NS + 1)",
+"",
+"        # Actual r3 archive mtimes from the all-3498 stat join: build-dependency rlib -> build-script binary.",
+"        aws = ('debug/build/aws-lc-sys-5469586605af0f08/build_script_main-5469586605af0f08', 1_792_317_342_061_812_584)",
+"        edges = (",
+"            (('debug/deps/libversion_check-371b5f2dedfc9d12.rlib', 1_792_317_335_107_394_486),",
+"             ('debug/build/generic-array-8fd0bbe89c84eca4/build_script_build-8fd0bbe89c84eca4', 1_792_317_335_371_394_444)),",
+"            (('debug/deps/libautocfg-856175fbd5b6f428.rlib', 1_792_317_341_719_393_475),",
+"             ('debug/build/num-traits-9996def55c5dad1c/build_script_build-9996def55c5dad1c', 1_792_317_341_771_393_467)),",
+"            (('debug/deps/libcc-d11016940553e9ef.rlib', 1_792_317_337_383_394_126), aws),",
+"            (('debug/deps/libcmake-02fd6461bc7a0673.rlib', 1_792_317_340_933_203_205), aws),",
+"            (('debug/deps/libdunce-9d2697c384b5541b.rlib', 1_792_317_341_311_513_634), aws),",
+"            (('debug/deps/libfs_extra-7470e21bc61d34fa.rlib', 1_792_317_341_427_393_514), aws),",
+"        )",
+"        for (dep_rel, dep_t), (bin_rel, bin_t) in edges:",
+"            self.assertEqual(seed_mtime(dep_t, (lo, hi)), dep_t)",
+"            self.assertEqual(seed_mtime(bin_t, (lo, hi)), bin_t)",
+"            self.assertLess(dep_t, bin_t, dep_rel)",
+"            self.assertGreater(self._legacy_two_tier_mtime_ns(dep_rel), self._legacy_two_tier_mtime_ns(bin_rel), dep_rel)",
+"        # aws-lc-sys-382f6f2cbe30927c/invoked.timestamp follows its compiled script binary.",
+"        self.assertLess(aws[1], 1_792_317_342_067_393_428)",
+"",
+"    def test_seed_refuses_preserved_mtime_not_newer_than_source_epoch(self):",
+"        c, q_root, copy_map_path, disp_path, expected_counts, all_outputs_map = self._make_synthetic_quarantine()",
+"        rlib_rel = 'debug/deps/libserde-5555666677778888.rlib'",
+"        q_rlib = q_root / 'target' / rlib_rel",
+"        # Read-only fixture: explicit owner utime only; mode stays 0o400.",
+"        os.utime(q_rlib, ns=(ccb.SOURCE_EPOCH_NS, ccb.SOURCE_EPOCH_NS), follow_symlinks=False)",
+"        saved_non_debug = copy.deepcopy(ccb.NON_DEBUG_CACHE_CANDIDATES)",
+"        ccb.NON_DEBUG_CACHE_CANDIDATES = {",
+"            '.rustc_info.json': all_outputs_map['.rustc_info.json'],",
+"            'generated/bincode/ZkStdLibArchV1_Decode.rs': all_outputs_map['generated/bincode/ZkStdLibArchV1_Decode.rs'],",
+"        }",
+"        try:",
+"            with self.assertRaises(guard.Refusal) as cm:",
+"                ccb.verify_and_seed_cached_target(",
+"                    c,",
+"                    guard,",
+"                    quarantine_root=q_root,",
+"                    copy_map_file=copy_map_path,",
+"                    disposition_file=disp_path,",
+"                    expected_counts=expected_counts,",
+"                )",
+"            self.assertIn('reconstituted source epoch', str(cm.exception))",
+"            self.assertIn(rlib_rel, str(cm.exception))",
+"            self.assertEqual(q_rlib.lstat().st_mtime_ns, ccb.SOURCE_EPOCH_NS)",
+"            self.assertEqual(stat.S_IMODE(q_rlib.lstat().st_mode), 0o400)",
+"            self.assertFalse((Path(c['paths']['packet']) / 'CACHED_TARGET_SEED.json').exists())",
+"        finally:",
+"            ccb.NON_DEBUG_CACHE_CANDIDATES = saved_non_debug",
+"",
+"    def test_workspace_member_alias_partition_and_closed_counts(self):"]}
+]
+```
+
+## 4. Selectors, reseal, and what the tests show
+
+**Selectors.** All are UNRUN and SDK-free. They use no subprocess, cgroup, Cargo or ELF execution.
+
+- **New, required:**
+  - `test_cached_current_build.CachedCurrentBuildSyntheticTest.test_seed_reapplies_preserved_r3_mtimes_in_dependency_order`
+  - `test_cached_current_build.CachedCurrentBuildSyntheticTest.test_preserved_seed_mtime_bounds_and_actual_r3_build_dependency_edges`
+  - `test_cached_current_build.CachedCurrentBuildSyntheticTest.test_seed_refuses_preserved_mtime_not_newer_than_source_epoch`
+- **Impacted existing method, one only, Root's choice:**
+  - `…CachedCurrentBuildSyntheticTest.test_target_partition_excludes_mori_workspace_and_preserves_quarantine_modes`
+  - Its bytes are unchanged, but it calls the changed function. It should still pass: its `TARGET_MIN_EPOCH_NS + 9999` perturbation still differs from the preserved mtime.
+
+**How the tests discriminate the old behaviour.**
+- The first test's `seeded[rlib] < seeded[bin]` assertion fails under the old code, which would have given 020 > 010.
+- The legacy replica asserts that inversion explicitly, so the fixture is shown to discriminate.
+- The unchanged postcheck is shown to still refuse a byte-identical, newer-mtime rewrite of a script binary.
+
+**Mechanical reseal.**
+1. Compute the SHA-256 of the materialized helper.
+2. In `bounded_sdk_compile.py`, replace the sole occurrence of `4d34b89951261967409a6a35ddbac4b071a24157d87d3d7c0cd61ea5cae984d3` (the `CACHED_CURRENT_BUILD_SHA256` literal) with that value. Refuse if the count is not 1, and change no other byte.
+
+The guard SHA therefore leaves `f1c9…`. Every P8 admission, config, receipt and review pin bound to `f1c9` or `4d34` is non-transferable.
+
+## 5. Honest limits and remaining prerequisites
+
+**Per-file mtime binding.** The helper takes each mtime from the archive `lstat`. It enforces the r3 range, the source-epoch bound and post-copy equality. Exact per-file equality with the original R3 inventory rests on Root's join (`719f0fe7…`). The helper does not re-derive it from the NUL stat table, because parsing that table would need an API I was not shown.
+
+**Sufficiency against Cargo is [C]-qualified.** The fix assumes three things:
+- Cargo's freshness is mtime ordering between dependency outputs and unit outputs, plus source mtimes against outputs.
+- The final state of the successful R3 build is Cargo-fresh.
+- `reconstitute_source_home` actually stamps sources at `SOURCE_EPOCH_NS`. I did not see its body; a reviewer must confirm this.
+
+Other uncovered cases:
+- `rerun-if-changed` paths outside source_home.
+- Environment or rustc differences.
+
+P8's 26 fresh run units and 28 fresh scripts support the mechanism, but do not prove the fix. Only a future fresh run, judged by the unchanged strict postcheck, can show it suffices. If it does not, the postcheck fails closed again.
+
+**Unseen code.**
+- I could not see the full 93 KB helper or the 61 KB test file. Reviewers must check whether any other code or test asserts the tier values. Any such hit must be reported, not silently edited.
+- The existing and new fixture tests assume the host clock is later than October 2025, so that fixture-written mtimes exceed `SOURCE_EPOCH_NS`.
+
+**Accounting prerequisite.** This is not authored here, but it blocks any future operation. `HISTORICAL_POST_R3_DEBITS` is still at its post-P7 values. Before any future cached-F launch, a separate owner edit must add the once-P8 accounting. The values are for Root to verify and select:
+
+| Item | Value |
+|---|---|
+| retired P8 E / S / P | 198,086,463 / 12,326,620 / 185,759,842 µs |
+| Totals E / S / P | 835,480,719 / 207,478,351 / 628,002,365 µs |
+| Supervisor ceil | 208 s (remaining 10,592) |
+| Whole remaining | 6,159 s |
+| P8 outer wall ceil | 133 s |
+| Cumulative `f_stderr_bytes` | Include P8 `F.stderr` (10,829 B). Root must confirm that 10,406 is the cumulative-to-P7 basis. |
+| F wall remaining | Root's selection, either 2,387 or the conservative 2,254. It is not measured. |
+
+I also did not see the body of `enforce_post_r3_historical_debits`. There is no reset and no refund.
+
+**Still required before any future run.** Root materialization, fresh independent security and normal reviews of these exact bytes, the test run, a new config and admission, and a genuinely source-changed fresh root. No P8 rerun and no unmodified Cargo retry are proposed.

@@ -1,0 +1,62 @@
+def verify_post_compile_no_script_reexec(c, guard, seed_snapshot=None):
+    """Verify after Phase F that no third-party build script or proc-macro host output was re-executed or rewritten."""
+    if seed_snapshot is None:
+        seed_snapshot = guard.jload(Path(c['paths']['packet']) / 'CACHED_TARGET_SEED.json')
+    dst_target = Path(c['paths']['target'])
+
+    # 1. Verify all 90 host_outputs kept their exact pre-compile SHA-256 and mtime_ns.
+    for hrel, exp_sha in seed_snapshot['host_outputs_seeded'].items():
+        p = dst_target / hrel
+        guard.regular(p)
+        guard.need(guard.digest(p) == exp_sha, 'third-party host output was rewritten during cached Phase F: ' + hrel)
+        pre_meta = seed_snapshot['seeded_files'][hrel]
+        st = p.lstat()
+        guard.need(st.st_mtime_ns == pre_meta['mtime_ns'], 'third-party host output mtime changed during cached Phase F: ' + hrel)
+
+    # 2. Verify all 34 build-script run-unit marker files kept their exact pre-compile SHA-256, mtime_ns, and inode,
+    # and no new debug/build/<unit> directories were created.
+    current_build_root = dst_target / 'debug' / 'build'
+    if current_build_root.is_dir():
+        actual_build_dirs = {d.name for d in current_build_root.iterdir() if d.is_dir()}
+        expected_build_dirs = {
+            rel.split('/')[2]
+            for rel in seed_snapshot['seeded_files']
+            if rel.startswith('debug/build/') and len(rel.split('/')) >= 4
+        }
+        guard.need(actual_build_dirs == expected_build_dirs, 'unexpected new build-script directories created during cached Phase F')
+
+    for unit_dir, markers in seed_snapshot['run_unit_snapshots'].items():
+        for mname, pre in markers.items():
+            p = dst_target / pre['relative']
+            guard.regular(p)
+            st = p.lstat()
+            guard.need(guard.digest(p) == pre['sha256'], 'third-party build-script marker content changed: ' + pre['relative'])
+            guard.need(
+                st.st_mtime_ns == pre['mtime_ns'] and st.st_ino == pre['ino'],
+                'third-party build-script was re-executed (timestamp/inode changed): ' + pre['relative'],
+            )
+
+    # 3. Verify that old excluded backend binary 3a2f695515330e5a is absent or distinct and a fresh mori_backend test binary exists.
+    deps_dir = dst_target / 'debug' / 'deps'
+    fresh_backend_bins = []
+    if deps_dir.is_dir():
+        for p in sorted(deps_dir.iterdir()):
+            if p.is_file() and not p.is_symlink() and p.name.startswith('mori_backend-') and '.' not in p.name:
+                rel = 'debug/deps/' + p.name
+                sha = guard.digest(p)
+                guard.need(
+                    not (rel == OLD_BACKEND_ELF_REL and sha == OLD_BACKEND_ELF_SHA256),
+                    'cached Phase F produced stale un-rebuilt old backend ELF 3a2f695515330e5a',
+                )
+                fresh_backend_bins.append({'relative': rel, 'sha256': sha, 'bytes': p.stat().st_size})
+    guard.need(len(fresh_backend_bins) >= 1, 'cached Phase F did not produce a fresh mori_backend test executable')
+
+    report = {
+        'host_outputs_verified_unchanged': len(seed_snapshot['host_outputs_seeded']),
+        'build_script_run_units_verified_not_reexecuted': len(seed_snapshot['run_unit_snapshots']),
+        'fresh_mori_backend_executables': fresh_backend_bins,
+    }
+    pkt_check = Path(c['paths']['packet']) / 'CACHED_POST_COMPILE_CHECK.json'
+    if not pkt_check.exists():
+        guard.receipt(c, 'CACHED_POST_COMPILE_CHECK.json', report, 'F')
+    return report
