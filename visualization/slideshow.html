@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quinelings 2.0 — Exotic Mathematical Lifeforms, Chimeras &amp; Live Execution Slideshow</title>
+    <style>
+      :root {
+        --bg: #050811;
+        --panel: rgba(11, 17, 31, 0.88);
+        --panel-border: rgba(71, 118, 172, 0.28);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --cyan: #38bdf8;
+        --violet: #a78bfa;
+        --emerald: #34d399;
+        --gold: #facc15;
+        --rose: #f43f5e;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at 50% 25%, #0e192d 0%, #050811 72%);
+        color: var(--text);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 22px;
+        background: rgba(7, 11, 21, 0.92);
+        border-bottom: 1px solid var(--panel-border);
+        backdrop-filter: blur(10px);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-badge {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(167, 139, 250, 0.22));
+        border: 1px solid rgba(56, 189, 248, 0.48);
+        color: #bae6fd;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        padding: 4px 10px;
+        border-radius: 999px;
+        text-transform: uppercase;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        background: rgba(18, 28, 48, 0.9);
+        color: #e2e8f0;
+        border: 1px solid rgba(100, 148, 204, 0.32);
+        border-radius: 8px;
+        padding: 7px 13px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.16s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn:hover {
+        background: rgba(30, 48, 78, 0.95);
+        border-color: var(--cyan);
+        color: #fff;
+      }
+      .btn.active {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.28), rgba(99, 102, 241, 0.32));
+        border-color: var(--cyan);
+        color: #fff;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+      }
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 410px;
+        gap: 16px;
+        padding: 16px 22px;
+        flex: 1;
+        max-width: 1780px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      @media (max-width: 1120px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .stage-card {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+        min-height: 620px;
+      }
+      .stage-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 11px 16px;
+        border-bottom: 1px solid rgba(71, 118, 172, 0.2);
+        background: rgba(8, 13, 25, 0.78);
+      }
+      .slide-pill-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .slide-counter {
+        background: rgba(30, 58, 95, 0.85);
+        border: 1px solid rgba(96, 165, 250, 0.55);
+        color: #bae6fd;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .slide-mech-badge {
+        background: rgba(49, 46, 129, 0.78);
+        border: 1px solid rgba(167, 139, 250, 0.55);
+        color: #ddd6fe;
+        padding: 4px 11px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .viewport-wrap {
+        position: relative;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 50%, #0d182c 0%, #050811 78%);
+        min-height: 510px;
+        overflow: hidden;
+      }
+      #liveCanvas {
+        width: 100%;
+        height: 100%;
+        min-height: 510px;
+        display: block;
+        cursor: grab;
+        touch-action: none;
+      }
+      #liveCanvas:active {
+        cursor: grabbing;
+      }
+      #plateImg {
+        max-width: 100%;
+        max-height: 660px;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: none;
+      }
+      .canvas-hud {
+        position: absolute;
+        bottom: 14px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        pointer-events: none;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .hud-chip {
+        background: rgba(8, 13, 26, 0.82);
+        border: 1px solid rgba(71, 118, 172, 0.35);
+        padding: 5px 11px;
+        border-radius: 8px;
+        font-size: 11.5px;
+        color: #cbd5e1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .info-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        padding: 16px 18px;
+      }
+      .card h2 {
+        margin: 0 0 6px 0;
+        font-size: 20px;
+        line-height: 1.28;
+        color: #f8fafc;
+      }
+      .card p.subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .section-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--cyan);
+        margin-bottom: 6px;
+      }
+      .formula-box {
+        background: rgba(6, 10, 20, 0.9);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 12.2px;
+        color: #e2e8f0;
+        line-height: 1.5;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .proof-box {
+        background: rgba(16, 42, 37, 0.35);
+        border: 1px solid rgba(52, 211, 153, 0.35);
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-size: 12.5px;
+        color: #d1fae5;
+        line-height: 1.45;
+      }
+      .control-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .control-row label {
+        font-size: 12.5px;
+        color: #cbd5e1;
+        font-weight: 500;
+      }
+      .outcome-group {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .outcome-btn {
+        padding: 6px 8px;
+        font-size: 11.5px;
+        font-weight: 600;
+        border-radius: 6px;
+        border: 1px solid rgba(100, 148, 204, 0.3);
+        background: rgba(15, 23, 42, 0.85);
+        color: #cbd5e1;
+        cursor: pointer;
+      }
+      .outcome-btn.active[data-outcome="Running"] {
+        background: rgba(56, 189, 248, 0.25);
+        border-color: var(--cyan);
+        color: #fff;
+      }
+      .outcome-btn.active[data-outcome="Done"] {
+        background: rgba(52, 211, 153, 0.25);
+        border-color: var(--emerald);
+        color: #fff;
+      }
+      .outcome-btn.active[data-outcome="Rejected"] {
+        background: rgba(244, 63, 94, 0.28);
+        border-color: var(--rose);
+        color: #fff;
+      }
+      .outcome-btn.active[data-outcome="Exhausted"] {
+        background: rgba(250, 204, 21, 0.22);
+        border-color: var(--gold);
+        color: #fff;
+      }
+      .thumb-strip {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(110px, 1fr));
+        gap: 8px;
+        padding: 0 22px 18px 22px;
+        max-width: 1780px;
+        width: 100%;
+        margin: 0 auto;
+        overflow-x: auto;
+      }
+      .thumb-item {
+        background: rgba(11, 17, 31, 0.85);
+        border: 1px solid rgba(71, 118, 172, 0.25);
+        border-radius: 10px;
+        padding: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .thumb-item:hover {
+        border-color: rgba(56, 189, 248, 0.65);
+        transform: translateY(-2px);
+      }
+      .thumb-item.active {
+        border-color: var(--cyan);
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+        background: rgba(20, 35, 62, 0.92);
+      }
+      .thumb-item img {
+        width: 100%;
+        height: 62px;
+        object-fit: cover;
+        border-radius: 6px;
+      }
+      .thumb-label {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #cbd5e1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-badge">Quinelings 2.0 · 20-Agent Council</span>
+        <h1>Exotic Mathematical Lifeforms, Chimeras &amp; Live Program Execution</h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="prevBtn" title="Previous Slide (Left Arrow)">← Prev</button>
+        <button class="btn" id="nextBtn" title="Next Slide (Right Arrow)">Next →</button>
+        <button class="btn active" id="modeLiveBtn">⚡ Live 60fps Math Kernel</button>
+        <button class="btn" id="modePlateBtn">🖼️ HDR Studio Plate</button>
+        <button class="btn" id="autoSlideBtn">▶ Auto-Advance (6s)</button>
+        <a class="btn" href="./index.html">🏛️ Back to 3D Sherlock CPU</a>
+      </div>
+    </header>
+
+    <div class="main-grid">
+      <div class="stage-card">
+        <div class="stage-toolbar">
+          <div class="slide-pill-group">
+            <span class="slide-counter" id="slideCounter">SLIDE 01 / 12</span>
+            <span class="slide-mech-badge" id="slideBadge">TOROIDAL-WEAVE · HOPF FIBRATION</span>
+          </div>
+          <div class="slide-pill-group">
+            <button class="btn active" id="toggleLoopBtn" title="Toggle Strange-Loop Ouroboros Quine Filament">
+              🐍 Ouroboros Quine Loop: ON
+            </button>
+            <button class="btn active" id="toggleCausticsBtn" title="Toggle Whitney A2/A3 Caustic Ridges">
+              ✨ Whitney Caustics: ON
+            </button>
+            <button class="btn" id="resetTiltBtn" title="Reset 3D View Angle">🎯 Reset Tilt</button>
+          </div>
+        </div>
+
+        <div class="viewport-wrap">
+          <canvas id="liveCanvas" width="1280" height="780"></canvas>
+          <img id="plateImg" src="./slides/slide_01_toroidal_hopf.png" alt="Slide Studio Portrait" />
+          <div class="canvas-hud">
+            <div class="hud-chip">
+              <span><strong>Ouroboros Stages:</strong></span>
+              <span><i class="dot" style="background:#38bdf8"></i> quote</span>
+              <span><i class="dot" style="background:#facc15"></i> run</span>
+              <span><i class="dot" style="background:#e879f9"></i> apply</span>
+            </div>
+            <div class="hud-chip" id="telemetryChip">
+              Drag to tilt in 3D · 9,216 pts · 60 FPS
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <div class="card">
+          <h2 id="slideTitle">Stereographic S³ → ℝ³ Hopf Fibration &amp; Linked Villarceau Circles</h2>
+          <p class="subtitle" id="slideSubtitle">
+            Every pair of Hopf fibers on the Clifford torus in S³ projects to linked Villarceau circles with linking number Lk = ±1.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="section-label">Exotic Mathematical Formulation</div>
+          <div class="formula-box" id="slideFormula"></div>
+          <div class="section-label" style="margin-top: 12px; color: var(--emerald)">
+            Quint &amp; Lean 4 Machine-Checked Verification
+          </div>
+          <div class="proof-box" id="slideProof"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-label">Live Program Execution Coupling (WovenBody.stepResponse)</div>
+          <div style="font-size: 12px; color: var(--muted); margin-bottom: 6px;">
+            Modulate the organism in real time with CEK execution outcomes, active operation territories, and recursion depth:
+          </div>
+          <div class="outcome-group" id="outcomeGroup">
+            <button class="outcome-btn active" data-outcome="Running">Running</button>
+            <button class="outcome-btn" data-outcome="Done">Done (Lock)</button>
+            <button class="outcome-btn" data-outcome="Rejected">Rejected (Fault)</button>
+            <button class="outcome-btn" data-outcome="Exhausted">Exhausted</button>
+          </div>
+
+          <div class="control-row" style="margin-top: 12px;">
+            <label for="activeNodeRange">Active Operation Owner (<span id="activeNodeVal">n1</span>)</label>
+            <input type="range" id="activeNodeRange" min="0" max="4" step="1" value="1" style="width: 150px;" />
+          </div>
+          <div class="control-row">
+            <label for="depthRange">Call / Recursion Depth (<span id="depthVal">3</span>)</label>
+            <input type="range" id="depthRange" min="0" max="8" step="1" value="3" style="width: 150px;" />
+          </div>
+          <div class="control-row">
+            <label for="speedRange">Phase Velocity (<span id="speedVal">1.0×</span>)</label>
+            <input type="range" id="speedRange" min="0" max="2.5" step="0.1" value="1.0" style="width: 150px;" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="thumb-strip" id="thumbStrip"></div>
+
+    <script type="module">
+      import { WovenBody, LifeformFamilies } from './src/engine/quinelingsSdk.js';
+
+      const graphs = {
+        tideglass: {
+          nodes: [
+            { id: 'w0', op: 'literal', inputs: [], params: { value: [32, 35, 41, 52, 70] } },
+            { id: 'w1', op: 'literal', inputs: [], params: { value: [3, 2, 3, 4, 2] } },
+            { id: 'w2', op: 'product', inputs: ['w0', 'w1'] },
+            { id: 'w3', op: 'sum', inputs: ['w2'] },
+            { id: 'w4', op: 'sum', inputs: ['w1'] },
+            { id: 'w5', op: 'divide', inputs: ['w3', 'w4'] },
+            { id: 'w6', op: 'report', inputs: ['w5'] },
+          ],
+        },
+        threadwing: {
+          nodes: [
+            { id: 'r0', op: 'literal', inputs: [] },
+            { id: 'r1', op: 'guard', inputs: ['r0'] },
+            { id: 'r2', op: 'choose', inputs: ['r1'] },
+            { id: 'r3', op: 'consensus', inputs: ['r1', 'r2'] },
+            { id: 'r4', op: 'action', inputs: ['r1', 'r3'] },
+          ],
+        },
+        fork: {
+          nodes: [
+            { id: 'a', op: 'literal', inputs: [] },
+            { id: 'b', op: 'sum', inputs: ['a'] },
+            { id: 'c', op: 'sum', inputs: ['a'] },
+            { id: 'd', op: 'sum', inputs: ['b', 'c'] },
+          ],
+        },
+        linear: {
+          nodes: [
+            { id: 'a', op: 'literal', inputs: [] },
+            { id: 'b', op: 'sum', inputs: ['a'] },
+            { id: 'c', op: 'report', inputs: ['b'] },
+          ],
+        },
+        terminal: {
+          nodes: [
+            { id: 'g', op: 'literal', inputs: [] },
+            { id: 'a', op: 'literal', inputs: [] },
+            { id: 'effect', op: 'action', inputs: ['g', 'a'] },
+          ],
+        },
+        braid: {
+          nodes: [
+            { id: 'n0', op: 'literal', inputs: [] },
+            { id: 'n1', op: 'sort', inputs: ['n0'] },
+            { id: 'n2', op: 'dedupe', inputs: ['n1'] },
+            { id: 'n3', op: 'select', inputs: ['n2'] },
+            { id: 'n4', op: 'report', inputs: ['n3'] },
+          ],
+        },
+      };
+
+      const toroidalRec = WovenBody.author(graphs.terminal, 42);
+      const toroidalBody = WovenBody.compile(toroidalRec, graphs.terminal);
+
+      const baseRoute = WovenBody.author(graphs.threadwing, 42);
+      const lorenzRec = {
+        ...baseRoute,
+        mechanism: 'lorenz-flow',
+        dynamics: {
+          system: 'lorenz',
+          method: 'rk4',
+          sigma: 10,
+          rho: 28,
+          beta: 8 / 3,
+          initial: [0.330938, 0.226438, 0.215456],
+          dt: 0.006,
+          burn: 512,
+          steps: 3072,
+          window: 384,
+        },
+      };
+      delete lorenzRec.embedding;
+      const lorenzBody = WovenBody.compile(lorenzRec, graphs.threadwing);
+      const cliffordBody = WovenBody.compile(baseRoute, graphs.threadwing);
+      const juliaBody = WovenBody.compile(WovenBody.author(graphs.fork, 42), graphs.fork);
+
+      const affineRec = {
+        ...WovenBody.author(graphs.fork, 42),
+        mechanism: 'recursive-affine',
+        geometry: {
+          model: 'contractive-branch-charts',
+          chart: 'rolled-scroll',
+          rollTurns: 3,
+          depth: 5,
+          root: [0, 0.62],
+          length: 0.64,
+          width: 0.2,
+          angle: -Math.PI / 2,
+          motion: 0.2,
+          transforms: [
+            { scale: 0.55, angle: -0.7, attach: 0.8 },
+            { scale: 0.56, angle: 0.7, attach: 0.9 },
+          ],
+        },
+      };
+      const affineBody = WovenBody.compile(affineRec, graphs.fork);
+      const mantleBody = WovenBody.compile(WovenBody.author(graphs.tideglass, 42), graphs.tideglass);
+      const braidBody = WovenBody.compile(WovenBody.author(graphs.braid, 42), graphs.braid);
+      const phylloBody = WovenBody.compile(WovenBody.author(graphs.linear, 42), graphs.linear);
+
+      const bodies = {
+        toroidal: toroidalBody,
+        lorenz: lorenzBody,
+        clifford: cliffordBody,
+        julia: juliaBody,
+        affine: affineBody,
+        mantle: mantleBody,
+        braid: braidBody,
+        phyllotaxis: phylloBody,
+      };
+
+      const SLIDES = [
+        {
+          id: 'toroidal',
+          plate: './slides/slide_01_toroidal_hopf.png',
+          badge: 'TOROIDAL-WEAVE · HOPF FIBRATION',
+          title: 'Stereographic S³ → ℝ³ Hopf Fibration & Linked Villarceau Circles',
+          subtitle: 'Every pair of Hopf fibers on the Clifford torus in S³ projects to linked Villarceau circles with linking number Lk = ±1.',
+          formula: 'ψ(α,θ,φ) = (cos α cos θ, cos α sin θ, sin α cos φ, sin α sin φ) ∈ S³\nπ(x) = (x₁, x₂, x₃) / (1 - x₄)',
+          proof: 'Lean 4: hopf_s3_norm_sq_one (∑ xᵢ² = 1) & stereographic_denom_pos · Quint: allMechanismsValidTest',
+          palette: [[56, 189, 248], [168, 85, 247], [244, 114, 182], [45, 212, 191], [250, 204, 21]],
+        },
+        {
+          id: 'lorenz',
+          plate: './slides/slide_02_lorenz_bishop.png',
+          badge: 'LORENZ-FLOW · BISHOP SO(3) TORSION',
+          title: 'Synchronized Lorenz–Thomas Labyrinth Attractor & Bishop Parallel Transport',
+          subtitle: 'Replaces fragile Frenet normals with reflection-propagated SO(3) Bishop frames + Thomas cyclic labyrinth coupling.',
+          formula: 'dx/dt = σ(y-x) + ε sin(y),  dy/dt = x(ρ-z) - y + ε sin(z),  dz/dt = xy - βz + ε sin(x)\nTᵢ · Uᵢ = 0,  Tᵢ · Vᵢ = 0,  Uᵢ · Vᵢ = 0',
+          proof: 'Zero Gimbal-flip curvature singularities · Smooth geodesic torsion twist along RK4 strange attractor ribbon',
+          palette: [[251, 146, 60], [56, 189, 248], [244, 63, 94], [192, 132, 252], [250, 204, 21]],
+        },
+        {
+          id: 'clifford',
+          plate: './slides/slide_03_clifford_biharmonic.png',
+          badge: 'CLIFFORD-FLOW · JACOBIAN VORTICITY',
+          title: 'Clifford Strange Attractor with Biharmonic Vorticity-Torsion Sheet Lift',
+          subtitle: 'Lifts flat 2D Clifford map steps into 3D via local Jacobian determinant compression det(DF) and rotational curl ω.',
+          formula: 'xₙ₊₁ = sin(a yₙ) + c cos(a xₙ),  yₙ₊₁ = sin(b xₙ) + d cos(b yₙ)\nz = 0.24 sin(2πu) + 0.11 tanh(ω) + 0.08 / (1 + |det DF|)',
+          proof: 'Lean 4: clifford_step_bounded (|sin(ay) + c cos(ax)| ≤ 1 + |c|) · Whitney A2/A3 caustic contour extraction',
+          palette: [[52, 211, 153], [56, 189, 248], [167, 139, 250], [244, 114, 182], [251, 191, 36]],
+        },
+        {
+          id: 'julia',
+          plate: './slides/slide_04_julia_holomorphic.png',
+          badge: 'RECURSIVE-JULIA · HOLOMORPHIC RELIEF',
+          title: '3D Quaternion / Bicomplex Douady–Hubbard Potential & Milnor Distance',
+          subtitle: 'Encodes continuous escape potential G_c(z) and Milnor distance estimator d(z) into 3D surface elevation and equipotential crests.',
+          formula: 'G_c(z) = 2⁻ⁿ log|zₙ|,  d(z) = |zₙ|·log|zₙ| / |z\'ₙ|\nz_relief = 0.22 exp(-3.2 G_c(z)) cos(arg zₙ - φ)',
+          proof: 'Smooth C¹ holomorphic relief across filled Julia basin & escaping exterior · Marching-squares equipotential caustics',
+          palette: [[192, 132, 252], [56, 189, 248], [244, 114, 182], [45, 212, 191], [250, 204, 21]],
+        },
+        {
+          id: 'affine',
+          plate: './slides/slide_05_affine_catastrophe.png',
+          badge: 'RECURSIVE-AFFINE · WHITNEY CAUSTICS',
+          title: 'Contractive Recursive Affine IFS with Whitney A₂ Fold & A₃ Cusp Caustics',
+          subtitle: 'Tracks projected Jacobian determinant det(J) and transverse gradient ∂_v det(J) to illuminate fold and cusp singularities.',
+          formula: 'x_{d+1} = R(θ_d)(s_d x_d) + t_d,  s_d ∈ [0.35, 0.67]\nI_caustic = (1 + |det J| / 0.08 + (∂_v det J / 0.18)²)^(-1/2)',
+          proof: 'Lean 4: contractive_scale_strict_decay (s^(d+1) < s^d) & ifs_reach_bounded (∑ L sᵏ ≤ (100/33)L)',
+          palette: [[74, 222, 128], [56, 189, 248], [250, 204, 21], [244, 114, 182], [167, 139, 250]],
+        },
+        {
+          id: 'mantle',
+          plate: './slides/slide_06_mantle_holonomy.png',
+          badge: 'LOGARITHMIC-MANTLE · STRANGE-LOOP HOLONOMY',
+          title: 'Bernoulli Golden-Spiral Shell with Hofstadter π-Holonomy Twist',
+          subtitle: 'Couples golden-ratio quasi-periodic phase Φ⁻¹ with a Möbius half-turn holonomy twist along the strand cycle.',
+          formula: 'r(u) = r₀ exp(b u),  Φ⁻¹ = (√5 - 1)/2\nθ_holonomy(u, φ) = π u + 2π Φ⁻¹ s + 0.35 sin(2π u - φ)',
+          proof: 'Lean 4: territory_width_pos & territory_width_sum = 1 · Continuous non-orientable Möbius phase transport',
+          palette: [[251, 191, 36], [56, 189, 248], [244, 63, 94], [45, 212, 191], [168, 85, 247]],
+        },
+        {
+          id: 'braid',
+          plate: './slides/slide_07_braid_ouroboros.png',
+          badge: 'PLEATED-BRAID · OUROBOROS QUINE FILAMENT',
+          title: 'Artin Braid Group B₃ Interlacing & Strange-Loop Quine Feedback Arc',
+          subtitle: 'Visualizes the self-reproducing constructor quine cycle (quote → run → apply) with 3 traveling KdV sech² solitons.',
+          formula: 'γ_loop(τ) = (1-τ)³ P_out + 3(1-τ)²τ C₁ + 3(1-τ)τ² C₂ + τ³ P_in\nA_soliton(τ,φ) = ∑ sech²(9 wrap(τ - φ/2π - m/3))',
+          proof: 'Lean 4: strange_loop_period_closure & soliton_pulse_bounded · Exact quine emission identity preserved',
+          palette: [[56, 189, 248], [244, 114, 182], [45, 212, 191], [250, 204, 21], [167, 139, 250]],
+        },
+        {
+          id: 'phyllotaxis',
+          plate: './slides/slide_08_phyllotaxis_soliton.png',
+          badge: 'PHYLLOTAXIS-FAN · VOGEL PARASTICHY',
+          title: 'Golden-Angle Vogel Phyllotaxis Whorls with Active Territory Soliton Flare',
+          subtitle: 'Fibonacci parastichy spirals (13, 21) modulated by a localized Gaussian execution soliton on the active operation node.',
+          formula: 'θₙ = 2π Φ⁻² n,  rₙ = c √n\nE_exec(u, t) = 1 + g_active exp(-(u - u_c)² / (2σ_u²)) · (0.5 + 0.5 sin(3φ))',
+          proof: 'Zero-allocation typed-array reuse · Deterministic ownerAt(x, y) spatial picking across all parastichy whorls',
+          palette: [[163, 230, 53], [56, 189, 248], [244, 114, 182], [250, 204, 21], [45, 212, 191]],
+        },
+        {
+          id: 'chimera_compose',
+          chimera: { parentA: 'lorenz', parentB: 'toroidal', mode: 'compose', blend: 0.48, coupling: 0.28 },
+          plate: './slides/slide_09_chimera_compose.png',
+          badge: 'CHIMERA · COMPOSE (CAUSAL SEAM GRAFT)',
+          title: 'Causal Seam Graft: Lorenz Strange Attractor × Hopf Toroidal Weave',
+          subtitle: 'Donor territories (u < u_seam) inhabit Lorenz–Thomas flow and transition across a C² quintic geodesic bridge into Hopf torus fibers.',
+          formula: 'S₂(τ) = 6τ⁵ - 15τ⁴ + 10τ³\nP(u,v) = (1 - S₂(τ)) P_Lorenz(u,v) + S₂(τ) P_Hopf(u,v) + 4λ(1-λ) H_bridge(u,v)',
+          proof: 'Lean 4: quinticBlend_deriv_zero/one & quinticBlend_second_deriv_zero/one (C² zero-jerk seam) · Quint: composeTest',
+          palette: [[251, 146, 60], [56, 189, 248], [244, 63, 94], [45, 212, 191], [168, 85, 247], [250, 204, 21]],
+        },
+        {
+          id: 'chimera_mate',
+          chimera: { parentA: 'julia', parentB: 'clifford', mode: 'mate', blend: 0.48, coupling: 0.28 },
+          plate: './slides/slide_10_chimera_mate.png',
+          badge: 'CHIMERA · MATE (HOMOLOGOUS CROSSOVER)',
+          title: 'Alternating Homologous Territory Crossover: Recursive Julia × Clifford Flow',
+          subtitle: 'Even operation territories inherit Douady–Hubbard holomorphic Julia relief; odd territories inherit Clifford vorticity sheets.',
+          formula: 'λ_mate(u) = S₂((u - u_k)/w_bridge) alternating by homologous node parity k mod 2\nP = (1 - λ) P_Julia + λ P_Clifford',
+          proof: 'Lean 4: chimeric_convex_enclosure (P ∈ [-R, R]³) · Quint: mateTest & validChimeraSeam invariant',
+          palette: [[192, 132, 252], [52, 211, 153], [244, 114, 182], [56, 189, 248], [250, 204, 21]],
+        },
+        {
+          id: 'chimera_symbiote',
+          chimera: { parentA: 'affine', parentB: 'braid', mode: 'symbiote', blend: 0.48, coupling: 0.28 },
+          plate: './slides/slide_11_chimera_symbiote.png',
+          badge: 'CHIMERA · SYMBIOTE (ATTRACTOR CROSS-MODULATION)',
+          title: 'Symbiogenetic Co-habitation: Recursive Affine IFS ⇄ Pleated Braid',
+          subtitle: "Parent A's contractive IFS invariant I_A(u,φ) modulates Parent B's braid phase while Parent B's torsion modulates Parent A.",
+          formula: 'φ_A(u) = φ + κ I_B(u, φ),  φ_B(u) = φ - κ I_A(u, φ),  κ = 0.28',
+          proof: 'Quint: symbioteTest (9/9 tests pass, 250 traces × 40 steps, 0 violations)',
+          palette: [[74, 222, 128], [56, 189, 248], [244, 114, 182], [250, 204, 21], [167, 139, 250]],
+        },
+        {
+          id: 'exec_comparison',
+          isComparison: true,
+          plate: './slides/slide_12_execution_response.png',
+          badge: 'PROGRAM EXECUTION RESPONSE',
+          title: 'Live Program Execution Coupling: Running vs. Done vs. Rejected',
+          subtitle: 'WovenBody.stepResponse & WovenBody.frame(body, phase, { execution }) dynamically modulate geometry from live CEK / task state.',
+          formula: 'g_i = 1 + (0.48 + 0.22 tanh(d/6)) exp(-(u-u_i)²/2σ²) + δ_Done(0.22) - δ_Fault(0.18 sin(17φ))\nΔz_i = 0.085 g_i sin(φ + 2πu_i)',
+          proof: 'Quint: executionLifecycleTest, faultLifecycleTest, exhaustedLifecycleTest & strangeLoopResonanceTest',
+          palette: [[56, 189, 248], [251, 146, 60], [52, 211, 153], [244, 63, 94], [250, 204, 21]],
+        },
+      ];
+
+      let currentSlideIdx = 0;
+      let viewMode = 'live'; // 'live' | 'plate'
+      let showLoop = true;
+      let showCaustics = true;
+      let execOutcome = 'Running';
+      let activeOwner = 1;
+      let recursionDepth = 3;
+      let speedMult = 1.0;
+      let phase = 0.85;
+      let tiltX = 0.18;
+      let tiltY = -0.22;
+      let isDragging = false;
+      let dragPrevX = 0;
+      let dragPrevY = 0;
+      let autoAdvanceTimer = null;
+
+      const canvas = document.getElementById('liveCanvas');
+      const ctx = canvas.getContext('2d');
+      const plateImg = document.getElementById('plateImg');
+      const thumbStrip = document.getElementById('thumbStrip');
+
+      SLIDES.forEach((s, idx) => {
+        const div = document.createElement('div');
+        div.className = 'thumb-item' + (idx === 0 ? ' active' : '');
+        div.innerHTML = `<img src="${s.plate}" alt="${s.badge}" /><div class="thumb-label">${String(idx + 1).padStart(2, '0')} · ${s.badge.split('·')[0].trim()}</div>`;
+        div.onclick = () => selectSlide(idx);
+        thumbStrip.appendChild(div);
+      });
+
+      function selectSlide(idx) {
+        currentSlideIdx = (idx + SLIDES.length) % SLIDES.length;
+        const s = SLIDES[currentSlideIdx];
+        document.getElementById('slideCounter').textContent = `SLIDE ${String(currentSlideIdx + 1).padStart(2, '0')} / ${SLIDES.length}`;
+        document.getElementById('slideBadge').textContent = s.badge;
+        document.getElementById('slideTitle').textContent = s.title;
+        document.getElementById('slideSubtitle').textContent = s.subtitle;
+        document.getElementById('slideFormula').textContent = s.formula;
+        document.getElementById('slideProof').textContent = s.proof;
+        plateImg.src = s.plate;
+
+        Array.from(thumbStrip.children).forEach((el, i) => {
+          el.classList.toggle('active', i === currentSlideIdx);
+        });
+      }
+
+      function setViewMode(mode) {
+        viewMode = mode;
+        document.getElementById('modeLiveBtn').classList.toggle('active', mode === 'live');
+        document.getElementById('modePlateBtn').classList.toggle('active', mode === 'plate');
+        canvas.style.display = mode === 'live' ? 'block' : 'none';
+        plateImg.style.display = mode === 'plate' ? 'block' : 'none';
+      }
+
+      document.getElementById('prevBtn').onclick = () => selectSlide(currentSlideIdx - 1);
+      document.getElementById('nextBtn').onclick = () => selectSlide(currentSlideIdx + 1);
+      document.getElementById('modeLiveBtn').onclick = () => setViewMode('live');
+      document.getElementById('modePlateBtn').onclick = () => setViewMode('plate');
+
+      document.getElementById('toggleLoopBtn').onclick = (e) => {
+        showLoop = !showLoop;
+        e.currentTarget.classList.toggle('active', showLoop);
+        e.currentTarget.textContent = `🐍 Ouroboros Quine Loop: ${showLoop ? 'ON' : 'OFF'}`;
+      };
+      document.getElementById('toggleCausticsBtn').onclick = (e) => {
+        showCaustics = !showCaustics;
+        e.currentTarget.classList.toggle('active', showCaustics);
+        e.currentTarget.textContent = `✨ Whitney Caustics: ${showCaustics ? 'ON' : 'OFF'}`;
+      };
+      document.getElementById('resetTiltBtn').onclick = () => {
+        tiltX = 0.18;
+        tiltY = -0.22;
+      };
+      document.getElementById('autoSlideBtn').onclick = (e) => {
+        if (autoAdvanceTimer) {
+          clearInterval(autoAdvanceTimer);
+          autoAdvanceTimer = null;
+          e.currentTarget.classList.remove('active');
+          e.currentTarget.textContent = '▶ Auto-Advance (6s)';
+        } else {
+          autoAdvanceTimer = setInterval(() => selectSlide(currentSlideIdx + 1), 6000);
+          e.currentTarget.classList.add('active');
+          e.currentTarget.textContent = '⏸ Auto-Advancing (6s)';
+        }
+      };
+
+      document.querySelectorAll('.outcome-btn').forEach((btn) => {
+        btn.onclick = () => {
+          execOutcome = btn.dataset.outcome;
+          document.querySelectorAll('.outcome-btn').forEach((b) => b.classList.toggle('active', b === btn));
+        };
+      });
+
+      document.getElementById('activeNodeRange').oninput = (e) => {
+        activeOwner = Number(e.target.value);
+        document.getElementById('activeNodeVal').textContent = `n${activeOwner}`;
+      };
+      document.getElementById('depthRange').oninput = (e) => {
+        recursionDepth = Number(e.target.value);
+        document.getElementById('depthVal').textContent = String(recursionDepth);
+      };
+      document.getElementById('speedRange').oninput = (e) => {
+        speedMult = Number(e.target.value);
+        document.getElementById('speedVal').textContent = `${speedMult.toFixed(1)}×`;
+      };
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') selectSlide(currentSlideIdx - 1);
+        else if (e.key === 'ArrowRight') selectSlide(currentSlideIdx + 1);
+      });
+
+      canvas.addEventListener('pointerdown', (e) => {
+        isDragging = true;
+        dragPrevX = e.clientX;
+        dragPrevY = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragPrevX;
+        const dy = e.clientY - dragPrevY;
+        dragPrevX = e.clientX;
+        dragPrevY = e.clientY;
+        tiltY = Math.max(-1.2, Math.min(1.2, tiltY + dx * 0.0055));
+        tiltX = Math.max(-1.0, Math.min(1.0, tiltX + dy * 0.0055));
+      });
+      canvas.addEventListener('pointerup', () => {
+        isDragging = false;
+      });
+
+      function renderSingleSpecimen(f, loop, pal, cx, cy, scale) {
+        const count = f.points.length / 4;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (let i = 0; i < count; i++) {
+          const x = f.points[i * 4], y = f.points[i * 4 + 1];
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+        const midX = (minX + maxX) * 0.5;
+        const midY = (minY + maxY) * 0.5;
+        const span = Math.max(0.35, Math.max((maxX - minX) * 0.46, (maxY - minY) * 0.54));
+
+        const cosY = Math.cos(tiltY), sinY = Math.sin(tiltY);
+        const cosX = Math.cos(tiltX), sinX = Math.sin(tiltX);
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+
+        for (let i = 0; i < count; i++) {
+          const b = i * 4;
+          const nx = (f.points[b] - midX) / span;
+          const ny = (f.points[b + 1] - midY) / span;
+          const nz = f.points[b + 2] * 0.65;
+          const alpha = f.points[b + 3];
+
+          const rx = nx * cosY + nz * sinY;
+          const rz1 = -nx * sinY + nz * cosY;
+          const ry = ny * cosX - rz1 * sinX;
+
+          const sx = cx + rx * scale;
+          const sy = cy + ry * scale;
+          const rgb = pal[(f.owners[i] || 0) % pal.length];
+          const a = Math.min(0.92, Math.max(0.06, alpha * 1.15));
+          ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a.toFixed(3)})`;
+          ctx.fillRect(sx - 1.1, sy - 1.1, 2.3, 2.3);
+        }
+
+        if (showCaustics && f.ridges) {
+          ctx.lineWidth = 1.6;
+          for (const r of f.ridges) {
+            const rgb = pal[(r.owner || 0) % pal.length];
+            ctx.strokeStyle = `rgba(${Math.min(255, rgb[0] + 55)},${Math.min(255, rgb[1] + 55)},${Math.min(255, rgb[2] + 55)},0.62)`;
+            ctx.beginPath();
+            const line = r.line || [];
+            for (let j = 0; j < line.length; j++) {
+              const p = line[j];
+              const nx = (p.x - midX) / span;
+              const ny = (p.y - midY) / span;
+              const nz = (p.z || 0) * 0.65;
+              const rx = nx * cosY + nz * sinY;
+              const rz1 = -nx * sinY + nz * cosY;
+              const ry = ny * cosX - rz1 * sinX;
+              const sx = cx + rx * scale;
+              const sy = cy + ry * scale;
+              if (j === 0) ctx.moveTo(sx, sy);
+              else ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
+          }
+        }
+
+        if (showLoop && loop && loop.line) {
+          const line = loop.line;
+          ctx.lineWidth = 3.0;
+          const stageCols = {
+            quote: 'rgba(56,189,248,0.92)',
+            run: 'rgba(250,204,21,0.95)',
+            apply: 'rgba(232,121,249,0.92)',
+          };
+          for (let j = 0; j < line.length - 1; j++) {
+            const p0 = line[j], p1 = line[j + 1];
+            const nx0 = (p0.x - midX) / span, ny0 = (p0.y - midY) / span, nz0 = (p0.z || 0) * 0.65;
+            const nx1 = (p1.x - midX) / span, ny1 = (p1.y - midY) / span, nz1 = (p1.z || 0) * 0.65;
+            const sx0 = cx + (nx0 * cosY + nz0 * sinY) * scale;
+            const sy0 = cy + (ny0 * cosX - (-nx0 * sinY + nz0 * cosY) * sinX) * scale;
+            const sx1 = cx + (nx1 * cosY + nz1 * sinY) * scale;
+            const sy1 = cy + (ny1 * cosX - (-nx1 * sinY + nz1 * cosY) * sinX) * scale;
+            ctx.strokeStyle = stageCols[p0.stage] || stageCols.run;
+            ctx.beginPath();
+            ctx.moveTo(sx0, sy0);
+            ctx.lineTo(sx1, sy1);
+            ctx.stroke();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      let lastTime = performance.now();
+      let fpsSmooth = 60;
+
+      function animate(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        if (dt > 0) fpsSmooth = fpsSmooth * 0.92 + (1 / dt) * 0.08;
+
+        if (viewMode === 'live') {
+          phase += dt * 0.72 * speedMult;
+          const W = canvas.width;
+          const H = canvas.height;
+          ctx.clearRect(0, 0, W, H);
+
+          const s = SLIDES[currentSlideIdx];
+          const exec = {
+            activeOwner,
+            recursionDepth,
+            stackRatio: recursionDepth / 8,
+            fuelRatio: execOutcome === 'Exhausted' ? 0.02 : 0.85,
+            progress: (phase % (Math.PI * 2)) / (Math.PI * 2),
+            outcome: execOutcome,
+          };
+
+          if (s.isComparison) {
+            const cols = [
+              { out: 'Running', x: W * 0.18, pal: [[56, 189, 248], [251, 146, 60], [168, 85, 247]], label: 'RUNNING (SOLITON FLARE)' },
+              { out: 'Done', x: W * 0.50, pal: [[52, 211, 153], [45, 212, 191], [56, 189, 248]], label: 'DONE (HARMONIC LOCK)' },
+              { out: 'Rejected', x: W * 0.82, pal: [[244, 63, 94], [251, 113, 133], [251, 146, 60]], label: 'REJECTED (BIFURCATION)' },
+            ];
+            for (const c of cols) {
+              const ex = { ...exec, outcome: c.out };
+              const f = WovenBody.frame(bodies.lorenz, phase, { budget: 3200, crests: showCaustics, execution: ex });
+              const loop = showLoop ? WovenBody.strangeLoop(bodies.lorenz, phase, { samples: 64, execution: ex }) : null;
+              renderSingleSpecimen(f, loop, c.pal, c.x, H * 0.52, 175);
+              ctx.fillStyle = '#e2e8f0';
+              ctx.font = 'bold 13px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText(c.label, c.x, 42);
+            }
+          } else if (s.chimera) {
+            const bodyA = bodies[s.chimera.parentA];
+            const bodyB = bodies[s.chimera.parentB];
+            const f = WovenBody.combine(bodyA, bodyB, s.chimera, phase, {
+              budget: 6144,
+              crests: showCaustics,
+              execution: exec,
+            });
+            const bridge = (f.ridges || []).find((r) => r.material === 'chimeric-seam-bridge');
+            const loop = bridge
+              ? { line: bridge.line.map((p, idx) => ({ ...p, stage: idx < 16 ? 'quote' : idx < 32 ? 'run' : 'apply' })) }
+              : null;
+            renderSingleSpecimen(f, loop, s.palette, W * 0.5, H * 0.5, 285);
+          } else {
+            const body = bodies[s.id];
+            const f = WovenBody.frame(body, phase, { budget: 6144, crests: showCaustics, execution: exec });
+            const loop = showLoop ? WovenBody.strangeLoop(body, phase, { samples: 84, execution: exec }) : null;
+            renderSingleSpecimen(f, loop, s.palette, W * 0.5, H * 0.5, 285);
+          }
+
+          document.getElementById('telemetryChip').textContent =
+            `Drag to tilt in 3D · Outcome: ${execOutcome} · ${Math.round(fpsSmooth)} FPS`;
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      selectSlide(0);
+      requestAnimationFrame(animate);
+    </script>
+  </body>
+</html>
