@@ -1,0 +1,86 @@
+--- a/crates/mori-core/src/sherlock/compile_artifact.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact.rs
+@@ -26,6 +26,9 @@
+ pub mod draft_profile;
+ #[path = "compile_artifact/draft_execution.rs"]
+ pub mod draft_execution;
++// Retained checked source and actual B genesis for explicit reference consumers.
++#[path = "compile_artifact/draft_reference.rs"]
++pub mod draft_reference;
+ // Public typed ExtProgram compiler using the actual checked owner admission ABI.
+ #[path = "compile_artifact/ext_compile.rs"]
+ pub mod ext_compile;
+--- /dev/null
++++ b/crates/mori-core/src/sherlock/compile_artifact/draft_reference.rs
+@@ -0,0 +1,71 @@
++//! Retain the actual checked source AST alongside its real B genesis pair.
++//! Host diagnostic source bridge only. No A/B state conversion, step, proof,
++//! source-digest authentication or global H1 admission is introduced.
++use std::sync::Arc;
++use crate::sherlock::Program;
++use crate::sherlock::helper_machine::shared::HostViolation;
++use crate::sherlock::helper_machine::shared::owner_host::HostObservation;
++use super::{CompileFailure, TargetDescriptor, parse_draft_config};
++use super::draft_contract::DraftConfigIdentity;
++use super::draft_report::{self, DraftCompileArtifact};
++use super::recursive_source::{self, AdmittedDraftSource, DraftPreparationBudget};
++use super::wire::OwnerWire;
++
++/// The same syntax that the existing bounded A-to-B copier consumed, plus the
++/// same unstepped owner pair from which `preparation` was projected.
++/// The A reference syntax is not an admitted A machine capability or B image.
++pub struct DraftReferencePreparation {
++    pub preparation: DraftCompileArtifact,
++    pair: AdmittedDraftSource,
++}
++impl DraftReferencePreparation {
++    pub fn reference_program(&self) -> &Arc<Program> {
++        &self.pair.preparation.draft.program
++    }
++    pub fn observe_b_genesis(&self) -> Result<HostObservation<'_>, HostViolation> {
++        self.pair.observe()
++    }
++}
++
++/// Same bounded parse/typecheck/copy/owner preparation as `compile_draft_host`.
++/// Returns the retained source `Arc<Program>` for an explicitly selected
++/// reference consumer. No compiler output is evaluated into a substitute literal.
++/// All H1/copy/Drop/report and semantic correspondence limitations remain.
++pub fn compile_draft_with_reference(
++    source: &str, config_source: &str, target_source: &str,
++) -> Result<DraftReferencePreparation, CompileFailure> {
++    let config = parse_draft_config(config_source)?;
++    let target_descriptor = crate::json::parse(target_source)
++        .map_err(|error| CompileFailure::core("config", error))?;
++    let budget = DraftPreparationBudget {
++        parse: config.preprocessing.parser_budget(),
++        max_type_depth: config.preprocessing.max_type_depth.0,
++        copy: config.preprocessing.copy_budget(),
++    };
++    let bounds = config.bounds.owner();
++    let layout = config.layout.owner(bounds);
++    let fuel = config.fuel.owner();
++    let stack = config.stack.owner();
++    let checked = recursive_source::prepare_checked_draft_bounded(
++        source, budget.parse, budget.max_type_depth,
++    ).map_err(CompileFailure::draft_source)?;
++    let pair = recursive_source::admit_checked_draft_bounded(
++        checked, &budget.copy, &bounds, &layout, &fuel, &stack,
++    ).map_err(CompileFailure::draft_source)?;
++    let preparation = draft_report::project_admitted_preparation(
++        &pair,
++        crate::intent::hash_bytes(source.as_bytes()),
++        DraftConfigIdentity {
++            fields: config,
++            file_digest: crate::intent::hash_bytes(config_source.as_bytes()),
++        },
++        TargetDescriptor {
++            descriptor: target_descriptor,
++            file_digest: crate::intent::hash_bytes(target_source.as_bytes()),
++        },
++    ).map_err(|error| CompileFailure {
++        stage: "observation", actual_error: error.owner_wire(),
++        evaluation_performed: false, events_forwarded: "0".into(), completed: false,
++    })?;
++    Ok(DraftReferencePreparation { preparation, pair })
++}
