@@ -334,7 +334,8 @@ mod tests {
 }
 
 use super::{BoundsC, LayoutCapacitiesC, LayoutSchemaC, ProgramView};
-use crate::{AssetId, Program, Snapshot, Type, UInt, Value};
+use crate::stage::{StagePlan, StagedProgram, LANGUAGE_2, SEMANTICS_2, STAGE_PLAN_FORMAT};
+use crate::{Action, AssetId, Expr, ExprId, InputDecl, Program, Snapshot, Statement, Type, UInt, Value};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct NameId(pub usize);
@@ -482,6 +483,200 @@ pub fn bind_fin_source(program: &Program, view: &ProgramView, layout: &LayoutSch
     Ok(bound)
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum FinStagedPrepareError {
+    Stage(crate::Error),
+    Bind(FinBindError),
+}
+impl From<FinBindError> for FinStagedPrepareError {
+    fn from(e: FinBindError) -> Self { Self::Bind(e) }
+}
+
+/// Checked `/2` declaration binding derived from the sealed staged source.
+/// Stage namespaces are preserved without changing `/1`: states+assets
+/// share one declaration namespace, actions are separate, and the program
+/// name is independent. `FinBoundSource.names` is the ordinary interned-
+/// spelling table already used by `/1`: one sorted unique `NameId` per
+/// distinct spelling. Equal spellings across namespaces therefore share
+/// a `NameId`, while typed `FinStateBinding`/`FinAssetBinding` rows and
+/// the `FinActionBinding` list distinguish roles; `resolve_name` resolves
+/// a spelling, not a role. Same-kind and state/asset collisions are still
+/// rejected by the unchanged binding loops below; cross-kind equality is
+/// not a duplicate. `name_rows` is the interned-table length and
+/// `name_bytes` is the sum of its distinct spelling lengths, exactly the
+/// `/1` accounting over its sorted unique view names. Refusal order is
+/// name_rows, then name_bytes, then state capacity, then asset capacity.
+/// Guards stage validation already excludes (profile, initial type,
+/// same-kind duplicates, asset-identity duplicates) remain defence in
+/// depth on this route, not load-route coverage.
+pub fn bind_fin_staged_source(
+    staged: &StagedProgram,
+    layout: &LayoutSchemaC,
+    caps: &FinCapacitiesC,
+) -> Result<FinBoundSource, FinBindError> {
+    let program = staged.program();
+    if program.language != LANGUAGE_2 || program.semantics != SEMANTICS_2 {
+        return Err(FinBindError::ProfileMismatch);
+    }
+    let mut names: Vec<String> = Vec::new();
+    names.push(program.name.clone());
+    names.extend(program.states.iter().map(|s| s.name.clone()));
+    names.extend(program.assets.iter().map(|a| a.name.clone()));
+    names.extend(program.actions.iter().map(|a| a.name.clone()));
+    names.sort();
+    names.dedup();
+    if names.len() > layout.capacities.name_rows {
+        return Err(FinBindError::NameRowsExceeded {
+            needed: names.len(),
+            limit: layout.capacities.name_rows,
+        });
+    }
+    let bytes: u128 = names.iter().map(|n| n.len() as u128).sum();
+    if bytes > layout.capacities.name_bytes as u128 {
+        return Err(FinBindError::NameBytesExceeded {
+            needed: bytes,
+            limit: layout.capacities.name_bytes,
+        });
+    }
+    if program.states.len() > caps.max_states {
+        return Err(FinBindError::CapacityExceeded("states"));
+    }
+    if program.assets.len() > caps.max_assets {
+        return Err(FinBindError::CapacityExceeded("assets"));
+    }
+    let mut bound = FinBoundSource {
+        names,
+        states: Vec::new(),
+        assets: Vec::new(),
+        actions: Vec::new(),
+        capacities: *caps,
+    };
+    let _program_name = bound.resolve_name(&program.name)?;
+    for (i, s) in program.states.iter().enumerate() {
+        if bound.states.iter().any(|x| x.text == s.name)
+            || bound.assets.iter().any(|x| x.text == s.name)
+        {
+            return Err(FinBindError::DuplicateDeclaration(s.name.clone()));
+        }
+        let initial = FinScalar::from(&s.initial);
+        if initial.ty() != s.ty {
+            return Err(FinBindError::InitialTypeMismatch(s.name.clone()));
+        }
+        let name_id = bound.resolve_name(&s.name)?;
+        bound.states.push(FinStateBinding {
+            row: FinStateRowId(i),
+            name: name_id,
+            text: s.name.clone(),
+            ty: s.ty,
+            initial,
+        });
+    }
+    for (i, a) in program.assets.iter().enumerate() {
+        if bound.assets.iter().any(|x| x.text == a.name)
+            || bound.states.iter().any(|x| x.text == a.name)
+        {
+            return Err(FinBindError::DuplicateDeclaration(a.name.clone()));
+        }
+        if bound.assets.iter().any(|x| x.identity == a.identity) {
+            return Err(FinBindError::AssetIdentityDuplicate);
+        }
+        let name_id = bound.resolve_name(&a.name)?;
+        bound.assets.push(FinAssetBinding {
+            row: FinAssetRowId(i),
+            name: name_id,
+            text: a.name.clone(),
+            identity: a.identity.clone(),
+        });
+    }
+    for act in &program.actions {
+        if bound.actions.iter().any(|x| x.text == act.name) {
+            return Err(FinBindError::DuplicateDeclaration(act.name.clone()));
+        }
+        let name_id = bound.resolve_name(&act.name)?;
+        bound.actions.push(FinActionBinding { name: name_id, text: act.name.clone() });
+    }
+    Ok(bound)
+}
+
+/// The sole FinPlan authority on this path: copied in action order from the
+/// sealed StagePlan (source-logical costs, never B fuel/schedule). No
+/// caller-authored plan can enter `FinPreparedStagedSource`.
+pub fn derive_fin_plan_from_stage(staged: &StagedProgram) -> Result<FinPlan, FinBindError> {
+    let program = staged.program();
+    let plan = staged.plan();
+    if plan.format != STAGE_PLAN_FORMAT || plan.actions.len() != program.actions.len() {
+        return Err(FinBindError::PlanActionMismatch);
+    }
+    let mut actions = Vec::with_capacity(plan.actions.len());
+    for (planned, source_action) in plan.actions.iter().zip(program.actions.iter()) {
+        if planned.action != source_action.name
+            || usize::from(planned.statement_count) != source_action.statements.len()
+        {
+            return Err(FinBindError::PlanActionMismatch);
+        }
+        actions.push(FinActionPlan {
+            name: planned.action.clone(),
+            segment_src_cost: planned.segment_cost.iter().map(|u| u.0).collect(),
+            committed_before: planned.committed_before.iter().map(|u| u.0).collect(),
+            plan_total: planned.plan_total.0,
+        });
+    }
+    let fin_plan = FinPlan { actions };
+    validate_fin_plan(&fin_plan)?;
+    Ok(fin_plan)
+}
+
+/// Paired prepared source: the whole sealed `/2` program/plan plus the
+/// source-derived extras. `StagedProgram` has no PartialEq/Eq, so this
+/// wrapper deliberately derives only Clone+Debug; `same_source` compares
+/// the comparable components (Program, StagePlan, hashes, extras).
+#[derive(Clone, Debug)]
+pub struct FinPreparedStagedSource {
+    staged: StagedProgram,
+    extras: FinAdmittedExtras,
+}
+impl FinPreparedStagedSource {
+    pub fn prepare(
+        staged: StagedProgram,
+        layout: &LayoutSchemaC,
+        caps: &FinCapacitiesC,
+    ) -> Result<Self, FinStagedPrepareError> {
+        let bound = bind_fin_staged_source(&staged, layout, caps)?;
+        let fin_plan = derive_fin_plan_from_stage(&staged)?;
+        let extras = FinAdmittedExtras::new(bound, fin_plan)?;
+        Ok(Self { staged, extras })
+    }
+    pub fn staged(&self) -> &StagedProgram { &self.staged }
+    pub fn program(&self) -> &Program { self.staged.program() }
+    pub fn stage_plan(&self) -> &StagePlan { self.staged.plan() }
+    pub fn program_hash(&self) -> [u8; 32] { self.staged.program_hash() }
+    pub fn plan_hash(&self) -> [u8; 32] { self.staged.plan_hash() }
+    pub fn extras(&self) -> &FinAdmittedExtras { &self.extras }
+    pub fn bound_source(&self) -> &FinBoundSource { self.extras.source() }
+    pub fn fin_plan(&self) -> &FinPlan { self.extras.plan() }
+    pub fn same_source(&self, other: &Self) -> bool {
+        self.program() == other.program()
+            && self.stage_plan() == other.stage_plan()
+            && self.program_hash() == other.program_hash()
+            && self.plan_hash() == other.plan_hash()
+            && self.extras == other.extras
+    }
+    pub fn action_index(&self, name: &str) -> Option<usize> {
+        self.program().actions.iter().position(|a| a.name == name)
+    }
+    pub fn action(&self, name: &str) -> Option<&Action> {
+        self.program().actions.iter().find(|a| a.name == name)
+    }
+    pub fn action_inputs(&self, name: &str) -> Option<&[InputDecl]> {
+        self.action(name).map(|a| a.inputs.as_slice())
+    }
+    pub fn statement(&self, action: &str, ordinal: usize) -> Option<&Statement> {
+        self.action(action).and_then(|a| a.statements.get(ordinal))
+    }
+    pub fn expression(&self, id: ExprId) -> Option<&Expr> {
+        self.program().expressions.get(usize::from(id))
+    }
+}
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FinBalanceRow { pub asset: FinAssetRowId, pub account: String, pub amount: u128 }
 #[derive(Clone, PartialEq, Eq, Debug)]
