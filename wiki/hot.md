@@ -49,3 +49,8 @@ tags: [moriarty, consolidation, recursion]
 ## Sherlock UPDATE018 — completed-interpreter concept
 
 [The designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-018-MATH-GUARDS-AND-EXECUTION-LAYERS.md) explains the future finished circuit/interpreter as a cumulative board. [Internal dated status](research/sherlock-circuit-atlas/UPDATE-018-MUSE-ENGINEERING-STATUS.md) keeps actual source and acceptance gaps separate. Website unpublished; product/native work continues independently.
+
+
+## Sherlock UPDATE019 — completed-interpreter concept
+
+[The designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-019-CHECKED-READS-AND-OWNER-LOOKUP.md) explains the future finished circuit/interpreter as a cumulative board. [Internal dated status](research/sherlock-circuit-atlas/UPDATE-019-MUSE-ENGINEERING-STATUS.md) keeps actual source and acceptance gaps separate. Website unpublished; product/native work continues independently.
