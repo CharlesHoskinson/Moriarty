@@ -1,0 +1,9 @@
+# Core3 boundary policy
+
+Opus4.8 HIGH and Gemini4ArgonHigh HIGH independently chose uniform Core3 boundary checks, with a correction to the continuation wording. Root adopted that abstract policy in [the decision](ADOPTED-ABSTRACT-F3-POLICY.md). Incoming duties without a liability-creation statement must be declared in source, whether the action awaits or completes in one segment. Existing Core1 and Core2 behavior remains required.
+
+H25 checks continuations that are actually emitted. It is not a promise that every start produces a continuation or that a later call progresses or completes. The adopted paragraph uses the exact Opus amendment; the two full replacement proposals differ in wording, and Gemini's additional Core2 clarification is retained. The full opinions and prior clauses preserve those differences and the rejected Sequence-only alternative.
+
+Both reviewers reported whole reading of the 12 supplied bodies. Root checked all 13 Opus quotes and 18 of 19 Gemini quotes literally; the remaining Gemini role quote matches after whitespace normalization. One Gemini implementation claim about scenario_snapshot is excluded: current Core3 liability_identities already includes Program.duties, and scenario_snapshot uses it. See the [source qualification](source-fact-qualification.json). Neither opinion is an implementation audit.
+
+This closes the abstract policy choice only. The complete D1/D1A proposal, REG3 construction, parser/IR/load correctness, source security review, compiler and ledger predicates remain open. All three planned financial tests remain unselected and unrun; these votes grant no runtime, SDK, proof, key, wallet or ledger execution. Original source bytes and the earlier 13/355 static-test qualification are unchanged. No EARS requirement is closed by this policy record.

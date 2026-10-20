@@ -1,0 +1,146 @@
+{
+  "amendment": "OPERATIVE RULE, UNIFORM FOR /3: For moriarty-core/3, bare stage admission and Sequence projection use the same boundary domain by explicit owner domain-unification policy choice. stage::start for a /3 StagedProgram applies the profile-appropriate canonical_boundary (REG3) for awaiting and non-awaiting actions alike, before evaluation, with attempted 0 on refusal; Sequence project_head applies the same profile-appropriate canonical_boundary at P7 before stage::start in both cases; stage::resume R7 applies the same REG3 rule to the retained continuation boundary. Therefore bare-/3 and Sequence /3 boundary domains coincide and neither depends on await count. Uniform non-awaiting bare-/3 admission at stage::start is an explicit owner policy choice (not an implication of H25 alone, since non-awaiting actions emit no continuation). For /3 actions that reach an await and emit StageOutcome::Waiting, emit_checked (H25) requires the post-segment continuation to serialize within MAX_CONTINUATION_BYTES, round-trip through decode::continuation, and satisfy R7 canonical_boundary under the same REG3 registry before emission; consequently, no emitted /3 Waiting continuation can fail R7 canonical_boundary on stage::resume against the same StagedProgram due to a start-versus-resume registry domain divergence. This is strictly a boundary-domain and Waiting-emission decode/R7 invariant, not a guarantee that every boundary admitted at start emits a Waiting continuation or a blanket guarantee of liveness, progress, completion, or unconditional ability to resume (which remain subject to R0-R6 preflight, event matching, caps, segment evaluation, and H26 static cost checks). Incoming discharge-only duties with no Statement::Liability anywhere are supported in bare /3 and in Sequence /3 only when declared by a /3 ExternalDutyDecl in REG3; without such declaration they are refused in both /3 domains under the same registry rule. This does not narrow Sequence /3 relative to bare stage::start for /3, because the same narrowing relative to an undeclared-duty reading applies at bare /3 stage::start.\n\nFOR /2: A Sequence-projected boundary is admissible only if it satisfies BOTH scenario_snapshot AND the profile-appropriate canonical boundary (REG), for awaiting and non-awaiting actions alike; no /2 stage predicate, message, ordering or hash input is changed. Bare /2 stage admission is unchanged: stage::start applies canonical_boundary only for awaiting /2 actions, preserving bare /2 non-awaiting discharge-only admission (and therefore Sequence /2 remains narrower than bare /2 stage::start for non-awaiting discharge-only duties without Statement::Liability). No /1 predicate is changed.\n\nRATIONALE: admission of the same owned head must not depend on successor await count; H25 requires an emitted Waiting continuation to decode through the resume decoder within byte/node limits and pass R7 (canonical_boundary) or not be emitted; serial composition needs one boundary domain per invocation; for /3, the owner explicitly chooses the same REG3 boundary domain at bare /3 stage::start for both awaiting and non-awaiting actions so bare start, Sequence projection (P7), Waiting emission (H25), and resume (R7) share one registry domain and so source-declared ExternalDutyDecl identities are enforced at bare /3 start even for zero-await actions. Alternative rejected: await-dependent admission (or Sequence-only REG3 enforcement for /3), because it makes admissibility a function of await count, leaves ExternalDutyDecl identity unchecked by canonical_boundary at bare /3 start for zero-await discharge-only actions, and creates a silent domain seam between bare /3 and Sequence /3 or within one serial chain. Alternative rejected: extending FrameBindings with caller-supplied (asset,debtor,creditor), because it changes the adopted DTO and treats unauthenticated caller identity as evidence.\n\nCOMPATIBILITY: For /1 and /2, no stage predicate is weakened, edited or bypassed (CSQ-016), and bare /2 non-awaiting discharge-only admission at stage::start is unchanged. No new resource defaults, caps, native authority or counter reset is introduced.\n\nLABELLED DISSENT / LIMITATION (non-operative, preserved for review): The prior draft (F04) stated that uniform canonical_boundary at P7 NARROWS the Sequence domain relative to bare stage::start for non-awaiting actions and is a strengthening at the Sequence admission layer only. For /3, that Sequence-only reading is NOT adopted in this operative text; it is preserved here as dissent (while noting that for /2, Sequence P7 still narrows relative to bare /2 non-awaiting stage::start). If fresh whole source/design reviews and root adoption reject uniform bare-/3, root must revert the uniform /3 condition in stage::start and its ghost/mismatch uniform-start tests together, and must not retain a narrowed target relabelled complete. Every statement above remains UNADOPTED pending fresh reviews, two substantive agreeing votes and root adoption.",
+  "anchors": [
+    {
+      "bodyId": "F01",
+      "locator": "lines 48-50 (emit_checked H25 definition)",
+      "quote": "/// H25: a Waiting continuation must decode back to itself through the actual\n/// resume decoder and pass R7, or it is not emitted.\nfn emit_checked(sp: &StagedProgram, action: usize, c: &Continuation) -> Result<(), Error>"
+    },
+    {
+      "bodyId": "F01",
+      "locator": "lines 242-246 (start canonical_boundary condition)",
+      "quote": "    if !plan.sites.is_empty()\n        || (sp.program().language == LANGUAGE_3 && sp.program().semantics == SEMANTICS_3)\n    {\n        decode::canonical_boundary(sp, index, &inputs, &pre).map_err(refuse)?;\n    }"
+    },
+    {
+      "bodyId": "F02",
+      "locator": "lines 88-95 (non-awaiting /3 wrong duty identity test)",
+      "quote": "#[test]\nfn core3_nonawaiting_wrong_duty_identity_is_refused_at_start_with_zero_attempted() {\n    let sp = v3(&format!(\n        \"{ASSET} {DUTY} action pay() {{ discharge(\\\"loan\\\", 3); }}\"\n    ));\n    let rejected = stage::start(&sp, \"pay\", scenario(&sp, \"loan\", \"mallory\", 5), None)\n        .expect_err(\"debtor differs from the source-declared duty\");"
+    },
+    {
+      "bodyId": "F02",
+      "locator": "lines 184-191 (legacy /2 non-awaiting discharge-only start test)",
+      "quote": "#[test]\nfn core2_nonawaiting_discharge_only_keeps_its_legacy_start_domain() {\n    let sp = v2(&format!(\n        \"{ASSET} action pay() {{ discharge(\\\"loan\\\", 3); }}\"\n    ));\n    let out = stage::start(&sp, \"pay\", scenario(&sp, \"loan\", \"alice\", 5), None)\n        .expect(\"legacy /2 non-awaiting discharge still starts\");"
+    },
+    {
+      "bodyId": "F03",
+      "locator": "line 3 (OPERATIVE RULE, UNIFORM FOR /3)",
+      "quote": "OPERATIVE RULE, UNIFORM FOR /3: For moriarty-core/3, bare stage admission and Sequence projection use the same domain. stage::start for a /3 StagedProgram applies the profile-appropriate canonical_boundary (REG3) for awaiting and non-awaiting actions alike, before evaluation, with attempted 0 on refusal; Sequence project_head applies the same profile-appropriate canonical_boundary at P7 before stage::start in both cases; stage::resume R7 applies the same REG3 rule to the retained continuation boundary. Therefore bare-/3 and Sequence /3 domains coincide, neither depends on await count, and a boundary admitted at /3 start remains resumable (H25). Incoming discharge-only duties with no Statement::Liability anywhere are supported in bare /3 and in Sequence only when declared by a /3 ExternalDutyDecl in REG3; without such declaration they are refused in both domains under the same registry rule. This does not narrow Sequence relative to bare stage::start for /3, because the same narrowing relative to an undeclared-duty reading applies at bare stage."
+    },
+    {
+      "bodyId": "F03",
+      "locator": "line 5 (FOR /2)",
+      "quote": "FOR /2: A Sequence-projected boundary is admissible only if it satisfies BOTH scenario_snapshot AND the profile-appropriate canonical boundary, for awaiting and non-awaiting actions alike; no /2 predicate, message, ordering or hash input is changed. Bare /2 stage admission is unchanged: stage::start applies canonical_boundary only for awaiting /2 actions, preserving bare /2 non-awaiting discharge-only admission. No /1 predicate is changed."
+    },
+    {
+      "bodyId": "F03",
+      "locator": "line 19 (RATIONALE)",
+      "quote": "RATIONALE: admission of the same owned head must not depend on successor await count; H25 requires a Waiting continuation to decode and pass R7 or not be emitted; serial composition needs one domain per invocation; the owner chooses the same one domain at bare /3 stage so start, Sequence projection and resume cannot diverge. Alternative rejected: await-dependent admission, because it makes admissibility a function of await count and creates a silent seam in one serial chain. Alternative rejected: extending FrameBindings with caller-supplied (asset,debtor,creditor), because it changes the adopted DTO and treats unauthenticated caller identity as evidence."
+    },
+    {
+      "bodyId": "F03",
+      "locator": "line 21 (COMPATIBILITY)",
+      "quote": "COMPATIBILITY: For /1 and /2, no stage predicate is weakened, edited or bypassed (CSQ-016), and bare /2 non-awaiting discharge-only admission is unchanged. No new resource defaults, caps, native authority or counter reset is introduced."
+    },
+    {
+      "bodyId": "F03",
+      "locator": "line 23 (LABELLED DISSENT / LIMITATION)",
+      "quote": "LABELLED DISSENT / LIMITATION (non-operative, preserved for review): The prior draft stated this NARROWS the Sequence domain relative to bare stage::start and is a strengthening at the Sequence admission layer only. That Sequence-only reading is NOT adopted in this operative text; it is preserved here only as dissent. If fresh whole source/design reviews and root adoption reject uniform bare-/3, root must revert the uniform condition in stage::start and its ghost/mismatch uniform-start tests together, and must not retain a narrowed target relabelled complete. Every statement above remains UNADOPTED pending fresh reviews, two substantive agreeing votes and root adoption."
+    },
+    {
+      "bodyId": "F04",
+      "locator": "line 1 (prior Sequence-only tradeoff prose)",
+      "quote": "Tradeoff, stated explicitly: this NARROWS the Sequence domain relative to bare stage::start for non-awaiting actions \u2014 incoming discharge-only duties with no Statement::Liability anywhere in the program are UNSUPPORTED as projected duties in Sequence (\u00a79), although bare Core/stage admits them. This is a strengthening at the Sequence admission layer only; no existing stage predicate is weakened, edited, or bypassed (CSQ-016)."
+    },
+    {
+      "bodyId": "F05",
+      "locator": "section A3 (Output round-trip H25)",
+      "quote": "- **Output round-trip (H25).** Before returning `Waiting`, admit serializes the new continuation with `serde_json::to_string`. It requires length \u2264 `MAX_CONTINUATION_BYTES` and `decode::continuation(text)? == c`. Otherwise it rejects with `bound`. No continuation may be emitted that cannot be resumed."
+    },
+    {
+      "bodyId": "F05",
+      "locator": "section A4 (canonical_boundary R7)",
+      "quote": "**`canonical_boundary` (R7).** This is a literal replacement of `scenario_snapshot` for resume. It never re-sorts."
+    },
+    {
+      "bodyId": "F06",
+      "locator": "Requirement CSQ-016 Additive compatibility",
+      "quote": "WHEN the new ordinary sequence path is integrated, existing Core/1/Core/2 stage APIs, original stage DTOs/digests/admission/costs, disjoint Pair and all original fixture/oracle/result records SHALL retain their exact selected behavior and qualifications unless a separately scoped reviewed extension explicitly changes them."
+    },
+    {
+      "bodyId": "F07",
+      "locator": "OD1 row",
+      "quote": "| OD1 \u2014 Source/domain admission | `Sequence::plan`, `FrameBindings`, projection before `stage::start` | What exact valid binding/domain/alias/schema judgments apply? Which local duty registry identities may be projected, including discharge-only incoming duties and await/R7 boundaries? Current predicates are not silently weakened. Supply exact admission ordering and supported domain; ordinary SC2 projection is not an admission proof. |"
+    },
+    {
+      "bodyId": "F08",
+      "locator": "opening paragraph (Permissionless product contract)",
+      "quote": "Any developer may author, compile, prove, publish and deploy programs in the supported language without approval from Moriarty maintainers, an agent council, Foreman, a hosted solver or a program registry."
+    },
+    {
+      "bodyId": "F09",
+      "locator": "paragraph 2 (two agreeing substantive votes rule)",
+      "quote": "two agreeing substantive votes decide an option. Record all votes and dissent. No response, provider failure or abstention counts as approval."
+    },
+    {
+      "bodyId": "F10",
+      "locator": "paragraph 3 (role assignment)",
+      "quote": "GPT-6.1 Sol high remains the nonsecurity author; Gemini 4 Argon High through AGY remains the nonsecurity reviewer."
+    },
+    {
+      "bodyId": "F11",
+      "locator": "opening paragraph (A1.1 scope)",
+      "quote": "Design only; nothing executed. This amends A6 and A7. Everything else in A0\u2013A11 is unchanged."
+    },
+    {
+      "bodyId": "F12",
+      "locator": "precedence list",
+      "quote": "  \"precedence\": [\n    \"DESIGN-OPUS-A2.md\",\n    \"DESIGN-OPUS-FINAL.md\",\n    \"DESIGN-OPUS-CLARIFICATION.md\",\n    \"DESIGN-OPUS.md\",\n    \"FINAL-NONSECURITY-DESIGN.md\"\n  ]"
+    }
+  ],
+  "coveredPolicy": [
+    "F03 line 3 (OPERATIVE RULE, UNIFORM FOR /3) as amended: uniform REG3 canonical_boundary domain at bare stage::start for awaiting and non-awaiting /3 actions alike (before evaluation, attempted 0 on refusal), matching Sequence project_head at P7 and stage::resume at R7, with H25/emit_checked and non-awaiting owner-choice qualifications explicitly stated.",
+    "F03 line 5 (FOR /2) as amended: Sequence /2 requires both scenario_snapshot and /2 canonical_boundary (REG) for awaiting and non-awaiting actions alike; bare /2 stage::start applies canonical_boundary only for awaiting /2 actions, preserving bare /2 non-awaiting discharge-only admission (and explicitly noting Sequence /2 remains narrower than bare /2 non-awaiting stage::start); no /1 or /2 stage predicate, message, ordering, or hash input is changed.",
+    "F03 line 19 (RATIONALE) as amended: uniform domain per invocation independent of await count, distinguishing H25 Waiting-output decode/R7 verification from the explicit owner policy choice to unify non-awaiting bare /3 stage::start with Sequence P7 and resume R7, and rejecting await-dependent admission and caller-supplied FrameBindings identity tuples.",
+    "F03 line 21 (COMPATIBILITY): exact /1 and /2 stage predicate preservation under CSQ-016, preservation of bare /2 non-awaiting discharge-only start admission, and no new resource defaults, caps, native authority, or counter resets.",
+    "F03 line 23 (LABELLED DISSENT / LIMITATION, non-operative, preserved for review) as amended: preservation of the prior F04 Sequence-only narrowing dissent and the mandatory conditional rollback rule (reverting both the uniform /3 condition in stage::start and the non-awaiting ghost/mismatch start tests together if uniform bare-/3 is rejected, without relabelling a narrowed target complete).",
+    "EXPLICIT EXCLUSION: F03 line 1 (complete replacement heading) and F03 lines 7, 9, 11, 13, 15, 17 (D1A GRAMMAR, IR, PARSER AND PROFILE, VALIDATION AND REGISTRY, LOAD, BOUNDARY AND CALLER DATA) and all source/runtime/compiler/test implementation claims are NOT adopted or approved by this policy vote."
+  ],
+  "decision": "REVISE_SCOPED_F3",
+  "dissent": [
+    "Preserved F04 / F03 line 23 Sequence-only dissent and conditional alternative: The preceding 11074B draft (F04) stated that applying canonical_boundary uniformly at P7 narrows the Sequence domain relative to bare stage::start for non-awaiting actions and is a strengthening at the Sequence admission layer only. That Sequence-only policy is rejected here for /3 in favor of uniform bare-/3, but is preserved in full as non-operative dissent. If the designated security owner vote or root adoption rejects uniform bare-/3, root must revert the uniform /3 condition in stage::start (F01 line 242) and its non-awaiting wrong-identity/ghost start tests in admit_v3_tests.rs (F02 lines 88-124) together, and must not retain a narrowed target relabelled complete.",
+    "Dissent against unamended F03 line 3 H25 shorthand: I dissent from adopting the unqualified phrase 'Therefore bare-/3 and Sequence /3 domains coincide, neither depends on await count, and a boundary admitted at /3 start remains resumable (H25)' as written in F03 line 3. H25 does not decide non-awaiting bare-/3 start admission (since zero-await actions never emit a Waiting continuation or call resume), and admitting a pre-state boundary at /3 start does not unconditionally guarantee that segment execution emits a Waiting continuation or that a later resume call will succeed or advance; my amendment in REVISE_SCOPED_F3 corrects this wording while adopting the uniform bare-/3 domain policy in full."
+  ],
+  "limitations": [
+    "This vote decides abstract F3 domain policy only (F03 lines 3, 5, 19, 21, 23 as amended); it does not adopt F03 line 1 or lines 7, 9, 11, 13, 15, 17 (D1A grammar, IR, parser, profile guards, validate_v3, REG3 construction algorithm, load_v3, or concrete canonical_boundary implementation).",
+    "This policy vote does not audit or certify that current admit.rs (F01), admit_v3_tests.rs (F02), or any other crate source achieves /1, /2, or /3 compliance, nor does it select or authorize running the three local runtime tests.",
+    "Source security, full 52-body/TCB source audit, runtime/effect eligibility, actual test execution and results, full financial and sequential composition coverage (CSQ-001..CSQ-016), OD1 concrete binding/alias/schema/ordering implementation, OD2-OD8 designated-owner contracts, native ZKIRv3/proof/ledger/target/product obligations (F08), B1, and PR310 remain separately open.",
+    "No user program permission gate is created or implied; Moriarty remains permissionless (F08, OD5).",
+    "Two substantive agreeing independent votes plus separate root adoption are required to adopt any policy; this single independent second design vote is neither consensus nor root adoption."
+  ],
+  "missingOperativeSources": [
+    "None required to decide this narrow abstract F3 domain policy (REVISE_SCOPED_F3): all 12 mandatory bodies (F01-F12) were supplied and read in whole, including complete operative H25 and R7 text in F05, higher-precedence A1.1 amendment and precedence in F11/F12, CSQ-016 in F06, and OD1 in F07.",
+    "Downstream / out-of-scope operative sources NOT supplied here and still required before any Sequence P7 implementation, full D1/D1A code audit, or runtime/effect eligibility review (not blocking this abstract domain-policy vote): (a) concrete Sequence::plan / project_head (P7 / U1 / \u00a79) and S028/S048/S049/S050/S096 / WIRE-CONTRACT.md specifications and source; (b) remaining mori-core stage/runtime modules (decode.rs, validate.rs, parser.rs, ir.rs, runtime.rs, profile.rs, cost.rs, plan.rs, digest.rs, mod.rs) and workspace/compiler TCB; (c) lower-precedence continuation baseline files listed in F12 (DESIGN-OPUS-CLARIFICATION.md, DESIGN-OPUS.md, FINAL-NONSECURITY-DESIGN.md, ORACLE-CONTINUATIONS.md/.json)."
+  ],
+  "rationale": "1. UNIFORM BARE-/3 VERSUS SEQUENCE-ONLY (OD1, CSQ-016, AND DOMAIN TRADEOFFS):\n- Relationship to OD1 (F07) and CSQ-016 (F06): Neither policy is uniquely forced a priori by original OD1 or CSQ-016 alone; both are permitted design choices provided '/1' and '/2' predicates are not silently weakened and the scope/tradeoffs are explicitly declared. OD1 delegates to the designated owner the exact supported domain and which local duty registry identities may be projected (including discharge-only incoming duties and await/R7 boundaries) subject to 'Current predicates are not silently weakened.' CSQ-016 requires existing Core/1 and Core/2 stage APIs, DTOs, digests, admission, and costs to retain their exact behavior 'unless a separately scoped reviewed extension explicitly changes them.' Because 'moriarty-core/3' ('language \"moriarty/3\"') is a separately scoped new profile extension (D1A) while '/1' and '/2' stage behavior is preserved unchanged, adopting a uniform REG3 boundary domain across bare '/3' stage::start, Sequence '/3' project_head (P7), and '/3' stage::resume (R7) is fully consistent with OD1 and CSQ-016.\n- Explicit domain benefit and loss accepted by choosing uniform bare-/3:\n  (a) Incoming discharge-only duties (no Statement::Liability in the program): In '/3', an action that only discharges (or reads) an incoming liability is admitted in both bare stage::start and Sequence project_head (P7)\u2014and its retained boundary passes R7 on resume\u2014if and only if that duty is declared by a '/3' ExternalDutyDecl in REG3. The explicit domain loss accepted in bare '/3' (relative to legacy bare '/2' non-awaiting start) is that bare '/3' stage::start refuses non-awaiting actions whose opening scenario contains an undeclared incoming liability (one absent from both Statement::Liability and Program.duties), with attempted = 0.\n  (b) Declared versus undeclared identities: Under uniform bare-/3, a source-declared ExternalDutyDecl identity (asset, debtor, creditor) in REG3 is enforced at bare stage::start even for a non-awaiting '/3' action (refusing a mismatched debtor like 'mallory' or an undeclared 'ghost' liability with attempted = 0 before segment 0 runs, as illustrated in F02 lines 88-124). Under the Sequence-only alternative, if bare '/3' stage::start omitted canonical_boundary when plan.sites.is_empty(), a non-awaiting bare '/3' action with an ExternalDutyDecl and no Statement::Liability would only run scenario_snapshot (which checks only Statement::Liability identities) and would fail to enforce the declared ExternalDutyDecl identity or canonical liability ordering at bare start.\n  (c) Awaiting versus non-awaiting actions: Uniform bare-/3 makes admissibility invariant to await count (0 awaits vs >=1 awaits) and eliminates any domain seam between bare '/3' stage::start, Sequence '/3' project_head (P7), and '/3' stage::resume (R7).\n- Sufficiency of '/1' and '/2' preservation prose as a policy constraint: F03 lines 5 and 21 are sufficient as a policy constraint to pin exact '/1' and '/2' stage preservation (no '/1' or '/2' stage predicate, message, ordering, or hash input changed; bare '/2' stage::start applies canonical_boundary only when !plan.sites.is_empty(), preserving bare '/2' non-awaiting discharge-only admission), except that line 5 / line 23 should explicitly note that for '/2' (unlike '/3'), Sequence P7 still narrows the domain relative to bare '/2' non-awaiting stage::start because '/2' has no ExternalDutyDecl and Sequence '/2' applies canonical_boundary to awaiting and non-awaiting actions alike. (Whether source actually achieves '/1' and '/2' preservation is not certified by this policy vote.)\n\n2. H25 WORDING, EMIT_CHECKED QUALIFICATION, AND OWNER POLICY CHOICE:\n- Does H25 itself decide uniform non-awaiting bare-/3 admission? No. In F05 (\u00a7A3, \u00a7A10) and F01 (lines 48-64, 102, 183), H25 ('emit_checked') is an output guard on emitted 'StageOutcome::Waiting' continuations requiring that the continuation serialize within MAX_CONTINUATION_BYTES (4 MiB), round-trip through 'decode::continuation' (within JSON depth/65,536-node limits), and pass R7 ('canonical_boundary'). A non-awaiting action ('plan.sites.is_empty()') has zero await sites, never emits a 'Waiting' continuation, and can never be passed to 'stage::resume' (R3 refuses 'site == 0' or 'site > plan.sites.len()'). Therefore, H25 and R7 alone only constrain awaiting actions (which bare '/2' already guarded at start via '!plan.sites.is_empty()'). Extending 'canonical_boundary' (REG3) to non-awaiting bare '/3' 'stage::start' is a separate, explicit owner domain-unification policy choice so that (i) bare '/3' start, Sequence '/3' P7, and '/3' resume R7 share one domain independent of await count, and (ii) source-declared 'ExternalDutyDecl' identities are checked at bare '/3' start even for zero-await actions.\n- Is 'a boundary admitted at /3 start remains resumable (H25)' adequately qualified as written in F03 line 3? No, not as an unqualified clause in the operative rule. While F03 line 19 (RATIONALE) notes that 'H25 requires a Waiting continuation to decode and pass R7 or not be emitted', the operative wording in F03 line 3 ('Therefore bare-/3 and Sequence /3 domains coincide, neither depends on await count, and a boundary admitted at /3 start remains resumable (H25)') is overbroad in three ways:\n  (i) A non-awaiting '/3' action admitted at start completes at exit_site == 0, emits no continuation, and is not resumable at all.\n  (ii) For an awaiting '/3' action, admitting the opening boundary 'pre' at 'stage::start' checks 'pre' before segment 0 runs; segment 0 execution can still reject (e.g., runtime error or H26 meter violation) or produce a post-segment continuation that fails 'emit_checked' (e.g., exceeding MAX_CONTINUATION_BYTES or JSON node limits).\n  (iii) Even when 'StageOutcome::Waiting' is emitted after passing 'emit_checked', H25 + R7 establishes only a boundary-domain and decoder/R7 invariant (that the emitted continuation's retained boundary and captures decode and satisfy R7 'canonical_boundary' under REG3 for the same 'StagedProgram' without start-vs-resume registry divergence)\u2014never a blanket guarantee of liveness, progress, completion, or unconditional ability to resume (since a subsequent 'stage::resume' can still be rejected by R0 action mismatch, R5 event mismatch, R6 cap preflight, segment evaluation failure, or H26, or can return 'Waiting { advanced: false }' on a false guard).\n- Accordingly, I vote 'REVISE_SCOPED_F3' to adopt the uniform bare-/3 domain policy while revising F03 lines 3, 5, 19, 21, and 23 to state these exact qualifications.\n\n3. COVERED CLAUSES, REJECTION OF SEQUENCE-ONLY FOR /3, AND OPEN OBLIGATIONS:\n- Covered clauses: Only F03 lines 3, 5, 19, 21, and 23 as amended in the 'amendment' field. F03 line 1 and lines 7, 9, 11, 13, 15, and 17 (grammar, IR, parser/profile, validation/REG3 construction, load_v3, concrete boundary/caller data) are excluded and remain unadopted/unreviewed.\n- Why the preserved Sequence-only alternative is rejected for /3: Leaving bare '/3' non-awaiting 'stage::start' without 'canonical_boundary' (REG3) would leave source-declared 'ExternalDutyDecl' identities unchecked at bare '/3' start for zero-await discharge-only actions, make bare '/3' admissibility depend on await count, and reintroduce a domain mismatch between bare '/3' and Sequence '/3'. Preserving legacy non-awaiting discharge-only start admission in '/2' (CSQ-016) while making the new opt-in '/3' profile uniform across bare start, Sequence P7, and resume R7 is strictly cleaner. The full F03 line 23 dissent and conditional rollback rule are preserved verbatim in the amendment and dissent record.\n- Open obligations: Registry policy choice does not approve concrete REG3 construction, parser/IR/schema, hashes, callbacks, Meter, evaluator, SDK, or compiler correspondence. Source security, runtime/effect eligibility, the three local runtime tests, actual test results, full financial/composition coverage, OD2-OD8, native/proof/ledger/target/product obligations (F08), B1, and PR310 remain separately open. No user program permission gate is created; the product remains permissionless.\n\n4. MISSING OPERATIVE SOURCES / READ SCOPE:\n- All 12 mandatory bodies (F01-F12) were read in whole. No missing operative normative source prevents deciding this narrow abstract domain policy via 'REVISE_SCOPED_F3'. Downstream specifications and source files outside this readset (such as concrete Sequence 'project_head' P7 / WIRE-CONTRACT.md implementation and the remaining 'mori-core' modules) are recorded in 'missingOperativeSources' and 'limitations' for separate future implementation/eligibility reviews.",
+  "readScope": {
+    "partial": [],
+    "unread": [],
+    "whole": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F10",
+      "F11",
+      "F12"
+    ]
+  },
+  "reportedIdentity": "Gemini 4 Argon (High) (independent nonsecurity second design reviewer via Antigravity)",
+  "reviewToken": "core3-F3-narrow-policy-agy-independent-second-vote-20261020-a1-whole-v1",
+  "reviewedSubjectSha256": "d62bd6426af532a8b99c6c24c3ad7b2a374ff22d2ee7ff84c0073d35e35cd9c8"
+}
