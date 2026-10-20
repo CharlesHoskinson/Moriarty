@@ -1,0 +1,89 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/source/envget_runtime.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/source/envget_runtime.py
+@@ -115,12 +115,15 @@
+ 
+ 
+ def validate_label_map(data):
+-    keys(data, ('status', 'definition', 'counts', 'declarations',
+-                'source_signature_registry', 'mapping_method'))
++    keys(data, ('status', 'definition', 'counts', 'new_EnvGet_counts',
++                'declarations', 'source_signature_registry', 'mapping_method'))
+     if not same_whole(data['source_signature_registry'], REGISTRY_PIN):
+         raise ValueError('label map source registry pin differs')
+     if data['counts'] != {'DATA': 279, 'function': 27}:
+         raise ValueError('ACTUAL306 DATA/function counts differ')
++    if (type(data['new_EnvGet_counts']) is not dict
++            or data['new_EnvGet_counts'] != {'function': 27, 'DATA': 31}):
++        raise ValueError('actual new_EnvGet_counts differ')
+     if type(data['declarations']) is not list or len(data['declarations']) != 306:
+         raise ValueError('complete ACTUAL306 declaration list required')
+     lines = base.checked(data['definition']).decode('utf-8').splitlines()
+@@ -194,6 +197,44 @@
+         base.codec.REG = saved
+ 
+ 
++@contextmanager
++def _root_entry_codec_reg():
++    """Temporarily admit exactly egTwoEventWindow at a query root.
++
++    Only ENTRY_NAME is added to DATA_REG for base.tree rendering.
++    The other 26 function names remain absent, so base.tree still
++    refuses any other residual function. The enclosing _codec_reg
++    restores the prior DATA-only registry on success and on failure.
++    """
++    reg = dict(DATA_REG)
++    reg[ENTRY_NAME] = ALL_REG[ENTRY_NAME]
++    with _codec_reg(reg):
++        yield
++
++
++def query_tree(term):
++    """Return base.tree(term) for one egTwoEventWindow-rooted query.
++
++    The entry function is admitted only at the root. Every non-scalar
++    descendant must already be DATA; a nested entry or any other
++    function is refused before the temporary registry is widened.
++    The temporary widening contains exactly DATA_REG plus ENTRY_NAME,
++    never all 27 functions, and is restored by _codec_reg on every path.
++    """
++    if getattr(term, 'name', None) != ENTRY_NAME or getattr(term, 'sort', None) != 'EGWindow':
++        raise ValueError('query tree egTwoEventWindow root required')
++    stack = list(term.args)
++    while stack:
++        node = stack.pop()
++        if node.name in ('@Int', '@Bool', '@String'):
++            continue
++        if node.name not in DATA_REG:
++            raise ValueError('residual/entry function refused below query root')
++        stack.extend(node.args)
++    with _root_entry_codec_reg():
++        return base.tree(term)
++
++
+ # ------------------------------------------------------- wire <-> internal
+ def wire_to_internal(tree):
+     """Wire {sort,literal} primitives -> internal {sort,value}. Key only."""
+@@ -363,7 +404,7 @@
+     term = from_tree(internal_query, allow_entry=True)
+     wire_env = envelope(term, allow_entry=True)
+     decoded = decode_document(wire_env, 'EGWindow', allow_entry=True)
+-    if not base.same(base.tree(term), base.tree(decoded)):
++    if not base.same(query_tree(term), query_tree(decoded)):
+         raise ValueError('whole source query/KJSON typed inverse differs')
+     if not same_whole(ports.to_snapshot(wire_query['arguments'][0]), before):
+         raise ValueError('before snapshot field-port inverse differs')
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/tests/test_envget_runtime.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/tests/test_envget_runtime.py
+@@ -161,7 +161,11 @@
+         self.assertEqual(term.name, 'egTwoEventWindow')
+         self.assertEqual(term.sort, 'EGWindow')
+         decoded = r.decode_document(wire_env, 'EGWindow', allow_entry=True)
+-        self.assertTrue(r.base.same(r.base.tree(term), r.base.tree(decoded)))
++        self.assertTrue(r.base.same(r.query_tree(term), r.query_tree(decoded)))
++        self.assertNotIn('egTwoEventWindow', r.base.codec.REG)
++        self.assertEqual(r.base.codec.REG, r.DATA_REG)
++        with self.assertRaises(ValueError):
++            r.query_tree(decoded.args[0])
+         self.assertNotIn('egTwoEventWindow', r.base.codec.REG)
+         self.assertEqual(r.base.codec.REG, r.DATA_REG)
+         with self.assertRaises(ValueError):

@@ -1,0 +1,45 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/root-first-compile-composition-preparation-01/ROOT-EXACT1-HELPER-TASK-STATE-COMPILE-COMPOSITION.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/root-exact1-compile-composition-preparation01/ROOT-EXACT1-ENVGET-COMPILE-COMPOSITION.py
+@@ -1,18 +1,18 @@
+ from pathlib import Path
+ import json,hashlib,runpy,os,sys,glob
+ R=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017')
+-B=R/'k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01'
+-V=B/'actual-MuseWonderHIGH-KCompleteB39ProducerSourceApiCompileReview20261020'
++B=R/'k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01'
++V=B/'fresh-source-API-exact1-review-preparation02-full-production-context/actual-MuseWonderHIGH-source-or-review-01'
+ load=lambda p:json.loads(Path(p).read_bytes())
+ def pin(p):
+  p=Path(p);v=p.read_bytes();return dict(path=str(p),bytes=len(v),sha256=hashlib.sha256(v).hexdigest())
+ def check(x):
+  a=pin(x['path']);assert a['bytes']==x['bytes']and a['sha256']==x['sha256'];return a
+-proposal=B/'PROPOSED-EXACT1-NEW-HELPER-TASK-STATE-COMPILE.json'
+-assert pin(proposal)['sha256']=='81f652d7cec64eb91567691e06b7b4bb53868e39cf156bc111d6ba32dcc44fdb'
++proposal=B/'PROPOSED-EXACT1-NEW-ENVGET-COMPILE.json'
++assert pin(proposal)['sha256']=='600b0578f1f25bf48431366d7b32b0b7f4edd0ba34654ad2b66fa991e811e80d'
+ j=load(proposal);assert len(j['phases'])==1;op=j['phases'][0]
+-rv=load(V/'RESULT.json');assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed'and rv['finalSHA']=='844cba79e84d261c328a3ef047029afc22de713b4912c06846240dd73a0051f5'
+-f=load(j['source_freeze']['path']);tools=load(j['tools']['path']);closure=load(j['K_builtin_closure']['path'])
++rv=load(V/'RESULT.json');assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed'and rv['finalSHA']=='6e71059b8fa82365eafb5d7df82d43177f3c58777a8d1d8f7246436771c6031d'
++f=load(B/'root-exact1-compile-composition-preparation01/CURRENT-COMPLETE-PUBLIC-COMPILE-INPUT-DATA.json');tools=load(j['tools']['path']);closure=load(j['K_builtin_closure']['path'])
+ flat={}
+ def walk(x):
+  if isinstance(x,dict):
+@@ -31,7 +31,7 @@
+  return {'all_match':True,'rows':len(rows),'classpathJars':len(tools['classpath_jar_membership'])}
+ before=prepost()
+ check(j['callback']['fullsource'])
+-api=runpy.run_path(j['callback']['fullsource']['path'],run_name='root_complete_HELPER_TASK_STATE_F03_launch_only')
++api=runpy.run_path(j['callback']['fullsource']['path'],run_name='root_conditional_ENVGET_F03_launch_only')
+ assert api['CHILD_SECONDS']==30 and api['SWEEP_SECONDS']==3
+ actual=B/'actual';assert not actual.exists()
+ phase=Path(op['cwd']);phase.mkdir(parents=True,mode=0o700)
+@@ -54,7 +54,7 @@
+  fd=os.open(phase,os.O_DIRECTORY|os.O_RDONLY);os.fsync(fd);os.close(fd)
+  post=prepost();durable(phase/'ROOT-POSTCHECK.json',post)
+  artifacts=[pin(p)for p in sorted(actual.rglob('*'))if p.is_file()and p not in [actual/'FLAT-INPUT-PINS.json']]
+- products=[pin(p)for p in sorted((actual/'c6-complete-helper-task-state-kompiled').rglob('*'))if p.is_file()]
++ products=[pin(p)for p in sorted((actual/'envget-positive-kompiled').rglob('*'))if p.is_file()]
+  errors=[pin(p)for p in phase.glob('hs_err_pid*.log')]
+  durable(actual/'ROOT-ALL-ACTUAL-PRODUCTS-FROZEN.json',{'products':products,'rawFiles':artifacts,'jvmErrorFiles':errors})
+  ok=record.get('returncode')==0 and record.get('outcome')=='exited'and record.get('timed_out')is False and record.get('containment_breach')is False and not record.get('remaining')and not errors and all(Path(p).is_file()for p in op['products'])
