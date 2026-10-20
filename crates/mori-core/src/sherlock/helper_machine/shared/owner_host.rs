@@ -23,6 +23,29 @@ use super::owner_runtime::{CheckedOwnerEngine, PrepareDeps};
 use super::host_implied_prefix::{implied_seg_base, SegBase};
 use crate::sherlock::helper_machine::families::HostFamilyPlans;
 
+use super::fin_carrier::{FinCapacitiesC, FinPreparedStagedSource, FinStagedPrepareError};
+
+/// Callable owner-host source preparation (source-only; no genesis, no
+/// execution, no `simulate`/`start`/`resume` substitution). The producing
+/// seam is the real `stage::load`; the receiving constructor is
+/// `FinPreparedStagedSource::prepare`.
+pub fn prepare_fin_staged_program(
+    staged: crate::stage::StagedProgram,
+    layout: &LayoutSchemaC,
+    caps: &FinCapacitiesC,
+) -> Result<FinPreparedStagedSource, FinStagedPrepareError> {
+    FinPreparedStagedSource::prepare(staged, layout, caps)
+}
+
+pub fn prepare_fin_staged_source(
+    src: &str,
+    layout: &LayoutSchemaC,
+    caps: &FinCapacitiesC,
+) -> Result<FinPreparedStagedSource, FinStagedPrepareError> {
+    let staged = crate::stage::load(src).map_err(FinStagedPrepareError::Stage)?;
+    prepare_fin_staged_program(staged, layout, caps)
+}
+
 pub fn host_owner_engine() -> impl OwnerEngine {
     CheckedOwnerEngine::new_reviewed(HostFamilyPlans, PrepareDeps {
         prepare_core: owner_prepare::prepare_core,
