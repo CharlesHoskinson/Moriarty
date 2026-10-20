@@ -1,0 +1,33 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/tests/test_state_runtime.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/revision03-frame-contrast-testonly/tests/test_state_runtime.py
+@@ -21,7 +21,29 @@
+ 
+ 
+ class CombinedStatePortTests(_frozen.PositiveStatePorts):
+-    pass
++    def test_root16_frame17_split_preserves_all_fields(self):
++        for case in self.doc['state_cases']:
++            with self.subTest(case=case['case_id']):
++                state = case['state']
++                t = p.from_json('CSOwnedState', state)
++                self.assertEqual(len(t['arguments'][0]['arguments']), 17)
++                self.assertEqual(p.to_json(t), state)
++                changed = copy.deepcopy(state)
++                reversed_frames = list(reversed(changed['frames']))
++                if reversed_frames != state['frames']:
++                    changed['frames'] = reversed_frames
++                elif changed['frames']:
++                    changed['frames'] = changed['frames'] + [copy.deepcopy(changed['frames'][0])]
++                else:
++                    # Test-local structural fixture only; no admission/reachability/stack-policy claim.
++                    changed['frames'] = [{'ScopeF': {'saved_env': {'Some': 0}, 'origin': 0}}]
++                self.assertNotEqual(changed['frames'], state['frames'])
++                self.assertNotEqual(changed, state)
++                self.assertEqual(changed['root'], state['root'])
++                self.assertEqual(changed['data'], state['data'])
++                self.assertEqual(changed['helper'], state['helper'])
++                self.assertNotEqual(p.from_json('CSOwnedState', changed), t)
++                self.assertEqual(p.to_json(p.from_json('CSOwnedState', changed)), changed)
+ 
+ 
+ def put_json(root, name, value):
