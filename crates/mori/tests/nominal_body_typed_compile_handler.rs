@@ -193,7 +193,7 @@ fn recursive_argument_failure_checks_unused_body_without_runtime_unfolding() {
 fn publication_failure_retains_completed_body_metadata_without_runtime_completion() {
     let temp=Temp::new();let file=temp.0.join("program.mori");let conf=temp.0.join("config.json");let target=temp.0.join("target.json");let out=temp.0.join("out");
     std::fs::write(&file,text("entry 0;")).unwrap();std::fs::write(&conf,config().to_string()).unwrap();std::fs::write(&target,"{}").unwrap();std::fs::create_dir(&out).unwrap();
-    let args=compile_args::Args {file,target,out,execution_profile:Some("sherlock-helper-microstep/1".into()),source_profile:Some(TYPED.into()),entry:true,action:None,execution_config:Some(conf),observe:false};
+    let args=compile_args::Args {file,target,out,execution_profile:Some("sherlock-helper-microstep/1".into()),source_profile:Some(TYPED.into()),entry:true,action:None,execution_config:Some(conf),execution_inputs:None,observe:false};
     let source=source_io::read_source(&args.file).unwrap();let mut statuses=0;
     let error=selected_compile::run(&args,&source,|_,_|statuses+=1).unwrap_err().to_string();
     assert!(error.contains("\"stage\": \"publish\""));assert!(error.contains("\"status\": \"completed\""));

@@ -13,7 +13,7 @@ pub use crate::cli_args::compile::Args;
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let source = core_io::read_source(&args.file)?;
     // Selected HostOnly preparation returns before either native/backend path.
-    if args.execution_profile.is_some() || args.source_profile.is_some() || args.entry {
+    if args.execution_profile.is_some() || args.source_profile.is_some() || args.entry || args.execution_inputs.is_some() {
         return super::compile_sherlock::run(&args, &source, |verb, message| shell.status(verb, message));
     }
     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
