@@ -102,9 +102,12 @@ pub enum AdmissionReason { LayoutWidthTooSmall, ProgramViewMalformed,
     GrammarDomainMismatch, ProfileMismatch, LayoutBoundsMismatch }
     // GrammarDomainMismatch/ProfileMismatch: reserved, no B-core producer.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum HostViolationKind { StepInvViolated, SelectUndefined, ReadOutOfBounds,
+pub enum HostViolationKind {
+    StepInvViolated, SelectUndefined, ReadOutOfBounds,
     WrongVariant, DisabledRuleReached, ExtensionRuleReached,
-    PhysicalCapacityExceeded, ArithmeticUndefined }
+    PhysicalCapacityExceeded, ArithmeticUndefined,
+    FinancialUnsupportedBeyondGenesis { op: FinUnsupportedOp },
+}
     // R4 enum only. Owner maps a foreign family RuleIdC and a rejected plan
     // to WrongVariant{clause:None,rule:None,locator:Some("foreign rule for family"|"invalid plan")}.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -390,6 +393,7 @@ pub struct LayoutSchemaC { pub layout_version: (String, String),
     pub boundary_capacities_present: bool } // must be false in B-core (AD-6)
 
 // ---------- errors / selection: no derives over raw, moved RawRuleId ----
+#[derive(Debug)]
 pub struct HostViolation { pub kind: HostViolationKind,
     pub clause: Option<StepInvClauseId>, pub rule: Option<RuleIdC>,
     pub locator: Option<String> }
@@ -404,6 +408,7 @@ pub enum NeededNatC { Exact(u128), AboveU128 }
     // the AD-1/AD-3 minimum, or RunIntC::Nat(u128). AboveU128 is produced
     // only from RunIntC::NatAboveU128 at admitRun R3/R4, whose magnitude the
     // 3-class input never carried. It is never a saturated finite needed value.
+#[derive(Debug)]
 pub enum Tooling { AdmissionRejected { reason: AdmissionReason,
         detail: String, locator: Option<LocatorC> },
     CapacityNotAdmitted { kind: CapacityKind, needed: NeededNatC, limit: u128,
@@ -421,7 +426,40 @@ pub enum StepResult { Terminal, Event { event: StepEventC } }
     // Full R4 StepEventC above; sink and consumers receive StepEventC, not a 3-field reduction.
 
 // ---------- Admitted / MachineImage: private, owner-child only ----------
-struct AdmittedBody { identity: IdentityC, bounds: BoundsC, view: ProgramView, layout: LayoutSchemaC }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FinUnsupportedOp {
+    Step,
+    Run,
+    Select,
+    Capture,
+    Codec,
+    ObservePure,
+    StepInv,
+}
+
+/// Financial genesis state retained inside the actual MachineImage.
+/// `committed` is source-logical stage-plan work only; it is not B fuel,
+/// helper work, a B schedule, or expanded physical work.
+#[derive(Clone, Debug)]
+pub struct FinImageState {
+    pub action_index: usize,
+    pub inputs: Vec<fin_carrier::FinInputBinding>,
+    pub snapshot: fin_carrier::FinSnapshot,
+    pub core_snapshot: crate::Snapshot,
+    pub cap: Option<crate::UInt>,
+    pub committed: crate::UInt,
+}
+
+struct AdmittedBody {
+    identity: IdentityC,
+    bounds: BoundsC,
+    // Explicit receiving domain: a financial admission never carries a
+    // fake or empty pure ProgramView, and a pure admission never carries
+    // a financial prepared source.
+    view: Option<ProgramView>,
+    fin: Option<fin_carrier::FinPreparedStagedSource>,
+    layout: LayoutSchemaC,
+}
     // layout is retained for AD/R5/physical checks; bounds==layout.bounds by AD-0a and is the authoritative copy.
 pub struct Admitted { body: Arc<AdmittedBody> }
 impl Clone for Admitted {
@@ -434,9 +472,11 @@ pub struct MachineImage {
     alloc: AllocCounters, active: ActiveLengths,
     seg_base: host_implied_prefix::SegBase,
     helper: Option<HelperControlC>, result: Option<HelperResultC>,
+    fin: Option<FinImageState>,
     data: Vec<RawDataRow>, data_fields: Vec<RefC>, env: Vec<EnvCellC>, frames: Vec<FrameRowC>,
     tasks: Vec<HelperTaskC>, value_slots: Vec<RefC>,
 }
+
 impl MachineImage {
     pub fn seg_base(&self) -> host_implied_prefix::SegBase { self.seg_base }
 }
@@ -592,7 +632,7 @@ pub trait PreImageView {
     // pure sort_of_kind None maps only here to ArithmeticUndefined for structural sort consumers.
     fn scalar_test_type_ok(&self, r: &RefC, expected: &TypeIdC) -> Result<bool, HostViolation>;
     // Sole Scalar TestType seam: kind Marker/ConstructorExtensionReserved yields Ok(false), UInt/Bool/Nil/Cons/Leaf/Branch compares checked_sort; families never map Option themselves.
-    fn admitted_function_count(&self) -> usize;
+    fn admitted_function_count(&self) -> Result<usize, HostViolation>;
     // Sole function-table length seam: owner returns admitted view functions.len(); no other implementation and no zero fallback is permitted. Other tables remain readable only through the checked row methods above.
 }
 // Owner-only whole-view access lives ONLY in shared::owner (not this trait,
@@ -694,8 +734,21 @@ pub trait OwnerEngine {
         -> Result<(), ProgramViewViolation>;
     fn admit(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
         -> Result<Admitted, Tooling>;
+    fn admit_fin(
+        &self,
+        prepared: fin_carrier::FinPreparedStagedSource,
+        b: &BoundsC,
+        l: &LayoutSchemaC,
+    ) -> Result<Admitted, Tooling>;
     fn admit_run(&self, a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC, finance: &FinanceInput)
         -> Result<MachineImage, Tooling>;
+    fn admit_fin_run(
+        &self,
+        a: &Admitted,
+        fuel: &RunIntC,
+        stack_limit: &RunIntC,
+        request: &fin_carrier::FinGenesisRequest,
+    ) -> Result<MachineImage, fin_carrier::FinRunError>;
     fn rule_id_of(&self, raw: &RawRuleId) -> RuleIdC;
     fn raw_rule_id(&self, rule: &RuleIdC) -> RawRuleId;
     fn select(&self, pre: &PreImage<'_>) -> Result<Selected, HostViolation>;
@@ -745,6 +798,9 @@ pub use owner_host::{prepare_fin_staged_program, prepare_fin_staged_source};
 #[cfg(test)]
 #[path = "shared/fin_staged_source_tests.rs"]
 mod fin_staged_source_tests;
+#[cfg(test)]
+#[path = "shared/fin_owner_genesis_tests.rs"]
+mod fin_owner_genesis_tests;
 
 pub use owner_ext_admit::{
     ExtCapacitiesC, PreparationReportC, WorkMapEntryC, admit_ext, admit_ext_program,

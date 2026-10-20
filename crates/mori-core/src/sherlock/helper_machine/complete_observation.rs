@@ -7,7 +7,11 @@
 use super::raw::{ConstRow, DataRow};
 use super::shared::*;
 use super::shared::host_implied_prefix::SegBase;
-use super::shared::owner_host::{host_owner_engine, observe_bound_image, HostObservation};
+use super::shared::owner_host::{
+    financial_presence, host_owner_engine, observe_bound_image, observe_fin_bound_image,
+    HostObservation,
+};
+use serde_json::json;
 
 fn clone_type_expr_iterative(root: &owner_ext_type_builder::TypeExprSrc) -> owner_ext_type_builder::TypeExprSrc {
     use owner_ext_type_builder::TypeExprSrc;
@@ -388,7 +392,677 @@ pub fn copy_observation(value: HostObservation<'_>) -> HostSnapshot {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct FinAdmissionSnapshot {
+    pub identity: IdentityC,
+    pub bounds: BoundsC,
+    pub layout: LayoutSnapshot,
+    pub ext_capacities: Option<ExtCapacitiesC>,
+    pub prepared: super::shared::fin_carrier::FinPreparedStagedSource,
+}
+
+#[derive(Clone, Debug)]
+pub struct FinHostSnapshot {
+    admission: FinAdmissionSnapshot,
+    image: ImageSnapshot,
+    state: FinImageState,
+}
+impl FinHostSnapshot {
+    pub fn admission(&self) -> &FinAdmissionSnapshot { &self.admission }
+    pub fn image(&self) -> &ImageSnapshot { &self.image }
+    pub fn state(&self) -> &FinImageState { &self.state }
+}
+
+/// Complete owned financial genesis capture. AB binding happens inside
+/// observe_fin_bound_image before any retained field is copied.
+pub fn capture_fin(
+    admitted: &Admitted,
+    image: &MachineImage,
+) -> Result<FinHostSnapshot, HostViolation> {
+    let obs = observe_fin_bound_image(admitted, image)?;
+    let l = obs.admission.layout;
+    let layout = LayoutSnapshot {
+        layout_version: l.layout_version.clone(),
+        field_id: l.field_id.clone(),
+        widths: l.widths.as_ref().map(|w| WidthsSnapshot {
+            index_widths: w.index_width_entries().to_vec(),
+            counter_widths: w.counter_width_entries().to_vec(),
+            record_widths: w.record_width_entries().to_vec(),
+        }),
+        scalar_layout_id: l.scalar_layout_id.clone(),
+        bounds: l.bounds,
+        capacities: l.capacities,
+        boundary_capacities_present: l.boundary_capacities_present,
+    };
+    let img = obs.image;
+    Ok(FinHostSnapshot {
+        admission: FinAdmissionSnapshot {
+            identity: obs.admission.identity.clone(),
+            bounds: *obs.admission.bounds,
+            layout,
+            ext_capacities: l.ext_capacities,
+            prepared: obs.admission.prepared.clone(),
+        },
+        image: ImageSnapshot {
+            run_id: img.run_id.clone(),
+            control: *img.control,
+            control_origin: img.control_origin,
+            env_root: img.env_root,
+            stack_limit: img.stack_limit,
+            outcome: *img.outcome,
+            initial_fuel: img.initial_fuel,
+            remaining_work: img.remaining_work,
+            consumed_work: img.consumed_work,
+            helper_work: img.helper_work,
+            helper_visits: img.helper_visits,
+            reference_cursor: img.reference_cursor,
+            alloc: *img.alloc,
+            active: *img.active,
+            helper: img.helper.copied(),
+            result: img.result.copied(),
+            seg_base: img.seg_base,
+            data: img.data.iter().map(data).collect(),
+            data_fields: img.data_fields.to_vec(),
+            env: img.env.to_vec(),
+            frames: img.frames.to_vec(),
+            tasks: img.tasks.to_vec(),
+            value_slots: img.value_slots.to_vec(),
+        },
+        state: img.state.clone(),
+    })
+}
+
+fn fin_bounds_json(b: &BoundsC) -> serde_json::Value {
+    json!({
+        "code_rows": b.code_rows.to_string(),
+        "function_rows": b.function_rows.to_string(),
+        "code_child_slots": b.code_child_slots.to_string(),
+        "parameter_slots": b.parameter_slots.to_string(),
+        "pattern_rows": b.pattern_rows.to_string(),
+        "match_plan_rows": b.match_plan_rows.to_string(),
+        "match_arm_rows": b.match_arm_rows.to_string(),
+        "type_rows": b.type_rows.to_string(),
+        "constructor_rows": b.constructor_rows.to_string(),
+        "constructor_field_slots": b.constructor_field_slots.to_string(),
+        "max_arity": b.max_arity.to_string(),
+        "constant_nodes": b.constant_nodes.to_string(),
+        "constant_field_slots": b.constant_field_slots.to_string(),
+        "data_nodes": b.data_nodes.to_string(),
+        "data_field_slots": b.data_field_slots.to_string(),
+        "environment_cells": b.environment_cells.to_string(),
+        "frames": b.frames.to_string(),
+        "helper_tasks": b.helper_tasks.to_string(),
+        "serialization_bytes": b.serialization_bytes.to_string(),
+        "max_reference_work": b.max_reference_work.to_string(),
+        "max_helper_work": b.max_helper_work.to_string(),
+        "step_cap": b.step_cap.to_string(),
+    })
+}
+
+fn fin_digest_json(d: &DigestC) -> serde_json::Value {
+    match d {
+        DigestC::Unselected => json!("Unselected"),
+        DigestC::Selected { format, bytes } => json!({
+            "Selected": { "format": format, "bytes": bytes },
+        }),
+    }
+}
+
+fn fin_scalar_json(v: &super::shared::fin_carrier::FinScalar) -> serde_json::Value {
+    match v {
+        super::shared::fin_carrier::FinScalar::UInt(n) => json!({ "UInt": n.to_string() }),
+        super::shared::fin_carrier::FinScalar::Bool(b) => json!({ "Bool": b }),
+    }
+}
+
+#[derive(Debug)]
+pub enum FinCaptureJsonError {
+    ActionIndexOutOfRange { action_index: usize, action_count: usize },
+    SnapshotSourceMismatch,
+    StateCountMismatch { snapshot_states: usize, bound_states: usize },
+    BalanceAssetRowOutOfRange { row: usize },
+    LiabilityAssetRowOutOfRange { row: usize },
+    SerializationLimitExceeded { limit: usize },
+    OutputNotUtf8,
+    Serialize { field: &'static str, error: serde_json::Error },
+}
+
+fn fin_widths_json(w: &Option<WidthsSnapshot>) -> serde_json::Value {
+    match w {
+        None => serde_json::Value::Null,
+        Some(w) => json!({
+            "index_widths": w.index_widths,
+            "counter_widths": w.counter_widths,
+            "record_widths": w.record_widths,
+        }),
+    }
+}
+
+fn fin_ext_capacities_json(e: &Option<ExtCapacitiesC>) -> serde_json::Value {
+    match e {
+        None => serde_json::Value::Null,
+        Some(e) => json!({
+            "plan_case_slots": e.plan_case_slots,
+            "field_path_slots": e.field_path_slots,
+            "pattern_child_slots": e.pattern_child_slots,
+            "input_rows": e.input_rows,
+            "asset_rows": e.asset_rows,
+            "state_rows": e.state_rows,
+            "account_rows": e.account_rows,
+            "liability_rows": e.liability_rows,
+            "await_site_rows": e.await_site_rows,
+            "await_binder_slots": e.await_binder_slots,
+            "balance_cells": e.balance_cells,
+            "journal_rows": e.journal_rows,
+            "pending_op_rows": e.pending_op_rows,
+            "observations_per_invocation": e.observations_per_invocation,
+            "max_lifetime_work": e.max_lifetime_work.to_string(),
+            "resume_rows": e.resume_rows,
+        }),
+    }
+}
+
+struct BoundedJsonWriter {
+    buf: Vec<u8>,
+    limit: usize,
+    exceeded: bool,
+}
+
+impl BoundedJsonWriter {
+    fn new(limit: usize) -> Self {
+        Self { buf: Vec::new(), limit, exceeded: false }
+    }
+    fn limit_error(&self) -> FinCaptureJsonError {
+        FinCaptureJsonError::SerializationLimitExceeded { limit: self.limit }
+    }
+}
+
+impl std::io::Write for BoundedJsonWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.write_all(bytes)?;
+        Ok(bytes.len())
+    }
+    fn write_all(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+        let next = self.buf.len().checked_add(bytes.len()).filter(|n| *n <= self.limit);
+        match next {
+            Some(_) => {
+                self.buf.extend_from_slice(bytes);
+                Ok(())
+            }
+            None => {
+                self.exceeded = true;
+                Err(std::io::Error::new(std::io::ErrorKind::Other, "fin capture serialization limit exceeded"))
+            }
+        }
+    }
+    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+}
+
+fn bw(w: &mut BoundedJsonWriter, bytes: &[u8]) -> Result<(), FinCaptureJsonError> {
+    std::io::Write::write_all(w, bytes).map_err(|_| w.limit_error())
+}
+fn bw_json_string(w: &mut BoundedJsonWriter, value: &str, field: &'static str) -> Result<(), FinCaptureJsonError> {
+    serde_json::to_writer(&mut *w, value).map_err(|error| {
+        if w.exceeded { w.limit_error() } else { FinCaptureJsonError::Serialize { field, error } }
+    })
+}
+fn bw_serialize<T: ?Sized + serde::Serialize>(w: &mut BoundedJsonWriter, value: &T, field: &'static str) -> Result<(), FinCaptureJsonError> {
+    serde_json::to_writer(&mut *w, value).map_err(|error| {
+        if w.exceeded { w.limit_error() } else { FinCaptureJsonError::Serialize { field, error } }
+    })
+}
+fn bw_display(w: &mut BoundedJsonWriter, value: &dyn std::fmt::Display) -> Result<(), FinCaptureJsonError> {
+    use std::io::Write as _;
+    write!(w, "{}", value).map_err(|_| w.limit_error())
+}
+
+struct DebugEscapeWriter<'a> {
+    writer: &'a mut BoundedJsonWriter,
+}
+impl std::fmt::Write for DebugEscapeWriter<'_> {
+    fn write_str(&mut self, value: &str) -> std::fmt::Result {
+        for ch in value.chars() {
+            let result = match ch {
+                '"' => bw(self.writer, b"\\\""),
+                '\\' => bw(self.writer, b"\\\\"),
+                '\n' => bw(self.writer, b"\\n"),
+                '\r' => bw(self.writer, b"\\r"),
+                '\t' => bw(self.writer, b"\\t"),
+                '\u{0008}' => bw(self.writer, b"\\b"),
+                '\u{000C}' => bw(self.writer, b"\\f"),
+                ch if (ch as u32) < 0x20 => {
+                    let mut hex = [0u8; 6];
+                    hex[0] = b'\\';
+                    hex[1] = b'u';
+                    let n = ch as u32;
+                    hex[2] = b"0123456789abcdef"[(n >> 12) as usize & 0xF];
+                    hex[3] = b"0123456789abcdef"[(n >> 8) as usize & 0xF];
+                    hex[4] = b"0123456789abcdef"[(n >> 4) as usize & 0xF];
+                    hex[5] = b"0123456789abcdef"[(n & 0xF) as usize];
+                    bw(self.writer, &hex)
+                }
+                ch => {
+                    let mut utf8 = [0u8; 4];
+                    bw(self.writer, ch.encode_utf8(&mut utf8).as_bytes())
+                }
+            };
+            if result.is_err() {
+                return Err(std::fmt::Error);
+            }
+        }
+        Ok(())
+    }
+}
+
+fn bw_debug_string(w: &mut BoundedJsonWriter, value: &dyn std::fmt::Debug, field: &'static str) -> Result<(), FinCaptureJsonError> {
+    use std::fmt::Write as _;
+    bw(w, b"\"")?;
+    let mut adapter = DebugEscapeWriter { writer: w };
+    if write!(adapter, "{:?}", value).is_err() {
+        if w.exceeded {
+            return Err(w.limit_error());
+        }
+        return Err(FinCaptureJsonError::Serialize {
+            field,
+            error: serde_json::Error::io(std::io::Error::new(std::io::ErrorKind::Other, "debug formatting failed")),
+        });
+    }
+    bw(w, b"\"")
+}
+
+fn bw_bounds(w: &mut BoundedJsonWriter, b: &BoundsC) -> Result<(), FinCaptureJsonError> {
+    bw(w, b"{")?;
+    let fields: [(&str, String); 22] = [
+        ("code_rows", b.code_rows.to_string()), ("function_rows", b.function_rows.to_string()),
+        ("code_child_slots", b.code_child_slots.to_string()), ("parameter_slots", b.parameter_slots.to_string()),
+        ("pattern_rows", b.pattern_rows.to_string()), ("match_plan_rows", b.match_plan_rows.to_string()),
+        ("match_arm_rows", b.match_arm_rows.to_string()), ("type_rows", b.type_rows.to_string()),
+        ("constructor_rows", b.constructor_rows.to_string()), ("constructor_field_slots", b.constructor_field_slots.to_string()),
+        ("max_arity", b.max_arity.to_string()), ("constant_nodes", b.constant_nodes.to_string()),
+        ("constant_field_slots", b.constant_field_slots.to_string()), ("data_nodes", b.data_nodes.to_string()),
+        ("data_field_slots", b.data_field_slots.to_string()), ("environment_cells", b.environment_cells.to_string()),
+        ("frames", b.frames.to_string()), ("helper_tasks", b.helper_tasks.to_string()),
+        ("serialization_bytes", b.serialization_bytes.to_string()), ("max_reference_work", b.max_reference_work.to_string()),
+        ("max_helper_work", b.max_helper_work.to_string()), ("step_cap", b.step_cap.to_string()),
+    ];
+    for (index, (name, value)) in fields.iter().enumerate() {
+        if index > 0 { bw(w, b",")?; }
+        bw_json_string(w, name, "bounds.key")?;
+        bw(w, b":")?;
+        bw_json_string(w, value, "bounds.value")?;
+    }
+    bw(w, b"}")
+}
+
+fn bw_digest(w: &mut BoundedJsonWriter, d: &DigestC) -> Result<(), FinCaptureJsonError> {
+    match d {
+        DigestC::Unselected => bw_json_string(w, "Unselected", "identity.digest"),
+        DigestC::Selected { format, bytes } => {
+            bw(w, b"{\"Selected\":{\"format\":")?;
+            bw_serialize(w, format, "identity.digest.format")?;
+            bw(w, b",\"bytes\":")?;
+            bw_serialize(w, bytes, "identity.digest.bytes")?;
+            bw(w, b"}}")
+        }
+    }
+}
+
+fn bw_scalar(w: &mut BoundedJsonWriter, v: &super::shared::fin_carrier::FinScalar) -> Result<(), FinCaptureJsonError> {
+    match v {
+        super::shared::fin_carrier::FinScalar::UInt(n) => {
+            bw(w, b"{\"UInt\":")?;
+            bw_json_string(w, &n.to_string(), "fin_scalar")?;
+            bw(w, b"}")
+        }
+        super::shared::fin_carrier::FinScalar::Bool(value) => {
+            bw(w, b"{\"Bool\":")?;
+            bw_display(w, value)?;
+            bw(w, b"}")
+        }
+    }
+}
+
+fn bw_widths(w: &mut BoundedJsonWriter, widths: &Option<WidthsSnapshot>) -> Result<(), FinCaptureJsonError> {
+    let Some(widths) = widths else { return bw(w, b"null"); };
+    bw(w, b"{\"index_widths\":")?;
+    bw_serialize(w, &widths.index_widths, "layout.widths.index_widths")?;
+    bw(w, b",\"counter_widths\":")?;
+    bw_serialize(w, &widths.counter_widths, "layout.widths.counter_widths")?;
+    bw(w, b",\"record_widths\":")?;
+    bw_serialize(w, &widths.record_widths, "layout.widths.record_widths")?;
+    bw(w, b"}")
+}
+
+fn bw_ext_capacities(w: &mut BoundedJsonWriter, ext: &Option<ExtCapacitiesC>) -> Result<(), FinCaptureJsonError> {
+    let Some(e) = ext else { return bw(w, b"null"); };
+    bw(w, b"{")?;
+    let fields: [(&str, String); 16] = [
+        ("plan_case_slots", e.plan_case_slots.to_string()), ("field_path_slots", e.field_path_slots.to_string()),
+        ("pattern_child_slots", e.pattern_child_slots.to_string()), ("input_rows", e.input_rows.to_string()),
+        ("asset_rows", e.asset_rows.to_string()), ("state_rows", e.state_rows.to_string()),
+        ("account_rows", e.account_rows.to_string()), ("liability_rows", e.liability_rows.to_string()),
+        ("await_site_rows", e.await_site_rows.to_string()), ("await_binder_slots", e.await_binder_slots.to_string()),
+        ("balance_cells", e.balance_cells.to_string()), ("journal_rows", e.journal_rows.to_string()),
+        ("pending_op_rows", e.pending_op_rows.to_string()), ("observations_per_invocation", e.observations_per_invocation.to_string()),
+        ("max_lifetime_work", e.max_lifetime_work.to_string()), ("resume_rows", e.resume_rows.to_string()),
+    ];
+    for (index, (name, value)) in fields.iter().enumerate() {
+        if index > 0 { bw(w, b",")?; }
+        bw_json_string(w, name, "layout.ext_capacities.key")?;
+        bw(w, b":")?;
+        if *name == "max_lifetime_work" {
+            bw_json_string(w, value, "layout.ext_capacities.max_lifetime_work")?;
+        } else {
+            bw(w, value.as_bytes())?;
+        }
+    }
+    bw(w, b"}")
+}
+
+/// Bounded diagnostic serialization of the complete financial genesis
+/// capture. The retained limit is `admission.bounds.serialization_bytes`;
+/// zero is a real zero limit, not unlimited. All program, stage-plan,
+/// core-snapshot, input, configuration, geometry, vector, Debug-string,
+/// and escaped UTF-8 output bytes are written through the checked writer
+/// before the returned `String` exists. No `serde_json::Value`, DOM, or
+/// `format!("{:?}", ...)` intermediate is constructed. This is not a C6,
+/// native, checkpoint, canonical, or otherwise adopted wire format.
+pub fn fin_capture_json(s: &FinHostSnapshot) -> Result<String, FinCaptureJsonError> {
+    let prepared = &s.admission.prepared;
+    let bound = prepared.bound_source();
+    let identity = &s.admission.identity;
+    let actions = &prepared.fin_plan().actions;
+    let action = actions.get(s.state.action_index).ok_or(
+        FinCaptureJsonError::ActionIndexOutOfRange {
+            action_index: s.state.action_index,
+            action_count: actions.len(),
+        },
+    )?;
+    if s.state.snapshot.source() != bound {
+        return Err(FinCaptureJsonError::SnapshotSourceMismatch);
+    }
+    if s.state.snapshot.states().len() != bound.states().len() {
+        return Err(FinCaptureJsonError::StateCountMismatch {
+            snapshot_states: s.state.snapshot.states().len(),
+            bound_states: bound.states().len(),
+        });
+    }
+    for balance in s.state.snapshot.balances() {
+        if balance.asset.0 >= bound.assets().len() {
+            return Err(FinCaptureJsonError::BalanceAssetRowOutOfRange { row: balance.asset.0 });
+        }
+    }
+    for liability in s.state.snapshot.liabilities() {
+        if liability.asset.0 >= bound.assets().len() {
+            return Err(FinCaptureJsonError::LiabilityAssetRowOutOfRange { row: liability.asset.0 });
+        }
+    }
+
+    let mut w = BoundedJsonWriter::new(s.admission.bounds.serialization_bytes);
+    bw(&mut w, b"{\"format\":\"financial-genesis-capture/1\",\"identity\":{\"profile_id\":")?;
+    bw_display(&mut w, &identity.profile_id)?;
+    bw(&mut w, b",\"grammar_domain\":")?;
+    bw_debug_string(&mut w, &identity.grammar_domain, "identity.grammar_domain")?;
+    bw(&mut w, b",\"finance\":")?;
+    bw_debug_string(&mut w, &identity.finance, "identity.finance")?;
+    bw(&mut w, b",\"layout_version\":")?;
+    bw_serialize(&mut w, &identity.layout_version, "identity.layout_version")?;
+    bw(&mut w, b",\"layout_digest\":")?;
+    bw_digest(&mut w, &identity.layout_digest)?;
+    bw(&mut w, b",\"bounds_digest\":")?;
+    bw_digest(&mut w, &identity.bounds_digest)?;
+    bw(&mut w, b",\"field_id\":")?;
+    bw_serialize(&mut w, &identity.field_id, "identity.field_id")?;
+    bw(&mut w, b",\"program_membership_digest\":")?;
+    bw_digest(&mut w, &identity.program_membership_digest)?;
+    bw(&mut w, b"},\"bounds\":")?;
+    bw_bounds(&mut w, &s.admission.bounds)?;
+    bw(&mut w, b",\"layout\":{\"layout_version\":")?;
+    bw_serialize(&mut w, &s.admission.layout.layout_version, "layout.layout_version")?;
+    bw(&mut w, b",\"field_id\":")?;
+    bw_serialize(&mut w, &s.admission.layout.field_id, "layout.field_id")?;
+    bw(&mut w, b",\"widths\":")?;
+    bw_widths(&mut w, &s.admission.layout.widths)?;
+    bw(&mut w, b",\"scalar_layout_id\":")?;
+    bw_serialize(&mut w, &s.admission.layout.scalar_layout_id, "layout.scalar_layout_id")?;
+    bw(&mut w, b",\"bounds\":")?;
+    bw_bounds(&mut w, &s.admission.layout.bounds)?;
+    bw(&mut w, b",\"capacities\":{\"name_rows\":")?;
+    bw_json_string(&mut w, &s.admission.layout.capacities.name_rows.to_string(), "layout.capacities")?;
+    bw(&mut w, b",\"name_bytes\":")?;
+    bw_json_string(&mut w, &s.admission.layout.capacities.name_bytes.to_string(), "layout.capacities")?;
+    bw(&mut w, b",\"occurrence_path_slots\":")?;
+    bw_json_string(&mut w, &s.admission.layout.capacities.occurrence_path_slots.to_string(), "layout.capacities")?;
+    bw(&mut w, b",\"value_slots\":")?;
+    bw_json_string(&mut w, &s.admission.layout.capacities.value_slots.to_string(), "layout.capacities")?;
+    bw(&mut w, b"},\"ext_capacities\":")?;
+    bw_ext_capacities(&mut w, &s.admission.ext_capacities)?;
+    bw(&mut w, b",\"boundary_capacities_present\":")?;
+    bw_display(&mut w, &s.admission.layout.boundary_capacities_present)?;
+    bw(&mut w, b"},\"prepared\":{\"program\":")?;
+    bw_serialize(&mut w, prepared.program(), "prepared.program")?;
+    bw(&mut w, b",\"stage_plan\":")?;
+    bw_serialize(&mut w, prepared.stage_plan(), "prepared.stage_plan")?;
+    bw(&mut w, b",\"program_hash\":")?;
+    bw_serialize(&mut w, &prepared.program_hash().to_vec(), "prepared.program_hash")?;
+    bw(&mut w, b",\"plan_hash\":")?;
+    bw_serialize(&mut w, &prepared.plan_hash().to_vec(), "prepared.plan_hash")?;
+    bw(&mut w, b",\"bound_names\":")?;
+    bw_serialize(&mut w, bound.names(), "prepared.bound_names")?;
+    bw(&mut w, b",\"bound_states\":[")?;
+    for (index, state) in bound.states().iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"row\":")?;
+        bw_display(&mut w, &state.row.0)?;
+        bw(&mut w, b",\"name_id\":")?;
+        bw_display(&mut w, &state.name.0)?;
+        bw(&mut w, b",\"text\":")?;
+        bw_json_string(&mut w, &state.text, "prepared.bound_states.text")?;
+        bw(&mut w, b",\"ty\":")?;
+        bw_debug_string(&mut w, &state.ty, "prepared.bound_states.ty")?;
+        bw(&mut w, b",\"initial\":")?;
+        bw_scalar(&mut w, &state.initial)?;
+        bw(&mut w, b"}")?;
+    }
+    bw(&mut w, b"],\"bound_assets\":[")?;
+    for (index, asset) in bound.assets().iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"row\":")?;
+        bw_display(&mut w, &asset.row.0)?;
+        bw(&mut w, b",\"name_id\":")?;
+        bw_display(&mut w, &asset.name.0)?;
+        bw(&mut w, b",\"text\":")?;
+        bw_json_string(&mut w, &asset.text, "prepared.bound_assets.text")?;
+        bw(&mut w, b",\"identity\":{\"network\":")?;
+        bw_json_string(&mut w, &asset.identity.network, "prepared.bound_assets.identity")?;
+        bw(&mut w, b",\"issuer\":")?;
+        bw_json_string(&mut w, &asset.identity.issuer, "prepared.bound_assets.identity")?;
+        bw(&mut w, b",\"reference\":")?;
+        bw_json_string(&mut w, &asset.identity.reference, "prepared.bound_assets.identity")?;
+        bw(&mut w, b",\"scale\":")?;
+        bw_display(&mut w, &asset.identity.scale)?;
+        bw(&mut w, b"}}")?;
+    }
+    bw(&mut w, b"],\"bound_actions\":[")?;
+    for (index, action) in bound.actions().iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"name_id\":")?;
+        bw_display(&mut w, &action.name.0)?;
+        bw(&mut w, b",\"text\":")?;
+        bw_json_string(&mut w, &action.text, "prepared.bound_actions.text")?;
+        bw(&mut w, b"}")?;
+    }
+    bw(&mut w, b"],\"bound_capacities\":{\"max_states\":")?;
+    bw_display(&mut w, &bound.capacities().max_states)?;
+    bw(&mut w, b",\"max_assets\":")?;
+    bw_display(&mut w, &bound.capacities().max_assets)?;
+    bw(&mut w, b",\"max_balances\":")?;
+    bw_display(&mut w, &bound.capacities().max_balances)?;
+    bw(&mut w, b",\"max_liabilities\":")?;
+    bw_display(&mut w, &bound.capacities().max_liabilities)?;
+    bw(&mut w, b"},\"fin_plan\":{\"actions\":[")?;
+    for (index, action) in actions.iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"name\":")?;
+        bw_json_string(&mut w, &action.name, "prepared.fin_plan.name")?;
+        bw(&mut w, b",\"segment_src_cost\":[")?;
+        for (item, value) in action.segment_src_cost.iter().enumerate() {
+            if item > 0 { bw(&mut w, b",")?; }
+            bw_json_string(&mut w, &value.to_string(), "prepared.fin_plan.segment_src_cost")?;
+        }
+        bw(&mut w, b"],\"committed_before\":[")?;
+        for (item, value) in action.committed_before.iter().enumerate() {
+            if item > 0 { bw(&mut w, b",")?; }
+            bw_json_string(&mut w, &value.to_string(), "prepared.fin_plan.committed_before")?;
+        }
+        bw(&mut w, b"],\"plan_total\":")?;
+        bw_json_string(&mut w, &action.plan_total.to_string(), "prepared.fin_plan.plan_total")?;
+        bw(&mut w, b"}")?;
+    }
+    bw(&mut w, b"]}},\"genesis\":{\"action_index\":")?;
+    bw_display(&mut w, &s.state.action_index)?;
+    bw(&mut w, b",\"action\":")?;
+    bw_json_string(&mut w, &action.name, "genesis.action")?;
+    bw(&mut w, b",\"inputs\":[")?;
+    for (index, input) in s.state.inputs.iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"name\":")?;
+        bw_json_string(&mut w, &input.name, "genesis.inputs.name")?;
+        bw(&mut w, b",\"ty\":")?;
+        bw_debug_string(&mut w, &input.ty, "genesis.inputs.ty")?;
+        bw(&mut w, b",\"value\":")?;
+        bw_serialize(&mut w, &input.value, "genesis.inputs.value")?;
+        bw(&mut w, b"}")?;
+    }
+    bw(&mut w, b"],\"snapshot\":{\"states\":[")?;
+    for (index, value) in s.state.snapshot.states().iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw_scalar(&mut w, value)?;
+    }
+    bw(&mut w, b"],\"balances\":[")?;
+    for (index, balance) in s.state.snapshot.balances().iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"asset_row\":")?;
+        bw_display(&mut w, &balance.asset.0)?;
+        bw(&mut w, b",\"account\":")?;
+        bw_json_string(&mut w, &balance.account, "genesis.snapshot.balances.account")?;
+        bw(&mut w, b",\"amount\":")?;
+        bw_json_string(&mut w, &balance.amount.to_string(), "genesis.snapshot.balances.amount")?;
+        bw(&mut w, b"}")?;
+    }
+    bw(&mut w, b"],\"liabilities\":[")?;
+    for (index, liability) in s.state.snapshot.liabilities().iter().enumerate() {
+        if index > 0 { bw(&mut w, b",")?; }
+        bw(&mut w, b"{\"name\":")?;
+        bw_json_string(&mut w, &liability.name, "genesis.snapshot.liabilities.name")?;
+        bw(&mut w, b",\"asset_row\":")?;
+        bw_display(&mut w, &liability.asset.0)?;
+        bw(&mut w, b",\"debtor\":")?;
+        bw_json_string(&mut w, &liability.debtor, "genesis.snapshot.liabilities.debtor")?;
+        bw(&mut w, b",\"creditor\":")?;
+        bw_json_string(&mut w, &liability.creditor, "genesis.snapshot.liabilities.creditor")?;
+        bw(&mut w, b",\"amount\":")?;
+        bw_json_string(&mut w, &liability.amount.to_string(), "genesis.snapshot.liabilities.amount")?;
+        bw(&mut w, b"}")?;
+    }
+    bw(&mut w, b"]},\"core_snapshot\":")?;
+    bw_serialize(&mut w, &s.state.core_snapshot, "genesis.core_snapshot")?;
+    bw(&mut w, b",\"cap\":")?;
+    match s.state.cap {
+        Some(cap) => bw_json_string(&mut w, &cap.0.to_string(), "genesis.cap")?,
+        None => bw(&mut w, b"null")?,
+    }
+    bw(&mut w, b",\"committed\":")?;
+    bw_json_string(&mut w, &s.state.committed.0.to_string(), "genesis.committed")?;
+    bw(&mut w, b"},\"image\":{\"run_id\":")?;
+    bw_debug_string(&mut w, &s.image.run_id, "image.run_id")?;
+    bw(&mut w, b",\"control\":")?;
+    bw_debug_string(&mut w, &s.image.control, "image.control")?;
+    bw(&mut w, b",\"control_origin\":")?;
+    bw_json_string(&mut w, &s.image.control_origin.to_string(), "image.control_origin")?;
+    bw(&mut w, b",\"env_root\":")?;
+    bw_debug_string(&mut w, &s.image.env_root, "image.env_root")?;
+    bw(&mut w, b",\"stack_limit\":")?;
+    bw_json_string(&mut w, &s.image.stack_limit.to_string(), "image.stack_limit")?;
+    bw(&mut w, b",\"outcome\":")?;
+    bw_debug_string(&mut w, &s.image.outcome, "image.outcome")?;
+    bw(&mut w, b",\"initial_fuel\":")?;
+    bw_json_string(&mut w, &s.image.initial_fuel.to_string(), "image.initial_fuel")?;
+    bw(&mut w, b",\"remaining_work\":")?;
+    bw_json_string(&mut w, &s.image.remaining_work.to_string(), "image.remaining_work")?;
+    bw(&mut w, b",\"consumed_work\":")?;
+    bw_json_string(&mut w, &s.image.consumed_work.to_string(), "image.consumed_work")?;
+    bw(&mut w, b",\"helper_work\":")?;
+    bw_json_string(&mut w, &s.image.helper_work.to_string(), "image.helper_work")?;
+    bw(&mut w, b",\"helper_visits\":")?;
+    bw_json_string(&mut w, &s.image.helper_visits.to_string(), "image.helper_visits")?;
+    bw(&mut w, b",\"reference_cursor\":")?;
+    bw_json_string(&mut w, &s.image.reference_cursor.to_string(), "image.reference_cursor")?;
+    bw(&mut w, b",\"alloc\":")?;
+    bw_debug_string(&mut w, &s.image.alloc, "image.alloc")?;
+    bw(&mut w, b",\"active\":")?;
+    bw_debug_string(&mut w, &s.image.active, "image.active")?;
+    bw(&mut w, b",\"seg_base\":{\"active\":")?;
+    bw_debug_string(&mut w, &s.image.seg_base.active(), "image.seg_base.active")?;
+    bw(&mut w, b",\"alloc\":")?;
+    bw_debug_string(&mut w, &s.image.seg_base.alloc(), "image.seg_base.alloc")?;
+    bw(&mut w, b",\"consumed_work\":")?;
+    let seg_consumed = s.image.seg_base.consumed_work();
+    bw_debug_string(&mut w, &seg_consumed, "image.seg_base.consumed_work")?;
+    bw(&mut w, b"},\"helper\":")?;
+    bw_debug_string(&mut w, &s.image.helper, "image.helper")?;
+    bw(&mut w, b",\"result\":")?;
+    bw_debug_string(&mut w, &s.image.result, "image.result")?;
+    bw(&mut w, b",\"data\":")?;
+    bw_debug_string(&mut w, &s.image.data, "image.data")?;
+    bw(&mut w, b",\"data_fields\":")?;
+    bw_debug_string(&mut w, &s.image.data_fields, "image.data_fields")?;
+    bw(&mut w, b",\"env\":")?;
+    bw_debug_string(&mut w, &s.image.env, "image.env")?;
+    bw(&mut w, b",\"frames\":")?;
+    bw_debug_string(&mut w, &s.image.frames, "image.frames")?;
+    bw(&mut w, b",\"tasks\":")?;
+    bw_debug_string(&mut w, &s.image.tasks, "image.tasks")?;
+    bw(&mut w, b",\"value_slots\":")?;
+    bw_debug_string(&mut w, &s.image.value_slots, "image.value_slots")?;
+    bw(&mut w, b"}}")?;
+    if w.exceeded {
+        return Err(w.limit_error());
+    }
+    String::from_utf8(w.buf).map_err(|_| FinCaptureJsonError::OutputNotUtf8)
+}
+
+#[cfg(test)]
+mod fin_capture_writer_tests {
+    use super::*;
+
+    #[test]
+    fn bounded_debug_string_escapes_utf8_and_controls() {
+        let mut writer = BoundedJsonWriter::new(64);
+        bw_debug_string(&mut writer, &"a\"\\\n\u{1}é", "test.debug").expect("bounded debug");
+        assert_eq!(
+            String::from_utf8(writer.buf).expect("utf8"),
+            serde_json::to_string(&format!("{:?}", "a\"\\\n\u{1}é")).expect("expected JSON")
+        );
+        let mut tight = BoundedJsonWriter::new(3);
+        assert!(matches!(
+            bw_debug_string(&mut tight, &"abcdef", "test.debug"),
+            Err(FinCaptureJsonError::SerializationLimitExceeded { limit: 3 })
+        ));
+    }
+}
+
 pub fn capture(admitted: &Admitted, image: &MachineImage) -> Result<HostSnapshot, HostViolation> {
+    if financial_presence(admitted, image)? {
+        return Err(HostViolation {
+            kind: super::shared::HostViolationKind::FinancialUnsupportedBeyondGenesis {
+                op: super::shared::FinUnsupportedOp::Capture,
+            },
+            clause: None,
+            rule: None,
+            locator: Some("financial complete capture beyond genesis".to_string()),
+        });
+    }
     observe_bound_image(admitted, image).map(copy_observation)
 }
 
