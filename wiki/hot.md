@@ -34,3 +34,8 @@ tags: [moriarty, consolidation, recursion]
 ## Sherlock circuit atlas continuation —2026-10-20
 
 [UPDATE017](research/sherlock-circuit-atlas/UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md) is a finished-site concept proposal with separately dated source engineering status. The full Sherlock/native/stagenet goal remains unfinished; the concept log is asynchronous.
+
+
+## UPDATE017 source provenance navigation —2026-10-20
+
+[The atlas index](research/sherlock-circuit-atlas/index.md) now lists both UPDATE017 source summaries separately from the unchanged Muse concept and status. The earlier Root lint and scoped raw-path readback remain separate observations; no global lint-clean or new product/native/EARS claim follows.
