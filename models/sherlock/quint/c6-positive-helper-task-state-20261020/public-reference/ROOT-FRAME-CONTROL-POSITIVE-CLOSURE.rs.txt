@@ -1,0 +1,784 @@
+//! Versioned physical lane view of the generic C6 machine root and frame stack.
+//!
+//! Profile `sherlock-c6-phys/1` (C6P1), Chunk 1: one root+frames image section,
+//! plus owned recorders around the existing fixed owner step for A135
+//! (`KMachinePushAccept`) and A140 (`KMachinePushRefuse`).
+//!
+//! This module is a codec and an owned-record consumer. It does not admit
+//! programs, construct `Admitted`/`MachineImage`, select rules, evaluate, or step
+//! twice. The section carries no program binding, helper, result, task, data,
+//! env-cell or value-slot table; those are Chunk 3/4 and remain OPEN. No native,
+//! proof, encoder-conformance or full-state physical POST claim is made.
+//!
+//! Layout (lane offsets are the `L_*` constants): magic, version, 17-lane
+//! control, control origin, 2-lane env root, stack limit, 3-lane outcome,
+//! six u128 counters, alloc(3), active(4), seg active(4), seg alloc(3), seg
+//! consumed work, frame count; then `frame_count` 13-lane frames bottom-to-top.
+//!
+//! `decode_image_section` first-error precedence:
+//! 1. fewer than 48 lanes: `Truncated`; 2. `BadMagic`; 3. `BadVersion`;
+//! 4. control record, structurally, ascending lanes (record-relative lane
+//!    numbers; an embedded frame reports section "frame");
+//! 5. root lanes 19..=47 structurally in ascending lane order (usize/u8
+//!    representability, env/outcome/ref tags, padding; section-absolute lanes);
+//! 6. representation caps: control, then root fields in lane order, then the
+//!    frame count against `max_frames`;
+//! 7. exact length: `Truncated`, then `TrailingLanes` (no allocation before);
+//! 8. frames bottom-to-top, each structurally then against caps.
+//! Indices must be strictly below their table cap; counts at most their cap;
+//! a slice is checked for end overflow, then arity, then end <= table cap.
+//! Builtin TypeId exception: the five TypeId index fields (ReturnF.return_type,
+//! ConstructorFieldsF.type_id and .field_type, Bound.return_type,
+//! Materialize.type_id) are checked against the effective cap
+//! `max(max_types, 4)`, because builtin TypeIds 0..=3 exist even when
+//! `type_rows < 4` (owner SI-15 `types.len().max(4)`; dedicated
+//! `check_program_view` uses 4 types). `max_types` itself stays the declared
+//! `type_rows` and still caps the program `types`/`type_args` table counts.
+//! `AllocCounters::data_fields`/`ActiveLengths::data_fields` have no caps field
+//! and are carried exactly. Membership of nominal IDs in admitted tables is
+//! cross-section work (Chunk 4) and is not claimed.
+
+use super::complete_observation::{
+    capture, record_step, CaptureStepError, CompleteStepRecord, HostSnapshot, ImageSnapshot,
+    ObservedStep,
+};
+use super::shared::adt::{CtorIdC, TypeIdC};
+use super::shared::*;
+
+pub const C6_PHYS_MAGIC: u128 = 0x4336_5048_5953_31;
+pub const C6_PHYS_VERSION: u128 = 1;
+pub const FRAME_LANES: usize = 13;
+pub const CONTROL_LANES: usize = 17;
+pub const IMAGE_SECTION_HEADER_LANES: usize = 48;
+/// A140 writes `ControlC::Error { code: 4 }`; publication is a later step.
+pub const PUSH_REFUSE_ERROR_CODE: u8 = 4;
+
+pub const L_MAGIC: usize = 0;
+pub const L_VERSION: usize = 1;
+pub const L_CONTROL: usize = 2;
+pub const L_CONTROL_ORIGIN: usize = 19;
+pub const L_ENV_ROOT: usize = 20;
+pub const L_STACK_LIMIT: usize = 22;
+pub const L_OUTCOME: usize = 23;
+pub const L_INITIAL_FUEL: usize = 26;
+pub const L_REMAINING_WORK: usize = 27;
+pub const L_CONSUMED_WORK: usize = 28;
+pub const L_HELPER_WORK: usize = 29;
+pub const L_HELPER_VISITS: usize = 30;
+pub const L_REFERENCE_CURSOR: usize = 31;
+pub const L_ALLOC: usize = 32;
+pub const L_ACTIVE: usize = 35;
+pub const L_SEG_ACTIVE: usize = 39;
+pub const L_SEG_ALLOC: usize = 43;
+pub const L_SEG_CONSUMED_WORK: usize = 46;
+pub const L_FRAME_COUNT: usize = 47;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PushSelection { Accept, Refuse }
+
+impl PushSelection {
+    pub fn rule(self) -> RuleIdC {
+        match self {
+            Self::Accept => RuleIdC::KMachinePushAccept,
+            Self::Refuse => RuleIdC::KMachinePushRefuse,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum C6PhysError {
+    BadMagic { actual: u128 },
+    BadVersion { actual: u128 },
+    Truncated { section: &'static str, needed: usize, actual: usize },
+    TrailingLanes { section: &'static str, extra: usize },
+    BadTag { section: &'static str, tag: u128 },
+    BadBool { section: &'static str, value: u128 },
+    NonZeroPadding { section: &'static str, lane: usize, value: u128 },
+    UsizeOverflow { section: &'static str, value: u128 },
+    CapacityExceeded { section: &'static str, needed: usize, limit: usize },
+    WrongControl { section: &'static str },
+    /// The owner would not select a Push row here (terminal, publication, fuel,
+    /// helper or stale result), in owner priority order.
+    NotPushSelected { section: &'static str },
+    /// The state is outside the step-invariant domain this layer accepts.
+    StepInvDomain { section: &'static str },
+    /// Logical Accept, but the owner's physical frame check would refuse.
+    PhysicalFrameCapacity { depth: usize, frames: usize },
+    UnexpectedPushSelection { expected: PushSelection, actual: PushSelection },
+    EventMismatch { section: &'static str },
+    AfterMismatch { section: &'static str },
+    CounterOverflow { section: &'static str },
+}
+
+pub type C6Result<T> = Result<T, C6PhysError>;
+
+/// Representation caps. Counts are inclusive limits; indices are strictly below.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6PhysCaps {
+    pub max_frames: usize,
+    pub max_expressions: usize,
+    pub max_names: usize,
+    pub max_arms: usize,
+    pub max_children: usize,
+    pub max_value_slots: usize,
+    pub max_constants: usize,
+    pub max_data_nodes: usize,
+    pub max_env_cells: usize,
+    pub max_functions: usize,
+    pub max_arity: usize,
+    pub max_types: usize,
+    pub max_occurrences: usize,
+    pub max_occurrence_paths: usize,
+    pub max_parameters: usize,
+    pub max_patterns: usize,
+    pub max_pattern_children: usize,
+    pub max_constructors: usize,
+    pub max_ctor_fields: usize,
+    pub max_decl_templates: usize,
+    pub max_plan_nodes: usize,
+    pub max_plan_cases: usize,
+    pub max_field_paths: usize,
+    pub max_constant_fields: usize,
+    pub max_name_bytes: usize,
+    /// Codec work budget, not an admitted limit: type-expression nodes decoded.
+    pub max_type_expr_nodes: usize,
+    /// Codec work budget, not an admitted limit: declaration-template text bytes.
+    pub max_template_bytes: usize,
+}
+
+/// Codec work budgets that have no admitted counterpart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6CodecBudgets {
+    pub type_expr_nodes: usize,
+    pub template_bytes: usize,
+}
+
+impl C6PhysCaps {
+    /// Exact admitted limits; never raised. Declarations are `type_rows - 4`.
+    /// `max_types` is the declared `type_rows` and caps table counts; the five
+    /// TypeId index fields use `max(max_types, 4)` so builtin TypeIds 0..=3
+    /// remain representable when `type_rows < 4`.
+    pub fn from_parts(bounds: &BoundsC, capacities: &LayoutCapacitiesC, ext: &ExtCapacitiesC,
+        budgets: C6CodecBudgets) -> Self {
+        Self {
+            max_frames: bounds.frames,
+            max_expressions: bounds.code_rows,
+            max_names: capacities.name_rows,
+            max_arms: bounds.match_arm_rows,
+            max_children: bounds.code_child_slots,
+            max_value_slots: capacities.value_slots,
+            max_constants: bounds.constant_nodes,
+            max_data_nodes: bounds.data_nodes,
+            max_env_cells: bounds.environment_cells,
+            max_functions: bounds.function_rows,
+            max_arity: bounds.max_arity,
+            max_types: bounds.type_rows,
+            max_occurrences: bounds.code_rows,
+            max_occurrence_paths: capacities.occurrence_path_slots,
+            max_parameters: bounds.parameter_slots,
+            max_patterns: bounds.pattern_rows,
+            max_pattern_children: ext.pattern_child_slots,
+            max_constructors: bounds.constructor_rows,
+            max_ctor_fields: bounds.constructor_field_slots,
+            max_decl_templates: bounds.type_rows.saturating_sub(4),
+            max_plan_nodes: bounds.match_plan_rows,
+            max_plan_cases: ext.plan_case_slots,
+            max_field_paths: ext.field_path_slots,
+            max_constant_fields: bounds.constant_field_slots,
+            max_name_bytes: capacities.name_bytes,
+            max_type_expr_nodes: budgets.type_expr_nodes,
+            max_template_bytes: budgets.template_bytes,
+        }
+    }
+
+    pub fn from_layout(layout: &LayoutSchemaC, budgets: C6CodecBudgets) -> Self {
+        let ext = ExtCapacitiesC::effective_for_extended_domain(layout.ext_capacities);
+        Self::from_parts(&layout.bounds, &layout.capacities, &ext, budgets)
+    }
+
+    /// Convenience caps for tests and tooling. Not admitted limits.
+    pub const fn test_caps() -> Self {
+        Self {
+            max_frames: 64, max_expressions: 256, max_names: 256, max_arms: 64,
+            max_children: 256, max_value_slots: 1024, max_constants: 256,
+            max_data_nodes: 256, max_env_cells: 256, max_functions: 64, max_arity: 8,
+            max_types: 64, max_occurrences: 256, max_occurrence_paths: 4096,
+            max_parameters: 256, max_patterns: 256, max_pattern_children: 256,
+            max_constructors: 256, max_ctor_fields: 256, max_decl_templates: 64,
+            max_plan_nodes: 256, max_plan_cases: 256, max_field_paths: 4096,
+            max_constant_fields: 256, max_name_bytes: 8192, max_type_expr_nodes: 4096,
+            max_template_bytes: 8192,
+        }
+    }
+}
+
+// ---------- lane primitives ----------
+
+/// usize -> u128 is lossless on every supported target (usize <= 64 bits).
+const fn u(v: usize) -> u128 { v as u128 }
+
+fn rd(section: &'static str, value: u128) -> C6Result<usize> {
+    usize::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
+}
+fn rd_u8(section: &'static str, value: u128) -> C6Result<u8> {
+    u8::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
+}
+fn rd_bool(section: &'static str, value: u128) -> C6Result<bool> {
+    match value { 0 => Ok(false), 1 => Ok(true), _ => Err(C6PhysError::BadBool { section, value }) }
+}
+/// Lanes `from..to` of `lanes` must be zero; `lane` is an index into `lanes`.
+fn zero(section: &'static str, lanes: &[u128], from: usize, to: usize) -> C6Result<()> {
+    for (lane, &value) in lanes.iter().enumerate().take(to).skip(from) {
+        if value != 0 { return Err(C6PhysError::NonZeroPadding { section, lane, value }); }
+    }
+    Ok(())
+}
+fn put_env(out: &mut [u128], at: usize, env: EnvRootC) {
+    if let Some(index) = env { out[at] = 1; out[at + 1] = u(index); }
+}
+fn get_env(section: &'static str, lanes: &[u128], at: usize) -> C6Result<EnvRootC> {
+    match lanes[at] {
+        0 => { zero(section, lanes, at + 1, at + 2)?; Ok(None) }
+        1 => Ok(Some(rd(section, lanes[at + 1])?)),
+        tag => Err(C6PhysError::BadTag { section, tag }),
+    }
+}
+fn put_ref(out: &mut [u128], at: usize, value: RefC) {
+    match value {
+        RefC::Const(index) => out[at + 1] = u(index),
+        RefC::Data(index) => { out[at] = 1; out[at + 1] = u(index); }
+    }
+}
+fn get_ref(section: &'static str, lanes: &[u128], at: usize) -> C6Result<RefC> {
+    match lanes[at] {
+        0 => Ok(RefC::Const(rd(section, lanes[at + 1])?)),
+        1 => Ok(RefC::Data(rd(section, lanes[at + 1])?)),
+        tag => Err(C6PhysError::BadTag { section, tag }),
+    }
+}
+fn put_slice(out: &mut [u128], at: usize, value: SliceC) {
+    out[at] = u(value.start);
+    out[at + 1] = u(value.len);
+}
+fn get_slice(section: &'static str, lanes: &[u128], at: usize) -> C6Result<SliceC> {
+    Ok(SliceC { start: rd(section, lanes[at])?, len: rd(section, lanes[at + 1])? })
+}
+fn binary_tag(op: BinaryOp) -> u128 {
+    match op { BinaryOp::Add => 0, BinaryOp::Sub => 1, BinaryOp::Mul => 2, BinaryOp::Eq => 3,
+        BinaryOp::Lt => 4, BinaryOp::Cons => 5, BinaryOp::Branch => 6 }
+}
+fn binary_from(section: &'static str, tag: u128) -> C6Result<BinaryOp> {
+    Ok(match tag { 0 => BinaryOp::Add, 1 => BinaryOp::Sub, 2 => BinaryOp::Mul, 3 => BinaryOp::Eq,
+        4 => BinaryOp::Lt, 5 => BinaryOp::Cons, 6 => BinaryOp::Branch,
+        _ => return Err(C6PhysError::BadTag { section, tag }) })
+}
+fn unary_tag(op: UnaryOp) -> u128 { match op { UnaryOp::Leaf => 0, UnaryOp::Not => 1 } }
+fn unary_from(section: &'static str, tag: u128) -> C6Result<UnaryOp> {
+    match tag { 0 => Ok(UnaryOp::Leaf), 1 => Ok(UnaryOp::Not), _ => Err(C6PhysError::BadTag { section, tag }) }
+}
+fn exhaust_tag(reason: ExhaustReason) -> u128 {
+    match reason { ExhaustReason::Fuel => 0, ExhaustReason::DataNodes => 1, ExhaustReason::DataFields => 2,
+        ExhaustReason::EnvironmentCells => 3, ExhaustReason::HelperTasks => 4,
+        ExhaustReason::HelperWork => 5, ExhaustReason::SerializationBytes => 6 }
+}
+fn exhaust_from(section: &'static str, tag: u128) -> C6Result<ExhaustReason> {
+    Ok(match tag { 0 => ExhaustReason::Fuel, 1 => ExhaustReason::DataNodes, 2 => ExhaustReason::DataFields,
+        3 => ExhaustReason::EnvironmentCells, 4 => ExhaustReason::HelperTasks,
+        5 => ExhaustReason::HelperWork, 6 => ExhaustReason::SerializationBytes,
+        _ => return Err(C6PhysError::BadTag { section, tag }) })
+}
+
+// ---------- representation caps ----------
+
+fn cap_count(section: &'static str, needed: usize, limit: usize) -> C6Result<()> {
+    if needed > limit { Err(C6PhysError::CapacityExceeded { section, needed, limit }) } else { Ok(()) }
+}
+fn cap_index(section: &'static str, index: usize, limit: usize) -> C6Result<()> {
+    let needed = index.checked_add(1).ok_or(C6PhysError::UsizeOverflow { section, value: u(index) })?;
+    cap_count(section, needed, limit)
+}
+fn cap_env(section: &'static str, env: EnvRootC, caps: &C6PhysCaps) -> C6Result<()> {
+    match env { Some(index) => cap_index(section, index, caps.max_env_cells), None => Ok(()) }
+}
+/// Const indexes the program constant table; Data indexes the data arena.
+fn cap_ref(section: &'static str, value: RefC, caps: &C6PhysCaps) -> C6Result<()> {
+    match value {
+        RefC::Const(index) => cap_index(section, index, caps.max_constants),
+        RefC::Data(index) => cap_index(section, index, caps.max_data_nodes),
+    }
+}
+fn cap_slice(section: &'static str, s: SliceC, table: usize, max_len: Option<usize>) -> C6Result<()> {
+    let end = s.start.checked_add(s.len).ok_or(C6PhysError::UsizeOverflow { section, value: u(s.start) })?;
+    if let Some(max_len) = max_len { cap_count(section, s.len, max_len)?; }
+    cap_count(section, end, table)
+}
+fn cap_vals(section: &'static str, s: SliceC, caps: &C6PhysCaps) -> C6Result<()> {
+    cap_slice(section, s, caps.max_value_slots, Some(caps.max_arity))
+}
+fn cap_kids(section: &'static str, s: SliceC, caps: &C6PhysCaps) -> C6Result<()> {
+    cap_slice(section, s, caps.max_children, Some(caps.max_arity))
+}
+/// TypeId index cap: builtin TypeIds 0..=3 exist independently of `type_rows`
+/// (owner SI-15 `types.len().max(4)`); larger nominal caps apply unchanged.
+fn type_index_cap(c: &C6PhysCaps) -> usize { c.max_types.max(4) }
+
+fn frame_caps(frame: &FrameRowC, c: &C6PhysCaps) -> C6Result<()> {
+    use FrameRowC as F;
+    let x = c.max_expressions;
+    match *frame {
+        F::LetF { binder, body, saved_env, origin } => {
+            cap_index("frame.binder", binder, c.max_names)?;
+            cap_index("frame.body", body, x)?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::LeftF { right, saved_env, origin, .. } => {
+            cap_index("frame.right", right, x)?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::RightF { left, origin, .. } => {
+            cap_ref("frame.left", left, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::UnaryF { origin, .. } => cap_index("frame.origin", origin, x),
+        F::IfF { then_expr, else_expr, saved_env, origin } => {
+            cap_index("frame.then_expr", then_expr, x)?;
+            cap_index("frame.else_expr", else_expr, x)?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::MatchF { arms, saved_env, origin } => {
+            cap_slice("frame.arms", arms, c.max_arms, None)?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::ArgsF { function_name, completed, rest, saved_env, origin } => {
+            cap_index("frame.function_name", function_name, c.max_names)?;
+            cap_vals("frame.completed", completed, c)?;
+            cap_kids("frame.rest", rest, c)?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::ReturnF { return_type, saved_env, origin } => {
+            cap_index("frame.return_type", return_type.0, type_index_cap(c))?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::ScopeF { saved_env, origin } => {
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+        F::ConstructorFieldsF { type_id, ctor_id, index, field_type, completed, rest, saved_env, origin, .. } => {
+            cap_index("frame.type_id", type_id.0, type_index_cap(c))?;
+            cap_index("frame.ctor_id", ctor_id.0, c.max_constructors)?;
+            cap_index("frame.index", index, c.max_arity)?;
+            cap_index("frame.field_type", field_type.0, type_index_cap(c))?;
+            cap_vals("frame.completed", completed, c)?;
+            cap_kids("frame.rest", rest, c)?;
+            cap_env("frame.saved_env", saved_env, c)?;
+            cap_index("frame.origin", origin, x)
+        }
+    }
+}
+
+fn control_caps(control: &ControlC, c: &C6PhysCaps) -> C6Result<()> {
+    use ControlC as K;
+    let x = c.max_expressions;
+    match *control {
+        K::Eval { expr } => cap_index("control.expr", expr, x),
+        K::Return { value } => cap_ref("control.value", value, c),
+        K::ScheduleNext { frame, next, env } => {
+            frame_caps(&frame, c)?;
+            cap_index("control.next", next, x)?;
+            cap_env("control.env", env, c)
+        }
+        K::Invoke { function_name, args } => {
+            cap_index("control.function_name", function_name, c.max_names)?;
+            cap_vals("control.args", args, c)
+        }
+        K::Enter { function, args } => {
+            if let Some(function) = function { cap_index("control.function", function, c.max_functions)?; }
+            cap_vals("control.args", args, c)
+        }
+        K::Bound { binding, return_type, body } => {
+            if let BoundBinding::Ok { env } = binding { cap_env("control.env", env, c)?; }
+            cap_index("control.return_type", return_type.0, type_index_cap(c))?;
+            cap_index("control.body", body, x)
+        }
+        K::Cases { value, arms, saved_env } => {
+            cap_ref("control.value", value, c)?;
+            cap_slice("control.arms", arms, c.max_arms, None)?;
+            cap_env("control.saved_env", saved_env, c)
+        }
+        K::CaseResult { matching, value, body, rest, saved_env } => {
+            if let CaseMatching::Matched { env } = matching { cap_env("control.env", env, c)?; }
+            cap_ref("control.value", value, c)?;
+            cap_index("control.body", body, x)?;
+            cap_slice("control.rest", rest, c.max_arms, None)?;
+            cap_env("control.saved_env", saved_env, c)
+        }
+        K::PrimResult { result: PrimOutcome::Value { value } } => cap_ref("control.value", value, c),
+        K::PrimResult { result: PrimOutcome::Error { .. } } | K::Error { .. } => Ok(()),
+        K::Materialize { type_id, ctor_id, fields } => {
+            cap_index("control.type_id", type_id.0, type_index_cap(c))?;
+            cap_index("control.ctor_id", ctor_id.0, c.max_constructors)?;
+            cap_vals("control.fields", fields, c)
+        }
+    }
+}
+
+// ---------- fixed-width records ----------
+
+/// Infallible 13-lane frame encoder. Caps are applied by the section layer.
+pub fn encode_frame(frame: &FrameRowC) -> [u128; FRAME_LANES] {
+    use FrameRowC as F;
+    let mut o = [0u128; FRAME_LANES];
+    match *frame {
+        F::LetF { binder, body, saved_env, origin } => {
+            o[1] = u(binder); o[2] = u(body); put_env(&mut o, 3, saved_env); o[5] = u(origin);
+        }
+        F::LeftF { op, right, saved_env, origin } => {
+            o[0] = 1; o[1] = binary_tag(op); o[2] = u(right); put_env(&mut o, 3, saved_env); o[5] = u(origin);
+        }
+        F::RightF { op, left, origin } => {
+            o[0] = 2; o[1] = binary_tag(op); put_ref(&mut o, 2, left); o[4] = u(origin);
+        }
+        F::UnaryF { op, origin } => { o[0] = 3; o[1] = unary_tag(op); o[2] = u(origin); }
+        F::IfF { then_expr, else_expr, saved_env, origin } => {
+            o[0] = 4; o[1] = u(then_expr); o[2] = u(else_expr); put_env(&mut o, 3, saved_env); o[5] = u(origin);
+        }
+        F::MatchF { arms, saved_env, origin } => {
+            o[0] = 5; put_slice(&mut o, 1, arms); put_env(&mut o, 3, saved_env); o[5] = u(origin);
+        }
+        F::ArgsF { function_name, completed, rest, saved_env, origin } => {
+            o[0] = 6; o[1] = u(function_name); put_slice(&mut o, 2, completed); put_slice(&mut o, 4, rest);
+            put_env(&mut o, 6, saved_env); o[8] = u(origin);
+        }
+        F::ReturnF { return_type, saved_env, origin } => {
+            o[0] = 7; o[1] = u(return_type.0); put_env(&mut o, 2, saved_env); o[4] = u(origin);
+        }
+        F::ScopeF { saved_env, origin } => { o[0] = 8; put_env(&mut o, 1, saved_env); o[3] = u(origin); }
+        F::ConstructorFieldsF { type_id, ctor_id, index, field_type, checked, completed, rest, saved_env, origin } => {
+            o[0] = 9; o[1] = u(type_id.0); o[2] = u(ctor_id.0); o[3] = u(index); o[4] = u(field_type.0);
+            o[5] = u128::from(checked); put_slice(&mut o, 6, completed); put_slice(&mut o, 8, rest);
+            put_env(&mut o, 10, saved_env); o[12] = u(origin);
+        }
+    }
+    o
+}
+
+/// Structural frame decode: tags, representability and padding, ascending lanes.
+pub fn decode_frame(l: &[u128; FRAME_LANES]) -> C6Result<FrameRowC> {
+    use FrameRowC as F;
+    const S: &str = "frame";
+    let (frame, used) = match l[0] {
+        0 => (F::LetF { binder: rd(S, l[1])?, body: rd(S, l[2])?, saved_env: get_env(S, l, 3)?,
+            origin: rd(S, l[5])? }, 6),
+        1 => (F::LeftF { op: binary_from(S, l[1])?, right: rd(S, l[2])?, saved_env: get_env(S, l, 3)?,
+            origin: rd(S, l[5])? }, 6),
+        2 => (F::RightF { op: binary_from(S, l[1])?, left: get_ref(S, l, 2)?, origin: rd(S, l[4])? }, 5),
+        3 => (F::UnaryF { op: unary_from(S, l[1])?, origin: rd(S, l[2])? }, 3),
+        4 => (F::IfF { then_expr: rd(S, l[1])?, else_expr: rd(S, l[2])?, saved_env: get_env(S, l, 3)?,
+            origin: rd(S, l[5])? }, 6),
+        5 => (F::MatchF { arms: get_slice(S, l, 1)?, saved_env: get_env(S, l, 3)?, origin: rd(S, l[5])? }, 6),
+        6 => (F::ArgsF { function_name: rd(S, l[1])?, completed: get_slice(S, l, 2)?, rest: get_slice(S, l, 4)?,
+            saved_env: get_env(S, l, 6)?, origin: rd(S, l[8])? }, 9),
+        7 => (F::ReturnF { return_type: TypeIdC(rd(S, l[1])?), saved_env: get_env(S, l, 2)?,
+            origin: rd(S, l[4])? }, 5),
+        8 => (F::ScopeF { saved_env: get_env(S, l, 1)?, origin: rd(S, l[3])? }, 4),
+        9 => (F::ConstructorFieldsF { type_id: TypeIdC(rd(S, l[1])?), ctor_id: CtorIdC(rd(S, l[2])?),
+            index: rd(S, l[3])?, field_type: TypeIdC(rd(S, l[4])?), checked: rd_bool(S, l[5])?,
+            completed: get_slice(S, l, 6)?, rest: get_slice(S, l, 8)?, saved_env: get_env(S, l, 10)?,
+            origin: rd(S, l[12])? }, FRAME_LANES),
+        tag => return Err(C6PhysError::BadTag { section: S, tag }),
+    };
+    zero(S, l, used, FRAME_LANES)?;
+    Ok(frame)
+}
+
+pub fn decode_frame_checked(lanes: &[u128; FRAME_LANES], caps: &C6PhysCaps) -> C6Result<FrameRowC> {
+    let frame = decode_frame(lanes)?;
+    frame_caps(&frame, caps)?;
+    Ok(frame)
+}
+
+/// Infallible 17-lane control encoder.
+pub fn encode_control(control: &ControlC) -> [u128; CONTROL_LANES] {
+    use ControlC as K;
+    let mut o = [0u128; CONTROL_LANES];
+    match *control {
+        K::Eval { expr } => o[1] = u(expr),
+        K::Return { value } => { o[0] = 1; put_ref(&mut o, 1, value); }
+        K::ScheduleNext { frame, next, env } => {
+            o[0] = 2; o[1..1 + FRAME_LANES].copy_from_slice(&encode_frame(&frame));
+            o[14] = u(next); put_env(&mut o, 15, env);
+        }
+        K::Invoke { function_name, args } => { o[0] = 3; o[1] = u(function_name); put_slice(&mut o, 2, args); }
+        K::Enter { function, args } => {
+            o[0] = 4;
+            if let Some(function) = function { o[1] = 1; o[2] = u(function); }
+            put_slice(&mut o, 3, args);
+        }
+        K::Bound { binding, return_type, body } => {
+            o[0] = 5;
+            if let BoundBinding::Ok { env } = binding { o[1] = 1; put_env(&mut o, 2, env); }
+            o[4] = u(return_type.0); o[5] = u(body);
+        }
+        K::Cases { value, arms, saved_env } => {
+            o[0] = 6; put_ref(&mut o, 1, value); put_slice(&mut o, 3, arms); put_env(&mut o, 5, saved_env);
+        }
+        K::CaseResult { matching, value, body, rest, saved_env } => {
+            o[0] = 7;
+            if let CaseMatching::Matched { env } = matching { o[1] = 1; put_env(&mut o, 2, env); }
+            put_ref(&mut o, 4, value); o[6] = u(body); put_slice(&mut o, 7, rest); put_env(&mut o, 9, saved_env);
+        }
+        K::PrimResult { result } => {
+            o[0] = 8;
+            match result {
+                PrimOutcome::Value { value } => put_ref(&mut o, 2, value),
+                PrimOutcome::Error { code } => { o[1] = 1; o[2] = u128::from(code); }
+            }
+        }
+        K::Error { code } => { o[0] = 9; o[1] = u128::from(code); }
+        K::Materialize { type_id, ctor_id, fields } => {
+            o[0] = 10; o[1] = u(type_id.0); o[2] = u(ctor_id.0); put_slice(&mut o, 3, fields);
+        }
+    }
+    o
+}
+
+/// Structural control decode; every unused lane of every union arm must be zero.
+pub fn decode_control(l: &[u128; CONTROL_LANES]) -> C6Result<ControlC> {
+    use ControlC as K;
+    const S: &str = "control";
+    let (control, used) = match l[0] {
+        0 => (K::Eval { expr: rd(S, l[1])? }, 2),
+        1 => (K::Return { value: get_ref(S, l, 1)? }, 3),
+        2 => {
+            let fl: &[u128; FRAME_LANES] = (&l[1..1 + FRAME_LANES]).try_into()
+                .map_err(|_| C6PhysError::Truncated { section: S, needed: CONTROL_LANES, actual: l.len() })?;
+            (K::ScheduleNext { frame: decode_frame(fl)?, next: rd(S, l[14])?, env: get_env(S, l, 15)? }, CONTROL_LANES)
+        }
+        3 => (K::Invoke { function_name: rd(S, l[1])?, args: get_slice(S, l, 2)? }, 4),
+        4 => {
+            let function = match l[1] {
+                0 => { zero(S, l, 2, 3)?; None }
+                1 => Some(rd(S, l[2])?),
+                tag => return Err(C6PhysError::BadTag { section: S, tag }),
+            };
+            (K::Enter { function, args: get_slice(S, l, 3)? }, 5)
+        }
+        5 => {
+            let binding = match l[1] {
+                0 => { zero(S, l, 2, 4)?; BoundBinding::Bad }
+                1 => BoundBinding::Ok { env: get_env(S, l, 2)? },
+                tag => return Err(C6PhysError::BadTag { section: S, tag }),
+            };
+            (K::Bound { binding, return_type: TypeIdC(rd(S, l[4])?), body: rd(S, l[5])? }, 6)
+        }
+        6 => (K::Cases { value: get_ref(S, l, 1)?, arms: get_slice(S, l, 3)?, saved_env: get_env(S, l, 5)? }, 7),
+        7 => {
+            let matching = match l[1] {
+                0 => { zero(S, l, 2, 4)?; CaseMatching::NoMatch }
+                1 => CaseMatching::Matched { env: get_env(S, l, 2)? },
+                tag => return Err(C6PhysError::BadTag { section: S, tag }),
+            };
+            (K::CaseResult { matching, value: get_ref(S, l, 4)?, body: rd(S, l[6])?, rest: get_slice(S, l, 7)?,
+                saved_env: get_env(S, l, 9)? }, 11)
+        }
+        8 => match l[1] {
+            0 => (K::PrimResult { result: PrimOutcome::Value { value: get_ref(S, l, 2)? } }, 4),
+            1 => (K::PrimResult { result: PrimOutcome::Error { code: rd_u8(S, l[2])? } }, 3),
+            tag => return Err(C6PhysError::BadTag { section: S, tag }),
+        },
+        9 => (K::Error { code: rd_u8(S, l[1])? }, 2),
+        10 => (K::Materialize { type_id: TypeIdC(rd(S, l[1])?), ctor_id: CtorIdC(rd(S, l[2])?),
+            fields: get_slice(S, l, 3)? }, 5),
+        tag => return Err(C6PhysError::BadTag { section: S, tag }),
+    };
+    zero(S, l, used, CONTROL_LANES)?;
+    Ok(control)
+}
+
+pub fn decode_control_checked(lanes: &[u128; CONTROL_LANES], caps: &C6PhysCaps) -> C6Result<ControlC> {
+    let control = decode_control(lanes)?;
+    control_caps(&control, caps)?;
+    Ok(control)
+}
+
+// ---------- root + frames section ----------
+
+/// Root registers of the section. Counters are carried exactly.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6Root {
+    pub control: ControlC,
+    pub control_origin: usize,
+    pub env_root: EnvRootC,
+    pub stack_limit: usize,
+    pub outcome: OutcomeC,
+    pub initial_fuel: u128,
+    pub remaining_work: u128,
+    pub consumed_work: u128,
+    pub helper_work: u128,
+    pub helper_visits: u128,
+    pub reference_cursor: u128,
+    pub alloc: AllocCounters,
+    pub active: ActiveLengths,
+    pub seg_active: ActiveLengths,
+    pub seg_alloc: AllocCounters,
+    pub seg_consumed_work: u128,
+}
+
+impl C6Root {
+    /// Projection of the owned image registers; no field is invented.
+    pub fn from_image(image: &ImageSnapshot) -> Self {
+        Self {
+            control: image.control, control_origin: image.control_origin, env_root: image.env_root,
+            stack_limit: image.stack_limit, outcome: image.outcome, initial_fuel: image.initial_fuel,
+            remaining_work: image.remaining_work, consumed_work: image.consumed_work,
+            helper_work: image.helper_work, helper_visits: image.helper_visits,
+            reference_cursor: image.reference_cursor, alloc: image.alloc, active: image.active,
+            seg_active: image.seg_base.active(), seg_alloc: image.seg_base.alloc(),
+            seg_consumed_work: image.seg_base.consumed_work(),
+        }
+    }
+}
+
+fn root_caps(root: &C6Root, c: &C6PhysCaps) -> C6Result<()> {
+    control_caps(&root.control, c)?;
+    cap_index("root.control_origin", root.control_origin, c.max_expressions)?;
+    cap_env("root.env_root", root.env_root, c)?;
+    cap_count("root.stack_limit", root.stack_limit, c.max_frames)?;
+    if let OutcomeC::Halted { value } = root.outcome { cap_ref("root.outcome", value, c)?; }
+    for (section, needed, limit) in [
+        ("root.alloc.data_nodes", root.alloc.data_nodes, c.max_data_nodes),
+        ("root.alloc.environment_cells", root.alloc.environment_cells, c.max_env_cells),
+        ("root.active.data", root.active.data, c.max_data_nodes),
+        ("root.active.env", root.active.env, c.max_env_cells),
+        ("root.active.value_slots", root.active.value_slots, c.max_value_slots),
+        ("root.seg_active.data", root.seg_active.data, c.max_data_nodes),
+        ("root.seg_active.env", root.seg_active.env, c.max_env_cells),
+        ("root.seg_active.value_slots", root.seg_active.value_slots, c.max_value_slots),
+        ("root.seg_alloc.data_nodes", root.seg_alloc.data_nodes, c.max_data_nodes),
+        ("root.seg_alloc.environment_cells", root.seg_alloc.environment_cells, c.max_env_cells),
+    ] {
+        cap_count(section, needed, limit)?;
+    }
+    Ok(())
+}
+
+fn section_len(frame_count: usize) -> C6Result<usize> {
+    frame_count.checked_mul(FRAME_LANES).and_then(|n| n.checked_add(IMAGE_SECTION_HEADER_LANES))
+        .ok_or(C6PhysError::UsizeOverflow { section: "image_section", value: u(frame_count) })
+}
+fn put_alloc(out: &mut [u128], at: usize, a: AllocCounters) {
+    out[at] = u(a.data_nodes); out[at + 1] = u(a.data_fields); out[at + 2] = u(a.environment_cells);
+}
+fn put_active(out: &mut [u128], at: usize, a: ActiveLengths) {
+    out[at] = u(a.data); out[at + 1] = u(a.data_fields); out[at + 2] = u(a.env); out[at + 3] = u(a.value_slots);
+}
+fn get_alloc(s: &'static str, l: &[u128], at: usize) -> C6Result<AllocCounters> {
+    Ok(AllocCounters { data_nodes: rd(s, l[at])?, data_fields: rd(s, l[at + 1])?, environment_cells: rd(s, l[at + 2])? })
+}
+fn get_active(s: &'static str, l: &[u128], at: usize) -> C6Result<ActiveLengths> {
+    Ok(ActiveLengths { data: rd(s, l[at])?, data_fields: rd(s, l[at + 1])?, env: rd(s, l[at + 2])?,
+        value_slots: rd(s, l[at + 3])? })
+}
+fn put_outcome(out: &mut [u128], at: usize, outcome: OutcomeC) {
+    match outcome {
+        OutcomeC::Running => {}
+        OutcomeC::Halted { value } => { out[at] = 1; put_ref(out, at + 1, value); }
+        OutcomeC::Rejected { code } => { out[at] = 2; out[at + 1] = u128::from(code); }
+        OutcomeC::Exhausted { reason } => { out[at] = 3; out[at + 1] = exhaust_tag(reason); }
+    }
+}
+fn get_outcome(s: &'static str, l: &[u128], at: usize) -> C6Result<OutcomeC> {
+    match l[at] {
+        0 => { zero(s, l, at + 1, at + 3)?; Ok(OutcomeC::Running) }
+        1 => Ok(OutcomeC::Halted { value: get_ref(s, l, at + 1)? }),
+        2 => { let code = rd_u8(s, l[at + 1])?; zero(s, l, at + 2, at + 3)?; Ok(OutcomeC::Rejected { code }) }
+        3 => { let reason = exhaust_from(s, l[at + 1])?; zero(s, l, at + 2, at + 3)?; Ok(OutcomeC::Exhausted { reason }) }
+        tag => Err(C6PhysError::BadTag { section: s, tag }),
+    }
+}
+
+/// Root+frames encoder. Caps are checked (root, frame count, frames) before
+/// any allocation; the output is the unique canonical section.
+pub fn encode_root_and_frames(root: &C6Root, frames: &[FrameRowC], caps: &C6PhysCaps) -> C6Result<Vec<u128>> {
+    root_caps(root, caps)?;
+    cap_count("frames", frames.len(), caps.max_frames)?;
+    for frame in frames { frame_caps(frame, caps)?; }
+    let mut out = vec![0u128; section_len(frames.len())?];
+    out[L_MAGIC] = C6_PHYS_MAGIC;
+    out[L_VERSION] = C6_PHYS_VERSION;
+    out[L_CONTROL..L_CONTROL + CONTROL_LANES].copy_from_slice(&encode_control(&root.control));
+    out[L_CONTROL_ORIGIN] = u(root.control_origin);
+    put_env(&mut out, L_ENV_ROOT, root.env_root);
+    out[L_STACK_LIMIT] = u(root.stack_limit);
+    put_outcome(&mut out, L_OUTCOME, root.outcome);
+    out[L_INITIAL_FUEL] = root.initial_fuel;
+    out[L_REMAINING_WORK] = root.remaining_work;
+    out[L_CONSUMED_WORK] = root.consumed_work;
+    out[L_HELPER_WORK] = root.helper_work;
+    out[L_HELPER_VISITS] = root.helper_visits;
+    out[L_REFERENCE_CURSOR] = root.reference_cursor;
+    put_alloc(&mut out, L_ALLOC, root.alloc);
+    put_active(&mut out, L_ACTIVE, root.active);
+    put_active(&mut out, L_SEG_ACTIVE, root.seg_active);
+    put_alloc(&mut out, L_SEG_ALLOC, root.seg_alloc);
+    out[L_SEG_CONSUMED_WORK] = root.seg_consumed_work;
+    out[L_FRAME_COUNT] = u(frames.len());
+    for (chunk, frame) in out[IMAGE_SECTION_HEADER_LANES..].chunks_exact_mut(FRAME_LANES).zip(frames) {
+        chunk.copy_from_slice(&encode_frame(frame));
+    }
+    Ok(out)
+}
+
+pub fn encode_image_section(image: &ImageSnapshot, caps: &C6PhysCaps) -> C6Result<Vec<u128>> {
+    encode_root_and_frames(&C6Root::from_image(image), &image.frames, caps)
+}
+
+/// Decoder; see the module documentation for the exact first-error order.
+pub fn decode_image_section(lanes: &[u128], caps: &C6PhysCaps) -> C6Result<(C6Root, Vec<FrameRowC>)> {
+    const S: &str = "image_section";
+    if lanes.len() < IMAGE_SECTION_HEADER_LANES {
+        return Err(C6PhysError::Truncated { section: S, needed: IMAGE_SECTION_HEADER_LANES, actual: lanes.len() });
+    }
+    if lanes[L_MAGIC] != C6_PHYS_MAGIC { return Err(C6PhysError::BadMagic { actual: lanes[L_MAGIC] }); }
+    if lanes[L_VERSION] != C6_PHYS_VERSION { return Err(C6PhysError::BadVersion { actual: lanes[L_VERSION] }); }
+    let control_lanes: &[u128; CONTROL_LANES] = (&lanes[L_CONTROL..L_CONTROL + CONTROL_LANES]).try_into()
+        .map_err(|_| C6PhysError::Truncated { section: S, needed: IMAGE_SECTION_HEADER_LANES, actual: lanes.len() })?;
+    let root = C6Root {
+        control: decode_control(control_lanes)?,
+        control_origin: rd(S, lanes[L_CONTROL_ORIGIN])?,
+        env_root: get_env(S, lanes, L_ENV_ROOT)?,
+        stack_limit: rd(S, lanes[L_STACK_LIMIT])?,
+        outcome: get_outcome(S, lanes, L_OUTCOME)?,
+        initial_fuel: lanes[L_INITIAL_FUEL],
+        remaining_work: lanes[L_REMAINING_WORK],
+        consumed_work: lanes[L_CONSUMED_WORK],
+        helper_work: lanes[L_HELPER_WORK],
+        helper_visits: lanes[L_HELPER_VISITS],
+        reference_cursor: lanes[L_REFERENCE_CURSOR],
+        alloc: get_alloc(S, lanes, L_ALLOC)?,
+        active: get_active(S, lanes, L_ACTIVE)?,
+        seg_active: get_active(S, lanes, L_SEG_ACTIVE)?,
+        seg_alloc: get_alloc(S, lanes, L_SEG_ALLOC)?,
+        seg_consumed_work: lanes[L_SEG_CONSUMED_WORK],
+    };
+    let frame_count = rd(S, lanes[L_FRAME_COUNT])?;
+    root_caps(&root, caps)?;
+    cap_count("frames", frame_count, caps.max_frames)?;
+    let needed = section_len(frame_count)?;
+    if lanes.len() < needed { return Err(C6PhysError::Truncated { section: S, needed, actual: lanes.len() }); }
+    if lanes.len() > needed { return Err(C6PhysError::TrailingLanes { section: S, extra: lanes.len() - needed }); }
+    let mut frames = Vec::with_capacity(frame_count);
+    for chunk in lanes[IMAGE_SECTION_HEADER_LANES..].chunks_exact(FRAME_LANES) {
+        let record: &[u128; FRAME_LANES] = chunk.try_into()
+            .map_err(|_| C6PhysError::Truncated { section: S, needed, actual: lanes.len() })?;
+        frames.push(decode_frame_checked(record, caps)?);
+    }
+    Ok((root, frames))
+}
+
