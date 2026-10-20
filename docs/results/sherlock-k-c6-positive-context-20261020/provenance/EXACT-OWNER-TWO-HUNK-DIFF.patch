@@ -1,0 +1,49 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-CTX22-derived-caps29-20261020/runtime-qa-postcompile-01/source/context_runtime.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-CTX22-derived-caps29-20261020/runtime-qa-postcompile-01/revision02-owner-two-static-corrections-01/source/context_runtime.py
+@@ -36,7 +36,7 @@
+ ENTRY_REG = {ENTRY['name']: (ENTRY['sort'], tuple(ENTRY['argument_sorts']))}
+ if len(DATA_REG) != 20:
+     raise ValueError('closed DATA20 registry required')
+-if ENTRY != {'name': 'cxObserveAll', 'sort': 'CXObservations', 'argument_sorts': ['CXCases']}:
++if ENTRY != {'name': 'cxObserveAll', 'sort': 'CXObservations', 'argument_sorts': ['CXCases'], 'declaring_module': 'SHERLOCK-C6-POSITIVE-CONTEXT'}:
+     raise ValueError('cxObserveAll entry declaration differs')
+ base.codec.REG = dict(DATA_REG)
+ 
+
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-CTX22-derived-caps29-20261020/runtime-qa-postcompile-01/tests/test_context_runtime.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-CTX22-derived-caps29-20261020/runtime-qa-postcompile-01/revision02-owner-two-static-corrections-01/tests/test_context_runtime.py
+@@ -229,17 +229,25 @@
+                 result = r.compare_manifest(r.base.load(manifest['path']))
+                 self.assertTrue(result['whole_typed_equal'])
+                 self.assertEqual(result['expected_body_reads'], 2)
+-                bad = put('ce.json', {'x': 2}) if False else None
+-                (root / 'ce.json').write_text(json.dumps({'x': 2}) + '\n')
+-                result2 = r.compare_manifest(r.base.load(manifest['path']))
++                self.assertTrue(result['commonJSON']['whole_typed_equal'])
++                self.assertTrue(result['typedAST']['whole_typed_equal'])
++            common_e_bad = put('ce_bad.json', {'x': 2})
++            manifest_bad = put('manifest_bad.json', {'commonJSON': {'actual': common_a, 'expected': common_e_bad},
++                                                     'typedAST': {'actual': ast_a, 'expected': ast_e},
++                                                     'durable_freeze': barrier})
++            with mock.patch.object(r, 'EXPECTED_COMMON_PIN', common_e_bad), mock.patch.object(r, 'EXPECTED_AST_PIN', ast_e):
++                result2 = r.compare_manifest(r.base.load(manifest_bad['path']))
+                 self.assertFalse(result2['whole_typed_equal'])
++                self.assertEqual(result2['expected_body_reads'], 2)
+                 self.assertTrue(result2['commonJSON']['whole_typed_equal'] is False)
+-                barrier2 = put('barrier.json', {'expected_body_reads': 0,
+-                                                'expected_body_read_scope': r.COMPARE_SCOPE,
+-                                                'members': [common_a]})
+-                manifest2 = put('manifest.json', {'commonJSON': {'actual': common_a, 'expected': common_e},
+-                                                  'typedAST': {'actual': ast_a, 'expected': ast_e},
+-                                                  'durable_freeze': barrier2})
++                self.assertTrue(result2['typedAST']['whole_typed_equal'])
++            barrier2 = put('barrier_missing.json', {'expected_body_reads': 0,
++                                                    'expected_body_read_scope': r.COMPARE_SCOPE,
++                                                    'members': [common_a]})
++            manifest2 = put('manifest_missing_barrier.json', {'commonJSON': {'actual': common_a, 'expected': common_e},
++                                                              'typedAST': {'actual': ast_a, 'expected': ast_e},
++                                                              'durable_freeze': barrier2})
++            with mock.patch.object(r, 'EXPECTED_COMMON_PIN', common_e), mock.patch.object(r, 'EXPECTED_AST_PIN', ast_e):
+                 with self.assertRaises(ValueError):
+                     r.compare_manifest(r.base.load(manifest2['path']))
+ 
