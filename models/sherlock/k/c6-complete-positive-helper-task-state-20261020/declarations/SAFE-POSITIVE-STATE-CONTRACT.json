@@ -1,0 +1,42 @@
+{
+  "schema": "c6-positive-state-assembly-contract/1",
+  "status": "SOURCE_DERIVED_PROPOSED_NORMAL_POSITIVE_GRAMMAR_NO_NEW_POLICY",
+  "constants": {
+    "magic": 18918541878711089,
+    "version": 1,
+    "STATE_SECTION_TAG": 1398030676,
+    "IMAGE_CHILD_TAG": 1229799751,
+    "DATA_SECTION_TAG": 1145132097,
+    "HELPER_SECTION_TAG": 1212501072,
+    "STATE_CHILD_COUNT": 3,
+    "STATE_HEADER_LANES": 41,
+    "IMAGE_HEADER_LANES": 48,
+    "FRAME_LANES": 13,
+    "DATA_HEADER_LANES": 7,
+    "HELPER_FIXED_LANES": 31
+  },
+  "header": "[magic,version,STATE_SECTION_TAG,3,IMAGE_CHILD_TAG,image.length,DATA_SECTION_TAG,data.length,HELPER_SECTION_TAG,helper.length,bool(context.ext_present),0] ++ all29caps in SAFE-JSON-TRANSPORT.capsDeclarationOrder",
+  "childrenOrder": [
+    "image",
+    "data",
+    "helper"
+  ],
+  "imageChild": "Canonical48lane root + each canonical13lane raw frame bottom-to-top, no dropped fields. Full existing B28/B29/B30 fixed13/17/48 raw contract preserved; actual Core98941 positive checked caps premised separately.",
+  "dataChild": "[magic,version,DATA_SECTION_TAG,data.length,data_fields.length,env.length,value_slots.length] ++ rows. Uses OWNED VEC LENGTHS, NOT padding to capacity or root.active. Data width5, Ref width2, Env width5. U128[0,n,0,0,0],Bool[1,b,0,0,0],Nil[2,0,0,0,0],Cons/Leaf/Branch[3|4|5,0,0,start,len],Constructor[6,type_id,ctor_id,start,len]. Env=[binder]++Ref(value)++OptionEnv(previous). Full Vecs retained; raw emptySlice start preserved.",
+  "helperChild": "Exact SAFE-HELPER-TASK-LANE-GRAMMAR, all11/19/3 variants + all7ScalarStaged and None options; no subset reduction.",
+  "directory": "state-relative starts prefix-sum beginning41; each end=start+full child length. Exact contiguous slices, final end is entire state length; do not truncate/normalize/drop arrays.",
+  "context": "C6StateContext::from_caps_assertion over all29explicit caller caps/ext_present/limit. This is tooling representation context, not retained-layout authority or admission. Preserve context exactly in observation.",
+  "counters": "C6Root stores every root/active/alloc/segment/work/visits/cursor field independently of Vec sizes. No derived depth/task_live stored. HelperCommon.origin_reference_cursor rawu128, parent_resume distinctOption index. Full state codec has no run_id; future HOST restores it from META.",
+  "positivePremises": [
+    "all raw scalar/u8/usize/slice sums and length arithmetic fit supported host; u128exact throughout",
+    "all typed records satisfy existing checked positive cap functions; builtins use max(max_types,4), nominal Build.type_id plainmax_types",
+    "entire lane length within context.limits.max_total_lanes; canonical record padding/header/tag/boolean images",
+    "caps are callerassertion, not raised from lanes; no redefinition of existing caps/refusal policy"
+  ],
+  "outside": [
+    "malformed/refusal/error precedence/security guards",
+    "helper transition/microstep semantics or task execution/clock",
+    "owner membership/admission/StepInv/reachability/counter consistency",
+    "actual Rust/Quint correspondence/native/SDK/P1/target/universalrefinement/EARS"
+  ]
+}
