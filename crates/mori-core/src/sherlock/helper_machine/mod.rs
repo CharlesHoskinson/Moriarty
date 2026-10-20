@@ -16,6 +16,7 @@ pub mod c6_phys_program;
 pub mod c6_phys_data;
 pub mod c6_phys_helper;
 pub mod c6_phys_state;
+pub mod c6_phys_host;
 pub mod witness_plan;
 pub mod complete_comparison;
 
