@@ -79,3 +79,8 @@ tags: [moriarty, consolidation, recursion]
 ## Sherlock UPDATE024 — staged nodes and allocation
 
 [The designated Muse concept](research/sherlock-circuit-atlas/UPDATE-024-STAGED-NODES-AND-ALLOCATION.md) distinguishes staged PendingNode tags from later DATA allocation in the future finished interpreter. [Dated internal status](research/sherlock-circuit-atlas/UPDATE-024-MUSE-ENGINEERING-STATUS.md) and [separate engineering metadata](research/sherlock-circuit-atlas/UPDATE-024-POST-AUTHOR-STATUS.md) keep current merged source and planned construction work distinct. Website unpublished; native and product work continues independently.
+
+
+## Sherlock UPDATE025 — concept source and later workflow observation
+
+[The literal Muse continuation](research/sherlock-circuit-atlas/UPDATE-025-ETCHED-RELATIONS-AND-LOOSE-INSERTS.md) follows UPDATE024 without replacing it. [Later dated status](research/sherlock-circuit-atlas/UPDATE-025-POST-AUTHOR-STATUS.md) distinguishes the new sampled workflow pass from zero external sampled witness coverage and the earlier timeout. The website remains unpublished; native and product acceptance are separate.
