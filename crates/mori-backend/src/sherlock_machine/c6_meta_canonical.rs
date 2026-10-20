@@ -32,6 +32,18 @@
 //! offset range, scope and reserved-operand refusal) happens before
 //! any constraint is emitted and is not gated.
 //!
+//! Bound mode (`C6MetaConfigBinding`): a caller may additionally retain
+//! one admission `BoundsC` and one complete original layout. Bound
+//! emission runs the identical parser and, gated by the same gate,
+//! compares every admission-bounds lane, every layout-bounds lane, the
+//! complete remaining layout segment (version pair, optional field_id,
+//! raw ordered width lists with duplicates, optional scalar id, four
+//! capacities, boundary bool) against those retained values on both
+//! passes. This is a deliberately stronger relation than the codec
+//! domain above and is a caller-selected family parameter, not codec
+//! or admission authentication. Admission identity, run identity, both
+//! `RunIntC` payloads, all PROG and all state remain runtime. The
+//! binding type's private fields claim no native authority.
 //! Parsing: META is variable-length, so lane roles are not fixed
 //! offsets. This module emits a lane-by-lane parser whose phase,
 //! sub-phase, remaining-byte, remaining-entry, width-list, optional
@@ -124,8 +136,10 @@ use midnight_zkir_v3::ir::Operand;
 use midnight_zkir_v3::{Identifier, Instruction};
 use mori_core::sherlock::helper_machine::c6_phys::{C6_PHYS_MAGIC, C6_PHYS_VERSION};
 use mori_core::sherlock::helper_machine::c6_phys_host::{
-    C6HostLimits, META_HEADER_LANES, META_SECTION_TAG,
+    C6HostConfig, C6HostLimits, META_HEADER_LANES, META_SECTION_TAG,
 };
+use mori_core::sherlock::helper_machine::complete_observation::LayoutSnapshot;
+use mori_core::sherlock::helper_machine::shared::BoundsC;
 use thiserror::Error;
 
 const LANE_BITS: u32 = 128;
@@ -143,6 +157,10 @@ const PH_ADM_BOUNDS: u128 = 12;
 const PH_LAYOUT_BOUNDS: u128 = 18;
 const PH_LAYOUT_CAPS: u128 = 19;
 const PH_LAYOUT_BOUNDARY: u128 = 20;
+const PH_LAYOUT_VERSION: u128 = 13;
+const PH_LAYOUT_FIELD_ID: u128 = 15;
+const PH_LAYOUT_WIDTHS: u128 = 16;
+const PH_LAYOUT_SCALAR: u128 = 17;
 const PH_RUN_FUEL: u128 = 30;
 const PH_RUN_STACK: u128 = 31;
 const PH_END: u128 = 32;
@@ -161,6 +179,10 @@ pub enum C6MetaCanonicalError {
     OffsetOutOfRange { offset: usize, len: usize },
     #[error("operand uses reserved META temporary identifier: {identifier}")]
     ReservedOperand { identifier: String },
+    #[error("bound META limits do not equal the retained binding limits")]
+    BindingLimitsMismatch,
+    #[error("invalid META config binding value in {field}")]
+    InvalidBinding { field: &'static str },
 }
 
 #[derive(Clone, Debug)]
@@ -173,6 +195,164 @@ pub struct C6MetaCanonicalInputs {
     /// against any retained host or verifier authority here.
     pub limits: C6HostLimits,
     pub meta_bounds_frames_offset: usize,
+}
+
+/// Caller-selected full META configuration binding. Private fields:
+/// this type is retained source data, not native authority and not a
+/// provenance guard. Constructed only by the validated constructors
+/// below, usable by a future same-crate `SourceSpec`; there is no
+/// dependency on any absent type.
+#[derive(Clone, Debug)]
+pub struct C6MetaConfigBinding {
+    admission_bounds: BoundsC,
+    layout: LayoutSnapshot,
+    limits: C6HostLimits,
+    admission_values: [u128; 22],
+    layout_values: [u128; 22],
+    capacity_values: [u128; 4],
+    layout_variable_expected: Vec<u128>,
+    layout_total_lanes: usize,
+}
+
+fn bounds_values(b: &BoundsC) -> [u128; 22] {
+    [
+        b.code_rows as u128, b.function_rows as u128, b.code_child_slots as u128,
+        b.parameter_slots as u128, b.pattern_rows as u128, b.match_plan_rows as u128,
+        b.match_arm_rows as u128, b.type_rows as u128, b.constructor_rows as u128,
+        b.constructor_field_slots as u128, b.max_arity as u128, b.constant_nodes as u128,
+        b.constant_field_slots as u128, b.data_nodes as u128, b.data_field_slots as u128,
+        b.environment_cells as u128, b.frames as u128, b.helper_tasks as u128,
+        b.serialization_bytes as u128, b.max_reference_work, b.max_helper_work, b.step_cap,
+    ]
+}
+
+fn push_text_expected(out: &mut Vec<u128>, s: &str) {
+    out.push(s.len() as u128);
+    out.extend(s.as_bytes().iter().map(|&b| u128::from(b)));
+}
+
+fn push_pair_expected(out: &mut Vec<u128>, p: &(String, String)) {
+    push_text_expected(out, &p.0);
+    push_text_expected(out, &p.1);
+}
+
+fn push_opt_pair_expected(out: &mut Vec<u128>, p: &Option<(String, String)>) {
+    match p {
+        None => out.push(0),
+        Some(pair) => { out.push(1); push_pair_expected(out, pair); }
+    }
+}
+
+fn binding_text_ok(s: &str, limits: &C6HostLimits, cum: &mut usize) -> Result<(), C6MetaCanonicalError> {
+    if s.len() > limits.max_string_bytes {
+        return Err(C6MetaCanonicalError::InvalidBinding { field: "layout.string" });
+    }
+    *cum = cum.checked_add(s.len())
+        .ok_or(C6MetaCanonicalError::InvalidBinding { field: "layout.bytes" })?;
+    if *cum > limits.max_metadata_bytes {
+        return Err(C6MetaCanonicalError::InvalidBinding { field: "layout.bytes" });
+    }
+    Ok(())
+}
+
+impl C6MetaConfigBinding {
+    /// Validated constructor from actual public Core types. Refuses a
+    /// retained layout that no metadata under `limits` could carry:
+    /// any layout string above `max_string_bytes`, layout text bytes
+    /// above `max_metadata_bytes`, or width entries above
+    /// `max_width_entries`. Admission bounds are retained separately
+    /// and are never equated with `layout.bounds`.
+    pub(crate) fn new(
+        admission_bounds: BoundsC,
+        layout: LayoutSnapshot,
+        limits: C6HostLimits,
+    ) -> Result<Self, C6MetaCanonicalError> {
+        let mut cum = 0usize;
+        binding_text_ok(&layout.layout_version.0, &limits, &mut cum)?;
+        binding_text_ok(&layout.layout_version.1, &limits, &mut cum)?;
+        if let Some(p) = &layout.field_id {
+            binding_text_ok(&p.0, &limits, &mut cum)?;
+            binding_text_ok(&p.1, &limits, &mut cum)?;
+        }
+        let mut width_entries = 0usize;
+        if let Some(w) = &layout.widths {
+            for list in [&w.index_widths, &w.counter_widths, &w.record_widths] {
+                width_entries = width_entries.checked_add(list.len())
+                    .ok_or(C6MetaCanonicalError::InvalidBinding { field: "layout.width_entries" })?;
+                if width_entries > limits.max_width_entries {
+                    return Err(C6MetaCanonicalError::InvalidBinding { field: "layout.width_entries" });
+                }
+                for (name, _) in list { binding_text_ok(name, &limits, &mut cum)?; }
+            }
+        }
+        if let Some(p) = &layout.scalar_layout_id {
+            binding_text_ok(&p.0, &limits, &mut cum)?;
+            binding_text_ok(&p.1, &limits, &mut cum)?;
+        }
+        let mut layout_variable_expected = Vec::new();
+        push_pair_expected(&mut layout_variable_expected, &layout.layout_version);
+        push_opt_pair_expected(&mut layout_variable_expected, &layout.field_id);
+        match &layout.widths {
+            None => layout_variable_expected.push(0),
+            Some(w) => {
+                layout_variable_expected.push(1);
+                for list in [&w.index_widths, &w.counter_widths, &w.record_widths] {
+                    layout_variable_expected.push(list.len() as u128);
+                    for (name, width) in list {
+                        push_text_expected(&mut layout_variable_expected, name);
+                        layout_variable_expected.push(u128::from(*width));
+                    }
+                }
+            }
+        }
+        push_opt_pair_expected(&mut layout_variable_expected, &layout.scalar_layout_id);
+        let layout_total_lanes = layout_variable_expected.len()
+            .checked_add(22).and_then(|n| n.checked_add(4)).and_then(|n| n.checked_add(1))
+            .ok_or(C6MetaCanonicalError::InvalidBinding { field: "layout.total" })?;
+        Ok(Self {
+            admission_values: bounds_values(&admission_bounds),
+            layout_values: bounds_values(&layout.bounds),
+            capacity_values: [
+                layout.capacities.name_rows as u128, layout.capacities.name_bytes as u128,
+                layout.capacities.occurrence_path_slots as u128, layout.capacities.value_slots as u128,
+            ],
+            admission_bounds,
+            layout,
+            limits,
+            layout_variable_expected,
+            layout_total_lanes,
+        })
+    }
+
+    /// Same validated binding taken from an original retained host
+    /// config. This module emits nothing outside META: any expected
+    /// CTX, derived caps, or source-checker integration remains the
+    /// separate mandatory Push/P1 integration, not this constructor.
+    pub(crate) fn from_host_config(
+        admission_bounds: BoundsC,
+        cfg: &C6HostConfig,
+        limits: C6HostLimits,
+    ) -> Result<Self, C6MetaCanonicalError> {
+        Self::new(admission_bounds, cfg.layout.clone(), limits)
+    }
+
+    pub(crate) fn admission_bounds(&self) -> BoundsC { self.admission_bounds }
+    pub(crate) fn layout(&self) -> &LayoutSnapshot { &self.layout }
+    pub(crate) fn limits(&self) -> C6HostLimits { self.limits }
+}
+
+#[derive(Clone, Debug)]
+pub struct C6MetaBoundCanonicalInputs {
+    pub gate: Operand,
+    pub pre_meta: Vec<Operand>,
+    pub post_meta: Vec<Operand>,
+    /// Must equal the binding's retained limits, else host refusal
+    /// before any emission. Never raised from raw lanes.
+    pub limits: C6HostLimits,
+    pub meta_bounds_frames_offset: usize,
+    /// Explicit and non-optional: bound mode cannot be selected
+    /// accidentally or omitted by the bound entry points.
+    pub binding: C6MetaConfigBinding,
 }
 
 #[derive(Clone, Debug)]
@@ -212,6 +392,7 @@ struct Regs {
     utf_min: Operand,
     cum_bytes: Operand,
     cum_widths: Operand,
+    bind_pos: Operand,
 }
 
 struct MetaEmitter<'a> {
@@ -327,6 +508,66 @@ impl<'a> MetaEmitter<'a> {
         self.gated_assert(active, ok);
         stored
     }
+    /// Phase-keyed fixed-field binding for one lane. Selectors are the
+    /// actual parser `phase`/`sub` registers and the `bind_pos`
+    /// register advanced only across layout phases 13..=20; no host
+    /// lane index selects a fixed field. Every comparison is gated by
+    /// `gate AND selector`. Only `TestEq` is used, so no operand
+    /// beyond the unconditionally 128-bit-ranged lane and immediates
+    /// `< 2^128` reaches any comparison.
+    fn bind_lane(&mut self, gate: &Operand, lane: Operand, regs: &Regs, binding: &C6MetaConfigBinding) {
+        for (phase_const, values) in [
+            (PH_ADM_BOUNDS, binding.admission_values),
+            (PH_LAYOUT_BOUNDS, binding.layout_values),
+        ] {
+            let is_phase = self.eqv(regs.phase.clone(), phase_const);
+            for (index, expected) in values.iter().enumerate() {
+                let is_sub = self.eqv(regs.sub.clone(), index as u128);
+                let phase_sub = self.and(is_phase.clone(), is_sub);
+                let active = self.and(gate.clone(), phase_sub);
+                self.gated_eq(active, lane.clone(), Self::imm(*expected));
+            }
+        }
+        {
+            let is_phase = self.eqv(regs.phase.clone(), PH_LAYOUT_CAPS);
+            for (index, expected) in binding.capacity_values.iter().enumerate() {
+                let is_sub = self.eqv(regs.sub.clone(), index as u128);
+                let phase_sub = self.and(is_phase.clone(), is_sub);
+                let active = self.and(gate.clone(), phase_sub);
+                self.gated_eq(active, lane.clone(), Self::imm(*expected));
+            }
+        }
+        {
+            let is_phase = self.eqv(regs.phase.clone(), PH_LAYOUT_BOUNDARY);
+            let active = self.and(gate.clone(), is_phase);
+            let expected = u128::from(binding.layout.boundary_capacities_present);
+            self.gated_eq(active, lane.clone(), Self::imm(expected));
+            // The boundary lane is the last layout lane: the cursor
+            // must stand exactly at the retained layout total, so a
+            // different valid layout shape cannot end the variable
+            // segment early or late and avoid the bindings above.
+            let last = (binding.layout_total_lanes - 1) as u128;
+            let at_last = self.eqv(regs.bind_pos.clone(), last);
+            let is_phase2 = self.eqv(regs.phase.clone(), PH_LAYOUT_BOUNDARY);
+            let active2 = self.and(gate.clone(), is_phase2);
+            self.gated_assert(active2, at_last);
+        }
+        {
+            let v13 = self.eqv(regs.phase.clone(), PH_LAYOUT_VERSION);
+            let v14 = self.eqv(regs.phase.clone(), 14);
+            let v15 = self.eqv(regs.phase.clone(), PH_LAYOUT_FIELD_ID);
+            let v16 = self.eqv(regs.phase.clone(), PH_LAYOUT_WIDTHS);
+            let v17 = self.eqv(regs.phase.clone(), PH_LAYOUT_SCALAR);
+            let in_variable = self.or_many(vec![v13, v14, v15, v16, v17]);
+            for (pos, expected) in binding.layout_variable_expected.iter().enumerate() {
+                let at_pos = self.eqv(regs.bind_pos.clone(), pos as u128);
+                let pos_sel = self.and(in_variable.clone(), at_pos);
+                let active = self.and(gate.clone(), pos_sel);
+                self.gated_eq(active, lane.clone(), Self::imm(*expected));
+            }
+        }
+    }
+
     /// One strict-UTF-8 byte step. Returns (pending, codepoint, minimum).
     /// Rejects lone/truncated continuations, overlong forms (including
     /// C0/C1 leads), surrogates, and codepoints above U+10FFFF, matching
@@ -398,7 +639,7 @@ impl<'a> MetaEmitter<'a> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn step(&mut self, gate: &Operand, lane: Operand, regs: Regs, limits: &C6HostLimits, at_bounds_frames: bool) -> Regs {
+    fn step(&mut self, gate: &Operand, lane: Operand, regs: Regs, limits: &C6HostLimits, at_bounds_frames: bool, binding: Option<&C6MetaConfigBinding>) -> Regs {
         let phase = regs.phase.clone();
         let sub = regs.sub.clone();
         let ph = |this: &mut Self, v: u128| this.eqv(phase.clone(), v);
@@ -444,6 +685,9 @@ impl<'a> MetaEmitter<'a> {
             let tie = self.and(is_adm, is_frames);
             self.gated_assert(gate.clone(), tie);
         }
+        if let Some(binding) = binding {
+            self.bind_lane(gate, lane.clone(), &regs, binding);
+        }
         let mut next_phase = regs.phase.clone();
         let mut next_sub = regs.sub.clone();
         let mut next_rem = regs.rem.clone();
@@ -456,6 +700,20 @@ impl<'a> MetaEmitter<'a> {
         let mut next_cum_bytes = regs.cum_bytes.clone();
         let mut next_cum_widths = regs.cum_widths.clone();
         let next_phase_inc = self.add_i(regs.phase.clone(), 1);
+        let mut next_bind_pos = regs.bind_pos.clone();
+        if binding.is_some() {
+            let b13 = self.eqv(regs.phase.clone(), PH_LAYOUT_VERSION);
+            let b14 = self.eqv(regs.phase.clone(), 14);
+            let b15 = self.eqv(regs.phase.clone(), PH_LAYOUT_FIELD_ID);
+            let b16 = self.eqv(regs.phase.clone(), PH_LAYOUT_WIDTHS);
+            let b17 = self.eqv(regs.phase.clone(), PH_LAYOUT_SCALAR);
+            let b18 = self.eqv(regs.phase.clone(), PH_LAYOUT_BOUNDS);
+            let b19 = self.eqv(regs.phase.clone(), PH_LAYOUT_CAPS);
+            let b20 = self.eqv(regs.phase.clone(), PH_LAYOUT_BOUNDARY);
+            let in_layout = self.or_many(vec![b13, b14, b15, b16, b17, b18, b19, b20]);
+            let bind_inc = self.add_i(regs.bind_pos.clone(), 1);
+            next_bind_pos = self.sel(in_layout, bind_inc, next_bind_pos);
+        }
         // Fixed header.
         for (p, value) in [(PH_MAGIC, C6_PHYS_MAGIC), (PH_VERSION, C6_PHYS_VERSION), (PH_TAG, META_SECTION_TAG)] {
             let is_p = ph(self, p);
@@ -799,15 +1057,15 @@ impl<'a> MetaEmitter<'a> {
             let active = self.and(gate.clone(), cond_end);
             self.gated_assert(active, Self::imm(0));
         }
-        Regs { phase: next_phase, sub: next_sub, rem: next_rem, cnt: next_cnt, list: next_list, hold: next_hold, utf_pending: next_utf_p, utf_cp: next_utf_cp, utf_min: next_utf_min, cum_bytes: next_cum_bytes, cum_widths: next_cum_widths }
+        Regs { phase: next_phase, sub: next_sub, rem: next_rem, cnt: next_cnt, list: next_list, hold: next_hold, utf_pending: next_utf_p, utf_cp: next_utf_cp, utf_min: next_utf_min, cum_bytes: next_cum_bytes, cum_widths: next_cum_widths, bind_pos: next_bind_pos }
     }
 
-    fn emit_one(&mut self, gate: &Operand, lanes: &[Operand], limits: &C6HostLimits, offset: usize, section: &'static str) -> Result<(), C6MetaCanonicalError> {
+    fn emit_one(&mut self, gate: &Operand, lanes: &[Operand], limits: &C6HostLimits, offset: usize, section: &'static str, binding: Option<&C6MetaConfigBinding>) -> Result<(), C6MetaCanonicalError> {
         let _ = section;
-        let mut regs = Regs { phase: Self::imm(0), sub: Self::imm(0), rem: Self::imm(0), cnt: Self::imm(0), list: Self::imm(0), hold: Self::imm(0), utf_pending: Self::imm(0), utf_cp: Self::imm(0), utf_min: Self::imm(0), cum_bytes: Self::imm(0), cum_widths: Self::imm(0) };
+        let mut regs = Regs { phase: Self::imm(0), sub: Self::imm(0), rem: Self::imm(0), cnt: Self::imm(0), list: Self::imm(0), hold: Self::imm(0), utf_pending: Self::imm(0), utf_cp: Self::imm(0), utf_min: Self::imm(0), cum_bytes: Self::imm(0), cum_widths: Self::imm(0), bind_pos: Self::imm(0) };
         for (index, lane) in lanes.iter().enumerate() {
             self.constrain_bits(lane.clone(), LANE_BITS);
-            regs = self.step(gate, lane.clone(), regs, limits, index == offset);
+            regs = self.step(gate, lane.clone(), regs, limits, index == offset, binding);
         }
         self.gated_eq(gate.clone(), regs.phase, Self::imm(PH_END));
         Ok(())
@@ -843,8 +1101,8 @@ impl C6MetaCanonicalEmitter {
         }
         let mut em = MetaEmitter::new(&self.scope, self.next_temp);
         em.constrain_boolean(inputs.gate.clone());
-        em.emit_one(&inputs.gate, &inputs.pre_meta, &inputs.limits, inputs.meta_bounds_frames_offset, "meta.pre")?;
-        em.emit_one(&inputs.gate, &inputs.post_meta, &inputs.limits, inputs.meta_bounds_frames_offset, "meta.post")?;
+        em.emit_one(&inputs.gate, &inputs.pre_meta, &inputs.limits, inputs.meta_bounds_frames_offset, "meta.pre", None)?;
+        em.emit_one(&inputs.gate, &inputs.post_meta, &inputs.limits, inputs.meta_bounds_frames_offset, "meta.post", None)?;
         self.next_temp = em.next_temp;
         Ok(C6MetaCanonicalBlock { instructions: em.instructions })
     }
@@ -854,3 +1112,51 @@ pub fn emit_c6_meta_canonical_block(inputs: &C6MetaCanonicalInputs, scope: &str)
     let mut emitter = C6MetaCanonicalEmitter::new(scope)?;
     emitter.emit(inputs)
 }
+
+impl C6MetaCanonicalEmitter {
+    /// Bound emission in this emitter's retained
+    /// `%{scope}.c6meta.temp.` serial namespace, disjoint from the
+    /// parent `.local.temp.` and DATA `.c6data.temp.` namespaces.
+    /// Repeated calls share the serial and never reuse a temp; the
+    /// standalone function below is single-shot at serial zero, and
+    /// reusing one scope for two standalone blocks in one circuit is
+    /// a caller collision, not a supported composition.
+    pub fn emit_bound(&mut self, inputs: &C6MetaBoundCanonicalInputs) -> Result<C6MetaCanonicalBlock, C6MetaCanonicalError> {
+        if (LANE_BITS as usize) >= FR_BITS {
+            return Err(C6MetaCanonicalError::InvalidBitWidth { bits: LANE_BITS });
+        }
+        if inputs.limits != inputs.binding.limits() {
+            return Err(C6MetaCanonicalError::BindingLimitsMismatch);
+        }
+        reject_reserved(&self.scope, &inputs.gate)?;
+        for lane in inputs.pre_meta.iter().chain(inputs.post_meta.iter()) { reject_reserved(&self.scope, lane)?; }
+        if inputs.pre_meta.len() < META_HEADER_LANES {
+            return Err(C6MetaCanonicalError::LengthMismatch { section: "meta.pre", expected: META_HEADER_LANES, actual: inputs.pre_meta.len() });
+        }
+        if inputs.pre_meta.len() != inputs.post_meta.len() {
+            return Err(C6MetaCanonicalError::LengthMismatch { section: "meta", expected: inputs.pre_meta.len(), actual: inputs.post_meta.len() });
+        }
+        if inputs.meta_bounds_frames_offset >= inputs.pre_meta.len() {
+            return Err(C6MetaCanonicalError::OffsetOutOfRange { offset: inputs.meta_bounds_frames_offset, len: inputs.pre_meta.len() });
+        }
+        let mut em = MetaEmitter::new(&self.scope, self.next_temp);
+        em.constrain_boolean(inputs.gate.clone());
+        em.emit_one(&inputs.gate, &inputs.pre_meta, &inputs.limits, inputs.meta_bounds_frames_offset, "meta.pre", Some(&inputs.binding))?;
+        em.emit_one(&inputs.gate, &inputs.post_meta, &inputs.limits, inputs.meta_bounds_frames_offset, "meta.post", Some(&inputs.binding))?;
+        self.next_temp = em.next_temp;
+        Ok(C6MetaCanonicalBlock { instructions: em.instructions })
+    }
+}
+
+/// Single-shot bound block at serial zero. For several bound blocks
+/// under one scope in one circuit, use one `C6MetaCanonicalEmitter`
+/// and call `emit_bound` repeatedly. Existing unbound
+/// `emit_c6_meta_canonical_block` remains exactly usable unchanged.
+pub fn emit_c6_meta_bound_canonical_block(inputs: &C6MetaBoundCanonicalInputs, scope: &str) -> Result<C6MetaCanonicalBlock, C6MetaCanonicalError> {
+    let mut emitter = C6MetaCanonicalEmitter::new(scope)?;
+    emitter.emit_bound(inputs)
+}
+
+#[cfg(test)]
+#[path = "c6_meta_canonical_bound_tests.rs"]
+mod c6_meta_canonical_bound_tests;
