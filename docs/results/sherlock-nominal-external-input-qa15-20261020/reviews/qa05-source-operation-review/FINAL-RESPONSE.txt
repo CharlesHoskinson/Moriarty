@@ -1,0 +1,83 @@
+Identity/role/read scope: Muse Code powered by muse-wonder-1.0 (HIGH), acting as fresh independent non-author reviewer under the standing user-authorized Opus outage fallback. Stateless, source-only review of the complete inline Units 01–46. No tools, files, compiler, tests, subject, evaluator, SDK, native code, provider, Git, or PW were executed. Earlier Opus labels are historical only. This is not approval by hashes alone; hashes were treated as pins, and all judgments below are traced from the supplied literal source bodies.
+
+Top finding: The single QA5 hunk — changing test12's expected StepCap `locator` from `null` to `{"Field":{"name":"bounds.stepCap"}}` — is independently derived from the complete public guard-plus-serialization chain, not merely fitted to the QA4 panic value. All three test12 routes agree with the public source. No mandatory defect was found within the stated limits. Corrected test12 (including its genesis and layout downstream assertions) remains future UNRUN.
+
+| Judgment | Disposition |
+|---|---|
+| SOURCE_APPLICABILITY | APPROVE_WITH_LIMITS |
+| PUBLIC_API_COMPILABILITY | APPROVE_WITH_LIMITS |
+| MEANINGFUL_TEST_SOURCE | APPROVE_WITH_LIMITS |
+| ORDINARY_EXACT_THREE_OPERATION_ELIGIBILITY | ELIGIBLE_WITH_LIMITS |
+| OVERALL | APPROVE_WITH_LIMITS / ELIGIBLE_WITH_LIMITS |
+
+## 1. SOURCE_APPLICABILITY — APPROVE_WITH_LIMITS
+
+Single-hunk scope verified from literal bodies, not hashes alone. Unit 41 records exactly one unique preimage match at byte offset 34009 (160 → 193 bytes), whole-preimage inverse equality to the QA4 source `411fa920…`, `helpersPrefixUnchanged: true`, `onlyChangedSelector: nominal_owner_and_genesis_refusals_preserve_payload`, and byte-identical bodies for all 14 other tests. Unit 01's current test12 contains exactly that one changed locator. All 15 names/helpers/fixtures and all production sources are unchanged; the previous five positive `expect(Serialize)` fixes, test14, and the genesis correction are preserved inside those byte-identical bodies.
+
+### Route 1 — StepCap via JSON (changed assertion, source-derived)
+
+- Test: `CONFIG.replace("\"step_cap\": \"1\"", "\"step_cap\": \"0\"")` on the Unit 20 fixture, where `step_cap` occurs only inside the single `bounds` object.
+- Mapping: Unit 05 `NominalConfig::owner()` derives `bounds = self.bounds.owner()` once and passes that same `bounds` into `self.layout.owner(bounds)`, so both `BoundsC` and `layout.bounds` copies carry `step_cap = 0`.
+- Order: Unit 03 first runs bounded parse, nominal binding, first T3 (`prepare_ext_program_types`, Unit 08 — which checks only boundary/finance/names/Pass-T, no capacity guard), then body check, then `compile_ext_host` (Unit 04) → `admit_ext_program` (Unit 06). AD-0a `layout.bounds == bounds` passes because both copies are 0; AD-1 `bounds.step_cap < 1` then fires.
+- Payload construction: AD-1 returns `ExtTypeBuildError::CoreTooling(Tooling::CapacityNotAdmitted{ kind: StepCap, needed: Exact(1), limit: 0, locator: field_loc("bounds.stepCap") })`. Unit 07: `field_loc` always returns `Some(LocatorC::Field{name})` — it can never produce `null`.
+- Stage mapping: Unit 04 wraps it as `ExtCompileFailure::Preparation`; Unit 03 maps that to `NominalBodyCompileError::OwnerAdmission`; Unit 02 `program_failure` maps it to stage `"owner-admission"` with `body_check_completed() == true`, hence `body_typechecking.status == "completed"`.
+- Serialization: Unit 13 adds the `CoreTooling` wrapper; Unit 12 the `CapacityNotAdmitted` object; Unit 16 `StepCap`; Unit 15 `{"Exact": …}`; Unit 18 renders `u128` needed/limit as decimal strings `"1"`/`"0"` and `Some(Field)` via Unit 14 as `{"Field":{"name":"bounds.stepCap"}}`.
+- Result: the QA5 expectation `{"CoreTooling":{"CapacityNotAdmitted":{"kind":"StepCap","needed":{"Exact":"1"},"limit":"0","locator":{"Field":{"name":"bounds.stepCap"}}}}}` agrees exactly, including stage and completed status. This matches the QA4 observed actual (Unit 33, left side) but is independently required by the source; the old `null` expectation was the sole defect. Earlier source-only reviews missed this locator premise; that miss is not laundered into a semantic or pass claim.
+
+### Route 2 — Genesis fuel via JSON (unobserved in QA4, source-derived now)
+
+- Test: `CONFIG.replace("\"value\": \"4096\"", "\"value\": \"100001\"")` changes only the fuel `Nat` value; `step_cap` stays 1 and both bounds copies stay equal, so owner admission succeeds.
+- Order: Unit 04 `compile_ext_host` → `admit_run` (Unit 09). R1 finance absent, R2 not negative, then R3: `fuel_v (100001) > bounds.max_reference_work (100000)` fires before R4 stack and R5 value-slots (fuel also exceeds `value_slots` 4096, but R3 preempts it). Unit 10 `cap_err(MaxReferenceWork, 100001, 100000, None)` preserves `locator: None`.
+- Stage mapping: raw `Tooling` → `ExtCompileFailure::Genesis` → `NominalBodyCompileError::Genesis` → Unit 02 stage `"genesis"`, body status `"completed"`, with the error serialized directly (no `CoreTooling` wrapper, per Unit 12 applied to bare `Tooling`).
+- Result: the retained expectation `{"CapacityNotAdmitted":{"kind":"MaxReferenceWork","needed":{"Exact":"100001"},"limit":"100000","locator":null}}` agrees exactly. This route was never executed in QA4 (panic stopped at the StepCap assertion, Units 32–34); it is affirmed from source only and remains future UNRUN.
+
+### Route 3 — Layout mismatch via typed API (unobserved in QA4, source-derived now)
+
+- Test: `typed_config()` sets `bounds.step_cap = 1` and `layout.bounds = bounds`; the test then mutates only `cfg.layout.bounds.step_cap = 2`, producing exactly `layout.bounds != bounds` while top-level `bounds.step_cap` stays 1.
+- Order: `typed_bound` → parse/bind → first T3/body check (which does not perform AD-0a) → `compile_ext_host` → AD-0a, the first check in `admit_ext_program`, fires before AD-1: `CoreTooling(AdmissionRejected{ reason: LayoutBoundsMismatch, detail: "layout.bounds != bounds", locator: field_loc("layout.bounds") })`.
+- Typed disposition: mapped to `NominalBodyCompileError::OwnerAdmission`; Unit 03 `body_check_completed()` is true for `OwnerAdmission`, and the failure is `unlocated`, so `failure.span.is_none()` holds.
+- Assertion shape: the test's `matches!` pattern checks the actual typed API — `OwnerAdmission(CoreTooling(AdmissionRejected{ reason: LayoutBoundsMismatch, detail, .. }))` with `detail == "layout.bounds != bounds"` — and the existing `..` ignores the locator. It is correctly not a full serialized-equality assertion, and QA5 does not mislabel it as one. The ignored locator would serialize as `{"Field":{"name":"layout.bounds"}}` but is not asserted.
+
+No production, source-config, or guard behavior is changed by QA5; only the one test expectation moves.
+
+## 2. PUBLIC_API_COMPILABILITY — APPROVE_WITH_LIMITS
+
+- The exact trait/error APIs close on the supplied complete functions: Unit 19 `CompileFailure` derives only `Serialize`; Unit 37 `serde_json::to_string` requires `T: ?Sized + Serialize`; Unit 38 supplies `Debug for serde_json::Error`. The five prior `unwrap_or_else` Serialize handlers are inside byte-identical test bodies and are unchanged.
+- The QA5 edit changes only a `json!` literal value inside an existing `assert_eq!` in test12. It introduces no new API surface, trait bound, import, or type.
+- Actual QA4 evidence (Units 23/27/31): external consumer compile exit 0 in 0.879699648s, list exit 0 with 15 tests, runtime exit 101 with 14 PASS / 1 FAIL. That compile PASS is scoped to the 8-input external consumer only. It is not a whole-current-PW, backend, CLI, or native claim, and QA5's one-literal change does not extend it. QA5 itself has not been compiled in this review.
+
+## 3. MEANINGFUL_TEST_SOURCE — APPROVE_WITH_LIMITS
+
+All existing test12 assertions were checked, not just the changed line:
+
+- StepCap route: full-payload `assert_eq!` on `actual_error.error`, plus `stage == "owner-admission"` and `body_typechecking.status == "completed"` — all preserved and now source-correct.
+- Genesis route: full-payload `assert_eq!` with direct (unwrapped) `Tooling`, `stage == "genesis"`, completed status, `needed Exact "100001"`, `limit "100000"`, `locator: null` — preserved and source-correct.
+- Layout route: `body_check_completed()`, `span.is_none()`, and the typed `matches!` on reason/detail with locator ignored by the pre-existing `..` — preserved and source-correct; not overstated as full serialized equality.
+- The correction strengthens rather than weakens the test: the previously impossible `null` expectation is replaced by the guard's actual constructed value, and the full-equality assertion is retained.
+- Retained limits, unchanged: tests 13/15 are SHARED_PRODUCER_EQUIVALENCE_ONLY; test3 is SHARED_DEPENDENCY_PROPAGATION; the 23-key object plus subset joins are not independent full 23-table equality. The private Root two-cohort comparison was not consumed; there is no new independent semantic oracle. Synthesized-entry body-error, partial-prefix HostViolation, and serializer-failure cases remain UNEXERCISED. Global H1/typing, full CLI, native, and EARS/financial qualification remain separate.
+
+## 4. ORDINARY_EXACT_THREE_OPERATION_ELIGIBILITY — ELIGIBLE_WITH_LIMITS
+
+Unit 42 defines exactly three new serial fail-stop operations, and only those are eligible:
+
+1. Changed-consumer `--test` link: 30s wall / 25 CPU / 2 GiB AS / 64 MiB FSIZE, reusing the qualified normal Core189 `dca9db9a…` rlib and 0400 dep-info (Unit 36) with no Core compile, no `cfg(test)` Core, no stub or reduced-module substitute.
+2. `--list`: exact SET of 15 names, count 15, 0 benchmarks, no order assumption; 10s wall / 8 CPU / 1 GiB AS / 16 MiB FSIZE. List membership must be durable before the runtime operation; compiling/listing 15 does not authorize replaying the 14.
+3. Runtime ONLY `--exact nominal_owner_and_genesis_refusals_preserve_payload --test-threads=1 --nocapture`, same 10s class, expecting exactly 1 passed / 0 failed / 0 ignored / 0 measured / 14 filtered out.
+
+Controls preserved across all three: `core=0`, 131072 kept bytes per stream, exact env/cwd, stdin DEVNULL, no cap increase, no retry, no new runner. Generated binary 0500 and dep-info 0400 are hashed/mode-checked/fsynced before list/run; dep-info must be exactly the 8 canonical consumer inputs (Unit 43) with no env-deps. Full raw CHILD result and streams are fsynced first, post-static/L/generated checks next, acceptance last; any failure stops with no retry and no truncated success. Unit 45's retained manual composition (713119d9 capture/static/dep functions only; no historical 22–24 artifact main, no old all-15 run) governs execution.
+
+Disposition of prior results: the 14 actual QA4 PASS results are retained against byte-equal bodies (Unit 44) and must not be replayed. If future test12 passes, the correct claim is "14 retained + 1 new", never "15 new passes". Unit 46 confirms fresh outputs/attempt/build/tmp absent and `review: UNISSUED` at preparation; Root binds this opinion to the terminal receipt only after full read and exact selection — there is no placeholder approval. Source-level ordinary eligibility is neither native authority nor a prediction that test12 will pass.
+
+## Mandatory defects
+
+None within the stated scope.
+
+## Missing premises (explicit)
+
+- Fixed 4L/tool250/sysroot/linker/normal-Core189 inventories are immutable external machine pins rehashed by the preparation (Units 42/46), not claims that all underlying raw library implementations were freshly read in this review.
+- The new review's actual report/terminal pins were truthfully UNISSUED at preparation; Root binding occurs after terminal completion and full read.
+- No independent semantic oracle exists here; test12's genesis and layout downstream assertions and the corrected StepCap assertion are source-traced but future UNRUN. The 14 retained QA4 passes are historical actuals on byte-equal bodies, not re-verified in this review.
+
+## Overall
+
+APPROVE_WITH_LIMITS for source applicability, public-API compilability, and meaningful test source; ELIGIBLE_WITH_LIMITS for the exact three-operation ordinary leaf. No approval is given for broad Core/guard/runtime/security or general adoption, EARS, or native — those remain separate.

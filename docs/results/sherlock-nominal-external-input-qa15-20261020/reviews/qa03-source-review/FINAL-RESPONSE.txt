@@ -1,0 +1,64 @@
+Identity/role/read scope: Muse Code powered by muse-wonder-1.0, acting as the fresh independent non-author HIGH reviewer. This is a source-only review of the complete inline Units 01–16. No tools, files, compiler, tests, subject, SDK, native/provider, Git, or PW were executed. All 15 tests remain UNRUN.
+
+Top finding: mandatory M1 is resolved on the real direct Tooling genesis wire. No other mandatory defect was found in the supplied current source within this narrow review.
+
+| Area | Verdict |
+|---|---|
+| SOURCE_APPLICABILITY | APPROVE_WITH_LIMITS |
+| PUBLIC_API_COMPILABILITY | APPROVE_WITH_LIMITS |
+| MEANINGFUL_TEST_SOURCE | APPROVE_WITH_LIMITS |
+| OVERALL | APPROVE_WITH_LIMITS |
+
+## M1 resolution proof
+
+The current test `nominal_owner_and_genesis_refusals_preserve_payload` now expects, for genesis:
+
+```json
+{"CapacityNotAdmitted": {
+  "kind": "MaxReferenceWork", "needed": {"Exact": "100001"},
+  "limit": "100000", "locator": null}}
+```
+
+with `stage == "genesis"` and body-typechecking status `"completed"`.
+
+That matches the supplied producer chain:
+
+1. The JSON config supplies `max_reference_work: "100000"`. The test replaces fuel `"4096"` with `"100001"`.
+2. In the complete `admit_run` body, R3 converts the fuel and, because `100001 > 100000`, returns `cap_err(CapacityKind::MaxReferenceWork, 100001, 100000, None)` before the R5 value-slot check.
+3. `cap_err` constructs `Tooling::CapacityNotAdmitted` with `NeededNatC::Exact(100001)`, limit `100000`, and locator `None`.
+4. `compile_ext_host` maps that `Tooling` failure to `ExtCompileFailure::Genesis`; `nominal_body_compile` maps it onward to `NominalBodyCompileError::Genesis(Tooling)`. Its `body_check_completed()` is therefore true.
+5. `program_failure` maps `Genesis(error)` to stage `"genesis"` and serializes `error.owner_wire()` directly. The complete `Tooling` wire implementation emits `{"CapacityNotAdmitted": {...}}` with no `CoreTooling` layer.
+
+The removed wrapper belonged only to the separate owner-admission path. The StepCap expectation in the same test correctly retains:
+
+```json
+{"CoreTooling": {"CapacityNotAdmitted": {
+  "kind": "StepCap", "needed": {"Exact": "1"},
+  "limit": "0", "locator": null}}}
+```
+
+because the StepCap refusal travels through `ExtTypeBuildError::CoreTooling`, whose wire implementation adds the `CoreTooling` layer, and is projected at stage `"owner-admission"`.
+
+## Preserved checks
+
+- The genesis kind, `Exact 100001`, limit `100000`, null locator, `genesis` stage, and completed body status are all retained.
+- The StepCap wrapper is unchanged.
+- The layout refusal still expects `ExtTypeBuildError::CoreTooling` with `AdmissionRejected`, `LayoutBoundsMismatch`, and detail `"layout.bounds != bounds"`.
+- Both prior test14 fixes remain present and unchanged: constructor fields are read through `field_start`/`field_len`, and the synthesized constant is directly compared with the source-known literal `{"U128":{"marker_free":true,"n":"42"}}`.
+- The current file contains exactly the 15 listed selectors, in the stated order. The owner response, full inverse, scope record, and freeze consistently identify the single genesis-wrapper hunk as the only test-file change. This judgment is based on the traced source bodies, not on hashes alone.
+- No production, policy, budget, guard, wire-encoder, or input-program change is indicated in the supplied material.
+
+## Mandatory findings
+
+None.
+
+## Preserved scope, limitations, and missing premises
+
+- This is a narrow changed-source applicability review. It is not a fresh approval of the whole Core, decoder, guard, runtime, full CLI, native path, or EARS.
+- Public API compilability is judged from the supplied public source interfaces only. The retained Core189 result is a separate normal-library compile and is not evidence that these 15 tests compile or pass.
+- Tests 13 and 15 remain `SHARED_PRODUCER_EQUIVALENCE_ONLY`. Test 3 remains `SHARED_DEPENDENCY_PROPAGATION`. The selected 23-field ProgramView object plus subset joins is not independent equality over all 23 fields.
+- Synthesized-entry body-error, partial-prefix `HostViolation`, and serializer-failure cases remain `UNEXERCISED`.
+- No runtime capture, private golden, semantic oracle, full CLI result, native result, ledger acceptance, guard authorization, or native grant is established.
+- Missing premises: none blocks this narrow M1 determination. Execution premises are absent by design: there is no compile or run result for the current 15 tests, and selected excerpts do not constitute a full current Core source review.
+
+Root may select any later new test leaf only after considering this actual review.
