@@ -1,0 +1,89 @@
+DECLARATION-ONLY EXCERPT from frozen3Bsource. No encoder/decoder/test or writer implementation supplied. ScalarStaged missing numeric variant mapping must remain explicit if not normativelydeclared.
+
+//! Helper/result/task section of sherlock-c6-phys/1 (C6P1), Chunk 3B.
+//!
+//! Codec over the three owned `ImageSnapshot` fields `helper`, `result`,
+//! `tasks`. It admits nothing, constructs no `Admitted`/`MachineImage`/
+//! `ImageSnapshot`, steps nothing, stores no task cursor (derived from the
+//! task count) and checks no cross-table membership or owner admission
+//! (Chunk 4). Reserved fields (`parent_resume`, PatternTag reserved variants)
+//! are carried as representation only; they are not admitted here.
+//!
+//! Layout: magic, version, `HELPER_SECTION_TAG`, task count; helper record
+//! (23 lanes) at 4; result record (4) at 27; then tasks (7 each) at 31,
+//! bottom-to-top. Lane 0 of each record is its tag: helper None=0, Scalar=1,
+//! EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match, Plan, Build=11;
+//! result None=0, then 1..=19 in `HelperResultC` declaration order; task
+//! ValidateTask=0, EqualTask=1, PairTask=2. Fields follow in `shared.rs`
+//! declaration order. Helpers start with common [site, origin_reference_cursor
+//! (full u128), parent_resume [p,v]]. Widths: usize/u8/bool/enum/u128 1;
+//! RefC 2 [0|1, i]; EnvRootC and non-env Option<usize> 2 (None [0,0], Some
+//! [1,v]; Chunk 1 env encoding, meaning per field); Option<TypeIdC> 2 likewise;
+//! Option<RefC> 3 (None [0,0,0], Some [1,tag,i]); SliceC 2 [start,len], raw
+//! (an empty slice keeps its start); ScalarStaged 2 [tag 0..=6, payload] with
+//! None payload 0. Enum tags are the explicit literal maps below.
+//! Unused lanes are zero; bools are 0/1; u8 lanes refuse > 255 (UsizeOverflow).
+//!
+//! Caps (index strictly below, count at most): Const max_constants, Data
+//! max_data_nodes, EnvRootC max_env_cells; names max_names; Bind.function,
+//! Find.found, FindFound max_functions (index), Find.row_cursor max_functions
+//! (count); EnvGet.cursor, EnvPut.new_root, Bind.dup_cursor, EnvUpdated.cell
+//! max_env_cells (index); Plan.arm, Match.arm, PlanMatched.arm max_arms;
+//! Plan.source_match max_expressions; Plan.node max_plan_nodes; Bind.params
+//! parameters end, len <= max_arity; Bind.args/Append.src/Build.src/AppendDone.seq
+//! value_slots end, len <= max_arity; Plan.path field_paths end, no arity;
+//! p_cursor/a_cursor/src_cursor/path_cursor count <= own slice len;
+//! Append.dest_start count <= max_value_slots; Build.field_start count <=
+//! max_data_field_slots; task cursors count <= max_arity; Match.x/y names only
+//! when the phase is past Arm and the pat_tag binds them (else raw placeholders);
+//! Scalar.expected and PairTask.sort `max(max_types, 4)` (builtin-capable);
+//! Build.type_id plain `max_types` (user nominal, as 3A Constructor);
+//! parent_resume, origin, reg_a, U128Value.n and u8 codes carry no cap. A slice
+//! checks end overflow, then arity, then end. Caps follow lane order.
+//!
+//! `decode_helper_tables` first-error order: 1. fewer than 31 lanes:
+//! `Truncated`; 2. `BadMagic`; 3. `BadVersion`; 4. tag `BadTag`; 5. task count
+//! structurally; 6. task count against `max_helper_tasks`; 7. section length
+//! (checked; `UsizeOverflow`), `Truncated`, then `TrailingLanes` (no allocation
+//! before); 8. helper record structurally (ascending record-relative lanes)
+//! then caps; 9. result likewise; 10. tasks in order, each likewise.
+
+pub const HELPER_SECTION_TAG: u128 = 0x4845_4C50;
+pub const HELPER_HEADER_LANES: usize = 4;
+pub const HELPER_LANES: usize = 23;
+pub const RESULT_LANES: usize = 4;
+pub const TASK_LANES: usize = 7;
+pub const L_HELPER_RECORD: usize = 4;
+pub const L_RESULT_RECORD: usize = 27;
+pub const L_TASKS: usize = 31;
+pub const HELPER_FIXED_LANES: usize = 31;
+const SECTION: &str = "state_helper";
+const HELPER_S: &str = "state.helper";
+const RESULT_S: &str = "state.result";
+const TASK_S: &str = "state.task";
+
+
+lane_enum!(site_tag, site_from, SiteTag, { EvalLiteral = 0, EvalVar = 1, EvalLet = 2, EvalBinary = 3,
+    EvalUnary = 4, EvalIf = 5, EvalMatch = 6, EvalCall = 7, Push = 8, RetLet = 9, RetLeft = 10,
+    RetRight = 11, RetUnary = 12, RetIf = 13, RetMatch = 14, RetArgs = 15, RetCall = 16, RetScope = 17,
+    Invoke = 18, Enter = 19, Bound = 20, Cases = 21, CaseResult = 22, Prim = 23, EvalConstruct = 24,
+    RetCtorFields = 25, Materialize = 26 });
+lane_enum!(mode_tag, mode_from, ScalarMode, { Add = 0, Sub = 1, Mul = 2, Lt = 3, Cons = 4, Branch = 5,
+    Leaf = 6, Not = 7, TestBool = 8, TestType = 9 });
+lane_enum!(sphase_tag, sphase_from, ScalarPhase, { First = 0, Second = 1, Done = 2 });
+lane_enum!(node_tag, node_from, NodeKind, { Cons = 0, Leaf = 1, Branch = 2 });
+lane_enum!(sel_tag, sel_from, BoolSelector, { True = 0, False = 1, NotBool = 2 });
+lane_enum!(tri_tag, tri_from, TriStatus, { Pending = 0, Positive = 1, Negative = 2 });
+lane_enum!(bphase_tag, bphase_from, BindPhase, { Pairing = 0, UnwindType = 1, UnwindDup = 2,
+    UnwindInsert = 3, Propagate = 4, Finished = 5 });
+lane_enum!(bstatus_tag, bstatus_from, BindStatus, { Ok = 0, Bad = 1 });
+lane_enum!(aphase_tag, aphase_from, AppendPhase, { Copy = 0, Tail = 1, Done = 2 });
+lane_enum!(mphase_tag, mphase_from, MatchPhase, { Arm = 0, Tag = 1, Distinct = 2, Field = 3, Bind = 4,
+    Ready = 5, NoMatchReady = 6, Done = 7 });
+lane_enum!(pphase_tag, pphase_from, PlanPhase, { Walk = 0, Test = 1, Bind = 2, Ready = 3,
+    NoMatchReady = 4, Done = 5 });
+lane_enum!(walk_tag, walk_from, PlanAfterWalk, { Test = 0, Bind = 1 });
+lane_enum!(build_tag, build_from, BuildPhase, { Copy = 0, Done = 1 });
+lane_enum!(pat_tag_of, pat_from, PatternTag, { PVar = 0, PNil = 1, PCons = 2, PLeaf = 3, PBranch = 4,
+    WildcardExtensionReserved = 5, ConstructorExtensionReserved = 6 });
+lane_enum!(visit_tag, visit_from, TaskVisitC, { Unvisited = 0, Fields = 1 });

@@ -1,0 +1,339 @@
+## Verdict: APPROVE
+
+Reviewer identity: fresh non-author Muse Wonder 1.0, HIGH effort. Earlier Opus labels are historical only.
+
+This approval is for source and proposed-operation review only.
+
+It is not approval by hashes alone.
+
+The literal consumer, retained modules, Core wrapper, body checker, owner admission, planner, genesis, and wire bodies were inspected inline.
+
+No subject was executed or imported.
+
+No populated expected artifact or derivation body was read.
+
+### Mandatory changes
+
+None.
+
+## Source route and whole-output capture
+
+The route is preserved without an SDK bypass:
+
+- [selected_body_typed_capture.rs, Section 7](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-wildcard-only-selected-handler-heldout-20261020/source/selected_body_typed_capture.rs) accepts exactly four ordinary arguments.
+
+  It builds the production `Args` argv with:
+
+  - `--entry`
+  - `--source-profile moriarty-sherlock-nominal-body-typed/1`
+  - `--execution-profile sherlock-helper-microstep/1`
+
+- It reads the program through the retained production `source_io::read_source`.
+
+  It then calls the retained production selected handler.
+
+- [compile_sherlock.rs, Section 10](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-wildcard-only-selected-handler-heldout-20261020/source/real/compile_sherlock.rs) uses:
+
+  ```rust
+  use super::{source_io as core_io, publish_io};
+  ```
+
+  Here `core_io` is the local SDK-free `source_io` module.
+
+  It is not an SDK-backed `commands/core_io` import.
+
+- For `NominalEntry` plus the body-typed profile, that handler selects:
+
+  ```rust
+  host::nominal_body_command::compile(source, &config, &target)
+  ```
+
+- [nominal_body_command.rs, Section 24](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/current-public-Core-3ABC-normal-qualification-20261019/snapshot/crates/mori-core/src/sherlock/compile_artifact/nominal_body_command.rs) uses the same config decoder.
+
+  It passes the caller parser budget and caller owner configuration into the actual Core wrapper.
+
+- [nominal_body_compile.rs, Section 25](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/current-public-Core-3ABC-normal-qualification-20261019/snapshot/crates/mori-core/src/sherlock/compile_artifact/nominal_body_compile.rs) performs, in order:
+
+  1. bounded nominal parsing;
+  2. first owner type preparation;
+  3. all-body checking;
+  4. movement of the same prepared program into `compile_ext_host`;
+  5. actual owner admission, including the second preparation;
+  6. actual genesis through `admit_run`.
+
+- The first-preparation body-check summary is discarded.
+
+  No first-T3 `TypeId` reaches the public artifact.
+
+- [ext_compile.rs, Section 27](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/current-public-Core-3ABC-normal-qualification-20261019/snapshot/crates/mori-core/src/sherlock/compile_artifact/ext_compile.rs) calls `admit_ext_program`.
+
+  It then calls the fixed host engine’s `admit_run`.
+
+- [owner_host.rs, Section 32](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/current-public-Core-3ABC-normal-qualification-20261019/snapshot/crates/mori-core/src/sherlock/helper_machine/shared/owner_host.rs) binds the admitted pair and genesis image through `PreImage::bind` before observation.
+
+  Therefore, the published report is AB-bound.
+
+- The public artifact contains no genesis image or runtime-result envelope.
+
+  Actual genesis construction is a prerequisite to obtaining the report.
+
+  It is not represented as a transition result.
+
+- The handler serializes the complete artifact before reserving `NEWDIR`.
+
+  It then uses `create_dir` and the complete-byte, no-replacement `publish_new`.
+
+- The capture reads back the exact published `sherlock-artifact.json` bytes.
+
+  It emits those same bytes plus exactly one additional LF byte.
+
+  There is no JSON projection, filtering, or reserialization in the capture path.
+
+- The `Prepared` message comes from the retained genuine `status_output::status` renderer.
+
+  It is not synthesized by the capture.
+
+## Wildcard primitive disposition
+
+The exact 110-byte program is:
+
+```text
+entry match 1 { wildcard => true };
+```
+
+The supported route is literal:
+
+- [nominal_source.rs, Section 30](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/current-public-Core-3ABC-normal-qualification-20261019/snapshot/crates/mori-core/src/sherlock/nominal_source.rs) parses `wildcard` to `ExtPattern::Wildcard`.
+
+- The body checker accepts a wildcard pattern without introducing a binder.
+
+  It checks the `UInt` scrutinee and the `Bool` arm body.
+
+  It also checks every function body and the closed entry, although this program has no functions.
+
+- Completed typing reports exactly:
+
+  - `eq-any`
+  - `unique-parameters-every-declaration`
+  - `unique-binders-every-arm`
+
+  These are the existing Root-adopted three judgments in Section 89.
+
+  The adoption grants no execution authority.
+
+- `ext_pattern_is_planned` in Section 37 returns `true` for `Wildcard`.
+
+- `begin_match` in Section 38 therefore returns a planned arm set rather than `None`.
+
+- G-4 binder checking runs before plan-node emission.
+
+- For this single irrefutable arm, the planned route is a `Select`, not a switch or bind chain.
+
+- The corresponding work-map event spelling is `XAdtHelperPlanSelect`.
+
+  This follows `record_plan_work` in Section 43.
+
+No inference is made about the full language or other match forms.
+
+## SAFE ABI-premise disposition
+
+The principal public ABI premises match the literal wire and declarations:
+
+- The body-typed artifact has exactly 14 root members.
+
+  They match the `json!` construction in Section 24 and the contract in Section 87.
+
+- `ProgramView` has all 23 declared members.
+
+- [the ProgramView wire implementation, Section 74](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/current-public-Core-3ABC-normal-qualification-20261019/snapshot/crates/mori-core/src/sherlock/compile_artifact/wire.rs:801) emits exactly those 23 members.
+
+- Nested slices use `{start, len}`.
+
+  Owner `usize`, `u128`, and `i64` values use decimal-string encoding.
+
+  Owner booleans and small integer types retain their stated JSON forms.
+
+- Primitive `TypeIdC` aliases are exactly:
+
+  - `UInt`
+  - `Bool`
+  - `List`
+  - `Tree`
+
+  Other type IDs use `{"TypeId": decimalString}`.
+
+- Constructor and declaration IDs use decimal-string encoding of their inner index.
+
+- `RuleIdC` wire values use the exact Rust variant spellings.
+
+  In particular, `XAdtHelperPlanSelect` is the correct spelling.
+
+- The program-name span is the parser’s identifier-token span.
+
+  It is serialized as half-open UTF-8 byte offsets `[start, end)`.
+
+- Owner admission fixes the HostOnly identity in Section 34:
+
+  - `profile_id = 2`
+  - caller-derived layout version and field ID
+  - `layout_digest = Unselected`
+  - `bounds_digest = Unselected`
+  - `program_membership_digest = Unselected`
+
+- The supplied premise associates that fixed identity with `GenericNominalExtensionReserved` and `Absent`.
+
+  That association is accepted here only as the stated source-inspected HostOnly ABI premise.
+
+  It is not an observed heldout result.
+
+One non-blocking wording clarification exists in the generic contract.
+
+Section 87 describes a `Selected` digest’s `format` as a string.
+
+The literal declaration and tuple wire encoding make it a two-string array.
+
+That discrepancy does not affect this discriminator because all three relevant digests are literally `Unselected`.
+
+It should be corrected before that generic wording is reused for a selected-digest case.
+
+The packet does not reproduce every supporting declaration body inline.
+
+In particular, the literal `EXECUTION_PROFILE` constant, `ExtDomain::GENERIC_ABSENT` definition, and `Layout::owner` body are not reproduced as complete items.
+
+Those identities are therefore accepted only through the SAFE source-inspected premises and their corroborating call sites.
+
+They are not treated as independently observed runtime values.
+
+This is a stated premise limitation, not a mandatory source change.
+
+Historical “proposed”, “uncompiled”, or “unadopted” comments remain lineage qualifications.
+
+They do not override:
+
+- the normal artifact receipt for compilation of the exact frozen186 cut;
+- Root’s separate adoption of the three static judgments;
+- the distinction between that adoption and execution authority.
+
+## Original two operations
+
+The two original proposed operations remain eligible for Root selection with unchanged argv and config:
+
+- [01-LINK-CONSUMER.proposed.json, Section 17](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-wildcard-only-selected-handler-heldout-20261020/01-LINK-CONSUMER.proposed.json)
+- [02-CAPTURE-WILDCARD.proposed.json, Section 18](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-wildcard-only-selected-handler-heldout-20261020/02-CAPTURE-WILDCARD.proposed.json)
+
+Both remain `PROPOSED_UNSELECTED_UNRUN`.
+
+Both retain the unchanged ordinary tuple:
+
+- 30 seconds wall
+- 25 seconds CPU
+- 2 GiB address space
+- 64 MiB file size
+- core size 0
+
+No Core rebuild is proposed.
+
+No Cargo, dev-dependency, `cfg(test)`, old-21 replay, native, SDK, provider, retry, or reset operation is introduced.
+
+Actual resource fit is **UNKNOWN**.
+
+Historical scoped results are artifact premises only.
+
+They are not transferred execution approvals.
+
+Root must separately select the existing applicable ordinary authority.
+
+This review does not create a new resource amendment or two-vote authority.
+
+### Link acceptance
+
+Link acceptance must retain the complete literal dep-info.
+
+Root must:
+
+- canonicalize both actual and required source paths with strict resolution;
+- require exactly the eight stated source paths;
+- reject extra or missing source, build, environment, or alternate-Core dependencies;
+- preserve the distinction between literal and canonical paths;
+- pin the produced ELF at mode `0500` before capture;
+- pin the dep-info at mode `0400` before capture;
+- require exact pre- and post-operation static, tool, extern, source, and full `-L` readbacks.
+
+### Capture acceptance
+
+Capture acceptance requires:
+
+- a fresh, absent `NEWDIR`;
+- the same pinned binary from operation 01;
+- complete untruncated stdout, stderr, and exit status;
+- an output directory containing exactly `sherlock-artifact.json`;
+- stdout equal to the exact published bytes plus one LF;
+- a genuine `Prepared` status from the real renderer;
+- a durable full actual freeze before independent comparison.
+
+The existing independent comparison must then compare every public member recursively.
+
+That includes empties, ordering, multiplicity, source/profile/config/target identities, digests, and all type, constant, name, program, planner, and work-map membership.
+
+Extra or omitted members must be rejected.
+
+## Pins and currentness
+
+The pin structure is internally consistent for the stated frozen cut:
+
+- 186 frozen Core members;
+- 185 full source contents, including non-Rust fixtures and docs, plus the Core manifest;
+- 8 candidate/module sources;
+- 8 externs;
+- 132 historical tool files;
+- 235 complete entries across the exact three `-L` directories;
+- the qualified normal 40,907,172-byte Core with digest beginning `35c7…`;
+- a byte-identical lib-prefixed alias.
+
+The full normal Core is the pinned historical186 cut.
+
+Live187 is not qualified.
+
+Live187 adds `c6_phys_host.rs` and its module declaration.
+
+The seven actual Mori route modules match the published/live bytes stated in the packet, but that does not qualify live187 as a whole.
+
+The inherited std, `librustc_driver`, loader, and shared-store limitation remains exactly as stated.
+
+It is not converted into a new global audit gate.
+
+## Blinding
+
+[BLINDING-CORRECTION-R2.md, Section 2](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-wildcard-only-selected-handler-heldout-20261020/BLINDING-CORRECTION-R2.md) is the active rule.
+
+Only SAFE metadata, exact inputs, declaration-only schema, and source-inspected ABI premises were used.
+
+Populated expected, complete-membership, and derivation bodies remain opaque.
+
+The required order remains:
+
+1. freeze the complete actual streams, exit, publication, output membership, artifact, source, tool, and command readbacks;
+2. only then let the existing independent comparison child consume its prefrozen expectation and the immutable actual freeze;
+3. return only SAFE comparison results to Root and the source author.
+
+No new runner, comparison framework, or admission gate is approved.
+
+## Exact limitations
+
+The following are not claimed:
+
+- actual link success;
+- actual resource fit;
+- actual compilation of the new consumer;
+- actual owner admission of the heldout program;
+- actual genesis or AB-bound report from an execution;
+- runtime `true`, runtime completion, or any transition result;
+- an executed comparison pass;
+- live187 or Host4 qualification;
+- whole-CLI acceptance;
+- full-language acceptance;
+- native or target qualification;
+- security, H1, resource-policy, financial, refinement, or EARS acceptance;
+- any new normative adoption beyond the existing Root adoption of the three stated static judgments.
+
+**APPROVE, with no mandatory source or operation changes, subject to Root selection and the unrun limitations above.**
