@@ -1,0 +1,15 @@
+--- a/crates/mori-backend/src/stage/lower.rs
++++ b/crates/mori-backend/src/stage/lower.rs
+@@ -27,6 +27,12 @@
+         ));
+     }
+     let sp = mori_core::stage::load(src).map_err(|e| error("program", e.to_string()))?;
++    compile_loaded_staged(sp, target)
++}
++
++// Keep source admission separate from the existing lowering sequence.
++// Only compile_staged calls this private helper, after its unchanged /2 load.
++fn compile_loaded_staged(sp: StagedProgram, target: &Target) -> Result<StagedArtifact, Error> {
+     target.validate()?;
+     let program = sp.program();
+     if program.assets.iter().any(|asset| asset.identity.network != target.network) {
