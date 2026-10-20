@@ -42,3 +42,15 @@ Root's 2026-10-17 receipts record default CI exit 0/241 Python tests and stream 
 `python3 models/sherlock/qa/analysis/work_summary.py INPUT` prints `sherlock-logical-work-summary/1` JSON with input digest; errors exit 2. Physical/economic costs remain unmeasured and A helper work unknown. [Summary CLI](../../../models/sherlock/qa/analysis/work_summary.py#L179).
 
 See [comparison](../how-to/compare-complete-observations.md), [stream checks](../how-to/check-stream-realization.md), [new cases](../how-to/add-normal-case.md).
+
+
+## Read the October 20 workflow results
+
+Use the [dated batch scope and exact pins](../../results/sherlock-source-workflow-batch-20261020/BATCH-SCOPE.md) for repair03; do not infer a new CLI or rerun from this reference update.
+
+- The initial `--match=.*` invocation exited 1. Its 34 authored tests passed, but imported stateful declarations were also selected. The corrected explicit selections add 24 extension, 5 regression and 1 directed-walk tests; 64 names is the total across those distinct scopes, not a retrospective exit 0 for the original command.
+- The separate directed run exited 0 and reached all six requested witnesses in one trace. Root's 47-step description is distinct from the `--max-steps=50` argument, which specifies a cap.
+- The sampled invocation requested 10,000 samples and 60 steps; exit 124 after 30.032008 s with empty streams is incomplete. It supplies neither invariant coverage nor a found violation. Preserve it instead of labelling the whole batch passed.
+- `ROOT-COHORT05-VERIFICATION.json` verifies the exact 1,735-file source set and manifest SHA256. Its `dispatchApproved:false` and `nativeExecuted:false` are authoritative limits of that receipt. Hashing a public fixture, staging files or listing tests is not SDK/native execution.
+
+The model retains original dispatch/result/resolution identities. Its finite checks do not establish that the real executor, saved artifact or target consumer implements those bindings. Construct source05’s 26 tests remain unrun. Lean source06 now has its own strict isolated kernel pass after a separate fresh review; the failed source05 result is preserved. The whole B55 Host/serializer/SDK/native correspondence remains open. This documentation runs no checks.
