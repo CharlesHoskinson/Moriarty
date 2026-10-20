@@ -30,3 +30,8 @@ Sol factual navigation: [verbatim author-time status](UPDATE-016-MUSE-ENGINEERIN
 - [UPDATE-017 — Padding, Namespaces and Record Boundaries](UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md) — whole-record padding, composed temporary namespaces kept apart, and the bounded snapshot/event relation at the host-record boundary. Concept proposal, dated 2026-10-20; engineering status is kept separate from the visitor copy.
 
 Sol factual navigation: [verbatim author-time status](UPDATE-017-MUSE-ENGINEERING-STATUS.md), [separate later source-review status](UPDATE-017-POST-AUTHOR-STATUS.md), [authorship/provenance](provenance/update-017-authorship.json) and [immutable captured reply](../../../.raw/captured/2767f0cd64cb44ac7ef0155bc77ba5026448974431c8ed0b6bba0824ea735c73.json). UPDATE016 and legacy author metadata remain unchanged.
+
+
+## Source summaries — UPDATE017
+
+Sol factual navigation: [Muse author source summary](../../sources/src-3a379ed0d342235e646f.md) and [later source-review status summary](../../sources/src-d46ae2224fc3fd5b82d6.md) retain the two portable source identities for UPDATE017. These source cards are provenance, not source/security/native acceptance.
