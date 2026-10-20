@@ -440,7 +440,7 @@ pub enum FinUnsupportedOp {
 /// Financial genesis state retained inside the actual MachineImage.
 /// `committed` is source-logical stage-plan work only; it is not B fuel,
 /// helper work, a B schedule, or expanded physical work.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FinImageState {
     pub action_index: usize,
     pub inputs: Vec<fin_carrier::FinInputBinding>,
@@ -448,6 +448,7 @@ pub struct FinImageState {
     pub core_snapshot: crate::Snapshot,
     pub cap: Option<crate::UInt>,
     pub committed: crate::UInt,
+pub exec: fin_exec_state::FinExecState,
 }
 
 struct AdmittedBody {
@@ -749,6 +750,13 @@ pub trait OwnerEngine {
         stack_limit: &RunIntC,
         request: &fin_carrier::FinGenesisRequest,
     ) -> Result<MachineImage, fin_carrier::FinRunError>;
+    fn select_fin(
+        &self,
+        pre: &PreImage<'_>,
+    ) -> Result<fin_selection::FinSelection, fin_selection::FinSelectionError> {
+        let _ = pre;
+        Err(fin_selection::FinSelectionError::NotFinancialAdmission)
+    }
     fn rule_id_of(&self, raw: &RawRuleId) -> RuleIdC;
     fn raw_rule_id(&self, rule: &RuleIdC) -> RawRuleId;
     fn select(&self, pre: &PreImage<'_>) -> Result<Selected, HostViolation>;
@@ -788,6 +796,14 @@ mod owner_runtime;
 pub mod owner_host;
 pub mod host_implied_prefix;
 pub mod fin_carrier;
+pub mod fin_exec_state;
+pub mod fin_selection;
+#[cfg(test)]
+#[path = "shared/fin_exec_state_tests.rs"]
+mod fin_exec_state_tests;
+#[cfg(test)]
+#[path = "shared/fin_selection_tests.rs"]
+mod fin_selection_tests;
 pub use fin_carrier::{
     FinActionBinding, FinActionPlan, FinAdmittedExtras, FinAssetBinding,
     FinAssetRowId, FinBindError, FinBoundSource, FinCapacitiesC, FinPlan,

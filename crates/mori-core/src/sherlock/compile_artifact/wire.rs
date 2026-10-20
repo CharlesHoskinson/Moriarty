@@ -525,6 +525,61 @@ impl OwnerWire for HostViolationKind {
     }
 }
 
+impl OwnerWire for fin_selection::FinRuleId {
+    fn owner_wire(&self) -> Value {
+        Value::String(self.retained_name().to_owned())
+    }
+}
+
+impl OwnerWire for fin_selection::FinStatementKind {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Let => json!("Let"),
+            Self::Liability => json!("Liability"),
+            Self::Transfer => json!("Transfer"),
+            Self::Fee => json!("Fee"),
+            Self::Discharge => json!("Discharge"),
+            Self::Next => json!("Next"),
+            Self::Emit => json!("Emit"),
+            Self::Requires => json!("Requires"),
+            Self::Ensures => json!("Ensures"),
+            Self::Await => json!("Await"),
+        }
+    }
+}
+
+impl OwnerWire for fin_selection::FinSelectionHeader {
+    fn owner_wire(&self) -> Value {
+        json!({
+            "format": self.format,
+            "rule": self.rule.owner_wire(),
+            "action_index": self.action_index.owner_wire(),
+            "action_name": self.action_name.owner_wire(),
+            "statement_cursor": self.statement_cursor.owner_wire(),
+            "segment_index": self.segment_index.owner_wire(),
+            "statement_kind": self.statement_kind.owner_wire(),
+            "committed_before": self.committed_before.owner_wire(),
+            "segment_src_cost": self.segment_src_cost.owner_wire(),
+            "plan_total": self.plan_total.owner_wire(),
+        })
+    }
+}
+
+impl OwnerWire for fin_selection::FinEventHeader {
+    fn owner_wire(&self) -> Value {
+        json!({
+            "format": self.format,
+            "rule": self.rule.owner_wire(),
+            "action_index": self.action_index.owner_wire(),
+            "action_name": self.action_name.owner_wire(),
+            "statement_cursor": self.statement_cursor.owner_wire(),
+            "segment_index": self.segment_index.owner_wire(),
+            "outcome": self.outcome.owner_wire(),
+            "boundary": self.boundary.owner_wire(),
+        })
+    }
+}
+
 impl OwnerWire for IdentityC {
     fn owner_wire(&self) -> Value {
         let IdentityC { profile_id, grammar_domain, finance, layout_version, layout_digest, bounds_digest, field_id, program_membership_digest } = self;
