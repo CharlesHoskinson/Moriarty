@@ -1,0 +1,70 @@
+Reviewer: Muse Code powered by `muse-wonder-1.0`, HIGH, independent non-author slot B. No tools, compilation, or test execution were used. Hashes were not treated as approval evidence.
+
+## Top finding
+
+The corrected sealed carrier fixes the six concrete UC01–UC06 source classes in the supplied literal Rust source. No concrete reachable panic, silent truncation, cross-source remapping, unchecked extras construction, or partial arithmetic mutation remains on the production paths reviewed.
+
+Decisions, limited to this first prerequisite source and its sixteen source-exposed tests:
+
+- `SOURCE_DESIGN_FAITHFULNESS`: **APPROVE**
+- `SECURITY_AND_REFUSAL_COMPLETENESS`: **APPROVE**
+- `ACTUAL_RUST_API_AND_TEST_SOURCE`: **APPROVE**
+
+No execution, adoption, integration, or future financial closure is authorized by this opinion.
+
+## 1. SOURCE_DESIGN_FAITHFULNESS — APPROVE
+
+The chosen sealed immutable construction is actually implemented:
+
+- `FinBoundSource`, `FinSnapshot`, and `FinAdmittedExtras` have private fields.
+- The parent change is exactly `pub mod fin_carrier;` to `pub(crate) mod fin_carrier;`.
+- `FinBoundSource` is constructible through `bind_fin_source`; `FinSnapshot` through `FinSnapshot::from_core` or checked mutations of an existing snapshot; `FinAdmittedExtras` through `FinAdmittedExtras::new`.
+- Getters return immutable slices or references, or a `Copy` capacities value. Cloning preserves the checked values and does not create a mutation path.
+- `FinAdmittedExtras::new` first calls `validate_fin_plan`, then enforces exact action count, order, and `FinActionPlan.name == FinActionBinding.text`.
+- `bind_fin_source` now checks profile, strictly sorted names, `name_rows`, `name_bytes`, state/asset capacities, duplicate state declarations, duplicate asset declarations, cross-kind state/asset name collisions, duplicate asset identities, duplicate actions, initial scalar type against declared state type, and resolves the program name, state names, asset names, and action names into local `NameId` values before pushing bindings. This resolves the prior two-phase-borrow concern at source level.
+- `FinSnapshot::from_core` clones the producing `FinBoundSource` into the snapshot. The identity actually enforced is structural equality over `names`, `states`, `assets`, `actions`, and `capacities`. That scope is correctly not promoted to full `ProgramView`, expression, occurrence, digest, cryptographic, admission, or V8 identity.
+- The internal balance order is `(bound AssetId, account)`, and liability order is `name`. `to_core` therefore emits Core-canonical balance ordering even when declaration `FinAssetRowId` order differs from `AssetId` order, as exercised by `uc05_multi_asset_balance_liability_core_roundtrip`.
+
+The owner statement that “no direct index remains” is literally false. The code still indexes `b.assets` in `FinSnapshot::from_core` sorting/duplicate detection and in `check_fin_snapshot`. Approval does **not** rest on that prose. It rests on the bound proof below.
+
+## 2. SECURITY_AND_REFUSAL_COMPLETENESS — APPROVE
+
+Sealing plus consumer rechecking is coherent:
+
+- Production code outside `fin_carrier` cannot construct forged field vectors because the fields are private and the module is crate-private. The `#[cfg(test)]` child module can access private fields, but no such forged-vector test is claimed and test-module access is not a production construction path.
+- Every consumer entry point calls `check_fin_snapshot`: `FinSnapshot::to_core`, `apply_set_state`, `apply_liability_add`, and `apply_transfer`.
+- `check_fin_snapshot` checks stored-source equality, state length and types, balance/liability capacities, asset-row ranges, strict balance ordering by `(AssetId, account)`, and strict liability ordering by `name` before indexing bound assets in its ordering loop. The preceding range check makes those indexes bounded on that path.
+- In `FinSnapshot::from_core`, each balance row’s `FinAssetRowId` is produced by `b.asset_row_of(&x.asset)`. In a genuinely bound source, `bind_fin_source` sets each binding’s `row` to its enumeration index in `b.assets`; therefore those later `b.assets[x.asset.0]` accesses are bounded for sealed production values. State conversion no longer silently truncates: `to_core` first requires shape equality and then verifies the rebuilt map length.
+- `FinSnapshot::to_core` is now `Result`-returning and uses `b.assets.get(...)` for conversions.
+- `apply_set_state` checks the snapshot, bound row, and scalar type before `get_mut` assignment.
+- `apply_liability_add` checks source/shape first; existing-row addition validates the binary-search position and full `(name, asset, debtor, creditor)` identity, computes `checked_add` before assignment, and preserves sorted insertion with capacity checking on the `None` path.
+- `apply_transfer` computes both `checked_sub` and `checked_add` before either assignment. For distinct rows, the later `if let Some(slot) = s.balances.get_mut(f/t)` assignments use positions obtained from the same exclusively borrowed vector with no intervening length change, so the missing-slot branch is unreachable on the current path and no partial debit/credit is introduced. Self-transfer checks sufficiency, performs no net movement, and still returns the transfer effect.
+- Cross-source use is refused as `SourceMismatch` in `to_core`, `apply_set_state`, `apply_liability_add`, and `apply_transfer` when the two sources differ in any carried structural field. Structurally identical sources are intentionally interchangeable under the owner’s stated equality scope; that is not upgraded to authentication.
+
+No concrete production counterexample in the six UC classes remains in the current module.
+
+## 3. ACTUAL_RUST_API_AND_TEST_SOURCE — APPROVE
+
+The typed signatures align with the supplied Core IR and parent source at static-reading level; no compile pass is assumed.
+
+- `AssetId` derives `PartialOrd, Ord` in the supplied Core IR, so sorting by `(&AssetId, &account)` is a real typed ordering.
+- `Value` has only `UInt(UInt)` and `Bool(bool)`, matching the exhaustive `FinScalar` conversions.
+- The test `ProgramView` fixture fields match the supplied parent `ProgramView`; `BoundsC::default()` exists in the parent source; crate exports supply the imported Core types used by the tests.
+- The sixteen syntactically discovered tests are all source-exposed and **UNRUN**: the original six names are retained and ten UC tests are added.
+- The tests cover, at source level: plan total/length/prefix/overflow and action count/identity through the actual `FinAdmittedExtras::new`; the independently derived 13-byte CE10 boundary; `NameId` versus state/asset rows; state type/range and Bool happy path; liability sorted insert, present-zero, identity, existing-row, missing-row, overflow, capacity, and asset-row refusals; truncated/extra state sets; cross-source refusal on conversion and all mutations; initial-type, cross-kind declaration, and `name_rows` refusals; duplicate balances/liabilities and balance capacity; multi-asset roundtrip against opposite declaration and `AssetId` orders; transfer happy/effect, self-transfer, insufficient balance, missing endpoints, unknown asset row, recipient overflow, and snapshot preservation.
+
+Precise test residuals, not silently claimed as covered:
+
+- There is no dedicated `FinSnapshot::from_core` liabilities-overcapacity input assertion, although the branch exists in `from_core`/`check_fin_snapshot` and liability capacity is tested through insertion.
+- Several refusal tests assert full snapshot equality after a sequence of refusals rather than immediately after every individual refusal.
+- There is no private forged-vector mutation test; that class is discharged by sealing plus `check_fin_snapshot` at every consumer, not by such a test.
+- There is no future owner runtime wiring test.
+- `snap_with_balances` ignores its `rows` argument and always builds fixed `alice=10`, `bob=3`; all current calls pass `vec![]`, so no parameterization is claimed.
+
+These are finite validation limits for later execution/integration, not concrete defects in the current sealed source design.
+
+## Remaining open scope
+
+Only the CE05 checked-component constructor, CE07 typed mutation component, and CE10 configured name-bound component are approved at source level. The original twelve predicates are not completely delivered. Admission/V8/V7, the other nine future source cases, `All20XFin`, `FinScalar` entry, recording/selection/`StepInv`, F01/F13, F12, F14, SI25–SI32/SI31, G2, scenarios/continuations/publication/errors, public finance/proof/native/target/EARS, and all fourteen findings remain **OPEN/REQUIRED**. No public, `owner_step`, `admit_run`, or genesis caller change is supplied or approved.
+
+Final verdict: **APPROVE / APPROVE / APPROVE**, strictly for the corrected `fin_carrier` prerequisite source, its one-line crate-private visibility correction, and the sixteen unrun source-exposed tests.
