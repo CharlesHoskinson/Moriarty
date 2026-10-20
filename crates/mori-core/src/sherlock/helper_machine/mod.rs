@@ -13,6 +13,9 @@ pub mod source_input_bridge;
 pub mod complete_observation;
 pub mod c6_phys;
 pub mod c6_phys_program;
+pub mod c6_phys_data;
+pub mod c6_phys_helper;
+pub mod c6_phys_state;
 pub mod witness_plan;
 pub mod complete_comparison;
 

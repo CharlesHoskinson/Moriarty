@@ -1,0 +1,2840 @@
+--- /dev/null
++++ b/crates/mori-core/src/sherlock/helper_machine/c6_phys_data.rs
+@@ -0,0 +1,551 @@
++//! Data/data-field/environment/value-slot table section of sherlock-c6-phys/1
++//! (C6P1), Chunk 3A.
++//!
++//! Codec over four owned `ImageSnapshot` tables. It admits nothing, constructs
++//! no `Admitted`/`MachineImage`/`ImageSnapshot`, steps nothing and checks no
++//! cross-table membership (Chunk 4). Root counters (`alloc`, `active`,
++//! `seg_base`) stay in the Chunk 1 section; the counts here are physical row
++//! counts and never stand in for them. Helper/result/task tables are Chunk 3B,
++//! assembly Chunk 3C. No native, constraint or proof claim.
++//!
++//! Layout: magic, version, `DATA_SECTION_TAG`, four counts (data, data_fields,
++//! env, value_slots), then those tables in that order, fixed-width rows:
++//! - data (5): U128 [0,n,0,0,0]; Bool [1,b,0,0,0]; Nil [2,0,0,0,0];
++//!   Cons/Leaf/Branch [3|4|5,0,0,start,len]; Constructor [6,type,ctor,start,len].
++//!   Field slices are raw: an empty slice keeps its start.
++//! - ref (2): Const [0,i], Data [1,i], as Chunk 1.
++//! - env (5): binder, value ref, previous (None [0,0], Some [1,i]), as Chunk 1.
++//!
++//! `decode_data_tables` first-error order:
++//! 1. fewer than 7 lanes: `Truncated`; 2. `BadMagic`; 3. `BadVersion`;
++//! 4. tag lane: `BadTag`; 5. counts, structurally, in lane order;
++//! 6. counts against caps in table order; 7. exact length: `Truncated`, then
++//!    `TrailingLanes` (no allocation before); 8. tables in order, each row
++//!    structurally (ascending row-relative lanes) then against caps.
++//! Indices are strictly below their cap; counts at most their cap; a field
++//! slice checks end overflow, then `max_arity`, then end <= data field slots.
++
++use super::c6_phys::{C6CodecBudgets, C6PhysCaps, C6PhysError, C6Result, C6_PHYS_MAGIC, C6_PHYS_VERSION};
++use super::complete_observation::{DataFieldsSnapshot, DataSnapshot, HostSnapshot, ImageSnapshot};
++use super::shared::adt::{CtorIdC, TypeIdC};
++use super::shared::{
++    BoundsC, EnvCellC, EnvRootC, ExtCapacitiesC, LayoutCapacitiesC, LayoutSchemaC, RefC,
++};
++
++pub const DATA_SECTION_TAG: u128 = 0x4441_5441;
++pub const DATA_HEADER_LANES: usize = 7;
++pub const DATA_ROW_LANES: usize = 5;
++pub const REF_LANES: usize = 2;
++pub const ENV_ROW_LANES: usize = 5;
++const SECTION: &str = "state_data";
++const DATA_S: &str = "state.data";
++const WIDTHS: [usize; 4] = [DATA_ROW_LANES, REF_LANES, ENV_ROW_LANES, REF_LANES];
++
++/// Chunk 3 representation caps: the Chunk 1/2 caps plus the two admitted
++/// limits `C6PhysCaps` does not carry. Exact admitted values; never raised.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct C6StateCaps {
++    pub phys: C6PhysCaps,
++    /// `BoundsC::data_field_slots`.
++    pub max_data_field_slots: usize,
++    /// `BoundsC::helper_tasks` (Chunk 3B task table).
++    pub max_helper_tasks: usize,
++}
++
++impl C6StateCaps {
++    pub fn from_parts(bounds: &BoundsC, capacities: &LayoutCapacitiesC, ext: &ExtCapacitiesC,
++        budgets: C6CodecBudgets) -> Self {
++        Self {
++            phys: C6PhysCaps::from_parts(bounds, capacities, ext, budgets),
++            max_data_field_slots: bounds.data_field_slots,
++            max_helper_tasks: bounds.helper_tasks,
++        }
++    }
++
++    pub fn from_layout(layout: &LayoutSchemaC, budgets: C6CodecBudgets) -> Self {
++        let ext = ExtCapacitiesC::effective_for_extended_domain(layout.ext_capacities);
++        Self::from_parts(&layout.bounds, &layout.capacities, &ext, budgets)
++    }
++
++    /// Convenience caps for tests and tooling. Not admitted limits.
++    pub const fn test_caps() -> Self {
++        Self { phys: C6PhysCaps::test_caps(), max_data_field_slots: 1024, max_helper_tasks: 64 }
++    }
++}
++
++// ---------- lane primitives (Chunk 1 conventions; shared with Chunk 3B) ----------
++
++pub(crate) const fn u(v: usize) -> u128 { v as u128 }
++
++pub(crate) fn rd(section: &'static str, value: u128) -> C6Result<usize> {
++    usize::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
++}
++pub(crate) fn rd_bool(section: &'static str, value: u128) -> C6Result<bool> {
++    match value { 0 => Ok(false), 1 => Ok(true), _ => Err(C6PhysError::BadBool { section, value }) }
++}
++/// Lanes `from..to` must be zero; `lane` is an index into `lanes`.
++pub(crate) fn zero(section: &'static str, lanes: &[u128], from: usize, to: usize) -> C6Result<()> {
++    for (lane, &value) in lanes.iter().enumerate().take(to).skip(from) {
++        if value != 0 { return Err(C6PhysError::NonZeroPadding { section, lane, value }); }
++    }
++    Ok(())
++}
++pub(crate) fn put_ref(out: &mut [u128], at: usize, value: RefC) {
++    match value {
++        RefC::Const(index) => out[at + 1] = u(index),
++        RefC::Data(index) => { out[at] = 1; out[at + 1] = u(index); }
++    }
++}
++pub(crate) fn get_ref(section: &'static str, lanes: &[u128], at: usize) -> C6Result<RefC> {
++    match lanes[at] {
++        0 => Ok(RefC::Const(rd(section, lanes[at + 1])?)),
++        1 => Ok(RefC::Data(rd(section, lanes[at + 1])?)),
++        tag => Err(C6PhysError::BadTag { section, tag }),
++    }
++}
++pub(crate) fn put_env(out: &mut [u128], at: usize, env: EnvRootC) {
++    if let Some(index) = env { out[at] = 1; out[at + 1] = u(index); }
++}
++pub(crate) fn get_env(section: &'static str, lanes: &[u128], at: usize) -> C6Result<EnvRootC> {
++    match lanes[at] {
++        0 => { zero(section, lanes, at + 1, at + 2)?; Ok(None) }
++        1 => Ok(Some(rd(section, lanes[at + 1])?)),
++        tag => Err(C6PhysError::BadTag { section, tag }),
++    }
++}
++
++pub(crate) fn cap_count(section: &'static str, needed: usize, limit: usize) -> C6Result<()> {
++    if needed > limit { Err(C6PhysError::CapacityExceeded { section, needed, limit }) } else { Ok(()) }
++}
++pub(crate) fn cap_index(section: &'static str, index: usize, limit: usize) -> C6Result<()> {
++    let needed = index.checked_add(1).ok_or(C6PhysError::UsizeOverflow { section, value: u(index) })?;
++    cap_count(section, needed, limit)
++}
++/// Const indexes the program constant table; Data indexes the data arena.
++pub(crate) fn cap_ref(section: &'static str, value: RefC, c: &C6StateCaps) -> C6Result<()> {
++    match value {
++        RefC::Const(index) => cap_index(section, index, c.phys.max_constants),
++        RefC::Data(index) => cap_index(section, index, c.phys.max_data_nodes),
++    }
++}
++pub(crate) fn cap_env(section: &'static str, env: EnvRootC, c: &C6StateCaps) -> C6Result<()> {
++    match env { Some(index) => cap_index(section, index, c.phys.max_env_cells), None => Ok(()) }
++}
++fn cap_fields(f: DataFieldsSnapshot, c: &C6StateCaps) -> C6Result<()> {
++    const S: &str = "state.data.fields";
++    let end = f.start.checked_add(f.len).ok_or(C6PhysError::UsizeOverflow { section: S, value: u(f.start) })?;
++    cap_count(S, f.len, c.phys.max_arity)?;
++    cap_count(S, end, c.max_data_field_slots)
++}
++
++// ---------- fixed-width rows ----------
++
++pub fn encode_data_row(row: &DataSnapshot) -> [u128; DATA_ROW_LANES] {
++    use DataSnapshot as D;
++    let mut o = [0u128; DATA_ROW_LANES];
++    let mut fields = |o: &mut [u128; DATA_ROW_LANES], tag: u128, f: DataFieldsSnapshot| {
++        o[0] = tag; o[3] = u(f.start); o[4] = u(f.len);
++    };
++    match *row {
++        D::U128 { n } => o[1] = n,
++        D::Bool { b } => { o[0] = 1; o[1] = u128::from(b); }
++        D::Nil => o[0] = 2,
++        D::Cons { fields: f } => fields(&mut o, 3, f),
++        D::Leaf { fields: f } => fields(&mut o, 4, f),
++        D::Branch { fields: f } => fields(&mut o, 5, f),
++        D::Constructor { type_id, ctor_id, fields: f } => {
++            fields(&mut o, 6, f); o[1] = u(type_id.0); o[2] = u(ctor_id.0);
++        }
++    }
++    o
++}
++
++fn get_fields(l: &[u128; DATA_ROW_LANES]) -> C6Result<DataFieldsSnapshot> {
++    Ok(DataFieldsSnapshot { start: rd(DATA_S, l[3])?, len: rd(DATA_S, l[4])? })
++}
++
++/// Structural data-row decode: tag, representability and padding, ascending lanes.
++pub fn decode_data_row(l: &[u128; DATA_ROW_LANES]) -> C6Result<DataSnapshot> {
++    use DataSnapshot as D;
++    let (row, used) = match l[0] {
++        0 => (D::U128 { n: l[1] }, 2),
++        1 => (D::Bool { b: rd_bool(DATA_S, l[1])? }, 2),
++        2 => (D::Nil, 1),
++        3..=5 => {
++            zero(DATA_S, l, 1, 3)?;
++            let fields = get_fields(l)?;
++            (match l[0] { 3 => D::Cons { fields }, 4 => D::Leaf { fields }, _ => D::Branch { fields } },
++                DATA_ROW_LANES)
++        }
++        6 => (D::Constructor { type_id: TypeIdC(rd(DATA_S, l[1])?), ctor_id: CtorIdC(rd(DATA_S, l[2])?),
++            fields: get_fields(l)? }, DATA_ROW_LANES),
++        tag => return Err(C6PhysError::BadTag { section: DATA_S, tag }),
++    };
++    zero(DATA_S, l, used, DATA_ROW_LANES)?;
++    Ok(row)
++}
++
++fn data_row_caps(row: &DataSnapshot, c: &C6StateCaps) -> C6Result<()> {
++    use DataSnapshot as D;
++    match *row {
++        D::U128 { .. } | D::Bool { .. } | D::Nil => Ok(()),
++        D::Cons { fields } | D::Leaf { fields } | D::Branch { fields } => cap_fields(fields, c),
++        D::Constructor { type_id, ctor_id, fields } => {
++            cap_index("state.data.type_id", type_id.0, c.phys.max_types)?;
++            cap_index("state.data.ctor_id", ctor_id.0, c.phys.max_constructors)?;
++            cap_fields(fields, c)
++        }
++    }
++}
++
++pub fn encode_ref_row(value: RefC) -> [u128; REF_LANES] {
++    let mut o = [0u128; REF_LANES];
++    put_ref(&mut o, 0, value);
++    o
++}
++pub fn decode_ref_row(section: &'static str, l: &[u128; REF_LANES]) -> C6Result<RefC> {
++    get_ref(section, l, 0)
++}
++
++pub fn encode_env_row(cell: &EnvCellC) -> [u128; ENV_ROW_LANES] {
++    let mut o = [0u128; ENV_ROW_LANES];
++    o[0] = u(cell.binder);
++    put_ref(&mut o, 1, cell.value);
++    put_env(&mut o, 3, cell.previous);
++    o
++}
++pub fn decode_env_row(l: &[u128; ENV_ROW_LANES]) -> C6Result<EnvCellC> {
++    const S: &str = "state.env";
++    Ok(EnvCellC { binder: rd(S, l[0])?, value: get_ref(S, l, 1)?, previous: get_env(S, l, 3)? })
++}
++fn env_row_caps(cell: &EnvCellC, c: &C6StateCaps) -> C6Result<()> {
++    cap_index("state.env.binder", cell.binder, c.phys.max_names)?;
++    cap_ref("state.env.value", cell.value, c)?;
++    cap_env("state.env.previous", cell.previous, c)
++}
++
++// ---------- owned table carrier and section ----------
++
++/// The four owned image tables, exactly as captured: order, multiplicity,
++/// raw slice starts and RefC tags are retained.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct C6DataTables {
++    pub data: Vec<DataSnapshot>,
++    pub data_fields: Vec<RefC>,
++    pub env: Vec<EnvCellC>,
++    pub value_slots: Vec<RefC>,
++}
++
++impl C6DataTables {
++    /// Owned extraction of the four table fields; no counter is read.
++    pub fn from_image(image: &ImageSnapshot) -> Self {
++        Self { data: image.data.clone(), data_fields: image.data_fields.clone(),
++            env: image.env.clone(), value_slots: image.value_slots.clone() }
++    }
++    /// Diagnostic: overwrite exactly these four fields of a caller-owned image
++    /// (normally a clone). Not import, admission or a MachineImage.
++    pub fn replace_tables_of(self, image: &mut ImageSnapshot) {
++        image.data = self.data;
++        image.data_fields = self.data_fields;
++        image.env = self.env;
++        image.value_slots = self.value_slots;
++    }
++    fn counts(&self) -> [usize; 4] {
++        [self.data.len(), self.data_fields.len(), self.env.len(), self.value_slots.len()]
++    }
++}
++
++fn count_caps(n: [usize; 4], c: &C6StateCaps) -> C6Result<()> {
++    cap_count("state.data", n[0], c.phys.max_data_nodes)?;
++    cap_count("state.data_fields", n[1], c.max_data_field_slots)?;
++    cap_count("state.env", n[2], c.phys.max_env_cells)?;
++    cap_count("state.value_slots", n[3], c.phys.max_value_slots)
++}
++
++/// Table start offsets plus the exact section length at index 4.
++fn table_offsets(n: [usize; 4]) -> C6Result<[usize; 5]> {
++    let mut o = [DATA_HEADER_LANES; 5];
++    for k in 0..4 {
++        o[k + 1] = n[k].checked_mul(WIDTHS[k]).and_then(|w| o[k].checked_add(w))
++            .ok_or(C6PhysError::UsizeOverflow { section: SECTION, value: u(n[k]) })?;
++    }
++    Ok(o)
++}
++
++/// Canonical encoder. Counts and every row are capped before allocation.
++pub fn encode_data_tables(t: &C6DataTables, caps: &C6StateCaps) -> C6Result<Vec<u128>> {
++    let counts = t.counts();
++    count_caps(counts, caps)?;
++    for row in &t.data { data_row_caps(row, caps)?; }
++    for r in &t.data_fields { cap_ref("state.data_fields.ref", *r, caps)?; }
++    for cell in &t.env { env_row_caps(cell, caps)?; }
++    for r in &t.value_slots { cap_ref("state.value_slots.ref", *r, caps)?; }
++    let mut out = Vec::with_capacity(table_offsets(counts)?[4]);
++    out.extend([C6_PHYS_MAGIC, C6_PHYS_VERSION, DATA_SECTION_TAG]);
++    out.extend(counts.map(u));
++    for row in &t.data { out.extend(encode_data_row(row)); }
++    for r in &t.data_fields { out.extend(encode_ref_row(*r)); }
++    for cell in &t.env { out.extend(encode_env_row(cell)); }
++    for r in &t.value_slots { out.extend(encode_ref_row(*r)); }
++    Ok(out)
++}
++
++fn decode_rows<const N: usize, T>(lanes: &[u128], from: usize, to: usize,
++    mut row: impl FnMut(&[u128; N]) -> C6Result<T>) -> C6Result<Vec<T>> {
++    let truncated = || C6PhysError::Truncated { section: SECTION, needed: to, actual: lanes.len() };
++    let part = lanes.get(from..to).ok_or_else(truncated)?;
++    let mut out = Vec::with_capacity(part.len() / N);
++    for chunk in part.chunks_exact(N) {
++        let record: &[u128; N] = chunk.try_into().map_err(|_| truncated())?;
++        out.push(row(record)?);
++    }
++    Ok(out)
++}
++
++fn checked_ref(l: &[u128; REF_LANES], section: &'static str, cap_section: &'static str,
++    caps: &C6StateCaps) -> C6Result<RefC> {
++    let value = decode_ref_row(section, l)?;
++    cap_ref(cap_section, value, caps)?;
++    Ok(value)
++}
++
++/// Decoder; see the module documentation for the exact first-error order.
++/// Returns owned tables only, never an image, admission or machine state.
++pub fn decode_data_tables(lanes: &[u128], caps: &C6StateCaps) -> C6Result<C6DataTables> {
++    if lanes.len() < DATA_HEADER_LANES {
++        return Err(C6PhysError::Truncated { section: SECTION, needed: DATA_HEADER_LANES, actual: lanes.len() });
++    }
++    if lanes[0] != C6_PHYS_MAGIC { return Err(C6PhysError::BadMagic { actual: lanes[0] }); }
++    if lanes[1] != C6_PHYS_VERSION { return Err(C6PhysError::BadVersion { actual: lanes[1] }); }
++    if lanes[2] != DATA_SECTION_TAG { return Err(C6PhysError::BadTag { section: SECTION, tag: lanes[2] }); }
++    let counts = [rd(SECTION, lanes[3])?, rd(SECTION, lanes[4])?, rd(SECTION, lanes[5])?, rd(SECTION, lanes[6])?];
++    count_caps(counts, caps)?;
++    let o = table_offsets(counts)?;
++    let needed = o[4];
++    if lanes.len() < needed { return Err(C6PhysError::Truncated { section: SECTION, needed, actual: lanes.len() }); }
++    if lanes.len() > needed { return Err(C6PhysError::TrailingLanes { section: SECTION, extra: lanes.len() - needed }); }
++    Ok(C6DataTables {
++        data: decode_rows::<DATA_ROW_LANES, _>(lanes, o[0], o[1], |l| {
++            let row = decode_data_row(l)?;
++            data_row_caps(&row, caps)?;
++            Ok(row)
++        })?,
++        data_fields: decode_rows::<REF_LANES, _>(lanes, o[1], o[2],
++            |l| checked_ref(l, "state.data_fields", "state.data_fields.ref", caps))?,
++        env: decode_rows::<ENV_ROW_LANES, _>(lanes, o[2], o[3], |l| {
++            let cell = decode_env_row(l)?;
++            env_row_caps(&cell, caps)?;
++            Ok(cell)
++        })?,
++        value_slots: decode_rows::<REF_LANES, _>(lanes, o[3], o[4],
++            |l| checked_ref(l, "state.value_slots", "state.value_slots.ref", caps))?,
++    })
++}
++
++/// Normal owned-snapshot caller: encode the four tables of a captured host.
++/// Constructs no Admitted/MachineImage; claims no admission or execution.
++pub fn data_lanes_from_host(host: &HostSnapshot, caps: &C6StateCaps) -> C6Result<Vec<u128>> {
++    encode_data_tables(&C6DataTables::from_image(&host.image), caps)
++}
++
++pub fn roundtrip_data_tables_owned(t: &C6DataTables, caps: &C6StateCaps) -> C6Result<C6DataTables> {
++    decode_data_tables(&encode_data_tables(t, caps)?, caps)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::sherlock::helper_machine::c6_phys::fixtures;
++    use crate::sherlock::helper_machine::c6_phys_program::PROGRAM_SECTION_TAG;
++    use crate::sherlock::helper_machine::complete_observation::{capture, record_step, ObservedStep};
++    use crate::sherlock::helper_machine::shared::HelperResultC;
++
++    fn caps() -> C6StateCaps { C6StateCaps::test_caps() }
++    fn f(start: usize, len: usize) -> DataFieldsSnapshot { DataFieldsSnapshot { start, len } }
++
++    fn all_variants() -> C6DataTables {
++        C6DataTables {
++            data: vec![
++                DataSnapshot::U128 { n: u128::MAX }, DataSnapshot::U128 { n: 0 },
++                DataSnapshot::Bool { b: true }, DataSnapshot::Bool { b: false }, DataSnapshot::Nil,
++                DataSnapshot::Cons { fields: f(0, 2) }, DataSnapshot::Leaf { fields: f(2, 1) },
++                DataSnapshot::Branch { fields: f(3, 2) },
++                DataSnapshot::Constructor { type_id: TypeIdC(5), ctor_id: CtorIdC(6), fields: f(5, 3) },
++                DataSnapshot::Constructor { type_id: TypeIdC(4), ctor_id: CtorIdC(4), fields: f(7, 0) },
++            ],
++            data_fields: vec![RefC::Const(3), RefC::Data(3), RefC::Data(3), RefC::Const(0),
++                RefC::Data(0), RefC::Const(3), RefC::Data(9), RefC::Const(1)],
++            env: vec![EnvCellC { binder: 2, value: RefC::Data(8), previous: None },
++                EnvCellC { binder: 2, value: RefC::Const(8), previous: Some(0) },
++                EnvCellC { binder: 0, value: RefC::Data(0), previous: Some(1) }],
++            value_slots: vec![RefC::Data(9), RefC::Data(9), RefC::Const(9), RefC::Const(0)],
++        }
++    }
++
++    /// Changing any single lane must refuse or decode to a different value.
++    fn every_lane_significant<const N: usize, T: PartialEq>(lanes: [u128; N], value: &T,
++        decode: fn(&[u128; N]) -> C6Result<T>) {
++        for at in 0..N {
++            let mut changed = lanes;
++            changed[at] ^= 0x55;
++            assert!(decode(&changed).map_or(true, |v| &v != value), "lane {at} was ignored");
++        }
++    }
++
++    #[test]
++    fn every_table_variant_and_raw_field_roundtrips_exactly() {
++        // SYNTHETIC codec vectors over every variant; not admitted images.
++        let t = all_variants();
++        let lanes = encode_data_tables(&t, &caps()).unwrap();
++        assert_eq!(lanes[..DATA_HEADER_LANES], [C6_PHYS_MAGIC, C6_PHYS_VERSION, DATA_SECTION_TAG, 10, 8, 3, 4]);
++        assert_eq!(lanes.len(), 7 + 10 * DATA_ROW_LANES + 8 * REF_LANES + 3 * ENV_ROW_LANES + 4 * REF_LANES);
++        assert_eq!(lanes[7..12], [0, u128::MAX, 0, 0, 0]);
++        assert_eq!(lanes[32..37], [3, 0, 0, 0, 2]);
++        assert_eq!(lanes[47..52], [6, 5, 6, 5, 3]);
++        assert_eq!(lanes[52..57], [6, 4, 4, 7, 0], "nonzero start of an empty slice is kept");
++        assert_eq!(lanes[57..61], [0, 3, 1, 3], "same-index Const and Data stay distinct");
++        assert_eq!(lanes[73..83], [2, 1, 8, 0, 0, 2, 0, 8, 1, 0], "None vs Some(0) previous");
++        let decoded = decode_data_tables(&lanes, &caps()).unwrap();
++        assert_eq!(decoded, t);
++        assert_eq!(encode_data_tables(&decoded, &caps()).unwrap(), lanes, "accepted lanes re-encode identically");
++        assert_eq!(roundtrip_data_tables_owned(&t, &caps()).unwrap(), t);
++        for row in &t.data { every_lane_significant(encode_data_row(row), row, decode_data_row); }
++        for cell in &t.env { every_lane_significant(encode_env_row(cell), cell, decode_env_row); }
++        for r in t.data_fields.iter().chain(&t.value_slots) {
++            every_lane_significant(encode_ref_row(*r), r, |l| decode_ref_row("state.ref", l));
++        }
++        let differs = |m: C6DataTables| assert_ne!(encode_data_tables(&m, &caps()).unwrap(), lanes);
++        let mut m = t.clone(); m.value_slots.swap(1, 2); differs(m);
++        let mut m = t.clone(); m.data_fields[0] = RefC::Data(3); differs(m);
++        let mut m = t.clone(); m.env[0].previous = Some(0); differs(m);
++        let mut m = t.clone();
++        m.data[9] = DataSnapshot::Constructor { type_id: TypeIdC(4), ctor_id: CtorIdC(4), fields: f(0, 0) };
++        differs(m);
++        let mut m = t; m.data[0] = DataSnapshot::U128 { n: u128::MAX - 1 }; differs(m);
++    }
++
++    #[test]
++    fn refusals_follow_the_declared_first_error_order() {
++        let t = all_variants();
++        let lanes = encode_data_tables(&t, &caps()).unwrap();
++        let dec = |l: &[u128]| decode_data_tables(l, &caps());
++        let set = |pairs: &[(usize, u128)]| { let mut m = lanes.clone(); for &(k, v) in pairs { m[k] = v; } m };
++        fn cap<T>(section: &'static str, needed: usize, limit: usize) -> C6Result<T> {
++            Err(C6PhysError::CapacityExceeded { section, needed, limit })
++        }
++        assert_eq!(dec(&lanes[..6]), Err(C6PhysError::Truncated { section: SECTION, needed: 7, actual: 6 }));
++        assert_eq!(dec(&set(&[(0, 0), (2, 0)])), Err(C6PhysError::BadMagic { actual: 0 }));
++        assert_eq!(dec(&set(&[(1, 2)])), Err(C6PhysError::BadVersion { actual: 2 }));
++        assert_eq!(dec(&set(&[(2, PROGRAM_SECTION_TAG)])),
++            Err(C6PhysError::BadTag { section: SECTION, tag: PROGRAM_SECTION_TAG }));
++        // Structural counts precede count caps; count caps precede length.
++        assert_eq!(dec(&set(&[(3, 999), (4, u128::MAX)])),
++            Err(C6PhysError::UsizeOverflow { section: SECTION, value: u128::MAX }));
++        assert_eq!(dec(&set(&[(3, 257)])), cap("state.data", 257, 256));
++        assert_eq!(dec(&set(&[(3, 11)])), Err(C6PhysError::Truncated { section: SECTION, needed: 101, actual: 96 }));
++        let mut trailing = lanes.clone();
++        trailing.push(0);
++        assert_eq!(dec(&trailing), Err(C6PhysError::TrailingLanes { section: SECTION, extra: 1 }));
++        // Data rows at 7 + 5k: structural, row-relative lanes.
++        assert_eq!(dec(&set(&[(7, 7)])), Err(C6PhysError::BadTag { section: DATA_S, tag: 7 }));
++        assert_eq!(dec(&set(&[(18, 2)])), Err(C6PhysError::BadBool { section: DATA_S, value: 2 }));
++        assert_eq!(dec(&set(&[(28, 1)])), Err(C6PhysError::NonZeroPadding { section: DATA_S, lane: 1, value: 1 }));
++        assert_eq!(dec(&set(&[(34, 4)])), Err(C6PhysError::NonZeroPadding { section: DATA_S, lane: 2, value: 4 }));
++        // Within a row, structure precedes caps; earlier tables precede later ones.
++        assert_eq!(dec(&set(&[(48, 64), (49, u128::MAX)])),
++            Err(C6PhysError::UsizeOverflow { section: DATA_S, value: u128::MAX }));
++        assert_eq!(dec(&set(&[(48, 64), (88, 7)])), cap("state.data.type_id", 65, 64));
++        assert_eq!(dec(&set(&[(49, 256)])), cap("state.data.ctor_id", 257, 256));
++        assert_eq!(dec(&set(&[(51, 9)])), cap("state.data.fields", 9, 8));
++        assert_eq!(dec(&set(&[(50, 1022)])), cap("state.data.fields", 1025, 1024));
++        assert_eq!(dec(&set(&[(50, usize::MAX as u128)])),
++            Err(C6PhysError::UsizeOverflow { section: "state.data.fields", value: usize::MAX as u128 }));
++        // Ref, env and value-slot rows.
++        assert_eq!(dec(&set(&[(57, 2)])), Err(C6PhysError::BadTag { section: "state.data_fields", tag: 2 }));
++        assert_eq!(dec(&set(&[(77, 1)])), Err(C6PhysError::NonZeroPadding { section: "state.env", lane: 4, value: 1 }));
++        assert_eq!(dec(&set(&[(76, 2)])), Err(C6PhysError::BadTag { section: "state.env", tag: 2 }));
++        assert_eq!(dec(&set(&[(73, 256)])), cap("state.env.binder", 257, 256));
++        assert_eq!(dec(&set(&[(82, 256)])), cap("state.env.previous", 257, 256));
++        assert_eq!(dec(&set(&[(88, 7)])), Err(C6PhysError::BadTag { section: "state.value_slots", tag: 7 }));
++        // Const and Data references use their own tables.
++        let one = |r| C6DataTables { data: vec![], data_fields: vec![r], env: vec![], value_slots: vec![] };
++        let mut c = caps();
++        c.phys.max_data_nodes = 4;
++        c.phys.max_constants = 9;
++        assert!(encode_data_tables(&one(RefC::Const(8)), &c).is_ok());
++        assert_eq!(encode_data_tables(&one(RefC::Data(4)), &c), cap("state.data_fields.ref", 5, 4));
++        let mut l = encode_data_tables(&one(RefC::Data(3)), &c).unwrap();
++        l[8] = 4;
++        assert_eq!(decode_data_tables(&l, &c), cap("state.data_fields.ref", 5, 4));
++        // The encoder applies the same caps; the data-field limit is its own.
++        let mut tight = caps();
++        tight.max_data_field_slots = 7;
++        assert_eq!(encode_data_tables(&t, &tight), cap("state.data_fields", 8, 7));
++        assert_eq!(decode_data_tables(&lanes, &tight), cap("state.data_fields", 8, 7));
++        let mut wide = t;
++        wide.data[8] = DataSnapshot::Constructor { type_id: TypeIdC(64), ctor_id: CtorIdC(6), fields: f(5, 3) };
++        assert_eq!(encode_data_tables(&wide, &caps()), cap("state.data.type_id", 65, 64));
++        // Exact admitted mapping: no borrowed or defaulted limit.
++        let bounds = BoundsC { data_nodes: 5, data_field_slots: 11, helper_tasks: 13, ..BoundsC::default() };
++        let budgets = C6CodecBudgets { type_expr_nodes: 1, template_bytes: 2 };
++        let (lc, ext) = (LayoutCapacitiesC::default(), ExtCapacitiesC::all_zero());
++        assert_eq!(C6StateCaps::from_parts(&bounds, &lc, &ext, budgets), C6StateCaps {
++            phys: C6PhysCaps::from_parts(&bounds, &lc, &ext, budgets),
++            max_data_field_slots: 11, max_helper_tasks: 13 });
++    }
++
++    #[test]
++    fn captured_nominal_host_tables_roundtrip_and_preserve_host() {
++        // OWNER-REACHABLE: real generic nominal admission, real fixed-owner steps.
++        let (admitted, mut image) = fixtures::admitted_run(64);
++        let mut terminal = false;
++        for _ in 0..4096 {
++            match record_step(&admitted, &mut image) {
++                Ok(ObservedStep::Event(_)) => {}
++                Ok(ObservedStep::Terminal { .. }) => { terminal = true; break; }
++                Err(_) => panic!("owner step"),
++            }
++        }
++        assert!(terminal, "the nominal run reaches its terminal boundary");
++        let host = fixtures::must(capture(&admitted, &image), "capture");
++        let img = &host.image;
++        assert!(img.data.iter().any(|d| matches!(d, DataSnapshot::Constructor { .. })));
++        assert!(img.data_fields.iter().any(|r| matches!(r, RefC::Const(_))));
++        assert!(img.data_fields.iter().any(|r| matches!(r, RefC::Data(_))));
++        assert!(!img.env.is_empty() && !img.value_slots.is_empty());
++        // Admitted bounds/capacities of this host; the data section reads no ext limit.
++        let caps = C6StateCaps::from_parts(&host.admission.bounds, &host.admission.layout.capacities,
++            &ExtCapacitiesC::all_zero(), C6CodecBudgets { type_expr_nodes: 0, template_bytes: 0 });
++        let lanes = data_lanes_from_host(&host, &caps).unwrap();
++        let owned = C6DataTables::from_image(img);
++        assert_eq!(lanes, encode_data_tables(&owned, &caps).unwrap());
++        let decoded = decode_data_tables(&lanes, &caps).unwrap();
++        assert_eq!(decoded, owned);
++        assert_eq!(encode_data_tables(&decoded, &caps).unwrap(), lanes);
++        // Replace ONLY the four tables of a clone: the whole owned host is equal.
++        let mut rebuilt = host.clone();
++        C6DataTables { data: vec![], data_fields: vec![], env: vec![], value_slots: vec![] }
++            .replace_tables_of(&mut rebuilt.image);
++        assert_ne!(rebuilt, host);
++        decoded.replace_tables_of(&mut rebuilt.image);
++        assert_eq!(rebuilt, host);
++        // Root counters and other state are not in this section.
++        let mut other = host.clone();
++        other.image.alloc.data_nodes += 1;
++        other.image.active.data_fields += 1;
++        other.image.reference_cursor += 7;
++        other.image.frames.clear();
++        other.image.result = Some(HelperResultC::EnvMissing);
++        assert_eq!(data_lanes_from_host(&other, &caps).unwrap(), lanes);
++        // A table field change is visible.
++        let mut changed = host.clone();
++        changed.image.data_fields[0] = match changed.image.data_fields[0] {
++            RefC::Const(i) => RefC::Data(i), RefC::Data(i) => RefC::Const(i) };
++        assert_ne!(data_lanes_from_host(&changed, &caps).unwrap(), lanes);
++        let n = img.data_fields.len();
++        let mut tight = caps;
++        tight.max_data_field_slots = n - 1;
++        assert_eq!(data_lanes_from_host(&host, &tight),
++            Err(C6PhysError::CapacityExceeded { section: "state.data_fields", needed: n, limit: n - 1 }));
++    }
++}
+--- /dev/null
++++ b/crates/mori-core/src/sherlock/helper_machine/c6_phys_helper.rs
+@@ -0,0 +1,1032 @@
++//! Helper/result/task section of sherlock-c6-phys/1 (C6P1), Chunk 3B.
++//!
++//! Codec over the three owned `ImageSnapshot` fields `helper`, `result`,
++//! `tasks`. It admits nothing, constructs no `Admitted`/`MachineImage`/
++//! `ImageSnapshot`, steps nothing, stores no task cursor (derived from the
++//! task count) and checks no cross-table membership or owner admission
++//! (Chunk 4). Reserved fields (`parent_resume`, PatternTag reserved variants)
++//! are carried as representation only; they are not admitted here.
++//!
++//! Layout: magic, version, `HELPER_SECTION_TAG`, task count; helper record
++//! (23 lanes) at 4; result record (4) at 27; then tasks (7 each) at 31,
++//! bottom-to-top. Lane 0 of each record is its tag: helper None=0, Scalar=1,
++//! EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match, Plan, Build=11;
++//! result None=0, then 1..=19 in `HelperResultC` declaration order; task
++//! ValidateTask=0, EqualTask=1, PairTask=2. Fields follow in `shared.rs`
++//! declaration order. Helpers start with common [site, origin_reference_cursor
++//! (full u128), parent_resume [p,v]]. Widths: usize/u8/bool/enum/u128 1;
++//! RefC 2 [0|1, i]; EnvRootC and non-env Option<usize> 2 (None [0,0], Some
++//! [1,v]; Chunk 1 env encoding, meaning per field); Option<TypeIdC> 2 likewise;
++//! Option<RefC> 3 (None [0,0,0], Some [1,tag,i]); SliceC 2 [start,len], raw
++//! (an empty slice keeps its start); ScalarStaged 2 [tag 0..=6, payload] with
++//! None payload 0. Enum tags are the explicit literal maps below.
++//! Unused lanes are zero; bools are 0/1; u8 lanes refuse > 255 (UsizeOverflow).
++//!
++//! Caps (index strictly below, count at most): Const max_constants, Data
++//! max_data_nodes, EnvRootC max_env_cells; names max_names; Bind.function,
++//! Find.found, FindFound max_functions (index), Find.row_cursor max_functions
++//! (count); EnvGet.cursor, EnvPut.new_root, Bind.dup_cursor, EnvUpdated.cell
++//! max_env_cells (index); Plan.arm, Match.arm, PlanMatched.arm max_arms;
++//! Plan.source_match max_expressions; Plan.node max_plan_nodes; Bind.params
++//! parameters end, len <= max_arity; Bind.args/Append.src/Build.src/AppendDone.seq
++//! value_slots end, len <= max_arity; Plan.path field_paths end, no arity;
++//! p_cursor/a_cursor/src_cursor/path_cursor count <= own slice len;
++//! Append.dest_start count <= max_value_slots; Build.field_start count <=
++//! max_data_field_slots; task cursors count <= max_arity; Match.x/y names only
++//! when the phase is past Arm and the pat_tag binds them (else raw placeholders);
++//! Scalar.expected and PairTask.sort `max(max_types, 4)` (builtin-capable);
++//! Build.type_id plain `max_types` (user nominal, as 3A Constructor);
++//! parent_resume, origin, reg_a, U128Value.n and u8 codes carry no cap. A slice
++//! checks end overflow, then arity, then end. Caps follow lane order.
++//!
++//! `decode_helper_tables` first-error order: 1. fewer than 31 lanes:
++//! `Truncated`; 2. `BadMagic`; 3. `BadVersion`; 4. tag `BadTag`; 5. task count
++//! structurally; 6. task count against `max_helper_tasks`; 7. section length
++//! (checked; `UsizeOverflow`), `Truncated`, then `TrailingLanes` (no allocation
++//! before); 8. helper record structurally (ascending record-relative lanes)
++//! then caps; 9. result likewise; 10. tasks in order, each likewise.
++
++use super::c6_phys::{C6PhysError, C6Result, C6_PHYS_MAGIC, C6_PHYS_VERSION};
++use super::c6_phys_data::{
++    cap_count, cap_env, cap_index, cap_ref, get_env, get_ref, put_env, put_ref, rd, rd_bool, u, zero,
++    C6StateCaps,
++};
++use super::complete_observation::{HostSnapshot, ImageSnapshot};
++use super::shared::adt::{CtorIdC, TypeIdC};
++use super::shared::{
++    AppendPhase, BindPhase, BindStatus, BoolSelector, BuildPhase, HelperCommon, HelperControlC,
++    HelperResultC, HelperTaskC, MatchPhase, NodeKind, PatternTag, PlanAfterWalk, PlanPhase, RefC,
++    ScalarMode, ScalarPhase, ScalarStaged, SiteTag, SliceC, TaskVisitC, TriStatus,
++};
++
++pub const HELPER_SECTION_TAG: u128 = 0x4845_4C50;
++pub const HELPER_HEADER_LANES: usize = 4;
++pub const HELPER_LANES: usize = 23;
++pub const RESULT_LANES: usize = 4;
++pub const TASK_LANES: usize = 7;
++pub const L_HELPER_RECORD: usize = 4;
++pub const L_RESULT_RECORD: usize = 27;
++pub const L_TASKS: usize = 31;
++pub const HELPER_FIXED_LANES: usize = 31;
++const SECTION: &str = "state_helper";
++const HELPER_S: &str = "state.helper";
++const RESULT_S: &str = "state.result";
++const TASK_S: &str = "state.task";
++
++// ---------- local primitives (3A conventions) ----------
++
++fn rd_u8(section: &'static str, value: u128) -> C6Result<u8> {
++    u8::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
++}
++fn cap_opt_ref(section: &'static str, v: Option<RefC>, c: &C6StateCaps) -> C6Result<()> {
++    match v { Some(r) => cap_ref(section, r, c), None => Ok(()) }
++}
++/// Non-environment optional index against its own table; never `cap_env`.
++fn cap_opt_index(section: &'static str, v: Option<usize>, limit: usize) -> C6Result<()> {
++    match v { Some(i) => cap_index(section, i, limit), None => Ok(()) }
++}
++fn cap_slice(section: &'static str, s: SliceC, table: usize, max_len: Option<usize>) -> C6Result<()> {
++    let end = s.start.checked_add(s.len).ok_or(C6PhysError::UsizeOverflow { section, value: u(s.start) })?;
++    if let Some(max_len) = max_len { cap_count(section, s.len, max_len)?; }
++    cap_count(section, end, table)
++}
++/// Builtin TypeIds 0..=3 exist independently of `type_rows` (Core policy).
++fn builtin_type_cap(c: &C6StateCaps) -> usize { c.phys.max_types.max(4) }
++
++macro_rules! lane_enum {
++    ($to:ident, $from:ident, $ty:ident, { $($v:ident = $n:literal),+ $(,)? }) => {
++        fn $to(v: $ty) -> u128 { match v { $($ty::$v => $n),+ } }
++        fn $from(section: &'static str, tag: u128) -> C6Result<$ty> {
++            match tag { $($n => Ok($ty::$v),)+ _ => Err(C6PhysError::BadTag { section, tag }) }
++        }
++    };
++}
++lane_enum!(site_tag, site_from, SiteTag, { EvalLiteral = 0, EvalVar = 1, EvalLet = 2, EvalBinary = 3,
++    EvalUnary = 4, EvalIf = 5, EvalMatch = 6, EvalCall = 7, Push = 8, RetLet = 9, RetLeft = 10,
++    RetRight = 11, RetUnary = 12, RetIf = 13, RetMatch = 14, RetArgs = 15, RetCall = 16, RetScope = 17,
++    Invoke = 18, Enter = 19, Bound = 20, Cases = 21, CaseResult = 22, Prim = 23, EvalConstruct = 24,
++    RetCtorFields = 25, Materialize = 26 });
++lane_enum!(mode_tag, mode_from, ScalarMode, { Add = 0, Sub = 1, Mul = 2, Lt = 3, Cons = 4, Branch = 5,
++    Leaf = 6, Not = 7, TestBool = 8, TestType = 9 });
++lane_enum!(sphase_tag, sphase_from, ScalarPhase, { First = 0, Second = 1, Done = 2 });
++lane_enum!(node_tag, node_from, NodeKind, { Cons = 0, Leaf = 1, Branch = 2 });
++lane_enum!(sel_tag, sel_from, BoolSelector, { True = 0, False = 1, NotBool = 2 });
++lane_enum!(tri_tag, tri_from, TriStatus, { Pending = 0, Positive = 1, Negative = 2 });
++lane_enum!(bphase_tag, bphase_from, BindPhase, { Pairing = 0, UnwindType = 1, UnwindDup = 2,
++    UnwindInsert = 3, Propagate = 4, Finished = 5 });
++lane_enum!(bstatus_tag, bstatus_from, BindStatus, { Ok = 0, Bad = 1 });
++lane_enum!(aphase_tag, aphase_from, AppendPhase, { Copy = 0, Tail = 1, Done = 2 });
++lane_enum!(mphase_tag, mphase_from, MatchPhase, { Arm = 0, Tag = 1, Distinct = 2, Field = 3, Bind = 4,
++    Ready = 5, NoMatchReady = 6, Done = 7 });
++lane_enum!(pphase_tag, pphase_from, PlanPhase, { Walk = 0, Test = 1, Bind = 2, Ready = 3,
++    NoMatchReady = 4, Done = 5 });
++lane_enum!(walk_tag, walk_from, PlanAfterWalk, { Test = 0, Bind = 1 });
++lane_enum!(build_tag, build_from, BuildPhase, { Copy = 0, Done = 1 });
++lane_enum!(pat_tag_of, pat_from, PatternTag, { PVar = 0, PNil = 1, PCons = 2, PLeaf = 3, PBranch = 4,
++    WildcardExtensionReserved = 5, ConstructorExtensionReserved = 6 });
++lane_enum!(visit_tag, visit_from, TaskVisitC, { Unvisited = 0, Fields = 1 });
++
++/// Fixed-width writer over a zero-initialized record; offsets are static.
++struct Wr<const N: usize> { o: [u128; N], at: usize }
++impl<const N: usize> Wr<N> {
++    fn new() -> Self { Self { o: [0; N], at: 0 } }
++    fn v(&mut self, x: u128) { self.o[self.at] = x; self.at += 1; }
++    fn us(&mut self, x: usize) { self.v(u(x)); }
++    fn r(&mut self, x: RefC) { put_ref(&mut self.o, self.at, x); self.at += 2; }
++    fn opt(&mut self, x: Option<usize>) { put_env(&mut self.o, self.at, x); self.at += 2; }
++    fn opt_ref(&mut self, x: Option<RefC>) {
++        if let Some(r) = x { self.o[self.at] = 1; put_ref(&mut self.o, self.at + 1, r); }
++        self.at += 3;
++    }
++    fn slice(&mut self, s: SliceC) { self.us(s.start); self.us(s.len); }
++    fn head(&mut self, kind: u128, c: HelperCommon) {
++        self.v(kind); self.v(site_tag(c.site)); self.v(c.origin_reference_cursor); self.opt(c.parent_resume);
++    }
++    fn staged(&mut self, s: ScalarStaged) {
++        use ScalarStaged as S;
++        let (t, x) = match s {
++            S::None => (0, 0), S::U128Value { n } => (1, n), S::BoolValue { b } => (2, u128::from(b)),
++            S::PendingNode { tag } => (3, node_tag(tag)), S::PrimError { code } => (4, u128::from(code)),
++            S::Selector { sel } => (5, sel_tag(sel)), S::TypeTest { ok } => (6, u128::from(ok)),
++        };
++        self.v(t); self.v(x);
++    }
++}
++
++/// Structural reader in ascending lanes; `l` is a statically sized record.
++struct Rd<'a> { l: &'a [u128], at: usize, s: &'static str }
++impl Rd<'_> {
++    fn raw(&mut self) -> u128 { let v = self.l[self.at]; self.at += 1; v }
++    fn us(&mut self) -> C6Result<usize> { let v = self.raw(); rd(self.s, v) }
++    fn byte(&mut self) -> C6Result<u8> { let v = self.raw(); rd_u8(self.s, v) }
++    fn tag<T>(&mut self, f: fn(&'static str, u128) -> C6Result<T>) -> C6Result<T> { let v = self.raw(); f(self.s, v) }
++    fn r(&mut self) -> C6Result<RefC> { let v = get_ref(self.s, self.l, self.at)?; self.at += 2; Ok(v) }
++    fn opt(&mut self) -> C6Result<Option<usize>> { let v = get_env(self.s, self.l, self.at)?; self.at += 2; Ok(v) }
++    fn opt_ref(&mut self) -> C6Result<Option<RefC>> {
++        match self.raw() {
++            0 => { zero(self.s, self.l, self.at, self.at + 2)?; self.at += 2; Ok(None) }
++            1 => self.r().map(Some),
++            tag => Err(C6PhysError::BadTag { section: self.s, tag }),
++        }
++    }
++    fn slice(&mut self) -> C6Result<SliceC> { Ok(SliceC { start: self.us()?, len: self.us()? }) }
++    fn common(&mut self) -> C6Result<HelperCommon> {
++        Ok(HelperCommon { site: self.tag(site_from)?, origin_reference_cursor: self.raw(), parent_resume: self.opt()? })
++    }
++    fn staged(&mut self) -> C6Result<ScalarStaged> {
++        use ScalarStaged as S;
++        let (tag, x, s) = (self.raw(), self.raw(), self.s);
++        Ok(match tag {
++            0 => { zero(s, self.l, self.at - 1, self.at)?; S::None }
++            1 => S::U128Value { n: x }, 2 => S::BoolValue { b: rd_bool(s, x)? },
++            3 => S::PendingNode { tag: node_from(s, x)? }, 4 => S::PrimError { code: rd_u8(s, x)? },
++            5 => S::Selector { sel: sel_from(s, x)? }, 6 => S::TypeTest { ok: rd_bool(s, x)? },
++            tag => return Err(C6PhysError::BadTag { section: s, tag }),
++        })
++    }
++}
++
++// ---------- helper record ----------
++
++pub fn encode_helper_record(h: Option<HelperControlC>) -> [u128; HELPER_LANES] {
++    use HelperControlC as H;
++    let mut w = Wr::<HELPER_LANES>::new();
++    let Some(h) = h else { return w.o };
++    match h {
++        H::Scalar { common, mode, operand_a, operand_b, expected, phase, reg_a, staged } => {
++            w.head(1, common); w.v(mode_tag(mode)); w.r(operand_a); w.opt_ref(operand_b);
++            w.opt(expected.map(|t| t.0)); w.v(sphase_tag(phase)); w.v(reg_a); w.staged(staged);
++        }
++        H::EnvGet { common, binder, cursor, found, status } => {
++            w.head(2, common); w.us(binder); w.opt(cursor); w.opt_ref(found); w.v(tri_tag(status));
++        }
++        H::EnvPut { common, binder, value, base, new_root, status } => {
++            w.head(3, common); w.us(binder); w.r(value); w.opt(base); w.opt(new_root); w.v(tri_tag(status));
++        }
++        H::Find { common, function_name, row_cursor, found, status } => {
++            w.head(4, common); w.us(function_name); w.us(row_cursor); w.opt(found); w.v(tri_tag(status));
++        }
++        H::Bind { common, function, params, args, p_cursor, a_cursor, partial, dup_cursor, phase, status } => {
++            w.head(5, common); w.us(function); w.slice(params); w.slice(args); w.us(p_cursor); w.us(a_cursor);
++            w.opt(partial); w.opt(dup_cursor); w.v(bphase_tag(phase)); w.v(bstatus_tag(status));
++        }
++        H::Append { common, src, value, src_cursor, dest_start, staged, phase } => {
++            w.head(6, common); w.slice(src); w.r(value); w.us(src_cursor); w.us(dest_start);
++            w.opt_ref(staged); w.v(aphase_tag(phase));
++        }
++        H::Validate { common, root, status } => { w.head(7, common); w.r(root); w.v(tri_tag(status)); }
++        H::Equal { common, left, right, status } => {
++            w.head(8, common); w.r(left); w.r(right); w.v(tri_tag(status));
++        }
++        H::Match { common, scrutinee, arm, saved_env, partial, pat_tag, x, y, field_idx, staged, phase, status } => {
++            w.head(9, common); w.r(scrutinee); w.us(arm); w.opt(saved_env); w.opt(partial);
++            w.v(pat_tag_of(pat_tag)); w.us(x); w.us(y); w.v(u128::from(field_idx)); w.opt_ref(staged);
++            w.v(mphase_tag(phase)); w.v(tri_tag(status));
++        }
++        H::Plan { common, source_match, scrutinee, saved_env, partial, node, phase, after_walk, cur, path,
++            path_cursor, arm, status } => {
++            w.head(10, common); w.us(source_match); w.r(scrutinee); w.opt(saved_env); w.opt(partial);
++            w.us(node); w.v(pphase_tag(phase)); w.v(walk_tag(after_walk)); w.r(cur); w.slice(path);
++            w.us(path_cursor); w.opt(arm); w.v(tri_tag(status));
++        }
++        H::Build { common, type_id, ctor_id, src, src_cursor, field_start, staged, node, phase } => {
++            w.head(11, common); w.us(type_id.0); w.us(ctor_id.0); w.slice(src); w.us(src_cursor);
++            w.us(field_start); w.opt_ref(staged); w.opt_ref(node); w.v(build_tag(phase));
++        }
++    }
++    w.o
++}
++
++/// Structural helper decode: tag, representability, presence and padding.
++pub fn decode_helper_record(l: &[u128; HELPER_LANES]) -> C6Result<Option<HelperControlC>> {
++    use HelperControlC as H;
++    let mut d = Rd { l: &l[..], at: 1, s: HELPER_S };
++    let h = match l[0] {
++        0 => None,
++        1 => Some(H::Scalar { common: d.common()?, mode: d.tag(mode_from)?, operand_a: d.r()?,
++            operand_b: d.opt_ref()?, expected: d.opt()?.map(TypeIdC), phase: d.tag(sphase_from)?,
++            reg_a: d.raw(), staged: d.staged()? }),
++        2 => Some(H::EnvGet { common: d.common()?, binder: d.us()?, cursor: d.opt()?, found: d.opt_ref()?,
++            status: d.tag(tri_from)? }),
++        3 => Some(H::EnvPut { common: d.common()?, binder: d.us()?, value: d.r()?, base: d.opt()?,
++            new_root: d.opt()?, status: d.tag(tri_from)? }),
++        4 => Some(H::Find { common: d.common()?, function_name: d.us()?, row_cursor: d.us()?,
++            found: d.opt()?, status: d.tag(tri_from)? }),
++        5 => Some(H::Bind { common: d.common()?, function: d.us()?, params: d.slice()?, args: d.slice()?,
++            p_cursor: d.us()?, a_cursor: d.us()?, partial: d.opt()?, dup_cursor: d.opt()?,
++            phase: d.tag(bphase_from)?, status: d.tag(bstatus_from)? }),
++        6 => Some(H::Append { common: d.common()?, src: d.slice()?, value: d.r()?, src_cursor: d.us()?,
++            dest_start: d.us()?, staged: d.opt_ref()?, phase: d.tag(aphase_from)? }),
++        7 => Some(H::Validate { common: d.common()?, root: d.r()?, status: d.tag(tri_from)? }),
++        8 => Some(H::Equal { common: d.common()?, left: d.r()?, right: d.r()?, status: d.tag(tri_from)? }),
++        9 => Some(H::Match { common: d.common()?, scrutinee: d.r()?, arm: d.us()?, saved_env: d.opt()?,
++            partial: d.opt()?, pat_tag: d.tag(pat_from)?, x: d.us()?, y: d.us()?, field_idx: d.byte()?,
++            staged: d.opt_ref()?, phase: d.tag(mphase_from)?, status: d.tag(tri_from)? }),
++        10 => Some(H::Plan { common: d.common()?, source_match: d.us()?, scrutinee: d.r()?,
++            saved_env: d.opt()?, partial: d.opt()?, node: d.us()?, phase: d.tag(pphase_from)?,
++            after_walk: d.tag(walk_from)?, cur: d.r()?, path: d.slice()?, path_cursor: d.us()?,
++            arm: d.opt()?, status: d.tag(tri_from)? }),
++        11 => Some(H::Build { common: d.common()?, type_id: TypeIdC(d.us()?), ctor_id: CtorIdC(d.us()?),
++            src: d.slice()?, src_cursor: d.us()?, field_start: d.us()?, staged: d.opt_ref()?,
++            node: d.opt_ref()?, phase: d.tag(build_from)? }),
++        tag => return Err(C6PhysError::BadTag { section: HELPER_S, tag }),
++    };
++    zero(HELPER_S, l, d.at, HELPER_LANES)?;
++    Ok(h)
++}
++
++fn helper_caps(h: &HelperControlC, c: &C6StateCaps) -> C6Result<()> {
++    use HelperControlC as H;
++    let p = &c.phys;
++    match *h {
++        H::Scalar { operand_a, operand_b, expected, .. } => {
++            cap_ref("state.helper.operand_a", operand_a, c)?;
++            cap_opt_ref("state.helper.operand_b", operand_b, c)?;
++            cap_opt_index("state.helper.expected", expected.map(|t| t.0), builtin_type_cap(c))
++        }
++        H::EnvGet { binder, cursor, found, .. } => {
++            cap_index("state.helper.binder", binder, p.max_names)?;
++            cap_opt_index("state.helper.cursor", cursor, p.max_env_cells)?;
++            cap_opt_ref("state.helper.found", found, c)
++        }
++        H::EnvPut { binder, value, base, new_root, .. } => {
++            cap_index("state.helper.binder", binder, p.max_names)?;
++            cap_ref("state.helper.value", value, c)?;
++            cap_env("state.helper.base", base, c)?;
++            cap_opt_index("state.helper.new_root", new_root, p.max_env_cells)
++        }
++        H::Find { function_name, row_cursor, found, .. } => {
++            cap_index("state.helper.function_name", function_name, p.max_names)?;
++            cap_count("state.helper.row_cursor", row_cursor, p.max_functions)?;
++            cap_opt_index("state.helper.found", found, p.max_functions)
++        }
++        H::Bind { function, params, args, p_cursor, a_cursor, partial, dup_cursor, .. } => {
++            cap_index("state.helper.function", function, p.max_functions)?;
++            cap_slice("state.helper.params", params, p.max_parameters, Some(p.max_arity))?;
++            cap_slice("state.helper.args", args, p.max_value_slots, Some(p.max_arity))?;
++            cap_count("state.helper.p_cursor", p_cursor, params.len)?;
++            cap_count("state.helper.a_cursor", a_cursor, args.len)?;
++            cap_env("state.helper.partial", partial, c)?;
++            cap_opt_index("state.helper.dup_cursor", dup_cursor, p.max_env_cells)
++        }
++        H::Append { src, value, src_cursor, dest_start, staged, .. } => {
++            cap_slice("state.helper.src", src, p.max_value_slots, Some(p.max_arity))?;
++            cap_ref("state.helper.value", value, c)?;
++            cap_count("state.helper.src_cursor", src_cursor, src.len)?;
++            cap_count("state.helper.dest_start", dest_start, p.max_value_slots)?;
++            cap_opt_ref("state.helper.staged", staged, c)
++        }
++        H::Validate { root, .. } => cap_ref("state.helper.root", root, c),
++        H::Equal { left, right, .. } => {
++            cap_ref("state.helper.left", left, c)?;
++            cap_ref("state.helper.right", right, c)
++        }
++        H::Match { scrutinee, arm, saved_env, partial, pat_tag, x, y, staged, phase, .. } => {
++            cap_ref("state.helper.scrutinee", scrutinee, c)?;
++            cap_index("state.helper.arm", arm, p.max_arms)?;
++            cap_env("state.helper.saved_env", saved_env, c)?;
++            cap_env("state.helper.partial", partial, c)?;
++            if phase != MatchPhase::Arm {
++                match pat_tag {
++                    PatternTag::PVar | PatternTag::PLeaf => cap_index("state.helper.x", x, p.max_names)?,
++                    PatternTag::PCons | PatternTag::PBranch => {
++                        cap_index("state.helper.x", x, p.max_names)?;
++                        cap_index("state.helper.y", y, p.max_names)?;
++                    }
++                    PatternTag::PNil | PatternTag::WildcardExtensionReserved
++                    | PatternTag::ConstructorExtensionReserved => {}
++                }
++            }
++            cap_opt_ref("state.helper.staged", staged, c)
++        }
++        H::Plan { source_match, scrutinee, saved_env, partial, node, cur, path, path_cursor, arm, .. } => {
++            cap_index("state.helper.source_match", source_match, p.max_expressions)?;
++            cap_ref("state.helper.scrutinee", scrutinee, c)?;
++            cap_env("state.helper.saved_env", saved_env, c)?;
++            cap_env("state.helper.partial", partial, c)?;
++            cap_index("state.helper.node", node, p.max_plan_nodes)?;
++            cap_ref("state.helper.cur", cur, c)?;
++            cap_slice("state.helper.path", path, p.max_field_paths, None)?;
++            cap_count("state.helper.path_cursor", path_cursor, path.len)?;
++            cap_opt_index("state.helper.arm", arm, p.max_arms)
++        }
++        H::Build { type_id, ctor_id, src, src_cursor, field_start, staged, node, .. } => {
++            cap_index("state.helper.type_id", type_id.0, p.max_types)?;
++            cap_index("state.helper.ctor_id", ctor_id.0, p.max_constructors)?;
++            cap_slice("state.helper.src", src, p.max_value_slots, Some(p.max_arity))?;
++            cap_count("state.helper.src_cursor", src_cursor, src.len)?;
++            cap_count("state.helper.field_start", field_start, c.max_data_field_slots)?;
++            cap_opt_ref("state.helper.staged", staged, c)?;
++            cap_opt_ref("state.helper.node", node, c)
++        }
++    }
++}
++
++pub fn decode_helper_record_checked(l: &[u128; HELPER_LANES], c: &C6StateCaps)
++    -> C6Result<Option<HelperControlC>> {
++    let h = decode_helper_record(l)?;
++    if let Some(h) = &h { helper_caps(h, c)?; }
++    Ok(h)
++}
++
++// ---------- result record ----------
++
++pub fn encode_result_record(r: Option<HelperResultC>) -> [u128; RESULT_LANES] {
++    use HelperResultC as R;
++    let mut w = Wr::<RESULT_LANES>::new();
++    let Some(r) = r else { return w.o };
++    match r {
++        R::Validated { ok } => { w.v(1); w.v(u128::from(ok)); }
++        R::EnvFound { value } => { w.v(2); w.r(value); }
++        R::EnvMissing => w.v(3),
++        R::EnvUpdated { cell } => { w.v(4); w.us(cell); }
++        R::FindFound { function } => { w.v(5); w.us(function); }
++        R::FindMissing => w.v(6),
++        R::BindOk { env } => { w.v(7); w.opt(env); }
++        R::BindBad => w.v(8),
++        R::AppendDone { seq } => { w.v(9); w.slice(seq); }
++        R::ScalarValue { value } => { w.v(10); w.r(value); }
++        R::ScalarError { code } => { w.v(11); w.v(u128::from(code)); }
++        R::ScalarSelector { sel } => { w.v(12); w.v(sel_tag(sel)); }
++        R::ScalarTypeTest { ok } => { w.v(13); w.v(u128::from(ok)); }
++        R::EqualDone { value } => { w.v(14); w.r(value); }
++        R::MatchMatched { env } => { w.v(15); w.opt(env); }
++        R::MatchNoMatch => w.v(16),
++        R::PlanMatched { arm, env } => { w.v(17); w.us(arm); w.opt(env); }
++        R::PlanNoMatch => w.v(18),
++        R::BuildDone { value } => { w.v(19); w.r(value); }
++    }
++    w.o
++}
++
++pub fn decode_result_record(l: &[u128; RESULT_LANES]) -> C6Result<Option<HelperResultC>> {
++    use HelperResultC as R;
++    let mut d = Rd { l: &l[..], at: 1, s: RESULT_S };
++    let r = match l[0] {
++        0 => None,
++        1 => Some(R::Validated { ok: rd_bool(RESULT_S, d.raw())? }),
++        2 => Some(R::EnvFound { value: d.r()? }),
++        3 => Some(R::EnvMissing),
++        4 => Some(R::EnvUpdated { cell: d.us()? }),
++        5 => Some(R::FindFound { function: d.us()? }),
++        6 => Some(R::FindMissing),
++        7 => Some(R::BindOk { env: d.opt()? }),
++        8 => Some(R::BindBad),
++        9 => Some(R::AppendDone { seq: d.slice()? }),
++        10 => Some(R::ScalarValue { value: d.r()? }),
++        11 => Some(R::ScalarError { code: d.byte()? }),
++        12 => Some(R::ScalarSelector { sel: d.tag(sel_from)? }),
++        13 => Some(R::ScalarTypeTest { ok: rd_bool(RESULT_S, d.raw())? }),
++        14 => Some(R::EqualDone { value: d.r()? }),
++        15 => Some(R::MatchMatched { env: d.opt()? }),
++        16 => Some(R::MatchNoMatch),
++        17 => Some(R::PlanMatched { arm: d.us()?, env: d.opt()? }),
++        18 => Some(R::PlanNoMatch),
++        19 => Some(R::BuildDone { value: d.r()? }),
++        tag => return Err(C6PhysError::BadTag { section: RESULT_S, tag }),
++    };
++    zero(RESULT_S, l, d.at, RESULT_LANES)?;
++    Ok(r)
++}
++
++fn result_caps(r: &HelperResultC, c: &C6StateCaps) -> C6Result<()> {
++    use HelperResultC as R;
++    let p = &c.phys;
++    match *r {
++        R::EnvFound { value } | R::ScalarValue { value } | R::EqualDone { value } | R::BuildDone { value } =>
++            cap_ref("state.result.value", value, c),
++        R::EnvUpdated { cell } => cap_index("state.result.cell", cell, p.max_env_cells),
++        R::FindFound { function } => cap_index("state.result.function", function, p.max_functions),
++        R::BindOk { env } | R::MatchMatched { env } => cap_env("state.result.env", env, c),
++        R::AppendDone { seq } => cap_slice("state.result.seq", seq, p.max_value_slots, Some(p.max_arity)),
++        R::PlanMatched { arm, env } => {
++            cap_index("state.result.arm", arm, p.max_arms)?;
++            cap_env("state.result.env", env, c)
++        }
++        R::Validated { .. } | R::EnvMissing | R::FindMissing | R::BindBad | R::ScalarError { .. }
++        | R::ScalarSelector { .. } | R::ScalarTypeTest { .. } | R::MatchNoMatch | R::PlanNoMatch => Ok(()),
++    }
++}
++
++pub fn decode_result_record_checked(l: &[u128; RESULT_LANES], c: &C6StateCaps)
++    -> C6Result<Option<HelperResultC>> {
++    let r = decode_result_record(l)?;
++    if let Some(r) = &r { result_caps(r, c)?; }
++    Ok(r)
++}
++
++// ---------- task record ----------
++
++pub fn encode_task_record(t: HelperTaskC) -> [u128; TASK_LANES] {
++    let mut w = Wr::<TASK_LANES>::new();
++    match t {
++        HelperTaskC::ValidateTask { r, visit, cursor } => { w.v(0); w.r(r); w.v(visit_tag(visit)); w.us(cursor); }
++        HelperTaskC::EqualTask { left, right, visit, cursor } => {
++            w.v(1); w.r(left); w.r(right); w.v(visit_tag(visit)); w.us(cursor);
++        }
++        HelperTaskC::PairTask { binder, sort, arg } => { w.v(2); w.us(binder); w.us(sort.0); w.r(arg); }
++    }
++    w.o
++}
++
++pub fn decode_task_record(l: &[u128; TASK_LANES]) -> C6Result<HelperTaskC> {
++    let mut d = Rd { l: &l[..], at: 1, s: TASK_S };
++    let t = match l[0] {
++        0 => HelperTaskC::ValidateTask { r: d.r()?, visit: d.tag(visit_from)?, cursor: d.us()? },
++        1 => HelperTaskC::EqualTask { left: d.r()?, right: d.r()?, visit: d.tag(visit_from)?, cursor: d.us()? },
++        2 => HelperTaskC::PairTask { binder: d.us()?, sort: TypeIdC(d.us()?), arg: d.r()? },
++        tag => return Err(C6PhysError::BadTag { section: TASK_S, tag }),
++    };
++    zero(TASK_S, l, d.at, TASK_LANES)?;
++    Ok(t)
++}
++
++fn task_caps(t: &HelperTaskC, c: &C6StateCaps) -> C6Result<()> {
++    match *t {
++        HelperTaskC::ValidateTask { r, cursor, .. } => {
++            cap_ref("state.task.r", r, c)?;
++            cap_count("state.task.cursor", cursor, c.phys.max_arity)
++        }
++        HelperTaskC::EqualTask { left, right, cursor, .. } => {
++            cap_ref("state.task.left", left, c)?;
++            cap_ref("state.task.right", right, c)?;
++            cap_count("state.task.cursor", cursor, c.phys.max_arity)
++        }
++        HelperTaskC::PairTask { binder, sort, arg } => {
++            cap_index("state.task.binder", binder, c.phys.max_names)?;
++            cap_index("state.task.sort", sort.0, builtin_type_cap(c))?;
++            cap_ref("state.task.arg", arg, c)
++        }
++    }
++}
++
++pub fn decode_task_record_checked(l: &[u128; TASK_LANES], c: &C6StateCaps) -> C6Result<HelperTaskC> {
++    let t = decode_task_record(l)?;
++    task_caps(&t, c)?;
++    Ok(t)
++}
++
++// ---------- owned carrier and section ----------
++
++/// The three owned image fields, exactly as captured: helper/result presence,
++/// every raw field, task order and multiplicity. No task cursor is stored.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct C6HelperTables {
++    pub helper: Option<HelperControlC>,
++    pub result: Option<HelperResultC>,
++    pub tasks: Vec<HelperTaskC>,
++}
++
++impl C6HelperTables {
++    pub fn from_image(image: &ImageSnapshot) -> Self {
++        Self { helper: image.helper, result: image.result, tasks: image.tasks.clone() }
++    }
++    /// Diagnostic: overwrite exactly these three fields of a caller-owned image.
++    pub fn replace_tables_of(self, image: &mut ImageSnapshot) {
++        image.helper = self.helper;
++        image.result = self.result;
++        image.tasks = self.tasks;
++    }
++}
++
++fn section_len(tasks: usize) -> C6Result<usize> {
++    tasks.checked_mul(TASK_LANES).and_then(|n| n.checked_add(HELPER_FIXED_LANES))
++        .ok_or(C6PhysError::UsizeOverflow { section: SECTION, value: u(tasks) })
++}
++
++/// Canonical encoder: count cap, then helper, result and task caps, before allocation.
++pub fn encode_helper_tables(t: &C6HelperTables, c: &C6StateCaps) -> C6Result<Vec<u128>> {
++    cap_count("state.tasks", t.tasks.len(), c.max_helper_tasks)?;
++    if let Some(h) = &t.helper { helper_caps(h, c)?; }
++    if let Some(r) = &t.result { result_caps(r, c)?; }
++    for task in &t.tasks { task_caps(task, c)?; }
++    let mut out = Vec::with_capacity(section_len(t.tasks.len())?);
++    out.extend([C6_PHYS_MAGIC, C6_PHYS_VERSION, HELPER_SECTION_TAG, u(t.tasks.len())]);
++    out.extend(encode_helper_record(t.helper));
++    out.extend(encode_result_record(t.result));
++    for task in &t.tasks { out.extend(encode_task_record(*task)); }
++    Ok(out)
++}
++
++/// Decoder; see the module documentation for the exact first-error order.
++/// Returns owned tables only, never an image, admission or machine state.
++pub fn decode_helper_tables(lanes: &[u128], c: &C6StateCaps) -> C6Result<C6HelperTables> {
++    if lanes.len() < HELPER_FIXED_LANES {
++        return Err(C6PhysError::Truncated { section: SECTION, needed: HELPER_FIXED_LANES, actual: lanes.len() });
++    }
++    if lanes[0] != C6_PHYS_MAGIC { return Err(C6PhysError::BadMagic { actual: lanes[0] }); }
++    if lanes[1] != C6_PHYS_VERSION { return Err(C6PhysError::BadVersion { actual: lanes[1] }); }
++    if lanes[2] != HELPER_SECTION_TAG { return Err(C6PhysError::BadTag { section: SECTION, tag: lanes[2] }); }
++    let n = rd(SECTION, lanes[3])?;
++    cap_count("state.tasks", n, c.max_helper_tasks)?;
++    let needed = section_len(n)?;
++    if lanes.len() < needed { return Err(C6PhysError::Truncated { section: SECTION, needed, actual: lanes.len() }); }
++    if lanes.len() > needed { return Err(C6PhysError::TrailingLanes { section: SECTION, extra: lanes.len() - needed }); }
++    let truncated = || C6PhysError::Truncated { section: SECTION, needed, actual: lanes.len() };
++    let hl: &[u128; HELPER_LANES] = (&lanes[L_HELPER_RECORD..L_RESULT_RECORD]).try_into().map_err(|_| truncated())?;
++    let helper = decode_helper_record_checked(hl, c)?;
++    let rl: &[u128; RESULT_LANES] = (&lanes[L_RESULT_RECORD..L_TASKS]).try_into().map_err(|_| truncated())?;
++    let result = decode_result_record_checked(rl, c)?;
++    let mut tasks = Vec::with_capacity(n);
++    for chunk in lanes[L_TASKS..].chunks_exact(TASK_LANES) {
++        let tl: &[u128; TASK_LANES] = chunk.try_into().map_err(|_| truncated())?;
++        tasks.push(decode_task_record_checked(tl, c)?);
++    }
++    Ok(C6HelperTables { helper, result, tasks })
++}
++
++/// Normal owned-snapshot caller. `caps` is an independent caller assertion
++/// (retained original layout/ext/budgets), not bound to `host.admission`.
++pub fn helper_lanes_from_host(host: &HostSnapshot, caps: &C6StateCaps) -> C6Result<Vec<u128>> {
++    encode_helper_tables(&C6HelperTables::from_image(&host.image), caps)
++}
++
++pub fn roundtrip_helper_tables_owned(t: &C6HelperTables, caps: &C6StateCaps) -> C6Result<C6HelperTables> {
++    decode_helper_tables(&encode_helper_tables(t, caps)?, caps)
++}
++
++/// Diagnostic inverse on a caller-owned host clone: only helper/result/tasks change.
++pub fn host_with_decoded_helper_tables(host: &HostSnapshot, lanes: &[u128], caps: &C6StateCaps)
++    -> C6Result<HostSnapshot> {
++    let tables = decode_helper_tables(lanes, caps)?;
++    let mut out = host.clone();
++    tables.replace_tables_of(&mut out.image);
++    Ok(out)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::sherlock::helper_machine::c6_phys::{fixtures, C6CodecBudgets};
++    use crate::sherlock::helper_machine::c6_phys_data::DATA_SECTION_TAG;
++    use crate::sherlock::helper_machine::complete_observation::{capture, record_step, ObservedStep};
++    use crate::sherlock::helper_machine::shared::i128_class::KIntC;
++    use crate::sherlock::helper_machine::shared::owner_ext_source_program::{ExtDomain, ExtProgram};
++    use crate::sherlock::helper_machine::shared::owner_ext_t3_uses::{ExtExpr, ExtFunction, ExtParamSrc, ExtValue};
++    use crate::sherlock::helper_machine::shared::owner_ext_type_builder::{
++        CtorDeclSrc, CtorFieldSrc, TypeDeclSrc, TypeExprSrc,
++    };
++    use crate::sherlock::helper_machine::shared::owner_host::host_owner_engine;
++    use crate::sherlock::helper_machine::shared::{
++        admit_ext_program, Admitted, BoundsC, CoreValue, ExtCapacitiesC, FinanceInput, LayoutCapacitiesC,
++        LayoutSchemaC, MachineImage, OwnerEngine, RunIntC,
++    };
++    use HelperControlC as H;
++
++    fn caps() -> C6StateCaps { C6StateCaps::test_caps() }
++    fn exceeded<T>(section: &'static str, needed: usize, limit: usize) -> C6Result<T> {
++        Err(C6PhysError::CapacityExceeded { section, needed, limit })
++    }
++    fn com(site: SiteTag) -> HelperCommon {
++        HelperCommon { site, origin_reference_cursor: u128::MAX, parent_resume: Some(3) }
++    }
++    const SITES: [SiteTag; 27] = { use SiteTag::*; [EvalLiteral, EvalVar, EvalLet, EvalBinary, EvalUnary,
++        EvalIf, EvalMatch, EvalCall, Push, RetLet, RetLeft, RetRight, RetUnary, RetIf, RetMatch, RetArgs,
++        RetCall, RetScope, Invoke, Enter, Bound, Cases, CaseResult, Prim, EvalConstruct, RetCtorFields,
++        Materialize] };
++
++    fn all_helpers() -> Vec<HelperControlC> {
++        let c = com(SiteTag::RetCtorFields);
++        vec![
++            H::Scalar { common: c, mode: ScalarMode::TestType, operand_a: RefC::Data(5),
++                operand_b: Some(RefC::Const(0)), expected: Some(TypeIdC(6)), phase: ScalarPhase::Second,
++                reg_a: u128::MAX, staged: ScalarStaged::U128Value { n: u128::MAX } },
++            H::EnvGet { common: c, binder: 7, cursor: Some(0), found: Some(RefC::Data(0)), status: TriStatus::Positive },
++            H::EnvPut { common: c, binder: 3, value: RefC::Const(9), base: None, new_root: Some(4),
++                status: TriStatus::Negative },
++            H::Find { common: c, function_name: 2, row_cursor: 5, found: None, status: TriStatus::Pending },
++            H::Bind { common: c, function: 3, params: SliceC { start: 4, len: 2 }, args: SliceC { start: 9, len: 0 },
++                p_cursor: 2, a_cursor: 0, partial: Some(1), dup_cursor: Some(0), phase: BindPhase::UnwindDup,
++                status: BindStatus::Bad },
++            H::Append { common: c, src: SliceC { start: 6, len: 3 }, value: RefC::Data(8), src_cursor: 3,
++                dest_start: 11, staged: Some(RefC::Data(2)), phase: AppendPhase::Tail },
++            H::Validate { common: c, root: RefC::Const(4), status: TriStatus::Negative },
++            H::Equal { common: c, left: RefC::Const(3), right: RefC::Data(3), status: TriStatus::Positive },
++            H::Match { common: c, scrutinee: RefC::Data(6), arm: 5, saved_env: Some(2), partial: None,
++                pat_tag: PatternTag::PBranch, x: 9, y: 10, field_idx: 1, staged: None, phase: MatchPhase::Field,
++                status: TriStatus::Pending },
++            H::Plan { common: c, source_match: 12, scrutinee: RefC::Const(7), saved_env: None, partial: Some(5),
++                node: 13, phase: PlanPhase::Walk, after_walk: PlanAfterWalk::Bind, cur: RefC::Data(7),
++                path: SliceC { start: 15, len: 2 }, path_cursor: 1, arm: Some(4), status: TriStatus::Pending },
++            H::Build { common: c, type_id: TypeIdC(5), ctor_id: CtorIdC(6), src: SliceC { start: 2, len: 2 },
++                src_cursor: 2, field_start: 14, staged: None, node: Some(RefC::Data(9)), phase: BuildPhase::Done },
++        ]
++    }
++    fn all_results() -> Vec<HelperResultC> {
++        use HelperResultC as R;
++        vec![R::Validated { ok: true }, R::Validated { ok: false }, R::EnvFound { value: RefC::Data(4) },
++            R::EnvMissing, R::EnvUpdated { cell: 5 }, R::FindFound { function: 3 }, R::FindMissing,
++            R::BindOk { env: None }, R::BindOk { env: Some(0) }, R::BindBad,
++            R::AppendDone { seq: SliceC { start: 7, len: 0 } }, R::AppendDone { seq: SliceC { start: 3, len: 2 } },
++            R::ScalarValue { value: RefC::Const(2) }, R::ScalarError { code: 255 },
++            R::ScalarSelector { sel: BoolSelector::NotBool }, R::ScalarTypeTest { ok: true },
++            R::EqualDone { value: RefC::Data(1) }, R::MatchMatched { env: Some(6) }, R::MatchNoMatch,
++            R::PlanMatched { arm: 5, env: Some(2) }, R::PlanNoMatch, R::BuildDone { value: RefC::Data(9) }]
++    }
++    fn all_tasks() -> Vec<HelperTaskC> {
++        vec![HelperTaskC::ValidateTask { r: RefC::Data(3), visit: TaskVisitC::Fields, cursor: 1 },
++            HelperTaskC::ValidateTask { r: RefC::Const(0), visit: TaskVisitC::Unvisited, cursor: 0 },
++            HelperTaskC::EqualTask { left: RefC::Const(3), right: RefC::Data(3), visit: TaskVisitC::Fields, cursor: 2 },
++            HelperTaskC::PairTask { binder: 4, sort: TypeIdC(3), arg: RefC::Data(2) },
++            HelperTaskC::PairTask { binder: 4, sort: TypeIdC(9), arg: RefC::Const(2) }]
++    }
++
++    /// Changing any single lane must refuse or decode to a different value.
++    fn every_lane_significant<const N: usize, T: PartialEq>(lanes: [u128; N], value: &T,
++        decode: fn(&[u128; N]) -> C6Result<T>) {
++        for at in 0..N {
++            let mut changed = lanes;
++            changed[at] ^= 0x55;
++            assert!(decode(&changed).map_or(true, |v| &v != value), "lane {at} was ignored");
++        }
++    }
++    fn rt_helper(h: HelperControlC) {
++        let l = encode_helper_record(Some(h));
++        assert_eq!(decode_helper_record_checked(&l, &caps()), Ok(Some(h)));
++        every_lane_significant(l, &Some(h), decode_helper_record);
++    }
++    fn map_exact<T: Copy + PartialEq + std::fmt::Debug>(all: &[T], to: fn(T) -> u128,
++        from: fn(&'static str, u128) -> C6Result<T>) {
++        for (i, v) in all.iter().enumerate() {
++            assert_eq!(to(*v), i as u128);
++            assert_eq!(from("t", i as u128), Ok(*v));
++        }
++        let n = all.len() as u128;
++        assert_eq!(from("t", n), Err(C6PhysError::BadTag { section: "t", tag: n }));
++    }
++
++    #[test]
++    fn literal_enum_maps_are_exhaustive_and_declaration_ordered() {
++        map_exact(&SITES, site_tag, site_from);
++        { use ScalarMode::*; map_exact(&[Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType], mode_tag, mode_from); }
++        { use ScalarPhase::*; map_exact(&[First, Second, Done], sphase_tag, sphase_from); }
++        { use NodeKind::*; map_exact(&[Cons, Leaf, Branch], node_tag, node_from); }
++        { use BoolSelector::*; map_exact(&[True, False, NotBool], sel_tag, sel_from); }
++        { use TriStatus::*; map_exact(&[Pending, Positive, Negative], tri_tag, tri_from); }
++        { use BindPhase::*; map_exact(&[Pairing, UnwindType, UnwindDup, UnwindInsert, Propagate, Finished], bphase_tag, bphase_from); }
++        map_exact(&[BindStatus::Ok, BindStatus::Bad], bstatus_tag, bstatus_from);
++        { use AppendPhase::*; map_exact(&[Copy, Tail, Done], aphase_tag, aphase_from); }
++        { use MatchPhase::*; map_exact(&[Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done], mphase_tag, mphase_from); }
++        { use PlanPhase::*; map_exact(&[Walk, Test, Bind, Ready, NoMatchReady, Done], pphase_tag, pphase_from); }
++        map_exact(&[PlanAfterWalk::Test, PlanAfterWalk::Bind], walk_tag, walk_from);
++        map_exact(&[BuildPhase::Copy, BuildPhase::Done], build_tag, build_from);
++        { use PatternTag::*; map_exact(&[PVar, PNil, PCons, PLeaf, PBranch, WildcardExtensionReserved,
++            ConstructorExtensionReserved], pat_tag_of, pat_from); }
++        map_exact(&[TaskVisitC::Unvisited, TaskVisitC::Fields], visit_tag, visit_from);
++    }
++
++    #[test]
++    fn all_variants_phases_staged_and_options_roundtrip_exactly() {
++        // SYNTHETIC codec vectors over every variant; not admitted images.
++        let helpers = all_helpers();
++        let kinds: std::collections::BTreeSet<u128> = helpers.iter().map(|h| encode_helper_record(Some(*h))[0]).collect();
++        assert_eq!(kinds.len(), 11);
++        for h in &helpers { rt_helper(*h); }
++        every_lane_significant(encode_helper_record(None), &None, decode_helper_record);
++        for site in SITES { rt_helper(H::Validate { common: com(site), root: RefC::Data(1), status: TriStatus::Pending }); }
++        for resume in [None, Some(0), Some(7)] {
++            rt_helper(H::Validate { common: HelperCommon { parent_resume: resume, ..com(SiteTag::Prim) },
++                root: RefC::Const(1), status: TriStatus::Positive });
++        }
++        let H::Scalar { common, operand_a, reg_a, .. } = helpers[0] else { panic!() };
++        { use ScalarStaged as S;
++          let staged = [S::None, S::U128Value { n: u128::MAX }, S::BoolValue { b: true }, S::BoolValue { b: false },
++            S::PendingNode { tag: NodeKind::Cons }, S::PendingNode { tag: NodeKind::Leaf },
++            S::PendingNode { tag: NodeKind::Branch }, S::PrimError { code: 10 }, S::PrimError { code: 255 },
++            S::Selector { sel: BoolSelector::True }, S::Selector { sel: BoolSelector::False },
++            S::Selector { sel: BoolSelector::NotBool }, S::TypeTest { ok: true }, S::TypeTest { ok: false }];
++          use ScalarMode::*;
++          for (k, mode) in [Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType].into_iter().enumerate() {
++            for phase in [ScalarPhase::First, ScalarPhase::Second, ScalarPhase::Done] {
++                for operand_b in [None, Some(RefC::Const(0)), Some(RefC::Data(0))] {
++                    for expected in [None, Some(TypeIdC(0)), Some(TypeIdC(3))] {
++                        rt_helper(H::Scalar { common, mode, operand_a, operand_b, expected, phase, reg_a,
++                            staged: staged[k % staged.len()] });
++                    }
++                }
++            }
++          }
++          for s in staged { rt_helper(H::Scalar { common, mode: TestType, operand_a, operand_b: None,
++              expected: None, phase: ScalarPhase::Done, reg_a, staged: s }); }
++        }
++        let H::Bind { common, function, params, args, p_cursor, a_cursor, partial, dup_cursor, .. } = helpers[4] else { panic!() };
++        { use BindPhase::*;
++          for phase in [Pairing, UnwindType, UnwindDup, UnwindInsert, Propagate, Finished] {
++            for status in [BindStatus::Ok, BindStatus::Bad] {
++                rt_helper(H::Bind { common, function, params, args, p_cursor, a_cursor, partial, dup_cursor, phase, status });
++            }
++          }
++        }
++        for phase in [AppendPhase::Copy, AppendPhase::Tail, AppendPhase::Done] {
++            let H::Append { common, src, value, src_cursor, dest_start, staged, .. } = helpers[5] else { panic!() };
++            rt_helper(H::Append { common, src, value, src_cursor, dest_start, staged, phase });
++        }
++        { use MatchPhase::*; use PatternTag::*;
++          for phase in [Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done] {
++            for pat_tag in [PVar, PNil, PCons, PLeaf, PBranch, WildcardExtensionReserved, ConstructorExtensionReserved] {
++                let H::Match { common, scrutinee, arm, saved_env, partial, x, y, field_idx, staged, status, .. } = helpers[8] else { panic!() };
++                rt_helper(H::Match { common, scrutinee, arm, saved_env, partial, pat_tag, x, y, field_idx, staged, phase, status });
++            }
++          }
++        }
++        { use PlanPhase::*;
++          for phase in [Walk, Test, Bind, Ready, NoMatchReady, Done] {
++            for after_walk in [PlanAfterWalk::Test, PlanAfterWalk::Bind] {
++                let H::Plan { common, source_match, scrutinee, saved_env, partial, node, cur, path, path_cursor, arm, status, .. } = helpers[9] else { panic!() };
++                rt_helper(H::Plan { common, source_match, scrutinee, saved_env, partial, node, phase, after_walk,
++                    cur, path, path_cursor, arm, status });
++            }
++          }
++        }
++        let H::Build { common, type_id, ctor_id, src, src_cursor, field_start, staged, node, .. } = helpers[10] else { panic!() };
++        rt_helper(H::Build { common, type_id, ctor_id, src, src_cursor, field_start, staged, node, phase: BuildPhase::Copy });
++        let results = all_results();
++        let tags: std::collections::BTreeSet<u128> = results.iter().map(|r| encode_result_record(Some(*r))[0]).collect();
++        assert_eq!(tags.len(), 19);
++        for r in results.iter().copied().map(Some).chain([None]) {
++            let l = encode_result_record(r);
++            assert_eq!(decode_result_record_checked(&l, &caps()), Ok(r));
++            every_lane_significant(l, &r, decode_result_record);
++        }
++        for t in all_tasks() {
++            let l = encode_task_record(t);
++            assert_eq!(decode_task_record_checked(&l, &caps()), Ok(t));
++            every_lane_significant(l, &t, decode_task_record);
++        }
++        // Distinctions that must survive: Const/Data, None/Some(0), raw empty start, u128 MAX.
++        let opt = |found| encode_helper_record(Some(H::EnvGet { common: com(SiteTag::EvalVar), binder: 0,
++            cursor: None, found, status: TriStatus::Pending }));
++        let encs = [opt(None), opt(Some(RefC::Const(0))), opt(Some(RefC::Data(0)))];
++        assert!(encs[0] != encs[1] && encs[1] != encs[2] && encs[0] != encs[2]);
++        assert_ne!(encode_result_record(Some(HelperResultC::BindOk { env: None })),
++            encode_result_record(Some(HelperResultC::BindOk { env: Some(0) })));
++        assert_ne!(encode_result_record(Some(HelperResultC::AppendDone { seq: SliceC { start: 7, len: 0 } })),
++            encode_result_record(Some(HelperResultC::AppendDone { seq: SliceC::empty() })));
++    }
++
++    #[test]
++    fn declared_lane_maps_header_and_section_inverse() {
++        let helpers = all_helpers();
++        assert_eq!(encode_helper_record(Some(helpers[10])),
++            [11, 25, u128::MAX, 1, 3, 5, 6, 2, 2, 2, 14, 0, 0, 0, 1, 1, 9, 1, 0, 0, 0, 0, 0]);
++        assert_eq!(encode_helper_record(Some(helpers[6]))[..9], [7, 25, u128::MAX, 1, 3, 0, 4, 2, 0]);
++        assert_eq!(encode_result_record(Some(HelperResultC::PlanMatched { arm: 5, env: Some(2) })), [17, 5, 1, 2]);
++        assert_eq!(encode_task_record(all_tasks()[2]), [1, 0, 3, 1, 3, 1, 2]);
++        assert_eq!(encode_task_record(all_tasks()[3]), [2, 4, 3, 1, 2, 0, 0]);
++        let t = C6HelperTables { helper: Some(helpers[10]),
++            result: Some(HelperResultC::PlanMatched { arm: 5, env: Some(2) }), tasks: all_tasks() };
++        let lanes = encode_helper_tables(&t, &caps()).unwrap();
++        assert_eq!(lanes[..4], [C6_PHYS_MAGIC, C6_PHYS_VERSION, HELPER_SECTION_TAG, 5]);
++        assert_eq!(lanes.len(), HELPER_FIXED_LANES + 5 * TASK_LANES);
++        assert_eq!(lanes[L_HELPER_RECORD..L_RESULT_RECORD], encode_helper_record(t.helper));
++        assert_eq!(lanes[L_RESULT_RECORD..L_TASKS], encode_result_record(t.result));
++        assert_eq!(lanes[L_TASKS + 2 * TASK_LANES..L_TASKS + 3 * TASK_LANES], encode_task_record(t.tasks[2]));
++        let decoded = decode_helper_tables(&lanes, &caps()).unwrap();
++        assert_eq!(decoded, t);
++        assert_eq!(encode_helper_tables(&decoded, &caps()).unwrap(), lanes);
++        assert_eq!(roundtrip_helper_tables_owned(&t, &caps()).unwrap(), t);
++        let differs = |m: C6HelperTables| assert_ne!(encode_helper_tables(&m, &caps()).unwrap(), lanes);
++        let mut m = t.clone(); m.tasks.swap(0, 1); differs(m);
++        let mut m = t.clone(); m.tasks.push(m.tasks[0]); differs(m);
++        let mut m = t.clone(); m.result = None; differs(m);
++        let mut m = t.clone(); m.helper = None; differs(m);
++        let empty = C6HelperTables { helper: None, result: None, tasks: Vec::new() };
++        assert_eq!(roundtrip_helper_tables_owned(&empty, &caps()).unwrap(), empty);
++    }
++
++    #[test]
++    fn refusals_follow_the_declared_first_error_order() {
++        let t = C6HelperTables { helper: Some(all_helpers()[1]), result: Some(HelperResultC::Validated { ok: true }),
++            tasks: vec![HelperTaskC::ValidateTask { r: RefC::Data(2), visit: TaskVisitC::Fields, cursor: 1 }] };
++        let lanes = encode_helper_tables(&t, &caps()).unwrap();
++        assert_eq!(lanes.len(), 38);
++        let dec = |l: &[u128]| decode_helper_tables(l, &caps());
++        let set = |pairs: &[(usize, u128)]| { let mut m = lanes.clone(); for &(k, v) in pairs { m[k] = v; } m };
++        assert_eq!(dec(&lanes[..30]), Err(C6PhysError::Truncated { section: SECTION, needed: 31, actual: 30 }));
++        assert_eq!(dec(&set(&[(0, 0), (2, 0)])), Err(C6PhysError::BadMagic { actual: 0 }));
++        assert_eq!(dec(&set(&[(1, 2)])), Err(C6PhysError::BadVersion { actual: 2 }));
++        assert_eq!(dec(&set(&[(2, DATA_SECTION_TAG)])), Err(C6PhysError::BadTag { section: SECTION, tag: DATA_SECTION_TAG }));
++        assert_eq!(dec(&set(&[(3, u128::MAX)])), Err(C6PhysError::UsizeOverflow { section: SECTION, value: u128::MAX }));
++        assert_eq!(dec(&set(&[(3, 65)])), exceeded("state.tasks", 65, 64));
++        assert_eq!(dec(&set(&[(3, 2)])), Err(C6PhysError::Truncated { section: SECTION, needed: 45, actual: 38 }));
++        let mut trailing = lanes.clone();
++        trailing.push(0);
++        assert_eq!(dec(&trailing), Err(C6PhysError::TrailingLanes { section: SECTION, extra: 1 }));
++        assert_eq!(dec(&set(&[(4, 12)])), Err(C6PhysError::BadTag { section: HELPER_S, tag: 12 }));
++        assert_eq!(dec(&set(&[(12, 2)])), Err(C6PhysError::BadTag { section: HELPER_S, tag: 2 }));
++        assert_eq!(dec(&set(&[(12, 0)])), Err(C6PhysError::NonZeroPadding { section: HELPER_S, lane: 9, value: 1 }));
++        assert_eq!(dec(&set(&[(16, 1)])), Err(C6PhysError::NonZeroPadding { section: HELPER_S, lane: 12, value: 1 }));
++        // Structure precedes caps; the helper record precedes the result record.
++        assert_eq!(dec(&set(&[(9, 999), (15, 7)])), Err(C6PhysError::BadTag { section: HELPER_S, tag: 7 }));
++        assert_eq!(dec(&set(&[(9, 256), (28, 2)])), exceeded("state.helper.binder", 257, 256));
++        assert_eq!(dec(&set(&[(28, 2)])), Err(C6PhysError::BadBool { section: RESULT_S, value: 2 }));
++        assert_eq!(dec(&set(&[(34, 2)])), Err(C6PhysError::BadTag { section: TASK_S, tag: 2 }));
++        assert_eq!(dec(&set(&[(35, 9)])), exceeded("state.task.cursor", 9, 8));
++        // u8 lanes refuse overflow; no truncation.
++        let mut l = encode_result_record(Some(HelperResultC::ScalarError { code: 255 }));
++        l[1] = 256;
++        assert_eq!(decode_result_record(&l), Err(C6PhysError::UsizeOverflow { section: RESULT_S, value: 256 }));
++        let mut l = encode_helper_record(Some(all_helpers()[0]));
++        l[16] = 0; l[15] = 4; l[16] = 256;
++        assert_eq!(decode_helper_record(&l), Err(C6PhysError::UsizeOverflow { section: HELPER_S, value: 256 }));
++        l[15] = 0; l[16] = 1;
++        assert_eq!(decode_helper_record(&l), Err(C6PhysError::NonZeroPadding { section: HELPER_S, lane: 16, value: 1 }));
++        let mut l = encode_helper_record(Some(all_helpers()[8]));
++        l[15] = 256;
++        assert_eq!(decode_helper_record(&l), Err(C6PhysError::UsizeOverflow { section: HELPER_S, value: 256 }));
++        // The encoder applies the same caps.
++        let mut tight = caps();
++        tight.max_helper_tasks = 0;
++        assert_eq!(encode_helper_tables(&t, &tight), exceeded("state.tasks", 1, 0));
++        assert_eq!(decode_helper_tables(&lanes, &tight).map(|_| ()), exceeded("state.tasks", 1, 0));
++    }
++
++    #[test]
++    fn field_specific_caps_cursors_and_type_policies() {
++        let chk = |h: HelperControlC, c: &C6StateCaps| helper_caps(&h, c);
++        let mut c = caps();
++        let base = com(SiteTag::Invoke);
++        let env_get = |binder| H::EnvGet { common: base, binder, cursor: None, found: None, status: TriStatus::Pending };
++        assert!(chk(env_get(255), &c).is_ok());
++        assert_eq!(chk(env_get(256), &c), exceeded("state.helper.binder", 257, 256));
++        let find = |row_cursor, found| H::Find { common: base, function_name: 0, row_cursor, found, status: TriStatus::Pending };
++        assert!(chk(find(64, None), &c).is_ok(), "one-past-end row cursor (FindEmpty)");
++        assert_eq!(chk(find(65, None), &c), exceeded("state.helper.row_cursor", 65, 64));
++        assert_eq!(chk(find(0, Some(64)), &c), exceeded("state.helper.found", 65, 64));
++        // Non-environment options use their own table, not max_env_cells.
++        c.phys.max_env_cells = 0;
++        assert!(chk(find(0, Some(5)), &c).is_ok());
++        assert_eq!(chk(H::EnvGet { common: base, binder: 0, cursor: Some(0), found: None, status: TriStatus::Pending }, &c),
++            exceeded("state.helper.cursor", 1, 0));
++        let plan = |arm, path| H::Plan { common: base, source_match: 0, scrutinee: RefC::Const(0), saved_env: None,
++            partial: None, node: 0, phase: PlanPhase::Ready, after_walk: PlanAfterWalk::Test, cur: RefC::Const(0),
++            path, path_cursor: 0, arm, status: TriStatus::Pending };
++        assert!(chk(plan(Some(63), SliceC { start: 0, len: 100 }), &c).is_ok(), "field paths carry no arity cap");
++        assert_eq!(chk(plan(Some(64), SliceC::empty()), &c), exceeded("state.helper.arm", 65, 64));
++        let resume = HelperCommon { parent_resume: Some(usize::MAX), ..base };
++        assert!(chk(H::Validate { common: resume, root: RefC::Const(0), status: TriStatus::Pending }, &c).is_ok(),
++            "reserved boundary identity is representation only");
++        let append = |src_cursor| H::Append { common: base, src: SliceC { start: 0, len: 3 }, value: RefC::Const(0),
++            src_cursor, dest_start: 1024, staged: None, phase: AppendPhase::Copy };
++        assert!(chk(append(3), &c).is_ok());
++        assert_eq!(chk(append(4), &c), exceeded("state.helper.src_cursor", 4, 3));
++        let bind = |args| H::Bind { common: base, function: 0, params: SliceC::empty(), args, p_cursor: 0, a_cursor: 0,
++            partial: None, dup_cursor: None, phase: BindPhase::Pairing, status: BindStatus::Ok };
++        assert_eq!(chk(bind(SliceC { start: usize::MAX, len: 1 }), &c),
++            Err(C6PhysError::UsizeOverflow { section: "state.helper.args", value: usize::MAX as u128 }));
++        assert_eq!(chk(bind(SliceC { start: 0, len: 9 }), &c), exceeded("state.helper.args", 9, 8));
++        assert_eq!(chk(bind(SliceC { start: 1020, len: 5 }), &c), exceeded("state.helper.args", 1025, 1024));
++        // Match placeholders are raw before the Arm read; bound names afterwards.
++        c.phys.max_names = 0;
++        let mat = |phase| H::Match { common: base, scrutinee: RefC::Const(0), arm: 0, saved_env: None, partial: None,
++            pat_tag: PatternTag::PCons, x: 0, y: 0, field_idx: 0, staged: None, phase, status: TriStatus::Pending };
++        assert!(chk(mat(MatchPhase::Arm), &c).is_ok());
++        assert_eq!(chk(mat(MatchPhase::Field), &c), exceeded("state.helper.x", 1, 0));
++        // Builtin-capable TypeIds use max(max_types, 4); user Build type_id does not.
++        let mut c = caps();
++        c.phys.max_types = 0;
++        let scalar = |e| H::Scalar { common: base, mode: ScalarMode::TestType, operand_a: RefC::Const(0),
++            operand_b: None, expected: Some(TypeIdC(e)), phase: ScalarPhase::First, reg_a: 0, staged: ScalarStaged::None };
++        assert!(chk(scalar(3), &c).is_ok());
++        assert_eq!(chk(scalar(4), &c), exceeded("state.helper.expected", 5, 4));
++        let pair = |s| task_caps(&HelperTaskC::PairTask { binder: 0, sort: TypeIdC(s), arg: RefC::Const(0) }, &c);
++        assert!(pair(3).is_ok());
++        assert_eq!(pair(4), exceeded("state.task.sort", 5, 4));
++        let build = H::Build { common: base, type_id: TypeIdC(0), ctor_id: CtorIdC(0), src: SliceC::empty(),
++            src_cursor: 0, field_start: 0, staged: None, node: None, phase: BuildPhase::Copy };
++        assert_eq!(chk(build, &c), exceeded("state.helper.type_id", 1, 0));
++    }
++
++    /// Local fixture retaining its own ORIGINAL admitting layout.
++    fn admitted_with_layout() -> (Admitted, MachineImage, LayoutSchemaC) {
++        let bounds = BoundsC { code_rows: 128, function_rows: 16, code_child_slots: 128, parameter_slots: 32,
++            pattern_rows: 32, match_plan_rows: 32, match_arm_rows: 32, type_rows: 16, constructor_rows: 16,
++            constructor_field_slots: 32, max_arity: 8, constant_nodes: 128, constant_field_slots: 128,
++            data_nodes: 128, data_field_slots: 128, environment_cells: 128, frames: 64, helper_tasks: 64,
++            serialization_bytes: 1_000_000, max_reference_work: 1_000_000, max_helper_work: 1_000_000, step_cap: 10_000 };
++        let layout = LayoutSchemaC { layout_version: ("c6-phys-helper-test".into(), "1".into()), field_id: None,
++            widths: None, scalar_layout_id: None, bounds,
++            capacities: LayoutCapacitiesC { name_rows: 128, name_bytes: 4096, occurrence_path_slots: 4096, value_slots: 4096 },
++            ext_capacities: Some(ExtCapacitiesC { plan_case_slots: 64, field_path_slots: 64, pattern_child_slots: 64,
++                ..ExtCapacitiesC::all_zero() }),
++            boundary_capacities_present: false };
++        let boxed = || TypeExprSrc::Named { name: "Box".into() };
++        let var = |name: &str| ExtExpr::Var { name: name.into() };
++        let lit = ExtExpr::Literal { value: ExtValue::Core { value: CoreValue::UInt { n: KIntC::InRange(7) } } };
++        let mk = ExtFunction { name: "mk".into(), parameters: vec![ExtParamSrc { name: "x".into(), ty: TypeExprSrc::UInt }],
++            return_type: boxed(), body: ExtExpr::Construct { ty: boxed(), ctor: "MkBox".into(), fields: vec![var("x")] } };
++        // `type Box = MkBox { item: UInt }`, `fn mk(x: UInt) -> Box`, entry `let p = mk(7) in p`.
++        let program = ExtProgram {
++            types: vec![TypeDeclSrc { name: "Box".into(), parameters: Vec::new(), ctors: vec![CtorDeclSrc {
++                name: "MkBox".into(), fields: vec![CtorFieldSrc { name: "item".into(), ty: TypeExprSrc::UInt }] }] }],
++            assets: Vec::new(), states: Vec::new(), inputs: Vec::new(), functions: vec![mk],
++            entry: ExtExpr::Let { name: "p".into(), value: Box::new(ExtExpr::Call { name: "mk".into(), args: vec![lit] }),
++                body: Box::new(var("p")) },
++        };
++        let (admitted, _report) = fixtures::must(admit_ext_program(program, ExtDomain::GENERIC_ABSENT, &bounds,
++            &layout, None), "generic nominal admission");
++        let image = fixtures::must(host_owner_engine().admit_run(&admitted, &RunIntC::Nat(fixtures::FUEL),
++            &RunIntC::Nat(64), &FinanceInput::Absent), "admit run");
++        (admitted, image, layout)
++    }
++
++    fn bump_origin(h: &mut HelperControlC) {
++        match h {
++            H::Scalar { common, .. } | H::EnvGet { common, .. } | H::EnvPut { common, .. } | H::Find { common, .. }
++            | H::Bind { common, .. } | H::Append { common, .. } | H::Validate { common, .. }
++            | H::Equal { common, .. } | H::Match { common, .. } | H::Plan { common, .. }
++            | H::Build { common, .. } => common.origin_reference_cursor ^= 1,
++        }
++    }
++
++    #[test]
++    fn owner_reachable_helper_states_roundtrip_and_clone_replace_whole_host() {
++        // OWNER-REACHABLE: real generic admission, real fixed-owner steps; caps from the retained layout.
++        let (admitted, mut image, layout) = admitted_with_layout();
++        let caps = C6StateCaps::from_layout(&layout, C6CodecBudgets { type_expr_nodes: 0, template_bytes: 0 });
++        let (mut seen_helper, mut seen_task) = ([false; 11], [false; 3]);
++        let (mut expected_some, mut results, mut mutated, mut terminal) = (false, 0usize, false, false);
++        for _ in 0..4096 {
++            let host = fixtures::must(capture(&admitted, &image), "capture");
++            let lanes = helper_lanes_from_host(&host, &caps).unwrap();
++            let decoded = decode_helper_tables(&lanes, &caps).unwrap();
++            assert_eq!(decoded, C6HelperTables::from_image(&host.image));
++            assert_eq!(encode_helper_tables(&decoded, &caps).unwrap(), lanes);
++            assert_eq!(host_with_decoded_helper_tables(&host, &lanes, &caps).unwrap(), host);
++            assert_eq!(lanes[3], host.image.tasks.len() as u128, "task cursor derived from the count only");
++            if let Some(h) = host.image.helper {
++                seen_helper[encode_helper_record(Some(h))[0] as usize - 1] = true;
++                expected_some |= matches!(h, H::Scalar { expected: Some(_), .. });
++            }
++            for task in &host.image.tasks { seen_task[encode_task_record(*task)[0] as usize] = true; }
++            if host.image.result.is_some() { results += 1; }
++            if !mutated && host.image.helper.is_some() && !host.image.tasks.is_empty() {
++                mutated = true;
++                let differs = |m: &HostSnapshot| assert_ne!(helper_lanes_from_host(m, &caps).unwrap(), lanes);
++                let mut m = host.clone(); bump_origin(m.image.helper.as_mut().unwrap()); differs(&m);
++                let mut m = host.clone(); m.image.tasks.push(m.image.tasks[0]); differs(&m);
++                let mut m = host.clone(); m.image.result = Some(HelperResultC::PlanNoMatch); differs(&m);
++                let mut m = host.clone();
++                m.image.frames.clear(); m.image.data.clear(); m.image.value_slots.clear();
++                m.image.reference_cursor ^= 1; m.image.control_origin ^= 1;
++                assert_eq!(helper_lanes_from_host(&m, &caps).unwrap(), lanes, "other state is not in this section");
++                let mut m = host.clone();
++                C6HelperTables { helper: None, result: None, tasks: Vec::new() }.replace_tables_of(&mut m.image);
++                assert_ne!(m, host);
++                decoded.clone().replace_tables_of(&mut m.image);
++                assert_eq!(m, host, "only helper/result/tasks are replaced");
++            }
++            match record_step(&admitted, &mut image) {
++                Ok(ObservedStep::Event(_)) => {}
++                Ok(ObservedStep::Terminal { .. }) => { terminal = true; break; }
++                Err(_) => panic!("owner step"),
++            }
++        }
++        assert!(terminal && mutated && expected_some && results > 0);
++        for (k, name) in [(0, "Scalar"), (1, "EnvGet"), (2, "EnvPut"), (3, "Find"), (4, "Bind"), (5, "Append"),
++            (6, "Validate"), (10, "Build")] {
++            assert!(seen_helper[k], "{name} helper is owner-reachable here");
++        }
++        assert!(seen_task[0] && seen_task[2], "ValidateTask and PairTask are owner-reachable here");
++    }
++}
+--- /dev/null
++++ b/crates/mori-core/src/sherlock/helper_machine/c6_phys_state.rs
+@@ -0,0 +1,890 @@
++//! Assembled physical state section of sherlock-c6-phys/1 (C6P1), Chunk 3C.
++//!
++//! One outer section over the three existing codecs, used as-is: Chunk 1 root+frames
++//! (`encode_root_and_frames`/`decode_image_section`), 3A data tables and 3B
++//! helper/result/task tables. It admits nothing, constructs no `Admitted`,
++//! `MachineImage`, `RunIdC`, `IdentityC` or `AdmissionSnapshot`, and steps nothing.
++//!
++//! Layout `sherlock-c6-phys/1` state section, version `C6_PHYS_VERSION`:
++//! - 0 magic, 1 version, 2 `STATE_SECTION_TAG`, 3 child count (exactly 3);
++//! - 4..=9 directory: (tag, exact lane length) for image (`IMAGE_CHILD_TAG`),
++//!   data (`DATA_SECTION_TAG`), helper (`HELPER_SECTION_TAG`), in that fixed order;
++//! - 10 ext-capacity presence (0 absent, 1 present; caps use the effective value);
++//! - 11 reserved, zero;
++//! - 12..=40 capacity descriptor: the 27 `C6PhysCaps` fields in declaration order,
++//!   then `max_data_field_slots`, `max_helper_tasks`;
++//! - then the three children contiguously; nothing between or after them.
++//! The order is fixed, so reordered or duplicated children are tag errors.
++//! Lengths are full usize; every offset sum is checked.
++//!
++//! `decode_state` first-error order:
++//! 1. input longer than the caller lane limit: `LimitExceeded` (nothing read);
++//! 2. fewer than 41 lanes: `Truncated`; 3. `BadMagic`; 4. `BadVersion`; 5. `BadTag`;
++//! 6. lanes 3..=40 ascending: count (`BadSectionCount`); per child tag
++//!    (`BadChildTag`), length (`UsizeOverflow`) and its minimum header
++//!    (`ChildLengthRange`); ext lane (`BadBool`, then `ContextMismatch`);
++//!    reserved lane (`NonZeroPadding`); descriptor lanes (`ContextMismatch`);
++//! 7. offsets (`UsizeOverflow`), then `Truncated`, then `TrailingLanes`
++//!    (no allocation before);
++//! 8. image, data, helper children on exact slices, each with its own frozen
++//!    first-error order, wrapped as `Child { child, offset, error }`.
++//! `encode_state` order: length plan (`UsizeOverflow`), then the lane limit, then
++//! the image, data and helper encoders (their caps); the output is the unique
++//! canonical section. Both sides accept exactly the same canonical domain.
++//!
++//! Representation only: stored `alloc`/`active`/segment-base counters are carried
++//! independently of vector lengths, and the derived depth/task_live are not stored.
++//! Cross-field consistency (SI-05/SI-10, membership, StepInv) is future owner
++//! admission (Chunk 4); no normalization happens here. `max_types` rules are the
++//! existing codecs' rules, unchanged.
++//!
++//! The uncached witness comparison checks preservation under the existing
++//! `construct_plan_for`/`evaluate_uncached` implementation only. Lanes,
++//! codec equality and plan equality are not constraints, proofs or native evidence.
++
++use super::c6_phys::{
++    decode_image_section, encode_root_and_frames, C6CodecBudgets, C6PhysError, C6Root, C6_PHYS_MAGIC,
++    C6_PHYS_VERSION, FRAME_LANES, IMAGE_SECTION_HEADER_LANES,
++};
++use super::c6_phys_data::{
++    decode_data_tables, encode_data_tables, rd, rd_bool, u, zero, C6DataTables, C6StateCaps,
++    DATA_HEADER_LANES, DATA_ROW_LANES, DATA_SECTION_TAG, ENV_ROW_LANES, REF_LANES,
++};
++use super::c6_phys_helper::{
++    decode_helper_tables, encode_helper_tables, C6HelperTables, HELPER_FIXED_LANES, HELPER_SECTION_TAG,
++    TASK_LANES,
++};
++use super::complete_observation::{HostSnapshot, ImageSnapshot};
++use super::shared::host_implied_prefix::SegBase;
++use super::shared::{BoundsC, ExtCapacitiesC, FrameRowC, LayoutCapacitiesC, LayoutSchemaC};
++use super::witness_plan::{
++    construct_plan_for, evaluate_uncached, LifetimeUnit, NodeId, Operation, WitnessEvaluation,
++    WitnessFailure, WitnessPlan,
++};
++
++pub const STATE_SECTION_TAG: u128 = 0x5354_4154;
++/// Directory-only tag: the Chunk 1 image section carries no tag lane itself.
++pub const IMAGE_CHILD_TAG: u128 = 0x494D_4147;
++pub const STATE_CHILD_COUNT: u128 = 3;
++pub const L_SECTION_COUNT: usize = 3;
++pub const L_DIRECTORY: usize = 4;
++pub const L_EXT_PRESENT: usize = 10;
++pub const L_RESERVED: usize = 11;
++pub const L_CAPS: usize = 12;
++pub const CAPS_DESCRIPTOR_LANES: usize = 29;
++pub const STATE_HEADER_LANES: usize = L_CAPS + CAPS_DESCRIPTOR_LANES;
++const STATE_S: &str = "state";
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum C6StateChild { Image, Data, Helper }
++
++impl C6StateChild {
++    pub const ALL: [Self; 3] = [Self::Image, Self::Data, Self::Helper];
++    const fn index(self) -> usize { match self { Self::Image => 0, Self::Data => 1, Self::Helper => 2 } }
++    pub const fn tag(self) -> u128 {
++        match self { Self::Image => IMAGE_CHILD_TAG, Self::Data => DATA_SECTION_TAG, Self::Helper => HELPER_SECTION_TAG }
++    }
++    pub const fn minimum_lanes(self) -> usize {
++        match self { Self::Image => IMAGE_SECTION_HEADER_LANES, Self::Data => DATA_HEADER_LANES, Self::Helper => HELPER_FIXED_LANES }
++    }
++}
++
++/// Local wrapper; parent `C6PhysError` values are preserved unchanged.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum C6StateError {
++    /// An outer-header error, reported against section "state".
++    Outer(C6PhysError),
++    LimitExceeded { needed: usize, limit: usize },
++    BadSectionCount { actual: u128 },
++    BadChildTag { child: C6StateChild, expected: u128, actual: u128 },
++    ChildLengthRange { child: C6StateChild, declared: usize, minimum: usize },
++    /// A header lane disagrees with the caller's supplied context.
++    ContextMismatch { lane: usize, expected: u128, actual: u128 },
++    /// A child codec error; `offset` is the child's first lane in the section.
++    Child { child: C6StateChild, offset: usize, error: C6PhysError },
++    /// Encoder self-check: the predicted child length differs from the child output.
++    ChildLengthDrift { child: C6StateChild, predicted: usize, actual: usize },
++    RetainedLayoutMismatch { field: &'static str },
++}
++pub type C6StateResult<T> = Result<T, C6StateError>;
++
++fn outer(error: C6PhysError) -> C6StateError { C6StateError::Outer(error) }
++fn child_error(child: C6StateChild, offset: usize, error: C6PhysError) -> C6StateError {
++    C6StateError::Child { child, offset, error }
++}
++
++/// Caller-required bound on the whole section, checked before decoding or assembly.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct C6StateLimits { pub max_total_lanes: usize }
++
++/// Caller-retained capacity context. It is an independent caller assertion and is
++/// not bound to `host.admission`; `LayoutSnapshot` has no ext capacities.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct C6StateContext { caps: C6StateCaps, ext_present: bool, limits: C6StateLimits }
++
++impl C6StateContext {
++    /// From the ORIGINAL admitting layout the caller retained.
++    pub fn from_layout(layout: &LayoutSchemaC, budgets: C6CodecBudgets, limits: C6StateLimits) -> Self {
++        Self { caps: C6StateCaps::from_layout(layout, budgets), ext_present: layout.ext_capacities.is_some(), limits }
++    }
++    /// Same derivation as `from_layout`; `ext` keeps absent distinct from present zero.
++    pub fn from_parts(bounds: &BoundsC, capacities: &LayoutCapacitiesC, ext: Option<ExtCapacitiesC>,
++        budgets: C6CodecBudgets, limits: C6StateLimits) -> Self {
++        let effective = ExtCapacitiesC::effective_for_extended_domain(ext);
++        Self { caps: C6StateCaps::from_parts(bounds, capacities, &effective, budgets), ext_present: ext.is_some(), limits }
++    }
++    /// Explicit caller assertion over already-derived caps (tooling and synthetic vectors).
++    pub fn from_caps_assertion(caps: C6StateCaps, ext_present: bool, limits: C6StateLimits) -> Self {
++        Self { caps, ext_present, limits }
++    }
++    pub fn caps(&self) -> &C6StateCaps { &self.caps }
++    pub fn ext_present(&self) -> bool { self.ext_present }
++    pub fn limits(&self) -> C6StateLimits { self.limits }
++    pub fn descriptor(&self) -> [u128; CAPS_DESCRIPTOR_LANES] {
++        let (c, p) = (&self.caps, &self.caps.phys);
++        [p.max_frames, p.max_expressions, p.max_names, p.max_arms, p.max_children, p.max_value_slots,
++            p.max_constants, p.max_data_nodes, p.max_env_cells, p.max_functions, p.max_arity, p.max_types,
++            p.max_occurrences, p.max_occurrence_paths, p.max_parameters, p.max_patterns,
++            p.max_pattern_children, p.max_constructors, p.max_ctor_fields, p.max_decl_templates,
++            p.max_plan_nodes, p.max_plan_cases, p.max_field_paths, p.max_constant_fields, p.max_name_bytes,
++            p.max_type_expr_nodes, p.max_template_bytes, c.max_data_field_slots, c.max_helper_tasks].map(u)
++    }
++    fn admit_total(&self, needed: usize) -> C6StateResult<()> {
++        let limit = self.limits.max_total_lanes;
++        if needed > limit { Err(C6StateError::LimitExceeded { needed, limit }) } else { Ok(()) }
++    }
++}
++
++/// Checks that the caller's retained layout equals every layout field the host
++/// snapshot carries. Ext capacities have no host counterpart.
++pub fn retained_layout_agrees_with_host(layout: &LayoutSchemaC, host: &HostSnapshot) -> C6StateResult<()> {
++    let h = &host.admission.layout;
++    let widths = match (&h.widths, &layout.widths) {
++        (None, None) => true,
++        (Some(s), Some(w)) => s.index_widths.as_slice() == w.index_width_entries()
++            && s.counter_widths.as_slice() == w.counter_width_entries()
++            && s.record_widths.as_slice() == w.record_width_entries(),
++        _ => false,
++    };
++    for (same, field) in [
++        (h.layout_version == layout.layout_version, "layout_version"),
++        (h.field_id == layout.field_id, "field_id"),
++        (widths, "widths"),
++        (h.scalar_layout_id == layout.scalar_layout_id, "scalar_layout_id"),
++        (h.bounds == layout.bounds && host.admission.bounds == layout.bounds, "bounds"),
++        (h.capacities == layout.capacities, "capacities"),
++        (h.boundary_capacities_present == layout.boundary_capacities_present, "boundary_capacities_present"),
++    ] {
++        if !same { return Err(C6StateError::RetainedLayoutMismatch { field }); }
++    }
++    Ok(())
++}
++
++/// Every encoded `ImageSnapshot` field: root registers (including the segment
++/// base), raw frames bottom-to-top, and all seven tables. `run_id` is external.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct C6OwnedState {
++    pub root: C6Root,
++    pub frames: Vec<FrameRowC>,
++    pub data: C6DataTables,
++    pub helper: C6HelperTables,
++}
++
++impl C6OwnedState {
++    pub fn from_image(image: &ImageSnapshot) -> Self {
++        Self { root: C6Root::from_image(image), frames: image.frames.clone(),
++            data: C6DataTables::from_image(image), helper: C6HelperTables::from_image(image) }
++    }
++    /// Diagnostic: overwrite every encoded field of a caller-owned image (normally
++    /// a clone); `run_id` stays external. Exhaustive destructuring makes a new
++    /// image or root field a compile error until it is accounted for.
++    pub fn replace_state_of(self, image: &mut ImageSnapshot) {
++        let C6OwnedState { root, frames, data, helper } = self;
++        let C6Root { control, control_origin, env_root, stack_limit, outcome, initial_fuel, remaining_work,
++            consumed_work, helper_work, helper_visits, reference_cursor, alloc, active, seg_active, seg_alloc,
++            seg_consumed_work } = root;
++        let C6DataTables { data, data_fields, env, value_slots } = data;
++        let C6HelperTables { helper, result, tasks } = helper;
++        let ImageSnapshot { run_id: _, control: i_control, control_origin: i_origin, env_root: i_env_root,
++            stack_limit: i_stack, outcome: i_outcome, initial_fuel: i_fuel, remaining_work: i_remaining,
++            consumed_work: i_consumed, helper_work: i_hwork, helper_visits: i_visits,
++            reference_cursor: i_cursor, alloc: i_alloc, active: i_active, helper: i_helper, result: i_result,
++            seg_base: i_seg, data: i_data, data_fields: i_fields, env: i_env, frames: i_frames,
++            tasks: i_tasks, value_slots: i_slots } = image;
++        *i_control = control; *i_origin = control_origin; *i_env_root = env_root; *i_stack = stack_limit;
++        *i_outcome = outcome; *i_fuel = initial_fuel; *i_remaining = remaining_work;
++        *i_consumed = consumed_work; *i_hwork = helper_work; *i_visits = helper_visits;
++        *i_cursor = reference_cursor; *i_alloc = alloc; *i_active = active;
++        *i_seg = SegBase::from_parts(seg_active, seg_alloc, seg_consumed_work);
++        *i_helper = helper; *i_result = result; *i_tasks = tasks;
++        *i_data = data; *i_fields = data_fields; *i_env = env; *i_slots = value_slots; *i_frames = frames;
++    }
++}
++
++/// Exact child lengths. Each child decoder checks its own exact length again.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct C6StateDirectory { pub image_lanes: usize, pub data_lanes: usize, pub helper_lanes: usize }
++
++impl C6StateDirectory {
++    pub fn len_of(&self, child: C6StateChild) -> usize {
++        match child { C6StateChild::Image => self.image_lanes, C6StateChild::Data => self.data_lanes,
++            C6StateChild::Helper => self.helper_lanes }
++    }
++    /// Image, data and helper start offsets, then the total length; all checked.
++    pub fn offsets(&self) -> C6StateResult<[usize; 4]> {
++        let mut o = [STATE_HEADER_LANES; 4];
++        for child in C6StateChild::ALL {
++            let (i, len) = (child.index(), self.len_of(child));
++            o[i + 1] = o[i].checked_add(len)
++                .ok_or(outer(C6PhysError::UsizeOverflow { section: STATE_S, value: u(len) }))?;
++        }
++        Ok(o)
++    }
++}
++
++/// Child lengths from counts and the public row widths (no child-private offsets).
++pub fn plan_state_lengths(state: &C6OwnedState) -> C6StateResult<C6StateDirectory> {
++    fn rows(acc: usize, count: usize, width: usize) -> C6StateResult<usize> {
++        count.checked_mul(width).and_then(|n| acc.checked_add(n))
++            .ok_or(outer(C6PhysError::UsizeOverflow { section: STATE_S, value: u(count) }))
++    }
++    let d = &state.data;
++    let data = rows(DATA_HEADER_LANES, d.data.len(), DATA_ROW_LANES)?;
++    let data = rows(data, d.data_fields.len(), REF_LANES)?;
++    let data = rows(data, d.env.len(), ENV_ROW_LANES)?;
++    Ok(C6StateDirectory {
++        image_lanes: rows(IMAGE_SECTION_HEADER_LANES, state.frames.len(), FRAME_LANES)?,
++        data_lanes: rows(data, d.value_slots.len(), REF_LANES)?,
++        helper_lanes: rows(HELPER_FIXED_LANES, state.helper.tasks.len(), TASK_LANES)?,
++    })
++}
++
++fn state_header(dir: &C6StateDirectory, ctx: &C6StateContext) -> [u128; STATE_HEADER_LANES] {
++    let mut h = [0u128; STATE_HEADER_LANES];
++    h[..L_DIRECTORY].copy_from_slice(&[C6_PHYS_MAGIC, C6_PHYS_VERSION, STATE_SECTION_TAG, STATE_CHILD_COUNT]);
++    for child in C6StateChild::ALL {
++        let at = L_DIRECTORY + 2 * child.index();
++        h[at] = child.tag();
++        h[at + 1] = u(dir.len_of(child));
++    }
++    h[L_EXT_PRESENT] = u128::from(ctx.ext_present);
++    h[L_CAPS..].copy_from_slice(&ctx.descriptor());
++    h
++}
++
++/// Canonical encoder: length plan, lane limit, then the three existing encoders.
++pub fn encode_state(state: &C6OwnedState, ctx: &C6StateContext) -> C6StateResult<Vec<u128>> {
++    use C6StateChild::*;
++    let dir = plan_state_lengths(state)?;
++    let o = dir.offsets()?;
++    ctx.admit_total(o[3])?;
++    let image = encode_root_and_frames(&state.root, &state.frames, &ctx.caps.phys)
++        .map_err(|e| child_error(Image, o[0], e))?;
++    let data = encode_data_tables(&state.data, &ctx.caps).map_err(|e| child_error(Data, o[1], e))?;
++    let helper = encode_helper_tables(&state.helper, &ctx.caps).map_err(|e| child_error(Helper, o[2], e))?;
++    let mut out = Vec::with_capacity(o[3]);
++    out.extend(state_header(&dir, ctx));
++    for (child, lanes) in [(Image, image), (Data, data), (Helper, helper)] {
++        let predicted = dir.len_of(child);
++        if lanes.len() != predicted {
++            return Err(C6StateError::ChildLengthDrift { child, predicted, actual: lanes.len() });
++        }
++        out.extend(lanes);
++    }
++    Ok(out)
++}
++
++/// Decoder; see the module documentation for the exact first-error order.
++pub fn decode_state(lanes: &[u128], ctx: &C6StateContext) -> C6StateResult<C6OwnedState> {
++    use C6StateChild::*;
++    ctx.admit_total(lanes.len())?;
++    if lanes.len() < STATE_HEADER_LANES {
++        return Err(outer(C6PhysError::Truncated { section: STATE_S, needed: STATE_HEADER_LANES, actual: lanes.len() }));
++    }
++    if lanes[0] != C6_PHYS_MAGIC { return Err(outer(C6PhysError::BadMagic { actual: lanes[0] })); }
++    if lanes[1] != C6_PHYS_VERSION { return Err(outer(C6PhysError::BadVersion { actual: lanes[1] })); }
++    if lanes[2] != STATE_SECTION_TAG { return Err(outer(C6PhysError::BadTag { section: STATE_S, tag: lanes[2] })); }
++    if lanes[L_SECTION_COUNT] != STATE_CHILD_COUNT {
++        return Err(C6StateError::BadSectionCount { actual: lanes[L_SECTION_COUNT] });
++    }
++    let mut lengths = [0usize; 3];
++    for child in C6StateChild::ALL {
++        let at = L_DIRECTORY + 2 * child.index();
++        if lanes[at] != child.tag() {
++            return Err(C6StateError::BadChildTag { child, expected: child.tag(), actual: lanes[at] });
++        }
++        let declared = rd(STATE_S, lanes[at + 1]).map_err(outer)?;
++        if declared < child.minimum_lanes() {
++            return Err(C6StateError::ChildLengthRange { child, declared, minimum: child.minimum_lanes() });
++        }
++        lengths[child.index()] = declared;
++    }
++    if rd_bool(STATE_S, lanes[L_EXT_PRESENT]).map_err(outer)? != ctx.ext_present {
++        return Err(C6StateError::ContextMismatch { lane: L_EXT_PRESENT,
++            expected: u128::from(ctx.ext_present), actual: lanes[L_EXT_PRESENT] });
++    }
++    zero(STATE_S, lanes, L_RESERVED, L_RESERVED + 1).map_err(outer)?;
++    for (k, expected) in ctx.descriptor().into_iter().enumerate() {
++        let lane = L_CAPS + k;
++        if lanes[lane] != expected { return Err(C6StateError::ContextMismatch { lane, expected, actual: lanes[lane] }); }
++    }
++    let dir = C6StateDirectory { image_lanes: lengths[0], data_lanes: lengths[1], helper_lanes: lengths[2] };
++    let o = dir.offsets()?;
++    if lanes.len() < o[3] {
++        return Err(outer(C6PhysError::Truncated { section: STATE_S, needed: o[3], actual: lanes.len() }));
++    }
++    if lanes.len() > o[3] {
++        return Err(outer(C6PhysError::TrailingLanes { section: STATE_S, extra: lanes.len() - o[3] }));
++    }
++    let (root, frames) = decode_image_section(&lanes[o[0]..o[1]], &ctx.caps.phys)
++        .map_err(|e| child_error(Image, o[0], e))?;
++    let data = decode_data_tables(&lanes[o[1]..o[2]], &ctx.caps).map_err(|e| child_error(Data, o[1], e))?;
++    let helper = decode_helper_tables(&lanes[o[2]..o[3]], &ctx.caps).map_err(|e| child_error(Helper, o[2], e))?;
++    Ok(C6OwnedState { root, frames, data, helper })
++}
++
++pub fn state_lanes_from_host(host: &HostSnapshot, ctx: &C6StateContext) -> C6StateResult<Vec<u128>> {
++    encode_state(&C6OwnedState::from_image(&host.image), ctx)
++}
++
++pub fn roundtrip_state_owned(state: &C6OwnedState, ctx: &C6StateContext) -> C6StateResult<C6OwnedState> {
++    decode_state(&encode_state(state, ctx)?, ctx)
++}
++
++/// Conditional diagnostic inverse: a clone of the caller's host with every encoded
++/// field replaced. `admission` and `image.run_id` are retained from the clone. This
++/// is not import, admission or an owner-authorized transition.
++pub fn host_with_decoded_state(host: &HostSnapshot, lanes: &[u128], ctx: &C6StateContext)
++    -> C6StateResult<HostSnapshot> {
++    let state = decode_state(lanes, ctx)?;
++    let mut out = host.clone();
++    state.replace_state_of(&mut out.image);
++    Ok(out)
++}
++
++/// First differing field of two owned host snapshots, if any.
++fn first_host_difference(a: &HostSnapshot, b: &HostSnapshot) -> Option<&'static str> {
++    let (x, y) = (&a.image, &b.image);
++    [
++        (a.admission == b.admission, "admission"), (x.run_id == y.run_id, "image.run_id"),
++        (x.control == y.control, "image.control"), (x.control_origin == y.control_origin, "image.control_origin"),
++        (x.env_root == y.env_root, "image.env_root"), (x.stack_limit == y.stack_limit, "image.stack_limit"),
++        (x.outcome == y.outcome, "image.outcome"), (x.initial_fuel == y.initial_fuel, "image.initial_fuel"),
++        (x.remaining_work == y.remaining_work, "image.remaining_work"),
++        (x.consumed_work == y.consumed_work, "image.consumed_work"), (x.helper_work == y.helper_work, "image.helper_work"),
++        (x.helper_visits == y.helper_visits, "image.helper_visits"),
++        (x.reference_cursor == y.reference_cursor, "image.reference_cursor"), (x.alloc == y.alloc, "image.alloc"),
++        (x.active == y.active, "image.active"), (x.helper == y.helper, "image.helper"),
++        (x.result == y.result, "image.result"), (x.seg_base == y.seg_base, "image.seg_base"),
++        (x.data == y.data, "image.data"), (x.data_fields == y.data_fields, "image.data_fields"),
++        (x.env == y.env, "image.env"), (x.frames == y.frames, "image.frames"), (x.tasks == y.tasks, "image.tasks"),
++        (x.value_slots == y.value_slots, "image.value_slots"),
++    ].into_iter().find(|&(same, _)| !same).map(|(_, field)| field)
++        .or_else(|| (a != b).then_some("snapshot"))
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum C6WitnessSide { Decoded, Cross }
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum C6WitnessError {
++    State(C6StateError),
++    HostMismatch { field: &'static str },
++    OriginalPlan(WitnessFailure),
++    DecodedPlan(WitnessFailure),
++    PlanMismatch { field: &'static str, index: Option<usize> },
++    LiveOutMismatch { node: NodeId, field: &'static str },
++    OriginalEvaluation(WitnessFailure),
++    DecodedEvaluation(WitnessFailure),
++    /// The ORIGINAL plan, with all its immutable bindings, evaluated over the rebuilt host.
++    CrossEvaluation(WitnessFailure),
++    EvaluationMismatch { against: C6WitnessSide, field: &'static str },
++}
++
++/// Preservation under the existing uncached implementation only.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct C6WitnessPreservation {
++    pub lifetime: LifetimeUnit,
++    pub state_lanes: Vec<u128>,
++    pub plan: WitnessPlan,
++    pub evaluation: WitnessEvaluation,
++    /// Named snapshot fields of the output node; live_outs = these plus the output.
++    pub live_out_fields: usize,
++}
++
++fn first_plan_difference(a: &WitnessPlan, b: &WitnessPlan) -> Option<(&'static str, Option<usize>)> {
++    fn first<T: PartialEq>(x: &[T], y: &[T]) -> Option<usize> {
++        (0..x.len().max(y.len())).find(|&i| x.get(i) != y.get(i))
++    }
++    if a.format != b.format { return Some(("format", None)); }
++    if a.lifetime != b.lifetime { return Some(("lifetime", None)); }
++    for (field, index) in [("inputs", first(&a.inputs, &b.inputs)), ("nodes", first(&a.nodes, &b.nodes)),
++        ("stable_topological_order", first(&a.stable_topological_order, &b.stable_topological_order)),
++        ("definitions", first(&a.definitions, &b.definitions)), ("live_outs", first(&a.live_outs, &b.live_outs))] {
++        if index.is_some() { return Some((field, index)); }
++    }
++    if a.output != b.output { return Some(("output", None)); }
++    (a != b).then_some(("plan", None))
++}
++
++/// Live-out structure of the actual plan: output fields, flags, lifetime, producer, last use.
++fn check_live_outs(plan: &WitnessPlan, lifetime: LifetimeUnit) -> Result<usize, C6WitnessError> {
++    let bad = |node, field| C6WitnessError::LiveOutMismatch { node, field };
++    let Some(Operation::Snapshot { fields }) = plan.nodes.get(plan.output.0).map(|n| &n.operation) else {
++        return Err(bad(plan.output, "output"));
++    };
++    let mut expected: Vec<NodeId> = fields.iter().map(|f| f.dependency.node).collect();
++    expected.push(plan.output);
++    if plan.live_outs != expected { return Err(bad(plan.output, "live_outs")); }
++    let publication = plan.stable_topological_order.len();
++    for &id in &plan.live_outs {
++        let d = plan.definitions.get(id.0).ok_or(bad(id, "definition"))?;
++        if d.value != id || d.producer != id { return Err(bad(id, "definition")); }
++        if !d.live_out { return Err(bad(id, "live_out")); }
++        if d.lifetime != lifetime { return Err(bad(id, "lifetime")); }
++        if d.last_use_order != publication { return Err(bad(id, "last_use_order")); }
++    }
++    let distinct: std::collections::BTreeSet<NodeId> = plan.live_outs.iter().copied().collect();
++    if plan.definitions.iter().filter(|d| d.live_out).count() != distinct.len() {
++        return Err(bad(plan.output, "live_out_count"));
++    }
++    Ok(fields.len())
++}
++
++fn first_evaluation_difference(a: &WitnessEvaluation, b: &WitnessEvaluation) -> Option<&'static str> {
++    if a.decoded.metadata != b.decoded.metadata { return Some("decoded.metadata"); }
++    if a.decoded.fields.len() != b.decoded.fields.len() { return Some("decoded.fields"); }
++    for (x, y) in a.decoded.fields.iter().zip(&b.decoded.fields) {
++        if x.field != y.field || x.value != y.value { return Some(x.field); }
++    }
++    if a.diagnostics != b.diagnostics { return Some("diagnostics"); }
++    (a != b).then_some("evaluation")
++}
++
++/// Encode/decode a host's state, clone-replace it, build both uncached plans for
++/// `lifetime`, evaluate them, and require equality of the whole raw host, the
++/// exact plans, the live-out structure, the full decoded snapshot and the
++/// diagnostics. The baseline is the actual host and the existing implementation.
++pub fn compare_uncached_witness(host: &HostSnapshot, ctx: &C6StateContext, lifetime: LifetimeUnit)
++    -> Result<C6WitnessPreservation, C6WitnessError> {
++    use C6WitnessError as E;
++    let state_lanes = state_lanes_from_host(host, ctx).map_err(E::State)?;
++    let rebuilt = host_with_decoded_state(host, &state_lanes, ctx).map_err(E::State)?;
++    if let Some(field) = first_host_difference(host, &rebuilt) { return Err(E::HostMismatch { field }); }
++    let plan = construct_plan_for(host, lifetime).map_err(E::OriginalPlan)?;
++    let decoded_plan = construct_plan_for(&rebuilt, lifetime).map_err(E::DecodedPlan)?;
++    if let Some((field, index)) = first_plan_difference(&plan, &decoded_plan) {
++        return Err(E::PlanMismatch { field, index });
++    }
++    let live_out_fields = check_live_outs(&plan, lifetime)?;
++    check_live_outs(&decoded_plan, lifetime)?;
++    let evaluation = evaluate_uncached(&plan, host).map_err(E::OriginalEvaluation)?;
++    let decoded = evaluate_uncached(&decoded_plan, &rebuilt).map_err(E::DecodedEvaluation)?;
++    let cross = evaluate_uncached(&plan, &rebuilt).map_err(E::CrossEvaluation)?;
++    for (against, other) in [(C6WitnessSide::Decoded, &decoded), (C6WitnessSide::Cross, &cross)] {
++        if let Some(field) = first_evaluation_difference(&evaluation, other) {
++            return Err(E::EvaluationMismatch { against, field });
++        }
++    }
++    Ok(C6WitnessPreservation { lifetime, state_lanes, plan, evaluation, live_out_fields })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::sherlock::helper_machine::c6_phys::{encode_frame, fixtures, L_INITIAL_FUEL};
++    use crate::sherlock::helper_machine::complete_observation::{
++        capture, record_step, DataFieldsSnapshot, DataSnapshot, ObservedStep,
++    };
++    use crate::sherlock::helper_machine::shared::adt::{CtorIdC, TypeIdC};
++    use crate::sherlock::helper_machine::shared::i128_class::KIntC;
++    use crate::sherlock::helper_machine::shared::owner_ext_source_program::{ExtDomain, ExtProgram};
++    use crate::sherlock::helper_machine::shared::owner_ext_t3_uses::{ExtExpr, ExtFunction, ExtParamSrc, ExtValue};
++    use crate::sherlock::helper_machine::shared::owner_ext_type_builder::{
++        CtorDeclSrc, CtorFieldSrc, TypeDeclSrc, TypeExprSrc,
++    };
++    use crate::sherlock::helper_machine::shared::owner_host::host_owner_engine;
++    use crate::sherlock::helper_machine::shared::{
++        admit_ext_program, ActiveLengths, Admitted, AllocCounters, ControlC, CoreValue, EnvCellC, FinanceInput,
++        HelperCommon, HelperControlC, HelperResultC, HelperTaskC, MachineImage, OutcomeC, OwnerEngine, RefC,
++        RunIntC, SiteTag, SliceC, TaskVisitC, TriStatus,
++    };
++    use C6StateChild::{Data, Helper, Image};
++
++    fn test_ctx() -> C6StateContext {
++        C6StateContext::from_caps_assertion(C6StateCaps::test_caps(), true, C6StateLimits { max_total_lanes: 4096 })
++    }
++
++    /// SYNTHETIC, unadmitted: stored counters disagree with table lengths, the segment
++    /// base is nonzero and several counters are u128::MAX. No owner step reaches this.
++    fn synthetic() -> C6OwnedState {
++        C6OwnedState {
++            root: C6Root {
++                control: ControlC::Eval { expr: 5 }, control_origin: 5, env_root: Some(0), stack_limit: 64,
++                outcome: OutcomeC::Running, initial_fuel: u128::MAX, remaining_work: u128::MAX - 10,
++                consumed_work: 10, helper_work: 3, helper_visits: u128::MAX, reference_cursor: 7,
++                alloc: AllocCounters { data_nodes: 11, data_fields: 12, environment_cells: 13 },
++                active: ActiveLengths { data: 21, data_fields: 22, env: 23, value_slots: 24 },
++                seg_active: ActiveLengths { data: 1, data_fields: 2, env: 3, value_slots: 4 },
++                seg_alloc: AllocCounters { data_nodes: 5, data_fields: 6, environment_cells: 7 },
++                seg_consumed_work: u128::MAX,
++            },
++            frames: vec![
++                FrameRowC::ScopeF { saved_env: None, origin: 1 },
++                FrameRowC::ConstructorFieldsF { type_id: TypeIdC(5), ctor_id: CtorIdC(6), index: 1,
++                    field_type: TypeIdC(4), checked: true, completed: SliceC { start: 2, len: 1 },
++                    rest: SliceC { start: 7, len: 0 }, saved_env: Some(2), origin: 16 },
++            ],
++            data: C6DataTables {
++                data: vec![DataSnapshot::U128 { n: u128::MAX },
++                    DataSnapshot::Constructor { type_id: TypeIdC(5), ctor_id: CtorIdC(6),
++                        fields: DataFieldsSnapshot { start: 0, len: 2 } },
++                    DataSnapshot::Nil],
++                data_fields: vec![RefC::Const(3), RefC::Data(0)],
++                env: vec![EnvCellC { binder: 2, value: RefC::Data(1), previous: None }],
++                value_slots: vec![RefC::Data(1), RefC::Const(0)],
++            },
++            helper: C6HelperTables {
++                helper: Some(HelperControlC::Validate { common: HelperCommon { site: SiteTag::EvalLiteral,
++                    origin_reference_cursor: u128::MAX, parent_resume: None }, root: RefC::Const(4),
++                    status: TriStatus::Pending }),
++                result: Some(HelperResultC::BindOk { env: Some(0) }),
++                tasks: vec![HelperTaskC::ValidateTask { r: RefC::Const(4), visit: TaskVisitC::Unvisited, cursor: 0 },
++                    HelperTaskC::PairTask { binder: 4, sort: TypeIdC(3), arg: RefC::Data(2) }],
++            },
++        }
++    }
++
++    #[test]
++    fn outer_framing_lane_map_inverse_and_first_error_order() {
++        let ctx = test_ctx();
++        let s = synthetic();
++        let lanes = encode_state(&s, &ctx).unwrap();
++        assert_eq!(plan_state_lengths(&s), Ok(C6StateDirectory { image_lanes: 74, data_lanes: 35, helper_lanes: 45 }));
++        assert_eq!(lanes.len(), 195);
++        assert_eq!(lanes[..L_CAPS], [C6_PHYS_MAGIC, C6_PHYS_VERSION, STATE_SECTION_TAG, 3, IMAGE_CHILD_TAG, 74,
++            DATA_SECTION_TAG, 35, HELPER_SECTION_TAG, 45, 1, 0]);
++        assert_eq!(lanes[L_CAPS..STATE_HEADER_LANES], ctx.descriptor());
++        assert_eq!((lanes[L_CAPS], lanes[L_CAPS + 10], lanes[39], lanes[40]), (64, 8, 1024, 64));
++        assert_eq!(lanes[41..115], encode_root_and_frames(&s.root, &s.frames, &ctx.caps.phys).unwrap()[..]);
++        assert_eq!(lanes[41 + L_INITIAL_FUEL], u128::MAX);
++        assert_eq!(lanes[102..115], encode_frame(&s.frames[1]), "the last raw frame is the top");
++        assert_eq!(lanes[115..150], encode_data_tables(&s.data, &ctx.caps).unwrap()[..]);
++        assert_eq!(lanes[150..], encode_helper_tables(&s.helper, &ctx.caps).unwrap()[..]);
++        let decoded = decode_state(&lanes, &ctx).unwrap();
++        assert_eq!(decoded, s);
++        assert_eq!(encode_state(&decoded, &ctx).unwrap(), lanes);
++        assert_eq!(roundtrip_state_owned(&s, &ctx), Ok(s.clone()));
++
++        let dec = |l: &[u128]| decode_state(l, &ctx);
++        let set = |pairs: &[(usize, u128)]| { let mut m = lanes.clone(); for &(k, v) in pairs { m[k] = v; } m };
++        let phys = |e: C6PhysError| C6StateError::Outer(e);
++        let mut c = ctx;
++        c.limits.max_total_lanes = 194;
++        assert_eq!(decode_state(&lanes, &c), Err(C6StateError::LimitExceeded { needed: 195, limit: 194 }));
++        assert_eq!(encode_state(&s, &c), Err(C6StateError::LimitExceeded { needed: 195, limit: 194 }));
++        c.limits.max_total_lanes = 195;
++        assert_eq!(decode_state(&lanes, &c), Ok(s.clone()));
++        assert_eq!(dec(&lanes[..40]), Err(phys(C6PhysError::Truncated { section: "state", needed: 41, actual: 40 })));
++        assert_eq!(dec(&set(&[(0, 0), (2, 0)])), Err(phys(C6PhysError::BadMagic { actual: 0 })));
++        assert_eq!(dec(&set(&[(1, 2)])), Err(phys(C6PhysError::BadVersion { actual: 2 })));
++        assert_eq!(dec(&set(&[(2, DATA_SECTION_TAG)])),
++            Err(phys(C6PhysError::BadTag { section: "state", tag: DATA_SECTION_TAG })));
++        assert_eq!(dec(&set(&[(3, 2), (4, 0)])), Err(C6StateError::BadSectionCount { actual: 2 }));
++        // Reordered and duplicated children are fixed-position tag errors.
++        assert_eq!(dec(&set(&[(4, DATA_SECTION_TAG), (5, 35), (6, IMAGE_CHILD_TAG), (7, 74)])),
++            Err(C6StateError::BadChildTag { child: Image, expected: IMAGE_CHILD_TAG, actual: DATA_SECTION_TAG }));
++        assert_eq!(dec(&set(&[(8, DATA_SECTION_TAG)])),
++            Err(C6StateError::BadChildTag { child: Helper, expected: HELPER_SECTION_TAG, actual: DATA_SECTION_TAG }));
++        assert_eq!(dec(&set(&[(7, u128::MAX)])),
++            Err(phys(C6PhysError::UsizeOverflow { section: "state", value: u128::MAX })));
++        assert_eq!(dec(&set(&[(7, 6)])), Err(C6StateError::ChildLengthRange { child: Data, declared: 6, minimum: 7 }));
++        assert_eq!(dec(&set(&[(10, 2), (11, 1)])), Err(phys(C6PhysError::BadBool { section: "state", value: 2 })));
++        assert_eq!(dec(&set(&[(11, 1)])),
++            Err(phys(C6PhysError::NonZeroPadding { section: "state", lane: 11, value: 1 })));
++        let mut absent = ctx;
++        absent.ext_present = false;
++        assert_eq!(decode_state(&set(&[(11, 1)]), &absent),
++            Err(C6StateError::ContextMismatch { lane: 10, expected: 0, actual: 1 }));
++        let mut narrow = ctx;
++        narrow.caps.phys.max_frames = 63;
++        assert_eq!(decode_state(&lanes, &narrow), Err(C6StateError::ContextMismatch { lane: 12, expected: 63, actual: 64 }));
++        let mut tight = ctx;
++        tight.caps.max_data_field_slots = 1;
++        assert_eq!(decode_state(&lanes, &tight), Err(C6StateError::ContextMismatch { lane: 39, expected: 1, actual: 1024 }));
++        assert_eq!(encode_state(&s, &tight), Err(C6StateError::Child { child: Data, offset: 115,
++            error: C6PhysError::CapacityExceeded { section: "state.data_fields", needed: 2, limit: 1 } }));
++        assert_eq!(dec(&set(&[(5, usize::MAX as u128)])),
++            Err(phys(C6PhysError::UsizeOverflow { section: "state", value: usize::MAX as u128 })));
++        // Outer length precedes every child body error.
++        assert_eq!(dec(&set(&[(5, 75), (89, 10)])),
++            Err(phys(C6PhysError::Truncated { section: "state", needed: 196, actual: 195 })));
++        let mut trailing = lanes.clone();
++        trailing.push(0);
++        assert_eq!(dec(&trailing), Err(phys(C6PhysError::TrailingLanes { section: "state", extra: 1 })));
++        // Declared boundaries are used as declared; the child's exact-length check refuses.
++        assert_eq!(dec(&set(&[(5, 87), (7, 22)])), Err(C6StateError::Child { child: Image, offset: 41,
++            error: C6PhysError::TrailingLanes { section: "image_section", extra: 13 } }));
++        assert_eq!(dec(&set(&[(5, 61), (7, 48)])), Err(C6StateError::Child { child: Image, offset: 41,
++            error: C6PhysError::Truncated { section: "image_section", needed: 74, actual: 61 } }));
++        assert_eq!(dec(&set(&[(89, 10), (122, 7)])), Err(C6StateError::Child { child: Image, offset: 41,
++            error: C6PhysError::BadTag { section: "frame", tag: 10 } }));
++        assert_eq!(dec(&set(&[(122, 7)])), Err(C6StateError::Child { child: Data, offset: 115,
++            error: C6PhysError::BadTag { section: "state.data", tag: 7 } }));
++        assert_eq!(dec(&set(&[(117, HELPER_SECTION_TAG)])), Err(C6StateError::Child { child: Data, offset: 115,
++            error: C6PhysError::BadTag { section: "state_data", tag: HELPER_SECTION_TAG } }));
++        assert_eq!(dec(&set(&[(154, 12)])), Err(C6StateError::Child { child: Helper, offset: 150,
++            error: C6PhysError::BadTag { section: "state.helper", tag: 12 } }));
++        let mut deep = s.clone();
++        deep.root.stack_limit = 65;
++        assert_eq!(encode_state(&deep, &ctx), Err(C6StateError::Child { child: Image, offset: 41,
++            error: C6PhysError::CapacityExceeded { section: "root.stack_limit", needed: 65, limit: 64 } }));
++    }
++
++    #[test]
++    fn every_owned_field_is_significant_and_external_fields_are_retained() {
++        let ctx = test_ctx();
++        let base_state = synthetic();
++        let base = encode_state(&base_state, &ctx).unwrap();
++        let mutations: [(&str, fn(&mut C6OwnedState)); 29] = [
++            ("control", |s| s.root.control = ControlC::Eval { expr: 6 }),
++            ("control_origin", |s| s.root.control_origin = 6),
++            ("env_root", |s| s.root.env_root = None),
++            ("stack_limit", |s| s.root.stack_limit = 63),
++            ("outcome", |s| s.root.outcome = OutcomeC::Halted { value: RefC::Data(0) }),
++            ("initial_fuel", |s| s.root.initial_fuel ^= 1),
++            ("remaining_work", |s| s.root.remaining_work ^= 1),
++            ("consumed_work", |s| s.root.consumed_work += 1),
++            ("helper_work", |s| s.root.helper_work += 1),
++            ("helper_visits", |s| s.root.helper_visits ^= 1),
++            ("reference_cursor", |s| s.root.reference_cursor += 1),
++            ("alloc", |s| s.root.alloc.data_fields += 1),
++            ("active", |s| s.root.active.value_slots += 1),
++            ("seg_active", |s| s.root.seg_active.env += 1),
++            ("seg_alloc", |s| s.root.seg_alloc.data_nodes += 1),
++            ("seg_consumed_work", |s| s.root.seg_consumed_work ^= 1),
++            ("frame order", |s| s.frames.swap(0, 1)),
++            ("frame count", |s| { s.frames.pop(); }),
++            ("raw empty rest start", |s| if let FrameRowC::ConstructorFieldsF { rest, .. } = &mut s.frames[1] { rest.start = 8; }),
++            ("data", |s| s.data.data[0] = DataSnapshot::U128 { n: u128::MAX - 1 }),
++            ("data_fields order", |s| s.data.data_fields.swap(0, 1)),
++            ("env previous", |s| s.data.env[0].previous = Some(0)),
++            ("value_slots", |s| s.data.value_slots.push(RefC::Const(0))),
++            ("helper presence", |s| s.helper.helper = None),
++            ("helper origin", |s| if let Some(HelperControlC::Validate { common, .. }) = &mut s.helper.helper { common.origin_reference_cursor ^= 1; }),
++            ("result presence", |s| s.helper.result = None),
++            ("result env", |s| s.helper.result = Some(HelperResultC::BindOk { env: None })),
++            ("task order", |s| s.helper.tasks.swap(0, 1)),
++            ("task multiplicity", |s| s.helper.tasks.push(s.helper.tasks[0])),
++        ];
++        for (name, mutate) in mutations {
++            let mut m = base_state.clone();
++            mutate(&mut m);
++            let lanes = encode_state(&m, &ctx).unwrap();
++            assert_ne!(lanes, base, "{name} was ignored");
++            assert_eq!(decode_state(&lanes, &ctx), Ok(m), "{name}");
++        }
++        // Stored counters are carried, never normalized to table lengths.
++        let decoded = decode_state(&base, &ctx).unwrap();
++        assert_eq!((decoded.root.active.data, decoded.data.data.len()), (21, 3));
++        // Empty tables, absent helper/result, and env None versus present Some(0).
++        let mut empty = synthetic();
++        empty.frames.clear();
++        empty.data = C6DataTables { data: vec![], data_fields: vec![], env: vec![], value_slots: vec![] };
++        empty.helper = C6HelperTables { helper: None, result: None, tasks: vec![] };
++        let some_zero = encode_state(&empty, &ctx).unwrap();
++        assert_eq!(some_zero.len(), 41 + 48 + 7 + 31);
++        assert_eq!(decode_state(&some_zero, &ctx), Ok(empty.clone()));
++        empty.root.env_root = None;
++        let none = encode_state(&empty, &ctx).unwrap();
++        assert_ne!(none, some_zero);
++        assert_eq!(decode_state(&none, &ctx), Ok(empty));
++        // Absent and present-zero ext give equal caps but distinct framed bytes.
++        let (b, lc, budgets, limits) = (BoundsC::default(), LayoutCapacitiesC::default(),
++            C6CodecBudgets { type_expr_nodes: 0, template_bytes: 0 }, C6StateLimits { max_total_lanes: 4096 });
++        let absent = C6StateContext::from_parts(&b, &lc, None, budgets, limits);
++        let zero_ext = C6StateContext::from_parts(&b, &lc, Some(ExtCapacitiesC::all_zero()), budgets, limits);
++        assert_eq!((absent.caps(), absent.ext_present(), zero_ext.ext_present()), (zero_ext.caps(), false, true));
++        // Clone-replace on a REAL captured host: only encoded fields change; the
++        // synthetic nonzero segment base is materialized via SegBase::from_parts.
++        let (admitted, image, _layout) = admitted_with_layout();
++        let host = fixtures::must(capture(&admitted, &image), "capture");
++        let out = host_with_decoded_state(&host, &base, &ctx).unwrap();
++        assert_eq!((&out.admission, &out.image.run_id), (&host.admission, &host.image.run_id));
++        assert_eq!(C6OwnedState::from_image(&out.image), base_state);
++        let r = &base_state.root;
++        assert_eq!(out.image.seg_base, SegBase::from_parts(r.seg_active, r.seg_alloc, r.seg_consumed_work));
++        assert_ne!(out.image.seg_base, SegBase::genesis_uncut());
++        assert_eq!(first_host_difference(&host, &out), Some("image.control"));
++        let mut back = out.clone();
++        C6OwnedState::from_image(&host.image).replace_state_of(&mut back.image);
++        assert_eq!(back, host);
++    }
++
++    /// Local fixture retaining its ORIGINAL admitting layout. Two-argument call,
++    /// nested nominal constructors; real generic admission and the owner's admit_run.
++    fn admitted_with_layout() -> (Admitted, MachineImage, LayoutSchemaC) {
++        let bounds = BoundsC { code_rows: 128, function_rows: 16, code_child_slots: 128, parameter_slots: 32,
++            pattern_rows: 32, match_plan_rows: 32, match_arm_rows: 32, type_rows: 16, constructor_rows: 16,
++            constructor_field_slots: 32, max_arity: 8, constant_nodes: 128, constant_field_slots: 128,
++            data_nodes: 128, data_field_slots: 128, environment_cells: 128, frames: 64, helper_tasks: 64,
++            serialization_bytes: 1_000_000, max_reference_work: 1_000_000, max_helper_work: 1_000_000, step_cap: 10_000 };
++        let layout = LayoutSchemaC { layout_version: ("c6-phys-state-test".into(), "1".into()), field_id: None,
++            widths: None, scalar_layout_id: None, bounds,
++            capacities: LayoutCapacitiesC { name_rows: 128, name_bytes: 4096, occurrence_path_slots: 4096, value_slots: 4096 },
++            ext_capacities: Some(ExtCapacitiesC { plan_case_slots: 64, field_path_slots: 64, pattern_child_slots: 64,
++                ..ExtCapacitiesC::all_zero() }),
++            boundary_capacities_present: false };
++        let field = |name: &str, ty: TypeExprSrc| CtorFieldSrc { name: name.into(), ty };
++        let var = |name: &str| ExtExpr::Var { name: name.into() };
++        let lit = |n: u128| ExtExpr::Literal { value: ExtValue::Core { value: CoreValue::UInt { n: KIntC::InRange(n) } } };
++        let pair = || TypeExprSrc::Named { name: "Pair".into() };
++        let box_uint = || TypeExprSrc::Apply { name: "Box".into(), args: vec![TypeExprSrc::UInt] };
++        let param = |name: &str| ExtParamSrc { name: name.into(), ty: TypeExprSrc::UInt };
++        // `type Box<A> = MkBox { item: A }`, `type Pair = MkPair { fst: UInt, snd: Box<UInt> }`,
++        // `fn mk(x: UInt, y: UInt) -> Pair { MkPair(x, MkBox(y)) }`, entry `let p = mk(7, 8) in p`.
++        let mk = ExtFunction { name: "mk".into(), parameters: vec![param("x"), param("y")], return_type: pair(),
++            body: ExtExpr::Construct { ty: pair(), ctor: "MkPair".into(), fields: vec![var("x"),
++                ExtExpr::Construct { ty: box_uint(), ctor: "MkBox".into(), fields: vec![var("y")] }] } };
++        let program = ExtProgram {
++            types: vec![
++                TypeDeclSrc { name: "Box".into(), parameters: vec!["A".into()], ctors: vec![CtorDeclSrc {
++                    name: "MkBox".into(), fields: vec![field("item", TypeExprSrc::Param { name: "A".into() })] }] },
++                TypeDeclSrc { name: "Pair".into(), parameters: Vec::new(), ctors: vec![CtorDeclSrc {
++                    name: "MkPair".into(), fields: vec![field("fst", TypeExprSrc::UInt), field("snd", box_uint())] }] },
++            ],
++            assets: Vec::new(), states: Vec::new(), inputs: Vec::new(), functions: vec![mk],
++            entry: ExtExpr::Let { name: "p".into(),
++                value: Box::new(ExtExpr::Call { name: "mk".into(), args: vec![lit(7), lit(8)] }), body: Box::new(var("p")) },
++        };
++        let (admitted, _report) = fixtures::must(admit_ext_program(program, ExtDomain::GENERIC_ABSENT, &bounds,
++            &layout, None), "generic nominal admission");
++        let image = fixtures::must(host_owner_engine().admit_run(&admitted, &RunIntC::Nat(fixtures::FUEL),
++            &RunIntC::Nat(64), &FinanceInput::Absent), "admit run");
++        (admitted, image, layout)
++    }
++
++    fn real_ctx(layout: &LayoutSchemaC) -> C6StateContext {
++        let budgets = C6CodecBudgets { type_expr_nodes: 0, template_bytes: 0 };
++        let limits = C6StateLimits { max_total_lanes: 1 << 20 };
++        let ctx = C6StateContext::from_layout(layout, budgets, limits);
++        assert_eq!(ctx, C6StateContext::from_parts(&layout.bounds, &layout.capacities, layout.ext_capacities, budgets, limits));
++        ctx
++    }
++
++    #[derive(Default)]
++    struct Seen { args_completed: bool, return_f: bool, ctor_completed: bool, bind_pairs: bool, append: bool,
++        build: bool, scalar_expected: bool, result: bool, env: bool, constructor_data: bool }
++
++    fn observe(seen: &mut Seen, img: &ImageSnapshot) {
++        for frame in &img.frames {
++            match frame {
++                FrameRowC::ArgsF { completed, .. } if completed.len > 0 => seen.args_completed = true,
++                FrameRowC::ReturnF { .. } => seen.return_f = true,
++                FrameRowC::ConstructorFieldsF { completed, .. } if completed.len > 0 => seen.ctor_completed = true,
++                _ => {}
++            }
++        }
++        match img.helper {
++            Some(HelperControlC::Bind { .. }) if img.tasks.iter().any(|t| matches!(t, HelperTaskC::PairTask { .. })) =>
++                seen.bind_pairs = true,
++            Some(HelperControlC::Append { .. }) => seen.append = true,
++            Some(HelperControlC::Build { .. }) => seen.build = true,
++            Some(HelperControlC::Scalar { expected: Some(_), .. }) => seen.scalar_expected = true,
++            _ => {}
++        }
++        seen.result |= img.result.is_some();
++        seen.env |= img.env_root.is_some() && !img.env.is_empty();
++        seen.constructor_data |= img.data.iter().any(|d| matches!(d, DataSnapshot::Constructor { .. }));
++    }
++
++    #[test]
++    fn owner_trace_states_roundtrip_and_clone_replace_whole_host() {
++        // OWNER-REACHABLE: real admission, real capture/record_step; ctx from the retained layout.
++        let (admitted, mut image, layout) = admitted_with_layout();
++        let ctx = real_ctx(&layout);
++        let first = fixtures::must(capture(&admitted, &image), "capture");
++        assert_eq!(retained_layout_agrees_with_host(&layout, &first), Ok(()));
++        let mut wrong = layout.clone();
++        wrong.bounds.frames += 1;
++        assert_eq!(retained_layout_agrees_with_host(&wrong, &first), Err(C6StateError::RetainedLayoutMismatch { field: "bounds" }));
++        let mut tampered = first.clone();
++        tampered.image.run_id.fuel_input = RunIntC::Nat(1);
++        assert_eq!(first_host_difference(&first, &tampered), Some("image.run_id"));
++        let check = |host: &HostSnapshot| -> Vec<u128> {
++            let lanes = state_lanes_from_host(host, &ctx).unwrap();
++            let decoded = decode_state(&lanes, &ctx).unwrap();
++            assert_eq!(decoded, C6OwnedState::from_image(&host.image));
++            assert_eq!(encode_state(&decoded, &ctx).unwrap(), lanes);
++            assert_eq!(host_with_decoded_state(host, &lanes, &ctx).unwrap(), *host, "whole clone-replaced host");
++            lanes
++        };
++        let mut seen = Seen::default();
++        let mut terminal = None;
++        for step in 0..4096 {
++            match record_step(&admitted, &mut image) {
++                Ok(ObservedStep::Event(record)) => {
++                    let (before, after) = (check(&record.before), check(&record.after));
++                    assert_eq!(before != after, record.before != record.after, "step {step}");
++                    observe(&mut seen, &record.before.image);
++                }
++                Ok(ObservedStep::Terminal { before, after }) => {
++                    check(&before);
++                    check(&after);
++                    terminal = Some(after);
++                    break;
++                }
++                Err(_) => panic!("owner step {step}"),
++            }
++        }
++        let last = terminal.expect("terminal within fuel and 4096 steps");
++        assert!(matches!(last.image.outcome, OutcomeC::Halted { .. }));
++        assert_eq!(retained_layout_agrees_with_host(&layout, &last), Ok(()));
++        assert!(seen.args_completed, "ArgsF with a nonempty completed prefix");
++        assert!(seen.return_f && seen.ctor_completed && seen.bind_pairs && seen.append && seen.build);
++        assert!(seen.scalar_expected && seen.result && seen.env && seen.constructor_data);
++    }
++
++    #[test]
++    fn uncached_witness_plans_and_decodes_are_preserved_over_the_owner_trace() {
++        let (admitted, mut image, layout) = admitted_with_layout();
++        let ctx = real_ctx(&layout);
++        let (mut compared, mut helpers, mut tasks, mut results, mut ctor_frames) = (0usize, 0usize, 0usize, 0usize, 0usize);
++        let mut verify = |host: &HostSnapshot, lifetime: LifetimeUnit, step: usize| {
++            let report = compare_uncached_witness(host, &ctx, lifetime)
++                .unwrap_or_else(|e| panic!("step {step} {lifetime:?}: {e:?}"));
++            assert_eq!(report.lifetime, lifetime);
++            assert_eq!(report.live_out_fields, 33);
++            assert_eq!(report.plan.live_outs.len(), 34);
++            assert_eq!(report.state_lanes, state_lanes_from_host(host, &ctx).unwrap());
++            assert_eq!(report.evaluation.decoded.metadata.seg_base, host.image.seg_base);
++            compared += 1;
++            helpers += usize::from(host.image.helper.is_some());
++            tasks += usize::from(!host.image.tasks.is_empty());
++            results += usize::from(host.image.result.is_some());
++            ctor_frames += usize::from(host.image.frames.iter().any(|f| matches!(f, FrameRowC::ConstructorFieldsF { .. })));
++        };
++        let mut terminal = false;
++        for step in 0..4096 {
++            if step % 8 == 0 {
++                verify(&fixtures::must(capture(&admitted, &image), "capture"), LifetimeUnit::Snapshot, step);
++            }
++            match record_step(&admitted, &mut image) {
++                Ok(ObservedStep::Event(record)) => {
++                    verify(&record.before, LifetimeUnit::RecordBefore, step);
++                    verify(&record.after, LifetimeUnit::RecordAfter, step);
++                }
++                Ok(ObservedStep::Terminal { before, after }) => {
++                    verify(&before, LifetimeUnit::RecordBefore, step);
++                    verify(&after, LifetimeUnit::RecordAfter, step);
++                    verify(&after, LifetimeUnit::Snapshot, step);
++                    terminal = true;
++                    break;
++                }
++                Err(_) => panic!("owner step {step}"),
++            }
++        }
++        assert!(terminal && compared > 0);
++        assert!(helpers > 0 && tasks > 0 && results > 0 && ctor_frames > 0);
++    }
++}
+--- a/crates/mori-core/src/sherlock/helper_machine/mod.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/mod.rs
+@@ -13,6 +13,9 @@
+ pub mod complete_observation;
+ pub mod c6_phys;
+ pub mod c6_phys_program;
++pub mod c6_phys_data;
++pub mod c6_phys_helper;
++pub mod c6_phys_state;
+ pub mod witness_plan;
+ pub mod complete_comparison;
+ 
+--- /dev/null
++++ b/crates/mori-core/tests/sherlock_c6_phys_data_public_consumer.rs
+@@ -0,0 +1,343 @@
++//! Sherlock C6P1 Chunk 3A public-API integration consumer (R-only proposed afterimage).
++//!
++//! External test crate compiled with `--test` against the ordinary production
++//! `mori_core` rlib (Core `cfg(test)` false). Every codec, owner and observation
++//! call goes to the actual public production item in the linked rlib; nothing is
++//! included by path, proxied, stubbed or re-implemented here.
++//!
++//! The three tests are separately named external observations corresponding to
++//! the three original `c6_phys_data::tests` unit tests. Those originals remain
++//! UNRUN; any result here is its own record and never stands in for them.
++//!
++//! Locally owned inputs only: `caps`, `f`, `all_variants`, `every_lane_significant`
++//! (verbatim from the 3A test module) and `fixtures` (the current Core
++//! `c6_phys::fixtures` input blueprint, rebuilt through public `ExtProgram`
++//! carriers, public `admit_ext_program` and the public fixed `host_owner_engine`).
++//! `SECTION`/`DATA_S` are expected-only copies of private production strings.
++//! Assertions marked `[ext+]` are external-only strengthenings, not 3A originals.
++
++use mori_core::sherlock::helper_machine::c6_phys::{
++    C6CodecBudgets, C6PhysCaps, C6PhysError, C6Result, C6_PHYS_MAGIC, C6_PHYS_VERSION,
++};
++use mori_core::sherlock::helper_machine::c6_phys_data::{
++    C6DataTables, C6StateCaps, DATA_HEADER_LANES, DATA_ROW_LANES, DATA_SECTION_TAG, ENV_ROW_LANES,
++    REF_LANES, data_lanes_from_host, decode_data_row, decode_data_tables, decode_env_row,
++    decode_ref_row, encode_data_row, encode_data_tables, encode_env_row, encode_ref_row,
++    roundtrip_data_tables_owned,
++};
++use mori_core::sherlock::helper_machine::c6_phys_program::PROGRAM_SECTION_TAG;
++use mori_core::sherlock::helper_machine::complete_observation::{
++    DataFieldsSnapshot, DataSnapshot, ObservedStep, capture, record_step,
++};
++use mori_core::sherlock::helper_machine::shared::adt::{CtorIdC, TypeIdC};
++use mori_core::sherlock::helper_machine::shared::{
++    BoundsC, EnvCellC, ExtCapacitiesC, HelperResultC, LayoutCapacitiesC, RefC,
++};
++
++/// EXPECTED-ONLY: value of the private production `c6_phys_data::SECTION`.
++/// Used solely on the right-hand side of error expectations; never passed in.
++const SECTION: &str = "state_data";
++/// EXPECTED-ONLY: value of the private production `c6_phys_data::DATA_S`.
++const DATA_S: &str = "state.data";
++
++/// Local input fixture: the current Core `c6_phys::fixtures` blueprint (`#[cfg(test)]`
++/// `pub(crate)`, unreachable from this crate) reproduced value-for-value through
++/// public carriers. No `Admitted`/`MachineImage` internal is constructed here: both
++/// come only from the owner's public admission and its public `admit_run`.
++mod fixtures {
++    use mori_core::sherlock::helper_machine::shared::i128_class::KIntC;
++    use mori_core::sherlock::helper_machine::shared::owner_ext_source_program::{ExtDomain, ExtProgram};
++    use mori_core::sherlock::helper_machine::shared::owner_ext_t3_uses::{
++        ExtExpr, ExtFunction, ExtParamSrc, ExtValue,
++    };
++    use mori_core::sherlock::helper_machine::shared::owner_ext_type_builder::{
++        CtorDeclSrc, CtorFieldSrc, TypeDeclSrc, TypeExprSrc,
++    };
++    use mori_core::sherlock::helper_machine::shared::owner_host::host_owner_engine;
++    use mori_core::sherlock::helper_machine::shared::{
++        Admitted, BoundsC, CoreValue, ExtCapacitiesC, FinanceInput, LayoutCapacitiesC,
++        LayoutSchemaC, MachineImage, OwnerEngine, RunIntC, admit_ext_program,
++    };
++
++    /// Initial fuel; kept <= layout value_slots and max_reference_work.
++    pub(crate) const FUEL: u128 = 4096;
++
++    pub(crate) fn must<T, E>(result: Result<T, E>, message: &str) -> T {
++        match result { Ok(value) => value, Err(_) => panic!("{message}") }
++    }
++
++    fn lit(n: u128) -> ExtExpr {
++        ExtExpr::Literal { value: ExtValue::Core { value: CoreValue::UInt { n: KIntC::InRange(n) } } }
++    }
++    fn box_uint() -> TypeExprSrc {
++        TypeExprSrc::Apply { name: "Box".into(), args: vec![TypeExprSrc::UInt] }
++    }
++
++    /// `type Box<A> = MkBox { item: A }`, `type Pair = MkPair { fst: UInt, snd: Box<UInt> }`,
++    /// `fn mk(x: UInt) -> Pair { MkPair(x, MkBox(x)) }`, entry `let p = mk(7) in p`.
++    /// The call gives genuine ArgsF and nominal ReturnF pushes. `KMachineBoundValid`
++    /// schedules the ReturnF with the callee environment, so that push changes `env_root`.
++    fn nominal_program() -> ExtProgram {
++        let field = |name: &str, ty: TypeExprSrc| CtorFieldSrc { name: name.into(), ty };
++        let var = |name: &str| ExtExpr::Var { name: name.into() };
++        let pair = || TypeExprSrc::Named { name: "Pair".into() };
++        let mk = ExtFunction {
++            name: "mk".into(),
++            parameters: vec![ExtParamSrc { name: "x".into(), ty: TypeExprSrc::UInt }],
++            return_type: pair(),
++            body: ExtExpr::Construct {
++                ty: pair(), ctor: "MkPair".into(),
++                fields: vec![var("x"), ExtExpr::Construct { ty: box_uint(), ctor: "MkBox".into(), fields: vec![var("x")] }],
++            },
++        };
++        ExtProgram {
++            types: vec![
++                TypeDeclSrc { name: "Box".into(), parameters: vec!["A".into()], ctors: vec![CtorDeclSrc {
++                    name: "MkBox".into(), fields: vec![field("item", TypeExprSrc::Param { name: "A".into() })] }] },
++                TypeDeclSrc { name: "Pair".into(), parameters: Vec::new(), ctors: vec![CtorDeclSrc {
++                    name: "MkPair".into(),
++                    fields: vec![field("fst", TypeExprSrc::UInt), field("snd", box_uint())] }] },
++            ],
++            assets: Vec::new(), states: Vec::new(), inputs: Vec::new(), functions: vec![mk],
++            entry: ExtExpr::Let {
++                name: "p".into(),
++                value: Box::new(ExtExpr::Call { name: "mk".into(), args: vec![lit(7)] }),
++                body: Box::new(var("p")),
++            },
++        }
++    }
++
++    /// Real generic nominal admission and the owner's real `admit_run`.
++    pub(crate) fn admitted_run(stack_limit: usize) -> (Admitted, MachineImage) {
++        let bounds = BoundsC {
++            code_rows: 128, function_rows: 16, code_child_slots: 128, parameter_slots: 32,
++            pattern_rows: 32, match_plan_rows: 32, match_arm_rows: 32, type_rows: 16,
++            constructor_rows: 16, constructor_field_slots: 32, max_arity: 8, constant_nodes: 128,
++            constant_field_slots: 128, data_nodes: 128, data_field_slots: 128, environment_cells: 128,
++            frames: 64, helper_tasks: 64, serialization_bytes: 1_000_000, max_reference_work: 1_000_000,
++            max_helper_work: 1_000_000, step_cap: 10_000,
++        };
++        let layout = LayoutSchemaC {
++            layout_version: ("c6-phys-test".into(), "1".into()), field_id: None, widths: None,
++            scalar_layout_id: None, bounds,
++            capacities: LayoutCapacitiesC { name_rows: 128, name_bytes: 4096, occurrence_path_slots: 4096,
++                value_slots: 4096 },
++            ext_capacities: Some(ExtCapacitiesC { plan_case_slots: 64, field_path_slots: 64,
++                pattern_child_slots: 64, ..ExtCapacitiesC::all_zero() }),
++            boundary_capacities_present: false,
++        };
++        let (admitted, _report) = must(admit_ext_program(nominal_program(), ExtDomain::GENERIC_ABSENT,
++            &bounds, &layout, None), "generic nominal admission");
++        let image = must(host_owner_engine().admit_run(&admitted, &RunIntC::Nat(FUEL),
++            &RunIntC::Nat(stack_limit as u128), &FinanceInput::Absent), "admit run");
++        (admitted, image)
++    }
++}
++
++// ---------- local test helpers (verbatim from the 3A test module) ----------
++
++fn caps() -> C6StateCaps { C6StateCaps::test_caps() }
++fn f(start: usize, len: usize) -> DataFieldsSnapshot { DataFieldsSnapshot { start, len } }
++
++fn all_variants() -> C6DataTables {
++    C6DataTables {
++        data: vec![
++            DataSnapshot::U128 { n: u128::MAX }, DataSnapshot::U128 { n: 0 },
++            DataSnapshot::Bool { b: true }, DataSnapshot::Bool { b: false }, DataSnapshot::Nil,
++            DataSnapshot::Cons { fields: f(0, 2) }, DataSnapshot::Leaf { fields: f(2, 1) },
++            DataSnapshot::Branch { fields: f(3, 2) },
++            DataSnapshot::Constructor { type_id: TypeIdC(5), ctor_id: CtorIdC(6), fields: f(5, 3) },
++            DataSnapshot::Constructor { type_id: TypeIdC(4), ctor_id: CtorIdC(4), fields: f(7, 0) },
++        ],
++        data_fields: vec![RefC::Const(3), RefC::Data(3), RefC::Data(3), RefC::Const(0),
++            RefC::Data(0), RefC::Const(3), RefC::Data(9), RefC::Const(1)],
++        env: vec![EnvCellC { binder: 2, value: RefC::Data(8), previous: None },
++            EnvCellC { binder: 2, value: RefC::Const(8), previous: Some(0) },
++            EnvCellC { binder: 0, value: RefC::Data(0), previous: Some(1) }],
++        value_slots: vec![RefC::Data(9), RefC::Data(9), RefC::Const(9), RefC::Const(0)],
++    }
++}
++
++/// Changing any single lane must refuse or decode to a different value.
++fn every_lane_significant<const N: usize, T: PartialEq>(lanes: [u128; N], value: &T,
++    decode: fn(&[u128; N]) -> C6Result<T>) {
++    for at in 0..N {
++        let mut changed = lanes;
++        changed[at] ^= 0x55;
++        assert!(decode(&changed).map_or(true, |v| &v != value), "lane {at} was ignored");
++    }
++}
++
++// ---------- external observations ----------
++
++#[test]
++fn public3a_every_table_variant_and_raw_field_roundtrips_exactly() {
++    // SYNTHETIC codec vectors over every variant; not admitted images.
++    let t = all_variants();
++    let lanes = encode_data_tables(&t, &caps()).unwrap();
++    assert_eq!(lanes[..DATA_HEADER_LANES], [C6_PHYS_MAGIC, C6_PHYS_VERSION, DATA_SECTION_TAG, 10, 8, 3, 4]);
++    assert_eq!(lanes.len(), 7 + 10 * DATA_ROW_LANES + 8 * REF_LANES + 3 * ENV_ROW_LANES + 4 * REF_LANES);
++    assert_eq!(lanes[7..12], [0, u128::MAX, 0, 0, 0]);
++    assert_eq!(lanes[32..37], [3, 0, 0, 0, 2]);
++    assert_eq!(lanes[47..52], [6, 5, 6, 5, 3]);
++    assert_eq!(lanes[52..57], [6, 4, 4, 7, 0], "nonzero start of an empty slice is kept");
++    assert_eq!(lanes[57..61], [0, 3, 1, 3], "same-index Const and Data stay distinct");
++    assert_eq!(lanes[73..83], [2, 1, 8, 0, 0, 2, 0, 8, 1, 0], "None vs Some(0) previous");
++    let decoded = decode_data_tables(&lanes, &caps()).unwrap();
++    assert_eq!(decoded, t);
++    assert_eq!(encode_data_tables(&decoded, &caps()).unwrap(), lanes, "accepted lanes re-encode identically");
++    assert_eq!(roundtrip_data_tables_owned(&t, &caps()).unwrap(), t);
++    for row in &t.data { every_lane_significant(encode_data_row(row), row, decode_data_row); }
++    for cell in &t.env { every_lane_significant(encode_env_row(cell), cell, decode_env_row); }
++    for r in t.data_fields.iter().chain(&t.value_slots) {
++        every_lane_significant(encode_ref_row(*r), r, |l| decode_ref_row("state.ref", l));
++    }
++    let differs = |m: C6DataTables| assert_ne!(encode_data_tables(&m, &caps()).unwrap(), lanes);
++    let mut m = t.clone(); m.value_slots.swap(1, 2); differs(m);
++    let mut m = t.clone(); m.data_fields[0] = RefC::Data(3); differs(m);
++    let mut m = t.clone(); m.env[0].previous = Some(0); differs(m);
++    let mut m = t.clone();
++    m.data[9] = DataSnapshot::Constructor { type_id: TypeIdC(4), ctor_id: CtorIdC(4), fields: f(0, 0) };
++    differs(m);
++    let mut m = t; m.data[0] = DataSnapshot::U128 { n: u128::MAX - 1 }; differs(m);
++}
++
++#[test]
++fn public3a_refusals_follow_the_declared_first_error_order() {
++    let t = all_variants();
++    let lanes = encode_data_tables(&t, &caps()).unwrap();
++    let dec = |l: &[u128]| decode_data_tables(l, &caps());
++    let set = |pairs: &[(usize, u128)]| { let mut m = lanes.clone(); for &(k, v) in pairs { m[k] = v; } m };
++    fn cap<T>(section: &'static str, needed: usize, limit: usize) -> C6Result<T> {
++        Err(C6PhysError::CapacityExceeded { section, needed, limit })
++    }
++    assert_eq!(dec(&lanes[..6]), Err(C6PhysError::Truncated { section: SECTION, needed: 7, actual: 6 }));
++    assert_eq!(dec(&set(&[(0, 0), (2, 0)])), Err(C6PhysError::BadMagic { actual: 0 }));
++    assert_eq!(dec(&set(&[(1, 2)])), Err(C6PhysError::BadVersion { actual: 2 }));
++    assert_eq!(dec(&set(&[(2, PROGRAM_SECTION_TAG)])),
++        Err(C6PhysError::BadTag { section: SECTION, tag: PROGRAM_SECTION_TAG }));
++    // Structural counts precede count caps; count caps precede length.
++    assert_eq!(dec(&set(&[(3, 999), (4, u128::MAX)])),
++        Err(C6PhysError::UsizeOverflow { section: SECTION, value: u128::MAX }));
++    assert_eq!(dec(&set(&[(3, 257)])), cap("state.data", 257, 256));
++    assert_eq!(dec(&set(&[(3, 11)])), Err(C6PhysError::Truncated { section: SECTION, needed: 101, actual: 96 }));
++    let mut trailing = lanes.clone();
++    trailing.push(0);
++    assert_eq!(dec(&trailing), Err(C6PhysError::TrailingLanes { section: SECTION, extra: 1 }));
++    // Data rows at 7 + 5k: structural, row-relative lanes.
++    assert_eq!(dec(&set(&[(7, 7)])), Err(C6PhysError::BadTag { section: DATA_S, tag: 7 }));
++    assert_eq!(dec(&set(&[(18, 2)])), Err(C6PhysError::BadBool { section: DATA_S, value: 2 }));
++    assert_eq!(dec(&set(&[(28, 1)])), Err(C6PhysError::NonZeroPadding { section: DATA_S, lane: 1, value: 1 }));
++    assert_eq!(dec(&set(&[(34, 4)])), Err(C6PhysError::NonZeroPadding { section: DATA_S, lane: 2, value: 4 }));
++    // Within a row, structure precedes caps; earlier tables precede later ones.
++    assert_eq!(dec(&set(&[(48, 64), (49, u128::MAX)])),
++        Err(C6PhysError::UsizeOverflow { section: DATA_S, value: u128::MAX }));
++    assert_eq!(dec(&set(&[(48, 64), (88, 7)])), cap("state.data.type_id", 65, 64));
++    assert_eq!(dec(&set(&[(49, 256)])), cap("state.data.ctor_id", 257, 256));
++    assert_eq!(dec(&set(&[(51, 9)])), cap("state.data.fields", 9, 8));
++    assert_eq!(dec(&set(&[(50, 1022)])), cap("state.data.fields", 1025, 1024));
++    assert_eq!(dec(&set(&[(50, usize::MAX as u128)])),
++        Err(C6PhysError::UsizeOverflow { section: "state.data.fields", value: usize::MAX as u128 }));
++    // Ref, env and value-slot rows.
++    assert_eq!(dec(&set(&[(57, 2)])), Err(C6PhysError::BadTag { section: "state.data_fields", tag: 2 }));
++    assert_eq!(dec(&set(&[(77, 1)])), Err(C6PhysError::NonZeroPadding { section: "state.env", lane: 4, value: 1 }));
++    assert_eq!(dec(&set(&[(76, 2)])), Err(C6PhysError::BadTag { section: "state.env", tag: 2 }));
++    assert_eq!(dec(&set(&[(73, 256)])), cap("state.env.binder", 257, 256));
++    assert_eq!(dec(&set(&[(82, 256)])), cap("state.env.previous", 257, 256));
++    assert_eq!(dec(&set(&[(88, 7)])), Err(C6PhysError::BadTag { section: "state.value_slots", tag: 7 }));
++    // Const and Data references use their own tables.
++    let one = |r| C6DataTables { data: vec![], data_fields: vec![r], env: vec![], value_slots: vec![] };
++    let mut c = caps();
++    c.phys.max_data_nodes = 4;
++    c.phys.max_constants = 9;
++    assert!(encode_data_tables(&one(RefC::Const(8)), &c).is_ok());
++    assert_eq!(encode_data_tables(&one(RefC::Data(4)), &c), cap("state.data_fields.ref", 5, 4));
++    let mut l = encode_data_tables(&one(RefC::Data(3)), &c).unwrap();
++    l[8] = 4;
++    assert_eq!(decode_data_tables(&l, &c), cap("state.data_fields.ref", 5, 4));
++    // The encoder applies the same caps; the data-field limit is its own.
++    let mut tight = caps();
++    tight.max_data_field_slots = 7;
++    assert_eq!(encode_data_tables(&t, &tight), cap("state.data_fields", 8, 7));
++    assert_eq!(decode_data_tables(&lanes, &tight), cap("state.data_fields", 8, 7));
++    let mut wide = t;
++    wide.data[8] = DataSnapshot::Constructor { type_id: TypeIdC(64), ctor_id: CtorIdC(6), fields: f(5, 3) };
++    assert_eq!(encode_data_tables(&wide, &caps()), cap("state.data.type_id", 65, 64));
++    // Exact admitted mapping: no borrowed or defaulted limit.
++    let bounds = BoundsC { data_nodes: 5, data_field_slots: 11, helper_tasks: 13, ..BoundsC::default() };
++    let budgets = C6CodecBudgets { type_expr_nodes: 1, template_bytes: 2 };
++    let (lc, ext) = (LayoutCapacitiesC::default(), ExtCapacitiesC::all_zero());
++    assert_eq!(C6StateCaps::from_parts(&bounds, &lc, &ext, budgets), C6StateCaps {
++        phys: C6PhysCaps::from_parts(&bounds, &lc, &ext, budgets),
++        max_data_field_slots: 11, max_helper_tasks: 13 });
++    // [ext+] EXTERNAL-ONLY strengthening (not a 3A original): the linked rlib's
++    // convenience caps are exactly those every expectation above was derived from.
++    assert_eq!(caps(), C6StateCaps { phys: C6PhysCaps::test_caps(), max_data_field_slots: 1024,
++        max_helper_tasks: 64 });
++    assert_eq!((caps().phys.max_types, caps().phys.max_arity, caps().phys.max_data_nodes,
++        caps().phys.max_names, caps().phys.max_env_cells), (64, 8, 256, 256, 256));
++}
++
++#[test]
++fn public3a_captured_nominal_host_tables_roundtrip_and_preserve_host() {
++    // OWNER-REACHABLE: real generic nominal admission, real fixed-owner steps.
++    let (admitted, mut image) = fixtures::admitted_run(64);
++    let mut terminal = false;
++    for _ in 0..4096 {
++        match record_step(&admitted, &mut image) {
++            Ok(ObservedStep::Event(_)) => {}
++            Ok(ObservedStep::Terminal { .. }) => { terminal = true; break; }
++            Err(_) => panic!("owner step"),
++        }
++    }
++    assert!(terminal, "the nominal run reaches its terminal boundary");
++    let host = fixtures::must(capture(&admitted, &image), "capture");
++    let img = &host.image;
++    assert!(img.data.iter().any(|d| matches!(d, DataSnapshot::Constructor { .. })));
++    assert!(img.data_fields.iter().any(|r| matches!(r, RefC::Const(_))));
++    assert!(img.data_fields.iter().any(|r| matches!(r, RefC::Data(_))));
++    assert!(!img.env.is_empty() && !img.value_slots.is_empty());
++    // Admitted bounds/capacities of this host; the data section reads no ext limit.
++    let caps = C6StateCaps::from_parts(&host.admission.bounds, &host.admission.layout.capacities,
++        &ExtCapacitiesC::all_zero(), C6CodecBudgets { type_expr_nodes: 0, template_bytes: 0 });
++    let lanes = data_lanes_from_host(&host, &caps).unwrap();
++    let owned = C6DataTables::from_image(img);
++    assert_eq!(lanes, encode_data_tables(&owned, &caps).unwrap());
++    let decoded = decode_data_tables(&lanes, &caps).unwrap();
++    assert_eq!(decoded, owned);
++    assert_eq!(encode_data_tables(&decoded, &caps).unwrap(), lanes);
++    // Replace ONLY the four tables of a clone: the whole owned host is equal.
++    let mut rebuilt = host.clone();
++    C6DataTables { data: vec![], data_fields: vec![], env: vec![], value_slots: vec![] }
++        .replace_tables_of(&mut rebuilt.image);
++    assert_ne!(rebuilt, host);
++    decoded.replace_tables_of(&mut rebuilt.image);
++    assert_eq!(rebuilt, host);
++    // Root counters and other state are not in this section.
++    let mut other = host.clone();
++    other.image.alloc.data_nodes += 1;
++    other.image.active.data_fields += 1;
++    other.image.reference_cursor += 7;
++    other.image.frames.clear();
++    other.image.result = Some(HelperResultC::EnvMissing);
++    assert_eq!(data_lanes_from_host(&other, &caps).unwrap(), lanes);
++    // A table field change is visible.
++    let mut changed = host.clone();
++    changed.image.data_fields[0] = match changed.image.data_fields[0] {
++        RefC::Const(i) => RefC::Data(i), RefC::Data(i) => RefC::Const(i) };
++    assert_ne!(data_lanes_from_host(&changed, &caps).unwrap(), lanes);
++    let n = img.data_fields.len();
++    let mut tight = caps;
++    tight.max_data_field_slots = n - 1;
++    assert_eq!(data_lanes_from_host(&host, &tight),
++        Err(C6PhysError::CapacityExceeded { section: "state.data_fields", needed: n, limit: n - 1 }));
++    // [ext+] EXTERNAL-ONLY strengthening (not a 3A original): the public admission
++    // route carried exactly the local fixture's limits, so the Const<->Data flip
++    // above was refused or accepted under equal 128/128 index caps.
++    assert_eq!(host.admission.layout.bounds, host.admission.bounds);
++    assert_eq!(host.admission.layout.layout_version, ("c6-phys-test".to_string(), "1".to_string()));
++    assert_eq!(host.admission.layout.capacities, LayoutCapacitiesC { name_rows: 128, name_bytes: 4096,
++        occurrence_path_slots: 4096, value_slots: 4096 });
++    assert_eq!((caps.phys.max_constants, caps.phys.max_data_nodes, caps.phys.max_env_cells,
++        caps.max_data_field_slots), (128, 128, 128, 128));
++}
