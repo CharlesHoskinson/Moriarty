@@ -127,7 +127,7 @@ fn shared_subexpression_fanout_stops_at_the_preparation_budget() {
     }
     let program = Program {
         language: crate::LANGUAGE.into(), semantics: crate::SEMANTICS.into(),
-        name: "Fanout".into(), states: vec![], assets: vec![], expressions,
+        name: "Fanout".into(), states: vec![], assets: vec![], duties: vec![], expressions,
         actions: vec![crate::Action { name: "blow".into(), inputs: vec![],
             statements: vec![Statement::Emit { name: "out".into(), value: 14 }] }],
     };

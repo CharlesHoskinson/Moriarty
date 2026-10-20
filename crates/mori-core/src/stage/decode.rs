@@ -49,7 +49,13 @@ pub fn event(text: &str) -> Result<StageEvent, Error> {
 type Identity<'a> = (&'a AssetId, &'a str, &'a str);
 
 /// Source-fixed liability identities over every action of the program.
-fn registry(p: &Program) -> Result<BTreeMap<&str, Identity<'_>>, Error> {
+/// For `/2` this is exactly the former private `registry`. For `/3` it is
+/// that set union `Program.duties`, each duty asset name resolved to its
+/// declared exact `AssetId`. A duty-caused conflict uses
+/// `sequence_duty_declaration`; a statement-only conflict keeps `liability`.
+/// This must agree with `stage::sequence`-side registries if one is added
+/// later and with `runtime` liability identities for `/2`.
+pub(crate) fn registry_for(p: &Program) -> Result<BTreeMap<&str, Identity<'_>>, Error> {
     let mut identities = BTreeMap::new();
     for stmt in p.actions.iter().flat_map(|action| &action.statements) {
         if let Statement::Liability {
@@ -73,6 +79,31 @@ fn registry(p: &Program) -> Result<BTreeMap<&str, Identity<'_>>, Error> {
             }
         }
     }
+    if p.language == super::LANGUAGE_3 && p.semantics == super::SEMANTICS_3 {
+        for decl in &p.duties {
+            let id = asset_identity(p, &decl.asset).map_err(|_| {
+                Error::new(
+                    "sequence_duty_declaration",
+                    "External duty declaration is not admissible in this program.",
+                )
+            })?;
+            let identity = (id, decl.debtor.as_str(), decl.creditor.as_str());
+            if identities
+                .insert(decl.name.as_str(), identity)
+                .is_some_and(|existing| existing != identity)
+            {
+                return Err(Error::new(
+                    "sequence_duty_declaration",
+                    "External duty declaration is not admissible in this program.",
+                ));
+            }
+        }
+    } else if !p.duties.is_empty() {
+        return Err(Error::new(
+            "profile",
+            "Unsupported language or semantics identity.",
+        ));
+    }
     Ok(identities)
 }
 
@@ -86,7 +117,9 @@ fn asset_identity<'a>(p: &'a Program, name: &str) -> Result<&'a AssetId, Error> 
 
 /// R7: the legacy `scenario_snapshot` predicates applied to a resumed boundary
 /// without normalisation. Codes and messages follow `scenario_snapshot`;
-/// ordering failures are new `balance`/`liability` messages.
+/// ordering failures are new `balance`/`liability` messages. The registry
+/// step is profile-dispatched only through `registry_for`: `/2` uses the
+/// statement registry, `/3` uses REG3. Every other predicate is unchanged.
 ///
 /// Balances keep the baseline predicate: every account the whole action
 /// transfers from or to must be present, and other declared-asset accounts
@@ -101,7 +134,6 @@ pub fn canonical_boundary(
     let (Some(a), Some(plan)) = (p.actions.get(action), sp.plan().actions.get(action)) else {
         return Err(Error::new("stage_site", "Unknown staged action."));
     };
-    // (d) Snapshot has no inputs component (U-1); R4 alone binds captures.
     let _ = captures;
     if b.balances.len() > 4096 || b.liabilities.len() > 1024 {
         return Err(Error::new(
@@ -109,7 +141,6 @@ pub fn canonical_boundary(
             "Scenario exceeds 4,096 balances or 1,024 liabilities.",
         ));
     }
-    // (a) States: exactly the declared states, each of its declared type.
     if b.state.len() != p.states.len() {
         return Err(Error::new(
             "state",
@@ -128,8 +159,6 @@ pub fn canonical_boundary(
             ));
         }
     }
-    // (b) Balances: declared assets, valid accounts, strictly ascending by
-    // (asset, account), which also excludes duplicates.
     let ids: BTreeSet<&AssetId> = p.assets.iter().map(|a| &a.identity).collect();
     let mut previous: Option<(&AssetId, &str)> = None;
     for balance in &b.balances {
@@ -176,9 +205,7 @@ pub fn canonical_boundary(
             }
         }
     }
-    // (c) Liabilities: strictly ascending by name; every name is a source
-    // liability of this program with exactly its registered identity.
-    let registry = registry(p)?;
+    let registry = registry_for(p)?;
     let mut previous: Option<&str> = None;
     for l in &b.liabilities {
         if !ids.contains(&l.asset) {
@@ -210,7 +237,6 @@ pub fn canonical_boundary(
             ));
         }
     }
-    // (e) Trace cells over the whole action, as at start.
     let added = a
         .statements
         .iter()

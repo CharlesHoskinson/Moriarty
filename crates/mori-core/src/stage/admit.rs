@@ -6,10 +6,14 @@
 //! segment, effects or continuation; the evaluator only ever sees a clone of
 //! the boundary, so the caller's input stays valid for a corrected retry (C10).
 use super::{
-    CONTINUATION_FORMAT, Continuation, NamedValue, PendingFrame, STAGE_EVENT_FORMAT,
-    StageEvent, StageLogical, StageOutcome, StageRejection, StageSegment, StagedProgram, cost,
-    decode, digest, profile, residual,
+    CONTINUATION_FORMAT, Continuation, LANGUAGE_3, NamedValue, PendingFrame, SEMANTICS_3,
+    STAGE_EVENT_FORMAT, StageEvent, StageLogical, StageOutcome, StageRejection, StageSegment,
+    StagedProgram, cost, decode, digest, profile, residual,
 };
+
+#[cfg(test)]
+#[path = "admit_v3_tests.rs"]
+mod admit_v3_tests;
 use crate::runtime::{self, SegmentEntry, SegmentRun};
 use crate::{Error, LOGICAL_COST_PROFILE_2, Scenario, UInt};
 
@@ -126,7 +130,10 @@ impl Admitted<'_> {
                 captures_out,
             } => {
                 let planned = *plan.segment_cost.get(segment).ok_or_else(|| {
-                    fail(Error::new("stage_logical", "Segment is absent from the stage plan."))
+                    fail(Error::new(
+                        "stage_logical",
+                        "Segment is absent from the stage plan.",
+                    ))
                 })?;
                 cost::require_static(meter, planned).map_err(fail)?;
                 let committed = cost::committed_after(plan, segment).map_err(fail)?;
@@ -158,7 +165,7 @@ impl Admitted<'_> {
                             action: action.clone(),
                             frame_pre,
                             frame_post,
-                            execution,
+                            execution: *execution,
                         },
                         committed,
                         attempted,
@@ -202,7 +209,7 @@ impl Admitted<'_> {
                         action: action.clone(),
                         frame_pre,
                         frame_post,
-                        execution,
+                        execution: *execution,
                     }),
                     continuation,
                     attempted,
@@ -232,7 +239,12 @@ pub fn start(
         .actions
         .get(index)
         .filter(|plan| plan.action == action)
-        .ok_or_else(|| refuse(Error::new("stage_site", "Action is absent from the stage plan.")))?;
+        .ok_or_else(|| {
+            refuse(Error::new(
+                "stage_site",
+                "Action is absent from the stage plan.",
+            ))
+        })?;
     let pre = runtime::scenario_snapshot(sp.program(), selected, &scenario).map_err(refuse)?;
     let limit = cost::start_preflight(plan, cap).map_err(refuse)?;
     let mut inputs = Vec::with_capacity(selected.inputs.len());
@@ -248,9 +260,19 @@ pub fn start(
             value,
         });
     }
-    // A boundary that R7 would refuse must not start an awaiting action:
-    // its continuation could never be resumed (H25).
-    if !plan.sites.is_empty() {
+    // F3 owner choice (UNADOPTED, see proposed D1-D1A correction): bare
+    // `/3` stage admission is uniform, not Sequence-only. For `/3` the
+    // REG3 canonical boundary applies for awaiting and non-awaiting
+    // actions alike, so a source-declared duty identity is checked at
+    // start in both cases and a later resume cannot diverge from the
+    // start domain (H25). This narrows bare `/3` relative to a purely
+    // Sequence-layer reading of D1A and requires root adoption of the
+    // corrected clause; it weakens no `/1` or `/2` predicate. `/2` keeps
+    // its legacy start domain exactly: only an awaiting `/2` action gets
+    // this preflight.
+    if !plan.sites.is_empty()
+        || (sp.program().language == LANGUAGE_3 && sp.program().semantics == SEMANTICS_3)
+    {
         decode::canonical_boundary(sp, index, &inputs, &pre).map_err(refuse)?;
     }
     let mut meter = cost::segment_meter(limit);
@@ -301,8 +323,10 @@ pub fn resume(
             "Unsupported continuation format or logical profile.",
         ));
     }
-    // R2
-    profile::require_core2(sp.program()).map_err(refused)?;
+    // R2: profile-dispatched staged admission. `/2` uses `require_core2`
+    // and `/3` uses `require_core3` through `require_staged`; no profile
+    // is converted and every other profile keeps the same profile error.
+    profile::require_staged(sp.program()).map_err(refused)?;
     if !digest::matches(&c.program_hash, &sp.program_hash())
         || !digest::matches(&c.plan_hash, &sp.plan_hash())
     {
@@ -315,8 +339,16 @@ pub fn resume(
     let Some(index) = sp.action_index(&c.action) else {
         return Err(refuse("stage_site", "Continuation action does not exist."));
     };
-    let Some(plan) = sp.plan().actions.get(index).filter(|plan| plan.action == c.action) else {
-        return Err(refuse("stage_site", "Action is absent from the stage plan."));
+    let Some(plan) = sp
+        .plan()
+        .actions
+        .get(index)
+        .filter(|plan| plan.action == c.action)
+    else {
+        return Err(refuse(
+            "stage_site",
+            "Action is absent from the stage plan.",
+        ));
     };
     if c.site == 0 || usize::from(c.site) > plan.sites.len() {
         return Err(refuse(
@@ -326,7 +358,9 @@ pub fn resume(
     }
     let site = &plan.sites[usize::from(c.site) - 1];
     // R4
-    if !layout_matches(&c.captures, site.captures.iter(), |s| (s.name.as_str(), s.ty)) {
+    if !layout_matches(&c.captures, site.captures.iter(), |s| {
+        (s.name.as_str(), s.ty)
+    }) {
         return Err(refuse(
             "stage_capture",
             "Captures differ from the pending site layout.",

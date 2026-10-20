@@ -17,6 +17,31 @@ pub struct Args {
 
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     let source = super::core_io::read_source(&args.file)?;
+    if matches!(
+        mori_core::language_v3(&source),
+        Ok(mori_core::stage::LANGUAGE_3)
+    ) {
+        if args.target.is_some() {
+            return Err(super::core_io::operation(
+                "moriarty/3 target inspection is unsupported; no Core/3 compiler enforcement map is available",
+            ));
+        }
+        let staged = match mori_core::stage::load_v3(&source) {
+            Ok(staged) => staged,
+            Err(error) => {
+                super::simulate::print_stage_report(json!({"status":"rejected", "error":error}))?;
+                return Ok(ExitCode::FAILURE);
+            }
+        };
+        let program = staged.program();
+        super::simulate::print_stage_report(json!({
+            "status": "accepted", "language": program.language, "semantics": program.semantics,
+            "agreement": program.name, "states": program.states, "assets": program.assets,
+            "duties": program.duties, "actions": program.actions, "expressions": program.expressions,
+            "stage_plan": staged.plan(), "enforcement_report": null
+        }))?;
+        return Ok(ExitCode::SUCCESS);
+    }
     if args.target.is_none()
         && mori_core::language(&source).is_ok_and(|language| language == "moriarty/2")
     {

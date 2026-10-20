@@ -184,6 +184,7 @@ fn dag(distinct: bool, twice: bool) -> Program {
         name: "Dag".into(),
         states: vec![],
         assets: vec![],
+        duties: vec![],
         expressions,
         actions: vec![Action {
             name: "run".into(),
