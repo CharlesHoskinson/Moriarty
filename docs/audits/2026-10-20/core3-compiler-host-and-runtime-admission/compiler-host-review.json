@@ -1,0 +1,173 @@
+{
+  "reviewToken": "core3-full-cli-compiler-host-owner-opus48-20261020-a1-whole-v1",
+  "reviewedSubjectSha256": "224b805372323fa3bf0541b40084c39c982a887776f094cb4bed965402c4314a",
+  "operationSha256": "92aebf43e8101e294e2b6d5c66ed098d986763a63ffebcbddc1c574cb65ca1f1",
+  "reportedIdentity": "Opus 4.8 (claude-opus-4-8), high effort \u2014 designated security owner per H010/H012; actual model recorded honestly.",
+  "decision": "PERMIT_EXACT_COMPILER_HOST_OPERATION_WITH_STATED_LIMITS",
+  "effectAndAuthorityAssessment": "This is a compile-only operation. The argv carries `--no-run` (H043), so Cargo compiles the real unmodified `mori` binary graph and exactly the `mcp_check_stdio` and `lsp` integration harnesses and stops before executing any test function, server, or product runtime. The enumerated host effects \u2014 the 37 build-script binaries, the 33 proc-macro expansions (including halo2derive host BigUint modular arithmetic producing field constants and the SDK serialize/storage/base-crypto/ledger-static token-construction macros), native C/assembly compilation, archiving and linking of blst (H019: cc.compile(\"blst\"), host ADX/CPUID/flag behavior) and AWS-LC (H018 get_builder \u2192 bundled CC/CMake or system path), the cc jobserver (H038/H039), AWS-LC default system discovery via pkg-config without OPENSSL_* vars (H018/H024), the conditional guarded GNU memcmp diagnostic (H021), and the onchain-runtime default vendored branch that skips Scheme generation (H020) \u2014 are all ordinary compiler/build-host effects. None of them is an SDK runtime operation. The governing execution boundary (H009/H010/H011) blocks a specific, enumerated set of SDK RUNTIME API executions: relation/circuit checks, k()/degree queries, VM/transcript execution, keygen, proving, native verification, deploy/ledger, and private-key/PK/SRS/cache actions. A `--no-run` compile reaches none of those; compiling the libraries that contain those APIs is categorically distinct from invoking them, and the operation's excludedActions enforce that distinction structurally. mori reaches SDK/native source only because mori-backend and mori-ledger are normal, nonoptional dependencies (H002); this is a larger compile surface than prior SDK-free Core/diagnostics builds, not a crossing of the runtime boundary. I apply the present whole execution-focus body (H009), which records the October-18 beta override at its head and expressly qualifies the historical native-zero/human-only records; I do not rely on the absent canonical assignment file (H044) and reinstate no removed human-only step. The product contract (H008: author/compile/prove/publish/deploy without maintainer approval) and AGENTS.md (H007: routine execution decisions without repeated permission) treat compilation as ordinary, permissionless work. No feature weakening, probe suppression, AWS-LC override, or system/bundled-linkage assumption is inserted; the FIPS/link-run probe, bindgen/SSL, and nonvendored Scheme remain visible non-selected source branches, not requested execution. On that basis the enumerated host effects are permitted for this exact bounded 90s TERM+5/MAX1 operation. This permit asserts no success, resource sufficiency, actual compiler/system-library selection, backend identity, TCB soundness, or any cryptographic/financial/SDK acceptance; a produced compile result would require separate result inspection, and protocol/test execution remains a later, separately-selected decision with F3/B1/PR310 and all native/proof/financial/ledger acceptance left open.",
+  "permittedHostEffects": [
+    "Compilation of the real unmodified mori binary graph and the two named integration-test harness crates (mcp_check_stdio, lsp) to the --no-run stage only.",
+    "Host execution of the 37 selected build-script binaries: rustc version/cfg/metadata/LLVM-IR probes, OUT_DIR scratch files, generated private.rs/version.expr, rerun/link metadata emission, and cleanup.",
+    "rustc expansion of the 33 selected proc-macros, including SDK families and halo2derive host BigUint modular-exponentiation field-constant construction and SDK token/serialization/storable code emission.",
+    "Native C/assembly compilation, archiving and linking via cc and the cc jobserver for blst (server.c + architecture assembly.S, host ADX/CPUID/flag probing) and AWS-LC (bundled CC source list path or CMake fallback).",
+    "AWS-LC default system discovery (system_detect::detect_system_awslc, pkg-config openssl/aws-lc/libcrypto/libcrypto-awslc) despite absent OPENSSL_* variables, including candidate header/library probing whose acceptance is unobserved.",
+    "The conditional, compiler-family/version/non-cross-guarded GNU memcmp diagnostic: compilation of memcmp_invalid_stripped_check.c and, only where its guards are satisfied, execution of that single probe executable.",
+    "onchain-runtime default vendored branch: rerun metadata emission and CARGO_FEATURE_VENDORED read, skipping the nonvendored scheme --script generate-rust-macros.ss generation.",
+    "Writes confined to the owned CARGO_HOME, the existing J-only CARGO_TARGET_DIR cache (incl. .rustc_info.json), OUT_DIR scratch, and the owned future TMPDIR capture root; capture of first exit, full stdout Cargo JSON and stderr."
+  ],
+  "excludedActions": [
+    "Execution of any product/test function or of the real mori/MCP/LSP server (operation halts at --no-run).",
+    "Any SDK prover/VM/transcript/relation-check/model-degree/k/keygen/parameter/SRS/PK/cache execution.",
+    "Any wallet/ledger/deploy/native-verification runtime action.",
+    "The three still-unselected financial-runtime positives and any language financial evaluation.",
+    "Feature or dependency weakening, --no-default-features edge removal, or vendored-Scheme toggling.",
+    "Native compiler-probe suppression, AWS-LC USE_SYSTEM/override insertion, or any assumed system-vs-bundled linkage selection.",
+    "Network fetch or package update (offline is software Cargo behavior only; no OS network isolation is claimed) and any Git mutation.",
+    "Any budget/ceiling increase or reset of MAX1/native600/k17/90s counters, and any automatic retry.",
+    "Any action by the reviewer: no build/compile/probe/test/network/Git/source/graph invocation was or will be performed in this review."
+  ],
+  "preconditions": [
+    "Use the exact pinned cargo/rustc/rustdoc 1.99 toolchain and the closed replacement environment exactly as a full replacement (not an overlay), retaining the repaired-vendor source.scrapling-custody --config override to avoid the prior missing-LSP offline refusal.",
+    "Reuse only the existing J-only owned CARGO_TARGET_DIR cache; never the original I/N targets. Cache reuse, latency and resource fit are not guaranteed.",
+    "The root-owned future capture/TMPDIR root must exist before launch (H043 records futureRootCreatedByPreparer=false); the preparer did not create it.",
+    "Preserve first exit, full stdout+stderr, complete Cargo JSON, EOF/reaping, owned PGID/SID cleanup, and all source/vendor/lock/tool pre- and post-pins; bind actual emitted binary/harness artifact identities, CARGO_BIN_EXE_mori path and selected features only after the operation, not before.",
+    "No flag/feature/source/control change and no new resource decision may be folded into this operation; any such change is a different proposed operation and is not covered by this permit."
+  ],
+  "missingNamedControls": [],
+  "anchors": [
+    {
+      "bodyId": "H043",
+      "locator": "argv",
+      "quote": "\"--no-run\""
+    },
+    {
+      "bodyId": "H043",
+      "locator": "excludedActions[0]",
+      "quote": "Product/test functions and real mori/MCP/LSP server execution"
+    },
+    {
+      "bodyId": "H009",
+      "locator": "Opus-owned execution boundary",
+      "quote": "No SDK relation/circuit checks, model/degree/k queries, VM/transcript execution, key generation, proving, native verification, deploy/ledger actions or private-key/PK/SRS/cache actions are authorized by this guidance."
+    },
+    {
+      "bodyId": "H009",
+      "locator": "Current beta operator override \u2014 October18UTC",
+      "quote": "removes human-only operator/tier approval requirements for authorized beta work"
+    },
+    {
+      "bodyId": "H008",
+      "locator": "opening paragraph",
+      "quote": "Any developer may author, compile, prove, publish and deploy programs in the supported language without approval from Moriarty maintainers"
+    },
+    {
+      "bodyId": "H002",
+      "locator": "Why compilation includes SDK/native build work",
+      "quote": "declares mori-backend and mori-ledger as normal, nonoptional dependencies."
+    },
+    {
+      "bodyId": "H019",
+      "locator": "main() blst compile",
+      "quote": "cc.files(&file_vec).compile(\"blst\");"
+    },
+    {
+      "bodyId": "H018",
+      "locator": "get_builder",
+      "quote": "if let Some(system_lib) = system_detect::detect_system_awslc(manifest_dir) {"
+    },
+    {
+      "bodyId": "H024",
+      "locator": "module doc precedence",
+      "quote": "pkg-config (`openssl`, `aws-lc`, `libcrypto`, then `libcrypto-awslc`)"
+    },
+    {
+      "bodyId": "H021",
+      "locator": "memcmp_check",
+      "quote": "let result = execute_command(exec_path.as_os_str(), &[]);"
+    },
+    {
+      "bodyId": "H042",
+      "locator": "tools[cc].resolvedPath / noExecutableInvoked",
+      "quote": "\"resolvedPath\": \"/usr/bin/x86_64-linux-gnu-gcc-15\""
+    },
+    {
+      "bodyId": "H004",
+      "locator": "root result",
+      "quote": "\"laterCompilationOrExecutionAdmission\": false"
+    },
+    {
+      "bodyId": "H044",
+      "locator": "missingCitedOverride",
+      "quote": "J/raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md absent; also absent at active W/main."
+    },
+    {
+      "bodyId": "H012",
+      "locator": "authorization paragraph",
+      "quote": "both `claude-opus-5-5` and `claude-opus-4-8` are authorized at high effort"
+    }
+  ],
+  "readScope": {
+    "whole": [
+      "H001",
+      "H002",
+      "H003",
+      "H004",
+      "H005",
+      "H006",
+      "H007",
+      "H008",
+      "H009",
+      "H010",
+      "H011",
+      "H012",
+      "H013",
+      "H014",
+      "H015",
+      "H016",
+      "H017",
+      "H018",
+      "H019",
+      "H020",
+      "H021",
+      "H022",
+      "H023",
+      "H024",
+      "H025",
+      "H026",
+      "H027",
+      "H028",
+      "H029",
+      "H030",
+      "H031",
+      "H032",
+      "H033",
+      "H034",
+      "H035",
+      "H036",
+      "H037",
+      "H038",
+      "H039",
+      "H040",
+      "H041",
+      "H042",
+      "H043",
+      "H044"
+    ],
+    "partial": [],
+    "unread": [],
+    "optionalTCBQualification": "All 44 mandatory bodies were read whole. The optional pinned TCB \u2014 145 source-context files including 68 manifests, both SDK macro closures, and generic compiler/native helper code \u2014 is physically supplied/indexed but was not read or audited here. Digest equality is not used as semantic proof; no exhaustive SDK/compiler/TCB soundness reading is claimed. Native transitive headers/assembly and generic Rust/compiler/dynamic-library behavior remain TCB beyond this classification."
+  },
+  "limitations": [
+    "The owner has not read the optional pinned TCB (145 source-context files, 68 manifests, SDK macro closures, generic compiler/native helpers); no SDK security/soundness proof is made or implied.",
+    "Tool metadata (H042) is filesystem identity only; no cargo/rustc/C-compiler/assembler/ar/cmake/pkg-config or version call was made. Actual compiler version, driver internal selection, memcmp-probe reachability, system-vs-bundled AWS-LC linkage, cache hits, exact compiler unit graph, and host invocation count are unestablished. (cc resolves to gcc-15 by file identity only; if gcc-15 is actually invoked, the memcmp version gate in H021 would skip the probe \u2014 this is possible, not asserted.)",
+    "Offline Cargo is software behavior, not OS network isolation; -j1/jobserver is not a hard CPU/memory/disk bound. No resource adequacy, latency, or success is guaranteed; the 90s TERM+5/MAX1 bound is the operation's bound, not a sufficiency guarantee.",
+    "The metadata-tree actual (H004/H005) invoked rustc metadata queries and wrote .rustc_info.json but grants no compilation/execution admission; cache warmth is not assumed.",
+    "The canonical October-18 beta-override assignment file is absent in J/W/main (H044); admission rests on the present whole execution-focus body (H009) that records and applies the override. No human-only step is reinstated and no override text is invented.",
+    "A produced compile result (binary/harness ELF identities, selected features, source/vendor/tool postpins) must be inspected separately; protocol/test execution is a later, separately-selected decision. F3/B1/PR310 and all financial/native/proof/compiler/ledger/product acceptance stay open.",
+    "This permit binds only the exact operationSha256 argv/env/vendor/lock/tool identities; any deviation voids it."
+  ],
+  "dissent": [
+    "A conservative reading could treat the absent canonical October-18 override file (H044) as grounds for MISSING_NAMED_CONTROLS, requiring the operative override body be present/identified before admission. I resolved this by applying the present whole execution-focus authority (H009), which itself records the override and, independently, limits the blocked boundary to SDK runtime operations \u2014 so compilation is not blocked even on the pre-override reading.",
+    "A stricter reviewer could withhold permission until OS-level memory/disk/network isolation and a separately-recorded resource decision for the 90s compile bound are established. I treat the 90s TERM+5/MAX1 as the bound of the operation itself (not a ceiling change or native600/k17 reset) and classify resource isolation as a limitation rather than an admission blocker, consistent with the instruction not to fold a new resource decision into this permit."
+  ]
+}
