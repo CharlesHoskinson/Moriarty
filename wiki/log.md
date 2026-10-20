@@ -1270,3 +1270,8 @@ Daml completion verification: 63 source-grounded provisional claims linked to im
 2026-09-28 — MIL/2 drafted against the nine-reviewer review. Escrow as a transition relation with per-witness exclusivity and a priority field; acceptance refinement replacing monotone completion; evidence as a type index with source-set propagation; Φ formation and totality; Φ₀/Φ₁ split with Φ₀ frozen and Φ₁ deferred; completed footprint cells, derived and checked; fallback deleted; caps as numbers. Five owner decisions taken with reversal costs recorded. Every claim tagged checked/obligation/deferred; six obligations outstanding before freeze. CLM-0992. Specified-only; nothing committed.
 
 2026-10-01 — Filed pinned Compact0.35/ledger9 source collection SRC-0115 and native financial pipeline working snapshot. Preserved original failed fetch and constructor/race gaps; native check/proof and financial ledger acceptance remain open. PR13 signed-intent delivery supersedes its historical pending-review snapshot.
+
+
+## 2026-10-20 — Sherlock UPDATE016 source intake
+
+Prepared the [wiki-scoped atlas continuation](research/sherlock-circuit-atlas/index.md) and exact Muse response capture with native portable source identities. Historical wiki-llm notes and UPDATE015 failure stay unchanged. The source/status/provenance and existing transaction review are separate from site launch, circuit security, SDK/native or fullgoal acceptance.

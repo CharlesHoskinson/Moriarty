@@ -339,3 +339,8 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 - [Whole-language design review and integration gaps](research/language-design-review/index.md)
 
 Historical preparation snapshot, 2026-10-01: [[wiki/sessions/native-financial-kernel-2026-10-01|Native financial work]] recorded reviewed actual keyless preparation and conditional Preview published-format incompatibility; proof/application/authentication gates were open at that checkpoint; R4/R5 above supersedes the local fixture proof/application gaps.
+
+
+## Sherlock circuit atlas continuation —2026-10-20
+
+[The wiki-scoped concept log](research/sherlock-circuit-atlas/index.md) preserves the historical atlas and contains designatedMuse author prose with separate engineering metadata. No site launch or implementation acceptance is claimed.
