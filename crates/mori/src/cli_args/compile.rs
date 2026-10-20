@@ -19,12 +19,15 @@ pub struct Args {
     /// Select the draft or nominal program's sole closed entry; no external inputs
     #[arg(long, requires = "execution_profile", conflicts_with = "action")]
     pub entry: bool,
-    /// Exact parameter-free source action for selected Sherlock preparation
+    /// Exact source action; without --execution-inputs it must be parameter-free
     #[arg(long, requires = "execution_profile")]
     pub action: Option<String>,
     /// Exact configuration for the selected source profile; no numerical defaults
     #[arg(long, requires = "execution_profile")]
     pub execution_config: Option<PathBuf>,
+    /// Typed input map for Core/1 action binding; values remain visible in the artifact
+    #[arg(long, value_name = "FILE", requires_all = ["execution_profile", "action"], conflicts_with = "entry")]
+    pub execution_inputs: Option<PathBuf>,
     /// Explicit host observation after actual preparation/admission
     #[arg(long, requires = "execution_profile")]
     pub observe: bool,

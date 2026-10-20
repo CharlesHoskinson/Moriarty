@@ -95,7 +95,20 @@ pub struct SourceIdentity {
     pub action: String, pub action_index: String, pub source_digest: String,
 }
 #[derive(Serialize)]
-pub struct InputPolicy { pub kind: &'static str, pub declared: Vec<String>, pub supplied: Vec<String> }
+pub struct InputPolicy {
+    pub kind: &'static str,
+    pub declared: Vec<String>,
+    pub supplied: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding: Option<InputBinding>,
+}
+/// Visible concrete entry arguments and the digest of the original input text.
+/// Values bind an input-specific admitted program, not private witnesses.
+#[derive(Serialize)]
+pub struct InputBinding {
+    pub values: BTreeMap<String, crate::Value>,
+    pub file_digest: String,
+}
 #[derive(Serialize)]
 pub struct ConfigIdentity { #[serde(flatten)] pub fields: ExecutionConfig, pub file_digest: String }
 #[derive(Serialize)]
@@ -188,20 +201,61 @@ pub fn compile_host(
     target_source: &str,
     observe: bool,
 ) -> Result<CompileArtifact, CompileFailure> {
+    compile_host_mode(source, action_name, config_source, target_source,
+        InputMode::LegacyEmpty, observe)
+}
+
+/// Bind an explicit typed map through the existing scalar prepare/run consumer.
+/// Uses the same strict JSON and Value/UInt decoding as other Core inputs.
+/// Typed values remain visible; no Scenario state, private witness, new guard,
+/// native exporter or fixed program identity is introduced by this route.
+pub fn compile_host_with_inputs(
+    source: &str,
+    action_name: &str,
+    config_source: &str,
+    target_source: &str,
+    inputs_source: &str,
+    observe: bool,
+) -> Result<CompileArtifact, CompileFailure> {
+    compile_host_mode(source, action_name, config_source, target_source,
+        InputMode::ExplicitTypedMap(inputs_source), observe)
+}
+
+enum InputMode<'a> { LegacyEmpty, ExplicitTypedMap(&'a str) }
+
+fn compile_host_mode(
+    source: &str,
+    action_name: &str,
+    config_source: &str,
+    target_source: &str,
+    mode: InputMode<'_>,
+    observe: bool,
+) -> Result<CompileArtifact, CompileFailure> {
     let config = parse_config(config_source)?;
     let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
     let target_descriptor = crate::json::parse(target_source)
         .map_err(|error| CompileFailure::core("config", error))?;
     validate_config(&consumer)
         .map_err(|error| CompileFailure::consumer(ConsumerError::HostGuard(error)))?;
+    // New mode only: config/target/config policy retain precedence. Decode the
+    // entire map before source parsing; original codec failures keep their text.
+    let (inputs, binding_digest) = match mode {
+        InputMode::LegacyEmpty => (BTreeMap::<String, crate::Value>::new(), None),
+        InputMode::ExplicitTypedMap(text) => {
+            let value = crate::json::parse(text)
+                .map_err(|error| CompileFailure::core("inputs", error))?;
+            let inputs: BTreeMap<String, crate::Value> = serde_json::from_value(value)
+                .map_err(|error| CompileFailure::input("inputs", error.to_string()))?;
+            (inputs, Some(crate::intent::hash_bytes(text.as_bytes())))
+        }
+    };
     let program = crate::parse(source).map_err(|error| CompileFailure::core("parse", error))?;
     preflight_source_global(&program, &consumer).map_err(CompileFailure::consumer)?;
     let action_index = program.actions.iter().position(|action| action.name == action_name)
         .ok_or_else(|| CompileFailure::input("select", format!("unknown action: {action_name}")))?;
-    let inputs = BTreeMap::<String, crate::Value>::new();
     let action = preflight_action_inputs(&program, action_index, &inputs, &consumer)
         .map_err(CompileFailure::consumer)?;
-    if !action.inputs.is_empty() {
+    if binding_digest.is_none() && !action.inputs.is_empty() {
         return Err(CompileFailure {
             stage:"select", actual_error:json!({"unsupported":"parameterized-action",
                 "action":action.name, "action_index":action_index.to_string(),
@@ -209,6 +263,12 @@ pub fn compile_host(
             events_forwarded:"0".into(), completed:false,
         });
     }
+    let (kind, declared, supplied) = if binding_digest.is_some() {
+        ("explicit-typed-map", action.inputs.iter().map(|input| input.name.clone()).collect(),
+            inputs.keys().cloned().collect())
+    } else {
+        ("parameter-free", vec![], vec![])
+    };
     // Each branch owns exactly one admission/image pair. In observe mode the
     // pair comes only from run_scalar_action, never a separate first preparation.
     let (preparation, admission, observation) = if observe {
@@ -242,7 +302,8 @@ pub fn compile_host(
             agreement:program.name, action:action_name.to_owned(), action_index:action_index.to_string(),
             source_digest:crate::intent::hash_bytes(source.as_bytes()) },
         execution_profile:EXECUTION_PROFILE,
-        input_policy:InputPolicy { kind:"parameter-free", declared:vec![], supplied:vec![] },
+        input_policy:InputPolicy { kind, declared, supplied,
+            binding:binding_digest.map(|file_digest| InputBinding { values:inputs, file_digest }) },
         config:ConfigIdentity { fields:config.clone(), file_digest:crate::intent::hash_bytes(config_source.as_bytes()) },
         target:TargetDescriptor { descriptor:target_descriptor,
             file_digest:crate::intent::hash_bytes(target_source.as_bytes()) },

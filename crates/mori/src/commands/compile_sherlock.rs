@@ -29,6 +29,10 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
                     }), evaluation_performed: false, events_forwarded: "0".into(), completed: false,
                 },
             })?;
+        if args.execution_inputs.is_some() && !matches!(&selection, SourceSelection::CoreAction(_)) {
+            return Err(CompileFailure::input("select",
+                "--execution-inputs is supported only for Core/1 action compilation"));
+        }
         if matches!(&selection, SourceSelection::DraftEntry) && args.observe {
             return Err(CompileFailure::input("select",
                 "draft preparation is compile-only; --observe is unsupported"));
@@ -44,9 +48,15 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
         // Target bytes are an explicit descriptor and digest, not native support.
         let target = core_io::read_source(&args.target)
             .map_err(|error| CompileFailure::input("config", error.to_string()))?;
+        let inputs = args.execution_inputs.as_deref().map(core_io::read_source).transpose()
+            .map_err(|error| CompileFailure::input("inputs", error.to_string()))?;
         let artifact = match selection {
             SourceSelection::CoreAction(action) => SelectedSherlockArtifact::Core(
-                host::compile_host(source, action, &config, &target, args.observe)?),
+                if let Some(inputs) = inputs.as_deref() {
+                    host::compile_host_with_inputs(source, action, &config, &target, inputs, args.observe)?
+                } else {
+                    host::compile_host(source, action, &config, &target, args.observe)?
+                }),
             SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
                 host::compile_draft_host(source, &config, &target)?),
             SourceSelection::NominalEntry => if body_typed_nominal {
