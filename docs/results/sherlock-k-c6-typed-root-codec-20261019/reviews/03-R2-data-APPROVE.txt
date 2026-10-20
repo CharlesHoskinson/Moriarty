@@ -1,0 +1,122 @@
+# Fresh non-author delta review: S1/S2/S3 on R2 `root_data.py` (3717499f…) and EXACT7
+
+## Verdicts
+
+**SOURCE/API: APPROVE.** The 15030 B adapter (`3717499f…`), with the prefrozen 3651 B tests (`c5090587…`), closes S1, S2 and S3. I found no blocking defect and no mandatory source fix.
+
+**EXACT7: CONDITIONAL.** No source, test, model, compile or design change remains. The operation depends only on the Root and caller prerequisites in section 3. This opinion does not permit running before those are closed.
+
+**Scope of this review:**
+- I read only the supplied full bodies: the adapter, tests, test-first record, `c6_data.py`, the freeze, the plan, the conditions, the binding, the diff and the inverse metadata.
+- I did not reread the model, `definition.kore`, the 67-map, the parser or the caller. Those premises are retained by pin only.
+- Nothing was executed. There is no RED or PASS claim. All 7 phases remain UNRUN.
+
+---
+
+## 1. Source findings
+
+### S1 is closed: `same_whole` is iterative and keeps strict semantics
+
+**Equivalence to `base.same`.** For JSON values, `same_whole` decides the same relation as `base.same`. It is a pure conjunction over every pushed pair, so LIFO order cannot change the result. It returns `True` only when the stack is empty, which means every pair was checked.
+
+| Concern | Finding |
+|---|---|
+| Type strictness | `type(x) is not type(y)` is checked first for every pair. `True` vs `1`, `1.0` vs `1`, and `str` vs `int` all return `False`. |
+| Keyset | `x.keys() != y.keys()` gives exact key-set equality, as in `base.same`. Key order is not semantic. `unique_object` already rejects duplicate keys. |
+| Array order | `zip(x, y)` runs only after the length check and pairs elements by position, so order is not lost. No sorting, set conversion or filtering is done. |
+| Leaves | `x != y` is the plain negation of `==` for str, int, bool, None and float. NaN and Infinity cannot occur, because `parse_constant` raises. |
+| Recursion | There is none. `extend(<genexpr>)` consumes the generator eagerly inside one frame, so stack depth is independent of document depth. There is no `setrecursionlimit` anywhere in the full body. |
+| No partial-data path | No exception is caught and nothing is skipped. There is no early `True`. |
+
+The full body matches the owner's blocks and the diff hunks:
+- `EXPECTED_PIN` comes after `LABEL_MAP_PIN` and before `OUTPUT_SCHEMA`.
+- `same_whole` sits between `carrier` and `render`.
+- `render`, `decode` and `compare` are identical to the owner's response.
+
+### S3 is closed: binding happens before any body is opened
+
+- **`render` and `decode`:** the type-exact `same_whole(m['source_input'], INPUT_PIN)` check is pure in-memory. It runs before `base.checked(m['source_input'])`.
+- **`compare`, order of operations:**
+  1. manifest load and keyset check;
+  2. the `EXPECTED_PIN` check (pure in memory);
+  3. freeze read and `validate_barrier`;
+  4. actual read;
+  5. expected read;
+  6. `same_whole`.
+- **No early expected read.** A wrong `expected` operand raises before any freeze, actual or expected file is read.
+- **Pin values.** `EXPECTED_PIN` equals `OPAQUE-EXPECTED-BINDING.expected` and plan `before06.expected`: `613495`, `4ca15348…752688`, same path. `INPUT_PIN` equals the freeze's `public_input` and plan `before05.source_input`.
+- **Comparison strength.** Using `same_whole` instead of `!=` is strictly stronger, because it is type-exact. There is no weakening.
+
+### Unchanged paths I checked against the new location
+
+- **`ROOT`/`MODEL` relocation is harmless.** These now resolve one directory deeper, but `MODEL` is otherwise unused. `BASE` is absolute.
+- **The test binds to the new source.** It uses `parents[1]/'source'`, which resolves to `revision02-corrected-source-01/source/root_data.py`.
+- **Other `base.same` uses** are in `carrier` and in `decode`'s root check. Their shallow depth is retained under the prior review's figures.
+
+### S2 is closed: the tests discriminate the defect
+
+- **The deepest lane really is the deepest.** `deep_lanes` puts the `i == 0` head innermost, so the leaf is the deepest scalar.
+- **The depth defeats the old recursive comparator.** There are 600 lanes at 2 JSON levels each. Under `base.same` that is about 2400 frames, which would raise `RecursionError` at the default limit. These methods therefore would have been RED against the old comparator.
+- **The trees are independent.** Each call rebuilds the chain, and `assertIsNot` confirms the two are distinct objects.
+- **The Bool-vs-Int test isolates the type rule.** The second assertion compares `{'sort':'Int','value':True}` with `{'sort':'Int','value':1}`. That catches any regression to `==`-based leaf comparison, since `True == 1`.
+- **The six original methods are byte-unchanged,** per the inverse.
+
+### Non-blocking notes (no change requested)
+
+- **N1. Test coverage gaps.** There is no test for:
+  - sibling-order or keyset differences;
+  - the `INPUT_PIN` or `EXPECTED_PIN` refusals;
+  - `compare` end to end.
+
+  Order preservation is confirmed only by source inspection of `zip`. Adding tests would require a new test-first freeze, which is not warranted.
+- **N2. Synthetic trees are not registry-valid** (an `Int` head on `ctLane`). That is acceptable because the tests are structural only, but "typed" in the comment is loose.
+- **N3. Unchanged `base.checked` and `validate_barrier` are type-loose** (dict `==` and list `in`). This is covered by R2 and not by the source.
+- **N4. Provenance path in `TEST-FIRST-RECORD`.** Its `new_tests.path` is the *request* directory copy, not the materialized corrected path. Binding is by equal sha (`c5090587…`). Root should treat the request-dir file as the test-first provenance artifact.
+
+---
+
+## 2. Operation delta
+
+The 7 changed leaves are `/phases/{0,1,5,6}/argv/4` and `source_freeze/{path,bytes,sha256}`. They are consistent with:
+- the new `SOURCE-FREEZE` (`5465c449…`);
+- its `source_exact_directory` = {`root_data.py`};
+- its `test_exact_directory` = {`TEST-FIRST-RECORD.json`, `test_root_data.py`}.
+
+Everything else is unchanged:
+- Phases 02–04: tool argv, cwd, env and limits.
+- The products and output paths.
+- compiled15, the opaque pins and the conditions pin.
+
+`-B` prevents `__pycache__` under both `source/` and `BASE/source`.
+
+---
+
+## 3. Remaining Root prerequisites (all binding before any selection)
+
+**C1. Caller closure (live review 31886; not assumed here).** The Root caller must bind the new revision exactly:
+- plan `97b8f40d…`;
+- source freeze `5465c449…`;
+- adapter `3717499f…`, tests `c5090587…`, record `989ca91a…`;
+- the new exact source and test directory membership under `revision02-corrected-source-01`, with no `__pycache__` present.
+
+It must reject the superseded adapter `a78089f5…` and the old `Q/source` and `Q/tests` membership.
+
+**C2. Phase 00 acceptance.** Root must expect **9** tests ("Ran 9 tests", OK, exit 0), not 6. The frozen `kind` text "NEW6…" is stale but non-gating. `unittest` reports on stderr, so 00 cannot use the empty-stderr class.
+
+**R1 (type-exact).** Before 01 and before 05, Root must verify `RENDER-MANIFEST.json` (`b3e9a149…`, whose body was not supplied) and `ROOT-DECODE-MANIFEST.json`:
+- `source_input` must be type-exactly equal to `INPUT_PIN`: exact keys, int `bytes`, identical path string.
+
+The new in-source check makes any literal mismatch a fail-closed `ValueError`. It does not replace R1.
+
+**R2, R3, R4.** These are unchanged and fully binding as stated in the original opinion:
+- **R2:** exact 3-key barrier members, read scope, fsync of files and directories, and the manifest `expected` exactly equal to the opaque pin.
+- **R3:** count is `None` before dispatch, and a traceback is UNKNOWN. An in-source operand refusal is also a traceback and stays UNKNOWN.
+- **R4:** fresh 0700 directories, membership checks, before and after pins, hash-only checks on the expected and freeze files, and stop on first problem.
+
+**Residuals preserved (record only):**
+- compile stderr `53062Bec611a63` is unadjudicated;
+- JVM 512 MiB fit and 03 backend wall time against the 30 s limit are unobserved;
+- stdlib is unpinned, with the hash-then-reread qualification;
+- there is no aggregate CPU, RSS or disk cap.
+
+The review makes no claim about native, HostSnapshot, admission, physical-B, clock, primitive completion, publication, auth or refinement. No private or expected body was read.
