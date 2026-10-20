@@ -1,0 +1,35 @@
+{
+  "source": {
+    "path": "/home/charl/Moriarty/.worktrees/sherlock-witness-cache-stream-20261018/crates/mori-core/src/sherlock/helper_machine/shared.rs",
+    "bytes": 49413,
+    "sha256": "a71299883c658d8647fab932929c4044e4281d309d94870bc26c3456a106b6d2"
+  },
+  "ranges": [
+    {
+      "first_line": 34,
+      "last_line": 83,
+      "body": "pub enum BinaryOp { Add, Sub, Mul, Eq, Lt, Cons, Branch }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum UnaryOp { Leaf, Not }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum PatternTag { PVar, PNil, PCons, PLeaf, PBranch,\n    WildcardExtensionReserved, ConstructorExtensionReserved } // L1 restored\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BoundaryKind { None, Terminal, TechnicalCut,\n    SourceSuspensionExtensionReserved } // L1 restored; still refused in B-core\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum LogicalKind { UInt, Bool, Nil, Cons, Leaf, Branch, Marker,\n    ConstructorExtensionReserved, Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC } }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ScalarMode { Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ScalarPhase { First, Second, Done }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum NodeKind { Cons, Leaf, Branch }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BuildPhase { Copy, Done }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum PlanPhase { Walk, Test, Bind, Ready, NoMatchReady, Done }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum PlanAfterWalk { Test, Bind }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BoolSelector { True, False, NotBool }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum TriStatus { Pending, Positive, Negative }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BindPhase { Pairing, UnwindType, UnwindDup, UnwindInsert, Propagate, Finished }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum BindStatus { Ok, Bad }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum AppendPhase { Copy, Tail, Done }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum MatchPhase { Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperKind { Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match, Plan, Build }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum FamilyId { Legacy, Scalar, EnvGet, EnvPut, Find, Bind, Append,\n    Validate, Equal, Match, BookkeepingRelease, Build, Plan }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum EventKind { LegacyComplete, HelperEnter, HelperVisit, HelperExit,\n    HelperFail, Bookkeeping, Publish, Startup }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum SiteTag { EvalLiteral, EvalVar, EvalLet, EvalBinary, EvalUnary, EvalIf,\n    EvalMatch, EvalCall, Push, RetLet, RetLeft, RetRight, RetUnary, RetIf,\n    RetMatch, RetArgs, RetCall, RetScope, Invoke, Enter, Bound, Cases,\n    CaseResult, Prim, EvalConstruct, RetCtorFields, Materialize }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\n"
+    },
+    {
+      "first_line": 169,
+      "last_line": 171,
+      "body": "pub enum RefC { Const(usize), Data(usize) } // shared owned ref; owner maps to raw\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct SliceC { pub start: usize, pub len: usize }\n"
+    },
+    {
+      "first_line": 178,
+      "last_line": 179,
+      "body": "pub type ValSliceC = SliceC; pub type FieldSliceC = SliceC;\npub type EnvRootC = Option<usize>;\n"
+    },
+    {
+      "first_line": 186,
+      "last_line": 225,
+      "body": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub struct HelperCommon { pub site: SiteTag, pub origin_reference_cursor: u128,\n    pub parent_resume: Option<usize> }\n    // ResumeId HOST carrier = usize in Option; always None in B-core,\n    // Some(_) = SI-08. Bounded width DEFERRED to X-05, not frozen here.\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum ScalarStaged { None, U128Value { n: u128 }, BoolValue { b: bool },\n    PendingNode { tag: NodeKind }, PrimError { code: u8 }, // 10|11, owner-checked\n    Selector { sel: BoolSelector }, TypeTest { ok: bool } }\n#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperControlC {\n    Scalar { common: HelperCommon, mode: ScalarMode, operand_a: RefC,\n        operand_b: Option<RefC>, expected: Option<TypeIdC>,\n        phase: ScalarPhase, reg_a: u128, staged: ScalarStaged },\n    EnvGet { common: HelperCommon, binder: usize, cursor: Option<usize>,\n        found: Option<RefC>, status: TriStatus },\n    EnvPut { common: HelperCommon, binder: usize, value: RefC, base: EnvRootC,\n        new_root: Option<usize>, status: TriStatus },\n    Find { common: HelperCommon, function_name: usize, row_cursor: usize,\n        found: Option<usize>, status: TriStatus },\n    Bind { common: HelperCommon, function: usize, params: SliceC, args: ValSliceC,\n        p_cursor: usize, a_cursor: usize, partial: EnvRootC,\n        dup_cursor: Option<usize>, phase: BindPhase, status: BindStatus },\n    Append { common: HelperCommon, src: ValSliceC, value: RefC,\n        src_cursor: usize, dest_start: usize, staged: Option<RefC>,\n        phase: AppendPhase },\n    Validate { common: HelperCommon, root: RefC, status: TriStatus },\n    Equal { common: HelperCommon, left: RefC, right: RefC, status: TriStatus },\n    Match { common: HelperCommon, scrutinee: RefC, arm: usize,\n        saved_env: EnvRootC, partial: EnvRootC, pat_tag: PatternTag,\n        x: usize, y: usize, field_idx: u8, staged: Option<RefC>,\n        phase: MatchPhase, status: TriStatus },\n    Plan { common: HelperCommon, source_match: usize, scrutinee: RefC,\n        saved_env: EnvRootC, partial: EnvRootC, node: usize, phase: PlanPhase,\n        after_walk: PlanAfterWalk, cur: RefC, path: SliceC, path_cursor: usize,\n        arm: Option<usize>, status: TriStatus },\n    Build { common: HelperCommon, type_id: TypeIdC, ctor_id: adt::CtorIdC,\n        src: ValSliceC, src_cursor: usize, field_start: usize,\n        staged: Option<RefC>, node: Option<RefC>, phase: BuildPhase },\n}\n"
+    },
+    {
+      "first_line": 267,
+      "last_line": 274,
+      "body": "#[derive(Clone, Copy, PartialEq, Eq, Debug)]\npub enum HelperResultC { Validated { ok: bool }, EnvFound { value: RefC },\n    EnvMissing, EnvUpdated { cell: usize }, FindFound { function: usize },\n    FindMissing, BindOk { env: EnvRootC }, BindBad, AppendDone { seq: ValSliceC },\n    ScalarValue { value: RefC }, ScalarError { code: u8 },\n    ScalarSelector { sel: BoolSelector }, ScalarTypeTest { ok: bool },\n    EqualDone { value: RefC }, MatchMatched { env: EnvRootC }, MatchNoMatch,\n    PlanMatched { arm: usize, env: EnvRootC }, PlanNoMatch, BuildDone { value: RefC } }\n"
+    }
+  ],
+  "scope": "Public owned carrier/enum declarations only; no helper codec, encoder, decoder or tests. Full source pin is opaque byte metadata, not full implementation inspection."
+}

@@ -1,0 +1,74 @@
+{
+  "status": "PASS_ALL209_POSTCOMPILE_LABELS_STATIC_NO_RUNTIME",
+  "actual_compile_result": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/root-first-compile-execution-01/ROOT-RESULT.json",
+    "bytes": 1931,
+    "sha256": "b16897eb0ab6d473accaff3da46cb2f074a33562ea483319f100836639aa767a"
+  },
+  "map": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/postcompile-label-qualification-01/COMPILED-KLABEL-MAP.json",
+    "bytes": 270342,
+    "sha256": "d1b6122c6d5601cd86fb90f822f6bf1921ec2cff5c57a5057d863415a9c73be9"
+  },
+  "compiled15": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/postcompile-label-qualification-01/COMPILED-REUSE15.json",
+    "bytes": 4108,
+    "sha256": "c0d8bb729701487070b959910f82432448c1f08264b121962b4315aef0c2626c"
+  },
+  "original_Root_membership": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/root-first-compile-execution-01/COMPILED-MEMBERSHIP.json",
+    "bytes": 4277,
+    "sha256": "6252bca31d0265aa68d23177131cc45756f93e2c5ad69497dc62582df6d1d5fb"
+  },
+  "exact15_current_membership_and_hashes_equal": true,
+  "compiled_txt": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/actual/c6-helper-kompiled/compiled.txt",
+    "bytes": 658978,
+    "sha256": "59eb62dee234e00cce82017c57bb3857d143b53e35ef00ef4cf15b4a9ffed604"
+  },
+  "data_count": 208,
+  "entry": "chObserveAll",
+  "unique_selected_actual_rawlabels": 209,
+  "barelabel_substitution_used": false,
+  "all_actual_arity_argument_result_sorts_role_Source_Location_module_match": true,
+  "overloaded_surface_attributes": [
+    {
+      "surface_klabel": "chMatchPhaseTag",
+      "selection": "Exact constructor/function role AND full argument/result sorts, not surface-name uniqueness",
+      "selected_line": 276,
+      "complete_actual_symbol_lines": [
+        {
+          "line": 276,
+          "body": "  symbol LblchMatchPhaseTag'LParRParUnds'SHERLOCK-C6-HELPER-RECORD-SYNTAX'Unds'CHMatchPhase{}() : SortCHMatchPhase{} [constructor{}(), functional{}(), injective{}(), klabel{}(\"chMatchPhaseTag\"), org'Stop'kframework'Stop'attributes'Stop'Location{}(\"Location(66,27,66,70)\"), org'Stop'kframework'Stop'attributes'Stop'Source{}(\"Source(/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/source/c6-helper-syntax.k)\")]"
+        },
+        {
+          "line": 277,
+          "body": "  symbol LblchMatchPhaseTag'LParUndsRParUnds'SHERLOCK-C6-HELPER-RECORD'Unds'Int'Unds'CHMatchPhase{}(SortCHMatchPhase{}) : SortInt{} [function{}(), klabel{}(\"chMatchPhaseTag\"), org'Stop'kframework'Stop'attributes'Stop'Location{}(\"Location(149,18,149,83)\"), org'Stop'kframework'Stop'attributes'Stop'Source{}(\"Source(/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/source/c6-helper-codec.k)\")]"
+        }
+      ]
+    }
+  ],
+  "initial_metadata_attempt": "Surface-name-only uniqueness stopped before map emission on chMatchPhaseTag overload. Changed qualification to full actual role/signature; no source/compiler/runtime retry. Both actual symbol lines retained.",
+  "primary": {
+    "source": {
+      "path": "/nix/store/x3ybp2gyrf0vlzzf02s959skd08wn5r6-source/k-frontend/src/main/java/org/kframework/kil/Production.java",
+      "bytes": 7845,
+      "sha256": "3b08183b2b0d058d2d14a2fa524dc0ea896059c46190f73d78f18de3d34e980c"
+    },
+    "start_line": 106,
+    "end_line": 183,
+    "body": "\n  /**\n   * Gets the effective KLabel declared by the user, taking the `klabel` and `symbol` attributes\n   * into account.\n   *\n   * <p>The effective label is specified as follows:\n   *\n   * <ul>\n   *   <li>If the production has a `symbol(X)` attribute, the effective label is `X`.\n   *   <li>If the production has `klabel(X)`, then the effective label is `X`. This syntax will be\n   *       deprecated in the future.\n   *   <li>Otherwise, return null.\n   * </ul>\n   *\n   * @return A string representing the effective label, or null.\n   */\n  private String getDeclaredLabel() {\n    String symbol = getAttribute(Att.SYMBOL());\n\n    if (symbol != null && !symbol.isEmpty()) {\n      return symbol;\n    }\n\n    return getAttribute(Att.KLABEL());\n  }\n\n  /**\n   * Gets the KLabel corresponding to this production. A production has a KLabel if and only if the\n   * production flattens in KORE to a term which is of sort KItem (ie, is a function or a\n   * constructor).\n   *\n   * @return\n   */\n  public String getKLabel(boolean kore) {\n    String klabel = getDeclaredLabel();\n    if (klabel == null\n        && (isSyntacticSubsort()\n            || containsAttribute(Att.TOKEN())\n            || containsAttribute(Att.BRACKET()))) {\n      return null;\n    } else if (klabel == null || (kore && getAttribute(Att.SYMBOL()) == null)) {\n      klabel = getPrefixLabel(kore);\n    }\n    return klabel.replace(\" \", \"\");\n  }\n\n  public String getBracketLabel(boolean kore) {\n    String klabel = getDeclaredLabel();\n    if (klabel == null || (kore && getAttribute(Att.SYMBOL()) == null)) {\n      klabel = getPrefixLabel(kore);\n    }\n    return klabel.replace(\" \", \"\");\n  }\n\n  private String getPrefixLabel(boolean kore) {\n    String label = \"\";\n    List<String> sorts = new ArrayList<>();\n    for (ProductionItem pi : items) {\n      if (pi instanceof NonTerminal) {\n        label += \"_\";\n        sorts.add(((NonTerminal) pi).getSort().name());\n      } else if (pi instanceof Terminal) {\n        label += ((Terminal) pi).getTerminal();\n      } else if (pi instanceof UserList) {\n        label += \"_\" + ((UserList) pi).separator + \"_\";\n        sorts.add(((UserList) pi).sort.name());\n        sorts.add(sort.name());\n      }\n    }\n    return label\n        + \"_\"\n        + ownerModuleName\n        + (kore ? \"_\" + sorts.stream().reduce(sort.name(), (s1, s2) -> s1 + \"_\" + s2) : \"\");\n  }\n\n  public java.util.List<ProductionItem> getItems() {\n    return items;\n  }\n",
+    "specific_rule": "getKLabel(kore): ifkore andsymbolattributeabsent usesgetPrefixLabel, evenklabelmetadataexists. FrozenPUBLICregistry.declared_klabel denotes sourceattribute, notactualruntimeKLabel."
+  },
+  "stderr": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-helper-control-result-codec-20261019/actual/00-compile/stderr",
+    "bytes": 152635,
+    "sha256": "b027eb3abf3c6eb1d0524d76da75e20c520d2b5426d3c8b94341e45093e4f95b",
+    "qualification": "UNADJUDICATED; body not semantically read/categorized"
+  },
+  "source_author_expected_body_reads": 0,
+  "actual_semantic_body_reads": 0,
+  "units_frontend_model_provider_execution": false,
+  "Scalar_independent_approval": "OPEN; compiled labels do not establish numeric map semantics",
+  "runtime31cohort": "UNRUN; None+TENnonScalar andNone+19results only"
+}
