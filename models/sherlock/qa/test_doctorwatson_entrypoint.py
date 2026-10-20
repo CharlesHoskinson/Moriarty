@@ -58,6 +58,24 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
                     self.assertNotEqual(os.environ.get('DW_TEST_REGRESSION_FAIL'), '1',
                                         'requested ordinary fixture regression failure')
             '''), encoding='utf-8')
+        delivery = self.checkout / 'models/doctorwatson'
+        delivery.mkdir(parents=True)
+        (delivery / 'test_delivery_fixture.py').write_text(textwrap.dedent('''\
+            import json
+            import os
+            from pathlib import Path
+            import unittest
+
+            class FixtureDeliveryRegression(unittest.TestCase):
+                def test_stage(self):
+                    events = Path(os.environ['DW_TEST_EVENTS'])
+                    previous = [json.loads(line)['stage'] for line in events.read_text().splitlines()]
+                    self.assertEqual(previous, ['checker', 'regression'])
+                    with events.open('a') as stream:
+                        stream.write(json.dumps({'stage': 'doctorwatson', 'cwd': str(Path.cwd())}) + '\\n')
+                    self.assertNotEqual(os.environ.get('DW_TEST_DELIVERY_FAIL'), '1',
+                                        'requested ordinary delivery fixture failure')
+            '''), encoding='utf-8')
         # Keep the real shell and Python interpreter; auxiliary CLI stand-ins
         # only record an unexpected launch and return a distinctive failure.
         binaries = self.root / 'bin'
@@ -108,7 +126,7 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
             args = parser.parse_args()
             events = Path(os.environ['DW_TEST_EVENTS'])
             previous = [json.loads(line)['stage'] for line in events.read_text().splitlines()]
-            if previous != ['checker', 'regression']:
+            if previous != ['checker', 'regression', 'doctorwatson']:
                 raise SystemExit('host fixture must follow ordinary QA')
             with events.open('a') as stream:
                 stream.write(json.dumps({'stage': 'host', 'cwd': str(Path.cwd())}) + '\\n')
@@ -142,8 +160,8 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
     def test_default_from_another_directory_runs_checker_then_regression_in_checkout(self):
         result = self.run_entrypoint()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assert_stages('checker', 'regression')
-        self.assertIn('Ran 1 test', result.stderr)
+        self.assert_stages('checker', 'regression', 'doctorwatson')
+        self.assertEqual(result.stderr.count('Ran 1 test'), 2)
 
     def test_checker_failure_propagates_and_prevents_regressions(self):
         result = self.run_entrypoint(DW_TEST_CHECKER_EXIT='23')
@@ -159,7 +177,18 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
     def test_default_launches_no_node_quint_or_github_cli(self):
         result = self.run_entrypoint()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assert_stages('checker', 'regression')
+        self.assert_stages('checker', 'regression', 'doctorwatson')
+        self.assertEqual(self.recorded(self.auxiliary), [])
+
+    def test_delivery_failure_propagates_and_prevents_host(self):
+        self.install_host_fixture()
+        result = self.run_entrypoint('--host', DOCTORWATSON_RUSTC='explicit-compiler',
+                                     DOCTORWATSON_OUTPUT_DIR='explicit-output',
+                                     DW_TEST_DELIVERY_FAIL='1')
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assert_stages('checker', 'regression', 'doctorwatson')
+        self.assertIn('requested ordinary delivery fixture failure', result.stderr)
+        self.assertFalse(self.host_arguments.exists())
         self.assertEqual(self.recorded(self.auxiliary), [])
 
     def test_unknown_option_returns_usage_before_checker(self):
@@ -188,7 +217,7 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
         result = self.run_entrypoint('--host', DOCTORWATSON_RUSTC=compiler,
                                      DOCTORWATSON_OUTPUT_DIR=output)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assert_stages('checker', 'regression', 'host')
+        self.assert_stages('checker', 'regression', 'doctorwatson', 'host')
         self.assertEqual(json.loads(self.host_arguments.read_text()), {
             'argv': ['--rustc', compiler, '--output-dir', output],
             'isolated': 1, 'dont_write_bytecode': 1,
@@ -201,7 +230,7 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
                                      DOCTORWATSON_OUTPUT_DIR='explicit-output',
                                      DW_TEST_HOST_EXIT='29')
         self.assertEqual(result.returncode, 29, result.stdout + result.stderr)
-        self.assert_stages('checker', 'regression', 'host')
+        self.assert_stages('checker', 'regression', 'doctorwatson', 'host')
         self.assertEqual(self.recorded(self.auxiliary), [])
 
     def test_host_missing_configuration_reaches_wrapper_preflight(self):
@@ -214,7 +243,7 @@ class DoctorWatsonEntrypointTests(unittest.TestCase):
                 self.host_arguments.unlink(missing_ok=True)
                 result = self.run_entrypoint('--host', **configuration)
                 self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-                self.assert_stages('checker', 'regression', 'host')
+                self.assert_stages('checker', 'regression', 'doctorwatson', 'host')
                 self.assertEqual(json.loads(self.host_arguments.read_text())['argv'], [
                     '--rustc', configuration.get('DOCTORWATSON_RUSTC', ''),
                     '--output-dir', configuration.get('DOCTORWATSON_OUTPUT_DIR', ''),
