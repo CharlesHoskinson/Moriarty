@@ -174,3 +174,8 @@ These pages accompany actual source/results publication. They add no accepted re
 ## Declared recursive nominal list — observed October 20
 
 The [public Rust API guide](how-to/observe-declared-recursive-list.md) follows one actual `ListUInt128` source through body typing, owner admission/genesis and complete owner records. [The retained evidence](../results/sherlock-original007-recursive-nominal-list-20261020/README.md) contains 70 events, one Terminal and all nine outputs, including 846,469 raw trace bytes. This source-aware finite result does not close UIREQ007 or its binder/formal/full-consumer/refinement obligations. The [layered explanation](explanation/nominal-text-to-admission.md#observed-body-typed-owner-path-october-20) keeps K/Quint/Clean, DATA constraints, native proof and target acceptance separate.
+
+
+## Complete positive META counterpart — October 20
+
+[The B38 public source/result](../../models/sherlock/quint/c6-positive-metadata-20261020/README.md), merged in [PR326](https://github.com/CharlesHoskinson/Moriarty/pull/326), records one frontend and two directed tests passing. Its full six-field metadata observations were compared internally; no actual vector JSON or Rust codec comparison is claimed. Six public modules need a withheld seventh expected-data module to run the test entry. The [retained-family reference](reference/c6-retained-push-family-and-context.md#later-positive-meta-evidence--2026-10-20) and [inspection guide](how-to/select-retained-push-family.md#inspect-the-later-positive-meta-result-without-changing-its-scope) preserve those limits and keep the later K META compile-only result, local Fin proof, pending handwritten source and native work separate. No full EARS, recursive-proof or target acceptance follows.

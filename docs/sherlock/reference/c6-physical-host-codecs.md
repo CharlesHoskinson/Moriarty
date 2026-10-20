@@ -38,3 +38,8 @@ Two fresh independent Muse HIGH opinions approve bounded design, source relation
 
 
 The [retained-family API reference](c6-retained-push-family-and-context.md) and [selection guide](../how-to/select-retained-push-family.md) describe the constructor/builder sequence and the separately observed K CTX22 common-JSON/typed-AST comparisons. K configuration evidence does not execute this Push SDK source.
+
+
+## Positive META counterpart — later October 20 result
+
+The [B38 direct META counterpart](../../../models/sherlock/quint/c6-positive-metadata-20261020/README.md) passed its frontend, whole-root comparison and roundtrip/span-law test. This finite positive model observes complete metadata plus ordered byte spans and final reader counters. It exports no actual observation-vector JSON and performs no actual Rust codec comparison; its six public modules require a withheld seventh expected module for the test entry. See the [updated reference](c6-retained-push-family-and-context.md#later-positive-meta-evidence--2026-10-20) for the complete six-field contract and separate K compile-only/Clean local-model/source/native boundaries. The CI4 SDK/tests remain UNRUN.
