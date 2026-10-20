@@ -1,0 +1,74 @@
+Identity/role/read scope: independent non-author reviewer in this stateless invocation, Muse Code powered by muse-wonder-1.0 (HIGH fallback as authorized). I read Units 01–50 inline only. No tools, commands, files, compiler, subject, tests, SDK, MockProver, native, Git, or PW were executed. All 15 tests remain UNRUN. No eligibility or native decision is made. Hashes were used only to identify the cut, not as approval.
+
+## Dispositions
+
+| Disposition area | Verdict |
+|---|---|
+| SOURCE_APPLICABILITY | APPROVE_WITH_LIMITS |
+| PUBLIC_API_COMPILABILITY | APPROVE_WITH_LIMITS |
+| MEANINGFUL_TEST_SOURCE | CHANGES_REQUIRED |
+| OVERALL | CHANGES_REQUIRED |
+
+## Mandatory finding
+
+**M-1 — Genesis payload has an extra `CoreTooling` wrapper in `nominal_owner_and_genesis_refusals_preserve_payload`.**
+
+The test asserts:
+
+```rust
+v["actual_error"]["error"] ==
+json!({"CoreTooling": {"CapacityNotAdmitted": { ... }}})
+```
+
+for the genesis fuel refusal.
+
+That does not match the supplied producer. In `nominal_body_command::program_failure`, the genesis arm is:
+
+```rust
+NominalBodyCompileError::Genesis(error) => ("genesis", error.owner_wire())
+```
+
+where `error` is already a `Tooling`. `Tooling::owner_wire()` emits `{"CapacityNotAdmitted": {...}}` directly, with no `CoreTooling` layer. The `CoreTooling` wrapper belongs only to `ExtTypeBuildError::CoreTooling`, which is the owner-admission path used by the StepCap case in the same test.
+
+Mandatory correction: in the genesis block only, change the expected value to:
+
+```rust
+json!({"CapacityNotAdmitted": {
+    "kind": "MaxReferenceWork", "needed": {"Exact": "100001"},
+    "limit": "100000", "locator": null}})
+```
+
+The StepCap assertion in the same test is correct as written and must not be changed. This is the sole mandatory correction set. I did not silently repair the source.
+
+## Verification of the two corrected test-14 hunks
+
+Both owner hunks are genuinely discriminating and source-correct:
+
+- Constructor fields: `impl OwnerWire for adt_storage::CtorRowExt` emits `owning_type,name_id,source_order,field_start,field_len` as decimal strings. Reading `idx(&link_row["field_start"])` / `idx(&link_row["field_len"])` is the actual wire contract. `slice_of` (`start`/`len`) remains correct for genuine `SliceC` rows only: type-row `args`, function `params`, and entry-call `args`.
+- U128 constant: `good_value()` declares argument `n` as UInt `"42"` before any run, and `impl OwnerWire for RawConstRow::U128` emits `{"U128":{"marker_free":bool,"n":decimal-string}}`. The direct assertion against `{"U128":{"marker_free":true,"n":"42"}}`, plus the retained `["U128"]["n"]=="42"` check, compares the actual constant to an independent source literal. The prior self-comparison is gone.
+
+Test 14 resolves `Chain<UInt>`, `Link`, parameters, and constants from declared rows rather than guessing a first ID. It proves a 23-field ProgramView object plus selected joins. It does **not** prove independent equality of all 23 fields or codec/guard correctness, and the file correctly does not claim otherwise.
+
+## Actual versus claimed coverage
+
+The corrected whole-15 file matches the corrected predicates in Units 37/39:
+
+- Tests 1–2: clap half-pair/conflict refusals plus manual-Args select refusal before any config/target/input read, with the older Core-only `--execution-inputs` guard keeping priority. One weakness, not a failure: in test 1 the pair-plus-`--action` and pair-plus-`--execution-inputs` cases are overdetermined, because `--entry` already conflicts with both in the base argv. They verify refusal but do not isolate the nominal-pair conflict as the sole cause.
+- Test 3: strict-JSON failures are SHARED_DEPENDENCY_PROPAGATION from `mori_core::json::parse`, not independent parser correctness.
+- Tests 4–7: exact nominal function, argument order/duplicate, constructor/type/field, and scalar wire payloads match the decoder and `nominal_input_error` projection in the supplied bodies, including native Bool, canonical decimal UInt, UInt 0/MAX positives, and `042`/`-1`/overflow refusals.
+- Test 8: the hand count is correct from the decoder's own accounting convention — synthesized 4 expr + 5 value + 4 type = 13, depth 4; combined 15 through the handler with existing 2. Equal-limit, one-below, zero-limit, and depth cases are source-derived, not observed counters.
+- Tests 9–11: original-entry replacement before body checking, explicit stale/null synthesized-entry provenance with retained original Entry site, and the ill-typed unused-function span (`function_index` 1, source text `n`) all match `nominal_body_compile`, the body checker, and the span mapper.
+- Test 12: StepCap and layout-mismatch staging are correct; only the genesis wrapper in M-1 is wrong.
+- Test 13: absent-pair handler versus current public command equivalence, correctly labelled SHARED_PRODUCER_EQUIVALENCE_ONLY. No historical byte baseline is claimed.
+- Test 14: compile-only bound-program projection as analysed above, subject to M-1 being elsewhere in the file.
+- Test 15: bound observe handler versus direct `observe_with_nominal_inputs` envelope equivalence, SHARED_PRODUCER_EQUIVALENCE_ONLY on the test's own synthetic input. No independent runtime-result or private-cohort claim.
+
+Nominal source strings use the actual parser grammar (`language`/`program`/`type Chain<T>`/typed `fn`/`entry`, `construct Chain<UInt>::Link(...)` in test 13), and spans asserted are actual source spans, not invented ones. ProgramView checks use decimal-string IDs, builtin `"UInt"`/`"Bool"` strings, nominal `{"TypeId":decimal-string}`, and `SliceC` start/len where those are the real wire shapes.
+
+## Preserved limits
+
+Synthesized-entry body-error, partial-prefix `HostViolation`, and serializer-failure remain explicitly UNEXERCISED. No independent semantic acceptance follows from this source review, the Core189 compile readback, or shared-producer agreement. Full body-typing/owner/global-resource/native/EARS duties remain separate. The external consumer is handler-only qualification, not a full `mori` CLI binary end-to-end result.
+
+Missing premises: none blocking this judgment. Bodies not supplied verbatim (for example `draft_contract::select_source` and `ext_compile`) were corroborated through the handler source and the supplied external-consumer units rather than assumed.
+
+Bottom line: the two test-14 corrections are approved. The file is not yet approvable as meaningful test source until M-1 is fixed, because one of the 15 tests would fail against the actual genesis wire when eventually run.
