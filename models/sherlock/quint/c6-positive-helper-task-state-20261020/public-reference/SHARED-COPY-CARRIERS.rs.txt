@@ -1,0 +1,131 @@
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct StepEventC { pub step_id: ExpandedStepIdC, pub rule_id: RuleIdC, pub event_kind: EventKind, pub site: Option<SiteTag>, pub helper_kind: Option<HelperKind>, pub disposition: StepDisposition, pub work_delta: u8, pub helper_work_delta: u8, pub helper_visits_delta: u8, pub reference_cursor_delta: u8, pub alloc_deltas: AllocDeltasC, pub value_slot_writes: u8, pub logical_depth_before: usize, pub logical_depth_after: usize, pub task_cursor_before: usize, pub task_cursor_after: usize, pub helper_phase_before: Option<HelperPhaseSummaryC>, pub helper_phase_after: Option<HelperPhaseSummaryC>, pub helper_cursor_before: Option<usize>, pub helper_cursor_after: Option<usize>, pub result_tag: Option<HelperResultTagC>, pub origin_reference_cursor: Option<u128>, pub source_expr_id: usize, pub source_occurrence: LocatorC, pub exhausted_kind: Option<ExhaustReason>, pub outcome_tag: OutcomeTagC, pub outcome_payload: OutcomeC, pub boundary: BoundaryKind }
+
+// ---------- shared Copy carriers (never derived over frozen raw-104) ----
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct BoundsC { pub code_rows: usize, pub function_rows: usize,
+    pub code_child_slots: usize, pub parameter_slots: usize,
+    pub pattern_rows: usize, pub match_plan_rows: usize,
+    pub match_arm_rows: usize, pub type_rows: usize,
+    pub constructor_rows: usize, pub constructor_field_slots: usize,
+    pub max_arity: usize, pub constant_nodes: usize,
+    pub constant_field_slots: usize, pub data_nodes: usize,
+    pub data_field_slots: usize, pub environment_cells: usize,
+    pub frames: usize, pub helper_tasks: usize,
+    pub serialization_bytes: usize, pub max_reference_work: u128,
+    pub max_helper_work: u128, pub step_cap: u128 } // all 22, schema #/bounds
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct LayoutCapacitiesC { pub name_rows: usize, pub name_bytes: usize,
+    pub occurrence_path_slots: usize, pub value_slots: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RefC { Const(usize), Data(usize) } // shared owned ref; owner maps to raw
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct SliceC { pub start: usize, pub len: usize }
+impl SliceC {
+    pub fn normalized(start: usize, len: usize) -> Self {
+        if len == 0 { Self { start: 0, len: 0 } } else { Self { start, len } }
+    }
+    pub fn empty() -> Self { Self { start: 0, len: 0 } }
+}
+pub type ValSliceC = SliceC; pub type FieldSliceC = SliceC;
+pub type EnvRootC = Option<usize>;
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct AllocCounters { pub data_nodes: usize, pub data_fields: usize,
+    pub environment_cells: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct ActiveLengths { pub data: usize, pub data_fields: usize,
+    pub env: usize, pub value_slots: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct HelperCommon { pub site: SiteTag, pub origin_reference_cursor: u128,
+    pub parent_resume: Option<usize> }
+    // ResumeId HOST carrier = usize in Option; always None in B-core,
+    // Some(_) = SI-08. Bounded width DEFERRED to X-05, not frozen here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarStaged { None, U128Value { n: u128 }, BoolValue { b: bool },
+    PendingNode { tag: NodeKind }, PrimError { code: u8 }, // 10|11, owner-checked
+    Selector { sel: BoolSelector }, TypeTest { ok: bool } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperControlC {
+    Scalar { common: HelperCommon, mode: ScalarMode, operand_a: RefC,
+        operand_b: Option<RefC>, expected: Option<TypeIdC>,
+        phase: ScalarPhase, reg_a: u128, staged: ScalarStaged },
+    EnvGet { common: HelperCommon, binder: usize, cursor: Option<usize>,
+        found: Option<RefC>, status: TriStatus },
+    EnvPut { common: HelperCommon, binder: usize, value: RefC, base: EnvRootC,
+        new_root: Option<usize>, status: TriStatus },
+    Find { common: HelperCommon, function_name: usize, row_cursor: usize,
+        found: Option<usize>, status: TriStatus },
+    Bind { common: HelperCommon, function: usize, params: SliceC, args: ValSliceC,
+        p_cursor: usize, a_cursor: usize, partial: EnvRootC,
+        dup_cursor: Option<usize>, phase: BindPhase, status: BindStatus },
+    Append { common: HelperCommon, src: ValSliceC, value: RefC,
+        src_cursor: usize, dest_start: usize, staged: Option<RefC>,
+        phase: AppendPhase },
+    Validate { common: HelperCommon, root: RefC, status: TriStatus },
+    Equal { common: HelperCommon, left: RefC, right: RefC, status: TriStatus },
+    Match { common: HelperCommon, scrutinee: RefC, arm: usize,
+        saved_env: EnvRootC, partial: EnvRootC, pat_tag: PatternTag,
+        x: usize, y: usize, field_idx: u8, staged: Option<RefC>,
+        phase: MatchPhase, status: TriStatus },
+    Plan { common: HelperCommon, source_match: usize, scrutinee: RefC,
+        saved_env: EnvRootC, partial: EnvRootC, node: usize, phase: PlanPhase,
+        after_walk: PlanAfterWalk, cur: RefC, path: SliceC, path_cursor: usize,
+        arm: Option<usize>, status: TriStatus },
+    Build { common: HelperCommon, type_id: TypeIdC, ctor_id: adt::CtorIdC,
+        src: ValSliceC, src_cursor: usize, field_start: usize,
+        staged: Option<RefC>, node: Option<RefC>, phase: BuildPhase },
+}
+// The nine dedicated Core frames remain. The generic continuation is carried
+// explicitly; activation, tag mapping and invariants remain owner dependencies.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FrameRowC {
+    LetF { binder: usize, body: usize, saved_env: EnvRootC, origin: usize },
+    LeftF { op: BinaryOp, right: usize, saved_env: EnvRootC, origin: usize },
+    RightF { op: BinaryOp, left: RefC, origin: usize },
+    UnaryF { op: UnaryOp, origin: usize },
+    IfF { then_expr: usize, else_expr: usize, saved_env: EnvRootC, origin: usize },
+    MatchF { arms: SliceC, saved_env: EnvRootC, origin: usize },
+    ArgsF { function_name: usize, completed: ValSliceC, rest: SliceC,
+        saved_env: EnvRootC, origin: usize },
+    ReturnF { return_type: TypeIdC, saved_env: EnvRootC, origin: usize },
+    ScopeF { saved_env: EnvRootC, origin: usize },
+    ConstructorFieldsF { type_id: TypeIdC, ctor_id: adt::CtorIdC, index: usize,
+        field_type: TypeIdC, checked: bool, completed: ValSliceC,
+        rest: SliceC, saved_env: EnvRootC, origin: usize },
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BoundBinding { Bad, Ok { env: EnvRootC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CaseMatching { NoMatch, Matched { env: EnvRootC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PrimOutcome { Value { value: RefC }, Error { code: u8 } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ControlC { Eval { expr: usize }, Return { value: RefC },
+    ScheduleNext { frame: FrameRowC, next: usize, env: EnvRootC },
+    Invoke { function_name: usize, args: ValSliceC },
+    Enter { function: Option<usize>, args: ValSliceC },
+    Bound { binding: BoundBinding, return_type: TypeIdC, body: usize },
+    Cases { value: RefC, arms: SliceC, saved_env: EnvRootC },
+    CaseResult { matching: CaseMatching, value: RefC, body: usize,
+        rest: SliceC, saved_env: EnvRootC },
+    PrimResult { result: PrimOutcome }, Error { code: u8 },
+    Materialize { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: ValSliceC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperTaskC {
+    ValidateTask { r: RefC, visit: TaskVisitC, cursor: usize },
+    EqualTask { left: RefC, right: RefC, visit: TaskVisitC, cursor: usize },
+    PairTask { binder: usize, sort: TypeIdC, arg: RefC },
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperResultC { Validated { ok: bool }, EnvFound { value: RefC },
+    EnvMissing, EnvUpdated { cell: usize }, FindFound { function: usize },
+    FindMissing, BindOk { env: EnvRootC }, BindBad, AppendDone { seq: ValSliceC },
+    ScalarValue { value: RefC }, ScalarError { code: u8 },
+    ScalarSelector { sel: BoolSelector }, ScalarTypeTest { ok: bool },
+    EqualDone { value: RefC }, MatchMatched { env: EnvRootC }, MatchNoMatch,
+    PlanMatched { arm: usize, env: EnvRootC }, PlanNoMatch, BuildDone { value: RefC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OutcomeC { Running, Halted { value: RefC }, Rejected { code: u8 },
+    Exhausted { reason: ExhaustReason } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct EnvCellC { pub binder: usize, pub value: RefC, pub previous: EnvRootC }

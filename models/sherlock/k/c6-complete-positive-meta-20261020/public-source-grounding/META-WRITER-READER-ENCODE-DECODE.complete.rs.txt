@@ -1,0 +1,194 @@
+struct MetaWriter<'a> { out: Vec<u128>, limits: &'a C6HostLimits, bytes: usize, width_entries: usize }
+impl MetaWriter<'_> {
+    fn v(&mut self, x: u128) { self.out.push(x); }
+    fn us(&mut self, x: usize) { self.v(u(x)); }
+    fn blob(&mut self, data: &[u8]) -> C6Result<()> {
+        cap_count("host.meta.string_bytes", data.len(), self.limits.max_string_bytes)?;
+        let next = self.bytes.checked_add(data.len())
+            .ok_or(C6PhysError::UsizeOverflow { section: META_S, value: u(data.len()) })?;
+        cap_count("host.meta.bytes", next, self.limits.max_metadata_bytes)?;
+        self.bytes = next;
+        self.us(data.len());
+        self.out.extend(data.iter().map(|&b| u128::from(b)));
+        Ok(())
+    }
+    fn pair(&mut self, p: &(String, String)) -> C6Result<()> { self.blob(p.0.as_bytes())?; self.blob(p.1.as_bytes()) }
+    fn opt_pair(&mut self, p: &Option<(String, String)>) -> C6Result<()> {
+        match p { None => { self.v(0); Ok(()) } Some(p) => { self.v(1); self.pair(p) } }
+    }
+    fn digest(&mut self, d: &DigestC) -> C6Result<()> {
+        match d {
+            DigestC::Unselected => { self.v(0); Ok(()) }
+            DigestC::Selected { format, bytes } => { self.v(1); self.pair(format)?; self.blob(bytes) }
+        }
+    }
+    fn identity(&mut self, i: &IdentityC) -> C6Result<()> {
+        let IdentityC { profile_id, grammar_domain, finance, layout_version, layout_digest, bounds_digest, field_id,
+            program_membership_digest } = i;
+        self.v(u128::from(*profile_id));
+        self.v(match grammar_domain { GrammarDomain::DedicatedSorts => 0, GrammarDomain::GenericNominalExtensionReserved => 1 });
+        self.v(match finance { FinanceInput::Absent => 0, FinanceInput::TypedExtensionReserved => 1 });
+        self.pair(layout_version)?;
+        self.digest(layout_digest)?;
+        self.digest(bounds_digest)?;
+        self.opt_pair(field_id)?;
+        self.digest(program_membership_digest)
+    }
+    fn bounds(&mut self, b: &BoundsC) {
+        let BoundsC { code_rows, function_rows, code_child_slots, parameter_slots, pattern_rows, match_plan_rows,
+            match_arm_rows, type_rows, constructor_rows, constructor_field_slots, max_arity, constant_nodes,
+            constant_field_slots, data_nodes, data_field_slots, environment_cells, frames, helper_tasks,
+            serialization_bytes, max_reference_work, max_helper_work, step_cap } = *b;
+        for x in [code_rows, function_rows, code_child_slots, parameter_slots, pattern_rows, match_plan_rows,
+            match_arm_rows, type_rows, constructor_rows, constructor_field_slots, max_arity, constant_nodes,
+            constant_field_slots, data_nodes, data_field_slots, environment_cells, frames, helper_tasks,
+            serialization_bytes] { self.us(x); }
+        for x in [max_reference_work, max_helper_work, step_cap] { self.v(x); }
+    }
+    fn widths(&mut self, w: &Option<WidthsSnapshot>) -> C6Result<()> {
+        let Some(WidthsSnapshot { index_widths, counter_widths, record_widths }) = w else { self.v(0); return Ok(()); };
+        self.v(1);
+        for list in [index_widths, counter_widths, record_widths] {
+            self.width_entries = self.width_entries.checked_add(list.len())
+                .ok_or(C6PhysError::UsizeOverflow { section: META_S, value: u(list.len()) })?;
+            cap_count("host.meta.width_entries", self.width_entries, self.limits.max_width_entries)?;
+            self.us(list.len());
+            for (name, width) in list { self.blob(name.as_bytes())?; self.v(u128::from(*width)); }
+        }
+        Ok(())
+    }
+    fn run_int(&mut self, r: RunIntC) {
+        let (t, n) = match r { RunIntC::Negative => (0, 0), RunIntC::Nat(n) => (1, n), RunIntC::NatAboveU128 => (2, 0) };
+        self.v(t);
+        self.v(n);
+    }
+}
+
+pub fn encode_metadata(m: &C6HostMetadata, limits: &C6HostLimits) -> C6Result<Vec<u128>> {
+    let C6HostMetadata { identity, bounds, layout, run_id } = m;
+    let LayoutSnapshot { layout_version, field_id, widths, scalar_layout_id, bounds: layout_bounds, capacities,
+        boundary_capacities_present } = layout;
+    let RunIdC { identity: run_identity, fuel_input, stack_limit_input } = run_id;
+    let LayoutCapacitiesC { name_rows, name_bytes, occurrence_path_slots, value_slots } = *capacities;
+    let mut w = MetaWriter { out: vec![C6_PHYS_MAGIC, C6_PHYS_VERSION, META_SECTION_TAG], limits, bytes: 0, width_entries: 0 };
+    w.identity(identity)?;
+    w.bounds(bounds);
+    w.pair(layout_version)?;
+    w.opt_pair(field_id)?;
+    w.widths(widths)?;
+    w.opt_pair(scalar_layout_id)?;
+    w.bounds(layout_bounds);
+    for x in [name_rows, name_bytes, occurrence_path_slots, value_slots] { w.us(x); }
+    w.v(u128::from(*boundary_capacities_present));
+    w.identity(run_identity)?;
+    w.run_int(*fuel_input);
+    w.run_int(*stack_limit_input);
+    Ok(w.out)
+}
+
+struct MetaReader<'a> { l: &'a [u128], at: usize, limits: &'a C6HostLimits, bytes: usize, width_entries: usize }
+impl MetaReader<'_> {
+    fn raw(&mut self) -> C6Result<u128> {
+        let v = *self.l.get(self.at)
+            .ok_or(C6PhysError::Truncated { section: META_S, needed: self.at + 1, actual: self.l.len() })?;
+        self.at += 1;
+        Ok(v)
+    }
+    fn us(&mut self) -> C6Result<usize> { let v = self.raw()?; rd(META_S, v) }
+    fn remaining(&self) -> usize { self.l.len() - self.at }
+    fn tag(&mut self, max: u128) -> C6Result<u128> {
+        let t = self.raw()?;
+        if t > max { Err(C6PhysError::BadTag { section: META_S, tag: t }) } else { Ok(t) }
+    }
+    fn truncated(&self, len: usize) -> C6PhysError {
+        C6PhysError::Truncated { section: META_S, needed: self.at.saturating_add(len), actual: self.l.len() }
+    }
+    fn blob(&mut self) -> C6Result<Vec<u8>> {
+        let len = self.us()?;
+        cap_count("host.meta.string_bytes", len, self.limits.max_string_bytes)?;
+        let next = self.bytes.checked_add(len).ok_or(C6PhysError::UsizeOverflow { section: META_S, value: u(len) })?;
+        cap_count("host.meta.bytes", next, self.limits.max_metadata_bytes)?;
+        self.bytes = next;
+        if len > self.remaining() { return Err(self.truncated(len)); }
+        let mut out = Vec::with_capacity(len);
+        for _ in 0..len {
+            let lane = self.raw()?;
+            out.push(u8::try_from(lane).map_err(|_| C6PhysError::BadTag { section: META_S, tag: lane })?);
+        }
+        Ok(out)
+    }
+    fn text(&mut self) -> C6Result<String> {
+        let bytes = self.blob()?;
+        let len = bytes.len();
+        String::from_utf8(bytes).map_err(|_| C6PhysError::BadTag { section: META_S, tag: u(len) })
+    }
+    fn pair(&mut self) -> C6Result<(String, String)> { Ok((self.text()?, self.text()?)) }
+    fn opt_pair(&mut self) -> C6Result<Option<(String, String)>> {
+        Ok(if self.tag(1)? == 0 { None } else { Some(self.pair()?) })
+    }
+    fn digest(&mut self) -> C6Result<DigestC> {
+        Ok(if self.tag(1)? == 0 { DigestC::Unselected } else { DigestC::Selected { format: self.pair()?, bytes: self.blob()? } })
+    }
+    fn identity(&mut self) -> C6Result<IdentityC> {
+        let profile = self.raw()?;
+        let profile_id = u8::try_from(profile).map_err(|_| C6PhysError::UsizeOverflow { section: META_S, value: profile })?;
+        let grammar_domain = if self.tag(1)? == 0 { GrammarDomain::DedicatedSorts } else { GrammarDomain::GenericNominalExtensionReserved };
+        let finance = if self.tag(1)? == 0 { FinanceInput::Absent } else { FinanceInput::TypedExtensionReserved };
+        Ok(IdentityC { profile_id, grammar_domain, finance, layout_version: self.pair()?, layout_digest: self.digest()?,
+            bounds_digest: self.digest()?, field_id: self.opt_pair()?, program_membership_digest: self.digest()? })
+    }
+    fn bounds(&mut self) -> C6Result<BoundsC> {
+        Ok(BoundsC { code_rows: self.us()?, function_rows: self.us()?, code_child_slots: self.us()?,
+            parameter_slots: self.us()?, pattern_rows: self.us()?, match_plan_rows: self.us()?,
+            match_arm_rows: self.us()?, type_rows: self.us()?, constructor_rows: self.us()?,
+            constructor_field_slots: self.us()?, max_arity: self.us()?, constant_nodes: self.us()?,
+            constant_field_slots: self.us()?, data_nodes: self.us()?, data_field_slots: self.us()?,
+            environment_cells: self.us()?, frames: self.us()?, helper_tasks: self.us()?,
+            serialization_bytes: self.us()?, max_reference_work: self.raw()?, max_helper_work: self.raw()?,
+            step_cap: self.raw()? })
+    }
+    fn width_list(&mut self) -> C6Result<Vec<(String, u32)>> {
+        let n = self.us()?;
+        self.width_entries = self.width_entries.checked_add(n).ok_or(C6PhysError::UsizeOverflow { section: META_S, value: u(n) })?;
+        cap_count("host.meta.width_entries", self.width_entries, self.limits.max_width_entries)?;
+        if n > self.remaining() { return Err(self.truncated(n)); }
+        let mut out = Vec::with_capacity(n);
+        for _ in 0..n {
+            let name = self.text()?;
+            let w = self.raw()?;
+            out.push((name, u32::try_from(w).map_err(|_| C6PhysError::UsizeOverflow { section: META_S, value: w })?));
+        }
+        Ok(out)
+    }
+    fn widths(&mut self) -> C6Result<Option<WidthsSnapshot>> {
+        if self.tag(1)? == 0 { return Ok(None); }
+        Ok(Some(WidthsSnapshot { index_widths: self.width_list()?, counter_widths: self.width_list()?,
+            record_widths: self.width_list()? }))
+    }
+    fn run_int(&mut self) -> C6Result<RunIntC> {
+        let t = self.tag(2)?;
+        let n = self.raw()?;
+        if t != 1 && n != 0 { return Err(C6PhysError::NonZeroPadding { section: META_S, lane: self.at - 1, value: n }); }
+        Ok(match t { 0 => RunIntC::Negative, 1 => RunIntC::Nat(n), _ => RunIntC::NatAboveU128 })
+    }
+}
+
+pub fn decode_metadata(l: &[u128], limits: &C6HostLimits) -> C6Result<C6HostMetadata> {
+    if l.len() < META_HEADER_LANES {
+        return Err(C6PhysError::Truncated { section: META_S, needed: META_HEADER_LANES, actual: l.len() });
+    }
+    if l[0] != C6_PHYS_MAGIC { return Err(C6PhysError::BadMagic { actual: l[0] }); }
+    if l[1] != C6_PHYS_VERSION { return Err(C6PhysError::BadVersion { actual: l[1] }); }
+    if l[2] != META_SECTION_TAG { return Err(C6PhysError::BadTag { section: META_S, tag: l[2] }); }
+    let mut r = MetaReader { l, at: META_HEADER_LANES, limits, bytes: 0, width_entries: 0 };
+    let identity = r.identity()?;
+    let bounds = r.bounds()?;
+    let layout = LayoutSnapshot { layout_version: r.pair()?, field_id: r.opt_pair()?, widths: r.widths()?,
+        scalar_layout_id: r.opt_pair()?, bounds: r.bounds()?,
+        capacities: LayoutCapacitiesC { name_rows: r.us()?, name_bytes: r.us()?, occurrence_path_slots: r.us()?,
+            value_slots: r.us()? },
+        boundary_capacities_present: { let v = r.raw()?; rd_bool(META_S, v)? } };
+    let run_id = RunIdC { identity: r.identity()?, fuel_input: r.run_int()?, stack_limit_input: r.run_int()? };
+    if r.at != l.len() { return Err(C6PhysError::TrailingLanes { section: META_S, extra: l.len() - r.at }); }
+    Ok(C6HostMetadata { identity, bounds, layout, run_id })
+}
