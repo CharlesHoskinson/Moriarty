@@ -1,0 +1,123 @@
+{
+  "schema": "sherlock-EnvGet-miss-hit-exit-public-common-contract/1",
+  "profile": "CoreHelperMicrostepDedicatedSorts-EnvGetMissHitExit-positive/1",
+  "case_ids": [
+    "nested-let-x7-y-varx-return-varx-miss-y-hit-x"
+  ],
+  "source_input": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-miss-hit-EnvGetExit-owner-positive-20261020/SAFE/PUBLIC-CORE-SOURCE-INPUT.json",
+    "bytes": 3018,
+    "sha256": "1033cc3ef65551901c0df8f789c1bc164f65f9fb21869b21f760c3b976b2bd6b"
+  },
+  "producer_route": "Future separately reviewed real owner_host::host_owner_engine -> OwnerEngine.admit -> admit_run -> step; observe_bound_image / complete_observation capture+record_step only. No manually constructed Admitted/MachineImage/helper, direct apply_validated bypass, or injected prestate.",
+  "target_selector": {
+    "source_path": [
+      "entry",
+      "body",
+      "body"
+    ],
+    "occurrence_AST_child_path": [
+      1,
+      1
+    ],
+    "before": "First Running/EvalVar/Pending EnvGet at target origin, cursor Some in-range and env[cursor].binder != helper.binder; prior source prefix retained whole.",
+    "sequence": "one Cell miss, one Cell hit, one Exit, each normal Applied; absent/interrupted within64 ordinary calls is a finite failure, not source/input repair",
+    "chain_premise": "first visited cell.previous is Some in-range; that next cell.binder equals requested helper.binder; no literal cell IDs/ordinals supplied"
+  },
+  "local_effects": {
+    "miss": "Copy entire EnvGet helper; set only cursor to visited EnvCell.previous; preserve common,binder,found,status exactly. Do not set Negative even if previous=None. Tables,root and all other helper/result/task fields preserved except owner accounting.",
+    "hit": "Copy entire EnvGet helper; found=Some(visited EnvCell.value), status=Positive; cursor/common/binder preserved.",
+    "exit": "Clear helper; result=Some(EnvFound{value=the exact pre.helper.found RefC}); preserve other fields except owner accounting.",
+    "work": "Each selected normal Applied row consumes1 remaining_work and adds1 consumed_work and helper_work. Each Cell adds1 helper_visits; Exit adds0. reference_cursor unchanged. No allocation/frame/task/envroot/control/sourceorigin/table/Outcome write occurs.",
+    "empty": "Previous=None on a miss stays Pending; a later separate EnvGetEmpty row sets Negative. Empty/failure/refusal/publication are NOT silently inserted into this three-row positive window."
+  },
+  "premises": [
+    "Actual admission/reachability/boundbefore/StepInv and correct owner normal selection/validation/physical checks remain external premises, never asserted by a new Bool/token.",
+    "Enough remaining work/helper-work/charged and physical caps for three normal Applied events; all u128/usize updates defined; no new refusal or admission policy.",
+    "For Running Pending helper, SI22 found=None and no live tasks; preserve raw tables, root, frames, saved/current maps and whole immutable admission/run identity.",
+    "Legacy K evaluation fuel and observation budget do not alias Core charged work; no K/B clock theorem."
+  ],
+  "observation": {
+    "native_root_keys": [
+      "before",
+      "after_miss",
+      "after_hit",
+      "after_exit",
+      "events"
+    ],
+    "HOSTs": "four complete native HostObservation/admission4+ProgramView23+Image23; all owned vectors/raw frames/maps/source tables retained",
+    "events": "three ordered complete StepEventC records, no selected-field projection",
+    "event_fields_order": [
+      "step_id",
+      "rule_id",
+      "event_kind",
+      "site",
+      "helper_kind",
+      "disposition",
+      "work_delta",
+      "helper_work_delta",
+      "helper_visits_delta",
+      "reference_cursor_delta",
+      "alloc_deltas",
+      "value_slot_writes",
+      "logical_depth_before",
+      "logical_depth_after",
+      "task_cursor_before",
+      "task_cursor_after",
+      "helper_phase_before",
+      "helper_phase_after",
+      "helper_cursor_before",
+      "helper_cursor_after",
+      "result_tag",
+      "origin_reference_cursor",
+      "source_expr_id",
+      "source_occurrence",
+      "exhausted_kind",
+      "outcome_tag",
+      "outcome_payload",
+      "boundary"
+    ],
+    "miss_event": "Cell rule, HelperVisit, Pending->Pending, helper_cursor_before=pre.cursor and after=visitedcell.previous; deltas1/1/1/0; result_tag absent; source/identity from same public ABI as other normal Applied rows.",
+    "hit_event": "Cell rule, HelperVisit, Pending->Positive; cursor unchanged; deltas1/1/1/0.",
+    "exit_event": "Exit rule, HelperExit, Positive->absent; helper_cursor_after absent; EnvFound result tag; deltas1/1/0/0.",
+    "all_other_event_fields": "Same adopted general normal-Applied ABI; step ordinal pre.consumed_work, run_id exact, source occurrence from original control_origin, original helper origin cursor, depth/task counts complete, zero allocation/value-slot deltas, Running outcome, BoundaryKind::None.",
+    "native_option_and_enum": "True OptionNone=null; Some uses existing nested Some carrier including Some(0); BoundaryKind::None is unit string None, not OptionNone.",
+    "layout_seam": "ext_capacities=None is immutable input-only premise; actual HostObservation omits this source field; never fabricate an observed field."
+  },
+  "K_DATA_target_proposal": {
+    "new_sort": "EGTraversalWindow",
+    "constructor": "egTraversalWindow",
+    "argument_sorts": [
+      "EGSnapshot",
+      "EGSnapshot",
+      "EGSnapshot",
+      "EGSnapshot",
+      "EGEvent",
+      "EGEvent",
+      "EGEvent"
+    ],
+    "argument_names": [
+      "before",
+      "after_miss",
+      "after_hit",
+      "after_exit",
+      "event_miss",
+      "event_hit",
+      "event_exit"
+    ],
+    "snapshot_and_event_syntax": "Reuse exact existing public EGSnapshot/EGEvent and transitive typed carriers. New window sort/entry are additive; old EGWindow/egTwoEventWindow remain unchanged.",
+    "intended_entry": "egThreeEventTraversal(EGSnapshot) -> EGTraversalWindow",
+    "runtime": "No compiled labels/pin schema exists for new declarations yet. Qualify actual raw compiled attributes after any separately selected new compile. Do not reuse guessed labels/old306 map as newlabel authority."
+  },
+  "independence": "New input-only contract precedes new producer source. Fresh stateless external independent expected-source owner is Root-dispatched later from SAFE only, never old actuals or protected expectations. Shared source-derived contracts/method correlation explicit; no backend-memory attestation.",
+  "not_claimed": [
+    "new admission or real capture",
+    "sourceprefix or expectedliteral generation",
+    "StepInv proof",
+    "main.k generaldispatcher ruletrace",
+    "native/SDK/physicalA135",
+    "globalA39/B/revision03 refinement",
+    "stagenet proof or fullEARS"
+  ],
+  "status": "INPUT_AND_DECLARATION_ONLY_BEFORE_NEW_PRODUCER_UNRUN"
+}
