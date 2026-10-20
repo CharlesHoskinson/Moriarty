@@ -1,0 +1,16 @@
+language "moriarty-sherlock-nominal/1";
+program RibbonRelay {
+  type Ribbon<T> { End; Link(z_mark: T, a_rest: Ribbon<T>); }
+  type Parcel<A, B> { Seal(z_contents: A, a_tag: B); }
+  fn flip(xs: Ribbon<Bool>): Ribbon<Bool> {
+    match xs {
+      Ribbon<Bool>::End() => construct Ribbon<Bool>::End(),
+      Ribbon<Bool>::Link(mark, rest) => construct Ribbon<Bool>::Link(not(mark), flip(rest))
+    }
+  }
+  fn stamp(xs: Ribbon<Bool>, tag: UInt): Parcel<Ribbon<Bool>, UInt> {
+    construct Parcel<Ribbon<Bool>, UInt>::Seal(flip(xs), tag)
+  }
+  entry stamp(construct Ribbon<Bool>::Link(true,
+    construct Ribbon<Bool>::Link(false, construct Ribbon<Bool>::End())), 37);
+}
