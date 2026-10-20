@@ -1,0 +1,438 @@
+```diff
+--- a/source/symbolic_compare.py
++++ b/source/symbolic_compare.py
+@@ -24,6 +24,12 @@
+ SEMANTIC = ("final_value", "calls", "matches", "constructors", "pending_checkpoints")
+ LIMITS = ["source-symbolic equality only; no physical clocks/IDs/cost/complete microstep oracle", "no admission, native, circuit, recursive proof, target or EARS acceptance"]
+ 
++# Owner new_checked seed, by position: builtin TypeIds 0..3 (name, ctor_start, ctor_len),
++# constructors 0..3 (owning_type, source_order, field_start, field_len), field type IDs 0..4.
++BUILTIN_TYPES = (("UInt", 0, 0), ("Bool", 0, 0), ("List", 0, 2), ("Tree", 2, 2))
++BUILTIN_CTORS = ((2, 0, 0, 0), (2, 1, 0, 2), (3, 0, 2, 1), (3, 1, 3, 2))
++BUILTIN_FIELDS = (0, 2, 0, 3, 3)
++
+ 
+ class Gap(Exception):
+     def __init__(self, path, reason):
+@@ -66,16 +72,21 @@
+     return body
+ 
+ 
+-def cut(rows, sl, path):
++def cut(rows, sl, path, normalized=False):
++    # Only owner-normalized roles (occurrence paths) require start 0 when empty;
++    # other empty program/image slices are bounds-checked only.
+     keys(sl, ("start", "len"), path)
+     a, n = index(sl["start"], path), index(sl["len"], path)
+-    need(n != 0 or a == 0, path, "non-normalized empty slice")
++    need(n != 0 or a == 0 or not normalized, path, "non-normalized empty slice")
+     need(type(rows) is list and a + n <= len(rows), path, "slice out of bounds")
+     return rows[a:a+n]
+ 
+ 
+ def same(a, b):
+     # Python otherwise aliases bool to integer. JSON objects ignore key order.
++    # One immutable parsed object (the normalized admission) equals itself.
++    if a is b:
++        return True
+     if type(a) is not type(b):
+         return False
+     if type(a) is dict:
+@@ -109,17 +120,23 @@
+         raise Gap(path, "invalid or excessive JSON: " + str(exc)) from exc
+ 
+ 
+-def pin(path):
++def pin_raw(path):
++    # One read: the exact bytes hashed here are the bytes returned to callers.
+     raw = Path(path).read_bytes()
+     return {"path": str(Path(path).resolve()), "bytes": len(raw),
+-            "sha256": hashlib.sha256(raw).hexdigest()}
++            "sha256": hashlib.sha256(raw).hexdigest()}, raw
++
++
++def pin(path):
++    return pin_raw(path)[0]
+ 
+ 
+ def checked(spec):
+     keys(spec, ("path", "bytes", "sha256"), "pin")
+     need(type(spec["path"]) is str and Path(spec["path"]).is_absolute(), "pin", "absolute file path required")
+-    need(pin(spec["path"]) == spec, spec["path"], "file byte/hash/path pin mismatch")
+-    return Path(spec["path"]).read_bytes()
++    actual, raw = pin_raw(spec["path"])
++    need(same(actual, spec), spec["path"], "file byte/hash/path pin mismatch")
++    return raw
+ 
+ 
+ def json_pin(spec):
+@@ -156,5 +173,5 @@
+         self.coords, self.types, self.pattern_coords = {}, {}, {}
+         self.calls, self.live_ctor, self.materializing = [], {}, None
+-        self.enter = None
++        self.enter, self.published = None, False
+         self.plan = None
+         self._associate()
+@@ -234,7 +251,7 @@
+                 actual_owner = {"entry": True} if not occ["owner_is_function"] else {"function": at(function_names, occ["function"], "occurrence.function")}
+                 if not occ["owner_is_function"]:
+                     need(occ["function"] == 0, "occurrence", "entry function index must be zero")
+-                need(same(actual_owner, owner) and same(cut(p["occurrence_paths"], occ["path"], "occurrence_paths"), path),
++                need(same(actual_owner, owner) and same(cut(p["occurrence_paths"], occ["path"], "occurrence_paths", True), path),
+                      "occurrence", "C1/C4 owner/path/ExprID association mismatch")
+                 src = v["expressions"][ident]
+                 need(same(self.owner(src["owner"]), owner) and same(src["path"], path),
+@@ -251,10 +268,25 @@
+                     stack.append((children[child_index], path + [child_index]))
+         need(len(seen) == len(p["expressions"]), "expressions", "unreachable extra expression membership")
+         self._associate_patterns()
++        self._builtin_rows()
+         for i in range(len(p["types"])):
+             self.typ(i)
+         self._declarations()
+ 
++    def _builtin_rows(self):
++        # Owner generic-view header plus exact new_checked seed rows. Builtin
++        # name_id 0 is padding and is never resolved against program.names.
++        p = self.p
++        need(same(p["entry"], 0) and len(p["types"]) >= len(BUILTIN_TYPES)
++             and len(p["constructors"]) >= len(BUILTIN_CTORS) and len(p["ctor_fields"]) >= len(BUILTIN_FIELDS),
++             "program", "owner entry/builtin row membership differs")
++        for cid, (owner, order, start, length) in enumerate(BUILTIN_CTORS):
++            seed = {"owning_type": owner, "name_id": 0, "source_order": order, "field_start": start, "field_len": length}
++            need(same(p["constructors"][cid], seed), "constructors", "builtin constructor row differs from owner seed")
++        for fid, tid in enumerate(BUILTIN_FIELDS):
++            need(same(p["ctor_fields"][fid], {"name_id": 0, "type_id": tid}),
++                 "ctor_fields", "builtin constructor field row differs from owner seed")
++
+     def _associate_patterns(self):
+         declared = {}
+         for row in self.prov["patterns"]:
+@@ -300,18 +332,23 @@
+         if ident in self.types:
+             return self.types[ident]
+         need(ident not in trail, "type_args", "cyclic type application")
+-        row = at(self.p["types"], ident, "types")
+-        name = self.name(row["name_id"])
+-        args = [self.typ(x, trail + (ident,)) for x in cut(self.p["type_args"], row["args"], "type_args")]
+-        if row["decl"] is None:
+-            need(name in ("UInt", "Bool", "List", "Tree") and not args,
+-                 "types", "unsupported or ambiguous builtin")
+-            value = {"builtin": name}
++        row = keys(at(self.p["types"], ident, "types"), ("name_id", "decl", "args", "ctor_start", "ctor_len"), "types")
++        if ident < len(BUILTIN_TYPES):
++            # Owner rows 0..3 are positional; name_id 0 is padding, never a name.
++            name, start, length = BUILTIN_TYPES[ident]
++            need(row["decl"] is None and same(row["args"], {"start": 0, "len": 0})
++                 and same([row["name_id"], row["ctor_start"], row["ctor_len"]], [0, start, length]),
++                 "types", "builtin type row differs from owner positional layout")
++            value = {"builtin": name}
+         else:
++            need(row["decl"] is not None, "types", "user type row >= 4 requires a declaration")
++            name = self.name(row["name_id"])
++            args = [self.typ(x, trail + (ident,)) for x in cut(self.p["type_args"], row["args"], "type_args")]
+             decl = at(self.p["decl_templates"], row["decl"], "decl_templates")
+-            need(name == decl["name"] and len(args) == len(decl["parameters"]),
++            need(name == decl["name"] and len(args) == len(decl["parameters"])
++                 == at(self.p["decl_param_counts"], row["decl"], "decl_param_counts"),
+                  "types", "nominal declaration/application mismatch")
+             value = {"named": name, "arguments": args}
+         self.types[ident] = value
+         return value
+ 
+@@ -363,6 +400,7 @@
+     def ctor(self, tid, cid):
+         c = at(self.p["constructors"], cid, "constructor")
+         t = at(self.p["types"], tid, "constructor.type")
++        need(tid >= len(BUILTIN_TYPES), "constructor", "dedicated builtin TypeId in nominal constructor kind")
+         index(c["owning_type"], "constructor.owner")
+         need(c["owning_type"] == tid and t["ctor_start"] <= cid < t["ctor_start"] + t["ctor_len"],
+              "constructor", "wrong owning type")
+@@ -396,7 +434,7 @@
+         for n, val in enumerate(vals):
+             expected = self.typ(at(self.p["ctor_fields"], c["field_start"] + n, "ctor_fields")["type_id"])
+             need(same(self.value_type(val), expected), "value.fields", "field value type mismatch")
+-        self.ledger.append({"association": "value", "raw_ref": ref, "type": ty, "constructor_id": b["ctor_id"]})
++        # No unlocated per-decode ledger row; raw refs stay in located lifecycle rows.
+         return {"Nominal": {"type": ty, "constructor": name, "fields": vals}}
+ 
+     @staticmethod
+@@ -405,20 +443,18 @@
+         return {"builtin": "UInt" if kind == "UInt" else "Bool"} if kind in ("UInt", "Bool") else b["type"]
+ 
+     def env(self, root, image):
+-        result, seen, raw = {}, set(), []
++        result, seen = {}, set()
+         while root is not None:
+             index(root, "env_root")
+             need(root not in seen, "env", "cyclic lexical environment")
+             seen.add(root)
+             cell = at(image["env"], root, "env")
+             keys(cell, ("binder", "value", "previous"), "env.cell")
+             name = self.name(cell["binder"])
+             # Actual EnvGet follows root -> previous and stops at first match.
+             if name not in result:
+                 result[name] = self.value(cell["value"], image)
+-            raw.append(root)
+             root = cell["previous"]
+-        self.ledger.append({"association": "environment", "chain": raw, "visible_names": sorted(result)})
+         return result
+ 
+     def vals(self, seq, image):
+@@ -517,10 +553,14 @@
+              and same(occ["ast_path"], coord["path"]), "event.source_occurrence", "event/source path mismatch")
+         rule = event["rule_id"]
+         disposition = event["disposition"]
++        need(not self.published, "event", "event after the single successful publication")
+         if disposition != "Applied":
+-            need(rule == "KAdminPublishValue" and disposition == "Published", "event", "capture did not complete successfully")
+-            need(not self.calls and not self.live_ctor and self.materializing is None,
++            need(rule == "KAdminPublishValue" and disposition == "Published" and event["event_kind"] == "Publish",
++                 "event", "capture did not complete successfully")
++            need(not self.calls and not self.live_ctor and self.materializing is None
++                 and self.enter is None and self.plan is None,
+                  "final", "publication with pending source continuation")
++            self.published = True
+             return
+         need(event["event_kind"] in ("LegacyComplete", "HelperEnter", "HelperVisit", "HelperExit", "HelperFail", "Bookkeeping"),
+              "event.event_kind", "unexpected applied event class")
+@@ -580,13 +620,13 @@
+                 self.enter = None
++                # Raw caller/callee roots and a direct handle stay with this call row.
++                self.ledger[-1].update(caller_env_root=frame["saved_env"], callee_env_root=c["env"])
++                self.calls[-1]["row"] = self.ledger[-1]
+         elif rule == "KMachineReturnCallValid":
+             need(self.calls and self.calls[-1]["depth"] == len(before["frames"]) - 1,
+                  "call.return", "return not paired to current semantic call")
+             frame = tag(before["frames"][-1], "ReturnF", "call.return")
+             need(frame["origin"] == self.calls[-1]["expr"] and same(after["frames"], before["frames"][:-1]),
+                  "call.return", "return frame identity changed")
+-            completed_call = self.calls.pop()
+-            for association in reversed(self.ledger):
+-                if association.get("association") == "call" and association["invocation"] == completed_call["invocation"]:
+-                    association["return_record"] = record
+-                    break
++            # The direct row handle avoids a ledger rescan on every return.
++            self.calls.pop()["row"]["return_record"] = record
+         elif rule in ("XAdtEvalConstructFields", "XAdtEvalConstructNullary"):
+@@ -670,9 +710,11 @@
+             self.plan = None
++            self.ledger[-1].update(scrutinee_ref=control["value"], saved_env_root=control["saved_env"], arm_env_root=result["env"])
+         elif rule in ("KMachineCasesHit", "KMachineCasesEmpty", "XAdtCasesPlanMiss"):
+             raise Gap("match", "unbound or unsuccessful match lifecycle: " + rule)
+ 
+     def finish(self, image):
+         self.image(image)
+         need(not self.calls and not self.live_ctor and self.enter is None and self.materializing is None and self.plan is None,
+              "final", "unconsumed semantic lifecycle")
++        need(self.published, "final", "no single successful KAdminPublishValue publication")
+         need(image["frames"] == [] and image["helper"] is None and image["result"] is None,
+@@ -683,76 +725,100 @@
+         return self.out
+ 
+ 
++def jsonl(raw, name):
++    """Parse one LF-terminated JSON value at a time from the one checked buffer."""
++    need(raw == b"" or raw.endswith(b"\n"), name, "unterminated final JSONL line")
++    start, n = 0, 0
++    while start < len(raw):
++        end = raw.index(b"\n", start)
++        yield n, parse(raw[start:end], name + ":" + str(n))
++        start, n = end + 1, n + 1
++
++
+ def capture_case(binding):
+     """Retain every diagnostic; never treat missing/failed capture as success."""
+-    files = binding["capture"]
+-    keys(files, ("input.json", "compile.json", "records.jsonl", "errors.jsonl", "final.json"), "capture")
+-    parents = {str(Path(x["path"]).parent) for x in files.values()}
+-    need(len(parents) == 1 and Path(next(iter(parents))).name == binding["capture_case"],
+-         "capture", "all five files must be in the selected case directory")
+-    for name, spec in files.items():
+-        need(Path(spec["path"]).name == name and not Path(spec["path"]).is_symlink(),
+-             "capture", "literal named capture file required; no alias to expected")
+-    raw = {name: checked(spec) for name, spec in files.items()}
+-    pins = list(files.values()) + [binding["source"]]
+-    source = checked(binding["source"]).decode("utf-8")
+-    inp, comp, final = [parse(raw[n], n) for n in ("input.json", "compile.json", "final.json")]
+-    failures, ledger, projection = [], [], None
+-    records = [parse(line, "records.jsonl:" + str(i)) for i, line in enumerate(raw["records.jsonl"].splitlines())]
+-    errors = [parse(line, "errors.jsonl:" + str(i)) for i, line in enumerate(raw["errors.jsonl"].splitlines())]
++    failures, ledger, projection, errors, pins, where = [], [], None, [], [], "capture"
+     try:
+-        need(not errors, "errors.jsonl", "producer diagnostics retained; complete success not established")
++        files = binding["capture"]
++        keys(files, ("input.json", "compile.json", "records.jsonl", "errors.jsonl", "final.json"), "capture")
++        parents = {str(Path(x["path"]).parent) for x in files.values()}
++        need(len(parents) == 1 and Path(next(iter(parents))).name == binding["capture_case"],
++             "capture", "all five files must be in the selected case directory")
++        for name, spec in files.items():
++            need(Path(spec["path"]).name == name and not Path(spec["path"]).is_symlink(),
++                 "capture", "literal named capture file required; no alias to expected")
++        raw = {}
++        for name, spec in list(files.items()) + [("source", binding["source"])]:
++            # Only accepted single-buffer pins are retained and later rechecked.
++            where = name
++            raw[name] = checked(spec)
++            pins.append(spec)
++        source = raw.pop("source").decode("utf-8")
++        where = "errors.jsonl"
++        for _, error in jsonl(raw["errors.jsonl"], "errors.jsonl"):
++            errors.append(error)
++        need(not errors, "errors.jsonl", "producer diagnostics retained; complete success not established")
++        where = "documents"
++        inp, comp, final = [parse(raw[n], n) for n in ("input.json", "compile.json", "final.json")]
+         for doc in (inp, comp, final):
+             need(doc["schema"] == ACTUAL_SCHEMA and doc["case"] == binding["capture_case"], "capture", "schema/case mismatch")
+         need(inp["source"] == source, "input.source", "original UTF-8 source bytes differ")
+         need(inp["independent_expected_cells_read"] is False and final["independent_expected_cells_read"] is False,
+              "capture", "producer declared independent expected read")
+         need(inp["source_profile"] == comp["source_profile"] == binding["source_profile"] == PROFILE, "source_profile", "not selected adopted profile")
+         need(comp["body_check"]["status"] == "completed" and comp["evaluation_performed"] is False,
+              "compile", "body completion/no-evaluation contract missing")
+         need(same(comp["body_check"]["judgments"], JUDGMENTS), "compile.body_check", "not exact adopted body-check judgments")
+         need(same(inp["configuration"], comp["configuration"]), "configuration", "configuration changed")
+-        genesis = comp["genesis"]
++        genesis = keys(comp["genesis"], ("admission", "image"), "genesis")
+         admission = genesis["admission"]
+         keys(admission, ("identity", "bounds", "view", "layout"), "admission")
++        where = "projection"
+         p = Projection(admission["view"], comp["provenance"], source)
+         projection, ledger = p.out, p.ledger
+-        previous, events, terminals = genesis, 0, 0
++        previous, events, terminals, count = {"admission": admission, "image": genesis["image"]}, 0, 0, 0
+ 
+         def boundary(bound):
+             keys(bound, ("admission", "image"), "boundary")
+             a = bound["admission"]
+-            if same(a, {"same_as": "compile.json#/genesis/admission"}):
+-                return {"admission": admission, "image": bound["image"]}
+-            keys(a, ("inline",), "boundary.admission")
+-            need(same(a["inline"], admission), "boundary.admission", "inline admission changed")
+-            return {"admission": a["inline"], "image": bound["image"]}
++            if not same(a, {"same_as": "compile.json#/genesis/admission"}):
++                keys(a, ("inline",), "boundary.admission")
++                need(same(a["inline"], admission), "boundary.admission", "inline admission changed")
++            # Reference and equality-validated inline share ONE immutable admission
++            # object, so continuity short-circuits instead of re-walking Program.
++            return {"admission": admission, "image": bound["image"]}
+ 
+-        for n, rec in enumerate(records):
+-            need(type(rec["record"]) is int and rec["record"] == n and terminals == 0,
+-                 "records[" + str(n) + "]", "noncontiguous index or record after terminal")
+-            before, after = boundary(rec["before"]), boundary(rec["after"])
+-            need(same(before, previous), "records[" + str(n) + "].before", "whole-boundary discontinuity")
+-            if rec["kind"] == "Event":
+-                keys(rec, ("record", "kind", "before", "event", "after"), "record")
+-                p.step(before["image"], rec["event"], after["image"], n)
+-                events += 1
+-            else:
+-                keys(rec, ("record", "kind", "before", "after"), "terminal")
+-                need(rec["kind"] == "Terminal" and same(before, after), "terminal", "missing/changed terminal boundary")
+-                terminals += 1
+-            previous = after
+-        need(terminals == 1 and len(records) == index(final["records"], "final.records") and events == index(final["events"], "final.events"), "final.counts", "complete record/event membership differs")
++        where = "records.jsonl"
++        for n, rec in jsonl(raw["records.jsonl"], "records.jsonl"):
++            # Only the current parsed record is live; the file is never listed.
++            where = "records.jsonl:" + str(n)
++            need(type(rec) is dict and rec.get("kind") in ("Event", "Terminal"), where, "Event or Terminal record required")
++            keys(rec, ("record", "kind", "before", "event", "after") if rec["kind"] == "Event"
++                 else ("record", "kind", "before", "after"), where)
++            need(type(rec["record"]) is int and rec["record"] == n and terminals == 0,
++                 where, "noncontiguous index or record after terminal")
++            before, after = boundary(rec["before"]), boundary(rec["after"])
++            need(same(before, previous), where + ".before", "whole-boundary discontinuity")
++            if rec["kind"] == "Event":
++                p.step(before["image"], rec["event"], after["image"], n)
++                events += 1
++            else:
++                need(same(before, after), where, "missing/changed terminal boundary")
++                terminals += 1
++            previous, count = after, n + 1
++        where = "final.json"
++        need(terminals == 1 and count == index(final["records"], "final.records") and events == index(final["events"], "final.events"), "final.counts", "complete record/event membership differs")
+         need(same(previous, final["owner"]), "final.owner", "last complete boundary differs")
+         need(same(comp["preparation"], final["preparation"]), "preparation", "preparation changed")
+         keys(final["actual_capture_checks"], ("continuous", "final_equals_last", "admission_unchanged", "preparation_unchanged"), "capture_checks")
+         need(all(x is True for x in final["actual_capture_checks"].values()), "capture_checks", "producer reported incomplete capture")
+         projection = p.finish(final["owner"]["image"])
+-    except (Gap, KeyError, IndexError, TypeError, RecursionError) as exc:
+-        failures.append({"path": getattr(exc, "path", "capture.shape"), "reason": getattr(exc, "reason", repr(exc))})
++    except (Gap, KeyError, IndexError, TypeError, RecursionError, AttributeError, ValueError, OSError) as exc:
++        # Located per-case receipt; already retained pins/diagnostics/ledger stay.
++        failures.append({"path": getattr(exc, "path", where), "reason": getattr(exc, "reason", repr(exc))})
+     return {"status": "ESTABLISHED" if not failures else "NOT_ESTABLISHED", "case": binding["case"],
+             "projection": projection, "gaps": failures, "producer_errors": errors,
+             "association_ledger": ledger, "input_pins": pins}
+ 
+ 
+ def first_difference(actual, expected, path="$"):
+@@ -810,15 +876,16 @@
+ 
+ 
+ def project_command(args):
+-    binding_pin = pin(args.bindings)
+-    bindings = json_pin(binding_pin)
++    binding_pin, binding_raw = pin_raw(args.bindings)
++    bindings = parse(binding_raw, binding_pin["path"])
+     keys(bindings, ("source_manifest", "cases"), "bindings")
+     need(bindings["source_manifest"]["sha256"] == INPUT_SHA, "bindings", "not original independent input manifest")
+     manifest = json_pin(bindings["source_manifest"])
+     originals = {x["path"]: x for x in manifest["source_and_safe_readset"] if x["path"].endswith(".mori")}
+     selected = bindings["cases"]
+     need(len(selected) == len(originals) and len({x["case"] for x in selected}) == len(selected), "bindings", "whole unique source case membership required")
+     for item in selected:
++        keys(item, ("case", "capture_case", "source_profile", "source", "capture"), "bindings.cases")
+         need(item["source"] == originals.get(item["source"]["path"]) and Path(item["source"]["path"]).name == item["case"],
+              "bindings", "source not member of original safe manifest")
+         need(item["capture_case"] == Path(item["case"]).stem, "bindings", "capture case not original input basename")
+@@ -890,7 +957,7 @@
+     args = cli.parse_args()
+     try:
+         return project_command(args) if args.command == "project" else compare_command(args)
+-    except (Gap, OSError, KeyError, IndexError, TypeError, UnicodeError, RecursionError) as exc:
++    except (Gap, OSError, KeyError, IndexError, TypeError, UnicodeError, ValueError, AttributeError, RecursionError) as exc:
+         # Preserve failure under the newly selected output directory where
+         # possible. Never overwrite input, projection, expected or old result.
+         directory = Path(args.outdir)
+```
+
+**Obligations map** (source-level only; nothing was run, applied or hashed)
+
+- **B1 (builtin rows by position).**
+  - `typ` maps rows 0..3 to `UInt`/`Bool`/`List`/`Tree` by position. Each such row must have `decl None`, args exactly `{start:0,len:0}`, `name_id` 0 (never looked up in `names`), and the ctor ranges (0,0),(0,0),(0,2),(2,2).
+  - A user row at index 4 or higher must have a declaration, and its argument count must equal `decl_param_counts`.
+  - `_builtin_rows` checks `entry == 0` and the exact `new_checked` seed: constructors 0..3 and the five field rows.
+  - `ctor` refuses builtin TypeIds.
+  - The existing nominal owner, field and generic checks are unchanged.
+- **R4 (single buffer).** `checked` hashes and returns the same buffer from one `pin_raw` read and compares with `same`. Canonical realpath pins are unchanged. `project_command` now reads the bindings file once.
+- **R3 (located failures).**
+  - `capture_case` wraps everything from `binding["capture"]` onward. It catches `AttributeError`, `ValueError` and `OSError` in addition to the existing errors.
+  - Every receipt carries a location: the `Gap` path, or `where` (file name or `records.jsonl:n`).
+  - Producer errors and accepted pins collected before a failure are kept. Only accepted pins are rechecked later.
+  - `main` also catches `ValueError` and `AttributeError`.
+- **Efficiency.**
+  - Reference and inline admissions are normalized to one immutable admission object. Inline is first checked for equality.
+  - `same` short-circuits on `is`, so per-record continuity no longer walks the Program. Full image continuity and terminal equality are unchanged.
+  - `jsonl` streams one record at a time from the checked buffer and requires the final LF.
+  - The unlocated value and environment ledger rows are removed. Raw env roots and the scrutinee ref are now attached to the call and match rows.
+  - `ReturnCallValid` uses a direct row handle instead of rescanning the ledger.
+- **Lifecycle.**
+  - Exactly one `KAdminPublishValue`/`Published`/`Publish` event is allowed, and no event may follow it.
+  - Publication also requires `enter` and `plan` to be empty. `finish` requires the publication.
+  - All five symbolic fields, their orders, the checkpoints and `first_difference` are unchanged.
+- **Empty slices.** Strict normalization applies only to occurrence paths and to the positional builtin args. Every other `cut` checks bounds only.
+
+**Residual finite prerequisites**
+
+- **Separate test delivery.** Fixtures must use the owner layout: builtins 0..3, the seed constructors and fields, and user rows from 4. The old `sample()` violates this.
+- **Lifecycle tests.** These must drive all five files through `capture_case`, including Publish and Terminal. The old tests also need these changes:
+  - `test_body_entry…` mocks `p.enter`, so its rows now lack the new `"row"` key.
+  - `finish` now needs `published`.
+- **New fail-closed shape requirements to note:**
+  - binding item keys must be exact;
+  - the JSONL final LF is required;
+  - an inline admission still costs one Program walk per boundary that uses it.
+- **Not changed here.** `compare_command` keeps its pin-then-`json_pin` double read, but each parse still uses the hashed buffer. There is no fit claim against the 30 s / 25 s CPU / 2 GiB / 64 MiB caps.
+- **Next gates.** Fresh nonauthor review, then the revised synthetic PASS, then Root pin/binding freezes. Ops02/03 stay UNRUN.
