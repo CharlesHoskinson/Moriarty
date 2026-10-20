@@ -1,0 +1,23 @@
+{
+  "status": "PASS_LITERAL_SINGLE_OWNER_METHOD_ONLY",
+  "owner": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/runtime-qa-postcompile-01/revision02-testonly-owner-correction-request-01/actual-MuseWonderHIGH-test-only-query-registry-lifetime-correction-01/FINAL-RESPONSE.txt",
+    "bytes": 3510,
+    "sha256": "078b5a743de10188576601bbf9e7deedc2492e739deeb635681cdd1808d149e8"
+  },
+  "before": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/runtime-qa-postcompile-01/tests/test_data_runtime.py",
+    "bytes": 9678,
+    "sha256": "9b95307183fe189ab5faf4373a91c20ec94562d223def7b80da0168ddef6e7af"
+  },
+  "after": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/runtime-qa-postcompile-01/revision02-test-registry-lifetime-correction-01/tests/test_data_runtime.py",
+    "bytes": 10403,
+    "sha256": "ced356d28e80db46b6ba39155e20e7615256d259034cfe8efa64abc1a4d30ae2"
+  },
+  "old_method": "    def test_original_input_query_inverse_and_metadata_separation(self):\n        term, wire, ported = r.carrier(copy.deepcopy(self.input))\n        self.assertEqual(ported['profile'],\n                         'sherlock-c6-data-positive-padded/1')\n        self.assertEqual(ported['case_id'],\n                         'seven-variants-partial-unequal-capacities-01')\n        self.assertEqual(ported['source_document'], self.input)\n        self.assertEqual(wire['format'], 'KAST')\n        self.assertEqual(wire['version'], 4)\n        self.assertTrue(r.base.same(\n            r.base.tree(term),\n            r.base.tree(r.decode_document(wire, 'DPObservation'))))\n        self.assertEqual(term.sort, 'DPObservation')\n        self.assertNotIn('dpObserve', r.base.codec.REG)\n        self.assertEqual(len(r.base.codec.REG), 26)\n        self.assertEqual(len(r.DATA_REG), 26)\n        self.assertEqual(len(r.LABELS), 27)\n",
+  "new_method_exact_owner_fence": "    def test_original_input_query_inverse_and_metadata_separation(self):\n        term, wire, ported = r.carrier(copy.deepcopy(self.input))\n        self.assertEqual(ported['profile'],\n                         'sherlock-c6-data-positive-padded/1')\n        self.assertEqual(ported['case_id'],\n                         'seven-variants-partial-unequal-capacities-01')\n        self.assertEqual(ported['source_document'], self.input)\n        self.assertEqual(wire['format'], 'KAST')\n        self.assertEqual(wire['version'], 4)\n        self.assertNotIn('dpObserve', r.base.codec.REG)\n        self.assertEqual(len(r.base.codec.REG), 26)\n        self.assertEqual(r.base.codec.REG, r.DATA_REG)\n        saved_registry = r.base.codec.REG\n        try:\n            r.base.codec.REG = {**r.DATA_REG, **r.ENTRY_REG}\n            self.assertEqual(len(r.base.codec.REG), 27)\n            self.assertIn('dpObserve', r.base.codec.REG)\n            query_tree = r.base.tree(term)\n            decoded_tree = r.base.tree(r.decode_document(wire, 'DPObservation'))\n        finally:\n            r.base.codec.REG = saved_registry\n        self.assertIs(r.base.codec.REG, saved_registry)\n        self.assertEqual(r.base.codec.REG, r.DATA_REG)\n        self.assertNotIn('dpObserve', r.base.codec.REG)\n        self.assertEqual(len(r.base.codec.REG), 26)\n        self.assertTrue(r.base.same(query_tree, decoded_tree))\n        self.assertEqual(term.sort, 'DPObservation')\n        self.assertNotIn('dpObserve', r.base.codec.REG)\n        self.assertEqual(len(r.base.codec.REG), 26)\n        self.assertEqual(len(r.DATA_REG), 26)\n        self.assertEqual(len(r.LABELS), 27)\n",
+  "exact_inverse": true,
+  "other12methods_and_setUp_byte_identical": true,
+  "tests_UNRUN_by_lane": true
+}
