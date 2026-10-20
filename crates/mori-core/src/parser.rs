@@ -49,7 +49,13 @@ pub(crate) fn parse_v3(source: &str) -> Result<Program, Error> {
 
 fn parse_profile(source: &str, profile: Profile) -> Result<Program, Error> {
     let staged = profile != Profile::Core1;
-    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let lexed = mori_lexer::lex(source).map_err(|diagnostic| {
+        let mut error = Error::new("lex", diagnostic.to_string());
+        error.offset = diagnostic
+            .first_label_offset()
+            .and_then(|offset| u32::try_from(offset).ok());
+        error
+    })?;
     let tokens = (0..lexed.len())
         .map(|i| {
             let idx = TokenIdx::new(i);
@@ -427,7 +433,13 @@ impl Parser {
 /// Read the explicit source profile for CLI routing; this does not admit a program.
 /// Unchanged: returns only `/1` or `/2`, so legacy consumers refuse `/3`.
 pub fn language(source: &str) -> Result<&'static str, Error> {
-    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let lexed = mori_lexer::lex(source).map_err(|diagnostic| {
+        let mut error = Error::new("lex", diagnostic.to_string());
+        error.offset = diagnostic
+            .first_label_offset()
+            .and_then(|offset| u32::try_from(offset).ok());
+        error
+    })?;
     let mut tokens = Vec::new();
     for i in 0..lexed.len() {
         let idx = TokenIdx::new(i);
@@ -461,7 +473,13 @@ pub fn language_v3(source: &str) -> Result<&'static str, Error> {
 }
 
 fn language_inner(source: &str, v3: bool) -> Result<&'static str, Error> {
-    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let lexed = mori_lexer::lex(source).map_err(|diagnostic| {
+        let mut error = Error::new("lex", diagnostic.to_string());
+        error.offset = diagnostic
+            .first_label_offset()
+            .and_then(|offset| u32::try_from(offset).ok());
+        error
+    })?;
     let mut tokens = Vec::new();
     for i in 0..lexed.len() {
         let idx = TokenIdx::new(i);

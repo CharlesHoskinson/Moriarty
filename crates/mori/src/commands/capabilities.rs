@@ -84,7 +84,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
         "catalogue": {
             "sourceRevision": SOURCE_REVISION, "coverage": "selected-public-profile-consumers",
             "basis": "source-inspection", "runtimeEvidence": "not-included",
-            "integrationBasis": "N961a source declarations with the existing C214b/P0ad8 Core3 proposal; all integrated build/runtime results UNRUN",
+            "integrationBasis": "N961a source declarations with the existing C214b/P0ad8 Core3 proposal; this MCP/LSP/diagnostic source overlay is UNRUN; historical Core-only evidence remains separately bound",
             "note": "sourceRevision is a historical inspection basis, not the exact source commit for every row or a binary revision. Public Core/3 rows reflect the later Core/3 consumer candidate. Linked profile constants and cfg flags come from the build. Routing/editor changes require a catalogue update."
         },
         "profiles": [
@@ -133,9 +133,9 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
             consumer("core2-compile", "compile FILE --target FILE --out DIR", (Some(LANGUAGE_2), Some(SEMANTICS_2), Some("moriarty-zkir-artifact/4")), None,
                 ("source-present", "staged-compiler-source-present"), &["Distinct staged artifact/4, ABI/4 and relation/4; unsigned target only.", "Legacy /3 proving consumers do not accept the distinct /4 type; no proof or ledger result is inferred."], &["crates/mori/src/commands/compile.rs", "crates/mori-backend/src/stage/mod.rs"]),
             consumer("rust-lsp", "lsp", (None, None, None), None,
-                ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/lsp.rs"]),
+                ("source-present", "source-check-only"), &["In-memory Beta/Core1/Core2/Core3 source checks through the shared public checker; no target, evaluator, native proof or ledger route. Current source integration is unrun."], &["crates/mori/src/commands/lsp.rs"]),
             consumer("rust-mcp", "mcp", (None, None, None), None,
-                ("stub", "not-implemented"), &["Stub at the catalogue inspection revision. Update this row when the editor implementation changes."], &["crates/mori/src/commands/mcp.rs"])
+                ("source-present", "source-check-only"), &["In-memory Beta/Core1/Core2/Core3 source checks through the shared public checker; no target, evaluator, native proof or ledger route. Current source integration is unrun."], &["crates/mori/src/commands/mcp.rs"])
         ],
         "targets": [{
             "id": "midnight-ledger9-zkirv3", "consumerIds": ["core1-compile", "core2-compile"],

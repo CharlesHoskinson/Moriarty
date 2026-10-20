@@ -186,8 +186,9 @@ fn public_query_distinguishes_profiles_build_consumers_and_unchecked_targets() {
     assert_eq!(targeted["availableInBuild"], false);
     for id in ["rust-lsp", "rust-mcp"] {
         let editor = row(&report, "consumers", id);
-        assert_eq!(editor["implementation"], "stub");
-        assert_eq!(editor["availableInBuild"], false);
+        assert_eq!(editor["implementation"], "source-present");
+        assert_eq!(editor["qualification"], "source-check-only");
+        assert_eq!(editor["availableInBuild"], true);
     }
     for target in report["targets"].as_array().unwrap() {
         assert!(target["configuredTarget"].is_null());

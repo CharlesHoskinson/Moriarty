@@ -10,8 +10,10 @@
 mod diagnostic;
 #[cfg(any(feature = "fancy", test))]
 pub mod render;
+mod source;
 mod suggest;
 
 pub use diagnostic::MoriDiagnostic;
 pub use miette::{Diagnostic, LabeledSpan, NamedSource, Report, Severity, SourceSpan};
+pub use source::NamedUtf8Source;
 pub use suggest::{corrected_line, suggest};
