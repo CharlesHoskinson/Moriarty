@@ -12,12 +12,22 @@
 //! operands come from earlier real Add/Lt/Cons/Leaf/Branch ScalarExit
 //! allocations inside the same genuine program.
 //!
-//! REQUIRED_OPEN (not delivered, not claimed): raw Marker/SI17 held
-//! values, full raw Fr/namespace/serial suite (separately required),
-//! invalid-SI22 fabricated PRE, SI08/SI17/SI21/SI22/StepInv as wholes,
-//! program membership, P1/native/full39, proof/synthesis. A nominal
-//! `Constructor` kind is read only from the actual snapshot variant,
-//! never inferred from a raw type id.
+//! Marker source fixtures below are genuine-owner only in the
+//! not-held and validation-boundary senses: an admitted Marker row
+//! may exist in the constant table while no held reference denotes
+//! it, and a held literal root is routed through Validate, whose
+//! root/task refs are the exact SI17 positional exemptions. Neither
+//! case is a ScalarConstruct Marker positive. RAW held-Marker
+//! Construct specimens live only in the consumer raw child module.
+//!
+//! REQUIRED_OPEN (not delivered, not claimed): full in-circuit
+//! SI17 held-reference traversal and transitive `marker_free`/V6
+//! correctness, full raw Fr/namespace/serial suite (separately
+//! required), invalid-SI22 fabricated PRE,
+//! SI08/SI17/SI21/SI22/StepInv as wholes, program membership,
+//! P1/native/full39, proof/synthesis. A nominal `Constructor` kind
+//! is read only from the actual snapshot variant, never inferred
+//! from a raw type id.
 
 use super::{
     build_c6_scalar_construct_step_circuit, check_c6_scalar_construct_step_circuit,
@@ -170,6 +180,125 @@ fn operand_kind(s: &HostSnapshot, r: RefC) -> KindWant {
     }
 }
 fn space_of(r: RefC) -> Space { match r { RefC::Const(_) => Space::Const, RefC::Data(_) => Space::Data } }
+
+// --- Marker/SI17 snapshot projection (host test code only) ---
+// TYPED ACCESS OBSTRUCTION: global `check_step_inv` needs a
+// `PreImage`; supplied source05 exposes no backend-test-public
+// constructor for it for `host_owner_engine()`. This is therefore
+// an exact snapshot-holder projection of the Core SI17 holder
+// definition, not the engine checker and not a proof.
+fn const_marker_free(s: &HostSnapshot, id: usize) -> bool {
+    match s.admission.view.constants.get(id) {
+        Some(ConstantSnapshot::U128 { marker_free, .. })
+        | Some(ConstantSnapshot::Bool { marker_free, .. })
+        | Some(ConstantSnapshot::Nil { marker_free })
+        | Some(ConstantSnapshot::Cons { marker_free, .. })
+        | Some(ConstantSnapshot::Leaf { marker_free, .. })
+        | Some(ConstantSnapshot::Branch { marker_free, .. })
+        | Some(ConstantSnapshot::Constructor { marker_free, .. })
+        | Some(ConstantSnapshot::U128OutOfRange { marker_free }) => *marker_free,
+        None => panic!("Const id must exist for marker_free projection"),
+    }
+}
+fn const_kind_name(s: &HostSnapshot, id: usize) -> &'static str {
+    match s.admission.view.constants.get(id) {
+        Some(ConstantSnapshot::U128 { .. }) => "UInt",
+        Some(ConstantSnapshot::Bool { .. }) => "Bool",
+        Some(ConstantSnapshot::Nil { .. }) => "Nil",
+        Some(ConstantSnapshot::Cons { .. }) => "Cons",
+        Some(ConstantSnapshot::Leaf { .. }) => "Leaf",
+        Some(ConstantSnapshot::Branch { .. }) => "Branch",
+        Some(ConstantSnapshot::Constructor { .. }) => "Constructor",
+        Some(ConstantSnapshot::U128OutOfRange { .. }) => "Marker",
+        None => panic!("Const id must exist for kind projection"),
+    }
+}
+fn marker_const_ids(s: &HostSnapshot) -> Vec<usize> {
+    s.admission.view.constants.iter().enumerate().filter_map(|(i, c)| match c {
+        ConstantSnapshot::U128OutOfRange { marker_free } => {
+            assert!(!*marker_free, "admitted Marker row must carry marker_free=false");
+            Some(i)
+        }
+        _ => None,
+    }).collect()
+}
+fn transitive_false_composite_ids(s: &HostSnapshot) -> Vec<usize> {
+    s.admission.view.constants.iter().enumerate().filter_map(|(i, c)| match c {
+        ConstantSnapshot::Cons { marker_free: false, .. }
+        | ConstantSnapshot::Leaf { marker_free: false, .. }
+        | ConstantSnapshot::Branch { marker_free: false, .. }
+        | ConstantSnapshot::Constructor { marker_free: false, .. } => Some(i),
+        _ => None,
+    }).collect()
+}
+fn collect_si17_refs(s: &HostSnapshot, held: &mut Vec<RefC>, exempt: &mut Vec<RefC>) {
+    match &s.image.control {
+        ControlC::Return { value } | ControlC::Cases { value, .. }
+        | ControlC::CaseResult { value, .. } => held.push(*value),
+        ControlC::PrimResult { result: PrimOutcome::Value { value } } => held.push(*value),
+        ControlC::ScheduleNext { frame, .. } => {
+            if let FrameRowC::RightF { left, .. } = frame { held.push(*left); }
+        }
+        _ => {}
+    }
+    for f in &s.image.frames {
+        if let FrameRowC::RightF { left, .. } = f { held.push(*left); }
+    }
+    if let Some(h) = &s.image.helper {
+        match h {
+            HelperControlC::Scalar { operand_a, operand_b, .. } => {
+                held.push(*operand_a);
+                if let Some(b) = operand_b { held.push(*b); }
+            }
+            HelperControlC::EnvGet { found, .. } => {
+                if let Some(r) = found { held.push(*r); }
+            }
+            HelperControlC::EnvPut { value, .. } => held.push(*value),
+            HelperControlC::Append { value, staged, .. } => {
+                held.push(*value);
+                if let Some(r) = staged { held.push(*r); }
+            }
+            HelperControlC::Build { staged, node, .. } => {
+                if let Some(r) = staged { held.push(*r); }
+                if let Some(r) = node { held.push(*r); }
+            }
+            HelperControlC::Validate { root, .. } => exempt.push(*root),
+            HelperControlC::Equal { left, right, .. } => { held.push(*left); held.push(*right); }
+            HelperControlC::Match { scrutinee, staged, .. } => {
+                held.push(*scrutinee);
+                if let Some(r) = staged { held.push(*r); }
+            }
+            HelperControlC::Plan { scrutinee, cur, .. } => { held.push(*scrutinee); held.push(*cur); }
+            HelperControlC::Find { .. } | HelperControlC::Bind { .. } => {}
+        }
+    }
+    if let Some(r) = &s.image.result {
+        match r {
+            HelperResultC::EnvFound { value } | HelperResultC::ScalarValue { value }
+            | HelperResultC::EqualDone { value } | HelperResultC::BuildDone { value } => held.push(*value),
+            _ => {}
+        }
+    }
+    for c in &s.image.env { held.push(c.value); }
+    held.extend(s.image.value_slots.iter().copied());
+    for t in &s.image.tasks {
+        match t {
+            HelperTaskC::ValidateTask { r, .. } => exempt.push(*r),
+            HelperTaskC::EqualTask { left, right, .. } => { held.push(*left); held.push(*right); }
+            HelperTaskC::PairTask { arg, .. } => held.push(*arg),
+        }
+    }
+    held.extend(s.image.data_fields.iter().copied());
+}
+fn snapshot_si17_projection(s: &HostSnapshot) -> (Vec<RefC>, Vec<RefC>, bool) {
+    let (mut held, mut exempt) = (Vec::new(), Vec::new());
+    collect_si17_refs(s, &mut held, &mut exempt);
+    let holds = held.iter().all(|r| match r {
+        RefC::Const(id) => const_marker_free(s, *id),
+        RefC::Data(_) => true,
+    });
+    (held, exempt, holds)
+}
 fn selected_helper(s: &HostSnapshot) -> HelperControlC {
     match s.image.helper { Some(h @ HelperControlC::Scalar { .. }) => h,
         _ => panic!("snapshot must carry a Scalar helper") }
@@ -382,6 +511,31 @@ fn bin(op: BinaryOp, l: CoreExpr, r: CoreExpr) -> CoreExpr {
     CoreExpr::Binary { op, left: Box::new(l), right: Box::new(r) } }
 fn unary(op: UnaryOp, x: CoreExpr) -> CoreExpr { CoreExpr::Unary { op, operand: Box::new(x) } }
 fn prog(entry: CoreExpr) -> CoreProgram { CoreProgram { functions: Vec::new(), entry } }
+fn lit_marker_neg() -> CoreExpr {
+    CoreExpr::Literal { value: CoreValue::UInt { n: i128_class::KIntC::Negative } }
+}
+fn lit_marker_above() -> CoreExpr {
+    CoreExpr::Literal { value: CoreValue::UInt { n: i128_class::KIntC::AboveU128 } }
+}
+fn lit_list_marker() -> CoreExpr {
+    CoreExpr::Literal { value: CoreValue::List { elements: vec![
+        i128_class::KIntC::InRange(1), i128_class::KIntC::Negative] } }
+}
+fn lit_tree_marker_branch() -> CoreExpr {
+    lit_tree(CoreTree::Branch {
+        left: Box::new(CoreTree::Leaf { n: i128_class::KIntC::AboveU128 }),
+        right: Box::new(tree_leaf(2)) })
+}
+fn unused_marker_fn(name: &str, return_type: SortTag, body: CoreExpr) -> CoreFunction {
+    CoreFunction { name: name.into(), parameters: Vec::new(), return_type, body }
+}
+fn marker_unused_prog(entry: CoreExpr) -> CoreProgram {
+    CoreProgram { functions: vec![
+        unused_marker_fn("unused_marker_scalar", SortTag::UInt, lit_marker_neg()),
+        unused_marker_fn("unused_marker_list", SortTag::List, lit_list_marker()),
+        unused_marker_fn("unused_marker_tree", SortTag::Tree, lit_tree_marker_branch()),
+    ], entry }
+}
 fn leaf_of(x: CoreExpr) -> CoreProgram { prog(unary(UnaryOp::Leaf, x)) }
 fn cons_of(a: CoreExpr, b: CoreExpr) -> CoreProgram { prog(bin(BinaryOp::Cons, a, b)) }
 fn branch_of(a: CoreExpr, b: CoreExpr) -> CoreProgram { prog(bin(BinaryOp::Branch, a, b)) }
@@ -677,4 +831,142 @@ fn owner_record_mutations_reject_exact_host_consistency() {
         Err(C6ScalarConstructConsumerError::EventMismatch { .. }) => {}
         other => panic!("crossed record: expected EventMismatch, ok={}", other.is_ok()),
     }
+}
+#[test]
+fn marker_rows_admitted_not_held_genuine_baseline_both_modes() {
+    // (a) Marker and transitive composites are admitted in the
+    // constant table of unused functions. The selected genuine
+    // Construct PRE holds only the UInt entry operand.
+    let w = leaf_spec(KindWant::UInt(0), Space::Const, pend(NodeKind::Leaf));
+    let make = &|| marker_unused_prog(unary(UnaryOp::Leaf, lit_u(0)));
+    let (_, _, pre) = reach_core(generous(), &w, "Marker not-held probe", make);
+    let markers = marker_const_ids(&pre);
+    assert!(!markers.is_empty(), "genuine prepare must create U128OutOfRange rows");
+    let composites = transitive_false_composite_ids(&pre);
+    assert!(composites.iter().any(|i| const_kind_name(&pre, *i) == "Cons"),
+        "list containing a Marker must be transitively marker_free=false");
+    assert!(composites.iter().any(|i| const_kind_name(&pre, *i) == "Branch"),
+        "tree containing a Marker must be transitively marker_free=false");
+    assert!(composites.iter().all(|i| !const_marker_free(&pre, *i)));
+    let (held, exempt, holds) = snapshot_si17_projection(&pre);
+    assert!(holds, "snapshot SI17 projection must hold at genuine Construct PRE");
+    for id in markers.iter().chain(composites.iter()) {
+        assert!(!held.contains(&RefC::Const(*id)),
+            "unused Marker/composite Const {id} must not be held at Construct PRE");
+        assert!(!exempt.contains(&RefC::Const(*id)),
+            "unused Marker/composite Const {id} is not a Validate exemption either");
+    }
+    // Full normal baseline: fresh factories, selected step exactly
+    // once in the wrapper, independent replay, both modes. This is
+    // run_core/assert_applied/assert_preserved unchanged.
+    run_core(&w, "Marker not-held Leaf baseline", make);
+}
+
+fn collect_marker_boundary(make: &dyn Fn() -> CoreProgram, label: &str) -> Vec<CompleteStepRecord> {
+    let b = generous();
+    let engine = host_owner_engine();
+    let admitted = engine.admit(&make(), &b, &layout(b, None))
+        .unwrap_or_else(|e| panic!("{label}: admit: {}", tooling_label(&e)));
+    let mut image = engine.admit_run(&admitted, &RunIntC::Nat(64), &RunIntC::Nat(8), &FinanceInput::Absent)
+        .unwrap_or_else(|e| panic!("{label}: genesis: {}", tooling_label(&e)));
+    let mut records = Vec::new();
+    for _ in 0..64 {
+        match owner_record(&admitted, &mut image) {
+            Ok(ObservedStep::Event(r)) => {
+                let done = r.event.rule_id == RuleIdC::KMachineEvalLiteralInvalid;
+                records.push(r);
+                if done { return records; }
+            }
+            Ok(ObservedStep::Terminal { after, .. }) =>
+                panic!("{label}: terminal before LiteralInvalid: {:?}", after.image.outcome),
+            Err(e) => panic!("{label}: boundary step: {}", capture_label(&e)),
+        }
+    }
+    panic!("{label}: genuine owner never reached LiteralInvalid")
+}
+fn assert_marker_boundary(records: &[CompleteStepRecord], root_kind: &str, label: &str) {
+    assert!(!records.is_empty(), "{label}: records");
+    for r in records {
+        assert_ne!(r.event.rule_id, RuleIdC::BHelperScalarConstruct,
+            "{label}: invalid literal must never reach ScalarConstruct");
+        assert!(!matches!(r.after.image.helper, Some(HelperControlC::Scalar { .. })),
+            "{label}: no Scalar helper may be installed on the literal path");
+        for snap in [&r.before, &r.after] {
+            let (_, _, holds) = snapshot_si17_projection(snap);
+            assert!(holds, "{label}: SI17 snapshot projection holds at every boundary snapshot");
+        }
+        assert_eq!(r.after.admission, r.before.admission, "{label}: admission preserved");
+        assert_eq!(r.after.image.data, r.before.image.data, "{label}: DATA preserved");
+        assert_eq!(r.after.image.data_fields, r.before.image.data_fields, "{label}: DATA fields preserved");
+        assert_eq!(r.after.image.env, r.before.image.env, "{label}: env preserved");
+        assert_eq!(r.after.image.value_slots, r.before.image.value_slots, "{label}: slots preserved");
+    }
+    let entry = records.iter().find(|r| r.event.rule_id == RuleIdC::BHelperValidateEntry)
+        .unwrap_or_else(|| panic!("{label}: ValidateEntry required"));
+    assert_eq!(entry.event.event_kind, EventKind::HelperEnter, "{label}: entry kind");
+    assert_eq!(entry.event.disposition, StepDisposition::Applied, "{label}: entry disposition");
+    let root = match entry.after.image.helper {
+        Some(HelperControlC::Validate { root, status: TriStatus::Pending, .. }) => root,
+        _ => panic!("{label}: ValidateEntry must install Validate/Pending"),
+    };
+    let RefC::Const(root_id) = root else { panic!("{label}: literal root must be Const") };
+    assert_eq!(const_kind_name(&entry.after, root_id), root_kind, "{label}: literal root kind");
+    assert!(!const_marker_free(&entry.after, root_id), "{label}: literal root marker_free=false");
+    assert_eq!(entry.after.image.tasks,
+        vec![HelperTaskC::ValidateTask { r: root, visit: TaskVisitC::Unvisited, cursor: 0 }],
+        "{label}: exactly the root ValidateTask after entry");
+    let (held, exempt, holds) = snapshot_si17_projection(&entry.after);
+    assert!(holds && !held.contains(&root), "{label}: Validate root is exempt, not held");
+    assert_eq!(exempt, vec![root, root],
+        "{label}: only Validate.root and ValidateTask.r positions are exempt");
+    assert!(records.iter().any(|r| r.event.rule_id == RuleIdC::BHelperValidateInvalid),
+        "{label}: a Marker occurrence must be judged invalid");
+    let failure = &records[records.len() - 2];
+    assert_eq!(failure.event.rule_id, RuleIdC::BHelperValidateFailure, "{label}: ValidateFailure precedes LiteralInvalid");
+    assert_eq!(failure.after.image.result, Some(HelperResultC::Validated { ok: false }),
+        "{label}: primitive validation result is false, not PrimError11");
+    assert!(failure.after.image.helper.is_none() && failure.after.image.tasks.is_empty(),
+        "{label}: failure clears helper/tasks");
+    let last = &records[records.len() - 1];
+    let (pre, post, e) = (&last.before.image, &last.after.image, &last.event);
+    assert_eq!(e.rule_id, RuleIdC::KMachineEvalLiteralInvalid, "{label}: final rule");
+    assert_eq!(e.event_kind, EventKind::LegacyComplete, "{label}: final kind");
+    assert_eq!(e.site, Some(SiteTag::EvalLiteral), "{label}: final site");
+    assert_eq!(e.disposition, StepDisposition::Applied, "{label}: final disposition");
+    assert_eq!((e.work_delta, e.helper_work_delta, e.helper_visits_delta, e.reference_cursor_delta),
+        (1, 0, 0, 1), "{label}: legacy deltas");
+    assert_eq!(e.step_id.ordinal, pre.consumed_work, "{label}: ordinal");
+    assert_eq!(*e.step_id.run_id, pre.run_id, "{label}: step run id");
+    assert!(matches!(pre.control, ControlC::Eval { .. }), "{label}: pre control Eval");
+    assert_eq!(pre.result, Some(HelperResultC::Validated { ok: false }), "{label}: pre result");
+    assert_eq!(post.control, ControlC::Error { code: 2 },
+        "{label}: KMachineEvalLiteralInvalid/ControlError2, distinct from PrimError11");
+    assert!(post.result.is_none() && post.helper.is_none() && post.tasks.is_empty(),
+        "{label}: post helper/result/tasks absent");
+    assert_eq!(post.outcome, OutcomeC::Running, "{label}: publication is a later step");
+    assert_eq!(post.remaining_work, pre.remaining_work - 1, "{label}: remaining-1");
+    assert_eq!(post.consumed_work, pre.consumed_work + 1, "{label}: consumed+1");
+    assert_eq!(post.helper_work, pre.helper_work, "{label}: helper_work unchanged");
+    assert_eq!(post.helper_visits, pre.helper_visits, "{label}: visits unchanged");
+    assert_eq!(post.reference_cursor, pre.reference_cursor + 1, "{label}: legacy cursor+1");
+    assert_eq!(post.frames, pre.frames, "{label}: frames preserved");
+    assert_eq!(post.alloc, pre.alloc, "{label}: alloc preserved");
+    assert_eq!(post.active, pre.active, "{label}: active preserved");
+}
+fn run_marker_boundary(make: &dyn Fn() -> CoreProgram, root_kind: &str, label: &str) {
+    // Independent fresh replay of the whole genuine boundary trace.
+    let records = collect_marker_boundary(make, label);
+    let replay = collect_marker_boundary(make, label);
+    assert_eq!(records, replay, "{label}: fresh replay equals original trace exactly");
+    assert_marker_boundary(&records, root_kind, label);
+}
+#[test]
+fn marker_literal_direct_validate_boundary_no_scalar_construct() {
+    run_marker_boundary(&|| prog(lit_marker_neg()), "Marker", "direct Negative marker");
+    run_marker_boundary(&|| prog(lit_marker_above()), "Marker", "direct AboveU128 marker");
+}
+#[test]
+fn marker_containing_literal_validate_boundary_no_scalar_construct() {
+    run_marker_boundary(&|| prog(lit_list_marker()), "Cons", "containing list marker");
+    run_marker_boundary(&|| prog(lit_tree_marker_branch()), "Branch", "containing tree marker");
 }
