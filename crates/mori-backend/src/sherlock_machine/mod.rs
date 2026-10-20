@@ -382,6 +382,10 @@ pub mod c6_scalar_failure_step;
 pub mod c6_scalar_exit_step;
 pub mod c6_scalar_exit_consumer;
 pub mod c6_checked_value_read;
+pub mod c6_scalar_tag_step;
+pub mod c6_scalar_tag_consumer;
+#[cfg(test)]
+mod c6_scalar_tag_step_tests;
 #[cfg(test)]
 mod c6_checked_value_read_tests;
 pub use c6_a135_push::{
@@ -437,4 +441,15 @@ pub use c6_checked_value_read::{
     emit_c6_checked_value_read_block, scalar_operand_view, C6CheckedValueReadBlock,
     C6CheckedValueReadEmitter, C6CheckedValueReadError, C6CheckedValueReadInputs,
     C6ScalarOperandView,
+};
+pub use c6_scalar_tag_step::{
+    emit_c6_scalar_tag_step_block, C6ScalarTagStepBlock, C6ScalarTagStepEmitter,
+    C6ScalarTagStepError, C6ScalarTagStepInputs,
+};
+pub use c6_scalar_tag_consumer::{
+    build_c6_scalar_tag_step_circuit, check_c6_scalar_tag_step_circuit,
+    record_scalar_tag_step,
+    witness_from_host_pair as witness_scalar_tag_from_host_pair,
+    witness_from_owner_record as witness_scalar_tag_from_owner_record,
+    C6ScalarTagConsumerError, C6ScalarTagStepCircuit, C6ScalarTagStepWitness,
 };
