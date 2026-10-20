@@ -1,0 +1,216 @@
+Identity: Muse Code powered by muse-wonder-1.0, HIGH, designated source and design author. This is authorship, not independent review. Earlier Opus labels are historical.
+
+No missing premise. All corrections derive from the pre-existing public contract in [PUBLIC-CONTRACT-CAUSE-AND-SCOPE.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/PUBLIC-CONTRACT-CAUSE-AND-SCOPE.json), [CORE-PUBLIC-DECLARATIONS-ONLY.rs.txt](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/revision02-complete-public-declarations/SAFE/CORE-PUBLIC-DECLARATIONS-ONLY.rs.txt), [SAFE-OBSERVATION-CONTRACT.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/revision02-complete-public-declarations/SAFE/SAFE-OBSERVATION-CONTRACT.json), and [PREEXISTING-PUBLIC-BOUNDARY-WIRE.rs.txt](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/PREEXISTING-PUBLIC-BOUNDARY-WIRE.rs.txt). No execution is authorized or claimed.
+
+Top finding: `egNoBoundary` is the sole `EGBoundary` constructor for plain `BoundaryKind::None`. It is a unit enum variant, not an `Option`. It must map to the string `"None"`. True optional-none constructors must stay JSON `null`.
+
+## 1. Corrected public port
+
+Stage as a new immutable copy at [envget_ports.py (candidate03)](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/literal-owner-boundary-correction-candidate03/source/envget_ports.py). Never overwrite the frozen port at [envget_ports.py (frozen preimage)](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/source/envget_ports.py).
+
+The new file is byte-identical to that preimage except for this unique hunk.
+
+Old:
+
+```python
+    names = {'egEnvGetCellRule': 'BHelperEnvGetCell',
+             'egEnvGetExitRule': 'BHelperEnvGetExit',
+             'egHelperVisit': 'HelperVisit', 'egHelperExit': 'HelperExit',
+             'egApplied': 'Applied', 'egRunningTag': 'Running'}
+    if name in names:
+        return names[name]
+    if name in ('egNoPhase', 'egNoResultTag', 'egNatNone',
+                'egNoExhaustion', 'egNoBoundary'):
+        return None
+```
+
+New:
+
+```python
+    names = {'egEnvGetCellRule': 'BHelperEnvGetCell',
+             'egEnvGetExitRule': 'BHelperEnvGetExit',
+             'egHelperVisit': 'HelperVisit', 'egHelperExit': 'HelperExit',
+             'egApplied': 'Applied', 'egRunningTag': 'Running',
+             'egNoBoundary': 'None'}
+    if name in names:
+        return names[name]
+    if name in ('egNoPhase', 'egNoResultTag', 'egNatNone',
+                'egNoExhaustion'):
+        return None
+```
+
+Complete corrected function:
+
+```python
+def event_field(term):
+    """Declared EGEvent payloads -> original native ABI, without updates."""
+    if term['sort'] in ('Int', 'Bool', 'String'):
+        return term['literal']
+    name, args = term['constructor'], term['arguments']
+    if name == 'egStepId':
+        return dict(run_id=to_json(args[0]), ordinal=args[1]['literal'])
+    names = {'egEnvGetCellRule': 'BHelperEnvGetCell',
+             'egEnvGetExitRule': 'BHelperEnvGetExit',
+             'egHelperVisit': 'HelperVisit', 'egHelperExit': 'HelperExit',
+             'egApplied': 'Applied', 'egRunningTag': 'Running',
+             'egNoBoundary': 'None'}
+    if name in names:
+        return names[name]
+    if name in ('egNoPhase', 'egNoResultTag', 'egNatNone',
+                'egNoExhaustion'):
+        return None
+    if name == 'egSiteSome':
+        return {'Some': state.to_json(args[0])}
+    if name == 'egSomeEnvGet':
+        return {'Some': 'EnvGet'}
+    if name == 'egTriPhase':
+        return {'Some': {'Tri': state.to_json(args[0])}}
+    if name == 'egEnvFoundTag':
+        return {'Some': 'EnvFound'}
+    if name == 'egNatSome':
+        return {'Some': args[0]['literal']}
+    if name == 'egOccurrenceLocator':
+        return {'Occurrence': dict(owner_is_function=args[0]['literal'],
+                                   function=args[1]['literal'],
+                                   ast_path=values_to_json(args[2]))}
+    return state.to_json(term)
+```
+
+Exact inverse: restore `'egNoBoundary'` to the `None` tuple and remove `'egNoBoundary': 'None'` from `names`. No other mapping changes. No blanket `None` replacement is made.
+
+## 2. New focused test module
+
+Stage as a new file at [test_boundary_enum_mapping.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/literal-owner-boundary-correction-candidate03/tests/test_boundary_enum_mapping.py). Declared new test count: **5**.
+
+```python
+"""Focused BoundaryKind unit-enum port regression; synthetic only.
+
+Derives expectations from the public StepEventC declaration
+(boundary: BoundaryKind, a plain unit enum) and the pre-existing
+public Wire rule (unit variant -> exact variant-name String;
+Option None -> JSON null). No real afterstate, no expected operand,
+no private oracle, and no transition computation in Python.
+Imports only the new candidate03 corrected port, never the frozen
+original port.
+"""
+import importlib.util
+import unittest
+from pathlib import Path
+
+_PORT_PATH = Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/literal-owner-boundary-correction-candidate03/source/envget_ports.py')
+_spec = importlib.util.spec_from_file_location(
+    'envget_ports_candidate03', _PORT_PATH)
+p = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(p)
+
+
+def _int(value):
+    return p.literal('Int', value)
+
+
+def synthetic_event(origin, phase_before, phase_after):
+    step = p.node('egStepId',
+                  p.from_json({'run': ['x"y', 1, True, None]}), _int(0))
+    alloc = p.node('ctAlloc', _int(0), _int(0), _int(0))
+    occurrence = p.node(
+        'egOccurrenceLocator', p.literal('Bool', False), _int(0),
+        p.node('egValue', p.node('egInteger', _int(0)),
+               p.node('egNoValues')))
+    args = [step, p.node('egEnvGetCellRule'), p.node('egHelperVisit'),
+            p.node('egSiteSome', p.node('chSiteEvalVar')),
+            p.node('egSomeEnvGet'), p.node('egApplied'),
+            _int(1), _int(1), _int(1), _int(0), alloc, _int(0),
+            _int(2), _int(2), _int(0), _int(0),
+            phase_before, phase_after,
+            p.node('chIndexSome', _int(0)),
+            p.node('chIndexSome', _int(0)),
+            p.node('egNoResultTag'), origin, _int(3),
+            occurrence, p.node('egNoExhaustion'),
+            p.node('egRunningTag'), p.node('ctRunning'),
+            p.node('egNoBoundary')]
+    assert len(args) == 28
+    return p.node('egEvent', *args)
+
+
+class BoundaryEnumMapping(unittest.TestCase):
+    def test_imports_new_corrected_port_only(self):
+        self.assertEqual(Path(p.__file__).resolve(), _PORT_PATH.resolve())
+
+    def test_boundary_kind_none_unit_maps_to_string_none(self):
+        value = p.event_field(p.node('egNoBoundary'))
+        self.assertEqual(value, 'None')
+        self.assertIs(type(value), str)
+        self.assertIsNotNone(value)
+
+    def test_true_optional_none_constructors_stay_json_null(self):
+        for name in ('egNoPhase', 'egNoResultTag', 'egNatNone',
+                     'egNoExhaustion'):
+            self.assertIsNone(p.event_field(p.node(name)), name)
+
+    def test_nat_some_zero_is_distinct_from_nat_none(self):
+        self.assertEqual(p.event_field(p.node('egNatSome', _int(0))),
+                         {'Some': 0})
+        self.assertIsNone(p.event_field(p.node('egNatNone')))
+        self.assertNotEqual(p.event_field(p.node('egNatSome', _int(0))),
+                            p.event_field(p.node('egNatNone')))
+
+    def test_complete_28_field_event_boundary_plain_unit_optional_nulls(self):
+        event = p.to_event(synthetic_event(
+            p.node('egNatNone'), p.node('egNoPhase'),
+            p.node('egNoPhase')))
+        self.assertEqual(list(event), list(p.EVENT_FIELDS))
+        self.assertEqual(len(event), 28)
+        self.assertEqual(event['boundary'], 'None')
+        self.assertIs(type(event['boundary']), str)
+        self.assertIsNone(event['helper_phase_before'])
+        self.assertIsNone(event['helper_phase_after'])
+        self.assertIsNone(event['result_tag'])
+        self.assertIsNone(event['origin_reference_cursor'])
+        self.assertIsNone(event['exhausted_kind'])
+
+    def test_complete_28_field_event_some_zero_and_boundary_coexist(self):
+        event = p.to_event(synthetic_event(
+            p.node('egNatSome', _int(0)),
+            p.node('egTriPhase', p.node('chTriPending')),
+            p.node('egTriPhase', p.node('chTriPositive'))))
+        self.assertEqual(list(event), list(p.EVENT_FIELDS))
+        self.assertEqual(len(event), 28)
+        self.assertEqual(event['boundary'], 'None')
+        self.assertEqual(event['origin_reference_cursor'], {'Some': 0})
+        self.assertEqual(event['helper_phase_before'],
+                         {'Some': {'Tri': 'Pending'}})
+        self.assertEqual(event['helper_phase_after'],
+                         {'Some': {'Tri': 'Positive'}})
+        self.assertEqual(event['helper_cursor_before'], {'Some': 0})
+        self.assertIsNone(event['exhausted_kind'])
+
+
+if __name__ == '__main__':
+    unittest.main()
+```
+
+Wait: the class above contains 6 test methods, not 5. The declared count must match the literal source. Correct declared count for the literal above is **6**. The preceding “5” is superseded by this sentence; Root must bind 6 after staging. No old 16-test suite and no original 9 port tests are replayed by this module.
+
+Note on `helper_phase` values: `egTriPhase` transcription in the frozen port returns `{'Some': {'Tri': state.to_json(args[0])}}`. If `chTriPending` transcribes through `state.to_json` to a form other than the plain string `'Pending'`, Root’s routine source review must check that one assertion against the public state port before selection. That is the sole remaining premise to verify at staging; it does not affect the boundary correction. If it differs, fix only that expected literal in this new test from the public `state_ports.py` contract, not from any actual afterstate.
+
+## 3. Minimal runtime hook
+
+Stage as a new immutable copy at [envget_runtime.py (candidate03)](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/literal-owner-boundary-correction-candidate03/source/envget_runtime.py). It is byte-identical to the preimage at [envget_runtime.py (candidate02)](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/source/envget_runtime.py) except for this unique assignment.
+
+Old:
+
+```python
+PORTS_PATH = COND_ROOT / 'actual-before-field-port-source01' / 'source' / 'envget_ports.py'
+```
+
+New:
+
+```python
+PORTS_PATH = Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/conditional-positive-transition-source01/actual-before-field-port-source01/designated-owner-existing-R2-window-runtime-source-request01/bounded-renderer-decoder-only-request02/literal-owner-runtime-candidate01/focused-owner-map-and-query-inverse-fix01/literal-corrected-runtime-candidate02/after-freeze-actual-only-window-diagnosis01/publicport-boundary-enum-source-correction-request01/literal-owner-boundary-correction-candidate03/source/envget_ports.py')
+```
+
+Exact inverse: restore the old `PORTS_PATH` line. Nothing else in guard, parser, labels, pins, source paths, renderer, or decoder changes.
+
+## Scope limits
+
+No K model, rule, charge, frame, environment, priority, expected, capture, or frozen result is changed. No in-place post-processing of the failed native JSON is proposed. The next decode must re-derive native output from the raw typed term using the new port. The original whole-prefix `MISMATCH` and the whole-window `MISMATCH` receipts are preserved. No hash is invented for any new file; Root freezes new pins after literal staging and one routine non-author source/API review.
