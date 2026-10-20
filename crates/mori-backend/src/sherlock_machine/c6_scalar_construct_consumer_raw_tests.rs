@@ -19,6 +19,14 @@
 //! CURRENT statement plus CURRENT post on every check; the one
 //! stale-commitment case is isolated and labelled.
 //!
+//! Marker specimens below are RAW local-relation cases only. Their
+//! genuine baselines contain an admitted, not-held Marker row; the
+//! raw statement then redirects the effect reference to that row.
+//! That intentionally violates retained SI17 for a held Scalar
+//! operand and also breaks SI08/SI21 entry-installed operand
+//! identity. They are never genuine admitted reachability,
+//! full-StepInv, SI17-proof, or authenticated owner records.
+//!
 //! Retained, not discharged: SI08/SI17/SI21/SI22/StepInv as wholes,
 //! ScalarEntry/ScalarTag installation coherence, program membership,
 //! P1/native. Exact remaining classes are listed at the end of the
@@ -336,6 +344,45 @@ fn cons_witness() -> Applied {
 fn branch_witness() -> Applied {
     run_core(&branch(KindWant::Leaf, KindWant::Leaf, pending(NodeKind::Branch)), "Branch Leaf",
         &|| prog(bin(BinaryOp::Branch, lit_tree(tree_leaf(5)), lit_tree(tree_leaf(6)))))
+}
+fn unused_marker_scalar_fn() -> CoreFunction {
+    CoreFunction { name: "unused_marker_scalar".into(), parameters: Vec::new(),
+        return_type: SortTag::UInt,
+        body: CoreExpr::Literal { value: CoreValue::UInt { n: i128_class::KIntC::Negative } } }
+}
+fn unused_marker_tree_fn() -> CoreFunction {
+    CoreFunction { name: "unused_marker_tree".into(), parameters: Vec::new(),
+        return_type: SortTag::Tree,
+        body: lit_tree(CoreTree::Branch {
+            left: Box::new(CoreTree::Leaf { n: i128_class::KIntC::AboveU128 }),
+            right: Box::new(tree_leaf(2)) }) }
+}
+fn prog_unused_markers(entry: CoreExpr) -> CoreProgram {
+    CoreProgram { functions: vec![unused_marker_scalar_fn(), unused_marker_tree_fn()], entry }
+}
+fn marker_leaf_witness() -> Applied {
+    run_core(&leaf(KindWant::UInt(5), pending(NodeKind::Leaf)), "MarkerRaw Leaf base",
+        &|| prog_unused_markers(unary(UnaryOp::Leaf, lit_u(5))))
+}
+fn marker_cons_witness() -> Applied {
+    run_core(&cons(KindWant::UInt(7), KindWant::Nil, pending(NodeKind::Cons)), "MarkerRaw Cons base",
+        &|| prog_unused_markers(bin(BinaryOp::Cons, lit_u(7), lit_list(&[]))))
+}
+fn marker_branch_witness() -> Applied {
+    run_core(&branch(KindWant::Leaf, KindWant::Leaf, pending(NodeKind::Branch)), "MarkerRaw Branch base",
+        &|| prog_unused_markers(bin(BinaryOp::Branch, lit_tree(tree_leaf(5)), lit_tree(tree_leaf(6)))))
+}
+fn find_marker_const_index(s: &HostSnapshot) -> usize {
+    s.admission.view.constants.iter().position(|c| match c {
+        ConstantSnapshot::U128OutOfRange { marker_free } => !*marker_free,
+        _ => false,
+    }).expect("genuine baseline must contain an admitted Marker Const row")
+}
+fn find_transitive_branch_const_index(s: &HostSnapshot) -> usize {
+    s.admission.view.constants.iter().position(|c| match c {
+        ConstantSnapshot::Branch { marker_free, .. } => !*marker_free,
+        _ => false,
+    }).expect("genuine baseline must contain a transitively marker_free=false Branch row")
 }
 fn nominal_leaf_ctor_program() -> ExtProgram {
     ExtProgram {
@@ -906,4 +953,103 @@ fn raw_emitter_length_geometry_producer_errors() {
         Err(C6ScalarConstructStepError::LengthMismatch { section: "helper", .. }) => {}
         other => panic!("expected helper LengthMismatch producer error, ok={}", other.is_ok()),
     }
+}
+// --- RAW Marker local relation (intentionally outside SI17) ---
+fn raw_marker_statement(a: &Applied, target_idx: usize, is_b: bool,
+    staged_tag: u128, payload: u128) -> Vec<Fr> {
+    let w = &a.witness;
+    let mut s = w.to_statement_frs();
+    let (space_rel, idx_rel) = if is_b { (9usize, 10usize) } else { (6usize, 7usize) };
+    // Full Ref identity, pre+post coherently: Const space + exact
+    // admitted row index already present in genuine PROG. No PROG
+    // lane, table framing, or marker_free lane is mutated.
+    set_both_helper_rel(&mut s, w, space_rel, 0);
+    set_both_helper_rel(&mut s, w, idx_rel, target_idx as u128);
+    s[helper_rel(w, true, 15)] = Fr::from(staged_tag);
+    s[helper_rel(w, true, 16)] = Fr::from(payload);
+    s
+}
+fn assert_raw_marker_case(a: &Applied, is_b: bool, label: &str) -> Vec<Fr> {
+    let w = &a.witness;
+    assert_raw_ok(w, w.to_statement_frs(), &format!("{label}: paired genuine positive"));
+    let marker_idx = find_marker_const_index(&a.record.before);
+    let s = raw_marker_statement(a, marker_idx, is_b, 4, 11);
+    // Valid other local premises are the genuine applied ones:
+    // Done post phase, applied counters/outcome, old DATA/helper
+    // preservation outside phase/staged/effect-ref. Binary A lanes
+    // (the stronger SI22 domain operand) are untouched.
+    assert_eq!(s[helper_rel(w, true, 13)], Fr::from(2u64), "{label}: post Done");
+    assert_eq!(s[pre_image_at(w, L_HELPER_WORK) + 0], w.to_statement_frs()[pre_image_at(w, L_HELPER_WORK)],
+        "{label}: pre helper_work is genuine, P3 not faked as Applied");
+    assert!(!w.disposition_is_refused_helper_work, "{label}: genuine baseline is Applied, not P3");
+    if is_b {
+        let base = w.to_statement_frs();
+        assert_eq!(s[helper_rel(w, false, 6)], base[helper_rel(w, false, 6)], "{label}: A space preserved");
+        assert_eq!(s[helper_rel(w, false, 7)], base[helper_rel(w, false, 7)], "{label}: A index preserved");
+    }
+    assert_raw_ok(w, s.clone(), &format!("{label}: RAW Marker to Done PrimError11, both modes"));
+    s
+}
+#[test]
+fn raw_marker_all_modes_prim_error11_local_relation_both_modes() {
+    // Leaf effect operand is A; Cons/Branch effect operand is B.
+    // Marker in binary A would instead fail the stronger SI22
+    // domain and is deliberately not used as an Error11 positive.
+    assert_raw_marker_case(&marker_leaf_witness(), false, "Leaf Marker A");
+    assert_raw_marker_case(&marker_cons_witness(), true, "Cons Marker B");
+    assert_raw_marker_case(&marker_branch_witness(), true, "Branch Marker B");
+}
+#[test]
+fn raw_marker_wrong_stage_code_phase_rejects_and_stale_cc_isolated() {
+    for (a, is_b, pending_payload, label) in [
+        (marker_leaf_witness(), false, 1u128, "Leaf Marker"),
+        (marker_cons_witness(), true, 0u128, "Cons Marker"),
+        (marker_branch_witness(), true, 2u128, "Branch Marker"),
+    ] {
+        let w = &a.witness;
+        let good = assert_raw_marker_case(&a, is_b, label);
+        let marker_idx = find_marker_const_index(&a.record.before);
+        // Wrong NodeKind staging for a Marker kind.
+        assert_raw_rejects(w, raw_marker_statement(&a, marker_idx, is_b, 3, pending_payload),
+            &format!("{label}: Marker as PendingNode must reach SDK preprocessing rejection"));
+        // Wrong PrimError code.
+        assert_raw_rejects(w, raw_marker_statement(&a, marker_idx, is_b, 4, 10),
+            &format!("{label}: Marker with code 10"));
+        // Wrong post phase (Second), with correct Error11 staging.
+        let mut wrong_phase = good.clone();
+        wrong_phase[helper_rel(w, true, 13)] = Fr::from(1u64);
+        assert_raw_rejects(w, wrong_phase, &format!("{label}: Marker wrong post phase"));
+    }
+    // Stale CC is separate from the current-statement positives:
+    // LedgerCall commitment is recomputed from current statement +
+    // current post in assert_raw_ok/check_raw above.
+    let a = marker_leaf_witness();
+    let w = &a.witness;
+    let good = assert_raw_marker_case(&a, false, "Leaf Marker stale-CC pair");
+    let base = w.to_statement_frs();
+    let c = circuit_for(w, C6PushStatementBindingMode::LedgerCall);
+    let randomness = Fr::from(0u64);
+    let mut stale_inputs = base.clone();
+    stale_inputs.extend(base[post_state_start(w)..].iter().copied());
+    let stale = transient_commit(&stale_inputs, randomness);
+    assert!(check_raw(&c, w, good.clone(), None).is_ok(),
+        "Marker statement with CURRENT recomputed CC must pass");
+    match check_raw(&c, w, good, Some(stale)) {
+        Err(C6ScalarConstructConsumerError::Backend(m)) => assert!(
+            m.contains("Communications commitment mismatch"), "stale CC category: {m}"),
+        other => panic!("Marker stale CC: expected rejection, ok={}", other.is_ok()),
+    }
+}
+#[test]
+fn raw_transitive_marker_free_false_branch_b_pending_local_only() {
+    // A Branch composite containing a Marker has kind Branch and
+    // marker_free=false. The local Construct relation stages it as
+    // PendingNode Branch; it does not enforce transitive SI17.
+    // This is a local-relation observation, not admitted validity.
+    let a = marker_branch_witness();
+    let w = &a.witness;
+    assert_raw_ok(w, w.to_statement_frs(), "transitive Branch paired genuine positive");
+    let idx = find_transitive_branch_const_index(&a.record.before);
+    let s = raw_marker_statement(&a, idx, true, 3, 2);
+    assert_raw_ok(w, s, "RAW transitive marker_free=false Branch B to PendingNode Branch");
 }
