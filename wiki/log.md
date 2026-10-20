@@ -1280,3 +1280,10 @@ Prepared the [wiki-scoped atlas continuation](research/sherlock-circuit-atlas/in
 ## 2026-10-20 — Sherlock UPDATE017 source intake
 
 Preserved the exact designated Muse source reply and appended [UPDATE017](research/sherlock-circuit-atlas/UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md), its status snapshot, later review disposition and portable provenance. Existing UPDATE016/legacy material remains byte-identical. The current bounded source opinions retain overallCHANGES_REQUIRED U-D5/U-D6; all18 tests remainUNRUN. No website deployment or product/native gate is introduced.
+
+
+## 2026-10-20 — UPDATE017 source-summary navigation
+
+The Root post-intake lint observed 32 findings: 17 dead-link, seven duplicate-basename, four orphan and four stale-index entries, with zero configuration, provenance, read or missing-frontmatter findings. This small navigation follow-up links the two new UPDATE017 source summaries from [the atlas index](research/sherlock-circuit-atlas/index.md). It does not repair older global findings or alter the Muse chapter/status.
+
+Mechanical path/hash readback confirms that the three new raw-JSON link findings point to two existing captured files. The installed linter skips dot-prefixed directories, including `.raw`, when building its link inventory; its original findings remain preserved rather than hidden. No post-follow-up lint result is asserted here. Future recovery can use [Graphify query guidance](../docs/results/sherlock-graphify-refresh-20261019/stagenet-recursive-rollup-priority-revision02/GRAPHIFY-TARGETED-USAGE.proposed.md) and [DoctorWatson learning context](../wiki-llm/doctorwatson-improvement-log.md), checking each source cut instead of assuming currentness. No new source/test/runtime or EARS result is added.
