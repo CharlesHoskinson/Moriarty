@@ -1,0 +1,9 @@
+# Exact7 positive padded DATA evidence
+
+All seven revision02 children passed; corrected13tests ran once. The actual whole2353-byte four-key observation matched the independently prefrozen document in06, after the recorded durable actual freeze. Full actual typed DPObservation165142bytes, KAST query, frontend KORE, reduced KORE and printed answer are public actual-origin archives. No private expected/freeze/derivation or compiled SDK payload is copied. Metadata keeps historical opaque pins only.
+
+The source README states the complete scope, counts/geometry, first unit failure, literal one-method correction, test fixture14vs83 limitation, preselection ACK refusal and all gaps. Current streams/COMMAND/launch/readset/prepost/product/status/barrier/selection records are exact; large inventories use deterministic gzip with inverse proofs. All01–06 execution evidence belongs to the sole revision02 dispatch. Original failed00 evidence remains under historical-failed-unit; compile receipts are separate from runtime.
+
+Text classification of169warnings does not semantically adjudicate the75887-byte compile stderr. Historical source UNRUN/labels-unqualified and result heap-UNOBSERVED prose stays untouched; later label qualification and actual frontend completion have their own scope. Raw provider wire/thinking and raw author responses are not public; substantive independent final opinions and literal source/inverses are retained.
+
+ARCHIVE-MEMBERSHIP binds every preceding payload target and its raw source, including exact gzip inverse; it excludes itself to avoid a seal cycle. Root’s separate complete copy manifest also binds that membership file. Paths under models preserve historical source bytes, not a new relocatable runtime. No reviewer decision or archived hash is itself a K execution or a proof of global refinement. No native/StepInv/EARS closure is claimed. The result/publication review is pending.
