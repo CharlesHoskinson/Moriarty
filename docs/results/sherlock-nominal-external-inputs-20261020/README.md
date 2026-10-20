@@ -54,3 +54,31 @@ proof, target, stagenet, full B04 or full EARS acceptance follows.
 See the [how-to](../../sherlock/how-to/compile-nominal-external-inputs.md),
 [input reference](../../sherlock/reference/nominal-external-inputs.md) and
 [boundary explanation](../../sherlock/explanation/nominal-external-input-capture-boundary.md).
+
+## Independent comparison update — 2026-10-20
+
+The later independent comparison **passed for both cases**. The earlier pending
+paragraph, ACTUAL-SUMMARY.json and archive retain their original dated status;
+this append records the completed comparison without rewriting those receipts.
+
+The [public SAFE result](INDEPENDENT-COMPARISON-SAFE-RESULT.json) reports complete
+typed argument and terminal-result trees, the whole eleven-field nominal binding,
+all seven per-argument fields and structural counts. It also covers exact source,
+input, config and target identities, source declarations and ordered function
+signatures/bodies, synthesized entry/parameters and source-only original-entry
+provenance. The pre-execution expectations were unchanged. Both actual captures
+completed bodychecking and admission and were observed Halted under the fixed
+config. This is a conditional finite result comparison, not a proof of budget
+sufficiency or unconditional termination.
+
+The [comparison execution receipt](INDEPENDENT-COMPARISON-EXECUTION.json) retains
+the complete success streams and command/result with four disclosed local-path
+redactions: exit0, no controller failure, 0.12336626098840497 seconds. No product
+capture or Core build was replayed. Private expected, checker and projection
+bodies are not published or semantically re-audited by this public packet.
+
+The complete raw ProgramView23, owner image/state, resources, work, trace,
+occurrences, allocated IDs, costs, extra rows and annotations were retained but
+are outside independent equality. Witness/constraint plans remain missing and
+export unsupported. Native/proof/target, refinement, whole default CLI and full
+B04/EARS acceptance remain open.
