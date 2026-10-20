@@ -1900,15 +1900,26 @@ pub fn admit_fin_run(
     if matches!(fuel, RunIntC::Negative) || matches!(stack_limit, RunIntC::Negative) {
         return Err(FinRunError::Genesis(FinGenesisError::GenesisInvalid));
     }
-    let mut image = genesis_image(a, fuel, stack_limit).map_err(FinRunError::Tooling)?;
-    image.fin = Some(FinImageState {
+    let mut image =
+        genesis_image(a, fuel, stack_limit).map_err(FinRunError::Tooling)?;
+    let exec = super::fin_exec_state::fin_exec_genesis(&snapshot, &inputs);
+    let fin_state = FinImageState {
         action_index,
         inputs,
         snapshot,
         core_snapshot,
         cap: request.cap,
         committed: crate::UInt(0),
-    });
+        exec,
+    };
+    super::fin_exec_state::check_fin_exec_genesis_invariant(
+        &fin_state,
+        prepared,
+    )
+    .map_err(|error| {
+        FinRunError::Genesis(FinGenesisError::ExecInvariant(error))
+    })?;
+    image.fin = Some(fin_state);
     Ok(image)
 }
 

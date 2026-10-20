@@ -326,3 +326,15 @@ pub fn admit_fin_genesis_image(
     let image = engine.admit_fin_run(&admitted, fuel, stack_limit, request)?;
     Ok((admitted, image))
 }
+pub fn select_fin_bound(
+    admitted: &Admitted,
+    img: &MachineImage,
+) -> Result<
+    super::fin_selection::FinSelection,
+    super::fin_selection::FinSelectionError,
+> {
+    let pre = PreImage::bind(admitted, img)
+        .map_err(super::fin_selection::FinSelectionError::Binding)?;
+    let engine = host_owner_engine();
+    engine.select_fin(&pre)
+}
