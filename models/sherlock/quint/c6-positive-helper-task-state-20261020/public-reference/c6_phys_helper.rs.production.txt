@@ -1,0 +1,596 @@
+//! Helper/result/task section of sherlock-c6-phys/1 (C6P1), Chunk 3B.
+//!
+//! Codec over the three owned `ImageSnapshot` fields `helper`, `result`,
+//! `tasks`. It admits nothing, constructs no `Admitted`/`MachineImage`/
+//! `ImageSnapshot`, steps nothing, stores no task cursor (derived from the
+//! task count) and checks no cross-table membership or owner admission
+//! (Chunk 4). Reserved fields (`parent_resume`, PatternTag reserved variants)
+//! are carried as representation only; they are not admitted here.
+//!
+//! Layout: magic, version, `HELPER_SECTION_TAG`, task count; helper record
+//! (23 lanes) at 4; result record (4) at 27; then tasks (7 each) at 31,
+//! bottom-to-top. Lane 0 of each record is its tag: helper None=0, Scalar=1,
+//! EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match, Plan, Build=11;
+//! result None=0, then 1..=19 in `HelperResultC` declaration order; task
+//! ValidateTask=0, EqualTask=1, PairTask=2. Fields follow in `shared.rs`
+//! declaration order. Helpers start with common [site, origin_reference_cursor
+//! (full u128), parent_resume [p,v]]. Widths: usize/u8/bool/enum/u128 1;
+//! RefC 2 [0|1, i]; EnvRootC and non-env Option<usize> 2 (None [0,0], Some
+//! [1,v]; Chunk 1 env encoding, meaning per field); Option<TypeIdC> 2 likewise;
+//! Option<RefC> 3 (None [0,0,0], Some [1,tag,i]); SliceC 2 [start,len], raw
+//! (an empty slice keeps its start); ScalarStaged 2 [tag 0..=6, payload] with
+//! None payload 0. Enum tags are the explicit literal maps below.
+//! Unused lanes are zero; bools are 0/1; u8 lanes refuse > 255 (UsizeOverflow).
+//!
+//! Caps (index strictly below, count at most): Const max_constants, Data
+//! max_data_nodes, EnvRootC max_env_cells; names max_names; Bind.function,
+//! Find.found, FindFound max_functions (index), Find.row_cursor max_functions
+//! (count); EnvGet.cursor, EnvPut.new_root, Bind.dup_cursor, EnvUpdated.cell
+//! max_env_cells (index); Plan.arm, Match.arm, PlanMatched.arm max_arms;
+//! Plan.source_match max_expressions; Plan.node max_plan_nodes; Bind.params
+//! parameters end, len <= max_arity; Bind.args/Append.src/Build.src/AppendDone.seq
+//! value_slots end, len <= max_arity; Plan.path field_paths end, no arity;
+//! p_cursor/a_cursor/src_cursor/path_cursor count <= own slice len;
+//! Append.dest_start count <= max_value_slots; Build.field_start count <=
+//! max_data_field_slots; task cursors count <= max_arity; Match.x/y names only
+//! when the phase is past Arm and the pat_tag binds them (else raw placeholders);
+//! Scalar.expected and PairTask.sort `max(max_types, 4)` (builtin-capable);
+//! Build.type_id plain `max_types` (user nominal, as 3A Constructor);
+//! parent_resume, origin, reg_a, U128Value.n and u8 codes carry no cap. A slice
+//! checks end overflow, then arity, then end. Caps follow lane order.
+//!
+//! `decode_helper_tables` first-error order: 1. fewer than 31 lanes:
+//! `Truncated`; 2. `BadMagic`; 3. `BadVersion`; 4. tag `BadTag`; 5. task count
+//! structurally; 6. task count against `max_helper_tasks`; 7. section length
+//! (checked; `UsizeOverflow`), `Truncated`, then `TrailingLanes` (no allocation
+//! before); 8. helper record structurally (ascending record-relative lanes)
+//! then caps; 9. result likewise; 10. tasks in order, each likewise.
+
+use super::c6_phys::{C6PhysError, C6Result, C6_PHYS_MAGIC, C6_PHYS_VERSION};
+use super::c6_phys_data::{
+    cap_count, cap_env, cap_index, cap_ref, get_env, get_ref, put_env, put_ref, rd, rd_bool, u, zero,
+    C6StateCaps,
+};
+use super::complete_observation::{HostSnapshot, ImageSnapshot};
+use super::shared::adt::{CtorIdC, TypeIdC};
+use super::shared::{
+    AppendPhase, BindPhase, BindStatus, BoolSelector, BuildPhase, HelperCommon, HelperControlC,
+    HelperResultC, HelperTaskC, MatchPhase, NodeKind, PatternTag, PlanAfterWalk, PlanPhase, RefC,
+    ScalarMode, ScalarPhase, ScalarStaged, SiteTag, SliceC, TaskVisitC, TriStatus,
+};
+
+pub const HELPER_SECTION_TAG: u128 = 0x4845_4C50;
+pub const HELPER_HEADER_LANES: usize = 4;
+pub const HELPER_LANES: usize = 23;
+pub const RESULT_LANES: usize = 4;
+pub const TASK_LANES: usize = 7;
+pub const L_HELPER_RECORD: usize = 4;
+pub const L_RESULT_RECORD: usize = 27;
+pub const L_TASKS: usize = 31;
+pub const HELPER_FIXED_LANES: usize = 31;
+const SECTION: &str = "state_helper";
+const HELPER_S: &str = "state.helper";
+const RESULT_S: &str = "state.result";
+const TASK_S: &str = "state.task";
+
+// ---------- local primitives (3A conventions) ----------
+
+fn rd_u8(section: &'static str, value: u128) -> C6Result<u8> {
+    u8::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
+}
+fn cap_opt_ref(section: &'static str, v: Option<RefC>, c: &C6StateCaps) -> C6Result<()> {
+    match v { Some(r) => cap_ref(section, r, c), None => Ok(()) }
+}
+/// Non-environment optional index against its own table; never `cap_env`.
+fn cap_opt_index(section: &'static str, v: Option<usize>, limit: usize) -> C6Result<()> {
+    match v { Some(i) => cap_index(section, i, limit), None => Ok(()) }
+}
+fn cap_slice(section: &'static str, s: SliceC, table: usize, max_len: Option<usize>) -> C6Result<()> {
+    let end = s.start.checked_add(s.len).ok_or(C6PhysError::UsizeOverflow { section, value: u(s.start) })?;
+    if let Some(max_len) = max_len { cap_count(section, s.len, max_len)?; }
+    cap_count(section, end, table)
+}
+/// Builtin TypeIds 0..=3 exist independently of `type_rows` (Core policy).
+fn builtin_type_cap(c: &C6StateCaps) -> usize { c.phys.max_types.max(4) }
+
+macro_rules! lane_enum {
+    ($to:ident, $from:ident, $ty:ident, { $($v:ident = $n:literal),+ $(,)? }) => {
+        fn $to(v: $ty) -> u128 { match v { $($ty::$v => $n),+ } }
+        fn $from(section: &'static str, tag: u128) -> C6Result<$ty> {
+            match tag { $($n => Ok($ty::$v),)+ _ => Err(C6PhysError::BadTag { section, tag }) }
+        }
+    };
+}
+lane_enum!(site_tag, site_from, SiteTag, { EvalLiteral = 0, EvalVar = 1, EvalLet = 2, EvalBinary = 3,
+    EvalUnary = 4, EvalIf = 5, EvalMatch = 6, EvalCall = 7, Push = 8, RetLet = 9, RetLeft = 10,
+    RetRight = 11, RetUnary = 12, RetIf = 13, RetMatch = 14, RetArgs = 15, RetCall = 16, RetScope = 17,
+    Invoke = 18, Enter = 19, Bound = 20, Cases = 21, CaseResult = 22, Prim = 23, EvalConstruct = 24,
+    RetCtorFields = 25, Materialize = 26 });
+lane_enum!(mode_tag, mode_from, ScalarMode, { Add = 0, Sub = 1, Mul = 2, Lt = 3, Cons = 4, Branch = 5,
+    Leaf = 6, Not = 7, TestBool = 8, TestType = 9 });
+lane_enum!(sphase_tag, sphase_from, ScalarPhase, { First = 0, Second = 1, Done = 2 });
+lane_enum!(node_tag, node_from, NodeKind, { Cons = 0, Leaf = 1, Branch = 2 });
+lane_enum!(sel_tag, sel_from, BoolSelector, { True = 0, False = 1, NotBool = 2 });
+lane_enum!(tri_tag, tri_from, TriStatus, { Pending = 0, Positive = 1, Negative = 2 });
+lane_enum!(bphase_tag, bphase_from, BindPhase, { Pairing = 0, UnwindType = 1, UnwindDup = 2,
+    UnwindInsert = 3, Propagate = 4, Finished = 5 });
+lane_enum!(bstatus_tag, bstatus_from, BindStatus, { Ok = 0, Bad = 1 });
+lane_enum!(aphase_tag, aphase_from, AppendPhase, { Copy = 0, Tail = 1, Done = 2 });
+lane_enum!(mphase_tag, mphase_from, MatchPhase, { Arm = 0, Tag = 1, Distinct = 2, Field = 3, Bind = 4,
+    Ready = 5, NoMatchReady = 6, Done = 7 });
+lane_enum!(pphase_tag, pphase_from, PlanPhase, { Walk = 0, Test = 1, Bind = 2, Ready = 3,
+    NoMatchReady = 4, Done = 5 });
+lane_enum!(walk_tag, walk_from, PlanAfterWalk, { Test = 0, Bind = 1 });
+lane_enum!(build_tag, build_from, BuildPhase, { Copy = 0, Done = 1 });
+lane_enum!(pat_tag_of, pat_from, PatternTag, { PVar = 0, PNil = 1, PCons = 2, PLeaf = 3, PBranch = 4,
+    WildcardExtensionReserved = 5, ConstructorExtensionReserved = 6 });
+lane_enum!(visit_tag, visit_from, TaskVisitC, { Unvisited = 0, Fields = 1 });
+
+/// Fixed-width writer over a zero-initialized record; offsets are static.
+struct Wr<const N: usize> { o: [u128; N], at: usize }
+impl<const N: usize> Wr<N> {
+    fn new() -> Self { Self { o: [0; N], at: 0 } }
+    fn v(&mut self, x: u128) { self.o[self.at] = x; self.at += 1; }
+    fn us(&mut self, x: usize) { self.v(u(x)); }
+    fn r(&mut self, x: RefC) { put_ref(&mut self.o, self.at, x); self.at += 2; }
+    fn opt(&mut self, x: Option<usize>) { put_env(&mut self.o, self.at, x); self.at += 2; }
+    fn opt_ref(&mut self, x: Option<RefC>) {
+        if let Some(r) = x { self.o[self.at] = 1; put_ref(&mut self.o, self.at + 1, r); }
+        self.at += 3;
+    }
+    fn slice(&mut self, s: SliceC) { self.us(s.start); self.us(s.len); }
+    fn head(&mut self, kind: u128, c: HelperCommon) {
+        self.v(kind); self.v(site_tag(c.site)); self.v(c.origin_reference_cursor); self.opt(c.parent_resume);
+    }
+    fn staged(&mut self, s: ScalarStaged) {
+        use ScalarStaged as S;
+        let (t, x) = match s {
+            S::None => (0, 0), S::U128Value { n } => (1, n), S::BoolValue { b } => (2, u128::from(b)),
+            S::PendingNode { tag } => (3, node_tag(tag)), S::PrimError { code } => (4, u128::from(code)),
+            S::Selector { sel } => (5, sel_tag(sel)), S::TypeTest { ok } => (6, u128::from(ok)),
+        };
+        self.v(t); self.v(x);
+    }
+}
+
+/// Structural reader in ascending lanes; `l` is a statically sized record.
+struct Rd<'a> { l: &'a [u128], at: usize, s: &'static str }
+impl Rd<'_> {
+    fn raw(&mut self) -> u128 { let v = self.l[self.at]; self.at += 1; v }
+    fn us(&mut self) -> C6Result<usize> { let v = self.raw(); rd(self.s, v) }
+    fn byte(&mut self) -> C6Result<u8> { let v = self.raw(); rd_u8(self.s, v) }
+    fn tag<T>(&mut self, f: fn(&'static str, u128) -> C6Result<T>) -> C6Result<T> { let v = self.raw(); f(self.s, v) }
+    fn r(&mut self) -> C6Result<RefC> { let v = get_ref(self.s, self.l, self.at)?; self.at += 2; Ok(v) }
+    fn opt(&mut self) -> C6Result<Option<usize>> { let v = get_env(self.s, self.l, self.at)?; self.at += 2; Ok(v) }
+    fn opt_ref(&mut self) -> C6Result<Option<RefC>> {
+        match self.raw() {
+            0 => { zero(self.s, self.l, self.at, self.at + 2)?; self.at += 2; Ok(None) }
+            1 => self.r().map(Some),
+            tag => Err(C6PhysError::BadTag { section: self.s, tag }),
+        }
+    }
+    fn slice(&mut self) -> C6Result<SliceC> { Ok(SliceC { start: self.us()?, len: self.us()? }) }
+    fn common(&mut self) -> C6Result<HelperCommon> {
+        Ok(HelperCommon { site: self.tag(site_from)?, origin_reference_cursor: self.raw(), parent_resume: self.opt()? })
+    }
+    fn staged(&mut self) -> C6Result<ScalarStaged> {
+        use ScalarStaged as S;
+        let (tag, x, s) = (self.raw(), self.raw(), self.s);
+        Ok(match tag {
+            0 => { zero(s, self.l, self.at - 1, self.at)?; S::None }
+            1 => S::U128Value { n: x }, 2 => S::BoolValue { b: rd_bool(s, x)? },
+            3 => S::PendingNode { tag: node_from(s, x)? }, 4 => S::PrimError { code: rd_u8(s, x)? },
+            5 => S::Selector { sel: sel_from(s, x)? }, 6 => S::TypeTest { ok: rd_bool(s, x)? },
+            tag => return Err(C6PhysError::BadTag { section: s, tag }),
+        })
+    }
+}
+
+// ---------- helper record ----------
+
+pub fn encode_helper_record(h: Option<HelperControlC>) -> [u128; HELPER_LANES] {
+    use HelperControlC as H;
+    let mut w = Wr::<HELPER_LANES>::new();
+    let Some(h) = h else { return w.o };
+    match h {
+        H::Scalar { common, mode, operand_a, operand_b, expected, phase, reg_a, staged } => {
+            w.head(1, common); w.v(mode_tag(mode)); w.r(operand_a); w.opt_ref(operand_b);
+            w.opt(expected.map(|t| t.0)); w.v(sphase_tag(phase)); w.v(reg_a); w.staged(staged);
+        }
+        H::EnvGet { common, binder, cursor, found, status } => {
+            w.head(2, common); w.us(binder); w.opt(cursor); w.opt_ref(found); w.v(tri_tag(status));
+        }
+        H::EnvPut { common, binder, value, base, new_root, status } => {
+            w.head(3, common); w.us(binder); w.r(value); w.opt(base); w.opt(new_root); w.v(tri_tag(status));
+        }
+        H::Find { common, function_name, row_cursor, found, status } => {
+            w.head(4, common); w.us(function_name); w.us(row_cursor); w.opt(found); w.v(tri_tag(status));
+        }
+        H::Bind { common, function, params, args, p_cursor, a_cursor, partial, dup_cursor, phase, status } => {
+            w.head(5, common); w.us(function); w.slice(params); w.slice(args); w.us(p_cursor); w.us(a_cursor);
+            w.opt(partial); w.opt(dup_cursor); w.v(bphase_tag(phase)); w.v(bstatus_tag(status));
+        }
+        H::Append { common, src, value, src_cursor, dest_start, staged, phase } => {
+            w.head(6, common); w.slice(src); w.r(value); w.us(src_cursor); w.us(dest_start);
+            w.opt_ref(staged); w.v(aphase_tag(phase));
+        }
+        H::Validate { common, root, status } => { w.head(7, common); w.r(root); w.v(tri_tag(status)); }
+        H::Equal { common, left, right, status } => {
+            w.head(8, common); w.r(left); w.r(right); w.v(tri_tag(status));
+        }
+        H::Match { common, scrutinee, arm, saved_env, partial, pat_tag, x, y, field_idx, staged, phase, status } => {
+            w.head(9, common); w.r(scrutinee); w.us(arm); w.opt(saved_env); w.opt(partial);
+            w.v(pat_tag_of(pat_tag)); w.us(x); w.us(y); w.v(u128::from(field_idx)); w.opt_ref(staged);
+            w.v(mphase_tag(phase)); w.v(tri_tag(status));
+        }
+        H::Plan { common, source_match, scrutinee, saved_env, partial, node, phase, after_walk, cur, path,
+            path_cursor, arm, status } => {
+            w.head(10, common); w.us(source_match); w.r(scrutinee); w.opt(saved_env); w.opt(partial);
+            w.us(node); w.v(pphase_tag(phase)); w.v(walk_tag(after_walk)); w.r(cur); w.slice(path);
+            w.us(path_cursor); w.opt(arm); w.v(tri_tag(status));
+        }
+        H::Build { common, type_id, ctor_id, src, src_cursor, field_start, staged, node, phase } => {
+            w.head(11, common); w.us(type_id.0); w.us(ctor_id.0); w.slice(src); w.us(src_cursor);
+            w.us(field_start); w.opt_ref(staged); w.opt_ref(node); w.v(build_tag(phase));
+        }
+    }
+    w.o
+}
+
+/// Structural helper decode: tag, representability, presence and padding.
+pub fn decode_helper_record(l: &[u128; HELPER_LANES]) -> C6Result<Option<HelperControlC>> {
+    use HelperControlC as H;
+    let mut d = Rd { l: &l[..], at: 1, s: HELPER_S };
+    let h = match l[0] {
+        0 => None,
+        1 => Some(H::Scalar { common: d.common()?, mode: d.tag(mode_from)?, operand_a: d.r()?,
+            operand_b: d.opt_ref()?, expected: d.opt()?.map(TypeIdC), phase: d.tag(sphase_from)?,
+            reg_a: d.raw(), staged: d.staged()? }),
+        2 => Some(H::EnvGet { common: d.common()?, binder: d.us()?, cursor: d.opt()?, found: d.opt_ref()?,
+            status: d.tag(tri_from)? }),
+        3 => Some(H::EnvPut { common: d.common()?, binder: d.us()?, value: d.r()?, base: d.opt()?,
+            new_root: d.opt()?, status: d.tag(tri_from)? }),
+        4 => Some(H::Find { common: d.common()?, function_name: d.us()?, row_cursor: d.us()?,
+            found: d.opt()?, status: d.tag(tri_from)? }),
+        5 => Some(H::Bind { common: d.common()?, function: d.us()?, params: d.slice()?, args: d.slice()?,
+            p_cursor: d.us()?, a_cursor: d.us()?, partial: d.opt()?, dup_cursor: d.opt()?,
+            phase: d.tag(bphase_from)?, status: d.tag(bstatus_from)? }),
+        6 => Some(H::Append { common: d.common()?, src: d.slice()?, value: d.r()?, src_cursor: d.us()?,
+            dest_start: d.us()?, staged: d.opt_ref()?, phase: d.tag(aphase_from)? }),
+        7 => Some(H::Validate { common: d.common()?, root: d.r()?, status: d.tag(tri_from)? }),
+        8 => Some(H::Equal { common: d.common()?, left: d.r()?, right: d.r()?, status: d.tag(tri_from)? }),
+        9 => Some(H::Match { common: d.common()?, scrutinee: d.r()?, arm: d.us()?, saved_env: d.opt()?,
+            partial: d.opt()?, pat_tag: d.tag(pat_from)?, x: d.us()?, y: d.us()?, field_idx: d.byte()?,
+            staged: d.opt_ref()?, phase: d.tag(mphase_from)?, status: d.tag(tri_from)? }),
+        10 => Some(H::Plan { common: d.common()?, source_match: d.us()?, scrutinee: d.r()?,
+            saved_env: d.opt()?, partial: d.opt()?, node: d.us()?, phase: d.tag(pphase_from)?,
+            after_walk: d.tag(walk_from)?, cur: d.r()?, path: d.slice()?, path_cursor: d.us()?,
+            arm: d.opt()?, status: d.tag(tri_from)? }),
+        11 => Some(H::Build { common: d.common()?, type_id: TypeIdC(d.us()?), ctor_id: CtorIdC(d.us()?),
+            src: d.slice()?, src_cursor: d.us()?, field_start: d.us()?, staged: d.opt_ref()?,
+            node: d.opt_ref()?, phase: d.tag(build_from)? }),
+        tag => return Err(C6PhysError::BadTag { section: HELPER_S, tag }),
+    };
+    zero(HELPER_S, l, d.at, HELPER_LANES)?;
+    Ok(h)
+}
+
+fn helper_caps(h: &HelperControlC, c: &C6StateCaps) -> C6Result<()> {
+    use HelperControlC as H;
+    let p = &c.phys;
+    match *h {
+        H::Scalar { operand_a, operand_b, expected, .. } => {
+            cap_ref("state.helper.operand_a", operand_a, c)?;
+            cap_opt_ref("state.helper.operand_b", operand_b, c)?;
+            cap_opt_index("state.helper.expected", expected.map(|t| t.0), builtin_type_cap(c))
+        }
+        H::EnvGet { binder, cursor, found, .. } => {
+            cap_index("state.helper.binder", binder, p.max_names)?;
+            cap_opt_index("state.helper.cursor", cursor, p.max_env_cells)?;
+            cap_opt_ref("state.helper.found", found, c)
+        }
+        H::EnvPut { binder, value, base, new_root, .. } => {
+            cap_index("state.helper.binder", binder, p.max_names)?;
+            cap_ref("state.helper.value", value, c)?;
+            cap_env("state.helper.base", base, c)?;
+            cap_opt_index("state.helper.new_root", new_root, p.max_env_cells)
+        }
+        H::Find { function_name, row_cursor, found, .. } => {
+            cap_index("state.helper.function_name", function_name, p.max_names)?;
+            cap_count("state.helper.row_cursor", row_cursor, p.max_functions)?;
+            cap_opt_index("state.helper.found", found, p.max_functions)
+        }
+        H::Bind { function, params, args, p_cursor, a_cursor, partial, dup_cursor, .. } => {
+            cap_index("state.helper.function", function, p.max_functions)?;
+            cap_slice("state.helper.params", params, p.max_parameters, Some(p.max_arity))?;
+            cap_slice("state.helper.args", args, p.max_value_slots, Some(p.max_arity))?;
+            cap_count("state.helper.p_cursor", p_cursor, params.len)?;
+            cap_count("state.helper.a_cursor", a_cursor, args.len)?;
+            cap_env("state.helper.partial", partial, c)?;
+            cap_opt_index("state.helper.dup_cursor", dup_cursor, p.max_env_cells)
+        }
+        H::Append { src, value, src_cursor, dest_start, staged, .. } => {
+            cap_slice("state.helper.src", src, p.max_value_slots, Some(p.max_arity))?;
+            cap_ref("state.helper.value", value, c)?;
+            cap_count("state.helper.src_cursor", src_cursor, src.len)?;
+            cap_count("state.helper.dest_start", dest_start, p.max_value_slots)?;
+            cap_opt_ref("state.helper.staged", staged, c)
+        }
+        H::Validate { root, .. } => cap_ref("state.helper.root", root, c),
+        H::Equal { left, right, .. } => {
+            cap_ref("state.helper.left", left, c)?;
+            cap_ref("state.helper.right", right, c)
+        }
+        H::Match { scrutinee, arm, saved_env, partial, pat_tag, x, y, staged, phase, .. } => {
+            cap_ref("state.helper.scrutinee", scrutinee, c)?;
+            cap_index("state.helper.arm", arm, p.max_arms)?;
+            cap_env("state.helper.saved_env", saved_env, c)?;
+            cap_env("state.helper.partial", partial, c)?;
+            if phase != MatchPhase::Arm {
+                match pat_tag {
+                    PatternTag::PVar | PatternTag::PLeaf => cap_index("state.helper.x", x, p.max_names)?,
+                    PatternTag::PCons | PatternTag::PBranch => {
+                        cap_index("state.helper.x", x, p.max_names)?;
+                        cap_index("state.helper.y", y, p.max_names)?;
+                    }
+                    PatternTag::PNil | PatternTag::WildcardExtensionReserved
+                    | PatternTag::ConstructorExtensionReserved => {}
+                }
+            }
+            cap_opt_ref("state.helper.staged", staged, c)
+        }
+        H::Plan { source_match, scrutinee, saved_env, partial, node, cur, path, path_cursor, arm, .. } => {
+            cap_index("state.helper.source_match", source_match, p.max_expressions)?;
+            cap_ref("state.helper.scrutinee", scrutinee, c)?;
+            cap_env("state.helper.saved_env", saved_env, c)?;
+            cap_env("state.helper.partial", partial, c)?;
+            cap_index("state.helper.node", node, p.max_plan_nodes)?;
+            cap_ref("state.helper.cur", cur, c)?;
+            cap_slice("state.helper.path", path, p.max_field_paths, None)?;
+            cap_count("state.helper.path_cursor", path_cursor, path.len)?;
+            cap_opt_index("state.helper.arm", arm, p.max_arms)
+        }
+        H::Build { type_id, ctor_id, src, src_cursor, field_start, staged, node, .. } => {
+            cap_index("state.helper.type_id", type_id.0, p.max_types)?;
+            cap_index("state.helper.ctor_id", ctor_id.0, p.max_constructors)?;
+            cap_slice("state.helper.src", src, p.max_value_slots, Some(p.max_arity))?;
+            cap_count("state.helper.src_cursor", src_cursor, src.len)?;
+            cap_count("state.helper.field_start", field_start, c.max_data_field_slots)?;
+            cap_opt_ref("state.helper.staged", staged, c)?;
+            cap_opt_ref("state.helper.node", node, c)
+        }
+    }
+}
+
+pub fn decode_helper_record_checked(l: &[u128; HELPER_LANES], c: &C6StateCaps)
+    -> C6Result<Option<HelperControlC>> {
+    let h = decode_helper_record(l)?;
+    if let Some(h) = &h { helper_caps(h, c)?; }
+    Ok(h)
+}
+
+// ---------- result record ----------
+
+pub fn encode_result_record(r: Option<HelperResultC>) -> [u128; RESULT_LANES] {
+    use HelperResultC as R;
+    let mut w = Wr::<RESULT_LANES>::new();
+    let Some(r) = r else { return w.o };
+    match r {
+        R::Validated { ok } => { w.v(1); w.v(u128::from(ok)); }
+        R::EnvFound { value } => { w.v(2); w.r(value); }
+        R::EnvMissing => w.v(3),
+        R::EnvUpdated { cell } => { w.v(4); w.us(cell); }
+        R::FindFound { function } => { w.v(5); w.us(function); }
+        R::FindMissing => w.v(6),
+        R::BindOk { env } => { w.v(7); w.opt(env); }
+        R::BindBad => w.v(8),
+        R::AppendDone { seq } => { w.v(9); w.slice(seq); }
+        R::ScalarValue { value } => { w.v(10); w.r(value); }
+        R::ScalarError { code } => { w.v(11); w.v(u128::from(code)); }
+        R::ScalarSelector { sel } => { w.v(12); w.v(sel_tag(sel)); }
+        R::ScalarTypeTest { ok } => { w.v(13); w.v(u128::from(ok)); }
+        R::EqualDone { value } => { w.v(14); w.r(value); }
+        R::MatchMatched { env } => { w.v(15); w.opt(env); }
+        R::MatchNoMatch => w.v(16),
+        R::PlanMatched { arm, env } => { w.v(17); w.us(arm); w.opt(env); }
+        R::PlanNoMatch => w.v(18),
+        R::BuildDone { value } => { w.v(19); w.r(value); }
+    }
+    w.o
+}
+
+pub fn decode_result_record(l: &[u128; RESULT_LANES]) -> C6Result<Option<HelperResultC>> {
+    use HelperResultC as R;
+    let mut d = Rd { l: &l[..], at: 1, s: RESULT_S };
+    let r = match l[0] {
+        0 => None,
+        1 => Some(R::Validated { ok: rd_bool(RESULT_S, d.raw())? }),
+        2 => Some(R::EnvFound { value: d.r()? }),
+        3 => Some(R::EnvMissing),
+        4 => Some(R::EnvUpdated { cell: d.us()? }),
+        5 => Some(R::FindFound { function: d.us()? }),
+        6 => Some(R::FindMissing),
+        7 => Some(R::BindOk { env: d.opt()? }),
+        8 => Some(R::BindBad),
+        9 => Some(R::AppendDone { seq: d.slice()? }),
+        10 => Some(R::ScalarValue { value: d.r()? }),
+        11 => Some(R::ScalarError { code: d.byte()? }),
+        12 => Some(R::ScalarSelector { sel: d.tag(sel_from)? }),
+        13 => Some(R::ScalarTypeTest { ok: rd_bool(RESULT_S, d.raw())? }),
+        14 => Some(R::EqualDone { value: d.r()? }),
+        15 => Some(R::MatchMatched { env: d.opt()? }),
+        16 => Some(R::MatchNoMatch),
+        17 => Some(R::PlanMatched { arm: d.us()?, env: d.opt()? }),
+        18 => Some(R::PlanNoMatch),
+        19 => Some(R::BuildDone { value: d.r()? }),
+        tag => return Err(C6PhysError::BadTag { section: RESULT_S, tag }),
+    };
+    zero(RESULT_S, l, d.at, RESULT_LANES)?;
+    Ok(r)
+}
+
+fn result_caps(r: &HelperResultC, c: &C6StateCaps) -> C6Result<()> {
+    use HelperResultC as R;
+    let p = &c.phys;
+    match *r {
+        R::EnvFound { value } | R::ScalarValue { value } | R::EqualDone { value } | R::BuildDone { value } =>
+            cap_ref("state.result.value", value, c),
+        R::EnvUpdated { cell } => cap_index("state.result.cell", cell, p.max_env_cells),
+        R::FindFound { function } => cap_index("state.result.function", function, p.max_functions),
+        R::BindOk { env } | R::MatchMatched { env } => cap_env("state.result.env", env, c),
+        R::AppendDone { seq } => cap_slice("state.result.seq", seq, p.max_value_slots, Some(p.max_arity)),
+        R::PlanMatched { arm, env } => {
+            cap_index("state.result.arm", arm, p.max_arms)?;
+            cap_env("state.result.env", env, c)
+        }
+        R::Validated { .. } | R::EnvMissing | R::FindMissing | R::BindBad | R::ScalarError { .. }
+        | R::ScalarSelector { .. } | R::ScalarTypeTest { .. } | R::MatchNoMatch | R::PlanNoMatch => Ok(()),
+    }
+}
+
+pub fn decode_result_record_checked(l: &[u128; RESULT_LANES], c: &C6StateCaps)
+    -> C6Result<Option<HelperResultC>> {
+    let r = decode_result_record(l)?;
+    if let Some(r) = &r { result_caps(r, c)?; }
+    Ok(r)
+}
+
+// ---------- task record ----------
+
+pub fn encode_task_record(t: HelperTaskC) -> [u128; TASK_LANES] {
+    let mut w = Wr::<TASK_LANES>::new();
+    match t {
+        HelperTaskC::ValidateTask { r, visit, cursor } => { w.v(0); w.r(r); w.v(visit_tag(visit)); w.us(cursor); }
+        HelperTaskC::EqualTask { left, right, visit, cursor } => {
+            w.v(1); w.r(left); w.r(right); w.v(visit_tag(visit)); w.us(cursor);
+        }
+        HelperTaskC::PairTask { binder, sort, arg } => { w.v(2); w.us(binder); w.us(sort.0); w.r(arg); }
+    }
+    w.o
+}
+
+pub fn decode_task_record(l: &[u128; TASK_LANES]) -> C6Result<HelperTaskC> {
+    let mut d = Rd { l: &l[..], at: 1, s: TASK_S };
+    let t = match l[0] {
+        0 => HelperTaskC::ValidateTask { r: d.r()?, visit: d.tag(visit_from)?, cursor: d.us()? },
+        1 => HelperTaskC::EqualTask { left: d.r()?, right: d.r()?, visit: d.tag(visit_from)?, cursor: d.us()? },
+        2 => HelperTaskC::PairTask { binder: d.us()?, sort: TypeIdC(d.us()?), arg: d.r()? },
+        tag => return Err(C6PhysError::BadTag { section: TASK_S, tag }),
+    };
+    zero(TASK_S, l, d.at, TASK_LANES)?;
+    Ok(t)
+}
+
+fn task_caps(t: &HelperTaskC, c: &C6StateCaps) -> C6Result<()> {
+    match *t {
+        HelperTaskC::ValidateTask { r, cursor, .. } => {
+            cap_ref("state.task.r", r, c)?;
+            cap_count("state.task.cursor", cursor, c.phys.max_arity)
+        }
+        HelperTaskC::EqualTask { left, right, cursor, .. } => {
+            cap_ref("state.task.left", left, c)?;
+            cap_ref("state.task.right", right, c)?;
+            cap_count("state.task.cursor", cursor, c.phys.max_arity)
+        }
+        HelperTaskC::PairTask { binder, sort, arg } => {
+            cap_index("state.task.binder", binder, c.phys.max_names)?;
+            cap_index("state.task.sort", sort.0, builtin_type_cap(c))?;
+            cap_ref("state.task.arg", arg, c)
+        }
+    }
+}
+
+pub fn decode_task_record_checked(l: &[u128; TASK_LANES], c: &C6StateCaps) -> C6Result<HelperTaskC> {
+    let t = decode_task_record(l)?;
+    task_caps(&t, c)?;
+    Ok(t)
+}
+
+// ---------- owned carrier and section ----------
+
+/// The three owned image fields, exactly as captured: helper/result presence,
+/// every raw field, task order and multiplicity. No task cursor is stored.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct C6HelperTables {
+    pub helper: Option<HelperControlC>,
+    pub result: Option<HelperResultC>,
+    pub tasks: Vec<HelperTaskC>,
+}
+
+impl C6HelperTables {
+    pub fn from_image(image: &ImageSnapshot) -> Self {
+        Self { helper: image.helper, result: image.result, tasks: image.tasks.clone() }
+    }
+    /// Diagnostic: overwrite exactly these three fields of a caller-owned image.
+    pub fn replace_tables_of(self, image: &mut ImageSnapshot) {
+        image.helper = self.helper;
+        image.result = self.result;
+        image.tasks = self.tasks;
+    }
+}
+
+fn section_len(tasks: usize) -> C6Result<usize> {
+    tasks.checked_mul(TASK_LANES).and_then(|n| n.checked_add(HELPER_FIXED_LANES))
+        .ok_or(C6PhysError::UsizeOverflow { section: SECTION, value: u(tasks) })
+}
+
+/// Canonical encoder: count cap, then helper, result and task caps, before allocation.
+pub fn encode_helper_tables(t: &C6HelperTables, c: &C6StateCaps) -> C6Result<Vec<u128>> {
+    cap_count("state.tasks", t.tasks.len(), c.max_helper_tasks)?;
+    if let Some(h) = &t.helper { helper_caps(h, c)?; }
+    if let Some(r) = &t.result { result_caps(r, c)?; }
+    for task in &t.tasks { task_caps(task, c)?; }
+    let mut out = Vec::with_capacity(section_len(t.tasks.len())?);
+    out.extend([C6_PHYS_MAGIC, C6_PHYS_VERSION, HELPER_SECTION_TAG, u(t.tasks.len())]);
+    out.extend(encode_helper_record(t.helper));
+    out.extend(encode_result_record(t.result));
+    for task in &t.tasks { out.extend(encode_task_record(*task)); }
+    Ok(out)
+}
+
+/// Decoder; see the module documentation for the exact first-error order.
+/// Returns owned tables only, never an image, admission or machine state.
+pub fn decode_helper_tables(lanes: &[u128], c: &C6StateCaps) -> C6Result<C6HelperTables> {
+    if lanes.len() < HELPER_FIXED_LANES {
+        return Err(C6PhysError::Truncated { section: SECTION, needed: HELPER_FIXED_LANES, actual: lanes.len() });
+    }
+    if lanes[0] != C6_PHYS_MAGIC { return Err(C6PhysError::BadMagic { actual: lanes[0] }); }
+    if lanes[1] != C6_PHYS_VERSION { return Err(C6PhysError::BadVersion { actual: lanes[1] }); }
+    if lanes[2] != HELPER_SECTION_TAG { return Err(C6PhysError::BadTag { section: SECTION, tag: lanes[2] }); }
+    let n = rd(SECTION, lanes[3])?;
+    cap_count("state.tasks", n, c.max_helper_tasks)?;
+    let needed = section_len(n)?;
+    if lanes.len() < needed { return Err(C6PhysError::Truncated { section: SECTION, needed, actual: lanes.len() }); }
+    if lanes.len() > needed { return Err(C6PhysError::TrailingLanes { section: SECTION, extra: lanes.len() - needed }); }
+    let truncated = || C6PhysError::Truncated { section: SECTION, needed, actual: lanes.len() };
+    let hl: &[u128; HELPER_LANES] = (&lanes[L_HELPER_RECORD..L_RESULT_RECORD]).try_into().map_err(|_| truncated())?;
+    let helper = decode_helper_record_checked(hl, c)?;
+    let rl: &[u128; RESULT_LANES] = (&lanes[L_RESULT_RECORD..L_TASKS]).try_into().map_err(|_| truncated())?;
+    let result = decode_result_record_checked(rl, c)?;
+    let mut tasks = Vec::with_capacity(n);
+    for chunk in lanes[L_TASKS..].chunks_exact(TASK_LANES) {
+        let tl: &[u128; TASK_LANES] = chunk.try_into().map_err(|_| truncated())?;
+        tasks.push(decode_task_record_checked(tl, c)?);
+    }
+    Ok(C6HelperTables { helper, result, tasks })
+}
+
+/// Normal owned-snapshot caller. `caps` is an independent caller assertion
+/// (retained original layout/ext/budgets), not bound to `host.admission`.
+pub fn helper_lanes_from_host(host: &HostSnapshot, caps: &C6StateCaps) -> C6Result<Vec<u128>> {
+    encode_helper_tables(&C6HelperTables::from_image(&host.image), caps)
+}
+
+pub fn roundtrip_helper_tables_owned(t: &C6HelperTables, caps: &C6StateCaps) -> C6Result<C6HelperTables> {
+    decode_helper_tables(&encode_helper_tables(t, caps)?, caps)
+}
+
+/// Diagnostic inverse on a caller-owned host clone: only helper/result/tasks change.
+pub fn host_with_decoded_helper_tables(host: &HostSnapshot, lanes: &[u128], caps: &C6StateCaps)
+    -> C6Result<HostSnapshot> {
+    let tables = decode_helper_tables(lanes, caps)?;
+    let mut out = host.clone();
+    tables.replace_tables_of(&mut out.image);
+    Ok(out)
+}
+
