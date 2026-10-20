@@ -386,8 +386,9 @@ pub use c6_data_canonical::{
     C6DataCanonicalEmitter, C6DataCanonicalError, C6DataCanonicalInputs, C6DataGeometry,
 };
 pub use c6_meta_canonical::{
-    emit_c6_meta_canonical_block, C6MetaCanonicalBlock, C6MetaCanonicalEmitter,
-    C6MetaCanonicalError, C6MetaCanonicalInputs,
+    emit_c6_meta_bound_canonical_block, emit_c6_meta_canonical_block, C6MetaBoundCanonicalInputs,
+    C6MetaCanonicalBlock, C6MetaCanonicalEmitter, C6MetaCanonicalError, C6MetaCanonicalInputs,
+    C6MetaConfigBinding,
 };
 pub use c6_program_context_canonical::{
     emit_c6_program_context_canonical_block, emit_c6_program_context_ctx_binding_block,
@@ -399,7 +400,7 @@ pub use c6_push_step::{
     check_c6_push_step_circuit, decode_padded_state_to_owned,
     emit_c6_push_step_block, encode_owned_state_to_padded, meta_admission_bounds_frames_offset,
     witness_from_host_pair, witness_from_owner_step, C6PaddedCarrierGeometry,
-    C6PaddedStateLanes, C6PushHostPrefixLanes, C6PushStatementBindingMode, C6PushStepBlock,
-    C6PushStepCircuit, C6PushStepError, C6PushStepInputs,
+    C6PaddedStateLanes, C6PushFamilyParams, C6PushHostPrefixLanes, C6PushStatementBindingMode,
+    C6PushStepBlock, C6PushStepCircuit, C6PushStepError, C6PushStepInputs,
     C6PushStepWitness, C6_PADDED_CARRIER_VERSION,
 };

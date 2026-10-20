@@ -86,9 +86,12 @@ use thiserror::Error;
 
 use super::c6_a135_push::c6_push_family;
 use super::c6_data_canonical::{emit_c6_data_canonical_block, C6DataCanonicalInputs};
-use super::c6_meta_canonical::{emit_c6_meta_canonical_block, C6MetaCanonicalInputs};
+use super::c6_meta_canonical::{
+    C6MetaBoundCanonicalInputs, C6MetaCanonicalEmitter, C6MetaConfigBinding,
+};
 use super::c6_program_context_canonical::{
-    emit_c6_program_context_canonical_block, C6ProgramContextCanonicalInputs,
+    C6ProgramContextCanonicalEmitter, C6ProgramContextCanonicalInputs,
+    C6ProgramContextCtxBindingInputs,
 };
 
 /// Version of the unadopted fixed-capacity padded state carrier.
@@ -430,12 +433,14 @@ impl C6PushHostPrefixLanes {
 pub struct C6PushStepWitness {
     enable: bool,
     selection: PushSelection,
+    source_params: C6PushFamilyParams,
     host_prefix: C6PushHostPrefixLanes,
     pre_state: C6PaddedStateLanes,
     post_state: C6PaddedStateLanes,
 }
 
 impl C6PushStepWitness {
+    pub fn source_params(&self) -> &C6PushFamilyParams { &self.source_params }
     pub const fn family(&self) -> &'static str { c6_push_family(self.selection) }
 
     /// Statement order: `enable, selector_is_accept, host_schema,
@@ -455,6 +460,80 @@ impl C6PushStepWitness {
             out.push(Fr::from(*lane));
         }
         out
+    }
+}
+
+/// Caller-retained Push family parameters: the original host config,
+/// a separately retained admission `BoundsC` (never equated with
+/// `cfg.layout.bounds`), and the original host limits. Geometry, caps,
+/// the bound-META binding, and the expected CTX are all derived here
+/// through the real Core chain; nothing is taken from prover META/PROG
+/// lanes, a decoded witness config, or any assertion type.
+#[derive(Clone, Debug)]
+pub struct C6PushFamilyParams {
+    cfg: C6HostConfig,
+    admission_bounds: BoundsC,
+    limits: C6HostLimits,
+    binding: C6MetaConfigBinding,
+    expected_ctx: [u128; CTX_LANES],
+    caps: C6StateCaps,
+    geometry: C6PaddedCarrierGeometry,
+}
+
+impl PartialEq for C6PushFamilyParams {
+    fn eq(&self, other: &Self) -> bool {
+        self.cfg == other.cfg
+            && self.admission_bounds == other.admission_bounds
+            && self.limits == other.limits
+            && self.binding.admission_bounds() == other.binding.admission_bounds()
+            && self.binding.layout() == other.binding.layout()
+            && self.binding.limits() == other.binding.limits()
+            && self.expected_ctx == other.expected_ctx
+            && self.caps == other.caps
+            && self.geometry == other.geometry
+    }
+}
+
+impl Eq for C6PushFamilyParams {}
+
+impl C6PushFamilyParams {
+    pub fn new(
+        cfg: C6HostConfig,
+        admission_bounds: BoundsC,
+        limits: C6HostLimits,
+    ) -> Result<Self, C6PushStepError> {
+        let binding = C6MetaConfigBinding::from_host_config(admission_bounds, &cfg, limits)
+            .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+        let (caps, _state_limits, geometry) = geometry_from_config(&cfg, &limits)?;
+        let expected_ctx = encode_context(cfg.ext, cfg.budgets);
+        let (ext, budgets) = decode_context(&expected_ctx)?;
+        if ext != cfg.ext || budgets != cfg.budgets {
+            return Err(C6PushStepError::Backend("context roundtrip disagreed".into()));
+        }
+        Ok(Self { cfg, admission_bounds, limits, binding, expected_ctx, caps, geometry })
+    }
+
+    pub fn cfg(&self) -> &C6HostConfig { &self.cfg }
+    pub fn admission_bounds(&self) -> BoundsC { self.admission_bounds }
+    pub fn limits(&self) -> C6HostLimits { self.limits }
+    pub fn meta_binding(&self) -> C6MetaConfigBinding { self.binding.clone() }
+    pub fn expected_ctx(&self) -> [u128; CTX_LANES] { self.expected_ctx }
+    pub fn caps(&self) -> C6StateCaps { self.caps }
+    pub fn geometry(&self) -> C6PaddedCarrierGeometry { self.geometry }
+
+    /// Recompute caps/geometry from the retained cfg/limits through
+    /// `cfg.state_context(&limits)` and refuse any independently
+    /// supplied geometry that differs. This is a host derivation
+    /// refusal before emission, not a caller-trust claim.
+    pub fn validate_geometry(
+        &self,
+        supplied: C6PaddedCarrierGeometry,
+    ) -> Result<(), C6PushStepError> {
+        let (caps, _state_limits, geometry) = geometry_from_config(&self.cfg, &self.limits)?;
+        if supplied != geometry || supplied.caps != caps {
+            return Err(C6PushStepError::InvalidGeometry { section: "geometry" });
+        }
+        Ok(())
     }
 }
 
@@ -479,9 +558,10 @@ pub fn witness_from_host_pair(
     if pre_prefix.meta != post_prefix.meta { return Err(C6PushStepError::HostPrefixMismatch { section: "meta" }); }
     if pre_prefix.prog != post_prefix.prog { return Err(C6PushStepError::HostPrefixMismatch { section: "prog" }); }
     if pre_prefix.ctx != post_prefix.ctx { return Err(C6PushStepError::HostPrefixMismatch { section: "ctx" }); }
+    let source_params = C6PushFamilyParams::new(cfg.clone(), pre.admission.bounds, *limits)?;
     let pre_state = encode_owned_state_to_padded(&C6OwnedState::from_image(&pre.image), caps, state_limits)?;
     let post_state = encode_owned_state_to_padded(&C6OwnedState::from_image(&post.image), caps, state_limits)?;
-    Ok(C6PushStepWitness { enable, selection, host_prefix: pre_prefix, pre_state, post_state })
+    Ok(C6PushStepWitness { enable, selection, source_params, host_prefix: pre_prefix, pre_state, post_state })
 }
 
 /// Owner-produced route: runs exactly one actual admitted+mutable recorder
@@ -516,11 +596,11 @@ pub struct C6PushStepInputs {
     pub carrier_version: Operand,
     pub geometry: C6PaddedCarrierGeometry,
     pub meta_bounds_frames_offset: usize,
-    /// UNAUTHENTICATED CIRCUIT PARAMETER: the builder-chosen limits
-    /// define only the structural META relation of this circuit.
-    /// They are not verified against any retained host or verifier
-    /// authority by this struct, the builder, or the checker.
-    pub meta_limits: C6HostLimits,
+    /// Retained family parameters (original cfg, separately retained
+    /// admission bounds, original limits). The bound META relation,
+    /// expected CTX, caps, and geometry derivation are all taken from
+    /// this value; it is a source parameter, not native authority.
+    pub source_params: C6PushFamilyParams,
     pub pre_meta: Vec<Operand>,
     pub pre_prog: Vec<Operand>,
     pub pre_ctx: [Operand; CTX_LANES],
@@ -739,6 +819,7 @@ impl<'a> IrEmitter<'a> {
 pub fn emit_c6_push_step_block(inputs: &C6PushStepInputs, scope: &str) -> Result<C6PushStepBlock, C6PushStepError> {
     if scope.trim().is_empty() { return Err(C6PushStepError::EmptyScope); }
     if (LANE_BITS as usize) >= FR_BITS { return Err(C6PushStepError::InvalidBitWidth { bits: LANE_BITS }); }
+    inputs.source_params.validate_geometry(inputs.geometry)?;
     let g = &inputs.geometry;
     let caps = &g.caps.phys;
     for (section, actual, expected) in [("image", inputs.pre_image.len(), g.image_total_lanes),
@@ -943,44 +1024,60 @@ pub fn emit_c6_push_step_block(inputs: &C6PushStepInputs, scope: &str) -> Result
     )
     .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
     em.instructions.extend(data_canonical.instructions);
-    // META canonicality (whole pre/post vectors). Parent already ranges
-    // every META lane and constrains post == pre unconditionally; this
-    // gated block proves the variable-length codec domain on both
-    // copies and ties meta_bounds_frames_offset to admission
-    // BoundsC.frames (index 16), not an arbitrary in-range lane.
-    // `inputs.meta_limits` is an UNAUTHENTICATED CIRCUIT PARAMETER:
-    // it defines only this structural relation and is not bound to
-    // the retained host limits that produced any witness.
-    let meta_canonical = emit_c6_meta_canonical_block(
-        &C6MetaCanonicalInputs {
+    // META canonicality, bound mode (whole pre/post vectors). Parent
+    // already ranges every META lane and constrains post == pre
+    // unconditionally; this gated block proves the variable-length
+    // codec domain on both copies, ties meta_bounds_frames_offset to
+    // admission BoundsC.frames (index 16), and binds all 22 admission
+    // bounds, all 22 layout bounds, the complete remaining layout
+    // segment, four capacities, and the boundary bool to the retained
+    // `source_params`. This replaces the unbound call exactly once;
+    // no unbound META parser is emitted in the composed circuit.
+    let mut meta_emitter = C6MetaCanonicalEmitter::new(scope)
+        .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+    let meta_canonical = meta_emitter
+        .emit_bound(&C6MetaBoundCanonicalInputs {
             gate: enable.clone(),
             pre_meta: inputs.pre_meta.clone(),
             post_meta: inputs.post_meta.clone(),
-            limits: inputs.meta_limits,
+            limits: inputs.source_params.limits(),
             meta_bounds_frames_offset: inputs.meta_bounds_frames_offset,
-        },
-        scope,
-    )
-    .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+            binding: inputs.source_params.meta_binding(),
+        })
+        .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
     em.instructions.extend(meta_canonical.instructions);
-    // PROG/CTX canonicality (pre-only). Parent already ranges every
-    // PROG and CTX lane and constrains post == pre unconditionally,
-    // so this binds both copies. Gate is the same `enable`: disabled
-    // steps enforce no canonicality beyond the unconditional lane
-    // ranges. `g.caps` is the geometry caps value already derived
-    // by the circuit builder's caller-retained config chain; this
-    // call does not authenticate that derivation.
-    let progctx_canonical = emit_c6_program_context_canonical_block(
-        &C6ProgramContextCanonicalInputs {
+    // PROG/CTX canonicality plus immediate expected-CTX binding
+    // (pre-only). Parent already ranges every PROG and CTX lane and
+    // constrains post == pre unconditionally, so this binds both
+    // copies; post CTX inherits through that unconditional equality.
+    // One retained-serial `C6ProgramContextCanonicalEmitter` carries
+    // both calls, so no `%{scope}.c6progctx.temp.` identifier is ever
+    // reused; the two single-shot wrappers are never combined under
+    // one scope. Gate is the same `enable`. `expected_ctx` is the
+    // immediate `encode_context(cfg.ext, cfg.budgets)` from the
+    // retained params: absent ext stays distinct from present-zero
+    // at lane 3, lane 18 keeps its raw u128 treatment, and the
+    // original budgets are retained at lanes 20/21.
+    let derived_caps = inputs.source_params.caps();
+    let mut progctx_emitter = C6ProgramContextCanonicalEmitter::new(scope)
+        .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+    let progctx_canonical = progctx_emitter
+        .emit(&C6ProgramContextCanonicalInputs {
             gate: enable.clone(),
             pre_prog: inputs.pre_prog.clone(),
             pre_ctx: inputs.pre_ctx.clone(),
-            caps: g.caps,
-        },
-        scope,
-    )
-    .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+            caps: derived_caps,
+        })
+        .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
     em.instructions.extend(progctx_canonical.instructions);
+    let ctx_binding = progctx_emitter
+        .emit_ctx_binding(&C6ProgramContextCtxBindingInputs {
+            gate: enable.clone(),
+            pre_ctx: inputs.pre_ctx.clone(),
+            expected_ctx: inputs.source_params.expected_ctx(),
+        })
+        .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+    em.instructions.extend(ctx_binding.instructions);
 
     let task_count = inputs.pre_helper[3].clone();
     em.gated_lt_count(enable.clone(), task_count.clone(), g.caps.max_helper_tasks);
@@ -1011,10 +1108,15 @@ pub struct C6PushStepCircuit {
     meta_len: usize,
     prog_len: usize,
     meta_bounds_frames_offset: usize,
-    meta_limits: C6HostLimits,
+    source_params: C6PushFamilyParams,
     statement_lane_count: usize,
     ir: IrSource,
     serialized_zkir: String,
+}
+
+impl C6PushStepCircuit {
+    pub fn source_params(&self) -> &C6PushFamilyParams { &self.source_params }
+    pub fn geometry(&self) -> C6PaddedCarrierGeometry { self.geometry }
 }
 
 fn make_typed_identifier(id: Identifier) -> Result<TypedIdentifier, C6PushStepError> {
@@ -1039,10 +1141,11 @@ fn alloc_lane(
 }
 
 pub fn build_c6_push_step_circuit(
-    geometry: C6PaddedCarrierGeometry, meta_len: usize, prog_len: usize,
-    meta_bounds_frames_offset: usize, meta_limits: C6HostLimits, mode: C6PushStatementBindingMode, scope: &str,
+    source_params: C6PushFamilyParams, meta_len: usize, prog_len: usize,
+    meta_bounds_frames_offset: usize, mode: C6PushStatementBindingMode, scope: &str,
 ) -> Result<C6PushStepCircuit, C6PushStepError> {
     if scope.trim().is_empty() { return Err(C6PushStepError::EmptyScope); }
+    let geometry = source_params.geometry();
     let mut call_inputs = Vec::new();
     let mut instructions = Vec::new();
     let mut transcript = Vec::new();
@@ -1075,7 +1178,7 @@ pub fn build_c6_push_step_circuit(
     let post_helper = vec_of("post_helper", geometry.helper_total_lanes, &mut call_inputs, &mut instructions, &mut transcript)?;
 
     let step_inputs = C6PushStepInputs { enable, selector_is_accept, host_schema, carrier_version, geometry,
-        meta_bounds_frames_offset, meta_limits, pre_meta, pre_prog, pre_ctx, pre_image, pre_data, pre_helper,
+        meta_bounds_frames_offset, source_params: source_params.clone(), pre_meta, pre_prog, pre_ctx, pre_image, pre_data, pre_helper,
         post_meta, post_prog, post_ctx, post_image: post_image.clone(), post_data: post_data.clone(), post_helper: post_helper.clone() };
     let block = emit_c6_push_step_block(&step_inputs, scope)?;
     instructions.extend(block.instructions);
@@ -1103,14 +1206,18 @@ pub fn build_c6_push_step_circuit(
     if loaded.instructions.len() > (1usize << VERIFIER_MAX_DEGREE) {
         return Err(C6PushStepError::Backend("instruction count exceeds verifier degree bound".into()));
     }
-    Ok(C6PushStepCircuit { mode, geometry, meta_len, prog_len, meta_bounds_frames_offset, meta_limits, statement_lane_count, ir: loaded, serialized_zkir })
+    Ok(C6PushStepCircuit { mode, geometry, meta_len, prog_len, meta_bounds_frames_offset, source_params, statement_lane_count, ir: loaded, serialized_zkir })
 }
 
 /// Non-proving SDK check (`ProofPreimage::check`, i.e. `IrSource::preprocess`)
 /// only. No `k()`, keygen, proving, or native claim is made. This
-/// helper does not authenticate `circuit.meta_limits`, geometry, or
-/// the serialized circuit against any verifier-pinned expectation;
-/// `meta_limits` remains an unauthenticated circuit parameter.
+/// helper does not authenticate `circuit.source_params`, geometry, or
+/// the serialized circuit against any verifier-pinned expectation.
+/// The relation actually enforced in-circuit at preprocessing is the
+/// selected one carried by the retained `source_params`: the bound
+/// META relation (retained binding and limits) and the immediate
+/// expected-CTX binding. This diagnostic checker is not an
+/// independent circuit or native authority.
 pub fn check_c6_push_step_circuit(circuit: &C6PushStepCircuit, witness: &C6PushStepWitness) -> Result<Vec<Option<usize>>, C6PushStepError> {
     if witness.pre_state.geometry != circuit.geometry || witness.post_state.geometry != circuit.geometry {
         return Err(C6PushStepError::Backend("witness geometry does not match circuit".into()));
@@ -1154,6 +1261,7 @@ pub fn check_c6_push_step_circuit(circuit: &C6PushStepCircuit, witness: &C6PushS
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::c6_program_context_canonical::C6ProgramContextCanonicalBlock;
     use mori_core::sherlock::helper_machine::c6_phys::{C6_PHYS_MAGIC, C6PhysCaps};
     use mori_core::sherlock::helper_machine::complete_observation::{
         AdmissionSnapshot, ConstantSnapshot, ExpressionSnapshot, ImageSnapshot, LayoutSnapshot,
@@ -1271,8 +1379,8 @@ mod tests {
     }
 
     fn circuit_for(w: &C6PushStepWitness, mode: C6PushStatementBindingMode) -> C6PushStepCircuit {
-        build_c6_push_step_circuit(w.pre_state.geometry, w.host_prefix.meta.len(), w.host_prefix.prog.len(),
-            w.host_prefix.meta_bounds_frames_offset, limits(), mode, "c6_push_test").unwrap()
+        build_c6_push_step_circuit(w.source_params().clone(), w.host_prefix.meta.len(), w.host_prefix.prog.len(),
+            w.host_prefix.meta_bounds_frames_offset, mode, "c6_push_test").unwrap()
     }
 
     #[test]
@@ -1375,5 +1483,225 @@ mod tests {
         bad.pre_state.image[L_CONSUMED_WORK] = u128::MAX;
         bad.post_state.image[L_CONSUMED_WORK] = 0;
         assert!(check_c6_push_step_circuit(&circuit, &bad).is_err(), "counter overflow");
+    }
+
+    fn circuit_for_offset(w: &C6PushStepWitness, offset: usize) -> C6PushStepCircuit {
+        build_c6_push_step_circuit(w.source_params().clone(), w.host_prefix.meta.len(), w.host_prefix.prog.len(),
+            offset, C6PushStatementBindingMode::LocalPublic, "c6_push_test").unwrap()
+    }
+
+    /// Layout bounds deliberately different from admission bounds:
+    /// admission stays `bounds(3)` on the host, layout becomes this.
+    fn distinct_layout_bounds() -> BoundsC {
+        let mut b = bounds(5);
+        b.code_rows = 24;
+        b.serialization_bytes = 2_000_000;
+        b.max_reference_work = 77;
+        b
+    }
+
+    fn distinct_family(pending: FrameRowC, stack_limit: usize)
+        -> (HostSnapshot, HostSnapshot, C6HostConfig) {
+        let (mut pre, mut cfg) = sample_host(pending, stack_limit);
+        cfg.layout.bounds = distinct_layout_bounds();
+        assert_ne!(cfg.layout.bounds, pre.admission.bounds,
+            "admission and layout bounds must stay separate fixtures");
+        pre.admission.layout = cfg.layout.clone();
+        let post = expected_post(&pre, if stack_limit > pre.image.frames.len() {
+            PushSelection::Accept } else { PushSelection::Refuse });
+        (pre, post, cfg)
+    }
+
+    #[test]
+    fn bound_accept_refuse_disabled_pass_sdk_check_both_modes_distinct_bounds() {
+        // Preprocessing-only category (`ProofPreimage::check`); not
+        // synthesis, MockProver, proving, or native evidence.
+        let (pre, post, cfg) = distinct_family(all_frames()[9], 2);
+        let w = witness_from_host_pair(true, &pre, &post, &cfg, &limits()).unwrap();
+        assert_eq!(w.selection, PushSelection::Accept);
+        assert_eq!(w.source_params().admission_bounds(), bounds(3));
+        assert_eq!(w.source_params().cfg().layout.bounds, distinct_layout_bounds());
+        assert_eq!(w.source_params().expected_ctx(), encode_context(cfg.ext, cfg.budgets));
+        for mode in [C6PushStatementBindingMode::LocalPublic, C6PushStatementBindingMode::LedgerCall] {
+            let circuit = circuit_for(&w, mode);
+            assert!(check_c6_push_step_circuit(&circuit, &w).is_ok(), "accept {mode:?}");
+            let (pre_r, post_r, cfg_r) = distinct_family(all_frames()[9], 1);
+            let wr = witness_from_host_pair(true, &pre_r, &post_r, &cfg_r, &limits()).unwrap();
+            assert_eq!(wr.selection, PushSelection::Refuse);
+            assert!(check_c6_push_step_circuit(&circuit, &wr).is_ok(), "refuse {mode:?}");
+            let wd = witness_from_host_pair(false, &pre, &pre, &cfg, &limits()).unwrap();
+            assert!(check_c6_push_step_circuit(&circuit, &wd).is_ok(), "disabled {mode:?}");
+        }
+    }
+
+    #[test]
+    fn bound_meta_admission_and_layout_fields_reject_in_preprocessing() {
+        let (pre, post, cfg) = distinct_family(all_frames()[0], 2);
+        let w = witness_from_host_pair(true, &pre, &post, &cfg, &limits()).unwrap();
+        let circuit = circuit_for(&w, C6PushStatementBindingMode::LocalPublic);
+        assert!(check_c6_push_step_circuit(&circuit, &w).is_ok(), "positive control");
+        // One admission-bounds fixed field (index 0), same codec-valid
+        // shape and length, retained binding unchanged: rejection must
+        // come from circuit preprocessing, not a producer filter.
+        let mut md = C6HostMetadata::from_host(&pre);
+        md.bounds.code_rows += 1;
+        let mut bad = w.clone();
+        bad.host_prefix.meta = encode_metadata(&md, &limits()).unwrap();
+        assert_eq!(bad.host_prefix.meta.len(), w.host_prefix.meta.len());
+        assert!(check_c6_push_step_circuit(&circuit, &bad).is_err(), "admission field");
+        // One remaining layout-bounds field (index 0 of the layout
+        // block), likewise re-encoded and supplied as raw lanes.
+        let mut md = C6HostMetadata::from_host(&pre);
+        md.layout.bounds.code_rows += 1;
+        let mut bad = w.clone();
+        bad.host_prefix.meta = encode_metadata(&md, &limits()).unwrap();
+        assert!(check_c6_push_step_circuit(&circuit, &bad).is_err(), "layout field");
+    }
+
+    #[test]
+    fn wrong_ctx_presence_and_budget_reject_in_preprocessing() {
+        let (pre, post, cfg) = distinct_family(all_frames()[0], 2);
+        assert_eq!(cfg.ext, None, "fixture has absent ext");
+        let w = witness_from_host_pair(true, &pre, &post, &cfg, &limits()).unwrap();
+        let circuit = circuit_for(&w, C6PushStatementBindingMode::LocalPublic);
+        assert!(check_c6_push_step_circuit(&circuit, &w).is_ok(), "positive control");
+        let mut bad = w.clone();
+        bad.host_prefix.ctx[3] = 1; // absent -> present-zero: distinct at lane 3
+        assert!(check_c6_push_step_circuit(&circuit, &bad).is_err(), "ctx presence");
+        let mut bad = w;
+        bad.host_prefix.ctx[20] += 1; // original budget lane
+        assert!(check_c6_push_step_circuit(&circuit, &bad).is_err(), "ctx budget");
+    }
+
+    #[test]
+    fn in_range_wrong_offset_rejects_in_preprocessing() {
+        let (pre, post, cfg) = distinct_family(all_frames()[0], 2);
+        let w = witness_from_host_pair(true, &pre, &post, &cfg, &limits()).unwrap();
+        let circuit = circuit_for(&w, C6PushStatementBindingMode::LocalPublic);
+        assert!(check_c6_push_step_circuit(&circuit, &w).is_ok(), "positive control");
+        let offset = w.host_prefix.meta_bounds_frames_offset;
+        assert!(offset > 0 && offset < w.host_prefix.meta.len());
+        // Same shifted, in-range offset on both sides: every host
+        // shape/offset precheck in the checker passes, so rejection
+        // must come from the bound-META phase/sub tie (admission
+        // BoundsC index 16) inside SDK preprocessing.
+        let mut bad = w.clone();
+        bad.host_prefix.meta_bounds_frames_offset = offset - 1;
+        let shifted = circuit_for_offset(&bad, offset - 1);
+        match check_c6_push_step_circuit(&shifted, &bad) {
+            Err(C6PushStepError::Backend(msg)) => assert!(
+                msg.starts_with("SDK ProofPreimage::check failed:"),
+                "rejection must be the SDK preprocessing diagnostic, got: {msg}"),
+            other => panic!(
+                "wrong offset must fail in preprocessing as Backend, got: {other:?}"),
+        }
+    }
+
+    fn dummy_step_inputs(params: C6PushFamilyParams, geometry: C6PaddedCarrierGeometry)
+        -> C6PushStepInputs {
+        let imm = || Operand::Immediate(Fr::from(0u128));
+        C6PushStepInputs {
+            enable: imm(), selector_is_accept: imm(), host_schema: imm(), carrier_version: imm(),
+            geometry, meta_bounds_frames_offset: 0, source_params: params,
+            pre_meta: vec![imm(); 8], pre_prog: vec![imm(); PROGRAM_HEADER_LANES],
+            pre_ctx: std::array::from_fn(|_| imm()),
+            pre_image: vec![imm(); geometry.image_total_lanes],
+            pre_data: vec![imm(); geometry.data_total_lanes],
+            pre_helper: vec![imm(); geometry.helper_total_lanes],
+            post_meta: vec![imm(); 8], post_prog: vec![imm(); PROGRAM_HEADER_LANES],
+            post_ctx: std::array::from_fn(|_| imm()),
+            post_image: vec![imm(); geometry.image_total_lanes],
+            post_data: vec![imm(); geometry.data_total_lanes],
+            post_helper: vec![imm(); geometry.helper_total_lanes],
+        }
+    }
+
+    #[test]
+    fn geometry_mismatch_is_host_derivation_refusal_before_emission() {
+        // Declared-boundary category: ungated host derivation refusal,
+        // not preprocessing and not a circuit result.
+        let (_pre, _post, cfg) = distinct_family(all_frames()[0], 2);
+        let params = C6PushFamilyParams::new(cfg.clone(), bounds(3), limits()).unwrap();
+        let mut other_cfg = cfg;
+        other_cfg.layout.bounds.frames += 1;
+        let other = C6PushFamilyParams::new(other_cfg, bounds(3), limits()).unwrap();
+        assert_ne!(other.geometry(), params.geometry());
+        let inputs = dummy_step_inputs(params, other.geometry());
+        assert!(matches!(emit_c6_push_step_block(&inputs, "c6_push_test"),
+            Err(C6PushStepError::InvalidGeometry { section: "geometry" })));
+    }
+
+    #[test]
+    fn same_geometry_different_limits_produce_different_ir() {
+        let (_pre, _post, cfg) = distinct_family(all_frames()[0], 2);
+        let a = C6PushFamilyParams::new(cfg.clone(), bounds(3), limits()).unwrap();
+        let mut lim_b = limits();
+        lim_b.max_metadata_bytes += 1;
+        let b = C6PushFamilyParams::new(cfg, bounds(3), lim_b).unwrap();
+        assert_eq!(a.geometry(), b.geometry(), "geometry ignores metadata-byte limit");
+        assert_ne!(a.limits(), b.limits());
+        let (pre, post, cfg2) = distinct_family(all_frames()[0], 2);
+        let _ = cfg2;
+        let w = witness_from_host_pair(true, &pre, &post,
+            &C6HostConfig { layout: a.cfg().layout.clone(), ext: a.cfg().ext, budgets: a.cfg().budgets },
+            &limits()).unwrap();
+        let (ma, pa) = (w.host_prefix.meta.len(), w.host_prefix.prog.len());
+        let off = w.host_prefix.meta_bounds_frames_offset;
+        let ca = build_c6_push_step_circuit(a, ma, pa, off,
+            C6PushStatementBindingMode::LocalPublic, "c6_push_test").unwrap();
+        let cb = build_c6_push_step_circuit(b, ma, pa, off,
+            C6PushStatementBindingMode::LocalPublic, "c6_push_test").unwrap();
+        assert_ne!(ca.serialized_zkir, cb.serialized_zkir,
+            "retained META limits are IR immediates even at equal geometry");
+    }
+
+    #[test]
+    fn two_program_contents_same_family_produce_identical_ir() {
+        let (pre, post, cfg) = distinct_family(all_frames()[0], 2);
+        let wa = witness_from_host_pair(true, &pre, &post, &cfg, &limits()).unwrap();
+        let mut pre_b = pre.clone();
+        pre_b.admission.view.names[0] = "y".into(); // "x" -> "y": same encoded length
+        let mut post_b = post.clone();
+        post_b.admission.view.names[0] = "y".into();
+        let wb = witness_from_host_pair(true, &pre_b, &post_b, &cfg, &limits()).unwrap();
+        assert_ne!(wa.host_prefix.prog, wb.host_prefix.prog, "program contents differ");
+        assert_eq!(wa.host_prefix.prog.len(), wb.host_prefix.prog.len());
+        // Expected PROG lanes are never derived from either witness:
+        // both circuits are built only from the retained params/lengths.
+        assert_eq!(circuit_for(&wa, C6PushStatementBindingMode::LocalPublic).serialized_zkir,
+            circuit_for(&wb, C6PushStatementBindingMode::LocalPublic).serialized_zkir);
+    }
+
+    #[test]
+    fn progctx_parse_and_ctx_binding_share_one_retained_serial() {
+        use std::collections::BTreeSet;
+        fn temp_ids(block: &C6ProgramContextCanonicalBlock) -> BTreeSet<String> {
+            let debug = format!("{:?}", block.instructions);
+            let prefix = "%x.c6progctx.temp.";
+            let mut out = BTreeSet::new();
+            let mut rest = debug.as_str();
+            while let Some(pos) = rest.find(prefix) {
+                let tail = &rest[pos..];
+                let end = tail.find(|c: char| !(c.is_ascii_alphanumeric() || c == '%' || c == '.' || c == '_'))
+                    .unwrap_or(tail.len());
+                out.insert(tail[..end].to_string());
+                rest = &tail[end..];
+            }
+            out
+        }
+        let (_h, cfg) = sample_host(all_frames()[0], 2);
+        let imm = || Operand::Immediate(Fr::from(1u128));
+        let mut emitter = C6ProgramContextCanonicalEmitter::new("x").unwrap();
+        let first = emitter.emit(&C6ProgramContextCanonicalInputs {
+            gate: imm(), pre_prog: vec![imm(); PROGRAM_HEADER_LANES],
+            pre_ctx: std::array::from_fn(|_| imm()), caps: caps(&cfg) }).unwrap();
+        let serial_after_first = emitter.next_temp();
+        assert!(serial_after_first > 0);
+        let second = emitter.emit_ctx_binding(&C6ProgramContextCtxBindingInputs {
+            gate: imm(), pre_ctx: std::array::from_fn(|_| imm()),
+            expected_ctx: encode_context(cfg.ext, cfg.budgets) }).unwrap();
+        assert!(emitter.next_temp() > serial_after_first);
+        assert!(temp_ids(&first).is_disjoint(&temp_ids(&second)),
+            "ctx binding must continue the serial, never restart at temp.0");
     }
 }
