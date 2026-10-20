@@ -1,0 +1,2294 @@
+--- a/proofs/src/plonk/mod.rs
++++ b/proofs/src/plonk/mod.rs
+@@ -32,6 +32,7 @@
+ pub(crate) mod evaluation;
+ mod keygen;
+ pub(crate) mod lookup;
++pub mod native_add_view;
+ pub mod permutation;
+ pub(crate) mod traces;
+ pub(crate) mod trash;
+--- a/proofs/src/plonk/permutation/keygen.rs
++++ b/proofs/src/plonk/permutation/keygen.rs
+@@ -73,6 +73,12 @@
+             return Err(Error::BoundsFailure);
+         }
+ 
++        crate::plonk::native_add_view::record_copy_pair(
++            &self.columns,
++            (left_column, left_row),
++            (right_column, right_row),
++        );
++
+         // See book/src/design/permutation.md for a description of this algorithm.
+ 
+         let mut left_cycle = self.aux[left_column][left_row];
+--- a/proofs/src/plonk/keygen.rs
++++ b/proofs/src/plonk/keygen.rs
+@@ -12,6 +12,9 @@
+     },
+     evaluation::Evaluator,
+     permutation, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
++};
++use super::native_add_view::{
++    record_converted_selector_fixed, record_dimensions, record_keygen_fixed_and_selectors,
+ };
+ use crate::{
+     circuit::Value,
+@@ -249,6 +252,7 @@
+         #[cfg(feature = "circuit-params")]
+         circuit.params(),
+     );
++    record_dimensions(domain.k(), domain.n as usize);
+ 
+     if (domain.n as usize) < cs.minimum_rows() {
+         return Err(Error::not_enough_rows_available(domain.k()));
+@@ -271,11 +275,14 @@
+         cs.constants.clone(),
+     )?;
+ 
++    record_keygen_fixed_and_selectors(&assembly.fixed, &assembly.selectors);
++
+     let mut fixed = batch_invert_rational(assembly.fixed);
+     // After this, the ConstraintSystem should not have any selectors: `verify` does
+     // not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
+     let selectors = std::mem::take(&mut assembly.selectors);
+     let (cs, selector_polys) = cs.directly_convert_selectors_to_fixed(selectors);
++    record_converted_selector_fixed(&selector_polys);
+     fixed.extend(selector_polys.into_iter().map(|poly| domain.lagrange_from_vec(poly)));
+ 
+     let permutation_vk = assembly.permutation.build_vk(params, &domain, &cs.permutation);
+@@ -309,6 +316,7 @@
+     let cs = cs;
+ 
+     let n = vk.domain.n as usize;
++    record_dimensions(vk.domain.k(), n);
+     let mut assembly: Assembly<F> = Assembly {
+         k: vk.domain.k(),
+         fixed: vec![vk.domain.empty_lagrange_rational(); cs.num_fixed_columns],
+@@ -326,8 +334,11 @@
+         cs.constants.clone(),
+     )?;
+ 
++    record_keygen_fixed_and_selectors(&assembly.fixed, &assembly.selectors);
++
+     let mut fixed = batch_invert_rational(assembly.fixed);
+     let (cs, selector_polys) = cs.directly_convert_selectors_to_fixed(assembly.selectors);
++    record_converted_selector_fixed(&selector_polys);
+     fixed.extend(selector_polys.into_iter().map(|poly| vk.domain.lagrange_from_vec(poly)));
+ 
+     let fixed_polys: Vec<_> =
+--- a/proofs/src/plonk/prover.rs
++++ b/proofs/src/plonk/prover.rs
+@@ -16,6 +16,7 @@
+     },
+     lookup, permutation, vanishing, Error, ProvingKey,
+ };
++use super::native_add_view::{record_advice_columns, record_dimensions};
+ #[cfg(feature = "committed-instances")]
+ use crate::poly::EvaluationDomain;
+ use crate::{
+@@ -485,6 +486,7 @@
+     let config = ConcreteCircuit::configure(&mut meta);
+ 
+     let domain = &pk.vk.domain;
++    record_dimensions(domain.k(), domain.n as usize);
+     // Selector optimizations cannot be applied here; use the ConstraintSystem
+     // from the verification key.
+     let meta = &pk.vk.cs;
+@@ -536,6 +538,8 @@
+                 config.clone(),
+                 meta.constants.clone(),
+             )?;
++
++            record_advice_columns(&witness.advice, &column_indices);
+ 
+             let mut advice_values = batch_invert_rational::<F>(
+                 witness
+--- a/proofs/src/circuit/floor_planner/single_pass.rs
++++ b/proofs/src/circuit/floor_planner/single_pass.rs
+@@ -98,6 +98,20 @@
+         let mut region_start = 0;
+         for column in &shape.columns {
+             region_start = cmp::max(region_start, self.columns.get(column).cloned().unwrap_or(0));
++        }
++        // Recording hook (see `plonk::native_add_view` docs): while
++        // recording is armed on this thread, this invokes `name()`
++        // once extra for every region laid out here, before the
++        // recorder filters on the two bounded names. Armed use
++        // requires pure, idempotent region-name closures; the
++        // inactive path does not invoke `name()` for recording.
++        if crate::plonk::native_add_view::is_recording_active() {
++            let region_name: String = name().into();
++            crate::plonk::native_add_view::record_region_base(
++                &region_name,
++                region_index,
++                region_start,
++            );
+         }
+         self.regions.push(region_start.into());
+ 
+--- a/circuits/src/field/native/native_chip.rs
++++ b/circuits/src/field/native/native_chip.rs
+@@ -232,6 +232,19 @@
+                 .collect::<Vec<_>>();
+ 
+             Constraints::with_selector(q_par_add, ids)
++        });
++
++        midnight_proofs::plonk::native_add_view::record_native_config_binding_with(|| {
++            midnight_proofs::plonk::native_add_view::NativeConfigBinding {
++                value_cols: value_columns.iter().map(|col| col.index()).collect(),
++                coeff_cols: coeff_cols.iter().map(|col| col.index()).collect(),
++                q_next_col: q_next_col.index(),
++                mul_ab_col: mul_ab_col.index(),
++                mul_ac_col: mul_ac_col.index(),
++                constant_col: constant_col.index(),
++                fixed_values_col: fixed_values_col.index(),
++                q_arith_selector: q_arith.index(),
++            }
+         });
+ 
+         NativeConfig {
+--- /dev/null
++++ b/proofs/src/plonk/native_add_view.rs
+@@ -0,0 +1,1809 @@
++//! Bounded structural recording for one generic linear-combination
++//! shape produced through `NativeChip::configure` /
++//! `NativeChip::linear_combination` synthesis.
++//!
++//! Opt-in only: nothing is recorded unless a caller holds a guard
++//! from [`begin_recording`] on the current thread across a production
++//! call (`keygen_vk_with_k`, `keygen_pk`, or `create_proof`).
++//! Production entry points never arm recording themselves. While no
++//! session is active, each hook performs one thread-local check and
++//! returns; no values are encoded, cloned, or constructed for
++//! recording, and the floor-planner hook does not invoke the
++//! region-name closure.
++//!
++//! # Supported subset, stated exactly
++//!
++//! The joined view in this module is a **generic
++//! linear-combination-shaped structural view**. It is not an
++//! established `NativeAdd` view: the recorded gate fixed encodings
++//! are opaque `PrimeField::to_repr` byte strings, and this module
++//! does not validate that they equal the add pattern
++//! `(-1, 1, 1, 0, 0)` with zero constant, `q_next`, `mul_ab`, and
++//! `mul_ac`. Deriving an actual `NativeAdd` — or any accepted
++//! assignment correspondence — from this view remains open and is
++//! not delivered here.
++//!
++//! A join can succeed only for sessions in which all of the
++//! following hold, and refuses otherwise:
++//!
++//! - the ordinary multi-term `linear_combination` path actually
++//!   created one `"Linear combination"` region (the empty-terms
++//!   early return to `assign_fixed(constant)`, the singleton
++//!   coefficient-`1`/zero-constant identity early return, and the
++//!   chip's cached-zero path create no such region and refuse at
++//!   join with `RegionMismatch`);
++//! - the zero term actually created an `"Assign fixed"` region
++//!   rather than being served only from the `cached_fixed` cache,
++//!   and neither add operand was filtered out as the cached zero;
++//! - both phases were laid out by the recording-aware single-pass
++//!   floor planner (`SingleChipLayouter`); other floor planners do
++//!   not call the region hook and refuse at join;
++//! - no other operation created additional distinct `"Assign
++//!   fixed"` or `"Linear combination"` bases, and no second distinct
++//!   `NativeChip` binding was configured under the same guard.
++//!
++//! # Armed-mode behaviour (not behaviour-preserving in general)
++//!
++//! While a guard is armed on a thread,
++//! `SingleChipLayouter::assign_region` invokes the region-name
++//! closure `name()` once extra for **every** region of **every**
++//! circuit laid out on that thread — not only for `"Assign fixed"`
++//! and `"Linear combination"`. The name filter runs only after the
++//! closure has been called. Armed use therefore requires pure,
++//! idempotent region-name closures: a closure that panics, mutates
++//! interior state, is non-idempotent, or reenters recording is
++//! unsupported while armed, and arming is not behaviour-preserving
++//! for arbitrary circuits. Likewise, any `NativeChip::configure`
++//! call on the armed thread can contribute a binding, including
++//! configure-only or key-reading contexts that synthesize nothing.
++//!
++//! # Recording, retention, and privacy
++//!
++//! Recording captures the full keygen fixed/selector tables and the
++//! merged proving advice columns for the synthesized circuit, not
++//! only the final joined cells. Finished sessions are retained in
++//! the `LAST_KEYGEN` / `LAST_PROVING` thread-locals — complete
++//! recorded tables, including proving witness advice encodings —
++//! until they are taken, replaced by a later session on the same
++//! thread, or the thread exits. Any code running on the same thread
++//! can call the public [`take_last_keygen_recording`] /
++//! [`take_last_proving_recording`] functions; thread reuse is not a
++//! privacy boundary. Callers must take sessions promptly.
++//! `Debug` for [`RecordedSession`] and
++//! [`JoinedLinearCombinationView`] is redacted to dimensions and
++//! counts and never prints recorded byte tables.
++//!
++//! # Caller-declared labels
++//!
++//! [`RecordedSession::declared_phase`] and
++//! [`RecordedSession::declared_circuit_count`] are supplied by the
++//! caller of [`begin_recording`]. They are not measured from any
++//! production call: a guard can span zero calls, several calls, or
++//! a call of the opposite phase. [`join_linear_combination_view`]
++//! checks only that both declarations equal `1`; it does not prove
++//! that exactly one matching synthesis happened, and taking a
++//! session proves nothing about which production call produced it.
++//!
++//! # Guard lifecycle
++//!
++//! The guard is not `Send` and not `Sync`: it must be created,
++//! held, and dropped on the thread that called [`begin_recording`].
++//! Guards may nest. Dropping in LIFO order finalizes and publishes
++//! each session. Dropping a guard out of order removes only that
++//! guard's own session (which is discarded, not published), leaves
++//! any inner active session untouched and still recording, and
++//! never resurrects the dropped session. `Drop` never panics,
++//! including during TLS teardown or unwinding; a guard must not be
++//! dropped from inside a recording callback while the recorder is
++//! borrowed by that callback's own hook.
++//!
++//! # Reentrancy and panic semantics of hooks
++//!
++//! No hook holds the thread-local borrow across a caller callback,
++//! field evaluation or encoding, or `Debug` formatting. Each hook
++//! reads the active session id, releases the borrow, performs its
++//! external work, then stores into the frame with that id. A
++//! callback may therefore call other hooks or begin and end a
++//! nested session without a `RefCell` borrow panic; if the
++//! originating session ended during the external work, the produced
++//! value is discarded. Region-name closures are the caller's code
++//! and run under the caller's own contract above.
++//!
++//! Recorded sessions are plain public data and are
++//! caller-constructible. The join is therefore a shape-agreement
++//! check over recorded fields only. It does not authenticate
++//! provenance, bind a verifying or proving key, identify a concrete
++//! circuit, state that any gate or copy constraint is satisfied,
++//! state that a verifier accepts anything, or state that the byte
++//! encoding is a homomorphism into any other carrier.
++
++use std::{
++    cell::{Cell, RefCell},
++    fmt,
++    marker::PhantomData,
++    rc::Rc,
++};
++
++use ff::PrimeField;
++
++use crate::{
++    plonk::{Any, Column},
++    poly::{LagrangeCoeff, Polynomial},
++    utils::rational::Rational,
++};
++
++/// Number of arithmetic columns in the recorded shape. This mirrors
++/// `NB_ARITH_COLS` in `midnight-circuits`; it is restated here
++/// because `midnight-proofs` cannot depend on that crate.
++const NB_ARITH_COLS: usize = 5;
++
++/// Caller-declared label for which production phase a recording
++/// session is intended to cover. This is a declaration by the
++/// caller of [`begin_recording`], not a measurement.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum CapturePhase {
++    /// Declared keygen: `keygen_vk_with_k` or `keygen_pk` synthesis
++    /// with the keygen `Assembly`: fixed values, selectors and
++    /// copies are recorded; advice assignments are no-ops in that
++    /// phase by design.
++    Keygen,
++    /// Declared proving: `parse_advices` synthesis with
++    /// `WitnessCollection`: advice values are recorded; fixed,
++    /// selector and copy callbacks are no-ops in that phase by
++    /// design.
++    Proving,
++}
++
++/// Column binding emitted by one `NativeChip::configure` invocation.
++/// All entries are column indices obtained from the actual
++/// `Column::index` and `Selector::index` accessors, plus the selector
++/// index of `q_arith` before selector-to-fixed conversion.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct NativeConfigBinding {
++    /// Advice column indices; the joined shape requires exactly
++    /// five.
++    pub value_cols: Vec<usize>,
++    /// Fixed coefficient column indices; the joined shape requires
++    /// exactly five.
++    pub coeff_cols: Vec<usize>,
++    /// `q_next_col`, fixed column index.
++    pub q_next_col: usize,
++    /// `mul_ab_col`, fixed column index.
++    pub mul_ab_col: usize,
++    /// `mul_ac_col`, fixed column index.
++    pub mul_ac_col: usize,
++    /// `constant_col`, fixed column index.
++    pub constant_col: usize,
++    /// `fixed_values_col`, fixed column index.
++    pub fixed_values_col: usize,
++    /// Index of the `q_arith` selector before conversion to a fixed
++    /// column. After `directly_convert_selectors_to_fixed`, this
++    /// selector lives in fixed column
++    /// `num_original_fixed_columns + q_arith_selector`.
++    pub q_arith_selector: usize,
++}
++
++/// Base of one recorded region, as assigned by `SingleChipLayouter`.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct RegionBase {
++    /// Region name, either `"Assign fixed"` or `"Linear combination"`.
++    pub name: String,
++    /// Index of the region within one floor-planner synthesis.
++    pub region_index: usize,
++    /// Absolute starting row of the region.
++    pub region_start: usize,
++}
++
++/// One column participating in the permutation argument, in the order
++/// returned by the existing `permutation::keygen::Assembly::columns`.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct PermutationColumnDesc {
++    /// Position in the permutation argument's column list.
++    pub position: usize,
++    /// Underlying column index of the `Column<Any>`.
++    pub column_index: usize,
++    /// `Debug` rendering of the column type, e.g. distinguishing advice
++    /// from fixed or instance columns. This is recorded data, used
++    /// only to locate a typed column inside the permutation ordering.
++    pub column_kind_debug: String,
++}
++
++/// A cell addressed in permutation-argument coordinates.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct PermCell {
++    /// Position in the permutation argument's column list.
++    pub permutation_column_position: usize,
++    /// Absolute row.
++    pub row: usize,
++}
++
++/// One ordered copy call, as passed to
++/// `permutation::keygen::Assembly::copy`, before any cycle merging.
++/// This is the call log, not the successor `mapping()` of the built
++/// permutation argument.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct CopyPair {
++    /// Left cell of the copy call.
++    pub left: PermCell,
++    /// Right cell of the copy call.
++    pub right: PermCell,
++}
++
++/// Everything recorded during one declared keygen or proving
++/// session.
++///
++/// All fields are public, so callers can construct or mutate values.
++/// A `RecordedSession` therefore carries no provenance guarantee;
++/// sessions obtained from [`take_last_keygen_recording`] or
++/// [`take_last_proving_recording`] are only as trustworthy as the
++/// thread-local recording that produced them.
++///
++/// `Debug` is redacted: it prints labels, dimensions, and counts
++/// only, never the recorded byte tables.
++#[derive(Clone, PartialEq, Eq)]
++pub struct RecordedSession {
++    /// Caller-declared phase label supplied to [`begin_recording`].
++    pub declared_phase: CapturePhase,
++    /// Caller-declared circuit count supplied to
++    /// [`begin_recording`]. Not measured from any production call.
++    pub declared_circuit_count: usize,
++    /// Domain size exponent `k`, when the phase supplied it.
++    pub k: Option<u32>,
++    /// Number of rows `n`, when the phase supplied it.
++    pub num_rows: Option<usize>,
++    /// Every distinct `NativeChip::configure` binding observed.
++    pub config_bindings: Vec<NativeConfigBinding>,
++    /// Bases of the two bounded regions, in observation order.
++    pub regions: Vec<RegionBase>,
++    /// Keygen only: fixed columns before selector conversion, indexed
++    /// `[column][row]`, each entry a `PrimeField::to_repr` byte string.
++    pub fixed_values: Vec<Vec<Vec<u8>>>,
++    /// Keygen only: original selector booleans, indexed
++    /// `[selector][row]`, before selector-to-fixed conversion.
++    pub selectors: Vec<Vec<bool>>,
++    /// Keygen only: selector columns after
++    /// `directly_convert_selectors_to_fixed`, indexed
++    /// `[selector][row]`, each entry a `PrimeField::to_repr` byte
++    /// string. Selector `s` is appended at fixed column
++    /// `fixed_values.len() + s`.
++    pub converted_selector_fixed: Vec<Vec<Vec<u8>>>,
++    /// Keygen only: permutation columns in argument order.
++    pub permutation_columns: Vec<PermutationColumnDesc>,
++    /// Keygen only: ordered copy-call log.
++    pub copy_pairs: Vec<CopyPair>,
++    /// Proving only: advice columns merged across phases, indexed
++    /// `[column][row]`, each entry a `PrimeField::to_repr` byte
++    /// string. Columns not assigned in any phase are empty vectors.
++    pub advice_values: Vec<Vec<Vec<u8>>>,
++}
++
++impl fmt::Debug for RecordedSession {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("RecordedSession")
++            .field("declared_phase", &self.declared_phase)
++            .field("declared_circuit_count", &self.declared_circuit_count)
++            .field("k", &self.k)
++            .field("num_rows", &self.num_rows)
++            .field("config_bindings_len", &self.config_bindings.len())
++            .field("regions_len", &self.regions.len())
++            .field("fixed_columns_len", &self.fixed_values.len())
++            .field("selector_columns_len", &self.selectors.len())
++            .field(
++                "converted_selector_columns_len",
++                &self.converted_selector_fixed.len(),
++            )
++            .field("permutation_columns_len", &self.permutation_columns.len())
++            .field("copy_pairs_len", &self.copy_pairs.len())
++            .field("advice_columns_len", &self.advice_values.len())
++            .finish_non_exhaustive()
++    }
++}
++
++/// Whether a cell is an advice or a fixed cell.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum CellKind {
++    /// Advice (witness) column.
++    Advice,
++    /// Fixed column.
++    Fixed,
++}
++
++/// A cell at an absolute row.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub struct AbsoluteCell {
++    /// Column kind.
++    pub kind: CellKind,
++    /// Column index within its kind.
++    pub column_index: usize,
++    /// Absolute row.
++    pub row: usize,
++}
++
++/// The joined structural view for one generic linear-combination
++/// shape, formed by shape agreement between two recorded sessions.
++/// This is recorded structural data only: it does not establish an
++/// actual `NativeAdd`, and does not state gate satisfaction, copy
++/// satisfaction, verifier acceptance, key or circuit identity, or
++/// any representation homomorphism.
++///
++/// `Debug` is redacted: it prints labels, dimensions, and counts
++/// only, never the recorded byte tables.
++#[derive(Clone, PartialEq, Eq)]
++pub struct JoinedLinearCombinationView {
++    /// The single configure binding shared by both phases.
++    pub binding: NativeConfigBinding,
++    /// Domain size exponent shared by both phases.
++    pub k: u32,
++    /// Number of rows shared by both phases.
++    pub num_rows: usize,
++    /// Absolute base row of the single `"Assign fixed"` region.
++    pub assign_fixed_region_start: usize,
++    /// Absolute base row of the single `"Linear combination"` region.
++    pub linear_combination_region_start: usize,
++    /// Absolute row of the linear-combination row: the region base
++    /// plus offset 0, where `assign_linear_combination_aux` assigns
++    /// the result and the limbs.
++    pub add_row: usize,
++    /// The cached zero cell: `fixed_values_col` at offset 0 of the
++    /// `"Assign fixed"` region.
++    pub zero_cell: AbsoluteCell,
++    /// Recorded encoding of the zero cell; checked to be all zero
++    /// bytes at join time as structural data.
++    pub zero_cell_encoding: Vec<u8>,
++    /// Output cell: `value_cols[0]` at `add_row`.
++    pub out_cell: AbsoluteCell,
++    /// `value_cols[0]` at `add_row + 1`, referenced by the `q_next`
++    /// term of the configured gate.
++    pub next_out_cell: AbsoluteCell,
++    /// The five advice cells `value_cols[i]` at `add_row`.
++    pub value_cells: Vec<AbsoluteCell>,
++    /// The five fixed coefficient cells `coeff_cols[i]` at `add_row`.
++    pub coeff_cells: Vec<AbsoluteCell>,
++    /// The fixed constant cell at `add_row`.
++    pub const_cell: AbsoluteCell,
++    /// The fixed `q_next` coefficient cell at `add_row`.
++    pub q_next_cell: AbsoluteCell,
++    /// The fixed `mul_ab` coefficient cell at `add_row`.
++    pub mul_ab_cell: AbsoluteCell,
++    /// The fixed `mul_ac` coefficient cell at `add_row`.
++    pub mul_ac_cell: AbsoluteCell,
++    /// The converted fixed cell holding `q_arith` at `add_row`: fixed
++    /// column `num_original_fixed_columns + q_arith_selector`.
++    pub q_arith_cell: AbsoluteCell,
++    /// Original `q_arith` enablement boolean at `add_row`, from the
++    /// keygen selector table before conversion. The join requires
++    /// this to be `true`.
++    pub q_arith_enabled: bool,
++    /// Fixed encodings at the gate cells of `add_row`, in the order
++    /// `coeff_cells`, then constant, `q_next`, `mul_ab`, `mul_ac`,
++    /// then the converted `q_arith` cell. These are opaque encodings;
++    /// no add coefficient pattern is validated against them.
++    pub gate_fixed_encodings: Vec<Vec<u8>>,
++    /// Permutation cell constrained equal to `value_cols[1]` at
++    /// `add_row`, from the ordered copy-call log.
++    pub left_partner: PermCell,
++    /// Permutation cell constrained equal to `value_cols[2]` at
++    /// `add_row`, from the ordered copy-call log.
++    pub right_partner: PermCell,
++    /// Full keygen fixed table, as recorded.
++    pub fixed_values: Vec<Vec<Vec<u8>>>,
++    /// Full original selector table, as recorded.
++    pub selectors: Vec<Vec<bool>>,
++    /// Full converted selector fixed table, as recorded.
++    pub converted_selector_fixed: Vec<Vec<Vec<u8>>>,
++    /// Permutation columns in argument order, as recorded.
++    pub permutation_columns: Vec<PermutationColumnDesc>,
++    /// Full ordered copy-call log, as recorded.
++    pub copy_pairs: Vec<CopyPair>,
++    /// Full proving advice table, as recorded.
++    pub advice_values: Vec<Vec<Vec<u8>>>,
++}
++
++impl fmt::Debug for JoinedLinearCombinationView {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("JoinedLinearCombinationView")
++            .field("k", &self.k)
++            .field("num_rows", &self.num_rows)
++            .field("add_row", &self.add_row)
++            .field("value_cells_len", &self.value_cells.len())
++            .field("coeff_cells_len", &self.coeff_cells.len())
++            .field("gate_fixed_encodings_len", &self.gate_fixed_encodings.len())
++            .field("fixed_columns_len", &self.fixed_values.len())
++            .field("selector_columns_len", &self.selectors.len())
++            .field(
++                "converted_selector_columns_len",
++                &self.converted_selector_fixed.len(),
++            )
++            .field("permutation_columns_len", &self.permutation_columns.len())
++            .field("copy_pairs_len", &self.copy_pairs.len())
++            .field("advice_columns_len", &self.advice_values.len())
++            .finish_non_exhaustive()
++    }
++}
++
++/// Reason a joined linear-combination view could not be formed.
++/// Every variant is a structural mismatch in the recorded data;
++/// none of them is a statement about constraint satisfaction or
++/// verification.
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub enum JoinError {
++    /// The first session was not declared as a keygen recording.
++    FirstSessionNotKeygen,
++    /// The second session was not declared as a proving recording.
++    SecondSessionNotProving,
++    /// A session declared a circuit count other than one. The count
++    /// is caller-declared; this checks the declaration only.
++    DeclaredCircuitCountNotOne {
++        /// Declared phase whose count was wrong.
++        phase: CapturePhase,
++        /// Observed declared count.
++        count: usize,
++    },
++    /// The domain parameters of the two phases are missing or differ.
++    DomainMismatch,
++    /// The two phases did not observe exactly one identical configure
++    /// binding.
++    BindingMismatch,
++    /// The binding does not have exactly five value columns and
++    /// exactly five coefficient columns.
++    InvalidArithColumnCount {
++        /// Observed number of value columns.
++        value_columns: usize,
++        /// Observed number of coefficient columns.
++        coefficient_columns: usize,
++    },
++    /// A recorded table column does not have exactly `num_rows`
++    /// entries, or a table has the wrong number of columns.
++    TableDimensionMismatch {
++        /// Which recorded table failed.
++        table: &'static str,
++        /// Column index within the table, or the column count when
++        /// the whole table width is wrong.
++        column: usize,
++        /// Required row count (or column count).
++        expected: usize,
++        /// Observed row count (or column count).
++        actual: usize,
++    },
++    /// Checked arithmetic overflowed while deriving a column index.
++    ArithmeticOverflow {
++        /// Which derivation overflowed.
++        what: &'static str,
++    },
++    /// `add_row + 1` is not a row inside `num_rows`.
++    NextRowOutOfBounds {
++        /// The linear-combination row.
++        add_row: usize,
++        /// Number of rows in the recorded domain.
++        num_rows: usize,
++    },
++    /// The recorded `q_arith` selector is not enabled at `add_row`.
++    QArithNotEnabled,
++    /// A bounded region name was absent in a phase, had several
++    /// distinct bases in a phase, or resolved to different bases
++    /// across the two phases.
++    RegionMismatch {
++        /// Region name that failed to resolve uniquely in both phases.
++        name: &'static str,
++    },
++    /// A recorded table does not contain a required cell.
++    MissingCell {
++        /// Human-readable description of the missing cell.
++        what: &'static str,
++    },
++    /// The recorded zero-cell encoding is not all zero bytes.
++    ZeroCellNotZero,
++    /// An advice column does not resolve to exactly one position in
++    /// the permutation argument.
++    AmbiguousPermutationColumn {
++        /// Advice column index that failed to resolve uniquely.
++        advice_index: usize,
++    },
++    /// A gate value cell does not have exactly one copy partner in
++    /// the ordered copy-call log.
++    AmbiguousCopyPartner {
++        /// Permutation position of the gate value cell.
++        position: usize,
++        /// Absolute row of the gate value cell.
++        row: usize,
++    },
++}
++
++impl fmt::Display for JoinError {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        match self {
++            JoinError::FirstSessionNotKeygen => {
++                write!(f, "first recorded session is not declared as a keygen session")
++            }
++            JoinError::SecondSessionNotProving => {
++                write!(f, "second recorded session is not declared as a proving session")
++            }
++            JoinError::DeclaredCircuitCountNotOne { phase, count } => write!(
++                f,
++                "{phase:?} session declared {count} circuits, expected exactly one declared"
++            ),
++            JoinError::DomainMismatch => {
++                write!(f, "keygen and proving domain parameters differ or are missing")
++            }
++            JoinError::BindingMismatch => write!(
++                f,
++                "keygen and proving did not observe exactly one identical NativeConfig binding"
++            ),
++            JoinError::InvalidArithColumnCount {
++                value_columns,
++                coefficient_columns,
++            } => write!(
++                f,
++                "binding has {value_columns} value and {coefficient_columns} coefficient columns, expected exactly five of each"
++            ),
++            JoinError::TableDimensionMismatch {
++                table,
++                column,
++                expected,
++                actual,
++            } => write!(
++                f,
++                "recorded {table} table column {column} has dimension {actual}, expected {expected}"
++            ),
++            JoinError::ArithmeticOverflow { what } => {
++                write!(f, "checked arithmetic overflowed deriving {what}")
++            }
++            JoinError::NextRowOutOfBounds { add_row, num_rows } => write!(
++                f,
++                "row after add row {add_row} is outside the {num_rows} recorded rows"
++            ),
++            JoinError::QArithNotEnabled => {
++                write!(f, "q_arith selector is not enabled at the add row")
++            }
++            JoinError::RegionMismatch { name } => write!(
++                f,
++                "region {name:?} does not have one identical recorded base in both phases"
++            ),
++            JoinError::MissingCell { what } => write!(f, "recorded table is missing {what}"),
++            JoinError::ZeroCellNotZero => {
++                write!(f, "recorded zero-cell encoding is not all zero bytes")
++            }
++            JoinError::AmbiguousPermutationColumn { advice_index } => write!(
++                f,
++                "advice column {advice_index} does not resolve to exactly one permutation position"
++            ),
++            JoinError::AmbiguousCopyPartner { position, row } => write!(
++                f,
++                "permutation cell ({position}, {row}) does not have exactly one copy partner"
++            ),
++        }
++    }
++}
++
++impl std::error::Error for JoinError {}
++
++/// One frame of the thread-local recording stack. Frames are
++/// identified by a unique session id so that hooks can store into
++/// the frame that was active when their external work began, even
++/// if a nested session has since become the top frame.
++struct ActiveFrame {
++    /// Unique id of the session that owns this frame.
++    id: u64,
++    /// The session being recorded into this frame.
++    session: RecordedSession,
++}
++
++thread_local! {
++    static ACTIVE_STACK: RefCell<Vec<ActiveFrame>> = RefCell::new(Vec::new());
++    static LAST_KEYGEN: RefCell<Option<RecordedSession>> = RefCell::new(None);
++    static LAST_PROVING: RefCell<Option<RecordedSession>> = RefCell::new(None);
++    static NEXT_SESSION_ID: Cell<u64> = Cell::new(1);
++}
++
++/// RAII guard for one opt-in recording session.
++///
++/// The guard is not `Send` and not `Sync` (the `PhantomData<Rc<()>>`
++/// marker): it must be created, held, and dropped on the thread
++/// that called [`begin_recording`]. Moving it to another thread is
++/// a compile error:
++///
++/// ```compile_fail
++/// let guard = midnight_proofs::plonk::native_add_view::begin_recording(
++///     midnight_proofs::plonk::native_add_view::CapturePhase::Keygen,
++///     1,
++/// );
++/// std::thread::spawn(move || drop(guard));
++/// ```
++///
++/// Dropping in LIFO order finalizes the session into the per-phase
++/// slot read by [`take_last_keygen_recording`] /
++/// [`take_last_proving_recording`]. Dropping out of order discards
++/// only that guard's session, leaves any inner active session
++/// recording, and never resurrects the dropped session. `Drop`
++/// never panics, including during TLS teardown or unwinding.
++pub struct NativeAddRecordingGuard {
++    /// Caller-declared phase label for this session.
++    declared_phase: CapturePhase,
++    /// Unique id of this guard's frame in the recording stack.
++    session_id: u64,
++    /// Non-`Send`, non-`Sync` marker: the guard is thread-affine.
++    _not_send: PhantomData<Rc<()>>,
++}
++
++impl fmt::Debug for NativeAddRecordingGuard {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("NativeAddRecordingGuard")
++            .field("declared_phase", &self.declared_phase)
++            .finish_non_exhaustive()
++    }
++}
++
++fn publish_session(session: RecordedSession) {
++    match session.declared_phase {
++        CapturePhase::Keygen => {
++            let _ = LAST_KEYGEN.try_with(|slot| {
++                if let Ok(mut slot) = slot.try_borrow_mut() {
++                    *slot = Some(session);
++                }
++            });
++        }
++        CapturePhase::Proving => {
++            let _ = LAST_PROVING.try_with(|slot| {
++                if let Ok(mut slot) = slot.try_borrow_mut() {
++                    *slot = Some(session);
++                }
++            });
++        }
++    }
++}
++
++impl Drop for NativeAddRecordingGuard {
++    fn drop(&mut self) {
++        // Extract this guard's session only if it is the top frame.
++        // An out-of-order frame is removed and discarded unpublished;
++        // frames above and below it are untouched. Every access is
++        // fallible so destruction during TLS teardown or unwinding
++        // cannot panic inside `Drop`.
++        let extracted: Option<RecordedSession> = ACTIVE_STACK
++            .try_with(|stack_cell| {
++                let mut stack = stack_cell.try_borrow_mut().ok()?;
++                let position = stack.iter().position(|frame| frame.id == self.session_id)?;
++                if position + 1 == stack.len() {
++                    stack.pop().map(|frame| frame.session)
++                } else {
++                    let _discarded = stack.remove(position);
++                    None
++                }
++            })
++            .ok()
++            .flatten();
++        if let Some(session) = extracted {
++            publish_session(session);
++        }
++    }
++}
++
++/// Begin recording one declared synthesis phase on this thread.
++/// This is the only activation boundary: production entry points
++/// never call this.
++///
++/// `declared_phase` and `declared_circuit_count` are caller
++/// declarations, not measurements; see the module documentation.
++/// The caller holds the returned guard across the production call
++/// it intends to cover (for example `keygen_vk_with_k` or
++/// `keygen_pk`, or `create_proof`). While the guard is alive, the
++/// bounded hooks in `keygen`, `prover`, `permutation::keygen`,
++/// `single_pass`, and `NativeChip::configure` record into the
++/// session. Guards may nest; see [`NativeAddRecordingGuard`] for
++/// the drop discipline.
++pub fn begin_recording(
++    declared_phase: CapturePhase,
++    declared_circuit_count: usize,
++) -> NativeAddRecordingGuard {
++    let session_id = NEXT_SESSION_ID
++        .try_with(|next| {
++            let id = next.get();
++            next.set(id.wrapping_add(1).max(1));
++            id
++        })
++        .unwrap_or(0);
++    let session = RecordedSession {
++        declared_phase,
++        declared_circuit_count,
++        k: None,
++        num_rows: None,
++        config_bindings: Vec::new(),
++        regions: Vec::new(),
++        fixed_values: Vec::new(),
++        selectors: Vec::new(),
++        converted_selector_fixed: Vec::new(),
++        permutation_columns: Vec::new(),
++        copy_pairs: Vec::new(),
++        advice_values: Vec::new(),
++    };
++    let _ = ACTIVE_STACK.try_with(|stack_cell| {
++        if let Ok(mut stack) = stack_cell.try_borrow_mut() {
++            stack.push(ActiveFrame {
++                id: session_id,
++                session,
++            });
++        }
++    });
++    NativeAddRecordingGuard {
++        declared_phase,
++        session_id,
++        _not_send: PhantomData,
++    }
++}
++
++/// Whether a recording session is active on this thread. Hooks call
++/// this (or read the active session id) before doing any recording
++/// work, so the inactive path is a single thread-local check.
++pub fn is_recording_active() -> bool {
++    active_session_id().is_some()
++}
++
++/// Take the most recent keygen session recorded on this thread.
++/// The session is retained in thread-local storage — including
++/// complete recorded tables — until this call, a later keygen
++/// session on the same thread, or thread exit. Any code on this
++/// thread can take it; thread reuse is not a privacy boundary, so
++/// callers must take sessions promptly.
++pub fn take_last_keygen_recording() -> Option<RecordedSession> {
++    LAST_KEYGEN
++        .try_with(|slot| slot.try_borrow_mut().ok()?.take())
++        .ok()
++        .flatten()
++}
++
++/// Take the most recent proving session recorded on this thread.
++/// Proving sessions contain witness advice encodings; the retention
++/// and same-thread access warnings on
++/// [`take_last_keygen_recording`] apply unchanged.
++pub fn take_last_proving_recording() -> Option<RecordedSession> {
++    LAST_PROVING
++        .try_with(|slot| slot.try_borrow_mut().ok()?.take())
++        .ok()
++        .flatten()
++}
++
++/// Id of the innermost active session on this thread, read under a
++/// brief borrow that is released before any external work runs.
++fn active_session_id() -> Option<u64> {
++    ACTIVE_STACK
++        .try_with(|stack_cell| {
++            stack_cell
++                .try_borrow()
++                .ok()?
++                .last()
++                .map(|frame| frame.id)
++        })
++        .ok()
++        .flatten()
++}
++
++/// Store into the frame owned by `session_id`, wherever it now sits
++/// in the stack. If that frame is gone (its guard was dropped while
++/// external work ran), the store is silently discarded. The borrow
++/// is held only for the store itself.
++fn store_to_session(session_id: u64, store: impl FnOnce(&mut RecordedSession)) {
++    let _ = ACTIVE_STACK.try_with(|stack_cell| {
++        if let Ok(mut stack) = stack_cell.try_borrow_mut() {
++            if let Some(frame) = stack.iter_mut().find(|frame| frame.id == session_id) {
++                store(&mut frame.session);
++            }
++        }
++    });
++}
++
++/// Encode one field element as its `PrimeField::to_repr` byte string.
++/// For `midnight_curves::Fq` this is the 32-byte little-endian
++/// canonical representation produced by `to_bytes_le`. This is a
++/// structural encoding only, not a proved homomorphism.
++pub fn encode_prime_field<F: PrimeField>(value: &F) -> Vec<u8> {
++    value.to_repr().as_ref().to_vec()
++}
++
++/// Record the domain parameters of the current session, if a session
++/// is active. Inactive: one thread-local check, no other work.
++pub fn record_dimensions(k: u32, num_rows: usize) {
++    if let Some(session_id) = active_session_id() {
++        store_to_session(session_id, |session| {
++            session.k = Some(k);
++            session.num_rows = Some(num_rows);
++        });
++    }
++}
++
++/// Record one `NativeChip::configure` binding, constructing it lazily
++/// via `make` only if a session is active. Called from inside
++/// `NativeChip::configure`, the only place where the private
++/// `NativeConfig` fields exist as locals. Inactive: `make` is never
++/// invoked, so no index vectors are built.
++///
++/// `make` runs with no recorder borrow held: it may call other
++/// hooks or begin and end a nested session without panicking. The
++/// constructed binding is stored into the session that was active
++/// when this hook was entered, even if a nested session is active
++/// by the time `make` returns; if that session has ended, the
++/// binding is discarded.
++pub fn record_native_config_binding_with(make: impl FnOnce() -> NativeConfigBinding) {
++    let Some(session_id) = active_session_id() else {
++        return;
++    };
++    let binding = make();
++    store_to_session(session_id, |session| {
++        if !session.config_bindings.contains(&binding) {
++            session.config_bindings.push(binding);
++        }
++    });
++}
++
++/// Record the base of one region, if a session is active. Only the
++/// two region names used by the bounded linear-combination path are
++/// kept; every other region is ignored. The floor-planner caller
++/// checks [`is_recording_active`] before invoking the region-name
++/// closure, so the inactive path never calls that closure for
++/// recording. While armed, that closure is invoked once extra for
++/// every region; see the module documentation.
++pub fn record_region_base(name: &str, region_index: usize, region_start: usize) {
++    if name != "Assign fixed" && name != "Linear combination" {
++        return;
++    }
++    if let Some(session_id) = active_session_id() {
++        let region = RegionBase {
++            name: name.to_string(),
++            region_index,
++            region_start,
++        };
++        store_to_session(session_id, |session| {
++            session.regions.push(region);
++        });
++    }
++}
++
++/// Record the keygen fixed columns and original selector booleans.
++/// Must be called after synthesis and before the fixed columns are
++/// batch-inverted and the selectors are taken for conversion, so the
++/// recorded data is the data the keygen `Assembly` actually held.
++/// All encoding and cloning happens only if a session is active,
++/// and runs with no recorder borrow held.
++pub fn record_keygen_fixed_and_selectors<F: PrimeField>(
++    fixed: &[Polynomial<Rational<F>, LagrangeCoeff>],
++    selectors: &[Vec<bool>],
++) {
++    let Some(session_id) = active_session_id() else {
++        return;
++    };
++    let encoded_fixed: Vec<Vec<Vec<u8>>> = fixed
++        .iter()
++        .map(|poly| {
++            poly.iter()
++                .map(|value| encode_prime_field(&value.evaluate()))
++                .collect::<Vec<Vec<u8>>>()
++        })
++        .collect::<Vec<Vec<Vec<u8>>>>();
++    let cloned_selectors: Vec<Vec<bool>> = selectors.iter().cloned().collect::<Vec<Vec<bool>>>();
++    store_to_session(session_id, |session| {
++        session.fixed_values = encoded_fixed;
++        session.selectors = cloned_selectors;
++    });
++}
++
++/// Record the selector fixed columns produced by
++/// `directly_convert_selectors_to_fixed`, before they are appended
++/// to the fixed table. Encoding happens only if a session is active,
++/// and runs with no recorder borrow held.
++pub fn record_converted_selector_fixed<F: PrimeField>(selector_polys: &[Vec<F>]) {
++    let Some(session_id) = active_session_id() else {
++        return;
++    };
++    let encoded: Vec<Vec<Vec<u8>>> = selector_polys
++        .iter()
++        .map(|poly| {
++            poly.iter()
++                .map(|value| encode_prime_field(value))
++                .collect::<Vec<Vec<u8>>>()
++        })
++        .collect::<Vec<Vec<Vec<u8>>>>();
++    store_to_session(session_id, |session| {
++        session.converted_selector_fixed = encoded;
++    });
++}
++
++/// Record the proving advice columns for the current phase. Columns
++/// are merged across phases by column index; each call replaces the
++/// recorded column, which is correct because `WitnessCollection`
++/// only writes advice columns of its current phase. Encoding happens
++/// only if a session is active, and runs with no recorder borrow
++/// held.
++pub fn record_advice_columns<F: PrimeField>(
++    advice: &[Polynomial<Rational<F>, LagrangeCoeff>],
++    column_indices: &std::collections::BTreeSet<usize>,
++) {
++    let Some(session_id) = active_session_id() else {
++        return;
++    };
++    let mut encoded_columns: Vec<(usize, Vec<Vec<u8>>)> = Vec::new();
++    for column_index in column_indices {
++        if let Some(poly) = advice.get(*column_index) {
++            let encoded = poly
++                .iter()
++                .map(|value| encode_prime_field(&value.evaluate()))
++                .collect::<Vec<Vec<u8>>>();
++            encoded_columns.push((*column_index, encoded));
++        }
++    }
++    store_to_session(session_id, |session| {
++        for (column_index, encoded) in encoded_columns {
++            if session.advice_values.len() <= column_index {
++                session.advice_values.resize(column_index + 1, Vec::new());
++            }
++            session.advice_values[column_index] = encoded;
++        }
++    });
++}
++
++/// Record one ordered permutation copy call, in permutation-argument
++/// coordinates. Called from inside
++/// `permutation::keygen::Assembly::copy`, after the column positions
++/// and row bounds have been resolved and before any cycle merging,
++/// so the log holds the original calls rather than the successor
++/// mapping of the built argument. Column descriptors — including
++/// their `Debug` formatting — are built only if a session is active,
++/// only on the first recorded call, and with no recorder borrow
++/// held.
++pub fn record_copy_pair(
++    columns: &[Column<Any>],
++    left: (usize, usize),
++    right: (usize, usize),
++) {
++    let Some(session_id) = active_session_id() else {
++        return;
++    };
++    let descriptors: Vec<PermutationColumnDesc> = columns
++        .iter()
++        .enumerate()
++        .map(|(position, column)| PermutationColumnDesc {
++            position,
++            column_index: column.index(),
++            column_kind_debug: format!("{:?}", column.column_type()),
++        })
++        .collect::<Vec<PermutationColumnDesc>>();
++    let pair = CopyPair {
++        left: PermCell {
++            permutation_column_position: left.0,
++            row: left.1,
++        },
++        right: PermCell {
++            permutation_column_position: right.0,
++            row: right.1,
++        },
++    };
++    store_to_session(session_id, |session| {
++        if session.permutation_columns.is_empty() {
++            session.permutation_columns = descriptors;
++        }
++        session.copy_pairs.push(pair);
++    });
++}
++
++/// How one bounded region name resolves inside a single session:
++/// absent, exactly one distinct base, or several distinct bases.
++/// Absent and ambiguous are distinct outcomes and both refuse at
++/// join time.
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++enum RegionStartResolution {
++    /// No region with this name was recorded in the session.
++    Absent,
++    /// Every region with this name had this one starting row.
++    Unique(usize),
++    /// Regions with this name had at least two distinct starting rows.
++    Ambiguous,
++}
++
++fn region_start_resolution(session: &RecordedSession, name: &str) -> RegionStartResolution {
++    let mut found: Option<usize> = None;
++    for region in &session.regions {
++        if region.name == name {
++            match found {
++                None => found = Some(region.region_start),
++                Some(start) if start == region.region_start => {}
++                Some(_) => return RegionStartResolution::Ambiguous,
++            }
++        }
++    }
++    match found {
++        Some(start) => RegionStartResolution::Unique(start),
++        None => RegionStartResolution::Absent,
++    }
++}
++
++fn resolve_region_start(
++    keygen: &RecordedSession,
++    proving: &RecordedSession,
++    name: &'static str,
++) -> Result<usize, JoinError> {
++    match (
++        region_start_resolution(keygen, name),
++        region_start_resolution(proving, name),
++    ) {
++        (RegionStartResolution::Unique(a), RegionStartResolution::Unique(b)) if a == b => Ok(a),
++        _ => Err(JoinError::RegionMismatch { name }),
++    }
++}
++
++fn fixed_at(
++    session: &RecordedSession,
++    column_index: usize,
++    row: usize,
++) -> Result<Vec<u8>, JoinError> {
++    session
++        .fixed_values
++        .get(column_index)
++        .and_then(|column| column.get(row))
++        .cloned()
++        .ok_or(JoinError::MissingCell { what: "fixed cell" })
++}
++
++fn converted_selector_at(
++    session: &RecordedSession,
++    selector_index: usize,
++    row: usize,
++) -> Result<Vec<u8>, JoinError> {
++    session
++        .converted_selector_fixed
++        .get(selector_index)
++        .and_then(|column| column.get(row))
++        .cloned()
++        .ok_or(JoinError::MissingCell {
++            what: "converted selector fixed cell",
++        })
++}
++
++fn advice_permutation_position(
++    session: &RecordedSession,
++    advice_index: usize,
++) -> Result<usize, JoinError> {
++    let mut found: Option<usize> = None;
++    for desc in &session.permutation_columns {
++        if desc.column_index == advice_index && desc.column_kind_debug.contains("Advice") {
++            match found {
++                None => found = Some(desc.position),
++                Some(_) => {
++                    return Err(JoinError::AmbiguousPermutationColumn { advice_index });
++                }
++            }
++        }
++    }
++    found.ok_or(JoinError::AmbiguousPermutationColumn { advice_index })
++}
++
++fn copy_partner(session: &RecordedSession, target: PermCell) -> Result<PermCell, JoinError> {
++    let mut found: Option<PermCell> = None;
++    for pair in &session.copy_pairs {
++        let partner = if pair.left == target {
++            Some(pair.right)
++        } else if pair.right == target {
++            Some(pair.left)
++        } else {
++            None
++        };
++        if let Some(partner) = partner {
++            match found {
++                None => found = Some(partner),
++                Some(existing) if existing == partner => {}
++                Some(_) => {
++                    return Err(JoinError::AmbiguousCopyPartner {
++                        position: target.permutation_column_position,
++                        row: target.row,
++                    });
++                }
++            }
++        }
++    }
++    found.ok_or(JoinError::AmbiguousCopyPartner {
++        position: target.permutation_column_position,
++        row: target.row,
++    })
++}
++
++fn check_byte_table_rows(
++    table: &[Vec<Vec<u8>>],
++    num_rows: usize,
++    table_name: &'static str,
++) -> Result<(), JoinError> {
++    for (column, entries) in table.iter().enumerate() {
++        if entries.len() != num_rows {
++            return Err(JoinError::TableDimensionMismatch {
++                table: table_name,
++                column,
++                expected: num_rows,
++                actual: entries.len(),
++            });
++        }
++    }
++    Ok(())
++}
++
++fn check_bool_table_rows(
++    table: &[Vec<bool>],
++    num_rows: usize,
++    table_name: &'static str,
++) -> Result<(), JoinError> {
++    for (column, entries) in table.iter().enumerate() {
++        if entries.len() != num_rows {
++            return Err(JoinError::TableDimensionMismatch {
++                table: table_name,
++                column,
++                expected: num_rows,
++                actual: entries.len(),
++            });
++        }
++    }
++    Ok(())
++}
++
++/// Join one keygen session and one proving session into the bounded
++/// structural view for one generic linear-combination shape, by
++/// shape agreement only.
++///
++/// The join refuses, with a structural error, unless: both sessions
++/// declare exactly one circuit (a caller declaration, not a
++/// measurement); the domain parameters agree; both phases observed
++/// exactly one identical configure binding with exactly five value
++/// and five coefficient columns; each bounded region name resolves
++/// to exactly one distinct base in each session and those bases are
++/// equal; every table exposed in the view has internally consistent
++/// `num_rows` dimensions; `add_row + 1` is inside `num_rows`; the
++/// converted `q_arith` column index is derived with checked
++/// arithmetic; `q_arith` is enabled at `add_row`; the proving advice
++/// table covers the named value cells at `add_row` and `add_row + 1`;
++/// the recorded zero cell encodes zero; and the two gate value cells
++/// at the add row each have exactly one copy partner.
++///
++/// This does not validate the add-shaped coefficient pattern and
++/// does not establish an actual `NativeAdd`. It is not a
++/// same-circuit or same-key check: sessions are public
++/// caller-constructible data, and no verifying key, proving key, key
++/// material, or concrete circuit identity is compared. Nothing here
++/// evaluates a gate, checks a copy constraint, or interprets the
++/// encodings in another carrier. Actual SDK add correspondence,
++/// gate satisfaction, copy satisfaction, and verifier acceptance
++/// remain open.
++pub fn join_linear_combination_view(
++    keygen: RecordedSession,
++    proving: RecordedSession,
++) -> Result<JoinedLinearCombinationView, JoinError> {
++    if keygen.declared_phase != CapturePhase::Keygen {
++        return Err(JoinError::FirstSessionNotKeygen);
++    }
++    if proving.declared_phase != CapturePhase::Proving {
++        return Err(JoinError::SecondSessionNotProving);
++    }
++    if keygen.declared_circuit_count != 1 {
++        return Err(JoinError::DeclaredCircuitCountNotOne {
++            phase: CapturePhase::Keygen,
++            count: keygen.declared_circuit_count,
++        });
++    }
++    if proving.declared_circuit_count != 1 {
++        return Err(JoinError::DeclaredCircuitCountNotOne {
++            phase: CapturePhase::Proving,
++            count: proving.declared_circuit_count,
++        });
++    }
++    let (k, num_rows) = match (keygen.k, keygen.num_rows, proving.k, proving.num_rows) {
++        (Some(k1), Some(n1), Some(k2), Some(n2)) if k1 == k2 && n1 == n2 => (k1, n1),
++        _ => return Err(JoinError::DomainMismatch),
++    };
++    if keygen.config_bindings.len() != 1
++        || proving.config_bindings.len() != 1
++        || keygen.config_bindings[0] != proving.config_bindings[0]
++    {
++        return Err(JoinError::BindingMismatch);
++    }
++    let binding = keygen.config_bindings[0].clone();
++    if binding.value_cols.len() != NB_ARITH_COLS || binding.coeff_cols.len() != NB_ARITH_COLS {
++        return Err(JoinError::InvalidArithColumnCount {
++            value_columns: binding.value_cols.len(),
++            coefficient_columns: binding.coeff_cols.len(),
++        });
++    }
++    // Internal dimensions of every table exposed in the view.
++    check_byte_table_rows(&keygen.fixed_values, num_rows, "fixed")?;
++    check_bool_table_rows(&keygen.selectors, num_rows, "selector")?;
++    check_byte_table_rows(
++        &keygen.converted_selector_fixed,
++        num_rows,
++        "converted selector fixed",
++    )?;
++    check_byte_table_rows(&proving.advice_values, num_rows, "advice")?;
++    if keygen.converted_selector_fixed.len() != keygen.selectors.len() {
++        return Err(JoinError::TableDimensionMismatch {
++            table: "converted selector fixed",
++            column: keygen.converted_selector_fixed.len(),
++            expected: keygen.selectors.len(),
++            actual: keygen.converted_selector_fixed.len(),
++        });
++    }
++    for (expected_position, desc) in keygen.permutation_columns.iter().enumerate() {
++        if desc.position != expected_position {
++            return Err(JoinError::TableDimensionMismatch {
++                table: "permutation columns",
++                column: expected_position,
++                expected: expected_position,
++                actual: desc.position,
++            });
++        }
++    }
++    for pair in &keygen.copy_pairs {
++        for cell in [pair.left, pair.right] {
++            if cell.permutation_column_position >= keygen.permutation_columns.len()
++                || cell.row >= num_rows
++            {
++                return Err(JoinError::MissingCell {
++                    what: "copy-pair cell outside recorded permutation table",
++                });
++            }
++        }
++    }
++    let assign_fixed_region_start =
++        resolve_region_start(&keygen, &proving, "Assign fixed")?;
++    let linear_combination_region_start =
++        resolve_region_start(&keygen, &proving, "Linear combination")?;
++    let add_row = linear_combination_region_start;
++    let next_row = add_row
++        .checked_add(1)
++        .filter(|next| *next < num_rows)
++        .ok_or(JoinError::NextRowOutOfBounds { add_row, num_rows })?;
++    let zero_cell = AbsoluteCell {
++        kind: CellKind::Fixed,
++        column_index: binding.fixed_values_col,
++        row: assign_fixed_region_start,
++    };
++    let zero_cell_encoding = fixed_at(&keygen, zero_cell.column_index, zero_cell.row)?;
++    if zero_cell_encoding.iter().any(|byte| *byte != 0) {
++        return Err(JoinError::ZeroCellNotZero);
++    }
++    let value_cells: Vec<AbsoluteCell> = binding
++        .value_cols
++        .iter()
++        .map(|column_index| AbsoluteCell {
++            kind: CellKind::Advice,
++            column_index: *column_index,
++            row: add_row,
++        })
++        .collect::<Vec<AbsoluteCell>>();
++    let coeff_cells: Vec<AbsoluteCell> = binding
++        .coeff_cols
++        .iter()
++        .map(|column_index| AbsoluteCell {
++            kind: CellKind::Fixed,
++            column_index: *column_index,
++            row: add_row,
++        })
++        .collect::<Vec<AbsoluteCell>>();
++    let const_cell = AbsoluteCell {
++        kind: CellKind::Fixed,
++        column_index: binding.constant_col,
++        row: add_row,
++    };
++    let q_next_cell = AbsoluteCell {
++        kind: CellKind::Fixed,
++        column_index: binding.q_next_col,
++        row: add_row,
++    };
++    let mul_ab_cell = AbsoluteCell {
++        kind: CellKind::Fixed,
++        column_index: binding.mul_ab_col,
++        row: add_row,
++    };
++    let mul_ac_cell = AbsoluteCell {
++        kind: CellKind::Fixed,
++        column_index: binding.mul_ac_col,
++        row: add_row,
++    };
++    let num_original_fixed_columns = keygen.fixed_values.len();
++    let q_arith_column_index = num_original_fixed_columns
++        .checked_add(binding.q_arith_selector)
++        .ok_or(JoinError::ArithmeticOverflow {
++            what: "converted q_arith fixed column index",
++        })?;
++    let q_arith_cell = AbsoluteCell {
++        kind: CellKind::Fixed,
++        column_index: q_arith_column_index,
++        row: add_row,
++    };
++    let q_arith_enabled = keygen
++        .selectors
++        .get(binding.q_arith_selector)
++        .and_then(|column| column.get(add_row))
++        .copied()
++        .ok_or(JoinError::MissingCell {
++            what: "q_arith selector cell",
++        })?;
++    if !q_arith_enabled {
++        return Err(JoinError::QArithNotEnabled);
++    }
++    // The proving advice table must cover the named value cells at
++    // the add row and the next row.
++    for cell in &value_cells {
++        let column = proving
++            .advice_values
++            .get(cell.column_index)
++            .ok_or(JoinError::MissingCell {
++                what: "proving advice column for a value cell",
++            })?;
++        if column.get(add_row).is_none() || column.get(next_row).is_none() {
++            return Err(JoinError::MissingCell {
++                what: "proving advice cell at add or next row",
++            });
++        }
++    }
++    let mut gate_fixed_encodings: Vec<Vec<u8>> = Vec::new();
++    for cell in &coeff_cells {
++        gate_fixed_encodings.push(fixed_at(&keygen, cell.column_index, cell.row)?);
++    }
++    gate_fixed_encodings.push(fixed_at(&keygen, const_cell.column_index, const_cell.row)?);
++    gate_fixed_encodings.push(fixed_at(&keygen, q_next_cell.column_index, q_next_cell.row)?);
++    gate_fixed_encodings.push(fixed_at(&keygen, mul_ab_cell.column_index, mul_ab_cell.row)?);
++    gate_fixed_encodings.push(fixed_at(&keygen, mul_ac_cell.column_index, mul_ac_cell.row)?);
++    gate_fixed_encodings.push(converted_selector_at(&keygen, binding.q_arith_selector, add_row)?);
++    let left_position = advice_permutation_position(&keygen, binding.value_cols[1])?;
++    let right_position = advice_permutation_position(&keygen, binding.value_cols[2])?;
++    let left_partner = copy_partner(
++        &keygen,
++        PermCell {
++            permutation_column_position: left_position,
++            row: add_row,
++        },
++    )?;
++    let right_partner = copy_partner(
++        &keygen,
++        PermCell {
++            permutation_column_position: right_position,
++            row: add_row,
++        },
++    )?;
++    Ok(JoinedLinearCombinationView {
++        binding: binding.clone(),
++        k,
++        num_rows,
++        assign_fixed_region_start,
++        linear_combination_region_start,
++        add_row,
++        zero_cell,
++        zero_cell_encoding,
++        out_cell: value_cells[0],
++        next_out_cell: AbsoluteCell {
++            kind: CellKind::Advice,
++            column_index: binding.value_cols[0],
++            row: next_row,
++        },
++        value_cells,
++        coeff_cells,
++        const_cell,
++        q_next_cell,
++        mul_ab_cell,
++        mul_ac_cell,
++        q_arith_cell,
++        q_arith_enabled,
++        gate_fixed_encodings,
++        left_partner,
++        right_partner,
++        fixed_values: keygen.fixed_values.clone(),
++        selectors: keygen.selectors.clone(),
++        converted_selector_fixed: keygen.converted_selector_fixed.clone(),
++        permutation_columns: keygen.permutation_columns.clone(),
++        copy_pairs: keygen.copy_pairs.clone(),
++        advice_values: proving.advice_values.clone(),
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use std::{
++        cell::{Cell, RefCell},
++        rc::Rc,
++    };
++
++    use super::*;
++
++    const ROWS: usize = 4;
++    const ADD_ROW: usize = 1;
++
++    fn binding() -> NativeConfigBinding {
++        NativeConfigBinding {
++            value_cols: vec![0, 1, 2, 3, 4],
++            coeff_cols: vec![0, 1, 2, 3, 4],
++            q_next_col: 5,
++            mul_ab_col: 6,
++            mul_ac_col: 7,
++            constant_col: 8,
++            fixed_values_col: 9,
++            q_arith_selector: 0,
++        }
++    }
++
++    fn byte_table(columns: usize) -> Vec<Vec<Vec<u8>>> {
++        vec![vec![vec![0u8; 4]; ROWS]; columns]
++    }
++
++    fn regions() -> Vec<RegionBase> {
++        vec![
++            RegionBase {
++                name: "Assign fixed".to_string(),
++                region_index: 0,
++                region_start: 0,
++            },
++            RegionBase {
++                name: "Linear combination".to_string(),
++                region_index: 1,
++                region_start: ADD_ROW,
++            },
++        ]
++    }
++
++    fn permutation_columns() -> Vec<PermutationColumnDesc> {
++        (0..7)
++            .map(|position| PermutationColumnDesc {
++                position,
++                column_index: position,
++                column_kind_debug: if position < 5 {
++                    "Advice".to_string()
++                } else {
++                    "Fixed".to_string()
++                },
++            })
++            .collect()
++    }
++
++    fn valid_sessions() -> (RecordedSession, RecordedSession) {
++        let keygen = RecordedSession {
++            declared_phase: CapturePhase::Keygen,
++            declared_circuit_count: 1,
++            k: Some(2),
++            num_rows: Some(ROWS),
++            config_bindings: vec![binding()],
++            regions: regions(),
++            fixed_values: byte_table(10),
++            selectors: vec![vec![true; ROWS]],
++            converted_selector_fixed: byte_table(1),
++            permutation_columns: permutation_columns(),
++            copy_pairs: vec![
++                CopyPair {
++                    left: PermCell {
++                        permutation_column_position: 1,
++                        row: ADD_ROW,
++                    },
++                    right: PermCell {
++                        permutation_column_position: 5,
++                        row: ADD_ROW,
++                    },
++                },
++                CopyPair {
++                    left: PermCell {
++                        permutation_column_position: 2,
++                        row: ADD_ROW,
++                    },
++                    right: PermCell {
++                        permutation_column_position: 6,
++                        row: ADD_ROW,
++                    },
++                },
++            ],
++            advice_values: Vec::new(),
++        };
++        let proving = RecordedSession {
++            declared_phase: CapturePhase::Proving,
++            declared_circuit_count: 1,
++            k: Some(2),
++            num_rows: Some(ROWS),
++            config_bindings: vec![binding()],
++            regions: regions(),
++            fixed_values: Vec::new(),
++            selectors: Vec::new(),
++            converted_selector_fixed: Vec::new(),
++            permutation_columns: Vec::new(),
++            copy_pairs: Vec::new(),
++            advice_values: byte_table(5),
++        };
++        (keygen, proving)
++    }
++
++    #[test]
++    fn inactive_hooks_do_no_work() {
++        let calls = Rc::new(Cell::new(0usize));
++        let counter = Rc::clone(&calls);
++        record_native_config_binding_with(move || {
++            counter.set(counter.get() + 1);
++            binding()
++        });
++        record_dimensions(2, ROWS);
++        record_region_base("Linear combination", 0, 0);
++        assert_eq!(calls.get(), 0);
++        assert!(!is_recording_active());
++        assert!(take_last_keygen_recording().is_none());
++        assert!(take_last_proving_recording().is_none());
++    }
++
++    #[test]
++    fn active_capture_stores_binding_dimensions_regions() {
++        {
++            let _guard = begin_recording(CapturePhase::Keygen, 1);
++            assert!(is_recording_active());
++            record_dimensions(2, ROWS);
++            record_native_config_binding_with(binding);
++            record_region_base("Linear combination", 1, ADD_ROW);
++            record_region_base("Unrelated region", 2, 3);
++        }
++        assert!(!is_recording_active());
++        let session = take_last_keygen_recording().expect("keygen session published");
++        assert_eq!(session.declared_phase, CapturePhase::Keygen);
++        assert_eq!(session.declared_circuit_count, 1);
++        assert_eq!(session.k, Some(2));
++        assert_eq!(session.num_rows, Some(ROWS));
++        assert_eq!(session.config_bindings, vec![binding()]);
++        assert_eq!(session.regions.len(), 1);
++        assert!(take_last_keygen_recording().is_none());
++    }
++
++    #[test]
++    fn lifo_nesting_publishes_each_on_drop() {
++        let outer = begin_recording(CapturePhase::Keygen, 1);
++        {
++            let _inner = begin_recording(CapturePhase::Proving, 1);
++            record_dimensions(3, 8);
++        }
++        assert!(is_recording_active());
++        let proving = take_last_proving_recording().expect("inner published first");
++        assert_eq!(proving.k, Some(3));
++        drop(outer);
++        assert!(!is_recording_active());
++        assert!(take_last_keygen_recording().is_some());
++    }
++
++    #[test]
++    fn out_of_order_drop_keeps_inner_and_discards_outer() {
++        let outer = begin_recording(CapturePhase::Keygen, 1);
++        let inner = begin_recording(CapturePhase::Proving, 1);
++        drop(outer);
++        // The inner session is untouched and still recording; the
++        // dropped outer session is neither published nor resurrected.
++        assert!(is_recording_active());
++        assert!(take_last_keygen_recording().is_none());
++        record_dimensions(4, 16);
++        drop(inner);
++        assert!(!is_recording_active());
++        let proving = take_last_proving_recording().expect("inner published on its drop");
++        assert_eq!(proving.k, Some(4));
++        assert!(take_last_keygen_recording().is_none());
++    }
++
++    #[test]
++    fn guard_drop_during_unwind_finalizes_without_double_panic() {
++        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++            let _guard = begin_recording(CapturePhase::Keygen, 1);
++            record_dimensions(2, ROWS);
++            panic!("simulated synthesis failure");
++        }));
++        assert!(result.is_err());
++        assert!(!is_recording_active());
++        let session = take_last_keygen_recording().expect("session published during unwind");
++        assert_eq!(session.num_rows, Some(ROWS));
++    }
++
++    #[test]
++    fn reentrant_callback_and_nested_begin_do_not_panic() {
++        let outer = begin_recording(CapturePhase::Keygen, 1);
++        record_native_config_binding_with(|| {
++            // Reentrant hooks run with no recorder borrow held.
++            assert!(is_recording_active());
++            record_dimensions(5, 32);
++            record_region_base("Assign fixed", 0, 0);
++            // A nested session begun and ended inside the callback
++            // publishes separately and does not steal the store.
++            let nested = begin_recording(CapturePhase::Proving, 1);
++            drop(nested);
++            binding()
++        });
++        drop(outer);
++        let keygen = take_last_keygen_recording().expect("outer published");
++        assert_eq!(keygen.config_bindings, vec![binding()]);
++        assert_eq!(keygen.k, Some(5));
++        assert_eq!(keygen.regions.len(), 1);
++        assert!(take_last_proving_recording().is_some());
++    }
++
++    #[test]
++    fn thread_local_capture_stays_on_its_thread() {
++        let handle = std::thread::spawn(|| {
++            let _guard = begin_recording(CapturePhase::Keygen, 1);
++            record_dimensions(6, 64);
++            drop(_guard);
++            take_last_keygen_recording().map(|session| session.k)
++        });
++        assert_eq!(handle.join().expect("child thread"), Some(Some(6)));
++        assert!(!is_recording_active());
++        assert!(take_last_keygen_recording().is_none());
++    }
++
++    #[test]
++    fn valid_sessions_join() {
++        let (keygen, proving) = valid_sessions();
++        let view = join_linear_combination_view(keygen, proving).expect("valid shape joins");
++        assert_eq!(view.add_row, ADD_ROW);
++        assert_eq!(view.next_out_cell.row, ADD_ROW + 1);
++        assert_eq!(view.value_cells.len(), 5);
++        assert_eq!(view.coeff_cells.len(), 5);
++        assert!(view.q_arith_enabled);
++        assert_eq!(view.q_arith_cell.column_index, 10);
++        assert_eq!(view.left_partner.permutation_column_position, 5);
++        assert_eq!(view.right_partner.permutation_column_position, 6);
++        // Debug is redacted: it names dimensions, not byte tables.
++        let debug = format!("{:?}", view);
++        assert!(debug.contains("num_rows"));
++        assert!(!debug.contains("gate_fixed_encodings:"));
++    }
++
++    #[test]
++    fn malformed_column_counts_refuse() {
++        let (mut keygen, mut proving) = valid_sessions();
++        keygen.config_bindings[0].value_cols.truncate(3);
++        keygen.config_bindings[0].coeff_cols.truncate(3);
++        proving.config_bindings[0].value_cols.truncate(3);
++        proving.config_bindings[0].coeff_cols.truncate(3);
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::InvalidArithColumnCount {
++                value_columns: 3,
++                coefficient_columns: 3,
++            })
++        );
++    }
++
++    #[test]
++    fn selector_column_overflow_refuses() {
++        let (mut keygen, proving) = valid_sessions();
++        keygen.config_bindings[0].q_arith_selector = usize::MAX;
++        let mut proving = proving;
++        proving.config_bindings[0].q_arith_selector = usize::MAX;
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::ArithmeticOverflow {
++                what: "converted q_arith fixed column index",
++            })
++        );
++    }
++
++    #[test]
++    fn disabled_q_arith_refuses() {
++        let (mut keygen, proving) = valid_sessions();
++        keygen.selectors[0][ADD_ROW] = false;
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::QArithNotEnabled)
++        );
++    }
++
++    #[test]
++    fn next_row_out_of_bounds_refuses() {
++        let (mut keygen, mut proving) = valid_sessions();
++        for session in [&mut keygen, &mut proving] {
++            session.regions[1].region_start = ROWS - 1;
++        }
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::NextRowOutOfBounds {
++                add_row: ROWS - 1,
++                num_rows: ROWS,
++            })
++        );
++    }
++
++    #[test]
++    fn short_advice_table_refuses() {
++        let (keygen, mut proving) = valid_sessions();
++        proving.advice_values.truncate(2);
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::MissingCell {
++                what: "proving advice column for a value cell",
++            })
++        );
++    }
++
++    #[test]
++    fn ragged_fixed_table_refuses() {
++        let (mut keygen, proving) = valid_sessions();
++        keygen.fixed_values[3].truncate(ROWS - 1);
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::TableDimensionMismatch {
++                table: "fixed",
++                column: 3,
++                expected: ROWS,
++                actual: ROWS - 1,
++            })
++        );
++    }
++
++    #[test]
++    fn ragged_advice_table_refuses() {
++        let (keygen, mut proving) = valid_sessions();
++        proving.advice_values[0].truncate(ROWS - 1);
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::TableDimensionMismatch {
++                table: "advice",
++                column: 0,
++                expected: ROWS,
++                actual: ROWS - 1,
++            })
++        );
++    }
++
++    #[test]
++    fn zero_singleton_and_multi_op_shapes_refuse() {
++        // Zero-term / singleton / cached-zero paths create no
++        // "Linear combination" region: region absence refuses.
++        let (mut keygen, proving) = valid_sessions();
++        keygen.regions.retain(|region| region.name != "Linear combination");
++        assert_eq!(
++            join_linear_combination_view(keygen.clone(), proving.clone()),
++            Err(JoinError::RegionMismatch {
++                name: "Linear combination",
++            })
++        );
++        // A second distinct linear-combination base (a second
++        // operation under the same guard) refuses as ambiguous.
++        let (mut keygen, mut proving) = valid_sessions();
++        keygen.regions.push(RegionBase {
++            name: "Linear combination".to_string(),
++            region_index: 7,
++            region_start: ADD_ROW + 2,
++        });
++        assert_eq!(
++            join_linear_combination_view(keygen.clone(), proving.clone()),
++            Err(JoinError::RegionMismatch {
++                name: "Linear combination",
++            })
++        );
++        // A second distinct configure binding refuses.
++        keygen.config_bindings.push(NativeConfigBinding {
++            fixed_values_col: 8,
++            ..binding()
++        });
++        proving
++            .config_bindings
++            .push(keygen.config_bindings[1].clone());
++        // Region ambiguity fires first; remove it to reach bindings.
++        keygen.regions.pop();
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::BindingMismatch)
++        );
++    }
++
++    #[test]
++    fn declared_count_is_only_a_declaration_check() {
++        let (mut keygen, proving) = valid_sessions();
++        keygen.declared_circuit_count = 2;
++        assert_eq!(
++            join_linear_combination_view(keygen, proving),
++            Err(JoinError::DeclaredCircuitCountNotOne {
++                phase: CapturePhase::Keygen,
++                count: 2,
++            })
++        );
++    }
++
++    #[test]
++    fn session_debug_is_redacted() {
++        let (keygen, _) = valid_sessions();
++        let debug = format!("{:?}", keygen);
++        assert!(debug.contains("fixed_columns_len"));
++        assert!(!debug.contains("fixed_values:"));
++        assert!(!debug.contains("advice_values:"));
++    }
++
++    // Silence unused warnings for helpers used only by some tests.
++    #[allow(dead_code)]
++    fn _unused(_cell: &RefCell<()>) {}
++}
+--- /dev/null
++++ b/circuits/tests/native_add_view_recording.rs
+@@ -0,0 +1,91 @@
++//! Chip-level recording tests for `NativeChip` synthesis under the
++//! public `run_test_native_gadget!` harness (`MockProver`).
++//!
++//! These tests assert only what the `MockProver` synthesis path
++//! records: the `NativeChip::configure` binding and the region
++//! bases seen by the floor planner. They are not production
++//! keygen/proving capture: no keygen `Assembly` or `parse_advices`
++//! hook runs, so `k`/`num_rows` stay `None` and no fixed, selector,
++//! advice, or copy table is recorded. Sessions taken here must not
++//! be joined.
++
++use std::collections::BTreeSet;
++
++use midnight_proofs::plonk::native_add_view::{
++    begin_recording, take_last_keygen_recording, CapturePhase, RecordedSession,
++};
++
++fn distinct_region_bases(session: &RecordedSession, name: &str) -> BTreeSet<usize> {
++    session
++        .regions
++        .iter()
++        .filter(|region| region.name == name)
++        .map(|region| region.region_start)
++        .collect()
++}
++
++fn take_mock_prover_session() -> RecordedSession {
++    let session = take_last_keygen_recording()
++        .expect("MockProver synthesis on this thread published a session");
++    // The declared label is only a declaration; the MockProver path
++    // supplies no domain dimensions and no keygen/proving tables.
++    assert_eq!(session.declared_phase, CapturePhase::Keygen);
++    assert_eq!(session.k, None);
++    assert_eq!(session.num_rows, None);
++    assert!(session.fixed_values.is_empty());
++    assert!(session.selectors.is_empty());
++    assert!(session.advice_values.is_empty());
++    assert!(session.copy_pairs.is_empty());
++    assert_eq!(session.config_bindings.len(), 1);
++    assert_eq!(session.config_bindings[0].value_cols.len(), 5);
++    assert_eq!(session.config_bindings[0].coeff_cols.len(), 5);
++    session
++}
++
++#[test]
++fn chip_empty_terms_create_no_linear_combination_region() {
++    let guard = begin_recording(CapturePhase::Keygen, 1);
++    midnight_circuits::run_test_native_gadget!(chip, layouter, {
++        // Empty term list: `linear_combination` serves the constant
++        // from `assign_fixed` and never enters the multi-term path.
++        let _constant = chip.linear_combination(&mut layouter, &[], F::from(0))?;
++    });
++    drop(guard);
++    let session = take_mock_prover_session();
++    assert!(distinct_region_bases(&session, "Linear combination").is_empty());
++}
++
++#[test]
++fn chip_singleton_identity_creates_no_linear_combination_region() {
++    let guard = begin_recording(CapturePhase::Keygen, 1);
++    midnight_circuits::run_test_native_gadget!(chip, layouter, {
++        let x = chip.assign(&mut layouter, Value::known(F::from(7)))?;
++        // One term, coefficient 1, zero constant: the identity early
++        // return hands `x` back without a "Linear combination" region.
++        let _same = chip.linear_combination(
++            &mut layouter,
++            &[(F::from(1), x.clone())],
++            F::from(0),
++        )?;
++    });
++    drop(guard);
++    let session = take_mock_prover_session();
++    assert!(distinct_region_bases(&session, "Linear combination").is_empty());
++}
++
++#[test]
++fn chip_multi_term_add_creates_one_linear_combination_region() {
++    let guard = begin_recording(CapturePhase::Keygen, 1);
++    midnight_circuits::run_test_native_gadget!(chip, layouter, {
++        let x = chip.assign(&mut layouter, Value::known(F::from(2)))?;
++        let y = chip.assign(&mut layouter, Value::known(F::from(3)))?;
++        let res = chip.add(&mut layouter, &x, &y)?;
++        chip.assert_equal_to_fixed(&mut layouter, &res, F::from(5))?;
++    });
++    drop(guard);
++    let session = take_mock_prover_session();
++    assert_eq!(
++        distinct_region_bases(&session, "Linear combination").len(),
++        1
++    );
++}
+--- a/circuits/Cargo.toml
++++ b/circuits/Cargo.toml
+@@ -61,3 +61,8 @@
+ [[bench]]
+ name = "poseidon_cpu"
+ harness = false
++
++[[test]]
++name = "native_add_view_recording"
++path = "tests/native_add_view_recording.rs"
++harness = true
+--- /dev/null
++++ b/proofs/tests/native_add_production_capture.rs
+@@ -0,0 +1,222 @@
++//! Bounded production-path capture regression for `NativeChip`.
++//!
++//! This test holds recorder guards across the real
++//! `keygen_vk_with_k` and `create_proof` calls. It checks only the
++//! structural capture relation implemented by
++//! `join_linear_combination_view`.
++//!
++//! It does not check gate satisfaction, copy satisfaction, verifier
++//! acceptance, same-key authentication, circuit authentication, the
++//! actual add coefficient pattern, or any canonical field map.
++//!
++//! `ParamsKZG::unsafe_setup` is used only because this is a bounded
++//! test. Its documentation states that it MUST NOT be used in
++//! production parameter generation.
++
++use blake2b_simd::State;
++use ff::Field;
++use midnight_circuits::{
++    field::{
++        decomposition::{
++            chip::P2RDecompositionConfig, pow2range::Pow2RangeChip,
++        },
++        native::{NB_ARITH_COLS, NB_ARITH_FIXED_COLS},
++        NativeChip,
++    },
++    instructions::*,
++    types::ComposableChip,
++};
++use midnight_curves::{Bls12, Fq as Scalar};
++use midnight_proofs::{
++    circuit::{Layouter, SimpleFloorPlanner, Value},
++    plonk::{
++        create_proof, keygen_pk, keygen_vk_with_k, native_add_view::{
++            begin_recording, join_linear_combination_view,
++            take_last_keygen_recording, take_last_proving_recording,
++            CapturePhase,
++        }, Circuit, ConstraintSystem, Error,
++    },
++    poly::kzg::{params::ParamsKZG, KZGCommitmentScheme},
++    transcript::{CircuitTranscript, Transcript},
++};
++use rand_core::OsRng;
++
++const K: u32 = 6;
++const NUM_ROWS: usize = 1usize << K;
++
++#[derive(Clone)]
++struct NativeAddCircuit {
++    x: Scalar,
++    y: Scalar,
++}
++
++impl Circuit<Scalar> for NativeAddCircuit {
++    type Config = P2RDecompositionConfig;
++    type FloorPlanner = SimpleFloorPlanner;
++
++    #[cfg(feature = "circuit-params")]
++    type Params = ();
++
++    fn without_witnesses(&self) -> Self {
++        Self {
++            x: Scalar::ZERO,
++            y: Scalar::ZERO,
++        }
++    }
++
++    fn configure(meta: &mut ConstraintSystem<Scalar>) -> Self::Config {
++        let advice_columns: [_; NB_ARITH_COLS] =
++            core::array::from_fn(|_| meta.advice_column());
++
++        let fixed_columns: [_; NB_ARITH_FIXED_COLS] =
++            core::array::from_fn(|_| meta.fixed_column());
++
++        let committed_instance_column = meta.instance_column();
++        let instance_column = meta.instance_column();
++
++        let native_config = NativeChip::configure(
++            meta,
++            &(
++                advice_columns,
++                fixed_columns,
++                [committed_instance_column, instance_column],
++            ),
++        );
++
++        // This config container is used only to obtain the recorded
++        // `NativeConfig`. The decomposition chip is not synthesized,
++        // so it creates no additional synthesis regions in this test.
++        let pow2range_config =
++            Pow2RangeChip::configure(meta, &advice_columns[1..=4]);
++
++        P2RDecompositionConfig::new(&native_config, &pow2range_config)
++    }
++
++    fn synthesize(
++        &self,
++        config: Self::Config,
++        mut layouter: impl Layouter<Scalar>,
++    ) -> Result<(), Error> {
++        let chip = NativeChip::new(config.native_config(), &());
++
++        let x = chip.assign(&mut layouter, Value::known(self.x))?;
++        let y = chip.assign(&mut layouter, Value::known(self.y))?;
++
++        // Two non-filtered terms enter the ordinary multi-term
++        // `linear_combination` path. No fixed-result equality is
++        // asserted here: this test records structural synthesis
++        // data and does not create a desired-sum certificate.
++        let _result = chip.add(&mut layouter, &x, &y)?;
++
++        Ok(())
++    }
++}
++
++#[test]
++fn native_add_capture_across_real_keygen_and_proving() {
++    let circuit = NativeAddCircuit {
++        x: Scalar::from(2u64),
++        y: Scalar::from(3u64),
++    };
++
++    // Bounded test parameters only. This is not a production setup.
++    let params = ParamsKZG::<Bls12>::unsafe_setup(K, OsRng);
++
++    // Real keygen synthesis through:
++    //
++    //   Circuit::configure
++    //     -> NativeChip::configure recording hook
++    //   SimpleFloorPlanner
++    //     -> SingleChipLayouter recording hook
++    //   keygen Assembly
++    //     -> fixed, selector, dimension, and permutation hooks
++    let vk = {
++        let _guard = begin_recording(CapturePhase::Keygen, 1);
++
++        let vk = keygen_vk_with_k::<
++            Scalar,
++            KZGCommitmentScheme<Bls12>,
++            NativeAddCircuit,
++        >(&params, &circuit, K)
++        .expect("keygen_vk_with_k should succeed");
++
++        drop(_guard);
++        vk
++    };
++
++    let keygen_session = take_last_keygen_recording()
++        .expect("real keygen synthesis should publish a recording");
++
++    assert_eq!(keygen_session.declared_phase, CapturePhase::Keygen);
++    assert_eq!(keygen_session.declared_circuit_count, 1);
++    assert_eq!(keygen_session.k, Some(K));
++    assert_eq!(keygen_session.num_rows, Some(NUM_ROWS));
++    assert_eq!(keygen_session.config_bindings.len(), 1);
++    assert!(!keygen_session.fixed_values.is_empty());
++    assert!(!keygen_session.selectors.is_empty());
++    assert!(!keygen_session.converted_selector_fixed.is_empty());
++    assert!(!keygen_session.permutation_columns.is_empty());
++    assert!(!keygen_session.copy_pairs.is_empty());
++
++    let pk = keygen_pk(vk, &circuit).expect("keygen_pk should succeed");
++
++    let empty_instance_column: &[Scalar] = &[];
++    let instances: &[&[Scalar]] =
++        &[empty_instance_column, empty_instance_column];
++
++    let mut transcript = CircuitTranscript::<State>::init();
++
++    // Real proving synthesis through:
++    //
++    //   Circuit::configure
++    //     -> NativeChip::configure recording hook
++    //   SimpleFloorPlanner
++    //     -> SingleChipLayouter recording hook
++    //   parse_advices / WitnessCollection
++    //     -> dimension and advice recording hooks
++    {
++        let _guard = begin_recording(CapturePhase::Proving, 1);
++
++        create_proof::<Scalar, KZGCommitmentScheme<Bls12>, _, _>(
++            &params,
++            &pk,
++            &[circuit],
++            #[cfg(feature = "committed-instances")]
++            0,
++            &[instances],
++            &mut transcript,
++            OsRng,
++        )
++        .expect("create_proof should succeed");
++
++        drop(_guard);
++    }
++
++    let proof = transcript.finalize();
++    assert!(!proof.is_empty());
++
++    let proving_session = take_last_proving_recording()
++        .expect("real proving synthesis should publish a recording");
++
++    assert_eq!(proving_session.declared_phase, CapturePhase::Proving);
++    assert_eq!(proving_session.declared_circuit_count, 1);
++    assert_eq!(proving_session.k, Some(K));
++    assert_eq!(proving_session.num_rows, Some(NUM_ROWS));
++    assert_eq!(proving_session.config_bindings.len(), 1);
++    assert!(!proving_session.advice_values.is_empty());
++
++    let view = join_linear_combination_view(keygen_session, proving_session)
++        .expect("real keygen and proving captures should join structurally");
++
++    assert_eq!(view.k, K);
++    assert_eq!(view.num_rows, NUM_ROWS);
++    assert_eq!(view.add_row, view.linear_combination_region_start);
++    assert_eq!(view.value_cells.len(), NB_ARITH_COLS);
++    assert_eq!(view.coeff_cells.len(), NB_ARITH_COLS);
++
++    // Five coefficients, constant, q_next, mul_ab, mul_ac, and the
++    // converted q_arith cell.
++    assert_eq!(view.gate_fixed_encodings.len(), 10);
++    assert!(view.q_arith_enabled);
++    assert!(view.zero_cell_encoding.iter().all(|byte| *byte == 0));
++}
