@@ -43,6 +43,29 @@ pub enum C6ProgramContextCanonicalError {
 pub struct C6ProgramContextCanonicalInputs { pub gate: Operand, pub pre_prog: Vec<Operand>, pub pre_ctx: [Operand; CTX_LANES], pub caps: C6StateCaps }
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCanonicalBlock { pub instructions: Vec<Instruction> }
+
+/// Inputs for one extra gated Prog walk whose only added outputs are the
+/// parsed constants count and the six lanes of the constant row whose
+/// index equals `selected_index`. Row lanes are codec lanes:
+/// `[tag, marker_free, lane2, lane3, lane4, lane5]`, variable used prefix
+/// by tag exactly as the parser's `PH_CONST_ROW` width table
+/// `[3,3,2,4,4,4,6,2]` encodes. Unused tail lanes stay zeroed by capture
+/// initialisation, never by synthesised payload.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextConstCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub selected_index: Operand,
+}
+
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextConstCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub const_count: Operand,
+    pub selected_found: Operand,
+    pub row: [Operand; 6],
+}
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs { pub gate: Operand, pub pre_ctx: [Operand; CTX_LANES], pub expected_ctx: [u128; CTX_LANES] }
 fn validate_scope(scope: &str) -> Result<(), C6ProgramContextCanonicalError> {
@@ -58,7 +81,7 @@ fn reject_reserved(scope: &str, operand: &Operand) -> Result<(), C6ProgramContex
     Ok(())
 }
 #[derive(Clone)]
-struct Regs { phase: Operand, sub: Operand, hold: Operand, opt: Operand, rem: Operand, cnt: Operand, cnt2: Operand, cnt3: Operand, te_need: Operand, srem: Operand, utf_pending: Operand, utf_cp: Operand, utf_min: Operand, cum_name: Operand, cum_tmpl: Operand, cum_nodes: Operand }
+struct Regs { phase: Operand, sub: Operand, hold: Operand, opt: Operand, rem: Operand, cnt: Operand, cnt2: Operand, cnt3: Operand, te_need: Operand, srem: Operand, utf_pending: Operand, utf_cp: Operand, utf_min: Operand, cum_name: Operand, cum_tmpl: Operand, cum_nodes: Operand, const_count: Operand, const_row_index: Operand, const_capture_active: Operand, const_found: Operand, const_cap_0: Operand, const_cap_1: Operand, const_cap_2: Operand, const_cap_3: Operand, const_cap_4: Operand, const_cap_5: Operand }
 struct Emitter<'a> { scope: &'a str, next_temp: usize, instructions: Vec<Instruction> }
 impl<'a> Emitter<'a> {
     fn new(scope: &'a str, next_temp: usize) -> Self { Self { scope, next_temp, instructions: Vec::new() } }
@@ -276,7 +299,7 @@ impl<'a> Emitter<'a> {
         let dr = self.add_i(org.rem.clone(), -1);
         nxt.rem = self.sel(event, dr, nxt.rem.clone());
     }
-    fn step(&mut self, gate: &Operand, lane: Operand, org: Regs, caps: &C6PhysCaps) -> Regs {
+    fn step(&mut self, gate: &Operand, lane: Operand, org: Regs, caps: &C6PhysCaps, selected_const: Option<&Operand>) -> Regs {
         let mut nxt = org.clone();
         let p_magic = self.eqv(org.phase.clone(), PH_MAGIC); let a = self.and(gate.clone(), p_magic); self.gated_eq(a, lane.clone(), Self::imm(C6_PHYS_MAGIC));
         let p_version = self.eqv(org.phase.clone(), PH_VERSION); let a = self.and(gate.clone(), p_version); self.gated_eq(a, lane.clone(), Self::imm(C6_PHYS_VERSION));
@@ -461,6 +484,36 @@ impl<'a> Emitter<'a> {
         {
             let cond_end = self.eqv(org.phase.clone(), PH_END); let a = self.and(gate.clone(), cond_end); self.gated_assert(a, Self::imm(0));
         }
+        if let Some(selected) = selected_const {
+            let is_ccount = self.eqv(org.phase.clone(), PH_CONST_COUNT);
+            nxt.const_count = self.sel(is_ccount, lane.clone(), nxt.const_count.clone());
+            let is_crow = self.eqv(org.phase.clone(), PH_CONST_ROW);
+            let is_start = self.eqv(org.sub.clone(), 0);
+            let row_start = self.and(is_crow.clone(), is_start);
+            let idx_eq = self.teq(org.const_row_index.clone(), selected.clone());
+            let active_here = self.sel(row_start, idx_eq, org.const_capture_active.clone());
+            let lane_active = self.and(is_crow.clone(), active_here.clone());
+            nxt.const_capture_active = self.sel(is_crow.clone(), active_here, nxt.const_capture_active.clone());
+            nxt.const_found = self.sel(lane_active.clone(), Self::imm(1), nxt.const_found.clone());
+            let s0 = self.eqv(org.sub.clone(), 0); let h0 = self.and(lane_active.clone(), s0);
+            nxt.const_cap_0 = self.sel(h0, lane.clone(), nxt.const_cap_0.clone());
+            let s1 = self.eqv(org.sub.clone(), 1); let h1 = self.and(lane_active.clone(), s1);
+            nxt.const_cap_1 = self.sel(h1, lane.clone(), nxt.const_cap_1.clone());
+            let s2 = self.eqv(org.sub.clone(), 2); let h2 = self.and(lane_active.clone(), s2);
+            nxt.const_cap_2 = self.sel(h2, lane.clone(), nxt.const_cap_2.clone());
+            let s3 = self.eqv(org.sub.clone(), 3); let h3 = self.and(lane_active.clone(), s3);
+            nxt.const_cap_3 = self.sel(h3, lane.clone(), nxt.const_cap_3.clone());
+            let s4 = self.eqv(org.sub.clone(), 4); let h4 = self.and(lane_active.clone(), s4);
+            nxt.const_cap_4 = self.sel(h4, lane.clone(), nxt.const_cap_4.clone());
+            let s5 = self.eqv(org.sub.clone(), 5); let h5 = self.and(lane_active, s5);
+            nxt.const_cap_5 = self.sel(h5, lane.clone(), nxt.const_cap_5.clone());
+            let used = self.used_from_hold(&org, &[3, 3, 2, 4, 4, 4, 6, 2]);
+            let used_m1 = self.add_i(used, -1);
+            let is_last = self.teq(org.sub.clone(), used_m1);
+            let row_done = self.and(is_crow, is_last);
+            let next_idx = self.add_i(org.const_row_index.clone(), 1);
+            nxt.const_row_index = self.sel(row_done, next_idx, nxt.const_row_index.clone());
+        }
         nxt
     }
 }
@@ -482,8 +535,8 @@ impl C6ProgramContextCanonicalEmitter {
         let mut em = Emitter::new(&self.scope, self.next_temp);
         let gate = inputs.gate.clone();
         em.cbool(gate.clone());
-        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0) };
-        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys); }
+        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0) };
+        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None); }
         em.gated_eq(gate.clone(), regs.phase, Emitter::imm(PH_END));
         let ctx = &inputs.pre_ctx;
         for lane in ctx.iter() { em.cbits(lane.clone(), LANE_BITS); }
@@ -502,6 +555,25 @@ impl C6ProgramContextCanonicalEmitter {
         em.check_usize(gate.clone(), ctx[21].clone());
         self.next_temp = em.next_temp;
         Ok(C6ProgramContextCanonicalBlock { instructions: em.instructions })
+    }
+    pub fn emit_prog_const_capture(&mut self, inputs: &C6ProgramContextConstCaptureInputs) -> Result<C6ProgramContextConstCaptureBlock, C6ProgramContextCanonicalError> {
+        if (LANE_BITS as usize) >= FR_BITS { return Err(C6ProgramContextCanonicalError::InvalidBitWidth { bits: LANE_BITS }); }
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.selected_index)?;
+        for lane in &inputs.pre_prog { reject_reserved(&self.scope, lane)?; }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES { return Err(C6ProgramContextCanonicalError::LengthMismatch { expected: PROGRAM_HEADER_LANES, actual: inputs.pre_prog.len() }); }
+        let p = &inputs.caps.phys;
+        for cap in [p.max_expressions, p.max_names, p.max_arms, p.max_children, p.max_functions, p.max_arity, p.max_types, p.max_occurrences, p.max_occurrence_paths, p.max_parameters, p.max_patterns, p.max_pattern_children, p.max_constructors, p.max_ctor_fields, p.max_decl_templates, p.max_plan_nodes, p.max_plan_cases, p.max_field_paths, p.max_constants, p.max_constant_fields, p.max_name_bytes, p.max_type_expr_nodes, p.max_template_bytes] {
+            if cap == usize::MAX { return Err(C6ProgramContextCanonicalError::GeometryOverflow); }
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0) };
+        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, Some(&inputs.selected_index)); }
+        em.gated_eq(gate.clone(), regs.phase.clone(), Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        Ok(C6ProgramContextConstCaptureBlock { instructions: em.instructions, const_count: regs.const_count.clone(), selected_found: regs.const_found.clone(), row: [regs.const_cap_0.clone(), regs.const_cap_1.clone(), regs.const_cap_2.clone(), regs.const_cap_3.clone(), regs.const_cap_4.clone(), regs.const_cap_5.clone()] })
     }
     pub fn emit_ctx_binding(&mut self, inputs: &C6ProgramContextCtxBindingInputs) -> Result<C6ProgramContextCanonicalBlock, C6ProgramContextCanonicalError> {
         if (LANE_BITS as usize) >= FR_BITS { return Err(C6ProgramContextCanonicalError::InvalidBitWidth { bits: LANE_BITS }); }

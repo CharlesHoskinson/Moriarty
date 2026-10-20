@@ -381,6 +381,9 @@ pub mod c6_push_step;
 pub mod c6_scalar_failure_step;
 pub mod c6_scalar_exit_step;
 pub mod c6_scalar_exit_consumer;
+pub mod c6_checked_value_read;
+#[cfg(test)]
+mod c6_checked_value_read_tests;
 pub use c6_a135_push::{
     c6_lanes_to_immediates, c6_push_family, emit_c6_push_observed_operands, C6PushOperands,
     C6_A135_FAMILY, C6_A140_FAMILY,
@@ -429,4 +432,9 @@ pub use c6_scalar_exit_consumer::{
     witness_from_host_pair as witness_scalar_exit_from_host_pair,
     witness_from_owner_record as witness_scalar_exit_from_owner_record,
     C6ScalarExitConsumerError, C6ScalarExitStepCircuit, C6ScalarExitStepWitness,
+};
+pub use c6_checked_value_read::{
+    emit_c6_checked_value_read_block, scalar_operand_view, C6CheckedValueReadBlock,
+    C6CheckedValueReadEmitter, C6CheckedValueReadError, C6CheckedValueReadInputs,
+    C6ScalarOperandView,
 };
