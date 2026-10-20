@@ -1,0 +1,43 @@
+{
+  "schema": "sherlock-c6-complete-META-observation-interface/1",
+  "profile": "sherlock-c6-complete-META-positive/1",
+  "expectedRoot": {
+    "schema": "independent-c6-complete-META-positive/1",
+    "profile": "sherlock-c6-complete-META-positive/1",
+    "case_ids": "List[str], literal ordered case_ids from SAFE inputs",
+    "observations": "List[CompletePositiveMETAObservation], same literal case order; no fields dropped"
+  },
+  "CompletePositiveMETAObservation": {
+    "encoded_lanes": "List[int], entire exact header/body in production Writer order",
+    "decoded_metadata": "Entire C6HostMetadata byte-projection record with all identity/bounds/layout/run_id fields/options/digests/RunInt/native kinds/order; exact SAFE-BYTE-WIRE metadata type",
+    "blob_spans": "List[BlobSpan], every Writer blob call in encoding order, including all emptytext and selectedemptydigest calls; no span for absent optional/digest content",
+    "final_blob_bytes": "int, cumulative all text+opaque digest payload bytes, prefixes excluded",
+    "final_width_entries": "int, complete cumulative number of entries in present index/counter/record width lists",
+    "final_cursor": "int, onepastlast consumed META lane; equals complete encoded_lanes length on this positive domain"
+  },
+  "BlobSpan": {
+    "kind": "Text or OpaqueDigestBytes, plain enum string",
+    "path": "Ordered List[{Field:str}|{Index:int}], complete source byte-wire field location",
+    "length_lane": "int, absolute zero-based META-local byte-length prefix lane",
+    "bytes_start": "int, first payload lane =length_lane+1",
+    "bytes_end": "int, exclusive payload endpoint, equals bytes_start when empty",
+    "bytes": "List[int], full exact raw payload bytes"
+  },
+  "pathConvention": {
+    "pair": "Use Field(first) or Field(second) under the complete metadata source field path.",
+    "identity": "Admission base[Field(identity)]; run base[Field(run_id),Field(identity)]. Within either identity use actual field names.",
+    "selectedDigest": "For each digest field path: Text format paths append Field(format),Field(first/second); OpaqueDigestBytes path appends Field(bytes). Do NOT add an artificial Selected path step.",
+    "optionPair": "Use actual option field path then first/second; no artificial Some step.",
+    "layout": "Base[Field(layout)]; version/field_id/scalar_layout_id paths append actual field name then first/second.",
+    "widthName": "[Field(layout),Field(widths),Field(listName),Index(i),Field(name)] where listName index_widths/counter_widths/record_widths; no artificial Some step."
+  },
+  "semantics": "Spans/finalcursor/finalcounters are a named mathematical projection of successful private Writer/Reader state, not extra public Rust outputs/getters, actual captured JSON or production runtime event/charge records.",
+  "positiveEquality": "A later whole-list predicate must compare every sixfield observation to independently prefrozen complete literal data. Roundtrip/spans/counter laws may be additional conjuncts, never replacement subsets.",
+  "directedDesign": [
+    "Complete three-case observations plus exact decode(encode(metadata)) equality on fullbyteprojection.",
+    "Unselected vs selected-empty digest stays distinct even though raw payload bytes empty; None vs Some(emptywidthrecord/emptypair) stays distinct.",
+    "Full admission/run identities and both bounds records remain distinct; no copying admission identity into run identity or layout bounds into admission.",
+    "NativeNegative/Nat0/NatMAX/NatAbove tags/padding preserved in both run-input positions across cohort; last3 bounds rawu128 and widths u32MAX transported exactly."
+  ],
+  "futureTypedTransport": "QNT/K-specific declaration carrier/export schema is intentionally not invented here; after independent original JSON prefreeze, freeze exact declaration-only target types/interface before additive typed transport. No model or expected data authored by source lane."
+}
