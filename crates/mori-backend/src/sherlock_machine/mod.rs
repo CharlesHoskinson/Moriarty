@@ -379,6 +379,8 @@ pub mod c6_program_context_canonical;
 pub mod c6_helper_canonical;
 pub mod c6_push_step;
 pub mod c6_scalar_failure_step;
+pub mod c6_scalar_exit_step;
+pub mod c6_scalar_exit_consumer;
 pub use c6_a135_push::{
     c6_lanes_to_immediates, c6_push_family, emit_c6_push_observed_operands, C6PushOperands,
     C6_A135_FAMILY, C6_A140_FAMILY,
@@ -416,4 +418,15 @@ pub use c6_scalar_failure_step::{
     witness_from_owner_record as witness_scalar_failure_from_owner_record,
     C6ScalarFailureStepBlock, C6ScalarFailureStepCircuit, C6ScalarFailureStepEmitter,
     C6ScalarFailureStepError, C6ScalarFailureStepInputs, C6ScalarFailureStepWitness,
+};
+pub use c6_scalar_exit_step::{
+    emit_c6_scalar_exit_step_block, C6ScalarExitStepBlock, C6ScalarExitStepEmitter,
+    C6ScalarExitStepError, C6ScalarExitStepInputs,
+};
+pub use c6_scalar_exit_consumer::{
+    build_c6_scalar_exit_step_circuit, check_c6_scalar_exit_step_circuit,
+    record_scalar_exit_step,
+    witness_from_host_pair as witness_scalar_exit_from_host_pair,
+    witness_from_owner_record as witness_scalar_exit_from_owner_record,
+    C6ScalarExitConsumerError, C6ScalarExitStepCircuit, C6ScalarExitStepWitness,
 };
