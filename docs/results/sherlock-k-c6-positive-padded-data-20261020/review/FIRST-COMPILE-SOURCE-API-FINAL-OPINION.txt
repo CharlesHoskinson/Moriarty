@@ -1,0 +1,178 @@
+Reviewer: Muse Code powered by muse-wonder-1.0, HIGH, independent non-author. No tools, commands, files, subjects, K, Python, tests, SDK, native code, or Git were executed. The opinion below rests on the complete inline bodies, not on hashes, AST checks, or delimiter checks alone.
+
+## Verdicts
+
+**SOURCE/API: APPROVE** — for the declared positive gate-one domain only, under the external premises stated below. No source change is required before the proposed compile.
+
+**EXACT1 COMPILE: ELIGIBLE** — exactly one new compile is eligible for Root selection, using the proposed `00-compile` argv and the existing `F03.launch` callable, subject to the mandatory dispatch leaves below. This is prospective eligibility only. It is not a parse, typecheck, kompile, warning-free, runtime, or semantic-equality result.
+
+I classify compile as **ELIGIBLE**, not **CONDITIONAL**, because the remaining items are dispatch-time verifications contained in the proposal, not missing source or plan revisions. If any mandatory leaf cannot be satisfied at dispatch, Root must stop rather than treat the compile as selected.
+
+## Source/API findings
+
+### Pack, geometry, and header
+
+The general model in [c6-positive-data.k](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/source/c6-positive-data.k) implements the declared capacity geometry:
+
+- Header: seven lanes.
+- Data base: `7`.
+- Fields base: `7 + 5 * max_data_nodes`.
+- Env base: fields base plus `2 * max_data_field_slots`.
+- Values base: env base plus `5 * max_env_cells`.
+- Total: values base plus `2 * max_value_slots`.
+- Active prefixes are ordered.
+- Every inactive capacity slot is padded with explicit zero lanes.
+- Only the first four capacities affect partition geometry; all nine capacities remain in `DPCaps` and in the Python carrier.
+
+The header writes the public magic, version `1`, DATA section tag, and the four physical table counts in the declared order. The decimal magic transcription is consistent with the supplied public hex basis and the pre-freeze correction record. That correction is accepted as source-history evidence, not as a compiler result.
+
+### Seven Data rows and other rows
+
+The row encodings match the public contract:
+
+- `U128`: tag `0`, full mathematical `Int` payload, remaining lanes zero.
+- `Bool`: tag `1`, native K `Bool` converted through the reused `ctBool`, remaining lanes zero.
+- `Nil`: tag `2`, remaining lanes zero.
+- `Cons`, `Leaf`, `Branch`: tags `3`, `4`, `5`, with raw slice `start` and `len` preserved, including a nonzero start with length zero.
+- `Constructor`: tag `6`, followed by type, constructor, slice start, and slice length.
+- References preserve the distinct `ctConst`/`ctData` tags and indices.
+- Environment cells preserve binder, reference tag/index, and previous-environment tag/index.
+- `None` and `Some(0)` remain distinct through `ctEnvNone` and `ctEnvSome(0)`.
+
+No `builtin-max(types,4)` exception was introduced. Constructor type/constructor bounds remain strict external DATA-cap premises rather than checks incorrectly relaxed by the model.
+
+### Unpack and observation
+
+The audit point on `dpUnpack` passes source inspection.
+
+`dpUnpack(C,L)` does **not** return the original `DPTables` argument. It reconstructs all four tables from the newly supplied lane term `L` by:
+
+- Reading node, field, env, and value counts from header lanes `3`, `4`, `5`, and `6`.
+- Dropping to data base `7` for nodes.
+- Dropping to `dpFieldsBase(C)`, `dpEnvBase(C)`, and `dpValuesBase(C)` for the other partitions.
+- Decoding each row from the dropped lane suffixes.
+
+`dpObserve` first packs the input, then `dpObservePacked`:
+
+- Retains the entire packed `CTLanes` value, including header, active rows, and inactive zero padding.
+- Derives `CTActive` from the packed header count lanes.
+- Uses `ctActive` only as the ordered four-Int physical-count carrier.
+- Rebuilds the decoded tables through `dpUnpack` from that same packed lane value.
+- Returns exactly the four observation fields represented by geometry, counts, padded lanes, and decoded tables, without a profile, case, or source-pin wrapper.
+
+This is a positive canonical inverse path only. `dpUnpack` is not approved as an arbitrary raw-image decoder, admission gate, canonicality checker, or security boundary.
+
+### Python port
+
+[data_ports.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/source/data_ports.py) is field-only within its declared contract:
+
+- It maps declared JSON fields into typed carriers.
+- It preserves caps order, table order, row order, variant distinctions, full integer values, and native Boolean values.
+- It performs no lane arithmetic, capacity-base calculation, row-lane encoding, evaluator work, expected reconstruction, or independent whole-image generation.
+- `port_input` keeps metadata and the source document separate from the `dpObserve` query.
+- `observation_document` only projects an already whole, strict-decoder-validated typed `DPObservation`.
+
+Outside declared positive inputs and that strict-decoder premise, the port makes no admission, validation, malformed-input, or security promise. That limitation is consistent with the requested scope.
+
+### Laws and tests
+
+The supplementary functions in [c6-positive-data-laws.k](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/source/c6-positive-data-laws.k) correctly express source-level predicates for inverse, extent, header counts, and inactive-zero padding. Their padding offsets use the same header, active-row, and capacity-base geometry as `dpPack`.
+
+They are not proved theorems, executed checks, or substitutes for the future independent whole four-field comparison.
+
+The six Python interface tests in [test_data_ports.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/tests/test_data_ports.py) are meaningful source-level interface tests for:
+
+- All seven variants and complete input retention.
+- Full 128-bit payload and native Boolean retention.
+- Raw empty-slice start retention.
+- `None` versus `Some(0)` and `Const` versus `Data`.
+- Cap-valid references beyond active prefixes without lookup.
+- Nine-cap order and exact four-table order.
+
+They remain **UNRUN**. No red, green, TDD-pass, or test-pass claim is made.
+
+## Mandatory positive-domain premises
+
+Source/API approval applies only where all of the following are externally established:
+
+1. Gate one is selected; this is a positive-domain model only.
+2. Each active count fits its relevant capacity.
+3. Host geometry, lengths, slice arithmetic, indices, and sums fit the target `usize` domain.
+4. Every mathematical lane satisfies `0 <= lane < 2^128`.
+5. The full U128 payload is preserved without modulus, limb truncation, float conversion, or string conversion.
+6. Reference indices satisfy the strict selected-capacity premises, using capacities rather than active counts.
+7. Environment binders and previous-environment indices satisfy their declared capacity premises.
+8. Slice lengths satisfy arity and field-slot premises; raw slice starts are retained even when length is zero.
+9. Constructor `type_id` and `ctor_id` satisfy strict DATA `max_types` and `max_constructors` caps, with no frame-style `max(types,4)` exception.
+10. The remaining five capacities are retained as input/domain data but do not alter DATA partition geometry.
+
+Cap-valid references may therefore point beyond active prefixes. The source correctly performs no membership lookup, dereference, reachability inference, or acyclicity inference.
+
+## Missing premises and non-claims
+
+The following are explicitly **missing, unobserved, or outside this review**, and must not be supplied by implication:
+
+- No K parse, typecheck, or kompile result exists yet.
+- Compiler warnings are unobserved.
+- The six Python tests and four supplementary K laws are unrun and unproved.
+- The private 2353-byte expected observation body was not supplied or read. Its hash identifies the prefrozen target but does not establish that the K model will equal it.
+- No actual compiled definition exists yet.
+- No actual compiled symbol, klabel, sort, arity, source-location, or membership map exists yet.
+- The declared 26-constructor registry plus temporary `dpObserve` render entry is not an actual compiled-label map.
+- No bare labels may be guessed, and no old 67- or 209-label map may be reused.
+- Full executable and JAR bodies were not individually supplied; only the existing tool, JAR, and builtin pin inventories were supplied.
+- The complete `domains.md` body was not supplied. The supplied K-EQUAL declaration excerpt and the pinned `domains.md` identity support compile eligibility only if Root revalidates the exact pin at dispatch.
+- Host `usize`, capacity, slice, arity, raw-lane, and related domain premises remain external; the K and Python sources do not prove them.
+- No Gate0, 129-bit derived-end, arbitrary-raw canonicality, hostile-input refusal, `Bounds`/`from_layout`, admission, StepInv, reachability, acyclicity, full-state, native, refinement, authentication, or EARS claim is established.
+
+## Exact-one compile eligibility
+
+The selected compile is the single `00-compile` phase in [PROPOSED-EXACT1-NEW-DATA-COMPILE.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/PROPOSED-EXACT1-NEW-DATA-COMPILE.json):
+
+- Main and syntax module: `SHERLOCK-C6-POSITIVE-PADDED-DATA-LAWS`.
+- Entry source: `c6-positive-data-laws.k`.
+- Compile closure: the laws, DATA model, DATA syntax, reused CT codec, and reused CT syntax files.
+- Backend: `haskell` with `--no-haskell-binary`.
+- No expected module.
+- No unit, frontend, renderer, reduction, print, runtime, old-compile, or prefix replay child is selected.
+- Existing K-EQUAL is imported from the pinned builtin domain; no new builtin or policy is created.
+
+### Mandatory dispatch leaves
+
+Root must satisfy all of the following:
+
+1. **Root-only selection:** Root alone performs currentness checks, creates the fresh phase state, and invokes the one compile. No other lane dispatches it.
+2. **Use only `F03.launch`:** Import the existing F03 module and call only `F03.launch(record, phase.argv, dict(phase.environment), phase.cwd, phase.environment["SHERLOCK_K_ATTEMPT_TOKEN"], 536870912)`. Do not execute F03’s old `--execute`/`main` attempt workflow.
+3. **Exactly one child:** One `F03.launch` invocation for the stated kompile argv. No retry, unchanged retry, alternate runner, cap increase, or in-flight modification after any failure.
+4. **Exact argv:** Preserve the pinned Java executable, JVM options, classpath wildcard, `org.kframework.main.Main -kompile`, laws file, Haskell backend, no-Haskell-binary flag, main/syntax modules, builtin include path, and output definition exactly as proposed.
+5. **Exact limits:** Retain the 30-second child wall limit, 3-second sweep, process-group/token containment, `RLIMIT_CORE=0`, `RLIMIT_FSIZE=512MiB`, umask `0o077`, JVM heap 512MiB, JVM stack 32MiB, and two active processors. No aggregate CPU, RSS, or disk cap is added.
+6. **Fresh phase state:** Use a fresh phase cwd, `home`, and `tmp` with the stated permissions. The cwd must be suitable for `F03.launch`’s exclusive creation of `stdout` and `stderr`; no pre-existing output files may collide with it. Preserve all streams, errors, scratch, and receipts.
+7. **Pre/post pinning:** Re-pin the complete source, test, SAFE, dependency, tool, JAR, and builtin inventories before and after. Hashes at dispatch establish current identity; they do not replace the body review recorded here.
+8. **Builtin closure check:** Revalidate the pinned `domains.md` and classpath membership at dispatch, including the already-declared K-EQUAL closure. Do not introduce a new builtin, declaration, or policy.
+9. **Pass determination:** A returned Python call or absence of an exception is not a pass. Root must inspect the mutated launch record for clean exit code `0`, non-timeout outcome, and no containment breach, then read the complete stdout and stderr and account for any JVM error file.
+10. **Product freeze:** On clean exit, freeze the exact generated kompiled membership and relevant product identities before making any later claim. The listed `definition.kore` product alone must not be treated as proof that the whole generated tree was inventoried.
+11. **Failure stop:** Any launch error, nonzero exit, signal, timeout, containment problem, unexpected warning issue requiring interpretation, product absence, or pin drift stops the operation. No unchanged retry is authorized.
+12. **Post-compile gate only:** After an actual successful compile, separately qualify all 26 DATA constructors plus the `dpObserve` entry against the actual Kore symbol/klabel, sort, arity, source, and location evidence. That qualification is not part of, and cannot be inferred from, this compile eligibility.
+
+## Runtime gap
+
+Runtime is **not eligible** from this review.
+
+[FUTURE-EXISTING-RUNTIME-DATA-CONTRACT.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/FUTURE-EXISTING-RUNTIME-DATA-CONTRACT.json) is intentionally nonselectable. The exact missing items are:
+
+- A successful new compiled definition.
+- Actual qualification of the 27-entry compiled-label map.
+- A designated-owner complete adaptation of the existing JSONv4 renderer, capture caller, strict decoder, field projection, and whole comparator.
+- A fresh complete source/API and exact-runtime-operation review after that adaptation exists.
+
+No fake runtime argv, file hash, compiled-label map, comparator, framework, guard, or authority may be created from this source review.
+
+## Final opinions
+
+**SOURCE/API: APPROVE**
+
+**EXACT1 COMPILE: ELIGIBLE** — one Root-dispatched compile only, under every mandatory leaf above.
+
+The future falsifiable semantic predicate remains exact equality of the complete original geometry, counts, whole capacity-padded lanes, and decoded tables against the independently prefrozen 2353-byte `a101bc…` observation after the complete actual and raw receipts are durably frozen. No compact-active-only, roundtrip-only, supplementary-law, schema-only, or profile-wrapped substitute is approved.
+
+The broader Sherlock goal and all unrelated gaps remain open.

@@ -1,0 +1,7 @@
+# Complete DATA first-compile diagnostic readback
+
+The retained compile exited0 in4.946s and produced15compiled files. It was not warning-free. The complete75,887-byte stderr (SHA25668fec7735b7e1fbecc6498a043dbfe3b6bfd2d55af5502772c499983b0527349) contains169Compiler warnings, all deprecated klabel attributes; no unused-variable/error/critical/info/unclassified diagnostic occurs. Every byte is partitioned and retained. Every source/location points at the indicated annotation and the rendered source text matches the current pinned source after whitespace-only renderer normalization. Remaining tails are only caret/whitespace.
+
+Per-file counts: {'c6-positive-data-laws.k': 6, 'c6-positive-data-syntax.k': 18, 'c6-positive-data.k': 28, 'c6-typed-root-codec.k': 51, 'c6-typed-root-syntax.k': 66}. The complete catalog retains all169labels, source locations and exact indicated lines; membership retains each original message/excerpt/caret/byte span/hash. No replacement of annotations or source change was performed.
+
+The source lane read all1,129rawstderr lines in three bounded nontruncated reads. Root's historical fullStreamsRootReadOwed/warningsUnadjudicated flags are not rewritten. Diagnostic reading/classification does not adjudicate equations, function coverage/termination, new raw labels, independent result equality, positive premise sufficiency, security/admission, native/refinement or EARS. Current semantic disposition remains UNADJUDICATED. No compile/retry/runtime/unit/provider/Git/canonical action and no private expected/actual body read occurred.
