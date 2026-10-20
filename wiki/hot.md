@@ -39,3 +39,8 @@ tags: [moriarty, consolidation, recursion]
 ## UPDATE017 source provenance navigation —2026-10-20
 
 [The atlas index](research/sherlock-circuit-atlas/index.md) now lists both UPDATE017 source summaries separately from the unchanged Muse concept and status. The earlier Root lint and scoped raw-path readback remain separate observations; no global lint-clean or new product/native/EARS claim follows.
+
+
+## Sherlock evidence layers —2026-10-20
+
+[The dated atlas engineering snapshot](research/sherlock-circuit-atlas/ENGINEERING-018-EVIDENCE-LAYERS.md) distinguishes current component/model/host/guard receipts from open SDK/native/recursive/target acceptance. Future concept prose remains designated Muse/Opus; the website is unpublished until full completion.

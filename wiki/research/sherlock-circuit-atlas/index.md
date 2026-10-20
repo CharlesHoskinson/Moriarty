@@ -35,3 +35,8 @@ Sol factual navigation: [verbatim author-time status](UPDATE-017-MUSE-ENGINEERIN
 ## Source summaries — UPDATE017
 
 Sol factual navigation: [Muse author source summary](../../sources/src-3a379ed0d342235e646f.md) and [later source-review status summary](../../sources/src-d46ae2224fc3fd5b82d6.md) retain the two portable source identities for UPDATE017. These source cards are provenance, not source/security/native acceptance.
+
+
+## Dated engineering snapshot — October20
+
+Sol factual navigation: [evidence layers](ENGINEERING-018-EVIDENCE-LAYERS.md) and [its source summary](../../sources/src-2188aa1edad38f4434e4.md) separate current component/formal/host/guard observations from proof acceptance. This is engineering context for the next designated Muse/Opus concept author, not Sol creative copy.
