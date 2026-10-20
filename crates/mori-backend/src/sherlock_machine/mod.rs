@@ -371,3 +371,35 @@ mod b_scalar_completion_normal_tests;
 mod b_return_right_completion_normal_tests;
 #[cfg(test)]
 mod b_admin_publication_normal_tests;
+
+pub mod c6_a135_push;
+pub mod c6_data_canonical;
+pub mod c6_meta_canonical;
+pub mod c6_program_context_canonical;
+pub mod c6_push_step;
+pub use c6_a135_push::{
+    c6_lanes_to_immediates, c6_push_family, emit_c6_push_observed_operands, C6PushOperands,
+    C6_A135_FAMILY, C6_A140_FAMILY,
+};
+pub use c6_data_canonical::{
+    c6_data_geometry, emit_c6_data_canonical_block, C6DataCanonicalBlock,
+    C6DataCanonicalEmitter, C6DataCanonicalError, C6DataCanonicalInputs, C6DataGeometry,
+};
+pub use c6_meta_canonical::{
+    emit_c6_meta_canonical_block, C6MetaCanonicalBlock, C6MetaCanonicalEmitter,
+    C6MetaCanonicalError, C6MetaCanonicalInputs,
+};
+pub use c6_program_context_canonical::{
+    emit_c6_program_context_canonical_block, emit_c6_program_context_ctx_binding_block,
+    C6ProgramContextCanonicalBlock, C6ProgramContextCanonicalEmitter,
+    C6ProgramContextCanonicalError, C6ProgramContextCanonicalInputs,
+    C6ProgramContextCtxBindingInputs,
+};
+pub use c6_push_step::{
+    check_c6_push_step_circuit, decode_padded_state_to_owned,
+    emit_c6_push_step_block, encode_owned_state_to_padded, meta_admission_bounds_frames_offset,
+    witness_from_host_pair, witness_from_owner_step, C6PaddedCarrierGeometry,
+    C6PaddedStateLanes, C6PushHostPrefixLanes, C6PushStatementBindingMode, C6PushStepBlock,
+    C6PushStepCircuit, C6PushStepError, C6PushStepInputs,
+    C6PushStepWitness, C6_PADDED_CARRIER_VERSION,
+};
