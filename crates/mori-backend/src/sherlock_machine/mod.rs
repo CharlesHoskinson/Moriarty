@@ -376,7 +376,9 @@ pub mod c6_a135_push;
 pub mod c6_data_canonical;
 pub mod c6_meta_canonical;
 pub mod c6_program_context_canonical;
+pub mod c6_helper_canonical;
 pub mod c6_push_step;
+pub mod c6_scalar_failure_step;
 pub use c6_a135_push::{
     c6_lanes_to_immediates, c6_push_family, emit_c6_push_observed_operands, C6PushOperands,
     C6_A135_FAMILY, C6_A140_FAMILY,
@@ -403,4 +405,15 @@ pub use c6_push_step::{
     C6PaddedStateLanes, C6PushFamilyParams, C6PushHostPrefixLanes, C6PushStatementBindingMode,
     C6PushStepBlock, C6PushStepCircuit, C6PushStepError, C6PushStepInputs,
     C6PushStepWitness, C6_PADDED_CARRIER_VERSION,
+};
+pub use c6_helper_canonical::{
+    c6_helper_geometry, emit_c6_helper_canonical_block, C6HelperCanonicalBlock,
+    C6HelperCanonicalEmitter, C6HelperCanonicalError, C6HelperCanonicalInputs, C6HelperGeometry,
+};
+pub use c6_scalar_failure_step::{
+    build_c6_scalar_failure_step_circuit, check_c6_scalar_failure_step_circuit,
+    emit_c6_scalar_failure_step_block, record_scalar_failure_step, witness_from_host_pair as witness_scalar_failure_from_host_pair,
+    witness_from_owner_record as witness_scalar_failure_from_owner_record,
+    C6ScalarFailureStepBlock, C6ScalarFailureStepCircuit, C6ScalarFailureStepEmitter,
+    C6ScalarFailureStepError, C6ScalarFailureStepInputs, C6ScalarFailureStepWitness,
 };
