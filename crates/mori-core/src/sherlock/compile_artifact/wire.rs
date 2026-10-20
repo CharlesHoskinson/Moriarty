@@ -504,6 +504,15 @@ impl OwnerWire for HostViolation {
 impl OwnerWire for HostViolationKind {
     fn owner_wire(&self) -> Value {
         match self {
+            Self::FinancialUnsupportedBeyondGenesis { op } => match op {
+                FinUnsupportedOp::Step => json!("FinancialUnsupportedBeyondGenesis.Step"),
+                FinUnsupportedOp::Run => json!("FinancialUnsupportedBeyondGenesis.Run"),
+                FinUnsupportedOp::Select => json!("FinancialUnsupportedBeyondGenesis.Select"),
+                FinUnsupportedOp::Capture => json!("FinancialUnsupportedBeyondGenesis.Capture"),
+                FinUnsupportedOp::Codec => json!("FinancialUnsupportedBeyondGenesis.Codec"),
+                FinUnsupportedOp::ObservePure => json!("FinancialUnsupportedBeyondGenesis.ObservePure"),
+                FinUnsupportedOp::StepInv => json!("FinancialUnsupportedBeyondGenesis.StepInv"),
+            },
             Self::StepInvViolated => json!("StepInvViolated"),
             Self::SelectUndefined => json!("SelectUndefined"),
             Self::ReadOutOfBounds => json!("ReadOutOfBounds"),

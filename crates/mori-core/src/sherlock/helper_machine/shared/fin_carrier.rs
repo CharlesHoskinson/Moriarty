@@ -678,6 +678,52 @@ impl FinPreparedStagedSource {
     }
 }
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FinInputBinding {
+    pub name: String,
+    pub ty: Type,
+    pub value: Value,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FinGenesisRequest {
+    pub action: String,
+    pub scenario: crate::Scenario,
+    pub cap: Option<UInt>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum FinGenesisError {
+    UnknownAction(String),
+    PlanActionMismatch,
+    NotFinancialAdmission,
+    Scenario(crate::Error),
+    CapExceeded { plan_total: u128, cap: u128 },
+    Bind(FinBindError),
+    CommittedBeforeMismatch,
+    GenesisInvalid,
+}
+impl From<FinBindError> for FinGenesisError {
+    fn from(e: FinBindError) -> Self { Self::Bind(e) }
+}
+
+/// Financial genesis uses the actual run tooling for R3/R4/R5 refusal and
+/// FinGenesisError for source/scenario/cap/invalid-genesis refusal. Neither
+/// is converted into a fabricated image or outcome. Debug is manual so the
+/// non-Debug Tooling payload is named without inventing a Tooling format.
+pub enum FinRunError {
+    Genesis(FinGenesisError),
+    Tooling(super::Tooling),
+}
+impl std::fmt::Debug for FinRunError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Genesis(e) => f.debug_tuple("Genesis").field(e).finish(),
+            Self::Tooling(_) => f.write_str("Tooling(..)"),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FinBalanceRow { pub asset: FinAssetRowId, pub account: String, pub amount: u128 }
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FinLiabilityRow { pub name: String, pub asset: FinAssetRowId,

@@ -43,8 +43,8 @@ use super::c6_phys_state::{
 use super::complete_observation::{capture, AdmissionSnapshot, HostSnapshot, ImageSnapshot, LayoutSnapshot, WidthsSnapshot};
 use super::shared::host_implied_prefix::SegBase;
 use super::shared::{
-    Admitted, BoundsC, DigestC, ExtCapacitiesC, FinanceInput, GrammarDomain, HostViolation, IdentityC,
-    LayoutCapacitiesC, LayoutSchemaC, MachineImage, RunIdC, RunIntC,
+    Admitted, BoundsC, DigestC, ExtCapacitiesC, FinanceInput, FinUnsupportedOp, GrammarDomain, HostViolation,
+    HostViolationKind, IdentityC, LayoutCapacitiesC, LayoutSchemaC, MachineImage, RunIdC, RunIntC,
 };
 use super::witness_plan::{
     construct_plan_for, evaluate_uncached, LifetimeUnit, WitnessEvaluation, WitnessFailure, WitnessPlan,
@@ -496,6 +496,20 @@ pub enum C6HostCaptureError { Observation(HostViolation), RetainedLayout(C6State
 /// Fixed-owner capture (AB first) of a bound pair with its original retained layout.
 pub fn capture_host(admitted: &Admitted, image: &MachineImage, retained: &LayoutSchemaC, budgets: C6CodecBudgets,
     limits: &C6HostLimits) -> Result<C6HostCapture, C6HostCaptureError> {
+    match super::shared::owner_host::financial_presence(admitted, image) {
+        Err(error) => return Err(C6HostCaptureError::Observation(error)),
+        Ok(true) => {
+            return Err(C6HostCaptureError::Observation(HostViolation {
+                kind: HostViolationKind::FinancialUnsupportedBeyondGenesis {
+                    op: FinUnsupportedOp::Codec,
+                },
+                clause: None,
+                rule: None,
+                locator: Some("financial C6 host codec beyond genesis".to_string()),
+            }));
+        }
+        Ok(false) => {}
+    }
     let host = capture(admitted, image).map_err(C6HostCaptureError::Observation)?;
     retained_layout_agrees_with_host(retained, &host).map_err(C6HostCaptureError::RetainedLayout)?;
     let config = C6HostConfig::from_retained_layout(retained, budgets);

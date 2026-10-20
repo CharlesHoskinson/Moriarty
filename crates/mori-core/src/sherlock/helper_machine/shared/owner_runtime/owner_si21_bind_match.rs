@@ -91,7 +91,7 @@ pub(super) fn si21_bind_result_ok(pre: &PreImage, r: &HelperResultC) -> Result<b
 }
 enum MatchDen { NoMatch, Matched(Vec<(usize, RefC)>) }
 fn match_denotation(pre: &PreImage, pat: &PatternRowC, scrutinee: &RefC) -> Result<MatchDen, HostViolation> {
-    let view = &pre.admitted.body.view;
+    let view = super::pure_view(pre)?;
     let mut stack: Vec<(PatternRowC, RefC)> = vec![(*pat, *scrutinee)];
     let mut bindings: Vec<(usize, RefC)> = Vec::new();
     let mut budget = view.patterns.len().saturating_add(1);

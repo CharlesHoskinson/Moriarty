@@ -52,6 +52,8 @@ pub fn host_owner_engine() -> impl OwnerEngine {
         check_program_view: owner_prepare::check_program_view,
         admit: owner_prepare::admit,
         admit_run: owner_prepare::admit_run,
+            admit_fin: owner_prepare::admit_fin,
+            admit_fin_run: owner_prepare::admit_fin_run,
     })
 }
 
@@ -65,6 +67,8 @@ pub fn host_owner_engine_with_word_layout(
             check_program_view: owner_prepare::check_program_view,
             admit: owner_prepare::admit,
             admit_run: owner_prepare::admit_run,
+            admit_fin: owner_prepare::admit_fin,
+            admit_fin_run: owner_prepare::admit_fin_run,
         },
     )
 }
@@ -143,6 +147,16 @@ pub fn observe_bound_image<'a>(admitted: &'a Admitted, img: &'a MachineImage)
     -> Result<HostObservation<'a>, HostViolation> {
     // AB first: a mismatch returns the SI-01 HostViolation before any read below.
     let pre = PreImage::bind(admitted, img)?;
+    if img.fin.is_some() || admitted.body.fin.is_some() {
+        return Err(HostViolation {
+            kind: HostViolationKind::FinancialUnsupportedBeyondGenesis {
+                op: FinUnsupportedOp::ObservePure,
+            },
+            clause: None,
+            rule: None,
+            locator: Some("financial beyond genesis".to_string()),
+        });
+    }
     // reg.segBase: only the owner helper over the bound pair; Err refuses the record.
     let seg_base = implied_seg_base(&pre)?;
     let PreImage { admitted, img } = pre;
@@ -168,6 +182,147 @@ pub fn observe_bound_image<'a>(admitted: &'a Admitted, img: &'a MachineImage)
         data: img.data.as_slice(), data_fields: img.data_fields.as_slice(),
         env: img.env.as_slice(), frames: img.frames.as_slice(),
         tasks: img.tasks.as_slice(), value_slots: img.value_slots.as_slice(), _sealed: () };
+    let view = match &body.view {
+        Some(view) => view,
+        None => return Err(HostViolation {
+            kind: HostViolationKind::FinancialUnsupportedBeyondGenesis {
+                op: FinUnsupportedOp::ObservePure,
+            },
+            clause: None,
+            rule: None,
+            locator: Some("pure view absent".to_string()),
+        }),
+    };
     Ok(HostObservation { admission: AdmissionObservation { identity: &body.identity,
-        bounds: &body.bounds, view: &body.view, layout, _sealed: () }, image, _sealed: () })
+        bounds: &body.bounds, view, layout, _sealed: () }, image, _sealed: () })
+}
+
+#[derive(Clone, Copy)]
+pub struct FinAdmissionObservation<'a> {
+    pub prepared: &'a super::fin_carrier::FinPreparedStagedSource,
+    pub identity: &'a IdentityC,
+    pub bounds: &'a BoundsC,
+    pub layout: &'a LayoutSchemaC,
+    _sealed: (),
+}
+
+#[derive(Clone, Copy)]
+pub struct FinImageObservation<'a> {
+    pub run_id: &'a RunIdC,
+    pub control: &'a ControlC,
+    pub control_origin: usize,
+    pub env_root: EnvRootC,
+    pub stack_limit: usize,
+    pub outcome: &'a OutcomeC,
+    pub initial_fuel: u128,
+    pub remaining_work: u128,
+    pub consumed_work: u128,
+    pub helper_work: u128,
+    pub helper_visits: u128,
+    pub reference_cursor: u128,
+    pub alloc: &'a AllocCounters,
+    pub active: &'a ActiveLengths,
+    pub seg_base: SegBase,
+    pub helper: Option<&'a HelperControlC>,
+    pub result: Option<&'a HelperResultC>,
+    pub data: &'a [RawDataRow],
+    pub data_fields: &'a [RefC],
+    pub env: &'a [EnvCellC],
+    pub frames: &'a [FrameRowC],
+    pub tasks: &'a [HelperTaskC],
+    pub value_slots: &'a [RefC],
+    pub state: &'a FinImageState,
+    _sealed: (),
+}
+
+#[derive(Clone, Copy)]
+pub struct FinBoundObservation<'a> {
+    pub admission: FinAdmissionObservation<'a>,
+    pub image: FinImageObservation<'a>,
+    _sealed: (),
+}
+
+pub fn observe_fin_bound_image<'a>(
+    admitted: &'a Admitted,
+    img: &'a MachineImage,
+) -> Result<FinBoundObservation<'a>, HostViolation> {
+    // AB first, exactly as the pure observation path.
+    let pre = PreImage::bind(admitted, img)?;
+    let seg_base = implied_seg_base(&pre)?;
+    let PreImage { admitted, img } = pre;
+    let (Some(prepared), Some(state)) = (&admitted.body.fin, &img.fin) else {
+        return Err(HostViolation {
+            kind: HostViolationKind::FinancialUnsupportedBeyondGenesis {
+                op: FinUnsupportedOp::ObservePure,
+            },
+            clause: None,
+            rule: None,
+            locator: Some("financial observation requires financial genesis".to_string()),
+        });
+    };
+    Ok(FinBoundObservation {
+        admission: FinAdmissionObservation {
+            prepared,
+            identity: &admitted.body.identity,
+            bounds: &admitted.body.bounds,
+            layout: &admitted.body.layout,
+            _sealed: (),
+        },
+        image: FinImageObservation {
+            run_id: &*img.run_id,
+            control: &img.control,
+            control_origin: img.control_origin,
+            env_root: img.env_root,
+            stack_limit: img.stack_limit,
+            outcome: &img.outcome,
+            initial_fuel: img.initial_fuel,
+            remaining_work: img.remaining_work,
+            consumed_work: img.consumed_work,
+            helper_work: img.helper_work,
+            helper_visits: img.helper_visits,
+            reference_cursor: img.reference_cursor,
+            alloc: &img.alloc,
+            active: &img.active,
+            seg_base,
+            helper: img.helper.as_ref(),
+            result: img.result.as_ref(),
+            data: img.data.as_slice(),
+            data_fields: img.data_fields.as_slice(),
+            env: img.env.as_slice(),
+            frames: img.frames.as_slice(),
+            tasks: img.tasks.as_slice(),
+            value_slots: img.value_slots.as_slice(),
+            state,
+            _sealed: (),
+        },
+        _sealed: (),
+    })
+}
+
+/// AB-bound borrowed financial-presence check. `PreImage::bind` is the only
+/// read before the result; no program, plan, snapshot, or image is cloned.
+/// Either financial side makes the pair a financial pair for the pure
+/// Capture/Codec refusals, preserving AB failure precedence.
+pub fn financial_presence<'a>(
+    admitted: &'a Admitted,
+    img: &'a MachineImage,
+) -> Result<bool, HostViolation> {
+    let pre = PreImage::bind(admitted, img)?;
+    Ok(pre.admitted.body.fin.is_some() || pre.img.fin.is_some())
+}
+
+pub fn admit_fin_genesis_image(
+    prepared: super::fin_carrier::FinPreparedStagedSource,
+    bounds: &BoundsC,
+    layout: &LayoutSchemaC,
+    fuel: &RunIntC,
+    stack_limit: &RunIntC,
+    request: &super::fin_carrier::FinGenesisRequest,
+) -> Result<(Admitted, MachineImage), super::fin_carrier::FinRunError> {
+    let engine = host_owner_engine();
+    let admitted = engine
+        .admit_fin(prepared, bounds, layout)
+        .map_err(super::fin_carrier::FinRunError::Tooling)?;
+    let image = engine.admit_fin_run(&admitted, fuel, stack_limit, request)?;
+    Ok((admitted, image))
 }
