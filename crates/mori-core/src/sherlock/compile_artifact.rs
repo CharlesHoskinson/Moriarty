@@ -1,7 +1,7 @@
 //! Selected Core scalar or explicit dedicated-draft HostOnly B preparation.
 //! Source candidate only: no constraint plan, native export or target execution.
-//! Both source routes use the existing B owner. Only the unchanged Core route
-//! has an explicit observe branch; draft preparation never executes B steps.
+//! Source routes use the existing B owner. Core scalar and body-typed nominal
+//! support explicit observation; dedicated draft compilation remains compile-only.
 use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::{json, Value};

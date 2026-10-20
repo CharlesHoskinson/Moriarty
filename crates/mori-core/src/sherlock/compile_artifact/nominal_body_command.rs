@@ -1,6 +1,13 @@
 //! Explicit body-typed nominal command over the actual public owner wrapper.
 //! Structural nominal compilation remains its separate unchanged command.
+use serde::Serialize;
 use serde_json::{json, Value};
+use super::draft_simulation_report::ExecutionReport;
+use super::nominal_body_compile::NominalBodyCompileArtifact;
+use crate::sherlock::helper_machine::core_action_consumer::{CompletedRun, ConsumerError, EventForwarding};
+use crate::sherlock::helper_machine::resource_report::ResourceReport;
+use crate::sherlock::helper_machine::shared::{OwnerEngine, StepEventC};
+use crate::sherlock::helper_machine::shared::owner_host::host_owner_engine;
 use super::{CompileFailure, nominal_command::NominalConfig, wire::{self, OwnerWire}};
 use super::draft_report::{SourceLocation, SourceSpan};
 use super::nominal_body_compile::{
@@ -75,6 +82,13 @@ fn program_failure(failure: NominalBodyCompileFailure) -> CompileFailure {
 pub fn compile(source: &str, config_source: &str, target_source: &str)
     -> Result<Value, CompileFailure>
 {
+    let (artifact, config, target) = prepare(source, config_source, target_source)?;
+    project_preparation(&artifact, config, target, source, config_source, target_source)
+}
+
+fn prepare(source: &str, config_source: &str, target_source: &str)
+    -> Result<(NominalBodyCompileArtifact, NominalConfig, Value), CompileFailure>
+{
     let config_json = crate::json::parse(config_source).map_err(|e| CompileFailure::core("config", e))?;
     let config: NominalConfig = serde_json::from_value(config_json)
         .map_err(|e| CompileFailure::input("config", e.to_string()))?;
@@ -82,6 +96,13 @@ pub fn compile(source: &str, config_source: &str, target_source: &str)
     let artifact = compile_nominal_source_host_bounded(
         source, config.preprocessing.parser_budget(), config.owner(), None,
     ).map_err(program_failure)?;
+    Ok((artifact, config, target))
+}
+
+fn project_preparation(
+    artifact: &NominalBodyCompileArtifact, config: NominalConfig, target: Value,
+    source: &str, config_source: &str, target_source: &str,
+) -> Result<Value, CompileFailure> {
     let report = artifact.report()
         .map_err(|e| diagnostic("observation", e.owner_wire(), None, "completed"))?;
     Ok(json!({
@@ -103,4 +124,84 @@ pub fn compile(source: &str, config_source: &str, target_source: &str)
         "evidence": {"source_preparation": "performed", "host_observation": "admitted-tables-only",
             "native": "unrun", "target": "unrun", "acceptance": "unestablished"},
     }))
+}
+
+
+/// Output-only complete preparation and actual owner execution. Private fields
+/// prevent an unchecked public constructor; this is not an import/run codec.
+#[derive(Serialize)]
+pub struct NominalHostObservation {
+    format: &'static str,
+    qualification: &'static str,
+    preparation: Value,
+    execution: ExecutionReport,
+}
+
+impl NominalHostObservation {
+    /// A caller's later serialization/publication error retains actual runtime
+    /// completion/count plus completed body checking. No shared report is changed.
+    pub fn failure(&self, stage: &'static str, message: impl Into<String>) -> CompileFailure {
+        CompileFailure {
+            stage,
+            actual_error: json!({"message": message.into(),
+                "source_profile": NOMINAL_BODY_TYPED_PROFILE,
+                "body_typechecking": {"status": "completed", "judgments": ADOPTED_NOMINAL_JUDGMENTS}}),
+            evaluation_performed: self.execution.evaluation_performed,
+            events_forwarded: self.execution.events_forwarded.clone(),
+            completed: self.execution.completed,
+        }
+    }
+}
+
+// Preserve the full existing consumer payload/flags and add only separately
+// completed source typing. Runtime errors have no source-local span.
+fn runtime_failure(mut failure: CompileFailure) -> CompileFailure {
+    failure.actual_error = json!({"source_profile": NOMINAL_BODY_TYPED_PROFILE,
+        "error": failure.actual_error, "span": null,
+        "body_typechecking": {"status": "completed", "judgments": ADOPTED_NOMINAL_JUDGMENTS}});
+    failure
+}
+
+/// General closed nominal source execution through the same actual checked pair.
+///
+/// Preparation/typing/admission/genesis and the complete compile-only projection
+/// happen once before moving that exact pair to the existing owner. No reparse,
+/// second admission, owner guard/default change, literal replacement or event
+/// vector. A returned Rejected/Exhausted summary is a real completed owner run.
+/// H1, serialization allocation, correspondence/native/target evidence remain
+/// separate; the target descriptor invokes no backend. Public use is permissionless.
+pub fn observe(source: &str, config_source: &str, target_source: &str)
+    -> Result<NominalHostObservation, CompileFailure>
+{
+    let (artifact, config, target) = prepare(source, config_source, target_source)?;
+    let preparation = project_preparation(&artifact, config, target, source, config_source, target_source)?;
+    // The projection owns its JSON values, not a cloned admitted pair. Its report
+    // borrow has ended before consuming these existing ownership-transfer APIs.
+    let (_, _, owner) = artifact.into_parts();
+    let (admitted, mut image, _) = owner.into_parts();
+    let mut events = EventForwarding::default();
+    let result = {
+        let mut sink = |_event: &StepEventC| { events.note(); };
+        host_owner_engine().run(&admitted, &mut image, &mut sink)
+    };
+    let summary = result.map_err(|violation| runtime_failure(CompileFailure::consumer(
+        ConsumerError::Run { violation, events_forwarded: events.forwarded },
+    )))?;
+    let completed = CompletedRun { admitted, image, summary, events_forwarded: events.forwarded };
+    let actual = completed.observe().map_err(|error| runtime_failure(CompileFailure::consumer(error)))?;
+    let execution = ExecutionReport {
+        evaluation_performed: true,
+        completed: true,
+        summary: completed.summary.owner_wire(),
+        events_forwarded: completed.events_forwarded.to_string(),
+        event_capture: "not-retained",
+        image: wire::image(&actual.image),
+        resource_report: ResourceReport::from_owner(&actual, &completed.summary),
+    };
+    Ok(NominalHostObservation {
+        format: "sherlock-nominal-host-observation/1",
+        qualification: "HostOnly nominal body-typed owner execution; no proof/native/target qualification",
+        preparation,
+        execution,
+    })
 }
