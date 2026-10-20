@@ -1,0 +1,19 @@
+APPROVE
+
+The declared mapping in [PUBLIC-GENERAL-NORMAL-APPLIED-EVENT-ABI.proposed.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-EnvGetCell-EnvGetExit-owner-positive-20261020/general-current-normal-Applied-event-ABI07/revision02-complete28-and-faithfulness-review/SAFE-proposed/PUBLIC-GENERAL-NORMAL-APPLIED-EVENT-ABI.proposed.json) faithfully transcribes the normal `Applied` event construction in [owner_runtime.rs](/home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/crates/mori-core/src/sherlock/helper_machine/shared/owner_runtime.rs).
+
+Key checks against the complete inline production source:
+
+- All 28 `StepEventC` fields are present, in the construction order used by `build_event`, with no invented field.
+- `site` is `Some(owner_site(pre))` from the pre-image. The Eval, Return-frame, Push, Invoke, Enter, Bound, Cases, CaseResult, Prim, and Materialize mappings match. `Error` produces a selection error, not a fabricated event site.
+- `helper_kind` priority is exact: live pre-helper, then post-helper, then `result_plan = helperPlan(owner_site(pre), pre)` when a staged pre-result exists, then the selected helper kind only for HelperEnter, HelperVisit, HelperExit, HelperFail, or Bookkeeping under `Applied`. This correctly preserves a staged LegacyComplete helper-plan result even though `Selected.helper_kind` itself is `None` for LegacyComplete.
+- The declared `helperPlan` table matches `owner_helper_plan`, including RetRight operator dependence, RetCtorFields `checked` dependence, Enter requiring `function: Some(_)`, and Cases distinguishing Plan from Match by the origin expression’s Match plan and nonempty arms.
+- `origin_reference_cursor` priority is exact for normal Applied rows: pre-helper common cursor, then post-helper common cursor, then the pre-image `reference_cursor` only when a staged pre-result exists. The refused-entry exception is correctly excluded from this Applied-only declaration.
+- `result_tag` correctly uses post-result for Applied HelperExit/HelperFail, pre-result for Applied LegacyComplete, and `None` otherwise. All 19 tag names match `result_tag`.
+- Helper phase and cursor mappings match, including Tri phases, Scalar 0/1/2, EnvGet/EnvPut Option preservation and the `Some(0)` versus `None` distinction, Validate/Equal using the corresponding state’s task length, Match widening `field_idx`, and Plan using `node`.
+- Charge and identity fields match: Applied work is 1, helper work follows `helper_eligible = event_kind != LegacyComplete`, visits copy `Selected.helper_visits`, reference-cursor delta is 1 only for Applied LegacyComplete, allocation deltas and value-slot writes copy the validated plan, and `exhausted_kind` is `None`.
+- `step_id.ordinal` is the before-state `consumed_work`: `owner_step` charges first, and `owner_apply_validated` computes the snapshotted charged value minus 1. The run ID is the whole post-image run ID, unchanged by the normal row.
+- Depth and task cursors use the raw pre/post frame and task lengths independently. Source expression is the pre-image `control_origin`; source occurrence copies that occurrence row’s owner/function fields and exact ordered path slice.
+- Outcome tag and payload are the complete post-image outcome, and boundary is `None` only for Running and Terminal otherwise, with no reinterpretation from helper or control errors.
+
+No mismatch or true missing premise was found within the stated normal-Applied scope.

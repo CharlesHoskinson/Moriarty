@@ -1,0 +1,48 @@
+## Verdict: APPROVE
+
+Top finding: the proposed declaration contract faithfully describes the ordinary DedicatedSorts factory route and the resulting canonical `ProgramView` mapping, within its stated conditional scope.
+
+This approval is only for the declaration contract. It is not a vote that any selected program was admitted, reached, executed, or validated.
+
+### Contract assessment
+
+- **Ordinary factory route — faithful.** `host_owner_engine` constructs `CheckedOwnerEngine` with `PrepareDeps.prepare_core = owner_prepare::prepare_core`, together with the corresponding `check_program_view`, `admit`, and `admit_run`. The `OwnerEngine` implementation delegates `admit` to that configured function. The contract correctly excludes the generic extension builder, compiler source path, word-layout engine, and arbitrary `ProgramView` admission.
+
+- **All eleven extra vectors — empty.** `prepare_core` constructs `pattern_children`, `types`, `type_args`, `constructors`, `ctor_fields`, `decl_param_counts`, `decl_ctor_counts`, `decl_templates`, `plan_nodes`, `plan_cases`, and `field_paths` as empty vectors. No builtin rows are inserted into those vectors.
+
+- **Builtin sort IDs — distinct from emitted tables.** `UInt = 0`, `Bool = 1`, `List = 2`, and `Tree = 3` are `TypeIdC` constants used by `from_source_sort`. They are not materialized `TypeRowC` or constructor rows. In dedicated validation, `is_generic = false` makes the validator use four implicit builtin types even though `types` remains empty.
+
+- **Sorted names — faithful.** `collect_names` accumulates distinct names in a Rust `BTreeSet<&str>` and converts its iteration order into the final `Vec<String>`. That gives strict Rust `str` ordering. Function names, parameters, `Var`, `Let` binders, `Call` names, and flat pattern binders are included. Equal text shares one `NameId`; there is no alpha-renaming. Capacity checks occur when a distinct name is first encountered, so successful mapping remains conditional on those checks.
+
+- **C1–C6 ordering and rows — faithful.**
+  - C1 assigns the entry subtree first in semantic preorder, beginning at `ExprId 0`, followed by function bodies in source declaration order.
+  - C1 child order is `Let: value, body`; `Binary: left, right`; `Unary: operand`; `If: cond, then, else`; `Call` arguments in source order; and `Match: scrutinee`, then arm bodies in source order.
+  - C2 emits only `Call` argument IDs into `children`.
+  - C3 emits arms and flat patterns in `ExprId` order and source arm order. No wildcard, nested constructor pattern, or `pattern_children` row is emitted by this Core grammar.
+  - C4 creates one occurrence per expression, preserves entry/function ownership, derives root-to-leaf paths from parent links, and appends those paths in occurrence order.
+  - C5 preserves function and parameter source order and maps parameter and return sorts through the fixed builtin `TypeIdC` values.
+  - C6 scans literals in `ExprId` order and performs a fresh child-before-parent expansion without interning or deduplication. List and Tree emission order, field order, returned literal-root rewriting, and `marker_free` propagation match the supplied source. Negative and above-`u128` integers both become `U128OutOfRange`.
+
+- **Empty-slice normalization — faithful.** `SliceC::normalized(start, len)` produces `start = 0, len = 0` for empty slices and otherwise retains the actual append start. This covers call arguments, match arms, occurrence paths, function parameters, and the corresponding empty cases described in the contract.
+
+- **Complete field coverage.** The declared 23 `ProgramView` fields match the carrier definition: entry, expressions, occurrences, occurrence paths, children, functions, parameters, arms, patterns, the eleven extra vectors, constants, constant fields, and names.
+
+- **Validation-source link — faithful as a proposed correspondence.** Ordinary `admit` runs `prepare_core` and then `check_program_view`. For dedicated views, the validator reconstructs Core in V8, re-prepares it, and compares the full view through `views_equal`, including names, paths, constants, marker flags, slices, and all eleven extra vectors. This is a source-derived correspondence premise, not proof that a particular input passed validation.
+
+- **Revision scope.** The inverse catalog identifies exactly seven changed JSON leaves, all under rule `source` locators. The semantic rule text and general mapping are unchanged in the supplied revision.
+
+### Remaining premise gaps
+
+1. **No successful preparation is established.** Capacity, bounds, layout, width, and other admission gates remain conditions. The contract correctly treats successful source preparation as a premise.
+
+2. **No selected-program evidence is included.** There is no actual `CoreProgram`, populated `ProgramView`, admitted body, genesis prefix, event sequence, afterstate, allocation counter, or execution result.
+
+3. **Admission and reachability remain open.** The contract does not establish `admit`, `admit_run`, reachability, transition comparison, guards, refusal policies, StepInv, physical/native behavior, clock equality, global refinement, or whole-EARS claims.
+
+4. **Generic validation is outside the supplied closure.** The generic branch delegates to `check_program_view_ext`; those callees were not supplied or reviewed here. The contract correctly excludes that route.
+
+5. **Hash values were not treated as approval evidence.** The decision above rests on the inline semantic source and contract text. Under the no-tools instruction, filesystem identity, byte equality, and hash recomputation remain unexecuted premises.
+
+6. **V8 validation is view-level, not original-source identity.** In particular, negative and above-`u128` integer classes collapse to the same `U128OutOfRange` constant row, so re-preparation compares the canonical view rather than recovering that original distinction.
+
+Subject to those explicit boundaries, the declaration contract is approved for Root disposition.
