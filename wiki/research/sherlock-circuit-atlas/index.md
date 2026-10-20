@@ -47,3 +47,10 @@ Sol factual navigation: [evidence layers](ENGINEERING-018-EVIDENCE-LAYERS.md) an
 - [UPDATE-018 — Math, Guards and Execution Layers](UPDATE-018-MATH-GUARDS-AND-EXECUTION-LAYERS.md) — the completed Sherlock interpreter on one cumulative board: typed values seated in bounded records, names held inside their fenced yards, a single step joining before, event and after, guards posted at the execution layers, and the whole machine running as one connected system. Concept proposal, dated 2026-10-20; engineering status is kept separate from the visitor copy.
 
 Sol factual navigation: [dated Muse engineering status](UPDATE-018-MUSE-ENGINEERING-STATUS.md), [source summary](../../sources/src-67304c4a1660d522d9a0.md), and [authorship/provenance](provenance/update-018-authorship.json). The chapter describes the future finished interpreter; it is not a current native/proof/target result. The website remains unpublished until full completion.
+
+
+## UPDATE019 — designated author concept continuation
+
+- [UPDATE-019 — Checked Reads and Owner Lookup](UPDATE-019-CHECKED-READS-AND-OWNER-LOOKUP.md) — at the finished interpreter's reading desk: a kind bit and index select one row inside an active prefix, the tagged row lights only its own payload and holds the rest at zero, a saved name is followed to its cell and its held value returned, and the full checking trace is kept distinct from the flattened view it exports. Concept proposal, dated 2026-10-20; engineering status is kept separate from the visitor copy.
+
+Sol factual navigation: [dated Muse engineering status](UPDATE-019-MUSE-ENGINEERING-STATUS.md), [source summary](../../sources/src-22ee37d52f566663f20e.md), and [authorship/provenance](provenance/update-019-authorship.json). The chapter describes the future finished interpreter; it is not a current native/proof/target result. The website remains unpublished until full completion.
