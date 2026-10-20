@@ -198,6 +198,15 @@ implementation. Product checks remain unrun in the source-only proposal.
 ## Testing
 
 - Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
+- The finite `mcp_check_stdio` target compares complete JSON-RPC transcripts
+  through the public `mori mcp` binary with manually frozen literal reports,
+  instead of insta snapshots. Each source assertion includes the complete
+  `.mori` input. It checks protocol dispatch, report preservation, exits and
+  stdio; it runs no agreement and establishes no native or ledger result.
+  Its additive Core/3 accepted case copies an independently frozen conditional
+  check report and exact source; the RPC wrapper remains source-author specified.
+  The Core/3 typed-refusal case asserts only source-profile metadata and supplies
+  no complete error golden.
 - Test programs shared by several crates live in `crates/fixtures/`, which is
   excluded from the workspace. Nothing under `crates/` reads files outside it;
   copy anything needed in.
@@ -223,8 +232,12 @@ implementation. Product checks remain unrun in the source-only proposal.
   panics, fed random strings, sequences of tricky fragments and, from the
   parser on, real programs with random damage.
 - Formatter tests also assert that formatting the output again changes nothing.
-- **Never write tests that invoke the CLI binary**, and never snapshot `--help`.
-  Test the library crates; keep the CLI a thin layer over them.
+- Test semantics in library crates; keep the CLI a thin layer over them.
+  The retained MCP/LSP protocol tests and the additive Core3 shared-dispatch
+  regression use the real source-only public binary as an explicitly scoped
+  integration check. Preserve complete source inputs and author-exposure notes;
+  they establish no evaluator, compiler, SDK/native, proof or ledger result.
+  Never snapshot `--help`.
 
 ## CLI
 

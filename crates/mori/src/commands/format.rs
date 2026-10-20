@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use mori_diagnostics::{MoriDiagnostic, NamedSource, Report};
+use mori_diagnostics::{MoriDiagnostic, NamedUtf8Source, Report};
 use rayon::prelude::*;
 
 use crate::error::CliError;
@@ -63,7 +63,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
                 not_formatted += 1;
             }
             Outcome::Invalid { source, error } => {
-                shell.report(&error.with_source_code(NamedSource::new(&name, source)));
+                shell.report(&error.with_source_code(NamedUtf8Source::new(&name, source)));
                 failed += 1;
             }
             Outcome::Failed(error) => {
