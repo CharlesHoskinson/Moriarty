@@ -1,0 +1,75 @@
+Identity: Muse Code powered by muse-wonder-1.0, HIGH — independent non-author review. Earlier Opus labels are historical. No tools, imports, providers, subjects, K/Java/native execution, or file access were used in this review.
+
+Top finding: the corrected diagnostic now discriminates by exact node form, not by result sort `Bool`, at every wire, internal, codec, KAST, and printed-result boundary supplied.
+
+## Verdict
+
+- SOURCE/API: **PASS**
+- exactONE changed-14-unit: **ELIGIBLE**
+- Mandatory fixes: **None**
+
+This is prospective source approval only. It is not approval by hashes alone, not a unit result, and not a K-law result.
+
+## Boundary review
+
+The three source files total three production/diagnostic source members, plus one test file. `envget_runtime.py` and `envget_ports.py` remain the supplied byte-identical dependency copies; the correction is confined to `envget_six_bool_diagnostic.py` and the test file.
+
+The wire/internal correction is complete:
+
+- Public wire primitive leaves are exactly `{'sort','literal'}`.
+- Public wire law roots are exactly `{'sort','constructor','arguments'}` with sort `Bool`.
+- Internal primitive leaves are exactly `{'sort','value'}`.
+- Internal law roots retain `{'sort','constructor','arguments'}`.
+- `_wire_to_internal_diag` and `_internal_to_wire_diag` dispatch on constructor/arguments presence before any leaf branch.
+- Native kind confusion is refused by exact `type(...) is` checks: Bool-as-Int, Int-as-Bool, `1/0` as Bool, and mixed wire forms containing both `literal` and constructor keys all raise `ValueError`.
+- `_internal_to_wire_diag` is the exact structural inverse, and `build_query_term` now checks the full wire/internal inverse with `same_whole` before codec construction.
+
+The typed-tree correction is also complete:
+
+- `_from_tree_diag` constructor-first dispatch prevents a Bool law root from being demanded as `{'sort','value'}`.
+- A genuine Bool literal still reaches `@Bool`; a law root reaches the named law codec constructor.
+- Unknown Bool constructors fail against `ALL_REG`.
+- Functions remain refused below permitted positions.
+- The only nested function position remains `egTraversalLinked` argument 0 → `egThreeEventTraversal(DATA EGSnapshot)`. Misplaced, double-nested, and non-linked traversal roots remain refused in wire validation, `_from_tree_diag`, KAST encoding, and KAST decoding.
+- `_validate_data_tree` now also uses node form, so a hypothetical DATA constructor returning Bool/Int/String below a snapshot would not be mistaken for a primitive leaf.
+- `validate_query_wire` passes only the extracted EGSnapshot subtree to the shared `runtime.wire_to_internal`. That subtree is within the shared converter's existing DATA domain; the Bool law root itself no longer crosses it.
+- `_encode_node_diag` discriminates `@Bool/@Int/@String` codec atoms from named constructors and emits KToken versus KApply correctly.
+- `_decode_node_diag` discriminates KToken versus KApply, checks exact KSort/token canonicality, exact labels, sorts, and arities.
+- The full query proof retains wire/internal inverse, codec/KAST inverse via `_codec_tree`, and the complete snapshot field-port inverse via `ports.to_snapshot`.
+
+Result parsing remains distinct:
+
+- `true` → `LAW_PASS`, Bool value `True`.
+- `false` → `LAW_FAIL`, Bool value `False`.
+- Int prints, residual law-function prints, trailing/multiple terms, quoted Bool, and empty input → `FAIL_BOOL_PRINT_PARSE`.
+- Unknown law names are refused before classification.
+
+Registry and genuine-binding preservation were checked. Temporary codec registries are restored through finally-protected context managers, diagnostic state restoration is verified, and `BEFORE_PIN` remains literal `None`. Rejected construction tests retain registry and `BEFORE_PIN` assertions. No Python transition, afterstate construction, expected-file access, genuine capture, or independent semantic golden was introduced. Synthetic `S`, `S_none`, and `S_event` remain PUBLIC UNADMITTED and author-visible.
+
+The four new methods cover the required regressions, and the supplied test source contains 14 methods total: the previous 10 unchanged plus the 4 root-carrier regressions.
+
+## exactONE changed-14-unit eligibility
+
+Eligible only as the single proposed process through the existing `F03.launch`: `/usr/bin/python3 -I -B -S` on the changed 14-method test file, with unchanged 30-second wall, 3-second sweep, hard 512 MiB FSIZE, core 0, umask 077, fresh 0700 directories, and the exact five-environment set.
+
+A future PASS may be claimed only with:
+
+- full stderr showing `Ran 14 tests` and final `OK`, with no error or failure;
+- clean F03 record at exit 0, with no timeout, containment breach, or residue;
+- full clean record, pins, and inventory before and after;
+- no K law/front-end/compile/reduce/print operation and no old10/old12 replay.
+
+The current unit actual root is stated absent, so this remains prospective eligibility, not an executed result.
+
+## Complete-body / read-limit disclosure
+
+Reviewed from the complete inline bodies supplied: the three source files, the complete 14-method test file, the corrective owner reply, literal forward/inverse readback, source freeze, proposed exact-one operation, node-form contract, failed-10 artifacts, called converter context, prior 8403-byte review, law declarations, K law/step bodies, ports/runtime/codec dependencies, registries/maps, compiled-15 declaration, and F03 launch closure/import projection.
+
+Limits remain explicit:
+
+- Large JSON declaration data was complete with whitespace compacted only; original pins were retained.
+- Compiled payload and stdlib implementations were existing external pins, not a new semantic re-read.
+- Full failed pre/post 620 documents remain archived and pinned in passive readback, not repeated in this focused review.
+- All 14 unit methods are **UNRUN**.
+- All six K laws remain **UNRUN**.
+- No genuine BEFORE binding, native/EARS approval, source admission, or expansion beyond carrier-only diagnostic scope is approved.
