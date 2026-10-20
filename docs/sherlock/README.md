@@ -18,6 +18,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Use typed word arithmetic](how-to/use-typed-word-arithmetic.md)
 - [Prepare owned generic program types](how-to/prepare-generic-program-types.md)
 - [Observe a declared recursive nominal list through the public Rust API](how-to/observe-declared-recursive-list.md)
+- [Select a retained Push configuration family](how-to/select-retained-push-family.md)
 
 ## Reference
 
@@ -35,6 +36,7 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [HostOnly configuration and exact fixture](reference/host-source-config.md)
 - [Image layout](reference/image-layout.md)
 - [C6 physical host codecs and nominal DATA-row representation](reference/c6-physical-host-codecs.md)
+- [Retained Push family and checked positive K context projection](reference/c6-retained-push-family-and-context.md)
 - [Bridges and ledger](reference/bridges-ledger.md)
 - [DoctorWatson](reference/doctorwatson.md)
 
