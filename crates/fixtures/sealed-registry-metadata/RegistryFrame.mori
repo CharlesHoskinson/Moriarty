@@ -1,0 +1,43 @@
+language "moriarty/3";
+agreement RegistryFrame {
+  state count: UInt = 7;
+  state flag: Bool = true;
+  asset A = { network: "local", issuer: "i", reference: "A", scale: 0 };
+  asset A2 = { network: "local", issuer: "i", reference: "A2", scale: 2 };
+  asset B = { network: "local", issuer: "j", reference: "B", scale: 0 };
+  duty "absent" = { asset: A, debtor: "alice", creditor: "bob" };
+  duty "declared" = { asset: B, debtor: "dora", creditor: "erin" };
+  duty "loan" = { asset: A, debtor: "alice", creditor: "bob" };
+  duty "read" = { asset: A2, debtor: "alice", creditor: "bob" };
+  duty "untouched" = { asset: B, debtor: "carol", creditor: "treasury" };
+  duty "zero" = { asset: A, debtor: "alice", creditor: "bob" };
+  action noop() {}
+  action observe() {
+    let hasRead = liability_present("read");
+    let readAmount = liability_amount("read");
+    let hasZero = liability_present("zero");
+    let zeroAmount = liability_amount("zero");
+    let hasAbsent = liability_present("absent");
+    let absentAmount = liability_amount("absent");
+  }
+  action pay() {
+    discharge("loan", 3);
+  }
+  action touch() {
+    next count = count + 1;
+  }
+  action create() {
+    liability("cross", A, "alice", "bob", 4);
+  }
+  action addZero() {
+    liability("cross", A, "alice", "bob", 0);
+  }
+  action observeCross() {
+    let crossPresent = liability_present("cross");
+    let crossAmount = liability_amount("cross");
+  }
+  action waitPay() {
+    await ready(go: Bool) when go;
+    discharge("loan", 3);
+  }
+}

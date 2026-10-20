@@ -21,7 +21,7 @@ pub use plan::{ActionPlan, AwaitSite, CaptureSlot, Origin, StageBinder, StagePla
 pub use profile::{require_core1, require_core2, require_core3};
 pub use report::outcome_report;
 
-use crate::{Error, Execution, Liability, Program, Snapshot, UInt, Value};
+use crate::{AssetId, Error, Execution, Liability, Program, Snapshot, UInt, Value};
 use serde::{Deserialize, Serialize};
 
 pub const LANGUAGE_2: &str = "moriarty/2";
@@ -42,6 +42,15 @@ pub const STAGE_LABELS: [(&str, &str); 3] = [
     ("authentication", "none"),
     ("consumption", "untracked"),
 ];
+
+/// Owned source-fixed liability metadata copied from a sealed staged program.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceLiabilityIdentity {
+    pub name: String,
+    pub asset: AssetId,
+    pub debtor: String,
+    pub creditor: String,
+}
 
 /// A staged program that passed profile, validation, plan invariants and
 /// static costing, with its canonical digests. Only `load` or `load_v3`
@@ -67,6 +76,23 @@ impl StagedProgram {
     pub fn plan_hash(&self) -> [u8; 32] {
         self.plan_hash
     }
+    /// Return an owned copy of the existing whole-program source registry.
+    /// This reads metadata only and does not change the staged program.
+    pub fn liability_registry(&self) -> Result<Vec<SourceLiabilityIdentity>, Error> {
+        let registry = decode::registry_for(self.program())?;
+        Ok(registry
+            .into_iter()
+            .map(
+                |(name, (asset, debtor, creditor))| SourceLiabilityIdentity {
+                    name: name.to_owned(),
+                    asset: asset.clone(),
+                    debtor: debtor.to_owned(),
+                    creditor: creditor.to_owned(),
+                },
+            )
+            .collect())
+    }
+
     /// Declaration index of an action; plan and program actions share it.
     pub(crate) fn action_index(&self, name: &str) -> Option<usize> {
         self.program.actions.iter().position(|a| a.name == name)

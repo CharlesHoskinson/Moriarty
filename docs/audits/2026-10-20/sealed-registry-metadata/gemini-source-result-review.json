@@ -1,0 +1,272 @@
+{
+  "actualRootResultSha256": "74b3c093ffa8e0a378761e77aad97fe1b2df9391b97e2776eadf0a4222aa0f49",
+  "anchors": [
+    {
+      "bodyId": "A06",
+      "literal": "pub use stage::SourceLiabilityIdentity;",
+      "locator": "crates/mori-core/src/lib.rs:32-42",
+      "supports": "Re-exports SourceLiabilityIdentity from mori_core root while preserving the baseline module declaration and re-export order."
+    },
+    {
+      "bodyId": "A07",
+      "literal": "#[derive(Debug, Clone, PartialEq, Eq)]\npub struct SourceLiabilityIdentity {\n    pub name: String,\n    pub asset: AssetId,\n    pub debtor: String,\n    pub creditor: String,\n}",
+      "locator": "crates/mori-core/src/stage/mod.rs:46-53",
+      "supports": "Defines detached, constructible, owned public metadata struct carrying name, AssetId, debtor, and creditor without Serialize/Deserialize wire derives."
+    },
+    {
+      "bodyId": "A07",
+      "literal": "#[derive(Debug, Clone)]\npub struct StagedProgram {\n    program: Program,\n    plan: StagePlan,\n    program_hash: [u8; 32],\n    plan_hash: [u8; 32],\n}",
+      "locator": "crates/mori-core/src/stage/mod.rs:58-64",
+      "supports": "Preserves sealed StagedProgram boundary with private fields and no public constructor, Default, Serialize, or Deserialize."
+    },
+    {
+      "bodyId": "A07",
+      "literal": "    pub fn liability_registry(&self) -> Result<Vec<SourceLiabilityIdentity>, Error> {\n        let registry = decode::registry_for(self.program())?;\n        Ok(registry\n            .into_iter()\n            .map(\n                |(name, (asset, debtor, creditor))| SourceLiabilityIdentity {\n                    name: name.to_owned(),\n                    asset: asset.clone(),\n                    debtor: debtor.to_owned(),\n                    creditor: creditor.to_owned(),\n                },\n            )\n            .collect())\n    }",
+      "locator": "crates/mori-core/src/stage/mod.rs:79-92",
+      "supports": "Delegates read-only source liability extraction to unchanged decode::registry_for(self.program()) and deep-clones all 7 identity leaf fields into an owned Vec<SourceLiabilityIdentity>."
+    },
+    {
+      "bodyId": "D01",
+      "literal": "pub(crate) fn registry_for(p: &Program) -> Result<BTreeMap<&str, Identity<'_>>, Error> {",
+      "locator": "crates/mori-core/src/stage/decode.rs:55-103",
+      "supports": "Confirms unchanged decode::registry_for collects statement liability identities across all actions and, for moriarty/3 + moriarty-core/3, unions Program.duties while enforcing asset_identity resolution and conflict errors."
+    },
+    {
+      "bodyId": "D02",
+      "literal": "pub struct AssetId {\n    pub network: String,\n    pub issuer: String,\n    pub reference: String,\n    pub scale: u8,\n}",
+      "locator": "crates/mori-core/src/ir.rs:111-118",
+      "supports": "Confirms AssetId contains the 4 asset leaf fields (network, issuer, reference, scale), which together with name, debtor, and creditor form all 7 identity leaves."
+    },
+    {
+      "bodyId": "D03",
+      "literal": "pub fn require_core2(program: &Program) -> Result<(), Error> {\n    if program.language != LANGUAGE_2 || program.semantics != SEMANTICS_2 {\n        return Err(Error::new(\"profile\", PROFILE_MESSAGE));\n    }\n    if !program.duties.is_empty() {\n        return Err(Error::new(\"profile\", PROFILE_MESSAGE));\n    }\n    Ok(())\n}",
+      "locator": "crates/mori-core/src/stage/profile.rs:31-47",
+      "supports": "Confirms unchanged profile guards isolate moriarty/2 (requiring empty duties) and moriarty/3 at stage::load and stage::load_v3 entry points."
+    },
+    {
+      "bodyId": "D04",
+      "literal": "[package]\nname = \"mori-core\"",
+      "locator": "crates/mori-core/Cargo.toml:1-18",
+      "supports": "Confirms mori-core dependencies are unchanged and no reverse dependency on mori-backend or external SDK/VM crates was introduced."
+    },
+    {
+      "bodyId": "A08",
+      "literal": "    assert_eq!(metadata.len(), 7);\n    assert_eq!(expected.len(), 7);\n    assert_eq!(identity_set(&metadata), expected);\n    assert_eq!(sp.program(), &program_before);\n    assert_eq!(sp.plan(), &plan_before);\n    assert_eq!((sp.program_hash(), sp.plan_hash()), hashes_before);",
+      "locator": "crates/mori-core/tests/sealed_registry_metadata.rs:52-80",
+      "supports": "Verifies Core3 positive test checks 8 actions, 6 duties, 2 Liability statements, 7 complete identities as a BTreeSet, and non-mutation of program, plan, and hashes."
+    },
+    {
+      "bodyId": "A08",
+      "literal": "    entry.name = \"detached-name\".into();\n    entry.asset.network = \"detached-network\".into();\n    entry.asset.issuer = \"detached-issuer\".into();\n    entry.asset.reference = \"detached-reference\".into();\n    entry.asset.scale = 1;\n    entry.debtor = \"detached-debtor\".into();\n    entry.creditor = \"detached-creditor\".into();\n    detached.pop();\n    assert_ne!(detached, original);",
+      "locator": "crates/mori-core/tests/sealed_registry_metadata.rs:82-108",
+      "supports": "Verifies deep ownership and detachment by mutating all 7 identity leaves and popping from a returned Vec, then re-querying liability_registry() and confirming StagedProgram and subsequent queries remain unmutated."
+    },
+    {
+      "bodyId": "A08",
+      "literal": "fn core2_registry_metadata_preserves_statement_only_identities() {\n    let sp = stage::load(CORE2_SOURCE).expect(\"load Core2 metadata source\");\n    let program_before = sp.program().clone();\n    assert_eq!(program_before.semantics, stage::SEMANTICS_2);\n    assert!(program_before.duties.is_empty());",
+      "locator": "crates/mori-core/tests/sealed_registry_metadata.rs:110-122",
+      "supports": "Verifies Core2 positive test loads moriarty/2 source with empty duties and 3 liability statements across 2 actions, yielding 2 distinct complete identities matching CORE2-REGISTRY-EXPECTED.json as a set."
+    },
+    {
+      "bodyId": "A01",
+      "literal": "  \"statement_identity_occurrences\": 3,\n  \"distinct_identity_count\": 2,\n  \"duties_count\": 0,\n  \"metadata_order_or_abi_policy\": \"Not specified by these set expectations.\"",
+      "locator": "crates/fixtures/sealed-registry-metadata/CORE2-REGISTRY-EXPECTED.json:27-34",
+      "supports": "Confirms Core2 fixture expected metadata specifies 2 distinct identities from 3 statement occurrences with 0 duties and explicitly abstains from Vec/ABI ordering claims."
+    },
+    {
+      "bodyId": "A02",
+      "literal": "  action earlier() {\n    liability(\"alpha\", UNIT, \"alice\", \"bob\", 0);\n    liability(\"zeta\", UNIT, \"dora\", \"erin\", 1);\n  }",
+      "locator": "crates/fixtures/sealed-registry-metadata/Core2Registry.mori:1-11",
+      "supports": "Confirms Core2 fixture source defines repeated matching liability identity \"zeta\" across actions later() and earlier() plus \"alpha\" in earlier()."
+    },
+    {
+      "bodyId": "A03",
+      "literal": "This fixture addition does not adopt the broken fullQ1 draft, wire a compiler consumer or choose registry bounds/context/artifact/native contracts.",
+      "locator": "crates/fixtures/sealed-registry-metadata/README.md:1-9",
+      "supports": "Documents narrow scope of the fixture addition and explicit non-adoption of the broken Q1 draft or backend/compiler contracts."
+    },
+    {
+      "bodyId": "A04",
+      "literal": "  \"backend_slot_order_positions_cardinality_version_context\": \"UNKNOWN: intentionally unspecified\",",
+      "locator": "crates/fixtures/sealed-registry-metadata/REGISTRY-EXPECTED.json:1-24",
+      "supports": "Confirms Core3 expected registry metadata compares complete 7-leaf identities as a semantic set without inventing backend slot order, cardinality caps, or context/version bindings."
+    },
+    {
+      "bodyId": "A05",
+      "literal": "  duty \"read\" = { asset: A2, debtor: \"alice\", creditor: \"bob\" };",
+      "locator": "crates/fixtures/sealed-registry-metadata/RegistryFrame.mori:1-43",
+      "supports": "Confirms RegistryFrame.mori uses distinct asset A2 (scale 2) for duty \"read\", avoiding the prior c46e0389 scale conflict while declaring 6 duties and 8 actions with 2 cross liability statements."
+    },
+    {
+      "bodyId": "E01",
+      "literal": "  \"status\": \"FROZEN_BEFORE_CANDIDATE_SOURCE_AND_TEST_AUTHORING\",\n  \"recordedAt\": \"2026-10-20T05:13:58.546535+00:00\",",
+      "locator": "prior-candidate/EXPECTATIONS-FREEZE.json:1-16",
+      "supports": "Establishes that the 4 fixture files (A01, A02, A04, A05) were frozen by SHA256 prior to candidate source and test authoring, with disclosed author exposure to existing implementation rules."
+    },
+    {
+      "bodyId": "E02",
+      "literal": "  \"source_blindness_scope\": \"New positive input frozen after explicit source-only admission-premise finding, before any companion consumer execution. Prior independent arithmetic and existing language-source exposure disclosed; no new financial value comes from implementation outputs. Not preimplementation independence for the existing language/admission rule and not a security oracle.\",",
+      "locator": "prior-candidate/reference-companion/PROVENANCE.json:1-14",
+      "supports": "Qualifies the provenance of the Core3 distinct-reference companion fixture as source-exposed to validate.rs scale checks and conditional on F3/REG3 premises rather than a blind security or financial oracle."
+    },
+    {
+      "bodyId": "S01",
+      "literal": "  \"ownershipTest\": \"Keep the first accessor result unchanged, mutate a second directly returned accessor result, then compare a third result and the full sealed Program/plan/stored hashes. No result clone is used as the mutation subject.\"",
+      "locator": "prior-candidate/SOURCE-AND-TEST-EFFECTS.json:1-18",
+      "supports": "Matches the actual implementation in A08 where a second direct liability_registry() call (not a local clone) is mutated across all 7 leaves and popped before re-querying."
+    },
+    {
+      "bodyId": "R01",
+      "literal": "  \"status\": \"PASS_CURRENT_FORMATTED_K_COMPILED_AND_THREE_METADATA_TESTS\",\n  \"exit\": 0,",
+      "locator": "actual/current-formatted/ROOT-RESULT.json:1-35",
+      "supports": "Establishes current formatted source compiled under exact K Cargo with 101 artifact events (ELF 988d628b7a35ab4977295cf9822b3ac8155366975dec42dc8c74e6c18fce74c5) and passed all 3 metadata tests with pinsHeld: true and 0 SDK units."
+    },
+    {
+      "bodyId": "R02",
+      "literal": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+      "locator": "actual/current-formatted/TEST-STDOUT.txt:1-8",
+      "supports": "Confirms the 3 test functions passed in the current formatted test run (335B with trailing LF vs 334B in R01.testStdout)."
+    },
+    {
+      "bodyId": "R03",
+      "literal": "     Running tests/sealed_registry_metadata.rs (/home/charl/moriarty-c2-opus55-restored-20261017/core3-sealed-registry-metadata-red-compile-actual-20261020-a1/owned/target/x86_64-unknown-linux-gnu/debug/deps/sealed_registry_metadata-afc9ee2822abe455)",
+      "locator": "actual/current-formatted/stderr.txt:1-3",
+      "supports": "Confirms Cargo compiled mori-core v0.1.0 in test profile and executed the selected test binary path matching R01.selectedArtifacts[0].path."
+    },
+    {
+      "bodyId": "R04",
+      "literal": "  \"ownedSessionRemaining\": [],\n  \"EOF\": true",
+      "locator": "actual/current-formatted/CLEANUP.json:1-5",
+      "supports": "Confirms clean process termination and EOF with no lingering owned sessions after the current formatted test run."
+    },
+    {
+      "bodyId": "H01",
+      "literal": "  \"terminalExitCode\": 124,\n  \"inputPinsUnchangedSupplied\": true,\n  \"captureParseErrors\": 0,\n  \"resultEvents\": 1,\n  \"terminalStatusLiteral\": null,\n  \"cliInitModelLabels\": [\n    \"gemini-4-argon-high\"\n  ],\n  \"actualBackendIdentityAttested\": false,\n  \"noRecursiveOrTextFallback\": true,\n  \"decision\": \"NO_EXPORT\",",
+      "locator": "actual/source-review-no-export/TERMINAL-EXPORT-RECEIPT.json:1-22",
+      "supports": "Confirms the earlier AGY source-review attempt timed out with exit 124 and produced NO_EXPORT, establishing no prior favorable review opinion."
+    },
+    {
+      "bodyId": "H03",
+      "literal": "  \"exit\": 101,\n  \"elapsedSeconds\": 0.6049286079942249,",
+      "locator": "actual/resolve101/ROOT-RESULT.json:1-19",
+      "supports": "Documents that the initial Cargo invocation failed in dependency/manifest resolution (exit 101, 0 artifacts) rather than observing an expected Rust E0432/E0599 test RED."
+    },
+    {
+      "bodyId": "H04",
+      "literal": "  \"exit\": 124,\n  \"elapsedSeconds\": 90.30898092399002,",
+      "locator": "actual/cargo90timeout/ROOT-RESULT.json:1-23",
+      "supports": "Documents that the repaired Cargo run timed out at 90s after 97 compiler artifacts without reaching the test compile RED error."
+    },
+    {
+      "bodyId": "H05",
+      "literal": "  \"status\": \"EXPECTED_RED_MISSING_PUBLIC_TYPE_AND_METHOD\",\n  \"exit\": 1,",
+      "locator": "actual/baseline-corrected-interface/ROOT-RESULT.json:1-42",
+      "supports": "Documents that E0432/E0599 interface errors were observed only via a direct baseline interface check (notFullKCargoBuild: true) whose archive differed in parser implementation."
+    },
+    {
+      "bodyId": "H06",
+      "literal": "  \"candidatePatchSha256\": \"469300940a82dd69af9dbf583f0fb7587530b72ef9e3676d6c8d450d1aba89c8\",",
+      "locator": "history/READONLY-API-EXACT-SOURCE-INTEGRATION.json:1-25",
+      "supports": "Records the pre-format integration state (patch 46930094...) prior to formatting stage/mod.rs and tests/sealed_registry_metadata.rs into current patch 4d9685e6...."
+    },
+    {
+      "bodyId": "H07",
+      "literal": "  \"status\": \"PASS_THREE_ORDINARY_METADATA_TESTS\",\n  \"exit\": 0,",
+      "locator": "actual/preformat-three-tests/ROOT-RESULT.json:1-19",
+      "supports": "Records the separate dated pre-format 3-test pass, which is kept distinct and not transferred as the post-format receipt."
+    }
+  ],
+  "artifactSha256": "988d628b7a35ab4977295cf9822b3ac8155366975dec42dc8c74e6c18fce74c5",
+  "candidateManifestSha256": "e29fd8e80847f156cd47a519bd8451ad3b3832f0a12576882b3a30c24716690c",
+  "candidatePatchSha256": "4d9685e6aaf894e80e7a73d6dfd8053d1a30822f1e24f0e47de68318ffb65729",
+  "decision": "APPROVE",
+  "dissent": [],
+  "findings": [],
+  "limitations": [
+    "This audit approves only the narrow additive read-only metadata API (SourceLiabilityIdentity and StagedProgram::liability_registry), the 4 fixture files, the 3 positive metadata unit/integration tests, and their observed host Cargo compilation and execution receipt (R01-R04).",
+    "Passing the 3 read-only metadata tests establishes only that stage::load and stage::load_v3 parse, validate, plan, and hash the two fixture programs and that StagedProgram::liability_registry returns detached owned copies of decode::registry_for entries matching the expected 7-leaf identity sets; it does not establish financial evaluation, stage::start/resume runtime semantics, compiler lowering, backend slot/ABI ordering, cryptographic/TCB soundness, SDK/VM/proof generation, or Midnight ledger/EARS acceptance.",
+    "Exact K Cargo expected-error RED was not observed prior to green compilation: H03 exited 101 during Cargo resolution, H04 timed out at 90s after 97 artifacts, and H05 observed E0432/E0599 only in a direct non-Cargo baseline check whose archive had a different parser implementation. No strict global Cargo TDD cycle is claimed.",
+    "Fixture expectations (E01, E02, A01-A05) are not blind security or financial oracles: the Core3 companion fixture was frozen after disclosed inspection of validate.rs scale rules to replace a conflicting-scale asset with A2 (scale 2), and the Core2 fixture was manually specified from literal source after code inspection.",
+    "The 17 unchanged consumer/dependency source pins and 103 protected prior artifacts are byte-verified only; transitive modules (parser, validate, plan, cost, digest, runtime) and mori-backend were not semantically re-audited in this review."
+  ],
+  "readScope": {
+    "optionalWholePathsRead": [
+      "READSET.json",
+      "packet/current/MANIFEST.json",
+      "packet/current/candidate.patch",
+      "packet/prior-candidate/BEFORE/crates/mori-core/src/lib.rs",
+      "packet/prior-candidate/BEFORE/crates/mori-core/src/stage/mod.rs",
+      "packet/prior-candidate/AFTER/crates/mori-core/src/stage/mod.rs",
+      "packet/prior-candidate/AFTER/crates/mori-core/tests/sealed_registry_metadata.rs"
+    ],
+    "unreadMandatoryIds": [],
+    "unreadOptionalLimits": [
+      "Full 113,636-byte compiler/test stdout (packet/actual/current-formatted/stdout.txt), 138,515-byte compiler artifact event stream (packet/actual/current-formatted/ACTUAL-EVENTS.json), and 589,214-byte plan and 1,620-pin manifest (packet/actual/current-formatted/PLAN-AND-FROZEN-EXPECTATIONS.json) were not read whole.",
+      "Unchanged transitive mori-core source files (parser.rs, runtime.rs, stage/admit.rs, stage/cost.rs, stage/digest.rs, stage/plan.rs, stage/validate.rs) and unchanged mori-backend source files (Cargo.toml, liabilities.rs, lib.rs, stage/artifact.rs, stage/context.rs, stage/lower.rs) were not read whole; their unchanged pins are treated as byte-verified assumptions rather than semantically audited TCB code.",
+      "Optional historical/prior-candidate event streams, plans, and companion financial/normative payloads listed in READSET.json outside optionalWholePathsRead were not read."
+    ],
+    "wholeBodyIds": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "D01",
+      "D02",
+      "D03",
+      "D04",
+      "G01",
+      "G02",
+      "G03",
+      "E01",
+      "E02",
+      "S01",
+      "R01",
+      "R02",
+      "R03",
+      "R04",
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H05",
+      "H06",
+      "H07"
+    ]
+  },
+  "reportedIdentity": "Gemini 4 Argon (High) (host session setting; actualBackendIdentityAttested: false, no independent backend cryptographic attestation inferred)",
+  "requestedIdentity": "gemini-4-argon-high/high",
+  "resultAssessment": {
+    "compileAndThreeTestEvidence": "R01-R04 document that the current formatted candidate compiled and ran under exact K Cargo in 13.42s with exit code 0, 101 compilerArtifactEvents, 0 SDKCompilationUnits, and selected test binary sealed_registry_metadata-afc9ee2822abe455 (27,580,104 bytes, SHA256 988d628b7a35ab4977295cf9822b3ac8155366975dec42dc8c74e6c18fce74c5). All 3 metadata tests (core2_registry_metadata_preserves_statement_only_identities, core3_registry_metadata_matches_complete_independent_identity_set, registry_metadata_is_owned_and_cannot_mutate_sealed_program) passed. R01.testStdout (334B) and R02 (335B, identical plus one trailing LF) are consistent without claiming byte-equality between the JSON field projection and the raw file.",
+    "currentSourceAndArtifactBinding": "Current 8-file manifest e29fd8e80847f156cd47a519bd8451ad3b3832f0a12576882b3a30c24716690c (packet/current/MANIFEST.json, recorded at 05:44:27Z with freshCurrentSourceCompileAndTests: PENDING before the test run) and current patch 4d9685e6aaf894e80e7a73d6dfd8053d1a30822f1e24f0e47de68318ffb65729 differ from the pre-format candidate (patch 469300940a82dd69af9dbf583f0fb7587530b72ef9e3676d6c8d450d1aba89c8 in H06) solely by rustfmt line-wrapping in crates/mori-core/src/stage/mod.rs and crates/mori-core/tests/sealed_registry_metadata.rs, with zero semantic change and lib.rs baseline module order retained. R01 (recorded at 05:45:14Z, SHA256 74b3c093ffa8e0a378761e77aad97fe1b2df9391b97e2776eadf0a4222aa0f49) binds directly to this formatted source and ELF 988d628b7a35ab4977295cf9822b3ac8155366975dec42dc8c74e6c18fce74c5.",
+    "pinsAndCleanup": "R01 and R04 confirm EOF: true, ownedSessionRemaining: [], parentDeadlineExpired: false, pinsHeld: true, and changedPins: [] across the 1,620 held pins (including the 17 unchanged consumer/dependency source pins and 103 protected prior artifacts). H02 similarly confirms clean process-group termination (ownedGroupRemaining: false, captureReachedEOF: true) for the earlier timed-out AGY attempt.",
+    "priorHistoryAndTddQualifications": "H01/H02 record the earlier AGY review timeout (exit 124 after 420s, NO_EXPORT), providing no prior review approval. H03 (Cargo resolver exit 101), H04 (Cargo 90s timeout at 97 artifacts, exit 124), and H05 (direct rustc interface check observing E0432/E0599 with notFullKCargoBuild: true against a baseline archive with a different parser) are accurately preserved as separate dated diagnostics; full exact-K Cargo expected-error RED was not observed. H07 (pre-format 3-test pass at 05:42:30Z on prior ELF 9f48c39b...) is retained as historical pre-format evidence and is not transferred to substitute for R01.",
+    "remainingScopeAndMissingEvidence": "Missing evidence for broader roadmap milestones (unnecessary for this narrow read-only metadata API approval, but required before any downstream consumer, financial, or target closure claim): (1) execution of the original 3/14 financial runtime tests and both 14-case reference candidates; (2) negative/rejection tests for conflicting liability/duty identities if direct accessor error-propagation coverage is desired beyond existing decode::registry_for unit/stage coverage; (3) an audited compiler/backend consumer wiring StagedProgram::liability_registry with explicit slot ordering, cardinality bounds, and context/artifact bindings; and (4) full scalar/financial/compiler/composition/ZKIRv3/Midnight proof and ledger acceptance evidence."
+  },
+  "reviewToken": "core3-sealed-registry-metadata-source-and-result-agy-20261020-a2-current-formatted-v1",
+  "scope": "NARROW_ORDINARY_METADATA_SOURCE_AND_ACTUAL_RESULT_ONLY",
+  "sourceAssessment": {
+    "additiveScope": "The production change is strictly additive and read-only: crates/mori-core/src/lib.rs (A06) appends `pub use stage::SourceLiabilityIdentity;` while retaining baseline module order, and crates/mori-core/src/stage/mod.rs (A07) adds `pub struct SourceLiabilityIdentity` and `StagedProgram::liability_registry(&self) -> Result<Vec<SourceLiabilityIdentity>, Error>`. No reverse backend dependency (D04), new validator, 16-cap/bound, domain/hash/context/artifact/version change, existing caller modification, or broken Q1 draft adoption is introduced.",
+    "compatibilityAndDelegation": "`StagedProgram::liability_registry(&self)` delegates directly to unchanged `decode::registry_for(self.program())?` (D01) and propagates any `Error` unchanged. For `moriarty/2` (`moriarty-core/2`), `registry_for` extracts statement-declared liability identities across all actions and rejects non-empty `duties` with `mori::core::profile`. For `moriarty/3` (`moriarty-core/3`), `registry_for` unions statement liability identities across all actions with `Program.duties`, resolving each asset name via `asset_identity` and rejecting conflicts with `mori::core::liability` (statement-only) or `mori::core::sequence_duty_declaration` (duty-caused). Profile isolation in `profile.rs` (D03) and wire decoding in `ir.rs` (D02) remain completely unchanged.",
+    "completeIdentityAndOwnership": "`SourceLiabilityIdentity` (A07) owns `name: String`, `asset: AssetId` (which in D02 owns `network: String`, `issuer: String`, `reference: String`, `scale: u8`), `debtor: String`, and `creditor: String`. `liability_registry(&self)` takes an immutable `&self` reference and deep-clones all 7 leaf fields (`name.to_owned()`, `asset.clone()`, `debtor.to_owned()`, `creditor.to_owned()`) into a newly allocated `Vec<SourceLiabilityIdentity>`, ensuring complete detachment from `StagedProgram` without mutating `program`, `plan`, `program_hash`, or `plan_hash`.",
+    "positiveTestCoverage": "`crates/mori-core/tests/sealed_registry_metadata.rs` (A08) covers: (1) `/3` complete identity set matching (`RegistryFrame.mori`, A05, and `REGISTRY-EXPECTED.json`, A04) across 8 actions, 6 declared duties, and 2 matching `\"cross\"` `Statement::Liability` occurrences in `create` and `addZero`, yielding 7 distinct 7-leaf identities compared as a `BTreeSet` without inventing a backend `Vec`/ABI slot order; (2) full ownership and non-mutation by mutating all 7 leaf fields on a second directly returned `liability_registry()` vector (`name`, `asset.network`, `asset.issuer`, `asset.reference`, `asset.scale`, `debtor`, `creditor`) plus `detached.pop()`, then verifying a third `liability_registry()` query and `sp.program()`, `sp.plan()`, and `(sp.program_hash(), sp.plan_hash())` remain unchanged; and (3) `/2` compatibility (`Core2Registry.mori`, A02, and `CORE2-REGISTRY-EXPECTED.json`, A01) with 0 duties and 3 statement occurrences across 2 actions (`later`, `earlier`) yielding 2 distinct complete identities.",
+    "sealedBoundary": "`StagedProgram` (A07:58-64) keeps all fields private (`program`, `plan`, `program_hash`, `plan_hash`) and derives only `Debug, Clone`\u2014with no public constructor, `Default`, `Serialize`, or `Deserialize`. Only `stage::load` and `stage::load_v3` construct `StagedProgram` via `finish_load`. `SourceLiabilityIdentity` is a detached public metadata struct with public fields and `Debug, Clone, PartialEq, Eq` (no `Serialize`/`Deserialize`), so callers can construct or mutate detached metadata without forging or mutating a `StagedProgram`."
+  },
+  "summary": "APPROVE within the narrow audited scope: current formatted 8-file candidate (manifest e29fd8e80847f156cd47a519bd8451ad3b3832f0a12576882b3a30c24716690c, patch 4d9685e6aaf894e80e7a73d6dfd8053d1a30822f1e24f0e47de68318ffb65729) adds only the read-only, deep-cloned `StagedProgram::liability_registry` accessor and `SourceLiabilityIdentity` struct in `mori-core`, preserves the sealed `StagedProgram` boundary and unchanged `decode::registry_for` delegation across `moriarty/2` and `moriarty/3`, and is backed by the observed exact-K Cargo compile and 3-test pass receipt (R01: 74b3c093ffa8e0a378761e77aad97fe1b2df9391b97e2776eadf0a4222aa0f49, ELF: 988d628b7a35ab4977295cf9822b3ac8155366975dec42dc8c74e6c18fce74c5) with all pins held and no lingering sessions. Broader financial runtime, compiler lowering, backend ordering/ABI, proof, and ledger acceptance remain outside this scope.",
+  "testCallChainAndEffects": {
+    "actualObservationLimits": "The observed test pass (R01, R02) proves only in-memory host execution of `load`, `load_v3`, `liability_registry`, `program`, `plan`, `program_hash`, `plan_hash`, and `BTreeSet` tuple comparisons over the two compiled-in fixtures. It establishes no financial transition correctness, no backend lowering or circuit soundness, no cryptographic hash collision resistance beyond static digest invocation, and no SDK/VM/target readiness.",
+    "loaderPath": "`stage::load(CORE2_SOURCE)` -> `parser::parse_v2` -> `profile::require_core2` -> `validate::validate_v2` -> `finish_load` (`plan::build` -> `validate::plan_invariants` -> `cost::fill` -> `validate::cost_invariants` -> `digest::program_hash` -> `digest::hex` -> `digest::plan_hash` -> `StagedProgram`); and `stage::load_v3(CORE3_SOURCE)` -> `parser::parse_v3` -> `profile::require_core3` -> `validate::validate_v3` -> `finish_load`.",
+    "metadataPath": "`StagedProgram::liability_registry(&self)` -> `decode::registry_for(self.program())` -> iterates `p.actions[*].statements` (`Statement::Liability`) and (when `moriarty/3` + `moriarty-core/3`) `p.duties` (`ExternalDutyDecl`), resolving each asset via `decode::asset_identity` into a temporary `BTreeMap<&str, (&AssetId, &str, &str)>` -> maps and deep-clones each entry into an owned `Vec<SourceLiabilityIdentity>`. In tests, `identity_set` and `expected_set` (via `serde_json::from_str`) convert entries into `BTreeSet<(String, AssetId, String, String)>` for order-independent set comparison.",
+    "notCalled": "`stage::start`, `stage::resume`, `stage::outcome_report`, `stage::sequence_report::*`, `decode::canonical_boundary`, `decode::continuation`, `decode::event`, `decode::read_bounded`, `runtime::simulate`, `runtime::replay`, `runtime::validate`, `replay::*`, `mori-backend::*`, file-system I/O (fixtures are embedded via `include_str!`), subprocesses, network, SDK, VM, prover, key, wallet, or ledger operations.",
+    "observedStaticEffects": "In-memory lexing, parsing, profile checking, static AST/plan/cost validation, SHA-256 canonical program/plan digest computation, heap allocation of owned `SourceLiabilityIdentity` vectors and test `BTreeSet`s, in-place mutation of a detached `Vec<SourceLiabilityIdentity>`, and standard Rust test harness stdout/stderr output.",
+    "unreviewedTransitiveLimits": "While `stage/mod.rs`, `stage/decode.rs`, `stage/profile.rs`, and `ir.rs` were inspected whole inline, `load` and `load_v3` transitively invoke unchanged modules (`parser.rs`, `stage/validate.rs`, `stage/plan.rs`, `stage/cost.rs`, `stage/digest.rs`, `mori-lexer`, `serde_json`, `sha2`) that were not read whole in this audit and are relied upon only as byte-pinned unchanged dependencies."
+  },
+  "unresolvedPremises": [
+    "Backend liability slot ordering, maximum liability cardinality caps, context/artifact schema bindings, and compiler consumer wiring remain intentionally unspecified (`backend_slot_order_positions_cardinality_version_context: UNKNOWN`).",
+    "Core3 `RegistryFrame.mori` and `REGISTRY-EXPECTED.json` carry a conditional REG3/F3 premise (`Conditional original proposed REG3, not full D1 adoption or backend admission proof`), and the original conflicting-scale packet (`c46e0389...`) remains separate and unrun.",
+    "Both 14-case reference financial candidates and the original 3/14 financial runtime tests remain unrun; full scalar, financial, compiler, composition, ZKIRv3, and Midnight target acceptance gates remain open."
+  ]
+}

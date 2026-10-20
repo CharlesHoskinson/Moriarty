@@ -1,0 +1,358 @@
+{
+  "dissent": [
+    "Byte-for-byte identity of the extracted body in compile_loaded_staged is static source-text evidence only; because rustc, Cargo, and midnight-zkir-v3 IrSource::load round-trips were not executed, this review does not assert compiled binary equivalence, runtime equivalence, or SDK/ZKIR execution results.",
+    "Separation of compile_loaded_staged(sp: StagedProgram, target: &Target) does not make the lowerer Core3-capable today: inside the extracted body, liabilities::registry(program) still inspects only Statement::Liability (ignoring Program.duties / REG3), logical_profile is hardcoded to LOGICAL_COST_PROFILE_2, lower_action_segment's stage branch calls stage_context_hash (which rejects any program.semantics != SEMANTICS_2 and recomputes liabilities::registry), and artifact.validate() enforces STAGED_ARTIFACT_FORMAT/ABI/RELATION /4 and SEMANTICS_2. A future Core3 entry cannot call compile_loaded_staged without first implementing the designated-owner B1 contract across registry, context, and artifact validation.",
+    "Fresh artifact validation at lower.rs:135 (artifact.validate()?) remains shape-only (/4 decoder predicate) and does not recompute program_hash, plan_hash, or per-circuit context_hash (F3); this mechanical extraction neither alters nor resolves that provenance boundary."
+  ],
+  "findings": [],
+  "limitations": [
+    "Strictly source-only review: no shell, rustc, cargo check/test, rustfmt, or midnight-zkir-v3 SDK execution was performed or admitted.",
+    "Review scope is bounded to the 28-role whole-body packet (R01-R28, 243,972 bundle bytes / 239,622 constituent bytes) plus INPUT-INDEX.json, OUTPUT-SCHEMA.json, and the standalone BEFORE/AFTER/candidate.patch files; broader workspace crates and transitive dependencies outside the packet were not audited.",
+    "No designated-owner B1/B2 security or interface design decisions (REG3 declared-duty compiler registry, Core3 context preimage shape/domain/version, Core3 artifact/ABI/relation schema, F3 fresh-artifact provenance, or B2 replay/proof/key/ledger bindings) are decided or approved by this mechanical review.",
+    "The positive structural control in context/crates/mori-backend/tests/stages.rs (generic_scalar_segments_and_zero_await_actions_keep_declaration_order) was authored with source exposure, imports midnight_zkir_v3::IrSource/Instruction, and remains unrun here; the baseline byte-comparison test legacy_artifact_and_every_ir_file_match_baseline_bytes remains #[ignore]."
+  ],
+  "mechanicalChecks": [
+    {
+      "predicate": "(1) Only the declared insertion changed actual J source",
+      "reason": "Comparing R01 (before/crates/mori-backend/src/stage/lower.rs, 146 lines, 7115 bytes, SHA256 0e3d7aacc96b4379a235761bd25fb9478c4ab6ff70d7cd3649acb11b7e796724) against R02 (after/crates/mori-backend/src/stage/lower.rs, 152 lines, 7402 bytes, SHA256 77b24f9fc6c23941e493315be6c2219e5dea5f069afe26d49de574a3ae2b2294) and R28 (candidate.patch) confirms that the only difference is the 6-line (287-byte) insertion at after/lower.rs:30-35. Deleting those 6 lines reconstructs R01 byte-for-byte. All 18 context files from J (R03-R20) are untouched.",
+      "references": [
+        "R01:before/crates/mori-backend/src/stage/lower.rs:1-146",
+        "R02:after/crates/mori-backend/src/stage/lower.rs:1-152",
+        "R23:preparation/SUBJECT.json:1-23",
+        "R24:preparation/MECHANICAL-EXTRACTION.json:1-35",
+        "R28:candidate.patch:1-15"
+      ],
+      "status": "source-established"
+    },
+    {
+      "predicate": "(2) Same public signature/export and original signed-target->load2->target.validate->registry->layout->real lowering->artifact.validate order and diagnostics",
+      "reason": "pub fn compile_staged(src: &str, target: &Target, _out: &Path) -> Result<StagedArtifact, Error> (after/lower.rs:22) and pub use lower::compile_staged; (context/stage/mod.rs:17) are unchanged. The execution sequence and all error categories/messages are preserved verbatim: (a) target.signed_policy.is_some() refusal returning error(\"unsupported\", \"Staged moriarty/2 relations are unsigned; a signed Target is refused.\"); (b) mori_core::stage::load(src).map_err(|e| error(\"program\", e.to_string()))?; (c) direct tail call compile_loaded_staged(sp, target); (d) target.validate()?; (e) cross-domain asset network check; (f) liabilities::registry(program)?; (g) frame::layouts(&sp)? and MAX_STAGED_CIRCUITS check; (h) StagedResources initialization and per-layout lower_action_segment(program, action, target, &registry, None, Some((&sp, layout)))? loop with checked resource accumulation and target bounds checks; (i) StagedArtifact assembly, 0..12 serde_json::to_vec_pretty fixed-point loop, and artifact.validate()? before returning Ok(artifact).",
+      "references": [
+        "R01:before/crates/mori-backend/src/stage/lower.rs:22-133",
+        "R02:after/crates/mori-backend/src/stage/lower.rs:22-139",
+        "R03:context/crates/mori-backend/src/stage/mod.rs:10-17"
+      ],
+      "status": "source-established"
+    },
+    {
+      "predicate": "(3) Same owned value is passed with no cloning/serialization/profile substitution and no new externally callable entry",
+      "reason": "compile_staged binds let sp = mori_core::stage::load(src)... (an owned, sealed mori_core::stage::StagedProgram with private fields and no public constructor or Deserialize implementation, per R09 context/crates/mori-core/src/stage/mod.rs:46-56) and moves sp by value directly into compile_loaded_staged(sp, target) without cloning, serialization, or profile alteration. compile_loaded_staged is a private fn in private module lower (R03 stage/mod.rs:10), has no pub/pub(crate) visibility or reexport, and has compile_staged as its sole caller.",
+      "references": [
+        "R02:after/crates/mori-backend/src/stage/lower.rs:29-35",
+        "R03:context/crates/mori-backend/src/stage/mod.rs:10-17",
+        "R08:context/crates/mori-backend/src/lib.rs:16-30",
+        "R09:context/crates/mori-core/src/stage/mod.rs:46-95"
+      ],
+      "status": "source-established"
+    },
+    {
+      "predicate": "(4) Every extracted body binding/reference/literal/resource/version/ABI/context/registry/descriptor/gate/return and trailing logical_resources text unchanged",
+      "reason": "Lines 36-139 of after/crates/mori-backend/src/stage/lower.rs (5034 bytes, SHA256 42b374f64f3881bf1ed6690fd938f5b4c887a77a384c9fa139a11e34fff31518) are byte-for-byte identical to lines 30-133 of before/crates/mori-backend/src/stage/lower.rs. Because compile_loaded_staged names its parameters sp: StagedProgram and target: &Target identically to the bindings in compile_staged, every inner expression (&sp, sp.program(), sp.program_hash(), sp.plan_hash(), target, program, registry, layouts, resources, circuits, artifact, constants, gates, and fixed-point loop) is unchanged. Trailing fn logical_resources(sp: &StagedProgram) -> Vec<ActionLogical> at after/lower.rs:141-152 is byte-for-byte identical to before/lower.rs:135-146.",
+      "references": [
+        "R01:before/crates/mori-backend/src/stage/lower.rs:30-146",
+        "R02:after/crates/mori-backend/src/stage/lower.rs:35-152",
+        "R24:preparation/MECHANICAL-EXTRACTION.json:6-11"
+      ],
+      "status": "source-established"
+    },
+    {
+      "predicate": "(5) Current public CLI compile/inspect/publication code and all Core1/Core2/native/SDK definitions remain untouched",
+      "reason": "All context files R03-R20 are unchanged. In particular, crates/mori/src/commands/compile.rs (R12) still dispatches moriarty/2 to mori_backend::stage::compile_staged(&source, &target, &args.out) and writes output files only after compilation and pretty-serialization succeed; crates/mori/src/commands/inspect.rs (R13) still refuses --target for moriarty/3 and moriarty/2; crates/mori-backend/src/lib.rs (R08), stage/context.rs (R04), stage/artifact.rs (R05), stage/frame.rs (R06), liabilities.rs (R07), crates/mori-core (R09-R11), and all Cargo.toml manifests (R15-R17) are unmodified.",
+      "references": [
+        "R03:context/crates/mori-backend/src/stage/mod.rs:1-37",
+        "R04:context/crates/mori-backend/src/stage/context.rs:1-97",
+        "R05:context/crates/mori-backend/src/stage/artifact.rs:1-502",
+        "R06:context/crates/mori-backend/src/stage/frame.rs:1-632",
+        "R07:context/crates/mori-backend/src/liabilities.rs:1-110",
+        "R08:context/crates/mori-backend/src/lib.rs:1-1230",
+        "R12:context/crates/mori/src/commands/compile.rs:1-226",
+        "R13:context/crates/mori/src/commands/inspect.rs:1-403",
+        "R15:context/crates/mori-backend/Cargo.toml:1-26",
+        "R16:context/crates/mori-core/Cargo.toml:1-18",
+        "R17:context/crates/mori/Cargo.toml:1-47"
+      ],
+      "status": "source-established"
+    },
+    {
+      "predicate": "(6) This is useful reusable admission/lowering separation for eventual owner-selected full Core3 path, not an unsupported3 stub or claimed Core3 compiler",
+      "reason": "The extraction isolates /2 source admission (signed-target refusal + mori_core::stage::load(src)) in compile_staged from the post-load lowering pipeline over a sealed StagedProgram in compile_loaded_staged. It introduces no unsupported-Core3 stub, no /2 relabeling, and no premature Core3 API. R21, R22, R23, and R26 accurately record that actual Core3 compilation remains blocked on designated-owner B1 premises (REG3 declared-duty registry, Core3 context/artifact/version/decoder contracts, F3 provenance if selected, and CLI compile/inspect --target consumers).",
+      "references": [
+        "R02:after/crates/mori-backend/src/stage/lower.rs:22-36",
+        "R21:history/CURRENT-SOURCE-DIAGNOSIS.md:1-52",
+        "R22:history/ROOT-RECONCILIATION.json:1-18",
+        "R23:preparation/SUBJECT.json:14-16",
+        "R26:preparation/BLOCKERS-AND-NEXT-INTEGRATION.json:1-13"
+      ],
+      "status": "source-established"
+    },
+    {
+      "predicate": "(7) Tests/expectations/resource/source-only claims honest and appropriate, no fabricated frozen financial/artifact-byte oracle",
+      "reason": "R23-R26 honestly state that rustfmt, Cargo/rustc compilation, and all backend/SDK/product tests are UNRUN; that literal byte extraction is not a runtime/SDK/ZKIR equivalence proof; that the existing stages.rs test generic_scalar_segments_and_zero_await_actions_keep_declaration_order ((\"z_first\", 0), (\"z_first\", 1), (\"a_second\", 0)) is an author-exposed source-order structural expectation whose execution links midnight_zkir_v3::IrSource; that legacy_artifact_and_every_ir_file_match_baseline_bytes remains #[ignore]; and that no fabricated or candidate-generated artifact/financial byte oracle is introduced.",
+      "references": [
+        "R14:context/crates/mori-backend/tests/stages.rs:114-187",
+        "R23:preparation/SUBJECT.json:17-21",
+        "R24:preparation/MECHANICAL-EXTRACTION.json:25-31",
+        "R25:preparation/EXPECTED-BEHAVIOR.json:1-34",
+        "R26:preparation/BLOCKERS-AND-NEXT-INTEGRATION.json:1-13"
+      ],
+      "status": "source-established"
+    }
+  ],
+  "requiredChanges": [],
+  "reviewToken": "core3-target-compiler-private-loaded-seam-agy-source-20261020-a1",
+  "role": "ordinary-source-only-nonauthor-mechanical-review",
+  "sourceReadCoverage": [
+    {
+      "id": "R01",
+      "literalQuotes": [
+        "pub fn compile_staged(src: &str, target: &Target, _out: &Path) -> Result<StagedArtifact, Error> {",
+        "    let sp = mori_core::stage::load(src).map_err(|e| error(\"program\", e.to_string()))?;\n    target.validate()?;",
+        "fn logical_resources(sp: &StagedProgram) -> Vec<ActionLogical> {"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 2-150 and standalone BEFORE/crates/mori-backend/src/stage/lower.rs lines 1-146, 7115 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R02",
+      "literalQuotes": [
+        "    let sp = mori_core::stage::load(src).map_err(|e| error(\"program\", e.to_string()))?;\n    compile_loaded_staged(sp, target)\n}\n\n// Keep source admission separate from the existing lowering sequence.\n// Only compile_staged calls this private helper, after its unchanged /2 load.\nfn compile_loaded_staged(sp: StagedProgram, target: &Target) -> Result<StagedArtifact, Error> {\n    target.validate()?;"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 152-306 and standalone AFTER/crates/mori-backend/src/stage/lower.rs lines 1-152, 7402 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R03",
+      "literalQuotes": [
+        "mod lower;",
+        "pub use lower::compile_staged;"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 308-347, 37 source lines, 1495 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R04",
+      "literalQuotes": [
+        "pub(crate) fn stage_context_hash(",
+        "    if program.semantics != SEMANTICS_2 {\n        return Err(error(\"artifact\", \"Staged context requires moriarty-core/2.\"));\n    }"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 349-448, 97 source lines, 3578 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R05",
+      "literalQuotes": [
+        "pub const STAGED_ARTIFACT_FORMAT: &str = \"moriarty-zkir-artifact/4\";",
+        "        if self.semantics != SEMANTICS_2 {\n            return Err(refuse(\"Staged artifacts require moriarty-core/2 semantics.\"));\n        }"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 450-954, 502 source lines, 19847 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R06",
+      "literalQuotes": [
+        "pub(crate) fn layouts(sp: &StagedProgram) -> Result<Vec<SegmentLayout>, Error> {",
+        "pub(crate) fn emit_post("
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 956-1590, 632 source lines, 23562 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R07",
+      "literalQuotes": [
+        "pub const MAX_LIABILITY_REGISTRY_ENTRIES: usize = 16;",
+        "pub(crate) fn registry(program: &Program) -> Result<Vec<LiabilityIdentity>, Error> {"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 1592-1704, 110 source lines, 3905 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R08",
+      "literalQuotes": [
+        "pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {",
+        "fn lower_action_segment("
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 1706-2938, 1230 source lines, 46686 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R09",
+      "literalQuotes": [
+        "pub struct StagedProgram {",
+        "pub fn load(src: &str) -> Result<StagedProgram, Error> {",
+        "pub fn load_v3(src: &str) -> Result<StagedProgram, Error> {"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 2940-3151, 209 source lines, 7120 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R10",
+      "literalQuotes": [
+        "pub fn require_core2(program: &Program) -> Result<(), Error> {",
+        "pub fn require_core3(program: &Program) -> Result<(), Error> {"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 3153-3215, 60 source lines, 2558 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R11",
+      "literalQuotes": [
+        "pub struct ExternalDutyDecl {",
+        "    #[serde(default, skip_serializing_if = \"Vec::is_empty\")]\n    pub duties: Vec<ExternalDutyDecl>,"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 3217-3724, 505 source lines, 13944 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R12",
+      "literalQuotes": [
+        "    if mori_core::language(&source).is_ok_and(|language| language == \"moriarty/2\") {\n        let target: mori_backend::Target = core_io::read_json(&args.target)?;\n        let artifact = mori_backend::stage::compile_staged(&source, &target, &args.out)\n            .map_err(core_io::operation)?;"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 3726-3954, 226 source lines, 9162 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R13",
+      "literalQuotes": [
+        "        if args.target.is_some() {\n            return Err(super::core_io::operation(\n                \"moriarty/3 target inspection is unsupported; no Core/3 compiler enforcement map is available\",\n            ));\n        }"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 3956-4361, 403 source lines, 22132 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R14",
+      "literalQuotes": [
+        "fn generic_scalar_segments_and_zero_await_actions_keep_declaration_order() {",
+        "    assert_eq!(a.circuits.iter().map(|c| (c.action.as_str(),c.segment)).collect::<Vec<_>>(),vec![(\"z_first\",0),(\"z_first\",1),(\"a_second\",0)]);",
+        "#[ignore = \"requires Opus-classified baseline fixture generation and MORIARTY_STAGE_V1_BASELINE\"]\nfn legacy_artifact_and_every_ir_file_match_baseline_bytes() {"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 4363-4552, 187 source lines, 10497 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R15",
+      "literalQuotes": [
+        "name = \"mori-backend\"",
+        "midnight-zkir-v3.workspace = true"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 4554-4582, 26 source lines, 578 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R16",
+      "literalQuotes": [
+        "name = \"mori-core\"",
+        "mori-lexer.workspace = true"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 4584-4604, 18 source lines, 362 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R17",
+      "literalQuotes": [
+        "name = \"mori\"",
+        "mori-backend.workspace = true"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 4606-4655, 47 source lines, 1273 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R18",
+      "literalQuotes": [
+        "## Proposed ordinary Core/3 public consumer difference",
+        "Product checks remain unrun in the source-only proposal."
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 4657-4925, 266 source lines, 15006 bytes, read across two byte-offset segments)",
+      "status": "whole"
+    },
+    {
+      "id": "R19",
+      "literalQuotes": [
+        "Compiled Moriarty contracts must target **ZKIRv3** and run on Midnight.",
+        "This end-to-end capability is unfinished."
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 4927-5011, 82 source lines, 12394 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R20",
+      "literalQuotes": [
+        "`inspect --target` has no Core/3 enforcement map.",
+        "The actual staged backend loads only /2, derives its\nregistry from liability statements rather than declared /3 duties, and accepts\nonly Core/2 contexts/artifacts."
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5013-5073, 58 source lines, 3731 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R21",
+      "literalQuotes": [
+        "The smallest useful next consumer capability is **additive Core3 staged artifact compilation through the existing real lowerer**, followed by public `mori compile` publication and `inspect --target` enforcement reporting.",
+        "If those premises remain unresolved, the exact blocker is **missing B1 contract**, not a missing parsing feature, test count or generic infrastructure."
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5075-5129, 52 source lines, 15505 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R22",
+      "literalQuotes": [
+        "\"status\": \"SOURCE_DIAGNOSIS_CHECKED_NO_EXECUTION_OR_ADOPTION\"",
+        "\"sourceSecurityFinancialCompilerTargetApproval\": false"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5131-5151, 18 source lines, 1076 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R23",
+      "literalQuotes": [
+        "\"changedPath\": \"crates/mori-backend/src/stage/lower.rs\"",
+        "\"sourceClaim\": \"Separation of source admission from already-existing real lowering only; not Core3 backend/target implementation completion\""
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5153-5177, 23 source lines, 1326 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R24",
+      "literalQuotes": [
+        "\"exactMovedBodyBytes\": 5034,\n  \"exactMovedBodySha256\": \"42b374f64f3881bf1ed6690fd938f5b4c887a77a384c9fa139a11e34fff31518\",\n  \"oldAndNewMovedBodyByteEqual\": true,"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5179-5216, 35 source lines, 1829 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R25",
+      "literalQuotes": [
+        "\"existingTest\": \"generic_scalar_segments_and_zero_await_actions_keep_declaration_order\"",
+        "\"resourceStatus\": \"UNRUN; compiler and test import pinned SDK IrSource/Instruction. No ordinary/backend/SDK execution or build selected by this preparation. Root requires concrete applicable admission before choosing any command.\""
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5218-5255, 34 source lines, 2787 bytes, read across two byte-offset segments)",
+      "status": "whole"
+    },
+    {
+      "id": "R26",
+      "literalQuotes": [
+        "\"ordinarySourceNow\": \"One private extraction seam for the actual existing shared scalar/financial staged lowerer. No new API or unsupported3 stub. Future owner-selected additive /3 entry can reuse this real routine only after the below contract/source changes are supplied and reviewed.\""
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5257-5272, 13 source lines, 1866 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R27",
+      "literalQuotes": [
+        "\"exactCurrentJNamespace\": \"unadopted_core3_tools_J_a958_20261020\"",
+        "\"ASTLocationIsSourceNavigationNotSemanticProof\": true"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5274-5310, 34 source lines, 2231 bytes)",
+      "status": "whole"
+    },
+    {
+      "id": "R28",
+      "literalQuotes": [
+        "+    compile_loaded_staged(sp, target)\n+}\n+\n+// Keep source admission separate from the existing lowering sequence.\n+// Only compile_staged calls this private helper, after its unchanged /2 load.\n+fn compile_loaded_staged(sp: StagedProgram, target: &Target) -> Result<StagedArtifact, Error> {"
+      ],
+      "scope": "whole (REQUIRED-INPUT.md lines 5312-5329 and standalone candidate.patch lines 1-15, 655 bytes)",
+      "status": "whole"
+    }
+  ],
+  "subjectSha256": "26746c7502e4dbdf4745113fc3d28a15d1d2ee3e1134adad165985a9368dfb08",
+  "summary": "Complete whole-body source-only mechanical review of the 28-role packet (R01-R28) against J (HEAD a117f361130236635fb0fab89287b3e8d28589cb, tree d1e9d24d24f7f5dc13d694e61bba447f8de7b52b, sourceCommit 753b7a10030fdda0e920bff91a26cb742f473c76). All seven mechanical source predicates (1)-(7) are source-established: only crates/mori-backend/src/stage/lower.rs is modified by a single 6-line (287-byte) wrapper insertion extracting private fn compile_loaded_staged(sp: StagedProgram, target: &Target) -> Result<StagedArtifact, Error>; compile_staged retains its exact public signature, reexport, signed-target refusal, and mori_core::stage::load (/2) error wrapping; the owned StagedProgram is moved without cloning, serialization, or profile substitution; the 5034-byte lowering body from target.validate()? through artifact.validate()? and return Ok(artifact) plus trailing logical_resources is byte-for-byte unchanged; all 18 context files remain untouched; and all preparation claims, unrun disclosures, and open B1/REG3/context/artifact/F3/B2 blockers are honestly stated without fabricating any artifact-byte or financial oracle.",
+  "verdict": "agree-mechanical-source-change"
+}
