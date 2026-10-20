@@ -63,3 +63,10 @@ Sol factual navigation: [dated Muse engineering status](UPDATE-019-MUSE-ENGINEER
 Sol factual navigation: [dated Muse engineering status](UPDATE-020-MUSE-ENGINEERING-STATUS.md), [source summary](../../sources/src-313f8f460833576ac2a6.md), and [authorship/provenance](provenance/update-020-authorship.json). The chapter describes the future finished interpreter; it is not a current native/proof/target result. The website remains unpublished until full completion.
 
 Sol factual navigation: [separate later Root status](UPDATE-020-POST-AUTHOR-STATUS.md) and [later metadata source summary](../../sources/src-573699ed126eb46bb7ef.md); new finite local MATCH preserves earlier mismatch history.
+
+
+## UPDATE021 — designated author concept continuation
+
+- [UPDATE-021 — Scalar Arithmetic and Checked Results](UPDATE-021-SCALAR-ARITHMETIC-AND-CHECKED-RESULTS.md) — in the finished interpreter's arithmetic room: NOT reads its single actual operand from the First phase, while ADD, SUB, MUL and LT bind the cached first value to its checked source and meet the second operand, retain carry, borrow and high half before the checked projection, and stage — but do not yet allocate — the exact value, Boolean or numbered error. Concept proposal, dated 2026-10-20; engineering status is kept separate from the visitor copy.
+
+Sol factual navigation: [dated Muse engineering status](UPDATE-021-MUSE-ENGINEERING-STATUS.md), [source summary](../../sources/src-e7299984b7b3131318a9.md), [authorship/provenance](provenance/update-021-authorship.json), [separate later source-review status](UPDATE-021-POST-AUTHOR-STATUS.md) and [later metadata summary](../../sources/src-301d37683620d39a643c.md). The chapter describes the future finished interpreter; the website remains unpublished until full completion. Source review does not establish execution or full-leaf acceptance.
