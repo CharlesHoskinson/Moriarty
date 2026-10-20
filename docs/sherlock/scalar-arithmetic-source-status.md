@@ -18,3 +18,13 @@ Six coverage classes remain required:
 SI08/SI21 predecessor and top-frame coherence, full SI17/SI21/SI22/StepInv, program membership, P1 native issuer/SourceSpec authentication and exactly-one whole-step dispatch remain external integration premises. Owner records validate internal consistency, not authenticated provenance; the selected-step wrapper does not roll back a step after an error.
 
 The full39-selector interpreter, required witness/constraints/exports, grouping1/2/4/8, residual baseline, finance, persistence, recursion and stagenet obligations remain open. SDK/native C13 is UNSELECTED; native23 `c=null`, `S NOT_ESTABLISHED`, stoppedAm10 and existing caps are unchanged. No execution authority or permissionless product boundary changes here.
+
+## October 20 — C6 test-source update
+
+The preceding section and its original evidence map preserve the C4 cut merged in PR353: 10 positive +12 raw tests, all UNRUN. This update changes only the raw test file. Production, the positive test file and registration remain byte-identical to that reviewed cut.
+
+Current source has **10 positive +22 raw =32 tests, all UNRUN and uncompiled**. One fresh independent Muse Wonder1.0 HIGH review approves the full current candidate as bounded source, including the new pairing/regA isolation and reachable producer-refusal test sources. The prior two C4 production opinions remain applicable to unchanged production; this update has **one fresh C6 review**, not two. See [the dated evidence](../../raw/sherlock/scalar-arithmetic-source-review-2026-10-20/c6-test-source-update/evidence.json) and its complete opinion.
+
+The standalone CTX prefix-mismatch branch is unreachable through the one-config host-pair API. The `max_data_nodes == usize::MAX` emitter-cap guard is dominated by checked geometry. The new source reports these obstructions; neither counts as direct guard coverage or a waiver.
+
+Four coverage classes remain required: disabled exported-overflow receipt evaluation; systematic all-mode Const/DATA operand crosses; true P3 with retained admission `max_helper_work == u128::MAX`; and broader per-lane preservation coverage. All earlier predecessor/StepInv/program-membership/P1/native/full39 and financial/persistent/recursive obligations remain open. No test execution, typecheck, SDK preprocessing, synthesis, proof, degree, performance or whole-leaf qualification is established by this source update.
