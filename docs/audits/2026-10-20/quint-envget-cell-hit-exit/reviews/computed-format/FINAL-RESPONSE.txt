@@ -1,0 +1,124 @@
+## Verdict: SOURCE/FORMAT_APPLICABILITY ACCEPT
+
+Reviewer: Muse Wonder 1.0 HIGH, independent non-author review. No tools, commands, executions, or file opens were performed in this review. No mandatory source changes are required for the stated finite applicability.
+
+This ACCEPT is not approval by hashes alone. It rests on reading the converter/verifier code and declarations below. It does not claim the later genuine-Rust comparison has run or matched.
+
+## Read coverage and readability
+
+I read all 22 supplied bodies completely as inline text:
+
+1. `convert_computed_itf_only.py`
+2. `verify_output_only.py`
+3. `SOURCE-AND-INPUT-FREEZE.json`
+4. `STRICT-INVERSE-PROOF.json`
+5. `FULL-FIELD-ARITY-RECEIPT.json`
+6. `FORMAT-OUTPUT-FREEZE.json`
+7. `SAFE-CONVERTER-HANDOFF.json`
+8. `POST-FORMAT-PIN-CHECK.json`
+9. `PUBLIC-ITF-WINDOW-FORMAT-INTERFACE.json`
+10. `SAFE-QNT-WINDOW-OBSERVATION-INTERFACE.json`
+11. `SAFE-OBSERVATION-CONTRACT.json`
+12. `itf.d.ts`
+13. `q41EnvGetOwnerTypes.qnt`
+14. `c6PositiveHostTypes.qnt`
+15. `c6PositiveMetaTypes.qnt`
+16. `c6PositiveProgramTypes.qnt`
+17. `c6PositiveContextTypes.qnt`
+18. `c6PositiveStateTypes.qnt`
+19. `q41ActualOwnerWindowRuntime.qnt`
+20. `ACTUAL-TWO-FREEZE.json`
+21. Prior runtime `FINAL-RESPONSE.txt`
+22. `AUTHOR-RAW-SEARCH-QUALIFICATION.json`
+
+Body boundaries and pins establish delivery identity only; they were not treated as semantic evidence.
+
+Explicitly not supplied/read: the populated computed ITF body, populated `COMPUTED-QUINT-NATIVE-WINDOW.json`, populated strict-inverse window, genuine Rust window/after artifact, expected bodies, and any comparison operation or selector. Those absences limit this verdict as stated below.
+
+## 1. Representation-only conversion
+
+Yes, for the supplied converter.
+
+`convert_computed_itf_only.py` uses only Python standard-library `pathlib`, `json`, `re`, `hashlib`, and `os`. Its inputs are the frozen computed ITF, the six pinned public declaration modules, the observation contract, its freeze file, and only path/hash use of the installed ITF declaration file. It takes no expected, genuine-Rust-after, diagnostic, producer, model, or owner-rule input.
+
+It does not import or invoke Quint, the owner relation, `q41ComputeWindow`, a frontend, or a subject. It only validates the reported trace selection:
+
+- `vars == ['machine']`
+- exactly two states
+- final state has `machine`
+- `machine` has `input_before`, `computed_window`, `computed_once`
+- `computed_once is True`
+- wrapper tag is `Q41ComputedWindow`
+- selected window has exactly `before`, `after_cell`, `after_exit`, `events`
+
+Those are schema/selection checks, not owner-rule evaluation.
+
+No value-dropping path was found in the exercised conversion pipeline:
+
+- Records use exact field-set checks in `decode_itf`, `bindfields`, `forward`, `encode_itf`, and almost all inverse paths.
+- Lists are transformed by order-preserving comprehensions.
+- No defaults, coercions, sorting, empty-table removal, or field filtering were found.
+- Integers require canonical `#bigint` decimal text in `decode_itf`; native re-encoding writes the exact integer again.
+- `type(v) is bool/int/str` checks and `exact()` preserve the bool-versus-int distinction.
+- Option handling distinguishes `None`/`null` from `{'Some': value}`, including a payload of zero because the check is structural rather than truthiness-based.
+- Declared byte-text fields are converted through byte lists and strict UTF-8 decoding; opaque declared byte lists remain integer lists.
+- The special transformations are paired and reversible in code: `C6MBytePair`, `C6MWidthEntry`, `C6PProgram.names`, `C6PDecl`, `C6PCtorDecl`, `C6PDeclField`, and the `C6PTypeToken` preorder flatten/unflatten path.
+
+The few inverse special cases that do not themselves call `bindfields`, such as `C6MBytePair`, `C6PDecl`, `C6PCtorDecl`, and `C6PDeclField`, are reached in this pipeline only after `decode_itf` has already enforced the complete declared record membership. That is sufficient for this frozen pipeline, though it means those inverse helpers should not be treated as standalone hostile-input validators.
+
+## 2. Declaration coverage and limits of the exact inverse
+
+The six declarations and converter type machinery cover the mapping shapes reachable from `Q41Window`:
+
+- primitive `int`, `bool`, and `str`
+- records with complete declared fields
+- ordered `List[...]`
+- named sum types
+- option sums listed in `options`
+- payload and unit enums listed in `prefixes`
+- explicit renames for cases such as finance absence, `U128`, `U128OutOfRange`, wildcard/constructor extension names, and matching results
+- byte-pair, width-entry, program-name, declaration, and source-type preorder projections
+
+Arity and constructor checking is real in the code:
+
+- `decode_itf` requires an ITF variant object with exactly `tag` and `value`, requires the tag to be declared, requires unit payloads to be `{'#tup': []}`, and decodes payload values against the declared payload type.
+- `inverse` requires the internal variant tuple, declared tag membership, and `has == (payload type is not None)`.
+- Forward non-option enum conversion requires exactly one matching native unit or payload name.
+- Forward option conversion requires exactly one unit variant for `None` and exactly one payload variant for `{'Some': ...}`.
+- `unflatten_type` consumes exactly the declared `Apply` arity and asserts that all preorder tokens are consumed.
+- `verify_output_only.py` additionally checks the complete window keys, three host records, admission/image structure, 23 program-view fields, 23 image fields, two events, and all 28 declared event fields per event.
+
+The reported strict inverse is therefore a meaningful finite observation: for this frozen selected window, `decode_itf -> inverse -> forward -> encode_itf` reconstructs the entire original selected ITF window with exact types, keys, values, constructor tags/arity, and list order, as implemented by `exact()`.
+
+What it proves is limited:
+
+- It proves internal bijectivity for the branches, variants, lists, and values actually exercised by this window.
+- It does not prove correctness for every declared enum alternative, every empty-list element type, or every unexercised declaration branch. Those branches were source-inspected, but they are not observationally proven by this one input.
+- It does not by itself prove that prefix-stripped or renamed native enum strings, width-entry pair shape, byte-pair shape, or type-tree shape equal genuine Rust native JSON. Those mappings are declared/implemented in the supplied FORMAT contract and converter, but no genuine Rust window or complete Rust representation source was supplied here.
+- It does not prove owner semantics, admission, refinement, reachability, Rust equality, circuit behavior, or any full-prefix result.
+
+## 3. Use as the computed-Quint side of a later comparison
+
+Yes. Subject to the prerequisites below, the frozen projection may be used as the computed-Quint side of a separately selected, complete native-window, typed-JSON comparison.
+
+I do not approve or guess any selector, genuine-Rust path, or comparison operation, because none was provided.
+
+Prerequisites for that separate Root-only child:
+
+1. Root first verifies every output pin in `FORMAT-OUTPUT-FREEZE.json`, not merely the native-window hash.
+2. Root separately selects the comparison operation and supplies the genuine Rust window source; that future child alone may open the genuine Rust artifact.
+3. The genuine side must be the complete native window root with exactly `before`, `after_cell`, `after_exit`, and `events`, not a full-prefix wrapper or a filtered projection.
+4. Comparison must be typed JSON equality over the whole window recursively: exact key sets, exact primitive kinds, bool distinct from int, arbitrary-precision integer handling without float/`Number` coercion, `null` distinct from `{'Some': ...}`, enum tag and payload arity, text versus opaque byte arrays, and array order.
+5. Any result must be reported only as local selected-window equality or mismatch. It must not erase or relabel the retained independent whole-prefix `MISMATCH`, and it must not be expanded into admission, refinement, native-prefix, circuit, stagenet, financial, or EARS closure.
+
+No unchanged frontend, runtime, or converter rerun is required merely to repeat prior successful steps.
+
+## Limitations retained
+
+- This is not a fresh blind semantic vote: the same FORMAT actor previously saw expected-DATA structural transport and released actual-before.
+- The historical raw identity/search qualification in Body 22 remains unchanged.
+- Standard-library Python is trusted; no complete Python/toolchain source audit is claimed.
+- Strict inverse success is a reported finite observation for the frozen positive window, not a universal proof or general hostile-input validator claim.
+- No populated output body was available to this reviewer, so individual populated values were not independently inspected here.
+
+**Mandatory findings: none.**

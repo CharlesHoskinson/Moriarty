@@ -1,0 +1,64 @@
+## Top verdict
+
+**Source/API: APPROVE, with no mandatory source change, for the new runtime wrapper and the frozen literal actual-before DATA as supplied.**
+
+**Operations: eligible in principle for separate Root selection, Op 01 first, but not yet dispatch-ready.** The packet does not retain the applicable ordinary caller/ITF composition that Root must inspect before selection. That is a bounded missing execution premise, not a defect in the two new QNT modules.
+
+Reviewer identity: Muse Wonder 1.0 HIGH, independent non-author review.
+
+No tools, commands, subjects, Quint/frontend, Rust, provider, Git, or canonical actions were executed. This is source review only. Nothing below is approval by hashes alone; findings rest on the inline bodies, with hash-only dependencies explicitly marked as unreviewed premises.
+
+No expected fixture, expectedRoot literal, after-state, or event input is present in the packet. The native whole-prefix comparison remains **MISMATCH**, untouched, and nothing here relabels it or infers admission, reachability, native equivalence, refinement, EARS, proof, or ledger closure.
+
+## 1. Direct native-before versus literal-before review
+
+I compared the complete released native `ACTUAL-WINDOW-BEFORE.json` (6,362 B) field by field against the complete literal `actualBefore: C6WholeHost` in [q41ActualOwnerBefore.qnt](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/source/q41ActualOwnerBefore.qnt), under the six declaration modules it imports. The literal is a faithful typed transport of that native record:
+
+- **Identity/meta:** `profile_id: 2`, `DedicatedSorts`, finance `Absent`, both digests and `program_membership_digest` unselected, `field_id: null` → `C6MNoPair`. `layout_version: ["envget-owner-positive", "1"]` is encoded as `C6MBytePair` byte lists; I decoded the integer lists and they spell exactly those two ASCII strings (`49` = `"1"`).
+- **Bounds, twice:** all 22 bound fields in `admission.bounds` and in `layout.bounds` match value-for-value (64/16/64/64/32/32/32/16/32/64, arity 2, 64/64/64/128/64/16/64, 65536, 256/1024/256), and layout capacities `64/256/256/256` with `boundary_capacities_present: false`, `widths: null` → `C6MNoWidths`, `scalar_layout_id: null` → `C6MNoPair`.
+- **Program view:** entry 0; the five expressions in order (`Let{0,1,2}`, `Literal{0}`, `Let{1,3,4}`, `Var{0}`, `Var{1}`); the five occurrences with paths `(0,0),(0,1),(1,1),(2,2),(4,2)`; `occurrence_paths: [0,1,1,0,1,1]`; all eleven previously-opaque vectors (`pattern_children`, `types`, `type_args`, `constructors`, `ctor_fields`, `decl_param_counts`, `decl_ctor_counts`, `decl_templates`, `plan_nodes`, `plan_cases`, `field_paths`) empty in both; one constant `U128{marker_free: true, n: 7}` → `C6PKUInt`; names `["x","y"]` → `List(120), List(121)`. Int-versus-bool is preserved (`marker_free`, `owner_is_function`, `boundary_capacities_present` are bools; all counts/indices are ints).
+- **Image:** run identity with `Nat(128)` fuel and `Nat(8)` stack inputs; `control: Eval{expr: 3}`, `control_origin: 3`, `env_root: Some(0)`, outcome `Running`, work counters `128/114/14/8/2/6`, alloc `(0,0,1)`, active `(0,0,1,0)`; helper `EnvGet{site: EvalVar, origin_reference_cursor: 6, parent_resume: null → C6HNoIndex, binder: 0, cursor: Some(0), found: null → C6HNoRef, status: Pending}`; `result: null` → `C6HNoResult`; zeroed `seg_base`; empty `data`, `data_fields`, `tasks`, `value_slots`; one env cell `{binder: 0, value: Const(0), previous: null}`; frames `ScopeF{null, 0}` then `LetF{binder: 1, body: 4, saved_env: Some(0), origin: 2}`.
+
+No field is omitted, reordered in any list, or coerced. Null maps to the correct option variant at each site, which differs by field (`C6MNoPair`, `C6MNoWidths`, `C6HNoIndex`, `C6HNoRef`, `C6EnvNone`, `C6HNoResult`) and is right in every case.
+
+**Mandatory-premise statement on sufficiency:** this direct, complete literal-versus-native comparison **does suffice** for this review of this one frozen input value, and the runtime approval does not rest on the FORMAT role's claimed inverse boolean. Two limits remain explicit:
+
+- The FORMAT writer / independent parse-inverse source and proof were **not supplied and were not reviewed**. I make no claim that that tooling is correct in general; it is also not a runtime dependency, since the runtime consumes only the frozen literal.
+- The FORMAT actor's prior expected-DATA exposure and correlation, and the historical raw-identity qualification, remain as stated. FORMAT is not a fresh blind or independent semantic vote, and this review does not treat it as one.
+
+## 2. Runtime wrapper source/API
+
+[q41ActualOwnerWindowRuntime.qnt](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/source/q41ActualOwnerWindowRuntime.qnt) does exactly what the pre-code constraints require:
+
+- Sole variable `machine: {input_before: C6WholeHost, computed_window: Q41NormalWindow, computed_once: bool}`. Raw output retention is therefore the whole state, with no projection or filtering layer.
+- `init` seeds `input_before: actualBefore`, `computed_window: Q41NoWindow`, `computed_once: false`. `Q41NoWindow` here is only not-yet-computed output, not a Core failure or refusal.
+- `computeActualWindow` is guarded by `not(machine.computed_once)` and calls the unchanged `q41ComputeWindow(machine.input_before)` exactly once, retaining `input_before` by record spread and setting `computed_once: true`. It reimplements no owner rule, imports no expected/after/event data, and performs no expected-aware check.
+- `actualBeforeRetained` (`machine.input_before == actualBefore`) and `wholeWindowRetained` (computed once, variant is `Q41ComputedWindow`, and `window.before == machine.input_before`) are correctly scoped as retention/collection checks. Neither asserts owner equality, and the review does not upgrade them.
+
+Because `Q41ComputedWindow` carries the full `Q41Window` — all three complete hosts and the ordered two events of 28 fields each, as defined in [q41EnvGetOwnerTypes.qnt](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/source/q41EnvGetOwnerTypes.qnt) — retaining `computed_window` in the sole variable retains everything the raw-output contract names. A projected boolean would not be a substitute, and none is used as one.
+
+On the literal before as transported, the helper presents as `Pending`, binder 0, cursor `Some(0)`, with `env[0].binder == 0`, so the previously approved relation in [q41EnvGetOwnerRelation.qnt](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/source/q41EnvGetOwnerRelation.qnt) is positioned to produce the Cell→Exit window. That is a statement about the model's computation on this input, not about native reachability: the external positive-domain premises from the prior review (real AB-bound reachable Running host, successful normal P0–P7 path, budget/read/arithmetic success, `active` lengths equal to owned Vec lengths) remain premises, and the literal alone does not discharge them.
+
+The eight prior modules were re-read in this packet; the prior parametric source/API APPROVE and its frontend PASS stand, and normal-domain policy is not reopened. The existing whole-source independent fixture PASS is a distinct result and is not evidence about this actual-before run.
+
+## 3. Frontend and run eligibility
+
+**Op 01 (new closure typecheck of `q41ActualOwnerWindowRuntime.qnt`): eligible for Root selection.** A PASS would require exit 0, controller failure `None`, and stdout/stderr both fully 0 bytes, under the pinned discipline: `PATH=/usr/bin:/bin`, `LANG=C.UTF-8`, DEVNULL stdin, 60 s wall, 4 MiB retained per stream, Node `--max-old-space-size=512`, exactly the ten regular public source entries, and the full 4,685 pre/post pin checks (4,670 package files + 2 Node/CLI + 10 sources + 3 symlinks; the arithmetic checks, but the 4,685-row manifest itself is referenced, not inline, so Root's pre/post verification is a mandatory premise I did not review by hash).
+
+**Op 02 (one TypeScript-backend sample): eligible only after Op 01 PASS and a separate, explicit Root selection**, with `seed 1`, `--max-samples 1`, `--max-steps 1`, `--init init`, `--step computeActualWindow`, `--invariant actualBeforeRetained`, `--witnesses wholeWindowRetained`, and a fresh `--out-itf` under a fresh empty `proposed-itf` created by Root outside the source tree. A PASS requires verification against the **raw ITF as authoritative** (the pretty CLI trace may truncate internally and is not a replacement):
+
+- exactly two complete raw ITF states (initial plus one computed step), each with exactly the sole `machine` variable;
+- state 0: `computed_once: false`, `Q41NoWindow`, `input_before` equal to the literal;
+- state 1: `computed_once: true`, `input_before` retained, `computed_window` a nonempty complete `Q41ComputedWindow` containing all three full hosts and the ordered full 2×28 events, `before == input_before`;
+- the `wholeWindowRetained` witness actually reached, and the invariant holding — exit 0 alone is not a PASS;
+- complete ITF within the 64 MiB cap cited from the pinned B19 authority (cited, not newly raised or re-approved here), with COMMAND/RESULT/full stdout/stderr/complete ITF fsynced before any assertion, parse, or comparison;
+- fail-stop on incomplete capture, diagnostics, cap or controller failure, nonzero exit, missing/short ITF, or witness failure. No autodispatch, retry, cap raise, old frontend/test replay, or native replay.
+
+## 4. Bounded missing premise (run side only)
+
+No new guard, capture, serializer, or harness code is authored in this packet, and none is needed for the source verdict. But the dispatch premise is not yet satisfied:
+
+- The only capture code supplied, [capture-helper.FULL.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch23-parametric-guard-discriminators-current-source-20261019/capture-helper.FULL.py), has a `main` that is hard-wired to an unrelated R435 tail-four libtest selection (frozen proposal/DAG assertions, `parse_exact_stdout`, 10 s / 128 KiB limits). That `main` must never run for these operations, and its test-output parser must not classify a Quint run.
+- Its reusable `capture(op, phase)` API is the right ordinary class — exact argv/env, bounded binary capture, one child, process-group kill — but `capture`/`save` perform **no fsync**, and no supplied caller composes it with the 4,685 pre/post pins, fresh `proposed-itf` creation, ITF-cap and two-state/witness verification, and fsync of COMMAND/RESULT/streams/ITF before classification.
+
+Therefore: before Root selection, an applicable existing ordinary runtime/ITF caller of exactly that shape must be retained and inspected, using unchanged `capture` and never `helper.main`. If no such caller already exists, that is the one bounded missing code obligation; it blocks dispatch, not the source/API approval above. The later model-window versus genuine Rust window comparison remains a separate, field-only typed inverse/review, selectable only after complete model output durability and authorized child AFTER — no such operation is selected or prejudged here.
