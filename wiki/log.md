@@ -1275,3 +1275,8 @@ Daml completion verification: 63 source-grounded provisional claims linked to im
 ## 2026-10-20 — Sherlock UPDATE016 source intake
 
 Prepared the [wiki-scoped atlas continuation](research/sherlock-circuit-atlas/index.md) and exact Muse response capture with native portable source identities. Historical wiki-llm notes and UPDATE015 failure stay unchanged. The source/status/provenance and existing transaction review are separate from site launch, circuit security, SDK/native or fullgoal acceptance.
+
+
+## 2026-10-20 — Sherlock UPDATE017 source intake
+
+Preserved the exact designated Muse source reply and appended [UPDATE017](research/sherlock-circuit-atlas/UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md), its status snapshot, later review disposition and portable provenance. Existing UPDATE016/legacy material remains byte-identical. The current bounded source opinions retain overallCHANGES_REQUIRED U-D5/U-D6; all18 tests remainUNRUN. No website deployment or product/native gate is introduced.
