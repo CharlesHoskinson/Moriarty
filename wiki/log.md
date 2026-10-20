@@ -1302,3 +1302,8 @@ Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas
 ## 2026-10-20 — UPDATE019 completed-interpreter concept source
 
 Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-019-CHECKED-READS-AND-OWNER-LOOKUP.md) with separate verbatim author-time engineering status and [source provenance](research/sherlock-circuit-atlas/provenance/update-019-authorship.json). The previous UPDATE018 reply and chapter remain unchanged. The corrected reply is 20,113 bytes against a requested 16,000-byte target; Root authorizes retaining the full bounded reply for factual review. This is concept-source intake, not website launch or native/recursive/target acceptance.
+
+
+## 2026-10-20 — UPDATE020 completed-interpreter concept source
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-020-SCALAR-TAG-SELECTORS-AND-CHECKED-WITNESSES.md) with separate verbatim author-time engineering status and [source provenance](research/sherlock-circuit-atlas/provenance/update-020-authorship.json). The previous UPDATE019 reply and chapter remain unchanged. The corrected reply is 15,071 bytes, within the 16,000-byte target; all five authored strings are retained exactly for factual review. This is concept-source intake, not website launch or native/recursive/target acceptance.
