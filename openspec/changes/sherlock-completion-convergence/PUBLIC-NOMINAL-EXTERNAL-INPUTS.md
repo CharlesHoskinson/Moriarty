@@ -34,3 +34,17 @@ bodychecked/admitted/Halted; full artifacts/raw receipts are retained. This
 observation closes no full B04/EARS/native/proof/target exit. Negative tests and
 independent complete-value/binding comparison retain their own evidence; see the
 [dated actual result](../../../docs/results/sherlock-nominal-external-inputs-20261020/README.md).
+
+## Later scoped comparison observation — 2026-10-20
+
+The independent comparison of the two already frozen external-input captures
+passed: complete typed arguments/results, all eleven binding fields and seven
+per-argument fields/counts, exact input/source/config/target identities and
+source declarations/ordered function bodies plus bound entry/parameters matched
+the unchanged pre-execution expectations. Both observations were bodychecked,
+admitted and Halted. No product replay occurred. This conditional finite
+comparison does not establish owner state/work/trace, allocated-ID/resource
+equality, unconditional termination, refinement, native/proof/target, whole CLI
+or full B04/EARS closure. The
+[public result and exact scope](../../../docs/results/sherlock-nominal-external-inputs-20261020/README.md#independent-comparison-update--2026-10-20)
+append to the retained historical pending record.
