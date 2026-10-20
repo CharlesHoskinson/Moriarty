@@ -1,0 +1,32 @@
+pub const C6_PHYS_MAGIC: u128 = 0x4336_5048_5953_31;
+pub const C6_PHYS_VERSION: u128 = 1;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PushSelection { Accept, Refuse }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum C6PhysError {
+    BadMagic { actual: u128 },
+    BadVersion { actual: u128 },
+    Truncated { section: &'static str, needed: usize, actual: usize },
+    TrailingLanes { section: &'static str, extra: usize },
+    BadTag { section: &'static str, tag: u128 },
+    BadBool { section: &'static str, value: u128 },
+    NonZeroPadding { section: &'static str, lane: usize, value: u128 },
+    UsizeOverflow { section: &'static str, value: u128 },
+    CapacityExceeded { section: &'static str, needed: usize, limit: usize },
+    WrongControl { section: &'static str },
+    /// The owner would not select a Push row here (terminal, publication, fuel,
+    /// helper or stale result), in owner priority order.
+    NotPushSelected { section: &'static str },
+    /// The state is outside the step-invariant domain this layer accepts.
+    StepInvDomain { section: &'static str },
+    /// Logical Accept, but the owner's physical frame check would refuse.
+    PhysicalFrameCapacity { depth: usize, frames: usize },
+    UnexpectedPushSelection { expected: PushSelection, actual: PushSelection },
+    EventMismatch { section: &'static str },
+    AfterMismatch { section: &'static str },
+    CounterOverflow { section: &'static str },
+}
+
+pub type C6Result<T> = Result<T, C6PhysError>;
