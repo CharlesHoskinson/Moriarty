@@ -1,0 +1,161 @@
+## Verdict
+
+**APPROVE — for the exact bounded source/operation reviewed.**
+
+I am Muse Code powered by **muse-wonder-1.0**, acting as a fresh, non-author reviewer under the user-authorized Muse Wonder 1.0 HIGH outage fallback. Earlier “Opus” labels in historical paths/replies are provenance labels, not my identity.
+
+This approval covers only the proposed one-attempt, whole-artifact source/operation design. It does **not** claim that the comparison has run, that the actual and expected artifacts match, or that any Root selection already exists.
+
+No tools, files, subjects, providers, comparator, tests, or protected bodies were executed or opened by me. Hashes were not my sole basis; I reviewed the supplied source logic and cross-document consistency. Hash arithmetic itself was not independently recomputed in this no-tool review — runtime `bind`/`check`/`static_check` calls are the operation’s recomputation gate.
+
+## Source bodies reviewed
+
+I reviewed the complete inline bodies or complete metadata bodies for:
+
+- Candidate child `compare_wildcard_whole_artifact_existing_h5.py`: `pin`, `check`, `_no_duplicates`, `_reject_constant`, `_finite_float`, `parse_json_bytes`, `read_json`, `load_module`, `program_view`, `check_static_manifest`, `check_source_freeze`, `check_private_freeze`, and `main`.
+- Candidate Root caller `run_selected_wildcard_comparison.py`: `fsync_file`, `fsync_dir`, `save`, `bind`, `_no_duplicates`, `parse_child_report`, and `main`.
+- Sealed `PUBLIC-BINDINGS.json` and sealed `03-comparison.COMMAND.json`.
+- `PUBLIC-BINDINGS.template.json`, `03-comparison.COMMAND.template.json`, `ROOT-SELECTION.template.json`, `ROOT-SELECTION.ready-for-review.template.json`, and `ROOT-INVOCATION.proposed.json`.
+- Existing capture helper: `pin`, `check`, `save`, `static_check`, `stop_group`, `capture`, and its inherited caller context.
+- Complete H5 modules `quint_observations.py` and `core2_await_boundary_wire.py`, especially `canonical_bytes` and `boundary_observations_equal`; domain codecs in those modules were inspected to confirm the candidate does not invoke them.
+- Exact generic H5 extract, existing Q33 child/caller/command baseline, actual freeze/source/link/capture/publication metadata, original SAFE handoff metadata, SAFE private-freeze shape declaration, the complete 50,332-byte owner repair reply as embedded, materialization receipt, and acyclic metadata seal receipt.
+
+Protected expected/actual semantic bodies and raw private-freeze contents were absent by design and were not inferred.
+
+## Findings by required area
+
+### 1. Finite sealing — pass
+
+The child embeds no pin of itself, the caller, the command, bindings, review, or selection. It only receives `comparisonSource` through bindings and asserts that path resolves to `__file__`.
+
+The caller embeds only the pre-existing capture-helper pin in `BOUND["helper"]`. It embeds no self, child, command, bindings, review, or selection pin.
+
+Semantically, sealed `PUBLIC-BINDINGS.json` differs from its template only by replacing `comparisonSource: null` with the final child pin. Sealed `03-comparison.COMMAND.json` likewise differs only by that child pin; bindings are referenced by path only, without a bindings pin.
+
+No supplied sealed input pins its own bytes. The dependency direction is acyclic:
+
+selection → caller/command/bindings/child/review; bindings → child and pre-existing leaves; command → child; caller → capture helper only; child → no future sealed file.
+
+The ready selection template has `authorized_one_attempt: false`, both review flags false, and `fresh_comparison_review: null`. It is not a real selection. The real `ROOT-SELECTION.json` does not yet exist and must be constructed last by Root after Root reads the full fresh review. Runtime receipts pinning the selection are outputs, not sealed inputs.
+
+Non-blocking observation: sealed bindings retain the template status text `TEMPLATE_ONLY_NOT_SEALED_NOT_EXECUTION_AUTHORITY`, and the command retains its UNRUN status. Neither child nor caller treats those strings as authority; authority comes from the future external Root selection and exact pin checks. Changing them would also violate the stated “only `comparisonSource` changes” seal rule.
+
+### 2. Root privacy — pass for the exact sealed inputs
+
+The caller’s actual logic, not merely its comments, maintains the boundary:
+
+- It parses bindings/selection/command as Root-side control metadata.
+- It carries `originalExpectedFreeze`, `expectedOpaque`, and `membershipOpaque` only as in-memory pin dictionaries.
+- `PRIVATE_BINDING_KEYS` explicitly names those three keys.
+- The Root pin row list is constructed from the public static manifest, actual/generated/helper/python rows, public receipt rows, caller, command, bindings, selection, and review.
+- It asserts each private binding row is **not** in that Root pin list before `helper.static_check(rows)`.
+- It never calls `pin`, `check`, `bind`, or `static_check` on the private freeze, expected, membership, or derivation files.
+- After capture, it compares only metadata dictionaries such as `report["expectedOpaque"] == b["expectedOpaque"]`; it does not open the named files.
+
+The indirect-manifest concern is bounded by the exact sealed operation: the manifest file itself is pinned, and the packet’s supplied metadata inspection states the current 477-row manifest contains no non-SAFE member at the original private oracle root. Under a different manifest, this approval would not transfer.
+
+Root may hash actual published/capture files as bytes through the public pin lists. It does not parse their semantic contents. Populated semantic comparison remains child-only.
+
+### 3. Child barrier — pass
+
+In child `main`, the order is materially correct:
+
+1. Bindings schema/key bindings and child self-pin are checked.
+2. Public rows are pin-checked.
+3. `check_static_manifest` verifies the 477-member manifest and pin-checks members.
+4. `check_source_freeze` verifies the 26-file source freeze and that `sourceCut` occurs exactly once.
+5. The actual freeze is read and checked for `COMPLETE_EXTERNAL_COMPILE_CAPTURE_FROZEN`, `expectedBodyReads == 0`, and exact member/generated/source-freeze/source-cut metadata equality.
+6. Link and capture results are checked for exit 0, no controller failure, two fully retained streams, and stream-pin membership.
+7. Publication receipt booleans are checked.
+8. Published bytes and capture stdout are read as bytes, pin-checked, and directly asserted as `stdout_raw == published_raw + b"\n"`, with lengths 10582 and 10583.
+9. The publication directory is asserted to contain only `sherlock-artifact.json`.
+10. SAFE metadata links are checked.
+11. Only after those actual checks does `check_private_freeze(b)` perform the first private-freeze open, followed by expected/membership pin checks and the expected-body read.
+
+`check_private_freeze` enforces the declared exact shape: five root keys; `protected_artifacts` must be a list of 22 rows; each row has exactly `path`, `bytes`, and `sha256`; `bytes` uses `type(...) is int`, excluding JSON booleans; `sha256` is 64 lowercase hexadecimal characters; the supplied expected and membership pins each occur exactly once. There is no list-or-map compatibility fallback.
+
+The actual-freeze metadata supplied matches the required 7944-byte pin ending in `...b38b903`, `expectedBodyReads: 0`, 19 members, and 3 generated artifacts. The source-cut R2 row is declared present once at index 8; the child enforces exact membership and uniqueness, though not the numeric index itself. That is sufficient for pin identity in this operation.
+
+### 4. H5 identity/load/parse and whole equality — pass
+
+The child loads `quint_observations` first through `load_module`, which inserts it into `sys.modules["quint_observations"]` before executing the H5 wire module. That satisfies the wire module’s `from quint_observations import canonical_bytes, decode_itf` premise.
+
+It then requires:
+
+```python
+assert h.canonical_bytes is q.canonical_bytes
+eq = h.boundary_observations_equal
+```
+
+Only `canonical_bytes`/`boundary_observations_equal` are used for comparison. `decode_itf`, Quint rendering, Core2 result/prefix conversion, `quint_typed_wire`, source codecs, evaluators, and model execution are not invoked by the child.
+
+`parse_json_bytes` is a strict guard only: UTF-8 decoding, duplicate-object-key rejection, non-finite constant rejection, and finite-float enforcement. It does not normalize values.
+
+The comparison is directly:
+
+```python
+whole_artifact_equal = eq(actual, expected)
+```
+
+over the complete parsed top-level objects. Supplementary checks only add root-keyset and `admission.program_view` keyset booleans. A selected table, status field, metadata count, subset, wrapper-stripped object, or regenerated golden cannot substitute for whole-object equality.
+
+Historical domain names in the H5 modules do not restrict the generic canonical-JSON equality function. `canonical_bytes` sorts object keys only; array order/multiplicity, nested membership, native JSON scalar distinctions, and values remain compared. Object-key order is the sole declared immaterial difference.
+
+### 5. Real publication binding — pass
+
+The child compares the parsed **actual published file**, not a reconstructed stdout projection. It binds that file to:
+
+- its exact pin,
+- generated-artifact membership,
+- capture stdout bytes plus exactly one LF,
+- sole published filename in the directory,
+- publication receipt,
+- link and capture exit/controller/full-stream metadata,
+- actual freeze membership,
+- SAFE expected/freeze/membership metadata links,
+- before/after pin rechecks,
+- bindings observed pin.
+
+The caller further requires a successful captured child exit, empty child stderr, full stream retention, exact report schema/booleans, matching comparison source, matching bindings pin through `bindingsObserved`, matching actual freeze, and metadata-only equality for private pin rows.
+
+No populated diff, row, table, leaf, expected value, or actual value is emitted in the child report or caller result.
+
+### 6. One attempt and inherited class — pass
+
+The command uses `/usr/bin/timeout`, `prlimit`, `/usr/bin/python3 -I -B`, wall 30s, CPU 25s, address space 2 GiB, file size 64 MiB, core 0, and 128 KiB per-stream capture limits. This matches the inherited Q33/capture-helper class; no new scheduler, framework, capability, or resource class is introduced.
+
+The caller:
+
+- requires an authorized, review-eligible, one-attempt external selection,
+- checks helper/caller/command/bindings/comparison-source/review pins before capture,
+- performs pre-capture static checks,
+- asserts the phase directory and `ONE-ATTEMPT.json` do not already exist,
+- creates the phase directory and exclusive one-attempt receipt with fsync,
+- invokes the existing capture helper once,
+- saves and fsyncs result/stream artifacts,
+- performs post-capture static checks,
+- accepts only `PASS` with every predicate true,
+- otherwise writes `FAIL_STOP_NO_RETRY` metadata and re-raises.
+
+The child returns exit 1 for both mismatch and its caught `ERROR` path, so the caller cannot convert mismatch or child error into pass. Its error output contains only schema, status, error type, and `allPredicatesTrue: false`; no body-bearing exception text is printed by the child’s top-level handler.
+
+### 7. Qualification — preserved
+
+The scope remains frozen 185-source plus manifest-186/full-normal Core35c7 only, with live187/Host4 excluded.
+
+The child and caller reports preserve the limits: compile/admission/body-typing/planner/publication comparison only; no runtime completion, native, ledger, refinement, or EARS approval. Historical normative-status uncertainty and owner-declaration/source-inspected ABI correlation qualifications remain intact.
+
+This source/operation approval does not establish the later comparison result.
+
+## Missing premises and disposition
+
+No missing premise prevents a bounded source/operation verdict. The withheld semantic bodies and raw private freeze are intentional blinded inputs, not review omissions, because the exact child logic that will check them after the actual barrier was supplied.
+
+Two future Root-side actions remain outside this approval and must not be backdated:
+
+1. Root must read the complete fresh review and complete owner reply as required by its own gate.
+2. Root must construct the single real external `ROOT-SELECTION.json` last, with `authorized_one_attempt`, review-eligibility flags, and the fresh-review pin set truthfully.
+
+**Terminal disposition: APPROVE the exact candidate source and proposed bounded one-attempt operation, subject to those future Root selection duties and the qualifications above.**
+
+Reviewer identity: **Muse Code powered by muse-wonder-1.0 — Muse Wonder 1.0 HIGH, fresh independent non-author review.**
