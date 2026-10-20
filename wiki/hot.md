@@ -69,3 +69,8 @@ tags: [moriarty, consolidation, recursion]
 ## Sherlock UPDATE022 — wide products and bound ports
 
 [The designated Muse concept](research/sherlock-circuit-atlas/UPDATE-022-WIDE-PRODUCTS-AND-BOUND-PORTS.md) follows the retained high half through the future finished interpreter. [Dated internal status](research/sherlock-circuit-atlas/UPDATE-022-MUSE-ENGINEERING-STATUS.md) and [separate engineering metadata](research/sherlock-circuit-atlas/UPDATE-022-POST-AUTHOR-STATUS.md) keep source, ordinary capture and formal results apart. Website unpublished; native and product work continues independently.
+
+
+## Sherlock UPDATE023 — Scalar Entry and frame routing
+
+[The designated Muse concept](research/sherlock-circuit-atlas/UPDATE-023-SCALAR-ENTRY-AND-FRAME-ROUTING.md) follows the actual Return and top-frame lanes through helper installation in the future finished interpreter. [Dated internal status](research/sherlock-circuit-atlas/UPDATE-023-MUSE-ENGINEERING-STATUS.md) and [separate engineering metadata](research/sherlock-circuit-atlas/UPDATE-023-POST-AUTHOR-STATUS.md) keep author-time source and later literal delivery distinct. Website unpublished; native and product work continues independently.
