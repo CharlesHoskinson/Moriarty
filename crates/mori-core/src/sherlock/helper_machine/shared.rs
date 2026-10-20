@@ -734,7 +734,17 @@ mod owner_prepare;
 mod owner_runtime;
 pub mod owner_host;
 pub mod host_implied_prefix;
-pub(crate) mod fin_carrier;
+pub mod fin_carrier;
+pub use fin_carrier::{
+    FinActionBinding, FinActionPlan, FinAdmittedExtras, FinAssetBinding,
+    FinAssetRowId, FinBindError, FinBoundSource, FinCapacitiesC, FinPlan,
+    FinPreparedStagedSource, FinScalar, FinStagedPrepareError,
+    FinStateBinding, FinStateRowId, NameId,
+};
+pub use owner_host::{prepare_fin_staged_program, prepare_fin_staged_source};
+#[cfg(test)]
+#[path = "shared/fin_staged_source_tests.rs"]
+mod fin_staged_source_tests;
 
 pub use owner_ext_admit::{
     ExtCapacitiesC, PreparationReportC, WorkMapEntryC, admit_ext, admit_ext_program,
