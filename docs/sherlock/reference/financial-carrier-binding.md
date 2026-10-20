@@ -13,3 +13,10 @@ Full financial lowering remains required: all twenty XFin transitions, financial
 The linked source archive records exact source and independent review provenance. It contains no compiled artifact or private oracle data. These project review records are not developer compile, prove or deployment permissions.
 
 See [source qualifications](../../results/sherlock-financial-carrier-unit02-source-20261020/SOURCE-QUALIFICATION.json), [review A](../../results/sherlock-financial-carrier-unit02-source-20261020/A-FINAL-RESPONSE.txt) and [review B](../../results/sherlock-financial-carrier-unit02-source-20261020/B-FINAL-RESPONSE.txt).
+
+
+## Interpret the observed carrier result at its producing boundary
+
+Use the [actual five-operation result](../../results/sherlock-financial-carrier-unit02-source-20261020/actual/ROOT-RESULT.json) when checking execution, and the source qualifications above when checking the component contract. A listed test is not an executed test: the qualification ran16 carrier tests from409 listed members and left393 filtered out. It built the real normal and cfg(test) Core cuts; it did not execute a financial owner invocation.
+
+`FinAdmittedExtras` and `FinSnapshot` are still crate-private component carriers. Their tests are not a public financial API or a substitute for attaching financial state to the actual admitted owner image. Keep public source/typed input, owner admission, financial genesis, dispatch/apply, recorded effects, continuations and ledger settlement as separate links. The next owner consumer must supply those links rather than presenting the existing carrier test as the complete path. Full20XFin, all14findings and native/target/EARS duties remain open.
