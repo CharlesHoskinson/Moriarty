@@ -23,3 +23,13 @@ private values/derivations remain unread by the source author and Root. The
 records whether the separate independent comparison is still pending or has
 reported its bounded result. Full owner state/work/trace, refinement and full
 B04/EARS remain separate obligations.
+
+## Later independent comparison — 2026-10-20
+
+The [dated comparison update](../../results/sherlock-nominal-external-inputs-20261020/README.md#independent-comparison-update--2026-10-20)
+now records PASS for both frozen external-input captures. It compares complete
+typed argument/result trees and binding/source identities under observed
+bodychecking, admission and Halted. The expectations were unchanged and no
+product replay occurred. Whole owner state/work/trace, allocated IDs, resource
+equality, unconditional termination, native and full B04/EARS remain separate.
+The earlier pending evidence remains historical.
