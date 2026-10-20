@@ -1,0 +1,127 @@
+# Fresh non-author review: C6 typed-root runtime data adapter and EXACT7 operations
+
+## Verdicts
+
+**SOURCE/API: REQUEST_CHANGES.** There is one blocking defect, in the comparison path.
+
+**EXACT7: INELIGIBLE as frozen.** Phase 06 cannot reach `PASS_WHOLE_TYPED_C6_ROOT_CODEC` on a correct actual. Once the fix below is made and freshly reviewed, the operation becomes **CONDITIONAL**. It would then depend only on closing the Opus-owned Root caller adaptation and the Root items in section 2. No new model, compile or design gate is needed.
+
+---
+
+## 1. Mandatory source findings
+
+### S1 (blocking): `compare` is guaranteed to raise `RecursionError` on any equal whole document
+
+`root_data.compare` calls `base.same(actual, expected)`. `base.same` recurses through a generator expression at every container level:
+
+```
+same(dict) → genexpr → same(list) → genexpr → same(dict) …
+```
+
+That is 4 live Python frames per typed `ctLane` node.
+
+Each `CTLanes` chain has 48 + 13 × frames lanes:
+
+- I checked case 00 by hand: 17 frames, so 269 lanes.
+- Case 01 and case 07, also checked, have 17 frames as well.
+- The other cases appear to be rotations of the same 17 frames.
+
+At 17 frames, the stack reaches the last lane of answer 0 at about 12 + 4 × 268 ≈ 1084 frames. That is beyond CPython's default recursion limit of 1000. `/usr/bin/python3` resolves to 3.14, where the Python-frame limit still applies.
+
+The traversal only reaches that depth when every earlier field matches. So:
+
+- an equal (correct) actual always raises a traceback;
+- under the frozen classification rules, that traceback after dispatch is counted as **UNKNOWN**;
+- PASS is therefore unreachable.
+
+Running 06 as frozen would spend the single prospective comparison and read the expected body without any possible positive result.
+
+**Required change (Opus source owner, since it replaces the comparator used in `compare`):** add an iterative comparator in `root_data.py` with exactly the semantics of `base.same`, and use it in `compare`. Leave `c6_data` untouched.
+
+```python
+def same_whole(a, b):
+    stack = [(a, b)]
+    while stack:
+        x, y = stack.pop()
+        if type(x) is not type(y): return False
+        if type(x) is dict:
+            if x.keys() != y.keys(): return False
+            stack.extend((x[k], y[k]) for k in x)
+        elif type(x) is list:
+            if len(x) != len(y): return False
+            stack.extend(zip(x, y))
+        elif x != y: return False
+    return True
+```
+
+Do not "fix" this with `sys.setrecursionlimit`. That only moves the failure from the Python limit to the C stack.
+
+### S2 (mandatory with S1): `test_root_data.py` cannot detect S1
+
+None of the 6 methods exercises `compare` or a lane-depth structure. Add normal positive/negative data tests that build two independent deep typed lane trees with loops. Use at least 600 nested `ctLane` nodes so the test exceeds the real depth with margin. The tests must show:
+
+- equal trees give `True` under the default recursion limit;
+- changing only the deepest scalar gives `False`;
+- a deepest `Bool` `true` against an `Int` `1` gives `False`.
+
+Use no expected body and no hostile parser input. Record the new test before the source change, as the existing first-test record did.
+
+### S3 (recommended, cheap to include in the same revision): bind operands in source
+
+- `INPUT_PIN` is only used by the tests. `render` and `decode` accept any self-consistent `source_input` pin from the manifest. Add `if m['source_input'] != INPUT_PIN: raise ValueError(...)` to both.
+- `compare` could likewise require `m['expected']` to equal the public opaque pin (613495 B, `4ca15348…`). That is a hash-only constant, so it does not expose the expected body.
+
+---
+
+## 2. Mandatory Root and caller conditions (not source changes)
+
+**R1.** Before 01 and before 05, Root must verify that each manifest's `source_input` is byte-identical to the 726918 B `6f029ff2…` pin. This stays mandatory even if S3 is adopted.
+
+**R2.** Before 06, Root must verify the barrier itself, because `base.validate_barrier` is weaker than the frozen conditions. It only checks that `expected_body_reads` is the int 0 and that the actual pin is a member. Root must also check:
+
+- the exact 3-key member pins;
+- `expected_body_read_scope`;
+- fsync of all files and directories.
+
+Root must also verify that the 06 manifest `expected` equals the opaque pin exactly.
+
+**R3.** Classify 06 only from a valid, complete stdout JSON plus empty stderr. A traceback exits with code 1, the same code as a genuine FAIL. Set the parse count to `None` before dispatch, as already frozen.
+
+**R4.** The F03 `launch` callable only records the child process. The Opus-owned caller must supply everything else around it:
+
+- fresh 0700 working directories;
+- the exact allowed-file membership check for each stage;
+- source, compiled-15, tool and helper pins before and after every child;
+- hash-only checks of the expected and freeze files;
+- stop-on-first-problem behaviour.
+
+This is what makes the verdict CONDITIONAL rather than ELIGIBLE after S1 and S2 are closed.
+
+---
+
+## 3. Verified as correct (no change)
+
+- **Registry:** 66 data constructors plus `ctObserveAll` makes 67. The label validator's raw-label formula, `kore_label` escaping, signature check and line-membership check all agree with every row of the map I examined.
+- **Registry isolation:** the entry function is enabled only inside `carrier()` and `validated_labels()`, and is restored in `finally`.
+- **Decode refuses leftovers:** decode parses with the 66 data constructors only. Any leftover `ctObserveAll`, `ctDecodeRoot` or other function, `#Bottom`, or a wrapper shape fails the unchanged parser with a `ValueError` and a nonzero exit.
+- **Labels in phase 02:** the JSON uses the raw generated label. Its KORE escape is exactly the symbol declared in `definition.kore`, whichever way kast resolves it.
+- **Whole-answer retention in 05:** the output keeps every answer's case ID, original root (checked against the input), the full lane chain and the decoded root, with no filtering. Semantic truth of the decoded root is correctly left to 06.
+- **Other recursion depths are under the limit:**
+
+  | Path | Approx. depth |
+  |---|---|
+  | `parse_printed` | ~290 |
+  | `tree` | ~275 |
+  | `json.dumps(indent=2)` in 05 | ~560 if pure-Python generators |
+  | `same` on roots and queries in 01/05 | ≤ ~150 |
+  | C JSON decode/encode | ~545 levels |
+
+---
+
+## 4. Non-blocking residual risks (record only; no in-flight change)
+
+- **03 wall time.** I estimate on the order of 10⁴ to 10⁵ equation applications for the Haskell backend: `ctAt` and `ctTake`/`ctDrop` repeatedly walking lists of about 269 lanes, across 17 roots. This has not been observed against the 30 s wall. A timeout is fail-closed and a STOP.
+- **02 is the first JSON v4 run against klabel-attributed productions.** The R2 precedent had no `klabel` attributes. A failure here is also fail-closed.
+- **Unreachable `KeyError`.** `decode_node` would raise `KeyError` rather than `ValueError` if the entry label appeared outside `carrier()`. This cannot happen in EXACT7.
+
+All 7 phases remain UNRUN. I opened no protected or private body.

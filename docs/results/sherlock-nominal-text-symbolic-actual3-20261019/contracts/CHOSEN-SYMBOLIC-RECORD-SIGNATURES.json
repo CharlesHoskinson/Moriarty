@@ -1,0 +1,152 @@
+{
+  "schema": "nominal-symbolic-chosen-record-signatures/1",
+  "purpose": "Declaration-only chosen representation, no specimen cell, count or expected sequence. Derived from the authored schema/conventions, without reopening populated expected.",
+  "definitions": {
+    "Source": {
+      "owner": "exactly one of {entry:true} or {function:string}",
+      "path": "array<nonnegative integer>"
+    },
+    "Type": "exactly one of {builtin:UInt|Bool|List|Tree} or {named:string,arguments:array<Type>}",
+    "Value": "exactly one of {UInt:decimal-string}, {Bool:boolean}, {Nominal:{type:Type,constructor:string,fields:array<Value>}}",
+    "Environment": "object<string source binder name,Value>; key order ignored; no omitted visible names",
+    "Call": {
+      "exact_keys": [
+        "invocation",
+        "function",
+        "call_site",
+        "arguments",
+        "caller_environment",
+        "callee_parameters"
+      ],
+      "types": {
+        "invocation": "nonnegative integer, independent semantic call ordinal",
+        "function": "string",
+        "call_site": "Source",
+        "arguments": "array<Value>",
+        "caller_environment": "Environment",
+        "callee_parameters": "Environment"
+      }
+    },
+    "Match": {
+      "exact_keys": [
+        "source",
+        "invocation",
+        "selected_arm",
+        "scrutinee",
+        "bindings",
+        "selected_body"
+      ],
+      "types": {
+        "source": "Source",
+        "invocation": "nonnegative integer, independent semantic match ordinal",
+        "selected_arm": "nonnegative integer, zero-based source arm",
+        "scrutinee": "Value",
+        "bindings": "array<Binding> in pattern preorder",
+        "selected_body": "Source"
+      }
+    },
+    "Binding": {
+      "exact_keys": [
+        "name",
+        "pattern_path",
+        "value"
+      ],
+      "types": {
+        "name": "string",
+        "pattern_path": "array<nonnegative integer> root-to-field descent",
+        "value": "Value"
+      }
+    },
+    "Construction": {
+      "exact_keys": [
+        "source",
+        "invocation",
+        "type",
+        "constructor",
+        "field_sources",
+        "field_values",
+        "saved_environment",
+        "in_call"
+      ],
+      "types": {
+        "source": "Source",
+        "invocation": "nonnegative integer assigned at opening, reused at completion",
+        "type": "Type",
+        "constructor": "string",
+        "field_sources": "array<Source>",
+        "field_values": "array<Value>, eventual ordered completed fields",
+        "saved_environment": "Environment",
+        "in_call": "null for entry lexical context, otherwise nonnegative enclosing semantic call invocation"
+      }
+    },
+    "Constructors": {
+      "exact_keys": [
+        "open_order",
+        "materialize_order"
+      ],
+      "types": {
+        "open_order": "array<Construction>",
+        "materialize_order": "array<Construction>; full records with same opening-assigned identities, not a numeric-only list"
+      }
+    },
+    "PendingConstruction": {
+      "exact_keys": [
+        "construction_invocation",
+        "source",
+        "current_field",
+        "completed_fields",
+        "saved_environment"
+      ],
+      "types": {
+        "construction_invocation": "nonnegative integer, opening-assigned construction identity",
+        "source": "Source",
+        "current_field": "nonnegative integer, original source field position",
+        "completed_fields": "array<Value>, strict completed prefix excluding active field",
+        "saved_environment": "Environment"
+      }
+    },
+    "Checkpoint": {
+      "exact_keys": [
+        "at_call",
+        "milestone",
+        "pending",
+        "caller_environment",
+        "callee_parameters"
+      ],
+      "types": {
+        "at_call": "nonnegative integer, semantic Call.invocation (not structured selector)",
+        "milestone": "exact string function_entry_after_all_arguments",
+        "pending": "array<PendingConstruction> outermost first",
+        "caller_environment": "Environment",
+        "callee_parameters": "Environment"
+      }
+    },
+    "Case": {
+      "exact_keys": [
+        "final_value",
+        "calls",
+        "matches",
+        "constructors",
+        "pending_checkpoints",
+        "limitations"
+      ],
+      "types": {
+        "final_value": "Value",
+        "calls": "array<Call>",
+        "matches": "array<Match>",
+        "constructors": "Constructors",
+        "pending_checkpoints": "array<Checkpoint>",
+        "limitations": "array<string> oracle qualifications; retained but not compared to producer-authored prose"
+      }
+    },
+    "Root": "exact fields schema,source_pins,normative_pins,author,scope,cases. Compare selected case semantic fields; provenance and limitations are separate evidence, not producer-equality targets."
+  },
+  "semantic_comparison_fields": [
+    "final_value",
+    "calls",
+    "matches",
+    "constructors",
+    "pending_checkpoints"
+  ],
+  "no_private_reads": "No populated private body was reopened to prepare this declaration-only signature."
+}

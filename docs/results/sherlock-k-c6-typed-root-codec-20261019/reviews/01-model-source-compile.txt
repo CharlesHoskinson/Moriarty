@@ -1,0 +1,94 @@
+# Verdicts
+
+**SOURCE/API: APPROVE.** Scope is the positive canonical carrier only. The universal C6 target stays open.
+
+**EXACT1 compile: ELIGIBLE.** The pre-launch items below are already covered by Root's conditions. The post-PASS notes are for Root's label freeze.
+
+This review was done without tools, by reading the supplied bodies. I ran nothing and read no expected or actual bodies.
+
+## Source findings: no defects found
+
+**Frame encoder (13 lanes) and the Rust `encode_frame` agree on every variant.**
+- I counted lanes per rule for all 10 encode/decode pairs:
+  - LetF, LeftF, IfF, MatchF: tag plus 5 fields, then 7 zero lanes.
+  - RightF and ReturnF: tag plus 4 fields, then 8 zero lanes.
+  - UnaryF: tag plus 2 fields, then 10 zero lanes.
+  - ScopeF: tag plus 3 fields, then 9 zero lanes.
+  - ArgsF: tag plus 8 fields, then 4 zero lanes.
+  - ConstructorFieldsF: tag plus all 12 lanes.
+- Every frame totals 13 lanes.
+- Field offsets match the Rust code exactly. This includes `put_ref` at 2 for RightF (Const leaves lane 2 at 0), env at 6 for ArgsF, and env at 10 / origin at 12 for ConstructorFieldsF.
+
+**Control encoder (17 lanes) and `encode_control` agree on all 11 variants.**
+- Enter: `Some` gives `1, idx`; `None` gives `0, 0`. Args are at lanes 3 and 4.
+- Bound and CaseResult: the 3-lane `(0,0,0)` / `(1, envTag, envIdx)` form matches `o[1]=1; put_env(2)`.
+- PrimResult:
+  - Value encodes as `(0, refTag, refIdx)` at lanes 1–3. This matches `put_ref(&mut o, 2, …)`.
+  - Error encodes as `(1, code, 0)`.
+- ScheduleNext is 1 + 13 + 1 + 2 = 17 lanes. This matches `o[1..14]`, `o[14]` and `put_env(15)`.
+
+**Root header (48 lanes) and `encode_root_and_frames` agree.**
+- The magic literal `18918541878711089` equals `0x4336_5048_5953_31`. I checked this arithmetically.
+- After version and the 17 control lanes, the tail is exactly 29 lanes covering offsets 19–47.
+- Every offset matches the `L_*` constants: env 20/21, outcome 23–25, wide counters 26–31, alloc 32, active 35, seg_active 39, seg_alloc 43, seg_consumed 46, frame count 47.
+- Frames are joined bottom-to-top with no reversal. Frame count is derived from the list, as the Rust `frames.len()` is.
+- Outcome lanes match `put_outcome`.
+
+**The decoder is a positive inverse with canonical padding enforced.**
+- Every zero tail and every option payload (`(0,0)` for None, the 3-lane Bad/NoMatch forms, Rejected/Exhausted/PrimError third lane 0) is a literal-0 pattern.
+- Root decoding is guarded by magic, version and `size == 48 + 13·count`.
+- Frame decoding takes and drops 13 lanes at a time.
+- Rule pairs on the same function do not overlap: they are split by distinct tag literals or by `N > 0` guards.
+
+**Typing is sound.**
+- `CTFunction` is a separate sort from `CTEnv`, with its own tag/index/decode functions.
+- I found no unbound right-hand-side variables and no unused left-hand-side variables.
+- All 66 constructors and 147 rules match the passive readback counts.
+
+**The syntax file matches the frozen SAFE interface.**
+- The 23-byte difference (4489 vs 4466 bytes) is exactly `requires "domains.md"` plus two newlines.
+
+**Premise honesty holds.**
+- The bounds on u8, usize and u128 values, and the absence of a malformed/refusal policy, are stated as external premises. They are not encoded as rules.
+- `ctPrimError(11)`, `ctError(11)` and `ctRejected(11)` remain distinct data.
+
+## Non-blocking notes
+
+1. **Layout provenance.** PUBLIC-LAYOUT-CORRESPONDENCE was observed against the older 6409 preimage. I cross-checked the K source directly against the supplied 98941 bodies, so the bridge to 98941 is supported here. The bodies of `u()`, `section_len` and the type definitions were not supplied. I assumed `u()` is an identity cast.
+2. **Coverage gaps.** These do not affect correctness, but the 17 inputs never exercise them:
+   - `ctBindingOk(ctEnvNone)` and `ctMatched(ctEnvNone)`, which encode as `(1,0,0)`.
+   - RightF with a Const left ref, or with any operator other than Sub.
+   - ScheduleNext with any frame other than ConstructorFieldsF.
+
+   The "7 binary ops" claim holds across frame variants, but not within each variant.
+3. **Future consumer requirement.** For any non-canonical lane input, `ctDecodeRoot` or `ctDecodeFrame` stays as an unevaluated function application. Any future consumer must treat a residual function symbol in the output as a FAIL, not match it structurally.
+
+## Compile eligibility
+
+**What checks out:**
+- The argv, environment, limits and `F03.launch` entry are consistent with the supplied closure.
+- `launch` hardcodes `cwd/stdout` and `cwd/stderr`, which match the phase paths. It reads `CHILD_SECONDS=30` and `SWEEP_SECONDS=3` from globals.
+- Relative `requires` and `-I builtin` resolve correctly.
+- Every rule is prefix-only, so there is no parse ambiguity.
+
+**Before launch, Root must:**
+- Create `00-compile`, `home` and `tmp` fresh with mode 0700. `launch` does not create them.
+- Make sure the `c6-typed-root-kompiled` output directory does not already exist.
+
+**PASS predicate.** PASS means all of the following:
+- outcome is `exited` with returncode 0;
+- not timed out;
+- `containment_breach` is false and `remaining` is empty;
+- `definition.kore` is present and non-empty.
+
+Stderr is captured and frozen but not adjudicated, because kompile may emit warnings.
+
+**Risk.** The 30-second wall time could be hit by the JVM parse of `domains.md` plus the long nested rules, `ctEncodeRoot` in particular. If it is, STOP; there is no retry, per the plan.
+
+**Post-PASS label freeze.** In K 7.1, `klabel(X)` without `symbol` may not produce a KORE symbol named `LblX`. The F03 definition, for example, uses generated names such as `LbluiRun'LParUnds…`. Root should therefore verify all 66 constructor labels plus `ctObserveAll` against the `klabel{}("X")` attributes in `definition.kore` and record the actual symbol names. Do not search for `Lbl<name>`. KAST JSON transport uses the klabel namespace.
+
+## Not claimed
+
+- Semantic equality with the opaque 613495-byte answers. Decoding the encoder's own output agreeing with the input is not independent evidence.
+- Adoption of the 98941 Core proposal, or any cap, admission, native, clock or refinement property.
+- Any security or refusal policy. That remains a separate Opus-owned leaf.
