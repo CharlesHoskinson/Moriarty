@@ -701,6 +701,7 @@ pub enum FinGenesisError {
     Bind(FinBindError),
     CommittedBeforeMismatch,
     GenesisInvalid,
+    ExecInvariant(super::fin_exec_state::FinExecInvariantError),
 }
 impl From<FinBindError> for FinGenesisError {
     fn from(e: FinBindError) -> Self { Self::Bind(e) }

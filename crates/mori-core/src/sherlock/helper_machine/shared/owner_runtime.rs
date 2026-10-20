@@ -1902,6 +1902,12 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
     ) -> Result<MachineImage, fin_carrier::FinRunError> {
         (self.prepare.admit_fin_run)(a, fuel, stack_limit, request)
     }
+    fn select_fin(
+        &self,
+        pre: &PreImage<'_>,
+    ) -> Result<fin_selection::FinSelection, fin_selection::FinSelectionError> {
+        fin_selection::select_fin(pre)
+    }
     fn rule_id_of(&self, raw: &RawRuleId) -> RuleIdC { owner_rule_id_of(raw) }
     fn raw_rule_id(&self, rule: &RuleIdC) -> RawRuleId { owner_raw_rule_id(rule) }
     fn select(&self, pre: &PreImage<'_>) -> Result<Selected, HostViolation> { owner_select(pre, &self.guards) }
