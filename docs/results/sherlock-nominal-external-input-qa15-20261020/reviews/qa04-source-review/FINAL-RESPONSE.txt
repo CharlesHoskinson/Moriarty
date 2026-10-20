@@ -1,0 +1,114 @@
+Identity/role/read scope: Muse Code powered by muse-wonder-1.0, acting as the fresh independent non-author HIGH reviewer under the standing Opus-outage fallback. This is a stateless, source-only review of the complete inline Units 01–26. I did not author the production or QA source. No tools, files, compiler, tests, subject, evaluator, SDK, native code, Git, or PW were executed. All 15 tests remain **UNRUN**.
+
+Top finding: the five QA4 `unwrap_or_else` replacements correctly remove the actual QA3 `CompileFailure: Debug` failure without changing any assertion, Ok value, or test selector, on the supplied source evidence. No mandatory source defect was found within this narrow review.
+
+| Judgment | Verdict |
+|---|---|
+| SOURCE_APPLICABILITY | APPROVE_WITH_LIMITS |
+| PUBLIC_API_COMPILABILITY | APPROVE_WITH_LIMITS |
+| MEANINGFUL_TEST_SOURCE | APPROVE_WITH_LIMITS |
+| ORDINARY_THREE_OPERATION_ELIGIBILITY | ELIGIBLE_WITH_LIMITS |
+| OVERALL | APPROVE_WITH_LIMITS / ELIGIBLE_WITH_LIMITS |
+
+## Chronology preserved
+
+QA3's actual external compile **FAILED** with exit 1 in 0.179932044s. It emitted exactly five E0277 errors because the positive `Result::expect` calls required `CompileFailure: Debug`, while the real declaration derives only `Serialize`. The `list` and `run` operations never ran. No production `Debug` derive was added. The prior QA3 source/API opinion did not establish compilation and is not treated here as a compile or semantic oracle.
+
+## 1. SOURCE_APPLICABILITY — APPROVE_WITH_LIMITS
+
+The five literal owner replacements are present, disjoint, and correspond exactly to the five E0277 sites:
+
+1. `nominal_scalar_wire_is_exact`: `canonical UInt boundary and native Bool compile`
+2. `bound_entry_replaces_original_before_body_check`: first `bound entry compiles`
+3. `bound_provenance_marks_original_entry_stale`: second, contextually distinct `bound entry compiles`
+4. `nominal_absent_pair_preserves_artifact_and_errors`: `absent-pair public command`
+5. `nominal_observe_uses_bound_actual_pair`: `direct bound observation`
+
+Each replacement has the form:
+
+```rust
+.unwrap_or_else(|failure| panic!(
+    "ORIGINAL MESSAGE: {}",
+    serde_json::to_string(&failure).unwrap()
+))
+```
+
+Applicability findings:
+
+- Each original message is retained verbatim as the panic prefix.
+- `unwrap_or_else` returns the original `Ok` value unchanged on success. No default, substitute, `is_ok` tautology, discarded result, or relaxed guard is introduced.
+- On `Err`, the complete `CompileFailure` is serialized rather than formatted with the missing `Debug` implementation.
+- The supplied full inverse and the current Unit 01 source agree that all assertion-macro lines, selectors, fixtures, and the other test bodies are unchanged. This judgment is traced against the literal bodies, not by hashes alone.
+- Entire test 12 (`nominal_owner_and_genesis_refusals_preserve_payload`, covering StepCap, direct genesis, and layout refusal) is unchanged.
+- Entire test 14 (`nominal_compile_only_retains_full_bound_program`) is unchanged.
+- The author and inverse materials were used only as literal-staging evidence, not as independent approval.
+
+## 2. PUBLIC_API_COMPILABILITY — APPROVE_WITH_LIMITS
+
+The central trait chain closes on the supplied declarations:
+
+- Unit 07 declares `CompileFailure` with `#[derive(Serialize)]` and no `Debug`.
+- Its fields are `stage: &'static str`, `actual_error: Value`, `evaluation_performed: bool`, `events_forwarded: String`, and `completed: bool`; all are serializable, with no field-skipping attribute in the supplied declaration.
+- Unit 08 confirms that `compile` and `compile_with_nominal_inputs` return `Result<Value, CompileFailure>`, and `observe_with_nominal_inputs` returns `Result<NominalHostObservation, CompileFailure>`.
+- Unit 19 confirms `serde_json::to_string<T>(value: &T) -> Result<String>` requires `T: ?Sized + Serialize`; Unit 20 confirms the called `to_vec` has the same bound. `&failure` therefore satisfies the call through `CompileFailure: Serialize`.
+- Unit 18 supplies the manual `Debug for serde_json::Error`, so the inner `.unwrap()` on the `to_string` result satisfies its `E: Debug` bound.
+- In each `unwrap_or_else` closure, the parameter is inferred as `CompileFailure`. The closure body is `panic!(...)`, whose type is `!`; `!` coerces to the respective Ok type (`Value` or `NominalHostObservation`). No `Debug` bound on `CompileFailure` is required by `unwrap_or_else`.
+
+Remaining `expect`/`unwrap` sites were checked against the same distinction. In particular, `nominal_failure` uses `.err().expect(...)` on an `Option<CompileFailure>`; `Option::expect` does not impose a `Debug` bound on the contained value. The actual QA3 compiler output is also relevant, non-hash evidence here: it enumerated the five—and only the five—E0277 failures before aborting. That supports, but does not replace, the source-level conclusion that the other retained call sites did not present the same missing-`Debug` defect.
+
+This is **not** a claim that QA4 has compiled. No new compile result exists. The future external compile remains the actual test of residual issues such as borrow checking, code generation, linking, and diagnostics not decidable from these excerpts. The unused `RunIntC` import warning remains intentionally deferred and is not a source-correctness failure for this correction.
+
+Missing premise: none that blocks this bounded source-level judgment. The full internal implementations behind the retained library, sysroot, linker, Core189 closure, and capture helper were not newly read; no new cached-source build or byte-equivalence claim is made. The retained dep-info names the actual serde_json 1.0.151 source paths, but the library artifact is an existing qualified artifact, not a rebuilt one.
+
+## 3. MEANINGFUL_TEST_SOURCE — APPROVE_WITH_LIMITS
+
+The correction preserves test meaning:
+
+- All 15 names and their order in the source inventory are unchanged.
+- No assertion was weakened or replaced by a success/default check. The only changed behavior is the panic-rendering path taken after an unexpected `Err`.
+- Positive Ok values continue into the same downstream assertions: canonical scalar compilation, bound-entry artifact fields, entry-provenance fields, absent-pair equivalence, and direct-observation equivalence.
+- The complete serialized failure in the panic message includes the stage and payload-bearing fields, so diagnostic content is improved rather than dropped.
+- Negative checks, budget-boundary checks, payload assertions, handler/no-output checks, and the test 12/test 14 bodies remain intact.
+
+Retained limitations are explicit and unchanged:
+
+- Tests 13 and 15 are **SHARED_PRODUCER_EQUIVALENCE_ONLY**.
+- Test 3 is **SHARED_DEPENDENCY_PROPAGATION**.
+- The selected 23-field `ProgramView` check plus subset joins is not independent equality over the full 23-field object or an independent semantic oracle.
+- Synthesized-entry body error, partial-prefix `HostViolation`, and serializer failure remain **UNEXERCISED**.
+- Root's separate private two-cohort comparison was not consumed or fitted.
+- Full body-typing/global H1/native/EARS requirements remain separate. No closed-clause or native grant follows.
+- All 15 tests may still fail for semantic or environmental reasons in the future leaf; source approval is not a predicted pass.
+
+## 4. ORDINARY_THREE_OPERATION_ELIGIBILITY — ELIGIBLE_WITH_LIMITS
+
+The proposed leaf is eligible, within the stated ordinary class, as exactly three new serial, fail-stop, no-retry operations:
+
+1. **Compile** the fresh external `--test` crate: 30s wall / 25 CPU / 2 GiB AS / 64 MiB FSIZE.
+2. **List** the qualified generated binary: 10s wall / 8 CPU / 1 GiB AS / 16 MiB FSIZE; exact set of 15 names, count 15, 0 benchmarks, no order assumption.
+3. **Run** all 15 once serially in the same 10s class: required terminal result is 15 passed / 0 failed / 0 ignored / 0 measured / 0 filtered, with each name exactly once.
+
+The operations preserve the required controls:
+
+- `core=0`, 131072 kept bytes per stream, stdin from DEVNULL, and only the exact stated cwd/environment.
+- Only the consumer crate is under `cfg(test)`; the full actual normal Core189 artifact `dca9…` and its 0400 dep-info are reused unchanged, not rebuilt, substituted, or stubbed. Root readback pins `dca9` and dep-info `0400`.
+- The eight exact consumed source/fixture inputs are inline-pinned; the expected dep-info is exactly those eight canonical inputs with no env-dep.
+- Raw child result and complete streams must be durable **first**, generated/static/L checks **next**, and acceptance **last**.
+- The generated binary must be pinned/fsynced at mode 0500 and dep-info at 0400 before list/run.
+- Any compile, capture, membership, pin, or test mismatch is fail-stop.
+- Fresh absent build/tmp/actual paths are required; the old failed dep-info is never reused.
+- Only the existing unchanged `713119d9` capture/static/dep functions and retained Root composition routines are used; no new runner or guard source is introduced.
+- Root must use the manual existing composition with exact data operands; the old 22–24 main artifact branches are not applicable.
+- Actual review binding to the future receipt after terminal completion is required before Root actual selection. No current approval placeholder is falsely asserted.
+
+This eligibility is limited to the ordinary, SDK-free, direct-`rustc`, host-only test source owned by the designated security author. It is not a native budget grant, full-backend qualification, default-CLI qualification, or approval of the Core, decoder, guard, or runtime broadly. The four external L inventories and the tools/sysroot/linker/Core189 source closure are treated as retained fixed machine pins rehashed by preparation; their full internal implementations were not newly read in this invocation. That is an honest inherited-pin limitation, not a basis for inventing a missing API premise or increasing limits.
+
+## Mandatory findings
+
+None.
+
+## Overall qualified verdict
+
+**APPROVE_WITH_LIMITS** for QA4 source applicability, public-API source compilability, and meaningful test source; **ELIGIBLE_WITH_LIMITS** for the exact proposed three-operation ordinary leaf.
+
+This approval is source-level only. QA4 remains **SOURCE_FIXED / ALL15_UNRUN** until a fresh actual compile/list/run leaf is executed and Root mechanically binds this review to the resulting terminal receipt.
