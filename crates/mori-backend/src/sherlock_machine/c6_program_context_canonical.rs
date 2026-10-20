@@ -66,6 +66,37 @@ pub struct C6ProgramContextConstCaptureBlock {
     pub selected_found: Operand,
     pub row: [Operand; 6],
 }
+
+/// Inputs for one extra gated Prog walk that additionally captures the
+/// type row whose index equals `selected_type_id` (ctor_start/ctor_len),
+/// the constructor row whose index equals `selected_ctor_id`
+/// (owning_type/field_start/field_len), the parsed type count, and the
+/// parsed constructor-field count. This is the constrained table read
+/// behind Core `adt_checked_ctor_arity`; validity itself is computed by
+/// the consumer from these captured lanes, never by a host flag.
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextCheckedSortCaptureInputs {
+    pub gate: Operand,
+    pub pre_prog: Vec<Operand>,
+    pub caps: C6StateCaps,
+    pub selected_type_id: Operand,
+    pub selected_ctor_id: Operand,
+}
+
+#[derive(Clone, Debug)]
+pub struct C6ProgramContextCheckedSortCaptureBlock {
+    pub instructions: Vec<Instruction>,
+    pub type_count: Operand,
+    pub type_found: Operand,
+    pub ctor_found: Operand,
+    pub owning_type: Operand,
+    pub ctor_start: Operand,
+    pub ctor_len: Operand,
+    pub field_start: Operand,
+    pub field_len: Operand,
+    pub ctor_field_count: Operand,
+}
+
 #[derive(Clone, Debug)]
 pub struct C6ProgramContextCtxBindingInputs { pub gate: Operand, pub pre_ctx: [Operand; CTX_LANES], pub expected_ctx: [u128; CTX_LANES] }
 fn validate_scope(scope: &str) -> Result<(), C6ProgramContextCanonicalError> {
@@ -81,7 +112,7 @@ fn reject_reserved(scope: &str, operand: &Operand) -> Result<(), C6ProgramContex
     Ok(())
 }
 #[derive(Clone)]
-struct Regs { phase: Operand, sub: Operand, hold: Operand, opt: Operand, rem: Operand, cnt: Operand, cnt2: Operand, cnt3: Operand, te_need: Operand, srem: Operand, utf_pending: Operand, utf_cp: Operand, utf_min: Operand, cum_name: Operand, cum_tmpl: Operand, cum_nodes: Operand, const_count: Operand, const_row_index: Operand, const_capture_active: Operand, const_found: Operand, const_cap_0: Operand, const_cap_1: Operand, const_cap_2: Operand, const_cap_3: Operand, const_cap_4: Operand, const_cap_5: Operand }
+struct Regs { phase: Operand, sub: Operand, hold: Operand, opt: Operand, rem: Operand, cnt: Operand, cnt2: Operand, cnt3: Operand, te_need: Operand, srem: Operand, utf_pending: Operand, utf_cp: Operand, utf_min: Operand, cum_name: Operand, cum_tmpl: Operand, cum_nodes: Operand, const_count: Operand, const_row_index: Operand, const_capture_active: Operand, const_found: Operand, const_cap_0: Operand, const_cap_1: Operand, const_cap_2: Operand, const_cap_3: Operand, const_cap_4: Operand, const_cap_5: Operand, types_count: Operand, type_row_index: Operand, type_capture_active: Operand, type_found: Operand, type_ctor_start: Operand, type_ctor_len: Operand, ctor_row_index: Operand, ctor_capture_active: Operand, ctor_found: Operand, ctor_owning_type: Operand, ctor_field_start: Operand, ctor_field_len: Operand, ctor_fields_count: Operand }
 struct Emitter<'a> { scope: &'a str, next_temp: usize, instructions: Vec<Instruction> }
 impl<'a> Emitter<'a> {
     fn new(scope: &'a str, next_temp: usize) -> Self { Self { scope, next_temp, instructions: Vec::new() } }
@@ -299,7 +330,7 @@ impl<'a> Emitter<'a> {
         let dr = self.add_i(org.rem.clone(), -1);
         nxt.rem = self.sel(event, dr, nxt.rem.clone());
     }
-    fn step(&mut self, gate: &Operand, lane: Operand, org: Regs, caps: &C6PhysCaps, selected_const: Option<&Operand>) -> Regs {
+    fn step(&mut self, gate: &Operand, lane: Operand, org: Regs, caps: &C6PhysCaps, selected_const: Option<&Operand>, selected_ctor: Option<(&Operand, &Operand)>) -> Regs {
         let mut nxt = org.clone();
         let p_magic = self.eqv(org.phase.clone(), PH_MAGIC); let a = self.and(gate.clone(), p_magic); self.gated_eq(a, lane.clone(), Self::imm(C6_PHYS_MAGIC));
         let p_version = self.eqv(org.phase.clone(), PH_VERSION); let a = self.and(gate.clone(), p_version); self.gated_eq(a, lane.clone(), Self::imm(C6_PHYS_VERSION));
@@ -514,6 +545,46 @@ impl<'a> Emitter<'a> {
             let next_idx = self.add_i(org.const_row_index.clone(), 1);
             nxt.const_row_index = self.sel(row_done, next_idx, nxt.const_row_index.clone());
         }
+        if let Some((sel_type, sel_ctor)) = selected_ctor {
+            let is_tcount = self.eqv(org.phase.clone(), PH_TYPE_COUNT);
+            nxt.types_count = self.sel(is_tcount, lane.clone(), nxt.types_count.clone());
+            let is_trow = self.eqv(org.phase.clone(), PH_TYPE_ROW);
+            let is_s0 = self.eqv(org.sub.clone(), 0);
+            let row_start = self.and(is_trow.clone(), is_s0);
+            let idx_eq = self.teq(org.type_row_index.clone(), (*sel_type).clone());
+            let active_here = self.sel(row_start, idx_eq, org.type_capture_active.clone());
+            let lane_active = self.and(is_trow.clone(), active_here.clone());
+            nxt.type_capture_active = self.sel(is_trow.clone(), active_here, nxt.type_capture_active.clone());
+            nxt.type_found = self.sel(lane_active.clone(), Self::imm(1), nxt.type_found.clone());
+            let s5 = self.eqv(org.sub.clone(), 5); let h5 = self.and(lane_active.clone(), s5);
+            nxt.type_ctor_start = self.sel(h5, lane.clone(), nxt.type_ctor_start.clone());
+            let s6 = self.eqv(org.sub.clone(), 6); let h6 = self.and(lane_active.clone(), s6);
+            nxt.type_ctor_len = self.sel(h6, lane.clone(), nxt.type_ctor_len.clone());
+            let is_last = self.eqv(org.sub.clone(), 6);
+            let row_done = self.and(is_trow, is_last);
+            let next_idx = self.add_i(org.type_row_index.clone(), 1);
+            nxt.type_row_index = self.sel(row_done, next_idx, nxt.type_row_index.clone());
+            let is_fcount = self.eqv(org.phase.clone(), PH_CTORFIELD_COUNT);
+            nxt.ctor_fields_count = self.sel(is_fcount, lane.clone(), nxt.ctor_fields_count.clone());
+            let is_crow = self.eqv(org.phase.clone(), PH_CTOR_ROW);
+            let is_cs0 = self.eqv(org.sub.clone(), 0);
+            let crow_start = self.and(is_crow.clone(), is_cs0);
+            let cidx_eq = self.teq(org.ctor_row_index.clone(), (*sel_ctor).clone());
+            let cactive_here = self.sel(crow_start, cidx_eq, org.ctor_capture_active.clone());
+            let clane_active = self.and(is_crow.clone(), cactive_here.clone());
+            nxt.ctor_capture_active = self.sel(is_crow.clone(), cactive_here, nxt.ctor_capture_active.clone());
+            nxt.ctor_found = self.sel(clane_active.clone(), Self::imm(1), nxt.ctor_found.clone());
+            let cs0 = self.eqv(org.sub.clone(), 0); let ch0 = self.and(clane_active.clone(), cs0);
+            nxt.ctor_owning_type = self.sel(ch0, lane.clone(), nxt.ctor_owning_type.clone());
+            let cs3 = self.eqv(org.sub.clone(), 3); let ch3 = self.and(clane_active.clone(), cs3);
+            nxt.ctor_field_start = self.sel(ch3, lane.clone(), nxt.ctor_field_start.clone());
+            let cs4 = self.eqv(org.sub.clone(), 4); let ch4 = self.and(clane_active, cs4);
+            nxt.ctor_field_len = self.sel(ch4, lane.clone(), nxt.ctor_field_len.clone());
+            let is_clast = self.eqv(org.sub.clone(), 4);
+            let crow_done = self.and(is_crow, is_clast);
+            let cnext_idx = self.add_i(org.ctor_row_index.clone(), 1);
+            nxt.ctor_row_index = self.sel(crow_done, cnext_idx, nxt.ctor_row_index.clone());
+        }
         nxt
     }
 }
@@ -535,8 +606,8 @@ impl C6ProgramContextCanonicalEmitter {
         let mut em = Emitter::new(&self.scope, self.next_temp);
         let gate = inputs.gate.clone();
         em.cbool(gate.clone());
-        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0) };
-        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None); }
+        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0), types_count: Emitter::imm(0), type_row_index: Emitter::imm(0), type_capture_active: Emitter::imm(0), type_found: Emitter::imm(0), type_ctor_start: Emitter::imm(0), type_ctor_len: Emitter::imm(0), ctor_row_index: Emitter::imm(0), ctor_capture_active: Emitter::imm(0), ctor_found: Emitter::imm(0), ctor_owning_type: Emitter::imm(0), ctor_field_start: Emitter::imm(0), ctor_field_len: Emitter::imm(0), ctor_fields_count: Emitter::imm(0) };
+        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, None); }
         em.gated_eq(gate.clone(), regs.phase, Emitter::imm(PH_END));
         let ctx = &inputs.pre_ctx;
         for lane in ctx.iter() { em.cbits(lane.clone(), LANE_BITS); }
@@ -569,11 +640,31 @@ impl C6ProgramContextCanonicalEmitter {
         let mut em = Emitter::new(&self.scope, self.next_temp);
         let gate = inputs.gate.clone();
         em.cbool(gate.clone());
-        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0) };
-        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, Some(&inputs.selected_index)); }
+        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0), types_count: Emitter::imm(0), type_row_index: Emitter::imm(0), type_capture_active: Emitter::imm(0), type_found: Emitter::imm(0), type_ctor_start: Emitter::imm(0), type_ctor_len: Emitter::imm(0), ctor_row_index: Emitter::imm(0), ctor_capture_active: Emitter::imm(0), ctor_found: Emitter::imm(0), ctor_owning_type: Emitter::imm(0), ctor_field_start: Emitter::imm(0), ctor_field_len: Emitter::imm(0), ctor_fields_count: Emitter::imm(0) };
+        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, Some(&inputs.selected_index), None); }
         em.gated_eq(gate.clone(), regs.phase.clone(), Emitter::imm(PH_END));
         self.next_temp = em.next_temp;
         Ok(C6ProgramContextConstCaptureBlock { instructions: em.instructions, const_count: regs.const_count.clone(), selected_found: regs.const_found.clone(), row: [regs.const_cap_0.clone(), regs.const_cap_1.clone(), regs.const_cap_2.clone(), regs.const_cap_3.clone(), regs.const_cap_4.clone(), regs.const_cap_5.clone()] })
+    }
+    pub fn emit_prog_checked_sort_capture(&mut self, inputs: &C6ProgramContextCheckedSortCaptureInputs) -> Result<C6ProgramContextCheckedSortCaptureBlock, C6ProgramContextCanonicalError> {
+        if (LANE_BITS as usize) >= FR_BITS { return Err(C6ProgramContextCanonicalError::InvalidBitWidth { bits: LANE_BITS }); }
+        reject_reserved(&self.scope, &inputs.gate)?;
+        reject_reserved(&self.scope, &inputs.selected_type_id)?;
+        reject_reserved(&self.scope, &inputs.selected_ctor_id)?;
+        for lane in &inputs.pre_prog { reject_reserved(&self.scope, lane)?; }
+        if inputs.pre_prog.len() < PROGRAM_HEADER_LANES { return Err(C6ProgramContextCanonicalError::LengthMismatch { expected: PROGRAM_HEADER_LANES, actual: inputs.pre_prog.len() }); }
+        let p = &inputs.caps.phys;
+        for cap in [p.max_expressions, p.max_names, p.max_arms, p.max_children, p.max_functions, p.max_arity, p.max_types, p.max_occurrences, p.max_occurrence_paths, p.max_parameters, p.max_patterns, p.max_pattern_children, p.max_constructors, p.max_ctor_fields, p.max_decl_templates, p.max_plan_nodes, p.max_plan_cases, p.max_field_paths, p.max_constants, p.max_constant_fields, p.max_name_bytes, p.max_type_expr_nodes, p.max_template_bytes] {
+            if cap == usize::MAX { return Err(C6ProgramContextCanonicalError::GeometryOverflow); }
+        }
+        let mut em = Emitter::new(&self.scope, self.next_temp);
+        let gate = inputs.gate.clone();
+        em.cbool(gate.clone());
+        let mut regs = Regs { phase: Emitter::imm(0), sub: Emitter::imm(0), hold: Emitter::imm(0), opt: Emitter::imm(0), rem: Emitter::imm(0), cnt: Emitter::imm(0), cnt2: Emitter::imm(0), cnt3: Emitter::imm(0), te_need: Emitter::imm(0), srem: Emitter::imm(0), utf_pending: Emitter::imm(0), utf_cp: Emitter::imm(0), utf_min: Emitter::imm(0), cum_name: Emitter::imm(0), cum_tmpl: Emitter::imm(0), cum_nodes: Emitter::imm(0), const_count: Emitter::imm(0), const_row_index: Emitter::imm(0), const_capture_active: Emitter::imm(0), const_found: Emitter::imm(0), const_cap_0: Emitter::imm(0), const_cap_1: Emitter::imm(0), const_cap_2: Emitter::imm(0), const_cap_3: Emitter::imm(0), const_cap_4: Emitter::imm(0), const_cap_5: Emitter::imm(0), types_count: Emitter::imm(0), type_row_index: Emitter::imm(0), type_capture_active: Emitter::imm(0), type_found: Emitter::imm(0), type_ctor_start: Emitter::imm(0), type_ctor_len: Emitter::imm(0), ctor_row_index: Emitter::imm(0), ctor_capture_active: Emitter::imm(0), ctor_found: Emitter::imm(0), ctor_owning_type: Emitter::imm(0), ctor_field_start: Emitter::imm(0), ctor_field_len: Emitter::imm(0), ctor_fields_count: Emitter::imm(0) };
+        for lane in &inputs.pre_prog { em.cbits(lane.clone(), LANE_BITS); regs = em.step(&gate, lane.clone(), regs, &inputs.caps.phys, None, Some((&inputs.selected_type_id, &inputs.selected_ctor_id))); }
+        em.gated_eq(gate.clone(), regs.phase.clone(), Emitter::imm(PH_END));
+        self.next_temp = em.next_temp;
+        Ok(C6ProgramContextCheckedSortCaptureBlock { instructions: em.instructions, type_count: regs.types_count.clone(), type_found: regs.type_found.clone(), ctor_found: regs.ctor_found.clone(), owning_type: regs.ctor_owning_type.clone(), ctor_start: regs.type_ctor_start.clone(), ctor_len: regs.type_ctor_len.clone(), field_start: regs.ctor_field_start.clone(), field_len: regs.ctor_field_len.clone(), ctor_field_count: regs.ctor_fields_count.clone() })
     }
     pub fn emit_ctx_binding(&mut self, inputs: &C6ProgramContextCtxBindingInputs) -> Result<C6ProgramContextCanonicalBlock, C6ProgramContextCanonicalError> {
         if (LANE_BITS as usize) >= FR_BITS { return Err(C6ProgramContextCanonicalError::InvalidBitWidth { bits: LANE_BITS }); }
