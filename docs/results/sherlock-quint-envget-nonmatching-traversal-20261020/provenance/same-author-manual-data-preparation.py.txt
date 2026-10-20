@@ -1,0 +1,97 @@
+from pathlib import Path
+import json,hashlib,datetime
+B=Path(__file__).parent;S=B/'source';P=B/'SAFE';old=B.parent/'batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/source';sha=lambda x:hashlib.sha256(x).hexdigest()
+for name in ['c6PositiveHostTypes.qnt','c6PositiveMetaTypes.qnt','c6PositiveProgramTypes.qnt','c6PositiveContextTypes.qnt','c6PositiveStateTypes.qnt','q41EnvGetOwnerTypes.qnt','q41EnvGetOwnerRelation.qnt']:
+ (S/name).write_bytes((old/name).read_bytes())
+imports=''.join('  import '+n+'.* from "./'+n+'"\n' for n in ['q41EnvGetOwnerTypes','c6PositiveHostTypes','c6PositiveMetaTypes','c6PositiveProgramTypes','c6PositiveContextTypes','c6PositiveStateTypes'])
+(S/'q42EnvGetTraversalTypes.qnt').write_text('module q42EnvGetTraversalTypes {\n'+imports+'  type Q42Trace = {hosts:List[C6WholeHost],events:List[Q41StepEvent],finished:bool,within_slice:bool}\n}\n')
+(S/'q42EnvGetTraversalInputs.qnt').write_text('module q42EnvGetTraversalInputs {\n'+imports+'''  // Fresh manual complete typed carriers, UNADMITTED; no old actual/expected data.
+  pure val q42Bounds:C6MBounds = {code_rows:16,function_rows:4,code_child_slots:16,
+    parameter_slots:8,pattern_rows:8,match_plan_rows:8,match_arm_rows:8,type_rows:4,
+    constructor_rows:4,constructor_field_slots:8,max_arity:8,constant_nodes:8,
+    constant_field_slots:8,data_nodes:8,data_field_slots:8,environment_cells:8,frames:8,
+    helper_tasks:8,serialization_bytes:65536,max_reference_work:128,max_helper_work:256,step_cap:128}
+  pure val q42Identity:C6MIdentity = {profile_id:0,grammar_domain:C6MDedicatedSorts,
+    finance:C6MFinanceAbsent,layout_version:{first:List(113,52,50),second:List(49)},
+    layout_digest:C6MUnselected,bounds_digest:C6MUnselected,field_id:C6MNoPair,
+    program_membership_digest:C6MUnselected}
+  pure val q42Layout:C6MLayout = {layout_version:q42Identity.layout_version,
+    field_id:C6MNoPair,widths:C6MNoWidths,scalar_layout_id:C6MNoPair,bounds:q42Bounds,
+    capacities:{name_rows:8,name_bytes:64,occurrence_path_slots:16,value_slots:8},
+    boundary_capacities_present:true}
+  pure val q42Program:C6PProgram = {entry:0,
+    expressions:List(C6PELet({binder:0,value:1,body:2}),C6PELiteral({constant:0}),
+      C6PELet({binder:1,value:3,body:4}),C6PEVar({binder:0}),C6PEVar({binder:0})),
+    occurrences:List({owner_is_function:false,function:0,path:{start:0,len:0}},
+      {owner_is_function:false,function:0,path:{start:0,len:1}},
+      {owner_is_function:false,function:0,path:{start:1,len:1}},
+      {owner_is_function:false,function:0,path:{start:2,len:2}},
+      {owner_is_function:false,function:0,path:{start:4,len:2}}),
+    occurrence_paths:List(0,1,1,0,1,1),children:List(),functions:List(),parameters:List(),
+    arms:List(),patterns:List(),pattern_children:List(),types:List(),type_args:List(),
+    constructors:List(),ctor_fields:List(),decl_param_counts:List(),decl_ctor_counts:List(),
+    decl_templates:List(),plan_nodes:List(),plan_cases:List(),field_paths:List(),
+    constants:List(C6PKUInt({marker_free:true,n:7}),C6PKUInt({marker_free:true,n:99})),
+    constant_fields:List(),names:List(List(120),List(121),List(122))}
+  pure val q42OneHopBefore:C6WholeHost = {
+    admission:{identity:q42Identity,bounds:q42Bounds,view:q42Program,layout:q42Layout},
+    image:{run_id:{identity:q42Identity,fuel_input:C6MNat(128),stack_limit_input:C6MNat(8)},
+      control:C6Eval({expr:4}),control_origin:4,env_root:C6EnvSome(2),stack_limit:8,
+      outcome:C6Running,initial_fuel:128,remaining_work:91,consumed_work:37,
+      helper_work:11,helper_visits:9,reference_cursor:13,
+      alloc:{data_nodes:2,data_fields:0,environment_cells:3},
+      active:{data:2,data_fields:0,env:3,value_slots:1},
+      helper:C6HSomeHelper(C6HEnvGet({common:{site:C6HSiteTagEvalVar,
+        origin_reference_cursor:13,parent_resume:C6HNoIndex},binder:0,
+        cursor:C6HSomeIndex(2),found:C6HNoRef,status:C6HTriStatusPending})),result:C6HNoResult,
+      seg_base:{active:{data:0,data_fields:0,env:0,value_slots:0},
+        alloc:{data_nodes:0,data_fields:0,environment_cells:0},consumed_work:0},
+      data:List(C6HU128({n:13}),C6HU128({n:21})),data_fields:List(),
+      env:List({binder:0,value:C6Const(0),previous:C6EnvNone},
+        {binder:0,value:C6Data(0),previous:C6EnvNone},
+        {binder:1,value:C6Const(1),previous:C6EnvSome(0)}),
+      frames:List(C6ScopeF({saved_env:C6EnvNone,origin:0}),
+        C6ScopeF({saved_env:C6EnvSome(0),origin:2})),tasks:List(),value_slots:List(C6Data(1))}}
+  pure val q42TwoHopBefore:C6WholeHost = {...q42OneHopBefore,image:{...q42OneHopBefore.image,
+    env_root:C6EnvSome(3),remaining_work:87,consumed_work:41,helper_work:17,helper_visits:14,
+    alloc:{data_nodes:2,data_fields:0,environment_cells:4},
+    active:{data:2,data_fields:0,env:4,value_slots:1},
+    helper:C6HSomeHelper(C6HEnvGet({common:{site:C6HSiteTagEvalVar,
+      origin_reference_cursor:13,parent_resume:C6HNoIndex},binder:0,
+      cursor:C6HSomeIndex(3),found:C6HNoRef,status:C6HTriStatusPending})),
+    env:List({binder:0,value:C6Const(0),previous:C6EnvNone},
+      {binder:1,value:C6Const(1),previous:C6EnvSome(0)},
+      {binder:0,value:C6Data(0),previous:C6EnvNone},
+      {binder:2,value:C6Data(1),previous:C6EnvSome(1)})}}
+}\n''')
+event_template='''{step_id:{run_id:BASE.image.run_id,ordinal:ORD},rule_id:"RULE",event_kind:"KIND",
+      site:Q41SomeText("EvalVar"),helper_kind:Q41SomeText("EnvGet"),disposition:"Applied",
+      work_delta:1,helper_work_delta:1,helper_visits_delta:VIS,reference_cursor_delta:0,
+      alloc_deltas:{data_nodes:0,data_fields:0,environment_cells:0},value_slot_writes:0,
+      logical_depth_before:2,logical_depth_after:2,task_cursor_before:0,task_cursor_after:0,
+      helper_phase_before:Q41SomePhase(Q41Tri(PHBEFORE)),helper_phase_after:PHAFTER,
+      helper_cursor_before:Q41SomeInt(CURBEFORE),helper_cursor_after:CURAFTER,result_tag:RESULT,
+      origin_reference_cursor:Q41SomeInt(13),source_expr_id:4,
+      source_occurrence:Q41Occurrence({owner_is_function:false,function:0,ast_path:List(1,1)}),
+      exhausted_kind:Q41NoText,outcome_tag:"Running",outcome_payload:C6Running,boundary:"None"}'''
+def literal_event(base,ordinal,is_exit,before,cursor,phase):
+ pairs={'BASE':base,'ORD':str(ordinal),'RULE':'BHelperEnvGetExit' if is_exit else 'BHelperEnvGetCell','KIND':'HelperExit' if is_exit else 'HelperVisit','VIS':'0' if is_exit else '1','PHBEFORE':'C6HTriStatusPositive' if is_exit else 'C6HTriStatusPending','PHAFTER':'Q41NoPhase' if is_exit else 'Q41SomePhase(Q41Tri('+phase+'))','CURBEFORE':str(before),'CURAFTER':'Q41NoInt' if is_exit else 'Q41SomeInt('+str(cursor)+')','RESULT':'Q41SomeText("EnvFound")' if is_exit else 'Q41NoText'}
+ out=event_template
+ for k in sorted(pairs,key=len,reverse=True):out=out.replace(k,pairs[k])
+ return out
+exp='module q42EnvGetTraversalManualExpected {\n'+imports+'  import q42EnvGetTraversalTypes.* from "./q42EnvGetTraversalTypes"\n  import q42EnvGetTraversalInputs.* from "./q42EnvGetTraversalInputs"\n  // SAME-AUTHOR manual data frozen before new producer; no producer function import.\n'
+cases=[('One','q42OneHopBefore',[(90,38,12,10,0,False),(89,39,13,11,0,True),(88,40,14,11,None,None)]),('Two','q42TwoHopBefore',[(86,42,18,15,1,False),(85,43,19,16,0,False),(84,44,20,17,0,True),(83,45,21,17,None,None)])]
+for label,base,states in cases:
+ for i,(rem,cons,work,visits,cursor,hit) in enumerate(states,1):
+  helper='C6HNoHelper' if cursor is None else 'C6HSomeHelper(C6HEnvGet({common:{site:C6HSiteTagEvalVar,origin_reference_cursor:13,parent_resume:C6HNoIndex},binder:0,cursor:C6HSomeIndex('+str(cursor)+'),found:'+('C6HSomeRef(C6Const(0))' if hit else 'C6HNoRef')+',status:'+('C6HTriStatusPositive' if hit else 'C6HTriStatusPending')+'}))'
+  result='C6HSomeResult(C6HResultEnvFound({value:C6Const(0)}))' if cursor is None else 'C6HNoResult'
+  exp+='  pure val q42'+label+'After'+str(i)+':C6WholeHost = {...'+base+',image:{...'+base+'.image,remaining_work:'+str(rem)+',consumed_work:'+str(cons)+',helper_work:'+str(work)+',helper_visits:'+str(visits)+',helper:'+helper+',result:'+result+'}}\n'
+ events=[literal_event(base,37,False,2,0,'C6HTriStatusPending'),literal_event(base,38,False,0,0,'C6HTriStatusPositive'),literal_event(base,39,True,0,0,'')] if label=='One' else [literal_event(base,41,False,3,1,'C6HTriStatusPending'),literal_event(base,42,False,1,0,'C6HTriStatusPending'),literal_event(base,43,False,0,0,'C6HTriStatusPositive'),literal_event(base,44,True,0,0,'')]
+ exp+='  pure val q42'+label+'Expected:Q42Trace = {hosts:List('+base+','+','.join('q42'+label+'After'+str(i) for i in range(1,len(states)+1))+'),events:List('+','.join(events)+'),finished:true,within_slice:true}\n'
+exp+='}\n';(S/'q42EnvGetTraversalManualExpected.qnt').write_text(exp)
+contract={'status':'PUBLIC_MANUAL_EXPECTATIONS_FROZEN_BEFORE_NEW_PRODUCER','authorship':'Same-author public manual inputs and expected wholeHost/event data; not independent oracle or vote. No prior actual/privateexpected imported.','semanticRule':'Nonmatching Pending EnvGet Cell changes cursor only to cell.previous. found/status/common preserved, even previous=None; Empty is separate and outside new slice.','cases':[{'case':'One','cursorPath':[2,0,0],'rows':['NonmatchingCell','HitCell','Exit'],'pre':[91,37,11,9],'post':[88,40,14,11],'bound':3},{'case':'Two','cursorPath':[3,1,0,0],'rows':['NonmatchingCell','NonmatchingCell','HitCell','Exit'],'pre':[87,41,17,14],'post':[83,45,21,17],'bound':4}],'counterOrder':['remaining_work','consumed_work','helper_work','helper_visits'],'discriminatingPredicate':'Complete allHost/allEvent equality, including skipped off-chain matching binder, Some(0), preserved Pending/found, exact work/visits and unchanged admission/arenas/frames/seg_base. An index-1 walk follows a wrong matching off-chain cell.','sourceTarget':'K public design: Let x=7;Let y=Var x;Var x, target entry/body/body AST[1,1]. Separate genuine Owner before/prefix capture remains required, no fabricated admitted status.','normalCorrespondencePremises':['Running reachable bound prestate; normal owner path P1/P2/P3/P6 and successful reads/validation/physical/arithmetic','Full active lengths match owned Vec lengths; input/reference domains/caps are valid','Mathematical ints embed actual u128/usize/byte without overflow; enough remaining work/helper budget'],'syntheticCases':'Complete structurally typed unadmitted carrier tests; admission, StepInv and owner reachability are NOT established by these cases.','expectedAsProducerInput':False,'newProducerSourceAbsent':not (S/'q42EnvGetTraversalRelation.qnt').exists(),'execution':False,'preparationHistory':'Prior inline stdlib preparation failed to parse an f-string before executing any statement; no source or model run occurred. This retained preparation fixes string construction only.'}
+(P/'PUBLIC-PRECODE-CONTRACT-AND-MANUAL-EXPECTATIONS.json').write_text(json.dumps(contract,indent=2)+'\n')
+files=[]
+for p in [S/n for n in ['q42EnvGetTraversalTypes.qnt','q42EnvGetTraversalInputs.qnt','q42EnvGetTraversalManualExpected.qnt']]+[P/'PUBLIC-PRECODE-CONTRACT-AND-MANUAL-EXPECTATIONS.json']:
+ b=p.read_bytes();files.append({'path':str(p),'bytes':len(b),'sha256':sha(b)})
+p=B/'PRECODE-MANUAL-EXPECTATION-FREEZE.json';p.write_text(json.dumps({'status':'PRECODE_MANUAL_FULLSTATE_AND_EVENTS_FROZEN','utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'files':files,'sameAuthorNotIndependent':True,'newProducerSourceAbsent':contract['newProducerSourceAbsent'],'execution':False},indent=2)+'\n');print(json.dumps({'freeze':{'path':str(p),'bytes':p.stat().st_size,'sha256':sha(p.read_bytes())},'newModelAbsent':contract['newProducerSourceAbsent']}))

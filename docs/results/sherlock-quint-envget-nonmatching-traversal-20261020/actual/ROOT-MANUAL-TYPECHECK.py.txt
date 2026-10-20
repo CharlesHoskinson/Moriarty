@@ -1,0 +1,57 @@
+from pathlib import Path
+import hashlib,json,os,runpy,stat
+Q=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch42-envget-nonmatching-traversal-20261020')
+H=Q/'root-manual-capture-data01'
+helper=H/'capture-helper.FULL.py.txt'
+assert hashlib.sha256(helper.read_bytes()).hexdigest()=='713119d9400f82d559967e4296313cec8cde7125dc91a74152500577ced00626'
+h=runpy.run_path(str(helper),run_name='root_selected_api_only')
+manifest=H/'CURRENT-4688-PIN-MANIFEST.json'
+assert hashlib.sha256(manifest.read_bytes()).hexdigest()=='5682be9bab7459666f69781f8cbedbd5f0267e4b285bdaf06a7027cc985b23e7'
+m=json.loads(manifest.read_text())
+operation=H/'01-newTraversalRuntimeFrontend.COMMAND.proposed.json'
+assert hashlib.sha256(operation.read_bytes()).hexdigest()=='70788731b27b38afa1bb8c376b8980a79178786a2dcf736b709c51ea90d12696'
+op=json.loads(operation.read_text())
+A=Q/'root-actual-separate-operations01'
+assert not A.exists()
+assert not (Q/'ordinary-TMP').exists()
+assert not (Q/'proposed-itf').exists()
+A.mkdir(mode=0o700)
+phase=A/op['id'];phase.mkdir(mode=0o700)
+for p in [Q/'ordinary-TMP',Q/'ordinary-TMP/HOME',Q/'ordinary-TMP/CACHE']:
+ p.mkdir(mode=0o700)
+h['save'](phase/'ROOT-SELECTION.json',{'status':'ROOT_SELECTS_ONE_NEW_TYPECHECK_ONLY','manualComposition':h['pin'](Path(__file__)),'operation':h['pin'](operation),'manifest':h['pin'](manifest),'sourceReview':h['pin'](Q/'actual-MuseWonderHIGH-Q42-whole-source-API-exact3-review-01/FINAL-RESPONSE.txt'),'helper':h['pin'](helper),'followingOperationsSelected':False})
+pre=h['static_check'](m['files'])
+h['save'](phase/'PRE-FILES.json',pre)
+assert pre['all_match']
+assert sorted(p.name for p in (Q/'source').iterdir())==m['sourceExactEntries']
+assert all(stat.S_ISREG(p.lstat().st_mode) for p in (Q/'source').iterdir())
+symlinks=[]
+for row in m['symlinks']:
+ p=Path(row['path'])
+ actual={'path':str(p),'target':os.readlink(p),'resolved':str(p.resolve(strict=True)),'isDirectory':p.resolve().is_dir()}
+ assert actual==row
+ symlinks.append(actual)
+h['save'](phase/'PRE-SYMLINKS.json',symlinks)
+result=h['capture'](op,phase)
+h['save'](phase/'RESULT.json',result)
+for p in phase.iterdir():
+ if p.is_file():
+  fd=os.open(p,os.O_RDONLY);os.fsync(fd);os.close(fd)
+fd=os.open(phase,os.O_RDONLY);os.fsync(fd);os.close(fd)
+post=h['static_check'](m['files'])
+h['save'](phase/'POST-FILES.json',post)
+assert post['all_match']
+assert sorted(p.name for p in (Q/'source').iterdir())==m['sourceExactEntries']
+assert all(stat.S_ISREG(p.lstat().st_mode) for p in (Q/'source').iterdir())
+for row in m['symlinks']:
+ p=Path(row['path'])
+ assert os.readlink(p)==row['target'] and str(p.resolve(strict=True))==row['resolved'] and p.resolve().is_dir()==row['isDirectory']
+h['save'](phase/'POST-SYMLINKS.json',symlinks)
+accepted=result['actual_exit']==0 and result['controller_failure'] is None and len(result['streams'])==2 and all(s['full_stream_retained'] and s['bytes']==0 for s in result['streams'])
+h['save'](phase/'ROOT-DISPOSITION.json',{'accepted':accepted,'scope':'new Q42 runtime frontend typecheck only','result':h['pin'](phase/'RESULT.json'),'staticRows':m['count'],'nextOperationSelected':False})
+for p in phase.iterdir():
+ if p.is_file():
+  fd=os.open(p,os.O_RDONLY);os.fsync(fd);os.close(fd)
+fd=os.open(phase,os.O_RDONLY);os.fsync(fd);os.close(fd)
+print(json.dumps({'accepted':accepted,'result':result}))
+assert accepted
