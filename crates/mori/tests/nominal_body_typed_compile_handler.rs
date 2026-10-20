@@ -169,9 +169,11 @@ fn explicit_entry_selection_is_required_before_config_io() {
     assert!(error.contains("\"selection_error\": \"MissingEntry\""));assert!(error.contains(TYPED));assert!(!o.published);assert!(o.statuses.is_empty());
 }
 #[test]
-fn observe_is_refused_before_config_io_for_body_typed_profile() {
+fn observe_reads_config_for_body_typed_profile_before_source_work() {
+    // Successor observation design explicitly retires the prior compile-only
+    // rejection. Its historical freeze/results remain valid for their old cut.
     let o=invoke(&text("entry 0;"),&config(),TYPED,true,true,false);let error=o.result.unwrap_err();
-    assert!(error.contains("nominal preparation is compile-only; --observe is unsupported"));assert!(!o.published);assert!(o.statuses.is_empty());
+    assert!(error.contains("\"stage\": \"config\""));assert!(!o.published);assert!(o.statuses.is_empty());
 }
 #[test]
 fn unknown_body_profile_version_remains_a_selection_error() {

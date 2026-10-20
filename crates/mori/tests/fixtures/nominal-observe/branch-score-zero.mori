@@ -1,0 +1,18 @@
+language "moriarty-sherlock-nominal/1";
+program BranchScore {
+  type Bush<T> {
+    Tip(value: T);
+    Fork(left: Bush<T>, right: Bush<T>);
+  }
+  fn make(n: UInt): Bush<UInt> {
+    if n == 0 { construct Bush<UInt>::Tip(9) }
+    else { construct Bush<UInt>::Fork(make(n - 1), construct Bush<UInt>::Tip(n)) }
+  }
+  fn score(t: Bush<UInt>): UInt {
+    match t {
+      Bush<UInt>::Tip(x) => x,
+      Bush<UInt>::Fork(left, right) => score(left) + score(right)
+    }
+  }
+  entry score(make(0));
+}
