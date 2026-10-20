@@ -1,0 +1,82 @@
+
+/// Caller-retained Push family parameters: the original host config,
+/// a separately retained admission `BoundsC` (never equated with
+/// `cfg.layout.bounds`), and the original host limits. Geometry, caps,
+/// the bound-META binding, and the expected CTX are all derived here
+/// through the real Core chain; nothing is taken from prover META/PROG
+/// lanes, a decoded witness config, or any assertion type.
+#[derive(Clone, Debug)]
+pub struct C6PushFamilyParams {
+    cfg: C6HostConfig,
+    admission_bounds: BoundsC,
+    limits: C6HostLimits,
+    binding: C6MetaConfigBinding,
+    expected_ctx: [u128; CTX_LANES],
+    caps: C6StateCaps,
+    geometry: C6PaddedCarrierGeometry,
+}
+
+impl PartialEq for C6PushFamilyParams {
+    fn eq(&self, other: &Self) -> bool {
+        self.cfg == other.cfg
+            && self.admission_bounds == other.admission_bounds
+            && self.limits == other.limits
+            && self.binding.admission_bounds() == other.binding.admission_bounds()
+            && self.binding.layout() == other.binding.layout()
+            && self.binding.limits() == other.binding.limits()
+            && self.expected_ctx == other.expected_ctx
+            && self.caps == other.caps
+            && self.geometry == other.geometry
+    }
+}
+
+impl Eq for C6PushFamilyParams {}
+
+impl C6PushFamilyParams {
+    pub fn new(
+        cfg: C6HostConfig,
+        admission_bounds: BoundsC,
+        limits: C6HostLimits,
+    ) -> Result<Self, C6PushStepError> {
+        let binding = C6MetaConfigBinding::from_host_config(admission_bounds, &cfg, limits)
+            .map_err(|e| C6PushStepError::Backend(e.to_string()))?;
+        let (caps, _state_limits, geometry) = geometry_from_config(&cfg, &limits)?;
+        let expected_ctx = encode_context(cfg.ext, cfg.budgets);
+        let (ext, budgets) = decode_context(&expected_ctx)?;
+        if ext != cfg.ext || budgets != cfg.budgets {
+            return Err(C6PushStepError::Backend("context roundtrip disagreed".into()));
+        }
+        Ok(Self { cfg, admission_bounds, limits, binding, expected_ctx, caps, geometry })
+    }
+
+    pub fn cfg(&self) -> &C6HostConfig { &self.cfg }
+    pub fn admission_bounds(&self) -> BoundsC { self.admission_bounds }
+    pub fn limits(&self) -> C6HostLimits { self.limits }
+    pub fn meta_binding(&self) -> C6MetaConfigBinding { self.binding.clone() }
+    pub fn expected_ctx(&self) -> [u128; CTX_LANES] { self.expected_ctx }
+    pub fn caps(&self) -> C6StateCaps { self.caps }
+    pub fn geometry(&self) -> C6PaddedCarrierGeometry { self.geometry }
+
+    /// Recompute caps/geometry from the retained cfg/limits through
+    /// `cfg.state_context(&limits)` and refuse any independently
+    /// supplied geometry that differs. This is a host derivation
+    /// refusal before emission, not a caller-trust claim.
+    pub fn validate_geometry(
+        &self,
+        supplied: C6PaddedCarrierGeometry,
+    ) -> Result<(), C6PushStepError> {
+        let (caps, _state_limits, geometry) = geometry_from_config(&self.cfg, &self.limits)?;
+        if supplied != geometry || supplied.caps != caps {
+            return Err(C6PushStepError::InvalidGeometry { section: "geometry" });
+        }
+        Ok(())
+    }
+}
+
+fn geometry_from_config(cfg: &C6HostConfig, limits: &C6HostLimits) -> Result<(C6StateCaps, C6StateLimits, C6PaddedCarrierGeometry), C6PushStepError> {
+    let ctx = cfg.state_context(limits);
+    let caps = *ctx.caps();
+    let state_limits = C6StateLimits { max_total_lanes: limits.max_state_lanes };
+    let geometry = C6PaddedCarrierGeometry::checked_new(caps, state_limits)?;
+    Ok((caps, state_limits, geometry))
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "sherlock-c6-complete-program-observation-wire/1",
+  "profile": "sherlock-c6-complete-program-positive/1",
+  "inputTablesOrder": [
+    "expressions",
+    "occurrences",
+    "occurrence_paths",
+    "children",
+    "functions",
+    "parameters",
+    "arms",
+    "patterns",
+    "pattern_children",
+    "types",
+    "type_args",
+    "constructors",
+    "ctor_fields",
+    "decl_param_counts",
+    "decl_ctor_counts",
+    "decl_templates",
+    "plan_nodes",
+    "plan_cases",
+    "field_paths",
+    "constants",
+    "constant_fields",
+    "names"
+  ],
+  "inputByteWire": "SAFE-BYTE-WIRE-INPUTS.json, two cases in literal order; no desired outputs included.",
+  "typedJsonConvention": "Exact singleton variant objects; nullary variants plainStrings; IDs transparent native integers; None=null/Some={Some:index}; native booleans and ordered arrays, no type coercion. In decoded_program, only textual fields become canonical UTF8 List[int], and each field.ty becomes complete preorder tokenList. Every other row/field exactly as native input.",
+  "expectedJSONRoot": {
+    "schema": "independent-c6-complete-program-positive/1",
+    "profile": "sherlock-c6-complete-program-positive/1",
+    "case_ids": "List[String], literal input case order",
+    "observations": "List[CompleteProgramPositiveObservation], same order"
+  },
+  "observation": {
+    "encoded_lanes": "List[int], complete header/count/row/text lanes in order, no filtering",
+    "decoded_program": "Exact full ProgramSnapshot byte/preorder projection: entry plus all22 ordered typed tables; all options/markers/rawu128/slices/duplicates/text retained",
+    "table_counts": "List[int], exactly22 raw count-prefix values in ProgramSnapshot table order",
+    "table_spans": "List[TableSpan], exactly22 in order",
+    "text_spans": "List[TextSpan], every Writer/Reader string call in encoded order, no table-level aggregation or dedup",
+    "final_cursor": "int, one-past-last consumed lane; equals full encoded_lanes length on positivecomplete stream"
+  },
+  "TableSpan": {
+    "table": "String, exact table name",
+    "count_lane": "int, absolute zero-based count-prefix lane",
+    "row_count": "int, raw count value",
+    "rows_start": "int, first lane immediately after count prefix",
+    "rows_end": "int, one-past-last row lane (equals rows_start when row_count0)",
+    "row_spans": "List[{row_index:int,start:int,end:int}], one per ordered row, start inclusive/end exclusive"
+  },
+  "TextSpan": {
+    "table": "String, names or decl_templates",
+    "row_index": "int, outer table row index",
+    "path": "List[PathStep], byte-wire logical field location (convention below)",
+    "budget": "String, Names or Template",
+    "length_lane": "int, absolute zero-based byte length prefix position",
+    "bytes_start": "int, immediately after length prefix",
+    "bytes_end": "int, exclusive endpoint",
+    "utf8_bytes": "List[int], entire original byte sequence including empty sequence"
+  },
+  "PathStep": "singleton {Field:String} or {Index:int}; metadata pathlabels are not encoded program text.",
+  "TextPathConvention": {
+    "names": "[] because table row itself is a byteString",
+    "declarationName": "[{Field:name}]",
+    "parameterName": "[{Field:parameters},{Index:j}]",
+    "ctorName": "[{Field:ctors},{Index:k},{Field:name}]",
+    "fieldName": "[{Field:ctors},{Index:k},{Field:fields},{Index:j},{Field:name}]",
+    "typeExprName": "[{Field:ctors},{Index:k},{Field:fields},{Index:j},{Field:ty},{Index:t},{Field:name}], t is preorder token index within that field.ty; emit only Named/Param/Apply name nodes"
+  },
+  "cursorMeaning": "Diagnostic positions in declared serialized representation, not productionB microsteps/events/charges or a new runtime transition rule. A zero table moves to next count after consuming its count; an empty string completes after consuming its length prefix; repeated rows/strings have separate spans.",
+  "independentAuthorNeed": "After Root assignment, derive complete observation objects privately from ONLY native/byte input, positivebodyfree contract, byteprojection and observation interface. No implementation/Reader/Writer/model/test/review/actual/prior expected bodies. No actual output seeds. Preserve both input cases/all22 tables and fullnative scalar kinds/order."
+}
