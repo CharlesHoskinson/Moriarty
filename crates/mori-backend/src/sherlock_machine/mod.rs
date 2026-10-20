@@ -384,10 +384,14 @@ pub mod c6_scalar_exit_consumer;
 pub mod c6_checked_value_read;
 pub mod c6_scalar_tag_step;
 pub mod c6_scalar_tag_consumer;
+pub mod c6_scalar_arithmetic_step;
+pub mod c6_scalar_arithmetic_consumer;
 #[cfg(test)]
 mod c6_scalar_tag_step_tests;
 #[cfg(test)]
 mod c6_checked_value_read_tests;
+#[cfg(test)]
+mod c6_scalar_arithmetic_step_tests;
 pub use c6_a135_push::{
     c6_lanes_to_immediates, c6_push_family, emit_c6_push_observed_operands, C6PushOperands,
     C6_A135_FAMILY, C6_A140_FAMILY,
@@ -445,6 +449,19 @@ pub use c6_checked_value_read::{
 pub use c6_scalar_tag_step::{
     emit_c6_scalar_tag_step_block, C6ScalarTagStepBlock, C6ScalarTagStepEmitter,
     C6ScalarTagStepError, C6ScalarTagStepInputs,
+};
+pub use c6_scalar_arithmetic_step::{
+    emit_c6_scalar_arithmetic_step_block, C6ScalarArithmeticStepBlock,
+    C6ScalarArithmeticStepEmitter, C6ScalarArithmeticStepError,
+    C6ScalarArithmeticStepInputs,
+};
+pub use c6_scalar_arithmetic_consumer::{
+    build_c6_scalar_arithmetic_step_circuit, check_c6_scalar_arithmetic_step_circuit,
+    record_scalar_arithmetic_step,
+    witness_from_host_pair as witness_scalar_arithmetic_from_host_pair,
+    witness_from_owner_record as witness_scalar_arithmetic_from_owner_record,
+    C6ScalarArithmeticConsumerError, C6ScalarArithmeticStepCircuit,
+    C6ScalarArithmeticStepWitness,
 };
 pub use c6_scalar_tag_consumer::{
     build_c6_scalar_tag_step_circuit, check_c6_scalar_tag_step_circuit,
