@@ -29,3 +29,8 @@ tags: [moriarty, consolidation, recursion]
 ## Current reviewed R4/R5 result — 2026-10-02
 
 [[wiki/sessions/native-financial-kernel-2026-10-01|Reviewed fixed-fixture R4 financial Success and complete R5 independent verification]] (SRC-0119). Three actual-result reviews and portable evidence retained; generic correspondence, authenticated custody/history/PCD and Preview remain open.
+
+
+## Sherlock circuit atlas continuation —2026-10-20
+
+[UPDATE017](research/sherlock-circuit-atlas/UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md) is a finished-site concept proposal with separately dated source engineering status. The full Sherlock/native/stagenet goal remains unfinished; the concept log is asynchronous.
