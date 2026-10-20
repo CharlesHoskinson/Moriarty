@@ -12,6 +12,7 @@ fn increment() -> Program {
             initial: Value::UInt(UInt(0)),
         }],
         assets: vec![],
+        duties: vec![],
         expressions: vec![
             Expr::Name {
                 name: "count".into(),

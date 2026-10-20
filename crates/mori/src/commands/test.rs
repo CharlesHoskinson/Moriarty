@@ -3,6 +3,8 @@ use crate::shell::Shell;
 use serde::Deserialize;
 use std::{path::PathBuf, process::ExitCode};
 
+mod stage_test;
+
 #[derive(Debug, clap::Args)]
 pub struct Args {
     pub dir: PathBuf,
@@ -35,7 +37,14 @@ enum Expected {
 }
 
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
-    let manifest: Manifest = core_io::read_json(&args.dir.join("mori-tests.json"))?;
+    let value: serde_json::Value = core_io::read_json(&args.dir.join("mori-tests.json"))?;
+    if value.get("profile").and_then(serde_json::Value::as_str) == Some("moriarty-tests/3") {
+        return stage_test::run_v3(&args.dir, value, shell);
+    }
+    if value.get("profile").and_then(serde_json::Value::as_str) == Some("moriarty-tests/2") {
+        return stage_test::run(&args.dir, value, shell);
+    }
+    let manifest: Manifest = serde_json::from_value(value).map_err(core_io::operation)?;
     if manifest.profile != "moriarty-tests/1"
         || manifest.cases.is_empty()
         || manifest.cases.len() > 256

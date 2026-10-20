@@ -124,6 +124,17 @@ pub fn validate(program: &Program) -> Result<(), Error> {
             "Unsupported language or semantics identity.",
         ));
     }
+    // F2 manual-custody guard: `Program.duties` is empty for every `/1`
+    // program by construction (parser and frozen v1 decode). A manually
+    // constructed `/1` value carrying duties is outside that custody and
+    // is refused with the existing profile identity, before hashing,
+    // serialization by callers, or interpretation can bind duties.
+    if !program.duties.is_empty() {
+        return Err(failure(
+            "profile",
+            "Unsupported language or semantics identity.",
+        ));
+    }
     if !identifier(&program.name) {
         return Err(failure(
             "name",
@@ -133,7 +144,8 @@ pub fn validate(program: &Program) -> Result<(), Error> {
     if program.actions.is_empty() {
         return Err(failure("program", "Program needs at least one action."));
     }
-    if program.states.len() + program.assets.len() + program.actions.len() > MAX_DECLARATIONS
+    if program.states.len() + program.assets.len() + program.actions.len() + program.duties.len()
+        > MAX_DECLARATIONS
         || program.expressions.len() > MAX_EXPRESSIONS
     {
         return Err(failure(
@@ -497,6 +509,13 @@ fn amount(
 // Core also supports incoming duties without a source declaration. Only names
 // declared by Liability statements have a source-fixed identity; do not impose
 // the backend's closed, sixteen-entry compiler profile on general Core input.
+// For `moriarty/3` the source-fixed set is REG3: the statement identities
+// above union `Program.duties`, each duty asset name resolved to its declared
+// exact `AssetId`. This agrees with `stage::validate_v3` and
+// `stage::decode::registry_for`; statement-only conflicts keep the legacy
+// `liability` error and duty-caused conflicts use
+// `sequence_duty_declaration`. It is source identity only, not consent,
+// authentication, authority, consumption or native validity.
 fn liability_identities(p: &Program) -> Result<BTreeMap<&str, (&AssetId, &str, &str)>, Error> {
     let mut identities = BTreeMap::new();
     for stmt in p.actions.iter().flat_map(|action| &action.statements) {
@@ -513,15 +532,43 @@ fn liability_identities(p: &Program) -> Result<BTreeMap<&str, (&AssetId, &str, &
                 debtor.as_str(),
                 creditor.as_str(),
             );
-            if let Some(existing) = identities.insert(name.as_str(), identity) {
-                if existing != identity {
-                    return Err(failure(
-                        "liability",
-                        format!("Conflicting source liability identity for {name:?}."),
-                    ));
-                }
+            if let Some(existing) = identities.insert(name.as_str(), identity)
+                && existing != identity
+            {
+                return Err(failure(
+                    "liability",
+                    format!("Conflicting source liability identity for {name:?}."),
+                ));
             }
         }
+    }
+    if p.language == crate::stage::LANGUAGE_3 && p.semantics == crate::stage::SEMANTICS_3 {
+        for decl in &p.duties {
+            let Some(asset_decl) = p.assets.iter().find(|a| a.name == decl.asset) else {
+                return Err(failure(
+                    "sequence_duty_declaration",
+                    "External duty declaration is not admissible in this program.",
+                ));
+            };
+            let identity = (
+                &asset_decl.identity,
+                decl.debtor.as_str(),
+                decl.creditor.as_str(),
+            );
+            if let Some(existing) = identities.insert(decl.name.as_str(), identity)
+                && existing != identity
+            {
+                return Err(failure(
+                    "sequence_duty_declaration",
+                    "External duty declaration is not admissible in this program.",
+                ));
+            }
+        }
+    } else if !p.duties.is_empty() {
+        return Err(failure(
+            "profile",
+            "Unsupported language or semantics identity.",
+        ));
     }
     Ok(identities)
 }
@@ -923,7 +970,7 @@ pub enum SegmentEntry<'a> {
 pub enum SegmentRun {
     NotAdvanced,
     Ran {
-        execution: Execution,
+        execution: Box<Execution>,
         exit_site: u16,
         captures_out: Vec<crate::stage::NamedValue>,
     },
@@ -952,15 +999,33 @@ pub(crate) fn run_segment(
             env.extend(inputs.iter().map(|v| (v.name.clone(), v.value.clone())));
             0
         }
-        SegmentEntry::Resume { site, captures, event } => {
-            env.extend(captures.iter().chain(event).map(|v| (v.name.clone(), v.value.clone())));
+        SegmentEntry::Resume {
+            site,
+            captures,
+            event,
+        } => {
+            env.extend(
+                captures
+                    .iter()
+                    .chain(event)
+                    .map(|v| (v.name.clone(), v.value.clone())),
+            );
             let ordinal = usize::from(plan.sites[usize::from(site) - 1].ordinal);
             let statement = &selected.statements[ordinal];
             let mut effects = Vec::new();
             // execute_statement charges dispatch once, then visits the guard.
             let value = execute_statement(
-                program, statement, &mut env, &mut current, &mut meter, &mut effects,
-            ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;
+                program,
+                statement,
+                &mut env,
+                &mut current,
+                &mut meter,
+                &mut effects,
+            )
+            .map_err(|mut error| {
+                error.step = Some(ordinal as u16);
+                error
+            })?;
             if value != Some(Value::Bool(true)) {
                 return Ok(SegmentRun::NotAdvanced);
             }
@@ -983,20 +1048,37 @@ pub(crate) fn run_segment(
                 error.step = Some(ordinal as u16);
                 error
             })?;
-            let site = plan.sites.iter().find(|s| usize::from(s.ordinal) == ordinal)
+            let site = plan
+                .sites
+                .iter()
+                .find(|s| usize::from(s.ordinal) == ordinal)
                 .ok_or_else(|| failure("stage_site", "Await site is absent from stage plan."))?;
             exit_site = site.site;
             for slot in &site.captures {
-                let value = env.get(&slot.name).cloned()
+                let value = env
+                    .get(&slot.name)
+                    .cloned()
                     .ok_or_else(|| failure("name", format!("Unknown name {:?}.", slot.name)))?;
-                captures_out.push(crate::stage::NamedValue { name: slot.name.clone(), value });
+                captures_out.push(crate::stage::NamedValue {
+                    name: slot.name.clone(),
+                    value,
+                });
             }
             break;
         }
         let mut effects = Vec::new();
         let value = execute_statement(
-            program, statement, &mut env, &mut current, &mut meter, &mut effects,
-        ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;
+            program,
+            statement,
+            &mut env,
+            &mut current,
+            &mut meter,
+            &mut effects,
+        )
+        .map_err(|mut error| {
+            error.step = Some(ordinal as u16);
+            error
+        })?;
         all_effects.extend(effects.clone());
         steps.push(Step {
             index: ordinal as u16,
@@ -1007,14 +1089,14 @@ pub(crate) fn run_segment(
         });
     }
     Ok(SegmentRun::Ran {
-        execution: Execution {
+        execution: Box::new(Execution {
             semantics: program.semantics.clone(),
             action: selected.name.clone(),
             pre,
             post: current,
             steps,
             effects: all_effects,
-        },
+        }),
         exit_site,
         captures_out,
     })

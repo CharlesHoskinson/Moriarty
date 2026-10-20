@@ -34,6 +34,25 @@ difference is listed here and agreed before it is made.
   frontend resolves names while parsing, so in a file with several errors it
   may report a different first one. Files with a single error behave the same.
 
+## Proposed ordinary Core/3 public consumer difference
+
+The separate Core/3 source proposal extends public check, source-only inspect,
+local staged simulation and whole-report `moriarty-tests/3` manifests through
+`mori_core::stage::load_v3`. It preserves explicit `/1` and `/2` library APIs,
+reports and profile boundaries. This is a proposed D1/D2/D3 interface, not an
+adopted language or runtime result. Full declarations, duties, expression arena,
+stage plan and outcomes retain their profile-specific meaning; no Beta, Source/6,
+Core/5 or Sherlock equivalence follows. Compiler artifact/context/registry and
+native trace/proof/target connections remain separate unimplemented contracts.
+
+The finite `core3_public_consumers` and `core3_stage_test_public` tests use
+manually specified ordinary source/schema observations rather than generated
+snapshots. Their author inspected source; they are not independent oracles.
+The existing independent P1/P2 financial/work freeze retains its original
+conditional scope. Whole financial wire/hash/byte expectations must be frozen
+independently before those comparisons; missing values cannot come from the
+implementation. Product checks remain unrun in the source-only proposal.
+
 ## Workspace
 
 - Every crate lives in `crates/*`. The `mori` crate is the CLI entry point.
