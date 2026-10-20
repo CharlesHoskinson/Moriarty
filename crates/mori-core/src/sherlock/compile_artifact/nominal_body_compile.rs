@@ -4,6 +4,9 @@
 //! (complete owner admission including second T3, then actual genesis). The
 //! first T3 and checker intentionally precede AD-0a/1/2/3. No owner guard is
 //! reproduced here. Parser extents do not bound the duplicate T3/checker work.
+//! The optional nominal-input variant decodes and binds before the first T3,
+//! replaces the parsed entry with the synthesized call, and then follows the
+//! same preparation, body-check, owner-admission and genesis path.
 use super::ext_compile::{
     compile_ext_host, ExtCompileArtifact, ExtCompileConfig, ExtCompileFailure, ExtCompileReport,
 };
@@ -13,6 +16,10 @@ use crate::sherlock::helper_machine::shared::{
 use crate::sherlock::helper_machine::shared::owner_ext_source_program::ExtProgram;
 use crate::sherlock::helper_machine::shared::owner_ext_t3_uses::{ExtExpr, ExtValue};
 use crate::sherlock::helper_machine::shared::owner_ext_type_builder::ExtTypeBuildError;
+use crate::sherlock::nominal_external_inputs::{
+    decode_and_bind_nominal_inputs, install_bound_entry, NominalBindingProvenance,
+    NominalInputError, NominalInputLimits,
+};
 use crate::sherlock_nominal_body_types::{
     check_nominal_program_bodies, NominalBodyTypeError, NominalBodyTypeErrorKind,
 };
@@ -20,6 +27,7 @@ use crate::sherlock_nominal_source::{
     parse_nominal_source_bounded, DraftError, DraftParseBudget, NominalProvenance,
     SourceOwner, SourceSpan,
 };
+use serde_json::Value;
 
 /// Source profile selected only through this completed body-checking route.
 /// This does not change the raw compiler's execution profile or financial scope.
@@ -28,10 +36,21 @@ pub const ADOPTED_NOMINAL_JUDGMENTS: &[&str] = &[
     "eq-any", "unique-parameters-every-declaration", "unique-binders-every-arm",
 ];
 
+/// Explicit request to bind one nominal function from one decoded JSON value.
+///
+/// The caller owns JSON reading and JSON syntax parsing. This type carries
+/// only the function name and the already decoded nominal-input document.
+#[derive(Clone, Debug, PartialEq)]
+pub struct NominalBindingRequest {
+    pub function_name: String,
+    pub input: Value,
+}
+
 /// New exhaustive stage enum; existing raw/source error enums stay unchanged.
 /// Every payload is the actual original error, including second-T3 owner errors.
 pub enum NominalBodyCompileError {
     Parse(DraftError),
+    NominalInput(NominalInputError),
     Preparation(ExtTypeBuildError),
     BodyType(NominalBodyTypeError),
     OwnerAdmission(ExtTypeBuildError),
@@ -41,6 +60,7 @@ impl std::fmt::Debug for NominalBodyCompileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Parse(e) => f.debug_tuple("Parse").field(e).finish(),
+            Self::NominalInput(e) => f.debug_tuple("NominalInput").field(e).finish(),
             Self::Preparation(_) => f.write_str("Preparation(owner ExtTypeBuildError)"),
             Self::BodyType(e) => f.debug_tuple("BodyType").field(e).finish(),
             Self::OwnerAdmission(_) => f.write_str("OwnerAdmission(owner ExtTypeBuildError)"),
@@ -70,6 +90,7 @@ pub struct NominalBodyCompileArtifact {
     name: String,
     provenance: NominalProvenance,
     owner: ExtCompileArtifact,
+    binding: Option<NominalBindingProvenance>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CompletedNominalBodyCheck {
@@ -81,6 +102,7 @@ pub struct NominalBodyCompileReport<'a> {
     pub source_profile: &'static str,
     pub body_check: CompletedNominalBodyCheck,
     pub owner: ExtCompileReport<'a>,
+    pub binding: Option<&'a NominalBindingProvenance>,
 }
 
 /// Compile the selected nominal text source through the actual owner APIs.
@@ -102,14 +124,78 @@ pub fn compile_nominal_source_host_bounded(
     config: ExtCompileConfig,
     locator: Option<LocatorC>,
 ) -> Result<NominalBodyCompileArtifact, NominalBodyCompileFailure> {
+    compile_nominal_source_host_bounded_inner(source, budget, config, locator, None)
+}
+
+/// Compile with one explicitly bound nominal function entry.
+///
+/// Decoding and binding happen after bounded parsing and before the first T3.
+/// The decoder receives the existing parser budget fields
+/// max_ast_occurrences and max_structural_ast_depth without new defaults.
+/// Existing AST occurrences are the checked sum of parsed expression and
+/// pattern provenance occurrences. Count overflow is reported as
+/// NominalInputError::CountOverflow. The synthesized entry replaces the
+/// parsed entry in the same ExtProgram; all declarations, functions, assets,
+/// states and financial inputs in that program are otherwise unchanged.
+pub fn compile_nominal_source_host_bounded_with_nominal_inputs(
+    source: &str,
+    budget: DraftParseBudget,
+    config: ExtCompileConfig,
+    locator: Option<LocatorC>,
+    request: NominalBindingRequest,
+) -> Result<NominalBodyCompileArtifact, NominalBodyCompileFailure> {
+    compile_nominal_source_host_bounded_inner(source, budget, config, locator, Some(request))
+}
+
+fn compile_nominal_source_host_bounded_inner(
+    source: &str,
+    budget: DraftParseBudget,
+    config: ExtCompileConfig,
+    locator: Option<LocatorC>,
+    nominal_request: Option<NominalBindingRequest>,
+) -> Result<NominalBodyCompileArtifact, NominalBodyCompileFailure> {
     let parsed = parse_nominal_source_bounded(source, budget)
         .map_err(|e| NominalBodyCompileFailure::unlocated(NominalBodyCompileError::Parse(e)))?;
+    let mut program = parsed.program;
+    let binding = match nominal_request {
+        Some(request) => {
+            let existing_ast_occurrences = parsed
+                .provenance
+                .expressions
+                .len()
+                .checked_add(parsed.provenance.patterns.len())
+                .ok_or_else(|| {
+                    NominalBodyCompileFailure::unlocated(NominalBodyCompileError::NominalInput(
+                        NominalInputError::CountOverflow,
+                    ))
+                })?;
+            let bound = decode_and_bind_nominal_inputs(
+                &program,
+                &request.function_name,
+                &request.input,
+                NominalInputLimits {
+                    max_ast_occurrences: budget.max_ast_occurrences,
+                    max_structural_ast_depth: budget.max_structural_ast_depth,
+                },
+                existing_ast_occurrences,
+            )
+            .map_err(|e| {
+                NominalBodyCompileFailure::unlocated(NominalBodyCompileError::NominalInput(e))
+            })?;
+            Some(install_bound_entry(&mut program, bound))
+        }
+        None => None,
+    };
     let program = {
         let prepared = prepare_ext_program_types(
-            parsed.program, &config.layout, config.domain, locator.clone(),
+            program, &config.layout, config.domain, locator.clone(),
         ).map_err(|e| NominalBodyCompileFailure::unlocated(NominalBodyCompileError::Preparation(e)))?;
         if let Err(error) = check_nominal_program_bodies(&prepared) {
-            let span = nominal_body_error_span(source, &prepared.program, &parsed.provenance, &error);
+            let span = if binding.is_some() && error.source.function_index.is_none() {
+                None
+            } else {
+                nominal_body_error_span(source, &prepared.program, &parsed.provenance, &error)
+            };
             return Err(NominalBodyCompileFailure { error: NominalBodyCompileError::BodyType(error), span });
         }
         // REPORT_ONLY_COMPLETED: discard the summary, including first-T3 IDs.
@@ -123,17 +209,27 @@ pub fn compile_nominal_source_host_bounded(
             ExtCompileFailure::Genesis(e) => NominalBodyCompileError::Genesis(e),
         })
     })?;
-    Ok(NominalBodyCompileArtifact { name: parsed.name, provenance: parsed.provenance, owner })
+    Ok(NominalBodyCompileArtifact { name: parsed.name, provenance: parsed.provenance, owner, binding })
 }
 impl NominalBodyCompileArtifact {
     pub fn name(&self) -> &str { &self.name }
+    /// Original parsed provenance.
+    ///
+    /// In bound mode, Entry occurrences in this provenance describe the
+    /// replaced original source entry. They are retained unchanged as stale
+    /// source-only provenance and are never repurposed as spans for the
+    /// synthesized entry. Function and function-body provenance remains the
+    /// provenance of the unchanged function bodies. The synthesized entry has
+    /// no SourceSpan.
     pub fn provenance(&self) -> &NominalProvenance { &self.provenance }
     pub fn owner(&self) -> &ExtCompileArtifact { &self.owner }
+    pub fn binding(&self) -> Option<&NominalBindingProvenance> { self.binding.as_ref() }
     pub fn report(&self) -> Result<NominalBodyCompileReport<'_>, HostViolation> {
         Ok(NominalBodyCompileReport {
             source_profile: NOMINAL_BODY_TYPED_PROFILE,
             body_check: CompletedNominalBodyCheck { status: "completed", judgments: ADOPTED_NOMINAL_JUDGMENTS },
             owner: self.owner.report()?,
+            binding: self.binding.as_ref(),
         })
     }
     /// Retain the actual raw admitted/genesis pair and complete source metadata.

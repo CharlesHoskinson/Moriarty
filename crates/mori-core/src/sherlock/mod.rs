@@ -70,6 +70,8 @@ mod source_origin_normal_tests;
 // No native ABI, machine-state importer or transition acceptance is provided.
 pub mod layout_a;
 
+pub mod nominal_external_inputs;
+
 #[cfg(test)]
 mod reference_stream_tests;
 

@@ -1,0 +1,29 @@
+language "moriarty-sherlock-nominal/1";
+program RelayWeave {
+  type Rope<T> {
+    End;
+    Join(z_item: T, a_next: Rope<T>);
+  }
+  type Batch<L, R> {
+    Ready(z_numbers: L, a_signals: R);
+  }
+  fn back(todo: Rope<UInt>, acc: Rope<UInt>): Rope<UInt> {
+    match todo {
+      Rope<UInt>::End() => acc,
+      Rope<UInt>::Join(item, rest) => back(rest, construct Rope<UInt>::Join(item, acc))
+    }
+  }
+  fn gather(signals: Rope<Bool>, seed: UInt, items: Rope<UInt>): Batch<Rope<UInt>, Rope<Bool>> {
+    construct Batch<Rope<UInt>, Rope<Bool>>::Ready(
+      back(items, construct Rope<UInt>::Join(seed, construct Rope<UInt>::End())),
+      negate(signals)
+    )
+  }
+  fn negate(signals: Rope<Bool>): Rope<Bool> {
+    match signals {
+      Rope<Bool>::End() => construct Rope<Bool>::End(),
+      Rope<Bool>::Join(signal, rest) => construct Rope<Bool>::Join(not(signal), negate(rest))
+    }
+  }
+  entry false;
+}

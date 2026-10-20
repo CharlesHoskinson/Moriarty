@@ -33,6 +33,16 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
             return Err(CompileFailure::input("select",
                 "--execution-inputs is supported only for Core/1 action compilation"));
         }
+        if args.nominal_inputs.is_some() || args.nominal_function.is_some() {
+            if args.nominal_inputs.is_none() || args.nominal_function.is_none() {
+                return Err(CompileFailure::input("select",
+                    "--nominal-inputs and --nominal-function must be supplied together"));
+            }
+            if !body_typed_nominal || !matches!(&selection, SourceSelection::NominalEntry) {
+                return Err(CompileFailure::input("select",
+                    "--nominal-inputs is supported only for nominal-body-typed/1 entry compilation"));
+            }
+        }
         if matches!(&selection, SourceSelection::DraftEntry) && args.observe {
             return Err(CompileFailure::input("select",
                 "draft preparation is compile-only; --observe is unsupported"));
@@ -50,6 +60,8 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
             .map_err(|error| CompileFailure::input("config", error.to_string()))?;
         let inputs = args.execution_inputs.as_deref().map(core_io::read_source).transpose()
             .map_err(|error| CompileFailure::input("inputs", error.to_string()))?;
+        let nominal_inputs = args.nominal_inputs.as_deref().map(core_io::read_source).transpose()
+            .map_err(|error| CompileFailure::input("inputs", error.to_string()))?;
         let artifact = match selection {
             SourceSelection::CoreAction(action) => SelectedSherlockArtifact::Core(
                 if let Some(inputs) = inputs.as_deref() {
@@ -62,10 +74,20 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
             SourceSelection::NominalEntry => if body_typed_nominal {
                 if args.observe {
                     SelectedSherlockArtifact::NominalObserved(
-                        host::nominal_body_command::observe(source, &config, &target)?)
+                        match (nominal_inputs.as_deref(), args.nominal_function.as_deref()) {
+                            (Some(inputs), Some(function)) => host::nominal_body_command::observe_with_nominal_inputs(source, &config, &target, inputs, function)?,
+                            (None, None) => host::nominal_body_command::observe(source, &config, &target)?,
+                            _ => return Err(CompileFailure::input("select",
+                                "--nominal-inputs and --nominal-function must be supplied together")),
+                        })
                 } else {
                     SelectedSherlockArtifact::NominalBodyTyped(
-                        host::nominal_body_command::compile(source, &config, &target)?)
+                        match (nominal_inputs.as_deref(), args.nominal_function.as_deref()) {
+                            (Some(inputs), Some(function)) => host::nominal_body_command::compile_with_nominal_inputs(source, &config, &target, inputs, function)?,
+                            (None, None) => host::nominal_body_command::compile(source, &config, &target)?,
+                            _ => return Err(CompileFailure::input("select",
+                                "--nominal-inputs and --nominal-function must be supplied together")),
+                        })
                 }
             } else {
                 SelectedSherlockArtifact::Nominal(
@@ -141,4 +163,3 @@ fn report_sherlock_failure(
         Err(error) => core_io::operation(error),
     }
 }
-
