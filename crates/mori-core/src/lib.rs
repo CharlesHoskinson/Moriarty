@@ -39,3 +39,4 @@ pub use parser::{language, language_v3, parse};
 pub use replay::{DetailedReplayError, ReplayDifference, compare_execution, replay_detailed};
 pub use runtime::{replay, simulate, validate};
 pub use source_sponsor::*;
+pub use stage::SourceLiabilityIdentity;

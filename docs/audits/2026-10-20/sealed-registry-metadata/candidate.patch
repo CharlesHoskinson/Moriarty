@@ -1,0 +1,468 @@
+diff --git a/crates/mori-core/src/lib.rs b/crates/mori-core/src/lib.rs
+index 5db00084..a1ee545d 100644
+--- a/crates/mori-core/src/lib.rs
++++ b/crates/mori-core/src/lib.rs
+@@ -39,3 +39,4 @@ pub use parser::{language, language_v3, parse};
+ pub use replay::{DetailedReplayError, ReplayDifference, compare_execution, replay_detailed};
+ pub use runtime::{replay, simulate, validate};
+ pub use source_sponsor::*;
++pub use stage::SourceLiabilityIdentity;
+diff --git a/crates/mori-core/src/stage/mod.rs b/crates/mori-core/src/stage/mod.rs
+index 963e4688..d3086ff2 100644
+--- a/crates/mori-core/src/stage/mod.rs
++++ b/crates/mori-core/src/stage/mod.rs
+@@ -21,7 +21,7 @@ pub use plan::{ActionPlan, AwaitSite, CaptureSlot, Origin, StageBinder, StagePla
+ pub use profile::{require_core1, require_core2, require_core3};
+ pub use report::outcome_report;
+ 
+-use crate::{Error, Execution, Liability, Program, Snapshot, UInt, Value};
++use crate::{AssetId, Error, Execution, Liability, Program, Snapshot, UInt, Value};
+ use serde::{Deserialize, Serialize};
+ 
+ pub const LANGUAGE_2: &str = "moriarty/2";
+@@ -43,6 +43,15 @@ pub const STAGE_LABELS: [(&str, &str); 3] = [
+     ("consumption", "untracked"),
+ ];
+ 
++/// Owned source-fixed liability metadata copied from a sealed staged program.
++#[derive(Debug, Clone, PartialEq, Eq)]
++pub struct SourceLiabilityIdentity {
++    pub name: String,
++    pub asset: AssetId,
++    pub debtor: String,
++    pub creditor: String,
++}
++
+ /// A staged program that passed profile, validation, plan invariants and
+ /// static costing, with its canonical digests. Only `load` or `load_v3`
+ /// constructs one; there is no public constructor, `Default` or `Deserialize`.
+@@ -67,6 +76,23 @@ impl StagedProgram {
+     pub fn plan_hash(&self) -> [u8; 32] {
+         self.plan_hash
+     }
++    /// Return an owned copy of the existing whole-program source registry.
++    /// This reads metadata only and does not change the staged program.
++    pub fn liability_registry(&self) -> Result<Vec<SourceLiabilityIdentity>, Error> {
++        let registry = decode::registry_for(self.program())?;
++        Ok(registry
++            .into_iter()
++            .map(
++                |(name, (asset, debtor, creditor))| SourceLiabilityIdentity {
++                    name: name.to_owned(),
++                    asset: asset.clone(),
++                    debtor: debtor.to_owned(),
++                    creditor: creditor.to_owned(),
++                },
++            )
++            .collect())
++    }
++
+     /// Declaration index of an action; plan and program actions share it.
+     pub(crate) fn action_index(&self, name: &str) -> Option<usize> {
+         self.program.actions.iter().position(|a| a.name == name)
+diff --git a/crates/fixtures/sealed-registry-metadata/CORE2-REGISTRY-EXPECTED.json b/crates/fixtures/sealed-registry-metadata/CORE2-REGISTRY-EXPECTED.json
+new file mode 100644
+index 00000000..950f1adc
+--- /dev/null
++++ b/crates/fixtures/sealed-registry-metadata/CORE2-REGISTRY-EXPECTED.json
+@@ -0,0 +1,35 @@
++{
++  "premise": "Manually specified ordinary source identity metadata before candidate code/tests. No evaluator/backend/financial/work oracle.",
++  "registry_as_semantic_set": [
++    {
++      "name": "alpha",
++      "asset": {
++        "network": "local",
++        "issuer": "metadata-only",
++        "reference": "UNIT",
++        "scale": 3
++      },
++      "debtor": "alice",
++      "creditor": "bob"
++    },
++    {
++      "name": "zeta",
++      "asset": {
++        "network": "local",
++        "issuer": "metadata-only",
++        "reference": "UNIT",
++        "scale": 3
++      },
++      "debtor": "dora",
++      "creditor": "erin"
++    }
++  ],
++  "source_action_order": [
++    "later",
++    "earlier"
++  ],
++  "statement_identity_occurrences": 3,
++  "distinct_identity_count": 2,
++  "duties_count": 0,
++  "metadata_order_or_abi_policy": "Not specified by these set expectations."
++}
+diff --git a/crates/fixtures/sealed-registry-metadata/Core2Registry.mori b/crates/fixtures/sealed-registry-metadata/Core2Registry.mori
+new file mode 100644
+index 00000000..cfe50c77
+--- /dev/null
++++ b/crates/fixtures/sealed-registry-metadata/Core2Registry.mori
+@@ -0,0 +1,11 @@
++language "moriarty/2";
++agreement LegacyRegistryMetadata {
++  asset UNIT = { network: "local", issuer: "metadata-only", reference: "UNIT", scale: 3 };
++  action later() {
++    liability("zeta", UNIT, "dora", "erin", 0);
++  }
++  action earlier() {
++    liability("alpha", UNIT, "alice", "bob", 0);
++    liability("zeta", UNIT, "dora", "erin", 1);
++  }
++}
+diff --git a/crates/fixtures/sealed-registry-metadata/README.md b/crates/fixtures/sealed-registry-metadata/README.md
+new file mode 100644
+index 00000000..16fb45f7
+--- /dev/null
++++ b/crates/fixtures/sealed-registry-metadata/README.md
+@@ -0,0 +1,9 @@
++# Sealed source-registry metadata fixtures
++
++RegistryFrame.mori and REGISTRY-EXPECTED.json are byte-exact copies from the additional independent distinct-reference companion frozen at3b961ce15f9be28ae0f2c5e6d611efc9ee1f01b1cf2d097a909a9296d8eca8d3. Its provenance discloses prior arithmetic/source-admission finding exposure. The semantic SET stays conditional; it is not a backend ordering/cardinality/ABI/context/hash/financial or native oracle. The original conflicting-scale packet c46e0389... remains unchanged.
++
++Core2Registry.mori and CORE2-REGISTRY-EXPECTED.json were separately specified from literal source identities before candidate code/tests. Their author inspected existing code; they are ordinary nonfinancial source-derived expectations, not a blind financial oracle. No implementation output or evaluator produced either expected set.
++
++The positive tests call only load/load_v3 and the metadata accessor. They compare complete identities as SETS, preserve the full Program/plan/hash metadata, and mutate detached owned results to check that a new query is unchanged. They execute no financial transition, start/resume, scenario, backend, SDK, VM, proof, key or ledger operation. No new invalid-input/security policy test is introduced.
++
++This fixture addition does not adopt the broken fullQ1 draft, wire a compiler consumer or choose registry bounds/context/artifact/native contracts. Source checks remain UNRUN in the external candidate preparation; root separately owns integration, fresh source audit and any actual checks.
+diff --git a/crates/fixtures/sealed-registry-metadata/REGISTRY-EXPECTED.json b/crates/fixtures/sealed-registry-metadata/REGISTRY-EXPECTED.json
+new file mode 100644
+index 00000000..37f0506a
+--- /dev/null
++++ b/crates/fixtures/sealed-registry-metadata/REGISTRY-EXPECTED.json
+@@ -0,0 +1,149 @@
++{
++  "backend_slot_order_positions_cardinality_version_context": "UNKNOWN: intentionally unspecified",
++  "declaration_only_names": [
++    "absent",
++    "declared",
++    "loan",
++    "read",
++    "untouched",
++    "zero"
++  ],
++  "declarations_are_not_execution": {
++    "cash_effects": [],
++    "created_boundary_rows": [],
++    "logical_expression_nodes": 0
++  },
++  "identity_members": [
++    "name",
++    "asset.network",
++    "asset.issuer",
++    "asset.reference",
++    "asset.scale",
++    "debtor",
++    "creditor"
++  ],
++  "premise": "Conditional original proposed REG3, not full D1 adoption or backend admission proof.",
++  "registry_as_semantic_set": [
++    {
++      "asset": {
++        "issuer": "i",
++        "network": "local",
++        "reference": "A",
++        "scale": 0
++      },
++      "creditor": "bob",
++      "debtor": "alice",
++      "name": "absent"
++    },
++    {
++      "asset": {
++        "issuer": "i",
++        "network": "local",
++        "reference": "A",
++        "scale": 0
++      },
++      "creditor": "bob",
++      "debtor": "alice",
++      "name": "cross"
++    },
++    {
++      "asset": {
++        "issuer": "j",
++        "network": "local",
++        "reference": "B",
++        "scale": 0
++      },
++      "creditor": "erin",
++      "debtor": "dora",
++      "name": "declared"
++    },
++    {
++      "asset": {
++        "issuer": "i",
++        "network": "local",
++        "reference": "A",
++        "scale": 0
++      },
++      "creditor": "bob",
++      "debtor": "alice",
++      "name": "loan"
++    },
++    {
++      "asset": {
++        "issuer": "i",
++        "network": "local",
++        "reference": "A2",
++        "scale": 2
++      },
++      "creditor": "bob",
++      "debtor": "alice",
++      "name": "read"
++    },
++    {
++      "asset": {
++        "issuer": "j",
++        "network": "local",
++        "reference": "B",
++        "scale": 0
++      },
++      "creditor": "treasury",
++      "debtor": "carol",
++      "name": "untouched"
++    },
++    {
++      "asset": {
++        "issuer": "i",
++        "network": "local",
++        "reference": "A",
++        "scale": 0
++      },
++      "creditor": "bob",
++      "debtor": "alice",
++      "name": "zero"
++    }
++  ],
++  "selected_action_cannot_shrink_program_registry": true,
++  "source_action_order": [
++    "noop",
++    "observe",
++    "pay",
++    "touch",
++    "create",
++    "addZero",
++    "observeCross",
++    "waitPay"
++  ],
++  "statement_identity_occurrences": [
++    {
++      "action": "create",
++      "identity": {
++        "asset": {
++          "issuer": "i",
++          "network": "local",
++          "reference": "A",
++          "scale": 0
++        },
++        "creditor": "bob",
++        "debtor": "alice",
++        "name": "cross"
++      },
++      "name": "cross"
++    },
++    {
++      "action": "addZero",
++      "identity": {
++        "asset": {
++          "issuer": "i",
++          "network": "local",
++          "reference": "A",
++          "scale": 0
++        },
++        "creditor": "bob",
++        "debtor": "alice",
++        "name": "cross"
++      },
++      "name": "cross"
++    }
++  ],
++  "union_consequence": "Both cross occurrences add one semantic registry entry even if neither action is selected. Different names with the same asset/parties remain different entries."
++}
+diff --git a/crates/fixtures/sealed-registry-metadata/RegistryFrame.mori b/crates/fixtures/sealed-registry-metadata/RegistryFrame.mori
+new file mode 100644
+index 00000000..36040d93
+--- /dev/null
++++ b/crates/fixtures/sealed-registry-metadata/RegistryFrame.mori
+@@ -0,0 +1,43 @@
++language "moriarty/3";
++agreement RegistryFrame {
++  state count: UInt = 7;
++  state flag: Bool = true;
++  asset A = { network: "local", issuer: "i", reference: "A", scale: 0 };
++  asset A2 = { network: "local", issuer: "i", reference: "A2", scale: 2 };
++  asset B = { network: "local", issuer: "j", reference: "B", scale: 0 };
++  duty "absent" = { asset: A, debtor: "alice", creditor: "bob" };
++  duty "declared" = { asset: B, debtor: "dora", creditor: "erin" };
++  duty "loan" = { asset: A, debtor: "alice", creditor: "bob" };
++  duty "read" = { asset: A2, debtor: "alice", creditor: "bob" };
++  duty "untouched" = { asset: B, debtor: "carol", creditor: "treasury" };
++  duty "zero" = { asset: A, debtor: "alice", creditor: "bob" };
++  action noop() {}
++  action observe() {
++    let hasRead = liability_present("read");
++    let readAmount = liability_amount("read");
++    let hasZero = liability_present("zero");
++    let zeroAmount = liability_amount("zero");
++    let hasAbsent = liability_present("absent");
++    let absentAmount = liability_amount("absent");
++  }
++  action pay() {
++    discharge("loan", 3);
++  }
++  action touch() {
++    next count = count + 1;
++  }
++  action create() {
++    liability("cross", A, "alice", "bob", 4);
++  }
++  action addZero() {
++    liability("cross", A, "alice", "bob", 0);
++  }
++  action observeCross() {
++    let crossPresent = liability_present("cross");
++    let crossAmount = liability_amount("cross");
++  }
++  action waitPay() {
++    await ready(go: Bool) when go;
++    discharge("loan", 3);
++  }
++}
+diff --git a/crates/mori-core/tests/sealed_registry_metadata.rs b/crates/mori-core/tests/sealed_registry_metadata.rs
+new file mode 100644
+index 00000000..a9755d45
+--- /dev/null
++++ b/crates/mori-core/tests/sealed_registry_metadata.rs
+@@ -0,0 +1,123 @@
++use mori_core::{AssetId, SourceLiabilityIdentity, Statement, stage};
++use serde::Deserialize;
++use std::collections::BTreeSet;
++
++const CORE3_SOURCE: &str =
++    include_str!("../../fixtures/sealed-registry-metadata/RegistryFrame.mori");
++const CORE3_EXPECTED: &str =
++    include_str!("../../fixtures/sealed-registry-metadata/REGISTRY-EXPECTED.json");
++const CORE2_SOURCE: &str =
++    include_str!("../../fixtures/sealed-registry-metadata/Core2Registry.mori");
++const CORE2_EXPECTED: &str =
++    include_str!("../../fixtures/sealed-registry-metadata/CORE2-REGISTRY-EXPECTED.json");
++
++type Identity = (String, AssetId, String, String);
++
++#[derive(Deserialize)]
++struct ExpectedRegistry {
++    registry_as_semantic_set: Vec<ExpectedIdentity>,
++}
++
++#[derive(Deserialize)]
++struct ExpectedIdentity {
++    name: String,
++    asset: AssetId,
++    debtor: String,
++    creditor: String,
++}
++
++fn expected_set(text: &str) -> BTreeSet<Identity> {
++    let expected: ExpectedRegistry = serde_json::from_str(text).expect("frozen metadata set");
++    expected
++        .registry_as_semantic_set
++        .into_iter()
++        .map(|entry| (entry.name, entry.asset, entry.debtor, entry.creditor))
++        .collect()
++}
++
++fn identity_set(entries: &[SourceLiabilityIdentity]) -> BTreeSet<Identity> {
++    entries
++        .iter()
++        .map(|entry| {
++            (
++                entry.name.clone(),
++                entry.asset.clone(),
++                entry.debtor.clone(),
++                entry.creditor.clone(),
++            )
++        })
++        .collect()
++}
++
++#[test]
++fn core3_registry_metadata_matches_complete_independent_identity_set() {
++    let sp = stage::load_v3(CORE3_SOURCE).expect("load distinct-reference Core3 source");
++    let program_before = sp.program().clone();
++    let plan_before = sp.plan().clone();
++    let hashes_before = (sp.program_hash(), sp.plan_hash());
++    assert_eq!(program_before.actions.len(), 8);
++    assert_eq!(program_before.duties.len(), 6);
++    assert_eq!(
++        program_before
++            .actions
++            .iter()
++            .flat_map(|action| &action.statements)
++            .filter(|statement| matches!(statement, Statement::Liability { .. }))
++            .count(),
++        2
++    );
++
++    let metadata = sp.liability_registry().expect("read Core3 metadata");
++    let expected = expected_set(CORE3_EXPECTED);
++    // Seven complete identities include six declared names and cross from two
++    // matching statements in different actions. No action is executed/selected.
++    assert_eq!(metadata.len(), 7);
++    assert_eq!(expected.len(), 7);
++    assert_eq!(identity_set(&metadata), expected);
++    assert_eq!(sp.program(), &program_before);
++    assert_eq!(sp.plan(), &plan_before);
++    assert_eq!((sp.program_hash(), sp.plan_hash()), hashes_before);
++}
++
++#[test]
++fn registry_metadata_is_owned_and_cannot_mutate_sealed_program() {
++    let sp = stage::load_v3(CORE3_SOURCE).expect("load distinct-reference Core3 source");
++    let program_before = sp.program().clone();
++    let plan_before = sp.plan().clone();
++    let hashes_before = (sp.program_hash(), sp.plan_hash());
++    let original = sp.liability_registry().expect("read original metadata");
++    let mut detached = sp
++        .liability_registry()
++        .expect("read separately owned metadata");
++    let entry = detached.first_mut().expect("nonempty frozen set");
++    entry.name = "detached-name".into();
++    entry.asset.network = "detached-network".into();
++    entry.asset.issuer = "detached-issuer".into();
++    entry.asset.reference = "detached-reference".into();
++    entry.asset.scale = 1;
++    entry.debtor = "detached-debtor".into();
++    entry.creditor = "detached-creditor".into();
++    detached.pop();
++    assert_ne!(detached, original);
++
++    let reread = sp.liability_registry().expect("read fresh owned metadata");
++    assert_eq!(reread, original);
++    assert_eq!(identity_set(&reread), expected_set(CORE3_EXPECTED));
++    assert_eq!(sp.program(), &program_before);
++    assert_eq!(sp.plan(), &plan_before);
++    assert_eq!((sp.program_hash(), sp.plan_hash()), hashes_before);
++}
++
++#[test]
++fn core2_registry_metadata_preserves_statement_only_identities() {
++    let sp = stage::load(CORE2_SOURCE).expect("load Core2 metadata source");
++    let program_before = sp.program().clone();
++    assert_eq!(program_before.semantics, stage::SEMANTICS_2);
++    assert!(program_before.duties.is_empty());
++    let metadata = sp.liability_registry().expect("read Core2 metadata");
++    let expected = expected_set(CORE2_EXPECTED);
++    assert_eq!(metadata.len(), 2);
++    assert_eq!(expected.len(), 2);
++    assert_eq!(identity_set(&metadata), expected);
++    assert_eq!(sp.program(), &program_before);
++}
