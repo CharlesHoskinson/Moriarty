@@ -734,6 +734,7 @@ mod owner_prepare;
 mod owner_runtime;
 pub mod owner_host;
 pub mod host_implied_prefix;
+pub(crate) mod fin_carrier;
 
 pub use owner_ext_admit::{
     ExtCapacitiesC, PreparationReportC, WorkMapEntryC, admit_ext, admit_ext_program,
