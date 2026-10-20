@@ -54,7 +54,10 @@ use super::{
     witness_from_host_pair, witness_from_owner_record, C6ScalarArithmeticConsumerError,
     C6ScalarArithmeticStepCircuit, C6ScalarArithmeticStepWitness, CHECK_KEY_LOCATION,
 };
-use super::super::c6_push_step::{C6PushStatementBindingMode, C6_PADDED_CARRIER_VERSION};
+use super::super::c6_push_step::{
+    C6PushFamilyParams, C6PushHostPrefixLanes, C6PushStatementBindingMode,
+    C6PushStepError, C6_PADDED_CARRIER_VERSION,
+};
 use super::super::c6_scalar_arithmetic_step::{
     C6ScalarArithmeticStepEmitter, C6ScalarArithmeticStepError, C6ScalarArithmeticStepInputs,
 };
@@ -626,6 +629,257 @@ fn raw_phase_mode_pairings_reject_both_modes() {
 
 // ---------- arithmetic branch negatives with coherent companions ----------
 
+// ---------- coherent pairing / regA isolation ----------
+//
+// Emitter facts used for the recomputations below (actual
+// `c6_scalar_arithmetic_step.rs`): applied post phase is Done (2);
+// post helper lanes other than phase/staged-tag/staged-payload equal
+// the pre lanes; `operandB` present iff numeric; Not requires
+// `regA == 0`; numeric requires `regA == readerA.uint_value`;
+// derived staged value is computed from mode, `regA` (x) and the
+// actual operand-B UInt payload (n). P3 is not used here (pre
+// helper-work is the genuine applied value, not the retained max).
+
+#[test]
+fn coherent_first_numeric_pairings_reject_both_modes() {
+    let a = add_witness(); let w = &a.witness; let base = w.to_statement_frs();
+    assert_raw_ok(w, base.clone(), "First/numeric paired positive (Second/Add)");
+    // Base is Second/Add 7+3. For each numeric mode: pre phase First
+    // (pre only; applied post phase stays Done), mode written to BOTH
+    // pre rel5 and post rel5 (post rel5 is a preservation lane: the
+    // applied helper loop permits post/pre differences only at
+    // rel13 phase, rel15 staged tag, rel16 staged payload), post
+    // staged recomputed for (7,3): Add 10, Sub 4, Mul 21, Lt false.
+    // For Add (mode 0) the post write is value-identical to the base.
+    for (mode, tag, payload, name) in [
+        (0u128, 1u128, 10u128, "First Add coherent"),
+        (1, 1, 4, "First Sub coherent"),
+        (2, 1, 21, "First Mul coherent"),
+        (3, 2, 0, "First Lt coherent"),
+    ] {
+        let mut s = base.clone();
+        s[pre_helper_at(w, 5)] = Fr::from(mode);
+        s[post_helper_at(w, 5)] = Fr::from(mode);
+        s[pre_helper_at(w, 13)] = Fr::from(0u64);
+        s[post_helper_at(w, 15)] = Fr::from(tag);
+        s[post_helper_at(w, 16)] = Fr::from(payload);
+        // All other companions unchanged from the applied positive and
+        // coherent with the mutated pre mode: pre staged None, post
+        // Done, regA=7 in pre and post (readerA row still UInt 7, same
+        // Ref kind/index identity), operandB present UInt 3 (readerB
+        // row unchanged), expected absent, common site/origin/
+        // parent_resume, result None, task count 0, applied P4/P7
+        // counters, outcome/cursor and all META/PROG/CTX/image/DATA
+        // preservation lanes. LedgerCall CC is recomputed from this
+        // mutated statement and its post flat by `check_raw`.
+        // Isolation is by this construction only; the generic SDK
+        // `Err` text is not used as a per-predicate oracle.
+        assert_raw_rejects(w, s, name);
+    }
+}
+
+#[test]
+fn coherent_second_not_pairings_reject_both_modes() {
+    let n = not_witness(); let nw = &n.witness; let base = nw.to_statement_frs();
+    assert_raw_ok(nw, base.clone(), "Second/Not paired positive (First/Not Bool)");
+    // Only pre phase First->Second. Mode Not, Bool operand A,
+    // operandB absent, regA=0, post Done with BoolValue{false}.
+    let mut s = base.clone();
+    s[pre_helper_at(nw, 13)] = Fr::from(1u64);
+    assert_raw_rejects(nw, s, "Second Not Bool coherent");
+
+    let e = run_core(&spec(ScalarMode::Not, KindWant::UInt(7), None), "Second Not UInt base",
+        &|| prog(CoreExpr::Unary { op: UnaryOp::Not, operand: Box::new(lit_u(7)) }));
+    let ew = &e.witness; let base = ew.to_statement_frs();
+    assert_raw_ok(ew, base.clone(), "Second/Not paired positive (First/Not UInt err11)");
+    let mut s = base.clone();
+    s[pre_helper_at(ew, 13)] = Fr::from(1u64);
+    // Post Done with PrimError{11} is already the coherent Not/UInt post.
+    assert_raw_rejects(ew, s, "Second Not UInt coherent err11");
+}
+
+#[test]
+fn coherent_done_pairings_reject_both_modes() {
+    let a = add_witness(); let w = &a.witness; let base = w.to_statement_frs();
+    assert_raw_ok(w, base.clone(), "Done/Add paired positive");
+    let mut s = base.clone();
+    s[pre_helper_at(w, 13)] = Fr::from(2u64);
+    assert_raw_rejects(w, s, "Done Add coherent");
+
+    let n = not_witness(); let nw = &n.witness; let base = nw.to_statement_frs();
+    assert_raw_ok(nw, base.clone(), "Done/Not paired positive");
+    let mut s = base.clone();
+    s[pre_helper_at(nw, 13)] = Fr::from(2u64);
+    assert_raw_rejects(nw, s, "Done Not coherent");
+}
+
+#[test]
+fn coherent_second_rega_mismatch_rejects_both_modes() {
+    let a = add_witness(); let w = &a.witness; let base = w.to_statement_frs();
+    assert_raw_ok(w, base.clone(), "regA mismatch paired positive");
+    // Mutated regA=8 in pre and in post (post helper preservation
+    // lane). Derived staged payload is recomputed as 8+3=11, tag
+    // U128Value, so the retained rejection is the readerA/regA
+    // denotation: actual operand-A row is still UInt 7. This is
+    // isolation by construction; the SDK error text is not used as
+    // a per-predicate oracle.
+    let mut s = base.clone();
+    set_both_helper(&mut s, w, 14, 8);
+    s[post_helper_at(w, 16)] = Fr::from(11u64);
+    assert_raw_rejects(w, s, "Second regA=8 vs operandA UInt 7, staged 11 coherent");
+}
+
+// ---------- host producer refusals (normal APIs) ----------
+
+#[test]
+fn host_producer_meta_and_prog_prefix_mismatch() {
+    let a = add_witness(); let cfg = core_cfg(bounds(100)); let lim = limits();
+    witness_from_host_pair(true, &a.record.before, &a.record.after, &cfg, &lim)
+        .unwrap_or_else(|e| panic!("prefix paired positive: {e}"));
+
+    // META: run identity is a META lane source. Changing only the
+    // post run fuel input keeps layout/PROG/CTX derivation equal and
+    // encode-valid, and META is compared first.
+    let mut bad = a.record.after.clone();
+    bad.image.run_id.fuel_input = RunIntC::Nat(65);
+    assert!(matches!(
+        witness_from_host_pair(true, &a.record.before, &bad, &cfg, &lim),
+        Err(C6ScalarArithmeticConsumerError::HostPrefixMismatch { section: "meta" })),
+        "post run-id change must refuse as meta HostPrefixMismatch");
+
+    // PROG: program entry is a PROG lane source, not a META source.
+    // The mutated whole ProgramSnapshot still encodes/decodes
+    // through the real codec inside `from_host_snapshot`. This
+    // mutated clone is a producer input, not an owner-admitted state.
+    let mut bad = a.record.after.clone();
+    bad.admission.view.entry += 1;
+    assert!(matches!(
+        witness_from_host_pair(true, &a.record.before, &bad, &cfg, &lim),
+        Err(C6ScalarArithmeticConsumerError::HostPrefixMismatch { section: "prog" })),
+        "post program-entry change must refuse as prog HostPrefixMismatch");
+}
+
+#[test]
+fn host_producer_ctx_mismatch_unreachable_by_derivation() {
+    // Exact obstruction: `witness_from_host_pair` takes one `cfg`
+    // and calls `C6PushHostPrefixLanes::from_host_snapshot` for pre
+    // and post with that same `cfg`. That constructor derives
+    // `ctx = encode_context(cfg.ext, cfg.budgets)`; it does not read
+    // any CTX source from either HostSnapshot. Hence pp.ctx == qp.ctx
+    // for every input pair, and `HostPrefixMismatch{section:"ctx"}`
+    // is unreachable through this normal API. No fake CTX post is
+    // constructed. The reachable assertion is the derivation itself:
+    let a = add_witness(); let cfg = core_cfg(bounds(100)); let lim = limits();
+    let pp = C6PushHostPrefixLanes::from_host_snapshot(&a.record.before, &cfg, &lim)
+        .unwrap_or_else(|e| panic!("pre prefix: {e}"));
+    let qp = C6PushHostPrefixLanes::from_host_snapshot(&a.record.after, &cfg, &lim)
+        .unwrap_or_else(|e| panic!("post prefix: {e}"));
+    assert_eq!(pp.ctx, qp.ctx, "CTX is cfg-derived identically for pre and post");
+    witness_from_host_pair(true, &a.record.before, &a.record.after, &cfg, &lim)
+        .unwrap_or_else(|e| panic!("ctx-derivation paired positive: {e}"));
+}
+
+#[test]
+fn host_producer_retained_config_mismatch() {
+    let a = add_witness(); let lim = limits();
+    witness_from_host_pair(true, &a.record.before, &a.record.after, &core_cfg(bounds(100)), &lim)
+        .unwrap_or_else(|e| panic!("config paired positive: {e}"));
+    // Check order: `C6PushFamilyParams::new` first, then the pre
+    // prefix builder refuses `host.admission.layout != cfg.layout`
+    // before any META/PROG/CTX comparison.
+    let wrong_cfg = core_cfg(bounds(101));
+    assert!(matches!(
+        witness_from_host_pair(true, &a.record.before, &a.record.after, &wrong_cfg, &lim),
+        Err(C6ScalarArithmeticConsumerError::Push(
+            C6PushStepError::ConfigMismatch { field: "layout" }))),
+        "retained layout mismatch must be Push(ConfigMismatch layout)");
+}
+
+#[test]
+fn host_producer_geometry_validate_and_section_length() {
+    let a = add_witness(); let w = &a.witness;
+    C6ScalarArithmeticStepEmitter::new("producer_control").expect("scope")
+        .emit(&valid_inputs(w)).expect("geometry/length paired positive");
+
+    // Emitter order: `source_params.validate_geometry` before caps
+    // and before section lengths.
+    let mut inputs = valid_inputs(w);
+    inputs.geometry.image_total_lanes += 1;
+    let mut em = C6ScalarArithmeticStepEmitter::new("producer_geom").expect("scope");
+    assert!(matches!(
+        em.emit(&inputs),
+        Err(C6ScalarArithmeticStepError::Push(
+            C6PushStepError::InvalidGeometry { section: "geometry" }))),
+        "tampered geometry must be Push(InvalidGeometry)");
+
+    let expected = w.source_params().geometry().image_total_lanes;
+    let mut inputs = valid_inputs(w);
+    inputs.pre_image.pop();
+    let mut em = C6ScalarArithmeticStepEmitter::new("producer_len").expect("scope");
+    assert!(matches!(
+        em.emit(&inputs),
+        Err(C6ScalarArithmeticStepError::LengthMismatch {
+            section: "image", expected: e, actual: ac }) if e == expected && ac == expected - 1),
+        "short pre_image must be image LengthMismatch with exact counts");
+}
+
+#[test]
+fn host_producer_checked_geometry_overflow_and_state_limit() {
+    let a = add_witness();
+    let needed = a.witness.source_params().geometry().state_total_lanes;
+    C6PushFamilyParams::new(core_cfg(bounds(100)), bounds(100), limits())
+        .expect("params paired positive");
+
+    let mut small = limits(); small.max_state_lanes = needed - 1;
+    assert!(matches!(
+        C6PushFamilyParams::new(core_cfg(bounds(100)), bounds(100), small),
+        Err(C6PushStepError::StateLimitExceeded { needed: n, limit: l })
+            if n == needed && l == needed - 1),
+        "state lane limit must be StateLimitExceeded with exact counts");
+
+    // Checked geometry precedes allocation: max_frames dominates
+    // the image total computation.
+    let mut b = bounds(100); b.frames = usize::MAX;
+    assert!(matches!(
+        C6PushFamilyParams::new(core_cfg(b), bounds(100), limits()),
+        Err(C6PushStepError::GeometryOverflow { section: "image" })),
+        "frames=MAX must overflow checked image geometry");
+}
+
+#[test]
+fn host_producer_usize_max_cap_reachable_and_dominated() {
+    let a = add_witness(); let w = &a.witness;
+    C6ScalarArithmeticStepEmitter::new("producer_cap_control").expect("scope")
+        .emit(&valid_inputs(w)).expect("cap paired positive");
+
+    // Reachable MAX cap: `max_constants` is not a padded-lane
+    // multiplier, so retained params can be built through the normal
+    // `C6PushFamilyParams::new` chain with this cap, geometry
+    // validation recomputes the same geometry, and the emitter cap
+    // guard is the first refusal.
+    let mut b = bounds(100); b.constant_nodes = usize::MAX;
+    let params = C6PushFamilyParams::new(core_cfg(b), bounds(100), limits())
+        .expect("max_constants=MAX retained params must build");
+    assert_eq!(params.caps().phys.max_constants, usize::MAX);
+    let mut inputs = valid_inputs(w);
+    inputs.geometry = params.geometry();
+    inputs.source_params = params;
+    let mut em = C6ScalarArithmeticStepEmitter::new("producer_cap").expect("scope");
+    assert!(matches!(
+        em.emit(&inputs),
+        Err(C6ScalarArithmeticStepError::GeometryOverflow { section: "caps" })),
+        "max_constants=MAX must reach emitter caps GeometryOverflow");
+
+    // Dominated MAX path: `max_data_nodes` is a lane multiplier in
+    // checked geometry, so normal params construction refuses
+    // earlier; the emitter caps guard is not reachable for this cap
+    // through retained params and is not fabricated here.
+    let mut b = bounds(100); b.data_nodes = usize::MAX;
+    assert!(matches!(
+        C6PushFamilyParams::new(core_cfg(b), bounds(100), limits()),
+        Err(C6PushStepError::GeometryOverflow { section: "data.data" })),
+        "data_nodes=MAX must overflow checked data geometry first");
+}
 #[test]
 fn raw_branch_wrong_staged_companions_reject() {
     // Low-only false success: 2^64 * 2^64 has low 0 but is error10.
