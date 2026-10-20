@@ -33,7 +33,7 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
             return Err(CompileFailure::input("select",
                 "draft preparation is compile-only; --observe is unsupported"));
         }
-        if matches!(&selection, SourceSelection::NominalEntry) && args.observe {
+        if matches!(&selection, SourceSelection::NominalEntry) && args.observe && !body_typed_nominal {
             return Err(CompileFailure::input("select",
                 "nominal preparation is compile-only; --observe is unsupported"));
         }
@@ -50,8 +50,13 @@ pub(super) fn run(args: &Args, source: &str, mut status: impl FnMut(&str, String
             SourceSelection::DraftEntry => SelectedSherlockArtifact::Draft(
                 host::compile_draft_host(source, &config, &target)?),
             SourceSelection::NominalEntry => if body_typed_nominal {
-                SelectedSherlockArtifact::NominalBodyTyped(
-                    host::nominal_body_command::compile(source, &config, &target)?)
+                if args.observe {
+                    SelectedSherlockArtifact::NominalObserved(
+                        host::nominal_body_command::observe(source, &config, &target)?)
+                } else {
+                    SelectedSherlockArtifact::NominalBodyTyped(
+                        host::nominal_body_command::compile(source, &config, &target)?)
+                }
             } else {
                 SelectedSherlockArtifact::Nominal(
                     host::nominal_command::compile(source, &config, &target)?)
@@ -84,6 +89,7 @@ enum SelectedSherlockArtifact {
     Draft(mori_core::sherlock_compile_artifact::draft_report::DraftCompileArtifact),
     Nominal(serde_json::Value),
     NominalBodyTyped(serde_json::Value),
+    NominalObserved(mori_core::sherlock_compile_artifact::nominal_body_command::NominalHostObservation),
 }
 impl SelectedSherlockArtifact {
     fn failure(&self, stage: &'static str, message: impl Into<String>)
@@ -91,6 +97,7 @@ impl SelectedSherlockArtifact {
     {
         match self { Self::Core(value) => value.failure(stage, message),
             Self::Draft(value) => value.failure(stage, message),
+            Self::NominalObserved(value) => value.failure(stage, message),
             Self::Nominal(_) => mori_core::sherlock_compile_artifact::CompileFailure::input(stage, message),
             // This private variant is constructed only after the actual typed
             // command succeeds. Retain its observed body disposition on later
@@ -107,6 +114,8 @@ impl SelectedSherlockArtifact {
             Self::Core(value) => serde_json::to_string_pretty(value)
                 .map_err(|error| value.failure("observation", error.to_string())),
             Self::Draft(value) => serde_json::to_string_pretty(value)
+                .map_err(|error| value.failure("serialization", error.to_string())),
+            Self::NominalObserved(value) => serde_json::to_string_pretty(value)
                 .map_err(|error| value.failure("serialization", error.to_string())),
             Self::Nominal(value) | Self::NominalBodyTyped(value) => serde_json::to_string_pretty(value)
                 .map_err(|error| self.failure("serialization", error.to_string())),
