@@ -12,22 +12,18 @@ use super::adt_runtime::{
 };
 
 pub(super) trait AdtPreImageAccess: PreImageView {
-    fn program_view(&self) -> &ProgramView;
+    fn program_view(&self) -> Result<&ProgramView, HostViolation>;
     fn record_adt_ref(&self, _r: RefC) {}
     fn record_adt_env(&self, _e: EnvRootC) {}
     fn record_adt_slots(&self, _s: SliceC) {}
 }
 
 impl<'a> AdtPreImageAccess for PreImage<'a> {
-    fn program_view(&self) -> &ProgramView {
-        &self.admitted.body.view
-    }
+    fn program_view(&self) -> Result<&ProgramView, HostViolation> { super::pure_view(self) }
 }
 
 impl<'a> AdtPreImageAccess for RecordingPreImageView<'a> {
-    fn program_view(&self) -> &ProgramView {
-        &self.inner.admitted.body.view
-    }
+    fn program_view(&self) -> Result<&ProgramView, HostViolation> { super::pure_view(self.inner) }
     fn record_adt_ref(&self, r: RefC) {
         self.record(r);
     }
@@ -192,7 +188,7 @@ fn impl_nullary_construct<T: AdtPreImageAccess + ?Sized>(
     if fields.len != 0 {
         return Err(wrong("nullary_construct non-empty fields"));
     }
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let arity = adt_checked_ctor_arity(view, type_id, ctor_id)?;
     if arity != 0 {
         return Err(wrong("nullary_construct arity != 0"));
@@ -238,7 +234,7 @@ fn impl_construct_fields<T: AdtPreImageAccess + ?Sized>(
     if fields.len == 0 {
         return Err(wrong("construct_fields empty fields"));
     }
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let arity = adt_checked_ctor_arity(view, type_id, ctor_id)?;
     if arity != fields.len {
         return Err(wrong("construct_fields arity mismatch"));
@@ -349,7 +345,7 @@ fn impl_constructor_next<T: AdtPreImageAccess + ?Sized>(
     let next_index = index
         .checked_add(1)
         .ok_or_else(|| arith("constructor_next index + 1"))?;
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let arity = adt_checked_ctor_arity(view, *type_id, *ctor_id)?;
     if next_index >= arity {
         return Err(oob("prog.ctorFields"));
@@ -424,7 +420,7 @@ fn impl_constructor_final<T: AdtPreImageAccess + ?Sized>(
     if rest.len != 0 {
         return Err(wrong("constructor_final non-empty rest"));
     }
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let arity = adt_checked_ctor_arity(view, *type_id, *ctor_id)?;
     if seq.len != arity {
         return Err(wrong("constructor_final seq.len != arity"));
@@ -632,7 +628,7 @@ fn impl_build_entry<T: AdtPreImageAccess + ?Sized>(
     else {
         return Err(wrong("build_entry control"));
     };
-    let arity = adt_checked_ctor_arity(pre.program_view(), type_id, ctor_id)?;
+    let arity = adt_checked_ctor_arity(pre.program_view()?, type_id, ctor_id)?;
     if fields.len == 0 || fields.len != arity {
         return Err(wrong("build_entry fields arity"));
     }
@@ -807,7 +803,7 @@ fn impl_plan_node<T: AdtPreImageAccess + ?Sized>(
     _selected: &Selected,
     id: &usize,
 ) -> Result<PlanNodeC, HostViolation> {
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let row = *view
         .plan_nodes
         .get(*id)
@@ -896,7 +892,7 @@ fn impl_plan_walk<T: AdtPreImageAccess + ?Sized>(
     if state.phase != PlanPhase::Walk || state.path_cursor >= state.path.len {
         return Err(wrong("plan_walk phase/cursor"));
     }
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let fp_pos = state
         .path
         .start
@@ -951,7 +947,7 @@ fn impl_plan_switch<T: AdtPreImageAccess + ?Sized>(
     else {
         return Err(wrong("plan_switch node"));
     };
-    let view = pre.program_view();
+    let view = pre.program_view()?;
     let t_row = view.types.get(type_id.0).ok_or_else(|| oob("prog.types"))?;
     if cases.len != t_row.ctor_len {
         return Err(oob("prog.planCases"));
@@ -1164,7 +1160,10 @@ impl_adt_runtime_reads!(RecordingPreImageView<'a>);
 // ================= StepInv & Denotational Closure Helpers for Generic ADTs =================
 
 pub(super) fn adt_dedicated_domain_clean(img: &MachineImage) -> bool {
-    let v = &img.admission.body.view;
+        let v = match &img.admission.body.view {
+            Some(view) => view,
+            None => return false,
+        };
     if !v.pattern_children.is_empty()
         || !v.types.is_empty()
         || !v.type_args.is_empty()
@@ -1247,7 +1246,7 @@ pub(super) fn adt_si11_ctor_row_ok(
     {
         return Ok(false);
     }
-    let view = &pre.admitted.body.view;
+    let view = pre.program_view()?;
     let tid = TypeIdC(type_id.0);
     let cid = CtorIdC(ctor_id.0);
     let Ok(arity) = adt_checked_ctor_arity(view, tid, cid) else {
@@ -1302,7 +1301,7 @@ pub(super) fn adt_si15_ctor_frame_ok(
     {
         return Ok(false);
     }
-    let view = &pre.admitted.body.view;
+    let view = pre.program_view()?;
     let Ok(ExpressionRowC::Construct {
         type_id: et,
         ctor_id: ec,
@@ -1367,7 +1366,7 @@ pub(super) fn adt_si16_materialize_ok(
     {
         return Ok(false);
     }
-    let view = &pre.admitted.body.view;
+    let view = pre.program_view()?;
     let Ok(ExpressionRowC::Construct {
         type_id: et,
         ctor_id: ec,
@@ -1431,7 +1430,7 @@ fn walk_path_from(
     path: SliceC,
     steps: usize,
 ) -> Result<Option<RefC>, HostViolation> {
-    let view = &pre.admitted.body.view;
+    let view = pre.program_view()?;
     let Some(end) = path.start.checked_add(path.len) else {
         return Ok(None);
     };
@@ -1465,7 +1464,7 @@ fn evaluate_plan_dag(
     root: usize,
     scrutinee: RefC,
 ) -> Result< Option<EvalPlanOutcome>, HostViolation> {
-    let view = &pre.admitted.body.view;
+    let view = pre.program_view()?;
     let mut node_id = root;
     let mut bindings: Vec<(usize, RefC)> = Vec::new();
     let mut budget = view.plan_nodes.len().saturating_add(1);
@@ -1545,7 +1544,7 @@ pub(super) fn si21_adt_helper_ok(
     {
         return Ok(false);
     }
-    let view = &pre.admitted.body.view;
+    let view = pre.program_view()?;
     match h {
         HelperControlC::Build {
             common,
