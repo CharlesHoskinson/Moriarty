@@ -355,3 +355,118 @@ pub fn observe_with_nominal_inputs(
         execution,
     })
 }
+
+/// Typed nominal compiler-to-owner handoff with the complete unstepped source
+/// preparation and the actual post-run admitted/image/summary pair. Events are
+/// forwarded to the caller, not retained here. This is HostOnly execution, not
+/// an importer, proof, native export, or a process-wide H1 guarantee.
+///
+/// Private fields preserve the producing sequence. Borrow the pair through
+/// `completed`/`observe`, or transfer it through `into_parts` to an existing
+/// typed consumer. No program/image is reconstructed from the JSON snapshot.
+pub struct NominalHostRun {
+    preparation: Value,
+    completed: CompletedRun,
+}
+
+impl NominalHostRun {
+    pub fn preparation(&self) -> &Value { &self.preparation }
+    pub fn completed(&self) -> &CompletedRun { &self.completed }
+
+    /// Borrow every actual owner table/image field with the existing AB check.
+    /// The original ConsumerError and completed summary/count are preserved.
+    pub fn observe(&self) -> Result<
+        crate::sherlock::helper_machine::shared::owner_host::HostObservation<'_>, ConsumerError,
+    > {
+        self.completed.observe()
+    }
+
+    /// Transfer the same preparation and completed pair, without a new parse,
+    /// admission, genesis, run, or JSON-to-program conversion.
+    pub fn into_parts(self) -> (Value, CompletedRun) {
+        (self.preparation, self.completed)
+    }
+
+    /// Consume the typed handoff into the existing complete observation wire.
+    /// The caller's sink may have retained events; this object itself has not.
+    /// No additional owner step is performed and no wire format is introduced.
+    pub fn into_observation(self) -> Result<NominalHostObservation, CompileFailure> {
+        let actual = self.completed.observe()
+            .map_err(|error| runtime_failure(CompileFailure::consumer(error)))?;
+        let execution = ExecutionReport {
+            evaluation_performed: true,
+            completed: true,
+            summary: self.completed.summary.owner_wire(),
+            events_forwarded: self.completed.events_forwarded.to_string(),
+            event_capture: "not-retained",
+            image: wire::image(&actual.image),
+            resource_report: ResourceReport::from_owner(&actual, &self.completed.summary),
+        };
+        Ok(NominalHostObservation {
+            format: "sherlock-nominal-host-observation/1",
+            qualification: "HostOnly nominal body-typed owner execution; no proof/native/target qualification",
+            preparation: self.preparation,
+            execution,
+        })
+    }
+}
+
+/// Prepare the real body-typed closed nominal source once, then run its same
+/// admitted pair with every full StepEventC forwarded once in owner order.
+///
+/// Declarations, recursive functions, generic type instances and match plans
+/// use the existing bounded compiler, owner and capacities. No callback can
+/// select a guard/plan or alter that pair. Sink allocation/retention is caller
+/// owned; sink panics are not caught, as in run_draft_host/run_scalar_action.
+/// A returned Rejected/Exhausted summary remains a completed real owner run.
+pub fn run(
+    source: &str, config_source: &str, target_source: &str,
+    sink: &mut dyn FnMut(&StepEventC),
+) -> Result<NominalHostRun, CompileFailure> {
+    let (artifact, config, target) = prepare(source, config_source, target_source)?;
+    let preparation = project_preparation(
+        &artifact, config, target, source, config_source, target_source, None,
+    )?;
+    run_prepared_nominal(artifact, preparation, sink)
+}
+
+/// The same typed/event handoff with the existing nominal input binding before
+/// first T3/body checking. Full binding metadata and original-source provenance
+/// remain in preparation. The arguments are visible program constants, not
+/// private witnesses or a fixed-circuit input path.
+pub fn run_with_nominal_inputs(
+    source: &str, config_source: &str, target_source: &str,
+    nominal_source: &str, nominal_function: &str,
+    sink: &mut dyn FnMut(&StepEventC),
+) -> Result<NominalHostRun, CompileFailure> {
+    let (artifact, config, target) = prepare_nominal(
+        source, config_source, target_source, nominal_source, nominal_function,
+    )?;
+    let preparation = project_preparation(
+        &artifact, config, target, source, config_source, target_source, Some(nominal_source),
+    )?;
+    run_prepared_nominal(artifact, preparation, sink)
+}
+
+fn run_prepared_nominal(
+    artifact: NominalBodyCompileArtifact, preparation: Value,
+    sink: &mut dyn FnMut(&StepEventC),
+) -> Result<NominalHostRun, CompileFailure> {
+    let (_, _, owner) = artifact.into_parts();
+    let (admitted, mut image, _) = owner.into_parts();
+    let mut events = EventForwarding::default();
+    let result = {
+        let mut forwarding_sink = |event: &StepEventC| {
+            events.note();
+            sink(event);
+        };
+        host_owner_engine().run(&admitted, &mut image, &mut forwarding_sink)
+    };
+    let summary = result.map_err(|violation| runtime_failure(CompileFailure::consumer(
+        ConsumerError::Run { violation, events_forwarded: events.forwarded },
+    )))?;
+    Ok(NominalHostRun {
+        preparation,
+        completed: CompletedRun { admitted, image, summary, events_forwarded: events.forwarded },
+    })
+}
