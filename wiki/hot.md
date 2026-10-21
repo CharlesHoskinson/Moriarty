@@ -84,3 +84,8 @@ tags: [moriarty, consolidation, recursion]
 ## Sherlock UPDATE025 — concept source and later workflow observation
 
 [The literal Muse continuation](research/sherlock-circuit-atlas/UPDATE-025-ETCHED-RELATIONS-AND-LOOSE-INSERTS.md) follows UPDATE024 without replacing it. [Later dated status](research/sherlock-circuit-atlas/UPDATE-025-POST-AUTHOR-STATUS.md) distinguishes the new sampled workflow pass from zero external sampled witness coverage and the earlier timeout. The website remains unpublished; native and product acceptance are separate.
+
+
+## Sherlock UPDATE026 — literal source and validation-task concept
+
+[Exact designated Gemini concept](research/sherlock-circuit-atlas/UPDATE-026-LITERAL-ROOTS-AND-VALIDATION-TASKS.md) and [separate later engineering qualification](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md) preserve future finished-site copy versus current candidate status. Website unpublished; circuit/native/target work remains separate.
