@@ -12,6 +12,7 @@ import importlib.util
 import json
 from pathlib import Path
 import re
+import sys
 
 
 HISTORICAL_EXPIRY = 1893456000000
@@ -84,7 +85,7 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview", *
     """
     if type(request) is not dict or type(observation) is not dict:
         raise ValueError("request and observation must be JSON objects")
-    repo, output_dir = Path(repo).resolve(), Path(output_dir)
+    repo, output_dir = Path(repo).resolve(), Path(output_dir).resolve()
     handoff = _handoff(repo)
     blockers = []
     plan = {
@@ -356,7 +357,7 @@ def prepare_funding_split_plan(request, observation, output_dir="prepared-previe
     """
     if type(request) is not dict or type(observation) is not dict:
         raise ValueError("request and observation must be JSON objects")
-    blockers, output_dir = [], Path(output_dir)
+    blockers, output_dir = [], Path(output_dir).resolve()
     plan = {
         "format": "doctorwatson-utxo-preview-funding-split-offline-plan/1",
         "network": "cardano-preview", "network_magic": 2,
@@ -445,18 +446,23 @@ def prepare_funding_split_plan(request, observation, output_dir="prepared-previe
 
 def emit_plan(plan, directory):
     """Write only the prepared public files; expected effects precede all inputs."""
-    directory = Path(directory)
+    directory = Path(directory).resolve()
     if str(directory) != plan["output_directory"] or not plan["ready_for_build_argv"]:
         raise ValueError("a ready plan and its exact output directory are required")
     names = ["EXPECTED-EFFECTS.json", *plan["files"], "PLAN.json"]
-    if any((directory / name).exists() for name in names):
+    if any((directory / name).exists() or (directory / name).is_symlink() for name in names):
         raise FileExistsError("refusing to overwrite existing prepared artifacts")
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / names[0]).write_bytes(_json_bytes(plan["expected_effects"]))
+
+    def write_new(name, data):
+        with (directory / name).open("xb") as output:
+            output.write(data)
+
+    write_new(names[0], _json_bytes(plan["expected_effects"]))
     for name, artifact in plan["files"].items():
         data = artifact["content"].encode() if artifact["encoding"] == "utf-8" else bytes.fromhex(artifact["content"])
-        (directory / name).write_bytes(data)
-    (directory / "PLAN.json").write_bytes(_json_bytes(plan))
+        write_new(name, data)
+    write_new("PLAN.json", _json_bytes(plan))
 
 
 def main(argv=None):
@@ -467,11 +473,15 @@ def main(argv=None):
     parser.add_argument("--observation", type=Path, required=True, help="Normalized public readiness observation JSON.")
     parser.add_argument("--out-dir", type=Path, required=True, help="New public artifact directory; no command will be run.")
     args = parser.parse_args(argv)
-    request, observation = json.loads(args.request.read_text()), json.loads(args.observation.read_text())
-    plan = (prepare_funding_split_plan(request, observation, args.out_dir) if args.kind == "funding-split"
-            else prepare_plan(args.repo, request, observation, args.out_dir))
-    if plan["ready_for_build_argv"]:
-        emit_plan(plan, args.out_dir)
+    try:
+        request, observation = json.loads(args.request.read_text()), json.loads(args.observation.read_text())
+        plan = (prepare_funding_split_plan(request, observation, args.out_dir) if args.kind == "funding-split"
+                else prepare_plan(args.repo, request, observation, args.out_dir))
+        if plan["ready_for_build_argv"]:
+            emit_plan(plan, args.out_dir)
+    except (OSError, ValueError) as error:
+        print(json.dumps({"error": {"type": type(error).__name__, "detail": str(error)}}), file=sys.stderr)
+        return 2
     print(json.dumps(plan, indent=2, sort_keys=True))
     return 0 if plan["ready_for_build_argv"] else 1
 
