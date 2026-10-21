@@ -1117,11 +1117,36 @@ def requirement_evidence_report(repo, path):
                 summary=summary, findings=issues)
 
 
+def benchmark_completion_report(policy, samples, current, receipt_root, baseline=None):
+    """Recompute explicit post-deployment evidence; never consume a cached pass.
+
+    The default literal/requirement-declaration checks do not import this module.
+    No native execution or source/resource selection is added by this selection.
+    """
+    benchmark_dir = Path(__file__).resolve().parents[1] / 'benchmarks'
+    spec = importlib.util.spec_from_file_location(
+        'doctorwatson_benchmark_acceptance', benchmark_dir / 'acceptance.py')
+    require(spec is not None and spec.loader is not None, 'benchmark acceptance consumer missing')
+    module = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(benchmark_dir))
+    try:
+        spec.loader.exec_module(module)
+        return module.assess_files(policy, samples, current, receipt_root, baseline)
+    finally:
+        sys.path.pop(0)
+
+
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
         lean_observations=None, quint_observations=None, image_observations=None, k_observations=None,
         requirement_evidence=None, compile_evidence_package=None, compile_evidence_case=None,
-        paired_k_observations=None, paired_quint_observations=None, selected_case=None, selected_initial_fuel=None):
+        paired_k_observations=None, paired_quint_observations=None, selected_case=None, selected_initial_fuel=None,
+        benchmark_policy=None, benchmark_samples=None, benchmark_current=None, benchmark_receipt_root=None,
+        benchmark_baseline=None):
     repo = Path(repo)
+    benchmark_inputs = (benchmark_policy, benchmark_samples, benchmark_current, benchmark_receipt_root)
+    benchmark_selected = any(value is not None for value in benchmark_inputs) or benchmark_baseline is not None
+    require(not benchmark_selected or all(value is not None for value in benchmark_inputs),
+            'benchmark policy, samples, current context and receipt root must be supplied together')
     require((compile_evidence_package is None) == (compile_evidence_case is None),
             'compile evidence package and case must be supplied together')
     inventory = source_read_inventory()
@@ -1260,6 +1285,20 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
             if report['first_difference'] is None:
                 report['first_difference'] = dict(path='/requirement_evidence',
                     expected='complete current declared evidence', observed=current['status'])
+    if benchmark_selected:
+        def selected_path(value):
+            if value is None:
+                return None
+            path = Path(value)
+            return path if path.is_absolute() else repo / path
+        benchmark = benchmark_completion_report(*(selected_path(value) for value in benchmark_inputs),
+                                                selected_path(benchmark_baseline))
+        report['benchmark_completion'] = benchmark
+        if not benchmark['complete']:
+            report['status'] = 'mismatch'
+            if report['first_difference'] is None:
+                report['first_difference'] = dict(path='/benchmark_completion',
+                    expected='complete current post-deployment benchmark evidence', observed='incomplete')
     return report
 
 
@@ -1273,6 +1312,11 @@ def main(argv=None):
                         help='exact captured artifact for the optional companion record')
     parser.add_argument('--requirement-evidence', type=Path,
                         help='report explicitly selected owner-declared requirement evidence/currentness; no semantic acceptance')
+    for name in ('policy', 'samples', 'current', 'receipt-root'):
+        parser.add_argument('--benchmark-' + name, type=Path,
+                            help='explicit post-deployment benchmark evidence selection; requires policy, samples, current and receipt-root together; no execution')
+    parser.add_argument('--benchmark-baseline', type=Path,
+                        help='prior actual samples for explicitly declared comparable-profile regression limits')
     supplied = parser.add_mutually_exclusive_group()
     supplied.add_argument('--host-observations', type=Path,
                         help='compare a supplied complete normal host diagnostic artifact; does not execute it')
@@ -1288,6 +1332,9 @@ def main(argv=None):
     parser.add_argument('--observed-prefixes', type=Path)
     parser.add_argument('--family', choices=FAMILIES, default='normal')
     args = parser.parse_args(argv)
+    benchmark_inputs = (args.benchmark_policy, args.benchmark_samples, args.benchmark_current, args.benchmark_receipt_root)
+    if (any(value is not None for value in benchmark_inputs) or args.benchmark_baseline is not None) and not all(value is not None for value in benchmark_inputs):
+        parser.error('--benchmark-policy, --benchmark-samples, --benchmark-current and --benchmark-receipt-root must be supplied together')
     if (args.compile_evidence_record is None) != (args.compile_evidence_case is None):
         parser.error('--compile-evidence-record and --compile-evidence-case must be supplied together')
     if any(getattr(args, layer + '_observations') is not None for layer in ('host', *LAYER_ARTIFACTS)) and (args.observed_programs is not None or args.observed_prefixes is not None):
@@ -1304,7 +1351,10 @@ def main(argv=None):
                      compile_evidence_case=args.compile_evidence_case,
                      paired_k_observations=args.paired_k_observations,
                      paired_quint_observations=args.paired_quint_observations,
-                     selected_case=args.selected_case, selected_initial_fuel=args.selected_initial_fuel)
+                     selected_case=args.selected_case, selected_initial_fuel=args.selected_initial_fuel,
+                     benchmark_policy=args.benchmark_policy, benchmark_samples=args.benchmark_samples,
+                     benchmark_current=args.benchmark_current, benchmark_receipt_root=args.benchmark_receipt_root,
+                     benchmark_baseline=args.benchmark_baseline)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')

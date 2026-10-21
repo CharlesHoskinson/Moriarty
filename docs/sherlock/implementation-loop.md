@@ -154,9 +154,33 @@ Two failures of one defect class require a smallest permitted reproducer and a c
 
 For native build/proof/target work, native authority0, C4 OPEN, R2 UNSATISFIED,60460 HOLD and Amendment10's no-retry/no-rephrase/no-reroute disposition remain intact. This loop cannot rewrite those records or use another model to work around the stopped amendment. The hard-blocker resolution must name an actually permitted operation or valid new premise before any dependent execution; ordinary SDK-free product source continues. If all remaining useful work depends on an unavailable premise, record the concrete blocked exit instead of manufacturing infrastructure or claiming completion.
 
+## Post-deployment benchmark success criterion
+
+After real deployment, run the existing Python DoctorWatson checker with all four
+explicit benchmark inputs described in the [benchmark how-to](benchmark-howto.md).
+It must recompute a complete current evidence result before declaring the
+post-deployment benchmark stage successful. Required cases, independent complete
+effects, current source/compiler/ledger/network/circuit/workload/target pins,
+actual proof and semantic local-verifier results, deployed inclusion/readback,
+required metrics/units/layers and declared repetitions/failure policy are conjunctive.
+An ordinary fixture, host/model sample, cached report, unavailable metric or missing
+independent effect oracle leaves this stage incomplete. Record first-baseline
+performance without inventing an SLA; later comparison uses explicitly frozen
+comparable-profile tolerances. Keep compile cold/warm and child/parent/decider costs
+separate from whole-run and RPC/ledger latency.
+
+The [additive benchmark EARS](../../openspec/changes/sherlock-moriarty-benchmarks/specs/benchmarks/spec.md)
+supplement the retained requirement families. Pin the recomputed report, selected
+policy/current inputs and underlying receipt/source closure in the existing
+requirement-evidence records and retain owner adoption separately. The fixed
+35 originals, 25 refinements and 68 scenarios keep their identities. This is an
+acceptance selection in the existing loop; it creates no native dispatch,
+operation allowance, budget reset or setup/keygen replay. Existing native source,
+resource, C13/stopped-amendment and cleanup requirements remain controlling.
+
 ## Full completion
 
-Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
+Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition, including the recomputed post-deployment benchmark criterion above. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
 
 
 ## Prospective native policy adoption — October17
