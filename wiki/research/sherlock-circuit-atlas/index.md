@@ -110,3 +110,6 @@ Sol factual navigation: [literal author-time engineering status](UPDATE-026-GEMI
 ## UPDATE026 — separate later receipt-contract correction
 
 Sol factual navigation: [receipt-gating engineering erratum](UPDATE-026-RECEIPT-GATING-ERRATUM.md) and [source summary](../../sources/src-af7414bf451359f4ded3.md). The later Opus opinion treats all const_found/count/row receipts as ungated; the five authored fields remain unchanged. Source-only scoped approval is not execution.
+
+
+- 2026-10-21 dated receipt cut: [reviewed later engineering facts](UPDATE-026-POST-AUTHOR-STATUS.md); local source `src-e4a728c21edb26d302ff` (immutable capture `.raw/captured/5324248203dc26f8b4de55d8d66d285dd9e9d02a8877fa660b6a1cfb5d510e17.json`). Historical source02 cut only; no new creative authoring or native/target acceptance.
