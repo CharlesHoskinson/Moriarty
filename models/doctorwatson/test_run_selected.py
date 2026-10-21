@@ -1,8 +1,6 @@
-"""Pure/mock tests for run_selected; injected runners only."""
-import hashlib
+"""Pure/mock tests for run_selected; injected stage runners only."""
 import json
 from pathlib import Path
-import shutil
 import tempfile
 import unittest
 
@@ -20,37 +18,20 @@ class RunSelectedTests(unittest.TestCase):
         self.plan_path = fx.plan_file(self.root, [self.task])
         self.fp = delivery.fingerprint(
             delivery.load_plan(self.plan_path), "build")
-        self.outputs = fx.guard_packet(self.root)
-        shutil.rmtree(self.root / "packet")
-        shutil.rmtree(self.root / "target")
-        self.guard = fx.write(self.root / "guard.py", b"# guard\n")
-        self.config = fx.write(self.root / "cfg.json", b"{}\n")
+        self.outer = fx.outer_fixture(self.root)
+        self.guard = self.outer["guard"]
+        self.config = self.outer["config_path"]
         self.sel_path = self.root / "selection.json"
         self.write_selection()
 
-    def write_selection(self, fingerprint=None, outputs=None,
+    def write_selection(self, fingerprint=None,
                         adapter="moriarty-sdk-build"):
-        sel = {"schema": "doctorwatson.execution-selection/1",
-               "task": "build", "adapter": adapter,
-               "fingerprint": fingerprint or self.fp,
-               "outerSequence": "bounded-sdk-compile-cached-current-f/1",
-               "guard": fx.pin(self.guard), "config": fx.pin(self.config),
-               "outputs": outputs if outputs is not None else self.outputs}
+        sel = fx.selection_dict(self.outer, fingerprint or self.fp,
+                                 adapter=adapter)
         self.sel_path.write_bytes(fx.encoded(sel))
 
-    def runner(self, code=0, exc=None):
-        calls = []
-
-        def run(argv):
-            calls.append(list(argv))
-            if exc is not None:
-                raise exc
-            fx.guard_packet(self.root)
-            fx.cleanup_receipt(self.root / "packet", "cleanup.json",
-                               "build", self.task["attempt"], self.fp)
-            return code
-        run.calls = calls
-        return run
+    def runner(self, failures=None):
+        return fx.outer_runner(self.outer, failures=failures)
 
     def go(self, runner, attempt="attempt-1"):
         return rs.run_selected_once("build", str(self.plan_path),
@@ -61,11 +42,15 @@ class RunSelectedTests(unittest.TestCase):
         runner = self.runner()
         code, record = self.go(runner)
         self.assertEqual(code, rs.EXIT_OK)
-        self.assertEqual(len(runner.calls), 1)
+        self.assertEqual(runner.calls.count("native"), 1)
         self.assertEqual(record["terminal"], "succeeded")
+        self.assertEqual(record["cleanupState"], "complete")
         result = json.loads(
             (self.root / "attempt-1/consumer-result.json").read_bytes())
         delivery.load_result(result)
+        self.assertEqual(result["cleanup"], "complete")
+        self.assertIsNone(result["review"])
+        self.assertIsNone(result["adoption"])
 
     def test_missing_selection_zero_calls(self):
         self.sel_path.unlink()
@@ -88,10 +73,29 @@ class RunSelectedTests(unittest.TestCase):
             self.go(runner)
         self.assertEqual(runner.calls, [])
 
+    def test_selection_v1_never_selected(self):
+        sel = json.loads(self.sel_path.read_bytes())
+        sel["schema"] = "doctorwatson.execution-selection/1"
+        del sel["outer"]
+        self.sel_path.write_bytes(fx.encoded(sel))
+        runner = self.runner()
+        with self.assertRaises(rs.BadInput):
+            self.go(runner)
+        self.assertEqual(runner.calls, [])
+
     def test_task_cannot_supply_argv(self):
         plan = json.loads(self.plan_path.read_bytes())
         plan["tasks"][0]["argv"] = ["cargo"]
         self.plan_path.write_bytes(fx.encoded(plan))
+        runner = self.runner()
+        with self.assertRaises(rs.BadInput):
+            self.go(runner)
+        self.assertEqual(runner.calls, [])
+
+    def test_selection_cannot_supply_argv_or_hooks(self):
+        sel = json.loads(self.sel_path.read_bytes())
+        sel["outer"]["argv"] = ["evil"]
+        self.sel_path.write_bytes(fx.encoded(sel))
         runner = self.runner()
         with self.assertRaises(rs.BadInput):
             self.go(runner)
@@ -119,23 +123,24 @@ class RunSelectedTests(unittest.TestCase):
             rs.resolve_selection(str(self.sel_path), resolved)
 
     def test_nonzero_exit_failed_one_call(self):
-        runner = self.runner(code=101)
+        runner = self.runner(failures={"native": 101})
         code, record = self.go(runner)
         self.assertEqual((code, record["terminal"]),
                          (rs.EXIT_FAILED, "failed"))
+        self.assertEqual(runner.calls.count("native"), 1)
 
     def test_exit_zero_missing_outputs_failed(self):
-        def run(argv):
-            return 0
-        code, _ = self.go(run)
+        runner = fx.outer_runner(self.outer, write_outputs=False)
+        code, _ = self.go(runner)
         self.assertEqual(code, rs.EXIT_FAILED)
 
     def test_runner_exception_unknown_and_consumed(self):
-        runner = self.runner(exc=TimeoutError("t"))
+        runner = self.runner(failures={"native": TimeoutError("t")})
         code, record = self.go(runner)
         self.assertEqual(code, rs.EXIT_UNKNOWN)
         self.assertEqual(record["terminal"], "unknown-submission")
         self.assertEqual(record["unknownScope"], "local-process")
+        self.assertNotEqual(record["cleanupState"], "complete-or-fake")
         runner2 = self.runner()
         with self.assertRaises(rs.Blocked):
             self.go(runner2)
