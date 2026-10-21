@@ -37,36 +37,25 @@ class IntegratedCompileTests(unittest.TestCase):
         plan_path = fx.plan_file(root, [task])
         plan = delivery.load_plan(plan_path)
         fp = delivery.fingerprint(plan, "build")
-        outputs = fx.guard_packet(root)  # paths declared; packet removed below
-        # Plan and selection are fixed before outputs exist: remove the
-        # packet/target trees, keep only their declared paths.
-        import shutil
-        shutil.rmtree(root / "packet")
-        shutil.rmtree(root / "target")
-        guard = fx.write(root / "bounded_sdk_compile.py",
-                         b"# fixture selected guard\n")
-        config = fx.write(root / "FINAL.json", b"{}\n")
-        sel = {"schema": "doctorwatson.execution-selection/1",
-               "task": "build", "adapter": "moriarty-sdk-build",
-               "fingerprint": fp,
-               "outerSequence": "bounded-sdk-compile-cached-current-f/1",
-               "guard": fx.pin(guard), "config": fx.pin(config),
-               "outputs": outputs}
+        # Plan and selection are fixed before outputs exist: the outer
+        # fixture declares retained paths only; no packet/target yet.
+        self.outer = fx.outer_fixture(root)
+        sel = fx.selection_dict(self.outer, fp)
+        outputs = sel["outputs"]
         sel_path = root / "selection.json"
         sel_path.write_bytes(fx.encoded(sel))
         return task, plan_path, sel_path, fp, outputs
 
-    def _mock_guard(self, task, fp, code=0):
-        root = self.root
-        calls = []
+    def _mock_guard(self, task, fp, failures=None):
+        inner = fx.outer_runner(self.outer, failures=failures)
+        native_argv = []
 
-        def runner(argv):
-            calls.append(list(argv))
-            fx.guard_packet(root)
-            fx.cleanup_receipt(root / "packet", "cleanup.json",
-                               task["id"], task["attempt"], fp)
-            return code
-        runner.calls = calls
+        def runner(stage):
+            if stage["stage"] == "native":
+                native_argv.append(list(stage["argv"]))
+            return inner(stage)
+        runner.calls = inner.calls
+        runner.native_argv = native_argv
         return runner
 
     def test_roundtrip_plan_to_readiness(self):
@@ -79,8 +68,10 @@ class IntegratedCompileTests(unittest.TestCase):
             "build", str(plan_path), str(sel_path), str(attempt),
             runner=runner)
         self.assertEqual(code, rs.EXIT_OK)
-        self.assertEqual(len(runner.calls), 1)
-        self.assertIn("--cached-current-f", runner.calls[0])
+        self.assertEqual(runner.calls.count("native"), 1)
+        self.assertEqual(len(runner.native_argv), 1)
+        self.assertIn("--cached-current-f",
+                      runner.native_argv[0][-1])
         self.assertEqual(plan_path.read_bytes(), before)
         preexec = json.loads((attempt / "PREEXEC.json").read_bytes())
         self.assertEqual(preexec["fingerprint"], fp)
@@ -129,14 +120,14 @@ class IntegratedCompileTests(unittest.TestCase):
     def test_exit_zero_with_tampered_f_outputs_is_failed(self):
         task, plan_path, sel_path, fp, _ = self._setup_plan_selection()
         root = self.root
+        inner = fx.outer_runner(self.outer)
 
-        def runner(argv):
-            fx.guard_packet(root)
-            fx.cleanup_receipt(root / "packet", "cleanup.json",
-                               task["id"], task["attempt"], fp)
-            elf = root / "target/debug/deps/mori_backend-deadbeef01"
-            elf.write_bytes(b"tampered elf\n")
-            return 0
+        def runner(stage):
+            rc = inner(stage)
+            if stage["stage"] == "native":
+                elf = self.outer["compile_root"] / "target" / fx.NEW_ELF_REL
+                elf.write_bytes(b"tampered elf\n")
+            return rc
         code, record = rs.run_selected_once(
             "build", str(plan_path), str(sel_path),
             str(root / "attempt-x"), runner=runner)

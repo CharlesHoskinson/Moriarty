@@ -52,7 +52,7 @@ if [[ $# -ge 1 && $1 == --test-selected ]]; then
   cd -- "$repo_root/models/doctorwatson"
   export PYTHONDONTWRITEBYTECODE=1
   if [[ $# -eq 0 ]]; then
-    set -- test_delivery test_run_selected test_settle_observation test_reconciliation test_integrated_roundtrip test_execution_reconciliation
+    set -- test_delivery test_run_selected test_settle_observation test_reconciliation test_integrated_roundtrip test_execution_reconciliation test_native_adapter07
   fi
   exec python3 -m unittest "$@" -v
 fi
