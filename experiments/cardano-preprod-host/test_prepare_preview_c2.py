@@ -1,7 +1,9 @@
 """Offline preparation expectations. Synthetic funding is never ledger evidence."""
 import copy
+from datetime import datetime, timezone
 import hashlib
 import importlib.util
+import inspect
 import json
 from pathlib import Path
 import tempfile
@@ -12,6 +14,32 @@ REPO = Path(__file__).resolve().parents[2]
 ADDRESS = "addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc"
 FUNDING = "11" * 32 + "#0"
 COLLATERAL = "22" * 32 + "#1"
+NOW = datetime(2026, 10, 21, 1, 38, tzinfo=timezone.utc)
+
+
+def full_cli_fixture():
+    """Synthetic full Conway JSON shape; no native decoding or fee claim."""
+    return {
+        "collateralPercentage": 150, "committeeMaxTermLength": 365, "committeeMinSize": 3,
+        "costModels": {name: [1, 2, 3] for name in ("PlutusV1", "PlutusV2", "PlutusV3")},
+        "dRepActivity": 31, "dRepDeposit": 500000000,
+        "dRepVotingThresholds": {name: 0.67 for name in (
+            "committeeNoConfidence", "committeeNormal", "hardForkInitiation", "motionNoConfidence",
+            "ppEconomicGroup", "ppGovGroup", "ppNetworkGroup", "ppTechnicalGroup", "treasuryWithdrawal", "updateToConstitution")},
+        "executionUnitPrices": {"priceMemory": 0.0577, "priceSteps": 0.0000721},
+        "govActionDeposit": 1000000000, "govActionLifetime": 30,
+        "maxBlockBodySize": 90112, "maxBlockExecutionUnits": {"memory": 77500000, "steps": 20000000000},
+        "maxBlockHeaderSize": 1100, "maxCollateralInputs": 3,
+        "maxTxExecutionUnits": {"memory": 17500000, "steps": 10000000000},
+        "maxTxSize": 16384, "maxValueSize": 5000, "minFeeRefScriptCostPerByte": 15,
+        "minPoolCost": 75000000, "monetaryExpansion": 0.003, "poolPledgeInfluence": 0.3,
+        "poolRetireMaxEpoch": 18,
+        "poolVotingThresholds": {name: 0.51 for name in (
+            "committeeNoConfidence", "committeeNormal", "hardForkInitiation", "motionNoConfidence", "ppSecurityGroup")},
+        "protocolVersion": {"major": 11, "minor": 0}, "stakeAddressDeposit": 2000000,
+        "stakePoolDeposit": 500000000, "stakePoolTargetNum": 500, "treasuryCut": 0.2,
+        "txFeeFixed": 155381, "txFeePerByte": 44, "utxoCostPerByte": 4310,
+    }
 
 
 class OfflineC2Preparation(unittest.TestCase):
@@ -31,6 +59,7 @@ class OfflineC2Preparation(unittest.TestCase):
             "min_claim_lovelace": 2500000, "min_change_lovelace": 1000000,
             "max_collateral_loss_lovelace": 5000000,
             "max_claim_loss_lovelace": 5000000,
+            "min_collateral_return_lovelace": 1000000,
             "execution_units": {"memory": 300000, "steps": 2500000000},
             "execution_units_source": "synthetic planning budget; not measured",
             "fee_source": "synthetic explicit planning amount; not measured",
@@ -48,15 +77,61 @@ class OfflineC2Preparation(unittest.TestCase):
             "protocolParameters": {
                 "collateralPercentage": 150, "maxCollateralInputs": 3,
                 "maxTxExecutionUnits": {"memory": 17500000, "steps": 10000000000},
-                "costModels": {"PlutusV3": [1, 2, 3]},
+                "costModels": full_cli_fixture()["costModels"],
                 "sourceBodySha256": "ab" * 32,
+                "txFeePerByte": 44, "txFeeFixed": 155381, "maxTxSize": 16384,
+                "executionUnitPrices": {"memory": "0.0577", "steps": "0.0000721"},
+                "coinsPerUtxoByte": 4310, "protocolMajor": 11, "protocolMinor": 0,
             },
-            "provenance": {"evidenceClass": "synthetic-test"},
+            "provenance": {"evidenceClass": "synthetic-test", "observedAt": "2026-10-21T01:37:00+00:00"},
+        }
+        # Preserve whitespace/order exactly; emitted bytes must not be canonicalized.
+        text = "  " + json.dumps(full_cli_fixture(), indent=1) + "\n\n"
+        self.request["cli_protocol_parameters_capture"] = {
+            "body_text": text,
+            "receipt": {
+                "observedAt": "2026-10-21T01:37:00+00:00", "completedAt": "2026-10-21T01:37:01+00:00",
+                "httpStatus": 200, "url": "https://preview.koios.rest/api/v1/cli_protocol_params",
+                "finalURL": "https://preview.koios.rest/api/v1/cli_protocol_params", "method": "GET",
+                "bodySHA256": hashlib.sha256(text.encode()).hexdigest(), "bytes": len(text.encode()),
+                "network": "preview", "networkMagic": 2,
+                "fetcher": "Scrapling0.4.15 Fetcher",
+            },
         }
 
     def plan(self, output_dir="prepared"):
         self.assertIsNotNone(self.module, "offline C2 builder preparation is missing")
-        return self.module.prepare_plan(REPO, self.request, self.observation, output_dir)
+        self.assertIn("now", inspect.signature(self.module.prepare_plan).parameters,
+                      "capture freshness needs a deterministic comparison time")
+        return self.module.prepare_plan(REPO, self.request, self.observation, output_dir, now=NOW)
+
+    def test_protocol_file_preserves_exact_full_capture_bytes_and_receipt_binding(self):
+        plan = self.plan()
+        self.assertTrue(plan["ready_for_build_argv"], plan["blockers"])
+        capture = self.request["cli_protocol_parameters_capture"]
+        output = plan["files"]["protocol-parameters.json"]
+        self.assertEqual(output["content"].encode(), capture["body_text"].encode())
+        self.assertEqual(output["sha256"], capture["receipt"]["bodySHA256"])
+        self.assertEqual(plan["cli_protocol_parameters"]["receipt"], capture["receipt"])
+        self.assertEqual(plan["expected_effects"]["cli_protocol_parameters"], plan["cli_protocol_parameters"])
+        self.assertFalse(plan["cli_protocol_parameters"]["cli_decoder_executed"])
+
+    def test_missing_full_capture_blocks_build_instead_of_serializing_normalized_subset(self):
+        self.request.pop("cli_protocol_parameters_capture")
+        plan = self.plan()
+        self.assertFalse(plan["ready_for_build_argv"])
+        self.assertIn("CLI_PROTOCOL_PARAMETERS_CAPTURE_REQUIRED", plan["blockers"])
+        self.assertNotIn("protocol-parameters.json", plan["files"])
+        self.assertIn("capture", plan["next_step"].lower())
+
+    def test_full_capture_hash_or_normalized_parameter_mismatch_blocks_build(self):
+        self.request["cli_protocol_parameters_capture"]["receipt"]["bodySHA256"] = "cd" * 32
+        plan = self.plan()
+        self.assertFalse(plan["ready_for_build_argv"])
+        self.assertTrue(any("CLI_PROTOCOL_PARAMETERS_CAPTURE" in b for b in plan["blockers"]))
+        self.setUp()
+        self.observation["protocolParameters"]["txFeeFixed"] += 1
+        self.assertFalse(self.plan()["ready_for_build_argv"])
 
     def test_issue_redeemer_and_existing_datum_feed_real_build_argv(self):
         plan = self.plan()
@@ -83,7 +158,9 @@ class OfflineC2Preparation(unittest.TestCase):
         self.assertEqual([o["lovelace"] for o in effects["success"]["outputs"]], [3000000, 16300000])
         self.assertEqual(effects["success"]["fee_lovelace"], 700000)
         self.assertEqual(effects["success"]["collateral_consumed_lovelace"], 0)
-        self.assertEqual(effects["phase2_failure"]["maximum_collateral_debit_lovelace"], 5000000)
+        self.assertEqual(effects["phase2_failure"]["maximum_collateral_debit_lovelace"], 1050000)
+        self.assertEqual(effects["phase2_failure"]["collateral_return"]["lovelace"], 3950000)
+        self.assertEqual(effects["phase2_failure"]["collateral_return"]["address"], ADDRESS)
         self.assertFalse(plan["execution_observed"])
         self.assertFalse(plan["financial_settlement_claimed"])
         self.assertFalse(plan["costs_measured"])
@@ -154,7 +231,7 @@ class OfflineC2Preparation(unittest.TestCase):
     def test_explicit_caps_and_minimums_are_enforced(self):
         for key, value, code in (
             ("fee_cap_lovelace", 600000, "FEE_CAP_EXCEEDED"),
-            ("max_collateral_loss_lovelace", 4000000, "COLLATERAL_LOSS_CAP_EXCEEDED"),
+            ("max_collateral_loss_lovelace", 1000000, "COLLATERAL_LOSS_CAP_EXCEEDED"),
             ("claim_lovelace", 2000000, "CLAIM_OUTPUT_BELOW_SUPPLIED_MINIMUM"),
             ("max_claim_loss_lovelace", 2000000, "CLAIM_LOSS_CAP_EXCEEDED"),
         ):
@@ -163,6 +240,26 @@ class OfflineC2Preparation(unittest.TestCase):
                 self.request[key] = value
                 self.assertIn(code, self.plan()["blockers"])
                 self.request[key] = original
+
+    def test_collateral_total_rounds_up_and_return_is_conserved(self):
+        self.request["fee_lovelace"] = 700001
+        plan = self.plan()
+        self.assertTrue(plan["ready_for_build_argv"], plan["blockers"])
+        argv = plan["build_raw_argv"]
+        self.assertIn("--tx-total-collateral", argv)
+        self.assertEqual(argv[argv.index("--tx-total-collateral") + 1], "1050002")
+        self.assertEqual(argv[argv.index("--tx-out-return-collateral") + 1], ADDRESS + "+3949998")
+        failure = plan["expected_effects"]["phase2_failure"]
+        self.assertEqual(failure["total_collateral_lovelace"] + failure["collateral_return"]["lovelace"], 5000000)
+
+    def test_collateral_return_minimum_and_owner_total_loss_ceiling_are_enforced(self):
+        self.request["min_collateral_return_lovelace"] = 4000000
+        self.assertIn("COLLATERAL_RETURN_BELOW_SUPPLIED_MINIMUM", self.plan()["blockers"])
+        self.request["min_collateral_return_lovelace"] = 1000000
+        self.request.update(fee_lovelace=4000000, fee_cap_lovelace=4100000,
+                            max_collateral_loss_lovelace=7000000)
+        self.observation["utxos"][1]["lovelace"] = 10000000
+        self.assertIn("COLLATERAL_LOSS_CAP_EXCEEDED", self.plan()["blockers"])
 
     def test_plan_is_deterministic_and_emits_only_public_offline_files(self):
         request, observation = copy.deepcopy(self.request), copy.deepcopy(self.observation)
