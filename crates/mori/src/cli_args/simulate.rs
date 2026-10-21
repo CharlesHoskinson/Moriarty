@@ -42,7 +42,7 @@ pub struct Args {
     /// Explicit source dialect on the selected Sherlock route; no autodetection
     #[arg(long, requires = "execution_profile")]
     pub source_profile: Option<String>,
-    /// Select the dedicated draft program's closed entry
+    /// Select the dedicated draft or body-typed nominal program's closed entry
     #[arg(long, requires = "execution_profile", conflicts_with_all = ["action", "scenario"])]
     pub entry: bool,
     /// Exact caller configuration; no numerical defaults
