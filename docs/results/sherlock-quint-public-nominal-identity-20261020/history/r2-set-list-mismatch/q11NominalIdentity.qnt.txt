@@ -1,0 +1,219 @@
+module q11NominalIdentity {
+  import q11NominalIdentityTypes.* from "./q11NominalIdentityTypes"
+  import c6PositiveProgramTypes.* from "./c6PositiveProgramTypes"
+  import c6PositiveStateTypes.* from "./c6PositiveStateTypes"
+  import c6PositiveHostTypes.* from "./c6PositiveHostTypes"
+  import nominalPublicSimulation.* from "./nominalPublicSimulation"
+
+  // These are positive partial relations over externally qualified source/table
+  // inputs. nth/head require their ordinary finite-domain premises. Undefined
+  // unsupported forms are not modeled Core refusals or new admission checks.
+  pure def q11Slice(xs:List[int],s:C6PSlice):List[int] = xs.slice(s.start,s.start+s.len)
+
+  pure def q11FieldBindings(v:C6PProgram,c:C6PCtorRow):List[Q11FieldBinding] =
+    range(0,c.field_len).map(i => {
+      val rowId=c.field_start+i
+      val raw=v.ctor_fields.nth(rowId)
+      {row_id:rowId,ordinal:i,raw:raw,name:if(c.owning_type>=4) v.names.nth(raw.name_id) else List()}
+    })
+  pure def q11CtorBinding(v:C6PProgram,id:int):Q11CtorBinding = {
+    val raw=v.constructors.nth(id)
+    {ctor_id:id,raw:raw,name:if(raw.owning_type>=4) v.names.nth(raw.name_id) else List(),
+      fields:q11FieldBindings(v,raw)}
+  }
+  pure def q11TypeBinding(v:C6PProgram,id:int):Q11TypeBinding = {
+    val raw=v.types.nth(id)
+    {type_id:id,raw:raw,name:if(id>=4) v.names.nth(raw.name_id) else List(),
+      args:q11Slice(v.type_args,raw.args),constructors:range(raw.ctor_start,raw.ctor_start+raw.ctor_len)}
+  }
+  pure def q11Bindings(v:C6PProgram):Q11Bindings = {
+    retained_view:v,types:range(0,v.types.length()).map(i=>q11TypeBinding(v,i)),
+    constructors:range(0,v.constructors.length()).map(i=>q11CtorBinding(v,i))
+  }
+
+  // Prefix source TypeExpr tokens are related to a supplied instantiated type.
+  // A parameter is resolved by its declared ordinal, never by a fixture ID.
+  pure def q11TypeTokenMatches(v:C6PProgram,parameters:List[List[int]],args:List[int],
+      state:Q11TypeMatch,t:C6PTypeToken):Q11TypeMatch = {
+    val candidate=state.pending.head()
+    val rest=state.pending.tail()
+    match t {
+      | C6PTUInt => {pending:rest,holds:state.holds and candidate==0}
+      | C6PTBool => {pending:rest,holds:state.holds and candidate==1}
+      | C6PTList => {pending:rest,holds:state.holds and candidate==2}
+      | C6PTTree => {pending:rest,holds:state.holds and candidate==3}
+      | C6PTParam(p) => {
+          val ordinal=range(0,parameters.length()).select(i=>parameters.nth(i)==p.name).head()
+          {pending:rest,holds:state.holds and candidate==args.nth(ordinal)}
+        }
+      | C6PTNamed(p) => {
+          val row=v.types.nth(candidate)
+          {pending:rest,holds:state.holds and v.names.nth(row.name_id)==p.name and row.args.len==0}
+        }
+      | C6PTApply(p) => {
+          val row=v.types.nth(candidate)
+          {pending:q11Slice(v.type_args,row.args).concat(rest),
+            holds:state.holds and v.names.nth(row.name_id)==p.name and row.args.len==p.arity}
+        }
+    }
+  }
+  pure def q11TypeExprMatches(v:C6PProgram,parameters:List[List[int]],args:List[int],
+      source:List[C6PTypeToken],candidate:int):bool = {
+    val scan=source.foldl({pending:List(candidate),holds:true},
+      (state,t)=>q11TypeTokenMatches(v,parameters,args,state,t))
+    scan.holds and scan.pending.length()==0
+  }
+  pure def q11DeclaredTypeRelates(v:C6PProgram,id:int):bool = {
+    val row=v.types.nth(id)
+    match row.decl {
+      | C6PNone => id<4
+      | C6PSome(declId) => {
+          val decl=v.decl_templates.nth(declId)
+          val args=q11Slice(v.type_args,row.args)
+          and {
+            v.names.nth(row.name_id)==decl.name,
+            args.length()==decl.parameters.length(),
+            v.decl_param_counts.nth(declId)==decl.parameters.length(),
+            v.decl_ctor_counts.nth(declId)==decl.ctors.length(),
+            row.ctor_len==decl.ctors.length(),
+            range(0,decl.ctors.length()).foldl(true,(priorCtor,ordinal)=>{
+              val c=v.constructors.nth(row.ctor_start+ordinal)
+              val source=decl.ctors.nth(ordinal)
+              priorCtor and and {
+                c.owning_type==id,c.source_order==ordinal,
+                v.names.nth(c.name_id)==source.name,c.field_len==source.fields.length(),
+                range(0,c.field_len).foldl(true,(priorField,fieldOrdinal)=>{
+                  val declaredField=v.ctor_fields.nth(c.field_start+fieldOrdinal)
+                  val sourceField=source.fields.nth(fieldOrdinal)
+                  priorField and v.names.nth(declaredField.name_id)==sourceField.name and
+                    q11TypeExprMatches(v,decl.parameters,args,sourceField.ty,declaredField.type_id)
+                }),
+              }
+            }),
+          }
+        }
+    }
+  }
+  pure def q11DeclarationRelation(v:C6PProgram):bool =
+    range(0,v.types.length()).foldl(true,(prior,id)=>prior and q11DeclaredTypeRelates(v,id))
+
+  pure def q11ConstChildren(v:C6PProgram,s:C6PSlice):List[C6Ref] =
+    q11Slice(v.constant_fields,s).map(i=>C6Const(i))
+  pure def q11DataChildren(t:Q11ReadTables,s:C6Slice):List[C6Ref] =
+    t.data_fields.slice(s.start,s.start+s.len)
+  pure def q11CtorNode(ty:int,ctor:int,children:List[C6Ref]):Q11ReadNode =
+    {token:ConstructorToken({typeId:ty,ctorId:ctor,arity:children.length()}),children:children}
+  pure def q11ConstNode(v:C6PProgram,id:int):Q11ReadNode = {
+    // OutOfRange is outside the inherited finite UInt/Bool/constructor profile.
+    // Taking head of the empty candidate list is undefined there, not a dummy
+    // zero, erased marker, exception policy, or a claimed Core rejection.
+    val candidates:List[Q11ReadNode] = match v.constants.nth(id) {
+      | C6PKUInt(p) => List({token:UIntToken(p.n),children:List()})
+      | C6PKBool(p) => List({token:BoolToken(p.b),children:List()})
+      | C6PKNil(_) => List(q11CtorNode(2,0,List()))
+      | C6PKCons(p) => List(q11CtorNode(2,1,q11ConstChildren(v,p.fields)))
+      | C6PKLeaf(p) => List(q11CtorNode(3,2,q11ConstChildren(v,p.fields)))
+      | C6PKBranch(p) => List(q11CtorNode(3,3,q11ConstChildren(v,p.fields)))
+      | C6PKConstructor(p) => List(q11CtorNode(p.type_id,p.ctor_id,q11ConstChildren(v,p.fields)))
+      | C6PKOutOfRange(_) => List()
+    }
+    candidates.head()
+  }
+  pure def q11DataNode(t:Q11ReadTables,id:int):Q11ReadNode = match t.data.nth(id) {
+    | C6HU128(p) => {token:UIntToken(p.n),children:List()}
+    | C6HBool(p) => {token:BoolToken(p.b),children:List()}
+    | C6HNil => q11CtorNode(2,0,List())
+    | C6HCons(p) => q11CtorNode(2,1,q11DataChildren(t,p.fields))
+    | C6HLeaf(p) => q11CtorNode(3,2,q11DataChildren(t,p.fields))
+    | C6HBranch(p) => q11CtorNode(3,3,q11DataChildren(t,p.fields))
+    | C6HConstructor(p) => q11CtorNode(p.type_id,p.ctor_id,q11DataChildren(t,p.fields))
+  }
+  pure def q11ReadStep(v:C6PProgram,t:Q11ReadTables,state:Q11ReadState):Q11ReadState =
+    if(state.pending.length()==0) state else {
+      val node=match state.pending.head() {
+        | C6Const(id)=>q11ConstNode(v,id)
+        | C6Data(id)=>q11DataNode(t,id)
+      }
+      {pending:node.children.concat(state.pending.tail()),tokens:state.tokens.append(node.token)}
+    }
+  pure def q11ReadReference(v:C6PProgram,t:Q11ReadTables,r:C6Ref,budget:int):Q11ReadState =
+    range(0,budget).foldl({pending:List(r),tokens:List()},(state,ignored)=>q11ReadStep(v,t,state))
+  pure def q11ReadConstant(v:C6PProgram,id:int,budget:int):Q11ReadState = {
+    val noData:Q11ReadTables={data:List(),data_fields:List()}
+    q11ReadReference(v,noData,C6Const(id),budget)
+  }
+  pure def q11ObserveEvidence(v:C6PProgram,image:C6HostImage,root:C6Ref,budget:int):Q11ReadEvidence = {
+    retained_view:v,retained_image:image,bindings:q11Bindings(v),root:root,
+    structural_read:q11ReadReference(v,{data:image.data,data_fields:image.data_fields},root,budget)
+  }
+  pure def q11EvidencePreserved(e:Q11ReadEvidence,v:C6PProgram,image:C6HostImage):bool =
+    e.retained_view==v and e.bindings.retained_view==v and e.retained_image==image
+
+  // General source-structure projection into the UNCHANGED source10 evaluator.
+  // Raw constant options, match plans, occurrence slices and all other23 input
+  // fields remain in retained_view. This projection does not make Core microstep,
+  // constant-folding/allocation, helper-work or clock correspondence claims.
+  pure def q11PatternToken(v:C6PProgram,id:int):(List[PatternToken],List[int]) =
+    match v.patterns.nth(id) {
+      | C6PPVar(p)=>(List(PatternBind(p.x)),List())
+      | C6PWildcard=>(List(PatternWildcard),List())
+      | C6PPNil=>(List(PatternConstructor({typeId:2,ctorId:0,arity:0})),List())
+      | C6PPCons(p)=>(List(PatternConstructor({typeId:2,ctorId:1,arity:2}),PatternBind(p.x),PatternBind(p.y)),List())
+      | C6PPLeaf(p)=>(List(PatternConstructor({typeId:3,ctorId:2,arity:1}),PatternBind(p.x)),List())
+      | C6PPBranch(p)=>(List(PatternConstructor({typeId:3,ctorId:3,arity:2}),PatternBind(p.x),PatternBind(p.y)),List())
+      | C6PPConstructor(p)=>(List(PatternConstructor({typeId:p.type_id,ctorId:p.ctor_id,arity:p.children.len})),q11Slice(v.pattern_children,p.children))
+    }
+  pure def q11Pattern(v:C6PProgram,id:int,budget:int):Pattern = {
+    val scan=range(0,budget).foldl({pending:List(id),tokens:List()},(state,ignored)=>
+      if(state.pending.length()==0) state else {
+        val sourcePatternItem=q11PatternToken(v,state.pending.head())
+        {pending:sourcePatternItem._2.concat(state.pending.tail()),tokens:state.tokens.concat(sourcePatternItem._1)}
+      })
+    val complete:List[Pattern]=if(scan.pending.length()==0) List(NestedPattern(scan.tokens)) else List()
+    complete.head()
+  }
+  pure def q11Expr(v:C6PProgram,id:int,budget:int):Expression = {
+    val candidates:List[Expression]=match v.expressions.nth(id) {
+      | C6PELiteral(p)=>{
+          val read=q11ReadConstant(v,p.constant,budget)
+          if(read.pending.length()==0) List(Literal(read.tokens)) else List()
+        }
+      | C6PEVar(p)=>List(Variable(p.binder))
+      | C6PELet(p)=>List(Let({name:p.binder,value:p.value,body:p.body}))
+      | C6PEBinary(p)=>match p.op {
+          | C6PAdd=>List(Binary({op:Add,left:p.left,right:p.right}))
+          | C6PSub=>List(Binary({op:Sub,left:p.left,right:p.right}))
+          | C6PEq=>List(Binary({op:Equal,left:p.left,right:p.right}))
+          | _=>List()
+        }
+      | C6PEUnary(p)=>match p.op {
+          | C6PNot=>List(BooleanNot(p.operand))
+          | _=>List()
+        }
+      | C6PEIf(p)=>List(If({condition:p.cond,yes:p.then_expr,no:p.else_expr}))
+      | C6PECall(p)=>List(Call({function:p.function_name,arguments:q11Slice(v.children,p.args)}))
+      | C6PEConstruct(p)=>List(Constructor({typeId:p.type_id,ctorId:p.ctor_id,occurrence:id,fields:q11Slice(v.children,p.fields)}))
+      | C6PEMatch(p)=>List(Match({value:p.scrutinee,arms:
+          v.arms.slice(p.arms.start,p.arms.start+p.arms.len).map(a=>{pattern:q11Pattern(v,a.pattern,budget),body:a.body})}))
+    }
+    candidates.head()
+  }
+  pure def q11Program(v:C6PProgram,budget:int):Program = {
+    val expressions:int->Expression=range(0,v.expressions.length()).foldl(Map(),
+      (rows,id)=>rows.put(id,q11Expr(v,id,budget)))
+    val functions:int->Function=v.functions.foldl(Map(),(rows,f)=>{
+      val params=v.parameters.slice(f.params.start,f.params.start+f.params.len)
+      rows.put(f.function_name,{name:f.function_name,parameters:params.map(p=>p.binder),
+        parameterTypes:params.map(p=>p.sort),resultType:f.return_type,body:f.body})
+    })
+    val layouts:(int,int)->Layout=range(0,v.constructors.length()).foldl(Map(),(rows,id)=>{
+      val c=v.constructors.nth(id)
+      rows.put((c.owning_type,id),{typeId:c.owning_type,ctorId:id,
+        fields:v.ctor_fields.slice(c.field_start,c.field_start+c.field_len).map(f=>f.type_id)})
+    })
+    {entry:v.entry,expressions:expressions,functions:functions,layouts:layouts}
+  }
+  pure def q11RunSource(v:C6PProgram,fuel:int,readBudget:int):Snapshot =
+    range(0,fuel).foldl(initial(q11Program(v,readBudget),fuel),(state,ignored)=>
+      if(state.outcome==Pending) advance(state) else state)
+}
