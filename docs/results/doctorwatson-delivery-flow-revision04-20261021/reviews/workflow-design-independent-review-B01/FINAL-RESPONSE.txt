@@ -1,0 +1,59 @@
+**Verdict:** `APPROVE_WORKFLOW_DESIGN_WITH_LIMITS`  
+**Reviewer:** Independent Non-Author Workflow Design & Documentation Review (Standing Opus Quota Fallback: Gemini 4 Argon High)  
+**Outputs Written:** [REPORT.md](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/doctorwatson-delivery-flow-revision04/workflow-design-independent-review-B01/REPORT.md), [FINDINGS.json](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/doctorwatson-delivery-flow-revision04/workflow-design-independent-review-B01/FINDINGS.json)
+
+---
+
+### 1. Assessment of Queue Reduction and Milestone Progression
+
+Revision 04 (`DW-FLOW-04`) directly addresses the root causes of review and integration backlog while ordering execution along the critical dependency chain without relaxing security, resource, C4/C13, or acceptance requirements:
+
+1. **Review and Integration Queue Reduction (`SF-16`, `SF-17`)**:
+   - Establishes [DOCTORWATSON.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/DOCTORWATSON.md) integrate-first discipline under a single integrator: `"Root is the single integration owner"` and `"Integrate first is the default: consume ready source and resolve its actual receiving-API gap before opening more research"`.
+   - Consolidates state into a single in-place continuation (`"Each task has one falsifiable product predicate, one owner, the actual receiving API, exact changed paths and an immediate executable next step"`) rather than accumulating per-step summary packets (`"Keep history immutable and update the current queue rather than writing another summary packet for each step"`).
+   - Offloads mechanical identity bookkeeping to Root (`"Root mechanically generates source pins, copy maps and result metadata; reviewers check behavior rather than transcribing hash tables"`) and requires reviews to verify the real receiving boundary (`"Reject a claimed interface that is absent from the receiving source"`).
+2. **Advancing the Stagenet Recursive Proof and Fenrir Chain with Full Lanes Retained**:
+   - Aligns [DOCTORWATSON.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/DOCTORWATSON.md), [implementation-loop.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/sherlock/implementation-loop.md), and [tasks.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md) on the concrete critical path: `"current native build → two linked child proofs, parent and terminal decider → independent verification → Midnight stagenet recursive validation and complete effects readback → Fenrir scale/performance matrix"`.
+   - Prevents the timed-out P14 literal proof from blocking unrelated native build or recursive relation work: `"The saved literal bundle retains its own independent verification obligation; its timeout neither verifies it nor supplies recursion evidence. Only consumers of that result depend on P14."`
+   - Keeps formal and circuit work active across blocked native steps: `"Keep Clean, Quint, K and handwritten-circuit implementation permanent on these exact slices, including when native work is blocked."`
+
+---
+
+### 2. Mandatory Current Defects and Boundary Limits (Exact Quotes)
+
+The documented shell routes and Python entrypoints accurately match [doctorwatson.sh](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/scripts/doctorwatson.sh), [reconciliation.py](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/reconciliation.py), [run_selected.py](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/run_selected.py), and [recursive-child-parent-terminal.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/sherlock/reference/recursive-child-parent-terminal.md). Approval is bounded by five concrete current limits in the receiving readset:
+
+1. **Non-Build Execution Adapters Remain Blocked in [`ADAPTERS`](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/run_selected.py)**:
+   - Only `"moriarty-sdk-build"` has `"launchable": True` (via `"bounded-sdk-compile-cached-current-f/2"`).
+   - `"handkey-verify-pis"` has `"launchable": False` and `"blockedReason": "selected independent handkey invocation scope absent; collector implemented, launch blocked"`.
+   - `"sherlock-anchor-settle-readback"` has `"launchable": False` and `"blockedReason": "target execution is Root-only and unselected here; no wallet/network authority in this bridge"`.
+   - Every other role in `delivery.ROLES` has `"launchable": False`, `"blockedReason": f"no Root-selected operation/collector for {_adapter} in this revision"`, and `"collector": None`.
+2. **History Flag Optionality Asymmetry Between `--inspect` and `--execute`**:
+   - In [`main`](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/reconciliation.py), `--inspect` enforces `parser.add_argument("--results", required=True)`, whereas [doctorwatson.sh](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/scripts/doctorwatson.sh) accepts `[--history PATH] [--reconciliations PATH]` optionally on `--execute`, and [`load_readiness`](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/reconciliation.py) notes: `"History is an optional input: with none supplied, readiness is assessed over zero results, so no durable replay barrier is claimed without a supplied complete raw history"`. Passing `--reconciliations` without history raises `ReconciliationError("reconciliations require the raw history they reference")`. Root must supply `--history H` on `--execute` as shown in the queue notation.
+3. **Python-Only Scope of `--test-selected` in [doctorwatson.sh](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/scripts/doctorwatson.sh)**:
+   - `--test-selected` runs `"# Focused ordinary test selection: only the DoctorWatson Python suites, optionally narrowed to named test modules. Never runs whole QA."` (`set -- test_delivery test_run_selected test_settle_observation test_reconciliation test_integrated_roundtrip test_execution_reconciliation test_native_adapter07`). Rust, K, Quint, Clean, and circuit checks require their own local commands.
+4. **Uncompiled/Unreviewed S1/S2 Candidate and Unapproved Parent Execution in [recursive-child-parent-terminal.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/sherlock/reference/recursive-child-parent-terminal.md)**:
+   - For `sherlock_link.rs`: `"Its fresh non-author Opus 5.5 opinion approves the MF01–MF06 leaf, with typed API abstentions and composition requirements. It does not approve execution."`
+   - For Moriarty S1/S2 (`produce_linked_requests`, `prove_linked_children`, `verify_linked_children`): `"The private S1 seal is source tooling for verified export of the exact requests/children/verification records; it is not an in-circuit authentication of source, Init or a parent theorem. None of these new A80 calls is claimed compiled or executed."`
+5. **Documented Governance Status in [doctorwatson-improvement-log.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/wiki-llm/doctorwatson-improvement-log.md)**:
+   - `"**Status: documented workflow revision; execution and acceptance remain separate.**"` Code and Quint model runtime checks remain separate follow-up tasks.
+
+---
+
+### 3. Substantive Reasoning
+
+- **Progress vs. Verified Wait Distinction**: Read-only readiness inspection (`scripts/doctorwatson.sh --inspect`, calling [`load_readiness`](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/reconciliation.py) with post-read pin verification `if after != pins:` and exiting `return 0  # inspectable records only; never execution approval`), tool availability (`SF-15`: `"WHEN a tool or layer becomes available, availability SHALL NOT create a passing observation or complete the feature"`), or waiting on a blocked adapter is a **verified wait / explicit blocker** (`"An unavailable call is a named missing consumer or input, never an invented command or successful task"`). **Genuine progress** requires integrating source against the real receiving API and observing a discriminating check or authenticated collector receipt, bounded by `SF-14` (`"WHEN two attempts repeat the same defect class, the owner SHALL reduce the reproducer and change approach before another broad attempt; WHEN two process-only cycles or thirty administration minutes accumulate, the owner SHALL perform eligible work or record the concrete blocker and owner"`).
+- **Affected Check Reuse (`SF-17`)**: `"WHEN only tests change, checks/review SHALL focus on the affected closure and reuse unchanged passing evidence unless composition or a concrete concern requires broader checks."` This avoids redundant reruns of unchanged passing prefixes via `--test-selected MODULE [MODULE...]` while mandating that `"a changed production caller refreshes its affected composition"` and post-PR integration repeats affected local checks.
+- **Applicability of Review vs. Terminal `SUCCESS`**:
+  1. *Provider/Process Return*: `"Provider terminal success means a response returned; source integration, observed checks and accepted behavior need their own evidence."` Likewise, `"Exit 0 plus present files is not enough; see decode_cached_current_f"` and verification requires `"its positive semantic verdict, not exit zero alone"`.
+  2. *Scoped Review*: Approves only the exact inspected changed units and boundary (`"The opinion approves only the exact bounded emitter source, not a later consumer/test source, native proof, measured degree or performance"`).
+  3. *Accepted Product Behavior*: Requires integrated source, digest-pinned [`load_readiness`](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/models/doctorwatson/reconciliation.py), live cgroup/mount restoration probes, and independent verification.
+
+---
+
+### 4. What This Design Does NOT Prove
+
+- Does **not** prove that the live runtime loop is armed (`"Documentation of a continuation does not establish that a runtime loop is armed; report that only from actual live runtime evidence"`).
+- Does **not** execute or prove the current native backend build (`moriarty-sdk-build`), compile or prove the linked children (`LiteralTransitionRequest`, `ReturnPublicationRequest`), compose the manifest/genesis/provenance leaf, or prove `sherlock_link.rs` or the terminal decider.
+- Does **not** verify the saved P14 literal proof or make `handkey-verify-pis` or `sherlock-anchor-settle-readback` launchable.
+- Does **not** establish Midnight stagenet recursive settlement, Fenrir rollup benchmarks (`"Sixteen transactions do not establish a ninety-six-transaction result"`), or code/Quint runtime checks of this revision.
