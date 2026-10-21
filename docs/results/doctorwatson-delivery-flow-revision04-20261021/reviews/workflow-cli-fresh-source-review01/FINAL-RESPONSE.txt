@@ -1,0 +1,63 @@
+FINALRESPONSE: APPROVE_CLI_SOURCE_WITH_LIMITS
+
+MANDATORY_DEFECTS: none
+
+### 1. Verdict & Scope Summary
+Independent non-author source, API, and recorded-result audit of the two-target candidate diff across [scripts/doctorwatson.sh](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/scripts/doctorwatson.sh) and [docs/DOCTORWATSON.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/DOCTORWATSON.md) against `module doctorwatson_delivery_flow` (`models/doctorwatson/doctorwatson_delivery_flow.qnt`) and the 10 recorded stub fixture cases.
+
+This review is performed by Gemini 4 Argon (High) under the standing Opus quota-outage fallback. No commands, tests, imports, subagents, or source writes were executed during this review.
+
+### 2. Technical Assessment & Exact Source Quotes
+
+1. **Strict `--design-flow` Argument Parsing & Tool Resolution Reuse**:
+   - [scripts/doctorwatson.sh](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/scripts/doctorwatson.sh) accepts `--design-flow` only when `$# -eq 1`:
+     > `elif [[ $# -eq 1 && $1 == --design-flow ]]; then`
+     > `  design_flow=true`
+   - Extra positional arguments, extra model paths, `=` suffixes, or unknown flags fall through to `elif [[ $# -ne 0 ]]; then`, print the updated usage string:
+     > `printf 'Usage: %s [--design|--design-flow|--host|--execute TASK --plan PATH --selection PATH --attempt DIR [--history PATH] [--reconciliations PATH]|--inspect --plan PATH --results PATH [--reconciliations PATH] [--next]|--test-selected [MODULE...]]\n' "$0" >&2`
+     and `exit 2` (verified in stub records `extra-argument`, `extra-model`, `equal-suffix`, and `unknown`, each recording `exit 2, Node 0, timeout 0, forbidden 0`).
+   - Tool resolution shares the existing `DOCTORWATSON_NODE` / `DOCTORWATSON_QUINT` check block prior to changing into `models/doctorwatson`:
+     > `if "$design" || "$design_flow"; then`
+     > `  check_mode=--design`
+     > `  if "$design_flow"; then check_mode=--design-flow; fi`
+     > `  node_command="${DOCTORWATSON_NODE:-node}"`
+     > `  quint_command="${DOCTORWATSON_QUINT:-quint}"`
+     Relative executable/CLI paths resolved via `command -v --` are anchored to `$PWD` (`$repo_root`) before the sub-directory `cd`, and missing tools exit `127` with zero Node/timeout calls (`missing-installed-node: exit 127, Node 0, timeout 0, forbidden 0`).
+
+2. **`--design-flow` Reaches Only the 2 New Model Commands with Required Resource Bounds & Exact 23-Test Match**:
+   - Within `if "$design_flow"; then`, the script changes working directory to `$repo_root/models/doctorwatson` and executes only the `typecheck` and `test` commands before `exit 0`:
+     > `if "$design_flow"; then`
+     > `  cd -- "$repo_root/models/doctorwatson"`
+     > `  timeout --signal=KILL 60s env -i PATH=/usr/bin:/bin LANG=C.UTF-8 TMPDIR="${TMPDIR:-/tmp}" \`
+     > `    "$node_path" --max-old-space-size=256 "$quint_path" \`
+     > `    typecheck doctorwatson_delivery_flow.qnt`
+     > `  timeout --signal=KILL 60s env -i PATH=/usr/bin:/bin LANG=C.UTF-8 TMPDIR="${TMPDIR:-/tmp}" \`
+     > `    "$node_path" --max-old-space-size=256 "$quint_path" \`
+     > `    test doctorwatson_delivery_flow.qnt --main=doctorwatson_delivery_flow \`
+     > `    --backend=typescript --max-samples=1 --seed=1 \`
+     > `    '--match=^(?:initialPendingTest|readyIsNotActualResultTest|observedResultMustMatchCurrentAttemptTest|providerSuccessIsNotApplicableReviewTest|wrongActualAPIReviewCannotApproveTest|wrongInspectedSourceCannotApproveTest|interruptedAndReviseAreNotApprovalTest|applicableReviseNeedsChangedCutTest|sourceAuthorCannotSupplyIndependentReviewTest|rootAloneIntegratesTest|reachableIntegrateFirstTest|passingChecksAreNotRequeuedTest|staleReviewCannotApproveChangedCutTest|changedUpstreamInvalidatesDependentEvidenceTest|bothSourceChangesRemainIntegrableTest|staleRunningResultCannotFinishNewCutTest|twoSameFailuresRequireNewApproachTest|changedCutDoesNotEraseFailureThresholdTest|differentFailureClassStartsNewStreakTest|actualCallShapeAndHistoryRequiredTest|sourceMergeDoesNotCompleteFormalOrNativeTest|allActualMilestonesAreNecessaryTest|completionRearmedByChangedCutTest)$'`
+     > `  exit 0`
+     > `fi`
+   - Both commands enforce `cwd` = `$repo_root/models/doctorwatson`, `timeout --signal=KILL 60s`, sanitized `env -i PATH=/usr/bin:/bin LANG=C.UTF-8 TMPDIR="${TMPDIR:-/tmp}"`, and `--max-old-space-size=256`.
+   - The second command pins `--main=doctorwatson_delivery_flow --backend=typescript --max-samples=1 --seed=1` and an exact anchored alternation (`^(?:...)$`) matching all 23 `run ...Test` declarations in `module doctorwatson_delivery_flow` 1-for-1.
+
+3. **First-Failure Fail-Stop & Isolation from QA / Old Model / Native Routes**:
+   - Under `set -euo pipefail`, neither `timeout` invocation is guarded by error-suppressing conditionals. A non-zero exit from `typecheck` halts immediately without invoking `test` (`first-failure-stops: exit 17, Node 1, timeout 1, forbidden 0`), and a non-zero exit from `test` propagates directly (`second-failure-propagates: exit 19, Node 2, timeout 2, forbidden 0`).
+   - On success, `exit 0` terminates the script prior to `models/sherlock/qa/check.py`, `unittest discover`, `models/sherlock/qa/run_host.py`, or the `if "$design"; then` block. No unintended QA, SDK/native, or 10,000-sample `doctorwatson_small` execution can occur on the `--design-flow` path.
+
+4. **Preservation of Existing CLI Routes**:
+   - Early `exec` branches for `--execute` (`models/doctorwatson/run_selected.py`), `--inspect` (`models/doctorwatson/reconciliation.py`), and `--test-selected` (`python3 -m unittest "$@" -v`) are untouched ahead of flag parsing.
+   - When `design_flow=false`, the default QA suite (`check.py` + `models/sherlock/qa` + `models/doctorwatson` unit tests), `--host` (`run_host.py`), and `--design` (the 5 existing 30s/256MiB `doctorwatson.qnt` / `doctorwatson_test.qnt` / `doctorwatson_coverage*.qnt` commands) remain byte-identical in behavior.
+
+5. **Documentation Overlay Consistency**:
+   - [docs/DOCTORWATSON.md](file:///home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/docs/DOCTORWATSON.md) preserves the `source-docs01` preimage tail intact and appends an accurate scope description matching the implementation:
+     > `For the focused finite delivery-flow design check, run`
+     > `` `scripts/doctorwatson.sh --design-flow`. It uses the existing installed Node/Quint ``
+     > `resolution, typechecks only` `` `doctorwatson_delivery_flow.qnt` ``, `then selects its 23`
+     > `named TypeScript tests with` `` `--max-samples=1 --seed=1` `` `; each command has a 60-second`
+     > `wall limit and 256 MiB Node heap. Failure stops the branch. This route skips normal`
+     > `QA and the older` `` `--design` `` `model prefix, including its 10,000-sample run.`
+
+### 3. Explicit Evidence Limits
+- Passing `scripts/doctorwatson.sh --design-flow` exercises only the finite `doctorwatson_delivery_flow.qnt` projection (`typecheck` and 23 named TypeScript tests at `--max-samples=1 --seed=1`).
+- It does not run the older `--design` prefix (including its 10,000-sample `doctorwatson_small` run), does not run the Sherlock or DoctorWatson Python QA suites, and does not establish native circuit proving, Midnight stagenet transaction settlement, or full Sherlock EARS/goal completion.

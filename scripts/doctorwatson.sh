@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local QA; --design and --host select explicit additional local checks.
+# Local QA; --design, --design-flow and --host select explicit local checks.
 # See docs/DOCTORWATSON-CI.md for evidence limits.
 set -euo pipefail
 
@@ -58,25 +58,30 @@ if [[ $# -ge 1 && $1 == --test-selected ]]; then
 fi
 
 design=false
+design_flow=false
 host=false
 if [[ $# -eq 1 && $1 == --design ]]; then
   design=true
+elif [[ $# -eq 1 && $1 == --design-flow ]]; then
+  design_flow=true
 elif [[ $# -eq 1 && $1 == --host ]]; then
   host=true
 elif [[ $# -ne 0 ]]; then
-  printf 'Usage: %s [--design|--host|--execute TASK --plan PATH --selection PATH --attempt DIR [--history PATH] [--reconciliations PATH]|--inspect --plan PATH --results PATH [--reconciliations PATH] [--next]|--test-selected [MODULE...]]\n' "$0" >&2
+  printf 'Usage: %s [--design|--design-flow|--host|--execute TASK --plan PATH --selection PATH --attempt DIR [--history PATH] [--reconciliations PATH]|--inspect --plan PATH --results PATH [--reconciliations PATH] [--next]|--test-selected [MODULE...]]\n' "$0" >&2
   exit 2
 fi
 
 cd -- "$repo_root"
 export PYTHONDONTWRITEBYTECODE=1
 
-if "$design"; then
+if "$design" || "$design_flow"; then
+  check_mode=--design
+  if "$design_flow"; then check_mode=--design-flow; fi
   node_command="${DOCTORWATSON_NODE:-node}"
   quint_command="${DOCTORWATSON_QUINT:-quint}"
   for tool in "$node_command" "$quint_command" timeout env; do
     if ! command -v -- "$tool" >/dev/null 2>&1; then
-      printf 'DoctorWatson --design requires an already installed tool: %s\n' "$tool" >&2
+      printf 'DoctorWatson %s requires an already installed tool: %s\n' "$check_mode" "$tool" >&2
       exit 127
     fi
   done
@@ -85,9 +90,24 @@ if "$design"; then
   [[ "$node_path" == /* ]] || node_path="$PWD/$node_path"
   [[ "$quint_path" == /* ]] || quint_path="$PWD/$quint_path"
   if [[ ! -x "$node_path" || ! -f "$quint_path" ]]; then
-    printf 'DoctorWatson --design requires a Node executable and a Quint JavaScript CLI file.\n' >&2
+    printf 'DoctorWatson %s requires a Node executable and a Quint JavaScript CLI file.\n' "$check_mode" >&2
     exit 127
   fi
+fi
+
+# Focused finite delivery-flow design check. No QA, old model prefix, native
+# operation or fallback runs in this branch. Both commands stop on first failure.
+if "$design_flow"; then
+  cd -- "$repo_root/models/doctorwatson"
+  timeout --signal=KILL 60s env -i PATH=/usr/bin:/bin LANG=C.UTF-8 TMPDIR="${TMPDIR:-/tmp}" \
+    "$node_path" --max-old-space-size=256 "$quint_path" \
+    typecheck doctorwatson_delivery_flow.qnt
+  timeout --signal=KILL 60s env -i PATH=/usr/bin:/bin LANG=C.UTF-8 TMPDIR="${TMPDIR:-/tmp}" \
+    "$node_path" --max-old-space-size=256 "$quint_path" \
+    test doctorwatson_delivery_flow.qnt --main=doctorwatson_delivery_flow \
+    --backend=typescript --max-samples=1 --seed=1 \
+    '--match=^(?:initialPendingTest|readyIsNotActualResultTest|observedResultMustMatchCurrentAttemptTest|providerSuccessIsNotApplicableReviewTest|wrongActualAPIReviewCannotApproveTest|wrongInspectedSourceCannotApproveTest|interruptedAndReviseAreNotApprovalTest|applicableReviseNeedsChangedCutTest|sourceAuthorCannotSupplyIndependentReviewTest|rootAloneIntegratesTest|reachableIntegrateFirstTest|passingChecksAreNotRequeuedTest|staleReviewCannotApproveChangedCutTest|changedUpstreamInvalidatesDependentEvidenceTest|bothSourceChangesRemainIntegrableTest|staleRunningResultCannotFinishNewCutTest|twoSameFailuresRequireNewApproachTest|changedCutDoesNotEraseFailureThresholdTest|differentFailureClassStartsNewStreakTest|actualCallShapeAndHistoryRequiredTest|sourceMergeDoesNotCompleteFormalOrNativeTest|allActualMilestonesAreNecessaryTest|completionRearmedByChangedCutTest)$'
+  exit 0
 fi
 
 python3 models/sherlock/qa/check.py --requirement-evidence \

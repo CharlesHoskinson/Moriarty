@@ -1,0 +1,70 @@
+**Verdict:** `APPROVE_MODEL_SOURCE_AND_FOCUSED_CHECKS_WITH_LIMITS` / `APPROVE_SOURCE_WITH_LIMITS`  
+**Reviewer Identity:** Gemini 4 Argon (High) — independent non-author ordinary Quint source/API/scenario review under observed Opus quota fallback.
+
+### 1. Confirmation of Complete Readset & Zero Execution
+I have inspected the complete provided inputs in full without executing any Quint, Node, model, provider, native, subagent, or Git commands:
+- `REQUIREMENTS.md` (4,036 bytes, SHA-256 `725ad6df...`)
+- `ACTUAL-API-READSET.md` (7,818 bytes, SHA-256 `af3a92d1...`)
+- `EARS-SF16-17-INPUT.md` (1,266 bytes, SHA-256 `e95804b2...`)
+- `EARS-COVERAGE.md` (2,244 bytes, SHA-256 `844d6b8c...`)
+- [doctorwatson_delivery_flow.qnt](file:///home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/doctorwatson-delivery-flow-revision04/source-quint01/after/models/doctorwatson/doctorwatson_delivery_flow.qnt) (23,650 bytes, SHA-256 `51a8c529...`)
+- `ROOT-COMMANDS.json` (2,986 bytes, SHA-256 `7050ca21...`)
+- `REPORT.md` (3,642 bytes, SHA-256 `a1666df6...`)
+
+Prior design-review approvals are not inherited for source review, and source approval does not infer test passes from test definitions.
+
+---
+
+### 2. Mandatory Defects
+**None.** No blocking syntax, typing, effect-mode, API-representation, invariant-inductiveness, non-vacuity, or scenario-reachability defects were found in `doctorwatson_delivery_flow.qnt` or `ROOT-COMMANDS.json`.
+
+*(Non-blocking note: `REQUIREMENTS.md` item 8 mentions `30s/256MiB` while `ROOT-COMMANDS.json` and `REPORT.md` reflect the latest explicit `60s/256MiB` Root bound; `ROOT-COMMANDS.json` matches the authorized `60s/256MiB` scope.)*
+
+---
+
+### 3. Technical Verification & Exact Source Quotes
+
+#### A. Quint Syntax, Types, Effects, and Finite Bounds
+- All sum types (`API`, `Predicate`, `Phase`, `Provider`, `Verdict`, `Failure`, `Milestone`), records (`Cut`, `Call`, `Stamp`, `Key`, `ActualResult`, `Review`, `Merge`, `ProjectCut`, `MilestoneResult`, `Task`, `State`), `pure val`/`pure def` declarations, `var state: State`, `action`, and `run` definitions are syntactically and type/effect valid in Quint.
+- Finite bounds in `bounds` (lines 209–213) are inductive across `init` and `step`:
+  - `canReady` enforces `s.tasks.get(id).attempt < 3` (line 89) before `applyStart` increments `attempt: t.attempt + 1` (line 99) and transitions `phase` from `Ready` to `Running`, bounding `attempt <= 3`.
+  - `canReady` and `canStart` enforce `s.tasks.get(id).sameFailures < 2` (lines 89, 95), so `applyResult` can only increment `sameFailures` from at most `1` to `2` (line 115).
+  - `canMerge` enforces `s.integrationBase < 5` (line 128), bounding `integrationBase <= 5`.
+
+#### B. Real Receiver Dependency (`LoadReadiness` → `ResolveTask` vs `InspectDelivery`)
+- `reconciliation.load_readiness(plan_path, history_path=None, reconciliations_path=None)` (`reconciliation.py:564`) refuses `reconciliations_path is not None and history_path is None`, and `run_selected.resolve_task(plan_path, task_id, history_path=None, reconciliations_path=None)` (`run_selected.py:295`) directly calls `reconciliation.load_readiness(...)` and requires `task_id`. `delivery.inspect_delivery(plan_path, history_path)` (`delivery.py:716`) is a distinct function.
+- `validCall` (lines 60–64) and `dependenciesReady` (line 84) accurately project this dependency and signature constraint:
+  > `pure def validCall(id: int, call: Call): bool = and { call.api == actualAPI(id), call.plan, not(call.reconciliations) or call.history, call.taskArgument == (if (id == 1) 0 else id), }`  
+  > `pure def dependenciesReady(s: State, id: int): bool = id == 1 or currentMerge(s, 1)`
+- Verified in `reachableIntegrateFirstTest` (lines 258–260) and `actualCallShapeAndHistoryRequiredTest` (lines 289–295).
+
+#### C. Actual Observed Results, Review Applicability, and `Revise` Blocking
+- `Ready` does not produce a result (`readyIsNotActualResultTest`, lines 226–227). `currentPass` (lines 65–69) requires an `observed: true, passed: true, failure: NoFailure` record matching `keyAt(s, id, s.tasks.get(id).attempt)`.
+- `examined` and `reviewedForMerge` (lines 70–78) require exact key, cut, API, `sourceRead`, `apiRead`, independent `REVIEWER`, `ProviderSucceeded`, `Approve`, and the absence of any `examined` `Revise` on the same key:
+  > `pure def examined(review: Review, key: Key): bool = and { review.key == key, review.inspectedSource == key.cut, review.inspectedAPI == key.cut.api, review.sourceRead, review.apiRead, review.reviewer == REVIEWER, review.provider == ProviderSucceeded, }`  
+  > `pure def reviewedForMerge(s: State, key: Key): bool = s.reviews.exists(r => applicable(r, key)) and not(s.reviews.exists(r => examined(r, key) and r.verdict == Revise))`
+- Provider `ProviderSucceeded` without source/API read (`providerSuccessIsNotApplicableReviewTest`, lines 234–236), wrong API `InspectDelivery` (`wrongActualAPIReviewCannotApproveTest`, lines 237–240), wrong source cut (`wrongInspectedSourceCannotApproveTest`, lines 241–243), `ProviderInterrupted` (`interruptedAndReviseAreNotApprovalTest`, lines 244–247), and self-review (`sourceAuthorCannotSupplyIndependentReviewTest`, lines 253–254) all fail to enable `canMerge`.
+- An `examined` `Revise` blocks `canMerge` even after `goodReview(state, 1)` is added on the same key, requiring `changeCut(1, 1)` (`applicableReviseNeedsChangedCutTest`, lines 248–252), while a wrong-API review is retained without blocking a valid approval on that cut (`wrongActualAPIReviewCannotApproveTest`, lines 237–240).
+
+#### D. Stale-Cut Invalidation, Append-Only History, and 5-Merge Non-Vacuity
+- `keyAt` binds `dependency: if (id == 1) emptyStamp else stamp(s, 1)` and `base: s.tasks.get(id).base` (lines 49–54).
+- `applyCut` (lines 138–144) resets `affected(id)` (`Set(1, 2)` for task 1; `Set(2)` for task 2) to `phase: Queued, pending: emptyKey` and sets `complete: false`, while changing `cut.source` only for `other == id` and preserving `results`, `reviews`, `merges`, and `milestones`:
+  > `if (affected(id).contains(other)) { ...t, phase: Queued, pending: emptyKey, cut: if (other == id) { ...t.cut, source: 1 } else t.cut }`
+- `bothSourceChangesRemainIntegrableTest` (lines 271–274) is a genuine executable composition reaching all 5 merges (`integrate(1)` → `integrate(2)` → `changeCut(2, 2)` → `integrate(2)` → `changeCut(1, 1)` → `integrate(1)` → `integrate(2)`) with `state.integrationBase == 5` and `state.tasks.get(2).attempt == 3`.
+
+#### E. Two Same-Class Failure Stop vs. Approach Reset
+- `applyResult` (lines 111–116) tracks consecutive same-class failures:
+  > `sameFailures: if (result.passed) 0 else if (t.failure == result.failure) t.sameFailures + 1 else 1`
+- Two `CheckMismatch` failures disable `canReady` and `canStart`; neither `changeCut(1, 1)` nor `configureCall(1, 1, actualCall(1))` resets `sameFailures` (`changedCutDoesNotEraseFailureThresholdTest`, lines 283–286), whereas `changeApproach(1, 1)` resets `sameFailures` and increments `approach` (`twoSameFailuresRequireNewApproachTest`, lines 279–282), and a different failure class (`CheckTimeout`) starts a new streak at `1` (`differentFailureClassStartsNewStreakTest`, lines 287–288).
+
+#### F. Pending Milestones, Completion, and Rearm
+- Source integration (`integrate(1)` then `integrate(2)`) succeeds with `state.milestones == Set()` (`reachableIntegrateFirstTest`, `sourceMergeDoesNotCompleteFormalOrNativeTest`).
+- `canComplete` (lines 163–166) requires `currentMerge` for both tasks plus all 7 `REQUIRED` milestones (`RecursiveProof`, `StagenetReadback`, `DegreeAndBenchmark`, `KLane`, `QuintLane`, `CleanLane`, `HandwrittenCircuit`) matching `projectCut(s)` with `actual: true, passed: true` (`allActualMilestonesAreNecessaryTest`, lines 299–304).
+- `completionRearmedByChangedCutTest` (lines 305–308) verifies that `changeCut(1, 1)` after `complete` clears `state.complete`, preserves the 7 prior milestone records, requires re-integration of tasks 1 and 2 plus 7 new milestone observations on the updated `projectCut(state)`, and finishes with `state.milestones.size() == 14`.
+
+---
+
+### 4. Authorization for Prospective Focused Checks & Scope Limits
+- All 23 `run` names in `doctorwatson_delivery_flow.qnt` (lines 224–308) exactly match the `--match` alternation in `ROOT-COMMANDS.json` (`expectedNamedTests: 23`).
+- **Root is authorized to run only `01-new-flow-typecheck` then `02-new-flow-named-tests` once each** under the unchanged `60s` wall / `256MiB` Node old-space (`--backend=typescript --max-samples=1 --seed=1`) scope using existing capture.
+- **Explicit limits:** This review approves model/test source only. It is not an observed test pass, EARS closure, Python runtime enforcement proof, liveness proof, or native/stagenet/circuit/formal acceptance. The existing public model, draft PR 367, and the incomplete `10000×60` (`30s`) sampled obligation remain separate and are not rerun or relabelled.

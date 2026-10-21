@@ -1,11 +1,53 @@
 # DoctorWatson: the Sherlock software factory
 
-Current working plan, updated 2026-10-17. The user names the factory **DoctorWatson**;
+Current working plan, updated 2026-10-21. The user names the factory **DoctorWatson**;
 Sherlock is the universal interpreter it builds. The user authorizes building and running this
 factory and requires **local CI**, because hosted CI is too expensive. GitHub
 stores source, PRs and result summaries. No Foreman or replacement scheduler is
 used. The [research review](research/sherlock/factory-2026-10-16/README.md)
 records the nine planning reviews and ten online research assignments.
+
+## Current delivery rule — integrate ready work first
+
+Root is the single integration owner. Keep the full Sherlock design and retained
+roadmap; select work toward **current native build → two linked child proofs,
+parent and terminal decider → independent verification → Midnight stagenet
+validation and complete effects readback → Fenrir feasibility measurements**.
+Keep the Clean, Quint, K and handwritten-circuit lanes active on these slices.
+A saved literal proof has its own verification gap; it cannot stand in for the
+linked recursive fixture or block unrelated eligible source work.
+
+Each task has one falsifiable product predicate, one owner, the actual receiving
+API, exact changed paths and an immediate executable next step. Root keeps one
+current continuation with that queue, current source/attempt, pending review or
+check, first blocker and next call with resolved inputs. Update that continuation
+in place; preserve prior results and failure/resource history. Source integration,
+observed tests and accepted product behavior are separate dispositions.
+
+Two approaches remain available. More agents can explore independent missing
+relations in parallel, but add review and integration work. **Integrate first is
+the default:** consume ready source and resolve its actual receiving-API gap
+before opening more research. Add a worker only for a bounded, independent task
+that advances a named predicate and has a receiving owner. Keep useful parallel
+formal and handwritten implementation running while a consuming operation is
+blocked.
+
+Reviews quote the actual changed units and enough adjacent caller/callee source
+to check the real API, with exact source quotes or a concrete counterexample for
+a finding. Reject a claimed interface that is absent from the receiving source.
+Root mechanically generates source pins, copy maps and result metadata; reviewers
+check behavior rather than transcribing hash tables. Full candidate bytes remain
+available. Review the affected closure: a test-only edit needs a focused review
+and selected discriminating checks, not an unchanged passing prefix rerun.
+Refresh wider checks when changed composition or a concrete unresolved concern
+requires them. Existing independent security, resource and acceptance obligations
+remain unchanged; these rules add no approval layer.
+
+The [operational queue](sherlock/implementation-loop.md#current-operational-queue)
+and [existing tasks](../openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md)
+name the next consumers. Local CI stays explicit. Documentation of a continuation
+does not establish that a runtime loop is armed; report that only from actual
+live runtime evidence.
 
 The default executable lane checks the independent A-profile corpus, its
 committed source transcription and the current Sherlock EARS evidence report.
@@ -68,7 +110,9 @@ The [whole025 reporting adoption](results/sherlock-model-only-evidence-record-20
    and its remaining work in the existing
    [Sherlock plan](SHERLOCK-IMPLEMENTATION-PLAN.md) or current
    [A-machine status](../openspec/changes/sherlock-machine-circuit-layout/IMPLEMENTATION-STATUS-2026-10-16.md).
-   Name its existing requirement/rule, actual consumer and observable result.
+   Name one falsifiable product predicate, its existing requirement/rule, actual
+   receiving API, owner and immediate executable next call. Integrate ready work
+   before starting a new research packet.
 2. Assign disjoint paths and an owner. Freeze independent expected observations
    before executing the implementation. Shared interfaces belong to one integrator.
 3. Implement the smallest useful consumer increment. Run local ordinary checks
@@ -77,8 +121,9 @@ The [whole025 reporting adoption](results/sherlock-model-only-evidence-record-20
 4. Compare complete states, prefixes, charges, outcomes and relevant ordered
    financial effects. Preserve the first failing input and field difference.
    Repair from the semantic contract, rather than replacing the expected result.
-5. Give a fresh non-author reviewer the full candidate and actual results.
-   Integrate through a normal GitHub PR; repeat affected local checks after
+5. Give a fresh non-author reviewer the candidate, actual changed units, adjacent
+   receiving API and scoped results. Root integrates through a normal GitHub PR;
+   repeat affected local checks after
    integration changes. Update the requirement row and its supporting pins;
    close only the complete reviewed predicate. Report source, observations and
    acceptance separately. Stale evidence cannot retain a current closure.
@@ -122,10 +167,11 @@ the design, not a scheduler or proof that agents/Git execute the design faithful
 
 ## Parallel ownership
 
-Use the available session slots for independent ready work. There is no fixed
-three- or six-lane ceiling. More workers help only while write sets, review,
-integration and physical resources remain available. Source concurrency changes
-no execution authority or resource counter.
+Integrate ready source before expanding the queue. Use available session slots
+for independent ready work with a real receiving owner; there is no fixed three-
+or six-lane ceiling. More workers help only while write sets, review, integration
+and physical resources remain available. Root owns shared integration. Source
+concurrency changes no execution authority or resource counter.
 
 | Work | Owner | Useful Luna support |
 |---|---|---|
@@ -217,3 +263,12 @@ bounded Opus source request targets one H2 scalar validation function and two
 tests. This adds no financial, native, B-charge, program or EARS closure. Keep
 the permanent Quint, Clean, K and handwritten-circuit lanes active. See the
 [qualified H1 record](results/sherlock-core2-await-uint-h1-20261018/README.md).
+
+For the focused finite delivery-flow design check, run
+`scripts/doctorwatson.sh --design-flow`. It uses the existing installed Node/Quint
+resolution, typechecks only `doctorwatson_delivery_flow.qnt`, then selects its 23
+named TypeScript tests with `--max-samples=1 --seed=1`; each command has a 60-second
+wall limit and 256 MiB Node heap. Failure stops the branch. This route skips normal
+QA and the older `--design` model prefix, including its 10,000-sample run. These
+finite design tests do not establish native execution, proof/ledger acceptance
+or a general runtime refinement; `--design` retains its separate existing scope.
