@@ -1,0 +1,52 @@
+from pathlib import Path
+import hashlib,json,os,runpy,stat
+Q=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10')
+H=Q/'root-manual-capture-data01'
+helper=H/'capture-helper.FULL.py.txt'
+assert hashlib.sha256(helper.read_bytes()).hexdigest()=='713119d9400f82d559967e4296313cec8cde7125dc91a74152500577ced00626'
+h=runpy.run_path(str(helper),run_name='root_selected_api_only')
+manifest=H/'CURRENT-4680-PIN-MANIFEST.json'
+assert hashlib.sha256(manifest.read_bytes()).hexdigest()=='35ad2444d1585857cb338fd7338f08678411e8d9947be2f8e5975e398a6d671d'
+m=json.loads(manifest.read_text())
+operation=H/'02-fourExactNominalSourceCaseTests.COMMAND.proposed.json'
+assert hashlib.sha256(operation.read_bytes()).hexdigest()=='f392779bc6af576d71dd4ab7996512afc4cdf9e731229595a2d0a01a5e5435f2'
+op=json.loads(operation.read_text())
+A=Q/'root-actual-separate-operations01'
+assert json.loads((A/'01-newNominalSourceRuntimeFrontend/ROOT-DISPOSITION.json').read_text())['accepted'] is True
+phase=A/op['id'];phase.mkdir(mode=0o700)
+h['save'](phase/'ROOT-SELECTION.json',{'status':'ROOT_SEPARATELY_SELECTS_FOUR_EXACT_NEW_NOMINAL_SOURCE_TESTS','manualComposition':h['pin'](Path(__file__)),'operation':h['pin'](operation),'manifest':h['pin'](manifest),'sourceReview':h['pin'](Q/'../formal-public-nominal-counterparts-fresh-gemini4-source-review01/QUINT-REPORT.md'),'helper':h['pin'](helper),'followingOperationsSelected':False})
+pre=h['static_check'](m['files'])
+h['save'](phase/'PRE-FILES.json',pre)
+assert pre['all_match']
+assert sorted(p.name for p in (Q/'afterimages').iterdir())==m['sourceExactEntries']
+assert all(stat.S_ISREG(p.lstat().st_mode) for p in (Q/'afterimages').iterdir())
+symlinks=[]
+for row in m['symlinks']:
+ p=Path(row['path'])
+ actual={'path':str(p),'target':os.readlink(p),'resolved':str(p.resolve(strict=True)),'isDirectory':p.resolve().is_dir()}
+ assert actual==row
+ symlinks.append(actual)
+h['save'](phase/'PRE-SYMLINKS.json',symlinks)
+result=h['capture'](op,phase)
+h['save'](phase/'RESULT.json',result)
+for p in phase.iterdir():
+ if p.is_file():
+  fd=os.open(p,os.O_RDONLY);os.fsync(fd);os.close(fd)
+fd=os.open(phase,os.O_RDONLY);os.fsync(fd);os.close(fd)
+post=h['static_check'](m['files'])
+h['save'](phase/'POST-FILES.json',post)
+assert post['all_match']
+assert sorted(p.name for p in (Q/'afterimages').iterdir())==m['sourceExactEntries']
+assert all(stat.S_ISREG(p.lstat().st_mode) for p in (Q/'afterimages').iterdir())
+for row in m['symlinks']:
+ p=Path(row['path'])
+ assert os.readlink(p)==row['target'] and str(p.resolve(strict=True))==row['resolved'] and p.resolve().is_dir()==row['isDirectory']
+h['save'](phase/'POST-SYMLINKS.json',symlinks)
+accepted=result['actual_exit']==0 and result['controller_failure'] is None and len(result['streams'])==2 and all(s['full_stream_retained'] for s in result['streams'])
+h['save'](phase/'RAW-CAPTURE-STATUS.json',{'captureComplete':accepted,'scope':'exact four new source10 nominal tests; semantic classification pending full stdout read','result':h['pin'](phase/'RESULT.json'),'staticRows':m['count'],'nextOperationSelected':False})
+for p in phase.iterdir():
+ if p.is_file():
+  fd=os.open(p,os.O_RDONLY);os.fsync(fd);os.close(fd)
+fd=os.open(phase,os.O_RDONLY);os.fsync(fd);os.close(fd)
+print(json.dumps({'accepted':accepted,'result':result}))
+assert accepted
