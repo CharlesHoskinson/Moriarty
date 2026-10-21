@@ -18,6 +18,7 @@ HISTORICAL_EXPIRY = 1893456000000
 REF = re.compile(r"[0-9a-f]{64}#(?:0|[1-9][0-9]*)\Z")
 CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 SELECTED_WALLET = "addr_test1vzt2n53u2vlr8ggxz8xan6ywrw8m55umfwvrgmzh3wmcmkcfxunjc"
+TOTAL_COLLATERAL_CEILING = 5000000  # Current designated-owner proposal, retained by root.
 
 
 def _json_bytes(value):
@@ -67,14 +68,19 @@ def _handoff(repo):
     return module.inspect_handoff(repo)
 
 
-def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
+def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview", *,
+                 now=None, max_protocol_capture_age_seconds=300):
     """Return deterministic public files and a concrete build-raw argument list.
 
     `observation` uses cardano_preview_readiness's normalized public fields.
     Its freshness/provider receipts still require the readiness consumer's
     separate assessment. `request` supplies transaction selections and amounts.
-    Distinct ADA-only funding/collateral inputs are required. No collateral
-    return is constructed: the entire selected collateral is the failure cap.
+    The request's `cli_protocol_parameters_capture` contains exact `body_text`
+    and its public `receipt`. The dedicated inspector checks that full capture
+    against this observation; normalized fields are never emitted as CLI JSON.
+    Distinct ADA-only funding/collateral inputs are required. The collateral
+    total is rounded up from the supplied fee and observed percentage; its
+    remainder returns to the selected wallet under the explicit output minimum.
     """
     if type(request) is not dict or type(observation) is not dict:
         raise ValueError("request and observation must be JSON objects")
@@ -91,6 +97,7 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
         "output_directory": str(output_dir), "files": {},
         "build_raw_argv": None, "expected_effects": None, "blockers": blockers,
         "funding_preparation": {"required": False},
+        "next_step": "Review the prepared public files and encode the unsigned body; no Cardano command is executed by this tool.",
         "qualification": "Verifier-only C2 claim mint preparation. No CLI decoding, minimum-ADA/fee calculation, ledger evaluation, signing or submission observed.",
     }
     if not handoff["ready_for_payload_encoding"]:
@@ -112,7 +119,8 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
 
     amounts = {}
     for name in ("claim_lovelace", "fee_lovelace", "fee_cap_lovelace", "min_claim_lovelace",
-                 "min_change_lovelace", "max_collateral_loss_lovelace", "max_claim_loss_lovelace",
+                 "min_change_lovelace", "min_collateral_return_lovelace",
+                 "max_collateral_loss_lovelace", "max_claim_loss_lovelace",
                  "invalid_before", "invalid_hereafter"):
         try:
             amounts[name] = _integer(request[name])
@@ -195,24 +203,60 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
             blockers.append("EXECUTION_UNITS_EXCEED_SUPPLIED_PROTOCOL_MAXIMUM")
     except (KeyError, TypeError, ValueError):
         blockers.append("PLUTUS_V3_PROTOCOL_PARAMETERS_REQUIRED")
+    capture = request.get("cli_protocol_parameters_capture")
+    inspection = None
+    if type(capture) is not dict or type(capture.get("body_text")) is not str or type(capture.get("receipt")) is not dict:
+        blockers.append("CLI_PROTOCOL_PARAMETERS_CAPTURE_REQUIRED")
+        plan["next_step"] = "Supply the exact full CLI protocol-parameter capture as body_text with its public receipt; normalized protocol fields alone cannot supply the CLI file."
+    else:
+        inspector_path = Path(__file__).with_name("preview_protocol_parameters.py")
+        try:
+            spec = importlib.util.spec_from_file_location("preview_public_cli_parameters", inspector_path)
+            inspector = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(inspector)
+            inspection = inspector.inspect_cli_protocol_parameters(
+                {"body": capture["body_text"].encode("utf-8"), "receipt": capture["receipt"]},
+                observation, now=now, max_age_seconds=max_protocol_capture_age_seconds)
+        except FileNotFoundError:
+            blockers.append("CLI_PROTOCOL_PARAMETERS_INSPECTOR_MISSING")
+        except (UnicodeError, TypeError, ValueError) as error:
+            blockers.append("CLI_PROTOCOL_PARAMETERS_CAPTURE_INVALID: " + str(error))
+        if inspection is not None:
+            if inspection["valid"]:
+                receipt_bytes = _json_bytes(capture["receipt"])
+                plan["cli_protocol_parameters"] = {
+                    "body_sha256": inspection["body_sha256"], "byte_length": inspection["byte_length"],
+                    "receipt": json.loads(receipt_bytes),
+                    "receipt_canonical_json_sha256": hashlib.sha256(receipt_bytes).hexdigest(),
+                    "normalized_source_body_sha256": plan.get("protocol_source_body_sha256"),
+                    "cli_decoder_executed": False,
+                }
+            else:
+                blockers.extend("CLI_PROTOCOL_PARAMETERS_CAPTURE: " + row["code"] + ": " + row["detail"]
+                                for row in inspection["blockers"])
+                plan["next_step"] = "Supply a current exact full CLI protocol-parameter capture and receipt that agree with the normalized public Preview snapshot; no normalized subset will be emitted."
     if blockers:
         return plan
 
     claim, fee = amounts["claim_lovelace"], amounts["fee_lovelace"]
     funding, collateral = selected["funding"], selected["collateral"]
     change = funding["lovelace"] - claim - fee
+    total_collateral = (fee * collateral_percent + 99) // 100
+    collateral_return = collateral["lovelace"] - total_collateral
     if fee > amounts["fee_cap_lovelace"]:
         blockers.append("FEE_CAP_EXCEEDED")
     if not fee or not claim or claim < amounts["min_claim_lovelace"]:
         blockers.append("CLAIM_OUTPUT_BELOW_SUPPLIED_MINIMUM")
     if change <= 0 or change < amounts["min_change_lovelace"]:
         blockers.append("CHANGE_OUTPUT_BELOW_SUPPLIED_MINIMUM")
-    if collateral["lovelace"] > amounts["max_collateral_loss_lovelace"]:
+    if total_collateral > min(amounts["max_collateral_loss_lovelace"], TOTAL_COLLATERAL_CEILING):
         blockers.append("COLLATERAL_LOSS_CAP_EXCEEDED")
     if claim > amounts["max_claim_loss_lovelace"]:
         blockers.append("CLAIM_LOSS_CAP_EXCEEDED")
     if collateral["lovelace"] * 100 < fee * collateral_percent:
         blockers.append("COLLATERAL_BELOW_SUPPLIED_PROTOCOL_REQUIREMENT")
+    if collateral_return <= 0 or collateral_return < amounts["min_collateral_return_lovelace"]:
+        blockers.append("COLLATERAL_RETURN_BELOW_SUPPLIED_MINIMUM")
     if amounts["invalid_before"] >= amounts["invalid_hereafter"]:
         blockers.append("INVALID_VALIDITY_INTERVAL")
     if blockers:
@@ -240,12 +284,15 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
     add_file("c2.plutus", _json_bytes({"type": "PlutusScriptV3", "description": "Existing applied K10 C2 public verifier-only test mint", "cborHex": script_hex}).decode())
     add_file("claim.inline-datum.json", _json_bytes(datum).decode())
     add_file("claim.inline-datum.cbor", payload["inline_datum_cbor_hex"], "hex")
-    add_file("protocol-parameters.json", _json_bytes(parameters).decode())
+    add_file("protocol-parameters.json", inspection["raw_text"])
     path = lambda name: str(output_dir / name)
     asset = identity["script_hash"] + "." + identity["token_name"]
     plan["build_raw_argv"] = [
         "cardano-cli", "conway", "transaction", "build-raw",
         "--tx-in", funding["ref"], "--tx-in-collateral", collateral["ref"],
+        # CLI 11.3.1 fc466f22 Common.Option pReturnCollateral/pTotalCollateral.
+        "--tx-out-return-collateral", f"{wallet}+{collateral_return}",
+        "--tx-total-collateral", str(total_collateral),
         "--tx-out", f"{script_address}+{claim}+1 {asset}",
         "--tx-out-inline-datum-file", path("claim.inline-datum.json"),
         "--tx-out", f"{change_address}+{change}",
@@ -261,6 +308,7 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
         "format": "doctorwatson-utxo-preview-c2-expected-effects/1",
         "evidence_kind": "pre-execution-expectations", "identity": identity,
         "protocol_source_body_sha256": source_digest,
+        "cli_protocol_parameters": plan["cli_protocol_parameters"],
         "success": {
             "ordinary_inputs": [funding["ref"]], "funding_input_lovelace": funding["lovelace"],
             "outputs": [
@@ -276,15 +324,23 @@ def prepare_plan(repo, request, observation, output_dir="prepared-c2-preview"):
         },
         "phase2_failure": {
             "ordinary_inputs_consumed": [], "claim_tokens_minted": 0,
-            "collateral_ref": collateral["ref"], "maximum_collateral_debit_lovelace": collateral["lovelace"],
-            "collateral_return": None, "reason": "No collateral-return field is constructed; the whole selected collateral is exposed.",
+            "collateral_ref": collateral["ref"], "collateral_input_lovelace": collateral["lovelace"],
+            "maximum_collateral_debit_lovelace": total_collateral,
+            "total_collateral_lovelace": total_collateral,
+            "collateral_return": {"address": wallet, "lovelace": collateral_return, "assets": []},
+            "collateral_conservation": f"{collateral['lovelace']} = {collateral_return} + {total_collateral}",
+            "reason": "The specified total collateral is the phase-2 failure debit; the remainder returns to the selected wallet. Actual ledger behavior remains unobserved.",
         },
         "claim_custody": {"status": "unresolved", "maximum_locked_lovelace": claim,
                           "max_claim_loss_lovelace": amounts["max_claim_loss_lovelace"],
                           "reason": "Archived claimant 555 requires its signature for claim.release; archived outref 222 is fabricated. Claim-output lovelace is locked; no recoverable ownership or financial settlement is established."},
         "supplied_planning_inputs": {"execution_units": units, "execution_units_source": request["execution_units_source"],
                                      "fee_source": request["fee_source"], "min_claim_lovelace": amounts["min_claim_lovelace"],
-                                     "min_change_lovelace": amounts["min_change_lovelace"], "measured": False},
+                                     "min_change_lovelace": amounts["min_change_lovelace"],
+                                     "min_collateral_return_lovelace": amounts["min_collateral_return_lovelace"],
+                                     "max_collateral_loss_lovelace": amounts["max_collateral_loss_lovelace"],
+                                     "owner_total_collateral_ceiling_lovelace": TOTAL_COLLATERAL_CEILING,
+                                     "measured": False},
         "unobserved": ["current-input freshness", "CLI protocol-parameter decoding", "minimum ADA and minimum fee", "ledger-budget evaluation", "inclusion and output readback"],
     }
     plan["ready_for_build_argv"] = True
