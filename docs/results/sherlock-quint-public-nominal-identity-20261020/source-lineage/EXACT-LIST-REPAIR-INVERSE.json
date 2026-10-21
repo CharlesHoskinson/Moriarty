@@ -1,0 +1,58 @@
+{
+  "before": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-identity-source11/revision02-local-name-collisions/afterimages/q11NominalIdentity.qnt",
+    "bytes": 12092,
+    "sha256": "d09716c4c95f68313e00b3d8e1ec26c07ee24aabceb1064201c163aa6ba8f439"
+  },
+  "after": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-identity-source11/revision03-ordered-list-folds/afterimages/q11NominalIdentity.qnt",
+    "bytes": 12420,
+    "sha256": "9d098cabab74868fd1dbcefd33940322ee4bc28f6eca26fdc07ce024c06973a3"
+  },
+  "replacementCount": 8,
+  "replacements": [
+    {
+      "before": "range(0,c.field_len).map(i => {\n      val rowId=c.field_start+i\n      val raw=v.ctor_fields.nth(rowId)\n      {row_id:rowId,ordinal:i,raw:raw,name:if(c.owning_type>=4) v.names.nth(raw.name_id) else List()}\n    })",
+      "after": "range(0,c.field_len).foldl(List(),(mappedRows,i) => {\n      val rowId=c.field_start+i\n      val raw=v.ctor_fields.nth(rowId)\n      mappedRows.append({row_id:rowId,ordinal:i,raw:raw,name:if(c.owning_type>=4) v.names.nth(raw.name_id) else List()})\n    })",
+      "count": 1
+    },
+    {
+      "before": "range(0,v.types.length()).map(i=>q11TypeBinding(v,i))",
+      "after": "range(0,v.types.length()).foldl(List(),(mappedRows,i)=>mappedRows.append(q11TypeBinding(v,i)))",
+      "count": 1
+    },
+    {
+      "before": "range(0,v.constructors.length()).map(i=>q11CtorBinding(v,i))",
+      "after": "range(0,v.constructors.length()).foldl(List(),(mappedRows,i)=>mappedRows.append(q11CtorBinding(v,i)))",
+      "count": 1
+    },
+    {
+      "before": "q11Slice(v.constant_fields,s).map(i=>C6Const(i))",
+      "after": "q11Slice(v.constant_fields,s).foldl(List(),(mappedRows,i)=>mappedRows.append(C6Const(i)))",
+      "count": 1
+    },
+    {
+      "before": "v.arms.slice(p.arms.start,p.arms.start+p.arms.len).map(a=>{pattern:q11Pattern(v,a.pattern,budget),body:a.body})",
+      "after": "v.arms.slice(p.arms.start,p.arms.start+p.arms.len).foldl(List(),(mappedRows,a)=>mappedRows.append({pattern:q11Pattern(v,a.pattern,budget),body:a.body}))",
+      "count": 1
+    },
+    {
+      "before": "params.map(p=>p.binder)",
+      "after": "params.foldl(List(),(mappedRows,p)=>mappedRows.append(p.binder))",
+      "count": 1
+    },
+    {
+      "before": "params.map(p=>p.sort)",
+      "after": "params.foldl(List(),(mappedRows,p)=>mappedRows.append(p.sort))",
+      "count": 1
+    },
+    {
+      "before": "v.ctor_fields.slice(c.field_start,c.field_start+c.field_len).map(f=>f.type_id)",
+      "after": "v.ctor_fields.slice(c.field_start,c.field_start+c.field_len).foldl(List(),(mappedRows,f)=>mappedRows.append(f.type_id))",
+      "count": 1
+    }
+  ],
+  "fullTextInverseEqualsPreimage": true,
+  "otherTenByteIdentical": true,
+  "scope": "Only pure ordered-list API repair; no values, predicates, guards, fixture IDs, residual, runtime row IDs, evaluator or test expectations changed."
+}
