@@ -1,13 +1,16 @@
-"""True CLI/executor roundtrip for reconciled readiness (mock guard).
+"""Executor roundtrip for reconciled readiness (mock outer stages).
 
-Drives the real run_selected.py CLI (and the shell --execute/--inspect
-routes) through a mock of the existing bounded-sdk-compile guard
-boundary. Unknown history blocks; correct original terminal + cleanup
-evidence enables a separately selected qualifying newer attempt; every
+Zero-dispatch variants drive the real run_selected.py CLI (and shell
+--inspect/--execute parsing): they exit before any stage runs. The
+positive dispatch drives run_selected_once -- the exact function the
+CLI main calls -- with an injected mock stage runner, because a real
+CLI dispatch now runs the provisioned operator/sudo/S-placement outer
+sequence, which ordinary tests must never execute. Unknown history
+blocks; correct original terminal + cleanup evidence enables a
+separately selected qualifying newer attempt; every
 wrong-token/digest/cleanup/fingerprint/cancelled/tampered variant
-leaves zero dispatch (the mock guard's dispatch counter never moves).
-Fingerprints come only from delivery.fingerprint; no accepted booleans
-are supplied anywhere.
+leaves zero stage dispatch. Fingerprints come only from
+delivery.fingerprint; no accepted booleans are supplied anywhere.
 """
 import json
 from pathlib import Path
@@ -39,10 +42,9 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
         self.original = self._unknown_result()
         self.history_path = self.root / "history.json"
         self._write_history(self.original)
-        self.outputs = fx.guard_packet(self.root)
-        shutil.rmtree(self.root / "packet")
-        shutil.rmtree(self.root / "target")
-        self.config = fx.write(self.root / "cfg.json", b"{}\n")
+        self.outer = fx.outer_fixture(self.root)
+        self.guard = self.outer["guard"]
+        self.config = self.outer["config_path"]
         self.sel_path = self.root / "selection.json"
         self.recs_path = self.root / "reconciliations.json"
         self.counter = self.root / "dispatch-count.txt"
@@ -87,31 +89,22 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
         self.task2 = task
         self.fp2 = delivery.fingerprint(
             delivery.load_plan(self.plan_path), "build")
-        guard_src = (
-            "import sys\n"
-            f"sys.path.insert(0, {str(MODELS)!r})\n"
-            "from pathlib import Path\n"
-            "import fixture_support as fx\n"
-            f"root = Path({str(self.root)!r})\n"
-            f"counter = Path({str(self.counter)!r})\n"
-            "prev = counter.read_text() if counter.exists() else ''\n"
-            "counter.write_text(prev + 'x\\n')\n"
-            "fx.guard_packet(root)\n"
-            f"fx.cleanup_receipt(root / 'packet', 'cleanup.json', 'build',"
-            f" {attempt!r}, {self.fp2!r})\n")
-        self.guard = fx.write(self.root / "bounded_sdk_compile.py",
-                              guard_src.encode())
         self._write_selection(self.fp2)
         return task
 
     def _write_selection(self, fingerprint):
-        sel = {"schema": "doctorwatson.execution-selection/1",
-               "task": "build", "adapter": "moriarty-sdk-build",
-               "fingerprint": fingerprint,
-               "outerSequence": "bounded-sdk-compile-cached-current-f/1",
-               "guard": fx.pin(self.guard), "config": fx.pin(self.config),
-               "outputs": self.outputs}
+        sel = fx.selection_dict(self.outer, fingerprint)
         self.sel_path.write_bytes(fx.encoded(sel))
+
+    def _run_inprocess(self, attempt="exec-att"):
+        runner = fx.outer_runner(self.outer)
+        code, record = rs.run_selected_once(
+            "build", str(self.plan_path), str(self.sel_path),
+            str(self.root / attempt), runner=runner,
+            history_path=str(self.history_path),
+            reconciliations_path=str(self.recs_path))
+        self.last_runner = runner
+        return code, record
 
     def _write_recs(self, resolution="process-exited", outcome="exited",
                     exit_code=101, token=None, rec_digest=None,
@@ -169,16 +162,19 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
                               codes=(2, 3)):
         self.assertIn(done.returncode, codes, done.stderr)
         self.assertEqual(self._dispatches(), 0)
+        self.assertFalse((self.root / attempt
+                          / "outer-stages.json").exists(),
+                         "stage ledger exists: a stage ran")
 
-    def test_positive_cli_roundtrip_and_identity_matches_inspect(self):
+    def test_positive_roundtrip_and_identity_matches_inspect(self):
         self._newer_plan(changed=True)
         self._write_recs()
         history_before = self.history_path.read_bytes()
         report = self._inspect()
         self.assertEqual(report["ready_for_root_selection"], ["build"])
-        done = self._run_cli()
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertEqual(self._dispatches(), 1)
+        code, _record = self._run_inprocess()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.last_runner.calls.count("native"), 1)
         attempt = self.root / "exec-att"
         preexec = json.loads((attempt / "PREEXEC.json").read_bytes())
         self.assertEqual(preexec["readinessIdentity"],
@@ -189,7 +185,7 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
             (attempt / "consumer-result.json").read_bytes()))
         self.assertEqual(self.history_path.read_bytes(), history_before)
 
-    def test_positive_shell_roundtrip(self):
+    def test_shell_inspect_and_blocked_execute_zero_dispatch(self):
         self._newer_plan(changed=True)
         self._write_recs()
         shell = str(REPO / "scripts/doctorwatson.sh")
@@ -201,6 +197,9 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertEqual(json.loads(done.stdout)
                          ["ready_for_root_selection"], ["build"])
+        # Shell --execute with a stale selection fingerprint: real CLI
+        # parsing + refusal, zero stages (no sudo/operator execution).
+        self._write_selection(self.fp1)
         done = subprocess.run(
             [shell, "--execute", "build", "--plan", str(self.plan_path),
              "--selection", str(self.sel_path), "--attempt",
@@ -208,8 +207,8 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
              str(self.history_path), "--reconciliations",
              str(self.recs_path)],
             cwd=REPO, capture_output=True, text=True)
-        self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertEqual(self._dispatches(), 1)
+        self._assert_zero_dispatch(done, attempt="shell-att",
+                                   codes=(3,))
 
     def test_unknown_history_without_reconciliations_blocks(self):
         self._newer_plan(changed=True)
@@ -329,7 +328,7 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
 class ActualUseRecheckTests(unittest.TestCase):
     def test_identity_drift_after_first_resolve_zero_dispatch(self):
         case = ExecutionReconciliationCliTests(
-            "test_positive_cli_roundtrip_and_identity_matches_inspect")
+            "test_positive_roundtrip_and_identity_matches_inspect")
         case.setUp()
         self.addCleanup(case.tmp.cleanup)
         case._newer_plan(changed=True)
@@ -351,7 +350,7 @@ class ActualUseRecheckTests(unittest.TestCase):
                 rs.run_selected_once(
                     "build", str(case.plan_path), str(case.sel_path),
                     str(case.root / "drift-att"),
-                    runner=lambda argv: calls.append(argv) or 0,
+                    runner=lambda stage: calls.append(stage) or 0,
                     history_path=str(case.history_path),
                     reconciliations_path=str(case.recs_path))
         self.assertEqual(calls, [])
@@ -360,17 +359,15 @@ class ActualUseRecheckTests(unittest.TestCase):
 class DeletedSentinelTests(unittest.TestCase):
     def test_deleted_attempt_dir_does_not_allow_same_attempt(self):
         case = ExecutionReconciliationCliTests(
-            "test_positive_cli_roundtrip_and_identity_matches_inspect")
+            "test_positive_roundtrip_and_identity_matches_inspect")
         case.setUp()
         self.addCleanup(case.tmp.cleanup)
-        # Original plan/selection for build-001 with a plain guard file.
-        guard = fx.write(case.root / "guard.py", b"# guard\n")
-        case.guard = guard
+        # Original plan/selection for build-001 (fixture outer pins).
         case._write_selection(case.fp1)
         calls = []
 
-        def unknown_runner(argv):
-            calls.append(list(argv))
+        def unknown_runner(stage):
+            calls.append(stage["stage"])
             raise TimeoutError("unknown")
 
         code, _ = rs.run_selected_once(
@@ -383,7 +380,7 @@ class DeletedSentinelTests(unittest.TestCase):
             rs.run_selected_once(
                 "build", str(case.plan_path), str(case.sel_path),
                 str(case.root / "att"),
-                runner=lambda argv: calls2.append(argv) or 0,
+                runner=lambda stage: calls2.append(stage) or 0,
                 history_path=str(case.history_path))
         self.assertEqual(calls2, [])
 
