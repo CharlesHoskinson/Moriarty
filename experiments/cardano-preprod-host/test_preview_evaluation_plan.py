@@ -1,9 +1,12 @@
 """Pure planning fixtures; none is a Preview observation or evaluator result."""
 import copy
+from contextlib import redirect_stdout
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -57,7 +60,7 @@ class PreviewEvaluationPlanTests(unittest.TestCase):
         self.bindings = {
             "format": "cardano-preview-offline-evaluation-bindings/1",
             "cli": {"path": "/tools/cardano-cli", "sha256": "ef" * 32},
-            "body": bound("unsigned.body", {"type": "TxBodyConway", "cborHex": "80"}),
+            "body": bound("unsigned.body", {"type": "Tx ConwayEra", "cborHex": "84a0a0f5f6"}),
             "script": self.script, "protocol_parameters": self.params,
             "era_history": bound("era-history.json", {"type": "EraHistory", "cborHex": "80"}, True),
             "system_start": bound("shelley-genesis.json", {
@@ -94,10 +97,25 @@ class PreviewEvaluationPlanTests(unittest.TestCase):
         self.assertFalse(result["ready_for_evaluation_argv"])
         self.assertIn("ERA_HISTORY_BINDING_REQUIRED", result["blockers"])
 
+    def test_offline_refuses_body_only_labels_and_missing_or_invalid_full_tx_hex(self):
+        for value in ({"type": "TxBodyConway", "cborHex": "80"},
+                      {"type": "TxBody ConwayEra", "cborHex": "a0"},
+                      {"type": "Tx ConwayEra", "cborHex": ""},
+                      {"type": "Tx ConwayEra", "cborHex": "0"},
+                      {"type": "Tx ConwayEra", "cborHex": "zz"},
+                      {"type": "Tx ConwayEra", "cborHex": 80},
+                      {"type": "Tx ConwayEra"}):
+            with self.subTest(value=value):
+                self.bindings["body"] = bound("unsigned.body", value)
+                result = self.prepare()
+                self.assertFalse(result["ready_for_evaluation_argv"])
+                self.assertIn("BODY_FULL_CONWAY_TRANSACTION_ENVELOPE_REQUIRED", result["blockers"])
+                self.assertIsNone(result["argv"])
+
     def test_raw_byte_drift_and_foreign_builder_script_are_refused(self):
         self.bindings["body"]["text"] += " "
         self.assertIn("BODY_SHA256_MISMATCH", self.prepare()["blockers"])
-        self.bindings["body"] = bound("unsigned.body", {"type": "TxBodyConway", "cborHex": "80"})
+        self.bindings["body"] = bound("unsigned.body", {"type": "Tx ConwayEra", "cborHex": "84a0a0f5f6"})
         self.bindings["script"] = bound("c2.plutus", {"type": "PlutusScriptV3", "cborHex": "4101"})
         self.assertIn("SCRIPT_BUILDER_IDENTITY_MISMATCH", self.prepare()["blockers"])
 
@@ -170,6 +188,98 @@ class PreviewEvaluationPlanTests(unittest.TestCase):
         self.plan = before[0]
         result = self.module.prepare_evaluation_plan(self.plan, self.bindings, "/public/utxo.json")
         self.assertIn("OUTPUT_REUSES_INPUT_PATH", result["blockers"])
+
+    def materialized_main_case(self, root):
+        """Write ordinary test DATA; the CLI-labelled file is never executed."""
+        plan, bindings = copy.deepcopy((self.plan, self.bindings))
+        for role in ("body", "script", "protocol_parameters", "utxo", "era_history", "system_start"):
+            row = bindings[role]
+            row["path"] = str(root / Path(row["path"]).name)
+            Path(row["path"]).write_bytes(row["text"].encode())
+        cli = root / "cardano-cli"
+        cli.write_bytes(b"UNIT DATA ONLY, NEVER EXECUTE\n")
+        bindings["cli"] = {"path": str(cli), "sha256": hashlib.sha256(cli.read_bytes()).hexdigest()}
+        plan["build_raw_argv"] = [str(root / item.removeprefix("/public/"))
+                                  if item.startswith("/public/") else item
+                                  for item in plan["build_raw_argv"]]
+        builder_file, bindings_file = root / "builder.json", root / "bindings.json"
+        builder_file.write_text(json.dumps(plan))
+        bindings_file.write_text(json.dumps(bindings))
+        return ["--builder-plan", str(builder_file), "--bindings", str(bindings_file),
+                "--cost-out", str(root / "cost.json")]
+
+    def test_main_binds_actual_file_bytes_and_only_emits_offline_argv(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = self.materialized_main_case(root)
+            before = {p: p.read_bytes() for p in root.iterdir()}
+            expected_argv = [str(root / "cardano-cli"), "conway", "transaction",
+                             "calculate-plutus-script-cost", "offline", "--start-time-utc",
+                             "2022-10-25T00:00:00Z", "--era-history-file", str(root / "era-history.json"),
+                             "--utxo-file", str(root / "utxo.json"), "--protocol-params-file",
+                             str(root / "protocol-parameters.json"), "--tx-file", str(root / "unsigned.body"),
+                             "--out-file", str(root / "cost.json")]
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = self.module.main(args)
+            result = json.loads(output.getvalue())
+            self.assertEqual(code, 0)
+            self.assertEqual(result["argv"], expected_argv)
+            self.assertTrue(result["materialized_inputs_verified"])
+            self.assertFalse(result["execution_observed"])
+            self.assertFalse((root / "cost.json").exists())
+            self.assertEqual({p: p.read_bytes() for p in root.iterdir()}, before)
+
+    def test_main_refuses_materialized_byte_drift(self):
+        for name, blocker in (("unsigned.body", "BODY_MATERIALIZED_FILE_MISMATCH"),
+                              ("cardano-cli", "CLI_MATERIALIZED_FILE_MISMATCH")):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                args = self.materialized_main_case(root)
+                path = root / name
+                path.write_bytes(path.read_bytes() + b" ")
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    code = self.module.main(args)
+                result = json.loads(output.getvalue())
+                self.assertEqual(code, 1)
+                self.assertIn(blocker, result["blockers"])
+                self.assertFalse(result["ready_for_evaluation_argv"])
+                self.assertFalse(result["materialized_inputs_verified"])
+                self.assertIsNone(result["argv"])
+                self.assertFalse((root / "cost.json").exists())
+
+    def test_main_refuses_existing_output_without_overwriting(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = self.materialized_main_case(root)
+            output_file = root / "cost.json"
+            expected_bytes = b"EXISTING ORDINARY DATA\n"
+            output_file.write_bytes(expected_bytes)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = self.module.main(args)
+            result = json.loads(output.getvalue())
+            self.assertEqual(code, 1)
+            self.assertIn("OUTPUT_ALREADY_EXISTS", result["blockers"])
+            self.assertIsNone(result["argv"])
+            self.assertEqual(output_file.read_bytes(), expected_bytes)
+
+    def test_remote_actual_planner_preserves_frozen_request_bytes_without_dispatch(self):
+        plan, _ = self.actual_planner_case()
+        transaction = bound("unsigned.body", {"type": "Tx ConwayEra", "cborHex": "84A0a0F5f6"})
+        expected_request = b'{"id":"unit-actual-planner","jsonrpc":"2.0","method":"evaluateTransaction","params":{"transaction":{"cbor":"84A0a0F5f6"}}}'
+        before = copy.deepcopy((plan, transaction))
+        result = self.module.prepare_remote_evaluation_request(
+            plan, transaction, transaction["sha256"], "unit-actual-planner")
+        self.assertTrue(result["ready_for_http_request"], result["blockers"])
+        self.assertEqual(json.dumps(result["request"], sort_keys=True, separators=(",", ":")).encode(), expected_request)
+        self.assertEqual((plan, transaction), before)
+        self.assertEqual(result["transaction_envelope_sha256"], transaction["sha256"])
+        self.assertIsNone(result["ledger_transaction_body_hash"])
+        self.assertFalse(result["execution_admitted"])
+        self.assertFalse(result["execution_observed"])
+        self.assertFalse(result["costs_measured"])
 
     def test_remote_request_preserves_full_transaction_cbor_without_dispatch(self):
         # Shape-only fixture, never a live transaction or evaluator result.

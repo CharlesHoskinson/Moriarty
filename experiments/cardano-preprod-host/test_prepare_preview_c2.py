@@ -1,9 +1,11 @@
 """Offline preparation expectations. Synthetic funding is never ledger evidence."""
 import copy
+from contextlib import chdir, redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import inspect
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -105,6 +107,117 @@ class OfflineC2Preparation(unittest.TestCase):
                       "capture freshness needs a deterministic comparison time")
         return self.module.prepare_plan(REPO, self.request, self.observation, output_dir, now=NOW)
 
+    def test_default_and_relative_output_paths_are_absolute_for_both_planners(self):
+        with tempfile.TemporaryDirectory() as directory, chdir(directory):
+            c2 = self.module.prepare_plan(REPO, self.request, self.observation, now=NOW)
+            split = self.module.prepare_funding_split_plan(self.split_request(), self.observation)
+            relative = self.plan("nested/public")
+            self.assertEqual(c2["output_directory"], str(Path(directory) / "prepared-c2-preview"))
+            self.assertEqual(split["output_directory"], str(Path(directory) / "prepared-preview-funding-split"))
+            self.assertEqual(relative["output_directory"], str(Path(directory) / "nested/public"))
+            for plan in (c2, split, relative):
+                self.assertTrue(plan["ready_for_build_argv"], plan["blockers"])
+                argv = plan["build_raw_argv"]
+                for index, flag in enumerate(argv):
+                    if flag in ("--mint-script-file", "--mint-redeemer-file", "--protocol-params-file",
+                                "--tx-out-inline-datum-file", "--out-file"):
+                        self.assertTrue(Path(argv[index + 1]).is_absolute(), (flag, argv[index + 1]))
+
+    def main_fixture(self, directory, kind="c2-mint"):
+        request = copy.deepcopy(self.request) if kind == "c2-mint" else self.split_request()
+        observation = copy.deepcopy(self.observation)
+        if kind == "c2-mint":
+            stamp = datetime.now(timezone.utc).isoformat()
+            request["cli_protocol_parameters_capture"]["receipt"].update(observedAt=stamp, completedAt=stamp)
+            observation["provenance"]["observedAt"] = stamp
+        request_path, observation_path = directory / "request.json", directory / "observation.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        observation_path.write_text(json.dumps(observation), encoding="utf-8")
+        return ["--kind", kind, "--repo", str(REPO), "--request", str(request_path),
+                "--observation", str(observation_path), "--out-dir", "public"]
+
+    def invoke_main(self, args):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            try:
+                status = self.module.main(args)
+            except Exception as error:
+                self.fail(f"Python main must report ordinary input/emission errors: {error!r}")
+        return status, stdout.getvalue(), stderr.getvalue()
+
+    def test_python_main_emits_c2_files_with_absolute_argv_and_exact_parameter_capture(self):
+        with tempfile.TemporaryDirectory() as directory, chdir(directory):
+            root = Path(directory)
+            args = self.main_fixture(root)
+            status, output, error = self.invoke_main(args)
+            self.assertEqual((status, error), (0, ""))
+            plan = json.loads(output)
+            self.assertEqual(plan["output_directory"], str(root / "public"))
+            self.assertEqual(json.loads((root / "public/PLAN.json").read_text()), plan)
+            self.assertEqual(json.loads((root / "public/EXPECTED-EFFECTS.json").read_text()), plan["expected_effects"])
+            for name, artifact in plan["files"].items():
+                content = (root / "public" / name).read_bytes()
+                self.assertEqual(hashlib.sha256(content).hexdigest(), artifact["sha256"])
+            capture = json.loads((root / "request.json").read_text())["cli_protocol_parameters_capture"]
+            self.assertEqual((root / "public/protocol-parameters.json").read_bytes(), capture["body_text"].encode())
+            self.assertEqual(plan["expected_effects"]["success"]["fee_lovelace"], 700000)
+            self.assertEqual(plan["expected_effects"]["claim_custody"]["status"], "unresolved")
+            self.assertFalse((root / "public/unsigned.body").exists())
+
+    def test_python_main_funding_split_emits_expectations_without_proof_reads(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory, chdir(directory):
+            root = Path(directory)
+            args = self.main_fixture(root, "funding-split")
+            with patch.object(self.module, "_handoff", side_effect=AssertionError("split must not read proofs")):
+                status, output, error = self.invoke_main(args)
+            self.assertEqual((status, error), (0, ""))
+            plan = json.loads(output)
+            self.assertEqual({p.name for p in (root / "public").iterdir()}, {"PLAN.json", "EXPECTED-EFFECTS.json"})
+            self.assertEqual([o["lovelace"] for o in plan["expected_effects"]["success"]["outputs"]], [10000000, 5000000, 4300000])
+            self.assertTrue(Path(plan["build_raw_argv"][-1]).is_absolute())
+
+    def test_python_main_bad_json_and_blocked_inputs_leave_no_output_files(self):
+        with tempfile.TemporaryDirectory() as directory, chdir(directory):
+            root = Path(directory)
+            args = self.main_fixture(root)
+            (root / "request.json").write_text("{broken", encoding="utf-8")
+            status, output, error = self.invoke_main(args)
+            self.assertEqual((status, output), (2, ""))
+            self.assertEqual(json.loads(error)["error"]["type"], "JSONDecodeError")
+            self.assertFalse((root / "public").exists())
+            args = self.main_fixture(root, "funding-split")
+            request = json.loads((root / "request.json").read_text())
+            request["fee_cap_lovelace"] = 1
+            (root / "request.json").write_text(json.dumps(request), encoding="utf-8")
+            status, output, error = self.invoke_main(args)
+            self.assertEqual((status, error), (1, ""))
+            self.assertIn("FEE_CAP_EXCEEDED", json.loads(output)["blockers"])
+            self.assertFalse((root / "public").exists())
+
+    def test_python_main_refuses_existing_file_and_dangling_link_without_writes(self):
+        for dangling in (False, True):
+            with self.subTest(dangling=dangling), tempfile.TemporaryDirectory() as directory, chdir(directory):
+                root = Path(directory)
+                args = self.main_fixture(root, "funding-split")
+                output_dir = root / "public"
+                output_dir.mkdir()
+                existing = output_dir / "PLAN.json"
+                target = root / "dangling-target"
+                if dangling:
+                    existing.symlink_to(target)
+                else:
+                    existing.write_bytes(b"retained original\n")
+                status, output, error = self.invoke_main(args)
+                self.assertEqual((status, output), (2, ""))
+                self.assertEqual(json.loads(error)["error"]["type"], "FileExistsError")
+                self.assertEqual({p.name for p in output_dir.iterdir()}, {"PLAN.json"})
+                self.assertFalse(target.exists())
+                if dangling:
+                    self.assertTrue(existing.is_symlink())
+                else:
+                    self.assertEqual(existing.read_bytes(), b"retained original\n")
+
     def test_protocol_file_preserves_exact_full_capture_bytes_and_receipt_binding(self):
         plan = self.plan()
         self.assertTrue(plan["ready_for_build_argv"], plan["blockers"])
@@ -139,7 +252,7 @@ class OfflineC2Preparation(unittest.TestCase):
         argv = plan["build_raw_argv"]
         self.assertEqual(argv[:4], ["cardano-cli", "conway", "transaction", "build-raw"])
         self.assertNotIn("--mint-redeemer-value", argv)
-        self.assertEqual(argv[argv.index("--mint-redeemer-file") + 1], "prepared/c2-issue.redeemer.json")
+        self.assertEqual(argv[argv.index("--mint-redeemer-file") + 1], str(Path("prepared/c2-issue.redeemer.json").resolve()))
         self.assertEqual(argv[argv.index("--mint-execution-units") + 1], "(300000,2500000000)")
         redeemer = json.loads(plan["files"]["c2-issue.redeemer.json"]["content"])
         self.assertEqual(redeemer["constructor"], 0)
@@ -277,16 +390,19 @@ class OfflineC2Preparation(unittest.TestCase):
         self.assertEqual(self.request, request)
         self.assertEqual(self.observation, observation)
 
-    def split(self, output_dir="prepared-split", **overrides):
-        self.assertIsNotNone(self.module, "offline funding split preparation is missing")
-        self.assertTrue(hasattr(self.module, "prepare_funding_split_plan"), "funding split implementation is missing")
-        request = {
+    def split_request(self):
+        return {
             "funding_ref": FUNDING, "funding_lovelace": 10000000,
             "collateral_lovelace": 5000000, "fee_lovelace": 700000,
             "fee_cap_lovelace": 800000, "min_funding_lovelace": 1000000,
             "min_collateral_lovelace": 1000000, "min_change_lovelace": 1000000,
             "invalid_before": 1000, "invalid_hereafter": 2000,
         }
+
+    def split(self, output_dir="prepared-split", **overrides):
+        self.assertIsNotNone(self.module, "offline funding split preparation is missing")
+        self.assertTrue(hasattr(self.module, "prepare_funding_split_plan"), "funding split implementation is missing")
+        request = self.split_request()
         request.update(overrides)
         return self.module.prepare_funding_split_plan(request, self.observation, output_dir)
 

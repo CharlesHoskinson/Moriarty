@@ -146,6 +146,10 @@ def prepare_evaluation_plan(builder, bindings, out_file):
         if role in parsed and (parsed[role].get("type") != kind
                                or HEX.fullmatch(str(parsed[role].get("cborHex", ""))) is None):
             blockers.append(role.upper() + "_TEXT_ENVELOPE_REQUIRED")
+    if "body" in parsed and (parsed["body"].get("type") != "Tx ConwayEra"
+                             or type(parsed["body"].get("cborHex")) is not str
+                             or HEX.fullmatch(parsed["body"]["cborHex"]) is None):
+        blockers.append("BODY_FULL_CONWAY_TRANSACTION_ENVELOPE_REQUIRED")
     start = parsed.get("system_start", {}).get("systemStart")
     try:
         stamp = datetime.fromisoformat(start.replace("Z", "+00:00"))
