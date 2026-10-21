@@ -1,5 +1,58 @@
 # Sherlock implementation loop contract
 
+## Current user override — deployment first, October 21, 2026
+
+This user-directed operational priority supersedes earlier scheduling statements
+below. Root's critical path is exclusively: **current ledger-9 build → two linked
+child proofs and their recursive parent/terminal decider → independent verification
+and tamper rejection → Midnight stagenet submission, full settlement and complete
+effects readback**. The next exit is an observed recursive stagenet transaction.
+A source merge, documentation update or passing local check does not satisfy it.
+
+Use the existing Root continuation and operation path. Keep one active correction
+for the blocking native path. Each blocker must name the exact failing command,
+selected source/attempt, observed failure and root cause, concrete correction, and
+next discriminating check. Resolve that correction in the actual receiving caller.
+Do not retry an unchanged failure or rerun an unchanged passing prefix. After two
+failures of the same class, reduce the reproducer and change the approach.
+
+The immediate deployment exit requires all of the following observed evidence:
+
+- The real transaction ID and explorer link for the accepted recursive submission
+  on Midnight stagenet, with its actual network and pinned ledger/verifier identity.
+- The selected source/compiler/tool/config cut and actual program, circuit, key,
+  proof and public-input artifact identities, linking both children through the
+  recursive parent and terminal decider to that submitted relation.
+- A positive independent verifier result for those exact artifacts, plus actual
+  rejection of the corresponding proof/public-input tampering.
+- Final settlement and complete state/effects readback against independently
+  frozen expectations, bound to that transaction and the same selected target.
+
+Pending submission, partial settlement, simulation, mock receipts, a saved literal
+proof or an unrelated proof cannot satisfy this exit. An unknown result remains
+unknown. Preserve failed, censored and consumed-operation records as they are.
+
+The complete Sherlock design and every retained requirement remain unchanged.
+Keep Clean, Quint, K and handwritten-circuit work active in parallel. Their failing
+checks block this deployment gate when they concern a relation in the deployed
+candidate's required correctness/proof/effects closure; unrelated EARS closure,
+documentation/graph maintenance and native framework extensions must not displace
+Root's critical path. This ordering does not waive any existing source, financial,
+proof, resource, cleanup, operation-counter or stopped C13 obligation. It adds no
+permission, scheduler, factory or approval flow.
+
+After successful recursive deployment and settlement, continue the Fenrir scale
+matrix and actual k, compile/prove/verify resource and serialized transaction-size
+benchmarks. Completing that measurement programme or a performance report is not
+a prerequisite to the first successful transaction. Existing native resource
+accounting still applies to every operation. The first deployment exit does not
+complete the full Sherlock goal or its downstream benchmarks and acceptance work.
+
+All earlier document content follows unchanged. Its evidence remains historical
+at its recorded scope; conflicting earlier scheduling order does not override
+this current deployment-first instruction.
+
+
 ## Current priority — stagenet recursive proof and Fenrir feasibility benchmark
 
 The October 19 user instruction makes deploying Sherlock on Midnight stagenet and validating a real recursive proof the top priority. Then generate a deterministic Fenrir-derived synthetic rollup and benchmark circuit degree k, proving/local verification costs and observed stagenet inclusion/settlement latency. Follow the [experiment](stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](../../openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md). A saved literal k18 proof retains a separate verification obligation; it is not recursion evidence.
