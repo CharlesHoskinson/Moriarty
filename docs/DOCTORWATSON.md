@@ -134,6 +134,37 @@ After two failures of the same defect class, reduce the reproducer and change
 approach. After two process-only cycles or thirty administration minutes, return
 to eligible implementation or name the concrete blocker and owner.
 
+## Branch cleanup at integration and handoff
+
+Root includes branch cleanup in each batch integration and compaction/session
+handoff. Reuse existing lane/worktree branches for ongoing work; a review, retry
+or continuation does not need another branch. Keep cleanup bounded alongside the
+current native-build/proof/stagenet priority and permanent formal/handwritten lanes.
+
+Refresh local/remote heads, open PRs, protected/default branches and worktree state
+before selecting deletions. Preserve `main`, the default branch, `sherlock`, other
+protected branches, open-PR heads, every checked-out worktree branch, dirty worktrees
+and any branch with unmerged or unknown work. Branch age or count is not evidence
+that its work is disposable.
+
+After verifying an ephemeral PR merged into its recorded base and its merge commit
+is retained there, delete its remote branch only if its freshly read head exactly
+matches the merged PR's recorded head. Use that full SHA as the remote deletion
+lease; if it moves or the comparison fails, retain it and refresh the disposition.
+For other completed branches, require their exact head to be contained in the
+retained integration history. Remove local counterparts only after rechecking for
+unique work and worktree use, with Git's non-force merged-branch deletion. Never
+force-delete a branch or remove a dirty/active worktree to satisfy cleanup.
+
+Keep unmerged or uncertain user work and record a typed `branch-retention` item in
+the existing Root continuation: `ref`, `local_sha`, `remote_sha`, `reason`, `owner`,
+`worktree`, `next_action`, `revisit_event`; use explicit null/unknown for unavailable
+facts. Name the merge/recovery or state change needed before reconsidering it;
+retention does not block unrelated product work. Record exact before/after heads,
+merge evidence, deleted/retained outcomes and failures with the batch/handoff.
+This routine uses existing Git/GitHub tools and adds no scheduler, hosted CI,
+branch-count limit or product acceptance gate.
+
 ## Exact candidate and dependency freshness
 
 Use Git's candidate commit/tree and integration-base identity in the PR, alongside
