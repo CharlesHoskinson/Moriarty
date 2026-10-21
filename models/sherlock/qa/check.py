@@ -1117,11 +1117,89 @@ def requirement_evidence_report(repo, path):
                 summary=summary, findings=issues)
 
 
+def benchmark_completion_report(policy, samples, current, receipt_root, baseline=None, *, repo=None, inventory=None):
+    """Use selected checkout code, source traceability and fresh retained evidence."""
+    import types
+    repo = Path(repo) if repo is not None else Path(__file__).resolve().parents[3]
+    repo = repo.resolve()
+    benchmark_dir = repo / 'models/sherlock/benchmarks'
+    trace_path = repo / 'openspec/changes/sherlock-moriarty-benchmarks/traceability.json'
+    def source_bytes(path):
+        with Path(path).open('rb') as stream:
+            raw = stream.read(16 * 1024 * 1024 + 1)
+        require(len(raw) <= 16 * 1024 * 1024, 'benchmark source/trace input exceeds ingestion bound')
+        return raw
+    trace_raw = source_bytes(trace_path)
+    trace = json.loads(trace_raw, object_pairs_hook=unique_members, parse_constant=nonfinite)
+    require(trace.get('schema') == 'sherlock-benchmark-traceability/2', 'benchmark source traceability /2 required')
+    pins = trace.get('sourcePins')
+    require(type(pins) is list and pins, 'complete benchmark source pins required')
+    required = {'models/sherlock/benchmarks/acceptance.py', 'models/sherlock/benchmarks/metrics.py',
+                'models/sherlock/benchmarks/sample.schema.json', 'models/sherlock/benchmarks/tests/test_metrics.py',
+                'models/sherlock/benchmarks/workloads/generate.py', 'models/sherlock/benchmarks/workloads/catalog.json',
+                'models/sherlock/benchmarks/workloads/tests/test_workloads.py',
+                'models/sherlock/benchmarks/test_acceptance.py', 'models/sherlock/qa/test_benchmark_completion.py',
+                'models/sherlock/qa/check.py', 'docs/sherlock/implementation-loop.md',
+                'openspec/changes/sherlock-moriarty-benchmarks/specs/benchmarks/spec.md'}
+    observed, sources = set(), {}
+    for pin in pins:
+        name = pin['path']
+        require(type(name) is str and name and not Path(name).is_absolute() and '..' not in Path(name).parts,
+                'safe source traceability path required')
+        target = (repo / name).resolve()
+        require(target.is_relative_to(repo), 'benchmark source pin escapes selected checkout')
+        require(name not in observed, 'duplicate benchmark source pin')
+        raw = source_bytes(target)
+        require(digest(raw) == pin['sha256'], 'benchmark dependent source changed: ' + name)
+        observed.add(name)
+        sources[name] = dict(path=name, sha256=digest(raw))
+        if inventory is not None:
+            inventory.record(name, raw)
+    require(required <= observed, 'cross-lane benchmark source traceability incomplete')
+    clauses = trace.get('requirements')
+    require(type(clauses) is dict and set(clauses) == {f'SBENCH-{i:03}' for i in range(1, 11)},
+            'retained benchmark EARS traceability membership differs')
+    for row in clauses.values():
+        require(type(row.get('paths')) is list and row['paths'] and set(row['paths']) <= observed,
+                'benchmark clause has unpinned source/test/document paths')
+    if inventory is not None:
+        inventory.record(str(trace_path.relative_to(repo)), trace_raw)
+    # A distinct package namespace prevents --repo from accidentally importing a
+    # previously loaded checkout's metrics/workloads modules in a long-lived host.
+    package_name = '_doctorwatson_benchmarks_' + hashlib.sha256(str(repo).encode()).hexdigest()[:16]
+    for key in list(sys.modules):
+        if key == package_name or key.startswith(package_name + '.'):
+            del sys.modules[key]
+    package = types.ModuleType(package_name)
+    package.__path__ = [str(benchmark_dir)]
+    sys.modules[package_name] = package
+    path = benchmark_dir / 'acceptance.py'
+    spec = importlib.util.spec_from_file_location(package_name + '.acceptance', path)
+    require(spec is not None and spec.loader is not None, 'benchmark acceptance consumer missing')
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    report = module.assess_files(policy, samples, current, receipt_root, baseline)
+    report['source_inputs'] = sources
+    for key, name in (('acceptance_source', 'acceptance.py'), ('metrics_source', 'metrics.py'), ('sample_schema_source', 'sample.schema.json'), ('catalog_source', 'workloads/catalog.json'), ('workload_validator_source', 'workloads/generate.py')):
+        report['inputs'][key] = sources['models/sherlock/benchmarks/' + name]
+    report['source_inputs']['traceability'] = dict(path=str(trace_path.relative_to(repo)), sha256=digest(trace_raw))
+    actual_consumer = Path(__file__).resolve()
+    report['source_inputs']['executing_qa_consumer'] = dict(path=str(actual_consumer), sha256=digest(actual_consumer.read_bytes()))
+    return report
+
+
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
         lean_observations=None, quint_observations=None, image_observations=None, k_observations=None,
         requirement_evidence=None, compile_evidence_package=None, compile_evidence_case=None,
-        paired_k_observations=None, paired_quint_observations=None, selected_case=None, selected_initial_fuel=None):
+        paired_k_observations=None, paired_quint_observations=None, selected_case=None, selected_initial_fuel=None,
+        benchmark_policy=None, benchmark_samples=None, benchmark_current=None, benchmark_receipt_root=None,
+        benchmark_baseline=None):
     repo = Path(repo)
+    benchmark_inputs = (benchmark_policy, benchmark_samples, benchmark_current, benchmark_receipt_root)
+    benchmark_selected = any(value is not None for value in benchmark_inputs) or benchmark_baseline is not None
+    require(not benchmark_selected or all(value is not None for value in benchmark_inputs),
+            'benchmark policy, samples, current context and receipt root must be supplied together')
     require((compile_evidence_package is None) == (compile_evidence_case is None),
             'compile evidence package and case must be supplied together')
     inventory = source_read_inventory()
@@ -1260,6 +1338,21 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
             if report['first_difference'] is None:
                 report['first_difference'] = dict(path='/requirement_evidence',
                     expected='complete current declared evidence', observed=current['status'])
+    if benchmark_selected:
+        def selected_path(value):
+            if value is None:
+                return None
+            path = Path(value)
+            return path if path.is_absolute() else repo / path
+        benchmark = benchmark_completion_report(*(selected_path(value) for value in benchmark_inputs),
+                                                selected_path(benchmark_baseline), repo=repo, inventory=inventory)
+        report['benchmark_completion'] = benchmark
+        report['source_reference_facts'] = inventory.report()
+        if not benchmark['complete']:
+            report['status'] = 'mismatch'
+            if report['first_difference'] is None:
+                report['first_difference'] = dict(path='/benchmark_completion',
+                    expected='complete current post-deployment benchmark evidence', observed='incomplete')
     return report
 
 
@@ -1273,6 +1366,11 @@ def main(argv=None):
                         help='exact captured artifact for the optional companion record')
     parser.add_argument('--requirement-evidence', type=Path,
                         help='report explicitly selected owner-declared requirement evidence/currentness; no semantic acceptance')
+    for name in ('policy', 'samples', 'current', 'receipt-root'):
+        parser.add_argument('--benchmark-' + name, type=Path,
+                            help='explicit post-deployment benchmark evidence selection; requires policy, samples, current and receipt-root together; no execution')
+    parser.add_argument('--benchmark-baseline', type=Path,
+                        help='prior actual samples for explicitly declared comparable-profile regression limits')
     supplied = parser.add_mutually_exclusive_group()
     supplied.add_argument('--host-observations', type=Path,
                         help='compare a supplied complete normal host diagnostic artifact; does not execute it')
@@ -1288,6 +1386,9 @@ def main(argv=None):
     parser.add_argument('--observed-prefixes', type=Path)
     parser.add_argument('--family', choices=FAMILIES, default='normal')
     args = parser.parse_args(argv)
+    benchmark_inputs = (args.benchmark_policy, args.benchmark_samples, args.benchmark_current, args.benchmark_receipt_root)
+    if (any(value is not None for value in benchmark_inputs) or args.benchmark_baseline is not None) and not all(value is not None for value in benchmark_inputs):
+        parser.error('--benchmark-policy, --benchmark-samples, --benchmark-current and --benchmark-receipt-root must be supplied together')
     if (args.compile_evidence_record is None) != (args.compile_evidence_case is None):
         parser.error('--compile-evidence-record and --compile-evidence-case must be supplied together')
     if any(getattr(args, layer + '_observations') is not None for layer in ('host', *LAYER_ARTIFACTS)) and (args.observed_programs is not None or args.observed_prefixes is not None):
@@ -1304,7 +1405,10 @@ def main(argv=None):
                      compile_evidence_case=args.compile_evidence_case,
                      paired_k_observations=args.paired_k_observations,
                      paired_quint_observations=args.paired_quint_observations,
-                     selected_case=args.selected_case, selected_initial_fuel=args.selected_initial_fuel)
+                     selected_case=args.selected_case, selected_initial_fuel=args.selected_initial_fuel,
+                     benchmark_policy=args.benchmark_policy, benchmark_samples=args.benchmark_samples,
+                     benchmark_current=args.benchmark_current, benchmark_receipt_root=args.benchmark_receipt_root,
+                     benchmark_baseline=args.benchmark_baseline)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')

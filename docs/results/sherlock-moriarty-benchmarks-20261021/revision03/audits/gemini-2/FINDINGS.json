@@ -1,0 +1,202 @@
+{
+  "schema": "sherlock-moriarty-benchmark-audit-findings/3",
+  "audit_round": "audits03",
+  "reviewer_seat": "gemini-2",
+  "requested_model": "gemini-4-argon-high",
+  "returned_model": "gemini-4-argon-high",
+  "provider_channel": "AGY",
+  "routing_authority": "User explicit 3-Gemini benchmark audit assignment + standing Opus 5.5 outage fallback (three Muse seats returned API 429 with no verdict and are not substituted)",
+  "verdict": "APPROVE_SOURCE_WITH_SCOPES",
+  "blocking_findings_count": 0,
+  "optional_observations_count": 2,
+  "candidate_verification": {
+    "candidate_root": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/sherlock-moriarty-benchmark-suite-20261021/integration03/candidate",
+    "candidate_map": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/sherlock-moriarty-benchmark-suite-20261021/integration03/CANDIDATE-MAP.json",
+    "total_files_inspected": 45,
+    "changed_in_revision03_count": 14,
+    "unchanged_vs_revision02_count": 31,
+    "traceability_pins_verified": 44,
+    "traceability_file": {
+      "path": "openspec/changes/sherlock-moriarty-benchmarks/traceability.json",
+      "bytes": 15239,
+      "sha256": "528ce97cec923188f138282212b1c30d3d10ba1b6dd02ce8d45e65a364f90f21"
+    },
+    "changed_code_and_schema_pins": {
+      "models/sherlock/benchmarks/metrics.py": {
+        "bytes": 44148,
+        "sha256": "f23b98a81fc45797ae0aaa8605194a73a25f5638d9180daf7c3ef0be889f1e03",
+        "revision02SHA256": "4277c31db087d40bfcc07805e00b6d7959f1926cb92f3a96521fa30f725223d6"
+      },
+      "models/sherlock/benchmarks/sample.schema.json": {
+        "bytes": 27098,
+        "sha256": "56e0e8348ae20c367eef2f8120d293859c245bf7333655dcf2109681ac17973b",
+        "revision02SHA256": "605609a83dd1e8d34f13afbf11fcff54bc3085cca02e9f3eaf012d9ee0516f75"
+      },
+      "models/sherlock/benchmarks/tests/test_metrics.py": {
+        "bytes": 37744,
+        "sha256": "e8e0ea3b3a7bd2b4d38b82cde71e71f283399e852c2570a3869bf6a20006c656",
+        "revision02SHA256": "7b2382a9deebb7526ae8e974ce18d6dfa8ffe25283d9915689341f503af05a3e"
+      },
+      "models/sherlock/benchmarks/acceptance.py": {
+        "bytes": 52322,
+        "sha256": "21681a60e927a27601c050dd3acac9f958e294897d233ca5528afff1b071b7ea",
+        "revision02SHA256": "b16d4b062b2b88c2ca56e99eacf523ab8bf9c5c48ecb4496812adbd31074ee8e"
+      },
+      "models/sherlock/benchmarks/test_acceptance.py": {
+        "bytes": 37629,
+        "sha256": "160e77eff04541dd522638abe40c50466ac324a7797588c3f405da8d147b23c3",
+        "revision02SHA256": "0be5f7af09a03a162b47746dc6bb4ee15b7742b1bcc726b2a784dfe792fdf818"
+      },
+      "models/sherlock/qa/test_benchmark_completion.py": {
+        "bytes": 5756,
+        "sha256": "1451417f566cc2321d508ccc058fd839ae2ad47ac1e9d5e131f96735747d36c7",
+        "revision02SHA256": "48a6c57a2a873a5a4a5fcdbf6607a720b953edff12a645d8d2f99ec3ce163412"
+      }
+    },
+    "root_actual_tests01_verified": {
+      "receipt_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/sherlock-moriarty-benchmark-suite-20261021/integration03/root-actual-tests01/RESULT.json",
+      "total_ordinary_tests": 154,
+      "counts_by_stream": {
+        "metrics": 48,
+        "workloads": 16,
+        "acceptance": 39,
+        "checker-seam": 7,
+        "existing-check": 33,
+        "existing-requirements": 11
+      },
+      "native_or_stagenet_executed": false
+    },
+    "independent_probe_receipt": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/sherlock-moriarty-benchmark-suite-20261021/audits03/gemini-2/probe_results.json"
+  },
+  "audits02_reconciliation": [
+    {
+      "finding_id": "R02-F01",
+      "origin_seat": "gemini-1",
+      "status": "RESOLVED",
+      "disposition": "mandatory_fix_verified",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:688-712 filters duplicate sample_ids, duplicate observation occurrences, and token-colliding success samples (continue before valid.append(checked)), preventing token-duplicate wrappers from entering validated or old_samples.",
+        "models/sherlock/benchmarks/metrics.py:590-591 evaluates enough = min(old['n'], new['n']) >= rule['min_samples'] and checks zero missing/unavailable/censored counts without rejecting retained descriptive duplicates (duplicate_observations > 0) when unique observations satisfy min_samples.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:395-413, models/sherlock/benchmarks/tests/test_metrics.py:470-482, and probe_revision03.py."
+      ]
+    },
+    {
+      "finding_id": "R02-F02",
+      "origin_seat": "gemini-1",
+      "status": "RESOLVED_WITH_CONTRACT_QUALIFICATION",
+      "disposition": "mandatory_fix_verified_with_contract_qualification",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:165-227 (_oracle_catalog) extracts all known non-unavailable scalar leaves from the frozen catalog expected document and enforces 1-to-1 equality via context['catalog_scalar_pointers'] as well as per-transition pre/post state scalar equality via context['transition_state_pointers'] and context['state_scalar_fields'].",
+        "models/sherlock/benchmarks/acceptance.py:168-169 requires expected_effect_root_pointers to use distinct non-overlapping JSON pointers while permitting legitimately equal root values (e.g., identity or zero-net-change transitions).",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:344-359 and probe_revision03.py."
+      ]
+    },
+    {
+      "finding_id": "R02-F03",
+      "origin_seat": "gemini-1",
+      "status": "RESOLVED_WITH_CONTRACT_QUALIFICATION",
+      "disposition": "mandatory_fix_verified_with_contract_qualification",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:229-243, 522-523, 641-643 (_independent_commands) enforces disjoint command_role_values['prove'] and ['local_verify'], distinct {receipt_sha256, pointer} bindings, distinct execution_id values, and role-valid mode values.",
+        "Contract qualification: prove and local_verify may legitimately reside at distinct JSON pointers (/runs/prove vs /runs/local_verify) within a shared JSON receipt bundle file when their command executions and modes are distinct.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:325-342."
+      ]
+    },
+    {
+      "finding_id": "R02-F04",
+      "origin_seat": "gemini-1",
+      "status": "RESOLVED",
+      "disposition": "mandatory_fix_verified",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:749-763 preserves full mandatory metric coverage while emitting report['comparison_scope'] with required_measurements, compared_metrics, and measured_without_tolerance per workload, avoiding an invented 93-metric SLA.",
+        "models/sherlock/benchmarks/acceptance.py:761-777 enforces max(case['min_successful_samples'], rule['min_samples']) across every compared (workload, evidence, identity, cache, cache_identity, aggregation_scopes) profile group.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:414-439."
+      ]
+    },
+    {
+      "finding_id": "R02-F05",
+      "origin_seat": "gemini-1",
+      "status": "RESOLVED_WITH_CONTRACT_QUALIFICATION",
+      "disposition": "mandatory_fix_verified_with_contract_qualification",
+      "evidence": [
+        "models/sherlock/benchmarks/metrics.py:672-673 requires terminal.success_values entries to be boolean True or non-empty strings (rejecting numeric exit codes such as 0 and boolean False) and evaluates the declared terminal.pointer directly.",
+        "Contract qualification: unrelated negative-control fields containing verifies: false elsewhere in a receipt bundle do not invalidate a sample whose selected terminal.pointer resolves to a valid semantic success value.",
+        "Verified by models/sherlock/benchmarks/tests/test_metrics.py:483-497 and probe_revision03.py."
+      ]
+    },
+    {
+      "finding_id": "REV02-F01",
+      "origin_seat": "gemini-3",
+      "status": "RESOLVED",
+      "disposition": "mandatory_fix_verified",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:430-479, 577-596 requires extension['layer_observations'][layer] for any layer with len(members) > 1 and validates all-member contributor ordering, member prove/local_verify receipt lineage, observed_parallel_span (all-member-command-span with start == min(starts), end == max(ends), and last - first == value) for wall_seconds, sum (cumulative-member-subprocess-cpu) for cpu_seconds, maximum (maximum-member-subprocess-peak-rss) for peak_rss_bytes, common for circuit.*, unique-verifying-keys for verifying_key.bytes, and sum (serialized-member-artifacts) for other byte metrics.",
+        "models/sherlock/benchmarks/acceptance.py:586-591 enforces phase receipt attribution across witness., keygen., prove., local_verify., circuit., proof., proving_key., verifying_key., instance., and artifact. metrics.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:360-373, 442-447."
+      ]
+    },
+    {
+      "finding_id": "REV02-F02",
+      "origin_seat": "gemini-3",
+      "status": "RESOLVED",
+      "disposition": "mandatory_fix_verified",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:26-28, 489-530 includes operation_id and circuit_sha256 in NODE_FIELDS and binds each node's prove and local_verify receipt against facts containing node_id, layer, operation_id, circuit_sha256, proof_sha256, statement_sha256, verifying_key_sha256, pre_state_sha256, post_state_sha256, circuit_k, and inputs.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:360-373 and probe_revision03.py."
+      ]
+    },
+    {
+      "finding_id": "REV02-F03",
+      "origin_seat": "gemini-3",
+      "status": "RESOLVED_WITH_CONTRACT_QUALIFICATION",
+      "disposition": "mandatory_fix_verified_with_contract_qualification",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:186-227, 544-546 binds every leaf proof node's pre_state_sha256 and post_state_sha256 to canonical_digest(_pointer(effects, pointers[boundary])) from transition_state_pointers, which are verified against all known scalar leaves of each ordered transition/batch in the frozen catalog.",
+        "Contract qualification: valid identity transitions (where pre-state and post-state values coincide at distinct pointers) are permitted and not blanket-rejected.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:344-359 and probe_revision03.py."
+      ]
+    },
+    {
+      "finding_id": "REV02-F04",
+      "origin_seat": "gemini-3",
+      "status": "RESOLVED",
+      "disposition": "mandatory_fix_verified",
+      "evidence": [
+        "models/sherlock/benchmarks/acceptance.py:250-280, 622-624 validates non-success samples via _partial_sources without requiring unobserved proof_nodes or successful deployment/inclusion/readback receipts, requires a non-empty censoring_reason from the observation receipt when status == 'censored', and returns {observation_token} so baseline/current cannot reuse a failed or censored observation across runs.",
+        "Verified by models/sherlock/benchmarks/test_acceptance.py:374-394, 449-458."
+      ]
+    },
+    {
+      "finding_id": "REV02-F05",
+      "origin_seat": "gemini-3",
+      "status": "RESOLVED",
+      "disposition": "mandatory_fix_verified",
+      "evidence": [
+        "models/sherlock/benchmarks/metrics.py:388-411, 439, 509, 585 defines metric_observation_key(metric) as (receipt_sha256, canonical_pointer) while retaining full scale/scope/timer_resolution_seconds in metric_observation_identity(metric). Rescaled duplicates of the same receipt+pointer collapse to a single unique observation in summarize, _exact_statistic, and compare_baseline, whereas distinct pointers in a shared receipt bundle remain distinct observations.",
+        "Verified by models/sherlock/benchmarks/tests/test_metrics.py:498-512 and probe_revision03.py."
+      ]
+    }
+  ],
+  "blocking_findings": [],
+  "optional_observations": [
+    {
+      "id": "OPT-R03-01",
+      "severity": "low",
+      "mandatory": false,
+      "file": "models/sherlock/benchmarks/acceptance.py",
+      "lines": "261-269",
+      "summary": "In _partial_sources, optional partial proof_nodes receipt_roles look up node_id/operation_id via policy['proof_receipt_fields']['prove'][key] rather than indexing by role and checking set(node.get('receipt_roles', {})) <= {'prove', 'local_verify'}.",
+      "impact": "Non-blocking: partial (failure/censored) samples never count toward min_successful_samples or statistical baseline comparisons, and metric_context_fields already binds partial node receipts to the sample's identity and workload_digest_sha256."
+    },
+    {
+      "id": "OPT-R03-02",
+      "severity": "low",
+      "mandatory": false,
+      "file": "models/sherlock/benchmarks/acceptance.py",
+      "lines": "570-579",
+      "summary": "In _proof_chain, _layer_aggregation is invoked when len(members) > 1; if an optional layer_observations[layer] receipt is supplied for a single-member layer (len(members) == 1), it is added to candidates without running _layer_aggregation.",
+      "impact": "Non-blocking: single-member layers are directly bound to their sole member's prove/local_verify receipts and byte lengths at lines 580-595."
+    }
+  ],
+  "next_step_dependency": "Suite source, schemas, catalog, DoctorWatson CLI seam, traceability pins, and 154 ordinary synthetic tests are complete and consistent. Actual benchmark completion and baseline establishment depend on executing the real ledger-9 native build, local prove/independent verify, and Midnight stagenet recursive rollup submission/settlement readback to populate real receipts."
+}

@@ -154,9 +154,40 @@ Two failures of one defect class require a smallest permitted reproducer and a c
 
 For native build/proof/target work, native authority0, C4 OPEN, R2 UNSATISFIED,60460 HOLD and Amendment10's no-retry/no-rephrase/no-reroute disposition remain intact. This loop cannot rewrite those records or use another model to work around the stopped amendment. The hard-blocker resolution must name an actually permitted operation or valid new premise before any dependent execution; ordinary SDK-free product source continues. If all remaining useful work depends on an unavailable premise, record the concrete blocked exit instead of manufacturing infrastructure or claiming completion.
 
+## Post-deployment benchmark success criterion
+
+Select the explicit stages in the [benchmark reference](benchmark-reference.md)
+and run the existing Python DoctorWatson checker with all four benchmark inputs
+in the [how-to](benchmark-howto.md). The initial deployed baseline requires at
+least one actual current linked two-transition child/parent/decider chain, actual
+per-node proof/statement/VK artifacts and positive native verification, complete
+independent state/effects, current source/compiler/environment/toolchain/ledger/
+network/circuit/workload/target pins and every fixed stage metric/repetition
+predicate. A source merge, host/model fixture, scalar oracle, unavailable root,
+missing required metric or cached report cannot satisfy that stage.
+
+Host MapQueue/MirrorArbor compiler coverage qualifies through actual host receipts
+without fictitious ledger evidence. The larger 1/2/4/6 Fenrir rollup series and
+full-suite stage remain separate conjunctive obligations; initial baseline success
+does not retire them or the full Sherlock goal. Report baseline observations
+without inventing an SLA. Historical comparisons validate their own frozen source
+cut and use the shared explicitly declared comparable-profile tolerance rules.
+Actual per-layer resources and local verification remain separate from whole-run
+and RPC/ledger timings; unexposed rows/columns remain unavailable.
+
+The [additive benchmark EARS](../../openspec/changes/sherlock-moriarty-benchmarks/specs/benchmarks/spec.md)
+retain fixed known stage/case/metric minimums and checked cross-lane source pins.
+Pin the recomputed report, reviewed policy/current/historical contexts and complete
+source/receipt closure in existing evidence/currentness records; retain actual
+native verification and owner adoption separately. Preserve the original
+35 clauses, 25 refinements/68 scenarios and every broader formal/financial/native/
+release obligation. This selection adds no scheduler, native dispatch, permission,
+budget reset, setup/keygen replay or human-only approval. Existing guards,
+operation limits, C13/stopped-amendment and cleanup records remain controlling.
+
 ## Full completion
 
-Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
+Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition, including the recomputed post-deployment benchmark criterion above. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
 
 
 ## Prospective native policy adoption — October17
@@ -383,3 +414,10 @@ The current graph is installed at `/home/charl/Moriarty/graphify-out/graph.json`
 On every recovery, start with `graphify-out/SHERLOCK-CURRENT.md` and `SHERLOCK-CONTEXT.md`, then query the relevant named symbol with its explicit graph and source root. Check the source manifest before relying on line references, extract changed files only, and read the selected source bodies. Use relation filters or single-node lookup for narrow context. A saved graph is not a live process or accounting probe. Preserve separate source roots for historical layers; never resolve all relative source paths against the main checkout.
 
 Clean B24 is merged into the Fenrir fork in PR 31 at `1847c4e6db59c78e05e857941bd4db9581ece8dd`. The primary next task remains a verify-only consumer of the frozen proof, with no repeated proving. Keep Clean, Quint, K and handwritten circuit implementation active. The graph is an index for this work, not another execution framework.
+
+Post-deployment benchmark qualification must also exclude reused operation wrappers
+from regression statistics, retain bound partial failure/censoring observations,
+and bind the frozen catalog scalar transitions to complete native state views.
+Multi-node layer measurements require explicit all-member timing/resource scope.
+A comparison pass covers its reported tolerance subset; it does not declare an
+external performance SLA or complete the broader Sherlock goal.
