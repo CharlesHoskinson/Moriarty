@@ -1,0 +1,1186 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "sherlock-benchmark-sample/1"
+    },
+    "sample_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+    },
+    "workload_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+    },
+    "workload_digest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evidence_class": {
+      "enum": [
+        "synthetic",
+        "host",
+        "model",
+        "native",
+        "stagenet"
+      ]
+    },
+    "status": {
+      "enum": [
+        "success",
+        "failure",
+        "censored",
+        "not_run"
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "circuit_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "compiler_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "environment_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ledger_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameters_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolchain_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "network": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profile": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "circuit_sha256",
+        "compiler_sha256",
+        "ledger_sha256",
+        "network",
+        "profile",
+        "source_sha256"
+      ]
+    },
+    "cache_state": {
+      "enum": [
+        "cold",
+        "warm",
+        "unknown",
+        "not_applicable"
+      ]
+    },
+    "cache_identity_sha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "metrics": {
+      "$ref": "#/$defs/metrics"
+    },
+    "layers": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/metrics"
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "schema"
+        ]
+      }
+    },
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expected_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "match": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "expected_sha256",
+        "observed_sha256",
+        "match"
+      ]
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proof_ready": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
+        },
+        "submission": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
+        },
+        "ack": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
+        },
+        "inclusion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
+        },
+        "readback": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
+        }
+      },
+      "required": [],
+      "description": "UTC ISO8601 timestamps with at most microsecond precision. Available events must be chronological; measured network durations must exactly match their event endpoints."
+    },
+    "extensions": {
+      "type": "object",
+      "properties": {
+        "acceptance": {
+          "type": "object",
+          "description": "Per-case target/host and recursive relation structure is validated by acceptance.py, never inferred by metrics."
+        },
+        "collection_diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "receipt_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "terminal_pointer": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "receipt_sha256",
+              "terminal_pointer",
+              "reason"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "cache_state",
+    "effects",
+    "events",
+    "evidence_class",
+    "identity",
+    "layers",
+    "metrics",
+    "receipts",
+    "sample_id",
+    "schema",
+    "status",
+    "workload_digest_sha256",
+    "workload_id"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moriarty:sherlock-benchmark-sample:1",
+  "title": "Sherlock benchmark sample v1",
+  "description": "Structural sample schema. Call metrics.validate_sample for receipt lineage, safe relative labels, effects digest/match consistency, observed domain capacity power-of-two and k consistency, used/lookup row bounds, UTC chronology, measured network metric/event equality and warm-cache identity. No unavailable rows/capacities are derived from k. Structural validity does not authenticate a producer or qualify native/stagenet evidence.",
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "receipt_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "pointer": {
+          "type": "string",
+          "pattern": "^(?:|/.*)$"
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "scope": {
+          "enum": [
+            "subprocess",
+            "process_tree",
+            "single_process",
+            "rpc_elapsed",
+            "circuit_metadata",
+            "serialized_artifact",
+            "ledger_receipt",
+            "unknown"
+          ]
+        },
+        "timer_resolution_seconds": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "receipt_sha256",
+        "pointer"
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artifact.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "circuit.advice_columns": {
+          "$ref": "#/$defs/metric_columns"
+        },
+        "circuit.domain_capacity_rows": {
+          "$ref": "#/$defs/metric_rows"
+        },
+        "circuit.fixed_columns": {
+          "$ref": "#/$defs/metric_columns"
+        },
+        "circuit.instance_columns": {
+          "$ref": "#/$defs/metric_columns"
+        },
+        "circuit.k": {
+          "$ref": "#/$defs/metric_exponent"
+        },
+        "circuit.lookup_rows": {
+          "$ref": "#/$defs/metric_rows"
+        },
+        "circuit.used_rows": {
+          "$ref": "#/$defs/metric_rows"
+        },
+        "compile.frontend.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "compile.frontend.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "compile.frontend.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "compile.lowering.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "compile.lowering.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "compile.lowering.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "compile.native.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "compile.native.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "compile.native.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "fee.dust": {
+          "$ref": "#/$defs/metric_DUST"
+        },
+        "host.consumer_link.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "host.consumer_link.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "host.consumer_link.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "host.handler.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "host.handler.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "host.handler.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "host.reference_execution.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "host.reference_execution.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "host.reference_execution.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "instance.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "keygen.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "keygen.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "keygen.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "local_verify.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "local_verify.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "local_verify.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "network.ack_to_inclusion_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "network.inclusion_to_readback_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "network.proof_ready_to_submission_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "network.submission_to_ack_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "network.submission_to_readback_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "parameters.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "parameters.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "parameters.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "proof.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "prove.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "prove.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "prove.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "proving_key.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "transaction.call.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "transaction.deployment.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "verifying_key.bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "witness.cpu_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        },
+        "witness.peak_rss_bytes": {
+          "$ref": "#/$defs/metric_bytes"
+        },
+        "witness.wall_seconds": {
+          "$ref": "#/$defs/metric_seconds"
+        }
+      },
+      "required": []
+    },
+    "metric_DUST": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "const": "DUST"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "unavailable",
+            "censored"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "censored"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metric_bytes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "const": "bytes"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "unavailable",
+            "censored"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "censored"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metric_columns": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "const": "columns"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "unavailable",
+            "censored"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "censored"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metric_exponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "const": "exponent"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "unavailable",
+            "censored"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "censored"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metric_rows": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "const": "rows"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "unavailable",
+            "censored"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "censored"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metric_seconds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "const": "seconds"
+        },
+        "status": {
+          "enum": [
+            "measured",
+            "unavailable",
+            "censored"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "status",
+        "source",
+        "reason"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              },
+              "source": {
+                "type": "null"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "type": "number",
+                "minimum": 0
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "censored"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$comment": "Relational equality and observed numerical bounds across object properties are enforced by metrics.validate_sample. extensions.acceptance is a C-owned schema checked by acceptance.py; a JSON object here is not acceptance. A metric source pointer identifies an exact scalar inside its receipt, including a specific run in a bundle. The summarizer retains scale/scope/resolution metadata separately and does not infer actual operation independence from pointers; acceptance.py qualifies operations.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cache_state": {
+            "const": "warm"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "cache_identity_sha256"
+        ],
+        "properties": {
+          "cache_identity_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  ]
+}
