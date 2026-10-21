@@ -1,0 +1,31 @@
+{
+  "schema": "core3-json-budget-witnesses/v1-unrun",
+  "provenance": "Hand-derived from the supplied contract and literal text. Status: UNRUN/UNOBSERVED. Not a source-blind oracle.",
+  "counting": "root depth 0; one value-node per deserialize entry including root, array elements and object member values, excluding object keys; utf8Bytes is text.len() in UTF-8 bytes; refusal is strictly greater than the inclusive limit",
+  "witnesses": [
+    {"id": "W_NULL", "text": "null", "utf8Bytes": 4, "valueNodes": 1, "maxDepth": 0, "derivation": "single null literal: root only"},
+    {"id": "W_TRUE", "text": "true", "utf8Bytes": 4, "valueNodes": 1, "maxDepth": 0, "derivation": "single bool literal: root only"},
+    {"id": "W_NUM", "text": "123", "utf8Bytes": 3, "valueNodes": 1, "maxDepth": 0, "derivation": "single number literal: root only"},
+    {"id": "W_STR", "text": "\"hi\"", "utf8Bytes": 4, "valueNodes": 1, "maxDepth": 0, "derivation": "quote + 2 ASCII + quote; one string node"},
+    {"id": "W_UTF8", "text": "\"é\"", "utf8Bytes": 4, "valueNodes": 1, "maxDepth": 0, "derivation": "quote(1) + U+00E9 in UTF-8(2) + quote(1) = 4 bytes but 3 characters; one string node"},
+    {"id": "W_ESC_U", "text": "\"\\u00e9\"", "utf8Bytes": 8, "valueNodes": 1, "maxDepth": 0, "derivation": "quote + backslash-u-0-0-e-9 (6) + quote = 8 bytes; decodes to U+00E9; one string node"},
+    {"id": "W_EMPTY_ARR", "text": "[]", "utf8Bytes": 2, "valueNodes": 1, "maxDepth": 0, "derivation": "empty array: root only, no element entries"},
+    {"id": "W_EMPTY_OBJ", "text": "{}", "utf8Bytes": 2, "valueNodes": 1, "maxDepth": 0, "derivation": "empty object: root only, no member-value entries"},
+    {"id": "W_ARR123", "text": "[1,2,3]", "utf8Bytes": 7, "valueNodes": 4, "maxDepth": 1, "derivation": "root array + 3 scalar elements = 4 nodes; elements at depth 1"},
+    {"id": "W_ARR12", "text": "[1,2]", "utf8Bytes": 5, "valueNodes": 3, "maxDepth": 1, "derivation": "root array + 2 scalar elements = 3 nodes; elements at depth 1"},
+    {"id": "W_OBJ1", "text": "{\"a\":1}", "utf8Bytes": 7, "valueNodes": 2, "maxDepth": 1, "derivation": "{ + quoted a(3) + : + 1 + } = 7; root object + 1 member value = 2 nodes (key not counted); value at depth 1"},
+    {"id": "W_OBJ_NEST", "text": "{\"a\":{\"b\":2}}", "utf8Bytes": 13, "valueNodes": 3, "maxDepth": 2, "derivation": "outer{ + quoted a + : + inner{ + quoted b + : + 2 + }} = 13; root + inner object + scalar = 3 nodes; scalar at depth 2"},
+    {"id": "W_ARR_NEST", "text": "[[1]]", "utf8Bytes": 5, "valueNodes": 3, "maxDepth": 2, "derivation": "root array + inner array + scalar = 3 nodes; scalar at depth 2"},
+    {"id": "W_DEEP", "text": "[[[1]]]", "utf8Bytes": 7, "valueNodes": 4, "maxDepth": 3, "derivation": "three nested arrays + scalar = 4 nodes; scalar at depth 3"},
+    {"id": "W_UNKNOWN", "text": "{\"unknown\":1}", "utf8Bytes": 13, "valueNodes": 2, "maxDepth": 1, "derivation": "{ + quoted unknown(9) + : + 1 + } = 13; root + member value = 2 nodes; Core Value retains the unknown member"},
+    {"id": "W_DUP", "text": "{\"x\":1,\"x\":2}", "utf8Bytes": 13, "valueNodes": null, "maxDepth": null, "derivation": "{ + quoted x + :1 + , + quoted x + :2 + } = 13; second decoded key x duplicates the first; counting stops at the duplicate refusal"},
+    {"id": "W_DUP_ESC", "text": "{\"x\":1,\"\\u0078\":2}", "utf8Bytes": 18, "valueNodes": null, "maxDepth": null, "derivation": "first member 6 bytes + comma + escaped key literal (quote + 6 escape bytes + quote = 8) + :2 + braces = 18; \\u0078 decodes to x, duplicate of the first key"},
+    {"id": "W_DUP_NEST", "text": "{\"a\":{\"x\":1,\"\\u0078\":2}}", "utf8Bytes": 24, "valueNodes": null, "maxDepth": null, "derivation": "outer member header 5 + nested duplicate object 18 + outer } = 24; duplicate occurs in the nested map"},
+    {"id": "W_TRAILING_OBJ", "text": "{} []", "utf8Bytes": 5, "valueNodes": null, "maxDepth": null, "derivation": "valid {} root (2) + space + [] (2) = 5; trailing check follows the successful root parse"},
+    {"id": "W_TRAILING_NUM", "text": "1 2", "utf8Bytes": 3, "valueNodes": null, "maxDepth": null, "derivation": "valid scalar root + space + second scalar = 3; trailing characters"},
+    {"id": "W_EMPTY", "text": "", "utf8Bytes": 0, "valueNodes": null, "maxDepth": null, "derivation": "zero bytes; no root value exists (EOF)"},
+    {"id": "W_LBRACE", "text": "{", "utf8Bytes": 1, "valueNodes": null, "maxDepth": null, "derivation": "lone opening brace; EOF while parsing an object"},
+    {"id": "W_TRAILING_COMMA_ARR", "text": "[1,]", "utf8Bytes": 4, "valueNodes": null, "maxDepth": null, "derivation": "[ + 1 + , + ] = 4; a value is expected after the comma"},
+    {"id": "W_SINGLE_QUOTE", "text": "'a'", "utf8Bytes": 3, "valueNodes": null, "maxDepth": null, "derivation": "single quotes are not JSON string delimiters; a value is expected"}
+  ]
+}
