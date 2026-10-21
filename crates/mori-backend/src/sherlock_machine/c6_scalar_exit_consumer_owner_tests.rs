@@ -471,7 +471,7 @@ fn p3_helper_work_uncharged_wins_over_simultaneous_p6() {
     // Helper-work count at the real Done state, learned from a prior
     // real run; the refusing run is then admitted with exactly that
     // initial bound (no post-admission mutation).
-    let hw = pre.helper_work;
+    let hw = pre.image.helper_work;
     assert!(hw > 0);
     run_refusal(&w, bounds(hw, 0, 0),
         StepDisposition::RefusedHelperWorkUncharged, ExhaustReason::HelperWork);

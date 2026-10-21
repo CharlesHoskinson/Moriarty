@@ -14,7 +14,7 @@ use mori_core::sherlock::helper_machine::c6_phys::{C6PushObserved, PushSelection
 pub const C6_A135_FAMILY: &str = "c6.kMachinePushAccept.phys1";
 pub const C6_A140_FAMILY: &str = "c6.kMachinePushRefuse.phys1";
 
-pub fn c6_push_family(selection: PushSelection) -> &'static str {
+pub const fn c6_push_family(selection: PushSelection) -> &'static str {
     match selection {
         PushSelection::Accept => C6_A135_FAMILY,
         PushSelection::Refuse => C6_A140_FAMILY,
