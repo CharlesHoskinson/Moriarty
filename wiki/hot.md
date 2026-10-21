@@ -89,3 +89,8 @@ tags: [moriarty, consolidation, recursion]
 ## Sherlock UPDATE026 — literal source and validation-task concept
 
 [Exact designated Gemini concept](research/sherlock-circuit-atlas/UPDATE-026-LITERAL-ROOTS-AND-VALIDATION-TASKS.md) and [separate later engineering qualification](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md) preserve future finished-site copy versus current candidate status. Website unpublished; circuit/native/target work remains separate.
+
+
+## UPDATE026 engineering correction — 2026-10-21
+
+[The separate receipt-contract erratum](research/sherlock-circuit-atlas/UPDATE-026-RECEIPT-GATING-ERRATUM.md) corrects one historical parenthetical; the creative chapter is unchanged and the site remains unpublished.

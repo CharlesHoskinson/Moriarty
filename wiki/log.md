@@ -1337,3 +1337,8 @@ Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas
 ## 2026-10-20 — UPDATE026 literal Gemini concept intake
 
 [The designated Gemini chapter](research/sherlock-circuit-atlas/UPDATE-026-LITERAL-ROOTS-AND-VALIDATION-TASKS.md) continues the completed-future circuit concept; [literal dated engineering status](research/sherlock-circuit-atlas/UPDATE-026-GEMINI-ENGINEERING-STATUS.md) and [later Root attribution](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md) remain separate. The emitter is not approved by this intake; formal source approval, finite synthetic Quint observations and native mock checks remain distinct from real circuit/native acceptance. No website publication, native proof or target acceptance is claimed.
+
+
+## 2026-10-21 — UPDATE026 receipt-contract erratum
+
+[Separate engineering correction](research/sherlock-circuit-atlas/UPDATE-026-RECEIPT-GATING-ERRATUM.md) records the designated Opus all-receipts-ungated finding and Root scoped emitter adoption. The authored concept remains unchanged; no native result or website launch.
