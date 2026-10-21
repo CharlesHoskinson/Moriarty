@@ -2,9 +2,63 @@
 
 ## Current priority — stagenet recursive proof and Fenrir feasibility benchmark
 
-The October 19 user instruction makes deploying Sherlock on Midnight stagenet and validating a real recursive proof the top priority. Then generate a deterministic Fenrir-derived synthetic rollup and benchmark circuit degree k, proving/local verification costs and observed stagenet inclusion/settlement latency. Follow the [experiment](stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](../../openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md). A saved literal k18 proof is a prerequisite, not recursion evidence.
+The October 19 user instruction makes deploying Sherlock on Midnight stagenet and validating a real recursive proof the top priority. Then generate a deterministic Fenrir-derived synthetic rollup and benchmark circuit degree k, proving/local verification costs and observed stagenet inclusion/settlement latency. Follow the [experiment](stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](../../openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md). A saved literal k18 proof retains a separate verification obligation; it is not recursion evidence.
 
-Select work in this order: saved-bundle independent verify-only → missing Sherlock recursive relation and terminal ledger-9 integration → local rehearsal → stagenet deployment/recursive validation and effects readback → synthetic rollup scale/performance matrix. Source tracing and authoring for the recursive relation, the SDK-transcript/inner-adapter study and dataset preparation may proceed while P14 is pending. Only consumption of its verification result depends on P14; other native checks require their own actual eligibility under existing source/resource rules. Retain Clean, Quint, K, handwritten circuit and documentation work on those exact slices. Graph work is now maintenance supporting implementation, with narrow graph-first recovery and changed-file refresh. No new factory or infrastructure queue displaces this objective. The full active Sherlock goal and all retained acceptance/resource obligations remain in force.
+Current selection order, updated October 21: **current native build → two linked child proofs, parent and terminal decider → independent verification → Midnight stagenet recursive validation and complete effects readback → Fenrir scale/performance matrix**. The saved literal bundle retains its own independent verification obligation; its timeout neither verifies it nor supplies recursion evidence. Only consumers of that result depend on P14. Keep Clean, Quint, K and handwritten-circuit implementation permanent on these exact slices, including when native work is blocked. Graph work supports implementation through narrow recovery and changed-file maintenance. The full Sherlock revision03 design and every retained acceptance/resource obligation remain in force.
+
+### Current operational queue
+
+Root owns integration and the one current continuation. For each selected task,
+record one product predicate, source/attempt identity, owner, receiving API,
+resolved next call and inputs, applicable review/check, and first blocker. Keep
+history immutable and update the current queue rather than writing another
+summary packet for each step. An unavailable call is a named missing consumer or
+input, never an invented command or successful task. Provider terminal success
+means a response returned; source integration, observed checks and accepted
+behavior need their own evidence.
+
+| Priority / predicate | Owner | Immediate next step in the existing path |
+|---|---|---|
+| Current backend actually builds on the selected source/tool/config cut | Root integrates; designated native/security owner supplies the boundary | Integrate the ready reviewed source, retain prior failed attempts/debits and cleanup state, then inspect the current plan/history/reconciliations. Root resolves the actual selected call only when its existing source/resource conditions hold. |
+| Two linked children, their parent and terminal decider produce bound artifacts | Designated circuit/proof owner; Root integrates | Bind the receiving source's real producer/reader API and selected inputs; compile/check the affected consumer, then select the separately eligible proof operation. Preserve the child, parent and terminal distinctions. |
+| Independent verification accepts those exact artifacts | Independent verifier owner | Freeze the selected key/proof/public-input identities and actual verifier invocation. Require its positive semantic verdict, not exit zero alone. |
+| Midnight stagenet accepts the recursive relation and settles complete expected effects | Root selects target work; designated target owner | Rehearse the real verifier/anchor path, then perform the existing eligible deployment/accept/settle/readback calls with independent expectations and public receipts. |
+| Fenrir workloads yield reproducible, scoped cost/scale measurements | Benchmark owner | Consume the accepted fixture and exact workload/measurement inputs; measure supported batches and retain failed or censored outcomes. Sixteen transactions do not establish a ninety-six-transaction result. |
+| Formal and handwritten counterparts track each changed relation | Named Clean, Quint, K and handwritten owners | Continue the next missing concrete relation or discriminating check on the current source slice; record unavailable layers as gaps. A finished leaf advances its lane. |
+
+The actual public shell interfaces are separate:
+
+```sh
+scripts/doctorwatson.sh --inspect --plan P --results H --reconciliations R --next
+scripts/doctorwatson.sh --test-selected MODULE [MODULE...]
+scripts/doctorwatson.sh --execute TASK --plan P --selection S --attempt DIR --history H --reconciliations R
+```
+
+`P/H/R/S/TASK/DIR/MODULE` above are notation, not runnable selections; Root's
+current continuation supplies the existing exact paths, task and named test
+modules. Inspect is read-only and its exit zero says records are inspectable.
+It and executor prelaunch use `reconciliation.load_readiness`; the executor
+rechecks exact input bytes at use. The fixed registry in `run_selected.py`
+selects the existing operation boundary; JSON supplies no arbitrary command.
+The shown execute syntax does not make blocked adapters launchable or authorize
+proof/target work. Retain the existing selected outer operation and timing path,
+resource policy, independent reviews, unknown outcomes and stopped C13 boundary.
+See the actual [shell](../../scripts/doctorwatson.sh),
+[readiness consumer](../../models/doctorwatson/reconciliation.py) and
+[execution bridge](../../models/doctorwatson/run_selected.py).
+
+Prefer integrating ready source to launching more research. More agents help on
+independent missing relations, but increase receiving/review load; use them only
+with disjoint ownership and an immediate consumer. Review actual changed units
+with their adjacent real API and scoped results. Root generates pin/copy/result
+metadata mechanically; reviewers supply source quotes and counterexamples, not
+hand-copied hash tables. Reject invented APIs. For test-only changes, review and
+run the affected tests without rerunning an unchanged passing prefix; broaden
+only for changed composition or a concrete concern. After two failures of the
+same class, reduce the reproducer and change approach. After two process-only
+cycles or thirty administration minutes, do eligible work or name its blocker
+and owner. Use local CI only; preserve all existing security and acceptance
+requirements. This documentation is not evidence that the live loop is armed.
 
 
 Requested by the user on2026-10-17 after final design/spec integration. This uses the existing DoctorWatson factory and existing requirement/evidence records. It is not a new scheduler, campaign, permission system or replacement roadmap.
