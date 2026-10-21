@@ -1,5 +1,43 @@
 # DoctorWatson: the Sherlock software factory
 
+## Current user override — deploy the recursive candidate first
+
+As of October 21, 2026, Root's critical path is **current ledger-9 build → two
+linked child proofs and their recursive parent/terminal decider → independent
+verification and tamper rejection → Midnight stagenet submission, full settlement
+and complete effects readback**. Use the existing implementation loop and current
+Root continuation. Do not substitute another documentation, graph, unrelated EARS
+or native framework task for the next concrete correction on this path.
+
+The immediate exit is a real accepted recursive stagenet transaction, with its
+transaction ID and explorer link, network and pinned ledger/verifier identity,
+selected source/compiler/tool/config and program/circuit/key/proof/public-input
+artifact identities, positive independent verifier result and actual tamper
+rejection, and final complete settlement/state/effects readback compared with
+independently frozen expectations. Bind that evidence to the same transaction,
+recursive chain and target. Pending or partial outcomes, simulation, a literal
+proof and an unrelated proof do not satisfy the exit; unknown stays unknown.
+
+Keep one active native correction. Record each exact failing command, source and
+attempt, observed failure/root cause, concrete correction and next discriminating
+check. Integrate the correction with its real receiving API. Do not retry unchanged
+failures or rerun passing prefixes; after two failures of the same class, reduce
+the reproducer and change approach. Preserve all consumed attempts and existing
+source/resource/cleanup/counter and stopped C13 obligations. This is operational
+reprioritization through DoctorWatson, with no new permission or approval flow.
+
+The full Sherlock scope remains unchanged. Clean, Quint, K and handwritten-circuit
+lanes remain required in parallel; only failing checks in the deployed candidate's
+required correctness/proof/effects closure block this deployment gate. Fenrir
+scaling, actual k, compile/prove/verify resource and serialized transaction-size
+benchmarks follow successful recursive deployment; they are not prerequisites to
+the first successful transaction. Existing per-operation resource accounting
+still applies. Preserve all downstream full-goal acceptance work.
+
+The earlier text below is retained byte-for-byte, including historical evidence.
+Where its scheduling statements conflict, this current override takes precedence.
+
+
 Current working plan, updated 2026-10-21. The user names the factory **DoctorWatson**;
 Sherlock is the universal interpreter it builds. The user authorizes building and running this
 factory and requires **local CI**, because hosted CI is too expensive. GitHub
