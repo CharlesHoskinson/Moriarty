@@ -111,7 +111,8 @@ class GraphContextTests(unittest.TestCase):
         write_json(self.out / "cardano-first-proof-scope.json", {
             "format": "cardano-first-proof-source-scope/1", "namespace": "new-source-scope",
             "seed": ref["nodeId"], "handoff_references": [ref],
-            "sources": [{"source_file": str(self.source), "sha256": self.pin}],
+            "sources": [{"source_file": str(self.source), "source_root": str(self.root),
+                         "sha256": self.pin}],
         })
         identity = json.loads((self.out / "graph-identity.json").read_text())
         identity["cardano_first_proof_scope_sha256"] = digest(self.out / "cardano-first-proof-scope.json")
@@ -145,6 +146,271 @@ class GraphContextTests(unittest.TestCase):
         result = self.load()
         self.assertEqual(result["sourceScope"]["status"], "STALE")
         self.assertIsNone(result["firstStageQuery"])
+
+    def install_named_scope(self, kind, source, source_root, node_id, pin=None):
+        # Independent fixture declarations for the three published sidecars.
+        names = {
+            "legacy": ("cardano-first-proof-scope.json", "cardano_first_proof_scope_sha256",
+                       "cardano-first-proof-source-scope/1"),
+            "protocol": ("cardano-protocol-planner-evaluation-scope.json",
+                         "cardano_protocol_planner_evaluation_scope_sha256",
+                         "cardano-protocol-planner-evaluation-source-scope/1"),
+            "current": ("cardano-preview-cli-filebinding-scope.json",
+                        "cardano_preview_cli_filebinding_scope_sha256",
+                        "cardano-preview-cli-filebinding-source-scope/1"),
+        }
+        name, key, format_name = names[kind]
+        pin = digest(source) if pin is None else pin
+        graph = json.loads((self.out / "graph.json").read_text())
+        graph["nodes"].append({"id": node_id, "source_file": str(source),
+                               "source_sha256": pin, "source_location": "L1",
+                               "source_namespace": kind, "source_snapshot": kind,
+                               "source_status": "fixture-source"})
+        write_json(self.out / "graph.json", graph)
+        ref = {"nodeId": node_id, "sourceFile": str(source), "sourceSha256": pin,
+               "sourceLocation": "L1", "sourceSnapshot": kind, "sourceStatus": "fixture-source",
+               "currentSourceSha256": pin, "sourceCurrentness": "MATCH", "readRequired": True}
+        write_json(self.out / name, {"format": format_name, "namespace": kind,
+                                    "seed": node_id, "handoff_references": [ref],
+                                    "sources": [{"source_file": str(source),
+                                                 "source_root": str(source_root), "sha256": pin}]})
+        identity = json.loads((self.out / "graph-identity.json").read_text())
+        identity["graph_sha256"] = digest(self.out / "graph.json")
+        identity[key] = digest(self.out / name)
+        write_json(self.out / "graph-identity.json", identity)
+
+    def other_checkout_source(self):
+        root = Path(self.tmp.name) / "other-checkout"
+        root.mkdir()
+        source = root / "source.md"
+        source.write_text("Matching bytes in another checkout\n")
+        return root, source
+
+    def test_current_checkout_uses_newest_matching_scope_and_corrected_query(self):
+        other_root, other_source = self.other_checkout_source()
+        self.install_named_scope("legacy", other_source, other_root, "w17")
+        self.install_named_scope("protocol", self.source, self.root, "i6-old", pin="0" * 64)
+        self.install_named_scope("current", self.source, self.root, "i6-current")
+        (self.root / "uncovered.md").write_text("outside the explicit source scope")
+        result = self.load()
+        self.assertEqual(result["status"], "STALE")
+        self.assertEqual(result["sourceScope"]["status"], "FRESH_FOR_EXPLICIT_SOURCE_SCOPE")
+        self.assertTrue(result["sourceScope"]["matchesCheckout"])
+        self.assertEqual(result["firstStageQuery"]["seed"], "i6-current")
+        self.assertEqual(result["firstStageQuery"]["question"],
+                         "inspect protocol prepare plan evaluation remote request")
+        self.assertEqual(result["firstStageQuery"]["mode"], "current-explicit-source-scope-only")
+        self.assertEqual(len(result["sourceScope"]["candidateScopes"]), 3)
+        self.assertFalse(result["ledgerAcceptance"])
+        self.assertFalse(result["sourceScope"]["wholeGraphFresh"])
+        self.assertIn("partial", result["semanticCoverage"])
+
+    def test_legacy_scope_remains_current_for_its_own_checkout(self):
+        self.install_named_scope("legacy", self.source, self.root, "w17-own-root")
+        result = self.load()
+        self.assertEqual(result["sourceScope"]["status"], "FRESH_FOR_EXPLICIT_SOURCE_SCOPE")
+        self.assertEqual(result["firstStageQuery"]["seed"], "w17-own-root")
+        self.assertTrue(result["firstStageQuery"]["question"].startswith("Cardano Groth16"))
+
+    def test_fresh_other_checkout_scope_is_never_current_here(self):
+        other_root, other_source = self.other_checkout_source()
+        self.install_named_scope("legacy", other_source, other_root, "w17")
+        (self.root / "uncovered.md").write_text("keep global scope explicitly stale")
+        result = self.load()
+        self.assertEqual(result["sourceScope"]["status"], "STALE")
+        self.assertFalse(result["sourceScope"]["matchesCheckout"])
+        self.assertIn("source-scope-root-mismatch", result["nextAction"])
+        self.assertEqual(result["firstStageQuery"]["mode"], "dated-discovery-only")
+
+    def test_changed_current_source_cannot_fall_back_to_unrelated_fresh_legacy(self):
+        other_root, other_source = self.other_checkout_source()
+        self.install_named_scope("legacy", other_source, other_root, "w17")
+        self.install_named_scope("current", self.source, self.root, "i6")
+        self.source.write_text("changed current-checkout bytes\n")
+        result = self.load()
+        self.assertEqual(result["sourceScope"]["status"], "STALE")
+        self.assertTrue(result["sourceScope"]["matchesCheckout"])
+        self.assertTrue(result["sourceScope"]["scopeFile"].endswith("cardano-preview-cli-filebinding-scope.json"))
+        self.assertEqual(result["firstStageQuery"]["mode"], "dated-discovery-only")
+        self.assertNotEqual(result["firstStageQuery"]["seed"], "w17")
+
+    def test_null_scoped_digest_cannot_qualify_a_missing_source(self):
+        original = self.source.read_bytes()
+        for exists in (True, False):
+            with self.subTest(source_exists=exists):
+                self.source.write_bytes(original)
+                node_id = "null-body-" + str(exists)
+                self.install_named_scope("current", self.source, self.root, node_id)
+                path = self.out / "cardano-preview-cli-filebinding-scope.json"
+                scope = json.loads(path.read_text())
+                scope["sources"][0]["sha256"] = None
+                scope["handoff_references"][0]["sourceSha256"] = None
+                write_json(path, scope)
+                graph = json.loads((self.out / "graph.json").read_text())
+                next(node for node in graph["nodes"] if node["id"] == node_id)["source_sha256"] = None
+                write_json(self.out / "graph.json", graph)
+                identity = json.loads((self.out / "graph-identity.json").read_text())
+                identity["graph_sha256"] = digest(self.out / "graph.json")
+                identity["cardano_preview_cli_filebinding_scope_sha256"] = digest(path)
+                write_json(self.out / "graph-identity.json", identity)
+                if not exists:
+                    self.source.unlink()
+                result = self.load()
+                self.assertEqual(result["sourceScope"]["status"], "STALE")
+                query = result["firstStageQuery"]
+                self.assertTrue(query is None or query["mode"] != "current-explicit-source-scope-only")
+                self.assertTrue(query is None or query["seed"] != node_id)
+
+    def test_symlink_scope_with_null_identity_cannot_supply_current_scope(self):
+        self.install_named_scope("current", self.source, self.root, "unbound-scope")
+        path = self.out / "cardano-preview-cli-filebinding-scope.json"
+        target = self.out / "linked-scope.json"
+        path.rename(target)
+        path.symlink_to(target.name)
+        identity = json.loads((self.out / "graph-identity.json").read_text())
+        identity["cardano_preview_cli_filebinding_scope_sha256"] = None
+        write_json(self.out / "graph-identity.json", identity)
+        result = self.load()
+        self.assertEqual(result["sourceScope"]["status"], "STALE")
+        query = result["firstStageQuery"]
+        self.assertTrue(query is None or query["mode"] != "current-explicit-source-scope-only")
+
+    def test_symlink_artifact_with_null_identity_cannot_supply_bound_query(self):
+        self.install_named_scope("current", self.source, self.root, "unbound-graph")
+        for name, key in (("graph.json", "graph_sha256"),
+                          ("source-manifest.json", "source_manifest_sha256"),
+                          ("semantic-coverage.json", "semantic_coverage_sha256")):
+            with self.subTest(artifact=name):
+                path = self.out / name
+                original = path.read_bytes()
+                identity_path = self.out / "graph-identity.json"
+                original_identity = identity_path.read_bytes()
+                target = self.out / ("linked-" + name)
+                path.rename(target)
+                path.symlink_to(target.name)
+                identity = json.loads(original_identity)
+                identity[key] = None
+                write_json(identity_path, identity)
+                try:
+                    result = self.load()
+                    self.assertIsNone(result["firstStageQuery"])
+                    self.assertEqual(result["handoffReferences"], [])
+                finally:
+                    path.unlink()
+                    path.write_bytes(original)
+                    target.unlink()
+                    identity_path.write_bytes(original_identity)
+
+    def test_missing_fallback_source_with_null_hash_is_not_a_match(self):
+        manifest_path = self.out / "source-manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["files"][0]["sha256"] = None
+        write_json(manifest_path, manifest)
+        graph_path = self.out / "graph.json"
+        graph = json.loads(graph_path.read_text())
+        graph["nodes"][0]["source_sha256"] = None
+        write_json(graph_path, graph)
+        self.source.unlink()
+        self.bind_identity()
+        result = self.load()
+        self.assertEqual(result["status"], "STALE")
+        ref = result["handoffReferences"][0]
+        self.assertIsNone(ref["currentSourceSha256"])
+        self.assertEqual(ref["sourceCurrentness"], "CHANGED_OR_MISSING")
+        self.assertEqual(result["firstStageQuery"]["mode"], "dated-discovery-only")
+
+    def test_scoped_named_reference_pins_require_nonblank_text(self):
+        for field, value in (("id", None), ("id", ""), ("id", False), ("id", " "),
+                             ("location", None), ("location", ""), ("location", 7), ("location", " ")):
+            with self.subTest(field=field, value=value):
+                self.make_graph()
+                self.install_named_scope("current", self.source, self.root, "valid-reference")
+                path = self.out / "cardano-preview-cli-filebinding-scope.json"
+                scope = json.loads(path.read_text())
+                graph = json.loads((self.out / "graph.json").read_text())
+                if field == "id":
+                    graph["nodes"][-1]["id"] = value
+                    scope["handoff_references"][0]["nodeId"] = value
+                    scope["seed"] = value
+                else:
+                    graph["nodes"][-1]["source_location"] = value
+                    scope["handoff_references"][0]["sourceLocation"] = value
+                write_json(self.out / "graph.json", graph)
+                write_json(path, scope)
+                self.bind_identity()
+                identity = json.loads((self.out / "graph-identity.json").read_text())
+                identity["cardano_preview_cli_filebinding_scope_sha256"] = digest(path)
+                write_json(self.out / "graph-identity.json", identity)
+                result = self.load()
+                self.assertEqual(result["sourceScope"]["status"], "STALE")
+                query = result["firstStageQuery"]
+                self.assertTrue(query is None or query["mode"] != "current-explicit-source-scope-only")
+                if query:
+                    self.assertTrue(all(isinstance(arg, str) and arg.strip() for arg in query["argv"]))
+
+    def test_fallback_named_reference_pins_require_nonblank_text(self):
+        for field, value in (("id", None), ("id", ""), ("id", False), ("id", " "),
+                             ("source_location", None), ("source_location", ""),
+                             ("source_location", 7), ("source_location", " ")):
+            with self.subTest(field=field, value=value):
+                self.make_graph()
+                path = self.out / "graph.json"
+                graph = json.loads(path.read_text())
+                graph["nodes"][0][field] = value
+                write_json(path, graph)
+                self.bind_identity()
+                result = self.load()
+                self.assertEqual(result["handoffReferences"], [])
+                self.assertIsNone(result["firstStageQuery"])
+
+    def test_scoped_reference_currentness_is_derived_from_validated_source(self):
+        for fields_present in (True, False):
+            with self.subTest(fields_present=fields_present):
+                self.make_graph()
+                self.install_named_scope("current", self.source, self.root, "valid-reference")
+                path = self.out / "cardano-preview-cli-filebinding-scope.json"
+                scope = json.loads(path.read_text())
+                ref = scope["handoff_references"][0]
+                derived = {"currentSourceSha256": None, "sourceCurrentness": "CHANGED_OR_MISSING",
+                           "readRequired": False}
+                if fields_present:
+                    ref.update(derived)
+                else:
+                    for key in derived:
+                        ref.pop(key)
+                write_json(path, scope)
+                identity = json.loads((self.out / "graph-identity.json").read_text())
+                identity["cardano_preview_cli_filebinding_scope_sha256"] = digest(path)
+                write_json(self.out / "graph-identity.json", identity)
+                result = self.load()
+                self.assertEqual(result["sourceScope"]["status"], "FRESH_FOR_EXPLICIT_SOURCE_SCOPE")
+                self.assertEqual(result["handoffReferences"], result["sourceScope"]["handoffReferences"])
+                actual = result["handoffReferences"][0]
+                self.assertEqual(actual.get("currentSourceSha256"), self.pin)
+                self.assertEqual(actual.get("sourceCurrentness"), "MATCH")
+                self.assertIs(actual.get("readRequired"), True)
+                self.assertEqual(json.loads(path.read_text()), scope)
+
+    def test_older_same_checkout_scope_can_supply_exact_matching_bytes(self):
+        self.install_named_scope("protocol", self.source, self.root, "matching-i6")
+        self.install_named_scope("current", self.source, self.root, "nonmatching-i6", pin="0" * 64)
+        result = self.load()
+        self.assertEqual(result["sourceScope"]["status"], "FRESH_FOR_EXPLICIT_SOURCE_SCOPE")
+        self.assertEqual(result["firstStageQuery"]["seed"], "matching-i6")
+
+    def test_declared_checkout_root_cannot_cover_a_source_outside_it(self):
+        _, other_source = self.other_checkout_source()
+        self.install_named_scope("current", other_source, self.root, "outside-root")
+        result = self.load()
+        self.assertEqual(result["sourceScope"]["status"], "STALE")
+        self.assertFalse(result["sourceScope"]["matchesCheckout"])
+        self.assertNotEqual(result["firstStageQuery"]["seed"], "outside-root")
+
+    def test_unregistered_sidecar_is_not_discovered(self):
+        write_json(self.out / "future-unregistered-scope.json", {"seed": "guessed"})
+        result = self.load()
+        self.assertIsNone(result["sourceScope"])
+        self.assertEqual(result["firstStageQuery"]["seed"], "exact_cardano_heading")
 
     def test_artifact_changes_cannot_offer_unbound_node_query(self):
         (self.out / "graph.json").write_text('{"nodes": []}')
