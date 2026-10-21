@@ -352,7 +352,7 @@ fn runtime_identity_and_run_values_stay_free_with_identical_ir() {
     let a = lanes(&meta(adm_bounds(), layout()));
     let b = lanes(&other);
     assert_eq!(a.len(), b.len());
-    assert!(check(1, b.clone(), b, Some(binding())).is_ok(), "same-shape runtime variation eligible");
+    assert!(check(1, b.clone(), b.clone(), Some(binding())).is_ok(), "same-shape runtime variation eligible");
     let ops = |n: usize| (vars("pre", n), vars("post", n));
     let (ap, aq) = ops(a.len());
     let (bp, bq) = ops(b.len());
