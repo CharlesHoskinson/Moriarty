@@ -515,6 +515,82 @@ class ReportingExpectations(unittest.TestCase):
         self.assertEqual(2, result.returncode)
         self.assertNotIn("Traceback", result.stderr + result.stdout)
 
+    def test_cardano_observations_require_cardano_selector(self):
+        for selector in ([], ["--next"], ["--requirement", "R-001"], ["--gate", "R-001"]):
+            with self.subTest(selector=selector):
+                result = subprocess.run(
+                    [sys.executable, str(CHECKER), "--json", *selector,
+                     "--cardano-observations", "public/observations.json"],
+                    capture_output=True, text=True, timeout=10)
+                self.assertEqual(2, result.returncode)
+                self.assertIn("--cardano-observations requires --cardano-next", result.stderr)
+                self.assertNotIn("Traceback", result.stderr + result.stdout)
+
+    def test_cardano_observations_reach_public_preview_and_stage_consumers(self):
+        marker = self.repo / "OBSERVATION_COMMAND_MUST_NOT_EXECUTE"
+        self.write("public/observations.json", json.dumps({
+            "preview": {"format": "cardano-preview-observation/1",
+                        "network": {"name": "preview", "magic": 2}},
+            "stages": {"preview-transaction-build": {
+                "evidence_refs": ["public/current-build-result.json"],
+                "command": f"touch {marker}"}},
+        }))
+        report = self.invoke("--cardano-next", "--cardano-observations", "public/observations.json")
+        network = next(row for row in report["preview_readiness"]["prerequisites"]
+                       if row["id"] == "network")
+        self.assertEqual("satisfied", network["status"])
+        build = next(row for row in report["stages"] if row["id"] == "preview-transaction-build")
+        self.assertEqual(["public/current-build-result.json"], build["evidence_refs"])
+        self.assertEqual("missing", build["status"], "A partial report must not imply an observed build")
+        self.assertEqual("open", report["acceptance"]["preview_chain"]["status"])
+        self.assertFalse(marker.exists())
+
+    def test_cardano_observation_input_errors_are_json_without_tracebacks(self):
+        for content in ("{broken", "[]", "null", '{"stages":{},"stages":{}}', '{"x":NaN}'):
+            with self.subTest(content=content):
+                self.write("public/observations.json", content)
+                report = self.invoke("--cardano-next", "--cardano-observations",
+                                     "public/observations.json", expected=2)
+                self.assertIn("Cardano next selection failed", report["error"])
+                self.assertIsNone(report["selected_action"])
+        report = self.invoke("--cardano-next", "--cardano-observations", "public/missing.json", expected=2)
+        self.assertIn("Cardano next selection failed", report["error"])
+
+    def test_cardano_observation_paths_use_public_reader_restrictions(self):
+        target = self.write("public/observations.json", "{}")
+        (self.repo / "public/link.json").symlink_to(target)
+        for path in ("../observations.json", str(target), "wallet/observations.json", "public/link.json"):
+            with self.subTest(path=path):
+                report = self.invoke("--cardano-next", "--cardano-observations", path, expected=2)
+                self.assertIn("Cardano next selection failed", report["error"])
+                self.assertTrue(report["wider_exits_open"])
+
+    def test_cardano_positional_entrypoint_consumes_observation_file(self):
+        self.invoke()  # Publish only this test's synthetic requirement metadata.
+        self.write("public/observations.json", json.dumps({
+            "preview": {"format": "cardano-preview-observation/1",
+                        "network": {"name": "preview", "magic": 2}}, "stages": {}}))
+        entrypoint = CHECKER.parents[3] / "scripts/doctorwatson-utxo.sh"
+        result = subprocess.run(
+            [str(entrypoint), "cardano-next", "--repo", str(self.repo), "--json",
+             "--cardano-observations", "public/observations.json"],
+            capture_output=True, text=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        network = next(row for row in report["preview_readiness"]["prerequisites"]
+                       if row["id"] == "network")
+        self.assertEqual("satisfied", network["status"])
+        self.assertEqual("open", report["acceptance"]["preview_chain"]["status"])
+
+    def test_cardano_human_output_preserves_financial_settlement_scope(self):
+        self.invoke()
+        result = subprocess.run(
+            [sys.executable, str(CHECKER), "--repo", str(self.repo), "--cardano-next"],
+            capture_output=True, text=True, timeout=10)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("financial_settlement: open", result.stdout)
+        self.assertIn("Wider language and roadmap exits remain open.", result.stdout)
+
     def test_reference_escape_absolute_private_and_symlink_are_rejected(self):
         outside = self.repo.parent / (self.repo.name + "-outside.txt")
         outside.write_text("Synthetic public outside fixture.\n")
