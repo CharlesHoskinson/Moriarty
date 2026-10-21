@@ -201,6 +201,7 @@ identity and execution limits remain enforced.
 4. Review exact changed source and actual result through applicable current non-author roles. Resolve material defects, integrate one candidate and publish/merge regularly. Reuse unchanged evidence with its original source/result identity.
 5. Update affected Diátaxis tutorial/how-to/reference/explanation pages with implementation/observed/unobserved acceptance status; record concrete no-impact dispositions for unaffected categories. Check links/examples/API locators. Append material DoctorWatson lessons, knowledge-graph deltas and circuit-website concept notes without claiming a deployed site or unobserved circuit.
 6. Update affected requirement and correctness-loop evidence rows. Required K, finite Quint, pure Lean, bounded Clean, handwritten witness/constraint, native and target rows remain conjunctive for acceptance; source-only completion closes only its source predicate.
+7. At batch integration and compaction/session handoff, apply the [branch cleanup procedure](../DOCTORWATSON.md#branch-cleanup-at-integration-and-handoff): reuse ongoing lane branches, delete verified merged ephemeral heads with exact remote SHA leases, and retain active/unmerged/unknown work with typed dispositions in the existing continuation.
 
 ## Churn stops and blocked work
 
