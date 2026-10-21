@@ -1,6 +1,6 @@
 # Additive benchmark EARS
 
-Revision02: implemented source and ordinary synthetic transport checks; actual
+Revision03: implemented source and ordinary synthetic transport checks; actual
 native/stagenet benchmark evidence and owner adoption remain open. SBENCH clauses
 supplement SRPOC-001–009 and preserve the original fixed 35/25/68 inventories and
 all broader full Sherlock goals. Matching hashes check supplied consistency and
@@ -50,6 +50,16 @@ artifacts. Layer resource sources belong to those qualified native receipts or
 an explicit qualified aggregate with exact contributor membership. A false native
 verifier verdict or unrelated/aliased timer cannot qualify a layer.
 
+#### Scenario: Independent command roles and actual aggregate scope
+
+Prover and verifier command results have distinct execution IDs and disjoint
+reviewed modes. Separate results at distinct pointers in one JSON bundle are
+valid. Every multi-node metric binds every member scalar; wall time uses exact
+observed member/aggregate intervals, CPU cumulative member subprocess time, and RSS
+the explicitly named maximum member subprocess peak. No sum claims parallel wall
+time or simultaneous whole-tree memory. Witness/keygen and every artifact metric
+receive the same lineage requirement, and compared aggregation scopes match.
+
 ### Requirement: SBENCH-004 Independent complete target effects
 
 When deployed evidence is qualified, the suite shall require current actual
@@ -63,6 +73,15 @@ Typed unavailable/unknown oracle fields and missing/null required roots cannot b
 relabeled complete deployed effects. Legitimate null option values remain valid.
 Host compiler terminal-value evidence qualifies its host stage without fabricated
 ledger facts. Actual native/owner proof verification remains separately mandatory.
+
+#### Scenario: Frozen scalar progress and partial failures
+
+Complete deployed oracle views bind known catalog scalar effects and each linked
+or Fenrir batch transition's known state fields; every proof leaf binds its
+independent complete pre/post views. Semantic root fields are separate; equal
+root values and legitimate identity transitions are not categorically forbidden.
+Available failed/censored observations retain qualified producer attribution and
+actual censoring reasons without requiring successful proofs or ledger artifacts.
 
 ### Requirement: SBENCH-005 Honest temporal and circuit observations
 
@@ -106,6 +125,14 @@ cut. Failed/censored records remain retained but do not become successful sample
 duplicates or reused current observations cannot supply historical replicas.
 Zero baselines have explicit absolute tolerance semantics. Initial baselines state
 future tolerances; declared-limit outcomes never invent an external performance SLA.
+
+#### Scenario: Qualified comparison population and declared scope
+
+Only distinct qualified successful operations enter the shared statistics.
+Renamed wrappers cannot mask a genuine regression. The case repetition minimum
+applies separately to each compared cache/environment profile. Mandatory measurement
+coverage remains complete; `comparison_scope` states the selected tolerance subset
+and measured metrics without declared tolerances, with no universal SLA claim.
 
 ### Requirement: SBENCH-008 Actual selected-checkout DoctorWatson consumer
 

@@ -385,6 +385,32 @@ def comparable_profile(sample):
         'evidence_class','identity','cache_state','cache_identity_sha256')})
 
 
+def metric_observation_identity(metric):
+    """Explicit source and normalization metadata; not operation authentication.
+
+    Pointer identity distinguishes separate runs stored in one bundle. Scale,
+    scope and resolution describe the observation and do not create a new run.
+    """
+    require(type(metric) is dict, 'metric observation: expected metric object')
+    source = metric.get('source')
+    _keys(source, {'receipt_sha256','pointer'}, {'scale','scope','timer_resolution_seconds'}, where='metric observation source')
+    _digest(source['receipt_sha256'],'metric observation receipt_sha256')
+    parts = _pointer_parts(source['pointer'])
+    pointer = '' if not parts else '/'+'/'.join(p.replace('~','~0').replace('/','~1') for p in parts)
+    scale = normalize_number(source.get('scale',1),unit='seconds')
+    require(scale > 0, 'metric observation scale must be positive')
+    _measurement_metadata(source)
+    return {'receipt_sha256':source['receipt_sha256'],'pointer':pointer,
+            'scale_decimal':str(scale),'scope':source.get('scope','unknown'),
+            'timer_resolution_seconds':source.get('timer_resolution_seconds')}
+
+
+def metric_observation_key(metric):
+    """Physical scalar binding; metadata-only rescaling cannot add repetitions."""
+    identity = metric_observation_identity(metric)
+    return identity['receipt_sha256'],identity['pointer']
+
+
 def summarize(samples):
     """Raw retained; successful uncensored distributions only, no SLA inference."""
     require(type(samples) is list, 'samples: expected list')
@@ -410,15 +436,18 @@ def summarize(samples):
             for s,v in items:
                 if s['status'] != 'success' or v['status'] != 'measured':
                     continue
-                src = v['source']; key = src['receipt_sha256']
+                key = metric_observation_key(v)
                 if key in unique:
-                    require(unique[key] == normalize_number(v['value'],unit=v['unit']), f'{name}: same receipt metric has inconsistent values')
+                    require(unique[key] == normalize_number(v['value'],unit=v['unit']), f'{name}: same receipt pointer observation has inconsistent normalized values')
                     duplicate_observations += 1
                 else:
                     unique[key] = normalize_number(v['value'],unit=v['unit'])
+            identities = {canonical_sha256(identity):identity for _,item in items if item['source'] is not None
+                          for identity in [metric_observation_identity(item)]}
             values = list(unique.values())
             ordered = sorted(values)
             summaries[name] = {'unit': METRIC_UNITS[split_metric(name)[1]], 'scope':next(iter(scopes),'unknown'),
+                'observation_identities':[identities[k] for k in sorted(identities)],
                 'observed_scopes':observed_scopes, 'timer_resolutions_seconds':resolutions,
                 'unknown_timer_resolution_observations':sum(s['status']=='success' and v['status']=='measured' and v['source'].get('timer_resolution_seconds') is None for s,v in items), 'duplicate_observations':duplicate_observations, 'n':len(values),
                 'missing':len(members)-len(items),
@@ -477,8 +506,7 @@ def _exact_statistic(samples, name, statistic):
     for sample in samples:
         item = _flatten(sample).get(name)
         if sample['status'] == 'success' and item is not None and item['status'] == 'measured':
-            source = item['source']
-            key = source['receipt_sha256']
+            key = metric_observation_key(item)
             unique[key] = Fraction(str(item['value']))
     values = sorted(unique.values())
     require(values, 'comparison statistic: no successful measurements')
@@ -554,13 +582,13 @@ def compare_baseline(baseline, current, tolerances, allowed_changed_subject_fiel
             for sample in samples:
                 item=_flatten(sample).get(name)
                 if sample['status']=='success' and item is not None and item['status']=='measured':
-                    result.add(item['source']['receipt_sha256'])
+                    result.add(metric_observation_key(item))
             return result
         require(not observations(baseline['samples']) & observations(current['samples']),
                 f'{name}: baseline/current observation reuse')
         old,new = a['metrics'].get(name),b['metrics'].get(name)
         enough = old and new and min(old['n'],new['n']) >= rule['min_samples']
-        complete = enough and all(x['success_missing']==x['success_unavailable']==x['success_censored']==x['duplicate_observations']==0 for x in (old,new))
+        complete = enough and all(x['success_missing']==x['success_unavailable']==x['success_censored']==0 for x in (old,new))
         if not complete:
             outcomes[name] = {'status':'incomplete','rule':copy.deepcopy(rule)}
             continue
@@ -641,6 +669,8 @@ def collect_sample(template, receipt_bindings, base_dir):
             term = binding['terminal']
             _keys(term, {'pointer','success_values','censored_values'}, where='terminal')
             require(type(term['success_values']) is list and type(term['censored_values']) is list, 'terminal: expected lists')
+            require(all(v is True or (type(v) is str and v.strip()) for v in term['success_values']),
+                    'terminal: process exit code alone is not semantic success; use True or a nonempty semantic status string')
             require(term['success_values'] and not any(_exact(v, c) for v in term['success_values'] for c in term['censored_values']), 'terminal: ambiguous values')
             try:
                 observed = resolve_pointer(doc, term['pointer'])

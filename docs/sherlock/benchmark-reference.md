@@ -59,7 +59,7 @@ Policy schema is `sherlock-benchmark-acceptance-policy/2`. It has `stage`,
 `catalog: {path, sha256}`, exact stage `cases`, `limits`, `regression`,
 `observation_fields`, `metric_context_fields`, `status_values`,
 `receipt_fields`, `terminal_values`, `proof_receipt_fields` and
-`statement_fields`. Cases copy the real catalog's identities/layers/root roles
+`statement_fields`, `command_fields` and `command_role_values`. Cases copy the real catalog's identities/layers/root roles
 and required metric IDs and add positive `min_successful_samples` and explicit
 nonnegative `max_failures`/`max_censored`. Native receipt schemas are adapted by
 reviewed RFC6901 pointers; benchmark code does not invent a native producer format.
@@ -86,7 +86,18 @@ sentinels cannot qualify. Legitimate null option values remain valid; profile
 required roots must be present and known. `expected_effect_root_pointers` maps the
 catalog's semantic root roles to real oracle fields, including all four Fenrir
 pre/post tree-root roles. `expected_state_pointers: {pre, post}` selects complete
-opening/closing states for terminal public-state comparison.
+opening/closing states for terminal public-state comparison. Root roles select
+separate semantic fields (values can legitimately coincide). Deployed contexts
+also provide `catalog_scalar_pointers`, mapping every known frozen semantic leaf
+to its complete-oracle pointer. Linked semantics include literal/program, both
+ordered transitions and known work; Fenrir semantics include balances, batch
+count, ordered transaction IDs, known state counters and totals. Typed unavailable
+root descriptors are excluded from this scalar projection and still cannot supply
+complete roots. `transition_state_pointers` selects ordered full pre/post states;
+`state_scalar_fields` maps frozen state scalar paths to actual state-view paths.
+Linked control/fuel transitions and each Fenrir corpus batch's known scalar
+pre/post state must agree with the validated catalog. Each leaf statement binds
+those actual full states, including additional preserved context.
 
 ## Sample acceptance extension /2
 
@@ -109,7 +120,13 @@ Each deployed `proof_nodes` entry has `node_id`, `layer`, `operation_id`, actual
 `circuit_sha256`, `circuit_k`, proof/statement/VK artifact digests, pre/post complete
 state digests, ordered `inputs` and prove/local_verify receipt bindings. Those
 native receipts must bind the complete node/subject fields and an actual positive
-cryptographic verification verdict. Nonempty artifact bytes are rehashed. Statement
+cryptographic verification verdict. `command_fields` maps `execution_id` and
+`mode` in actual command results. Disjoint `command_role_values.prove` and
+`.local_verify` values and distinct execution IDs separate prover and verifier
+observations. A single JSON bundle can hold both at distinct command-result
+pointers; the same result cannot satisfy both roles. These consistency checks do
+not authenticate commands or replace actual native verification.
+Nonempty artifact bytes are rehashed. Statement
 JSON selects complete states through `statement_fields`; binary statements need
 an existing native decoded `statement_view` receipt binding its artifact digest.
 State views are compared as complete JSON, including fields and list order.
@@ -121,17 +138,39 @@ continuous, parent/decider boundaries match and the terminal graph consumes ever
 transition/batch exactly once in order. Final artifacts and independent complete
 opening/closing states must match the deployed terminal proof.
 
-Layer metric sources are tied to native node proof/verifier receipts. Optional
-`layer_observations[layer]` can bind an actual native aggregate receipt containing
-the exact node-reference list through `layer_receipt_fields`; it cannot replace
-individual positive proof verifications. Aggregate proof/instance bytes sum
-serialized members; VK bytes count distinct key artifacts. Setup/key receipts
-may be retained and reused; this consumer never dispatches repeated setup.
+Layer metric sources include witness/keygen/prove/local-verify, circuit metadata
+and every required artifact size. A multi-node layer requires
+`layer_observations[layer]`, binding a real aggregate receipt and the exact ordered
+node references through `layer_receipt_fields`. Its `aggregation` adapter selects
+a recipe for every measured layer metric. Every recipe names all members in
+order and each original member scalar source, unit/scale and command attribution.
+All sources are re-read with the shared exact decimal normalizer.
+
+Wall recipes use `mode: observed_parallel_span`, `scope: all-member-command-span`,
+aggregate `start`/`end` pointers, and contributor `start`/`end` pointers relative
+to each actual command result. Every member duration equals its observed interval;
+aggregate endpoints equal the earliest member start and latest member end. This
+allows parallel spans and never sums elapsed wall time. CPU uses `sum` with
+`cumulative-member-subprocess-cpu`; RSS uses `maximum` with
+`maximum-member-subprocess-peak-rss`, which claims only the largest member peak,
+not simultaneous process-tree memory. Circuit metadata uses `common`.
+Serialized member byte metrics use `sum`/`serialized-member-artifacts`; VK bytes
+use `unique-verifying-keys`. Proof/instance/VK counts also agree with rehashed
+artifact byte lengths. Qualified aggregation mode/scope signatures must match
+across historical comparisons. Aggregate records cannot replace individual
+positive native verifications. Setup/key artifacts may remain retained and
+reused; the consumer never dispatches setup.
 
 Raw duplicate records remain visible but cannot supply additional distinct
 successful observations or failure attempts. Reused prove/verify/call/readback
 observations cannot satisfy extra repetitions. Declared failures/censoring remain
-counted and bounded. The raw and deduplicated counts are separate.
+counted and bounded. Only qualified unique successes enter regression statistics;
+a renamed wrapper that reuses prove/verify/call operations stays descriptive.
+Available failed/censored scalar sources must belong to retained actual observer,
+role, node or layer records with matching producer context. Successful proof or
+ledger artifacts are not required for a partial failure. Censored observations
+bind an actual nonempty censoring reason through `observation_fields.censoring_reason`.
+The raw and deduplicated counts are separate.
 
 JSON and receipt reads use the shared 16MiB ingestion bound. Binary artifact reads
 have `ingestion_limits.max_artifact_bytes`, default 64MiB. These are supplied-data
@@ -151,7 +190,13 @@ that historical cut before the shared comparison checks unchanged environment,
 toolchain, ledger/network/workload/cache/scope/resolution and allowed compiler/
 source/circuit changes. Retained failures/censoring do not masquerade as successful
 statistics; duplicates cannot provide replicas, and current observations cannot
-be their own baseline. Zero baselines have explicit absolute tolerance semantics.
+be their own baseline. The selected case repetition minimum applies inside each
+compared cache/environment profile; a tolerance cannot weaken it. No unselected
+cold/warm profile is invented. `comparison_scope` lists all mandatory measurements,
+the explicitly selected tolerance metrics, and measurements without a declared
+regression tolerance. Full measurement coverage remains required; passing a subset
+of tolerances asserts only that subset, never a universal performance target.
+Zero baselines have explicit absolute tolerance semantics.
 
 `traceability.json` /2 pins the cross-lane implementation/schema/catalog/generator,
 tests, documentation and workload closure, maps all SBENCH clauses and is checked

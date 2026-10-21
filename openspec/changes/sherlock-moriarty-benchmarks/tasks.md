@@ -15,3 +15,10 @@
 
 Source/test checkboxes concern implementation only. No actual native or target
 benchmark acceptance is claimed by this change.
+
+Revision03 tightens operation uniqueness before comparison, independent command
+role attribution, complete multi-node measurement scopes, frozen scalar/transition
+oracle correspondence and partial failure producer lineage. Comparison explicitly
+reports its declared tolerance subset and preserves complete stage measurements.
+Ordinary synthetic regressions establish consumer behavior only; actual native
+benchmarks and the full Sherlock goal remain open.

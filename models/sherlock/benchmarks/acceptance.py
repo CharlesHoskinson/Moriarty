@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal
 from pathlib import Path
 
 try:
@@ -161,8 +162,11 @@ def _context(current, case, root):
     if case["evidence_class"] == "stagenet":
         _need(context.get("expected_effects_scope") == "complete-deployed-effects", "complete deployed effects scope required")
         _known_effects(effects)
+        _oracle_catalog(context, effects, case, root)
         roots = context["expected_effect_root_pointers"]
         _need(set(roots) == set(case["required_effect_root_roles"]), "profile-required effect root roles missing")
+        _need(len(set(roots.values())) == len(roots), "distinct semantic root fields required; root values may coincide")
+        _need(not any(a != b and b.startswith(a + "/") for a in roots.values() for b in roots.values()), "overlapping root field pointers")
         for role, pointer in roots.items():
             value = _pointer(effects, pointer)
             _known_effects(value)
@@ -177,6 +181,102 @@ def _context(current, case, root):
         expected = _pointer(frozen, case["expected_terminal_value_pointer"])
         _need(_equal(effects, expected), "host expected value differs from independently frozen catalog oracle")
     return context, effects
+
+
+def _known_scalars(value, prefix=""):
+    """Frozen semantic leaves; unavailable native roots are deliberately excluded."""
+    if isinstance(value, dict):
+        if value.get("status") in ("unknown", "unavailable", "deferred", "not_run"):
+            return {}
+        return {path: leaf for key, child in value.items() for path, leaf in
+                _known_scalars(child, prefix + "/" + key.replace("~", "~0").replace("/", "~1")).items()}
+    if isinstance(value, list):
+        return {path: leaf for index, child in enumerate(value) for path, leaf in
+                _known_scalars(child, prefix + "/" + str(index)).items()}
+    return {} if value is None else {prefix: value}
+
+
+def _oracle_catalog(context, effects, case, root):
+    frozen = read_json(_path(root, str(Path(case["_catalog_root"]) / case["expected_effects_path"])))
+    semantic = ({key: frozen[key] for key in ("literal", "program", "ordered_transitions", "work")}
+                if case["workload_id"] == "sherlock-linked-two-step" else
+                {key: frozen[key] for key in ("balances", "batches", "ordered_transaction_ids", "state", "totals")})
+    scalars = _known_scalars(semantic)
+    pointers = context["catalog_scalar_pointers"]
+    _need(set(pointers) == set(scalars), "complete frozen catalog scalar correspondence required")
+    for path, value in scalars.items():
+        _need(_equal(_pointer(effects, pointers[path]), value), "native oracle differs from frozen catalog scalar: " + path)
+    transitions = context["transition_state_pointers"]
+    if case["workload_id"] == "sherlock-linked-two-step":
+        expected = [dict(pre=dict(control=t["pre_control"], fuel=t["fuel_before"]),
+                         post=dict(control=t["post_control"], fuel=t["fuel_after"]))
+                    for t in frozen["ordered_transitions"]]
+    else:
+        corpus = read_json(_path(root, str(Path(case["_catalog_root"]) / case["inputs"][0]["path"])))
+        expected = [dict(pre=batch["state_pre"], post=batch["state_post"]) for batch in corpus["batches"]]
+    _need(len(transitions) == len(expected), "independent transition-state count differs")
+    for pointers, transition in zip(transitions, expected):
+        _need(set(pointers) == {"pre", "post"}, "transition state boundaries required")
+        for boundary, state in transition.items():
+            actual = _pointer(effects, pointers[boundary])
+            fields = context["state_scalar_fields"]
+            leaves = _known_scalars(state)
+            _need(set(fields) >= set(leaves), "known transition scalar adapters incomplete")
+            for path, value in leaves.items():
+                _need(_equal(_pointer(actual, fields[path]), value), "frozen transition scalar differs: " + boundary + path)
+
+
+def _independent_commands(roles, parsed, policy):
+    _need(not set(policy["command_role_values"]["prove"]) & set(policy["command_role_values"]["local_verify"]), "prover/verifier command modes must be disjoint")
+    prove, verify = roles["prove"], roles["local_verify"]
+    _need(prove != verify, "prover result cannot serve as independent verifier result")
+    commands = []
+    for role in ("prove", "local_verify"):
+        receipt = _binding(roles[role], parsed)
+        fields = policy["command_fields"]
+        execution = _pointer(receipt, fields["execution_id"])
+        mode = _pointer(receipt, fields["mode"])
+        _need(type(execution) is str and bool(execution), "actual command execution identity required")
+        _need(mode in policy["command_role_values"][role], "actual command mode differs: " + role)
+        commands.append(execution)
+    _need(commands[0] != commands[1], "verification must be a separate command observation")
+    return commands
+
+
+def _within(source, binding):
+    return source["receipt_sha256"] == binding["receipt_sha256"] and source["pointer"].startswith(binding["pointer"] + "/")
+
+
+def _partial_sources(sample, extension, policy, parsed):
+    # Failed commands need their actual available producer lineage, not a
+    # successful proof/deployment. Unobserved roles/artifacts may be absent.
+    approved = [extension["observation"]]
+    facts = dict(sample["identity"], workload_digest_sha256=sample["workload_digest_sha256"])
+    _need(set(extension.get("receipt_roles", {})) <= set(NATIVE_ROLES) | {"host"}, "unknown partial producer role")
+    for binding in extension.get("receipt_roles", {}).values():
+        receipt = _binding(binding, parsed)
+        _fields(receipt, policy["metric_context_fields"], facts,
+                set(facts) - {"circuit_sha256"}, "partial-producer")
+        approved.append(binding)
+    for node in extension.get("proof_nodes", []):
+        for binding in node.get("receipt_roles", {}).values():
+            receipt = _binding(binding, parsed)
+            _fields(receipt, policy["metric_context_fields"], facts,
+                    set(facts) - {"circuit_sha256"}, "partial-node-producer")
+            # Available native node identity must still be the declared node.
+            for key in ("node_id", "operation_id"):
+                _need(_pointer(receipt, policy["proof_receipt_fields"]["prove"][key]) == node[key], "partial node producer identity differs")
+            approved.append(binding)
+    for binding in extension.get("layer_observations", {}).values():
+        receipt = _binding(binding, parsed)
+        _fields(receipt, policy["metric_context_fields"], facts, set(facts) - {"circuit_sha256"}, "partial-layer-producer")
+        approved.append(binding)
+    for name, metric in _named_metrics(sample):
+        if metric["status"] in ("measured", "censored"):
+            _need(any(_within(metric["source"], binding) for binding in approved), "partial measurement lacks available producer attribution: " + name)
+    if sample["status"] == "censored":
+        reason = _pointer(_binding(extension["observation"], parsed), policy["observation_fields"]["censoring_reason"])
+        _need(type(reason) is str and bool(reason.strip()), "actual censoring reason required")
 
 
 def _known_effects(value):
@@ -327,7 +427,58 @@ def _observation(sample, case, context, policy, parsed):
     return extension
 
 
-def _proof_chain(sample, case, context, effects, extension, policy, parsed, lengths):
+def _layer_aggregation(sample, layer, members, binding, policy, parsed, raw):
+    receipt = _binding(binding, parsed)
+    recipes = _pointer(receipt, policy["layer_receipt_fields"]["aggregation"])
+    measured = {name: metric for name, metric in sample["layers"][layer].items() if metric["status"] == "measured"}
+    _need(set(recipes) == set(measured), "all measured layer metrics require explicit aggregation lineage")
+    for name, metric in measured.items():
+        recipe = recipes[name]
+        contributors = recipe["contributors"]
+        _need([item["node_id"] for item in contributors] == [node["node_id"] for node in members], "layer aggregation omits/reorders actual members: " + name)
+        values = []
+        for item, node in zip(contributors, members):
+            phase = "local_verify" if name.startswith("local_verify.") else "prove"
+            source = item["source"]
+            _need(_within(source, node["receipt_roles"][phase]), "aggregate contributor lacks actual member command lineage: " + name)
+            values.append(receipt_metric_value(raw[source["receipt_sha256"]], source["pointer"], source.get("scale", 1), unit=metric["unit"]))
+        mode = recipe["mode"]
+        if name.endswith("wall_seconds"):
+            _need(mode == "observed_parallel_span" and recipe["scope"] == "all-member-command-span", "wall time requires actual all-member elapsed scope")
+            start, end = (Decimal(str(receipt_metric_value(raw[binding["receipt_sha256"]], binding["pointer"] + recipe[key], unit="seconds"))) for key in ("start", "end"))
+            _need(end >= start, "negative aggregate span")
+            starts, ends = [], []
+            for item, node, value in zip(contributors, members, values):
+                phase = "local_verify" if name.startswith("local_verify.") else "prove"
+                command_binding = node["receipt_roles"][phase]
+                first, last = (Decimal(str(receipt_metric_value(raw[command_binding["receipt_sha256"]], command_binding["pointer"] + item[key], unit="seconds"))) for key in ("start", "end"))
+                _need(start <= first <= last <= end and last - first == Decimal(str(value)), "member wall time differs from actual command span")
+                starts.append(first); ends.append(last)
+            _need(start == min(starts) and end == max(ends), "aggregate span does not cover exact observed member endpoints")
+            expected = end - start
+        elif name.endswith("cpu_seconds"):
+            _need(mode == "sum" and recipe["scope"] == "cumulative-member-subprocess-cpu", "CPU aggregation scope missing")
+            expected = sum(Decimal(str(value)) for value in values)
+        elif name.endswith("peak_rss_bytes"):
+            _need(mode == "maximum" and recipe["scope"] == "maximum-member-subprocess-peak-rss", "RSS aggregation requires explicit member-peak scope")
+            expected = max(values)
+        elif name.startswith("circuit."):
+            _need(mode == "common" and all(value == values[0] for value in values), "mixed circuit metadata cannot share one layer scalar")
+            expected = values[0]
+        elif name == "verifying_key.bytes":
+            _need(mode == "unique-verifying-keys", "VK aggregation mode required")
+            unique = {}
+            for node, value in zip(members, values):
+                unique[node["verifying_key_sha256"]] = value
+            expected = sum(unique.values())
+        else:
+            _need(metric["unit"] == "bytes" and mode == "sum" and recipe["scope"] == "serialized-member-artifacts", "explicit serialized member byte aggregation required")
+            expected = sum(values)
+        _need(Decimal(str(metric["value"])) == Decimal(str(expected)), "layer aggregate differs from all actual member measurements: " + name)
+        _need(_within(metric["source"], binding), "multinode layer scalar must come from declared aggregate receipt")
+
+
+def _proof_chain(sample, case, context, effects, extension, policy, parsed, lengths, raw):
     nodes = extension["proof_nodes"]
     _need(type(nodes) is list and nodes, "actual per-layer proof/statement/VK nodes required")
     known, groups, tokens, artifacts = {}, {}, set(), set()
@@ -368,6 +519,8 @@ def _proof_chain(sample, case, context, effects, extension, policy, parsed, leng
         facts = dict(sample["identity"], workload_digest_sha256=sample["workload_digest_sha256"], **{key: node[key] for key in NODE_FIELDS})
         # A node circuit may differ from the whole terminal circuit, as expected.
         facts["circuit_sha256"] = node["circuit_sha256"]
+        commands = _independent_commands(node["receipt_roles"], parsed, policy)
+        tokens.update(("command-execution", case["workload_id"] + ":" + command, "") for command in commands)
         for role in ("prove", "local_verify"):
             binding = node["receipt_roles"][role]
             receipt = _binding(binding, parsed)
@@ -388,6 +541,9 @@ def _proof_chain(sample, case, context, effects, extension, policy, parsed, leng
         _need(len(groups.get("leaf", [])) == count, "actual rollup batch leaf count differs")
     leaves = [node for node in nodes if node["layer"] not in ("parent", "decider")]
     _need(all(a["post_state_sha256"] == b["pre_state_sha256"] for a, b in zip(leaves, leaves[1:])), "leaf transition/batch whole-state continuity failed")
+    for leaf, pointers in zip(leaves, context["transition_state_pointers"]):
+        for boundary in ("pre", "post"):
+            _need(canonical_digest(_pointer(effects, pointers[boundary])) == leaf[boundary + "_state_sha256"], "leaf statement differs from independently expected transition state")
     _need(len(groups["decider"]) == 1 and nodes[-1]["layer"] == "decider", "exactly one final decider required")
     final = nodes[-1]
     boundaries = context["expected_state_pointers"]
@@ -418,13 +574,16 @@ def _proof_chain(sample, case, context, effects, extension, policy, parsed, leng
             _fields(_binding(aggregate, parsed), policy["layer_receipt_fields"], facts,
                     set(facts) | {"success"}, "layer/" + layer, policy["terminal_values"].get("layer_observation"))
             tokens.add(("layer_observation", aggregate["receipt_sha256"], aggregate["pointer"]))
+        if len(members) > 1:
+            _need(aggregate is not None, "multinode layer needs declared all-member measurement scope")
+            _layer_aggregation(sample, layer, members, aggregate, policy, parsed, raw)
         measured_k = sample["layers"][layer]["circuit.k"]
         _need(all(member["circuit_k"] == measured_k["value"] for member in members), "measured layer degree differs from actual proof circuit")
         for name, metric in sample["layers"][layer].items():
             if metric["status"] != "measured":
                 continue
             phase = "local_verify" if name.startswith("local_verify.") else "prove"
-            if name.startswith(("prove.", "local_verify.", "circuit.", "proof.", "verifying_key.", "instance.")):
+            if name.startswith(("witness.", "keygen.", "prove.", "local_verify.", "circuit.", "proof.", "proving_key.", "verifying_key.", "instance.", "artifact.")):
                 source = metric["source"]
                 candidates = [member["receipt_roles"][phase] for member in members]
                 if aggregate is not None:
@@ -458,8 +617,11 @@ def _sample(sample, case, context, effects, policy, root):
     parsed, raw, lengths = _receipts(sample, policy, root)
     _lineage(sample, parsed, raw, policy)  # failed/censored measurements receive the same lineage checks
     extension = _observation(sample, case, context, policy, parsed)
+    observation = extension["observation"]
+    observation_token = ("observation", observation["receipt_sha256"], observation["pointer"])
     if sample["status"] != "success":
-        return sample, set()
+        _partial_sources(sample, extension, policy, parsed)
+        return sample, {observation_token}
     _need(sample["cache_state"] != "unknown", "selected benchmark cache state unavailable")
     _need(sample["evidence_class"] == case["evidence_class"], "case requires its actual host or stagenet evidence class")
     coverage = metric_coverage(sample, required_metric_ids(case))
@@ -476,7 +638,9 @@ def _sample(sample, case, context, effects, policy, root):
             _need(extension[key] == context[key], "actual target/anchor differs")
         for key in ("deployment_id", "call_transaction_id"):
             _need(type(extension[key]) is str and bool(extension[key]), "actual deployed transaction identity missing")
-        tokens = _proof_chain(sample, case, context, effects, extension, policy, parsed, lengths)
+        commands = _independent_commands(extension["receipt_roles"], parsed, policy)
+        tokens = _proof_chain(sample, case, context, effects, extension, policy, parsed, lengths, raw)
+        tokens.update(("command-execution", case["workload_id"] + ":" + command, "") for command in commands)
         facts.update({key: extension[key] for key in ("target_id", "anchor_id", "deployment_id", "call_transaction_id", "proof_sha256", "statement_sha256", "verifying_key_sha256")})
         facts.update(sample["events"], effects=effects)
         _need(all(sample["events"].get(key) is not None for key in EVENTS), "complete receipt-bound event timestamps required")
@@ -498,8 +662,12 @@ def _sample(sample, case, context, effects, policy, root):
             continue
         source = metric["source"]
         _need(any(source["receipt_sha256"] == binding["receipt_sha256"] and source["pointer"].startswith(binding["pointer"] + "/") for binding in approved), "measurement comes from an unqualified/failed receipt: " + name)
+    sample["extensions"]["qualified_aggregation_scopes"] = {
+        layer: {name: {key: recipe[key] for key in ("mode", "scope")} for name, recipe in
+                _pointer(_binding(binding, parsed), policy["layer_receipt_fields"]["aggregation"]).items()}
+        for layer, binding in extension.get("layer_observations", {}).items()}
     _limits(sample, policy)
-    return sample, tokens
+    return sample, tokens | {observation_token}
 
 
 def _evaluate(samples, policy, current, root):
@@ -533,15 +701,15 @@ def _evaluate(samples, policy, current, root):
                     row["duplicate_observations"] += 1
                     continue
                 occurrences.add(occurrence)
+                if checked["status"] == "success" and tokens.intersection(all_tokens):
+                    row["duplicate_observations"] += 1
+                    continue
                 row["counts"][checked["status"]] += 1
                 valid.append(checked)
                 if checked["status"] == "success":
-                    if tokens.intersection(all_tokens):
-                        row["duplicate_observations"] += 1
-                    else:
-                        row["successful_observations"] += 1
-                        row["qualified_samples"].append(label)
-                    all_tokens.update(tokens)
+                    row["successful_observations"] += 1
+                    row["qualified_samples"].append(label)
+                all_tokens.update(tokens)
             except Incomplete as error:
                 row["findings"].append(dict(sample_id=sample.get("sample_id"), reason=str(error)))
         if row["successful_observations"] < case["min_successful_samples"]:
@@ -578,17 +746,27 @@ def assess(samples, policy, current, receipt_root, baseline=None):
             _need(not old_tokens.intersection(tokens), "current observation reused as historical baseline")
             report["baseline_cases"] = old_rows
             comparisons = []
+            report["comparison_scope"] = []
             for case in policy["cases"]:
                 name = case["workload_id"]
                 left = [sample for sample in old_samples if sample["workload_id"] == name]
                 right = [sample for sample in validated if sample["workload_id"] == name]
                 rules = policy["regression"]["tolerances"].get(name)
                 _need(type(rules) is dict and bool(rules), "per-case explicit comparison tolerances required")
+                required = required_metric_ids(case)
+                _need(set(rules) <= set(required), "tolerance metric is outside selected required coverage")
+                report["comparison_scope"].append(dict(workload_id=name,
+                    required_measurements=required, compared_metrics=sorted(rules),
+                    measured_without_tolerance=sorted(set(required) - set(rules))))
+                minimum = case["min_successful_samples"]
+                _need(all(type(rule.get("min_samples")) is int and rule["min_samples"] > 0 for rule in rules.values()), "explicit positive shared tolerance repetition minimum required")
+                rules = {metric: dict(rule, min_samples=max(minimum, rule["min_samples"])) for metric, rule in rules.items()}
                 allowed = policy["regression"].get("allowed_changed_subject_fields", ())
                 def group_key(sample):
                     return canonical_digest(dict(workload=sample["workload_digest_sha256"], evidence=sample["evidence_class"],
                         identity={key: value for key, value in sample["identity"].items() if key not in allowed},
-                        cache=sample["cache_state"], cache_identity=sample.get("cache_identity_sha256")))
+                        cache=sample["cache_state"], cache_identity=sample.get("cache_identity_sha256"),
+                        aggregation_scopes=sample["extensions"].get("qualified_aggregation_scopes", {})))
                 # Partition only; all compatibility, statistics and decimal
                 # tolerance semantics remain in the single shared API.
                 groups = {group_key(sample) for sample in right if sample["status"] == "success"}
@@ -596,7 +774,7 @@ def assess(samples, policy, current, receipt_root, baseline=None):
                 for key in sorted(groups):
                     previous = [sample for sample in left if group_key(sample) == key]
                     observed = [sample for sample in right if group_key(sample) == key]
-                    _need(any(sample["status"] == "success" for sample in previous), "comparable own-context historical profile unavailable")
+                    _need(sum(sample["status"] == "success" for sample in previous) >= minimum and sum(sample["status"] == "success" for sample in observed) >= minimum, "declared per-profile comparison repetition minimum incomplete")
                     try:
                         comparison = compare_baseline({"samples": previous}, {"samples": observed}, rules,
                             allowed_changed_subject_fields=allowed)
