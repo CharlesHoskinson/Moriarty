@@ -94,3 +94,6 @@ tags: [moriarty, consolidation, recursion]
 ## UPDATE026 engineering correction — 2026-10-21
 
 [The separate receipt-contract erratum](research/sherlock-circuit-atlas/UPDATE-026-RECEIPT-GATING-ERRATUM.md) corrects one historical parenthetical; the creative chapter is unchanged and the site remains unpublished.
+
+
+2026-10-21 dated source02 intake: [separate circuit engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), source `src-e4a728c21edb26d302ff`. Historical metadata/fixture/kernel/inverse scopes; no current liveness or acceptance claim.
