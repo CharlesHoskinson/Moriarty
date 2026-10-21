@@ -47,3 +47,46 @@ contracts, prove semantic or cryptographic correctness, run declared commands,
 or establish compiler, proof, wallet, node or ledger acceptance. Synthetic
 regressions exercise reporting only. No SDK, model, network or native operation
 is part of this entrypoint, and no scheduler or hosted CI is installed.
+
+The Cardano workflow status consumer also loads `cardano_graph_context.py`.
+Its `load_graph_context(repo_root, graphify_out=None)` resolves an explicit
+argument first, then `GRAPHIFY_OUT`, then that checkout's `graphify-out`.
+Relative selections resolve against `repo_root`; it never falls back to the
+parent checkout. For the existing external graph, select it explicitly:
+
+```bash
+export GRAPHIFY_OUT=/home/charl/moriarty-c2-opus55-restored-20261017/graph-refresh-20261019/graphify-out
+./scripts/doctorwatson-utxo.sh --cardano-next --json
+```
+
+The helper reuses `scripts/graph-nav.py` freshness checks: graph/manifest/coverage
+hashes, recorded root, snapshot cardinality, HEAD, every included body and primary
+inventory membership. The report bounds displayed issues and lists the omitted
+counts. Matching graph identity permits at most four exact-node/source-location
+handoff references and one inert 1500-token query suggestion. The budget is
+approximate. A stale graph's suggestion is explicitly `dated-discovery-only`;
+changed source hashes, original snapshot/status and the partial semantic coverage
+qualification remain visible. An unbound graph offers no guessed node/query.
+Read the complete applicable current sources after lookup. No graph rebuild,
+model, proof, SDK, wallet, network or ledger operation runs in this helper.
+
+This reuses the existing Moriarty graph policy and additive fragments in
+`docs/utxo/graphs/`. The inspected ProjectFenrir conventions are in
+`/home/charl/projectfenrir/aitools/fenrir-graph/SKILL.md`, its
+`references/context-packs.md`, and `aitools/ctx/{cmd_q.py,stamp.py,cmd_pack.py}`:
+explicit external graph selection, bounded exact-ID navigation, pointer packs,
+source reads and freshness qualification. ProjectFenrir's
+`fenrir-workspace/SPRINT-WORKFLOW.md` supplies its sprint workflow;
+`sequencer/quint/durable_handoff.qnt` and
+`sequencer/quint/settlement/enforced_settlement.qnt` are protocol models, not a
+DoctorWatson execution model. Its PPR implementation, measured recall and update
+commands are not imported or claimed here. Moriarty's existing workflow model
+remains `models/doctorwatson/doctorwatson.qnt`; this Python context handoff has no
+new Quint correspondence result. Graph metadata establishes no ledger acceptance
+and no live/rearmed loop.
+
+Focused ordinary checks:
+
+```bash
+python3 -m unittest discover -s models/utxo/qa -p test_cardano_graph_context.py -v
+```

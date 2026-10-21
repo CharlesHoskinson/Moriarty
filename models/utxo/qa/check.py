@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read public UTXO metadata and report declarations and byte currentness.
+"""Read public UTXO metadata and select the next Cardano proof-to-chain step.
 
 No declared command is executed. File agreement does not authenticate evidence,
 reviewers, results, product semantics, cryptography or target acceptance.
@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shlex
 import stat
 import sys
 
@@ -394,11 +395,19 @@ def main(argv=None):
     parser.add_argument("--baseline", default=BASELINE)
     parser.add_argument("--evidence", default=EVIDENCE)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--cardano-observations", metavar="PATH",
+                        help="public repository-relative JSON observations for --cardano-next")
     select = parser.add_mutually_exclusive_group()
     select.add_argument("--next", action="store_true")
+    select.add_argument("--cardano-next", action="store_true",
+                        help="select the next genuine invoice Groth16-to-Preview step without executing it")
     select.add_argument("--requirement")
     select.add_argument("--gate")
     args = parser.parse_args(argv)
+    if args.cardano_observations is not None and not args.cardano_next:
+        parser.error("--cardano-observations requires --cardano-next")
+    if args.cardano_next:
+        return cardano_next(Path(args.repo), args.json, args.cardano_observations)
     try:
         files = Files(Path(args.repo))
         report = inspect(files, files.document(args.baseline), files.document(args.evidence))
@@ -455,6 +464,54 @@ def main(argv=None):
                   "integrity": {"status": "failed", "issues": [f"malformed input: {exc}"]},
                   "requirements": [], "families": [], "nextActions": []}
         print(json.dumps(report, indent=2) if args.json else f"doctorwatson<UTXO>: malformed input: {exc}")
+        return 2
+
+
+def cardano_next(repo, json_output, observations_path=None):
+    """Expose the read-only Cardano selector through the public QA consumer."""
+    try:
+        observations = None
+        if observations_path is not None:
+            observations = Files(repo).document(observations_path)
+            require(type(observations) is dict, "Cardano observations must be an object")
+        from cardano_first_proof import build_cardano_status
+
+        report = build_cardano_status(repo, observations)
+        if json_output:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            action = report["selected_action"]
+            if action is None:
+                print("doctorwatson<UTXO>: no missing Cardano stage in the supplied reports")
+            else:
+                print(f"doctorwatson<UTXO>: Cardano next — {action['id']}")
+                print(f"  Next action: {action['description']}")
+                print(f"  Consumer: {action['consumer']}")
+                for expected in action["evidence_required"]:
+                    print(f"  Required evidence: {expected}")
+            for stage in report["stages"]:
+                print(f"  {stage['id']}: {stage['status']}")
+                for missing in stage["missing"]:
+                    print(f"    Missing: {missing}")
+            for scope, acceptance in report["acceptance"].items():
+                print(f"  {scope}: {acceptance['status']} — {acceptance['detail']}")
+            graph = report.get("graph_context")
+            if graph is not None:
+                print(f"  Graph: {graph['status']}; {graph['semanticCoverage']}")
+                print(f"  Graph next: {graph['nextAction']}")
+                query = graph.get("firstStageQuery")
+                if query is not None:
+                    print(f"  Graph query ({query['mode']}): {shlex.join(query['argv'])}")
+            print("  Wider language and roadmap exits remain open.")
+        # Missing execution evidence is an honest selection, not a failed QA gate.
+        return 0
+    except (ImportError, ValueError, OSError, UnicodeError, RecursionError) as exc:
+        message = f"Cardano next selection failed: {exc}"
+        if json_output:
+            print(json.dumps({"error": message, "selected_action": None,
+                              "wider_exits_open": True}, indent=2))
+        else:
+            print(f"doctorwatson<UTXO>: {message}")
         return 2
 
 
