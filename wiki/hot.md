@@ -97,3 +97,8 @@ tags: [moriarty, consolidation, recursion]
 
 
 2026-10-21 dated source02 intake: [separate circuit engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), source `src-e4a728c21edb26d302ff`. Historical metadata/fixture/kernel/inverse scopes; no current liveness or acceptance claim.
+
+
+### 2026-10-21 — source07 historical receipt distinction
+
+[Source07 separate engineering cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), src-b61a963c72b8a8e55ce7, is dated prebuild history, not current execution status. It separates ordinary accounting checks, operational cleanup discharge, wallet B2 and finite counterparts; site remains unpublished until full Sherlock completion.

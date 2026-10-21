@@ -386,6 +386,8 @@ pub mod c6_scalar_tag_step;
 pub mod c6_scalar_tag_consumer;
 pub mod c6_scalar_arithmetic_step;
 pub mod c6_scalar_arithmetic_consumer;
+pub mod c6_return_call_step;
+mod c6_return_call_consumer;
 pub mod c6_scalar_entry_step;
 pub mod c6_scalar_entry_consumer;
 pub mod c6_validate_field_step;
@@ -503,4 +505,14 @@ pub use c6_validate_field_consumer::{
     witness_from_owner_record as witness_validate_field_from_owner_record,
     C6ValidateFieldConsumerError, C6ValidateFieldStepCircuit,
     C6ValidateFieldStepWitness,
+};
+
+pub use c6_return_call_step::{
+    emit_c6_return_call_step_block, C6ReturnCallStepBlock, C6ReturnCallStepEmitter,
+    C6ReturnCallStepError, C6ReturnCallStepInputs,
+};
+pub use c6_return_call_consumer::{
+    build_c6_return_call_step_circuit, check_c6_return_call_step_circuit,
+    witness_from_host_pair as witness_return_call_from_host_pair,
+    C6ReturnCallConsumerError, C6ReturnCallStepCircuit, C6ReturnCallStepWitness,
 };
