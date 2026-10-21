@@ -2101,3 +2101,17 @@ pins, then advances the eligible receiving source/check. Validate improvement
 against actual integrated behavior and observed review/check latency; this entry
 claims no measured speedup, armed runtime, native success or acceptance. Earlier
 failures, dissent, resource/cleanup history and security obligations remain.
+
+
+## October21 UTC — actual receiving APIs and complete-data checks
+
+Dated implementation results; prior failures remain immutable.
+
+1. **Compile the actual receiver early.** Ordinary compilation found E0609 field errors and E0433 (`FuelPolicy`) missed by static review. Keep the failure receipts and dated normal05/cfg06 qualification. A static review is not a typecheck.
+2. **Use one declared-schema mapping across all callers.** Public artifact admission has six fields; complete-snapshot admission has four. Source07 corrected the top-level test, but the next quote run found the same invalid whole-object equality in its shared assertion helper. Source09 must centralize the full-value mapping and inspect all callers before another run. Keep exact field sets and semantic expectations. The original twelve attempted Core tests produced eight passes and four failures; eighteen remained unrun. The later source07 quote failure is separate evidence, not a passing semantic comparison.
+3. **Preserve full data within the real export limits.** Fitting the compact trace budget did not ensure its pretty diagnostic fit the public exporter. The designated source08 remedy must preserve every represented field and record under the existing limits. Keep the direct-export assertion and independent71/145 expectations intact; do not substitute a summary or larger cap.
+4. **Compose owned functions, then inspect their receiving boundary.** Root combined native03 policy and native04's three owned parser functions, discarding overlapping alternatives. Two remaining seams were identified: author/voter PROMPT visibility inside the worker and honest unknown-returned-identity routing. Source06 addresses those seams. Composition and source delivery alone do not establish native readiness or a successful build.
+5. **Report the exact formal result.** K's twelve new return-projection tests passed. Both complete recursive typed return trees and original23-field source identity matched unchanged independent expectations. Full NG states and ordered74/108 events remain retained without an independent whole-state/event comparison. This is no Core-clock, admission, refinement, native proof or EARS closure.
+6. **Publish private formal source with its limits.** Clean PR72/73 merged twenty-nine exact source/evidence additions into the private fork. Source15 derives the represented logical observation window from source-pool premises. Native occurrence joining, charged Rust schedule correspondence, full Lake and target proof remain separate obligations. Public references must preserve the private-fork boundary.
+
+Continue the existing DoctorWatson loop with local affected checks and regular reviewed integration. Retain all Sherlock, financial, native, recursive, stagenet and release obligations. UPDATE026's five creative strings remain unchanged; the site remains unpublished until full Sherlock completion.
