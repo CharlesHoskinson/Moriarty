@@ -1,0 +1,128 @@
+{
+  "schema": "sherlock-benchmark-suite-audit-findings/3",
+  "audit_date_utc": "2026-10-21",
+  "auditor": {
+    "slot": "audits03/gemini-1",
+    "requested_model": "gemini-4-argon-high",
+    "returned_model": "gemini-4-argon-high",
+    "provider": "AGY",
+    "effort": "high",
+    "role": "independent-non-author-reviewer",
+    "routing_basis": "Explicit user request for 3 Gemini seats plus standing observed Opus outage fallback; 3 Muse seats remain recorded API 429 with no verdict and no substitution."
+  },
+  "verdict": "APPROVE_SOURCE_WITH_SCOPES",
+  "blocking_findings_count": 0,
+  "scoped_qualifications_count": 1,
+  "candidate_verification": {
+    "candidate_map_path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/sherlock-moriarty-benchmark-suite-20261021/integration03/CANDIDATE-MAP.json",
+    "candidate_map_bytes": 19505,
+    "candidate_map_sha256": "83babde4a640799a1c66bee67a52c8f22bdb37cf0700d038d1948ac93164ab11",
+    "total_candidate_files": 45,
+    "changed_vs_revision02": 14,
+    "unchanged_vs_revision02": 31,
+    "traceability_pinned_files": 44,
+    "byte_and_sha256_mismatches": 0,
+    "root_test_receipt": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/sherlock-moriarty-benchmark-suite-20261021/integration03/root-actual-tests01/RESULT.json",
+      "bytes": 6985,
+      "sha256": "a18e6ae96489172c93f938547d4b3e398d30ccfefaa5a19b339be7f29e594100",
+      "total_ordinary_synthetic_tests_ran": 154,
+      "all_streams_exit_zero": true,
+      "streams": {
+        "metrics": 48,
+        "workloads": 16,
+        "acceptance": 39,
+        "checker-seam": 7,
+        "existing-check": 33,
+        "existing-requirements": 11
+      },
+      "evidence_scope": "synthetic-suite-code-and-collector-consistency-only; no compiler, SDK, Halo2/Plonk prover, verifier or Midnight stagenet execution"
+    }
+  },
+  "prior_audits02_resolution": [
+    {
+      "prior_finding_id": "R02-F01",
+      "paired_prior_finding_ids": [
+        "REV02-F01"
+      ],
+      "classification": "mandatory_defect_fix",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/acceptance.py:704-712, token-reusing duplicate successful samples (checked['status'] == 'success' and tokens.intersection(all_tokens)) increment row['duplicate_observations'] and continue before row['counts']['success'] += 1 and valid.append(checked), preventing duplicate wrapper leak into compare_baseline. In acceptance.py:761-778, rule['min_samples'] is floored at case['min_successful_samples'] and enforced inside every compared profile group (group_key). In models/sherlock/benchmarks/metrics.py:590-591, compare_baseline checks deduplicated unique n >= rule['min_samples'] without failing when descriptive duplicates are retained alongside sufficient unique observations. Confirmed by probe_1_r02_f01_duplicate_and_profile_minima."
+    },
+    {
+      "prior_finding_id": "R02-F02",
+      "paired_prior_finding_ids": [
+        "REV02-F02"
+      ],
+      "classification": "mandatory_defect_fix",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/acceptance.py:229-243, 522-523, 641-643, _independent_commands enforces disjoint command_role_values between prove and local_verify, distinct (receipt_sha256, pointer) bindings (supporting shared JSON receipt bundles with distinct role pointers while rejecting aliased result pointers), and distinct non-empty execution_id strings tracked as command-execution tokens. Confirmed by probe_2_r02_f02_command_independence."
+    },
+    {
+      "prior_finding_id": "R02-F03",
+      "paired_prior_finding_ids": [
+        "REV02-F02"
+      ],
+      "classification": "mandatory_defect_fix",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/acceptance.py:430-479, 577-591, 665-668, 769, line 586 now binds all 10 layer metric prefixes (witness., keygen., prove., local_verify., circuit., proof., proving_key., verifying_key., instance., artifact.), and multi-member layers (len(members) > 1) require layer_observations[layer] and validate _layer_aggregation across all members in order (observed_parallel_span for wall_seconds, sum for cpu_seconds and non-VK serialized artifact bytes, maximum for peak_rss_bytes, common for circuit.*, unique-verifying-keys for verifying_key.bytes), while recording qualified_aggregation_scopes in group_key. Confirmed by probe_3_r02_f03_layer_aggregation_and_attribution."
+    },
+    {
+      "prior_finding_id": "R02-F04",
+      "paired_prior_finding_ids": [],
+      "classification": "contract_qualification_and_scope_disclosure",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/acceptance.py:749-763, compare mode enforces set(rules) <= set(required_metric_ids(case)) and min_samples >= case['min_successful_samples'], retains mandatory full metric_coverage on every successful sample, and emits report['comparison_scope'] explicitly listing required_measurements, compared_metrics, and measured_without_tolerance without inventing an unrequested 93-metric SLA, while keeping performance_target_satisfied=False and full_goal_complete=False. Confirmed by probe_4_r02_f04_comparison_scope."
+    },
+    {
+      "prior_finding_id": "R02-F05",
+      "paired_prior_finding_ids": [
+        "REV02-F05"
+      ],
+      "classification": "mandatory_defect_fix",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/metrics.py:388-412, 439-446, 504-511, 580-596, 672-691, collect_sample requires non-numeric semantic success_values (True or non-empty string, rejecting numeric exit code 0 and False), evaluates the selected terminal.pointer (so nested /result/verifies=False marks failure even with exit_code=0, while unrelated negative_control.verifies=False does not falsely fail a valid receipt), and uses metric_observation_key (receipt_sha256, canonical_pointer) consistently across summarize, _exact_statistic, and compare_baseline while flagging scale/scope/timer-resolution drift. Confirmed by probe_5_r02_f05_collect_and_identity."
+    },
+    {
+      "prior_finding_id": "REV02-F03",
+      "paired_prior_finding_ids": [],
+      "classification": "mandatory_defect_fix",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/acceptance.py:165-177, 186-227, 544-546, _oracle_catalog binds every non-unavailable frozen catalog scalar leaf via catalog_scalar_pointers and every ordered transition/batch pre/post state via transition_state_pointers and state_scalar_fields (linked to proof leaf pre_state_sha256 and post_state_sha256), while _context requires distinct non-overlapping semantic root pointers (permitting equal root values when legitimate). Confirmed by probe_6_rev02_f03_oracle_and_roots."
+    },
+    {
+      "prior_finding_id": "REV02-F04",
+      "paired_prior_finding_ids": [],
+      "classification": "mandatory_defect_fix",
+      "status": "RESOLVED",
+      "verification": "In models/sherlock/benchmarks/acceptance.py:250-280, 620-624, 712, 746, _partial_sources validates that all measured/censored metrics on non-success samples originate from approved partial producer bindings with verified identity/node context, requires a non-empty censoring_reason on censored samples without requiring fictitious success artifacts, and records observation_token so failed/censored observations cannot be reused across baseline and current. Confirmed by test_acceptance.py and verify_revision03.py."
+    }
+  ],
+  "findings": [],
+  "scoped_qualifications": [
+    {
+      "id": "R03-S01",
+      "severity": "low",
+      "blocking": false,
+      "file": "models/sherlock/benchmarks/acceptance.py",
+      "lines": "570-591",
+      "symbol": "_proof_chain",
+      "summary": "Optional layer_observations on single-member proof layers (len(members) == 1) should remain omitted in reviewed acceptance policies unless _layer_aggregation is also applied to 1-member layer_observations.",
+      "details": "In _proof_chain (acceptance.py:570-591), _layer_aggregation(sample, layer, members, aggregate, policy, parsed, raw) is called when len(members) > 1 (lines 577-579), while lines 589-590 append aggregate to candidates whenever aggregate is not None. In all catalog and test fixtures, layer_observations is attached only on multi-member layers (len(members) > 1, such as Fenrir leaf batches 2/4/6), and single-member layers bind directly to member['receipt_roles'][phase]. When reviewing future post-deployment acceptance policies/samples, keep layer_observations restricted to multi-member layers (or optionally invoke _layer_aggregation whenever aggregate is not None)."
+    }
+  ],
+  "scopes_and_boundaries": {
+    "source_and_synthetic_consistency_approved": true,
+    "native_or_stagenet_executed": false,
+    "saved_bundle_verify_only_p14_satisfied": false,
+    "initial_deployed_recursive_baseline_observed": false,
+    "full_rollup_series_observed": false,
+    "full_sherlock_goal_complete": false,
+    "retained_obligations": [
+      "Original 35 UIREQ clauses and 25 additive refinement features / 68 scenarios remain separate from benchmark tooling.",
+      "Permanent Clean, Quint, and K formal lanes and concrete handwritten circuit lane remain active.",
+      "Existing native authority/resource guards, counters, C4/R2/60460, P14 verify-only prerequisite, and stopped Amendment 10 remain unchanged.",
+      "Moriarty remains permissionless for public developers; maintainer benchmark/review controls never become public compile/prove/deploy permissions."
+    ]
+  }
+}
