@@ -86,5 +86,18 @@ class DoctorWatsonBenchmarkTests(unittest.TestCase):
         for flag in ("--benchmark-policy","--benchmark-samples","--benchmark-current","--benchmark-receipt-root","--benchmark-baseline"):
             self.assertIn(flag,stream.getvalue())
 
+    def test_real_cli_rejects_prover_as_verifier_after_fresh_recomputation(self):
+        node=self.fixture.samples[0]["extensions"]["acceptance"]["proof_nodes"][0]
+        node["receipt_roles"]["local_verify"]=dict(node["receipt_roles"]["prove"])
+        (self.fixture.root/"samples.json").write_text(json.dumps(self.fixture.samples))
+        args=["--repo",str(REPO)]
+        for flag,path in zip(("policy","samples","current","receipt-root"),self.paths):args += ["--benchmark-"+flag,str(path)]
+        stream=io.StringIO()
+        with contextlib.redirect_stdout(stream):code=qa.main(args)
+        self.assertEqual(code,1)
+        report=json.loads(stream.getvalue())["benchmark_completion"]
+        self.assertFalse(report["complete"])
+        self.assertIn("independent verifier",str(report["cases"][0]["findings"]))
+
 
 if __name__=="__main__":unittest.main()

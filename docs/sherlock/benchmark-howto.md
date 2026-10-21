@@ -66,3 +66,19 @@ unchanged native source/resource/cleanup and stopped-amendment requirements.
 Ordinary tests exercise synthetic transport data only. Run focused acceptance and
 checker-seam tests plus affected existing QA regressions to validate code; their
 native-looking fixture receipts establish no native or target observation.
+
+For a deployed oracle, map the validated catalog's known scalar expectations and
+ordered transition state views using `catalog_scalar_pointers`,
+`transition_state_pointers` and `state_scalar_fields`. Supply complete independent
+root fields separately. Bind actual distinct prover/verifier command results with
+execution identities and reviewed command-mode adapters; a shared JSON bundle is
+valid when it retains separate results at distinct pointers. For multi-node
+layers, retain every original member measurement and the aggregate's declared
+wall-span, cumulative CPU, member-peak RSS and serialized-byte recipes described
+in the reference. Do not replace parallel elapsed time or memory with a sum.
+
+When comparing, declare only the metrics for which tolerances have actually been
+chosen. Review `comparison_scope` beside complete stage measurement coverage.
+Retain failed/censored producer receipts and actual timeout reasons, even when no
+successful proof or ledger artifact was produced. Duplicate wrappers remain in
+raw evidence but do not enter successful counts or regression statistics.

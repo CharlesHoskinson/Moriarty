@@ -414,3 +414,10 @@ The current graph is installed at `/home/charl/Moriarty/graphify-out/graph.json`
 On every recovery, start with `graphify-out/SHERLOCK-CURRENT.md` and `SHERLOCK-CONTEXT.md`, then query the relevant named symbol with its explicit graph and source root. Check the source manifest before relying on line references, extract changed files only, and read the selected source bodies. Use relation filters or single-node lookup for narrow context. A saved graph is not a live process or accounting probe. Preserve separate source roots for historical layers; never resolve all relative source paths against the main checkout.
 
 Clean B24 is merged into the Fenrir fork in PR 31 at `1847c4e6db59c78e05e857941bd4db9581ece8dd`. The primary next task remains a verify-only consumer of the frozen proof, with no repeated proving. Keep Clean, Quint, K and handwritten circuit implementation active. The graph is an index for this work, not another execution framework.
+
+Post-deployment benchmark qualification must also exclude reused operation wrappers
+from regression statistics, retain bound partial failure/censoring observations,
+and bind the frozen catalog scalar transitions to complete native state views.
+Multi-node layer measurements require explicit all-member timing/resource scope.
+A comparison pass covers its reported tolerance subset; it does not declare an
+external performance SLA or complete the broader Sherlock goal.
