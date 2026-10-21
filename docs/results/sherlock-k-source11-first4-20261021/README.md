@@ -1,0 +1,9 @@
+# Source11 first4 K windows — recorded October21 result
+
+Root [records](ROOT-INDEPENDENT-WHOLE-COMPARISON.json) two complete first4 K windows matching independently frozen constructor AST bytes for map-queue and mirror-arbor. The recorded comparison covers the complete original source plus initial, four after-states and final identity, including complete program/control/maps/frames/cumulative events. This statement attributes Root's result; this publication preparer remained independent-oracle blind and did not reperform the comparison.
+
+The [ten pure tests](ROOT-TEN-PURE-TESTS-RESULT.json) passed once. The [actual phase summary](ACTUAL-PHASE-SUMMARY.json) records ten existing F03 children, all exit0, with 19.623 child seconds and empty teardown records. Exact commands/results and all 22 raw streams are selected below. No tests, model or compile were replayed during publication preparation.
+
+Use the [tutorial](tutorial.md) to inspect the evidence, the [how-to](how-to-review.md) to review without replay, the [reference](reference.md) for files and API, and the [explanation](explanation.md) for limits and the next predicate. [Source identity and reuse](SOURCE-IDENTITY-AND-REUSE.json) records the exact six new source/contract files and eleven existing byte-identical dependencies. [Root adoption](ROOT-SOURCE-AND-TEN-TEST-ADOPTION.json) retains the original false patch/report claims and their recorded qualifications.
+
+The scope is finite, uncharged public nominal Source11 first4. Shared source-derived mapping is a premise. Full traces, source-to-production correspondence and Core/refinement/EARS/native/proof/stagenet acceptance remain open. Exact source/receipts retain historical absolute paths; relocated public-path import/compile/execution is UNRUN. No multi-MB ASTs, compiled payloads, jars, full inventories or provider logs are published in this selection. See [publication scope](PUBLICATION-SCOPE.json).
