@@ -1,0 +1,16 @@
+language "moriarty-sherlock-nominal/1";
+program MirrorArbor {
+  type Arbor<T> { Tip(z_value: T); Fork(z_left: Arbor<T>, a_right: Arbor<T>); }
+  type Stamp<A, B> { Seal(z_tree: A, a_code: B); }
+  fn reflect(t: Arbor<Bool>): Arbor<Bool> {
+    match t {
+      Arbor<Bool>::Tip(value) => construct Arbor<Bool>::Tip(not(value)),
+      Arbor<Bool>::Fork(left, right) => construct Arbor<Bool>::Fork(reflect(right), reflect(left))
+    }
+  }
+  fn stamp(t: Arbor<Bool>): Stamp<Arbor<Bool>, UInt> {
+    construct Stamp<Arbor<Bool>, UInt>::Seal(reflect(t), 41)
+  }
+  entry stamp(construct Arbor<Bool>::Fork(construct Arbor<Bool>::Tip(true),
+    construct Arbor<Bool>::Fork(construct Arbor<Bool>::Tip(false), construct Arbor<Bool>::Tip(true))));
+}
