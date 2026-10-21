@@ -1,5 +1,6 @@
 """Synthetic public fixtures. These tests never execute SDK/native/proof/wallet code."""
 import copy
+from decimal import Decimal
 import hashlib
 import json
 from pathlib import Path
@@ -23,7 +24,8 @@ def sample(name='s1', value=2):
                          'environment_sha256': H, 'toolchain_sha256': H},
             'cache_state': 'not_applicable', 'metrics': {
                 'prove.wall_seconds': {'value': value, 'unit': 'seconds', 'status': 'measured',
-                    'source': {'receipt_sha256': receipt_hash, 'pointer': '/duration_seconds'}, 'reason': None}},
+                    'source': {'receipt_sha256': receipt_hash, 'pointer': '/duration_seconds',
+                               'scope':'subprocess','timer_resolution_seconds':0.001}, 'reason': None}},
             'layers': {}, 'receipts': [{'path': 'public-test.json', 'sha256': receipt_hash, 'schema': 'test/1'}],
             'effects': {'expected_sha256': None, 'observed_sha256': None, 'match': None},
             'events': {}}
@@ -113,7 +115,7 @@ class MetricsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp)/'receipt.json'; raw=b'{"format":"synthetic/1","resources":{"wall_ms":1250,"rss_kib":4},"terminal":"ok"}'
             p.write_bytes(raw); sha=hashlib.sha256(raw).hexdigest()
-            bindings=[{'path':'receipt.json','sha256':sha,'fields':[
+            bindings=[{'path':'receipt.json','sha256':sha,'terminal':{'pointer':'/terminal','success_values':['ok'],'censored_values':[]},'fields':[
                 {'metric':'prove.wall_seconds','pointer':'/resources/wall_ms','unit':'seconds','scale':.001},
                 {'metric':'prove.peak_rss_bytes','pointer':'/resources/rss_kib','unit':'bytes','scale':1024},
                 {'metric':'proof.bytes','pointer':'/not-exposed','unit':'bytes'}]}]
@@ -133,7 +135,7 @@ class MetricsTests(unittest.TestCase):
             with self.assertRaises(ValueError):m.collect_sample(s,[{'path':'../secret','sha256':H,'fields':[]}],Path(tmp))
             raw=b'{"v":1}'; p=Path(tmp)/'r.json';p.write_bytes(raw)
             f={'metric':'prove.wall_seconds','pointer':'/v','unit':'seconds'}
-            with self.assertRaisesRegex(ValueError,'duplicate'):m.collect_sample(s,[{'path':'r.json','sha256':hashlib.sha256(raw).hexdigest(),'fields':[f,f]}],Path(tmp))
+            with self.assertRaisesRegex(ValueError,'duplicate'):m.collect_sample(s,[{'path':'r.json','sha256':hashlib.sha256(raw).hexdigest(),'terminal':{'pointer':'/v','success_values':[1],'censored_values':[]},'fields':[f,f]}],Path(tmp))
 
     def test_real_host_receipt_shape_cannot_be_elevated_to_native(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -227,13 +229,19 @@ class MetricsTests(unittest.TestCase):
             sha=hashlib.sha256(raw).hexdigest()
             s=sample();s['metrics']={};s['receipts']=[]
             root.joinpath('template.json').write_text(json.dumps(s))
-            binding=[{'path':'r.json','sha256':sha,'fields':[{'metric':'host.handler.wall_seconds','pointer':'/duration','unit':'seconds','scope':'subprocess'}]}]
+            binding=[{'path':'r.json','sha256':sha,'terminal':{'pointer':'/duration','success_values':[2],'censored_values':[]},'fields':[{'metric':'host.handler.wall_seconds','pointer':'/duration','unit':'seconds','scope':'subprocess','timer_resolution_seconds':0.001}]}]
             root.joinpath('bindings.json').write_text(json.dumps(binding))
             self.assertEqual(m.main(['collect','--template',str(root/'template.json'),'--bindings',str(root/'bindings.json'),'--base-dir',tmp,'--output',str(root/'sample.json')]),0)
             self.assertEqual(m.main(['report','--samples',str(root/'sample.json'),'--output',str(root/'report.json'),'--markdown',str(root/'report.md')]),0)
             limits={'host.handler.wall_seconds':{'statistic':'median','relative_increase':0,'absolute_increase':0,'min_samples':1}}
             root.joinpath('limits.json').write_text(json.dumps(limits))
-            self.assertEqual(m.main(['compare','--baseline',str(root/'report.json'),'--current',str(root/'report.json'),'--tolerances',str(root/'limits.json'),'--output',str(root/'comparison.json')]),0)
+            s['sample_id']='s2';root.joinpath('template2.json').write_text(json.dumps(s))
+            raw2=b'{"duration":2,"invocation":"second-synthetic-fixture"}';root.joinpath('r2.json').write_bytes(raw2)
+            binding[0].update(path='r2.json',sha256=hashlib.sha256(raw2).hexdigest())
+            root.joinpath('bindings2.json').write_text(json.dumps(binding))
+            self.assertEqual(m.main(['collect','--template',str(root/'template2.json'),'--bindings',str(root/'bindings2.json'),'--base-dir',tmp,'--output',str(root/'sample2.json')]),0)
+            self.assertEqual(m.main(['report','--samples',str(root/'sample2.json'),'--output',str(root/'report2.json')]),0)
+            self.assertEqual(m.main(['compare','--baseline',str(root/'report.json'),'--current',str(root/'report2.json'),'--tolerances',str(root/'limits.json'),'--output',str(root/'comparison.json')]),0)
             self.assertEqual(json.loads(root.joinpath('comparison.json').read_text())['status'],'within_declared_tolerance')
             self.assertEqual(root.joinpath('r.json').read_bytes(),raw)
 
@@ -244,6 +252,200 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(stats['duplicate_observations'],1)
         b['metrics']['prove.wall_seconds']['value']=3
         with self.assertRaisesRegex(ValueError,'same receipt'):m.summarize([a,b])
+
+    def test_unknown_receipt_needs_explicit_terminal_and_semantic_false_dominates_exit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            raw=b'{"exit_code":0,"verifies":false,"wall":1}'
+            Path(tmp,'r.json').write_bytes(raw)
+            b={'path':'r.json','sha256':hashlib.sha256(raw).hexdigest(),'fields':[]}
+            s=sample();s['metrics']={};s['receipts']=[]
+            with self.assertRaisesRegex(ValueError,'terminal'):m.collect_sample(s,[b],Path(tmp))
+            b['terminal']={'pointer':'/exit_code','success_values':[0],'censored_values':[]}
+            self.assertEqual(m.collect_sample(s,[b],Path(tmp))['status'],'failure')
+
+    def test_not_run_template_becomes_actual_success_from_positive_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            raw=b'{"ok":true,"wall":1.5}'
+            Path(tmp,'r.json').write_bytes(raw)
+            b={'path':'r.json','sha256':hashlib.sha256(raw).hexdigest(),'terminal':{'pointer':'/ok','success_values':[True],'censored_values':[]},
+               'fields':[{'metric':'prove.wall_seconds','pointer':'/wall','unit':'seconds'}]}
+            s=sample();s['status']='not_run';s['metrics']={};s['receipts']=[]
+            checked=m.collect_sample(s,[b],Path(tmp))
+            self.assertEqual(checked['status'],'success')
+            self.assertTrue(m.metric_coverage(checked,['prove.wall_seconds'])['complete'])
+
+    def test_censored_receipt_censors_its_values_but_preserves_completed_other_phase(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ok=b'{"ok":true,"wall":1.5}'
+            timeout=b'{"terminal":"timeout","wall":30,"cpu":28,"rss":4096}'
+            for name,raw in [('ok',ok),('timeout',timeout)]:Path(tmp,name+'.json').write_bytes(raw)
+            bindings=[{'path':'ok.json','sha256':hashlib.sha256(ok).hexdigest(),'terminal':{'pointer':'/ok','success_values':[True],'censored_values':[]},
+                       'fields':[{'metric':'keygen.wall_seconds','pointer':'/wall','unit':'seconds'}]},
+                      {'path':'timeout.json','sha256':hashlib.sha256(timeout).hexdigest(),'terminal':{'pointer':'/terminal','success_values':['ok'],'censored_values':['timeout']},
+                       'fields':[{'metric':'prove.wall_seconds','pointer':'/wall','unit':'seconds'},
+                                 {'metric':'prove.cpu_seconds','pointer':'/cpu','unit':'seconds'},
+                                 {'metric':'prove.peak_rss_bytes','pointer':'/rss','unit':'bytes'},
+                                 {'metric':'proof.bytes','pointer':'/absent','unit':'bytes'}]}]
+            s=sample();s['metrics']={};s['receipts']=[]
+            checked=m.collect_sample(s,bindings,Path(tmp))
+            self.assertEqual(checked['status'],'censored')
+            self.assertEqual(checked['metrics']['keygen.wall_seconds']['status'],'measured')
+            for name in ('prove.wall_seconds','prove.cpu_seconds','prove.peak_rss_bytes'):
+                self.assertEqual(checked['metrics'][name]['status'],'censored')
+                self.assertTrue(checked['metrics'][name]['reason'])
+            self.assertEqual(checked['metrics']['proof.bytes']['status'],'unavailable')
+            st=m.summarize([checked])['groups'][0]['metrics']['prove.wall_seconds']
+            self.assertEqual((st['n'],st['censored'],st['excluded_terminal']),(0,1,0))
+
+    def test_circuit_observed_capacity_matches_k_without_arbitrary_degree_cap(self):
+        s=sample();source=s['metrics']['prove.wall_seconds']['source']
+        def put(name,value,unit):s['layers'].setdefault('child',{})[name]={'value':value,'unit':unit,'status':'measured','source':source,'reason':None}
+        put('circuit.k',10,'exponent');put('circuit.domain_capacity_rows',262144,'rows')
+        with self.assertRaisesRegex(ValueError,'capacity'):m.validate_sample(s)
+        put('circuit.k',40,'exponent');put('circuit.domain_capacity_rows',2**40,'rows')
+        self.assertTrue(m.validate_sample(s))
+        put('circuit.domain_capacity_rows',1023,'rows')
+        with self.assertRaisesRegex(ValueError,'capacity'):m.validate_sample(s)
+        put('circuit.k',10**30,'exponent');s['layers']['child'].pop('circuit.domain_capacity_rows')
+        self.assertTrue(m.validate_sample(s))
+        self.assertNotIn('circuit.used_rows',m.validate_sample(s)['layers']['child'])
+
+    def test_used_and_lookup_observed_rows_are_bounded_with_or_without_capacity(self):
+        for name in ('circuit.used_rows','circuit.lookup_rows'):
+            s=sample();source=s['metrics']['prove.wall_seconds']['source']
+            s['metrics']={'circuit.k':{'value':10,'unit':'exponent','status':'measured','source':source,'reason':None},
+                          name:{'value':1025,'unit':'rows','status':'measured','source':source,'reason':None}}
+            with self.subTest(metric=name),self.assertRaisesRegex(ValueError,'rows'):m.validate_sample(s)
+            s['metrics'][name]['value']=1024
+            self.assertTrue(m.validate_sample(s))
+            s['metrics'].pop('circuit.k')
+            s['metrics']['circuit.domain_capacity_rows']={'value':512,'unit':'rows','status':'measured','source':source,'reason':None}
+            with self.assertRaisesRegex(ValueError,'capacity'):m.validate_sample(s)
+
+    def test_network_metric_requires_its_actual_event_duration(self):
+        s=sample();s['events']={'submission':'2026-10-21T00:00:00Z','readback':'2026-10-21T00:01:40Z'}
+        source=s['metrics']['prove.wall_seconds']['source']
+        s['metrics']={'network.submission_to_readback_seconds':{'value':0.001,'unit':'seconds','status':'measured','source':source,'reason':None}}
+        with self.assertRaisesRegex(ValueError,'event'):m.validate_sample(s)
+        s['metrics']['network.submission_to_readback_seconds']['value']=100
+        self.assertTrue(m.validate_sample(s))
+        s['events'].pop('readback')
+        with self.assertRaisesRegex(ValueError,'event'):m.validate_sample(s)
+
+    def test_shared_exact_decimal_normalization_and_receipt_token_precision(self):
+        self.assertEqual(m.normalize_number(3,0.1,unit='seconds'),0.3)
+        self.assertEqual(m.receipt_metric_value(b'{"duration":3}','/duration',0.1,unit='seconds'),0.3)
+        self.assertEqual(m.normalize_number(3.0,1024,unit='bytes'),3072)
+        with self.assertRaises(ValueError):m.normalize_number(3,0.1,unit='bytes')
+        with self.assertRaises(ValueError):m.normalize_number(True,1,unit='seconds')
+        with self.assertRaises(ValueError):m.normalize_number(3,0,unit='seconds')
+        with self.assertRaisesRegex(ValueError,'precision'):m.receipt_metric_value(b'{"duration":0.123456789123456789}','/duration',1,unit='seconds')
+        with self.assertRaises(ValueError):m.receipt_metric_value(b'{"duration":1e-1000}','/duration',1,unit='seconds')
+        with self.assertRaises(ValueError):m.receipt_metric_value(b'{"duration":1e-10000000}','/duration',1,unit='seconds')
+        self.assertEqual(m.normalize_number(Decimal('0.1'),3,unit='seconds'),0.3)
+        with self.assertRaises(ValueError):m.receipt_metric_value(b'{"duration":3,"duration":4}','/duration',1,unit='seconds')
+
+    def test_collector_uses_same_exact_decimal_result_as_acceptance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            raw=b'{"ok":true,"wall":3}'
+            Path(tmp,'r.json').write_bytes(raw)
+            b={'path':'r.json','sha256':hashlib.sha256(raw).hexdigest(),'terminal':{'pointer':'/ok','success_values':[True],'censored_values':[]},
+               'fields':[{'metric':'prove.wall_seconds','pointer':'/wall','unit':'seconds','scale':0.1}]}
+            s=sample();s['receipts']=[];s['metrics']={}
+            checked=m.collect_sample(s,[b],Path(tmp))
+            self.assertEqual(checked['metrics']['prove.wall_seconds']['value'],0.3)
+            self.assertEqual(checked['metrics']['prove.wall_seconds']['value'],m.receipt_metric_value(raw,'/wall',0.1,unit='seconds'))
+
+    def test_required_metric_case_contract_never_double_prefixes_catalog_ids(self):
+        ids=['prove.wall_seconds','layer:child:circuit.k']
+        self.assertEqual(m.required_metric_ids({'required_metrics':ids,'required_layers':['child']}),ids)
+        self.assertEqual(m.required_metric_ids({'required_metrics':['proof.bytes'],'required_layers':['child'],'required_layer_metrics':['circuit.k']}),['proof.bytes','layer:child:circuit.k'])
+        self.assertEqual(m.required_metric_ids({'required_metrics':['host.handler.wall_seconds'],'required_layers':[],'required_layer_metrics':[]}),['host.handler.wall_seconds'])
+        with self.assertRaises(ValueError):m.required_metric_ids({'required_metrics':ids,'required_layers':['child'],'required_layer_metrics':['layer:child:circuit.k']})
+        with self.assertRaises(ValueError):m.required_metric_ids({'required_metrics':ids+ids})
+
+    def test_shared_comparison_retains_failures_without_losing_successful_baseline(self):
+        a=sample('old-success',0);f=sample('old-failed',50);f['status']='failure'
+        b=sample('new-success',0.1);c=sample('new-censored',30);c['status']='censored'
+        c['metrics']['prove.wall_seconds'].update(status='censored',reason='timeout')
+        rule={'prove.wall_seconds':{'statistic':'median','relative_increase':0.1,'absolute_increase':0.1,'min_samples':1}}
+        result=m.compare_baseline(m.summarize([a,f]),m.summarize([b,c]),rule)
+        self.assertEqual(result['status'],'within_declared_tolerance')
+        self.assertEqual(result['baseline_counts']['failure'],1)
+        self.assertEqual(result['current_counts']['censored'],1)
+        self.assertEqual(result['metrics']['prove.wall_seconds']['limit'],0.1)
+        rule['prove.wall_seconds']['min_samples']=2
+        self.assertEqual(m.compare_baseline(m.summarize([a,f]),m.summarize([b,c]),rule)['status'],'incomplete')
+
+    def test_failure_scope_unknown_does_not_override_success_distribution_scope(self):
+        a=sample('a');b=sample('b');b['status']='failure';b['metrics']['prove.wall_seconds']['source'].pop('scope')
+        a['metrics']['prove.wall_seconds']['source']['scope']='subprocess'
+        report=m.summarize([a,b]);metric=report['groups'][0]['metrics']['prove.wall_seconds']
+        self.assertEqual(metric['scope'],'subprocess')
+        self.assertEqual(metric['observed_scopes'],['subprocess','unknown'])
+        self.assertEqual((metric['n'],metric['excluded_terminal']),(1,1))
+
+    def test_duplicate_time_int_and_float_spelling_still_one_observation(self):
+        a=sample('a',1);b=copy.deepcopy(a);b['sample_id']='b';b['metrics']['prove.wall_seconds']['value']=1.0
+        result=m.summarize([a,b])['groups'][0]['metrics']['prove.wall_seconds']
+        self.assertEqual((result['n'],result['duplicate_observations']),(1,1))
+
+    def test_nonobject_acceptance_extension_is_rejected_structurally(self):
+        s=sample();s['extensions']={'acceptance':'success'}
+        with self.assertRaisesRegex(ValueError,'acceptance'):m.validate_sample(s)
+
+    def test_comparison_threshold_and_median_use_exact_decimal_arithmetic(self):
+        rule={'prove.wall_seconds':{'statistic':'median','relative_increase':2,'absolute_increase':0,'min_samples':1}}
+        r=m.compare_baseline(m.summarize([sample('a',0.1)]),m.summarize([sample('b',0.30000000000000004)]),rule)
+        self.assertEqual(r['status'],'regression')
+        self.assertEqual(r['metrics']['prove.wall_seconds']['limit_decimal'],'0.3')
+        rule['prove.wall_seconds']['relative_increase']=0
+        r=m.compare_baseline(m.summarize([sample('a',0.1),sample('b',0.2)]),m.summarize([sample('c',0.15000000000000002)]),rule)
+        self.assertEqual(r['status'],'regression')
+        self.assertEqual(r['metrics']['prove.wall_seconds']['baseline_statistic_decimal'],'0.15')
+
+    def test_missing_terminal_predicate_is_retained_failure_not_missing_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            raw=b'{"exit_code":137,"wall":2}'
+            Path(tmp,'r.json').write_bytes(raw)
+            b={'path':'r.json','sha256':hashlib.sha256(raw).hexdigest(),'terminal':{'pointer':'/verifier/verifies','success_values':[True],'censored_values':[]},
+               'fields':[{'metric':'prove.wall_seconds','pointer':'/wall','unit':'seconds'}]}
+            s=sample();s['receipts']=[];s['metrics']={}
+            checked=m.collect_sample(s,[b],Path(tmp))
+            self.assertEqual(checked['status'],'failure')
+            self.assertTrue(checked['extensions']['collection_diagnostics'])
+            self.assertEqual(checked['metrics']['prove.wall_seconds']['value'],2)
+
+    def test_same_receipt_alias_fields_or_unit_selectors_do_not_supply_repetitions(self):
+        a=sample('a',2);b=copy.deepcopy(a);b['sample_id']='b'
+        b['metrics']['prove.wall_seconds']['source'].update(pointer='/wall_ms',scale=0.001)
+        stat=m.summarize([a,b])['groups'][0]['metrics']['prove.wall_seconds']
+        self.assertEqual((stat['n'],stat['duplicate_observations']),(1,1))
+        b['metrics']['prove.wall_seconds']['value']=2.1
+        with self.assertRaisesRegex(ValueError,'same receipt'):m.summarize([a,b])
+
+    def test_baseline_comparison_cannot_compare_same_observation_or_unknown_timing(self):
+        a=sample('a');b=sample('b')
+        rule={'prove.wall_seconds':{'statistic':'median','relative_increase':0,'absolute_increase':0,'min_samples':1}}
+        ar=m.summarize([a])
+        with self.assertRaisesRegex(ValueError,'sample_id'):m.compare_baseline(ar,ar,rule)
+        b['metrics']['prove.wall_seconds']['source']=copy.deepcopy(a['metrics']['prove.wall_seconds']['source'])
+        b['receipts']=copy.deepcopy(a['receipts'])
+        b['metrics']['prove.wall_seconds']['source']['pointer']='/aliased_wall'
+        with self.assertRaisesRegex(ValueError,'observation'):m.compare_baseline(ar,m.summarize([b]),rule)
+        a=sample('a');b=sample('b')
+        for name in ('scope','timer_resolution_seconds'):
+            for s in (a,b):s['metrics']['prove.wall_seconds']['source'].pop(name,None)
+            with self.assertRaisesRegex(ValueError,'scope|resolution'):m.compare_baseline(m.summarize([a]),m.summarize([b]),rule)
+            for s in (a,b):s['metrics']['prove.wall_seconds']['source'].update(scope='subprocess',timer_resolution_seconds=0.001)
+
+    def test_receipt_parser_and_cli_inputs_share_bounded_json_reading(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp,'oversize.json');p.write_bytes(b'{"padding":"'+b'x'*64+b'"}')
+            with patch.object(m,'MAX_RECEIPT_BYTES',32):
+                with self.assertRaisesRegex(ValueError,'size|limit|bound'):m.receipt_metric_value(p.read_bytes(),'/padding',unit='seconds')
+                with self.assertRaisesRegex(ValueError,'size|limit|bound'):m.read_json_bytes(p)
 
     def test_effect_match_claim_must_agree_with_digests(self):
         s=sample(); s['effects']={'expected_sha256':H,'observed_sha256':'b'*64,'match':True}

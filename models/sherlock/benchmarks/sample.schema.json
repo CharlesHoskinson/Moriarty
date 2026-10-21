@@ -236,41 +236,78 @@
             "string",
             "null"
           ],
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
         },
         "submission": {
           "type": [
             "string",
             "null"
           ],
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
         },
         "ack": {
           "type": [
             "string",
             "null"
           ],
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
         },
         "inclusion": {
           "type": [
             "string",
             "null"
           ],
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
         },
         "readback": {
           "type": [
             "string",
             "null"
           ],
-          "format": "date-time"
+          "format": "date-time",
+          "pattern": "(?:Z|\\+00:00)$"
         }
       },
-      "required": []
+      "required": [],
+      "description": "UTC ISO8601 timestamps with at most microsecond precision. Available events must be chronological; measured network durations must exactly match their event endpoints."
     },
     "extensions": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "acceptance": {
+          "type": "object",
+          "description": "Per-case target/host and recursive relation structure is validated by acceptance.py, never inferred by metrics."
+        },
+        "collection_diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "receipt_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "terminal_pointer": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "receipt_sha256",
+              "terminal_pointer",
+              "reason"
+            ]
+          }
+        }
+      }
     }
   },
   "required": [
@@ -291,7 +328,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:moriarty:sherlock-benchmark-sample:1",
   "title": "Sherlock benchmark sample v1",
-  "description": "Structural schema. metrics.validate_sample additionally enforces unit lineage, safe paths, UTC chronology, effects consistency, warm cache identity and observed capacity. This schema does not authenticate producers.",
+  "description": "Structural sample schema. Call metrics.validate_sample for receipt lineage, safe relative labels, effects digest/match consistency, observed domain capacity power-of-two and k consistency, used/lookup row bounds, UTC chronology, measured network metric/event equality and warm-cache identity. No unavailable rows/capacities are derived from k. Structural validity does not authenticate a producer or qualify native/stagenet evidence.",
   "$defs": {
     "source": {
       "type": "object",
@@ -1122,5 +1159,28 @@
         }
       ]
     }
-  }
+  },
+  "$comment": "Relational equality and observed numerical bounds across object properties are enforced by metrics.validate_sample. extensions.acceptance is a C-owned schema checked by acceptance.py; a JSON object here is not acceptance.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cache_state": {
+            "const": "warm"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "cache_identity_sha256"
+        ],
+        "properties": {
+          "cache_identity_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  ]
 }

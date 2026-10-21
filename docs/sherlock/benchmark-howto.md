@@ -1,38 +1,45 @@
-# Check post-deployment benchmark evidence
+# Assess a benchmark stage through DoctorWatson
 
-Use this after eligible existing operations have produced actual current stagenet
-proof, verification, deployment, inclusion and readback receipts. This command
-only reads supplied data. For fields and limitations, see the
-[reference](benchmark-reference.md); for native selection and unchanged limits,
-continue the [existing loop](implementation-loop.md).
+Use the existing eligible operations to obtain the real inputs first. This
+procedure only reads retained data; it cannot start compilation, setup/keygen,
+proving, a wallet or a transaction. See the [reference](benchmark-reference.md)
+for exact fields and the [implementation loop](implementation-loop.md) for
+unchanged native source/resource/cleanup and stopped-amendment requirements.
 
-1. Select exact workload catalog members and freeze complete independent expected
-   effects before the subject execution. Keep supported scope and incomplete
-   oracles explicit. The current linked/Fenrir public scalar expectations do not
-   supply complete independent native-effect acceptance. Finish those missing
-   predicates before qualifying the corresponding deployed case.
-2. Select repetitions and cold/warm profiles within existing eligible operation
-   limits. Reuse applicable passed setup/keygen receipts. Obtain new observations
-   only through the existing owner/entrypoint when its source/resource predicates
-   hold; a benchmark flag starts no compiler, proof or transaction.
-3. Retain the actual public receipts/artifacts beneath one selected receipt root.
-   Keep proof and statement bytes, exact current source/compiler/ledger/circuit
-   identities, network/target/anchor, deployed transaction IDs, complete readback
-   effects and all failures/censoring. Exclude recovery material and private keys.
-4. Freeze a policy and current context using the reference fields. Bind each
-   receipt role's semantic fields to the real schema through reviewed JSON
-   pointers. In particular, select the actual verification verdict. Declare all
-   required phase/layer metrics and exact units; leave unavailable data explicit.
-   A required unavailable metric leaves completion open. Pin the exact current
-   source closure and workload/oracle artifacts rather than copying old labels.
-5. Collect receipt-bound samples with the existing metrics collector. Preserve
-   subprocess measurement scope/timer resolution and distinguish cold/warm cache
-   identities. Preserve complete raw observations and sample IDs. Choose an
-   initial baseline with an explicit future tolerance disposition when there is
-   no justified applicable SLA; use comparison only with prior comparable actual
-   samples and explicitly selected metric tolerances.
-6. From the checkout, run the existing Python checker, substituting your retained
-   paths. All four benchmark inputs are required together:
+1. Choose an explicit catalog stage. Host compiler coverage uses actual host
+   receipts; `initial-deployed-baseline` requires an actual deployed recursive
+   linked chain. Keep the full 1/2/4/6 rollup series and full-suite obligations
+   separate. Snapshot the exact workload catalog and its validated local source/
+   oracle/generator closure under the retained receipt root.
+2. Freeze independent expected values before subject execution. Host cases use
+   the public terminal-value oracle. Native cases need a separately frozen
+   complete state/effect oracle and known roots; the current linked/Fenrir host/
+   scalar descriptors explicitly cannot supply it. Keep legitimate option-null
+   values; do not replace missing native roots with labels or SHA placeholders.
+3. Freeze a /2 policy copying the exact selected catalog cases and minimum metric
+   coverage. Select repetitions and failure/censoring limits within the existing
+   operation budget. Copy applicable passed setup/keygen evidence instead of
+   requesting another run. Declare actual measurement scopes/cache states and
+   every needed native receipt-schema pointer/terminal predicate.
+4. Retain actual current source/compiler/environment/toolchain and applicable
+   ledger/circuit/target/anchor pins per case. Retain proof/statement/VK artifacts
+   and the executed native per-node prove and independent cryptographic-verifier
+   receipts. Preserve complete opening/intermediate/closing statement states,
+   exact recursive predecessor bindings and deployed inclusion/readback effects.
+   Point current context fields to those immutable artifacts and independent
+   oracle values. Never include recovery material or private keys.
+5. Collect actual raw metrics with the shared receipt collector, preserving
+   failed/censored/not-run observations, decimal scales and timer resolution.
+   Keep native child/parent/decider resources separate, serialized transaction
+   bytes/DUST explicit, local cryptographic verification separate from network
+   durations, and used rows unavailable where the producer does not expose them.
+6. Select an initial baseline with an explicit future tolerance disposition when
+   no justified target SLA exists. For a later comparison, provide a /2 baseline
+   envelope with its own historical policy/current context, receipt root prefix
+   and source artifacts. Explicitly select allowed source/compiler/circuit changes
+   and shared per-case median/p95/relative/absolute/min-sample rules; retain known
+   matching environment, toolchain, workload, ledger/network and measurement scope.
+7. Run the existing Python checker from the selected checkout, replacing paths:
 
    ```bash
    python3 models/sherlock/qa/check.py --repo . \
@@ -43,19 +50,19 @@ continue the [existing loop](implementation-loop.md).
      --benchmark-receipt-root retained
    ```
 
-   Add `--benchmark-baseline retained/prior-samples.json` only for an explicitly
-   selected comparison policy. Capture actual stdout/stderr and exit code in the
-   existing evidence record. Exit 1 or 2 leaves the selected stage incomplete;
-   resolve the named missing predicate without relabeling data or replaying setup.
-7. Review the exact candidate, policy, source closure and actual receipt semantics.
-   Pin the recomputed report and its dependencies in the existing requirement
-   evidence/currentness records and retain the owner disposition separately.
-   A `complete` benchmark result qualifies only its declared case/profile scope.
-   Keep larger repetitions, unsupported scale stages and every retained full
-   Sherlock/formal/native/financial/release requirement separately open until
-   its actual evidence exists.
+   Add `--benchmark-baseline retained/historical-baseline.json` for comparison.
+   The selected checkout's benchmark modules and pinned source traceability are
+   checked on this invocation; a cached pass is not an input. Capture stdout,
+   stderr and exit code. Exit 1 means incomplete/mismatched evidence. Exit 2 means
+   missing/malformed or source-integrity input; both keep the stage open.
+8. Review actual producer/schema semantics, proof/statement bindings, independent
+   expected effects and the exact result under existing ownership. Pin the
+   recomputed report and its complete policy/context/receipt/source dependencies
+   in the existing evidence/currentness records. Retain owner adoption separately.
+   Update the selected stage without incrementing the fixed 35/25/68 inventories.
+   Continue larger stages and every retained Sherlock/formal/handwritten/native/
+   financial/release predicate until their own actual evidence exists.
 
-For an ordinary code check, run `python3 -m unittest discover -s
-models/sherlock/benchmarks -p 'test_acceptance.py' -v` and the existing QA tests.
-Their synthetic parser fixtures validate the benchmark implementation only.
-No native/stagenet success is produced by those tests.
+Ordinary tests exercise synthetic transport data only. Run focused acceptance and
+checker-seam tests plus affected existing QA regressions to validate code; their
+native-looking fixture receipts establish no native or target observation.

@@ -8,7 +8,9 @@ Subprocess resource totals include process startup and wrapper overhead.
 import argparse
 import copy
 from datetime import datetime
+from decimal import Decimal, localcontext, DecimalException, Inexact
 import hashlib
+from fractions import Fraction
 import json
 import math
 from pathlib import Path, PurePosixPath
@@ -45,7 +47,7 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def loads_strict(raw):
+def loads_strict(raw, *, decimal_numbers=False):
     """Reject duplicate fields and non-JSON numeric constants before validation."""
     def pairs(items):
         result = {}
@@ -55,7 +57,22 @@ def loads_strict(raw):
         return result
     def constant(value):
         raise ValueError(f'nonfinite JSON number: {value}')
-    return json.loads(raw, object_pairs_hook=pairs, parse_constant=constant)
+    try:
+        return json.loads(raw, object_pairs_hook=pairs, parse_constant=constant,
+                          parse_float=Decimal if decimal_numbers else float)
+    except DecimalException as exc:
+        raise ValueError('JSON decimal arithmetic range exceeded') from exc
+
+
+def read_json_bytes(path):
+    """Bound JSON ingestion only; this does not read binary proof/key artifacts."""
+    path = Path(path)
+    require(path.is_file(), 'JSON input: regular file required')
+    require(path.stat().st_size <= MAX_RECEIPT_BYTES, 'JSON input: size exceeds ingestion limit')
+    with path.open('rb') as handle:
+        raw = handle.read(MAX_RECEIPT_BYTES+1)
+    require(len(raw) <= MAX_RECEIPT_BYTES, 'JSON input: size exceeds ingestion limit')
+    return raw
 
 
 def canonical_sha256(document):
@@ -76,6 +93,74 @@ def _number(value, where, integer=False):
     require(value >= 0 and (type(value) is int or math.isfinite(value)), f'{where}: expected finite nonnegative value')
     if integer:
         require(type(value) is int, f'{where}: expected integer count')
+
+
+def _decimal_number(value, where):
+    require(type(value) in (int,float,Decimal), f'{where}: expected numeric value')
+    result = value if type(value) is Decimal else Decimal(str(value))
+    require(result.is_finite() and result >= 0, f'{where}: expected finite nonnegative value')
+    return result
+
+
+def normalize_number(value, scale=1, *, unit):
+    """Exact decimal unit normalization, with no epsilon or silent precision loss.
+
+    Output is JSON int/float. Nonintegral seconds must have a lossless canonical
+    decimal float spelling; more precise input needs a producer-declared timer
+    resolution or decimal-format schema, never implicit rounding here.
+    """
+    require(unit in set(METRIC_UNITS.values()), 'normalization: unknown unit')
+    left = _decimal_number(value, 'receipt scalar')
+    right = _decimal_number(scale, 'scale')
+    require(right > 0, 'scale must be positive')
+    with localcontext() as context:
+        context.prec = max(1,len(left.as_tuple().digits)+len(right.as_tuple().digits))
+        context.traps[Inexact] = True
+        try:
+            result = left * right
+        except DecimalException as exc:
+            raise ValueError('normalization: decimal arithmetic range exceeded') from exc
+    if result == result.to_integral_value():
+        return int(result)
+    require(unit == 'seconds', 'normalization: count must be an integer')
+    converted = float(result)
+    require(math.isfinite(converted) and Decimal(str(converted)) == result,
+            'normalization: decimal precision cannot be represented losslessly')
+    return converted
+
+
+def receipt_metric_value(raw_json, pointer, scale=1, *, unit):
+    """Reproduce an original JSON scalar's normalized value using decimal tokens."""
+    require(type(raw_json) in (str,bytes), 'receipt: JSON bytes/string required')
+    size = len(raw_json.encode('utf-8')) if type(raw_json) is str else len(raw_json)
+    require(size <= MAX_RECEIPT_BYTES, 'receipt: size exceeds ingestion limit')
+    value = resolve_pointer(loads_strict(raw_json, decimal_numbers=True), pointer)
+    require(value is not None, 'receipt scalar: null/unavailable value')
+    return normalize_number(value, scale, unit=unit)
+
+
+def required_metric_ids(case):
+    """One expansion point for flat catalog and optional layer metric declarations."""
+    require(type(case) is dict, 'case: expected object')
+    result = case.get('required_metrics')
+    require(type(result) is list and result, 'required_metrics: nonempty list required')
+    result = list(result)
+    for name in result:
+        split_metric(name)
+    layers = case.get('required_layers',[])
+    require(type(layers) is list and all(type(x) is str and LABEL.fullmatch(x) for x in layers), 'required_layers: invalid labels')
+    require(len(layers)==len(set(layers)), 'required_layers: duplicates')
+    if 'required_layer_metrics' in case:
+        names = case['required_layer_metrics']
+        require(type(names) is list and (layers or not names), 'required_layer_metrics: declared layers required')
+        for name in names:
+            layer,_ = split_metric(name)
+            require(layer is None, 'required_layer_metrics: already prefixed')
+        result += [f'layer:{layer}:{name}' for layer in layers for name in names]
+    require(len(result)==len(set(result)), 'required_metrics: duplicate metric')
+    require(all(split_metric(name)[0] is None or split_metric(name)[0] in layers for name in result),
+            'required_metrics: undeclared layer')
+    return result
 
 
 def _path(value):
@@ -159,6 +244,38 @@ def _measurement_metadata(source):
         require(source['timer_resolution_seconds'] > 0, 'timer_resolution_seconds: must be positive')
 
 
+def _circuit_consistency(values):
+    def observed(name):
+        metric = values.get(name,{})
+        return metric['value'] if metric.get('status') == 'measured' else None
+    degree = observed('circuit.k')
+    capacity = observed('circuit.domain_capacity_rows')
+    if capacity is not None:
+        require(capacity > 0 and capacity & (capacity-1) == 0, 'circuit: observed domain capacity must be a positive power of two')
+        if degree is not None:
+            require(capacity.bit_length()-1 == degree, 'circuit: observed capacity disagrees with k')
+    for name in ('circuit.used_rows','circuit.lookup_rows'):
+        rows = observed(name)
+        if rows is None:
+            continue
+        if capacity is not None:
+            require(rows <= capacity, f'{name}: rows exceed observed capacity')
+        if degree is not None:
+            # rows <= 2**k without constructing 2**k or imposing a fake k cap.
+            require(rows == 0 or (rows-1).bit_length() <= degree, f'{name}: rows exceed k domain')
+
+
+def _latencies(events):
+    times = _event_times(events)
+    result = {}
+    for a,b in EVENT_PAIRS:
+        if a in times and b in times:
+            delta = times[b]-times[a]
+            microseconds = (delta.days*86400+delta.seconds)*1000000 + delta.microseconds
+            result[f'network.{a}_to_{b}_seconds'] = normalize_number(microseconds,Decimal('0.000001'),unit='seconds')
+    return result
+
+
 def _event_times(events):
     require(type(events) is dict and set(events) <= {'proof_ready','submission','ack','inclusion','readback'}, 'events: field set differs')
     parsed = {}
@@ -167,6 +284,7 @@ def _event_times(events):
         if raw is None:
             continue
         require(type(raw) is str and ('T' in raw) and raw.endswith(('Z', '+00:00')), f'events.{key}: UTC timestamp required')
+        require(re.search(r'\.[0-9]{7,}',raw) is None, f'events.{key}: precision exceeds microseconds')
         try:
             t = datetime.fromisoformat(raw.replace('Z', '+00:00'))
         except ValueError as exc:
@@ -214,10 +332,7 @@ def validate_sample(document):
     for values in (document['metrics'], *document['layers'].values()):
         for name, item in values.items():
             _validate_metric(name, item, hashes)
-        capacity = values.get('circuit.domain_capacity_rows', {})
-        used = values.get('circuit.used_rows', {})
-        if capacity.get('status') == used.get('status') == 'measured':
-            require(used['value'] <= capacity['value'], 'circuit: used rows exceed observed capacity')
+        _circuit_consistency(values)
     effects = document['effects']
     _keys(effects, {'expected_sha256','observed_sha256','match'}, where='effects')
     for key in ('expected_sha256','observed_sha256'):
@@ -226,9 +341,15 @@ def validate_sample(document):
     if effects['match'] is not None:
         require(effects['expected_sha256'] is not None and effects['observed_sha256'] is not None, 'effects: match requires both digests')
         require(effects['match'] == (effects['expected_sha256'] == effects['observed_sha256']), 'effects: inconsistent match claim')
-    _event_times(document['events'])
+    latencies = _latencies(document['events'])
+    for name,item in document['metrics'].items():
+        if name.startswith('network.') and item['status'] == 'measured':
+            require(name in latencies, f'{name}: event endpoints required')
+            require(normalize_number(item['value'],unit='seconds') == latencies[name], f'{name}: event duration mismatch')
     if 'extensions' in document:
         require(type(document['extensions']) is dict, 'extensions: expected object')
+        if 'acceptance' in document['extensions']:
+            require(type(document['extensions']['acceptance']) is dict, 'extensions.acceptance: expected object; detailed schema belongs to acceptance consumer')
     # JSON roundtrip also excludes nonfinite or non-JSON extension values.
     try:
         return loads_strict(json.dumps(document, allow_nan=False))
@@ -239,9 +360,7 @@ def validate_sample(document):
 def event_latencies(sample):
     """Diagnostic durations only; they do not manufacture receipt-bound metrics."""
     sample = validate_sample(sample)
-    t = _event_times(sample['events'])
-    return {f'network.{a}_to_{b}_seconds': (t[b]-t[a]).total_seconds()
-            for a,b in EVENT_PAIRS if a in t and b in t}
+    return _latencies(sample['events'])
 
 
 def metric_coverage(sample, required_metrics):
@@ -281,25 +400,31 @@ def summarize(samples):
         summaries = {}
         for name in names:
             items = [(s, f[name]) for s,f in zip(members,flats) if name in f]
-            scopes = {v['source'].get('scope','unknown') for _,v in items if v['source'] is not None}
+            observed_scopes = sorted({v['source'].get('scope','unknown') for _,v in items if v['source'] is not None})
+            scopes = {v['source'].get('scope','unknown') for s,v in items
+                      if s['status']=='success' and v['status']=='measured'}
             require(len(scopes) <= 1, f'{name}: different resource scopes cannot pool')
-            resolutions = sorted({v['source']['timer_resolution_seconds'] for _,v in items
-                                  if v['source'] is not None and v['source'].get('timer_resolution_seconds') is not None})
+            resolutions = sorted({v['source']['timer_resolution_seconds'] for s,v in items
+                                  if s['status']=='success' and v['status']=='measured' and v['source'].get('timer_resolution_seconds') is not None})
             unique = {}; duplicate_observations = 0
             for s,v in items:
                 if s['status'] != 'success' or v['status'] != 'measured':
                     continue
-                src = v['source']; key = (src['receipt_sha256'],src['pointer'],src.get('scale',1))
+                src = v['source']; key = src['receipt_sha256']
                 if key in unique:
-                    require(_exact(unique[key],v['value']), f'{name}: same receipt pointer has inconsistent values')
+                    require(unique[key] == normalize_number(v['value'],unit=v['unit']), f'{name}: same receipt metric has inconsistent values')
                     duplicate_observations += 1
                 else:
-                    unique[key] = v['value']
+                    unique[key] = normalize_number(v['value'],unit=v['unit'])
             values = list(unique.values())
             ordered = sorted(values)
             summaries[name] = {'unit': METRIC_UNITS[split_metric(name)[1]], 'scope':next(iter(scopes),'unknown'),
-                'timer_resolutions_seconds':resolutions, 'duplicate_observations':duplicate_observations, 'n':len(values),
+                'observed_scopes':observed_scopes, 'timer_resolutions_seconds':resolutions,
+                'unknown_timer_resolution_observations':sum(s['status']=='success' and v['status']=='measured' and v['source'].get('timer_resolution_seconds') is None for s,v in items), 'duplicate_observations':duplicate_observations, 'n':len(values),
                 'missing':len(members)-len(items),
+                'success_missing':sum(s['status']=='success' and name not in flat for s,flat in zip(members,flats)),
+                'success_unavailable':sum(s['status']=='success' and v['status']=='unavailable' for s,v in items),
+                'success_censored':sum(s['status']=='success' and v['status']=='censored' for s,v in items),
                 'unavailable':sum(v['status']=='unavailable' for _,v in items),
                 'censored':sum(v['status']=='censored' for _,v in items),
                 'excluded_terminal':sum(s['status']!='success' and v['status']=='measured' for s,v in items),
@@ -347,6 +472,39 @@ def _exact(left, right):
     return type(left) is type(right) and left == right
 
 
+def _exact_statistic(samples, name, statistic):
+    unique = {}
+    for sample in samples:
+        item = _flatten(sample).get(name)
+        if sample['status'] == 'success' and item is not None and item['status'] == 'measured':
+            source = item['source']
+            key = source['receipt_sha256']
+            unique[key] = Fraction(str(item['value']))
+    values = sorted(unique.values())
+    require(values, 'comparison statistic: no successful measurements')
+    if statistic == 'p95':
+        return values[math.ceil(.95*len(values))-1]
+    middle = len(values)//2
+    return values[middle] if len(values)%2 else (values[middle-1]+values[middle])/2
+
+
+def _exact_decimal(value):
+    # Comparison arithmetic starts with finite decimal inputs. Its denominators
+    # contain only factors 2 and 5, so this conversion terminates exactly.
+    with localcontext() as context:
+        context.prec = len(str(abs(value.numerator))) + 4*len(str(value.denominator)) + 4
+        result = Decimal(value.numerator)/Decimal(value.denominator)
+    return result
+
+
+def _comparison_number(value):
+    try:
+        return normalize_number(_exact_decimal(value),unit='seconds')
+    except ValueError:
+        # Retain the exact decimal string below instead of a rounded JSON bound.
+        return None
+
+
 def compare_baseline(baseline, current, tolerances, allowed_changed_subject_fields=()):
     """Explicit per-profile descriptive regression decision; never target acceptance.
 
@@ -358,6 +516,8 @@ def compare_baseline(baseline, current, tolerances, allowed_changed_subject_fiel
     require(len(baseline['groups']) == len(current['groups']) == 1,
             'comparable profile: compare exactly one group at a time')
     a,b = baseline['groups'][0],current['groups'][0]
+    require(not {s['sample_id'] for s in baseline['samples']} & {s['sample_id'] for s in current['samples']},
+            'comparison: baseline/current sample_id overlap')
     require(type(allowed_changed_subject_fields) in (list,tuple), 'subject change policy: expected list')
     require(all(type(x) is str for x in allowed_changed_subject_fields), 'subject change policy: expected strings')
     allowed = set(allowed_changed_subject_fields)
@@ -389,24 +549,42 @@ def compare_baseline(baseline, current, tolerances, allowed_changed_subject_fiel
         _number(rule['absolute_increase'],'absolute_increase')
         _number(rule['min_samples'],'min_samples',integer=True)
         require(rule['min_samples'] >= 1, 'min_samples: must be positive')
+        def observations(samples):
+            result=set()
+            for sample in samples:
+                item=_flatten(sample).get(name)
+                if sample['status']=='success' and item is not None and item['status']=='measured':
+                    result.add(item['source']['receipt_sha256'])
+            return result
+        require(not observations(baseline['samples']) & observations(current['samples']),
+                f'{name}: baseline/current observation reuse')
         old,new = a['metrics'].get(name),b['metrics'].get(name)
         enough = old and new and min(old['n'],new['n']) >= rule['min_samples']
-        clean = all(g['counts']['total'] == g['counts']['success'] for g in (a,b))
-        complete = enough and clean and all(x['missing']==x['unavailable']==x['censored']==x['duplicate_observations']==0 for x in (old,new))
+        complete = enough and all(x['success_missing']==x['success_unavailable']==x['success_censored']==x['duplicate_observations']==0 for x in (old,new))
         if not complete:
             outcomes[name] = {'status':'incomplete','rule':copy.deepcopy(rule)}
             continue
+        require(old['scope'] != 'unknown' and new['scope'] != 'unknown', 'comparable measurement scope unknown')
+        if old['unit']=='seconds':
+            require(old['timer_resolutions_seconds'] and new['timer_resolutions_seconds']
+                    and old['unknown_timer_resolution_observations']==new['unknown_timer_resolution_observations']==0,
+                    'comparable timer resolution unknown')
         require(old['scope'] == new['scope'] and old['timer_resolutions_seconds'] == new['timer_resolutions_seconds'],
                 'comparable measurement scope/resolution differs')
-        old_value,new_value = old[rule['statistic']],new[rule['statistic']]
-        limit = old_value * (1 + rule['relative_increase']) + rule['absolute_increase']
+        old_value = _exact_statistic(baseline['samples'],name,rule['statistic'])
+        new_value = _exact_statistic(current['samples'],name,rule['statistic'])
+        limit = old_value * (1 + Fraction(str(rule['relative_increase']))) + Fraction(str(rule['absolute_increase']))
         outcomes[name] = {'status':'regression' if new_value > limit else 'within_declared_tolerance',
-                          'baseline':old_value,'current':new_value,'limit':limit,'rule':copy.deepcopy(rule)}
+                          'baseline':_comparison_number(old_value),'current':_comparison_number(new_value),
+                          'limit':_comparison_number(limit),'baseline_statistic_decimal':str(_exact_decimal(old_value)),
+                          'current_statistic_decimal':str(_exact_decimal(new_value)),
+                          'limit_decimal':str(_exact_decimal(limit)),'rule':copy.deepcopy(rule)}
     states = {x['status'] for x in outcomes.values()}
     status = 'incomplete' if 'incomplete' in states else 'regression' if 'regression' in states else 'within_declared_tolerance'
     return {'schema':'sherlock-benchmark-comparison/1','profile_sha256':a['profile_sha256'],
             'baseline_profile_sha256':a['profile_sha256'],'current_profile_sha256':b['profile_sha256'],
             'baseline_identity':a['identity'],'current_identity':b['identity'],
+            'baseline_counts':a['counts'],'current_counts':b['counts'],
             'allowed_changed_subject_fields':sorted(allowed),'changed_subject_fields':changed,
             'status':status,'acceptance':'not-assessed','metrics':outcomes}
 
@@ -414,7 +592,7 @@ def compare_baseline(baseline, current, tolerances, allowed_changed_subject_fiel
 def _receipt_terminal(document, template):
     """Known host receipt outcome dominates caller labels; no evidence upgrade."""
     if document.get('format') not in HOST_FORMATS:
-        return template['status']
+        return None
     require(template['evidence_class'] == 'host', 'host receipt must retain host evidence_class')
     terminal = document.get('terminal_state')
     require(type(terminal) is str, 'host terminal_state: missing')
@@ -428,7 +606,7 @@ def _receipt_terminal(document, template):
 def collect_sample(template, receipt_bindings, base_dir):
     """Read explicit digest-pinned receipts; JSON pointers never invoke commands.
 
-    A binding's optional terminal mapping is {pointer, success_values,
+    A binding's terminal mapping (required except for recognized host formats) is {pointer, success_values,
     censored_values}; every other observed value is failure. Missing/null metric
     pointer becomes unavailable. Scale converts original scalar units explicitly.
     """
@@ -438,14 +616,14 @@ def collect_sample(template, receipt_bindings, base_dir):
     root = Path(base_dir).resolve(strict=True)
     sample.setdefault('receipts',[]); sample.setdefault('metrics',{});sample.setdefault('layers',{})
     assigned = set(_flatten(sample)); receipt_paths = {r['path'] for r in sample['receipts']}
-    terminal_states = [sample['status']]
+    terminal_states = []
     for binding in receipt_bindings:
         _keys(binding, {'path','sha256','fields'}, {'terminal'}, where='binding')
         rel = _path(binding['path']); _digest(binding['sha256'], 'binding.sha256')
         path = root.joinpath(*rel.parts).resolve(strict=True)
         require(path.is_relative_to(root) and path.is_file(), 'receipt path: outside base or not file')
         require(path.stat().st_size <= MAX_RECEIPT_BYTES, 'receipt: exceeds 16MiB collector limit')
-        raw = path.read_bytes()
+        raw = read_json_bytes(path)
         digest = hashlib.sha256(raw).hexdigest()
         require(digest == binding['sha256'], 'receipt digest mismatch')
         doc = loads_strict(raw)
@@ -455,14 +633,34 @@ def collect_sample(template, receipt_bindings, base_dir):
         schema = doc.get('schema', doc.get('format'))
         require(schema is None or type(schema) is str, 'receipt schema: expected string')
         sample['receipts'].append({'path':binding['path'],'sha256':digest,'schema':schema})
-        terminal_states.append(_receipt_terminal(doc, sample))
+        known_terminal = _receipt_terminal(doc, sample)
+        require(known_terminal is not None or 'terminal' in binding,
+                'binding: explicit terminal mapping required for unrecognized receipt format')
+        binding_states = [known_terminal] if known_terminal is not None else []
         if 'terminal' in binding:
             term = binding['terminal']
             _keys(term, {'pointer','success_values','censored_values'}, where='terminal')
             require(type(term['success_values']) is list and type(term['censored_values']) is list, 'terminal: expected lists')
             require(term['success_values'] and not any(_exact(v, c) for v in term['success_values'] for c in term['censored_values']), 'terminal: ambiguous values')
-            observed = resolve_pointer(doc, term['pointer'])
-            terminal_states.append('success' if any(_exact(observed,v) for v in term['success_values']) else 'censored' if any(_exact(observed,v) for v in term['censored_values']) else 'failure')
+            try:
+                observed = resolve_pointer(doc, term['pointer'])
+            except KeyError:
+                binding_states.append('failure')
+                extensions=sample.setdefault('extensions',{})
+                require(type(extensions) is dict, 'extensions: expected object')
+                diagnostics=extensions.setdefault('collection_diagnostics',[])
+                require(type(diagnostics) is list, 'collection_diagnostics: expected list')
+                diagnostics.append({'receipt_sha256':digest,'terminal_pointer':term['pointer'],
+                                    'reason':'terminal predicate absent; operation outcome unverified'})
+            else:
+                binding_states.append('success' if any(_exact(observed,v) for v in term['success_values']) else 'censored' if any(_exact(observed,v) for v in term['censored_values']) else 'failure')
+        # Fenrir's actual boolean verifier predicate cannot be replaced by exit0.
+        if 'verifies' in doc:
+            require(type(doc['verifies']) is bool, 'verifies: expected semantic boolean verdict')
+            if doc['verifies'] is False:
+                binding_states.append('failure')
+        binding_status = next((state for state in ('failure','censored') if state in binding_states), 'success')
+        terminal_states.append(binding_status)
         require(type(binding['fields']) is list, 'binding.fields: expected list')
         for field in binding['fields']:
             _keys(field, {'metric','pointer','unit'}, {'scale', 'scope', 'timer_resolution_seconds'}, where='binding field')
@@ -480,11 +678,11 @@ def collect_sample(template, receipt_bindings, base_dir):
                 item = {'value':None,'unit':field['unit'],'status':'unavailable','source':None,
                         'reason':f"receipt does not expose {field['pointer']}"}
             else:
-                _number(value,'receipt scalar'); value = value * scale
-                if field['unit'] != 'seconds' and type(value) is float and value.is_integer():
-                    value = int(value)
-                item = {'value':value,'unit':field['unit'],'status':'measured',
-                        'source':{'receipt_sha256':digest,'pointer':field['pointer'],'scale':scale},'reason':None}
+                value = receipt_metric_value(raw,field['pointer'],scale,unit=field['unit'])
+                censored = binding_status == 'censored'
+                item = {'value':value,'unit':field['unit'],'status':'censored' if censored else 'measured',
+                        'source':{'receipt_sha256':digest,'pointer':field['pointer'],'scale':scale},
+                        'reason':'receipt terminal state censored; captured scalar is partial operation evidence' if censored else None}
             if item['source'] is not None:
                 item['source'].update({k: field[k] for k in ('scope','timer_resolution_seconds') if k in field})
             dest = sample['metrics'] if layer is None else sample['layers'].setdefault(layer,{})
@@ -509,18 +707,18 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         if args.command=='collect':
-            result=collect_sample(loads_strict(Path(args.template).read_bytes()),loads_strict(Path(args.bindings).read_bytes()),Path(args.base_dir))
+            result=collect_sample(loads_strict(read_json_bytes(Path(args.template))),loads_strict(read_json_bytes(Path(args.bindings))),Path(args.base_dir))
         elif args.command=='compare':
-            result=compare_baseline(loads_strict(Path(args.baseline).read_bytes()),
-                loads_strict(Path(args.current).read_bytes()),loads_strict(Path(args.tolerances).read_bytes()),
+            result=compare_baseline(loads_strict(read_json_bytes(Path(args.baseline))),
+                loads_strict(read_json_bytes(Path(args.current))),loads_strict(read_json_bytes(Path(args.tolerances))),
                 allowed_changed_subject_fields=args.allow_changed_subject_field)
         else:
-            result=summarize([loads_strict(Path(p).read_bytes()) for p in args.samples])
+            result=summarize([loads_strict(read_json_bytes(Path(p))) for p in args.samples])
         Path(args.output).write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
         if args.command=='report' and args.markdown:
             Path(args.markdown).write_text(render_markdown(result))
         return 0
-    except (ValueError, KeyError, OSError, TypeError) as exc:
+    except (ValueError, KeyError, OSError, TypeError, OverflowError) as exc:
         print(f'benchmark input error: {exc}',file=sys.stderr)
         return 2
 

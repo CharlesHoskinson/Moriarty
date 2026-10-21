@@ -1,213 +1,297 @@
-"""Pure parser fixtures only: labels never establish an actual stagenet run."""
+"""Ordinary synthetic receipts only; no proof, compiler or target execution."""
 import copy
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
-from acceptance import assess, canonical_digest
+from acceptance import assess, canonical_digest, InputError
+from metrics import METRIC_UNITS, required_metric_ids, event_latencies
+from workloads.generate import stage_contract
 
-H = hashlib.sha256(b"fixture source").hexdigest()
-I = {"source_sha256": H, "compiler_sha256": H, "ledger_sha256": H,
-     "network": "stagenet-fixture", "circuit_sha256": H, "profile": "fixture/1"}
-LAYERS = ["child-0", "child-1", "parent", "decider"]
+HERE = Path(__file__).resolve().parent
+H = lambda raw: hashlib.sha256(raw).hexdigest()
+
+
+class Fixture:
+    """Synthetic transport fixture using the REAL validated workload catalog."""
+    def __init__(self, root, stage="initial-deployed-baseline", label="current", compiler="compiler"):
+        self.root, self.label = Path(root), label
+        self.root.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(HERE / "workloads", self.root / "workloads", dirs_exist_ok=True)
+        self.catalog = json.loads((self.root / "workloads/catalog.json").read_text())
+        cases = stage_contract(self.catalog, stage)["cases"]
+        self.policy = dict(schema="sherlock-benchmark-acceptance-policy/2", stage=stage,
+            catalog=dict(path="workloads/catalog.json", sha256=H((self.root / "workloads/catalog.json").read_bytes())),
+            cases=[], limits={}, regression=dict(mode="initial_baseline", future_tolerances="Freeze explicit per-case tolerances before any future comparison."),
+            observation_fields={}, status_values={name:[name] for name in ("success","failure","censored","not_run")},
+            receipt_fields={}, terminal_values={name:[True] for name in ("host","prove","local_verify","deployment","inclusion","readback")},
+            proof_receipt_fields={}, statement_fields=dict(pre_state="/pre_state",post_state="/post_state"))
+        self.current = dict(schema="sherlock-benchmark-current/2", cases={})
+        self.samples=[]
+        for case in cases:
+            case=copy.deepcopy(case);case.update(min_successful_samples=1,max_failures=0,max_censored=0)
+            self.policy["cases"].append(case)
+            self.samples.append(self.make(case, compiler))
+
+    def write(self, path, raw):
+        target=self.root/path;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
+        return H(raw)
+
+    def pin(self, path, value):
+        self.write(path,json.dumps(value).encode())
+        return dict(path=path,algorithm="canonical-json-sha256")
+
+    def add(self, sample, path, value, schema="fixture-native-receipt/1"):
+        raw=value if isinstance(value,bytes) else json.dumps(value).encode()
+        sha=self.write(path,raw)
+        sample["receipts"].append(dict(path=path,sha256=sha,schema=schema))
+        return dict(receipt_sha256=sha,pointer="")
+
+    def metric(self, name, value, source, pointer):
+        unit=METRIC_UNITS[name]
+        scope="rpc_elapsed" if name.startswith("network.") else "circuit_metadata" if name.startswith("circuit.") else "serialized_artifact" if unit=="bytes" else "ledger_receipt" if unit=="DUST" else "subprocess"
+        src=dict(receipt_sha256=source["receipt_sha256"],pointer=pointer,scope=scope)
+        if unit=="seconds":src["timer_resolution_seconds"]=0.001
+        return dict(value=value,unit=unit,status="measured",source=src,reason=None)
+
+    def make(self, case, compiler):
+        name=case["workload_id"];host=case["evidence_class"]=="host"
+        prefix=name+"/";identity=dict(profile="fixture/1",network=None if host else "stagenet-fixture")
+        pins={}
+        for key, value in (("source_sha256","source"),("compiler_sha256",compiler),("ledger_sha256","ledger"),("circuit_sha256","terminal-circuit"),("environment_sha256","same-machine"),("toolchain_sha256","same-toolchain")):
+            if host and key in ("ledger_sha256","circuit_sha256"):
+                identity[key]=None;continue
+            path=prefix+key+".bin";identity[key]=self.write(path,value.encode());pins[key]=dict(path=path,algorithm="sha256")
+        context=dict(identity=identity,identity_pins=pins,workload_digest_sha256=case["workload_digest_sha256"],
+            workload_pin=dict(path="workloads/catalog.json",algorithm="canonical-json-sha256",pointer=f"/cases/{[c['workload_id'] for c in self.catalog['cases']].index(name)}/inputs"),
+            expected_effects_independence="independent")
+        if host:
+            document=json.loads((self.root/"workloads"/case["expected_effects_path"]).read_text());effects=document["value"]
+            context.update(expected_effects_scope="host-terminal-value",expected_effects_pin=dict(path="workloads/"+case["expected_effects_path"],algorithm="canonical-json-sha256",pointer="/value"))
+        else:
+            context.update(target_id="fixture-target",anchor_id="fixture-anchor",expected_effects_scope="complete-deployed-effects",
+                expected_effect_root_pointers={role:"/roots/"+role for role in case["required_effect_root_roles"]},expected_state_pointers=dict(pre="/pre_state",post="/post_state"))
+            count=2 if name=="sherlock-linked-two-step" else int(name.rsplit("-",1)[1])
+            states=[dict(pc=i,whole_context={"preserved":[1,2],"optional":None}) for i in range(count+1)]
+            effects=dict(ordered_effects=[dict(step=i) for i in range(count)],pre_state=states[0],post_state=states[-1],preserved_state={"reserve":4},fees_dust=2,residual_duties=[],optional_result=None,roots={role:H(role.encode()) for role in case["required_effect_root_roles"]})
+            context["expected_effects_pin"]=self.pin(prefix+"expected.json",effects)
+        context["expected_effects_sha256"]=canonical_digest(effects)
+        self.current["cases"][name]=context
+        sample=dict(schema="sherlock-benchmark-sample/1",sample_id=self.label+"-"+name,workload_id=name,workload_digest_sha256=case["workload_digest_sha256"],evidence_class=case["evidence_class"],status="success",identity=copy.deepcopy(identity),cache_state="cold",metrics={},layers={},receipts=[],effects=dict(expected_sha256=canonical_digest(effects),observed_sha256=canonical_digest(effects),match=True),events={key:None for key in ("proof_ready","submission","ack","inclusion","readback")},extensions={})
+        extension=dict(schema="sherlock-benchmark-sample-acceptance/2",observation_id=self.label+":"+name,receipt_roles={})
+        sample["extensions"]["acceptance"]=extension
+        if not host:
+            sample["events"]={key:f"2026-10-21T00:00:0{i}Z" for i,key in enumerate(sample["events"])}
+            extension.update(target_id=context["target_id"],anchor_id=context["anchor_id"],deployment_id="fixture-deployment",call_transaction_id=self.label+":"+name+":call",proof_nodes=[])
+            nodes=extension["proof_nodes"]
+            leaf_names=["child-0","child-1"] if name=="sherlock-linked-two-step" else [f"leaf-{i}" for i in range(count)]
+            plan=[(leaf,"child-"+str(i) if name=="sherlock-linked-two-step" else "leaf",states[i],states[i+1],[]) for i,leaf in enumerate(leaf_names)]
+            plan += [("parent","parent",states[0],states[-1],leaf_names),("decider","decider",states[0],states[-1],["parent"])]
+            by_name={}
+            for node_id,layer,pre,post,input_ids in plan:
+                proof=self.add(sample,prefix+node_id+"-proof.bin",("proof:"+self.label+name+node_id).encode(),None)["receipt_sha256"]
+                vk=self.add(sample,prefix+node_id+"-vk.bin",("vk:"+layer).encode(),None)["receipt_sha256"]
+                statement=self.add(sample,prefix+node_id+"-statement.json",dict(pre_state=pre,post_state=post,node=node_id),"fixture-public-statement/1")["receipt_sha256"]
+                node=dict(node_id=node_id,layer=layer,operation_id=self.label+":"+node_id,circuit_sha256=identity["circuit_sha256"] if layer=="decider" else H(("circuit:"+layer).encode()),proof_sha256=proof,statement_sha256=statement,verifying_key_sha256=vk,pre_state_sha256=canonical_digest(pre),post_state_sha256=canonical_digest(post),circuit_k=10,inputs=[{k:v for k,v in by_name[child].items() if k in {"node_id","layer","circuit_sha256","proof_sha256","statement_sha256","verifying_key_sha256","pre_state_sha256","post_state_sha256"}} for child in input_ids],receipt_roles={})
+                values={metric:(10 if metric=="circuit.k" else 1024 if metric=="circuit.domain_capacity_rows" else next((len((self.root/ref["path"]).read_bytes()) for ref in sample["receipts"] if ref["sha256"]==node[field]),1) if (field:={"proof.bytes":"proof_sha256","verifying_key.bytes":"verifying_key_sha256","instance.bytes":"statement_sha256"}.get(metric)) else 1) for metric in {m.split(":",2)[2] for m in required_metric_ids(case) if m.startswith("layer:"+layer+":")}}
+                for role in ("prove","local_verify"):
+                    facts=dict(identity);facts.update({key:value for key,value in node.items() if key!="receipt_roles"});facts.update(workload_digest_sha256=case["workload_digest_sha256"],success=True,exit_code=0,metrics=values)
+                    binding=self.add(sample,prefix+node_id+"-"+role+".json",facts)
+                    node["receipt_roles"][role]=binding
+                    self.policy["proof_receipt_fields"][role]={key:"/"+key for key in facts if key not in ("exit_code","metrics")}
+                nodes.append(node);by_name[node_id]=node
+                if layer not in sample["layers"]:
+                    sample["layers"][layer]={metric:self.metric(metric,value,node["receipt_roles"]["local_verify" if metric.startswith("local_verify.") else "prove"],"/metrics/"+metric) for metric,value in values.items()}
+            for key in ("proof_sha256","statement_sha256","verifying_key_sha256"):extension[key]=nodes[-1][key]
+            if count > 1 and name != "sherlock-linked-two-step":
+                leaves=[node for node in nodes if node["layer"]=="leaf"]
+                values={metric:entry["value"] for metric,entry in sample["layers"]["leaf"].items()}
+                lengths={ref["sha256"]:len((self.root/ref["path"]).read_bytes()) for ref in sample["receipts"]}
+                for metric,field in (("proof.bytes","proof_sha256"),("verifying_key.bytes","verifying_key_sha256"),("instance.bytes","statement_sha256")):
+                    values[metric]=sum(lengths[sha] for sha in {node[field] for node in leaves}) if field=="verifying_key_sha256" else sum(lengths[node[field]] for node in leaves)
+                body=dict(identity,workload_digest_sha256=case["workload_digest_sha256"],layer="leaf",nodes=[{k:v for k,v in node.items() if k in {"node_id","layer","circuit_sha256","proof_sha256","statement_sha256","verifying_key_sha256","pre_state_sha256","post_state_sha256"}} for node in leaves],success=True,metrics=values)
+                binding=self.add(sample,prefix+"leaf-group.json",body)
+                extension["layer_observations"]={"leaf":binding}
+                self.policy["layer_receipt_fields"]={key:"/"+key for key in body if key!="metrics"}
+                self.policy["terminal_values"]["layer_observation"]=[True]
+                sample["layers"]["leaf"]={metric:self.metric(metric,value,binding,"/metrics/"+metric) for metric,value in values.items()}
+        facts=dict(identity,workload_digest_sha256=case["workload_digest_sha256"],observation_id=extension["observation_id"],cache_state="cold",status="success")
+        whole_values={metric:1 for metric in required_metric_ids(case) if not metric.startswith("layer:")}
+        if not host:whole_values.update(event_latencies(sample))
+        facts["metrics"]=whole_values
+        extension["observation"]=self.add(sample,prefix+"observation.json",facts)
+        self.policy["observation_fields"]={key:"/"+key for key in facts if key!="metrics"}
+        self.policy["metric_context_fields"]={key:"/"+key for key in identity if key!="circuit_sha256"}
+        self.policy["metric_context_fields"]["workload_digest_sha256"]="/workload_digest_sha256"
+        sample["metrics"]={metric:self.metric(metric,value,extension["observation"],"/metrics/"+metric) for metric,value in whole_values.items()}
+        facts=dict(identity,workload_digest_sha256=case["workload_digest_sha256"],effects=effects,outcome="Halted",success=True)
+        if not host:
+            facts.update({key:extension[key] for key in ("target_id","anchor_id","deployment_id","call_transaction_id","proof_sha256","statement_sha256","verifying_key_sha256")});facts.update(sample["events"])
+        for role in (["host"] if host else ["prove","local_verify","deployment","inclusion","readback"]):
+            binding=self.add(sample,prefix+role+".json",dict(facts,role=role,exit_code=0))
+            extension["receipt_roles"][role]=binding
+            self.policy["receipt_fields"][role]={key:"/"+key for key in facts}
+        return sample
+
+    def assess(self,baseline=None):return assess(self.samples,self.policy,self.current,self.root,baseline)
+
+    def replace_receipt(self,sample,binding,mutate):
+        ref=next(ref for ref in sample["receipts"] if ref["sha256"]==binding["receipt_sha256"])
+        path=self.root/ref["path"];value=json.loads(path.read_text());mutate(value);raw=json.dumps(value).encode();path.write_bytes(raw)
+        old=ref["sha256"];new=H(raw);ref["sha256"]=new
+        def update(value):
+            if isinstance(value,dict):
+                for key,child in value.items():
+                    if key=="receipt_sha256" and child==old:value[key]=new
+                    else:update(child)
+            elif isinstance(value,list):
+                for child in value:update(child)
+        update(sample)
+
 
 class AcceptanceTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name)
-        effects = {"ordered_effects": [{"credit": 3}], "preserved": {"reserve": 4},
-                   "fees_dust": 2, "residual_duties": ["owed"]}
-        self.current = {"schema": "sherlock-benchmark-current/1", "identity": I,
-                        "target_id": "target-fixture", "anchor_id": "anchor-fixture",
-                        "identity_pins": {key: {"path": "identity.bin", "algorithm": "sha256"} for key in I if key.endswith("sha256")},
-                        "cases": {"sherlock-linked-two-step": {
-                            "workload_digest_sha256": H,
-                            "expected_effects_sha256": canonical_digest(effects),
-                            "expected_effects_independence": "independent", "expected_effects_scope": "complete-deployed-effects",
-                            "workload_pin": {"path": "workload.bin", "algorithm": "sha256"},
-                            "expected_effects_pin": {"path": "effects.json", "algorithm": "canonical-json-sha256"}}}}
-        self.case = {"workload_id": "sherlock-linked-two-step", "kind": "sherlock-recursive-interpreter",
-                     "workload_digest_sha256": H, "required_metrics": ["prove.wall_seconds"],
-                     "required_layers": LAYERS, "min_successful_samples": 1,
-                     "max_failures": 0, "max_censored": 0}
-        self.policy = {"schema": "sherlock-benchmark-acceptance-policy/1", "cases": [self.case],
-                       "receipt_fields": {}, "limits": {}, "profile": "fixture/1", "network": "stagenet-fixture",
-                       "regression": {"mode": "initial_baseline", "future_tolerances": "must be explicitly selected before comparison"}}
-        ext = dict(target_id="target-fixture", anchor_id="anchor-fixture", deployment_id="deploy-fixture",
-                   call_transaction_id="call-fixture", proof_sha256=hashlib.sha256(b"fixture proof").hexdigest(),
-                   statement_sha256=H, receipt_roles={})
-        self.sample = {"schema": "sherlock-benchmark-sample/1", "sample_id": "fixture-1",
-                       "workload_id": "sherlock-linked-two-step", "workload_digest_sha256": H,
-                       "evidence_class": "stagenet", "status": "success", "identity": I,
-                       "cache_state": "cold", "metrics": {}, "layers": {}, "receipts": [],
-                       "effects": {"expected_sha256": canonical_digest(effects),
-                                   "observed_sha256": canonical_digest(effects), "match": True},
-                       "events": {k: f"2026-10-21T00:00:0{n}Z" for n,k in enumerate(
-                           ["proof_ready", "submission", "ack", "inclusion", "readback"])},
-                       "extensions": {"acceptance": ext}}
-        (self.root/"identity.bin").write_bytes(b"fixture source")
-        (self.root/"workload.bin").write_bytes(b"fixture source")
-        (self.root/"effects.json").write_text(json.dumps(effects))
-        self.put("proof.bin", b"fixture proof")
-        ext["proof_artifact_receipt"] = self.sample["receipts"][-1]["sha256"]
-        facts = dict(I, workload_digest_sha256=H, target_id=ext["target_id"], anchor_id=ext["anchor_id"],
-                     deployment_id=ext["deployment_id"], call_transaction_id=ext["call_transaction_id"],
-                     proof_sha256=ext["proof_sha256"], statement_sha256=H,
-                     success=True, effects=effects, seconds=2, layer_seconds={layer: 2 for layer in LAYERS})
-        facts.update(self.sample["events"])
-        for role in ["prove", "local_verify", "deployment", "inclusion", "readback"]:
-            self.put(role + ".json", json.dumps(facts).encode())
-            ext["receipt_roles"][role] = self.sample["receipts"][-1]["sha256"]
-            self.policy["receipt_fields"][role] = {key: "/"+key for key in facts if key != "seconds"}
-        sha = ext["receipt_roles"]["prove"]
-        m = {"value": 2, "unit": "seconds", "status": "measured",
-             "source": {"receipt_sha256": sha, "pointer": "/seconds"}, "reason": None}
-        self.sample["metrics"]["prove.wall_seconds"] = m
-        self.sample["layers"] = {layer: {"prove.wall_seconds": dict(copy.deepcopy(m),source={"receipt_sha256":sha,"pointer":"/layer_seconds/"+layer})} for layer in LAYERS}
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.f=Fixture(self.tmp.name)
 
-    def put(self, name, raw):
-        (self.root/name).write_bytes(raw)
-        self.sample["receipts"].append({"path": name,"sha256": hashlib.sha256(raw).hexdigest(),"schema": None})
+    def test_real_catalog_policy_with_all_layer_prefixed_metrics_passes(self):
+        result=self.f.assess();self.assertTrue(result["complete"],result)
+        self.assertFalse(result["performance_target_satisfied"]);self.assertFalse(result["full_goal_complete"])
 
-    def result(self, samples=None, baseline=None):
-        return assess(samples or [self.sample], self.policy, self.current, self.root, baseline or [])
+    def test_catalog_kind_metrics_case_and_layer_omissions_cannot_pass(self):
+        for mutate in [lambda p:p["cases"][0].update(kind="moriarty-nominal-source"),lambda p:p["cases"][0].update(required_metrics=["prove.wall_seconds"]),lambda p:p.update(cases=[]),lambda p:p["cases"][0].update(required_layers=[])]:
+            with self.subTest(mutate=mutate):
+                policy=copy.deepcopy(self.f.policy);mutate(policy)
+                self.assertFalse(assess(self.f.samples,policy,self.f.current,self.f.root)["complete"])
 
-    def test_complete_fixture_requires_every_receipt_and_layer(self):
-        self.assertTrue(self.result()["complete"])
-        self.assertFalse(self.result()["performance_target_satisfied"])
-        self.assertIn("owner", self.result()["scope"])
+    def test_initial_baseline_and_full_series_are_distinct(self):
+        self.f.policy["stage"]="full-rollup-series"
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_current_artifact_edit_invalidates_before_adoption(self):
-        (self.root/"identity.bin").write_bytes(b"changed source")
-        self.assertFalse(self.result()["complete"])
+    def test_host_compiler_stage_uses_host_receipts_without_network(self):
+        fixture=Fixture(Path(self.tmp.name)/"host","host-compiler-coverage")
+        result=fixture.assess();self.assertTrue(result["complete"],result)
+        self.assertTrue(all(s["identity"]["ledger_sha256"] is None and not s["events"]["submission"] for s in fixture.samples))
 
-    def test_layer_cost_cannot_reuse_whole_run_timer(self):
-        self.sample["layers"]["decider"]["prove.wall_seconds"]["source"] = copy.deepcopy(self.sample["metrics"]["prove.wall_seconds"]["source"])
-        self.assertFalse(self.result()["complete"])
+    def test_full_series_and_full_suite_contracts_have_positive_fixture_paths(self):
+        for stage in ("full-rollup-series","full-suite"):
+            fixture=Fixture(Path(self.tmp.name)/stage,stage)
+            result=fixture.assess();self.assertTrue(result["complete"],result)
+            self.assertFalse(result["full_goal_complete"])
 
-    def test_wrong_limit_profile_cannot_qualify(self):
-        self.policy["profile"] = "fenrir-unrelated/1"
-        self.assertFalse(self.result()["complete"])
+    def test_host_or_model_cannot_replace_deployed_recursive_chain(self):
+        self.f.samples[0]["evidence_class"]="host"
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_host_and_model_cannot_close_stagenet(self):
-        for label in ["host", "model", "native", "synthetic"]:
-            self.sample["evidence_class"] = label
-            self.assertFalse(self.result()["complete"])
+    def test_environment_toolchain_pins_qualify_and_drift_invalidates(self):
+        context=next(iter(self.f.current["cases"].values()))
+        path=self.f.root/context["identity_pins"]["environment_sha256"]["path"];path.write_bytes(b"different-machine")
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_current_source_or_target_drift_invalidates(self):
-        self.current["identity"] = dict(I, source_sha256="b"*64)
-        self.assertFalse(self.result()["complete"])
-        self.current["identity"] = I
-        self.current["anchor_id"] = "changed"
-        self.assertFalse(self.result()["complete"])
+    def test_per_layer_false_verifier_even_exit_zero_is_incomplete(self):
+        sample=self.f.samples[0];binding=sample["extensions"]["acceptance"]["proof_nodes"][0]["receipt_roles"]["local_verify"]
+        self.f.replace_receipt(sample,binding,lambda d:d.update(success=False))
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_timestamp_labels_must_match_observed_receipts(self):
-        self.sample["events"]["readback"]="2026-10-21T00:00:09Z"
-        self.assertFalse(self.result()["complete"])
+    def test_missing_child_proof_or_vk_artifact_is_incomplete(self):
+        for field in ("proof_sha256","verifying_key_sha256","statement_sha256"):
+            sample=copy.deepcopy(self.f.samples[0]);sample["extensions"]["acceptance"]["proof_nodes"][0][field]="f"*64
+            self.assertFalse(assess([sample],self.f.policy,self.f.current,self.f.root)["complete"])
 
-    def test_receipt_edit_invalidates_even_with_unchanged_sample(self):
-        (self.root/"readback.json").write_text("{}")
-        self.assertFalse(self.result()["complete"])
+    def test_parent_child_statement_and_whole_state_continuity_required(self):
+        sample=self.f.samples[0];sample["extensions"]["acceptance"]["proof_nodes"][2]["inputs"][0]["post_state_sha256"]="f"*64
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_fabricated_metric_value_or_unit_cannot_pass(self):
-        self.sample["metrics"]["prove.wall_seconds"]["value"] = 0
-        self.assertFalse(self.result()["complete"])
+    def test_unavailable_oracle_sentinel_cannot_claim_complete_effects(self):
+        context=next(iter(self.f.current["cases"].values()));path=self.f.root/context["expected_effects_pin"]["path"]
+        value=json.loads(path.read_text());value["roots"]["pre_state_root"]={"status":"unavailable","value":None};path.write_text(json.dumps(value));context["expected_effects_sha256"]=canonical_digest(value)
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_missing_layer_and_unavailable_required_metric_incomplete(self):
-        self.sample["layers"].pop("decider")
-        self.assertFalse(self.result()["complete"])
-        self.sample["metrics"]["prove.wall_seconds"].update(value=None,status="unavailable",source=None,reason="not exposed")
-        self.assertFalse(self.result()["complete"])
+    def test_legitimate_null_option_values_remain_valid(self):
+        self.assertTrue(self.f.assess()["complete"])
 
-    def test_entire_effect_including_residual_duty_is_required(self):
-        self.current["cases"]["sherlock-linked-two-step"]["expected_effects_sha256"] = H
-        self.assertFalse(self.result()["complete"])
+    def test_null_required_root_is_incomplete(self):
+        context=next(iter(self.f.current["cases"].values()));path=self.f.root/context["expected_effects_pin"]["path"]
+        value=json.loads(path.read_text());value["roots"]["ledger_state_root"]=None;path.write_text(json.dumps(value));context["expected_effects_sha256"]=canonical_digest(value)
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_correlated_expected_effects_cannot_qualify(self):
-        self.current["cases"]["sherlock-linked-two-step"]["expected_effects_independence"] = "correlated"
-        self.assertFalse(self.result()["complete"])
+    def test_network_duration_must_match_receipt_bound_events(self):
+        self.f.samples[0]["metrics"]["network.submission_to_readback_seconds"]["value"]=0.001
+        with self.assertRaises(InputError):self.f.assess()
 
-    def test_proof_artifact_must_exist_and_match(self):
-        (self.root/"proof.bin").write_bytes(b"")
-        self.assertFalse(self.result()["complete"])
+    def test_unprefixed_limit_applies_to_matching_layer_metrics(self):
+        self.f.policy["limits"]={"prove.wall_seconds":dict(max=0.5,unit="seconds")}
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_repeats_cannot_reuse_same_transaction(self):
-        self.case["min_successful_samples"] = 2
-        other = copy.deepcopy(self.sample); other["sample_id"] = "fixture-2"
-        self.assertFalse(self.result([self.sample,other])["complete"])
+    def test_decimal_scaling_uses_original_receipt_tokens(self):
+        sample=self.f.samples[0];metric=sample["layers"]["child-0"]["prove.wall_seconds"]
+        binding=sample["extensions"]["acceptance"]["proof_nodes"][0]["receipt_roles"]["prove"]
+        self.f.replace_receipt(sample,binding,lambda d:d["metrics"].update({"prove.wall_seconds":3}))
+        metric["value"]=0.3;metric["source"]["scale"]=0.1
+        self.assertTrue(self.f.assess()["complete"])
 
-    def test_failure_and_censored_counts_remain_and_block_by_declared_policy(self):
-        for status in ["failure", "censored"]:
-            other=copy.deepcopy(self.sample); other.update(sample_id=status,status=status)
-            result=self.result([self.sample,other])
-            self.assertFalse(result["complete"])
-            self.assertEqual(result["cases"][0]["counts"][status],1)
+    def test_all_failure_identity_and_numeric_lineage_is_checked(self):
+        failed=copy.deepcopy(self.f.samples[0]);failed.update(sample_id="failure",status="failure");failed["identity"]["source_sha256"]="f"*64
+        self.f.policy["cases"][0]["max_failures"]=1;self.f.samples.append(failed)
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_exit_zero_with_false_verifier_verdict_cannot_pass(self):
-        path=self.root/"local_verify.json"
-        receipt=json.loads(path.read_text()); receipt["verifies"]=False
-        raw=json.dumps(receipt).encode(); path.write_bytes(raw)
-        sha=hashlib.sha256(raw).hexdigest()
-        for ref in self.sample["receipts"]:
-            if ref["path"]=="local_verify.json": ref["sha256"]=sha
-        self.sample["extensions"]["acceptance"]["receipt_roles"]["local_verify"]=sha
-        self.policy["receipt_fields"]["local_verify"]["success"]="/verifies"
-        self.assertFalse(self.result()["complete"])
+    def test_duplicate_observation_is_retained_without_count_inflation(self):
+        self.f.samples.append(copy.deepcopy(self.f.samples[0]))
+        result=self.f.assess();self.assertTrue(result["complete"],result)
+        self.assertEqual(result["cases"][0]["successful_observations"],1);self.assertEqual(result["cases"][0]["duplicate_observations"],1)
+        self.f.policy["cases"][0]["min_successful_samples"]=2
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_repeated_prove_receipt_cannot_supply_new_observation(self):
-        self.case["min_successful_samples"]=2
-        other=copy.deepcopy(self.sample);other["sample_id"]="second"
-        other["extensions"]["acceptance"]["call_transaction_id"]="another-call"
-        result=self.result([self.sample,other])
-        self.assertFalse(result["complete"])
-        self.assertTrue(any("reus" in f["reason"] for f in result["cases"][0]["findings"]))
+    def test_historical_optimized_compiler_uses_own_identity_pins(self):
+        prior=Fixture(self.f.root/"prior",label="prior",compiler="old-compiler")
+        self.f.policy["regression"]={"mode":"compare","allowed_changed_subject_fields":["compiler_sha256"],"tolerances":{"sherlock-linked-two-step":{"layer:decider:prove.wall_seconds":{"statistic":"median","relative_increase":0,"absolute_increase":0,"min_samples":1}}}}
+        baseline=dict(schema="sherlock-benchmark-baseline/2",root_prefix="prior",samples=prior.samples,policy=prior.policy,current=prior.current)
+        result=self.f.assess(baseline);self.assertTrue(result["complete"],result)
+        self.assertEqual(result["comparisons"][0]["changed_subject_fields"],["compiler_sha256"])
+        context=next(iter(prior.current["cases"].values()));(prior.root/context["identity_pins"]["compiler_sha256"]["path"]).write_bytes(b"drift")
+        self.assertFalse(self.f.assess(baseline)["complete"])
 
-    def test_initial_baseline_needs_explicit_future_policy(self):
-        self.policy["regression"].pop("future_tolerances")
-        self.assertFalse(self.result()["complete"])
+    def test_current_observation_cannot_supply_own_baseline(self):
+        self.f.policy["regression"]={"mode":"compare","tolerances":{"sherlock-linked-two-step":{"layer:decider:prove.wall_seconds":{"statistic":"median","relative_increase":0,"absolute_increase":0,"min_samples":1}}}}
+        baseline=dict(schema="sherlock-benchmark-baseline/2",root_prefix="self",samples=self.f.samples,policy=copy.deepcopy(self.f.policy),current=self.f.current)
+        baseline["policy"]["regression"]=dict(mode="initial_baseline",future_tolerances="explicit future policy")
+        shutil.copytree(self.f.root,self.f.root/"self",ignore=shutil.ignore_patterns("self"))
+        self.assertFalse(self.f.assess(baseline)["complete"])
 
-    def prior_baseline(self):
-        baseline=copy.deepcopy(self.sample)
-        baseline["sample_id"]="prior-fixture"
-        baseline["extensions"]["acceptance"]["call_transaction_id"]="prior-call"
-        mapping={}
-        for ref in baseline["receipts"]:
-            if not ref["path"].endswith(".json"): continue
-            value=json.loads((self.root/ref["path"]).read_text())
-            value["call_transaction_id"]="prior-call";value["observation_id"]="prior"
-            raw=json.dumps(value).encode();old=ref["sha256"];new=hashlib.sha256(raw).hexdigest()
-            ref["path"]="prior-"+ref["path"];ref["sha256"]=new
-            (self.root/ref["path"]).write_bytes(raw);mapping[old]=new
-        for role,sha in baseline["extensions"]["acceptance"]["receipt_roles"].items():
-            baseline["extensions"]["acceptance"]["receipt_roles"][role]=mapping[sha]
-        for metrics in [baseline["metrics"],*baseline["layers"].values()]:
-            for metric in metrics.values():
-                source=metric.get("source")
-                if source:source["receipt_sha256"]=mapping.get(source["receipt_sha256"],source["receipt_sha256"])
-        return baseline
+    def failure_sample(self,fixture,label="retained-failure"):
+        failed=copy.deepcopy(fixture.samples[0]);failed.update(sample_id=label,status="failure")
+        extension=failed["extensions"]["acceptance"]
+        old=next(ref for ref in failed["receipts"] if ref["sha256"]==extension["observation"]["receipt_sha256"])
+        body=json.loads((fixture.root/old["path"]).read_text());body.update(status="failure",observation_id=label)
+        extension["observation_id"]=label
+        extension["observation"]=fixture.add(failed,failed["workload_id"]+"/"+label+".json",body)
+        return failed
 
-    def test_compare_requires_comparable_baseline_and_explicit_tolerances(self):
-        self.policy["regression"]={"mode":"compare","tolerances":{"prove.wall_seconds":{"max_ratio":1.1}}}
-        self.assertFalse(self.result()["complete"])
-        self.assertFalse(self.result(baseline=[copy.deepcopy(self.sample)])["complete"])
-        self.assertTrue(self.result(baseline=[self.prior_baseline()])["complete"])
-        baseline=copy.deepcopy(self.sample); baseline["identity"]=dict(I,network="other")
-        self.assertFalse(self.result(baseline=[baseline])["complete"])
+    def test_retained_failed_baseline_does_not_break_shared_compare(self):
+        prior=Fixture(self.f.root/"prior",label="prior",compiler="old-compiler")
+        prior.policy["cases"][0]["max_failures"]=1
+        prior.samples.append(self.failure_sample(prior))
+        self.f.policy["regression"]={"mode":"compare","allowed_changed_subject_fields":["compiler_sha256"],"tolerances":{"sherlock-linked-two-step":{"layer:decider:prove.wall_seconds":{"statistic":"median","relative_increase":0,"absolute_increase":0,"min_samples":1}}}}
+        baseline=dict(schema="sherlock-benchmark-baseline/2",root_prefix="prior",samples=prior.samples,policy=prior.policy,current=prior.current)
+        result=self.f.assess(baseline);self.assertTrue(result["complete"],result)
+        self.assertEqual(result["baseline_cases"][0]["counts"]["failure"],1)
 
-    def test_declared_limit_is_applied_to_whole_and_each_layer(self):
-        self.policy["limits"]={"prove.wall_seconds":{"max":1,"unit":"seconds"}}
-        self.assertFalse(self.result()["complete"])
+    def test_failed_metric_receipt_context_and_value_are_checked(self):
+        failed=self.failure_sample(self.f);failed["layers"]["child-0"]["prove.wall_seconds"]["value"]=999
+        self.f.policy["cases"][0]["max_failures"]=1;self.f.samples.append(failed)
+        self.assertFalse(self.f.assess()["complete"])
 
-    def test_empty_required_cases_cannot_succeed(self):
-        self.policy["cases"]=[]
-        self.assertFalse(self.result()["complete"])
+    def test_artifact_ingestion_bound_is_explicit_and_separate(self):
+        self.f.policy["ingestion_limits"]={"max_artifact_bytes":1}
+        with self.assertRaises(InputError):self.f.assess()
+        self.f.policy["ingestion_limits"]["max_artifact_bytes"]=1024
+        self.assertTrue(self.f.assess()["complete"])
 
-    def test_missing_role_semantic_binding_cannot_succeed(self):
-        self.policy["receipt_fields"]["inclusion"].pop("proof_sha256")
-        self.assertFalse(self.result()["complete"])
+    def test_missing_referenced_receipts_are_input_errors(self):
+        sample=self.f.samples[0];ref=sample["receipts"][-1];path=self.f.root/ref["path"];path.unlink()
+        with self.assertRaises(InputError):self.f.assess()
 
-if __name__ == "__main__":
-    unittest.main()
+
+if __name__=="__main__":unittest.main()

@@ -1,124 +1,149 @@
 # Additive benchmark EARS
 
-Status: implemented source with ordinary synthetic parser checks; actual
-post-deployment evidence and owner adoption remain open. These SBENCH identifiers
-supplement SRPOC-001–009 and the original fixed 35/25/68 inventories.
+Revision02: implemented source and ordinary synthetic transport checks; actual
+native/stagenet benchmark evidence and owner adoption remain open. SBENCH clauses
+supplement SRPOC-001–009 and preserve the original fixed 35/25/68 inventories and
+all broader full Sherlock goals. Matching hashes check supplied consistency and
+currentness; they never authenticate proofs, issuers, independent oracles or reviews.
 
-### Requirement: SBENCH-001 Exact workload identity
+### Requirement: SBENCH-001 Fixed workload and stage identity
 
-When the suite selects a workload, it shall retain the versioned workload ID,
-exact input digest, source/compiler/profile identities, declared supported shape
-and complete independent expected-effect scope before evaluating observations.
+When a benchmark stage is assessed, DoctorWatson shall validate the /2 workload
+catalog and complete local generator/source/oracle provenance closure, select its
+known stage minimums, and reject omitted cases, spoofed kinds/evidence/layers,
+changed workload digests or weakened mandatory metric/repetition coverage.
 
-#### Scenario: Actual nominal and recursion cases
+#### Scenario: Initial baseline versus larger stages
 
-The declared cases identify `moriarty-map-queue`, `moriarty-mirror-arbor`,
-`sherlock-linked-two-step` and `fenrir-transfer-batches-1`, `-2`, `-4`, `-6`.
-A reduced source/scalar fixture preserves its scope and unavailable native fields.
+Host compiler coverage uses actual MapQueue/MirrorArbor host receipts. Initial
+deployed baseline requires at least one actual linked two-transition recursive
+stagenet chain. Full rollup series additionally requires the 1/2/4/6 batch cases;
+full-suite retains all three scopes. A scoped stage cannot complete the full goal.
 
-### Requirement: SBENCH-002 Measurement provenance and units
+### Requirement: SBENCH-002 Exact retained metric lineage
 
-When a measurement is reported, the suite shall retain the exact raw receipt,
-metric source pointer/scale, registry unit, observation status and actual producer
-scope; it shall recompute measured values from those pinned receipt bytes.
+When any successful, failed or censored observation is retained, the suite shall
+check its own frozen subject/environment/workload context, bounded receipt/artifact
+bytes and exact decimal receipt pointer/scale values with the shared metric API.
+Required metrics shall have measured values and exact registry units; raw failures,
+censoring, missing/unavailable data and descriptive duplicates shall remain visible.
 
-#### Scenario: Missing or relabeled values
+#### Scenario: Real catalog metric IDs and failed lineage
 
-A missing, null, unavailable, censored, wrong-unit or changed-receipt value cannot
-fill a required metric. All raw observations and failures remain visible.
+Already-qualified `layer:<id>:<metric>` IDs are normalized once. Changed failed
+sample identities or metric values do not escape validation. Missing/malformed
+referenced files are input errors; known missing required observations remain open.
 
-### Requirement: SBENCH-003 Separate resource and proof layers
+### Requirement: SBENCH-003 Native proof-layer resources and artifacts
 
-When a recursive case is assessed, the suite shall require declared whole-run
-and distinct child/parent/decider layer observations with profile-specific metric
-coverage; actual k/capacity/used rows/columns shall remain separately named.
+When a recursive deployed case is qualified, the suite shall bind actual per-node
+circuit/k, nonempty proof/statement/VK artifacts, complete statement state views,
+ordered predecessor references and actual positive local cryptographic verification
+receipts for every required child/leaf, parent and decider layer.
 
-#### Scenario: Aggregate timer reuse
+#### Scenario: Missing linkage or unrelated layer timer
 
-One whole-run or layer receipt pointer cannot supply another layer's measured
-cost. Sherlock requires two child layers, parent and decider; Fenrir declares its
-actual leaf/parent/decider shape. Unavailable used rows are not derived from 2^k.
+Child post-state equals the next child's complete pre-state; parent/decider
+boundaries match ordered verified inputs. The terminal consumes every transition/
+batch exactly once, matches independent opening/closing states and deployed final
+artifacts. Layer resource sources belong to those qualified native receipts or
+an explicit qualified aggregate with exact contributor membership. A false native
+verifier verdict or unrelated/aliased timer cannot qualify a layer.
 
-### Requirement: SBENCH-004 Current qualified stagenet evidence
+### Requirement: SBENCH-004 Independent complete target effects
 
-When post-deployment benchmark completion is assessed, the predicate shall require
-actual successful current stagenet-class samples, current source/compiler/ledger/
-network/circuit/workload/target/anchor identities, nonempty proof bytes, bound
-statement identities, actual semantic local verification, deployment, inclusion
-and complete readback receipts, with independently frozen complete deployed effects.
+When deployed evidence is qualified, the suite shall require current actual
+source/compiler/environment/toolchain/ledger/network/circuit/workload/target/anchor,
+proof/statement/VK identities, deployment/inclusion/readback and complete independent
+expected effects with every profile-required root and whole-state boundary known.
 
-#### Scenario: Host fixture or false verifier verdict
+#### Scenario: Scalar descriptor with unavailable roots
 
-Host/model/synthetic/native-local labels cannot close stagenet. A verifier's exit
-zero with a false verdict remains incomplete. Correlated/scalar expectations do
-not replace complete independent deployed effects.
+Typed unavailable/unknown oracle fields and missing/null required roots cannot be
+relabeled complete deployed effects. Legitimate null option values remain valid.
+Host compiler terminal-value evidence qualifies its host stage without fabricated
+ledger facts. Actual native/owner proof verification remains separately mandatory.
 
-### Requirement: SBENCH-005 Local and network timing separation
+### Requirement: SBENCH-005 Honest temporal and circuit observations
 
-When reporting timings, the suite shall distinguish local crypto verification,
-subprocess wall/CPU/RSS and proof-ready/submission/ack/inclusion/readback times;
-it shall require receipt-bound end-to-end event values for deployed samples.
+When resource or timing metrics are reported, the suite shall retain subprocess
+scope/resolution, separate local crypto work from network durations, bind complete
+proof-ready/submission/ack/inclusion/readback timestamps and require measured
+network durations to agree with their actual event endpoints.
 
-#### Scenario: RPC latency
+#### Scenario: Capacity, used rows and RPC latency
 
-RPC queue/inclusion/readback latency supplies no validator CPU claim, and a
-subprocess timing supplies no pure algorithm-kernel timing claim.
+Observed k/capacity consistency is checked when both exist without an arbitrary k
+cap or huge speculative shift. Unexposed rows/columns remain typed unavailable,
+never inferred from capacity. RPC latency supplies no validator CPU or kernel-time
+claim; distinct phase/layer scalars cannot share one unrelated pointer.
 
-### Requirement: SBENCH-006 Explicit repetitions and terminal results
+### Requirement: SBENCH-006 Selected repetitions and deduplicated outcomes
 
-When repetitions are assessed, the suite shall use an explicitly selected positive
-successful count and declared failure/censor limits, preserve all terminal results,
-and require distinct actual prove/verify/inclusion/readback observations and calls.
+When repetitions are assessed, the suite shall use explicit required success and
+failure/censoring limits, preserve raw observations, and count distinct actual
+producer/prove/verify/call/readback operations rather than renamed duplicates.
 
-#### Scenario: Renamed repeated receipt
+#### Scenario: Shared setup and repeated observation
 
-A new sample ID with reused observation receipts cannot increase the successful
-count. Shared setup/key artifacts may be reused without replaying keygen/setup.
+Descriptive duplicates remain visible but cannot supply replicas or extra failed
+attempts. Applicable setup/key artifacts may be reused without rekeygen/replay.
+An unavailable/not-run required observation remains incomplete under existing
+operation selection/resource/cleanup and consumed-result rules.
 
-### Requirement: SBENCH-007 Baseline and profile limits
+### Requirement: SBENCH-007 Shared own-context historical comparison
 
-When performance is assessed, the suite shall apply only explicitly declared
-applicable profile limits or exact-comparable-profile regression tolerances;
-an initial baseline shall state an explicit future tolerance disposition.
+When comparing performance, the suite shall validate historical samples against
+their own frozen catalog/policy/identity/source/oracle/artifact context, then use
+the shared comparison API with explicit per-case statistic/relative/absolute/minimum
+sample rules and allowed source/compiler/circuit changes. Environment, toolchain,
+workload, ledger/network/cache and known measurement scope/resolution remain matched.
 
-#### Scenario: No supplied SLA
+#### Scenario: Optimized compiler and retained failures
 
-A complete first baseline may report measured performance without satisfying an
-invented SLA. A current observation cannot be its own prior baseline. Unknown
-Fenrir-to-Midnight threshold applicability remains unavailable.
+A declared optimized compiler can compare against its own pinned prior compiler
+cut. Failed/censored records remain retained but do not become successful samples;
+duplicates or reused current observations cannot supply historical replicas.
+Zero baselines have explicit absolute tolerance semantics. Initial baselines state
+future tolerances; declared-limit outcomes never invent an external performance SLA.
 
-### Requirement: SBENCH-008 Existing DoctorWatson completion selection
+### Requirement: SBENCH-008 Actual selected-checkout DoctorWatson consumer
 
-When the implementation loop declares post-deployment benchmark success, it shall
-first run the existing Python DoctorWatson checker with policy, samples, current
-context and receipt root together and recompute a complete evidence result.
+When the loop declares a benchmark stage successful, it shall run the existing
+Python checker with policy/samples/current/receipt root together, load benchmark
+code from `--repo`, verify cross-lane source traceability, record code/schema/catalog
+hashes and source reads, and recompute the stage from actual selected inputs.
 
-#### Scenario: Changed evidence after a cached pass
+#### Scenario: Source or receipt drift after a cached pass
 
-Changed source/workload/expected-effect/receipt bytes make the next selected
-check incomplete. A cached acceptance report cannot replace the recomputation.
-An incomplete result sets checker mismatch; absent/malformed inputs are errors.
+Changed dependent source pins or receipt/state artifacts invalidate the next
+selection. Cached reports cannot substitute. Evidence mismatch/incompleteness
+returns checker exit 1; missing/malformed or source-integrity inputs return exit 2.
 
-### Requirement: SBENCH-009 Retained ownership and execution limits
+### Requirement: SBENCH-009 Unchanged native and owner boundaries
 
-When benchmark work is selected, it shall preserve existing source/resource/
-cleanup rules, native guards, stopped C13/amendment dispositions and operation
-counters; no benchmark option shall dispatch compiler/SDK/proof/wallet/network work.
+When benchmark code is selected, it shall remain a bounded supplied-data consumer
+and preserve existing source/resource/cleanup guards, operation counters, C13 and
+stopped-amendment dispositions. No benchmark flag shall dispatch compiler/SDK/proof/
+key/wallet/target work, replay passed setup or create a human approval/authentication
+framework. Actual native verification and existing owner adoption remain required.
 
-#### Scenario: Ordinary suite test
+#### Scenario: Ordinary synthetic test
 
-A bounded pure synthetic-fixture test validates suite code only. It supplies no
-native operation allowance, keygen replay, deployment or target evidence.
+The tests execute suite code against synthetic transport fixtures only. Their
+native-looking labels, positive predicates or artifact hashes establish no actual
+native proof, stagenet observation, execution allowance or full-goal closure.
 
-### Requirement: SBENCH-010 Existing evidence and full-goal continuity
+### Requirement: SBENCH-010 Source-bound additive evidence and documentation
 
-When evidence is adopted, DoctorWatson shall pin the recomputed benchmark report,
-reviewed policy/current inputs and complete source/receipt dependencies in its
-existing evidence/currentness records, retaining implementation, observation and
-owner acceptance separately and updating the affected Diataxis documentation.
+When a stage result is adopted, DoctorWatson shall retain pinned cross-lane code,
+schema/catalog/generator/provenance, tests/docs and original clause mappings,
+record implementation/ordinary validation/actual target evidence/owner adoption
+separately in existing evidence records and update affected Diataxis material.
 
-#### Scenario: Scoped baseline completion
+#### Scenario: Retained full Sherlock work
 
-A benchmark result does not renumber or close fixed original/refinement inventory
-members or retire formal/handwritten lanes. Larger repetitions/scale and all
-retained full Sherlock/financial/native/release predicates remain conjunctive.
+Initial baseline completion leaves full rollup/full-suite and every original
+35 clause, 25 refinement/68 scenario and broader formal/handwritten/financial/
+native/release obligation retained. Pins establish currentness, not semantic or
+reviewer authentication; the existing full goal continues beyond this suite.

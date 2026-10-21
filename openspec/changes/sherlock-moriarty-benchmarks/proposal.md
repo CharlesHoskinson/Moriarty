@@ -1,32 +1,26 @@
-# Sherlock and Moriarty reproducible benchmark acceptance
+# Sherlock and Moriarty benchmark stages
 
-The deployed Sherlock/Fenrir experiment currently has no executable benchmark
-completion selection. Add versioned workload descriptors, retained receipt-bound
-measurements and a read-only recomputed evidence predicate to the existing
-DoctorWatson Python checker. The existing implementation loop must consume that
-selection after deployment before declaring the benchmark stage successful.
+Add deterministic workloads, receipt-bound measurement and executable stage
+assessment to the existing DoctorWatson loop. Revision02 binds the real /2 catalog
+and complete local provenance, uses shared decimal/metric/comparison APIs, qualifies
+host compiler evidence separately and requires actual per-node recursive native
+artifacts/verification/complete states for deployed stages.
 
-Cover the actual nominal MapQueue/MirrorArbor sources, the two-linked-transition
-child/parent/decider shape, and Fenrir-derived deterministic public supported
-16-transaction batches with 1/2/4/6-batch prefixes. Host/scalar fixtures retain
-source/effect scope and never become native or stagenet evidence. Complete
-independent linked/Fenrir native-effect oracles remain unavailable.
+Stages are host compiler coverage, initial deployed linked baseline, full 1/2/4/6
+rollup series, and conjunctive full-suite. Initial deployment cannot retire larger
+stages or full Sherlock. Native/source/resource/cleanup/C13/owner boundaries remain;
+no native dispatch, scheduler, budget reset, human approval or new authentication
+system is introduced. Source/metadata hashes establish evidence consistency and
+currentness only. Actual native cryptographic verification and owner adoption
+remain separate obligations.
 
-Implement `models/sherlock/benchmarks/acceptance.py` and the explicit
-`models/sherlock/qa/check.py --benchmark-*` selection. Preserve the 35 original
-UIREQ clauses, 25 refinements/68 scenarios and every inherited full-Sherlock exit.
-These additive SBENCH clauses do not inflate their closed counts. Bind policy,
-current source/workload/target inputs, report and underlying receipt/source
-closure through the existing requirement-evidence/currentness records and owner
-adoption. No new factory, scheduler, native guard, permission or budget exists.
+Use the existing Python checker --benchmark-* selection with current source trace
+pins and actual retained inputs. Historical regression uses its own frozen source
+cut plus the single shared comparison API with explicit allowed subject changes,
+known environment/toolchain and per-case tolerance rules. No performance SLA was
+supplied; initial observations do not invent one. Unavailable native roots and
+scalar/host oracle scope remain explicit. Implementation and ordinary synthetic
+transport tests do not constitute native/stagenet acceptance.
 
-No performance SLA was provided. Initial actual baselines report raw observations,
-count, failures/censoring and distributions only where justified. Future regression
-tolerances are explicit and profile-specific. Fenrir source thresholds are not
-Midnight limits without verified applicability; RPC latency is not validator CPU.
-
-Implementation/ordinary validation and post-deployment acceptance are separate.
-The former is reviewable source plus pure tests; the latter remains unobserved
-until actual current proof/verifier/deployment/effect/metric receipts pass the
-selected predicate and receive existing applicable owner adoption. The active
-full Sherlock goal continues beyond this subtask.
+Retain original fixed35/25/68 inventories and every inherited full interpreter,
+formal/handwritten/native/financial/release exit. SBENCH001–010 are additive.

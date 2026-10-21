@@ -156,27 +156,34 @@ For native build/proof/target work, native authority0, C4 OPEN, R2 UNSATISFIED,6
 
 ## Post-deployment benchmark success criterion
 
-After real deployment, run the existing Python DoctorWatson checker with all four
-explicit benchmark inputs described in the [benchmark how-to](benchmark-howto.md).
-It must recompute a complete current evidence result before declaring the
-post-deployment benchmark stage successful. Required cases, independent complete
-effects, current source/compiler/ledger/network/circuit/workload/target pins,
-actual proof and semantic local-verifier results, deployed inclusion/readback,
-required metrics/units/layers and declared repetitions/failure policy are conjunctive.
-An ordinary fixture, host/model sample, cached report, unavailable metric or missing
-independent effect oracle leaves this stage incomplete. Record first-baseline
-performance without inventing an SLA; later comparison uses explicitly frozen
-comparable-profile tolerances. Keep compile cold/warm and child/parent/decider costs
-separate from whole-run and RPC/ledger latency.
+Select the explicit stages in the [benchmark reference](benchmark-reference.md)
+and run the existing Python DoctorWatson checker with all four benchmark inputs
+in the [how-to](benchmark-howto.md). The initial deployed baseline requires at
+least one actual current linked two-transition child/parent/decider chain, actual
+per-node proof/statement/VK artifacts and positive native verification, complete
+independent state/effects, current source/compiler/environment/toolchain/ledger/
+network/circuit/workload/target pins and every fixed stage metric/repetition
+predicate. A source merge, host/model fixture, scalar oracle, unavailable root,
+missing required metric or cached report cannot satisfy that stage.
+
+Host MapQueue/MirrorArbor compiler coverage qualifies through actual host receipts
+without fictitious ledger evidence. The larger 1/2/4/6 Fenrir rollup series and
+full-suite stage remain separate conjunctive obligations; initial baseline success
+does not retire them or the full Sherlock goal. Report baseline observations
+without inventing an SLA. Historical comparisons validate their own frozen source
+cut and use the shared explicitly declared comparable-profile tolerance rules.
+Actual per-layer resources and local verification remain separate from whole-run
+and RPC/ledger timings; unexposed rows/columns remain unavailable.
 
 The [additive benchmark EARS](../../openspec/changes/sherlock-moriarty-benchmarks/specs/benchmarks/spec.md)
-supplement the retained requirement families. Pin the recomputed report, selected
-policy/current inputs and underlying receipt/source closure in the existing
-requirement-evidence records and retain owner adoption separately. The fixed
-35 originals, 25 refinements and 68 scenarios keep their identities. This is an
-acceptance selection in the existing loop; it creates no native dispatch,
-operation allowance, budget reset or setup/keygen replay. Existing native source,
-resource, C13/stopped-amendment and cleanup requirements remain controlling.
+retain fixed known stage/case/metric minimums and checked cross-lane source pins.
+Pin the recomputed report, reviewed policy/current/historical contexts and complete
+source/receipt closure in existing evidence/currentness records; retain actual
+native verification and owner adoption separately. Preserve the original
+35 clauses, 25 refinements/68 scenarios and every broader formal/financial/native/
+release obligation. This selection adds no scheduler, native dispatch, permission,
+budget reset, setup/keygen replay or human-only approval. Existing guards,
+operation limits, C13/stopped-amendment and cleanup records remain controlling.
 
 ## Full completion
 

@@ -1,17 +1,17 @@
 # Benchmark implementation and acceptance tasks
 
-- [x] Add versioned deterministic public workloads and explicitly scoped independent expectations (lane B).
-- [x] Add strict receipt-bound metric parsing/collection, exact-profile summaries and raw failure/censor retention (lane A).
-- [x] Add read-only acceptance predicate and concrete existing DoctorWatson checker selection (lane C).
-- [x] Add ordinary synthetic-fixture tests for receipt/currentness/effects/units/layers/repeats/baselines and checker input/recompute behavior.
-- [x] Update focused reference/how-to and implementation-loop success criterion.
-- [ ] Integrator reviews and integrates exact afterimages; obtain requested three Gemini and three Muse independent full-candidate tool audits.
-- [ ] Native owner produces actual current supported proof, semantic independent verification and deployed inclusion/readback receipts under existing limits.
-- [ ] Freeze complete independent deployed effects for linked/Fenrir cases; do not substitute scalar/public-shape expectations.
-- [ ] Select/charge required repetitions and cache profiles under existing operation limits, reusing passed setup/keygen.
-- [ ] Run explicit DoctorWatson benchmark-completion selection with actual current policy/samples/context/receipt root; all required cases/metrics/layers/repetitions must be complete.
-- [ ] Pin recomputed evidence and its complete dependencies in existing records; retain exact owner adoption and larger-scale incompleteness separately.
-- [ ] Continue all retained full Sherlock/formal/handwritten/native/financial/release obligations.
+- [x] Implement versioned deterministic public workload catalog and explicit stage/case/evidence/layer/root/metric minimums.
+- [x] Preserve source/oracle/provenance closure, scalar independence limits and unavailable native roots.
+- [x] Implement shared exact receipt normalization, metric-ID expansion, failure/censor statistics and descriptive regression semantics.
+- [x] Implement host versus deployed stage qualification, per-node native proof/statement/VK/state continuity, exact event/metric lineage and deduplicated observations.
+- [x] Validate historical baselines against their own frozen contexts before the shared comparison.
+- [x] Implement actual --repo-aware Python DoctorWatson selection, checked cross-lane source pins, EARS mapping and focused Diataxis documentation.
+- [ ] Integrator freezes revision02 source and actual bounded test receipts; obtains all requested independent full-candidate audits and resolves substantive findings.
+- [ ] Native owner produces actual eligible compiler/proof/cryptographic-verification/deployment/inclusion/readback observations under existing guards and limits.
+- [ ] Independent owner freezes complete native state/effect oracle with all required roots; source/scalar expectations cannot replace it.
+- [ ] Select/charge required cold/warm repetitions without repeating applicable setup/keygen; retain failures/censoring/unsupported stages.
+- [ ] Run actual initial-deployed-baseline check, retain exact source/evidence and existing owner adoption, then continue larger stages.
+- [ ] Complete full rollup/full-suite plus every retained full Sherlock/formal/handwritten/financial/native/release obligation separately.
 
-Ordinary tests validate code only; none of these checked source tasks marks
-actual native/stagenet or full-goal acceptance complete.
+Source/test checkboxes concern implementation only. No actual native or target
+benchmark acceptance is claimed by this change.
