@@ -2075,3 +2075,29 @@ These are dated factual lessons from [this batch](../docs/results/sherlock-recei
 6. **Correct receipt-contract prose without rewriting authored history.** The fresh Opus ValidateEntry opinion and Root’s scoped adoption say `const_found`, `const_count` and `const_row` are all ungated derived receipts. UPDATE026’s exception parenthetical is false; its five creative strings remain immutable, with a separate engineering erratum required. Consumers bind constrained carrier lanes, not candidate receipt values. The opinion approves only the exact bounded emitter source, not a later consumer/test source, native proof, measured degree or performance. Reviewer elapsed wall time does not measure reviewer CPU.
 
 The next work remains the actual circuit/consumer source and eligible native path. Source09 author work is recorded only as in progress at Root’s task cut, not delivered source or a result. Full frontendU0–U7,39selectors, StepInv, finance, formal correspondence, native recursion, stagenet settlement and EARS obligations remain open. The human-free beta override remains unchanged. Website concepts remain designated-author prose; the site stays unpublished until full Sherlock completion.
+
+
+## 2026-10-21 — DW-FLOW-04: integrate ready source before expanding the queue
+
+**Status: documented workflow revision; execution and acceptance remain separate.**
+The [receiving-boundary lessons](../docs/results/sherlock-receiving-boundary-lessons-20261021/SOURCE-PINS.json)
+record why source review must use the actual receiver: a returned approval can
+describe an absent API, and passing mocks can miss the real producer shape.
+More workers help independent missing relations but also add integration load.
+Prefer Root integrating ready source, then the next executable consumer check,
+before opening more research.
+
+The [current loop](../docs/sherlock/implementation-loop.md#current-operational-queue)
+now names one integration owner and a queue toward native build, linked recursive
+proofs, independent verification, stagenet effects and Fenrir measurements. Each
+task names one product predicate, actual API and immediate next call in one
+current continuation. Clean, Quint, K and handwritten implementation stay active.
+Root generates exact identity metadata mechanically; semantic reviews quote
+changed source and adjacent APIs or give counterexamples. Test-only edits use
+focused checks, and two same-class failures require a changed approach.
+
+Next owner: Root integrates the exact reviewed documentation and affected trace
+pins, then advances the eligible receiving source/check. Validate improvement
+against actual integrated behavior and observed review/check latency; this entry
+claims no measured speedup, armed runtime, native success or acceptance. Earlier
+failures, dissent, resource/cleanup history and security obligations remain.

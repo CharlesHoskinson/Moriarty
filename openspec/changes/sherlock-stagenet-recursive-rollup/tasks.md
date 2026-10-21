@@ -1,6 +1,12 @@
 # Current implementation order
 
-Use the existing DoctorWatson loop and local CI. Source preparation may overlap; Root integrates and selects actual native or wallet operations. All checkboxes below refer to observed outcomes, not authored plans.
+Use the existing DoctorWatson loop and local CI. Root is the single integration owner and selects actual native or wallet operations. Integrate ready source before expanding research; parallel work needs a disjoint write set and real receiving owner. Each task has one product predicate and an immediate executable next step with resolved inputs in the one current Root continuation. Source integration, observed tests and product acceptance remain separate. All checkboxes below refer to observed outcomes, not authored plans.
+
+Current priority: native build → two linked children/parent/terminal decider → independent verification → Midnight stagenet effects → Fenrir benchmark. Clean, Quint, K and handwritten-circuit lanes remain permanent. The list preserves historical work and open obligations; the P14 literal-only row is not a prerequisite for an unrelated current build. See the [operational queue](../../../docs/sherlock/implementation-loop.md#current-operational-queue) for owner/next-call fields and actual shell interfaces.
+
+- [ ] Integrate the ready current native source and observe the selected backend build through the existing eligible operation; retain all earlier attempt, resource, unknown-outcome, cleanup and stopped C13 history.
+- [ ] Bind the real receiving producer/reader APIs for two linked children, parent and terminal decider; observe their separate compiled/proved artifacts on that cut. Do not substitute an invented CLI or source-only result.
+- [ ] Independently verify those exact recursive artifacts before consuming their verdict for target acceptance.
 
 - [x] Refresh/query the current Sherlock Graphify source layer and latest proof-result addendum.
 - [x] Recheck all 206 scoped Rust source hashes and preserve historical graph layers.
@@ -17,4 +23,4 @@ Use the existing DoctorWatson loop and local CI. Source preparation may overlap;
 - [ ] Benchmark one sixteen-transaction full batch and two/four/six-batch prefixes as supported and eligible; keep any optional eight-transaction adapter experiment separate; preserve all failures/censored measurements.
 - [ ] Publish the workload/adapter source, exact corpus and measurement manifest, raw results and scoped feasibility report; update Graphify, Diátaxis, roadmap and DoctorWatson lessons.
 
-Next source task: the reviewed P14 verify-only prerequisite, followed by the actual recursive-path gap. Source drafts or infrastructure checks do not complete deployment, recursive verification or benchmarking. No existing resource class is extended here.
+Next call: Root inspects the actual current plan/history/reconciliations through the existing `--inspect` route, integrates ready reviewed source and runs the affected selected ordinary checks. The continuation must bind the exact paths and first blocker before the separately eligible native call; this task list supplies no execution selection. Use bounded review of changed units and adjacent real APIs, machine-generated pins, focused checks for test-only edits and a changed approach after two same-class failures. Source drafts or infrastructure checks do not complete deployment, recursive verification or benchmarking. No existing resource class is extended here.

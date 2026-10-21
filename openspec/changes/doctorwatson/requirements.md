@@ -2,8 +2,8 @@
 
 These developer workflow requirements implement UIREQ-021–026 and support
 B-T01/B-T02/B-T11. SF identifiers identify this increment, not new product exits.
-Their scope is the existing independent `sherlock-k-a/1` corpus and its literal
-transcription. Current implementation coverage and observed checks are recorded
+SF-01–06 cover the existing independent `sherlock-k-a/1` corpus and its literal
+transcription; SF-07–17 govern the retained Sherlock delivery workflow. Current implementation coverage and observed checks are recorded
 in the [local QA documentation](../../../docs/DOCTORWATSON-CI.md).
 
 | ID | EARS requirement | Positive and refusal QA |
@@ -23,6 +23,8 @@ in the [local QA documentation](../../../docs/DOCTORWATSON-CI.md).
 | SF-13 | WHEN work is cancelled or explicitly blocked, it SHALL release active write ownership and retain its failure/resource history. | Another eligible writer can proceed after release; dependent acceptance remains blocked. |
 | SF-14 | WHEN two attempts repeat the same defect class, the owner SHALL reduce the reproducer and change approach before another broad attempt; WHEN two process-only cycles or thirty administration minutes accumulate, the owner SHALL perform eligible work or record the concrete blocker and owner. | Refuse a third blind retry or more administration; witness a reduced reproducer and changed approach, or an explicit blocker. |
 | SF-15 | WHEN a tool or layer becomes available, availability SHALL NOT create a passing observation or complete the feature; source integration and full behavior/acceptance SHALL remain separate. | Make all layers available without running them and keep full completion false; record actual current results before claiming the corresponding tier. |
+| SF-16 | WHEN Root selects or resumes a task, the single current continuation SHALL name one falsifiable product predicate, owner, actual receiving API, current source/attempt, resolved immediate next call and inputs, applicable review/check and first blocker; Root SHALL integrate ready source before opening research that does not resolve a named missing predicate. | Ready source with an available receiver advances to integration/check; an absent API or input is a concrete blocker. Parallel formal and handwritten lanes remain active; no new scheduler or empty-history reset. |
+| SF-17 | WHEN a candidate is reviewed, the reviewer SHALL inspect its actual changed units, enough adjacent receiving API and scoped results, and substantiate findings with source quotes or counterexamples; Root SHALL mechanically generate identity metadata. WHEN only tests change, checks/review SHALL focus on the affected closure and reuse unchanged passing evidence unless composition or a concrete concern requires broader checks. | Refuse an approval describing an absent API; preserve full bytes and exact pins, without a hand-transcribed hash table. A new discriminating test receives focused review/check; a changed production caller refreshes its affected composition. |
 
 No requirement grants native authority, changes a resource/counter/C4 condition,
 selects new semantics or authors substitute security tests. Security work stays
