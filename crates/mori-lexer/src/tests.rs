@@ -325,3 +325,202 @@ fn leading_token_survives_invalid_body_without_accepting_it() {
     assert_eq!(crate::first_token_text(&oversized).unwrap(), "language");
     assert!(crate::lex(&oversized).is_err());
 }
+
+// Normal public API expectations frozen before this append; see EXPECTED-NORMAL-API.json.
+
+#[test]
+fn decode_string_returns_frozen_normal_utf8_bytes() {
+    let cases: &[(&str, &str, &[u8])] = &[
+        (r###"empty"###, r###""""###, &[]),
+        (r###"ascii"###, r###""Midnight""###, &[77, 105, 100, 110, 105, 103, 104, 116]),
+        (r###"quote"###, r###""\"""###, &[34]),
+        (r###"backslash"###, r###""\\""###, &[92]),
+        (r###"solidus"###, r###""\/""###, &[47]),
+        (r###"short_controls"###, r###""\b\f\n\r\t""###, &[8, 12, 10, 13, 9]),
+        (r###"hex_ascii"###, r###""\u0041\u0062\u0030""###, &[65, 98, 48]),
+        (r###"hex_nul"###, r###""\u0000""###, &[0]),
+        (r###"bmp_escaped"###, r###""\u00e9""###, &[195, 169]),
+        (r###"bmp_raw"###, r###""é""###, &[195, 169]),
+        (r###"pair_upper"###, r###""\uD83D\uDE00""###, &[240, 159, 152, 128]),
+        (r###"pair_lower"###, r###""\ud83d\ude00""###, &[240, 159, 152, 128]),
+        (r###"astral_raw"###, r###""😀""###, &[240, 159, 152, 128]),
+        (r###"music_pair"###, r###""\uD834\uDD1E""###, &[240, 157, 132, 158]),
+        (r###"escaped_crlf"###, r###""\r\n""###, &[13, 10]),
+        (r###"mixed_newline"###, r###""a\nb""###, &[97, 10, 98]),
+        (r###"combining_escaped"###, r###""e\u0301""###, &[101, 204, 129]),
+        (r###"combining_raw"###, r###""é""###, &[101, 204, 129]),
+        (r###"raw_and_escaped_solidus"###, r###""path/to\/file""###, &[112, 97, 116, 104, 47, 116, 111, 47, 102, 105, 108, 101]),
+        (r###"literal_unicode_spelling"###, r###""\\u0041""###, &[92, 117, 48, 48, 52, 49]),
+        (r###"literal_n_spelling"###, r###""\\n""###, &[92, 110]),
+        (r###"three_slashes_then_quote"###, r###""\\\"""###, &[92, 34]),
+        (r###"five_slashes_then_quote"###, r###""\\\\\"""###, &[92, 92, 34]),
+        (r###"four_slashes_before_end"###, r###""\\\\""###, &[92, 92]),
+    ];
+    for &(name, source, expected) in cases {
+        let tokens = lex(source).unwrap_or_else(|error| panic!("{name}: {error}"));
+        assert_eq!(tokens.len(), 2, "{name}: exactly one string and EOF");
+        let first = TokenIdx::new(0);
+        assert_eq!(tokens.kind(first), crate::TokenKind::String, "{name}");
+        assert_eq!(tokens.kind(TokenIdx::new(1)), crate::TokenKind::Eof, "{name}");
+        let quoted = tokens.span(first, source).source_text(source);
+        assert_eq!(quoted, source, "{name}: preserve the complete quoted input");
+        assert_eq!(crate::decode_string(quoted).as_bytes(), expected, "{name}");
+    }
+}
+
+#[test]
+fn token_kind_public_classification_matches_every_variant() {
+    use crate::TokenKind::*;
+    let cases = [
+        (Ident, false, false, true),
+        (Number, false, false, false),
+        (String, false, false, false),
+        (KwProfile, true, false, true),
+        (KwAgreement, true, false, true),
+        (KwAction, true, false, true),
+        (KwUses, true, false, true),
+        (KwTrue, true, false, true),
+        (KwFalse, true, false, true),
+        (KwNone, true, false, true),
+        (KwSuccessOnly, true, false, true),
+        (KwDomain, true, true, true),
+        (KwAccount, true, true, true),
+        (KwAsset, true, true, true),
+        (KwConst, true, true, true),
+        (KwIntent, true, true, true),
+        (KwObligation, true, true, true),
+        (KwPool, true, true, true),
+        (KwInstrument, true, true, true),
+        (KwObservation, true, true, true),
+        (KwPolicy, true, true, true),
+        (KwGrant, true, true, true),
+        (KwStage, true, true, true),
+        (KwEpisode, true, true, true),
+        (KwParty, true, true, true),
+        (KwShareClass, true, true, true),
+        (LBrace, false, false, false),
+        (RBrace, false, false, false),
+        (LBracket, false, false, false),
+        (RBracket, false, false, false),
+        (LParen, false, false, false),
+        (RParen, false, false, false),
+        (Colon, false, false, false),
+        (Semicolon, false, false, false),
+        (Comma, false, false, false),
+        (Eq, false, false, false),
+        (Lt, false, false, false),
+        (Gt, false, false, false),
+        (Dot, false, false, false),
+        (Plus, false, false, false),
+        (Minus, false, false, false),
+        (Star, false, false, false),
+        (Eof, false, false, false),
+    ];
+    for (kind, keyword, declaration, word) in cases {
+        assert_eq!(kind.is_keyword(), keyword, "{kind:?}: keyword");
+        assert_eq!(kind.is_declaration_kind(), declaration, "{kind:?}: declaration");
+        assert_eq!(kind.is_word(), word, "{kind:?}: word");
+    }
+}
+
+#[test]
+fn keyword_lookup_and_lexing_preserve_exact_spelling() {
+    use crate::TokenKind;
+    let cases = [
+        (r###"profile"###, TokenKind::KwProfile),
+        (r###"agreement"###, TokenKind::KwAgreement),
+        (r###"action"###, TokenKind::KwAction),
+        (r###"uses"###, TokenKind::KwUses),
+        (r###"true"###, TokenKind::KwTrue),
+        (r###"false"###, TokenKind::KwFalse),
+        (r###"None"###, TokenKind::KwNone),
+        (r###"SuccessOnly"###, TokenKind::KwSuccessOnly),
+        (r###"domain"###, TokenKind::KwDomain),
+        (r###"account"###, TokenKind::KwAccount),
+        (r###"asset"###, TokenKind::KwAsset),
+        (r###"const"###, TokenKind::KwConst),
+        (r###"intent"###, TokenKind::KwIntent),
+        (r###"obligation"###, TokenKind::KwObligation),
+        (r###"pool"###, TokenKind::KwPool),
+        (r###"instrument"###, TokenKind::KwInstrument),
+        (r###"observation"###, TokenKind::KwObservation),
+        (r###"policy"###, TokenKind::KwPolicy),
+        (r###"grant"###, TokenKind::KwGrant),
+        (r###"stage"###, TokenKind::KwStage),
+        (r###"episode"###, TokenKind::KwEpisode),
+        (r###"party"###, TokenKind::KwParty),
+        (r###"share_class"###, TokenKind::KwShareClass),
+    ];
+    for (source, expected) in cases {
+        assert_eq!(TokenKind::keyword(source), Some(expected), "{source}");
+        let tokens = lex(source).unwrap();
+        assert_eq!(tokens.len(), 2, "{source}");
+        assert_eq!(tokens.kind(TokenIdx::new(0)), expected, "{source}");
+        assert_eq!(tokens.kind(TokenIdx::new(1)), TokenKind::Eof, "{source}");
+        assert_eq!(tokens.span(TokenIdx::new(0), source).source_text(source), source);
+    }
+    for source in [
+        r###"Profile"###,
+        r###"profiled"###,
+        r###"none"###,
+        r###"successonly"###,
+        r###"shareclass"###,
+        r###"share_Class"###,
+        r###"X_7"###,
+    ] {
+        assert_eq!(TokenKind::keyword(source), None, "{source}");
+        let tokens = lex(source).unwrap();
+        assert_eq!(tokens.len(), 2, "{source}");
+        assert_eq!(tokens.kind(TokenIdx::new(0)), TokenKind::Ident, "{source}");
+        assert_eq!(tokens.kind(TokenIdx::new(1)), TokenKind::Eof, "{source}");
+    }
+}
+
+#[test]
+fn punctuation_lookup_preserves_every_public_symbol() {
+    use crate::TokenKind;
+    let cases = [
+        (b'{', TokenKind::LBrace),
+        (b'}', TokenKind::RBrace),
+        (b'[', TokenKind::LBracket),
+        (b']', TokenKind::RBracket),
+        (b'(', TokenKind::LParen),
+        (b')', TokenKind::RParen),
+        (b':', TokenKind::Colon),
+        (b';', TokenKind::Semicolon),
+        (b',', TokenKind::Comma),
+        (b'=', TokenKind::Eq),
+        (b'<', TokenKind::Lt),
+        (b'>', TokenKind::Gt),
+        (b'.', TokenKind::Dot),
+        (b'+', TokenKind::Plus),
+        (b'-', TokenKind::Minus),
+        (b'*', TokenKind::Star),
+    ];
+    for (byte, expected) in cases {
+        assert_eq!(TokenKind::punctuation(byte), Some(expected));
+        let bytes = [byte];
+        let source = std::str::from_utf8(&bytes).unwrap();
+        let tokens = lex(source).unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.kind(TokenIdx::new(0)), expected);
+        assert_eq!(tokens.kind(TokenIdx::new(1)), TokenKind::Eof);
+        assert_eq!(tokens.span(TokenIdx::new(0), source).source_text(source), source);
+    }
+}
+
+#[test]
+fn first_token_text_preserves_raw_prefix_without_validating_later_body() {
+    let cases = [
+        ("blank", " \t\r\n", "", true),
+        ("comments", "// preamble\r\n/* retained */ ", "", true),
+        ("keyword_before_invalid_tail", "// preamble\r\n/* note */ profile @", "profile", false),
+        ("identifier_before_invalid_string", "Name_7 \"\\q\"", "Name_7", false),
+        ("raw_string_prefix", "\"a\\/b\" agreement", "\"a\\/b\"", true),
+        ("number_and_next_word", "10USD", "10", true),
+    ];
+    for (name, source, expected, whole_lex_succeeds) in cases {
+        assert_eq!(crate::first_token_text(source).unwrap(), expected, "{name}");
+        assert_eq!(lex(source).is_ok(), whole_lex_succeeds, "{name}: full lex is separate");
+    }
+}
