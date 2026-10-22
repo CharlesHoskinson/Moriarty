@@ -26,12 +26,12 @@ All boxes refer to observed outcomes. Nothing is checked in this draft. Paths ar
 
 - [ ] 1.1 Write schedule tests: 50 headers, 6 s period, record cap 642, FROZEN cap 560.
 - [ ] 1.2 Implement `fsyn/src/schedule.rs` and the share counter. Test share counts 6,225, 7,615 and 8,192.
-- [ ] 1.3 Write event tests for each leaf step kind and each of the nine forced outcomes.
+- [ ] 1.3 Write event tests for each leaf step kind and each of the eight active forced outcomes.
 - [ ] 1.4 Implement `fsyn/src/events.rs` with the three presets of design section 4.3.
 - [ ] 1.5 Implement `fsyn/src/replay.rs` over the 23-field `S5` state. Label its output internal consistency.
 - [ ] 1.6 Run `python3 ~/research/fenrir-rollup-design-2026-10-19/scripts/build-rev20.py --check` inside `cut.py check`.
 - [ ] 1.7 Implement emitters in `fsyn/src/emit/`: `stmt`, `ext_digest`, `bc_digest`, `stmt_da`, `stmt_dm`, `stmt_lc`, FDAC, claim leaves.
-- [ ] 1.7a Write exit tests first: one key per exit, FWDR2 leaves, hold at execution, one hold per capability.
+- [ ] 1.7a Write exit tests first: the shared routed key per note-exit transition, FWDR2 leaves, hold at execution, one hold per capability, applied release leaves the note unspent then withdrawal applies, and route-specific TRANSFER versus WITHDRAW/escape/payout disclosure.
 - [ ] 1.7b Implement exit kinds, holds and `public.json` and `private.json` transcripts in `fsyn/src/emit/exit.rs`.
   Verify: `quint test $R/models/exit_core.qnt --main exit_tests` and forward replays against `exit_fixed`.
 - [ ] 1.7c Implement key-preserving rotation and migration scenarios with wind-down exits.

@@ -96,7 +96,7 @@ The generator SHALL emit every leaf step kind and every forced outcome code in t
 
 - **GIVEN** the `planning` preset at S1
 - **WHEN** a batch is generated
-- **THEN** MAIN, LATE (when nonzero), FORCED, DEPOSIT, SYS, CLOSE and all nine forced outcomes have counts in `FIXTURE.json`
+- **THEN** MAIN, LATE (when nonzero), FORCED, DEPOSIT, SYS, CLOSE and all eight active forced outcomes have counts in `FIXTURE.json`
 
 #### Scenario: SSRD-007-02 cap exceeded
 
@@ -324,7 +324,7 @@ IF the live design differs from the pinned cut, THEN FSYN SHALL mark every depen
 
 ### Requirement: SSRD-025 Exit kinds and one exit key
 
-FSYN SHALL emit every exit kind of design section 4.4 (L2 spend, forced TRANSFER, forced WITHDRAW with claim, FENC_RELEASE, escape, import, shielded and unshielded payout, foreign-backed escape), and every exit SHALL consume exactly one exit key `xk`.
+FSYN SHALL emit every route and related action of design section 4.4 (L2 spend, forced TRANSFER, forced WITHDRAW with claim, FENC_RELEASE, escape, import, shielded and unshielded payout, foreign-backed escape). Spend, escape and import SHALL use the same routed `xk` according to their pinned state transitions. Claim SHALL mark the withdrawal paid without spending the note again, and IMPORT SHALL enter the already escaped `xk` into routed nullifier state without another payout. An applied FENC_RELEASE SHALL lift the hold and consume the capability, leaving the note unspent for a later withdrawal.
 
 #### Scenario: SSRD-025-01 escape, import, then spend
 
@@ -337,6 +337,12 @@ FSYN SHALL emit every exit kind of design section 4.4 (L2 spend, forced TRANSFER
 - **GIVEN** a withdrawal leaf whose `batch_no` differs from its statement
 - **WHEN** the replay runs
 - **THEN** the fixed model refuses it and `MutLeafBatch` strands the withdrawal
+
+#### Scenario: SSRD-025-03 release then withdraw
+
+- **GIVEN** a consented hold on an otherwise unspent note and a valid FENC_RELEASE
+- **WHEN** the release applies and the owner later withdraws that note
+- **THEN** the release consumes only the capability and lifts the hold without spending `xk`, and the later withdrawal applies and consumes `xk`, as pinned `liveness_exit.qnt` `releaseThenWithdrawTest` and `exit_core.qnt` `releaseThenExitTest` specify
 
 ### Requirement: SSRD-026 Holds at execution
 
@@ -356,7 +362,7 @@ The generator SHALL key each hold by `H(DOM_HT, nf)`, SHALL give each capability
 
 ### Requirement: SSRD-027 Boundary disclosure
 
-WHEN FSYN emits an exit, its `public.json` SHALL carry no shielded destination and no value that links the exit to L2 history, and SHALL carry the asset and amount (Q17); an unshielded payout SHALL also carry its destination (Q16).
+WHEN FSYN emits a fixture, its `public.json` SHALL follow the pinned route-specific public fields and modeled unlinkability to L2 history. Forced TRANSFER SHALL expose no note asset, amount or destination. WITHDRAW, escape and payout SHALL expose asset and amount (Q17); a shielded payout SHALL hide its destination and an unshielded payout SHALL reveal its own destination (Q16). These fixture checks SHALL NOT be reported as a cryptographic privacy proof.
 
 #### Scenario: SSRD-027-01 shielded payout
 
@@ -369,6 +375,12 @@ WHEN FSYN emits an exit, its `public.json` SHALL carry no shielded destination a
 - **GIVEN** an emitter that writes the shielded destination to `public.json`
 - **WHEN** the disclosure check runs
 - **THEN** it exits 1 and `shieldedPrivate` fails, as `MutShieldedPublic` shows
+
+#### Scenario: SSRD-027-03 forced transfer disclosure
+
+- **GIVEN** a forced TRANSFER fixture using the pinned FS1 interface
+- **WHEN** the disclosure check runs
+- **THEN** the public note fields contain no asset, amount or destination, preserve the interface's allowed output/expiry and fee/bond refund metadata, and an emitter that exposes the private note values fails the route-specific check
 
 ### Requirement: SSRD-028 Sealed-for-life lifecycle
 
