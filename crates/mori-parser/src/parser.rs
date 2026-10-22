@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
                     let name = self.span(self.agreement_name());
                     diagnostics::unclosed_agreement(span, name, name.source_text(self.source))
                 }
-                TokenKind::Ident => diagnostics::unknown_item(
+                kind if kind.is_word() => diagnostics::unknown_item(
                     span,
                     Some(span.source_text(self.source)),
                     self.source,
@@ -227,6 +227,11 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self, depth: usize) -> Result<u16> {
+        // A next declaration/action cannot complete the value being parsed.
+        // Bare keyword words and keyword calls retain their existing grammar.
+        if self.starts_item() {
+            return Err(self.unexpected("mori::syntax::expected_value", &[Expected::Expression]));
+        }
         let kind = self.peek();
         match kind {
             TokenKind::String => Ok(self.leaf(NodeTag::String)),
@@ -258,7 +263,7 @@ impl<'a> Parser<'a> {
     fn number(&mut self) -> Result<u16> {
         let number = self.bump();
         let number_span = self.span(number);
-        if self.peek() == TokenKind::Ident {
+        if self.peek() == TokenKind::Ident && self.peek_at(1) != TokenKind::Colon {
             let asset = self.bump();
             let asset_span = self.span(asset);
             if asset_span.start == number_span.end {
@@ -393,6 +398,9 @@ impl<'a> Parser<'a> {
     /// Whether the current token can begin an expression, so a list item
     /// was probably meant to follow.
     fn starts_expression(&self) -> bool {
+        if self.starts_item() {
+            return false;
+        }
         let kind = self.peek();
         kind.is_word()
             || matches!(
@@ -403,6 +411,15 @@ impl<'a> Parser<'a> {
                     | TokenKind::LBracket
                     | TokenKind::LBrace
             )
+    }
+
+    /// An item keyword followed by its identifier cannot be one primary.
+    /// Do not classify keyword call names (`asset(...)`, `policy.action(...)`)
+    /// or bare keyword words (`pool`) as an item boundary.
+    fn starts_item(&self) -> bool {
+        let kind = self.peek();
+        (kind == TokenKind::KwAction || kind.is_declaration_kind())
+            && self.peek_at(1) == TokenKind::Ident
     }
 
     /// Another item follows without a separating comma.

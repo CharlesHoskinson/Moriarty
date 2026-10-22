@@ -142,8 +142,8 @@ pub fn wrong_profile(span: Span, profile: &str) -> MoriDiagnostic {
 pub fn unclosed_agreement(eof: Span, name: Span, name_text: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("The agreement `{name_text}` never closes."))
         .with_code("mori::syntax::unclosed_agreement")
-        .with_label(name.label("the agreement starts here"))
         .with_label(eof.primary_label("the file ends here"))
+        .with_label(name.label("the agreement starts here"))
         .with_help_code(
             "Add a `}` after the last declaration or action:",
             format!("agreement {name_text} {{\n  ...\n}}"),
@@ -256,8 +256,8 @@ pub fn missing_comma(at: Span, between: &str, source: &str) -> MoriDiagnostic {
 pub fn duplicate_field(span: Span, earlier: Span, key: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("The field `{key}` appears twice."))
         .with_code("mori::syntax::duplicate_field")
-        .with_label(earlier.label("first here"))
         .with_label(span.primary_label("and again here"))
+        .with_label(earlier.label("first here"))
         .with_help("Each field can appear only once in a record or call.")
 }
 
