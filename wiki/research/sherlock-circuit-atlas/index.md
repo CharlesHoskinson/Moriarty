@@ -130,3 +130,16 @@ Sol factual navigation: [receipt-gating engineering erratum](UPDATE-026-RECEIPT-
 ## UPDATE027 — phase clocks and preserved accumulators (proposed)
 
 - [UPDATE-027 — Phase Clocks and Preserved Accumulators](UPDATE-027-PHASE-CLOCKS-AND-PRESERVED-ACCUMULATORS.md) — new source-grounded concept for the Moriarty Tron/PCB/Three.js build-up: the ten actual Source44 start/complete milestones, cumulative clock and incomplete evidence ribbon beside separate lhs/rhs ordered bases/scalars/named maps; a checked clone resolves/collapses/pairs while originals continue in A102→A80 fold order. Concept only, with no site asset, measured speedup, native proof or target result. UPDATE026 and prior creative fields stay unchanged. The website WILL go live after full Sherlock completion and is unpublished today.
+
+
+## UPDATE028 — two verified children and twenty clock ports (proposed)
+
+- [UPDATE-028 — Two Verified Children and Twenty Clock Ports](UPDATE-028-TWO-VERIFIED-CHILDREN-AND-TWENTY-CLOCK-PORTS.md) — Moriarty Tron/PCB/Three.js concept for the exact A102→A80 original-accumulator fold beside resolved/collapsed pairing clones, with twenty start/complete sockets for ten actual phases and a separate buffered-capture drawer. Accepted child-test receipts stop at that boundary; the parent is Root-reported running at this dated cut, with no result consumed here. K's first symbolic law, wallet signed uncertainty and missing financial/range proof seams remain separate. Concept only, no image or deployed asset; the website WILL go live after full Sherlock completion.
+
+
+- UPDATE028 revision02: the exact fixed A102→A80 parent is now Root-adopted after independent actual-result review, with 6,432-byte proof and all twenty phase markers. The proposed optic clock records measured setup/prove intervals; its separate-verifier, Build9/MP2/D and stagenet indicators remain UNRUN. The earlier running statement is its dated first-draft cut. No financial synthetic16/range validity, current image/site or full-goal acceptance follows.
+
+
+### UPDATE028 revision03 — separately launched verifier and keyed Build9
+
+Subsequent dated evidence adds the adopted fixed-parent separate-process verification and five selected refusals, keyed Build9's thirteen files, all fourteen finite symbolic K results, the nine passed data-AST checks and the compact checker's eleven passes/two parser failures. R4 and owner checks remain pending; the real metadata constructor/close smoke is scoped and awaiting fresh actual review. [Continue UPDATE028](UPDATE-028-TWO-VERIFIED-CHILDREN-AND-TWENTY-CLOCK-PORTS.md#revision03--a-separate-receiving-socket-and-a-keyed-connector). Preserve UPDATE026/027, earlier clocks, originals and named maps. Public Tron/PCB/Three.js concepts only; the website WILL launch after full Sherlock completion.
