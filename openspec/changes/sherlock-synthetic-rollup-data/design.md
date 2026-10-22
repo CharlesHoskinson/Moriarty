@@ -116,12 +116,12 @@ Three presets (plan choice). Each preset is a vector over leaf step kinds and ou
 
 Exit kinds (section 4.4) are drawn from the `mix` stream with a shielded share parameter (planning 50 percent, plan choice).
 
-Forced outcomes cover all nine codes of LIVENESS-EXIT: APPLIED, NULLIFIER_SPENT, COMMITMENT_ALREADY_PRESENT, EXPIRED, CAPABILITY_CONSUMED, ALREADY_LIFTED, FENC_STALE, FENC_ENCUMBERED, FORCED_INVALID. The `planning` values are plan choices, not Fenrir figures; open question OQ-1 asks for a target mix. Caps come from `constants.json`.
+Forced outcomes cover the eight active codes of VALIDITY and LIVENESS-EXIT: APPLIED, NULLIFIER_SPENT, COMMITMENT_ALREADY_PRESENT, EXPIRED, CAPABILITY_CONSUMED, ALREADY_LIFTED, FENC_ENCUMBERED, FORCED_INVALID. The pinned exit design note withdraws `FENC_STALE` and `fenc_seq_ref`; neither is an active generated outcome or field. The `planning` values are plan choices, not Fenrir figures; open question OQ-1 asks for a target mix. Caps come from `constants.json`.
 
 ### 4.4 Lifecycle events
 
 - **DA misses.** Reason 2 (`laterStored`), reason 3 (`dmAccepted` with a `stmt_dm` for MISS_A or MISS_B and layout cases A1 to A5), reason 4 (pointer above `lc_top` on an expired store, Q12). Reason 1 never anchors and appears only in adversarial cases. A lower miss supersedes a pending one; `reorgFreeze` clears a miss whose block left the chain.
-- **Exit kinds.** Every exit consumes the one exit key `xk`. FSYN emits each kind with its public transcript:
+- **Exit paths and related actions.** Note-spend routes share the routed exit key `xk`; each action follows its pinned state effect, rather than consuming a new note key at every stage. An applied `FENC_RELEASE` lifts the hold and consumes the capability, leaving the note unspent so a later withdrawal can apply. IMPORT records an already escaped `xk` in the routed nullifier state without another payout; `claim` marks the withdrawal paid and does not spend the note again. FSYN emits each row with its route-specific public transcript:
 
 | Kind | Route | Statement | Public on Midnight | Hold check |
 |---|---|---|---|---|
@@ -138,7 +138,7 @@ Forced outcomes cover all nine codes of LIVENESS-EXIT: APPLIED, NULLIFIER_SPENT,
 - **Claims.** Withdrawal leaves are `H(DOM_FWDR2, deployment_id, batch_no, wd_index, asset, amount, xcm)` under `wd_roots[batch_no]`, verified under `claimKeyAt(settled_record[batch_no].g)`. The leaf carries `xcm`, never a destination.
 - **Holds.** A hold is keyed by `ht = H(DOM_HT, nf)` in `fenc_root`. The consent binding `hb = H(DOM_HB, cap_id, ht, r)` is a hiding commitment created only by the owner's own spend (C1, C2, P-VAL-30) and opened only at the hold insert. A capability carries at most one hold. The hold is decided once, at execution, from `H(DOM_HT, nf)` and public data; an enqueue-time hold check does not exist. Hold scenarios cover: unheld exit applies; held exit refused as `FENC_ENCUMBERED`; hold inserted after enqueue and caught at drain; release then exit.
 - **Escape.** A settlement stall longer than `T_FREEZE` = 604,800 s opens FX12; `esc_gen` and `b = batch_no` are fixed at `openEscape`; `closeEscapeWindow` after `ESC_OPEN_MIN` = 259,200 s; escapes read `settled_record[b].exit_roots`; deposits refund to the recorded destination. Time is simulated, so a seven-day stall is a schedule, not a wait.
-- **Disclosure transcript.** Each exit fixture writes `public.json`, the list of every value an observer of Midnight and Celestia sees, and `private.json`, the openings. The oracle gate checks that no shielded destination appears in `public.json` and that no public value links an exit to its L2 history (`exit_core.qnt` `shieldedPrivate`, `unlinkable`). Unshielded payouts carry their destination and amount in `public.json`, as Q16 allows.
+- **Disclosure transcript.** Each fixture writes `public.json`, the list of values exposed by its pinned route to an observer of Midnight and Celestia, and `private.json`, the openings. Forced TRANSFER publishes no note asset, amount or destination; its allowed fields remain those of the pinned FS1 interface, including fee/bond refund metadata. WITHDRAW, escape and payout expose asset and amount under Q17. A shielded payout hides its destination; an unshielded payout reveals its own destination under Q16. The oracle gate checks the route-specific field sets and the model predicates `shieldedPrivate` and `unlinkable`; agreement with these abstract predicates is not a cryptographic privacy proof.
 - **Modes.** COMMITTEE, PUBLISHED_FHDR (after 24 h without settlement) and FORCED_ONLY. FORCED_ONLY stays off at launch (Q3), so FSYN emits it only for oracle scenarios that the models cover, tagged `launch=off`.
 
 ### 4.5 Committee
