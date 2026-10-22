@@ -122,3 +122,6 @@ Sol factual navigation: [receipt-gating engineering erratum](UPDATE-026-RECEIPT-
 
 
 - Source10: [separate keygen, relation-source and synchronization cut](UPDATE-026-POST-AUTHOR-STATUS.md). [src-ebbed65e89ce72b6c641](../../../.raw/captured/1e72150d338d99a6023e6529ffde9f275680fadba5d0719e0d940c81de3a7b30.json)
+
+
+- Source12: [optimized-build and diagnostic-context cut](UPDATE-026-POST-AUTHOR-STATUS.md). [src-e669a9989d96997e6612](../../../.raw/captured/aacfdd191d1db2ad75fa8934cbf103606331664ff0b312036e459f66679b553e.json)
