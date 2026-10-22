@@ -105,3 +105,6 @@ tags: [moriarty, consolidation, recursion]
 
 
 - Source09: current CLI, scoped child verify/tamper and parent-unrun boundary: [separate engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-5db5466cc3f32308a244](../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json)
+
+
+- Source10: [dated keygen/source/sync boundary](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-ebbed65e89ce72b6c641](../.raw/captured/1e72150d338d99a6023e6529ffde9f275680fadba5d0719e0d940c81de3a7b30.json)
