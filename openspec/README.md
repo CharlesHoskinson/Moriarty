@@ -41,3 +41,5 @@ A checked task requires its own evidence. Planned verification commands and desi
 - [Sherlock universal interpreter](changes/sherlock-universal-interpreter-design/proposal.md): Candidate B reference-machine design, 35 EARS clauses, shared bounded-step interfaces, recursive data and calls, K and Quint models, and a required Lean/Clean circuit stage before native integration. Clean integration changes belong in Fenrir's existing fork. This separate draft does not amend the 160 canonical requirement headings or close a roadmap exit.
 
 - [DoctorWatson](changes/doctorwatson/proposal.md): local software factory for Sherlock, executable corpus/readback QA, direct parallel source delivery and feature EARS. Required model/circuit/native/target evidence stays separate.
+
+- [Synthetic rollup data](changes/sherlock-synthetic-rollup-data/proposal.md): draft FSYN plan for seeded Fenrir rollup workloads in both test-format profiles, Quint-oracle fidelity, tests, fixtures and benchmarks that start when recursion is ready. Specified only.
