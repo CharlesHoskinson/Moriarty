@@ -1,0 +1,169 @@
+{
+  "status": "INDEPENDENT_LITERAL_EXPECTATIONS_FROZEN_BEFORE_TEST_AND_FIX",
+  "at": "2026-10-22T05:39:21.002233+00:00",
+  "publicSourceHead": "767d90d1c7549b3e44d59b6a5c77a85784300da6",
+  "cases": [
+    {
+      "id": "ascii_at_zero",
+      "source": "@",
+      "sourceUtf8Bytes": 1,
+      "sourceSha256": "c3641f8544d7c02f3580b07c0f9887f0c6a27ff5ab1d4a3e29caf197cfc299ae",
+      "literalPrefixBeforeLabel": "",
+      "manuallySpecifiedUtf8ByteOffset": 0,
+      "prefixByteCountMetadataCheck": 0,
+      "expectedError": {
+        "code": "mori::core::lex",
+        "message": "I do not recognize the character `@`.",
+        "offset": 0,
+        "step": null
+      },
+      "publicConsumers": [
+        "mori_core::parse",
+        "mori_core::language"
+      ],
+      "derivation": "ASCII prefix/header bytes plus direct UTF8 encodings café=c a f C3 A9, 😀=F0 9F 98 80; CRLF is two bytes. Label at literal @/opening delimiter, not scalar column or final detection position. No lexer/parser/SUT imported or executed."
+    },
+    {
+      "id": "core1_multibyte_comment",
+      "source": "language \"moriarty/1\";\n/* café */ @\n",
+      "sourceUtf8Bytes": 37,
+      "sourceSha256": "4ed0f9553ac02b9d4186167f0c0b89145064ef95852a9fbf9c690979fc3b72ec",
+      "literalPrefixBeforeLabel": "language \"moriarty/1\";\n/* café */ ",
+      "manuallySpecifiedUtf8ByteOffset": 35,
+      "prefixByteCountMetadataCheck": 35,
+      "expectedError": {
+        "code": "mori::core::lex",
+        "message": "I do not recognize the character `@`.",
+        "offset": 35,
+        "step": null
+      },
+      "publicConsumers": [
+        "mori_core::parse",
+        "mori_core::language"
+      ],
+      "derivation": "ASCII prefix/header bytes plus direct UTF8 encodings café=c a f C3 A9, 😀=F0 9F 98 80; CRLF is two bytes. Label at literal @/opening delimiter, not scalar column or final detection position. No lexer/parser/SUT imported or executed."
+    },
+    {
+      "id": "core1_crlf_multibyte_astral",
+      "source": "language \"moriarty/1\";\r\n/* café 😀 */ @\r\n",
+      "sourceUtf8Bytes": 44,
+      "sourceSha256": "b1066d1fc015b85cf501d06ecbf2ade5b57084aecdd9119820f7015f97201f3b",
+      "literalPrefixBeforeLabel": "language \"moriarty/1\";\r\n/* café 😀 */ ",
+      "manuallySpecifiedUtf8ByteOffset": 41,
+      "prefixByteCountMetadataCheck": 41,
+      "expectedError": {
+        "code": "mori::core::lex",
+        "message": "I do not recognize the character `@`.",
+        "offset": 41,
+        "step": null
+      },
+      "publicConsumers": [
+        "mori_core::parse",
+        "mori_core::language"
+      ],
+      "derivation": "ASCII prefix/header bytes plus direct UTF8 encodings café=c a f C3 A9, 😀=F0 9F 98 80; CRLF is two bytes. Label at literal @/opening delimiter, not scalar column or final detection position. No lexer/parser/SUT imported or executed."
+    },
+    {
+      "id": "core2_crlf_multibyte_astral",
+      "source": "language \"moriarty/2\";\r\n/* café 😀 */ @\r\n",
+      "sourceUtf8Bytes": 44,
+      "sourceSha256": "60de9bd48d6d405bd5c79568b3d0666412495260bca62f1dbe07bd19690f808a",
+      "literalPrefixBeforeLabel": "language \"moriarty/2\";\r\n/* café 😀 */ ",
+      "manuallySpecifiedUtf8ByteOffset": 41,
+      "prefixByteCountMetadataCheck": 41,
+      "expectedError": {
+        "code": "mori::core::lex",
+        "message": "I do not recognize the character `@`.",
+        "offset": 41,
+        "step": null
+      },
+      "publicConsumers": [
+        "mori_core::parse",
+        "mori_core::language"
+      ],
+      "derivation": "ASCII prefix/header bytes plus direct UTF8 encodings café=c a f C3 A9, 😀=F0 9F 98 80; CRLF is two bytes. Label at literal @/opening delimiter, not scalar column or final detection position. No lexer/parser/SUT imported or executed."
+    },
+    {
+      "id": "unterminated_comment_open",
+      "source": "language \"moriarty/1\";\n/* café */ /* unfinished",
+      "sourceUtf8Bytes": 48,
+      "sourceSha256": "dcb8aac06d0d06e5c98f3d20c2eaa163aabe98f831bd7952c8721a410facb970",
+      "literalPrefixBeforeLabel": "language \"moriarty/1\";\n/* café */ ",
+      "manuallySpecifiedUtf8ByteOffset": 35,
+      "prefixByteCountMetadataCheck": 35,
+      "expectedError": {
+        "code": "mori::core::lex",
+        "message": "This block comment never ends.",
+        "offset": 35,
+        "step": null
+      },
+      "publicConsumers": [
+        "mori_core::parse",
+        "mori_core::language"
+      ],
+      "derivation": "ASCII prefix/header bytes plus direct UTF8 encodings café=c a f C3 A9, 😀=F0 9F 98 80; CRLF is two bytes. Label at literal @/opening delimiter, not scalar column or final detection position. No lexer/parser/SUT imported or executed."
+    },
+    {
+      "id": "unterminated_string_open",
+      "source": "language \"moriarty/1\";\n/* café */ \"unfinished",
+      "sourceUtf8Bytes": 46,
+      "sourceSha256": "3abdce8aad5e26268d0eb1880c735cb181d6aec6f7abb82321db52a3b3ed96b6",
+      "literalPrefixBeforeLabel": "language \"moriarty/1\";\n/* café */ ",
+      "manuallySpecifiedUtf8ByteOffset": 35,
+      "prefixByteCountMetadataCheck": 35,
+      "expectedError": {
+        "code": "mori::core::lex",
+        "message": "This string never ends.",
+        "offset": 35,
+        "step": null
+      },
+      "publicConsumers": [
+        "mori_core::parse",
+        "mori_core::language"
+      ],
+      "derivation": "ASCII prefix/header bytes plus direct UTF8 encodings café=c a f C3 A9, 😀=F0 9F 98 80; CRLF is two bytes. Label at literal @/opening delimiter, not scalar column or final detection position. No lexer/parser/SUT imported or executed."
+    }
+  ],
+  "controls": [
+    {
+      "id": "syntax_still_at_token",
+      "source": "language \"moriarty/1\";\n/* café */ agreement ;\n",
+      "expectedError": {
+        "code": "mori::core::syntax",
+        "message": "Expected a name.",
+        "offset": 45,
+        "step": null
+      }
+    },
+    {
+      "id": "unlocated_validation_stays_none",
+      "source": "language \"moriarty/1\"; agreement MissingAction {}",
+      "expectedError": {
+        "code": "mori::core::program",
+        "message": "Program needs at least one action.",
+        "offset": null,
+        "step": null
+      }
+    },
+    {
+      "id": "valid_profile_controls",
+      "source": "language \"moriarty/1\"; agreement Plain { action ping() { requires true; } }",
+      "expectedAgreement": "Plain",
+      "expectedActionNames": [
+        "ping"
+      ],
+      "expectedLanguages": {
+        "core1": "moriarty/1",
+        "core2": "moriarty/2"
+      }
+    }
+  ],
+  "sourceContracts": [
+    "mori_diagnostics::MoriDiagnostic::first_label_offset is Option<usize> of first inserted UTF8 byte label; none remainsnone, zero remainsSome(0).",
+    "mori_span::Span start/end u32; actuallexerbound65536B; genericCoreError offsetOption<u32>.",
+    "ExistingCorelex category/message preserved; no severity/help/labels added to CoreError schema."
+  ],
+  "actualRED": "UNRUN",
+  "actualGREEN": "UNRUN",
+  "qualification": "Handderived literal expected byte positions verified only via stdlib UTF8 encoding/count metadata. Existing source was read for code/message/label semantics. No implementation output supplies expectations; no financial/resource policy selected."
+}

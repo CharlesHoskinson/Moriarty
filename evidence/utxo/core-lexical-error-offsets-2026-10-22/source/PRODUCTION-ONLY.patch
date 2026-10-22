@@ -1,0 +1,30 @@
+--- a/crates/mori-core/src/parser.rs
++++ b/crates/mori-core/src/parser.rs
+@@ -12,7 +12,12 @@
+ }
+ 
+ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
+-    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
++    let lexed = mori_lexer::lex(source).map_err(|diagnostic| {
++        let mut error = Error::new("lex", diagnostic.to_string());
++        // Lexer label positions are u32 UTF-8 byte offsets under its source bound.
++        error.offset = diagnostic.first_label_offset().map(|offset| offset as u32);
++        error
++    })?;
+     let tokens = (0..lexed.len())
+         .map(|i| {
+             let idx = TokenIdx::new(i);
+@@ -350,7 +355,12 @@
+ 
+ /// Read the explicit source profile for CLI routing; this does not admit a program.
+ pub fn language(source: &str) -> Result<&'static str, Error> {
+-    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
++    let lexed = mori_lexer::lex(source).map_err(|diagnostic| {
++        let mut error = Error::new("lex", diagnostic.to_string());
++        // Lexer label positions are u32 UTF-8 byte offsets under its source bound.
++        error.offset = diagnostic.first_label_offset().map(|offset| offset as u32);
++        error
++    })?;
+     let mut tokens = Vec::new();
+     for i in 0..lexed.len() {
+         let idx = TokenIdx::new(i);
