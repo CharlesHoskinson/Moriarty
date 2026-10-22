@@ -55,6 +55,12 @@ impl MoriDiagnostic {
         self
     }
 
+    /// UTF-8 byte offset of the first added source label, if one exists.
+    /// Reading this does not consume or reorder the diagnostic's labels.
+    pub fn first_label_offset(&self) -> Option<usize> {
+        self.inner.labels.first().map(LabeledSpan::offset)
+    }
+
     pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
         self.inner.help = Some(help.into());
         self
@@ -112,5 +118,34 @@ impl Diagnostic for MoriDiagnostic {
         } else {
             Some(Box::new(self.inner.labels.iter().cloned()))
         }
+    }
+}
+
+#[cfg(test)]
+mod first_label_offset_tests {
+    use super::*;
+
+    #[test]
+    fn no_label_is_distinct_from_a_zero_length_label_at_zero() {
+        let diagnostic = MoriDiagnostic::error("ordinary diagnostic");
+        assert_eq!(diagnostic.first_label_offset(), None);
+        let diagnostic = diagnostic.with_label(LabeledSpan::at(0..0, "point"));
+        assert_eq!(diagnostic.first_label_offset(), Some(0));
+    }
+
+    #[test]
+    fn accessor_preserves_insertion_order_and_does_not_consume_labels() {
+        let diagnostic = MoriDiagnostic::error("ordinary diagnostic")
+            .with_label(LabeledSpan::at(7..9, "first"))
+            .with_label(LabeledSpan::at(2..3, "second"));
+        assert_eq!(diagnostic.first_label_offset(), Some(7));
+        let offsets: Vec<_> = diagnostic
+            .labels()
+            .unwrap()
+            .map(|label| label.offset())
+            .collect();
+        assert_eq!(offsets, [7, 2]);
+        assert_eq!(diagnostic.to_string(), "ordinary diagnostic");
+        assert_eq!(diagnostic.first_label_offset(), Some(7));
     }
 }
