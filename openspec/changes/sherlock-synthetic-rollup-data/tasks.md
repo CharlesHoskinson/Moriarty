@@ -9,6 +9,7 @@ All boxes refer to observed outcomes. Nothing is checked in this draft. Paths ar
   Verify: `python3 -B models/sherlock/rollup-synth/cut.py check --cut openspec/changes/sherlock-synthetic-rollup-data/design-cut.json`.
 - [ ] 0.3 Write extractor tests with one agreeing and one disagreeing constant pair.
 - [ ] 0.4 Implement `models/sherlock/rollup-synth/extract.py`. Write `constants.json`, `layouts.json`, `rules.json` under `models/sherlock/rollup-synth/extracted/`.
+  Constants include `DOM_FWDR2`, `DOM_XCM`, `DOM_HT` and `DOM_HB` from the exit specs.
   Verify: `python3 -B models/sherlock/rollup-synth/extract.py --cut openspec/changes/sherlock-synthetic-rollup-data/design-cut.json --out models/sherlock/rollup-synth/extracted`.
 - [ ] 0.5 Create the standalone package `models/sherlock/rollup-synth/fsyn/` with its own `Cargo.lock`. Pin the RTF-018 crate set.
 - [ ] 0.6 Write stream tests: one changed stream leaves other streams byte-identical.
@@ -28,8 +29,12 @@ All boxes refer to observed outcomes. Nothing is checked in this draft. Paths ar
 - [ ] 1.3 Write event tests for each leaf step kind and each of the nine forced outcomes.
 - [ ] 1.4 Implement `fsyn/src/events.rs` with the three presets of design section 4.3.
 - [ ] 1.5 Implement `fsyn/src/replay.rs` over the 23-field `S5` state. Label its output internal consistency.
-- [ ] 1.6 Refresh the cut when `ROLLUP-ARCHITECTURE.md` revision 20 lands. Regenerate dependent fixtures.
+- [ ] 1.6 Run `python3 ~/research/fenrir-rollup-design-2026-10-19/scripts/build-rev20.py --check` inside `cut.py check`.
 - [ ] 1.7 Implement emitters in `fsyn/src/emit/`: `stmt`, `ext_digest`, `bc_digest`, `stmt_da`, `stmt_dm`, `stmt_lc`, FDAC, claim leaves.
+- [ ] 1.7a Write exit tests first: one key per exit, FWDR2 leaves, hold at execution, one hold per capability.
+- [ ] 1.7b Implement exit kinds, holds and `public.json` and `private.json` transcripts in `fsyn/src/emit/exit.rs`.
+  Verify: `quint test $R/models/exit_core.qnt --main exit_tests` and forward replays against `exit_fixed`.
+- [ ] 1.7c Implement key-preserving rotation and migration scenarios with wind-down exits.
 - [ ] 1.8 Implement the Celestia chain, synthetic validator set, NMT shares and range proofs.
 - [ ] 1.9 Write the fidelity lint: every emitter needs a row in `models/sherlock/rollup-synth/fidelity.json`.
 - [ ] 1.10 Implement forward replay emission to `models/sherlock/rollup-synth/replay/<case>.qnt`.
@@ -45,11 +50,11 @@ All boxes refer to observed outcomes. Nothing is checked in this draft. Paths ar
 
 ## P2 Adversarial, mutation and fixtures (runs now)
 
-- [ ] 2.1 Write the coverage check: each of 14 adversary classes needs one case.
+- [ ] 2.1 Write the coverage check: 14 adversary classes and 2 exit attackers each need one case.
 - [ ] 2.2 Emit the adversarial families of design section 7.4 under `fixtures/<fid>/adversarial/`.
 - [ ] 2.3 Import the 11 FRTF v2 and 8 FRTF v3 invalid cases with their layers.
 - [ ] 2.4 Register generator mutants in `models/sherlock/rollup-synth/mutants.json`.
-- [ ] 2.5 Run the existing Quint mutants against generated scenarios. Each mutant fails at least one replay.
+- [ ] 2.5 Run the existing Quint mutants, the 11 `exit_core.qnt` mutants included. Each fails at least one replay.
 - [ ] 2.6 Add a bolero harness for `frtf-x/1` decode. Run it 300 s on each format change.
 - [ ] 2.7 Release `fsyn-fixtures/1`. Write `MANIFEST.json` and `FIXTURE.json` per fixture.
 - [ ] 2.8 Pin Celestia nmt test vectors by remote, branch and full commit. Store receipts under `raw/`.

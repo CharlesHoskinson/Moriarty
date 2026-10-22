@@ -252,7 +252,7 @@ Every generator rule and every oracle check SHALL have a registered mutant, and 
 
 ### Requirement: SSRD-019 Adversarial coverage
 
-For each of the 14 adversary classes of the security model, FSYN SHALL emit at least one case with its expected failing layer, reason code, Quint invariant and killing mutant.
+For each of the 14 adversary classes of the security model and the two exit attackers of the exit design note, FSYN SHALL emit at least one case with its expected failing layer, reason code, Quint invariant and killing mutant.
 
 #### Scenario: SSRD-019-01 missing class
 
@@ -310,8 +310,78 @@ WHEN a report gives a fleet size or a settled-TPS point, it SHALL label each val
 
 IF the live design differs from the pinned cut, THEN FSYN SHALL mark every dependent fixture stale, and a stale fixture SHALL NOT enter a benchmark sample.
 
-#### Scenario: SSRD-024-01 revision 20 lands
+#### Scenario: SSRD-024-01 module spec revision
 
-- **GIVEN** `ROLLUP-ARCHITECTURE.md` revision 20 lands
+- **GIVEN** LIVENESS-EXIT moves past revision 7 and revision 20 is regenerated
 - **WHEN** `fsyn cut check` runs in DoctorWatson
-- **THEN** fixtures that depend on the architecture group are stale until `fsyn cut refresh` and regeneration
+- **THEN** fixtures that depend on the changed groups are stale until `fsyn cut refresh` and regeneration
+
+#### Scenario: SSRD-024-02 generated file out of sync
+
+- **GIVEN** `build-rev20.py --check` reports a difference
+- **WHEN** `fsyn cut check` runs
+- **THEN** it exits 2 and no fixture is generated
+
+### Requirement: SSRD-025 Exit kinds and one exit key
+
+FSYN SHALL emit every exit kind of design section 4.4 (L2 spend, forced TRANSFER, forced WITHDRAW with claim, FENC_RELEASE, escape, import, shielded and unshielded payout, foreign-backed escape), and every exit SHALL consume exactly one exit key `xk`.
+
+#### Scenario: SSRD-025-01 escape, import, then spend
+
+- **GIVEN** a note escaped in FX12 and imported by the next settled batch
+- **WHEN** a later L2 spend of the same `xk` is generated in an adversarial case
+- **THEN** the spend is refused and `exit_core.qnt` `noDoublePay` holds, and `MutEscKeyHash` breaks it
+
+#### Scenario: SSRD-025-02 claim leaf under another batch
+
+- **GIVEN** a withdrawal leaf whose `batch_no` differs from its statement
+- **WHEN** the replay runs
+- **THEN** the fixed model refuses it and `MutLeafBatch` strands the withdrawal
+
+### Requirement: SSRD-026 Holds at execution
+
+The generator SHALL key each hold by `H(DOM_HT, nf)`, SHALL give each capability at most one hold, and SHALL decide each hold once at execution.
+
+#### Scenario: SSRD-026-01 hold after enqueue
+
+- **GIVEN** a forced TRANSFER enqueued before a consented hold on its note
+- **WHEN** the batch drains
+- **THEN** the outcome is `FENC_ENCUMBERED`, and `MutQueueTimeHold` pays the held note
+
+#### Scenario: SSRD-026-02 one capability, two notes
+
+- **GIVEN** an adversarial case binding one capability to two notes
+- **WHEN** the replay runs
+- **THEN** `oneCapOneHold` refuses the second hold
+
+### Requirement: SSRD-027 Boundary disclosure
+
+WHEN FSYN emits an exit, its `public.json` SHALL carry no shielded destination and no value that links the exit to L2 history, and SHALL carry the asset and amount (Q17); an unshielded payout SHALL also carry its destination (Q16).
+
+#### Scenario: SSRD-027-01 shielded payout
+
+- **GIVEN** a shielded claim
+- **WHEN** the disclosure check runs
+- **THEN** `public.json` holds `xk`, asset, amount and `xcm`, and no destination
+
+#### Scenario: SSRD-027-02 leaked destination
+
+- **GIVEN** an emitter that writes the shielded destination to `public.json`
+- **WHEN** the disclosure check runs
+- **THEN** it exits 1 and `shieldedPrivate` fails, as `MutShieldedPublic` shows
+
+### Requirement: SSRD-028 Sealed-for-life lifecycle
+
+The generator SHALL emit only key-preserving in-place rotations, and SHALL emit every key or roster change as a migration to a new deployment with wind-down exits of every old note.
+
+#### Scenario: SSRD-028-01 key change requested
+
+- **GIVEN** a scenario that changes the decider key in place
+- **WHEN** generation runs
+- **THEN** it exits 1 citing Q15, and the migration form of the scenario is the only one emitted
+
+#### Scenario: SSRD-028-02 expired store reset
+
+- **GIVEN** an expired light-client store and a key-preserving rotation
+- **WHEN** `activate` replays in `lifecycle.qnt` (`lifecycle_sealed`)
+- **THEN** a fresh reset header signed under `DOM_LCRESET2` is installed and no verifier key changes

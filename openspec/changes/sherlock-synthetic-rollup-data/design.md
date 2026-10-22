@@ -6,17 +6,18 @@ Status: DRAFT / PROPOSED, 2026-10-21. Specified only. Labels follow the reposito
 
 | Input | Role | Pin |
 |---|---|---|
-| Five module specs: VALIDITY (rev 4), DA-PROOF (rev 3), CELESTIA-AUTH (rev 3), LIVENESS-EXIT (rev 5), LIFECYCLE (rev 5) | source of truth for rules, statements and properties | design-cut `module_specs` |
-| `INTERFACES.md`, `synthesis/SECURITY-MODEL.md`, `synthesis/CATALOGUE.md` | interface contracts, adversary table, goals G1 to G6 | design-cut `interfaces_and_security` |
-| `corpus/OWNER-QUESTIONS.md` | rulings Q1 to Q15 | design-cut `owner_rulings` |
-| 50 Quint files in `models/` (11 composed models, 39 `if_IF-*` contracts) | executable oracles | design-cut `quint_oracles` |
+| Five module specs: VALIDITY (rev 8), DA-PROOF (rev 3), CELESTIA-AUTH (rev 3), LIVENESS-EXIT (rev 7), LIFECYCLE (rev 5) | source of truth for rules, statements and properties | design-cut `module_specs` |
+| `INTERFACES.md`, `synthesis/SECURITY-MODEL.md`, `synthesis/CATALOGUE.md`, `synthesis/EXIT-DESIGN-NOTE.md` | interface contracts, adversary table, goals G1 to G6, exit construction | design-cut `interfaces_and_security` |
+| `OWNER-QUESTIONS.md` | rulings Q1 to Q17 | design-cut `owner_rulings` |
+| 51 Quint files in `models/` (12 composed models including `exit_core.qnt`, 39 `if_IF-*` contracts) | executable oracles | design-cut `quint_oracles` |
 | `liv_params.planning.json`, `liv_params_check.py`, `gen_da_table.py` | parameter gate and DA table | design-cut `parameter_gate` |
-| Lean package `FenrirRollup` (155 theorems, no `sorry` or `axiom`, source fact `THEOREMS.md`) | proved bounds used as assertions | design-cut `lean_bounds` |
+| Lean package `FenrirRollup`, 47 source files including `L19_Exit.lean` and `L19_Fenc.lean` (no `sorry` or `axiom`, source fact `THEOREMS.md`) | proved bounds used as assertions | design-cut `lean_bounds` |
 | FRTF v3 (`MANIFEST.json`, `PIN-SET.json`, `params-v3.json`, `workloads.json`, handoff), `rollup_test_format.qnt`, `envelope.rs` | S0 format, golden vectors, invalid cases | design-cut `rollup_test_format_v3` |
 | Fenrir `sprint5-rollup-test-format` (RTF-001 to RTF-030) | format ownership and versioning rules | design-cut `rollup_test_format_spec` |
-| `ROLLUP-ARCHITECTURE.md` | cost model RX-52 to RX-57, RX-71, RX-94; E-RB definitions | design-cut `architecture` |
+| `ROLLUP-ARCHITECTURE.md` revision 20 and `scripts/build-rev20.py` | final design, generated from the module specs, interfaces, security model and contracts; E-RB gates | design-cut `architecture` |
+| `audits/ROLLUP-ARCHITECTURE.rev19.md` | cost model RX-52 to RX-57, RX-71, RX-94 (revision 20 keeps RX ids only as citations) | design-cut `cost_model_history` |
 
-Revision state (repository observation, 2026-10-21): `ROLLUP-ARCHITECTURE.md` is at revision 19. Revision 20 has not landed. The module specs, `INTERFACES.md` and `SECURITY-MODEL.md` already state revision 20 content (for example `stmt_da` under `DOM_DA7` and `stmt_dm` under `DOM_DM5`, where revision 19 text has `DOM_DA6` and `DOM_DM4`). FSYN therefore takes rules from the module specs and takes only the cost model and E-RB definitions from the architecture file. Task 1.6 refreshes the cut when revision 20 lands.
+Revision state (repository observation, 2026-10-21): the design is final. `ROLLUP-ARCHITECTURE.md` revision 20 (sha256 `e933a56d…7e20366`) is generated from the module specs, `INTERFACES.md`, the security model and the executable contracts by `scripts/build-rev20.py`, and `build-rev20.py --check` passed at pin time. FSYN takes rules, statements and properties from the module specs, which revision 20 restates. Revision 20 cites the RX cost figures without restating them, so the cost model and unit costs come from the pinned revision 19 file, labelled history. `stmt_da` is under `DOM_DA7` and `stmt_dm` under `DOM_DM5`.
 
 Rulings that shape the data (source facts, OWNER-QUESTIONS):
 
@@ -28,7 +29,11 @@ Rulings that shape the data (source facts, OWNER-QUESTIONS):
 - Q12 = A: DA miss reason 4 on an expired light-client store.
 - Q13 = C: a funded light-client advancer duty.
 - Q14: the contract maintenance authority is unsatisfiable.
-- Q15: sealed for life. No seat is replaced in place; a key change is a migration; a migration starts at 3 permanent seat losses (LIFECYCLE R6).
+- Q15: sealed for life. The only in-place rotation keeps every key and resets an expired light-client store. A change of any key or roster is a new deployment, and owners leave the old one by forced exit, claim or escape. No seat is replaced in place; a migration starts at 3 permanent seat losses (LIFECYCLE R6).
+- Q16 = YES: a claim or escape to an unshielded Midnight address reveals its own amount and destination on Midnight, unlinkable to the user's L2 history.
+- Q17 = A: a shielded exit hides its destination and its link to L2 history; its asset and amount are public, like any escrow movement on Ledger 9.
+
+Exit construction (source fact, `EXIT-DESIGN-NOTE.md`, LIVENESS-EXIT revision 7): one exit key `xk = (family, era, nf)` that every spend, escape and import consumes; one exit statement XS shared by the forced `WITHDRAW` and the escape, with destination commitment `xcm = H(DOM_XCM, deployment_id, dest, blind)`; payout by opening `xcm`; one hold check, at execution, keyed by `ht = H(DOM_HT, nf)`; at most one hold per capability; `exit_roots` stored in `settled_record[b]`.
 
 ## 2. Architecture
 
@@ -103,19 +108,37 @@ Three presets (plan choice). Each preset is a vector over leaf step kinds and ou
 | covenant call (TierC) | 2 a batch (FRTF covenant pick) | 256 a batch | 1,024 a batch (`TIERC_MAX`, 5 TierC levels) |
 | FORCED (WITHDRAW, TRANSFER, FENC_RELEASE) | none | 64 a batch | 512 a batch (`FORCED_MAX`), `FORCED_ROOM(0)` = 11 a header |
 | DEPOSIT | 1 a batch | 64 a batch | 512 a batch (`DEP_MAX`), `DEP_ROOM` = 11 a header |
-| withdrawal and claim (`FWDR1` leaf) | 1 a batch | 1 percent of MAIN | `EXPORT_MAX` = 1,024 exports |
+| withdrawal and claim (`FWDR2` leaf) | 1 a batch | 1 percent of MAIN | `EXPORT_MAX` = 1,024 exports |
 | SYS, FENC records | none | 4 a batch | `FENC_FORCED_BUDGET` = 512 |
 | IMPORT (escape import) | none | only in FX12 scenarios | `IMPORT_ROOM` = 82 a header, `IMPORT_PER_BATCH` = 4,096 |
 | LATE | none | 0 | 1 percent of MAIN |
 | CLOSE | per FRTF step shape | one per header | one per header |
+
+Exit kinds (section 4.4) are drawn from the `mix` stream with a shielded share parameter (planning 50 percent, plan choice).
 
 Forced outcomes cover all nine codes of LIVENESS-EXIT: APPLIED, NULLIFIER_SPENT, COMMITMENT_ALREADY_PRESENT, EXPIRED, CAPABILITY_CONSUMED, ALREADY_LIFTED, FENC_STALE, FENC_ENCUMBERED, FORCED_INVALID. The `planning` values are plan choices, not Fenrir figures; open question OQ-1 asks for a target mix. Caps come from `constants.json`.
 
 ### 4.4 Lifecycle events
 
 - **DA misses.** Reason 2 (`laterStored`), reason 3 (`dmAccepted` with a `stmt_dm` for MISS_A or MISS_B and layout cases A1 to A5), reason 4 (pointer above `lc_top` on an expired store, Q12). Reason 1 never anchors and appears only in adversarial cases. A lower miss supersedes a pending one; `reorgFreeze` clears a miss whose block left the chain.
-- **Escape.** A settlement stall longer than `T_FREEZE` = 604,800 s opens FX12; `closeEscapeWindow` after `ESC_OPEN_MIN` = 259,200 s; escapes under `escapeKeyAt(esc_gen)`; refunds to the recorded destination. Time is simulated, so a seven-day stall is a schedule, not a wait.
-- **Exits.** `WITHDRAW` forced entries and normal withdrawals produce claim leaves `H(DOM_FWDR1, deployment_id, batch_no, wd_index, recipient, asset, amount)`.
+- **Exit kinds.** Every exit consumes the one exit key `xk`. FSYN emits each kind with its public transcript:
+
+| Kind | Route | Statement | Public on Midnight | Hold check |
+|---|---|---|---|---|
+| L2 spend | ordinary MAIN record | user proof (`L_upv`) | nullifier, commitments, ciphertexts | at execution in the leaf |
+| forced `TRANSFER` | `forced_enqueue_v2`, drained by a leaf | FS1 in zero knowledge | `xk`, output commitments, ciphertexts, expiry; no amount, asset or address | at drain only |
+| forced `WITHDRAW` | `forced_enqueue_v2`, drained, then `claim` | XS (FS1) | `xk`, `asset`, `amount`, `xcm`, `refund_dest` | at drain only |
+| `FENC_RELEASE` | `forced_enqueue_v2` | FS1 | `xk`, capability | lifts the hold when `APPLIED` |
+| escape | FX12 `escape` | XS under `escapeKeyAt(esc_gen)` | `xk`, `asset`, `amount`, `xcm` | in the escape proof, against `exit_roots.fenc_root` pinned at `openEscape` |
+| import | IMPORT step after FX12 | consumes the escaped `xk` | escape-import root | none (consumes `xk` exactly) |
+| unshielded payout | `claim` or native escape | opening of `xcm` in clear | destination and amount (Q16) | none |
+| shielded payout | `claim` or native escape | opening of `xcm` as private input; shielded output | asset and amount only (Q17) | none |
+| foreign-backed escape | `FWDR v2` foreign exit leaf | XS | `xk`, `asset`, `amount`, `xcm` | as escape |
+
+- **Claims.** Withdrawal leaves are `H(DOM_FWDR2, deployment_id, batch_no, wd_index, asset, amount, xcm)` under `wd_roots[batch_no]`, verified under `claimKeyAt(settled_record[batch_no].g)`. The leaf carries `xcm`, never a destination.
+- **Holds.** A hold is keyed by `ht = H(DOM_HT, nf)` in `fenc_root`. The consent binding `hb = H(DOM_HB, cap_id, ht, r)` is a hiding commitment created only by the owner's own spend (C1, C2, P-VAL-30) and opened only at the hold insert. A capability carries at most one hold. The hold is decided once, at execution, from `H(DOM_HT, nf)` and public data; an enqueue-time hold check does not exist. Hold scenarios cover: unheld exit applies; held exit refused as `FENC_ENCUMBERED`; hold inserted after enqueue and caught at drain; release then exit.
+- **Escape.** A settlement stall longer than `T_FREEZE` = 604,800 s opens FX12; `esc_gen` and `b = batch_no` are fixed at `openEscape`; `closeEscapeWindow` after `ESC_OPEN_MIN` = 259,200 s; escapes read `settled_record[b].exit_roots`; deposits refund to the recorded destination. Time is simulated, so a seven-day stall is a schedule, not a wait.
+- **Disclosure transcript.** Each exit fixture writes `public.json`, the list of every value an observer of Midnight and Celestia sees, and `private.json`, the openings. The oracle gate checks that no shielded destination appears in `public.json` and that no public value links an exit to its L2 history (`exit_core.qnt` `shieldedPrivate`, `unlinkable`). Unshielded payouts carry their destination and amount in `public.json`, as Q16 allows.
 - **Modes.** COMMITTEE, PUBLISHED_FHDR (after 24 h without settlement) and FORCED_ONLY. FORCED_ONLY stays off at launch (Q3), so FSYN emits it only for oracle scenarios that the models cover, tagged `launch=off`.
 
 ### 4.5 Committee
@@ -123,7 +146,8 @@ Forced outcomes cover all nine codes of LIVENESS-EXIT: APPLIED, NULLIFIER_SPENT,
 - 16 seats, threshold t = 12, f = 4 (T1). Lean `committee_arith` gives `2t - n = 8 > f`.
 - Byzantine behaviours for at most 4 seats a run: sign anything, equivocate on `(anchor_epoch, h)`, withhold shares and data, delay range signatures up to `F_LAG_SIGN_MAX` = 120 s.
 - Colluding-12 behaviours appear only in adversarial cases (section 7.4).
-- Seat churn under Q15: no in-place replacement. Permanent losses accumulate per run; at 3 losses the generator switches the run to a migration scenario (new deployment, new `relation_id`). A key-preserving rotation (LIFECYCLE R4) with `TL >= 14 d` is the only in-place rotation.
+- Seat churn under Q15: no in-place replacement. Permanent losses accumulate per run; at 3 losses the generator switches the run to a migration scenario.
+- Sealed-for-life rotation. The only in-place rotation is key-preserving (LIFECYCLE R4): `propose` accepts only `keys[gen]` itself, `activate` needs `TL >= 14 d`, phase NORMAL and the drain of every pre-cutoff withdrawal, and its one effect beyond the generation step is a fresh quorum-signed reset header for an expired store (Q12, `DOM_LCRESET2`). A key or roster change is a migration: a new deployment with a new `relation_id`, while owners of the old deployment leave by forced exit, claim or escape. Migration scenarios generate both deployments and the wind-down exits of every old note.
 
 ### 4.6 Celestia light client
 
@@ -161,15 +185,18 @@ Production-shape envelope (plan choice): FSYN writes `frtf-x/1`, a draft superse
 |---|---|---|---|
 | header range, preimages, BIP340 aggregate | V1 `anchorRange`, V8 `signRange` | range-signature message v5 | `validity.qnt` (`validity_core`), `if_IF-VAL-*` |
 | batch statement | V3 `acceptValidity`, V4 `settleValidity` | `stmt`, `ext_digest`, `bc_digest` | `validity.qnt`, `if_IF-LIV-VAL-2` (`batchConstants`) |
-| escape import and claim | V4 step 6, `claim` | `S5_post[9] = esc_acc_at[esc_k_post]` | `val_import_lock.qnt`, `liveness_exit.qnt` |
+| escape import and claim | V4 step 6, `claim` | `S5_post[9] = esc_acc_at[esc_k_post]`; `FWDR2` leaf | `val_import_lock.qnt`, `liveness_exit.qnt`, `exit_core.qnt` |
+| exit statement and payout | `forced_enqueue_v2` (WITHDRAW), `escape`, `claim` | XS over `settled_record[b].exit_roots`; `xcm` opening | `exit_core.qnt` (QEX) |
+| holds | hold insert under C1 and C2, drain, `FENC_RELEASE` | `ht = H(DOM_HT, nf)` in `fenc_root`; `hb` binding | `exit_core.qnt`, `if_IF-VAL-LIV-4` (forced outcome function) |
+| disclosure transcript | every exit route | `public.json` against `private.json` | `exit_core.qnt` (`shieldedPrivate`, `unlinkable`) |
 | ANCHORED exposure | signing at ANCHORED | `exposed <= cap` | `val_exposure.qnt` |
 | inclusion proof per range | `acceptDa`, `daLock` | `stmt_da` (`DOM_DA7`, `da_acc`, `wk_acc`) | `da_proof.qnt` (43 table runs), `da_accept.qnt`, `if_IF-DA-VAL-*` |
 | DA miss | `acceptDaMiss`, `dmAccepted`, `admitDaMiss` | `stmt_dm` (`DOM_DM5`) | `da_accept.qnt`, `liveness_exit.qnt`, `if_IF-DA-LIV-1` |
 | light-client append | O1 `acceptLC`, O2 `advanceCelestiaLC`, O10 `resetStore` | `stmt_lc` (`DOM_LC1`), `DOM_LCRESET2` | `cel_auth.qnt` (`cel_fixed`, `cel_duty`), `cel_dlc_votes.qnt`, `if_IF-CEL-*` |
 | pointer cover | O6 `coverBase` | `IF-CEL-DA-1` | `if_IF-CEL-DA-1`, `cel_auth.qnt` (`coverage`) |
 | forced queue, deposits, cursors | `forced_enqueue_v2`, `deposit`, `refundDeposit` | `forced_to`, `dep_to` in `bc_digest` | `liveness_exit.qnt`, `if_IF-LIV-VAL-2` |
-| FX12 escape | `openEscape`, `escape`, `closeEscapeWindow` | exit relation v2 | `liveness_exit.qnt` |
-| rotation, migration | `propose`, `activate` | `relation_id` | `lifecycle.qnt` (`lifecycle_sealed`), `life_gen.qnt`, `life_freeze.qnt` |
+| FX12 escape | `openEscape`, `escape`, `closeEscapeWindow` | exit relation v2 (XS) | `liveness_exit.qnt`, `exit_core.qnt` |
+| key-preserving rotation, migration | `propose`, `activate`, new deployment | `relation_id` | `lifecycle.qnt` (`lifecycle_sealed`), `life_gen.qnt`, `life_freeze.qnt` |
 | FRTF v3 envelope | Profile A and B batch | FRTF `stmt`, `relation_digest` | `rollup_test_format.qnt`, `rtf verify` |
 
 ### 6.2 Differential replay
@@ -203,7 +230,10 @@ Each property test samples generated scenarios and checks the property on the re
 | P-CEL-16 | `GAP_MAX x 6 s < LC_TRUST_PERIOD`; I16: 518,400 + 39,600 + 14,400 + 14,400 = 586,800 <= 604,800 | `planning_valid_iff`, `planning_gate` |
 | P-LIV-3 | no non-FORCED_ONLY batch settles without `stmt_da` | none |
 | P-LIV-12 | forced drain within `floor(q / cap) + ceil(r / budget) + 1` windows | `drain_bound` |
-| P-LIV-15, P-LIV-26 | one outcome per `WITHDRAW`; claims recompute the leaf | none |
+| P-LIV-15, P-LIV-26 | one outcome per `WITHDRAW`; claims recompute the `FWDR2` leaf | none |
+| P-LIV-11, P-LIV-17 | one exit per key across spend, escape and import; the due prefix, `fenc_stop` and the hold decision are stable under appends | `Exit.one_exit_per_key`, `dueCount_append_stable`, `fencStop_append_stable`, `held_append_stable` |
+| P-LIV-30 | an escape pays exactly the proven note to its owner's committed destination, once, and never for a held note | none (`exit_core.qnt` `payoutMatches`, `holdRespected`) |
+| exit invariants | no double pay, honest exit never refused, no stranded withdrawal, one hold per capability, a held capability stays live, binding by owner only, shielded destination private, unlinkable | `exit_core.qnt` `allInv` (`noDoublePay`, `honestNotRefused`, `noStranded`, `oneCapOneHold`, `heldCapLive`, `byOwnerOnly`, `shieldedPrivate`, `unlinkable`) |
 | P-LIFE-14, P-LIFE-19 | reset only on an expired store; maintenance update refused | L12 `Life.*` |
 | P-LIFE-18 | rotation batch drains 655 x 50 = 32,750 entries | `rotation_batch_cap`, `forced_rooms` |
 
@@ -235,12 +265,12 @@ Property tests use a seeded shrinking runner (`proptest` in the Rust package; Py
 ### 7.3 Mutation suite
 
 - **Generator mutants.** Each rule in `rules.json` has a registered mutant (for example gap 257 admitted, a pad before a real child, a forced entry above `FORCED_ROOM`, a stale light-client base, a `stmt_da` over the wrong `k`). Each mutant runs through the oracle gate and must be killed by a named check.
-- **Oracle mutants.** The existing Quint mutants are reused as teeth checks: `validity_mut_notruncate`, `validity_mut_keepsptr`, `validity_mut_prune`, `validity_mut_overwrite`, `val_import_lock_mutprefix`, `val_exposure_mutnocap`, `val_exposure_mutunset`, `lifecycle_mut_signer`, `lifecycle_mut_seal`, `noGapMutantBreaksGapTest`, and FRTF `rtf_m1` to `rtf_m8`. A generated scenario set must make each of them fail at least one replay, which shows the scenarios reach the guarded states.
+- **Oracle mutants.** The existing Quint mutants are reused as teeth checks: `validity_mut_notruncate`, `validity_mut_keepsptr`, `validity_mut_prune`, `validity_mut_overwrite`, `val_import_lock_mutprefix`, `val_exposure_mutnocap`, `val_exposure_mutunset`, `lifecycle_mut_signer`, `lifecycle_mut_seal`, `noGapMutantBreaksGapTest`, the eleven exit mutants of `exit_core.qnt` (`MutEscKeyHash`, `MutUnboundHoldLookup`, `MutStopFqCount`, `MutRootsAbsent`, `MutShieldedPublic`, `MutHoldByCm`, `MutQueueTimeHold`, `MutLeafBatch`, `MutPublicBinding`, `MutPublicNfBinding`, `MutMultiHold`), and FRTF `rtf_m1` to `rtf_m8`. A generated scenario set must make each of them fail at least one replay, which shows the scenarios reach the guarded states.
 - **Codec fuzzing.** The FRTF harness `rollup_envelope_decode` runs 300 s on every FSYN format change (RTF-030), and `frtf-x/1` gets its own bolero harness.
 
 ### 7.4 Adversarial corpora
 
-One family for each adversary class of SECURITY-MODEL section 2. Every case records base fixture, mutation, expected failing layer, reason code, Quint invariant and killing mutant.
+One family for each of the 14 adversary classes of SECURITY-MODEL section 2, plus two attackers named by the exit design note: a designated party that inserts holds and an observer that reads every public field. Every case records base fixture, mutation, expected failing layer, reason code, Quint invariant and killing mutant.
 
 | Adversary class | Cases (examples) | Expected outcome | Bounding properties |
 |---|---|---|---|
@@ -248,12 +278,14 @@ One family for each adversary class of SECURITY-MODEL section 2. Every case reco
 | Prover | swapped child proof, pad abuse, tuple or position substitution, replay across generations; FRTF `inner_proof_tampered`, `inner_vk_mismatched` | refused at the named layer | P-VAL-10 to P-VAL-13, P-DA-5 to P-DA-8 |
 | Up to f = 4 Byzantine seats | equivocation, withheld shares, signatures on anything | no quorum at t = 12 | P-VAL-3, P-VAL-4 |
 | Colluding 12 of 16 | two contents a height, wrong pointer height, foreign namespace, unposted blob, `snap_time` at `SNAP_TOL`, stall, reset header not on Celestia | no invalid settlement; no settlement without data; no freeze | P-VAL-9, P-DA-2, P-DA-15, G6 |
-| Rotation quorum | rotation before `TL`, a changed key set, activation outside NORMAL | refused | P-LIFE-2, P-LIFE-4 to P-LIFE-6, P-LIFE-14 |
+| Rotation quorum | rotation before `TL`, a key set other than `keys[gen]`, activation outside NORMAL or before the pre-cutoff drain | refused; key changes only by migration (Q15) | P-LIFE-2, P-LIFE-4 to P-LIFE-6, P-LIFE-14 |
 | CMA holder | maintenance update | refused (`MutSignerCMA`, `MutSatisfiableSeal` kill the bypass) | P-LIFE-17, P-LIFE-19 |
 | Light-client advancer | gap 257, out-of-order append, stale base, front-run append, stop advancing | refused or reason 4 | P-CEL-1 to P-CEL-6, P-CEL-14 |
 | Activation caller | stale or altered reset fields | refused | P-CEL-12, P-LIFE-14 |
-| Users | queue spam, double `WITHDRAW`, refused claim, refund to another destination; FRTF eight transaction cases | one outcome; recomputed leaf | P-LIV-11, P-LIV-15, P-LIV-26 |
+| Users | queue spam, double `WITHDRAW`, refused claim, refund to another destination, escape then spend of the same `xk`, escape then import replayed, claim under another batch number, substituted `xcm`; FRTF eight transaction cases | one outcome per key; recomputed leaf | P-LIV-11, P-LIV-15, P-LIV-17, P-LIV-26, P-LIV-30 |
 | Watchers | early `openEscape`, racing calls | refused before `T_FREEZE` | P-LIV-1, P-LIV-19 |
+| Designated party (exit note) | hold without owner consent, binding from a public nullifier, one capability over two notes, hold keyed by `cm`, hold inserted after enqueue | refused, or caught by the execution-time check | P-VAL-30, `exit_core.qnt` `byOwnerOnly`, `oneCapOneHold`, `holdRespected` |
+| Observer (exit note) | link a shielded exit to its L2 history, read a shielded destination, read a binding at note creation | no link; destination absent from `public.json`; amounts public (Q17) | `exit_core.qnt` `shieldedPrivate`, `unlinkable` |
 | Celestia below 1/3 | withheld blob, reorder in block, evicted PFB | miss provable; walk authenticates | P-CEL-7, P-DA-9, P-DA-10 |
 | Celestia at 1/3 or more | false header accepted by the store | validity holds; residual R6 recorded | none (out of model, T3) |
 | Midnight Ledger 9 | delayed inclusion, reorg of unfinal blocks | `reorgFreeze` drops dependent misses | P-LIV-9 |
@@ -281,6 +313,8 @@ All benchmark samples use the SBENCH /2 sample schema and the SRPOC-005 metric s
 | DA inclusion proof cost | S2 headers, S3 batch | `L_inc`, node, walk, J3, DAD core-s; DAD and DMD over the 1,024-leaf tree of one header | RX-71, E-RB-8 |
 | settled-TPS curve | S4 at r in {1, 5, 10, 25, 50, 75, 100, 107} | settled TPS, lag in headers against `SETTLE_LAG_ADMIT`, tail p50 and p99 | Q1 target 100; RX-53 thresholds |
 
+The RX figures in the comparison column come from the pinned revision 19 file (`cost_model_history`); revision 20 cites them by id. They are comparison bases, never inputs to a projection.
+
 Settled-TPS method (SSRD-023): a measured series runs S4 on the allocated host set; a projected series multiplies measured unit costs by the generated tree plan and a stated fleet size. Each point carries `measured` or `projected`. Settled TPS = settled transactions / elapsed time over at least 12 batches. No point is filled from the modeled RX figures.
 
 Report format: `fsyn-bench-report/1` JSON (cut digest, fid list, host inventory, crate and SRS pins, per-benchmark sample references, measured and projected series) beside the SBENCH samples and raw logs. Reproduction: one command per benchmark, recorded in the report.
@@ -302,7 +336,7 @@ P0 to P2 need no proof, key or network. P3 is the switch that recursion turns on
 
 - **Locations.** Code: `models/sherlock/rollup-synth/`. Small fixtures (S0, S1, S5): `models/sherlock/rollup-synth/fixtures/<fid>/`, committed. Large fixtures (S2 to S4): regenerated into `$FSYN_CACHE/<fid>/` (default `~/.cache/moriarty-fsyn/`); only `MANIFEST.json` and `FIXTURE.json` are committed. FRTF v3 is read from its pinned path and is not copied.
 - **Versioning.** Generator `fsyn/MAJOR.MINOR`: MAJOR changes any emitted byte for an unchanged cut; MINOR adds a scale, preset or case. Catalog cases cite the fid. FRTF follows Fenrir's versions (v3, v3.1 at the FX42 freeze, next version for DL-24 scoped witnesses). `frtf-x/1` stays a draft tag until Fenrir adopts a production-shape version.
-- **Sync.** `fsyn cut check` runs in the ordinary DoctorWatson corpus check. A changed pinned file makes every dependent fixture stale (SSRD-024). `fsyn cut refresh` writes a new cut and a diff of changed constants, layouts and rules; regeneration follows; fixtures whose bytes change get a new fid. FSYN never edits a Fenrir file. Rule questions go to the module owners (RS-1 to RS-5) and format questions to the `sprint5-rollup-test-format` owner.
+- **Sync.** `fsyn cut check` also runs `scripts/build-rev20.py --check`, so revision 20 and its module sources stay one record. The check runs in the ordinary DoctorWatson corpus check. A changed pinned file makes every dependent fixture stale (SSRD-024). `fsyn cut refresh` writes a new cut and a diff of changed constants, layouts and rules; regeneration follows; fixtures whose bytes change get a new fid. FSYN never edits a Fenrir file. Rule questions go to the module owners (RS-1 to RS-5) and format questions to the `sprint5-rollup-test-format` owner.
 - **One source of truth.** Constants and rules come from the executable models and the module specs through the extractor. A golden vector that disagrees with its source is a design defect report to Fenrir, not a local fix.
 
 ## 11. Semantic guarantees and operational feasibility

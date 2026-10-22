@@ -31,12 +31,16 @@ Status: specified, not implemented or accepted. SSRD clauses supplement SRPOC-00
 - **SSRD-016 Golden vectors.** FSYN shall keep golden vectors for the relation digest, envelope digests, share counts, L_inc leaf counts, the I16 sum and the rotation batch cap, each bound to its source line or theorem.
 - **SSRD-017 Property tests.** For every module property listed in design section 6, the suite shall run a property test over generated scenarios and assert the Lean-proved bound where one exists.
 - **SSRD-018 Mutation.** Every generator rule and every oracle check shall have a registered mutant, and each mutant shall be killed by at least one test before a fixture release.
-- **SSRD-019 Adversarial corpora.** For each of the 14 adversary classes of the security model, FSYN shall emit at least one case with its expected failing layer, reason code, Quint invariant and killing mutant.
+- **SSRD-019 Adversarial corpora.** For each of the 14 adversary classes of the security model and the two exit attackers of the exit design note, FSYN shall emit at least one case with its expected failing layer, reason code, Quint invariant and killing mutant.
 - **SSRD-020 Replayable fixtures.** Each fixture release shall carry a manifest of path, bytes and SHA-256, its cut digest and its exact regeneration command, and `fsyn verify` shall reproduce it byte for byte.
 
-## Benchmarks and phasing
+## Benchmarks, phasing, exits and lifecycle
 
 - **SSRD-021 Benchmark trigger.** A benchmark phase shall start only after its named trigger artefact exists (design section 9), and a missing trigger shall leave the phase open without a substitute workload.
 - **SSRD-022 Benchmark scope.** When a benchmark runs, it shall report per leaf type and layer the SRPOC-005 metrics on the SBENCH /2 sample schema, plus the FSYN workload digest and scale.
 - **SSRD-023 Modeled and measured series.** When a report gives a fleet size or a settled-TPS point, it shall label each value measured or projected, and it shall derive projections only from measured unit costs.
 - **SSRD-024 Design change.** If the live design differs from the pinned cut, FSYN shall mark every dependent fixture stale, and stale fixtures shall not enter a benchmark sample.
+- **SSRD-025 Exit kinds.** FSYN shall emit every exit kind of design section 4.4, and every exit shall consume exactly one exit key `xk` across spend, escape and import.
+- **SSRD-026 Holds.** The generator shall key each hold by `H(DOM_HT, nf)`, give each capability at most one hold, and decide each hold once at execution.
+- **SSRD-027 Boundary disclosure.** When FSYN emits an exit, its public transcript shall carry no shielded destination and no link to L2 history, and shall carry asset and amount (Q16, Q17).
+- **SSRD-028 Sealed lifecycle.** The generator shall emit only key-preserving in-place rotations, and shall emit every key or roster change as a migration to a new deployment with wind-down exits.
