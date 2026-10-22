@@ -1,0 +1,69 @@
+{
+  "schema": "sherlock-parent-child-ordered-lane-material/1",
+  "scope": "General logical mirror of positive typed check_link_lanes + link_heights + link_statement/circuit public-order preimages. No byte parser, proof verification or numeric Poseidon implementation.",
+  "input_fields": [
+    "keys_id",
+    "program_lanes",
+    "state_lanes",
+    "pinned_contexts(A102lo,A102hi,A80lo,A80hi)",
+    "h_pre",
+    "a102_complete_instance",
+    "a80_complete_instance"
+  ],
+  "geometry": {
+    "P_min": 1,
+    "S_min": 1,
+    "max_instance": 16383,
+    "len": "P+2*S+5",
+    "binding": 0,
+    "context": [
+      1,
+      3
+    ],
+    "program": "[3,3+P)",
+    "pre": "[3+P,3+P+S)",
+    "post": "[3+P+S,3+P+2*S)",
+    "rule_tag": "3+P+2*S",
+    "charge": "4+P+2*S"
+  },
+  "relation": [
+    "Both exact-length vectors and pinned context pairs.",
+    "Complete ordered ProgramBlock equality and complete ordered A102.post==A80.pre, not root-lane-only equality.",
+    "Wire envelopes A102=(3,1),A80=(0,0). Tags are not source line numbers102/80.",
+    "Parent-owned 0<=h_pre and h_pre+2<2^64, h_mid=h_pre+1, n_steps2/work1. No child height lane invented.",
+    "BindingA/BindingB are retained distinct inputs, not recomputed/equalized.",
+    "16 statement positions exactly FIELD_NAMES. Trace commits domain plus20 ordered arguments, including h_mid and both envelopes."
+  ],
+  "field_order": [
+    "keys_id",
+    "a102_ctx_lo",
+    "a102_ctx_hi",
+    "a80_ctx_lo",
+    "a80_ctx_hi",
+    "program_c",
+    "pre_root",
+    "h_pre",
+    "mid_root",
+    "post_root",
+    "h_post",
+    "bind_a102",
+    "bind_a80",
+    "n_steps",
+    "work",
+    "trace_c"
+  ],
+  "hash_interpretation": "CommitmentPreimage(domain,args) is a free DATA term. An external interpretation may evaluate Poseidon([dom(domain)]+interpreted args), with actual ASCII/u128 little-endian tag and field encoding. This model computes neither hash nor proof; no collision-freedom/injectivity is assumed.",
+  "positive_input_premises": [
+    "Lanes denote already canonical F scalar values; this is not a canonical byte receiving/field validator.",
+    "The caller supplied the full ProgramBlock/state vectors and pinned layout.",
+    "Relation.validate key distinctness/context-limb128 bounds, key_id derivation and proof presence/verification are separate not implemented here."
+  ],
+  "external_obligations": [
+    "Correct child keys/processed VK bytes/proof preparation",
+    "Original-own accumulator order, fixed-base namespaces and terminal subgroup/pairing decider",
+    "Poseidon/domain/field and byte representation correspondence",
+    "Genesis/anchor(pre_root,h_pre), Init,projectA,StepInv,F3-F5,G4/full39",
+    "Real parent proof, resource results, stagenet transaction/finality"
+  ],
+  "independence": "Handcomputed finite fixture outputs specified before K source. Same author/source-read correlation disclosed; not a separate oracle vote and not native observed outputs."
+}

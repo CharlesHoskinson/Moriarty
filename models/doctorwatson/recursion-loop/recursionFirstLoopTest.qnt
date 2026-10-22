@@ -1,0 +1,76 @@
+module recursionFirstLoopTest {
+  import recursionFirstLoop.* from "./recursionFirstLoop"
+  action verifiedParent:bool=passedLocal(ParentProof).then(dispatchVerifier(ParentVerify))
+    .then(observeVerifier(ParentVerify,goodVerification(state)))
+  action localChain:bool=acceptSource.then(verifiedParent).then(passedLocal(Build9))
+    .then(recordCapture(CapturedCrossChecked,true,true,true)).then(passedLocal(DPrepare)).then(passedLocal(DProof))
+    .then(dispatchVerifier(DVerify)).then(observeVerifier(DVerify,goodVerification(state)))
+  run completeExactIntentFirstLoopTest=initWith(true,ExactIntent).then(localChain)
+    .then(passedLocal(SyntheticImport)).then(reconcileOriginal(FullFinalizedExact)).then(submitTarget(1))
+    .then(observeTarget(fullReceipt(state))).then(passedLocal(Benchmark))
+    .expect(firstLoopComplete and loopInvariant and state.originalSends==1 and state.newSends==1)
+  run sourceAcceptanceIsNotProofTest=initWith(true,ExactIntent).then(acceptSource)
+    .expect(not(current(state,ParentProof)) and not(current(state,ParentVerify)) and state.milestones==Set())
+  run build9AndImporterAreIndependentlyPreparableTest=initWith(true,ExactIntent)
+    .then(passedLocal(Build9)).then(passedLocal(SyntheticImport))
+    .expect(not(state.sourceAccepted) and not(current(state,ParentProof)) and buildWitness and importerWitness)
+  run mp2WaitsForParentAndBuild9Test=initWith(true,ExactIntent).then(passedLocal(Build9))
+    .expect(not(dependencies(state,MP2))).then(acceptSource).then(verifiedParent)
+    .then(recordCapture(CapturedCrossChecked,true,true,true)).expect(mp2Witness and loopInvariant)
+  run provisionalOrUnequalCaptureCannotQualifyTest=initWith(true,ExactIntent).then(acceptSource)
+    .then(verifiedParent).then(passedLocal(Build9)).expect(
+      state.evidence.get(MP2).status==Pending and dependencies(state,MP2))
+    .then(recordCapture(Provisional,true,true,true).fail())
+  run compiledPIsMustMatchTest=initWith(true,ExactIntent).then(acceptSource)
+    .then(verifiedParent).then(passedLocal(Build9)).then(recordCapture(CapturedCrossChecked,false,true,true).fail())
+  run parentVerificationNeedsBothRoutesAndFullStatementTest=initWith(true,ExactIntent).then(acceptSource)
+    .then(passedLocal(ParentProof)).then(dispatchVerifier(ParentVerify)).expect(
+      verificationQualifies(state,ParentVerify,goodVerification(state)) and
+      Set({...goodVerification(state),independent:false},{...goodVerification(state),routeOne:false},
+        {...goodVerification(state),routeTwo:false},{...goodVerification(state),tamperRejected:false},
+        {...goodVerification(state),full28:false},{...goodVerification(state),tupleMatches:false},
+        {...goodVerification(state),epoch:1},{...goodVerification(state),actual:false})
+      .forall(r=>not(verificationQualifies(state,ParentVerify,r))))
+  run unavailableFactoryAdapterIsNotInventedTest=initWith(true,ExactIntent).expect(
+    not(factoryRunnable(ParentProof)) and not(factoryRunnable(Build9)) and not(factoryRunnable(Benchmark))
+      and factoryRunnable(ParentVerify) and factoryRunnable(DVerify))
+  run verifierRequiresHistoryTest=initWith(true,ExactIntent).then(acceptSource).then(passedLocal(ParentProof))
+    .then(removeHistory).then(dispatchVerifier(ParentVerify).fail())
+  run walletUnknownDoesNotBlockLocalPreparationTest=initWith(true,ExactIntent).then(localChain)
+    .expect(dWitness and state.original==OriginalUnknown).then(submitTarget(1).fail())
+  run emptyIndexerAndErrorDoNotDischargeOriginalTest=initWith(true,ExactIntent)
+    .then(reconcileOriginal(Absent)).then(reconcileOriginal(ReadError))
+    .expect(state.original==OriginalUnknown and state.originalSends==1 and state.newSends==0)
+  run wrongIdentityDoesNotDischargeOriginalTest=initWith(true,ExactIntent).then(reconcileOriginal(WrongIdentity))
+    .expect(state.original==OriginalUnknown and state.originalSends==1)
+  run originalIdentifierCannotBeResentTest=initWith(true,ExactIntent).then(localChain)
+    .then(reconcileOriginal(FullFinalizedExact)).then(submitTarget(0).fail())
+  run financialAuthorizationIsIndependentTest=initWith(false,ExactIntent).then(localChain)
+    .then(reconcileOriginal(FullFinalizedExact)).then(submitTarget(1).fail())
+  run partialTargetReadbackPreventsSecondSendTest=initWith(true,ExactIntent).then(localChain)
+    .then(reconcileOriginal(FullFinalizedExact)).then(submitTarget(1))
+    .then(observeTarget({...fullReceipt(state),fullEffects:false}))
+    .expect(state.evidence.get(TargetReadback).status==Unknown and not(current(state,TargetReadback)))
+    .then(submitTarget(1).fail())
+  run canonicalFinalityBytesFeesAndFullEffectsRequiredTest=initWith(true,ExactIntent).expect(
+    receiptQualifies(state,fullReceipt(state)) and Set({...fullReceipt(state),canonical:false},
+      {...fullReceipt(state),finalized:false},{...fullReceipt(state),exactBytes:false},
+      {...fullReceipt(state),identityMatched:false},{...fullReceipt(state),fullEffects:false},
+      {...fullReceipt(state),feesMatched:false},{...fullReceipt(state),epoch:1})
+      .forall(r=>not(receiptQualifies(state,r))))
+  run fixedS0CannotCloseExactIntentBenchmarkTest=initWith(true,FixedS0).then(localChain)
+    .then(passedLocal(SyntheticImport)).then(reconcileOriginal(FullFinalizedExact)).then(submitTarget(1))
+    .then(observeTarget(fullReceipt(state))).expect(not(dependencies(state,Benchmark)))
+    .then(passedLocal(Benchmark).fail())
+  run benchmarkRequiresActualImporterTest=initWith(true,ExactIntent).then(localChain)
+    .then(reconcileOriginal(FullFinalizedExact)).then(submitTarget(1)).then(observeTarget(fullReceipt(state)))
+    .expect(not(dependencies(state,Benchmark))).then(passedLocal(SyntheticImport))
+    .then(passedLocal(Benchmark)).expect(firstLoopComplete)
+  run changedInputPreservesButInvalidatesEvidenceTest=initWith(true,ExactIntent).then(localChain)
+    .then(editInputs).expect(state.evidence.get(ParentProof).status==Passed and not(parentWitness)
+      and not(dWitness) and not(firstLoopComplete) and state.originalSends==1 and loopInvariant)
+  run unknownParentAttemptCannotSilentlyRetryTest=initWith(true,ExactIntent).then(acceptSource)
+    .then(recordFailure(ParentProof,true)).then(editInputs)
+    .expect(state.evidence.get(ParentProof).status==Unknown and state.evidence.get(ParentProof).epoch==0)
+    .then(passedLocal(ParentProof).fail())
+}
