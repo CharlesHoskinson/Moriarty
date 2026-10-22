@@ -170,15 +170,22 @@ impl<'a> Parser<'a> {
     fn expect_word(&mut self, s: &'static str) -> Result<(),DraftError> {
         if !self.word(s) { return Err(self.error(s)); } self.bump(); Ok(())
     }
+    // The shared lexer also tags the financial grammar's words (for example
+    // asset, pool and None). They have no syntax role in this nominal grammar.
+    // Keep nominal syntax and booleans reserved in every identifier position.
+    fn nominal_name_token(&self) -> bool {
+        self.kind(0).is_word() && !reserved(self.text())
+            && !matches!(self.kind(0),TokenKind::KwTrue|TokenKind::KwFalse)
+    }
     fn name(&mut self) -> Result<NamedSite,DraftError> {
-        if self.kind(0)!=TokenKind::Ident || reserved(self.text()) { return Err(self.error("identifier")); }
+        if !self.nominal_name_token() { return Err(self.error("identifier")); }
         let n=NamedSite { name: self.text().into(),span: self.span() }; self.bump(); Ok(n)
     }
     fn type_expr(&mut self, parameters: &[String]) -> Result<(TypeExprSrc,SourceSpan),DraftError> {
         self.descend(|p|p.type_expr_inner(parameters))
     }
     fn type_expr_inner(&mut self, parameters: &[String]) -> Result<(TypeExprSrc,SourceSpan),DraftError> {
-        if !(self.kind(0)==TokenKind::Ident && !reserved(self.text()))
+        if !self.nominal_name_token()
             && !matches!(self.text(),"UInt"|"Bool"|"List"|"Tree")
         { return Err(self.error("type name")); }
         let start=self.span().start; let name=self.text().to_owned(); self.bump();

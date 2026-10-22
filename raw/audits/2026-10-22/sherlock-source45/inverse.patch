@@ -1,0 +1,109 @@
+--- a/recl9/src/lib.rs
++++ b/recl9/src/lib.rs
+@@ -28,7 +28,6 @@
+ pub mod segment;
+ pub mod sherlock_child;
+ pub mod sherlock_link;
+-pub mod sherlock_verify;
+ pub mod srs;
+ pub mod stage;
+ pub mod template;
+--- a/recl9/src/main.rs
++++ b/recl9/src/main.rs
+@@ -249,7 +249,6 @@
+         "mock-decider" => mock_decider(&p(2), &a[3], opt_k(4)),
+         "sherlock-keygen-parent" => sherlock_cli::keygen_parent(&a[2..]),
+         "sherlock-prove-parent" => sherlock_cli::prove_parent(&a[2..]),
+-        "sherlock-verify-parent" => straw_recl9::sherlock_verify::verify_parent(&a[2..]),
+         "sherlock-keygen-decider" => sherlock_cli::keygen_decider(&a[2..]),
+         _ => Err("usage: see src/main.rs".into()),
+     };
+--- a/recl9/src/sherlock_verify.rs
++++ /dev/null
+@@ -1,86 +0,0 @@
+-//! Separately launched public verification of an already produced Sherlock parent.
+-//! No relation synthesis, child loading, PK setup, prover or file writes occur.
+-use std::{collections::BTreeMap, fs::File, io::{self, Cursor, Read}, path::Path, time::Instant};
+-
+-use group::{prime::PrimeCurveAffine, Curve};
+-use midnight_circuits::hash::poseidon::PoseidonState;
+-use midnight_curves::{Bls12, G2Affine};
+-use midnight_proofs::{poly::{commitment::Params, kzg::params::ParamsKZG}, utils::SerdeFormat};
+-use midnight_zk_stdlib::verify;
+-use serde_json::json;
+-
+-use crate::{
+-    inner::{verify_offcircuit, vk_name},
+-    sherlock_link::{SherlockLinkRelation, LINK_STATE_FIELDS},
+-    stage,
+-    util::{f_from_hex, f_to_hex, sha256_hex, vk_bytes, vk_from_bytes, F},
+-};
+-
+-const SRS14_SHA256: &str = "fc253016885ec830e97808c9ec920bb5cab5c21af590380a6cb5eb0538e2b244";
+-
+-fn capped(path: &Path, maximum: usize) -> io::Result<Vec<u8>> {
+-    let mut bytes = Vec::new();
+-    File::open(path)?.take(maximum as u64 + 1).read_to_end(&mut bytes)?;
+-    if bytes.is_empty() || bytes.len() > maximum {
+-        return Err(io::Error::other("verifier input is empty or exceeds its fixed bound"));
+-    }
+-    Ok(bytes)
+-}
+-
+-/// Four explicit paths, once each. There is no implicit SRS discovery or download.
+-/// Crypto false is a typed JSON result; malformed input/argv exits through main's error path.
+-/// Success requires both public stdlib verification and the carried-accumulator pairing.
+-pub fn verify_parent(args: &[String]) -> stage::Result<()> {
+-    let allowed = ["--vk", "--proof", "--instance", "--srs14"];
+-    if args.len() != 8 { return Err("verifier expects exactly four path flags".into()); }
+-    let mut flags = BTreeMap::new();
+-    for pair in args.chunks_exact(2) {
+-        if !allowed.contains(&pair[0].as_str()) || pair[1].is_empty() || pair[1].starts_with("--") ||
+-            flags.insert(pair[0].as_str(), pair[1].as_str()).is_some() {
+-            return Err("verifier path flags must be known, nonempty and unique".into());
+-        }
+-    }
+-    if flags.len() != allowed.len() { return Err("verifier path flags are incomplete".into()); }
+-    let vkb = capped(Path::new(flags["--vk"]), 1 << 20)?;
+-    let proof = capped(Path::new(flags["--proof"]), 64 << 20)?;
+-    let instance_bytes = capped(Path::new(flags["--instance"]), 64 << 10)?;
+-    let srs_bytes = capped(Path::new(flags["--srs14"]), 4 << 20)?;
+-    let vk = vk_from_bytes(&vkb).map_err(|e| format!("verifier vk decode: {e}"))?;
+-    if vk_bytes(&vk) != vkb { return Err("verifier vk decode: noncanonical roundtrip".into()); }
+-    let encoded: Vec<String> = serde_json::from_slice(&instance_bytes)
+-        .map_err(|e| format!("verifier instance decode: {e}"))?;
+-    if encoded.len() != LINK_STATE_FIELDS + 12 {
+-        return Err("verifier instance decode: expected exactly28 fields".into());
+-    }
+-    let mut instance = Vec::with_capacity(encoded.len());
+-    for text in &encoded {
+-        if text.len() != 64 || !text.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c)) {
+-            return Err("verifier instance decode: expected canonical lowercase64hex".into());
+-        }
+-        let scalar = f_from_hex(text).map_err(|e| format!("verifier instance decode: {e}"))?;
+-        if f_to_hex(&scalar) != *text { return Err("verifier instance decode: noncanonical scalar".into()); }
+-        instance.push(scalar);
+-    }
+-    if sha256_hex(&srs_bytes) != SRS14_SHA256 { return Err("verifier SRS14 official pin mismatch".into()); }
+-    let mut reader = Cursor::new(srs_bytes.as_slice());
+-    let params = ParamsKZG::<Bls12>::read_custom(&mut reader, SerdeFormat::RawBytesUnchecked)?;
+-    if reader.position() != srs_bytes.len() as u64 || params.max_k() != 14 ||
+-        params.g2().to_affine() != G2Affine::generator() {
+-        return Err("verifier SRS14 shape or trailing data mismatch".into());
+-    }
+-    let vp = params.verifier_params();
+-    // Public KZG verifier parameters contain only G2 and tauG2, not the proving degree.
+-    // The same official ceremony supplies these for both 2^14 and the parent's 2^20.
+-    let started = Instant::now();
+-    let stdlib_ok = verify::<SherlockLinkRelation, PoseidonState<F>>(&vp, &vk, &instance, None, &proof).is_ok();
+-    let pairing_ok = if stdlib_ok {
+-        Some(verify_offcircuit(&vp, &vk, &vk_name("w", &vk), &instance, &proof, true).is_ok())
+-    } else { None };
+-    let verifies = stdlib_ok && pairing_ok == Some(true);
+-    let failure = if !stdlib_ok { Some("stdlib_verify") } else if pairing_ok != Some(true) { Some("carried_pairing") } else { None };
+-    println!("{}", json!({"kind":"sherlock-parent-independent-verify", "verifies":verifies,
+-        "stdlib_verifies":stdlib_ok, "pairing_verifies":pairing_ok, "failure":failure,
+-        "verify_s":started.elapsed().as_secs_f64(), "vk_sha256":sha256_hex(&vkb),
+-        "proof_sha256":sha256_hex(&proof), "instance_sha256":sha256_hex(&instance_bytes)}));
+-    Ok(())
+-}
