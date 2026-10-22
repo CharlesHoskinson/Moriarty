@@ -125,3 +125,8 @@ Sol factual navigation: [receipt-gating engineering erratum](UPDATE-026-RECEIPT-
 
 
 - Source12: [optimized-build and diagnostic-context cut](UPDATE-026-POST-AUTHOR-STATUS.md). [src-e669a9989d96997e6612](../../../.raw/captured/aacfdd191d1db2ad75fa8934cbf103606331664ff0b312036e459f66679b553e.json)
+
+
+## UPDATE027 — phase clocks and preserved accumulators (proposed)
+
+- [UPDATE-027 — Phase Clocks and Preserved Accumulators](UPDATE-027-PHASE-CLOCKS-AND-PRESERVED-ACCUMULATORS.md) — new source-grounded concept for the Moriarty Tron/PCB/Three.js build-up: the ten actual Source44 start/complete milestones, cumulative clock and incomplete evidence ribbon beside separate lhs/rhs ordered bases/scalars/named maps; a checked clone resolves/collapses/pairs while originals continue in A102→A80 fold order. Concept only, with no site asset, measured speedup, native proof or target result. UPDATE026 and prior creative fields stay unchanged. The website WILL go live after full Sherlock completion and is unpublished today.
