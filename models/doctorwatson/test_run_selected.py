@@ -14,6 +14,8 @@ class RunSelectedTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.empty_history = fx.write(self.root / "empty-history.json", fx.encoded(
+            {"schema": "doctorwatson.delivery-history/1", "results": []}))
         self.task = fx.task(self.root, "build", "moriarty-sdk-build")
         self.plan_path = fx.plan_file(self.root, [self.task])
         self.fp = delivery.fingerprint(
@@ -36,7 +38,8 @@ class RunSelectedTests(unittest.TestCase):
     def go(self, runner, attempt="attempt-1"):
         return rs.run_selected_once("build", str(self.plan_path),
                                     str(self.sel_path),
-                                    str(self.root / attempt), runner=runner)
+                                    str(self.root / attempt), runner=runner,
+            history_path=str(self.empty_history))
 
     def test_valid_dispatch_exactly_once_consumer_result_loads(self):
         runner = self.runner()

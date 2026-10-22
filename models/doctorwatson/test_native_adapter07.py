@@ -84,6 +84,8 @@ class FactoryCase(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.empty_history = fx.write(self.root / "empty-history.json", fx.encoded(
+            {"schema": "doctorwatson.delivery-history/1", "results": []}))
         self.outer = fx.outer_fixture(self.root)
         self.task = fx.task(self.root, "build", "moriarty-sdk-build",
                             outer=self.outer)
@@ -106,7 +108,8 @@ class FactoryCase(unittest.TestCase):
     def go(self, runner, attempt="att"):
         return rs.run_selected_once(
             "build", str(self.plan_path), str(self.sel_path),
-            str(self.root / attempt), runner=runner)
+            str(self.root / attempt), runner=runner,
+            history_path=str(self.empty_history))
 
     def resolved(self):
         task = rs.resolve_task(str(self.plan_path), "build")
@@ -338,6 +341,8 @@ class CurrentReceiptTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.empty_history = fx.write(self.root / "empty-history.json", fx.encoded(
+            {"schema": "doctorwatson.delivery-history/1", "results": []}))
 
     def packet(self, route="policy", doc_mutator=None, **kw):
         shutil = __import__("shutil")
@@ -689,7 +694,8 @@ class LifecycleTests(FactoryCase):
                                        return_value=fake_mountinfo):
                     code, record = rs.run_selected_once(
                         "build", str(plan_path), str(sel_path),
-                        str(sub_root / "att"), runner=runner)
+                        str(sub_root / "att"), runner=runner,
+                        history_path=str(self.empty_history))
                 self.assertEqual(code, rs.EXIT_OK)
                 receipt = load_json(outer["retained"] / "cleanup.json")
                 self.assertEqual(receipt["restoration"], "unknown")
@@ -988,6 +994,7 @@ class LifecycleTests(FactoryCase):
                 "--plan", str(self.plan_path),
                 "--selection", str(self.sel_path),
                 "--attempt", str(self.root / "att-cli"),
+                "--history", str(self.empty_history),
             ])
         self.assertEqual(rc, rs.EXIT_OK)
         final_rec = load_json(self.root / "att-cli/result-final.json")
@@ -1027,6 +1034,7 @@ class LifecycleTests(FactoryCase):
                 "--plan", str(self.plan_path),
                 "--selection", str(self.sel_path),
                 "--attempt", str(self.root / "att-time-wrap"),
+                "--history", str(self.empty_history),
             ], capture_output=True, text=True, timeout=15)
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertGreater(self.outer["time_output"].stat().st_size, 0)

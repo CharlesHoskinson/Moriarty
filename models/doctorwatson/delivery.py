@@ -21,6 +21,8 @@ import stat
 import sys
 from typing import Any
 
+from capabilities import adapter_capability
+
 MAX_JSON_BYTES = 4 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 1024 * 1024 * 1024
 MAX_TASKS = 128
@@ -201,6 +203,28 @@ def _read(ref: FileRef, *, public_json=False):
         os.close(fd)
 
 
+class _AssessmentReads:
+    """Reuse exact FileRefs only during one assessment, never across dispatches.
+
+    Parsing mode is part of identity; roles do not change the checked bytes.
+    Opaque artifact reads retain no payload. Failures are local too.
+    """
+    def __init__(self):
+        self.cache = {}
+
+    def read(self, ref, *, public_json=False):
+        key = (ref.path, ref.bytes, ref.sha256, public_json)
+        if key not in self.cache:
+            try:
+                self.cache[key] = (True, _read(ref, public_json=public_json))
+            except (OSError, SchemaError) as exc:
+                self.cache[key] = (False, exc)
+        succeeded, value = self.cache[key]
+        if not succeeded:
+            raise value
+        return value
+
+
 def _document_bytes(path):
     # Input documents are data only; their paths never become executable authority.
     with open(path, 'rb') as stream:
@@ -344,20 +368,23 @@ def load_plan(path) -> Plan:
     return parse_plan_bytes(_document_bytes(path))
 
 
-def fingerprint(plan: Plan, name: str) -> str:
+def fingerprints(plan: Plan) -> dict[str, str]:
+    """Compute the existing fingerprint format once in dependency order."""
+    by_id = plan.by_id
     cache = {}
-    def calc(task_id):
-        if task_id in cache:
-            return cache[task_id]
-        task = plan.by_id[task_id]
+    for name in plan.order:
+        task = by_id[name]
         value = {'task':task.id,'adapter':task.adapter,'identity':json.loads(task.identity_json),
                  'inputs':task.inputs,'owner':task.owner,'eligible_reviewers':task.eligible_reviewers,
                  'integrator':plan.integrator,'dependencies':[
-                     {'task':dep,'stage':stage,'fingerprint':calc(dep),'attempt':plan.by_id[dep].attempt}
+                     {'task':dep,'stage':stage,'fingerprint':cache[dep],'attempt':by_id[dep].attempt}
                      for dep,stage in task.dependencies]}
-        cache[task_id] = _digest(value)
-        return cache[task_id]
-    return calc(name)
+        cache[name] = _digest(value)
+    return cache
+
+
+def fingerprint(plan: Plan, name: str) -> str:
+    return fingerprints(plan)[name]
 
 
 @dataclass(frozen=True)
@@ -492,7 +519,8 @@ def _cleanup(task: Task, result: Result, value):
             raise CleanupDebt(f'actual cleanup observation retains {key} debt')
 
 
-def validate_artifacts(task: Task, result: Result):
+def validate_artifacts(task: Task, result: Result, *, _reader=None):
+    read = _reader or _read
     if {a.role for a in result.artifacts} != set(required_roles(task.adapter)):
         raise SchemaError('required artifact membership incomplete')
     observation = None
@@ -501,7 +529,7 @@ def validate_artifacts(task: Task, result: Result):
     for ref in result.artifacts:
         if ref.bytes == 0 and ref.role not in ('stdout','stderr'):
             raise SchemaError(f'{ref.role}: empty required artifact')
-        value = _read(ref,public_json=(ref.role in ('observation','resource-receipt') or (task.adapter=='handkey-verify-pis' and ref.role=='stdout') or (task.adapter=='sherlock-anchor-settle-readback' and ref.role=='source-result')))
+        value = read(ref,public_json=(ref.role in ('observation','resource-receipt') or (task.adapter=='handkey-verify-pis' and ref.role=='stdout') or (task.adapter=='sherlock-anchor-settle-readback' and ref.role=='source-result')))
         if task.adapter=='sherlock-anchor-settle-readback' and ref.role=='source-result':
             settle_source_result = value
         if ref.role=='resource-receipt':
@@ -541,14 +569,15 @@ def validate_artifacts(task: Task, result: Result):
     return observation, success
 
 
-def _acceptance(plan, task, result):
+def _acceptance(plan, task, result, *, _reader=None):
     """Applicable local review/adoption are external premises, not authentication."""
+    read = _reader or _read
     if result.review is None or result.adoption is None:
         return False,['missing applicable review or Root adoption']
     try:
-        review = _fields(_read(result.review,public_json=True),
+        review = _fields(read(result.review,public_json=True),
                          ('schema','task','attempt','fingerprint','artifact_manifest_sha256','reviewer','approved'),'review')
-        adoption = _fields(_read(result.adoption,public_json=True),
+        adoption = _fields(read(result.adoption,public_json=True),
                            ('schema','task','attempt','fingerprint','artifact_manifest_sha256','integrator','review_sha256','adopted'),'adoption')
         _enum(review['schema'],('doctorwatson.delivery-review/1',),'review.schema')
         _enum(adoption['schema'],('doctorwatson.delivery-adoption/1',),'adoption.schema')
@@ -571,7 +600,7 @@ def _acceptance(plan, task, result):
         return False,[str(exc)]
 
 
-def attempt_obligations(task: Task, result: Result, currentness: str):
+def attempt_obligations(task: Task, result: Result, currentness: str, *, _reader=None):
     """Per-original (unknown, cleanup_debt) for ONE history attempt.
 
     This is the single consumer derivation used by assess itself and by
@@ -584,6 +613,7 @@ def attempt_obligations(task: Task, result: Result, currentness: str):
     against the pinned artifact bytes via _read + _cleanup) all count as
     debt even when the record claims cleanup complete.
     """
+    read = _reader or _read
     unknown = result.submission=='unknown' or result.terminal=='unknown-submission'
     debt = result.cleanup!='complete'
     if currentness!='current' and task.adapter!='source-integration':
@@ -591,21 +621,27 @@ def attempt_obligations(task: Task, result: Result, currentness: str):
         try:
             if receipt is None:
                 raise CleanupDebt('historical cleanup receipt missing')
-            _cleanup(task,result,_read(receipt,public_json=True))
+            _cleanup(task,result,read(receipt,public_json=True))
         except (OSError,SchemaError):
             debt=True
     return unknown,debt
 
 
 def assess(plan: Plan, results: tuple[Result, ...]):
+    return _assess(plan, results, _AssessmentReads())
+
+
+def _assess(plan: Plan, results: tuple[Result, ...], reads):
+    by_id = plan.by_id
+    task_fingerprints = fingerprints(plan)
     rows={}
     ready=[]
     for name in plan.order:
-        task=plan.by_id[name]; fp=fingerprint(plan,name)
+        task=by_id[name]; fp=task_fingerprints[name]
         blockers=[]; files_current=True
         for ref in task.input_files:
             try:
-                _read(ref)
+                reads.read(ref)
             except (OSError,SchemaError) as exc:
                 files_current=False; blockers.append(f'current input unavailable or changed: {exc}')
         unmet=[]
@@ -632,7 +668,7 @@ def assess(plan: Plan, results: tuple[Result, ...]):
                 freshness='stale-dependencies'
             else:
                 freshness='current'; current=result
-            obligation_unknown,obligation_debt=attempt_obligations(task,result,freshness)
+            obligation_unknown,obligation_debt=attempt_obligations(task,result,freshness,_reader=reads.read)
             if obligation_unknown:
                 historical_unknown=True
             if obligation_debt:
@@ -684,7 +720,7 @@ def assess(plan: Plan, results: tuple[Result, ...]):
             row['state']='predicate-failed'; blockers.append('target inclusion not recorded')
         else:
             try:
-                observation, success=validate_artifacts(task,current)
+                observation, success=validate_artifacts(task,current,_reader=reads.read)
                 row['observation']=observation
                 if not success:
                     row['state']='predicate-failed'; blockers.append('typed public observation did not meet adapter predicate')
@@ -693,7 +729,7 @@ def assess(plan: Plan, results: tuple[Result, ...]):
                     row['state']='source-integrated' if source else 'observed'
                     row['source_integrated_recorded']=source
                     row['observation_recorded']=not source
-                    accepted,reasons=_acceptance(plan,task,current)
+                    accepted,reasons=_acceptance(plan,task,current,_reader=reads.read)
                     row['acceptance_recorded']=accepted; row['acceptance_blockers']=reasons
             except CleanupDebt as exc:
                 row['state']='cleanup-debt'; blockers.append(str(exc))
@@ -703,14 +739,42 @@ def assess(plan: Plan, results: tuple[Result, ...]):
     for task in plan.tasks:
         if rows[task.id]['selection_candidate']:
             ready.append(task.id)
-    return {'schema':'doctorwatson.delivery-report/1','records_valid':True,
+    return apply_capabilities({'schema':'doctorwatson.delivery-report/1','records_valid':True,
             'execution_authority':False,'producer_authenticity':'not-established',
             'acceptance_basis':'exact inspected local review and Root adoption records are external project premises',
             'adapter_basis':'typed public adapter outputs; settle source-result uses the integrated fixed decoder, other native producers and the execution bridge remain separate',
             'ready_for_root_selection':ready,'tasks':[rows[t.id] for t in plan.tasks],
             'orphaned_history':[{'task':r.task,'attempt':r.attempt,'fingerprint':r.fingerprint,'terminal':r.terminal,
                                  'artifacts':[a.record() for a in r.artifacts]}
-                                for r in results if r.task not in plan.by_id]}
+                                for r in results if r.task not in by_id]})
+
+
+def apply_capabilities(report):
+    """Refresh dispatch facts after the final qualified readiness calculation.
+
+    The legacy candidate field remains a dependency/input/history-qualified
+    candidate. Availability alone never promotes a consumed or blocked task.
+    """
+    dispatch = []
+    for row in report['tasks']:
+        cap = adapter_capability(row['adapter'])
+        dependency_ready = row['selection_candidate']
+        blockers = [] if dependency_ready else (
+            list(row['blockers']) or ['task is not an unconsumed dependency-ready candidate'])
+        if cap['blocked_reason'] is not None:
+            blockers.append(cap['blocked_reason'])
+        row.update(dependency_ready=dependency_ready,
+                   collector_available=cap['collector_available'],
+                   executor_available=cap['executor_available'],
+                   ready_for_dispatch=(dependency_ready and cap['collector_available']
+                                       and cap['executor_available']),
+                   dispatch_blockers=blockers)
+        if row['ready_for_dispatch']:
+            dispatch.append(row['id'])
+    report['ready_for_dispatch'] = dispatch
+    report['dispatch_preflight'] = 'not-observed'
+    report['dispatch_readiness_scope'] = 'dependencies-and-adapter-capabilities'
+    return report
 
 
 def inspect_delivery(plan_path, history_path):
@@ -731,7 +795,8 @@ def main(argv=None):
         return 2
     if args.next:
         report={key:report[key] for key in ('schema','records_valid','execution_authority',
-                  'producer_authenticity','ready_for_root_selection')}
+                  'producer_authenticity','ready_for_root_selection','ready_for_dispatch',
+                  'dispatch_preflight','dispatch_readiness_scope')}
     print(json.dumps(report,sort_keys=True,indent=2,allow_nan=False))
     # Exit zero means inspectable records, never successful tasks or execution approval.
     return 0
