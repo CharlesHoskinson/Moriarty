@@ -1,0 +1,313 @@
+--- a/recl9/src/sherlock_child.rs
++++ b/recl9/src/sherlock_child.rs
+@@ -15,10 +15,10 @@
+ //! validity of the child until a reviewed terminal fold and pairing check. It is not the
+ //! StrawAnchor node, its statement is not a rollup statement, and no decider consumes it.
+ 
+-use std::io;
++use std::{collections::BTreeMap, io};
+ 
+ use midnight_circuits::{
+-    hash::poseidon::PoseidonState, instructions::*, types::AssignedNative, verifier::Accumulator,
++    hash::poseidon::PoseidonState, instructions::*, types::AssignedNative, verifier::{fixed_bases, Accumulator},
+ };
+ use midnight_curves::Bls12;
+ use midnight_proofs::{
+@@ -30,7 +30,7 @@
+ 
+ use crate::{
+     decider::bls_arch,
+-    inner::{acc_pi_len, acc_pis, prepare_offcircuit, verify_child_incircuit, verify_offcircuit, vk_name, S},
++    inner::{acc_pi_len, acc_pis, prepare_offcircuit, prepare_own_offcircuit, verify_child_incircuit, verify_offcircuit, vk_name, S},
+     util::{read_bytes, read_u32, sha256_hex, vk_bytes, vk_from_bytes, write_bytes, F},
+ };
+ 
+@@ -114,6 +114,27 @@
+     verify::<RawInstance, Pos>(params, &child.vk, &child.instance, None, &child.proof)
+         .map_err(|e| format!("stdlib verify: {e:?}"))?;
+     verify_offcircuit(params, &child.vk, &child.name, &child.instance, &child.proof, false)
++}
++
++/// Full verification for the parent fold, retaining the ORIGINAL own accumulator.
++/// The stdlib route remains independent. Only a clone is resolved/collapsed for the
++/// second route's pairing; returning that clone would change the later fold transcript.
++/// `child.name` must be the same namespace used by the parent's in-circuit preparation.
++/// No result is cached across calls or accepted from the caller.
++pub(crate) fn verify_sherlock_child_own_offcircuit(
++    params: &ParamsVerifierKZG<Bls12>,
++    child: &SherlockChild,
++) -> Result<Accumulator<S>, String> {
++    verify::<RawInstance, Pos>(params, &child.vk, &child.instance, None, &child.proof)
++        .map_err(|e| format!("stdlib verify: {e:?}"))?;
++    let own = prepare_own_offcircuit(&child.vk, &child.name, &child.instance, &child.proof)?;
++    let mut checked = own.clone();
++    checked.resolve_fixed_bases(&fixed_bases::<S>(&child.name, child.vk.vk()));
++    checked.collapse();
++    if !checked.check(params, &BTreeMap::new()) {
++        return Err("pairing check failed".into());
++    }
++    Ok(own)
+ }
+ 
+ /// Single-child wrapper: the child key fixed as constants, the full child instance and
+@@ -288,6 +309,46 @@
+         assert!(verify_sherlock_child_offcircuit(&vp, &trailing).is_err());
+         assert!(SherlockChild::from_bytes(&vk_bytes(&c.vk), &"0".repeat(64), n, c.instance.clone(), c.proof.clone()).is_err());
+         assert!(SherlockChild::from_bytes(&vk_bytes(&c.vk), &sha256_hex(&vk_bytes(&c.vk)), n + 1, c.instance.clone(), c.proof.clone()).is_err());
++    }
++
++    fn assert_same_own(a: &Accumulator<S>, b: &Accumulator<S>) {
++        for (lhs, rhs) in [(a.lhs(), b.lhs()), (a.rhs(), b.rhs())] {
++            assert_eq!(lhs.bases(), rhs.bases(), "ordered original bases");
++            assert_eq!(lhs.scalars(), rhs.scalars(), "ordered original scalars");
++            assert_eq!(lhs.fixed_base_scalars(), rhs.fixed_base_scalars(), "complete named fixed-base map");
++        }
++    }
++
++    #[test]
++    #[ignore = "requires actual pinned child and 2^14 SRS; no proof production; separate resource admission"]
++    fn verified_own_reuse_preserves_raw_encoding_and_both_refusal_routes() {
++        let vp = verifier_params();
++        let mut c = child();
++        // Exercise the namespace used by the actual parent, not the legacy wrapper's label.
++        c.name = vk_name("sherlock_a102", &c.vk);
++        let original = prepare_own_offcircuit(&c.vk, &c.name, &c.instance, &c.proof).unwrap();
++        let own = verify_sherlock_child_own_offcircuit(&vp, &c).unwrap();
++        assert_same_own(&own, &original);
++        assert_eq!(acc_pis(&own), acc_pis(&original), "raw transcript encoding retained");
++        let before = acc_pis(&own);
++        let mut checked = own.clone();
++        checked.resolve_fixed_bases(&fixed_bases::<S>(&c.name, c.vk.vk()));
++        checked.collapse();
++        assert!(checked.check(&vp, &BTreeMap::new()));
++        assert_eq!(acc_pis(&checked), acc_pis(&verify_sherlock_child_offcircuit(&vp, &c).unwrap()));
++        assert_same_own(&own, &original);
++        assert_eq!(acc_pis(&own), before, "pairing clone must not mutate original fold input");
++        assert_ne!(acc_pis(&own), acc_pis(&checked), "collapsed encoding is not the fold input");
++        let mut bad_instance = c.clone();
++        bad_instance.instance[1] += F::ONE;
++        let mut bad_proof = c.clone();
++        bad_proof.proof[c.proof.len() / 2] ^= 1;
++        let mut trailing = c.clone();
++        trailing.proof.push(0);
++        for bad in [bad_instance, bad_proof, trailing] {
++            assert!(verify_sherlock_child_offcircuit(&vp, &bad).is_err());
++            assert!(verify_sherlock_child_own_offcircuit(&vp, &bad).is_err());
++        }
+     }
+ 
+     #[test]
+--- a/recl9/src/sherlock_link.rs
++++ b/recl9/src/sherlock_link.rs
+@@ -49,7 +49,7 @@
+ use crate::{
+     decider::{bls_arch, CommBinding, DeciderRelation},
+     inner::{acc_pi_len, acc_pis, prepare_own_offcircuit, reconstruct_acc, verify_offcircuit, vk_name, C, S},
+-    sherlock_child::{verify_sherlock_child_offcircuit, SherlockChild, MAX_CHILD_INSTANCE, MAX_CHILD_PROOF_BYTES},
++    sherlock_child::{verify_sherlock_child_own_offcircuit, SherlockChild, MAX_CHILD_INSTANCE, MAX_CHILD_PROOF_BYTES},
+     template::Template,
+     util::{f_from_hex, f_to_hex, read_bytes, read_f, read_u32, sha256_hex, vk_bytes, vk_from_bytes, write_bytes, write_f, F},
+ };
+@@ -412,6 +412,17 @@
+         let own_a = prepare_own_offcircuit(&self.a102_vk, &an, &w.a102_instance, &w.a102_proof)?;
+         let own_b = prepare_own_offcircuit(&self.a80_vk, &bn, &w.a80_instance, &w.a80_proof)?;
+         let mut acc = Accumulator::accumulate(&[own_a, own_b]);
++        acc.resolve_fixed_bases(&bases);
++        acc.collapse();
++        Ok(acc)
++    }
++
++    /// Parent-only reuse: inputs must be the original own accumulators from the two
++    /// full child checks in this invocation, in A102/A80 order and these key namespaces.
++    /// Resolve/collapse only AFTER accumulate hashes their original encodings.
++    fn fold_verified_own(&self, own: [Accumulator<S>; 2]) -> Result<Accumulator<S>, String> {
++        let bases = self.fixed_base_values()?;
++        let mut acc = Accumulator::accumulate(&own);
+         acc.resolve_fixed_bases(&bases);
+         acc.collapse();
+         Ok(acc)
+@@ -1130,6 +1141,37 @@
+     pub proof: Vec<u8>,
+ }
+ 
++#[derive(Clone, Copy)]
++enum ParentProofPhase {
++    Model, ChildA102Verify, ChildA80Verify, AccumulatorFold, FoldedPairing,
++    SetupPk, Prove, StdlibVerify, PairingVerify, Write,
++}
++
++fn parent_proof_phase_record(phase: ParentProofPhase, complete: bool, elapsed: Duration) -> serde_json::Value {
++    let stage = match phase {
++        ParentProofPhase::Model => "model",
++        ParentProofPhase::ChildA102Verify => "child_a102_verify",
++        ParentProofPhase::ChildA80Verify => "child_a80_verify",
++        ParentProofPhase::AccumulatorFold => "accumulator_fold",
++        ParentProofPhase::FoldedPairing => "folded_pairing",
++        ParentProofPhase::SetupPk => "setup_pk",
++        ParentProofPhase::Prove => "prove",
++        ParentProofPhase::StdlibVerify => "stdlib_verify",
++        ParentProofPhase::PairingVerify => "pairing_verify",
++        ParentProofPhase::Write => "write",
++    };
++    serde_json::json!({"kind": "sherlock-parent-proof-phase", "stage": stage,
++        "boundary": if complete { "complete" } else { "start" }, "elapsed_seconds": elapsed.as_secs_f64()})
++}
++
++fn parent_proof_phase(phase: ParentProofPhase, complete: bool) {
++    use std::io::Write;
++    static BEGAN: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
++    let elapsed = BEGAN.get_or_init(Instant::now).elapsed();
++    // Diagnostics carry fixed labels and time only. A closed stderr is not a proof refusal.
++    let _ = writeln!(io::stderr().lock(), "{}", parent_proof_phase_record(phase, complete, elapsed));
++}
++
+ /// Native: full off-circuit verification of both children, exact-degree SRS and key,
+ /// the folded accumulator's pairing, prove under the Poseidon transcript, then the stdlib
+ /// verify and the decider's view (prepare, fold the carried accumulator, one pairing).
+@@ -1150,6 +1192,7 @@
+     vk_roundtrip(vk).map_err(|e| e.to_string())?;
+     let vp = &params.verifier_params();
+     let k = vk.k() as u32;
++    parent_proof_phase(ParentProofPhase::Model, false);
+     if !parent_degree_matches(
+         k,
+         params.max_k(),
+@@ -1158,27 +1201,50 @@
+     ) {
+         return Err(format!("parent needs matching SRS and a fixed-point or legacy cost-model key degree; key 2^{k}, SRS 2^{}", params.max_k()));
+     }
+-    for (cvk, inst, proof) in [(&rel.a102_vk, &w.a102_instance, &w.a102_proof), (&rel.a80_vk, &w.a80_instance, &w.a80_proof)] {
+-        let child = SherlockChild { name: vk_name("sherlock", cvk), vk: cvk.clone(), instance: inst.clone(), proof: proof.clone() };
+-        verify_sherlock_child_offcircuit(vp, &child)?;
+-    }
+-    let instance = rel.instance(w)?;
++    parent_proof_phase(ParentProofPhase::Model, true);
++    let mut own = Vec::with_capacity(2);
++    for (cvk, inst, proof, name, phase) in [
++        (&rel.a102_vk, &w.a102_instance, &w.a102_proof, rel.a102_name(), ParentProofPhase::ChildA102Verify),
++        (&rel.a80_vk, &w.a80_instance, &w.a80_proof, rel.a80_name(), ParentProofPhase::ChildA80Verify),
++    ] {
++        parent_proof_phase(phase, false);
++        let child = SherlockChild { name, vk: cvk.clone(), instance: inst.clone(), proof: proof.clone() };
++        own.push(verify_sherlock_child_own_offcircuit(vp, &child)?);
++        parent_proof_phase(phase, true);
++    }
++    parent_proof_phase(ParentProofPhase::AccumulatorFold, false);
++    let statement = rel.statement(w)?;
++    let own_b = own.pop().expect("two verified children");
++    let own_a = own.pop().expect("two verified children");
++    let instance = [statement, acc_pis(&rel.fold_verified_own([own_a, own_b])?)].concat();
++    parent_proof_phase(ParentProofPhase::AccumulatorFold, true);
++    parent_proof_phase(ParentProofPhase::FoldedPairing, false);
+     let acc = reconstruct_acc(&instance[LINK_STATE_FIELDS..]).ok_or("parent accumulator malformed")?;
+     if !acc.check(vp, &BTreeMap::new()) {
+         return Err("folded child accumulator fails its pairing".into());
+     }
++    parent_proof_phase(ParentProofPhase::FoldedPairing, true);
++    parent_proof_phase(ParentProofPhase::SetupPk, false);
+     let pk = setup_pk(rel, vk);
++    parent_proof_phase(ParentProofPhase::SetupPk, true);
++    parent_proof_phase(ParentProofPhase::Prove, false);
+     let proof = prove::<SherlockLinkRelation, Pos>(params, &pk, rel, &instance, w.clone(), &mut ChaCha20Rng::from_entropy())
+         .map_err(|e| format!("prove parent: {e:?}"))?;
+     drop(pk);
++    parent_proof_phase(ParentProofPhase::Prove, true);
++    parent_proof_phase(ParentProofPhase::StdlibVerify, false);
+     verify::<SherlockLinkRelation, Pos>(vp, vk, &instance, None, &proof).map_err(|e| format!("parent stdlib verify: {e:?}"))?;
++    parent_proof_phase(ParentProofPhase::StdlibVerify, true);
++    parent_proof_phase(ParentProofPhase::PairingVerify, false);
+     verify_offcircuit(vp, vk, &vk_name("w", vk), &instance, &proof, true)?;
++    parent_proof_phase(ParentProofPhase::PairingVerify, true);
+     Ok(LinkParentProof { vk: vk.clone(), instance, proof })
+ }
+ 
+ /// The w_dir consumed unchanged by `straw-recl9 prove <w_dir> <key_dir> <out> <K>`:
+ /// w.vk (processed), w.proof, w.instance.json (32-byte LE hex array) and SOURCE.
+ pub fn write_w_dir(dir: &Path, parent: &LinkParentProof, source: &str) -> io::Result<()> {
++    parent_proof_phase(ParentProofPhase::Write, false);
+     if parent.instance.len() != LINK_STATE_FIELDS + acc_pi_len() {
+         return Err(bad("parent instance is not the 28-field layout"));
+     }
+@@ -1187,7 +1253,9 @@
+     write_new(dir, "w.proof", &parent.proof)?;
+     let fields: Vec<String> = parent.instance.iter().map(f_to_hex).collect();
+     write_new(dir, "w.instance.json", &serde_json::to_vec_pretty(&fields).map_err(io::Error::other)?)?;
+-    write_new(dir, "SOURCE", source.as_bytes())
++    write_new(dir, "SOURCE", source.as_bytes())?;
++    parent_proof_phase(ParentProofPhase::Write, true);
++    Ok(())
+ }
+ 
+ /// The stock decider over the parent: W instance 16 statement fields plus 12 accumulator
+--- a/recl9/src/sherlock_link_tests.rs
++++ b/recl9/src/sherlock_link_tests.rs
+@@ -400,3 +400,69 @@
+         assert!(r.check_witness(&w).is_err() && r.statement(&w).is_err() && r.link_acc_offcircuit(&w).is_err());
+     }
+ }
++
++#[test]
++fn parent_proof_phase_records_have_only_fixed_labels_and_elapsed() {
++    let phases = [
++        (ParentProofPhase::Model, "model"), (ParentProofPhase::ChildA102Verify, "child_a102_verify"),
++        (ParentProofPhase::ChildA80Verify, "child_a80_verify"), (ParentProofPhase::AccumulatorFold, "accumulator_fold"),
++        (ParentProofPhase::FoldedPairing, "folded_pairing"), (ParentProofPhase::SetupPk, "setup_pk"),
++        (ParentProofPhase::Prove, "prove"), (ParentProofPhase::StdlibVerify, "stdlib_verify"),
++        (ParentProofPhase::PairingVerify, "pairing_verify"), (ParentProofPhase::Write, "write"),
++    ];
++    for (phase, label) in phases {
++        for complete in [false, true] {
++            let record = parent_proof_phase_record(phase, complete, Duration::from_millis(1234));
++            assert_eq!(record, serde_json::json!({"kind": "sherlock-parent-proof-phase", "stage": label,
++                "boundary": if complete { "complete" } else { "start" }, "elapsed_seconds": 1.234}));
++            assert_eq!(record.as_object().unwrap().len(), 4, "no payload or error fields");
++        }
++    }
++}
++
++fn assert_same_own(a: &Accumulator<S>, b: &Accumulator<S>) {
++    for (lhs, rhs) in [(a.lhs(), b.lhs()), (a.rhs(), b.rhs())] {
++        assert_eq!(lhs.bases(), rhs.bases(), "ordered original bases");
++        assert_eq!(lhs.scalars(), rhs.scalars(), "ordered original scalars");
++        assert_eq!(lhs.fixed_base_scalars(), rhs.fixed_base_scalars(), "complete named fixed-base map");
++    }
++}
++
++#[test]
++#[ignore = "actual pinned linked children and pinned 2^14 SRS; transcript/verification work, separately selected"]
++fn verified_child_owns_preserve_the_original_combined_instance() {
++    use midnight_proofs::utils::SerdeFormat;
++    use std::io::BufReader;
++    let env = |n: &str| std::env::var(n).unwrap_or_else(|_| panic!("{n} must be set explicitly"));
++    let p = LinkPins {
++        a102_vk_sha256: env("SHERLOCK_A102_VK_SHA256"), a80_vk_sha256: env("SHERLOCK_A80_VK_SHA256"),
++        a102_context_hash: env("SHERLOCK_A102_CONTEXT_HASH"), a80_context_hash: env("SHERLOCK_A80_CONTEXT_HASH"),
++        program_lanes: env("SHERLOCK_PROGRAM_LANES").parse().unwrap(),
++        state_lanes: env("SHERLOCK_STATE_LANES").parse().unwrap(),
++    };
++    let (mut a, mut b) = read_link_children(Path::new(&env("SHERLOCK_LINK_CHILDREN_DIR")), &p).unwrap();
++    let rel = SherlockLinkRelation::from_pins(a.vk.clone(), b.vk.clone(), &p).unwrap();
++    let w = SherlockLinkWitness::from_children(&a, &b, 0);
++    let bytes = fs::read(Path::new(&env("MIDNIGHT_SRS_DIR")).join("bls_midnight_2p14")).unwrap();
++    assert_eq!(sha256_hex(&bytes), "fc253016885ec830e97808c9ec920bb5cab5c21af590380a6cb5eb0538e2b244");
++    let vp = ParamsKZG::<Bls12>::read_custom(&mut BufReader::new(&bytes[..]), SerdeFormat::RawBytesUnchecked)
++        .unwrap().verifier_params();
++    a.name = rel.a102_name();
++    b.name = rel.a80_name();
++    let own_a = verify_sherlock_child_own_offcircuit(&vp, &a).unwrap();
++    let own_b = verify_sherlock_child_own_offcircuit(&vp, &b).unwrap();
++    let fresh_a = prepare_own_offcircuit(&a.vk, &a.name, &a.instance, &a.proof).unwrap();
++    let fresh_b = prepare_own_offcircuit(&b.vk, &b.name, &b.instance, &b.proof).unwrap();
++    assert_same_own(&own_a, &fresh_a);
++    assert_same_own(&own_b, &fresh_b);
++    assert_eq!(acc_pis(&own_a), acc_pis(&fresh_a));
++    assert_eq!(acc_pis(&own_b), acc_pis(&fresh_b));
++    let reversed = rel.fold_verified_own([own_b.clone(), own_a.clone()]).unwrap();
++    assert_same_own(&own_a, &fresh_a);
++    assert_same_own(&own_b, &fresh_b);
++    let folded = rel.fold_verified_own([own_a, own_b]).unwrap();
++    assert!(folded.check(&vp, &BTreeMap::new()));
++    assert_ne!(acc_pis(&folded), acc_pis(&reversed), "ordered fold transcript");
++    let reused = [rel.statement(&w).unwrap(), acc_pis(&folded)].concat();
++    assert_eq!(reused, rel.instance(&w).unwrap(), "original reference independently prepares both transcripts again");
++}
