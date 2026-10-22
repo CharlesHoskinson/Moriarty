@@ -1,0 +1,19 @@
+# Actual native observations — October22,2026
+
+Two descriptive native records use the existing sherlock-benchmark-sample/1 collector. No new runner, benchmark profile policy or metric registry is introduced. JSON receipts are explicit public-safe scalar projections of adopted private runtime receipts; source/adoption hashes retain transitive provenance, not independent cryptographic authentication. They contain no private absolute paths, wallet identifiers or instance fields. Raw proofs, keys, SRS, wallet and private source are excluded.
+
+The fixed A102→A80 parent has k20 and6432 proof bytes. setup_pk is62.328385318s; the prove interval is882.589555363s INCLUDING explicit proving-key drop. Producer stdlib and full-pairing checks are separate phase observations, not an independently launched verifier result. Model, all other phase timings, native951.6142616319703s and root954.127131041023s are retained separately; these intervals overlap and must never be added into one cost. No counter is attributed from service totals to the prove phase. The prefinal service snapshot is15678128128bytes and1820.361367CPU seconds, explicitly not final/isolated proof RSS or CPU.
+
+The anchor mock-compile-many observation reports acceptValidity k6/38rows and settleValidity k10/979rows with229/3828-byte binary IR. Its joint native0.08447831502417102s and root0.49419909302378073s are not per-circuit time, keyed compile or keygen measurements. Domain capacity and missing rows/columns are not inferred from k. Rust backend build208.047s is deliberately excluded: it is not Moriarty source compilation and has a separate receipt/subject.
+
+Every unavailable registry measurement is null with status unavailable and an explicit reason. Producer checks remain in extensions, while independent verification, tamper rejection, decider, full effects, network/ledger transaction identity, serialized transaction size, latency and DUST stay unobserved. Cache state and timer resolution are unknown; this is neither a cold/warm comparison nor a qualified repetition. No tolerance/SLA, speedup, TPS or native-rollup feasibility result is claimed.
+
+The catalog's frozen linked case is a deployed complete chain; these are deliberately distinct descriptive workload IDs/digests. They cannot substitute for its stagenet case or the original full synthetic-rollup plan. Existing catalog/acceptance requires complete current identities, all child/parent/decider evidence, independent correctness/effects and actual deployment. Full real-world synthetic-rollup implementation and performance, including all approved forced outcomes and settlement, remains required; these observations are prerequisites only. The older Fenrir scalar corpus is not a proxy for that goal.
+
+From this public directory and an installed canonical suite at f11817c26392b2b0b87a89bad158fb5e61846af7:
+
+    python3 -B /path/to/models/sherlock/benchmarks/metrics.py collect --template templates/parent-proof.json --bindings bindings/parent-proof.json --base-dir . --output samples/parent-proof.json
+    python3 -B /path/to/models/sherlock/benchmarks/metrics.py collect --template templates/anchor-cost.json --bindings bindings/anchor-cost.json --base-dir . --output samples/anchor-cost.json
+    python3 -B /path/to/models/sherlock/benchmarks/metrics.py report --samples samples/parent-proof.json samples/anchor-cost.json --output descriptive-report.json --markdown descriptive-report.md
+
+These commands read DATA only and never dispatch native subjects. The shell path placeholder is illustrative, not a private locator. Report success means descriptive schema/collection success; it is not SBENCH qualification. Current schema gaps need no code change for these records: no registered cost-model/whole-service/PK-drop-only metric or final service counter exists, so retain precise observations under extensions and leave incompatible metrics unavailable.
