@@ -388,6 +388,8 @@ pub mod c6_scalar_arithmetic_step;
 pub mod c6_scalar_arithmetic_consumer;
 pub mod c6_return_left_step;
 mod c6_return_left_consumer;
+pub mod c6_return_right_step;
+mod c6_return_right_consumer;
 pub mod c6_return_scope_step;
 mod c6_return_scope_consumer;
 pub mod c6_return_call_step;
@@ -539,4 +541,14 @@ pub use c6_return_left_consumer::{
     build_c6_return_left_step_circuit, check_c6_return_left_step_circuit,
     witness_from_host_pair as witness_return_left_from_host_pair,
     C6ReturnLeftConsumerError, C6ReturnLeftStepCircuit, C6ReturnLeftStepWitness,
+};
+
+pub use c6_return_right_step::{
+    emit_c6_return_right_step_block, C6ReturnRightStepBlock, C6ReturnRightStepEmitter,
+    C6ReturnRightStepError, C6ReturnRightStepInputs,
+};
+pub use c6_return_right_consumer::{
+    build_c6_return_right_step_circuit, check_c6_return_right_step_circuit,
+    witness_from_host_pair as witness_return_right_from_host_pair,
+    C6ReturnRightConsumerError, C6ReturnRightStepCircuit, C6ReturnRightStepWitness,
 };
