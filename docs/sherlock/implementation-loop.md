@@ -1,5 +1,81 @@
 # Sherlock implementation loop contract
 
+## Active recursion loop — October 22, 2026, revision05
+
+The user instructs: **merge, rewrite and begin the loop**. This resumes the
+Sherlock implementation objective and supersedes the dated audit pause below.
+DoctorWatson is merged at `066c360b7735bddf6e8950a118c15d76b2953c78`
+on `sherlock` ([PR404](https://github.com/CharlesHoskinson/Moriarty/pull/404));
+shared AgentBus is merged at `01c7202b9963881fe3b3e2771e031bc75be19223`
+on ProjectFenrir `main` ([PR84](https://github.com/CharlesHoskinson/projectfenrir/pull/84)).
+A merge establishes published source. It does not establish live service activation
+or a native proof. The active Codex goal, current task manifest, actual agent state
+and DoctorWatson reports determine runtime progress; this document is not a daemon.
+
+The next demonstrable capability is a **genuine A102/A80 parent proof and independent
+verification**. Source43 already produced a release ELF and k20 verifying key.
+Its first proof attempt failed allocation; its second timed out after500.5487s,
+with no parent proof and no internal phase attribution. Preserve those failures.
+Source44 adds phase clocks and preserves original child accumulators for reuse.
+Its full structures, named fixed-base maps, order, transcript and refusal behavior
+need current review and actual consumer checks; equal evaluated points or `acc_pis`
+alone are insufficient. No measured speedup or successful completion is assumed.
+
+The execution order is:
+
+1. Review Source44 and strengthen its actual structural tests where needed.
+   Before any heavy build or check, obtain an explicit prospective bounded successor
+   resource decision with two substantive independent opinions and cleanup headroom.
+   The historical0.540990P/1247S/162whole remainder cannot fund a new build; retain
+   all old holds and stopped C13. Recheck host pressure and use disk-backed scratch.
+   Then materialize the exact changed source/current cache inventory through the
+   existing bounded build route, build the real consumer and run selected checks.
+2. Select one finite phase-observed parent completion experiment within its
+   separately recorded envelope. A successful build or test does not automatically
+   launch a proof, release an old hold or establish a completed proving-key setup.
+3. Independently verify the exact complete parent artifacts and actual rejection
+   cases. In parallel, prepare existing Build9 and helper source. Build9 compilation
+   does not depend on a completed parent proof.
+4. Produce actual MP2 capture with compiled-public-input equality, then the opening-aware
+   terminal D proof bound to that template and the full28-field parent statement.
+   This step prepares local artifacts only; deployment waits for wallet reconciliation.
+5. Reconcile the original wallet submission by its exact transaction identifier,
+   read-only, before another send. Preserve identifier/hash distinctions and uncertain
+   outcomes. Reuse the saved Midnight stagenet wallet and full financial guard.
+6. After wallet reconciliation, deploy D's accept verifier with the compiled settle
+   verifier through the existing stagenet deploy/accept/settle path. Independently read
+   finalized root, height, batch, sets and balances against frozen expected effects. Record the
+   real network, ledger/verifier identity, transaction IDs and public receipts.
+7. Benchmark exact-intent synthetic Fenrir workloads after that deployment. The importer
+   must preserve selected intents and native range/group topology; a seeded native
+   recipe does not substitute for those inputs. Record actual compile/setup/prove/verify,
+   k/rows/columns, CPU/RSS, proof/key/transaction bytes, fees and inclusion/settlement
+   measurements separately. Expand16/32/64/96 only where actually supported.
+
+Root integrates; the native source owner and two independent reviewers handle the
+first candidate. Dedicated Clean, Quint and K lanes track the same changed relation.
+Handwritten circuit implementation remains a permanent product lane. Update Diataxis
+documentation, the DoctorWatson improvement log and circuit-website concept log as
+meaningful implementation changes land. The website publication commitment remains.
+
+Run affected checks locally. Use current DoctorWatson readiness and exact-use
+rechecks, complete history and durable reservations for supported adapters. Where
+an adapter is collect-only or unsupported, name its missing executor and use only
+an already reviewed eligible native consumer; no plan entry invents launchability.
+Keep one heavy operation and acquire its proving lock at exactly one layer.
+Do not retry unchanged failures or replay accepted prefixes. After two same-class
+failures reduce the reproducer/change approach; after two process-only cycles or
+thirty administration minutes return to product work.
+
+Each cycle finishes with affected-source graph refresh, actual wiki-llm results
+and lessons, and fresh conservative Git cleanup. Keep unique/dirty/active work and
+all partial/unknown outcomes. AgentBus supplies optional advisory coordination;
+canonical artifacts, reviews, resources and ownership govern execution. No new
+scheduler, Foreman, per-agent branches or hosted CI is introduced.
+
+Acceptance remains the existing [SRPOC EARS](../../openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md),
+[SBENCH criteria](stagenet-recursive-rollup-experiment.md) and all retained Sherlock
+requirements. This revision closes no unobserved proof, target or full-language EARS.
 
 ## Current audit and cycle cleanup — October 22, 2026
 
