@@ -29,6 +29,8 @@ class IntegratedCompileTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.empty_history = fx.write(self.root / "empty-history.json", fx.encoded(
+            {"schema": "doctorwatson.delivery-history/1", "results": []}))
 
     def _setup_plan_selection(self, disposition="active"):
         root = self.root
@@ -66,7 +68,7 @@ class IntegratedCompileTests(unittest.TestCase):
         runner = self._mock_guard(task, fp)
         code, record = rs.run_selected_once(
             "build", str(plan_path), str(sel_path), str(attempt),
-            runner=runner)
+            runner=runner, history_path=str(self.empty_history))
         self.assertEqual(code, rs.EXIT_OK)
         self.assertEqual(runner.calls.count("native"), 1)
         self.assertEqual(len(runner.native_argv), 1)
@@ -105,7 +107,8 @@ class IntegratedCompileTests(unittest.TestCase):
         runner = self._mock_guard(task, fp)
         with self.assertRaises(rs.Blocked):
             rs.run_selected_once("build", str(plan_path), str(sel_path),
-                                 str(self.root / "attempt-2"), runner=runner)
+                                 str(self.root / "attempt-2"), runner=runner,
+                                 history_path=str(self.empty_history))
         self.assertEqual(runner.calls, [])
 
     def test_blocked_disposition_zero_calls(self):
@@ -114,7 +117,8 @@ class IntegratedCompileTests(unittest.TestCase):
         runner = self._mock_guard(task, fp)
         with self.assertRaises(rs.Blocked):
             rs.run_selected_once("build", str(plan_path), str(sel_path),
-                                 str(self.root / "a"), runner=runner)
+                                 str(self.root / "a"), runner=runner,
+                                 history_path=str(self.empty_history))
         self.assertEqual(runner.calls, [])
 
     def test_exit_zero_with_tampered_f_outputs_is_failed(self):
@@ -130,7 +134,8 @@ class IntegratedCompileTests(unittest.TestCase):
             return rc
         code, record = rs.run_selected_once(
             "build", str(plan_path), str(sel_path),
-            str(root / "attempt-x"), runner=runner)
+            str(root / "attempt-x"), runner=runner,
+            history_path=str(self.empty_history))
         self.assertEqual(code, rs.EXIT_FAILED)
         self.assertFalse((root / "attempt-x/consumer-result.json").exists())
 
@@ -144,6 +149,8 @@ class IntegratedSettleTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.empty_history = fx.write(self.root / "empty-history.json", fx.encoded(
+            {"schema": "doctorwatson.delivery-history/1", "results": []}))
         self.inputs = fx.settle_inputs()
         self.task = fx.task(self.root, "settle",
                             "sherlock-anchor-settle-readback",
@@ -215,6 +222,8 @@ class IntegratedHandkeyTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self.empty_history = fx.write(self.root / "empty-history.json", fx.encoded(
+            {"schema": "doctorwatson.delivery-history/1", "results": []}))
         blob = b"public opaque bytes\n"
         sha = hashlib.sha256(blob).hexdigest()
         self.inputs = {k: sha for k in

@@ -14,7 +14,7 @@ Task/plan JSON can never supply argv, a shell string, caps, limits,
 environment, or a success boolean: delivery's exact-field plan schema
 refuses such keys.
 
-The one launchable adapter dispatches ONE code-fixed provisioned-host outer
+The SDK-build adapter dispatches ONE code-fixed provisioned-host outer
 sequence (selection/2, ``bounded-sdk-compile-cached-current-f/2``): OP0..OP6
 are external host-provisioning prerequisites already completed prior to
 config.final.json issuance (so execution_root, config_dir, and Q-OBS already
@@ -40,6 +40,15 @@ never a synthesized complete -- and only then does the fixed collector run
 over the retained outputs. The direct ``[python, guard, --cached-current-f]``
 argv of selection/1 is retired: outside S it can never satisfy the guard, so
 it is never selected.
+
+The handkey-selection/1 branch dispatches only the fixed public verifier tuple
+through a dedicated forked ordinary supervisor. PR_SET_CHILD_SUBREAPER must
+succeed before workload launch; actual wait4 reaping to ECHILD and observed
+group absence establish cleanup. Fixed per-process limits do not establish
+aggregate native resource admission. Execution requires an explicit complete
+history file and durably reserves attempts beside it, retaining originals
+before a separately selected changed attempt. This source wiring grants no
+native execution permission.
 
 After the outer sequence, fixed source-specific collectors convert the
 actual raw producer files into the consumer Result shape exactly
@@ -69,6 +78,8 @@ injected runner performs no native dispatch.
 from __future__ import annotations
 
 import copy
+import ctypes
+import fcntl
 import hashlib
 import importlib.util
 import json
@@ -77,11 +88,15 @@ import os
 from pathlib import Path
 import re
 import resource
+import selectors
+import signal
 import stat
 import subprocess
 import sys
 import time
 from typing import Any, Callable
+
+from capabilities import adapter_capability
 
 import delivery  # sibling ordinary consumer in models/doctorwatson
 
@@ -130,9 +145,7 @@ ADAPTERS: dict[str, dict[str, Any]] = {
         "collector": "collect_cached_current_f",
     },
     "handkey-verify-pis": {
-        "launchable": False,
-        "blockedReason": "selected independent handkey invocation scope "
-                         "absent; collector implemented, launch blocked",
+        "launchable": True,
         "rawOutputRoles": ("stdout", "stderr", "resource-receipt",
                            "key", "proof", "statement"),
         "collector": "collect_handkey",
@@ -326,7 +339,8 @@ def resolve_task(plan_path: str, task_id: str, history_path: str | None = None,
                 "attempt": task.attempt, "fingerprint": fingerprint,
                 "inputs": task.inputs, "plan": plan, "task_obj": task,
                 "readiness": row,
-                "readiness_identity": readiness["identity"]}
+                "readiness_identity": readiness["identity"],
+                "history_results": readiness["results"]}
     if task.disposition != "active":
         raise Blocked(f"task disposition is {task.disposition}; not active")
     if not row["selection_candidate"]:
@@ -354,12 +368,7 @@ def _recheck_at_use(task: dict, selection: dict, plan_path: str,
             or fresh_task["readiness_identity"] != task["readiness_identity"]
             or fresh_selection["selectionSha256"]
             != selection["selectionSha256"]
-            or fresh_selection["guard"] != selection["guard"]
-            or fresh_selection["config"] != selection["config"]
-            or fresh_selection["outputs"] != selection["outputs"]
-            or fresh_selection["outer"] != selection["outer"]
-            or fresh_selection["outerSequence"]
-            != selection["outerSequence"]):
+            or fresh_selection != selection):
         raise Blocked("readiness/selection identity changed before "
                       "dispatch; pinned at resolve, rechecked at use")
     return fresh_task, fresh_selection
@@ -728,6 +737,10 @@ def resolve_selection(selection_path: str, task: dict) -> dict:
     constant extracted from the digest-verified guard bytes.
     """
     sel = _load_json_file(selection_path, "selection")
+    if type(sel) is dict and sel.get("schema") == HANDKEY_SELECTION_SCHEMA:
+        return _resolve_handkey_selection(sel, task)
+    if task["adapter"] == "handkey-verify-pis":
+        raise BadInput("handkey adapter requires strict handkey-selection/1")
     keys = {"schema", "task", "adapter", "fingerprint", "outerSequence",
             "guard", "config", "outer", "outputs"}
     if type(sel) is not dict or set(sel) != keys:
@@ -741,8 +754,9 @@ def resolve_selection(selection_path: str, task: dict) -> dict:
         raise Blocked("selection fingerprint stale vs consumer fingerprint "
                       "(source/dependency/input mismatch); zero dispatch")
     spec = ADAPTERS[task["adapter"]]
-    if not spec["launchable"]:
-        raise Blocked(f"adapter {task['adapter']}: {spec['blockedReason']}")
+    capability = adapter_capability(task["adapter"])
+    if not capability["executor_available"]:
+        raise Blocked(f"adapter {task['adapter']}: {capability['blocked_reason']}")
     if sel["outerSequence"] not in spec["outerSequences"]:
         raise BadInput("selection.outerSequence: not a fixed sequence "
                        f"for {task['adapter']}")
@@ -2418,6 +2432,442 @@ def _validate_counters(path: str | None) -> bool:
                for n in nodes.values())
 
 
+HANDKEY_SELECTION_SCHEMA = "doctorwatson.handkey-selection/1"
+HANDKEY_PROFILE = {"wallSeconds": 30, "cpuSeconds": 25,
+                   "addressSpaceBytes": 2 * 1024**3,
+                   "fileBytes": 64 * 1024**2, "coreBytes": 0,
+                   "streamBytes": 4 * 1024**2}
+
+
+def _resolve_handkey_selection(sel: dict, task: dict) -> dict:
+    keys = {"schema", "task", "adapter", "attempt", "fingerprint",
+            "tool", "key", "proof", "statement", "outputRoot"}
+    if set(sel) != keys:
+        raise BadInput("handkey selection: exact fixed fields required; no argv/env/hooks/caps")
+    if task["adapter"] != "handkey-verify-pis":
+        raise Blocked("handkey selection adapter mismatch")
+    if (sel["task"] != task["id"] or sel["adapter"] != task["adapter"]
+            or sel["attempt"] != task["attempt"]
+            or sel["fingerprint"] != task["fingerprint"]):
+        raise Blocked("handkey selection task/attempt/fingerprint mismatch")
+    if not adapter_capability(task["adapter"])["executor_available"]:
+        raise Blocked("handkey executor unavailable")
+    pins = {k: _verify_pinned(sel[k], "selection." + k)
+            for k in ("tool", "key", "proof", "statement", "outputRoot")}
+    obj = task["task_obj"]
+    bound = {(r.path, r.bytes, r.sha256) for r in obj.input_files}
+    identity = json.loads(obj.identity_json)
+    tools = {(r["path"], r["bytes"], r["sha256"]) for r in identity["tools"]}
+    configs = {(r["path"], r["bytes"], r["sha256"]) for r in identity["config"]}
+    for name, pin in pins.items():
+        triple = (pin["path"], pin["bytes"], pin["sha256"])
+        if triple not in bound or (name == "tool" and triple not in tools) \
+                or (name == "outputRoot" and triple not in configs):
+            raise Blocked(f"selection.{name}: not bound in plan identity")
+    for name in ("key", "proof", "statement"):
+        if pins[name]["sha256"] != task["inputs"][name + "_sha256"]:
+            raise Blocked(f"selection.{name}: task HANDKEY_PINS mismatch")
+    if not os.access(pins["tool"]["path"], os.X_OK):
+        raise Blocked("handkey tool is not executable")
+    root_raw = _read_raw(pins["outputRoot"]["path"], "handkey output root")
+    if (len(root_raw) != pins["outputRoot"]["bytes"] or
+            hashlib.sha256(root_raw).hexdigest() != pins["outputRoot"]["sha256"]):
+        raise Blocked("handkey outputRoot changed before parsing pinned bytes")
+    try:
+        root = json.loads(root_raw.decode(), object_pairs_hook=_pairs,
+                          parse_constant=_constant, parse_float=_float)
+    except (ValueError, UnicodeError) as exc:
+        raise BadInput(f"handkey outputRoot: invalid JSON: {exc}") from exc
+    if type(root) is not dict or set(root) != {"schema", "path"} \
+            or root["schema"] != "doctorwatson.handkey-output-root/1":
+        raise BadInput("handkey outputRoot: exact versioned root descriptor required")
+    output_root = _abs_norm(root["path"], "handkey outputRoot.path")
+    if not Path(output_root).is_dir() or Path(output_root).resolve() != Path(output_root):
+        raise Blocked("handkey output root must be an existing real directory")
+    return {**sel, **pins, "outputRootPath": output_root,
+            "selectionSha256": _digest(sel)}
+
+
+def _handkey_limits():
+    os.setsid()
+    for kind, limit in ((resource.RLIMIT_CPU, HANDKEY_PROFILE["cpuSeconds"]),
+                        (resource.RLIMIT_AS, HANDKEY_PROFILE["addressSpaceBytes"]),
+                        (resource.RLIMIT_FSIZE, HANDKEY_PROFILE["fileBytes"]),
+                        (resource.RLIMIT_CORE, 0)):
+        resource.setrlimit(kind, (limit, limit))
+
+
+def _write_handkey_json(path: Path, value) -> dict:
+    ref = _write_json_atomic(path, value)
+    _fsync_dir(path.parent)
+    return ref
+
+
+def _wait4_retry(pid, options):
+    while True:
+        try:
+            return os.wait4(pid, options)
+        except InterruptedError:
+            continue
+
+
+def _kill_adopted_handkey_children():
+    children = Path(f"/proc/self/task/{os.getpid()}/children").read_text().split()
+    for child in children:
+        try:
+            os.kill(int(child), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+def _capture_handkey_group(stage: dict) -> dict:
+    """Fixed ordinary capture, called only in an isolated child subreaper.
+
+    The supervisor owns only this operation's tree. Linux __WALL includes
+    non-SIGCHLD clone children in the final ECHILD observation. Per-process
+    inherited rlimits do not impose aggregate CPU or memory limits.
+    """
+    started = time.monotonic()
+    streams = selectors.DefaultSelector()
+    outputs = {}
+    counts = {"stdout": 0, "stderr": 0}
+    process = None
+    status = usage = None
+    reason = None
+    killed = False
+    drained = False
+    adopted = []
+    wait_all = os.WNOHANG | 0x40000000  # Linux __WALL
+    try:
+        # Refuse output ownership problems before launching any verifier.
+        for name in counts:
+            outputs[name] = open(stage[name], "xb")
+        process = subprocess.Popen(stage["argv"], cwd=stage["cwd"],
+                                   env=stage["env"], stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   shell=False, preexec_fn=_handkey_limits)
+        _write_handkey_json(Path(stage["cwd"]) / "launched.json", {
+            "pid": process.pid, "processGroup": process.pid,
+            "supervisorPid": os.getpid()})
+        for name in counts:
+            pipe = getattr(process, name)
+            os.set_blocking(pipe.fileno(), False)
+            streams.register(pipe, selectors.EVENT_READ, name)
+        while status is None or streams.get_map():
+            if reason is None and time.monotonic() - started >= HANDKEY_PROFILE["wallSeconds"]:
+                reason = "wall-timeout"
+            if reason is not None and not killed:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                killed = True
+            if status is None:
+                waited, raw_status, ru = _wait4_retry(process.pid, wait_all)
+                if waited:
+                    status, usage = raw_status, ru
+                    process.returncode = os.waitstatus_to_exitcode(status)
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+            if status is not None:
+                _kill_adopted_handkey_children()
+            for key, _ in streams.select(0.02):
+                chunk = os.read(key.fileobj.fileno(), 65536)
+                if not chunk:
+                    streams.unregister(key.fileobj)
+                    key.fileobj.close()
+                    continue
+                name = key.data
+                remaining = HANDKEY_PROFILE["streamBytes"] - counts[name]
+                outputs[name].write(chunk[:max(0, remaining)])
+                counts[name] += len(chunk)
+                if counts[name] > HANDKEY_PROFILE["streamBytes"]:
+                    reason = "stream-limit"
+            if time.monotonic() - started > HANDKEY_PROFILE["wallSeconds"] + 2:
+                reason = reason or "unresolved-descendant-streams"
+                break
+        drain_deadline = min(started + HANDKEY_PROFILE["wallSeconds"] + 2,
+                             time.monotonic() + 1)
+        while status is not None and time.monotonic() < drain_deadline:
+            try:
+                pid, child_status, child_usage = _wait4_retry(-1, wait_all)
+            except ChildProcessError:
+                drained = True
+                break
+            if pid:
+                adopted.append({"pid": pid, "returncode": os.waitstatus_to_exitcode(child_status),
+                                "userSeconds": child_usage.ru_utime,
+                                "systemSeconds": child_usage.ru_stime,
+                                "maxRssKiB": child_usage.ru_maxrss})
+                continue
+            _kill_adopted_handkey_children()
+            time.sleep(0.01)
+        group_absent = False
+        try:
+            os.killpg(process.pid, 0)
+        except ProcessLookupError:
+            group_absent = True
+        cleanup = "complete" if drained and group_absent else "unknown"
+        return {"returncode": process.returncode, "reason": reason,
+                "pid": process.pid, "processGroup": process.pid,
+                "groupAbsentObserved": group_absent,
+                "subreaperDrainECHILD": drained, "adoptedChildren": adopted,
+                "descendantsContained": drained, "cleanup": cleanup,
+                "wallSeconds": time.monotonic() - started,
+                "usage": None if usage is None else {
+                    "userSeconds": usage.ru_utime, "systemSeconds": usage.ru_stime,
+                    "maxRssKiB": usage.ru_maxrss},
+                "streamBytesObserved": counts,
+                "usageScope": "direct child wait4; adopted rows may include descendant accounting, never summed",
+                "limitScope": "per-process rlimits inherited by descendants; no aggregate CPU/memory limit",
+                "supervisorOverheadUsage": None}
+    except BaseException as exc:
+        identity = "not launched" if process is None else f"pid={process.pid} pgid={process.pid}"
+        raise StageUnknown(f"capture failure ({identity}): {type(exc).__name__}: {exc}") from exc
+    finally:
+        # Any I/O/controller failure still attempts to stop this owned tree;
+        # only the normal observed drain above may certify cleanup complete.
+        if process is not None and not drained:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            stop = time.monotonic() + 1
+            while time.monotonic() < stop:
+                try:
+                    _kill_adopted_handkey_children()
+                    pid, _, _ = _wait4_retry(-1, wait_all)
+                except ChildProcessError:
+                    break
+                if not pid:
+                    time.sleep(0.01)
+        for key in list(streams.get_map().values()):
+            key.fileobj.close()
+        streams.close()
+        if process is not None:
+            for name in counts:
+                pipe = getattr(process, name)
+                if pipe is not None:
+                    pipe.close()
+        for stream in outputs.values():
+            try:
+                stream.flush()
+                os.fsync(stream.fileno())
+            finally:
+                stream.close()
+
+
+def _enable_handkey_subreaper():
+    # Linux PR_SET_CHILD_SUBREAPER. Never called in the root/controller.
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(36, 1, 0, 0, 0) != 0:
+        raise OSError(ctypes.get_errno(), "PR_SET_CHILD_SUBREAPER failed")
+
+
+def _capture_handkey(stage: dict) -> dict:
+    """Run the fixed capture in a fresh, isolated child subreaper.
+
+    The supervisor owns no unrelated children. Only its kernel ECHILD after
+    reaping the direct child and every adopted descendant can prove cleanup.
+    Failure before prctl never launches the verifier. Parent deadline failure
+    remains unknown, with the supervisor identity retained for reconciliation.
+    """
+    receipt = Path(stage["cwd"]) / "supervisor.json"
+    supervisor = os.fork()
+    if supervisor == 0:
+        try:
+            _enable_handkey_subreaper()
+            value = _capture_handkey_group(stage)
+        except BaseException as exc:
+            value = {"returncode": None, "cleanup": "unknown",
+                     "reason": f"supervisor failure: {type(exc).__name__}: {exc}",
+                     "launchStatus": "unknown; supervisor failed"}
+            launch = Path(stage["cwd"]) / "launched.json"
+            try:
+                value["launchIdentity"] = _load_json_file(str(launch), "launch identity")
+            except Exception:
+                value["launchIdentity"] = None
+        try:
+            _write_handkey_json(receipt, value)
+        finally:
+            os._exit(0)
+    deadline = time.monotonic() + HANDKEY_PROFILE["wallSeconds"] + 4
+    while time.monotonic() < deadline:
+        pid, status = os.waitpid(supervisor, os.WNOHANG)
+        if pid:
+            if os.waitstatus_to_exitcode(status) != 0:
+                raise StageUnknown(f"handkey supervisor {supervisor} failed")
+            observed = _load_json_file(str(receipt), "supervisor result")
+            return {**observed, "supervisorPid": supervisor,
+                    "supervisorReaped": True}
+        time.sleep(0.01)
+    # Do not turn supervisor timeout into a fictitious cleanup success.
+    raise StageUnknown(f"handkey supervisor {supervisor} termination/descendants unknown")
+
+
+def _reserve_handkey_attempt(task, history_path):
+    """Atomically reserve one attempt against the complete history journal.
+
+    A durable reservation survives deletion of the caller's output directory.
+    Prior attempts must be present with their exact saved Result in supplied
+    history; common readiness retains its original reconciliation/debt guards.
+    An incomplete/crashed reservation blocks until explicitly recovered.
+    """
+    history = Path(_abs_norm(history_path, "history"))
+    if history.parent.resolve() != history.parent:
+        raise Blocked("handkey history parent must be a real directory")
+    reservations = history.parent / (history.name + ".attempts")
+    reservations.mkdir(exist_ok=True)
+    _fsync_dir(history.parent)
+    if reservations.is_symlink() or not reservations.is_dir():
+        raise Blocked("history reservation namespace is not a real directory")
+    lock_fd = os.open(reservations / "LOCK", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        prior_results = task["history_results"]
+        token = _digest({"task": task["id"], "attempt": task["attempt"]})
+        reservation = reservations / token
+        if reservation.exists():
+            raise Blocked("task attempt already reserved; reconcile original, no retry")
+        entries = list(reservations.iterdir())
+        if len(entries) > 4097:
+            raise Blocked("history reservation journal exceeds bounded inspection")
+        for sibling in entries:
+            if sibling.name == "LOCK":
+                continue
+            if sibling.is_symlink() or not sibling.is_dir() or not HEX.fullmatch(sibling.name):
+                raise Blocked("unrecognized history reservation entry")
+            try:
+                original = _load_json_file(str(sibling / "reservation.json"), "prior reservation")
+                if original["task"] != task["id"]:
+                    continue
+                saved = delivery.load_result(_load_json_file(
+                    str(sibling / "history-result.json"), "prior attempt result"))
+                if not any(reconciliation.result_digest(r) == reconciliation.result_digest(saved)
+                           for r in prior_results):
+                    raise Blocked("authoritative history omitted or changed a reserved original attempt")
+            except (KeyError, BadInput, CollectError, delivery.SchemaError) as exc:
+                raise Blocked("prior reservation incomplete; reconcile original attempt") from exc
+        reservation.mkdir()
+        _write_handkey_json(reservation / "reservation.json", {
+            "task": task["id"], "attempt": task["attempt"],
+            "fingerprint": task["fingerprint"], "history": str(history)})
+        _fsync_dir(reservations)
+        return reservation
+    finally:
+        os.close(lock_fd)
+
+
+def _run_handkey_once(task, selection, plan_path, selection_path, attempt_dir,
+                      history_path, reconciliations_path):
+    attempt = Path(_abs_norm(attempt_dir, "attempt"))
+    if attempt.parent != Path(selection["outputRootPath"]):
+        raise Blocked("handkey attempt must be a direct child of the identity-bound output root")
+    reservation = _reserve_handkey_attempt(task, history_path)
+    try:
+        attempt.mkdir(exist_ok=False)
+        _fsync_dir(attempt.parent)
+    except FileExistsError as exc:
+        raise Blocked("attempt directory already consumed; no retry") from exc
+    argv = [selection["tool"]["path"], "verify-pis"] + [
+        selection[k]["path"] for k in ("key", "proof", "statement")]
+    stage = {"stage": "handkey-verify-pis", "argv": argv,
+             "cwd": str(attempt), "env": {"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
+             "stdout": str(attempt / "stdout"), "stderr": str(attempt / "stderr"),
+             "profile": HANDKEY_PROFILE}
+    preexec = {"schema": "doctorwatson.handkey-preexec/1",
+               "task": task["id"], "attempt": task["attempt"],
+               "adapter": task["adapter"], "fingerprint": task["fingerprint"],
+               "readinessIdentity": task["readiness_identity"],
+               "selection": selection, "stage": stage,
+               "scope": "ordinary local verification protocol; no native resource grant"}
+    preexec_ref = _write_handkey_json(attempt / "PREEXEC.json", preexec)
+    _write_handkey_json(reservation / "PREEXEC.json", {"preexec": preexec_ref})
+    task, selection = _recheck_at_use(task, selection, plan_path, selection_path,
+                                     history_path, reconciliations_path)
+    base = {**preexec, "schema": "doctorwatson.handkey-execution-result/1",
+            "preexec": preexec_ref, "consumerResult": None,
+            "cleanupState": "unknown"}
+    result = None
+    observed = None
+    try:
+        observed = _capture_handkey(stage)
+        base["cleanupState"] = observed["cleanup"]
+        _write_handkey_json(attempt / "resources.json", observed)
+        _write_handkey_json(attempt / "cleanup.json", {
+            "schema": "doctorwatson.cleanup-observation/1", "task": task["id"],
+            "attempt": task["attempt"], "fingerprint": task["fingerprint"],
+            "cleanup": observed["cleanup"], "restoration": observed["cleanup"]})
+        raw = [{"role": name, "path": stage[name]} for name in ("stdout", "stderr")]
+        raw += [{"role": "resource-receipt", "path": str(attempt / "cleanup.json")}]
+        raw += [{"role": name, "path": selection[name]["path"]}
+                for name in ("key", "proof", "statement")]
+        record = {**base, "observation": observed, "rawOutputs": raw,
+                  "terminal": "unknown-submission", "unknownScope": "local-process"}
+        raw_ref = _write_handkey_json(attempt / "execution.json", record)
+        rc = observed["returncode"]
+        # Decode actual full output only after the supervisor proves cleanup;
+        # no unknown containment record can become a successful consumer Result.
+        result = collect_result(task, raw, rc, attempt, raw_ref) if rc is not None \
+            and observed["reason"] is None and observed["cleanup"] == "complete" else None
+        if observed["cleanup"] != "complete":
+            (attempt / "consumer-result.json").unlink(missing_ok=True)
+            (attempt / "collector.json").unlink(missing_ok=True)
+            record["collectorDetail"] = "descendant cleanup not proven by supervisor drain"
+            code = EXIT_UNKNOWN
+        elif result is not None:
+            record.update(terminal=result["terminal"], unknownScope=None,
+                          consumerResult=_file_ref("consumer-result", str(attempt / "consumer-result.json")))
+            code = EXIT_OK if result["terminal"] == "succeeded" else EXIT_FAILED
+        else:
+            record.update(terminal="failed", unknownScope=None,
+                          collectorDetail=observed["reason"] or "verifier result unavailable")
+            code = EXIT_FAILED
+    except CollectError as exc:
+        record = {**record, "terminal": "failed", "unknownScope": None, "collectorDetail": str(exc)}
+        code = EXIT_FAILED
+    except Exception as exc:
+        record = {**base, "terminal": "unknown-submission", "unknownScope": "local-process",
+                  "collectorDetail": f"capture/record failure: {type(exc).__name__}: {exc}"}
+        code = EXIT_UNKNOWN
+    # Save the exact original history Result separately from mutable plan
+    # selection; later attempts must retain it, including all uncertainty/debt.
+    if result is None or record["terminal"] == "unknown-submission":
+        returncode = None if observed is None else observed.get("returncode")
+        _, exit_code, child_signal = _terminal_fields(returncode) if returncode is not None else (None, None, None)
+        artifacts = []
+        try:
+            artifacts.append(_file_ref("resource-receipt", str(attempt / "cleanup.json")))
+        except CollectError:
+            pass  # No receipt was observed; existing cleanup-debt rules apply.
+        result = _result_dict(task, record["terminal"], exit_code, child_signal,
+                              record["cleanupState"], "not-applicable", artifacts)
+    try:
+        history_ref = _write_handkey_json(reservation / "history-result.json", result)
+        record["historyResult"] = history_ref
+        _write_handkey_json(attempt / "result-final.json", record)
+        _write_handkey_json(reservation / "result-final.json", record)
+    except OSError as exc:
+        # The reservation and PREEXEC remain consumed. Preserve the actual
+        # process/cleanup observations, but never report durable completion
+        # when a terminal record could not be persisted. No retry is selected.
+        record = {**record, "observedCollectorTerminal": record["terminal"],
+                  "observedConsumerResult": record.get("consumerResult"),
+                  "terminal": "unknown-submission", "unknownScope": "local-record",
+                  "consumerResult": None,
+                  "persistenceDetail": f"terminal record persistence failed: {type(exc).__name__}: {exc}"}
+        for path in (attempt / "result-persistence-unknown.json",
+                     reservation / "result-persistence-unknown.json"):
+            try:
+                _write_handkey_json(path, record)
+            except OSError:
+                pass
+        return EXIT_UNKNOWN, record
+    return code, record
+
+
 def run_selected_once(task_id: str, plan_path: str, selection_path: str,
                       attempt_dir: str,
                       runner: Callable[[dict], int] | None = None,
@@ -2463,6 +2913,8 @@ def run_selected_once(task_id: str, plan_path: str, selection_path: str,
     monotonic/RUSAGE brackets through cleanup and states the excluded
     tails (time's own output write, sudo/orphan CPU unknown).
     """
+    if history_path is None:
+        raise BadInput("execution requires authoritative complete --history")
     if runner is None:
         runner = _default_runner
     if reconciliations_path is not None and history_path is None:
@@ -2474,6 +2926,9 @@ def run_selected_once(task_id: str, plan_path: str, selection_path: str,
     task, selection = _recheck_at_use(task, selection, plan_path,
                                       selection_path, history_path,
                                       reconciliations_path)
+    if task["adapter"] == "handkey-verify-pis":
+        return _run_handkey_once(task, selection, plan_path, selection_path,
+                                 attempt_dir, history_path, reconciliations_path)
     outer = selection["outer"]
     _require_existing_provisioned_host(selection)
     for stale, what in ((outer["retainedDir"], "retainedDir"),
@@ -2821,7 +3276,7 @@ def run_selected_once(task_id: str, plan_path: str, selection_path: str,
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: run_selected.py --execute TASK --plan PATH "
-             "--selection PATH --attempt DIR [--history PATH] "
+             "--selection PATH --attempt DIR --history PATH "
              "[--reconciliations PATH]")
     try:
         if len(argv) < 8 or argv[0] != "--execute" or argv[2] != "--plan" \

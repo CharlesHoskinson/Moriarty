@@ -372,7 +372,9 @@ class DeletedSentinelTests(unittest.TestCase):
 
         code, _ = rs.run_selected_once(
             "build", str(case.plan_path), str(case.sel_path),
-            str(case.root / "att"), runner=unknown_runner)
+            str(case.root / "att"), runner=unknown_runner,
+            history_path=str(fx.write(case.root / "empty-history.json", fx.encoded(
+                {"schema": "doctorwatson.delivery-history/1", "results": []}))))
         self.assertEqual(code, rs.EXIT_UNKNOWN)
         shutil.rmtree(case.root / "att")  # sentinel deleted by operator
         calls2 = []
