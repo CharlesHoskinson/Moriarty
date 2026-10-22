@@ -437,7 +437,8 @@ def assess_reconciled(plan, results, reconciliations):
     is required before promotion. Current-attempt unknowns are not
     rewritten into successes.
     """
-    report = delivery.assess(plan, results)
+    reads = delivery._AssessmentReads()
+    report = delivery._assess(plan, results, reads)
     obligations = {}
     for row in report["tasks"]:
         task = plan.by_id[row["id"]]
@@ -448,7 +449,8 @@ def assess_reconciled(plan, results, reconciliations):
                 obligations[(result.task, result.attempt)] = \
                     delivery.attempt_obligations(
                         task, result,
-                        currentness.get(result.attempt, "stale-attempt"))
+                        currentness.get(result.attempt, "stale-attempt"),
+                        _reader=reads.read)
     applicable = {}
     for rec in reconciliations:
         try:
@@ -518,7 +520,7 @@ def assess_reconciled(plan, results, reconciliations):
         if row["selection_candidate"]:
             ready.append(row["id"])
     report["ready_for_root_selection"] = ready
-    return report
+    return delivery.apply_capabilities(report)
 
 
 def _read_pinned(path, what):
@@ -643,7 +645,8 @@ def main(argv=None):
         report = {k: report[k] for k in
                   ("schema", "records_valid", "execution_authority",
                    "producer_authenticity", "ready_for_root_selection",
-                   "readiness_identity")}
+                   "ready_for_dispatch", "dispatch_preflight",
+                   "dispatch_readiness_scope", "readiness_identity")}
     print(json.dumps(report, sort_keys=True, indent=2, allow_nan=False))
     return 0  # inspectable records only; never execution approval
 

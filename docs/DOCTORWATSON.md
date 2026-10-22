@@ -341,3 +341,49 @@ wall limit and 256 MiB Node heap. Failure stops the branch. This route skips nor
 QA and the older `--design` model prefix, including its 10,000-sample run. These
 finite design tests do not establish native execution, proof/ledger acceptance
 or a general runtime refinement; `--design` retains its separate existing scope.
+
+## Cycle finalization — October 22, 2026
+
+Every implementation/review/integration cycle ends with an explicit cleanup
+phase. Root refreshes the affected Graphify context on the actual current source,
+records the outcome and lessons in wiki-llm, then retires redundant inactive
+branches and worktrees. A plan is not completed cleanup. Use the
+[delivery reference](DOCTORWATSON-DELIVERY.md) and
+[cycle-finalization requirements](../openspec/changes/doctorwatson-cycle-finalization/specs/cycle-finalization/spec.md).
+
+The existing `cleanup.py` route validates the supplied graph receipt against
+current affected-source and graph artifact hashes, appends a cycle entry once,
+and freshly inspects every explicitly selected Git candidate. It does not rebuild
+an entire graph, dispatch agents or run native work. Graphify produces the graph;
+this phase checks and records its identity. If graph refresh or wiki append fails,
+branch deletion does not start. An unresolved mutation leaves finalization
+incomplete. Unrelated product work can continue.
+
+Replace the old blanket worktree retention rule above with this narrower rule:
+protect active worktrees and user data; retire an inactive merged worktree only
+when tracked, untracked **and ignored** status is pristine. Preserve retained
+roots, open PR heads/bases and active task claims. A linked worktree alone is not
+a permanent reason to keep a finished branch. Do not force removal, discard
+unique work, run garbage collection or create archive branches as a substitute
+for integration. Give every retention an owner, next action and revisit event.
+Remote branches require a fresh remote inventory and exact-head deletion lease;
+the local helper does not itself delete remote branches.
+
+Prevent recurrence while dispatching: context, research and review agents reuse
+the shared immutable source cut and do not create a branch or worktree. Give a
+writing lane an owned worktree only when isolation is needed, record its owner
+and retirement event, and reuse the integration lane. Keep disposable test/build
+outputs in the declared runtime or temporary directory where the consumer allows
+it. Existing ignored data needs an explicit preservation/disposal decision; never
+erase it simply to make a worktree removable. More workers do not require one
+permanent branch per worker.
+
+For local branch deletion the helper first proves the exact candidate is an
+ancestor of a retained root, then uses a Git ref transaction to verify retained
+root tips and delete only the expected candidate tip. This avoids `git branch -d`
+choosing a stale upstream as its merge test and avoids deleting a ref that moved
+after inspection. It is merged-only deletion, with a fresh worktree check.
+Concurrent uncooperative filesystem/checkout changes remain outside an atomic Git
+ref transaction; agents must respect active task ownership. Active bus claims,
+if introduced, supplement that ownership; silence or offline presence is not
+proof that a worktree is disposable.
