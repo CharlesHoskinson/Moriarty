@@ -116,3 +116,6 @@ Sol factual navigation: [receipt-gating engineering erratum](UPDATE-026-RECEIPT-
 
 
 - [Source07 dated engineering receipt cut](UPDATE-026-POST-AUTHOR-STATUS.md): scoped accounting tests, operational cleanup disposition, wallet B2 and finite formal/transport results. Historical prebuild cut; no site launch or acceptance.
+
+
+- Source09: current CLI, scoped child verify/tamper and parent-unrun boundary: [dated engineering status](UPDATE-026-POST-AUTHOR-STATUS.md). [src-5db5466cc3f32308a244](../../../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json)

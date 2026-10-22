@@ -102,3 +102,6 @@ tags: [moriarty, consolidation, recursion]
 ### 2026-10-21 — source07 historical receipt distinction
 
 [Source07 separate engineering cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), src-b61a963c72b8a8e55ce7, is dated prebuild history, not current execution status. It separates ordinary accounting checks, operational cleanup discharge, wallet B2 and finite counterparts; site remains unpublished until full Sherlock completion.
+
+
+- Source09: current CLI, scoped child verify/tamper and parent-unrun boundary: [separate engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-5db5466cc3f32308a244](../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json)
