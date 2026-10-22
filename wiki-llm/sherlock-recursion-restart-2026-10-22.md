@@ -1,0 +1,9 @@
+# Sherlock recursion restart — 2026-10-22
+
+The user authorized beginning the rewritten loop after the workflow audit. DoctorWatson PR404 and ProjectFenrir AgentBus PR84 are merged. The first cycle resumes Source44 source/caller review, independent raw-accumulator preservation checks, and dedicated Clean, Quint and K work. It also prepares read-only wallet uncertainty reconciliation and exact-intent synthetic-rollup lifting. These are implementation tasks; no new native proof or stagenet deployment is claimed.
+
+The next output is a genuine recursive parent proof, independently checked, followed by the existing Build9/MP2/opening-aware D and finalized stagenet route. Build9 preparation is independent of parent proof completion. The prior release build and k20 verification key are retained; the parent timeout remains a failure. Source44 is an unmeasured optimization. Current metadata inventory must be rebound honestly before the cached build; old successful build evidence does not cover changed files.
+
+Factory lessons: keep one current queue and the direct receiving API; distinguish missing keyed artifacts from missing implementation; inspect full raw structures rather than only evaluated encodings; separate compile, proving-key setup, proof and target observations. Resource holds remain historical, and prospective allocations must be explicit. No indefinite infrastructure loop, duplicate wallet resend or nested proving lock.
+
+Each meaningful iteration updates the affected graph, Diataxis corpus, DoctorWatson improvements and circuit-website design notes, then disposes safely of redundant branches using fresh inventory. The new AgentBus remains optional advisory coordination; existing services have not been restarted. The full Sherlock language/formal/financial/release scope and original requirement denominators remain unchanged.
