@@ -40,3 +40,17 @@ Native13 accounting source02 has two scoped source/resource agreements and133 or
 Wallet B2's actual same-process SDK class/address restoration and close passed in4.672590seconds; Root attributes two facade openings. This preparation used only safe Root metadata, not private wallet JSON or raw SDK streams. Current sync/NIGHT/DUST/fees remain unknown; no proof or submission is claimed. The205-record Quint transport inverse passed, then the generated frontend timed out at60seconds and operation10 remained unrun. Clean D05 passed nine focused diagnostic declarations, not the six whole Source21 contracts.
 
 These are different layers in the actual circuit build-up, not evidence of a finished native/target pipeline. The existing Moriarty Tron/PCB/Three.js concept notes and all five UPDATE026 authored strings remain byte-exact; no new Sol-authored visitor scene is added. The website WILL go live when full Sherlock is finished and is unpublished today. Benchmark measurements remain a postdeployment obligation.
+
+
+## October22 UTC — source09 separate build, child-verification and composition cut
+
+Factual engineering appendix from N1–N3/Q1/W1/G1–G2/C1–C2/K1–K2 and attributed R1; [Source09 safe capture](../../../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json). It adds no designated-author visitor copy or source/security judgment. Source08 remains a separate unapplied historical proposal.
+
+Root adopted the current normal recl9 CLI build at108.303918 seconds outer. Retained A102/A80 child proofs separately passed fresh-process reconstruction/verification on the same backend; the scoped A102 proof-byte mutation, with copied manifest digest updated, refused. These are concrete build/child/verifier stages in the circuit build-up. The recursive parent remains unrun at this cut; terminal/decider, crossgraph compatibility, authenticated source Init, full39, stagenet settlement and target benchmarks remain open. This is no independent cryptographic implementation or general tamper theorem.
+
+Source15's action API passed205 consumes/207 full-state comparisons, with external-input typechecking open and nominal semantics unbound. Wallet generation5 advanced and saved, but remains catching up/not transaction-ready. Clean22 R1 failed; its R2 repair received changes-required review and remains unrun. K16 R2 is source-approved only, uncompiled/unrun. PR390/391 merged exact scoped metadata/source; A195's nine tests remain uncompiled/unrun. Private PR78's merge is Root-attributed; no private payload is included.
+
+This grounds the existing Moriarty Tron/PCB/Three.js circuit timeline; it adds no new scene or implemented web asset. The five UPDATE026 creative fields and all earlier notes remain byte-exact. The website WILL go live when full Sherlock is finished and is unpublished today.
+
+
+Later dated receipt supplement, read 2026-10-22T00:53:28.316037+00:00: Source07 saved generation6 and closed after an accepted exit2 diagnostic in11.053556 seconds. Shielded applied8267 with gap163226; DUST applied646 with gap171426; unshielded was strict, with47emissions per component. Transaction readiness remains false and fee sufficiency unassessed. This advances the Source06 generation5 history without replacing it. The exact private PR78 receipt now confirms merge19373127e3630aabfd16e29907a04d442e2928d6/three additions; its scope remains the existing six adopted logical proofs, with no new native or target result. Only safe metadata was read.

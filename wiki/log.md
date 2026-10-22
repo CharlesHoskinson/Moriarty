@@ -1350,3 +1350,6 @@ Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas
 ### 2026-10-21 — source07 dated engineering intake
 
 Append the exact reviewed [atlas engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), sourced by src-b61a963c72b8a8e55ce7. The historical prebuild cut and all acceptance limits remain unchanged. No creative fields or later outcomes are rewritten.
+
+
+- Source09: current CLI, scoped child verify/tamper and parent-unrun boundary: [separate engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-5db5466cc3f32308a244](../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json)
