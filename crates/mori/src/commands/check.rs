@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Instant;
 
-use mori_diagnostics::{MoriDiagnostic, NamedSource};
+use mori_diagnostics::{MoriDiagnostic, NamedUtf8Source};
 
 use crate::json::CheckReport;
 use crate::shell::Shell;
@@ -58,7 +58,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
                         let diagnostic = MoriDiagnostic::error(error.message.clone())
                             .with_code(error.code.clone())
                             .with_label(mori_span::Span::empty(offset).primary_label("here"));
-                        shell.report(&diagnostic.with_source_code(NamedSource::new(
+                        shell.report(&diagnostic.with_source_code(NamedUtf8Source::new(
                             crate::display::text(&name),
                             source.clone(),
                         )));
@@ -137,7 +137,7 @@ fn finish(
     if !json {
         let count = diagnostics.len();
         for diagnostic in diagnostics {
-            shell.report(&diagnostic.with_source_code(NamedSource::new(
+            shell.report(&diagnostic.with_source_code(NamedUtf8Source::new(
                 crate::display::text(name),
                 source.to_owned(),
             )));
