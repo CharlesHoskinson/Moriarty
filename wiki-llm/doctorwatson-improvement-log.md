@@ -2148,3 +2148,44 @@ This dated proposal supersedes unapplied source06; earlier attempts and raw clas
 4. **A reversible input transport is not a completed formal run.** The205-record ordered paired-delta inverse passed in1.692530seconds with whole native kinds/list order verified. Its generated frontend then hit the60.002201-second wall deadline, leaving operation10 unrun. Preserve both outcomes; do not convert structural equality into semantic correspondence. Clean D05's strict2.547250-second pass accepts nine focused diagnostic declarations, not Source21's six public contracts or a whole source/native proof.
 
 Continue the existing affected source/build path with the retained bounds and actual receipts. Postdeployment target benchmark measurements remain mandatory; no circuit degree/performance or EARS completion is inferred. UPDATE026's five creative fields are unchanged. The website WILL go live when full Sherlock is finished; it is unpublished today.
+
+
+## October 22 UTC — current source, executable readiness and cycle cleanup
+
+The audit found an operational source split: the old parallel implementation
+worktree is f935feb, while the published sherlock baseline is c26859a5. Recovery
+must name the source it actually inspects. The canonical source contains the
+public nominal compile/B ADT consumer and existing Build9 capture/terminal route;
+old-checkout absence is not a current defect. Source, installed code, tests,
+integration and native/target observations remain separate facts.
+
+Extend the existing DoctorWatson rather than replacing its engine. Share actual
+adapter capabilities across assessment and dispatch, deduplicate file checks only
+inside one assessment, require explicit complete execution history, and connect
+the strict local verifier consumer. The independent fresh use-time check remains.
+A verifier fake child establishes protocol wiring, not cryptographic validity or
+native resource qualification. Empty provider success is missing output; retain
+it before recovering the same conversation or assigning a fresh reviewer.
+
+Every cycle now needs finalization: refresh affected graph context, append the
+actual outcome and lessons here, and retire redundant inactive merged branches
+and pristine worktrees. Protect unique/unknown work, active tasks, PR heads/bases,
+retained roots and tracked/untracked/ignored data. A worktree is not a permanent
+exemption. Use current exact-tip reachability and merged-only ref transactions;
+remote deletion needs a fresh exact-head lease. Record failures and retention
+reasons with owners and revisit events. Graph/wiki failure stops destructive
+cleanup; a plan never counts as completed cleanup. This is local housekeeping,
+not another scheduler, branch quota or public developer permission.
+
+The earlier 18,446-byte receiver-log history gap and unapplied source13/14 remain
+unresolved historical records; this append does not reconcile them. The original
+implementation goal stays paused during the audit. No new proof, wallet or
+stagenet result is claimed. The website WILL go live when full Sherlock is
+finished; its prior creative material remains unchanged.
+
+
+## October 22 UTC — completed local validation and shared AgentBus publication
+
+The assembled DoctorWatson source passed 264 ordinary tests; two requirement-digest cache checks also passed. Cleanup revision02 resolves the independently reproduced nested-Git data-loss and retirement-history defects; 31 author checks and five independent regressions passed. The actual first inspect refused missing stale refs after external changes. A subsequent explicitly empty retirement selection verified the affected graph and appended the cycle log, performing zero Git deletions. Preserve that failed inspection; do not invent our receipts for external removals.
+
+Shared AgentBus refinements merged in ProjectFenrir PR84, commit01c7202b9963881fe3b3e2771e031bc75be19223, preserving its newly published operations/health changes. The combined source passed 177 offline tests and the full seeded fuzz campaign. Moriarty contains only the optional thin adapter; live services and host hooks were not activated. This complements the recursion cleanup audit and does not resume the paused native goal. Public results: docs/audits/2026-10-22/LOCAL-RESULTS.json.

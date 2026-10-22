@@ -6,6 +6,15 @@ This directory preserves architecture research, design alternatives, dated deliv
 narratives and their evidence. It does not replace the adopted language, the
 canonical `wiki/` provenance ledger or the [delivery roadmap](../ROADMAP.md).
 
+## Current workflow reading — October 22, 2026
+
+Start with the [DoctorWatson workflow audit](doctorwatson-workflow-review-2026-10-22.md)
+and [cycle cleanup contract](../docs/DOCTORWATSON.md#cycle-finalization--october-22-2026).
+They distinguish canonical published source from the old implementation worktree,
+source delivery from observed checks, and the remaining recursive stagenet and
+synthetic-rollup evidence. The October 14 baseline below is dated history.
+
+
 ## Current reading — October 14, 2026
 
 The reconciliation baseline is merged [PR50](https://github.com/CharlesHoskinson/Moriarty/pull/50),

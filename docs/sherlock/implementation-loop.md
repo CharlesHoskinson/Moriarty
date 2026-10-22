@@ -1,5 +1,41 @@
 # Sherlock implementation loop contract
 
+
+## Current audit and cycle cleanup — October 22, 2026
+
+The user paused native implementation for the workflow review. Keep the original
+Sherlock goal paused during this audit; no source, graph or factory check resumes
+proof, wallet or target work. The full desired exit remains a genuine recursive
+proof accepted and fully read back on Midnight stagenet, followed by a benchmarked
+Fenrir synthetic rollup. Recover the [audit findings and next calls](../../wiki-llm/doctorwatson-workflow-review-2026-10-22.md).
+
+After each source/review/integration cycle: (1) update the affected graph from the
+current source cut, (2) append the actual result and lessons to wiki-llm, (3)
+inspect and safely retire redundant branches and inactive merged pristine
+worktrees, and (4) record exact deleted/retained/blocked outcomes. Finalization
+is mandatory cycle housekeeping, not a prerequisite for unrelated product
+progress. A failed graph/wiki step prevents deletion; a failed or uncertain
+cleanup cannot be reported complete. Preserve all historical results and
+acceptance obligations. Use the [cleanup contract](../DOCTORWATSON.md#cycle-finalization--october-22-2026)
+and [delivery routes](../DOCTORWATSON-DELIVERY.md), with local CI only.
+
+Use published current source rather than an old checkout's missing-feature
+claims: the audit base is `c26859a5cb0288e6b86da7dcca8b260654a0a39b`;
+the old parallel implementation worktree is at `f935febac3f9158c3ce02812ac3b3c4adb986714`.
+Source43 already built and produced a k20 verifying key; a genuine parent proof
+remains absent after allocation failure and timeout. Preserve those observations.
+Source44's phase telemetry/original-accumulator reuse is candidate source, not a
+measured optimization. Build9 capture and the opening-aware terminal route
+already exist; their keyed outputs and actual execution are the missing inputs.
+
+A task is dispatch-ready only when its dependencies and both actual collector
+and executor exist. Require complete raw execution history explicitly; inspect
+and actual use recheck current input identities separately. Provider success
+with empty output is not a review. Prefer integrating ready reviewed source
+before opening more research; reserve the heavy proving lock at exactly one
+layer to avoid nested-lock deadlock. Keep the Clean, Quint, K and handwritten
+lanes and circuit website design log in the existing continuation.
+
 ## Current user override — deployment first, October 21, 2026
 
 This user-directed operational priority supersedes earlier scheduling statements

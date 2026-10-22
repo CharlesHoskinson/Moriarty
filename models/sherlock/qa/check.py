@@ -915,13 +915,15 @@ def requirement_evidence_report(repo, path):
         key = str(target)
         if key not in cache:
             try:
-                cache[key] = target.read_bytes()
+                raw = target.read_bytes()
+                cache[key] = (raw, digest(raw))
             except OSError as error:
                 cache[key] = error
-        raw = cache[key]
-        if isinstance(raw, OSError):
+        cached = cache[key]
+        if isinstance(cached, OSError):
             issue(findings, 'missing', location, 'declared file cannot be read', path=ref['path'])
             return None
+        raw, actual = cached
         if any(key in ref for key in ('startLine', 'endLine')):
             start = ref.get('startLine', 1)
             end = ref.get('endLine', start)
@@ -930,7 +932,6 @@ def requirement_evidence_report(repo, path):
                 issue(findings, 'invalid', location, 'declared line span is outside the file', path=ref['path'])
         if 'claim' in ref and type(ref['claim']) is not str:
             issue(findings, 'invalid', location, 'reference claim must be a string', path=ref['path'])
-        actual = digest(raw)
         if actual != ref['sha256']:
             issue(findings, 'stale', location, 'declared file bytes changed', path=ref['path'],
                   expected_sha256=ref['sha256'], actual_sha256=actual)
