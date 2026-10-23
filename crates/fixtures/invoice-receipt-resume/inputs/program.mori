@@ -1,0 +1,22 @@
+language "moriarty/2";
+agreement InvoiceReceipt {
+    state principal: UInt = 0;
+    asset CREDIT = {
+        network: "local", issuer: "receipt-issuer", reference: "credit", scale: 3
+    };
+    action pay(quantity: UInt) {
+        let owed = quantity + 3;
+        liability("paid-invoice", CREDIT, "alice", "merchant", owed);
+        transfer(CREDIT, "alice", "merchant", owed);
+        fee(CREDIT, "alice", "treasury", 2);
+        discharge("paid-invoice", owed);
+        next principal = quantity;
+        await receipt(accepted: Bool) when accepted;
+        emit "present-zero"(liability_present("paid-invoice"));
+        emit "absent"(liability_present("later-credit"));
+        emit "closed-amount"(liability_amount("paid-invoice"));
+    }
+    action open_credit() {
+        liability("later-credit", CREDIT, "merchant", "alice", 5);
+    }
+}

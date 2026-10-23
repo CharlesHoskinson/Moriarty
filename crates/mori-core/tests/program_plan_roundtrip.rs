@@ -26,8 +26,14 @@ agreement InvoiceReceipt {
     }
 }"#;
 
+const EXPECTED_WAITING_PREFIX: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../fixtures/invoice-waiting-prefix/expected-prefix.json"
+));
+
 #[test]
 fn invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values() {
+    let expected_prefix: serde_json::Value = serde_json::from_str(EXPECTED_WAITING_PREFIX).unwrap();
     let asset = json!({
         "network": "local", "issuer": "receipt-issuer", "reference": "credit", "scale": 3
     });
@@ -144,11 +150,29 @@ fn invoice_program_plan_and_zero_duty_continuation_roundtrip_as_complete_values(
     assert_eq!(json::parse(&program_text).unwrap(), expected_program);
     assert_eq!(json::parse(&plan_text).unwrap(), expected_plan);
 
-    let StageOutcome::Waiting { continuation, .. } =
-        stage::start(&program, "pay", scenario, Some(UInt(23))).unwrap()
+    let StageOutcome::Waiting {
+        advanced,
+        segment,
+        continuation,
+        attempted,
+        residual,
+    } = stage::start(&program, "pay", scenario, Some(UInt(23))).unwrap()
     else {
         panic!("invoice prefix must wait for its receipt");
     };
+    assert_eq!(advanced, expected_prefix["advanced"].as_bool().unwrap());
+    assert_eq!(
+        serde_json::to_value(attempted).unwrap(),
+        expected_prefix["attempted"]
+    );
+    assert_eq!(
+        serde_json::to_value(&residual).unwrap(),
+        expected_prefix["residual"]
+    );
+    assert_eq!(
+        serde_json::to_value(segment.expect("start must publish its complete prefix")).unwrap(),
+        expected_prefix["segment"]
+    );
     let continuation_text = json::export(&continuation).unwrap();
     let reopened = stage::decode::continuation(&continuation_text).unwrap();
     assert_eq!(
