@@ -80,3 +80,6 @@ mod reference_stream_tests;
 mod arithmetic_witness;
 #[cfg(test)]
 mod arithmetic_witness_normal_tests;
+
+// Typed Rust nominal values; source parsing/JSON wire bounds stay unchanged.
+pub mod nominal_ast_inputs;

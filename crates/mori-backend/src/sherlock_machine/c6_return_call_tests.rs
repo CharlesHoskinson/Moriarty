@@ -223,7 +223,7 @@ fn raw_range_gate_and_disabled_equality_hold_with_current_commitments() {
         let image=4+c.meta_len+c.prog_len+CTX_LANES;
         let post_image=image+c.geometry.state_total_lanes+c.meta_len+c.prog_len+CTX_LANES;
         let mut z=s.clone();z[0]=Fr::from(2u64);assert!(raw(&c,z).is_err());
-        let mut z=s.clone();z[post_image+L_HELPER_VISITS]+=Fr::from(1u64);assert!(raw(&c,z).is_err());
+        let mut z=s.clone();z[post_image+L_HELPER_VISITS] = z[post_image+L_HELPER_VISITS] + Fr::from(1u64);assert!(raw(&c,z).is_err());
         let high=Fr::from(u128::MAX)+Fr::from(1u64);
         let mut z=s.clone();z[image+L_CONSUMED_WORK]=high;z[post_image+L_CONSUMED_WORK]=high;
         assert!(raw(&c,z).is_err(),"disabled does not waive raw unsigned128 domain");
@@ -240,7 +240,7 @@ fn data_program_context_and_schema_mutations_cannot_hide_behind_current_cc() {
         for at in [2,3,4+c.meta_len,4+c.meta_len+c.prog_len,
             post_base+c.meta_len,post_base+c.meta_len+c.prog_len,
             post_base+c.meta_len+c.prog_len+CTX_LANES+c.geometry.image_total_lanes+7] {
-            let mut z=s.clone();z[at]+=Fr::from(1u64);assert!(raw(&c,z).is_err());
+            let mut z=s.clone();z[at] = z[at] + Fr::from(1u64);assert!(raw(&c,z).is_err());
         }
     }
 }
