@@ -657,12 +657,9 @@ fn nominal_ctor_one_field_program(with_marker: bool) -> ExtProgram {
                     name: "Alpha".into(),
                 },
                 ctor: "MkAlpha".into(),
-                fields: vec![(
-                    "payload".into(),
-                    ExtValue::Core {
-                        value: CoreValue::UInt { n: field_val },
-                    },
-                )],
+                fields: vec![ExtValue::Core {
+                    value: CoreValue::UInt { n: field_val },
+                }],
             },
         },
     }
@@ -682,22 +679,16 @@ fn nominal_ctor_two_fields_program() -> ExtProgram {
                 },
                 ctor: "MkPair".into(),
                 fields: vec![
-                    (
-                        "first".into(),
-                        ExtValue::Core {
-                            value: CoreValue::UInt {
-                                n: i128_class::KIntC::InRange(11),
-                            },
+                    ExtValue::Core {
+                        value: CoreValue::UInt {
+                            n: i128_class::KIntC::InRange(11),
                         },
-                    ),
-                    (
-                        "second".into(),
-                        ExtValue::Core {
-                            value: CoreValue::UInt {
-                                n: i128_class::KIntC::InRange(22),
-                            },
+                    },
+                    ExtValue::Core {
+                        value: CoreValue::UInt {
+                            n: i128_class::KIntC::InRange(22),
                         },
-                    ),
+                    },
                 ],
             },
         },
@@ -1007,7 +998,7 @@ fn raw_enabled_selection_outcome_fuel_owner_site_helper_task_visit_and_oob_both_
         s[post_image_at(w, L_CONTROL + 1)] = Fr::from(0u64);
         s[pre_image_at(w, L_CONTROL + 2)] = Fr::from(0u64);
         s[post_image_at(w, L_CONTROL + 2)] = Fr::from(0u64);
-        assert_raw_rejects(w, s, "owner_site: ControlC::Return(1) at depth==0 rejected");
+        assert_raw_rejects(w, s.clone(), "owner_site: ControlC::Return(1) at depth==0 rejected");
 
         let f0 = w.source_params.geometry().frame_slot_offset(0);
         s[pre_image_at(w, L_FRAME_COUNT)] = Fr::from(1u64);
@@ -1200,7 +1191,10 @@ fn raw_field_at_slice_bounds_constant_fields_and_sc05_child_const_bound_before_p
 
         let b_p3 = bounds_with(2, 4);
         let (adm_p3, mut img_p3, _) = reach_core(b_p3, &w_spec, "raw P3 Cons", make);
-        let ObservedStep::Event(rec_p3) = owner_record(&adm_p3, &mut img_p3).expect("P3") else {
+        let ObservedStep::Event(rec_p3) = (match owner_record(&adm_p3, &mut img_p3) {
+            Ok(step) => step,
+            Err(error) => panic!("P3: {}", capture_step_error_label(&error)),
+        }) else {
             panic!("P3 event");
         };
         let wit_p3 =
@@ -1232,7 +1226,10 @@ fn raw_field_at_slice_bounds_constant_fields_and_sc05_child_const_bound_before_p
         // Now on P6 (`bounds_with(100, 1)`):
         let b_p6 = bounds_with(100, 1);
         let (adm_p6, mut img_p6, _) = reach_core(b_p6, &w_spec, "raw P6 Cons", make);
-        let ObservedStep::Event(rec_p6) = owner_record(&adm_p6, &mut img_p6).expect("P6") else {
+        let ObservedStep::Event(rec_p6) = (match owner_record(&adm_p6, &mut img_p6) {
+            Ok(step) => step,
+            Err(error) => panic!("P6: {}", capture_step_error_label(&error)),
+        }) else {
             panic!("P6 event");
         };
         let wit_p6 =
@@ -1607,7 +1604,10 @@ fn raw_p3_p6_and_tail_at_bound_dispositions_precedence_and_counters_both_modes()
     // 1. Genuine P6 witness (`bounds_with(100, 1)` on non-tail `Cons` at `cursor == 0`):
     let b_p6 = bounds_with(100, 1);
     let (adm_p6, mut img_p6, _) = reach_core(b_p6, &w_cons, "P6 Cons", make_cons);
-    let ObservedStep::Event(rec_p6) = owner_record(&adm_p6, &mut img_p6).expect("P6") else {
+    let ObservedStep::Event(rec_p6) = (match owner_record(&adm_p6, &mut img_p6) {
+        Ok(step) => step,
+        Err(error) => panic!("P6: {}", capture_step_error_label(&error)),
+    }) else {
         panic!("P6 event");
     };
     let w_p6 = witness_from_owner_record(&rec_p6, &core_cfg(b_p6), &limits()).expect("P6 witness");
@@ -1675,7 +1675,10 @@ fn raw_p3_p6_and_tail_at_bound_dispositions_precedence_and_counters_both_modes()
     // 2. P3 dominates would-be P6 (`bounds_with(2, 1)` on non-tail `Cons` at `cursor == 0`):
     let b_p3_dom = bounds_with(2, 1);
     let (adm_p3, mut img_p3, _) = reach_core(b_p3_dom, &w_cons, "P3 dom P6 Cons", make_cons);
-    let ObservedStep::Event(rec_p3) = owner_record(&adm_p3, &mut img_p3).expect("P3") else {
+    let ObservedStep::Event(rec_p3) = (match owner_record(&adm_p3, &mut img_p3) {
+        Ok(step) => step,
+        Err(error) => panic!("P3: {}", capture_step_error_label(&error)),
+    }) else {
         panic!("P3 event");
     };
     let w_p3 =
@@ -1734,7 +1737,7 @@ fn raw_in_bounds_data_parent_and_data_child_accepted_by_bare_circuit_vs_oob_reje
     let lw = &live.witness;
     assert_eq!(lw.pre_data[3], 2, "2 active DATA nodes: Data(0)=U128(4), Data(1)=Cons");
     assert_eq!(lw.pre_data[4], 2, "2 active data_fields: [Data(0), Const(list_5)]");
-    let data_geom = c6_data_geometry(&lw.source_params.geometry().caps.phys).expect("data geom");
+    let data_geom = c6_data_geometry(&lw.source_params.geometry().caps).expect("data geom");
     let df0_is_data = lw.pre_data[data_geom.fields_base];
     let df0_index = lw.pre_data[data_geom.fields_base + 1];
     let df1_is_data = lw.pre_data[data_geom.fields_base + REF_LANES];

@@ -189,7 +189,7 @@ fn disabled_is_identity_with_raw128_and_129bit_derived_slice_domain() {
         let image=3+c.meta_len+c.prog_len+CTX_LANES;
         let post_image=image+c.geometry.state_total_lanes+c.meta_len+c.prog_len+CTX_LANES;
         let mut z=s.clone();z[0]=Fr::from(2u64);assert!(raw(&c,z).is_err());
-        let mut z=s.clone();z[post_image+L_CONSUMED_WORK]+=Fr::from(1u64);assert!(raw(&c,z).is_err());
+        let mut z=s.clone();z[post_image+L_CONSUMED_WORK] = z[post_image+L_CONSUMED_WORK] + Fr::from(1u64);assert!(raw(&c,z).is_err());
         let high=Fr::from(u128::MAX)+Fr::from(1u64);let mut z=s.clone();
         z[image+L_CONSUMED_WORK]=high;z[post_image+L_CONSUMED_WORK]=high;assert!(raw(&c,z).is_err());
         // Nonmatching variant slice sums are emitted even with gate0: MAX+MAX
@@ -209,7 +209,7 @@ fn immutable_data_program_context_and_schema_mutations_use_current_commitment() 
         let image=3+c.meta_len+c.prog_len+CTX_LANES;let post_base=image+c.geometry.state_total_lanes;
         for at in [1,2,3+c.meta_len,3+c.meta_len+c.prog_len,post_base+c.meta_len,
             post_base+c.meta_len+c.prog_len,post_base+c.meta_len+c.prog_len+CTX_LANES+c.geometry.image_total_lanes+7] {
-            let mut z=s.clone();z[at]+=Fr::from(1u64);assert!(raw(&c,z).is_err());
+            let mut z=s.clone();z[at] = z[at] + Fr::from(1u64);assert!(raw(&c,z).is_err());
         }
     }
 }

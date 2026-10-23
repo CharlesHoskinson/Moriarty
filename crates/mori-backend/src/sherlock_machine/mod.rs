@@ -552,3 +552,30 @@ pub use c6_return_right_consumer::{
     witness_from_host_pair as witness_return_right_from_host_pair,
     C6ReturnRightConsumerError, C6ReturnRightStepCircuit, C6ReturnRightStepWitness,
 };
+
+pub mod c6_equal_empty_step;
+pub use c6_equal_empty_step::{
+    emit_c6_equal_empty_step_block, build_c6_equal_empty_step_circuit,
+    check_c6_equal_empty_step_circuit,
+    witness_from_host_pair as witness_equal_empty_from_host_pair,
+    C6EqualEmptyStepBlock, C6EqualEmptyStepCircuit, C6EqualEmptyStepEmitter,
+    C6EqualEmptyStepError, C6EqualEmptyStepInputs, C6EqualEmptyStepWitness,
+};
+
+// Additive Task2 fragment; complete range/provenance/native obligations remain open.
+pub mod c6_construct_nullary_step;
+pub mod c6_construct_nullary_consumer;
+pub use c6_construct_nullary_step::{
+    emit_c6_construct_nullary_step_block, C6ConstructNullaryStepBlock,
+    C6ConstructNullaryStepEmitter, C6ConstructNullaryStepError, C6ConstructNullaryStepInputs,
+};
+pub use c6_construct_nullary_consumer::{
+    build_c6_construct_nullary_step_circuit, check_c6_construct_nullary_step_circuit,
+    check_c6_construct_nullary_statement,
+    witness_from_host_pair as witness_construct_nullary_from_host_pair,
+    witness_from_owner_record as witness_construct_nullary_from_owner_record,
+    C6ConstructNullaryConsumerError, C6ConstructNullaryStepCircuit, C6ConstructNullaryStepWitness,
+};
+pub use c6_program_context_canonical::{
+    C6ProgramContextExpressionCaptureInputs, C6ProgramContextExpressionCaptureBlock,
+};

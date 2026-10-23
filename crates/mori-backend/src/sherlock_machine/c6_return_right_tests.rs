@@ -193,7 +193,7 @@ fn disabled_full_identity_raw128_gate2_and_derived129_domain() {
     for m in modes() {
         let c=circuit(&w,m);let s=w.to_statement_frs();assert!(raw(&c,s.clone()).is_ok());let image=3+c.meta_len+c.prog_len+CTX_LANES;
         let post_image=image+c.geometry.state_total_lanes+c.meta_len+c.prog_len+CTX_LANES;
-        let mut z=s.clone();z[0]=Fr::from(2u64);assert!(raw(&c,z).is_err());let mut z=s.clone();z[post_image+L_CONSUMED_WORK]+=Fr::from(1u64);assert!(raw(&c,z).is_err());
+        let mut z=s.clone();z[0]=Fr::from(2u64);assert!(raw(&c,z).is_err());let mut z=s.clone();z[post_image+L_CONSUMED_WORK] = z[post_image+L_CONSUMED_WORK] + Fr::from(1u64);assert!(raw(&c,z).is_err());
         let high=Fr::from(u128::MAX)+Fr::from(1u64);let mut z=s.clone();z[image+L_CONSUMED_WORK]=high;z[post_image+L_CONSUMED_WORK]=high;assert!(raw(&c,z).is_err());
         let mut z=s.clone();for at in [IMAGE_SECTION_HEADER_LANES+1,IMAGE_SECTION_HEADER_LANES+2] { z[image+at]=Fr::from(u128::MAX);z[post_image+at]=Fr::from(u128::MAX); }
         assert!(raw(&c,z).is_ok(),"gate0 nonmatching sliceend2^129-2 fits comparator129");
@@ -207,7 +207,7 @@ fn old_data_program_context_helper_metadata_preserve_with_current_commitment() {
         for at in [1,2,3+c.meta_len,3+c.meta_len+c.prog_len,post_base+c.meta_len,post_base+c.meta_len+c.prog_len,
             post_base+c.meta_len+c.prog_len+CTX_LANES+c.geometry.image_total_lanes+7,
             post_base+c.meta_len+c.prog_len+CTX_LANES+c.geometry.image_total_lanes+c.geometry.data_total_lanes+L_HELPER_RECORD] {
-            let mut z=s.clone();z[at]+=Fr::from(1u64);assert!(raw(&c,z).is_err()); }
+            let mut z=s.clone();z[at] = z[at] + Fr::from(1u64);assert!(raw(&c,z).is_err()); }
     }
 }
 fn inputs(w:&C6ReturnRightStepWitness)->C6ReturnRightStepInputs {

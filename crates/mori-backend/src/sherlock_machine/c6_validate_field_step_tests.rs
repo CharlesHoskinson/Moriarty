@@ -805,7 +805,7 @@ struct Applied {
 
 fn finish_applied(
     admitted: Admitted,
-    mut image: MachineImage,
+    image: &mut MachineImage,
     pre: HostSnapshot,
     replay: CompleteStepRecord,
     config: &C6HostConfig,
@@ -813,9 +813,9 @@ fn finish_applied(
     label: &str,
 ) -> Applied {
     assert_eq!(replay.before, pre, "{label}: replay PRE equals original PRE");
-    let witness = record_validate_field_step(&admitted, &mut image, config, &limits())
+    let witness = record_validate_field_step(&admitted, image, config, &limits())
         .unwrap_or_else(|e| panic!("{label}: wrapper selected step once: {e}"));
-    let original_post = capture(&admitted, &image)
+    let original_post = capture(&admitted, image)
         .unwrap_or_else(|e| panic!("{label}: capture original POST: {}", violation_label(&e)));
     assert_eq!(
         original_post, replay.after,
@@ -857,26 +857,26 @@ fn finish_applied(
 
 fn run_core(w: &FieldSpec, label: &str, make: &dyn Fn() -> CoreProgram) -> Applied {
     let b = generous();
-    let (admitted, image, pre) = reach_core(b, w, label, make);
+    let (admitted, mut image, pre) = reach_core(b, w, label, make);
     let (radm, mut rimg, _) = reach_core(b, w, label, make);
     let replay = match owner_record(&radm, &mut rimg) {
         Ok(ObservedStep::Event(r)) => r,
         Ok(ObservedStep::Terminal { .. }) => panic!("{label}: replay selected step terminal"),
         Err(e) => panic!("{label}: replay selected step: {}", capture_label(&e)),
     };
-    finish_applied(admitted, image, pre, replay, &core_cfg(b), w, label)
+    finish_applied(admitted, &mut image, pre, replay, &core_cfg(b), w, label)
 }
 
 fn run_ext(w: &FieldSpec, label: &str, make: &dyn Fn() -> ExtProgram) -> Applied {
     let b = generous();
-    let (admitted, image, pre) = reach_ext(b, w, label, make);
+    let (admitted, mut image, pre) = reach_ext(b, w, label, make);
     let (radm, mut rimg, _) = reach_ext(b, w, label, make);
     let replay = match owner_record(&radm, &mut rimg) {
         Ok(ObservedStep::Event(r)) => r,
         Ok(ObservedStep::Terminal { .. }) => panic!("{label}: replay selected ext step terminal"),
         Err(e) => panic!("{label}: replay selected ext step: {}", capture_label(&e)),
     };
-    finish_applied(admitted, image, pre, replay, &ext_cfg(b), w, label)
+    finish_applied(admitted, &mut image, pre, replay, &ext_cfg(b), w, label)
 }
 
 fn lit_u(n: u128) -> CoreExpr {
@@ -1029,12 +1029,9 @@ fn ext_ctor_one_field(val: i128_class::KIntC) -> ExtExpr {
                 name: "Alpha".into(),
             },
             ctor: "MkAlpha".into(),
-            fields: vec![(
-                "payload".into(),
-                ExtValue::Core {
-                    value: CoreValue::UInt { n: val },
-                },
-            )],
+            fields: vec![ExtValue::Core {
+                value: CoreValue::UInt { n: val },
+            }],
         },
     }
 }
@@ -1047,22 +1044,16 @@ fn ext_ctor_two_fields(first: u128, second: u128) -> ExtExpr {
             },
             ctor: "MkPair".into(),
             fields: vec![
-                (
-                    "first".into(),
-                    ExtValue::Core {
-                        value: CoreValue::UInt {
-                            n: i128_class::KIntC::InRange(first),
-                        },
+                ExtValue::Core {
+                    value: CoreValue::UInt {
+                        n: i128_class::KIntC::InRange(first),
                     },
-                ),
-                (
-                    "second".into(),
-                    ExtValue::Core {
-                        value: CoreValue::UInt {
-                            n: i128_class::KIntC::InRange(second),
-                        },
+                },
+                ExtValue::Core {
+                    value: CoreValue::UInt {
+                        n: i128_class::KIntC::InRange(second),
                     },
-                ),
+                },
             ],
         },
     }
@@ -1076,40 +1067,28 @@ fn ext_nested_outer_pair(left_val: u128, right_val: u128) -> ExtExpr {
             },
             ctor: "MkOuter".into(),
             fields: vec![
-                (
-                    "left_box".into(),
-                    ExtValue::Constructor {
-                        ty: TypeExprSrc::Named {
-                            name: "Alpha".into(),
-                        },
-                        ctor: "MkAlpha".into(),
-                        fields: vec![(
-                            "payload".into(),
-                            ExtValue::Core {
-                                value: CoreValue::UInt {
-                                    n: i128_class::KIntC::InRange(left_val),
-                                },
-                            },
-                        )],
+                ExtValue::Constructor {
+                    ty: TypeExprSrc::Named {
+                        name: "Alpha".into(),
                     },
-                ),
-                (
-                    "right_box".into(),
-                    ExtValue::Constructor {
-                        ty: TypeExprSrc::Named {
-                            name: "Alpha".into(),
+                    ctor: "MkAlpha".into(),
+                    fields: vec![ExtValue::Core {
+                        value: CoreValue::UInt {
+                            n: i128_class::KIntC::InRange(left_val),
                         },
-                        ctor: "MkAlpha".into(),
-                        fields: vec![(
-                            "payload".into(),
-                            ExtValue::Core {
-                                value: CoreValue::UInt {
-                                    n: i128_class::KIntC::InRange(right_val),
-                                },
-                            },
-                        )],
+                    }],
+                },
+                ExtValue::Constructor {
+                    ty: TypeExprSrc::Named {
+                        name: "Alpha".into(),
                     },
-                ),
+                    ctor: "MkAlpha".into(),
+                    fields: vec![ExtValue::Core {
+                        value: CoreValue::UInt {
+                            n: i128_class::KIntC::InRange(right_val),
+                        },
+                    }],
+                },
             ],
         },
     }
@@ -1202,14 +1181,16 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
     //    - `OuterPair(cursor=1)` (tail `1 -> 1`) schedules `right_box` (`Alpha(22)`) second,
     //    - `right_box(cursor=0)` (tail `1 -> 1`) replaces slot 0 with `UInt(22)`.
     {
-        let (admitted, _) = admit_ext_program(
+        let (admitted, _) = match admit_ext_program(
             ext_prog(ext_nested_outer_pair(11, 22)),
             ExtDomain::GENERIC_ABSENT,
             &b,
             &layout(b, Some(ExtCapacitiesC::all_zero())),
             None,
-        )
-        .expect("admit nested OuterPair");
+        ) {
+            Ok(value) => value,
+            Err(error) => panic!("admit nested OuterPair: {}", ext_label(&error)),
+        };
         let engine = host_owner_engine();
         let mut image = engine
             .admit_run(
@@ -1219,13 +1200,23 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
                 &FinanceInput::Absent,
             )
             .expect("genesis nested OuterPair");
-        let mut replay_img = image.clone();
+        let mut replay_img = engine
+            .admit_run(
+                &admitted,
+                &RunIntC::Nat(64),
+                &RunIntC::Nat(8),
+                &FinanceInput::Absent,
+            )
+            .unwrap_or_else(|error| panic!("replay genesis: {}", tooling_label(&error)));
         let host_cfg = ext_cfg(b);
         let mut field_steps = Vec::new();
 
         for step_idx in 0..32 {
             let pre_snap = capture(&admitted, &image).expect("capture pre");
-            let replay_step = owner_record(&admitted, &mut replay_img).expect("replay step");
+            let replay_step = (match owner_record(&admitted, &mut replay_img) {
+                Ok(step) => step,
+                Err(error) => panic!("replay step: {}", capture_label(&error)),
+            });
             let ObservedStep::Event(replay_rec) = replay_step else {
                 break;
             };
@@ -1248,7 +1239,7 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
                 };
                 let app = finish_applied(
                     admitted.clone(),
-                    image.clone(),
+                    &mut image,
                     pre_snap.clone(),
                     replay_rec.clone(),
                     &host_cfg,
@@ -1271,9 +1262,13 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
                     app.record.after.image.tasks.len(),
                     child_kind,
                 ));
-                let _ = owner_record(&admitted, &mut image).expect("advance main image");
+                // finish_applied advanced the original image once and compared its full post
+                // against the independently stepped replay image above.
             } else {
-                let _ = owner_record(&admitted, &mut image).expect("advance non-field step");
+                let _ = (match owner_record(&admitted, &mut image) {
+                    Ok(step) => step,
+                    Err(error) => panic!("advance non-field step: {}", capture_label(&error)),
+                });
                 if replay_rec.event.rule_id == RuleIdC::KMachineEvalLiteralValid {
                     break;
                 }
@@ -1339,14 +1334,24 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
                 &FinanceInput::Absent,
             )
             .expect("genesis nested Branch");
-        let mut replay_img = image.clone();
+        let mut replay_img = engine
+            .admit_run(
+                &admitted,
+                &RunIntC::Nat(64),
+                &RunIntC::Nat(8),
+                &FinanceInput::Absent,
+            )
+            .unwrap_or_else(|error| panic!("replay genesis: {}", tooling_label(&error)));
         let host_cfg = core_cfg(b);
         let mut saw_2_to_3 = false;
         let mut saw_3_to_3 = false;
 
         for step_idx in 0..32 {
             let pre_snap = capture(&admitted, &image).expect("capture pre");
-            let replay_step = owner_record(&admitted, &mut replay_img).expect("replay step");
+            let replay_step = (match owner_record(&admitted, &mut replay_img) {
+                Ok(step) => step,
+                Err(error) => panic!("replay step: {}", capture_label(&error)),
+            });
             let ObservedStep::Event(replay_rec) = replay_step else {
                 break;
             };
@@ -1369,7 +1374,7 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
                 };
                 let app = finish_applied(
                     admitted.clone(),
-                    image.clone(),
+                    &mut image,
                     pre_snap.clone(),
                     replay_rec.clone(),
                     &host_cfg,
@@ -1382,9 +1387,13 @@ fn nested_same_typed_distinct_child_order_and_lower_task_stack_preservation_both
                 if pre_snap.image.tasks.len() == 3 && app.record.after.image.tasks.len() == 3 {
                     saw_3_to_3 = true;
                 }
-                let _ = owner_record(&admitted, &mut image).expect("advance main image");
+                // finish_applied advanced the original image once and compared its full post
+                // against the independently stepped replay image above.
             } else {
-                let _ = owner_record(&admitted, &mut image).expect("advance non-field step");
+                let _ = (match owner_record(&admitted, &mut image) {
+                    Ok(step) => step,
+                    Err(error) => panic!("advance non-field step: {}", capture_label(&error)),
+                });
                 if replay_rec.event.rule_id == RuleIdC::KMachineEvalLiteralValid {
                     break;
                 }
@@ -1456,8 +1465,25 @@ fn marker_child_scheduled_by_validate_field_before_later_validate_invalid_both_m
     );
     let _ = record_validate_field_step(&admitted, &mut image, &core_cfg(b), &limits())
         .expect("ValidateField on Leaf(Marker) succeeds");
-    let mut twin = image.clone();
-    let next_step = owner_record(&admitted, &mut twin).expect("twin next step");
+    let (twin_admitted, mut twin, _) = reach_core(
+        b,
+        &field_spec(ConstKindWant::Leaf, false, 0),
+        "Leaf Marker independently reconstructed twin",
+        &|| prog(lit_tree_marker_leaf()),
+    );
+    let _ = match owner_record(&twin_admitted, &mut twin) {
+        Ok(step) => step,
+        Err(error) => panic!("twin ValidateField step: {}", capture_label(&error)),
+    };
+    assert_eq!(
+        capture(&twin_admitted, &twin).expect("capture independent twin post-field"),
+        capture(&admitted, &image).expect("capture original post-field"),
+        "independently reconstructed twin starts at the same full post-field state"
+    );
+    let next_step = (match owner_record(&twin_admitted, &mut twin) {
+        Ok(step) => step,
+        Err(error) => panic!("twin next step: {}", capture_label(&error)),
+    });
     let ObservedStep::Event(rec_inv) = next_step else {
         panic!("expected ValidateInvalid event");
     };
@@ -1741,7 +1767,7 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
         let w_leaf = field_spec(ConstKindWant::Leaf, true, 0);
         let make_leaf = &|| prog(lit_tree(tree_leaf(7)));
         let b_tight = bounds_with(100, 1);
-        let (admitted, image, pre) = reach_core(b_tight, &w_leaf, "tail-at-bound Leaf", make_leaf);
+        let (admitted, mut image, pre) = reach_core(b_tight, &w_leaf, "tail-at-bound Leaf", make_leaf);
         let (radm, mut rimg, _) =
             reach_core(b_tight, &w_leaf, "tail-at-bound Leaf replay", make_leaf);
         let replay = match owner_record(&radm, &mut rimg) {
@@ -1750,7 +1776,7 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
         };
         let _ = finish_applied(
             admitted,
-            image,
+            &mut image,
             pre,
             replay,
             &core_cfg(b_tight),
@@ -1773,7 +1799,7 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
         };
         let make_outer = &|| ext_prog(ext_nested_outer_pair(11, 22));
         let b_tight2 = bounds_with(100, 2);
-        let (admitted, image, pre) =
+        let (admitted, mut image, pre) =
             reach_ext(b_tight2, &w_depth2_tail, "depth-2 tail-at-bound", make_outer);
         assert_eq!(pre.image.tasks.len(), 2);
         let (radm, mut rimg, _) = reach_ext(
@@ -1788,7 +1814,7 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
         };
         let _ = finish_applied(
             admitted,
-            image,
+            &mut image,
             pre,
             replay,
             &ext_cfg(b_tight2),
@@ -1809,19 +1835,19 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
             field_spec(ConstKindWant::Leaf, true, 0),
             bounds_with(2, 4),
             "P3 tail Leaf at helper_work=2",
-            &|| prog(lit_tree(tree_leaf(7))) as CoreProgram,
+            (|| prog(lit_tree(tree_leaf(7)))) as fn() -> CoreProgram,
         ),
         (
             field_spec(ConstKindWant::Cons, true, 0),
             bounds_with(2, 4),
             "P3 non-tail Cons at helper_work=2, helper_tasks=4",
-            &|| prog(lit_list(&[7])),
+            (|| prog(lit_list(&[7]))) as fn() -> CoreProgram,
         ),
         (
             field_spec(ConstKindWant::Cons, true, 0),
             bounds_with(2, 1),
             "P3 dominates would-be P6 on non-tail Cons (helper_work=2==max, tasks+1=2>helper_tasks=1)",
-            &|| prog(lit_list(&[7])),
+            (|| prog(lit_list(&[7]))) as fn() -> CoreProgram,
         ),
     ] {
         for (host_cfg, cfg_label) in [
@@ -1832,8 +1858,8 @@ fn p3_p6_and_tail_at_bound_precedence_and_retained_admission_bounds_both_modes()
             ),
         ] {
             let full_label = format!("{label} ({cfg_label})");
-            let (admitted, mut image, pre) = reach_core(b_p3, &w, &full_label, make);
-            let (radm, mut rimg, _) = reach_core(b_p3, &w, &full_label, make);
+            let (admitted, mut image, pre) = reach_core(b_p3, &w, &full_label, &make);
+            let (radm, mut rimg, _) = reach_core(b_p3, &w, &full_label, &make);
             let replay = match owner_record(&radm, &mut rimg) {
                 Ok(ObservedStep::Event(r)) => r,
                 _ => panic!("{full_label}: P3 replay must produce event"),
@@ -2132,7 +2158,10 @@ fn owner_record_mutations_reject_exact_host_consistency_and_ps_before_p3_p6() {
     let b_p3 = bounds_with(2, 1);
     let (adm_p3, mut img_p3, _) =
         reach_core(b_p3, &w_cons, "PS-before-P3 base", &|| prog(lit_list(&[7])));
-    let ObservedStep::Event(rec_p3) = owner_record(&adm_p3, &mut img_p3).expect("P3 step") else {
+    let ObservedStep::Event(rec_p3) = (match owner_record(&adm_p3, &mut img_p3) {
+        Ok(step) => step,
+        Err(error) => panic!("P3 step: {}", capture_label(&error)),
+    }) else {
         panic!("expected P3 event");
     };
 

@@ -28,6 +28,9 @@ use crate::sherlock_nominal_source::{
     SourceOwner, SourceSpan,
 };
 use serde_json::Value;
+use crate::sherlock::nominal_ast_inputs::{bind_nominal_ast_inputs, NominalAstBindingRequest};
+
+enum NominalEntryRequest { Json(NominalBindingRequest), Ast(NominalAstBindingRequest) }
 
 /// Source profile selected only through this completed body-checking route.
 /// This does not change the raw compiler's execution profile or financial scope.
@@ -144,7 +147,19 @@ pub fn compile_nominal_source_host_bounded_with_nominal_inputs(
     locator: Option<LocatorC>,
     request: NominalBindingRequest,
 ) -> Result<NominalBodyCompileArtifact, NominalBodyCompileFailure> {
-    compile_nominal_source_host_bounded_inner(source, budget, config, locator, Some(request))
+    compile_nominal_source_host_bounded_inner(source, budget, config, locator, Some(NominalEntryRequest::Json(request)))
+}
+
+/// Bind caller-owned typed nominal constants after real bounded source parsing.
+/// No string/JSON alternative grammar, fixed-key/private-input claim or owner
+/// policy change. AST occurrence/depth limits come from the same parser budget.
+/// First T3/body checking and genuine owner admission/genesis remain unchanged.
+pub fn compile_nominal_source_host_bounded_with_ast_inputs(
+    source: &str, budget: DraftParseBudget, config: ExtCompileConfig,
+    locator: Option<LocatorC>, request: NominalAstBindingRequest,
+) -> Result<NominalBodyCompileArtifact, NominalBodyCompileFailure> {
+    compile_nominal_source_host_bounded_inner(source, budget, config, locator,
+        Some(NominalEntryRequest::Ast(request)))
 }
 
 fn compile_nominal_source_host_bounded_inner(
@@ -152,7 +167,7 @@ fn compile_nominal_source_host_bounded_inner(
     budget: DraftParseBudget,
     config: ExtCompileConfig,
     locator: Option<LocatorC>,
-    nominal_request: Option<NominalBindingRequest>,
+    nominal_request: Option<NominalEntryRequest>,
 ) -> Result<NominalBodyCompileArtifact, NominalBodyCompileFailure> {
     let parsed = parse_nominal_source_bounded(source, budget)
         .map_err(|e| NominalBodyCompileFailure::unlocated(NominalBodyCompileError::Parse(e)))?;
@@ -169,16 +184,16 @@ fn compile_nominal_source_host_bounded_inner(
                         NominalInputError::CountOverflow,
                     ))
                 })?;
-            let bound = decode_and_bind_nominal_inputs(
-                &program,
-                &request.function_name,
-                &request.input,
-                NominalInputLimits {
-                    max_ast_occurrences: budget.max_ast_occurrences,
-                    max_structural_ast_depth: budget.max_structural_ast_depth,
-                },
-                existing_ast_occurrences,
-            )
+            let limits = NominalInputLimits {
+                max_ast_occurrences: budget.max_ast_occurrences,
+                max_structural_ast_depth: budget.max_structural_ast_depth,
+            };
+            let bound = match request {
+                NominalEntryRequest::Json(request) => decode_and_bind_nominal_inputs(
+                    &program, &request.function_name, &request.input, limits, existing_ast_occurrences),
+                NominalEntryRequest::Ast(request) => bind_nominal_ast_inputs(
+                    &program, &request.function_name, request.arguments, limits, existing_ast_occurrences),
+            }
             .map_err(|e| {
                 NominalBodyCompileFailure::unlocated(NominalBodyCompileError::NominalInput(e))
             })?;
