@@ -1,5 +1,8 @@
-//! Positive Core/1 financial observations against independently frozen literals.
-use mori_core::{Execution, Program, Scenario, UInt, parse, simulate, simulate_metered, validate};
+//! Positive Core/1 financial observations against frozen literal expectations.
+use mori_core::{
+    AssetId, Effect, Execution, Program, Scenario, UInt, Value as CoreValue, parse, simulate,
+    simulate_metered, validate,
+};
 use serde_json::{Value, json};
 
 macro_rules! fixture {
@@ -430,5 +433,318 @@ fn actus_stk04_matches_independent_core_trace_and_four_cashflow_fields() {
     assert_eq!(
         json!(pair_effects),
         oracle["complete_ordered_effect_history"]
+    );
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Ump01Bindings {
+    pub asset: AssetId,
+    pub lender: String,
+    pub borrower: String,
+    pub principal_duty: String,
+}
+
+// Exact selected-fixture JSON integer types. Other decimal/signed rate or
+// amount domains are deliberately outside this finite adapter's admission.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Ump01Fields {
+    pub event_date: String,
+    pub event_type: String,
+    pub payoff: i64,
+    pub currency: String,
+    pub notional_principal: u64,
+    pub nominal_interest_rate: u64,
+    pub accrued_interest: u64,
+}
+
+fn ump01_uint_duty_amount(execution: &Execution, bindings: &Ump01Bindings) -> Result<UInt, String> {
+    execution
+        .post
+        .liabilities
+        .iter()
+        .find(|row| row.name == bindings.principal_duty)
+        .map(|row| row.amount)
+        .ok_or_else(|| "missing actual closing principal duty".into())
+}
+
+fn ump01_uint_state(execution: &Execution, name: &str) -> Result<UInt, String> {
+    match execution.post.state.get(name) {
+        Some(CoreValue::UInt(value)) => Ok(*value),
+        _ => Err(format!("missing or non-UInt source state {name}")),
+    }
+}
+
+fn ump01_integral_result(value: UInt, name: &str) -> Result<u64, String> {
+    u64::try_from(value.0).map_err(|_| format!("{name} exceeds selected integer adapter"))
+}
+
+/// Project actual public effects/duties/state into the seven present fields.
+/// This function reads no fixture results or expected oracle. It preserves no
+/// claim that projection alone validates the complete execution: `observe`
+/// returns the complete Execution for a separate trace comparison.
+fn ump01_project(execution: &Execution, bindings: &Ump01Bindings) -> Result<Ump01Fields, String> {
+    if execution.semantics != "moriarty-core/1" || execution.action != "initialExchange" {
+        return Err("wrong selected profile/action".into());
+    }
+    let mut transfer = None;
+    let mut event = None;
+    let mut principal_effects = 0usize;
+    for effect in &execution.effects {
+        match effect {
+            Effect::Transfer {
+                asset,
+                from,
+                to,
+                amount,
+            } => {
+                if transfer.is_some()
+                    || asset != &bindings.asset
+                    || from != &bindings.lender
+                    || to != &bindings.borrower
+                {
+                    return Err("wrong or additional selected initial-exchange cashflow".into());
+                }
+                transfer = Some((asset.reference.clone(), *amount));
+            }
+            Effect::Liability {
+                name,
+                asset,
+                debtor,
+                creditor,
+                before,
+                after,
+            } => {
+                if name != &bindings.principal_duty
+                    || asset != &bindings.asset
+                    || debtor != &bindings.borrower
+                    || creditor != &bindings.lender
+                {
+                    return Err("unexpected duty identity".into());
+                }
+                if before.0 != 0 || *after != ump01_uint_duty_amount(execution, bindings)? {
+                    return Err("principal effect differs from actual closing duty".into());
+                }
+                principal_effects += 1;
+            }
+            Effect::Emit { name, value } => {
+                if event.is_some() || name != "IED" {
+                    return Err("wrong or additional selected event".into());
+                }
+                let CoreValue::UInt(time) = value else {
+                    return Err("event timestamp is not UInt".into());
+                };
+                event = Some((name.clone(), *time));
+            }
+            Effect::State { .. } => {}
+            _ => return Err("effect outside selected initial-exchange source".into()),
+        }
+    }
+    if principal_effects != 1 {
+        return Err("selected issuance requires one actual principal-duty effect".into());
+    }
+    let (currency, amount) = transfer.ok_or("missing actual cashflow")?;
+    let (event_type, time) = event.ok_or("missing actual IED emit")?;
+    if ump01_uint_state(execution, "statusTime")? != time {
+        return Err("source status time differs from emitted time".into());
+    }
+    let duty = execution
+        .post
+        .liabilities
+        .iter()
+        .find(|row| row.name == bindings.principal_duty)
+        .ok_or("missing actual outstanding principal duty")?;
+    if duty.asset != bindings.asset
+        || duty.debtor != bindings.borrower
+        || duty.creditor != bindings.lender
+    {
+        return Err("closing duty does not retain exact selected identity".into());
+    }
+    if duty.amount != amount {
+        return Err("principal duty differs from actual initial-exchange amount".into());
+    }
+    let magnitude =
+        i64::try_from(amount.0).map_err(|_| "payoff exceeds selected signed integer adapter")?;
+    let payoff = magnitude.checked_neg().ok_or("signed payoff overflow")?;
+    let digits = format!("{:014}", time.0);
+    if digits.len() != 14 {
+        return Err("timestamp outside supplied YYYYMMDDhhmmss encoding".into());
+    }
+    let event_date = format!(
+        "{}-{}-{}T{}:{}:{}",
+        &digits[0..4],
+        &digits[4..6],
+        &digits[6..8],
+        &digits[8..10],
+        &digits[10..12],
+        &digits[12..14]
+    );
+    Ok(Ump01Fields {
+        event_date,
+        event_type,
+        payoff,
+        currency,
+        notional_principal: ump01_integral_result(duty.amount, "notionalPrincipal")?,
+        nominal_interest_rate: ump01_integral_result(
+            ump01_uint_state(execution, "nominalInterestRate")?,
+            "nominalInterestRate",
+        )?,
+        accrued_interest: ump01_integral_result(
+            ump01_uint_state(execution, "accruedInterest")?,
+            "accruedInterest",
+        )?,
+    })
+}
+
+/// Actual existing public consumer path; no fixture lookup or shadow evaluator.
+/// The caller compares the returned complete trace against frozen literals.
+fn ump01_observe(
+    source: &str,
+    scenario: &Scenario,
+    bindings: &Ump01Bindings,
+) -> Result<(Execution, Ump01Fields), String> {
+    let program = mori_core::parse(source).map_err(|error| error.to_string())?;
+    mori_core::validate(&program).map_err(|error| error.to_string())?;
+    let execution = mori_core::simulate(&program, "initialExchange", scenario)
+        .map_err(|error| error.to_string())?;
+    let fields = ump01_project(&execution, bindings)?;
+    Ok((execution, fields))
+}
+
+#[test]
+fn actus_ump01_matches_independent_core_trace_and_seven_financial_fields() {
+    use sha2::Digest;
+
+    let core_json = fixture!("actus-ump01/independent/CORE-FINANCIAL-WORK.expected.json");
+    let actus_json = fixture!("actus-ump01/independent/ACTUS-FINANCIAL-SCHEDULE.expected.json");
+    let manifest_json = fixture!("actus-ump01/independent/INPUT-ONLY-MANIFEST.json");
+    for (bytes, literal_sha256) in [
+        (
+            core_json,
+            "6711c863fd3cfaf332de85660fb19ab24b7177c07f1bbdd36943e30408053e6e",
+        ),
+        (
+            actus_json,
+            "49126886ad8efdfce72252bcbe117634dd3a6b702fc00ff798af71eda5080ce7",
+        ),
+        (
+            manifest_json,
+            "b62e24c0040b319733f49d84f5be133a74df49313f5e251c6b7f886cf78455bd",
+        ),
+    ] {
+        assert_eq!(
+            mori_core::intent::hex(&sha2::Sha256::digest(bytes.as_bytes())),
+            literal_sha256
+        );
+    }
+    let expected: Value = serde_json::from_str(core_json).unwrap();
+    let actus: Value = serde_json::from_str(actus_json).unwrap();
+    let manifest: Value = serde_json::from_str(manifest_json).unwrap();
+    let source = fixture!("actus-ump01/source.mori");
+    let opening = fixture!("actus-ump01/opening.scenario.json");
+    let bindings_json = fixture!("actus-ump01/subject-bindings.json");
+    let operands_json = fixture!("actus-ump01/call-operands.json");
+    let normative_json = fixture!("actus-ump01/ump01.normative-operands.json");
+    for (name, input) in [
+        ("inputs/source.mori", source),
+        ("inputs/opening.scenario.json", opening),
+        ("inputs/subject-bindings.json", bindings_json),
+        ("inputs/call-operands.json", operands_json),
+        ("inputs/ump01.normative-operands.json", normative_json),
+    ] {
+        let pin = manifest["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|pin| pin["path"] == name)
+            .unwrap();
+        assert_eq!(
+            mori_core::intent::hex(&sha2::Sha256::digest(input.as_bytes())),
+            pin["sha256"].as_str().unwrap()
+        );
+    }
+    let bindings: Ump01Bindings = serde_json::from_str(bindings_json).unwrap();
+    let scenario: Scenario = serde_json::from_str(opening).unwrap();
+    let original = scenario.clone();
+    let operands: Value = serde_json::from_str(operands_json).unwrap();
+    let calls = operands["calls"].as_array().unwrap();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0]["action"], expected["action"]);
+    assert_eq!(calls[0]["inputs"], expected["call_inputs"]);
+    assert_eq!(
+        serde_json::to_value(&scenario.inputs).unwrap(),
+        expected["call_inputs"]
+    );
+    assert_eq!(operands["language"], expected["source_language"]);
+    assert_eq!(operands["semantics"], expected["source_semantics"]);
+
+    let (actual, fields) = ump01_observe(source, &scenario, &bindings).unwrap();
+    assert_eq!(scenario, original);
+    assert_eq!(actual.action, expected["action"].as_str().unwrap());
+    assert_eq!(
+        actual.semantics,
+        expected["source_semantics"].as_str().unwrap()
+    );
+    assert_eq!(serde_json::to_value(&actual.pre).unwrap(), expected["pre"]);
+    assert_eq!(
+        serde_json::to_value(&actual.post).unwrap(),
+        expected["post"]
+    );
+    assert_eq!(
+        serde_json::to_value(&actual.effects).unwrap(),
+        expected["ordered_effects"]
+    );
+
+    let expected_steps = expected["source_prefixes"].as_array().unwrap();
+    assert_eq!(actual.steps.len(), expected_steps.len());
+    let mut prefix: Vec<Value> = Vec::new();
+    for (ordinal, (step, frozen)) in actual.steps.iter().zip(expected_steps).enumerate() {
+        assert_eq!(usize::from(step.index), ordinal);
+        assert_eq!(json!(step.index), frozen["source_ordinal"]);
+        assert_eq!(
+            serde_json::to_value(&step.value).unwrap(),
+            frozen["typed_result"]
+        );
+        assert_eq!(
+            serde_json::to_value(&step.snapshot).unwrap(),
+            frozen["complete_snapshot"]
+        );
+        let delta = serde_json::to_value(&step.effects).unwrap();
+        assert_eq!(delta, frozen["new_effects"]);
+        prefix.extend(delta.as_array().unwrap().iter().cloned());
+        assert_eq!(json!(prefix), frozen["ordered_effect_history"]);
+    }
+    assert_eq!(json!(prefix), expected["ordered_effects"]);
+
+    let events = actus["ordered_known_scheduled_financial_events"]
+        .as_array()
+        .unwrap();
+    assert_eq!(events.len(), 1);
+    let event = &events[0];
+    assert_eq!(fields.event_date, event["event_time"].as_str().unwrap());
+    assert_eq!(fields.event_type, event["event_type"].as_str().unwrap());
+    assert_eq!(
+        fields.payoff.to_string(),
+        event["payoff_in_contract_role_perspective"]
+            .as_str()
+            .unwrap()
+    );
+    assert_eq!(fields.currency, event["currency"].as_str().unwrap());
+    assert_eq!(
+        fields.notional_principal.to_string(),
+        event["post_notionalPrincipal"].as_str().unwrap()
+    );
+    assert_eq!(
+        fields.nominal_interest_rate.to_string(),
+        expected["post"]["state"]["nominalInterestRate"]["value"]
+            .as_str()
+            .unwrap()
+    );
+    assert_eq!(
+        fields.accrued_interest.to_string(),
+        expected["post"]["state"]["accruedInterest"]["value"]
+            .as_str()
+            .unwrap()
     );
 }
