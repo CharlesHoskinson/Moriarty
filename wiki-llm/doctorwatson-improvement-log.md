@@ -2286,3 +2286,9 @@ Concrete DoctorWatson improvements follow these receiving boundaries:
 - Classify RPC by its actual purpose and call path. A blanket prohibition on `state_call` is wrong because public runtime metadata initialization can use it. That does not authorize financial RPC, signing, send/watch or a new registration.
 
 The next source/result sequence is R4 review → fresh Core → seven new parser regressions and the two old failures → full owner checks and supported financial trace → required native checks and range/terminal binding. MP2, D and target acceptance each need their own current artifacts and selected execution; the fixed parent and keys do not stand in for them. The [UPDATE028 concept](../wiki/research/sherlock-circuit-atlas/UPDATE-028-TWO-VERIFIED-CHILDREN-AND-TWENTY-CLOCK-PORTS.md) adds the separate verifier and keyed connector beside the measured twenty-port rail. It remains a public Moriarty Tron/PCB/Three.js design note. The website WILL launch after full Sherlock completion; no site, image or private payload is published by this draft.
+
+## Operational lessons
+
+The SDK deploy02 operation failed without an accepted deployment. The strict failure projector refused classification, leaving cause and exposure unknown. Preserve private streams; proceed only with the finite crash-classifier source/tests A/B and an actual read-only projection. No SDK retry is selected. Record failure only after capture, post-run pins and cleanup checks are complete.
+
+Keep host, native and stagenet evidence separate. A successful host execution does not establish a retained full trace or native proof. Passing pure checks do not establish that a later SDK operation succeeded. Keep the D3 pure result and deploy02 failure as separate milestones.
