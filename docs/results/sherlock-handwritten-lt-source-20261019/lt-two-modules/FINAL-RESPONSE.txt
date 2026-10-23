@@ -1,0 +1,186 @@
+# Fresh non-author audit: UInt128 Lt arithmetic and Bool completion (revision02)
+
+**Basis.** Static reading of the two supplied bodies against the supplied common declarations, `enabled_fetch.rs`, the SDK `ir.rs`/`ir_types.rs`, the schema and the R4 rows. I used no tools and executed nothing. I make no compile, SDK, native or golden claim.
+
+## Verdicts
+- **Constraint/source: APPROVE_WITH_LIMITS.** I found no internal soundness bug that needs a mandatory fix.
+- **Normal/API: APPROVE_WITH_LIMITS.** There is one recommended rename (A1). It is not a soundness issue.
+
+---
+
+## 1. Arithmetic: `b_scalar_less_than.rs::emit_b_scalar_arithmetic_lt`
+
+**Space and enable gating (A01–A03).**
+- The code is `space = select(enable, …operand_b.value.space, 0)` with `boolean(space)`, then `en_const = select(space, 0, enable)`.
+- If enable=0, both space and en_const are 0. If enable=1, `en_const = 1 − space`. This is correct.
+
+**Zero-capacity tables.**
+- `space_read_any_kind` emits `b.eq(enable, immediate(0))` and returns zeros.
+- If Const capacity is 0 and enable=1, the operand is forced into Data space.
+- If both capacities are 0 and enable=1, the circuit is unsatisfiable. That is correct, because no operand exists.
+- `active_rows` of a zero-capacity table is not bounded locally. The doc states this; it is a caller condition (C3).
+
+**Nonzero-capacity tables.**
+- `emit_enabled_fetch_block` emits `constrain(… active_rows, UInt)`, the per-cell constraints and `exceeds_capacity == 0` unconditionally.
+- So even a disabled row requires both value tables to be well-formed. This is the inherited contract ("Count and every row must be well-formed in every branch") and is a caller condition, not a bug.
+
+**Tag check (A07).**
+- `b.bits(read_tag, 3)` followed by asserting `less_than(read_tag, 6)` rejects Constructor(6) and U128OutOfRange/Marker(7).
+- This makes a Marker operand B unsatisfiable (C-INV), which is consistent with SI-17 (markers appear only in Validate).
+- Disabled rows give read_tag=0, which passes.
+
+**Byte reads (A08).**
+- Each selected byte is constrained to 8 bits, and `eq(value, select(b_is_uint, value, 0))` forces non-UInt rows to have zero `n` lanes.
+- This matches `/notation/inactive`. A non-UInt row with nonzero `n` is C-INV, not error 11. That is acceptable.
+
+**Borrow recurrence (A11).**
+- With β₀=0, the recurrence is `need_i = n_i + β_i` and `β_{i+1} = [a_i < need_i]`. This is exactly the borrow-out of LE subtraction A−B, so β₁₆ = [A<B].
+- Operand ranges: `eff_reg_a` is 8-bit and `need` is ≤256 under `bits 9`. Both are far inside the `LessThan{bits:32}` precondition ("UB if `a` or `b` exceed `bits`"), and the precondition is established locally.
+- The whole 128-bit value is never compared in one step.
+- If enabled with a non-UInt B: `read_n=0`, so every `need_i=0` and the whole chain is 0. If disabled, the chain is also 0. So `borrow_chain` is effectively enable-effective as well.
+
+**Staging (A12–A13).**
+- Post phase is Done.
+- Tag is `select(b_is_uint, 2, 4)`, `bool_value = is_less`, and the error code is `select(b_is_uint, 0, 11)`.
+- `u128_value`, `pending_node_tag`, `selector` and `type_test_ok` are all 0.
+- There is no 10 path. Every inactive union lane is zero.
+- This matches the R4 row: `if h.mode = Lt then BoolValue{b: h.regA < u128(b)}`, and `kind(b) != UInt → PrimError{11}`.
+
+**Preservation (A14).**
+- The named lanes plus `eff_reg_a`↔`post.reg_a` plus `rest` cover, together with A12/A13, all 48+rest helper lanes (indices 0–47 per `unpack_helper_lanes`).
+
+**Counters (A15–A17).**
+- The `decrement` and `increment` algebra is `pre + 256·next = post + borrow` and `post + 256·next = pre + carry`, with the final borrow/carry equal to 0.
+- This gives exact −1/+1 with no wrap and requires remainingWork ≥ 1.
+- The result is [-1,+1,+1,+1], matching `deltas.base` for `/helper_events/2`.
+- All intermediate values are below 2⁹, so there is no field wrap.
+
+**Namespaces.**
+- The three prefixes `%s.local.temp.`, `%s.const_fetch.temp.` and `%s.data_fetch.temp.` are pairwise non-nested.
+- Inputs are checked against all three, and `enabled_fetch` rechecks its own.
+
+## 2. Bool exit: `b_scalar_less_than_completion.rs::emit_b_scalar_exit_lt_bool`
+
+**E01 guards.**
+- RetRight/Scalar/Lt/Done/BoolValue is checked, with zero pending, error, selector, type-test and u128 lanes.
+- `eff_staged_bool` is constrained boolean.
+- Pre outcome must be Running with a zero payload, and pre result must be absent, including `rest`.
+
+**E02 cap branch.**
+- `can_alloc = less_than(pre_alloc, bounds)` at 128 bits, giving `applied + cap_refused = enable`.
+- This is P6 for the only positive Bool-exit delta, DataNodes (via G-SCALAR-ALLOC-NODE). The fields delta is 0, so checking only DataNodes is correct.
+
+**E03 logical counter.** `post.alloc = pre.alloc + applied`. The `bits 128` constraint cannot wrap, because applied implies pre < bounds < 2¹²⁸.
+
+**E04 physical capacity.**
+- `pre ≤ cap` and `post ≤ cap` hold unconditionally under the effective (enable-gated) values.
+- `assert(select(applied, pre_active < cap, 1))` matches D-33: the physical check applies only when capRefusal is none.
+- A refused step with active == cap is accepted with no write. This is correct.
+
+**E05 rows.**
+- The one-hot write selector satisfies `write_sum == applied`.
+- Pre rows at or above the active length are zero, via `pre_row_inactive` and `constrain_data_row_zero_when`.
+- The target row gets tag 1, n=0, `bool_b = staged`, `fields=0` and `rest=0`, which is `DataRow::Bool{b}`. Every other row satisfies post == pre.
+- On refusal there is no append.
+
+**E06 result.** On Applied, the result is `ScalarValue{Data(pre.active.data)}` with every inactive lane zero. On refusal, it is absent.
+
+**E07 helper.** The `select(applied, 0, pre)` selection runs over all 48+rest lanes. This gives clearHelper on Applied and an exact retention on refusal.
+
+**E08 outcome.** It is Running, or Exhausted(DataNodes=1), with the other payload lanes zero.
+
+**E09 counters.**
+- Work is [-1,+1,+1,0].
+- `referenceCursor`, `alloc_data_fields`, `alloc_environment_cells`, `depth`, `task_live`, the three `active_*` lanes and `rest` are preserved.
+- `alloc_data_nodes` is handled in E03, so the counter set is complete.
+
+**Disabled rows.** Every input constraint is either `gated_eq` or applied to enable-effective values. Post lanes are free, as declared.
+
+## 3. Failure: `emit_b_scalar_failure_lt`
+
+- F01 checks staged tag 4, zero bool/pending/selector/type-test, and zero u128 lanes.
+- F02 is `gated_eq(enable, pre.staged.prim_error_code, 11)`. Code **10 is unsatisfiable**, as required.
+- F03 is `Some(ScalarError{11})` with inactive lanes zero.
+- F04 clears every lane of `helper_operands(post_helper)`, and the post outcome is Running.
+- F05 preserves `active.data`, `alloc.dataNodes` and every data row, and zeroes pre inactive rows.
+- F06 is work [-1,+1,+1,0] plus the preserved counters, which matches `/helper_events/5`.
+- `_eff_reg_a` only range-checks. It is harmless.
+
+## 4. Complement and carrier mappings
+
+**Coverage.** `emit_b_lt_completion_complement` with `complement_operands` covers `site`, `control_origin`, all 7 `BControlRow` lanes plus `rest`, every `BFrameRow` lane (including `right_op`), and `reference_cursor_bytes`. Combined with exit/failure, every field of `BLtPublishState` is constrained.
+
+**C02.**
+- This is a Horner reconstruction of 8-bit lanes compared against a 128-bit scalar.
+- Its maximum is 2¹²⁸−1, which is below the BLS12-381 scalar modulus, so the binding is injective.
+
+**Shapes.** Frame counts, frame `rest` uniformity and control `rest` are host-checked, so `zip` cannot silently truncate.
+
+**`lt_helper_to_common` and `lt_completion_counters_to_common`.** These use exhaustive destructuring with no `..`, so a missed field would be a compile error. Mode keeps ordinal 3.
+
+**`to_legacy_handoff` and its inverse.**
+- The rest order is `[alloc_data_nodes, alloc_data_fields, alloc_environment_cells, task_live, active_data_fields, active_env, active_value_slots] ++ counter_rest` in both directions.
+- `depth` goes through `state.depth`. The scalar `reference_cursor`, outcome payload and data go through complement fields.
+- `let [a,…,g, counter_rest @ ..] = rest.as_slice() else {LegacyRestLaneCount}`.
+- By construction, `handoff.to_admin_publish_state() == lt.to_admin_publish_state()`.
+- Gap G2: the doc claim "the order of the `b_admin_publication` chain bridge" is not verifiable, because that body was not supplied.
+
+## 5. API, wrapper and SDK closure
+
+**Instruction shapes.** Every variant used matches the captured `ir.rs`:
+- `PublicInput{guard,val_t,output}`, `Impact{guard,inputs}`, `ConstrainBits`, `ConstrainToBoolean`, `CondSelect`, `ConstrainEq`, `Assert`, `TestEq`, `LessThan{bits}`, `Add`, `Mul`, `Output{vals}`.
+- `IrSource{version: Default (V0), inputs: vec![], outputs: Native×n, …}`.
+
+**Wrapper layout.**
+- The field order is identical in `input_fields`, the unpack cursor and `pack_witness`: enable, constAR, rows(tag+16), dataAR, rows, pre 48+r, post 48+r, 64, 64.
+- Outputs are 19 values plus the inputs, matching `output_fields`.
+- The namespace `%b_scalar_lt.input.N` is disjoint from the three temp prefixes.
+
+**Stale Sub artifacts.** No Sub hook, Sub prefix or `cfg(test)` child remains. The trailing comment only states that none is attached. The one leftover is A1 below.
+
+**Borrow and move order.** Every `from_fn` closure's `&mut b` capture ends before the next use. The moves of `eff_pre_active_data`, `eff_staged_bool`, `cap_u128`, `can_alloc` and `borrow` all occur after their last cloned use. I see no visible borrow-checker conflict.
+
+**A1 (recommended, not mandatory).**
+- The role `BScalarArithmeticFieldRole::Underflow` labels the `is_less` output.
+- Final borrow is technically "underflow of left−right", but the name is the Sub vocabulary leaking into a public role.
+- Rename it to `IsLess`. Downstream consumers are keyed by role.
+
+**A2 (low-risk compile item).**
+- `let read_n = std::array::from_fn(|i| …)` is indexed (`read_n[i]`) before N is fixed by the struct field.
+- An explicit `let read_n: BU128Lanes =` removes any reliance on inference order.
+
+**A3 (compile gap).**
+- `#[derive(Clone, Debug, PartialEq)]` on `BLtPublishState` and `BLtLegacyHandoff` requires those derives on `BControlRow`, `BFrameRow`, `BLegacyCompletionState` and `BAdminPublishState`.
+- The supplied `literalUTF8` spans start at `pub struct`, so I cannot see the derive attributes.
+
+## 6. Caller conditions (not internal bugs)
+
+- **C1. Bounds binding.** `bounds_data_nodes` must be bound to the admitted `bounds.dataNodes` and must not be a free prover witness. Otherwise the prover chooses between Applied and RefusedCapCharged.
+  - `pre_data.capacity` must be the real physical `img.data` capacity.
+  - The SAFE completion case "bounds5 / physcap2" is local-only; in a single segment the two must be equal.
+- **C2. Enable provenance and P3.** `enable` must come from constrained dispatch (pre-staged tag BoolValue vs PrimError, with exactly one selected), plus P3: `helperWork < maxHelperWork`.
+  - P2 is enforced locally only as remaining ≥ 1.
+- **C3. Table-length binding.** Both value tables must be well-formed unconditionally. The zero-capacity `active_rows` must be bound to 0. `data.active_rows` must equal `reg.active.data`.
+  - The arithmetic's 17-lane Data projection must alias the same `img.data` lanes as the completion's `BDataRowLanes`.
+- **C4. Pre-state invariants trusted, not checked.**
+  - SI-22 S2: `pre.staged = None` and `reg_a = u128(operandA)`.
+  - SI-21: mode = `scalarModeOf(top.op)`, op4 RightF.
+  - SI-03, SI-04 and SI-05 (`alloc = active`).
+- **C5. Lanes no Lt block constrains.** `envRoot`, `stackLimit`, `initialFuel`, the `dataFields`/`env`/`valueSlots`/`tasks` arenas and `segBase` are absent from `BAdminPublishState`. They are untouched-image C for the composer.
+  - Arithmetic counters beyond the four work counters (`referenceCursor`, `alloc_*`, `depth`, …) are likewise the composer's responsibility.
+- **C6. Namespaces.** Global per-IrSource namespace non-nesting across the arithmetic, exit, failure and complement scopes is unchecked.
+- **C7. Parent registration.** Both files redeclare names that are already re-exported (`HELPER_PRESENT`, `BScalarArithmeticRegister`, `BChargedCounters`, `BValueRef`, `BU128Lanes`, `HELPER_RESULT_TAG_*`, …).
+  - Any `pub use` in `mod.rs` must be explicit and aliased; glob or duplicate re-exports would be E0252/ambiguity errors.
+- **C8. Mode checks downstream.** Existing common chain or legacy blocks that assert `mode == SCALAR_MODE_ADD` will reject the Lt helper after `lt_helper_to_common`. The op4 chain is future work, as declared.
+
+## 7. Unexecuted normal-test requirements (still owed)
+
+1. **SDK check positives** for every SAFE input in both Const and Data space, against blind independently derived expectations. I derive no goldens here.
+   - Include the `LessThan{bits:32}` boundary of a byte equal to 255 with borrow-in 1 (need = 256). This is the first use of 32-bit LessThan in this code family.
+2. **Arithmetic tamper rejections:** flipped post `bool_value`; wrong staged tag; error 10 for UInt B; a nonzero inactive union lane; tag 6 or 7; a byte above 255; a non-UInt row with nonzero `n`; an index at or above `active_rows`; both capacities 0 with enable=1; counter wrap.
+3. **Exit cap boundaries:** alloc = bounds−1 (Applied) and alloc = bounds (Refused, helper retained, rows unchanged).
+   - Also Applied with active == cap, which must be rejected, and a write at any non-target slot, which must be rejected.
+4. **Failure:** code 10 rejected; any data change rejected; a helper lane left nonzero rejected.
+5. **Complement and mapping:** cursor byte/scalar mismatch rejected; legacy handoff round trip; rest length below 7 gives `LegacyRestLaneCount`; each host shape and namespace error variant.
+6. **Disabled rows:** disabled rows accept arbitrary post lanes, but still require the value tables to be well-formed.
+7. **Separate reachable positive:** a NEW positive derived from a source program and satisfying StepInv, replacing the SI-03-violating local fixture (consumed 255 / helper 511), before any full-stage claim.

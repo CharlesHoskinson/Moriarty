@@ -1,0 +1,213 @@
+# Fresh non-author audit: Lt/op4 ReturnRight row and typed `BLtPublishState` adapter
+
+**Basis.** This is a static reading of the supplied complete bodies:
+- `b_return_right_less_than.rs`
+- the Lt Bool completion and Lt arithmetic modules
+- the exact Sub preimage
+- the common declarations with their attributes
+- the bridge helpers
+- the public schema and R4 rows
+- SDK `ir.rs` and `ir_types.rs`
+
+I used no tools. I did not compile, evaluate, prove or check anything natively, and I make no StepInv, P1 or whole-interpreter claim. The prior two-module opinion is context only, not my vote.
+
+## Verdicts
+
+| Area | Verdict |
+|---|---|
+| **Source / constraints** | **APPROVE_WITH_LIMITS.** No soundness defect found and no mandatory constraint fix. |
+| **Normal / API** | **APPROVE_WITH_LIMITS**, conditional on one trivial mandatory cleanup, **N1** (unused imports). |
+
+---
+
+## 1. Live row: what changed from Sub
+
+I diffed the row against the Sub preimage. It is a literal copy except for four changes:
+
+- **Operator constant.** `c_binop_sub` becomes `let c_binop_lt = em.load_imm_u64(BINARY_OP_LT, "binop_lt");`. The guard is `em.assert_eq_when(is_popped_i.clone(), pre.frames[i].right_op.clone(), c_binop_lt.clone(), ...)`.
+- **Error code.** `assert_error_code_10_or_11_when` becomes `em.assert_eq_when(is_err.clone(), pre.result.scalar_error_code.clone(), c_err_11, zero.clone(), "pre_res_err_11")`. With `is_err ∈ {0,1}`, an enabled error must be exactly 11, so 10 is unsatisfiable.
+- **Imports.** `PRIM_ERROR_ARITH_OVERFLOW` and `BINARY_OP_SUB` are removed.
+- **Dead code.** The dead private `primitive.value` and `primitive.error` copies are removed. No Eq or Div support is added.
+
+### Normative match: enabled row
+
+I checked the enabled row against R4 `/legacy_completion_instances/15`, `site_result_sets["RetRight with top.op = Lt"] = [ScalarValue(kind Bool), ScalarError(11)]`, and T-LEGACY.
+
+**Result tag partition.**
+- `branch_sum == enable` with `is_val = enable·[tag=9]` and `is_err = enable·[tag=10]`.
+- This rejects EqualDone (13) and every other tag. That is correct for op 4, since EqualDone belongs only to Eq.
+
+**Value branch.**
+- The value must be in Data space with a u128 index, and the error code must be 0.
+- The value is transferred: `post.control.prim_value == pre.result.scalar_value`, and `pec = 0`.
+
+**Error branch.**
+- The value must be zero, and the code is transferred with `pot = is_err` (VALUE=0, ERROR=1).
+
+**Selector, type test and rest.** These are zero on pre; post `return_value`, `error_code` and `rest` are zero.
+
+**Pre-state guards.**
+- `site=11`, `outcome=Running`, `control=Return` with every inactive control lane zeroed.
+- `control_origin` is u128.
+- The helper is absent in both pre and post across all 48+rest lanes.
+
+**`framePop`.**
+- `pre.depth == post.depth + enable`.
+- The one-hot over `post.depth ∈ [0, cap)` uses `seen_top == enable`. Because the `TestEq` indices are distinct, at most one slot fires.
+- On the popped slot:
+  - `RightF` with `op == 4`;
+  - a valid `left`;
+  - u128 `origin`;
+  - `rest` zero;
+  - `post.control_origin == origin`.
+- Lower slots are preserved.
+- Pre slots at or above `pre.depth` are zero, and post slots at or above `post.depth` are zero.
+
+**Post-site and counters.**
+- `post.site == 23` matches `/dispatch/site` for PrimResult, and the block's `BPostSiteContract::Bound(SITE_PRIM)` is truthful. There is no terminal or no-site claim.
+- Counters are `[-1,+1,0,0,+1,…,depth −1]`.
+  - `remaining_work` cannot underflow, so an enabled row at `remaining_work = 0` is unsatisfiable. P2 must win.
+  - The cursor bytes are +1 with no overflow.
+  - `state.rest` is preserved, which carries the 7 named counters plus `counter_rest`.
+
+### Disabled row
+
+`not_enable = 1` gives `post == pre` for every legacy lane:
+- site, outcome tag, helper, result, control and `control_origin`;
+- all frames, because `preserve_slot_i = not_enable + 0`;
+- depth;
+- all five byte counters, because increments by 0 reduce to equality;
+- rest.
+
+`is_popped`, `is_above_pre` and `zero_post_slot` all evaluate to 0. **The legacy part fully stutters.**
+
+## 2. Typed wrapper `emit_b_lt_return_right_typed_block`
+
+### Field coverage of the actual `BLtPublishState`
+
+| Field | Constrained by |
+|---|---|
+| `site`, `control`, `control_origin`, `result`, `frames` | Legacy row, via `to_legacy_handoff().state` |
+| `outcome.tag` | Legacy row (`state.outcome`) |
+| `outcome.halted_value.{space,index}`, `rejected_code`, `exhausted_reason` | Wrapper, unconditional `constrain_eq` |
+| `helper` (Lt nominal type) | Legacy row, through the exhaustive `lt_helper_to_common` destructuring |
+| `data.active_rows`, and per row `tag`, `n[16]`, `bool_b`, `fields_start`, `fields_len`, `rest` | Wrapper, unconditional equality; `capacity` is checked on the host |
+| `counters.work.*`, `counters.depth` | Legacy row |
+| `alloc_*`, `task_live`, `active_*`, `counters.rest` | Legacy `state.rest`, preserved unconditionally |
+| `task_live` | Additionally `assert_zero_when(enable, pre.counters.task_live…)`; post follows through rest |
+| `counters.reference_cursor` | Wrapper: Horner pack of `reference_cursor_bytes`, unconditional, for both pre and post |
+| `reference_cursor_bytes` | Legacy row, +enable |
+
+Every field is covered. The handoff mapping is identical to the supplied `b_admin_publication::to_legacy_completion_state`: same 7-lane rest order, `depth`, and `reference_cursor := reference_cursor_bytes`. **This closes the prior G2 body gap.**
+
+### The complement does not freeze changed lanes
+
+`lt_rr_complement_operands` contains only:
+- the outcome payload;
+- `data.active_rows`;
+- the data rows.
+
+It excludes site, control, frames, `control_origin` and the byte cursor. The scalar cursor is related by packing, not by equality. The wrapper does **not** call `emit_b_lt_completion_complement`, whose `complement_operands` would freeze control, frames and `reference_cursor_bytes`. That requirement is met.
+
+### Cursor packing
+
+- `acc = b15; acc = acc·256 + b_i` for i = 14…0 equals Σ b_i·256^i over 8-bit lanes.
+- The maximum is 2¹²⁸−1, which is below the BLS12-381 scalar modulus, so the binding is injective.
+- This is byte-for-byte the supplied `constrain_ref_cursor_scalar_matches_bytes`.
+- Because it is unconditional, it meets the completion complement's stated composer duty ("must bind the cursor unconditionally at every stage").
+
+### Disabled typed row
+
+- The legacy part stutters (above).
+- The complement equalities are unconditional.
+- The scalar cursor equals the packed bytes, which are themselves stuttered, so the scalar stutters.
+- `task_live` is gated off.
+
+**The entire represented typed state stutters.**
+
+### Shapes before zip
+
+- **Data.** The host checks `pre.capacity == post.capacity`, `rows.len() == capacity` on both sides, and pairwise `rest.len()` equality. These run before the flattened `lt_rr_complement_operands(pre).zip(...(post))`, so the zip cannot truncate.
+- **Legacy.** `validate_state_pair` runs before any emission zip.
+- Cross-row `rest` uniformity is not required, because alignment is pairwise.
+
+### Namespaces over all operands
+
+Every input `Variable` is checked against both `%{scope}__` and `%{scope}_typed__`, and must carry the `%` prefix required by SDK serde. The checked set is:
+- `enable` and every legacy-mapped lane, via `check_caller_variables` called twice;
+- every complement lane;
+- both scalar cursors.
+
+The two emitted prefixes are mutually non-nested: after `%{scope}_`, the next character is `_` in one and `t` in the other.
+
+## 3. Block-local acceptances (not defects; the caller must exclude them)
+
+- **K1. Wrong-kind result.** An enabled row with `pre.result = ScalarValue{Data(j)}` is accepted when `img.data[j]` is a **UInt** row, or when `j ≥ active_rows`. This holds even though the typed wrapper has the Data table. Publication would then Halt with a UInt for `a<b`. It is excluded only if the result is the Lt exit's E06/E05 output (`Data(pre.active)` plus an appended Bool row) carried untouched to this row. Example source of the bad state: an Add-mode exit muxed into this Lt row's pre.
+- **K2. Unchecked Running payload.** An enabled row whose `outcome.tag = Running` has a nonzero payload is accepted and preserved. Zero payload is required by SI-02, or by the previous stage's E08.
+- **K3. Mode/op coherence comes from the chain.** Mode 3 versus top op 4 is not linked inside any one block: the Lt arithmetic and completion never read frames, and this row never sees the mode. The link holds only if frames are carried untouched through arithmetic → exit → ReturnRight, and SI-21 holds at the chain start.
+
+## 4. Normal / API
+
+**N1 (mandatory before compile admission, no semantic effect).** `CONTROL_TAG_ERROR`, `PRIM_OUTCOME_TAG_ERROR` and `PRIM_OUTCOME_TAG_VALUE` are imported but now unused. In Sub, the dead `#[allow(dead_code)]` primitive copies used them. Here they produce `unused_imports` warnings, which become a hard error under `-D warnings` or `deny(warnings)`. Remove them.
+
+**Derives.**
+- `BLtReturnRightConstructionError` derives `Clone, Debug, PartialEq, Eq`. This is valid because `BReturnRightCompletionEmitError` derives `Eq` (attribute verified), and the enum contains no `Operand`, which lacks `Eq` in `ir.rs`.
+- The attribute-bearing declarations show `BControlRow`, `BFrameRow`, `BLegacyCompletionState` and `BAdminPublishState` all derive `Clone, Debug, PartialEq`. **This closes the prior A3 gap** for `BLtPublishState` and `BLtLegacyHandoff`.
+
+**Borrows, moves and conversions.**
+- `validate_scope(scope)?`, both `check_caller_variables(...)?` calls and `emit_k_machine_return_right_lt_block(...)?` convert through `impl From<BReturnRightCompletionEmitError>`.
+- `Err(...UnprefixedVariable.into())` infers its target from the return type.
+- `enable` is cloned for the legacy block and moved last into `assert_zero_when`, with no later use. `zero` is moved once and not reused.
+- `reserved.iter().any(|prefix| id.0.starts_with(prefix))` compiles because `&String: Pattern`.
+- The `impl Iterator<Item = &Operand>` return borrows only `st`. It mirrors the already-reviewed `complement_operands`.
+
+**SDK fidelity.** The instructions used are `Add`, `Mul`, `TestEq`, `CondSelect`, `ConstrainBits`, `ConstrainEq`, `ConstrainToBoolean` and `DivModPowerOfTwo{outputs: vec![q, r]}`. All match `ir.rs`. Every `CondSelect` bit is boolean: `enable`, `is_val`, `is_popped` and `next_seen_top ∈ {0,1}`.
+
+**Recommendations (not mandatory).**
+- **R1.** Import the existing `b_return_right_completion::BINARY_OP_LT` (= 4) instead of redeclaring `const BINARY_OP_LT: u128 = 4;`. This keeps a single source of truth.
+- **R2.** Optionally harden K1 inside the wrapper. Recompute `is_val`, then require `index + 1 == data.active_rows` and a one-hot over `data[index]` that checks tag 1, `n = 0` and `fields = 0`. The cost is O(cap). This would turn an SI-21R premise into an in-row constraint.
+- **R3.** Pick a derived-namespace suffix that `validate_scope` cannot admit as a user scope. As written, the scopes `s` and `s_typed` together make `s`'s complement namespace equal `s_typed`'s legacy namespace.
+- **R4.** Fix the stale comment `// F4: cap == 0 is admitted for primitive.value / primitive.error`. There are no primitive rows in this module.
+- **R5.** The wrapper reads the outcome payload, data and scalar cursor from `pre`/`post` directly rather than from the handoff's complement fields. The values are the same clones, so this is not a defect; only the doc's "consumes handoff complement" wording is slightly loose.
+
+## 5. Remaining caller conditions (prior C1–C8 retained)
+
+- **CC1 Provenance (K1).** The pre-result must be exactly the constrained mode-3 Lt exit's Applied post (result, data and active rows) or the Lt failure-11 post, carried unchanged. No non-Lt exit may feed this row.
+- **CC2 Mode/op coherence (K3).** SI-21 must hold at chain entry. Frames must be carried as untouched-image C through the arithmetic block, which does not constrain frames.
+- **CC3 Dispatch.** `enable` must come from constrained, exactly-one dispatch after P0/P1/P2. A cap-refused exit (Exhausted, result absent) must route away; this row is unsatisfiable if enabled there. Each row has its own post, and the caller muxes them.
+- **CC4 Namespaces.** Global per-IrSource uniqueness of both `%s__` and `%s_typed__`. Never use both `s` and `s_typed` as scopes (R3). The fixed `k_ret_right_lt` may appear at most once. Prefixes must not nest with the `.local.temp.` and fetch namespaces of other blocks.
+- **CC5 Disabled rows are not vacuous.** They still require 8-bit counter lanes, scalar/byte cursor coherence and `frames.len() ≥ 1`.
+- **CC6 Framing.** `envRoot`, `stackLimit`, `initialFuel`, `segBase`, the `dataFields`/`env`/`valueSlots`/`tasks` arenas, identity and the program view are outside the carriers and remain untouched-image C.
+- **CC7 Running payload zero (K2).** Required by StepInv or the previous stage.
+- **CC8 Table aliasing.** `data` must alias the same `img.data` lanes used by the arithmetic and exit blocks.
+- **CC9 Parent registration.** Module and `mod.rs` re-exports must be explicit and non-glob-conflicting. This is still pending.
+- **Retained history.** The original SI-03 local inputs and the cohort01 AD3 failures remain unrepaired historical gaps.
+
+## 6. Scoped new tests still owed (none executed)
+
+1. **Positives with blind expectations.** Value (Bool `Data`) and error-11 branches at depth 1 and depth = cap. Expect:
+   - lower frames preserved, popped slot zero, `control_origin = origin`, `post.site = 23`;
+   - counters `[-1,+1,0,0,+1]` with depth −1, and scalar cursor equal to packed bytes;
+   - data and outcome payload unchanged, `task_live = 0`.
+2. **Enabled rejections:**
+   - top op ∈ {0,1,2,3,5,6}, or tag ≠ RightF;
+   - ScalarError 10 or any other code, EqualDone, or an absent result;
+   - any helper lane nonzero, site ≠ 11, outcome ≠ Running, control ≠ Return, `post.site ≠ 23`;
+   - wrong `pot`, `pv` or `pec`, or result not cleared;
+   - `pre.depth = 0` or `pre.depth > cap`, a changed lower frame, a nonzero popped or above-top slot, or `origin` mismatch;
+   - `remaining_work = 0`, cursor overflow, scalar ≠ bytes, `task_live ≠ 0`;
+   - any data, active-rows, outcome-payload or counter-rest change.
+3. **Disabled rows:**
+   - `post == pre` accepted for well-formed arbitrary-site pre-states;
+   - a single changed lane rejected, for every lane class including data and the scalar cursor;
+   - an incoherent pre cursor rejected.
+4. **Host errors:** each `BReturnRightCompletionEmitError` variant, `DataTableShape`, and `DataRowRestShape`. Also `UnprefixedVariable` and `TemporaryNameCollision` for each operand region, against both prefixes.
+5. **Emitted names:** all outputs are unique and lie under the two prefixes. SDK serde, `IrSource::load` and `check` succeed on a harness.
+6. **Handoff equivalence:** `to_legacy_handoff().state` must equal `to_legacy_completion_state(to_admin_publish_state())`, tested inside the crate.
+7. **Chains:**
+   - arithmetic → exit → ReturnRight → `primitive.value` → P1 Halted(Bool);
+   - failure → `primitive.error` → Rejected(11);
+   - a cap-refused exit with ReturnRight enabled must be unsatisfiable.
+8. **Negative composer test for K1:** an Add-exit UInt result fed into the Lt ReturnRight row must be rejected by the composer. This block alone accepts it.
+
+**Not claimed:** compilation, SDK, proof or native results; StepInv; full Lt P1 or whole-interpreter closure; registration; runtime eligibility.
