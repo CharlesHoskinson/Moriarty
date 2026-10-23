@@ -115,6 +115,19 @@ pub struct AssetDecl {
     pub name: String,
     pub identity: AssetId,
 }
+/// Source-declared external duty identity for `moriarty/3` only.
+/// Constructed only by `parser::parse_v3` from source text; never by JSON,
+/// a manifest, a binding map, a Scenario or a Snapshot. It is parsed source
+/// identity for admission, not OD5 consent, obligation formation,
+/// authenticated completeness or native authority.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ExternalDutyDecl {
+    pub name: String,
+    pub asset: String,
+    pub debtor: String,
+    pub creditor: String,
+}
 /// Serialize-only on the shared type: decoding always goes through the frozen
 /// `v1` wire, so JSON can never yield `Await`.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -184,6 +197,12 @@ pub struct Program {
     pub assets: Vec<AssetDecl>,
     pub expressions: Vec<Expr>,
     pub actions: Vec<Action>,
+    /// Empty for every `/1` and `/2` program, so serialization, canonical
+    /// bytes and program/plan hashes for those profiles are unchanged.
+    /// A `/3` program is built only by `parser::parse_v3`; its duties then
+    /// serialize in declaration order and bind into the program hash.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub duties: Vec<ExternalDutyDecl>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -271,6 +290,8 @@ pub struct Execution {
 /// Frozen `moriarty-core/1` decode wire: the baseline (fe01bc8b) derives,
 /// moved verbatim. Type names are kept so serde's `expecting` text, unknown
 /// variant lists and error messages stay byte-identical. There is no Await.
+/// There is also no `duties` field, so `deny_unknown_fields` refuses any
+/// JSON object carrying `duties` on every shared decode path.
 pub mod v1 {
     use super::{AssetDecl, Effect, Expr, ExprId, InputDecl, Snapshot, StateDecl, Value};
     use serde::{Deserialize, Serialize};
@@ -425,6 +446,7 @@ impl From<v1::Program> for Program {
             assets: p.assets,
             expressions: p.expressions,
             actions: p.actions.into_iter().map(Into::into).collect(),
+            duties: Vec::new(),
         }
     }
 }

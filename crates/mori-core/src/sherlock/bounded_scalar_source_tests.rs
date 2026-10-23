@@ -38,7 +38,7 @@ fn exceeded(measure: HostMeasure, required: Option<u128>, bound: u128) -> HostOb
 
 fn hostile_core(expressions: Vec<crate::Expr>, action: crate::Action) -> crate::Program {
     crate::Program { language: crate::LANGUAGE.into(), semantics: crate::SEMANTICS.into(),
-        name: "Hostile".into(), states: vec![], assets: vec![], expressions, actions: vec![action] }
+        name: "Hostile".into(), states: vec![], assets: vec![], duties: vec![], expressions, actions: vec![action] }
 }
 
 /// Records chain, charges and retained identity common to every admitted run.

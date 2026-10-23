@@ -283,6 +283,7 @@ mod tests {
             name: "D".into(),
             states: vec![],
             assets: vec![],
+            duties: vec![],
             expressions: vec![
                 Expr::Name { name: "x".into() },
                 Expr::Binary { op: BinaryOp::Add, lhs: 0, rhs: 0 },

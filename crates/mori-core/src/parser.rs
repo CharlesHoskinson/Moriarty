@@ -1,17 +1,54 @@
 use crate::*;
 use mori_lexer::{TokenIdx, TokenKind};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Profile {
+    Core1,
+    Core2,
+    Core3,
+}
+impl Profile {
+    fn language(self) -> &'static str {
+        match self {
+            Self::Core1 => LANGUAGE,
+            Self::Core2 => crate::stage::LANGUAGE_2,
+            Self::Core3 => crate::stage::LANGUAGE_3,
+        }
+    }
+    fn semantics(self) -> &'static str {
+        match self {
+            Self::Core1 => SEMANTICS,
+            Self::Core2 => crate::stage::SEMANTICS_2,
+            Self::Core3 => crate::stage::SEMANTICS_3,
+        }
+    }
+}
+
 /// Parses the explicitly versioned core profile; beta grammar is untouched.
 pub fn parse(source: &str) -> Result<Program, Error> {
-    parse_profile(source, false)
+    parse_profile(source, Profile::Core1)
 }
 
 /// Syntax-only parser; only stage::load admits the resulting source.
 pub(crate) fn parse_v2(source: &str) -> Result<Program, Error> {
-    parse_profile(source, true)
+    parse_profile(source, Profile::Core2)
 }
 
-fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
+/// Syntax-only `/3` parser; only stage::load_v3 admits the result.
+/// Grammar added over `/2`: inside the agreement block, before the first
+/// action, interleaved with state/asset declarations, any number of
+/// `duty "<name>" = { asset: <asset-word>, debtor: "<debtor>", creditor: "<creditor>" };`
+/// `duty` is matched by token text only on this path; the lexer yields it
+/// as an ordinary identifier and no lexer change is required. On `/1` and
+/// `/2` paths the same text reaches the existing unsupported-declaration
+/// refusal. Name/debtor/creditor are decoded strings (`parser.string()`);
+/// asset is a word naming a declared asset, checked in `validate_v3`.
+pub(crate) fn parse_v3(source: &str) -> Result<Program, Error> {
+    parse_profile(source, Profile::Core3)
+}
+
+fn parse_profile(source: &str, profile: Profile) -> Result<Program, Error> {
+    let staged = profile != Profile::Core1;
     let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
     let tokens = (0..lexed.len())
         .map(|i| {
@@ -34,30 +71,63 @@ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
         tokens,
         pos: 0,
         program: Program {
-            language: if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE }.into(),
-            semantics: if staged { crate::stage::SEMANTICS_2 } else { SEMANTICS }.into(),
+            language: profile.language().into(),
+            semantics: profile.semantics().into(),
             name: String::new(),
             states: vec![],
             assets: vec![],
             expressions: vec![],
             actions: vec![],
+            duties: vec![],
         },
     };
     parser.expect("language")?;
-    let profile = parser.string()?;
-    let expected_language = if staged { crate::stage::LANGUAGE_2 } else { LANGUAGE };
-    if profile != expected_language {
+    let found = parser.string()?;
+    let expected_language = profile.language();
+    if found != expected_language {
         return Err(parser.error(
             "profile",
-            format!("Expected language \"{expected_language}\"; found {profile:?}."),
+            format!("Expected language \"{expected_language}\"; found {found:?}."),
         ));
     }
     parser.expect(";")?;
     parser.expect("agreement")?;
     parser.program.name = parser.word()?;
     parser.expect("{")?;
+    let mut seen_action = false;
     while !parser.eat("}") {
-        if parser.eat("state") {
+        if profile == Profile::Core3 && parser.peek_is_duty() {
+            if seen_action {
+                return Err(parser.error(
+                    "syntax",
+                    "Duty declarations must precede the first action.",
+                ));
+            }
+            parser.pos += 1;
+            let name = parser.string()?;
+            parser.expect("=")?;
+            parser.expect("{")?;
+            parser.expect("asset")?;
+            parser.expect(":")?;
+            let asset = parser.word()?;
+            parser.expect(",")?;
+            parser.expect("debtor")?;
+            parser.expect(":")?;
+            let debtor = parser.string()?;
+            parser.expect(",")?;
+            parser.expect("creditor")?;
+            parser.expect(":")?;
+            let creditor = parser.string()?;
+            parser.eat(",");
+            parser.expect("}")?;
+            parser.expect(";")?;
+            parser.program.duties.push(ExternalDutyDecl {
+                name,
+                asset,
+                debtor,
+                creditor,
+            });
+        } else if parser.eat("state") {
             let name = parser.word()?;
             parser.expect(":")?;
             let ty = parser.ty()?;
@@ -101,6 +171,7 @@ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
                 },
             });
         } else if parser.eat("action") {
+            seen_action = true;
             let name = parser.word()?;
             parser.expect("(")?;
             let mut inputs = vec![];
@@ -145,7 +216,10 @@ fn parse_profile(source: &str, staged: bool) -> Result<Program, Error> {
         } else {
             return Err(parser.error("unsupported", "Expected state, asset or action declaration; loops and native calls are unsupported."));
         }
-        if parser.program.states.len() + parser.program.assets.len() + parser.program.actions.len()
+        if parser.program.states.len()
+            + parser.program.assets.len()
+            + parser.program.actions.len()
+            + parser.program.duties.len()
             > MAX_DECLARATIONS
         {
             return Err(parser.error("bound", "Program exceeds 256 declarations."));
@@ -172,6 +246,9 @@ struct Parser {
 impl Parser {
     fn peek(&self) -> &Tok {
         &self.tokens[self.pos]
+    }
+    fn peek_is_duty(&self) -> bool {
+        self.peek().text == "duty" && self.peek().kind != TokenKind::String
     }
     fn error(&self, code: &str, message: impl Into<String>) -> Error {
         let mut e = Error::new(code, message);
@@ -281,7 +358,6 @@ impl Parser {
             }
         };
         loop {
-            // A decoded string spelling an operator is still a string token.
             if self.peek().kind == TokenKind::String {
                 break;
             }
@@ -316,7 +392,7 @@ impl Parser {
     fn statement(&mut self) -> Result<Statement, Error> {
         let keyword = self.word()?;
         let s=match keyword.as_str() {
-            "await" if self.program.language == crate::stage::LANGUAGE_2 => {
+            "await" if matches!(self.program.language.as_str(), crate::stage::LANGUAGE_2 | crate::stage::LANGUAGE_3) => {
                 let label = self.word()?;
                 self.expect("(")?;
                 let mut binders = Vec::new();
@@ -349,6 +425,7 @@ impl Parser {
 }
 
 /// Read the explicit source profile for CLI routing; this does not admit a program.
+/// Unchanged: returns only `/1` or `/2`, so legacy consumers refuse `/3`.
 pub fn language(source: &str) -> Result<&'static str, Error> {
     let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
     let mut tokens = Vec::new();
@@ -365,7 +442,7 @@ pub fn language(source: &str) -> Result<&'static str, Error> {
     }
     let mut parser = Parser { tokens, pos: 0, program: Program {
         language: LANGUAGE.into(), semantics: SEMANTICS.into(), name: String::new(),
-        states: vec![], assets: vec![], expressions: vec![], actions: vec![],
+        states: vec![], assets: vec![], expressions: vec![], actions: vec![], duties: vec![],
     }};
     parser.expect("language")?;
     let profile = parser.string()?;
@@ -373,5 +450,71 @@ pub fn language(source: &str) -> Result<&'static str, Error> {
         LANGUAGE => Ok(LANGUAGE),
         crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),
         _ => Err(parser.error("profile", format!("Expected language \"{LANGUAGE}\"; found {profile:?}."))),
+    }
+}
+
+/// Extended routing for staged consumers that explicitly support `/3`.
+/// Returns `/1`, `/2` or `/3`; it does not admit a program and never
+/// converts between profiles.
+pub fn language_v3(source: &str) -> Result<&'static str, Error> {
+    language_inner(source, true)
+}
+
+fn language_inner(source: &str, v3: bool) -> Result<&'static str, Error> {
+    let lexed = mori_lexer::lex(source).map_err(|e| Error::new("lex", e.to_string()))?;
+    let mut tokens = Vec::new();
+    for i in 0..lexed.len() {
+        let idx = TokenIdx::new(i);
+        let span = lexed.span(idx, source);
+        let raw = &source[span.start as usize..span.end as usize];
+        let kind = lexed.kind(idx);
+        tokens.push(Tok {
+            text: if kind == TokenKind::String { mori_lexer::decode_string(raw) } else { raw.to_owned() },
+            kind,
+            start: span.start,
+        });
+    }
+    let mut parser = Parser {
+        tokens,
+        pos: 0,
+        program: Program {
+            language: LANGUAGE.into(),
+            semantics: SEMANTICS.into(),
+            name: String::new(),
+            states: vec![],
+            assets: vec![],
+            expressions: vec![],
+            actions: vec![],
+            duties: vec![],
+        },
+    };
+    let expected = if v3 {
+        format!(
+            "language \"{LANGUAGE}\" or \"{}\" or \"{}\"",
+            crate::stage::LANGUAGE_2,
+            crate::stage::LANGUAGE_3
+        )
+    } else {
+        format!(
+            "language \"{LANGUAGE}\" or \"{}\"",
+            crate::stage::LANGUAGE_2
+        )
+    };
+    parser.expect("language").map_err(|mut error| {
+        error.message = format!("Expected {expected}. {}", error.message);
+        error
+    })?;
+    let profile = parser.string().map_err(|mut error| {
+        error.message = format!("Expected {expected}. {}", error.message);
+        error
+    })?;
+    match profile.as_str() {
+        LANGUAGE => Ok(LANGUAGE),
+        crate::stage::LANGUAGE_2 => Ok(crate::stage::LANGUAGE_2),
+        crate::stage::LANGUAGE_3 if v3 => Ok(crate::stage::LANGUAGE_3),
+        _ => Err(parser.error(
+            "profile",
+            format!("Expected {expected}; found {profile:?}."),
+        )),
     }
 }

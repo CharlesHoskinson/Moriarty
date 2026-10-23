@@ -15,7 +15,7 @@ pub struct Args {
     /// Scenario JSON with the local state and inputs
     #[arg(long, value_name = "FILE", required_unless_present = "resume")]
     pub scenario: Option<PathBuf>,
-    /// Resume a moriarty/2 continuation (local, unauthenticated, consumption untracked)
+    /// Resume a moriarty/2 or moriarty/3 continuation (local, unauthenticated, consumption untracked)
     #[arg(
         long,
         value_name = "FILE",
@@ -97,8 +97,13 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
         ));
     }
     let source = super::core_io::read_source(&args.file)?;
-    // Hook: /2 routing. A /2 start keeps every core failure labelled.
-    if mori_core::language(&source) == Ok(mori_core::stage::LANGUAGE_2) {
+    // Staged starts keep every Core load/scenario failure labelled.
+    let language =
+        super::check_source::public_core_language(&source).map_err(super::core_io::operation)?;
+    if matches!(
+        language,
+        mori_core::stage::LANGUAGE_2 | mori_core::stage::LANGUAGE_3
+    ) {
         return run_stage_start(&args, &source, action, scenario_path);
     }
     let program = mori_core::parse(&source).map_err(super::core_io::operation)?;
@@ -186,7 +191,7 @@ fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
         .ok_or_else(|| super::core_io::operation("--resume requires --event"))?;
     let source = super::core_io::read_source(&args.file)?;
     let result = (|| -> Result<StageOutcome, StageRejection> {
-        let program = stage::load(&source).map_err(no_work)?;
+        let program = super::check_source::load_staged_source(&source).map_err(no_work)?;
         let continuation = decode::read_bounded(
             resume,
             decode::MAX_CONTINUATION_BYTES,
@@ -202,12 +207,12 @@ fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
     print_stage_result(result)
 }
 
-/// A `/2` start. Load and scenario failures are labelled stage rejections; the
+/// A `/2` or `/3` start. Load/scenario failures are labelled stage rejections; the
 /// scenario keeps the legacy 1 MiB strict reader.
 fn run_stage_start(args: &Args, source: &str, action: &str, scenario: &Path) -> super::Result<ExitCode> {
     use mori_core::stage::{self, StageOutcome, StageRejection, decode};
     let result = (|| -> Result<StageOutcome, StageRejection> {
-        let program = stage::load(source).map_err(no_work)?;
+        let program = super::check_source::load_staged_source(source).map_err(no_work)?;
         let text = decode::read_bounded(scenario, 1_048_576, "Scenario JSON exceeds 1 MiB")
             .map_err(no_work)?;
         let value = mori_core::json::parse(&text).map_err(no_work)?;

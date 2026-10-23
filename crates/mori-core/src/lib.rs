@@ -35,7 +35,7 @@ mod runtime;
 mod source_sponsor;
 pub use ir::*;
 pub use logical_cost::*;
-pub use parser::{language, parse};
+pub use parser::{language, language_v3, parse};
 pub use replay::{DetailedReplayError, ReplayDifference, compare_execution, replay_detailed};
 pub use runtime::{replay, simulate, validate};
 pub use source_sponsor::*;
