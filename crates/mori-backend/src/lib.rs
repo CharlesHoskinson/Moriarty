@@ -19,6 +19,7 @@ pub mod replay;
 pub mod schnorr;
 pub mod sherlock_child;
 pub mod sherlock_link;
+pub mod sherlock_link_producer;
 pub mod sherlock_machine;
 pub mod signed_relation;
 pub mod stage;
