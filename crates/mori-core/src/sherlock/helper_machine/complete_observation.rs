@@ -15,6 +15,17 @@ use serde_json::json;
 
 fn clone_type_expr_iterative(root: &owner_ext_type_builder::TypeExprSrc) -> owner_ext_type_builder::TypeExprSrc {
     use owner_ext_type_builder::TypeExprSrc;
+    // Leaf clones need only their value (and owned name), not two work Vecs.
+    // Keep Apply on the original iterative path, including deep applications.
+    match root {
+        TypeExprSrc::UInt => return TypeExprSrc::UInt,
+        TypeExprSrc::Bool => return TypeExprSrc::Bool,
+        TypeExprSrc::List => return TypeExprSrc::List,
+        TypeExprSrc::Tree => return TypeExprSrc::Tree,
+        TypeExprSrc::Named { name } => return TypeExprSrc::Named { name: name.clone() },
+        TypeExprSrc::Param { name } => return TypeExprSrc::Param { name: name.clone() },
+        TypeExprSrc::Apply { .. } => {}
+    }
     enum Frame<'a> {
         Enter(&'a TypeExprSrc),
         BuildApply { name: String, arity: usize },
