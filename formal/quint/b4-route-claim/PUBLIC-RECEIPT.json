@@ -1,0 +1,98 @@
+{
+  "schema": "sherlock.b4-route-claim.public-receipt/1",
+  "status": "SCOPED_ACTUAL_RESULT_ADOPTED",
+  "source": {
+    "b4RouteClaim.qnt": {
+      "bytes": 5200,
+      "sha256": "9e6f05492bb55553ab5d2f196fe65f4362e255c390f2675b1e9ae2d921920dde"
+    },
+    "b4RouteClaimTest.qnt": {
+      "bytes": 2852,
+      "sha256": "a011fdf83539430909c2b27ee596d5d340bd6eca49535c2d2441aabcdc6c5231"
+    }
+  },
+  "observed": {
+    "frontend": "success with empty diagnostics for the exact selected file/import cut",
+    "corrected_control_cases": 5,
+    "expected_bad_old_reachable_witnesses": 2,
+    "selected_names": [
+      "parkedReadControlLinkedTest",
+      "t20ObserveInjectedTest",
+      "t20BindInjectedTest",
+      "t20ReproveInjectedTest",
+      "t21ConcurrentRouteRefusedTest",
+      "oldT20LeavesFailedExpectedBadTest",
+      "oldT21DoubleInnerExpectedBadTest"
+    ],
+    "samples_each": 1,
+    "seed": 1,
+    "interpretation": "Five corrected/control cases plus two ExpectedBad old-transition witnesses. Seven passing declarations are not seven safety passes."
+  },
+  "review": {
+    "source_semantics": "Separate actual canonical claude-opus-5-5 review: APPROVE_SCOPED_SOURCE with M1-M7 qualifications",
+    "actual_data": "Separate GPT-based mechanical review: consistent for the scoped observed result; no new semantic or security verdict",
+    "source_review_sha256": "1c82e66424947f9c5872c1001596d146fcaa155e551f3cc15d9ffc1701282b31",
+    "actual_data_review_sha256": "3ce0997d12b696127705f8f77da3abe2ccfc124b22fbbe9d5d3c2aec7e232c0a",
+    "adoption_record_sha256": "ecbc50e52e433bd739099449f6a4a9e4a4247459b5a71929004ef422bc5b9857",
+    "actual_result_record_sha256": "99c48dd37053820fc6e45293f72055f92321f424fedbae90fe774913d03c6b4c"
+  },
+  "qualifications": {
+    "M1": {
+      "meaning": "The five corrected/control cases and the two ExpectedBad cases have different meanings. Each ExpectedBad declaration succeeds when its selected old transition reaches an unsafe state; they are bad-old reachable witnesses, not safety passes.",
+      "corrected_control": [
+        "parkedReadControlLinkedTest",
+        "t20ObserveInjectedTest",
+        "t20BindInjectedTest",
+        "t20ReproveInjectedTest",
+        "t21ConcurrentRouteRefusedTest"
+      ],
+      "expected_bad_old_reachable": [
+        "oldT20LeavesFailedExpectedBadTest",
+        "oldT21DoubleInnerExpectedBadTest"
+      ]
+    },
+    "M2": {
+      "premise": "The model records failure state and first code atomically. This corresponds only to the selected T20/T21 schedules in which refusal is recorded before the parked read is released.",
+      "schedules": "T20 observe/bind refusals are synchronous, and the reprove rejection is awaited before release. T21 awaits the second route rejection before release.",
+      "excluded": "Real async entry refusals can latch a microtask later. This result establishes no global synchronous-latching theorem. General step interleavings, simulation, invariant runs and exhaustive checks are outside this adopted result; delayed-latch and consumer go-gate work remains separate."
+    },
+    "M3": {
+      "premise": "The baseReturn guard assumes the base provider settles only after its own route call settles and propagates route rejection. The selected test behavior is evidence for its fixture schedule, not a proof of the unsupplied production provider implementation."
+    },
+    "M4": {
+      "omission": "The model does not track the provider promise rejection-code oracle. A rejected route is expected to propagate STATE_CHANGED in the implementation, whereas model baseReturn uses NoRouteCapture after a prior rej has already recorded the original first code. NoRouteCapture therefore does not become first in the selected traces.",
+      "counts": "The T20 zero codec and sealed-getter counts are only partly represented by later observation refusal; exact counts and the provider rejection-code oracle are not established by this model."
+    },
+    "M5": {
+      "collapsed_or_omitted_paths": [
+        "ERR_B4_ROUTE_REFUSED stats checks",
+        "inner.prove throwing, including ERR_B4_UNEXPECTED or an inner LinkError",
+        "read rejection",
+        "copy failure / ERR_B4_NOT_BYTES",
+        "ERR_B4_CALLBACK_CONTEXT",
+        "ERR_B4_ROUTE_BINDING",
+        "ERR_B4_VK_UNRESOLVED",
+        "base provider resolving without invoking the route: baseReturn is disabled while route 1 remains Out"
+      ],
+      "other_abstractions": "Lookup resolution, valid binding/preimage hashes, codec and observing segments, and foreign reentry inside collapsed segments are premises or outside scope."
+    },
+    "M6": {
+      "membership": "Only the seven named Test-suffixed declarations are selected. toPreimage and toProofRead are unselected prefix runs; the latter expectation is exercised through cases built on it. Including the two prefix runs would be a different nine-declaration selection, not this result.",
+      "sampling": "Seed 1, one example per selected declaration; no broad sampling or exhaustive coverage is claimed."
+    },
+    "M7": {
+      "mixed_prefix": "oldT20LeavesFailedExpectedBadTest uses the corrected route-entry/after-preimage prefix, which sets claimed and checks okAt, before the unchecked old after-proof transition. This is a mixed-prefix witness, not pure OLD02 replay.",
+      "justification_and_limit": "On that selected prefix the old entry and unchecked after-preimage take the same branches; the old after-proof transition reads neither claimed nor first. Other old callback, provider-prove and sealed-observation behavior is assumed equal to the current version; the source comparison supplied only the affected old route and wrappers."
+    }
+  },
+  "evidence_boundary": "The retained selected captures support the frontend and five-plus-two result. Historical pre/post pin and lifetime observations remain owner attestations; independent current hash agreement does not reconstruct historical process or filesystem behavior. No stronger closure theorem is inferred.",
+  "not_established": [
+    "global async failure-latch or consumer post-await go-gate correctness",
+    "general simulation, invariant-run, liveness or exhaustive safety results",
+    "production JavaScript, SDK or Rust refinement",
+    "wire/vector/privacy/native proof verification or durable proof-reuse closure",
+    "A accept-token counterpart",
+    "genuine call, financial acceptance, target settlement or full Sherlock completion",
+    "security certification"
+  ]
+}
