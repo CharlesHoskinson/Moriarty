@@ -1,5 +1,16 @@
 # Sherlock implementation loop contract
 
+## Current delivery priority — revision13, 2026-10-24
+
+The complete Sherlock objective remains genuine recursion, independent verification, finalized full effects on Midnight ledger-9 stagenet, and an exact-intent synthetic Fenrir rollup benchmark. The recorded goal is currently **blocked** on the applicable corrected-call assembly review or reviewer-routing change. An actual Opus5.5 coordinator was requested; its provider withheld the response, so it supplied no usable direction or approval.
+
+The critical path is current SDK-bound proof → independent verify → one finalized full-effects call on the existing deployment → synthetic rollup benchmarks. Reuse the existing contract, wallet and keys. Keep prior consumed attempts, financial uncertainty, resource caps and review requirements. Do not replay unchanged attempts. The corrected preparation has eleven public source/configuration files and syntax/hash checks; its generator, bindings, decision and live attempt have not run.
+
+Clean, Quint, K, handwritten circuits, documentation, source graph and safe branch cleanup remain tracked. Their expansion cannot become a new prerequisite to the first existing keyed proof/call. K66 peripheral preparation stopped before a new composition, once record, selection or subject. Run CI locally; no new factory, daemon, per-agent branch or hosted CI.
+
+See [current status](stagenet-rescue-current-2026-10-24.md) and [machine-readable observations](status-2026-10-24.json). Earlier loop revisions below remain historical records with their original scope.
+
+
 ## Active recursion loop — October 22, 2026, revision05
 
 The user instructs: **merge, rewrite and begin the loop**. This resumes the

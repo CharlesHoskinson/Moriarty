@@ -143,3 +143,8 @@ Sol factual navigation: [receipt-gating engineering erratum](UPDATE-026-RECEIPT-
 ### UPDATE028 revision03 — separately launched verifier and keyed Build9
 
 Subsequent dated evidence adds the adopted fixed-parent separate-process verification and five selected refusals, keyed Build9's thirteen files, all fourteen finite symbolic K results, the nine passed data-AST checks and the compact checker's eleven passes/two parser failures. R4 and owner checks remain pending; the real metadata constructor/close smoke is scoped and awaiting fresh actual review. [Continue UPDATE028](UPDATE-028-TWO-VERIFIED-CHILDREN-AND-TWENTY-CLOCK-PORTS.md#revision03--a-separate-receiving-socket-and-a-keyed-connector). Preserve UPDATE026/027, earlier clocks, originals and named maps. Public Tron/PCB/Three.js concepts only; the website WILL launch after full Sherlock completion.
+
+
+## Current source checkpoint — 2026-10-24
+
+[Latest circuit note](../../../docs/sherlock/circuit-atlas-current-note-2026-10-24.md) records the revised parent19/leaf20/recursive31 source interfaces and successful cold build with tests unrun. [Exact source snapshots](../../../raw/audits/2026-10-24/README.md) and [stagenet test status](../../../docs/sherlock/stagenet-rescue-current-2026-10-24.md) retain their separate scopes. These are development notes; the future circuit website remains unpublished.
