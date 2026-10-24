@@ -3,21 +3,19 @@
 Status: **PROPOSED / UNADOPTED / UNEXECUTED**. This is an ordinary representation
 design for review, not a native ABI, schema freeze, implementation, theorem,
 resource admission or permission to execute. It changes no existing specification.
-The author is Astra, at the user's explicit request. Adoption requires two fresh
-substantive agreeing votes: Muse for nonsecurity design and Opus for its security
-scope. Root arranges those reviews; neither L3 vote is asserted here.
+The author is Astra, at the user's explicit request. Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required.
 
 Revision L4 adds only the verbatim Opus G1/G2 canonical append/path
 clarifications and the G3 future-obligation label, and corrects G4 map
-provenance. Fresh diff-scoped Opus and Muse review remains required. No codec,
+provenance. No codec,
 ProgramBlock digest, canonical-uniqueness or execution result is claimed.
 
 Historical revision L3 materialized only Opus F1(a-c)/F2 text clarifications and recorded
 F3/F5 constraints and F4's UNSELECTED mechanism from the fresh L2 review.
 L2 received two substantive ADOPTABLE_WITH_LIMITS votes, but those votes do
 not approve these changed bytes, implement a codec or establish determinism.
-Complete preparation/decode claims require fresh Muse and Opus review of L3;
-this candidate remains unadopted and unexecuted.
+Complete preparation/decode claims need their own evidence;
+this candidate remains unexecuted.
 
 Historical revision L2 materialized the separately supplied Opus 5.5 high owner repairs,
 including the exact 39-rule observation envelope and the separation of physical

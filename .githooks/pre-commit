@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# DoctorWatson pre-commit: holdout ownership, docs-only rule, then T0.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+mapfile -d '' -t staged < <(git diff --cached --name-only --no-renames -z)
+
+# (1) The sealed holdout belongs to the evaluator.
+if [[ "${DW_ROLE:-}" != "evaluator" ]]; then
+  for p in "${staged[@]}"; do
+    if [[ "$p" == qa/holdout/* ]]; then
+      echo "pre-commit: REJECTED: holdout is evaluator-owned ($p); set DW_ROLE=evaluator only in the evaluator role" >&2
+      exit 1
+    fi
+  done
+fi
+
+# (2) No docs-only commits in the inner loop.
+if [[ ${#staged[@]} -gt 0 && "${DW_DOCS_COMMIT:-}" != "1" ]]; then
+  docs_only=1
+  for p in "${staged[@]}"; do
+    case "$p" in
+      docs/* | evidence/* | raw/* | wiki/* | wiki-llm/*) ;;
+      *)
+        docs_only=0
+        break
+        ;;
+    esac
+  done
+  if [[ $docs_only -eq 1 ]]; then
+    echo "pre-commit: REJECTED: docs-only commit in the inner loop; set DW_DOCS_COMMIT=1 for a milestone docs commit" >&2
+    exit 1
+  fi
+fi
+
+# (3) T0.
+if [[ "${DW_SKIP_T0:-}" == "1" ]]; then
+  echo "pre-commit: WARNING: DW_SKIP_T0=1, skipping T0 (emergency use only)" >&2
+  exit 0
+fi
+exec "$root/qa/tiers/t0.sh" --staged

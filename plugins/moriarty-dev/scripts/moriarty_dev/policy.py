@@ -4,26 +4,22 @@
 grant admission. Booleans and integers are distinct: ``bool`` is not ``int``.
 Unknown keys, missing keys and wrong types yield ``INPUT_INVALID``.
 
-Check order for a well-typed input:
+Blocking checks, in order, for a well-typed input:
 
 1. unknown action kind
 2. read-only ``report`` (always allowed)
-3. current authority
-4. current candidate bytes/hash
-5. task entry eligibility
-6. resource admission
-7. named admission/command gaps
-8. unresolved operational history
-9. primary implementation reservation
-10. repeated same-defect failures
-11. administrative cycle/time limits
-12. allow
+3. primary implementation reservation (one writer at a time)
+4. administrative cycle/time limits
+5. allow
 
-A focused repair after two same-defect failures requires both
-``reproducerVerified`` and ``approachChanged``. Repair occupies the primary
-implementation slot. Report remains allowed when dispatch is denied.
-Reproduce remains allowed for repeated-failure, history, admin and
-concurrency limits, but not for admission/command gaps.
+Everything else is advisory. Missing or stale campaign authority, stale
+candidate evidence, task entry eligibility, resource admission,
+admission/command gaps, unresolved operational history and repeated
+same-defect failures (unchanged retries, missing review receipts, missing
+independent approval, consumed attempts) never deny an action. The guarded
+CLI still cannot launch a command it cannot resolve; that is structural. Each one is recorded in ``warnings`` as the reason
+code it used to produce, and the action stays ``ALLOWED``. Report remains
+allowed whenever dispatch is denied.
 """
 from __future__ import annotations
 
@@ -51,7 +47,7 @@ SNAPSHOT_KEYS = (
     "nextActionId",
     "missingEvidence",
 )
-DECISION_KEYS = ("allow", "reasonCode", "nextActionId", "missingEvidence")
+DECISION_KEYS = ("allow", "reasonCode", "nextActionId", "missingEvidence", "warnings")
 KNOWN_KINDS = frozenset(
     ("implement", "reproduce", "repair", "verify", "review", "admin", "report")
 )
@@ -85,44 +81,50 @@ def assess(snapshot, action):
     next_id = snapshot["nextActionId"]
     if kind not in KNOWN_KINDS:
         return _decision(False, "UNKNOWN_KIND", next_id, missing)
+    warnings = _advisories(snapshot, kind, missing)
     if kind == "report":
-        return _decision(True, "ALLOWED", next_id, missing)
-    if snapshot["authorityCurrent"] is False:
-        return _decision(False, "AUTHORITY_UNAVAILABLE", next_id, missing)
-    if snapshot["candidateCurrent"] is False:
-        return _decision(False, "EVIDENCE_STALE", next_id, missing)
-    if snapshot["entryEligible"] is False:
-        return _decision(False, "ENTRY_INELIGIBLE", next_id, missing)
-    if snapshot["resourceAdmitted"] is False:
-        return _decision(False, "RESOURCE_EXHAUSTED", next_id, missing)
-    if _admission_gap(missing):
-        return _decision(False, "ADMISSION_UNRESOLVED", next_id, missing)
-    if _history_gap(missing) and kind not in HISTORY_EXEMPT_KINDS:
-        return _decision(False, "HISTORY_UNRESOLVED", next_id, missing)
+        return _decision(True, "ALLOWED", next_id, missing, warnings)
     if snapshot["primaryActive"] is True and kind in PRIMARY_BLOCKED_KINDS:
-        return _decision(False, "PRIMARY_ACTIVE", next_id, missing)
+        return _decision(False, "PRIMARY_ACTIVE", next_id, missing, warnings)
+    if kind == "admin" and _admin_limit(snapshot):
+        return _decision(False, "ADMIN_LIMIT", next_id, missing, warnings)
+    return _decision(True, "ALLOWED", next_id, missing, warnings)
+
+
+def _advisories(snapshot, kind, missing):
+    """Former gates, now warnings: recorded, never blocking."""
+    warnings = []
+    if snapshot["authorityCurrent"] is False:
+        warnings.append("AUTHORITY_UNAVAILABLE")
+    if snapshot["candidateCurrent"] is False:
+        warnings.append("EVIDENCE_STALE")
+    if snapshot["entryEligible"] is False:
+        warnings.append("ENTRY_INELIGIBLE")
+    if snapshot["resourceAdmitted"] is False:
+        warnings.append("RESOURCE_EXHAUSTED")
+    if _admission_gap(missing):
+        warnings.append("ADMISSION_UNRESOLVED")
+    if _history_gap(missing) and kind not in HISTORY_EXEMPT_KINDS:
+        warnings.append("HISTORY_UNRESOLVED")
     same_failures = snapshot.get("sameDefectFailures")
     if same_failures is not None and same_failures >= FAILURE_RETRY_LIMIT:
         if kind in RETRY_BLOCKED_KINDS:
-            return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
-        if kind == "repair":
-            ready = (
-                snapshot["reproducerVerified"] is True
-                and snapshot["approachChanged"] is True
-            )
-            if not ready:
-                return _decision(False, "REPAIR_UNREADY", next_id, missing)
-    if kind == "admin" and _admin_limit(snapshot):
-        return _decision(False, "ADMIN_LIMIT", next_id, missing)
-    return _decision(True, "ALLOWED", next_id, missing)
+            warnings.append("REPRODUCE_BEFORE_RETRY")
+        elif kind == "repair" and not (
+            snapshot["reproducerVerified"] is True
+            and snapshot["approachChanged"] is True
+        ):
+            warnings.append("REPAIR_UNREADY")
+    return warnings
 
 
-def _decision(allow, reason_code, next_action_id, missing_evidence):
+def _decision(allow, reason_code, next_action_id, missing_evidence, warnings=()):
     return {
         "allow": allow,
         "reasonCode": reason_code,
         "nextActionId": next_action_id,
         "missingEvidence": list(missing_evidence),
+        "warnings": list(warnings),
     }
 
 

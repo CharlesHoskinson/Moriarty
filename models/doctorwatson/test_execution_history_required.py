@@ -50,13 +50,15 @@ class ExecutionHistoryRequiredTests(unittest.TestCase):
             delivery.load_plan(self.case.plan), "verify")
         self.case.selection.write_bytes(fx.encoded(self.case.selection_value))
 
-    def test_omitted_original_result_blocks_new_attempt_even_changed_source(self):
+    def test_omitted_original_result_warns_and_new_attempt_runs(self):
         self.assertEqual(self.case.go()[0], rs.EXIT_OK)
         self.newer_attempt()
         self.case.marker.unlink()
-        with self.assertRaisesRegex(rs.Blocked, "omitted or changed"):
-            self.case.go("attempt2")
-        self.assertFalse(self.case.marker.exists())
+        code, _record = self.case.go("attempt2")
+        self.assertEqual(code, rs.EXIT_OK)
+        self.assertTrue(self.case.marker.exists())
+        preexec = json.loads((self.case.output / "attempt2/PREEXEC.json").read_text())
+        self.assertTrue(any("omits or changed" in w for w in preexec["retryWarnings"]))
 
     def test_retained_exact_success_allows_selected_changed_attempt(self):
         code, record = self.case.go()
@@ -80,14 +82,16 @@ class ExecutionHistoryRequiredTests(unittest.TestCase):
                 self.case.go("attempt2")
         capture.assert_not_called()
 
-    def test_crash_after_preexec_reservation_blocks_new_attempt(self):
+    def test_crash_after_preexec_reservation_warns_and_new_attempt_runs(self):
         with mock.patch.object(rs, "_capture_handkey", side_effect=KeyboardInterrupt):
             with self.assertRaises(KeyboardInterrupt):
                 self.case.go()
         self.newer_attempt()
-        with self.assertRaisesRegex(rs.Blocked, "prior reservation incomplete"):
-            self.case.go("attempt2")
-        self.assertFalse(self.case.marker.exists())
+        code, _record = self.case.go("attempt2")
+        self.assertEqual(code, rs.EXIT_OK)
+        self.assertTrue(self.case.marker.exists())
+        preexec = json.loads((self.case.output / "attempt2/PREEXEC.json").read_text())
+        self.assertTrue(any("incomplete" in w for w in preexec["retryWarnings"]))
 
     def test_history_result_write_failure_returns_unknown_and_preserves_reservation(self):
         original = rs._write_handkey_json
@@ -105,9 +109,11 @@ class ExecutionHistoryRequiredTests(unittest.TestCase):
         self.assertTrue((self.case.output / "attempt/PREEXEC.json").is_file())
         self.assertTrue((self.case.output / "attempt/launched.json").is_file())
         self.case.marker.unlink()
-        with self.assertRaises(rs.Blocked):
-            self.case.go("different-directory")
-        self.assertFalse(self.case.marker.exists())
+        # The unwritten history result is a warning; the rerun is a logged retry.
+        code, _record = self.case.go("different-directory")
+        self.assertEqual(code, rs.EXIT_OK)
+        self.assertTrue(self.case.marker.exists())
+        self.assertTrue((self.case.output / "attempt/PREEXEC.json").is_file(), "original evidence kept")
 
     def test_final_record_fsync_failure_retains_actual_unknown_debt(self):
         original = rs._fsync_dir
@@ -142,7 +148,7 @@ class ExecutionHistoryRequiredTests(unittest.TestCase):
         self.assertTrue(self.case.marker.exists())
         self.assertEqual(record["cleanupState"], "complete")
 
-    def test_reservation_uses_exact_history_already_parsed_by_common_readiness(self):
+    def test_reservation_warns_from_exact_history_already_parsed_by_common_readiness(self):
         code, record = self.case.go()
         self.assertEqual(code, rs.EXIT_OK)
         old = delivery.load_result(json.loads(Path(record["historyResult"]["path"]).read_text()))
@@ -151,10 +157,11 @@ class ExecutionHistoryRequiredTests(unittest.TestCase):
         # A transient, different pathname re-read must not satisfy the journal
         # when the actual digest-pinned readiness history omits the original.
         with mock.patch.object(delivery, "load_history", return_value=[old]) as reread:
-            with self.assertRaisesRegex(rs.Blocked, "omitted or changed"):
-                self.case.go("attempt2")
+            code, _record = self.case.go("attempt2")
+        self.assertEqual(code, rs.EXIT_OK)
         reread.assert_not_called()
-        self.assertFalse(self.case.marker.exists())
+        preexec = json.loads((self.case.output / "attempt2/PREEXEC.json").read_text())
+        self.assertTrue(any("omits or changed" in w for w in preexec["retryWarnings"]))
 
 
 if __name__ == "__main__":

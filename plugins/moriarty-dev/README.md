@@ -4,15 +4,15 @@ Repository-scoped development guidance for Moriarty's permissionless financial l
 
 ## Current execution focus
 
-Load the [develop skill](skills/develop/SKILL.md), read checkout `AGENTS.md`, and run CLI `status --json` before following a recovered queue. The user's current request controls task selection. Historical campaign status remains historical operational truth; it does not select today's task or establish consolidated roadmap acceptance.
+The process is the factory loop in the checkout's `AGENTS.md`: run `scripts/sherlock-next`
+and work the first failing predicate. This plugin is not required and is disabled in
+`.codex/config.toml`. The [develop skill](skills/develop/SKILL.md) is a pointer to that loop.
+Technical references: the [execution reference](skills/develop/references/execution-focus.md)
+(profiles and consumers) and, for Rust changes, checkout `RUST_GUIDELINES.md` and the
+[Rust checklist](skills/develop/references/rust.md).
 
-Current nonsecurity language work uses `gpt-6.1-sol` authoring and a fresh non-author Opus 5.5 audit, both at high effort. The October 16 user instruction, “switch muse to opus5.5”, replaces older Muse defaults; see the [routing record](../../raw/assignments/moriarty-opus-nonsecurity-routing-2026-10-16.md). All security work belongs to Opus 5.5 under the [current assignment](../../docs/audits/2026-10-14/SECURITY-ROUTING.md). Later explicit user steering controls its scope. The standing instruction remains: “if opus goes down switch to gemini or muse until its back up.” Use actual availability, announce fallback and retain the returned identity; Gemini 4 Argon high through AGY is first while Muse is quota-blocked. No new permission or duplicate probe is required. Live assigned Argon tasks retain their identities. Preserve historical receipts and frozen contracts with their original rosters. Consequential design/resource decisions retain two substantive agreeing votes; that rule is separate from the current audit roster. The CLI does not enforce that roster or make receipt ingestion full acceptance.
-
-The [roadmap](../../ROADMAP.md), [audit plan](../../docs/audits/2026-10-14/AUDIT-PLAN.md), [mid-roadmap review](../../docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md), [OpenSpec/EARS package](../../openspec/changes/consolidated-language-kernel/proposal.md) and [wiki index](../../wiki/index.md) supply current requirements and evidence. The [execution reference](skills/develop/references/execution-focus.md) covers profiles, independent financial/work expectations, unchanged U/M/MC/SP/G exits and the Opus-owned zero-native boundary. Existing disjoint source ownership can continue with one integration owner; no scheduler or new campaign is added.
-
-Rust changes follow checkout `RUST_GUIDELINES.md` and the [Rust checklist](skills/develop/references/rust.md). Apply current checkout `AGENTS.md` and user steering; routine authorized repairs need no further approval. Run inspected local checks within scope and authority, report unrun checks at source-only handoff, and do not dispatch hosted CI. The optional `rust` workflow is manual only.
-
-Report implementation, evidence and acceptance separately. Local/static child capabilities, historical proofs and Preview receipts retain their scopes. Fenrir remains separately qualified with unknown external facts left unknown. This plugin update does not complete a product exit or authorize native execution.
+The sections below describe the legacy guarded-dispatch CLI. They are history; the factory
+charter replaces its rules, and the legacy loop is being moved onto factory budgets.
 
 ## Guarantees
 
@@ -98,9 +98,9 @@ python3 -m unittest discover -s plugins/moriarty-dev/tests -p test_guidance.py -
 python3 -m unittest discover -s plugins/moriarty-dev/tests -p test_registration_pin.py -v
 ```
 
-The guidance checks cover explicit task precedence, current nonsecurity routing, profile/evidence qualification, links and manifest metadata. They are not agent-compliance trials or product acceptance. The registration check fails when `hooks/hooks.json` differs from the registration generated for the current runtime digest. Regenerate it with `deployment.py prepare` after any runtime Python change; never hand-edit a pin.
+The guidance checks cover the factory-loop pointer, links and manifest metadata. The registration check fails when `hooks/hooks.json` differs from the registration generated for the current runtime digest. Regenerate it with `deployment.py prepare` after any runtime Python change; never hand-edit a pin.
 
-The self-contained `test_compatibility.py` and `test_upgrade.py` suites run from any copied plugin root with temporary stores, cache roots, runtime homes and a stub installer ([compatibility tests](COMPATIBILITY.md#tests-from-source-and-from-a-cache)). Existing admission/security/notification-auth suites remain under Opus ownership. Inspect side effects before selecting any of them and run them with a temporary `HOME`. Three are not ordinary checks and need their own execution authority: `test_runner.py` starts the external Foreman launcher, `test_regressions.py` `test_reproducer_demonstrates_defect` imports a Midnight local ledger driver, and `test_records.py` `test_actual_master_family_admits_review` reads live budget/ledger state. No native checks are implied.
+The self-contained `test_compatibility.py` and `test_upgrade.py` suites run from any copied plugin root with temporary stores, cache roots, runtime homes and a stub installer ([compatibility tests](COMPATIBILITY.md#tests-from-source-and-from-a-cache)). Inspect side effects before selecting any of them and run them with a temporary `HOME`. Three are not ordinary checks and need their own execution authority: `test_runner.py` starts the external Foreman launcher, `test_regressions.py` `test_reproducer_demonstrates_defect` imports a Midnight local ledger driver, and `test_records.py` `test_actual_master_family_admits_review` reads live budget/ledger state. No native checks are implied.
 
 The canonical maintained package is `plugins/moriarty-dev/` in the reviewed repository checkout. Installed caches are snapshots: never patch them directly. Inspect `codex plugin marketplace list --json` and `codex plugin list --marketplace personal --json` to locate the configured source and installed version. For the inspected local personal marketplace, the catalog is `/home/charl/.agents/plugins/marketplace.json` and its mutable source is `/home/charl/plugins/moriarty-dev`; it is separate from the repository.
 

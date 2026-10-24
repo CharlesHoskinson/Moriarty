@@ -644,15 +644,21 @@ def _assess(plan: Plan, results: tuple[Result, ...], reads):
                 reads.read(ref)
             except (OSError,SchemaError) as exc:
                 files_current=False; blockers.append(f'current input unavailable or changed: {exc}')
-        unmet=[]
+        unmet=[]; dep_warnings=[]
         for dep,stage in task.dependencies:
             upstream=rows[dep]
             available={'source-integrated':upstream['source_integrated_recorded'],
                        'observed':upstream['observation_recorded'],
                        'accepted':upstream['acceptance_recorded']}[stage]
+            if stage=='accepted' and not available and (
+                    upstream['observation_recorded'] or upstream['source_integrated_recorded']):
+                # Review/adoption is advisory: an observed upstream result is usable.
+                dep_warnings.append(f'{dep} lacks review-and-adoption acceptance (advisory)')
+                available=True
             if not available:
                 unmet.append(f'{dep} requires {stage}')
         blockers.extend(unmet)
+        warnings=list(dep_warnings)
         history=[]; current=None
         historical_unknown=False; historical_debt=False
         for result in results:
@@ -682,7 +688,7 @@ def _assess(plan: Plan, results: tuple[Result, ...], reads):
              'scope':('supplied handkey public-vector verification; ledger acceptance not established' if task.adapter=='handkey-verify-pis' else 'supplied typed public adapter observation; native producer authenticity not established'),
              'state':'ready','source_integrated_recorded':False,'observation_recorded':False,
              'acceptance_recorded':False,'producer_authenticity':'not-established',
-             'observation':None,'history':history,'blockers':blockers,'acceptance_blockers':[],
+             'observation':None,'history':history,'blockers':blockers,'warnings':warnings,'acceptance_blockers':[],
              'execution_authority':False,'selection_candidate':False}
         if task.disposition!='active':
             row['state']=task.disposition
@@ -694,7 +700,10 @@ def _assess(plan: Plan, results: tuple[Result, ...], reads):
             if task.launch_state=='possible-launch':
                 row['state']='unknown-reconcile'; blockers.append('possible launch has no current terminal receipt; reconcile original operation')
             elif history:
-                row['state']='stale'; blockers.append('history retained; no current qualifying receipt')
+                # A stale receipt never blocks a rerun; it is retained and reported.
+                row['state']='stale'; warnings.append('history retained; no current qualifying receipt')
+                if files_current and not unmet and task.launch_state=='not-started':
+                    row['selection_candidate']=True
             elif not files_current:
                 row['state']='blocked-input'
             elif unmet:
@@ -705,15 +714,16 @@ def _assess(plan: Plan, results: tuple[Result, ...], reads):
             if (history and files_current and not unmet and task.launch_state=='not-started'
                 and all(h['attempt']!=task.attempt for h in history)):
                 if any(h['fingerprint']==fp for h in history):
-                    blockers.append('unchanged consumed operation requires changed inputs')
-                else:
-                    row['selection_candidate']=True
+                    warnings.append('unchanged retry of an already-attempted operation (advisory; logged as retry)')
+                row['selection_candidate']=True
         elif current.submission=='unknown' or current.terminal=='unknown-submission':
             row['state']='unknown-reconcile'; blockers.append('submission outcome unknown; query original transaction before retry')
         elif current.cleanup!='complete':
             row['state']='cleanup-debt'; blockers.append('cleanup/restoration incomplete or unknown')
         elif current.terminal!='succeeded':
-            row['state']=current.terminal; blockers.append('terminal result retained; no automatic retry')
+            # Results are unique per (task, attempt id). A rerun needs a new plan
+            # attempt id only; unchanged inputs and fresh reviews are not required.
+            row['state']=current.terminal; blockers.append('terminal result retained for this attempt id; rerun under a new attempt id (advisory warnings only)')
         elif current.exit_code!=0 or current.signal is not None:
             row['state']='terminal-inconsistent'; blockers.append('success requires exit zero without signal')
         elif task.adapter in ('sherlock-anchor-settle-readback','sherlock-rollup-benchmark') and current.submission!='included':
@@ -753,14 +763,15 @@ def apply_capabilities(report):
     """Refresh dispatch facts after the final qualified readiness calculation.
 
     The legacy candidate field remains a dependency/input/history-qualified
-    candidate. Availability alone never promotes a consumed or blocked task.
+    candidate. Availability alone never promotes a blocked task; a previously
+    attempted task stays a candidate (advisory warnings only).
     """
     dispatch = []
     for row in report['tasks']:
         cap = adapter_capability(row['adapter'])
         dependency_ready = row['selection_candidate']
         blockers = [] if dependency_ready else (
-            list(row['blockers']) or ['task is not an unconsumed dependency-ready candidate'])
+            list(row['blockers']) or ['task is not a dependency-ready candidate'])
         if cap['blocked_reason'] is not None:
             blockers.append(cap['blocked_reason'])
         row.update(dependency_ready=dependency_ready,
@@ -768,7 +779,8 @@ def apply_capabilities(report):
                    executor_available=cap['executor_available'],
                    ready_for_dispatch=(dependency_ready and cap['collector_available']
                                        and cap['executor_available']),
-                   dispatch_blockers=blockers)
+                   dispatch_blockers=blockers,
+                   dispatch_warnings=list(row.get('warnings', [])))
         if row['ready_for_dispatch']:
             dispatch.append(row['id'])
     report['ready_for_dispatch'] = dispatch

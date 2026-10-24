@@ -1,6 +1,10 @@
 # Sherlock correctness loop
 
-Status: required development workflow from the October 15 user instruction.
+Superseded 2026-10-24: process, review and approval requirements in this file are retired;
+follow [AGENTS.md](../AGENTS.md) (factory predicates and holdouts). The technical comparison
+method below stands. The sections from "Current gaps" onward are dated observations kept as history.
+
+Status: development method from the October 15 user instruction.
 The ordinary complete-observation consumers now accept host, image, Quint and
 pure Lean diagnostic artifacts, plus supplied K projection documents. Actual
 execution, projection correspondence and the remaining cross-layer circuit/native
@@ -19,7 +23,7 @@ continuations as their profiles and interfaces are reviewed.
 
 1. Name the changed source rules, admitted inputs, profile, bounds and existing
    requirement/component rows. Preserve the old profile when semantics change.
-2. Have a non-author freeze expected complete states and work prefixes before
+2. Freeze expected complete states and work prefixes before
    running the implementation. Reuse the committed independent normal oracles
    where their domain applies; add independently derived cases for new coverage.
 3. Update the affected K definition, Quint instance/projection and Lean semantic
@@ -29,15 +33,15 @@ continuations as their profiles and interfaces are reviewed.
    for the same declared step interface. Bind their actual witness and constraint
    implementations separately. Record shared gadgets or generated code: agreement
    between shared implementations supplies less independent evidence.
-5. Run only separately inspected and admitted checks. Compare complete projected
+5. Run the slice's checks. Compare complete projected
    traces against the frozen expectations and between the available realizations.
    Report the first divergent field, rule and prefix, including each raw state.
 6. Repair the responsible implementation, model or projection from its contract;
-   retain the failing receipt. A changed expectation needs an independently
-   reviewed semantic correction, not a regenerated implementation output.
+   retain the failing receipt. A changed expectation needs a justified
+   semantic correction, not a regenerated implementation output.
    Add the resolved case to the regression corpus and recheck affected layers.
-7. Before accepting the slice or an optimization, refresh applicable reviews and
-   the matrix below for the exact candidate. A missing required layer leaves
+7. Before accepting the slice or an optimization, refresh the matrix below for
+   the exact candidate. A missing required layer leaves
    cross-layer acceptance open even when independent source work can continue.
 
 ## Distinct jobs for each layer
@@ -107,8 +111,8 @@ building a new scheduler or treating this document as an implemented file format
   exit/terminal status, raw output location and digest for each actual execution.
 - First divergence and expected/actual complete projections; keep failed runs and
   fixes linked. Bind private evidence privately without publishing its paths.
-- Actual review identities, scope and dissent; separately identify any theorem,
-  constraint, exporter, native or target evidence and its remaining assumptions.
+- Separately identify any theorem, constraint, exporter, native or target
+  evidence and its remaining assumptions.
 
 A source, profile, bounds, projection, compiler or gadget change invalidates the
 affected comparisons. Re-run that affected closure before reusing its result.
@@ -131,8 +135,7 @@ position. Check compatibility rather than treating a target name as a version.
 Retain fee, debit, liability and residual-duty observations where applicable,
 plus the existing security-owner negative and failure requirements. Keep this
 row not run until its actual receipts exist. Preview and Fenrir devnet evidence
-retain their own scopes. Select execution through the existing admission and
-resource limits; this document supplies no new configuration or execution grant.
+retain their own scopes. Run heavy work through `scripts/doctorwatson heavy`.
 
 ## Current gaps and execution boundary
 

@@ -259,11 +259,17 @@ class ExecutionReconciliationCliTests(unittest.TestCase):
         self._write_recs()
         self._assert_zero_dispatch(self._run_cli(), codes=(3,))
 
-    def test_same_fingerprint_consumed_retry_zero_dispatch(self):
+    def test_same_fingerprint_consumed_retry_dispatches_with_warning(self):
         self._newer_plan(changed=False)
         self.assertEqual(self.fp2, self.fp1)
         self._write_recs()
-        self._assert_zero_dispatch(self._run_cli(), codes=(3,))
+        report = self._inspect()
+        self.assertEqual(report["ready_for_root_selection"], ["build"])
+        self.assertTrue(any("unchanged retry" in w
+                            for w in report["tasks"][0]["warnings"]))
+        code, _record = self._run_inprocess()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.last_runner.calls.count("native"), 1)
 
     def test_tampered_history_zero_dispatch(self):
         self._newer_plan(changed=True)

@@ -429,7 +429,8 @@ def _merge_intervals(intervals: list[tuple[float, float]]) -> float:
     return sum(e - s for s, e in merged)
 
 
-def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: str | None = None) -> str:
+def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: str | None = None,
+            warnings: list | None = None) -> str:
     conn = init_db(db_path)
     try:
         conn.execute("BEGIN IMMEDIATE")
@@ -448,8 +449,12 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
         if charge_id is not None:
             try:
                 conn.execute("INSERT INTO runner_claims (charge_id, reservation_id) VALUES (?, ?)", (charge_id, res_id))
-            except sqlite3.IntegrityError as exc:
-                raise ReservationConflictError("Existing charge already claimed: " + charge_id) from exc
+            except sqlite3.IntegrityError:
+                # A rerun on the same charge is a logged retry, not a refusal.
+                # The prior reservation row stays; only the claim moves forward.
+                conn.execute("UPDATE runner_claims SET reservation_id = ? WHERE charge_id = ?", (res_id, charge_id))
+                if warnings is not None:
+                    warnings.append("CHARGE_REUSED:" + charge_id)
         pid = os.getpid()
         now = _now_iso()
         conn.execute(

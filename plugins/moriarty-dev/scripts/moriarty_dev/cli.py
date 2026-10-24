@@ -300,6 +300,7 @@ def cmd_status(repo: Path, db_path: Path, history_reader, as_json: bool):
         "reason": reason,
         "nextAction": next_action_id,
         "missingEvidence": snap.get("missingEvidence", []),
+        "warnings": decision["warnings"],
         "pendingTransactions": [tx["txId"] for tx in undelivered],
     }
 
@@ -309,7 +310,7 @@ def cmd_status(repo: Path, db_path: Path, history_reader, as_json: bool):
         print(f"Capability: {capability}")
         print(f"Last result: {last_result}")
         if blocked_action != "none":
-            print(f"Blocked action: {blocked_action}")
+            print(f"Advisory (not blocking): {blocked_action}")
             print(f"Reason: {reason}")
         print(f"Next: {next_action_id}")
         if undelivered:
@@ -357,6 +358,7 @@ def cmd_next(repo: Path, db_path: Path, history_reader, as_json: bool):
         "reasonCode": best_decision["reasonCode"],
         "nextActionId": best_decision["nextActionId"],
         "missingEvidence": best_decision["missingEvidence"],
+        "warnings": best_decision["warnings"],
     }
     if as_json:
         print(json.dumps(out, indent=2))
@@ -364,6 +366,8 @@ def cmd_next(repo: Path, db_path: Path, history_reader, as_json: bool):
         print(f"Next action: {best_decision.get('nextActionId') or best_action['id']}")
         print(f"Allowed: {best_decision['allow']}")
         print(f"Reason: {best_decision['reasonCode']}")
+        if best_decision["warnings"]:
+            print("Advisory: " + ", ".join(best_decision["warnings"]))
 
 
 def _load_admitted_runner(repo: Path, action: dict) -> tuple[dict, str]:
@@ -394,6 +398,8 @@ def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: 
         else:
             sys.stderr.write(msg + "\n")
         sys.exit(2)
+    if decision["warnings"] and not as_json:
+        sys.stderr.write("Advisory (not blocking): " + ", ".join(decision["warnings"]) + "\n")
 
     try:
         runner, runner_digest = _load_admitted_runner(repo, action)
@@ -405,8 +411,13 @@ def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: 
             sys.stderr.write(msg + "\n")
         sys.exit(2)
 
+    reserve_warnings = []
     try:
-        res_id = reserve(db_path, str(repo), action, snap, charge_id=runner["chargeId"])
+        res_id = reserve(db_path, str(repo), action, snap, charge_id=runner["chargeId"],
+                         warnings=reserve_warnings)
+        if reserve_warnings and not as_json:
+            sys.stderr.write("Advisory (not blocking): rerun of an already-claimed charge; logged as retry "
+                             + ", ".join(reserve_warnings) + "\n")
     except ReservationConflictError as exc:
         sys.stderr.write(f"Reservation conflict: {exc}\n")
         sys.exit(2)

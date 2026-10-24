@@ -6,7 +6,7 @@ import unittest
 from moriarty_dev.policy import assess
 
 
-DECISION_KEYS = ("allow", "reasonCode", "nextActionId", "missingEvidence")
+DECISION_KEYS = ("allow", "reasonCode", "nextActionId", "missingEvidence", "warnings")
 ACTION_KEYS = (
     "id",
     "requirement",
@@ -90,34 +90,39 @@ def decision_shape(test, result):
     )
     test.assertIs(type(result["missingEvidence"]), list)
     test.assertTrue(all(type(item) is str for item in result["missingEvidence"]))
+    test.assertIs(type(result["warnings"]), list)
+    test.assertTrue(all(type(item) is str for item in result["warnings"]))
 
 
 class StopRules(unittest.TestCase):
-    def test_third_broad_attempt_is_denied(self):
+    def test_third_broad_attempt_warns_but_is_allowed(self):
         s = baseline()
         s["sameDefectFailures"] = 2
         d = assess(s, action("implement"))
-        self.assertFalse(d["allow"])
-        self.assertEqual(d["reasonCode"], "REPRODUCE_BEFORE_RETRY")
+        self.assertTrue(d["allow"])
+        self.assertEqual(d["reasonCode"], "ALLOWED")
+        self.assertEqual(d["warnings"], ["REPRODUCE_BEFORE_RETRY"])
         self.assertEqual(d["nextActionId"], "ledger-driver-reproduce")
 
-    def test_denial_does_not_block_reproducer(self):
+    def test_warning_does_not_block_reproducer(self):
         s = baseline()
         s["sameDefectFailures"] = 2
         self.assertTrue(assess(s, action("reproduce"))["allow"])
 
     def test_admin_time_boundary(self):
+        # Administrative loop limit is a kept guard against unbounded bookkeeping.
         for seconds, allowed in [(1799, True), (1800, False)]:
             s = baseline()
             s["adminSeconds"] = seconds
             self.assertEqual(assess(s, action("admin"))["allow"], allowed)
 
-    def test_stale_candidate_cannot_run(self):
+    def test_stale_candidate_warns_but_can_run(self):
         s = baseline()
         s["candidateCurrent"] = False
-        self.assertEqual(
-            assess(s, action("repair"))["reasonCode"], "EVIDENCE_STALE"
-        )
+        d = assess(s, action("repair"))
+        self.assertTrue(d["allow"])
+        self.assertEqual(d["reasonCode"], "ALLOWED")
+        self.assertEqual(d["warnings"], ["EVIDENCE_STALE"])
 
 
 class PolicyBoundaries(unittest.TestCase):
@@ -125,14 +130,21 @@ class PolicyBoundaries(unittest.TestCase):
         self.assertTrue(callable(assess))
         allowed = assess(baseline(), action("implement"))
         blocked = assess(
+            dict(baseline(), primaryActive=True), action("implement")
+        )
+        warned = assess(
             dict(baseline(), sameDefectFailures=2), action("implement")
         )
         decision_shape(self, allowed)
         decision_shape(self, blocked)
+        decision_shape(self, warned)
         self.assertTrue(allowed["allow"])
         self.assertEqual(allowed["reasonCode"], "ALLOWED")
+        self.assertEqual(allowed["warnings"], [])
         self.assertFalse(blocked["allow"])
         self.assertNotEqual(allowed["reasonCode"], blocked["reasonCode"])
+        self.assertTrue(warned["allow"])
+        self.assertEqual(warned["warnings"], ["REPRODUCE_BEFORE_RETRY"])
 
     def test_one_failure_still_allows_implement(self):
         s = baseline()
@@ -142,46 +154,49 @@ class PolicyBoundaries(unittest.TestCase):
     def test_two_failures_table(self):
         s = baseline()
         s["sameDefectFailures"] = 2
-        expected = {
-            "implement": False,
-            "admin": False,
-            "reproduce": True,
-            "review": True,
-            "report": True,
-            "verify": True,
-        }
-        for kind, allowed in expected.items():
+        warned = {"implement": True, "admin": True}
+        for kind in ("implement", "admin", "reproduce", "review", "report", "verify"):
             result = assess(s, action(kind))
-            self.assertEqual(result["allow"], allowed, kind)
-            if not allowed:
-                self.assertEqual(result["reasonCode"], "REPRODUCE_BEFORE_RETRY")
+            self.assertTrue(result["allow"], kind)
+            self.assertEqual(result["reasonCode"], "ALLOWED", kind)
+            self.assertEqual(
+                result["warnings"],
+                ["REPRODUCE_BEFORE_RETRY"] if warned.get(kind) else [],
+                kind,
+            )
 
     def test_repair_requires_reproducer_and_changed_approach(self):
+        # An unchanged repair is recorded as a warning; it is never refused.
         cases = [
             (False, False, False),
             (True, False, False),
             (False, True, False),
             (True, True, True),
         ]
-        for reproducer, changed, allowed in cases:
+        for reproducer, changed, ready in cases:
             s = baseline()
             s["sameDefectFailures"] = 2
             s["reproducerVerified"] = reproducer
             s["approachChanged"] = changed
             result = assess(s, action("repair"))
-            self.assertEqual(result["allow"], allowed, (reproducer, changed))
-            if not allowed:
-                self.assertEqual(result["reasonCode"], "REPAIR_UNREADY")
-            else:
-                self.assertEqual(result["reasonCode"], "ALLOWED")
+            self.assertTrue(result["allow"], (reproducer, changed))
+            self.assertEqual(result["reasonCode"], "ALLOWED")
+            self.assertEqual(
+                result["warnings"], [] if ready else ["REPAIR_UNREADY"],
+                (reproducer, changed),
+            )
 
-    def test_repair_ready_does_not_admit_another_implement(self):
+    def test_repair_ready_still_warns_another_implement(self):
         s = baseline()
         s["sameDefectFailures"] = 2
         s["reproducerVerified"] = True
         s["approachChanged"] = True
-        self.assertFalse(assess(s, action("implement"))["allow"])
-        self.assertTrue(assess(s, action("repair"))["allow"])
+        implement = assess(s, action("implement"))
+        self.assertTrue(implement["allow"])
+        self.assertEqual(implement["warnings"], ["REPRODUCE_BEFORE_RETRY"])
+        repair = assess(s, action("repair"))
+        self.assertTrue(repair["allow"])
+        self.assertEqual(repair["warnings"], [])
 
     def test_admin_cycle_boundary(self):
         for cycles, allowed in [(1, True), (2, False)]:
@@ -200,28 +215,29 @@ class PolicyBoundaries(unittest.TestCase):
         self.assertTrue(assess(s, action("reproduce"))["allow"])
         self.assertFalse(assess(s, action("admin"))["allow"])
 
-    def test_authority_unavailable(self):
+    def test_authority_unavailable_warns_only(self):
         s = baseline()
         s["authorityCurrent"] = False
-        denied = assess(s, action("implement"))
-        self.assertFalse(denied["allow"])
-        self.assertEqual(denied["reasonCode"], "AUTHORITY_UNAVAILABLE")
+        result = assess(s, action("implement"))
+        self.assertTrue(result["allow"])
+        self.assertEqual(result["reasonCode"], "ALLOWED")
+        self.assertEqual(result["warnings"], ["AUTHORITY_UNAVAILABLE"])
         self.assertTrue(assess(s, action("report"))["allow"])
 
-    def test_entry_ineligible(self):
+    def test_entry_ineligible_warns_only(self):
         s = baseline()
         s["entryEligible"] = False
-        denied = assess(s, action("implement"))
-        self.assertFalse(denied["allow"])
-        self.assertEqual(denied["reasonCode"], "ENTRY_INELIGIBLE")
+        result = assess(s, action("implement"))
+        self.assertTrue(result["allow"])
+        self.assertEqual(result["warnings"], ["ENTRY_INELIGIBLE"])
         self.assertTrue(assess(s, action("report"))["allow"])
 
-    def test_resource_exhausted(self):
+    def test_resource_not_admitted_warns_only(self):
         s = baseline()
         s["resourceAdmitted"] = False
-        denied = assess(s, action("implement"))
-        self.assertFalse(denied["allow"])
-        self.assertEqual(denied["reasonCode"], "RESOURCE_EXHAUSTED")
+        result = assess(s, action("implement"))
+        self.assertTrue(result["allow"])
+        self.assertEqual(result["warnings"], ["RESOURCE_EXHAUSTED"])
         self.assertTrue(assess(s, action("report"))["allow"])
 
     def test_primary_active_blocks_implement_not_review_or_repair_path(self):
@@ -250,20 +266,24 @@ class PolicyBoundaries(unittest.TestCase):
         self.assertEqual(result["reasonCode"], "PRIMARY_ACTIVE")
         self.assertTrue(assess(s, action("reproduce"))["allow"])
 
-    def test_check_order_prefers_authority_over_retry_rule(self):
+    def test_authority_and_retry_rule_are_both_recorded(self):
         s = baseline()
         s["authorityCurrent"] = False
         s["sameDefectFailures"] = 2
+        result = assess(s, action("implement"))
+        self.assertTrue(result["allow"])
         self.assertEqual(
-            assess(s, action("implement"))["reasonCode"], "AUTHORITY_UNAVAILABLE"
+            result["warnings"], ["AUTHORITY_UNAVAILABLE", "REPRODUCE_BEFORE_RETRY"]
         )
 
-    def test_stale_candidate_beats_retry_rule(self):
+    def test_stale_candidate_and_retry_rule_are_both_recorded(self):
         s = baseline()
         s["candidateCurrent"] = False
         s["sameDefectFailures"] = 2
+        result = assess(s, action("implement"))
+        self.assertTrue(result["allow"])
         self.assertEqual(
-            assess(s, action("implement"))["reasonCode"], "EVIDENCE_STALE"
+            result["warnings"], ["EVIDENCE_STALE", "REPRODUCE_BEFORE_RETRY"]
         )
 
     def test_unknown_kind_rejected(self):
@@ -273,35 +293,41 @@ class PolicyBoundaries(unittest.TestCase):
         self.assertFalse(result["allow"])
         self.assertEqual(result["reasonCode"], "UNKNOWN_KIND")
 
-    def test_lineage_rename_does_not_clear_failures(self):
+    def test_lineage_rename_does_not_clear_failure_warning(self):
         s = baseline()
         s["sameDefectFailures"] = 2
         renamed = action("implement")
         renamed["id"] = "fresh-packet-name"
         renamed["candidate"] = "candidate-b"
         result = assess(s, renamed)
-        self.assertFalse(result["allow"])
-        self.assertEqual(result["reasonCode"], "REPRODUCE_BEFORE_RETRY")
+        self.assertTrue(result["allow"])
+        self.assertEqual(result["warnings"], ["REPRODUCE_BEFORE_RETRY"])
 
     def test_independent_capability_not_blocked_by_other_failures(self):
         s = baseline()
         s["sameDefectFailures"] = 0
-        self.assertTrue(assess(s, other_lineage("implement"))["allow"])
-        blocked = dict(s)
-        blocked["sameDefectFailures"] = 2
-        self.assertFalse(assess(blocked, action("implement"))["allow"])
-        self.assertTrue(assess(s, other_lineage("implement"))["allow"])
+        self.assertEqual(assess(s, other_lineage("implement"))["warnings"], [])
+        warned = dict(s)
+        warned["sameDefectFailures"] = 2
+        self.assertTrue(assess(warned, action("implement"))["allow"])
+        self.assertEqual(
+            assess(warned, action("implement"))["warnings"],
+            ["REPRODUCE_BEFORE_RETRY"],
+        )
+        self.assertEqual(assess(s, other_lineage("implement"))["warnings"], [])
 
-    def test_history_unresolved_does_not_become_zero_failures(self):
+    def test_history_unresolved_is_a_warning_not_zero_failures(self):
         s = baseline()
         s["missingEvidence"] = ["operational-history"]
-        denied = assess(s, action("implement"))
-        self.assertFalse(denied["allow"])
-        self.assertEqual(denied["reasonCode"], "HISTORY_UNRESOLVED")
-        self.assertTrue(assess(s, action("report"))["allow"])
-        self.assertTrue(assess(s, action("reproduce"))["allow"])
+        result = assess(s, action("implement"))
+        self.assertTrue(result["allow"])
+        self.assertEqual(result["warnings"], ["HISTORY_UNRESOLVED"])
+        self.assertEqual(result["missingEvidence"], ["operational-history"])
+        self.assertEqual(assess(s, action("report"))["warnings"], [])
+        self.assertEqual(assess(s, action("reproduce"))["warnings"], [])
         repair = assess(s, action("repair"))
-        self.assertFalse(repair["allow"])
+        self.assertTrue(repair["allow"])
+        self.assertEqual(repair["warnings"], ["HISTORY_UNRESOLVED"])
 
     def test_report_survives_every_dispatch_block(self):
         s = baseline()
@@ -324,23 +350,23 @@ class PolicyBoundaries(unittest.TestCase):
             ["operational-history", "commandRef-unresolved:x"],
         )
 
-    def test_command_gap_blocks_dispatch_not_report(self):
+    def test_command_gap_warns_and_never_blocks_policy(self):
+        # The guarded CLI still cannot launch without a resolvable command.
         s = baseline()
         s["missingEvidence"] = ["commandRef-unresolved:commands.json#missing"]
-        self.assertEqual(
-            assess(s, action("implement"))["reasonCode"], "ADMISSION_UNRESOLVED"
-        )
-        self.assertEqual(
-            assess(s, action("reproduce"))["reasonCode"], "ADMISSION_UNRESOLVED"
-        )
+        for kind in ("implement", "reproduce"):
+            result = assess(s, action(kind))
+            self.assertTrue(result["allow"], kind)
+            self.assertEqual(result["warnings"], ["ADMISSION_UNRESOLVED"], kind)
         self.assertTrue(assess(s, action("report"))["allow"])
 
     def test_admission_gap_named(self):
         s = baseline()
         s["missingEvidence"] = ["admissionRef-unresolved:campaign:missing"]
         result = assess(s, action("implement"))
-        self.assertFalse(result["allow"])
-        self.assertEqual(result["reasonCode"], "ADMISSION_UNRESOLVED")
+        self.assertTrue(result["allow"])
+        self.assertEqual(result["reasonCode"], "ALLOWED")
+        self.assertEqual(result["warnings"], ["ADMISSION_UNRESOLVED"])
         self.assertIn("admissionRef-unresolved:campaign:missing", result["missingEvidence"])
 
 
@@ -379,7 +405,7 @@ class ClosedBoundary(unittest.TestCase):
 
     def test_unknown_action_field_rejected(self):
         body = action("implement")
-        body["expectedError"] = "REPRODUCE_BEFORE_RETRY"
+        body["expectedError"] = "PRIMARY_ACTIVE"
         result = assess(baseline(), body)
         self.assertEqual(result["reasonCode"], "INPUT_INVALID")
         other = action("implement")
@@ -430,10 +456,10 @@ class ClosedBoundary(unittest.TestCase):
             assess(baseline(), first)["allow"],
             assess(baseline(), second)["allow"],
         )
-        blocked = dict(baseline(), sameDefectFailures=2)
+        warned = dict(baseline(), primaryActive=True)
         self.assertEqual(
-            assess(blocked, first)["reasonCode"],
-            assess(blocked, second)["reasonCode"],
+            assess(warned, first)["reasonCode"],
+            assess(warned, second)["reasonCode"],
         )
 
 

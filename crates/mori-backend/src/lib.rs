@@ -30,6 +30,7 @@ pub use liabilities::{
 };
 pub mod parameters;
 pub mod proving;
+pub mod qa_mutation;
 
 pub const ARTIFACT_FORMAT: &str = "moriarty-zkir-artifact/3";
 pub const PUBLIC_ABI_VERSION: &str = "moriarty-public-abi/3";

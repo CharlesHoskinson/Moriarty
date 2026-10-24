@@ -1,5 +1,7 @@
 # DoctorWatson delivery: plan, execute once, inspect, reconcile
 
+Superseded 2026-10-24: review routing, adoption votes, consumed-attempt and no-retry rules, permanent lanes and campaign queues in this file are retired. The process is the factory loop in [AGENTS.md](../AGENTS.md); technical descriptions below stand as history of the legacy tooling.
+
 This page documents the ordinary DoctorWatson delivery surface in
 `models/doctorwatson/` (`delivery.py`, `run_selected.py`,
 `settle_observation.py`, `reconciliation.py`) and its shell routes in

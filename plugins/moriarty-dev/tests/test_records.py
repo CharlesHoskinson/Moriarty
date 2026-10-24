@@ -597,7 +597,8 @@ class GenuineRegisters(unittest.TestCase):
         self.assertFalse(snap["candidateCurrent"])
         self.assertFalse(snap["resourceAdmitted"])
         decision = assess(snap, read_actions(str(self.root))[0])
-        self.assertFalse(decision["allow"])
+        self.assertTrue(decision["allow"])
+        self.assertIn("AUTHORITY_UNAVAILABLE", decision["warnings"])
         f0 = stage_by_id(load_json(self.program_path), "f0")
         self.assertEqual(f0["status"], "blocked")
 
@@ -610,7 +611,9 @@ class GenuineRegisters(unittest.TestCase):
         )
         self.assertFalse(snap["entryEligible"])
         action = [row for row in read_actions(str(self.root)) if row["id"] == "sp02-frontend-implement"][0]
-        self.assertFalse(assess(snap, action)["allow"])
+        decision = assess(snap, action)
+        self.assertTrue(decision["allow"])
+        self.assertIn("ENTRY_INELIGIBLE", decision["warnings"])
         rp01 = stage_by_id(load_json(self.program_path), "rp01-full")
         self.assertEqual(rp01["status"], "specified-only")
 
@@ -681,7 +684,9 @@ class GenuineRegisters(unittest.TestCase):
         self.assertFalse(snap["resourceAdmitted"])
         self.assertFalse(snap["authorityCurrent"] and snap["resourceAdmitted"])
         action = read_actions(str(self.root))[0]
-        self.assertFalse(assess(snap, action)["allow"])
+        decision = assess(snap, action)
+        self.assertTrue(decision["allow"])
+        self.assertIn("AUTHORITY_UNAVAILABLE", decision["warnings"])
 
     def test_genuine_loan_swap_report_is_current(self):
         self._install_loan_family()
@@ -706,7 +711,9 @@ class GenuineRegisters(unittest.TestCase):
             history_reader=verified_history(),
         )
         self.assertFalse(snap["authorityCurrent"])
-        self.assertFalse(assess(snap, read_actions(str(self.root))[0])["allow"])
+        decision = assess(snap, read_actions(str(self.root))[0])
+        self.assertTrue(decision["allow"])
+        self.assertIn("AUTHORITY_UNAVAILABLE", decision["warnings"])
         self.assertTrue(
             any("campaign-stage-mismatch" in item for item in snap["missingEvidence"])
         )
@@ -728,7 +735,9 @@ class GenuineRegisters(unittest.TestCase):
             any("resource-live-state-unavailable" in item for item in snap["missingEvidence"])
         )
         action = [row for row in read_actions(str(self.root)) if row["id"] == "sp01-loan-review"][0]
-        self.assertFalse(assess(snap, action)["allow"])
+        decision = assess(snap, action)
+        self.assertTrue(decision["allow"])
+        self.assertIn("RESOURCE_EXHAUSTED", decision["warnings"])
         report = [row for row in read_actions(str(self.root)) if row["kind"] == "report"][0]
         report_snap = load_snapshot(str(self.root), "sp01-loan-report")
         self.assertTrue(assess(report_snap, report)["allow"])
@@ -764,7 +773,9 @@ class GenuineRegisters(unittest.TestCase):
         self.assertTrue(
             any("campaign-status-unsupported" in item for item in snap["missingEvidence"])
         )
-        self.assertFalse(assess(snap, read_actions(str(self.root))[0])["allow"])
+        decision = assess(snap, read_actions(str(self.root))[0])
+        self.assertTrue(decision["allow"])
+        self.assertIn("AUTHORITY_UNAVAILABLE", decision["warnings"])
 
     def test_changed_owned_bytes_invalidate_candidate(self):
         self._install_loan_family()
@@ -846,7 +857,9 @@ class GenuineRegisters(unittest.TestCase):
         self.assertEqual(current["capability"], "fixed-financial-driver")
         self.assertNotIn("candidate", current)
         implement = [row for row in read_actions(str(self.root)) if row["kind"] == "implement"][0]
-        self.assertFalse(assess(second, implement)["allow"])
+        decision = assess(second, implement)
+        self.assertTrue(decision["allow"])
+        self.assertIn("REPRODUCE_BEFORE_RETRY", decision["warnings"])
 
     def test_missing_history_is_not_verified_zero(self):
         self._install_funded_loan_review()
@@ -899,8 +912,11 @@ class GenuineRegisters(unittest.TestCase):
             "sp05-ledger-implement",
             history_reader=verified_history(),
         )
-        self.assertIsNone(snap["nextActionId"])
-        self.assertIn("next-action-none", snap["missingEvidence"])
+        # No action qualifies cleanly, so the first allowed one is named with
+        # its warnings instead of leaving the loop without a next step.
+        self.assertEqual(snap["nextActionId"], "sp05-ledger-implement")
+        self.assertNotIn("next-action-none", snap["missingEvidence"])
+        self.assertFalse(snap["authorityCurrent"])
 
     def test_reads_do_not_write(self):
         self._install_admitted_sp05()
@@ -1211,7 +1227,9 @@ class AdmissionTraversal(unittest.TestCase):
         # Attaching a plugin-focused pass binding to loan campaign must be rejected
         self.assertFalse(snap["resourceAdmitted"])
         self.assertTrue(any("resource-scope-mismatch" in item for item in snap["missingEvidence"]))
-        self.assertFalse(assess(snap, action)["allow"])
+        decision = assess(snap, action)
+        self.assertTrue(decision["allow"])
+        self.assertIn("RESOURCE_EXHAUSTED", decision["warnings"])
 
     def test_substitute_success_shaped_static_verification_receipt_rejected(self):
         self._install_funded_loan_review()
@@ -1245,9 +1263,9 @@ class AdmissionTraversal(unittest.TestCase):
             str(self.root), "sp01-loan-review", history_reader=verified_history()
         )
         self.assertFalse(snap["resourceAdmitted"])
-        self.assertFalse(
-            assess(snap, [row for row in read_actions(str(self.root)) if row["id"] == "sp01-loan-review"][0])["allow"]
-        )
+        decision = assess(snap, [row for row in read_actions(str(self.root)) if row["id"] == "sp01-loan-review"][0])
+        self.assertTrue(decision["allow"])
+        self.assertIn("RESOURCE_EXHAUSTED", decision["warnings"])
 
     def test_negative_planning_is_unavailable(self):
         self._positive_review()
@@ -1312,9 +1330,9 @@ class AdmissionTraversal(unittest.TestCase):
         )
         self.assertFalse(snap["authorityCurrent"])
         self.assertTrue(any("action-candidate-conflict" in item for item in snap["missingEvidence"]))
-        self.assertFalse(
-            assess(snap, read_actions(str(self.root))[0])["allow"]
-        )
+        decision = assess(snap, read_actions(str(self.root))[0])
+        self.assertTrue(decision["allow"])
+        self.assertIn("AUTHORITY_UNAVAILABLE", decision["warnings"])
 
     def test_action_evidence_profile_cannot_claim_settlement(self):
         self._positive_review()

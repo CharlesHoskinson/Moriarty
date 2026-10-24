@@ -23,7 +23,7 @@ The [product contract](../docs/MORIARTY-PRODUCT-CONTRACT.md) defines the permiss
 
 The [October 14 PR50 reconciliation](changes/consolidated-language-kernel/reconciliation-2026-10-14.md) is the current interpretation of inherited packages, task status, profiles and evidence. It records delivered local/static children while every full U/M/MC/SP/G exit remains open. [UNI-018–024](changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md#requirement-uni-018-profile-and-consumer-admission) add testable reconciliation clauses; the [current requirement index](current-requirement-crosswalk.json) supplements immutable original crosswalks. The [mid-roadmap review](../docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) retains its original PR49 source baseline and observations.
 
-New nonsecurity work uses GPT-6.1 Sol high implementation and fresh non-author Muse Wonder 1.0 high audits. Opus owns all security work. Historical receipts and terminal task contracts keep their original identities. Current native execution authority remains zero; specification checks grant no product or ledger execution authority.
+Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required. Review routing and model rosters named in older packages are retired.
 
 The separately authored [Opus security reconciliation](changes/consolidated-language-kernel/security-reconciliation-2026-10-14.md) retains its OSR-1014 clause IDs and stated scope. Those addendum clauses are separate from the 160 canonical `spec.md` headings indexed above.
 

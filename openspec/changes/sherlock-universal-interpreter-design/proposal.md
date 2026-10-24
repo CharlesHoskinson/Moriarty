@@ -28,4 +28,4 @@ Ten first-wave studies, five Opus brainstorms, ten optimization studies and ten 
 
 Universal, per-program and fixed-family realizations remain unmeasured alternatives sharing one reference interface. Exact helper/allocation tables, bounds, admission, layouts, formal mappings and financial opcodes remain explicit work. Opus exclusively owns the [original security requirements](security-requirements.md) and [Candidate B security delta](security-candidate-b.md), including disposition of their recorded profile conflicts.
 
-Fresh full-candidate Muse nonsecurity and non-author Opus security audits, with actual identities, terminal status, limitations and dissent, are required before adoption. Consequential decisions retain two substantive agreeing votes. Passing document checks, merged foundation source and model samples do not replace those reviews or later implementation/target evidence.
+Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required. Passing document checks, merged foundation source and model samples do not replace implementation or target evidence.

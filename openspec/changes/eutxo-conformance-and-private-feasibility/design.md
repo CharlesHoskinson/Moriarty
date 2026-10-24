@@ -21,7 +21,7 @@ Independent source packet: `t1-independent-oracles-19/`, packet digest `9d71e736
 Its RESULTS envelopes are source evidence; compiled templates are specified-only.
 Implementation18 frozen candidate digest reported by primary: `aed4090af8f1e94e3904140ac2b23be9aa79e85141806841f1066115e5386680`.
 That digest is context, not this draft's code approval.
-Its independent code audits are separate from design votes and native result review.
+Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required.
 Observed backend file hashes are partial moving observations unless their full candidate manifest verifies.
 
 ## Prospective typed interfaces

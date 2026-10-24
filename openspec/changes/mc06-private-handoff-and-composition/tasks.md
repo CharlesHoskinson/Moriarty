@@ -13,7 +13,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 ## 1. Specify residual and handoff semantics
 
 - [ ] 1.1 Define Complete, Pending, and Rejected outcomes with exact residual authority and obligations. Inventory witness ownership and leakage.
-- [ ] 1.2 Review positive feasibility and global work-budget conservation before implementation.
+- [ ] 1.2 Check positive feasibility and global work-budget conservation before implementation.
 - [ ] 1.3 Preserve the failing result and the corrected result with source hashes.
 - [ ] 1.4 Commit only owned changes in an isolated implementation worktree.
 

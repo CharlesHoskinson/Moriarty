@@ -1,5 +1,7 @@
 # DoctorWatson: the Sherlock software factory
 
+Superseded 2026-10-24: review routing, adoption votes, consumed-attempt and no-retry rules, permanent lanes and campaign queues in this file are retired. The process is the factory loop in [AGENTS.md](../AGENTS.md); technical descriptions below stand as history of the legacy tooling.
+
 ## Current user override — deploy the recursive candidate first
 
 As of October 21, 2026, Root's critical path is **current ledger-9 build → two
@@ -81,7 +83,7 @@ Refresh wider checks when changed composition or a concrete unresolved concern
 requires them. Existing independent security, resource and acceptance obligations
 remain unchanged; these rules add no approval layer.
 
-The [operational queue](sherlock/implementation-loop.md#current-operational-queue)
+The [operational queue](sherlock/implementation-loop.md)
 and [existing tasks](../openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md)
 name the next consumers. Local CI stays explicit. Documentation of a continuation
 does not establish that a runtime loop is armed; report that only from actual

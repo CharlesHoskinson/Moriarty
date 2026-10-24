@@ -63,3 +63,26 @@ class StoreConnections(unittest.TestCase):
         with self.assertRaises(sqlite3.OperationalError):
             store.init_db(self.path)
         self.assertTrue(all(c.closed for c in self.connections))
+
+
+class ChargeRerun(unittest.TestCase):
+    def test_rerun_on_claimed_charge_is_a_logged_retry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "state.sqlite3"
+            action = {"requirement": "SP01", "capability": "c", "candidate": "x",
+                      "id": "a", "kind": "verify"}
+            first_warnings, second_warnings = [], []
+            first = store.reserve(db, "repo", action, {}, charge_id="charge-1", warnings=first_warnings)
+            store.finish(db, first, {"exitCode": 0})
+            second = store.reserve(db, "repo", action, {}, charge_id="charge-1", warnings=second_warnings)
+            self.assertNotEqual(first, second)
+            self.assertEqual(first_warnings, [])
+            self.assertEqual(second_warnings, ["CHARGE_REUSED:charge-1"])
+            conn = sqlite3.connect(db)
+            try:
+                self.assertEqual(
+                    conn.execute("SELECT reservation_id FROM runner_claims WHERE charge_id='charge-1'").fetchall(),
+                    [(second,)])
+                self.assertEqual(conn.execute("SELECT count(*) FROM reservations").fetchone()[0], 2)
+            finally:
+                conn.close()

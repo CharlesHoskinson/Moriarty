@@ -91,4 +91,4 @@ All boxes refer to observed outcomes. Nothing is checked in this draft. Paths ar
 ## Close-out
 
 - [ ] 6.1 Update the Sherlock Graphify layer, the wiki log and the Diataxis how-to for FSYN.
-- [ ] 6.2 Obtain the current designated independent reviews before each gate record is cited.
+- [x] 6.2 Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required.

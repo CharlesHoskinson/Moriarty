@@ -1,7 +1,9 @@
 """DoctorWatson explicit single-operation execution bridge.
 
-One Root-selected task is dispatched at most once through a fixed adapter
-registry to an existing operation boundary. Plan parsing and operation
+One Root-selected task is dispatched per call through a fixed adapter
+registry to an existing operation boundary. A rerun is allowed: an existing
+attempt directory or stale host state is preserved (renamed aside, never
+deleted) and the rerun is logged as a retry. Plan parsing and operation
 fingerprint are the ordinary consumer's own ``delivery.load_plan`` /
 ``delivery.fingerprint``; prelaunch readiness is the ONE common path
 ``reconciliation.load_readiness`` (delivery.assess folded with validated
@@ -31,7 +33,7 @@ historical suffix), the original operator ``collect-evidence``, then
 ``teardown`` (or ``abort-prelaunch-cleanup`` only when native was dispatched
 and ONE_SHOT_STARTED is still absent). Any prelaunch refusal before
 native/factory host mutation (e.g., prelaunch-verify or counters-before
-failing) consumes the attempt and retains the raw failure receipt WITHOUT
+failing) retains the raw failure receipt WITHOUT
 running abort-prelaunch-cleanup or teardown against the preexisting
 provisioned host. A typed cleanup-observation receipt is issued from those
 actual stage outcomes and a live restoration probe of both the cgroup
@@ -47,8 +49,9 @@ succeed before workload launch; actual wait4 reaping to ECHILD and observed
 group absence establish cleanup. Fixed per-process limits do not establish
 aggregate native resource admission. Execution requires an explicit complete
 history file and durably reserves attempts beside it, retaining originals
-before a separately selected changed attempt. This source wiring grants no
-native execution permission.
+before a rerun, which is logged as a retry. Handkey wall time is capped only
+from a measured ``factory.budgets`` entry (measure, then cap). This source
+wiring grants no native execution permission.
 
 After the outer sequence, fixed source-specific collectors convert the
 actual raw producer files into the consumer Result shape exactly
@@ -97,6 +100,16 @@ import time
 from typing import Any, Callable
 
 from capabilities import adapter_capability
+
+# The factory package owns measured budgets; make it importable when this
+# module is run as a script from any directory.
+_FACTORY_PARENT = str(Path(__file__).resolve().parent)
+if _FACTORY_PARENT not in sys.path:
+    sys.path.insert(0, _FACTORY_PARENT)
+try:
+    from factory import budgets
+except ImportError:  # factory package unavailable: behave as unmeasured
+    budgets = None
 
 import delivery  # sibling ordinary consumer in models/doctorwatson
 
@@ -2216,10 +2229,35 @@ def _restoration_probe(selection: dict) -> dict:
     }
 
 
-def _require_existing_provisioned_host(selection: dict) -> None:
+def _set_aside(path: str, what: str, warnings: list | None = None) -> str:
+    """Preserve stale prior-run state by renaming it; never delete evidence.
+
+    A leftover marker, retained dir or output from an earlier run no longer
+    blocks a rerun. It moves to ``<path>.prevN`` (first free N) so the new
+    run starts clean and the old bytes survive. Returns the new path.
+    """
+    for n in range(1, 10_000):
+        target = f"{path}.prev{n}"
+        if os.path.lexists(target):
+            continue
+        try:
+            os.rename(path, target)
+        except OSError as exc:
+            raise Blocked(f"cannot preserve stale {what} aside: {exc}") from exc
+        message = f"stale {what} {path} set aside as {target}; rerun logged as retry"
+        _log_retry("native", message)
+        if warnings is not None:
+            warnings.append(message)
+        return target
+    raise Blocked(f"stale {what} aside namespace exhausted")
+
+
+def _require_existing_provisioned_host(selection: dict,
+                                       warnings: list | None = None) -> None:
     """Provisioned-host entry: OP0..OP6 are external prerequisites, so
     execution_root, config_dir, and Q-OBS observation_output must already
-    exist, while ONE_SHOT_STARTED must be absent."""
+    exist. A leftover ONE_SHOT_STARTED from an earlier run is preserved
+    aside (advisory), because marker presence after native decides cleanup."""
     _require_real_parent_dir(selection["outer"]["retainedDir"],
                              "selection.outer.retainedDir")
     req_paths = selection["requestFacts"]["paths"]
@@ -2245,15 +2283,16 @@ def _require_existing_provisioned_host(selection: dict) -> None:
     if type(q_obs) is not dict:
         raise Blocked("preexisting Q-OBS observation_output must be a "
                       "JSON object")
-    if os.path.lexists(Path(exec_root) / "ONE_SHOT_STARTED"):
-        raise Blocked("ONE_SHOT_STARTED already exists at selection "
-                      "(stale/consumed); zero dispatch")
+    marker = Path(exec_root) / "ONE_SHOT_STARTED"
+    if os.path.lexists(marker):
+        _set_aside(str(marker), "ONE_SHOT_STARTED", warnings)
 
 
 def _check_time_output_preexec(time_output: str) -> str:
     """Allow absent timeOutput OR a 0-byte regular non-symlink file
     precreated by wrapping /usr/bin/time -v -o <timeOutput>; refuse
-    symlinks, non-regular files, or non-empty stale files."""
+    symlinks and non-regular files. A non-empty file from an earlier run is
+    set aside (kept), not refused."""
     try:
         st = os.lstat(time_output)
     except FileNotFoundError:
@@ -2265,8 +2304,8 @@ def _check_time_output_preexec(time_output: str) -> str:
         raise Blocked("timeOutput already exists as symlink or "
                       "non-regular file; zero dispatch")
     if st.st_size != 0:
-        raise Blocked("timeOutput already exists and is non-empty "
-                      "(stale/consumed); zero dispatch")
+        _set_aside(time_output, "timeOutput")
+        return "stale-set-aside"
     return "precreated-zero-byte"
 
 
@@ -2433,10 +2472,36 @@ def _validate_counters(path: str | None) -> bool:
 
 
 HANDKEY_SELECTION_SCHEMA = "doctorwatson.handkey-selection/1"
-HANDKEY_PROFILE = {"wallSeconds": 30, "cpuSeconds": 25,
-                   "addressSpaceBytes": 2 * 1024**3,
-                   "fileBytes": 64 * 1024**2, "coreBytes": 0,
-                   "streamBytes": 4 * 1024**2}
+HANDKEY_BUDGET_KEY = "handkey"
+# Disk-protection limits, not cost guesses: they stay fixed configuration.
+HANDKEY_FILE_BYTES = 64 * 1024**2
+HANDKEY_STREAM_BYTES = 4 * 1024**2
+
+
+def _handkey_limits_lookup():
+    """Cap dict from factory.budgets, or None while unmeasured/unavailable."""
+    if budgets is None:
+        return None
+    try:
+        return budgets.limits_for(HANDKEY_BUDGET_KEY)
+    except Exception:  # an unreadable budget file must not block a run
+        return None
+
+
+def _handkey_profile() -> dict:
+    """Measure-then-cap: no wall/CPU/address-space cap until measured."""
+    limits = _handkey_limits_lookup()
+    wall = None if limits is None else limits.get("wallSeconds")
+    rss = None if limits is None else limits.get("maxRssBytes")
+    return {"budget": HANDKEY_BUDGET_KEY, "measured": wall is not None,
+            "wallSeconds": wall, "cpuSeconds": None,
+            "addressSpaceBytes": None, "maxRssBytes": rss,
+            "fileBytes": HANDKEY_FILE_BYTES, "coreBytes": 0,
+            "streamBytes": HANDKEY_STREAM_BYTES}
+
+
+def _log_retry(kind: str, detail: str) -> None:
+    sys.stderr.write(f"run_selected: retry ({kind}): {detail}\n")
 
 
 def _resolve_handkey_selection(sel: dict, task: dict) -> dict:
@@ -2488,13 +2553,14 @@ def _resolve_handkey_selection(sel: dict, task: dict) -> dict:
             "selectionSha256": _digest(sel)}
 
 
-def _handkey_limits():
+def _handkey_limits(profile):
     os.setsid()
-    for kind, limit in ((resource.RLIMIT_CPU, HANDKEY_PROFILE["cpuSeconds"]),
-                        (resource.RLIMIT_AS, HANDKEY_PROFILE["addressSpaceBytes"]),
-                        (resource.RLIMIT_FSIZE, HANDKEY_PROFILE["fileBytes"]),
+    for kind, limit in ((resource.RLIMIT_CPU, profile["cpuSeconds"]),
+                        (resource.RLIMIT_AS, profile["addressSpaceBytes"]),
+                        (resource.RLIMIT_FSIZE, profile["fileBytes"]),
                         (resource.RLIMIT_CORE, 0)):
-        resource.setrlimit(kind, (limit, limit))
+        if limit is not None:
+            resource.setrlimit(kind, (limit, limit))
 
 
 def _write_handkey_json(path: Path, value) -> dict:
@@ -2527,7 +2593,10 @@ def _capture_handkey_group(stage: dict) -> dict:
     non-SIGCHLD clone children in the final ECHILD observation. Per-process
     inherited rlimits do not impose aggregate CPU or memory limits.
     """
+    profile = stage["profile"]
+    wall = profile["wallSeconds"]
     started = time.monotonic()
+    status_at = None
     streams = selectors.DefaultSelector()
     outputs = {}
     counts = {"stdout": 0, "stderr": 0}
@@ -2545,7 +2614,8 @@ def _capture_handkey_group(stage: dict) -> dict:
         process = subprocess.Popen(stage["argv"], cwd=stage["cwd"],
                                    env=stage["env"], stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                   shell=False, preexec_fn=_handkey_limits)
+                                   shell=False,
+                                   preexec_fn=lambda: _handkey_limits(profile))
         _write_handkey_json(Path(stage["cwd"]) / "launched.json", {
             "pid": process.pid, "processGroup": process.pid,
             "supervisorPid": os.getpid()})
@@ -2554,7 +2624,8 @@ def _capture_handkey_group(stage: dict) -> dict:
             os.set_blocking(pipe.fileno(), False)
             streams.register(pipe, selectors.EVENT_READ, name)
         while status is None or streams.get_map():
-            if reason is None and time.monotonic() - started >= HANDKEY_PROFILE["wallSeconds"]:
+            if reason is None and wall is not None \
+                    and time.monotonic() - started >= wall:
                 reason = "wall-timeout"
             if reason is not None and not killed:
                 try:
@@ -2580,16 +2651,24 @@ def _capture_handkey_group(stage: dict) -> dict:
                     key.fileobj.close()
                     continue
                 name = key.data
-                remaining = HANDKEY_PROFILE["streamBytes"] - counts[name]
+                remaining = profile["streamBytes"] - counts[name]
                 outputs[name].write(chunk[:max(0, remaining)])
                 counts[name] += len(chunk)
-                if counts[name] > HANDKEY_PROFILE["streamBytes"]:
+                if counts[name] > profile["streamBytes"]:
                     reason = "stream-limit"
-            if time.monotonic() - started > HANDKEY_PROFILE["wallSeconds"] + 2:
+            now = time.monotonic()
+            if status is not None and status_at is None:
+                status_at = now
+            # Unmeasured: no wall cap, but descendants holding the pipes open
+            # after the direct child exited get a fixed 2 s grace.
+            stream_end = (started + wall + 2 if wall is not None
+                          else None if status_at is None else status_at + 2)
+            if stream_end is not None and now > stream_end:
                 reason = reason or "unresolved-descendant-streams"
                 break
-        drain_deadline = min(started + HANDKEY_PROFILE["wallSeconds"] + 2,
-                             time.monotonic() + 1)
+        drain_deadline = time.monotonic() + 1
+        if wall is not None:
+            drain_deadline = min(started + wall + 2, drain_deadline)
         while status is not None and time.monotonic() < drain_deadline:
             try:
                 pid, child_status, child_usage = _wait4_retry(-1, wait_all)
@@ -2610,18 +2689,30 @@ def _capture_handkey_group(stage: dict) -> dict:
         except ProcessLookupError:
             group_absent = True
         cleanup = "complete" if drained and group_absent else "unknown"
+        elapsed = time.monotonic() - started
+        rss_bytes = None if usage is None else usage.ru_maxrss * 1024
         return {"returncode": process.returncode, "reason": reason,
                 "pid": process.pid, "processGroup": process.pid,
                 "groupAbsentObserved": group_absent,
                 "subreaperDrainECHILD": drained, "adoptedChildren": adopted,
                 "descendantsContained": drained, "cleanup": cleanup,
-                "wallSeconds": time.monotonic() - started,
+                "wallSeconds": elapsed,
+                "measurement": {
+                    "budget": profile["budget"], "capped": wall is not None,
+                    "wallSeconds": elapsed, "maxRssBytes": rss_bytes,
+                    "wallCapSeconds": wall, "maxRssCapBytes": profile["maxRssBytes"],
+                    "rssCapExceeded": bool(rss_bytes is not None
+                                           and profile["maxRssBytes"] is not None
+                                           and rss_bytes > profile["maxRssBytes"]),
+                    "report": ("measured cap applied" if wall is not None else
+                               "unmeasured: no wall/CPU/address-space cap; "
+                               "record this run with `doctorwatson heavy` to set one")},
                 "usage": None if usage is None else {
                     "userSeconds": usage.ru_utime, "systemSeconds": usage.ru_stime,
                     "maxRssKiB": usage.ru_maxrss},
                 "streamBytesObserved": counts,
                 "usageScope": "direct child wait4; adopted rows may include descendant accounting, never summed",
-                "limitScope": "per-process rlimits inherited by descendants; no aggregate CPU/memory limit",
+                "limitScope": "file-size/core rlimits inherited by descendants; wall cap only when measured; no aggregate CPU/memory limit",
                 "supervisorOverheadUsage": None}
     except BaseException as exc:
         identity = "not launched" if process is None else f"pid={process.pid} pgid={process.pid}"
@@ -2693,8 +2784,9 @@ def _capture_handkey(stage: dict) -> dict:
             _write_handkey_json(receipt, value)
         finally:
             os._exit(0)
-    deadline = time.monotonic() + HANDKEY_PROFILE["wallSeconds"] + 4
-    while time.monotonic() < deadline:
+    wall = stage["profile"]["wallSeconds"]
+    deadline = None if wall is None else time.monotonic() + wall + 4
+    while deadline is None or time.monotonic() < deadline:
         pid, status = os.waitpid(supervisor, os.WNOHANG)
         if pid:
             if os.waitstatus_to_exitcode(status) != 0:
@@ -2707,14 +2799,38 @@ def _capture_handkey(stage: dict) -> dict:
     raise StageUnknown(f"handkey supervisor {supervisor} termination/descendants unknown")
 
 
-def _reserve_handkey_attempt(task, history_path):
-    """Atomically reserve one attempt against the complete history journal.
+def _fresh_attempt_dir(attempt: Path) -> tuple[Path, "Path | None", int]:
+    """Create the attempt directory; never delete or reuse existing evidence.
+
+    If it already exists, the existing directory is left untouched and a
+    sibling ``<name>.retryN`` is created. Returns (dir, previous-or-None, N).
+    """
+    try:
+        attempt.mkdir(exist_ok=False)
+        return attempt, None, 0
+    except FileExistsError:
+        pass
+    for n in range(1, 10_000):
+        candidate = attempt.parent / f"{attempt.name}.retry{n}"
+        try:
+            candidate.mkdir(exist_ok=False)
+        except FileExistsError:
+            continue
+        return candidate, attempt, n
+    raise Blocked("attempt retry directory namespace exhausted")
+
+
+def _reserve_handkey_attempt(task, history_path, warnings=None):
+    """Atomically reserve one attempt against the history journal.
 
     A durable reservation survives deletion of the caller's output directory.
-    Prior attempts must be present with their exact saved Result in supplied
-    history; common readiness retains its original reconciliation/debt guards.
-    An incomplete/crashed reservation blocks until explicitly recovered.
+    A rerun of an already-reserved attempt (or one after a crashed attempt)
+    gets a retry reservation beside the original and is logged; prior
+    reservations are never altered. Prior attempts missing from the supplied
+    history, and incomplete reservations, are advisory warnings. A damaged
+    reservation namespace still blocks: that is journal integrity.
     """
+    warnings = [] if warnings is None else warnings
     history = Path(_abs_norm(history_path, "history"))
     if history.parent.resolve() != history.parent:
         raise Blocked("handkey history parent must be a real directory")
@@ -2729,8 +2845,16 @@ def _reserve_handkey_attempt(task, history_path):
         prior_results = task["history_results"]
         token = _digest({"task": task["id"], "attempt": task["attempt"]})
         reservation = reservations / token
-        if reservation.exists():
-            raise Blocked("task attempt already reserved; reconcile original, no retry")
+        retry = 0
+        while reservation.exists():
+            retry += 1
+            reservation = reservations / _digest(
+                {"task": task["id"], "attempt": task["attempt"], "retry": retry})
+            if retry > 10_000:
+                raise Blocked("attempt retry reservation namespace exhausted")
+        if retry:
+            warnings.append(f"attempt {task['attempt']} already reserved; "
+                            f"logged as retry {retry}")
         entries = list(reservations.iterdir())
         if len(entries) > 4097:
             raise Blocked("history reservation journal exceeds bounded inspection")
@@ -2747,13 +2871,15 @@ def _reserve_handkey_attempt(task, history_path):
                     str(sibling / "history-result.json"), "prior attempt result"))
                 if not any(reconciliation.result_digest(r) == reconciliation.result_digest(saved)
                            for r in prior_results):
-                    raise Blocked("authoritative history omitted or changed a reserved original attempt")
+                    warnings.append("authoritative history omits or changed a reserved original attempt "
+                                    f"({sibling.name[:12]})")
             except (KeyError, BadInput, CollectError, delivery.SchemaError) as exc:
-                raise Blocked("prior reservation incomplete; reconcile original attempt") from exc
+                warnings.append(f"prior reservation {sibling.name[:12]} incomplete: {exc}")
         reservation.mkdir()
         _write_handkey_json(reservation / "reservation.json", {
             "task": task["id"], "attempt": task["attempt"],
-            "fingerprint": task["fingerprint"], "history": str(history)})
+            "fingerprint": task["fingerprint"], "history": str(history),
+            **({"retry": retry, "warnings": list(warnings)} if retry or warnings else {})})
         _fsync_dir(reservations)
         return reservation
     finally:
@@ -2765,24 +2891,30 @@ def _run_handkey_once(task, selection, plan_path, selection_path, attempt_dir,
     attempt = Path(_abs_norm(attempt_dir, "attempt"))
     if attempt.parent != Path(selection["outputRootPath"]):
         raise Blocked("handkey attempt must be a direct child of the identity-bound output root")
-    reservation = _reserve_handkey_attempt(task, history_path)
-    try:
-        attempt.mkdir(exist_ok=False)
-        _fsync_dir(attempt.parent)
-    except FileExistsError as exc:
-        raise Blocked("attempt directory already consumed; no retry") from exc
+    warnings: list[str] = []
+    reservation = _reserve_handkey_attempt(task, history_path, warnings)
+    attempt, previous, retry = _fresh_attempt_dir(attempt)
+    _fsync_dir(attempt.parent)
+    if previous is not None:
+        warnings.append(f"attempt directory {previous} exists; kept intact, "
+                        f"rerun recorded in {attempt}")
+    for warning in warnings:
+        _log_retry("handkey", warning)
     argv = [selection["tool"]["path"], "verify-pis"] + [
         selection[k]["path"] for k in ("key", "proof", "statement")]
     stage = {"stage": "handkey-verify-pis", "argv": argv,
              "cwd": str(attempt), "env": {"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"},
              "stdout": str(attempt / "stdout"), "stderr": str(attempt / "stderr"),
-             "profile": HANDKEY_PROFILE}
+             "profile": _handkey_profile()}
     preexec = {"schema": "doctorwatson.handkey-preexec/1",
                "task": task["id"], "attempt": task["attempt"],
                "adapter": task["adapter"], "fingerprint": task["fingerprint"],
                "readinessIdentity": task["readiness_identity"],
                "selection": selection, "stage": stage,
                "scope": "ordinary local verification protocol; no native resource grant"}
+    if warnings:
+        preexec["retryWarnings"] = warnings
+        preexec["retryOf"] = None if previous is None else str(previous)
     preexec_ref = _write_handkey_json(attempt / "PREEXEC.json", preexec)
     _write_handkey_json(reservation / "PREEXEC.json", {"preexec": preexec_ref})
     task, selection = _recheck_at_use(task, selection, plan_path, selection_path,
@@ -2852,7 +2984,7 @@ def _run_handkey_once(task, selection, plan_path, selection_path, attempt_dir,
     except OSError as exc:
         # The reservation and PREEXEC remain consumed. Preserve the actual
         # process/cleanup observations, but never report durable completion
-        # when a terminal record could not be persisted. No retry is selected.
+        # when a terminal record could not be persisted. A rerun is a logged retry.
         record = {**record, "observedCollectorTerminal": record["terminal"],
                   "observedConsumerResult": record.get("consumerResult"),
                   "terminal": "unknown-submission", "unknownScope": "local-record",
@@ -2874,7 +3006,7 @@ def run_selected_once(task_id: str, plan_path: str, selection_path: str,
                       history_path: str | None = None,
                       reconciliations_path: str | None = None
                       ) -> tuple[int, dict]:
-    """Dispatch one selected outer operation at most once.
+    """Dispatch one selected outer operation.
 
     PREEXEC/4 (consumer fingerprint, selection hash, verified
     guard/config/outer pins, the full code-fixed stage table, declared
@@ -2930,23 +3062,25 @@ def run_selected_once(task_id: str, plan_path: str, selection_path: str,
         return _run_handkey_once(task, selection, plan_path, selection_path,
                                  attempt_dir, history_path, reconciliations_path)
     outer = selection["outer"]
-    _require_existing_provisioned_host(selection)
+    retry_warnings: list[str] = []
+    _require_existing_provisioned_host(selection, retry_warnings)
     for stale, what in ((outer["retainedDir"], "retainedDir"),
                         (selection["requestFacts"]["paths"]
                          ["evidence_dir"], "evidence_dir")):
         if os.path.lexists(stale):
-            raise Blocked(f"{what} already exists at selection "
-                          "(stale/consumed); zero dispatch")
+            _set_aside(stale, what, retry_warnings)
     time_output_state = _check_time_output_preexec(outer["timeOutput"])
     attempt = Path(attempt_dir)
     try:
-        attempt.mkdir(parents=False, exist_ok=False)
+        attempt, previous, _retry = _fresh_attempt_dir(attempt)
         (attempt / "streams").mkdir()
-    except FileExistsError as exc:
-        raise Blocked("attempt directory already exists (consumed/stale/"
-                      "unknown); no retry, zero dispatch") from exc
     except OSError as exc:
         raise BadInput(f"attempt directory unusable: {exc}") from exc
+    if previous is not None:
+        message = (f"attempt directory {previous} exists; kept intact, "
+                   f"rerun recorded in {attempt}")
+        _log_retry("native", message)
+        retry_warnings.append(message)
     stages = build_outer_stages(selection, attempt)
     stage_order = [s for s, _ in PROVISION_STEPS] + [
         "counters-before", "native", "counters-after",
@@ -2975,6 +3109,9 @@ def run_selected_once(task_id: str, plan_path: str, selection_path: str,
                      "time's own output-writing tail and sudo/orphan "
                      "CPU are outside/unknown, never asserted"},
     }
+    if retry_warnings:
+        preexec["retryWarnings"] = retry_warnings
+        preexec["retryOf"] = None if previous is None else str(previous)
     try:
         preexec_ref = _write_json_atomic(attempt / "PREEXEC.json", preexec)
     except OSError as exc:

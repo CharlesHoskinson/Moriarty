@@ -110,9 +110,9 @@ def handle_session_start(repo):
                  f"Next: {snapshot.get('nextActionId') or action['id']}"]
         failures = snapshot.get("sameDefectFailures")
         if isinstance(failures, int) and failures >= 2:
-            lines.append("Blocked: another broad correction; reproduce the unresolved defect.")
+            lines.append("Advisory: repeated failures; consider reproducing the unresolved defect (not blocking).")
         elif failures is None:
-            lines.append("History unresolved; inspect CLI status before dispatch.")
+            lines.append("History unresolved; inspect CLI status (advisory, not blocking).")
         pending = _pending(repo)
         if pending:
             lines.append(pending)
@@ -217,7 +217,9 @@ def handle_pre_tool_use(payload, repo):
             decision = assess(snapshot, action)
             if not decision["allow"]:
                 return _output(event, permissionDecision="deny",
-                               permissionDecisionReason=f"Repeated unresolved failure or unavailable admission ({decision.get('reasonCode')}). Run {decision.get('nextActionId') or 'CLI status'}.")
+                               permissionDecisionReason=f"Dispatch denied ({decision.get('reasonCode')}): authority unavailable, another primary run is active, or the admin limit is reached. Run {decision.get('nextActionId') or 'CLI status'}.")
+            if decision.get("warnings"):
+                return _output(event, additionalContext="Advisory (not blocking): " + ", ".join(decision["warnings"]))
     except Exception:
         return _diagnostic(event)
     return _output(event)

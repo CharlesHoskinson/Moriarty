@@ -2494,6 +2494,7 @@ def _select_next(
         for item in missing
         if item == "operational-history" or item.startswith("operational-history")
     ]
+    fallback = None
     for other in ranked:
         local = []
         flags = _action_flags(
@@ -2523,7 +2524,14 @@ def _select_next(
         snap["nextActionId"] = None
         decision = assess(snap, other)
         if decision.get("allow") is True:
-            return other["id"]
+            if not decision.get("warnings"):
+                return other["id"]
+            # Prefer a warning-free action; otherwise fall back to the first
+            # allowed one so advisory findings never leave the loop without a step.
+            if fallback is None:
+                fallback = other["id"]
+    if fallback is not None:
+        return fallback
     missing.append("next-action-none")
     return None
 

@@ -19,7 +19,7 @@ Revision03 design candidate is `dcc62e21e9e351843bd04a3be537ebe260f8c1d0ec606cfc
 Both full design reviews approve scoped T1 design only.
 Implementation18 candidate is `aed4090af8f1e94e3904140ac2b23be9aa79e85141806841f1066115e5386680`.
 Its Aiken checks use synthetic transactions. `nativePins` and calibrated source are absent.
-Required current implementation reviews remain separate from design votes.
+Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required.
 Oracle19 packet is `9d71e736e3d3c159a83ff3bb21dbb3f5b2a9661dd90ed1e70414c2690b6552d6`.
 Its source envelopes are independent expected outcomes, not native evidence.
 

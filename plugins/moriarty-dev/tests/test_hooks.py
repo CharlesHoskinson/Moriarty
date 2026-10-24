@@ -15,7 +15,7 @@ if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
 import test_records as tr
-from moriarty_dev.store import get_db_path, init_db, record_event
+from moriarty_dev.store import get_db_path, init_db, record_event, reserve
 
 
 class HookContractTestCase(unittest.TestCase):
@@ -107,7 +107,7 @@ class HookContractTestCase(unittest.TestCase):
         res = json.loads(proc.stdout.strip() or "{}")
         self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
 
-    def test_denied_known_dispatch(self):
+    def test_known_dispatch_warns_and_primary_conflict_denies(self):
         # Set up genuine registers in self.root with 2 failures
         tr.copy_genuine_registers(self.root)
         campaigns = tr.load_json(self.root / "evidence" / "moriarty-completion-program-2026-09-07" / "report-reconciliation" / "campaign-admission.json")
@@ -139,8 +139,17 @@ class HookContractTestCase(unittest.TestCase):
         }
         res = self.run_hook("PreToolUse", payload)
         hook_out = res.get("hookSpecificOutput", {})
+        # Repeated failures and missing authority are advisory: never a denial.
+        self.assertNotIn("permissionDecision", hook_out)
+        self.assertIn("Advisory (not blocking)", hook_out.get("additionalContext", ""))
+        self.assertIn("REPRODUCE_BEFORE_RETRY", hook_out.get("additionalContext", ""))
+
+        # A second primary implementation writer is still refused.
+        reserve(self.db_path, str(self.root), implement_action, {})
+        res = self.run_hook("PreToolUse", payload)
+        hook_out = res.get("hookSpecificOutput", {})
         self.assertEqual(hook_out.get("permissionDecision"), "deny")
-        self.assertIn("Repeated unresolved failure", hook_out.get("permissionDecisionReason", ""))
+        self.assertIn("PRIMARY_ACTIVE", hook_out.get("permissionDecisionReason", ""))
         self.assertIn("sp01-loan-reproduce", hook_out.get("permissionDecisionReason", ""))
 
     def test_permitted_diagnostic(self):

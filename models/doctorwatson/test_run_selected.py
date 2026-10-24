@@ -111,12 +111,19 @@ class RunSelectedTests(unittest.TestCase):
         with self.assertRaises(rs.Blocked):
             rs.resolve_task(str(self.plan_path), "child")
 
-    def test_consumed_attempt_never_retried(self):
-        (self.root / "attempt-1").mkdir()
+    def test_existing_attempt_directory_is_kept_and_rerun_dispatches(self):
+        old = self.root / "attempt-1"
+        old.mkdir()
+        (old / "evidence.txt").write_bytes(b"prior evidence")
         runner = self.runner()
-        with self.assertRaises(rs.Blocked):
-            self.go(runner)
-        self.assertEqual(runner.calls, [])
+        code, _record = self.go(runner)
+        self.assertEqual(code, rs.EXIT_OK)
+        self.assertEqual(runner.calls.count("native"), 1)
+        self.assertEqual((old / "evidence.txt").read_bytes(), b"prior evidence")
+        retry = self.root / "attempt-1.retry1"
+        preexec = json.loads((retry / "PREEXEC.json").read_bytes())
+        self.assertEqual(preexec["retryOf"], str(old))
+        self.assertTrue(any("exists; kept intact" in w for w in preexec["retryWarnings"]))
 
     def test_unlaunchable_adapter_blocked(self):
         resolved = {"id": "build", "adapter": "sherlock-rollup-benchmark",
@@ -137,7 +144,7 @@ class RunSelectedTests(unittest.TestCase):
         code, _ = self.go(runner)
         self.assertEqual(code, rs.EXIT_FAILED)
 
-    def test_runner_exception_unknown_and_consumed(self):
+    def test_runner_exception_unknown_then_rerun_is_allowed(self):
         runner = self.runner(failures={"native": TimeoutError("t")})
         code, record = self.go(runner)
         self.assertEqual(code, rs.EXIT_UNKNOWN)
@@ -145,9 +152,12 @@ class RunSelectedTests(unittest.TestCase):
         self.assertEqual(record["unknownScope"], "local-process")
         self.assertNotEqual(record["cleanupState"], "complete-or-fake")
         runner2 = self.runner()
-        with self.assertRaises(rs.Blocked):
-            self.go(runner2)
-        self.assertEqual(runner2.calls, [])
+        code2, _record2 = self.go(runner2)
+        # The rerun is no longer refused as "consumed": it reaches the host's
+        # own prelaunch-verify, which is the real safety check for leftover state.
+        self.assertEqual(code2, rs.EXIT_FAILED if "native" not in runner2.calls else rs.EXIT_OK)
+        self.assertIn("prelaunch-verify", runner2.calls)
+        self.assertTrue((self.root / "attempt-1" / "PREEXEC.json").is_file(), "first attempt evidence kept")
 
     def test_no_shell_one_subprocess_site(self):
         src = (Path(__file__).parent / "run_selected.py").read_text()

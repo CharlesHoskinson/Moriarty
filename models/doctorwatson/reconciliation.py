@@ -47,15 +47,13 @@ not make pathname-based guard execution or config reads at dispatch
 time atomic. No producer authentication is claimed beyond delivery's
 existing basis.
 
-Retry rule after a genuine original discharge: ``process-not-started``
-proves the original operation never ran, so a separately selected
-newer attempt may reuse the same fingerprint. Any consumed outcome
-(process-exited, cleanup-complete of an exited process, tx-included)
-suppresses a same-fingerprint retry; only a changed-fingerprint newer
-attempt may become a candidate, and only after that discharge. An
-unresolved current plan attempt, a non-active (cancelled/blocked)
-disposition, or a possible-launch current attempt never becomes a
-candidate through reconciliation.
+Retry rule after a genuine original discharge: any discharged original
+(process-not-started, process-exited, cleanup-complete of an exited
+process, tx-included) leaves the task a candidate. A same-fingerprint
+retry of a consumed outcome carries an advisory warning and is logged;
+it is never suppressed. An unresolved current plan attempt, a non-active
+(cancelled/blocked) disposition, or a possible-launch current attempt
+never becomes a candidate through reconciliation.
 """
 from __future__ import annotations
 
@@ -502,16 +500,15 @@ def assess_reconciled(plan, results, reconciliations):
                     if e.get("fingerprint") == row["fingerprint"]
                     and e["resolution"] != "process-not-started"]
                 if consumed_same_fp:
-                    row["state"] = "stale"
-                    row["selection_candidate"] = False
-                    row["blockers"] = base_blockers + [
-                        "unchanged consumed operation requires changed "
-                        "inputs (same-fingerprint retry suppressed; "
-                        "original attempt discharged as "
+                    # Advisory only: an unchanged retry after a discharged
+                    # original is allowed and logged, never suppressed.
+                    row.setdefault("warnings", []).append(
+                        "unchanged retry of a discharged original "
+                        "(advisory; original attempt discharged as "
                         + ",".join(sorted({e["resolution"]
                                             for e in consumed_same_fp}))
-                        + ")"]
-                elif not base_blockers:
+                        + ")")
+                if not base_blockers:
                     row["blockers"] = base_blockers
                     row["state"] = "ready"
                     row["selection_candidate"] = True

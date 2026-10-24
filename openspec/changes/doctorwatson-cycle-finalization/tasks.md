@@ -1,6 +1,6 @@
 # Tasks and evidence
 
-Checkboxes record this proposal's observed evidence, not full Sherlock acceptance. Fresh returned independent review and integration remain required for changed final bytes.
+Checkboxes record this proposal's observed evidence, not full Sherlock acceptance.
 
 - [x] DWCF-001: Implement shared capability facts and additive dispatch reporting, including refresh after reconciliation. Evidence: `implementation/readiness/verification.json` and `preflight-verification.json`, capability/preflight qualification regressions (96 focused readiness tests on the latter cut).
 - [x] DWCF-002: Compute fingerprints once per assessment; reuse exact FileRefs locally; cache requirement bytes/digests; detect intervening changes. Evidence: 95 focused regressions plus two requirement-cache tests under `implementation/readiness/`.

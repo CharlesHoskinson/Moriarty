@@ -38,7 +38,7 @@ class HistoricalRegressionsTestCase(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def test_composition_green_summary_cannot_clear_failing_full_state(self):
+    def test_composition_green_summary_cannot_clear_failing_full_state_warning(self):
         # Even if a review or summary claims all green, a failing full-state test invalidates candidateCurrent
         snap = {
             "authorityCurrent": True,
@@ -65,10 +65,12 @@ class HistoricalRegressionsTestCase(unittest.TestCase):
             "evidenceProfile": "local-runtime",
         }
         dec = assess(snap, action)
-        self.assertFalse(dec["allow"])
-        self.assertEqual(dec["reasonCode"], "EVIDENCE_STALE")
+        # Stale evidence is advisory now; the failing state stays visible.
+        self.assertTrue(dec["allow"])
+        self.assertIn("EVIDENCE_STALE", dec["warnings"])
+        self.assertEqual(dec["missingEvidence"], snap["missingEvidence"])
 
-    def test_new_packet_cannot_erase_prior_failures(self):
+    def test_new_packet_cannot_erase_prior_failure_warning(self):
         # Failures are keyed by lineage: (repository, requirement, capability)
         req = "SP05.1"
         cap = "fixed-financial-driver"
@@ -104,8 +106,8 @@ class HistoricalRegressionsTestCase(unittest.TestCase):
             "missingEvidence": [],
         }
         dec = assess(snap, action)
-        self.assertFalse(dec["allow"])
-        self.assertEqual(dec["reasonCode"], "REPRODUCE_BEFORE_RETRY")
+        self.assertTrue(dec["allow"])
+        self.assertEqual(dec["warnings"], ["REPRODUCE_BEFORE_RETRY"])
 
     def test_stale_checkpoint_activity_not_live_worker(self):
         # A historical checkpoint with no live worker does not grant live dispatch
@@ -125,7 +127,7 @@ class HistoricalRegressionsTestCase(unittest.TestCase):
         self.assertIn("Defect reproduced", res.stderr)
         self.assertIn("admitted-not-executed", res.stderr)
 
-    def test_stop_rules_preserve_repair_and_deny_broad_implement(self):
+    def test_stop_rules_preserve_repair_and_warn_on_broad_implement(self):
         req = "SP05.1"
         cap = "fixed-financial-driver"
         snap = {
@@ -162,15 +164,16 @@ class HistoricalRegressionsTestCase(unittest.TestCase):
             "commandRef": "commands.json#repair-driver",
             "evidenceProfile": "local-runtime",
         }
-        # Implement is blocked
+        # Another broad implement is allowed but carries the retry warning
         dec_imp = assess(snap, implement_action)
-        self.assertFalse(dec_imp["allow"])
-        self.assertEqual(dec_imp["reasonCode"], "REPRODUCE_BEFORE_RETRY")
+        self.assertTrue(dec_imp["allow"])
+        self.assertEqual(dec_imp["warnings"], ["REPRODUCE_BEFORE_RETRY"])
 
         # Repair is permitted because reproducerVerified and approachChanged are both True
         dec_rep = assess(snap, repair_action)
         self.assertTrue(dec_rep["allow"])
         self.assertEqual(dec_rep["reasonCode"], "ALLOWED")
+        self.assertEqual(dec_rep["warnings"], [])
 
 
 if __name__ == "__main__":

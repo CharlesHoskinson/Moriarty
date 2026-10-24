@@ -115,17 +115,18 @@ class ReconciliationTests(unittest.TestCase):
             rec.load_reconciliations(path)
 
 
-    def test_consumed_same_fingerprint_retry_suppressed(self):
+    def test_consumed_same_fingerprint_retry_is_allowed_with_warning(self):
         original = self._unknown_result()
         record = self._record(original, resolution="process-exited",
                               outcome="exited", exit_code=101)
         report = self._assess(original, [record])  # new attempt, same fp
         row = report["tasks"][0]
-        self.assertEqual(row["state"], "stale")
-        self.assertFalse(row["selection_candidate"])
-        self.assertEqual(report["ready_for_root_selection"], [])
-        self.assertTrue(any("same-fingerprint retry suppressed" in b
-                            for b in row["blockers"]))
+        self.assertEqual(row["state"], "ready")
+        self.assertTrue(row["selection_candidate"])
+        self.assertEqual(report["ready_for_root_selection"], ["build"])
+        self.assertEqual(row["blockers"], [])
+        self.assertTrue(any("unchanged retry of a discharged original" in w
+                            for w in row["warnings"]))
 
     def test_changed_fingerprint_after_genuine_discharge_ready(self):
         original = self._unknown_result()

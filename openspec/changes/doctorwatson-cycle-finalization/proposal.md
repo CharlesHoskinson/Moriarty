@@ -18,4 +18,4 @@ The original native implementation goal remains paused. Source43's optimized bui
 
 ## Acceptance and exclusions
 
-Acceptance requires the specified ordinary regressions, fresh independent review of the exact final source, local CI, and actual finalization receipts for any claimed completed cycle. Source presence, author tests, merged source and target evidence are separate fields. No arbitrary-shell task runner, new orchestration framework, hosted CI, native retry, wallet operation or proof-resource grant is introduced. Canonical history and the circuit atlas remain intact. Graph path coverage must distinguish metadata inventory from semantic reads.
+Acceptance requires the specified ordinary regressions, local CI, and actual finalization receipts for any claimed completed cycle. Source presence, author tests, merged source and target evidence are separate fields. No arbitrary-shell task runner, new orchestration framework, hosted CI, native retry, wallet operation or proof-resource grant is introduced. Canonical history and the circuit atlas remain intact. Graph path coverage must distinguish metadata inventory from semantic reads.

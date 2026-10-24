@@ -37,7 +37,7 @@ The [September 17 native K results](../../../deliverables/k-lifecycle-execution-
 - [ ] 4.5 Audit actual K results and retain unproved metatheorem/correspondence gates.
 
 ## 5. Authenticated Docker and Preview
-- [ ] 5.1 Freeze and independently review source/profile/head, authenticated state/authority/time and failure/fee constraints before implementation.
+- [ ] 5.1 Freeze source/profile/head, authenticated state/authority/time and failure/fee constraints before implementation.
 - [ ] 5.1a Bind those reviewed constraints in the actual lowerer/custody/SDK caller.
 - [ ] 5.2 Implement the already specified executor/lifetime boundary and offline fault matrix.
 - [ ] 5.3 Run test:ledger, test:compiled, test:finalized-state and test:preview; audit exact source.

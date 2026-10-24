@@ -2,10 +2,9 @@
 
 This workflow governs maintainer work only. Public developer tools never read Pel, reviewer or campaign records as validity inputs.
 
-The [October 14 routing assignment](../../../raw/assignments/moriarty-sol-muse-routing-2026-10-14.md) controls new nonsecurity source work: GPT-6.1 Sol high implementation and fresh non-author Muse Wonder 1.0 high audits. All security work belongs to Opus. The [parallel workflow](../../../docs/PARALLEL-DEVELOPMENT.md) and [six-task manifest](../../parallel-language-workflow.json) retain disjoint ownership and historical terminal task contracts; their earlier author/reviewer roster does not select new work.
-Use one scoped executable predicate per disjoint source task. Preserve the full U0–U7 acceptance dependencies. Freeze a five-part task with objective, exact owned files, interfaces, constraints and verification. Include positive/hostile expected results from an independent reviewer. Bind the base and candidate bytes, semantic/target profile, requirements, existing executable paths and argv, tool versions, input hashes, output artifacts, timeout/memory/CPU/submission/debit ceilings and current cumulative charges. Missing command or target interface means specified-only or interface-blocked, not ready.
+Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required. Model routing, reviewer seats and the plugin-dispatch steps in older text are retired.
+Use one scoped executable predicate per disjoint source task. Preserve the full U0–U7 acceptance dependencies. Freeze a five-part task with objective, exact owned files, interfaces, constraints and verification. Bind the base and candidate bytes, semantic/target profile, requirements, existing executable paths and argv, tool versions, input hashes and output artifacts. Missing command or target interface means specified-only or interface-blocked, not ready.
 
-Reconcile existing internal accounting before its dependent action. Use the repository development plugin for registered dispatch. Verify the actual caller path; retain failed observations. Request non-author review of the complete frozen result, preserve dissent and correct within the authorized bound. A successful local test or reviewer vote does not establish native proof or Preview financial acceptance. Do not build new orchestration infrastructure.
 
 ## Known executable checks and limits
 

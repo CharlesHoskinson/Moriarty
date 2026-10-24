@@ -1,17 +1,12 @@
 # Parallel Moriarty source development
 
-The October 14 user update selects `gpt-6.1-sol` high implementation and fresh
-independent `muse-wonder-1.0` high audits for new nonsecurity language roadmap work.
-The later security instruction assigns all security work to Opus 5.5.
-This replaces the author/reviewer routing in the initial October 13 wave below;
-its records, task contracts, resource limits and acceptance requirements remain.
-See [the routing assignment](../raw/assignments/moriarty-sol-muse-routing-2026-10-14.md).
-Review the full exact candidate and applicable actual results before merging.
+Superseded 2026-10-24: author/reviewer model routing, review seats, audit rosters and
+admission steps in this file are retired. The process is the factory loop in
+[AGENTS.md](../AGENTS.md): run `scripts/sherlock-next`, work the first failing predicate.
+The task lanes, author-context packets and verification commands below stay as a
+technical description of disjoint source ownership; they grant or block nothing.
 
-The retained October 13 initial instruction selected three `gpt-6.1-sol` authors and three `grok-4.7` authors, all at high effort.
-This instruction supersedes the single active source delivery restriction for this workflow.
-It preserves every U0–U7, M1–M17, MC and SP acceptance requirement.
-This procedure governs maintainer work. It does not authorize public Moriarty programs.
+This procedure covers maintainer work and does not authorize public Moriarty programs.
 
 [The task manifest](../openspec/parallel-language-workflow.json) defines the initial wave.
 The manifest describes source tasks. It is not a scheduler, campaign registry or native admission record.
@@ -105,7 +100,6 @@ python3 "$MORIARTY_CLEAN/scripts/build_task_context.py" --repo "$MORIARTY_WORKER
 Load the installed develop skill or its checked-in `SKILL.md` before selecting work.
 Read the compact context and the complete affected source before editing.
 Ask a non-author to define independent financial/work expectations.
-Route security analysis and hostile security cases to Opus.
 Use a fresh author session in that worktree with the manifest's exact model and high effort.
 Keep the same author through repairs of that capability.
 Record requested and returned model identities separately.
@@ -257,86 +251,14 @@ Preserve those bindings. Do not reuse old manifests, signing contexts, keys or a
 This workflow neither opens nor regenerates native material.
 Freeze the complete integrated tree for fresh independent audits after composition.
 
-## Fresh reviews
+## Review and native work
 
-For new nonsecurity work, use a fresh non-author `muse-wonder-1.0` high audit.
-Use `gpt-6.1-sol` high implementation and assign all security work to Opus 5.5.
-Review the exact full candidate, requirements, independent expectations and actual results.
-A changed candidate needs a fresh applicable review.
-Missing reviewers cannot approve; original frozen rosters remain attached to their contracts.
-Component approval does not approve a later composition or execution result.
-
-The following initial roster is historical, not current routing:
-
-<details>
-<summary>October 13 initial review seats (superseded for new work)</summary>
-
-Every final candidate in that initial plan required fresh Sol and Grok reviews.
-Round 1 uses these reviewer seats:
-
-| Author lane | Fresh Sol reviewer seat | Fresh Grok reviewer seat |
-|---|---|---|
-| S1 | S2 | G1 |
-| S2 | S3 | G2 |
-| S3 | S1 | G3 |
-| G1 | S1 | G2 |
-| G2 | S2 | G3 |
-| G3 | S3 | G1 |
-
-A reviewer seat means a fresh session, not reuse of that seat's author context.
-The same-provider reviewer is a different author lane. It must not have authored the candidate under review.
-Rotate the same-provider non-author seat and the opposite-provider seat when changed candidates require another round.
-Use `--review-round N` to display the next assignment.
-Never substitute the candidate's author for a missing reviewer.
-Preserve actual identities, dissent, scope and terminal status.
-
-Lane reviewer rotation applies only to that lane's candidate.
-The complete composed tree uses two separate reviewer roles outside the six author lanes:
-
-| Integrated reviewer | Requested model and effort | Scope |
-|---|---|---|
-| R-S | `gpt-6.1-sol` high | Fresh read-only full composed-candidate review |
-| R-G | `grok-4.7` high | Fresh read-only full composed-candidate review |
-
-R-S and R-G have no implementation assignments.
-Neither reviewer may have authored any file or shared integration change in the current composed candidate.
-Do not rotate S1–S3 or G1–G3 authors into these integrated review roles.
-The manifest and packets record these roles. The lead verifies actual session independence and observed identities.
-The recorded plan does not establish a launched reviewer or an approval.
-
-Give both reviewers the complete frozen candidate and applicable contracts.
-Actual-result reviewers must also inspect the retained actual output bytes and controls.
-Source approval does not approve an execution result.
-Component verdicts do not approve a later merged candidate.
-Keep consequential design/resource majority decisions separate from routine repairs and result audits.
-
-</details>
-
-Current reviewers still need the complete frozen candidate and applicable results.
-Preserve actual identity, scope, dissent and terminal status.
-The historical seat names above do not reinstate their superseded models.
-
-Use the existing ingestion command only when candidate, authority and scope match its registered action:
-
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . review --receipt /path/to/receipt.json
-```
-
-The current loan review action has stale inputs and a design-only scope.
-Keep unmatched source/result receipts beside their candidate instead of forcing them through that action.
-The plugin does not enforce the currently selected reviewer roster.
-Its identity substring check can reject same-model session identities.
-Report such a refusal. Do not omit the author or invent model identities to bypass it.
-
-## Native work remains separately admitted
-
-Existing frozen signed-call native work retains its Opus 5.5 and Muse audit conditions.
-A later source-review roster does not replace those frozen conditions.
-Degree discovery, SRS initialization, key generation, proving, Real verification, ledger apply and Preview need exact current admission.
-Preserve physical resource limits, accounting, debit ceilings, stop rules and public transaction notifications.
-Six author slots grant no native concurrency or budget.
-`NativeWorkLimits` bounds public shapes and bytes. It does not establish physical host capacity.
-Do not repeat completed native work or restart an old goal because this workflow exists.
+Superseded 2026-10-24: reviews are inputs and nothing waits on a reviewer; native and
+stagenet work follows AGENTS.md (heavy runs through `scripts/doctorwatson heavy`, T3
+promotion through the one cold review). Technical limits still hold: `NativeWorkLimits`
+bounds public shapes and bytes but does not establish physical host capacity, and
+G1 arithmetic and G2 policy changes invalidate dependent signed contexts and derived
+material.
 
 ## Check this workflow implementation
 

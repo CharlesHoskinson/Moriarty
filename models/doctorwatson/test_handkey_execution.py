@@ -28,6 +28,11 @@ class HandkeyExecutionTests(unittest.TestCase):
         self.descriptor = fx.write(self.root / "output-root.json", fx.encoded({
             "schema": "doctorwatson.handkey-output-root/1", "path": str(self.output)}))
         self.marker = self.root / "launched"
+        # Deterministic default: unmeasured budget (no wall/CPU/address-space cap).
+        self.real_lookup = rs._handkey_limits_lookup
+        patch = mock.patch.object(rs, "_handkey_limits_lookup", return_value=None)
+        self.limits = patch.start()
+        self.addCleanup(patch.stop)
         self.configure()
 
     def configure(self, body='print(\'{"verifies":true,"verify_s":0.01}\')'):
@@ -69,7 +74,16 @@ class HandkeyExecutionTests(unittest.TestCase):
         self.assertEqual(report["tasks"][0]["state"], "observed")
         self.assertFalse(report["tasks"][0]["acceptance_recorded"])
         preexec = json.loads((self.output / "attempt/PREEXEC.json").read_text())
-        self.assertEqual(preexec["stage"]["profile"], rs.HANDKEY_PROFILE)
+        profile = preexec["stage"]["profile"]
+        self.assertEqual(profile, rs._handkey_profile())
+        self.assertIsNone(profile["wallSeconds"])
+        self.assertIsNone(profile["cpuSeconds"])
+        self.assertIsNone(profile["addressSpaceBytes"])
+        self.assertEqual(profile["streamBytes"], 4 * 1024**2)
+        measurement = observed["measurement"]
+        self.assertFalse(measurement["capped"])
+        self.assertGreater(measurement["wallSeconds"], 0)
+        self.assertIn("unmeasured", measurement["report"])
         self.assertEqual(preexec["stage"]["env"], {"PATH": "/usr/bin:/bin", "LANG": "C", "LC_ALL": "C"})
 
     def test_false_empty_extra_malformed_nonfinite_and_nonzero_fail(self):
@@ -123,12 +137,37 @@ class HandkeyExecutionTests(unittest.TestCase):
         self.assertEqual(code, rs.EXIT_FAILED, record)
         self.assertIn("pin mismatch", record["collectorDetail"])
 
-    def test_duplicate_attempt_even_different_output_directory_zero_second_child(self):
+    def test_rerun_of_reserved_attempt_is_a_logged_retry(self):
         self.assertEqual(self.go()[0], rs.EXIT_OK)
         self.marker.unlink()
-        with self.assertRaises(rs.Blocked):
-            self.go("different-attempt-directory")
-        self.assertFalse(self.marker.exists())
+        code, record = self.go("different-attempt-directory")
+        self.assertEqual(code, rs.EXIT_OK, record)
+        self.assertTrue(self.marker.exists(), "second child ran")
+        preexec = json.loads((self.output / "different-attempt-directory/PREEXEC.json").read_text())
+        self.assertTrue(any("already reserved" in w for w in preexec["retryWarnings"]))
+        reservations = list((self.root / "history.json.attempts").glob("*/reservation.json"))
+        self.assertEqual(len(reservations), 2, "original reservation is preserved")
+
+    def test_existing_attempt_directory_is_kept_and_rerun_uses_retry_directory(self):
+        (self.output / "attempt").mkdir()
+        evidence = self.output / "attempt" / "old-evidence"
+        evidence.write_bytes(b"keep me")
+        code, record = self.go()
+        self.assertEqual(code, rs.EXIT_OK, record)
+        self.assertEqual(evidence.read_bytes(), b"keep me")
+        self.assertTrue((self.output / "attempt.retry1/PREEXEC.json").is_file())
+        preexec = json.loads((self.output / "attempt.retry1/PREEXEC.json").read_text())
+        self.assertEqual(preexec["retryOf"], str(self.output / "attempt"))
+
+    def test_incomplete_prior_reservation_warns_instead_of_blocking(self):
+        self.assertEqual(self.go()[0], rs.EXIT_OK)
+        for path in (self.root / "history.json.attempts").glob("*/history-result.json"):
+            path.unlink()
+        self.marker.unlink()
+        code, record = self.go("again")
+        self.assertEqual(code, rs.EXIT_OK, record)
+        preexec = json.loads((self.output / "again/PREEXEC.json").read_text())
+        self.assertTrue(any("incomplete" in w for w in preexec["retryWarnings"]))
 
     def test_setsid_grandchild_is_reaped_before_complete(self):
         self.configure('''pid = os.fork()
@@ -146,14 +185,33 @@ print('{"verifies":true,"verify_s":0.01}')''')
         for child in record["observation"]["adoptedChildren"]:
             self.assertFalse(Path(f'/proc/{child["pid"]}').exists())
 
-    def test_timeout_drain_observed_terminal_failed_no_retry(self):
+    def test_measured_budget_caps_wall_time(self):
         self.configure('time.sleep(10)')
-        with mock.patch.dict(rs.HANDKEY_PROFILE, wallSeconds=0.05):
-            code, record = self.go()
+        self.limits.return_value = {"wallSeconds": 0.05, "maxRssBytes": 10**12}
+        code, record = self.go()
         self.assertEqual(code, rs.EXIT_FAILED, record)
         self.assertEqual(record["observation"]["reason"], "wall-timeout")
+        measurement = record["observation"]["measurement"]
+        self.assertTrue(measurement["capped"])
+        self.assertEqual(measurement["wallCapSeconds"], 0.05)
+        self.assertFalse(measurement["rssCapExceeded"])
         self.assertTrue(record["observation"]["subreaperDrainECHILD"])
         self.assertEqual(record["cleanupState"], "complete")
+
+    def test_budget_lookup_uses_factory_budgets_handkey_key(self):
+        with mock.patch.object(rs, "_handkey_limits_lookup", self.real_lookup):
+            with mock.patch.object(rs.budgets, "limits_for",
+                                   return_value={"wallSeconds": 7, "maxRssBytes": 99}) as lookup:
+                profile = rs._handkey_profile()
+            lookup.assert_called_once_with("handkey")
+            self.assertEqual((profile["wallSeconds"], profile["maxRssBytes"]), (7, 99))
+            self.assertTrue(profile["measured"])
+            self.assertIsNone(profile["cpuSeconds"])
+            self.assertIsNone(profile["addressSpaceBytes"])
+            with mock.patch.object(rs.budgets, "limits_for", return_value=None):
+                unmeasured = rs._handkey_profile()
+            self.assertFalse(unmeasured["measured"])
+            self.assertIsNone(unmeasured["wallSeconds"])
 
     def test_unproved_drain_remains_unknown(self):
         observed = {"returncode": 0, "reason": "unproved drain", "cleanup": "unknown"}

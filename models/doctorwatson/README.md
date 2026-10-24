@@ -1,4 +1,15 @@
-# DoctorWatson workflow model
+# DoctorWatson
+
+## DoctorWatson is now the factory
+
+DoctorWatson is the Moriarty software factory: a measured, non-blocking loop that
+picks the first failing predicate, fixes it and records the result. It no longer
+gates work on reviews, votes, admissions or consumed attempts; a rerun is always
+allowed and is logged. Read [factory/CONTRACT.md](factory/CONTRACT.md) for the
+frozen paths, schemas and CLI, and [AGENTS.md](../../AGENTS.md) for the charter.
+Caps come from measurement (`factory.budgets.limits_for`), not from guesses.
+
+## Legacy model
 
 This Quint model checks the abstract delivery workflow in
 [DOCTORWATSON.md](../../docs/DOCTORWATSON.md), its
@@ -24,7 +35,7 @@ The entrypoint records a failing command as a failure; it has no smaller-run,
 Rust backend, download, hosted CI, Apalache or native fallback. Consult the
 entrypoint for the exact installed-tool discovery and complete witness arguments.
 
-## State, operations and assumptions
+### State, operations and assumptions
 
 `doctorwatson` is parameterized by task/actor sets, integrator and an externally
 supplied applicable-review-owner predicate. `doctorwatson_small` supplies all
@@ -78,7 +89,7 @@ Failures are observable terminal job results, not process crashes. Cancellation
 and blocker declarations release active writes while retaining history. There is
 no fairness or eventual-success claim: owners may cancel or keep changing inputs.
 
-## Requirement coverage
+### Requirement coverage
 
 | Requirement | Modeled predicate/operation and deterministic evidence | Concrete boundary |
 | --- | --- | --- |
@@ -118,7 +129,7 @@ it establishes no useful eventual-success guarantee. Cancellation dominates the
 default sampling, so merge/completion evidence comes from the deterministic
 scenarios and directed walk, with the random zero counts retained below.
 
-## Observations and retained failures
+### Observations and retained failures
 
 The delivery follow-up strengthens SF-14: upstream edits preserve active
 dependents' administration counters, and shared-input changes preserve every

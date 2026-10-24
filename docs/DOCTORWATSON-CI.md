@@ -1,5 +1,7 @@
 # DoctorWatson local CI
 
+Superseded 2026-10-24: review routing, adoption votes, consumed-attempt and no-retry rules, permanent lanes and campaign queues in this file are retired. The process is the factory loop in [AGENTS.md](../AGENTS.md); technical descriptions below stand as history of the legacy tooling.
+
 Run the local ordinary QA consumer:
 
 ```bash

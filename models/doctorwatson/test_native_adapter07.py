@@ -210,12 +210,15 @@ class SingletonFixedArgvTests(FactoryCase):
             self.go(runner)
         self.assertEqual(runner.calls, [])
 
-    def test_stale_retained_dir_zero_calls(self):
+    def test_stale_retained_dir_is_set_aside_and_rerun_dispatches(self):
         self.outer["retained"].mkdir()
+        (self.outer["retained"] / "prior.bin").write_bytes(b"prior evidence")
         runner = fx.outer_runner(self.outer)
-        with self.assertRaises(rs.Blocked):
-            self.go(runner)
-        self.assertEqual(runner.calls, [])
+        code, _record = self.go(runner)
+        self.assertEqual(code, rs.EXIT_OK)
+        self.assertEqual(runner.calls.count("native"), 1)
+        kept = Path(str(self.outer["retained"]) + ".prev1")
+        self.assertEqual((kept / "prior.bin").read_bytes(), b"prior evidence")
 
     def test_helper_not_guard_sibling_or_wrong_name_or_digest_mismatch_blocked(self):
         # 1) Wrong filename (not cached_current_build.py)
@@ -618,7 +621,7 @@ class LifecycleTests(FactoryCase):
         self.assertEqual(record["cleanupState"], "owed")
         self.assertEqual(self.receipt()["restoration"], "owed")
 
-    def test_missing_provisioned_host_prerequisites_refused_zero_calls(self):
+    def test_missing_prerequisites_refused_zero_calls_and_stale_marker_set_aside(self):
         shutil = __import__("shutil")
         # 1) Missing Q-OBS observation_output
         self.outer["qobs_path"].unlink()
@@ -628,13 +631,19 @@ class LifecycleTests(FactoryCase):
         self.assertEqual(runner.calls, [])
         self.outer["qobs_path"].write_bytes(fx.encoded({"schema": "q-obs/1"}))
 
-        # 2) Preexisting ONE_SHOT_STARTED marker
+        # 2) Preexisting ONE_SHOT_STARTED marker is preserved aside, not refused
         marker = self.outer["compile_root"] / "ONE_SHOT_STARTED"
         marker.write_bytes(b"stale\n")
-        with self.assertRaises(rs.Blocked):
-            self.go(runner, attempt="att-stale-marker")
-        self.assertEqual(runner.calls, [])
-        marker.unlink()
+        runner_marker = fx.outer_runner(self.outer)
+        code, _ = self.go(runner_marker, attempt="att-stale-marker")
+        self.assertEqual(code, rs.EXIT_OK)
+        self.assertEqual(runner_marker.calls.count("native"), 1)
+        self.assertEqual(Path(str(marker) + ".prev1").read_bytes(), b"stale\n")
+        preexec = load_json(self.root / "att-stale-marker/PREEXEC.json")
+        self.assertTrue(any("ONE_SHOT_STARTED" in w for w in preexec["retryWarnings"]))
+        for leftover in (marker, Path(str(marker) + ".prev1")):
+            if leftover.exists():
+                leftover.unlink()
 
         # 3) Missing execution_root
         shutil.rmtree(self.outer["compile_root"])
@@ -642,7 +651,7 @@ class LifecycleTests(FactoryCase):
             self.go(runner, attempt="att-no-exec-root")
         self.assertEqual(runner.calls, [])
 
-    def test_zero_byte_precreated_time_output_allowed_and_nonempty_refused(self):
+    def test_zero_byte_precreated_time_output_allowed_and_nonempty_set_aside(self):
         # 0-byte regular file (precreated by /usr/bin/time -v -o before execvp)
         self.outer["time_output"].write_bytes(b"")
         runner = fx.outer_runner(self.outer)
@@ -653,21 +662,31 @@ class LifecycleTests(FactoryCase):
             preexec["outerTimeWrapper"]["timeOutputStateAtPreexec"],
             "precreated-zero-byte")
 
-        # Non-empty stale timeOutput must be refused with zero calls
+        # Non-empty stale timeOutput is set aside (kept), not refused
         self.outer["time_output"].write_bytes(b"Command being timed: ...\n")
         runner2 = fx.outer_runner(self.outer)
-        with self.assertRaises(rs.Blocked):
-            self.go(runner2, attempt="att-nonempty-time")
-        self.assertEqual(runner2.calls, [])
+        self.go(runner2, attempt="att-nonempty-time")
+        self.assertIn("prelaunch-verify", runner2.calls)  # dispatched, not refused
+        self.assertEqual(
+            Path(str(self.outer["time_output"]) + ".prev1").read_bytes(),
+            b"Command being timed: ...\n")
+        preexec2 = load_json(self.root / "att-nonempty-time/PREEXEC.json")
+        self.assertEqual(
+            preexec2["outerTimeWrapper"]["timeOutputStateAtPreexec"],
+            "stale-set-aside")
+        if self.outer["time_output"].exists():
+            self.outer["time_output"].unlink()
+        self.outer["time_output"].write_bytes(b"")
 
         # Symlink timeOutput must be refused with zero calls
         self.outer["time_output"].unlink()
         target = self.root / "time-target.txt"
         target.write_bytes(b"")
         self.outer["time_output"].symlink_to(target)
+        runner3 = fx.outer_runner(self.outer)
         with self.assertRaises(rs.Blocked):
-            self.go(runner2, attempt="att-symlink-time")
-        self.assertEqual(runner2.calls, [])
+            self.go(runner3, attempt="att-symlink-time")
+        self.assertEqual(runner3.calls, [])
 
     def test_mountpoint_still_active_in_mountinfo_prevents_restoration_complete(self):
         req = load_json(self.outer["request_path"])

@@ -1,5 +1,7 @@
 # Sherlock completion design — revision 03
 
+Superseded 2026-10-24: review routing, adoption votes, consumed-attempt and no-retry rules, permanent lanes and campaign queues in this file are retired. The process is the factory loop in [AGENTS.md](../../AGENTS.md); technical descriptions below stand as history of the legacy tooling.
+
 Date: 2026-10-17. Status: reconciled design after ten Gemini Argon HIGH research reports and three Astra MAX reconciliation reviews; finite Quint execution and five Astra HIGH final readiness passes are separately recorded prerequisites to the newly requested implementation loop. Baseline public source: `628615a94d8a74837a1af510293927bb74d5c2b5`. The old automatic goal remains historical and CLEARED. The user now requests a new completion loop after this design, EARS/OpenSpec and readiness checks. Root arms that new goal explicitly; this document changes no native/security authority.
 
 ## Outcome and retained contract

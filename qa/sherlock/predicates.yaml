@@ -1,0 +1,666 @@
+version: 1
+predicates:
+  - id: A1
+    set: A
+    title: "Native backend builds on the current source cut (cargo build --locked -p mori-backend)"
+    tier: T1
+    check: "scripts/qa/check-a1.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L7"
+    holdout: false
+  - id: A2
+    set: A
+    title: "Two linked child proofs (A102 -> A80) compiled, proved and accepted by their own verifiers"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A2"
+    heavy: true
+    budget: "a2-linked-children"
+    depends: [A1]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L8"
+    holdout: false
+  - id: A3
+    set: A
+    title: "k20 parent proof recursively verifying both linked children"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A3"
+    heavy: true
+    budget: "a3-parent-k20"
+    depends: [A2]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L8"
+    holdout: false
+  - id: A4
+    set: A
+    title: "Terminal decider (D) proof over the parent, bound to the stagenet verifier contract"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A4"
+    heavy: true
+    budget: "a4-terminal-d"
+    depends: [A3]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L8"
+    holdout: false
+  - id: A5
+    set: A
+    title: "Independent cryptographic verification of the exact A2-A4 artifacts by a separate verifier"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A5"
+    heavy: false
+    depends: [A4]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L9"
+    holdout: false
+  - id: A6
+    set: A
+    title: "Local ledger-9 acceptance of the terminal proof call with retained positive and negative obligations"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh A6"
+    heavy: true
+    budget: "a6-ledger9-local"
+    depends: [A5]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L20"
+    holdout: false
+  - id: A7
+    set: A
+    title: "The five rejection cases (tampered inner proof, mismatched VK, wrong predecessor root or height, reordered batch, replayed statement) are refused locally"
+    tier: T2
+    check: "qa/holdout/run.sh rejections-local"
+    heavy: false
+    depends: [A6]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L20"
+    holdout: true
+  - id: A8
+    set: A
+    title: "A finalized contract call exists on stagenet contract 80a0291c... (read-only indexer: ContractCall in action history)"
+    tier: T3
+    check: "scripts/qa/check-a8.sh"
+    heavy: false
+    depends: [A7]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L22"
+    holdout: false
+  - id: A9
+    set: A
+    title: "The five rejection cases are refused on stagenet"
+    tier: T3
+    check: "qa/holdout/run.sh rejections-stagenet"
+    heavy: false
+    depends: [A8]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L11"
+    holdout: true
+  - id: A10
+    set: A
+    title: "Public receipts and complete effects readback of the stagenet call, independent of the submitter (SRPOC-002, SRPOC-007)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh A10"
+    heavy: false
+    depends: [A9]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L11"
+    holdout: false
+  - id: B1
+    set: B
+    title: "Deterministic Fenrir-derived dataset with public seed, source pins and manifest regenerates byte-identically (SRPOC-003)"
+    tier: T0
+    check: "scripts/qa/check-b1.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L7"
+    holdout: false
+  - id: B2
+    set: B
+    title: "Independent replay of the complete state transitions of the dataset (SRPOC-003)"
+    tier: T1
+    check: "scripts/qa/unimplemented.sh B2"
+    heavy: false
+    depends: [B1]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L18"
+    holdout: false
+  - id: B3
+    set: B
+    title: "One 16-transaction full batch proved and verified locally (SRPOC-004)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh B3"
+    heavy: true
+    budget: "b3-full-batch-local"
+    depends: [B2, A5]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
+    holdout: false
+  - id: B4
+    set: B
+    title: "The same 16-transaction batch accepted on stagenet (SRPOC-004)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh B4"
+    heavy: true
+    budget: "b4-full-batch-stagenet"
+    depends: [B3, A8]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
+    holdout: false
+  - id: B5
+    set: B
+    title: "Two-, four- and six-batch prefixes run, with failures and censored measurements kept (SRPOC-004, SRPOC-008)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh B5"
+    heavy: true
+    budget: "b5-prefix-batches"
+    depends: [B4]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L23"
+    holdout: false
+  - id: B6
+    set: B
+    title: "Per-layer circuit k, domain capacity, used rows, lookup rows and columns, with unavailable values explicit (SRPOC-005)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh B6"
+    heavy: false
+    depends: [B3]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L9"
+    holdout: false
+  - id: B7
+    set: B
+    title: "Time, RSS and bytes in separate scopes, peak under decimal 16 GB with swap 0 (SRPOC-005)"
+    tier: T2
+    check: "scripts/qa/unimplemented.sh B7"
+    heavy: false
+    depends: [B3]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/tasks.md#L19"
+    holdout: false
+  - id: B8
+    set: B
+    title: "Fees, finalization time and settlement-readback latency reported separately from local verification time (SRPOC-006)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh B8"
+    heavy: false
+    depends: [B4]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L10"
+    holdout: false
+  - id: B9
+    set: B
+    title: "Feasibility report states exact workload, sample count, observed k/resources/latency, failures and remaining gaps (SRPOC-009)"
+    tier: T3
+    check: "scripts/qa/unimplemented.sh B9"
+    heavy: false
+    depends: [B5, B6, B7, B8]
+    source: "openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md#L13"
+    holdout: false
+  - id: U001
+    set: U
+    title: "UIREQ-001 Fixed interpreter relation: Two distinct programs"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-001"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-001-fixed-interpreter-relation"
+    holdout: true
+  - id: U002
+    set: U
+    title: "UIREQ-002 Explicit supported profile: First-order fragment"
+    tier: T1
+    check: "scripts/qa/check-u002.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-002-explicit-supported-profile"
+    holdout: true
+  - id: U003
+    set: U
+    title: "UIREQ-003 Lexical call scope: Caller-local preservation"
+    tier: T1
+    check: "scripts/qa/check-u003.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-003-lexical-call-scope"
+    holdout: true
+  - id: U004
+    set: U
+    title: "UIREQ-004 Strict evaluation order: Nested arguments"
+    tier: T1
+    check: "scripts/qa/check-u004.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-004-strict-evaluation-order"
+    holdout: true
+  - id: U005
+    set: U
+    title: "UIREQ-005 Named recursive calls: Self and mutual recursion"
+    tier: T1
+    check: "scripts/qa/check-u005.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-005-named-recursive-calls"
+    holdout: true
+  - id: U006
+    set: U
+    title: "UIREQ-006 Exact scalar arithmetic: Normal arithmetic"
+    tier: T1
+    check: "scripts/qa/check-u006.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-006-exact-scalar-arithmetic"
+    holdout: true
+  - id: U007
+    set: U
+    title: "UIREQ-007 Typed inductive values: Recursive list value"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-007"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-007-typed-inductive-values"
+    holdout: true
+  - id: U008
+    set: U
+    title: "UIREQ-008 Selected match branch: Tree fold"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-008"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-008-selected-match-branch"
+    holdout: true
+  - id: U009
+    set: U
+    title: "UIREQ-009 Structural value meaning: Repeated subtree"
+    tier: T1
+    check: "scripts/qa/check-u009.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-009-structural-value-meaning"
+    holdout: true
+  - id: U010
+    set: U
+    title: "UIREQ-010 Explicit pending return: Factorial multiplication"
+    tier: T1
+    check: "scripts/qa/check-u010.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-010-explicit-pending-return"
+    holdout: true
+  - id: U011
+    set: U
+    title: "UIREQ-011 Complete pure result: Completed versus pending"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-011"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-011-complete-pure-result"
+    holdout: true
+  - id: U012
+    set: U
+    title: "UIREQ-012 Explicit bounded outcome: Finite recursive attempt"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-012"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-012-explicit-bounded-outcome"
+    holdout: true
+  - id: U013
+    set: U
+    title: "UIREQ-013 Versioned work observations: Same computation in chunks"
+    tier: T1
+    check: "scripts/qa/check-u013.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-013-versioned-work-observations"
+    holdout: true
+  - id: U014
+    set: U
+    title: "UIREQ-014 Complete checkpoint representation: Pending callee snapshot"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-014"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-014-complete-checkpoint-representation"
+    holdout: true
+  - id: U015
+    set: U
+    title: "UIREQ-015 Pending-return resumption: Resume inner call"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-015"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-015-pending-return-resumption"
+    holdout: true
+  - id: U016
+    set: U
+    title: "UIREQ-016 Chunk transparency: Boundary before return"
+    tier: T1
+    check: "scripts/qa/check-u016.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-016-chunk-transparency"
+    holdout: true
+  - id: U017
+    set: U
+    title: "UIREQ-017 Complete financial observation: First paid prefix"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-017"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-017-complete-financial-observation"
+    holdout: true
+  - id: U018
+    set: U
+    title: "UIREQ-018 Existing await-prefix preservation: Await after partial payment"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-018"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-018-existing-await-prefix-preservation"
+    holdout: true
+  - id: U019
+    set: U
+    title: "UIREQ-019 Local segment failure outcome: Second segment fails before commit"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-019"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-019-local-segment-failure-outcome"
+    holdout: true
+  - id: U020
+    set: U
+    title: "UIREQ-020 Target phase mapping: Permitted retained fee"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-020"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-020-target-phase-mapping"
+    holdout: true
+  - id: U021
+    set: U
+    title: "UIREQ-021 Declared model projection: Finite call-return comparison"
+    tier: T1
+    check: "scripts/qa/check-u021.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-021-declared-model-projection"
+    holdout: true
+  - id: U022
+    set: U
+    title: "UIREQ-022 Compiler semantic mapping: New supported program"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-022"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-022-compiler-semantic-mapping"
+    holdout: true
+  - id: U023
+    set: U
+    title: "UIREQ-023 Native relation inventory: Fixed relation across programs"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-023"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-023-native-relation-inventory"
+    holdout: true
+  - id: U024
+    set: U
+    title: "UIREQ-024 Optimization preservation: Frame or sharing optimization"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-024"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-024-optimization-preservation"
+    holdout: true
+  - id: U025
+    set: U
+    title: "UIREQ-025 Evidence-class report: Pure models only"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-025"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-025-evidence-class-report"
+    holdout: true
+  - id: U026
+    set: U
+    title: "UIREQ-026 Required Clean correspondence stage: Recursive semantics and bounded step circuit"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-026"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-026-required-clean-correspondence-stage"
+    holdout: true
+  - id: U027
+    set: U
+    title: "UIREQ-027 Indexed program-image provenance: Distinct occurrences and recursive references"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-027"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-027-indexed-program-image-provenance"
+    holdout: true
+  - id: U028
+    set: U
+    title: "UIREQ-028 Bounded helper microsteps: Lookup and equality cursors"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-028"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-028-bounded-helper-microsteps"
+    holdout: true
+  - id: U029
+    set: U
+    title: "UIREQ-029 Bounded representation domain: Complete pending-state encoding"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-029"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-029-bounded-representation-domain"
+    holdout: true
+  - id: U030
+    set: U
+    title: "UIREQ-030 Typed arithmetic component API: Carry, borrow and full product"
+    tier: T1
+    check: "scripts/qa/check-u030.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-030-typed-arithmetic-component-api"
+    holdout: true
+  - id: U031
+    set: U
+    title: "UIREQ-031 Separate compilation/export plans: Structured witness export and unsupported features"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-031"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-031-separate-compilationexport-plans"
+    holdout: true
+  - id: U032
+    set: U
+    title: "UIREQ-032 Earliest-stop reference slices: Grouped pending return"
+    tier: T1
+    check: "scripts/qa/check-u032.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-032-earliest-stop-reference-slices"
+    holdout: true
+  - id: U033
+    set: U
+    title: "UIREQ-033 Bounded static residualization: Three realization masks"
+    tier: T1
+    check: "qa/holdout/run.sh uireq-033"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-033-bounded-static-residualization"
+    holdout: true
+  - id: U034
+    set: U
+    title: "UIREQ-034 Declaration-driven ordered matching: New recursive Schedule declaration"
+    tier: T1
+    check: "scripts/qa/check-u034.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-034-declaration-driven-ordered-matching"
+    holdout: true
+  - id: U035
+    set: U
+    title: "UIREQ-035 Deterministic witness dataflow: Independent normal comparison baseline"
+    tier: T1
+    check: "scripts/qa/check-u035.sh"
+    heavy: false
+    depends: []
+    source: "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md#requirement-uireq-035-deterministic-witness-dataflow"
+    holdout: true
+  - id: C1
+    set: C
+    title: "Core semantics: UIREQ-001..012 pass on one fixed relation"
+    tier: T1
+    check: "scripts/qa/check-c.sh"
+    heavy: false
+    depends: [U001, U002, U003, U004, U005, U006, U007, U008, U009, U010, U011, U012]
+    source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
+    holdout: false
+  - id: C2
+    set: C
+    title: "Checkpoints, chunking and resume: UIREQ-013..016 and 032"
+    tier: T1
+    check: "scripts/qa/check-c.sh"
+    heavy: false
+    depends: [U013, U014, U015, U016, U032]
+    source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
+    holdout: false
+  - id: C3
+    set: C
+    title: "Compiler and program image: UIREQ-022, 027, 031, 034, 035"
+    tier: T1
+    check: "scripts/qa/check-c.sh"
+    heavy: false
+    depends: [U022, U027, U031, U034, U035]
+    source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
+    holdout: false
+  - id: C4
+    set: C
+    title: "Representation, arithmetic and optimizations: UIREQ-023, 024, 028..030, 033"
+    tier: T1
+    check: "scripts/qa/check-c.sh"
+    heavy: false
+    depends: [U023, U024, U028, U029, U030, U033]
+    source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
+    holdout: false
+  - id: C5
+    set: C
+    title: "Financial behavior: UIREQ-017..020"
+    tier: T1
+    check: "scripts/qa/check-c.sh"
+    heavy: false
+    depends: [U017, U018, U019, U020]
+    source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
+    holdout: false
+  - id: C6
+    set: C
+    title: "Model correspondence and evidence class: UIREQ-021, 025, 026"
+    tier: T1
+    check: "scripts/qa/check-c.sh"
+    heavy: false
+    depends: [U021, U025, U026]
+    source: "openspec/changes/sherlock-universal-interpreter-design/requirements.md"
+    holdout: false
+  - id: F1
+    set: F
+    title: "Governance charter in place (AGENTS.md is the factory charter, no review-routing sections)"
+    tier: T0
+    check: "scripts/qa/check-f1.sh"
+    heavy: false
+    depends: []
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F2
+    set: F
+    title: "predicates.yaml validates against the frozen schema"
+    tier: T0
+    check: "scripts/doctorwatson validate"
+    heavy: false
+    depends: []
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F3
+    set: F
+    title: "scripts/sherlock-next runs and names the first failing predicate"
+    tier: T0
+    check: "scripts/sherlock-next"
+    heavy: false
+    depends: [F2]
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F4
+    set: F
+    title: "Host preflight passes (disk free >= 150 GiB, load below CPU count, heavy lock free)"
+    tier: T0
+    check: "scripts/doctorwatson preflight"
+    heavy: false
+    depends: []
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F5
+    set: F
+    title: "Pre-commit hook installed (core.hooksPath = .githooks)"
+    tier: T0
+    check: "test \"$(git config core.hooksPath)\" = .githooks"
+    heavy: false
+    depends: []
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F6
+    set: F
+    title: "Holdout manifest verifies (every file hashed, none unlisted)"
+    tier: T0
+    check: "scripts/doctorwatson holdout verify"
+    heavy: false
+    depends: []
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F7
+    set: F
+    title: "Holdout rejection suite runner present and executable"
+    tier: T0
+    check: "test -x qa/holdout/run.sh"
+    heavy: false
+    depends: []
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F8
+    set: F
+    title: "Budget for the k20 parent is measured and capped"
+    tier: T0
+    check: "scripts/qa/check-f8.sh"
+    heavy: false
+    depends: [F2]
+    source: "models/doctorwatson/factory/CONTRACT.md"
+    holdout: false
+  - id: F9
+    set: F
+    title: "Bus wrapper fails open (bus off, failing or hung leaves next/check/heavy/stop-rule stdout, exit codes and runs.jsonl unchanged)"
+    tier: T0
+    check: "cd models/doctorwatson && python3 -m unittest factory.tests.test_bus.FailOpen factory.tests.test_bus.InProcess"
+    heavy: false
+    depends: [F2]
+    source: "wiki-llm/doctorwatson-agentbus/DECISION.md#laws-from-the-failure-mode-review-binding-on-every-bus-feature"
+    holdout: false
+  - id: F10
+    set: F
+    title: "Bus events validate (doctorwatson.bus/1 schema, event_id determinism, 1 KiB cap, stop-rule dedupe, inbound is data)"
+    tier: T0
+    check: "scripts/qa/check-f10.sh"
+    heavy: false
+    depends: [F9]
+    source: "wiki-llm/doctorwatson-agentbus/DECISION.md#v1-scope-to-be-built-now"
+    holdout: false
+  - id: F11
+    set: F
+    title: "Nothing waits on a reviewer (no --wait outside qa/tiers/t3.sh; the T3 wait is bounded to 3600 s in chunks of 240 s or less)"
+    tier: T0
+    check: "scripts/qa/check-f11.sh"
+    heavy: false
+    depends: [F9]
+    source: "wiki-llm/doctorwatson-agentbus/DECISION.md#v1-scope-to-be-built-now"
+    holdout: false
+  - id: F12
+    set: F
+    title: "spawn degrades with the bus killed and keeps the key, governor and brief rules (no API keys in the child, per-vendor flock slots)"
+    tier: T0
+    check: "scripts/qa/check-f12.sh"
+    heavy: false
+    depends: [F9]
+    source: "wiki-llm/doctorwatson-agentbus/DECISION.md#v1-scope-to-be-built-now"
+    holdout: false
+  - id: F13
+    set: F
+    title: "Live bus smoke (T1; skipped, exit 0, when there is no broker or identity)"
+    tier: T1
+    check: "scripts/qa/check-f13.sh"
+    heavy: false
+    depends: [F9]
+    source: "wiki-llm/doctorwatson-agentbus/DECISION.md#v1-scope-to-be-built-now"
+    holdout: false

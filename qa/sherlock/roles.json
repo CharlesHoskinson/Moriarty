@@ -1,0 +1,53 @@
+{
+  "schema": "doctorwatson.roles/1",
+  "run": "dw-moriarty",
+  "note": "Pins the expected name -> AgentBus role map. DIDs and keys are never stored here (identity bindings live in the gitignored .agentbus/). An unpinned sender is flagged 'unpinned' by `bus inbox`, not rejected; a pinned sender publishing a type outside mayPublish is 'invalid'.",
+  "agents": {
+    "dw-driver": {
+      "agentbusRole": "implementer",
+      "purpose": "the factory loop: publishes status.*, stop.escalate and job.*; holds advisory slot claims; sets kv status/stop",
+      "chans": ["*"],
+      "claims": ["slot:"],
+      "mayPublish": ["status.flip", "status.tick", "stop.escalate", "job.start", "job.end", "review.request"],
+      "mint": "agentbus id new --run dw-moriarty --as dw-driver --role implementer --claims slot: --chan '*' --identity-dir <repo-root>"
+    },
+    "dw-lead": {
+      "agentbusRole": "lead",
+      "purpose": "coordinator: wakes on stop.escalate, review.reply and status.flip; manual bus publish",
+      "chans": ["*"],
+      "claims": ["slot:"],
+      "mayPublish": ["review.request", "stop.escalate", "status.flip"],
+      "mint": "agentbus id new --run dw-moriarty --as dw-lead --role lead --chan '*' --claims slot: --identity-dir <lead-binding-dir>"
+    },
+    "dw-evaluator": {
+      "agentbusRole": "auditor",
+      "purpose": "holdout evaluator; v1 publishes nothing (the verdict channel is deferred to v2)",
+      "chans": ["*"],
+      "claims": [],
+      "mayPublish": [],
+      "mint": "agentbus id new --run dw-moriarty --as dw-evaluator --role auditor --chan '*' --identity-dir <evaluator-binding-dir>"
+    },
+    "dw-reviewer": {
+      "agentbusRole": "auditor",
+      "purpose": "cold reviewers; replies to review.request",
+      "chans": ["*"],
+      "claims": [],
+      "mayPublish": ["review.reply"],
+      "mint": "agentbus id new --run dw-moriarty --as dw-reviewer --role auditor --chan '*' --identity-dir <reviewer-binding-dir>"
+    }
+  },
+  "spawned": {
+    "agentbusRole": "helper",
+    "purpose": "workers minted by `doctorwatson spawn`; the wrapper publishes their bookends",
+    "chans": ["agents"],
+    "claims": [],
+    "mayPublish": ["agent.start", "agent.heartbeat", "agent.done"]
+  },
+  "capabilities": {
+    "verified": "2026-10-24 against agentbus release afc9ad9e076e",
+    "slotClaims": "Any role can claim slot:* if its credential lists the prefix 'slot:' (--claims slot:). The literal 'slot:*' is NOT a wildcard and is refused. With no --claims prefix every claim is refused ('resource not in the credential's claim prefixes'), whatever the role.",
+    "kv": "Only implementer, quint, auditor and lead may kv set. A helper cannot.",
+    "channels": "A helper may send to an agent name or '*' without --chan; '#chan' needs --chan. Channel posts reach an inbox only if the receiver subscribed; '*' and direct sends always do.",
+    "consequence": "The driver is an implementer minted with --claims slot: (claims + kv). Spawned workers are helpers with --chan agents and no claims or kv."
+  }
+}

@@ -6,7 +6,7 @@ Verification for every task: `python3 openspec/sprints/verify.py` and `openspec 
 
 ## 1. Planning adoption
 
-- [ ] 1.1 Record each independent review verdict in `openspec/PCD-INTEGRATION-2026-09-11.md`.
+- [ ] 1.1 Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required.
 - [ ] 1.2 Obtain the Charter's second reviewer verdict before any task below is admitted.
 - [ ] 1.3 Record the user's confirmation or change for each default in the decision register.
 

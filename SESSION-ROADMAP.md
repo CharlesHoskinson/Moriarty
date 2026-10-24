@@ -4,7 +4,7 @@ This feature branch is a work-in-progress snapshot for a fresh context. It is no
 
 ## Start here
 
-1. Load `moriarty-dev:develop` as required by AGENTS.md and run the repository plugin CLI `status`. Read this roadmap and the current `openspec/changes/language-to-ledger-lifecycle/tasks.md` before following older queues.
+1. Run `scripts/sherlock-next` (AGENTS.md factory loop). Read this roadmap and the current `openspec/changes/language-to-ledger-lifecycle/tasks.md` before following older queues.
 2. Recover the typed checkpoint with `/home/charl/foreman/skills/foreman/runtime/dist/fm-session.js recover --json`; redirect output to a file before parsing. Recheck perishable measurements. `.foreman/session.ndjson` is the tracked checkpoint export; the SQLite store remains local.
 3. Inspect git status and actual process state. No implementation worker is intentionally left running for this handoff. The native goal was observed blocked after a controller capacity error; a saved goal or roadmap does not establish a running loop. Preserve that goal and its full scope; do not replace it with a smaller goal or mark it complete.
 4. Preserve the unreviewed user/plugin/spec/wiki changes on this branch. Base main was `cd240b8e4fa1f5b34d5b334f406caf90ea561dc4`, including the user's latest DeFi decision correction. Existing worktrees remain on disk; see `deliverables/session-handoff-2026-09-12/retained-worktrees.json`.

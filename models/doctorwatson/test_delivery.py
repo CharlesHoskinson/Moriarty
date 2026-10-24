@@ -341,10 +341,15 @@ class DeliveryTests(unittest.TestCase):
         self.success(self.plan['tasks'][0])
         self.assertEqual(self.inspect()['ready_for_root_selection'], ['child'])
 
-    def test_observed_does_not_satisfy_accepted(self):
+    def test_observed_satisfies_accepted_with_advisory_warning(self):
         self.plan['tasks'].append(self.task('child', dependencies=[{'task':'build','stage':'accepted'}]))
         self.success()
-        self.assertEqual(self.row('child')['state'], 'blocked-dependency')
+        row = self.row('child')
+        self.assertNotEqual(row['state'], 'blocked-dependency')
+        self.assertEqual(row['blockers'], [])
+        self.assertTrue(any('lacks review-and-adoption acceptance' in w for w in row['warnings']))
+        self.assertEqual(self.inspect()['ready_for_root_selection'], ['child'])
+        self.assertFalse(self.row()['acceptance_recorded'])
 
     def test_review_and_root_adoption_are_explicit_external_premises(self):
         self.plan['tasks'].append(self.task('child', dependencies=[{'task':'build','stage':'accepted'}]))
@@ -370,11 +375,13 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(self.row()['state'], 'timed-out')
         self.assertEqual(self.inspect()['ready_for_root_selection'], [])
 
-    def test_new_attempt_id_cannot_retry_unchanged_timed_out_operation(self):
+    def test_new_attempt_id_may_retry_unchanged_timed_out_operation(self):
         r=self.success(); r.update(terminal='timed-out',exit_code=None,signal=9)
         self.plan['tasks'][0]['attempt']='build-002'
-        self.assertEqual(self.inspect()['ready_for_root_selection'],[])
-        self.assertIn('unchanged consumed operation requires changed inputs', self.row()['blockers'])
+        self.assertEqual(self.inspect()['ready_for_root_selection'],['build'])
+        self.assertEqual(self.row()['blockers'], [])
+        self.assertTrue(any('unchanged retry' in w for w in self.row()['warnings']))
+        self.assertEqual(self.row()['history'][0]['terminal'],'timed-out')
 
     def test_changed_operation_can_be_selected_without_erasing_failed_attempt(self):
         r=self.success(); r.update(terminal='timed-out',exit_code=None,signal=9)

@@ -1,6 +1,6 @@
 # Sherlock traceability and scope
 
-FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY; fresh independent review and the existing decision rule remain pending. The scopes below describe obligations, not passing results. Concrete source inventories are reconciled in [model-coverage.md](model-coverage.md); historical Candidate A observations have the exact limited scope below. Every Candidate B acceptance scenario remains unexecuted. There is no established K↔Quint, compiler, circuit or ledger correspondence. K pure uses structural values; concrete Quint uses a fixed finite arena. These differences require explicit adapters.
+FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY; adoption is governed by AGENTS.md. Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required. The scopes below describe obligations, not passing results. Concrete source inventories are reconciled in [model-coverage.md](model-coverage.md); historical Candidate A observations have the exact limited scope below. Every Candidate B acceptance scenario remains unexecuted. There is no established K↔Quint, compiler, circuit or ledger correspondence. K pure uses structural values; concrete Quint uses a fixed finite arena. These differences require explicit adapters.
 
 ## UIREQ component matrix
 

@@ -72,7 +72,7 @@ class BoundRunnerTests(unittest.TestCase):
         tr.dump_json(self.accounting, budget)
         return self.action
 
-    def test_bound_precharged_verify_executes_once(self):
+    def test_bound_precharged_verify_executes_and_rerun_is_logged_retry(self):
         action = self.admit()
         budget_before = self.accounting.read_bytes()
         result = self.run_cli("run", "--action", action["id"], "--json")
@@ -80,13 +80,20 @@ class BoundRunnerTests(unittest.TestCase):
         self.assertEqual(self.child_marker.read_text(), "checked")
         self.assertEqual(self.accounting.read_bytes(), budget_before, "plugin must not charge twice")
         self.child_marker.unlink()
+        # A rerun on an already-claimed charge is a logged retry, not a refusal.
         again = self.run_cli("run", "--action", action["id"], "--json")
-        self.assertEqual(again.returncode, 2, again.stdout + again.stderr)
-        self.assertFalse(self.child_marker.exists(), "one charge cannot authorize a second execution")
+        self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
+        self.assertEqual(self.child_marker.read_text(), "checked")
+        self.assertEqual(self.accounting.read_bytes(), budget_before, "retry must not charge either")
         with closing(sqlite3.connect(self.db_path)) as conn, conn:
-            receipt = json.loads(conn.execute("SELECT receipt_json FROM reservations WHERE status='finished'").fetchone()[0])
-        self.assertEqual(receipt["runnerReceipt"]["runnerDigest"], self.runner_digest)
-        self.assertEqual(receipt["runnerReceipt"]["chargeId"], self.plan["chargeId"])
+            rows = conn.execute("SELECT receipt_json FROM reservations WHERE status='finished'").fetchall()
+            claims = conn.execute("SELECT charge_id, reservation_id FROM runner_claims").fetchall()
+        self.assertEqual(len(rows), 2, "both attempts stay recorded")
+        self.assertEqual(len(claims), 1)
+        for (raw,) in rows:
+            receipt = json.loads(raw)
+            self.assertEqual(receipt["runnerReceipt"]["runnerDigest"], self.runner_digest)
+            self.assertEqual(receipt["runnerReceipt"]["chargeId"], self.plan["chargeId"])
 
     def test_changed_executable_source_does_not_launch(self):
         action = self.admit()

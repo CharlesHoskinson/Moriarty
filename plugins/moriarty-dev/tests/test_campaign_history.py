@@ -59,7 +59,9 @@ class CampaignHistory(unittest.TestCase):
         self.assertFalse(snap["authorityCurrent"])
         self.assertFalse(snap["candidateCurrent"])
         self.assertFalse(snap["resourceAdmitted"])
-        self.assertFalse(assess(snap, actions[0])["allow"])
+        decision = assess(snap, actions[0])
+        self.assertTrue(decision["allow"])
+        self.assertIn("AUTHORITY_UNAVAILABLE", decision["warnings"])
 
     def test_observations_cannot_promote_failed_record(self):
         self.install()

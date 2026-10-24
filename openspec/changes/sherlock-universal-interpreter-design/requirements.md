@@ -1,6 +1,6 @@
 # Sherlock EARS requirements
 
-FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY; pending fresh independent reviews and the existing decision rule. The 35 atomic clauses and WHEN/THEN scenarios are normative within this proposed package at [spec.md](specs/universal-interpreter/spec.md). This index does not duplicate or weaken their wording. All are unexecuted; financial/lifecycle extensions remain pending where stated. Existing UNI/MOR/MPLR/AEO/ZR/MNR and Opus-owned security clauses remain unchanged.
+FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY; Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required. The 35 atomic clauses and WHEN/THEN scenarios are normative within this proposed package at [spec.md](specs/universal-interpreter/spec.md). This index does not duplicate or weaken their wording. All are unexecuted; financial/lifecycle extensions remain pending where stated. Existing UNI/MOR/MPLR/AEO/ZR/MNR and Opus-owned security clauses remain unchanged.
 
 | ID | Behavior | Scenario |
 |---|---|---|

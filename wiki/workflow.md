@@ -24,14 +24,14 @@ Begin with [[wiki/index|the index]], [[wiki/hot|current context]] and the smalle
 
 ## Ingest and maintain
 
-1. Read [AGENTS.md](../AGENTS.md), [WIKI_SCHEMA.md](../WIKI_SCHEMA.md) and the relevant user assignment.
+1. Read [AGENTS.md](../AGENTS.md) (the factory loop) and [WIKI_SCHEMA.md](../WIKI_SCHEMA.md).
 2. Stage new inputs in `inbox/`. Use `wiki-ingest` and its reviewed capture workflow to preserve new source bytes under `.raw/captured/`. Existing `raw/` captures remain immutable and are already inside this vault. Record each new SRC identifier in both the source inventory and the portable ledger mapping; update citing-page backlinks in the same intake operation.
 3. Reuse topic pages, preserve source/claim IDs and distinguish source facts, experiments, inference and open questions. Keep conflicting findings visible in [[wiki/contradictions|contradictions]].
-4. Draft one scoped transaction with expected file hashes, note changes, source/claim records and index/log updates. Inspect the exact changed paths before applying. Existing authorization covers routine work within its stated scope; elapsed time never supplies missing authority.
-5. Apply through the pinned claude-obsidian core. On conflict, re-read and rebuild; on interruption, use transaction recovery. Run `wiki-lint` read-only afterward. Apply Humanizer to maintained prose while preserving citations, data and code.
-6. Commit and publish separately when authorized. There are no automatic commits or pushes, and staged inbox files and runtime recovery data are ignored by Git.
+4. Draft one scoped transaction with expected file hashes, note changes, source/claim records and index/log updates. Inspect the exact changed paths before applying.
+5. Apply through the pinned claude-obsidian core. On conflict, re-read and rebuild; on interruption, use transaction recovery. Run `wiki-lint` read-only afterward.
+6. Commit and publish separately. There are no automatic commits or pushes, and staged inbox files and runtime recovery data are ignored by Git.
 
-The source and claim vocabulary is explained in [[wiki/meta/provenance|the provenance mapping]]. Existing S0-S7 lifecycle labels stay authoritative for legacy claims. A structurally valid ledger does not prove correctness or confer reviewer acceptance.
+The source and claim vocabulary is explained in [[wiki/meta/provenance|the provenance mapping]]. Existing S0-S7 lifecycle labels stay authoritative for legacy claims. A structurally valid ledger does not prove correctness.
 
 ## Local commands
 

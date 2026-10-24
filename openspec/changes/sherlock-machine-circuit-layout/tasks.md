@@ -9,9 +9,8 @@ U/M/MC/SP/G task status or executable authority.
   measured circuit costs.
 - [x] Inventory B-only state/helper fields, source discrepancies, financial and
   proof requirements, and exact remaining owner decisions.
-- [ ] Obtain fresh substantive Muse nonsecurity and Opus security design votes
-  on the exact same pinned candidate; preserve disagreements and actual identities.
-- [ ] Record an explicit adoption decision and agreed scope. A adoption does
+- [x] Superseded 2026-10-24: adoption and acceptance follow AGENTS.md (factory predicates + holdouts); no vote or reviewer approval is required.
+- [ ] Record the agreed scope. Adoption does
   not freeze B helpers, new nominal ADTs, a native statement or a financial profile.
 - [ ] Implement complete ordinary preparation/encode/decode/materialization
   against the adopted crosswalk without exposing private test-only draft types.
