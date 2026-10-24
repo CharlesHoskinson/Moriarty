@@ -2292,3 +2292,10 @@ The next source/result sequence is R4 review → fresh Core → seven new parser
 The SDK deploy02 operation failed without an accepted deployment. The strict failure projector refused classification, leaving cause and exposure unknown. Preserve private streams; proceed only with the finite crash-classifier source/tests A/B and an actual read-only projection. No SDK retry is selected. Record failure only after capture, post-run pins and cleanup checks are complete.
 
 Keep host, native and stagenet evidence separate. A successful host execution does not establish a retained full trace or native proof. Passing pure checks do not establish that a later SDK operation succeeded. Keep the D3 pure result and deploy02 failure as separate milestones.
+
+
+## 2026-10-24 — first recursive call remains the delivery boundary
+
+The current loop is revision13 and blocked on the applicable corrected-call assembly review or reviewer-routing change. The user appointed an actual Opus5.5 coordinator; its provider withheld the response, so it supplied no direction or approval. Stop peripheral preparation from becoming a new prerequisite to the already keyed proof/call. Preserve scoped formal and build results without counting them as target acceptance.
+
+[Current lessons](../docs/sherlock/doctorwatson-current-improvement-2026-10-24.md), [status](../docs/sherlock/stagenet-rescue-current-2026-10-24.md), and [exact-source checkpoint](../raw/audits/2026-10-24/README.md) record the current limits. The existing contract deployment finalized; a current SDK-bound recursive-proof call and synthetic rollup benchmark remain open.
