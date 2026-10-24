@@ -1,0 +1,12 @@
+import Clean.Sherlock.DecodedCounterAdapter
+
+#print axioms Clean.Sherlock.DecodedCounterAdapter.exact_image_counter_projection
+#print axioms Clean.Sherlock.DecodedCounterAdapter.checkedAdd_value
+#print axioms Clean.Sherlock.DecodedCounterAdapter.checkedSub_value
+#print axioms Clean.Sherlock.DecodedCounterAdapter.checkedAdd_overflow_none
+#print axioms Clean.Sherlock.DecodedCounterAdapter.checkedSub_underflow_none
+#print axioms Clean.Sherlock.DecodedCounterAdapter.accounting_of_checked_results
+#print axioms Clean.Sherlock.DecodedCounterAdapter.headroom_of_checked_results
+#print axioms Clean.Sherlock.DecodedCounterAdapter.image_headroom_of_checked_results
+#print axioms Clean.Sherlock.DecodedCounterAdapter.staged_projection
+#print axioms Clean.Sherlock.DecodedCounterAdapter.staged_charge_from_checked_results

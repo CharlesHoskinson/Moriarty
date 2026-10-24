@@ -1,0 +1,47 @@
+--- a/crates/mori/tests/nominal_external_input_compile_handler.rs
++++ b/crates/mori/tests/nominal_external_input_compile_handler.rs
+@@ -590,7 +590,7 @@
+         host::nominal_body_command::compile_with_nominal_inputs(
+             SOURCE, CONFIG, TARGET, &v.to_string(), "pick",
+         )
+-        .expect("canonical UInt boundary and native Bool compile");
++        .unwrap_or_else(|failure| panic!("canonical UInt boundary and native Bool compile: {}", serde_json::to_string(&failure).unwrap()));
+     }
+     for (text, variant) in [
+         ("042", "InvalidUInt"),
+@@ -742,7 +742,7 @@
+     let bound = host::nominal_body_command::compile_with_nominal_inputs(
+         SOURCE, CONFIG, TARGET, &good_inputs(), "pick",
+     )
+-    .expect("bound entry compiles");
++    .unwrap_or_else(|failure| panic!("bound entry compiles: {}", serde_json::to_string(&failure).unwrap()));
+     assert_eq!(bound["evaluation_performed"], false);
+     assert_eq!(bound["body_typechecking"]["status"], "completed");
+     assert_eq!(bound["nominal_binding"]["function_name"], "pick");
+@@ -767,7 +767,7 @@
+     let bound = host::nominal_body_command::compile_with_nominal_inputs(
+         SOURCE, CONFIG, TARGET, &good_inputs(), "pick",
+     )
+-    .expect("bound entry compiles");
++    .unwrap_or_else(|failure| panic!("bound entry compiles: {}", serde_json::to_string(&failure).unwrap()));
+     assert_eq!(
+         bound["nominal_binding"]["entry_provenance"],
+         json!({
+@@ -889,7 +889,7 @@
+     // Use a well-typed absent-pair source for the artifact equivalence.
+     let ok_source = SOURCE.replace("entry missing_sentinel;", "entry pick(\n    construct Chain<UInt>::Link(7, construct Chain<UInt>::End()), 42, true);");
+     let direct = host::nominal_body_command::compile(&ok_source, CONFIG, TARGET)
+-        .expect("absent-pair public command");
++        .unwrap_or_else(|failure| panic!("absent-pair public command: {}", serde_json::to_string(&failure).unwrap()));
+     assert!(direct.get("nominal_binding").is_none());
+     let text = make_invocation(&ok_source, None, false, CONFIG)
+         .run()
+@@ -1042,7 +1042,7 @@
+     let direct = host::nominal_body_command::observe_with_nominal_inputs(
+         SOURCE, CONFIG, TARGET, &good_inputs(), "pick",
+     )
+-    .expect("direct bound observation");
++    .unwrap_or_else(|failure| panic!("direct bound observation: {}", serde_json::to_string(&failure).unwrap()));
+     let text = make_invocation(SOURCE, Some((&good_inputs(), "pick")), true, CONFIG)
+         .run()
+         .expect("handler bound observation");

@@ -1,0 +1,32 @@
+POLICY A102-R5M120000-P1 (proposed; grants nothing until Root records adoption after the reviews named in its own record).
+§1 RESOURCE03 D2 PREDICATE CORRECTION (runtime statement only).
+1.1 The resource03 D2 review_predicate, that REQUIRED_MASKS hides every credential path under /home/charl/.cargo in every phase where that mount is visible, is false as written for runner fc1c1c98 and for original R5 028f950b. It is withdrawn as a statement of fact and replaced for the record by 1.2. This policy makes and implies no change to source, REQUIRED_MASKS, mounts, modes, guards, numerics, quotas or provisioning.
+1.2 Truthful statement. The old Cargo home /home/charl/.cargo, including any credentials, credentials.toml or token-bearing config, is masked from every Cargo, rustc, build-script and proc-macro process in every phase. It is also masked from every runner data worker in phases B, C, D, E and F. It is restored read-only only to phase A0 and A runner data workers. That exposure is pre-existing: it dates from R3 N2, is documented in the R5 README, and is unchanged by the exact16 amendment. A0/A workers run no Cargo, compiler, build script or proc-macro. They run with --unshare-net, --cap-drop ALL, seccomp network and io_uring notify-kill, and a /home/charl tmpfs. They read from the old Cargo home only the paths that staging_destination() admits for the 2,243 pinned staging rows, and no admitted class names a Cargo credentials or root config file. Receipts and logs carry paths, stats and hashes only.
+1.3 Accepted exception. The A0/A visibility in 1.2 is accepted as a pre-existing exposure within the original trusted-runner boundary. The same-uid supervisor already holds unmasked home access, so this exposure adds no principal beyond the trusted runner. It is not a credential-hiding guarantee for A0/A.
+1.4 Unread fact. The 20 hash-pinned git-db-metadata inputs, including git/db/.../config, are copied into the source home and are visible to Cargo in phases B through F. Their content has not been read. Nothing in this policy asserts that they are free of credential material. Making that determination is a separately authorized action. Until Root records its result, every real-run or native admission record must carry this as an open fact.
+1.5 Required disclosure. Any future user Tier 1 request must state:
+(a) A0/A runner data workers have read-only visibility of the whole old Cargo home.
+(b) The open fact in 1.4.
+(c) A0 is not stat-only. It reads and SHA-256 hashes the full raw bytes of all 2,243 inputs. The 52 git-loose-unknown containers are re-hashed as opaque bytes in A, C, D, E and, for Tier 2, F. The runner never decompresses them, but Cargo/libgit2 may inflate them in B or C.
+§2 RESOURCE03 R2 SCOPE FOR THE ORDINARY SYNTHETIC UNIT RUN.
+2.1 R2 is unchanged, unwaived and unsatisfied. The 61 tests bound below were written by authors who saw interfaces, so they are not blind.
+2.2 Decision. The existing standard, independent but interface-informed tests with independent oracles, is acceptable for one class only. That class is execution of driver 4bdb0146 over exactly these seven files, as ORDINARY_SYNTHETIC_UNIT_TEST with zero native authority:
+bounded_sdk_compile.py fc1c1c98
+config.example.json ed683c42
+exact16_git_symlinks.json 47cd59df
+test_config_source.py 0f966d96
+test_bounded_sdk_compile_link_fragment.py 920983f6
+test_bounded_sdk_compile_symlink_config.py d13b51da
+test_r5_walk_treehash_freeze.py f6b7b2d4
+Root must record the full 64-hex values.
+2.3 Conditions.
+(a) Test, fixture, guard and driver bytes are exactly as bound. Any change in response to a result voids this scope for the changed bytes and requires fresh review.
+(b) The record discloses the oracle classes used: stdlib Git framing with published known-answer values, literal SHA-256 vectors, the owner record transcribed twice, contract text, and refusal-message substrings acting as predicate discriminators.
+(c) Every outcome is recorded verbatim with the label INTERFACE_INFORMED_NOT_BLIND_R2_UNSATISFIED. That includes failures, errors, DRIVER_REFUSAL text and tripwire messages, and every attempt with none selected or omitted.
+(d) Results bind only to guard fc1c1c98 and to the observed interpreter, never to 5ebe3469 or 84b0b814. If a diagnostic run against 84b0 is separately admitted, it is recorded separately.
+(e) A result may not be cited as satisfying R2, as source adoption, as real-run or native admission evidence, or as C4 closure. It may be cited only as an ordinary unit result for the bound bytes.
+2.4 Native boundary. Real-run or native admission of any runner requires a separate Root disposition of R2. There are two routes:
+(a) Tests authored by a fresh Opus context that has not seen the implementation, reviewed, and passing against the admitted runner, with the original 22 tests (0f966d96) passing unchanged.
+(b) A separately authored R2 amendment with its own fresh non-author votes.
+R2 names 5ebe3469. How it applies to fc1c1c98 is unresolved and is not decided here.
+§3 NON-EFFECTS. This policy grants nothing. AM-1..AM-4, the link_text_extension, T1 and T2 remain ungranted. Native, SDK, prove and deploy authority remain zero. The historical caps, counters, terminal records, P3, P10 and C4 are unchanged, and nothing resets an all-cap or alters an old attempt. Original R5 stays byte-identical and fail-closed. author_metadata.py must never be executed or imported.

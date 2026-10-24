@@ -1,0 +1,80 @@
+---
+id: moriarty.research.sherlock.atlas.update026.later
+title: UPDATE026 separate later Root status
+type: overview
+status: active
+created: 2026-10-20
+updated: 2026-10-20
+updated_at: 2026-10-21T00:07:39.779018+00:00
+tags: [moriarty, sherlock, circuit-concept]
+sources:
+  - src-b2f7521f280d19f900a4
+---
+
+# Separate later Root status
+
+Recorded 2026-10-21T00:07:39.779018+00:00; source is Root's direct task message, not an independent source/security vote or subject result. All five Gemini-authored fields retain their author cut 2026-10-20T23:38:17.638934+00:00. The website remains unpublished until full Sherlock completion.
+
+Root reports that both emitter opinions were withheld because of phantomVM/API context. This intake claims no emitter approval, compile or execution. Root reports fresh K ValidateEntry source approval with runtime/tests unrun. The complete Root Quint09 readback records actual frontend, five tests and one installation witness PASS; its scope is finite same-author synthetic UNADMITTED predictions, without genuine Core admission, independent oracle, native constraints or refinement. Root separately attributes native08 actual170+41 mock checks PASS with two fresh reviews in progress at that task cut; mock checks are not native execution. No current recursive proof, target settlement, full39 or EARS result follows.
+
+The same designated Gemini author corrected exactly one engineering sentence: source06 draft PR362 head4cddf566 has32tests total, comprising26byte-exact retained source05 bodies plus6new Marker functions (15positive+17raw). The public draft readback supports that inventory. The separate producer14 tests are not included in32. All32 and producer14 remain uncompiled/unrun at the authored cut. Four other authored strings are byte-identical; the one-sentence inverse is recorded separately. The initial erroneous reply and first proposal remain immutable history.
+
+[Authored-source summary](../../sources/src-4ffc6c2ca45fd77f5213.md) and [later-metadata summary](../../sources/src-b2f7521f280d19f900a4.md) retain separate source identities. No private expected, theorem, proof, wallet or semantic capture body is included.
+
+
+## October21 UTC — separate later engineering receipt cut
+
+Factual Sol preparation from the pinned Root receipts and direct task cut; not new Gemini-authored visitor copy, a security judgment or circuit qualification. All five UPDATE026 authored strings and every earlier entry remain unchanged. The website WILL go live when Sherlock is finished and is unpublished today.
+
+ValidateEmpty now has four delivered Rust source files with16declared tests. They remain uncompiled/unrun; source review preparation is separate from approval and SDK execution. Native11's metadata-only probe passed1.112seconds/all315pins, while its first five tests failed in setup; fixture-fix02 and the separate accounting-source02 are not adopted outcomes at this cut. Clean18R4 failed with three errors/zero products despite stable8278pins/85read-only origins and a closed unit. Quint OP1 passed complete selected data inversion/raw retention with679pins/four links; no model run occurred. PR381/382 are exact source/result publications, not native or target results.
+
+For the next designated concept author, this adds an engineering distinction to the existing Moriarty Tron/PCB/Three.js circuit build-up: delivered constraint/consumer source, declared tests, reversible carrier wiring and executed proof evidence are separate layers. This is a source-grounding brief only, with no Sol-authored scene, visitor chapter or implemented Three.js asset. Finished-site visitor prose remains confident and separate from these dated implementation facts; no current native proof, recursive-chain acceptance, measured degree/performance or stagenet settlement is asserted.
+
+
+## October21 UTC — source07 separate engineering receipt cut
+
+Factual engineering preparation from A1–A2/N1–N2/W1–W2/Q1–Q3/C1 and the attributed Root cut; not new designated-author visitor copy or source/security certification. This supersedes unapplied source06 while preserving its snapshot.
+
+Native13 accounting source02 has two scoped source/resource agreements and133 ordinary test passes in12 disjoint groups under unchanged caps. No corrected ledger9 ELF, recursive proof or stagenet result follows. Root's operation-specific failed-cleanup discharge preserves the original raw OWED classification, the false automatic preservation predicate and permanently unobserved no-script/90-host-output/34-run-unit post-audit, including possible historical policy violation.
+
+Wallet B2's actual same-process SDK class/address restoration and close passed in4.672590seconds; Root attributes two facade openings. This preparation used only safe Root metadata, not private wallet JSON or raw SDK streams. Current sync/NIGHT/DUST/fees remain unknown; no proof or submission is claimed. The205-record Quint transport inverse passed, then the generated frontend timed out at60seconds and operation10 remained unrun. Clean D05 passed nine focused diagnostic declarations, not the six whole Source21 contracts.
+
+These are different layers in the actual circuit build-up, not evidence of a finished native/target pipeline. The existing Moriarty Tron/PCB/Three.js concept notes and all five UPDATE026 authored strings remain byte-exact; no new Sol-authored visitor scene is added. The website WILL go live when full Sherlock is finished and is unpublished today. Benchmark measurements remain a postdeployment obligation.
+
+
+## October22 UTC — source09 separate build, child-verification and composition cut
+
+Factual engineering appendix from N1–N3/Q1/W1/G1–G2/C1–C2/K1–K2 and attributed R1; [Source09 safe capture](../../../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json). It adds no designated-author visitor copy or source/security judgment. Source08 remains a separate unapplied historical proposal.
+
+Root adopted the current normal recl9 CLI build at108.303918 seconds outer. Retained A102/A80 child proofs separately passed fresh-process reconstruction/verification on the same backend; the scoped A102 proof-byte mutation, with copied manifest digest updated, refused. These are concrete build/child/verifier stages in the circuit build-up. The recursive parent remains unrun at this cut; terminal/decider, crossgraph compatibility, authenticated source Init, full39, stagenet settlement and target benchmarks remain open. This is no independent cryptographic implementation or general tamper theorem.
+
+Source15's action API passed205 consumes/207 full-state comparisons, with external-input typechecking open and nominal semantics unbound. Wallet generation5 advanced and saved, but remains catching up/not transaction-ready. Clean22 R1 failed; its R2 repair received changes-required review and remains unrun. K16 R2 is source-approved only, uncompiled/unrun. PR390/391 merged exact scoped metadata/source; A195's nine tests remain uncompiled/unrun. Private PR78's merge is Root-attributed; no private payload is included.
+
+This grounds the existing Moriarty Tron/PCB/Three.js circuit timeline; it adds no new scene or implemented web asset. The five UPDATE026 creative fields and all earlier notes remain byte-exact. The website WILL go live when full Sherlock is finished and is unpublished today.
+
+
+Later dated receipt supplement, read 2026-10-22T00:53:28.316037+00:00: Source07 saved generation6 and closed after an accepted exit2 diagnostic in11.053556 seconds. Shielded applied8267 with gap163226; DUST applied646 with gap171426; unshielded was strict, with47emissions per component. Transaction readiness remains false and fee sufficiency unassessed. This advances the Source06 generation5 history without replacing it. The exact private PR78 receipt now confirms merge19373127e3630aabfd16e29907a04d442e2928d6/three additions; its scope remains the existing six adopted logical proofs, with no new native or target result. Only safe metadata was read.
+
+
+## October22 UTC — Source10 separate keygen, relation-source and synchronization cut
+
+Engineering grounding only from [the Source10 safe capture](../../../.raw/captured/1e72150d338d99a6023e6529ffde9f275680fadba5d0719e0d940c81de3a7b30.json); no designated-author creative replacement, new scene or source/security judgment. All five UPDATE026 authored fields and earlier entries remain unchanged.
+
+The second parent keygen timed out at native exit124/500.302865 seconds, with1133.219477 closed-unit CPU seconds and4,618,358,784-byte memory peak; Root records no completed keys. The Source37 model-reuse/phase-clock source is adopted after two scoped source reviews, but uncompiled and unmeasured. Source38's exact six SDK-free guards later passed once in0.931234 seconds; the old9/1170 metadata is declined. The corrected future1180-P/500-S/295-whole native reservation remains conditional and the native build is unselected. No new build, parent proof or performance result is inferred.
+
+For the next designated concept author, retain the requested `RightF → PrimResult` prefix label as source-grounding notation, not a statement that owner SI09/21R/22 holds or an executed circuit result. Root reports10 ReturnRight tests source-approved/uncompiled. Source constraints, their predecessor premises, witness checks and actual native proof remain distinct in the existing Moriarty Tron/PCB/Three.js build-up. This is factual engineering context; it does not author new visitor copy or assets.
+
+K16's45 phases/15 Bool results are finite UNADMITTED diagnostics; private PR79's ten logical contracts and the unrun Clean23/K17/Quint16 source retain their own scope. The latest safe wallet receipt saved generation11 and closed with all three lanes strictly synchronized; readiness is still false and fees unassessed. PR392's twelve published source/docs and Source09's lint timeout remain historical facts, not whole-goal acceptance.
+
+No linked recursive parent/terminal/decider, full interpreter/finance/StepInv, target settlement, measured new k/performance or EARS closure follows. The website WILL launch when full Sherlock is finished and is unpublished today; completed-future visitor concepts remain the designated author's unchanged material.
+
+
+## October22 UTC — Source12 separate optimized-build and diagnostic-context cut
+
+Dated engineering metadata at 2026-10-22T10:12:13.936820+00:00; [safe Source12 capture](../../../.raw/captured/aacfdd191d1db2ad75fa8934cbf103606331664ff0b312036e459f66679b553e.json). All five UPDATE026 creative fields remain byte-identical, and Source11 remains an unchanged unapplied historical proposal. This adds no designated-author scene, visitor copy or implemented Three.js asset.
+
+The Source43 optimized-backend CLI build passed at205.038281 seconds native/212.326712 seconds outer. It adds a concrete build stage to the existing Moriarty Tron/PCB/Three.js circuit timeline, not a new parent proof, measured speedup or target acceptance. Root's prospective P-only1590-second successor preserves old gross/debits/unknowns/C13 and selects no stage caller/hold. Exact execution graphs and callers still need their existing bindings.
+
+Source21's26 SDK-free tests and2 syntax checks passed. Its separate read-only SDK probe returned a qualified counterfactual `REGISTRATION_FEE_ALLOWANCE`, with both signed-time booleans true and objects released; no wallet/network/financial effect occurred. The current-clock Source20 `TTL_EXPIRED` remains distinct, and Source18's original cause remains unknown. A Root-reported blank-state metadata possibility is source-only, not a repair/current-balance result.
+
+Clean26's bubblewrap argument refusal happened before Lean, with no proofs compiled/accepted; the next read-only transport is preparation only. PublicPR400 merges six Q17R2 source files while retaining UNADMITTED/runtime03-unrun scope and its qualified index-delta receipt. The website WILL launch when full Sherlock is finished and is unpublished today. The finished-future concepts remain the designated author's unchanged material.

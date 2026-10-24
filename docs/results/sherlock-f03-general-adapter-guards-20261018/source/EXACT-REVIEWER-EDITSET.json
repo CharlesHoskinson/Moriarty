@@ -1,0 +1,37 @@
+{
+  "source_reviewer_now_author_of_three_fix_literals": "ab58b477-7f3f-4444-9954-f664fab4706f",
+  "report": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/F03-general-offline-guard-tests-owner-materialization-20261018/fresh-independent-review/REPORT.md",
+    "bytes": 30337,
+    "sha256": "3eb90277590980d9a92d4fd888cc7275fbe2dcfca9a6afee7ee119be7438027e"
+  },
+  "ops": [
+    {
+      "fix_number": 1,
+      "old": "        check_prestartup(\n            lambda st: st['exec-000']['receipt']['argv'].extend(['--smt', 'none']),\n            'pre-startup command template mismatch between exec-000 and exec-001',\n        )\n",
+      "new": "        check_prestartup(\n            mutate_flag('exec-000', '--smt', 'z3'),\n            'pre-startup command template mismatch between exec-000 and exec-001',\n        )\n",
+      "preimage_unique_count": 1,
+      "response_section_byte_start": 18990,
+      "old_sha256": "b5a55ece5d7cb4ce0a555315ffdd815293b4fad5b9e66e2121fc00f6af482402",
+      "new_sha256": "c404a2f11fcfca7bee4402000aa91d1a4ba9cc67074ef9f8b86b5bc72e3011f7"
+    },
+    {
+      "fix_number": 2,
+      "old": "    def test_multiline_single_k_item_positive_normalization_and_retention(self):\n        base_cfg = self.stages['print-001']['stdout'].decode('ascii')\n        self.assertNotIn('~>', base_cfg)\n        multiline_head = (\n            'uiEval(\\n'\n            '    uiCall(\\n'\n            '      3,\\n'\n            '      uiExpr(uiLiteral(uiCons(uiU(1), uiCons(uiU(2), uiCons(uiU(3), uiNil())))), uiNoExprs())\\n'\n            '    )\\n'\n            '  )'\n        )\n        k_start = base_cfg.index('<k>') + 3\n        k_end = base_cfg.index('</k>')\n        multiline_cfg = (\n            base_cfg[:k_start] + '\\n    ' + multiline_head + ' ~> .K\\n  ' + base_cfg[k_end:]\n        )\n",
+      "new": "    def test_multiline_single_k_item_positive_normalization_and_retention(self):\n        base_cfg = self.stages['print-001']['stdout'].decode('ascii')\n        multiline_head = (\n            'uiEval(\\n'\n            '    uiCall(\\n'\n            '      3,\\n'\n            '      uiExpr(uiLiteral(uiCons(uiU(1), uiCons(uiU(2), uiCons(uiU(3), uiNil())))), uiNoExprs())\\n'\n            '    )\\n'\n            '  )'\n        )\n        k_start = base_cfg.index('<k>') + 3\n        k_end = base_cfg.index('</k>')\n        self.assertNotIn('~>', base_cfg[:k_start] + base_cfg[k_end:])\n        multiline_cfg = (\n            base_cfg[:k_start] + '\\n    ' + multiline_head + ' ~> .K\\n  ' + base_cfg[k_end:]\n        )\n",
+      "preimage_unique_count": 1,
+      "response_section_byte_start": 19468,
+      "old_sha256": "8b72ee2cde2c8223aad1194548121ac290a4c1dbc930f62c825f9c5b1715c464",
+      "new_sha256": "69ed2b6e52c625049b2f9820c6ad75cfd614006f73e133c4f2abbe012b9e3e9b"
+    },
+    {
+      "fix_number": 3,
+      "old": "        e5_argv[e5_argv.index('--output') + 1] = e4_argv[e4_argv.index('--output') + 1]\n        asm_chain['captures'][6]['print_receipt']['argv'][2] = e5_argv[e5_argv.index('--output') + 1]\n        e5_argv.extend(['--smt', 'none'])\n        asm_chain['captures'][6]['print_receipt']['argv'][0] = '/usr/local/bin/kprint-custom'\n",
+      "new": "        e5_argv[e5_argv.index('--output') + 1] = e4_argv[e4_argv.index('--output') + 1]\n        asm_chain['captures'][6]['print_receipt']['argv'][2] = e5_argv[e5_argv.index('--output') + 1]\n        e5_argv[e5_argv.index('--smt') + 1] = 'z3'\n        asm_chain['captures'][6]['print_receipt']['argv'][0] = '/usr/local/bin/kprint-custom'\n",
+      "preimage_unique_count": 1,
+      "response_section_byte_start": 20937,
+      "old_sha256": "bda0e2730c2f187bc7afe408888334f51e9609517c97ca7200d6ce33ea3e6e99",
+      "new_sha256": "f95553f8db7c3c442d2a15e1f4715edff908ae564e80e6896fc9e46edc333256"
+    }
+  ]
+}

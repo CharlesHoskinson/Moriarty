@@ -1,0 +1,262 @@
+def jload(path):
+    def pairs(items):
+        result={}
+        for k,v in items:
+            need(k not in result,'duplicate JSON key: '+k);result[k]=v
+        return result
+    return json.loads(Path(path).read_text(), object_pairs_hook=pairs)
+
+
+def regular(path):
+    p=absolute(str(path))
+    need(not any(x.is_symlink() for x in [p,*p.parents]),'symlink path: '+str(p))
+    s=os.stat(p,follow_symlinks=False);need(stat.S_ISREG(s.st_mode),'not regular: '+str(p));return s
+
+
+def digest(path, git=False):
+    s=regular(path); before=stable_stat(path)
+    h=hashlib.sha1() if git else hashlib.sha256()
+    if git:h.update(b'blob '+str(s.st_size).encode()+b'\0')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    try:
+        with os.fdopen(fd,'rb') as f:
+            while b:=f.read(CHUNK):h.update(b)
+    finally:
+        need(stable_stat(path)==before,'file changed while reading: '+str(path))
+    return h.hexdigest()
+
+
+def cg_paths(c):
+    cg=c['cgroup'];e=cg['envelope_path']
+    return e,e+'/'+cg['supervisor_leaf_name'],e+'/'+cg['phase_parent_name']
+
+
+def read_numbers(path):return dict((k,int(v)) for k,v in (x.split() for x in _cg_text(path).splitlines()))
+
+
+class Group:
+    def __init__(self,c,phase):
+        self.path=cg_fs(phase_cgroup(c,phase));self.v=c['limits'][phase];self.created=False
+    def create(self):
+        _cg_mkdir(self.path);self.created=True
+        need(_cg_text(self.path/'cgroup.type').strip()=='domain','phase cgroup type')
+        need({'cpu','memory','pids'}<=set(_cg_text(self.path/'cgroup.controllers').split()),'phase controllers missing')
+        need(not _cg_text(self.path/'cgroup.procs').splitlines(),'phase group populated at creation')
+        for k,v in {'memory.max':self.v['memory_bytes'],'memory.swap.max':0,'pids.max':self.v['pids'],'cpu.max':str(self.v['cpu_quota_us'])+' '+str(self.v['cpu_period_us'])}.items():
+            _cg_write(self.path/k,str(v));need(_cg_text(self.path/k).strip()==str(v),'cgroup setting not effective')
+        _cg_dirstat(self.path/'cgroup.kill')  # Existence required; no fallback kill path.
+    def join_child(self):
+        (self.path/'cgroup.procs').write_text(str(os.getpid()))
+        resource.setrlimit(resource.RLIMIT_FSIZE,(self.v['file_bytes'],self.v['file_bytes']))
+        resource.setrlimit(resource.RLIMIT_CORE,(0,0))
+    def kill(self):
+        if not self.created:return
+        try:_cg_dirstat(self.path)
+        except FileNotFoundError:return
+        _cg_write(self.path/'cgroup.kill','1')
+    def check(self):
+        need(getattr(self,'prior_cpu',0)+read_numbers(self.path/'cpu.stat').get('usage_usec',0)<=self.v['cpu_time_us'],'total cgroup CPU cap')
+        need(read_numbers(self.path/'memory.events').get('oom_kill',0)==0,'cgroup OOM')
+        need(read_numbers(self.path/'pids.events').get('max',0)==0,'tasks cap hit')
+    def close(self):
+        if not self.created:return
+        self.kill()
+        deadline=time.monotonic()+5
+        while read_numbers(self.path/'cgroup.events').get('populated',0):
+            need(time.monotonic()<deadline,'descendants did not terminate');time.sleep(.02)
+        _cg_rmdir(self.path)
+
+
+CACHED_CURRENT_BUILD_SHA256 = 'f88474ea30cd2c9eae49c9103ecdf22944f43ffa31cf38ef31ba8e0a5c9602f2'
+
+
+def prior_receipts(c,phase,precheck,retained_audit=False):
+    need(retained_audit in (False,True,'r2','r3'),'invalid retained audit route')
+    packet=Path(c['paths']['packet'])
+    if phase=='F' and not retained_audit and precheck and not (packet/'D_FREEZE.json').is_file() and not (packet/'A0_RESULT.json').is_file():
+        names=[]
+    elif phase=='F' and not retained_audit and (packet/'SOURCE_HOME_RECONSTITUTION.json').is_file() and (packet/'CACHED_TARGET_SEED.json').is_file():
+        names=['A0_FREEZE.json','C_RAW_IDENTITIES.json','D_FREEZE.json','E_RESOLVED.json','SOURCE_HOME_RECONSTITUTION.json','CACHED_TARGET_SEED.json']
+    else:
+        names=[p+'_RESULT.json' for p in PHASES[:PHASES.index(phase)]]
+        extra={'A':['A0_FREEZE.json'],'C':['A0_FREEZE.json'],'D':['C_RAW_IDENTITIES.json'],'E':['D_FREEZE.json'],'F':['D_FREEZE.json','E_RESOLVED.json']}
+        names+=extra.get(phase,[])
+    if phase in ('E','F') and not precheck:names+=[phase+'.stdout',phase+'.stderr']
+    if retained_audit:
+        need(phase=='F' and not precheck,'retained audit phase mismatch')
+        names+=['F_precheck.stdout','F_precheck.stderr','F_audit.stdout','F_audit.stderr','TERMINAL_FAILURE.json']
+        if retained_audit in ('r2','r3'):names+=list(R411_CONSUMED_PINS)
+        if retained_audit=='r3':names+=list(R419_R2_CONSUMED_PINS)
+    return {name:digest(packet/name) for name in names}
+
+
+def launch(c,phase,config_sha,retained_audit=False):
+    import array
+    import socket
+    import fcntl
+    need(retained_audit in (False,True,'r2','r3') and (not retained_audit or phase=='F'),'retained audit only supports phase F')
+    group=Group(c,phase);v=c['limits'][phase];packet=Path(c['paths']['packet'])
+    need((Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
+    supervisor_envelope(c);bound_identities(c);quotas(c,phase)
+    prior_logs=('_precheck','','_audit','_retained_audit','_retained_audit_r2') if retained_audit=='r3' else ('_precheck','','_audit','_retained_audit') if retained_audit=='r2' else ('_precheck','','_audit')
+    start=time.monotonic();counts={k:sum((packet/f'F{s}.{k}').stat().st_size for s in prior_logs) for k in ('stdout','stderr')} if retained_audit else {'stdout':0,'stderr':0};records=[]
+    for k,n in counts.items():need(n<=v[k+'_bytes'],'log cap hit '+phase+' '+k)
+    if retained_audit:
+        group.prior_cpu=read_numbers(group.path.parent/'cpu.stat').get('usage_usec',0)
+        if retained_audit=='r2':need(group.prior_cpu>=246681730,'phase CPU counter reset')
+        elif retained_audit=='r3':need(group.prior_cpu>=257950306,'phase CPU counter reset')
+        need(group.prior_cpu<v['cpu_time_us'],'total cgroup CPU cap')
+    try:
+        group.create()
+        variants=[(True,False)] if retained_audit else [(False,False)] if phase in ('B','E','F') else [(True,False)]
+        if phase in ('E','F') and not retained_audit:variants=[(True,True),(False,False),(True,False)]  # same phase/group/deadline, data audit only
+        for audit,precheck in variants:
+            args=sandbox_args(c,phase,audit,precheck,retained_audit);suffix='_retained_audit_r3' if retained_audit=='r3' else '_retained_audit_r2' if retained_audit=='r2' else '_retained_audit' if retained_audit else '_precheck' if precheck else '_audit' if audit and phase in ('E','F') else ''
+            parent,child=socket.socketpair();proc=None;listener=None;sel=selectors.DefaultSelector();logs=[];token_fd=-1
+            stage_fd=sealed_memfd('sdk-post-bwrap-stage',TRAMPOLINE)
+            if audit:
+                context={'nonce':os.urandom(32).hex(),'phase':phase,'precheck':precheck,'config_sha256':config_sha,'runner_sha256':c['bindings']['runner']['sha256'],
+                         'cgroup':'0::'+phase_cgroup(c,phase),
+                         'marker_sha256':digest(Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED'),
+                         'predecessors':prior_receipts(c,phase,precheck,retained_audit),'host_originals_checked':True,'mounts':child_mounts(c,phase,retained_audit)}
+                token_fd=sealed_memfd('sdk-internal-worker-context',json_bytes(context))
+            separator=args.index('--');target=args[separator+1:]
+            if audit:target+=['--config-sha256',config_sha,'--worker-fd',str(token_fd)]
+            preserved=[stage_fd,child.fileno()]+([token_fd] if audit else [])
+            cmd=['/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]
+            bwrap_opts=args[:separator]+([] if '--as-pid-1' in args[:separator] else ['--as-pid-1']);fd=sealed_memfd('sdk-bwrap-argv',b'\0'.join(x.encode() for x in bwrap_opts)+b'\0');args=bwrap_opts+['--',*cmd]
+            try:
+                for name in ('stdout','stderr'):logs.append(open(packet/(phase+suffix+'.'+name),'xb',buffering=0))
+                def enter():
+                    parent.close();group.join_child()
+                proc=subprocess.Popen(['/usr/bin/bwrap','--args',str(fd),'--',*cmd],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={},pass_fds=tuple([fd,*preserved]),preexec_fn=enter,close_fds=True)
+                child.close();parent.settimeout(max(.001,v['wall_seconds']-(time.monotonic()-start)))
+                for name,stream,log in zip(('stdout','stderr'),(proc.stdout,proc.stderr),logs):
+                    os.set_blocking(stream.fileno(),False);sel.register(stream,selectors.EVENT_READ,(name,log))
+                received=[]
+                try:
+                    message,anc,flags,_=parent.recvmsg(1,socket.CMSG_SPACE(array.array('i').itemsize))
+                    need(message==b'L' and not flags,'listener handoff failed')
+                    for level,kind,data in anc:
+                        need(level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS,'unexpected handoff')
+                        values=array.array('i');values.frombytes(data);received.extend(values)
+                    need(len(received)==1,'exact one seccomp listener required');listener=received[0]
+                except BaseException:
+                    for rfd in received:
+                        try:os.close(rfd)
+                        except OSError:pass
+                    group.kill()
+                    while sel.get_map():
+                        if time.monotonic()-start>v['wall_seconds']:break
+                        events=sel.select(.05)
+                        if not events and proc.poll() is not None:break
+                        for key,_ in events:
+                            name,log=key.data;chunk=os.read(key.fileobj.fileno(),65536)
+                            if not chunk:sel.unregister(key.fileobj);continue
+                            take=min(len(chunk),max(0,v[name+'_bytes']-counts[name]))
+                            if take:counts[name]+=take;log.write(chunk[:take])
+                            if take<len(chunk):sel.unregister(key.fileobj)
+                    raise
+                sel.register(listener,selectors.EVENT_READ,('network',None))
+                while len(sel.get_map())>1 or proc.poll() is None:
+                    need(time.monotonic()-start<=v['wall_seconds'],'wall cap '+phase);group.check()
+                    for key,_ in sel.select(.05):
+                        name,log=key.data
+                        if name=='network':
+                            need(not network_pending(listener),'network syscall attempt: stop whole cgroup')
+                            continue
+                        chunk=os.read(key.fileobj.fileno(),65536)
+                        if not chunk:sel.unregister(key.fileobj);continue
+                        counts[name]+=len(chunk);need(counts[name]<=v[name+'_bytes'],'log cap hit '+phase+' '+name)
+                        log.write(chunk)
+                need(proc.wait()==0,'phase exit nonzero '+phase);group.check()
+                need(not network_pending(listener),'late network notification')
+                need(read_numbers(group.path/'cgroup.events').get('populated',0)==0,'background descendants remain after phase process')
+                records.append({'argv':args,'audit_worker':audit,'child_exit':0})
+            finally:
+                if sys.exc_info()[0] is not None:signal.setitimer(signal.ITIMER_REAL,0)
+                if proc is not None and proc.poll() is None:group.kill();proc.wait(timeout=5)
+                if listener is not None:os.close(listener)
+                parent.close();child.close();os.close(fd);os.close(stage_fd)
+                if token_fd>=0:os.close(token_fd)
+                sel.close()
+                for log in logs:log.close()
+        return {'phase':phase,'processes':records,'environment':cargo_env(c,phase),'wall_seconds':time.monotonic()-start,'log_bytes':counts}
+    finally:
+        if sys.exc_info()[0] is not None:signal.setitimer(signal.ITIMER_REAL,0)
+        group.close()
+
+
+def worker(c,phase,retained_audit=False):
+    # A0/A/C/D workers and E/F post-command audits are dispatched. They run inside the same bounded
+    # cgroup/sandbox envelope; Cargo receives no Python callback or wrapper flag.
+    need(retained_audit in (False,True,'r2','r3'),'invalid retained audit route')
+    if phase=='A0':freeze_inputs(c)
+    elif phase=='A':stage(c)
+    elif phase=='C':verify_raw(c)
+    elif phase=='D':freeze_source(c)
+    elif phase=='E':metadata_check(c)
+    elif phase=='F':
+        output_check(c,'F_RETAINED_QUARANTINED_OUTPUTS_R3.json' if retained_audit=='r3' else 'F_RETAINED_QUARANTINED_OUTPUTS_R2.json' if retained_audit=='r2' else 'F_RETAINED_QUARANTINED_OUTPUTS.json' if retained_audit else 'F_QUARANTINED_OUTPUTS.json')
+        if not retained_audit and (Path(c['paths']['packet'])/'CACHED_TARGET_SEED.json').is_file():
+            import importlib.util
+            helper_path=Path(__file__).resolve(strict=True).parent/'cached_current_build.py'
+            regular(helper_path)
+            need(HEX.fullmatch(CACHED_CURRENT_BUILD_SHA256) is not None and digest(helper_path)==CACHED_CURRENT_BUILD_SHA256,'cached_current_build helper pin unsealed or mismatched')
+            spec=importlib.util.spec_from_file_location('cached_current_build',helper_path)
+            need(spec is not None and spec.loader is not None,'unable to load cached_current_build spec')
+            mod=importlib.util.module_from_spec(spec);sys.modules['cached_current_build']=mod;spec.loader.exec_module(mod)
+            mod.verify_post_compile_no_script_reexec(c,sys.modules[__name__])
+    else:raise Unsupported('invalid data worker phase')
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--config',required=True)
+    parser.add_argument('--config-sha256',required=True)
+    parser.add_argument('--worker-fd',type=int)
+    parser.add_argument('--worker',choices=('A0','A','C','D','E','F'))
+    parser.add_argument('--precheck',action='store_true')
+    parser.add_argument('--retained-f-audit',action='store_true')
+    parser.add_argument('--retained-f-audit-r2',action='store_true')
+    parser.add_argument('--retained-f-audit-r3',action='store_true')
+    parser.add_argument('--cached-current-f',action='store_true')
+    a=parser.parse_args();need(HEX.fullmatch(a.config_sha256) is not None,'external full-config SHA required')
+    need(sum(bool(x) for x in (a.retained_f_audit,a.retained_f_audit_r2,a.retained_f_audit_r3,a.cached_current_f))<=1,'conflicting retained audit flags')
+    retained_mode='r3' if a.retained_f_audit_r3 else 'r2' if a.retained_f_audit_r2 else a.retained_f_audit
+    need(digest(a.config)==a.config_sha256,'final config differs from Root-supplied external anchor')
+    c=validate(jload(a.config));need(str(Path(a.config).resolve())==c['paths']['config'],'config path binding')
+    executing_identity(c)
+    if a.worker:
+        need(not a.cached_current_f,'cached-current-f is supervisor-only entry')
+        need(not retained_mode or (a.worker=='F' and not a.precheck),'invalid retained audit worker flags')
+        verify_worker_context(c,a.worker,a.precheck,a.worker_fd,a.config_sha256,retained_mode)
+        consent(c)
+        if a.precheck:
+            need(a.worker in ('E','F'),'invalid precheck')
+            pkt=Path(c['paths']['packet'])
+            if a.worker=='F' and not (pkt/'D_FREEZE.json').is_file() and not (pkt/'A0_RESULT.json').is_file():
+                import importlib.util
+                helper_path=Path(__file__).resolve(strict=True).parent/'cached_current_build.py'
+                regular(helper_path)
+                need(HEX.fullmatch(CACHED_CURRENT_BUILD_SHA256) is not None and digest(helper_path)==CACHED_CURRENT_BUILD_SHA256,'cached_current_build helper pin unsealed or mismatched')
+                spec=importlib.util.spec_from_file_location('cached_current_build',helper_path)
+                need(spec is not None and spec.loader is not None,'unable to load cached_current_build spec')
+                mod=importlib.util.module_from_spec(spec);sys.modules['cached_current_build']=mod;spec.loader.exec_module(mod)
+                mod.prepare_cached_current_f_worker(c,sys.modules[__name__])
+            frozen_source(c)
+        else:worker(c,a.worker,retained_mode)
+    else:
+        need(a.worker_fd is None and not a.precheck,'internal flags on supervisor')
+        if a.cached_current_f:
+            import importlib.util
+            helper_path=Path(__file__).resolve(strict=True).parent/'cached_current_build.py'
+            regular(helper_path)
+            need(HEX.fullmatch(CACHED_CURRENT_BUILD_SHA256) is not None and digest(helper_path)==CACHED_CURRENT_BUILD_SHA256,'cached_current_build helper pin unsealed or mismatched')
+            spec=importlib.util.spec_from_file_location('cached_current_build',helper_path)
+            need(spec is not None and spec.loader is not None,'unable to load cached_current_build spec')
+            mod=importlib.util.module_from_spec(spec);sys.modules['cached_current_build']=mod;spec.loader.exec_module(mod)
+            mod.cached_current_f(c,a.config_sha256,sys.modules[__name__])
+        elif retained_mode:retained_f_audit(c,a.config_sha256,retained_mode)
+        else:run(c,a.config_sha256)
+

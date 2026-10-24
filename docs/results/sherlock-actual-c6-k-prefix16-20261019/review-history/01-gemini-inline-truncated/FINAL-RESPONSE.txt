@@ -1,0 +1,121 @@
+### Final Substantive Review Opinion (Non-Author Muse Review under Observed Opus 429 Outage)
+
+* **SOURCE=REQUEST_CHANGES**
+* **EXACT6_OPERATIONS=INELIGIBLE**
+* **Tool / Filesystem / Execution Discipline**: Zero tools invoked, zero filesystem reads performed, zero processes executed, no ACK round.
+
+---
+
+### 1. Blocking Defect & `mandatoryfixes`
+
+1. **Host CLI 128 KiB Prompt Truncation Cut Off All 7 Subject Source Files (`<truncated 704403 bytes>`)**:
+   * The Antigravity CLI (`agy`) enforces a hard **131,072-byte (128 KiB)** cap on `<USER_REQUEST>`.
+   * Because the inline prompt placed `TOOL-ENTRY-PINS.json` (45,447 bytes) and `inputs/PRIMARY-COMPLETE-PREFIX-000-076.jsonl` (317,478 bytes) ahead of the source files, `<USER_REQUEST>` was truncated mid-line in `PRIMARY-COMPLETE-PREFIX-000-076.jsonl` at record 26 (`...{"before":{"admission":{"same_as":"compile.json#/genesis/admission"},"image":{"active":{"data":0,"data_fields":0,"env":2,"value_`), replacing the remaining **704,403 bytes** with `<truncated 704403 bytes>`.
+   * Under the strict instruction **"No tools, filesystem reads, execution or ACK round"** and `AGENTS.md` Evidence Rule 8 / Completion Rule (*"Never claim formal correspondence, deployment, support, adoption, safety, equivalence, or feasibility without naming the tested predicate and evidence"* and *"The final recommendation cannot be marked decision-grade while a mandatory source family is uninspected"*), a reviewer cannot approve uninspected source code.
+   * **Uninspected mandatory payloads inside the truncated 704,403 bytes**:
+     * All 7 Python source files in `SOURCE-OP-FREEZE.json` (63,744 bytes total):
+       * `source/render_input.py` (7,374 bytes, sha256 `1610121a3aec0b41d074ebfa79517271283f04de54240b30a6af3b7992d70f02`)
+       * `source/primary_relation.py` (16,154 bytes, sha256 `5724b76a4b8666e5bd0e03f36e6c4774a99b6568d077e6b26ba500b30e7c88db`)
+       * `source/decode_prefix.py` (4,434 bytes, sha256 `f057cd3bae04cf0fb4de9f4756f747f8086d36f9d4dac6e3f4ae35f03d3827bd`)
+       * `source/compare_prefix.py` (3,207 bytes, sha256 `0788ed6230abbf11cfa4df6e6c43baf91d3f60e627d296eff9ee0ee01480822b`)
+       * `source/complete_k_wire.py` (13,275 bytes, sha256 `b475887749e86b77b55645651d7df442546d768684d855b316971803408dcb06`)
+       * `source/kore_continuation.py` (5,112 bytes, sha256 `3fc617c748f93d2cc99c9d97453b4d64ee11b1b0a4bbe9fffe8127d40bef6e5c`)
+       * `source/nominal_trace_codec.py` (14,188 bytes, sha256 `6ddfc623f8870bffe5477933c24b52458c88e19fcc676127612fa3b4eb928cb6`)
+     * `inputs/SAFE-K-INPUT.json` (14,309 bytes, sha256 `74c6a1debd9321481ded89f5b63dcc9a779a2503ac8c3770bc5adcfc5ffd1bf7`)
+     * `independent-actual-c6-schedule-K-prefix16-oracle-20261019/SAFE-BINDINGS.json` (3,040 bytes, sha256 `0bd81c4fdb65a980fa5d13f144f18b0d504cda933b7704b8fbdb302aae0106af`)
+     * `STATIC-PINS.json` (10,210 bytes, sha256 `1d084b62fb264391a2f2e292fe2e1fbec68a8769e2c0e124d4a828b859e0f812`)
+     * Records `26..76` of `inputs/PRIMARY-COMPLETE-PREFIX-000-076.jsonl` (affecting boundary pairs `8..16`, i.e., primary after-records `40, 44, 46, 48, 52, 57, 70, 72, 76` and event blocks `7..15`)
+     * `PUBLIC-API.json`, the 3 unchanged K source files (`nominal-product-syntax.k`, etc.), and the F03 callback files (`k_engine_attempt_f03_01.py`, `EXISTING-LAUNCH-CALLABLE-CLOSURE.py.txt`, `IMPORT-TIME-AST-REVIEW-PROJECTION.json`).
+
+2. **Mandatory Remediation for Root Re-Dispatch**:
+   * Because `agy` truncates any single `<USER_REQUEST>` at 131,072 bytes, an 835,475-byte single prompt cannot be delivered inline in one shot to `agy`.
+   * Root must either:
+     1. Deliver the review input in `<128 KiB` verified partitions (or place the 7 Python sources [63.7 KiB] + `SAFE-K-INPUT.json` [14.3 KiB] + `SAFE-BINDINGS.json` [3.0 KiB] + `STATIC-PINS.json` [10.2 KiB] in the primary `<128 KiB` prompt window and verify absence of `<truncated ...>`), **or**
+     2. Explicitly authorize read-only `view_file` calls restricted to the exact public paths pinned in `SOURCE-OP-FREEZE.json` / `STATIC-PINS.json` (excluding `private/expected-complete-K-prefix.json` and forbidding `run_command`).
+
+---
+
+### 2. `readcoverage` (Exact Verified vs. Truncated Inventory)
+
+#### A. Fully Read & Verified Inline Artifacts (10 Complete Files + 26 Complete JSONL Records)
+1. `SOURCE-OP-FREEZE.json` (4,258 bytes, sha256 `b10a2aa4a132362066ec707edb80523aa976ed7fc6fb0acdf87597f172359419`): Verified 7 source pins, plan/manifest/static/compiled15/tool/schedule/safe-oracle pins, and `private_expected_body_read: false`.
+2. `PREPARATION-READBACK.json` (599 bytes, sha256 `dd58f9e71b4d219a358fa56b005b614ff7785605f161ef8c50a30c77632d375b`): Verified passive readback flags (`all6subjectoperations_UNRUN: true`, `actual_root_absent: true`, `sources_subject_functions_executed: false`).
+3. `README.md` (4,894 bytes, sha256 `4e76c9e4f71da2a59f74966448be7c41a53dee4d575264c1bfa60db3fded867a`): Verified scope, two-conjunct falsifiable predicate, renderer/relation architecture, and non-equivalence of B/K clocks.
+4. `ROOT-OPERATION-RECIPE.md` (3,199 bytes, sha256 `ed476e634bd56a6d2abe3fa9b8a26b53e4dd32165a64f156f51916461010c35f`): Verified pre-child pin checks, directory creation (`0700`), per-child invariants, and `ROOT-ACTUAL-FROZEN-BEFORE-EXPECTED.json` barrier before child 6.
+5. `PROPOSED-OPERATIONS.json` (14,266 bytes, sha256 `1ddc5ed633a17d47262502b9f47bc3c90aa15960a488b5c691047e6e77e1ddc4`): Verified all 6 prospective phase descriptors (`01-render` through `06-independent-comparison`), `argv`, isolated `environment` (`inherit_environment: false`, `LANG=C`, `LC_ALL=C`, `HOME`, `TMPDIR`, `SHERLOCK_K_ATTEMPT_TOKEN`), `stdin: "DEVNULL"`, `F03.launch` callback entry, and resource limits (`wall_seconds: 30`, `sweep_seconds: 3`, `rlimit_core: 0`, `rlimit_fsize: 536870912`, `umask: "0o077"`, JVM `512m` heap / `32m` stack / `2` processors).
+6. `CAPTURE-AND-COMPARISON-MANIFEST.json` (2,643 bytes, sha256 `53c12ffc682c9f93a73515e17cf72a62fe45985ada1b5bd603d5532b823a9ed2`): Verified input/output path wiring across phases 1–6 and the private expected pin (`expected-complete-K-prefix.json`, 130,662 bytes, sha256 `01dec9f61497f96442892ed0c16e144f4e0fc4b3c33cca921f51338a7abb48de`).
+7. `COMPILED-PINS.json` (4,826 bytes, sha256 `9290555eb2adc49c5cb5044adf21586feb408006b8be0ad601f8a61ee05b07be`): Verified all 15 reused `nominal-kompiled` artifact pins (`definition.kore` sha256 `c91e1448...`, `syntaxDefinition.kore` sha256 `739abef0...`, `scanner` sha256 `7f266706...`, etc.) and `compile_operations: 0`.
+8. `TOOL-ENTRY-PINS.json` (45,447 bytes, sha256 `f93c73ffbb5b0cca5244b4c61aaa14172eaa357e4f29fb978e03b0d0cc8d628b`): Verified all 4 binary tool entry pins (`/usr/bin/python3` -> `/usr/bin/python3.14`, OpenJDK 21 `java`, `.kore-exec-wrapped`, `kprint`) and all 156 JAR pins under `k-7.1.337`.
+9. `inputs/PRIMARY-BOUNDARY-SCHEDULE.json` (7,635 bytes, sha256 `e527eda6d5243eeed9c3a560c563d46545258c6361e34fdea31713566e884a23`): Verified the 17 boundary pairs (`k_state_ordinal` `0..16` against `genesis` and primary `after` records `1, 6, 10, 12, 17, 21, 23, 40, 44, 46, 48, 52, 57, 70, 72, 76`) and 16 `event_block_protocol` entries (`k_event_ordinal` `0..15`).
+10. `inputs/PRIMARY-COMPLETE-PREFIX-000-076.jsonl` (Records `0..25` complete; Record `26` partial):
+    * Verified continuity (`record[i].before.image == record[i-1].after.image`), `consumed_work` + `remaining_work == 4096`, `helper_work` / `helper_visits` / `reference_cursor` deltas, and boundary alignment across pairs `0..7` (records `0..23`) and the entry of event block `7` (`records 24..25`).
+
+#### B. Truncated / Unread Payloads (0% Read Due to 128 KiB CLI Cap)
+* `inputs/PRIMARY-COMPLETE-PREFIX-000-076.jsonl` records `26..76`
+* `inputs/SAFE-K-INPUT.json`
+* `SAFE-BINDINGS.json`
+* `STATIC-PINS.json`
+* All 7 Python source files (`compare_prefix.py`, `complete_k_wire.py`, `decode_prefix.py`, `kore_continuation.py`, `nominal_trace_codec.py`, `primary_relation.py`, `render_input.py`)
+* `PUBLIC-API.json`, the 3 K source files, and F03 callback source/closure files.
+
+---
+
+### 3. Protocol, Phase-5 Failure Classification & Schedule Assessment (on Read Artifacts)
+
+1. **Exact-Six Operation Plan & Phase-5 Failure Classification (`PROPOSED-OPERATIONS.json`, `ROOT-OPERATION-RECIPE.md`)**:
+   * **Phase 5 (`05-decode-relation`) failure classification is sound in design**:
+     * If raw K output decoding fails (structural tape incomplete or wire invalid), Phase 5 aborts with no wire, and execution stops immediately with Phase 6 `UNRUN` and the private expected oracle unread.
+     * If decoding succeeds and produces a valid six-key `actual-complete-K-prefix.json`, that wire is persisted before evaluating the fixed-boundary primary relation (`primary-K-fixed-boundary-relation.json`).
+     * A primary-relation `FAIL` with a valid decoded K wire is preserved as falsification evidence and may proceed to Phase 6 (`06-independent-comparison`) after Root's `ROOT-ACTUAL-FROZEN-BEFORE-EXPECTED.json` barrier solely to record the independent whole-prefix comparison; however, **final `PASS` requires BOTH conjuncts** (independent whole-prefix typed equality AND all 17 fixed boundary pairs + 77 raw primary continuity/occurrence/accounting checks).
+     * No boundary re-selection, schedule fitting, normalization, source repair, cap increase, or retry is permitted on failure.
+   * **Note for Source Inspection Once Un-truncated**: When `decode_prefix.py` and `compare_prefix.py` are provided in an un-truncated prompt, verify whether `decode_prefix.py` exits `0` (recording `status: "FAIL"` inside `primary-K-fixed-boundary-relation.json`) or exits non-zero on a relation mismatch, since `ROOT-OPERATION-RECIPE.md` specifies both *"Any tool nonzero or invalid/missing capture stops with later children UNRUN"* and *"A relation FAIL with valid captured wire remains evidence; child6 may compare that wire independently"*.
+
+2. **Boundary Schedule & Primary Prefix (`0..25`) Verification**:
+   * Across records `0..25`, `PRIMARY-BOUNDARY-SCHEDULE.json` aligns:
+     * Pair 0: `k_state_ordinal: 0` $\leftrightarrow$ `genesis` (`record 0 before`: `Eval(0)`, `env_root: null`, `frames: []`).
+     * Pair 1: `k_state_ordinal: 1` (`ngLetStarted`, expr `0`, `ast_path: []`) $\leftrightarrow$ `record 1 after` (`Eval(1)`, `frames: [LetF(13, 2, 0, null)]`).
+     * Pair 2: `k_state_ordinal: 2` (`ngLiteralEvaluated`, expr `1`, `ast_path: [0]`) $\leftrightarrow$ `record 6 after` (`Return(Const(0))`, after 4 `Validate` helper steps in records `2..5`).
+     * Pair 3: `k_state_ordinal: 3` (`ngLetBound`, expr `1`, `ast_path: [0]`) $\leftrightarrow$ `record 10 after` (`Eval(2)`, `env_root: 0` binding `13 -> Const(0)`, `frames: [ScopeF(0, null)]`, after 3 `EnvPut` helper steps in records `7..9`).
+     * Pair 4: `k_state_ordinal: 4` (`ngLetStarted`, expr `2`, `ast_path: [1]`) $\leftrightarrow$ `record 12 after` (`Eval(3)`, `frames: [ScopeF(0, null), LetF(16, 4, 2, 0)]`).
+     * Pair 5: `k_state_ordinal: 5` (`ngLiteralEvaluated`, expr `3`, `ast_path: [1, 0]`) $\leftrightarrow$ `record 17 after` (`Return(Const(1))`).
+     * Pair 6: `k_state_ordinal: 6` (`ngLetBound`, expr `3`, `ast_path: [1, 0]`) $\leftrightarrow$ `record 21 after` (`Eval(4)`, `env_root: 1` binding `16 -> Const(1), prev: 0`, `frames: [ScopeF(0, null), ScopeF(2, 0)]`).
+     * Pair 7: `k_state_ordinal: 7` (`ngLetStarted`, expr `4`, `ast_path: [1, 1]`) $\leftrightarrow$ `record 23 after` (`Eval(5)`, `frames: [ScopeF(0, null), ScopeF(2, 0), LetF(17, 6, 4, 1)]`).
+   * Notice that in `PRIMARY-COMPLETE-PREFIX-000-076.jsonl`, `frames` is ordered bottom-first (`[ScopeF(0, null), ScopeF(2, 0), LetF(17, 6, 4, 1)]` with the newest pushed frame at the end), matching `README.md`'s description that `primary_relation.py` reverses the primary bottom-first frame vector to match K's top-first continuation stack. (Exact code verification in `primary_relation.py` remains pending un-truncated delivery.)
+
+---
+
+### 4. `preciseRootpreconditions`
+
+Before Root may execute any of the 6 operations:
+1. **Resolve Source Review Truncation**: Re-dispatch the non-author review without CLI prompt truncation so all 7 Python source files, `SAFE-K-INPUT.json`, `SAFE-BINDINGS.json`, `STATIC-PINS.json`, `PUBLIC-API.json`, the 3 K sources, records `26..76` of `PRIMARY-COMPLETE-PREFIX-000-076.jsonl`, and the F03 closure are fully inspected and receive `SOURCE=APPROVE` and `EXACT6_OPERATIONS=ELIGIBLE`.
+2. **Pre-Child Pin & Environment Verification (Before Every Child 1..6)**:
+   * Verify `STATIC-PINS.json`, `COMPILED-PINS.json` (15 files), and `TOOL-ENTRY-PINS.json` (4 binaries + 156 JARs).
+   * Verify exact sha256 of the 7 Python source files and absence of `__pycache__` in `source/`.
+   * Verify `actual/` (and each prospective child's outputs/streams) is absent prior to creating its fresh `0700` `cwd`, `cwd/home`, and `cwd/tmp`.
+   * Load `F03.launch` from an isolated Root interpreter without triggering `F03.main`, campaign, preflight, ledger, or retry paths; pass `inherit_environment=False`, `stdin=DEVNULL`, `wall_seconds=30`, `sweep_seconds=3`, `rlimit_core=0`, `rlimit_fsize=536870912`, `umask=0o077`.
+3. **Phase-Specific Barriers**:
+   * **After Child 1 (`01-render`)**: Verify exit `0`, inverse check pass, non-empty `initial.ng` and `query.term`, and exact byte equality `query.term == b"ngObserve(" + initial_ng[:-1] + b",16)\n"`.
+   * **After Child 2 (`02-kast`)**: Verify exit `0`, non-empty `stdout`, no `hs_err_pid*.log`, and pin `02-kast/stdout` before Child 3.
+   * **After Child 3 (`03-reduce`)**: Verify exit `0`, non-empty `result.kore`, `--depth 1` against existing `definition.kore` with no recompile.
+   * **After Child 4 (`04-print`)**: Verify exit `0` and complete un-truncated `04-print/stdout`.
+   * **After Child 5 (`05-decode-relation`)**: Verify complete tape decode and persisted six-key `actual-complete-K-prefix.json` + `primary-K-fixed-boundary-relation.json`. Stop immediately before Child 6 if decoding aborted or failed to produce a valid wire.
+   * **Before Child 6 (`06-independent-comparison`)**: Flush and `fsync` all actual products, receipts, streams, and directories; write and pin `actual/ROOT-ACTUAL-FROZEN-BEFORE-EXPECTED.json` containing the exact `{path, bytes, sha256}` pins for `actual_wire`, `relation`, and raw receipts/streams **before** Child 6 opens `private/expected-complete-K-prefix.json`.
+
+---
+
+### 5. `private-oraclequalification`
+
+* The independent expected oracle (`private/expected-complete-K-prefix.json`, 130,662 bytes, sha256 `01dec9f61497f96442892ed0c16e144f4e0fc4b3c33cca921f51338a7abb48de`) was prefrozen prior to any actual K execution from `SAFE-K-INPUT.json`, empty initial environment, observation budget `16`, and public semantic declarations alone, without reading primary after-states, `PRIMARY-BOUNDARY-SCHEDULE.json`, the new Python consumer sources, K implementation rules, or old goldens.
+* Its private body and materializer/derivation scripts are unread by this review (`private_expected_body_read: false`), and its internal semantic derivation remains unreviewed here; additionally, `SAFE-BINDINGS.json` (3,040 bytes, sha256 `0bd81c4f...`) was inside the 704,403-byte CLI truncation window and must be included in the un-truncated re-review.
+* Primary after-states in `PRIMARY-COMPLETE-PREFIX-000-076.jsonl` are observation inputs solely to the partial boundary relation in Child 5 and are **never** an independent K golden or an input to Child 6's expected oracle.
+* Actual `observerCuts` / ordinals must be derived strictly from actual decoded K states prior to opening `private/expected-complete-K-prefix.json`; no header, count, or state cell may be copied from actual to expected.
+
+---
+
+### 6. `retainedunsupported` Scope
+
+Even upon a future `PASS` of this 16-step prefix correspondence check, the following remain open and unsupported:
+1. **Suffix Beyond K Step 16 / Primary Record 76**: Ordered match-arm selection (`Match`-origin `ScopeF` requiring arm identity evidence), function return to caller (`ReturnF` popping and caller environment restoration), evaluation of the second/last constructor field of `PairBox`, and full-program termination.
+2. **Clock, Fuel, and Work Refinement**: `NGState` carries no work or fuel counter; K observation budget `16` and `remainingObservations` do not refine or equate to primary `initial_fuel` (`4096`), `consumed_work`, `remaining_work`, `reference_cursor`, `helper_work`, `helper_visits`, `MatchPlan`, or `workMap`.
+3. **Physical B State & Intermediate Helper Steps**: Primary intermediate helper states (`Validate`, `EnvPut`, `EnvGet`, `ScheduleNext`, etc.), arena capacities, `alloc` / `active` / `seg_base` counters, `value_slots`, physical `Const`/`Data` reference identities, and constructor `checked` flags have no K equality carrier and are checked only for raw primary continuity and self-accounting.
+4. **Broader Language, Native, Circuit, and Ledger Gates**: Generic type-parameter instantiation (`actual generic instances`), general native recursive proofs (MC01–MC08 / Halo2 R3 row limits), circuit/PCD compliance, private handoff, full ACTUS/DeFi conformance, and Midnight Preview financial ledger settlement remain open. The permanent K lane remains active.

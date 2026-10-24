@@ -1,0 +1,57 @@
+{
+  "request_id": "B06-CANDIDATE03-NONAUTHOR29F6",
+  "reviewer_context": {
+    "conversation_id": "29f6efee-2b5e-4f3f-b663-bad4292ff558",
+    "model": "Gemini 4 Argon (High) via gemini-4-argon-high fallback (Opus quota outage; NOT Opus)",
+    "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/212-word-public-integration-final-review/actual-same-owner-review-01/review-session",
+    "role_and_independence": "Fresh non-author nominal source-correction and ordinary normal-QA reviewer. Did NOT author the 8 nominal candidate files (authored by bb6043a1-63f1-4de9-b26f-ef50139233e3), the 583B Pass-B name correction (authored by d2f4cab5-a214-4450-af91-35feb60db39f), or the independent planner oracle/consumer. Prior R402 typed-word constructor authorship and R203/R212 word reviews are unrelated and confer no nominal approval here.",
+    "tools_and_execution": "Read all 40 page files across all 24 bodies using only full-file view_file calls (no line ranges, shell, compiler, test, git, or provider calls)."
+  },
+  "readable_body_and_page_coverage": {
+    "all_24_bodies_and_40_pages_read_in_full": true,
+    "truncation_observed": false,
+    "candidate_8_source_files": [
+      "Body 1 (001-001.txt, 406B, sha256 245fabd7...): adt.rs (TypeIdC, CtorIdC, TypeRowC)",
+      "Body 2 (002-001.txt, 361B, sha256 c70c61d5...): adt_storage.rs (CtorRowExt, CtorFieldRowExt)",
+      "Body 3 (003-001.txt, 2706B, sha256 d7f70be2...): nominal_declaration_order.rs (DeclarationFieldOccurrence, for_each_constructor_field, walk_declaration_type_occurrences)",
+      "Body 4 (004-001.txt, 3125B, sha256 23e9a894...): owner_ext_prepare_types.rs (instantiate_declared_types, drain_pending_keys)",
+      "Body 5 (005-001.txt..005-006.txt, 6 pages, 34959B, sha256 77ab913b...): owner_ext_type_builder.rs (DeclIdxC, TypeExprSrc with iterative Drop, CtorFieldSrc, CtorDeclSrc, TypeDeclSrc, DeclNameIds, PassBTypeNameIds, CheckedTypeDeclView, BuiltAdtTypeTables, OwnerExtTypeBuilder)",
+      "Body 6 (006-001.txt, 5707B, sha256 df3c3519...): owner_prepare/nominal_decl_producer_tests.rs (2 author #[test] fns)",
+      "Body 7 (007-001.txt..007-008.txt, 8 pages, 70287B, sha256 ae9b29a7...): owner_prepare.rs (existing DedicatedSorts prepare_core/check_program_view/admit/admit_run + corrected collect_decl_group_names + prepare_nominal_declarations + prepare_program_nominal_declarations)",
+      "Body 8 (008-001.txt..008-004.txt, 4 pages, 44186B, sha256 66f9eea2...): shared.rs (public module declarations and re-exports of prepare_nominal_declarations, prepare_program_nominal_declarations, PreparedDeclarationScope, PreparedNominalDeclarations)"
+    ],
+    "provenance_contract_and_oracle_bodies": [
+      "Bodies 9-15 (009-001.txt..015-001.txt): CANDIDATE-FREEZE (8243B), EXACT-D2F4-OWNER-CORRECTION (583B), CANDIDATE03-EXACT-FUNCTION-DIFF (1652B), AUTHORSHIP-DELIVERY (1618B), 07-COMPLETE-ADOPTED-004-SCON016.md (4593B), 08-COMPLETE-ADOPTED-NOMINAL-INTERFACE-SECTION.md (2433B), NORMATIVE-CONTRACT-EXCERPTS.json (11378B)",
+      "Body 16 (016-001.txt, 2084B, sha256 c1392540...): INPUT.freeze.json (Wrap<T>, Zeta, Alpha declarations and layout)",
+      "Body 17 (017-001.txt 3329B + 017-002.txt 833B = 4162B, sha256 3d4996a1...): EXPECTED.freeze.json read completely through tail in 017-002.txt lines 1-60, including ctor_fields[0..10], decl_param_counts: [1, 0, 0], decl_ctor_counts: [1, 2, 1], max_arity: 4, name_count: 12",
+      "Body 18 (018-001.txt, 1066B, sha256 a08a37c0...): LOCAL-TYPE-OCCURRENCES.freeze.json read completely (all 6 occurrences: decl 0 field 0 Param T; decl 1 field 0 Named Alpha; decl 1 field 1 Apply Wrap[Bool] at [] and Bool at [0]; decl 2 field 0 Named Zeta; decl 2 field 1 UInt)",
+      "Bodies 19-24 (019-001.txt..024-001.txt): ORACLE-FREEZE.json (2166B), sherlock_nominal_declarations_independent.rs (5285B), HANDOFF.json (4304B), REVIEW-PROJECTION.json (022-001.txt + 022-002.txt, 11695B), RESULT.json (1687B), stderr.bin (4862B)"
+    ]
+  },
+  "source_and_correction_disposition": {
+    "verdict": "APPROVE",
+    "pass_b_correction_assessment": "In owner_prepare.rs (007-002.txt:109-125, 010-001.txt, 011-001.txt), d2f4's 583-byte replacement of collect_decl_group_names removes the erroneous collection of type parameter names (decl.parameters) and field type-expression names (TypeExprSrc::Named/Param/Apply) that existed in candidate-02. It visits only decl.name, ctor.name, and field.name in source declaration/constructor/field order via push_distinct_name, checking CapacityKind::NameRows and CapacityKind::NameBytes incrementally before inserting into the BTreeSet<&str>. This matches the normative Pass-B contract in NORMATIVE-CONTRACT-EXCERPTS.json (015-001.txt:7, 'Parameter names are never entered').",
+    "candidate_8_files_assessment": "1) Raw carriers & visibility: shared.rs (008-004.txt:123-136) keeps owner_prepare and owner_runtime private while exposing adt, adt_storage, nominal_declaration_order, owner_ext_prepare_types, owner_ext_type_builder, and re-exporting prepare_nominal_declarations, prepare_program_nominal_declarations, PreparedDeclarationScope, and PreparedNominalDeclarations. PassBTypeNameIds.owner_verified is private to owner_ext_type_builder and constructible only via pub(super) fn new_owner_verified in shared (005-001.txt:69-80). 2) DedicatedSorts & 12-table Core preservation: Existing prepare_core, check_program_view (V1-V8 over the 12 Core tables), admit, admit_run, and 9-variant FrameRowC are unchanged. CheckedTypeDeclView::new_checked (005-002.txt:4-14) rejects non-empty decls under GrammarDomain::DedicatedSorts with Tooling::UnsupportedFeature { feature: FeatureKind::GenericAdt }. 3) T1/T2 FIFO & V9 builtins: OwnerExtTypeBuilder::new_checked (005-003.txt:74-180) initializes the exact V9 builtin rows (types 0..3 UInt/Bool/List/Tree, constructors 0..3 Nil/Cons/Leaf/Branch, ctor_fields 0..4). instantiate_declared_types (004-001.txt:25-39) preassigns non-parameterized declarations in source order (T1: TypeIds 4..3+N) before draining the FIFO queue (T2: drain_pending_keys), resolving field TypeExprSrc iteratively (C8 non-recursive stack in resolve_type_expr, 005-004.txt:141-191) and checking TypeRows (including type_args slots), ConstructorRows, ConstructorFieldSlots, and MaxArity incrementally per I-2..I-5."
+  },
+  "independent_normal_oracle_and_consumer_disposition": {
+    "verdict": "APPROVE",
+    "assessment": "ORACLE-FREEZE.json (019-001.txt, sha256 74dae0e4...), INPUT.freeze.json (016-001.txt), EXPECTED.freeze.json (017-001.txt..017-002.txt), and LOCAL-TYPE-OCCURRENCES.freeze.json (018-001.txt) were frozen before target execution and match candidate-03 semantics without oracle fitting: 1) Pass-B names exclude parameter 'T' and builtin type references 'Bool'/'UInt', yielding name_count=12 sorted ASCII names ['Alpha','EndZeta','ToAlpha','ToZeta','Wrap','WrapValue','Zeta','again','cargo','inner','next','weight'] and exact decl_name_ids. 2) T1 skips parameterized decl 0 (Wrap<T>) and assigns Zeta -> TypeId 4 (decl 1) and Alpha -> TypeId 5 (decl 2) in source order. 3) T2 FIFO dequeues TypeId 4 (Zeta: ctors 4 ToAlpha, 5 EndZeta; fields 5 -> TypeId 5, 6 -> discovers Wrap<Bool> as TypeId 6 with type_args=[1]), then TypeId 5 (Alpha: ctor 6 ToZeta; fields 7 -> TypeId 4, 8 -> TypeId 0), then TypeId 6 (Wrap<Bool>: ctor 7 WrapValue; field 9 substitutes T -> TypeId 1), producing all 7 types, 1 type_arg, 8 constructors, 10 ctor_fields, decl_param_counts=[1,0,0], decl_ctor_counts=[1,2,1], max_arity=4, name_count=12. 4) Consumer revision 02 (020-001.txt, 5285B, sha256 0d7d21b4..., HANDOFF.json 021-001.txt) changes only the import path from private shared::owner_prepare to public shared::{prepare_nominal_declarations, PreparedDeclarationScope}, preserving all assertions and fixtures unchanged."
+  },
+  "remaining_3_operations_eligibility": {
+    "verdict": "APPROVE_REMAINING_3_OPERATIONS_ONLY",
+    "already_compiled_core_reuse": "Candidate 03 Core compilation ALREADY PASSED (RESULT.json 023-001.txt: exit 0, 3.9878708139985974s, 474 input pins unchanged, stdout 0B, stderr 4862B with 9 pre-existing non-candidate warnings in 024-001.txt), producing libmori_core.rlib (39803342B, sha256 2eaa593c...) and core-rlib.d (53572B, sha256 ca7c051f...). Do NOT recompile the passing Core prefix (coreCompileOperations: 0).",
+    "eligible_operations_in_review_projection": [
+      "02-compileIndependentNominalConsumer: 30s wall / 25s CPU / 2GiB AS / 64MiB fsize prlimit, rustc --edition=2024 --test on consumer-revision02 sherlock_nominal_declarations_independent.rs linking already-compiled candidate03 libmori_core.rlib (2eaa593c...) and libserde_json-76dc87088753b61e.rlib",
+      "03-listExactOneIndependentNominalTest: 10s wall / 25s CPU / 1GiB AS / 1MiB fsize prlimit, --list verifying exact 1-test membership ['independent_nominal_declaration_order_mutual_references_and_fifo_tables']",
+      "04-runExactIndependentNominalTest: 10s wall / 25s CPU / 1GiB AS / 1MiB fsize prlimit, --exact independent_nominal_declaration_order_mutual_references_and_fifo_tables --test-threads=1 --nocapture"
+    ],
+    "blocked_operands_or_limit_issues": "NONE (all 480 flat input pins, 2 reused Core outputs, 4 consumer closure files, and 131072B stream cap / serialFailStopNoRetry bounds in 022-001.txt..022-002.txt are consistent and unblocked)."
+  },
+  "findings_and_scope_limits": {
+    "mandatory_source_corrections": [],
+    "scope_and_acceptance_limits": [
+      "Declaration-table scope only: prepare_nominal_declarations and prepare_program_nominal_declarations (owner_prepare.rs 007-003.txt:68-136) produce only Pass-B declaration NameIds and T1/T2 declaration-field type/constructor/field tables (PreparedNominalDeclarations).",
+      "Open EARS / B06 obligations: T3 whole-program type-use traversal (function signatures, Construct, ExtValue::Constructor, Ctor patterns), extended ProgramView/admitExt, SCON-016.R02 ConstructorFields continuation frame and left-to-right recursive field evaluation (UIREQ-004), ordered MatchPlan compilation/runtime (SCON-016, UIREQ-034), negative/guard testing, and native/circuit/proof acceptance remain unimplemented and open."
+    ]
+  }
+}

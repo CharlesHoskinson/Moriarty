@@ -1,0 +1,96 @@
+--- a/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-PREPARATION.json
++++ b/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-PREPARATION.json
+@@ -298,6 +298,17 @@
+       }
+     },
+     "program_view": {
++      "pattern_children": [],
++      "types": [],
++      "type_args": [],
++      "constructors": [],
++      "ctor_fields": [],
++      "decl_param_counts": [],
++      "decl_ctor_counts": [],
++      "decl_templates": [],
++      "plan_nodes": [],
++      "plan_cases": [],
++      "field_paths": [],
+       "entry": "0",
+       "expressions": [
+         {
+@@ -341,6 +352,7 @@
+         {
+           "Match": {
+             "scrutinee": "7",
++            "plan": null,
+             "arms": {
+               "start": "0",
+               "len": "2"
+@@ -956,6 +968,17 @@
+       }
+     },
+     "program_view": {
++      "pattern_children": [],
++      "types": [],
++      "type_args": [],
++      "constructors": [],
++      "ctor_fields": [],
++      "decl_param_counts": [],
++      "decl_ctor_counts": [],
++      "decl_templates": [],
++      "plan_nodes": [],
++      "plan_cases": [],
++      "field_paths": [],
+       "entry": "0",
+       "expressions": [
+         {
+@@ -1017,6 +1040,7 @@
+         {
+           "Match": {
+             "scrutinee": "10",
++            "plan": null,
+             "arms": {
+               "start": "0",
+               "len": "2"
+--- a/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-RUNTIME.json
++++ b/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-RUNTIME.json
+@@ -15,7 +15,7 @@
+     },
+     "preparation": {
+       "path": "fixtures/EXPECTED-PREPARATION.json",
+-      "sha256": "24cc457da9858ecbb6358f2f146f151151ab59ac4213bc4757f44b88060f121b"
++      "sha256": "c9690565b07beafe5dd90a2f981a3232bbd16b9a57fadf4fff1b6e418ae49caf"
+     }
+   },
+   "cases": {
+--- a/crates/mori-core/tests/sherlock_draft_runtime_independent.rs
++++ b/crates/mori-core/tests/sherlock_draft_runtime_independent.rs
+@@ -27,6 +27,10 @@
+         BinaryOp::Eq=>"Eq",BinaryOp::Lt=>"Lt",BinaryOp::Cons=>"Cons",BinaryOp::Branch=>"Branch" }
+ }
+ fn unary(op: UnaryOp) -> &'static str { match op {UnaryOp::Leaf=>"Leaf",UnaryOp::Not=>"Not"} }
++fn empty_table<T>(field: &str, rows: &[T]) -> Value {
++    assert!(rows.is_empty(), "unexpected nonempty {field} in sealed DedicatedSorts program");
++    json!([])
++}
+ // Independent read-only projection of actual admitted tables into the frozen
+ // R115 representation. No private production serializer/helper is called.
+ fn program_view(view: &ProgramView) -> Value {
+@@ -68,6 +72,17 @@
+         "occurrence_paths":view.occurrence_paths.iter().map(|n|dec(*n)).collect::<Vec<_>>(),
+         "children":view.children.iter().map(|n|dec(*n)).collect::<Vec<_>>(),
+         "functions":functions,"parameters":parameters,"arms":arms,"patterns":patterns,
++        "pattern_children":empty_table("pattern_children",&view.pattern_children),
++        "types":empty_table("types",&view.types),
++        "type_args":empty_table("type_args",&view.type_args),
++        "constructors":empty_table("constructors",&view.constructors),
++        "ctor_fields":empty_table("ctor_fields",&view.ctor_fields),
++        "decl_param_counts":empty_table("decl_param_counts",&view.decl_param_counts),
++        "decl_ctor_counts":empty_table("decl_ctor_counts",&view.decl_ctor_counts),
++        "decl_templates":empty_table("decl_templates",&view.decl_templates),
++        "plan_nodes":empty_table("plan_nodes",&view.plan_nodes),
++        "plan_cases":empty_table("plan_cases",&view.plan_cases),
++        "field_paths":empty_table("field_paths",&view.field_paths),
+         "constants":constants,"constant_fields":view.constant_fields.iter().map(|n|dec(*n)).collect::<Vec<_>>(),
+         "names":view.names})
+ }

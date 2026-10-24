@@ -1,0 +1,239 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native-p11-current-WW-two-leaf-metadata-preparation-20261019/revision02-frozen-WW40d418/owner-unsealed-materialization-01/original-mode-owner-correction-request-01/literal-corrected-receipt-bound-candidate-01/afterimages/bounded_sdk_compile.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native-p11-retired-carry-source-candidate-20261019/afterimages/bounded_sdk_compile.py
+@@ -627,7 +627,7 @@
+ 
+ BETA_ASSIGNMENT_PATH = '/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md'
+ BETA_ASSIGNMENT_SHA256 = 'bcb1e016dd4a87ee31ddc1073405963d0860643667e2c259ebba4b706c26fabd'
+-CACHED_CURRENT_BUILD_SHA256 = '30fb7acae73c9b4451ae7f657d5423ab4d4f82193f8cf58e4f9fbe43ad449ae5'
++CACHED_CURRENT_BUILD_SHA256 = 'a9a98bdde271a1f37f4159ba7c765f630e0e17a169c9b0324e5dc08a2d2adf6c'
+ 
+ def _validate_tier_grant(c,records,tier):
+     r=records['tier'+str(tier)];kind=r.get('kind')
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native-p11-current-WW-two-leaf-metadata-preparation-20261019/revision02-frozen-WW40d418/owner-unsealed-materialization-01/original-mode-owner-correction-request-01/literal-corrected-receipt-bound-candidate-01/afterimages/cached_current_build.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native-p11-retired-carry-source-candidate-20261019/afterimages/cached_current_build.py
+@@ -1988,13 +1988,190 @@
+         'effective_supervisor_usec_at_start': effective_sup_usec,
+         'effective_phases_usec_at_start': effective_phases_usec,
+     }
++P11_ACTUAL_ROOT = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/native-p11-actual-host-provision-20261019'
++
++P11_EVIDENCE_ROOT = '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-evidence-20261018-06-cached-current-p11-01'
++
++P11_OUTER_DIR = P11_ACTUAL_ROOT + '/actual-one-current-WW-cached-current-F-01'
++
++P11_RECEIPT_PINS = {
++    'outer result': (P11_OUTER_DIR + '/RESULT.json', 922, 'c8cb1e1b518ec0ea78067e62d2852ce2ccd00d3de1dccff7b9e800e3b970269e'),
++    'outer stderr': (P11_OUTER_DIR + '/stderr.bin', 39, '9b4078eb89bbadd2597138fa1536d7732ccfa032574ab7218427a91f1a3a28bd'),
++    'Root cleanup': (P11_ACTUAL_ROOT + '/ROOT-P11-CLEANUP-RESULT.json', 1670, '82e136a224b39984fb53405dcd9286a9306a50a6b6377c4f3bbbe744f62210dd'),
++    'teardown result': (P11_ACTUAL_ROOT + '/actual-teardown-01/RESULT.json', 859, '171e95ac96312ab3d941127df9bf8ee9cd78d3f0234f53ab243bdc98f6a32aad'),
++    'evidence manifest': (P11_EVIDENCE_ROOT + '/EVIDENCE_SHA256_MANIFEST.json', 797, '131309ba547568bfdbc5e28a417e557f2b71eb3b022716f51a97c6a499100e6f'),
++}
++
++# Preserved attempt files (manifest-relative); each SHA-256 comes from the pinned manifest.
++P11_EVIDENCE_FILE_BYTES = {
++    'ONE_SHOT_STARTED': 9,
++    'packet/F_precheck.stderr': 112,
++    'packet/F_precheck.stdout': 0,
++    'packet/TERMINAL_FAILURE.json': 111,
++    'packet/USED_LAUNCH_ac016eccddc7f851f05f244b81ac1a86e9e2a0fcfc8bee86ab0195f7826611e8': 9,
++}
++
++# Raw terminal cpu.stat (usage, user, system, nr_periods).
++P11_RAW_CPU_STAT = {
++    'E': (12906928, 9991688, 2915240, 135),
++    'S': (9308089, 7234742, 2073347, 130),
++    'P': (3598838, 2756981, 841857, 42),
++}
++
++P11_OUTER_SECONDS = 13.15461667800264
++
++POST_P11_HISTORICAL_DEBITS = {
++    # Failed P11 F_precheck: one-shot consumed, no Cargo or ELF; never refunded.
++    'retired_p11_envelope_usec': 12906928,
++    'retired_p11_supervisor_usec': 9308089,
++    'retired_p11_phases_usec': 3598838,
++    'retired_p11_independent_residual_usec': 1,
++    'envelope_usec': 1092254321,
++    'supervisor_usec': 252227979,
++    'supervisor_cpu_seconds_ceil': 253,
++    'phases_usec': 840026337,
++    'independent_envelope_minus_supervisor_minus_phases_usec': 5,
++    'p11_f_stdout_bytes': 0,
++    'p11_f_stderr_bytes': 112,
++    # Separate outer controller stream; never also counted as F stderr.
++    'p11_outer_controller_stderr_bytes_separate': 39,
++    'f_stdout_bytes': 0,
++    'f_stderr_bytes': 59519,
++    # ceil(13.15s actual outer), debited once to both whole and F wall.
++    'p11_outer_wall_seconds_ceil': 14,
++    'remaining_total_wall_seconds_max': 5921,
++    'remaining_f_wall_seconds_max': 2021,
++    'remaining_supervisor_cpu_seconds_max': 10547,
++    'gross_supervisor_cpu_seconds_max': 10800,
++}
++
++def _verify_p11_receipts(guard):
++    """Bind the failed P11 F_precheck charge to its exact pinned actual records."""
++    debits = POST_P11_HISTORICAL_DEBITS
++    pinned = {}
++    for key, (path, size, sha) in P11_RECEIPT_PINS.items():
++        p = Path(path)
++        guard.regular(p)
++        guard.need(p.stat().st_size == size and guard.digest(p) == sha, 'P11 ' + key + ' SHA-256 or byte size mismatch')
++        pinned[key] = p
++    files = guard.jload(pinned['evidence manifest'])['files']
++    guard.need(set(files) == set(P11_EVIDENCE_FILE_BYTES), 'P11 evidence manifest file set mismatch')
++    for rel, size in P11_EVIDENCE_FILE_BYTES.items():
++        p = Path(P11_EVIDENCE_ROOT + '/' + rel)
++        guard.regular(p)
++        guard.need(p.stat().st_size == size and guard.digest(p) == files[rel], 'P11 ' + rel + ' SHA-256 or byte size mismatch')
++        pinned[rel] = p
++    esp = (('E', 'envelope_usec'), ('S', 'supervisor_usec'), ('P', 'phases_usec'))
++    for node, k in esp:
++        p = Path(P11_ACTUAL_ROOT + '/actual-terminal-preservation-01/' + node + '-cpu.stat')
++        guard.regular(p)
++        raw = (
++            'usage_usec %d\nuser_usec %d\nsystem_usec %d\nnice_usec 0\nnr_periods %d\n'
++            'nr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n' % P11_RAW_CPU_STAT[node]
++        )
++        guard.need(
++            p.read_bytes() == raw.encode() and P11_RAW_CPU_STAT[node][0] == debits['retired_p11_' + k],
++            'P11 raw ' + node + ' cpu.stat mismatch',
++        )
++    outer = guard.jload(pinned['outer result'])
++    guard.exact(outer, 'id actual_exit elapsed_seconds controller_failure streams', 'P11 outer result')
++    cleanup = guard.jload(pinned['Root cleanup'])
++    counts = cleanup['counts']
++    guard.need(
++        counts.get('phase') == 'F_precheck'
++        and counts.get('result') == dict(zip(('path', 'bytes', 'sha256'), P11_RECEIPT_PINS['outer result']))
++        and counts.get('rawUsageUsec') == {n: debits['retired_p11_' + k] for n, k in esp}
++        and counts.get('previousHistory') == {n: POST_P10_HISTORICAL_DEBITS[k] for n, k in esp}
++        and counts.get('cumulativeUsec') == {n: debits[k] for n, k in esp}
++        and counts.get('currentResidualUsec') == debits['retired_p11_independent_residual_usec']
++        and all(counts.get(k) is False for k in ('CargoStarted', 'SDKbuild', 'newELF', 'nativeOutputsAccepted'))
++        and counts.get('oneShotConsumed') is True
++        # Distinct F stream: the exact A0 digest refusal, never the outer controller stderr.
++        and pinned['packet/F_precheck.stderr'].read_bytes() == str(counts.get('failure')).encode()
++        and guard.jload(pinned['packet/TERMINAL_FAILURE.json']).get('type') == 'Refusal'
++        and outer['id'] == 'P11-one-current-WW-cached-current-F'
++        and outer['actual_exit'] == 2
++        and outer['controller_failure'] is None
++        and outer['elapsed_seconds'] == P11_OUTER_SECONDS
++        # Current status is this outer cleanup record; counts.cleanupOwed is a historical snapshot.
++        and cleanup.get('status') == 'DONE'
++        and cleanup.get('cleanupOwed') is False
++        and all(cleanup.get(k) is True for k in ('all3MountsAbsent', 'EandSupervisorAndPhasesAbsent', 'noCargoStarted', 'noELFProducedOrExecuted'))
++        and cleanup.get('evidence') == P11_EVIDENCE_ROOT
++        and cleanup.get('teardown') == dict(zip(('path', 'bytes', 'sha256'), P11_RECEIPT_PINS['teardown result']))
++        and guard.jload(pinned['teardown result']).get('actual_exit') == 0,
++        'P11 failed F_precheck receipt content mismatch',
++    )
++
++def enforce_post_p11_historical_debits(c, guard, at_start=True):
++    """Layer the retired failed P11 F_precheck charge once over unchanged post-P10 accounting."""
++    base_state = enforce_post_p10_historical_debits(c, guard, at_start=at_start)
++    prior = POST_P10_HISTORICAL_DEBITS
++    debits = POST_P11_HISTORICAL_DEBITS
++    _verify_p11_receipts(guard)
++    resid = 'independent_envelope_minus_supervisor_minus_phases_usec'
++    wall = debits['p11_outer_wall_seconds_ceil']
++    guard.need(
++        all(debits[k] == prior[k] + debits['retired_p11_' + k] for k in ('envelope_usec', 'supervisor_usec', 'phases_usec'))
++        # E is never normalized to S+P: the independent residual carries 4 + 1 = 5.
++        and debits['retired_p11_envelope_usec'] - debits['retired_p11_supervisor_usec'] - debits['retired_p11_phases_usec']
++        == debits['retired_p11_independent_residual_usec'] == 1
++        and debits['envelope_usec'] - debits['supervisor_usec'] - debits['phases_usec']
++        == debits[resid] == prior[resid] + debits['retired_p11_independent_residual_usec'] == 5
++        and debits['f_stdout_bytes'] == prior['f_stdout_bytes'] + debits['p11_f_stdout_bytes']
++        == prior['f_stdout_bytes'] + P11_EVIDENCE_FILE_BYTES['packet/F_precheck.stdout'] == 0
++        and debits['f_stderr_bytes'] == prior['f_stderr_bytes'] + debits['p11_f_stderr_bytes'] == 59519
++        and debits['p11_f_stderr_bytes'] == P11_EVIDENCE_FILE_BYTES['packet/F_precheck.stderr']
++        and debits['p11_outer_controller_stderr_bytes_separate'] == P11_RECEIPT_PINS['outer stderr'][1] == 39
++        and wall == int(-(-P11_OUTER_SECONDS // 1)) == 14
++        and debits['gross_supervisor_cpu_seconds_max'] == prior['gross_supervisor_cpu_seconds_max'] == 10800
++        and debits['supervisor_cpu_seconds_ceil'] == (debits['supervisor_usec'] + 999999) // 1000000 == 253
++        and debits['remaining_supervisor_cpu_seconds_max'] == 10800 - debits['supervisor_cpu_seconds_ceil'] == 10547
++        and debits['remaining_total_wall_seconds_max'] == prior['remaining_total_wall_seconds_max'] - wall == 5921
++        and debits['remaining_f_wall_seconds_max'] == prior['remaining_f_wall_seconds_max'] - wall == 2021,
++        'internal post-P11 historical debit invariant violated',
++    )
++    guard.need(
++        c['total_wall_seconds'] <= debits['remaining_total_wall_seconds_max']
++        and c['limits']['F']['wall_seconds'] <= debits['remaining_f_wall_seconds_max']
++        and c['supervisor_cpu_seconds'] <= debits['remaining_supervisor_cpu_seconds_max'],
++        'config exceeds post-P11 remaining wall, F wall or supervisor CPU ceiling',
++    )
++    live_e, live_s, live_p = (guard.read_numbers(guard.cg_fs(ns) / 'cpu.stat').get('usage_usec', 0) for ns in guard.cg_paths(c))
++    guard.need(
++        live_e >= base_state['live_envelope_usec_at_start']
++        and live_s >= base_state['live_supervisor_usec_at_start']
++        and live_p >= base_state['live_phases_usec_at_start'],
++        'live cgroup CPU counter reset during post-P11 accounting',
++    )
++    # Every historical debit through P11 is always added, never refunded.
++    eff_e, eff_s, eff_p = debits['envelope_usec'] + live_e, debits['supervisor_usec'] + live_s, debits['phases_usec'] + live_p
++    sup_cap = debits['gross_supervisor_cpu_seconds_max'] * 1_000_000
++    f_cap = c['limits']['F']['cpu_time_us']
++    guard.need(
++        live_s <= c['supervisor_cpu_seconds'] * 1_000_000 and eff_s <= sup_cap,
++        'cumulative supervisor CPU through P11 exceeds cap',
++    )
++    guard.need(eff_p < f_cap if at_start else eff_p <= f_cap, 'cumulative phases CPU through P11 exceeds F cpu_time_us cap')
++    guard.need(eff_e <= sup_cap + f_cap, 'cumulative envelope CPU through P11 exceeds combined CPU cap')
++    return dict(
++        base_state,
++        post_p11_debits=copy.deepcopy(debits),
++        live_envelope_usec_at_start=live_e,
++        live_supervisor_usec_at_start=live_s,
++        live_phases_usec_at_start=live_p,
++        effective_envelope_usec_at_start=eff_e,
++        effective_supervisor_usec_at_start=eff_s,
++        effective_phases_usec_at_start=eff_p,
++    )
++
+ def cached_current_f(c, config_sha, guard):
+     """Supervisor entry point for --cached-current-f (preparation + Cargo + post-audit run inside phase F leaf)."""
+     guard.need(c['mode'] == 'tier1-and-compile', 'cached-current-f requires tier1-and-compile mode')
+     guard.need(HEX40.fullmatch(guard.BASE) is not None, 'current candidate BASE commit is still unsealed placeholder')
+     guard.consent(c)
+     guard.supervisor_envelope(c)
+-    debit_state = enforce_post_p10_historical_debits(c, guard, at_start=True)
++    debit_state = enforce_post_p11_historical_debits(c, guard, at_start=True)
+ 
+     def expired(signum, frame):
+         raise guard.Refusal('whole-job wall cap')
+@@ -2003,8 +2180,8 @@
+     signal.setitimer(signal.ITIMER_REAL, c['total_wall_seconds'])
+     import resource
+     max_rem_sup_sec = (
+-        POST_P10_HISTORICAL_DEBITS['gross_supervisor_cpu_seconds_max'] * 1_000_000
+-        - POST_P10_HISTORICAL_DEBITS['supervisor_usec']
++        POST_P11_HISTORICAL_DEBITS['gross_supervisor_cpu_seconds_max'] * 1_000_000
++        - POST_P11_HISTORICAL_DEBITS['supervisor_usec']
+     ) // 1_000_000
+     rlim_cpu = min(c['supervisor_cpu_seconds'], max_rem_sup_sec)
+     resource.setrlimit(resource.RLIMIT_CPU, (rlim_cpu, rlim_cpu))
+@@ -2035,14 +2212,14 @@
+         seed_snapshot = guard.jload(packet_dir / 'CACHED_TARGET_SEED.json')
+         log_bytes = f_result['log_bytes']
+         guard.need(
+-            POST_P10_HISTORICAL_DEBITS['f_stderr_bytes'] + log_bytes['stderr'] <= c['limits']['F']['stderr_bytes'],
+-            'cumulative F stderr bytes (including post-P10 historical debit) exceeded cap',
+-        )
+-        guard.need(
+-            POST_P10_HISTORICAL_DEBITS['f_stdout_bytes'] + log_bytes['stdout'] <= c['limits']['F']['stdout_bytes'],
+-            'cumulative F stdout bytes (including post-P10 historical debit) exceeded cap',
+-        )
+-        post_debit_state = enforce_post_p10_historical_debits(c, guard, at_start=False)
++            POST_P11_HISTORICAL_DEBITS['f_stderr_bytes'] + log_bytes['stderr'] <= c['limits']['F']['stderr_bytes'],
++            'cumulative F stderr bytes (including post-P11 historical debit) exceeded cap',
++        )
++        guard.need(
++            POST_P11_HISTORICAL_DEBITS['f_stdout_bytes'] + log_bytes['stdout'] <= c['limits']['F']['stdout_bytes'],
++            'cumulative F stdout bytes (including post-P11 historical debit) exceeded cap',
++        )
++        post_debit_state = enforce_post_p11_historical_debits(c, guard, at_start=False)
+         if (packet_dir / 'CACHED_POST_COMPILE_CHECK.json').is_file():
+             post_check = guard.jload(packet_dir / 'CACHED_POST_COMPILE_CHECK.json')
+         else:

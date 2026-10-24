@@ -1,0 +1,19 @@
+# Check an independently constructed expectation before comparison
+
+Draft for independent documentation review. Use the existing result and review workflow; this page introduces no runner or admission mechanism.
+
+1. Specify the complete observable contract from the public schema and normative input. Include ordered fields, physical padding, envelopes, scalar representation and total length. Preserve the source and schema identities used for that specification.
+2. Keep the expectation author separate from implementation output. Do not give that author actual images, capture values, comparison differences or an earlier failed enumeration to repair. Freeze the returned artifact before parsing or comparing it.
+3. Validate its structure against the independently specified contract before issuing it as an expectation. A malformed, incomplete or wrong-length artifact is a retained failed candidate, even when the author process exited successfully.
+4. Preserve the refusal and change approach at the independent construction boundary. A deterministic constructor can make shape, membership and count explicit. Its source and resulting artifact still need their own review and actual validation; the method alone establishes no correct values.
+5. Only after both actual-output freeze and eligible expectation freeze may the designated comparison consume the two. Retain full comparison coverage and any first difference. Derive a correction from the contract rather than fitting the expectation to observed output.
+
+The dated current iteration rejected a 327-lane enumeration against a required 335-lane geometry. No expectation was issued from that rejected response, and no K execution or actual-output comparison followed from it. A fresh constructor is a changed approach; its review/result status must be taken from actual terminal receipts before publication. This draft does not claim that it returned a valid335-lane expectation or that any runtime agreed with it.
+
+Publish source facts, qualified aggregate outcomes and approved public receipts. Keep actual images, SAFE input contents, private expected arrays and private Fenrir research outside this documentation/publication batch. Hashes are equality information; preserve the declared tool-less author and SAFE-only boundary. Keep source exposure, same-author expectations and independent expectations clearly distinguished.
+
+K execution, finite Quint checks, Clean kernel results, Rust/SDK results and native proof verification each establish different predicates. A successful artifact check or finite model test does not close whole-interpreter, recursion, financial, target or EARS obligations.
+
+Later dated result: Root reports twenty synthetic grammar checks, changed decoding, the complete335-lane audit and whole typed comparison against the separately prefrozen independent expectation all passed. The initial decode failure is preserved and no engine/kast/print prefix was replayed. Read the [dated DESIGN013 status](../../../wiki-llm/sherlock-circuit-atlas/DESIGN-013-STATUS-AND-PROVENANCE.md) for that later observation. Typed equality is not raw-byte equality or authenticated context; the shared mapping assumptions, original main.k correspondence and native/target obligations remain separate. No private value is reproduced here.
+
+A further Root data comparison reports2262 typed recursive checks with no mismatch between immutable host and K observations, covering all8positions,15Program/6State tables,2envelopes and335lanes after only the declared host-decimal-to-UInt128 conversion. Keep that supplied-data equality separate from the independent-expectation comparison, from unpaired host metadata/coordinate names, and from semantic mapping or authenticated-context proof. Preserve the old capture's historical `NOT_ISSUED` label rather than rewriting it from a later result.

@@ -11,6 +11,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import re
 from pathlib import Path
 import sys
 
@@ -42,12 +43,112 @@ LAYER_ARTIFACTS = {
 }
 
 
+# Additive selected-run metadata. This is a declared projection, not execution
+# evidence or an additional model. Full-corpus constants and modes stay unchanged.
+PAIRED_PROJECTION_CONTRACT = {'comparisonProfile': 'sherlock-k-a/1',
+ 'referenceSource': {'path': 'models/sherlock/k/main.k',
+                     'sha256': 'b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41',
+                     'bytes': 16249},
+ 'commonDomain': {'input': 'Finite closed immutable K-compatible syntax/function tables, acyclic '
+                           'expression references, named recursive functions, canonical signed-decimal '
+                           'names, UInt128/Bool/List[UInt128]/structuralTree, finite fuel/stack. K-A '
+                           'counterpart rather than older finite-algorithm Quint-A.',
+                  'numericBounds': {'UInt128min': '0',
+                                    'UInt128max': '340282366920938463463374607431768211455',
+                                    'F03initialFuel': 93,
+                                    'F03stackLimit': 64,
+                                    'F03expectedLogicalFramePeak': 11,
+                                    'F03literalListLength': 3,
+                                    'programIdentity': 'F03 '
+                                                       'input_sha256832f1c6521477d052b1021cb7cff25c2a7da3b807e6374243479e7b3126e4100'},
+                  'notClaims': ['Fullnumericspace exhaustively checked',
+                                'Wholegrammar/allprogram refinement',
+                                'General arbitrary Snapshot admission',
+                                'Physical heap/native-stack/time guarantee']},
+ 'fieldMaps': [{'commonField': 'code_k / entry_k',
+                'K': 'observed <code> plus retained input entry',
+                'Quint': 'finite immutable expression/function tables expanded by _Renderer; named '
+                         'calls remain named, never unrolled',
+                'difference': 'ExprId sharing and unused rows retained in rawITF; Ktext is structural '
+                              'diagnostic, not pointer/codec identity'},
+               {'commonField': 'control_k',
+                'K': 'observed <k> after startup',
+                'Quint': 'all supported Control variants render through _Renderer.control',
+                'difference': 'No typed K prestartup↔Quint initialized constructor correspondence '
+                              'claimed'},
+               {'commonField': 'environment_k',
+                'K': 'observed Int-key map',
+                'Quint': 'raw int-key map rendered in canonical decimal-string lexical key order',
+                'difference': 'Raw map encoding/order retained; iteration order not semantic'},
+               {'commonField': 'frames_top_first_k / depth',
+                'K': '<stack>/<depth> retained, including all saved environments and pending '
+                     'return/multiplication/args/scope',
+                'Quint': 'topfirst Frame list, full payload rendering; depth derived from listlength',
+                'difference': 'No frame payload or caller environment dropped'},
+               {'commonField': 'stack_limit',
+                'K': '<stackLimit>',
+                'Quint': 'machine.stackLimit',
+                'difference': 'Exact selected finiteinput64 for F03; no physical/native stack claim'},
+               {'commonField': 'initial_fuel / remaining_fuel / charged_steps',
+                'K': '<initialFuel>/<fuel>; work initial-minus-remaining',
+                'Quint': 'machine.initial/remaining; derivedwork',
+                'difference': 'K-A schedule selected on both; helpers unmetered; no transfer to frozen '
+                              'Quint-A terminaltick profile'},
+               {'commonField': 'output_k',
+                'K': '<out> Pending/Done/Rejected/Exhausted',
+                'Quint': 'Outcome rendering retains same K-A diagnostic forms',
+                'difference': 'No financial segment commit/duty result added'},
+               {'commonField': 'records.rule_start_line / charge / before / after',
+                'K': 'actual DebugAppliedRewriteRules span matched to compiled inventory +observed fuel '
+                     'delta +complete cells',
+                'Quint': 'raw lastRule/lastCharge on actual step; complete adjacent snapshots',
+                'difference': 'No rule inferred from expected states or borrowed host execution'},
+               {'commonField': 'terminal_has_next',
+                'K': 'actual separate terminal no-rule/unchanged-state probe under recorded capture '
+                     'convention',
+                'Quint': 'no further K-A semantic edge after publication; actual total action may '
+                         'remain enabled for rule0/charge0stutter',
+                'difference': 'Distinct enabledness interpretations declared; rawstutters retained and '
+                              'counted, not deleted without explanation'}],
+ 'ruleToAction': 'For each actually observed K semantic rule span/startline, compare the Quint step '
+                 'transition raw lastRule with that same pinned rule line and lastCharge with observed '
+                 'charge. step dispatches through generic '
+                 'advance/evaluate/return/invoke/bind/cases/primitive branches; no case-specific '
+                 'interpreter. Startup74 is model initialization metadata, not an observed Quint '
+                 'startup action.',
+ 'hiddenSteps': ['K pure helper/function normalization is inside its A charged semantic rule; '
+                 'visits/work remain unmeasured, not0. Raw engine simplifications/rewrites are retained '
+                 'separately from selected semantic boundaries.',
+                 'Quint pure helper folds/rendering do not add A charges. ExprId table sharing expands '
+                 'only for diagnostic text.',
+                 'Quint postpublication rule0/charge0 stutters remain raw and are explicitly excluded '
+                 'from K-A semantic records; no disabledness probe fabricated.',
+                 'KgeneratedCounter and prestartupKore are retained raw but not in nine-cell typed '
+                 'common projection.'],
+ 'unmatchedFinanceWait': 'Chosen pure K-A grammar has no financial working '
+                         'store/effects/duties/await/resume cells. Older universalMachine localwaiting '
+                         'does not establish a Kfinancial counterpart; no mapping is claimed for it. '
+                         'Bfinancial/helper state and newer interpreter-chunk models are separate '
+                         'retained obligations.',
+ 'reportDisposition': 'FINITE_ACTUAL_TRACE_AGREEMENT_ONLY when actual pair matches; semantic '
+                      'refinement/proof/native/target NONE. Producer origin comes from separately '
+                      'retained actual receipts, not adapter hashes alone.'}
+F03_ORACLE_ROOT = 'docs/audits/2026-10-16/sherlock-full-original-fixtures/frozen/fixture-oracle-data-01'
+F03_ORACLE_PINS = {
+    'fixture-normal-programs.json': '71e780f207c862e6b7061b9b24cb51c3f5243874e256442d46d009e9fc937113',
+    'fixture-normal-prefixes.json': '13d00607c8eac53d6d607502e00395b50f6a2f2a9be386f2ba8bbc5bb167a49b',
+}
+SELECTED_CASES = tuple(case for members in FAMILIES.values() for case in members) + ('F03',)
+
+
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def document(path, *, strict=False):
+def document(path, *, strict=False, inventory=None, reference_path=None):
     raw = Path(path).read_bytes()
+    if inventory is not None:
+        inventory.record(reference_path if reference_path is not None else str(path), raw)
     value = (json.loads(raw, object_pairs_hook=unique_members, parse_constant=nonfinite,
                         parse_float=finite) if strict else json.loads(raw))
     return {'path': str(path), 'sha256': digest(raw)}, value
@@ -311,7 +412,7 @@ def compare_documents(expected_programs, expected_prefixes, observed_programs, o
     return None
 
 
-def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None):
+def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None, inventory=None):
     """Call the pinned existing serializer only, never its rustc/test entry point.
 
     Its bytes are hashed before any execution and exactly those verified bytes
@@ -320,6 +421,8 @@ def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None
     """
     helper = repo / SERIALIZER['path']
     helper_raw = helper.read_bytes()
+    if inventory is not None:
+        inventory.record(SERIALIZER['path'], helper_raw)
     require(digest(helper_raw) == SERIALIZER['sha256'], f'{helper}: serializer digest mismatch; not executed')
     spec = importlib.util.spec_from_file_location('sherlock_literal_serializer', helper)
     require(spec is not None and spec.loader is not None, 'serializer unavailable')
@@ -331,6 +434,8 @@ def check_rust_transcription(repo, programs, prefixes, family, *, read_text=None
                                         constant_prefix='EXTRA_' if extra else '')
     path = repo / 'crates/mori-core/src/sherlock' / ('extra_normal_oracles.rs' if extra else 'normal_oracles.rs')
     actual = read_text(path).encode('utf-8') if read_text is not None else path.read_bytes()
+    if inventory is not None:
+        inventory.record(str(path.relative_to(repo)), actual)
     require(actual == expected.encode('utf-8'), f'{path}: committed Rust literal transcription differs from frozen JSON')
     return dict(path=str(path.relative_to(repo)), sha256=digest(actual),
                 serializer_sha256=digest(helper_raw), status='literal-transcription-match',
@@ -481,7 +586,7 @@ def layer_raw_context(artifact, difference):
     return context
 
 
-def compare_supplied_observations(artifact, families, *, layer):
+def compare_supplied_observations(artifact, families, *, layer, selection=None):
     """Compare a declared adapter envelope with independently frozen literals.
 
     Only the existing common observation projection is compared. Raw machine
@@ -496,6 +601,10 @@ def compare_supplied_observations(artifact, families, *, layer):
     adapter = host_adapter()
     expected = adapter.expected_observations(families, producer=producer)
     observed = artifact['observations']
+    omissions = None
+    if selection is not None:
+        expected, _ = _selected_observations(expected, **selection)
+        observed, omissions = _selected_observations(observed, **selection)
     difference = adapter.compare_observations(expected, observed, first_difference)
     if difference is not None:
         difference.update(projection=artifact['projection'],
@@ -513,17 +622,594 @@ def compare_supplied_observations(artifact, families, *, layer):
                    raw_diagnostic_counts={key: len(artifact[key]) for key in ('raw_runs', 'raw_traces')
                                           if type(artifact.get(key)) is list},
                    expected_programs=len(expected['programs']), expected_prefix_runs=len(expected['runs']))
+    if omissions is not None:
+        summary.update(omissions)
+        summary['scope'] = 'selected-supplied-' + layer + '-diagnostic-artifact-comparison-only'
     return difference, summary
 
 
+def _selected_observations(observations, *, case_id, initial_fuel):
+    """Select complete literal objects; do not trim fields within either object."""
+    require(type(observations) is dict, 'selected observations must be object')
+    programs, runs = observations.get('programs'), observations.get('runs')
+    require(type(programs) is list and type(runs) is list,
+            'selected observations need program and run arrays')
+    selected_programs = [row for row in programs
+                         if type(row) is dict and row.get('case_id') == case_id]
+    selected_runs = [row for row in runs if type(row) is dict
+                     and row.get('case_id') == case_id and type(row.get('initial')) is dict
+                     and type(row['initial'].get('initial_fuel')) is int
+                     and row['initial']['initial_fuel'] == initial_fuel]
+    require(len(selected_programs) == 1, 'exactly one selected program identity required')
+    require(len(selected_runs) == 1, 'exactly one selected run required')
+    # Preserve all envelope members as well, so undeclared extra members do not
+    # disappear from complete structural comparison. Only unrelated rows are omitted.
+    selected = dict(observations, programs=selected_programs, runs=selected_runs)
+    return selected, dict(omitted_programs=len(programs) - 1, omitted_runs=len(runs) - 1)
+
+
+def compare_paired_observations(k_artifact, quint_artifact, families, *, case_id, initial_fuel):
+    """Compare one explicitly selected supplied pair and independent literals.
+
+    No producer is executed or authenticated. Each selected run retains all11
+    snapshot fields, ordered records, rule/charge, before/after and terminal probe.
+    Literal overlay expansion uses the existing adapter, never a new evaluator.
+    """
+    require(type(case_id) is str and type(initial_fuel) is int,
+            'selected case and exact integer initial fuel required')
+    adapter = host_adapter()
+    expected_all = adapter.expected_observations(families)
+    expected, omitted = _selected_observations(expected_all, case_id=case_id, initial_fuel=initial_fuel)
+    artifacts = dict(k=k_artifact, quint=quint_artifact)
+    selected, layers = {}, {}
+    for layer, artifact in artifacts.items():
+        observed, _ = _selected_observations(
+            artifact['observations'], case_id=case_id, initial_fuel=initial_fuel)
+        selected[layer] = observed
+        difference, summary = compare_supplied_observations(artifact, families, layer=layer,
+            selection=dict(case_id=case_id, initial_fuel=initial_fuel))
+        context_key = dict(case_id=case_id, initial_fuel=initial_fuel, path='/runs/0/terminal')
+        summary.update(first_difference=difference, evidence=artifact.get('evidence'),
+                       raw_context=layer_raw_context(artifact, context_key))
+        layers[layer] = summary
+    # Producer names intentionally differ. Their exact per-layer identity was
+    # compared above; every other selected observation member is compared here.
+    left = {key: value for key, value in selected['k'].items() if key != 'producer'}
+    right = {key: value for key, value in selected['quint'].items() if key != 'producer'}
+    paired_difference = adapter.compare_observations(left, right, first_difference)
+    if paired_difference is not None:
+        paired_difference['raw_context'] = {layer: layer_raw_context(artifact, paired_difference)
+                                            for layer, artifact in artifacts.items()}
+    failed = paired_difference is not None or any(row['first_difference'] is not None
+                                                 for row in layers.values())
+    expected_program = expected['programs'][0]
+    oracle_program = next(program for programs, _ in families for program in programs['programs']
+                          if program['case_id'] == case_id)
+    peaks, stack_limits, record_projection = {}, {}, {}
+    for layer, observations in selected.items():
+        run = observations['runs'][0]
+        stack_limits[layer] = run['initial'].get('stack_limit')
+        records = run.get('records', [])
+        snapshots = [run.get('initial'), run.get('terminal')]
+        if type(records) is list:
+            snapshots.extend(record.get(field) for record in records if type(record) is dict
+                             for field in ('before', 'after'))
+            record_projection[layer] = [dict(record_index=index,
+                rule_start_line=record.get('rule_start_line'), charge=record.get('charge'))
+                for index, record in enumerate(records) if type(record) is dict]
+        else:
+            record_projection[layer] = None
+        peaks[layer] = max((state['depth'] for state in snapshots if type(state) is dict
+                           and type(state.get('depth')) is int), default=None)
+    known_cases = list(dict.fromkeys(SELECTED_CASES + tuple(
+        row['case_id'] for row in expected_all['programs'])))
+    return dict(status='mismatch' if failed else 'match',
+        scope='explicit-selected-supplied-k-quint-complete-state-comparison-only',
+        disposition='mismatch' if failed else 'supplied-finite-complete-trace-agreement-only',
+        actual_execution='not-established-by-comparator', refinement='none', acceptance='none',
+        selection=dict(case_id=case_id, initial_fuel=initial_fuel, compared_programs=1,
+                       compared_runs=1, oracle_omissions=omitted),
+        oracle=dict(profile=expected['profile'], source_sha256=expected['source_sha256'],
+                    program=expected_program, input_sha256=oracle_program.get('input_sha256'),
+                    exact_completion_fuel=oracle_program.get('exact_completion_fuel'),
+                    expected_value_k=oracle_program.get('expected_value_k'),
+                    expected_logical_frame_peak=oracle_program.get('expected_maximum_frame_depth')),
+        numeric_bounds=dict(UInt128_min=0, UInt128_max=340282366920938463463374607431768211455,
+            initial_fuel=initial_fuel, stack_limit=expected['runs'][0]['initial']['stack_limit'],
+            observed_stack_limit=stack_limits, observed_logical_frame_peak=peaks),
+        projection_contract=PAIRED_PROJECTION_CONTRACT, selected_rule_action_projection=record_projection,
+        paired=dict(status='mismatch' if paired_difference else 'match', first_difference=paired_difference),
+        layers=layers, catalogue=dict(retained_default_cases=list(SELECTED_CASES[:-1]),
+            unobserved_by_this_report=[case for case in known_cases if case != case_id],
+            other_catalogue_status='unchanged; omitted cases are not observed by this report'),
+        gaps=['Supplied declarations and raw diagnostics do not authenticate model execution.',
+              'Finite selected trace agreement is not semantic refinement, proof, native or target evidence.',
+              'The pure profile supplies no finance/wait correspondence; other retained models remain separate.'])
+
+
+def source_read_inventory():
+    """Load the sibling facts helper without relying on Python's script path."""
+    path = Path(__file__).resolve().with_name('source_reference_facts.py')
+    raw = path.read_bytes()
+    spec = importlib.util.spec_from_file_location('sherlock_source_reference_facts', path)
+    require(spec is not None and spec.loader is not None, 'source facts helper unavailable')
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(raw, str(path), 'exec', dont_inherit=True), module.__dict__)
+    return module.ReadInventory()
+
+
+def compile_evidence_record(repo, package, case):
+    """Identify seven evidence fields from recorded package files only.
+
+    All optional reporting logic lives inside this already snapshotted module.
+    Source/binary identities remain historical receipt declarations; current
+    equality, client route, invocation authenticity and semantics are not proved.
+    No compiler, interpreter, model, SDK or native operation is selected.
+    """
+    def require(condition, message):
+        if not condition:
+            raise ValueError('compile evidence record: ' + message)
+
+    def read_file(path, *, json_document):
+        raw = Path(path).read_bytes()
+        identity = dict(path=str(path), sha256=digest(raw), bytes=len(raw))
+        value = (json.loads(raw, object_pairs_hook=unique_members, parse_constant=nonfinite,
+                            parse_float=finite) if json_document else raw)
+        return identity, value
+
+    require(case in ('quote', 'eligibility'), 'supported case is quote or eligibility')
+    repo, package = Path(repo), Path(package)
+    if not package.is_absolute():
+        package = repo / package
+
+    def load(relative, *, json_document=True):
+        path = package / relative
+        identity, value = read_file(path, json_document=json_document)
+        try:
+            public_path = str(path.relative_to(repo))
+        except ValueError:
+            public_path = str(path)
+        return dict(path=public_path, sha256=identity['sha256']), identity['bytes'], value
+
+    inventory_ref, _, inventory = load('core-metadata-diagnostic-01/PREEXEC.json')
+    build_input_ref, _, build_input = load('core-rlib-01/PREEXEC.json')
+    build_result_ref, _, build_result = load('core-rlib-01/RESULT.json')
+    capture_input_ref, _, capture_input = load('actual-capture/PREEXEC.json')
+    capture_result_ref, _, capture_result = load('actual-capture/RESULT.json')
+    client_ref, client_bytes, _ = load('actual-capture/capture.rs', json_document=False)
+    artifact_ref, artifact_bytes, artifact = load('actual-capture/' + case + '.stdout')
+
+    require(build_input['input_snapshot'] == '../core-metadata-diagnostic-01/PREEXEC.json',
+            'build input snapshot must identify the published source inventory')
+    members = inventory['source_pins']
+    require(type(members) is list and bool(members), 'recorded source inventory is required')
+    require(all(type(member) is dict and all(key in member for key in ('path', 'sha256', 'bytes'))
+                for member in members), 'recorded source members require their identities')
+    require(build_result['exit_code'] == 0 and build_result['source_changed'] == [],
+            'recorded library build must have a zero exit and unchanged sources')
+    require(capture_result['status'] == 'CAPTURED' and capture_result['input_changed'] == [],
+            'capture must record captured output and unchanged inputs')
+    for phase in ('compile', case):
+        selected = [step for step in capture_result['steps'] if step['name'] == phase]
+        require(len(selected) == 1 and selected[0]['exit_code'] == 0,
+                'selected recorded compile/case exit must be zero')
+    output = capture_result['outputs'][case + '.stdout']
+    require(output['sha256'] == artifact_ref['sha256'] and output['bytes'] == artifact_bytes,
+            'captured artifact bytes must match the recorded output identity')
+    clients = [entry for entry in capture_input['inputs']
+               if entry['sha256'] == client_ref['sha256'] and entry['bytes'] == client_bytes]
+    require(len(clients) == 1, 'capture client bytes must match one recorded input identity')
+    library = capture_input['core_library']
+    require(type(library) is dict and all(key in library for key in ('path', 'sha256', 'bytes')),
+            'recorded core library identity is required')
+    require(sum(entry == library for entry in build_result['artifacts']) == 1,
+            'capture core library must match one successful recorded build artifact')
+    require(artifact['format'] == 'sherlock-host-artifact/1', 'unsupported captured artifact format')
+    require(type(artifact['config']) is dict and type(artifact['admission']['bounds']) is dict,
+            'complete supplied config and admission bounds must remain objects')
+    observation, evidence = artifact['observation'], artifact['evidence']
+    observed = observation['status'] == 'observed'
+    require(observation['status'] in ('not-requested', 'observed'), 'unsupported observation disposition')
+    require(observation['evaluation_performed'] is observed,
+            'observation disposition must preserve its reported evaluation flag')
+    require(evidence['host_observation'] == ('observed' if observed else 'unrun'),
+            'reported host evidence must agree with the observation disposition')
+
+    return {
+        'format': 'sherlock-compiler-evidence-record/1',
+        'status': 'linked-historical-records',
+        'record_boundary': 'captured artifact plus recorded capture/build/source receipts',
+        'predicate': {
+            'id': ('sherlock.compile_host.prepare_admit_observe/1' if observed
+                   else 'sherlock.compile_host.prepare_admit/1'),
+            'claim': ('receipt-declared host observation' if observed
+                      else 'receipt-declared source preparation and admission only'),
+        },
+        'source_tree': {
+            'kind': 'historical-recorded-source-inventory',
+            'inventory': inventory_ref,
+            'members': members,
+            'current_source_equality': 'not-checked',
+        },
+        'profile': artifact['execution_profile'],
+        'consumer': {
+            'id': 'mori_core::sherlock_compile_artifact::compile_host',
+            'capture_client': client_ref,
+            'argument_mode': 'observe=true' if observed else 'observe=false',
+            'invocation_authenticity': 'not-established',
+            'identity_basis': 'supported-capture-family-convention',
+            'argument_mode_basis': 'inferred-from-artifact-observation',
+            'client_call_route': 'not-checked',
+        },
+        'bounds': {'config': artifact['config'], 'admission': artifact['admission']['bounds']},
+        'target': {
+            'declared': artifact['target'],
+            'qualification': artifact['qualification'],
+            'native': evidence['native'],
+            'target': evidence['target'],
+        },
+        'evidence_class': {
+            'kind': ('recorded-host-observation-artifact' if observed
+                     else 'recorded-compile-only-artifact'),
+            'receipt_status': capture_result['status'],
+            'artifact_evidence': evidence,
+            'semantic_validity': 'not-established-by-this-reader',
+        },
+        'identities': {
+            'artifact': artifact_ref,
+            'core_library': library,
+            'capture_inputs': capture_input_ref,
+            'capture_result': capture_result_ref,
+            'build_inputs': build_input_ref,
+            'build_result': build_result_ref,
+        },
+        'bindings_checked': [
+            'captured artifact bytes equal recorded output identity',
+            'capture client bytes equal one recorded capture input identity',
+            'capture core-library identity equals recorded successful build artifact',
+            'recorded build input snapshot names the published source inventory',
+            'recorded selected compile/case exits are zero; source/input changed arrays are empty',
+        ],
+        'gaps': [
+            'Historical source inventory entries are recorded identities; source bytes are not reopened or claimed current.',
+            'Library identity is matched between receipts; binary bytes and source-to-binary authenticity are not established.',
+            'Capture executable identity at invocation time is unrecorded in this receipt format.',
+            'Invocation authenticity and independent semantic correctness are not established by a file reader.',
+            'No compiler, interpreter, model, SDK, proof or ledger is executed; native/target qualification and acceptance remain separate.',
+            'Consumer and argument mode are the supported-family convention and artifact-status inference; client call-route source is not checked.',
+        ],
+        'acceptance': 'none',
+    }
+
+
+
+def requirement_evidence_report(repo, path):
+    """Validate declared row membership/currentness, never decide semantic acceptance.
+
+    The optional sidecar carries owner assessments. Reading matching files does
+    not authenticate an audit or execute a scenario. Bare corpus/snapshot checks
+    never call this function or read its catalogue/evidence dependencies.
+    """
+    path = Path(path)
+    if not path.is_absolute():
+        path = Path(repo) / path
+    reference, ledger = document(path, strict=True)
+    require(type(ledger) is dict and ledger.get('schema') == 'sherlock.current-requirement-evidence/1',
+            'unknown requirement evidence schema')
+    require(type(ledger.get('retainedInventory')) is list and ledger['retainedInventory'],
+            'retained requirement-family inventory required')
+    issues, cache = [], {}
+
+    def issue(findings, kind, location, message, **detail):
+        findings.append(dict(kind=kind, location=location, message=message, **detail))
+
+    def pinned(ref, location, findings):
+        if (type(ref) is not dict or type(ref.get('path')) is not str or not ref['path']
+                or type(ref.get('sha256')) is not str
+                or re.fullmatch('[0-9a-f]{64}', ref['sha256']) is None):
+            issue(findings, 'invalid', location, 'reference requires path and SHA-256')
+            return None
+        target = Path(ref['path'])
+        if not target.is_absolute():
+            target = Path(repo) / target
+        key = str(target)
+        if key not in cache:
+            try:
+                raw = target.read_bytes()
+                cache[key] = (raw, digest(raw))
+            except OSError as error:
+                cache[key] = error
+        cached = cache[key]
+        if isinstance(cached, OSError):
+            issue(findings, 'missing', location, 'declared file cannot be read', path=ref['path'])
+            return None
+        raw, actual = cached
+        if any(key in ref for key in ('startLine', 'endLine')):
+            start = ref.get('startLine', 1)
+            end = ref.get('endLine', start)
+            if (type(start) is not int or type(end) is not int or start < 1
+                    or end < start or end > len(raw.splitlines())):
+                issue(findings, 'invalid', location, 'declared line span is outside the file', path=ref['path'])
+        if 'claim' in ref and type(ref['claim']) is not str:
+            issue(findings, 'invalid', location, 'reference claim must be a string', path=ref['path'])
+        if actual != ref['sha256']:
+            issue(findings, 'stale', location, 'declared file bytes changed', path=ref['path'],
+                  expected_sha256=ref['sha256'], actual_sha256=actual)
+        return raw
+
+    def integrity(findings):
+        return next((kind for kind in ('invalid', 'missing', 'stale')
+                     if any(row['kind'] == kind for row in findings)), 'current')
+
+    def declared_path(ref):
+        candidate = Path(ref['path'])
+        return candidate if candidate.is_absolute() else Path(repo) / candidate
+
+    catalogue_raw = pinned(ledger.get('requirementCatalogue'), '/requirementCatalogue', issues)
+    inventory = ledger.get('refinementInventory')
+    inventory_raw = pinned(inventory, '/refinementInventory', issues)
+    for ref, expected_path in (
+            (ledger.get('requirementCatalogue'), 'openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md'),
+            (inventory, 'openspec/changes/sherlock-completion-convergence/specs/sherlock-completion/spec.md')):
+        if type(ref) is dict and type(ref.get('path')) is str and declared_path(ref) != Path(repo) / expected_path:
+            issue(issues, 'invalid', '/inventory', 'catalogue must name the retained canonical specification', path=ref['path'])
+    require(catalogue_raw is not None and inventory_raw is not None,
+            'requirement catalogue or refinement inventory unavailable')
+    def sections(raw):
+        result = {}
+        for part in re.split(r'(?m)^### Requirement: ', raw.decode('utf-8'))[1:]:
+            heading = part.splitlines()[0]
+            identifier = heading.split(' ', 1)[0]
+            require(identifier not in result, 'duplicate requirement heading in catalogue')
+            result[identifier] = dict(heading=heading,
+                scenarios=re.findall(r'(?m)^#### Scenario: (.+)$', part))
+        return result
+
+    originals, refinements = sections(catalogue_raw), sections(inventory_raw)
+    required_ids, feature_ids = list(originals), list(refinements)
+    original_scenario_count = sum(len(row['scenarios']) for row in originals.values())
+    scenario_count = sum(len(row['scenarios']) for row in refinements.values())
+    if (required_ids != [f'UIREQ-{number:03}' for number in range(1, 36)]
+            or feature_ids != [f'SCON-{number:03}' for number in range(1, 26)]
+            or scenario_count != 68):
+        issue(issues, 'invalid', '/inventory', 'retained 35/25/68 named membership differs')
+    if inventory.get('featureIds') != feature_ids or inventory.get('scenarioCount') != scenario_count:
+        issue(issues, 'invalid', '/refinementInventory', 'declared refinement inventory differs')
+    assessment = ledger.get('assessment')
+    if (type(assessment) is not dict or type(assessment.get('status')) is not str
+            or not assessment['status'] or assessment.get('globalV1') not in ('open', 'closed')
+            or assessment.get('adoption') not in ('pending-root', 'adopted')):
+        issue(issues, 'invalid', '/assessment', 'explicit assessment disposition required')
+        assessment = assessment if type(assessment) is dict else {}
+
+    def rows(member, expected):
+        declared = ledger.get(member)
+        if type(declared) is not list:
+            issue(issues, 'invalid', '/' + member, 'complete row array required')
+            declared = []
+        ids = [row.get('id') if type(row) is dict else None for row in declared]
+        if ids != expected:
+            issue(issues, 'invalid', '/' + member, 'row membership/order differs', expected=expected, observed=ids)
+        results = []
+        for index, row in enumerate(declared):
+            location, findings = f'/{member}/{index}', []
+            try:
+                require(type(row) is dict, 'row must be an object')
+                fields(row, ('id', 'requirementSource', 'predicate', 'implementation', 'validation',
+                             'acceptance', 'currentness', 'nextDiscriminatingCheck', 'citations'), location)
+                source = row['requirementSource']
+                fields(source, ('path', 'sha256', 'heading', 'scenarioNames'), location + '/requirementSource')
+                raw = pinned(source, location + '/requirementSource', findings)
+                catalogue_ref = ledger['requirementCatalogue'] if member == 'requirements' else inventory
+                expected_section = (originals if member == 'requirements' else refinements).get(row['id'])
+                def source_path(ref):
+                    candidate = Path(ref['path'])
+                    return candidate if candidate.is_absolute() else Path(repo) / candidate
+                require(source_path(source) == source_path(catalogue_ref)
+                        and source['sha256'] == catalogue_ref['sha256'],
+                        'row source must bind its declared requirement catalogue')
+                if (expected_section is None or source['heading'] != expected_section['heading']
+                        or source['scenarioNames'] != expected_section['scenarios']):
+                    issue(findings, 'invalid', location + '/requirementSource',
+                          'row heading or named scenario membership differs from its ID',
+                          expected=expected_section, observed=source)
+                predicate = row['predicate']
+                fields(predicate, ('id', 'description', 'domain', 'applicableEvidenceClasses'), location + '/predicate')
+                require(all(type(predicate[key]) is str and predicate[key] for key in ('id', 'description', 'domain'))
+                        and type(predicate['applicableEvidenceClasses']) is list,
+                        'explicit predicate/domain/evidence classes required')
+                require(predicate['applicableEvidenceClasses']
+                        and all(type(item) is str and item for item in predicate['applicableEvidenceClasses']),
+                        'evidence classes must be nonempty named strings')
+                for field, allowed, extra in (
+                        ('implementation', ('complete', 'partial', 'absent', 'unknown'), ('supportedScope', 'missing')),
+                        ('validation', ('observed', 'partial', 'unrun', 'unknown'), ('evidenceRefs', 'countercaseRefs', 'reviewRefs')),
+                        ('acceptance', ('closed', 'open'), ('scope', 'reason'))):
+                    fields(row[field], ('status',) + extra, location + '/' + field)
+                    require(row[field]['status'] in allowed, f'unknown {field} status')
+                require(type(row['implementation']['supportedScope']) is str
+                        and type(row['implementation']['missing']) is str
+                        and all(type(row['acceptance'][key]) is str and row['acceptance'][key]
+                                for key in ('scope', 'reason')), 'explicit scope/gap/reason strings required')
+                fields(row['currentness'], ('sourcePins', 'comparedToCurrent', 'limitations'), location + '/currentness')
+                require(row['currentness']['comparedToCurrent'] in ('identical', 'changed', 'partial', 'unknown'),
+                        'unknown declared currentness')
+                require(type(row['currentness']['limitations']) is list
+                        and all(type(item) is str for item in row['currentness']['limitations']),
+                        'currentness limitations must be strings')
+                fields(row['nextDiscriminatingCheck'], ('consumer', 'input', 'expected', 'missingAuthorityOrOwner'),
+                       location + '/nextDiscriminatingCheck')
+                require(all(type(value) is str for value in row['nextDiscriminatingCheck'].values()),
+                        'next check fields must be explicit strings')
+                for field, refs in (
+                        ('sourcePins', row['currentness']['sourcePins']),
+                        ('evidenceRefs', row['validation']['evidenceRefs']),
+                        ('countercaseRefs', row['validation']['countercaseRefs']),
+                        ('reviewRefs', row['validation']['reviewRefs']), ('citations', row['citations']),
+                        ('sourceRefs', row['implementation'].get('sourceRefs', [])),
+                        ('recordedConsumerClosure', row['currentness'].get('recordedConsumerClosure', []))):
+                    require(type(refs) is list, field + ' must be an array')
+                    for ref_index, ref in enumerate(refs):
+                        pinned(ref, f'{location}/{field}/{ref_index}', findings)
+                if row['acceptance']['status'] == 'closed':
+                    require(row['validation']['evidenceRefs'] and row['validation']['reviewRefs']
+                            and row['currentness']['sourcePins'] and row['acceptance']['scope']
+                            and row['acceptance']['reason'], 'closed declaration needs scoped evidence, review and source references')
+                    require(row['implementation']['status'] == 'complete' and row['validation']['status'] == 'observed'
+                            and row['currentness']['comparedToCurrent'] == 'identical',
+                            'closed declaration requires complete/observed/current declarations')
+            except (ValueError, KeyError, TypeError, UnicodeError) as error:
+                issue(findings, 'invalid', location, str(error))
+            state = integrity(findings + issues)
+            results.append(dict(id=row.get('id') if type(row) is dict else None, declared=row,
+                                integrity=state, current_reportability=('current-owner-declaration' if state == 'current' else 'not-current'),
+                                findings=findings))
+        return results
+
+    original_rows = rows('requirements', required_ids)
+    feature_rows = rows('refinementRequirements', feature_ids)
+    # Later membership failures also invalidate earlier rows; no stale/invalid
+    # declaration enters a current subtotal merely because it appeared first.
+    if issues:
+        for row in original_rows + feature_rows:
+            row['integrity'] = integrity(row['findings'] + issues)
+            row['current_reportability'] = 'not-current'
+    combined = original_rows + feature_rows
+    def summarize(group):
+        def eligible(row):
+            declared = row['declared']
+            return (row['integrity'] == 'current' and type(declared) is dict
+                    and type(declared.get('acceptance')) is dict
+                    and declared['acceptance'].get('status') == 'closed'
+                    and type(declared.get('currentness')) is dict
+                    and declared['currentness'].get('comparedToCurrent') == 'identical')
+        result = dict(rows=len(group), current_owner_declared_closed=sum(eligible(row) for row in group),
+                      current_adopted_closed=0)
+        if assessment.get('adoption') == 'adopted':
+            result['current_adopted_closed'] = sum(eligible(row)
+                and row['declared']['acceptance'].get('adoption') == 'adopted' for row in group)
+        for field in ('implementation', 'validation', 'acceptance'):
+            states = [row['declared'][field].get('status') for row in group
+                      if type(row['declared']) is dict and type(row['declared'].get(field)) is dict]
+            result['declared_' + field] = {status: states.count(status) for status in sorted(
+                {state for state in states if type(state) is str})}
+        return result
+    retained = []
+    retained_issues = []
+    for index, item in enumerate(ledger.get('retainedInventory', [])):
+        findings = []
+        if (type(item) is dict and type(item.get('family')) is str and type(item.get('status')) is str
+                and type(item.get('disposition')) is str):
+            pinned(item.get('catalogue'), f'/retainedInventory/{index}/catalogue', findings)
+        else:
+            issue(findings, 'invalid', f'/retainedInventory/{index}', 'retained family/status/catalogue required')
+        retained.append(dict(declared=item, integrity=integrity(findings), findings=findings))
+        retained_issues.extend(findings)
+    summary = dict(original35=summarize(original_rows), refinement25=summarize(feature_rows))
+    return dict(status=integrity(issues + retained_issues + [finding for row in combined for finding in row['findings']]),
+                scope='declared-requirement-evidence-completeness-and-currentness-only',
+                semantic_assessment='owner-declared; file checks do not authenticate audits or decide acceptance',
+                dependency_closure='declared-only; undeclared dependencies are not established',
+                ledger=reference, assessment=assessment,
+                inventory=dict(original_requirement_ids=required_ids, refinement_feature_ids=feature_ids,
+                               original_scenario_count=original_scenario_count, scenario_count=scenario_count,
+                               scenario_execution='not-established-by-file-check'),
+                requirements=original_rows, refinement_requirements=feature_rows, retained_inventory=retained,
+                summary=summary, findings=issues)
+
+
+def benchmark_completion_report(policy, samples, current, receipt_root, baseline=None, *, repo=None, inventory=None):
+    """Use selected checkout code, source traceability and fresh retained evidence."""
+    import types
+    repo = Path(repo) if repo is not None else Path(__file__).resolve().parents[3]
+    repo = repo.resolve()
+    benchmark_dir = repo / 'models/sherlock/benchmarks'
+    trace_path = repo / 'openspec/changes/sherlock-moriarty-benchmarks/traceability.json'
+    def source_bytes(path):
+        with Path(path).open('rb') as stream:
+            raw = stream.read(16 * 1024 * 1024 + 1)
+        require(len(raw) <= 16 * 1024 * 1024, 'benchmark source/trace input exceeds ingestion bound')
+        return raw
+    trace_raw = source_bytes(trace_path)
+    trace = json.loads(trace_raw, object_pairs_hook=unique_members, parse_constant=nonfinite)
+    require(trace.get('schema') == 'sherlock-benchmark-traceability/2', 'benchmark source traceability /2 required')
+    pins = trace.get('sourcePins')
+    require(type(pins) is list and pins, 'complete benchmark source pins required')
+    required = {'models/sherlock/benchmarks/acceptance.py', 'models/sherlock/benchmarks/metrics.py',
+                'models/sherlock/benchmarks/sample.schema.json', 'models/sherlock/benchmarks/tests/test_metrics.py',
+                'models/sherlock/benchmarks/workloads/generate.py', 'models/sherlock/benchmarks/workloads/catalog.json',
+                'models/sherlock/benchmarks/workloads/tests/test_workloads.py',
+                'models/sherlock/benchmarks/test_acceptance.py', 'models/sherlock/qa/test_benchmark_completion.py',
+                'models/sherlock/qa/check.py', 'docs/sherlock/implementation-loop.md',
+                'openspec/changes/sherlock-moriarty-benchmarks/specs/benchmarks/spec.md'}
+    observed, sources = set(), {}
+    for pin in pins:
+        name = pin['path']
+        require(type(name) is str and name and not Path(name).is_absolute() and '..' not in Path(name).parts,
+                'safe source traceability path required')
+        target = (repo / name).resolve()
+        require(target.is_relative_to(repo), 'benchmark source pin escapes selected checkout')
+        require(name not in observed, 'duplicate benchmark source pin')
+        raw = source_bytes(target)
+        require(digest(raw) == pin['sha256'], 'benchmark dependent source changed: ' + name)
+        observed.add(name)
+        sources[name] = dict(path=name, sha256=digest(raw))
+        if inventory is not None:
+            inventory.record(name, raw)
+    require(required <= observed, 'cross-lane benchmark source traceability incomplete')
+    clauses = trace.get('requirements')
+    require(type(clauses) is dict and set(clauses) == {f'SBENCH-{i:03}' for i in range(1, 11)},
+            'retained benchmark EARS traceability membership differs')
+    for row in clauses.values():
+        require(type(row.get('paths')) is list and row['paths'] and set(row['paths']) <= observed,
+                'benchmark clause has unpinned source/test/document paths')
+    if inventory is not None:
+        inventory.record(str(trace_path.relative_to(repo)), trace_raw)
+    # A distinct package namespace prevents --repo from accidentally importing a
+    # previously loaded checkout's metrics/workloads modules in a long-lived host.
+    package_name = '_doctorwatson_benchmarks_' + hashlib.sha256(str(repo).encode()).hexdigest()[:16]
+    for key in list(sys.modules):
+        if key == package_name or key.startswith(package_name + '.'):
+            del sys.modules[key]
+    package = types.ModuleType(package_name)
+    package.__path__ = [str(benchmark_dir)]
+    sys.modules[package_name] = package
+    path = benchmark_dir / 'acceptance.py'
+    spec = importlib.util.spec_from_file_location(package_name + '.acceptance', path)
+    require(spec is not None and spec.loader is not None, 'benchmark acceptance consumer missing')
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    report = module.assess_files(policy, samples, current, receipt_root, baseline)
+    report['source_inputs'] = sources
+    for key, name in (('acceptance_source', 'acceptance.py'), ('metrics_source', 'metrics.py'), ('sample_schema_source', 'sample.schema.json'), ('catalog_source', 'workloads/catalog.json'), ('workload_validator_source', 'workloads/generate.py')):
+        report['inputs'][key] = sources['models/sherlock/benchmarks/' + name]
+    report['source_inputs']['traceability'] = dict(path=str(trace_path.relative_to(repo)), sha256=digest(trace_raw))
+    actual_consumer = Path(__file__).resolve()
+    report['source_inputs']['executing_qa_consumer'] = dict(path=str(actual_consumer), sha256=digest(actual_consumer.read_bytes()))
+    return report
+
+
 def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
-        lean_observations=None, quint_observations=None, image_observations=None, k_observations=None):
+        lean_observations=None, quint_observations=None, image_observations=None, k_observations=None,
+        requirement_evidence=None, compile_evidence_package=None, compile_evidence_case=None,
+        paired_k_observations=None, paired_quint_observations=None, selected_case=None, selected_initial_fuel=None,
+        benchmark_policy=None, benchmark_samples=None, benchmark_current=None, benchmark_receipt_root=None,
+        benchmark_baseline=None):
     repo = Path(repo)
+    benchmark_inputs = (benchmark_policy, benchmark_samples, benchmark_current, benchmark_receipt_root)
+    benchmark_selected = any(value is not None for value in benchmark_inputs) or benchmark_baseline is not None
+    require(not benchmark_selected or all(value is not None for value in benchmark_inputs),
+            'benchmark policy, samples, current context and receipt root must be supplied together')
+    require((compile_evidence_package is None) == (compile_evidence_case is None),
+            'compile evidence package and case must be supplied together')
+    inventory = source_read_inventory()
     files = []
     totals = dict(programs=0, state_rows=0, charged_edges=0, publications=0, prefix_rows=0)
     transcriptions = []
     frozen = {}
     source_raw = (repo / SOURCE['path']).read_bytes()
+    inventory.record(SOURCE['path'], source_raw)
     require(digest(source_raw) == SOURCE['sha256'], 'frozen K source changed')
     files.append(dict(path=SOURCE['path'], sha256=digest(source_raw)))
     for member in FAMILIES:
@@ -531,7 +1217,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         for suffix in ('programs', 'prefixes'):
             name = member + '-' + suffix + '.json'
             path = repo / 'models/sherlock/oracles' / name
-            ref, value = document(path)
+            ref, value = document(path, inventory=inventory, reference_path=str(path.relative_to(repo)))
             require(ref['sha256'] == FROZEN[name], f'frozen oracle changed: {name}')
             ref['path'] = str(path.relative_to(repo))
             files.append(ref)
@@ -539,7 +1225,7 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         counts = validate_pair(*docs, family=member)
         for key, count in counts.items():
             totals[key] += count
-        transcriptions.append(check_rust_transcription(repo, *docs, member))
+        transcriptions.append(check_rust_transcription(repo, *docs, member, inventory=inventory))
         frozen[member] = docs
     require((observed_programs is None) == (observed_prefixes is None),
             'observed-programs and observed-prefixes must be supplied together')
@@ -549,7 +1235,16 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
             'supplied layer observations are mutually exclusive comparison modes')
     require(not any(path is not None for path in supplied_paths.values()) or observed_programs is None,
             'layer observations and literal document observations are separate comparison modes')
+    paired_options = (paired_k_observations, paired_quint_observations, selected_case, selected_initial_fuel)
+    paired_mode = any(option is not None for option in paired_options)
+    require(not paired_mode or all(option is not None for option in paired_options),
+            'paired K/Quint paths, selected case and initial fuel must be supplied together')
+    require(not paired_mode or (observed_programs is None
+            and not any(path is not None for path in supplied_paths.values())),
+            'selected paired and existing observation comparisons are separate modes')
+    require(not paired_mode or selected_case in SELECTED_CASES, 'unsupported selected paired case')
     difference = None
+    selected_pair = None
     supplied_host = None
     supplied_layers = {}
     observed_files = []
@@ -581,10 +1276,40 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
         difference, summary = compare_supplied_observations(artifact, list(frozen.values()), layer=layer)
         summary['file'] = ref
         supplied_layers['supplied_' + layer + '_observation'] = summary
-    return dict(status='mismatch' if difference else 'pass',
+    if paired_mode:
+        # Keep the full default source/corpus validation above. Only this explicit
+        # selected comparison may use a single run instead of216 corpus runs.
+        oracle_families = list(frozen.values())
+        oracle_files = []
+        if selected_case == 'F03':
+            fixture_documents = []
+            for name, pin in F03_ORACLE_PINS.items():
+                path = repo / F03_ORACLE_ROOT / name
+                ref, value = document(path, strict=True, inventory=inventory,
+                                      reference_path=str(path.relative_to(repo)))
+                require(ref['sha256'] == pin, 'frozen F03 oracle changed: ' + name)
+                ref['path'] = str(path.relative_to(repo))
+                oracle_files.append(ref)
+                fixture_documents.append(value)
+            oracle_families = [tuple(fixture_documents)]
+        pair_documents = []
+        for path in (paired_k_observations, paired_quint_observations):
+            ref, value = document(path, strict=True)
+            observed_files.append(ref)
+            pair_documents.append(value)
+        selected_pair = compare_paired_observations(*pair_documents, oracle_families,
+            case_id=selected_case, initial_fuel=selected_initial_fuel)
+        selected_pair['oracle_files'] = oracle_files if oracle_files else files[1:]
+        selected_pair['supplied_files'] = dict(zip(('k', 'quint'), observed_files, strict=True))
+        difference = selected_pair['paired']['first_difference']
+        for row in selected_pair['layers'].values():
+            if difference is None:
+                difference = row['first_difference']
+    report = dict(status='mismatch' if difference else 'pass',
                 scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
                 profile=PROFILE, counts=totals, frozen_files=files,
                 rust_literal_transcriptions=transcriptions, observed_files=observed_files,
+                source_reference_facts=inventory.report(),
                 supplied_observation_status=('mismatch' if difference else 'match') if observed_files else 'not-supplied',
                 supplied_observation_family=family if observed_files else None,
                 supplied_comparison_gaps={'K': dict(
@@ -599,21 +1324,74 @@ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal'
                       'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'],
                 **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}),
                 **supplied_layers)
+    if selected_pair is not None:
+        report['selected_paired_projection'] = selected_pair
+        report['supplied_observation_family'] = None
+        report['supplied_comparison_gaps']['K']['status'] = 'selected-supplied-comparison-only'
+    if compile_evidence_package is not None:
+        report['compile_evidence_record'] = compile_evidence_record(
+            repo, compile_evidence_package, compile_evidence_case)
+    if requirement_evidence is not None:
+        current = requirement_evidence_report(repo, requirement_evidence)
+        report['requirement_evidence'] = current
+        if current['status'] != 'current':
+            report['status'] = 'mismatch'
+            if report['first_difference'] is None:
+                report['first_difference'] = dict(path='/requirement_evidence',
+                    expected='complete current declared evidence', observed=current['status'])
+    if benchmark_selected:
+        def selected_path(value):
+            if value is None:
+                return None
+            path = Path(value)
+            return path if path.is_absolute() else repo / path
+        benchmark = benchmark_completion_report(*(selected_path(value) for value in benchmark_inputs),
+                                                selected_path(benchmark_baseline), repo=repo, inventory=inventory)
+        report['benchmark_completion'] = benchmark
+        report['source_reference_facts'] = inventory.report()
+        if not benchmark['complete']:
+            report['status'] = 'mismatch'
+            if report['first_difference'] is None:
+                report['first_difference'] = dict(path='/benchmark_completion',
+                    expected='complete current post-deployment benchmark evidence', observed='incomplete')
+    return report
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--observed-programs', type=Path)
+    parser.add_argument('--compile-evidence-record', type=Path,
+                        help='identify evidence fields from an existing compiler capture package; no producer execution')
+    parser.add_argument('--compile-evidence-case', choices=('quote', 'eligibility'),
+                        help='exact captured artifact for the optional companion record')
+    parser.add_argument('--requirement-evidence', type=Path,
+                        help='report explicitly selected owner-declared requirement evidence/currentness; no semantic acceptance')
+    for name in ('policy', 'samples', 'current', 'receipt-root'):
+        parser.add_argument('--benchmark-' + name, type=Path,
+                            help='explicit post-deployment benchmark evidence selection; requires policy, samples, current and receipt-root together; no execution')
+    parser.add_argument('--benchmark-baseline', type=Path,
+                        help='prior actual samples for explicitly declared comparable-profile regression limits')
     supplied = parser.add_mutually_exclusive_group()
     supplied.add_argument('--host-observations', type=Path,
                         help='compare a supplied complete normal host diagnostic artifact; does not execute it')
     for layer in LAYER_ARTIFACTS:
         supplied.add_argument('--' + layer + '-observations', type=Path,
                               help='compare a supplied complete normal ' + layer + ' adapter artifact; does not execute it')
+    parser.add_argument('--paired-k-observations', type=Path,
+                        help='explicit selected-run K artifact; requires paired Quint, case and fuel; no execution')
+    parser.add_argument('--paired-quint-observations', type=Path,
+                        help='explicit selected-run Quint artifact; does not require all216 runs')
+    parser.add_argument('--selected-case', choices=SELECTED_CASES)
+    parser.add_argument('--selected-initial-fuel', type=int)
     parser.add_argument('--observed-prefixes', type=Path)
     parser.add_argument('--family', choices=FAMILIES, default='normal')
     args = parser.parse_args(argv)
+    benchmark_inputs = (args.benchmark_policy, args.benchmark_samples, args.benchmark_current, args.benchmark_receipt_root)
+    if (any(value is not None for value in benchmark_inputs) or args.benchmark_baseline is not None) and not all(value is not None for value in benchmark_inputs):
+        parser.error('--benchmark-policy, --benchmark-samples, --benchmark-current and --benchmark-receipt-root must be supplied together')
+    if (args.compile_evidence_record is None) != (args.compile_evidence_case is None):
+        parser.error('--compile-evidence-record and --compile-evidence-case must be supplied together')
     if any(getattr(args, layer + '_observations') is not None for layer in ('host', *LAYER_ARTIFACTS)) and (args.observed_programs is not None or args.observed_prefixes is not None):
         parser.error('layer observations and literal document observations are separate comparison modes')
     if (args.observed_programs is None) != (args.observed_prefixes is None):
@@ -623,7 +1401,15 @@ def main(argv=None):
                      observed_prefixes=args.observed_prefixes, family=args.family,
                      host_observations=args.host_observations, lean_observations=args.lean_observations,
                      quint_observations=args.quint_observations, image_observations=args.image_observations,
-                     k_observations=args.k_observations)
+                     k_observations=args.k_observations, requirement_evidence=args.requirement_evidence,
+                     compile_evidence_package=args.compile_evidence_record,
+                     compile_evidence_case=args.compile_evidence_case,
+                     paired_k_observations=args.paired_k_observations,
+                     paired_quint_observations=args.paired_quint_observations,
+                     selected_case=args.selected_case, selected_initial_fuel=args.selected_initial_fuel,
+                     benchmark_policy=args.benchmark_policy, benchmark_samples=args.benchmark_samples,
+                     benchmark_current=args.benchmark_current, benchmark_receipt_root=args.benchmark_receipt_root,
+                     benchmark_baseline=args.benchmark_baseline)
         output = json.dumps(report, indent=2, allow_nan=False)
     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
         parser.exit(2, f'QA input error: {error}\n')

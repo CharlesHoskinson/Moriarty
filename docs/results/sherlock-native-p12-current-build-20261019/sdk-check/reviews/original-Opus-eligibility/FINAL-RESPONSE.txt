@@ -1,0 +1,154 @@
+# A102 P12 two-op review: list, then first selector only
+
+## Verdict: **ELIGIBLE_SINGLE_BOUNDED_ATTEMPT**
+
+The verdict covers exactly the serial pair `00-list-current-P12-A102-prefix` → `01-current-P12-FIRST-heavy-A102-check`, as specified, once, on execution copy SHA256 `5d97f479…bfca`, subject to conditions C1–C9 below.
+
+- **What it is:** an operation-eligibility judgment for one bounded fixed-input attempt.
+- **What it is not:**
+  - It is not a test PASS, nor a prediction that the test passes or fits.
+  - It grants no `ir.k()`, SRS, keygen, prove, native verify, stagenet, Am10/T3/k17 or C4/R2 action.
+  - It grants no cap increase, retry, credit or refund.
+- **Why not WITHHOLD:** the side-effect surface is closed by the supplied complete bodies, and the omitted families sit behind rlimits.
+- **What remains unknown:** whether the attempt fits the 10 s / CPU 8 / AS 1 GiB class. The attempt itself is how that gets observed, and a truthful fail-stop is an acceptable outcome.
+
+## Read scope
+
+- **No tools used.** I read only the packet text.
+- **Read completely:**
+  - `literal_bridge.rs`, `literal_witness_native_tests.rs`, `literal_host.rs` and `literal_step.rs`.
+  - `literal_witness` lines 55–111 and 1350–EOF.
+  - SDK bodies 09–15.
+  - The two-op JSON, ELF header, durability order, P12 result/cleanup/carry JSON, the 7652 opinion, the M1–M3 facts and the linkage index.
+- **Not read (frozen premises, not fresh coverage):**
+  - witness encoders (`encode_observed_a`, `encode_a102_step_post_state`, the `*_to_image_values` functions);
+  - `literal_ui_valid.rs`, `fetch.rs`, `enabled_fetch.rs`;
+  - mori-core `prepare_a` and `Machine`/reference;
+  - SDK preprocess instruction arms other than PublicInput, Impact and Output;
+  - the `VERIFIER_MAX_DEGREE` value;
+  - Cargo profile opt-levels.
+
+## Independently recomputed facts
+
+**Lane counts.** I recomputed these from the `literal_schema` source and the fixture capacities:
+
+| Block | Breakdown | Lanes |
+|---|---|---|
+| Program | header 16 + tables 691 | 707 |
+| State | root 45 + Data 396 + DataFields 18 + EnvCells 40 + ValueSlots 8 + FrameSlots 68 + ControlRows 108 | 683 |
+| Statement | 2 + 707 + 683 + 683 + 2 | 2077 |
+| IR outputs | 683 + 2 | 685 |
+
+The hard-coded test constants are correct.
+
+**Work counts.** For selector 1: prepare_a 2, Machine.step 1, LiteralLayout::new 6, emit+serde+load 5, `ProofPreimage::check` 8 (1 positive, then 2+2+2+1 negatives). This matches the packet.
+
+**Native exclusion.** The selected path never reaches `prepare()`, `ir.k()`, `OfflineParameters::load`, `keygen`, `prove`, `vk.verify` or `futures::executor::block_on`. Body 10 shows that `check` is only `preprocess(...)?.pi_skips`.
+
+**Runtime file access.**
+- The reference source and the 9 relation sources are `include_bytes!`/`include_str!`, so the binary reads no source at runtime.
+- The only filesystem effects are `create_dir_all(outdir)` and 3 `create_new` writes.
+- Those writes occur only after all 8 checks and all assertions have passed.
+
+**Negative attribution.**
+- The IR is value-independent: positive `emitted_ir == checked.ir` is asserted, and the negatives reuse `checked.ir`.
+- The transcripts are coherent, so the Impact mismatch and EOF bails cannot fire.
+- Each `Err` is therefore caused by the single mutated lane flowing through some circuit constraint. Which constraint fired is not identified.
+- A panic would not satisfy `is_err()`; it fails the test instead.
+
+**Second selector.** It is a strict subset of the first (same fixture plus the same 8 checks, without the writes), so not running it loses no coverage.
+
+## Source premises (frozen, not verified here)
+
+- **S1. Purity of omitted families.** The omitted families do pure in-memory computation: no filesystem, network, subprocess, environment or key-location I/O, no thread pools, and no global tracing subscriber or logger installation.
+- **S2. Instruction set of omitted emitters.** The omitted emitters produce no `PublicInput`, `PrivateInput`, `Impact` or `Output`.
+  - Otherwise the SDK transcript slicing panics, or the EOF check bails.
+  - Either way the result is a truthful failure.
+- **S3. Verifier degree.** `VERIFIER_MAX_DEGREE ≥ 12`, since 2078 ≤ 2^VMD is required. If not, `LiteralLayout::new` refuses before any work.
+- **S4. Fixture fits capacities.** The fixture fits `prepare_a` capacities, uses little-endian fuel bytes (byte 0 = 50 → 49), and `LessThan`/`ConstrainBits` at 128 bits are accepted by SDK preprocess.
+  - A violation of any of these fails truthfully.
+- **S5. ELF identity.** The ELF is the `mori_backend` lib unittest harness (test profile), so `--list` has libtest semantics. Root should cite this from the existing P12 build record (`F_CACHED_CURRENT_RESULT` `5ee74509…`).
+  - Supporting evidence: `sourceTwoSDKCheckLeavesCompiled: true`, link count 1 (not Cargo-uplifted), and the single fresh executable.
+  - If no existing record establishes test-profile identity, **this verdict lapses to WITHHOLD**. A non-libtest binary given `--list` has unbounded semantics, and the class does not sandbox network access.
+
+## Resource and side-effect envelope (per child, unchanged class)
+
+| Limit | Value |
+|---|---|
+| Wall | `timeout --signal=KILL 10s` (GNU timeout signals the process group) |
+| CPU | 8 s soft = hard (SIGXCPU/SIGKILL; record whichever is observed) |
+| Address space | 1 GiB |
+| File size | 16 MiB per file (SIGXFSZ terminates; core 0) |
+| Streams | 131072 B kept per stream |
+
+- **Two-child ceiling:** 20 s wall / 16 s CPU.
+- **Op 00 effects:** stdout only.
+- **Op 01 effects:** at most one directory (`actual-output-01`) plus 3 files, each ≤ 16 MiB; stdout and stderr.
+- **Memory:** my source estimate of peak AS is a few hundred MiB. LOAD segments are 40.65 MB, and debug sections are not mapped because `RUST_BACKTRACE` is absent from the environment.
+- **CPU and wall time are the real risk.** This is a debug build, with 5 serde_json `to_value`/`to_string`/`load` round-trips of an IR I estimate at tens of thousands of instructions, plus 8 interpreted preprocess runs. Dependency opt-level is unknown. Fit is **unobserved**.
+- **Unpinned:** host shared libraries listed in NEEDED.
+
+## Conditions
+
+**C1. Exclusive slot.** At selection, the check slot must be quiescent and exclusive: no other build, test, native or provider process. Root records this.
+
+**C2. Execution copy.**
+- Use a fresh `execution-copy-01` directory that did not previously exist. Create the file with O_EXCL, copy byte-for-byte from the 0444 quarantine file, and confirm size 473172040 and SHA256 `5d97…bfca`.
+- Set 0700 on the copy only, then fsync the copy and its directory.
+- Re-verify the quarantine file's hash, mode, mtime and link count as unchanged.
+- Record copy, hash and fsync costs separately from native CPU.
+
+**C3. Child environment and paths.**
+- The child environment is exactly the listed map: no inherited `LD_*`, `RUST_*` or `HOME`.
+- stdin is `/dev/null`.
+- `cwd` and `cwd/tmp` exist, and `tmp` is empty.
+- `actual-output-01` must be **absent** before op 00 and still absent between the two ops.
+
+**C4. Op 00 acceptance.** All of the following must hold:
+- Exit 0, no controller failure, and `full_stream_retained` true on both streams.
+- stderr empty. Nonempty stderr is an anomaly and means fail-stop.
+- stdout parses fully as `<name>: test|benchmark` lines plus the summary `N_t tests, N_b benchmarks`, and the parsed line counts equal the summary counts.
+- Both selector names appear exactly once as `: test`.
+- No files appear in `cwd`, `tmp` or the output path.
+- Root records N_t, N_b and a hash of the name list. Any failure stops here: op 01 does not run, and nothing is retried.
+
+**C5. Op 01 acceptance.** All of the following must hold:
+- Raw receipt and streams are saved before any validation.
+- Exit 0, and streams fully retained.
+- Exactly one `test <exact name> ... ok` line.
+- The summary reads `1 passed; 0 failed; 0 ignored; 0 measured; (N_t + N_b − 1) filtered out`. Note that benchmarks count toward `filtered_out`.
+- Exactly 3 regular files exist, none a symlink. A PASS with no files means the environment variable was lost: freeze fails.
+
+**C6. Durability (addition to the proposed order).** The child creates `actual-output-01` itself via `create_dir_all`. So in addition to fsyncing the 3 files and the outdir, Root must **also fsync the parent review directory** before writing the external `ARTIFACT-FREEZE.json`, and must record the file and directory modes (umask-derived). After that, follow the order as proposed: manifest O_EXCL, fsync the manifest and its parent, and only then the independent unblind or comparison.
+
+**C7. Failure handling.**
+- Timeout, SIGXCPU/SIGKILL, AS exhaustion (OOM or alloc abort), SIGXFSZ, panic or stream overflow each consumes the attempt.
+- Preserve the partial streams and files, mark the comparison UNRUN, and go to source-only diagnosis.
+- No cap increase, calibration rerun, second-selector run or old-49 replay.
+
+**C8. Record corrections (records only, not source, argv unchanged).**
+- Op 00's `"effects"` field says `newP11ELF unbound`. Annotate an erratum: the binding is the P12 execution copy `5d97…`.
+- The `PRESERVATIONRESULT` (`cleanupOwed: true`) and CPU-carry (`cacheRestoreStillOwedSession`) snapshots are superseded by `ROOT-NATIVE-P12-RESULT` `48009c74…` (`cleanupOwed`/`restorationOwed` false). Cite that record at selection.
+
+**C9. Accounting.**
+- Add the actual child rusage to the retained carry (E 1190123103 / S 265033522 / P 925089576, residual 5).
+- Record controller, copy and fsync time separately.
+- No borrowed credit, reset or new aggregate allowance.
+
+## What a PASS would mean, and what it would not
+
+**A PASS would mean:**
+- For this one fixed fixture on this ELF, the producer's 2077-lane statement satisfies SDK nonproving preprocess, with zero binding fixture and transcripts 0 / 0 / 2077 / 2077.
+- Each of the 7 single-lane corruptions yields a preprocess `Err`.
+- Emit plus serde round-trip is stable across 5 runs.
+- The asserted counts hold.
+
+**A PASS would not mean:**
+- a proof, soundness, or a circuit-k or keygen result;
+- correctness for other inputs;
+- closure of StepInv, uiValid, F4, G4, projectA, continuity or ledger obligations;
+- resource fit for proving;
+- agreement with the independent oracle (pending the separate passive comparison after freeze);
+- that the 685 producer post/envelope values are SDK outputs. `check` returns only the skip map.
+
+`program_source_sha256` is the hash of the L4 `program_bytes`, not of program source text. The bridge's "UNOBSERVED" header is F13 drift and stays unrepaired in this cut.

@@ -1,0 +1,86 @@
+### Independent Non-Author Normal Source, Whole-Generated-Class, Two-Test & Future-P5 Compatibility Review
+
+- **Reviewer Identity & Routing**:
+  - `conversation_id`: `6cf4ae86-6a6b-470a-b942-a47168bc7606`
+  - `reviewer_role`: `nonsecurity_source_reviewer` (independent non-author normal source/resource/operation consistency reviewer)
+  - `primary_model`: `claude-opus-5-5` (`effort = high`)
+  - `requested_model`: `gemini-4-argon-high`
+  - `returned_identity`: `gemini-4-argon-high` (`effort = high`)
+  - `fallback_status`: `standing_opus_quota_outage_fallback`
+  - `excluded_author`: Candidate source author `4e8031df-879c-41c4-95d2-622cd6b5df22` (`4e`) is excluded from review voting. No tools, imports, commands, tests, SDK/native executions, or filesystem actions were invoked. All 7 inline bodies (`BODY1`–`BODY7`) were read in full, alongside the retained full guard (`3e8a3c3d...` / `45c8cabb...`) in this same CID context.
+
+---
+
+### 1. Q1 Verdict: Substantive Source & Resource Review (`APPROVED_NORMAL_SOURCE`)
+
+- **Q1 Source Recommendation**: **`APPROVED_NORMAL_SOURCE`**
+  - Bound to the 3 unrun candidate files (`BODY1`, `BODY2`, `BODY4` `/both_roots_exact_same_files`, `BODY7` `/newguard`):
+    - `bounded_sdk_compile.py`: `92,418 B`, `sha256 = 5b009608772b408b0c88b0c585586f2a5fdae1acf042a1b4155540178d98113b`
+    - `cached_current_build.py`: `70,179 B`, `sha256 = 3c4a6d858c0fb404ac2be5f7cb51aea80cd0599caaedce13d1c3539be351ffa7`
+    - `test_cached_current_build.py`: `35,520 B`, `sha256 = 8240c319b006dfe2e85577dd8ec10754feae213c5ab3817c5dce2b98ee23eb0d`
+    - Unchanged worktree `BASE = 'f935febac3f9158c3ce02812ac3b3c4adb986714'` and `LOCK = '3fbc2453d641100bc34c9569116ccfddf5758c9e20375a7e036251828c9a0238'`.
+
+#### 1.1 Guard Sole Helper Seal Verification (`BODY7`)
+- Per `BODY7` (`4682c505...`), `bounded_sdk_compile.py` (`5b009608...`, `92,418 B`) differs from the previously reviewed `45c8cabb758bac36751b045dc8c1837efcaf16aee00ce59b4f4086f17025951e` solely by updating the unique helper pin constant:
+  ```python
+  CACHED_CURRENT_BUILD_SHA256 = '3c4a6d858c0fb404ac2be5f7cb51aea80cd0599caaedce13d1c3539be351ffa7'
+  ```
+- Reversing that single literal restores `45c8cabb...` byte-for-byte (`/inverse_restores_all92418bytes_sha256` and `/all_guard_function_bodies_and_otherbytes_unchanged = true` in `BODY7`).
+
+#### 1.2 Exact 8 `git-control` + `.global-cache` Dated Snapshot Transition, 579-File Branch Audit & Strict 30,660 Historical `D_FREEZE.json` Invariant (`BODY1`, `BODY3`, `BODY5`)
+1. **Complete 579 `expected_generated_files` Branch & Fallback Assessment (`BODY1` L387–523, `BODY3`, `BODY5` `/partition_579`)**:
+   - **`425` `cargo-ok` entries** (`BODY3` `kind_id = 1`: `2` in `{04c9c5d,a01a1ea}/.cargo-ok` with empty hash `e3b0c442...` `sha256[67]`, and `423` in `registry/src/.../<crate>/.cargo-ok` with `{"v":1}` hash `afbf9d0f...` `sha256[47]`): copied from host if matching `expected_old_sha` (L466–470) or deterministically reconstructed from `candidates = (b'', b'{"v":1}', b'{"v":1}\n')` verified against `expected_old_sha` and `old_cargo_ok` (L483–498). All `425` preserve their exact historical `r3` `D_FREEZE.json` hashes.
+   - **`4` `cargo-lockfile` entries** (`BODY3` `kind_id = 0`):
+     - `.global-cache` (`1` entry): materialized from the verified immutable snapshot `GLOBAL_CACHE_SNAPSHOT_PATH` (`356,352 B`, `sha256 = 390ffa709f11c02f40e6484d8d58dd009dd23f572ab2987541b41068692154fa` vs historical `f7138d71...` `sha256[72]`, verified via `_verify_bookkeeping_hash_check_record` at L222–288 and L404–434).
+     - `.package-cache` (`0 B`, `e3b0c442...` `sha256[67]`), `git/CACHEDIR.TAG`, and `registry/CACHEDIR.TAG` (`177 B`, `6d9d1d21...` `sha256[26]`): verified unchanged in `_verify_bookkeeping_hash_check_record` (L281–286) and backed by the exact historical-hash literal fallback `(b'', b'Signature: 8a477f597d28d172789f06886806bc55\n')` at L499–505.
+   - **`150` `git-control` entries** (`BODY3` `kind_id = 2`, `75` each under `04c9c5d/.git/` and `a01a1ea/.git/`):
+     - **`8` dated `git-control` snapshot entries** (`EIGHT_GIT_CONTROL_SNAPSHOT_SPEC` at `BODY1` L1035–1084: `.git/config`, `.git/index`, `.git/logs/HEAD`, `.git/logs/refs/heads/master` in both `04c9c5d` and `a01a1ea`, totaling `281,004 B`): materialized from mode-`0o444` immutable snapshots verified by `_verify_eight_git_control_snapshots` (L1154–1226) and `_validate_git_control_snapshot_payload` (L1106–1152) at L435–465.
+     - **`130` `.git/objects/` loose (`116`) and pack/idx/rev (`14`) entries**: copied from host checkout `.git/objects/` if matching `expected_old_sha` (L466–470) or recovered by filename and verified against `expected_old_sha` from `source_home / 'git/db'` (staged from `A0_FREEZE.json`) or `old_home_root / 'git'` (L471–482). All `130` preserve their exact historical `r3` `D_FREEZE.json` hashes.
+     - **`12` static metadata entries** (`FETCH_HEAD`, `HEAD`, `description`, `hooks/README.sample`, `info/exclude`, `refs/heads/master` in both `04c9c5d` and `a01a1ea`): all `12` match their historical `r3` `D_FREEZE.json` hashes on host.
+     - **Explicit Qualification of Static `git-control` Fallback (`BODY1` L506–515, `BODY5` `/owner_wholeclass_claim_qualified`)**: The static literal fallback at L506–515 (`[b'', b'ref: refs/heads/master\n', (g_commit + '\n').encode('ascii')]`) covers **`6` of the `12` static metadata files** (`FETCH_HEAD`, `HEAD`, and `refs/heads/master` $\times 2$). The other **`6` static template files** (`description` `sha256[32]`, `hooks/README.sample` `sha256[28]`, and `info/exclude` `sha256[77]` $\times 2$) have no in-code literal fallback and rely on live host files under `/home/charl/.cargo/git/checkouts/...` matching `expected_old_sha` (or failing closed at L516–519). Thus, author prose claiming whole-579 host-mutation independence is qualified accordingly.
+2. **Format Bounds, Non-Influence on Cargo `--frozen` & Strict `30,660` Historical Invariant (`BODY1` L525–544, L1106–1226)**:
+   - `_verify_eight_git_control_snapshots` pins `EIGHT_GIT_CONTROL_PROJECTION_SHA256 = 'a36fd57bd8f09dfa05a478584ba4010a6773204518c6dd0d00357755633aa61c'` (`6,069 B`) and `EIGHT_GIT_CONTROL_MANIFEST_SHA256 = 'bedc415cc183227833f7c55bcb4c62b5fa8b7390f90b0a84eaf6a2ddda4d6337'` (`10,917 B`), checks `stat.S_IMODE(snap_p.lstat().st_mode) == 0o444`, exact byte size (`total_snapshot_bytes == 281004`), and SHA-256 on all 8 snapshot files, and validates `.git/config` INI sections/keys against `ALLOWED_GIT_CONFIG_SECTION_KEYS` (local `/home/charl/.cargo/git/db/...` origin URL only, no `@`/`?`/`#` or executable hooks/fsmonitor), `.git/index` `DIRC` v2/v3/v4 header, and UTF-8 newline-terminated reflogs.
+   - Under `cargo test --no-run --frozen -p mori-backend --lib -j4` with read-only `source_home`, Cargo reads only the extracted checkout source trees and `.cargo-ok`; `.git/config`, `.git/index`, `.git/logs/*`, and `.global-cache` do not alter crate resolution, features, or Rust compilation.
+   - After `guard.verify_raw(c)` and `guard.freeze_source(c)` (L527–528), lines 530–538 enforce `set(new_d_files.keys()) == set(old_d_files.keys())` (`30,669` entries), `allowed_dated_rels = {GLOBAL_CACHE_REL} | set(git_control_by_rel.keys())` (`9` entries), and `new_d_files[path_key] == old_val` for all **`30,660` other entries** (`30,090` authenticated source entries + `570` strict historical generated entries).
+
+#### 1.3 Post-P4 Historical CPU & Wall Debit Accounting (`BODY1` L91–122, L859–1014; `BODY5`; `BODY6`)
+- `BODY6` (`02246e4a...`, `1,753 B`) and `BODY5` (`/P4cleanup` `38c797ae...`, `2,632 B`) confirm P4 failed in `reconstitute_source_home` after writing `ONE_SHOT_STARTED` and before Cargo Phase F started (`cargoNeverStarted = true`, `markerExisted = true`, `cleanupOwed = false`, `status = "P4_PRESERVED_AND_CLEANED"`).
+- `HISTORICAL_POST_R3_DEBITS` (`BODY1` L91–122) and `enforce_post_r3_historical_debits` (L859–995) add retired P4 usage (`13,735,290` usec `envelope` and `supervisor`, `0` usec `phases`, `P4wallSeconds = 14.7216s` $\rightarrow$ `15s` ceiling) **exactly once** to the prior post-P3 debits (`359,653,742` / `89,370,060` / `270,283,681` usec):
+  - `retired_cached_attempts_envelope_usec = 13455030 + 13735290 = 27190320`
+  - `envelope_usec = 346198712 + 27190320 = 373389032`
+  - `supervisor_usec = 75915030 + 27190320 = 103105350` (`supervisor_cpu_seconds_ceil = 104` $\rightarrow$ `remaining_supervisor_cpu_seconds_max = 10696` under unchanged `10,800s` gross cap)
+  - `phases_usec = 270283681`
+  - `remaining_total_wall_seconds_max = 6511` (`6526 - 15`); `remaining_f_wall_seconds_max = 2522` (unchanged).
+- `enforce_post_r3_historical_debits` pins and verifies all 5 historical cleanup/counter receipts (`POST_CLEANUP_RESULT_PATH` `e7804b2a...`, `P3_COUNTERS_DISPOSITION_PATH` `8d6db3b4...`, `P3_PRESERVE_CLEANUP_RESULT_PATH` `a824faae...`, `P4_COUNTERS_BEFORE_RETIRE_PATH` `02246e4a...`, `P4_PRESERVE_CLEANUP_RESULT_PATH` `38c797ae...`), enforces config ceilings (`total_wall_seconds <= 6511`, `limits.F.wall_seconds <= 2522`, `supervisor_cpu_seconds <= 10696`), and adds `373,389,032` / `103,105,350` / `270,283,681` usec to live cgroup `usage_usec` at start and end, while `cached_current_f` sets `RLIMIT_CPU` to `min(c['supervisor_cpu_seconds'], 10696)` and restores `guard.Group.__init__` in `finally:`.
+
+---
+
+### 2. Q2 Verdict: Exact Changed Two Synthetic Test Methods & Bounded Operation (`BODY2`, `BODY4`, `BODY5`)
+
+- **Q2 Operation Disposition**: **`ELIGIBLE_ORDINARY_SDKFREE_TWO_CHANGED_TESTS_OPERATION`**
+  - Bound to `TWO-CHANGED-SDKFREE-OPERATION.proposed.json` (`5,823 B`, `sha256 = b4f921a3d137e7562c64ab4936c96a496e23c486e5dc18c1d5e41dc128777d3a` in `BODY4` `/actual_operation_pin`) over the 3 pinned files (`5b009608...`, `3c4a6d85...`, `8240c319...` in `/both_roots_exact_same_files`) in `isolated-two-test-suite`.
+- **Verification of the Two Changed Methods & Honest Coverage Boundaries (`BODY2`, `BODY5` `/exact_two_test_coverage`)**:
+  1. **`test_reconstitute_source_home_pure_extraction_and_generated_bookkeeping` (`BODY2` L254–565)**:
+     - Constructs a 24-entry synthetic `D_FREEZE.json` (`9` authenticated source files across `04c9c5d`, `a01a1ea`, and `objc2-0.6.5` + `15` generated files including `.global-cache`, `.package-cache`, both `CACHEDIR.TAG`s, `.cargo-ok`, `pack-716c8728.pack` via `git/db` search, `a01a1ea/.git/HEAD` via static literal fallback, and all `8` `git-control` snapshots while `host_cargo` has drifted bytes for `.global-cache` and all `8` `.git/` files).
+     - Verifies `len(rep['dated_bookkeeping_deltas']) == 9`, exact snapshot digests in `source_home`, `0o555` frozen directory mode, and `guard.frozen_source(c)` (L526–536).
+     - Verifies two negative refusal paths: (a) appending a disallowed key (`fsmonitor = /bin/sh`) to `04c9c5d/.git/config` snapshot raises `guard.Refusal` (L539–553), and (b) mutating `snap_path` (`global-cache.immutable.snapshot`) to an unrecorded digest raises `guard.Refusal` (L555–560), with `os.chmod(..., 0o644)` before `_write(..., 0o444)` and `_reset_dirs()` preventing fixture permission errors.
+  2. **`test_post_r3_historical_debits_enforced` (`BODY2` L637–680)**:
+     - Verifies post-P4 debits (`373,389,032` / `103,105,350` / `270,283,681` usec) at `0` live usage and at `400s`/`100s`/`300s` live usage, plus `guard.Refusal` at `total_wall_seconds = 6512` (`> 6511`) and `supervisor_cpu_seconds = 10697` (`> 10696`).
+  3. **Honest Non-Blocking Coverage Boundaries**:
+     - The synthetic suite exercises 24 `D_FREEZE` entries and `cleanup_receipt_file=None` in Test 4 rather than all 579 production generated paths, and does not separately unit-test bad `DIRC` magic/version in `.git/index`, NUL-byte reflogs, non-`0o444` snapshot modes, or missing/duplicate rows in `EIGHT-SNAPSHOT-OWNER-PROJECTION.json` (which are enforced by explicit `guard.need(...)` checks in `_validate_git_control_snapshot_payload` and `_verify_eight_git_control_snapshots`).
+     - Selecting only the 2 changed methods (`expectedTestsRun = 2`, `newNativeBudget = false`, `outcomeLabel = "INTERFACE_INFORMED_NOT_BLIND_R2_UNSATISFIED"`) avoids replaying unchanged Test 1 and avoids running Test 3's unsealed-sentinel assertion (`CACHED_CURRENT_BUILD_SHA256`) against the sealed guard (`5b009608...`).
+
+---
+
+### 3. Q3 Verdict: Future Cached-Only Source/Config Compatibility & Concrete Eligibility Predicates (`BODY5`, `BODY6`, `BODY7`)
+
+With P4 preserved and cleaned (`cleanupOwed = false` in `BODY5` `/P4cleanup`) and source (`5b009608...` / `3c4a6d85...`) unchanged, a future P5 `--cached-current-f` compile invocation is compatible and will be eligible once the following concrete predicates are satisfied:
+
+1. **Pass the Q2 Two-Test Synthetic Operation**:
+   - Execute `TWO-CHANGED-SDKFREE-OPERATION.proposed.json` (`b4f921a3...`) once and record `actual_exit = 0` (`2 passed, 0 failed`) with all 6 source/staged pins unchanged.
+2. **Fresh P5 Host Provisioning (`Q-OBS`) & Live `OP-0` Readiness**:
+   - Provision 3 fresh tmpfs quota mounts (`target_tmp`, `source_home`, `packet` with new mount IDs distinct from retired P4 mounts `190`/`191`/`240`) and fresh unpopulated `E`/`L`/`P` cgroups under `/moriarty-sherlock-ledger9-20261018-06`, and record the new P5 `Q-OBS`.
+3. **Materialize P5 Final Config, Projection & 5-Receipt Acyclic DAG (Without Source Edits)**:
+   - Bind `/bindings/runner/sha256 = "5b009608772b408b0c88b0c585586f2a5fdae1acf042a1b4155540178d98113b"`, unchanged `/source_manifest/sha256 = "3d64ce9126ae89b57e22ea35c3189fb0497ef4858b3ba954ed1b9338dbfb7ad1"`, unchanged `/bindings/subject/sha256 = "5f7254ef3f2618faa762fb22484258d52a97d9d9b57760dbe5e016b74a050ada"`, current 3,306-path/1,063-directory `/old_home_stat_manifest`, new P5 `/quota_mounts` from P5 `Q-OBS`, exact 9 `/paths` (no `evidence_dir` key), and post-P4 resource ceilings (`/total_wall_seconds = 6511`, `/limits/F/wall_seconds = 2522`, `/supervisor_cpu_seconds = 10696`).
+   - Complete the 5-receipt DAG (`security` `APPROVED_SOURCE_WITH_LIMITS` + `nonsecurity` `APPROVED_NORMAL_SOURCE` bound to `runner_sha256 = 5b009608...` $\rightarrow$ `root` `ADMITTED_CONFIGURATION` $\rightarrow$ standing-beta `tier1` $\rightarrow$ `tier2` $\rightarrow$ final config SHA-256 in the R419 `--cached-current-f` wrapper argv) and inspect the actual issued P5 config/receipts before Root selects one invocation. No new human gate, blind R2 loop, or Cargo B/C/E/test-ELF replay is required, and all Phase F outputs remain `UNACCEPTED` until independent post-compile result review.
+

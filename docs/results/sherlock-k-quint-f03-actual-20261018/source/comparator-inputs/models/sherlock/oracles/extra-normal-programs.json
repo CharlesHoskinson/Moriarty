@@ -1,0 +1,49 @@
+{
+  "format": "sherlock-literal-normal-inputs/1",
+  "status": "hand-authored source preparation; specified-only/unexecuted",
+  "profile": "sherlock-k-a/1",
+  "baseline_commit": "30b65d925d1fc8210cb3521e7091aba787a69141",
+  "source": {
+    "path": "models/sherlock/k/main.k",
+    "sha256": "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41"
+  },
+  "programs": [
+    {
+      "case_id": "N07",
+      "code_k": "uiFunction(uiFun(17, uiParam(0, uiUIntT(), uiParam(1, uiUIntT(), uiParam(2, uiUIntT(), uiNoParams()))), uiUIntT(), uiBinary(uiAdd(), uiBinary(uiAdd(), uiVar(0), uiBinary(uiMul(), uiLiteral(uiU(10)), uiVar(1))), uiBinary(uiMul(), uiLiteral(uiU(100)), uiVar(2)))), uiNoFuns())",
+      "entry_k": "uiCall(17, uiExpr(uiLiteral(uiU(1)), uiExpr(uiLiteral(uiU(2)), uiExpr(uiLiteral(uiU(3)), uiNoExprs()))))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 38,
+      "title": "Three source-ordered arguments with asymmetric decimal weights",
+      "expected_value_k": "uiU(321)",
+      "derivation": "Call 17 binds a=1, b=2, c=3 after source-ordered argument evaluation. The body (a + 10*b) + 100*c yields 321. Helpers append/find/bind and checked arithmetic are unmetered in A. 12 charges reach the body, 25 evaluate it, one restores the caller. See EXTRA-NORMAL-DERIVATION.md.",
+      "input_sha256": "4ea276354b7344fdb7bb0456fccad4a2d07e8c8b95968f45a8a29a5820b91172",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six source fields case_id/code_k/entry_k/initial_arguments/stack_limit/exact_completion_fuel, excluding digest/convention and metadata."
+    },
+    {
+      "case_id": "N08",
+      "code_k": "uiFunction(uiFun(18, uiParam(0, uiUIntT(), uiNoParams()), uiUIntT(), uiIf(uiBinary(uiEq(), uiVar(0), uiLiteral(uiU(0))), uiLiteral(uiU(1)), uiBinary(uiMul(), uiVar(0), uiCall(18, uiExpr(uiBinary(uiSub(), uiVar(0), uiLiteral(uiU(1))), uiNoExprs()))))), uiNoFuns())",
+      "entry_k": "uiCall(18, uiExpr(uiLiteral(uiU(2)), uiNoExprs()))",
+      "initial_arguments": "Explicit literals in entry_k; no external arguments.",
+      "stack_limit": 8,
+      "exact_completion_fuel": 82,
+      "title": "Named self-recursive factorial two with suspended multiplication",
+      "expected_value_k": "uiU(2)",
+      "derivation": "Function 18 recursively calls the same source-table function on n-1 until n=0; no source unrolling. Equality selects false, false, true. Calls retain caller-return and pending multiplication frames. Base return restores n=1 at76, next return n=2 at79, outer return empty at82. 8+28+28+12+3+3=82 charges. See EXTRA-NORMAL-DERIVATION.md.",
+      "input_sha256": "9a407ff6b874bb837093b771e323187927a61ff706dba236a3cdd69c0d3dc8b7",
+      "sha256_convention": "SHA256 of UTF-8 compact sorted-key JSON of the six source fields case_id/code_k/entry_k/initial_arguments/stack_limit/exact_completion_fuel, excluding digest/convention and metadata."
+    }
+  ],
+  "scope": {
+    "purpose": "Add two normal complete-state/prefix expectations beyond unchanged N01-N06; independent audit and consumer wiring remain separate.",
+    "coverage_status": "Two new A programs only; all frozen-fixture, D01-D36, whole-grammar, Candidate B, native and target obligations remain as recorded in normal-programs.json.",
+    "admission": "Ordinary valid finite examples. No new closed-body or unique-function-table admission condition; K's source-ordered first-matching-function lookup is unchanged.",
+    "future_b": {
+      "profile": "sherlock-helper-microstep/1",
+      "status": "not derived or frozen here",
+      "exact_fuel": null,
+      "exact_helper_work": null
+    }
+  }
+}

@@ -1,0 +1,143 @@
+# B19 Source-Runtime-Derivation Review: Read/Literal/UIntAdd fragment
+
+## Verdict
+
+**SOURCE ACCEPT, conditional on one mandatory literal fix (M1).**
+
+- **As-submitted bytes:** not eligible for the frontend.
+- **After M1:** the frontend is eligible once Root verifies that the diff is exactly M1 and re-freezes the pins.
+- **One five-step run:** eligible only after an exit-0 frontend on the same post-M1 bytes, plus the run conditions in R1–R7.
+
+No tool was executed. I did not compute any expected cell, and I make no equality prediction against the B18 expectations. All 15 bodies were read in full. None is clipped: each body is complete under its stated byte count and hash, and Body 10's excerpts are declared line ranges, not truncations.
+
+## Mandatory literal source fix
+
+**M1. `sourceCore2ReadAdd.qnt`, in `resumeGuard`. Rename the match binder `enabled`.**
+
+```
+-          | BoolValue(enabled) => if (enabled) {...charged,
++          | BoolValue(guardHolds) => if (guardHolds) {...charged,
+```
+
+- **Why:** `enabled` is a Quint built-in temporal operator (`enabled(action)`). Match arms desugar to lambdas, so this binder is a lambda parameter that shadows a built-in. Depending on how the installed resolver handles it, this is either a QNT101-style "built-in name redefined" error or a resolution of `if (enabled)` to the operator.
+- **Uncertainty:** without execution I cannot confirm which way the pinned Quint version behaves.
+- **Why it is still mandatory:** the preflight forbids a retry. A frontend failure would burn the operation pair for a one-token hazard. The rename has no semantic effect.
+- **Root check:** the only byte change is these two tokens on one line, so the file grows from 13335 to 13341 bytes (+6). After that:
+  - re-pin the file;
+  - regenerate `SOURCE-ONLY-FREEZE.json`;
+  - update the `sourceFreeze` pin in `EXACT-NEW-TWO-OPERATIONS.json`.
+
+  I accept the source with exactly this change and no other byte change, so no further design review is needed.
+
+I checked every other binder, local, top-level and constructor name in Bodies 1, 5 and 6. None collides with a Quint built-in or with any name imported from `financialBoundary`.
+
+## Source/API correspondence audit
+
+### RuntimeEvidence isolation: confirmed
+- `sourceRequest` projects exactly the five fields identity, plan, guardCosts, input and startBoundary. `SourceRequest` has no runtime field.
+- `sourceDerivedCore2SequenceSeed` reads `H::suppliedInvocations` only through `sourceRequest`.
+- `deriveSourceQueue` rebuilds each `Invocation` from the request, plus `deriveRuntime` output as its runtime.
+- No path in Body 5 or Body 6 reads `.runtime`. The historical seed's evidence is dead data.
+- The port reads only `S::suppliedInvocations` and `S::sourceDerivationSupported`.
+
+### No shortcuts: confirmed
+- **Static costs:** the evaluator never reads `segmentCosts`, `committedBefore`, `planTotal` or `guardCosts`. Those appear only in the unchanged `normalDomain`, as falsifiable cross-checks of the dynamic `attempted` against the static plan.
+- **Fixture literals:** Body 5 and Body 6 contain no fixture names or IDs.
+- **Outside-fragment markers:** `OutsideSourceFragment` and `OutsideSourceQueue` are never mapped to `Failed` or `Rejected`. An unsupported request yields an empty queue, never a truncated prefix.
+
+### Expression worklist
+- **Left-first evaluation:** the worklist is a stack with `NeedExpression(L)`, then `NeedExpression(R)`, then `FinishSourceAdd` prepended. This reproduces `eval_cached`'s recursive left-then-right order.
+- **Charging:**
+  - a cache check happens before any charge, and a hit costs zero;
+  - a first visit charges +1 before its children, matching `charge_logical` before the match arm;
+  - `FinishSourceAdd` adds no charge.
+- **No cycles or in-progress re-entry:** child IDs must be strictly less than `nodeId`. A second request for a node is always processed after that node's Finish has run.
+- **Fresh cache:** `deriveExpression` creates `emptyMemo` on every call, so the cache is fresh per statement.
+- **Arithmetic:** Add is checked against `CORE_UINT_MAX = 2^128 − 1`, which is correct. Read and Literal values must also be in range.
+- **Bound 1+3·N is sufficient:**
+  - total ticks equal 1 root Need, plus 2 Needs per distinct expanded Add, plus 1 Finish per Add;
+  - that is 1 + 3A, with A ≤ N;
+  - the extra ticks are fixed points.
+  - The bound is a termination observation, not a fee.
+- **Unused field:** `visited` is computed but never read. This is harmless (advisory).
+
+### Statements and segments
+- **Environment:**
+  - Start uses `startBoundary.state`, then `scenario.inputs`; the Set fold is safe because the `put` operations on distinct keys commute.
+  - Resume uses `continuation.boundary.state`, then captures, then event values, in list order.
+  - Both match `run_segment` and G3.
+- **Let/Next:**
+  - each charges 1 + |R(root)|;
+  - Let updates the env only;
+  - Next updates both state and env and emits one `StateEffect` (before, after);
+  - `Step.snapshot` is post-statement, `Step.value` is `SomeScalar(value)`, and `index` is the original ordinal;
+  - `Step.statement` is the SourceProgram statement;
+  - balances and liabilities are untouched.
+- **Await entry:**
+  - charges +1;
+  - finds the site by ordinal;
+  - reads the captures by name in layout order;
+  - stops, with no Step.
+- **Resume guard:**
+  - charges 1 + |R(guard)|;
+  - on true, appends a guard Step with the pre snapshot and empty effects, then continues;
+  - on false, sets `NotAdvanced` with the counted `attempted` and emits no Step or segment.
+  - This matches `execute_statement` + `run_segment` and the false-guard formula in G5.
+- **Termination without an Await:** exit 0 with empty captures, giving Complete. An empty Start segment is permitted.
+- **Initial gating:** `actionName`, `semantics` and `statementCount` are cross-checked. The resume ordinal comes from `sites.nth(site−1)`, as in Rust. A resume landing on a non-Await is unsupported.
+- **Out-of-range access:** every `nth`/`get` is guarded, so there is no TS runtime crash path.
+
+### Literal adapter vs the 607 B source: matches
+- **Arena:**
+  - IDs 0–7 follow `advance` with append-after-operands: `retained + delta` gives 2, then 3, then Add 4.
+  - IDs 8–9 are the two uncalled `liability(...)` amounts `UIntValue(0)`.
+  - State initials go through `literal()` without `push`, as shown in the parser excerpt.
+- **Statements:** all six statements, the binders and the guard/value roots match.
+- **Plan premise:** the seed's plan is consistent with the G3 rules: `statementCount` 6; site ordinals 1 and 5; and the capture layouts `[delta, retained]` and `[delta, retained, ready, seen]` with their origins and ordinals.
+
+### Port delta and fixed machine
+- The diff in Body 7 matches Body 3 exactly. The only changes are the supplier import and `S::sourceDerivationSupported` in `sequenceInv`.
+- `machine` remains the only state variable. The evaluator is entirely pure `def`/`val`.
+- An empty or unsupported queue makes `init` false and `queueDomain` false.
+
+## Advisory items (do not apply without a new review)
+
+- **A1.** `sourceSite` returns the last ordinal match, whereas Rust's `find` returns the first. They are equivalent under the premise that admitted plan ordinals are unique.
+- **A2.** The port comment "no … source evaluator" is now only true of the port module itself. Leave it, to keep the reviewed diff minimal.
+- **A3.** A UInt-valued guard is treated as outside the fragment, whereas Rust would publish NotAdvanced. This is a conservative choice outside admitted typing.
+
+## Operation eligibility
+
+### Operation 1: `newSourceDerivedReadAddFrontend` (typecheck)
+Eligible after M1. The exact argv, cwd, environment and limits are acceptable. The import closure covers all six files.
+
+### Operation 2: `newSourceDerivedReadAddFiveStepCapture`
+Conditionally eligible. The explicit flags are acceptable: main, `init`, `sequenceStep`, `sequenceInv`, `allInputsPublishedWitness`, TypeScript, samples 1, seed 1, steps 5.
+
+The bound is correct: N = 3 gives 5 transitions and 6 states. Each state has exactly one enabled disjunct, so the run is deterministic.
+
+Conditions:
+- **R1.** The frontend exits 0 with no diagnostics, on the identical post-M1 pins.
+- **R2.** Root performs pre- and post-run pin checks of the six source files and the 4670 + 2 + 3 installed closure. The source directory contains exactly six regular files and no symlinks.
+- **R3.** Before the run, `proposed-itf/` is created empty, as a sibling of the source directory (Quint will not create it). Root also records the realized `{seq}` filename expansion.
+- **R4.** Exit 0 alone is not success. Each of the following is a failure, with no retry:
+  - a missing or empty ITF;
+  - an unsatisfied init (empty derived queue);
+  - fewer or more than 6 states;
+  - an unreported witness, or a final state that is not Published with `records.length = 3`;
+  - any invariant violation;
+  - a timeout or cap breach.
+- **R5.** The ITF `vars` contain only `machine`, and there is no `--mbt` metadata.
+- **R6.** Root confirms that `financialBoundary.qnt` and `independentCore2SequenceSeed.qnt` are byte-identical to the adopted B18 files. No diff for them was supplied here.
+- **R7.** Root confirms that the flag set is identical to the previously executed B18 five-step argv, apart from the paths. Freeze the complete raw trace before any comparison. Applicability of the B18 expectations remains a separate decision by Root or the independent owner.
+
+## Explicit limitations (unchanged gaps)
+
+- **Parser excerpt coverage:** the parser excerpt does not include the asset, action or liability-statement branches. The arena mapping for IDs 0–7 relies on the documented allocation rule plus asset declarations pushing no Expr. IDs 8–9 carry no weight: they only enlarge the tick bound.
+- **Not derived from source:**
+  - identity, program/plan digests, the normalized Start boundary, capture layouts and static costs remain premises;
+  - so do caps, admission, `emit_checked` and the continuation/event history;
+  - event label/binder conformance, Next type agreement, and no-shadow admission are also premises.
+- **Unmodelled:** production Error and Rejected handling, failed arithmetic diagnostics, and meter denial.
+- **Out of scope:** financial statements and liability reads; Sub, Mul, comparison operators and Not; auth; H2/H3/H4/H6; loader, native and VM; B/K/helper/physical clock identity; EARS closure.
+- **Not a vote:** this is an audit only, not a third independent semantic vote. Earlier native B18 successes do not establish this formal result.

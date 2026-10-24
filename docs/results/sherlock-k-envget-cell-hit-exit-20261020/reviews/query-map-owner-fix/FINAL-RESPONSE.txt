@@ -1,0 +1,187 @@
+# Designated source authorship — Muse Wonder 1.0 HIGH
+
+Authorship only. No execution. The two blockers are closed below with bounded literal corrections. No premise is missing for these source/API fixes.
+
+## Correction 1 — actual `new_EnvGet_counts` in `validate_label_map`
+
+Exact anchored hunk in `envget_runtime.py`:
+
+Old:
+
+```python
+def validate_label_map(data):
+    keys(data, ('status', 'definition', 'counts', 'declarations',
+                'source_signature_registry', 'mapping_method'))
+    if not same_whole(data['source_signature_registry'], REGISTRY_PIN):
+        raise ValueError('label map source registry pin differs')
+    if data['counts'] != {'DATA': 279, 'function': 27}:
+        raise ValueError('ACTUAL306 DATA/function counts differ')
+```
+
+New:
+
+```python
+def validate_label_map(data):
+    keys(data, ('status', 'definition', 'counts', 'new_EnvGet_counts',
+                'declarations', 'source_signature_registry', 'mapping_method'))
+    if not same_whole(data['source_signature_registry'], REGISTRY_PIN):
+        raise ValueError('label map source registry pin differs')
+    if data['counts'] != {'DATA': 279, 'function': 27}:
+        raise ValueError('ACTUAL306 DATA/function counts differ')
+    if (type(data['new_EnvGet_counts']) is not dict
+            or data['new_EnvGet_counts'] != {'function': 27, 'DATA': 31}):
+        raise ValueError('actual new_EnvGet_counts differ')
+```
+
+This consumes the frozen full map as-is.
+
+It does not strip the field, truncate declarations, change source tuples, change compiled labels/counts, or weaken any guard.
+
+## Correction 2 — bounded temporary root-query tree context
+
+### 2a. Add reusable helper immediately after `_codec_reg`
+
+Exact anchored insertion after the complete existing `_codec_reg` function:
+
+```python
+@contextmanager
+def _codec_reg(reg):
+    saved = base.codec.REG
+    base.codec.REG = reg
+    try:
+        yield
+    finally:
+        base.codec.REG = saved
+```
+
+Insert after it:
+
+```python
+@contextmanager
+def _root_entry_codec_reg():
+    """Temporarily admit exactly egTwoEventWindow at a query root.
+
+    Only ENTRY_NAME is added to DATA_REG for base.tree rendering.
+    The other 26 function names remain absent, so base.tree still
+    refuses any other residual function. The enclosing _codec_reg
+    restores the prior DATA-only registry on success and on failure.
+    """
+    reg = dict(DATA_REG)
+    reg[ENTRY_NAME] = ALL_REG[ENTRY_NAME]
+    with _codec_reg(reg):
+        yield
+
+
+def query_tree(term):
+    """Return base.tree(term) for one egTwoEventWindow-rooted query.
+
+    The entry function is admitted only at the root. Every non-scalar
+    descendant must already be DATA; a nested entry or any other
+    function is refused before the temporary registry is widened.
+    The temporary widening contains exactly DATA_REG plus ENTRY_NAME,
+    never all 27 functions, and is restored by _codec_reg on every path.
+    """
+    if getattr(term, 'name', None) != ENTRY_NAME or getattr(term, 'sort', None) != 'EGWindow':
+        raise ValueError('query tree egTwoEventWindow root required')
+    stack = list(term.args)
+    while stack:
+        node = stack.pop()
+        if node.name in ('@Int', '@Bool', '@String'):
+            continue
+        if node.name not in DATA_REG:
+            raise ValueError('residual/entry function refused below query root')
+        stack.extend(node.args)
+    with _root_entry_codec_reg():
+        return base.tree(term)
+```
+
+### 2b. Corrected complete `build_query_term`
+
+Replace the complete existing function with:
+
+```python
+def build_query_term(before):
+    """egTwoEventWindow(actual before) with whole query inverse proof.
+
+    The entry function is admitted only at this root and only under a
+    temporary REG widening; base.codec.REG is restored on every path.
+    """
+    wire_query = ports.query(before)
+    if (wire_query.get('constructor') != ENTRY_NAME
+            or wire_query.get('sort') != 'EGWindow'
+            or len(wire_query.get('arguments', [])) != 1):
+        raise ValueError('complete egTwoEventWindow source term required')
+    internal_query = wire_to_internal(wire_query)
+    term = from_tree(internal_query, allow_entry=True)
+    wire_env = envelope(term, allow_entry=True)
+    decoded = decode_document(wire_env, 'EGWindow', allow_entry=True)
+    if not base.same(query_tree(term), query_tree(decoded)):
+        raise ValueError('whole source query/KJSON typed inverse differs')
+    if not same_whole(ports.to_snapshot(wire_query['arguments'][0]), before):
+        raise ValueError('before snapshot field-port inverse differs')
+    if ENTRY_NAME in base.codec.REG or len(base.codec.REG) != len(DATA_REG):
+        raise ValueError('entry label lifetime not restored to DATA registry')
+    return term, wire_env, wire_query
+```
+
+The only changed line inside this function is:
+
+Old:
+
+```python
+    if not base.same(base.tree(term), base.tree(decoded)):
+```
+
+New:
+
+```python
+    if not base.same(query_tree(term), query_tree(decoded)):
+```
+
+The full typed query inverse assertion is retained.
+
+Entry admission remains root-only in `from_tree`, `_encode_node`, and `_decode_node`; `query_tree` additionally refuses any non-DATA descendant, including a nested `egTwoEventWindow`.
+
+Final DATA-only registry restoration is preserved by `_codec_reg`’s `finally` on success, comparison failure, and `base.tree` failure.
+
+## Correction 3 — corrected complete test method
+
+Replace the complete existing `test_actual_label_query_inverse_and_entry_lifetime` method with:
+
+```python
+    def test_actual_label_query_inverse_and_entry_lifetime(self):
+        self.assertEqual(len(r.LABELS), 306)
+        self.assertEqual(len(r.DATA_REG), 279)
+        self.assertEqual(len(r.FUNCTION_NAMES), 27)
+        self.assertEqual(r.LABELS['egTwoEventWindow'],
+                         'egTwoEventWindow(_)_SHERLOCK-ENVGET-POSITIVE-STEP_EGWindow_EGSnapshot')
+        self.assertEqual(r.REVERSE_LABELS[r.LABELS['egTwoEventWindow']],
+                         'egTwoEventWindow')
+        x = fixture()
+        term, wire_env, _wire_query = r.build_query_term(x)
+        self.assertEqual(term.name, 'egTwoEventWindow')
+        self.assertEqual(term.sort, 'EGWindow')
+        decoded = r.decode_document(wire_env, 'EGWindow', allow_entry=True)
+        self.assertTrue(r.base.same(r.query_tree(term), r.query_tree(decoded)))
+        self.assertNotIn('egTwoEventWindow', r.base.codec.REG)
+        self.assertEqual(r.base.codec.REG, r.DATA_REG)
+        with self.assertRaises(ValueError):
+            r.query_tree(decoded.args[0])
+        self.assertNotIn('egTwoEventWindow', r.base.codec.REG)
+        self.assertEqual(r.base.codec.REG, r.DATA_REG)
+        with self.assertRaises(ValueError):
+            r.from_tree(r.wire_to_internal(p.query(x)))
+        with self.assertRaises(ValueError):
+            r.decode_document(wire_env, 'EGWindow')
+        self.assertEqual(r.base.codec.REG, r.DATA_REG)
+```
+
+No test is added or removed.
+
+Final explicit test-method count remains **16**: 9 `FieldPorts` methods plus 7 `EnvGetRuntimeTests` methods.
+
+## Remaining static source/API gaps
+
+None identified within the two-blocker scope after these corrections.
+
+No K syntax/rules/input/map/compiled-15 change is made. No expected/afterstate read is added. The protected independent Rust artifact remains `MISMATCH` and is not repaired, relabelled, or assumed to match.

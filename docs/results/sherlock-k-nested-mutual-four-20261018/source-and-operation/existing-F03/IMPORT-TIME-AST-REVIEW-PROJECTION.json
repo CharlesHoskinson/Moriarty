@@ -1,0 +1,1671 @@
+{
+  "method": "complete top-level statement membership; required globals and every call-bearing assignment inline; other literal old-wrapper metadata factored by RHS digest. All function bodies except selected complete closure not re-reviewed, never called.",
+  "statements": [
+    {
+      "kind": "Expr",
+      "line": 2,
+      "endLine": 37,
+      "literal_source": "\"\"\"Sherlock K-A attempt-engine-F03-01: one-case F03 raw K engine capture. No recompile.\n\nDerived from the consumed attempt-engine-N01-01 driver (53993B, SHA256\naf9f49b07af4b8d16607fd7cbe01df79ff30302a782084ab502a17dda10e56d2) under\nunchanged per-child controls (30 s wall, 3 s sweep, RLIMIT_CORE 0,\nRLIMIT_FSIZE 512 MiB, umask 077, minimal environment, no host PATH).\nConsumed attempt-engine-N01-01 and its ledger remain untouched.\n\n  python3 -I -B k_engine_attempt_f03_01.py --preflight-only\n      Read-only gates and inventories. No directory, claim, ledger record or\n      child. Prints driver_sha256 and identity_sha256 for review.\n  python3 -I -B k_engine_attempt_f03_01.py --execute \\\\\n          --approved-driver-sha256 HEX --approved-identity-sha256 HEX\n      Exactly one terminal attempt-engine-F03-01 in the R251 actual/k root.\n      Never retried, never reset.\n\nFixed stages (195 child processes + 1 driver-only local initializer = 196 stages),\nstrictly in order:\n\n  kast               pinned JRE, org.kframework.main.Main -kast, frozen F03 input\n                     (F03-fuel093-stack064.ui, 359B, fuel 93, stack limit 64)\n  initializer        driver only: the parsed UIRun is bound as $PGM under the\n                     compiled LblinitGeneratedTopCell; no cell or rule is written\n  exec-000           pinned .kore-exec-wrapped depth-0 pre-startup normalization\n  exec-001           pinned .kore-exec-wrapped depth-1 startup transition\n  exec-002..exec-094 pinned .kore-exec-wrapped depth-1 steps (93 charged transitions)\n  exec-095           pinned .kore-exec-wrapped depth-1 step (free publication)\n  exec-096           pinned .kore-exec-wrapped depth-1 separate terminal probe\n  print-000..096     pinned kprint on each of the 97 states, observation only\n\nA stage is consumed once its ledger claim is appended. The first problem\n(launch error, nonzero exit, signal, timeout, containment breach, missing\nproduct, unexpected stage file, protected-tree change or captured-artifact\nchange) stops the attempt: no retry, no alternate method. Outputs are kept\nraw and hashed; nothing is decoded, matched, labelled or certified.\n\"\"\""
+    },
+    {
+      "kind": "Import",
+      "line": 38,
+      "endLine": 38,
+      "literal_source": "import argparse"
+    },
+    {
+      "kind": "Import",
+      "line": 39,
+      "endLine": 39,
+      "literal_source": "import datetime"
+    },
+    {
+      "kind": "Import",
+      "line": 40,
+      "endLine": 40,
+      "literal_source": "import hashlib"
+    },
+    {
+      "kind": "Import",
+      "line": 41,
+      "endLine": 41,
+      "literal_source": "import json"
+    },
+    {
+      "kind": "Import",
+      "line": 42,
+      "endLine": 42,
+      "literal_source": "import os"
+    },
+    {
+      "kind": "Import",
+      "line": 43,
+      "endLine": 43,
+      "literal_source": "import re"
+    },
+    {
+      "kind": "Import",
+      "line": 44,
+      "endLine": 44,
+      "literal_source": "import resource"
+    },
+    {
+      "kind": "Import",
+      "line": 45,
+      "endLine": 45,
+      "literal_source": "import secrets"
+    },
+    {
+      "kind": "Import",
+      "line": 46,
+      "endLine": 46,
+      "literal_source": "import signal"
+    },
+    {
+      "kind": "Import",
+      "line": 47,
+      "endLine": 47,
+      "literal_source": "import stat"
+    },
+    {
+      "kind": "Import",
+      "line": 48,
+      "endLine": 48,
+      "literal_source": "import subprocess"
+    },
+    {
+      "kind": "Import",
+      "line": 49,
+      "endLine": 49,
+      "literal_source": "import sys"
+    },
+    {
+      "kind": "Import",
+      "line": 50,
+      "endLine": 50,
+      "literal_source": "import time"
+    },
+    {
+      "kind": "Assign",
+      "line": 52,
+      "endLine": 52,
+      "targets": [
+        "WORKSPACE"
+      ],
+      "rhs_sha256": "37e11659f565ece93879f6df5bceaa647845765eee6c9854068251447257c180",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 53,
+      "endLine": 53,
+      "targets": [
+        "RUNTIME_PARENT"
+      ],
+      "rhs_sha256": "6a118641eb010a38c2d01476983191d0e5ad59092fcd956f4783440061244aa5",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 54,
+      "endLine": 54,
+      "targets": [
+        "RUNTIME"
+      ],
+      "rhs_sha256": "668449280b2bed51d65db5ed126bedc573f21784519f5eba96b843901f20fa74",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 56,
+      "endLine": 56,
+      "targets": [
+        "CONSUMED_N01_ATTEMPT_NAME"
+      ],
+      "rhs_sha256": "f5634478ea29275e35c68ba612b39d51eab00151dafe41d6816f8702db423a1d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 57,
+      "endLine": 57,
+      "targets": [
+        "CONSUMED_N01_ATTEMPT"
+      ],
+      "rhs_sha256": "34b02d8445e6303752787a7bc89e4152175632ee1cf254c3ac320b4b5ff98f30",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 58,
+      "endLine": 58,
+      "targets": [
+        "CONSUMED_N01_LEDGER"
+      ],
+      "rhs_sha256": "cb3128ea33bb4a6ba34ff1cda02bdc0153082f59e288053af54f1a3cb0c7c167",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 59,
+      "endLine": 59,
+      "targets": [
+        "HISTORICAL_N01_DRIVER_SHA256"
+      ],
+      "rhs_sha256": "3b3c875c59a2c5c3b54eaedd96881a5632f3facc21997dd976ae9b9bc25c09d6",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 60,
+      "endLine": 60,
+      "targets": [
+        "HISTORICAL_N01_DRIVER_BYTES"
+      ],
+      "rhs_sha256": "0a212867d112323f81ae826c35c1c345ec65810d320ade84d7ba0e985e5461ca",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 62,
+      "endLine": 62,
+      "targets": [
+        "PLAN_PARENT"
+      ],
+      "rhs_sha256": "127632f2ad8c6f31e98f1fad66c2aa17236bdeee09a1d470b907e206e9da9b8f",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 63,
+      "endLine": 63,
+      "targets": [
+        "PLAN_ROOT"
+      ],
+      "rhs_sha256": "f23cf7b482c4c7234951e7f5228780d7e6422c0ad937b957438b64e9257ffcd9",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 64,
+      "endLine": 64,
+      "targets": [
+        "ACTUAL_ROOT"
+      ],
+      "rhs_sha256": "330a7e5ba53aefe14a4bfe21e81e9a2cc5829c32cce36ba58a26802bcb60ab42",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 65,
+      "endLine": 65,
+      "targets": [
+        "ATTEMPT_NAME"
+      ],
+      "rhs_sha256": "1bf2c05592c91cc9b67271425a9b097610068b5af8ec2eb32f37a14eb11462b5",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 66,
+      "endLine": 66,
+      "targets": [
+        "ATTEMPT"
+      ],
+      "rhs_sha256": "e7fa89cea4ac9e5fa5145c8f586b97aff6edef934ff1a4d98546ab6a0c93b244",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 67,
+      "endLine": 67,
+      "targets": [
+        "STAGES_DIR"
+      ],
+      "rhs_sha256": "4af308f2bf99cb230053c3733f39d75a926dd41b5976105c21b42ce9d5892d21",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 68,
+      "endLine": 68,
+      "targets": [
+        "RECEIPT"
+      ],
+      "rhs_sha256": "2cdb1f3678d55773fcd650f0a0ee1bcb3da0a1e0d4d9939df7aa775a1b2428ff",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 69,
+      "endLine": 69,
+      "targets": [
+        "LEDGER"
+      ],
+      "rhs_sha256": "8383f0fa6549b12e557a0a277d44b80b5dc13055a957af82e1cc85334a58077d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 71,
+      "endLine": 71,
+      "targets": [
+        "COMPILE_LEDGER"
+      ],
+      "rhs_sha256": "95f4140ae4c4bfcd0085027aa32a11a927d13170681884904b49535483981dec",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 72,
+      "endLine": 72,
+      "targets": [
+        "COMPILE_ATTEMPT"
+      ],
+      "rhs_sha256": "8214f027f41d09eaf13e5c6e59c24d5b10b8594143f8ba068771f73232dce102",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 73,
+      "endLine": 73,
+      "targets": [
+        "COMPILE_DRIVER_SHA256"
+      ],
+      "rhs_sha256": "ec07547acfd2c3bcbb2acbe769148f7392c97bf7096288064b9e67682abb146d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 74,
+      "endLine": 74,
+      "targets": [
+        "COMPILE_RECEIPT_SHA256"
+      ],
+      "rhs_sha256": "1507932371cca16dd02d301b07f05a08fe047bfa68d0c93e8f14d0b3672de553",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 75,
+      "endLine": 75,
+      "targets": [
+        "COMPILED"
+      ],
+      "rhs_sha256": "b2a629e777bea67fe50546809001dc2beb81b7c49a2d5cd21e76f45f7e6980b2",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 76,
+      "endLine": 76,
+      "targets": [
+        "DEFINITION"
+      ],
+      "rhs_sha256": "12bfcf3cba396f97739da32789b39c27cbdca3179ef20d738463b52695b7bd60",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 77,
+      "endLine": 77,
+      "targets": [
+        "SYNTAX_DEFINITION"
+      ],
+      "rhs_sha256": "2ce5a6fc04297b67945c3411417c1ad12ad8b5b2128b1fa756a88c9c369b931c",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 78,
+      "endLine": 78,
+      "targets": [
+        "MACROS"
+      ],
+      "rhs_sha256": "0c3b306e7379e8ae45455bc5165416e7694107dbb21e041d2c5a179788d53da1",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 79,
+      "endLine": 79,
+      "targets": [
+        "COMPILE_INPUT"
+      ],
+      "rhs_sha256": "1333813646109763a826e87ffe7d258f05316bb21511090a4b3ce71dc0fdc4c6",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 80,
+      "endLine": 80,
+      "targets": [
+        "CANDIDATE_SNAPSHOT"
+      ],
+      "rhs_sha256": "c75be73c29a4fa8081bf79db519394c4bece260cb172b981dc5565bbfdd7ae4e",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 81,
+      "endLine": 81,
+      "targets": [
+        "CANDIDATE_RECORD"
+      ],
+      "rhs_sha256": "b9e6b213a4c08d8e2001a7d4719c9ab125594851bf3abbb1fa3bdbc65b0f9fa4",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 82,
+      "endLine": 82,
+      "targets": [
+        "CANDIDATE_RECORD_SHA256"
+      ],
+      "rhs_sha256": "ff5829fb5526cca4f43aa7426f16e0b6dcbefb1560c018e84eb1ab77cedac602",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 84,
+      "endLine": 84,
+      "targets": [
+        "N01_INPUTS"
+      ],
+      "rhs_sha256": "dd51618310ab5faa9111d8b9cca00a0cb7091149c98201fac0167123204dc1f7",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 85,
+      "endLine": 85,
+      "targets": [
+        "N01_INPUT"
+      ],
+      "rhs_sha256": "ff39df6633da3a5d623097a129b5ae7975db57bda3558e38c2d1fc2330d3d59f",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 86,
+      "endLine": 86,
+      "targets": [
+        "N01_INPUT_SHA256"
+      ],
+      "rhs_sha256": "5851aa23748b4510db836cc5b209d0d229a0f43db3dc61099bf988e67f541900",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 87,
+      "endLine": 87,
+      "targets": [
+        "N01_INPUT_BYTES"
+      ],
+      "rhs_sha256": "44cb730c420480a0477b505ae68af508fb90f96cf0ec54c6ad16949dd427f13a",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 89,
+      "endLine": 89,
+      "targets": [
+        "INPUTS"
+      ],
+      "rhs_sha256": "20a90933689eae51d1727347f7792cbb5036fc9a9ca6a3c788f116ab6a8776c9",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 90,
+      "endLine": 90,
+      "targets": [
+        "INPUT"
+      ],
+      "rhs_sha256": "9d648b8f3c219353b5ab0f89415d90f5c992ca75cbd6cdce3a89d6b36822a59b",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 91,
+      "endLine": 91,
+      "targets": [
+        "INPUT_SHA256"
+      ],
+      "rhs_sha256": "cfadd675f252baf750fd9466eab0f7d343586eae08c7a31209e12c7298ec4e4e",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 92,
+      "endLine": 92,
+      "targets": [
+        "INPUT_BYTES"
+      ],
+      "rhs_sha256": "9197e4844abed2fea3569a2acf7b0d584c979c333ab7ae10ba6c339898776f5a",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 93,
+      "endLine": 93,
+      "targets": [
+        "INITIAL_FUEL"
+      ],
+      "rhs_sha256": "6e4001871c0cf27c7634ef1dc478408f642410fd3a444e2a88e301f5c4a35a4d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 94,
+      "endLine": 94,
+      "targets": [
+        "STACK_LIMIT"
+      ],
+      "rhs_sha256": "a68b412c4282555f15546cf6e1fc42893b7e07f271557ceb021821098dd66c1b",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 96,
+      "endLine": 96,
+      "targets": [
+        "PROSPECTIVE_K_COMMANDS"
+      ],
+      "rhs_sha256": "fe4cfc9fab1dc635b5ead0252112106bf5271ed43df946494ad2343c27a2f444",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 97,
+      "endLine": 97,
+      "targets": [
+        "PROSPECTIVE_K_COMMANDS_SHA256"
+      ],
+      "rhs_sha256": "02c005ac1a6689354f769cfcef03701466a9279686c527c02c955ffa43ab34c9",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 98,
+      "endLine": 98,
+      "targets": [
+        "PROSPECTIVE_K_COMMANDS_BYTES"
+      ],
+      "rhs_sha256": "f7471268f8b72c33120b04f122c0a6f76cb462012a707b17a2bd43fbb6a8badb",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 99,
+      "endLine": 99,
+      "targets": [
+        "PROSPECTIVE_K_COMMANDS_COUNT"
+      ],
+      "rhs_sha256": "1dfacb2ea5a03e0a915999e03b5a56196f1b1664d2f768d1b7eff60ac059789d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 100,
+      "endLine": 100,
+      "targets": [
+        "INITIALIZER_RECIPE_SHA256"
+      ],
+      "rhs_sha256": "7c2df7c9f2085ac126c0ed86e1af913ecd81973ea80034d87827c68b1b444454",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 101,
+      "endLine": 101,
+      "targets": [
+        "INITIALIZER_RECIPE_BYTES"
+      ],
+      "rhs_sha256": "96382608813353bee4eeaf0635a3b3356276fece94fe8c9cf048871078f8fd14",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 102,
+      "endLine": 102,
+      "targets": [
+        "READ_IMPORT_PINS"
+      ],
+      "rhs_sha256": "055b53ef429c418b54d7470587d11dad0cc572e9036f6ae0553996388ec6a21c",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 103,
+      "endLine": 103,
+      "targets": [
+        "READ_IMPORT_PINS_SHA256"
+      ],
+      "rhs_sha256": "00a9e5065cbe4c23d989eabb489fb47f48b0001d7d7590f11a0b25611327211f",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 104,
+      "endLine": 104,
+      "targets": [
+        "READ_IMPORT_PINS_BYTES"
+      ],
+      "rhs_sha256": "e9731841267c45a764eee59b59df31d954cb832925ead4a0f139e13524691ea8",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 106,
+      "endLine": 106,
+      "targets": [
+        "INTERPRETER_SHA256"
+      ],
+      "rhs_sha256": "c1db71ab98c83fecf3ec47f3cc12fbe57c70071a0bf3d14ed8779e1ca28e9bd5",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 108,
+      "endLine": 108,
+      "targets": [
+        "STORE"
+      ],
+      "rhs_sha256": "fd3b8c68d331b7a78551389c175d0fcf847f10484f95798bd5f8c53420a38db7",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 109,
+      "endLine": 109,
+      "targets": [
+        "K_ROOT"
+      ],
+      "rhs_sha256": "c43f71affc265f883fef14d6c3de0494574678898eb5073190af5648746d9886",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 110,
+      "endLine": 110,
+      "targets": [
+        "JRE_ROOT"
+      ],
+      "rhs_sha256": "dccec228383214ebfe6f80b5d01add72c87b13e2d1feb79568e9ebfa28e8fcaa",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 111,
+      "endLine": 111,
+      "targets": [
+        "JAVA"
+      ],
+      "rhs_sha256": "e475b7bf186f82eaea0351eb55850046c8ff7ede931bf0418eda8a55aed4c1ac",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 112,
+      "endLine": 112,
+      "targets": [
+        "K_JARS"
+      ],
+      "rhs_sha256": "04fe68ceb73416b7881799903fe632d7e99bfa30266748150b94cb4c3fb1c0e9",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 113,
+      "endLine": 113,
+      "targets": [
+        "K_BUILTIN"
+      ],
+      "rhs_sha256": "9c230bae3ec8b807469fc146839e26fb8e2aaba42299c6f57dd688836adca66c",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 114,
+      "endLine": 114,
+      "targets": [
+        "K_WRAPPER"
+      ],
+      "rhs_sha256": "5d234534f47764518336d5730da8f5144b5364fdf840379127e89f9d3b04511c",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 115,
+      "endLine": 115,
+      "targets": [
+        "K_UNWRAPPED"
+      ],
+      "rhs_sha256": "442bf5dee1c27486283adbabb844fdea10af75fca08b422798d47973012868eb",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 116,
+      "endLine": 116,
+      "targets": [
+        "K_LIBRARY"
+      ],
+      "rhs_sha256": "fadd2d6442b9f526cd91507cc8ab1ad2bfa196adbd844fa89a18990a164e7402",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 117,
+      "endLine": 117,
+      "targets": [
+        "K_KAST_UNWRAPPED"
+      ],
+      "rhs_sha256": "adca4349fcd8dc986c5f609cb4d84f66e69897bc22bc64f19f58fd9e7a8466a6",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 118,
+      "endLine": 118,
+      "targets": [
+        "K_KORE_PRINT_UNWRAPPED"
+      ],
+      "rhs_sha256": "6bd269649d5907d0b39d7f1d5e321d3a2e0bc893027f7f2e7a77e1e026dd3ffc",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 119,
+      "endLine": 119,
+      "targets": [
+        "K_KORE_PRINT_WRAPPER"
+      ],
+      "rhs_sha256": "7669ff2400990d4146ab505b9a27208cc190048846d0352941336bdfca6a7d23",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 120,
+      "endLine": 125,
+      "targets": [
+        "TOOL_ROOTS"
+      ],
+      "rhs_sha256": "ca2fcce0f1db235a95a247c624755c2045f69976d750b4eab658d4f8a7e23d82",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 126,
+      "endLine": 126,
+      "targets": [
+        "GCC_ROOT"
+      ],
+      "rhs_sha256": "bb2a7651895eea031f85795d6a5d066da24a2fa5ee0503abc82462facf27ed5b",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "GCC_ROOT = dict(TOOL_ROOTS)['gcc']"
+    },
+    {
+      "kind": "Assign",
+      "line": 127,
+      "endLine": 127,
+      "targets": [
+        "FLEX"
+      ],
+      "rhs_sha256": "a79880ca38f51337e93ac0a6d44786ac01a0ed0620892d0ffac478a6777ef8c7",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "FLEX = dict(TOOL_ROOTS)['flex'] + '/bin/flex'"
+    },
+    {
+      "kind": "Assign",
+      "line": 128,
+      "endLine": 128,
+      "targets": [
+        "KORE_ROOT"
+      ],
+      "rhs_sha256": "2fad9891cc136d64b0741186d6eb31811d8256678993957c670823aa77fc0081",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "KORE_ROOT = dict(TOOL_ROOTS)['kore-parser']"
+    },
+    {
+      "kind": "Assign",
+      "line": 129,
+      "endLine": 129,
+      "targets": [
+        "Z3_ROOT"
+      ],
+      "rhs_sha256": "755798e0b1f739d9d33f4da1514a3c20ef19a60b694420e9443805c4f565915d",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "Z3_ROOT = dict(TOOL_ROOTS)['z3']"
+    },
+    {
+      "kind": "Assign",
+      "line": 130,
+      "endLine": 130,
+      "targets": [
+        "KORE_EXEC"
+      ],
+      "rhs_sha256": "9ce7525b444ee3e838dc0efa3a15e2587404e0a2947aa7017ecc1c8372b09733",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 131,
+      "endLine": 131,
+      "targets": [
+        "KORE_EXEC_SHA256"
+      ],
+      "rhs_sha256": "213354f701a24cc4f22796c628e900abc2f9743dc3181c168f38157052aa37ce",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 132,
+      "endLine": 132,
+      "targets": [
+        "KORE_EXEC_WRAPPER"
+      ],
+      "rhs_sha256": "7c28195de7eac0fdf6ff8031bf76fc44b07e7e5e60c8c5c637f67d1290ede357",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 133,
+      "endLine": 133,
+      "targets": [
+        "LLVM_ROOT"
+      ],
+      "rhs_sha256": "29cb57b0125accc3d4fe58e2e5adc52f5466290066e86c3747bf13e0b17f8108",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 134,
+      "endLine": 134,
+      "targets": [
+        "KPRINT"
+      ],
+      "rhs_sha256": "ca3809ac7441b404d6131df29040dd3f8c96fa49f5851ae2a8b9945df9df06ba",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 135,
+      "endLine": 135,
+      "targets": [
+        "JAVA_PATH"
+      ],
+      "rhs_sha256": "ca82a612a152ccea914e9800e02306e38904a376bde3743cb9ee2b97bf31bf91",
+      "calls": [
+        "':'.join"
+      ],
+      "literal_source": "JAVA_PATH = ':'.join(root + '/bin' for _, root in TOOL_ROOTS)"
+    },
+    {
+      "kind": "Assign",
+      "line": 136,
+      "endLine": 136,
+      "targets": [
+        "KORE_EXEC_PATH"
+      ],
+      "rhs_sha256": "da1b8073e3e1fe1acf7abc03c5e933a5f5b6dac320417f8679353d66fae95d59",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 138,
+      "endLine": 138,
+      "targets": [
+        "CHILD_SECONDS"
+      ],
+      "rhs_sha256": "624b60c58c9d8bfb6ff1886c2fd605d2adeb6ea4da576068201b6c6958ce93f4",
+      "calls": [],
+      "literal_source": "CHILD_SECONDS = 30"
+    },
+    {
+      "kind": "Assign",
+      "line": 139,
+      "endLine": 139,
+      "targets": [
+        "SWEEP_SECONDS"
+      ],
+      "rhs_sha256": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+      "calls": [],
+      "literal_source": "SWEEP_SECONDS = 3"
+    },
+    {
+      "kind": "Assign",
+      "line": 140,
+      "endLine": 140,
+      "targets": [
+        "FILE_SIZE_LIMIT"
+      ],
+      "rhs_sha256": "38496d62864bc2a21b9f637a8c8bc440df46a2b016939dc620d166d41bfa79d9",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 141,
+      "endLine": 141,
+      "targets": [
+        "TOKEN_NAME"
+      ],
+      "rhs_sha256": "1e95b208271aa502b871bfb866ab5af92c226c08c4605fcf21472f43a18f9d4b",
+      "calls": [],
+      "literal_source": "TOKEN_NAME = 'SHERLOCK_K_ATTEMPT_TOKEN'"
+    },
+    {
+      "kind": "Assign",
+      "line": 142,
+      "endLine": 142,
+      "targets": [
+        "STORE_ROOT"
+      ],
+      "rhs_sha256": "71bf1640ea417f9680adc2ee801bccd3f7eebc548a03c43737a85e21066e2a72",
+      "calls": [
+        "re.compile"
+      ],
+      "literal_source": "STORE_ROOT = re.compile(rb'/nix/store/[0-9a-z]{32}-[0-9A-Za-z+._?=-]+')"
+    },
+    {
+      "kind": "Assign",
+      "line": 143,
+      "endLine": 143,
+      "targets": [
+        "EMPTY_SHA256"
+      ],
+      "rhs_sha256": "0bcdfc8dcd6beea3c8bb438552618e364c76f9e016e13b67c1f3821ecf9d11f7",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 145,
+      "endLine": 145,
+      "targets": [
+        "MAIN_REL"
+      ],
+      "rhs_sha256": "b079b2e6d6d61fc6a2207669bcf3ab267c00a8a340426294ba21334d93ebab05",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 146,
+      "endLine": 146,
+      "targets": [
+        "MAIN_SHA256"
+      ],
+      "rhs_sha256": "fbd6539fc3bbc3effa91f5814c58abe5df408eea9ef29de9f732e93d9ae8523b",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 147,
+      "endLine": 147,
+      "targets": [
+        "MAIN_BYTES"
+      ],
+      "rhs_sha256": "072db31ce670255297c5d67fd00068faf81a7f50223b5a5af0f555aa69815fe0",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 148,
+      "endLine": 160,
+      "targets": [
+        "HISTORICAL_N01_SOURCE_FILES"
+      ],
+      "rhs_sha256": "24f6c9416b750abaf7c015b440e27a9590d5ad6ee54ec60ed28fd597d9ea0b64",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 161,
+      "endLine": 173,
+      "targets": [
+        "SOURCE_FILES"
+      ],
+      "rhs_sha256": "16cff616b295f4e69bae21247458da48eb248d0099105b27ecb71979e62f9319",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 174,
+      "endLine": 174,
+      "targets": [
+        "K_SRC"
+      ],
+      "rhs_sha256": "3c9978dec3a70cebeb3e30c514ef36d7095ea47e99520c2c2cb457e712de7b75",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 175,
+      "endLine": 175,
+      "targets": [
+        "KORE_PKG"
+      ],
+      "rhs_sha256": "2a1bdde327fc519c5e0eff8037005826668399ffeb4aa9d3a3b244317c2c3b47",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 176,
+      "endLine": 176,
+      "targets": [
+        "KORE_SRC"
+      ],
+      "rhs_sha256": "ec6f2a90817bc9a46955083b5527c84673b9fd0a7a02dd94fd8de975f66435a0",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 177,
+      "endLine": 177,
+      "targets": [
+        "LLVM_SRC"
+      ],
+      "rhs_sha256": "1aa5b6560c6d6118c81ca6ede0f21e6361107d98f5d7be5ac48b9178fc220748",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 178,
+      "endLine": 216,
+      "targets": [
+        "PRIMARY_SOURCES"
+      ],
+      "rhs_sha256": "3dd27acb072c4a2c07d7c42a7c34a77ad5cf171eee1e5e35d0ed84163d8adfa0",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 217,
+      "endLine": 223,
+      "targets": [
+        "PINNED_FILES"
+      ],
+      "rhs_sha256": "6a1e65e1109f88f99dcf2380c83b4e8343618ac359c68e8c64dbbb7589900160",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 224,
+      "endLine": 247,
+      "targets": [
+        "COMPILE_TREE"
+      ],
+      "rhs_sha256": "00ab2897e7c453c36e408f7b98669a4013c8c78168683982c6f8771b571c7b3c",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 248,
+      "endLine": 249,
+      "targets": [
+        "COMPILE_INPUT_SHAPE"
+      ],
+      "rhs_sha256": "8f17e818a0b72174d436c060289214344b12f8c895305497284dc48bd34fbf5c",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 252,
+      "endLine": 253,
+      "targets": [
+        "UIRUN_OPEN"
+      ],
+      "rhs_sha256": "5533981bcd40e1f2471109f27b39c18d65a30f63c749a41d1d5e0fdc9b209971",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 254,
+      "endLine": 263,
+      "targets": [
+        "DEFINITION_MARKERS"
+      ],
+      "rhs_sha256": "219d2aad6ea39fecd49c9c91e6d8acbced0892ce5197af507146179912eea669",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 264,
+      "endLine": 266,
+      "targets": [
+        "INIT_PREFIX"
+      ],
+      "rhs_sha256": "336efca53f1e83bd62d7eea13a0eba8e218d10d2c301a99a50add526181df184",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 267,
+      "endLine": 267,
+      "targets": [
+        "INIT_SUFFIX"
+      ],
+      "rhs_sha256": "cf70693ff4bccf40a20ef84e33f98c7b3dbda34009e43344c8db84975238a32b",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 268,
+      "endLine": 268,
+      "targets": [
+        "PARSED_LIMIT"
+      ],
+      "rhs_sha256": "2acfd08aa731ac7cb3a84903b096431859617ae369863aeea33912a3220616d4",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 269,
+      "endLine": 269,
+      "targets": [
+        "LOG_ENTRIES"
+      ],
+      "rhs_sha256": "c6eb2494514939463fe1b1277a7d87ecc6f00a14afd32dc3a17b88422cb9d230",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 271,
+      "endLine": 271,
+      "targets": [
+        "STAGE_KAST"
+      ],
+      "rhs_sha256": "eaaccaf663fd34f0dbeecdb83abbb3b2d063b2d29bc92752750c43e31f28d49d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 272,
+      "endLine": 272,
+      "targets": [
+        "STAGE_INIT"
+      ],
+      "rhs_sha256": "f8e9ca7630b7557707975ded7213314b6bec6c66e532e84b6a0401a02abc5e5d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 273,
+      "endLine": 273,
+      "targets": [
+        "ENGINE_STAGE_MAX_INDEX"
+      ],
+      "rhs_sha256": "7b1a278f5abe8e9da907fc9c29dfd432d60dc76e17b0fabab659d2a508bc65c4",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 274,
+      "endLine": 276,
+      "targets": [
+        "ENGINE_STAGES"
+      ],
+      "rhs_sha256": "878fe210bc1c281b8b7f6a6e57a13e07d4e7db8baa84a6ea91beb971626a85ca",
+      "calls": [
+        "tuple",
+        "range"
+      ],
+      "literal_source": "ENGINE_STAGES = (('exec-000', 0),) + tuple(\n    (f'exec-{idx:03d}', 1) for idx in range(1, ENGINE_STAGE_MAX_INDEX + 1)\n)"
+    },
+    {
+      "kind": "Assign",
+      "line": 277,
+      "endLine": 277,
+      "targets": [
+        "PRINT_STAGES"
+      ],
+      "rhs_sha256": "359c18135b5e6fea2ca34751f61f50adc7fe61a7d93ebb1b2a562864406be1b4",
+      "calls": [
+        "tuple",
+        "range"
+      ],
+      "literal_source": "PRINT_STAGES = tuple(f'print-{idx:03d}' for idx in range(ENGINE_STAGE_MAX_INDEX + 1))"
+    },
+    {
+      "kind": "Assign",
+      "line": 278,
+      "endLine": 278,
+      "targets": [
+        "CHILD_STAGE_NAMES"
+      ],
+      "rhs_sha256": "c5a18aad8d7faa822e2f42dc2fb83ba026b91bb0f8e378a1292e219331b9d7ee",
+      "calls": [
+        "tuple"
+      ],
+      "literal_source": "CHILD_STAGE_NAMES = (STAGE_KAST,) + tuple(name for name, _ in ENGINE_STAGES) + PRINT_STAGES"
+    },
+    {
+      "kind": "Assign",
+      "line": 279,
+      "endLine": 279,
+      "targets": [
+        "STAGE_NAMES"
+      ],
+      "rhs_sha256": "4d691e1f68fb740b863e35b04661cae4fb0eb900308a8f26fd761076a807acc3",
+      "calls": [
+        "list"
+      ],
+      "literal_source": "STAGE_NAMES = [STAGE_KAST, STAGE_INIT] + [name for name, _ in ENGINE_STAGES] + list(PRINT_STAGES)"
+    },
+    {
+      "kind": "Assign",
+      "line": 281,
+      "endLine": 477,
+      "targets": [
+        "PROSPECTIVE_STAGE_TOKENS"
+      ],
+      "rhs_sha256": "6dfec8533fd15c1fec3056c987cfd00fc7497f54c325810127e5be9c78596eb7",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 479,
+      "endLine": 492,
+      "targets": [
+        "STAGE_GEOMETRY"
+      ],
+      "rhs_sha256": "1bf3038977eaef338f332312546c06886c44d714c3ce08679c2fb913564b5336",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "STAGE_GEOMETRY = dict(\n    total_child_commands=PROSPECTIVE_K_COMMANDS_COUNT,\n    kast_children=1,\n    local_initializer_stages=1,\n    kore_exec_children=97,\n    kprint_children=97,\n    prestartup_raw=('kast', 'initializer', 'exec-000', 'print-000'),\n    startup_probe=('exec-001', 'print-001'),\n    post_startup_state_prints='print-001..print-095 (95 states)',\n    charged_transitions='exec-002..exec-094 (93 charged steps)',\n    free_publication_transition=('exec-095', 'print-095'),\n    terminal_probe=('exec-096', 'print-096'),\n    arithmetic_child_wall_cap_sum_seconds=PROSPECTIVE_K_COMMANDS_COUNT * CHILD_SECONDS,\n)"
+    },
+    {
+      "kind": "Assign",
+      "line": 493,
+      "endLine": 495,
+      "targets": [
+        "LIMITS"
+      ],
+      "rhs_sha256": "14757fecaca8e53eb7b456c0a5a00ee139c23688ad2f100bcbbdac8a9c1f9553",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "LIMITS = dict(wall_seconds=CHILD_SECONDS, sweep_seconds=SWEEP_SECONDS, rlimit_core=0, umask='0o077',\n              process_group='new session; SIGKILL to group at deadline and after exit; token sweep',\n              memory_cpu='tool defaults, as for the admitted native compile children; only the JVM is bounded')"
+    },
+    {
+      "kind": "Assign",
+      "line": 496,
+      "endLine": 496,
+      "targets": [
+        "JVM_LIMITS"
+      ],
+      "rhs_sha256": "6e10476ce16fe05bb9297f118b3c13cf706ff68a9fa8b48131da79b10f50d537",
+      "calls": [
+        "dict"
+      ],
+      "literal_source": "JVM_LIMITS = dict(jvm_heap='64m..512m', jvm_stack='32m', jvm_active_processors=2)"
+    },
+    {
+      "kind": "Assign",
+      "line": 497,
+      "endLine": 502,
+      "targets": [
+        "EXPECTATIONS"
+      ],
+      "rhs_sha256": "1c37a1066142f140338638542e3f19e363108350935557c9108b385ba6701f7d",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 503,
+      "endLine": 506,
+      "targets": [
+        "SCOPE"
+      ],
+      "rhs_sha256": "70b774e9b08c733eb5dcb9e0374dc79d508c644a0e75bd107bff50cd1a0f2e98",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "Assign",
+      "line": 507,
+      "endLine": 508,
+      "targets": [
+        "IDENTITY_KEYS"
+      ],
+      "rhs_sha256": "73c108467426aea78aecce2996840a91e99a65ec9a3b57a53718189cff189061",
+      "calls": [],
+      "factored": "literal/container/operator expression; complete original text in IMPORT-TIME-AST.json and pinned full source; not consumed by selected callable"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 511,
+      "endLine": 512,
+      "definition_only": "utc"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 515,
+      "endLine": 519,
+      "definition_only": "environment"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 522,
+      "endLine": 527,
+      "definition_only": "sha256_file"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 530,
+      "endLine": 534,
+      "definition_only": "file_digest"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 537,
+      "endLine": 552,
+      "definition_only": "read_exact"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 555,
+      "endLine": 560,
+      "definition_only": "read_store"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 563,
+      "endLine": 564,
+      "definition_only": "open_exclusive"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 567,
+      "endLine": 575,
+      "definition_only": "write_exclusive"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 578,
+      "endLine": 585,
+      "definition_only": "append_ledger"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 588,
+      "endLine": 602,
+      "definition_only": "entry"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 605,
+      "endLine": 614,
+      "definition_only": "tree"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 617,
+      "endLine": 631,
+      "definition_only": "check_sources"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 634,
+      "endLine": 646,
+      "definition_only": "check_primary"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 649,
+      "endLine": 663,
+      "definition_only": "check_pinned"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 666,
+      "endLine": 671,
+      "definition_only": "store_executable"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 674,
+      "endLine": 683,
+      "definition_only": "elf_magic"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 686,
+      "endLine": 700,
+      "definition_only": "store_refs"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 703,
+      "endLine": 726,
+      "definition_only": "packaging_evidence"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 729,
+      "endLine": 742,
+      "definition_only": "kprint_linkage"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 745,
+      "endLine": 769,
+      "definition_only": "nix_support_flags"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 772,
+      "endLine": 779,
+      "definition_only": "locate"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 782,
+      "endLine": 800,
+      "definition_only": "compiler_closure"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 803,
+      "endLine": 811,
+      "definition_only": "compile_attempt_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 814,
+      "endLine": 819,
+      "definition_only": "compile_input_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 822,
+      "endLine": 842,
+      "definition_only": "candidate_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 845,
+      "endLine": 859,
+      "definition_only": "input_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 862,
+      "endLine": 886,
+      "definition_only": "prospective_plan_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 889,
+      "endLine": 902,
+      "definition_only": "compiled_content_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 905,
+      "endLine": 907,
+      "definition_only": "pinned_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 910,
+      "endLine": 924,
+      "definition_only": "compile_ledger_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 927,
+      "endLine": 939,
+      "definition_only": "engine_ledger_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 942,
+      "endLine": 964,
+      "definition_only": "runtime_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 967,
+      "endLine": 980,
+      "definition_only": "protected_snapshot"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 983,
+      "endLine": 988,
+      "definition_only": "inventories"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 991,
+      "endLine": 996,
+      "definition_only": "identity"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 999,
+      "endLine": 1036,
+      "definition_only": "preflight"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1039,
+      "endLine": 1066,
+      "definition_only": "processes"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1069,
+      "endLine": 1073,
+      "definition_only": "kill_group"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1076,
+      "endLine": 1091,
+      "definition_only": "sweep"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1094,
+      "endLine": 1135,
+      "definition_only": "launch"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1138,
+      "endLine": 1143,
+      "definition_only": "protected_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1146,
+      "endLine": 1171,
+      "definition_only": "stage_problems"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1174,
+      "endLine": 1211,
+      "definition_only": "child_stage"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1214,
+      "endLine": 1247,
+      "definition_only": "parsed_problem"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1250,
+      "endLine": 1281,
+      "definition_only": "initializer_stage"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1284,
+      "endLine": 1292,
+      "definition_only": "kast_command"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1295,
+      "endLine": 1300,
+      "definition_only": "exec_command"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1303,
+      "endLine": 1304,
+      "definition_only": "kprint_command"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1307,
+      "endLine": 1357,
+      "definition_only": "expected_prospective_k_commands"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1360,
+      "endLine": 1392,
+      "definition_only": "run_stages"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1395,
+      "endLine": 1415,
+      "definition_only": "postflight"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1418,
+      "endLine": 1431,
+      "definition_only": "persist"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1434,
+      "endLine": 1482,
+      "definition_only": "execute"
+    },
+    {
+      "kind": "FunctionDef",
+      "line": 1485,
+      "endLine": 1499,
+      "definition_only": "main"
+    },
+    {
+      "kind": "If",
+      "line": 1502,
+      "endLine": 1503,
+      "literal_source": "if __name__ == '__main__':\n    sys.exit(main())"
+    }
+  ],
+  "full_projection": "context/IMPORT-TIME-AST.json",
+  "selected_closure": "context/EXISTING-LAUNCH-CALLABLE-CLOSURE.py.txt",
+  "execution": "ast.parse only, module not imported"
+}

@@ -1,8 +1,5 @@
 //! Actual CLI replay consumer; all roots and signature attachment are separate inputs.
-use crate::{
-    cli::{ActionInput, SignedProfile},
-    shell::Shell,
-};
+use crate::{cli::ActionInput, shell::Shell};
 #[cfg(feature = "native")]
 use mori_backend::{
     Target,
@@ -13,21 +10,8 @@ use mori_backend::{
 use mori_core::UInt;
 use std::{path::PathBuf, process::ExitCode};
 
-#[derive(Debug, clap::Args, Default)]
-pub struct AuthorizationArgs {
-    /// Strict signed owner-intent profile (signed Targets require the complete group)
-    #[arg(long)]
-    pub profile: Option<SignedProfile>,
-    /// Separately trusted expected account/domain authority
-    #[arg(long, value_name = "FILE")]
-    pub authority: Option<PathBuf>,
-    /// Separately trusted logical time (not authenticated ledger time)
-    #[arg(long)]
-    pub at: Option<u128>,
-    /// Actual external signed wrapper; never loaded from the record
-    #[arg(long, value_name = "FILE")]
-    pub signature: Option<PathBuf>,
-}
+pub use crate::cli_args::replay::AuthorizationArgs;
+
 #[cfg(feature = "native")]
 pub enum LoadedAuthorization {
     Unsigned,
@@ -38,12 +22,6 @@ pub enum LoadedAuthorization {
     },
 }
 impl AuthorizationArgs {
-    pub fn present(&self) -> bool {
-        self.profile.is_some()
-            || self.authority.is_some()
-            || self.at.is_some()
-            || self.signature.is_some()
-    }
     #[cfg(feature = "native")]
     pub fn load(&self, target: &Target) -> super::Result<LoadedAuthorization> {
         if target.signed_policy.is_none() {

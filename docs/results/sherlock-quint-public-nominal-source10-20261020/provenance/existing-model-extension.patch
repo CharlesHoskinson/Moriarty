@@ -1,0 +1,72 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/preimages/nominalConstruction.qnt
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSimulation.qnt
+@@ -1,4 +1,4 @@
+-module nominalConstruction {
++module nominalPublicSimulation {
+   // Separate finite semantic profile, not new K/B rule tags or native ABI.
+   // Closed admitted expressions; source occurrence is distinct from nominal identity.
+   type Token = UIntToken(int) | BoolToken(bool)
+@@ -14,7 +14,7 @@
+   type PatternMatch = {matched: bool, bindings: Environment}
+   type Arm = {pattern: Pattern, body: int}
+   type Op = Add | Sub | Equal
+-  type Expression = Literal(Value) | Variable(int)
++  type Expression = Literal(Value) | Variable(int) | BooleanNot(int)
+     | Let({name: int, value: int, body: int})
+     | Binary({op: Op, left: int, right: int})
+     | If({condition: int, yes: int, no: int})
+@@ -29,6 +29,7 @@
+     | ScopeFrame(Environment)
+     | LeftFrame({op: Op, right: int, saved: Environment})
+     | RightFrame({op: Op, left: Value})
++    | NotFrame
+     | IfFrame({yes: int, no: int, saved: Environment})
+     | ArgumentsFrame({function: int, completed: List[Value], remaining: List[int], saved: Environment})
+     | ReturnFrame({resultType: int, saved: Environment})
+@@ -38,7 +39,7 @@
+     | Cases({value: Value, remaining: List[Arm], saved: Environment, source: int, index: int})
+     | Stopped
+   type Outcome = Pending | Done(Value) | Exhausted | OutsideDomain
+-  type Event = Start | LiteralEvent | VariableEvent | LetEvent | BinaryEvent | IfEvent
++  type Event = Start | LiteralEvent | VariableEvent | LetEvent | BinaryEvent | UnaryEvent | IfEvent
+     | ConstructorIntroduce | ConstructorFieldReturn | ConstructorBuild
+     | CallEvent | ArgumentReturn | CallEnter | CallReturn | ScopeReturn
+     | MatchEvent | MatchReturn | MatchMiss | MatchSelect | PrimitiveReturn | BranchSelect
+@@ -52,7 +53,7 @@
+     enteredArguments: List[List[Value]], maxDepth: int,
+   }
+   var machine: Snapshot
+-  pure val PROFILE = "sherlock-quint-nominal-pattern-worklist/1"
++  pure val PROFILE = "sherlock-quint-public-nominal-source-cases/1"
+   pure val TERMINAL_PUBLICATION_CHARGE = 1
+   pure val FROZEN_K_A_TERMINAL_PUBLICATION_CHARGE = 0
+   pure val MAX_SCALAR = 255
+@@ -172,6 +173,7 @@
+       | Literal(v) => if (validValue(s.program, v)) emit(marked, LiteralEvent, Return(v)) else stopDomain(marked)
+       | Variable(name) => if (s.environment.keys().contains(name))
+           emit(marked, VariableEvent, Return(s.environment.get(name))) else stopDomain(marked)
++      | BooleanNot(operand) => push(marked, NotFrame, operand, s.environment, UnaryEvent)
+       | Let(e) => push(marked, LetFrame({name: e.name, body: e.body, saved: s.environment}), e.value, s.environment, LetEvent)
+       | Binary(e) => push(marked, LeftFrame({op: e.op, right: e.right, saved: s.environment}), e.left, s.environment, BinaryEvent)
+       | If(e) => push(marked, IfFrame({yes: e.yes, no: e.no, saved: s.environment}), e.condition, s.environment, IfEvent)
+@@ -191,6 +193,12 @@
+       val n = if (op == Add) scalar(left) + scalar(right) else scalar(left) - scalar(right)
+       if (n < 0 or n > MAX_SCALAR) stopDomain(s) else emit(s, PrimitiveReturn, Return(uint(n)))
+     }
++  // General ordinary positive Bool negation; uses the same return/frame path.
++  // Other values remain outside this finite typed profile, not a Core refusal.
++  pure def booleanNot(s: Snapshot, value: Value): Snapshot =
++    if (value == List(BoolToken(true))) emit(s, PrimitiveReturn, Return(List(BoolToken(false))))
++    else if (value == List(BoolToken(false))) emit(s, PrimitiveReturn, Return(List(BoolToken(true))))
++    else stopDomain(s)
+   pure def returnField(s: Snapshot, c: Construction, value: Value): Snapshot = {
+     val complete = {...c, completed: c.completed.append(value)}
+     if (c.remaining.length() == 0)
+@@ -208,6 +216,7 @@
+         | ScopeFrame(saved) => {...popped, environment: saved, control: Return(value), event: ScopeReturn}
+         | LeftFrame(f) => push(popped, RightFrame({op: f.op, left: value}), f.right, f.saved, BinaryEvent)
+         | RightFrame(f) => primitive(popped, f.op, f.left, value)
++        | NotFrame => booleanNot(popped, value)
+         | IfFrame(f) => if (value == List(BoolToken(true)))
+             {...popped, environment: f.saved, control: Eval(f.yes), event: BranchSelect}
+           else if (value == List(BoolToken(false)))

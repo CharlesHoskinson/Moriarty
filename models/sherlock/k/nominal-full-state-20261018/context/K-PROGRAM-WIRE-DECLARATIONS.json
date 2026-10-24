@@ -1,0 +1,94 @@
+{
+  "status": "SAFE_DECLARATIONS_ONLY_NO_POPULATED_EXPECTED_OR_ACTUAL_STATES",
+  "schema": "independent-nominal-full-state/1",
+  "profile": "K-uncharged-nominal-let-if-successor",
+  "KProgram": {
+    "NGProgram": [
+      "declarations:TypeDecl[]",
+      "expressions:Node[]",
+      "functions:Function[]",
+      "entry:ExprId"
+    ],
+    "TypeDecl": [
+      "type_id:int",
+      "recursive_group:int",
+      "ctors:Ctor[]"
+    ],
+    "Ctor": [
+      "type_id:int",
+      "ctor_id:int",
+      "source_order:int",
+      "field_types:int[]"
+    ],
+    "Node": [
+      "id:ExprId",
+      "occurrence:int",
+      "kind:ExpressionVariant"
+    ],
+    "Function": [
+      "name_id:int",
+      "parameters:Parameter[]",
+      "return_type_id:int",
+      "body:ExprId"
+    ],
+    "Parameter": [
+      "name_id:int",
+      "type_id:int"
+    ]
+  },
+  "ExpressionVariants": {
+    "ngLiteral": "{Literal:Value}",
+    "ngVariable": "{Variable:{name_id:int}}",
+    "ngAdd": "{Add:{left:ExprId,right:ExprId}}",
+    "ngConstruct": "{Construct:{type_id:int,ctor_id:int,fields:ExprId[]}}",
+    "ngCall": "{Call:{name_id:int,arguments:ExprId[]}}",
+    "ngMatch": "{Match:{scrutinee:ExprId,arms:Arm[]}}",
+    "ngLet": "{Let:{binder:int,bound_expr:ExprId,body_expr:ExprId}}",
+    "ngIf": "{If:{condition_expr:ExprId,yes_expr:ExprId,no_expr:ExprId}}"
+  },
+  "Arm": [
+    "source_arm_id:int",
+    "pattern:Pattern",
+    "body:ExprId"
+  ],
+  "Pattern": [
+    "{Wildcard:{}}",
+    "{Bind:int}",
+    "{Constructor:{type_id:int,ctor_id:int,fields:Pattern[]}}"
+  ],
+  "Value": [
+    "{UInt:int}",
+    "{Bool:bool}",
+    "{Nominal:{type_id:int,ctor_id:int,fields:Value[]}}"
+  ],
+  "Normalization": {
+    "raw_Binary_Add": "Only Binary with op Add in these SAFEinputs maps to currentK ngAdd/normalized kind Add. No general Binary/equality/subtraction type introduced.",
+    "raw_Constructor": "CurrentK normalized tag Construct, not Constructor. Pattern Constructor tag remains Constructor.",
+    "raw_Ctor_parent_type": "Each normalizedCtor row includes parent type_id as encoded in ngCtor, in addition to ctor_id/source_order/field_types.",
+    "raw_Match": "scrutineeExpr maps to scrutinee; sourceArmId to source_arm_id; bodyExpr to body. Event body_expr_id remains a DISTINCT existing label.",
+    "raw_Call": "function maps to name_id, args to arguments; functiondefinition returnType to return_type_id and bodyExpr to body.",
+    "raw_Let": "valueExpr maps to bound_expr, bodyExpr to body_expr; binder unchanged.",
+    "raw_ExprId": "exprId maps to row id; occurrence remains independent, not a rowkey replacement.",
+    "raw_name_fields": "Variable name maps name_id; parameter name maps name_id.",
+    "display_metadata": "SAFEinput TypeDecl.name, constructor.name, function.sourceName are descriptive source sidecars not fields in currentK carriers. Preserve them in SAFEinput document; do not invent/insert them into currentK Program or drop any actualK Program field. No primary canonical ID claim.",
+    "list_order": "Every declaration/constructor/node/function/parameter/argument/arm/pattern-field/value-field/binding/event/frame list retains source/state order. Only environmentMap rows sort by numeric name_id, retaining every row.",
+    "Match_wire": "Exact complete recursivePattern/Arm/BindingPaths declarations separately in PUBLIC-MATCH-WIRE-DECLARATIONS.json."
+  },
+  "State": [
+    "program:KProgram",
+    "control:declared NGControl variant",
+    "environment:MapRows",
+    "frames_top_first:fullNGFrame[]",
+    "events:fullcumulativeNGEvent[]"
+  ],
+  "Root": [
+    "schema",
+    "profile",
+    "caseId",
+    "states",
+    "terminalStepContract",
+    "observerCuts"
+  ],
+  "observer_policy": "Allobservedstateordinals; derive range(actual_states length) before opening anyexpected; no separatecuts/resume.",
+  "no_model_change": "All declarations describe unchanged alreadyreviewedactualpassedK model/codec. No new fullwireversion/profile, evaluator branch, fieldalias or sourceadmission guard."
+}

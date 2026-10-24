@@ -1,0 +1,230 @@
+{
+  "status": "DECLARATION_ONLY_SAFE_FOR_SOURCE_AUTHOR_NO_POPULATED_EXPECTATIONS",
+  "scope": "Read schema and opaque paths only. Do not open or inspect populated fixture files, source-ID tables or work cells. Existing frozen oracle bytes are unchanged.",
+  "root_shape": {
+    "kind": "JSON object",
+    "required_keys": [
+      "profile",
+      "comparison_domain",
+      "complete_program",
+      "snapshot_format",
+      "record_representation",
+      "snapshots",
+      "records",
+      "prefix_work_A",
+      "charged_A_work",
+      "A_event_count",
+      "terminal_outcome",
+      "B_absolute_work",
+      "logical_depth_peak_A"
+    ],
+    "comparison_payload": [
+      "complete_program",
+      "snapshots",
+      "records",
+      "prefix_work_A",
+      "charged_A_work",
+      "A_event_count",
+      "terminal_outcome",
+      "logical_depth_peak_A"
+    ],
+    "descriptive_metadata_keys": [
+      "profile",
+      "comparison_domain",
+      "snapshot_format",
+      "record_representation",
+      "B_absolute_work"
+    ]
+  },
+  "wire_conventions": {
+    "integers": "JSON unsigned integer number tokens, NOT decimal strings. This finite oracle has no integer represented by a string. Deserialize u128 fields losslessly (serde_json Value::as_u64 only where source type/range is already established; otherwise typed u128). Do not cast semantic UInts through signed or floating-point values.",
+    "null": "JSON null is actual absent Option/control, not a string.",
+    "variants": "Externally tagged object with exactly one variant key, except unit Outcome Pending is a JSON string.",
+    "arrays": "Order significant except object-member order; compare serde_json::Value structural equality.",
+    "objects": "Key names/case significant. Descriptive prose is metadata, not product output to fabricate.",
+    "expressions": "Complete structural AST content; no serialized pointer, physical ExprId or generated provenance substitution.",
+    "environment": "Array of {name:string,value:Value}, ordered by lexical exact name. This is the A visible finite map, not the full shadowed B chain. Retain raw B ordered chains separately.",
+    "frame_order": "frames_top_first is the A order. B ordered raw frame spans remain distinct.",
+    "records": "Each record references adjacent complete snapshots by before_snapshot/after_snapshot array indices. No compressed state delta or missing snapshot fields."
+  },
+  "types": {
+    "Program": {
+      "functions": "Function[]",
+      "entry": "Expr"
+    },
+    "Function": {
+      "name": "string",
+      "parameters": "Parameter[]",
+      "return_type": "TypeName",
+      "body": "Expr"
+    },
+    "Parameter": {
+      "name": "string",
+      "ty": "TypeName"
+    },
+    "TypeName": "string enum matching public reference Type variant name",
+    "Value": {
+      "UInt": "unsigned JSON integer",
+      "Bool": "JSON boolean",
+      "List": "array of unsigned JSON integers",
+      "Tree": "Tree"
+    },
+    "Tree": {
+      "Leaf": "unsigned JSON integer",
+      "Branch": "ordered pair array [Tree,Tree]"
+    },
+    "Expr": {
+      "Literal": "Value",
+      "Var": "string",
+      "Binary": {
+        "op": "BinaryOpName",
+        "left": "Expr",
+        "right": "Expr"
+      },
+      "If": {
+        "condition": "Expr",
+        "yes": "Expr",
+        "no": "Expr"
+      },
+      "Call": {
+        "name": "string",
+        "args": "Expr[]"
+      },
+      "Match": {
+        "value": "Expr",
+        "arms": "Arm[]"
+      }
+    },
+    "Arm": {
+      "pattern": "Pattern",
+      "body": "Expr"
+    },
+    "Pattern": {
+      "Nil": "null",
+      "Cons": "ordered pair of binder-name strings",
+      "Leaf": "binder-name string",
+      "Branch": "ordered pair of binder-name strings"
+    },
+    "EnvironmentEntry": {
+      "name": "string",
+      "value": "Value"
+    },
+    "Snapshot": {
+      "program": "Program",
+      "control": "Control or null",
+      "environment": "EnvironmentEntry[]",
+      "frames_top_first": "Frame[]",
+      "stack_limit": "unsigned JSON integer",
+      "remaining_fuel": "unsigned JSON integer",
+      "initial_fuel": "unsigned JSON integer",
+      "outcome": "Outcome"
+    },
+    "Control": {
+      "Eval": "Expr",
+      "Return": "Value",
+      "Push": {
+        "frame": "Frame",
+        "next": "Control",
+        "environment": "EnvironmentEntry[]"
+      },
+      "Invoke": {
+        "name": "string",
+        "values": "Value[]"
+      },
+      "Enter": {
+        "function": "Function or null",
+        "values": "Value[]"
+      },
+      "Bound": {
+        "bindings": "EnvironmentEntry[] or null",
+        "type": "TypeName",
+        "body": "Expr"
+      },
+      "Cases": {
+        "value": "Value",
+        "arms": "Arm[]",
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "CaseResult": {
+        "bindings": "EnvironmentEntry[] or null",
+        "value": "Value",
+        "body": "Expr",
+        "remaining_arms": "Arm[]",
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "PrimitiveResult": {
+        "Ok": "Value"
+      }
+    },
+    "Frame": {
+      "Args": {
+        "function_name": "string",
+        "completed_values": "Value[]",
+        "remaining_exprs": "Expr[]",
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "Return": {
+        "expected_type": "TypeName",
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "If": {
+        "yes": "Expr",
+        "no": "Expr",
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "Left": {
+        "op": "BinaryOpName",
+        "right": "Expr",
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "Right": {
+        "op": "BinaryOpName",
+        "left": "Value"
+      },
+      "Scope": {
+        "saved_environment": "EnvironmentEntry[]"
+      },
+      "Match": {
+        "arms": "Arm[]",
+        "saved_environment": "EnvironmentEntry[]"
+      }
+    },
+    "Outcome": {
+      "Pending": "unit variant encoded directly as JSON string Pending",
+      "Done": "externally tagged object {Done:Value}"
+    },
+    "Record": {
+      "rule_start_line": "unsigned JSON integer",
+      "charge": "unsigned JSON integer",
+      "before_snapshot": "unsigned JSON integer array index",
+      "after_snapshot": "unsigned JSON integer array index"
+    },
+    "PrefixWork": "unsigned JSON integer array aligned to snapshots; source A charges, never raw B work",
+    "BinaryOpName": "string enum matching public reference BinaryOp variant name"
+  },
+  "not_exercised_wire_variants": "Only forms actually present in the frozen positive fixtures are specified above. Other public A variants (including Let/Unary expression+frame forms, Pattern Var, Error/rejection/exhaustion) remain obligations of the full projection implementation; no expected cells for them are supplied by these files and no complete nine-frame coverage claim follows.",
+  "opaque_primary_fixture_paths": {
+    "factorial": "expectations/factorial3-complete-A39-prefix.json",
+    "list": "expectations/list2-5-complete-A39-prefix.json",
+    "tree": "expectations/tree4-1-3-complete-A39-prefix.json"
+  },
+  "opaque_additional_fixture_paths": {
+    "program_contrast": "expectations/factorial2-normal-program-contrast-A39-prefix.json",
+    "pending_caller": "expectations/factorial-pending-caller3.json"
+  },
+  "pending_fixture_root_shape": {
+    "A_snapshot_indices": "unsigned JSON integer array",
+    "snapshots": "Snapshot[] aligned to indices",
+    "at_A36": "descriptive metadata string",
+    "B_event_ordinal_or_helper_phase_alignment": "descriptive scope qualification string; not runtime data"
+  },
+  "fixture_path_base": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ035-independent-reference-prefix-oracle-20261018",
+  "consumer_comparison_contract": [
+    "Use only literal include paths to the opaque primary JSON files; do not inspect expected cells during source authoring.",
+    "Serialize actual projected A snapshots with the exact Snapshot/Program/Expr/Control/Frame/Value environment schema above, then compare each complete semantic snapshot and the complete ordered Record/prefix-work arrays to independently frozen fixtures.",
+    "Record before/after indices correspond to the complete actual snapshot vector. A consumer may instead compare actual A StepRecords directly to adjacent frozen snapshots, without generating a second expected trace.",
+    "Actual B raw spans, pending helpers, logical boundaries, source associations and B counters are retained separately and never synthesized from expected fixture indices or A charges.",
+    "Check the entire projected prefix through actual terminal publication; three terminal values alone do not satisfy this schema contract.",
+    "Scope decisions remain explicit: A visible maps do not erase raw B shadow cells; no full-B microstate/work expectation is created by this safe schema."
+  ]
+}

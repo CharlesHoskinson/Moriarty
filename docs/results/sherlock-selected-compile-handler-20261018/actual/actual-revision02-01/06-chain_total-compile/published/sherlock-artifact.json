@@ -1,0 +1,1357 @@
+{
+  "format": "sherlock-host-artifact/2",
+  "qualification": "HostOnly dedicated draft preparation; no constraints or native export",
+  "source": {
+    "language": "moriarty-sherlock-draft/1",
+    "semantics": "moriarty-sherlock-dedicated/1",
+    "program": "ChainTotal",
+    "selection": {
+      "kind": "entry"
+    },
+    "source_digest": "3cec986244abd2e43c5d52894a84c54d69383a2bec327308651ea40a3f787644"
+  },
+  "execution_profile": "sherlock-helper-microstep/1",
+  "supported_profile": {
+    "format": "sherlock-supported-profile/1",
+    "source_language": "moriarty-sherlock-draft/1",
+    "source_semantics": "moriarty-sherlock-dedicated/1",
+    "execution_profile": "sherlock-helper-microstep/1",
+    "qualification": "HostOnly prepared-and-admitted dedicated first-order source; runtime and semantic correspondence unobserved",
+    "grammar": {
+      "domain": "DedicatedSorts",
+      "binding": "lexical variables; closed entry; immutable source-ordered global named function table",
+      "expressions": [
+        "Literal",
+        "Var",
+        "Let",
+        "If",
+        "Call",
+        "Match",
+        "Binary.Add",
+        "Binary.Sub",
+        "Binary.Mul",
+        "Binary.Eq",
+        "Binary.Lt",
+        "Binary.Cons",
+        "Binary.Branch",
+        "Unary.Leaf",
+        "Unary.Not"
+      ],
+      "patterns": [
+        "Var",
+        "Nil",
+        "Cons",
+        "Leaf",
+        "Branch"
+      ],
+      "constructors": [
+        "Nil",
+        "Cons(UInt128,List)",
+        "Leaf(UInt128)",
+        "Branch(Tree,Tree)"
+      ],
+      "named_calls": "first declaration lookup; self and mutual recursion remain calls, without source-recursion unrolling",
+      "matching": "first matching source arm; ordered binders; scrutinee evaluated once by the selected execution semantics",
+      "evaluation_order": "strict left-to-right operands, arguments and constructor fields",
+      "higher_order_closures": "extension; unsupported by this source grammar",
+      "letrec": "extension; unsupported by this source grammar",
+      "generic_nominal_adts": "separate declaration/constructor extension; not supplied by dedicated List/Tree sorts"
+    },
+    "numeric_domains": {
+      "UInt": "UInt128 integers in [0,340282366920938463463374607431768211455]; checked add/sub/mul; no modular wrap",
+      "Bool": "false or true",
+      "List": "finite immutable List of UInt128",
+      "Tree": "finite immutable binary Tree with UInt128 leaf payloads",
+      "equality": "structural over the dedicated value sum; different variants compare false",
+      "pointer_identity": "not source-visible; cyclic values unsupported"
+    },
+    "schedule": {
+      "profile": "sherlock-helper-microstep/1",
+      "legacy_completion_charge": "1",
+      "explicit_helper_transition_charge": "1",
+      "startup_terminal_error_publication_charge": "0",
+      "helper_families": [
+        "Scalar",
+        "EnvGet",
+        "EnvPut",
+        "Find",
+        "Bind",
+        "Append",
+        "Validate",
+        "Equal",
+        "Match"
+      ],
+      "counters": "consumed_work includes charged helper work; helper_work, helper_visits and reference_cursor remain distinct",
+      "reference_comparison": "sherlock-k-a/1 keeps pure helpers unmetered; equal A/B fuel and runtime correspondence are not claimed",
+      "physical_resources": "host heap/stack/time, circuit rows/degree and proof/target costs are unmeasured"
+    },
+    "extents": {
+      "status": "caller-declared logical capacities and preprocessing extents; no global H1 or output-serialization bound is certified",
+      "bounds": {
+        "code_rows": "64",
+        "function_rows": "4",
+        "code_child_slots": "16",
+        "parameter_slots": "8",
+        "pattern_rows": "8",
+        "match_plan_rows": "8",
+        "match_arm_rows": "8",
+        "type_rows": "8",
+        "constructor_rows": "8",
+        "constructor_field_slots": "16",
+        "max_arity": "8",
+        "constant_nodes": "16",
+        "constant_field_slots": "16",
+        "data_nodes": "64",
+        "data_field_slots": "64",
+        "environment_cells": "64",
+        "frames": "64",
+        "helper_tasks": "64",
+        "serialization_bytes": "65536",
+        "max_reference_work": "4096",
+        "max_helper_work": "4096",
+        "step_cap": "4096"
+      },
+      "layout": {
+        "layout_version": [
+          "moriarty",
+          "sherlock-helper-microstep-hostonly/1"
+        ],
+        "field_id": null,
+        "widths": null,
+        "scalar_layout_id": null,
+        "capacities": {
+          "name_rows": "32",
+          "name_bytes": "256",
+          "occurrence_path_slots": "256",
+          "value_slots": "1024"
+        },
+        "boundary_capacities_present": false
+      },
+      "fuel": {
+        "kind": "Nat",
+        "value": "64"
+      },
+      "stack": {
+        "kind": "Nat",
+        "value": "8"
+      },
+      "preprocessing": {
+        "max_source_bytes": "4096",
+        "max_tokens": "256",
+        "max_functions": "4",
+        "max_parameters_per_function": "8",
+        "max_total_parameters": "8",
+        "max_ast_nodes": "128",
+        "max_parse_depth": "64",
+        "max_structural_ast_depth": "32",
+        "max_type_depth": "32",
+        "max_copy_depth": "32",
+        "max_copy_expr_nodes": "128",
+        "max_copy_match_arms": "16",
+        "max_copy_name_bytes": "512",
+        "max_copy_list_elements": "64",
+        "max_copy_tree_nodes": "64",
+        "max_copy_tree_depth": "32"
+      },
+      "serialization_scope": "bounds.serialization_bytes is the declared owner image/checkpoint capacity; public report JSON size and encoding costs are not measured or enforced by this metadata",
+      "frame_scope": "bounds.frames is logical image capacity; stack is the separately supplied logical run stack limit",
+      "work_scope": "max_reference_work, max_helper_work and step_cap are separate logical capacities; fuel is the separately supplied run budget"
+    },
+    "admission_scope": {
+      "source_typecheck": "all function bodies and entry are checked for lexical variables, signatures and sorts under max_type_depth; calls inspect signatures without recursive callee descent",
+      "owner_closed_body_admission": "explicit implementation work remains; this report adds no whole-program owner admission checker",
+      "unique_function_admission": "explicit implementation work remains; first declaration lookup is preserved, not a unique-name guarantee",
+      "finance": "Absent; transfers, fees, liabilities, wait and resume are outside this dedicated pure grammar"
+    },
+    "dispositions": {
+      "supported": "the listed dedicated grammar under the selected caller-supplied profile and extents; this artifact is prepared/admitted only",
+      "source_preparation_failures": [
+        "parse",
+        "typecheck",
+        "copy"
+      ],
+      "owner_tooling_failures": [
+        "AdmissionRejected",
+        "CapacityNotAdmitted",
+        "UnsupportedFeature"
+      ],
+      "tooling_boundary": "owner tooling failures retain their locator when supplied, and remain outside runtime Outcome; unsupported source syntax may instead be a located parse diagnostic",
+      "runtime_outcomes": [
+        "Running",
+        "Halted",
+        "Rejected",
+        "Exhausted"
+      ],
+      "runtime_boundary": "Rejected(error4) frame refusal and Exhausted(kind) runtime limits are not AdmissionRejected, CapacityNotAdmitted or tooling UnsupportedFeature",
+      "host_violation": "separate owner invariant/observation failure; never a successful application outcome",
+      "native_export": "unsupported; witness and constraint plans missing; no native or target result"
+    }
+  },
+  "input_policy": {
+    "kind": "closed-entry",
+    "declared": [],
+    "supplied": []
+  },
+  "config": {
+    "format": "sherlock-draft-host-config/1",
+    "profile": "sherlock-helper-microstep/1",
+    "grammar": "DedicatedSorts",
+    "finance": "Absent",
+    "bounds": {
+      "code_rows": "64",
+      "function_rows": "4",
+      "code_child_slots": "16",
+      "parameter_slots": "8",
+      "pattern_rows": "8",
+      "match_plan_rows": "8",
+      "match_arm_rows": "8",
+      "type_rows": "8",
+      "constructor_rows": "8",
+      "constructor_field_slots": "16",
+      "max_arity": "8",
+      "constant_nodes": "16",
+      "constant_field_slots": "16",
+      "data_nodes": "64",
+      "data_field_slots": "64",
+      "environment_cells": "64",
+      "frames": "64",
+      "helper_tasks": "64",
+      "serialization_bytes": "65536",
+      "max_reference_work": "4096",
+      "max_helper_work": "4096",
+      "step_cap": "4096"
+    },
+    "layout": {
+      "layout_version": [
+        "moriarty",
+        "sherlock-helper-microstep-hostonly/1"
+      ],
+      "field_id": null,
+      "widths": null,
+      "scalar_layout_id": null,
+      "capacities": {
+        "name_rows": "32",
+        "name_bytes": "256",
+        "occurrence_path_slots": "256",
+        "value_slots": "1024"
+      },
+      "boundary_capacities_present": false
+    },
+    "fuel": {
+      "kind": "Nat",
+      "value": "64"
+    },
+    "stack": {
+      "kind": "Nat",
+      "value": "8"
+    },
+    "preprocessing": {
+      "max_source_bytes": "4096",
+      "max_tokens": "256",
+      "max_functions": "4",
+      "max_parameters_per_function": "8",
+      "max_total_parameters": "8",
+      "max_ast_nodes": "128",
+      "max_parse_depth": "64",
+      "max_structural_ast_depth": "32",
+      "max_type_depth": "32",
+      "max_copy_depth": "32",
+      "max_copy_expr_nodes": "128",
+      "max_copy_match_arms": "16",
+      "max_copy_name_bytes": "512",
+      "max_copy_list_elements": "64",
+      "max_copy_tree_nodes": "64",
+      "max_copy_tree_depth": "32"
+    },
+    "file_digest": "0763c35fedd5aa8807bfac55f4d6ea0264cbaf5f6ed587a0fe8e08672e02f50f"
+  },
+  "target": {
+    "descriptor": {
+      "kind": "host-only-fixture",
+      "name": "R218-positive-preparation"
+    },
+    "file_digest": "b7b9069acc831ae962d941c75a75c7bc2780e4029a569209458601f9b3f8d56d"
+  },
+  "preparation": {
+    "kind": "dedicated-source",
+    "functions": [
+      {
+        "name": "sum",
+        "parameters": [
+          {
+            "name": "xs",
+            "sort": "List"
+          }
+        ],
+        "return_sort": "UInt"
+      }
+    ],
+    "provenance": {
+      "language_span": {
+        "start": 9,
+        "end": 36
+      },
+      "program_name_span": {
+        "start": 46,
+        "end": 56
+      },
+      "functions": [
+        {
+          "index": "0",
+          "span": {
+            "start": 61,
+            "end": 140
+          },
+          "name_span": {
+            "start": 64,
+            "end": 67
+          },
+          "parameters": [
+            {
+              "binder": {
+                "name": "xs",
+                "span": {
+                  "start": 68,
+                  "end": 70
+                }
+              },
+              "type_span": {
+                "start": 72,
+                "end": 76
+              }
+            }
+          ],
+          "return_type_span": {
+            "start": 79,
+            "end": 83
+          }
+        }
+      ],
+      "expressions": [
+        {
+          "source": {
+            "function_index": null,
+            "child_path": []
+          },
+          "span": {
+            "start": 149,
+            "end": 173
+          },
+          "kind": "call"
+        },
+        {
+          "source": {
+            "function_index": null,
+            "child_path": [
+              "0"
+            ]
+          },
+          "span": {
+            "start": 153,
+            "end": 172
+          },
+          "kind": "cons"
+        },
+        {
+          "source": {
+            "function_index": null,
+            "child_path": [
+              "0",
+              "0"
+            ]
+          },
+          "span": {
+            "start": 158,
+            "end": 159
+          },
+          "kind": "uint"
+        },
+        {
+          "source": {
+            "function_index": null,
+            "child_path": [
+              "0",
+              "1"
+            ]
+          },
+          "span": {
+            "start": 160,
+            "end": 171
+          },
+          "kind": "cons"
+        },
+        {
+          "source": {
+            "function_index": null,
+            "child_path": [
+              "0",
+              "1",
+              "0"
+            ]
+          },
+          "span": {
+            "start": 165,
+            "end": 166
+          },
+          "kind": "uint"
+        },
+        {
+          "source": {
+            "function_index": null,
+            "child_path": [
+              "0",
+              "1",
+              "1"
+            ]
+          },
+          "span": {
+            "start": 167,
+            "end": 170
+          },
+          "kind": "nil"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": []
+          },
+          "span": {
+            "start": 90,
+            "end": 136
+          },
+          "kind": "match"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": [
+              "0"
+            ]
+          },
+          "span": {
+            "start": 96,
+            "end": 98
+          },
+          "kind": "var"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": [
+              "1"
+            ]
+          },
+          "span": {
+            "start": 108,
+            "end": 109
+          },
+          "kind": "uint"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": [
+              "2"
+            ]
+          },
+          "span": {
+            "start": 124,
+            "end": 134
+          },
+          "kind": "add"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": [
+              "2",
+              "0"
+            ]
+          },
+          "span": {
+            "start": 124,
+            "end": 125
+          },
+          "kind": "var"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": [
+              "2",
+              "1"
+            ]
+          },
+          "span": {
+            "start": 128,
+            "end": 134
+          },
+          "kind": "call"
+        },
+        {
+          "source": {
+            "function_index": "0",
+            "child_path": [
+              "2",
+              "1",
+              "0"
+            ]
+          },
+          "span": {
+            "start": 132,
+            "end": 133
+          },
+          "kind": "var"
+        }
+      ],
+      "patterns": [
+        {
+          "match_source": {
+            "function_index": "0",
+            "child_path": []
+          },
+          "arm_index": "0",
+          "span": {
+            "start": 101,
+            "end": 104
+          },
+          "binders": []
+        },
+        {
+          "match_source": {
+            "function_index": "0",
+            "child_path": []
+          },
+          "arm_index": "1",
+          "span": {
+            "start": 111,
+            "end": 120
+          },
+          "binders": [
+            {
+              "name": "h",
+              "span": {
+                "start": 116,
+                "end": 117
+              }
+            },
+            {
+              "name": "t",
+              "span": {
+                "start": 118,
+                "end": 119
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "types": {
+      "function_returns": [
+        "UInt"
+      ],
+      "entry_type": "UInt"
+    },
+    "owner_mapping": {
+      "program_view_pointer": "/admission/program_view",
+      "source_order": "entry-preorder-then-original-function-body-order",
+      "join": "source function_index/child_path to owner occurrence owner_is_function/function/path",
+      "correspondence": "unestablished-until-independent-comparison"
+    }
+  },
+  "correspondence": {
+    "mapping_id": "moriarty-sherlock-draft-to-b-obligations",
+    "mapping_version": "1",
+    "status": "named-unproved",
+    "source_language": "moriarty-sherlock-draft/1",
+    "source_semantics": "moriarty-sherlock-dedicated/1",
+    "reference_profile": "sherlock-k-a/1",
+    "target_profile": "sherlock-helper-microstep/1",
+    "target_layout": "HostOnly",
+    "pipeline": "bounded source parse -> typed A Program -> bounded structural CoreProgram copy -> owner admit/admit_run -> unstepped ProgramView/genesis projection",
+    "occurrence_binding": "source function_index/child_path -> owner occurrence owner_is_function/function/path; complete preparation/provenance and ProgramView remain separate fields",
+    "declared_scope": "All supported Program/Function, Expr operator families, patterns and dedicated sorts; no generic ADT or financial grammar is added",
+    "obligations": [
+      {
+        "id": "draft-to-b.program/1",
+        "construct": "Program",
+        "target": "Program -> CoreProgram -> ProgramView + genesis",
+        "returned_values": "Preserve closed entry, original function table and the eventual entry value.",
+        "defined_failures": "Keep parse/type/copy/owner admission diagnostics separate from runtime Outcome.",
+        "order": "Retain entry-preorder owner occurrence IDs and original function-table order.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.function/1",
+        "construct": "Function",
+        "target": "Function/Parameter -> CoreFunction/CoreParameter -> function/parameter rows",
+        "returned_values": "Preserve names, parameter sorts/order, declared return sort and body.",
+        "defined_failures": "Preserve first declaration lookup and runtime bind/return failures 8/6 on applicable common-domain states; preparation typing may reject earlier.",
+        "order": "Check every body in original order before entry; do not unroll recursive calls.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.literal/1",
+        "construct": "Literal",
+        "target": "Expr::Literal -> CoreExpr::Literal -> constant rows",
+        "returned_values": "Preserve UInt128, Bool and nil literals; construct other List/Tree values via existing constructors.",
+        "defined_failures": "Public UInt overflow is a source UIntLiteral diagnostic; no typed-domain runtime literal failure is invented.",
+        "order": "Preserve each structural occurrence and literal constant identity/order.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.var/1",
+        "construct": "Var",
+        "target": "Expr::Var -> CoreExpr::Var; EnvGet",
+        "returned_values": "Preserve exact lexical lookup value and sort.",
+        "defined_failures": "Name the unknown-variable diagnostic and common-domain runtime missing-variable code3 separately.",
+        "order": "Search the same saved lexical environment; structural sharing is not name equality.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.let/1",
+        "construct": "Let",
+        "target": "Expr::Let -> CoreExpr::Let; EnvPut",
+        "returned_values": "Preserve bound value, shadowing, body value and restored caller environment.",
+        "defined_failures": "Preserve first value/body failure without inventing a successful binding.",
+        "order": "Evaluate value before body; body sees the new binding; restore saved scope.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.if/1",
+        "construct": "If",
+        "target": "Expr::If -> CoreExpr::If",
+        "returned_values": "Preserve Bool-directed selected branch value.",
+        "defined_failures": "Preserve condition failure and runtime non-Bool condition code5 where applicable; do not execute the unselected branch.",
+        "order": "Condition first, then only selected branch at runtime; static checker still checks both branches.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.call/1",
+        "construct": "Call",
+        "target": "Expr::Call -> CoreExpr::Call; Find/Bind/Validate/ReturnF",
+        "returned_values": "Preserve named recursive call result and declared return sort; no evaluated-literal substitution.",
+        "defined_failures": "Name missing function7, binding8 and return-sort6 on applicable runtime states; phase diagnostics remain distinct.",
+        "order": "Strict left-to-right arguments, first matching declaration, ordered parameter binding and caller restoration.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.match/1",
+        "construct": "Match",
+        "target": "Expr::Match -> CoreExpr::Match; Match/ScopeF",
+        "returned_values": "Preserve selected arm value and saved-environment extension.",
+        "defined_failures": "Preserve scrutinee/selected-body failures and no-matching-arm code9; preparation EmptyMatch is distinct.",
+        "order": "Scrutinee first; try source arms in order and execute the first matching arm only.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-add/1",
+        "construct": "Binary.Add",
+        "target": "Expr::Binary(Add) -> CoreExpr::Binary(Add); Scalar",
+        "returned_values": "Exact checked UInt128 sum.",
+        "defined_failures": "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-sub/1",
+        "construct": "Binary.Sub",
+        "target": "Expr::Binary(Sub) -> CoreExpr::Binary(Sub); Scalar",
+        "returned_values": "Exact checked UInt128 difference.",
+        "defined_failures": "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-mul/1",
+        "construct": "Binary.Mul",
+        "target": "Expr::Binary(Mul) -> CoreExpr::Binary(Mul); Scalar",
+        "returned_values": "Exact checked UInt128 product.",
+        "defined_failures": "Preserve checked arithmetic error10 and invalid operand-sort error11 on applicable runtime states.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-eq/1",
+        "construct": "Binary.Eq",
+        "target": "Expr::Binary(Eq) -> CoreExpr::Binary(Eq); Scalar/Equal",
+        "returned_values": "Structural Bool equality across all dedicated sorts, including unequal sorts.",
+        "defined_failures": "No equal-sort precondition is added; preserve failures from either operand.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-lt/1",
+        "construct": "Binary.Lt",
+        "target": "Expr::Binary(Lt) -> CoreExpr::Binary(Lt); Scalar",
+        "returned_values": "UInt128 less-than Bool.",
+        "defined_failures": "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-cons/1",
+        "construct": "Binary.Cons",
+        "target": "Expr::Binary(Cons) -> CoreExpr::Binary(Cons); Scalar",
+        "returned_values": "Preserve head UInt and the ordered tail List.",
+        "defined_failures": "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.binary-branch/1",
+        "construct": "Binary.Branch",
+        "target": "Expr::Binary(Branch) -> CoreExpr::Binary(Branch); Scalar",
+        "returned_values": "Preserve ordered left/right Tree children.",
+        "defined_failures": "Preserve invalid operand-sort error11 and earlier operand failures on applicable runtime states.",
+        "order": "Strict left-to-right operand evaluation; both operand inference steps precede static sort requirements.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.unary-leaf/1",
+        "construct": "Unary.Leaf",
+        "target": "Expr::Unary(Leaf) -> CoreExpr::Unary(Leaf); Scalar",
+        "returned_values": "Preserve the UInt payload as a Tree Leaf.",
+        "defined_failures": "Preserve operand failures and invalid operand-sort error11 on applicable runtime states.",
+        "order": "Evaluate the operand before the unary operation.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.unary-not/1",
+        "construct": "Unary.Not",
+        "target": "Expr::Unary(Not) -> CoreExpr::Unary(Not); Scalar",
+        "returned_values": "Preserve Bool negation.",
+        "defined_failures": "Preserve operand failures and invalid operand-sort error11 on applicable runtime states.",
+        "order": "Evaluate the operand before the unary operation.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.pattern-var/1",
+        "construct": "Pattern.Var",
+        "target": "Pattern::Var -> CorePattern::PVar -> pattern rows; Match",
+        "returned_values": "Bind the entire scrutinee value and its sort.",
+        "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
+        "order": "Preserve arm order, binder order, saved environment and first-match selection.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.pattern-nil/1",
+        "construct": "Pattern.Nil",
+        "target": "Pattern::Nil -> CorePattern::PNil -> pattern rows; Match",
+        "returned_values": "Match exactly the empty List.",
+        "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
+        "order": "Preserve arm order, binder order, saved environment and first-match selection.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.pattern-cons/1",
+        "construct": "Pattern.Cons",
+        "target": "Pattern::Cons -> CorePattern::PCons -> pattern rows; Match",
+        "returned_values": "Match nonempty List and bind ordered UInt head/List tail.",
+        "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
+        "order": "Preserve arm order, binder order, saved environment and first-match selection.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.pattern-leaf/1",
+        "construct": "Pattern.Leaf",
+        "target": "Pattern::Leaf -> CorePattern::PLeaf -> pattern rows; Match",
+        "returned_values": "Match Tree Leaf and bind its UInt payload.",
+        "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
+        "order": "Preserve arm order, binder order, saved environment and first-match selection.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.pattern-branch/1",
+        "construct": "Pattern.Branch",
+        "target": "Pattern::Branch -> CorePattern::PBranch -> pattern rows; Match",
+        "returned_values": "Match Tree Branch and bind ordered left/right Trees.",
+        "defined_failures": "A miss continues to the next arm; duplicate Cons/Branch binders remain a miss at runtime and a distinct preparation diagnostic.",
+        "order": "Preserve arm order, binder order, saved environment and first-match selection.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.sort-uint/1",
+        "construct": "Sort.UInt",
+        "target": "Type::UInt -> SortTag::UInt",
+        "returned_values": "Preserve dedicated UInt sort, constructor membership and declared argument/return typing.",
+        "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
+        "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.sort-bool/1",
+        "construct": "Sort.Bool",
+        "target": "Type::Bool -> SortTag::Bool",
+        "returned_values": "Preserve dedicated Bool sort, constructor membership and declared argument/return typing.",
+        "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
+        "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.sort-list/1",
+        "construct": "Sort.List",
+        "target": "Type::List -> SortTag::List",
+        "returned_values": "Preserve dedicated List sort, constructor membership and declared argument/return typing.",
+        "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
+        "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      },
+      {
+        "id": "draft-to-b.sort-tree/1",
+        "construct": "Sort.Tree",
+        "target": "Type::Tree -> SortTag::Tree",
+        "returned_values": "Preserve dedicated Tree sort, constructor membership and declared argument/return typing.",
+        "defined_failures": "Distinguish static Expected diagnostics, runtime bind/return/operand failures and owner Tooling.",
+        "order": "Preserve parameter/return/constructor field order; no generic nominal ADT encoding is substituted.",
+        "resource_obligation": "draft-to-b.resource-observations/1",
+        "effects_and_duties": "not-applicable: pure DedicatedSorts with FinanceInput::Absent",
+        "status": "named-unproved"
+      }
+    ],
+    "resources": {
+      "id": "draft-to-b.resource-observations/1",
+      "a_clock": "sherlock-k-a/1: one charge per charged machine rule; terminal publication zero; pure helpers and allocation unmetered",
+      "b_clock": "sherlock-helper-microstep/1: consumed_work, helper_work, helper_visits and reference_cursor are distinct observations",
+      "helper_mapping": "Explicitly align/hide Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal and Match visits and bookkeeping against reference boundaries",
+      "same_fuel": "not-claimed: equal source values do not imply equal A/B fuel or helper schedules",
+      "failure_classes": "Parse/type/copy/Tooling preparation refusals, HostViolation, semantic errors, frame-cap/resource rejection4 and fuel/capacity exhaustion remain distinct",
+      "required_comparison": "Compare complete returned values, defined failures, order and resource prefixes under explicit caller extents; compile-only tables do not observe those runtime prefixes",
+      "unmeasured": "Physical host time/heap/stack, circuit rows/degree, proof/key size and ledger fees are not inferred"
+    },
+    "finance": {
+      "source_profile": "pure-dedicated-sorts",
+      "target_input": "FinanceInput::Absent",
+      "effects": "not-applicable in this grammar/profile; no transfers/fees are represented",
+      "residual_duties": "not-applicable in this grammar/profile; no liabilities/wait/resume are represented"
+    },
+    "proof": {
+      "semantic_correspondence": "unproved",
+      "runtime_values_failures_order_resources": "unobserved-by-compile-only-preparation",
+      "witness_plan": "missing",
+      "constraint_plan": "missing",
+      "native_export": "unsupported",
+      "native_proof_target": "unrun",
+      "gap": "No source-to-B semantic proof or B-to-Clean/handwritten circuit correspondence/native exporter is supplied; host evaluation cannot supply missing circuit evidence"
+    }
+  },
+  "admission": {
+    "bounds": {
+      "code_child_slots": "16",
+      "code_rows": "64",
+      "constant_field_slots": "16",
+      "constant_nodes": "16",
+      "constructor_field_slots": "16",
+      "constructor_rows": "8",
+      "data_field_slots": "64",
+      "data_nodes": "64",
+      "environment_cells": "64",
+      "frames": "64",
+      "function_rows": "4",
+      "helper_tasks": "64",
+      "match_arm_rows": "8",
+      "match_plan_rows": "8",
+      "max_arity": "8",
+      "max_helper_work": "4096",
+      "max_reference_work": "4096",
+      "parameter_slots": "8",
+      "pattern_rows": "8",
+      "serialization_bytes": "65536",
+      "step_cap": "4096",
+      "type_rows": "8"
+    },
+    "identity": {
+      "bounds_digest": "Unselected",
+      "field_id": null,
+      "finance": "Absent",
+      "grammar_domain": "DedicatedSorts",
+      "layout_digest": "Unselected",
+      "layout_version": [
+        "moriarty",
+        "sherlock-helper-microstep-hostonly/1"
+      ],
+      "profile_id": 2,
+      "program_membership_digest": "Unselected"
+    },
+    "layout": {
+      "boundary_capacities_present": false,
+      "bounds": {
+        "code_child_slots": "16",
+        "code_rows": "64",
+        "constant_field_slots": "16",
+        "constant_nodes": "16",
+        "constructor_field_slots": "16",
+        "constructor_rows": "8",
+        "data_field_slots": "64",
+        "data_nodes": "64",
+        "environment_cells": "64",
+        "frames": "64",
+        "function_rows": "4",
+        "helper_tasks": "64",
+        "match_arm_rows": "8",
+        "match_plan_rows": "8",
+        "max_arity": "8",
+        "max_helper_work": "4096",
+        "max_reference_work": "4096",
+        "parameter_slots": "8",
+        "pattern_rows": "8",
+        "serialization_bytes": "65536",
+        "step_cap": "4096",
+        "type_rows": "8"
+      },
+      "capacities": {
+        "name_bytes": "256",
+        "name_rows": "32",
+        "occurrence_path_slots": "256",
+        "value_slots": "1024"
+      },
+      "field_id": null,
+      "layout_version": [
+        "moriarty",
+        "sherlock-helper-microstep-hostonly/1"
+      ],
+      "scalar_layout_id": null,
+      "widths": null
+    },
+    "program_view": {
+      "arms": [
+        {
+          "body": "8",
+          "pattern": "0"
+        },
+        {
+          "body": "9",
+          "pattern": "1"
+        }
+      ],
+      "children": [
+        "1",
+        "12"
+      ],
+      "constant_fields": [],
+      "constants": [
+        {
+          "U128": {
+            "marker_free": true,
+            "n": "2"
+          }
+        },
+        {
+          "U128": {
+            "marker_free": true,
+            "n": "5"
+          }
+        },
+        {
+          "Nil": {
+            "marker_free": true
+          }
+        },
+        {
+          "U128": {
+            "marker_free": true,
+            "n": "0"
+          }
+        }
+      ],
+      "entry": "0",
+      "expressions": [
+        {
+          "Call": {
+            "args": {
+              "len": "1",
+              "start": "0"
+            },
+            "function_name": "1"
+          }
+        },
+        {
+          "Binary": {
+            "left": "2",
+            "op": "Cons",
+            "right": "3"
+          }
+        },
+        {
+          "Literal": {
+            "constant": "0"
+          }
+        },
+        {
+          "Binary": {
+            "left": "4",
+            "op": "Cons",
+            "right": "5"
+          }
+        },
+        {
+          "Literal": {
+            "constant": "1"
+          }
+        },
+        {
+          "Literal": {
+            "constant": "2"
+          }
+        },
+        {
+          "Match": {
+            "arms": {
+              "len": "2",
+              "start": "0"
+            },
+            "scrutinee": "7"
+          }
+        },
+        {
+          "Var": {
+            "binder": "3"
+          }
+        },
+        {
+          "Literal": {
+            "constant": "3"
+          }
+        },
+        {
+          "Binary": {
+            "left": "10",
+            "op": "Add",
+            "right": "11"
+          }
+        },
+        {
+          "Var": {
+            "binder": "0"
+          }
+        },
+        {
+          "Call": {
+            "args": {
+              "len": "1",
+              "start": "1"
+            },
+            "function_name": "1"
+          }
+        },
+        {
+          "Var": {
+            "binder": "2"
+          }
+        }
+      ],
+      "functions": [
+        {
+          "body": "6",
+          "function_name": "1",
+          "params": {
+            "len": "1",
+            "start": "0"
+          },
+          "return_type": "UInt"
+        }
+      ],
+      "names": [
+        "h",
+        "sum",
+        "t",
+        "xs"
+      ],
+      "occurrence_paths": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "1",
+        "0",
+        "1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "1",
+        "2",
+        "2",
+        "0",
+        "2",
+        "1",
+        "2",
+        "1",
+        "0"
+      ],
+      "occurrences": [
+        {
+          "function": "0",
+          "owner_is_function": false,
+          "path": {
+            "len": "0",
+            "start": "0"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": false,
+          "path": {
+            "len": "1",
+            "start": "0"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": false,
+          "path": {
+            "len": "2",
+            "start": "1"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": false,
+          "path": {
+            "len": "2",
+            "start": "3"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": false,
+          "path": {
+            "len": "3",
+            "start": "5"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": false,
+          "path": {
+            "len": "3",
+            "start": "8"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "0",
+            "start": "0"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "1",
+            "start": "11"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "1",
+            "start": "12"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "1",
+            "start": "13"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "2",
+            "start": "14"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "2",
+            "start": "16"
+          }
+        },
+        {
+          "function": "0",
+          "owner_is_function": true,
+          "path": {
+            "len": "3",
+            "start": "18"
+          }
+        }
+      ],
+      "parameters": [
+        {
+          "binder": "3",
+          "sort": "List"
+        }
+      ],
+      "patterns": [
+        "PNil",
+        {
+          "PCons": {
+            "x": "0",
+            "y": "2"
+          }
+        }
+      ]
+    },
+    "representation": "HostOnly",
+    "status": "admitted"
+  },
+  "genesis": {
+    "active": {
+      "data": "0",
+      "data_fields": "0",
+      "env": "0",
+      "value_slots": "0"
+    },
+    "alloc": {
+      "data_fields": "0",
+      "data_nodes": "0",
+      "environment_cells": "0"
+    },
+    "consumed_work": "0",
+    "control": {
+      "Eval": {
+        "expr": "0"
+      }
+    },
+    "control_origin": "0",
+    "data": [],
+    "data_fields": [],
+    "env": [],
+    "env_root": null,
+    "frames": [],
+    "helper": null,
+    "helper_visits": "0",
+    "helper_work": "0",
+    "initial_fuel": "64",
+    "outcome": "Running",
+    "reference_cursor": "0",
+    "remaining_work": "64",
+    "result": null,
+    "run_id": {
+      "fuel_input": {
+        "Nat": "64"
+      },
+      "identity": {
+        "bounds_digest": "Unselected",
+        "field_id": null,
+        "finance": "Absent",
+        "grammar_domain": "DedicatedSorts",
+        "layout_digest": "Unselected",
+        "layout_version": [
+          "moriarty",
+          "sherlock-helper-microstep-hostonly/1"
+        ],
+        "profile_id": 2,
+        "program_membership_digest": "Unselected"
+      },
+      "stack_limit_input": {
+        "Nat": "8"
+      }
+    },
+    "seg_base": {
+      "active": {
+        "data": "0",
+        "data_fields": "0",
+        "env": "0",
+        "value_slots": "0"
+      },
+      "alloc": {
+        "data_fields": "0",
+        "data_nodes": "0",
+        "environment_cells": "0"
+      },
+      "consumed_work": "0"
+    },
+    "stack_limit": "8",
+    "tasks": [],
+    "value_slots": []
+  },
+  "plans": {
+    "witness": {
+      "status": "missing",
+      "artifact": null,
+      "reason": "dedicated draft witness plan not implemented"
+    },
+    "constraint": {
+      "status": "missing",
+      "artifact": null,
+      "reason": "dedicated draft constraint plan not implemented"
+    },
+    "export": {
+      "status": "unsupported",
+      "artifact": null,
+      "reason": "HostOnly; native/target export not implemented"
+    }
+  },
+  "observation": {
+    "status": "not-requested",
+    "evaluation_performed": false
+  },
+  "evidence": {
+    "source_preparation": "performed",
+    "host_observation": "genesis-only",
+    "native": "unrun",
+    "target": "unrun",
+    "acceptance": "unestablished"
+  }
+}

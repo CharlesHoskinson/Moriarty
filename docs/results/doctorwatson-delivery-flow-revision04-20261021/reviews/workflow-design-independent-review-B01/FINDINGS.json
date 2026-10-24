@@ -1,0 +1,66 @@
+{
+  "schema": "doctorwatson.workflow-design-review/1",
+  "review_id": "workflow-design-independent-review-B01",
+  "reviewer_model": "Gemini 4 Argon (High)",
+  "role": "independent-nonauthor-workflow-design-review",
+  "verdict": "APPROVE_WORKFLOW_DESIGN_WITH_LIMITS",
+  "blocking_defects": [],
+  "mandatory_current_defects_and_limits": [
+    {
+      "id": "LIMIT-01",
+      "category": "adapter-launch-boundary",
+      "summary": "Only moriarty-sdk-build is launchable in run_selected.py; independent verification, target settlement, and all other delivery roles remain launch-blocked.",
+      "exact_quotes": [
+        "\"launchable\": False,\n        \"blockedReason\": \"selected independent handkey invocation scope \"\n                         \"absent; collector implemented, launch blocked\"",
+        "\"launchable\": False,\n        \"blockedReason\": \"target execution is Root-only and unselected \"\n                         \"here; no wallet/network authority in this bridge\"",
+        "\"launchable\": False,\n        \"blockedReason\": f\"no Root-selected operation/collector for \"\n                         f\"{_adapter} in this revision\""
+      ]
+    },
+    {
+      "id": "LIMIT-02",
+      "category": "readiness-cli-flag-asymmetry",
+      "summary": "reconciliation.py CLI requires --results, whereas scripts/doctorwatson.sh --execute accepts --history optionally and load_readiness assesses over zero results without a replay barrier when history_path is omitted.",
+      "exact_quotes": [
+        "History is an optional input:\n    with none supplied, readiness is assessed over zero results, so\n    no durable replay barrier is claimed without a supplied complete\n    raw history.",
+        "if reconciliations_path is not None and history_path is None:\n        raise ReconciliationError(\n            \"reconciliations require the raw history they reference\")",
+        "parser.add_argument(\"--results\", required=True)"
+      ]
+    },
+    {
+      "id": "LIMIT-03",
+      "category": "test-selected-scope",
+      "summary": "scripts/doctorwatson.sh --test-selected runs only Python unittest modules under models/doctorwatson and does not execute Rust, K, Quint, Clean, or circuit tests.",
+      "exact_quotes": [
+        "# Focused ordinary test selection: only the DoctorWatson Python suites,\n# optionally narrowed to named test modules. Never runs whole QA.",
+        "set -- test_delivery test_run_selected test_settle_observation test_reconciliation test_integrated_roundtrip test_execution_reconciliation test_native_adapter07"
+      ]
+    },
+    {
+      "id": "LIMIT-04",
+      "category": "recursive-source-and-execution-gap",
+      "summary": "The Fenrir parent review does not approve execution, and the Moriarty S1/S2 linked-child candidate and manifest/genesis/provenance composition remain unreviewed, uncompiled, and unexecuted.",
+      "exact_quotes": [
+        "Its fresh non-author Opus 5.5 opinion approves the MF01–MF06 leaf, with typed API abstentions and composition requirements. It does not approve execution.",
+        "The private S1 seal is source tooling for verified export of the exact requests/children/verification records; it is not an in-circuit authentication of source, Init or a parent theorem. None of these new A80 calls is claimed compiled or executed."
+      ]
+    },
+    {
+      "id": "LIMIT-05",
+      "category": "declarative-workflow-requirements",
+      "summary": "SF-16 and SF-17 are documented workflow governance rules; automated code/model runtime checks remain a separate follow-up.",
+      "exact_quotes": [
+        "**Status: documented workflow revision; execution and acceptance remain separate.**",
+        "This documentation is not evidence that the live loop is armed."
+      ]
+    }
+  ],
+  "does_not_prove": [
+    "Does not prove that the live runtime loop is armed.",
+    "Does not prove or execute the current native backend build.",
+    "Does not compile, review, or prove the linked child proofs, parent, or terminal decider.",
+    "Does not verify the saved P14 literal proof or provide a launchable handkey-verify-pis adapter.",
+    "Does not authorize or execute Midnight stagenet deployment, recursive verification, or effects readback.",
+    "Does not establish Fenrir synthetic rollup scale or performance measurements.",
+    "Does not execute DoctorWatson Python unit tests or Quint workflow model checks."
+  ]
+}

@@ -1,0 +1,71 @@
+--- a/models/sherlock/k/literal-complete-images-20261019/README.md
++++ b/models/sherlock/k/literal-complete-images-20261019/README.md
+@@ -27,7 +27,9 @@
+ 
+ The positive input premise requires a complete empty Init, positive sixteen-byte
+ little-endian fuel equal to initial fuel, empty arenas/frames/environment, Pending
+-outcome, and entry Eval(0). It selects the actual entry Literal row and its active
++outcome, and entry Eval(0). The runtime stackLimit may be below or equal to
++capacities.stack_limit; all transitions preserve that actual runtime value.
++It selects the actual entry Literal row and its active
+ Constant-space UInt reference. The value is not restricted to seven. Program
+ builtins, unused tables and padding are preserved as supplied; the actual checked
+ producer/source-preparation association is an external premise. This model does
+@@ -80,6 +82,13 @@
+ K_MAIN REFERENCE FRESH_OUTPUT. The minimal scalar profile is explicitly fixed
+ there to program `[0,0,1,0,1,0,0,0,0,0,4,4,5,1,0]`, state `[0,0,0,0,0,1]`,
+ stack 0, A semantic fuel 1, statement bound 335 and observation budget 2.
++K_MAIN must be the pinned legacy `models/sherlock/k/main.k` bytes in which
++ruleStartLine 102 resolves, exactly as LiteralSourceIdentity specifies. It must
++not be this new counterpart file. The complete-layout context identifies the
++existing backend relation and caller-asserted source identities; it does not
++identify or attest this new counterpart K source. The new source/definition is
++bound separately by its own source and compile-result pins.
++
+ Its producer link depends on the real backend crate: it is SDK-PENDING and has
+ not been declared SDK-free. Its public source identity consists of SHA-256
+ identifiers of actual supplied bytes; authentication/network selection is not
+--- a/models/sherlock/k/literal-complete-images-20261019/literal-complete-images.k
++++ b/models/sherlock/k/literal-complete-images-20261019/literal-complete-images.k
+@@ -141,7 +141,7 @@
+   // Init tables, including Eval(0) and every unused row, are entirely zero.
+   rule lcInitRoot(S, SL)
+     => lcAllZero(lcTake(S, 5)) andBool lcGet(S, 5) ==Int 1
+-       andBool lcAllZero(lcTake(lcDrop(S, 6), 2)) andBool lcGet(S, 8) ==Int SL
++       andBool lcAllZero(lcTake(lcDrop(S, 6), 2)) andBool lcGet(S, 8) <=Int SL
+        andBool lcTake(lcDrop(S, 9), 16) ==K lcTake(lcDrop(S, 25), 16)
+        andBool lcCells(lcTake(lcDrop(S, 9), 16), 256)
+        andBool lcLE(lcTake(lcDrop(S, 9), 16)) >Int 0
+@@ -164,6 +164,8 @@
+   syntax LCRow ::= lcReturnRow(Int, Int) [function]
+   // Row tag=Return(1), exprId=0, then the actual selected ValueRef and zero tail.
+   rule lcReturnRow(S, I) => lcCell(1, lcCell(0, lcCell(S, lcCell(I, lcZeros(32)))))
++  // Entry row 0 is selected because lcGoodInput requires all-zero Init
++  // control tables (Eval exprId=0); no later Eval is reachable in this entry.
+   rule lcA102(lcImage(_, PT), lcImage(R, ST))
+     => lcImage(lcCat(lcTake(R, 9), lcCat(lcBorrow(lcTake(lcDrop(R, 9), 16), 1), lcDrop(R, 25))),
+        lcSetTable(ST, 5, lcSetRow(lcTableAt(ST, 5), 0,
+--- a/models/sherlock/qa/literal_complete_images_from_source.rs
++++ b/models/sherlock/qa/literal_complete_images_from_source.rs
+@@ -25,7 +25,11 @@
+     let config = fs::read_to_string(config_path)?;
+     let target = fs::read_to_string(target_path)?;
+     let prepared = compile_draft_with_reference(&source, &config, &target)
+-        .map_err(|_| io::Error::other("public source preparation refused"))?;
++        .map_err(|error| io::Error::other(format!(
++            "public source preparation refused: stage={} actual_error={} evaluation_performed={} events_forwarded={} completed={}",
++            error.stage, error.actual_error, error.evaluation_performed,
++            error.events_forwarded, error.completed,
++        )))?;
+     let identity = LiteralSourceIdentity {
+         k_source_sha256: sha(&fs::read(k_path)?),
+         reference_source_sha256: sha(&fs::read(reference_path)?),
+@@ -40,7 +44,7 @@
+     // This invocation is only proposed source. Root must classify its actual backend closure.
+     let (_produced, layout, request, _statement) = produce_checked_literal_complete_execution_request(
+         Arc::clone(prepared.reference_program()), &capacities, 1, 0, &identity, 335,
+-    ).map_err(|_| io::Error::other("actual complete-pair producer refused"))?;
++    ).map_err(|error| io::Error::other(format!("actual complete-pair producer refused: {error}")))?;
+     let mut output = fs::OpenOptions::new().write(true).create_new(true).open(output_path)?;
+     export::write_input(&request, layout.context_limbs(), 2, &mut output)?;
+     output.flush()?;

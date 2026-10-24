@@ -1,0 +1,15 @@
+# Sherlock simulation report integration
+
+Sherlock’s draft `simulate` route now shares its production argument types with the independent consumer and exposes a public JSON simulation report. The report separates genesis preparation from actual post-run results and resource observations. The source integration and six independent test/fixture files are installed after source and actual-result review.
+
+Local validation: the shared production argument consumer passed one test covering 24 fixed cases; normal Core compilation passed; the new report consumer passed compilation, listing and one test running two programs through execution, report construction, serialization and decoding. It checks independently specified UInt results 7 and 8 and same-run state/report bindings. Raw captures, prior failures, mechanical corrections and full final reviews are retained here. No passing test was rerun to repair a reporting error.
+
+The final evidence reader reports 11 current adopted original requirements out of 35, with 24 original requirements and all 25 refinement features still open. This integration adds no requirement acceptance. The earlier stale/current-10 result is preserved; the one documentation reference was corrected after substantive compatibility review. Full CLI dispatch, file handling and command exit behavior remain unobserved. Host observations establish no native proof or stagenet result.
+
+[Root integration](ROOT-ACTUAL-INTEGRATION.json), [final review](evidence/R315/FINAL-RESPONSE.txt), [currentness result](CURRENTNESS-RESULT.json), [preserved negative](prior-negative/CURRENTNESS-RESULT.json), and [R301 raw compile interpretation correction](evidence/R301/actual-attempt-01/ROOT-DEPINFO-ALIAS-CORRECTION.json) retain their exact scopes. The prepared publication map records the earlier pre-final-review cut; these final supplements supersede its pending statuses. The source snapshots named `pending-R315-consumer` preserve their historical directory names; the identical six files are now installed in `crates/mori-core/tests/`.
+
+No dependency/SDK payload, executable binary, wallet material, private provider content or stat-manifest payload is published by this archive. Large transitive input inventories remain explicitly pinned external metadata rather than a claimed complete source audit.
+
+## Later selected-handler observation — 2026-10-18
+
+The [real selected-handler result](real-selected-handler/README.md) now records four passing phases through the production Sherlock handler, genuine shared file I/O and printed complete JSON for ChainTotal/BranchTotal, followed by saved-file verification. Root installed seven source/fixture files and five reviewed documentation changes. The earlier CLI/file-I/O UNRUN wording above describes this archive's prior API-only cut; enclosing root Cli/global options and outer dispatch remain unobserved. The eleven-original acceptance baseline is unchanged. The raw docs abstention and later full-tail approval are both retained.

@@ -47,13 +47,23 @@ impl Builder {
 
     fn select(&mut self, bit: Operand, a: Operand, b: Operand) -> Operand {
         let output = self.fresh();
-        self.instructions.push(Instruction::CondSelect { bit, a, b, output: output.clone() });
+        self.instructions.push(Instruction::CondSelect {
+            bit,
+            a,
+            b,
+            output: output.clone(),
+        });
         Operand::Variable(output)
     }
 
     fn less_than(&mut self, a: Operand, b: Operand) -> Operand {
         let output = self.fresh();
-        self.instructions.push(Instruction::LessThan { a, b, bits: 128, output: output.clone() });
+        self.instructions.push(Instruction::LessThan {
+            a,
+            b,
+            bits: 128,
+            output: output.clone(),
+        });
         let result = Operand::Variable(output);
         constrain(&mut self.instructions, result.clone(), Type::Bool);
         result
@@ -77,16 +87,28 @@ pub fn emit_enabled_fetch_block(
     scope: &str,
 ) -> Result<EnabledFetchBlock, ConstructionError> {
     shape.check_rows(&inputs.rows)?;
-    if scope.is_empty() { return Err(ConstructionError::EmptyScope); }
+    if scope.is_empty() {
+        return Err(ConstructionError::EmptyScope);
+    }
     // Exactly 4 + N*(C+3) fresh identifiers: effective index, two comparisons,
     // guarded assertion; N equality/gated-selector/sum triples; N*C lane selects.
     // This checks host arithmetic only; it admits no concrete resource bound.
-    shape.capacity.checked_mul(shape.columns.len().checked_add(3)
-        .ok_or(ConstructionError::SizeOverflow)?).and_then(|n| n.checked_add(4))
+    shape
+        .capacity
+        .checked_mul(
+            shape
+                .columns
+                .len()
+                .checked_add(3)
+                .ok_or(ConstructionError::SizeOverflow)?,
+        )
+        .and_then(|n| n.checked_add(4))
         .ok_or(ConstructionError::SizeOverflow)?;
     let namespace = format!("%{scope}.temp.");
     for operand in [&inputs.enable, &inputs.active_rows, &inputs.index]
-        .into_iter().chain(inputs.rows.iter().flatten()) {
+        .into_iter()
+        .chain(inputs.rows.iter().flatten())
+    {
         if let Operand::Variable(id) = operand {
             if !id.0.starts_with('%') {
                 return Err(ConstructionError::UnprefixedVariable);
@@ -96,7 +118,11 @@ pub fn emit_enabled_fetch_block(
             }
         }
     }
-    let mut b = Builder { scope: scope.into(), serial: 0, instructions: Vec::new() };
+    let mut b = Builder {
+        scope: scope.into(),
+        serial: 0,
+        instructions: Vec::new(),
+    };
     constrain(&mut b.instructions, inputs.enable.clone(), Type::Bool);
     constrain(&mut b.instructions, inputs.active_rows.clone(), Type::UInt);
     for row in &inputs.rows {
@@ -106,29 +132,46 @@ pub fn emit_enabled_fetch_block(
     }
     let index_eff = b.select(inputs.enable.clone(), inputs.index.clone(), immediate(0));
     constrain(&mut b.instructions, index_eff.clone(), Type::UInt);
-    let exceeds_capacity = b.less_than(immediate(shape.capacity as u128), inputs.active_rows.clone());
-    b.instructions.push(Instruction::ConstrainEq { a: exceeds_capacity, b: immediate(0) });
+    let exceeds_capacity = b.less_than(
+        immediate(shape.capacity as u128),
+        inputs.active_rows.clone(),
+    );
+    b.instructions.push(Instruction::ConstrainEq {
+        a: exceeds_capacity,
+        b: immediate(0),
+    });
     let in_prefix = b.less_than(index_eff.clone(), inputs.active_rows.clone());
     let guarded_prefix = b.select(inputs.enable.clone(), in_prefix, immediate(1));
-    b.instructions.push(Instruction::Assert { cond: guarded_prefix });
+    b.instructions.push(Instruction::Assert {
+        cond: guarded_prefix,
+    });
 
     let mut selectors = Vec::with_capacity(shape.capacity);
     let mut sum = immediate(0);
     for row in 0..shape.capacity {
         let output = b.fresh();
         b.instructions.push(Instruction::TestEq {
-            a: index_eff.clone(), b: immediate(row as u128), output: output.clone(),
+            a: index_eff.clone(),
+            b: immediate(row as u128),
+            output: output.clone(),
         });
         let eq = Operand::Variable(output);
         constrain(&mut b.instructions, eq.clone(), Type::Bool);
         let selector = b.select(inputs.enable.clone(), eq, immediate(0));
         constrain(&mut b.instructions, selector.clone(), Type::Bool);
         let sum_output = b.fresh();
-        b.instructions.push(Instruction::Add { a: sum, b: selector.clone(), output: sum_output.clone() });
+        b.instructions.push(Instruction::Add {
+            a: sum,
+            b: selector.clone(),
+            output: sum_output.clone(),
+        });
         sum = Operand::Variable(sum_output);
         selectors.push(selector);
     }
-    b.instructions.push(Instruction::ConstrainEq { a: sum, b: inputs.enable.clone() });
+    b.instructions.push(Instruction::ConstrainEq {
+        a: sum,
+        b: inputs.enable.clone(),
+    });
 
     let mut selected = Vec::with_capacity(shape.columns.len());
     for (column, col) in shape.columns.iter().enumerate() {
@@ -137,7 +180,15 @@ pub fn emit_enabled_fetch_block(
             value = b.select(selector.clone(), inputs.rows[row][column].clone(), value);
         }
         constrain(&mut b.instructions, value.clone(), col.kind);
-        selected.push(EnabledTypedOperand { kind: col.kind, value, enable: inputs.enable.clone() });
+        selected.push(EnabledTypedOperand {
+            kind: col.kind,
+            value,
+            enable: inputs.enable.clone(),
+        });
     }
-    Ok(EnabledFetchBlock { instructions: b.instructions, selected, preserved: inputs.clone() })
+    Ok(EnabledFetchBlock {
+        instructions: b.instructions,
+        selected,
+        preserved: inputs.clone(),
+    })
 }

@@ -122,3 +122,40 @@ The source record separates G4-FIELD-SRC from unproved G4-FIELD-PRIME and unobse
 The publication selects proposal, review, adoption and pin metadata; it explicitly omits 88 of the 93 original collection bodies. It does not vendor or newly authenticate the SDK/registry implementations. Original source reviewers received the complete collection but did not independently rehash it. Local source hashes, lock checksums and selected Git blob matches do not establish registry-archive authenticity or a complete feature/build/C/backend closure.
 
 The governing adoption limit remains: this acceptance rests on source inspection and paper derivation only; it includes no execution evidence and confers no G4 runtime certification, no emitter acceptance, and no native authority. G4-FETCH/BYTE/APPEND, IO1–IO8, complete P4/P5/StepInv/chaining, native compilation/proofs and Midnight stagenet remain open. All E1–E7/E-FUEL, full39/P3/L4 conditions, C4 and its registration-revert requirement, old caps/counters/failures and full U/M/MC/SP/G financial and product exits remain unchanged.
+
+
+## 2026-10-17 source-status appendix — ledger transaction adapter
+
+[PR158 source evidence](../../../models/sherlock/ledger-transaction-adapter-source-20261017/README.md) records the exact merged Literal deployment/call transaction adapter and its declared source-closure entry, preserving the existing uiValid include. Two designated security source reviews and one ordinary correction review have scoped approvals/PASS with actual CLI exits 0 under the Gemini 4 Argon HIGH fallback. The author CLI remains pending at source seal and is not a completed vote. Four syntax-parser checks passed; default local CI passed 230 ordinary tests with both logs saved. These are source/syntax/corpus observations; the adapter has no SDK typecheck or execution result.
+
+Cost profile is not state identity; local transaction Pedersen checking is conditional on no coin offers. Nonempty companion transcripts are refused. Fee sufficiency, full ledger application/effects, authenticated readback and actual stagenet settlement remain open. All preceding checklist and acceptance statuses, dates and historical observations remain unchanged. This appendix closes no StepInv/F4/G4/C4, native, financial, full-interpreter, U/M/MC/SP/G or release exit and transfers no old key/descriptor identity or execution authority.
+
+
+## 2026-10-17 result appendix — Return publication
+
+The [Return-publication record](../../../models/sherlock/return-publication-source-20261017/README.md) separates PR161 source integration from actual SDK-free observations: prior library/test metadata passed; six host tests passed (3 A102 +3 A80 internal consistency), and independent capture comparison passed 250 logical carriers (86 program + 81 pre + 81 post + 2 envelope) plus 210 schema labels. Host/test/client dep-info membership was 10/12/1; all 57 reused Core inputs matched current W. O80 expectations predate host execution; comparator freeze followed internal tests and preceded external capture.
+
+Selected frozen Quint files retain source-time UNRUN wording beside later two-frontend/six-test and one deterministic init/one-step invariant/witness observations. The earlier source review remains temporally scoped. Root's scalar Clean normalization qualification does not establish generic full-state terminal/arena embedding. The 252-position statement's two context limbs remain UNBOUND and no A80 native Layout/statement was selected. Generic 39-way dispatch, StepInv/F4/G4, full-state Clean adapter, native emitter compilation, proof/independent verification and stagenet settlement remain OPEN. No preceding prefix, checklist, key identity, resource gate, counter or acceptance exit is changed.
+
+
+## 2026-10-17 source-status appendix — literal complete execution
+
+[PR #163](https://github.com/CharlesHoskinson/Moriarty/pull/163) merged the reviewed literal composer source. One immutable program and the exact same intermediate state join the actual A102 literal and A80 Return-publication emitters, with Init and fuel/work accounting. Two designated security source reviews returned scoped approvals and fresh ordinary source/API integration review passed; 230 local CI tests passed. These source/corpus results do not execute the composer.
+
+Mandatory boundaries remain: positive initial fuel only (zero-fuel startup unimplemented); Done is a Step-mode Constant-space reference, not a canonical StateBlock. Separate `projectA` is required at canonical checkpoints/chunk boundaries. SDK/native compilation/execution, composer symbolic tests, proof and target evidence remain UNRUN. Full 39-way dispatch, StepInv, F4, G4, `projectA` and composed native Layout remain OPEN. No old context/key/qualification transfers; preceding prefixes, acceptance exits, authority, limits and counters are unchanged.
+
+
+## 2026-10-17 source-status appendix — A82 error publication
+
+[PR #165](https://github.com/CharlesHoskinson/Moriarty/pull/165) merged the A82 Error-to-Rejected fragment with registered `emit_error_publication_step` API. Its source accepts full u8 payloads and nonempty frames, precedes exhaustion at fuel 0, clears control and preserves arenas, environment, frames and fuel. The frozen “Unregistered” module opening predates registration.
+
+Two independent designated security SOURCE approvals and fresh ordinary final four-file PASS used the Argon HIGH Opus-outage route. Two source leaves passed syntax parsing; default local CI passed 230 tests in 9.901 seconds. These checks did not SDK-typecheck the fragment or run its three symbolic tests. SDK typechecking, symbolic tests, native circuit/proof and stagenet evidence remain UNRUN. Full StepInv, F4, G4, `projectA`, generic dispatch and A82 native Layout remain OPEN. No old context/key/qualification is inherited. Native authority remains zero; preceding prefixes, acceptance statuses, limits and counters are unchanged.
+
+
+## 2026-10-17 source-status appendix — exhaustion and composed ledger
+
+[PR #167](https://github.com/CharlesHoskinson/Moriarty/pull/167) adds the standalone A84 exhaustion source and six UNRUN symbolic tests. Error and empty-stack Return keep priority at zero fuel; nonempty-stack Return and recursive Push spines are admitted by this local fragment. Its wire fixtures do not establish full StepInv-valid machine states. This does not implement zero-fuel startup in the positive-fuel A102-to-A80 composer.
+
+At this dated capture, [draft PR #168](https://github.com/CharlesHoskinson/Moriarty/pull/168) publishes the eight-file composed source candidate (commit `381a789d`); final source reviews and merge are pending. The distinct `literal_complete_bridge` layout/request/statement carries two context limbs, Program, Init, intermediate, Done and both envelopes (`2 + P + 3*S + 4` lanes). Host checks cover full 16-byte fuel subtraction and inactive Return columns. New typed ledger and transaction modules consume this layout through distinct key/opening/prover/verification APIs and deployment/call assembly and the declared `verify_extracted_call_from_contract_state_bytes_for_request` entry point. Supplied state authentication, freshness and chain association remain caller obligations. Old A102 public leaf APIs remain preserved; parent/source-closure changes invalidate automatic inheritance of old context/key qualifications.
+
+All eight composed Rust source/registration files passed syntax parsing. Default local CI passed 230 tests in 9.958 seconds; it does not typecheck the SDK or execute these new Rust tests. SDK/native compilation, relation load/costing, keygen, proofs, verification, deploy and stagenet acceptance remain UNRUN. Step-mode Constant-space intermediate/Done are not canonical StateBlocks: `projectA`, F3/F4/F5, G4, full StepInv, full 39-way dispatch and all broader interpreter/financial/U/M/MC/SP/G/release exits remain OPEN. This appendix changes no preceding checklist, execution authority, resource limit or counter. The immediate target is a real Sherlock Midnight stagenet transaction and complete supported effects readback.

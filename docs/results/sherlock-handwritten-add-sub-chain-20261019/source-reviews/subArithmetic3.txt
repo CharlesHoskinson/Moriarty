@@ -1,0 +1,263 @@
+# Fresh non-author review: Sub arithmetic emitter and three-test source
+
+## Identity and read coverage
+
+**Identity.** My runtime reports `claude-opus-5-5`. I can't see session IDs. This context has no prior turns and wrote no source. Root's capture of identity and status is authoritative. This is one opinion, not two votes.
+
+**No tools were used.** Nothing was compiled, executed, evaluated, or proved. Everything below is source reading.
+
+**Read in full:**
+- Bodies 1–28, including the complete emitter with its hook and the complete test module.
+- `mod.rs`, `enabled_fetch.rs`, `fetch.rs`, `literal_host.rs`.
+- Schema pointers, the R4 row, the host Scalar fragment, the K primitives, and the checked leaves.
+- SDK `ir.rs`, `ir_vm.rs`, `ir_types.rs`, `lib.rs`, and the instruction files `add`, `assign`, `constrain_eq`, `eq`, `mod`, `mul`, `neg`, `select`.
+
+**Not supplied, so not verified:**
+- `b_scalar_arithmetic.rs` (the Add original). The "exact copy plus 20 edits" claim is unverifiable by me.
+- Crate `Cargo.toml` and edition.
+- The `mori_core::Type` definition. Copy is inferred from existing `column.kind` usage.
+- `midnight_circuits` `lower_than`, `assigned_to_le_bits`, `convert`, `select`, `is_equal`, `assert_non_zero`.
+- `transient_crypto::Fr`: its `PartialOrd`/`Ord` semantics, `From<u128>`, and `FR_BITS`.
+- `ACTUAL-HOST-REFERENCE-BINARY.rs.txt` and `ACTUAL-HOST-VALUE-OP-TYPES.rs.txt`, which Body 15 lists but which were not inline.
+
+---
+
+## 1. Security relation (local row only): **APPROVE_WITH_LIMITS**
+
+### Constraints actually enforced (quotes from `b_scalar_subtraction.rs`, `emit_b_scalar_arithmetic_sub`)
+
+**Selection.**
+- `space = select(enable, opB.space, 0)` and `en_const = select(space, 0, enable)`, both boolean-constrained.
+- When disabled, both fetches run with enable 0. `index_eff` is 0, all selectors are 0, and the selected cells are 0.
+
+**Tag.**
+- `b.bits(read_tag.clone(), 3)` followed by `less_than(read_tag, 6)` and then `b.assert(valid_tag)`.
+- In-circuit, `Assert` is `assert_non_zero`. That is sound here only because `less_than` emits `ConstrainToBoolean` on its output, and it does.
+
+**Operand bytes.**
+- `b.bits(value.clone(), 8)`, then `active_n = select(b_is_uint, value, 0)`, then `b.eq(value, active_n)`.
+- So `read_n` is forced to 0 unless `enable` holds and the tag is 0.
+
+**Borrow loop (A11):**
+```
+let need = b.add(read_n[i].clone(), borrow);
+b.bits(need.clone(), 9);
+let next_borrow = b.less_than(eff_reg_a[i].clone(), need.clone());
+```
+- `need` lies in [0, 256] because `read_n` is at most 255 and the borrow is boolean.
+- `bo_i = (a_i < need_i)` is the standard LE subtraction borrow.
+- When `need = 256`, `bo` is 1 and `post_i = a_i`, which is correct.
+- `underflow = bo_15`, which equals `regA < u128(b)`.
+
+**Reconstruction:**
+```
+let minuend = b.add(eff_reg_a[i].clone(), borrow_term);   // borrow_term = 256*bo_i
+let reconstructed = b.add(eff_post_u128[i].clone(), needs[i].clone());
+b.gated_eq(&is_val, reconstructed, minuend);
+```
+- Every term is below 512 and the field is about 255 bits, so this is integer equality with no wrap.
+- Summing over bytes, the `bo` terms telescope to `post + b = a + bo_15·2^128`.
+- `is_val` requires `bo_15 = 0`, so `post = a − b` exactly.
+- Each `post_i` is in [0, 255] in both borrow cases, so the byte is unique.
+- On the success path each `bo_i` is also forced by the 8-bit `post` range: a wrong bit yields `post_i` of 256 or more, or a negative value. That path is self-checking even without trusting `LessThan`.
+
+**Error selector:**
+```
+let code_if_uint = b.select(underflow.clone(), immediate(PRIM_ERROR_ARITH_OVERFLOW), immediate(0));
+let expected_error_code = b.select(b_is_uint.clone(), code_if_uint, immediate(PRIM_ERROR_SORT_MISMATCH));
+```
+- Combined with `expected_staged_tag = select(is_val, 1, 4)`:
+  - Value: tag 1, code 0.
+  - UInt underflow: tag 4, code 10.
+  - Valid non-UInt: tag 4, code 11.
+- For a non-UInt operand, `read_n` is 0, so every `need` is 0, `LessThan(a, 0)` is 0, and `underflow` is 0. Underflow can only be 1 when enabled with a UInt operand.
+- This matches K `uiChecked(A −Int B)` and the row branches.
+
+**Inactive payload.**
+- `select(is_val, 0, eff_post_u128[i]) == 0` zeroes the U128 lanes on error or when disabled.
+- The `bool`, `pendingNode`, `selector` and `typeTestOk` lanes are gated to 0.
+- On success the code lane is forced to 0 through `expected_error_code`.
+
+**Preservation (A14).**
+- Covered: present, kind, site, mode, `opA.{space,index}`, `opB.{present,space,index}`, all 16 `regA` lanes (`eff_reg_a` against `post.reg_a`), and every `rest` lane.
+- Phase is set to Done. `staged` is rewritten.
+- All 48+rest lanes are accounted for.
+
+**Counters.**
+- `decrement` and `increment` work over `eff_bytes` (8-bit) with `TestEq` borrow/carry and a final `b.eq(borrow, immediate(0))`, so there is no wrap.
+- Deltas are [−1, +1, +1, +1], matching the T-HELPER base.
+
+**Disabled rows.** Only boolean `enable`, nonzero-capacity table well-formedness, and `read_tag = 0` passing the tag check are required. Disabled stutter is not established; I neither claim nor demand it.
+
+### Mandatory finding
+
+**F1 (doc/constraint mismatch, not arithmetic).** The module doc says disabled rows still require "`active_rows <= capacity`". But in `space_read_any_kind`:
+```
+if table.capacity == 0 { b.eq(enable, immediate(0)); return Ok((immediate(0), ...)); }
+```
+- No range or `≤ 0` constraint is emitted on `active_rows` for a zero-capacity table.
+- The public wrapper adds only a 128-bit range.
+- **Fix:** either qualify the doc ("for nonzero-capacity tables") or emit `bits(active_rows,128)` plus `eq(active_rows, 0)` in that branch.
+- It does not affect the Sub result, because enable forces the other space.
+
+### Limits (not defects)
+
+- **L1.** The PrimError(10) path has no cross-check besides the SDK `LessThan`. A wrong in-circuit `lower_than` bit could stage 10 for an in-range pair. Optional defence in depth: always witness diff bytes and check the reconstruction unconditionally.
+- **L2.** Tags 6 and 7 (Marker, U128OutOfRange), and non-UInt rows with nonzero `n` lanes, make the circuit unsatisfiable rather than yielding 11. That is correct only under the SI-17, `/notation/inactive` and projection binding the caller supplies.
+- **L3. Caller premises, unchanged:**
+  - SI-22 S2: `pre.staged` is None and `regA = u128(opA)`. Not constrained here.
+  - `active_rows` bound to `active(prog.constants)` and `pre.active.data`.
+  - Dispatch-derived `enable` and exactly-one dispatch.
+  - AB, P0–P3 and PS, including P2 zero fuel and P3 `helperWork = max`.
+  - `referenceCursor`, alloc counters and complement C.
+  - Full StepInv, SI-21 and SI-21R.
+  - L04 field/statement binding.
+
+---
+
+## 2. Normal / ABI / SDK compatibility (source-staged): **APPROVE_WITH_LIMITS**
+
+**Instruction shapes match `ir.rs`:**
+- `CondSelect{bit,a,b,output}`, `ConstrainEq{a,b}`, `ConstrainToBoolean{val}`, `ConstrainBits{val,bits:u32}`, `Assert{cond}`.
+- `TestEq{a,b,output}`, `LessThan{a,b,bits,output}`, `Add`/`Mul{a,b,output}`.
+- `PublicInput{guard:None,val_t,output}`, `Impact{guard,inputs}`, `Output{vals}`.
+- The SDK has no Sub variant (only `Neg`), so the borrow-chain construction is the appropriate choice.
+
+**SDK `LessThan(bits = 128)`.**
+- In-circuit it calls `std.lower_than(.., u32::max(128 + 0, 4)) = 128`, which is even and at least 4.
+- Off-circuit, `resolve_operand_bits(.., Some(128))` checks bits above 128 are zero (128 < `FR_BITS`), then compares `from_bits(..) < from_bits(..)` on `Fr`.
+- Inputs are pre-ranged to 8 bits (`eff_bytes`) and 9 bits (`need`), well inside the documented "UB if a or b exceed bits" precondition.
+- **Unverified:**
+  - Soundness of `lower_than`.
+  - Whether `Fr`'s `PartialOrd` is canonical-integer ordering. If it compared the internal representation, preprocess and synthesize would diverge. The existing `fetch.rs` has the same reliance.
+- Using 128 bits for 9-bit values costs extra rows; correctness is unaffected.
+
+**Visibility.**
+- `use super::*` in a child pulls in parent private items and imports: `immediate`, `constrain`, `Column`, `TableShape`, `emit_enabled_fetch_block`, `Fr`, `Operand`, `Arc`, `Type`.
+- Local definitions shadow the glob re-exports of the Add carriers (named items beat globs). The test grandchild's glob therefore sees the Sub-local types.
+- The Sub types are distinct Rust types from the Add types. A shared dispatcher needs conversion or unification (an ABI-owner decision).
+
+**Registration needed.**
+- `pub mod b_scalar_subtraction;` in `mod.rs`.
+- Do not `pub use` the colliding carrier names (E0252 against the existing explicit Add re-exports).
+- Only `emit_b_scalar_arithmetic_sub`, `emit_public_b_scalar_arithmetic_sub`, `BScalarArithmeticSub{Inputs,Block}`, `EmittedBScalarArithmeticSub` and `SCALAR_MODE_SUB` are unique.
+
+**Compile-only risks.**
+- **Edition ≥ 2021** is required for by-value array `.into_iter()`:
+  - `[&input.enable, ...].into_iter().chain(...)`
+  - `helper_operands`
+  - the test's `const_rows.into_iter().enumerate()`
+- `let read_n = std::array::from_fn(...)` gets N=16 only from later struct usage while `read_n[i]` is indexed earlier. I believe this compiles, but only the compiler can confirm.
+- Possible `dead_code` warnings on `EvalRejection` fields; harmless unless `deny(warnings)`.
+
+**Wrapper.**
+- Field order equals `pack_witness` order: enable, const active, const rows (tag + 16), data active, data rows, pre/post 48+rest, pre/post counters 4×16 LE.
+- Outputs are 19 + inputs, all Native. Lengths are consistent.
+- Scope `b_scalar_sub` input ids don't collide with the three temp namespaces.
+
+**Construction errors.**
+- `EmptyScope` comes first, then `RowCount{Const|Data}`, `RestLaneCount`, `UnprefixedVariable` and `TemporaryNameCollision`, against `%{scope}.local.temp.`, `.const_fetch.temp.` and `.data_fetch.temp.`.
+- Fetch scopes are `{scope}.const_fetch` and `{scope}.data_fetch`, and they nest consistently.
+
+---
+
+## 3. Three-test source: **APPROVE_WITH_LIMITS**
+
+**Binding.**
+```
+#[cfg(test)]
+#[path = "b_scalar_subtraction_three_tests.rs"]
+mod three_tests;
+```
+- A non-inline module in a non-`mod.rs` file resolves relative to `src/sherlock_machine/`.
+- That gives `sherlock_machine::b_scalar_subtraction::three_tests::<name>`.
+- There are exactly 3 `#[test]` functions, and the names match Body 1/4.
+- Compilable only after registration.
+
+**Fixtures.**
+- Every name the emitter reads is bound: `%in.const.{0..2}.{tag,n.i}`, `%in.data.0.*`, helper/rest/staged lanes, and counters.
+- The prefixes avoid the `sub_case` namespaces.
+- All immediates used (0, 1, 2, 3, 4, 6, 10, 11, 255, 256) are within 0..=1024.
+- Only supported instructions are emitted.
+
+### Independent derivation (from the norms, not the author's labels)
+
+**Test 1:** a = 2^64+3, with bytes [3, 0×7, 1, 0…]. b = 0x105, with bytes [5, 1, 0…].
+
+| Byte | need | Borrow | post byte |
+|---|---|---|---|
+| 0 | 5 | 1 | 254 |
+| 1 | 2 | 1 | 254 |
+| 2–7 | 1 | 1 | 255 |
+| 8 | 1 | 0 | 0 |
+| 9–15 | 0 | 0 | 0 |
+
+- Borrow chain: `[1×8, 0×8]`.
+- DIFF = `0xFFFF_FFFF_FFFF_FEFE`.
+- Tag 1, code 0.
+- Mutation `post0 = 253`: `guarded = select(1, 253+5, 259)` gives **(258, 259)**.
+
+**Test 2:** a = 0x100, with bytes [0, 1]. b = 2^120+1, with bytes [1, 0…, 1 at byte 15].
+- Borrow chain: `[1, 0×14, 1]`.
+- Underflow 1, `is_val` 0.
+- U128 lanes are forced to 0. Tag 4.
+- `code_if_uint` is 10, so the expected code is 10.
+- Mutation code 11 gives **(11, 10)**.
+
+**Test 3:** Bool row 2.
+- `read_tag` 1, `b_is_uint` 0, `read_n` 0.
+- All `need` values 0, borrow chain all 0.
+- Expected code 11.
+- Mutation 10 gives **(10, 11)**.
+
+**Counters.**
+- [0x100, 0xFF, 0x1FF, 0] → [0xFF, 0x100, 0x200, 1].
+- These exercise the byte-0 borrow (decrement) and carries (increment). They satisfy `left = right` at every byte, with final borrow/carry 0.
+
+**Baseline.**
+- Const fetch: `en_const` = 1, `LessThan(3, 3)` = 0, index < 3, selector sum 1.
+- Disabled data fetch: `LessThan(1, 1)` = 0, `guarded_prefix` = 1, sum 0 = enable.
+- All six A09 guards hold.
+- All pass. Each test's baseline is accepted by my derivation.
+
+**First failure.**
+- `staged.code` is first read at the A13 `gated_eq`.
+- `staged.u128.0` is read earlier, by A10 `eff_bytes` (a select plus `bits 8`), but 253 passes there. It then fails at the byte-0 reconstruction `ConstrainEq`, before that iteration's inactive check.
+- The pairs genuinely follow instruction order from a valid baseline.
+
+### Low findings (non-blocking)
+
+- **T1.** The `assert_rejected_at_eq` doc says "no other emitted relation reads that lane earlier". That is false for `staged.u128.0`. The assertion is still valid as a first-failure check; reword it.
+- **T2.** The test checks only that the failing index is a `ConstrainEq` and its values. Pinning operand identity, e.g. that `b` is the expected minuend temp, would harden it.
+
+### Evaluator limits
+
+- It is host-only and off-circuit. It runs an honest witness plus one bad lane per case.
+- It uses `u128` with no `Fr` wrap. `Add`/`Mul` `unwrap` panics on overflow. `bits ≥ 128` is unchecked.
+- It is not SDK, Halo2, or adversarial in-circuit evidence.
+- The expected values are the author's. My derivation above agrees with them, but that is not a golden.
+
+---
+
+## Pending (explicit, not waived)
+
+- Actual compilation and test runs after registration.
+- **SDK preprocess and MockProver runs**, including `LessThan`/`Fr` ordering.
+- **Boundary cases:**
+  - need = 256 (e.g. 2^16 − 0xFFFF)
+  - a = b → `U128Value(0)`
+  - 0 − 0
+  - MAX − MAX, MAX − 0, 0 − MAX
+  - top-byte-only borrow
+- **Other inputs:**
+  - Data-space enabled operandB.
+  - `enable = 0` with arbitrary post lanes.
+  - Tags 6 and 7, and tags of 8 or more, rejected.
+  - Non-UInt row with nonzero `n`.
+  - Capacity-0 tables (F1).
+- **Errors and refusals:**
+  - Every construction-error and namespace-collision variant.
+  - Counter refusals: remaining 0, `helperWork` 2^128−1.
+- **Wrapper:** `emit_public_b_scalar_arithmetic_sub` and `pack_witness` round-trip and length errors.
+- **The 10-case corpus.**
+- **Integration:** the Sub completion → typed RR → P1 chain (separately owned), and the full B96/39 statement, field and proof scope.

@@ -1,0 +1,65 @@
+{
+  "lineage": "Author-owned source-static structural tests/helper documentation; never treated as independent value/work oracle",
+  "sources": [
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/source_adapter_operator_tests.rs",
+      "source_sha256": "d0f1cedc9a52980f0c4f7c284d55850fa0af633bcc3865d078d7b21c4fbacd95",
+      "line_spans": [
+        {
+          "start": 1,
+          "end": 15,
+          "text": "//! Author-owned ordinary structural tests, SOURCE_ONLY / UNRUN.\n//! These assert the public lowering design, not independent values/work/traces.\n//! No evaluator, Machine, owner engine or private oracle is called/read.\nuse super::*;\n\nfn node(value: Expr) -> ExprRef { Arc::new(value) }\nfn name(value: &str) -> ExprRef { node(Expr::Var(value.into())) }\nfn bool_node(value: bool) -> ExprRef { node(Expr::Literal(Value::Bool(value))) }\nfn primitive(op: BinaryOp, lhs: ExprRef, rhs: ExprRef) -> ExprRef {\n    node(Expr::Binary(op, lhs, rhs))\n}\nfn negate(value: ExprRef) -> ExprRef { node(Expr::Unary(UnaryOp::Not, value)) }\nfn eager_pair(body: ExprRef) -> ExprRef {\n    node(Expr::Let(\"$0l\".into(), name(\"left\"),\n        node(Expr::Let(\"$0r\".into(), name(\"right\"), body))))"
+        },
+        {
+          "start": 52,
+          "end": 64,
+          "text": "#[test]\nfn missing_scalar_operators_have_exact_eager_existing_ast_lowerings() {\n    let l = \"$0l\";\n    let r = \"$0r\";\n    let cases = [\n        (\"not =\", \"UInt\", negate(primitive(BinaryOp::Eq, name(\"left\"), name(\"right\")))),\n        (\">=\", \"UInt\", negate(primitive(BinaryOp::Lt, name(\"left\"), name(\"right\")))),\n        (\">\", \"UInt\", eager_pair(primitive(BinaryOp::Lt, name(r), name(l)))),\n        (\"<=\", \"UInt\", eager_pair(negate(primitive(BinaryOp::Lt, name(r), name(l))))),\n        (\"and\", \"Bool\", eager_pair(node(Expr::If(name(l), name(r), bool_node(false))))),\n        (\"or\", \"Bool\", eager_pair(node(Expr::If(name(l), bool_node(true), name(r))))),\n    ];\n    for (operator, ty, expected) in cases {"
+        },
+        {
+          "start": 162,
+          "end": 196,
+          "text": "fn repeated_dag_edges_have_distinct_deterministic_hygienic_generated_symbols() {\n    let source = Program {\n        language: crate::LANGUAGE.into(), semantics: crate::SEMANTICS.into(),\n        name: \"Shared\".into(), states: vec![], assets: vec![],\n        expressions: vec![CoreExpr::Name { name: \"left\".into() },\n            CoreExpr::Name { name: \"right\".into() },\n            CoreExpr::Binary { op: CoreOp::Gt, lhs: 0, rhs: 1 },\n            CoreExpr::Binary { op: CoreOp::And, lhs: 2, rhs: 2 }],\n        actions: vec![crate::Action { name: \"inspect\".into(),\n            inputs: vec![crate::InputDecl { name: \"left\".into(), ty: crate::Type::UInt },\n                crate::InputDecl { name: \"right\".into(), ty: crate::Type::UInt }],\n            statements: vec![Statement::Emit { name: \"out\".into(), value: 3 }] }],\n    };\n    let first = prepare_scalar_action(&source, 0).unwrap();\n    assert_eq!(first, prepare_scalar_action(&source, 0).unwrap());\n    let mut binders = Vec::new(); generated_binders(&first.function.body, &mut binders);\n    assert!(!binders.is_empty());\n    assert_eq!(binders.iter().collect::<std::collections::BTreeSet<_>>().len(), binders.len());\n    assert!(binders.iter().all(|binder| binder.contains('$') && binder != \"left\" && binder != \"right\"));\n    let mut paths = Vec::new(); generated_paths(&first.function.body, vec![], &mut paths);\n    assert_eq!(first.report.occurrences.iter().map(|site| site.body_path.clone())\n        .collect::<Vec<_>>(), paths);\n}\n\n#[test]\nfn compact_symbol_supply_avoids_every_already_occupied_generated_name() {\n    let source = scalar_source(\">\", \"UInt\");\n    let mut supply = LoweringSymbols::new(&source);\n    assert!(supply.occupied.contains(\"Operators\"));\n    assert!(supply.occupied.contains(\"inspect\"));\n    assert!(supply.occupied.contains(\"left\") && supply.occupied.contains(\"right\"));\n    // Ordinary compiler fresh-name lifecycle: reserve existing generated names,\n    // then request a colliding base. No invalid Core input is constructed.\n    supply.occupied.insert(\"$0l\".into());\n    supply.occupied.insert(\"$0l$\".into());"
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/helper_machine/core_action_consumer_tests.rs",
+      "source_sha256": "3ef5d065f61a0b66fdd984250f784729645793e404e31542d2aadfbf79869799",
+      "line_spans": [
+        {
+          "start": 73,
+          "end": 78,
+          "text": "    assert_eq!(actual.preparation.generated_function_name, action);\n    assert_eq!(actual.preparation.inputs.iter().map(|input| input.name.as_str()).collect::<Vec<_>>(),\n        declared.iter().map(|(name, _)| *name).collect::<Vec<_>>());\n    assert_eq!(actual.preparation.emit.statement_index, 2);\n    assert_eq!(actual.preparation.emit.role, \"value-projection; ordered emit effect remains in Core\");\n"
+        },
+        {
+          "start": 97,
+          "end": 105,
+          "text": "    assert_eq!(view.names[function.function_name], action);\n    let parameters = &view.parameters[function.params.start..function.params.start + function.params.len];\n    assert_eq!(parameters.iter().map(|parameter| view.names[parameter.binder].as_str()).collect::<Vec<_>>(),\n        declared.iter().map(|(name, _)| *name).collect::<Vec<_>>());\n    let (function_name, args) = match &view.expressions[view.entry] {\n        ExpressionRowC::Call { function_name, args } => (*function_name, *args),\n        _ => panic!(\"admitted entry is not the explicit generated call\"),\n    };\n    assert_eq!(view.names[function_name], action);"
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/sherlock/bounded_scalar_source.rs",
+      "source_sha256": "abe867f9b91738800e954fcb452dd5fea534c85d4ee390e38af09a444c5a8548",
+      "line_spans": [
+        {
+          "start": 288,
+          "end": 310,
+          "text": "}\n\n/// Own nodes, operand nesting offsets, own nesting, synthetic binders, Ifs.\ntype Lowering = (u128, [u128; 2], u128, u128, u128);\n\n/// Literal, Name, Not and the five direct binary primitives: one node over its operands.\nconst DIRECT: Lowering = (1, [1, 1], 1, 0, 0);\n\n/// The adapter's lowering table, with L and R the mapped operands at the given offsets.\nfn lowering(op: crate::BinaryOp) -> Lowering {\n    use crate::BinaryOp as Op;\n    match op {\n        Op::Add | Op::Sub | Op::Mul | Op::Eq | Op::Lt => DIRECT,\n        // Unary(Not, Binary(Eq | Lt, L, R)).\n        Op::Ne | Op::Ge => (2, [2, 2], 2, 0, 0),\n        // Let(l, L, Let(r, R, Binary(Lt, Var(r), Var(l)))).\n        Op::Gt => (5, [1, 2], 4, 2, 0),\n        // Let(l, L, Let(r, R, Unary(Not, Binary(Lt, Var(r), Var(l))))).\n        Op::Le => (6, [1, 2], 5, 2, 0),\n        // Let(l, L, Let(r, R, If(Var(l), Var(r) | true, false | Var(r)))).\n        Op::And | Op::Or => (6, [1, 2], 4, 2, 1),\n    }\n}"
+        }
+      ]
+    },
+    {
+      "source": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/crates/mori-core/src/intent.rs",
+      "source_sha256": "a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c",
+      "line_spans": [
+        {
+          "start": 69,
+          "end": 71,
+          "text": "pub fn hash_bytes(bytes: &[u8]) -> String {\n    hex(&Sha256::digest(bytes))\n}"
+        }
+      ]
+    }
+  ],
+  "not_fixed": "Exact fresh-name spellings/node_kind and Core parser numeric metadata for these new cases are not supplied by this mapping"
+}

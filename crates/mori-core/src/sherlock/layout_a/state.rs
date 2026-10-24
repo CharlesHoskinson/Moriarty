@@ -1,8 +1,8 @@
 //! Internal host-only L4 StateBlock rows; no public importer or native interface.
 //! Logical lanes follow L4 column order. Byte serialization is a separate layer.
-use crate::sherlock::Program;
-use super::rows::{ConstantNode, ProgramBlock, TableId, ValueRef, Slice};
 use super::limits::{Locator, PrepareFailure};
+use super::rows::{ConstantNode, ProgramBlock, Slice, TableId, ValueRef};
+use crate::sherlock::Program;
 
 /// Every dimension is caller supplied. D must equal PreparedA.capacities.data.
 /// No resource/default capacity is chosen by these structures.
@@ -18,10 +18,17 @@ pub struct StateCapacities {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct EnvRoot { pub present: bool, pub index: usize }
+pub struct EnvRoot {
+    pub present: bool,
+    pub index: usize,
+}
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct EnvCell { pub name_id: usize, pub value: ValueRef, pub parent: EnvRoot }
+pub struct EnvCell {
+    pub name_id: usize,
+    pub value: ValueRef,
+    pub parent: EnvRoot,
+}
 
 /// The logical Data node has exactly the same columns as the Constant node.
 pub type DataNode = ConstantNode;
@@ -111,39 +118,86 @@ pub struct AImage<'a> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DecodeMode { Canonical, Step }
+pub enum DecodeMode {
+    Canonical,
+    Step,
+}
 
 /// Exactly the seven located L4 tooling refusal classes. None is a semantic
 /// Outcome or StepRecord. Preparation's two classes preserve their identity.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StateFailure {
-    Capacity { table: &'static str, needed: u128, limit: u128, locator: Locator },
-    ProgramMismatch { locator: Locator },
-    OutsideProgramClosure { field: &'static str, locator: Locator },
-    WrongRepresentation { block: &'static str, table: &'static str, row: usize,
-        column: &'static str, definition: &'static str },
-    OutsideObservationDomain { condition: &'static str, locator: Locator },
-    WrongProfile { locator: Locator },
-    HostUnrepresentable { field: &'static str, locator: Locator },
+    Capacity {
+        table: &'static str,
+        needed: u128,
+        limit: u128,
+        locator: Locator,
+    },
+    ProgramMismatch {
+        locator: Locator,
+    },
+    OutsideProgramClosure {
+        field: &'static str,
+        locator: Locator,
+    },
+    WrongRepresentation {
+        block: &'static str,
+        table: &'static str,
+        row: usize,
+        column: &'static str,
+        definition: &'static str,
+    },
+    OutsideObservationDomain {
+        condition: &'static str,
+        locator: Locator,
+    },
+    WrongProfile {
+        locator: Locator,
+    },
+    HostUnrepresentable {
+        field: &'static str,
+        locator: Locator,
+    },
 }
 pub type StateResult<T> = std::result::Result<T, StateFailure>;
 
 impl From<PrepareFailure> for StateFailure {
     fn from(value: PrepareFailure) -> Self {
         match value {
-            PrepareFailure::Capacity { table, needed, limit, locator } => {
+            PrepareFailure::Capacity {
+                table,
+                needed,
+                limit,
+                locator,
+            } => {
                 let table = match table {
-                    TableId::Names => "Names", TableId::NameBytes => "NameBytes",
-                    TableId::Occurrences => "Occurrences", TableId::OccurrencePaths => "OccurrencePaths",
-                    TableId::Expressions => "Expressions", TableId::ExprChildren => "ExprChildren",
-                    TableId::Functions => "Functions", TableId::Parameters => "Parameters",
-                    TableId::Patterns => "Patterns", TableId::Arms => "Arms", TableId::Types => "Types",
-                    TableId::Constructors => "Constructors", TableId::ConstructorFieldTypes => "ConstructorFieldTypes",
-                    TableId::Constants => "Constants", TableId::ConstantFields => "ConstantFields",
+                    TableId::Names => "Names",
+                    TableId::NameBytes => "NameBytes",
+                    TableId::Occurrences => "Occurrences",
+                    TableId::OccurrencePaths => "OccurrencePaths",
+                    TableId::Expressions => "Expressions",
+                    TableId::ExprChildren => "ExprChildren",
+                    TableId::Functions => "Functions",
+                    TableId::Parameters => "Parameters",
+                    TableId::Patterns => "Patterns",
+                    TableId::Arms => "Arms",
+                    TableId::Types => "Types",
+                    TableId::Constructors => "Constructors",
+                    TableId::ConstructorFieldTypes => "ConstructorFieldTypes",
+                    TableId::Constants => "Constants",
+                    TableId::ConstantFields => "ConstantFields",
                 };
-                Self::Capacity { table, needed, limit, locator }
+                Self::Capacity {
+                    table,
+                    needed,
+                    limit,
+                    locator,
+                }
             }
-            PrepareFailure::HostUnrepresentable { locator } => Self::HostUnrepresentable { field: locator.field, locator },
+            PrepareFailure::HostUnrepresentable { locator } => Self::HostUnrepresentable {
+                field: locator.field,
+                locator,
+            },
         }
     }
 }

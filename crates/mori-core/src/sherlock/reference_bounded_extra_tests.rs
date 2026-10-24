@@ -15,7 +15,7 @@
 //! acf460094b258910bad0499fb8feda0cd85b680023939800ad714d2cb71bee16
 
 use super::normal_oracle_inputs::normal_program;
-use super::reference_display::{environment_to_k, KDisplay};
+use super::reference_display::{KDisplay, environment_to_k};
 use super::*;
 
 // Reader schema for the existing mechanical JSON transcriptions. Keeping the
@@ -81,17 +81,26 @@ fn compare_boundary(
     let published = position == prefix.boundary_state_index + 1;
     let expected = &case.states[position.min(prefix.boundary_state_index)];
     let control = if published { ".K" } else { expected.control };
-    let output = if published { prefix.output } else { case.pending_output };
+    let output = if published {
+        prefix.output
+    } else {
+        case.pending_output
+    };
     let remaining = prefix.initial_fuel - expected.charged_steps;
     assert_eq!(actual.program.to_k(), case.code, "{context}: code");
     assert_eq!(actual.program.entry.to_k(), case.entry, "{context}: entry");
     assert_eq!(
-        actual.control.as_ref().map(KDisplay::to_k).unwrap_or_else(|| ".K".into()),
+        actual
+            .control
+            .as_ref()
+            .map(KDisplay::to_k)
+            .unwrap_or_else(|| ".K".into()),
         control,
         "{context}: control at event boundary {position}"
     );
     assert_eq!(
-        environment_to_k(&actual.environment), expected.environment,
+        environment_to_k(&actual.environment),
+        expected.environment,
         "{context}: complete environment at event boundary {position}"
     );
     assert_eq!(
@@ -100,13 +109,71 @@ fn compare_boundary(
         "{context}: complete top-first frames at event boundary {position}"
     );
     assert_eq!(actual.depth(), expected.depth, "{context}: depth");
-    assert_eq!(actual.stack_limit, case.stack_limit, "{context}: stack limit");
-    assert_eq!(actual.initial_fuel, prefix.initial_fuel, "{context}: initial fuel");
-    assert_eq!(actual.remaining_fuel, remaining, "{context}: remaining fuel");
-    assert_eq!(actual.charged_steps(), expected.charged_steps, "{context}: work");
+    assert_eq!(
+        actual.stack_limit, case.stack_limit,
+        "{context}: stack limit"
+    );
+    assert_eq!(
+        actual.initial_fuel, prefix.initial_fuel,
+        "{context}: initial fuel"
+    );
+    assert_eq!(
+        actual.remaining_fuel, remaining,
+        "{context}: remaining fuel"
+    );
+    assert_eq!(
+        actual.charged_steps(),
+        expected.charged_steps,
+        "{context}: work"
+    );
     assert_eq!(actual.outcome.to_k(), output, "{context}: complete outcome");
     if position >= prefix.boundary_state_index {
-        assert_eq!(remaining, prefix.remaining_fuel, "{context}: frozen terminal fuel");
+        assert_eq!(
+            remaining, prefix.remaining_fuel,
+            "{context}: frozen terminal fuel"
+        );
+    }
+}
+
+// The first visit to each (fuel prefix, event position) must pass the full
+// independent literal comparison above. Later visits still compare the complete
+// typed Snapshot against that validated immutable observation. This avoids
+// rendering the same program, control, environment and frames for every replay;
+// it does not use another evaluator or skip any Machine::run_steps call.
+struct ValidatedBoundaries<'a> {
+    case: &'a ExpectedCase,
+    prefix: &'a ExpectedPrefix,
+    snapshots: Vec<Option<Snapshot>>,
+}
+
+impl<'a> ValidatedBoundaries<'a> {
+    fn new(case: &'a ExpectedCase, prefix: &'a ExpectedPrefix) -> Self {
+        Self {
+            case,
+            prefix,
+            // Positions include the initial state and free terminal publication.
+            snapshots: vec![None; prefix.boundary_state_index + 2],
+        }
+    }
+
+    fn check(&mut self, actual: &Snapshot, position: usize, context: &str) {
+        if let Some(validated) = self.snapshots[position].as_ref() {
+            assert_eq!(
+                actual, validated,
+                "{context}: complete validated boundary at {position}"
+            );
+            return;
+        }
+        compare_boundary(actual, self.case, self.prefix, position, context);
+        // Store only after every independent literal assertion has succeeded.
+        self.snapshots[position] = Some(actual.clone());
+    }
+
+    fn assert_complete(&self, context: &str) {
+        assert!(
+            self.snapshots.iter().all(Option::is_some),
+            "{context}: every frozen boundary must receive its literal comparison"
+        );
     }
 }
 
@@ -114,39 +181,61 @@ fn compare_boundary(
 // record are checked against independent observations, even across call cuts.
 fn compare_group(
     machine: &mut Machine,
-    case: &ExpectedCase,
-    prefix: &ExpectedPrefix,
+    boundaries: &mut ValidatedBoundaries<'_>,
     offset: usize,
     budget: usize,
     context: &str,
 ) -> usize {
+    let case = boundaries.case;
+    let prefix = boundaries.prefix;
     let event_count = prefix.boundary_state_index + 1;
     let expected_len = budget.min(event_count - offset);
     let before = machine.snapshot();
-    compare_boundary(&before, case, prefix, offset, context);
+    boundaries.check(&before, offset, context);
     let records = machine.run_steps(budget);
-    assert_eq!(records.len(), expected_len, "{context}: retained event count at {offset}");
+    assert_eq!(
+        records.len(),
+        expected_len,
+        "{context}: retained event count at {offset}"
+    );
     let mut previous = before;
     let mut group_work = 0;
     for (index, record) in records.iter().enumerate() {
         let position = offset + index;
-        assert_eq!(record.before, previous, "{context}: typed record continuity at {position}");
-        compare_boundary(&record.before, case, prefix, position, context);
-        compare_boundary(&record.after, case, prefix, position + 1, context);
+        assert_eq!(
+            record.before, previous,
+            "{context}: typed record continuity at {position}"
+        );
+        boundaries.check(&record.before, position, context);
+        boundaries.check(&record.after, position + 1, context);
         let (rule, charge) = if position < prefix.boundary_state_index {
-            (case.states[position + 1].via_rule_start_line.expect("literal charged edge"), 1)
+            (
+                case.states[position + 1]
+                    .via_rule_start_line
+                    .expect("literal charged edge"),
+                1,
+            )
         } else {
             (prefix.publication_rule_start_line, 0)
         };
-        assert_eq!(record.rule_start_line, rule, "{context}: source rule at event {position}");
-        assert_eq!(record.charge, charge, "{context}: raw charge at event {position}");
+        assert_eq!(
+            record.rule_start_line, rule,
+            "{context}: source rule at event {position}"
+        );
+        assert_eq!(
+            record.charge, charge,
+            "{context}: raw charge at event {position}"
+        );
         group_work += u128::from(record.charge);
         previous = record.after.clone();
     }
     let end = offset + expected_len;
     let after = machine.snapshot();
-    assert_eq!(after, previous, "{context}: complete live machine at group end");
-    compare_boundary(&after, case, prefix, end, context);
+    assert_eq!(
+        after, previous,
+        "{context}: complete live machine at group end"
+    );
+    boundaries.check(&after, end, context);
     let expected_work = case.states[end.min(prefix.boundary_state_index)].charged_steps
         - case.states[offset.min(prefix.boundary_state_index)].charged_steps;
     assert_eq!(group_work, expected_work, "{context}: retained prefix work");
@@ -161,33 +250,57 @@ fn compare_all_frozen_prefixes_and_cuts(case_id: &str) {
     assert_eq!(K_SOURCE_SHA256, ORACLE_SOURCE_SHA256);
     assert_eq!(K_SOURCE_SHA256, EXTRA_ORACLE_SOURCE_SHA256);
     assert_eq!(program.to_k(), case.code, "{case_id}: input code identity");
-    assert_eq!(program.entry.to_k(), case.entry, "{case_id}: input entry identity");
+    assert_eq!(
+        program.entry.to_k(),
+        case.entry,
+        "{case_id}: input entry identity"
+    );
 
     for prefix in case.prefixes {
         let event_count = prefix.boundary_state_index + 1;
+        let mut boundaries = ValidatedBoundaries::new(case, prefix);
         for cut in 0..=event_count {
             for width in [1, 2, 4, 8] {
-                let context = format!("{case_id}, fuel {}, cut {cut}, width {width}", prefix.initial_fuel);
-                let mut machine = Machine::new(program.clone(), prefix.initial_fuel, case.stack_limit);
+                let context = format!(
+                    "{case_id}, fuel {}, cut {cut}, width {width}",
+                    prefix.initial_fuel
+                );
+                let mut machine =
+                    Machine::new(program.clone(), prefix.initial_fuel, case.stack_limit);
                 // Cut zero and cut terminal are real run_steps calls, so empty
                 // calls and an exact cut immediately before free publication
                 // are covered alongside every saved control/frame boundary.
-                let mut offset = compare_group(&mut machine, case, prefix, 0, cut, &context);
+                let mut offset = compare_group(&mut machine, &mut boundaries, 0, cut, &context);
                 assert_eq!(offset, cut, "{context}: exact requested cut");
                 let saved = machine.snapshot();
-                assert!(machine.run_steps(0).is_empty(), "{context}: zero-event observation");
-                assert_eq!(machine.snapshot(), saved, "{context}: zero-event cut preserves full state");
+                assert!(
+                    machine.run_steps(0).is_empty(),
+                    "{context}: zero-event observation"
+                );
+                assert_eq!(
+                    machine.snapshot(),
+                    saved,
+                    "{context}: zero-event cut preserves full state"
+                );
                 while offset < event_count {
-                    offset = compare_group(&mut machine, case, prefix, offset, width, &context);
+                    offset = compare_group(&mut machine, &mut boundaries, offset, width, &context);
                 }
                 let terminal = machine.snapshot();
-                compare_boundary(&terminal, case, prefix, event_count, &context);
+                boundaries.check(&terminal, event_count, &context);
                 for budget in [0, 1, 2, 4, 8] {
-                    assert!(machine.run_steps(budget).is_empty(), "{context}: terminal event budget {budget}");
-                    assert_eq!(machine.snapshot(), terminal, "{context}: published state remains stable");
+                    assert!(
+                        machine.run_steps(budget).is_empty(),
+                        "{context}: terminal event budget {budget}"
+                    );
+                    assert_eq!(
+                        machine.snapshot(),
+                        terminal,
+                        "{context}: published state remains stable"
+                    );
                 }
             }
         }
+        boundaries.assert_complete(&format!("{case_id}, fuel {}", prefix.initial_fuel));
     }
 }
 
@@ -235,23 +348,50 @@ fn run_steps_extra_normal_frozen_membership() {
     let mut cut_count = 0;
     for (case_id, expected_prefixes, charged, expected_cuts) in membership {
         let case = case(case_id);
-        assert_eq!(case.prefixes.len(), expected_prefixes, "{case_id}: frozen fuel rows");
-        assert_eq!(case.states.len(), charged + 1, "{case_id}: complete charged boundaries");
+        assert_eq!(
+            case.prefixes.len(),
+            expected_prefixes,
+            "{case_id}: frozen fuel rows"
+        );
+        assert_eq!(
+            case.states.len(),
+            charged + 1,
+            "{case_id}: complete charged boundaries"
+        );
         assert_eq!(case.publication_pre_state_index, charged);
         assert_eq!(case.initial_fuel, charged as u128);
         assert_eq!(case.input_sha256.len(), 64);
         assert_eq!(case.publication_charge, 0);
         assert_eq!(case.publication_control, ".K");
         assert_eq!(case.publication_rule_start_line, 80);
-        assert_eq!(case.publication_output, format!("uiDone({})", case.expected_value));
+        assert_eq!(
+            case.publication_output,
+            format!("uiDone({})", case.expected_value)
+        );
         assert_eq!(case.prefixes[charged].output, case.publication_output);
-        assert_eq!(case.prefixes[charged].publication_rule_start_line, case.publication_rule_start_line);
+        assert_eq!(
+            case.prefixes[charged].publication_rule_start_line,
+            case.publication_rule_start_line
+        );
         for (index, state) in case.states.iter().enumerate() {
-            assert_eq!(state.charged_steps, index as u128, "{case_id}: literal work");
-            assert_eq!(state.remaining_fuel, case.initial_fuel - state.charged_steps);
+            assert_eq!(
+                state.charged_steps, index as u128,
+                "{case_id}: literal work"
+            );
+            assert_eq!(
+                state.remaining_fuel,
+                case.initial_fuel - state.charged_steps
+            );
         }
-        let cuts = case.prefixes.iter().map(|prefix| prefix.boundary_state_index + 2).sum::<usize>();
-        assert_eq!(cuts, expected_cuts, "{case_id}: exhaustive event-cut membership");
+        let cuts = case
+            .prefixes
+            .iter()
+            .map(|prefix| prefix.boundary_state_index + 2)
+            .sum::<usize>();
+        assert_eq!(
+            cuts, expected_cuts,
+            "{case_id}: exhaustive event-cut membership"
+        );
         prefix_count += case.prefixes.len();
         cut_count += cuts;
     }

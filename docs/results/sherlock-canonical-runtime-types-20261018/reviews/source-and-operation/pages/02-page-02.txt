@@ -1,0 +1,127 @@
+fn match_entry_payload(sel: &Selected, pre: &dyn PreImageView,
+    origin_reference_cursor: u128) -> Result<EffectPlan, HostViolation> {
+    let ControlC::Cases { value: scrutinee, arms, saved_env } = *pre.control()
+        else { return Err(wrong_variant()); };
+    Ok(empty_plan(HelperControlC::Match { common: common(sel, origin_reference_cursor)?,
+        scrutinee, arm: arms.start, saved_env, partial: saved_env,
+        pat_tag: PatternTag::PVar, x: 0, y: 0, field_idx: 0, staged: None,
+        phase: MatchPhase::Arm, status: TriStatus::Pending }))
+}
+
+// pr comes from the public wrapper's checked parameter read. The value-slot
+// read remains here, in normative parameter-before-argument order.
+fn bind_pair_payload(_sel: &Selected, pre: &dyn PreImageView,
+    pr: (usize, TypeIdC)) -> Result<EffectPlan, HostViolation> {
+    let mut helper = pre.helper().copied().ok_or_else(wrong_variant)?;
+    let HelperControlC::Bind { args, p_cursor, a_cursor, .. } = &mut helper
+        else { return Err(wrong_variant()); };
+    let pos = args.start.checked_add(*a_cursor).ok_or(HostViolation {
+        kind: HostViolationKind::ArithmeticUndefined, clause: None,
+        rule: None, locator: None })?;
+    let arg = pre.value_slot(&pos)?;
+    *p_cursor = p_cursor.checked_add(1).ok_or(HostViolation {
+        kind: HostViolationKind::ArithmeticUndefined, clause: None,
+        rule: None, locator: None })?;
+    *a_cursor = a_cursor.checked_add(1).ok_or(HostViolation {
+        kind: HostViolationKind::ArithmeticUndefined, clause: None,
+        rule: None, locator: None })?;
+    let mut writes = PlannedWrites::default();
+    writes.task_op = TaskOp::Push(HelperTaskC::PairTask { binder: pr.0, sort: pr.1, arg });
+    writes.helper = Write::Set(Some(helper));
+    let mut delta_assert = PlanDelta::default(); delta_assert.task_live = 1;
+    Ok(EffectPlan { writes, delta_assert })
+}
+
+// p is a private tuple projected from the wrapper's exact checked pattern row.
+fn match_arm_payload(_sel: &Selected, pre: &dyn PreImageView,
+    p: (PatternTag, usize, usize)) -> Result<EffectPlan, HostViolation> {
+    let mut helper = pre.helper().copied().ok_or_else(wrong_variant)?;
+    let HelperControlC::Match { scrutinee, pat_tag, x, y, staged, phase, .. } = &mut helper
+        else { return Err(wrong_variant()); };
+    *pat_tag = p.0;
+    *x = if p.0 == PatternTag::PNil { 0 } else { p.1 };
+    *y = if matches!(p.0, PatternTag::PCons | PatternTag::PBranch) { p.2 } else { 0 };
+    if p.0 == PatternTag::PVar { *staged = Some(*scrutinee); *phase = MatchPhase::Bind; }
+    else { *phase = MatchPhase::Tag; }
+    let mut writes = PlannedWrites::default(); writes.helper = Write::Set(Some(helper));
+    Ok(EffectPlan { writes, delta_assert: PlanDelta::default() })
+}
+
+// Root forwards the four corresponding FamilyPlans methods to these pure
+// functions. No fallback body for another family is supplied here.
+pub fn plan_bind(sel: &Selected, pre: &dyn PreImageView,
+    guards: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> {
+    use RuleIdC::*;
+    match sel.rule {
+        BHelperBindEntry => {
+            let ControlC::Enter { function: Some(function), .. } = *pre.control()
+                else { return Err(wrong_variant()); };
+            let params = pre.function_row(&function)?.params;
+            bind_entry_payload(sel, pre, pre.reference_cursor(), params)
+        }
+        BHelperBindPair => {
+            let HelperControlC::Bind { params, p_cursor, .. } = helper_copy(pre)?
+                else { return Err(wrong_variant()); };
+            let pos = params.start.checked_add(p_cursor).ok_or(HostViolation {
+                kind: HostViolationKind::ArithmeticUndefined, clause: None,
+                rule: None, locator: None })?;
+            let pr = pre.parameter(&pos)?;
+            bind_pair_payload(sel, pre, (pr.binder, pr.sort))
+        }
+        BHelperBindEmpty | BHelperBindArity | BHelperBindType | BHelperBindDuplicate |
+        BHelperBindInsert | BHelperBindPropagate => {
+            bind_unwind_payload(sel, pre, guards, pre.task_live())
+        }
+        BHelperBindExit | BHelperBindFailure => plan_bind_terminal(sel, pre, guards),
+        _ => Err(foreign_rule()),
+    }
+}
+
+pub fn plan_validate(sel: &Selected, pre: &dyn PreImageView,
+    guards: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> {
+    use RuleIdC::*;
+    match sel.rule {
+        BHelperValidateEntry => validate_entry_payload(sel, pre, pre.reference_cursor()),
+        BHelperValidateOccurrence | BHelperValidateField | BHelperValidateEmpty |
+        BHelperValidateInvalid | BHelperValidateExit | BHelperValidateFailure => {
+            plan_validate_nonentry(sel, pre, guards)
+        }
+        _ => Err(foreign_rule()),
+    }
+}
+
+pub fn plan_equal(sel: &Selected, pre: &dyn PreImageView,
+    guards: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> {
+    use RuleIdC::*;
+    match sel.rule {
+        BHelperEqualEntry => equal_entry_payload(sel, pre, pre.reference_cursor()),
+        BHelperEqualPair | BHelperEqualField | BHelperEqualEmpty |
+        BHelperEqualDifferent | BHelperEqualExit => plan_equal_nonentry(sel, pre, guards),
+        _ => Err(foreign_rule()),
+    }
+}
+
+pub fn plan_match(sel: &Selected, pre: &dyn PreImageView,
+    guards: &dyn GuardEvaluator) -> Result<EffectPlan, HostViolation> {
+    use RuleIdC::*;
+    match sel.rule {
+        BHelperMatchEntry => match_entry_payload(sel, pre, pre.reference_cursor()),
+        BHelperMatchArm => {
+            let HelperControlC::Match { arm, .. } = helper_copy(pre)?
+                else { return Err(wrong_variant()); };
+            let arm_row = pre.arm(&arm)?;
+            let p = match *pre.pattern(&arm_row.pattern)? {
+                PatternRowC::PVar { x } => (PatternTag::PVar, x, 0),
+                PatternRowC::PNil => (PatternTag::PNil, 0, 0),
+                PatternRowC::PCons { x, y } => (PatternTag::PCons, x, y),
+                PatternRowC::PLeaf { x } => (PatternTag::PLeaf, x, 0),
+                PatternRowC::PBranch { x, y } => (PatternTag::PBranch, x, y),
+            };
+            match_arm_payload(sel, pre, p)
+        }
+        BHelperMatchOccurrence | BHelperMatchField | BHelperMatchBinding |
+        BHelperMatchDistinct | BHelperMatchNext | BHelperMatchSelected |
+        BHelperMatchExit | BHelperMatchFailure => plan_match_postarm(sel, pre, guards),
+        _ => Err(foreign_rule()),
+    }
+}

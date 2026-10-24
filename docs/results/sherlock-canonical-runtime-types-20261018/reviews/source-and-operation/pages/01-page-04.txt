@@ -1,0 +1,74 @@
+            Self::AdmissionRejected { reason, detail, locator } => json!({"AdmissionRejected": {"reason": reason.owner_wire(), "detail": detail.owner_wire(), "locator": locator.owner_wire()}}),
+            Self::CapacityNotAdmitted { kind, needed, limit, locator } => json!({"CapacityNotAdmitted": {"kind": kind.owner_wire(), "needed": needed.owner_wire(), "limit": limit.owner_wire(), "locator": locator.owner_wire()}}),
+            Self::UnsupportedFeature { feature, locator } => json!({"UnsupportedFeature": {"feature": feature.owner_wire(), "locator": locator.owner_wire()}}),
+        }
+    }
+}
+
+impl OwnerWire for TriStatus {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Pending => json!("Pending"),
+            Self::Positive => json!("Positive"),
+            Self::Negative => json!("Negative"),
+        }
+    }
+}
+
+impl OwnerWire for UnaryOp {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Leaf => json!("Leaf"),
+            Self::Not => json!("Not"),
+        }
+    }
+}
+
+pub fn layout(value: &LayoutObservation<'_>) -> Value {
+    json!({"layout_version": value.layout_version.owner_wire(),
+        "field_id": value.field_id.owner_wire(),
+        "widths": value.widths.as_ref().map(widths),
+        "scalar_layout_id": value.scalar_layout_id.owner_wire(),
+        "bounds": value.bounds.owner_wire(), "capacities": value.capacities.owner_wire(),
+        "boundary_capacities_present": value.boundary_capacities_present})
+}
+fn widths(value: &WidthTableObservation<'_>) -> Value {
+    json!({"index_widths": value.index_widths.owner_wire(),
+        "counter_widths": value.counter_widths.owner_wire(),
+        "record_widths": value.record_widths.owner_wire()})
+}
+pub fn admission(value: &HostObservation<'_>) -> Value {
+    json!({"status":"admitted", "representation":"HostOnly",
+        "identity": value.admission.identity.owner_wire(),
+        "bounds": value.admission.bounds.owner_wire(),
+        "program_view": value.admission.view.owner_wire(), "layout": layout(&value.admission.layout)})
+}
+pub fn image(value: &ImageObservation<'_>) -> Value {
+    json!({
+        "run_id": value.run_id.owner_wire(),
+        "control": value.control.owner_wire(),
+        "control_origin": value.control_origin.owner_wire(),
+        "env_root": value.env_root.owner_wire(),
+        "stack_limit": value.stack_limit.owner_wire(),
+        "outcome": value.outcome.owner_wire(),
+        "initial_fuel": value.initial_fuel.owner_wire(),
+        "remaining_work": value.remaining_work.owner_wire(),
+        "consumed_work": value.consumed_work.owner_wire(),
+        "helper_work": value.helper_work.owner_wire(),
+        "helper_visits": value.helper_visits.owner_wire(),
+        "reference_cursor": value.reference_cursor.owner_wire(),
+        "alloc": value.alloc.owner_wire(),
+        "active": value.active.owner_wire(),
+        "helper": value.helper.owner_wire(),
+        "result": value.result.owner_wire(),
+        "data": value.data.owner_wire(),
+        "data_fields": value.data_fields.owner_wire(),
+        "env": value.env.owner_wire(),
+        "frames": value.frames.owner_wire(),
+        "tasks": value.tasks.owner_wire(),
+        "value_slots": value.value_slots.owner_wire(),
+        "seg_base": {"active":value.seg_base.active().owner_wire(),
+            "alloc":value.seg_base.alloc().owner_wire(),
+            "consumed_work":value.seg_base.consumed_work().owner_wire()}
+    })
+}

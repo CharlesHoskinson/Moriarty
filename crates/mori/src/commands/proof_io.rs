@@ -5,12 +5,7 @@ use crate::cli::ActionInput;
 use crate::error::CliError;
 use std::path::PathBuf;
 #[cfg(feature = "native")]
-use std::{
-    fs::{File, OpenOptions},
-    io::{ErrorKind, Write},
-    path::Path,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::{io::ErrorKind, path::Path};
 
 #[derive(Debug, clap::Args)]
 pub struct Input {
@@ -108,55 +103,23 @@ pub fn require_new(path: &Path) -> super::Result<()> {
         .into()),
     }
 }
-#[cfg(feature = "native")]
-struct Staging(PathBuf);
-#[cfg(feature = "native")]
-impl Drop for Staging {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-    }
-}
-#[cfg(feature = "native")]
-static NEXT: AtomicU64 = AtomicU64::new(0);
-/// Publish only complete bytes. A same-directory hard link atomically refuses
-/// any destination created since the early check, including dangling symlinks.
+/// Publish only complete bytes through the shared no-replacement publisher.
 #[cfg(feature = "native")]
 pub fn publish_new(path: &Path, bytes: &[u8]) -> super::Result<()> {
-    let parent = path
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    let stage = parent.join(format!(
-        ".mori-proof-{}-{}.tmp",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    let mut file: File = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&stage)
-        .map_err(|source| CliError::Write {
-            path: stage.clone(),
-            source,
-        })?;
-    let staging = Staging(stage);
-    file.write_all(bytes)
-        .and_then(|()| file.sync_all())
-        .map_err(|source| CliError::Write {
-            path: staging.0.clone(),
-            source,
-        })?;
-    drop(file);
-    std::fs::hard_link(&staging.0, path).map_err(|source| CliError::Write {
-        path: path.into(),
-        source,
-    })?;
-    Ok(())
+    super::publish_io::publish_new(path, bytes).map_err(|error| {
+        CliError::Write {
+            path: error.path,
+            source: error.source,
+        }
+        .into()
+    })
 }
 
 #[cfg(all(test, feature = "native"))]
 mod tests {
+    use super::super::publish_io::NEXT;
     use super::*;
+    use std::sync::atomic::Ordering;
     #[test]
     fn concurrent_publication_keeps_one_complete_winner() {
         let dir = std::env::temp_dir().join(format!(

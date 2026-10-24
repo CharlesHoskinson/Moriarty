@@ -1,0 +1,174 @@
+# Sub `k.machine.return.right`: independent source review
+
+**Scope read.** I read all 35 supplied bodies in full. That covers:
+
+- the new `b_return_right_subtraction.rs` and its derivation patch;
+- the full Add RR, `b_scalar_arithmetic`, `b_scalar_completion` and Sub completion/handoff;
+- the Sub arithmetic and three-tests files, plus the two comment hunks and the token attestation;
+- P1, parent `mod.rs`, `fetch` / `enabled_fetch` / `literal_host`;
+- the schema and row pointers, the K and host excerpts, and the captured `zkir-v3` `ir` / `ir_vm` / `ir_types` / `lib` and instruction files.
+
+**External or unread.** I did not read:
+
+- the `midnight_zk_stdlib` / circuits internals (`assigned_to_le_bits` canonicality, Native→bit `convert`), or `Fr: From<u128>`;
+- the before-images `3d3b` / `5812`, so the Body 08 token equality is accepted as an attestation and not re-derived;
+- the Add RR normal tests, or any `mod.rs` wiring for the Sub modules.
+
+I did not check hashes. Nothing was executed.
+
+---
+
+## Decision 1: Security and constraint source — ACCEPT (source-only, scoped)
+
+### The single semantic change is correct
+
+In `emit_return_right_sub_scoped`, the popped-top guard is:
+
+```
+em.assert_eq_when(is_popped_i.clone(), pre.frames[i].right_op.clone(), c_binop_sub.clone(), …"f_top_op_{}")
+```
+
+Here `c_binop_sub = load_imm_u64(BINARY_OP_SUB, …)`, which is the `b_return_right_completion` constant `1`, not a relabel. The derivation patch shows `c_binop_add` → `c_binop_sub` as the only non-comment constraint token change. When enabled, a top frame with `right_op` of 0 (Add), 2 (Mul) or any other value gives `1·x ≠ 1·1` and is unsatisfiable.
+
+### Checks re-verified against the actual body
+
+**Enable and result partition.**
+- `enable` is boolean (`ConstrainToBoolean`), and `not_enable = CondSelect(enable,0,1)`.
+- `is_val = enable·TestEq(tag,9)` and `is_err = enable·TestEq(tag,10)`, with `res_branch_partition: is_val+is_err == enable`. When enabled, exactly one of ScalarValue or ScalarError holds.
+
+**Data ValueRef and codes 10/11.**
+- On `is_val`, the code requires space `== VALUE_SPACE_DATA`, a 128-bit index, and code 0.
+- On `is_err`, it requires the ValueRef to be zero and `assert_error_code_10_or_11_when` (`TestEq10+TestEq11 == 1`).
+- When enabled, selector, type-test and result `rest` must all be zero.
+
+**Pre- and post-control unions.**
+- Pre-control must be `Return` (tag 1) with a valid `return_value`, and every other union column zero.
+- Post-control must be `PrimResult` (8), with `prim_outcome_tag == is_err` (this relies on Value=0 / Error=1, which is documented).
+- `prim_value` equals the result value on `is_val`, and is zero on `is_err`.
+- `prim_error_code` is zero on `is_val`, and equals the code on `is_err`.
+- `return_value`, `error_code` and `rest` are zero.
+
+**Frame pop, lower frames and inactive slots.**
+- `depth_dec: pre.depth == post.depth + enable` holds unconditionally.
+- With `seen_top == enable`, when enabled `post.depth` is some `i < cap` and `pre.depth = i+1 ∈ [1,cap]`.
+- `preserve_slot_i = not_enable + enable·[i<post.depth]`, `is_above_pre_i = [i>post.depth]` and `zero_post_slot_i = [i≥post.depth]` are all boolean. So:
+  - lower frames are fully preserved;
+  - the popped slot must be a `RightF` with op 1, a valid `left`, a 128-bit `origin` and zero `rest`;
+  - pre slots at or above `pre.depth` are zero, and post slots at or above `post.depth` (including the popped slot) are zero.
+
+**Other registers.**
+- `post.control_origin == top.origin` (exactly one gate fires).
+- When enabled, post site is 23 and the block reports `BPostSiteContract::Bound(SITE_PRIM)`.
+- Outcome is Running before and after.
+- Helper is absent before and after, and post-result is cleared (`assert_result_absent`).
+
+**Work counters and cursor.**
+- `remaining_work` decrements with no borrow-out, so an enabled row with `remaining_work = 0` is unsatisfiable, consistent with P2 taking precedence.
+- `consumed_work` and `reference_cursor` each increment by one.
+- `helper_work`, `helper_visits` and state `rest` are equal.
+- The DivMod carry chain is sound: each sum is at most 256 and lanes are 8-bit.
+
+**Disabled full stutter.** With `enable = 0`, every lane group is pinned:
+- site, outcome, control and `control_origin` through `not_enable`;
+- helper and result through `*_eq_when(not_enable)`;
+- every frame slot through `preserve_slot_i = 1`;
+- depth, counters and `rest` unconditionally.
+
+`validate_state_pair` guarantees that every `zip` over `rest` / frames is length-complete.
+
+**Fresh-name uniqueness.** Fresh names follow `%{scope}__{tag}_{counter}`. The final `_`-segment is always the unique decimal counter, so names are collision-free within the block. Two distinct scopes that pass `validate_scope` (no `__`, no leading or trailing `_`) cannot share a `%{scope}__` prefix.
+
+### Low and informational findings (non-blocking)
+
+**L1 (doc obligation list).** SI-09 `taskLive == 0` is not constrained here: it is opaque `state.rest[3]` after `to_legacy_handoff`. The Add chain enforces it explicitly with `b.gated_eq(&legacy_enable, …task_live…, 0)`. The module doc lists the handoff complement, primitive rows, P1 and SI-21R, but not taskLive. That item should be added to the composer obligations.
+
+**L2 (provenance).** The result carrier has no mode field. This row checks `top.op = Sub`, but not that the consumed `ScalarValue`/`ScalarError` was produced by a mode-Sub helper; that needs SI-21 Scalar.entry coherence or Sub-only chaining. Exactly-one dispatch across the RR variants (Add, Sub, …) is also caller-owned. This is part of the P2/P3/P6 provenance obligation, not a defect.
+
+**L3 (disabled-row precondition).** The 8-bit lane range checks in `assert_u128_inc_by_gate` and `_eq_always` are not gated. A disabled row therefore still needs byte-valid counter lanes before and after. The Sub completion uses enable-effective `eff_bytes`, so the composer needs to know this asymmetry.
+
+**L4 (namespace, caller premise).** The Sub completion only checks that its scope is non-empty. A completion scope such as `a__b` emits `%a__b.local.temp.N`, which lies inside RR scope `a`'s reserved `%a__` space. This is covered by the stated per-`IrSource` non-overlap premise, but it is worth one integration test.
+
+---
+
+## Decision 2: Rust, API, normal, serde and typed-consumer source — CONDITIONAL ACCEPT; compile status not established
+
+**Types and imports.**
+- Every name imported from `b_return_right_completion`, `b_scalar_arithmetic` and `b_scalar_completion` exists and is `pub`. Explicit imports shadow the `super::*` glob, which carries the same items through `mod.rs` re-exports.
+- No carrier, block or error type is redeclared. The block and standalone return types are the Add types (`BLegacyCompletionBlock`, `BReturnRightCompletionEmitError`).
+- `BSubPublishState::to_legacy_handoff().state` has exactly the type `BLegacyCompletionState`. Body 04 imports it from `b_return_right_completion`, and its lane mapping and `rest` order match `to_legacy_completion_state` in P1.
+- A disabled-path Sub exit or failure post feeds this row's enabled preconditions consistently:
+  - an Applied exit gives result `9/Data(idx)` with other columns zero;
+  - a failure gives `10/code` with the value zeroed;
+  - a cap-refused state (`Exhausted`, result absent) is unsatisfiable here.
+
+**Error precedence** (identical to Add): `InvalidScope`, then `EmptyFrameCapacity` (pre only), then `FrameCapacityMismatch`, then `FrameRestLengthMismatch` (pre before post at each slot), then the control, helper, result and state `rest` mismatches, then `check_caller_variables`. The caller-variable check walks every lane, including inactive frames and all five counter arrays, and the first offender wins.
+
+**Serde.**
+- Every emitted ID starts with `%`.
+- Caller variables without `%` are rejected (`UnprefixedVariable`), consistent with `Operand::deserialize`'s `%`/`0x` rule.
+- The instruction variants and field names used all match the captured `ir.rs`: `Add`, `Mul`, `TestEq`, `CondSelect`, `DivModPowerOfTwo{outputs: Vec}`, `ConstrainBits{bits: u32}`, `ConstrainEq`, `ConstrainToBoolean`.
+
+**Private primitive copies.** These are `#[allow(dead_code)]` and token-identical to Add, so I see no compile problem. `#[allow(dead_code)]` functions are treated as live roots, so no unused-import or unused-method warnings follow. They do add maintenance drift and review surface, and I recommend deleting them in a later cut.
+
+**Gap: wiring.** The supplied `mod.rs` declares none of `b_scalar_subtraction`, `b_scalar_subtraction_completion` or `b_return_right_subtraction`. The unsupplied wiring hunk must:
+- add `pub mod b_return_right_subtraction;`;
+- not `pub use` Sub structural copies (`BValueRef`, `BScalarArithmeticRegister`, `BChargedCounters`, …) under the common names, which would be E0252 in `mod.rs`.
+
+Until that hunk exists and builds, compile and normal status remain UNRUN.
+
+**F1/T1 comment corrections.** The actual wording now qualifies both points:
+- Body 05: "well-formed nonzero-capacity tables… A zero-capacity table emits no fetch block". This matches `space_read_any_kind` (`b.eq(enable, immediate(0))`), and `active_rows` is unbounded there.
+- Body 06: "the evaluator's first rejecting relation… Earlier relations may read that lane (e.g. the `eff_bytes` 8-bit range…)". I traced the first test's mutation (253) through `eff_bytes`, which passes, and then `gated_eq`, which fails at (258, 259).
+
+No test, assertion or constraint token differs in the shown hunks. I did not re-review the 3d3b/5812 images.
+
+---
+
+## Future Sub RR tests (not delivered; the arithmetic three-tests are not RR coverage)
+
+The `three_tests` interpreter rejects `DivModPowerOfTwo`. RR tests need either SDK preprocess/`check` or an interpreter extended with DivMod.
+
+**Normal, enabled.** Use `cap=3`, `depth 2→1`, slot 0 a nonzero preserved frame, slot 1 `RightF{op=1, Const left, origin o}`, and slot 2 zero. Counters should carry and borrow across a byte boundary. Cover three results:
+- (a) `ScalarValue(Data j)` → `PrimResult::Value(Data j)`;
+- (b) `ScalarError(10)`;
+- (c) `ScalarError(11)`.
+
+Assert acceptance, `post_site == Bound(23)`, that the standalone output equals the block output under `k_ret_right_sub`, and that every output is unique and carries the `%k_ret_right_sub__` prefix.
+
+**Wrong-op differential.**
+- Top `right_op = 0` should fail at the `f_top_op` ConstrainEq with values (0, 1); `right_op = 2` should fail with (2, 1).
+- The same witness with op 1 should be rejected by the Add RR.
+- Structurally, the Add and Sub streams under one scope should differ only in the `f_top_op_{i}_rhs` Mul immediate, `0` vs `1`.
+
+**Error and result branch rejections.**
+- result tag 11 (partition);
+- code 9 or 12;
+- an error carrying a nonzero ValueRef;
+- a `ScalarValue` with Const space;
+- result absent;
+- post `prim_outcome_tag`, `prim_value` or code mismatches.
+
+**Frame rejections.**
+- `pre.depth = 0` and `pre.depth = cap+1` (`valid_popped_frame_slot`);
+- a nonzero popped post slot;
+- a mutated lower frame;
+- `control_origin ≠ top.origin`;
+- `remaining_work = 0` (no-overflow carry).
+
+**Disabled.** With `enable = 0` and an RR-ineligible pre state (an Add top, or `PrimResult` control), `post == pre` is accepted. A one-lane mutation in each group should be rejected: site, outcome, control, `control_origin`, helper, result, each frame slot, depth, each counter, and `rest`. `enable = 2` should be rejected.
+
+**Namespace and errors.**
+- `InvalidScope` for `""`, `_a`, `a_`, `a__b`, `a-b`, `a.b`;
+- `InvalidScope` takes precedence over `EmptyFrameCapacity`, which takes precedence over a mismatch;
+- each rest-length mismatch and its order;
+- first-wins ordering between `Unprefixed` and `Collision`;
+- a deep collision at `post.frames[last].rest[0]` and at `reference_cursor[15]`;
+- `%k_ret_right_add__x` is accepted by the Sub standalone, while `%k_ret_right_sub__x` is rejected;
+- immediates are accepted on any lane;
+- the L4 completion-scope intrusion case.
+
+**Typed seam.** `BSubPublishState → to_legacy_handoff().state` fed directly into the Sub RR, starting from a Sub exit-Applied post and from a failure post.
+
+---
+
+This is one context and one opinion. No SDK, MockProver, proof, operation-eligibility, full-B or end-to-end claim is made. Complete39/B96, AB/StepInv, arenas, packing, field, financial, formal, native and ledger obligations, plus P2/P3/P6, SI-21R, taskLive and the composer duties, all remain open.

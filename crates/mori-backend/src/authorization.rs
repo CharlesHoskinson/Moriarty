@@ -122,11 +122,7 @@ pub fn validate_label(label: &str) -> Result<(), Error> {
     }
     Ok(())
 }
-pub fn decode_digest(text: &str) -> Result<[u8; 32], Error> {
-    schnorr::unhex(text, 32)?
-        .try_into()
-        .map_err(|_| error("authorization", "Expected SHA256 digest."))
-}
+pub use crate::sherlock_machine::literal_host::decode_digest;
 pub fn digest_limbs(digest: [u8; 32]) -> [UInt; 2] {
     [
         UInt(u128::from_le_bytes(

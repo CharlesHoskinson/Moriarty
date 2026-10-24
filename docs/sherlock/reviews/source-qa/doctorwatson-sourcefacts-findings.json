@@ -1,0 +1,201 @@
+{
+  "schema": "doctorwatson-ordinary-source-review/1",
+  "review_id": "DW3",
+  "review_date": "2026-10-17",
+  "reviewer": "fresh non-author GPT-6.1 Sol HIGH",
+  "verdict": "APPROVE",
+  "scope": "ordinary exact-source ReadInventory candidate; Root sole integrator; source-read facts coverage deliberately partial",
+  "candidate_manifest_sha256": "f8deb4ffbba0adb4ae8943e2a47aa8a8212bb4e724be33ecd507a48759b14ea6",
+  "candidate_patch_sha256": "d8419954aeb2aadb2491145e1e330b18a0f08e74e6d37b89d6019081e1a82e92",
+  "required_corrections": [],
+  "verified_read_only": {
+    "all_three_afterimage_manifest_pins": true,
+    "new_paths_absent_in_public_preimage": true,
+    "checker_preimage_pin": true,
+    "all_three_overlay_files_equal_candidate": true,
+    "patch_exactly_reproduces_preimage_to_afterimage_diffs": true,
+    "full_baseline_checker_read": true,
+    "full_new_helper_and_six_tests_read": true,
+    "existing_serializer_and_host_helper_and_33tests_read": true,
+    "factory_call_and_discovery_consumer_read": true,
+    "subject_tests_or_candidate_code_executed_by_reviewer": false,
+    "providers_or_subagents": false,
+    "W_or_Git_mutation": false
+  },
+  "source_findings": [
+    {
+      "id": "DW3-01",
+      "severity": "information",
+      "finding": "Inventory facts use the same raw byte object at existing K/oracle/serializer/transcription call sites. The helper itself opens no files. It counts8unique paths/9read events for the default checker because serializer is read once per family.",
+      "locations": [
+        "candidate/models/sherlock/qa/check.py:49",
+        "candidate/models/sherlock/qa/check.py:326",
+        "candidate/models/sherlock/qa/check.py:339",
+        "candidate/models/sherlock/qa/check.py:545",
+        "candidate/models/sherlock/qa/check.py:553",
+        "candidate/models/sherlock/qa/source_reference_facts.py:15"
+      ]
+    },
+    {
+      "id": "DW3-02",
+      "severity": "information",
+      "finding": "No existing compare/validation predicate, serializer hash check, comparison mode, status computation, main exit selection or existing verdict is edited. Functional additions are helper initialization, call-site accounting and one source_reference_facts field. A complete installation now requires the new sibling helper, read before corpus checks.",
+      "locations": [
+        "candidate.patch",
+        "candidate/models/sherlock/qa/check.py:525",
+        "candidate/models/sherlock/qa/check.py:539",
+        "candidate/models/sherlock/qa/check.py:607"
+      ]
+    },
+    {
+      "id": "DW3-03",
+      "severity": "scope_limit",
+      "finding": "Snapshot hashes characterize recorded bytes during this checker invocation, not current filesystem contents, chronological history, atomic snapshot, producer authenticity, review coverage or native execution. Multiple distinct recorded snapshots set changed_between_reads; unchanged recorded snapshots cannot rule out intervening changes.",
+      "locations": [
+        "candidate/models/sherlock/qa/source_reference_facts.py:19",
+        "candidate/models/sherlock/qa/source_reference_facts.py:24",
+        "REPORT.md evidence boundary"
+      ]
+    },
+    {
+      "id": "DW3-04",
+      "severity": "scope_limit",
+      "finding": "Tool/helper source, Python imports/interpreter, host adapter and optional supplied observation reads are omitted by design. The new sibling helper is read/compiled from check.py's resolved sibling, not selected repo; its imports are outside the inventory. Existing serializer imports remain outside inventory. dependency_closure=not-established accurately prevents a full-closure claim.",
+      "locations": [
+        "candidate/models/sherlock/qa/check.py:525",
+        "candidate/models/sherlock/qa/source_reference_facts.py:37",
+        "REPORT.md evidence boundary"
+      ]
+    },
+    {
+      "id": "DW3-05",
+      "severity": "information",
+      "finding": "The six tests distinguish empty/no-evidence, exact binary hashing, repeat counts, changed snapshots, deterministic output/copy isolation and actual checker membership. Existing33test source and retained logs cover normal comparisons/error paths. Coverage18/18statements2/2branches is helper-only author evidence, not integration proof or this reviewer's execution.",
+      "locations": [
+        "candidate/models/sherlock/qa/test_source_reference_facts.py:23",
+        "candidate/models/sherlock/qa/test_source_reference_facts.py:34",
+        "candidate/models/sherlock/qa/test_source_reference_facts.py:47",
+        "candidate/models/sherlock/qa/test_source_reference_facts.py:58",
+        "candidate/models/sherlock/qa/test_source_reference_facts.py:70",
+        "candidate/models/sherlock/qa/test_source_reference_facts.py:81",
+        "COVERAGE.json"
+      ]
+    }
+  ],
+  "optional_test_improvements": [
+    {
+      "finding": "Stable sorting test reverses path insertion order but not insertion order of two snapshots for one path. Implementation explicitly sorts snapshot keys, so no current defect is found.",
+      "optional_next_change": "If this helper is later changed, extend the existing sorting test with reversed per-path snapshot insertion order; no extra execution is requested by this review."
+    }
+  ],
+  "author_evidence_observed_not_rerun": {
+    "new_tests": "6/6 retained log",
+    "existing_tests": "33/33 retained log",
+    "actual_checker_exit": 0,
+    "computed_source_facts": {
+      "unique_paths": 8,
+      "read_events": 9,
+      "bytes_read": 293065
+    },
+    "helper_coverage": "18/18statements;2/2branches;100%;retained report only"
+  },
+  "security_boundary": "No native/security policy/admission/authority/guard paths are edited by this three-file diff. This is a source-scope observation, not a substitute security judgment or execution grant.",
+  "acceptance_limits": [
+    "Source-only ordinary approval of these exact candidate bytes.",
+    "No execution by this reviewer, no runtime authentication or current-candidate CI result generated.",
+    "Root must integrate all3files atomically and own any authorized post-integration ordinary checks.",
+    "Existing model/formal/native/SDK/target and parent acceptance remain outside scope."
+  ],
+  "evidence": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/REPORT.md",
+      "bytes": 6034,
+      "sha256": "d630f4e4d5f3ba431993f555930936aa347b55d441c21eaaa757c9f2be7fc8fa"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/candidate.patch",
+      "bytes": 11833,
+      "sha256": "d8419954aeb2aadb2491145e1e330b18a0f08e74e6d37b89d6019081e1a82e92"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/CANDIDATE-MANIFEST.json",
+      "bytes": 822,
+      "sha256": "f8deb4ffbba0adb4ae8943e2a47aa8a8212bb4e724be33ecd507a48759b14ea6"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/COMMANDS.json",
+      "bytes": 2161,
+      "sha256": "fd1a81b3768081efbdbe694ccb71eceb64d3408eb6ac6582f886249c8f389e1c"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/FRESHNESS.json",
+      "bytes": 2233,
+      "sha256": "ce812d11279a808d882e8ea36e0dc3750431ff9816380372ab45f85507ebedf2"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/COVERAGE.json",
+      "bytes": 4849,
+      "sha256": "e6c790b46ea7a386596726854ace63a319ceb6b52bc5549cbeb4beb5ef2bbfb3"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/receipts/new-tests.stderr",
+      "bytes": 1136,
+      "sha256": "dfc44e1e75156aa5c3b69f1a8f22252fc0c17bbcf5a13a616213ebb40b18483b"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/receipts/existing-check-tests.stderr",
+      "bytes": 3643,
+      "sha256": "3e3a360482a6eb4f5368ddec6aa0da2484dfbe9d80d966c41a6271ad456255ce"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/receipts/real-consumer.stdout",
+      "bytes": 6723,
+      "sha256": "468ce891dd3cc5d8cc9917b470f40c2c80bf978bdd941995ef438b73f5b90ba0"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/receipts/coverage-command.json",
+      "bytes": 1013,
+      "sha256": "fe81eadb671dbc246ecea78224081d0957041d3aa6b9c35d3bb984768bfd260f"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/candidate/models/sherlock/qa/check.py",
+      "bytes": 37578,
+      "sha256": "123cb51bbc1ce10e3b884605a5daab6e6ded48d3a7c8f6f262ef2bf67e4ee675"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/candidate/models/sherlock/qa/source_reference_facts.py",
+      "bytes": 1484,
+      "sha256": "b4603118a977db9f21012907361349e5c29fd24346e04cecf5ea018f81048fde"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/08-doctorwatson-evidence/candidate/models/sherlock/qa/test_source_reference_facts.py",
+      "bytes": 4876,
+      "sha256": "909effc28405703cfa65f2cf9dafdec63397d7aed31290b2420c58a88eb006fd"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/models/sherlock/qa/check.py",
+      "bytes": 36429,
+      "sha256": "7a6d1bbca881f5c2b012278989dac600834d610986694e640da51a40b5a412e0"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/models/sherlock/qa/test_check.py",
+      "bytes": 15361,
+      "sha256": "04185967a06d0ec031e58a9623032664e4dbdab8c00fd8c8100962789ffdbe59"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/models/sherlock/reference/check-reference.py",
+      "bytes": 13260,
+      "sha256": "1b22a0c4dc14ac0dabd5fe4e8c5ca5ff85485e9b22dd2673a4645f5145cfa94b"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/models/sherlock/qa/host_observations.py",
+      "bytes": 4912,
+      "sha256": "61b8258595a298231679362cb3974ae176b6970e7e4475388252d59da545fcdc"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/scripts/doctorwatson.sh",
+      "bytes": 3756,
+      "sha256": "769baa788f66b76675f042372d6d626dd14a650168e0014641b2475c65c02084"
+    }
+  ]
+}

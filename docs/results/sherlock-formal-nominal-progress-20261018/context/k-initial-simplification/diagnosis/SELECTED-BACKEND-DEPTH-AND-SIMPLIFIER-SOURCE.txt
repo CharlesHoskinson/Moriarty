@@ -1,0 +1,230 @@
+SOURCE /nix/store/pmjs0mz53bz7p8jzzqx4nba1pfwyhf39-kore/app/exec/Main.hs
+SHA256 d25081c4a4929e27ad37130963f16646503eb79f4350833f65dc740fecfab191
+LINES 721-762
+721: koreRun execOptions = do
+722:     let KoreExecOptions
+723:             { definitionFileName
+724:             , mainModuleName
+725:             , koreSolverOptions
+726:             , koreLogOptions
+727:             , breadthLimit
+728:             , depthLimit
+729:             , strategy
+730:             , patternFileName
+731:             , finalNodeType
+732:             } = execOptions
+733:     SerializedDefinition{serializedModule, lemmas, locations, internedTextCache} <-
+734:         deserializeDefinition
+735:             koreSolverOptions
+736:             definitionFileName
+737:             mainModuleName
+738:     let SerializedModule
+739:             { verifiedModule
+740:             , metadataTools
+741:             , equations
+742:             , rewrites
+743:             } = serializedModule
+744:         undefinedLabels = runValidate $ validateDebugOptions equations (rewriteRules rewrites) koreLogOptions
+745:     when (isLeft undefinedLabels) $
+746:         throwM . DebugOptionsValidationError $
+747:             fromLeft mempty undefinedLabels
+748:     lift $ writeIORef globalInternedTextCache internedTextCache
+749:     initial <- loadPattern metadataTools verifiedModule patternFileName
+750:     (exitCode, final) <-
+751:         execute koreSolverOptions metadataTools lemmas $
+752:             exec
+753:                 Nothing
+754:                 DisableMovingAverage
+755:                 depthLimit
+756:                 breadthLimit
+757:                 finalNodeType
+758:                 serializedModule
+759:                 strategy
+760:                 initial
+761:     lift $ renderResult execOptions (unparse final)
+762:     return (locations, exitCode)
+
+SOURCE /nix/store/pmjs0mz53bz7p8jzzqx4nba1pfwyhf39-kore/src/Kore/Exec.hs
+SHA256 33781b4634669dbfb720fa86249cab350458f69ee0ea7b35e5d060419e1c07bc
+LINES 281-363
+281: exec ::
+282:     Maybe StepTimeout ->
+283:     EnableMovingAverage ->
+284:     Limit Natural ->
+285:     Limit Natural ->
+286:     Strategy.FinalNodeType ->
+287:     -- | The main module
+288:     SerializedModule ->
+289:     ExecutionMode ->
+290:     -- | The input pattern
+291:     TermLike VariableName ->
+292:     SMT (ExitCode, TermLike VariableName)
+293: exec
+294:     stepTimeout
+295:     enableMA
+296:     depthLimit
+297:     breadthLimit
+298:     finalNodeType
+299:     SerializedModule
+300:         { sortGraph
+301:         , overloadGraph
+302:         , metadataTools
+303:         , verifiedModule
+304:         , rewrites = Initialized{rewriteRules}
+305:         , equations
+306:         }
+307:     execMode
+308:     inputPattern@(mkRewritingTerm -> initialTerm) = do
+309:         debugInitialPattern inputPattern
+310:         evalSimplifier verifiedModule' sortGraph overloadGraph metadataTools equations $ do
+311:             finals <-
+312:                 GraphTraversal.graphTraversal
+313:                     GraphTraversal.GraphTraversalCancel
+314:                     stepTimeout
+315:                     enableMA
+316:                     finalNodeType
+317:                     Strategy.DepthFirst
+318:                     breadthLimit
+319:                     transit
+320:                     (const Nothing)
+321:                     Limit.Unlimited
+322:                     execStrategy
+323:                     (ExecDepth 0, Start $ Pattern.fromTermLike initialTerm)
+324:                     >>= \case
+325:                         GraphTraversal.Ended results ->
+326:                             pure results
+327:                         GraphTraversal.GotStuck _ results ->
+328:                             pure $ map extractStuckTraversalResult results
+329:                         GraphTraversal.Stopped results nexts -> do
+330:                             when (null nexts) $
+331:                                 forM_ depthLimit warnDepthLimitExceeded
+332:                             pure results
+333:                         GraphTraversal.Aborted results -> do
+334:                             pure results
+335:                         GraphTraversal.TimedOut _ results -> do
+336:                             pure results
+337: 
+338:             let (depths, finalConfigs) = unzip finals
+339:             infoExecDepth (maximum (ExecDepth 0 : depths))
+340:             let finalConfigs' =
+341:                     MultiOr.make $
+342:                         mapMaybe (fst . extractProgramState) finalConfigs
+343:             debugFinalPatterns finalConfigs'
+344:             exitCode <- getExitCode verifiedModule finalConfigs'
+345:             let finalTerm =
+346:                     MultiOr.map getRewritingPattern finalConfigs'
+347:                         & OrPattern.toTermLike initialSort
+348:                         & sameTermLikeSort initialSort
+349:             return (exitCode, finalTerm)
+350:       where
+351:         verifiedModule' =
+352:             IndexedModule.mapAliasPatterns
+353:                 -- TODO (thomas.tuegel): Move this into Kore.Builtin
+354:                 (Builtin.internalize metadataTools)
+355:                 verifiedModule
+356:         initialSort = termLikeSort initialTerm
+357: 
+358:         execStrategy :: [Strategy.Step Prim]
+359:         execStrategy =
+360:             Limit.takeWithin depthLimit $
+361:                 [Begin, Simplify, Rewrite, Simplify]
+362:                     : repeat [Begin, Rewrite, Simplify]
+363: 
+
+SOURCE /nix/store/pmjs0mz53bz7p8jzzqx4nba1pfwyhf39-kore/src/Data/Limit.hs
+SHA256 bab451dbce35b070d2768371ba829b1a15e6bd7f5cc4d1201833c62d2e396a4b
+LINES 54-79
+54: withinLimit :: Ord a => Limit a -> a -> Bool
+55: withinLimit =
+56:     \case
+57:         Unlimited -> const True
+58:         Limit u -> (<= u)
+59: 
+60: -- | Enumerate values beginning at @a@ and within the limit.
+61: enumFromLimit :: (Enum a, Ord a) => Limit a -> a -> [a]
+62: enumFromLimit limit a = takeWhile (withinLimit limit) (enumFrom a)
+63: 
+64: {- | A list of limited length with identical elements.
+65: 
+66: @replicate Unlimited x@ is an infinite list where @x@ is the value of every
+67: element.
+68: 
+69: @replicate (Limit n) x@ is a list of length @n@ where @x@ is the value of every
+70: element.
+71: -}
+72: replicate :: (Enum a, Ord a) => Limit a -> b -> [b]
+73: replicate limit b = takeWithin limit (repeat b)
+74: 
+75: -- | Take a limited prefix of the given list.
+76: takeWithin :: (Enum a, Ord a) => Limit a -> [b] -> [b]
+77: takeWithin limit bs = zipWith const bs limiting
+78:   where
+79:     limiting = enumFromLimit limit (toEnum 1)
+
+SOURCE /nix/store/pmjs0mz53bz7p8jzzqx4nba1pfwyhf39-kore/src/Kore/Rewrite.hs
+SHA256 596ed5b29401b7d1ce3fb54b0adbe15cd12158f162271cb349026e33d13d96d6
+LINES 207-232
+207: transitionRule rewriteGroups assumeInitialDefined = transitionRuleWorker
+208:   where
+209:     transitionRuleWorker _ Simplify Bottom = pure Bottom
+210:     transitionRuleWorker _ _ Bottom = empty
+211:     transitionRuleWorker _ Begin (Rewritten _ a) = pure $ Start a
+212:     transitionRuleWorker _ Begin (Remaining _) = empty
+213:     transitionRuleWorker _ Begin state@(Start _) = pure state
+214:     transitionRuleWorker _ Simplify (Rewritten x patt) =
+215:         transitionSimplify (Rewritten x) patt
+216:     transitionRuleWorker _ Simplify (Remaining patt) =
+217:         transitionSimplify Remaining patt
+218:     transitionRuleWorker _ Simplify (Start patt) =
+219:         transitionSimplify Start patt
+220:     transitionRuleWorker mode Rewrite (Remaining patt) =
+221:         transitionRewrite mode patt
+222:     transitionRuleWorker mode Rewrite (Start patt) =
+223:         transitionRewrite mode patt
+224:     transitionRuleWorker _ Rewrite state@(Rewritten _ _) =
+225:         pure state
+226: 
+227:     transitionSimplify prim config = do
+228:         configs <- lift $ Pattern.simplifyTopConfiguration config
+229:         filteredConfigs <- liftSimplifier $ SMT.Evaluator.filterMultiOr $srcLoc configs
+230:         if isBottom filteredConfigs
+231:             then pure Bottom
+232:             else prim <$> asum (pure <$> toList filteredConfigs)
+
+SOURCE /nix/store/pmjs0mz53bz7p8jzzqx4nba1pfwyhf39-kore/src/Kore/Rewrite/Function/Evaluator.hs
+SHA256 e3100b104b8341a44f131995b40f3514a4ffede49dcbe36b6e16a2a248c0a2fa
+LINES 185-218
+185: {- | Evaluates axioms on patterns.
+186: 
+187: Returns Nothing if there is no axiom for the pattern's identifier.
+188: -}
+189: evaluatePattern ::
+190:     forall simplifier.
+191:     MonadSimplify simplifier =>
+192:     -- | The predicate from the configuration
+193:     SideCondition RewritingVariableName ->
+194:     -- | Aggregated children predicate and substitution.
+195:     Condition RewritingVariableName ->
+196:     -- | The pattern to be evaluated
+197:     TermLike RewritingVariableName ->
+198:     -- | The default value
+199:     ( Maybe SideCondition.Representation ->
+200:       MaybeT simplifier (OrPattern RewritingVariableName)
+201:     ) ->
+202:     MaybeT simplifier (OrPattern RewritingVariableName)
+203: evaluatePattern
+204:     sideCondition
+205:     childrenCondition
+206:     termLike
+207:     defaultValue =
+208:         do
+209:             BuiltinAndAxiomSimplifier evaluator <- lookupAxiomSimplifier termLike
+210:             whileDebugTerm termLike $ do
+211:                 merged <- do
+212:                     result <- liftSimplifier $ evaluator termLike sideCondition
+213:                     flattened <- case result of
+214:                         AttemptedAxiom.Applied
+215:                             AttemptedAxiomResults
+216:                                 { results = orResults
+217:                                 , remainders = orRemainders
+218:                                 } -> do

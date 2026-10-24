@@ -1270,3 +1270,92 @@ Daml completion verification: 63 source-grounded provisional claims linked to im
 2026-09-28 — MIL/2 drafted against the nine-reviewer review. Escrow as a transition relation with per-witness exclusivity and a priority field; acceptance refinement replacing monotone completion; evidence as a type index with source-set propagation; Φ formation and totality; Φ₀/Φ₁ split with Φ₀ frozen and Φ₁ deferred; completed footprint cells, derived and checked; fallback deleted; caps as numbers. Five owner decisions taken with reversal costs recorded. Every claim tagged checked/obligation/deferred; six obligations outstanding before freeze. CLM-0992. Specified-only; nothing committed.
 
 2026-10-01 — Filed pinned Compact0.35/ledger9 source collection SRC-0115 and native financial pipeline working snapshot. Preserved original failed fetch and constructor/race gaps; native check/proof and financial ledger acceptance remain open. PR13 signed-intent delivery supersedes its historical pending-review snapshot.
+
+
+## 2026-10-20 — Sherlock UPDATE016 source intake
+
+Prepared the [wiki-scoped atlas continuation](research/sherlock-circuit-atlas/index.md) and exact Muse response capture with native portable source identities. Historical wiki-llm notes and UPDATE015 failure stay unchanged. The source/status/provenance and existing transaction review are separate from site launch, circuit security, SDK/native or fullgoal acceptance.
+
+
+## 2026-10-20 — Sherlock UPDATE017 source intake
+
+Preserved the exact designated Muse source reply and appended [UPDATE017](research/sherlock-circuit-atlas/UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md), its status snapshot, later review disposition and portable provenance. Existing UPDATE016/legacy material remains byte-identical. The current bounded source opinions retain overallCHANGES_REQUIRED U-D5/U-D6; all18 tests remainUNRUN. No website deployment or product/native gate is introduced.
+
+
+## 2026-10-20 — UPDATE017 source-summary navigation
+
+The Root post-intake lint observed 32 findings: 17 dead-link, seven duplicate-basename, four orphan and four stale-index entries, with zero configuration, provenance, read or missing-frontmatter findings. This small navigation follow-up links the two new UPDATE017 source summaries from [the atlas index](research/sherlock-circuit-atlas/index.md). It does not repair older global findings or alter the Muse chapter/status.
+
+Mechanical path/hash readback confirms that the three new raw-JSON link findings point to two existing captured files. The installed linter skips dot-prefixed directories, including `.raw`, when building its link inventory; its original findings remain preserved rather than hidden. No post-follow-up lint result is asserted here. Future recovery can use [Graphify query guidance](../docs/results/sherlock-graphify-refresh-20261019/stagenet-recursive-rollup-priority-revision02/GRAPHIFY-TARGETED-USAGE.proposed.md) and [DoctorWatson learning context](../wiki-llm/doctorwatson-improvement-log.md), checking each source cut instead of assuming currentness. No new source/test/runtime or EARS result is added.
+
+
+## 2026-10-20 — source, model, guard and proof layers
+
+Prepared the [dated engineering snapshot](research/sherlock-circuit-atlas/ENGINEERING-018-EVIDENCE-LAYERS.md) from public finance16PASS, scoped Clean/K receipts, recursive ADT capture metadata and native24guardfixtures. All fullfinancial/native/recursive/stagenet/degree obligations remain separate. The released independent SAFE result covers both complete recursive values and required source identities only; no whole trace/resource/native/refinement claim follows. Earlier graph/status/source cuts and website author words stay unchanged.
+
+
+## 2026-10-20 — UPDATE018 completed-interpreter concept source
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-018-MATH-GUARDS-AND-EXECUTION-LAYERS.md) with separate verbatim author-time engineering status and [source provenance](research/sherlock-circuit-atlas/provenance/update-018-authorship.json). The original unadopted reply and UPDATE017 remain unchanged. The corrected reply is 20,117 bytes against a requested 16,000-byte target; Root authorizes retaining the full bounded reply for factual review. This is concept-source intake, not website launch or native/recursive/target acceptance.
+
+
+## 2026-10-20 — UPDATE019 completed-interpreter concept source
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-019-CHECKED-READS-AND-OWNER-LOOKUP.md) with separate verbatim author-time engineering status and [source provenance](research/sherlock-circuit-atlas/provenance/update-019-authorship.json). The previous UPDATE018 reply and chapter remain unchanged. The corrected reply is 20,113 bytes against a requested 16,000-byte target; Root authorizes retaining the full bounded reply for factual review. This is concept-source intake, not website launch or native/recursive/target acceptance.
+
+
+## 2026-10-20 — UPDATE020 completed-interpreter concept source
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-020-SCALAR-TAG-SELECTORS-AND-CHECKED-WITNESSES.md) with separate verbatim author-time engineering status and [source provenance](research/sherlock-circuit-atlas/provenance/update-020-authorship.json). The previous UPDATE019 reply and chapter remain unchanged. The corrected reply is 15,071 bytes, within the 16,000-byte target; all five authored strings are retained exactly for factual review. This is concept-source intake, not website launch or native/recursive/target acceptance.
+
+
+## 2026-10-20 — UPDATE021 arithmetic concept source
+
+Prepared the exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-021-SCALAR-ARITHMETIC-AND-CHECKED-RESULTS.md) and separate verbatim author-time status. All five authored strings and the 14,660-byte raw JSON are preserved; [authorship and reconstruction](research/sherlock-circuit-atlas/provenance/update-021-authorship.json) identify the actual author. The [later source-review status](research/sherlock-circuit-atlas/UPDATE-021-POST-AUTHOR-STATUS.md) records bounded emitter approvals and a returned consumer source reply separately from the author cut. UPDATE020 and all earlier content remain unchanged. This is concept-source intake, not website launch, circuit execution, native proof, stagenet or EARS acceptance.
+
+
+## 2026-10-20 — UPDATE022 wide products and bound ports concept
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-022-WIDE-PRODUCTS-AND-BOUND-PORTS.md) with separate literal [author-time status](research/sherlock-circuit-atlas/UPDATE-022-MUSE-ENGINEERING-STATUS.md). All five strings and the full20,528-byte raw reply are retained; it exceeds the requested16,000-byte soft target by4,528 bytes. [Authorship and reconstruction](research/sherlock-circuit-atlas/provenance/update-022-authorship.json) disclose this without truncation or Sol creative edits. The [separate engineering snapshot](research/sherlock-circuit-atlas/UPDATE-022-POST-AUTHOR-STATUS.md) preserves C4 source22UNRUN and the distinct ordinary/formal evidence, including pending full Core result review. All earlier words and provenance remain unchanged. Website unpublished; no circuit execution, proof, native, target or EARS claim follows.
+
+
+## 2026-10-20 — UPDATE023 Scalar Entry and frame routing concept
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-023-SCALAR-ENTRY-AND-FRAME-ROUTING.md) with separate literal [author-time status](research/sherlock-circuit-atlas/UPDATE-023-MUSE-ENGINEERING-STATUS.md). All five strings and the full17,884-byte raw reply are retained; it exceeds the requested16,000-byte soft target by1,884 bytes. [Authorship and reconstruction](research/sherlock-circuit-atlas/provenance/update-023-authorship.json) disclose this without truncation or Sol creative edits. The [separate engineering snapshot](research/sherlock-circuit-atlas/UPDATE-023-POST-AUTHOR-STATUS.md) preserves author-time C1unreviewed status and separate later consumer delivery with tests still preparing. All earlier words and provenance remain unchanged. Website unpublished; no circuit execution, proof, native, target or EARS claim follows.
+
+
+## 2026-10-20 — UPDATE024 staged nodes and allocation concept
+
+Prepared exact designated Muse [concept chapter](research/sherlock-circuit-atlas/UPDATE-024-STAGED-NODES-AND-ALLOCATION.md) with separate literal [author-time status](research/sherlock-circuit-atlas/UPDATE-024-MUSE-ENGINEERING-STATUS.md). All five strings and the full15,638-byte raw reply are retained within the16,000-byte target. [Authorship and reconstruction](research/sherlock-circuit-atlas/provenance/update-024-authorship.json) disclose this without truncation or Sol creative edits. The [separate engineering snapshot](research/sherlock-circuit-atlas/UPDATE-024-POST-AUTHOR-STATUS.md) preserves the current Entry20UNRUN and ConstructNEXT source qualifications. All earlier words and provenance remain unchanged. Website unpublished; no circuit execution, proof, native, target or EARS claim follows.
+
+
+## 2026-10-20 — UPDATE025 authored concept and separately dated actual results
+
+[The exact designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-025-ETCHED-RELATIONS-AND-LOOSE-INSERTS.md) and [literal author-time engineering note](research/sherlock-circuit-atlas/UPDATE-025-MUSE-ENGINEERING-STATUS.md) preserve all five authored strings. [Separate later Root facts](research/sherlock-circuit-atlas/UPDATE-025-POST-AUTHOR-STATUS.md) record performance04 eight completed checks and 74 named tests, including the sampled pass with all nine external witnesses zero. Repair03 timeout and Lean05 failure remain history. Source identity, witness proposal, constrained relation, diagnostic receipt and actual execution remain distinct. No website launch or native/target/EARS result is claimed.
+
+
+## 2026-10-20 — UPDATE026 literal Gemini concept intake
+
+[The designated Gemini chapter](research/sherlock-circuit-atlas/UPDATE-026-LITERAL-ROOTS-AND-VALIDATION-TASKS.md) continues the completed-future circuit concept; [literal dated engineering status](research/sherlock-circuit-atlas/UPDATE-026-GEMINI-ENGINEERING-STATUS.md) and [later Root attribution](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md) remain separate. The emitter is not approved by this intake; formal source approval, finite synthetic Quint observations and native mock checks remain distinct from real circuit/native acceptance. No website publication, native proof or target acceptance is claimed.
+
+
+## 2026-10-21 — UPDATE026 receipt-contract erratum
+
+[Separate engineering correction](research/sherlock-circuit-atlas/UPDATE-026-RECEIPT-GATING-ERRATUM.md) records the designated Opus all-receipts-ungated finding and Root scoped emitter adoption. The authored concept remains unchanged; no native result or website launch.
+
+
+2026-10-21 — Intake `src-e4a728c21edb26d302ff`: [UPDATE026 separate engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), preserving all five creative strings. Source02 dated facts and its scoped factual opinion; no native/proof/target/EARS acceptance.
+
+
+### 2026-10-21 — source07 dated engineering intake
+
+Append the exact reviewed [atlas engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), sourced by src-b61a963c72b8a8e55ce7. The historical prebuild cut and all acceptance limits remain unchanged. No creative fields or later outcomes are rewritten.
+
+
+- Source09: current CLI, scoped child verify/tamper and parent-unrun boundary: [separate engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-5db5466cc3f32308a244](../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json)
+
+
+- Source10: measured keygen failure, source-only reuse and strict-sync-only result: [engineering status](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-ebbed65e89ce72b6c641](../.raw/captured/1e72150d338d99a6023e6529ffde9f275680fadba5d0719e0d940c81de3a7b30.json)
+
+
+- Source12: [separate build, prospective capacity and counterfactual diagnosis](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-e669a9989d96997e6612](../.raw/captured/aacfdd191d1db2ad75fa8934cbf103606331664ff0b312036e459f66679b553e.json)

@@ -1,0 +1,128 @@
+"""R-only literal ordinary test/schema integration. Never runs a subject."""
+from pathlib import Path
+import hashlib,json,re,shutil,difflib
+R=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017')
+W=Path('/home/charl/Moriarty/.worktrees/sherlock-witness-cache-stream-20261018')
+D=R/'formal-runtime-progress-current-schema-five-consumer-amendment-20261019'
+EXTRA=['pattern_children','types','type_args','constructors','ctor_fields','decl_param_counts','decl_ctor_counts','decl_templates','plan_nodes','plan_cases','field_paths']
+ROOTS=['crates/mori-core/tests/'+f for f in ['sherlock_draft_compile.rs','sherlock_compile_artifact_positive.rs','support/sherlock_core1_provenance_independent.rs','support/sherlock_provenance_twins_independent.rs','sherlock_witness_baseline_independent.rs']]
+def pin(p):
+ p=Path(p);b=p.read_bytes();return dict(path=str(p),bytes=len(b),sha256=hashlib.sha256(b).hexdigest())
+def save(name,d):
+ (D/name).write_text(json.dumps(d,indent=2)+'\n')
+def one(s,a,b):
+ assert s.count(a)==1,(a[:100],s.count(a));return s.replace(a,b,1)
+paths=set(ROOTS);edges=[]
+for rel in ROOTS:
+ for inc in re.findall(r'include_str!\("([^\"]+)"\)',(W/rel).read_text()):
+  f=str((Path(rel).parent/inc));assert (W/f).is_file();paths.add(f);edges.append(dict(source=rel,target=f,kind='literal include_str'))
+for rel in sorted(paths):
+ p=D/'snapshot'/rel;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(W/rel,p)
+changes=[]
+def write_change(rel,new,scope,extra=None):
+ before=(W/rel).read_bytes();after=new.encode();assert before!=after
+ old=D/'preimages'/rel;old.parent.mkdir(parents=True,exist_ok=True);old.write_bytes(before)
+ p=D/'snapshot'/rel;p.write_bytes(after)
+ delta=''.join(difflib.unified_diff(before.decode().splitlines(True),after.decode().splitlines(True),fromfile='a/'+rel,tofile='b/'+rel))
+ diff=D/'diffs'/Path(rel+'.diff');diff.parent.mkdir(parents=True,exist_ok=True);diff.write_text(delta)
+ changes.append(dict(relative=rel,preimage=pin(old),currentWwPreimage=pin(W/rel),afterimage=pin(p),diff=pin(diff),scope=scope,**(extra or {})))
+# Reuse the independently reviewed empty-table projection, no production serializer.
+helper='fn empty_table<T>(field: &str, rows: &[T]) -> Value {\n    assert!(rows.is_empty(), "unexpected nonempty {field} in sealed DedicatedSorts program");\n    json!([])\n}\n'
+for rel in ROOTS[2:4]:
+ s=(W/rel).read_text();s=one(s,'// Independent read-only projection of actual admitted tables into the frozen\n',helper+'// Independent read-only projection of actual admitted tables into the frozen\n')
+ a='        "functions":functions,"parameters":parameters,"arms":arms,"patterns":patterns,\n'
+ s=one(s,a,a+''.join('        "'+f+'":empty_table("'+f+'",&view.'+f+'),\n' for f in EXTRA))
+ write_change(rel,s,'Keep every old projection and runtime/provenance assertion; assert eleven dedicated tables empty before projecting them explicitly.')
+rel=ROOTS[1];s=(W/rel).read_text();a='        "parameters", "arms", "patterns", "constants", "constant_fields", "names",\n';s=one(s,a,a+''.join('        '+', '.join('"'+f+'"' for f in EXTRA[i:i+4])+',\n' for i in range(0,len(EXTRA),4)))
+a='    assert!(view["arms"].as_array().unwrap().is_empty());\n'
+b='    // Dedicated Core/1 preparation initializes these eleven current tables empty.\n    for field in [\n'+''.join('        '+', '.join('"'+f+'"' for f in EXTRA[i:i+4])+',\n' for i in range(0,len(EXTRA),4))+'    ] {\n        assert!(view[field].as_array().expect("present current ProgramView table").is_empty(),\n            "unexpected nonempty {field} in dedicated compiler fixture");\n    }\n'
+s=one(s,a,b+a);write_change(rel,s,'Exact 23-field membership plus actual-empty assertions; all earlier format/evidence assertions retained.')
+s=one(s,'//! R115 EXPECTED is independently sealed; no subject outputs define expectations.','//! Original R115 values are retained; current schema additions are source-derived before execution.')
+s=one(s,'including all12 ProgramView','including all23 current ProgramView')
+write_change(rel,s,'Full fixture equality retained, including all26 correspondence obligations; comments identify independent schema amendment.')
+rel=ROOTS[4];s=(W/rel).read_text();a=re.search(r'const FIELDS: \[&str;21\] = \[[^\n]+\];',s).group();oldfields=json.loads(a[a.index('=')+1:].strip().rstrip(';'));newfields=oldfields+['functions']+EXTRA
+s=one(s,a,'const FIELDS: [&str;33] = '+json.dumps(newfields,separators=(',',':'))+';')
+a='    assert_eq!(d.fields.iter().map(|f|f.field).collect::<Vec<_>>(),FIELDS);\n'
+b='''    // Current dedicated inputs have eleven explicit empty ADT/declaration/plan tables.
+    assert_eq!(raw.admission.identity.grammar_domain,GrammarDomain::DedicatedSorts);
+'''+''.join('    assert!(raw.admission.view.'+f+'.is_empty(),"dedicated input '+f+'");\n' for f in EXTRA)+'''    let functions=match field(&d.fields,"functions") {
+        wp::SlotValue::Sequence{kind:wp::SequenceKind::Functions,items}=>items,
+        _=>panic!("typed current functions output"),
+    };
+    assert_eq!(functions.len(),raw.admission.view.functions.len());
+    for (decoded,original) in functions.iter().zip(&raw.admission.view.functions) {
+        match decoded {
+            wp::SlotValue::Source(wp::InputValue::Function(row))=>assert_eq!(row,original),
+            _=>panic!("complete ordered FunctionRowC output"),
+        }
+    }
+    for (name,expected_kind) in [
+'''
+kinds=['Indices','Types','TypeIds','Constructors','ConstructorFields','Indices','Indices','DeclTemplates','PlanNodes','PlanCases','Indices']
+b+=''.join('        ("'+f+'",wp::SequenceKind::'+k+'),\n' for f,k in zip(EXTRA,kinds))+'''    ] {
+        match field(&d.fields,name) {
+            wp::SlotValue::Sequence{kind,items}=>{
+                assert_eq!(*kind,expected_kind,"typed {name} output");
+                assert!(items.is_empty(),"dedicated decoded {name}");
+            },
+            _=>panic!("present typed {name} output"),
+        }
+    }
+'''
+s=one(s,a,a+b);write_change(rel,s,'Exact all33 output membership; typed ordered full FunctionRowC preservation and eleven explicit typed empty tables; all old DAG/metadata/value/order assertions retained.')
+# Opaque fixture transformation: append only new schema fields and Match.plan null.
+fixture_rels=['crates/mori-core/tests/fixtures/draft-compile/EXPECTED.json','crates/mori-core/tests/support/fixtures/sherlock_core1_provenance/EXPECTED.json','crates/mori-core/tests/support/fixtures/sherlock_provenance_twins/EXPECTED.json']
+legacykeys={'entry','expressions','occurrences','occurrence_paths','children','functions','parameters','arms','patterns','constants','constant_fields','names'}
+def insert_properties(text,start,props):
+ obj,end=json.JSONDecoder().raw_decode(text[start:]);end+=start;assert text[end-1]=='}';last=end-1
+ while text[last-1].isspace():last-=1
+ # Retain all original whitespace/values; infer indentation from the first property.
+ first=re.search(r'\n([ \t]+)"',text[start:end]);assert first
+ indent=first.group(1);addition=',\n'+',\n'.join(indent+json.dumps(k)+': '+json.dumps(v,separators=(',',':')) for k,v in props)
+ return text[:last]+addition+text[last:],addition,last
+for rel in fixture_rels:
+ original=(W/rel).read_text();before=json.loads(original);s=original;records=[]
+ starts=[m.end()-1 for m in re.finditer(r'"program_view"\s*:\s*\{',s)];assert starts
+ for start in reversed(starts):
+  obj,n=json.JSONDecoder().raw_decode(s[start:]);assert set(obj)==legacykeys
+  # Work on this bounded object only so no other Match-like metadata changes.
+  local=s[start:start+n]
+  for m in reversed(list(re.finditer(r'"Match"\s*:\s*\{',local))):
+   mt=m.end()-1;mo,_=json.JSONDecoder().raw_decode(local[mt:]);assert 'plan' not in mo
+   local,addition,pos=insert_properties(local,mt,[('plan',None)]);records.append(dict(kind='dedicated Match.plan',addition=addition,offsetWithinProgramView=pos))
+  local,addition,pos=insert_properties(local,0,[(f,[]) for f in EXTRA]);records.append(dict(kind='eleven dedicated tables',addition=addition,offsetWithinProgramView=pos))
+  s=s[:start]+local+s[start+n:]
+ after=json.loads(s)
+ # Exact inverse on JSON values: remove only independently added keys; do not inspect populated cells.
+ def inverse(v):
+  if isinstance(v,dict):
+   if 'program_view' in v:
+    p=v['program_view'];assert set(p)==legacykeys|set(EXTRA)
+    for f in EXTRA:assert p.pop(f)==[]
+    for e in p['expressions']:
+     if isinstance(e,dict) and 'Match' in e:assert e['Match'].pop('plan') is None
+   for x in v.values():inverse(x)
+  elif isinstance(v,list):
+   for x in v:inverse(x)
+ inverse(after);assert after==before
+ # Text inverse: every addition unique and removed without altering any old byte.
+ inv=s
+ for rec in reversed(records):
+  # New-table insertion may recur once per case with identical text: remove one exact occurrence.
+  assert rec['addition'] in inv;inv=inv.replace(rec['addition'],'',1)
+ assert inv==original
+ write_change(rel,s,'Opaque schema-only additions; every old JSON value and old byte recovered by inverse.',{'addedEmptyTableSets':len(starts),'addedMatchPlanNulls':sum(x['kind']=='dedicated Match.plan' for x in records),'oldValuesEqualAfterDeletingOnlyNewKeys':True,'exactOldBytesRecoveredByRemovingInsertions':True})
+# Verify every unchanged closure file remains W-byte exact, every source assertion spelling preserved.
+unchanged=[]
+for rel in sorted(paths-set(x['relative'] for x in changes)):
+ assert (D/'snapshot'/rel).read_bytes()==(W/rel).read_bytes();unchanged.append(pin(D/'snapshot'/rel))
+for rel in ROOTS:
+ old=(W/rel).read_text();new=(D/'snapshot'/rel).read_text()
+ # The sole replaced assertion is old exact field membership, now a strict full current-field contract.
+ if rel!=ROOTS[4]:
+  oldassert=[l.strip() for l in old.splitlines() if 'assert' in l and not l.lstrip().startswith('//')]
+  for l in oldassert:assert l in new,('removed assertion',rel,l)
+save('COPYMAP.json',{'scope':'Eight test/fixture paths only; no production edits or W writes','files':changes})
+save('SOURCE-CLOSURES.json',{'roots':[dict(root=rel,count=1+sum(e['source']==rel for e in edges),files=[pin(D/'snapshot'/p) for p in sorted({rel}|{e['target'] for e in edges if e['source']==rel})]) for rel in ROOTS],'sourceEdges':edges,'allSnapshotFiles':[pin(D/'snapshot'/p) for p in sorted(paths)]})
+save('LITERAL-INVERSE-AND-UNCHANGED-VALIDATION.json',{'changedFiles':len(changes),'unchangedConsumerClosureFiles':len(unchanged),'unchangedPins':unchanged,'originalAssertionsRetainedExceptExact21To33Membership':True,'oldOpaqueFixtureValuesAndBytesRecoverable':True,'productionEdits':0,'subjectCompilerProviderGitWwWrites':0,'status':'STATIC_ONLY_UNRUN'})
+print('changed',len(changes),'snapshot',len(paths),'closures',[1+sum(e['source']==r for e in edges) for r in ROOTS]);print('fixture additions',[(x['relative'],x.get('addedEmptyTableSets'),x.get('addedMatchPlanNulls')) for x in changes if x['relative'].endswith('.json')])

@@ -1,0 +1,31 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch18-core2-owning-event-sequence-20261019/model-port-after-core-freeze-02/source/independentCore2SequencePort.qnt
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch18-core2-owning-event-sequence-20261019/model-port-f1-action-effects-revision03/source/independentCore2SequencePort.qnt
+@@ -59,20 +59,15 @@
+     queueDomain, allInv, normalDomain(machine.current),
+     isQueuePrefix(machine.records), linkedPrefix(machine.records), queuePositionInv,
+   }
+-  action init: bool = if (suppliedQueue.length() == 0) false
+-    else initInvocation(suppliedQueue.head())
+-  action advanceInput: bool = {
+-    if (machine.phase != Published or machine.records.length() == 0
+-        or machine.records.length() >= suppliedQueue.length()) false else {
+-      val suppliedNext = suppliedQueue.nth(machine.records.length())
+-      val previousResult = machine.records.nth(machine.records.length() - 1).result
+-      all {
+-        resumeFollows(previousResult, suppliedNext),
+-        sameSourceContext(machine.current, suppliedNext),
+-        beginInvocation(suppliedNext),
+-      }
++    action init: bool = all { suppliedQueue.length() > 0, initInvocation(suppliedQueue.head()) }
++    action advanceInput: bool = all {
++      machine.phase == Published, machine.records.length() > 0,
++      machine.records.length() < suppliedQueue.length(),
++      resumeFollows(machine.records.nth(machine.records.length() - 1).result,
++        suppliedQueue.nth(machine.records.length())),
++      sameSourceContext(machine.current, suppliedQueue.nth(machine.records.length())),
++      beginInvocation(suppliedQueue.nth(machine.records.length())),
+     }
+-  }
+   action finalStutter: bool = all {
+     machine.phase == Published, machine.records.length() == suppliedQueue.length(),
+     terminalStutter,

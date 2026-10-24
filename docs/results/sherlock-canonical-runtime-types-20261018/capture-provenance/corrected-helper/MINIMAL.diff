@@ -1,0 +1,40 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-execution-preparation/run_selected_13.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-execution-preparation/revision02/run_selected_13.py
+@@ -6,7 +6,7 @@
+ import argparse, datetime, hashlib, json, os, re, selectors, shlex, shutil, signal, subprocess, time
+ 
+ D = Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA')
+-E = Path(__file__).resolve().parent
++E = Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-execution-preparation')
+ CAPTURE = E / 'actual-thirteen-01'
+ # Filled once during source preparation, not computed from mutable selection.
+ FROZEN = {'proposal': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/PROPOSED.json', 'bytes': 29898, 'sha256': '4ad42defa549cef2f5c3a6ac8d688457a8759d3634af8fefd779b1b9dad6d620'}, 'DAG': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/READSET-AND-OUTPUT-DAG.json', 'bytes': 13177, 'sha256': 'f153e2874e422a9195b4d297a5f6053644c4c491bc80c5c55551f6f3dcd3bf97'}, 'flat_inputs': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/FLAT-INPUT-PINS.json', 'bytes': 135220, 'sha256': 'cd49f9e88c82155f46fa0935a53f84fa2069dddb29d6e7060cfcf08379c1b48f'}, 'composition': {'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/435-resolved-signature-ordinary-QA/SOURCE-COMPOSITION.json', 'bytes': 167929, 'sha256': 'a95f7361b4fa4d13349fa2fa1541e24089d65f650c65bf72bdbfae5d44136ea6'}}
+@@ -182,7 +182,7 @@
+     for directory in [D / 'build', D / 'tmp']:
+         assert not directory.is_symlink()
+         assert not directory.exists() or (directory.is_dir() and not any(directory.iterdir())), 'output workdir is not fresh/empty'
+-    assert all(not Path(output).exists() for op in ops for output in op['outputs'])
++    assert all(not Path(output).exists() for op in ops for output in op.get('outputs', []))
+     # Only after explicit Root selection: reconstruct missing reviewed inputs, never overwrite existing immutable inputs.
+     snapshots = composition['files']
+     expected_paths = {row['snapshot']['path'] for row in snapshots}
+@@ -231,16 +231,16 @@
+             for row in dag_by_id[op['id']]['generated_inputs']:
+                 assert row['path'] in generated, 'prior generated input not observed'
+                 check(generated[row['path']])
+-            assert all(not Path(path).exists() for path in op['outputs'])
++            assert all(not Path(path).exists() for path in op.get('outputs', []))
+             result = capture(op, phase)
+             try:
+                 assert result['actual_exit'] == 0 and result['controller_failure'] is None
+                 assert all(row['full_stream_retained'] for row in result['streams'])
+-                outputs = [pin(path) for path in op['outputs']]
++                outputs = [pin(path) for path in op.get('outputs', [])]
+                 result['outputs'] = outputs
+                 allowed = {str(Path(row['path']).resolve(strict=True)): row for row in flat}
+                 allowed.update({str(Path(row['path']).resolve(strict=True)): row for row in generated.values()})
+-                info = [path for path in op['outputs'] if path.endswith('.d')]
++                info = [path for path in op.get('outputs', []) if path.endswith('.d')]
+                 result['dep_info_inputs'] = [dict(path=path, inputs=dep_inputs(path, allowed)) for path in info]
+                 if '--exact' in op['argv']:
+                     result['exact_test_acceptance'] = test_membership(op, phase)

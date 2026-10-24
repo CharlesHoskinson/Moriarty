@@ -1,0 +1,166 @@
+{
+  "reviewRole": "FRESH_NONAUTHOR_REVIEWER_OPUS_5_5_HIGH. I am not the S1 source author or its self-approver, and I am not the author of the prior 22580B opinion. I executed no tools, compilers, tests, models, SDK/native, providers or Git. Every statement comes from reading the inline bodies only.",
+  "scope": "Focused changed-source review of the S1/RC1 correction. Reviewed: reference_projection.rs 38b91ce8… (29503B) and sherlock_reference_projection_generic_refusal.rs 7540807c… (13904B), with the raw owner diff 9c9157de…, the derived metadata diff 5e362169…, LITERAL-MATERIALIZATION 862c8261…, SOURCE-FREEZE b197e30c…, the 18 operations in PROPOSED.json 00e34386…, DEP-INFO-EXPECTED-MEMBERSHIP 031e8e03… and STATIC-PIN-DELTA 99a32df7…. The 366 unchanged files, including F7 025de7cd…, nominal_source ca3efdd0… and the three 035 support sources, are taken as byte-exact under the controlling prior opinion and were not re-audited. Approval here is a scoped source and operation review. It is not an observed union result, and it is not parent, native, financial, target or EARS acceptance.",
+  "sourceDecision": "APPROVE",
+  "sourceDecisionSummary": "RC1 is implemented as specified. generic_profile (reference_projection.rs:96-109) reads the actual admission identity's GrammarDomain and the .len() of exactly the eleven RC1 tables. It returns Ok only for DedicatedSorts with all eleven tables empty. Otherwise it returns a typed, Copy GenericGap::GenericProfile carrying the domain and all eleven counts. The counts array and the irrefutable destructure use the same field order. It is called at reference_projection.rs:173, after the unchanged generic_rows (:172) and before the length check (:174), the occurrence-path walk, wp::materialize and association. ReferenceSource's fields are private and new() is its only constructor, so every A projection path (project_reference_boundary, ReferencePrefixProjection::new/push) is gated. Specific Construct/PlannedMatch/Wildcard/ConstructorPattern/ConstructorConstant/UnsupportedNominalType precedence is unchanged. The old dedicated path is byte-identical after an Ok guard, subject to premise P1. The fourth test is an append-only, non-masked regression with an exact typed expectation. I found no content ambiguity in the resulting bytes, so no source correction is required.",
+  "operationsDecision": "APPROVE",
+  "operationsDecisionSummary": "Conditional approval. The 18 operations keep the prior acceptable structure, and the sole previous blocker (O1, pins bound to pre-RC1 bytes) is resolved by reading:\n- every source pin, freeze, flat-manifest, membership and generated-namespace reference now resolves to the corrected bytes, and they cross-check against each other;\n- filtered counts are 1/8/3, and the exact sets of 2/9/4 names match the source;\n- op07's rename leaves membership unchanged;\n- overflow-checks=yes is set on all four compiles.\nExecution remains conditional on Root literally pinning and retaining the exercised composition glue and meeting OC1–OC7 before op01. The glue bytes are not supplied, so OC1–OC7 are unverified here. The unadapted run_selected_13.py test_membership/dep_inputs must not be used as acceptance.",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "none (RC1 implemented)",
+      "path": "crates/mori-core/src/sherlock/helper_machine/reference_projection.rs:96-109",
+      "evidence": [
+        "The domain source is admission.identity.grammar_domain (IdentityC; GrammarDomain is Copy and PartialEq per shared.rs:25-26). It is not inferred from the caller's A program or ExtDomain.",
+        "The eleven tables are read by .len() in this order: types, type_args, constructors, ctor_fields, decl_param_counts, decl_ctor_counts, decl_templates, plan_nodes, plan_cases, field_paths, pattern_children. The `let [..] = counts` destructure uses the identical order, so no count lands in the wrong field. The array is [usize; 11] and Copy, so the destructure is irrefutable and there is no borrow conflict with the earlier .iter().",
+        "The success condition is a conjunction: DedicatedSorts AND all counts == 0. Every other case returns Err. There is no wildcard success and no partial subset.",
+        "constant_fields is intentionally excluded and this is sound. The Ext route always yields GenericNominalExtensionReserved (G-10, per the prior opinion), so the domain test alone refuses every Ext admission whatever constant_fields holds. Dedicated List/Tree constants keep their legitimate use of it.",
+        "GenericGap still derives Clone, Copy, Debug, PartialEq and Eq, which GrammarDomain and usize satisfy. ProjectionGap's derives are unaffected. GrammarDomain resolves through super::shared::*, and AdmissionSnapshot through the existing explicit complete_observation import. No local name shadows anything used later."
+      ]
+    },
+    {
+      "id": "R2",
+      "severity": "none (precedence preserved)",
+      "path": "reference_projection.rs:170-176 (ReferenceSource::new); :251-256 (ReferencePrefixProjection::new)",
+      "evidence": [
+        "Call order is: generic_rows(view)? at :172, then generic_profile(&initial.admission)? at :173, then the expressions/occurrences and functions length check at :174.",
+        "generic_rows is unchanged: expressions (ConstructExpression, PlannedMatch), then patterns (WildcardPattern, ConstructorPattern), then constants (ConstructorConstant), then function return TypeIds and parameter sort TypeIds (UnsupportedNominalType via ty). Every specific identity therefore still wins over GenericProfile, so the Pair and Flag owner tests keep ConstructExpression and PlannedMatch.",
+        "Both borrows of initial.admission are shared, so there is no borrow conflict.",
+        "ReferencePrefixProjection::new calls ReferenceSource::new as its first statement, so both entry points return the identical gap before any wp::materialize.",
+        "Gating is complete. The ReferenceSource fields are private, the only struct literal is inside new(), and project_reference_boundary/snapshot/push all require a constructed source. snapshot() and push() additionally reject any admission that differs from the source's (AdmissionChanged), so a dedicated source cannot project a generic snapshot.",
+        "reference_value remains a free value-level converter, not gated by the profile. That is unchanged and intentional: test 3 converts a dedicated UInt from a generic run, and Constructor nodes still return ConstructorValue. It associates no program."
+      ]
+    },
+    {
+      "id": "R3",
+      "severity": "none by reading / premise P1 (old dedicated path)",
+      "path": "reference_projection.rs:104; owner_prepare.rs (not in my readset)",
+      "evidence": [
+        "When generic_profile returns Ok, control continues into the byte-identical association, materialize, projection and A39 path.",
+        "Premise P1: every dedicated Core admission (prepare_core/admit) has DedicatedSorts identity and all eleven tables empty. This includes types (no seeded built-in sort rows), constructors, pattern_children (PCons/PBranch carry names inline) and plan_cases.",
+        "P1 is carried from the prior opinion's direct reading of owner_prepare (its S1 and S3: 'always have DedicatedSorts identity and empty ADT tables'). I did not verify it independently.",
+        "If P1 is false, op08 is the first operation to observe it: the dedicated 035 path would refuse with GenericProfile, and every later operation would be left UNRUN. That outcome is evidence of a premise failure. It is never a reason to narrow the table set or fit an expectation."
+      ]
+    },
+    {
+      "id": "R4",
+      "severity": "none (behaviour change confined to generic admissions)",
+      "path": "reference_projection.rs:173",
+      "evidence": [
+        "Only GenericNominal admissions, or the publicly unreachable DedicatedSorts-with-nonempty-table branch, change outcome. Generic admissions with specific generic rows keep their earlier specific gap.",
+        "A generic admission with dedicated-only rows now gets GenericProfile instead of a possible successful association (the S1 defect) or a SourceAssociation mismatch.",
+        "GenericGap was introduced within this same union, so no pre-union consumer can match it exhaustively. The only supplied matcher (the owner test) uses `other =>` catch-alls.",
+        "The public consumer bytes (op02) are not inline. If they call ReferenceSource on generic programs that contain constructors or planned matches, the specific gaps are preserved by precedence."
+      ]
+    },
+    {
+      "id": "T4",
+      "severity": "none (fourth test is valid by reading; owner-authored, not independent proof)",
+      "path": "crates/mori-core/tests/sherlock_reference_projection_generic_refusal.rs:160-187",
+      "evidence": [
+        "The change is append-only. The prior three-test source is an exact byte prefix, so the imports, helpers and three tests are unchanged.",
+        "Inputs: the real public compile_ext_host with the unchanged generic_config (GENERIC_ABSENT, SAFE bounds/capacities). The program has one declared-but-unused nominal type `Unused { U }` and entry uint(5). The test uses into_parts and co::capture of the genesis image only, with no record_step.",
+        "Non-masking assertions:\n- the domain is GenericNominalExtensionReserved;\n- the entry row exists and is Literal, and every expression row is Literal, so there is no Construct and no planned Match;\n- no Wildcard or Constructor pattern exists;\n- no Constructor constant exists;\n- functions and parameters are empty, so there is no signature TypeId and no UnsupportedNominalType;\n- decl_templates is nonempty, so the declaration reached the admitted tables.",
+        "Refusal: the expected GenericProfile takes the actual domain and all eleven .len() values field by field, and must equal both ReferenceSource::new(...).err() and ReferencePrefixProjection::new(...).err().",
+        "The caller's A program is Literal(UInt 5), matching the entry, so a SourceAssociation mismatch cannot stand in for the guard. Without RC1 the prior trace says association would succeed, giving None instead of Some, so the test would fail. It is therefore a genuine regression test for the guard.",
+        "Compile shape by reading:\n- GrammarDomain and PatternRowC come from the shared::* glob;\n- co::ExpressionSnapshot and co::ConstantSnapshot are pub per the prior opinion;\n- match ergonomics over Option<&T> and &T with `{..}`/unit patterns are valid under edition 2024;\n- Result::err needs no Debug on ReferenceSource;\n- assert_eq! over Option<ProjectionGap> uses the derived Debug and PartialEq;\n- image is immutable because capture takes a shared reference.",
+        "Limitation: because the expected counts come from the snapshot, the test cannot discriminate field-mapping errors between counts that happen to be equal. R1 covers the mapping by reading."
+      ]
+    },
+    {
+      "id": "M1",
+      "severity": "INFO (patch metadata defect confirmed; no content ambiguity)",
+      "path": "owner-exact/OWNER.diff 9c9157de…; OWNER.LITERAL-CONTEXT-METADATA.diff 5e362169…",
+      "evidence": [
+        "Independent header arithmetic:\n- hunk 1 adds 6 lines: -47,6 +47,12 is correct;\n- hunk 2 adds 14 lines (3 doc, 1 fn, 1 let, 3 counts, 1 if, 2 destructure, 2 Err, 1 brace) to 6 context lines, so the new count is 20, not the author's 19, and the new start 87+6=93 is correct;\n- hunk 3's new start is 149+6+14=169, not the author's 168, and its count of 8 is correct;\n- the test hunk -157,3 +157,31 is consistent.",
+        "The raw author headers were therefore invalid. The S1 owner response's limitations text repeats the same wrong offsets; that is historical prose.",
+        "The derived diff differs only in those two header numbers. All four old contexts are unique with exact old offsets. The resulting file layout matches: ConstructorValue is at line 47 and GenericProfile at 53-55, the parameter loop is at 93 and generic_profile at 96-109, and impl ReferenceSource is at 169 with the guard at 173.",
+        "The resulting pinned bytes are unambiguous. No correction is required. This is not a new author vote."
+      ]
+    },
+    {
+      "id": "S4",
+      "severity": "LOW (retained, non-blocking)",
+      "path": "reference_projection.rs:92-93 (generic_rows signature loop)",
+      "evidence": "Signature refusals still use UnsupportedNominalType(n) with no function or parameter row index. RC1 does not address this. Row-carrying hardening remains optional."
+    },
+    {
+      "id": "U1",
+      "severity": "INFO (unexercised branch)",
+      "path": "reference_projection.rs:104",
+      "evidence": "No public construction reaches the DedicatedSorts-with-nonempty-table refusal branch: the Ext route cannot produce DedicatedSorts, and the Core route has empty tables under P1. It is covered by reading only, and no fabricated ProgramView is used."
+    },
+    {
+      "id": "O1r",
+      "severity": "none (prior blocker resolved by regeneration)",
+      "path": "PROPOSED.json; SOURCE-FREEZE.json; DEP-INFO-EXPECTED-MEMBERSHIP.json; STATIC-PIN-DELTA.json",
+      "evidence": [
+        "These pins agree with each other:\n- PROPOSED.source matches SOURCE-FREEZE b197e30c… (2507B);\n- materialization matches 862c8261…;\n- flatInputs matches 30d72a4f…, the newManifest in the delta;\n- depMembership matches 031e8e03….",
+        "Core104 counted at exactly 104 entries, and its reference_projection entry is 38b91ce8…. owner1 is 7540807c…. 035 has 14 entries (10 fixtures, the registration file and 3 support sources) and public has 3.",
+        "Inline cross-checks against Core104 pins: shared.rs a7129988… and complete_observation.rs 2891c4f0… match the context-05/06/07 origins; ext_compile.rs 5e8641b3… and owner_ext_source_program.rs 5170e6ba… match contexts 03/04; owner_ext_admit.rs 025de7cd… matches F7.",
+        "The manifest delta changes exactly five rows (the two sources plus three metadata files) and keeps the count at 718."
+      ]
+    },
+    {
+      "id": "O2r",
+      "severity": "none (envelopes and lists consistent with source)",
+      "path": "PROPOSED.json ops 03/04-05/07/08-12/14/15-18",
+      "evidence": [
+        "Op14's exact set of 4 names equals the four #[test] function names in 7540807c…. The owner filtered_out is 3 (4-1), the 035 filtered_out is 8 (9-1) and the public filtered_out is 1 (2-1).",
+        "Op07's existingWorkTestNames are exactly the four work:: members of the nine-name set; only the label changed.",
+        "Op07 still uses the alternate schema ('expected'/exactUniqueTestNames/testCount/benchmarkCount), which OC1/OC3 glue must map explicitly.",
+        "OC1 now states 3 for the four owner selectors.",
+        "Ops 01/02/06/13 all carry -C overflow-checks=yes. Op01 uses fresh metadata moriarty_generic_C6_ABI_F7_S1_WW_union_20261019_v1 and fresh output names. Ops 02/06/13 link only the new rlib.",
+        "All operations keep: an exact environment with no inheritance, stdin DEVNULL, timeout KILL with prlimit CPU/AS/FSIZE and core=0, a 128KiB stream cap, and serial fail-stop with no retry."
+      ]
+    },
+    {
+      "id": "O3r",
+      "severity": "MEDIUM (glue condition, unverifiable here)",
+      "path": "Root composition glue (not supplied); run_selected_13.py ce0482fd…",
+      "evidence": "The prior O2–O4 defects in the unadapted helper still stand: the expectedMembership key mismatch, unasserted filtered_out, subset-only dep_inputs, the dict-path extraction issue and the absent terse-list parsing. Root reports adapted glue, but its bytes are not in this packet. OC1–OC7 must be met with literally pinned and retained glue before op01."
+    },
+    {
+      "id": "O6r",
+      "severity": "LOW (operational risk retained)",
+      "path": "ops 08–12, 18",
+      "evidence": "Multi-strategy 035 selectors run at opt-level=0 with overflow checks, under CPU 8s and wall 10s, with no prior timing in the readset. Op18 needs only compile plus genesis capture and should be light. A resource termination is operational, not a correctness verdict; it leaves later operations UNRUN with no retry."
+    }
+  ],
+  "operationConditions": [
+    "OC1–OC7 exactly as stated in PROPOSED.json, with OC1 filtered_out values 1 (ops 04/05), 8 (ops 08–12) and 3 (ops 15–18), and op07's alternate schema mapped explicitly.",
+    "Root's exercised glue must be literally pinned and retained with the receipts. Neither helper main nor unadapted test_membership/dep_inputs may serve as acceptance.",
+    "Dep-info equality is exact set equality: Core104 with families/../fragments alias resolution, and public3, 03514 and owner1, using the declared 'path' key.",
+    "The first failure stops all later operations as UNRUN, with no retries.",
+    "The raw child result and streams are saved before postprocessing.",
+    "All ten case files must be complete and frozen before any independent union comparison. Missing output is never success."
+  ],
+  "reviewedBoundariesAndPrecedence": [
+    "ReferenceSource::new runs these steps in order: generic_rows, in its unchanged order (expressions → patterns → constants → function returns → parameter sorts); then generic_profile, which checks the actual domain and the eleven tables; then the length check; then the occurrence-path walk; then wp::materialize; then expression, arm, function, parameter and entry association.",
+    "ReferencePrefixProjection::new runs ReferenceSource::new first, then materializes and projects the boundary. Both entry points return the identical typed gap.",
+    "Every projection path is gated: private fields, a single constructor, and AdmissionChanged checks in snapshot() and push().",
+    "Refusal sites, unchanged:\n- reference_value: ConstructorValue;\n- pattern(): Wildcard and Constructor;\n- frame(): ConstructorFieldsFrame;\n- control(): MaterializeControl;\n- reference_rule: XAdt rules give UnmappedRule.",
+    "Old dedicated path: when DedicatedSorts with empty tables passes (P1), the path is byte-identical.",
+    "Patch metadata: both raw author headers are invalid and the derived arithmetic headers are correct. The resulting bytes and the inverse proof are consistent with the inline sources.",
+    "Operations 01–18: argv, environment, limits, outputs, ordering, envelopes, list sets, membership pins, the manifest delta and OC1–OC7."
+  ],
+  "readsetLimitations": [
+    "Nothing was compiled or executed for this revision. Type-correctness and behaviour are established by reading only. The source is UNCOMPILED/UNEXECUTED.",
+    "owner_prepare.rs, owner_ext_type_builder.rs, check_program_view(_ext), dag.rs, adt.rs and owner_ext_t3_uses.rs are not inline. P1 (empty dedicated tables) and the fourth test's admission premises (zero-function GENERIC_ABSENT admission of a Literal entry; the unused declaration reaching decl_templates; successful genesis capture) are inherited from the prior opinion's trace and are unobserved.",
+    "The public consumer sources (consumer.rs, wire.rs, inputs) are not inline, so whether they call reference_projection is unknown here. See R4 for why precedence limits any impact.",
+    "Of the 718-row static manifest and the 368-file closure, only the bodies above are inline. The rest are pinned external records, read only through the delta and the membership file.",
+    "The Root composition glue bytes are not supplied, so OC1–OC7 cannot be verified.",
+    "The 035 fixture bodies and all populated generic expected/comparison/cell arrays were neither read nor requested.",
+    "rustc dep-info behaviour (include_str! files listed, extern rlibs not listed) is assumed from prior runs.",
+    "Earlier C6/F7 PASS results and Root's original independent comparison PASS are old-cut facts and do not certify this revision. The prior CHANGES_REQUIRED opinion is not inherited as approval; this decision is fresh over the changed bytes."
+  ],
+  "retainedUnsupportedScope": [
+    "Full generic B-to-A/source reference projection remains open: nominal values, constructor membership authentication, PlanNode/planned-match semantics, ConstructorFieldsF/Materialize continuations, normative XAdt rule mapping and generic B-trace correspondence. GenericProfile is an explicit narrow diagnostic refusal, never flattening or correspondence.",
+    "Exercised refusals for Wildcard, ConstructorPattern, ConstructorConstant, ConstructorFieldsFrame, MaterializeControl and the DedicatedSorts-nonempty-table branch remain unexercised.",
+    "S4: row-carrying signature refusal is not addressed.",
+    "Four 035 tests are not selected and stay unrun: contrast::let_leaf_pattern_variable, work::list_two_five, work::tree_four_one_three and work::valid_program_layout_run_inputs_clear_cache_contrasts. Whole-035/UIREQ-035 closure is not claimed.",
+    "nominal_source behaviour is compile-only.",
+    "Prior open findings F3, F5, F6, F8, F9, F10, F11, F12 and N1/N3/N4 remain open.",
+    "Not claimed or granted: H1 host-resource and untrusted-input guarantees, financial, native/ZKIRv3, target, recursion, EARS, parent requirements, the permissionless product contract, and capacity/default expansion."
+  ]
+}

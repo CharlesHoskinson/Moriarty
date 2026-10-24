@@ -1,4 +1,4 @@
-//! Source-static projection tests. No evaluator is called.
+//! Source-static projection tests and fixed scalar evaluation compatibility checks.
 use super::*;
 
 const WEIGHTED: &str = include_str!("source_adapter_fixtures/weighted-total.mori");
@@ -208,16 +208,15 @@ fn report_serializes_actual_mapping_and_explicit_coverage() {
 
 #[test]
 fn ordinary_valid_core_outside_projection_remains_explicitly_unmapped() {
-    let source = crate::parse("language \"moriarty/1\"; agreement Outside { action compare(a: UInt, b: UInt) { emit \"greater\"(a > b); } }").unwrap();
+    let source = crate::parse("language \"moriarty/1\"; agreement Outside { action compare(a: UInt, b: UInt) { emit \"first\"(a); emit \"second\"(b); } }").unwrap();
     crate::validate(&source).unwrap();
     let report = source_projection_report(&source);
     let ActionProjection::Unsupported { diagnostic, .. } = &report.actions[0] else {
-        panic!("Gt has no direct scalar projection in this slice");
+        panic!("ordered source effects remain outside a single final-value projection");
     };
-    assert_eq!(diagnostic.construct, "binary-Gt");
+    assert_eq!(diagnostic.construct, "nonfinal-emit");
     assert_eq!(diagnostic.statement_index, Some(0));
-    assert_eq!(diagnostic.expression, Some(2));
-    // Reporting is independent from the existing source language validation.
+    assert_eq!(diagnostic.expression, None);
     crate::validate(&source).unwrap();
 }
 
@@ -281,4 +280,82 @@ fn shared_subexpression_fanout_stops_at_the_preparation_budget() {
     };
     assert_eq!(diagnostic.construct, "projection-occurrence-budget");
     crate::validate(&program).unwrap(); // Reporting stays independent of Core validation.
+}
+
+fn eager_boolean_source(expression: &str) -> Program {
+    crate::parse(&format!(
+        "language \"moriarty/1\"; agreement Eager {{ action inspect() {{ emit \"value\"({expression}); }} }}"
+    ))
+    .expect("fixed scalar source parses")
+}
+
+fn run_projected_scalar(source: &Program) -> crate::sherlock::Outcome {
+    let mapped = prepare_scalar_action(source, 0).expect("fixed scalar source projects");
+    let entry = e(Expr::Call(mapped.function.name.clone(), vec![]));
+    let program = Arc::new(crate::sherlock::Program {
+        functions: vec![mapped.function],
+        entry,
+    });
+    // Fixed tiny programs only. Machine receives 128 fuel and a 32-frame stack
+    // limit; run_steps caps the observed records at 128, including publication.
+    let mut machine = crate::sherlock::Machine::new(program, 128, 32);
+    machine.run_steps(128);
+    machine.snapshot().outcome
+}
+
+// Core eval_cached evaluates lhs, then rhs, before applying either boolean op.
+// Thus 0 - 1 fails even when the left Bool determines the logical result.
+// The independent arithmetic expectation is Core underflow / K-A error 10;
+// neither evaluator supplies the other evaluator's expected outcome.
+fn assert_eager_boolean_right_underflow(
+    expression: &str,
+    control_expression: &str,
+    expected_control: bool,
+) {
+    let control = eager_boolean_source(control_expression);
+    let execution = crate::simulate(&control, "inspect", &crate::Scenario::default())
+        .expect("the non-underflowing sibling must emit its exact boolean result");
+    assert_eq!(
+        execution.effects,
+        vec![crate::Effect::Emit {
+            name: "value".into(),
+            value: crate::Value::Bool(expected_control),
+        }]
+    );
+    assert_eq!(execution.steps.len(), 1);
+    assert_eq!(
+        execution.steps[0].value,
+        Some(crate::Value::Bool(expected_control))
+    );
+    assert_eq!(
+        run_projected_scalar(&control),
+        crate::sherlock::Outcome::Done(Value::Bool(expected_control))
+    );
+
+    let source = eager_boolean_source(expression);
+    let core_error = crate::simulate(&source, "inspect", &crate::Scenario::default())
+        .expect_err("the right operand must fail before a boolean value is emitted");
+    assert_eq!(
+        core_error,
+        crate::Error {
+            code: "mori::core::underflow".into(),
+            message: "UInt subtraction is negative.".into(),
+            offset: None,
+            step: Some(0),
+        }
+    );
+    assert_eq!(
+        run_projected_scalar(&source),
+        crate::sherlock::Outcome::Rejected(10)
+    );
+}
+
+#[test]
+fn false_and_preserves_right_operand_underflow_in_core_and_projection() {
+    assert_eager_boolean_right_underflow("false and (0 - 1 == 0)", "false and (1 - 1 == 0)", false);
+}
+
+#[test]
+fn true_or_preserves_right_operand_underflow_in_core_and_projection() {
+    assert_eager_boolean_right_underflow("true or (0 - 1 == 0)", "true or (1 - 1 == 0)", true);
 }

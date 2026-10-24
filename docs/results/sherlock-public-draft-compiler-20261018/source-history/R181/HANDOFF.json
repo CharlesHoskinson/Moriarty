@@ -1,0 +1,34 @@
+{
+  "task": "R181 scoped bounded draft parser source",
+  "author": "Sol",
+  "authorization": "Latest user instruction: Sol writes; Opus/Gemini audits, limited to parser budget checks",
+  "implementation_status": "source candidate with two full production afterimages and focused test sources",
+  "validation_status": "source text inspection only; no compiler, formatter, Cargo, tests, evaluator, model, adapter, SDK or native execution",
+  "acceptance_status": "unreviewed; fresh designated security audit required before execution",
+  "production_paths": [
+    "crates/mori-core/src/sherlock/draft_source.rs",
+    "crates/mori-lexer/src/lib.rs"
+  ],
+  "test_sources": ["tests/bounded_parser.rs", "tests/lexer_token_limit.rs"],
+  "entry": "parse_draft_source_bounded(&str, DraftParseBudget) -> Result<ParsedDraft, DraftError>",
+  "budget_error": "DraftError::Budget(DraftBudgetExceeded { resource: DraftBudgetResource, limit: usize, observed: usize })",
+  "limits": ["source bytes", "tokens including EOF", "functions", "parameters per function", "total parameters", "Expr and Pattern occurrences", "parser recursion depth", "Expr structural depth"],
+  "review_predicate": "The proposed bounded entry can parse supported positive programs and rejects first exceeded explicit extents before the affected allocation/descent; original parser API, grammar, precedence, binders, provenance order, type policy and lexer hard limits remain unchanged",
+  "root_integration": [
+    "Use candidate.patch only after comparing SOURCE-FREEZE.json preimages to active source",
+    "Map R120 config fields explicitly and add distinct structural AST depth extent",
+    "Adapt R120 draft_diagnostics exhaustive DraftError match for Budget",
+    "Choose test wiring and freeze independent expectations; obtain fresh audit before executing"
+  ],
+  "unresolved": [
+    "Fresh Opus/Gemini full-candidate audit and selected ordinary checks",
+    "Checker/general copy/report/recursive destruction and cleanup remain unadmitted",
+    "Public compile consumer/config integration and general H1 admission remain incomplete"
+  ],
+  "writes": "Only this R181 review directory; no W or Git writes",
+  "provider_calls": 0,
+  "candidate_execution": 0,
+  "native_authority": 0,
+  "preserved": ["original EARS", "all existing limits", "C4", "R2", "60460", "stopped amendment 10"],
+  "checkpoint": "Foreman-backed checkpoint tool not invoked because the user bans Foreman; this handoff is a source-review artifact, not a replacement framework"
+}

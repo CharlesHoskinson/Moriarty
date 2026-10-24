@@ -1,0 +1,220 @@
+{
+  "status": "ACTUAL_DESIGNATED_SECURITY_B_CHANGES_REQUIRED_MOCK_UNCLASSIFIED_WITH_REPLY_SIZE_DEVIATION",
+  "created_utc": "2026-10-18T01:29:46.852981+00:00",
+  "actual_terminal": {
+    "CLI_exit": 0,
+    "provider_status": "SUCCESS",
+    "controller_elapsed_seconds": 410.12360337699647,
+    "provider_duration_seconds": 406.787020206,
+    "actual_init_model": [
+      "gemini-4-argon-high"
+    ],
+    "actual_CID": "63caee44-97f3-42ee-8478-f33e38cf100a",
+    "observed_CIDs": [
+      "63caee44-97f3-42ee-8478-f33e38cf100a"
+    ],
+    "stderr_bytes": 0,
+    "stream_parse_errors": 0,
+    "stop_events": [],
+    "all_original_and_page_pins_unchanged": true
+  },
+  "read_coverage": {
+    "original_bodies": 46,
+    "unique_representations": 45,
+    "required_pages": 50,
+    "unique_DONEpages": 50,
+    "all50DONEonce": true,
+    "alllinebytesummaries_match": true,
+    "disallowedtools": [],
+    "duplicate_reads": {},
+    "all46originsreconstruct": true,
+    "sourcepair_raw_byteexact": true,
+    "JSONmetadata_lossless_compaction": true,
+    "alias_explicit": true,
+    "tool_summary_limit": "Actual AGY tool_info output contains line/byte summary, not full response text. Count/path summaries are mechanically checked; end-to-end body fidelity and semantic reading are not proved by summaries. Auditor scope and literal source-grounding checked separately."
+  },
+  "actual_security_owner_decisions": {
+    "A_changed_source": "CHANGES_REQUIRED",
+    "B_future_fixed_mock_only_ordinary_operation": {
+      "classification": "UNCLASSIFIED/ABSTAIN",
+      "missing_concrete_premises": [
+        "Existing policy P1 2.2 (F034) restricts ORDINARY_SYNTHETIC_UNIT_TEST to 'one class only': driver 4bdb0146 over the exact seven bound files (bounded_sdk_compile.py fc1c1c98, config.example.json ed683c42, exact16_git_symlinks.json 47cd59df, test_config_source.py 0f966d96, test_bounded_sdk_compile_link_fragment.py 920983f6, test_bounded_sdk_compile_symlink_config.py d13b51da, test_r5_walk_treehash_freeze.py f6b7b2d4). F001 and F002 are not in that bound set.",
+        "F001 requires source changes (Decision A: CHANGES_REQUIRED) and carries unresolved R186 author prompt-truncation provenance (F005, F006).",
+        "No concrete inspected command/argv, test driver, environment isolation, resource/wall bounds, or closed-effect enforcement guaranteeing F001 live host/mount/cgroup entrypoints cannot be invoked is supplied."
+      ]
+    }
+  },
+  "old_MF_dispositions": {
+    "MF-01": "FIXED_WITH_REGRESSION",
+    "MF-02": "FIXED",
+    "MF-03": "FIXED",
+    "MF-04": "FIXED",
+    "MF-05": "FIXED",
+    "MF-06": "FIXED",
+    "MF-07": "FIXED"
+  },
+  "new_mandatory_findings": [
+    {
+      "id": "NEW-MF-01",
+      "severity": "HIGH",
+      "anchor": "F001:absolute `re.fullmatch(r'(/[A-Za-z0-9._-]+)+', value)`; F001:check_host_predicates `probe_cg = absolute('/sys/fs/cgroup/' + rel_cg)`; F001:cmd_prelaunch_verify `rec_op0.get('self_cgroup') == current['op0_facts']['self_cgroup']`",
+      "issue": "(1) `check_host_predicates()` passes the caller's `/proc/self/cgroup` path (`rel_cg`) to `absolute()`, whose regex omits `@` (and `:`). On standard systemd hosts where an unprivileged uid=1000 shell runs under `user@1000.service` (explicitly referenced in F002, F037, F041), `cmd_op0`, `cmd_op6`, and `cmd_prelaunch_verify` unconditionally fail with `Refusal('normalized absolute path required')`. (2) `cmd_prelaunch_verify()` requires `self_cgroup` equality with `OP-6`, refusing launch if `prelaunch-verify` runs in a different uid=1000 session/scope than `OP-6` within the same mount namespace."
+    },
+    {
+      "id": "NEW-MF-02",
+      "severity": "MEDIUM",
+      "anchor": "F001:main `req_sha = sha256_regular(args.request)` and `req = validate_request(jload(args.request))`; F001:cmd_collect_evidence `obs_doc = jload(obs_path)`; F001:cmd_teardown `manifest_sha = sha256_regular(ev_manifest)`",
+      "issue": "(1) `main()` opens `args.request` three separate times across `sha256_regular()` and `jload()` without verifying fd inode/device/digest identity between hash and parse, and takes no external `--request-sha256` CLI anchor for root steps (`op2`, `op4`, `op5`, `teardown`, `abort-prelaunch-cleanup`). (2) `cmd_teardown()` (running as root) only hashes `EVIDENCE_SHA256_MANIFEST.json` via `sha256_regular()` without `jload()` verification that `request_sha256`, `provisioner_sha256`, `observation_sha256`, and `ONE_SHOT_STARTED` match the active request and `observation_output`. (3) `cmd_collect_evidence()` does not re-verify that `execution_root` and `packet` remain active tmpfs mounts matching `obs_doc['quota_mounts']` (`mount_id`/`device`), and copies via `shutil.copy2` without hashing source files via `sha256_regular()` first."
+    },
+    {
+      "id": "NEW-MF-03",
+      "severity": "MEDIUM",
+      "anchor": "F001:run_mount_tmpfs `subprocess.run(['/usr/bin/mount', ...])`; F001:umount_quota_tmpfs `subprocess.run(['/usr/bin/umount', '--', str(mp)], ...)`; F001:cmd_op2; F001:cmd_op4; F001:cmd_teardown",
+      "issue": "Root steps (`OP-2`, `OP-4`, `teardown`, `abort-prelaunch-cleanup`) execute `/usr/bin/mount` and `/usr/bin/umount` without first calling `pin_operator_tool()`, and traverse `uid=1000`-writable `execution_root` (in `OP-4` and unmount steps) using non-atomic user-space `lstat()`/`is_symlink()` checks before pathname-based `mount`/`umount` subprocess calls (F005, F022, F032)."
+    }
+  ],
+  "new_nonblocking_findings": [
+    {
+      "id": "NB-01",
+      "anchor": "F001:pin_operator_tool `cur = absolute(target) if target.startswith('/') else absolute(str(cur.parent / target))` and `not os.access(rp, os.W_OK)`",
+      "issue": "Relative tool symlinks containing `..` fail `absolute()` because `Path` does not collapse `..` before `'..' not in p.parts`; writability checks use `os.access(..., os.W_OK)` instead of `(st_mode & 0o022) == 0`."
+    },
+    {
+      "id": "NB-02",
+      "anchor": "F001:validate_request `l_mem = page_aligned(...)`; F001:verify_and_observe `if len(b) > 2:`",
+      "issue": "`validate_request()` enforces no minimum floor on `supervisor_leaf_limits` (`L`: 1610612736 B, 64 pids, `100000 100000` cpu in F035) and no upper bound on `max_inodes` (524288/4096 in F035); `verify_and_observe()` guards superblock option checks with `if len(b) > 2:` instead of `need(len(b) > 2, ...)`."
+    },
+    {
+      "id": "NB-03",
+      "anchor": "F001:cmd_op5; F001:teardown_cgroups `for ch in sorted(p_dir.iterdir(), key=lambda x: x.name):`",
+      "issue": "`cmd_op5` does not set `cgroup.max.depth` or `cgroup.max.descendants` (F011) on `uid=1000`-writable `P`, while `teardown_cgroups` only removes direct child directories of `P`."
+    },
+    {
+      "id": "NB-04",
+      "anchor": "F002:ProvisionerContractTests",
+      "issue": "F002 lacks mock tests for `cmd_op0`..`cmd_op6`, `cmd_collect_evidence`, and `cmd_abort_prelaunch_cleanup`, and tests `check_host_predicates` only with `session-1.scope` (no `@`)."
+    }
+  ],
+  "remaining_gap_judgments": [
+    "Resolution of NEW-MF-01..NEW-MF-03, full-context author re-verification curing the R186 prompt truncation gap (F005), and fresh independent security/nonsecurity audits.",
+    "Root selection of fresh non-historical `request.json` operands (`execution_root`, `config_dir`, `observation_output`, `evidence_dir`, top-level `envelope_path`) and explicit human/root provisioning authorization (F037, F038).",
+    "Live host satisfaction of OP-0 (`MemAvailable >= 23622320128` B; historical R98 was 23621820416 B, F041), single cgroup2 mount with `cpu`/`memory`/`pids` and `cgroup.kill`, and unprivileged userns/AppArmor availability for non-setuid `/usr/bin/bwrap`.",
+    "Execution of OP-0..OP-6, post-OP-6 capture of `old_home_stat_manifest` after link-text pre-check, disposition of `expected_generated_files`, and assembly of `config.final.json` (copying only the 6 envelope keys accepted by `F036:validate_cgroup` and omitting `supervisor_leaf_limits`/`phase_parent_limits`).",
+    "External Root CPOL3 verification (`source_manifest_sha256 == 9f48d1f227c2714bab374828b7fe4dd930aab660ea63dd2685f91d6250bcafce` in both receipts and R53 freeze `f7910a648f0558c9aa3f0543c18cc546d0b0238c83b867db75c2ff0dfb3cdf17`, F033), `ADMITTED_CONFIGURATION`, verbatim P1 1.5(a)-(c) disclosures (including 20 unread `git-db-metadata` files and 52 `git-loose-unknown` containers, F034), separate explicit user `GRANTED_TIER1`/`GRANTED_TIER2`, and separate Root disposition of `R2` (`UNSATISFIED`) and `C4` (`OPEN`).",
+    "Maintainer host provisioning remains strictly separate from the permissionless product boundary; this review grants no source approval, config admission, provisioning, or tier/native execution authority."
+  ],
+  "literal_readback": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/LITERAL-READBACK.json",
+    "checks": 69,
+    "all_mechanical_checks_match": true,
+    "coordinator_scope": "Coordinator mechanical source-name/hash/anchor/coverage/terminal readback only. Security findings/severity/policy applicability/currenthost/provisioning/interpretation are actual reviewer judgments, not approved or replaced by Sol."
+  },
+  "reply_size_deviation": {
+    "requested_max_bytes": 8000,
+    "actual_bytes": 13714,
+    "excess_bytes": 5714,
+    "raw_preserved": true,
+    "retry": false
+  },
+  "qualifications": [
+    "No clean sourceapproval/mock grant: actual sourceCHANGES_REQUIRED, futuremockUNCLASSIFIED/ABSTAIN.",
+    "R186author33398Btruncation/19guardboundedclosure/upstreamversion/currenthostunknowns preserved.",
+    "FreshindependentsecurityB: currentAopinions notread/supplied; no sourceauthorcontext/CIDreused.",
+    "Sourceapproval/configadmission/provisioning/tier/nativeauthority notestablished; Rootaloneadopts/selectsfutureoperations."
+  ],
+  "pins": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/REPORT.md",
+      "bytes": 13714,
+      "sha256": "51acdf8f6be4e92023f443beeaa0e49091fe9fa447245b9d1cc5ef4c0cddc9be"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/RESULT.json",
+      "bytes": 64669,
+      "sha256": "42c159649ca475893b2147b6f27dd94b1344735b92c165e2eaf1b4cd2321b5f0"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/LITERAL-READBACK.json",
+      "bytes": 20636,
+      "sha256": "31bb054a4639a167eee3fa987cdb07bb4215cf97f18dcc027e5baff82a28522c"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/TOOL-READ-COVERAGE.json",
+      "bytes": 29586,
+      "sha256": "bf0c309bb1df26ed9f1e64d63c68cc38b9f94568ece1c30ed2dc3ef6ac1bf4d2"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/INPUT-MEMBERSHIP.json",
+      "bytes": 66619,
+      "sha256": "829e04935f804a71238d9f150195bc044d8064d2a28f1ea1549565c589cb3533"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/FREEZE.json",
+      "bytes": 900,
+      "sha256": "79afb692fe26df30efd77dc469d7e6d3a39197a8b41b130424844be62e3f97e2"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/FREEZE.proposed.json",
+      "bytes": 606,
+      "sha256": "18dedc3848c977e6c67765f0169d2dba2e50448d177961f10caa3575f2cc10e0"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/PROMPT.txt",
+      "bytes": 27651,
+      "sha256": "b36796f6e7dedb4afbb9d437b94374af55b65bf0de7f62c028eb56790b7ba42d"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/PROMPT.proposed.txt",
+      "bytes": 27348,
+      "sha256": "a88a006349774d8118efca53f2caeebac4bc21b0bf770e70c0d420822a68268a"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/ROOT-SELECTION-PREFIX.txt",
+      "bytes": 303,
+      "sha256": "33bb2307c2fd70750dee32642106ce8667c2e442464d0a50dca3af338ce2e5bc"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/LAUNCH.json",
+      "bytes": 1420,
+      "sha256": "5b53dd676a74cec617264191851a9e670e079c5a1b83695b755f61c8c8214735"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/PRECALL-PINS.json",
+      "bytes": 17490,
+      "sha256": "ffe41f5b0d30f38ae3674fab9a06a85a7adc26a20b24f47ac074a06c6e9b4c09"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/POSTCALL-PINS.json",
+      "bytes": 17490,
+      "sha256": "ffe41f5b0d30f38ae3674fab9a06a85a7adc26a20b24f47ac074a06c6e9b4c09"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/PRELAUNCH-LOSSLESS-READBACK.json",
+      "bytes": 8942,
+      "sha256": "c25f161a5a348d9d0b0be2241591eb641301250e7d121344e76f257a6a852054"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/PRIMARY-SECTION-PIN-CHECK.json",
+      "bytes": 8943,
+      "sha256": "d1348c1e37dffbca22e2f1e85c6e47de1acf3583d53fc9b32c8ae47265929264"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/AVAILABLE-TOOL-TRANSPORT.jsonl",
+      "bytes": 36823,
+      "sha256": "9f2fd5089467b41a6a8397edd4ccd9347bd11207ed54c161362481118e8c9e86"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/PROVIDER.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/199-operator-provisioner-security-B/run_once_binary.py",
+      "bytes": 8284,
+      "sha256": "17479f6a7d7fde1a3dbcf97cfc03cb4cde8251f232dd550e22354d1ed5404689"
+    }
+  ],
+  "provider_calls": 1,
+  "retries": 0,
+  "native_authority": 0
+}

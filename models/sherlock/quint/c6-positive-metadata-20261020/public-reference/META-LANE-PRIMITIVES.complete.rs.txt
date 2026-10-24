@@ -1,0 +1,12 @@
+pub(crate) const fn u(v: usize) -> u128 { v as u128 }
+
+pub(crate) fn rd(section: &'static str, value: u128) -> C6Result<usize> {
+    usize::try_from(value).map_err(|_| C6PhysError::UsizeOverflow { section, value })
+}
+pub(crate) fn rd_bool(section: &'static str, value: u128) -> C6Result<bool> {
+    match value { 0 => Ok(false), 1 => Ok(true), _ => Err(C6PhysError::BadBool { section, value }) }
+}
+
+pub(crate) fn cap_count(section: &'static str, needed: usize, limit: usize) -> C6Result<()> {
+    if needed > limit { Err(C6PhysError::CapacityExceeded { section, needed, limit }) } else { Ok(()) }
+}

@@ -1,0 +1,47 @@
+        "coverage": "In-memory JSON Schema structure checks on decision-records.schema.json and config.schema.json verifying $defs.security and $defs.nonsecurity required 15 keys, primary_model const, requested_model/returned_identity enums, oneOf 5-tuple branches, Root nonsecurity_receipt_sha256 requirement, and absence of legacy muse definitions."
+      }
+    ]
+  },
+  "source_audited_and_tripwired_baseline_functions": {
+    "note": "These functions in bounded_sdk_compile.py are intentionally tripwired or partially un-exercised in unit tests because they perform real host/namespace/cgroup/filesystem/subprocess operations; their correctness is covered by mandatory line-by-line non-author security and non-security source reviews, not claimed as unit-tested.",
+    "functions": [
+      {
+        "function": "validate(c), validate_cgroup(cg), and schema helpers (need, exact, no_null, positive, absolute, relative, pin_schema)",
+        "anchor": "16-01.txt L68-L202 (global L68-L202)",
+        "verification_mode": "Partially unit-tested (validate_cgroup in test_config_source.py; exact16 symlink/checkout/include-under-link and tier1 review_receipts keys in test_bounded_sdk_compile_symlink_config.py); receipt-key negative/tier2 branches and remaining numeric/path/ceiling predicates verified by direct source audit."
+      },
+      {
+        "function": "consent(c)",
+        "anchor": "16-02.txt L148-L183 (global L370-L405)",
+        "verification_mode": "Verified by direct source audit (source-audit-only; executable unit-test coverage via test_receipt_routing.py is UNESTABLISHED pending helper/exception/signature alignment)."
+      },
+      {
+        "function": "owned_paths(c), executing_identity(c), regular(path), digest(path, git=False), check_pin(p), old_home_stats(c), bound_identities(c, host_originals=True)",
+        "anchor": "16-01.txt L216-L222 & 16-02.txt L1-L30, L125-L146 (global L216-L252, L347-L368)",
+        "verification_mode": "Tripwired or mocked in unit driver; verified by direct source audit."
+      },
+      {
+        "function": "sandbox_args(c, phase, worker=True, precheck=False), TRAMPOLINE, sealed_memfd(name, data), prior_receipts(c, phase, precheck), child_mounts(c, phase), verify_worker_context(c, phase, precheck, fd, config_sha), network_pending(fd), launch(c, phase, config_sha)",
+        "anchor": "16-02.txt L229-L238, 16-03.txt L1-L30, L124-L218 & 16-04.txt L1-L32 (global L451-L490, L584-L710)",
+        "verification_mode": "sandbox_args A0/A copy mounts and /sys/fs/cgroup masks and launch Group.create failure cleanup are unit-tested in test_config_source.py; remaining bwrap/seccomp/memfd/FD handoff/worker-context predicates verified by direct source audit."
+      },
+      {
+        "function": "staging_destination(row, c), freeze_inputs(c), stage(c), approved_includes(c), verify_raw(c)",
+        "anchor": "16-04.txt L35-L171 (global L713-L849)",
+        "verification_mode": "staging_destination positive 3 rows (test_config_source.py), approved_includes pin precheck (test_bounded_sdk_compile_symlink_config.py), and helpers link_identity/link_target/walk_tree/tree_hashes are unit-tested; phase A0/A/C loops and remaining refusal branches verified by direct source audit."
+      },
+      {
+        "function": "unit_identity(package), metadata_check(c), make_words(text), parse_depinfo(text, worktree), artifact_dependencies(artifact, records), output_check(c), check_tmpfs(q, allowed_nested), quotas(c, phase), json_bytes(value), write_new(path, data, cap), receipt(c, name, value, phase), worker(c, phase), run(c, config_sha), main()",
+        "anchor": "16-02.txt L32-L40, L196-L227, 16-04.txt L195-L212 & 16-05.txt L1-L168 (global L254-L262, L418-L449, L873-L1058)",
+        "verification_mode": "parse_depinfo positive target/escaped-space parsing is unit-tested in test_config_source.py; all negative make_words/parse_depinfo refusals, artifact_dependencies, metadata_check, output_check, quotas, and runtime entrypoints verified by direct source audit."
+      }
+    ]
+  },
+  "ordinary_test_execution_recipe": {
+    "status_in_this_call": "UNRUN",
+    "step_1_materialize": "Coordinator applies ROUTING-SOURCE-EDITS.json to the 6 R22 afterimages, writes test_receipt_routing.py and routing_unit_driver.py, and records all resulting SHA-256 digests in SOURCE-FREEZE.json.",
+    "step_2_bind_pins_in_driver": "Verify that routing_unit_driver.py expected SHA-256 constants (or --source-freeze-json pin table in SOURCE-FREEZE.json) match the exact materialized SHA-256 digests of bounded_sdk_compile.py, the 4 data files, and the 5 test modules (keeping test_config_source.py byte-identical at 0f966d96932136e0762c18b80ba0ca0d13230079125850ce3c35e438a37e5e9d).",
+    "step_3_execute_ordinary_unit_driver": "/usr/bin/python3.14 -B routing_unit_driver.py --src-dir <materialized-r33-src-dir> --source-freeze <path-to-SOURCE-FREEZE.json>",
+    "step_4_preserve_evidence": "Record exit_code, stdout_sha256, stderr_sha256, and 69-method execution count in an ordinary unit-run result JSON for fresh non-author security and non-security reviewers."
+  }
+}

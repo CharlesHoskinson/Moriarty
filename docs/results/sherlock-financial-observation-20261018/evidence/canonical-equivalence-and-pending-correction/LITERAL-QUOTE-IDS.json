@@ -1,0 +1,85 @@
+{
+  "Q1": {
+    "meaning": "exact consumed context fulloriginalpin; do not copy a different hash",
+    "record": {
+      "source": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED.json",
+        "bytes": 179206,
+        "sha256": "3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4"
+      },
+      "selectors_actually_compared": [
+        "/program_context/program_hash",
+        "/program_context/plan_hash"
+      ],
+      "projection": {
+        "program_context": {
+          "program_hash": "a3fc591f7da1b94d86094e6507c0d1c2e3af3c195d7a937eb8de181d6a63b723",
+          "plan_hash": "b8d0c5e4deaded2e29295d0ba4248df1a7d5f5100418b7e1bcecaaa53e3d8a2d"
+        }
+      },
+      "not_compared": "All other179206B EXPECTED.json fields are compiled/parsing input but NOT compared by the test. This projection preserves exactly both consumed scalar cells; it does not claim fulloriginal-body review or179KBcomparison."
+    }
+  },
+  "Q2": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+    "actual_type_declarations": [
+      "pub enum FinancialObservation<'a> {",
+      "pub enum AccountingAvailability<'a> {",
+      "pub enum TentativePublication {"
+    ],
+    "actual_raw_type": "Result<stage::StageOutcome,stage::StageRejection>",
+    "withdraw": [
+      "StageResults",
+      "SegmentAccountingDispositions",
+      "TentativeSegmentPublicationDispositions",
+      "ProjectedStageOutcome::Rejected"
+    ]
+  },
+  "Q3": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/mod.rs",
+    "declaration": "pub fn load(src: &str) -> Result<StagedProgram, Error> {\n    let program = crate::parser::parse_v2(src)?;\n",
+    "other_actual_definitions": {
+      "stage/admit.rs": {
+        "start_line": 219,
+        "resume_line": 279
+      },
+      "stage/decode.rs": {
+        "canonical_boundary_line": 94
+      }
+    },
+    "withdraw": "admit::{load,start,resume} and oldwrongdeclarationlocators"
+  },
+  "Q4": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+    "amount_helper": "fn amount(\n    p: &Program,\n    id: ExprId,\n    env: &BTreeMap<String, Value>,\n    snapshot: &Snapshot,\n    meter: &mut Option<&mut Meter>,\n) -> Result<UInt, Error> {\n    match evaluate(p, id, env, snapshot, meter)? {\n        Value::UInt(v) => Ok(v),\n        _ => Err(failure(\"type\", \"Expected UInt amount.\")),\n    }\n",
+    "actual_executor": "fn execute_statement(\n    program: &Program,\n    stmt: &Statement,\n    env: &mut BTreeMap<String, Value>,\n    current: &mut Snapshot,\n    meter: &mut Option<&mut Meter>,\n    effects: &mut Vec<Effect>,\n) -> Result<Option<Value>, Error> {\n    charge_logical(meter)?;\n    match stmt {\n        Statement::Await { guard, .. } => {\n",
+    "Liability_arm": "        Statement::Liability {\n            name,\n            asset,\n            debtor,\n            creditor,\n            amount: expr,\n        } => {\n            let amount = amount(program, *expr, env, current, meter)?;\n            let id = validate_asset(program, asset)?.clone();\n            let found = current.liabilities.iter().position(|l| l.name == *name);\n            let before = if let Some(index) = found {\n                let l = &current.liabilities[index];\n                if l.asset != id || l.debtor != *debtor || l.creditor != *creditor {\n                    return Err(failure(\n                        \"liability\",\n                        \"Existing liability identity differs.\",\n                    ));\n                }\n                l.amount\n            } else {\n                UInt(0)\n            };\n            let after = UInt(\n                before\n                    .0\n                    .checked_add(amount.0)\n                    .ok_or_else(|| failure(\"overflow\", \"Liability exceeds u128.\"))?,\n            );\n            if let Some(index) = found {\n                current.liabilities[index].amount = after;\n            } else {\n                current.liabilities.push(Liability {\n                    name: name.clone(),\n                    asset: id.clone(),\n                    debtor: debtor.clone(),\n                    creditor: creditor.clone(),\n                    amount: after,\n                });\n                current.liabilities.sort_by(|a, b| a.name.cmp(&b.name));\n            }\n            effects.push(Effect::Liability {\n                name: name.clone(),\n                asset: id,\n                debtor: debtor.clone(),\n                creditor: creditor.clone(),\n                before,\n                after,\n",
+    "withdraw": "declareDuties wouldrejecton amount==0 in runtime::eval_statement; no suchfunction/zeroamountguard exists. This action remains unexecuted; do not add a policy change."
+  },
+  "Q5": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/sherlock/financial_projection.rs",
+    "checked_add": "impl AmountAggregate {\n    fn add(self, amount: UInt) -> Self {\n        match self {\n            Self::Exact(value) => match value.0.checked_add(amount.0) {\n                Some(sum) => Self::Exact(UInt(sum)), None => Self::AboveU128,\n            },\n            Self::AboveU128 => Self::AboveU128,\n        }\n    }\n}\n\n",
+    "selftransfer_debit_credit": "pub fn account_effects(effects: &[Effect]) -> AccountingReport<'_> {\n    let mut accounts = Vec::new();\n    for effect in effects {\n        let (asset, from, to, amount, fee) = match effect {\n            Effect::Transfer { asset, from, to, amount } => (asset, from.as_str(), to.as_str(), *amount, false),\n            Effect::Fee { asset, from, to, amount } => (asset, from.as_str(), to.as_str(), *amount, true),\n            Effect::State { .. } | Effect::Liability { .. } | Effect::Emit { .. } => continue,\n        };\n        let debit = account_index(&mut accounts, asset, from);\n        {\n            let row = &mut accounts[debit];\n            row.gross_debit = row.gross_debit.add(amount);\n            if fee { row.fee_debit = row.fee_debit.add(amount); }\n            else { row.transfer_debit = row.transfer_debit.add(amount); }\n        }\n        let credit = account_index(&mut accounts, asset, to);\n        {\n            let row = &mut accounts[credit];\n            row.gross_receipts = row.gross_receipts.add(amount);\n            if fee { row.fee_receipts = row.fee_receipts.add(amount); }\n            else { row.transfer_receipts = row.transfer_receipts.add(amount); }\n        }\n    }\n    for row in &mut accounts {\n        row.net_flow = match (row.gross_receipts, row.gross_debit) {\n            (AmountAggregate::Exact(receipts), AmountAggregate::Exact(debit)) => {\n                if receipts.0 > debit.0 { NetFlow::Inflow(UInt(receipts.0 - debit.0)) }\n                else if debit.0 > receipts.0 { NetFlow::Outflow(UInt(debit.0 - receipts.0)) }\n                else { NetFlow::Balanced }\n",
+    "scope": "Unchangedsource frompriorfullcontext; corrected literalfact only, not newexecution ofoverflow/selftransfer."
+  },
+  "Q6": {
+    "source": "original UIREQ017/018/019 and interfacefinancialparagraph",
+    "exact": {
+      "original_spec": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+        "bytes": 23568,
+        "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b"
+      },
+      "UIREQ017_018_019_verbatim": "### Requirement: UIREQ-017 Complete financial observation\nWHEN the future financial extension reports a segment outcome, it SHALL expose the complete ordered financial observation defined by its adapter.\n\n#### Scenario: First paid prefix\n- **WHEN** Reserve 100/liability 40 pays 30, charges fee 2 and discharges liability 30 at an admitted prefix boundary.\n- **THEN** The observation reports reserve 68, liability 10, gross debit 32 and recipient receipt 30, with residual duty 10.\n\n### Requirement: UIREQ-018 Existing await-prefix preservation\nWHEN existing Core/2 typed-await behavior is lowered to the universal machine, the adapter SHALL preserve its successful-prefix effects, duties and checkpoint atomicity.\n\n#### Scenario: Await after partial payment\n- **WHEN** The preceding successful prefix reaches a typed await.\n- **THEN** Its committed prefix and residual duty remain the same as Core/2; exact universal Commit/Yield/Await opcodes remain an open design choice.\n\n### Requirement: UIREQ-019 Local segment failure outcome\nWHEN a future financial segment fails locally, the adapter SHALL distinguish its discarded tentative delta from the retained committed prefix, consumed work and residual duties.\n\n#### Scenario: Second segment fails before commit\n- **WHEN** After the 68-reserve/10-liability prefix, a later local segment fails before its financial commit.\n- **THEN** The retained prefix still reports reserve 68 and liability 10, plus later consumed work; no global ledger rollback is inferred.\n",
+      "original_interfaces": {
+        "path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/openspec/changes/sherlock-universal-interpreter-design/interfaces.md",
+        "bytes": 36972,
+        "sha256": "bee739da090c41230adc6ebd711075d842ef127d7fed8d54276e9fb484d19536"
+      },
+      "financial_extension_verbatim": "The financial extension must add complete committed/tentative state, ordered effects, residual duties, pending operations/observations and phase/cost fields to `ReferenceState`, images and observations together. Existing Core/2 successful-prefix typed await remains controlling. Exact universal `Commit`/`Yield`/`Await` opcodes and target-phase mapping stay OPEN for integration/review; no opcode is supplied here. Chunk cuts, caches, match plans and residual blocks cannot create financial commits or move source boundaries. Existing UISEC clauses remain unchanged, with all new security implications referred to their Opus owner.",
+      "source_presence_check": true,
+      "interpretation": "Actual owner argument retained in REPORT.md; this exact-text record makes no new acceptance decision."
+    },
+    "Root_proposed_scope_advisory": "Root current proposed disposition:017 overall OPEN; exactCore2 component and First paid prefix scenario observed; actualSherlockfinancial producer relationship unestablished. This is advisory context, not a requiredreviewverdict. Independently assess originalclause/scenario against supplied norms; disagree or abstain if warranted. Do not impose018orMachineImage-onlygate absentnorms."
+  }
+}

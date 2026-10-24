@@ -1,0 +1,28 @@
+--- a/crates/mori-core/src/sherlock/compile_artifact.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact.rs
+@@ -6,10 +6,8 @@
+ use serde::Serialize;
+ use serde_json::{json, Value};
+ use crate::sherlock::helper_machine::core_action_consumer::{
+-    prepare_scalar_action_host, run_scalar_action, ConsumerError,
+-};
+-use crate::sherlock::helper_machine::core_action_consumer_security::{
+-    preflight_action_inputs, preflight_source_global, validate_config,
++    preflight_action_inputs, preflight_source_global, prepare_scalar_action_host,
++    run_scalar_action, validate_config, ConsumerError,
+ };
+ use crate::sherlock::helper_machine::shared::StepEventC;
+ use crate::sherlock_source::ScalarActionReport;
+--- a/crates/mori-core/src/sherlock/helper_machine/core_action_consumer.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/core_action_consumer.rs
+@@ -29,8 +29,8 @@
+ use super::source_input_bridge;
+ 
+ pub use super::core_action_consumer_security::{
+-    CompletedRun, ConsumerConfig, ConsumerError, ConsumerProfile, HostGuardError, HostMeasure,
+-    SourceHostBounds,
++    preflight_action_inputs, preflight_source_global, validate_config, CompletedRun,
++    ConsumerConfig, ConsumerError, ConsumerProfile, HostGuardError, HostMeasure, SourceHostBounds,
+ };
+ 
+ /// The unchanged source preparation report and the actual completed B run.

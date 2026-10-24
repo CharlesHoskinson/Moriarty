@@ -134,3 +134,129 @@ iteration. The latest circuit iteration remains 004. Read the adjacent
 the historical candidate labels, later source adoption and exact captures.
 Earlier notes remain unchanged. This folder still contains no website code,
 assets, rendered scene or deployment.
+
+
+## Design companion 006
+
+[Design 006: source boards and host replay](DESIGN-006-SOURCE-BOARDS-AND-HOST-REPLAY.md) continues the concept log for the finished Sherlock v1 website. It develops the circuit assembly history: source-pinned additions and changes become cumulative Three.js board layers, with execution inspection and source clickthrough. Its visitor copy assumes the finished release. The [materializer record](DESIGN-006-STATUS-AND-PROVENANCE.md) and [factual source manifest](provenance/design-006-source-manifest.json) preserve actual author identity, source pins and current evidence scope. This companion does not add a circuit iteration; the latest actual circuit entry remains 004. Earlier entries remain unchanged.
+
+
+## Latest circuit iteration 005
+
+[Iteration 005: Scalar.tag and two-space fetch](ITERATION-005-SCALAR-TAG-AND-TWO-SPACE-FETCH.md) records the new handwritten positive RetRight/Add/First/UInt leaf and the board changes it adds to the assembly history. It stages operand A in sixteen byte lanes, advances the helper phase, preserves the helper complement and relates the work counters byte by byte. Its [materializer record](ITERATION-005-STATUS-AND-PROVENANCE.md) and [source manifest](provenance/iteration-005-source-manifest.json) bind the exact freeze and current audit scope. This is the latest actual circuit source iteration. Earlier latest-iteration labels retain their historical freeze context; Designs 005/006 remain visual companions. The website's visitor experience describes finished Sherlock v1 and launches when the complete goal is accepted.
+
+
+## Source and evidence update 006
+
+[Update 006: statement boundary and settlement route](UPDATE-006-STATEMENT-BOUNDARY-AND-SETTLEMENT-ROUTE.md) is the preserved Opus-authored source/evidence note that followed circuit iteration 005. It adds no circuit iteration and is distinct from Design 006 above. It proposes complete logical program/pre/post pin banks and an off-board statement, native proof, verification and settlement route for the finished Moriarty Tron/PCB and Three.js experience. Read its [editorial status and provenance](UPDATE-006-STATUS-AND-PROVENANCE.md) alongside it: the historical author freeze is preserved, two wording/binding passages are explicitly qualified, and later public bridge and actual codec observations have their own limited scope. Its [factual manifest](provenance/update-006-source-manifest.json) records actual authorship and exact source pins. The latest actual circuit entry remains 005. The site launches when the complete Sherlock v1 goal is accepted; this append publishes a design-log entry only.
+
+## Editorial update007 — actual host observations and revision03
+
+[Host observation and completion design](UPDATE-007-HOST-OBSERVATION-AND-COMPLETION-DESIGN.md) links the actual stream and composed carrier results to the existing assembly-history concept. It is a Root/Sol factual editorial update, not a new circuit-source iteration or Opus creative note. Latest actual circuit-source entry remains005. The finished website launches after full Sherlock v1 acceptance.
+
+
+## Editorial update008 — nominal declaration assembly
+
+[Nominal declaration assembly](UPDATE-008-NOMINAL-DECLARATION-ASSEMBLY.md) records the adopted compiler table substrate and its independent complete-table normal observation. Root/Sol factual editorial update; circuit iteration005 remains the latest circuit-source entry.
+
+
+## Editorial update009 — selected word host lowering
+
+[Selected word host lowering](UPDATE-009-SELECTED-WORD-HOST-LOWERING.md) records Root's whole030 host arithmetic adoption and the exact normal/error observations. Root/Sol factual editorial update only; circuit-source iteration005 remains latest. Host lowering is not circuit/native acceptance, and no circuit layout/cost winner is selected.
+
+
+## Editorial update010 — actual trace and preparation
+
+[Actual trace and preparation assembly](UPDATE-010-ACTUAL-TRACE-AND-PREPARATION.md) connects the observed typed-source preparation and finite F03 model trace to a future source-clickthrough view. Root/Sol factual concept only; no website code or circuit-source iteration is added. Latest actual circuit entry remains005.
+
+
+## Editorial update 011 — retained native audit provenance
+
+[Retained native audit provenance](UPDATE-011-NATIVE06-AUDIT-PROVENANCE.md) links the two scoped result acceptances and actual preservation/cleanup. Root/Sol factual editorial entry only; circuit-source iteration 005 remains latest. SDK target execution, proofs and stagenet remain open.
+
+
+- [Editorial update012 — canonical TypeId carriers](UPDATE-012-CANONICAL-TYPE-CARRIERS.md): three compiles and ten host tests passed; six real fields, nominal storage only, no new circuit iteration.
+
+
+- [Editorial update013 — financial await-prefix host evidence](UPDATE-013-FINANCIAL-AWAIT-PREFIX.md): consumed returned-prefix publication and two fixed positive consumers; no new circuit source, iteration005 remains latest.
+
+- [Editorial update 014 — complete observations and portable prefixes](UPDATE-014-COMPLETE-OBSERVATIONS-AND-PORTABLE-PREFIXES.md): full-field comparison and distinct portability stages; concept only, circuit iteration 005 remains latest.
+
+
+## Circuit source iterations006/007 — October18 dated staging
+
+[006: checked Add and staged outcomes](ITERATION-006-CHECKED-ADD-AND-STAGED-OUTCOMES.md) and its [historical provenance](ITERATION-006-STATUS-AND-PROVENANCE.md) retain the exact source/concept freeze. Root subsequently installed the exact three006 Add files at short head334e1d08 under draftPR263; SDK compilation, eight tests and constraint/proof execution remain unrun. [007: staged-result completion](ITERATION-007-STAGED-RESULT-COMPLETION.md) and its [provenance](ITERATION-007-STATUS-AND-PROVENANCE.md) describe returned R-only source, not an installed or executed completion circuit. These factual notes are Root/Sol drafts grounded in actual Gemini4ArgonHIGH source, not Opus creative replies. Earlier005/latest labels preserve their historical cuts. The finished site goes live only when the whole Sherlock goal is finished and accepted; no website is built or deployed here. [Dated source/evidence bindings](../../docs/results/sherlock-four-lane-progress-20261018/addenda/20261018-literal035-clean-circuit/EVIDENCE.json).
+
+
+## Design companion 007 — subtraction and typed handoff
+
+[Design 007: subtraction and typed handoff](DESIGN-007-SUBTRACTION-AND-TYPED-HANDOFF.md) is the preserved Opus5.5 high creative companion for the cumulative Moriarty Tron/PCB and Three.js assembly history. Its sixteen-byte borrow ladder connects staged outcomes, completion and a typed handoff ribbon. [Status and provenance](DESIGN-007-STATUS-AND-PROVENANCE.md) distinguish the raw note date from the actual October19 return, bind the exact source cut and retain unregistered/SDK-unrun scope. [The source manifest](provenance/design-007-source-manifest.json) records full pins and the raw public reply. Finished-release visitor copy stays confident; the site goes live when the full Sherlock goal is finished. This companion adds no circuit iteration or website code. Earlier Root/Sol factual iterations006/007 and the independent website thread keep their separate authorship and history.
+
+
+## Design companion 008 — Sub5 composer and typed backplane
+
+[Design 008: Sub5 composer and typed backplane](DESIGN-008-SUB5-COMPOSER-AND-TYPED-BACKPLANE.md) is the preserved **Muse** creative contribution under the observed Opus outage fallback. It extends Design 007 into the source-grounded five-stage Sub composer, typed handoff and independently source-audited parent backplane. [Status and provenance](DESIGN-008-STATUS-AND-PROVENANCE.md) bind the actual contributor identity, exact source cut and draft PR276 publication; all 46 existing SDK tests and the separate three-branch overlay remain UNRUN. The test review does not establish exact guard isolation, and old-W2 P9 compilation covers none of the new thirteen hashes. [The factual manifest](provenance/design-008-source-manifest.json) and [public reply projection](provenance/design-008-muse-public-reply.json.gz) preserve the bindings. Finished-release visitor copy remains future-facing: the site launches only after the whole Sherlock goal is finished and accepted. This companion adds no circuit iteration, website implementation, source/security vote or execution/proof/ledger acceptance. Earlier notes and their authorship remain unchanged.
+
+
+## Design companion 009 — full product and typed completion
+
+[Design 009: full product and typed completion](DESIGN-009-FULL-PRODUCT-AND-TYPED-COMPLETION.md) preserves the exact Muse creative reply: an 8×8 limb-product field, separate low/high rails and typed completion dock. Its [status and provenance](DESIGN-009-STATUS-AND-PROVENANCE.md) retain the actual configured/contributor identity, historical source gaps and later dated fixture/review facts. The [source manifest](provenance/design-009-source-manifest.json) binds the exact note and public reply. This companion adds no circuit iteration or website implementation. The finished site launches only after the whole Sherlock goal is finished and accepted.
+
+
+## October19: Lt switchyard and checked-statement history
+
+[Design010](DESIGN-010-LT-SWITCHYARD-AND-CHECKED-STATEMENT.md) is the fresh Opus concept for the three handwritten Lt modules and a separate A102 check-history gallery. Apply its [status and factual corrections](DESIGN-010-STATUS-AND-PROVENANCE.md), including four distinct corruptions across seven rejecting calls. [Update015](UPDATE-015-MUL-SOURCE-COHORT-AND-DOCUMENTATION.md) retains the preceding historical Mul source cut. The finished website remains tied to full Sherlock completion.
+
+## Design companion 011 — child binding and anchored return
+
+[Design011: child binding and anchored return](DESIGN-011-CHILD-BINDING-AND-ANCHORED-RETURN.md) is the Opus5.5 HIGH creative companion for the recursive return spine. It covers:
+
+- a whole statement ribbon headed by the child binding, with no digest stand-in;
+- a create-once phase shelf written before proving;
+- the A102→A80 splice;
+- the parent and terminal-anchor bays;
+- a separate K-state bench that is never wired to the proof path.
+
+Its internal register separates three source states:
+
+- the installed T1 child source, with no native run;
+- the delivered A80/link module, which is unapplied, unreviewed and uncompiled;
+- the still-missing Fenrir parent, terminal and harness scope.
+
+No proof, verifier result or recursive endpoint is claimed. Root records actual authorship and hashes in `AUTHORSHIP.json` separately. This companion adds no circuit-source iteration or website code. The finished site launches once the full Sherlock goal is complete and accepted.
+
+Sol factual addendum — October 19: the separate [DESIGN011 status and provenance](DESIGN-011-STATUS-AND-PROVENANCE.md) records later review, source and prelaunch facts; the Opus note and navigation above remain verbatim at their earlier cut.
+
+## Design companion 012 — sealed handoff and complete statements
+
+[Design012: sealed handoff and complete statements](DESIGN-012-SEALED-HANDOFF-AND-COMPLETE-STATEMENTS.md) is the Opus 5.5 HIGH creative continuation of Design011's return spine. It adds:
+
+- an admission gauge that checks shape and offsets before encoding;
+- a private seal die and a read-only glass verification cabinet, with no approval lamp;
+- a full-field manifest /2 board whose child cards distinguish the A102 carrier null, drawn as a blanking plate, from any digest;
+- a keyed reader connector that stays holstered while the reviewed parent reads /1;
+- the parent's 28-lane route (16 statement lanes, then 12 accumulator lanes), and three distinct ends for the chain: genesis ring, terminal wall and anchor block;
+- four separately sourced inspection rails (Nat, K, Quint, circuit/native) with no shared wire and no shared clock.
+
+Its dated internal register records the state at the 2026-10-19 cut:
+
+- the manifest /2 source is frozen, unreviewed and uncompiled;
+- the parent source has scoped approval with a /1 reader, and /2 reconciliation is requested;
+- no 28 route is wired;
+- no current anchor exists;
+- the formal results are scoped: Nat kernel-checked, K definition-compiled only, and Quint four operations with eight directed tests.
+
+No proof, verifier result or recursive endpoint is claimed. Root records actual authorship and hashes in `AUTHORSHIP.json` separately. This companion adds no circuit-source iteration or website code. The finished site launches once the full Sherlock goal is complete and accepted.
+
+
+Sol factual publication addendum — October 19: [DESIGN012 status and provenance](DESIGN-012-STATUS-AND-PROVENANCE.md) records the actual Opus return, later Root-attributed PR294/Fenrir35 merges and newer uncompiled anchor source. The creative note and navigation above retain their exact earlier-cut author bytes.
+
+
+## Design companion 013 — layered board and statement-lane trace
+
+[Design013](DESIGN-013-LAYERED-BOARD-RULE-SELECTORS-AND-TRACE.md) is the verbatim Opus5.5 HIGH concept for39 semantic-rule selectors, an index-only335-lane structural trace and a separate canonical/earlier-worktree construction rail. It is construction documentation, with no website implementation or deployment. Its [dated status and provenance](DESIGN-013-STATUS-AND-PROVENANCE.md) keeps later K/Quint progress, the retained decode/classifier failures and source-identity lessons separate from the immutable author body. No proof, target or EARS completion follows; the finished site launches once the full Sherlock goal is complete and accepted.
+
+
+## Design companion 014 — let scheduling and frame routing
+
+[Design014](DESIGN-014-LET-SCHEDULING-AND-FRAME-ROUTING.md) preserves the verbatim Opus 5.5 HIGH concept separating A114 scheduling from A135 frame installation and A140 capacity refusal. Its [authorship and provenance](provenance/design-014-authorship.json) records the actual author return and dated status scope. This is internal concept guidance, with no website implementation, mandatory public developer workflow or new execution claim. DESIGN013 is unchanged. The website publishes only when the full Sherlock goal is finished.

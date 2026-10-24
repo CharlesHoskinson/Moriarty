@@ -1,0 +1,28 @@
+**Verdict: APPROVE — the top finding is that the correction is complete and non-masking: all 11 added `ProgramView` tables are provably empty for these specimens, both `Match.plan` values are provably `null`, and no original expectation is altered.**
+
+Reviewer identity: requested Opus5.5HIGH / standing fallback; actual returned identity is Muse Code powered by muse-wonder-1.0. No tools, subjects, provider, compiler, test, or Git operation were run in this review.
+
+**Schema correctness**
+
+- Current `ProgramView` carrier and its `OwnerWire` impl in the premises both enumerate exactly 23 fields: the original 12 plus `pattern_children`, `types`, `type_args`, `constructors`, `ctor_fields`, `decl_param_counts`, `decl_ctor_counts`, `decl_templates`, `plan_nodes`, `plan_cases`, `field_paths`.
+- The complete `prepare_core` body terminates in `Ok(ProgramView { ... })` with all 11 of those vectors constructed as `Vec::new()`, unconditionally. With the sealed `DedicatedSorts` sources declaring no generic ADTs or plans, the 22 fixture arrays (11 per case) are independently determined `[]`, not copied from any observed artifact.
+- `prepare_core` constructs every `ExpressionRowC::Match` with `plan: None`; `OwnerWire for Option<T>` maps `None` to JSON `null`, and the `ExpressionRowC` wire impl emits the `plan` key. ChainTotal Match at ExprId 6 (scrutinee 7) and BranchTotal Match at ExprId 9 (scrutinee 10) therefore correctly gain `"plan": null`, matching R115's arm derivation (`start 0, len 2` both cases).
+- The retained runtime expectations are untouched: ChainTotal `7` with calls `[0, 11, 11]` / count 3, BranchTotal `8` with calls `[0, 13, 15, 13, 15]` / count 5, per R259's derivation.
+
+**Projector integrity**
+
+- `empty_table` asserts `rows.is_empty()` on the *actual* admitted table before emitting `[]`. A nonempty table fails the test; nothing is fabricated, flattened, or dropped, and no production serializer is called.
+- This is correctly scoped as a sealed-profile assertion in test-local code, not a production refusal. Insertion position (after `patterns`, before `constants`) matches the `OwnerWire` field order; the fixture's textual key placement is immaterial since comparisons are `serde_json::Value` equality.
+
+**Preservation and inverse**
+
+- The diff is additions-only: 22 empty arrays, two `plan: null` cells, the `empty_table` helper plus 11 projector entries, and the single preparation-hash update in [the amended runtime fixture](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/draft-runtime-current-ProgramView-schema-correction-20261019/afterimages/crates/mori-core/tests/fixtures/draft-runtime-independent/EXPECTED-RUNTIME.json) (`24cc457d…` → `c9690565…`, byte length unchanged at 7124).
+- Before/after pins in [SOURCE-DELTA-PINS.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/draft-runtime-current-ProgramView-schema-correction-20261019/fresh-nonauthor-review/SOURCE-DELTA-PINS.json) are internally consistent, and removing exactly the added cells plus restoring the old hash and deleting the helper reproduces the three originals byte-for-byte. Published R115/R259 and all preimages remain immutable.
+- Noted and accepted as intentional: the retained `programViewExpected` strings still describe the inherited 12-field R115 baseline. They are descriptive only — the operative comparison is against the amended fixture object — and [the derivation record](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/draft-runtime-current-ProgramView-schema-correction-20261019/INDEPENDENT-SCHEMA-DERIVATION.md) documents the extension to 23 fields rather than silently rewriting history.
+
+**Four-operation QA**
+
+- The compact metadata in [ALL-FOUR-OPERATIONS-COMPACT.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/draft-runtime-current-ProgramView-schema-correction-20261019/fresh-nonauthor-review/ALL-FOUR-OPERATIONS-COMPACT.json) is approved as proposed: fresh external compile against the pinned immutable actual-19 `NormalCore104` rlib (no old external binary reuse, no Core/cohort replay), exact dep-info membership of the seven consumer inputs, `exactlist2`, and each runtime selector at exactly 1 PASS / 1 filtered, under unchanged caps/env, 629 pre/post pins, serial fail-stop, no retry.
+- All four operations remain **UNRUN**; this approval authorizes the design, not any outcome.
+
+**Scope limit:** this verdict covers DedicatedSorts specimens on the public `run_draft_host` route with the independent 7/8 final/event contract only. Complete generic B event/payload/work/arena oracles, raw exported full traces, and native/target/EARS correspondence remain unclaimed, and the existing in-memory full-event observation is not a saved full B golden.

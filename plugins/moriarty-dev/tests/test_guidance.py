@@ -28,7 +28,7 @@ class CurrentGuidanceTestCase(unittest.TestCase):
         for text in (self.skill, self.focus, self.readme):
             with self.subTest(document=text.splitlines()[0]):
                 self.assertIn("gpt-6.1-sol", text)
-                self.assertIn("muse-wonder-1.0", text)
+                self.assertIn("fresh non-author Opus 5.5", text)
                 self.assertIn("high effort", text)
         self.assertNotIn("Both Fresh Audits", self.skill)
         self.assertNotIn("Both selected auditors", self.skill)

@@ -1,0 +1,207 @@
+--- a/tests/bounded_parser.rs
++++ b/tests/bounded_parser.rs
+@@ -37,6 +37,160 @@
+     let text = "language \"moriarty-sherlock-draft/1\"; program Demo { fn f(x: UInt): UInt { f(x) } entry f(1); }";
+     assert_eq!(parse_draft_source_bounded(text, limits()), parse_draft_source(text));
+     assert!(parse_draft_source_bounded(text, limits()).is_ok());
++}
++
++fn expected_expr(expression: Expr) -> ExprRef { Arc::new(expression) }
++fn expected_uint(value: u128) -> ExprRef { expected_expr(Expr::Literal(Value::UInt(value))) }
++fn expected_var(name: &str) -> ExprRef { expected_expr(Expr::Var(name.into())) }
++fn expected_call(name: &str, arguments: Vec<ExprRef>) -> ExprRef {
++    expected_expr(Expr::Call(name.into(), arguments))
++}
++fn expected_binary(op: BinaryOp, left: ExprRef, right: ExprRef) -> ExprRef {
++    expected_expr(Expr::Binary(op, left, right))
++}
++fn expected_leaf(child: ExprRef) -> ExprRef { expected_expr(Expr::Unary(UnaryOp::Leaf, child)) }
++fn expected_span(start: u32, end: u32) -> SourceSpan { SourceSpan { start, end } }
++fn expected_binder(name: &str, start: u32, end: u32) -> BinderSite {
++    BinderSite { name: name.into(), span: expected_span(start, end) }
++}
++fn expected_site(function_index: Option<usize>, child_path: &[usize],
++    start: u32, end: u32, kind: &'static str) -> ExpressionSite
++{
++    ExpressionSite { source: SourceLocation { function_index, child_path: child_path.to_vec() },
++        span: expected_span(start, end), kind }
++}
++
++#[test]
++fn precedence_has_independently_expected_ast() {
++    let parsed = parse_draft_source_bounded(&source("1 + 2 * 3"), limits()).unwrap();
++    assert_eq!(parsed.program.as_ref(), &Program {
++        functions: vec![],
++        entry: expected_binary(BinaryOp::Add, expected_uint(1),
++            expected_binary(BinaryOp::Mul, expected_uint(2), expected_uint(3))),
++    });
++}
++
++// Exact fixture bytes and every provenance literal below come from the frozen
++// independent R115 EXPECTED.json / DERIVATION.md, not either parser's output.
++// AST shapes are transcribed from R115's independent row/child derivation.
++#[test]
++fn chain_total_matches_independent_ast_and_complete_provenance() {
++    let text = include_str!("inputs/chain-total.mori");
++    let parsed = parse_draft_source_bounded(text, limits()).unwrap();
++    let expected = Program {
++        functions: vec![Function {
++            name: "sum".into(),
++            parameters: vec![Parameter { name: "xs".into(), ty: Type::List }],
++            return_type: Type::UInt,
++            body: expected_expr(Expr::Match(expected_var("xs"), vec![
++                Arm { pattern: Pattern::Nil, body: expected_uint(0) },
++                Arm { pattern: Pattern::Cons("h".into(), "t".into()),
++                    body: expected_binary(BinaryOp::Add, expected_var("h"),
++                        expected_call("sum", vec![expected_var("t")])) },
++            ])),
++        }],
++        entry: expected_call("sum", vec![expected_binary(BinaryOp::Cons, expected_uint(2),
++            expected_binary(BinaryOp::Cons, expected_uint(5),
++                expected_expr(Expr::Literal(Value::List(vec![])))))]),
++    };
++    assert_eq!(parsed.name, "ChainTotal");
++    assert_eq!(parsed.program.as_ref(), &expected);
++    assert_eq!(parsed.provenance, SourceProvenance {
++        language_span: expected_span(9, 36),
++        program_name_span: expected_span(46, 56),
++        functions: vec![FunctionSite {
++            index: 0, span: expected_span(61, 140), name_span: expected_span(64, 67),
++            parameters: vec![ParameterSite {
++                binder: expected_binder("xs", 68, 70), type_span: expected_span(72, 76),
++            }],
++            return_type_span: expected_span(79, 83),
++        }],
++        expressions: vec![
++            expected_site(None, &[], 149, 173, "call"),
++            expected_site(None, &[0], 153, 172, "cons"),
++            expected_site(None, &[0, 0], 158, 159, "uint"),
++            expected_site(None, &[0, 1], 160, 171, "cons"),
++            expected_site(None, &[0, 1, 0], 165, 166, "uint"),
++            expected_site(None, &[0, 1, 1], 167, 170, "nil"),
++            expected_site(Some(0), &[], 90, 136, "match"),
++            expected_site(Some(0), &[0], 96, 98, "var"),
++            expected_site(Some(0), &[1], 108, 109, "uint"),
++            expected_site(Some(0), &[2], 124, 134, "add"),
++            expected_site(Some(0), &[2, 0], 124, 125, "var"),
++            expected_site(Some(0), &[2, 1], 128, 134, "call"),
++            expected_site(Some(0), &[2, 1, 0], 132, 133, "var"),
++        ],
++        patterns: vec![
++            PatternSite { match_source: SourceLocation { function_index: Some(0), child_path: vec![] },
++                arm_index: 0, span: expected_span(101, 104), binders: vec![] },
++            PatternSite { match_source: SourceLocation { function_index: Some(0), child_path: vec![] },
++                arm_index: 1, span: expected_span(111, 120),
++                binders: vec![expected_binder("h", 116, 117), expected_binder("t", 118, 119)] },
++        ],
++    });
++}
++
++#[test]
++fn branch_total_matches_independent_ast_and_complete_provenance() {
++    let text = include_str!("inputs/branch-total.mori");
++    let parsed = parse_draft_source_bounded(text, limits()).unwrap();
++    let expected = Program {
++        functions: vec![Function {
++            name: "fold".into(),
++            parameters: vec![Parameter { name: "t".into(), ty: Type::Tree }],
++            return_type: Type::UInt,
++            body: expected_expr(Expr::Match(expected_var("t"), vec![
++                Arm { pattern: Pattern::Leaf("n".into()), body: expected_var("n") },
++                Arm { pattern: Pattern::Branch("l".into(), "r".into()),
++                    body: expected_binary(BinaryOp::Add,
++                        expected_call("fold", vec![expected_var("l")]),
++                        expected_call("fold", vec![expected_var("r")])) },
++            ])),
++        }],
++        entry: expected_call("fold", vec![expected_binary(BinaryOp::Branch,
++            expected_leaf(expected_uint(4)), expected_binary(BinaryOp::Branch,
++                expected_leaf(expected_uint(1)), expected_leaf(expected_uint(3))))]),
++    };
++    assert_eq!(parsed.name, "BranchTotal");
++    assert_eq!(parsed.program.as_ref(), &expected);
++    assert_eq!(parsed.provenance, SourceProvenance {
++        language_span: expected_span(9, 36),
++        program_name_span: expected_span(46, 57),
++        functions: vec![FunctionSite {
++            index: 0, span: expected_span(62, 153), name_span: expected_span(65, 69),
++            parameters: vec![ParameterSite {
++                binder: expected_binder("t", 70, 71), type_span: expected_span(73, 77),
++            }],
++            return_type_span: expected_span(80, 84),
++        }],
++        expressions: vec![
++            expected_site(None, &[], 162, 207, "call"),
++            expected_site(None, &[0], 167, 206, "branch"),
++            expected_site(None, &[0, 0], 174, 181, "leaf"),
++            expected_site(None, &[0, 0, 0], 179, 180, "uint"),
++            expected_site(None, &[0, 1], 182, 205, "branch"),
++            expected_site(None, &[0, 1, 0], 189, 196, "leaf"),
++            expected_site(None, &[0, 1, 0, 0], 194, 195, "uint"),
++            expected_site(None, &[0, 1, 1], 197, 204, "leaf"),
++            expected_site(None, &[0, 1, 1, 0], 202, 203, "uint"),
++            expected_site(Some(0), &[], 91, 149, "match"),
++            expected_site(Some(0), &[0], 97, 98, "var"),
++            expected_site(Some(0), &[1], 112, 113, "var"),
++            expected_site(Some(0), &[2], 130, 147, "add"),
++            expected_site(Some(0), &[2, 0], 130, 137, "call"),
++            expected_site(Some(0), &[2, 0, 0], 135, 136, "var"),
++            expected_site(Some(0), &[2, 1], 140, 147, "call"),
++            expected_site(Some(0), &[2, 1, 0], 145, 146, "var"),
++        ],
++        patterns: vec![
++            PatternSite { match_source: SourceLocation { function_index: Some(0), child_path: vec![] },
++                arm_index: 0, span: expected_span(101, 108),
++                binders: vec![expected_binder("n", 106, 107)] },
++            PatternSite { match_source: SourceLocation { function_index: Some(0), child_path: vec![] },
++                arm_index: 1, span: expected_span(115, 126),
++                binders: vec![expected_binder("l", 122, 123), expected_binder("r", 124, 125)] },
++        ],
++    });
+ }
+ 
+ #[test]
+@@ -103,8 +257,31 @@
+     budget.max_structural_ast_depth = 1;
+     exceeds(&source("((1))"), budget,
+         DraftBudgetResource::ParserRecursionDepth, 4, 5);
++    budget.max_parser_recursion_depth = 5;
++    exceeds(&source("((1))"), budget,
++        DraftBudgetResource::ParserRecursionDepth, 5, 6);
+     budget.max_parser_recursion_depth = 6;
+     assert!(parse_draft_source_bounded(&source("((1))"), budget).is_ok());
++}
++
++#[test]
++fn literal_has_exact_parser_recursion_depth_two() {
++    let mut budget = limits();
++    budget.max_parser_recursion_depth = 0;
++    exceeds(&source("1"), budget, DraftBudgetResource::ParserRecursionDepth, 0, 1);
++    budget.max_parser_recursion_depth = 1;
++    exceeds(&source("1"), budget, DraftBudgetResource::ParserRecursionDepth, 1, 2);
++    budget.max_parser_recursion_depth = 2;
++    assert!(parse_draft_source_bounded(&source("1"), budget).is_ok());
++}
++
++#[test]
++fn nonbinary_constructor_has_exact_structural_depth_two() {
++    let mut budget = limits();
++    budget.max_structural_ast_depth = 1;
++    exceeds(&source("leaf(1)"), budget, DraftBudgetResource::StructuralAstDepth, 1, 2);
++    budget.max_structural_ast_depth = 2;
++    assert!(parse_draft_source_bounded(&source("leaf(1)"), budget).is_ok());
+ }
+ 
+ #[test]
+--- a/tests/lexer_token_limit.rs
++++ b/tests/lexer_token_limit.rs
+@@ -11,6 +11,9 @@
+     assert!(matches!(lex_with_token_limit("", 0),
+         Err(TokenLimitedLexError::TokenLimit { limit: 0, observed: 1 })));
+     assert_eq!(lex_with_token_limit("", 1).unwrap(), lex("").unwrap());
++    // EOF needs the remaining slot: reject before scanning the excess invalid token.
++    assert!(matches!(lex_with_token_limit("a @", 2),
++        Err(TokenLimitedLexError::TokenLimit { limit: 2, observed: 3 })));
+ }
+ 
+ #[test]

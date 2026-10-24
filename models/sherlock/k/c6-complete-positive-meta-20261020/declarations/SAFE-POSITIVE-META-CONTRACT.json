@@ -1,0 +1,103 @@
+{
+  "schema": "sherlock-c6-complete-META-positive-contract/1",
+  "profile": "sherlock-c6-complete-META-positive/1",
+  "status": "SOURCE_DERIVED_PROPOSED_POSITIVE_REPRESENTATION_NOT_SECURITY_OR_ADMISSION_POLICY",
+  "actualAPI": {
+    "encode_metadata": "(&C6HostMetadata,&C6HostLimits)->C6Result<Vec<u128>>",
+    "decode_metadata": "(&[u128],&C6HostLimits)->C6Result<C6HostMetadata>",
+    "consumerScope": "Direct META APIs only. No capture/from_host/host-envelope binding/import/recorder or handwritten constraint execution."
+  },
+  "constants": {
+    "C6_PHYS_MAGIC": 18918541878711089,
+    "C6_PHYS_VERSION": 1,
+    "META_SECTION_TAG": 1296389185,
+    "META_HEADER_LANES": 3
+  },
+  "sequence": [
+    "header(magic,version,META tag)",
+    "identity(metadata.identity)",
+    "bounds22(metadata.bounds)",
+    "pair(layout.layout_version)",
+    "opt_pair(layout.field_id)",
+    "widths(layout.widths)",
+    "opt_pair(layout.scalar_layout_id)",
+    "bounds22(layout.bounds)",
+    "capacities4(layout.capacities)",
+    "bool(layout.boundary_capacities_present)",
+    "identity(run_id.identity)",
+    "run_int(run_id.fuel_input)",
+    "run_int(run_id.stack_limit_input)"
+  ],
+  "primitives": {
+    "blob": "[byteLength] followed by each exact byte as one integer lane, including a length lane for empty payload.",
+    "text": "blob of all canonicalUTF8 bytes of the complete source String; byte length, not character count.",
+    "pair": "first text then second text.",
+    "opt_pair": "None=[0]; Some=[1] then pair, even if both strings empty.",
+    "digest": "Unselected=[0]; Selected=[1], then pair(format), then blob(bytes). Selected format/payload are opaque representation, not authenticated digests.",
+    "identity": "profile_id as one u8 lane; grammar as one lane (DedicatedSorts0,GenericNominalExtensionReserved1); finance as one lane (Absent0,TypedExtensionReserved1); pair(layout_version); digest(layout_digest); digest(bounds_digest); opt_pair(field_id); digest(program_membership_digest), exact order.",
+    "bounds22": [
+      "code_rows",
+      "function_rows",
+      "code_child_slots",
+      "parameter_slots",
+      "pattern_rows",
+      "match_plan_rows",
+      "match_arm_rows",
+      "type_rows",
+      "constructor_rows",
+      "constructor_field_slots",
+      "max_arity",
+      "constant_nodes",
+      "constant_field_slots",
+      "data_nodes",
+      "data_field_slots",
+      "environment_cells",
+      "frames",
+      "helper_tasks",
+      "serialization_bytes",
+      "max_reference_work",
+      "max_helper_work",
+      "step_cap"
+    ],
+    "boundsScalarWidths": "First19 fields native usize; last3 max_reference_work/max_helper_work/step_cap rawu128. Do not narrow rawu128 to usize.",
+    "capacities4": [
+      "name_rows",
+      "name_bytes",
+      "occurrence_path_slots",
+      "value_slots"
+    ],
+    "widths": "None=[0]; Some=[1], then index_widths,counter_widths,record_widths in order; each list starts [entryCount], then every text(name) and nativeu32 width. Empty present lists retain all three count prefixes; duplicates/order kept.",
+    "bool": "False0,True1.",
+    "run_int": "Negative=[0,0]; Nat(n)=[1,n], including0 and rawu128MAX; NatAboveU128=[2,0]. Tags/padding distinguish it from any Nat. Direct metadata decoding returns these diagnostic variants; this is not their genesis/admission validity."
+  },
+  "sourceCounters": {
+    "blob_bytes": "Starts0; every blob adds its raw payload byte length, text and selected-digest bytes together. Length prefixes are not counted.",
+    "width_entries": "Starts0; each of the three present width lists adds its full raw entry count; nothing from absent widths.",
+    "cursor": "Starts3 for reader after header. Every consumed scalar/count/payload advances over exactly that representation. Successful positive full decode consumes the entire stream with no trailing lanes. These are diagnostic representation counters, not B work/helper steps/fees."
+  },
+  "callerLimits": {
+    "usedByDirectMETA": [
+      "max_string_bytes applies separately to every text/digest blob",
+      "max_metadata_bytes applies cumulatively to all text+selecteddigest payload bytes across admission/layout/run identity",
+      "max_width_entries applies cumulatively across all three layout width lists"
+    ],
+    "notConsultedByDirectMETA": [
+      "max_total_lanes",
+      "max_state_lanes"
+    ],
+    "distinction": "The all-empty cases deliberately retain outer host/state limits0. This does not assert encode_host/decode_host or any state/whole-host call accepts that configuration. Do not add an outer host bound to the direct META counterpart."
+  },
+  "positivePremises": [
+    "All typed source Strings canonical validUTF8; all raw opaque byte elements0..255, profile0..255,width0..u32MAX, nativeusize fields fit selected64bit host, rawu128 fields0..2^128-1.",
+    "All blob payload lengths obey source max_string_bytes; cumulative text+digest bytes obey max_metadata_bytes; cumulative width entries obey max_width_entries, and all source checked arithmetic/size calculations fit. These are existing normal-success domain premises, not new model guards/refusal rules.",
+    "Only full canonical images of these typed inputs are decoded. No malformed/error-firstness/sourceauthentication or refusal validation is modeled or specified by this task.",
+    "Admission identity/run identity need not match for diagnostic metadata representation. Admission bounds/layout bounds likewise remain separate. Reserved grammar/finance/profile tags and RunInt negative/above variants do not establish an admitted program, valid genesis, authority or financial behavior."
+  ],
+  "independentAuthorNeed": "Root assigns independent owner after this input/spec freeze. Derive complete encoded lanes, decoded completebyteprojection, blob span order/paths, both final counters and finalcursor only from SAFE input/bodyfree spec/declarations. No writer/reader/encoder/decoder/model/tests/review/actual/oldexpected body read. Original and typedtransport data remain independently frozen/private before later model implementation.",
+  "limits": [
+    "No model implementation or expected output calculation in this batch stage.",
+    "No actual Rust/META circuit/emitter/sourcechecker/P1/native/target/constraint/admission/auth/refusal/security/globalrefinement/EARS conclusion.",
+    "Opaque digest encoding selects no cryptographic meaning or approval; no source runtime fees/helper clocks/cost decisions added.",
+    "All retained G/E/D/N and25refinementOPEN remain separate."
+  ]
+}

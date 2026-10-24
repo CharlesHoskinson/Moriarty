@@ -77,8 +77,7 @@ fn quoted_fee_full_reports_and_bytes_preserve_actual_captured_amount() {
     let action = case["action"].as_str().unwrap();
     let cap: Option<UInt> = serde_json::from_value(case["logical_cap"].clone()).unwrap();
     let program = stage::load(fixture!("quoted-fee.mori")).unwrap();
-    let scenario: Scenario =
-        serde_json::from_str(fixture!("quoted-fee-scenario.json")).unwrap();
+    let scenario: Scenario = serde_json::from_str(fixture!("quoted-fee-scenario.json")).unwrap();
     let started = stage::start(&program, action, scenario, cap).unwrap();
     let pending = checked_report(started, fixture!("quoted-fee-start.json"))
         .expect("start must yield its actual waiting continuation");

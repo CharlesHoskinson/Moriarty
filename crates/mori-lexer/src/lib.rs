@@ -52,6 +52,40 @@ pub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {
     Lexer::new(source).run(false)
 }
 
+/// An optional caller token limit is separate from the legacy hard limits.
+#[derive(Debug)]
+pub enum TokenLimitedLexError {
+    Lex(MoriDiagnostic),
+    TokenLimit { limit: usize, observed: usize },
+}
+
+impl From<MoriDiagnostic> for TokenLimitedLexError {
+    fn from(error: MoriDiagnostic) -> Self {
+        Self::Lex(error)
+    }
+}
+
+/// Lex with an additional inclusive token limit, counting the EOF token.
+/// Checks the caller limit before initial token capacity and each token emission;
+/// comments remain subject to the source-byte limit, not the token count.
+/// The existing hard source/token/identifier/string limits still apply.
+pub fn lex_with_token_limit(
+    source: &str,
+    max_tokens: usize,
+) -> Result<Tokens, TokenLimitedLexError> {
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(diagnostics::source_too_large(source.len()).into());
+    }
+    if max_tokens == 0 {
+        return Err(TokenLimitedLexError::TokenLimit {
+            limit: 0,
+            observed: 1,
+        });
+    }
+    Lexer::with_token_capacity(source, max_tokens.min(MAX_TOKENS))
+        .run_limited(false, Some(max_tokens))
+}
+
 /// Identify a leading profile token without requiring the remaining source to
 /// lex successfully. Inspect only a bounded prefix; full parsing retains all
 /// source and token limits.
@@ -72,19 +106,51 @@ struct Lexer<'src> {
 
 impl<'src> Lexer<'src> {
     fn new(source: &'src str) -> Self {
+        Self::with_token_capacity(source, source.len() / 8 + 1)
+    }
+
+    fn with_token_capacity(source: &'src str, token_capacity: usize) -> Self {
         Self {
             source,
             bytes: source.as_bytes(),
             pos: 0,
             // Roughly one token per eight bytes, as in Zig.
-            tokens: Soa::with_capacity(source.len() / 8 + 1),
+            tokens: Soa::with_capacity(token_capacity),
             comments: Soa::new(),
         }
     }
 
-    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {
+    fn run(self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {
+        self.run_limited(first_only, None)
+            .map_err(|error| match error {
+                TokenLimitedLexError::Lex(error) => error,
+                // No caller limit is supplied on this legacy path.
+                TokenLimitedLexError::TokenLimit { .. } => {
+                    diagnostics::too_many_tokens(Span::empty(0))
+                }
+            })
+    }
+
+    fn run_limited(
+        mut self,
+        first_only: bool,
+        max_tokens: Option<usize>,
+    ) -> Result<Tokens, TokenLimitedLexError> {
         while let Some(&b) = self.bytes.get(self.pos) {
             let start = self.pos;
+            // Reserve one slot for EOF before scanning/emitting a real token.
+            let skips_token = matches!(b, b' ' | b'\t' | b'\r' | b'\n')
+                || (b == b'/' && matches!(self.peek(1), Some(b'/' | b'*')));
+            if !skips_token {
+                if let Some(limit) = max_tokens {
+                    if self.tokens.len() >= limit.saturating_sub(1) {
+                        return Err(TokenLimitedLexError::TokenLimit {
+                            limit,
+                            observed: self.tokens.len().saturating_add(2),
+                        });
+                    }
+                }
+            }
             match b {
                 b' ' | b'\t' | b'\r' | b'\n' => self.pos += 1,
                 b'/' if self.peek(1) == Some(b'/') => self.line_comment(start),
@@ -94,11 +160,19 @@ impl<'src> Lexer<'src> {
                 b'A'..=b'Z' | b'a'..=b'z' => self.word(start)?,
                 _ => match TokenKind::punctuation(b) {
                     Some(kind) => self.push(kind, start, start + 1)?,
-                    None => return Err(self.unexpected_character(start)),
+                    None => return Err(self.unexpected_character(start).into()),
                 },
             }
             if first_only && !self.tokens.is_empty() {
                 break;
+            }
+        }
+        if let Some(limit) = max_tokens {
+            if self.tokens.len() >= limit {
+                return Err(TokenLimitedLexError::TokenLimit {
+                    limit,
+                    observed: self.tokens.len().saturating_add(1),
+                });
             }
         }
         // The end-of-file token is always pushed: the bound reserves room for it.

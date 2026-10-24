@@ -1,0 +1,50 @@
+Unchanged original source fullpin {"path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md", "bytes": 23568, "sha256": "e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b"}
+Full original017/018/019 bodies:
+### Requirement: UIREQ-017 Complete financial observation
+WHEN the future financial extension reports a segment outcome, it SHALL expose the complete ordered financial observation defined by its adapter.
+
+#### Scenario: First paid prefix
+- **WHEN** Reserve 100/liability 40 pays 30, charges fee 2 and discharges liability 30 at an admitted prefix boundary.
+- **THEN** The observation reports reserve 68, liability 10, gross debit 32 and recipient receipt 30, with residual duty 10.
+
+### Requirement: UIREQ-018 Existing await-prefix preservation
+WHEN existing Core/2 typed-await behavior is lowered to the universal machine, the adapter SHALL preserve its successful-prefix effects, duties and checkpoint atomicity.
+
+#### Scenario: Await after partial payment
+- **WHEN** The preceding successful prefix reaches a typed await.
+- **THEN** Its committed prefix and residual duty remain the same as Core/2; exact universal Commit/Yield/Await opcodes remain an open design choice.
+
+### Requirement: UIREQ-019 Local segment failure outcome
+WHEN a future financial segment fails locally, the adapter SHALL distinguish its discarded tentative delta from the retained committed prefix, consumed work and residual duties.
+
+#### Scenario: Second segment fails before commit
+- **WHEN** After the 68-reserve/10-liability prefix, a later local segment fails before its financial commit.
+- **THEN** The retained prefix still reports reserve 68 and liability 10, plus later consumed work; no global ledger rollback is inferred.
+
+
+Financial-extension interface context (exact source excerpts; not extra gate) {"path": "/home/charl/Moriarty/.worktrees/sherlock-parallel-implementation-20261016/openspec/changes/sherlock-universal-interpreter-design/interfaces.md", "bytes": 36972, "sha256": "bee739da090c41230adc6ebd711075d842ef127d7fed8d54276e9fb484d19536"}
+1: # Sherlock Candidate B interface contract
+2: 
+3: Status: FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY unless an evidence row explicitly says otherwise. These are proposed engineering interfaces, not implemented APIs or accepted correspondence results. This file owns shared names and field meanings used by [design.md](design.md), requirements and the implementation plan. Security requirements, theorem statements, tests and judgments remain with Opus in the unchanged [UISEC document](security-requirements.md) and separate [Candidate B delta](security-candidate-b.md); interface completeness does not assess them. The Opus-owned [Candidate B A1–A4/B002 dispositions](security-candidate-b.md) supply the governing profile, accounting, NoMatch, codec and provenance dispositions reflected below.
+4: 
+5: ## Schema maturity and remaining freeze
+6: 
+7: This is a proposed interface vocabulary and field-meaning contract, not a complete implementable schema. No B schema freeze is permitted before Phase 0 defines all row/control payload types, tag cases, bounded widths/slices, helper phases/resume slots, the full outcome/error-code table, `Bounds.stepCap`, the `admit` signature and per-profile `isResourceLimit` table, `StepInv` fields, per-rule charge/allocation rows including failures, and intra-cap precedence, with the Opus review required by its A1–A4 handoff. Names such as `CodeRow`, `DataRow`, `EnvCell`, `FrameRow`, `HelperTask`, typed cursors and `fixedPayload` below identify future typed schema fields; they are not existing Lean/Clean declarations. The known K/B mappings error4 (frame cap), error9 (no matching arm) and error10 (checked arithmetic) are explicit; frozen Quint instead retains its actual Rejected phase with StackBound reason. These profile-specific observations do not substitute for that full table.
+8: 
+9: ## Identities, profiles and preparation
+10: 
+299:              nodes:[PlanNode],entry,armTable,workMap}
+300: PlanNode = Switch(occurrencePath,cases,default) | Bind(binderId,occurrencePath,next)
+301:          | Select(sourceArmId,bodyExprId) | NoMatch
+302: ```
+303: 
+304: `NoMatch` is a match-plan/helper result that maps to application `Rejected(error9)`, following the Opus-owned reconciliation; it adds no `Outcome` variant. The exact transition and full error-code table remain Phase 0 work.
+305: 
+306: First extend to closed monomorphic nominal recursive groups, including mutual references. Assign stable type/constructor/field/binder/occurrence IDs; derive a plain tagged-node layout; compile source-ordered pattern matrices using first-column specialization/default decomposition. Field slot `i` always means source field `i`. Evaluate constructor fields strictly left-to-right before allocation and the scrutinee once before matching. Select the minimum matching source arm index, bind in its fresh arm scope and execute only its body. Pattern occurrences use `(sourceMatchId,sourceArmId,fieldPath)`, never arena addresses. `workMap` carries an ordered reference-event cursor; shared tests/suffixes cannot erase charges or stop positions. Heuristic columns, packing and test sharing are later comparisons. Parameterized types need separately bounded instantiation; closures, GADTs, mutation/cycles and or-patterns remain additional extensions. Existing dedicated K list/tree sorts do not discharge this work.
+307: 
+308: The financial extension must add complete committed/tentative state, ordered effects, residual duties, pending operations/observations and phase/cost fields to `ReferenceState`, images and observations together. Existing Core/2 successful-prefix typed await remains controlling. Exact universal `Commit`/`Yield`/`Await` opcodes and target-phase mapping stay OPEN for integration/review; no opcode is supplied here. Chunk cuts, caches, match plans and residual blocks cannot create financial commits or move source boundaries. Existing UISEC clauses remain unchanged, with all new security implications referred to their Opus owner.
+309: 
+310: 
+311: ## Opus-owned claim gates
+312: 
+313: The engineering handoff requires applicable Opus-authored B001–B009 hostile cases at every phase making a B-specific claim; the later security phase is not the sole gate. In particular, `bounded_decode_matches` must be gated on the Opus A4/B002 cases (inactive-slot garbage, a referenced unreachable node, foreign codeId, tag/layout mismatch, write below activeLength, and nondeterministic physical post-image). This records the designated owner's gates, not new tests, a security assessment or a claimed pass. All actual cases, constraints, WF proofs and acceptance judgments remain Opus-owned and pending.

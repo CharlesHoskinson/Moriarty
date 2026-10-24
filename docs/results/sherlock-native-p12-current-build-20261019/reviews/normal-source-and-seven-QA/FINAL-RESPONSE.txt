@@ -1,0 +1,184 @@
+# Fresh B non-author review: P11 retired-carry cut
+
+**Scope.** Static review only: no tools, imports, execution, or Git. I read the full supplied guard (96706B, `74063ff1…`), helper (158235B, `a9a98bdd…`) and Muse test source (11642B, `5d125001…`). I also read the QA proposal, the freeze, materialization, seal and pin-check records, every actual P11 small record, A's ABSTAIN, and Gemini's source-only opinion.
+
+I inherit no approval from A, Gemini or the static preparer. I did not hash any file myself. Digest equality is taken from Root's pin records and must be re-checked by Root's pre/post staging hashes.
+
+---
+
+## NORMAL_SOURCE: **APPROVED_NORMAL_SOURCE** (with limits)
+
+### Coverage of the reviewed cut
+
+**Guard (`bounded_sdk_compile.py`)**
+- The only P11-relevant change is `CACHED_CURRENT_BUILD_SHA256 = 'a9a98bdd…'`.
+- All three helper load sites check `regular(helper_path)` and the digest before `exec_module`: `worker` phase F post-compile, `main` F `--precheck`, and `main` `--cached-current-f`.
+- No other guard behavior changed relative to the described hunks.
+
+**Helper additions**
+- `P11_*` constants, `P11_RECEIPT_PINS`, `P11_EVIDENCE_FILE_BYTES` and `P11_RAW_CPU_STAT`.
+- `POST_P11_HISTORICAL_DEBITS`, `_verify_p11_receipts` and `enforce_post_p11_historical_debits`.
+- `cached_current_f` callsite and cap rewiring, including the hunk-1 literal `debit_state = enforce_post_p11_historical_debits(c, guard, at_start=True)`.
+
+### Independent arithmetic checks
+
+| Quantity | Check |
+|---|---|
+| E | 1079347393 + 12906928 = **1092254321** |
+| S | 242919890 + 9308089 = **252227979** |
+| P | 836427499 + 3598838 = **840026337** |
+| P11 residual | 12906928 − 9308089 − 3598838 = **1** |
+| Cumulative residual | 1092254321 − 252227979 − 840026337 = **5** (= 4 + 1); E is never normalized to S+P |
+| Supervisor ceil | (252227979 + 999999) // 10⁶ = **253** |
+| Supervisor remaining | 10800 − 253 = **10547**; `cached_current_f` gives the same via (10800·10⁶ − 252227979) // 10⁶ = 10547 |
+| Outer wall | `int(-(-13.15461667800264 // 1))` = **14** |
+| Remaining wall | Whole 5935 − 14 = **5921**; F 2035 − 14 = **2021**. Debited once each; the P10 pre-phase 5 is not re-debited |
+| F streams | stderr 59407 + 112 = **59519**; stdout 0 + 0 = 0 |
+| Outer controller stderr | 39B is kept separate (`p11_outer_controller_stderr_bytes_separate`) and not added to F |
+
+**Byte lengths I counted by hand**
+- `F_precheck.stderr` literal = 112B, and the outer stderr literal = 39B.
+- The `_verify_p11_receipts` cpu.stat template yields exactly 142B, 141B and 139B for E, S and P, matching the actual raw records. The exact-byte comparison is therefore equivalent to a size and digest pin.
+
+### `_verify_p11_receipts`: field checks
+
+**Pins are checked before anything is parsed.**
+- All 5 receipts are checked for `regular`, size and SHA before any `jload`.
+- The manifest key set must equal `P11_EVIDENCE_FILE_BYTES`.
+- Each evidence file is checked for `regular`, size and manifest digest before it is read.
+
+**Cleanup state: current versus historical.**
+- *Current state:* `status=='DONE'`, top-level `cleanupOwed is False`, the 4 absence/no-Cargo/no-ELF booleans, `evidence==P11_EVIDENCE_ROOT`, the teardown descriptor, and teardown `actual_exit==0`.
+- *Historical snapshot:* `counts.cleanupOwed` is deliberately not consulted.
+
+**Counts, stream and terminal checks.**
+- `counts.result` equals the outer pin triple.
+- `rawUsageUsec`, `previousHistory`, `cumulativeUsec` and `currentResidualUsec` are all tied to the constants.
+- `F_precheck.stderr` bytes must equal `counts.failure`, which keeps the 112B F stream distinct from the 39B controller stream.
+- Terminal `type=='Refusal'`.
+- Outer: `exact` 5-key schema, `id`, `actual_exit==2`, `controller_failure is None`, and `elapsed_seconds` equality (the JSON float round-trips).
+- Every literal agrees with the supplied actual records: outer result, cleanup, teardown, manifest and the cpu.stat files.
+
+### `enforce_post_p11_historical_debits`
+- Layers exactly once over `enforce_post_p10` (unchanged).
+- Checks the per-key sum invariant and the chained residual, stream, wall and CPU equalities.
+- Ceilings tighten to 5921, 2021 and 10547.
+- Fails closed if a live counter falls below `base_state`.
+- Phase CPU uses `<` at start and `<=` at the end; the combined envelope cap is unchanged in class.
+- The return value overlays post-P11 effective values on `base_state` while preserving `historical_debits` and `post_p10_debits`.
+
+### `cached_current_f`
+- Both start and end accounting now go through P11.
+- `Group.prior_cpu` is fed from `effective_phases_usec_at_start` under P11.
+- RLIMIT_CPU is `min(cfg, 10547)`.
+- The cumulative F stderr and stdout checks use `POST_P11`.
+- The `Group.__init__` restore and the timer zeroing in `finally`/`except` are intact.
+- No other `POST_P10` reference remains on the current-route arithmetic. `_verify_p10_f_result` still correctly binds the historical P10 result to `HISTORICAL_POST_R3_DEBITS`.
+
+### Non-blocking observations
+1. **Missing keys and wrong types.** `cleanup['counts']` and `jload(manifest)['files']` use subscripting. A missing key raises KeyError, which `main` catches as a refusal. A TypeError would not be caught, but it still fails closed with a nonzero exit. Exact pinned bytes make both moot.
+2. **Raw cpu.stat files are not listed in `P11_RECEIPT_PINS`.** The exact-byte template provides equivalent strength (counts verified above).
+3. **Outer `streams[]` are not cross-checked field by field.** They are covered transitively by the pinned RESULT digest, and the standalone stderr pin `9b4078…` equals the stream SHA inside RESULT.
+4. **The camino A0 digest refusal in `reconstitute_source_home` is unchanged and must stay that way.** Any future native run will refuse again until a separately reviewed historical restoration route resolves it. That route is out of scope here and is not a source defect.
+5. **Routing label for the security receipt (Root admission issue, not this cut).** The fallback tuple literal in `consent` is labelled `standing_opus_quota_outage_fallback`, but the actual cause was a classifier ABSTAIN. Root must not relabel that cause when it issues any security receipt.
+6. **RLIMIT_CPU is a per-process bound against a cgroup-history budget.** This is the same class as before and is conservative.
+
+**Limits on this opinion.** It is a normal (non-security) source opinion on this exact two-file cut only. It does not establish native, config, admission, cgroup, provisioning, proof or stagenet eligibility, or the behavior of the real cache or namespace.
+
+---
+
+## TEST_SOURCE: **APPROVE** (finite owner-scoped QA, with stated limits)
+
+### Imports and loading
+- `L()` loads the exact siblings via `Path(__file__).with_name`. Both modules are side-effect-free at import (constants only), and `__main__` is off because the module names are not `'__main__'`.
+- `H` resolves to the helper. `R` resolves to `guard.Refusal` and `ND` to `guard.need`, so `assertRaises(R)` catches the real production refusal type. KeyError or TypeError would surface as test errors, not false passes.
+
+### Fake guard `G` and API signatures
+- `G` provides exactly the surface the P11 path uses: `need`, `exact`, `regular`, `digest(p)`, `jload`, `cg_paths(c)`, `cg_fs(ns)` and `read_numbers`.
+- These match the production call shapes. `cg_paths` and `cg_fs` are bound instance methods, and `cg_fs` maps into the temp `cg/` tree.
+
+### No host reads are reachable
+- `enforce_post_p10_historical_debits` is replaced before first use by `mk` (setUp).
+- `verify_post_compile_no_script_reexec` is replaced in test 7.
+- `P11_ACTUAL_ROOT`, `P11_EVIDENCE_ROOT`, `P11_RECEIPT_PINS` and `P11_EVIDENCE_FILE_BYTES` are rebound to temp paths in setUp, before any call.
+- Live cgroup counters come from temp files (10/20/30).
+- No `/proc`, `/sys`, sourcehome, evidence, cache or SDK path is reachable.
+
+### Restoration and isolation
+- `sv` snapshots all 8 mutated module attributes before mutation. `addCleanup(rs)` runs before `td.cleanup` (LIFO), and runs even if setUp fails.
+- `enforce_post_p11` is restored in test 7's `finally`.
+- `POST_P11` is restored in test 6's `finally` and again by `rs`.
+- `Group.__init__` restoration is asserted with `assertIs` after both success and failure.
+- The fake guard is per-test, and all fixtures live under `TemporaryDirectory`.
+
+### Native hooks
+- In test 7, `signal.signal`, `signal.setitimer` and `resource.setrlimit` are patched before the first `cached_current_f` call in both invocations.
+- `consent`, `supervisor_envelope`, `bound_identities`, `owned_paths`, `quotas`, `receipt` and `write_new` are mocks, so no marker or receipt is written.
+- `launch` is a pure fake.
+- `os.getuid` and `stat` operate on real temp directories, which is benign.
+
+### Meaningfulness of each test
+- **Test 1.**
+  - Asserts the literal carry values (1092254321, 252227979, 840026337; residual 5 and 1; 5921, 2021, 10547; 59519, 112, 39), independently of helper constants.
+  - Asserts effective = debit + live, i.e. +10, +20, +30.
+  - Confirms `base_state` passthrough.
+  - Combined with the production invariant checks, this pins the constants.
+- **Test 2.**
+  - Covers outer pin SHA, outer stderr size, a manifest extra key (after a valid re-pin), and a manifest digest versus file mismatch.
+  - Each mutation is single and targeted, and `sy()` correctly re-derives every pin.
+- **Test 3.** Bumps each node's usage by one digit-preserving step, refuses, restores, then re-asserts positive.
+- **Test 4.** Covers outer `actual_exit`, `controller_failure`, `elapsed_seconds`, and a same-length terminal type mutation. Each is re-pinned through `sy()`, so only the target check can fail.
+- **Test 5.** Mutates current `status`, `cleanupOwed` and `all3MountsAbsent`, and the teardown exit. It demonstrates that the historical `counts.cleanupOwed=True` snapshot is ignored.
+- **Test 6.** Covers wall, F wall and supervisor caps at +1, the exact `cpu_time_us` boundary (refuse at start, pass at end), a live counter reset, and internal invariant tampering of envelope and stderr.
+- **Test 7.**
+  - `prior_cpu == 840026367` (P10 would give 836427529) and `fl == [True, False]` directly exercise the hunk-1 correction.
+  - Asserts RLIMIT_CPU `(10547, 10547)`, `ITIMER_REAL` 5921 then 0, and a single consent and launch.
+  - With stderr cap 59519, 0 passes and +1 refuses with TERMINAL_FAILURE, which distinguishes the 59519 total from the old 59407.
+- **Test 7 `jl`.** Dispatches only the two packet names explicitly and otherwise falls back to a real temp read.
+- **LF byte values.** I re-derived the fixture lengths: 112, 39 and the cpu template are correct.
+
+### Coverage limits (not blocking, recorded honestly)
+1. **The 112B-versus-39B stream distinction is only tested indirectly.** No negative test covers the `F_precheck.stderr == counts.failure` equality, despite test 4's name.
+2. **Several checks have no negative test.** These are `counts.phase`, `result`, `rawUsageUsec`, `previousHistory`, `cumulativeUsec`, `currentResidualUsec`, the Cargo/SDK/ELF flags, `oneShotConsumed`, outer `id`, cleanup `evidence`, the `EandSupervisorAndPhasesAbsent`, `noCargo` and `noELF` flags, and the teardown descriptor.
+3. **Untested caps.** Live supervisor above `supervisor_cpu_seconds × 10⁶` and the envelope combined cap.
+4. **Assertions are coarse.**
+   - Refusal assertions check the type only, not the message.
+   - In tests 2, 4 and 5 the positive baseline is not re-asserted between mutations. Restoration is correct by inspection.
+5. **Some fixtures mirror production.**
+   - The cpu.stat template and `P11_OUTER_SECONDS` are drawn from helper constants.
+   - The synthetic terminal JSON is 110B, not the actual 111B.
+   - The tests re-pin the receipts and evidence constants to synthetic fixtures. Binding the production literals to the actual records is established by Root's pin-check record and my own literal comparison, not by these tests.
+6. **The fake guard differs from the real one.** Its `jload` has no duplicate-key hook, and its `regular` uses `is_file` semantics. The real `enforce_post_p10`/r3 layering and the real guard namespace are not exercised. This is finite owner QA, not a whole-history oracle.
+
+---
+
+## EXACT_ONE_ORDINARY_7_QA: **ELIGIBLE**
+
+### Basis for eligibility
+- The argv contains only `timeout --signal=KILL 30s` and `prlimit` CPU 25, AS 2GiB, FSIZE 64MiB, CORE 0. This is identical to the selected 12-class, with no increase.
+- The interpreter runs as `python3 -I -B -S`.
+  - `-I` means only the inserted staging path is on `sys.path`.
+  - `-B` means no `.pyc` is written.
+  - `-S` means no site-packages. Everything used is stdlib: unittest, mock, tempfile, hashlib, json, tarfile, resource and signal.
+- The selector names match the 7 `test_*` methods exactly.
+- `countTestCases()==7` is enforced by `assert`, which is active because there is no `-O`.
+- Exit is 0 only if `wasSuccessful`, `testsRun==7`, there are no skips and no expected failures. Otherwise exit is 1, or 137 on KILL.
+- The environment sets HOME and TMPDIR to the stage and `PATH=/usr/bin:/bin`. With TMPDIR at the stage, `TemporaryDirectory` stays inside the stage, and the cleanups remove it on pass or fail. Residue is retained only on KILL, as already specified.
+- No real cgroup, `/proc`, native, SDK, evaluator, sourcehome, evidence or cache access is reachable, as established above.
+- The expected CPU and memory use is trivial.
+
+### Binding conditions on Root (from the proposal itself)
+- Copy exactly the 3 pinned regular files, 96706, 158235 and 11642 bytes, under the exact sibling names into the fresh stage.
+- Run the hash and membership checks before and after, with no other files present.
+- Make one serial attempt, fail-stop, with no retry, no old-12 replay and no extra framework.
+- The 1MiB-per-stream and 5s drain capture is unchanged.
+
+### What eligibility does not grant
+A pass establishes only that this synthetic finite guard QA passed. It grants no native, config, privileged, cgroup, provisioning, proof or stagenet eligibility. It grants no security approval: that remains Gemini's source-only opinion, subject to Root's routing-label handling. It does not permit any camino or historical restoration action.
+
+### Blocking anchors
+None. Non-blocking anchors:
+- `cached_current_build.py:_verify_p11_receipts`: `counts.failure` stream equality has no negative test; `cleanup['counts']` subscripting.
+- `cached_current_build.py:enforce_post_p11_historical_debits`: live supervisor and envelope caps are untested.
+- `bounded_sdk_compile.py:consent` `allowed_routing`: fallback label versus actual classifier cause (Root receipt matter).
+- `cached_current_build.py:reconstitute_source_home`: the A0 digest guard is unchanged and must stay unchanged.

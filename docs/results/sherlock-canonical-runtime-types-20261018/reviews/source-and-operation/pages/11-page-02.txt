@@ -1,0 +1,14 @@
+        Err(failure) => return Err(PlannedStepError::Materialization {
+            side: WitnessSide::Before, failure, observed: Box::new(observed),
+            completed_before: None,
+        }),
+    };
+    let after = match materialize_for(after_raw, LifetimeUnit::RecordAfter) {
+        Ok(value) => value,
+        Err(failure) => return Err(PlannedStepError::Materialization {
+            side: WitnessSide::After, failure, observed: Box::new(observed),
+            completed_before: Some(Box::new(before)),
+        }),
+    };
+    Ok(PlannedObservedStep { observed, before, after })
+}

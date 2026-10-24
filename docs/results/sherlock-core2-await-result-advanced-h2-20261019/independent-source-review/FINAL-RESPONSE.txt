@@ -1,0 +1,85 @@
+## Verdict
+
+**Source: ACCEPT, narrowly scoped to `core2_result` `Waiting.advanced`. Operation: ELIGIBLE under the exact conditions in Body 15. No ABSTAIN is triggered.**
+
+The supplied text is complete and legible for Bodies 1–16. I used no tools and did not execute anything. Bytes and SHA-256 values are treated only as supplied preparer metadata, not as independently recomputed readability or correctness evidence.
+
+### Source audit
+
+In the [candidate consumer](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch15-core2-await-h2-result-advanced/revision01-muse/afterimages/models/sherlock/qa/core2_await_boundary_wire.py), the only consumer change from the supplied 12,712-byte preimage is:
+
+```python
+if type(payload['advanced']) is not bool:
+    raise ValueError('expected Core Bool payload')
+```
+
+It is correctly placed:
+
+- after `_row(payload, 'advanced segment continuation attempted residual')`, so a missing or extra field remains a shape `ValueError`;
+- before constructing `body`, segment conversion, continuation conversion, attempted conversion, and residual conversion;
+- in only the `Waiting` branch of `core2_result`.
+
+The check is semantically strict in the right way. `type(x) is bool` accepts exactly Python `True` and `False`, while rejecting the important confusables `0`, `1`, `0.0`, `'true'`, and `None`. It does not coerce with `bool(value)`. Since the output then reuses `payload['advanced']` unchanged, exact bool identity and type are preserved.
+
+That matches Body 5: the actual `FinancialObservation::Waiting` declaration declares `advanced: bool`. It also uses the same exception type and message pattern already used for Core Bool payloads in `_scalar`.
+
+No advanced–segment consistency rule was added. That is correct for this scoped change; no relationship between `advanced` and `segment` is inferred here.
+
+### Test audit
+
+The [new test file](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch15-core2-await-h2-result-advanced/revision01-muse/afterimages/models/sherlock/qa/test_core2_await_result_advanced_h2.py) contains exactly the two intended test methods.
+
+`test_waiting_preserves_exact_bool` exhausts the bool domain with `True` and `False`. It uses `assertIs` for the value and also asserts the runtime type is `bool`. That is a strong preservation check, not merely an equality check.
+
+`test_waiting_rejects_non_bool_advanced` covers `0`, `1`, `0.0`, `'true'`, and `None`. Those cases are meaningfully sensitive to the new guard: without the guard, the remaining minimal fixture would pass through the consumer and would not produce the expected `ValueError` from the advanced field. Additional array or object negative cases are not necessary because the implementation has one type-identity branch for all non-`bool` values.
+
+The tests are adequate for isolating this consumer guard.
+
+### Mandatory fixture finding
+
+**MF-1 — fixture is not an actual or canonical Core continuation example.**  
+The preserved author fixture uses:
+
+```python
+'site': 's'
+```
+
+Body 6 declares the actual `Continuation.site` as `u16`. Therefore the fixture must not be described as an actual Core outcome, a canonical Core outcome, or serde-produced Core data.
+
+This is **not blocking for the narrow literal guard test**, because `_continuation` currently copies `site` without validating it, and the fixture is expressly a handwritten supplied representation. It **is blocking for any broader claim** that the fixture represents a real Core continuation. The required fix for that broader use would be to replace `'s'` with an in-range `u16` integer, refreeze the changed test bytes and pins, and run a fresh bounded operation. Do not silently edit or waive the literal in the present review record.
+
+No other fixture field defeats the purpose of these two tests. `segment: None`, empty captures, empty residual, `cap: None`, and `attempted: '0'` form a minimal surrounding shape that lets the advanced check be exercised without claiming segment, program, financial, or execution semantics.
+
+### Operation eligibility
+
+The one proposed invocation in Body 15 is **ELIGIBLE** as a single, SDK-free, literal-representation test operation, provided the Root executor enforces all of these exactly:
+
+- one invocation only: `/usr/bin/python3 -B -m unittest -v test_core2_await_result_advanced_h2`;
+- cwd is exactly the specified QA directory;
+- exactly the three QA entries are present before and after: `core2_await_boundary_wire.py`, `quint_observations.py`, and `test_core2_await_result_advanced_h2.py`;
+- environment replacement contains exactly `PATH=/usr/bin:/bin` and `LANG=C.UTF-8`;
+- the supplied source/Python pins match before and after, and `/usr/bin/python3` resolves to the pinned `/usr/bin/python3.14`;
+- timeout is 60 seconds;
+- stdout and stderr are each capped at 4 MiB, with overflow or truncation treated as not a pass;
+- exit code is `0`;
+- exactly the two named test methods run and report `ok`;
+- output reports `Ran 2 tests` and `OK`, with no skips, expected failures, extra tests, imported SDK/evaluator execution, or new files;
+- no prior H1/H2 Bool/H2 Error/original-six tests are replayed in this operation.
+
+The imports are ordinary local/stdlib only for this purpose: `unittest`, the candidate wire module, and its `quint_observations` import closure. Decoder import alone does not make this an evaluator, Quint, provider, network, or SDK execution.
+
+### Remaining open items
+
+This verdict does not close or validate:
+
+- the separate `core2_await_prefix` `advanced` field;
+- numeric fields beyond the advanced bool check;
+- Quint H2;
+- H3–H6;
+- full consumer or caller integration;
+- CLI behavior;
+- real Core2/B06 traces;
+- financial, program, effects, same-call, admission, native, B, or EARS claims;
+- private goldens or canonical producer outcomes.
+
+**Final disposition: ACCEPT the two-line `Waiting.advanced` bool guard; ELIGIBLE to run exactly the one bounded two-test operation, with MF-1 preserved as the fixture limitation.**

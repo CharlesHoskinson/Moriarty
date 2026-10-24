@@ -17,6 +17,8 @@ use std::sync::Arc;
 pub mod authorization;
 pub mod replay;
 pub mod schnorr;
+pub mod sherlock_child;
+pub mod sherlock_link;
 pub mod sherlock_machine;
 pub mod signed_relation;
 pub mod source_projection;
@@ -35,8 +37,8 @@ pub const RELATION_VERSION: &str = "moriarty-zkir-relation/3";
 /// Explicit authorization discriminator of an unsigned v3 artifact.
 pub const UNSIGNED_MODE: &str = "unsigned";
 
-pub const LEDGER_REVISION: &str = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14";
-pub const ZKIR_VERSION: &str = "3.0.0-rc.2";
+pub(crate) use sherlock_machine::literal_host::error;
+pub use sherlock_machine::literal_host::{Error, LEDGER_REVISION, ZKIR_VERSION};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Target {
@@ -342,18 +344,6 @@ fn decode_artifact_target<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Targ
     let value = Target::deserialize(d)?;
     value.validate().map_err(serde::de::Error::custom)?;
     Ok(value)
-}
-#[derive(Debug, Clone, Serialize, Deserialize, thiserror::Error)]
-#[error("{code}: {message}")]
-pub struct Error {
-    pub code: String,
-    pub message: String,
-}
-fn error(code: &str, message: impl Into<String>) -> Error {
-    Error {
-        code: format!("mori::backend::{code}"),
-        message: message.into(),
-    }
 }
 fn digest<T: Serialize>(value: &T) -> Result<[u8; 32], Error> {
     let bytes =

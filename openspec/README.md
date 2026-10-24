@@ -1,5 +1,22 @@
 # Moriarty specifications
 
+The proposed [Sherlock circuit optimizations](changes/sherlock-circuit-optimizations/proposal.md) specify source sharing and measured follow-up experiments with 16 EARS clauses/32 scenarios; all remain draft and retain the existing Sherlock requirements.
+
+The current [Sherlock stagenet recursion and Fenrir rollup experiment](changes/sherlock-stagenet-recursive-rollup/proposal.md) prioritizes actual recursive-proof acceptance on Midnight stagenet and measured circuit degree k/performance. Its additive SRPOC requirements and tasks preserve the full original requirements and separate literal, recursive, local and ledger evidence.
+
+
+## Sherlock completion revision03 — October17
+
+The selected [completion convergence change](changes/sherlock-completion-convergence/ADOPTION.md)
+adds25 EARS refinements/68 scenarios and maps all35 original Sherlock requirements.
+Read the [concrete first compiler batch](changes/sherlock-completion-convergence/FIRST-COMPILER-BATCH.md),
+[finite tasks](changes/sherlock-completion-convergence/tasks.md),
+[final design](../docs/sherlock/design.md) and [implementation loop](../docs/sherlock/implementation-loop.md).
+Implementation/evidence/acceptance remain separate; full original scope and native
+owner boundaries remain in force. Draft labels in preserved author snapshots are
+historical; the adoption record identifies the controlling successor.
+
+
 The governing proposal is [consolidated language and kernel](changes/consolidated-language-kernel/proposal.md), with one [U0–U7 roadmap](../ROADMAP.md), [vision/design](../docs/MORIARTY-CONSOLIDATED-DESIGN.md), [next backend requirements](../docs/MORIARTY-BACKEND-REQUIREMENTS.md), [EARS](changes/consolidated-language-kernel/requirements.md), [traceability](changes/consolidated-language-kernel/traceability.md) and [Pel workflow](changes/consolidated-language-kernel/workflow.md). Links below preserve detailed requirements and historical evidence, not competing schedules.
 
 The [product contract](../docs/MORIARTY-PRODUCT-CONTRACT.md) defines the permissionless language boundary. It supersedes conflicting administrative deployment requirements.
@@ -26,3 +43,5 @@ A checked task requires its own evidence. Planned verification commands and desi
 - [Sherlock universal interpreter](changes/sherlock-universal-interpreter-design/proposal.md): Candidate B reference-machine design, 35 EARS clauses, shared bounded-step interfaces, recursive data and calls, K and Quint models, and a required Lean/Clean circuit stage before native integration. Clean integration changes belong in Fenrir's existing fork. This separate draft does not amend the 160 canonical requirement headings or close a roadmap exit.
 
 - [DoctorWatson](changes/doctorwatson/proposal.md): local software factory for Sherlock, executable corpus/readback QA, direct parallel source delivery and feature EARS. Required model/circuit/native/target evidence stays separate.
+
+- [Synthetic rollup data](changes/sherlock-synthetic-rollup-data/proposal.md): draft FSYN plan for seeded Fenrir rollup workloads in both test-format profiles, Quint-oracle fidelity, tests, fixtures and benchmarks that start when recursion is ready. Specified only.

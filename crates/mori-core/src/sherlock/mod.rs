@@ -3,12 +3,15 @@
 //! This typed API represents the valid-UInt128, nonnegative-budget common
 //! domain of the frozen K reference. It does not change Moriarty source `/1`
 //! or `/2`, implement the proposed B helper schedule, or produce constraints.
+//! The separate B helper machine lives in the `helper_machine` child module;
+//! it does not alter this A profile or its execution paths.
 //! Pure helpers and host allocation remain unmetered in this A profile.
 
 pub mod compare;
+pub mod helper_machine;
 mod reference;
-mod reference_stream;
 pub mod reference_display;
+mod reference_stream;
 mod reference_types;
 
 pub use reference::Machine;
@@ -49,8 +52,7 @@ pub(crate) mod program_image;
 pub(crate) mod image_reference;
 
 // Host-only event grouping; every internal reference record stays observable.
-#[cfg(test)]
-mod reference_slice;
+pub mod reference_slice;
 
 // Unadopted host snapshot rows; normal materialization checks only.
 #[cfg(test)]
@@ -68,10 +70,11 @@ mod helper_call_adapter;
 #[cfg(test)]
 mod source_origin_normal_tests;
 
-// Internal L4 host preparation source proposal; H1, no network/untrusted API.
-// Compilation and all normal tests remain UNRUN pending separate admission.
-#[cfg(test)]
-mod layout_a;
+// SDK-free host L4 preparation and typed observation codec.
+// No native ABI, machine-state importer or transition acceptance is provided.
+pub mod layout_a;
+
+pub mod nominal_external_inputs;
 
 #[cfg(test)]
 mod reference_stream_tests;
@@ -81,3 +84,6 @@ mod reference_stream_tests;
 mod arithmetic_witness;
 #[cfg(test)]
 mod arithmetic_witness_normal_tests;
+
+// Typed Rust nominal values; source parsing/JSON wire bounds stay unchanged.
+pub mod nominal_ast_inputs;

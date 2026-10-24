@@ -1,0 +1,23 @@
+--- a/crates/mori/tests/nominal_external_input_compile_handler.rs
++++ b/crates/mori/tests/nominal_external_input_compile_handler.rs
+@@ -1008,7 +1008,7 @@
+                 && row["owning_type"] == chain_type_id
+         })
+         .expect("declared Link constructor row");
+-    let (fstart, flen) = slice_of(link_row);
++    let (fstart, flen) = (idx(&link_row["field_start"]), idx(&link_row["field_len"]));
+     assert_eq!(flen, 2);
+     assert_eq!(names[idx(&view["ctor_fields"][fstart]["name_id"])], "head");
+     assert_eq!(view["ctor_fields"][fstart]["type_id"], json!("UInt"));
+@@ -1029,10 +1029,7 @@
+     assert_eq!(chain_constant["Constructor"]["type_id"], chain_type_id);
+     assert_eq!(
+         chain_constant["Constructor"]["ctor_id"], json!(link_pos.to_string()));
+-    assert_eq!(arg_constant(1), json!({"U128": {"marker_free": true, "n": "42"}})
+-        .as_object()
+-        .map(|_| arg_constant(1))
+-        .unwrap_or_else(|| arg_constant(1)));
++    assert_eq!(arg_constant(1), json!({"U128": {"marker_free": true, "n": "42"}}));
+     assert_eq!(arg_constant(1)["U128"]["n"], "42");
+     assert_eq!(arg_constant(2)["Bool"]["b"], true);
+ }

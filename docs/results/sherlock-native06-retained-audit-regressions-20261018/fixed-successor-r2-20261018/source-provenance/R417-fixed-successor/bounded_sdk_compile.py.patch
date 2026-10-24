@@ -1,0 +1,170 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/415-native06-dot-segment-guard-test-candidate/afterimages/bounded_sdk_compile.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/417-native06-fixed-successor-guard-test-candidate/afterimages/bounded_sdk_compile.py
+@@ -448,7 +448,7 @@
+     need(q['packet']['max_bytes']<=v['packet_bytes'],'packet hard bound too large')
+ 
+ def sandbox_args(c,phase,worker=True,precheck=False,retained_audit=False):
+-    need(not retained_audit or (phase=='F' and worker and not precheck),'retained audit sandbox mismatch')
++    need(retained_audit in (False,True,'r2') and (not retained_audit or (phase=='F' and worker and not precheck)),'retained audit sandbox mismatch')
+     owned_paths(c)
+     p=c['paths'];args=['--die-with-parent','--new-session','--unshare-user','--unshare-pid','--unshare-net','--unshare-ipc','--unshare-uts','--disable-userns','--cap-drop','ALL','--ro-bind','/','/']
+     # Mask private home and old trees first; restore only the exact bound public
+@@ -486,7 +486,8 @@
+     if worker:args+=['/usr/bin/python3','-I','-B',c['bindings']['runner']['path'],'--worker',phase,'--config',p['config']]
+     else:args+=cargo_argv(phase)
+     if precheck:args+=['--precheck']
+-    if retained_audit:args+=['--retained-f-audit']
++    if retained_audit=='r2':args+=['--retained-f-audit-r2']
++    elif retained_audit:args+=['--retained-f-audit']
+     return args
+ 
+ def _cg_text(path):return Path(path).read_text()
+@@ -592,7 +593,15 @@
+     seals=fcntl.F_SEAL_WRITE|fcntl.F_SEAL_SHRINK|fcntl.F_SEAL_GROW|fcntl.F_SEAL_SEAL
+     fcntl.fcntl(fd,fcntl.F_ADD_SEALS,seals);return fd
+ 
++R411_CONSUMED_PINS = {
++    'F_retained_audit.stdout': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
++    'F_retained_audit.stderr': '78ee1269c2a286f0a28e4c657322649ecb2934f91f70741881067efe6dabeac0',
++    'TERMINAL_FAILURE_RETAINED_AUDIT.json': '7d37ba6e226a0852d1b6a67314c6db80acd42a66225fa78782d1cbd321208c09',
++    'USED_LAUNCH_93645c50dfc6c31930def6df095941fec5f41243bede003b450fe0c3db0cf5f3': '6996692eb1c89d9bcf83ac52ecd63d76df3902b6bb6bc3978a353431fbfef8c8',
++}
++
+ def prior_receipts(c,phase,precheck,retained_audit=False):
++    need(retained_audit in (False,True,'r2'),'invalid retained audit route')
+     packet=Path(c['paths']['packet']);names=[p+'_RESULT.json' for p in PHASES[:PHASES.index(phase)]]
+     extra={'A':['A0_FREEZE.json'],'C':['A0_FREEZE.json'],'D':['C_RAW_IDENTITIES.json'],'E':['D_FREEZE.json'],'F':['D_FREEZE.json','E_RESOLVED.json']}
+     names+=extra.get(phase,[])
+@@ -600,6 +609,7 @@
+     if retained_audit:
+         need(phase=='F' and not precheck,'retained audit phase mismatch')
+         names+=['F_precheck.stdout','F_precheck.stderr','F_audit.stdout','F_audit.stderr','TERMINAL_FAILURE.json']
++        if retained_audit=='r2':names+=list(R411_CONSUMED_PINS)
+     return {name:digest(packet/name) for name in names}
+ 
+ def child_mounts(c,phase,retained_audit=False):
+@@ -644,21 +654,23 @@
+     import array
+     import socket
+     import fcntl
+-    need(not retained_audit or phase=='F','retained audit only supports phase F')
++    need(retained_audit in (False,True,'r2') and (not retained_audit or phase=='F'),'retained audit only supports phase F')
+     group=Group(c,phase);v=c['limits'][phase];packet=Path(c['paths']['packet'])
+     need((Path(c['paths']['execution_root'])/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
+     supervisor_envelope(c);bound_identities(c);quotas(c,phase)
+-    start=time.monotonic();counts={k:sum((packet/f'F{s}.{k}').stat().st_size for s in ('_precheck','','_audit')) for k in ('stdout','stderr')} if retained_audit else {'stdout':0,'stderr':0};records=[]
++    prior_logs=('_precheck','','_audit','_retained_audit') if retained_audit=='r2' else ('_precheck','','_audit')
++    start=time.monotonic();counts={k:sum((packet/f'F{s}.{k}').stat().st_size for s in prior_logs) for k in ('stdout','stderr')} if retained_audit else {'stdout':0,'stderr':0};records=[]
+     for k,n in counts.items():need(n<=v[k+'_bytes'],'log cap hit '+phase+' '+k)
+     if retained_audit:
+         group.prior_cpu=read_numbers(group.path.parent/'cpu.stat').get('usage_usec',0)
++        if retained_audit=='r2':need(group.prior_cpu>=246681730,'phase CPU counter reset')
+         need(group.prior_cpu<v['cpu_time_us'],'total cgroup CPU cap')
+     try:
+         group.create()
+         variants=[(True,False)] if retained_audit else [(False,False)] if phase in ('B','E','F') else [(True,False)]
+         if phase in ('E','F') and not retained_audit:variants=[(True,True),(False,False),(True,False)]  # same phase/group/deadline, data audit only
+         for audit,precheck in variants:
+-            args=sandbox_args(c,phase,audit,precheck,retained_audit);suffix='_retained_audit' if retained_audit else '_precheck' if precheck else '_audit' if audit and phase in ('E','F') else ''
++            args=sandbox_args(c,phase,audit,precheck,retained_audit);suffix='_retained_audit_r2' if retained_audit=='r2' else '_retained_audit' if retained_audit else '_precheck' if precheck else '_audit' if audit and phase in ('E','F') else ''
+             parent,child=socket.socketpair();proc=None;listener=None;sel=selectors.DefaultSelector();logs=[];token_fd=-1
+             stage_fd=sealed_memfd('sdk-post-bwrap-stage',TRAMPOLINE)
+             if audit:
+@@ -1049,45 +1061,59 @@
+ def worker(c,phase,retained_audit=False):
+     # A0/A/C/D workers and E/F post-command audits are dispatched. They run inside the same bounded
+     # cgroup/sandbox envelope; Cargo receives no Python callback or wrapper flag.
++    need(retained_audit in (False,True,'r2'),'invalid retained audit route')
+     if phase=='A0':freeze_inputs(c)
+     elif phase=='A':stage(c)
+     elif phase=='C':verify_raw(c)
+     elif phase=='D':freeze_source(c)
+     elif phase=='E':metadata_check(c)
+-    elif phase=='F':output_check(c,'F_RETAINED_QUARANTINED_OUTPUTS.json' if retained_audit else 'F_QUARANTINED_OUTPUTS.json')
++    elif phase=='F':output_check(c,'F_RETAINED_QUARANTINED_OUTPUTS_R2.json' if retained_audit=='r2' else 'F_RETAINED_QUARANTINED_OUTPUTS.json' if retained_audit else 'F_QUARANTINED_OUTPUTS.json')
+     else:raise Unsupported('invalid data worker phase')
+ 
+-def retained_f_audit(c,config_sha):
++def retained_f_audit(c,config_sha,retained_audit=True):
+     start=time.monotonic()
++    need(retained_audit in (True,'r2'),'invalid retained audit route')
+     need(c['mode']=='tier1-and-compile','retained F audit requires tier1-and-compile mode')
++    if retained_audit=='r2':
++        need(c['total_wall_seconds']<=6586 and c['limits']['F']['wall_seconds']<=2566,'post-R411 wall ceiling')
+     consent(c);supervisor_envelope(c)
+     def expired(signum,frame):raise Refusal('whole-job wall cap')
+     init_wall=min(c['total_wall_seconds'],c['limits']['F']['wall_seconds'])
+     need(init_wall>0,'whole-job wall cap')
+     signal.signal(signal.SIGALRM,expired);signal.setitimer(signal.ITIMER_REAL,init_wall)
+     try:
+-        sup_cpu=c['supervisor_cpu_seconds']-(read_numbers(cg_fs(cg_paths(c)[1])/'cpu.stat').get('usage_usec',0)+999999)//1000000
++        sup_usec=read_numbers(cg_fs(cg_paths(c)[1])/'cpu.stat').get('usage_usec',0)
++        if retained_audit=='r2':need(sup_usec>=56990698,'supervisor CPU counter reset')
++        sup_cpu=c['supervisor_cpu_seconds']-(sup_usec+999999)//1000000
+         need(sup_cpu>0,'supervisor CPU cap');resource.setrlimit(resource.RLIMIT_CPU,(sup_cpu,sup_cpu))
+         bound_identities(c);owned_paths(c);quotas(c,'F');frozen_source(c)
+         p=c['paths'];root=Path(p['execution_root']);packet=Path(p['packet'])
+         need((root/'ONE_SHOT_STARTED').is_file(),'one-shot start missing')
+-        predecessors=prior_receipts(c,'F',False,retained_audit=True)
+-        need(jload(packet/'TERMINAL_FAILURE.json')=={'message':'phase exit nonzero F','native_outputs_accepted':False,'type':'Refusal'},'unexpected prior terminal failure')
++        predecessors=prior_receipts(c,'F',False,retained_audit=retained_audit)
++        expected_failure={'message':'phase exit nonzero F','native_outputs_accepted':False,'type':'Refusal'}
++        need(jload(packet/'TERMINAL_FAILURE.json')==expected_failure,'unexpected prior terminal failure')
++        if retained_audit=='r2':
++            need(jload(packet/'TERMINAL_FAILURE_RETAINED_AUDIT.json')==expected_failure,'unexpected prior retained audit failure')
++            need(all(predecessors.get(k)==v for k,v in R411_CONSUMED_PINS.items()),'consumed R411 predecessor digest mismatch')
+         prior_wall=sum(jload(packet/(ph+'_RESULT.json'))['wall_seconds'] for ph in PHASES[:-1])
+         wall_budget=min(c['total_wall_seconds']-prior_wall,c['limits']['F']['wall_seconds'])
+         rem_wall=wall_budget-(time.monotonic()-start)
+         need(rem_wall>0,'whole-job wall cap');signal.setitimer(signal.ITIMER_REAL,rem_wall)
+-        for name in ('F_RESULT.json','F_QUARANTINED_OUTPUTS.json','F_RETAINED_AUDIT_RESULT.json','F_RETAINED_QUARANTINED_OUTPUTS.json','TERMINAL_FAILURE_RETAINED_AUDIT.json','F_retained_audit.stdout','F_retained_audit.stderr'):
++        forbidden=('F_RESULT.json','F_QUARANTINED_OUTPUTS.json','F_RETAINED_AUDIT_RESULT.json','F_RETAINED_QUARANTINED_OUTPUTS.json','F_RETAINED_AUDIT_R2_RESULT.json','F_RETAINED_QUARANTINED_OUTPUTS_R2.json','TERMINAL_FAILURE_RETAINED_AUDIT_R2.json','F_retained_audit_r2.stdout','F_retained_audit_r2.stderr') if retained_audit=='r2' else ('F_RESULT.json','F_QUARANTINED_OUTPUTS.json','F_RETAINED_AUDIT_RESULT.json','F_RETAINED_QUARANTINED_OUTPUTS.json','TERMINAL_FAILURE_RETAINED_AUDIT.json','F_retained_audit.stdout','F_retained_audit.stderr')
++        for name in forbidden:
+             need(not (packet/name).exists(),'retained audit output already exists: '+name)
++        out_name='F_RETAINED_QUARANTINED_OUTPUTS_R2.json' if retained_audit=='r2' else 'F_RETAINED_QUARANTINED_OUTPUTS.json'
++        res_name='F_RETAINED_AUDIT_R2_RESULT.json' if retained_audit=='r2' else 'F_RETAINED_AUDIT_RESULT.json'
++        fail_name='TERMINAL_FAILURE_RETAINED_AUDIT_R2.json' if retained_audit=='r2' else 'TERMINAL_FAILURE_RETAINED_AUDIT.json'
+         try:
+-            result=launch(c,'F',config_sha,retained_audit=True)
++            result=launch(c,'F',config_sha,retained_audit=retained_audit)
+             bound_identities(c)
+             need(time.monotonic()-start<=wall_budget,'whole-job wall cap')
+-            result.update({'retained_audit':True,'audit_config_sha256':config_sha,'audit_runner_sha256':c['bindings']['runner']['sha256'],'marker_sha256':digest(root/'ONE_SHOT_STARTED'),'predecessors':predecessors,'quarantined_outputs_sha256':digest(packet/'F_RETAINED_QUARANTINED_OUTPUTS.json'),'native_outputs_accepted':False})
+-            receipt(c,'F_RETAINED_AUDIT_RESULT.json',result,'F')
++            result.update({'retained_audit':retained_audit,'audit_config_sha256':config_sha,'audit_runner_sha256':c['bindings']['runner']['sha256'],'marker_sha256':digest(root/'ONE_SHOT_STARTED'),'predecessors':predecessors,'quarantined_outputs_sha256':digest(packet/out_name),'native_outputs_accepted':False})
++            receipt(c,res_name,result,'F')
+         except BaseException as e:
+             signal.setitimer(signal.ITIMER_REAL,0)
+-            try:receipt(c,'TERMINAL_FAILURE_RETAINED_AUDIT.json',{'type':type(e).__name__,'message':str(e),'native_outputs_accepted':False},'F')
++            try:receipt(c,fail_name,{'type':type(e).__name__,'message':str(e),'native_outputs_accepted':False},'F')
+             except Exception:pass
+             raise
+     finally:
+@@ -1131,20 +1157,23 @@
+     parser.add_argument('--worker',choices=('A0','A','C','D','E','F'))
+     parser.add_argument('--precheck',action='store_true')
+     parser.add_argument('--retained-f-audit',action='store_true')
++    parser.add_argument('--retained-f-audit-r2',action='store_true')
+     a=parser.parse_args();need(HEX.fullmatch(a.config_sha256) is not None,'external full-config SHA required')
++    need(not (a.retained_f_audit and a.retained_f_audit_r2),'conflicting retained audit flags')
++    retained_mode='r2' if a.retained_f_audit_r2 else a.retained_f_audit
+     need(digest(a.config)==a.config_sha256,'final config differs from Root-supplied external anchor')
+     c=validate(jload(a.config));need(str(Path(a.config).resolve())==c['paths']['config'],'config path binding')
+     executing_identity(c)
+     if a.worker:
+-        need(not a.retained_f_audit or (a.worker=='F' and not a.precheck),'invalid retained audit worker flags')
+-        verify_worker_context(c,a.worker,a.precheck,a.worker_fd,a.config_sha256,a.retained_f_audit)
++        need(not retained_mode or (a.worker=='F' and not a.precheck),'invalid retained audit worker flags')
++        verify_worker_context(c,a.worker,a.precheck,a.worker_fd,a.config_sha256,retained_mode)
+         consent(c)
+         if a.precheck:
+             need(a.worker in ('E','F'),'invalid precheck');frozen_source(c)
+-        else:worker(c,a.worker,a.retained_f_audit)
++        else:worker(c,a.worker,retained_mode)
+     else:
+         need(a.worker_fd is None and not a.precheck,'internal flags on supervisor')
+-        if a.retained_f_audit:retained_f_audit(c,a.config_sha256)
++        if retained_mode:retained_f_audit(c,a.config_sha256,retained_mode)
+         else:run(c,a.config_sha256)
+ 
+ if __name__=='__main__':

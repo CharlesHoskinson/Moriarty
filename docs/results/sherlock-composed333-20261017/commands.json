@@ -1,0 +1,106 @@
+{
+  "cwd": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01",
+  "environment": {
+    "PATH": "/usr/bin:/bin",
+    "LANG": "C.UTF-8",
+    "TMPDIR": "/tmp"
+  },
+  "per_child_prefix": [
+    "/usr/bin/timeout",
+    "--signal=KILL",
+    "30s"
+  ],
+  "commands": [
+    {
+      "name": "compile-host",
+      "argv": [
+        "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc",
+        "--edition=2024",
+        "--crate-name",
+        "sherlock_literal_host",
+        "--crate-type",
+        "rlib",
+        "--cfg",
+        "mori_sdk_free",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/source/crates/mori-backend/src/sherlock_machine/literal_host.rs",
+        "--emit=link=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/lib_sherlock_literal_host.rlib,dep-info=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/host.d",
+        "-L",
+        "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target/debug/deps",
+        "-L",
+        "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/stagenet-codec-roundtrip-ordinary-preparation-01/attempt-01",
+        "--extern",
+        "mori_core=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/stagenet-codec-roundtrip-ordinary-preparation-01/attempt-01/libmori_core.rlib",
+        "--extern",
+        "serde=/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target/debug/deps/libserde-ca97fc5f093a8961.rlib",
+        "--extern",
+        "thiserror=/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target/debug/deps/libthiserror-afe06c60c8123fd1.rlib",
+        "--extern",
+        "sha2=/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target/debug/deps/libsha2-73f69f806ed827a6.rlib"
+      ]
+    },
+    {
+      "name": "compile-client",
+      "argv": [
+        "/home/charl/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin/rustc",
+        "--edition=2024",
+        "--crate-name",
+        "sherlock_composed_capture",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/capture_composed.rs",
+        "--emit=link=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/capture-composed,dep-info=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/client.d",
+        "-L",
+        "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target/debug/deps",
+        "-L",
+        "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/stagenet-codec-roundtrip-ordinary-preparation-01/attempt-01",
+        "-L",
+        "dependency=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01",
+        "--extern",
+        "literal_host=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/lib_sherlock_literal_host.rlib",
+        "--extern",
+        "mori_core=/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-parallel-20261016/stagenet-codec-roundtrip-ordinary-preparation-01/attempt-01/libmori_core.rlib",
+        "--extern",
+        "serde_json=/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target/debug/deps/libserde_json-050e8b0fd297b131.rlib"
+      ]
+    },
+    {
+      "name": "run-capture",
+      "argv": [
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/capture-composed",
+        "b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41",
+        "cc68879db15d23d336736e39112521be52f3abfe948d5df4e4d3d97ae9ec7f81",
+        "23583d35bd71139a3024006be4f6276ba0f647a52f2fa00745e6d3fcf13c3938"
+      ],
+      "stdout": "capture.json"
+    },
+    {
+      "name": "extract",
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/extract.py",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01"
+      ]
+    },
+    {
+      "name": "compare-named",
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/oracle/compare_composed.py",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/payload.json"
+      ]
+    },
+    {
+      "name": "compare-ordered",
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/oracle/compare_composed.py",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/checks/composed-actual-01/ordered.json",
+        "--ordered"
+      ]
+    }
+  ]
+}

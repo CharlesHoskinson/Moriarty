@@ -1,0 +1,2169 @@
+--- a/crates/mori-core/src/sherlock/compile_artifact.rs
++++ b/crates/mori-core/src/sherlock/compile_artifact.rs
+@@ -7,8 +7,9 @@
+ use serde_json::{json, Value};
+ use crate::sherlock::helper_machine::core_action_consumer::{
+     preflight_action_inputs, preflight_source_global, prepare_scalar_action_host,
+-    validate_config, ConsumerError,
++    run_scalar_action, validate_config, ConsumerError,
+ };
++use crate::sherlock::helper_machine::shared::StepEventC;
+ use crate::sherlock_source::ScalarActionReport;
+ 
+ #[path = "compile_artifact/config.rs"]
+@@ -45,15 +46,6 @@
+ use config::ExecutionConfig;
+ use wire::OwnerWire;
+ 
+-#[path = "compile_artifact/complete_trace_wire.rs"]
+-mod complete_trace_wire;
+-#[path = "compile_artifact/core_observation.rs"]
+-mod core_observation;
+-
+-pub use complete_trace_wire::{
+-    reconstruct_step_host_snapshot, TRACE_FORMAT, TRACE_SERIALIZATION_BUDGET,
+-};
+-
+ pub const EXECUTION_PROFILE: &str = "sherlock-helper-microstep/1";
+ 
+ /// Output-only JSON trees below come from typed exhaustive owner projections.
+@@ -83,10 +75,6 @@
+         events_forwarded: String,
+         image: Value,
+         resource_report: crate::sherlock::helper_machine::resource_report::ResourceReport,
+-        /// Complete owner records under `TRACE_FORMAT` (`"sherlock-core1-complete-trace/2"`)
+-        /// bounded per-projection by `admission.bounds.serialization_bytes` and across
+-        /// the trace by `derive_trace_serialization_budget` / `crate::json::parse_limited`.
+-        complete_trace: Value,
+     },
+ }
+ impl CompileArtifact {
+@@ -96,18 +84,8 @@
+             Observation::NotRequested { .. } => (false, "0".to_owned(), false),
+             Observation::Observed { events_forwarded, .. } => (true, events_forwarded.clone(), true),
+         };
+-        let mut actual_error = json!({"message":message.into()});
+-        if let Observation::Observed { complete_trace, .. } = &self.observation {
+-            actual_error["complete_trace"] = complete_trace.clone();
+-        }
+-        CompileFailure { stage, actual_error,
++        CompileFailure { stage, actual_error:json!({"message":message.into()}),
+             evaluation_performed, events_forwarded, completed }
+-    }
+-    /// Serialize the completed artifact manifest, reporting any serializer error
+-    /// at the `"serialization"` stage while preserving completed-run metadata.
+-    pub fn manifest(&self) -> Result<String, CompileFailure> {
+-        serde_json::to_string_pretty(self)
+-            .map_err(|error| self.failure("serialization", error.to_string()))
+     }
+ }
+ 
+@@ -158,125 +136,6 @@
+     pub fn input(stage: &'static str, error: impl Into<String>) -> Self {
+         Self { stage, actual_error: json!({"message":error.into()}),
+             evaluation_performed:false, events_forwarded:"0".into(), completed:false }
+-    }
+-    /// Export this failure through `crate::json::export`. Normal normalized traces
+-    /// pass `crate::json::export(self)` directly; if a caller constructs an oversized
+-    /// diagnostic exceeding the 1 MiB / 65,536-node / 32-depth exporter bounds,
+-    /// preserve `stage`, `evaluation_performed`, `events_forwarded`, `completed`,
+-    /// all non-trace error metadata (`message`, `failure_boundary`,
+-    /// `serialization_error`, `violation`), and the largest fitting prefix of
+-    /// `complete_trace`.
+-    pub fn export_diagnostic(&self) -> Result<String, crate::Error> {
+-        let first_error = match crate::json::export(self) {
+-            Ok(diagnostic) => return Ok(diagnostic),
+-            Err(error) => error,
+-        };
+-        if let Some(trace_obj) = self
+-            .actual_error
+-            .get("complete_trace")
+-            .and_then(Value::as_object)
+-        {
+-            let records = trace_obj
+-                .get("records")
+-                .and_then(Value::as_array)
+-                .cloned()
+-                .unwrap_or_default();
+-            let build_candidate = |keep: usize, include_snapshots: bool| -> Self {
+-                let mut err_map = self
+-                    .actual_error
+-                    .as_object()
+-                    .cloned()
+-                    .unwrap_or_default();
+-                err_map.insert("diagnostic_export_error".into(), json!(&first_error));
+-                let mut trimmed = serde_json::Map::new();
+-                if let Some(fmt) = trace_obj.get("format") {
+-                    trimmed.insert("format".into(), fmt.clone());
+-                }
+-                if include_snapshots {
+-                    if let Some(init) = trace_obj.get("initial") {
+-                        trimmed.insert("initial".into(), init.clone());
+-                    }
+-                } else {
+-                    trimmed.insert("initial".into(), Value::Null);
+-                }
+-                if let Some(qual) = trace_obj.get("qualification") {
+-                    trimmed.insert("qualification".into(), qual.clone());
+-                }
+-                trimmed.insert(
+-                    "records".into(),
+-                    Value::Array(records.iter().take(keep).cloned().collect()),
+-                );
+-                trimmed.insert("retained_records".into(), Value::String(keep.to_string()));
+-                if include_snapshots {
+-                    if let Some(ret) = trace_obj.get("returned") {
+-                        trimmed.insert("returned".into(), ret.clone());
+-                    }
+-                }
+-                if let Some(budget) = trace_obj.get("serialization_budget") {
+-                    trimmed.insert("serialization_budget".into(), budget.clone());
+-                }
+-                err_map.insert("complete_trace".into(), Value::Object(trimmed));
+-                Self {
+-                    stage: self.stage,
+-                    actual_error: Value::Object(err_map),
+-                    evaluation_performed: self.evaluation_performed,
+-                    events_forwarded: self.events_forwarded.clone(),
+-                    completed: self.completed,
+-                }
+-            };
+-            if let Ok(zero_export) = crate::json::export(&build_candidate(0, true)) {
+-                let mut low = 0usize;
+-                let mut high = records.len();
+-                let mut best = zero_export;
+-                while low < high {
+-                    let mid = low + (high - low + 1) / 2;
+-                    if let Ok(candidate_export) = crate::json::export(&build_candidate(mid, true)) {
+-                        low = mid;
+-                        best = candidate_export;
+-                    } else {
+-                        high = mid - 1;
+-                    }
+-                }
+-                return Ok(best);
+-            }
+-            if let Ok(meta_export) = crate::json::export(&build_candidate(0, false)) {
+-                return Ok(meta_export);
+-            }
+-        }
+-        let mut fallback_map = self
+-            .actual_error
+-            .as_object()
+-            .cloned()
+-            .unwrap_or_default();
+-        fallback_map.insert("diagnostic_export_error".into(), json!(&first_error));
+-        if fallback_map.contains_key("complete_trace") {
+-            fallback_map.insert("complete_trace".into(), Value::Null);
+-        }
+-        let without_trace = Self {
+-            stage: self.stage,
+-            actual_error: Value::Object(fallback_map.clone()),
+-            evaluation_performed: self.evaluation_performed,
+-            events_forwarded: self.events_forwarded.clone(),
+-            completed: self.completed,
+-        };
+-        if let Ok(exported) = crate::json::export(&without_trace) {
+-            return Ok(exported);
+-        }
+-        if let Some(fb) = fallback_map
+-            .get_mut("failure_boundary")
+-            .and_then(Value::as_object_mut)
+-        {
+-            fb.remove("before");
+-            fb.remove("after");
+-        }
+-        let compact_boundary = Self {
+-            stage: self.stage,
+-            actual_error: Value::Object(fallback_map),
+-            evaluation_performed: self.evaluation_performed,
+-            events_forwarded: self.events_forwarded.clone(),
+-            completed: self.completed,
+-        };
+-        crate::json::export(&compact_boundary)
+     }
+     fn core(stage: &'static str, error: crate::Error) -> Self {
+         Self { stage, actual_error:json!(error), evaluation_performed:false,
+@@ -410,21 +269,19 @@
+     } else {
+         ("parameter-free", vec![], vec![])
+     };
+-    // Each branch owns exactly one admission/image pair. Observe mode consumes
+-    // that same shared preparation through record_step; no second admission.
++    // Each branch owns exactly one admission/image pair. In observe mode the
++    // pair comes only from run_scalar_action, never a separate first preparation.
+     let (preparation, admission, observation) = if observe {
+-        let prepared = prepare_scalar_action_host(&program, action_index, &inputs, &consumer)
++        let mut sink = |_event: &StepEventC| {};
++        let run = run_scalar_action(&program, action_index, &inputs, &consumer, &mut sink)
+             .map_err(CompileFailure::consumer)?;
+-        let (run, complete_trace) = core_observation::run(prepared)?;
+-        let actual = run.observe().map_err(|error|
+-            core_observation::attach_completed_trace(CompileFailure::consumer(error), &complete_trace))?;
++        let actual = run.observe().map_err(CompileFailure::consumer)?;
+         let admission = wire::admission(&actual);
+-        let resource = run.resource_report().map_err(|error|
+-            core_observation::attach_completed_trace(CompileFailure::consumer(error), &complete_trace))?;
++        let resource = run.resource_report().map_err(CompileFailure::consumer)?;
+         let observation = Observation::Observed {
+             evaluation_performed:true, summary:run.completed.summary.owner_wire(),
+             events_forwarded:run.completed.events_forwarded.to_string(),
+-            image:wire::image(&actual.image), resource_report:resource, complete_trace,
++            image:wire::image(&actual.image), resource_report:resource,
+         };
+         (run.preparation, admission, observation)
+     } else {
+--- a/crates/mori-core/src/sherlock/compile_artifact/complete_trace_wire.rs
++++ /dev/null
+@@ -1,564 +0,0 @@
+-//! Complete output-only owned snapshots and bounded UTF-8 wire writer.
+-//! Top-level containers (`HostSnapshot`, `AdmissionSnapshot`, `ProgramSnapshot`,
+-//! `ImageSnapshot`, `LayoutSnapshot`, normalized `StepHostSnapshot`
+-//! `{"image": ...}`, `CompleteStepRecord`, and `TerminalBoundary`) stream
+-//! field-by-field and slice-element-by-element into `BoundedJsonWriter`, while
+-//! `BoundedJsonWriter::write_owner_wire` materializes bounded single-row/leaf
+-//! `Value`s via `OwnerWire::owner_wire` after pre-checking `buf.len() < active_limit`.
+-//! Enforces `admission.bounds.serialization_bytes` per projection (`0` is a
+-//! real zero bound) and cumulative trace bounds validated through
+-//! `crate::json::parse_limited` without parallel trait duplication.
+-//! No import, semantic validation, native encoding or authenticity claim.
+-use serde_json::{Value, json};
+-use crate::sherlock::helper_machine::complete_observation as obs;
+-use crate::sherlock::helper_machine::shared::host_implied_prefix::SegBase;
+-use super::wire::OwnerWire;
+-
+-/// Versioned complete-trace wire format: `initial` and `returned` carry full
+-/// `HostSnapshot` (`{"admission": ..., "image": ...}`), while intermediate
+-/// `records[i].before/after` and `terminal.before/after` carry normalized
+-/// `StepHostSnapshot` (`{"image": ...}`) sharing `initial["admission"]`.
+-pub const TRACE_FORMAT: &str = "sherlock-core1-complete-trace/2";
+-
+-/// Dual serialization budget contract recorded in `complete_trace["serialization_budget"]`:
+-/// per-projection capacity is `admission.bounds.serialization_bytes`; cumulative
+-/// whole-trace capacity is `derive_trace_serialization_budget(admission.bounds)`;
+-/// step/terminal boundaries use `image-only-shared-admission`.
+-pub const TRACE_SERIALIZATION_BUDGET: &str = "per_projection:admission.bounds.serialization_bytes;whole_trace:derive_trace_serialization_budget(admission.bounds);step_boundaries:image-only-shared-admission";
+-
+-impl OwnerWire for SegBase { fn owner_wire(&self) -> Value {
+-    json!({"active":self.active().owner_wire(),"alloc":self.alloc().owner_wire(),
+-        "consumed_work":self.consumed_work().owner_wire()})
+-} }
+-impl OwnerWire for obs::WidthsSnapshot { fn owner_wire(&self)->Value {
+-let obs::WidthsSnapshot { index_widths, counter_widths, record_widths } = self;
+-json!({"index_widths":index_widths.owner_wire(),"counter_widths":counter_widths.owner_wire(),"record_widths":record_widths.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::LayoutSnapshot { fn owner_wire(&self)->Value {
+-let obs::LayoutSnapshot { layout_version, field_id, widths, scalar_layout_id, bounds, capacities, boundary_capacities_present } = self;
+-json!({"layout_version":layout_version.owner_wire(),"field_id":field_id.owner_wire(),"widths":widths.owner_wire(),"scalar_layout_id":scalar_layout_id.owner_wire(),"bounds":bounds.owner_wire(),"capacities":capacities.owner_wire(),"boundary_capacities_present":boundary_capacities_present.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::ExpressionSnapshot { fn owner_wire(&self)->Value {
+-match self {
+-Self::Literal{constant} => json!({"Literal":{"constant":constant.owner_wire()}}),
+-Self::Var{binder} => json!({"Var":{"binder":binder.owner_wire()}}),
+-Self::Let{binder,value,body} => json!({"Let":{"binder":binder.owner_wire(),"value":value.owner_wire(),"body":body.owner_wire()}}),
+-Self::Binary{op,left,right} => json!({"Binary":{"op":op.owner_wire(),"left":left.owner_wire(),"right":right.owner_wire()}}),
+-Self::Unary{op,operand} => json!({"Unary":{"op":op.owner_wire(),"operand":operand.owner_wire()}}),
+-Self::If{cond,then_expr,else_expr} => json!({"If":{"cond":cond.owner_wire(),"then_expr":then_expr.owner_wire(),"else_expr":else_expr.owner_wire()}}),
+-Self::Call{function_name,args} => json!({"Call":{"function_name":function_name.owner_wire(),"args":args.owner_wire()}}),
+-Self::Match{scrutinee,arms,plan} => json!({"Match":{"scrutinee":scrutinee.owner_wire(),"arms":arms.owner_wire(),"plan":plan.owner_wire()}}),
+-Self::Construct{type_id,ctor_id,fields,constant} => json!({"Construct":{"type_id":type_id.owner_wire(),"ctor_id":ctor_id.owner_wire(),"fields":fields.owner_wire(),"constant":constant.owner_wire()}}),
+-}
+-} }
+-
+-impl OwnerWire for obs::ConstFieldsSnapshot { fn owner_wire(&self)->Value {
+-let obs::ConstFieldsSnapshot { start, len } = self;
+-json!({"start":start.owner_wire(),"len":len.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::DataFieldsSnapshot { fn owner_wire(&self)->Value {
+-let obs::DataFieldsSnapshot { start, len } = self;
+-json!({"start":start.owner_wire(),"len":len.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::ConstantSnapshot { fn owner_wire(&self)->Value {
+-match self {
+-Self::U128{marker_free,n} => json!({"U128":{"marker_free":marker_free.owner_wire(),"n":n.owner_wire()}}),
+-Self::Bool{marker_free,b} => json!({"Bool":{"marker_free":marker_free.owner_wire(),"b":b.owner_wire()}}),
+-Self::Nil{marker_free} => json!({"Nil":{"marker_free":marker_free.owner_wire()}}),
+-Self::Cons{marker_free,fields} => json!({"Cons":{"marker_free":marker_free.owner_wire(),"fields":fields.owner_wire()}}),
+-Self::Leaf{marker_free,fields} => json!({"Leaf":{"marker_free":marker_free.owner_wire(),"fields":fields.owner_wire()}}),
+-Self::Branch{marker_free,fields} => json!({"Branch":{"marker_free":marker_free.owner_wire(),"fields":fields.owner_wire()}}),
+-Self::Constructor{marker_free,type_id,ctor_id,fields} => json!({"Constructor":{"marker_free":marker_free.owner_wire(),"type_id":type_id.owner_wire(),"ctor_id":ctor_id.owner_wire(),"fields":fields.owner_wire()}}),
+-Self::U128OutOfRange{marker_free} => json!({"U128OutOfRange":{"marker_free":marker_free.owner_wire()}}),
+-}
+-} }
+-
+-impl OwnerWire for obs::DataSnapshot { fn owner_wire(&self)->Value {
+-match self {
+-Self::U128{n} => json!({"U128":{"n":n.owner_wire()}}),
+-Self::Bool{b} => json!({"Bool":{"b":b.owner_wire()}}),
+-Self::Nil => json!("Nil"),
+-Self::Cons{fields} => json!({"Cons":{"fields":fields.owner_wire()}}),
+-Self::Leaf{fields} => json!({"Leaf":{"fields":fields.owner_wire()}}),
+-Self::Branch{fields} => json!({"Branch":{"fields":fields.owner_wire()}}),
+-Self::Constructor{type_id,ctor_id,fields} => json!({"Constructor":{"type_id":type_id.owner_wire(),"ctor_id":ctor_id.owner_wire(),"fields":fields.owner_wire()}}),
+-}
+-} }
+-
+-impl OwnerWire for obs::ProgramSnapshot { fn owner_wire(&self)->Value {
+-let obs::ProgramSnapshot { entry, expressions, occurrences, occurrence_paths, children, functions, parameters, arms, patterns, pattern_children, types, type_args, constructors, ctor_fields, decl_param_counts, decl_ctor_counts, decl_templates, plan_nodes, plan_cases, field_paths, constants, constant_fields, names } = self;
+-json!({"entry":entry.owner_wire(),"expressions":expressions.owner_wire(),"occurrences":occurrences.owner_wire(),"occurrence_paths":occurrence_paths.owner_wire(),"children":children.owner_wire(),"functions":functions.owner_wire(),"parameters":parameters.owner_wire(),"arms":arms.owner_wire(),"patterns":patterns.owner_wire(),"pattern_children":pattern_children.owner_wire(),"types":types.owner_wire(),"type_args":type_args.owner_wire(),"constructors":constructors.owner_wire(),"ctor_fields":ctor_fields.owner_wire(),"decl_param_counts":decl_param_counts.owner_wire(),"decl_ctor_counts":decl_ctor_counts.owner_wire(),"decl_templates":decl_templates.owner_wire(),"plan_nodes":plan_nodes.owner_wire(),"plan_cases":plan_cases.owner_wire(),"field_paths":field_paths.owner_wire(),"constants":constants.owner_wire(),"constant_fields":constant_fields.owner_wire(),"names":names.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::AdmissionSnapshot { fn owner_wire(&self)->Value {
+-let obs::AdmissionSnapshot { identity, bounds, view, layout } = self;
+-json!({"identity":identity.owner_wire(),"bounds":bounds.owner_wire(),"view":view.owner_wire(),"layout":layout.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::ImageSnapshot { fn owner_wire(&self)->Value {
+-let obs::ImageSnapshot { run_id, control, control_origin, env_root, stack_limit, outcome, initial_fuel, remaining_work, consumed_work, helper_work, helper_visits, reference_cursor, alloc, active, helper, result, seg_base, data, data_fields, env, frames, tasks, value_slots } = self;
+-json!({"run_id":run_id.owner_wire(),"control":control.owner_wire(),"control_origin":control_origin.owner_wire(),"env_root":env_root.owner_wire(),"stack_limit":stack_limit.owner_wire(),"outcome":outcome.owner_wire(),"initial_fuel":initial_fuel.owner_wire(),"remaining_work":remaining_work.owner_wire(),"consumed_work":consumed_work.owner_wire(),"helper_work":helper_work.owner_wire(),"helper_visits":helper_visits.owner_wire(),"reference_cursor":reference_cursor.owner_wire(),"alloc":alloc.owner_wire(),"active":active.owner_wire(),"helper":helper.owner_wire(),"result":result.owner_wire(),"seg_base":seg_base.owner_wire(),"data":data.owner_wire(),"data_fields":data_fields.owner_wire(),"env":env.owner_wire(),"frames":frames.owner_wire(),"tasks":tasks.owner_wire(),"value_slots":value_slots.owner_wire()})
+-} }
+-
+-impl OwnerWire for obs::HostSnapshot { fn owner_wire(&self)->Value {
+-let obs::HostSnapshot { admission, image } = self;
+-json!({"admission":admission.owner_wire(),"image":image.owner_wire()})
+-} }
+-
+-/// Lossless step-boundary projection: `AdmissionSnapshot` is immutable across all
+-/// micro-steps of a run (`complete_observation::record_step` takes `&Admitted`) and
+-/// is retained in full on `complete_trace["initial"]` and `complete_trace["returned"]`.
+-pub(super) fn step_host_snapshot_wire(snapshot: &obs::HostSnapshot) -> Value {
+-    json!({"image": snapshot.image.owner_wire()})
+-}
+-
+-/// Deterministic lossless reconstruction of a full `HostSnapshot` wire object
+-/// (`{"admission": ..., "image": ...}`) from the trace's shared `initial["admission"]`
+-/// and any normalized step or terminal boundary (`{"image": ...}`).
+-pub fn reconstruct_step_host_snapshot(
+-    shared_admission: &Value,
+-    step_boundary: &Value,
+-) -> Value {
+-    json!({
+-        "admission": shared_admission,
+-        "image": step_boundary["image"],
+-    })
+-}
+-
+-impl OwnerWire for obs::CompleteStepRecord { fn owner_wire(&self)->Value {
+-let obs::CompleteStepRecord { before, event, after } = self;
+-json!({"before":step_host_snapshot_wire(before),"event":event.owner_wire(),"after":step_host_snapshot_wire(after)})
+-} }
+-
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub(super) enum BoundedWireError {
+-    SerializationLimitExceeded { limit: usize },
+-    OutputNotUtf8,
+-    Serialize { field: &'static str, message: String },
+-}
+-
+-/// Checked UTF-8 byte writer enforcing both per-projection capacity
+-/// (`admission.bounds.serialization_bytes`) via `with_projection_budget` and
+-/// cumulative trace capacity (`limit`). Zero is a real zero bound (not
+-/// unlimited). Every write checks cumulative byte length with `checked_add`
+-/// against `active_limit` before extending `buf`.
+-#[derive(Debug, Clone, PartialEq, Eq)]
+-pub(super) struct BoundedJsonWriter {
+-    buf: Vec<u8>,
+-    limit: usize,
+-    active_limit: usize,
+-    exceeded_limit: Option<usize>,
+-}
+-
+-impl BoundedJsonWriter {
+-    pub(super) fn new(limit: usize) -> Self {
+-        Self {
+-            buf: Vec::new(),
+-            limit,
+-            active_limit: limit,
+-            exceeded_limit: None,
+-        }
+-    }
+-    pub(super) fn limit(&self) -> usize {
+-        self.limit
+-    }
+-    pub(super) fn as_bytes(&self) -> &[u8] {
+-        &self.buf
+-    }
+-    pub(super) fn checkpoint(&self) -> usize {
+-        self.buf.len()
+-    }
+-    pub(super) fn rollback(&mut self, checkpoint: usize) {
+-        self.buf.truncate(checkpoint);
+-        self.active_limit = self.limit;
+-        self.exceeded_limit = None;
+-    }
+-    pub(super) fn limit_error(&self) -> BoundedWireError {
+-        BoundedWireError::SerializationLimitExceeded {
+-            limit: self.exceeded_limit.unwrap_or(self.active_limit),
+-        }
+-    }
+-    pub(super) fn with_projection_budget<F>(
+-        &mut self,
+-        per_projection_limit: usize,
+-        f: F,
+-    ) -> Result<(), BoundedWireError>
+-    where
+-        F: FnOnce(&mut Self) -> Result<(), BoundedWireError>,
+-    {
+-        if per_projection_limit == 0 {
+-            self.exceeded_limit = Some(0);
+-            return Err(self.limit_error());
+-        }
+-        let prev_active = self.active_limit;
+-        let projection_ceiling = self.buf.len().saturating_add(per_projection_limit);
+-        self.active_limit = prev_active.min(projection_ceiling);
+-        let result = f(self);
+-        self.active_limit = prev_active;
+-        if result.is_err() && self.exceeded_limit.is_some() {
+-            if projection_ceiling <= prev_active {
+-                self.exceeded_limit = Some(per_projection_limit);
+-            } else {
+-                self.exceeded_limit = Some(prev_active);
+-            }
+-            return Err(self.limit_error());
+-        }
+-        result
+-    }
+-    pub(super) fn write_raw(&mut self, bytes: &[u8]) -> Result<(), BoundedWireError> {
+-        std::io::Write::write_all(self, bytes).map_err(|_| self.limit_error())
+-    }
+-    pub(super) fn write_serialize<T: ?Sized + serde::Serialize>(
+-        &mut self,
+-        value: &T,
+-        field: &'static str,
+-    ) -> Result<(), BoundedWireError> {
+-        if self.buf.len() >= self.active_limit {
+-            if self.exceeded_limit.is_none() {
+-                self.exceeded_limit = Some(self.active_limit);
+-            }
+-            return Err(self.limit_error());
+-        }
+-        serde_json::to_writer(&mut *self, value).map_err(|error| {
+-            if self.exceeded_limit.is_some() {
+-                self.limit_error()
+-            } else {
+-                BoundedWireError::Serialize { field, message: error.to_string() }
+-            }
+-        })
+-    }
+-    pub(super) fn write_owner_wire<T: OwnerWire>(
+-        &mut self,
+-        value: &T,
+-        field: &'static str,
+-    ) -> Result<(), BoundedWireError> {
+-        if self.buf.len() >= self.active_limit {
+-            if self.exceeded_limit.is_none() {
+-                self.exceeded_limit = Some(self.active_limit);
+-            }
+-            return Err(self.limit_error());
+-        }
+-        let encoded = value.owner_wire();
+-        self.write_serialize(&encoded, field)
+-    }
+-    pub(super) fn write_owner_wire_slice<T: OwnerWire>(
+-        &mut self,
+-        slice: &[T],
+-        field: &'static str,
+-    ) -> Result<(), BoundedWireError> {
+-        self.write_raw(b"[")?;
+-        for (idx, item) in slice.iter().enumerate() {
+-            if idx > 0 {
+-                self.write_raw(b",")?;
+-            }
+-            self.write_owner_wire(item, field)?;
+-        }
+-        self.write_raw(b"]")
+-    }
+-    pub(super) fn write_layout_snapshot(
+-        &mut self,
+-        layout: &obs::LayoutSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        let obs::LayoutSnapshot {
+-            layout_version,
+-            field_id,
+-            widths,
+-            scalar_layout_id,
+-            bounds,
+-            capacities,
+-            boundary_capacities_present,
+-        } = layout;
+-        self.write_raw(b"{\"boundary_capacities_present\":")?;
+-        self.write_owner_wire(boundary_capacities_present, "layout.boundary_capacities_present")?;
+-        self.write_raw(b",\"bounds\":")?;
+-        self.write_owner_wire(bounds, "layout.bounds")?;
+-        self.write_raw(b",\"capacities\":")?;
+-        self.write_owner_wire(capacities, "layout.capacities")?;
+-        self.write_raw(b",\"field_id\":")?;
+-        self.write_owner_wire(field_id, "layout.field_id")?;
+-        self.write_raw(b",\"layout_version\":")?;
+-        self.write_owner_wire(layout_version, "layout.layout_version")?;
+-        self.write_raw(b",\"scalar_layout_id\":")?;
+-        self.write_owner_wire(scalar_layout_id, "layout.scalar_layout_id")?;
+-        self.write_raw(b",\"widths\":")?;
+-        self.write_owner_wire(widths, "layout.widths")?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_program_snapshot(
+-        &mut self,
+-        view: &obs::ProgramSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        let obs::ProgramSnapshot {
+-            entry,
+-            expressions,
+-            occurrences,
+-            occurrence_paths,
+-            children,
+-            functions,
+-            parameters,
+-            arms,
+-            patterns,
+-            pattern_children,
+-            types,
+-            type_args,
+-            constructors,
+-            ctor_fields,
+-            decl_param_counts,
+-            decl_ctor_counts,
+-            decl_templates,
+-            plan_nodes,
+-            plan_cases,
+-            field_paths,
+-            constants,
+-            constant_fields,
+-            names,
+-        } = view;
+-        self.write_raw(b"{\"arms\":")?;
+-        self.write_owner_wire_slice(arms, "view.arms")?;
+-        self.write_raw(b",\"children\":")?;
+-        self.write_owner_wire_slice(children, "view.children")?;
+-        self.write_raw(b",\"constant_fields\":")?;
+-        self.write_owner_wire_slice(constant_fields, "view.constant_fields")?;
+-        self.write_raw(b",\"constants\":")?;
+-        self.write_owner_wire_slice(constants, "view.constants")?;
+-        self.write_raw(b",\"constructors\":")?;
+-        self.write_owner_wire_slice(constructors, "view.constructors")?;
+-        self.write_raw(b",\"ctor_fields\":")?;
+-        self.write_owner_wire_slice(ctor_fields, "view.ctor_fields")?;
+-        self.write_raw(b",\"decl_ctor_counts\":")?;
+-        self.write_owner_wire_slice(decl_ctor_counts, "view.decl_ctor_counts")?;
+-        self.write_raw(b",\"decl_param_counts\":")?;
+-        self.write_owner_wire_slice(decl_param_counts, "view.decl_param_counts")?;
+-        self.write_raw(b",\"decl_templates\":")?;
+-        self.write_owner_wire_slice(decl_templates, "view.decl_templates")?;
+-        self.write_raw(b",\"entry\":")?;
+-        self.write_owner_wire(entry, "view.entry")?;
+-        self.write_raw(b",\"expressions\":")?;
+-        self.write_owner_wire_slice(expressions, "view.expressions")?;
+-        self.write_raw(b",\"field_paths\":")?;
+-        self.write_owner_wire_slice(field_paths, "view.field_paths")?;
+-        self.write_raw(b",\"functions\":")?;
+-        self.write_owner_wire_slice(functions, "view.functions")?;
+-        self.write_raw(b",\"names\":")?;
+-        self.write_owner_wire_slice(names, "view.names")?;
+-        self.write_raw(b",\"occurrence_paths\":")?;
+-        self.write_owner_wire_slice(occurrence_paths, "view.occurrence_paths")?;
+-        self.write_raw(b",\"occurrences\":")?;
+-        self.write_owner_wire_slice(occurrences, "view.occurrences")?;
+-        self.write_raw(b",\"parameters\":")?;
+-        self.write_owner_wire_slice(parameters, "view.parameters")?;
+-        self.write_raw(b",\"pattern_children\":")?;
+-        self.write_owner_wire_slice(pattern_children, "view.pattern_children")?;
+-        self.write_raw(b",\"patterns\":")?;
+-        self.write_owner_wire_slice(patterns, "view.patterns")?;
+-        self.write_raw(b",\"plan_cases\":")?;
+-        self.write_owner_wire_slice(plan_cases, "view.plan_cases")?;
+-        self.write_raw(b",\"plan_nodes\":")?;
+-        self.write_owner_wire_slice(plan_nodes, "view.plan_nodes")?;
+-        self.write_raw(b",\"type_args\":")?;
+-        self.write_owner_wire_slice(type_args, "view.type_args")?;
+-        self.write_raw(b",\"types\":")?;
+-        self.write_owner_wire_slice(types, "view.types")?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_admission_snapshot(
+-        &mut self,
+-        admission: &obs::AdmissionSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        let obs::AdmissionSnapshot {
+-            identity,
+-            bounds,
+-            view,
+-            layout,
+-        } = admission;
+-        self.write_raw(b"{\"bounds\":")?;
+-        self.write_owner_wire(bounds, "admission.bounds")?;
+-        self.write_raw(b",\"identity\":")?;
+-        self.write_owner_wire(identity, "admission.identity")?;
+-        self.write_raw(b",\"layout\":")?;
+-        self.write_layout_snapshot(layout)?;
+-        self.write_raw(b",\"view\":")?;
+-        self.write_program_snapshot(view)?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_image_snapshot(
+-        &mut self,
+-        image: &obs::ImageSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        let obs::ImageSnapshot {
+-            run_id,
+-            control,
+-            control_origin,
+-            env_root,
+-            stack_limit,
+-            outcome,
+-            initial_fuel,
+-            remaining_work,
+-            consumed_work,
+-            helper_work,
+-            helper_visits,
+-            reference_cursor,
+-            alloc,
+-            active,
+-            helper,
+-            result,
+-            seg_base,
+-            data,
+-            data_fields,
+-            env,
+-            frames,
+-            tasks,
+-            value_slots,
+-        } = image;
+-        self.write_raw(b"{\"active\":")?;
+-        self.write_owner_wire(active, "image.active")?;
+-        self.write_raw(b",\"alloc\":")?;
+-        self.write_owner_wire(alloc, "image.alloc")?;
+-        self.write_raw(b",\"consumed_work\":")?;
+-        self.write_owner_wire(consumed_work, "image.consumed_work")?;
+-        self.write_raw(b",\"control\":")?;
+-        self.write_owner_wire(control, "image.control")?;
+-        self.write_raw(b",\"control_origin\":")?;
+-        self.write_owner_wire(control_origin, "image.control_origin")?;
+-        self.write_raw(b",\"data\":")?;
+-        self.write_owner_wire_slice(data, "image.data")?;
+-        self.write_raw(b",\"data_fields\":")?;
+-        self.write_owner_wire_slice(data_fields, "image.data_fields")?;
+-        self.write_raw(b",\"env\":")?;
+-        self.write_owner_wire_slice(env, "image.env")?;
+-        self.write_raw(b",\"env_root\":")?;
+-        self.write_owner_wire(env_root, "image.env_root")?;
+-        self.write_raw(b",\"frames\":")?;
+-        self.write_owner_wire_slice(frames, "image.frames")?;
+-        self.write_raw(b",\"helper\":")?;
+-        self.write_owner_wire(helper, "image.helper")?;
+-        self.write_raw(b",\"helper_visits\":")?;
+-        self.write_owner_wire(helper_visits, "image.helper_visits")?;
+-        self.write_raw(b",\"helper_work\":")?;
+-        self.write_owner_wire(helper_work, "image.helper_work")?;
+-        self.write_raw(b",\"initial_fuel\":")?;
+-        self.write_owner_wire(initial_fuel, "image.initial_fuel")?;
+-        self.write_raw(b",\"outcome\":")?;
+-        self.write_owner_wire(outcome, "image.outcome")?;
+-        self.write_raw(b",\"reference_cursor\":")?;
+-        self.write_owner_wire(reference_cursor, "image.reference_cursor")?;
+-        self.write_raw(b",\"remaining_work\":")?;
+-        self.write_owner_wire(remaining_work, "image.remaining_work")?;
+-        self.write_raw(b",\"result\":")?;
+-        self.write_owner_wire(result, "image.result")?;
+-        self.write_raw(b",\"run_id\":")?;
+-        self.write_owner_wire(run_id, "image.run_id")?;
+-        self.write_raw(b",\"seg_base\":")?;
+-        self.write_owner_wire(seg_base, "image.seg_base")?;
+-        self.write_raw(b",\"stack_limit\":")?;
+-        self.write_owner_wire(stack_limit, "image.stack_limit")?;
+-        self.write_raw(b",\"tasks\":")?;
+-        self.write_owner_wire_slice(tasks, "image.tasks")?;
+-        self.write_raw(b",\"value_slots\":")?;
+-        self.write_owner_wire_slice(value_slots, "image.value_slots")?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_host_snapshot(
+-        &mut self,
+-        snapshot: &obs::HostSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        self.write_raw(b"{\"admission\":")?;
+-        self.write_admission_snapshot(&snapshot.admission)?;
+-        self.write_raw(b",\"image\":")?;
+-        self.write_image_snapshot(&snapshot.image)?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_step_host_snapshot(
+-        &mut self,
+-        snapshot: &obs::HostSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        self.write_raw(b"{\"image\":")?;
+-        self.write_image_snapshot(&snapshot.image)?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_step_record(
+-        &mut self,
+-        record: &obs::CompleteStepRecord,
+-    ) -> Result<(), BoundedWireError> {
+-        self.write_raw(b"{\"after\":")?;
+-        self.write_step_host_snapshot(&record.after)?;
+-        self.write_raw(b",\"before\":")?;
+-        self.write_step_host_snapshot(&record.before)?;
+-        self.write_raw(b",\"event\":")?;
+-        self.write_owner_wire(&record.event, "record.event")?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn write_terminal_boundary(
+-        &mut self,
+-        before: &obs::HostSnapshot,
+-        after: &obs::HostSnapshot,
+-    ) -> Result<(), BoundedWireError> {
+-        self.write_raw(b"{\"after\":")?;
+-        self.write_step_host_snapshot(after)?;
+-        self.write_raw(b",\"before\":")?;
+-        self.write_step_host_snapshot(before)?;
+-        self.write_raw(b"}")
+-    }
+-    pub(super) fn parse_value(&self, field: &'static str) -> Result<Value, BoundedWireError> {
+-        if self.exceeded_limit.is_some() {
+-            return Err(self.limit_error());
+-        }
+-        parse_bounded_slice(&self.buf, self.limit, field)
+-    }
+-    pub(super) fn into_value(self, field: &'static str) -> Result<Value, BoundedWireError> {
+-        self.parse_value(field)
+-    }
+-}
+-
+-impl std::io::Write for BoundedJsonWriter {
+-    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+-        self.write_all(bytes)?;
+-        Ok(bytes.len())
+-    }
+-    fn write_all(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+-        let next = self
+-            .buf
+-            .len()
+-            .checked_add(bytes.len())
+-            .filter(|n| *n <= self.active_limit);
+-        match next {
+-            Some(_) => {
+-                self.buf.extend_from_slice(bytes);
+-                Ok(())
+-            }
+-            None => {
+-                if self.exceeded_limit.is_none() {
+-                    self.exceeded_limit = Some(self.active_limit);
+-                }
+-                Err(std::io::Error::new(
+-                    std::io::ErrorKind::Other,
+-                    "complete trace serialization limit exceeded",
+-                ))
+-            }
+-        }
+-    }
+-    fn flush(&mut self) -> std::io::Result<()> {
+-        Ok(())
+-    }
+-}
+-
+-pub(super) fn parse_bounded_slice(
+-    bytes: &[u8],
+-    limit: usize,
+-    field: &'static str,
+-) -> Result<Value, BoundedWireError> {
+-    let text = std::str::from_utf8(bytes).map_err(|_| BoundedWireError::OutputNotUtf8)?;
+-    crate::json::parse_limited(
+-        text,
+-        limit,
+-        "complete trace serialization limit exceeded",
+-    )
+-    .map_err(|error| BoundedWireError::Serialize {
+-        field,
+-        message: error.message,
+-    })
+-}
+--- a/crates/mori-core/src/sherlock/compile_artifact/core_observation.rs
++++ /dev/null
+@@ -1,1384 +0,0 @@
+-//! Public Core/1 complete diagnostic records around the unchanged owner API.
+-//! Separates per-projection capacity (`admission.bounds.serialization_bytes`,
+-//! where `0` is a real zero bound) from the cumulative trace/envelope ceiling
+-//! (`derive_trace_serialization_budget`, bounded by `crate::json`'s 1 MiB /
+-//! 65,536-node / 32-depth limits via `crate::json::parse_limited`) without
+-//! retaining duplicate `CompleteStepRecord` vectors alongside the byte buffer.
+-use serde_json::{json, Value};
+-use crate::sherlock::helper_machine::complete_observation::{
+-    capture, record_step, CaptureStepError, CompleteStepRecord, HostSnapshot, ObservedStep,
+-};
+-use crate::sherlock::helper_machine::core_action_consumer::{
+-    CompletedRun, CoreActionPrepared, CoreActionRun,
+-};
+-use crate::sherlock::helper_machine::shared::{
+-    BoundsC, ExpandedStepIdC, HostViolation, RuleIdC, RunSummary, StepDisposition,
+-};
+-use super::{
+-    CompileFailure,
+-    complete_trace_wire::{
+-        BoundedJsonWriter, BoundedWireError, TRACE_FORMAT, TRACE_SERIALIZATION_BUDGET,
+-    },
+-};
+-
+-/// Canonical `crate::json` document byte ceiling (`1024 * 1024` = 1 MiB).
+-pub(super) const PUBLIC_JSON_MAX_BYTES: usize = 1024 * 1024;
+-
+-/// Derive the cumulative multi-step trace byte ceiling from the admitted
+-/// `BoundsC` (`serialization_bytes` per projection across `step_cap` steps plus
+-/// initial/returned projections) capped by `PUBLIC_JSON_MAX_BYTES`.
+-pub(super) fn derive_trace_serialization_budget(bounds: &BoundsC) -> usize {
+-    let projections = usize::try_from(bounds.step_cap)
+-        .unwrap_or(usize::MAX)
+-        .saturating_add(2);
+-    bounds
+-        .serialization_bytes
+-        .saturating_mul(projections)
+-        .min(PUBLIC_JSON_MAX_BYTES)
+-}
+-
+-const TRACE_OPEN_BEFORE_INITIAL: &[u8] =
+-    br#"{"format":"sherlock-core1-complete-trace/2","initial":"#;
+-const TRACE_AFTER_INITIAL_OPEN_RECORDS: &[u8] = br#","qualification":"actual complete owner records; no transition/native/target acceptance","records":["#;
+-const TRACE_PREFIX_CLOSE: &[u8] =
+-    br#"],"serialization_budget":"per_projection:admission.bounds.serialization_bytes;whole_trace:derive_trace_serialization_budget(admission.bounds);step_boundaries:image-only-shared-admission"}"#;
+-const TRACE_CLOSE_RECORDS_OPEN_RETURNED: &[u8] = br#"],"returned":"#;
+-const TRACE_AFTER_RETURNED_SERIALIZATION_BUDGET: &[u8] =
+-    br#","serialization_budget":"per_projection:admission.bounds.serialization_bytes;whole_trace:derive_trace_serialization_budget(admission.bounds);step_boundaries:image-only-shared-admission""#;
+-const TRACE_OPEN_TERMINAL: &[u8] = br#","terminal":"#;
+-const TRACE_CLOSE_ROOT: &[u8] = b"}";
+-
+-fn wire_error_json(error: &BoundedWireError) -> Value {
+-    match error {
+-        BoundedWireError::SerializationLimitExceeded { limit } => json!({
+-            "kind": "SerializationLimitExceeded",
+-            "limit": limit.to_string(),
+-        }),
+-        BoundedWireError::OutputNotUtf8 => json!({
+-            "kind": "OutputNotUtf8",
+-        }),
+-        BoundedWireError::Serialize { field, message } => json!({
+-            "kind": "Serialize",
+-            "field": field,
+-            "message": message,
+-        }),
+-    }
+-}
+-
+-fn bounded_wire_value<T: super::wire::OwnerWire>(
+-    value: &T,
+-    limit: usize,
+-    field: &'static str,
+-) -> Value {
+-    let mut writer = BoundedJsonWriter::new(limit);
+-    match writer
+-        .write_owner_wire(value, field)
+-        .and_then(|()| writer.into_value(field))
+-    {
+-        Ok(encoded) => encoded,
+-        Err(error) => json!({ "serialization_error": wire_error_json(&error) }),
+-    }
+-}
+-
+-#[derive(Debug)]
+-pub(super) enum BoundedFailureKind {
+-    Initial,
+-    Record {
+-        step_id: ExpandedStepIdC,
+-        rule_id: RuleIdC,
+-        disposition: StepDisposition,
+-    },
+-    Returned,
+-    Terminal {
+-        returned_checkpoint: usize,
+-    },
+-    CaptureStepBoundary {
+-        stage: &'static str,
+-        boundary_kind: &'static str,
+-        violation: HostViolation,
+-        executed_event: Option<(ExpandedStepIdC, RuleIdC, StepDisposition)>,
+-    },
+-}
+-
+-/// Typed per-projection or whole-trace serialization failure retaining the
+-/// bounded UTF-8 buffer and record checkpoints without unread snapshot fields.
+-#[derive(Debug)]
+-pub(super) struct BoundedTraceFailure {
+-    writer: BoundedJsonWriter,
+-    record_checkpoints: Vec<usize>,
+-    per_projection_limit: usize,
+-    trace_limit: usize,
+-    error: BoundedWireError,
+-    events_forwarded: u128,
+-    evaluation_performed: bool,
+-    completed: bool,
+-    kind: BoundedFailureKind,
+-}
+-
+-impl BoundedTraceFailure {
+-    fn write_envelope_with_trace(
+-        limit: usize,
+-        trace_slice: Option<&[u8]>,
+-        failure_boundary: &Value,
+-        serialization_error: Option<&Value>,
+-        violation: Option<&HostViolation>,
+-    ) -> Result<Value, BoundedWireError> {
+-        let mut env = BoundedJsonWriter::new(limit);
+-        env.write_raw(b"{\"complete_trace\":")?;
+-        match trace_slice {
+-            Some(bytes) => env.write_raw(bytes)?,
+-            None => env.write_raw(b"null")?,
+-        }
+-        env.write_raw(b",\"failure_boundary\":")?;
+-        env.write_serialize(failure_boundary, "failure_boundary")?;
+-        if let Some(ser_err) = serialization_error {
+-            env.write_raw(b",\"serialization_error\":")?;
+-            env.write_serialize(ser_err, "serialization_error")?;
+-        }
+-        if let Some(v) = violation {
+-            env.write_raw(b",\"violation\":")?;
+-            env.write_owner_wire(v, "violation")?;
+-        }
+-        env.write_raw(b"}")?;
+-        env.into_value("actual_error")
+-    }
+-
+-    pub(super) fn into_compile_failure(self) -> CompileFailure {
+-        let Self {
+-            mut writer,
+-            record_checkpoints,
+-            per_projection_limit,
+-            trace_limit,
+-            error,
+-            events_forwarded,
+-            evaluation_performed,
+-            completed,
+-            kind,
+-        } = self;
+-        let events_str = events_forwarded.to_string();
+-        let exceeded_limit = match &error {
+-            BoundedWireError::SerializationLimitExceeded { limit } => *limit,
+-            _ => per_projection_limit.min(trace_limit),
+-        };
+-        let field_limit = per_projection_limit.min(trace_limit);
+-        let ser_err = wire_error_json(&error);
+-
+-        if matches!(kind, BoundedFailureKind::Initial)
+-            || per_projection_limit == 0
+-            || trace_limit == 0
+-        {
+-            let boundary = json!({
+-                "kind": "initial-serialization-limit-exceeded",
+-                "limit": exceeded_limit.to_string(),
+-            });
+-            let actual_error = Self::write_envelope_with_trace(
+-                trace_limit,
+-                None,
+-                &boundary,
+-                Some(&ser_err),
+-                None,
+-            )
+-            .unwrap_or_else(|_| {
+-                json!({
+-                    "complete_trace": Value::Null,
+-                    "failure_boundary": boundary,
+-                    "serialization_error": ser_err,
+-                })
+-            });
+-            return CompileFailure {
+-                stage: "observation",
+-                actual_error,
+-                evaluation_performed,
+-                events_forwarded: events_str,
+-                completed,
+-            };
+-        }
+-
+-        let stage = match &kind {
+-            BoundedFailureKind::CaptureStepBoundary { stage, .. } => *stage,
+-            BoundedFailureKind::Initial
+-            | BoundedFailureKind::Record { .. }
+-            | BoundedFailureKind::Returned
+-            | BoundedFailureKind::Terminal { .. } => "observation",
+-        };
+-
+-        let try_candidate =
+-            |preserved_records: usize, trace_slice: Option<&[u8]>| -> Result<Value, BoundedWireError> {
+-                let boundary = match &kind {
+-                    BoundedFailureKind::Initial => unreachable!(),
+-                    BoundedFailureKind::Record {
+-                        step_id,
+-                        rule_id,
+-                        disposition,
+-                    } => json!({
+-                        "executed_records": &events_str,
+-                        "failed_disposition": bounded_wire_value(disposition, field_limit, "failed_disposition"),
+-                        "failed_rule_id": bounded_wire_value(rule_id, field_limit, "failed_rule_id"),
+-                        "failed_step_id": bounded_wire_value(step_id, field_limit, "failed_step_id"),
+-                        "kind": "record-serialization-limit-exceeded",
+-                        "limit": exceeded_limit.to_string(),
+-                        "preserved_records": preserved_records.to_string(),
+-                    }),
+-                    BoundedFailureKind::Returned => json!({
+-                        "executed_records": &events_str,
+-                        "kind": "returned-serialization-limit-exceeded",
+-                        "limit": exceeded_limit.to_string(),
+-                        "preserved_records": preserved_records.to_string(),
+-                    }),
+-                    BoundedFailureKind::Terminal { .. } => json!({
+-                        "executed_records": &events_str,
+-                        "kind": "terminal-serialization-limit-exceeded",
+-                        "limit": exceeded_limit.to_string(),
+-                        "preserved_records": preserved_records.to_string(),
+-                    }),
+-                    BoundedFailureKind::CaptureStepBoundary {
+-                        boundary_kind,
+-                        executed_event,
+-                        ..
+-                    } => match executed_event {
+-                        Some((step_id, rule_id, disposition)) => json!({
+-                            "event_present": true,
+-                            "executed_records": &events_str,
+-                            "failed_disposition": bounded_wire_value(disposition, field_limit, "failed_disposition"),
+-                            "failed_rule_id": bounded_wire_value(rule_id, field_limit, "failed_rule_id"),
+-                            "failed_step_id": bounded_wire_value(step_id, field_limit, "failed_step_id"),
+-                            "kind": boundary_kind,
+-                            "limit": exceeded_limit.to_string(),
+-                            "preserved_records": preserved_records.to_string(),
+-                            "serialization_error": &ser_err,
+-                        }),
+-                        None => json!({
+-                            "event_present": false,
+-                            "executed_records": &events_str,
+-                            "kind": boundary_kind,
+-                            "limit": exceeded_limit.to_string(),
+-                            "preserved_records": preserved_records.to_string(),
+-                            "serialization_error": &ser_err,
+-                        }),
+-                    },
+-                };
+-
+-                match &kind {
+-                    BoundedFailureKind::CaptureStepBoundary { violation, .. } => {
+-                        Self::write_envelope_with_trace(
+-                            trace_limit,
+-                            trace_slice,
+-                            &boundary,
+-                            None,
+-                            Some(violation),
+-                        )
+-                    }
+-                    _ => Self::write_envelope_with_trace(
+-                        trace_limit,
+-                        trace_slice,
+-                        &boundary,
+-                        Some(&ser_err),
+-                        None,
+-                    ),
+-                }
+-            };
+-
+-        if let BoundedFailureKind::Terminal { returned_checkpoint } = kind {
+-            if returned_checkpoint > 0 {
+-                let all_recs = record_checkpoints.len().saturating_sub(1);
+-                writer.rollback(returned_checkpoint);
+-                if writer.write_raw(TRACE_CLOSE_ROOT).is_ok() {
+-                    if let Ok(actual_error) = try_candidate(all_recs, Some(writer.as_bytes())) {
+-                        return CompileFailure {
+-                            stage,
+-                            actual_error,
+-                            evaluation_performed,
+-                            events_forwarded: events_str,
+-                            completed,
+-                        };
+-                    }
+-                }
+-            }
+-        }
+-
+-        for (idx, &cp) in record_checkpoints.iter().enumerate().rev() {
+-            writer.rollback(cp);
+-            if writer.write_raw(TRACE_PREFIX_CLOSE).is_ok() {
+-                if let Ok(actual_error) = try_candidate(idx, Some(writer.as_bytes())) {
+-                    return CompileFailure {
+-                        stage,
+-                        actual_error,
+-                        evaluation_performed,
+-                        events_forwarded: events_str,
+-                        completed,
+-                    };
+-                }
+-            }
+-        }
+-
+-        if let Ok(actual_error) = try_candidate(0, None) {
+-            return CompileFailure {
+-                stage,
+-                actual_error,
+-                evaluation_performed,
+-                events_forwarded: events_str,
+-                completed,
+-            };
+-        }
+-
+-        let fallback_error = match &kind {
+-            BoundedFailureKind::CaptureStepBoundary {
+-                boundary_kind,
+-                violation,
+-                executed_event,
+-                ..
+-            } => {
+-                let boundary = match executed_event {
+-                    Some((step_id, rule_id, disposition)) => json!({
+-                        "event_present": true,
+-                        "executed_records": &events_str,
+-                        "failed_disposition": bounded_wire_value(disposition, field_limit, "failed_disposition"),
+-                        "failed_rule_id": bounded_wire_value(rule_id, field_limit, "failed_rule_id"),
+-                        "failed_step_id": bounded_wire_value(step_id, field_limit, "failed_step_id"),
+-                        "kind": boundary_kind,
+-                        "limit": exceeded_limit.to_string(),
+-                        "preserved_records": "0",
+-                        "serialization_error": &ser_err,
+-                    }),
+-                    None => json!({
+-                        "event_present": false,
+-                        "executed_records": &events_str,
+-                        "kind": boundary_kind,
+-                        "limit": exceeded_limit.to_string(),
+-                        "preserved_records": "0",
+-                        "serialization_error": &ser_err,
+-                    }),
+-                };
+-                json!({
+-                    "complete_trace": Value::Null,
+-                    "failure_boundary": boundary,
+-                    "violation": bounded_wire_value(violation, field_limit, "violation"),
+-                })
+-            }
+-            BoundedFailureKind::Record {
+-                step_id,
+-                rule_id,
+-                disposition,
+-            } => json!({
+-                "complete_trace": Value::Null,
+-                "failure_boundary": {
+-                    "executed_records": &events_str,
+-                    "failed_disposition": bounded_wire_value(disposition, field_limit, "failed_disposition"),
+-                    "failed_rule_id": bounded_wire_value(rule_id, field_limit, "failed_rule_id"),
+-                    "failed_step_id": bounded_wire_value(step_id, field_limit, "failed_step_id"),
+-                    "kind": "record-serialization-limit-exceeded",
+-                    "limit": exceeded_limit.to_string(),
+-                    "preserved_records": "0",
+-                },
+-                "serialization_error": ser_err,
+-            }),
+-            BoundedFailureKind::Returned => json!({
+-                "complete_trace": Value::Null,
+-                "failure_boundary": {
+-                    "executed_records": &events_str,
+-                    "kind": "returned-serialization-limit-exceeded",
+-                    "limit": exceeded_limit.to_string(),
+-                    "preserved_records": "0",
+-                },
+-                "serialization_error": ser_err,
+-            }),
+-            BoundedFailureKind::Terminal { .. } => json!({
+-                "complete_trace": Value::Null,
+-                "failure_boundary": {
+-                    "executed_records": &events_str,
+-                    "kind": "terminal-serialization-limit-exceeded",
+-                    "limit": exceeded_limit.to_string(),
+-                    "preserved_records": "0",
+-                },
+-                "serialization_error": ser_err,
+-            }),
+-            BoundedFailureKind::Initial => unreachable!(),
+-        };
+-
+-        CompileFailure {
+-            stage,
+-            actual_error: fallback_error,
+-            evaluation_performed,
+-            events_forwarded: events_str,
+-            completed,
+-        }
+-    }
+-}
+-
+-pub(super) struct Trace {
+-    writer: BoundedJsonWriter,
+-    per_projection_limit: usize,
+-    trace_limit: usize,
+-    checkpoint: usize,
+-    record_checkpoints: Vec<usize>,
+-}
+-
+-impl Trace {
+-    pub(super) fn begin(initial: HostSnapshot) -> Result<Self, BoundedTraceFailure> {
+-        let per_projection_limit = initial.admission.bounds.serialization_bytes;
+-        let trace_limit = derive_trace_serialization_budget(&initial.admission.bounds);
+-        Self::begin_with_limits(initial, per_projection_limit, trace_limit)
+-    }
+-
+-    pub(super) fn begin_with_limits(
+-        initial: HostSnapshot,
+-        per_projection_limit: usize,
+-        trace_limit: usize,
+-    ) -> Result<Self, BoundedTraceFailure> {
+-        let mut writer = BoundedJsonWriter::new(trace_limit);
+-        let write_result = (|| -> Result<usize, BoundedWireError> {
+-            if per_projection_limit == 0 {
+-                return Err(BoundedWireError::SerializationLimitExceeded { limit: 0 });
+-            }
+-            writer.write_raw(TRACE_OPEN_BEFORE_INITIAL)?;
+-            writer.with_projection_budget(per_projection_limit, |w| {
+-                w.write_host_snapshot(&initial)
+-            })?;
+-            writer.write_raw(TRACE_AFTER_INITIAL_OPEN_RECORDS)?;
+-            let checkpoint = writer.checkpoint();
+-            writer.write_raw(TRACE_PREFIX_CLOSE)?;
+-            writer.rollback(checkpoint);
+-            Ok(checkpoint)
+-        })();
+-        drop(initial);
+-        match write_result {
+-            Ok(checkpoint) => Ok(Self {
+-                writer,
+-                per_projection_limit,
+-                trace_limit,
+-                checkpoint,
+-                record_checkpoints: vec![checkpoint],
+-            }),
+-            Err(error) => Err(BoundedTraceFailure {
+-                writer,
+-                record_checkpoints: Vec::new(),
+-                per_projection_limit,
+-                trace_limit,
+-                error,
+-                events_forwarded: 0,
+-                evaluation_performed: false,
+-                completed: false,
+-                kind: BoundedFailureKind::Initial,
+-            }),
+-        }
+-    }
+-
+-    pub(super) fn record_count(&self) -> usize {
+-        self.record_checkpoints.len().saturating_sub(1)
+-    }
+-
+-    /// Exact UTF-8 byte length of the closed prefix (`initial` + `records` + envelope).
+-    #[cfg(test)]
+-    pub(super) fn prefix_byte_len(&self) -> usize {
+-        self.checkpoint + TRACE_PREFIX_CLOSE.len()
+-    }
+-
+-    #[cfg(test)]
+-    pub(super) fn prefix_bytes(&self) -> Vec<u8> {
+-        let mut copy = self.writer.clone();
+-        copy.rollback(self.checkpoint);
+-        let _ = copy.write_raw(TRACE_PREFIX_CLOSE);
+-        copy.as_bytes().to_vec()
+-    }
+-
+-    #[cfg(test)]
+-    pub(super) fn prefix(&self) -> Value {
+-        let bytes = self.prefix_bytes();
+-        super::complete_trace_wire::parse_bounded_slice(&bytes, self.writer.limit(), "complete_trace")
+-            .unwrap_or(Value::Null)
+-    }
+-
+-    pub(super) fn push_record(
+-        &mut self,
+-        record: CompleteStepRecord,
+-    ) -> Result<(), BoundedTraceFailure> {
+-        let prior_records = self.record_count();
+-        let per_projection_limit = self.per_projection_limit;
+-        let trace_limit = self.trace_limit;
+-        self.writer.rollback(self.checkpoint);
+-        let write_result = (|| -> Result<usize, BoundedWireError> {
+-            if prior_records > 0 {
+-                self.writer.write_raw(b",")?;
+-            }
+-            self.writer
+-                .with_projection_budget(per_projection_limit, |w| w.write_step_record(&record))?;
+-            let next_checkpoint = self.writer.checkpoint();
+-            self.writer.write_raw(TRACE_PREFIX_CLOSE)?;
+-            self.writer.rollback(next_checkpoint);
+-            Ok(next_checkpoint)
+-        })();
+-        match write_result {
+-            Ok(next_checkpoint) => {
+-                drop(record);
+-                self.checkpoint = next_checkpoint;
+-                self.record_checkpoints.push(next_checkpoint);
+-                Ok(())
+-            }
+-            Err(error) => {
+-                let CompleteStepRecord {
+-                    before,
+-                    event,
+-                    after,
+-                } = record;
+-                drop(before);
+-                drop(after);
+-                let step_id = event.step_id;
+-                let rule_id = event.rule_id;
+-                let disposition = event.disposition;
+-                let mut writer = BoundedJsonWriter::new(trace_limit);
+-                std::mem::swap(&mut self.writer, &mut writer);
+-                let record_checkpoints = std::mem::take(&mut self.record_checkpoints);
+-                Err(BoundedTraceFailure {
+-                    writer,
+-                    record_checkpoints,
+-                    per_projection_limit,
+-                    trace_limit,
+-                    error,
+-                    events_forwarded: prior_records as u128 + 1,
+-                    evaluation_performed: true,
+-                    completed: false,
+-                    kind: BoundedFailureKind::Record {
+-                        step_id,
+-                        rule_id,
+-                        disposition,
+-                    },
+-                })
+-            }
+-        }
+-    }
+-
+-    pub(super) fn finish_terminal(
+-        mut self,
+-        before: HostSnapshot,
+-        after: HostSnapshot,
+-    ) -> Result<Value, BoundedTraceFailure> {
+-        let per_projection_limit = self.per_projection_limit;
+-        let trace_limit = self.trace_limit;
+-        let events = self.record_count() as u128;
+-        self.writer.rollback(self.checkpoint);
+-        let returned_checkpoint = match (|| -> Result<usize, BoundedWireError> {
+-            self.writer.write_raw(TRACE_CLOSE_RECORDS_OPEN_RETURNED)?;
+-            self.writer
+-                .with_projection_budget(per_projection_limit, |w| w.write_host_snapshot(&after))?;
+-            self.writer
+-                .write_raw(TRACE_AFTER_RETURNED_SERIALIZATION_BUDGET)?;
+-            let after_returned = self.writer.checkpoint();
+-            self.writer.write_raw(TRACE_CLOSE_ROOT)?;
+-            self.writer.rollback(after_returned);
+-            Ok(after_returned)
+-        })() {
+-            Ok(cp) => cp,
+-            Err(error) => {
+-                drop(before);
+-                drop(after);
+-                return Err(BoundedTraceFailure {
+-                    writer: self.writer,
+-                    record_checkpoints: self.record_checkpoints,
+-                    per_projection_limit,
+-                    trace_limit,
+-                    error,
+-                    events_forwarded: events,
+-                    evaluation_performed: true,
+-                    completed: true,
+-                    kind: BoundedFailureKind::Returned,
+-                });
+-            }
+-        };
+-
+-        let terminal_write = (|| -> Result<(), BoundedWireError> {
+-            self.writer.write_raw(TRACE_OPEN_TERMINAL)?;
+-            self.writer
+-                .with_projection_budget(per_projection_limit, |w| {
+-                    w.write_terminal_boundary(&before, &after)
+-                })?;
+-            self.writer.write_raw(TRACE_CLOSE_ROOT)
+-        })();
+-        drop(before);
+-        drop(after);
+-
+-        match terminal_write {
+-            Ok(()) => match self.writer.parse_value("complete_trace") {
+-                Ok(value) => Ok(value),
+-                Err(error) => Err(BoundedTraceFailure {
+-                    writer: self.writer,
+-                    record_checkpoints: self.record_checkpoints,
+-                    per_projection_limit,
+-                    trace_limit,
+-                    error,
+-                    events_forwarded: events,
+-                    evaluation_performed: true,
+-                    completed: true,
+-                    kind: BoundedFailureKind::Terminal {
+-                        returned_checkpoint,
+-                    },
+-                }),
+-            },
+-            Err(error) => Err(BoundedTraceFailure {
+-                writer: self.writer,
+-                record_checkpoints: self.record_checkpoints,
+-                per_projection_limit,
+-                trace_limit,
+-                error,
+-                events_forwarded: events,
+-                evaluation_performed: true,
+-                completed: true,
+-                kind: BoundedFailureKind::Terminal {
+-                    returned_checkpoint,
+-                },
+-            }),
+-        }
+-    }
+-
+-    pub(super) fn failure_checked(
+-        mut self,
+-        error: CaptureStepError,
+-    ) -> Result<CompileFailure, BoundedTraceFailure> {
+-        let per_projection_limit = self.per_projection_limit;
+-        let trace_limit = self.trace_limit;
+-        let prior_records = self.record_count();
+-
+-        let (stage, additional_event) = match &error {
+-            CaptureStepError::BeforeObservation(_) => ("observation", 0u128),
+-            CaptureStepError::Step { .. } => ("run", 0u128),
+-            CaptureStepError::AfterObservation { event, .. } => {
+-                ("observation", u128::from(event.is_some()))
+-            }
+-        };
+-        let events = prior_records as u128 + additional_event;
+-        let evaluation_performed =
+-            prior_records > 0 || stage == "run" || additional_event != 0;
+-
+-        let mut env = BoundedJsonWriter::new(trace_limit);
+-        let full_write = (|| -> Result<Value, BoundedWireError> {
+-            self.writer.rollback(self.checkpoint);
+-            self.writer.write_raw(TRACE_PREFIX_CLOSE)?;
+-            env.write_raw(b"{\"complete_trace\":")?;
+-            env.write_raw(self.writer.as_bytes())?;
+-            env.write_raw(b",\"failure_boundary\":")?;
+-            match &error {
+-                CaptureStepError::BeforeObservation(_) => {
+-                    env.write_raw(b"{\"kind\":\"before-observation\"}")?;
+-                }
+-                CaptureStepError::Step { before, after, .. } => {
+-                    env.write_raw(b"{\"after\":")?;
+-                    match after {
+-                        Ok(snapshot) => {
+-                            env.write_raw(b"{\"Ok\":")?;
+-                            env.with_projection_budget(per_projection_limit, |w| {
+-                                w.write_host_snapshot(snapshot)
+-                            })?;
+-                            env.write_raw(b"}")?;
+-                        }
+-                        Err(violation) => {
+-                            env.write_raw(b"{\"Err\":")?;
+-                            env.write_owner_wire(violation, "after.Err")?;
+-                            env.write_raw(b"}")?;
+-                        }
+-                    }
+-                    env.write_raw(b",\"before\":")?;
+-                    env.with_projection_budget(per_projection_limit, |w| {
+-                        w.write_host_snapshot(before)
+-                    })?;
+-                    env.write_raw(b",\"kind\":\"step\"}")?;
+-                }
+-                CaptureStepError::AfterObservation { before, event, .. } => {
+-                    env.write_raw(b"{\"before\":")?;
+-                    env.with_projection_budget(per_projection_limit, |w| {
+-                        w.write_host_snapshot(before)
+-                    })?;
+-                    env.write_raw(b",\"event\":")?;
+-                    env.write_owner_wire(event, "failure_boundary.event")?;
+-                    env.write_raw(b",\"kind\":\"after-observation\"}")?;
+-                }
+-            }
+-            env.write_raw(b",\"violation\":")?;
+-            match &error {
+-                CaptureStepError::BeforeObservation(violation)
+-                | CaptureStepError::Step { violation, .. }
+-                | CaptureStepError::AfterObservation { violation, .. } => {
+-                    env.write_owner_wire(violation, "violation")?;
+-                }
+-            }
+-            env.write_raw(b"}")?;
+-            env.into_value("actual_error")
+-        })();
+-
+-        match full_write {
+-            Ok(actual_error) => Ok(CompileFailure {
+-                stage,
+-                actual_error,
+-                evaluation_performed,
+-                events_forwarded: events.to_string(),
+-                completed: false,
+-            }),
+-            Err(wire_error) => {
+-                let (boundary_kind, violation, executed_event) = match error {
+-                    CaptureStepError::BeforeObservation(v) => {
+-                        ("before-observation", v, None)
+-                    }
+-                    CaptureStepError::Step { violation: v, .. } => ("step", v, None),
+-                    CaptureStepError::AfterObservation {
+-                        violation: v,
+-                        event,
+-                        ..
+-                    } => (
+-                        "after-observation",
+-                        v,
+-                        event.map(|ev| (ev.step_id, ev.rule_id, ev.disposition)),
+-                    ),
+-                };
+-                Err(BoundedTraceFailure {
+-                    writer: self.writer,
+-                    record_checkpoints: self.record_checkpoints,
+-                    per_projection_limit,
+-                    trace_limit,
+-                    error: wire_error,
+-                    events_forwarded: events,
+-                    evaluation_performed,
+-                    completed: false,
+-                    kind: BoundedFailureKind::CaptureStepBoundary {
+-                        stage,
+-                        boundary_kind,
+-                        violation,
+-                        executed_event,
+-                    },
+-                })
+-            }
+-        }
+-    }
+-
+-    pub(super) fn failure(self, error: CaptureStepError) -> CompileFailure {
+-        self.failure_checked(error)
+-            .unwrap_or_else(BoundedTraceFailure::into_compile_failure)
+-    }
+-}
+-
+-fn initial_failure(violation: HostViolation, limit: usize) -> CompileFailure {
+-    let violation_wire = bounded_wire_value(&violation, limit, "violation");
+-    let complete_trace = if limit == 0 {
+-        Value::Null
+-    } else {
+-        json!({
+-            "format": TRACE_FORMAT,
+-            "initial": Value::Null,
+-            "records": [],
+-        })
+-    };
+-    CompileFailure {
+-        stage: "observation",
+-        actual_error: json!({
+-            "violation": violation_wire,
+-            "complete_trace": complete_trace,
+-            "failure_boundary": {
+-                "kind": "initial-observation",
+-            },
+-        }),
+-        evaluation_performed: false,
+-        events_forwarded: "0".into(),
+-        completed: false,
+-    }
+-}
+-
+-/// Consume exactly one existing prepared pair; do not admit or prepare again.
+-/// record_step alone calls the existing owner step. No alternate engine or
+-/// inferred transition is used. Terminal has no fabricated event/charge.
+-pub(super) fn run(prepared: CoreActionPrepared) -> Result<(CoreActionRun, Value), CompileFailure> {
+-    let bounds = *prepared
+-        .observe()
+-        .map_err(|v| initial_failure(v, PUBLIC_JSON_MAX_BYTES))?
+-        .admission
+-        .bounds;
+-    let per_projection_limit = bounds.serialization_bytes;
+-    let trace_limit = derive_trace_serialization_budget(&bounds);
+-    run_with_limits(prepared, per_projection_limit, trace_limit)
+-}
+-
+-pub(super) fn run_with_limits(
+-    prepared: CoreActionPrepared,
+-    per_projection_limit: usize,
+-    trace_limit: usize,
+-) -> Result<(CoreActionRun, Value), CompileFailure> {
+-    let CoreActionPrepared { preparation, admitted, mut image } = prepared;
+-    let initial = capture(&admitted, &image)
+-        .map_err(|v| initial_failure(v, per_projection_limit.min(trace_limit)))?;
+-    let mut trace = Trace::begin_with_limits(initial, per_projection_limit, trace_limit)
+-        .map_err(BoundedTraceFailure::into_compile_failure)?;
+-    loop {
+-        match record_step(&admitted, &mut image) {
+-            Ok(ObservedStep::Event(record)) => {
+-                trace
+-                    .push_record(record)
+-                    .map_err(BoundedTraceFailure::into_compile_failure)?;
+-            }
+-            Ok(ObservedStep::Terminal { before, after }) => {
+-                // These are the actual final registers, not A work or source
+-                // counters. Events count exactly the records just delivered.
+-                let events = trace.record_count() as u128;
+-                let summary = RunSummary {
+-                    outcome: after.image.outcome,
+-                    events,
+-                    consumed_work: after.image.consumed_work,
+-                    helper_work: after.image.helper_work,
+-                    helper_visits: after.image.helper_visits,
+-                    reference_cursor: after.image.reference_cursor,
+-                };
+-                let output = trace
+-                    .finish_terminal(before, after)
+-                    .map_err(BoundedTraceFailure::into_compile_failure)?;
+-                return Ok((
+-                    CoreActionRun {
+-                        preparation,
+-                        completed: CompletedRun {
+-                            admitted,
+-                            image,
+-                            summary,
+-                            events_forwarded: events,
+-                        },
+-                    },
+-                    output,
+-                ));
+-            }
+-            Err(error) => return Err(trace.failure(error)),
+-        }
+-    }
+-}
+-
+-/// Preserve the already captured complete run on a later ordinary reporter error.
+-pub(super) fn attach_completed_trace(mut failure: CompileFailure, trace: &Value) -> CompileFailure {
+-    failure.actual_error = json!({"error":failure.actual_error,"complete_trace":trace});
+-    failure
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use super::super::complete_trace_wire::reconstruct_step_host_snapshot;
+-    use super::super::wire::OwnerWire;
+-    use crate::sherlock::helper_machine::core_action_consumer::prepare_scalar_action_host;
+-    use crate::sherlock::helper_machine::shared::owner_host::host_owner_engine;
+-    use crate::sherlock::helper_machine::shared::OwnerEngine;
+-    use std::collections::BTreeMap;
+-    const CONFIG: &str = include_str!("../../../tests/sherlock_compile_artifact_positive/config.json");
+-    const TRACE_QUALIFICATION: &str =
+-        "actual complete owner records; no transition/native/target acceptance";
+-    fn prepared_with_limit(name: &str, serialization_bytes: usize) -> CoreActionPrepared {
+-        let source = format!("language \"moriarty/1\"; agreement {name} {{ action q() {{ let x = 19 * 3; emit \"q\"(x + 2); }} }}");
+-        let program = crate::parse(&source).unwrap();
+-        let mut config = super::super::parse_config(CONFIG).ok().unwrap().consumer().unwrap();
+-        config.bounds.serialization_bytes = serialization_bytes;
+-        config.layout.bounds.serialization_bytes = serialization_bytes;
+-        prepare_scalar_action_host(&program, 0, &BTreeMap::new(), &config).ok().unwrap()
+-    }
+-    fn prepared_with_fuel_and_limit(
+-        name: &str,
+-        fuel: u128,
+-        serialization_bytes: usize,
+-    ) -> CoreActionPrepared {
+-        let source = format!("language \"moriarty/1\"; agreement {name} {{ action q() {{ let x = 19 * 3; emit \"q\"(x + 2); }} }}");
+-        let program = crate::parse(&source).unwrap();
+-        let mut config = super::super::parse_config(CONFIG).ok().unwrap().consumer().unwrap();
+-        config.fuel = crate::sherlock::helper_machine::shared::RunIntC::Nat(fuel);
+-        config.bounds.serialization_bytes = serialization_bytes;
+-        config.layout.bounds.serialization_bytes = serialization_bytes;
+-        prepare_scalar_action_host(&program, 0, &BTreeMap::new(), &config).ok().unwrap()
+-    }
+-    fn prepared(name: &str) -> CoreActionPrepared {
+-        let source = format!("language \"moriarty/1\"; agreement {name} {{ action q() {{ let x = 19 * 3; emit \"q\"(x + 2); }} }}");
+-        let program = crate::parse(&source).unwrap();
+-        let config = super::super::parse_config(CONFIG).ok().unwrap().consumer().unwrap();
+-        prepare_scalar_action_host(&program, 0, &BTreeMap::new(), &config).ok().unwrap()
+-    }
+-    fn two_records() -> (CoreActionPrepared, Trace) {
+-        let mut pair = prepared("TraceBoundary");
+-        let initial = capture(&pair.admitted, &pair.image).unwrap();
+-        let mut trace = Trace::begin(initial).unwrap();
+-        for _ in 0..2 {
+-            match record_step(&pair.admitted, &mut pair.image) {
+-                Ok(ObservedStep::Event(record)) => trace.push_record(record).unwrap(),
+-                _ => panic!("real initial owner events required"),
+-            }
+-        }
+-        (pair,trace)
+-    }
+-    #[test]
+-    fn actual_ab_failure_retains_full_earlier_prefix_without_replay() {
+-        let (mut pair,trace) = two_records();
+-        let foreign = prepared("DifferentAdmission");
+-        let before = capture(&pair.admitted, &pair.image).unwrap();
+-        let prefix = trace.prefix();
+-        let error = match record_step(&foreign.admitted, &mut pair.image) {
+-            Err(error) => error,
+-            Ok(_) => panic!("foreign admission must fail AB binding"),
+-        };
+-        let failure = trace.failure(error);
+-        assert_eq!(failure.stage,"observation");
+-        assert_eq!(failure.events_forwarded,"2");
+-        assert!(failure.evaluation_performed);
+-        assert!(!failure.completed);
+-        assert_eq!(failure.actual_error["complete_trace"],prefix);
+-        assert_eq!(failure.actual_error["failure_boundary"],json!({"kind":"before-observation"}));
+-        assert!(failure.actual_error["violation"].is_object());
+-        assert_eq!(capture(&pair.admitted, &pair.image).unwrap(),before);
+-    }
+-    #[test]
+-    fn explicit_step_failure_projection_retains_both_available_boundaries() {
+-        // Projection branch control, not a claim this injected Step error is
+-        // reachable through an immutable well-formed public source pair.
+-        let (pair,trace) = two_records();
+-        let foreign = prepared("ForeignErrorValue");
+-        let violation = capture(&foreign.admitted,&pair.image).err().unwrap();
+-        let exact_error = violation.owner_wire();
+-        let before = capture(&pair.admitted,&pair.image).unwrap();
+-        let prefix = trace.prefix();
+-        let failure = trace.failure(CaptureStepError::Step { violation,
+-            before:Box::new(before.clone()), after:Ok(Box::new(before.clone())) });
+-        assert_eq!(failure.actual_error["violation"],exact_error);
+-        assert_eq!(failure.actual_error["complete_trace"],prefix);
+-        assert_eq!(failure.actual_error["failure_boundary"],json!({"kind":"step",
+-            "before":before.owner_wire(),"after":{"Ok":before.owner_wire()}}));
+-        assert_eq!(failure.events_forwarded,"2");
+-    }
+-    #[test]
+-    fn post_capture_failure_preserves_actual_event_outside_complete_prefix() {
+-        // Constructed projection branch using a genuine next owner event.
+-        // It does not establish a naturally occurring post-capture failure.
+-        let (mut pair,trace) = two_records();
+-        let before = capture(&pair.admitted,&pair.image).unwrap();
+-        let event = match host_owner_engine().step(&pair.admitted,&mut pair.image).unwrap() {
+-            crate::sherlock::helper_machine::shared::StepResult::Event { event } => event,
+-            _ => panic!("next real owner event required"),
+-        };
+-        let foreign = prepared("ForeignAfterError");
+-        let violation = capture(&foreign.admitted,&pair.image).err().unwrap();
+-        let exact_event = event.owner_wire();
+-        let failure = trace.failure(CaptureStepError::AfterObservation {
+-            violation,before:Box::new(before.clone()),event:Some(event) });
+-        assert_eq!(failure.events_forwarded,"3");
+-        assert_eq!(failure.actual_error["complete_trace"]["records"].as_array().unwrap().len(),2);
+-        assert_eq!(failure.actual_error["failure_boundary"]["before"],before.owner_wire());
+-        assert_eq!(failure.actual_error["failure_boundary"]["event"],exact_event);
+-        assert!(!failure.completed);
+-    }
+-    #[test]
+-    fn unavailable_failure_sides_and_initial_failure_are_explicit_not_success_defaults() {
+-        // Constructed projection controls only; no claim that the unchanged
+-        // well-formed public producer naturally reaches all defensive branches.
+-        let (pair,trace) = two_records();
+-        let foreign=prepared("ForeignMissingAfter");
+-        let violation=capture(&foreign.admitted,&pair.image).err().unwrap();
+-        let after_error=capture(&foreign.admitted,&pair.image).err().unwrap();
+-        let after_wire=after_error.owner_wire();
+-        let before=capture(&pair.admitted,&pair.image).unwrap();
+-        let failure=trace.failure(CaptureStepError::Step { violation,
+-            before:Box::new(before), after:Err(after_error) });
+-        assert_eq!(failure.actual_error["failure_boundary"]["after"],json!({"Err":after_wire}));
+-        assert!(failure.actual_error["failure_boundary"]["after"].get("Ok").is_none());
+-        let (pair,trace)=two_records();
+-        let violation=capture(&foreign.admitted,&pair.image).err().unwrap();
+-        let before=capture(&pair.admitted,&pair.image).unwrap();
+-        let failure=trace.failure(CaptureStepError::AfterObservation {
+-            violation,before:Box::new(before),event:None });
+-        assert_eq!(failure.actual_error["failure_boundary"]["event"],Value::Null);
+-        assert_eq!(failure.events_forwarded,"2");
+-        let violation=capture(&foreign.admitted,&pair.image).err().unwrap();
+-        let failure=initial_failure(violation, pair.observe().unwrap().admission.bounds.serialization_bytes);
+-        assert_eq!(failure.actual_error["complete_trace"]["initial"],Value::Null);
+-        assert_eq!(failure.actual_error["complete_trace"]["records"],json!([]));
+-        assert!(!failure.evaluation_performed);
+-        assert!(!failure.completed);
+-        assert_eq!(failure.events_forwarded,"0");
+-    }
+-    #[test]
+-    fn bounded_writer_matches_owner_wire_bytes_and_enforces_zero_and_initial_limits() {
+-        let mut ref_pair = prepared("TraceBoundary");
+-        let ref_initial = capture(&ref_pair.admitted, &ref_pair.image).unwrap();
+-        let mut ref_records = Vec::new();
+-        for _ in 0..2 {
+-            if let Ok(ObservedStep::Event(record)) =
+-                record_step(&ref_pair.admitted, &mut ref_pair.image)
+-            {
+-                ref_records.push(record);
+-            }
+-        }
+-        let (_, trace) = two_records();
+-        let expected_prefix = json!({
+-            "format": TRACE_FORMAT,
+-            "initial": ref_initial.owner_wire(),
+-            "qualification": TRACE_QUALIFICATION,
+-            "records": ref_records.owner_wire(),
+-            "serialization_budget": TRACE_SERIALIZATION_BUDGET,
+-        });
+-        let expected_bytes = serde_json::to_vec(&expected_prefix).unwrap();
+-        assert_eq!(trace.prefix_bytes(), expected_bytes);
+-        assert_eq!(trace.prefix(), expected_prefix);
+-        assert_eq!(
+-            reconstruct_step_host_snapshot(
+-                &expected_prefix["initial"]["admission"],
+-                &expected_prefix["records"][0]["before"],
+-            ),
+-            ref_initial.owner_wire()
+-        );
+-
+-        // Zero is a real zero bound, not unlimited: emits Null complete_trace (0 trace bytes).
+-        let zero_pair = prepared_with_limit("ZeroBudget", 0);
+-        let zero_failure = match run(zero_pair) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("zero serialization_bytes must refuse initial trace"),
+-        };
+-        assert_eq!(zero_failure.stage, "observation");
+-        assert!(!zero_failure.evaluation_performed);
+-        assert!(!zero_failure.completed);
+-        assert_eq!(zero_failure.events_forwarded, "0");
+-        assert_eq!(zero_failure.actual_error["complete_trace"], Value::Null);
+-        assert_eq!(
+-            zero_failure.actual_error["failure_boundary"]["kind"],
+-            "initial-serialization-limit-exceeded"
+-        );
+-        assert_eq!(zero_failure.actual_error["serialization_error"]["limit"], "0");
+-
+-        // Per-projection initial and returned boundaries via `run(prepared_with_fuel_and_limit(...))`.
+-        let (_, baseline_fuel0) =
+-            run(prepared_with_fuel_and_limit("InitialProbe", 0, 65_536)).ok().unwrap();
+-        let init_bytes_65536 = serde_json::to_vec(&baseline_fuel0["initial"]).unwrap().len();
+-        let base_init_snap = init_bytes_65536 - 2 * "65536".len();
+-        let exact_init_snap = (1usize..=65_536)
+-            .find(|c| *c == base_init_snap + 2 * c.to_string().len())
+-            .unwrap();
+-        let under_init_snap = match run(prepared_with_fuel_and_limit(
+-            "InitialProbe",
+-            0,
+-            exact_init_snap - 1,
+-        )) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("exact_init_snap - 1 must fail initial snapshot projection"),
+-        };
+-        assert!(!under_init_snap.evaluation_performed);
+-        assert!(!under_init_snap.completed);
+-        assert_eq!(under_init_snap.events_forwarded, "0");
+-        assert_eq!(under_init_snap.actual_error["complete_trace"], Value::Null);
+-        assert_eq!(
+-            under_init_snap.actual_error["failure_boundary"]["limit"],
+-            (exact_init_snap - 1).to_string()
+-        );
+-
+-        // Cumulative trace_limit initial boundary (`exact_initial_trace - 1`): fails before step 1.
+-        let probe_pair = prepared("InitialProbe");
+-        let probe_initial = capture(&probe_pair.admitted, &probe_pair.image).unwrap();
+-        let probe_trace = Trace::begin(probe_initial).unwrap();
+-        let exact_initial_trace = probe_trace.prefix_byte_len();
+-
+-        let under_initial = match run_with_limits(
+-            prepared("InitialProbe"),
+-            65_536,
+-            exact_initial_trace - 1,
+-        ) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("exact_initial_trace - 1 must fail during initial serialization"),
+-        };
+-        assert!(!under_initial.evaluation_performed);
+-        assert_eq!(under_initial.events_forwarded, "0");
+-        assert_eq!(under_initial.actual_error["complete_trace"], Value::Null);
+-        assert!(
+-            serde_json::to_vec(&under_initial.actual_error)
+-                .unwrap()
+-                .len()
+-                <= exact_initial_trace - 1
+-        );
+-
+-        // Exact whole-envelope boundary `L_0_env` (where `actual_error` with `initial` + 0 records fits).
+-        let probe_step1 = match run_with_limits(prepared("InitialProbe"), 65_536, 7_000) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("7_000 must fail on step 1 record serialization"),
+-        };
+-        let probe_env_len = serde_json::to_vec(&probe_step1.actual_error).unwrap().len();
+-        let base_env0 = probe_env_len - 2 * "7000".len();
+-        let exact_initial_env = (1usize..=65_536)
+-            .find(|c| *c == base_env0 + 2 * c.to_string().len())
+-            .unwrap();
+-
+-        // At `exact_initial_env - 1`: step 1 executes, and `actual_error` rolls back `complete_trace` to Null
+-        // so the entire `actual_error` envelope stays `<= exact_initial_env - 1`.
+-        let env_minus_one = match run_with_limits(
+-            prepared("InitialProbe"),
+-            65_536,
+-            exact_initial_env - 1,
+-        ) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("exact_initial_env - 1 must fail"),
+-        };
+-        assert!(env_minus_one.evaluation_performed);
+-        assert_eq!(env_minus_one.events_forwarded, "1");
+-        assert_eq!(env_minus_one.actual_error["complete_trace"], Value::Null);
+-        assert!(
+-            serde_json::to_vec(&env_minus_one.actual_error)
+-                .unwrap()
+-                .len()
+-                <= exact_initial_env - 1
+-        );
+-
+-        // At `exact_initial_env` and `exact_initial_env + 1`: `initial` + 0 records fits inside `actual_error`.
+-        for limit in [exact_initial_env, exact_initial_env + 1] {
+-            let at_env = match run_with_limits(prepared("InitialProbe"), 65_536, limit) {
+-                Err(failure) => failure,
+-                Ok(_) => panic!("limit must fail on first step record serialization"),
+-            };
+-            assert!(at_env.evaluation_performed);
+-            assert!(!at_env.completed);
+-            assert_eq!(at_env.events_forwarded, "1");
+-            assert!(at_env.actual_error["complete_trace"]["initial"].is_object());
+-            assert_eq!(
+-                at_env.actual_error["complete_trace"]["records"]
+-                    .as_array()
+-                    .unwrap()
+-                    .len(),
+-                0
+-            );
+-            assert_eq!(
+-                serde_json::to_vec(&at_env.actual_error).unwrap().len(),
+-                exact_initial_env
+-            );
+-        }
+-    }
+-    #[test]
+-    fn record_returned_terminal_and_failure_boundary_limits_preserve_exact_prefix_and_counts() {
+-        // Probe 2-record whole-envelope boundary `L_2_env` (2 limit occurrences in `actual_error`).
+-        let (_, two_rec_trace) = two_records();
+-        let probe_two_limit = two_rec_trace.prefix_byte_len() + 1000;
+-        assert!(probe_two_limit <= 65_536);
+-        let probe_two_failure =
+-            match run_with_limits(prepared("TraceBoundary"), 65_536, probe_two_limit) {
+-                Err(failure) => failure,
+-                Ok(_) => panic!("probe_two_limit must fail on 3rd record"),
+-            };
+-        assert_eq!(
+-            probe_two_failure.actual_error["failure_boundary"]["preserved_records"],
+-            "2"
+-        );
+-        let probe_two_env_len = serde_json::to_vec(&probe_two_failure.actual_error)
+-            .unwrap()
+-            .len();
+-        let base_two_env = probe_two_env_len - 2 * probe_two_limit.to_string().len();
+-        let exact_two_env = (1usize..=65_536)
+-            .find(|c| *c == base_two_env + 2 * c.to_string().len())
+-            .unwrap();
+-
+-        // `L_2_env - 1` rolls back to 1 preserved record so `actual_error` stays `<= L_2_env - 1`.
+-        let minus_one_two =
+-            match run_with_limits(prepared("TraceBoundary"), 65_536, exact_two_env - 1) {
+-                Err(failure) => failure,
+-                Ok(_) => panic!("exact_two_env - 1 must fail on 3rd record"),
+-            };
+-        assert_eq!(minus_one_two.events_forwarded, "3");
+-        assert_eq!(
+-            minus_one_two.actual_error["failure_boundary"]["preserved_records"],
+-            "1"
+-        );
+-        assert_eq!(
+-            minus_one_two.actual_error["complete_trace"]["records"]
+-                .as_array()
+-                .unwrap()
+-                .len(),
+-            1
+-        );
+-        assert!(
+-            serde_json::to_vec(&minus_one_two.actual_error)
+-                .unwrap()
+-                .len()
+-                <= exact_two_env - 1
+-        );
+-
+-        // `L_2_env` and `L_2_env + 1` preserve 2 records with exact whole-envelope byte length `L_2_env`.
+-        for limit in [exact_two_env, exact_two_env + 1] {
+-            let fail_on_third = match run_with_limits(prepared("TraceBoundary"), 65_536, limit) {
+-                Err(failure) => failure,
+-                Ok(_) => panic!("must fail on 3rd record"),
+-            };
+-            assert!(fail_on_third.evaluation_performed);
+-            assert!(!fail_on_third.completed);
+-            assert_eq!(fail_on_third.events_forwarded, "3");
+-            assert_eq!(
+-                fail_on_third.actual_error["complete_trace"]["records"]
+-                    .as_array()
+-                    .unwrap()
+-                    .len(),
+-                2
+-            );
+-            assert_eq!(
+-                fail_on_third.actual_error["failure_boundary"]["preserved_records"],
+-                "2"
+-            );
+-            assert!(fail_on_third.actual_error["failure_boundary"]["failed_step_id"].is_object());
+-            assert!(
+-                fail_on_third.actual_error["failure_boundary"]["failed_step_id"]["ordinal"]
+-                    .is_string()
+-            );
+-            assert!(fail_on_third.actual_error["failure_boundary"]["failed_rule_id"].is_string());
+-            assert!(
+-                fail_on_third.actual_error["failure_boundary"]["failed_disposition"].is_string()
+-            );
+-            assert_eq!(
+-                serde_json::to_vec(&fail_on_third.actual_error)
+-                    .unwrap()
+-                    .len(),
+-                exact_two_env
+-            );
+-        }
+-
+-        // CaptureStepError::AfterObservation boundary overflow preserves executed event identity
+-        // (`failed_step_id`, `failed_rule_id`, `failed_disposition`) and bounds `actual_error <= limit`.
+-        let mut pair_step_err = prepared("TraceBoundary");
+-        let init_step_err = capture(&pair_step_err.admitted, &pair_step_err.image).unwrap();
+-        let mut trace_step_err =
+-            Trace::begin_with_limits(init_step_err, 65_536, exact_two_env + 64).unwrap();
+-        for _ in 0..2 {
+-            if let Ok(ObservedStep::Event(r)) =
+-                record_step(&pair_step_err.admitted, &mut pair_step_err.image)
+-            {
+-                trace_step_err.push_record(r).unwrap();
+-            }
+-        }
+-        let before_snap = capture(&pair_step_err.admitted, &pair_step_err.image).unwrap();
+-        let event_next = match host_owner_engine()
+-            .step(&pair_step_err.admitted, &mut pair_step_err.image)
+-            .unwrap()
+-        {
+-            crate::sherlock::helper_machine::shared::StepResult::Event { event } => event,
+-            _ => panic!("expected event"),
+-        };
+-        let expected_step_id = event_next.step_id.owner_wire();
+-        let expected_rule_id = event_next.rule_id.owner_wire();
+-        let expected_disposition = event_next.disposition.owner_wire();
+-        let foreign = prepared("ForeignBoundaryOverflow");
+-        let violation = capture(&foreign.admitted, &pair_step_err.image).err().unwrap();
+-        let boundary_overflow = trace_step_err.failure(CaptureStepError::AfterObservation {
+-            violation,
+-            before: Box::new(before_snap),
+-            event: Some(event_next),
+-        });
+-        assert_eq!(boundary_overflow.events_forwarded, "3");
+-        assert!(boundary_overflow.evaluation_performed);
+-        assert!(!boundary_overflow.completed);
+-        assert_eq!(
+-            boundary_overflow.actual_error["failure_boundary"]["kind"],
+-            "after-observation"
+-        );
+-        assert_eq!(
+-            boundary_overflow.actual_error["failure_boundary"]["event_present"],
+-            true
+-        );
+-        assert_eq!(
+-            boundary_overflow.actual_error["failure_boundary"]["failed_step_id"],
+-            expected_step_id
+-        );
+-        assert_eq!(
+-            boundary_overflow.actual_error["failure_boundary"]["failed_rule_id"],
+-            expected_rule_id
+-        );
+-        assert_eq!(
+-            boundary_overflow.actual_error["failure_boundary"]["failed_disposition"],
+-            expected_disposition
+-        );
+-        assert!(
+-            serde_json::to_vec(&boundary_overflow.actual_error)
+-                .unwrap()
+-                .len()
+-                <= exact_two_env + 64
+-        );
+-
+-        // Full terminal completion boundary triplet (`L_full - 1`, `L_full`, `L_full + 1`)
+-        // using fuel = 0 (`1` record, normalized trace ~17 KB <= 65,536).
+-        let working_pair = prepared_with_fuel_and_limit("TraceBoundary", 0, 65_536);
+-        let (completed_run, working_trace) = run(working_pair).ok().expect("65536 must succeed");
+-        let n_records = completed_run.completed.events_forwarded as usize;
+-        assert_eq!(n_records, 1);
+-        let exact_full = serde_json::to_vec(&working_trace).unwrap().len();
+-        assert!(exact_full <= 65_536);
+-
+-        for limit in [exact_full, exact_full + 1] {
+-            let (_, ok_trace) = run_with_limits(
+-                prepared_with_fuel_and_limit("TraceBoundary", 0, 65_536),
+-                65_536,
+-                limit,
+-            )
+-            .ok()
+-            .expect("exact_full and exact_full + 1 must succeed");
+-            assert_eq!(serde_json::to_vec(&ok_trace).unwrap().len(), exact_full);
+-        }
+-
+-        let minus_one_failure = match run_with_limits(
+-            prepared_with_fuel_and_limit("TraceBoundary", 0, 65_536),
+-            65_536,
+-            exact_full - 1,
+-        ) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("exact_full - 1 must fail on terminal serialization"),
+-        };
+-        assert!(minus_one_failure.evaluation_performed);
+-        assert!(minus_one_failure.completed);
+-        assert_eq!(minus_one_failure.events_forwarded, n_records.to_string());
+-        assert_eq!(
+-            minus_one_failure.actual_error["failure_boundary"]["kind"],
+-            "terminal-serialization-limit-exceeded"
+-        );
+-        assert_eq!(
+-            minus_one_failure.actual_error["complete_trace"]["records"]
+-                .as_array()
+-                .unwrap()
+-                .len(),
+-            n_records
+-        );
+-        assert!(
+-            serde_json::to_vec(&minus_one_failure.actual_error)
+-                .unwrap()
+-                .len()
+-                <= exact_full - 1
+-        );
+-
+-        // Verify lazy in-place checkpoint rollback on populated `writer` when `returned_checkpoint`
+-        // succeeds in `finish_terminal` (`returned_only_len <= tight_terminal_limit`) but `terminal`
+-        // fails AND `returned` + `actual_error` envelope exceeds `tight_terminal_limit`: rolls back
+-        // in-place from `returned_checkpoint` to `record_checkpoints[1]` (`1` preserved record),
+-        // never dropping `complete_trace` to `null`.
+-        let mut returned_only = working_trace.as_object().unwrap().clone();
+-        returned_only.remove("terminal");
+-        let returned_only_len = serde_json::to_vec(&Value::Object(returned_only)).unwrap().len();
+-        let tight_terminal_limit = returned_only_len + 32;
+-        let rollback_from_terminal = match run_with_limits(
+-            prepared_with_fuel_and_limit("TraceBoundary", 0, 65_536),
+-            65_536,
+-            tight_terminal_limit,
+-        ) {
+-            Err(failure) => failure,
+-            Ok(_) => panic!("tight_terminal_limit must fail on terminal write and roll back returned"),
+-        };
+-        assert!(rollback_from_terminal.evaluation_performed);
+-        assert!(rollback_from_terminal.completed);
+-        assert_eq!(rollback_from_terminal.events_forwarded, "1");
+-        assert_eq!(
+-            rollback_from_terminal.actual_error["failure_boundary"]["kind"],
+-            "terminal-serialization-limit-exceeded"
+-        );
+-        assert_eq!(
+-            rollback_from_terminal.actual_error["failure_boundary"]["preserved_records"],
+-            "1"
+-        );
+-        assert!(
+-            rollback_from_terminal.actual_error["complete_trace"]
+-                .get("returned")
+-                .is_none()
+-        );
+-        assert_eq!(
+-            rollback_from_terminal.actual_error["complete_trace"]["records"]
+-                .as_array()
+-                .unwrap()
+-                .len(),
+-            1
+-        );
+-        assert!(
+-            serde_json::to_vec(&rollback_from_terminal.actual_error)
+-                .unwrap()
+-                .len()
+-                <= tight_terminal_limit
+-        );
+-    }
+-}

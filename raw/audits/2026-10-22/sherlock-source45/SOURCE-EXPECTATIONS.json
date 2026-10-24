@@ -1,0 +1,85 @@
+{
+  "schema": "sherlock.source45-public-expectations/1",
+  "entrypoint": {
+    "command": "sherlock-verify-parent",
+    "flags": [
+      "--vk",
+      "--proof",
+      "--instance",
+      "--srs14"
+    ],
+    "flagRules": "Exactly four nonempty known path flags once each, any order; no implicit discovery or download."
+  },
+  "decoder": {
+    "vk": "Processed MidnightVK with complete consumption and exact byte roundtrip",
+    "instance": "One complete JSON array of exactly28 lowercase64hex canonical scalar strings; no extra document",
+    "instanceShape": "16 public statement scalars then12 carried-accumulator scalars",
+    "boundsBytes": {
+      "vk": 1048576,
+      "proof": 67108864,
+      "instance": 65536,
+      "srs14": 4194304
+    },
+    "SRS14": "Explicit official pinned file, complete consumption, degree14 and standard G2; no proving key"
+  },
+  "verification": {
+    "public": "verify::<SherlockLinkRelation, PoseidonState<F>>(vp,vk,instance,None,proof)",
+    "pairing": "verify_offcircuit(vp,vk,vk_name(\"w\",vk),instance,proof,true)",
+    "success": "Both paths true; the second carries and checks the full accumulator pairing.",
+    "proofTrailing": "The public verifier checks complete transcript consumption."
+  },
+  "output": {
+    "kind": "sherlock-parent-independent-verify",
+    "exactKeys": [
+      "kind",
+      "verifies",
+      "stdlib_verifies",
+      "pairing_verifies",
+      "failure",
+      "verify_s",
+      "vk_sha256",
+      "proof_sha256",
+      "instance_sha256"
+    ],
+    "cryptoFalse": {
+      "observedPublicVerifierRefusals": "Four selected cases return exit0 with verifies=false, stdlib_verifies=false, pairing_verifies=null, failure=stdlib_verify.",
+      "additionalSourceBranch": "If public stdlib verification succeeds and the later carried pairing fails: exit0, verifies=false, stdlib_verifies=true, pairing_verifies=false, failure=carried_pairing.",
+      "observationLimit": "The carried_pairing failure branch was not isolated or observed in the six selected cases."
+    },
+    "decoderError": "exit1 through the existing main error path; VK trailing has empty stdout and verifier-vk-decode error prefix",
+    "acceptance": "Exit0 alone is insufficient; bind exact artifact hashes, strict booleans, finite nonnegative timing and full authenticated streams."
+  },
+  "cases": [
+    {
+      "id": "genuine",
+      "expected": "exit0, both verifiers true and failure null"
+    },
+    {
+      "id": "proof_byte",
+      "mutation": "proof byte0 XOR1",
+      "expected": "public standard-library rejection; pairing not attempted"
+    },
+    {
+      "id": "public_statement",
+      "mutation": "canonical h_pre scalar index7 zero to one; all other scalars unchanged",
+      "expected": "public standard-library rejection; pairing not attempted"
+    },
+    {
+      "id": "wrong_valid_vk",
+      "mutation": "known valid child VK substituted",
+      "expected": "public standard-library rejection; may be input-shape mismatch, not isolated pairing rejection"
+    },
+    {
+      "id": "proof_trailing",
+      "mutation": "one zero byte appended",
+      "expected": "public standard-library transcript rejection; pairing not attempted"
+    },
+    {
+      "id": "vk_trailing",
+      "mutation": "one zero byte appended",
+      "expected": "strict processed-VK decoder rejection, exit1"
+    }
+  ],
+  "correction": "The original draft mislabeled h_pre as index1; the explicit frozen correction and actual case use index7.",
+  "limits": "These six cases are finite selected observations, not arbitrary-input coverage or independently implemented cryptography."
+}

@@ -1,0 +1,23 @@
+--- original/literal_complete_images.py
++++ candidate/literal_complete_images.py
+@@ -113,7 +113,7 @@
+            "lcNoTables": 0, "lcTable": 2, "lcImage": 2, "lcContext": 2,
+            "lcCaps": 3, "lcMachine": 4, "lcNoStates": 0, "lcState": 2,
+            "lcNoEvents": 0, "lcEvent": 6, "lcTrace": 4, "lcResult": 2}
+-TOKEN = re.compile(r"\s*(-?[0-9]+|[A-Za-z][A-Za-z0-9_]*|[(),])")
++TOKEN = re.compile(r"\s*(-?[0-9]+|[A-Za-z][A-Za-z0-9_]*|[(),]|~>|\.K)")
+ 
+ 
+ def parse(text: str) -> Term:
+@@ -164,6 +164,11 @@
+             need_value = False
+         else:
+             if not stack:
++                # kprint may retain the empty K-sequence continuation. It is
++                # framing only after the complete balanced constructor tree.
++                if tokens[index:] == ["~>", ".K"]:
++                    index += 2
++                    break
+                 raise FormatError("trailing tokens after complete term")
+             if token == ",":
+                 need_value = True

@@ -6,9 +6,14 @@
 use super::*;
 
 fn fixture() -> (TableShape, FetchInputs) {
-    let shape = TableShape::new(1, vec![
-        Column { name: "amount".into(), kind: Type::UInt },
-    ]).unwrap();
+    let shape = TableShape::new(
+        1,
+        vec![Column {
+            name: "amount".into(),
+            kind: Type::UInt,
+        }],
+    )
+    .unwrap();
     let variable = |name: &str| Operand::Variable(Identifier(name.into()));
     let inputs = FetchInputs {
         active_rows: variable("%caller.count"),
@@ -29,8 +34,10 @@ fn opus_g_d1_rejects_unprefixed_caller_variables() {
             _ => &mut inputs.rows[0][0],
         };
         *operand = Operand::Variable(Identifier("caller.unprefixed".into()));
-        assert!(matches!(emit_fetch_block(&shape, &inputs, "fetch"),
-            Err(ConstructionError::UnprefixedVariable)));
+        assert!(matches!(
+            emit_fetch_block(&shape, &inputs, "fetch"),
+            Err(ConstructionError::UnprefixedVariable)
+        ));
     }
 }
 
@@ -45,7 +52,9 @@ fn opus_g_d1_rejects_inputs_in_the_final_temporary_namespace() {
             _ => &mut inputs.rows[0][0],
         };
         *operand = Operand::Variable(Identifier("%fetch.temp.0".into()));
-        assert!(matches!(emit_fetch_block(&shape, &inputs, "fetch"),
-            Err(ConstructionError::TemporaryNameCollision)));
+        assert!(matches!(
+            emit_fetch_block(&shape, &inputs, "fetch"),
+            Err(ConstructionError::TemporaryNameCollision)
+        ));
     }
 }

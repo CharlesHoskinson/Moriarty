@@ -73,7 +73,10 @@ impl ImageMachine {
     pub(super) fn representation_diagnostics(&self) -> (Option<String>, Vec<String>) {
         (
             self.control.as_ref().map(|control| format!("{control:?}")),
-            self.frames.iter().map(|frame| format!("{frame:?}")).collect(),
+            self.frames
+                .iter()
+                .map(|frame| format!("{frame:?}"))
+                .collect(),
         )
     }
 

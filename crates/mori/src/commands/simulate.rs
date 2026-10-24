@@ -1,46 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 
 use crate::shell::Shell;
 
-#[derive(Debug, clap::Args)]
-pub struct Args {
-    /// Source file
-    pub file: PathBuf,
+#[path = "simulate_sherlock.rs"]
+mod sherlock;
 
-    /// Action to run
-    #[arg(long, value_name = "NAME", required_unless_present = "resume")]
-    pub action: Option<String>,
-
-    /// Scenario JSON with the local state and inputs
-    #[arg(long, value_name = "FILE", required_unless_present = "resume")]
-    pub scenario: Option<PathBuf>,
-    /// Resume a moriarty/2 continuation (local, unauthenticated, consumption untracked)
-    #[arg(
-        long,
-        value_name = "FILE",
-        requires = "event",
-        conflicts_with_all = ["scenario", "trace", "target", "profile", "authority", "at", "signature"]
-    )]
-    pub resume: Option<PathBuf>,
-    /// Stage event JSON for --resume (at most 64 KiB)
-    #[arg(long, value_name = "FILE", requires = "resume")]
-    pub event: Option<PathBuf>,
-    /// Generate a complete public replay sidecar against a trusted Target
-    #[arg(long)]
-    pub trace: bool,
-    /// Cap local statement and uncached expression attempts (other costs unmeasured)
-    #[arg(long, value_name = "CANONICAL_U128", value_parser = logical_cap, conflicts_with = "trace")]
-    pub logical_cap: Option<mori_core::UInt>,
-    /// Trusted Target JSON (required with --trace)
-    #[arg(long, value_name = "FILE")]
-    pub target: Option<std::path::PathBuf>,
-    #[command(flatten)]
-    pub authorization: super::replay::AuthorizationArgs,
-}
+pub use crate::cli_args::simulate::Args;
 
 impl Args {
-    /// Legacy start inputs. Clap requires both whenever --resume is absent.
+    /// Legacy start inputs. Clap requires both outside resume or explicit Sherlock selection.
     fn legacy(&self) -> super::Result<(&str, &Path)> {
         match (self.action.as_deref(), self.scenario.as_deref()) {
             (Some(action), Some(scenario)) => Ok((action, scenario)),
@@ -51,12 +20,14 @@ impl Args {
     }
 }
 
-fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
-    serde_json::from_value(serde_json::Value::String(value.into()))
-        .map_err(|_| "expected canonical unsigned decimal string in u128 range".into())
-}
-
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    if args.execution_profile.is_some()
+        || args.source_profile.is_some()
+        || args.entry
+        || args.execution_config.is_some()
+    {
+        return sherlock::run(&args);
+    }
     // Clap has already refused every --resume/--event conflict, so a
     // malformed invocation reads no file.
     if let Some(resume) = &args.resume {
@@ -171,18 +142,27 @@ fn print_stage_result(
     Ok(exit)
 }
 
+/// The owning call retains its exact financial inputs and result. Ordinary
+/// Core/2 stdout uses the adopted outcome envelope; the richer Sherlock
+/// publication remains a separate API, not an implicit public profile change.
+fn print_produced_stage_result(
+    produced: &mori_core::sherlock_financial_projection::ProducedInvocation<'_>,
+) -> super::Result<ExitCode> {
+    print_stage_result(produced.raw_result().clone())
+}
+
 /// `--resume`: reads the source, then the continuation, then the event.
 /// Bounded-read, strict-decode, load and admission failures are labelled stage
 /// rejections; a source the filesystem cannot read keeps the legacy error.
 /// Nothing is recorded, so the same file can be resumed again (untracked).
 fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
-    use mori_core::stage::{self, StageOutcome, StageRejection, decode};
+    use mori_core::stage::{self, StageRejection, decode};
     let event_path = args
         .event
         .as_deref()
         .ok_or_else(|| super::core_io::operation("--resume requires --event"))?;
     let source = super::core_io::read_source(&args.file)?;
-    let result = (|| -> Result<StageOutcome, StageRejection> {
+    let loaded = (|| -> Result<(stage::StagedProgram, stage::Continuation, stage::StageEvent), StageRejection> {
         let program = stage::load(&source).map_err(no_work)?;
         let continuation = decode::read_bounded(
             resume,
@@ -195,15 +175,21 @@ fn run_resume(args: &Args, resume: &Path) -> super::Result<ExitCode> {
             decode::read_bounded(event_path, decode::MAX_EVENT_BYTES, decode::EVENT_TOO_LARGE)
                 .and_then(|text| decode::event(&text))
                 .map_err(no_work)?;
-        stage::resume(
-            &program,
-            continuation,
-            event,
-            args.action.as_deref(),
-            args.logical_cap,
-        )
+        Ok((program, continuation, event))
     })();
-    print_stage_result(result)
+    match loaded {
+        Ok((program, continuation, event)) => {
+            let produced = mori_core::sherlock_financial_projection::resume_observed(
+                &program,
+                continuation,
+                event,
+                args.action.clone(),
+                args.logical_cap,
+            );
+            print_produced_stage_result(&produced)
+        }
+        Err(rejected) => print_stage_result(Err(rejected)),
+    }
 }
 
 /// A `/2` start. Load and scenario failures are labelled stage rejections; the
@@ -214,8 +200,8 @@ fn run_stage_start(
     action: &str,
     scenario: &Path,
 ) -> super::Result<ExitCode> {
-    use mori_core::stage::{self, StageOutcome, StageRejection, decode};
-    let result = (|| -> Result<StageOutcome, StageRejection> {
+    use mori_core::stage::{self, StageRejection, decode};
+    let loaded = (|| -> Result<(stage::StagedProgram, mori_core::Scenario), StageRejection> {
         let program = stage::load(source).map_err(no_work)?;
         let text = decode::read_bounded(scenario, 1_048_576, "Scenario JSON exceeds 1 MiB")
             .map_err(no_work)?;
@@ -228,9 +214,20 @@ fn run_stage_start(
                 step: None,
             })
         })?;
-        stage::start(&program, action, scenario, args.logical_cap)
+        Ok((program, scenario))
     })();
-    print_stage_result(result)
+    match loaded {
+        Ok((program, scenario)) => {
+            let produced = mori_core::sherlock_financial_projection::start_observed(
+                &program,
+                action.to_owned(),
+                scenario,
+                args.logical_cap,
+            );
+            print_produced_stage_result(&produced)
+        }
+        Err(rejected) => print_stage_result(Err(rejected)),
+    }
 }
 
 /// A refusal before any segment evaluation: no work attempted or committed.
@@ -241,3 +238,7 @@ fn no_work(error: mori_core::Error) -> mori_core::stage::StageRejection {
         committed: mori_core::UInt(0),
     }
 }
+
+#[cfg(test)]
+#[path = "simulate_sherlock_tests.rs"]
+mod sherlock_tests;

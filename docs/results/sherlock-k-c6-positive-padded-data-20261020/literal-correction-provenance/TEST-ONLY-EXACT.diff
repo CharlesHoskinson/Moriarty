@@ -1,0 +1,29 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/runtime-qa-postcompile-01/tests/test_data_runtime.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/runtime-qa-postcompile-01/revision02-test-registry-lifetime-correction-01/tests/test_data_runtime.py
+@@ -112,9 +112,23 @@
+         self.assertEqual(ported['source_document'], self.input)
+         self.assertEqual(wire['format'], 'KAST')
+         self.assertEqual(wire['version'], 4)
+-        self.assertTrue(r.base.same(
+-            r.base.tree(term),
+-            r.base.tree(r.decode_document(wire, 'DPObservation'))))
++        self.assertNotIn('dpObserve', r.base.codec.REG)
++        self.assertEqual(len(r.base.codec.REG), 26)
++        self.assertEqual(r.base.codec.REG, r.DATA_REG)
++        saved_registry = r.base.codec.REG
++        try:
++            r.base.codec.REG = {**r.DATA_REG, **r.ENTRY_REG}
++            self.assertEqual(len(r.base.codec.REG), 27)
++            self.assertIn('dpObserve', r.base.codec.REG)
++            query_tree = r.base.tree(term)
++            decoded_tree = r.base.tree(r.decode_document(wire, 'DPObservation'))
++        finally:
++            r.base.codec.REG = saved_registry
++        self.assertIs(r.base.codec.REG, saved_registry)
++        self.assertEqual(r.base.codec.REG, r.DATA_REG)
++        self.assertNotIn('dpObserve', r.base.codec.REG)
++        self.assertEqual(len(r.base.codec.REG), 26)
++        self.assertTrue(r.base.same(query_tree, decoded_tree))
+         self.assertEqual(term.sort, 'DPObservation')
+         self.assertNotIn('dpObserve', r.base.codec.REG)
+         self.assertEqual(len(r.base.codec.REG), 26)

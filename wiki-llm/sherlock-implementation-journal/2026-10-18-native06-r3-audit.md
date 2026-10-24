@@ -1,0 +1,18 @@
+# October 18 — retained native06 R3 audit and durable cleanup
+
+Observation: The corrected retained R3 audit passed and both independent result reviewers accepted its scoped build-provenance result. Root subsequently verified durable preservation of 3,554 files (3,498 target files, 55 packet files and one external marker), totaling 2,628,344,281 bytes, then completed all six cleanup operations. The three tmpfs mounts are gone, cgroups are absent and the final receipt records `cleanupOwed:false`. Archived files remain read-only/nonexecutable; native outputs remain unaccepted and the SDK target ELF was not executed. Proofs, native target semantics, stagenet and full Sherlock completion remain open. No requirement status changes; the current published count remains 15/35.
+
+The [archive](../../docs/results/sherlock-native06-association-audit-20261018/README.md) preserves the failed outer wrapper, corrected operation, whole security and normal opinions, factual qualifications and filesystem receipts. The source author is distinct from both reviewers; later same-CID review turns are continuity, not extra votes. The outer 23.021559253 seconds and inner 12.381874724997033 seconds are different clocks. No Cargo rebuild or SDK target execution was needed for this retained audit.
+
+Interpretation: a verified association audit makes the retained build provenance usable within its stated scope. Root's later exact-copy and cleanup receipts settle preservation and cleanup, without settling artifact semantics, proof or deployment. The immutable earlier raw cuts continue to show pending reviews or cleanup owed at their original times. Full packet membership is 55 regular files plus an external 9-byte marker.
+
+Next unresolved work is qualification of the actual native target, proof/verification and stagenet execution under the full product obligations. No new circuit iteration or requirement closure follows from this editorial entry.
+
+
+## October 19 — Reviewed P8 accounting source and three synthetic checks
+
+The [dated accounting record](../../docs/results/sherlock-native-p8-accounting-20261019/README.md), cut 2026-10-19T01:00:42.522698Z, follows the user-selected narrow “Sol writes; Opus audits” assignment. Distinct fresh Opus security and normal-source sessions approved the exact helper/guard/test cut. Root confirmed missing reused marker/cleanup-sequence constants before tests; its initial tuple-to-list static comparison was corrected only in the preflight check. The full opinions, actual assignment and factual hash-shorthand correction remain preserved.
+
+Exactly three changed SDK-free methods passed: exit 0, outer 0.247066901 seconds, unittest 0.093 seconds, no skips/errors/failures, with the exact three staged source files unchanged. The source carries P8 once at E 835480719/S 207478351/P 628002365 microseconds cumulatively, remaining whole 6159/F 2254/supervisorCPU 10592 seconds and F stderr 34201 bytes. Fwall uses the selected conservative outer 133 debit, not measured F launch wall. Strong seed/postcheck behavior and earlier receipt expectations remain unchanged.
+
+The observation is interface-informed synthetic evidence, not a blind result or execution of the production non-None receipt branch. P8 remains failed and unaccepted, no ELF executed, cleanup owed false; no offline fallback. New native build, proof/verification and stagenet are UNRUN in this dated source cut. Later Root provisioning/build work remains separate. R2 UNSATISFIED, C4 OPEN and Am10/T3/k17 STOPPED remain; no requirement adoption or whole Sherlock completion is claimed. Earlier journal paragraphs retain their original dated scope.

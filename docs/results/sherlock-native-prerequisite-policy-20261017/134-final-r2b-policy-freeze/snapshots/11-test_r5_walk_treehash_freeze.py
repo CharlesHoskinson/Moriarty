@@ -1,0 +1,416 @@
+#!/usr/bin/python3
+# Walk / tree-hash / freeze fragment for the bounded R5 Git-symlink amendment.
+# PROPOSED_UNRUN: authored text only; executing it needs separate driver classification.
+# Stdlib unittest only. Synthetic fixtures live under an owned TemporaryDirectory.
+# Oracles are literal digests, stdlib hashlib Git blob framing and owner-contract
+# text, never guard helpers. Guard main/run/worker are never invoked.
+import contextlib
+import copy
+import hashlib
+import importlib
+import importlib.util
+import os
+from pathlib import Path
+import re
+import stat
+import sys
+import tempfile
+import types
+import unittest
+from unittest import mock
+
+GUARD_NAME = 'bounded_sdk_compile'
+GUARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), GUARD_NAME + '.py')
+G = None
+
+SHA256_EMPTY = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+SHA256_ABC = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+GIT_BLOB_EMPTY = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391'
+GIT_BLOB_TEST_CONTENT = 'd670460b4b4aece5915caf5c68d12f560a9fe3e4'
+SHA256_RE = re.compile('[0-9a-f]{64}')
+LINK_RE = re.compile('git-symlink:[0-9a-f]{40}')
+OPEN_FNS = ('os.open', 'builtins.open', 'io.open')
+
+B_RS = b'fn main() {}'
+PAYLOAD = b'TARGET PAYLOAD: must never be read through a declared link'
+# Synthetic link texts inside the admitted 33..55 byte window. Both resolve to real
+# objects outside source_home, so any follow or descent would be observable.
+DIR_TEXT = b'../../outside' + b'/.' * 14
+FILE_TEXT = b'./' * 8 + b'../../outside/payload.zkir'
+LINK_RELS = ('pkg/link.zkir', 'pkg/file_link.prover')
+
+
+def setUpModule():
+    global G
+    mod = sys.modules.get(GUARD_NAME)
+    if mod is None:
+        spec = importlib.util.spec_from_file_location(GUARD_NAME, GUARD_PATH)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[GUARD_NAME] = mod
+        try:
+            spec.loader.exec_module(mod)
+        except BaseException:
+            sys.modules.pop(GUARD_NAME, None)
+            raise
+    elif os.path.abspath(getattr(mod, '__file__', None) or '') != GUARD_PATH:
+        raise ImportError('reused bounded_sdk_compile is not the adjacent guard file')
+    G = mod
+
+
+def git_blob(data):
+    # Independent oracle: Git blob framing over known synthetic bytes.
+    return hashlib.sha1(b'blob ' + str(len(data)).encode() + bytes(1) + data).hexdigest()
+
+
+def norm(arg):
+    return None if isinstance(arg, int) else os.fsdecode(os.fspath(arg))
+
+
+def path_of(event):
+    return norm(event[1][0]) if event[1] else None
+
+
+def under(path, top):
+    return path is not None and (path == str(top) or path.startswith(str(top) + '/'))
+
+
+def mode_of(path):
+    return stat.S_IMODE(os.lstat(path).st_mode)
+
+
+def write(path, data, mode):
+    with open(path, 'wb') as f:
+        f.write(data)
+    os.chmod(path, mode)
+
+
+def restore_perms(top):
+    # Owned temp cleanup only: restore write access on real entries, never via a link.
+    for dirpath, _, filenames in os.walk(top):
+        if not os.path.islink(dirpath):
+            os.chmod(dirpath, 0o755)
+        for name in filenames:
+            path = os.path.join(dirpath, name)
+            if not os.path.islink(path):
+                os.chmod(path, 0o644)
+
+
+class Rec:
+    def __init__(self):
+        self.events = []
+
+    def calls(self, name):
+        return [e for e in self.events if e[0] == name]
+
+
+def recorder(rec, name, real):
+    def call(*args, **kwargs):
+        event = [name, args, kwargs, None]
+        rec.events.append(event)
+        event[3] = real(*args, **kwargs)
+        return event[3]
+    return call
+
+
+@contextlib.contextmanager
+def spying(*targets):
+    # Record-and-forward wrappers around the real stdlib functions; nothing is faked.
+    rec = Rec()
+    with contextlib.ExitStack() as stack:
+        for target in targets:
+            modname, attr = target.rsplit('.', 1)
+            real = getattr(importlib.import_module(modname), attr)
+            stack.enter_context(mock.patch(target, new=recorder(rec, target, real)))
+        yield rec
+
+
+class WalkTreeHashFreezeTest(unittest.TestCase):
+
+    def build(self):
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        tmp = Path(os.path.realpath(td.name))
+        self.addCleanup(restore_perms, str(tmp))
+        root = tmp / 'source_home'
+        pkg = root / 'pkg'
+        sub = pkg / 'sub'
+        outside = tmp / 'outside'
+        os.makedirs(sub)
+        os.mkdir(outside)
+        os.mkdir(tmp / 'packet')
+        write(root / 'a.txt', b'abc', 0o644)
+        write(pkg / 'b.rs', B_RS, 0o755)
+        write(sub / 'c.bin', b'', 0o644)
+        write(outside / 'payload.zkir', PAYLOAD, 0o644)
+        os.symlink(b'payload.zkir', os.fsencode(outside / 'inner_link'))
+        os.symlink(DIR_TEXT, os.fsencode(pkg / 'link.zkir'))
+        os.symlink(FILE_TEXT, os.fsencode(pkg / 'file_link.prover'))
+        for d in (root, pkg, sub, outside):
+            os.chmod(d, 0o755)
+        return types.SimpleNamespace(
+            tmp=tmp, root=root, pkg=pkg, sub=sub, outside=outside,
+            links=frozenset(root / rel for rel in LINK_RELS),
+            cfg={'paths': {'source_home': str(root), 'packet': str(tmp / 'packet')}})
+
+    def expected(self):
+        return {
+            'a.txt': SHA256_ABC,
+            'pkg/b.rs': hashlib.sha256(B_RS).hexdigest(),
+            'pkg/sub/c.bin': SHA256_EMPTY,
+            'pkg/link.zkir': 'git-symlink:' + git_blob(DIR_TEXT),
+            'pkg/file_link.prover': 'git-symlink:' + git_blob(FILE_TEXT),
+        }
+
+    @contextlib.contextmanager
+    def guard_io(self, fx, store):
+        # Isolation only: declared_links is the synthetic set (NOT the real 16 rows);
+        # jload/receipt are an in-memory packet. Guard main and the SDK are untouched.
+        packet = fx.cfg['paths']['packet']
+
+        def jload(path):
+            self.assertEqual(norm(Path(path).parent), packet)
+            return copy.deepcopy(store[Path(path).name])
+
+        def receipt(*args, **kwargs):
+            self.assertEqual(kwargs, {})
+            store.setdefault('_receipts', []).append(copy.deepcopy(args[1:]))
+            store[args[1]] = copy.deepcopy(args[2])
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(G, 'declared_links', lambda c: fx.links))
+            stack.enter_context(mock.patch.object(G, 'jload', jload))
+            stack.enter_context(mock.patch.object(G, 'receipt', receipt))
+            yield
+
+    def refuse_before_reads(self, root, links, pattern):
+        digest = mock.Mock(side_effect=AssertionError('content read before refusal'))
+        with mock.patch.object(G, 'digest', digest), spying('os.readlink') as rec:
+            with self.assertRaisesRegex(G.Refusal, pattern):
+                G.tree_hashes(root, links)
+        digest.assert_not_called()
+        self.assertEqual(rec.calls('os.readlink'), [])
+
+    def test_oracle_literals_and_text_bounds(self):
+        self.assertEqual(git_blob(b''), GIT_BLOB_EMPTY)
+        self.assertEqual(git_blob(b'test content\n'), GIT_BLOB_TEST_CONTENT)
+        self.assertEqual(hashlib.sha256(b'abc').hexdigest(), SHA256_ABC)
+        self.assertEqual(hashlib.sha256(b'').hexdigest(), SHA256_EMPTY)
+        self.assertEqual((len(DIR_TEXT), len(FILE_TEXT)), (41, 42))
+        self.assertEqual(G.GIT_SYMLINK_TEXT_BYTES, (33, 55))
+        self.assertEqual(G.GIT_SYMLINK_MODE, '120000')
+
+    def test_tree_hashes_exact_value_classes(self):
+        fx = self.build()
+        got = G.tree_hashes(fx.root, fx.links)
+        self.assertEqual(got, self.expected())
+        for rel, value in got.items():
+            self.assertEqual(bool(LINK_RE.fullmatch(value)), rel in LINK_RELS, rel)
+            self.assertEqual(bool(SHA256_RE.fullmatch(value)), rel not in LINK_RELS, rel)
+        through_target = {hashlib.sha256(PAYLOAD).hexdigest(), 'git-symlink:' + git_blob(PAYLOAD),
+                          'git-symlink:' + hashlib.sha1(PAYLOAD).hexdigest()}
+        self.assertFalse(through_target & set(got.values()))
+
+    def test_declared_links_never_descended_followed_or_read_through(self):
+        fx = self.build()
+        files, found, dirs = G.walk_tree(fx.root, fx.links)
+        self.assertEqual(files, sorted([fx.root / 'a.txt', fx.pkg / 'b.rs', fx.sub / 'c.bin']))
+        self.assertEqual(found, set(fx.links))
+        self.assertEqual(dirs, sorted([fx.pkg, fx.sub]))
+        link_strs = {str(p) for p in fx.links}
+        with spying('os.open', 'builtins.open', 'io.open', 'os.stat', 'os.readlink') as rec:
+            G.tree_hashes(fx.root, fx.links)
+        for event in rec.events:
+            path = path_of(event)
+            self.assertFalse(under(path, fx.outside), (event[0], path))
+            if event[0] in OPEN_FNS:
+                self.assertNotIn(path, link_strs, event[0])
+            if event[0] == 'os.stat' and path in link_strs:
+                self.assertIs(event[2].get('follow_symlinks'), False, path)
+        self.assertEqual(sorted(os.fsencode(path_of(e)) for e in rec.calls('os.readlink')),
+                         sorted(os.fsencode(p) for p in fx.links))
+
+    def test_undeclared_symlink_refuses_before_reads(self):
+        for label in ('extra_link', 'declared_subset'):
+            with self.subTest(label):
+                fx = self.build()
+                links = fx.links
+                if label == 'extra_link':
+                    os.symlink(b'a.txt', os.fsencode(fx.root / 'extra'))
+                else:
+                    links = frozenset({fx.pkg / 'link.zkir'})
+                self.refuse_before_reads(fx.root, links, 'undeclared symlink')
+
+    def test_declared_set_mismatch_refuses_before_reads(self):
+        for label, pattern in (('regular', 'not a symlink'), ('directory', 'not a symlink'),
+                               ('missing', 'missing')):
+            with self.subTest(label):
+                fx = self.build()
+                extra = {'regular': fx.root / 'a.txt', 'directory': fx.sub,
+                         'missing': fx.pkg / 'absent.zkir'}[label]
+                self.refuse_before_reads(fx.root, fx.links | {extra}, pattern)
+
+    def test_default_walk_and_tree_hashes_admit_no_symlink(self):
+        fx = self.build()
+        with self.assertRaisesRegex(G.Refusal, 'undeclared symlink'):
+            G.walk_files(fx.root)
+        with self.assertRaisesRegex(G.Refusal, 'undeclared symlink'):
+            G.tree_hashes(fx.root)
+        plain = fx.tmp / 'plain'
+        os.makedirs(plain / 'd')
+        write(plain / 'x.txt', b'abc', 0o644)
+        write(plain / 'd' / 'y.txt', b'', 0o644)
+        self.assertEqual(G.walk_files(plain), sorted([plain / 'x.txt', plain / 'd' / 'y.txt']))
+        self.assertEqual(G.tree_hashes(plain), {'x.txt': SHA256_ABC, 'd/y.txt': SHA256_EMPTY})
+        os.symlink(b'../../outside', os.fsencode(plain / 'd' / 'dirlink'))
+        with self.assertRaisesRegex(G.Refusal, 'undeclared symlink'):
+            G.walk_files(plain)
+        os.symlink(b'source_home', os.fsencode(fx.tmp / 'rootlink'))
+        with self.assertRaisesRegex(G.Refusal, 'symlink tree root'):
+            G.walk_files(fx.tmp / 'rootlink')
+
+    def test_link_identity_size_bounds_and_refusal_before_readlink(self):
+        fx = self.build()
+        sizes = fx.tmp / 'sizes'
+        os.mkdir(sizes)
+        for n in (32, 33, 55, 56):
+            text = b'../' + b'q' * (n - 3)
+            path = sizes / ('len%d' % n)
+            os.symlink(text, os.fsencode(path))
+            with self.subTest(n), spying('os.readlink', *OPEN_FNS) as rec:
+                if 33 <= n <= 55:
+                    self.assertEqual(G.link_identity(path), (text, git_blob(text)))
+                else:
+                    with self.assertRaisesRegex(G.Refusal, 'outside admitted size'):
+                        G.link_identity(path)
+                    self.assertEqual(rec.calls('os.readlink'), [])
+                self.assertFalse([e for e in rec.events if e[0] in OPEN_FNS and path_of(e) == str(path)])
+
+    def test_link_identity_race_refuses(self):
+        fx = self.build()
+        link = fx.pkg / 'link.zkir'
+        real_stat, real_readlink, seen = G.stable_stat, os.readlink, []
+
+        def drifting(path):
+            s = dict(real_stat(path))
+            seen.append(s)
+            if len(seen) > 1:
+                s['mtime_ns'] += 1
+            return s
+
+        with mock.patch.object(G, 'stable_stat', drifting):
+            with self.assertRaisesRegex(G.Refusal, 'changed while reading'):
+                G.link_identity(link)
+        self.assertEqual(len(seen), 2)
+        with mock.patch('os.readlink', lambda p: real_readlink(p)[:-1]):
+            with self.assertRaisesRegex(G.Refusal, 'changed while reading'):
+                G.link_identity(link)
+
+    def test_chmod_nofollow_never_follows_and_checks_type(self):
+        fx = self.build()
+        watched = (fx.outside, fx.outside / 'payload.zkir', fx.pkg, fx.root / 'a.txt')
+        before = {p: mode_of(p) for p in watched}
+        cases = ((fx.pkg / 'link.zkir', True), (fx.pkg / 'link.zkir', False),
+                 (fx.pkg / 'file_link.prover', False), (fx.pkg / 'file_link.prover', True),
+                 (fx.pkg, False), (fx.root / 'a.txt', True))
+        fifo = os.stat_result((stat.S_IFIFO | 0o644, 0, 0, 1, 0, 0, 0, 0, 0, 0))
+        with spying('os.open', 'os.fchmod', 'os.chmod', 'os.close') as rec:
+            for path, directory in cases:
+                with self.subTest(path=str(path), directory=directory):
+                    with self.assertRaises((OSError, G.Refusal)):
+                        G.chmod_nofollow(path, directory)
+            with mock.patch('os.fstat', return_value=fifo):
+                with self.assertRaisesRegex(G.Refusal, 'type changed'):
+                    G.chmod_nofollow(fx.root / 'a.txt', False)
+        self.assertEqual(rec.calls('os.fchmod'), [])
+        self.assertEqual(rec.calls('os.chmod'), [])
+        for e in rec.calls('os.open'):
+            self.assertTrue(e[1][1] & os.O_NOFOLLOW, path_of(e))
+        opened = [e[3] for e in rec.calls('os.open') if e[3] is not None]
+        self.assertEqual(sorted(opened), sorted(e[1][0] for e in rec.calls('os.close')))
+        self.assertEqual({p: mode_of(p) for p in watched}, before)
+
+    def test_freeze_source_fd_based_nofollow_and_receipt(self):
+        fx = self.build()
+        store = {'C_RAW_IDENTITIES.json': {'files': self.expected()}}
+        with self.guard_io(fx, store), spying('os.open', 'os.fchmod', 'os.chmod') as rec:
+            G.freeze_source(fx.cfg)
+        self.assertEqual(rec.calls('os.chmod'), [])
+        last_open, chmods = {}, []
+        for name, args, kwargs, result in rec.events:
+            if name == 'os.open' and result is not None:
+                last_open[result] = (norm(args[0]), args[1])
+            elif name == 'os.fchmod':
+                path, flags = last_open[args[0]]
+                self.assertTrue(flags & os.O_NOFOLLOW, path)
+                chmods.append((path, args[1], bool(flags & os.O_DIRECTORY)))
+        want = {str(fx.root / 'a.txt'): (0o444, False), str(fx.pkg / 'b.rs'): (0o555, False),
+                str(fx.sub / 'c.bin'): (0o444, False), str(fx.pkg): (0o555, True),
+                str(fx.sub): (0o555, True), str(fx.root): (0o555, True)}
+        self.assertEqual(sorted(chmods), sorted((p, m, d) for p, (m, d) in want.items()))
+        order = [c[0] for c in chmods]
+        self.assertLess(order.index(str(fx.sub)), order.index(str(fx.pkg)))
+        self.assertEqual(order[-1], str(fx.root))
+        for p, (m, _) in want.items():
+            self.assertEqual(mode_of(p), m, p)
+        self.assertEqual((mode_of(fx.outside), mode_of(fx.outside / 'payload.zkir')), (0o755, 0o644))
+        for link, text in ((fx.pkg / 'link.zkir', DIR_TEXT), (fx.pkg / 'file_link.prover', FILE_TEXT)):
+            self.assertTrue(stat.S_ISLNK(os.lstat(link).st_mode))
+            self.assertEqual(os.readlink(os.fsencode(link)), text)
+        self.assertEqual(len(store['_receipts']), 1)
+        name, payload, phase = store['_receipts'][0]
+        self.assertEqual((name, phase), ('D_FREEZE.json', 'D'))
+        self.assertEqual(set(payload), {'H_S', 'files'})
+        self.assertEqual(payload['files'], self.expected())
+        self.assertTrue(SHA256_RE.fullmatch(payload['H_S']))
+
+    def test_freeze_source_refuses_mismatch_before_chmod(self):
+        fx = self.build()
+        relinked = dict(self.expected(), **{'pkg/link.zkir': 'git-symlink:' + git_blob(PAYLOAD)})
+        dropped = {k: v for k, v in self.expected().items() if k != 'pkg/file_link.prover'}
+        for label, files in (('linktext', relinked), ('membership', dropped)):
+            with self.subTest(label):
+                store = {'C_RAW_IDENTITIES.json': {'files': files}}
+                with self.guard_io(fx, store), spying('os.fchmod', 'os.chmod') as rec:
+                    with self.assertRaisesRegex(G.Refusal, 'changed before freeze'):
+                        G.freeze_source(fx.cfg)
+                self.assertEqual(rec.events, [])
+                self.assertNotIn('_receipts', store)
+                self.assertEqual((mode_of(fx.root), mode_of(fx.root / 'a.txt')), (0o755, 0o644))
+
+    def test_frozen_source_refuses_changes(self):
+        def retarget(fx):
+            os.unlink(fx.pkg / 'link.zkir')
+            os.symlink(b'../../elsewhere' + b'/.' * 13, os.fsencode(fx.pkg / 'link.zkir'))
+
+        def link_to_regular(fx):
+            os.unlink(fx.pkg / 'link.zkir')
+            write(fx.pkg / 'link.zkir', DIR_TEXT, 0o644)
+
+        def link_removed(fx):
+            os.unlink(fx.pkg / 'link.zkir')
+
+        def regular_added(fx):
+            write(fx.sub / 'new.rs', b'', 0o644)
+
+        def regular_changed(fx):
+            write(fx.root / 'a.txt', b'abd', 0o644)
+
+        def undeclared_link(fx):
+            os.symlink(b'a.txt', os.fsencode(fx.root / 'extra'))
+
+        for mutate in (retarget, link_to_regular, link_removed, regular_added,
+                       regular_changed, undeclared_link):
+            with self.subTest(mutate.__name__):
+                fx = self.build()
+                store = {'C_RAW_IDENTITIES.json': {'files': self.expected()}}
+                with self.guard_io(fx, store):
+                    G.freeze_source(fx.cfg)
+                    self.assertEqual(G.frozen_source(fx.cfg)['files'], self.expected())
+                restore_perms(str(fx.tmp))
+                mutate(fx)
+                with self.guard_io(fx, store), self.assertRaises(G.Refusal):
+                    G.frozen_source(fx.cfg)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -16,13 +16,13 @@
 //! current adapter and machine source. They are not wall-clock, byte or native
 //! stack measurements. Whether a caller's chosen counts satisfy H1 for its own
 //! thread stack and deployment is a separate review decision.
-use crate::sherlock::{BinaryOp, Expr, ExprRef, Machine, Outcome, Program, Snapshot, StepRecord,
-    Type, UnaryOp, Value};
-use crate::sherlock_source::{prepare_scalar_action, ProjectionDiagnostic, ScalarActionReport};
+use crate::sherlock::{
+    BinaryOp, Expr, ExprRef, Machine, Outcome, Program, Snapshot, StepRecord, Type, UnaryOp, Value,
+};
+use crate::sherlock_source::{ProjectionDiagnostic, ScalarActionReport, prepare_scalar_action};
 use std::sync::Arc;
 
-pub const QUALIFICATION: &str =
-    "bounded-host-observation; stateless scalar Core/1 projection; operation, slot and nesting counts only";
+pub const QUALIFICATION: &str = "bounded-host-observation; stateless scalar Core/1 projection; operation, slot and nesting counts only";
 
 /// Caller-stated finite extents. There is deliberately no `Default`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,7 +33,8 @@ pub struct HostObservationBounds {
     /// Statements summed over every action; Core validation types each one.
     pub max_source_statements: usize,
     pub max_scalar_arguments: usize,
-    /// Unshared occurrences, checked before the adapter's own fixed budget.
+    /// Unshared occurrences, including the adapter's synthetic lowering nodes,
+    /// checked before the adapter's own fixed budget.
     pub max_projection_occurrences: usize,
     /// Generated body nesting. This bounds derived Drop/Clone/PartialEq/Debug
     /// recursion over the generated AST; its native stack use is unmeasured.
@@ -62,10 +63,17 @@ pub enum HostMeasure {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostObservationRefusal {
     /// `required: None` means the checked count overflowed `u128`.
-    Exceeded { measure: HostMeasure, required: Option<u128>, bound: u128 },
+    Exceeded {
+        measure: HostMeasure,
+        required: Option<u128>,
+        bound: u128,
+    },
     /// The actual Core validation error, unchanged.
     CoreValidation(crate::Error),
-    NoSuchAction { action_index: usize, action_count: usize },
+    NoSuchAction {
+        action_index: usize,
+        action_count: usize,
+    },
     /// Lists and trees are outside the scalar domain. Only the discriminant is read.
     NonScalarArgument { index: usize },
     /// The actual adapter diagnostic, unchanged; it is not a compiler refusal.
@@ -83,7 +91,8 @@ pub enum HostObservationRefusal {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HostExtent {
     pub bounds: HostObservationBounds,
-    /// Lets plus unshared expression nodes over every let and emit value.
+    /// Lets plus unshared generated nodes over every let and emit value,
+    /// including synthetic lowering nodes.
     pub projected_occurrences: u128,
     pub ast_nesting_bound: u128,
     /// Measured iteratively on the actual generated body.
@@ -92,9 +101,11 @@ pub struct HostExtent {
     pub step_record_bound: u128,
     /// `min(stack_limit, initial_fuel)`: a step pushes at most one frame.
     pub frame_bound: u128,
-    /// Arity plus lets: the distinct names any machine environment can hold.
+    /// Arity plus lets plus two synthetic binders per lowered Gt, Le, And or Or
+    /// occurrence: the distinct names any machine environment can hold.
     pub environment_entry_bound: u128,
-    /// `(2 * initial_fuel + 6) * (frame_bound + 3) * (entries + 2 * arity + 1)`.
+    /// `(2 * initial_fuel + 6) * (frame_bound + 3) * (entries + other)`, where
+    /// `other` is `2 * arity + 1`, raised to 2 when a lowered If is generated.
     pub peak_slot_bound: u128,
     pub argument_types_match_inputs: bool,
 }
@@ -123,109 +134,181 @@ pub struct BoundedSourceObservation {
 /// Arguments are borrowed so a refused list or tree is never cloned, compared
 /// or dropped here. Arity and scalar type mismatches are admitted and produce
 /// the existing A outcome; [`HostExtent::argument_types_match_inputs`] records them.
-pub fn observe_scalar_action(program: &crate::Program, action_index: usize, arguments: &[Value],
-    initial_fuel: u128, bounds: HostObservationBounds)
-    -> Result<BoundedSourceObservation, HostObservationRefusal>
-{
-    within(HostMeasure::SourceActions, Some(count(program.actions.len())),
-        count(bounds.max_source_actions))?;
-    within(HostMeasure::SourceExpressions, Some(count(program.expressions.len())),
-        count(bounds.max_source_expressions))?;
-    let statements = program.actions.iter()
-        .try_fold(0u128, |sum, action| sum.checked_add(count(action.statements.len())));
-    within(HostMeasure::SourceStatements, statements, count(bounds.max_source_statements))?;
-    within(HostMeasure::ScalarArguments, Some(count(arguments.len())),
-        count(bounds.max_scalar_arguments))?;
-    if let Some(index) = arguments.iter()
+pub fn observe_scalar_action(
+    program: &crate::Program,
+    action_index: usize,
+    arguments: &[Value],
+    initial_fuel: u128,
+    bounds: HostObservationBounds,
+) -> Result<BoundedSourceObservation, HostObservationRefusal> {
+    within(
+        HostMeasure::SourceActions,
+        Some(count(program.actions.len())),
+        count(bounds.max_source_actions),
+    )?;
+    within(
+        HostMeasure::SourceExpressions,
+        Some(count(program.expressions.len())),
+        count(bounds.max_source_expressions),
+    )?;
+    let statements = program.actions.iter().try_fold(0u128, |sum, action| {
+        sum.checked_add(count(action.statements.len()))
+    });
+    within(
+        HostMeasure::SourceStatements,
+        statements,
+        count(bounds.max_source_statements),
+    )?;
+    within(
+        HostMeasure::ScalarArguments,
+        Some(count(arguments.len())),
+        count(bounds.max_scalar_arguments),
+    )?;
+    if let Some(index) = arguments
+        .iter()
         .position(|value| !matches!(value, Value::UInt(_) | Value::Bool(_)))
     {
         return Err(HostObservationRefusal::NonScalarArgument { index });
     }
-    let action = program.actions.get(action_index).ok_or(HostObservationRefusal::NoSuchAction {
-        action_index, action_count: program.actions.len(),
-    })?;
+    let action = program
+        .actions
+        .get(action_index)
+        .ok_or(HostObservationRefusal::NoSuchAction {
+            action_index,
+            action_count: program.actions.len(),
+        })?;
     crate::validate(program).map_err(HostObservationRefusal::CoreValidation)?;
 
     // Validation orders every child before its parent, so one forward pass gives
-    // unshared tree sizes and node depths without recursion. Saturated sizes
-    // exceed every usize bound and are refused below.
-    let mut sizes: Vec<u128> = Vec::with_capacity(program.expressions.len());
-    let mut depths: Vec<u128> = Vec::with_capacity(program.expressions.len());
+    // each expression's exact unshared generated extent under the adapter's
+    // lowering table, without recursion: nodes, nesting, synthetic binders and
+    // lowered conditionals. Saturated counts exceed every usize bound and are
+    // refused below.
+    let mut extents: Vec<Generated> = Vec::with_capacity(program.expressions.len());
     for expression in &program.expressions {
-        let (children, fanout): ([crate::ExprId; 2], usize) = match expression {
-            crate::Expr::Binary { lhs, rhs, .. } => ([*lhs, *rhs], 2),
-            crate::Expr::Not { value } => ([*value, 0], 1),
-            _ => ([0, 0], 0),
+        let (children, fanout, form): ([crate::ExprId; 2], usize, Lowering) = match expression {
+            crate::Expr::Binary { op, lhs, rhs } => ([*lhs, *rhs], 2, lowering(*op)),
+            crate::Expr::Not { value } => ([*value, 0], 1, DIRECT),
+            _ => ([0, 0], 0, DIRECT),
         };
-        let (mut size, mut depth) = (1u128, 0u128);
-        for child in &children[..fanout] {
-            let index = usize::from(*child);
-            let (Some(child_size), Some(child_depth)) = (sizes.get(index), depths.get(index)) else {
+        let (nodes, offsets, nesting, binders, conditionals) = form;
+        let mut extent = Generated {
+            nodes,
+            nesting,
+            binders,
+            conditionals,
+        };
+        for (child, offset) in children[..fanout].iter().zip(offsets) {
+            let Some(child) = extents.get(usize::from(*child)) else {
                 return Err(contract("expression-order"));
             };
-            size = size.saturating_add(*child_size);
-            depth = depth.max(*child_depth);
+            extent.nodes = extent.nodes.saturating_add(child.nodes);
+            extent.nesting = extent.nesting.max(offset.saturating_add(child.nesting));
+            extent.binders = extent.binders.saturating_add(child.binders);
+            extent.conditionals = extent.conditionals.saturating_add(child.conditionals);
         }
-        sizes.push(size);
-        depths.push(depth + 1);
+        extents.push(extent);
     }
-    // Conservative over the adapter: unsupported statements stop preparation early.
+    // Conservative over the adapter: unsupported statements stop preparation
+    // early. A prepared action is exactly its lets and final emit, counted here.
     let (mut lets, mut occurrences, mut value_depth) = (0u128, 0u128, 0u128);
+    let (mut binders, mut conditionals) = (0u128, 0u128);
     for statement in &action.statements {
         let (value, binder) = match statement {
             crate::Statement::Let { value, .. } => (*value, 1),
             crate::Statement::Emit { value, .. } => (*value, 0),
             _ => continue,
         };
-        let index = usize::from(value);
-        let (Some(size), Some(depth)) = (sizes.get(index), depths.get(index)) else {
+        let Some(extent) = extents.get(usize::from(value)) else {
             return Err(contract("statement-expression"));
         };
         lets += binder;
-        occurrences = occurrences.saturating_add(binder).saturating_add(*size);
-        value_depth = value_depth.max(*depth);
+        occurrences = occurrences
+            .saturating_add(binder)
+            .saturating_add(extent.nodes);
+        value_depth = value_depth.max(extent.nesting);
+        binders = binders.saturating_add(extent.binders);
+        conditionals = conditionals.saturating_add(extent.conditionals);
     }
-    within(HostMeasure::ProjectionOccurrences, Some(occurrences),
-        count(bounds.max_projection_occurrences))?;
+    within(
+        HostMeasure::ProjectionOccurrences,
+        Some(occurrences),
+        count(bounds.max_projection_occurrences),
+    )?;
     // Let i sits at depth i; its deepest value node at i + depth(value).
     let ast_nesting_bound = lets.saturating_add(value_depth);
-    within(HostMeasure::AstNesting, Some(ast_nesting_bound), count(bounds.max_ast_nesting))?;
-    let step_record_bound = within(HostMeasure::StepRecords, initial_fuel.checked_add(1),
-        count(bounds.max_step_records))?;
+    within(
+        HostMeasure::AstNesting,
+        Some(ast_nesting_bound),
+        count(bounds.max_ast_nesting),
+    )?;
+    let step_record_bound = within(
+        HostMeasure::StepRecords,
+        initial_fuel.checked_add(1),
+        count(bounds.max_step_records),
+    )?;
     let events = usize::try_from(step_record_bound).map_err(|_| contract("step-record-width"))?;
     let arity = count(action.inputs.len()).max(count(arguments.len()));
     let frame_bound = count(bounds.stack_limit).min(initial_fuel);
-    let environment_entry_bound = arity.saturating_add(lets);
-    let peak_slot_bound = within(HostMeasure::RetainedSlots,
-        peak_slots(initial_fuel, frame_bound, environment_entry_bound, arity),
-        bounds.max_retained_slots)?;
+    // Synthetic binders join the environment; a lowered If frame holds two branches.
+    let environment_entry_bound = arity.saturating_add(lets).saturating_add(binders);
+    let peak_slot_bound = within(
+        HostMeasure::RetainedSlots,
+        peak_slots(
+            initial_fuel,
+            frame_bound,
+            environment_entry_bound,
+            arity,
+            conditionals > 0,
+        ),
+        bounds.max_retained_slots,
+    )?;
 
-    let mapped = prepare_scalar_action(program, action_index)
-        .map_err(HostObservationRefusal::Projection)?;
-    if count(mapped.report.occurrences.len()) > occurrences {
+    let mapped =
+        prepare_scalar_action(program, action_index).map_err(HostObservationRefusal::Projection)?;
+    if count(mapped.report.occurrences.len()) != occurrences {
         return Err(contract("occurrence-precount"));
     }
     let function = mapped.function;
     if function.parameters.len() != action.inputs.len()
-        || !function.parameters.iter().all(|parameter| scalar(parameter.ty))
+        || !function
+            .parameters
+            .iter()
+            .all(|parameter| scalar(parameter.ty))
         || !scalar(function.return_type)
     {
         return Err(contract("generated-signature"));
     }
-    // Each occurrence is exactly one fresh generated body node.
-    let (nodes, observed_ast_nesting) = admitted_body(&function.body, mapped.report.occurrences.len())
-        .map_err(contract)?;
+    // Each occurrence is exactly one fresh generated body node. Every Let binder
+    // and If frame the machine can hold was counted above for environment and slots.
+    let (nodes, observed_ast_nesting, let_nodes, if_nodes) =
+        admitted_body(&function.body, mapped.report.occurrences.len()).map_err(contract)?;
     if nodes != mapped.report.occurrences.len() || count(observed_ast_nesting) > ast_nesting_bound {
         return Err(contract("generated-body-extent"));
     }
+    if count(let_nodes) != lets.saturating_add(binders) || count(if_nodes) != conditionals {
+        return Err(contract("generated-binders"));
+    }
     let argument_types_match_inputs = arguments.len() == action.inputs.len()
-        && arguments.iter().zip(&action.inputs).all(|(value, input)| matches!((value, input.ty),
-            (Value::UInt(_), crate::Type::UInt) | (Value::Bool(_), crate::Type::Bool)));
+        && arguments.iter().zip(&action.inputs).all(|(value, input)| {
+            matches!(
+                (value, input.ty),
+                (Value::UInt(_), crate::Type::UInt) | (Value::Bool(_), crate::Type::Bool)
+            )
+        });
 
     // The fixed diagnostic invocation of the returned real function.
-    let entry = Arc::new(Expr::Call(function.name.clone(), arguments.iter()
-        .map(|value| Arc::new(Expr::Literal(value.clone()))).collect()));
-    let generated = Arc::new(Program { functions: vec![function], entry });
+    let entry = Arc::new(Expr::Call(
+        function.name.clone(),
+        arguments
+            .iter()
+            .map(|value| Arc::new(Expr::Literal(value.clone())))
+            .collect(),
+    ));
+    let generated = Arc::new(Program {
+        functions: vec![function],
+        entry,
+    });
     let mut machine = Machine::new(generated.clone(), initial_fuel, bounds.stack_limit);
     let initial = machine.snapshot();
     let records = machine.run_steps(events);
@@ -235,10 +318,23 @@ pub fn observe_scalar_action(program: &crate::Program, action_index: usize, argu
     }
     let terminal_has_next = machine.step().is_some();
     Ok(BoundedSourceObservation {
-        report: mapped.report, program: generated, initial, records, terminal, terminal_has_next,
-        extent: HostExtent { bounds, projected_occurrences: occurrences, ast_nesting_bound,
-            observed_ast_nesting, step_record_bound, frame_bound, environment_entry_bound,
-            peak_slot_bound, argument_types_match_inputs },
+        report: mapped.report,
+        program: generated,
+        initial,
+        records,
+        terminal,
+        terminal_has_next,
+        extent: HostExtent {
+            bounds,
+            projected_occurrences: occurrences,
+            ast_nesting_bound,
+            observed_ast_nesting,
+            step_record_bound,
+            frame_bound,
+            environment_entry_bound,
+            peak_slot_bound,
+            argument_types_match_inputs,
+        },
         qualification: QUALIFICATION,
     })
 }
@@ -251,12 +347,18 @@ fn contract(detail: &'static str) -> HostObservationRefusal {
     HostObservationRefusal::PreparationContract { detail }
 }
 
-fn within(measure: HostMeasure, required: Option<u128>, bound: u128)
-    -> Result<u128, HostObservationRefusal>
-{
+fn within(
+    measure: HostMeasure,
+    required: Option<u128>,
+    bound: u128,
+) -> Result<u128, HostObservationRefusal> {
     match required {
         Some(value) if value <= bound => Ok(value),
-        required => Err(HostObservationRefusal::Exceeded { measure, required, bound }),
+        required => Err(HostObservationRefusal::Exceeded {
+            measure,
+            required,
+            bound,
+        }),
     }
 }
 
@@ -264,22 +366,70 @@ fn scalar(ty: Type) -> bool {
     matches!(ty, Type::UInt | Type::Bool)
 }
 
+/// One expression's unshared generated extent.
+#[derive(Clone, Copy)]
+struct Generated {
+    nodes: u128,
+    nesting: u128,
+    binders: u128,
+    conditionals: u128,
+}
+
+/// Own nodes, operand nesting offsets, own nesting, synthetic binders, Ifs.
+type Lowering = (u128, [u128; 2], u128, u128, u128);
+
+/// Literal, Name, Not and the five direct binary primitives: one node over its operands.
+const DIRECT: Lowering = (1, [1, 1], 1, 0, 0);
+
+/// The adapter's lowering table, with L and R the mapped operands at the given offsets.
+fn lowering(op: crate::BinaryOp) -> Lowering {
+    use crate::BinaryOp as Op;
+    match op {
+        Op::Add | Op::Sub | Op::Mul | Op::Eq | Op::Lt => DIRECT,
+        // Unary(Not, Binary(Eq | Lt, L, R)).
+        Op::Ne | Op::Ge => (2, [2, 2], 2, 0, 0),
+        // Let(l, L, Let(r, R, Binary(Lt, Var(r), Var(l)))).
+        Op::Gt => (5, [1, 2], 4, 2, 0),
+        // Let(l, L, Let(r, R, Unary(Not, Binary(Lt, Var(r), Var(l))))).
+        Op::Le => (6, [1, 2], 5, 2, 0),
+        // Let(l, L, Let(r, R, If(Var(l), Var(r) | true, false | Var(r)))).
+        Op::And | Op::Or => (6, [1, 2], 4, 2, 1),
+    }
+}
+
 /// Snapshot units: initial, terminal, two per record, the live machine state
 /// and one transient control/frame copy inside a step. Per snapshot: its
 /// environment, a control holding at most a frame plus an environment, and
-/// each frame holding at most one environment, arity values and arity
-/// pending arguments. Lists, trees and match arms are unreachable here.
-fn peak_slots(fuel: u128, frames: u128, entries: u128, arity: u128) -> Option<u128> {
-    let per_unit = entries.checked_add(arity.checked_mul(2)?)?.checked_add(1)?;
+/// each frame holding at most one environment and either arity values, arity
+/// pending arguments and one reference, or a lowered If's two branch
+/// references. Lists, trees and match arms are unreachable here.
+fn peak_slots(
+    fuel: u128,
+    frames: u128,
+    entries: u128,
+    arity: u128,
+    branches: bool,
+) -> Option<u128> {
+    let mut other = arity.checked_mul(2)?.checked_add(1)?;
+    if branches {
+        other = other.max(2);
+    }
+    let per_unit = entries.checked_add(other)?;
     let per_snapshot = frames.checked_add(3)?.checked_mul(per_unit)?;
-    fuel.checked_mul(2)?.checked_add(6)?.checked_mul(per_snapshot)
+    fuel.checked_mul(2)?
+        .checked_add(6)?
+        .checked_mul(per_snapshot)
 }
 
-/// Explicit-stack walk admitting only the forms the scalar adapter emits.
-/// Returns the node count and nesting, stopping once `node_limit` is passed.
-fn admitted_body(body: &ExprRef, node_limit: usize) -> Result<(usize, usize), &'static str> {
+/// Explicit-stack walk admitting only the scalar forms the adapter emits,
+/// including its Let, Not, Eq/Lt and If lowerings. Returns the node count,
+/// nesting, Let count and If count, stopping once `node_limit` is passed.
+fn admitted_body(
+    body: &ExprRef,
+    node_limit: usize,
+) -> Result<(usize, usize, usize, usize), &'static str> {
     let mut pending = vec![(body, 1usize)];
-    let (mut nodes, mut nesting) = (0usize, 0usize);
+    let (mut nodes, mut nesting, mut lets, mut conditionals) = (0usize, 0usize, 0usize, 0usize);
     while let Some((expr, depth)) = pending.pop() {
         nodes += 1;
         if nodes > node_limit {
@@ -289,19 +439,29 @@ fn admitted_body(body: &ExprRef, node_limit: usize) -> Result<(usize, usize), &'
         match &**expr {
             Expr::Literal(Value::UInt(_) | Value::Bool(_)) | Expr::Var(_) => {}
             Expr::Let(_, value, body) => {
+                lets += 1;
                 pending.push((value, depth + 1));
                 pending.push((body, depth + 1));
             }
-            Expr::Binary(BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Eq
-                | BinaryOp::Lt, left, right) => {
+            Expr::Binary(
+                BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Eq | BinaryOp::Lt,
+                left,
+                right,
+            ) => {
                 pending.push((left, depth + 1));
                 pending.push((right, depth + 1));
             }
             Expr::Unary(UnaryOp::Not, value) => pending.push((value, depth + 1)),
+            Expr::If(condition, yes, no) => {
+                conditionals += 1;
+                pending.push((condition, depth + 1));
+                pending.push((yes, depth + 1));
+                pending.push((no, depth + 1));
+            }
             _ => return Err("generated-node-form"),
         }
     }
-    Ok((nodes, nesting))
+    Ok((nodes, nesting, lets, conditionals))
 }
 
 #[cfg(test)]

@@ -148,6 +148,8 @@ fn encode_key<T: Serializable + Tagged>(
     Ok(writer.bytes)
 }
 // Declared source identity, not a certificate for the complete Rust build or SRS.
+// mori-backend non-test modules are named by path from an inventory. cfg(test)
+// modules, mori-core files outside this list, and SDK/registry sources are not covered.
 pub(crate) fn source_closure() -> String {
     codec::hash(
         concat!(
@@ -178,6 +180,10 @@ pub(crate) fn source_closure() -> String {
             include_str!("local_deployment.rs"),
             include_str!("static_compile.rs"),
             include_str!("call_artifacts.rs"),
+            include_str!("sherlock_literal.rs"),
+            include_str!("sherlock_literal_complete.rs"),
+            include_str!("sherlock_transaction.rs"),
+            include_str!("sherlock_transaction_complete.rs"),
             include_str!("../../mori/Cargo.toml"),
             include_str!("../../mori/src/cli.rs"),
             include_str!("../../mori/src/commands/mod.rs"),
@@ -284,9 +290,36 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-core/src/sherlock/source_adapter.rs"),
             include_str!("../../mori-core/src/sherlock/source_adapter_tests.rs"),
             include_str!("../../mori-core/src/sherlock/source_origin_normal_tests.rs"),
+            include_str!("../../../models/sherlock/literal-step/MAPPING.md"),
             include_str!("../../mori-backend/Cargo.toml"),
-            include_str!("../../mori-backend/src/schnorr.rs"),
+            include_str!("../../mori-backend/src/lib.rs"),
+            include_str!("../../mori-backend/src/authorization.rs"),
+            include_str!("../../mori-backend/src/liabilities.rs"),
             include_str!("../../mori-backend/src/parameters.rs"),
+            include_str!("../../mori-backend/src/proving.rs"),
+            include_str!("../../mori-backend/src/replay.rs"),
+            include_str!("../../mori-backend/src/schnorr.rs"),
+            include_str!("../../mori-backend/src/signed_relation.rs"),
+            include_str!("../../mori-backend/src/source_projection.rs"),
+            include_str!("../../mori-backend/src/stage/mod.rs"),
+            include_str!("../../mori-backend/src/stage/artifact.rs"),
+            include_str!("../../mori-backend/src/stage/context.rs"),
+            include_str!("../../mori-backend/src/stage/frame.rs"),
+            include_str!("../../mori-backend/src/stage/lower.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/mod.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/fetch.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/enabled_fetch.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_host.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_step.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_ui_valid.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_bridge.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_witness.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/return_publication_step.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/return_publication_witness.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_complete_execution.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/literal_complete_bridge.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/error_publication_step.rs"),
+            include_str!("../../mori-backend/src/sherlock_machine/fuel_exhaustion_step.rs"),
             include_str!("../../mori-backend/third-party/jubjub-fens/NOTICE.md"),
             include_str!("../../mori-backend/third-party/jubjub-fens/LICENSE-MIT"),
             include_str!("../../mori-backend/third-party/jubjub-fens/LICENSE-APACHE")

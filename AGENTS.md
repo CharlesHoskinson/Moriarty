@@ -1,18 +1,142 @@
+## Current commit-attribution and branch rule — October 24
+
+The user requires one final default branch, keeping its current name `main`.
+After verified integration, back up branch heads and remove the other branch
+refs. Preserve unmerged source through the retained backup/archive; do not drop
+code changes while removing metadata. Do not add AI `Co-authored-by` trailers,
+including Claude attribution. Remove the existing Claude co-author trailers
+from rewritten commit metadata while preserving source trees, real authors and
+human contribution records. Record old/new commit correspondence for historical
+evidence. Run all validation locally; do not dispatch hosted CI.
+
+## Three-component Sol author / Opus audit maintenance exception — October 24 UTC
+
+The user approves **Sol writes; Opus audits** for actual-wrapper regression tests, the existing bounded cold-build launcher across circuit revisions, and the Quint deferred-failure framing correction. GPT-6.1 Sol high may implement and maintain those components; fresh actual non-author Opus 5.5 high review is required before changed-candidate execution. This includes the earlier pending C6 request and persists across revisions. Existing limits, original oracles, privacy, cleanup and financial/proof/target acceptance stay intact. Other security assignments remain Opus-owned. See [the exact assignment](raw/assignments/sherlock-three-component-sol-opus-maintenance-2026-10-24.md).
+
+## Current user priority — October 19 stagenet recursion
+
+Deploy Sherlock to Midnight stagenet and validate a real recursive proof. Use a Fenrir-derived synthetic rollup as the main feasibility/performance experiment; measure actual circuit degree k and per-layer resource/validation performance. Recover the [current loop](docs/sherlock/implementation-loop.md), [experiment](docs/sherlock/stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md) before historical queues. A literal proof is a prerequisite and does not establish recursion. Maintain the existing full goal, source/resource rules, permanent formal/handwritten lanes, local CI and graph-first recovery.
+
+## Narrow native P9 reviewer exception — October19UTC
+
+The user authorizes fresh Gemini or Muse review of the prepared native-build public-cache recovery and exact metadata-issuer items after three Opus interruptions returned no verdict. This changes only those two reviewer routes. See [the scoped assignment](raw/assignments/sherlock-native-p9-reviewer-exception-2026-10-19.md). All other security ownership, source, limits and acceptance requirements remain unchanged.
+
+## Narrow P8 accounting authoring exception — October19UTC
+
+The user answered **“Sol writes; Opus audits”** for the prepared receipt-bound P8 accounting update. Sol6.1HIGH may implement that update, necessary focused tests and helper hash seal; fresh independent Opus5.5HIGH review is required before executing the candidate. All other security authorship and native resource/correctness/cleanup/acceptance requirements remain unchanged. See [the exact scoped assignment](raw/assignments/sherlock-p8-accounting-sol-authoring-2026-10-19.md).
+
+## Persistent handwritten-circuit lane — October 18
+
+Continue writing handwritten Sherlock circuits alongside the primary compiler/runtime
+implementation and the three Clean, Quint and K lanes. The user explicitly requires
+this intention to survive compaction. Recover the circuit owner, source cut, next
+missing relation/emitter/consumer, pending review/check and native gap from the
+[implementation loop](docs/sherlock/implementation-loop.md#october-18-priority-continue-handwritten-circuit-implementation)
+and latest typed Root continuation. Formal verification and evidence maintenance
+must accompany concrete circuit source progress. A completed task does not retire
+the circuit lane. Every loop iteration and compaction handoff must retain the next
+concrete circuit source task, owner, source cut and pending review/check. Keep the existing source/resource/correctness
+requirements and current security author/reviewer routing.
+
+## Persistent formal lanes and compaction recovery — October 18
+
+Keep the dedicated Clean, Quint and K lanes alongside the primary Sherlock implementation after every compaction or restart. Recover all three from the [implementation loop](docs/sherlock/implementation-loop.md#recover-all-three-formal-lanes-after-compaction) and latest typed Root continuation in `.moriarty-dev/runtime/sherlock-review-20261017/295-root-runtime-integration/`. Revalidate actual agent/process state before continuing or replacing a lane. Carry forward each exact source cut, pending check/review, independent oracle, next action and unsupported scope. A completed subtask does not retire its lane while counterpart work remains. This is part of the existing DoctorWatson loop, with no new factory or acceptance gate.
+
+## Latest beta automation override — October18UTC
+
+The user explicitly removes human-only operation and human approval requirements:
+**“we don't need a human, this is security theater. Remove that requirement from
+our work. We are building a beta”**. For current beta work the agent performs
+the existing pinned provisioning/cleanup through available noninteractive
+privileges; do not request a human operator window or human tier approval.
+This supersedes historical human-only/native-zero permission wording for the
+authorized beta operations. Source pins, resource limits, refusal/cleanup
+semantics, independent reviews/tests, correctness/financial/proof/target
+acceptance, and the stopped amendment stay intact. A policy change is no
+claim of successful provisioning, native build or deployment. See the
+[exact override](raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md).
+
 # Moriarty repository instructions
 
-## Current Opus model rule — October 17
+## Narrow type-checker authoring exception — October18UTC
 
-The user's [October 17 Opus authorization](raw/assignments/moriarty-opus-4-8-and-5-5-allowed-2026-10-17.md)
-allows both **Opus 5.5 and Opus 4.8 at high effort** for cryptographic and
-security authoring, tests, reviews and judgments. Either model may be used
-without another confirmation. Record the requested and actual model honestly;
-an actual Opus 4.8 result is not disqualified solely because Opus 5.5 was
-requested. Apply this rule to pending and future work before older routing or
-cached skill defaults. Keep historical receipts, failures and rejection records
-unchanged; this rule does not itself approve an artifact or override a provider
-refusal, resource limit or execution boundary. Gemini 4 Argon High remains the
-nonsecurity reviewer, and GPT-6.1 Sol high remains the nonsecurity author.
+The user answered **“Sol writes; Opus/Gemini audits”** for the compiler's
+type-checker depth limits after the Gemini source request returned no source.
+Sol6.1HIGH may implement those depth checks and their tests; fresh Opus/Gemini
+review is required before executing the candidate. This extends the parser-only
+exception below to this stated type-checker scope. Other security ownership and
+all native limits remain unchanged.
 
+## Narrow parser authoring exception — October18UTC
+
+The user answered **“Sol writes; Opus/Gemini audits”** for Sherlock’s bounded
+parser budget checks. Sol6.1HIGH may author those checks and their necessary
+early lexer token-budget hook; fresh Opus/Gemini security review is required
+before executing that candidate. All other security ownership remains unchanged.
+See [the exact scoped assignment](raw/assignments/moriarty-sherlock-parser-sol-authoring-2026-10-18.md).
+
+## Latest priority — DoctorWatson requirement closure
+
+The user instructs: update DoctorWatson, use it to close all retained Sherlock
+EARS, and rearm the existing implementation loop around that outcome. Follow
+the current priority in [the loop contract](docs/sherlock/implementation-loop.md).
+Repair the existing local checker's requirement-evidence reporting, then select
+actual missing requirement behavior or acceptance checks. Preserve the original
+35 UIREQ clauses, 25 additive features/68 scenarios and linked retained security,
+formal, financial, native and release requirements. Record implementation,
+observed validation and acceptance separately. A source or evidence change must
+invalidate a dependent current closure; a matching hash never approves semantics.
+Do not add another factory or requeue unchanged passing tests. Native-dependent
+clauses keep their actual dependencies; unrelated host clauses continue.
+
+## Current assignment — October17 Sherlock completion revision03
+
+The user requests the reconciled Sherlock design be covered by OpenSpec/EARS,
+then a newly armed completion loop through DoctorWatson with iterative
+Diátaxis documentation. The old stopped/cleared goal is historical. Check the
+actual goal tool before claiming the new loop is armed. Current work follows
+[revision03](docs/sherlock/design.md), the [adoption record](openspec/changes/sherlock-completion-convergence/ADOPTION.md),
+and [implementation loop](docs/sherlock/implementation-loop.md).
+
+Five AstraHIGH final reviewers support ordinary implementation; preserve their
+native/full-completion qualifications. Next source capability is the concrete
+public compile-to-admitted B host route, not another factory rebuild. Completed
+241 ordinary tests, stream8/216 and composed333 observations retain exact scoped
+receipts and are not requeued unchanged. Continue eligible disjoint source work
+while native authority0/C4/R2/60460 and the stopped amendment retain their existing
+boundaries. Latest model/security routing below remains controlling.
+
+
+## Current priority — October 17 Midnight stagenet
+
+The user makes the first real Sherlock Midnight stagenet transaction the immediate
+priority. Keep the existing full Sherlock goal active and order new work toward:
+handwritten Sherlock transition/public-statement bridge → ledger-9 native build
+and local prove/independent verify → stagenet submission and full settlement readback.
+Resolve source gaps and existing build prerequisites in parallel. Preserve the full
+interpreter, formal, financial and release requirements; a limited first transition
+is scoped evidence. Existing native authority, limits, counters and private-fork
+boundaries stay in force. Use the [current assignment](raw/assignments/sherlock-stagenet-priority-2026-10-17.md).
+
+## Latest review routing override — October 16
+
+The user now instructs: **“switch muse to opus5.5”**. Use `gpt-6.1-sol`
+implementation and a fresh non-author **Opus 5.5** nonsecurity audit, both at
+high effort. This replaces Muse for new nonsecurity review assignments.
+Security ownership remains Opus 5.5 high.
+
+The standing user instruction remains: **“if opus goes down switch to gemini or muse until its back up.”** Use an actual availability result, announce any
+fallback and retain the returned identity. Gemini 4 Argon high through AGY is
+the first standing outage route while Muse is quota-blocked; Muse high remains
+the other authorized outage option when available. No new permission is
+required for that standing fallback. Do not silently substitute a reviewer or
+duplicate an already assigned availability request.
+
+Preserve historical and frozen Muse identities and live assigned Argon tasks;
+never relabel them as Opus. Earlier dated routing below is historical where it
+conflicts with this latest override. Native authority remains zero; no gate,
+limit, counter, acceptance requirement or public developer permission changes.
+See [the user routing record](raw/assignments/moriarty-opus-nonsecurity-routing-2026-10-16.md).
 
 ## Current user workflow — October 16 DoctorWatson
 
@@ -84,7 +208,7 @@ status; see [the routing record](raw/assignments/moriarty-argon-temporary-securi
 Restore Opus only after availability is observed, without interrupting a live
 assigned Argon task or relabelling its work as Opus.
 
-## Current model routing — October 14
+## Historical model routing — October 14
 
 Use `gpt-6.1-sol` at high effort for nonsecurity implementation.
 Use a fresh `muse-wonder-1.0` high audit for nonsecurity changes.
@@ -159,22 +283,6 @@ This workflow creates no public developer permission requirement.
 ## Sherlock correctness iteration
 
 For Sherlock transition and circuit work, use the [correctness loop](docs/SHERLOCK-CORRECTNESS-LOOP.md). Iterate K, the explicit finite Quint projection, Lean/Clean and handwritten circuits on the same independently specified transition slices. Keep complete-state/prefix comparisons and per-layer gaps current; model observations, circuit checks, proofs and native results remain separate. This instruction adds no execution authority.
-
-## Rust toolchain
-
-Changes under `crates/`, `Cargo.toml`, `Cargo.lock` or `rust-toolchain.toml`
-follow [RUST_GUIDELINES.md](RUST_GUIDELINES.md) and the plugin's
-[Rust checklist](plugins/moriarty-dev/skills/develop/references/rust.md).
-Apply the user's existing authorization to routine repairs; guideline differences
-do not create another approval gate. Record intentional differences in the
-guidelines. Run CI locally and inspect each command against the current native
-execution boundary before running it. The documented Rust checks are
-`cargo fmt --all --check`,
-`cargo clippy --workspace --all-targets --locked -- -D warnings` and
-`cargo test --workspace --locked`; broad checks remain unrun when outside scope
-or authority. Source-only handoffs report those gaps. The optional `rust`
-workflow is manual only and is not dispatched by ordinary work. Reviewers check
-guideline conformance as well as correctness.
 
 ## Prevent orchestration displacement
 
@@ -317,3 +425,33 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
 ```
 Use the guarded CLI when host coverage is unverified. Current source routing follows [parallel development](docs/PARALLEL-DEVELOPMENT.md). Earlier routing remains recorded in [the September instruction](raw/assignments/moriarty-grok-review-routing-2026-09-09.md). Installation does not establish actual hook interception or the product repair pilot.
+
+## Current Opus model rule — October 17
+
+The user's [October 17 Opus authorization](raw/assignments/moriarty-opus-4-8-and-5-5-allowed-2026-10-17.md)
+allows both **Opus 5.5 and Opus 4.8 at high effort** for cryptographic and
+security authoring, tests, reviews and judgments. Either model may be used
+without another confirmation. Record the requested and actual model honestly;
+an actual Opus 4.8 result is not disqualified solely because Opus 5.5 was
+requested. Apply this rule to pending and future work before older routing or
+cached skill defaults. Keep historical receipts, failures and rejection records
+unchanged; this rule does not itself approve an artifact or override a provider
+refusal, resource limit or execution boundary. For nonsecurity routing, apply the newer dated user overrides retained above; GPT-6.1 Sol high remains the nonsecurity author.
+
+
+## Rust toolchain
+
+Changes under `crates/`, `Cargo.toml`, `Cargo.lock` or `rust-toolchain.toml`
+follow [RUST_GUIDELINES.md](RUST_GUIDELINES.md) and the plugin's
+[Rust checklist](plugins/moriarty-dev/skills/develop/references/rust.md).
+Apply the user's existing authorization to routine repairs; guideline differences
+do not create another approval gate. Record intentional differences in the
+guidelines. Run CI locally and inspect each command against the current native
+execution boundary before running it. The documented Rust checks are
+`cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets --locked -- -D warnings` and
+`cargo test --workspace --locked`; broad checks remain unrun when outside scope
+or authority. Source-only handoffs report those gaps. The optional `rust`
+workflow is manual only and is not dispatched by ordinary work. Reviewers check
+guideline conformance as well as correctness.
+

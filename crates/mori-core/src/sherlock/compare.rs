@@ -1,14 +1,15 @@
-//! First-difference positions for complete typed A-profile observations.
+//! First-difference and continuity positions for complete typed A observations.
 //!
-//! This is an observation comparator, not a trace-validity checker: it does not
-//! check record continuity, evaluate rules, authenticate source metadata, or
-//! validate proofs. The caller supplies two present traces on the declared
+//! Pairwise `first_difference` compares supplied observations. The separate
+//! `first_continuity_difference` checks complete state edges and total charge.
+//! Neither evaluates rules, authenticates source metadata, or validates proofs.
+//! For pairwise comparison the caller supplies two present traces on the declared
 //! `sherlock-k-a/1` common domain. An empty record slice is a present zero-step
 //! observation; it is not an absent K, Quint, Lean, Clean, or handwritten layer.
 //! Missing adapters and layers must be reported separately by their consumer.
 //!
-//! No K execution or cross-profile clock alignment is provided. Different
-//! profile/source declarations are reported before inspecting states. Metadata
+//! No K execution or cross-profile clock alignment is provided. Pairwise
+//! comparison reports different profile/source declarations before states. Metadata
 //! equality alone does not establish that a declaration is true. This API does
 //! not implement Candidate B or claim other profiles have the same semantics.
 //! Structural comparison inherits A's unbounded host time and recursive data
@@ -148,3 +149,114 @@ fn snapshot_difference(left: &Snapshot, right: &Snapshot) -> Option<SnapshotFiel
         None
     }
 }
+
+/// Complete-state continuity edge. Record indices are zero based.
+/// Retrieve both raw states from the original trace and returned snapshot.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ContinuityBoundary {
+    /// `trace.initial` versus `trace.records[0].before`.
+    InitialToFirst,
+    /// `records[previous].after` versus `records[next].before`.
+    BetweenRecords { previous: usize, next: usize },
+    /// `records[last].after` versus the independently supplied returned state.
+    LastToReturned { last: usize },
+    /// A present empty record slice: `trace.initial` versus returned state.
+    EmptyToReturned,
+}
+
+/// First complete-state boundary or aggregate charge-accounting mismatch.
+/// Raw observations remain caller-owned; no values are erased or normalized.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ContinuityDifference {
+    State {
+        boundary: ContinuityBoundary,
+        field: SnapshotField,
+    },
+    /// Returned remaining fuel exceeds initial remaining fuel.
+    UndefinedFuelDelta,
+    /// Checked addition of this record's charge would exceed u128.
+    ChargeOverflow { index: usize },
+    ChargeSumMismatch {
+        recorded: u128,
+        endpoint_delta: u128,
+    },
+}
+
+/// Check initial/first, adjacent after/before edges in ascending record order,
+/// then last/returned. Empty records compare initial/returned, without inferring
+/// terminality. All eight complete fields use the existing `SnapshotField` order.
+/// State differences precede aggregate accounting: checked endpoint subtraction,
+/// checked charge summation, then exact total equality. No counters are clamped.
+///
+/// `None` means these supplied boundaries and aggregate counters agree only.
+/// It does not validate a transition, rule line, individual rule charge, outcome,
+/// profile declaration, source authenticity, missing layer, or proof. In
+/// particular, a matching pending prefix is permitted. Structural comparison
+/// retains the A profile's unbounded host traversal; no new resource policy or
+/// public untrusted-input admission is provided.
+#[must_use]
+pub fn first_continuity_difference(
+    trace: TraceView<'_>,
+    returned: &Snapshot,
+) -> Option<ContinuityDifference> {
+    if let Some((first, rest)) = trace.records.split_first() {
+        if let Some(field) = snapshot_difference(trace.initial, &first.before) {
+            return Some(ContinuityDifference::State {
+                boundary: ContinuityBoundary::InitialToFirst,
+                field,
+            });
+        }
+        let mut previous = first;
+        for (index, next) in rest.iter().enumerate() {
+            if let Some(field) = snapshot_difference(&previous.after, &next.before) {
+                return Some(ContinuityDifference::State {
+                    boundary: ContinuityBoundary::BetweenRecords {
+                        previous: index,
+                        next: index + 1,
+                    },
+                    field,
+                });
+            }
+            previous = next;
+        }
+        if let Some(field) = snapshot_difference(&previous.after, returned) {
+            return Some(ContinuityDifference::State {
+                boundary: ContinuityBoundary::LastToReturned {
+                    last: trace.records.len() - 1,
+                },
+                field,
+            });
+        }
+    } else if let Some(field) = snapshot_difference(trace.initial, returned) {
+        return Some(ContinuityDifference::State {
+            boundary: ContinuityBoundary::EmptyToReturned,
+            field,
+        });
+    }
+
+    let Some(endpoint_delta) = trace
+        .initial
+        .remaining_fuel
+        .checked_sub(returned.remaining_fuel)
+    else {
+        return Some(ContinuityDifference::UndefinedFuelDelta);
+    };
+    let mut recorded = 0u128;
+    for (index, record) in trace.records.iter().enumerate() {
+        let Some(sum) = recorded.checked_add(u128::from(record.charge)) else {
+            return Some(ContinuityDifference::ChargeOverflow { index });
+        };
+        recorded = sum;
+    }
+    if recorded != endpoint_delta {
+        return Some(ContinuityDifference::ChargeSumMismatch {
+            recorded,
+            endpoint_delta,
+        });
+    }
+    None
+}
+
+#[cfg(test)]
+#[path = "trace_continuity_tests.rs"]
+mod trace_continuity_tests;

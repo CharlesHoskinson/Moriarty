@@ -1,0 +1,336 @@
+--- a/models/sherlock/qa/check.py
++++ b/models/sherlock/qa/check.py
+@@ -41,6 +41,104 @@
+               ('raw_traces', 'raw_trace_references', 'evidence')),
+     'image': ('sherlock-image-observations/1', 'sherlock-image-reference', ()),
+ }
++
++
++# Additive selected-run metadata. This is a declared projection, not execution
++# evidence or an additional model. Full-corpus constants and modes stay unchanged.
++PAIRED_PROJECTION_CONTRACT = {'comparisonProfile': 'sherlock-k-a/1',
++ 'referenceSource': {'path': 'models/sherlock/k/main.k',
++                     'sha256': 'b3746ff51dd7999b046ccb23237595605420adcfeebc0c04c0ad0f1396b11d41',
++                     'bytes': 16249},
++ 'commonDomain': {'input': 'Finite closed immutable K-compatible syntax/function tables, acyclic '
++                           'expression references, named recursive functions, canonical signed-decimal '
++                           'names, UInt128/Bool/List[UInt128]/structuralTree, finite fuel/stack. K-A '
++                           'counterpart rather than older finite-algorithm Quint-A.',
++                  'numericBounds': {'UInt128min': '0',
++                                    'UInt128max': '340282366920938463463374607431768211455',
++                                    'F03initialFuel': 93,
++                                    'F03stackLimit': 64,
++                                    'F03expectedLogicalFramePeak': 11,
++                                    'F03literalListLength': 3,
++                                    'programIdentity': 'F03 '
++                                                       'input_sha256832f1c6521477d052b1021cb7cff25c2a7da3b807e6374243479e7b3126e4100'},
++                  'notClaims': ['Fullnumericspace exhaustively checked',
++                                'Wholegrammar/allprogram refinement',
++                                'General arbitrary Snapshot admission',
++                                'Physical heap/native-stack/time guarantee']},
++ 'fieldMaps': [{'commonField': 'code_k / entry_k',
++                'K': 'observed <code> plus retained input entry',
++                'Quint': 'finite immutable expression/function tables expanded by _Renderer; named '
++                         'calls remain named, never unrolled',
++                'difference': 'ExprId sharing and unused rows retained in rawITF; Ktext is structural '
++                              'diagnostic, not pointer/codec identity'},
++               {'commonField': 'control_k',
++                'K': 'observed <k> after startup',
++                'Quint': 'all supported Control variants render through _Renderer.control',
++                'difference': 'No typed K prestartup↔Quint initialized constructor correspondence '
++                              'claimed'},
++               {'commonField': 'environment_k',
++                'K': 'observed Int-key map',
++                'Quint': 'raw int-key map rendered in canonical decimal-string lexical key order',
++                'difference': 'Raw map encoding/order retained; iteration order not semantic'},
++               {'commonField': 'frames_top_first_k / depth',
++                'K': '<stack>/<depth> retained, including all saved environments and pending '
++                     'return/multiplication/args/scope',
++                'Quint': 'topfirst Frame list, full payload rendering; depth derived from listlength',
++                'difference': 'No frame payload or caller environment dropped'},
++               {'commonField': 'stack_limit',
++                'K': '<stackLimit>',
++                'Quint': 'machine.stackLimit',
++                'difference': 'Exact selected finiteinput64 for F03; no physical/native stack claim'},
++               {'commonField': 'initial_fuel / remaining_fuel / charged_steps',
++                'K': '<initialFuel>/<fuel>; work initial-minus-remaining',
++                'Quint': 'machine.initial/remaining; derivedwork',
++                'difference': 'K-A schedule selected on both; helpers unmetered; no transfer to frozen '
++                              'Quint-A terminaltick profile'},
++               {'commonField': 'output_k',
++                'K': '<out> Pending/Done/Rejected/Exhausted',
++                'Quint': 'Outcome rendering retains same K-A diagnostic forms',
++                'difference': 'No financial segment commit/duty result added'},
++               {'commonField': 'records.rule_start_line / charge / before / after',
++                'K': 'actual DebugAppliedRewriteRules span matched to compiled inventory +observed fuel '
++                     'delta +complete cells',
++                'Quint': 'raw lastRule/lastCharge on actual step; complete adjacent snapshots',
++                'difference': 'No rule inferred from expected states or borrowed host execution'},
++               {'commonField': 'terminal_has_next',
++                'K': 'actual separate terminal no-rule/unchanged-state probe under recorded capture '
++                     'convention',
++                'Quint': 'no further K-A semantic edge after publication; actual total action may '
++                         'remain enabled for rule0/charge0stutter',
++                'difference': 'Distinct enabledness interpretations declared; rawstutters retained and '
++                              'counted, not deleted without explanation'}],
++ 'ruleToAction': 'For each actually observed K semantic rule span/startline, compare the Quint step '
++                 'transition raw lastRule with that same pinned rule line and lastCharge with observed '
++                 'charge. step dispatches through generic '
++                 'advance/evaluate/return/invoke/bind/cases/primitive branches; no case-specific '
++                 'interpreter. Startup74 is model initialization metadata, not an observed Quint '
++                 'startup action.',
++ 'hiddenSteps': ['K pure helper/function normalization is inside its A charged semantic rule; '
++                 'visits/work remain unmeasured, not0. Raw engine simplifications/rewrites are retained '
++                 'separately from selected semantic boundaries.',
++                 'Quint pure helper folds/rendering do not add A charges. ExprId table sharing expands '
++                 'only for diagnostic text.',
++                 'Quint postpublication rule0/charge0 stutters remain raw and are explicitly excluded '
++                 'from K-A semantic records; no disabledness probe fabricated.',
++                 'KgeneratedCounter and prestartupKore are retained raw but not in nine-cell typed '
++                 'common projection.'],
++ 'unmatchedFinanceWait': 'Chosen pure K-A grammar has no financial working '
++                         'store/effects/duties/await/resume cells. Older universalMachine localwaiting '
++                         'does not establish a Kfinancial counterpart; no mapping is claimed for it. '
++                         'Bfinancial/helper state and newer interpreter-chunk models are separate '
++                         'retained obligations.',
++ 'reportDisposition': 'FINITE_ACTUAL_TRACE_AGREEMENT_ONLY when actual pair matches; semantic '
++                      'refinement/proof/native/target NONE. Producer origin comes from separately '
++                      'retained actual receipts, not adapter hashes alone.'}
++F03_ORACLE_ROOT = 'docs/audits/2026-10-16/sherlock-full-original-fixtures/frozen/fixture-oracle-data-01'
++F03_ORACLE_PINS = {
++    'fixture-normal-programs.json': '71e780f207c862e6b7061b9b24cb51c3f5243874e256442d46d009e9fc937113',
++    'fixture-normal-prefixes.json': '13d00607c8eac53d6d607502e00395b50f6a2f2a9be386f2ba8bbc5bb167a49b',
++}
++SELECTED_CASES = tuple(case for members in FAMILIES.values() for case in members) + ('F03',)
+ 
+ 
+ def digest(raw):
+@@ -488,7 +586,7 @@
+     return context
+ 
+ 
+-def compare_supplied_observations(artifact, families, *, layer):
++def compare_supplied_observations(artifact, families, *, layer, selection=None):
+     """Compare a declared adapter envelope with independently frozen literals.
+ 
+     Only the existing common observation projection is compared. Raw machine
+@@ -503,6 +601,10 @@
+     adapter = host_adapter()
+     expected = adapter.expected_observations(families, producer=producer)
+     observed = artifact['observations']
++    omissions = None
++    if selection is not None:
++        expected, _ = _selected_observations(expected, **selection)
++        observed, omissions = _selected_observations(observed, **selection)
+     difference = adapter.compare_observations(expected, observed, first_difference)
+     if difference is not None:
+         difference.update(projection=artifact['projection'],
+@@ -520,7 +622,109 @@
+                    raw_diagnostic_counts={key: len(artifact[key]) for key in ('raw_runs', 'raw_traces')
+                                           if type(artifact.get(key)) is list},
+                    expected_programs=len(expected['programs']), expected_prefix_runs=len(expected['runs']))
++    if omissions is not None:
++        summary.update(omissions)
++        summary['scope'] = 'selected-supplied-' + layer + '-diagnostic-artifact-comparison-only'
+     return difference, summary
++
++
++def _selected_observations(observations, *, case_id, initial_fuel):
++    """Select complete literal objects; do not trim fields within either object."""
++    require(type(observations) is dict, 'selected observations must be object')
++    programs, runs = observations.get('programs'), observations.get('runs')
++    require(type(programs) is list and type(runs) is list,
++            'selected observations need program and run arrays')
++    selected_programs = [row for row in programs
++                         if type(row) is dict and row.get('case_id') == case_id]
++    selected_runs = [row for row in runs if type(row) is dict
++                     and row.get('case_id') == case_id and type(row.get('initial')) is dict
++                     and type(row['initial'].get('initial_fuel')) is int
++                     and row['initial']['initial_fuel'] == initial_fuel]
++    require(len(selected_programs) == 1, 'exactly one selected program identity required')
++    require(len(selected_runs) == 1, 'exactly one selected run required')
++    # Preserve all envelope members as well, so undeclared extra members do not
++    # disappear from complete structural comparison. Only unrelated rows are omitted.
++    selected = dict(observations, programs=selected_programs, runs=selected_runs)
++    return selected, dict(omitted_programs=len(programs) - 1, omitted_runs=len(runs) - 1)
++
++
++def compare_paired_observations(k_artifact, quint_artifact, families, *, case_id, initial_fuel):
++    """Compare one explicitly selected supplied pair and independent literals.
++
++    No producer is executed or authenticated. Each selected run retains all11
++    snapshot fields, ordered records, rule/charge, before/after and terminal probe.
++    Literal overlay expansion uses the existing adapter, never a new evaluator.
++    """
++    require(type(case_id) is str and type(initial_fuel) is int,
++            'selected case and exact integer initial fuel required')
++    adapter = host_adapter()
++    expected_all = adapter.expected_observations(families)
++    expected, omitted = _selected_observations(expected_all, case_id=case_id, initial_fuel=initial_fuel)
++    artifacts = dict(k=k_artifact, quint=quint_artifact)
++    selected, layers = {}, {}
++    for layer, artifact in artifacts.items():
++        observed, _ = _selected_observations(
++            artifact['observations'], case_id=case_id, initial_fuel=initial_fuel)
++        selected[layer] = observed
++        difference, summary = compare_supplied_observations(artifact, families, layer=layer,
++            selection=dict(case_id=case_id, initial_fuel=initial_fuel))
++        context_key = dict(case_id=case_id, initial_fuel=initial_fuel, path='/runs/0/terminal')
++        summary.update(first_difference=difference, evidence=artifact.get('evidence'),
++                       raw_context=layer_raw_context(artifact, context_key))
++        layers[layer] = summary
++    # Producer names intentionally differ. Their exact per-layer identity was
++    # compared above; every other selected observation member is compared here.
++    left = {key: value for key, value in selected['k'].items() if key != 'producer'}
++    right = {key: value for key, value in selected['quint'].items() if key != 'producer'}
++    paired_difference = adapter.compare_observations(left, right, first_difference)
++    if paired_difference is not None:
++        paired_difference['raw_context'] = {layer: layer_raw_context(artifact, paired_difference)
++                                            for layer, artifact in artifacts.items()}
++    failed = paired_difference is not None or any(row['first_difference'] is not None
++                                                 for row in layers.values())
++    expected_program = expected['programs'][0]
++    oracle_program = next(program for programs, _ in families for program in programs['programs']
++                          if program['case_id'] == case_id)
++    peaks, stack_limits, record_projection = {}, {}, {}
++    for layer, observations in selected.items():
++        run = observations['runs'][0]
++        stack_limits[layer] = run['initial'].get('stack_limit')
++        records = run.get('records', [])
++        snapshots = [run.get('initial'), run.get('terminal')]
++        if type(records) is list:
++            snapshots.extend(record.get(field) for record in records if type(record) is dict
++                             for field in ('before', 'after'))
++            record_projection[layer] = [dict(record_index=index,
++                rule_start_line=record.get('rule_start_line'), charge=record.get('charge'))
++                for index, record in enumerate(records) if type(record) is dict]
++        else:
++            record_projection[layer] = None
++        peaks[layer] = max((state['depth'] for state in snapshots if type(state) is dict
++                           and type(state.get('depth')) is int), default=None)
++    known_cases = list(dict.fromkeys(SELECTED_CASES + tuple(
++        row['case_id'] for row in expected_all['programs'])))
++    return dict(status='mismatch' if failed else 'match',
++        scope='explicit-selected-supplied-k-quint-complete-state-comparison-only',
++        disposition='mismatch' if failed else 'supplied-finite-complete-trace-agreement-only',
++        actual_execution='not-established-by-comparator', refinement='none', acceptance='none',
++        selection=dict(case_id=case_id, initial_fuel=initial_fuel, compared_programs=1,
++                       compared_runs=1, oracle_omissions=omitted),
++        oracle=dict(profile=expected['profile'], source_sha256=expected['source_sha256'],
++                    program=expected_program, input_sha256=oracle_program.get('input_sha256'),
++                    exact_completion_fuel=oracle_program.get('exact_completion_fuel'),
++                    expected_value_k=oracle_program.get('expected_value_k'),
++                    expected_logical_frame_peak=oracle_program.get('expected_maximum_frame_depth')),
++        numeric_bounds=dict(UInt128_min=0, UInt128_max=340282366920938463463374607431768211455,
++            initial_fuel=initial_fuel, stack_limit=expected['runs'][0]['initial']['stack_limit'],
++            observed_stack_limit=stack_limits, observed_logical_frame_peak=peaks),
++        projection_contract=PAIRED_PROJECTION_CONTRACT, selected_rule_action_projection=record_projection,
++        paired=dict(status='mismatch' if paired_difference else 'match', first_difference=paired_difference),
++        layers=layers, catalogue=dict(retained_default_cases=list(SELECTED_CASES[:-1]),
++            unobserved_by_this_report=[case for case in known_cases if case != case_id],
++            other_catalogue_status='unchanged; omitted cases are not observed by this report'),
++        gaps=['Supplied declarations and raw diagnostics do not authenticate model execution.',
++              'Finite selected trace agreement is not semantic refinement, proof, native or target evidence.',
++              'The pure profile supplies no finance/wait correspondence; other retained models remain separate.'])
+ 
+ 
+ def source_read_inventory():
+@@ -915,7 +1119,8 @@
+ 
+ def run(repo, *, observed_programs=None, observed_prefixes=None, family='normal', host_observations=None,
+         lean_observations=None, quint_observations=None, image_observations=None, k_observations=None,
+-        requirement_evidence=None, compile_evidence_package=None, compile_evidence_case=None):
++        requirement_evidence=None, compile_evidence_package=None, compile_evidence_case=None,
++        paired_k_observations=None, paired_quint_observations=None, selected_case=None, selected_initial_fuel=None):
+     repo = Path(repo)
+     require((compile_evidence_package is None) == (compile_evidence_case is None),
+             'compile evidence package and case must be supplied together')
+@@ -951,7 +1156,16 @@
+             'supplied layer observations are mutually exclusive comparison modes')
+     require(not any(path is not None for path in supplied_paths.values()) or observed_programs is None,
+             'layer observations and literal document observations are separate comparison modes')
++    paired_options = (paired_k_observations, paired_quint_observations, selected_case, selected_initial_fuel)
++    paired_mode = any(option is not None for option in paired_options)
++    require(not paired_mode or all(option is not None for option in paired_options),
++            'paired K/Quint paths, selected case and initial fuel must be supplied together')
++    require(not paired_mode or (observed_programs is None
++            and not any(path is not None for path in supplied_paths.values())),
++            'selected paired and existing observation comparisons are separate modes')
++    require(not paired_mode or selected_case in SELECTED_CASES, 'unsupported selected paired case')
+     difference = None
++    selected_pair = None
+     supplied_host = None
+     supplied_layers = {}
+     observed_files = []
+@@ -983,6 +1197,35 @@
+         difference, summary = compare_supplied_observations(artifact, list(frozen.values()), layer=layer)
+         summary['file'] = ref
+         supplied_layers['supplied_' + layer + '_observation'] = summary
++    if paired_mode:
++        # Keep the full default source/corpus validation above. Only this explicit
++        # selected comparison may use a single run instead of216 corpus runs.
++        oracle_families = list(frozen.values())
++        oracle_files = []
++        if selected_case == 'F03':
++            fixture_documents = []
++            for name, pin in F03_ORACLE_PINS.items():
++                path = repo / F03_ORACLE_ROOT / name
++                ref, value = document(path, strict=True, inventory=inventory,
++                                      reference_path=str(path.relative_to(repo)))
++                require(ref['sha256'] == pin, 'frozen F03 oracle changed: ' + name)
++                ref['path'] = str(path.relative_to(repo))
++                oracle_files.append(ref)
++                fixture_documents.append(value)
++            oracle_families = [tuple(fixture_documents)]
++        pair_documents = []
++        for path in (paired_k_observations, paired_quint_observations):
++            ref, value = document(path, strict=True)
++            observed_files.append(ref)
++            pair_documents.append(value)
++        selected_pair = compare_paired_observations(*pair_documents, oracle_families,
++            case_id=selected_case, initial_fuel=selected_initial_fuel)
++        selected_pair['oracle_files'] = oracle_files if oracle_files else files[1:]
++        selected_pair['supplied_files'] = dict(zip(('k', 'quint'), observed_files, strict=True))
++        difference = selected_pair['paired']['first_difference']
++        for row in selected_pair['layers'].values():
++            if difference is None:
++                difference = row['first_difference']
+     report = dict(status='mismatch' if difference else 'pass',
+                 scope='frozen-normal-corpus-and-source-literal-QA', acceptance='none',
+                 profile=PROFILE, counts=totals, frozen_files=files,
+@@ -1002,6 +1245,10 @@
+                       'No B helper microsteps, hostile cases, general grammar or financial continuation coverage.'],
+                 **({'supplied_host_observation': supplied_host} if supplied_host is not None else {}),
+                 **supplied_layers)
++    if selected_pair is not None:
++        report['selected_paired_projection'] = selected_pair
++        report['supplied_observation_family'] = None
++        report['supplied_comparison_gaps']['K']['status'] = 'selected-supplied-comparison-only'
+     if compile_evidence_package is not None:
+         report['compile_evidence_record'] = compile_evidence_record(
+             repo, compile_evidence_package, compile_evidence_case)
+@@ -1032,6 +1279,12 @@
+     for layer in LAYER_ARTIFACTS:
+         supplied.add_argument('--' + layer + '-observations', type=Path,
+                               help='compare a supplied complete normal ' + layer + ' adapter artifact; does not execute it')
++    parser.add_argument('--paired-k-observations', type=Path,
++                        help='explicit selected-run K artifact; requires paired Quint, case and fuel; no execution')
++    parser.add_argument('--paired-quint-observations', type=Path,
++                        help='explicit selected-run Quint artifact; does not require all216 runs')
++    parser.add_argument('--selected-case', choices=SELECTED_CASES)
++    parser.add_argument('--selected-initial-fuel', type=int)
+     parser.add_argument('--observed-prefixes', type=Path)
+     parser.add_argument('--family', choices=FAMILIES, default='normal')
+     args = parser.parse_args(argv)
+@@ -1048,7 +1301,10 @@
+                      quint_observations=args.quint_observations, image_observations=args.image_observations,
+                      k_observations=args.k_observations, requirement_evidence=args.requirement_evidence,
+                      compile_evidence_package=args.compile_evidence_record,
+-                     compile_evidence_case=args.compile_evidence_case)
++                     compile_evidence_case=args.compile_evidence_case,
++                     paired_k_observations=args.paired_k_observations,
++                     paired_quint_observations=args.paired_quint_observations,
++                     selected_case=args.selected_case, selected_initial_fuel=args.selected_initial_fuel)
+         output = json.dumps(report, indent=2, allow_nan=False)
+     except (OSError, ValueError, KeyError, TypeError, RecursionError) as error:
+         parser.exit(2, f'QA input error: {error}\n')

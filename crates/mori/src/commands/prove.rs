@@ -1,6 +1,6 @@
-use super::proof_io;
 #[cfg(feature = "native")]
 use super::core_io;
+use super::proof_io;
 use crate::shell::Shell;
 use std::{path::PathBuf, process::ExitCode};
 #[derive(Debug, clap::Args)]

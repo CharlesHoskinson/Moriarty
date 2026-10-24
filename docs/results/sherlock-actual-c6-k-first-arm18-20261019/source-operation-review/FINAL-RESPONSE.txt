@@ -1,0 +1,119 @@
+SOURCE=APPROVE
+EXACT5_OPERATIONS=ELIGIBLE
+
+No mandatory source fix is required. The five children may be selected by Root, in order, subject to the prerequisites below. This is an opinion on source and operation eligibility only. Nothing was executed, and no runtime result, hidden-oracle correctness or global acceptance is claimed.
+
+## Basis
+
+**Raw carry (child 01)**
+- `prepare_continuation.py` and `kore_continuation.resume_query` bind the prior raw Kore to its original durable freeze.
+- They extract the third `ngTape` argument by balanced span. The scanner honours strings, escapes and sort braces, and rejects trailing text.
+- They type-check that argument as a 5-ary `ngState` and enforce `16 + 2 == observation_budget`.
+- They emit `OBSERVE(final, \dv{SortInt{}}("2"))` and verify the carried bytes inside the new query.
+- No state is generated from JSON or from expected data.
+- The `OBSERVE` label follows the same mangling as the `TAPE` and `STATE` labels, which are already confirmed by actual output. If the label were wrong, `kore-exec` would fail to parse it and stop with a nonzero exit.
+
+**Decoder and join (child 04)**
+- `decode_continuation.py` re-checks that the query and the carry file contain the prior final state byte for byte.
+- It checks that the new tape's initial raw state equals the carried state byte for byte, and that both ends of the new tape are `ngState` terms.
+- It decodes the complete print with the unchanged codec and checks full decoded equality at the boundary.
+- `join_complete_chunks` removes only the one equal duplicate state. It checks the per-window bound, the absence of a terminal state before a continuation, the immutable Program, and +1 cumulative event continuity. It requires `len == used + 1`.
+- It then re-checks the joined initial state against the SAFE input and the per-ordinal event count and Program identity.
+- `observerCuts` is derived from the actual states only, and `caseId` is rebound from SAFE rather than copied from the old wire.
+- The tail and the joined wire are persisted before `relate`. A relation exception is retained as `FAIL` and the child exits 0.
+
+**Cases control**
+- The relation accepts only the original full ordered arm span, `[start, start+len) ==` the source `source_arm_id`s. A suffix after misses fails explicitly.
+- The resulting `ngChoose` has the same shape as the K rule `ngScrutinee` return and the `ngScrutineeReturned` payload order. That is: Match id and occurrence, the primary scrutinee decoded through constants, complete source arms, and the saved map from `saved_env`.
+
+**Match-origin ScopeF provenance (`match_scope_evidence.scope_history`)**
+- It requires a `Positive`, phase-`Done`, site-`Cases` Plan exit, record 86.
+- That exit must retain the Cases origin, `saved_env` and scrutinee.
+- The arm layout must equal the immutable source.
+- Recursive first success over the ordered source patterns must equal `plan.arm`.
+- The chosen pattern must be binder-linear.
+- `saved ∪ bindings` (shadowing like `Rho[N<-V]`) must equal the actual `plan.partial` environment.
+- At the CasesPlanHit (record 87), the `ScheduleNext` body, environment and `ScopeF{origin,saved_env}` must match.
+- The push at record 88 must be adjacent to the hit, pushed at exactly the top index, with the exact scheduled frame, `Eval body` and `env_root`.
+- Labels follow actual stack positions through common-prefix diffing. A frame alone never yields an arm. The `ngArmScope` consumer additionally requires the same `match_expr_id` and saved map.
+
+**Recursive pattern relation**
+- In `pattern_bindings`, Wildcard adds no binding, Bind records outer-first paths, and Constructor checks type, constructor and arity and recurses left to right.
+- Non-nominal values and arity mismatches are misses.
+- This agrees with `ngMatchPattern`, `ngChildPath` (which appends) and `ngCombineMatches`.
+- For the frozen data, arm 0 binds `14 ↦ UInt 4` at path `[0,0]`. The body environment is `{13, 14}`.
+- The `ngArmSelected` payload keys equal the public payload order.
+
+**Comparator and barrier (child 05)**
+- `compare_prefix.py` is unchanged.
+- It checks Root's freeze pins for the actual wire and the relation before opening the expected document.
+- It compares the whole six-key wire with strict scalar types, ordered arrays and set-equal object keys.
+- Final `PASS` requires both the typed equality and relation `PASS`.
+
+**K source premise**
+- The three unchanged K bodies were read in full.
+- K17 is `ngChoose`. K18 is first-arm `ngArmSelected`, which pushes `ngArmScope(E,O,A,Saved)` over the unchanged caller frames, with environment `ngExtendEnvironment`.
+- This is consistent with the frozen schedule pairs 17→after 77 and 18→after 88.
+
+No fixture-ID branch, inference of the source arm from the evaluated body, alignment search, retry or normalization was found.
+
+## Non-mandatory hardening (do not apply now; doing so would change frozen source)
+- At the CasesPlanHit, also cross-check `before.result.PlanMatched.{arm,env}` against `pending`, and require the hit to be exit+1. Today these are enforced only through the body, environment and frame match.
+- In child 04, also assert the query's bound literal is `"2"`. Today this is enforced indirectly through the window-size checks.
+- `relate`'s exception filter omits `AttributeError`. If one occurred, the wire would persist without a relation file and Root would stop.
+- This fixture's binder path `[0,0]` does not discriminate path ordering. Path ordering is covered only by the independent wire oracle.
+
+## Root prerequisites
+1. **Pin checks before every child.** Re-check:
+   - all flat static pins;
+   - exact membership of the eleven source files and absence of `__pycache__`;
+   - compiled-15, tool-4 and jar-156 pins;
+   - every previously produced product, including the carry receipt and its embedded `query` and `whole_state` pins against the files.
+
+   Stop on any drift.
+2. **Launch only through the frozen `F03.launch` entry.** Load it in an isolated Root interpreter. Do not use F03's main, ledger, campaign or retry paths. Use the exact argv, a non-inherited environment and `stdin` set to `DEVNULL`. Create fresh `cwd`, `home` and `tmp` directories with mode 0700, and make sure every product is absent beforehand.
+3. **Limits.** Keep the existing limits:
+   - 30 s per child, with a 3 s sweep;
+   - `CORE` 0 and `FSIZE` 512 MiB;
+   - umask 077;
+   - process-group plus token sweep.
+
+   Do not compile, run `kast`, replay the old prefix, raise a cap or repair anything.
+4. **Stop conditions.** Stop with later children UNRUN on:
+   - a timeout or containment breach;
+   - remaining processes;
+   - a nonzero exit from children 01 to 04;
+   - a missing product;
+   - a decode abort, including the strict raw byte-identity check at the boundary, which fails closed.
+
+   If child 04 aborts before a relation file exists, child 05 stays UNRUN and the expected document is never opened.
+5. **Durable freeze after child 04.** Fsync the carry, query, receipt, raw window, complete print, tail states, joined wire, relation, all streams and receipts, and their directories. Then write `ROOT-ACTUAL-FROZEN-BEFORE-EXPECTED.json` with:
+   - `actual_wire` and `relation` as `{path, bytes, sha256}`, using path strings identical to the manifest strings (the comparator uses dict equality);
+   - all raw and receipt pins.
+
+   Only child 05 may open the expected document.
+6. **Child 05 outcome.** If child 05 exits 1 with a complete comparison product, record that as a failed predicate. It does not permit a retry, schedule change or source fix.
+
+## Read coverage
+All supplied bodies were read in full. These include:
+- the source-operation freeze, README, checker plan, preparation readback, proposed operations, capture manifest, and static, compiled, tool and import-closure indexes;
+- the `PRIMARY-RELATION.diff`;
+- all eleven source files;
+- the SAFE input, boundary schedule, and primary records 0–88 (the Plan, hit and push records 77–88 in detail);
+- the public API, the K syntax, product and observer sources, and the K program-wire declarations;
+- the SAFE bindings and readset;
+- the F03 full source, launch closure and import projection;
+- the prior durable freeze, the prior actual wire 0..16, `compile.json`, the prior Root result and the prior review.
+
+The raw Kore seed of about 3 MB and the compiled, tool and jar payloads are pinned artifacts and were not semantically read. Runtime checks cover them: balanced extraction, typed K execution, and decoded equality at the boundary.
+
+## Hidden-oracle and scope qualifications
+- **Hidden oracle unread.** The private expected body, derivation and freeze were not read, so their content and the author's read history are unverified. The SAFE bindings and readset are accepted only as the basis for separation.
+- **Correlated methods.** The oracle uses the same semantic method as earlier work, so this is not a new cross-model vote. A common-mode error between `pattern_bindings` and the K matcher would not be caught by the relation alone.
+- **Out of scope.** Nothing here claims:
+  - a K, B or primary cost clock or work equality (K has no work carrier);
+  - physical or `canonicalMatchPlan` identity;
+  - a full physical-B projection;
+  - generic-instance, native, circuit, ledger or global EARS results;
+  - any security or sourceguard judgement.
+- **Later cuts remain open.** Arm-body return, caller return, last-field completion and the full case are not covered. The permanent K lane stays active.

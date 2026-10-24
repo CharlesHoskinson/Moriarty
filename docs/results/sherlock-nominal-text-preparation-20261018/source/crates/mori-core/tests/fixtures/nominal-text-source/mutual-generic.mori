@@ -1,0 +1,12 @@
+language "moriarty-sherlock-nominal/1";
+program MutualAndGeneric {
+  type Even { Zero; SuccOdd(previous: Odd); }
+  type Odd { SuccEven(previous: Even); }
+  type Box<T> { Box(value: T); }
+  fn wrap(e: Even): Box<Even> { construct Box<Even>::Box(e) }
+  fn unwrap(b: Box<Even>): Even {
+    match b { Box<Even>::Box(value) => value }
+  }
+  entry unwrap(wrap(construct Even::SuccOdd(
+    construct Odd::SuccEven(construct Even::Zero()))));
+}

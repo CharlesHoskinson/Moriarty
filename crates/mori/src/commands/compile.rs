@@ -5,20 +5,38 @@ use crate::error::CliError;
 use crate::shell::Shell;
 #[cfg(feature = "native")]
 use std::path::Path;
-use std::{path::PathBuf, process::ExitCode};
+use std::process::ExitCode;
 
-#[derive(Debug, clap::Args)]
-pub struct Args {
-    pub file: PathBuf,
-    /// Exact target profile JSON with network, anchor and compiler limits
-    #[arg(long)]
-    pub target: PathBuf,
-    /// New output directory; refuses to overwrite existing artifacts
-    #[arg(long)]
-    pub out: PathBuf,
-}
-#[cfg(feature = "native")]
+#[cfg(all(test, feature = "native"))]
+use std::path::PathBuf;
+
+pub use crate::cli_args::compile::Args;
+
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    // Selected HostOnly preparation returns before either native/backend path.
+    if args.execution_profile.is_some()
+        || args.source_profile.is_some()
+        || args.entry
+        || args.execution_inputs.is_some()
+    {
+        let source = super::source_io::read_source(&args.file)?;
+        return super::compile_sherlock::run(&args, &source, |verb, message| {
+            shell.status(verb, message)
+        });
+    }
+    #[cfg(feature = "native")]
+    {
+        run_native(args, shell)
+    }
+    #[cfg(not(feature = "native"))]
+    {
+        let _ = (args, shell);
+        super::native_unavailable()
+    }
+}
+
+#[cfg(feature = "native")]
+fn run_native(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let source = core_io::read_source(&args.file)?;
     if mori_core::language(&source).is_ok_and(|language| language == "moriarty/2") {
         let target: mori_backend::Target = core_io::read_json(&args.target)?;
@@ -264,12 +282,75 @@ mod tests {
     }
 }
 
-#[cfg(not(feature = "native"))]
-pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
-    let _ = (
-        &args.file,
-        &args.target,
-        &args.out,
-    );
-    super::native_unavailable()
+#[cfg(all(test, not(feature = "native")))]
+mod host_route_tests {
+    use super::*;
+    use crate::cli::{Cli, Command};
+    use clap::Parser;
+    use std::{
+        path::PathBuf,
+        sync::atomic::{AtomicU64, Ordering},
+    };
+
+    struct Temporary(PathBuf);
+    impl Drop for Temporary {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn public_compile_prepares_selected_host_artifact_without_native() {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let temporary = Temporary(std::env::temp_dir().join(format!(
+            "mori-public-host-compile-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        )));
+        std::fs::create_dir(&temporary.0).unwrap();
+        let fixtures =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/real-compile-handler");
+        let source = fixtures.join("fixed-quote.mori");
+        let config = fixtures.join("core-config.json");
+        let target = fixtures.join("target.json");
+        let out = temporary.0.join("artifact");
+        let cli = Cli::try_parse_from([
+            "mori",
+            "compile",
+            source.to_str().unwrap(),
+            "--target",
+            target.to_str().unwrap(),
+            "--out",
+            out.to_str().unwrap(),
+            "--execution-profile",
+            "sherlock-helper-microstep/1",
+            "--action",
+            "quote",
+            "--execution-config",
+            config.to_str().unwrap(),
+        ])
+        .unwrap();
+        let Command::Compile(args) = cli.command else {
+            panic!("expected the public compile command");
+        };
+        let mut shell = Shell::new(crate::shell::Verbosity::Quiet, anstream::ColorChoice::Never);
+        assert_eq!(run(args, &mut shell).unwrap(), ExitCode::SUCCESS);
+        let artifact: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(out.join("sherlock-artifact.json")).unwrap())
+                .unwrap();
+        let expected: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/fixtures/real-compile-handler/EXPECTED-OUTPUT.json"
+        ))
+        .unwrap();
+        for group in ["commonPointers", "compileOnlyPointers"] {
+            for (pointer, value) in expected["core"][group].as_object().unwrap() {
+                assert_eq!(artifact.pointer(pointer), Some(value), "{pointer}");
+            }
+        }
+        assert_eq!(
+            artifact["source"],
+            expected["core"]["cases"]["quote"]["source"]
+        );
+        assert_eq!(std::fs::read_dir(out).unwrap().count(), 1);
+    }
 }

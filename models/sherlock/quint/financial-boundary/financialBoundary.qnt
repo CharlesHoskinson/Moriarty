@@ -1,0 +1,265 @@
+module financialBoundary {
+  // General Core/2 source-boundary publication relation, not an expression VM.
+  // Admission, runtime evaluation, static costs and emit_checked are premises.
+  type Scalar = UIntValue(int) | BoolValue(bool)
+  type ScalarType = UIntType | BoolType
+  type OptionalUInt = NoUInt | SomeUInt(int)
+  type OptionalText = NoText | SomeText(str)
+  type OptionalScalar = NoScalar | SomeScalar(Scalar)
+  type NamedValue = {name: str, value: Scalar}
+  type AssetId = {network: str, issuer: str, reference: str, scale: int}
+  type Balance = {account: str, asset: AssetId, amount: int}
+  type Liability = {name: str, asset: AssetId, debtor: str, creditor: str, amount: int}
+  type Snapshot = {state: str -> Scalar, balances: List[Balance], liabilities: List[Liability]}
+  type Scenario = {state: str -> Scalar, inputs: str -> Scalar, balances: List[Balance], liabilities: List[Liability]}
+  type Effect = StateEffect({name: str, before: Scalar, after: Scalar})
+    | TransferEffect({asset: AssetId, from: str, to: str, amount: int})
+    | FeeEffect({asset: AssetId, from: str, to: str, amount: int})
+    | LiabilityEffect({name: str, asset: AssetId, debtor: str, creditor: str, before: int, after: int})
+    | EmitEffect({name: str, value: Scalar})
+  type NetFlow = Balanced | Inflow(int) | Outflow(int)
+  type AccountFlow = {asset: AssetId, account: str, transferDebit: int, transferReceipts: int,
+    feeDebit: int, feeReceipts: int, grossDebit: int, grossReceipts: int, netFlow: NetFlow}
+  type InputDecl = {name: str, ty: ScalarType}
+  type Statement = AwaitStatement({label: str, binders: List[InputDecl], guard: int})
+    | LetStatement({name: str, value: int}) | RequiresStatement(int) | EnsuresStatement(int)
+    | NextStatement({state: str, value: int}) | EmitStatement({name: str, value: int})
+    | TransferStatement({asset: str, from: str, to: str, amount: int})
+    | FeeStatement({asset: str, from: str, to: str, amount: int})
+    | LiabilityStatement({name: str, asset: str, debtor: str, creditor: str, amount: int})
+    | DischargeStatement({name: str, amount: int})
+  type Step = {index: int, statement: Statement, value: OptionalScalar, snapshot: Snapshot, effects: List[Effect]}
+  type Execution = {semantics: str, actionName: str, pre: Snapshot, post: Snapshot, steps: List[Step], effects: List[Effect]}
+  type PendingFrame = {site: int, captures: List[NamedValue]}
+  type Segment = {actionName: str, framePre: PendingFrame, framePost: PendingFrame, execution: Execution}
+  type StageLogical = {profile: str, cap: OptionalUInt, committed: int}
+  type Continuation = {format: str, programHash: str, planHash: str, actionName: str,
+    site: int, captures: List[NamedValue], logical: StageLogical, boundary: Snapshot}
+  type StageEvent = {format: str, actionName: str, label: str, values: List[NamedValue]}
+  type SourceError = {code: str, message: str, offset: OptionalUInt, step: OptionalUInt}
+  type OptionalSegment = NoSegment | SomeSegment(Segment)
+  type StageResult = Waiting({advanced: bool, segment: OptionalSegment, continuation: Continuation, attempted: int, residual: List[Liability]})
+    | Complete({segment: Segment, committed: int, attempted: int, residual: List[Liability]})
+    | Rejected({error: SourceError, attempted: int, committed: int})
+  type AwaitPrefix = WaitingPrefix({advanced: bool, actionName: str, site: int,
+      captures: List[NamedValue], logical: StageLogical, committedBoundary: Snapshot,
+      residual: List[Liability], publishedSegment: OptionalSegment, attempted: int})
+    | CompletePrefix | RejectedNoReturnedCheckpoint
+  type CaptureOrigin = InputOrigin | LetOrigin | EventOrigin
+  type CaptureSlot = {name: str, ty: ScalarType, origin: CaptureOrigin, ordinal: int}
+  type AwaitSite = {site: int, ordinal: int, label: str, binders: List[InputDecl], captures: List[CaptureSlot]}
+  type ActionPlan = {actionName: str, statementCount: int, sites: List[AwaitSite],
+    segmentCosts: List[int], committedBefore: List[int], planTotal: int}
+  type Identity = {programHash: str, planHash: str, actionName: str, semantics: str}
+  type InvocationInput = StartInput({actionName: str, scenario: Scenario, cap: OptionalUInt})
+    | ResumeInput({continuation: Continuation, event: StageEvent, cliAction: OptionalText, cliCap: OptionalUInt})
+  // Runtime carries no tentative state on failure. Do not synthesize one.
+  type RuntimeRun = NotAdvanced
+    | Ran({execution: Execution, exitSite: int, capturesOut: List[NamedValue]})
+    | Failed(SourceError)
+  type RuntimeEvidence = {runtimeResult: RuntimeRun, attempted: int}
+  type Invocation = {identity: Identity, plan: ActionPlan, guardCosts: int -> int,
+    input: InvocationInput, startBoundary: Snapshot, runtime: RuntimeEvidence}
+  type OptionalResult = NoResult | Result(StageResult)
+  type OptionalPrefix = NoPrefix | Prefix(AwaitPrefix)
+  type Record = {invocation: Invocation, result: StageResult, awaitPrefix: AwaitPrefix}
+  type Phase = Ready | Published
+  type Machine = {current: Invocation, phase: Phase, result: OptionalResult,
+    awaitPrefix: OptionalPrefix, records: List[Record], observedAttempted: int}
+  var machine: Machine
+  pure val PROFILE = "sherlock-quint-core2-boundary/1"
+  pure val CONTINUATION_FORMAT = "moriarty-continuation/1"
+  pure val LOGICAL_PROFILE = "moriarty-reference-logical-cost/2"
+  pure val MAX_FINITE_UINT = 1024
+
+  // Exact mathematical sums on the finite input domain. Fees count in gross
+  // once; reverse flows and self transfers retain both gross sides.
+  pure def accountFlow(asset: AssetId, account: str, effects: List[Effect]): AccountFlow = {
+    val amounts = effects.foldl({transferDebit: 0, transferReceipts: 0, feeDebit: 0, feeReceipts: 0}, (acc, effect) => match effect {
+      | TransferEffect(e) => if (e.asset != asset) acc else {...acc,
+          transferDebit: acc.transferDebit + (if (e.from == account) e.amount else 0),
+          transferReceipts: acc.transferReceipts + (if (e.to == account) e.amount else 0)}
+      | FeeEffect(e) => if (e.asset != asset) acc else {...acc,
+          feeDebit: acc.feeDebit + (if (e.from == account) e.amount else 0),
+          feeReceipts: acc.feeReceipts + (if (e.to == account) e.amount else 0)}
+      | _ => acc
+    })
+    val debit = amounts.transferDebit + amounts.feeDebit
+    val receipts = amounts.transferReceipts + amounts.feeReceipts
+    {asset: asset, account: account, transferDebit: amounts.transferDebit, transferReceipts: amounts.transferReceipts,
+      feeDebit: amounts.feeDebit, feeReceipts: amounts.feeReceipts, grossDebit: debit, grossReceipts: receipts,
+      netFlow: if (receipts == debit) Balanced else if (receipts > debit) Inflow(receipts - debit) else Outflow(debit - receipts)}
+  }
+  pure def residual(s: Snapshot): List[Liability] = s.liabilities.select(row => row.amount > 0)
+  pure def entry(inv: Invocation): int = match inv.input {
+    | StartInput(_) => 0
+    | ResumeInput(input) => input.continuation.site
+  }
+  pure def keptCommitted(inv: Invocation): int = match inv.input {
+    | StartInput(_) => 0
+    | ResumeInput(input) => input.continuation.logical.committed
+  }
+  pure def storedCap(inv: Invocation): OptionalUInt = match inv.input {
+    | StartInput(input) => input.cap
+    | ResumeInput(input) => input.continuation.logical.cap
+  }
+  pure def framePre(inv: Invocation): PendingFrame = match inv.input {
+    | StartInput(_) => {site: 0, captures: List()}
+    | ResumeInput(input) => {site: input.continuation.site, captures: input.continuation.captures}
+  }
+  pure def boundaryPre(inv: Invocation): Snapshot = match inv.input {
+    | StartInput(_) => inv.startBoundary
+    | ResumeInput(input) => input.continuation.boundary
+  }
+  pure def committedAfter(inv: Invocation): int =
+    inv.plan.segmentCosts.slice(0, entry(inv) + 1).foldl(0, (total, cost) => total + cost)
+  // Captured identity/plan/work are already admitted source premises. This
+  // normal-domain relation does not implement R0-R7, decoder or cryptography.
+  pure def normalDomain(inv: Invocation): bool = {
+    val index = entry(inv)
+    val shape = and {
+      index >= 0, index <= inv.plan.sites.length(),
+      inv.plan.segmentCosts.length() == inv.plan.sites.length() + 1,
+      inv.plan.committedBefore.length() == inv.plan.segmentCosts.length(),
+      inv.plan.actionName == inv.identity.actionName, inv.runtime.attempted >= 0,
+      inv.runtime.attempted <= MAX_FINITE_UINT,
+    }
+    if (not(shape)) false else match inv.runtime.runtimeResult {
+      | NotAdvanced => match inv.input {
+          | StartInput(_) => false
+          | ResumeInput(_) => if (not(inv.guardCosts.keys().contains(index))) false
+              else inv.runtime.attempted == inv.guardCosts.get(index)
+        }
+      | Ran(segmentRun) => and {
+          segmentRun.execution.pre == boundaryPre(inv), segmentRun.execution.actionName == inv.identity.actionName,
+          segmentRun.execution.semantics == inv.identity.semantics,
+          inv.runtime.attempted == inv.plan.segmentCosts.nth(index),
+          segmentRun.exitSite == (if (index == inv.plan.sites.length()) 0 else index + 1),
+          (segmentRun.exitSite == 0) implies segmentRun.capturesOut == List(),
+        }
+      | Failed(_) => true
+    }
+  }
+  pure def publishRan(inv: Invocation, execution: Execution, exitSite: int, capturesOut: List[NamedValue]): StageResult = {
+    val committed = committedAfter(inv)
+    val segment: Segment = {actionName: inv.identity.actionName, framePre: framePre(inv),
+      framePost: {site: exitSite, captures: capturesOut}, execution: execution}
+    if (exitSite == 0) Complete({segment: segment, committed: committed,
+      attempted: inv.runtime.attempted, residual: residual(execution.post)})
+    else Waiting({advanced: true, segment: SomeSegment(segment),
+      continuation: {format: CONTINUATION_FORMAT, programHash: inv.identity.programHash,
+        planHash: inv.identity.planHash, actionName: inv.identity.actionName, site: exitSite,
+        captures: capturesOut, logical: {profile: LOGICAL_PROFILE, cap: storedCap(inv), committed: committed},
+        boundary: execution.post}, attempted: inv.runtime.attempted, residual: residual(execution.post)})
+  }
+  pure def publish(inv: Invocation): OptionalResult = match inv.runtime.runtimeResult {
+    | NotAdvanced => match inv.input {
+        | ResumeInput(input) => Result(Waiting({advanced: false, segment: NoSegment,
+            continuation: input.continuation, attempted: inv.runtime.attempted,
+            residual: residual(input.continuation.boundary)}))
+        // Outside the normal relation; no invented production error/checkpoint.
+        | StartInput(_) => NoResult
+      }
+    | Ran(segmentRun) => Result(publishRan(inv, segmentRun.execution, segmentRun.exitSite, segmentRun.capturesOut))
+    | Failed(error) => Result(Rejected({error: error, attempted: inv.runtime.attempted, committed: keptCommitted(inv)}))
+  }
+  pure def awaitView(result: StageResult): AwaitPrefix = match result {
+    | Waiting(waiting) => WaitingPrefix({advanced: waiting.advanced,
+        actionName: waiting.continuation.actionName, site: waiting.continuation.site,
+        captures: waiting.continuation.captures, logical: waiting.continuation.logical,
+        committedBoundary: waiting.continuation.boundary, residual: waiting.residual,
+        publishedSegment: waiting.segment, attempted: waiting.attempted})
+    | Complete(_) => CompletePrefix
+    | Rejected(_) => RejectedNoReturnedCheckpoint
+  }
+  pure def initial(inv: Invocation): Machine = {current: inv, phase: Ready, result: NoResult,
+    awaitPrefix: NoPrefix, records: List(), observedAttempted: 0}
+  pure def applyPublication(s: Machine): Machine = match publish(s.current) {
+    | NoResult => s
+    | Result(result) => {
+        val view = awaitView(result)
+        {...s, phase: Published, result: Result(result), awaitPrefix: Prefix(view),
+          records: s.records.append({invocation: s.current, result: result, awaitPrefix: view}),
+          observedAttempted: s.observedAttempted + s.current.runtime.attempted}
+      }
+  }
+  pure def nextInvocation(s: Machine, inv: Invocation): Machine = {
+    ...s, current: inv, phase: Ready, result: NoResult, awaitPrefix: NoPrefix,
+  }
+  action initInvocation(inv: Invocation): bool = machine' = initial(inv)
+  action publishStep: bool = all {
+    machine.phase == Ready, normalDomain(machine.current), machine' = applyPublication(machine),
+  }
+  // Explicit externally supplied next source invocation, not automatic resume,
+  // global rollback, event authentication or permission to execute a program.
+  action beginInvocation(inv: Invocation): bool = all {
+    machine.phase == Published, normalDomain(inv), machine' = nextInvocation(machine, inv),
+  }
+  action terminalStutter: bool = all {machine.phase == Published, machine' = machine}
+  action step: bool = any {publishStep, terminalStutter}
+
+  pure def resultAttempted(result: StageResult): int = match result {
+    | Waiting(r) => r.attempted | Complete(r) => r.attempted | Rejected(r) => r.attempted
+  }
+  pure def falseAwaitPreserved(record: Record): bool = match record.invocation.runtime.runtimeResult {
+    | NotAdvanced => match record.invocation.input {
+        | ResumeInput(input) => record.result == Waiting({advanced: false, segment: NoSegment,
+            continuation: input.continuation, attempted: record.invocation.runtime.attempted,
+            residual: residual(input.continuation.boundary)})
+        | _ => false
+      }
+    | _ => true
+  }
+  pure def successfulSegmentPreserved(record: Record): bool = match record.invocation.runtime.runtimeResult {
+    | Ran(segmentRun) => {
+        val segment: Segment = {actionName: record.invocation.identity.actionName, framePre: framePre(record.invocation),
+          framePost: {site: segmentRun.exitSite, captures: segmentRun.capturesOut}, execution: segmentRun.execution}
+        match record.result {
+          | Waiting(r) => r.advanced and r.segment == SomeSegment(segment)
+            and r.continuation.boundary == segmentRun.execution.post
+            and r.continuation.captures == segmentRun.capturesOut
+            and r.continuation.logical.cap == storedCap(record.invocation)
+            and r.continuation.logical.committed == committedAfter(record.invocation)
+            and r.residual == residual(segmentRun.execution.post)
+          | Complete(r) => r.segment == segment and r.committed == committedAfter(record.invocation)
+            and r.residual == residual(segmentRun.execution.post)
+          | Rejected(_) => false
+        }
+      }
+    | _ => true
+  }
+  pure def failurePublishesNoCheckpoint(record: Record): bool = match record.invocation.runtime.runtimeResult {
+    | Failed(error) => record.result == Rejected({error: error,
+        attempted: record.invocation.runtime.attempted, committed: keptCommitted(record.invocation)})
+      and record.awaitPrefix == RejectedNoReturnedCheckpoint
+    | _ => true
+  }
+  val completeRecordsInv = machine.records.foldl(true, (ok, record) => and {
+    ok, normalDomain(record.invocation), falseAwaitPreserved(record),
+    successfulSegmentPreserved(record), failurePublishesNoCheckpoint(record),
+    record.awaitPrefix == awaitView(record.result),
+    resultAttempted(record.result) == record.invocation.runtime.attempted,
+  })
+  val attemptedClockInv = machine.observedAttempted == machine.records.foldl(0, (work, record) => work + resultAttempted(record.result))
+  val publicationInv = if (machine.phase == Ready) machine.result == NoResult and machine.awaitPrefix == NoPrefix
+    else machine.records.length() > 0 and machine.result == Result(machine.records.nth(machine.records.length() - 1).result)
+      and machine.awaitPrefix == Prefix(machine.records.nth(machine.records.length() - 1).awaitPrefix)
+  val allInv = completeRecordsInv and attemptedClockInv and publicationInv
+  val falseAwaitWitness = machine.records.foldl(false, (seen, record) => seen or match record.result {
+    | Waiting(r) => not(r.advanced) and r.segment == NoSegment and r.attempted > 0
+    | _ => false
+  })
+  val successfulEmptyEffectsWitness = machine.records.foldl(false, (seen, record) => seen or match record.result {
+    | Waiting(r) => match r.segment {
+        | SomeSegment(segment) => r.advanced and segment.execution.effects == List()
+        | NoSegment => false
+      }
+    | _ => false
+  })
+  val completeWitness = machine.records.foldl(false, (seen, record) => seen or match record.result {
+    | Complete(_) => true | _ => false
+  })
+  val rejectedNoCheckpointWitness = machine.records.foldl(false, (seen, record) => seen or match record.result {
+    | Rejected(_) => record.awaitPrefix == RejectedNoReturnedCheckpoint | _ => false
+  })
+}

@@ -1,0 +1,74 @@
+{
+  "identity_and_scope": {
+    "conversation_id": "bb6043a1-63f1-4de9-b26f-ef50139233e3",
+    "cwd": "/tmp/moriarty-r140-final-security-A-9c662tt7",
+    "reviewer_slot": "security-A",
+    "reviewer_role": "designated_security_owner",
+    "primary_model": "claude-opus-5-5",
+    "requested_model": "gemini-4-argon-high",
+    "returned_identity": "gemini-4-argon-high",
+    "effort": "high",
+    "fallback_status": "standing_opus_quota_outage_fallback",
+    "action": "usage_result_diagnosis_and_minimal_changed_input_discriminator",
+    "tools_or_external_actions_invoked": 0,
+    "authority_granted_by_this_response": false
+  },
+  "diagnosis_of_actual_usage_result": {
+    "established_facts": [
+      "1. In combined-output.bin (0ef33e8d..., 2809B, exit 0 in 0.0501s), step_a_mask_lstat proves all 6 non-home/non-cargo mask targets ('/run', '/sys/fs/cgroup', '/var/lib/docker', '/nix/var/determinate', '/nix/var/nix/daemon-socket', '/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014') exist on the host as directories (kind='dir', 0o40755/0o40555/0o40710).",
+      "2. Both B1_no_masks (2.94ms) and B2_with_masks (1.96ms) exited with returncode=1, handoff={'error':null,'flags':0,'received_msg_hex':'','scm_rights_fds':0} (immediate EOF on parent.recvmsg), stdout='', and stderr starting at byte 0 with 'usage: /usr/bin/bwrap [OPTIONS...] [--] COMMAND [ARGS...]\\n\\n' with no preceding 'bwrap: ...' error line.",
+      "3. Both unchanged bounded_sdk_compile.py:launch() (94810a65..., L658-663) and bwrap_handoff_diag.owner-proposed.py:run_variant() (87bc1766..., L166-181) serialized '--' and the target command ('/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/<stage_fd>', ...) INSIDE the NUL-separated '--args' memfd (fd) and called subprocess.Popen(['/usr/bin/bwrap', '--args', str(fd)], ...) with no COMMAND [ARGS...] on bwrap's outer process argv."
+    ],
+    "root_cause_of_usage_refusal_vs_remaining_hypotheses": {
+      "established_parser_mechanism": "In Bubblewrap (/usr/bin/bwrap 0.11.1), '--args FD' parses [OPTIONS...] from FD (in parse_args_recurse with in_file=TRUE, where '--' or non-option tokens either terminate only the local in_file slice or are rejected in-file), leaving outer argc==0 in main() when no COMMAND [ARGS...] is supplied on bwrap's outer argv after '--args <fd>'. When outer argc==0, bwrap calls usage(EXIT_FAILURE, stderr) and exits 1 before creating namespaces, performing mounts, or execing TRAMPOLINE. Closing the child process closes control_fd, producing the exact EOF (msg==b'') that triggered 'Refusal: listener handoff failed' in native A0 (39126d62...).",
+      "remaining_unobserved_post_parse_hypotheses": "Because bwrap exited during CLI argument parsing in both native A0 and diagnostic attempt 01, post-parse behavior of (a) bwrap '--ro-bind' double mask loops + '--remount-ro', (b) inherited pass_fds (stage_fd, control_fd, token_fd) survival across bwrap into TRAMPOLINE, and (c) TRAMPOLINE seccomp(NEW_LISTENER) + SCM_RIGHTS sendmsg remains UNOBSERVED until '--' + cmd is moved from the '--args' memfd to bwrap's outer argv."
+    }
+  },
+  "minimal_diagnostic_script_edit": {
+    "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/309-C-source-coverage-and-human-request/listener-handoff-owner-diagnosis/host-only-discriminator-independent-review/bwrap_handoff_diag.owner-proposed.py",
+    "target_sha256": "87bc176659f58253f73a8d504f22109733bd4d2b85b97218d4a602cef1704f4d",
+    "unique_anchor": "Inside def run_variant(name, mask_empty, use_masks, global_deadline), lines 166-181",
+    "old": "        args += [\n            '--remount-ro', '/home/charl', '--clearenv',\n            '--setenv', 'PATH', '/usr/bin:/bin', '--setenv', 'LANG', 'C',\n            '--chdir', '/', '--',\n            '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/' + str(stage_fd),\n            str(stage_fd), str(child.fileno()), str(token_fd), '/bin/true',\n        ]\n        fd = sealed_memfd('sdk-bwrap-argv', b'\\0'.join(x.encode() for x in args) + b'\\0')\n\n        def enter():\n            parent.close()\n            os.setsid()\n\n        proc = subprocess.Popen(\n            ['/usr/bin/bwrap', '--args', str(fd)],",
+    "new": "        args += [\n            '--remount-ro', '/home/charl', '--clearenv',\n            '--setenv', 'PATH', '/usr/bin:/bin', '--setenv', 'LANG', 'C',\n            '--chdir', '/',\n        ]\n        cmd = [\n            '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/' + str(stage_fd),\n            str(stage_fd), str(child.fileno()), str(token_fd), '/bin/true',\n        ]\n        fd = sealed_memfd('sdk-bwrap-argv', b'\\0'.join(x.encode() for x in args) + b'\\0')\n\n        def enter():\n            parent.close()\n            os.setsid()\n\n        proc = subprocess.Popen(\n            ['/usr/bin/bwrap', '--args', str(fd), '--', *cmd],",
+    "rationale": "Keeps only bwrap [OPTIONS...] inside the NUL-separated '--args' memfd (fd) and passes ['--', *cmd] on bwrap's outer Popen argv as required by bwrap's CLI parser. All other bytes, resource limits, scratch isolation, and cleanup in 87bc1766... remain unchanged."
+  },
+  "next_wrapper_argv": [
+    "/usr/bin/timeout",
+    "--signal=TERM",
+    "--kill-after=1s",
+    "10s",
+    "/usr/bin/sudo",
+    "-n",
+    "--",
+    "/usr/bin/setpriv",
+    "--reuid=1000",
+    "--regid=1000",
+    "--clear-groups",
+    "--inh-caps=-all",
+    "--bounding-set=-all",
+    "--no-new-privs",
+    "--",
+    "/usr/bin/env",
+    "-i",
+    "LANG=C",
+    "PATH=/usr/bin:/bin",
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-S",
+    "/tmp/bwrap_handoff_diag.py"
+  ],
+  "expected_discriminator_observations": {
+    "if_B1_and_B2_return_rc0_msg_4c_scm_rights_1": "Proves that placing ['--', *cmd] on outer bwrap argv resolves the A0 handoff failure and that pass_fds inheritance (stage_fd, control_fd, token_fd), double mask binds, '--remount-ro', and TRAMPOLINE seccomp(NEW_LISTENER) + SCM_RIGHTS handoff all succeed under UID 1000 / NoNewPrivs=1.",
+    "if_B1_or_B2_fails_post_parse": "Captures the exact post-parse bwrap or python3/TRAMPOLINE stderr (e.g. ENOENT/EBADF on /proc/self/fd/<stage_fd> or control_fd if bwrap closes extra FDs, mount/remount-ro error in B2, or seccomp error in TRAMPOLINE)."
+  },
+  "matching_unchanged_guard_defect_and_minimal_proposal": {
+    "target_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/53-r2-integrated-source-candidate/source/bounded_sdk_compile.py",
+    "target_sha256": "94810a65a2a68563300edefe34c76447ad9cc3118c07c8ae8f67607b88ac1fd7",
+    "unique_anchor": "Inside def launch(c,phase,config_sha), lines 657-674",
+    "old": "             preserved=[stage_fd,child.fileno()]+([token_fd] if audit else [])\n            args=args[:separator]+['--','/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]\n            fd=sealed_memfd('sdk-bwrap-argv',b'\\0'.join(x.encode() for x in args)+b'\\0')\n            try:\n                for name in ('stdout','stderr'):logs.append(open(packet/(phase+suffix+'.'+name),'xb',buffering=0))\n                def enter():\n                    parent.close();group.join_child()\n                proc=subprocess.Popen(['/usr/bin/bwrap','--args',str(fd)],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={},pass_fds=tuple([fd,*preserved]),preexec_fn=enter,close_fds=True)\n                child.close();parent.settimeout(max(.001,v['wall_seconds']-(time.monotonic()-start)))\n                message,anc,flags,_=parent.recvmsg(1,socket.CMSG_SPACE(array.array('i').itemsize))\n                need(message==b'L' and not flags,'listener handoff failed')\n                received=[]\n                for level,kind,data in anc:\n                    need(level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS,'unexpected handoff')\n                    values=array.array('i');values.frombytes(data);received.extend(values)\n                need(len(received)==1,'exact one seccomp listener required');listener=received[0]\n                sel.register(listener,selectors.EVENT_READ,('network',None))\n                for name,stream,log in zip(('stdout','stderr'),(proc.stdout,proc.stderr),logs):\n                    os.set_blocking(stream.fileno(),False);sel.register(stream,selectors.EVENT_READ,(name,log))",
+    "new": "            preserved=[stage_fd,child.fileno()]+([token_fd] if audit else [])\n            cmd=['/usr/bin/python3','-I','-B','-S','/proc/self/fd/'+str(stage_fd),str(stage_fd),str(child.fileno()),str(token_fd),*target]\n            fd=sealed_memfd('sdk-bwrap-argv',b'\\0'.join(x.encode() for x in args[:separator])+b'\\0');args=args[:separator]+['--',*cmd]\n            try:\n                for name in ('stdout','stderr'):logs.append(open(packet/(phase+suffix+'.'+name),'xb',buffering=0))\n                def enter():\n                    parent.close();group.join_child()\n                proc=subprocess.Popen(['/usr/bin/bwrap','--args',str(fd),'--',*cmd],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env={},pass_fds=tuple([fd,*preserved]),preexec_fn=enter,close_fds=True)\n                child.close();parent.settimeout(max(.001,v['wall_seconds']-(time.monotonic()-start)))\n                for name,stream,log in zip(('stdout','stderr'),(proc.stdout,proc.stderr),logs):\n                    os.set_blocking(stream.fileno(),False);sel.register(stream,selectors.EVENT_READ,(name,log))\n                def drain():\n                    while sel.get_map():\n                        need(time.monotonic()-start<=v['wall_seconds'],'wall cap '+phase);events=sel.select(.05)\n                        if not events and proc.poll() is not None:break\n                        for key,_ in events:\n                            name,log=key.data;chunk=os.read(key.fileobj.fileno(),65536)\n                            if not chunk:sel.unregister(key.fileobj);continue\n                            counts[name]+=len(chunk);need(counts[name]<=v[name+'_bytes'],'log cap hit '+phase+' '+name);log.write(chunk)\n                message,anc,flags,_=parent.recvmsg(1,socket.CMSG_SPACE(array.array('i').itemsize))\n                if message!=b'L' or flags:drain();raise Refusal('listener handoff failed')\n                received=[]\n                for level,kind,data in anc:\n                    need(level==socket.SOL_SOCKET and kind==socket.SCM_RIGHTS,'unexpected handoff')\n                    values=array.array('i');values.frombytes(data);received.extend(values)\n                if len(received)!=1:drain();raise Refusal('exact one seccomp listener required')\n                listener=received[0];sel.register(listener,selectors.EVENT_READ,('network',None))",
+    "status": "PROPOSAL_ONLY_UNADOPTED (awaits diagnostic B1/B2 result and fresh independent non-author source review)"
+  },
+  "limitations": "No tools run; no execution or guard adoption here. <=10s global wall, <=4096B output cap, per-process 256MiB AS / 128MiB DATA over <=4 concurrent processes, and immutable ONE_SHOT_STARTED / failure receipts / C4=OPEN / stopped Amendment10 preserved."
+}

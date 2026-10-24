@@ -71,10 +71,20 @@ pub(super) fn materialize_arithmetic(
         uu: false,
         ovf: false,
         lt_out: false,
-        add: AddWitness { r: [0; 16], c: [false; 17] },
-        sub: SubWitness { r: [0; 16], bo: [false; 17] },
+        add: AddWitness {
+            r: [0; 16],
+            c: [false; 17],
+        },
+        sub: SubWitness {
+            r: [0; 16],
+            bo: [false; 17],
+        },
         mul: MulWitness {
-            r: [0; 16], h: [0; 16], c: [0; 33], h_sum: 0, h_zero: false,
+            r: [0; 16],
+            h: [0; 16],
+            c: [0; 33],
+            h_sum: 0,
+            h_zero: false,
         },
     };
     let (Some(op), Some(a), Some(b)) = (op, left, right) else {
@@ -95,8 +105,8 @@ pub(super) fn materialize_arithmetic(
                 let subtrahend = u16::from(b[i]) + u16::from(out.sub.bo[i]);
                 out.sub.bo[i + 1] = u16::from(a[i]) < subtrahend;
                 // Rearranged SUB-i, always in 0..=255 after the borrow choice.
-                out.sub.r[i] = (u16::from(a[i])
-                    + 256 * u16::from(out.sub.bo[i + 1]) - subtrahend) as u8;
+                out.sub.r[i] =
+                    (u16::from(a[i]) + 256 * u16::from(out.sub.bo[i + 1]) - subtrahend) as u8;
             }
             out.ovf = out.sel_sub && out.sub.bo[16];
             out.lt_out = out.sel_lt && out.sub.bo[16];
@@ -145,8 +155,11 @@ pub(super) struct FuelWitness {
 /// Free publications precede exhaustion and preserve fuel, including fuel zero.
 pub(super) fn materialize_fuel(en_evt: bool, term: bool, pre: &[u8; 16]) -> FuelWitness {
     let mut out = FuelWitness {
-        z: [false; 16], zp: [false; 17], bw: [false; 17],
-        charged: false, post: *pre,
+        z: [false; 16],
+        zp: [false; 17],
+        bw: [false; 17],
+        charged: false,
+        post: *pre,
     };
     out.zp[0] = en_evt;
     for i in 0..16 {
@@ -157,8 +170,8 @@ pub(super) fn materialize_fuel(en_evt: bool, term: bool, pre: &[u8; 16]) -> Fuel
     out.bw[0] = out.charged;
     for i in 0..16 {
         out.bw[i + 1] = out.bw[i] && out.z[i];
-        out.post[i] = (u16::from(pre[i]) + 256 * u16::from(out.bw[i + 1])
-            - u16::from(out.bw[i])) as u8;
+        out.post[i] =
+            (u16::from(pre[i]) + 256 * u16::from(out.bw[i + 1]) - u16::from(out.bw[i])) as u8;
     }
     out
 }

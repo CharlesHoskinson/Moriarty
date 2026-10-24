@@ -1,0 +1,154 @@
+# A102 existing-candidate applicability review: d12adc85 + bb14c25b onto W3 229770
+
+## Scope
+
+- **No tools used.** I opened no files and ran nothing: no compile, SDK, test, host, native, provider or Git action.
+- **What I read:** only the supplied packet text. That is bodies 01–04 and 09–15 in full, the excerpted `literal_host.rs` ranges (1–123, 246–302, 375–459), the `literal_witness.rs` range 1350–1502, the P7 stderr lines 133–158 and the import diff.
+- **What I did not see:**
+  - current W3 `literal_bridge.rs` (ab586) and current W3 `literal_witness_native_tests.rs` (80912ae);
+  - `literal_host.rs` lines 124–245 and 460 onward;
+  - the rest of `literal_witness.rs`, `literal_ui_valid.rs`, `enabled_fetch.rs` and `fetch.rs`;
+  - the mori-core sherlock AST and `PreparedA`;
+  - the full P7 stderr;
+  - the W3 pin of `mori-core/src/sherlock/reference.rs`.
+- **Positional check:** the P7 diagnostic positions match the supplied current bodies: `mod.rs:47:36`, `literal_step.rs:7:66`, `literal_host.rs:82:1`, and test `9:43` before the fix.
+- **Not a pass:** this is not a compile or pass prediction. It grants no runtime, native or resource authority.
+
+## Verdict: WITHHOLD (evidence-gated; no CHANGES_REQUIRED source defect found)
+
+- **The two afterimages themselves:** I found no mandatory source defect. Against the declarations and SDK bodies supplied, they are coherent.
+- **Why applicability is withheld:** the overlay replaces two current W3 files whose contents were not supplied. It also depends on one external pin that is not in the packet.
+- **How it converts:** if M1–M3 below come back clean, the verdict becomes APPROVE without any source change. If they don't, the specific owner seam is named under each item.
+
+## Mandatory findings (all evidence gates, no source edits)
+
+**M1. The bridge overwrite delta is unverified (ab586 → d12adc85).**
+- The packet asserts reuse but never shows the 18269B preimage.
+- Root must supply the byte diff ab586 → d12adc85 and confirm both of these:
+  - (a) The diff is purely additive: `CHECK_KEY_LOCATION`, `LiteralConstraintCheck`, `check_literal_statement`, `check_literal_transition`.
+  - (b) No item, signature or `pub use` entry that W3 siblings (`literal_complete_bridge`, `literal_witness*`, normal tests) depend on is removed or changed.
+- Any non-additive hunk, especially in `emit`, `prepare`, or the `pub use` list, becomes an owner seam for the bridge source owner. It must not be silently accepted.
+
+**M2. The test overwrite delta is unverified (80912ae → bb14c25b).**
+- The current 4664B file is being replaced wholesale. Root must list 80912ae's `#[test]` selectors and check two things:
+  - (a) Any selector from 80912ae that is in the frozen W3 49 is either deliberately retired or carried unchanged into bb14. Otherwise the cut silently drops W3 coverage.
+  - (b) If either "new" selector name already exists in 80912ae, record explicitly that the name now refers to a different, heavier body. The W3 receipt for that name then covers nothing in the future cut.
+
+**M3. The external reference pin is unconfirmed.**
+- bb14 hard-codes `reference.rs` as 16 840 B with SHA cc68879d… (lines 39–42). That file is outside the nine-source set, and the packet gives no W3 229770 pin for it.
+- Root must confirm both values at the cut base.
+- If they differ, both selectors panic on their first assertion. The fix is then an owner decision on whether the A102 fixture is still valid, not a constant refresh.
+- This is the only identity-like hard-coded value in bb14. No layout, relation or context digest is hard-coded, so the relation-hash change from the overlay cannot break any assertion.
+
+## What I verified against the supplied bodies
+
+**Imports and visibility**
+- `literal_host::LiteralLane` is `pub struct` inside `pub mod`, so the P7 fix resolves E0603 correctly.
+- `literal_step` is private, but the test is a descendant of `sherlock_machine`, so `literal_step::{LiteralCapacities, LiteralTable}` (its `pub use`) is reachable.
+- Every other name the test imports from `literal_bridge` is `pub fn`, `pub enum`, `pub struct` or `pub use`.
+- The diff matches the bb14 text exactly, including the original 5-space indent on line 9.
+
+**SDK API fit**
+- `ProofPreimage` field set, `check(&impl Zkir)` and `IrSource: Zkir` match bodies 09 and 10.
+- The `PublicInput{guard,val_t,output}`, `Impact{guard,inputs}` and `Output{vals}` shapes match bodies 12–14.
+- `IrSource` field set matches body 10.
+
+**Channel semantics**
+- `inputs=[]` matches LocalPublic `inputs=[]` (body 11).
+- Each PublicInput consumes `public_transcript_outputs[i]`.
+- Each `Impact(guard=1)` checks `public_transcript_inputs[i]` and pushes `None` into `pi_skips`.
+- The EOF check passes at 2077/2077.
+- The 685 Outputs (683 post + 2 envelope) form a separate vector that `check` does not return.
+- So the check returns `pi_skips` only. The captured post/envelope in the artifact is producer data, not SDK Output, and the artifact does not claim otherwise.
+
+**Counts**
+- 2 + 707 + 683 + 683 + 2 = 2077, and 683 + 2 = 685, consistent with `emit`.
+- Statement plus binding is 2078, within `2^VERIFIER_MAX_DEGREE` as checked.
+
+**Producer path**
+- The `build_checked_literal_transition_request(program, &caps, 50, 12, &id, max)` signature and its return type match body 08.
+- One `Machine::step` runs per fixture. `prepare_a` runs twice: once preparatory, once inside the producer.
+
+**Attribution of the negative cases**
+- Each corruption changes exactly one lane and keeps both transcripts coherent.
+- The test first asserts that host `statement()` accepts the mutated values, and IR emission does not depend on values.
+- So each `Err` must come from SDK preprocessing (a constraint over the mutated lane), not from transcript mismatch, shape or host refusal.
+- The negatives are owner-authored and assert `is_err()` only; they do not identify which constraint fired.
+
+**Native exclusion**
+- Neither selector reaches `prepare`, `ir.k()`, `OfflineParameters::load`, keygen, prove or verify.
+- `prove_literal_transition` and `verify_literal_transition` are compiled but uncalled.
+
+**Relation membership**
+- Current `mod.rs` (b26df00c) already registers `pub mod literal_bridge` and `#[cfg(test)] mod literal_witness_native_tests`. No registration change is needed.
+- Only the `literal_bridge.rs` member of the nine-source hash changes.
+
+**Independence**
+- A positive PASS would show that the producer and the circuit agree. It would not show agreement with an independent oracle.
+- The `MORIARTY_A102_CHECK_OUTPUT_DIR` artifact is suitable input for the separate 2075-lane plus symbolic-context oracle comparison, after the final freeze.
+
+## Advisory (non-mandatory; do not edit now, since source changes would move the relation hash)
+
+**A1. API dependencies outside the packet.** Only the changed-cut compile can close these:
+- `PreparedA::program_bytes`
+- `PreparedA.{block, capacities, names}`
+- header `entry_expr_id`, header `active_lengths` and `ValueRef.space`, all of which need Serialize
+- `ProducedLiteralTransition` field visibility
+- `LiteralLayout` deriving Clone + Debug (around `literal_host.rs:374`), needed by `#[derive(Clone, Debug)] LiteralConstraintCheck`
+- the visibility of `limbs`, `record` and `statement`
+- `OPEN_OBLIGATIONS`
+- the sherlock `Value`/`Tree` constructors
+
+A clean full P7 stderr for this file would be partial supporting evidence only, because P7's base differs from W3.
+
+**A2. Possible panic in `check_literal_statement`.**
+- Called with a statement shorter than the IR's PublicInput count, the SDK slices out of range (body 12), which panics rather than returning `Err`.
+- No reviewed caller can trigger this. It is a possible future hardening item.
+
+**A3. Documentation drift.**
+- The `mod.rs` header says the bridge is "uncompiled and unobserved", and the bridge header says "Compile/keygen/prove/verify: UNOBSERVED".
+- This is known F13 drift, to be addressed in a future cut only.
+
+**A4. `program_source_sha256` is the SHA of the L4 `program_bytes`, not of program source text.**
+- The artifact should be read with that qualification.
+
+## Facts for the designated operation owner (classification input, not a grant)
+
+**Per-selector work, counted from source:**
+
+| Selector | prepare_a | Machine.step | Layouts | emit + serde + `IrSource::load` | `ProofPreimage::check` runs |
+|---|---|---|---|---|---|
+| `produced_a102_request_emits_local_public_zkir_within_local_verifier_lane_bound` | 2 | 1 | 6 | 5 | 8 (1 positive, 7 negative) |
+| `semantically_corrupted_a102_transitions_reach_and_fail_sdk_preimage_check` | 2 | 1 | 5 | 4 | 8 |
+
+**Selection and concurrency**
+- The second selector's work is a strict subset of the first's, on an identical fixture.
+- Selecting both under the default parallel test harness roughly doubles peak memory under the 1 GiB address-space limit.
+- Recommendation: select only the first selector, or force `--test-threads=1`.
+
+**Output files**
+- Only the positive selector writes files, and only when the environment variable is set.
+- The directory must be fresh. `create_new` panics on any existing file, and a mid-sequence failure can leave a partial set.
+- The ZKIR byte size against FSIZE 16 MiB is unmeasured. The artifact records it as `zkir_bytes`.
+
+**Failure path**
+- Failing `assert_eq!` calls on `IrSource`, `ProgramBlock` or the 2077-lane statement can dump output far larger than the 131072-byte stream cap. Diagnostics would be truncated.
+
+**Unestablished items**
+- The 10 s / CPU8 / AS 1 GiB / FSIZE 16 MiB / core0 / 131072 class is a reference class only. Fit is not established.
+- Not established here: the changed-cut ELF identity, the post-P10 retained debit (E 1079347393 / S 242919890 / P 836427499 retained; no reset, refund or borrowed W3 credit), and execution selection.
+
+**Retained as stated**
+- Am10/T3/k17 stopped.
+- C4 OPEN.
+- R2 unsatisfied.
+- StepInv, uiValid, F4, G4, projectA, continuity and ledger obligations OPEN.
+
+## Minimal next tasks (Root, mechanical; no source author cycle)
+
+1. Diff ab586 → d12adc85 (M1).
+2. List 80912ae's selectors and cross-reference them with the frozen W3 49 (M2).
+3. Pin W3 `reference.rs` length and SHA (M3).
+4. At cut time, re-hash the copied bytes against d12adc85 and bb14c25b. Three different afterimage source paths are cited for d12adc85; the hashes agree, but verify the actual copy.
+
+If all four come back clean, this review converts to APPROVE on the same text. Any non-additive hunk or a reference-pin mismatch goes to the bridge or test source owner as a named seam. Expected cells and owner assertions stay unmodified.

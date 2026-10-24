@@ -1,0 +1,5 @@
+The raw Quint reviewer ACCEPT is mechanically consistent with the narrow observed finite result:3exit0 commands,8tests,one reported193state directedtrace and4witnesses reached1of1. All13fullhashliterals in the raw report match current pinned inputs; the33source/expectation/tool/readbasis pins and exact terminalsummary offsets were verified. The fulltrace stays unread and hash-pinned.
+
+FACTUAL-QUALIFICATIONS.json retains three qualifications: external independentoracle11file/890319B metadata was not bound/verified and must be omitted from adoptedfacts; frontend typecheck exit0 does not separately report each internal subphase; source-semantic catalog remains conditioned on prior review rather than a new source audit. No independent complete-oracle agreement, exhaustive verification, correspondence or EARS/native claim is established.
+
+The raw report is preserved byte-exact. This is a cheap factual/pin check only; no semantic revote, duplicate passed check, subject/provider execution, source/guard/test change, W or Git action occurred.

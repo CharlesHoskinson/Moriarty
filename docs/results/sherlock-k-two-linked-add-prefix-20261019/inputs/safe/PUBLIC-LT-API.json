@@ -1,0 +1,519 @@
+{
+  "status": "DECLARATION_ONLY_SAFE_FOR_INDEPENDENT_ORACLE_AUTHOR_NO_RULES_OR_EXPECTED_OUTPUTS",
+  "syntax_source": "context/COMPLETE-LT-CONSTRUCTOR-SYNTAX.k.txt",
+  "state_fields": [
+    "program",
+    "control",
+    "environment",
+    "frames_top_first",
+    "events"
+  ],
+  "entrypoints": {
+    "ngInitial": "(NGProgram,Map)->NGState",
+    "ngStep": "NGState->NGState",
+    "ngAdvance": "(NGState,nonnegative observation microstep count)->NGState; zero returns exact pending state, no semantic exhaustion"
+  },
+  "frame_payload_order": {
+    "ngAddLeft": [
+      "expr_id",
+      "occurrence",
+      "right_expr_id",
+      "saved_environment"
+    ],
+    "ngAddRight": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "saved_environment"
+    ],
+    "ngArguments": [
+      "call_expr_id",
+      "call_occurrence",
+      "function_name_id",
+      "argument_cursor",
+      "active_expr_id",
+      "evaluated_prefix",
+      "remaining_expr_ids",
+      "saved_environment"
+    ],
+    "ngFunctionReturn": [
+      "call_expr_id",
+      "call_occurrence",
+      "function_name_id",
+      "return_type_id",
+      "saved_environment"
+    ],
+    "ngConstructorFields": [
+      "constructor_expr_id",
+      "constructor_occurrence",
+      "type_id",
+      "ctor_id",
+      "field_types",
+      "field_cursor",
+      "active_expr_id",
+      "evaluated_prefix",
+      "remaining_expr_ids",
+      "saved_environment"
+    ],
+    "ngScrutinee": [
+      "match_expr_id",
+      "match_occurrence",
+      "source_arms",
+      "saved_environment"
+    ],
+    "ngArmScope": [
+      "match_expr_id",
+      "match_occurrence",
+      "source_arm_id",
+      "saved_environment"
+    ],
+    "ngLetValue": [
+      "source_expr",
+      "occurrence",
+      "binder",
+      "bound_expr",
+      "body_expr",
+      "saved_environment"
+    ],
+    "ngLetScope": [
+      "source_expr",
+      "occurrence",
+      "binder",
+      "saved_environment"
+    ],
+    "ngCondition": [
+      "source_expr",
+      "occurrence",
+      "condition_expr",
+      "yes_expr",
+      "no_expr",
+      "saved_environment"
+    ],
+    "ngLtLeft": [
+      "expr_id",
+      "occurrence",
+      "right_expr_id",
+      "saved_environment"
+    ],
+    "ngLtRight": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "saved_environment"
+    ]
+  },
+  "event_payload_order": {
+    "ngLiteralEvaluated": [
+      "expr_id",
+      "occurrence",
+      "value"
+    ],
+    "ngVariableRead": [
+      "expr_id",
+      "occurrence",
+      "name_id",
+      "value"
+    ],
+    "ngAddStarted": [
+      "expr_id",
+      "occurrence",
+      "left_expr_id",
+      "right_expr_id",
+      "saved_environment"
+    ],
+    "ngAddRightRequested": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "right_expr_id",
+      "saved_environment"
+    ],
+    "ngAdded": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "right_value",
+      "result"
+    ],
+    "ngConstructorStarted": [
+      "expr_id",
+      "occurrence",
+      "type_id",
+      "ctor_id",
+      "field_expr_ids",
+      "field_types",
+      "saved_environment"
+    ],
+    "ngConstructorFieldReturned": [
+      "constructor_expr_id",
+      "constructor_occurrence",
+      "field_cursor",
+      "completed_expr_id",
+      "completed_expr_occurrence",
+      "value",
+      "prefix_after",
+      "remaining_expr_ids_after",
+      "saved_environment"
+    ],
+    "ngConstructorBuilt": [
+      "constructor_expr_id",
+      "constructor_occurrence",
+      "type_id",
+      "ctor_id",
+      "value",
+      "saved_environment"
+    ],
+    "ngCallStarted": [
+      "call_expr_id",
+      "call_occurrence",
+      "function_name_id",
+      "argument_expr_ids",
+      "saved_environment"
+    ],
+    "ngArgumentReturned": [
+      "call_expr_id",
+      "call_occurrence",
+      "argument_cursor",
+      "completed_expr_id",
+      "value",
+      "prefix_after",
+      "remaining_expr_ids_after",
+      "saved_environment"
+    ],
+    "ngFunctionEntered": [
+      "call_expr_id",
+      "call_occurrence",
+      "function_name_id",
+      "arguments",
+      "bound_environment",
+      "return_type_id"
+    ],
+    "ngFunctionReturned": [
+      "call_expr_id",
+      "call_occurrence",
+      "function_name_id",
+      "value",
+      "restored_environment"
+    ],
+    "ngMatchStarted": [
+      "match_expr_id",
+      "match_occurrence",
+      "scrutinee_expr_id",
+      "source_arms",
+      "saved_environment"
+    ],
+    "ngScrutineeReturned": [
+      "match_expr_id",
+      "match_occurrence",
+      "value",
+      "source_arms",
+      "saved_environment"
+    ],
+    "ngArmMiss": [
+      "match_expr_id",
+      "match_occurrence",
+      "source_arm_id",
+      "scrutinee_value"
+    ],
+    "ngArmSelected": [
+      "match_expr_id",
+      "match_occurrence",
+      "source_arm_id",
+      "bindings",
+      "body_expr_id",
+      "body_environment"
+    ],
+    "ngArmBodyReturned": [
+      "match_expr_id",
+      "match_occurrence",
+      "source_arm_id",
+      "value",
+      "restored_environment"
+    ],
+    "ngFinished": [
+      "value"
+    ],
+    "ngOutsideEvent": [
+      "reason"
+    ],
+    "ngLetStarted": [
+      "source_expr",
+      "occurrence",
+      "binder",
+      "bound_expr",
+      "body_expr",
+      "saved_environment"
+    ],
+    "ngLetBound": [
+      "source_expr",
+      "occurrence",
+      "binder",
+      "bound_expr",
+      "bound_occurrence",
+      "bound_value",
+      "body_expr",
+      "saved_environment",
+      "extended_environment"
+    ],
+    "ngLetBodyReturned": [
+      "source_expr",
+      "occurrence",
+      "binder",
+      "returned_value",
+      "restored_environment"
+    ],
+    "ngIfStarted": [
+      "source_expr",
+      "occurrence",
+      "condition_expr",
+      "yes_expr",
+      "no_expr",
+      "saved_environment"
+    ],
+    "ngBranchSelected": [
+      "source_expr",
+      "occurrence",
+      "condition_expr",
+      "condition_occurrence",
+      "choice_bool",
+      "selected_expr",
+      "restored_environment"
+    ],
+    "ngLtStarted": [
+      "expr_id",
+      "occurrence",
+      "left_expr_id",
+      "right_expr_id",
+      "saved_environment"
+    ],
+    "ngLtRightRequested": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "right_expr_id",
+      "saved_environment"
+    ],
+    "ngLtCompared": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "right_value",
+      "result",
+      "saved_environment"
+    ],
+    "ngLtSortFailed": [
+      "expr_id",
+      "occurrence",
+      "left_value",
+      "right_value",
+      "code",
+      "saved_environment"
+    ],
+    "ngLtPrimitiveReturned": [
+      "expr_id",
+      "occurrence",
+      "value",
+      "environment"
+    ],
+    "ngLtPrimitiveFailed": [
+      "expr_id",
+      "occurrence",
+      "code",
+      "environment"
+    ]
+  },
+  "source_bindings": "ngBinding(name_id,match_expr_id,source_arm_id,field_path,value,tail); match occurrence remains in ArmSelected event",
+  "constructor_convention": "cursor is active source field index; active_expr_id separate, remaining_expr_ids excludes active field; evaluated_prefix contains already completed values. Actual tail frames are caller return_context. A Return control before consume retains this frame unchanged. Materialize is separate post-last-return control.",
+  "events_granularity": "Exactly one appended operation-specific event per advancing ngStep; terminal ngHalted(_), ngOutsideModel(_) and ngLtError(_,_,11) ngStep is the identical complete state with no appended event; ngAdvance at these terminals also preserves state (including any positive observation bound), and ngObserve stops without a terminal-stutter row. ngAdvance observer count is not A/B/fuel/work. Add/Call/Match/Construct each have explicit start events; fields/args/scrutinee/body/function returns are separate events. Arm selection attempts one source arm per ngStep, emitting miss or selected; selected body actually evaluated. ngFinished publishes top-level Return without claiming A80 charge.",
+  "input_domain": {
+    "type_id": 20,
+    "recursive_group": 9,
+    "ctors": {
+      "Done": 21,
+      "Pay": 22,
+      "Both": 23
+    },
+    "functions": {
+      "sum": 50,
+      "first": 51,
+      "copy": 52
+    },
+    "source_ids": "Input ExprIds and explicit occurrence integers remain separate; no source remapping."
+  },
+  "no_semantic_outputs_in_this_file": true,
+  "control_payload_order": {
+    "ngEval": [
+      "expr_id"
+    ],
+    "ngReturn": [
+      "value"
+    ],
+    "ngApply": [
+      "call_expr_id",
+      "call_occurrence",
+      "function_name_id",
+      "arguments"
+    ],
+    "ngChoose": [
+      "match_expr_id",
+      "match_occurrence",
+      "scrutinee_value",
+      "remaining_source_arms",
+      "saved_environment"
+    ],
+    "ngMaterialize": [
+      "constructor_expr_id",
+      "constructor_occurrence",
+      "type_id",
+      "ctor_id",
+      "ordered_values"
+    ],
+    "ngHalted": [
+      "value"
+    ],
+    "ngOutsideModel": [
+      "reason"
+    ],
+    "ngLtPrimitiveValue": [
+      "expr_id",
+      "occurrence",
+      "value"
+    ],
+    "ngLtPrimitiveError": [
+      "expr_id",
+      "occurrence",
+      "code"
+    ],
+    "ngLtError": [
+      "expr_id",
+      "occurrence",
+      "code"
+    ]
+  },
+  "return_event_remainder_convention": "remaining_expr_ids_after is new pending frame tail-only remainder after selecting new active next expression; final return uses[]. completed_expr_id/occurrence name original active field/argument source expression, never a callee body leaf.",
+  "call_environment_convention": "Callee body receives parameter bindings only; FunctionReturn saves caller environment; match body extends saved current environment, ArmScope restores it.",
+  "kind": "DECLARATION_ONLY_SOURCE_SUCCESSOR_NO_EXPECTED_OUTPUTS",
+  "predecessor_public_api": "generic-nominal-product-model-v2-review-operation-20261018/context/PUBLIC-API.json",
+  "let_if_extension": {
+    "kind": "DECLARATION_ONLY_NO_EXPECTED_OUTPUTS",
+    "profile": "proposed uncharged nominal reference successor; no A/B clock equivalence",
+    "state": "ngState(NGProgram,NGControl,Map,NGFrames,NGEvents)",
+    "observer": "ngObserve(NGState,Int) => NGTape(initial,ordered each-after,final); budget0 exact unchanged state; no terminal stutter records",
+    "new_expressions": {
+      "ngLet": [
+        "occurrence",
+        "binder",
+        "bound_expr",
+        "body_expr"
+      ],
+      "ngIf": [
+        "occurrence",
+        "condition_expr",
+        "yes_expr",
+        "no_expr"
+      ]
+    },
+    "new_frames": {
+      "ngLetValue": [
+        "source_expr",
+        "occurrence",
+        "binder",
+        "bound_expr",
+        "body_expr",
+        "saved_environment"
+      ],
+      "ngLetScope": [
+        "source_expr",
+        "occurrence",
+        "binder",
+        "saved_environment"
+      ],
+      "ngCondition": [
+        "source_expr",
+        "occurrence",
+        "condition_expr",
+        "yes_expr",
+        "no_expr",
+        "saved_environment"
+      ]
+    },
+    "new_events": {
+      "ngLetStarted": [
+        "source_expr",
+        "occurrence",
+        "binder",
+        "bound_expr",
+        "body_expr",
+        "saved_environment"
+      ],
+      "ngLetBound": [
+        "source_expr",
+        "occurrence",
+        "binder",
+        "bound_expr",
+        "bound_occurrence",
+        "bound_value",
+        "body_expr",
+        "saved_environment",
+        "extended_environment"
+      ],
+      "ngLetBodyReturned": [
+        "source_expr",
+        "occurrence",
+        "binder",
+        "returned_value",
+        "restored_environment"
+      ],
+      "ngIfStarted": [
+        "source_expr",
+        "occurrence",
+        "condition_expr",
+        "yes_expr",
+        "no_expr",
+        "saved_environment"
+      ],
+      "ngBranchSelected": [
+        "source_expr",
+        "occurrence",
+        "condition_expr",
+        "condition_occurrence",
+        "choice_bool",
+        "selected_expr",
+        "restored_environment"
+      ]
+    },
+    "control_changes": [],
+    "state_field_changes": [],
+    "event_contract": "Exactly one event per advancing ngStep; terminal ngStep unchanged; ngFinished is separate uncharged publication",
+    "admission_premises": "finite closed expression/function tables, unique source/name/definition mapping where required, typed normal operands, binder-linear patterns, existing extensional finite-value domain",
+    "execution": "NONE"
+  },
+  "extension_profile": {
+    "name": "K-uncharged-nominal-Lt-completion/1",
+    "P1_error_publication": "UNMODELED; ngLtError11 is a stable error-control observation boundary",
+    "source_admission": "Existing closed/canonical/admitted NGProgram and nominal-value premises. No malformed nominal/admission/error-policy guard claim.",
+    "steps": "Lt expression left/right strict evaluation, source-bearing typed completion, separate primitive return/error; no work/fuel/cap carrier.",
+    "terminal_controls": [
+      "ngHalted(_)",
+      "ngOutsideModel(_)",
+      "ngLtError(_,_,11)"
+    ],
+    "Lt_error_boundary_stutter": {
+      "ngStep": "ngStep(ngState(P,ngLtError(E,O,11),Rho,Fs,Es)) is exactly ngState(P,ngLtError(E,O,11),Rho,Fs,Es); no event appended.",
+      "ngAdvance": "ngAdvance at bound0 returns exact input; any positive bound on ngLtError(E,O,11) returns the identical complete state; no event appended.",
+      "ngObserve": "Stops upon ngTerminal(ngLtError(E,O,11)) and returns the complete tape without invoking ngStep on that boundary and without a terminal-stutter state row.",
+      "scope": "Error-control observation boundary only, not P1 Rejected publication."
+    },
+    "nonterminal_Lt_controls": {
+      "ngLtPrimitiveValue(E,O,V)": "Always nonterminal. Bool V steps to ngReturn(V) with ngLtPrimitiveReturned event; non-Bool V steps to OutsideModel using declared reason token.",
+      "ngLtPrimitiveError(E,O,Code)": "Always nonterminal. Code11 steps to terminal ngLtError(E,O,11) with ngLtPrimitiveFailed event; any other code steps to OutsideModel using declared reason token.",
+      "ngLtError(E,O,Code) when Code != 11": "Nonterminal; one ngStep goes to OutsideModel using declared reason token."
+    },
+    "OutsideModel_reason_tokens": {
+      "malformed_scalar_operand": "lt_operand_outside_UInt128_admitted_domain",
+      "nonBool_primitive_value_carrier": "lt_primitive_value_carrier_not_Bool",
+      "non11_primitive_error_carrier": "lt_primitive_error_code_outside_profile",
+      "non11_error_boundary_carrier": "lt_error_boundary_code_outside_profile"
+    }
+  }
+}

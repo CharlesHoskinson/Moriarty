@@ -1,0 +1,51 @@
+Independent non-author review by Muse Wonder 1.0 HIGH. Earlier Opus labels are historical. No tools, subjects, Quint, frontend, tests, or files were executed in this review.
+
+## Verdict
+
+**SOURCE/API: APPROVE** for the exact import-only revision02 cut, scoped as below.
+
+**Operation 01: ELIGIBLE, prospective only**, after Root completes the review-metadata finalization and opaque-binding conditions below.
+
+**Operations 02 and 03: CONDITIONALLY ELIGIBLE only**, each separately selected by Root and only after the actual preceding operation PASSes.
+
+No mandatory source fix is identified in the nine supplied current QNT bodies. No Quint PASS is claimed. No operation has run on revision02.
+
+## Import-only change verified from the bodies
+
+Exactly 9 direct declaration-import lines are added, in 3 modules, immediately after the existing `c6PositiveHostTypes` import:
+
+- `c6PositiveHostInputs`: MetaTypes, ProgramTypes, ContextTypes, StateTypes (4).
+- `c6PositiveHostCodec`: MetaTypes, ContextTypes, StateTypes (3).
+- `c6PositiveHostObservation`: ContextTypes, StateTypes (2).
+
+The grammar and path form match every surrounding import: `import <module>.* from "./<module>"`, module name equals file basename, inside the module body. The supplied diff and remove-import inverse show all non-import lines, the full input literal, semantics, assertions, caps, types, layout, and expected predicate unchanged, and all 18 other modules byte-identical. No declaration module, export, or visibility policy is altered.
+
+Minimality and provider uniqueness, checked name-by-name against the five supplied declaration modules (HostTypes, MetaTypes, ProgramTypes, ContextTypes, StateTypes):
+
+- Codec's 8 previously missing names map uniquely: MetaTypes gives `C6MMetadata`, `C6MRunId`, `C6MHostLimits`; ContextTypes gives `C6CtxInput`, `C6CtxPayload`, `C6CtxStateView`; StateTypes gives `C6HContext`, `C6HState`. No ProgramTypes name is used directly in Codec, and none is added — correct minimality.
+- Inputs' previously missing names map uniquely across the four added modules, including the Meta constructors seen in the failed run (`C6MDedicatedSorts`, `C6MFinanceAbsent`, `C6MSelected`, `C6MNoPair`, `C6MUnselected`), Program constructors (`C6PELiteral`, `C6PEVar`, `C6PKUInt`, `C6PKBool`), Context constructors (`C6CtxAbsent`, `C6CtxPresent`), and the State constructors. All four imports are used.
+- Observation's 3 previously missing names map uniquely: ContextTypes gives `C6CtxAbsent`, `C6CtxPresent`; StateTypes gives `C6HChildSection`. Both imports are used.
+
+No ambiguity is introduced. The declaration modules define disjoint name families (`C6M*`, `C6P*`, `C6Ctx*`, and State's `C6*`/`C6H*` carriers), with no identifier defined by two of the newly wildcard-imported modules. Other existing imports contribute operator/function names and hidden re-copies of these same declarations; the supplied installed `NameCollector` source confirms why the original failure occurred and why direct imports cure it lexically: imported definitions are copied as hidden (`copyNames(..., copyAsHidden=true)`), hidden non-const definitions are dropped on re-copy, and the collector comment states imports are not transitive by default. Direct import from a declaration module copies its locally defined, non-hidden names, which resolves name lookup without re-exporting them further. The static regression record is consistent with this: the old direct-provider check fails in exactly these 3 modules, and the new check reports no missing C6-prefixed name across all 21 public modules, with no ignored type-alias or constructor use left relying on transitivity elsewhere.
+
+## Limits of this approval
+
+The old actual failure is preserved and not relabeled: the original frontend exited 1 in 3.444 s with 0 stdout bytes and 136,800 retained stderr bytes, all 4,697 pins matching, and operations 02/03 never ran. The independent SAFE classification certifies that the retained stderr contexts are only public `c6PositiveHostInputs` line 4 and its prefix, with exactly eight QNT404 headers and no protected-fixture diagnostics. The renderer stops mid-eighth source excerpt, with no final LF or summary.
+
+Therefore the eight headers are **not** an exhaustive error list, and the static direct-provider check is a **lexical necessary check only**. Neither proves Quint frontend, type, or effect sufficiency. That proof is precisely what operation 01 exists to test on the changed source; this is a new frontend run on new source, not a retry of the old failed cut. The old approval is not reused as revision02 approval.
+
+## Conditions Root must satisfy before and during execution
+
+1. Root alone, after a full read of this opinion, finalizes **only** the review-directory path and final-SHA literals in the pending caller. The caller AST, full forward inverse, and pin retention must remain identical; the proposal pin and all other data stay unchanged. The current placeholder must remain non-executable until then.
+2. Root verifies the actual on-disk files against the proposal pins at execution time. Two delivered-body header values in this packet do not match the pinned file values they name — the delivered author-freeze body header (10,010 B / `656263f4…`) versus the pinned freeze in the Root receipt and proposal (11,072 B / `fb1b7ada…`), and the delivered proposal body header (`6e467eaf…`) versus the proposal pin embedded in the caller and adaptation record (`c76b63bb…`). The supplied source rows agree with the proposal across both records, and the caller's `check` will fail-stop if the actual files do not match the pins; nevertheless Root must confirm the actual freeze and proposal bytes match the pinned values, and must not proceed on the delivered header hashes alone.
+3. Root opaque-rebinds the unchanged 83,367 B expected fixture (`780bbb83…`) as the 22nd source entry, mode 0400, exact 22 regular entries, only after the 21 public pins verify. No private expected values are requested or needed for this opinion; author private body/hash/copy remains zero.
+4. Execution keeps the existing terms: Root sole executor; capture helper invoked through its API only, never `main`; raw COMMAND/RESULT/full streams fsynced before classification; controls, source, tool, and symlink 4,697 pre/post checks; exact 22 entries and 0400 fixture before and after; 60 s, 4 MiB retained per stream, 512 MiB Node, exact PATH/LANG, DEVNULL stdin, argv unchanged except new cwd and operation IDs; test module, names, seed 1, sample 1 unchanged. First failure stops all pending operations. No retry, cap raise, auto-next, old-passing-prefix replay, or source edit between operations.
+5. PASS bars unchanged: 01 requires exit 0 with full 0/0 streams; 02 and 03 each require exactly one named ok, 1 passing, stderr 0, and no QNT/DEBUG/failed/ignored/other-name/truncated output. No `[ok]` assumption.
+
+## Missing premises, stated explicitly
+
+This packet supplies complete current bodies for the 3 changed modules, the unchanged test module, and all 5 declaration modules, plus the collector/base sources, capture helper, pending caller, proposal, and adaptation/inverse records. The other 18 unchanged modules and the Rust API closure are **not** re-read as bodies here; they are covered only by the retained prior full-21-source read coverage and exact byte pins, as the prompt directs. Hash equality alone is not the basis of this approval; the approval rests on the nine bodies read, the name-by-name provider check, and the collector semantics. If Root's pre-execution pin checks contradict any retained pin, eligibility lapses automatically under the caller's fail-stop.
+
+## Scope retained open
+
+No conclusion is given on malformed/refusal, security, auth, admission, StepInv, runtime, helper-clock, circuit, native, SDK, target, universal-refinement, or EARS matters. All G/E/D/N items and the 25 refinement items remain OPEN.

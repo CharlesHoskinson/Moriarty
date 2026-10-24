@@ -217,7 +217,11 @@ fn widths_one_two_four_eight_retain_every_independent_normal_prefix() {
                     let records = machine.run_steps(width);
                     // StepRecord equality covers every field of both full snapshots,
                     // the exact source-rule line and the raw per-event charge.
-                    assert_eq!(records, expected[offset..end], "{case}, fuel={fuel}, width={width}, offset={offset}");
+                    assert_eq!(
+                        records,
+                        expected[offset..end],
+                        "{case}, fuel={fuel}, width={width}, offset={offset}"
+                    );
                     assert_eq!(machine.snapshot(), expected[end - 1].after);
                     offset = end;
                 }

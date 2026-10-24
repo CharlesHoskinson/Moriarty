@@ -1,0 +1,79 @@
+Identity: Muse Wonder 1.0 HIGH, independent non-author review. No tools, execution, edits, or private expected/actual bodies were used.
+
+Top finding: the new K relation correctly models the conditional normal `EnvGetCell` hit followed by `EnvGetExit` against the complete typed state and correctly constructs both 28-field events. There is no semantic defect in the new K bodies that blocks that conditional source/API approval. One ancillary test-first pin is stale, noted below.
+
+## (1) SOURCE/API — **APPROVE**
+
+This approval covers only the conditional, normal Applied branch over a complete `CSOwnedState`, under the external premises listed below. It does not approve runtime execution, admission, dispatch/guard/refusal policy, a guarded adapter/caller, producer/consumer code, native refinement, A39, B-clock, or EARS claims.
+
+### Checks that pass
+
+- **State carriers and field map**
+  - `egSnapshot(Admission, RunId, CSOwnedState)` keeps admission and run identity as whole immutable `EGJSON` trees.
+  - `ctRoot` is used with its 17 positions consistently: control, origin, env root, stack limit, outcome, initial fuel, remaining work, consumed work, helper work, helper visits, reference cursor, alloc, active, segment active/alloc/consumed, and frames at `arg16`.
+  - `dpTables` maps data, data fields, env, and value slots in that order.
+  - `csHelperTables` maps helper, result, and tasks in that order.
+  - All 23 image fields in the supplied mapping are therefore represented, including raw frames.
+
+- **Cell transition**
+  - It requires `EnvGet` with `chTriPending()`.
+  - On the stated hit premise, `egHitRef(chIndexSome(Index), Binder, Tables)` selects `dpEnvCell(Binder, Value, _)` from the env table and produces `chRefSome(Value)` with `chTriPositive()`.
+  - Cursor, common record, binder, result, tasks, tables, admission, and run ID are retained.
+  - This matches the supplied owner `env_get_cell` hit branch: set `found`, set status Positive, retain cursor and other helper fields.
+
+- **Exit transition**
+  - It requires `chTriPositive()` with `chRefSome(Value)`, clears the helper, and writes `chSomeResult(chResultEnvFound(Value))`.
+  - Tasks and all unrelated state are preserved.
+  - This matches the supplied owner `env_get_exit`.
+
+- **Owner charges**
+  - `egChargeRoot` is the same root update for both rows: remaining work −1, consumed work +1, helper work +1.
+  - Cell adds helper visits +1; Exit adds helper visits +0.
+  - Reference cursor, alloc counters, frames, outcome `ctRunning()`, control, origin, env root, and all other root fields are retained.
+  - This matches the normative Cell base deltas `[-1, 1, 1, 1, 0, …]` and Exit base deltas `[-1, 1, 1, 0, 0, …]`.
+
+- **Events: all 28 fields, in order**
+  - Both events use `egStepId(RunId, Consumed)` from their own prestate. For Exit, that is the after-Cell consumed value, which is the correct Exit prestate ordinal.
+  - Cell: Cell rule, `HelperVisit`, `EvalVar`, `EnvGet`, `Applied`, work/helper-work/visits/reference-cursor deltas `1/1/1/0`, zero alloc deltas, zero value-slot writes, unchanged depth and task count, phase Pending→Positive, cursor Some→same Some, no result tag.
+  - Exit: Exit rule, `HelperExit`, `EvalVar`, `EnvGet`, `Applied`, deltas `1/1/0/0`, zero alloc/value-slot changes, unchanged depth and task count, phase Positive→none, cursor prestate cursor→none, `EnvFound` result tag.
+  - Both use the live helper common `origin_reference_cursor`, not the root reference cursor, in accordance with the supplied current event-ABI bridge.
+  - Both use `control_origin` as `source_expr_id` and derive source occurrence from `admission.view.occurrences[control_origin]` plus the exact `occurrence_paths[start:start+len]` slice.
+  - Both use no exhaustion, Running outcome tag/payload, and no boundary, matching a post-state that remains Running.
+
+- **Linked window and laws**
+  - `egTwoEventWindow` computes Exit from the computed after-Cell state, rather than independently reconstructing it.
+  - The three UNRUN laws are general preservation/join predicates, as claimed. They are not treated here as an independent finite oracle or observed test result.
+
+### Non-semantic packet defect
+
+- `TEST-FIRST-UNRUN-RECORD.json` pins `tests/envget-positive-laws.k` as 1815 bytes / `f751be…`, while the frozen source body, passive readback, `SOURCE-FREEZE.json`, and compile closure pin the same path as 1825 bytes / `741251…`.
+- Therefore the test-first chronology is not established for the exact frozen law bytes. This does not invalidate the K semantics or the compile closure, which consistently pin the 1825-byte version, but the stale record should be corrected or explicitly superseded before anyone relies on the “written first” claim for the frozen bytes.
+
+### Missing premises and assumptions — explicitly not established
+
+1. **Real admission and reachability:** a genuine `host_owner_engine()` admission, `admit_run`, AB binding, StepInv satisfaction, and a reachable prestate in the genesis-to-target prefix. No literal admitted prefix is supplied.
+2. **Selection:** the owner must actually select `BHelperEnvGetCell` and then `BHelperEnvGetExit`, with no entry, empty, failure, refusal, publication, or other row intervening.
+3. **Hit premise:** prestate helper is `EnvGet`, Pending, cursor is `Some(index)`, that index is in range in the K env-table ordering, and the inspected cell binder equals the helper binder. The K function is undefined/stuck outside that hit premise rather than modelling the miss advance.
+4. **StepInv side conditions not encoded as guards:** for example result absence while the helper is live, prior `found = none` for the pending Cell row, task/helper coherence, site coherence at `EvalVar`, and common-record coherence. `egCellWithValue` discards the prior found field and `egExit` discards the prior result field; correctness therefore depends on those external invariants.
+5. **Fuel, helper-work, physical, and cap premises:** remaining work > 0 is encoded in `egChargeRoot`; helper-work headroom, physical capacity, logical caps, and absence of P3/P6 refusal are not established by the K source.
+6. **Bounded arithmetic:** K `Int` is unbounded. Real `u128`/`usize` ranges and checked owner arithmetic remain external representation premises.
+7. **Admission JSON shape:** the source assumes exact object keys `view`, `occurrences`, `occurrence_paths`, `owner_is_function`, `function`, `path`, `start`, and `len`; unique keys; in-range origin and path slice; and the declared snake-case native wire. No guarded adapter validates or executes that mapping.
+8. **Canonical-11 gap:** the current literal admitted prefix retains the stated canonical-11-vector contract GAP. The K relation is parametric over the whole admission tree; it does not supply, invent, or validate those vectors.
+9. **Future comparison:** meaningful validation still requires the independently frozen, complete real-owner three-state/two-event equality over every state field and all 28 event fields. Boolean law results alone are insufficient.
+10. **Compiled products are UNBOUND:** no actual compiled label, sort, arity, Source, or Location map has been observed. No raw-label guessing is approved.
+
+## (2) Exact-1 COMPILE — **CONDITIONAL**
+
+The proposed single `00-compile` phase may become eligible only if Root selects it exactly as frozen and satisfies the stated Root conditions. It is not eligible as an already-approved or already-run compile, and this verdict authorizes no runtime phase.
+
+Conditions:
+
+- Root alone selects this genuinely new compile; no B39/CTX/META passing prefix, old compile replay, runtime, expected module, producer, or subject execution is included.
+- Before and after the child, Root rechecks the complete source closure, SAFE/input pins, tool/JAR/builtin pins, the F03 full source, and the full callable closure by actual bytes.
+- Root creates the fresh `0700` compile `cwd`, `home`, and `tmp`; ensures `stdout`, `stderr`, and `actual/envget-positive-kompiled` are absent before launch; and uses the exact frozen environment and JVM limits.
+- Root invokes only the existing `F03.launch(record, phase.argv, dict(phase.environment), phase.cwd, phase.environment[SHERLOCK_K_ATTEMPT_TOKEN], 536870912)` callable, exactly once. No `F03` wrapper main, preflight mode, retry, or substitute launcher is approved.
+- The exact compile argument remains the frozen `envget-positive-laws.k` input with `--backend haskell`, `--no-haskell-binary`, main/syntax module `SHERLOCK-ENVGET-POSITIVE-LAWS`, the supplied builtin include path, and the supplied output definition.
+- The disclosed resource basis remains: 30-second child wall limit, 3-second sweep, 512 MiB FSIZE, core 0, umask `077`, JVM heap 512 MiB / stack 32 MiB / 2 processors, and **no aggregate CPU/RSS/disk cap claim**.
+- After any selected compile, Root must preserve the full record and streams, inventory/fsync/hash **all** actual products rather than assume a product count, classify diagnostics completely, and qualify actual Definition symbols/sorts/arities/Source/Location from the real products before any runtime discussion.
+
+Final scope statement: **SOURCE/API APPROVE for the conditional normal Cell-hit→Exit relation only; exact-1 COMPILE CONDITIONAL under Root selection and the preflight/postflight conditions above; runtime, adapter, caller, guard/refusal, native, refinement, A39, B-clock, and EARS remain unapproved and UNRUN.**

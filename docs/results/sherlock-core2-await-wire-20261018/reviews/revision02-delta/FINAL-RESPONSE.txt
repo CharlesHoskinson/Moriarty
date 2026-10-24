@@ -1,0 +1,132 @@
+# B11 revision02 delta review: M1/M2 correction, sixth-test fixture, one-operation eligibility
+
+## 1. Coverage and tool use
+
+- **Tools:** none. I used no filesystem, shell, Python import/compile/test/CLI, Quint, provider, Git or network access.
+- **Bodies read:** all ten, each completely from its BEGIN marker to its END marker. The final marker `END-B11-REVISION02-FRESH-OPUS-DELTA-ONEOP-REVIEW` is present. Nothing is clipped, so this is not an ABSTAIN.
+- **Not verified:**
+  - Any SHA256 or byte pin.
+  - That Body 5's diff was produced from the real revision01 files. Revision01 bytes are not supplied.
+  - That the 54298 B carrier file equals the one the original review saw. That rests on the matching `2653fb…` pin label.
+- **One text-arithmetic consistency check:** the two added consumer lines are 113 B and 106 B including indentation and newline, which is 219 B. That equals 11989 − 11770. This is a coherence check, not pin verification.
+- **Reliance:** this is a delta opinion. For the unchanged consumer helpers, the decoder beyond `decode_itf`, the Core serde/B06 mapping and the first five tests, I rely on the original full-source/API opinion in Body 4. I did not redo that audit and do not claim it as my own. I did read Body 1 and Body 2 completely to check for unintended changes, syntax and imports.
+
+## 2. M1: guard literal and placement
+
+**Literal:** Body 1's added `if`/`raise` pair is token-for-token identical to the correction in Body 4 §2 M1:
+
+- Condition: `type(...) is not int` for both indices, then `< 0` for both.
+- Message: `'explicit raw ITF state ordinal and record index must be non-negative integers'`.
+
+The indentation is 4 spaces for `if` and 8 for `raise`, which is correct inside the function. Body 7's literal has `\n` plus 8 spaces before `raise`, which matches the file.
+
+**Placement:** the guard is the first statement of `supplied_itf_record`, before `document['states'][…]`. Body 5's diff shows it as the only consumer change.
+
+**Behaviour:**
+- `-1` for either argument now raises `ValueError` instead of selecting from the end of the list.
+- `type(x) is not int` also rejects `bool`, because `type(True) is bool`.
+- argparse `type=int` still delivers plain `int`, so valid CLI use is unaffected.
+- No other validation was added. H1–H6 are untouched, as authorized.
+
+## 3. M2: comment and fixture
+
+**(a) Comment:** it now reads "Literal inputs compared by both codecs; not independent expected output." This correctly describes the equality as same-author cross-codec equality over literal representation data. It no longer claims the expected side avoids codec calls. The module docstring's "same-author serialization fixture, not an independent financial outcome/trace" is consistent with it.
+
+**(b) Fixture discrimination:** the document now has three states:
+
+| State | Records | `attempted` values |
+|---|---|---|
+| 0 | `[before]` | 41 |
+| 1 | `[before, record, after]` | 41, 1, 73 |
+| 2 | `[after]` | 73 |
+
+The test selects `(1, 1)`. Each shortcut either fails the whole-object equality, where Core expects `attempted` 1 on both the result and the prefix side, or raises `IndexError`:
+
+| Shortcut | Outcome |
+|---|---|
+| First state | 41 at index 0; `IndexError` at index 1 |
+| Last/terminal state | 73 at index 0; `IndexError` at index 1 |
+| First record of state 1 | 41 |
+| Last record of state 1 | 73 |
+| Python `-1` end selection | Now guarded |
+
+There are differing records on both sides of the selection, and a third state follows it.
+
+**Copy independence:** `copy.deepcopy` isolates the edits to `before`/`after`. `record` keeps `attempted == 1`, and `selected['result']['value']['attempted'] == 1` checks this directly.
+
+**The two `-1` assertions are non-vacuous:**
+- Without the guard, `(-1, 0)` would return `after` and `(1, -1)` would return `after` without raising.
+- `decode_itf` handles `#map` before its unsupported-`#` check.
+- Exactly one `::machine` name exists in each state.
+
+So the only possible `ValueError` source is the guard.
+
+**Cross-codec equality:** I re-traced it by hand on the new selected record and it still holds:
+- `Waiting`/`WaitingPrefix` key sets match.
+- `NoSegment` and `NoUInt` are both in `Q_NULLARY`.
+- The `#map` is decoded and then sorted into rows in the Snapshot branch.
+- `committed`/`attempted` come out as `1` on both sides.
+
+**Syntax and imports:**
+- `copy` is imported by the tests.
+- The bracket nesting in `document` closes correctly.
+- Indentation is consistent.
+- The consumer still imports only `decode_itf`.
+- The diff hunks in Body 5 fall only inside the sixth method, which matches Body 7's six names with five unchanged methods.
+
+## 4. Findings
+
+**Mandatory delta findings: none.**
+
+Non-blocking notes, which do not change the verdict:
+
+- **N1:** States 0 and 2 have only one record each. A contrived implementation that ignores `state_ordinal` and searches for any state where `record_index` is in range would still pass. The test's comment claims only first/last shortcuts, which is accurate. Giving the neighbouring states two or more differing records would close this gap.
+- **N2:** `records == [before_record]` and `records == [after_record]` compare each list against the same objects, so they are identity-tautological. They detect list replacement or length changes, not in-place content mutation. The final `#map` literal assertion is the real non-mutation check, and it covers the selected record only. None of these assertions claims more.
+- **N3:** On the CLI, `--state-ordinal -1` now ends with an uncaught `ValueError` traceback rather than `parser.error`. This belongs with H4 (diagnostic consistency). The CLI is untested.
+- **N4:** CORRECTION.md (Body 6) shows the guard with `if` at column 0 and `raise` at 8 spaces. This is cosmetic in the document only. The source file is correct.
+
+**H1–H6 remain unresolved and are not waived** before any real-capture use:
+- canonical UInt spelling and range
+- scalar field types
+- nullary payload shape
+- consistent diagnostics and Quint shape checks
+- canonical-byte comparison
+- `selectedRecord` provenance limits
+
+This fix neither hardens nor blesses real capture.
+
+## 5. Verdicts
+
+**Revision02 source verdict: ACCEPT (delta).** M1 is the exact Opus-authored guard, placed first. M2(a) is reworded accurately. M2(b) selects state 1 / record 1 between differing records with a third state after it, and includes two genuinely discriminating `-1` `ValueError` assertions. For the unchanged parts, acceptance relies on the original full-source/API opinion (Body 4), which found the Core→B06 mapping correct.
+
+**One-operation verdict: ELIGIBLE**, for exactly Body 8:
+
+```
+/usr/bin/python3 -B -m unittest -v test_core2_await_boundary_wire
+```
+
+- **cwd:** `…/revision02-indices/afterimages/models/sherlock/qa`
+- **Limits:** 60 s timeout, 4 MiB stdout, 4 MiB stderr.
+
+Enforceable conditions:
+1. **Pins before.** Root checks the pins for:
+   - `core2_await_boundary_wire.py` (`843f10…`, 11989 B)
+   - `test_core2_await_boundary_wire.py` (`22e7d3…`, 9070 B)
+   - `quint_observations.py` (`595a4f…`, 16774 B)
+   - `core2-await-literal-inputs.json` (`2653fb…`, 54298 B)
+   - `/usr/bin/python3` (`52e0a1…`, 7477160 B)
+2. **Clean `qa` directory.** It contains exactly the four listed entries, nothing that shadows a stdlib module, and no `__pycache__`.
+3. **Clean environment.** `PYTHONPATH` and `PYTHONHOME` are unset.
+4. **One invocation.** Run exactly once, with no retry.
+5. **Pass criterion.** Exit 0, all six named tests each reported `ok`, `Ran 6 tests`, `OK`, and no skips or expected failures. Anything else is recorded verbatim as a failure.
+6. **Pins after.** Recheck the same pins afterwards and confirm no new files exist.
+7. **No carried evidence.** No earlier six-test evidence carries over, and no B10 or passed-prefix reruns are included.
+
+## 6. Scope retained
+
+A pass would establish only these six same-author representation assertions on these exact bytes. The scope is the structural result/awaitPrefix comparison of supplied observations.
+
+- `rawInput`, the ordinal, the record index and `selectedRecord` are provenance only.
+- The cross-codec equality is same-author literal representation data, not independent expected output.
+- This review makes no claim about Invocation or program pairing, same-call provenance, admission, runtime, static work, a financial oracle, a production guard, B-charge, native or product closure.
+- No execution result follows from this review, and no canonical ledger state changes. Root runs the operation on the new pins only.

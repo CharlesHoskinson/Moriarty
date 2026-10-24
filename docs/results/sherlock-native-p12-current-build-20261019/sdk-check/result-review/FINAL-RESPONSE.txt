@@ -1,0 +1,203 @@
+# Scoped review: A102 P12 SDK nonproving result, passive comparison, and PR284 applicability
+
+## Disposition: **REVIEW_SCOPED_RESULT_APPROVE**
+
+This approves the result with finite record corrections (R1–R7 below). None of them needs a rerun, and none adds a gate.
+
+| Track | Judgment |
+|---|---|
+| **A.** SDK-result acceptance (op 00 list, op 01 first heavy check) | **ACCEPT** |
+| **B.** Eligibility: C1′ amendment and C2–C9 fulfilment | **FULFILLED**, with record gaps R2–R6 (non-blocking) |
+| **C.** Passive comparator: code, data and provenance agreement | **ACCEPT**, with hardening notes H1–H2 (non-blocking) |
+| **D.** Finite source applicability to PR284's two leaves | **APPROVE to ready/merge** as scoped, with the applicability record R7 |
+
+**Read scope.** I used no tools and executed no subject or SDK code. I read only inputs 0–43 and the inline program hex. The following are premises, not fresh coverage:
+- the 3,972,464 B IR body;
+- the 473 MB ELF;
+- compiled SDK payloads;
+- the comparison report body;
+- PR284's actual diff and head.
+
+## Independent recomputations
+
+I recomputed these by hand; all agree with the records.
+
+- **List count.** Summing the stdout lines module by module gives 11+16+14+8+8+3+5+3+6+2+3+4+3+5+2+3+4+3+3+6+2+6 = **120**. This matches the summary line `120 tests, 0 benchmarks`. Op 01's `119 filtered out` equals N_t + N_b − 1.
+- **Segments.** 2 + 707 + 683 + 683 + 2 = 2077. The post segment starts at 2 + 707 + 683 = 1392, and 1392 + 685 = 2077. These match LAYOUT-2077 and the Output operand indices 1392..2076.
+- **Context limbs.** I decoded `context_hash` 8d3ba6cf…c120d9 as digest[0:16] and digest[16:32], each read as a little-endian u128.
+  - limb0 = 0x10032304bf062bb659bf34a9cfa63b8d = 21283935083502133171196419186673204109.
+  - limb1 = 0xd920c1d4e924bce179714d2d96a5d91a = 288612559958378237282717083764452088090.
+  - Both are exact matches to the actual and expected values, and both are below 2^128.
+- **Accounting.**
+  - op 00: 0.002388 + 0.001964 s = 4,352 µs.
+  - op 01: 5.737607 + 0.07593 s = 5,813,537 µs.
+  - Total added: 5,817,889 µs.
+  - E: 1,190,123,103 → 1,195,940,992. P: 925,089,576 → 930,907,465. S is unchanged. Both sums are exact.
+- **Timeline** (from epoch-ns mtimes; 2026-10-19 00:00 UTC = 1792368000):
+
+  | Event | Time (UTC) |
+  |---|---|
+  | Quarantine ELF mtime | 08:47:17.55 |
+  | Selection | 09:16:05 |
+  | Execution-copy mtime | 09:16:56.80 |
+  | Pre-op-00 slot check | 09:16:57.52 |
+  | Op 01 child | 09:17:53.302 – 09:17:59.125 |
+  | Three artifact mtimes | 09:17:59.109 / .113 / .113 |
+  | Freeze | 09:17:59.52 |
+  | Unblind | 09:19:12 |
+
+  - The artifacts were written about 15 ms before the child exited, which is consistent with source: writes happen only after every assertion.
+  - The private context materialization (06:01:45) precedes the actual capture.
+
+## A. SDK-result acceptance
+
+**Op 00 (list): accepted.**
+- Exit 0, both streams fully retained (14,116 B stdout, 0 B stderr).
+- Both selectors appear exactly once as `: test`.
+- Parsed line count equals the summary.
+- Ordered-name hash recorded; no writes to cwd, tmp or the output directory.
+
+**Op 01 (first heavy check): accepted.**
+- Exit 0, 253 B stdout, 0 B stderr.
+- Exactly one `… ok` line, and the summary reads `1 passed; 0 failed; 0 ignored; 0 measured; 119 filtered out`.
+- Three regular, non-symlink files; size and SHA match the freeze.
+- Resource use:
+  - CPU 5.81 s against the 8 s cap.
+  - Wall 5.82 s against the 10 s cap.
+  - maxrss 129 MiB against the 1 GiB address-space cap.
+  - Wall ≈ CPU, so shared-host contention was negligible. The fit figure to cite is 5.81 s CPU.
+
+**Premises from the eligibility opinion now discharged by observation, for this fixture and ELF:**
+
+| Premise | How it was discharged |
+|---|---|
+| S3 (`VERIFIER_MAX_DEGREE ≥ 12`) | `check_literal_statement` passed with 2078 ≤ 2^VMD. |
+| S2 (no stray I/O instructions) | The comparator counted exactly 2077 PublicInput, 2077 Impact and 1 Output over the whole IR. The empty-private-transcript check passed, which excludes PrivateInput. |
+| S4 (fixture fits) | `prepare_a` and the fixture fit, and LE fuel went 50 → 49. |
+| S5 (libtest identity) | The list output has libtest format. |
+| S1 (purity) | Only partially observed: no unexpected files were recorded. Network purity is not observable here. |
+
+**Narrow additional fact.** The test asserts at runtime that the `include_bytes!` reference source is 16,840 B with SHA cc68879d…. Because the test passed, the reference bytes embedded in this ELF hash to that value. That is the only identity this run observes. K_SOURCE and the program-source strings remain claims.
+
+## B. Eligibility fulfilment
+
+**C1′ (shared-host amendment).**
+- Literal amendment text and `originalC1LiteralHostEnumerationNotSatisfied` are recorded.
+- Gates passed:
+  - `nproc` 6.
+  - Load 4.30 at selection and 1.92 immediately before op 00, both below the 5 threshold.
+  - MemAvailable about 30.6 GiB.
+  - PSI recorded.
+- The Moriarty exe/cwd set was empty at selection, before op 00, before op 01 and after op 01. Terminal states were confirmed. Transient Fenrir `rustc` processes were disclosed.
+- Gaps: R2 and R3.
+
+**C2–C9.**
+
+| Condition | Status |
+|---|---|
+| C2 Execution copy | Quarantine mode, mtime, nlink and inode are unchanged before and after the copy. Copy is mode 0700 and fsynced. Costs recorded separately. Gap: R5. |
+| C3 Child environment | Environment map is exact and stdin is `/dev/null`. Gap: R4. |
+| C4 Op 00 acceptance | Met (see A). |
+| C5 Op 01 acceptance | Met (see A). |
+| C6 Durability | File modes 0644, directory modes 0755. Files, outdir and parent were fsynced before the manifest. Gap: R6. |
+| C7 Failure handling | Not applicable (pass). |
+| C8 Record corrections | Erratum recorded and cleanup record 48009c74 cited. |
+| C9 Accounting | Exact, as recomputed above. |
+
+## C. Passive comparator audit (`compare_frozen_data.py`, e9477ad9)
+
+**uint exactness and no bool/float coercion on the actual side.** Confirmed.
+- `uint()` requires `str`, matches `0|[1-9][0-9]*` exactly (ASCII digits only, no sign, whitespace or leading zeros), and requires a value below 2^128.
+- `normalize()` rejects every non-string, non-list value.
+
+**Strict typing on the expected side.**
+- The 2077-lane expected statement is checked with `type(n) is int`, which excludes bools and floats.
+- Image and metadata comparisons go through `json.dumps(sort_keys=True)`, which distinguishes `true` from `1` and `4.0` from `4` and fails closed.
+
+**Whole metadata.**
+- For each of the 2077 lanes, the actual lane object must equal exactly the 7-key dict built from LAYOUT (index, path, name, bits, boolean, `maximum_dec`, `value_dec`). Extra or missing keys fail.
+- `value_dec` is compared with `str(actual public value)`. Combined with `valueEqual`, this transitively binds `lanes[].value_dec` to the expected value.
+
+**Three images.**
+- Program, pre and post are each compared as root plus every table, in `table_order`.
+- Each is also compared against the whole flat list: 707, 683 and 683 lanes.
+- The actual image key set must be exactly `{root, tables}`.
+
+**Two context lanes plus 2075 values.**
+- Exact string match on the context limbs.
+- All 2077 values against the strictly typed expected statement.
+- 2075-lane view against the original noncontext file.
+
+**685 producer projection.**
+- `actual[1392:]` equals return-projection-685. This is the post image followed by the envelope `3,1`.
+- The IR's single Output references exactly ids 1392..2076.
+- The report qualification states correctly that these are producer statement lanes, not SDK outputs. `check` exposes only `pi_skips`.
+
+**No source-authentication claim.** Reference and K identities are labeled `ClaimIdentity`. Both the report qualification and INPUT-IDENTITIES disclaim authentication.
+
+**Provenance.**
+- Every file the comparator reads is pinned, transitively:
+  - the 15 original pins via EXPECTATION-FREEZE;
+  - the 4 private pins via PRIVATE-MATERIALIZATION-FREEZE;
+  - the 3 actual pins via ARTIFACT-FREEZE (itself pinned by literal hash).
+- All pins are re-hashed after loading, which guards against changes between pinning and reading.
+- No SDK, producer or evaluator is executed.
+- The layout hash 2eef6d6f… sits in the original October 18 freeze and equals the actual value. That is a genuine pre-frozen agreement.
+
+**Report body not inline: acceptable.** The script asserts `all(checks) and not mismatches` *after* printing. Exit 0 under `timeout`/`prlimit` (which propagate status) therefore corroborates the inline stdout summary independently of the 1,246,537 B body.
+
+**Coverage limits.** State these explicitly.
+1. Only the PI, Impact, Output, inputs, outputs and communications-flag structure of the 30,289-instruction IR is compared. The remaining ~26,134 instructions (limb ConstrainEq, dispatch, the literal fragment) have no independent expectation. They are covered only by SDK satisfiability and the negative checks.
+2. PI/Impact interleaving is not checked.
+3. Some artifact fields are uncompared: `fixture`, `check_outcome`, `open_obligations`, `byte_counts`. They agree by eye.
+4. Agreement on `context_hash` is agreement between two computations over the same pinned source bytes. It does not authenticate those bytes.
+5. Timestamps of the expectation freezes are custody assertions; hashes prove content, not time.
+
+**Hardening notes (non-blocking, no rerun).**
+- **H1.** `noncontext2075`, `producerPostEnvelope685` and `stackCapacity` use Python `==`, which would accept `True == 1` or `1.0 == 1` on the expected side. This is harmless here: the pinned files visibly contain only integer tokens, and the strictly typed `all2077StatementValues` covers the same lanes.
+- **H2.** `json.loads` accepts duplicate keys and NaN. This is immaterial here, since every value is fail-closed or strictly typed.
+
+## D. PR284 applicability
+
+The result transfers to PR284's two leaves only under these conditions:
+- the PR's `literal_bridge.rs` is byte-equal to d12adc85…c52 (21,601 B);
+- the PR's `literal_witness_native_tests.rs` is byte-equal to bb14c25b…b4a7 (20,522 B);
+- the remaining build inputs equal the P12 tree that produced ELF 5d97f479…bfca.
+
+Recording these equalities is a scope statement, not a gate (see R7).
+
+**Source review, security and normal.** No defect found.
+- `check_literal_statement` uses the distinct `CHECK_KEY_LOCATION`, a zero binding, and a bounded lane count, and it refuses skips.
+- `LiteralConstraintCheck` is not `Serialize`, so it cannot be shipped as a claim.
+- Test writes are opt-in through an environment variable, use `create_new`, and run only after all assertions.
+
+**Cosmetic items, deliberately not to be fixed in this cut** (any edit breaks the byte binding):
+- the stale `Compile … UNOBSERVED` header (F13 drift; compile is now observed);
+- a 5-space indent before `ImageValues` in the test imports.
+
+Note both in the PR description.
+
+**Limitations.**
+- One fixture and one ELF, nonproving preprocess only.
+- 4 distinct single-lane corruptions were rejected; the failing constraint is not identified.
+- The strict-subset second selector and the other 118 harness tests did not run on this ELF. This result says nothing about them, about workspace CI, or about other inputs.
+- No `ir.k()`, SRS, keygen, prove, native verify, stagenet, ledger or allEARS closure is asserted.
+- StepInv, uiValid, F4, G4, projectA and continuity obligations remain open.
+
+## Finite record corrections (observed facts only, no rerun)
+
+- **R1.** ROOT-PASS `negative: 7` and the eligibility opinion's "7 single-lane corruptions" should read: **7 rejecting check invocations over 4 distinct single-lane corruptions.** Fuel, Return constant index and stackLimit are each checked via both the statement and transition paths; context limb 0 is checked via the statement path only.
+- **R2.** HOST-SLOT should state that the clarification's `cargo-bolero`/`mysticeti_dag` and three `quint_evaluator` PIDs were absent at selection, or that the scan was not exhaustive. It should label `claude` 2329 and 3033 and `agy` 1687552 as unattributed same-UID processes, and disclose SwapFree ≈ 12 KiB of 8 GiB.
+- **R3.** Post-op-01 C1′ §6:
+  - Item 6: record "exit 0; OOM record not applicable/kernel log not consulted".
+  - Item 7: state whether the ELF SHA in ARTIFACT-FREEZE was freshly recomputed after op 01, and record the copy mode as 0700.
+- **R4.** State whether `actual-output-01` was observed absent before op 01. If it was not observed, record that as unobserved. Either way, `create_new` together with mtimes inside the run window binds the files to this run.
+- **R5.** EXECUTION-COPY-RECEIPT should assert O_EXCL creation in a fresh `execution-copy-01` directory. This is consistent with the index correction's `copyAttempts: 0`.
+- **R6.** Record, outside the manifest itself, that ARTIFACT-FREEZE was created with O_EXCL and that it and its parent were fsynced. Note also that COMPLETE-REPORT's parent directory was not fsynced; the report is redundant, so this is non-blocking.
+- **R7.** Add a PR284 applicability record:
+  - the PR head commit;
+  - SHA-256 of both leaf blobs, equal to d12adc85… and bb14c25b…;
+  - a statement that the remaining build inputs match the P12 build;
+  - result scope = ELF 5d97f479…bfca.
+
+  If the blobs or other build inputs differ, the result does not transfer. That is a scope fact, not a request to rerun.

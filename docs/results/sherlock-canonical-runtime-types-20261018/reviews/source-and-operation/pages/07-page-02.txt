@@ -1,0 +1,113 @@
+        HelperResultC::FindMissing => match invoke_name(pre) { Some(n) => least_row_named(pre, n)?.is_none(), None => false },
+        HelperResultC::AppendDone { seq } => match (pre.top_frame(), ret_value(pre)) {
+            (Some(FrameRowC::ArgsF { completed, .. }), Some(v)) => {
+                if completed.len.checked_add(1) != Some(seq.len) || seq.start.checked_add(seq.len) != Some(pre.active().value_slots) { return Ok(false); }
+                let mut i = 0usize;
+                while i < completed.len { if slot_at(pre, seq, i)? != slot_at(pre, completed, i)? { return Ok(false); } i += 1; }
+                slot_at(pre, seq, completed.len)? == v }
+            _ => false },
+        HelperResultC::ScalarValue { value } => match (newest_data(pre, value), scalar_result_prim(pre)?) {
+            (Some(j), Some((p, a, b))) => data_row_is(pre, j, p, a, b)?, _ => false },
+        HelperResultC::ScalarError { code } => matches!(scalar_result_prim(pre)?, Some((KPrim::Error(c), _, _)) if c == *code),
+        HelperResultC::ScalarSelector { sel } => match (pre.top_frame(), ret_value(pre)) {
+            (Some(FrameRowC::IfF { .. }), Some(v)) => selector_of(pre, &v)? == *sel, _ => false },
+        HelperResultC::ScalarTypeTest { ok } => match (pre.top_frame(), ret_value(pre)) {
+            (Some(FrameRowC::ReturnF { return_type, .. }), Some(v)) => has_type(pre, &v, *return_type)? == *ok, _ => false },
+        HelperResultC::EqualDone { value } => match (newest_data(pre, value), pre.top_frame(), ret_value(pre)) {
+            (Some(j), Some(FrameRowC::RightF { op: BinaryOp::Eq, left, .. }), Some(v)) => {
+                let r0 = RefC::Data(j);
+                pre.kind_of(&r0)? == LogicalKind::Bool && pre.bool_of(&r0)? == structurally_equal(pre, *left, v)? }
+            _ => false },
+        HelperResultC::BindOk { .. } | HelperResultC::BindBad | HelperResultC::MatchMatched { .. } | HelperResultC::MatchNoMatch =>
+            return Err(cv("Bind/Match SI-21R is owner_si21_bind_match")),
+    })
+}
+
+// ---- SI-22 helper_state_space
+fn scalar_state_ok(pre: &PreImage, h: &HelperControlC) -> Result<bool, HostViolation> {
+    use ScalarMode as M; use ScalarStaged as S;
+    let (mode, a, b, expected, phase, reg_a, staged) = match h {
+        HelperControlC::Scalar { mode, operand_a, operand_b, expected, phase, reg_a, staged, .. } => (*mode, *operand_a, *operand_b, *expected, *phase, *reg_a, *staged),
+        _ => return Err(cv("Scalar state")) };
+    let binary = matches!(mode, M::Add | M::Sub | M::Mul | M::Lt | M::Cons | M::Branch);
+    if b.is_some() != binary || expected.is_some() != (mode == M::TestType) { return Ok(false); }
+    let ka = pre.kind_of(&a)?;
+    let numeric = matches!(mode, M::Add | M::Sub | M::Mul | M::Lt) && ka == LogicalKind::UInt;
+    let reg_ok = if numeric { reg_a == pre.u128_of(&a)? } else { reg_a == 0 };
+    Ok(match phase {
+        ScalarPhase::First => staged == S::None && reg_a == 0,
+        ScalarPhase::Second => staged == S::None && reg_ok && match mode {
+            M::Add | M::Sub | M::Mul | M::Lt | M::Cons => ka == LogicalKind::UInt,
+            M::Branch => matches!(ka, LogicalKind::Leaf | LogicalKind::Branch),
+            _ => false },
+        ScalarPhase::Done => reg_ok && matches!((mode, staged),
+            (M::Add | M::Sub | M::Mul, S::U128Value { .. } | S::PrimError { code: 10 | 11 })
+            | (M::Lt | M::Not, S::BoolValue { .. } | S::PrimError { code: 11 })
+            | (M::Cons, S::PendingNode { tag: NodeKind::Cons }) | (M::Branch, S::PendingNode { tag: NodeKind::Branch })
+            | (M::Leaf, S::PendingNode { tag: NodeKind::Leaf }) | (M::Cons | M::Branch | M::Leaf, S::PrimError { code: 11 })
+            | (M::TestBool, S::Selector { .. }) | (M::TestType, S::TypeTest { .. })),
+    })
+}
+fn tasks_ok(pre: &PreImage, equal: bool) -> Result<bool, HostViolation> {
+    for t in &pre.img.tasks {
+        let ok = match (equal, t) {
+            (false, HelperTaskC::ValidateTask { visit: TaskVisitC::Unvisited, cursor, .. }) | (true, HelperTaskC::EqualTask { visit: TaskVisitC::Unvisited, cursor, .. }) => *cursor == 0,
+            (false, HelperTaskC::ValidateTask { r, visit: TaskVisitC::Fields, cursor }) => { let ar = pre.checked_arity(&pre.kind_of(r)?)?; ar > 0 && *cursor < ar }
+            (true, HelperTaskC::EqualTask { left, right, visit: TaskVisitC::Fields, cursor }) => { let k = pre.kind_of(left)?; let ar = pre.checked_arity(&k)?; k == pre.kind_of(right)? && ar > 0 && *cursor < ar }
+            _ => false };
+        if !ok { return Ok(false); }
+    }
+    Ok(true)
+}
+fn match_state_ok(pre: &PreImage, h: &HelperControlC) -> Result<bool, HostViolation> {
+    use PatternTag as P;
+    let (pat_tag, x, y, field_idx, staged, phase, status, partial, saved) = match h {
+        HelperControlC::Match { pat_tag, x, y, field_idx, staged, phase, status, partial, saved_env, .. } => (*pat_tag, *x, *y, *field_idx, *staged, *phase, *status, *partial, *saved_env),
+        _ => return Err(cv("Match state")) };
+    let pending = status == TriStatus::Pending; let at_saved = partial == saved;
+    Ok(match phase {
+        MatchPhase::Arm => pending && pat_tag == P::PVar && x == 0 && y == 0 && field_idx == 0 && staged.is_none() && at_saved,
+        MatchPhase::Tag => pending && matches!(pat_tag, P::PNil | P::PCons | P::PLeaf | P::PBranch) && staged.is_none() && at_saved,
+        MatchPhase::Distinct => pending && matches!(pat_tag, P::PCons | P::PBranch) && staged.is_none() && at_saved,
+        MatchPhase::Field => pending && matches!(pat_tag, P::PLeaf | P::PCons | P::PBranch) && staged.is_none() && match field_idx {
+            0 => at_saved,
+            1 => matches!(pat_tag, P::PCons | P::PBranch) && match partial { Some(p) => pre.env_cell(&p)?.previous == saved, None => false },
+            _ => false },
+        MatchPhase::Bind => pending && staged.is_some() && ((pat_tag == P::PVar && field_idx == 0) || matches!(pat_tag, P::PLeaf | P::PCons | P::PBranch)),
+        MatchPhase::Ready => pending && staged.is_none(),
+        MatchPhase::NoMatchReady => pending && staged.is_none() && at_saved,
+        MatchPhase::Done => staged.is_none() && match status { TriStatus::Positive => true, TriStatus::Negative => at_saved, TriStatus::Pending => false },
+    })
+}
+pub(super) fn si22_helper_ok(pre: &PreImage) -> Result<bool, HostViolation> {
+    let tl = pre.task_live();
+    let h = match pre.helper() { Some(h) => *h, None => return Err(cv("SI-22 without helper")) };
+    Ok(match h {
+        HelperControlC::Scalar { .. } => tl == 0 && scalar_state_ok(pre, &h)?,
+        HelperControlC::EnvGet { cursor, found, status, .. } => tl == 0 && match status {
+            TriStatus::Pending => found.is_none(), TriStatus::Positive => found.is_some() && cursor.is_some(), TriStatus::Negative => found.is_none() && cursor.is_none() },
+        HelperControlC::EnvPut { new_root, status, .. } => tl == 0 && match status {
+            TriStatus::Pending => new_root.is_none(), TriStatus::Positive => new_root.is_some(), TriStatus::Negative => false },
+        HelperControlC::Find { row_cursor, found, status, .. } => { let n = pre.admitted_function_count(); tl == 0 && match status {
+            TriStatus::Pending => found.is_none() && row_cursor <= n, TriStatus::Positive => found == Some(row_cursor) && row_cursor < n,
+            TriStatus::Negative => found.is_none() && row_cursor == n } }
+        HelperControlC::Bind { params, args, p_cursor, a_cursor, partial, dup_cursor, phase, status, .. } => {
+            let unwound = p_cursor == params.len && a_cursor == args.len && params.len == args.len && tl >= 1;
+            pre.img.tasks.iter().all(|t| matches!(t, HelperTaskC::PairTask { .. })) && match (phase, status) {
+                (BindPhase::Pairing, BindStatus::Ok) => p_cursor == tl && a_cursor == tl && p_cursor <= params.len && a_cursor <= args.len && partial.is_none() && dup_cursor.is_none(),
+                (BindPhase::UnwindType | BindPhase::UnwindInsert, BindStatus::Ok) => unwound && dup_cursor.is_none(),
+                (BindPhase::UnwindDup, BindStatus::Ok) => unwound && dup_cursor.is_some(),
+                (BindPhase::Propagate, BindStatus::Bad) => tl >= 1 && dup_cursor.is_none(),
+                (BindPhase::Finished, _) => tl == 0 && dup_cursor.is_none(),
+                _ => false } }
+        HelperControlC::Append { src, src_cursor, dest_start, staged, phase, .. } => {
+            let done = if phase == AppendPhase::Done { 1 } else { 0 };
+            let len_ok = dest_start.checked_add(src_cursor).and_then(|x| x.checked_add(done)) == Some(pre.active().value_slots);
+            tl == 0 && len_ok && match phase {
+                AppendPhase::Copy => src_cursor <= src.len && (staged.is_none() || src_cursor < src.len),
+                AppendPhase::Tail | AppendPhase::Done => src_cursor == src.len && staged.is_none() } }
+        HelperControlC::Validate { status, .. } => match status { TriStatus::Positive => tl == 0, TriStatus::Negative => true, TriStatus::Pending => tasks_ok(pre, false)? },
+        HelperControlC::Equal { status, .. } => match status { TriStatus::Positive => tl == 0, TriStatus::Negative => true, TriStatus::Pending => tasks_ok(pre, true)? },
+        HelperControlC::Match { .. } => tl == 0 && match_state_ok(pre, &h)?,
+    })
+}

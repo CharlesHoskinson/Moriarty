@@ -1,0 +1,20 @@
+--- old1a7b/test_launch_handoff.py
++++ candidate2dc9/test_launch_handoff.py
+@@ -396,7 +396,7 @@
+             res = runner.launch(h.c, 'A0', h.config_sha)
+ 
+         sep = expected_raw.index('--')
+-        expected_options = expected_raw[:sep]
++        expected_options = expected_raw[:sep] + ['--as-pid-1']
+         expected_target = expected_raw[sep + 1:] + ['--config-sha256', h.config_sha, '--worker-fd', '101']
+         expected_cmd = [
+             '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/100',
+@@ -468,7 +468,7 @@
+             res = runner.launch(h.c, 'B', h.config_sha)
+ 
+         sep = expected_raw.index('--')
+-        expected_options = expected_raw[:sep]
++        expected_options = expected_raw[:sep] + ['--as-pid-1']
+         expected_cmd = [
+             '/usr/bin/python3', '-I', '-B', '-S', '/proc/self/fd/100',
+             '100', '301', '-1', *runner.cargo_argv('B'),

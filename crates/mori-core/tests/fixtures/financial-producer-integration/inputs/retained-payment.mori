@@ -1,0 +1,20 @@
+language "moriarty/2";
+agreement RetainedPaymentObservation {
+  asset UNIT = { network: "local", issuer: "r151-financial-observation", reference: "UNIT", scale: 0 };
+  asset AUX = { network: "local", issuer: "r151-financial-observation", reference: "AUX", scale: 0 };
+  state marker: UInt = 77;
+  state flag: Bool = true;
+  action pay() {
+    transfer(UNIT, "reserve", "beneficiary", 30);
+    fee(UNIT, "reserve", "fee_recipient", 2);
+    discharge("pay-beneficiary", 30);
+    await release(ready: Bool) when ready;
+    transfer(UNIT, "reserve", "beneficiary", 10);
+    fee(UNIT, "reserve", "fee_recipient", 1);
+    discharge("pay-beneficiary", 10);
+  }
+  action declareDuties() {
+    liability("auditDuty", AUX, "observer", "fee_recipient", 0);
+    liability("pay-beneficiary", UNIT, "reserve", "beneficiary", 0);
+  }
+}

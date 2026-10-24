@@ -1,0 +1,82 @@
+Identity: Muse Code powered by muse-wonder-1.0, HIGH — fresh independent non-author reviewer A. No tools, execution, compiler, SDK run, author consultation, or peer consultation was used. Hashes were treated only as byte identifiers, not as approval.
+
+Top finding: the corrected integration is source-sound for its stated bounded scope. The retained family, one bound META call, and one retained-serial PROG/CTX emitter with immediate CTX binding close the composition issues without inventing native authority.
+
+## Verdicts
+
+- DESIGN_INTEGRATED_RETAINED_FAMILY_AND_BINDINGS: AGREE
+- SOURCE_SECURITY_RELATION: APPROVE — source level only, UNRUN
+- NORMAL_PRODUCTION_API: APPROVE — source/API shape only, not compilation and not cfg-test evidence
+- TEST_SOURCE: APPROVE — source level only; all 11 Push tests plus 13 META leaf tests, 24 total, remain UNRUN
+- OVERALL: AGREE — for this new Push composition only; not whole-program, P1, native, ledger, proof, or stagenet approval
+
+Mandatory fixes for this bounded candidate: none.
+
+## Grounds
+
+### Retained family
+
+`C6PushFamilyParams` has private fields and only read-only access. It is constructible through `C6PushFamilyParams::new` and otherwise obtainable by cloning an already-derived value, so a caller cannot mutate one cached component into inconsistency with another.
+
+Its derivation is coherent:
+
+- The reviewed `C6MetaConfigBinding::from_host_config` receives the original config, the separately supplied admission `BoundsC`, and the original limits.
+- Admission bounds are never equated with `cfg.layout.bounds`; the binding separately retains and binds all 22 fields of each.
+- Caps and geometry come through the actual config chain: original config, state context, effective extended-domain capacities, state/phys caps construction, then checked padded geometry against the retained state-lane limit.
+- `expected_ctx` is the immediate encoding of the original optional ext value and original budgets. Absent ext and present-zero ext therefore remain distinct at CTX lane 3 even though their effective caps coincide.
+- The manual `PartialEq`/`Eq` implementation is sound. It compares config, admission bounds, limits, expected CTX, caps, geometry, and the binding through its existing crate-visible admission-bounds, layout, and limits getters. Those three binding inputs deterministically determine the binding’s derived lane arrays. The public equality contract of `C6PushStepWitness` is preserved rather than silently dropped.
+
+The new public constructor is not a permission, issuer, or provenance mechanism. Any caller can select a family. The security relation is that a circuit built from that selected family binds prover-supplied META and CTX lanes to it. A future native consumer must still independently select and retain the expected family or source specification, reconstruct and compare the circuit/IR and entry point, select its keys through the real issuer path, compare the complete statement, output, and communications commitment, and perform real proof verification. None of that is implemented or claimed here.
+
+In particular, `witness_from_host_pair` copies its family from the supplied config and the pre snapshot’s admission bounds. That is a producer convenience, not independent verifier selection. Copying `source_params` from a witness into the builder does not authenticate the witness.
+
+### Integrated composition
+
+The emitter obtains the META binding, META limits, derived caps, and expected CTX from the same retained family. It replaces the former unbound META call with exactly one bound `emit_bound` call; no second META parser is emitted.
+
+The PROG/CTX composition is also correctly retained-serial:
+
+- One `C6ProgramContextCanonicalEmitter` performs the PROG/CTX parse and then `emit_ctx_binding`.
+- Its temporary serial continues across both calls.
+- The parent, DATA, META, and PROG/CTX temporary namespaces remain distinct.
+- DATA remains called once, and HELPER canonical emission remains genuinely open.
+
+The low-level step inputs still expose geometry separately, but `emit_c6_push_step_block` calls geometry validation against the retained family before constructing the composed emitter blocks. This is an ungated host derivation refusal, not a `debug_assert`. Because validated geometry includes its caps, a supplied geometry cannot independently raise the caps used by the parent or DATA while PROG/CTX uses different family caps; PROG/CTX receives the family caps directly.
+
+At gate 1, a different legitimate family cannot simply be substituted against the original circuit: its differing META fields or CTX lanes fail the original family’s immediate bindings during preprocessing. Different limits with the same geometry remain distinguished through the retained META limits and parser immediates. At gate 0, canonical META/CTX binding is intentionally inactive, while the unconditional 128-bit lane ranges and pre/post META, PROG, CTX, DATA, and HELPER equality remain. Consequently, a disabled step does not by itself prove that its statement belongs to the retained family; that remains an invocation/native-consumer obligation.
+
+No full META template, program-derived expected lanes, per-program key, host assertion flag, digest authentication, or independent source checker has been introduced. Two structurally valid programs of the same encoded length under the same family therefore produce the same circuit, while program substitution must be rejected later against an independently selected invocation.
+
+### Normal API and ownership
+
+The normal production changes are coherent:
+
+- The builder now takes the retained family rather than loose geometry and META limits.
+- The builder derives geometry from that family.
+- Witness and circuit values expose read-only family accessors.
+- Parent exports include the new family and bound-META API items.
+- The four non-`Copy` operand arrays now use `std::array::from_fn`.
+- The test-only canonical-block import is test-local and adds no production import or alias.
+
+No remaining literal production trait, move, borrow, arity, or visibility blocker was found in the supplied called bodies. This is not a compiler judgment: the current parent is an unpublished integration target with a known unrelated prefix difference from the public baseline, and no whole-crate transitive closure or blind replacement is authorized by this review.
+
+### Test source
+
+The 11 Push tests have the right source-level categories and controls:
+
+- Bound Accept, Refuse, and disabled cases pass through the SDK-check path in both statement modes with admission and layout bounds deliberately distinct.
+- Admission and layout META mutations are re-encoded as structurally valid lanes while the retained binding is unchanged, with positive controls, so rejection is not merely a producer filter.
+- CTX presence and budget mutations are tested as preprocessing negatives with a positive control.
+- The corrected wrong-offset test changes both witness and circuit offset to the same in-range `offset - 1` and specifically requires the SDK preprocessing `Backend` diagnostic. It therefore does not let the checker’s host offset precheck mask the bound-META phase/subconstraint rejection.
+- Geometry mismatch is correctly classified only as a host derivation refusal.
+- Different limits at equal geometry are tested as a host serialized-IR distinction, not as native cost or key evidence.
+- Different program contents at equal encoded length are tested for identical IR, not for a per-program key.
+- The PROG/CTX namespace test checks actual emitted temporary identifiers and serial advancement, not merely matching test names.
+
+The tests do not claim synthesis, MockProver satisfaction, constraint-category separation, proving, or native validity. Their circuit negatives are preprocessing evidence only, apart from the expressly labelled host geometry refusal and host IR comparisons.
+
+## Missing premises and limits
+
+No compiler, Cargo, SDK preprocessing, synthesis, MockProver, key-generation, proving, native, ledger, or test result exists for this candidate. All 24 tests are UNRUN. A Push-level positive control using a present-zero ext family would strengthen coverage, but the distinction itself is established by the supplied context encoding and immediate-binding source and is not a mandatory fix to this composition.
+
+Still mandatory and open: an independently selected P1 SourceSpec/source checker, native issuer and ledger consumers, HELPER canonical integration, full 39-selector dispatch, complete `StepInv`, admission and refinement, witness constraints, export, groups 1/2/4/8, earliest-stop behavior, residual/finance/persistence/recursion handling, native issuance, and stagenet acceptance.

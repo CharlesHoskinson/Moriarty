@@ -1,0 +1,7 @@
+This is a self-contained six-source additive unsigned Lt K model cut with three adapters. Base rules are copied unchanged, so relative K requires stay within source/. Corrected context/PUBLIC-LT-API.json and context/COMPLETE-LT-CONSTRUCTOR-SYNTAX.k.txt preserve terminal/nonterminal declarations and four exact OutsideModel reason tokens.
+
+The source compiled once, exit0/15.911s. [Full scoped compile evidence](../../../../docs/results/sherlock-k-lt-compile-20261019/README.md) retains the original conditional source opinion, exact M1/M2 doc correction/inverse and unchanged source identity. No Lt runtime evaluation or independent complete-state comparison has occurred.
+
+Future renderer selection must pass --api context/PUBLIC-LT-API.json and --syntax context/COMPLETE-LT-CONSTRUCTOR-SYNTAX.k.txt from this directory, and use the selected render_input + parse_printed + CompleteKWire path. Legacy nominal_trace_codec.encode/decode remain partial and unselected; they lack Let/If. Those arguments are a binding declaration, not an execution recipe or authorization. Source compilation uses --syntax-module SHERLOCK-NOMINAL-LT-OBSERVATIONS, not renderer --syntax.
+
+Safe-inputs is a new input-only declaration handoff for a different independent oracle author. The flat K ports use explicitly assigned source IDs and have not been executed. Typed caller/constructor/error paths remain required coverage. No primary/B clock, fuel, work or cost identity, native evidence, P1 error publication, malformed nominal admission or global correctness claim is made.

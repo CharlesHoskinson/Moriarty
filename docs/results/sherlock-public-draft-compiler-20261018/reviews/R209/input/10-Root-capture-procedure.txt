@@ -1,0 +1,40 @@
+Provenance: the prior R150 collector ran inside an exec_command Python cell;
+there was no pre-existing collector file to cite. The following is a retrospective
+transcription of its ordinary subprocess/capture block, for inspecting the same
+Root tool procedure prospectively. It is not a native guard, SDK runner, scheduler,
+registered source file, or an attestation of a historical file hash. R165 supplies
+three exact selected argv values rather than R150's five. Fixed per-stream cap
+131072 bytes and external timeout flags are unchanged. No child is launched by
+writing or reading this transcript.
+
+The block uses stdlib subprocess, selectors, os, signal and time; argv, cwd and
+environment are exactly those in the selected frozen plan. Root writes PREEXEC
+and verifies source/library/fixture/tool pins before this block, and saves its
+captured bytes, exit/time/output-cap status and post-input-pin checks afterward.
+A nonzero exit or exceeded cap stops selection of later phases.
+
+start=time.monotonic()
+child=subprocess.Popen(argv,cwd=P['cwd'],env=P['environment'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
+poll=selectors.DefaultSelector()
+poll.register(child.stdout,selectors.EVENT_READ,'stdout')
+poll.register(child.stderr,selectors.EVENT_READ,'stderr')
+outputs={'stdout':bytearray(),'stderr':bytearray()}
+over=False
+while poll.get_map():
+    for key,_ in poll.select(timeout=.2):
+        part=os.read(key.fd,8192)
+        if not part:
+            poll.unregister(key.fileobj)
+            continue
+        out=outputs[key.data]
+        if len(out)+len(part)>131072:
+            out.extend(part[:max(0,131072-len(out))])
+            over=True
+            try:
+                os.killpg(child.pid,signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            out.extend(part)
+code=child.wait()
+elapsed=time.monotonic()-start

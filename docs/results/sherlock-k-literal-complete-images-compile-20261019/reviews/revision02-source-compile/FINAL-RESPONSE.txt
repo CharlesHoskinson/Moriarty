@@ -1,0 +1,123 @@
+```json
+{
+  "source_disposition": "ABSTAIN",
+  "source_disposition_basis": "No verified source defect remains in any of the five candidates. Four files are approved within their declared scope (see component_dispositions). The overall disposition is held at ABSTAIN for one reason: the F6 correction in literal_complete_images_from_source.rs reads five CompileFailure fields, and the declaration that would confirm them is not in the packet. Item 09 ends at line 108, which is the struct's opening line `pub struct CompileFailure {`. Unverified evidence is not treated as a defect here, which follows the user's correction of old F1/F2. If the omitted body shows `stage`, `actual_error`, `evaluation_performed`, `events_forwarded` and `completed` as pub fields whose types implement Display, from_source.rs moves to APPROVE and so does the overall disposition. No source change is requested.",
+  "component_dispositions": {
+    "models/sherlock/k/literal-complete-images-20261019/literal-complete-images.k": "APPROVE within the declared positive UInt-literal Init->Return->Done domain. The F3 and F4 hunks are correct. No new defect.",
+    "models/sherlock/k/literal-complete-images-20261019/README.md": "APPROVE. The stackLimit premise (F3) and K_MAIN identity (F7) text match the actual declarations.",
+    "models/sherlock/qa/literal_complete_images.py": "APPROVE as a strict, fail-closed renderer/decoder. F5 framing remains unobserved.",
+    "models/sherlock/qa/literal_complete_images_export.rs": "APPROVE as source. All imported paths, fields and types are verified against the native-handwritten backend declarations (Items 12, 13, 15, 20).",
+    "models/sherlock/qa/literal_complete_images_from_source.rs": "ABSTAIN. The CompileFailure field binding is unverifiable (F6), and the API evidence comes from two different worktrees (N1)."
+  },
+  "finding_resolution": {
+    "F1": {
+      "status": "RESOLVED. The old finding is withdrawn as a defect.",
+      "evidence": "In the cache-stream tree, crates/mori-core/src/lib.rs declares `#[path = \"sherlock/compile_artifact.rs\"] pub mod sherlock_compile_artifact;` (Item 07). compile_artifact.rs declares `#[path = \"compile_artifact/draft_reference.rs\"] pub mod draft_reference;` (Item 08). That nested path resolves relative to src/sherlock/, which matches Item 10's actual path. draft_reference.rs defines `pub fn compile_draft_with_reference(&str, &str, &str) -> Result<DraftReferencePreparation, CompileFailure>` and `pub fn reference_program(&self) -> &Arc<Program>`, where Program is crate::sherlock::Program. So `mori_core::sherlock_compile_artifact::draft_reference::compile_draft_with_reference` is a public path. The old review's claim that the import was 'expected to fail' was wrong; the old packet simply lacked these registrations. No import or re-export change was needed or made.",
+      "residual": "This evidence comes from the cache-stream worktree only. See N1."
+    },
+    "F2": {
+      "status": "RESOLVED",
+      "evidence": "mori-backend lib.rs has `pub mod sherlock_machine;` (Item 11). sherlock_machine/mod.rs has `pub mod literal_host;` and `pub mod literal_complete_bridge;` (Item 12). literal_complete_bridge.rs defines `pub struct LiteralCompleteExecutionRequest { pub capacities, pub identity, pub values }` and `pub struct LiteralCompleteValues` with pub program/init (Item 20). It also defines `pub fn produce_checked_literal_complete_execution_request(Arc<Program>, &LiteralCapacities, u128, usize, &LiteralSourceIdentity, usize) -> Result<(ProducedLiteralReturnPublication, LiteralCompleteLayout, LiteralCompleteExecutionRequest, Vec<u128>)>` and `pub fn context_limbs(&self) -> [u128; 2]` (Item 21). literal_host.rs defines pub ImageValues{root, tables}, LiteralCapacities{program:[usize;15], state:[usize;6], stack_limit:u128} and LiteralSourceIdentity with three String fields (Items 13, 15). The calls in from_source.rs (args 1, 0, &identity, 335, 4-tuple destructure) and the field reads in export.rs match. LiteralCapacities, LiteralSourceIdentity and ImageValues derive Clone, so the old derive-elision note is closed. sha() emits 64 lowercase hex characters, which is exactly what decode_digest/unhex(32) accepts, so that old limitation is also closed.",
+      "residual": "The impl header for context_limbs and the bridge's `Result` alias are not inline. Both are inferred from `self.context_limbs()` inside `statement` and from the use of literal_host::error(...)."
+    },
+    "F3": {
+      "status": "RESOLVED",
+      "evidence": "lcInitRoot now uses `lcGet(S, 8) <=Int SL`. This matches the producer's refusal `stack_limit_u128 > capacities.stack_limit => Capacity` (Item 19). It also matches the schema lane `count(stackLimit, capacity)`, which has inclusive maximum = capacity (Item 14) and from which schema_capacities recovers stack_limit (Item 16). Root lane 8 is preserved by lcA102 (lcTake(R,9) is retained) and by lcA80 (which only writes lanes 5 and 41..44). SL itself is range-checked by lcUInt. Fuel handling is unchanged: remaining==initial bytes, all bytes <256, LE>0, A102 borrows 1 from remaining only, and A80 consumes none at fuel 0. The README input premise states the relation. For the selected profile both values are 0."
+    },
+    "F4": {
+      "status": "RESOLVED (comment only)",
+      "evidence": "The added lcA102 comment is accurate. lcGoodInput requires lcTablesZero(ST), so control row 0 is Eval exprId 0. lcWalk reaches lcAdvance only from lcRun under that guard, and after A102 the control tag is Return, so no later Eval is reachable. The rule text is otherwise unchanged."
+    },
+    "F5": {
+      "status": "OPEN / UNOBSERVED. Not a source blocker.",
+      "evidence": "parse() strips only an exact bare `<k>...</k>`. Any other wrapper is rejected at the `<` character by the unchanged tokenizer, which is fail-closed. The real kprint framing has not been observed. The README's phrase 'optionally within the single <k>...</k>' remains unverified against real output."
+    },
+    "F6": {
+      "status": "PARTIALLY RESOLVED. The CompileFailure half is UNVERIFIED.",
+      "evidence": "Producer half: `{error}` uses Display. literal_host::Error derives thiserror::Error with `#[error(\"{code}: {message}\")]` (Item 13). The bridge maps StateFailure into the message via `{e:?}` (Item 21), so a refusal becomes diagnosable. CompileFailure half: Item 09 confirms `#[derive(Serialize)]` only, so avoiding Debug is correct. However, Item 09 ends at line 108, the struct's opening brace. The existence and pub visibility of `stage`, `actual_error`, `evaluation_performed`, `events_forwarded` and `completed`, Display for each field type, and the claim that these are all of the public fields cannot be checked.",
+      "required_correction": "No source edit is requested. Supply compile_artifact.rs from line 109 to the closing brace of CompileFailure, plus the Display impl or type of each formatted field. If any of the five fields is absent, non-pub, or lacks Display, change that format argument in main()."
+    },
+    "F7": {
+      "status": "RESOLVED",
+      "evidence": "The README now states that K_MAIN must be the pinned legacy models/sherlock/k/main.k bytes in which ruleStartLine 102 resolves, citing LiteralSourceIdentity. This matches Item 15's doc comment on k_source_sha256. It also states that the layout context does not identify or attest the new counterpart K source.",
+      "residual": "The README does not pin main.k by hash, and from_source.rs hashes whatever bytes it is given. Binding K_MAIN to the pinned main.k (Item 26 lists a 16249-byte file with sha256 b3746ff5…1d41 in the cache-stream tree) is a precondition of any future producer operation, not a source property."
+    }
+  },
+  "new_findings": [
+    {
+      "id": "N1",
+      "severity": "MEDIUM (binding/evidence, not an established source defect)",
+      "file": "models/sherlock/qa/literal_complete_images_from_source.rs",
+      "region": "the `use mori_core::sherlock_compile_artifact::...` and `use mori_backend::sherlock_machine::...` imports, and the Arc::clone(prepared.reference_program()) argument",
+      "defect": "The two halves of this consumer are verified against different worktrees. The mori-core registrations, draft_reference and the workspace Cargo.toml (Items 07–10, 23) come from .worktrees/sherlock-witness-cache-stream-20261018. The backend registrations, producer, manifest and bridge (Items 11–22) come from .worktrees/sherlock-native-handwritten-20261019. mori-backend depends on `mori-core.workspace = true`, which is a path dependency inside its own workspace. The packet does not establish that the native-handwritten tree's mori-core exposes sherlock_compile_artifact::draft_reference, or that the cache-stream tree contains literal_complete_bridge. The `Arc<Program>` handoff type-checks only if draft_reference's crate::sherlock::Program and the backend's mori_core::sherlock::Program come from the same mori-core crate instance.",
+      "required_correction": "Name one source tree or commit that contains both APIs, with mori-backend resolving to that same mori-core, and pin its lib.rs and draft_reference.rs. Otherwise, treat the consumer as unbound. This needs no edit to the five candidates."
+    },
+    {
+      "id": "N2",
+      "severity": "LOW (compile-operation precondition)",
+      "file": "fresh-review/PROPOSED-COMPILE-ONLY.json",
+      "region": "prepost / sourceDirectoryExactMembers",
+      "defect": "The proposal does not itself record the expected bytes and sha256 of the two source-directory members. It says only 'Rehash all candidate/static files'.",
+      "required_correction": "The pre-run and post-run checks must bind literal-complete-images.k to 12993 bytes with sha256 9ecb76d8150e520b9fc99793f6a8138ffc65649762d3d86d737f462832b89561, and README.md to 8427 bytes with sha256 20f79149ebaa4da7e3bb1277140d7875d2ee682db379acc1c4ad1b59a5e790de. The directory must contain exactly these two members."
+    }
+  ],
+  "verified_unchanged_properties": {
+    "geometry": "Program 16 + (O4 + X11 + T12 + Q16 + QF5 + K22) = 86. State 45 + 36 = 81. Statement 2 + 86 + 3×81 + 4 = 335. lcFinish emits in the same order as LiteralCompleteLayout::statement (Item 21): context limbs, then Program/Init/intermediate/Done as root followed by tables flattened row-major, then (rule_tag, charge) ×2. Python logical_layout uses the same segment order.",
+    "envelopes": "lcChange(102,3,1) and lcChange(80,0,0) supply T1,Q1,T2,Q2 = (3,1),(0,0). These equal LiteralEnvelopeValues::step1()/step2() (Item 20), and statement() requires them.",
+    "publication_and_carry": "lcA80 sets controlLength 0, outcomeTag 1, outcomeValue = ControlRows[0] (space, index), and outcomeError 0. It clears every ControlRows row and preserves fuel and the other five arenas. This matches Item 19 (outcome_tag=1, outcome_value=selected_constant_ref, outcome_error=0, control_rows.fill(default), equal remaining/initial fuel, frames empty ↔ lane 4 == 0). Context, capacities and Program are carried unchanged and are bound nonlinearly in lcFinish.",
+    "walk": "For N ≥ 2, the walk produces the same two-event trace whether N = 2 (lcWalk(M,0)) or N ≥ 3 (the Done rule). The rules are disjoint by their requires clauses. Partial cases stay unreduced, the decoder rejects them, and they are fail-closed.",
+    "renderer_decoder": "The renderer's constructor names, arities and argument order match the K grammar, and lcRun(LCContext, LCCaps, LCImage, LCImage, Int). JSON key sets match export.rs's output byte layout exactly. Booleans, floats, NaN/Infinity, negatives, duplicate keys and out-of-range lanes are rejected. The output file is opened exclusively. The decoder requires exact arity, known constructors and no trailing tokens. It checks allocated row counts and widths against the emitted capacities, and checks statement length against the derived geometry. Nothing is recomputed or filled."
+  },
+  "normal_api_disposition": "ABSTAIN",
+  "normal_api_limits": [
+    "F1 and F2 are resolved: all imported paths and called signatures exist as public declarations in their respective trees.",
+    "The F6 CompileFailure field binding is unverified because Item 09 ends at the struct's opening line.",
+    "N1: the evidence is split across the cache-stream and native-handwritten worktrees, so no single build graph containing both APIs is established.",
+    "SDK: the mori-backend crate imports midnight_zkir_v3/midnight_transient_crypto unconditionally in lib.rs and sherlock_machine/mod.rs. Its manifest depends on midnight-zkir-v3, midnight-transient-crypto (git rev 04c9c5d9…) and midnight-curves. Linking mori_backend as a crate therefore pulls SDK crates. literal_host's `--cfg mori_sdk_free` direct-rustc mode covers that file only, not literal_complete_bridge or the producer path. The classification stays SDK-PENDING and no SDK-free claim is made.",
+    "No Cargo target, manifest, sha2/mori_core/mori_backend dependency or edition exists for the QA Rust files. They are proposed standalone Rust 2024 source, not a built or eligible target. No backend, Cargo or producer operation is selected or classified here.",
+    "LiteralCompleteLayout::new and complete_representation bodies and the bridge `Result` alias are not inline. Refusal behaviour beyond what Item 21 shows is not reviewed.",
+    "Whether the actual SOURCE/CONFIG/TARGET Program fits the fixed scalar capacities is unknown. The producer refuses on a mismatch and does not adapt.",
+    "The context is context_limbs() of the layout, a hash over caller-asserted digests. It is unauthenticated and does not bind the new counterpart K source."
+  ],
+  "compile_operation_disposition": "ELIGIBLE",
+  "compile_operation_basis": {
+    "inputs": "The operation reads only the new literal-complete-images.k (Item 02 path, identical to the argv path) plus the installed K 7.1.337 builtin include (`requires \"domains.md\"`) and the K jars. It needs no Rust, backend, SDK, context, oracle, cached definition, main.k/ng, producer, render, kast, kore-exec or kprint. The Rust-only findings F6 and N1 are outside this operation's inputs.",
+    "argv": "--backend haskell --no-haskell-binary, --main-module MORIARTY-LITERAL-COMPLETE-IMAGES and --syntax-module MORIARTY-LITERAL-COMPLETE-IMAGES-SYNTAX match the declared modules. Only the source path, cwd/output paths and token are new relative to the cited recipe.",
+    "launch": "Item 24's entry F03.launch(record, argv, env, cwd, token, 536870912) matches Item 25's `launch(record, command, env, cwd, token, fsize)`. stdout and stderr are opened exclusively at cwd/stdout|stderr with O_EXCL|O_NOFOLLOW. The child runs in a new session with a preexec CORE 0 / FSIZE 512MiB / umask 077 limit, a 30 s wait, a group kill and a 3 s pgid+token sweep, and containment_breach is recorded.",
+    "prerequisites": [
+      "N2: pre-run and post-run hash binding of the two source members to Items 01/02, plus exact directory membership.",
+      "Phase cwd and the output-definition directory are absent before the run. Root creates private 0700 cwd/home/tmp. The output parent exists.",
+      "The 4 tool-entry pins, the exact 156-JAR membership and the 281 conservative K closure pins are rechecked before and after the run.",
+      "Only the unchanged F03.launch is invoked. No oldmain/ledger/main()/retry/cap raise. The import-time behaviour of the full F03 module relies on the pinned import-AST projection, which this review did not re-read."
+    ],
+    "limits": "Per-child wall 30 s + 3 s sweep, RLIMIT_FSIZE 512MiB, RLIMIT_CORE 0, umask 077, JVM -Xmx512m/-Xss32m/ActiveProcessorCount=2. No aggregate CPU/RSS/disk cap. Non-JVM processes keep their defaults. A cold-JVM haskell-backend kompile may come close to 30 s; a timeout is a recorded non-pass and is not retried.",
+    "success_meaning": "A fresh, nonempty definition.kore with every output member inventoried and hashed is evidence of syntax/definition generation for this exact source hash only. It says nothing about runtime, nonlinear-match behaviour, 335-lane comparison, refinement, native behaviour or EARS. No outcome is predicted, and the parenthesis balance of lcProgramWidths/lcStateWidths/lcFinish was not mechanically counted."
+  },
+  "coverage": {
+    "candidates_read_in_full": "Items 01–05, all five. Byte counts and SHA-256 values were not recomputed because no tools were used.",
+    "context_read": "Items 06–26 read as supplied.",
+    "precise_omissions": [
+      "CompileFailure field list, visibility and types (Item 09 selection stops at line 108; this is a selection boundary, not transport clipping).",
+      "Single-tree binding of mori-core and mori-backend (N1). The native-handwritten tree's mori-core lib.rs and the cache-stream tree's mori-core sherlock/mod.rs are not inline.",
+      "literal_schema lane order (literal_step.rs). Positional K lane offsets versus emitter field names are inherited from the prior review and not re-derived here.",
+      "Remainder of literal_ui_valid.rs after line 520: the actual 8-bit uintBytes constraint is visible only as a comment, and the Bool/Ctor bodies, inactive-row zeroing and recursive ConstantFields validity are not shown.",
+      "LiteralCompleteLayout::new, complete_representation, the bridge Result alias and the context_limbs impl header.",
+      "CORRECTIONS.patch, EXACT-CORRECTIONS-AND-INVERSE.json and FACTUAL-REVIEW-RECONCILIATION.json. The 'six hunks / exact inverses' claim is not independently verified; the complete afterimages were reviewed instead.",
+      "Full F03 module, import-time AST projection, TOOL-ENTRY-PINS and EXISTING-K-TOOL-CLOSURE-PINS bodies, and main.k.",
+      "Real kprint framing (F5)."
+    ],
+    "transport_clipping": "None detected in Items 01–05. Items 09, 16 and 18 end mid-declaration at their attributed line ranges; these are selection boundaries."
+  },
+  "retained_gaps": [
+    "Full-image independent expectation is NOT_ISSUED. The protected nine-cell oracle is excluded and opaque. Any later oracle author must not see the producer's intermediate/Done values, and existing exposure must be disclosed.",
+    "No actual complete context or input freeze exists, and no producer has run.",
+    "lcUIntConstant checks only the selected row: kind/typeId/ctorId = 0, 16 bytes <256, zero tail. emit_literal_ui_valid_with_capacities also constrains inactive constant rows to zero, every active constant recursively, the fixed Types/Constructors/CFT tables and the Types fetch (kind == typeId, ctorLength == 0). No equivalence or refinement is claimed, and these remain external producer/admission premises.",
+    "Per-lane L4 ranges beyond <2^128, fuel bytes <256 and constant bytes <256, plus Program padding, builtin rows and index columns, remain with LiteralCompleteLayout::statement/complete_representation and the producer.",
+    "The decoder performs no continuity or statement-equals-flattened-images checks. lcFinish binds these at emission, and the comparison stage must still check them.",
+    "Haskell-backend runtime behaviour of the nonlinear function LHS (lcPrepend, lcFinish) and of stuck partial functions is unobserved.",
+    "Real kprint framing is unobserved (F5).",
+    "Lines 102/80 are origin metadata only. No firing of an original main.k rule is evidenced.",
+    "Init/context authentication, general F4/StepInv, OBL.G4 byte/field encoding, projectA canonical-boundary materialisation, general dispatch, other value sorts, Budget0/error/exhaustion paths, cross-layer refinement, native proof, target/stagenet acceptance and EARS status are all unestablished and unchanged."
+  ]
+}
+```

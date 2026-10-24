@@ -89,6 +89,58 @@ pub enum DraftError {
         span: SourceSpan,
         text: String,
     },
+    Budget(DraftBudgetExceeded),
+}
+
+/// Inclusive, caller-owned parser limits. No defaults or evaluator admission.
+/// AST occurrences count every Expr and Pattern, including repeated source uses;
+/// functions and parameters have their own separate limits. Structural depth
+/// counts Expr nodes on the longest root-to-leaf path (a leaf has depth one).
+/// Parser recursion counts active block/expression/atom/arguments/match/pattern
+/// descent entries; parentheses count here even though they add no Expr node.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DraftParseBudget {
+    pub max_source_bytes: usize,
+    /// Includes EOF; comments do not count as tokens.
+    pub max_tokens: usize,
+    pub max_functions: usize,
+    pub max_parameters_per_function: usize,
+    pub max_total_parameters: usize,
+    pub max_ast_occurrences: usize,
+    pub max_parser_recursion_depth: usize,
+    pub max_structural_ast_depth: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DraftBudgetResource {
+    SourceBytes,
+    Tokens,
+    Functions,
+    ParametersPerFunction,
+    TotalParameters,
+    AstOccurrences,
+    ParserRecursionDepth,
+    StructuralAstDepth,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DraftBudgetExceeded {
+    pub resource: DraftBudgetResource,
+    pub limit: usize,
+    /// Actual source size, or first attempted count/depth above the limit.
+    pub observed: usize,
+}
+
+fn within(resource: DraftBudgetResource, limit: usize, observed: usize) -> Result<(), DraftError> {
+    if observed > limit {
+        Err(DraftError::Budget(DraftBudgetExceeded {
+            resource,
+            limit,
+            observed,
+        }))
+    } else {
+        Ok(())
+    }
 }
 
 ///
@@ -97,13 +149,36 @@ pub enum DraftError {
 /// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
 pub fn parse_draft_source(source: &str) -> Result<ParsedDraft, DraftError> {
     let tokens = mori_lexer::lex(source).map_err(|error| DraftError::Lex(error.to_string()))?;
-    Parser {
-        source,
-        tokens,
-        cursor: 0,
-        end: 0,
-    }
-    .program()
+    Parser::new(source, tokens, None).program()
+}
+
+/// Parse with explicit preparation limits, checked before the affected work.
+/// Preserves the legacy grammar and provenance order. The lexer hard limits
+/// remain independent. This does not admit the checker, evaluator, general
+/// cloning/reporting, or recursive destruction of returned/partial ASTs (H1).
+pub fn parse_draft_source_bounded(
+    source: &str,
+    budget: DraftParseBudget,
+) -> Result<ParsedDraft, DraftError> {
+    within(
+        DraftBudgetResource::SourceBytes,
+        budget.max_source_bytes,
+        source.len(),
+    )?;
+    let tokens =
+        mori_lexer::lex_with_token_limit(source, budget.max_tokens).map_err(
+            |error| match error {
+                mori_lexer::TokenLimitedLexError::Lex(error) => DraftError::Lex(error.to_string()),
+                mori_lexer::TokenLimitedLexError::TokenLimit { limit, observed } => {
+                    DraftError::Budget(DraftBudgetExceeded {
+                        resource: DraftBudgetResource::Tokens,
+                        limit,
+                        observed,
+                    })
+                }
+            },
+        )?;
+    Parser::new(source, tokens, Some(budget)).program()
 }
 
 struct Node {
@@ -111,15 +186,18 @@ struct Node {
     span: SourceSpan,
     children: Vec<Node>,
     patterns: Vec<(SourceSpan, Vec<BinderSite>)>,
+    depth: usize,
 }
 
 impl Node {
     fn new(expression: Expr, span: SourceSpan, children: Vec<Node>) -> Self {
+        let depth = children.iter().map(|child| child.depth).max().unwrap_or(0) + 1;
         Self {
             expression: Arc::new(expression),
             span,
             children,
             patterns: vec![],
+            depth,
         }
     }
 }
@@ -129,9 +207,62 @@ struct Parser<'a> {
     tokens: Tokens,
     cursor: usize,
     end: u32,
+    budget: Option<DraftParseBudget>,
+    total_parameters: usize,
+    ast_occurrences: usize,
+    parser_depth: usize,
 }
 
-impl Parser<'_> {
+impl<'a> Parser<'a> {
+    fn new(source: &'a str, tokens: Tokens, budget: Option<DraftParseBudget>) -> Self {
+        Self {
+            source,
+            tokens,
+            cursor: 0,
+            end: 0,
+            budget,
+            total_parameters: 0,
+            ast_occurrences: 0,
+            parser_depth: 0,
+        }
+    }
+    fn descend<T>(
+        &mut self,
+        parse: impl FnOnce(&mut Self) -> Result<T, DraftError>,
+    ) -> Result<T, DraftError> {
+        if let Some(budget) = self.budget {
+            within(
+                DraftBudgetResource::ParserRecursionDepth,
+                budget.max_parser_recursion_depth,
+                self.parser_depth.saturating_add(1),
+            )?;
+        }
+        self.parser_depth += 1;
+        let result = parse(self);
+        self.parser_depth -= 1;
+        result
+    }
+    fn reserve_occurrence(&mut self) -> Result<(), DraftError> {
+        if let Some(budget) = self.budget {
+            within(
+                DraftBudgetResource::AstOccurrences,
+                budget.max_ast_occurrences,
+                self.ast_occurrences.saturating_add(1),
+            )?;
+        }
+        self.ast_occurrences += 1;
+        Ok(())
+    }
+    fn structural_depth(&self, maximum_child_depth: usize) -> Result<(), DraftError> {
+        if let Some(budget) = self.budget {
+            within(
+                DraftBudgetResource::StructuralAstDepth,
+                budget.max_structural_ast_depth,
+                maximum_child_depth.saturating_add(1),
+            )?;
+        }
+        Ok(())
+    }
     fn index(&self, ahead: usize) -> TokenIdx {
         TokenIdx::new((self.cursor + ahead).min(self.tokens.len() - 1))
     }
@@ -220,6 +351,13 @@ impl Parser<'_> {
         let mut sites = Vec::new();
         let mut bodies = Vec::new();
         while self.word("fn") {
+            if let Some(budget) = self.budget {
+                within(
+                    DraftBudgetResource::Functions,
+                    budget.max_functions,
+                    functions.len().saturating_add(1),
+                )?;
+            }
             let index = functions.len();
             let start = self.span().start;
             self.bump();
@@ -229,6 +367,19 @@ impl Parser<'_> {
             let mut parameter_sites = Vec::new();
             if self.kind(0) != TokenKind::RParen {
                 loop {
+                    if let Some(budget) = self.budget {
+                        within(
+                            DraftBudgetResource::ParametersPerFunction,
+                            budget.max_parameters_per_function,
+                            parameters.len().saturating_add(1),
+                        )?;
+                        within(
+                            DraftBudgetResource::TotalParameters,
+                            budget.max_total_parameters,
+                            self.total_parameters.saturating_add(1),
+                        )?;
+                    }
+                    self.total_parameters += 1;
                     let binder = self.name()?;
                     self.expect(TokenKind::Colon, ":")?;
                     let (ty, type_span) = self.ty()?;
@@ -281,9 +432,9 @@ impl Parser<'_> {
             expressions: Vec::new(),
             patterns: Vec::new(),
         };
-        collect_sites(&entry, None, &mut provenance);
+        collect_sites(&entry, None, &mut provenance, self.budget)?;
         for (index, body) in bodies.iter().enumerate() {
-            collect_sites(body, Some(index), &mut provenance);
+            collect_sites(body, Some(index), &mut provenance, self.budget)?;
         }
         Ok(ParsedDraft {
             name: name.name,
@@ -292,12 +443,18 @@ impl Parser<'_> {
         })
     }
     fn block(&mut self) -> Result<Node, DraftError> {
+        self.descend(Self::block_inner)
+    }
+    fn block_inner(&mut self) -> Result<Node, DraftError> {
         self.expect(TokenKind::LBrace, "{")?;
         let node = self.expression(0)?;
         self.expect(TokenKind::RBrace, "}")?;
         Ok(node)
     }
     fn expression(&mut self, minimum: u8) -> Result<Node, DraftError> {
+        self.descend(|parser| parser.expression_inner(minimum))
+    }
+    fn expression_inner(&mut self, minimum: u8) -> Result<Node, DraftError> {
         let mut left = self.atom()?;
         while let Some((op, precedence, width)) = self.binary() {
             if precedence < minimum {
@@ -311,6 +468,8 @@ impl Parser<'_> {
                 start: left.span.start,
                 end: right.span.end,
             };
+            self.reserve_occurrence()?;
+            self.structural_depth(left.depth.max(right.depth))?;
             left = Node::new(
                 Expr::Binary(op, left.expression.clone(), right.expression.clone()),
                 span,
@@ -330,7 +489,23 @@ impl Parser<'_> {
         })
     }
     fn atom(&mut self) -> Result<Node, DraftError> {
+        self.descend(Self::atom_inner)
+    }
+    fn atom_inner(&mut self) -> Result<Node, DraftError> {
         let start = self.span().start;
+        // Parentheses change source extent but do not create an AST occurrence.
+        if self.kind(0) == TokenKind::LParen {
+            self.bump();
+            let mut node = self.expression(0)?;
+            self.expect(TokenKind::RParen, ")")?;
+            node.span = SourceSpan {
+                start,
+                end: self.end,
+            };
+            return Ok(node);
+        }
+        self.reserve_occurrence()?;
+        self.structural_depth(0)?;
         if self.word("let") {
             self.bump();
             let binder = self.name()?;
@@ -338,6 +513,7 @@ impl Parser<'_> {
             let value = self.expression(0)?;
             self.expect_word("in")?;
             let body = self.expression(0)?;
+            self.structural_depth(value.depth.max(body.depth))?;
             return Ok(Node::new(
                 Expr::Let(
                     binder.name,
@@ -357,6 +533,7 @@ impl Parser<'_> {
             let yes = self.block()?;
             self.expect_word("else")?;
             let no = self.block()?;
+            self.structural_depth(condition.depth.max(yes.depth).max(no.depth))?;
             return Ok(Node::new(
                 Expr::If(
                     condition.expression.clone(),
@@ -372,16 +549,6 @@ impl Parser<'_> {
         }
         if self.word("match") {
             return self.match_expression(start);
-        }
-        if self.kind(0) == TokenKind::LParen {
-            self.bump();
-            let mut node = self.expression(0)?;
-            self.expect(TokenKind::RParen, ")")?;
-            node.span = SourceSpan {
-                start,
-                end: self.end,
-            };
-            return Ok(node);
         }
         if self.kind(0) == TokenKind::Number {
             let text = self.text().to_owned();
@@ -423,6 +590,7 @@ impl Parser<'_> {
             let constructor = self.text().to_owned();
             self.bump();
             let children = self.arguments()?;
+            self.structural_depth(children.iter().map(|child| child.depth).max().unwrap_or(0))?;
             let expression = match (constructor.as_str(), children.as_slice()) {
                 ("leaf", [child]) => Expr::Unary(UnaryOp::Leaf, child.expression.clone()),
                 ("not", [child]) => Expr::Unary(UnaryOp::Not, child.expression.clone()),
@@ -450,6 +618,7 @@ impl Parser<'_> {
         let name = self.name()?;
         if self.kind(0) == TokenKind::LParen {
             let arguments = self.arguments()?;
+            self.structural_depth(arguments.iter().map(|child| child.depth).max().unwrap_or(0))?;
             let expression = Expr::Call(
                 name.name,
                 arguments
@@ -470,6 +639,9 @@ impl Parser<'_> {
         }
     }
     fn arguments(&mut self) -> Result<Vec<Node>, DraftError> {
+        self.descend(Self::arguments_inner)
+    }
+    fn arguments_inner(&mut self) -> Result<Vec<Node>, DraftError> {
         self.expect(TokenKind::LParen, "(")?;
         let mut arguments = Vec::new();
         if self.kind(0) != TokenKind::RParen {
@@ -485,6 +657,9 @@ impl Parser<'_> {
         Ok(arguments)
     }
     fn match_expression(&mut self, start: u32) -> Result<Node, DraftError> {
+        self.descend(|parser| parser.match_expression_inner(start))
+    }
+    fn match_expression_inner(&mut self, start: u32) -> Result<Node, DraftError> {
         self.bump();
         let scrutinee = self.expression(0)?;
         self.expect(TokenKind::LBrace, "{")?;
@@ -508,6 +683,7 @@ impl Parser<'_> {
             self.bump();
         }
         self.expect(TokenKind::RBrace, "}")?;
+        self.structural_depth(children.iter().map(|child| child.depth).max().unwrap_or(0))?;
         let mut node = Node::new(
             Expr::Match(children[0].expression.clone(), arms),
             SourceSpan {
@@ -520,6 +696,10 @@ impl Parser<'_> {
         Ok(node)
     }
     fn pattern(&mut self) -> Result<(Pattern, SourceSpan, Vec<BinderSite>), DraftError> {
+        self.descend(Self::pattern_inner)
+    }
+    fn pattern_inner(&mut self) -> Result<(Pattern, SourceSpan, Vec<BinderSite>), DraftError> {
+        self.reserve_occurrence()?;
         let start = self.span().start;
         if self.word("nil") {
             self.bump();
@@ -590,9 +770,45 @@ fn reserved(name: &str) -> bool {
     )
 }
 
-fn collect_sites(root: &Node, function_index: Option<usize>, provenance: &mut SourceProvenance) {
+fn collect_sites(
+    root: &Node,
+    function_index: Option<usize>,
+    provenance: &mut SourceProvenance,
+    budget: Option<DraftParseBudget>,
+) -> Result<(), DraftError> {
+    if let Some(budget) = budget {
+        within(
+            DraftBudgetResource::StructuralAstDepth,
+            budget.max_structural_ast_depth,
+            root.depth,
+        )?;
+        within(
+            DraftBudgetResource::AstOccurrences,
+            budget.max_ast_occurrences,
+            1,
+        )?;
+    }
+    let mut scheduled = 1usize;
     let mut todo = vec![(root, Vec::new())];
     while let Some((node, path)) = todo.pop() {
+        if let Some(budget) = budget {
+            // Before path/source clones or provenance growth. Each parsed Expr
+            // contributes one expression site; each Pattern one pattern site.
+            within(
+                DraftBudgetResource::StructuralAstDepth,
+                budget.max_structural_ast_depth,
+                path.len().saturating_add(1),
+            )?;
+            within(
+                DraftBudgetResource::AstOccurrences,
+                budget.max_ast_occurrences,
+                provenance
+                    .expressions
+                    .len()
+                    .saturating_add(provenance.patterns.len())
+                    .saturating_add(1),
+            )?;
+        }
         let source = SourceLocation {
             function_index,
             child_path: path.clone(),
@@ -603,6 +819,17 @@ fn collect_sites(root: &Node, function_index: Option<usize>, provenance: &mut So
             kind: node_kind(&node.expression),
         });
         for (arm_index, (span, binders)) in node.patterns.iter().enumerate() {
+            if let Some(budget) = budget {
+                within(
+                    DraftBudgetResource::AstOccurrences,
+                    budget.max_ast_occurrences,
+                    provenance
+                        .expressions
+                        .len()
+                        .saturating_add(provenance.patterns.len())
+                        .saturating_add(1),
+                )?;
+            }
             provenance.patterns.push(PatternSite {
                 match_source: source.clone(),
                 arm_index,
@@ -611,11 +838,25 @@ fn collect_sites(root: &Node, function_index: Option<usize>, provenance: &mut So
             });
         }
         for (index, child) in node.children.iter().enumerate().rev() {
+            if let Some(budget) = budget {
+                within(
+                    DraftBudgetResource::StructuralAstDepth,
+                    budget.max_structural_ast_depth,
+                    path.len().saturating_add(2),
+                )?;
+                within(
+                    DraftBudgetResource::AstOccurrences,
+                    budget.max_ast_occurrences,
+                    scheduled.saturating_add(1),
+                )?;
+            }
+            scheduled += 1;
             let mut child_path = path.clone();
             child_path.push(index);
             todo.push((child, child_path));
         }
     }
+    Ok(())
 }
 
 fn node_kind(expression: &Expr) -> &'static str {

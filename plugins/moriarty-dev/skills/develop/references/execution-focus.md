@@ -1,12 +1,19 @@
 # Current scope and evidence reference
 
+## Current beta operator override — October18UTC
+
+Apply active checkout `AGENTS.md` and `raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md` first; the [canonical override](https://github.com/CharlesHoskinson/Moriarty/blob/d0dfe7c06cd54c5caed9d3d58dadbecaa7d9d41c/raw/assignments/sherlock-beta-automated-provisioning-2026-10-18.md) removes human-only operator/tier approval requirements for authorized beta work. Existing source identities, resource caps, failure/cleanup semantics, independent reviews/tests and correctness/financial/proof/target acceptance remain as that assignment states. Historical operator/native-zero records below do not reinstate a removed human-only step. This link adds no new guard or resource policy.
+
 This is guidance for the active Moriarty checkout, including when the skill was loaded from an installed cache. Read checkout files by resolving the code paths below against the active checkout root. Repository documents are outside the installed plugin package; relative Markdown links are reserved for package files. This reference creates no new campaign, scheduler, authority or acceptance schema.
 
-Temporary user override (2026-10-15): Gemini 4 Argon high through AGY receives
-all work otherwise assigned to Opus until Opus availability is observed again.
-Read checkout `AGENTS.md` and its linked assignment. Existing Opus-authored
-execution boundaries and historical evidence keep their scope; this routing
-change grants no native authority and changes no acceptance requirement.
+Latest user override (2026-10-16): “switch muse to opus5.5”. Read checkout
+`AGENTS.md` and `raw/assignments/moriarty-opus-nonsecurity-routing-2026-10-16.md`.
+New nonsecurity review uses Opus 5.5 high; security ownership remains Opus.
+The standing instruction remains: “if opus goes down switch to gemini or muse until its back up.”
+Use actual availability, announce fallback and retain actual identity. Gemini 4 Argon
+high through AGY is first while Muse is quota-blocked; no new permission or duplicate
+probe is required. Historical/frozen Muse records and live assigned Argon tasks
+retain their identities. No gate, native authority or acceptance requirement changes.
 
 ## Read current requirements before choosing work
 
@@ -18,10 +25,10 @@ Read `AGENTS.md`, then the user's current request and these current checkout doc
 - `wiki/index.md` and `wiki/workflow.md`: existing evidence, contradictions, provenance and canonical transaction procedure.
 - `wiki-llm/README.md` and `wiki-llm/RECONCILIATION-2026-10-14.md`: current research navigation, profile/consumer distinctions and dated evidence qualification.
 - `openspec/current-requirement-crosswalk.json` and `openspec/changes/consolidated-language-kernel/reconciliation-2026-10-14.md`: current requirement dispositions and reconciliation against the retained exits.
-- `wiki-llm/SECURITY-CURRENTNESS-2026-10-14.md` and `openspec/changes/consolidated-language-kernel/security-reconciliation-2026-10-14.md`: Opus-authored security addenda; consult as source references and route new interpretation or changes to the current designated security owner (temporarily AGY Argon until Opus availability is observed).
+- `wiki-llm/SECURITY-CURRENTNESS-2026-10-14.md` and `openspec/changes/consolidated-language-kernel/security-reconciliation-2026-10-14.md`: Opus-authored security addenda; consult as source references and route new interpretation or changes to the current designated security owner (Opus 5.5 with the standing actual-outage fallback).
 - `docs/PARALLEL-DEVELOPMENT.md` and `openspec/parallel-language-workflow.json`: existing disjoint task ownership and shared-interface integration. Refresh task status; this historical task list is not automatic dispatch authority.
 
-Current nonsecurity authoring is `gpt-6.1-sol`; independent non-author audit is `muse-wonder-1.0`, both at high effort. Apply later explicit user steering within its scope. Preserve frozen contracts and historical audit identities; the October 13 Sol/Grok pair and September task rosters remain evidence for their original candidates. They do not mandate extra obsolete seats for new work. Consequential decisions retain the existing two agreeing substantive votes.
+Current nonsecurity language work uses `gpt-6.1-sol` authoring and a fresh non-author Opus 5.5 audit, both at high effort. Apply later explicit user steering within its scope. Preserve frozen contracts and historical audit identities; the October 13 Sol/Grok pair and September task rosters remain evidence for their original candidates. They do not mandate extra obsolete seats for new work. Consequential decisions retain the existing two agreeing substantive votes.
 
 Follow the requested task before an old I2/MC02 or F0 recovery queue. Preserve I2's uncertified scope until MC05 and SP05's SP01 dependency; do not reset failures, debits, ceilings or unresolved evidence. Existing `status`/`next`/`report` reflect registered historical campaigns. Reconcile them honestly without rewriting them to resemble the consolidated roadmap.
 
@@ -59,18 +66,18 @@ Preview observations qualify only Preview. Fenrir network ID, Anchor, committee/
 
 ## Opus-owned execution boundary
 
-Read checkout `docs/audits/2026-10-14/SECURITY-ROUTING.md` and `docs/audits/2026-10-14/SECURITY-REVIEW.md`; these record Opus ownership of security analysis, hostile tests, recommendations and judgments. For new work, the October 15 AGY Argon assignment temporarily supersedes standing Opus 5.5 routing until Opus availability is observed. The execution boundary remains Opus-authored and unchanged; historical/frozen records keep their original rosters. Nonsecurity authors preserve and report that boundary without supplying substitute security conclusions.
+Read checkout `docs/audits/2026-10-14/SECURITY-ROUTING.md` and `docs/audits/2026-10-14/SECURITY-REVIEW.md`; these record Opus ownership of security analysis, hostile tests, recommendations and judgments. New security work remains with Opus 5.5 high, using the standing Gemini/Muse fallback only on an actual outage; announce fallback and retain its actual identity. The execution boundary remains Opus-authored and unchanged; historical/frozen records keep their original rosters. Nonsecurity authors preserve and report that boundary without supplying substitute security conclusions.
 
-As recorded by those documents, current native authority is zero. No SDK relation/circuit checks, model/degree/k queries, VM/transcript execution, key generation, proving, native verification, deploy/ledger actions or private-key/PK/SRS/cache actions are authorized by this guidance. `prepare-call`, `prepare-signed-call`, signed `verify-intent --profile`, `simulate --trace --target` and the replay generator may invoke blocked SDK operations; names such as check, static or test do not establish an ordinary path. Inspect actual side effects before any ordinary command; broad native suites remain blocked. Source-static public IR work has its existing bounded scope only.
+Before the October18 beta override, those documents recorded native authority zero; the remainder of this paragraph records that historical pre-override boundary, subject to the current beta override above. No SDK relation/circuit checks, model/degree/k queries, VM/transcript execution, key generation, proving, native verification, deploy/ledger actions or private-key/PK/SRS/cache actions are authorized by this guidance. `prepare-call`, `prepare-signed-call`, signed `verify-intent --profile`, `simulate --trace --target` and the replay generator may invoke blocked SDK operations; names such as check, static or test do not establish an ordinary path. Inspect actual side effects before any ordinary command; broad native suites remain blocked. Source-static public IR work has its existing bounded scope only.
 
-Keep native gates, resource limits, historical counters, receipt authentication and public-transaction delivery controls intact. Route any new proposed changes or security test design to the current designated security owner (temporarily AGY Argon until Opus availability is observed). Missing evidence is an acceptance blocker, not permission to launch a retry. No new campaign, budget reset or native probe is created here.
+Keep native gates, resource limits, historical counters, receipt authentication and public-transaction delivery controls intact. Route any new proposed changes or security test design to the current designated security owner (Opus 5.5 with the standing actual-outage fallback). Missing evidence is an acceptance blocker, not permission to launch a retry. No new campaign, budget reset or native probe is created here.
 
 ## Pressure checks before reporting
 
 | Situation | Required response |
 |---|---|
 | Plugin default or hook offers old SP01/I2 work during a requested documentation repair | Perform the current authorized repair; retain old status as operational history and do not dispatch it |
-| Earlier records require paired Astra/Grok or Sol/Grok audits | Apply latest scoped nonsecurity Muse routing; preserve original rosters for historical/frozen contracts |
+| Earlier records require paired Astra/Grok or Sol/Grok audits | Apply latest scoped nonsecurity Opus 5.5 high routing and standing actual-outage fallback; preserve original rosters for historical/frozen contracts |
 | Green static FeePool results or an old proof suggest U2 or U6 is done | Report the exact child capability and historical tree; retain general grammar, native/target and complete family gaps |
 | Node beta check passes, so Rust compile is assumed to pass | Resolve executable, source/semantics profile and real compiler consumer separately |
 | A successful refusal is offered as the second U2 walkthrough | Keep it as refusal evidence; require two positive programs and generality coverage |

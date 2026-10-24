@@ -1,0 +1,310 @@
+{
+  "status": "source-only mapping of unregistered constructor against exact owner proposal; no semantic/circuit/native result",
+  "source": {
+    "path": "b_scalar_tag.rs",
+    "bytes": 13854,
+    "sha256": "af82e70192b34f6bd5a95ec1008fe412a5294057b2becd149cab24aef60285cb"
+  },
+  "owner_contract": {
+    "sha256": "eff9da91e02019722908deff03fd4925b189e807e86d7b3f43ee6308dc2adf98",
+    "status": "PROPOSED_SOURCE_DESIGN_ONLY: unregistered, unreviewed; no ABI, width, layout, field or row adoption",
+    "public_reference": "Separate designated-owner local caller contract, identified by hash; not a B physical codec or adopted ABI."
+  },
+  "normative_pins": [
+    {
+      "path": "schema-host09.json",
+      "bytes": 150343,
+      "sha256": "237a3f31d5d93f613aab6a73fbf105373c3842272b6aed7876fb86a0ceb48de5"
+    },
+    {
+      "path": "rows-r4.json",
+      "bytes": 97998,
+      "sha256": "a0dd03b196a247232b2595204645268e368625ce320ccf7d5cc6dc237b7de75e"
+    }
+  ],
+  "target": {
+    "source_path": "crates/mori-backend/src/sherlock_machine/b_scalar_tag.rs",
+    "callable": "emit_b_scalar_tag_add",
+    "row": "rows-supplement.json /helper_events/1 (b.helper.Scalar.tag), template /templates/T-HELPER, overlay /helper_events/1 (C00, C14)",
+    "branch": "site RetRight, mode Add, phase First, kind(h.operandA) = UInt. Effects are /helper_events/1/effects/1/then/0/then: set h.regA := u128(a); set h.phase := Second. Base delta /helper_events/1/deltas/base = [-1,1,1,1,0,0,0,0,0,0,0]. cap_kinds_possible = [].",
+    "row_status_note": "Root designates this row as the adopted R4 row. The overlay file's own status field still reads PROPOSED_UNADOPTED. This contract does not decide adoption.",
+    "schema": "Qualified HostOnly schema SHA237a3f31d5d93f613aab6a73fbf105373c3842272b6aed7876fb86a0ceb48de5; adopted host source, no circuit-layout adoption."
+  },
+  "input_source_mapping": [
+    {
+      "field": "enable",
+      "class": "composer-derived bit",
+      "source": "constrained dispatch per enable_truth_scope"
+    },
+    {
+      "field": "constants.capacity",
+      "class": "host construction parameter",
+      "source": "bounds.constantNodes",
+      "pointer": "schema /bounds/fields/11; /program_image_view/tables/prog.constants/capacity"
+    },
+    {
+      "field": "constants.active_rows",
+      "class": "read alias",
+      "source": "active(prog.constants)",
+      "pointer": "schema /program_image_view/header/activeLengths"
+    },
+    {
+      "field": "constants.rows[j].tag / .n",
+      "class": "read alias",
+      "source": "prog.constants[j]: ConstTag ordinal lane and ConstRow.U128.n bytes",
+      "pointer": "schema /records/ConstRow/variant/U128"
+    },
+    {
+      "field": "data.capacity",
+      "class": "host construction parameter",
+      "source": "bounds.dataNodes (single segment)",
+      "pointer": "schema /machine_image/tables/img.data/capacity"
+    },
+    {
+      "field": "data.active_rows",
+      "class": "read alias",
+      "source": "pre reg.active.data",
+      "pointer": "schema /machine_image/registers/reg.active.data"
+    },
+    {
+      "field": "data.rows[j].tag / .n",
+      "class": "read alias",
+      "source": "pre img.data[j]: DataTag ordinal lane and DataRow.U128.n bytes",
+      "pointer": "schema /records/DataRow/variant/U128"
+    },
+    {
+      "field": "pre_helper.present, kind",
+      "class": "independent pre operand",
+      "source": "pre reg.helper Opt.present and the HelperControl variant discriminator",
+      "pointer": "schema /machine_image/registers/reg.helper"
+    },
+    {
+      "field": "pre_helper.site",
+      "class": "independent pre operand",
+      "source": "HelperControl.common.site",
+      "pointer": "schema /records/HelperControl/common/site"
+    },
+    {
+      "field": "pre_helper.mode, phase, operand_a, reg_a",
+      "class": "independent pre operand (reg_a unreferenced)",
+      "source": "HelperControl.variants.Scalar.{mode, phase, operandA, regA}",
+      "pointer": "schema /records/HelperControl/variants/Scalar"
+    },
+    {
+      "field": "pre_helper.rest",
+      "class": "independent pre operand",
+      "source": "every other lane of the reg.helper encoding: common.originReferenceCursor, common.parentResume, Scalar.operandB, Scalar.expected, Scalar.staged (tag and payload), and any further register lanes"
+    },
+    {
+      "field": "post_helper.*",
+      "class": "independent post witness",
+      "source": "the same lanes of the post-image reg.helper"
+    },
+    {
+      "field": "pre_counters.*",
+      "class": "independent pre operand",
+      "source": "reg.remainingWork, reg.consumedWork, reg.helperWork, reg.helperVisits",
+      "pointer": "schema /machine_image/registers; /row_language/deltas/vector_order entries 0-3"
+    },
+    {
+      "field": "post_counters.*",
+      "class": "independent post witness",
+      "source": "the same post-image registers"
+    },
+    {
+      "field": "scope",
+      "class": "host namespace",
+      "source": "composer allocates a non-nested namespace"
+    }
+  ],
+  "output_mapping": [
+    {
+      "field": "instructions",
+      "meaning": "Fragment to append after every input is bound. There is no PublicInput, Impact, Output or IrSource."
+    },
+    {
+      "field": "read_n",
+      "meaning": "Generated temporaries. They equal the bytes of u128(deref(operandA)) when enable = 1 and are 0 when enable = 0. A disabled zero is not a fetched, default or padding row."
+    },
+    {
+      "field": "preserved",
+      "meaning": "Exact clone of the input operands. These are aliases only, never a transition or acceptance result."
+    },
+    {
+      "field": "(absent)",
+      "meaning": "No success flag, computed post image, event envelope or rule tag is emitted."
+    }
+  ],
+  "read_write_preservation": {
+    "independent_pre": "pre_helper, pre_counters; operand_a also drives the read",
+    "independent_post_witness": "post_helper, post_counters. Supplied, never computed, and constrained under enable by K09, K10, K12 and K13.",
+    "read_only_aliases": "both value tables and their active lengths",
+    "constants": "the eight ordinal consts; immediates 0, 1, 255 and 256",
+    "generated": "s, en_const, eff lanes, fetch temporaries, read_n, borrow/carry chains",
+    "unchanged_within_leaf": "present, kind, site, mode, operandA and every rest lane (including staged, operandB, expected, originReferenceCursor, parentResume)",
+    "unchanged_outside_leaf": "see OBL-06"
+  },
+  "constraints_owner_verbatim": [
+    {
+      "id": "K01",
+      "emit": "ConstrainToBoolean(enable)",
+      "basis": "enable is a bit"
+    },
+    {
+      "id": "K02",
+      "emit": "s := CondSelect{bit: enable, a: pre_helper.operand_a.space, b: 0}; ConstrainToBoolean(s)",
+      "basis": "/records/ValueRef/encoding"
+    },
+    {
+      "id": "K03",
+      "emit": "en_data := s (alias); en_const := CondSelect{bit: s, a: 0, b: enable}; ConstrainToBoolean(en_const)",
+      "basis": "under enable exactly one space is read; both are 0 when disabled"
+    },
+    {
+      "id": "K04",
+      "emit": "If constants.capacity > 0: append emit_enabled_fetch_block(TableShape::new(constants.capacity, columns tag, n.0 .. n.15, all Type::UInt), EnabledFetchInputs{enable: en_const, active_rows: constants.active_rows, index: pre_helper.operand_a.index, rows}, scope {scope}.const_fetch), giving (tag_c, n_c). Else ConstrainEq(en_const, 0), and tag_c and n_c are immediate 0.",
+      "basis": "/helper_events/1/reads/0 bound active(prog.constants); SC-02"
+    },
+    {
+      "id": "K05",
+      "emit": "The same for data with en_data and scope {scope}.data_fetch, giving (tag_d, n_d); a zero capacity gives ConstrainEq(en_data, 0)",
+      "basis": "bound pre.active.data; SC-02"
+    },
+    {
+      "id": "K06",
+      "emit": "For each nonzero-capacity space: gated_eq(en_const, tag_c, CONST_TAG_U128); gated_eq(en_data, tag_d, DATA_TAG_U128)",
+      "basis": "kind(a) = UInt per space (D-23, C14). U128OutOfRange (Marker) and every other tag are excluded."
+    },
+    {
+      "id": "K07",
+      "emit": "For i in 0..16: read_n[i] := CondSelect{bit: s, a: n_d[i], b: n_c[i]}; ConstrainBits(read_n[i], 8)",
+      "basis": "u128(a) as UInt128 bytes; SC-03"
+    },
+    {
+      "id": "K08",
+      "emit": "gated_eq(enable, pre.present, 1); gated_eq(enable, pre.kind, HELPER_KIND_SCALAR); gated_eq(enable, pre.site, SITE_RET_RIGHT); gated_eq(enable, pre.mode, SCALAR_MODE_ADD); gated_eq(enable, pre.phase, SCALAR_PHASE_FIRST)",
+      "basis": "/helper_events/1/select_when; /dispatch/select/0; branch identity. present = 1 anchors the zero-valued ordinals."
+    },
+    {
+      "id": "K09",
+      "emit": "gated_eq(enable, post.phase, SCALAR_PHASE_SECOND); for i: gated_eq(enable, post.reg_a[i], read_n[i])",
+      "basis": "the write set /helper_events/1/effects/1/then/0/then"
+    },
+    {
+      "id": "K10",
+      "emit": "gated_eq(enable, post.x, pre.x) for x in present, kind, site, mode, operand_a.space, operand_a.index, then rest[j] for every j in order",
+      "basis": "set h.<field> rewrites only the named fields (/row_language/effects/set); T-HELPER preserved"
+    },
+    {
+      "id": "K11",
+      "emit": "For each of the 8 counter carriers (4 pre, 4 post) and each byte: e := CondSelect{bit: enable, a: lane, b: 0}; ConstrainBits(e, 8)",
+      "basis": "local u128 carrier range"
+    },
+    {
+      "id": "K12",
+      "emit": "remaining_work, over eff lanes, with borrow := enable. Per byte i: z := TestEq(pre_e[i], 0) then boolean; next := CondSelect{bit: borrow, a: z, b: 0} then boolean; c := Mul(256, next), bits 9; l := Add(pre_e[i], c), bits 9; r := Add(post_e[i], borrow), bits 9; ConstrainEq(l, r); borrow := next. After byte 15: ConstrainEq(borrow, 0).",
+      "basis": "P4 remainingWork -= 1. The final borrow of 0 forces pre >= 1 (P2 excluded)."
+    },
+    {
+      "id": "K13",
+      "emit": "consumed_work, helper_work and helper_visits, over eff lanes, with carry := enable. Per byte i: f := TestEq(pre_e[i], 255) then boolean; next := CondSelect{bit: carry, a: f, b: 0} then boolean; c := Mul(256, next), bits 9; l := Add(post_e[i], c), bits 9; r := Add(pre_e[i], carry), bits 9; ConstrainEq(l, r); carry := next. After byte 15: ConstrainEq(carry, 0).",
+      "basis": "P4 consumedWork += 1, helperWork += 1 (helperEligible); P7 helperVisits += 1 (row constant 1, SC-10); no wrap at 2^128"
+    }
+  ],
+  "implementation_locations": {
+    "K01-K03": 136,
+    "K04-K06": 143,
+    "K07:": 151,
+    "K08-K09": 157,
+    "K10:": 171,
+    "K11:": 182,
+    "K12-K13": 191
+  },
+  "local_helpers": {
+    "space_read": "K04\u2013K06 and existing enabled_fetch; zero capacity excludes that space without a fictitious row",
+    "eff_bytes": "K11 effective lanes",
+    "decrement": "K12 remainingWork -1",
+    "increment": "K13 consumedWork/helperWork/helperVisits +1",
+    "helper_operands/table_operands/counter_operands": "S1 host construction checks only, exact owner namespace and shape requirements"
+  },
+  "downstream_seam": {
+    "registration": "Root-only future child module of sherlock_machine; source currently unregistered; parent immediate/SDK builder names reused",
+    "physical_adapter": "OBL04 helper complete lane partition and true Const/Data projections/active bounds (OBL05); OBL07 explicit serialized-counter/payload connection remains absent",
+    "dispatcher": "OBL01 admissionbinding,OBL02 Running/P3,OBL03 constrained exactly-one branch enable; P0/P2/P3 and all other row/branch/refusal leaves remain separate",
+    "complete_image_preservation": "OBL06: every cell outside leaf, including referenceCursor and delta entries4\u201310, must be constrained equal under enable by future composer; source aliases are not those constraints",
+    "statement_event_binding": "OBL09 program/pre/post statement binding and field embedding; OBL11 event envelope not emitted",
+    "inactive_branch": "OBL12 another enabledbranch determines post; local disabled effective lanes zero, no global canonicalinactive policy"
+  },
+  "caller_obligations_owner_verbatim": [
+    {
+      "id": "OBL-01",
+      "text": "AB: step only with the image's own Admitted (SI-01, D-32). Host-only; the encoded form is open."
+    },
+    {
+      "id": "OBL-02",
+      "text": "enable = 0 unless pre.outcome = Running and pre.helperWork < bounds.maxHelperWork, which routes P0 and P3 to their own branches."
+    },
+    {
+      "id": "OBL-03",
+      "text": "enable is derived from the constrained pre-state selector, never from a free witness or expected data. Exactly one enable across the whole step relation."
+    },
+    {
+      "id": "OBL-04",
+      "text": "pre_helper and post_helper are exact aliases of the bound pre and post reg.helper lanes. The typed lanes are the named fields; rest is the complete remaining partition (nothing omitted or duplicated) in identical order pre and post. Discriminator lanes hold the schema Enum ordinals and the space lane holds the ValueRef bit; a layout using other codes invalidates this leaf until re-review."
+    },
+    {
+      "id": "OBL-05",
+      "text": "The value tables are all physical rows of the bound ProgramView prog.constants and the pre img.data, projected exactly to the variant tag ordinal lane and the U128.n byte lanes, with the true active lengths. Every projected cell is < 2^128 in every image where the fragment appears, whatever the value of enable."
+    },
+    {
+      "id": "OBL-06",
+      "text": "Every pre/post cell outside this leaf is equal under enable: reg.control, controlOrigin, envRoot, depth, stackLimit, outcome, initialFuel, referenceCursor (D-09R), alloc.*, active.*, taskLive, result, segBase, and every image table and slot. Delta entries 4-10 are zero."
+    },
+    {
+      "id": "OBL-07",
+      "text": "The counter and regA carriers are connected to the eventual serialized encodings by explicit constraints, because counterWidths and WidthTable are not frozen. Until then the carriers are local only."
+    },
+    {
+      "id": "OBL-08",
+      "text": "StepInv on the pre-image is external (SI-03, SI-04, SI-08 result absent, SI-13, SI-17, SI-21 including operandA = top.left and site coherence, and SI-22 S1). Post-StepInv preservation is not claimed."
+    },
+    {
+      "id": "OBL-09",
+      "text": "Program, pre and post statement binding and field embedding are external (L04 open). This is a mid-helper image, so it is never a canonical boundary (D-30); proof splits link physical images directly."
+    },
+    {
+      "id": "OBL-10",
+      "text": "Every operand is bound before the fragment. The composer reserves the %{scope}. namespace non-nested against all other blocks."
+    },
+    {
+      "id": "OBL-11",
+      "text": "Any bound event envelope or StepEvent records ruleId b.helper.Scalar.tag, HelperVisit, Applied, work/helperWork/helperVisits deltas 1/1/1, cursor delta 0, zero alloc and value-slot writes, and helperPhase First to Second. None of this is emitted here."
+    },
+    {
+      "id": "OBL-12",
+      "text": "When enable = 0 the post lanes are determined by whichever branch is enabled, not by this leaf."
+    }
+  ],
+  "blocked_before_registration_owner_verbatim": [
+    "I-B-PAYLOAD-WIDTHS / layout: the reg.helper lane partition, the discriminator carriers, and the ConstRow/DataRow lane projection",
+    "counterWidths and the UInt128 serialized form, connected per OBL-07",
+    "L04 statement binding and fieldId (field fact p > 2^128)",
+    "a dispatch composer with exactly-one enable and the P0/P2/P3 branches",
+    "row and overlay adoption status (I-B-EVENT-ADOPTION; the overlay file still reads PROPOSED_UNADOPTED)",
+    "a fresh full-source Muse and Opus review of the actual bytes",
+    "a Root mod declaration"
+  ],
+  "nonclaims_owner_verbatim": [
+    "No SDK load, check, evaluation, compilation, proof, test or SDK query; no Rust compiled.",
+    "No mod.rs declaration, registration, dispatch, PublicInput or Output wiring.",
+    "No StepInv genesis or preservation, whole-transition, soundness proof, security or W_B correspondence claim.",
+    "No B layout, width table, counter width, field, limb, physical tag, cap, Bounds value or constructor semantics is adopted.",
+    "No behavior for any other operator, site, branch or row, and no negative or hostile tests.",
+    "No native authority; C4 unchanged."
+  ],
+  "publication_display": {
+    "derived_from_mapping_sha256": "05dfcbe2744dc407788bd41d42935db1ecbc11c08f24931a962e64d98170a56a",
+    "changes": "Origin-path metadata removed for publication only; source, all constraint/caller-obligation text, cosmetic colon labels and unverified line references preserved unchanged.",
+    "source_unchanged": true
+  }
+}

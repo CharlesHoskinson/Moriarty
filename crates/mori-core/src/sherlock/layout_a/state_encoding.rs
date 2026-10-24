@@ -1,10 +1,11 @@
 //! Internal L4 ordered StateBlock bytes; no parser, digest or native embedding.
-use crate::sherlock::Snapshot;
 use super::limits::Locator;
 use super::rows::{Capacities, PreparedA, Slice, TableId, ValueRef};
-use super::state::{ControlRow, EnvRoot, FrameRow, StateBlock, StateCapacities,
-    StateFailure, StateResult};
+use super::state::{
+    ControlRow, EnvRoot, FrameRow, StateBlock, StateCapacities, StateFailure, StateResult,
+};
 use super::state_encode::encode_observed_a;
+use crate::sherlock::Snapshot;
 
 // Mathematical count(Z) includes Z, so its width is bit_length(Z), at least 1.
 // id(Z) uses bit_length(Z - 1), with zero/one capacities still one bit wide.
@@ -23,17 +24,25 @@ struct Writer {
 
 impl Writer {
     fn at(&mut self, table: &'static str, row: usize) {
-        self.location = Locator { expression: None, function: None, field: table, item: row };
+        self.location = Locator {
+            expression: None,
+            function: None,
+            field: table,
+            item: row,
+        };
     }
 
     fn host(&self) -> StateFailure {
         StateFailure::HostUnrepresentable {
-            field: self.location.field, locator: self.location,
+            field: self.location.field,
+            locator: self.location,
         }
     }
 
     fn raw(&mut self, bytes: &[u8]) -> StateResult<()> {
-        self.bytes.try_reserve(bytes.len()).map_err(|_| self.host())?;
+        self.bytes
+            .try_reserve(bytes.len())
+            .map_err(|_| self.host())?;
         self.bytes.extend_from_slice(bytes);
         Ok(())
     }
@@ -77,8 +86,12 @@ impl Writer {
         self.id(value.index, capacity)
     }
 
-    fn frame(&mut self, row: &FrameRow, program: &Capacities,
-        state: &StateCapacities) -> StateResult<()> {
+    fn frame(
+        &mut self,
+        row: &FrameRow,
+        program: &Capacities,
+        state: &StateCapacities,
+    ) -> StateResult<()> {
         let cap = |id: TableId| program.tables[id as usize];
         let values = cap(TableId::Constants).max(state.data);
         self.byte(row.tag)?;
@@ -95,8 +108,12 @@ impl Writer {
         self.slice(row.arms, cap(TableId::Arms))
     }
 
-    fn control(&mut self, row: &ControlRow, program: &Capacities,
-        state: &StateCapacities) -> StateResult<()> {
+    fn control(
+        &mut self,
+        row: &ControlRow,
+        program: &Capacities,
+        state: &StateCapacities,
+    ) -> StateResult<()> {
         let cap = |id: TableId| program.tables[id as usize];
         let values = cap(TableId::Constants).max(state.data);
         self.byte(row.tag)?;
@@ -119,11 +136,17 @@ impl Writer {
 
 // This helper is deliberately private. Only the real canonical encoder supplies
 // its padded block. It is not a raw-image acceptance or validation interface.
-fn expand_state(block: &StateBlock, program: &Capacities,
-    state: &StateCapacities) -> StateResult<Vec<u8>> {
+fn expand_state(
+    block: &StateBlock,
+    program: &Capacities,
+    state: &StateCapacities,
+) -> StateResult<Vec<u8>> {
     let cap = |id: TableId| program.tables[id as usize];
     let values = cap(TableId::Constants).max(state.data);
-    let mut w = Writer { bytes: Vec::new(), location: Locator::field("Root") };
+    let mut w = Writer {
+        bytes: Vec::new(),
+        location: Locator::field("Root"),
+    };
     let r = &block.root;
     w.count(r.active_data, state.data)?;
     w.count(r.active_data_fields, state.data_fields)?;
@@ -176,9 +199,14 @@ fn expand_state(block: &StateBlock, program: &Capacities,
 }
 
 /// Expand an observed current-A Snapshot after actual canonical encoding.
-/// No byte parser, public importer, statement binding or native ABI is exposed.
-pub(super) fn observed_state_bytes_a(prepared: &PreparedA,
-    capacities: &StateCapacities, snapshot: &Snapshot) -> StateResult<Vec<u8>> {
+/// No byte parser, statement binding or native ABI is exposed.
+/// No Machine-state importer; decode_observed_a is a public typed-row decoder
+/// under the trust preconditions documented by layout_a.
+pub fn observed_state_bytes_a(
+    prepared: &PreparedA,
+    capacities: &StateCapacities,
+    snapshot: &Snapshot,
+) -> StateResult<Vec<u8>> {
     let block = encode_observed_a(prepared, capacities, snapshot)?;
     expand_state(&block, &prepared.capacities, capacities)
 }

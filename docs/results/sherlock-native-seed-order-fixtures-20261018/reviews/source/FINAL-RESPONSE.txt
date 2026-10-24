@@ -1,0 +1,134 @@
+# Review: P8 seed-order-only change (H1–H4, helper seal) and the four ordinary fixture tests
+
+## Read coverage
+
+**Read in full (inline Bodies 1–13):**
+- The contract, inventory, freeze and materialization records.
+- The import and initializer scope.
+- The complete guard, ccb and test closures.
+- The old `verify_and_seed_cached_target`.
+- The all-3498 mtime readback.
+- The proposed ordinary-four operation.
+
+**Not supplied, so not read:**
+- `SOURCE.diff` and the H1–H4/T1 hunk texts.
+- The author's `FINAL-RESPONSE.txt`.
+- `EXACT-CLOSURE-AND-UNCHANGED-BOUNDARIES.json` and `MODULE-INITIALIZATION-INVENTORY.json`.
+- The postcheck preimage.
+- The `CACHED_CURRENT_BUILD_SHA256` line in `bounded_sdk_compile.py`.
+- `test_cached_current_build.py` lines 33–46, 204, 848, 927 and 968.
+- The raw stat `.nul` files.
+
+I used no tools and executed nothing.
+
+## Q1: Seed-order source — APPROVE_SCOPED_SEED_SOURCE, with the qualifications below
+
+### Hunk reconstruction
+
+I could not read the hunk texts. Instead I diffed the full old and new function bodies and checked the byte counts. H1–H4 add up to +198, +543, −34 and +213, which is +920. That matches the file growing from 93065 to 93985 bytes.
+
+| Hunk | Old bytes | What the old text is |
+|---|---|---|
+| H1 | 55 | The `TARGET_FINGERPRINT_EPOCH_NS = …` line. The new text appends a comment and `R3_ARCHIVE_MTIME_RANGE_NS`. |
+| H2 | 34 | `def verify_and_seed_cached_target(`. The new text inserts `_preserved_seed_mtime_ns` before it. |
+| H3 | 355 | The two-tier `is_late_tier` block plus the `os.utime` line. |
+| H4 | 371 | The source-mutation check. The new text adds an mtime equality check and a check that the destination mtime equals the preserved mtime. |
+
+Apart from these hunks, the seed function is identical to the old one.
+
+### Correctness
+
+- **Predicate 1 (preserved mtime, archive unchanged):**
+  - Each seeded file receives `src_st_before.st_mtime_ns`.
+  - That value is bracketed: `digest` re-checks `stable_stat` (which includes mtime) while reading, and `src_st_after` must match the inode, mode and mtime after the copy.
+  - The destination mtime is re-read and must equal the preserved value.
+  - There is no class-normalized tier any more.
+  - The archive stays unwritten and keeps its 0o400/0o444 mode check.
+- **Predicate 2 (bounds):**
+  - The production route (`expected_counts is None`) enforces the inclusive range `R3_ARCHIVE_MTIME_RANGE_NS`. This equals the readback's `current_archive_mtime_range`.
+  - On every route, `<= SOURCE_EPOCH_NS` is refused.
+  - The fixture route skips only the range check.
+- **Predicate 3 (ordering):**
+  - Every test edge value matches the readback exactly: version_check→generic-array, autocfg→num-traits, cc, cmake, dunce and fs_extra→aws-lc-sys, and the aws-lc-sys binary before `382f…/invoked.timestamp`.
+  - The legacy tiers inverted the rlib→build-script edge (2.0e10 versus 1.0e10 offset). This change fixes that inversion.
+  - Each pair of hardlinked script binaries (`build_script_build-<h>` and `build-script-build`) gets the same preserved mtime.
+  - This makes no universal promise about Cargo freshness.
+- **Predicate 4 (strict postcheck):**
+  - No hunk falls in `verify_post_compile_no_script_reexec`; the byte accounting above shows this.
+  - It still refuses an mtime change on a byte-identical host output.
+  - I have no preimage of it, so "byte-identical" rests on the recorded claim.
+
+### Qualifications
+
+These are non-blocking observations, not required fixes.
+
+1. **The mtime is not pinned per file in code.**
+   - The contents are hash-pinned. The mtime is only checked against the range, held stable while seeding, and is greater than the epoch.
+   - Equality to the original R3 values is established externally, by the 2026-10-18 all-3498 join (`mtime_or_bytes_differences: []`). No code checks it.
+   - The owner can still run `utime` on a 0o400 file within the range; the fixture itself does this. A touch to the current time would land above `hi` and be refused.
+   - So "authenticated" here means pinned contents, range-bounded and seeding-stable mtimes, and equality as of the external readback.
+   - Optional hardening, if wanted later: bind each file's `mtime_ns` to the pinned stat inventory.
+2. **A refusal can leave a partial target.** The epoch/range refusal fires after the copy. That matches the existing fail-closed pattern, since retries require a fresh empty target.
+3. **Helper seal: consistent with the record, but the line was not read.**
+   - The old value is the ccb preimage SHA (`4d34…`). The new value is the ccb afterimage SHA (`82cc…`).
+   - `bounded_sdk_compile.py` stays at 96012 bytes, and the materialization reports the replacement as unique.
+   - I did not literally confirm the line.
+
+### Abstention
+
+I abstain on callers and consumers outside the closure. Specifically, I cannot say whether any unselected code (including the accounting route or config) assumes the normalized `TARGET_MIN_EPOCH_NS` or `TARGET_FINGERPRINT_EPOCH_NS` seed times. That would need the callers of `verify_and_seed_cached_target`, and anything else that reads those constants or `CACHED_TARGET_SEED.json`.
+
+## Q2: Ordinary four — not ELIGIBLE_ORDINARY_FOUR as submitted; two corrections needed
+
+### The test bodies are meaningful and safe as written
+
+- **Test A, `test_seed_reapplies_preserved_r3_mtimes_in_dependency_order`:**
+  - It fails under the old code, because every seeded mtime must equal its supplied value.
+  - It checks the source mtime and the 0o400 mode both before and after.
+  - It covers the run-unit snapshot, a passing postcheck, and refusal of a same-byte script whose mtime increased by 1 ns.
+  - The output/invoked/stderr ordering asserts only restate the supplied data. They document the expected order but add no extra test of the code.
+- **Test B, `test_preserved_seed_mtime_bounds_and_actual_r3_build_dependency_edges`:**
+  - It checks the exact inclusive `lo`/`hi` bounds: `±1` is refused with a range and accepted without one.
+  - It checks the epoch boundary: `SOURCE_EPOCH-1` and `SOURCE_EPOCH` are refused, `+1` is accepted.
+  - Its edge literals match the readback. The literal-versus-literal comparisons are data facts, not tests of the code.
+- **Test C, `test_seed_refuses_preserved_mtime_not_newer_than_source_epoch`:**
+  - It fails under the old code.
+  - It checks the refusal message and path.
+  - It confirms the archive is unmutated and that no seed receipt was written.
+- **Test D, `test_target_partition_excludes_mori_workspace_and_preserves_quarantine_modes`:**
+  - It is byte-unchanged and still valid: creation-time mtimes are later than `SOURCE_EPOCH`, and `TARGET_MIN+9999` still differs from the preserved mtime.
+  - It now depends on the wall clock being later than 2025-10-09.
+
+### Execution scope
+
+- Everything runs under TMPDIR. There are no production paths, no subprocess and no I/O at import.
+- `-I -B -S` keeps the run off user site-packages and stops `.pyc` files from altering the three-file staging set.
+- Fixture writes are far below FSIZE 1 MiB.
+- Nanosecond equality needs a filesystem with nanosecond timestamps. The staging directory is on ext4 under WSL2, so that holds.
+- The 35 s wall limit is the supervisor's margin over the inherited inner 30 s timeout. I am not proposing any limit change.
+
+### Corrections
+
+1. **Reject vacuous passes in the exit predicate.** As written, skipped or expected-failure tests still give `wasSuccessful()` true and count towards `testsRun == 4`. Use:
+   ```python
+   raise SystemExit(not (result.wasSuccessful() and result.testsRun == 4 and not result.skipped and not result.expectedFailures))
+   ```
+2. **Supply the missing fixture-hook items, or I abstain on that part of the safety review.**
+   - What is missing:
+     - `test_cached_current_build.py` lines 33–46, which hold the class header and any class attributes.
+     - Lines 204, 848, 927 and 968, the decorator slots before each selected `def`.
+     - An AST attestation, pinned to `8352ad…`, that none of `setUpModule`, `tearDownModule`, `setUpClass`, `tearDownClass` or `addClassCleanup` exist, and that neither the class nor the four methods have decorators.
+   - Why it matters: unittest runs these hooks implicitly, and the closure lists only explicitly called code.
+
+I also abstain on whether the "impacted set" is complete. Only one old test is claimed to be impacted. Unselected tests that call the seed function or assert normalized epochs were not shown. This does not affect the four tests themselves.
+
+## Q3: Observations and limitations retained
+
+- The original P8 result stays FAILED. Nothing here admits it retroactively.
+- The accounting prerequisite stays unresolved, and both the broad and narrow Opus refusals are preserved. I did not author or adjudicate accounting source.
+- The strict postcompile guard is unchanged according to the record. The new test refuses a same-byte script mtime rewrite.
+- The seed-order evidence is limited to the finite R3 metadata join. There is no universal Cargo freshness proof.
+- I make no judgment on native admission, config, Cargo, ELF, proof or stagenet.
+- I infer no permission from stdout or CLI exit 0.
+- The owner-authored tests are interface-informed, not blind (R2 unsatisfied).
+- The old SOURCE-FREEZE note ("review after accounting completion") is not overridden. This review only covers the seed-only scope the current Root selected.

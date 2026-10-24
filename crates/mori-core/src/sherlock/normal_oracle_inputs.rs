@@ -94,4 +94,3 @@ pub(super) fn normal_program(case_id: &str) -> Arc<Program> {
         ),
     }
 }
-

@@ -1,0 +1,5 @@
+R184 returned one fresh independent ArgonHIGH source audit of Sol R181: APPROVE_WITH_LIMITS. Exit0/SUCCESS in369.60seconds.31complete bodies/42pages were read exactly once; line/byte summaries match and all input pins remain unchanged. No candidate execution or W/Git write occurred.
+
+Owner-required work before relevant integration/check consideration: adapt R120 DraftError::Budget and distinct structural depth config semantics; strengthen independent AST/provenance and exact recursion/nonbinary-depth tests; add pre-scan excess-token test. Lexer initial-capacity and collector scheduling suggestions are explicitly OPTIONAL, despite their placement in the report corrections array.
+
+Full raw18274-byte opinion is retained (above requested10KB aim). Mechanical readback finds two abbreviated struct/enum snippets and a two-line collector-initializer locator drift; actual source excerpts are supplied, without replacing the security judgment. Both stated full hashes match membership. All tests remain UNRUN. Checker/type/copy/report/destruction/public consumer/H1 and native acceptance stay separate; native0/C4/R2/60460/stoppedAm10 unchanged.

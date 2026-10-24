@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 pub const FORMAT: &str = "moriarty-sherlock-scalar-source-projection/1";
 
-/// Maintainer preparation budget: the maximum number of source occurrences a
+/// Maintainer preparation budget: the maximum number of mapping occurrences a
 /// single report (summed across its actions) will materialize. Preparation
 /// expands the validated Core expression DAG once per traversed edge with no
 /// sharing, so a DAG of linear size can demand exponentially many occurrences
@@ -21,7 +21,8 @@ pub const FORMAT: &str = "moriarty-sherlock-scalar-source-projection/1";
 /// 8192-expression Core bounds. This ceiling is a representation-preparation
 /// limit only: it is not a Core schema rule, resource/circuit cost, or any
 /// change to the compiler's supported subset. Exhaustion is per-site
-/// `Unsupported` metadata, never a compiler refusal.
+/// `Unsupported` metadata, never a compiler refusal. Synthetic scalar-lowering
+/// nodes consume this same existing ceiling; it is not increased for lowering.
 pub const MAX_PROJECTION_OCCURRENCES: usize = crate::MAX_EXPRESSIONS + crate::MAX_STATEMENTS;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -57,6 +58,9 @@ pub struct EmitSite {
 
 /// Path is relative to the generated function body, not text or image row IDs.
 /// Every traversed source edge receives a separate occurrence, even for a DAG.
+/// Every synthetic internal lowering node also receives one occurrence, marked
+/// by a `lowering-` node_kind. Its expression/source_expression identify the
+/// original binary requiring it, rather than another traversed source edge.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct SourceOccurrence {
     pub action_index: usize,
@@ -125,7 +129,7 @@ pub struct SourceProjectionReport {
 pub fn source_projection_report(program: &Program) -> SourceProjectionReport {
     let validation = crate::validate(program);
     let mut remaining = MAX_PROJECTION_OCCURRENCES;
-    let actions = program
+    let actions: Vec<ActionProjection> = program
         .actions
         .iter()
         .enumerate()
@@ -150,6 +154,13 @@ pub fn source_projection_report(program: &Program) -> SourceProjectionReport {
             }
         })
         .collect();
+    let lowered = actions.iter().any(|projection| match projection {
+        ActionProjection::Prepared { report } => report
+            .occurrences
+            .iter()
+            .any(|site| site.node_kind.starts_with("lowering-")),
+        ActionProjection::Unsupported { .. } => false,
+    });
     SourceProjectionReport {
         format: FORMAT.into(), source_language: program.language.clone(),
         source_semantics: program.semantics.clone(), agreement: program.name.clone(),
@@ -159,7 +170,11 @@ pub fn source_projection_report(program: &Program) -> SourceProjectionReport {
         evaluation_performed: false, source_expression_count: program.expressions.len(),
         source_action_count: program.actions.len(), source_state_count: program.states.len(),
         source_asset_count: program.assets.len(),
-        coverage: "direct scalar nodes; stateless actions; ordered lets and one final emit value; first unsupported site per action; no effects execution or unvisited-site mapping".into(),
+        coverage: if lowered {
+            "all Core/1 scalar binary operators via existing primitives and hygienic eager lowering; stateless actions; ordered lets and one final emit value; source/generated body-preorder mapping; no effects execution or unvisited-site mapping"
+        } else {
+            "direct scalar nodes; stateless actions; ordered lets and one final emit value; first unsupported site per action; no effects execution or unvisited-site mapping"
+        }.into(),
         actions,
     }
 }
@@ -291,6 +306,7 @@ fn prepare_validated_action(
     let mut occurrences = Vec::new();
     let mut mapped_lets = Vec::new();
     let mut path = Vec::new();
+    let mut symbols: Option<LoweringSymbols> = None;
     for site in &lets {
         charge(remaining, index, Some(site.statement_index), None)?;
         occurrences.push(SourceOccurrence {
@@ -310,6 +326,7 @@ fn prepare_validated_action(
             site.expression,
             value_path,
             &mut occurrences,
+            &mut symbols,
             remaining,
         )?;
         let ty =
@@ -333,6 +350,7 @@ fn prepare_validated_action(
         emit.expression,
         path,
         &mut occurrences,
+        &mut symbols,
         remaining,
     )?;
     let return_type =
@@ -391,6 +409,7 @@ fn map_expression(
     id: ExprId,
     path: Vec<usize>,
     occurrences: &mut Vec<SourceOccurrence>,
+    symbols: &mut Option<LoweringSymbols>,
     remaining: &mut usize,
 ) -> Result<ExprRef, ProjectionDiagnostic> {
     let source = program.expressions.get(usize::from(id)).ok_or_else(|| {
@@ -410,6 +429,7 @@ fn map_expression(
         CoreExpr::LiabilityPresent { .. } => "liability-present",
         CoreExpr::LiabilityAmount { .. } => "liability-amount",
     };
+    let ordinal = occurrences.len();
     charge(remaining, action, Some(statement), Some(id))?;
     occurrences.push(SourceOccurrence {
         action_index: action,
@@ -419,7 +439,11 @@ fn map_expression(
         node_kind: kind.into(),
         source_expression: Some(source.clone()),
     });
-    let child = |id, position, occurrences: &mut Vec<SourceOccurrence>, remaining: &mut usize| {
+    let child = |id,
+                 position,
+                 occurrences: &mut Vec<SourceOccurrence>,
+                 symbols: &mut Option<LoweringSymbols>,
+                 remaining: &mut usize| {
         let mut child_path = path.clone();
         child_path.push(position);
         map_expression(
@@ -429,6 +453,7 @@ fn map_expression(
             id,
             child_path,
             occurrences,
+            symbols,
             remaining,
         )
     };
@@ -438,29 +463,84 @@ fn map_expression(
             crate::Value::Bool(value) => Value::Bool(*value),
         }),
         CoreExpr::Name { name } => Expr::Var(name.clone()),
-        CoreExpr::Not { value } => {
-            Expr::Unary(UnaryOp::Not, child(*value, 0, occurrences, remaining)?)
-        }
+        CoreExpr::Not { value } => Expr::Unary(
+            UnaryOp::Not,
+            child(*value, 0, occurrences, symbols, remaining)?,
+        ),
         CoreExpr::Binary { op, lhs, rhs } => {
-            let op = match op {
-                CoreOp::Add => BinaryOp::Add,
-                CoreOp::Sub => BinaryOp::Sub,
-                CoreOp::Mul => BinaryOp::Mul,
-                CoreOp::Eq => BinaryOp::Eq,
-                CoreOp::Lt => BinaryOp::Lt,
-                other => {
-                    return Err(diagnostic(
-                        action,
-                        Some(statement),
-                        Some(id),
-                        &format!("binary-{other:?}"),
-                        "unsupported-projection",
-                    ));
+            match op {
+                CoreOp::Add | CoreOp::Sub | CoreOp::Mul | CoreOp::Eq | CoreOp::Lt => {
+                    let primitive = match op {
+                        CoreOp::Add => BinaryOp::Add,
+                        CoreOp::Sub => BinaryOp::Sub,
+                        CoreOp::Mul => BinaryOp::Mul,
+                        CoreOp::Eq => BinaryOp::Eq,
+                        CoreOp::Lt => BinaryOp::Lt,
+                        _ => unreachable!("direct scalar operator selected above"),
+                    };
+                    let left = child(*lhs, 0, occurrences, symbols, remaining)?;
+                    let right = child(*rhs, 1, occurrences, symbols, remaining)?;
+                    Expr::Binary(primitive, left, right)
                 }
-            };
-            let left = child(*lhs, 0, occurrences, remaining)?;
-            let right = child(*rhs, 1, occurrences, remaining)?;
-            Expr::Binary(op, left, right)
+                CoreOp::Ne | CoreOp::Ge => {
+                    // Both existing primitives are already eager left-to-right.
+                    // The added Not wraps their result without reversing operands.
+                    let (primitive, kind) = if *op == CoreOp::Ne {
+                        (BinaryOp::Eq, "lowering-eq")
+                    } else {
+                        (BinaryOp::Lt, "lowering-lt")
+                    };
+                    let inner_path = generated_occurrence(
+                        action,
+                        statement,
+                        id,
+                        source,
+                        &path,
+                        &[0],
+                        kind,
+                        occurrences,
+                        remaining,
+                    )?;
+                    let left = map_expression(
+                        program,
+                        action,
+                        statement,
+                        *lhs,
+                        child_path(&inner_path, 0),
+                        occurrences,
+                        symbols,
+                        remaining,
+                    )?;
+                    let right = map_expression(
+                        program,
+                        action,
+                        statement,
+                        *rhs,
+                        child_path(&inner_path, 1),
+                        occurrences,
+                        symbols,
+                        remaining,
+                    )?;
+                    Expr::Unary(UnaryOp::Not, Arc::new(Expr::Binary(primitive, left, right)))
+                }
+                CoreOp::Gt | CoreOp::Le | CoreOp::And | CoreOp::Or => {
+                    return lower_eager_binary(
+                        program,
+                        action,
+                        statement,
+                        id,
+                        source,
+                        *op,
+                        *lhs,
+                        *rhs,
+                        &path,
+                        ordinal,
+                        occurrences,
+                        symbols,
+                        remaining,
+                    );
+                }
+            }
         }
         CoreExpr::LiabilityPresent { .. } | CoreExpr::LiabilityAmount { .. } => {
             return Err(diagnostic(
@@ -473,6 +553,298 @@ fn map_expression(
         }
     };
     Ok(Arc::new(mapped))
+}
+
+/// Lazy, action-local fresh symbols. Provenance lives in report occurrences,
+/// so generated strings need carry only their unique preorder ordinal/side.
+struct LoweringSymbols {
+    occupied: std::collections::BTreeSet<String>,
+}
+
+impl LoweringSymbols {
+    fn new(program: &Program) -> Self {
+        let mut occupied = std::collections::BTreeSet::new();
+        occupied.insert(program.name.clone());
+        for declaration in &program.states {
+            occupied.insert(declaration.name.clone());
+        }
+        for declaration in &program.assets {
+            occupied.insert(declaration.name.clone());
+        }
+        for action in &program.actions {
+            occupied.insert(action.name.clone());
+            for input in &action.inputs {
+                occupied.insert(input.name.clone());
+            }
+            for statement in &action.statements {
+                if let Statement::Let { name, .. } = statement {
+                    occupied.insert(name.clone());
+                }
+            }
+        }
+        for expression in &program.expressions {
+            if let CoreExpr::Name { name } = expression {
+                occupied.insert(name.clone());
+            }
+        }
+        Self { occupied }
+    }
+
+    fn fresh(&mut self, ordinal: usize, side: &str) -> String {
+        let mut candidate = format!("${ordinal}{side}");
+        while self.occupied.contains(&candidate) {
+            candidate.push('$');
+        }
+        self.occupied.insert(candidate.clone());
+        candidate
+    }
+}
+
+fn child_path(path: &[usize], position: usize) -> Vec<usize> {
+    let mut result = path.to_vec();
+    result.push(position);
+    result
+}
+
+/// Record a real internal AST node against the unchanged report budget before
+/// allocating its path/record. The origin is the source binary requiring it.
+fn generated_occurrence(
+    action: usize,
+    statement: usize,
+    id: ExprId,
+    source: &CoreExpr,
+    parent: &[usize],
+    positions: &[usize],
+    kind: &str,
+    occurrences: &mut Vec<SourceOccurrence>,
+    remaining: &mut usize,
+) -> Result<Vec<usize>, ProjectionDiagnostic> {
+    charge(remaining, action, Some(statement), Some(id))?;
+    let mut path = parent.to_vec();
+    path.extend_from_slice(positions);
+    occurrences.push(SourceOccurrence {
+        action_index: action,
+        statement_index: statement,
+        expression: Some(id),
+        body_path: path.clone(),
+        node_kind: kind.into(),
+        source_expression: Some(source.clone()),
+    });
+    Ok(path)
+}
+
+/// Existing Let sequencing forces both operands before a reversed comparison
+/// or conditional. `$` is outside validated Core identifiers. The preorder
+/// ordinal distinguishes each unshared source occurrence, including DAG edges.
+fn lower_eager_binary(
+    program: &Program,
+    action: usize,
+    statement: usize,
+    id: ExprId,
+    source: &CoreExpr,
+    op: CoreOp,
+    lhs: ExprId,
+    rhs: ExprId,
+    path: &[usize],
+    ordinal: usize,
+    occurrences: &mut Vec<SourceOccurrence>,
+    symbols: &mut Option<LoweringSymbols>,
+    remaining: &mut usize,
+) -> Result<ExprRef, ProjectionDiagnostic> {
+    let (left_name, right_name) = {
+        let supply = symbols.get_or_insert_with(|| LoweringSymbols::new(program));
+        (supply.fresh(ordinal, "l"), supply.fresh(ordinal, "r"))
+    };
+    // The outer Let's source-root occurrence was recorded by map_expression.
+    let left = map_expression(
+        program,
+        action,
+        statement,
+        lhs,
+        child_path(path, 0),
+        occurrences,
+        symbols,
+        remaining,
+    )?;
+    let right_let_path = generated_occurrence(
+        action,
+        statement,
+        id,
+        source,
+        path,
+        &[1],
+        "lowering-let",
+        occurrences,
+        remaining,
+    )?;
+    let right = map_expression(
+        program,
+        action,
+        statement,
+        rhs,
+        child_path(&right_let_path, 0),
+        occurrences,
+        symbols,
+        remaining,
+    )?;
+    let body = match op {
+        CoreOp::Gt | CoreOp::Le => {
+            let comparison_path = if op == CoreOp::Le {
+                let not_path = generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &right_let_path,
+                    &[1],
+                    "lowering-not",
+                    occurrences,
+                    remaining,
+                )?;
+                generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &not_path,
+                    &[0],
+                    "lowering-lt",
+                    occurrences,
+                    remaining,
+                )?
+            } else {
+                generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &right_let_path,
+                    &[1],
+                    "lowering-lt",
+                    occurrences,
+                    remaining,
+                )?
+            };
+            generated_occurrence(
+                action,
+                statement,
+                id,
+                source,
+                &comparison_path,
+                &[0],
+                "lowering-name",
+                occurrences,
+                remaining,
+            )?;
+            generated_occurrence(
+                action,
+                statement,
+                id,
+                source,
+                &comparison_path,
+                &[1],
+                "lowering-name",
+                occurrences,
+                remaining,
+            )?;
+            let comparison = Arc::new(Expr::Binary(
+                BinaryOp::Lt,
+                Arc::new(Expr::Var(right_name.clone())),
+                Arc::new(Expr::Var(left_name.clone())),
+            ));
+            if op == CoreOp::Le {
+                Arc::new(Expr::Unary(UnaryOp::Not, comparison))
+            } else {
+                comparison
+            }
+        }
+        CoreOp::And | CoreOp::Or => {
+            let conditional_path = generated_occurrence(
+                action,
+                statement,
+                id,
+                source,
+                &right_let_path,
+                &[1],
+                "lowering-if",
+                occurrences,
+                remaining,
+            )?;
+            generated_occurrence(
+                action,
+                statement,
+                id,
+                source,
+                &conditional_path,
+                &[0],
+                "lowering-name",
+                occurrences,
+                remaining,
+            )?;
+            let (yes, no) = if op == CoreOp::And {
+                generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &conditional_path,
+                    &[1],
+                    "lowering-name",
+                    occurrences,
+                    remaining,
+                )?;
+                generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &conditional_path,
+                    &[2],
+                    "lowering-literal",
+                    occurrences,
+                    remaining,
+                )?;
+                (
+                    Arc::new(Expr::Var(right_name.clone())),
+                    Arc::new(Expr::Literal(Value::Bool(false))),
+                )
+            } else {
+                generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &conditional_path,
+                    &[1],
+                    "lowering-literal",
+                    occurrences,
+                    remaining,
+                )?;
+                generated_occurrence(
+                    action,
+                    statement,
+                    id,
+                    source,
+                    &conditional_path,
+                    &[2],
+                    "lowering-name",
+                    occurrences,
+                    remaining,
+                )?;
+                (
+                    Arc::new(Expr::Literal(Value::Bool(true))),
+                    Arc::new(Expr::Var(right_name.clone())),
+                )
+            };
+            Arc::new(Expr::If(Arc::new(Expr::Var(left_name.clone())), yes, no))
+        }
+        _ => unreachable!("only eager derived operators call lower_eager_binary"),
+    };
+    Ok(Arc::new(Expr::Let(
+        left_name,
+        left,
+        Arc::new(Expr::Let(right_name, right, body)),
+    )))
 }
 
 fn statement_kind(statement: &Statement) -> &'static str {
@@ -493,3 +865,7 @@ fn statement_kind(statement: &Statement) -> &'static str {
 #[cfg(test)]
 #[path = "source_adapter_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "source_adapter_operator_tests.rs"]
+mod operator_tests;

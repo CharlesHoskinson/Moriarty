@@ -336,3 +336,16 @@ security approval or language-exit acceptance.
   does not prove the signer controls the account; keep reporting possession as
   unchecked.
 - The product target is ZKIRv3 on Midnight.
+
+### Preserved Sherlock dependency feature exception
+
+The integrated Sherlock backend retains direct exact pins for
+`midnight-zk-stdlib = 2.3.5`, `midnight-proofs = 0.8.3` and
+`midnight-circuits = 7.2.4`, with default features disabled. The workspace
+proofs dependency keeps its existing default feature contract for other
+consumers. In edition 2024 a member cannot disable a workspace dependency's
+enabled defaults, so replacing these entries with workspace inheritance would
+change the feature closure. The versions remain identical to the locked target
+packages. This merge preserves that feature distinction; it does not qualify
+a fresh key, proof or ledger deployment. Frozen raw source snapshots and their
+recorded hashes remain historical artifacts and are not reformatted in place.

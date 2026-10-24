@@ -1,0 +1,46 @@
+## Verdict: **APPROVE**
+
+Reviewer identity: Muse Wonder 1.0 HIGH, independent non-author review. Earlier Opus labels are historical only. No tools, commands, files, or subjects were executed. All proposed Quint checks remain **UNRUN**.
+
+### Coverage acknowledgement
+
+All **28/28 numbered bodies** and the final completion marker were readable in full:
+
+- Bodies 1–9: README, pre-code freezes, public contracts, source-input record, validation proposal, and lossless-delivery record.
+- Bodies 10–22: all 13 complete Quint modules — five `c6Positive*` type modules, two Q41 modules, and six Q42 modules (`Types`, `Inputs`, `ManualExpected`, `Relation`, `Test`, `Runtime`).
+- Bodies 23–27: four complete public Rust production modules — `environment.rs`, `owner_runtime.rs` in PART-A/PART-B, `shared.rs`, and `owner_host.rs`.
+- Body 28: static import/readback record.
+
+Hashes were treated as metadata only; approval rests on the literal readable bodies, not hash-implied readability.
+
+### Core semantic findings
+
+1. **Nonmatch rule is exact.** In Body 20, `q42NormalStep` handles only `Pending` + `Some(cursor)` + `cell.binder != getArg.binder` itself: it builds `C6HEnvGet({...getArg, cursor:nextCursor})`, where `nextCursor = q42Previous(cellArg.previous)`. Record spread preserves `common`, `binder`, `found`, and `status`. `q42Previous` maps `C6EnvNone → C6HNoIndex` and `C6EnvSome(i) → C6HSomeIndex(i)`, so `previous=None` stays `Pending` with absent cursor — `EnvGetEmpty`/Negative is a separate row outside this slice. Rust Body 23 `env_get_cell` agrees: match sets `found`/`Positive`; nonmatch writes only `*cursor = cell.previous`.
+
+2. **Hit/Exit/charge/event composition is genuinely reused.** Matching-binder and non-Pending cases delegate to unchanged `q41NormalStep` (Body 16): hit sets `found=Some(cell.value)`, `status=Positive`, cursor preserved; Exit clears helper and sets `EnvFound{value}` from `pre.helper.found`. Charge (`remaining-1, consumed+1, helper_work+1, helper_visits+visitsArg`, Cell=1/Exit=0) and the full 28-field `q41Event` come from Q41 unchanged. Body 25 `owner_select` orders EnvGet Exit/Failure/Cell/Empty so a `Pending, Some(_)` state selects Cell, consistent with this composition.
+
+3. **General trace retains intermediates with no padding.** `q42TraceStart` seeds `hosts=[pre]`; `q42AppendOne` appends each Applied host/event, sets `finished` only on `BHelperEnvGetExit`, marks `within_slice=false` on `OutsidePositiveSlice` without appending, and is a no-op once `finished`. `q42ComputeTrace` is a bounded fold over that. Tests assert `q42ComputeTrace(one,5) == q42OneExpected` and `(two,6) == q42TwoExpected`, proving post-completion folds add no stutter hosts/events.
+
+4. **One-miss projection is closed.** `q42ObserveMissHitExit` requires `finished`, `within_slice`, exactly 4 hosts and 3 events, and returns exactly `before/after_miss/after_hit/after_exit/events`. The length-plus-finished condition logically forces Cell, Cell, Exit with the second Cell a hit: a first-step hit would finish at step 2 and the third fold would exit the slice.
+
+5. **Two-miss case retains 5 hosts / 4 events.** `q42TwoExpected` (Body 19) lists `q42TwoHopBefore, After1..After4` and four ordered events, asserted by exact whole-trace equality in Body 21.
+
+6. **Discrimination is real, not charge-only.** The one-hop case routes cursor 2→0, skipping off-chain matching cell 1 (`binder 0, value Data(0)`); an index−1 walk would hit cell 1 with the wrong value. The two-hop case routes 3→1→0, skipping off-chain matching cell 2. Full-Host plus full-event equality in Body 21 therefore distinguishes previous-pointer traversal from index subtraction, early found/status mutation, wrong work/visits, and lost retained tables/frames/arenas/`seg_base`. Prefix assertions (1-step, 2-step) and `q42TraceOwnerLaws` corroborate intermediate retention and outside-write preservation.
+
+### Explicit missing premises (not established, correctly not claimed)
+
+- Synthetic carriers in Bodies 18–19 are structurally typed **UNADMITTED**: admission, reachability, and StepInv are not established for them.
+- The actual nested-Let cohort (`Let x=7; Let y=Var x; Var x`, AST `[1,1]`, source Body 4 / contract Body 5) still requires separate real Owner admission/capture and an independent comparison; the synthetic program/bounds deliberately differ and cannot substitute.
+- Mathematical-int → `u128`/`usize`/byte host fit, in-range env reads, read/validation/physical checks, resource sufficiency, normal owner selection, and StepInv remain external premises.
+- Same-author manual expected data (Bodies 2–3, frozen before the producer) are not an independent oracle or vote. No old actual/private expected input was used.
+- No new guard/refusal/auth policy, native/refinement, circuit, stagenet, or EARS claim follows. Full transitive unrelated admission/refusal/family implementations in Bodies 24–26 are supplied context, not newly verified.
+
+### Per-operation conditional eligibility (Root separately selects; none authorized to auto-run)
+
+1. **01-newTraversalRuntimeFrontend** — conditionally eligible as proposed: exact argv/cwd/environment, exit 0 with empty stdout/stderr, subject to all 4688 pre/post pins unchanged. Covers the runtime import closure; Test/ManualExpected closure is only exercised by Op 02.
+2. **02-twoExactTraversalTests** — eligible **only after Op 01 PASS**. The `--match` regex exactly names the two runs present in Body 21 (`q42PointerTraversalCompleteHostsAndEventsTest`, `q42TraversalPrefixesAndFiveKeyWindowTest`); predicate requires exactly those two passing, one sample each, no ignored/failed/other names.
+3. **03-oneThreeStepTraversalRun** — eligible **only after Op 02 PASS and a separate Root selection**: fresh empty ITF path, exactly one 4-state/3-event trace with full Hosts retained, durable raw freeze before any comparison; CLI witness-counter claims only if the full text actually reports one.
+
+Sequence constraints preserved: strict 1→2→3, no `helper.main`, no old passing prefix replay, no retry or cap raise. Retaining/adapting the existing ordinary capture caller remains pending and separate, with `helper.capture` only, fresh-path and raw-durability requirements intact.
+
+**APPROVE** — for the Q42 nonmatching-traversal positive slice exactly as scoped above.

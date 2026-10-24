@@ -55,6 +55,7 @@ MAX_CONFIGURATION_BYTES = 8192
 MAX_NESTING = 32
 MAX_TERM_BYTES = 4096
 MAX_CAPTURES = 64
+F03_MAX_CAPTURES = 95
 MAX_ARGV = 64
 MAX_ARG_CHARS = 4096
 MAX_RULE_SPANS = 4096
@@ -84,6 +85,9 @@ _LOGGED_OPEN = ('      \\and{SortGeneratedTopCell{}}(', '          /* term: */')
 _LOGGED_CLOSE = ('      \\and{SortGeneratedTopCell{}}(', '          /* predicate: */',
                  '          \\top{SortGeneratedTopCell{}}(),', '          /* substitution: */',
                  '          \\top{SortGeneratedTopCell{}}()', '      ))')
+_INLINE_MAP_KEY_INJ = re.compile(
+    r'( *)/\* Inj: \*/ inj\{SortInt\{\}, SortKItem\{\}\}\(\\dv\{SortInt\{\}\}\("(-?[0-9]+)"\)\),'
+)
 _COUNTER = b"Lbl'-LT-'generatedCounter'-GT-'"
 _ENGINE_VALUED = frozenset({'--module', '--pattern', '--output', '--depth', '--smt',
                             '--log-format', '--log-entries'})
@@ -158,6 +162,23 @@ def _term_text(text, label):
     _nesting(text, label)
 
 
+_K_ITEM_CONSTRUCTORS = frozenset({
+    'uiRun', 'uiEval', 'uiRet', 'uiPush', 'uiInvoke', 'uiEnter',
+    'uiBound', 'uiCases', 'uiCaseResult', 'uiPrimResult', 'uiError',
+})
+
+
+def _single_k_item(head):
+    """Admit a multiline <k> head only when it parses as one bounded KItem constructor term."""
+    if len(head) > MAX_TERM_BYTES:
+        return False
+    try:
+        node = _TERMS.parse_term(head)
+    except ValueError:
+        return False
+    return type(node) is tuple and node[0] in _K_ITEM_CONSTRUCTORS
+
+
 def _configuration(text):
     """Bound and admit one kprint configuration; return (decoder text, unit-tail note)."""
     if type(text) is not str:
@@ -178,7 +199,8 @@ def _configuration(text):
     content = text[start + 3:end] if single else ''
     head, separator, tail = content.partition(' ~> ')
     if (text.count('~>') != 1 or not separator or not tail.startswith('.K') or tail[2:].strip()
-            or not head.strip() or head.strip() == '.K' or '\n' in head.strip()):
+            or not head.strip() or head.strip() == '.K'
+            or ('\n' in head.strip() and not _single_k_item(head))):
         raise ValueError('actual-format gap: K sequence other than one <k> item with .K unit tail')
     return (text[:start + 3] + head + tail[2:] + text[end:],
             dict(rule='one <k> item X printed "X ~> .K" (kseq(X, dotk())) reduced to X',
@@ -296,8 +318,10 @@ def _probe(probe, label):
             _receipt(probe.get('print_receipt'), PRINT_RECEIPT_KEYS, 'print'))
 
 
-def _captures(captures):
-    if type(captures) is not list or not captures or len(captures) > MAX_CAPTURES:
+def _captures(captures, *, max_captures=MAX_CAPTURES):
+    if type(max_captures) is not int or not 1 <= max_captures <= F03_MAX_CAPTURES:
+        raise ValueError('max_captures must be an int between 1 and F03_MAX_CAPTURES')
+    if type(captures) is not list or not captures or len(captures) > max_captures:
         raise ValueError('ordered complete post-startup captures required')
     receipts = []
     for index, capture in enumerate(captures):
@@ -476,14 +500,33 @@ def _step(raw_log, state_kore, configuration, engine, printer, *, source_path, s
     return dict(decoded_log=decoded, applied=entry, rule=rule, gaps=list(dict.fromkeys(gaps)))
 
 
+def _logged_map_key_line(line):
+    """Render an inline SortInt map-key injection in kore-exec's wrapped On-configuration form."""
+    match = _INLINE_MAP_KEY_INJ.fullmatch(line)
+    if match is None:
+        return ' ' * 10 + line
+    indent = ' ' * (10 + len(match[1]))
+    return (
+        f'{indent}/* Inj: */ inj{{SortInt{{}}, SortKItem{{}}}}(\n'
+        f'{indent}    \\dv{{SortInt{{}}}}("{match[2]}")\n'
+        f'{indent}),'
+    )
+
+
 def _logged_input_gaps(entry, input_kore):
-    """Require the logged On-configuration term to be the input Kore bytes, re-indented."""
+    """Require the logged On-configuration term to match the re-indented input Kore term."""
     if entry is None or len(input_kore) > MAX_KORE_BYTES or not input_kore.isascii():
         return ['logged-configuration-is-not-input-kore']
-    term = [' ' * 10 + line for line in input_kore.decode('ascii').split('\n')]
-    term[-1] += ','
-    expected = '\n'.join(_LOGGED_OPEN + tuple(term) + _LOGGED_CLOSE) + '\n'
-    return [] if entry['configuration_text'] == expected else [
+    lines = input_kore.decode('ascii').split('\n')
+    inline_term = [' ' * 10 + line for line in lines]
+    inline_term[-1] += ','
+    wrapped_term = [_logged_map_key_line(line) for line in lines]
+    wrapped_term[-1] += ','
+    expected = {
+        '\n'.join(_LOGGED_OPEN + tuple(inline_term) + _LOGGED_CLOSE) + '\n',
+        '\n'.join(_LOGGED_OPEN + tuple(wrapped_term) + _LOGGED_CLOSE) + '\n',
+    }
+    return [] if entry['configuration_text'] in expected else [
         'logged-configuration-is-not-input-kore']
 
 
@@ -618,13 +661,14 @@ def decode_startup_probe(probe, *, post_startup_configuration, entry_k, source_p
 
 
 def decode_capture(case_id, entry_k, captures, *, source_path, rule_spans=None,
-                   terminal_probe=None, startup_probe=None, run_input=None):
+                   terminal_probe=None, startup_probe=None, run_input=None,
+                   max_captures=MAX_CAPTURES):
     """Join observed incoming spans with supplied adjacent kprint cells and their receipts."""
     if type(case_id) is not str or not case_id or len(case_id) > 64:
         raise ValueError('case_id and separately retained entry_k text required')
     _term_text(entry_k, 'entry_k')
     _source(source_path)
-    receipts = _captures(captures)
+    receipts = _captures(captures, max_captures=max_captures)
     spans = _spans(rule_spans, source_path)
     terminal_receipts = _probe(terminal_probe, 'terminal') if terminal_probe is not None else None
     startup_receipts = _probe(startup_probe, 'startup') if startup_probe is not None else None

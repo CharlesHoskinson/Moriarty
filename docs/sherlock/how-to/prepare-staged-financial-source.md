@@ -1,0 +1,13 @@
+# Prepare staged financial source
+
+Use this boundary when you need checked, immutable `/2` source and its source-derived plan for a future financial consumer. It does not create a financial owner admission, genesis image or execution.
+
+1. Author source accepted by the actual `mori_core::stage::load` grammar and validation. The checked public consumer test in `crates/mori-core/tests/fin_staged_public_api.rs` is the observed example; it includes stage-legal state/action and program/action shared spellings and a nonempty typed input.
+2. Supply an explicit `LayoutSchemaC` and `FinCapacitiesC`. The external test demonstrates construction through public `shared` types. Its finite values are fixture parameters, not universal defaults or an authorization policy.
+3. Call `mori_core::sherlock::helper_machine::shared::prepare_fin_staged_source(source, &layout, &caps)`. If you already have a sealed `stage::StagedProgram`, use `prepare_fin_staged_program`. Handle `FinStagedPrepareError::Stage` for source validation and `::Bind` for binding/capacity errors. Stage validation runs first; binding checks name rows, name bytes, states, then assets.
+4. Inspect `program()`, `stage_plan()`, `program_hash()`, `plan_hash()`, `bound_source()` and `fin_plan()`. `action()`, `action_inputs()`, `statement()` and `expression()` return read-only optional references; missing/out-of-range lookups return `None`. Source-logical plan costs are not B fuel or an independently established B schedule.
+5. Keep the prepared wrapper as the paired sealed source. Its immutable fields and constructor prevent inserting a caller-authored plan. Do not substitute standalone `FinAdmittedExtras` as admission or use `same_source` to bind a target/configuration/preparation context; sufficient layout limits are not retained by that comparison.
+
+[The current actual result](../../results/sherlock-financial-staged-source-producer-20261020/README.md) compiled the real normal/cfg(test) Core and passed9 internal and2 genuine external source tests. The external test used the new normal rlib and public types, with no production stub or SDK build. It is not a default-backend/Cargo workspace build, public financial CLI invocation, owner step or ledger observation. No compiled binary is distributed in that evidence archive.
+
+The next financial consumer still needs real admission, initialized financial genesis, recorded environment/effects, all20XFin and retained invariants, continuations and target phase mapping. Full financial outcomes, native/proof/target and EARS remain open. Project review receipts are internal evidence, not permissions required from a public developer.

@@ -1,0 +1,211 @@
+                    values=array.array('i');values.frombytes(data);received.extend(values)
+                need(len(received)==1,'exact one seccomp listener required');listener=received[0]
+                sel.register(listener,selectors.EVENT_READ,('network',None))
+                for name,stream,log in zip(('stdout','stderr'),(proc.stdout,proc.stderr),logs):
+                    os.set_blocking(stream.fileno(),False);sel.register(stream,selectors.EVENT_READ,(name,log))
+                while len(sel.get_map())>1 or proc.poll() is None:
+                    need(time.monotonic()-start<=v['wall_seconds'],'wall cap '+phase);group.check()
+                    for key,_ in sel.select(.05):
+                        name,log=key.data
+                        if name=='network':
+                            need(not network_pending(listener),'network syscall attempt: stop whole cgroup')
+                            continue
+                        chunk=os.read(key.fileobj.fileno(),65536)
+                        if not chunk:sel.unregister(key.fileobj);continue
+                        counts[name]+=len(chunk);need(counts[name]<=v[name+'_bytes'],'log cap hit '+phase+' '+name)
+                        log.write(chunk)
+                need(proc.wait()==0,'phase exit nonzero '+phase);group.check()
+                need(not network_pending(listener),'late network notification')
+                need(read_numbers(group.path/'cgroup.events').get('populated',0)==0,'background descendants remain after phase process')
+                records.append({'argv':args,'audit_worker':audit,'child_exit':0})
+            finally:
+                if sys.exc_info()[0] is not None:signal.setitimer(signal.ITIMER_REAL,0)
+                if proc is not None and proc.poll() is None:group.kill();proc.wait(timeout=5)
+                if listener is not None:os.close(listener)
+                parent.close();child.close();os.close(fd);os.close(stage_fd)
+                if token_fd>=0:os.close(token_fd)
+                sel.close()
+                for log in logs:log.close()
+        return {'phase':phase,'processes':records,'environment':cargo_env(c,phase),'wall_seconds':time.monotonic()-start,'log_bytes':counts}
+    finally:
+        if sys.exc_info()[0] is not None:signal.setitimer(signal.ITIMER_REAL,0)
+        group.close()
+
+
+def staging_destination(row,c):
+    registry='index.crates.io-1949cf8c6b5b557f';db='git/db/midnight-ledger-b2f9c59d942dfdca/'
+    dest=str(relative(row['destination_relative_to_future_home']));src=str(absolute(row['source']));kind=row['category']
+    if kind=='registry-index':
+        prefix='registry/index/'+registry+'/'
+        need(dest==prefix+'config.json' or dest.startswith(prefix+'.cache/'),'index destination class')
+        need(src=='/home/charl/.cargo/'+dest,'index source location')
+    elif kind=='registry-archive-container':
+        prefix='registry/cache/'+registry+'/'
+        need(dest.startswith(prefix) and '/' not in dest[len(prefix):] and dest.endswith('.crate'),'archive destination class')
+        acquired={p['path'] for p in c['acquired_archives']}
+        need(src=='/home/charl/.cargo/'+dest or src in acquired,'archive source location')
+        need(Path(src).name==Path(dest).name,'archive filename mapping')
+    elif kind in ('git-db-metadata','git-loose-container-known-commit-tree-or-nonpayload-source','git-loose-unknown','git-pack-container-or-index'):
+        need(dest.startswith(db) and src=='/home/charl/.cargo/'+dest,'Git DB source/destination')
+        tail=dest[len(db):]
+        if kind=='git-db-metadata':
+            need(tail in ('HEAD','config','FETCH_HEAD','description','hooks/README.sample','info/exclude') or re.fullmatch(r'refs/commit/[0-9a-f]{40}',tail) is not None,'Git metadata destination')
+        elif kind.startswith('git-loose'):
+            need(re.fullmatch(r'objects/[0-9a-f]{2}/[0-9a-f]{38}',tail) is not None,'loose object destination')
+        else:need(re.fullmatch(r'objects/pack/pack-[0-9a-f]{40}\.(pack|idx|rev)',tail) is not None,'Git pack destination')
+    else:raise Refusal('unsupported staging category')
+    return dest
+
+def freeze_inputs(c):
+    m=jload(c['bindings']['staging']['path']);rows=[];unknown=0
+    need(len(m['inputs'])==2243,'staging membership changed')
+    from collections import Counter
+    counts=Counter(row['category'] for row in m['inputs'])
+    need(counts=={'registry-index':1735,'registry-archive-container':423,'git-db-metadata':20,'git-loose-container-known-commit-tree-or-nonpayload-source':6,'git-loose-unknown':52,'git-pack-container-or-index':7},'staging category counts changed')
+    destinations=set()
+    for p in m['inputs']:
+        destination=staging_destination(p,c);need(destination not in destinations,'duplicate staging destination');destinations.add(destination)
+        src=p['source'];before=stable_stat(src);need(before['size']==p['bytes'],'staging size changed')
+        got=digest(src)
+        acquired={entry['path']:entry['sha256'] for entry in c['acquired_archives']}
+        if src in acquired:need(got==acquired[src],'acquired archive pin changed')
+        if p.get('sha256'):need(got==p['sha256'],'staging hash changed')
+        else:
+            need(p['category']=='git-loose-unknown','unclassified first hash');unknown+=1
+        relative(p['destination_relative_to_future_home'])
+        rows.append({'source':src,'destination':p['destination_relative_to_future_home'],'sha256':got,'stat':before})
+    need(unknown==52,'unknown container count changed')
+    receipt(c,'A0_FREEZE.json',{'observation':'FIRST CURRENT raw-container observation under separate AM-4 consent; P10 remains historical BLOCKED','inputs':rows},'A0')
+
+def stage(c):
+    frozen=jload(Path(c['paths']['packet'])/'A0_FREEZE.json');total=0;root=Path(c['paths']['source_home'])
+    need(not any(root.iterdir()),'source-home not empty')
+    source_rows=jload(c['bindings']['staging']['path'])['inputs']
+    originals={staging_destination(p,c):p for p in source_rows}
+    need(len(frozen['inputs'])==len(originals) and {p['destination'] for p in frozen['inputs']}==set(originals),'staging receipt membership differs')
+    for p in frozen['inputs']:
+        need(p['source']==originals[p['destination']]['source'],'staging receipt source differs')
+        src=Path(p['source']);need(stable_stat(src)==p['stat'],'source stat changed')
+        dest=root/relative(p['destination']);need(not dest.exists(),'duplicate staging destination');dest.parent.mkdir(parents=True,exist_ok=True)
+        before=stable_stat(src);total+=before['size'];need(total<=268435456,'A total copy bytes')
+        with open(src,'rb') as inf,open(dest,'xb') as outf:
+            while b:=inf.read(CHUNK):outf.write(b)
+        need(digest(dest)==p['sha256'] and stable_stat(src)==before,'copy identity changed')
+    receipt(c,'A_COPY.json',{'files':len(frozen['inputs']),'bytes':total},'A')
+
+def approved_includes(c):
+    """Exact literal include inventory plus the owner's twelve digest entries."""
+    need(c['bindings']['embedded']['sha256']=='ac397cfd5e0952b01ae1b892997808e95e13d3ac10ecff2e90418e484fab57d7','unreviewed embedded inventory')
+    need(c['bindings']['amendments']['sha256']=='3676da94b6ad533a2276271c55c3c47b8c4473170b1200cf0dcae2b362fbda5d','unreviewed AM-1 through AM-4 bytes')
+    amendments=jload(c['bindings']['amendments']['path']);inventory=jload(c['bindings']['embedded']['path'])['inputs']
+    roots={g['commit']:g['relative_root'] for g in c['git_checkouts']};expected={};digests=set()
+    for item in inventory:
+        if 'git_tree_entry' in item:
+            commit=item['git_commit'];rel=item['git_relative_target'];path=str(PurePosixPath(roots[commit])/relative(rel))
+            expected[path]={'relative':path,'algorithm':'git-blob','digest':item['git_tree_entry']['blob'],'source_identifier':commit+':'+rel}
+        elif 'archive_member' in item:
+            member=item['archive_member'];parts=relative(member).parts
+            matches=[r for r in c['registry_roots'] if Path(r['source_relative']).name==parts[0] and r['package_checksum']==item['locked_archive_sha256']]
+            need(len(matches)==1,'include archive identity mapping');r=matches[0]
+            path=str(PurePosixPath(r['source_relative']).joinpath(*parts[1:]))
+            expected[path]={'relative':path,'algorithm':'archive-member','digest':r['package_checksum'],'source_identifier':Path(r['archive']).name+':'+member}
+        else:
+            need(item.get('enclosing_item',{}).get('name')=='exptfile' and 'conservative_static_tree_entries' in item,'unhandled include site')
+    am=amendments['AM-3'];need(am['git_commit']=='04c9c5d9bcebb8d4427d8589fb54d58a55599c14','AM-3 commit')
+    names={'zswap/static/'+op+'.'+kind+'.sha256' for op in ('spend','output','sign') for kind in ('prover','verifier','bzkir')}
+    names|={'ledger/static/dust/spend.'+kind+'.sha256' for kind in ('prover','verifier','bzkir')}
+    need(len(am['digest_files'])==12 and {x['path'] for x in am['digest_files']}==names,'exact AM-3 digest membership')
+    for item in am['digest_files']:
+        rel=item['path'];path=str(PurePosixPath(roots[am['git_commit']])/relative(rel));digests.add(path)
+        expected[path]={'relative':path,'algorithm':'git-blob','digest':item['git_blob'],'source_identifier':am['git_commit']+':'+rel}
+    supplied={x['relative']:x for x in c['includes']}
+    need(supplied==expected,'include map differs from owner raw/digest identities')
+    need(not any(p.endswith(('.zkir','.bzkir','.prover')) for p in expected),'excluded raw payload include')
+    return digests
+
+def verify_raw(c):
+    digest_paths=approved_includes(c)
+    root=Path(c['paths']['source_home']);expected=set();stamps=[]
+    for r in c['registry_roots']:
+        archive=root/relative(r['archive']);need(digest(archive)==r['package_checksum'],'archive identity')
+        dest=root/relative(r['source_relative']);seen=set()
+        with tarfile.open(archive,'r:gz') as tf:
+            for m in tf:
+                parts=relative(m.name).parts;need(parts[0]==dest.name,'archive package root')
+                rel=Path(*parts[1:])
+                if m.isdir():continue
+                need(m.isfile() and not m.issparse(),'unsupported archive member type')
+                need(str(rel) not in seen,'duplicate archive member');seen.add(str(rel))
+                p=dest/rel;regular(p);need(p.stat().st_size==m.size,'archive member size')
+                member=tf.extractfile(m);need(member is not None,'archive stream missing');h=hashlib.sha256()
+                while b:=member.read(CHUNK):h.update(b)
+                need(digest(p)==h.hexdigest(),'extracted file differs from archive');expected.add(str(p.relative_to(root)))
+    for g in c['git_checkouts']:
+        base=root/relative(g['relative_root']);regular_rows={row['relative'] for row in g['files'] if row['mode']!=GIT_SYMLINK_MODE}
+        for row in g['files']:
+            p=base/relative(row['relative'])
+            if row['mode']==GIT_SYMLINK_MODE:
+                # Proposed AM-4 extension: link text only; the target is never opened, stat'ed or followed.
+                text,blob=link_identity(p);need(blob==row['blob'],'Git symlink text identity')
+                link_target(row['relative'],text,regular_rows);expected.add(str(p.relative_to(root)));continue
+            need(digest(p,True)==row['blob'],'Git tree blob identity')
+            need(bool(p.stat().st_mode&0o111)==(row['mode']=='100755'),'Git executable mode mismatch');expected.add(str(p.relative_to(root)))
+    for row in c['includes']:
+        p=root/relative(row['relative']);need(str(p.relative_to(root)) in expected,'include outside authenticated materialization')
+        if row['algorithm']=='git-blob':need(digest(p,True)==row['digest'],'include Git target mismatch')
+        else:
+            archive_name,member=row['source_identifier'].split(':',1)
+            matches=[r for r in c['registry_roots'] if Path(r['archive']).name==archive_name and r['package_checksum']==row['digest']]
+            need(len(matches)==1,'include archive origin differs')
+            need(str(PurePosixPath(matches[0]['source_relative']).joinpath(*relative(member).parts[1:]))==row['relative'],'include member path differs')
+        if row['relative'] in digest_paths:
+            with open(p,'rb') as f:prefix=f.read(64)
+            need(len(prefix)==64 and all(ch in b'0123456789abcdef' for ch in prefix),'AM-3 first 64 bytes are not lowercase hex')
+    staged=jload(Path(c['paths']['packet'])/'A0_FREEZE.json')['inputs']
+    for row in staged:need(digest(root/row['destination'])==row['sha256'],'staged input modified');expected.add(row['destination'])
+    for row in c['expected_generated_files']:
+        p=root/relative(row['relative']);regular(p);expected.add(row['relative'])
+        if row['kind']=='cargo-ok':stamps.append({'path':row['relative'],'sha256':digest(p),'bytes':p.stat().st_size})
+        # Cargo bookkeeping is recorded as generated, not authenticated source.
+    actual=tree_hashes(root,declared_links(c));need(set(actual)==expected,'unexpected or missing source-home file membership')
+    receipt(c,'C_RAW_IDENTITIES.json',{'files':actual,'cargo_ok':stamps,'raw_only':True},'C')
+
+def chmod_nofollow(path,directory):
+    # fd-based on an O_NOFOLLOW object, so a swapped-in symlink refuses instead of redirecting.
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC|(os.O_DIRECTORY if directory else 0))
+    try:
+        s=os.fstat(fd);need(stat.S_ISDIR(s.st_mode) if directory else stat.S_ISREG(s.st_mode),'freeze object type changed: '+str(path))
+        os.fchmod(fd,0o555 if directory else stat.S_IMODE(s.st_mode)&~0o222)
+    finally:os.close(fd)
+
+def freeze_source(c):
+    root=Path(c['paths']['source_home']);links=declared_links(c);expected=jload(Path(c['paths']['packet'])/'C_RAW_IDENTITIES.json')['files']
+    need(tree_hashes(root,links)==expected,'source-home changed before freeze')
+    # chmod is supplementary. E/F use read-only bind mounts independently.
+    # Declared Git symlinks are never chmod'ed and no chmod here can follow a link.
+    files,_,dirs=walk_tree(root,links)
+    for p in files:chmod_nofollow(p,False)
+    for d in sorted(dirs,key=lambda x:len(x.parts),reverse=True):chmod_nofollow(d,True)
+    chmod_nofollow(root,True)
+    receipt(c,'D_FREEZE.json',{'H_S':hashlib.sha256(json_bytes(expected)).hexdigest(),'files':expected},'D')
+
+def frozen_source(c):
+    frozen=jload(Path(c['paths']['packet'])/'D_FREEZE.json');need(tree_hashes(Path(c['paths']['source_home']),declared_links(c))==frozen['files'],'H_S content/membership changed');return frozen
+
+def unit_identity(package):return package['name']+' '+package['version']+' ('+str(package['source'])+')'
+
+def metadata_check(c):
+    frozen_source(c);m=jload(Path(c['paths']['packet'])/'E.stdout');units=jload(c['bindings']['host_units']['path'])['units'];allowed={(u['package_id'],u['kind'],u['path']) for u in units}
+    need(len(units)==101 and sum(bool(u['sdk_origin_candidate']) for u in units)==8,'owner 8+93 host superset')
+    nodes={n['id']:n for n in m['resolve']['nodes']};observed=[];roots={}
+    for pkg in m['packages']:
+        if pkg['id'] not in nodes:continue
+        root=Path(pkg['manifest_path']).parent;roots[pkg['id']]=str(root)
+        for target in pkg['targets']:
+            kind='build-script' if 'custom-build' in target['kind'] else 'proc-macro' if 'proc-macro' in target['kind'] else None
+            if kind:
+                rel=str(Path(target['src_path']).relative_to(root));key=(unit_identity(pkg),kind,rel)
+                need(key in allowed,'resolved host unit outside bound superset');observed.append({'package':pkg['id'],'identity':key,'root':str(root),'name':pkg['name'],'target_name':target['name']})
+        fs=nodes[pkg['id']]['features']
+        if pkg['name']=='midnight-onchain-runtime':need('vendored' in fs,'vendored missing')
+        if pkg['name']=='lazy_static':need('spin_no_std' not in fs,'spin_no_std forbidden')

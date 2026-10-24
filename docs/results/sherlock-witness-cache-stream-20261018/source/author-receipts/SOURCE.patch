@@ -1,0 +1,622 @@
+--- a/crates/mori-core/src/sherlock/helper_machine/witness_plan/dag.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/witness_plan/dag.rs
+@@ -114,7 +114,7 @@
+     Ok(result)
+ }
+ 
+-fn node_failure(node: &Node, kind: FailureKind) -> WitnessFailure {
++pub(super) fn node_failure(node: &Node, kind: FailureKind) -> WitnessFailure {
+     WitnessFailure { location: node.location, node: Some(node.id), kind }
+ }
+ fn field_values(node: &Node, fields: &[FieldBinding], args: &[&SlotValue])
+@@ -133,7 +133,7 @@
+     Ok(result)
+ }
+ 
+-fn operation(plan: &WitnessPlan, input: &HostSnapshot, node: &Node, args: &[&SlotValue], diagnostics: &mut HostDiagnostics)
++pub(super) fn operation(plan: &WitnessPlan, input: &HostSnapshot, node: &Node, args: &[&SlotValue], diagnostics: &mut HostDiagnostics)
+     -> Result<SlotValue, WitnessFailure>
+ {
+     let wrong = || node_failure(node, FailureKind::WrongOperation);
+@@ -206,8 +206,8 @@
+     })
+ }
+ 
+-pub(super) fn evaluate(plan: &WitnessPlan, input: &HostSnapshot)
+-    -> Result<WitnessEvaluation, WitnessFailure>
++pub(super) fn validate(plan: &WitnessPlan)
++    -> Result<Vec<NodeId>, WitnessFailure>
+ {
+     let at = Location::new("plan", None, "structure");
+     if plan.format != "sherlock-host-witness-plan/1" { return Err(fail(at, FailureKind::WrongOperation)); }
+@@ -230,6 +230,14 @@
+         }
+     }
+     if reads.iter().any(|count| *count != 1) { return Err(fail(at, FailureKind::IncompleteBindings)); }
++    Ok(schedule)
++}
++
++pub(super) fn evaluate(plan: &WitnessPlan, input: &HostSnapshot)
++    -> Result<WitnessEvaluation, WitnessFailure>
++{
++    let at = Location::new("plan", None, "structure");
++    let schedule = validate(plan)?;
+     let mut slots: Vec<Option<SlotValue>> = vec![None; plan.nodes.len()];
+     let mut diagnostics = HostDiagnostics::default();
+     for id in schedule {
+--- a/crates/mori-core/src/sherlock/helper_machine/witness_plan/strategy.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/witness_plan/strategy.rs
+@@ -0,0 +1,205 @@
++//! Optional memoization and scratch-slot lifetimes for the existing witness DAG.
++//!
++//! This executes only `dag::operation`, never B/source transitions. Exact typed
++//! keys use full equality, not hashes: program/profile/layout/admission, graph,
++//! binding paths/types, and each operation's complete immutable argument values.
++//! Every Read and the unchanged plan validation still execute on warm calls.
++//! A cache retains one graph, with one most-recent argument/result entry per
++//! non-Read node. There is no global cache, eviction budget or admission policy.
++//! Logical slots/operations below are not measured bytes, allocator traffic,
++//! total clones, elapsed time, B work, or a physical-memory improvement claim.
++use super::*;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum SlotStorage { RetainAll, LastUse }
++
++#[derive(Clone, Debug, PartialEq, Eq, Default)]
++pub struct StrategyDiagnostics {
++    /// Every node in the original stable order, including memo hits.
++    pub scheduled_nodes: usize,
++    pub cache_hits: usize,
++    /// Only non-Read misses; all Read nodes always execute separately.
++    pub cache_misses: usize,
++    pub scope_reset: bool,
++    /// Values cloned out of memo entries, excluding key/argument/other clones.
++    pub copied_cached_slot_values: usize,
++    pub reclaimed_slots: usize,
++    /// Scratch slots only; excludes retained raw records, plan, sink and cache.
++    pub peak_live_slots: usize,
++    pub retained_slots_at_publication: usize,
++    pub cached_value_slots: usize,
++    /// Top-level argument cells retained as exact keys, not recursive bytes.
++    pub cached_argument_slots: usize,
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct StrategyEvaluation {
++    /// Complete decoded output; HostDiagnostics counts only executed operations.
++    /// `retained_slots` is the scratch count immediately before publication.
++    pub witness: WitnessEvaluation,
++    pub scheduling: StrategyDiagnostics,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++struct BindingShape {
++    id: BindingId,
++    path: InputPath,
++    value_type: SourceType,
++    location: Location,
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++struct CacheScope {
++    format: &'static str,
++    lifetime: LifetimeUnit,
++    admission: AdmissionSnapshot,
++    nodes: Vec<Node>,
++    bindings: Vec<BindingShape>,
++}
++impl CacheScope {
++    fn new(plan: &WitnessPlan, input: &HostSnapshot) -> Self {
++        Self {
++            format: plan.format, lifetime: plan.lifetime,
++            admission: input.admission.clone(), nodes: plan.nodes.clone(),
++            bindings: plan.inputs.iter().map(|b| BindingShape {
++                id: b.id, path: b.path, value_type: b.value_type, location: b.location,
++            }).collect(),
++        }
++    }
++}
++struct MemoEntry {
++    /// Full values preserve all raw tags, ordered multiplicity and occurrences.
++    arguments: Vec<SlotValue>,
++    value: SlotValue,
++}
++#[derive(Default)]
++pub struct WitnessCache {
++    scope: Option<CacheScope>,
++    entries: Vec<Option<MemoEntry>>,
++}
++impl WitnessCache {
++    pub fn clear(&mut self) { self.scope = None; self.entries.clear(); }
++    pub fn value_slots(&self) -> usize {
++        self.entries.iter().filter(|entry| entry.is_some()).count()
++    }
++    pub fn argument_slots(&self) -> usize {
++        self.entries.iter().filter_map(Option::as_ref).map(|e| e.arguments.len()).sum()
++    }
++    fn bind(&mut self, plan: &WitnessPlan, input: &HostSnapshot) -> bool {
++        let scope = CacheScope::new(plan, input);
++        if self.scope.as_ref() == Some(&scope) { return false; }
++        self.scope = Some(scope);
++        self.entries = (0..plan.nodes.len()).map(|_| None).collect();
++        true
++    }
++}
++
++pub fn evaluate_last_use(plan: &WitnessPlan, input: &HostSnapshot)
++    -> Result<StrategyEvaluation, WitnessFailure>
++{
++    evaluate_with_storage(plan, input, SlotStorage::LastUse, None)
++}
++pub fn evaluate_memoized(plan: &WitnessPlan, input: &HostSnapshot,
++    cache: &mut WitnessCache, storage: SlotStorage)
++    -> Result<StrategyEvaluation, WitnessFailure>
++{
++    evaluate_with_storage(plan, input, storage, Some(cache))
++}
++
++/// Preserve the baseline's complete validation, order and operation semantics.
++/// Last-use only releases scratch values after their final ordered consumer;
++/// boundary live-outs remain through publication. Cached copies are accounted
++/// separately and are not reported as reclaimed scratch or semantic savings.
++pub fn evaluate_with_storage(plan: &WitnessPlan, input: &HostSnapshot,
++    storage: SlotStorage, mut cache: Option<&mut WitnessCache>)
++    -> Result<StrategyEvaluation, WitnessFailure>
++{
++    let at = Location::new("plan", None, "structure");
++    let schedule = dag::validate(plan)?;
++    let mut scheduling = StrategyDiagnostics::default();
++    if let Some(memo) = cache.as_deref_mut() {
++        scheduling.scope_reset = memo.bind(plan, input);
++    }
++    let mut release = vec![Vec::new(); schedule.len()];
++    if storage == SlotStorage::LastUse {
++        for definition in &plan.definitions {
++            // validate() compared these exact definitions to the existing
++            // recomputation; every non-live-out last-use is a schedule position.
++            if !definition.live_out {
++                release[definition.last_use_order].push(definition.value);
++            }
++        }
++    }
++    let mut slots: Vec<Option<SlotValue>> = vec![None; plan.nodes.len()];
++    let mut diagnostics = HostDiagnostics::default();
++    let mut live = 0;
++    for (position, id) in schedule.into_iter().enumerate() {
++        let node = &plan.nodes[id.0];
++        let result = {
++            let mut args = Vec::new();
++            for dependency in &node.dependencies {
++                let value = slots.get(dependency.node.0).and_then(Option::as_ref)
++                    .ok_or_else(|| dag::node_failure(node, FailureKind::MissingDependency {
++                        dependency: dependency.node,
++                    }))?;
++                if value.value_type() != dependency.value_type {
++                    return Err(dag::node_failure(node, FailureKind::WrongType {
++                        expected: dependency.value_type, actual: value.value_type(),
++                    }));
++                }
++                args.push(value);
++            }
++            // Reads are never bypassed: InputChanged/type/location behavior is
++            // the existing operation's behavior, including warm evaluations.
++            let memoizable = !matches!(node.operation, Operation::Read(_));
++            let cached = if memoizable {
++                cache.as_deref().and_then(|memo| memo.entries[id.0].as_ref())
++                    .filter(|entry| entry.arguments.len() == args.len()
++                        && entry.arguments.iter().zip(&args).all(|(a, b)| a == *b))
++            } else { None };
++            if let Some(entry) = cached {
++                scheduling.cache_hits += 1;
++                scheduling.copied_cached_slot_values += 1;
++                entry.value.clone()
++            } else {
++                let value = dag::operation(plan, input, node, &args, &mut diagnostics)?;
++                diagnostics.evaluated_nodes += 1;
++                if memoizable {
++                    if let Some(memo) = cache.as_deref_mut() {
++                        scheduling.cache_misses += 1;
++                        memo.entries[id.0] = Some(MemoEntry {
++                            arguments: args.iter().map(|value| (**value).clone()).collect(),
++                            value: value.clone(),
++                        });
++                    }
++                }
++                value
++            }
++        };
++        if result.value_type() != node.output_type {
++            return Err(dag::node_failure(node, FailureKind::WrongType {
++                expected: node.output_type, actual: result.value_type(),
++            }));
++        }
++        slots[id.0] = Some(result);
++        live += 1;
++        scheduling.scheduled_nodes += 1;
++        scheduling.peak_live_slots = scheduling.peak_live_slots.max(live);
++        for dead in &release[position] {
++            if slots[dead.0].take().is_some() {
++                live -= 1;
++                scheduling.reclaimed_slots += 1;
++            }
++        }
++    }
++    diagnostics.retained_slots = live;
++    scheduling.retained_slots_at_publication = live;
++    if let Some(memo) = cache.as_deref() {
++        scheduling.cached_value_slots = memo.value_slots();
++        scheduling.cached_argument_slots = memo.argument_slots();
++    }
++    let Some(SlotValue::Snapshot(decoded)) = slots.get_mut(plan.output.0).and_then(Option::take) else {
++        return Err(fail(at, FailureKind::IncompleteOutputs));
++    };
++    Ok(StrategyEvaluation {
++        witness: WitnessEvaluation { decoded, diagnostics }, scheduling,
++    })
++}
+--- a/crates/mori-core/src/sherlock/helper_machine/witness_plan/stream.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/witness_plan/stream.rs
+@@ -0,0 +1,108 @@
++//! Complete record streaming around the SAME fixed-owner observation interface.
++//!
++//! The library retains no record history. The callback sees a complete borrowed
++//! record, then its raw/materialized buffers are dropped before the next step.
++//! A retaining caller/sink can still retain everything; no measured memory/time
++//! improvement or semantic-prefix/clock theorem is implied by this interface.
++use super::{
++    construct_plan_for, evaluate_with_storage, HostSnapshot, LifetimeUnit,
++    SlotStorage, StrategyEvaluation, WitnessCache, WitnessFailure, WitnessPlan,
++};
++use crate::sherlock::helper_machine::complete_observation::{
++    self as observation, CaptureStepError, ObservedStep, WitnessSide,
++};
++use crate::sherlock::helper_machine::shared::{Admitted, MachineImage};
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct StrategyMaterializedSnapshot {
++    pub raw: HostSnapshot,
++    pub plan: WitnessPlan,
++    pub evaluation: StrategyEvaluation,
++}
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub struct StrategyObservedStep {
++    pub observed: ObservedStep,
++    pub before: StrategyMaterializedSnapshot,
++    pub after: StrategyMaterializedSnapshot,
++}
++pub enum StrategyStepError {
++    Owner(CaptureStepError),
++    Materialization {
++        side: WitnessSide,
++        failure: WitnessFailure,
++        observed: Box<ObservedStep>,
++        completed_before: Option<Box<StrategyMaterializedSnapshot>>,
++    },
++}
++/// Separate before/after lifetime namespaces retain one graph each, not history.
++#[derive(Default)]
++pub struct WitnessRecordCache { before: WitnessCache, after: WitnessCache }
++impl WitnessRecordCache {
++    pub fn clear(&mut self) { self.before.clear(); self.after.clear(); }
++}
++
++pub fn materialize_with_storage(input: &HostSnapshot, lifetime: LifetimeUnit,
++    storage: SlotStorage, cache: Option<&mut WitnessCache>)
++    -> Result<StrategyMaterializedSnapshot, WitnessFailure>
++{
++    let plan = construct_plan_for(input, lifetime)?;
++    let evaluation = evaluate_with_storage(&plan, input, storage, cache)?;
++    Ok(StrategyMaterializedSnapshot { raw: input.clone(), plan, evaluation })
++}
++
++/// One real owner step, followed solely by reconstruction of its saved raw
++/// boundaries. On any tooling failure, the actual step and available boundaries
++/// are returned unchanged; no rollback, retry or extra transition is performed.
++pub fn record_step_with_storage(admitted: &Admitted, image: &mut MachineImage,
++    storage: SlotStorage, mut cache: Option<&mut WitnessRecordCache>)
++    -> Result<StrategyObservedStep, StrategyStepError>
++{
++    let observed = observation::record_step(admitted, image).map_err(StrategyStepError::Owner)?;
++    let (before_raw, after_raw) = match &observed {
++        ObservedStep::Event(record) => (&record.before, &record.after),
++        ObservedStep::Terminal { before, after } => (before, after),
++    };
++    let before_cache = cache.as_deref_mut().map(|memo| &mut memo.before);
++    let before = match materialize_with_storage(before_raw, LifetimeUnit::RecordBefore, storage, before_cache) {
++        Ok(value) => value,
++        Err(failure) => return Err(StrategyStepError::Materialization {
++            side: WitnessSide::Before, failure, observed: Box::new(observed),
++            completed_before: None,
++        }),
++    };
++    let after_cache = cache.as_deref_mut().map(|memo| &mut memo.after);
++    let after = match materialize_with_storage(after_raw, LifetimeUnit::RecordAfter, storage, after_cache) {
++        Ok(value) => value,
++        Err(failure) => return Err(StrategyStepError::Materialization {
++            side: WitnessSide::After, failure, observed: Box::new(observed),
++            completed_before: Some(Box::new(before)),
++        }),
++    };
++    Ok(StrategyObservedStep { observed, before, after })
++}
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum StreamAction { Continue, Stop }
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub enum StreamStop { Sink, Terminal }
++
++/// Yield every complete observed record/terminal boundary in order. The sink
++/// may stop after a delivered boundary, preserving that exact caller-owned
++/// MachineImage. No inferred work/event, hidden step, image substitution or
++/// application exhaustion is introduced. Execution classification remains the
++/// existing caller's obligation, independently of this source-only interface.
++pub fn stream_owner_steps<F>(admitted: &Admitted, image: &mut MachineImage,
++    mut cache: Option<&mut WitnessRecordCache>, mut sink: F)
++    -> Result<StreamStop, StrategyStepError>
++where F: FnMut(&StrategyObservedStep) -> StreamAction
++{
++    loop {
++        let step = record_step_with_storage(admitted, image, SlotStorage::LastUse, cache.as_deref_mut())?;
++        let terminal = matches!(&step.observed, ObservedStep::Terminal { .. });
++        let action = sink(&step);
++        // No decoded/raw record history is held across loop iterations.
++        drop(step);
++        if terminal { return Ok(StreamStop::Terminal); }
++        if action == StreamAction::Stop { return Ok(StreamStop::Sink); }
++    }
++}
+--- a/crates/mori-core/src/sherlock/helper_machine/witness_plan.rs
++++ b/crates/mori-core/src/sherlock/helper_machine/witness_plan.rs
+@@ -1,10 +1,11 @@
+-//! Deterministic, uncached host materialization of existing B observations.
++//! Deterministic host materialization of existing B observations.
+ //!
+ //! This read-only plan does not evaluate source expressions, select owner rules,
+ //! modify an image, emit constraints or authenticate supplied snapshots. Plans
+-//! bind exact immutable observation inputs. Every node executes once per call;
+-//! retained evaluation slots are not a cross-call cache. Complete raw snapshots
+-//! remain alongside decoded values. Host allocation/copy/time costs and H1 are
++//! bind exact immutable observation inputs. Existing uncached entrypoints execute
++//! every node once per call. Optional memoization and last-use/streaming APIs
++//! retain the same operations and complete raw/decoded boundaries, with separate
++//! logical host diagnostics. Physical allocation/copy/time costs and H1 remain
+ //! unmeasured; no native, resource, A/B-clock or correspondence claim is made.
+ use super::complete_observation::{
+     AdmissionSnapshot, ConstantSnapshot, DataSnapshot, ExpressionSnapshot, HostSnapshot,
+@@ -240,7 +241,8 @@
+     pub copied_value_nodes: usize,
+     /// Only prior-chain entries copied within Environment operations.
+     pub copied_environment_entries: usize,
+-    /// Slots retained by this uncached baseline; not allocated bytes/prover memory.
++    /// Scratch slots at publication: all nodes in the uncached baseline,
++    /// potentially fewer after last-use. Not allocated bytes/prover memory.
+     pub retained_slots: usize,
+     pub measured_host_bytes: Option<usize>,
+     pub measured_host_time_ns: Option<u128>,
+@@ -280,3 +282,18 @@
+     let evaluation = evaluate_uncached(&plan, input)?;
+     Ok(MaterializedSnapshot { raw: input.clone(), plan, evaluation })
+ }
++
++// Optional host scheduling strategies reuse the same validated DAG operations.
++#[path = "witness_plan/strategy.rs"]
++mod strategy;
++pub use strategy::{
++    evaluate_last_use, evaluate_memoized, evaluate_with_storage,
++    SlotStorage, StrategyDiagnostics, StrategyEvaluation, WitnessCache,
++};
++#[path = "witness_plan/stream.rs"]
++mod stream;
++pub use stream::{
++    materialize_with_storage, record_step_with_storage, stream_owner_steps,
++    StrategyMaterializedSnapshot, StrategyObservedStep, StrategyStepError,
++    WitnessRecordCache, StreamAction, StreamStop,
++};
+--- a/crates/mori-core/tests/support/sherlock_witness_cache_stream_positive.rs
++++ b/crates/mori-core/tests/support/sherlock_witness_cache_stream_positive.rs
+@@ -0,0 +1,207 @@
++//! New explicit ordinary positive consumer; not autodiscovered by default Cargo.
++//! Three fixed normal inputs exercise the real admitted owner only once each.
++//! On those actual saved snapshots, compare uncached/cold/warm/last-use outputs.
++//! This is variant preservation + literal result checking, not an independent
++//! complete B-prefix/clock oracle. No old protected oracle/assertion is copied.
++//! The QA sink retains one previous raw boundary and counts observations; it
++//! does not retain a trace history or claim measured total memory/time savings.
++use mori_core::sherlock::helper_machine::{complete_observation as co, witness_plan as wp};
++use mori_core::sherlock::helper_machine::shared::*;
++use mori_core::sherlock::helper_machine::shared::owner_host::host_owner_engine;
++use std::collections::BTreeSet;
++
++fn tooling<T>(result: Result<T, Tooling>) -> T {
++    match result {
++        Ok(value) => value,
++        Err(Tooling::AdmissionRejected { reason, detail, locator }) =>
++            panic!("normal admission {reason:?}: {detail} at {locator:?}"),
++        Err(Tooling::CapacityNotAdmitted { kind, needed, limit, locator }) =>
++            panic!("normal capacity {kind:?}: {needed:?}/{limit} at {locator:?}"),
++        Err(Tooling::UnsupportedFeature { feature, locator }) =>
++            panic!("normal feature {feature:?} at {locator:?}"),
++    }
++}
++// Same explicit positive case capacities as the adopted baseline input CONFIG.
++// These are fixture inputs, not new admission/resource policy or defaults.
++fn layout() -> (BoundsC, LayoutSchemaC) {
++    let bounds = BoundsC {
++        code_rows: 64, function_rows: 4, code_child_slots: 16, parameter_slots: 8,
++        pattern_rows: 8, match_plan_rows: 8, match_arm_rows: 8, type_rows: 8,
++        constructor_rows: 8, constructor_field_slots: 16, max_arity: 8,
++        constant_nodes: 16, constant_field_slots: 16, data_nodes: 64,
++        data_field_slots: 64, environment_cells: 64, frames: 64, helper_tasks: 64,
++        serialization_bytes: 65536, max_reference_work: 4096,
++        max_helper_work: 4096, step_cap: 4096,
++    };
++    let schema = LayoutSchemaC {
++        layout_version: ("moriarty".into(), "sherlock-helper-microstep-hostonly/1".into()),
++        field_id: None, widths: None, scalar_layout_id: None, bounds,
++        capacities: LayoutCapacitiesC {
++            name_rows: 32, name_bytes: 256, occurrence_path_slots: 256, value_slots: 4096,
++        }, boundary_capacities_present: false,
++    };
++    (bounds, schema)
++}
++// Only actual source AST construction below; no source evaluation/substitution.
++fn var(name: &str) -> CoreExpr { CoreExpr::Var { name: name.into() } }
++fn uint(n: u128) -> CoreExpr {
++    CoreExpr::Literal { value: CoreValue::UInt { n: i128_class::KIntC::InRange(n) } }
++}
++fn binary(op: BinaryOp, left: CoreExpr, right: CoreExpr) -> CoreExpr {
++    CoreExpr::Binary { op, left: Box::new(left), right: Box::new(right) }
++}
++fn call(name: &str, argument: CoreExpr) -> CoreExpr {
++    CoreExpr::Call { name: name.into(), args: vec![argument] }
++}
++fn program(name: &str, binder: &str, sort: SortTag, body: CoreExpr, argument: CoreExpr) -> CoreProgram {
++    CoreProgram {
++        functions: vec![CoreFunction {
++            name: name.into(), parameters: vec![CoreParameter { name: binder.into(), sort }],
++            return_type: SortTag::UInt, body,
++        }], entry: call(name, argument),
++    }
++}
++fn factorial() -> CoreProgram {
++    program("fact", "n", SortTag::UInt, CoreExpr::If {
++        cond: Box::new(binary(BinaryOp::Eq, var("n"), uint(0))),
++        then_expr: Box::new(uint(1)),
++        else_expr: Box::new(binary(BinaryOp::Mul, var("n"),
++            call("fact", binary(BinaryOp::Sub, var("n"), uint(1))))),
++    }, uint(3))
++}
++fn list_sum() -> CoreProgram {
++    program("sum_list", "xs", SortTag::List, CoreExpr::Match {
++        scrutinee: Box::new(var("xs")), arms: vec![
++            CoreArm { pattern: CorePattern::PNil, body: uint(0) },
++            CoreArm { pattern: CorePattern::PCons { x: "h".into(), y: "t".into() },
++                body: binary(BinaryOp::Add, var("h"), call("sum_list", var("t"))) },
++        ],
++    }, CoreExpr::Literal { value: CoreValue::List {
++        elements: vec![i128_class::KIntC::InRange(2), i128_class::KIntC::InRange(5)],
++    } })
++}
++fn tree_sum() -> CoreProgram {
++    let leaf = |n| CoreTree::Leaf { n: i128_class::KIntC::InRange(n) };
++    program("sum_tree", "tr", SortTag::Tree, CoreExpr::Match {
++        scrutinee: Box::new(var("tr")), arms: vec![
++            CoreArm { pattern: CorePattern::PLeaf { x: "n".into() }, body: var("n") },
++            CoreArm { pattern: CorePattern::PBranch { x: "l".into(), y: "r".into() },
++                body: binary(BinaryOp::Add, call("sum_tree", var("l")), call("sum_tree", var("r"))) },
++        ],
++    }, CoreExpr::Literal { value: CoreValue::Tree { tree: CoreTree::Branch {
++        left: Box::new(leaf(4)), right: Box::new(CoreTree::Branch {
++            left: Box::new(leaf(1)), right: Box::new(leaf(3)),
++        }),
++    } } })
++}
++
++fn inspect_variants(materialized: &wp::StrategyMaterializedSnapshot) {
++    let raw = &materialized.raw;
++    let plan = &materialized.plan;
++    let baseline = wp::evaluate_uncached(plan, raw).unwrap_or_else(|e| panic!("uncached {e:?}"));
++    assert_eq!(materialized.evaluation.witness.decoded, baseline.decoded);
++    let reclaimed = wp::evaluate_last_use(plan, raw).unwrap_or_else(|e| panic!("last-use {e:?}"));
++    assert_eq!(reclaimed.witness.decoded, baseline.decoded);
++    let live_outs = plan.live_outs.iter().copied().collect::<BTreeSet<_>>().len();
++    assert_eq!(reclaimed.scheduling.reclaimed_slots, plan.nodes.len() - live_outs);
++    assert_eq!(reclaimed.scheduling.retained_slots_at_publication, live_outs);
++    assert!(reclaimed.scheduling.peak_live_slots <= plan.nodes.len());
++    assert_eq!(reclaimed.witness.diagnostics.evaluated_nodes, plan.nodes.len());
++    assert_eq!(reclaimed.witness.diagnostics.value_constructions, baseline.diagnostics.value_constructions);
++    assert_eq!(reclaimed.witness.diagnostics.environment_constructions, baseline.diagnostics.environment_constructions);
++    assert_eq!(reclaimed.witness.diagnostics.copied_value_nodes, baseline.diagnostics.copied_value_nodes);
++    assert_eq!(reclaimed.witness.diagnostics.copied_environment_entries, baseline.diagnostics.copied_environment_entries);
++
++    let mut cache = wp::WitnessCache::default();
++    let cold = wp::evaluate_memoized(plan, raw, &mut cache, wp::SlotStorage::RetainAll)
++        .unwrap_or_else(|e| panic!("cold {e:?}"));
++    assert_eq!(cold.witness.decoded, baseline.decoded);
++    assert!(cold.scheduling.scope_reset);
++    assert_eq!(cold.scheduling.cache_hits, 0);
++    assert_eq!(cold.scheduling.cache_misses, plan.nodes.len() - plan.inputs.len());
++    assert_eq!(cold.witness.diagnostics, baseline.diagnostics);
++    let warm = wp::evaluate_memoized(plan, raw, &mut cache, wp::SlotStorage::LastUse)
++        .unwrap_or_else(|e| panic!("warm {e:?}"));
++    assert_eq!(warm.witness.decoded, baseline.decoded);
++    assert!(!warm.scheduling.scope_reset);
++    assert_eq!(warm.scheduling.cache_misses, 0);
++    assert_eq!(warm.scheduling.cache_hits, plan.nodes.len() - plan.inputs.len());
++    assert_eq!(warm.witness.diagnostics.input_reads, plan.inputs.len());
++    assert_eq!(warm.witness.diagnostics.evaluated_nodes, plan.inputs.len());
++    assert_eq!(warm.witness.diagnostics.value_constructions, 0);
++    assert_eq!(warm.witness.diagnostics.environment_constructions, 0);
++    assert_eq!(warm.witness.diagnostics.payload_constructions, 0);
++    assert_eq!(warm.scheduling.copied_cached_slot_values, warm.scheduling.cache_hits);
++    assert_eq!(warm.scheduling.cached_value_slots, plan.nodes.len() - plan.inputs.len());
++    assert_eq!(warm.scheduling.reclaimed_slots, plan.nodes.len() - live_outs);
++    assert_eq!(warm.scheduling.retained_slots_at_publication, live_outs);
++    assert_eq!(warm.witness.diagnostics.measured_host_bytes, None);
++    assert_eq!(warm.witness.diagnostics.measured_host_time_ns, None);
++}
++fn resolved_result(snapshot: &wp::DecodedSnapshot) -> &wp::DecodedValue {
++    let outcome = &snapshot.fields.iter().find(|f| f.field == "outcome").unwrap().value;
++    let wp::SlotValue::Payload(payload) = outcome else { panic!("complete outcome payload") };
++    assert_eq!(payload.kind, wp::PayloadKind::Outcome);
++    let value = &payload.fields.iter().find(|f| f.field == "value").unwrap().value;
++    let wp::SlotValue::Value(value) = value else { panic!("resolved returned value") };
++    value
++}
++fn exercise(source: CoreProgram, expected: u128, stop_and_resume: bool) {
++    let (bounds, schema) = layout();
++    let owner = host_owner_engine();
++    let admitted = tooling(owner.admit(&source, &bounds, &schema));
++    let mut image = tooling(owner.admit_run(&admitted, &RunIntC::Nat(4096),
++        &RunIntC::Nat(64), &FinanceInput::Absent));
++    let initial = co::capture(&admitted, &image).unwrap_or_else(|_| panic!("bound initial"));
++    let mut previous = initial;
++    let mut records = 0usize;
++    let mut saw_pending_call = false;
++    let mut final_decoded = None;
++    let mut cache = wp::WitnessRecordCache::default();
++    let mut sink = |step: &wp::StrategyObservedStep| {
++        assert_eq!(step.before.raw, previous);
++        let (raw_before, raw_after) = match &step.observed {
++            co::ObservedStep::Event(record) => (&record.before, &record.after),
++            co::ObservedStep::Terminal { before, after } => (before, after),
++        };
++        assert_eq!(&step.before.raw, raw_before);
++        assert_eq!(&step.after.raw, raw_after);
++        inspect_variants(&step.before);
++        inspect_variants(&step.after);
++        saw_pending_call |= matches!(raw_before.image.control, ControlC::Invoke { .. })
++            && !raw_before.image.frames.is_empty();
++        if matches!(raw_after.image.outcome, OutcomeC::Halted { .. }) {
++            final_decoded = Some(step.after.evaluation.witness.decoded.clone());
++        }
++        previous = raw_after.clone();
++        records += 1;
++        if stop_and_resume && records == 1 { wp::StreamAction::Stop }
++        else { wp::StreamAction::Continue }
++    };
++    let first = wp::stream_owner_steps(&admitted, &mut image, Some(&mut cache), &mut sink)
++        .unwrap_or_else(|_| panic!("real owner stream"));
++    if stop_and_resume {
++        assert_eq!(first, wp::StreamStop::Sink);
++        // Resume the SAME image/cache after the delivered boundary: no replay.
++        let resumed = wp::stream_owner_steps(&admitted, &mut image, Some(&mut cache), &mut sink)
++            .unwrap_or_else(|_| panic!("same-image continuation"));
++        assert_eq!(resumed, wp::StreamStop::Terminal);
++    } else { assert_eq!(first, wp::StreamStop::Terminal); }
++    drop(sink);
++    let returned = co::capture(&admitted, &image).unwrap_or_else(|_| panic!("bound returned"));
++    assert_eq!(returned, previous);
++    assert!(records > 1);
++    assert!(saw_pending_call);
++    assert!(matches!(returned.image.outcome, OutcomeC::Halted { .. }));
++    let decoded = final_decoded.expect("actual halted boundary");
++    assert_eq!(resolved_result(&decoded), &wp::DecodedValue {
++        nodes: vec![wp::ValueNode::UInt(expected)], root: 0,
++    });
++}
++
++#[test]
++fn factorial_three_cold_warm_last_use_and_stopped_stream() { exercise(factorial(), 6, true); }
++#[test]
++fn list_two_five_cold_warm_last_use_and_stream() { exercise(list_sum(), 7, false); }
++#[test]
++fn tree_four_one_three_cold_warm_last_use_and_stream() { exercise(tree_sum(), 8, false); }

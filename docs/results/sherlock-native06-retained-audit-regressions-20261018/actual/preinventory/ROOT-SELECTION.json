@@ -1,0 +1,99 @@
+{
+  "at": "2026-10-18T11:33:54.956747+00:00",
+  "scope": "Read-only retained target/packet file metadata and hashes; no binaries executed, no SDK operation, no guard import or installation. This is prospective observation, not proof of historical immutability.",
+  "caps": {
+    "wall_seconds_per_stage": 60,
+    "cpu_seconds_per_process": 50,
+    "as_bytes_per_process": 536870912,
+    "capture_fsize_bytes_per_file": 16777216,
+    "not_aggregate_process_tree_bound": true
+  },
+  "toolpins": [
+    {
+      "path": "/usr/bin/find",
+      "realpath": "/usr/bin/find",
+      "sha256": "efe4843f166525b02f328f0c456a884d6a597f32d2c78cd615b6be0b64279bcf"
+    },
+    {
+      "path": "/usr/bin/prlimit",
+      "realpath": "/usr/bin/prlimit",
+      "sha256": "cb28811cb3902773c1a0f3ac0ea554c7a1e232724e9d4cae055ede54b65a7bc4"
+    },
+    {
+      "path": "/usr/bin/sha256sum",
+      "realpath": "/usr/lib/cargo/bin/coreutils/sha256sum",
+      "sha256": "f84e76ea4da1e0c4e92254bd0d7dccdabe2c8b3098e734f27997dae3ee5d8e02"
+    },
+    {
+      "path": "/usr/bin/sort",
+      "realpath": "/usr/lib/cargo/bin/coreutils/sort",
+      "sha256": "f84e76ea4da1e0c4e92254bd0d7dccdabe2c8b3098e734f27997dae3ee5d8e02"
+    },
+    {
+      "path": "/usr/bin/timeout",
+      "realpath": "/usr/lib/cargo/bin/coreutils/timeout",
+      "sha256": "f84e76ea4da1e0c4e92254bd0d7dccdabe2c8b3098e734f27997dae3ee5d8e02"
+    },
+    {
+      "path": "/usr/bin/xargs",
+      "realpath": "/usr/bin/xargs",
+      "sha256": "2d94cda98faff5d37ae634ec32bfa3273ee556e2abc3cf8fa53950d9b40e0f0b"
+    }
+  ],
+  "prefix": [
+    "/usr/bin/timeout",
+    "--signal=KILL",
+    "60s",
+    "/usr/bin/prlimit",
+    "--cpu=50:50",
+    "--as=536870912:536870912",
+    "--fsize=16777216:16777216",
+    "--core=0:0",
+    "--"
+  ],
+  "steps": [
+    {
+      "argv": [
+        "/usr/bin/find",
+        "-P",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-compile-20261018-06/target",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-compile-20261018-06/packet",
+        "-printf",
+        "%y\\t%D\\t%i\\t%m\\t%U\\t%G\\t%s\\t%T@\\t%p\\t%l\\0"
+      ],
+      "stdout_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/409-native06-retained-audit-config-proposal/future-inventory-output/filetype-stat-linktext.nul"
+    },
+    {
+      "argv": [
+        "/usr/bin/find",
+        "-P",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-compile-20261018-06/target",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-sdk-compile-20261018-06/packet",
+        "-type",
+        "f",
+        "-print0"
+      ],
+      "stdout_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/409-native06-retained-audit-config-proposal/future-inventory-output/regular.raw.nul"
+    },
+    {
+      "argv": [
+        "/usr/bin/sort",
+        "-z",
+        "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/409-native06-retained-audit-config-proposal/future-inventory-output/regular.raw.nul"
+      ],
+      "stdout_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/409-native06-retained-audit-config-proposal/future-inventory-output/regular.sorted.nul"
+    },
+    {
+      "argv": [
+        "/usr/bin/xargs",
+        "-0",
+        "-r",
+        "/usr/bin/sha256sum",
+        "--zero",
+        "--"
+      ],
+      "stdin_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/409-native06-retained-audit-config-proposal/future-inventory-output/regular.sorted.nul",
+      "stdout_file": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/409-native06-retained-audit-config-proposal/future-inventory-output/regular.sha256.nul"
+    }
+  ]
+}

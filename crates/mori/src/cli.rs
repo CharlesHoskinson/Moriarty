@@ -2,11 +2,11 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+use crate::cli_args::simulate;
 use crate::commands::{
     capabilities, check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
     keygen_signed_call, lsp, mcp, prepare_call, prepare_signed_call, prove, prove_call,
-    prove_signed_call, replay, simulate, test, verify, verify_call, verify_intent,
-    verify_signed_call,
+    prove_signed_call, replay, test, verify, verify_call, verify_intent, verify_signed_call,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -17,13 +17,13 @@ use crate::styles;
 #[cfg_attr(
     all(not(feature = "native"), not(feature = "source6-expansion")),
     command(
-        after_help = "Built without native: local Core reference tooling only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature."
+        after_help = "Built without native: local Core reference tooling and explicit Sherlock host preparation/simulation. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature."
     )
 )]
 #[cfg_attr(
     all(not(feature = "native"), feature = "source6-expansion"),
     command(
-        after_help = "Built without native: local Core reference tooling and explicit Source/6 transfer expansion only. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature."
+        after_help = "Built without native: local Core reference tooling, explicit Sherlock host preparation/simulation and explicit Source/6 transfer expansion. Midnight compile, call, proof, targeted inspect, trace/replay and JubJub profiles require the native feature."
     )
 )]
 pub struct Cli {
@@ -89,12 +89,7 @@ pub struct SigningOutputArgs {
     pub json: bool,
 }
 
-/// Signed native owner-intent profile selected explicitly by name.
-#[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum SignedProfile {
-    #[value(name = "moriarty-jubjub-owner-intent/1")]
-    JubjubOwnerIntent,
-}
+pub use crate::cli_args::SignedProfile;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Color {
@@ -121,14 +116,15 @@ pub enum Command {
     Init(init::Args),
     /// Check syntax, names, types and action support
     Check(check::Args),
-    /// Compile supported Core/1 or Core/2 source into ledger-9 ZKIRv3 circuits
+    /// Compile Core/1 or Core/2 ZKIRv3 circuits or prepare an explicit Sherlock host artifact
     ///
-    /// Use a language "moriarty/1"; or language "moriarty/2"; source header.
+    /// Native routes use a language "moriarty/1"; or language "moriarty/2"; header.
+    /// Sherlock host preparation requires --execution-profile and explicit source selection.
     /// Beta/1 and Source/6 text are not compiler inputs.
     #[cfg_attr(
         not(feature = "native"),
         command(
-            after_help = "Unavailable in this build: this command requires the native feature."
+            after_help = "Without native, explicit Sherlock host preparation is available; Core/1 and Core/2 ZKIR compilation require the native feature."
         )
     )]
     Compile(compile::Args),
@@ -236,14 +232,15 @@ pub enum Command {
     /// Default expansion accepts moriarty/1 Core source. The explicit
     /// --emit-source6-transfer option emits a local beta transfer proposal.
     Expand(expand::Args),
-    /// Run a Core/1 action or Core/2 stage locally against a scenario
+    /// Run a Core/1 action, Core/2 stage or explicitly selected Sherlock entry locally
     ///
-    /// Use a language "moriarty/1"; or language "moriarty/2"; source header.
+    /// Core routes use a language "moriarty/1"; or language "moriarty/2"; header.
+    /// Sherlock routes require --execution-profile and an explicit source selection.
     /// moriarty-beta/1 and Source/6 text are not simulation inputs.
     #[cfg_attr(
         not(feature = "native"),
         command(
-            after_help = "Without native, local Core simulation and staged start/resume are available; --trace requires the native feature."
+            after_help = "Without native, local Core simulation, staged start/resume and explicit Sherlock host simulation are available; --trace requires the native feature."
         )
     )]
     Simulate(simulate::Args),

@@ -1,0 +1,145 @@
+// Existing public declarations only, not candidate implementation.
+// shared.rs178-254:
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct HelperCommon { pub site: SiteTag, pub origin_reference_cursor: u128,
+    pub parent_resume: Option<usize> }
+    // ResumeId HOST carrier = usize in Option; always None in B-core,
+    // Some(_) = SI-08. Bounded width DEFERRED to X-05, not frozen here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarStaged { None, U128Value { n: u128 }, BoolValue { b: bool },
+    PendingNode { tag: NodeKind }, PrimError { code: u8 }, // 10|11, owner-checked
+    Selector { sel: BoolSelector }, TypeTest { ok: bool } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperControlC {
+    Scalar { common: HelperCommon, mode: ScalarMode, operand_a: RefC,
+        operand_b: Option<RefC>, expected: Option<SortTag>,
+        phase: ScalarPhase, reg_a: u128, staged: ScalarStaged },
+    EnvGet { common: HelperCommon, binder: usize, cursor: Option<usize>,
+        found: Option<RefC>, status: TriStatus },
+    EnvPut { common: HelperCommon, binder: usize, value: RefC, base: EnvRootC,
+        new_root: Option<usize>, status: TriStatus },
+    Find { common: HelperCommon, function_name: usize, row_cursor: usize,
+        found: Option<usize>, status: TriStatus },
+    Bind { common: HelperCommon, function: usize, params: SliceC, args: ValSliceC,
+        p_cursor: usize, a_cursor: usize, partial: EnvRootC,
+        dup_cursor: Option<usize>, phase: BindPhase, status: BindStatus },
+    Append { common: HelperCommon, src: ValSliceC, value: RefC,
+        src_cursor: usize, dest_start: usize, staged: Option<RefC>,
+        phase: AppendPhase },
+    Validate { common: HelperCommon, root: RefC, status: TriStatus },
+    Equal { common: HelperCommon, left: RefC, right: RefC, status: TriStatus },
+    Match { common: HelperCommon, scrutinee: RefC, arm: usize,
+        saved_env: EnvRootC, partial: EnvRootC, pat_tag: PatternTag,
+        x: usize, y: usize, field_idx: u8, staged: Option<RefC>,
+        phase: MatchPhase, status: TriStatus },
+}
+// FrameRow: exactly 9 core variants. ConstructorFields is NOT a variant:
+// a reserved ConstructorFields tag at any owner boundary is refused
+// HostViolation{WrongVariant}/C-INV, its payload is never carried here.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FrameRowC {
+    LetF { binder: usize, body: usize, saved_env: EnvRootC, origin: usize },
+    LeftF { op: BinaryOp, right: usize, saved_env: EnvRootC, origin: usize },
+    RightF { op: BinaryOp, left: RefC, origin: usize },
+    UnaryF { op: UnaryOp, origin: usize },
+    IfF { then_expr: usize, else_expr: usize, saved_env: EnvRootC, origin: usize },
+    MatchF { arms: SliceC, saved_env: EnvRootC, origin: usize },
+    ArgsF { function_name: usize, completed: ValSliceC, rest: SliceC,
+        saved_env: EnvRootC, origin: usize },
+    ReturnF { return_type: SortTag, saved_env: EnvRootC, origin: usize },
+    ScopeF { saved_env: EnvRootC, origin: usize },
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BoundBinding { Bad, Ok { env: EnvRootC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CaseMatching { NoMatch, Matched { env: EnvRootC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PrimOutcome { Value { value: RefC }, Error { code: u8 } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ControlC { Eval { expr: usize }, Return { value: RefC },
+    ScheduleNext { frame: FrameRowC, next: usize, env: EnvRootC },
+    Invoke { function_name: usize, args: ValSliceC },
+    Enter { function: Option<usize>, args: ValSliceC },
+    Bound { binding: BoundBinding, return_type: SortTag, body: usize },
+    Cases { value: RefC, arms: SliceC, saved_env: EnvRootC },
+    CaseResult { matching: CaseMatching, value: RefC, body: usize,
+        rest: SliceC, saved_env: EnvRootC },
+    PrimResult { result: PrimOutcome }, Error { code: u8 } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperTaskC {
+    ValidateTask { r: RefC, visit: TaskVisitC, cursor: usize },
+    EqualTask { left: RefC, right: RefC, visit: TaskVisitC, cursor: usize },
+    PairTask { binder: usize, sort: SortTag, arg: RefC },
+}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperResultC { Validated { ok: bool }, EnvFound { value: RefC },
+    EnvMissing, EnvUpdated { cell: usize }, FindFound { function: usize },
+    FindMissing, BindOk { env: EnvRootC }, BindBad, AppendDone { seq: ValSliceC },
+    ScalarValue { value: RefC }, ScalarError { code: u8 },
+    ScalarSelector { sel: BoolSelector }, ScalarTypeTest { ok: bool },
+
+// shared.rs267-327:
+pub struct CoreProgram { pub functions: Vec<CoreFunction>, pub entry: CoreExpr }
+pub struct CoreFunction { pub name: String, pub parameters: Vec<CoreParameter>,
+    pub return_type: SortTag, pub body: CoreExpr }
+pub struct CoreParameter { pub name: String, pub sort: SortTag }
+pub enum CoreExpr { Literal { value: CoreValue }, Var { name: String },
+    Let { name: String, value: Box<CoreExpr>, body: Box<CoreExpr> },
+    Binary { op: BinaryOp, left: Box<CoreExpr>, right: Box<CoreExpr> },
+    Unary { op: UnaryOp, operand: Box<CoreExpr> },
+    If { cond: Box<CoreExpr>, then_expr: Box<CoreExpr>, else_expr: Box<CoreExpr> },
+    Call { name: String, args: Vec<CoreExpr> },
+    Match { scrutinee: Box<CoreExpr>, arms: Vec<CoreArm> } }
+pub struct CoreArm { pub pattern: CorePattern, pub body: CoreExpr }
+pub enum CorePattern { PVar { x: String }, PNil,
+    PCons { x: String, y: String }, PLeaf { x: String },
+    PBranch { x: String, y: String } }
+pub enum CoreValue { UInt { n: i128_class::KIntC }, Bool { b: bool },
+    List { elements: Vec<i128_class::KIntC> }, Tree { tree: CoreTree } }
+pub mod i128_class {
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    pub enum KIntC { InRange(u128), Negative, AboveU128 }
+}
+pub enum CoreTree { Leaf { n: i128_class::KIntC },
+    Branch { left: Box<CoreTree>, right: Box<CoreTree> } }
+// From<&reference_types::Program>: #[cfg(test)] only, no Stage-2 entry point.
+
+// ProgramView: Vec lengths ARE active lengths (no stored duplicate).
+pub enum ExpressionRowC { Literal { constant: usize }, Var { binder: usize },
+    Let { binder: usize, value: usize, body: usize },
+    Binary { op: BinaryOp, left: usize, right: usize },
+    Unary { op: UnaryOp, operand: usize },
+    If { cond: usize, then_expr: usize, else_expr: usize },
+    Call { function_name: usize, args: SliceC },
+    Match { scrutinee: usize, arms: SliceC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct FunctionRowC { pub function_name: usize, pub params: SliceC, pub return_type: SortTag, pub body: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ParameterRowC { pub binder: usize, pub sort: SortTag }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ArmRowC { pub pattern: usize, pub body: usize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PatternRowC { PVar { x: usize }, PNil, PCons { x: usize, y: usize }, PLeaf { x: usize }, PBranch { x: usize, y: usize } }
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct OccurrenceRowC { pub owner_is_function: bool, pub function: usize, pub path: SliceC }
+    // owner_is_function=false is Entry with function=0; path slices occurrence_paths.
+pub struct ProgramView {
+    pub entry: usize,
+    pub expressions: Vec<ExpressionRowC>, pub occurrences: Vec<OccurrenceRowC>, pub occurrence_paths: Vec<usize>,
+    pub children: Vec<usize>, pub functions: Vec<FunctionRowC>,
+    pub parameters: Vec<ParameterRowC>, pub arms: Vec<ArmRowC>,
+    pub patterns: Vec<PatternRowC>,
+    pub constants: Vec<RawConstRow>, pub constant_fields: Vec<usize>,
+    pub names: Vec<String>,
+}
+    // Vec lengths are the sole active lengths. constants hold markerFree in RawConstRow; constant_fields are Const ids in field order.
+impl ProgramView {
+    pub fn active_expressions(&self) -> usize { self.expressions.len() }
+    pub fn active_functions(&self) -> usize { self.functions.len() }
+    pub fn active_names(&self) -> usize { self.names.len() }
+}
+// WidthTable: private, duplicate-free by construction (owner-only ctor).
+pub struct WidthTable { index_widths: Vec<(String, u32)>, counter_widths: Vec<(String, u32)>, record_widths: Vec<(String, u32)> }
+
+// Existing source SortTag at line30:
+pub enum SortTag { UInt, Bool, List, Tree }

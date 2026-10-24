@@ -1,0 +1,281 @@
+{
+  "status": "MANUAL_SOURCE_ONLY_EXPECTATIONS_FROZEN_BEFORE_MODEL_EXTENSION",
+  "utc": "2026-10-21T00:51:06.538543+00:00",
+  "source": [
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/public-compiler-next-source06/afterimages/crates/mori/tests/fixtures/nominal-simulate/map-queue.mori",
+      "bytes": 638,
+      "sha256": "b8b30eb7b66280065092d4e8590c8c798b640e64b3c748153a997107f8c8010d"
+    },
+    {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/public-compiler-next-source06/afterimages/crates/mori/tests/fixtures/nominal-simulate/mirror-arbor.mori",
+      "bytes": 735,
+      "sha256": "504fd3f85c354b778f4f5c4d49cd75155c21a62d087c24530f9a2fa51e93bfa9"
+    }
+  ],
+  "readsetRestriction": "Only these two .mori files; no new Rust prediction/tests or current actual outputs/private oracle read. Existing Quint API inspection follows this manual freeze.",
+  "independence": "Same-author source-derived pre-code expectations, independent of new Rust assertions/current results; not a fresh blinded oracle vote.",
+  "expectedTrees": [
+    {
+      "case_id": "map-queue",
+      "typedReturn": {
+        "type": {
+          "name": "Envelope",
+          "args": [
+            {
+              "name": "Queue",
+              "args": [
+                {
+                  "name": "UInt",
+                  "args": []
+                }
+              ]
+            },
+            {
+              "name": "Bool",
+              "args": []
+            }
+          ]
+        },
+        "constructor": "Wrap",
+        "fields": [
+          {
+            "name": "z_items",
+            "value": {
+              "type": {
+                "name": "Queue",
+                "args": [
+                  {
+                    "name": "UInt",
+                    "args": []
+                  }
+                ]
+              },
+              "constructor": "Push",
+              "fields": [
+                {
+                  "name": "z_item",
+                  "value": {
+                    "UInt": 5
+                  }
+                },
+                {
+                  "name": "a_tail",
+                  "value": {
+                    "type": {
+                      "name": "Queue",
+                      "args": [
+                        {
+                          "name": "UInt",
+                          "args": []
+                        }
+                      ]
+                    },
+                    "constructor": "Push",
+                    "fields": [
+                      {
+                        "name": "z_item",
+                        "value": {
+                          "UInt": 10
+                        }
+                      },
+                      {
+                        "name": "a_tail",
+                        "value": {
+                          "type": {
+                            "name": "Queue",
+                            "args": [
+                              {
+                                "name": "UInt",
+                                "args": []
+                              }
+                            ]
+                          },
+                          "constructor": "Empty",
+                          "fields": []
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "a_marker",
+            "value": {
+              "Bool": true
+            }
+          }
+        ]
+      },
+      "operationOrder": [
+        "pack argument constructs input Queue<UInt> in declaration field order",
+        "bump Push item3: compute3+2=5 before recursively bumping tail",
+        "bump Push item8: compute8+2=10 before recursively bumping Empty",
+        "bump Empty: construct Empty",
+        "return inner Push z_item10,a_tailEmpty",
+        "return outer Push z_item5,a_tailinnerPush",
+        "construct Envelope<Queue<UInt>,Bool>::Wrap z_items mappedQueue,a_markertrue"
+      ],
+      "properties": [
+        "Exact generic type argument order Queue<UInt> then Bool",
+        "Declaration field order z_items,a_marker and z_item,a_tail; no lexicographic sorting",
+        "Recursive tail remains nested nominal values; full exact typed return tree",
+        "Result differs from identity mapping/+1/reversedqueue/changedtail shape"
+      ]
+    },
+    {
+      "case_id": "mirror-arbor",
+      "typedReturn": {
+        "type": {
+          "name": "Stamp",
+          "args": [
+            {
+              "name": "Arbor",
+              "args": [
+                {
+                  "name": "Bool",
+                  "args": []
+                }
+              ]
+            },
+            {
+              "name": "UInt",
+              "args": []
+            }
+          ]
+        },
+        "constructor": "Seal",
+        "fields": [
+          {
+            "name": "z_tree",
+            "value": {
+              "type": {
+                "name": "Arbor",
+                "args": [
+                  {
+                    "name": "Bool",
+                    "args": []
+                  }
+                ]
+              },
+              "constructor": "Fork",
+              "fields": [
+                {
+                  "name": "z_left",
+                  "value": {
+                    "type": {
+                      "name": "Arbor",
+                      "args": [
+                        {
+                          "name": "Bool",
+                          "args": []
+                        }
+                      ]
+                    },
+                    "constructor": "Fork",
+                    "fields": [
+                      {
+                        "name": "z_left",
+                        "value": {
+                          "type": {
+                            "name": "Arbor",
+                            "args": [
+                              {
+                                "name": "Bool",
+                                "args": []
+                              }
+                            ]
+                          },
+                          "constructor": "Tip",
+                          "fields": [
+                            {
+                              "name": "z_value",
+                              "value": {
+                                "Bool": false
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "name": "a_right",
+                        "value": {
+                          "type": {
+                            "name": "Arbor",
+                            "args": [
+                              {
+                                "name": "Bool",
+                                "args": []
+                              }
+                            ]
+                          },
+                          "constructor": "Tip",
+                          "fields": [
+                            {
+                              "name": "z_value",
+                              "value": {
+                                "Bool": true
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "a_right",
+                  "value": {
+                    "type": {
+                      "name": "Arbor",
+                      "args": [
+                        {
+                          "name": "Bool",
+                          "args": []
+                        }
+                      ]
+                    },
+                    "constructor": "Tip",
+                    "fields": [
+                      {
+                        "name": "z_value",
+                        "value": {
+                          "Bool": false
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "a_code",
+            "value": {
+              "UInt": 41
+            }
+          }
+        ]
+      },
+      "operationOrder": [
+        "reflect outer Fork evaluates original right subtree first",
+        "reflect inner Fork evaluates original right Tip(true): nottrue=false then constructs Tip(false)",
+        "then inner original left Tip(false): notfalse=true then constructs Tip(true)",
+        "construct inner reflected Fork z_leftTip(false),a_rightTip(true)",
+        "then original outer left Tip(true): nottrue=false then construct Tip(false)",
+        "construct outer reflected Fork z_leftinnerFork,a_rightTip(false)",
+        "construct Stamp<Arbor<Bool>,UInt>::Seal z_tree mirroredArbor,a_code41"
+      ],
+      "properties": [
+        "Exact generic type argument order Arbor<Bool> then UInt",
+        "All three Boolean tips flipped; both Fork levels swap left/right",
+        "Asymmetric resulting shape has Fork on left and Tip on right; equality cannot pass by only arity/count",
+        "Declaration field order z_left,a_right and z_tree,a_code, never lexical order"
+      ]
+    }
+  ],
+  "modelNotYetAuthored": true,
+  "costAndAdmission": "Operation order is denotational/evaluation-order expectation, not numeric B work/fuel/native allocation or admitted prefix. No inference of runtime cost or generic correspondence/EARS."
+}

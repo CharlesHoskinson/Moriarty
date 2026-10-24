@@ -1,6 +1,6 @@
 //! Literal normal specimens from aux/2 ARITHMETIC-FUEL-DESIGN.md §3.
 //! These test host computation only, not constraints or machine acceptance.
-use super::arithmetic_witness::{materialize_arithmetic, materialize_fuel, ArithmeticOp};
+use super::arithmetic_witness::{ArithmeticOp, materialize_arithmetic, materialize_fuel};
 
 const ZERO: [u8; 16] = [0; 16];
 const MAX: [u8; 16] = [255; 16];
@@ -19,7 +19,9 @@ fn at(i: usize, x: u8) -> [u8; 16] {
 
 fn chain(first: usize, last: usize) -> [bool; 17] {
     let mut bits = [false; 17];
-    for bit in &mut bits[first..=last] { *bit = true; }
+    for bit in &mut bits[first..=last] {
+        *bit = true;
+    }
     bits
 }
 
@@ -42,8 +44,10 @@ fn owner_add_a1_through_a5() {
         assert_eq!(w.add.c, c);
         assert_eq!((w.sel_add, w.uu, w.ovf, w.lt_out), (true, true, ovf, false));
         for i in 0..16 {
-            assert_eq!(u16::from(a[i]) + u16::from(b[i]) + u16::from(c[i]),
-                u16::from(r[i]) + 256 * u16::from(c[i + 1]));
+            assert_eq!(
+                u16::from(a[i]) + u16::from(b[i]) + u16::from(c[i]),
+                u16::from(r[i]) + 256 * u16::from(c[i + 1])
+            );
         }
     }
 }
@@ -59,15 +63,79 @@ fn owner_sub_s1_through_s4_and_lt_l1_through_l5() {
     let mut negative_two = MAX;
     negative_two[0] = 254;
     let cases = [
-        (ArithmeticOp::Sub, small(1), small(1), ZERO, [false; 17], false, false),
-        (ArithmeticOp::Sub, ZERO, small(1), MAX, chain(1, 16), true, false),
-        (ArithmeticOp::Sub, at(1, 1), small(1), small(255), chain(1, 1), false, false),
+        (
+            ArithmeticOp::Sub,
+            small(1),
+            small(1),
+            ZERO,
+            [false; 17],
+            false,
+            false,
+        ),
+        (
+            ArithmeticOp::Sub,
+            ZERO,
+            small(1),
+            MAX,
+            chain(1, 16),
+            true,
+            false,
+        ),
+        (
+            ArithmeticOp::Sub,
+            at(1, 1),
+            small(1),
+            small(255),
+            chain(1, 1),
+            false,
+            false,
+        ),
         (ArithmeticOp::Sub, MAX, MAX, ZERO, [false; 17], false, false),
-        (ArithmeticOp::Lt, small(3), small(5), negative_two, chain(1, 16), false, true),
-        (ArithmeticOp::Lt, small(5), small(3), small(2), [false; 17], false, false),
-        (ArithmeticOp::Lt, small(7), small(7), ZERO, [false; 17], false, false),
-        (ArithmeticOp::Lt, at(15, 1), small(255), high_remainder, chain(1, 15), false, false),
-        (ArithmeticOp::Lt, small(255), at(15, 1), reverse_remainder, chain(16, 16), false, true),
+        (
+            ArithmeticOp::Lt,
+            small(3),
+            small(5),
+            negative_two,
+            chain(1, 16),
+            false,
+            true,
+        ),
+        (
+            ArithmeticOp::Lt,
+            small(5),
+            small(3),
+            small(2),
+            [false; 17],
+            false,
+            false,
+        ),
+        (
+            ArithmeticOp::Lt,
+            small(7),
+            small(7),
+            ZERO,
+            [false; 17],
+            false,
+            false,
+        ),
+        (
+            ArithmeticOp::Lt,
+            at(15, 1),
+            small(255),
+            high_remainder,
+            chain(1, 15),
+            false,
+            false,
+        ),
+        (
+            ArithmeticOp::Lt,
+            small(255),
+            at(15, 1),
+            reverse_remainder,
+            chain(16, 16),
+            false,
+            true,
+        ),
     ];
     for (op, a, b, r, bo, ovf, lt) in cases {
         let w = materialize_arithmetic(Some(op), Some(&a), Some(&b));
@@ -75,10 +143,15 @@ fn owner_sub_s1_through_s4_and_lt_l1_through_l5() {
         assert_eq!(w.sub.bo, bo);
         assert!(w.uu);
         assert_eq!((w.ovf, w.lt_out), (ovf, lt));
-        assert_eq!((w.sel_sub, w.sel_lt), (op == ArithmeticOp::Sub, op == ArithmeticOp::Lt));
+        assert_eq!(
+            (w.sel_sub, w.sel_lt),
+            (op == ArithmeticOp::Sub, op == ArithmeticOp::Lt)
+        );
         for i in 0..16 {
-            assert_eq!(u16::from(a[i]) + 256 * u16::from(bo[i + 1]),
-                u16::from(b[i]) + u16::from(bo[i]) + u16::from(r[i]));
+            assert_eq!(
+                u16::from(a[i]) + 256 * u16::from(bo[i + 1]),
+                u16::from(b[i]) + u16::from(bo[i]) + u16::from(r[i])
+            );
         }
     }
 }
@@ -91,8 +164,12 @@ fn owner_mul_m1_through_m6_full_product_and_all_carries() {
     c4[16] = 1;
     let mut c6 = [0u16; 33];
     // Exact owner M-6 formula, not computed using the candidate recurrence.
-    for k in 1..=16 { c6[k] = 255 * k as u16 - 1; }
-    for k in 17..=31 { c6[k] = 255 * (32 - k) as u16; }
+    for k in 1..=16 {
+        c6[k] = 255 * k as u16 - 1;
+    }
+    for k in 17..=31 {
+        c6[k] = 255 * (32 - k) as u16;
+    }
     let mut r3 = ZERO;
     r3[0] = 1;
     r3[1] = 254;
@@ -112,7 +189,10 @@ fn owner_mul_m1_through_m6_full_product_and_all_carries() {
         assert_eq!(w.mul.h, h);
         assert_eq!(w.mul.c, c);
         assert_eq!((w.mul.h_sum, w.mul.h_zero), (sum, zero));
-        assert_eq!((w.sel_mul, w.uu, w.ovf, w.lt_out), (true, true, !zero, false));
+        assert_eq!(
+            (w.sel_mul, w.uu, w.ovf, w.lt_out),
+            (true, true, !zero, false)
+        );
     }
     assert_eq!(c6[16], 4079);
 }
@@ -153,15 +233,15 @@ fn owner_fuel_f1_through_f8_probe_decrement_and_publication() {
     let mut f4_post = MAX;
     f4_post[0] = 254;
     let cases = [
-        (small(1), false, ZERO, chain(0, 0), true), // F-1
-        (at(2, 1), false, f2_post, chain(0, 2), true), // F-2
+        (small(1), false, ZERO, chain(0, 0), true),      // F-1
+        (at(2, 1), false, f2_post, chain(0, 2), true),   // F-2
         (at(15, 1), false, f3_post, chain(0, 15), true), // F-3
-        (MAX, false, f4_post, chain(0, 0), true), // F-4
-        (ZERO, true, ZERO, [false; 17], false), // F-5a A080
-        (ZERO, false, ZERO, [false; 17], false), // F-5b A084
-        (small(5), true, small(5), [false; 17], false), // F-6 A082
-        (ZERO, true, ZERO, [false; 17], false), // F-7 A082
-        (small(3), false, small(2), chain(0, 0), true), // F-8
+        (MAX, false, f4_post, chain(0, 0), true),        // F-4
+        (ZERO, true, ZERO, [false; 17], false),          // F-5a A080
+        (ZERO, false, ZERO, [false; 17], false),         // F-5b A084
+        (small(5), true, small(5), [false; 17], false),  // F-6 A082
+        (ZERO, true, ZERO, [false; 17], false),          // F-7 A082
+        (small(3), false, small(2), chain(0, 0), true),  // F-8
     ];
     for (pre, term, post, bw, charged) in cases {
         let w = materialize_fuel(true, term, &pre);
@@ -175,8 +255,10 @@ fn owner_fuel_f1_through_f8_probe_decrement_and_publication() {
         for i in 0..16 {
             expected_z[i] = pre[i] == 0;
             expected_zp[i + 1] = i < first_nonzero;
-            assert_eq!(u16::from(post[i]) + u16::from(bw[i]),
-                u16::from(pre[i]) + 256 * u16::from(bw[i + 1]));
+            assert_eq!(
+                u16::from(post[i]) + u16::from(bw[i]),
+                u16::from(pre[i]) + 256 * u16::from(bw[i + 1])
+            );
         }
         assert_eq!(w.z, expected_z);
         assert_eq!(w.zp, expected_zp);

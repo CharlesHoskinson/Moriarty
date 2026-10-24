@@ -1,0 +1,128 @@
+### 1. Identity, Effort, Fresh Context & Exact Current Pins
+
+- **Designated Reviewer & Effort**: `gemini-4-argon-high` / `HIGH` (standing observed Opus outage fallback; fresh independent root-inspection audit; zero tools invoked; zero file/history reads, writes, shell, web, subagent, import, test, mock, host-metadata, SDK, provisioning, native, or Git operations).
+- **Fresh Conversation / Workspace**:
+  - **CID**: `6277cc2c-99b8-4b7a-a220-a6c971d1bb98`
+  - **CWD (inert transport datum)**: `/tmp/moriarty-r275-fresh-independent-review-pb4isp2h`
+  - **Independence**: No prior session continuity, no peer opinion supplied, and prior reviewer A's R262 report is treated strictly as supplied reference data (as A authored the two mock-fix snippets and is not independent on `CURRENT_FULL_CHANGED_MOCK15`).
+- **Exact Current Candidate Pins (Transport-Supplied Headers, Verified Against Full Inline Source Bodies)**:
+  - **`operator_provisioner.py` (`CURRENT_FULL_OPERATOR_READ_ONLY`)**: `48932B`, SHA-256 `7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476` (unchanged; 833 lines).
+  - **`test_operator_provisioner_mock.py` (`CURRENT_FULL_CHANGED_MOCK15`)**: `50163B`, SHA-256 `3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7` (changed; 15 AST `test_*` methods in `ProvisionerContractTests`, unrun).
+
+---
+
+### 2. Readable Coverage vs. Truncation & Scope Gaps
+
+1. **Read Completely Inline**:
+   - `CURRENT_FULL_OPERATOR_READ_ONLY` (`48932B`, `7a8e55b9...`): 100% present and read line-by-line (`BEGIN` to `END`).
+   - `CURRENT_FULL_CHANGED_MOCK15` (`50163B`, `3e23ab97...`): 100% present and read line-by-line (`BEGIN` to `END`, all 15 `test_*` methods).
+   - `EXACT_PRIOR_A_COMPLETE13_DISPOSITIONS_FIX_BASIS_SCOPE_NOT_NEW_APPROVAL` (`33418B`, `a04b17df...`): 100% present and read (`BEGIN` to `END`, §§3–6).
+   - `COMPLETE_SELECTED_NORMATIVE_F033` (`5804B`, `b22d6da3...`), `F034` (`5430B`, `9946b53b...`), `F035` (`9538B`, `8f4e6fc0...`), `F036` (`26794B`, `d7ec203b...`, preamble lines 1–61 + 19 complete guard definitions), `F037` (`3476B`, `caadb3a7...`), and `F038` (`3513B`, `ad7faa8a...`): 100% present and read (`BEGIN` to `END`).
+2. **Precise Truncation / Omitted-Scope Gaps (Not Recertified or Guessed)**:
+   - **Prompt Tail Truncation (`GAP-TRUNC-F039-F041`)**: `COMPLETE_SELECTED_NORMATIVE_F039` (`1388B`, `458ab0f4...`) is truncated mid-line after `{"op6_observation_json_schema":{"schema":"sherlock-operator-provisioning-observation/1","op0_facts":{"mem_available_bytes":"int >= 23622320128","self_cgroup":"sing` with marker `<truncated 13794 bytes>`. The remaining ~1,224 B of `F039`, all of `F040` and `F041`, and any trailing blocks inside those 13,794 bytes are **absent/unread** in this prompt.
+   - **Omitted Primary/Raw Closure & Runner Bodies**: Raw historical review/author artifacts (`F022`, `F023`, `F031`, `F032`, `F047`, `F050`, `F055`, `F303`–`F307`), non-excerpted lines of `bounded_sdk_compile.py` outside `F036`'s preamble + 19 definitions, full SDK/dependency sources, and live host/runtime state are outside inline scope and are not recertified. Byte counts and SHA-256 digests are accepted as transport pins without tool execution.
+
+---
+
+### 3. Independent Review of Original 13 Dispositions (+ `ADD-NB-01`, `ADD-NB-02`) Against Current Inline Pair & `F033`–`F038`
+
+*(Note: Where prior citations additionally referenced `F039`–`F041`, verification below binds strictly to the complete inline `operator_provisioner.py`, `test_operator_provisioner_mock.py`, `F033`–`F038`, and the visible prefix of `F039`, with `GAP-TRUNC-F039-F041` noted for the unread tail.)*
+
+| ID | Independent Verification on Current Inline Pair (`7a8e55b9...` / `3e23ab97...`) & `F033`–`F038` | Disposition |
+| :--- | :--- | :--- |
+| **`F-01`** | `absolute()` permits `@` via `r'(/[A-Za-z0-9._@-]+)+'`; `validate_request()` validates top-level `envelope_path` with `r'/[A-Za-z0-9_][A-Za-z0-9_.@-]{0,127}'` (compatible with `F036:validate_cgroup` and `F037`); `check_host_predicates()` validates `rel_cg` with `r'[A-Za-z0-9_.@:-]+(/[A-Za-z0-9_.@:-]+)*'`, `'..' not in Path(rel_cg).parts`, and `cg_root in probe_cg.parents`. Tested in Tests 5 & 10. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`F-02`** | `cmd_prelaunch_verify()` calls live `verify_and_observe()` (enforcing fresh `MemAvailable >= 23622320128` per `F033:CPOL4` and `F038` Step 10, plus `0::/` membership) and compares `schema`, `request_sha256`, `provisioner_sha256`, `quota_mounts`, `cgroup_verified`, and `operator_tool_sha256` against recorded `OP-6`, while checking `rec_op0['mem_available_bytes'] >= OP0_MIN_MEM_AVAILABLE_BYTES` and `rec_op0['self_cgroup'].startswith('0::/')` without requiring ambient session `self_cgroup` equality across login shells. Tested in Test 7. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`F-03`** | `cmd_teardown()` parses `EVIDENCE_SHA256_MANIFEST.json` via single-fd `jload_with_sha256()`, verifies `request_sha256`, `provisioner_sha256`, `observation_sha256 == sha256_regular(obs_path)`, `'ONE_SHOT_STARTED' in files`, and `sha256_regular(ev_dir / rel_name) == f_sha` for every manifest entry before `teardown_cgroups()` and idempotent `umount_quota_tmpfs(..., require_mounted=False)` (`F038` Step 11). Tested in Test 8. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`F-04`** | `cmd_collect_evidence()` loads `obs_path` via `jload_with_sha256()`, verifies active `target_tmp` and `packet` mounts in `parse_mountinfo()` against `obs_doc['quota_mounts']` (`mountpoint`, `mount_id`, `device`, `tmpfs` per `F035:Q-OBS_predicate`), pre-validates and hashes `ONE_SHOT_STARTED` and `packet/*` before `os.mkdir(ev_dir)`, copies via `copy_regular_verified()` (with `os.fsync` + re-hash), and `fsync_dir()`s `pkt_out`, `ev_dir` (via `write_new_json`), and `ev_dir.parent`. Tested in Test 9. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`F-05`** | `run_mount_tmpfs()` refuses already-mounted mountpoints; `cmd_op3()` and `cmd_op4()` verify `execution_root` is an active single `tmpfs` mount; `cmd_op5()` verifies a single global `cgroup2` mount at `/sys/fs/cgroup` with no nested mounts and `require_absent_nonsymlink(e_dir)`; `verify_and_observe()` enforces `need(len(b) > 2, ...)` before reading superblock options (`F035`, `F038` Steps 4–8). Tested in Tests 9, 12, 13, 14, 15. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`F-06`** | `pin_operator_tool()` checks non-symlink `0:0` `(mode & 0o022) == 0` ancestors before normalizing relative symlink targets via `os.path.normpath(str(cur.parent / target))`, enforces `(stat.S_IMODE(rst.st_mode) & 0o022) == 0` on the resolved regular file, and is called in `run_mount_tmpfs()` and `umount_quota_tmpfs()` before `subprocess.run()`. Tested in Tests 6, 8, 12, 13, 15. (Historical `A: F-06 MEDIUM` vs `B: NB-01 NONBLOCKING` severity difference preserved.) | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`NEW-MF-01`** | Identical to `F-01` (sub-issue 1: `@`/`:` in `self_cgroup` / `envelope_path`) and `F-02` (sub-issue 2: `cmd_prelaunch_verify` `self_cgroup` session independence). | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`NEW-MF-02`** | Single-fd `jload_with_sha256()` is used in `main()`, `cmd_prelaunch_verify()`, `cmd_collect_evidence()`, and `cmd_teardown()`; `--request-sha256` is enforced in `main()`; active mount and manifest/file digest checks are enforced in `cmd_collect_evidence()` and `cmd_teardown()`. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`NEW-MF-03`** | **Split disposition (preserved contract boundary)**: (1) `pin_operator_tool()` before root `mount`/`umount` and `mp.lstat().st_dev == root_dev` residency verification before `OP-4` are **`CLOSED_BY_CURRENT_SOURCE`**. (2) User-space `resolve() + O_NOFOLLOW + fstat` and pathname-based `/usr/bin/mount` and `/usr/bin/umount` subprocesses (`F035`, `F038` Steps 4/6/11) do **not** provide kernel-atomic `openat2(RESOLVE_NO_SYMLINKS)` or fd-bound `fsopen`/`move_mount` immunity against concurrent hostile `uid=1000` ancestor replacement during root steps. Single quiescent human operator execution remains an **unadopted contract boundary** that Root has not granted as privileged/native authority. | **`SPLIT: TOOL_PIN_AND_ST_DEV_CLOSED / QUIESCENT_OPERATOR_PATHNAME_ATOMICITY_BOUNDARY_OPEN`** |
+| **`NB-01`** | Closed by the same `pin_operator_tool()` and `check_host_predicates()` `..` normalization and `0o022` mode bitmask checks as `F-06`. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`NB-02`** | `need(len(b) > 2, ...)` in `verify_and_observe()` is **`CLOSED_BY_CURRENT_SOURCE`**. Hardcoded `L` floors / `max_inodes` ceilings in `validate_request()` remain **`REJECTED_WITH_SOURCE`** (`F036:validate` and `F037` specify positive/page-aligned operator obligations and arithmetic conservation rather than fixed schema constants for `L` or `max_inodes`). | **`CLOSED_BY_CURRENT_SOURCE` / `REJECTED_WITH_SOURCE`** |
+| **`NB-03`** | Recursive post-order child cgroup teardown under `P` (`depth <= 4`) in `kill_and_rmdir_cgroup()` / `teardown_cgroups()` is **`CLOSED_BY_CURRENT_SOURCE`**. Writing uncontracted `cgroup.max.depth` / `cgroup.max.descendants` in `cmd_op5()` remains **`REJECTED_WITH_SOURCE`** (`F035` and `F038` Step 7 specify the exact `OP-5` writes without `cgroup.max.*`, and Test 14 asserts they are not written). | **`CLOSED_BY_CURRENT_SOURCE` / `REJECTED_WITH_SOURCE`** |
+| **`NB-04`** | Direct unit tests for `cmd_op0` (Test 10), `cmd_op1` (Test 11), `cmd_op2` (Test 12), `cmd_op4` (Test 13), `cmd_op5` (Test 14), `verify_and_observe` + `cmd_op6` (Test 15) are implemented in `CURRENT_FULL_CHANGED_MOCK15` with positive, invariant (`K1`–`K3`), and negative `Refusal` assertions. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`ADD-NB-01`** | Single-fd `jload_with_sha256()` unpacking `(doc, sha)` is used across `cmd_prelaunch_verify`, `cmd_collect_evidence`, `cmd_teardown`, and `main`, and mocked consistently in Tests 7, 8, and 9. | **`CLOSED_BY_CURRENT_SOURCE`** |
+| **`ADD-NB-02`** | With the two literal mock fixes applied in `CURRENT_FULL_CHANGED_MOCK15` (see §4 below), both previously unmocked read-only calls in Tests 6 and 9 are now intercepted. | **`CLOSED_BY_CURRENT_SOURCE`** |
+
+---
+
+### 4. Audit of the Two R262A-Authored Fixes & All 15 Tests' OS-Effect Interception (`CURRENT_FULL_CHANGED_MOCK15`)
+
+1. **Verification of the Two Inserted Mock Snippets**:
+   - **Insertion 1 (`Test 6`: `test_pin_operator_tool_accepts_root_symlinked_python3_and_rejects_unowned_target`)**:
+     - Added `mock.patch('os.geteuid', return_value=1000)` to the `with` block testing `op.pin_operator_tool('/usr/bin/python3')`.
+     - **Effect**: Intercepts both `os.geteuid() == 0` checks in `pin_operator_tool()` (at ancestor directory loop and resolved regular file check), preventing live `geteuid(2)` syscalls and ensuring `not os.access(..., os.W_OK)` is always evaluated through the mocked `os.access` callable. **Closes `NEW-MOCK-02` with zero regressions.**
+   - **Insertion 2 (`Test 9`: `test_ops_collect_evidence_abort_cleanup_and_main_anchor`, `cmd_op3` `with` block)**:
+     - Added `mock.patch.object(Path, 'is_symlink', autospec=True, return_value=False)` to the `with` block testing `op.cmd_op3(req)`.
+     - **Effect**: Intercepts `need(not any(x.is_symlink() for x in [root, *root.parents]), 'symlink in execution_root path')` inside `cmd_op3()`, preventing the 7 live `os.lstat` calls on `/home/charl/Moriarty/.moriarty-dev/runtime/fresh-op-root-unselected` and its 6 ancestor directories and ensuring `cmd_op3(req)` deterministically reaches the mocked `parse_mountinfo()` check. **Closes `NEW-MOCK-01` with zero regressions.**
+
+2. **Full 15-Test Import, Call-Path, Patch-Scope & Oracle Audit (`ProvisionerContractTests`)**:
+   - **Module Import Path**: Importing `operator_provisioner` and `test_operator_provisioner_mock` loads only Python stdlib modules (`__future__`, `argparse`, `copy`, `hashlib`, `json`, `os`, `pathlib`, `re`, `shutil`, `stat`, `subprocess`, `time`, `unittest`, `unittest.mock`) and defines constants/functions/classes. **Zero OS calls occur at import or test-discovery time.**
+   - **Test-by-Test Reached OS Effect Accounting**:
+     - **Tests 1–4** (`test_valid_request_passes_schema_and_arithmetic`, `test_rejects_historical_paths_ancestors_disjointness_and_nested_cgroup`, `test_rejects_lp_sum_exceeding_envelope_or_tmpfs_plus_f_exceeding_p_or_phase_f_floors`, `test_mount_flags_preserve_exec_on_target_tmp_and_noexec_on_others`): Pure in-memory validation/formatting (`validate_request`, `mount_flags`); **0 OS effects reached**.
+     - **Test 5** (`test_check_host_predicates_succeeds_without_root_cgroup_kill_using_nonroot_witness`): Reaches `Path.exists`, `Path.read_text`, `Path.is_symlink`, `Path.resolve`, `Path.lstat`, `os.access`; **100% mocked**.
+     - **Test 6** (`test_pin_operator_tool_accepts_root_symlinked_python3_and_rejects_unowned_target`): Reaches `Path.is_symlink`, `Path.resolve`, `os.lstat`, `os.readlink`, `os.access`, `os.geteuid`, and `sha256_regular`; **100% mocked**.
+     - **Test 7** (`test_prelaunch_verify_detects_qobs_or_tool_drift`): Reaches `verify_and_observe` and `jload_with_sha256`; **100% mocked**.
+     - **Test 8** (`test_teardown_polls_cgroup_events_and_validates_mountinfo`): Reaches `require_root_operator`, `jload_with_sha256`, `sha256_regular`, `pin_operator_tool`, `parse_mountinfo`, `Path.exists`, `Path.is_symlink`, `Path.lstat`, `Path.iterdir`, `Path.write_text`, `Path.read_text`, `os.rmdir`, `time.sleep`, `subprocess.run`; **100% mocked**.
+     - **Test 9** (`test_ops_collect_evidence_abort_cleanup_and_main_anchor`): Across all 5 `with` blocks (`cmd_op3`, `cmd_collect_evidence` positive/negative, `cmd_abort_prelaunch_cleanup` negative, `main` positive/negative), reaches `require_unprivileged_operator`, `require_root_operator`, `jload_with_sha256`, `sha256_regular`, `parse_mountinfo`, `require_absent_nonsymlink`, `copy_regular_verified`, `fsync_dir`, `write_new_json`, `default_provisioner_sha256`, `cmd_op0`, `Path.exists`, `Path.is_symlink`, `Path.is_file`, `Path.iterdir`, `os.mkdir`, `os.chmod`, `builtins.print`; **100% mocked**.
+     - **Test 10** (`test_cmd_op0_direct_host_predicates_and_fresh_path_refusals`): Reaches `os.getuid`, `os.geteuid`, `os.getgid`, `os.getegid`, `os.access`, `Path.exists`, `Path.read_text`, `Path.is_symlink`, `Path.resolve`, `Path.lstat`; **100% mocked**.
+     - **Test 11** (`test_cmd_op1_direct_mkdir_chmod_and_refusals`): Reaches `os.getuid`, `os.geteuid`, `os.getgid`, `os.getegid`, `Path.read_text`, `Path.exists`, `Path.is_symlink`, `os.mkdir`, `os.chmod`; **100% mocked**.
+     - **Test 12** (`test_cmd_op2_direct_root_target_tmp_mount_and_refusals`): Reaches `os.getuid`, `os.geteuid`, `Path.read_text`, `Path.is_symlink`, `Path.lstat`, `Path.iterdir`, `pin_operator_tool`, `subprocess.run`; **100% mocked**.
+     - **Test 13** (`test_cmd_op4_direct_source_home_and_packet_noexec_mounts_and_refusals`): Reaches `os.getuid`, `os.geteuid`, `Path.read_text`, `Path.is_symlink`, `Path.lstat`, `Path.iterdir`, `pin_operator_tool`, `subprocess.run`; **100% mocked**.
+     - **Test 14** (`test_cmd_op5_direct_cgroup_hierarchy_caps_and_selective_delegation`): Reaches `os.getuid`, `os.geteuid`, `Path.exists`, `Path.is_symlink`, `Path.write_text`, `Path.read_text`, `os.mkdir`, `os.chown`, `os.chmod`; **100% mocked**.
+     - **Test 15** (`test_verify_and_observe_and_cmd_op6_direct_qobs_k_invariants_and_atomic_write`): Reaches `os.getuid`, `os.geteuid`, `os.getgid`, `os.getegid`, `os.access`, `os.statvfs`, `os.lstat`, `Path.lstat`, `Path.exists`, `Path.is_symlink`, `Path.is_dir`, `Path.resolve`, `Path.read_text`, `Path.iterdir`, `sha256_regular`, `os.open`, `os.fdopen`, `os.fsync`, `os.close`; **100% mocked**.
+   - **Are ALL reached candidate-directed OS effects mocked?**: **YES.** Every candidate-directed OS, filesystem, `/proc`, `/sys/fs/cgroup`, mount, privilege, subprocess, timer, and FD effect reached across all 15 tests in `CURRENT_FULL_CHANGED_MOCK15` (`3e23ab97...`) is now mocked.
+   - **Regressions / Missed Effects**: **Zero regressions and zero missed reached OS effects.**
+   - **Residual Non-Blocking Coverage Note (`NEW-MOCK-03`, unchanged `LOW`)**: Low-level `os.open`/`os.fstat` internals of `sha256_regular`, `jload_with_sha256`, and `copy_regular_verified`, the positive 6-child `mkdir` loop of `cmd_op3`, the positive unmount path of `cmd_abort_prelaunch_cleanup`, and recursive child cgroups under `P` (`depth 1..4`) remain unexercised by low-level mocks; this is non-blocking and requires no source change.
+
+---
+
+### 5. Separate `source_only_verdict`
+
+- **`source_only_verdict`**: **`APPROVE`** *(for the complete inline candidate pair `operator_provisioner.py` `48932B SHA7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476` and `test_operator_provisioner_mock.py` `50163B SHA3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7` against all readable inline normative contracts `F033`–`F038` and visible prefix of `F039`, subject to the preserved `NEW-MF-03` quiescent-operator / pathname-atomicity contract boundary; paired with explicit `ABSTAIN / GAP-TRUNC-F039-F041` solely on any direct comparison against the `<truncated 13794 bytes>` tail of `F039`–`F041`)*.
+- **Source Anchors & Reasons**:
+  1. `operator_provisioner.py` (`7a8e55b9...`) has zero source defects across `validate_request` (L190–262), `check_host_predicates` (L285–332), `cmd_op0`..`cmd_op6` (L334–634), `cmd_prelaunch_verify` (L636–653), `cmd_collect_evidence` (L666–711), `cmd_teardown` (L770–790), `cmd_abort_prelaunch_cleanup` (L792–806), and `main` (L808–830).
+  2. `test_operator_provisioner_mock.py` (`3e23ab97...`) cleanly resolves both prior mock-interception omissions (`os.geteuid` in Test 6 at L153 and `Path.is_symlink` in Test 9's `cmd_op3` block at L304) with zero regressions and 100% mock interception of reached candidate-directed OS effects across all 15 tests.
+  3. **Honest Scope**: Approves the source pair as proposal/test text only. Does **not** select or authorize `mock15` execution, does **not** close the unadopted `NEW-MF-03` quiescent-operator / pathname-atomicity boundary for root `mount`/`umount`, and does **not** fabricate or recertify the `<truncated 13794 bytes>` suffix (`F039` tail, `F040`, `F041`) or any omitted raw closure files.
+
+---
+
+### 6. Separate Prospective Classification of Proposed SDK-Free `mock15` Plan
+
+- **Independent Policy Evaluation of `P1` (`F034`) & `R157` (`F033`)**:
+  1. **Why Existing `P1` §2.2 Does Not Automatically Cover `mock15`**:
+     - `F034` (`P1` §2.2) explicitly restricts the adopted ordinary class: *"The existing standard, independent but interface-informed tests with independent oracles, is acceptable for one class only. That class is execution of driver 4bdb0146 over exactly these seven files, as ORDINARY_SYNTHETIC_UNIT_TEST with zero native authority"*, naming the exact 7 bound `R5` files (`bounded_sdk_compile.py fc1c1c98`, `config.example.json ed683c42`, `exact16_git_symlinks.json 47cd59df`, `test_config_source.py 0f966d96`, `test_bounded_sdk_compile_link_fragment.py 920983f6`, `test_bounded_sdk_compile_symlink_config.py d13b51da`, `test_r5_walk_treehash_freeze.py f6b7b2d4`).
+     - Neither `F034` (`P1`) nor `F033` (`R157` prospective native-path adoption of `R134` / `P1` §§1.2–1.5) includes `operator_provisioner.py` (`7a8e55b9...`), `test_operator_provisioner_mock.py` (`3e23ab97...`), or `/usr/bin/python3 -I -B -c ... unittest` discovery. Existing policy/class scope cannot be extended by implication.
+  2. **SDK-Free / Non-Native Properties Verified From Source**:
+     - The proposed `mock15` run touches **zero** SDK crate archives, **zero** `git-db-metadata` or `git-loose-unknown` payloads (`F034` §1.2–1.5), never imports or invokes `bounded_sdk_compile.py` or `author_metadata.py` (`F034` §3), requires no elevated privilege, and—with `NEW-MOCK-01` and `NEW-MOCK-02` now fixed in `3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7`—mocks **100% of reached candidate-directed OS effects** across all 15 tests.
+  3. **Needed Limited Root Scope Adoption & Exact Conditions**:
+     - Before `mock15` can be executed as an ordinary synthetic mock unit test (`ORDINARY_SYNTHETIC_MOCK_UNIT_TEST` / parallel to `F034` `P1` §2.2–2.3 with `native_authority = 0`), Root must explicitly record a **limited SDK-free ordinary scope adoption** binding:
+       1. **Exact Two-File Digests**: Isolated directory containing only `operator_provisioner.py` (`48932B`, SHA-256 `7a8e55b908a82f138037d6cc4cc87dca4105cad1ee5838b6110555a40e7f6476`) and `test_operator_provisioner_mock.py` (`50163B`, SHA-256 `3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7`); any byte change voids the scope (`P1` §2.3(a)).
+       2. **Exact Command & Test Count**: `/usr/bin/python3 -I -B -c` stdlib `unittest` discovery over those two files enforcing exact `countTestCases() == 15`.
+       3. **Bounded Unprivileged Execution & Controller Caps**: Verified at launch to run as unprivileged `uid=euid=gid=egid=1000` with `CapPrm=CapEff=CapAmb=0`, under an active controller enforcing the `30s` hard wall cap and `131072B` combined output cap.
+       4. **Verbatim Labeling & Non-Citation (`P1` §2.3(b)–(e))**: Verbatim recording of all outcomes (including any failure/error) as `INTERFACE_INFORMED_NOT_BLIND_R2_UNSATISFIED`, disclosing that `3e23ab97...` uses interface-informed mocks/oracles, with **zero citation** as `R2` satisfaction (`P1` §2.1, §2.4), host provisioning feasibility, `ADMITTED_CONFIGURATION`, tier consent, or `C4` closure.
+- **`mock15_prospective_classification`**:
+  - **Without Limited Root Scope Adoption / Unverified Runtime Preconditions**: **`ABSTAIN / UNCLASSIFIED_WITHOUT_LIMITED_ROOT_SCOPE_ADOPTION`** (because `F034` `P1` §2.2 is explicitly restricted to `"one class only"`—`driver 4bdb0146` over the 7 bound `R5` files—and caller identity/caps/controller state are `UNKNOWN`/unprobed, plus any raw `F307` JSON in the `<truncated 13794 bytes>` tail is unread).
+  - **Upon Limited Root Scope Adoption & Launch-Time Controller Verification**: **`ELIGIBLE_WITH_EXACT_CONDITIONS`** as a limited SDK-free `ORDINARY_SYNTHETIC_UNIT_TEST` with `native_authority = 0` (the prior `NEW-MOCK-01` and `NEW-MOCK-02` mock-interception blockers from R262A are now **resolved** in `3e23ab97182ef04881ce93216e1bdbede4cbd946b46aeee651589d12b92625d7`).
+
+---
+
+### 7. Remaining Assumptions, Preserved Dissent & Authority Status
+
+1. **Preserved Unadopted Quiescent-Operator / Pathname-Atomicity Gap (`NEW-MF-03`)**:
+   - `operator_provisioner.py` relies on Python user-space symlink/stat checks followed by pathname-based `/usr/bin/mount` and `/usr/bin/umount` subprocesses (`F035`, `F038` Steps 4, 6, 11). It does not implement kernel-atomic `openat2(RESOLVE_NO_SYMLINKS)` or fd-bound `fsopen`/`move_mount` immunity against a concurrent hostile `uid=1000` process mutating paths under `execution_root` during root steps. Root has **not** adopted single-human-operator quiescence as privileged or native execution permission.
+2. **Preserved Historical Reviewer Disagreements**:
+   - Historical differences between prior reviewers (`R198A` vs. `R199B` on `F-06`/`NB-01` severity and `MF-01..MF-07` labels; `R262A` vs. `R240B`/`R255` on Test 6 `os.geteuid` and Test 9 `Path.is_symlink`, now resolved in `3e23ab97...`) remain preserved in the record.
+3. **Unobserved Live Host & Native Prerequisites (`F033`, `F034`, `F035`, `F037`, `F038`)**:
+   - Live host `OP-0` predicates (`MemAvailable >= 23,622,320,128` B per `F033:CPOL4`, single global `cgroup2` mount at `/sys/fs/cgroup` with `cpu`/`memory`/`pids` and `cgroup.kill`/`cgroup.events`, non-setuid `/usr/bin/bwrap`, `user.max_user_namespaces > 0`), fresh Root-selected `request.json` operands, human/root execution of `OP-0..OP-6`, post-`OP-6` `old_home_stat_manifest`, external Root `CPOL3` verification (`9f48d1f227c2714bab374828b7fe4dd930aab660ea63dd2685f91d6250bcafce` and R53 freeze `f7910a648f0558c9aa3f0543c18cc546d0b0238c83b867db75c2ff0dfb3cdf17`), `ADMITTED_CONFIGURATION`, verbatim `P1` §1.5(a)–(c) disclosures, explicit human `GRANTED_TIER1`/`GRANTED_TIER2`, and separate Root disposition of `R2` and `C4` are all **unobserved and ungranted**.
+4. **Summary Status Flags**:
+   - **`source_only_verdict`**: `APPROVE` (within complete inline readable scope `7a8e55b9...` + `3e23ab97...` + `F033`–`F038`; `ABSTAIN / GAP-TRUNC-F039-F041` on unread `<truncated 13794 bytes>` tail; `NEW-MF-03` quiescent-operator / pathname-atomicity boundary preserved)
+   - **`mock15_prospective_classification`**: `ABSTAIN / UNCLASSIFIED_WITHOUT_LIMITED_ROOT_SCOPE_ADOPTION` (`ELIGIBLE_WITH_EXACT_CONDITIONS` only if Root adopts the limited SDK-free two-file ordinary scope parallel to `P1` §2.2–2.3 and launch-time `1000:1000` / `Cap*=0` / `30s` / `131072B` controller preconditions are verified; candidate mock-interception condition is 100% satisfied by `3e23ab97...`)
+   - **`old_policy_adoption`**: `NONE`
+   - **`operationselected`**: `false`
+   - **`execution_authority`**: `0`
+   - **`native_authority`**: `0` (`C4=OPEN`, `R2=UNSATISFIED`, `60-460=HOLD`, `stoppedAm10=noRetryNoRephraseNoReroute`, `quarantinedT3=UNCHANGED`)
+
+END-R275-FRESH-INDEPENDENT-SOURCE-MOCK15-NATIVE0

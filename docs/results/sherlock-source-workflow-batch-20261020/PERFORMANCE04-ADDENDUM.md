@@ -1,0 +1,13 @@
+# Later performance04 observation — 2026-10-20
+
+This addendum leaves the already-reviewed five-path batch cut unchanged. That earlier cut truthfully recorded repair03's sampled exit124/incomplete result; the new receipt belongs to changed performance04 source. It is not a retrospective correction of the earlier actual result.
+
+Root's result receipt dated 2026-10-20T21:44:40.440111+00:00 records eight selected operations completed with exit0 and matching pre/post source pins: typecheck, ten predicate-equivalence examples, named selections of 34/24/5/1 tests, one sampled run and a separate directed baseline. There are 74 named tests (10+34+24+5+1), not 74 universal proofs. The retained result contains the complete argv and stdout for all eight operations.
+
+The sampled command preserved 10000 samples, maximum60steps, seed1, 30-second wall bound and 256MiB Node old-space. It completed in 28.824681795988seconds with no invariant violation reported. **All nine requested external witnesses were reached in zero of the10000traces.** No external random-history coverage follows. Node old-space is not totalRSS, and this result is not a measured SDK/native/circuit performance result.
+
+The separate directed run reached all six requested witnesses in one trace. Root reports its path length as47steps; the maximum50step command cap alone is not independent length proof. The named examples and directed trace supply finite scoped checks, not exhaustive workflow correctness or actual producer/process authentication.
+
+See the [separately dated atlas metadata](../../../wiki/research/sherlock-circuit-atlas/UPDATE-025-POST-AUTHOR-STATUS.md), which pins and captures the complete Root performance04 receipt without private semantic payloads. The [original batch scope](BATCH-SCOPE.md) retains failedLean05 versus separate isolatedLean06PASS, Construct26UNRUN, producer14UNRUN and exactcohort identity qualifications. No source/resource design adoption, SDK/native proof, recursive target, fullinterpreter/refinement or EARS acceptance is inferred. The website remains unpublished until completeSherlock.
+
+Separate later source/vote metadata: Root PR363 is draft head45270aea3974361e5a79ba49d461818a3bc356e5/eight files/three uncompiled-unrun tests. Both design03 voters returned AGREE, distinct from the earlier design02 dissent; neither vote is Root adoption or native permission. Policy03 integration04 source author reports59 tripwired pure tests and a NOTREADY configuration, not native execution or independent runtime qualification. See the atlas metadata for exact receipt pins; no current policy/adoption or host liveness claim is made.

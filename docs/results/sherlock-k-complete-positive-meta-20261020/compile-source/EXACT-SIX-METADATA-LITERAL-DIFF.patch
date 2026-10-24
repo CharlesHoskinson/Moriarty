@@ -1,0 +1,34 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-CTX22-derived-caps29-20261020/ROOT-EXACT1-COMPILE-COMPOSITION.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-META-20261020/ROOT-EXACT1-COMPILE-COMPOSITION.py
+@@ -1,17 +1,17 @@
+ from pathlib import Path
+ import json,hashlib,runpy,os,sys,glob
+ R=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017')
+-B=R/'k-C6-positive-CTX22-derived-caps29-20261020'
+-V=B/'fresh-model-field-source-API-exact1-review-preparation-01/actual-MuseWonderHIGH-general-CTX22-model-field-source-exact1-compile-review'
++B=R/'k-C6-complete-positive-META-20261020'
++V=B/'fresh-source-API-newcompile-review-preparation-01/actual-MuseWonderHIGH-KFullMetaSourceAPIExact1CompileMuseReview20261020'
+ load=lambda p:json.loads(Path(p).read_bytes())
+ def pin(p):
+  p=Path(p);v=p.read_bytes();return dict(path=str(p),bytes=len(v),sha256=hashlib.sha256(v).hexdigest())
+ def check(x):
+  a=pin(x['path']);assert a['bytes']==x['bytes']and a['sha256']==x['sha256'];return a
+-proposal=B/'PROPOSED-EXACT1-NEW-CTX-COMPILE.json'
+-assert pin(proposal)['sha256']=='d2cccdf0a37a61b71ea37a6e93df585233a9a44783747576b6c868625025a2bf'
++proposal=B/'PROPOSED-EXACT1-NEW-META-COMPILE.json'
++assert pin(proposal)['sha256']=='2e185e0143ca0f38d15f4feb89a2b3584c29c8234853dbca5bb2ea8bc7ddcbfb'
+ j=load(proposal);assert len(j['phases'])==1;op=j['phases'][0]
+-rv=load(V/'RESULT.json');assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed'and rv['finalSHA']=='670598c18e9fc0e117612c1f4c3db9ddb1e4e99fc82a446e9bc42bea7af9552a'
++rv=load(V/'RESULT.json');assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed'and rv['finalSHA']=='33e5bd1a8ce1cc432ef23b4483eece8cce473945f9541a6d381817609d5ae763'
+ f=load(j['source_freeze']['path']);tools=load(j['tools']['path']);closure=load(j['K_builtin_closure']['path'])
+ flat={}
+ def walk(x):
+@@ -54,7 +54,7 @@
+  fd=os.open(phase,os.O_DIRECTORY|os.O_RDONLY);os.fsync(fd);os.close(fd)
+  post=prepost();durable(phase/'ROOT-POSTCHECK.json',post)
+  artifacts=[pin(p)for p in sorted(actual.rglob('*'))if p.is_file()and p not in [actual/'FLAT-INPUT-PINS.json']]
+- products=[pin(p)for p in sorted((actual/'c6-positive-context-kompiled').rglob('*'))if p.is_file()]
++ products=[pin(p)for p in sorted((actual/'c6-positive-meta-kompiled').rglob('*'))if p.is_file()]
+  errors=[pin(p)for p in phase.glob('hs_err_pid*.log')]
+  durable(actual/'ROOT-ALL-ACTUAL-PRODUCTS-FROZEN.json',{'products':products,'rawFiles':artifacts,'jvmErrorFiles':errors})
+  ok=record.get('returncode')==0 and record.get('outcome')=='exited'and record.get('timed_out')is False and record.get('containment_breach')is False and not record.get('remaining')and not errors and all(Path(p).is_file()for p in op['products'])

@@ -1,0 +1,57 @@
+        name, payload, phase = store['_receipts'][0]
+        self.assertEqual((name, phase), ('D_FREEZE.json', 'D'))
+        self.assertEqual(set(payload), {'H_S', 'files'})
+        self.assertEqual(payload['files'], self.expected())
+        self.assertTrue(SHA256_RE.fullmatch(payload['H_S']))
+
+    def test_freeze_source_refuses_mismatch_before_chmod(self):
+        fx = self.build()
+        relinked = dict(self.expected(), **{'pkg/link.zkir': 'git-symlink:' + git_blob(PAYLOAD)})
+        dropped = {k: v for k, v in self.expected().items() if k != 'pkg/file_link.prover'}
+        for label, files in (('linktext', relinked), ('membership', dropped)):
+            with self.subTest(label):
+                store = {'C_RAW_IDENTITIES.json': {'files': files}}
+                with self.guard_io(fx, store), spying('os.fchmod', 'os.chmod') as rec:
+                    with self.assertRaisesRegex(G.Refusal, 'changed before freeze'):
+                        G.freeze_source(fx.cfg)
+                self.assertEqual(rec.events, [])
+                self.assertNotIn('_receipts', store)
+                self.assertEqual((mode_of(fx.root), mode_of(fx.root / 'a.txt')), (0o755, 0o644))
+
+    def test_frozen_source_refuses_changes(self):
+        def retarget(fx):
+            os.unlink(fx.pkg / 'link.zkir')
+            os.symlink(b'../../elsewhere' + b'/.' * 13, os.fsencode(fx.pkg / 'link.zkir'))
+
+        def link_to_regular(fx):
+            os.unlink(fx.pkg / 'link.zkir')
+            write(fx.pkg / 'link.zkir', DIR_TEXT, 0o644)
+
+        def link_removed(fx):
+            os.unlink(fx.pkg / 'link.zkir')
+
+        def regular_added(fx):
+            write(fx.sub / 'new.rs', b'', 0o644)
+
+        def regular_changed(fx):
+            write(fx.root / 'a.txt', b'abd', 0o644)
+
+        def undeclared_link(fx):
+            os.symlink(b'a.txt', os.fsencode(fx.root / 'extra'))
+
+        for mutate in (retarget, link_to_regular, link_removed, regular_added,
+                       regular_changed, undeclared_link):
+            with self.subTest(mutate.__name__):
+                fx = self.build()
+                store = {'C_RAW_IDENTITIES.json': {'files': self.expected()}}
+                with self.guard_io(fx, store):
+                    G.freeze_source(fx.cfg)
+                    self.assertEqual(G.frozen_source(fx.cfg)['files'], self.expected())
+                restore_perms(str(fx.tmp))
+                mutate(fx)
+                with self.guard_io(fx, store), self.assertRaises(G.Refusal):
+                    G.frozen_source(fx.cfg)
+
+
+if __name__ == '__main__':
+    unittest.main()

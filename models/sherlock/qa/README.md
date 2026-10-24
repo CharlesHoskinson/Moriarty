@@ -15,6 +15,26 @@ calls that helper's compiler/test entry point. It reads 208 complete state rows,
 prefixes. Expected values remain the independently authored committed corpus;
 this tool cannot update them. The pre-implementation contract is [CONTRACT.md](CONTRACT.md).
 
+## Source-reference facts
+
+Each successful checker report includes `source_reference_facts` for explicitly
+recorded checker input-byte reads. It records SHA-256 and length of the same byte
+objects consumed, without reopening files. Paths are sorted, repeated reads are
+counted, and differing byte snapshots of one path remain visible. The helper
+opens no files and adds no execution result.
+
+For the current default corpus check, the recorded set contains eight unique
+paths and nine reads: frozen K source, four oracle documents, two committed Rust
+literal transcriptions and the serializer read for each family. This partial
+inventory does not cover the checker/helper imports or supplied observation files;
+it is not a dependency-closure, reviewer-coverage or producer-authenticity claim.
+The report retains `dependency_closure: not-established`,
+`reviewer_read_extent: not-observed` and `execution_evidence: none`.
+
+The [local CI guide](../../../docs/DOCTORWATSON-CI.md#explicit-stream-observation-job)
+also documents the explicit real stream wrapper job. Its actual Rust execution
+receipt remains separate from the supplied-file comparison reported here.
+
 Compare a supplied readback in the **existing corpus document shapes**:
 
 ```sh
@@ -150,3 +170,42 @@ actual parsed-source execution matching both programs and all 1,259 records.
 Source code, supplied-file agreement and actual execution remain separate; the
 source path has no general or untrusted input endpoint. Compiler/native, Clean
 constraints and target acceptance require their own evidence.
+
+
+## Optional compiler capability evidence record
+
+A raw `sherlock-host-artifact/1` identifies its input program, not the compiler's
+implementation tree. To report a capability from an existing capture, attach its
+source/build/capture receipt package and select this optional reporting mode:
+
+```sh
+python3 -I -B models/sherlock/qa/check.py --repo . \
+  --compile-evidence-record docs/results/sherlock-source-compile-20261017 \
+  --compile-evidence-case quote
+```
+
+`check.compile_evidence_record(repo, package, case)` supports the existing Quote
+or Eligibility package layout. It reads files only and adds a separate
+`sherlock-compiler-evidence-record/1` companion. Standard Mori compilation and
+artifact/1 do not change. The record identifies predicate, historical source
+inventory, profile, conventional API identifier/pinned client, complete supplied
+bounds, target and evidence class; it checks exact artifact/client byte identities and the recorded
+library/build/source-inventory links. It accepts no replacement source-tree
+claim and performs no compiler, interpreter, model, SDK or ledger operation.
+
+The consumer identifier is the supported capture-family convention; observation
+mode is inferred from the artifact disposition. The pinned client call-route
+source is not checked, and this limitation is emitted explicitly. The report
+distinguishes recorded compile-only output from reported host observation. Both real captures in this package are compile-only. Source member
+identities remain recorded historical metadata; current-source equality,
+binary/source authenticity, invocation authenticity and semantic correctness
+are not established by this reader. The original receipt lacks capture executable
+identity at invocation time, which remains an emitted gap. Acceptance is `none`.
+The ordinary source-reference-facts inventory remains its existing partial corpus
+read inventory; the companion's own identity fields describe its separate reads.
+
+This compiler record does not consume the old C1–C4 model observations or test
+UIREQ025's Pure-models-only scenario. Historical model records must separately
+identify K frontend-only and repaired scalar15 Quint scope, with the B evidence
+cut and later observations kept distinct. No full requirement closes from this
+mode or from its synthetic positive fixtures alone.

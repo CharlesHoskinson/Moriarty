@@ -13,6 +13,7 @@ pub mod check;
 mod check_source;
 pub mod compile;
 pub mod compile_call;
+mod compile_sherlock;
 mod core_io;
 pub mod expand;
 pub mod format;
@@ -29,9 +30,11 @@ mod proof_io;
 pub mod prove;
 pub mod prove_call;
 pub mod prove_signed_call;
+mod publish_io;
 pub mod replay;
 mod signed_call_io;
 pub mod simulate;
+mod source_io;
 pub mod test;
 pub mod verify;
 pub mod verify_call;
@@ -74,8 +77,9 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
 fn native_unavailable<T>() -> Result<T> {
     Err(crate::error::CliError::Operation {
         code: "mori::command::native-unavailable".into(),
-        message: "This mori build has no Midnight support. Rebuild with the native feature enabled."
-            .into(),
+        message:
+            "This mori build has no Midnight support. Rebuild with the native feature enabled."
+                .into(),
     }
     .into())
 }

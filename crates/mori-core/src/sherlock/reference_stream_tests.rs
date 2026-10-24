@@ -4,7 +4,7 @@
 //! Source preparation only: compilation/execution remain UNRUN pending preflight.
 
 use super::normal_oracle_inputs::{normal_program, uint};
-use super::reference_display::{environment_to_k, KDisplay};
+use super::reference_display::{KDisplay, environment_to_k};
 use super::reference_stream::VisitStop;
 use super::*;
 use std::ops::ControlFlow;
@@ -41,10 +41,27 @@ fn typed_state(
 }
 
 fn n01_states() -> Vec<Snapshot> {
-    let program = Arc::new(Program { functions: vec![], entry: uint(7) });
+    let program = Arc::new(Program {
+        functions: vec![],
+        entry: uint(7),
+    });
     vec![
-        typed_state(&program, 1, 1, Some(Control::Eval(uint(7))), vec![], Outcome::Pending),
-        typed_state(&program, 1, 0, Some(Control::Return(Value::UInt(7))), vec![], Outcome::Pending),
+        typed_state(
+            &program,
+            1,
+            1,
+            Some(Control::Eval(uint(7))),
+            vec![],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            1,
+            0,
+            Some(Control::Return(Value::UInt(7))),
+            vec![],
+            Outcome::Pending,
+        ),
         typed_state(&program, 1, 0, None, vec![], Outcome::Done(Value::UInt(7))),
     ]
 }
@@ -57,16 +74,74 @@ fn n02_states() -> Vec<Snapshot> {
     let left = Frame::Left(BinaryOp::Add, uint(3), Environment::new());
     let right = Frame::Right(BinaryOp::Add, Value::UInt(2));
     vec![
-        typed_state(&program, 7, 7, Some(Control::Eval(program.entry.clone())), vec![], Outcome::Pending),
-        typed_state(&program, 7, 6, Some(Control::Push(
-            left.clone(), Box::new(Control::Eval(uint(2))), Environment::new(),
-        )), vec![], Outcome::Pending),
-        typed_state(&program, 7, 5, Some(Control::Eval(uint(2))), vec![left.clone()], Outcome::Pending),
-        typed_state(&program, 7, 4, Some(Control::Return(Value::UInt(2))), vec![left], Outcome::Pending),
-        typed_state(&program, 7, 3, Some(Control::Eval(uint(3))), vec![right.clone()], Outcome::Pending),
-        typed_state(&program, 7, 2, Some(Control::Return(Value::UInt(3))), vec![right], Outcome::Pending),
-        typed_state(&program, 7, 1, Some(Control::PrimitiveResult(Ok(Value::UInt(5)))), vec![], Outcome::Pending),
-        typed_state(&program, 7, 0, Some(Control::Return(Value::UInt(5))), vec![], Outcome::Pending),
+        typed_state(
+            &program,
+            7,
+            7,
+            Some(Control::Eval(program.entry.clone())),
+            vec![],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            6,
+            Some(Control::Push(
+                left.clone(),
+                Box::new(Control::Eval(uint(2))),
+                Environment::new(),
+            )),
+            vec![],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            5,
+            Some(Control::Eval(uint(2))),
+            vec![left.clone()],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            4,
+            Some(Control::Return(Value::UInt(2))),
+            vec![left],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            3,
+            Some(Control::Eval(uint(3))),
+            vec![right.clone()],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            2,
+            Some(Control::Return(Value::UInt(3))),
+            vec![right],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            1,
+            Some(Control::PrimitiveResult(Ok(Value::UInt(5)))),
+            vec![],
+            Outcome::Pending,
+        ),
+        typed_state(
+            &program,
+            7,
+            0,
+            Some(Control::Return(Value::UInt(5))),
+            vec![],
+            Outcome::Pending,
+        ),
         typed_state(&program, 7, 0, None, vec![], Outcome::Done(Value::UInt(5))),
     ]
 }
@@ -74,7 +149,13 @@ fn n02_states() -> Vec<Snapshot> {
 const N02_RULES: &[usize] = &[117, 135, 102, 149, 102, 153, 223, 80];
 const N02_CHARGES: &[u8] = &[1, 1, 1, 1, 1, 1, 1, 0];
 
-fn assert_record(record: &StepRecord, before: &Snapshot, after: &Snapshot, rule: usize, charge: u8) {
+fn assert_record(
+    record: &StepRecord,
+    before: &Snapshot,
+    after: &Snapshot,
+    rule: usize,
+    charge: u8,
+) {
     assert_eq!(&record.before, before, "complete borrowed pre-state");
     assert_eq!(&record.after, after, "complete borrowed post-state");
     assert_eq!(record.rule_start_line, rule, "source rule order");
@@ -89,9 +170,19 @@ fn visit_n01_full_typed_records_and_terminal_precedence() {
     assert_eq!(machine.snapshot(), expected[0]);
     let mut position = 0;
     let result = machine.visit_steps(2, |record: &StepRecord| {
-        assert_record(record, &expected[position], &expected[position + 1], [102, 80][position], [1, 0][position]);
+        assert_record(
+            record,
+            &expected[position],
+            &expected[position + 1],
+            [102, 80][position],
+            [1, 0][position],
+        );
         position += 1;
-        if position == 2 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+        if position == 2 {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
     });
     assert_eq!(position, 2);
     assert_eq!(result.events, 2);
@@ -113,7 +204,13 @@ fn visit_n02_full_typed_records_across_budgets() {
         loop {
             let start = position;
             let result = machine.visit_steps(budget, |record: &StepRecord| {
-                assert_record(record, &expected[position], &expected[position + 1], N02_RULES[position], N02_CHARGES[position]);
+                assert_record(
+                    record,
+                    &expected[position],
+                    &expected[position + 1],
+                    N02_RULES[position],
+                    N02_CHARGES[position],
+                );
                 retained.push(record.clone());
                 position += 1;
                 ControlFlow::Continue(())
@@ -129,7 +226,13 @@ fn visit_n02_full_typed_records_across_budgets() {
         }
         assert_eq!(retained.len(), 8);
         for (index, record) in retained.iter().enumerate() {
-            assert_record(record, &expected[index], &expected[index + 1], N02_RULES[index], N02_CHARGES[index]);
+            assert_record(
+                record,
+                &expected[index],
+                &expected[index + 1],
+                N02_RULES[index],
+                N02_CHARGES[index],
+            );
         }
     }
 }
@@ -187,16 +290,32 @@ fn visit_observer_break_resumes_after_delivered_record() {
             let mut machine = Machine::new(normal_program("N02"), 7, 8);
             let mut position = 0;
             let stopped = machine.visit_steps(budget, |record: &StepRecord| {
-                assert_record(record, &expected[position], &expected[position + 1], N02_RULES[position], N02_CHARGES[position]);
+                assert_record(
+                    record,
+                    &expected[position],
+                    &expected[position + 1],
+                    N02_RULES[position],
+                    N02_CHARGES[position],
+                );
                 position += 1;
-                if position == cut { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+                if position == cut {
+                    ControlFlow::Break(())
+                } else {
+                    ControlFlow::Continue(())
+                }
             });
             assert_eq!(stopped.events, cut);
             assert_eq!(stopped.stop, VisitStop::Observer);
             assert_eq!(position, cut);
             assert_eq!(machine.snapshot(), expected[cut]);
             let resumed = machine.visit_steps(8, |record: &StepRecord| {
-                assert_record(record, &expected[position], &expected[position + 1], N02_RULES[position], N02_CHARGES[position]);
+                assert_record(
+                    record,
+                    &expected[position],
+                    &expected[position + 1],
+                    N02_RULES[position],
+                    N02_CHARGES[position],
+                );
                 position += 1;
                 ControlFlow::Continue(())
             });
@@ -214,7 +333,13 @@ fn visit_budget_cut_preserves_pending_zero_fuel_publication() {
     let mut machine = Machine::new(normal_program("N02"), 7, 8);
     let mut position = 0;
     let cut = machine.visit_steps(7, |record: &StepRecord| {
-        assert_record(record, &expected[position], &expected[position + 1], N02_RULES[position], 1);
+        assert_record(
+            record,
+            &expected[position],
+            &expected[position + 1],
+            N02_RULES[position],
+            1,
+        );
         position += 1;
         ControlFlow::Continue(())
     });
@@ -240,7 +365,14 @@ fn visit_budget_cut_preserves_pending_zero_fuel_publication() {
 fn visit_zero_fuel_exhaustion_is_one_free_terminal_record() {
     // The ordinary N01 fuel-zero prefix is frozen in normal-prefixes.json.
     let program = normal_program("N01");
-    let before = typed_state(&program, 0, 0, Some(Control::Eval(uint(7))), vec![], Outcome::Pending);
+    let before = typed_state(
+        &program,
+        0,
+        0,
+        Some(Control::Eval(uint(7))),
+        vec![],
+        Outcome::Pending,
+    );
     let after = typed_state(&program, 0, 0, None, vec![], Outcome::Exhausted);
     let mut machine = Machine::new(program, 0, 8);
     let mut callbacks = 0;
@@ -265,7 +397,10 @@ struct FrozenN05State {
 }
 const N05_CODE: &str = "uiFunction(uiFun(11, uiParam(0, uiBoolT(), uiNoParams()), uiUIntT(), uiIf(uiVar(0), uiCall(11, uiExpr(uiLiteral(uiB(false)), uiNoExprs())), uiLiteral(uiU(6)))), uiNoFuns())";
 const N05_ENTRY: &str = "uiCall(11, uiExpr(uiLiteral(uiB(true)), uiNoExprs()))";
-const N05_RULES: &[usize] = &[131, 135, 102, 181, 200, 204, 208, 135, 123, 135, 108, 161, 131, 135, 102, 181, 200, 204, 208, 135, 123, 135, 108, 165, 102, 185, 185, 80];
+const N05_RULES: &[usize] = &[
+    131, 135, 102, 181, 200, 204, 208, 135, 123, 135, 108, 161, 131, 135, 102, 181, 200, 204, 208,
+    135, 123, 135, 108, 165, 102, 185, 185, 80,
+];
 const N05_CUTS: &[FrozenN05State] = &[
     FrozenN05State {
         charged_steps: 0,
@@ -286,21 +421,31 @@ const N05_CUTS: &[FrozenN05State] = &[
         remaining_fuel: 7,
         control: "uiEval(uiIf(uiVar(0), uiCall(11, uiExpr(uiLiteral(uiB(false)), uiNoExprs())), uiLiteral(uiU(6))))",
         environment: "0 |-> uiB(false)",
-        frames: &["uiReturnF(uiUIntT(), 0 |-> uiB(true))", "uiReturnF(uiUIntT(), .Map)"],
+        frames: &[
+            "uiReturnF(uiUIntT(), 0 |-> uiB(true))",
+            "uiReturnF(uiUIntT(), .Map)",
+        ],
     },
     FrozenN05State {
         charged_steps: 22,
         remaining_fuel: 5,
         control: "uiEval(uiVar(0))",
         environment: "0 |-> uiB(false)",
-        frames: &["uiIfF(uiCall(11, uiExpr(uiLiteral(uiB(false)), uiNoExprs())), uiLiteral(uiU(6)), 0 |-> uiB(false))", "uiReturnF(uiUIntT(), 0 |-> uiB(true))", "uiReturnF(uiUIntT(), .Map)"],
+        frames: &[
+            "uiIfF(uiCall(11, uiExpr(uiLiteral(uiB(false)), uiNoExprs())), uiLiteral(uiU(6)), 0 |-> uiB(false))",
+            "uiReturnF(uiUIntT(), 0 |-> uiB(true))",
+            "uiReturnF(uiUIntT(), .Map)",
+        ],
     },
     FrozenN05State {
         charged_steps: 25,
         remaining_fuel: 2,
         control: "uiRet(uiU(6))",
         environment: "0 |-> uiB(false)",
-        frames: &["uiReturnF(uiUIntT(), 0 |-> uiB(true))", "uiReturnF(uiUIntT(), .Map)"],
+        frames: &[
+            "uiReturnF(uiUIntT(), 0 |-> uiB(true))",
+            "uiReturnF(uiUIntT(), .Map)",
+        ],
     },
     FrozenN05State {
         charged_steps: 26,
@@ -322,19 +467,33 @@ fn assert_n05_state(actual: &Snapshot, expected: &FrozenN05State, published: boo
     assert_eq!(actual.program.to_k(), N05_CODE, "complete frozen code");
     assert_eq!(actual.program.entry.to_k(), N05_ENTRY, "frozen entry");
     assert_eq!(
-        actual.control.as_ref().map(KDisplay::to_k).unwrap_or_else(|| ".K".into()),
+        actual
+            .control
+            .as_ref()
+            .map(KDisplay::to_k)
+            .unwrap_or_else(|| ".K".into()),
         if published { ".K" } else { expected.control },
         "complete control, including saved caller environments"
     );
     assert_eq!(environment_to_k(&actual.environment), expected.environment);
     let frames: Vec<String> = actual.frames.iter().map(KDisplay::to_k).collect();
-    assert_eq!(frames, expected.frames, "every top-first frame and caller environment");
+    assert_eq!(
+        frames, expected.frames,
+        "every top-first frame and caller environment"
+    );
     assert_eq!(actual.depth(), expected.frames.len());
     assert_eq!(actual.stack_limit, 8);
     assert_eq!(actual.initial_fuel, 27);
     assert_eq!(actual.remaining_fuel, expected.remaining_fuel);
     assert_eq!(actual.charged_steps(), expected.charged_steps);
-    assert_eq!(actual.outcome, if published { Outcome::Done(Value::UInt(6)) } else { Outcome::Pending });
+    assert_eq!(
+        actual.outcome,
+        if published {
+            Outcome::Done(Value::UInt(6))
+        } else {
+            Outcome::Pending
+        }
+    );
 }
 
 #[test]
@@ -351,11 +510,17 @@ fn visit_n05_recursive_cut_keeps_full_caller_environments() {
             assert_eq!(record.before, previous);
             assert_eq!(record.rule_start_line, N05_RULES[position]);
             assert_eq!(record.charge, 1);
-            if let Some(expected) = N05_CUTS.iter().find(|state| state.charged_steps == position as u128) {
+            if let Some(expected) = N05_CUTS
+                .iter()
+                .find(|state| state.charged_steps == position as u128)
+            {
                 assert_n05_state(&record.before, expected, false);
             }
             position += 1;
-            if let Some(expected) = N05_CUTS.iter().find(|state| state.charged_steps == position as u128) {
+            if let Some(expected) = N05_CUTS
+                .iter()
+                .find(|state| state.charged_steps == position as u128)
+            {
                 assert_n05_state(&record.after, expected, false);
             }
             previous = record.after.clone();

@@ -1,0 +1,135 @@
+{
+  "status": "RAW_SCOPED_RESULT_APPROVAL_WITH_LITERAL_ERRORS_PENDING_ROOT_DISPOSITION",
+  "created_utc": "2026-10-18T00:58:40.225373+00:00",
+  "actual_report": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/188-financial-positive-result-review/REPORT.md",
+    "bytes": 12114,
+    "sha256": "86e8e2b2df78bb7f5e27f2a4894c6e0e46b0d48a094e06bf98d641cd6269b5e8"
+  },
+  "raw_owner_result_decision": "APPROVE_SCOPED_RESULT",
+  "raw_UIREQ017_clause": "OPEN_FOR_SHERLOCK_EXTENSION",
+  "raw_UIREQ017_scenario": "OBSERVED_ON_CORE2_ADAPTER_ONLY",
+  "coordinator_substitute_functional_or_security_decision": false,
+  "original_report_unchanged": true,
+  "errors": [
+    {
+      "id": "E1",
+      "class": "wrong cryptographic identity in actual reviewer text",
+      "actual_report_claim": "EXPECTED.json (179206B, sha256 4b457ef95443400a672e0ca1a0ff24259c0e6aa8a63c4b39fd670848a04d54b8)",
+      "literal_evidence": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/176-financial-input-revision-ordinary-preparation/snapshot/152-financial-observation-independent-expectations/EXPECTED.json",
+        "bytes": 179206,
+        "sha256": "3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4"
+      },
+      "factual_correction": "The actual179206B staged EXPECTED.json SHA256 is3a0dfd6f9289e56af377d01e10bde47b0882afab0dbf074601ade9a973eab2b4. The claimed4b457... does not appear in any supplied body or complete pin identity list. Use the actual projection/fullpin record; do not adopt the invented digest.",
+      "evidence_file": {
+        "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/188-financial-positive-result-review/EXPECTED-CONTEXT-EXACT-CONSUMED-PROJECTION.json",
+        "bytes": 911,
+        "sha256": "df82f9a60a397d203a4ff7a0d402aaad9a23733d187b642343b5f29c4c2fea9d"
+      }
+    },
+    {
+      "id": "E2",
+      "class": "unsupported unexecuted zero-amount counterfactual and nonexistent function",
+      "actual_report_claim": "declareDuties (which would reject on amount==0 in runtime::eval_statement F022 line631)",
+      "literal_evidence": {
+        "amount_helper": {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "start": 485,
+          "text": "fn amount(\n    p: &Program,\n    id: ExprId,\n    env: &BTreeMap<String, Value>,\n    snapshot: &Snapshot,\n    meter: &mut Option<&mut Meter>,\n) -> Result<UInt, Error> {\n    match evaluate(p, id, env, snapshot, meter)? {\n        Value::UInt(v) => Ok(v),\n        _ => Err(failure(\"type\", \"Expected UInt amount.\")),\n    }\n"
+        },
+        "actual_statement_executor": {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "start": 702,
+          "text": "fn execute_statement(\n    program: &Program,\n    stmt: &Statement,\n    env: &mut BTreeMap<String, Value>,\n    current: &mut Snapshot,\n    meter: &mut Option<&mut Meter>,\n    effects: &mut Vec<Effect>,\n) -> Result<Option<Value>, Error> {\n    charge_logical(meter)?;\n    match stmt {\n        Statement::Await { guard, .. } => {\n"
+        },
+        "Liability_arm": {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/runtime.rs",
+          "start": 787,
+          "text": "        Statement::Liability {\n            name,\n            asset,\n            debtor,\n            creditor,\n            amount: expr,\n        } => {\n            let amount = amount(program, *expr, env, current, meter)?;\n            let id = validate_asset(program, asset)?.clone();\n            let found = current.liabilities.iter().position(|l| l.name == *name);\n            let before = if let Some(index) = found {\n                let l = &current.liabilities[index];\n                if l.asset != id || l.debtor != *debtor || l.creditor != *creditor {\n                    return Err(failure(\n                        \"liability\",\n                        \"Existing liability identity differs.\",\n                    ));\n                }\n                l.amount\n            } else {\n                UInt(0)\n            };\n            let after = UInt(\n                before\n                    .0\n                    .checked_add(amount.0)\n                    .ok_or_else(|| failure(\"overflow\", \"Liability exceeds u128.\"))?,\n            );\n            if let Some(index) = found {\n                current.liabilities[index].amount = after;\n            } else {\n                current.liabilities.push(Liability {\n                    name: name.clone(),\n                    asset: id.clone(),\n                    debtor: debtor.clone(),\n                    creditor: creditor.clone(),\n                    amount: after,\n                });\n                current.liabilities.sort_by(|a, b| a.name.cmp(&b.name));\n            }\n            effects.push(Effect::Liability {\n                name: name.clone(),\n                asset: id,\n                debtor: debtor.clone(),\n                creditor: creditor.clone(),\n                before,\n                after,\n"
+        }
+      },
+      "factual_correction": "runtime::eval_statement is absent. Actual execute_statement calls amount, whose UInt branch accepts the amount value without a zero guard. The Liability arm adds amount via checked_add; it has no amount==0 refusal. Selected pay is the actual test; declareDuties is not executed by it. Do not use this counterfactual as a source fact or alter runtime policy.",
+      "scope": "Ordinary literal source correction only; no new action executed and no security/acceptance judgment."
+    },
+    {
+      "id": "E3",
+      "class": "invented type names / narrative aliases",
+      "actual_report_claims": [
+        "StageResults",
+        "SegmentAccountingDispositions",
+        "TentativeSegmentPublicationDispositions",
+        "ProjectedStageOutcome::Rejected"
+      ],
+      "literal_evidence": {
+        "full_adapter": {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/151-financial-observation-adapter/candidate/crates/mori-core/src/sherlock/financial_projection.rs",
+          "bytes": 15133,
+          "sha256": "8ffdfc5433c9efe78b26cf31d86e86aacbb8cab9b41506c713d2aff4f3441142"
+        },
+        "declarations": [
+          {
+            "line": 43,
+            "literal": "pub enum FinancialObservation<'a> {"
+          },
+          {
+            "line": 241,
+            "literal": "pub enum AccountingAvailability<'a> {"
+          },
+          {
+            "line": 247,
+            "literal": "pub enum TentativePublication {"
+          }
+        ],
+        "raw_result": "Result<stage::StageOutcome,stage::StageRejection>"
+      },
+      "factual_correction": "Use actual Result<StageOutcome,StageRejection>, AccountingAvailability, TentativePublication and FinancialObservation::Rejected names. The reported capitalized aliases are absent from all provided actual called Core source and adapter/test bodies. Raw result/fixture names remain unchanged."
+    },
+    {
+      "id": "E4",
+      "class": "wrong file/function declaration locators",
+      "actual_report_claims": [
+        "F027 admit::{load,start,resume}",
+        "F028 canonical_boundary line206",
+        "F026 StageRejection lines146-152"
+      ],
+      "literal_evidence": [
+        {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/mod.rs",
+          "line": 71,
+          "literal": "pub fn load(src: &str) -> Result<StagedProgram, Error> {"
+        },
+        {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/admit.rs",
+          "line": 219,
+          "literal": "pub fn start("
+        },
+        {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/admit.rs",
+          "line": 279,
+          "literal": "pub fn resume("
+        },
+        {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/decode.rs",
+          "line": 94,
+          "literal": "pub fn canonical_boundary("
+        },
+        {
+          "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/159-financial-ordinary-preparation/snapshot/crates/mori-core/src/stage/mod.rs",
+          "line": 173,
+          "literal": "pub struct StageRejection {"
+        }
+      ],
+      "factual_correction": "Use named actual paths/functions; stage::load is defined in stage/mod.rs, not admit.rs. This ledger gives actual declaration anchors. Full bodies remain supplied; raw report offsets are not silently trusted."
+    },
+    {
+      "id": "E5",
+      "class": "output scope/size deviation",
+      "actual_report_bytes": 12114,
+      "requested_limit_bytes": 6500,
+      "factual_correction": "Full12114B response is retained unchanged; no trimming or second call. Treat target as missed, not silently compliant."
+    }
+  ],
+  "no_retry_continuation_rephrase_or_second_provider_call": true,
+  "scope": "Exact factual source/digest/locator corrections only. Raw owner decisions/reasoning preserved; Root alone determines whether and how applicable current-result evidence is adopted."
+}

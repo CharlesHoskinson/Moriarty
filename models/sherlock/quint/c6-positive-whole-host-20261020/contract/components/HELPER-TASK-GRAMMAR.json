@@ -1,0 +1,491 @@
+{
+  "schema": "c6-positive-helper-task-lane-contract/1",
+  "sourceDerivedProposedContract": true,
+  "magic": 18918541878711089,
+  "version": 1,
+  "sectionTag": 1212501072,
+  "recordWidths": {
+    "helper": 23,
+    "result": 4,
+    "task": 7
+  },
+  "common": [
+    "site:SiteTag",
+    "origin_reference_cursor:u128",
+    "parent_resume:OptionIndex"
+  ],
+  "recordRules": "Begin tag then flatten fields in listed order, zero-pad entire record to fixed width. No field normalization. Absent helper/result means entire zero record. common expands after helper tag. All expected raw rows must independently derive from these declarations, not source encoder.",
+  "primitive": {
+    "usize/u8/u128": "one exact integer lane; external native fit for usize/u8",
+    "bool": "one lane 0=false or1=true",
+    "Ref": "Const(index)=[0,index];Data(index)=[1,index]",
+    "OptionIndex/OptionEnv/OptionType": "None=[0,0];Some(index)=[1,index]",
+    "OptionRef": "None=[0,0,0];Some(ref)=[1]+Ref(ref)",
+    "Slice": "[start,len], preserve nonzero start even when len0",
+    "ScalarStaged": "two lanes[tag,payload] listed below",
+    "enum": "one explicit numeric tag from enumTags"
+  },
+  "helperVariants": [
+    {
+      "variant": "Scalar",
+      "tag": 1,
+      "fields": [
+        "common",
+        "mode:ScalarMode",
+        "operand_a:Ref",
+        "operand_b:OptionRef",
+        "expected:OptionType",
+        "phase:ScalarPhase",
+        "reg_a:u128",
+        "staged:ScalarStaged"
+      ]
+    },
+    {
+      "variant": "EnvGet",
+      "tag": 2,
+      "fields": [
+        "common",
+        "binder:usize",
+        "cursor:OptionIndex",
+        "found:OptionRef",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "EnvPut",
+      "tag": 3,
+      "fields": [
+        "common",
+        "binder:usize",
+        "value:Ref",
+        "base:OptionEnv",
+        "new_root:OptionIndex",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "Find",
+      "tag": 4,
+      "fields": [
+        "common",
+        "function_name:usize",
+        "row_cursor:usize",
+        "found:OptionIndex",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "Bind",
+      "tag": 5,
+      "fields": [
+        "common",
+        "function:usize",
+        "params:Slice",
+        "args:Slice",
+        "p_cursor:usize",
+        "a_cursor:usize",
+        "partial:OptionEnv",
+        "dup_cursor:OptionIndex",
+        "phase:BindPhase",
+        "status:BindStatus"
+      ]
+    },
+    {
+      "variant": "Append",
+      "tag": 6,
+      "fields": [
+        "common",
+        "src:Slice",
+        "value:Ref",
+        "src_cursor:usize",
+        "dest_start:usize",
+        "staged:OptionRef",
+        "phase:AppendPhase"
+      ]
+    },
+    {
+      "variant": "Validate",
+      "tag": 7,
+      "fields": [
+        "common",
+        "root:Ref",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "Equal",
+      "tag": 8,
+      "fields": [
+        "common",
+        "left:Ref",
+        "right:Ref",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "Match",
+      "tag": 9,
+      "fields": [
+        "common",
+        "scrutinee:Ref",
+        "arm:usize",
+        "saved_env:OptionEnv",
+        "partial:OptionEnv",
+        "pat_tag:PatternTag",
+        "x:usize",
+        "y:usize",
+        "field_idx:u8",
+        "staged:OptionRef",
+        "phase:MatchPhase",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "Plan",
+      "tag": 10,
+      "fields": [
+        "common",
+        "source_match:usize",
+        "scrutinee:Ref",
+        "saved_env:OptionEnv",
+        "partial:OptionEnv",
+        "node:usize",
+        "phase:PlanPhase",
+        "after_walk:PlanAfterWalk",
+        "cur:Ref",
+        "path:Slice",
+        "path_cursor:usize",
+        "arm:OptionIndex",
+        "status:TriStatus"
+      ]
+    },
+    {
+      "variant": "Build",
+      "tag": 11,
+      "fields": [
+        "common",
+        "type_id:usize",
+        "ctor_id:usize",
+        "src:Slice",
+        "src_cursor:usize",
+        "field_start:usize",
+        "staged:OptionRef",
+        "node:OptionRef",
+        "phase:BuildPhase"
+      ]
+    }
+  ],
+  "resultVariants": [
+    {
+      "variant": "Validated",
+      "tag": 1,
+      "fields": [
+        "ok:bool"
+      ]
+    },
+    {
+      "variant": "EnvFound",
+      "tag": 2,
+      "fields": [
+        "value:Ref"
+      ]
+    },
+    {
+      "variant": "EnvMissing",
+      "tag": 3,
+      "fields": []
+    },
+    {
+      "variant": "EnvUpdated",
+      "tag": 4,
+      "fields": [
+        "cell:usize"
+      ]
+    },
+    {
+      "variant": "FindFound",
+      "tag": 5,
+      "fields": [
+        "function:usize"
+      ]
+    },
+    {
+      "variant": "FindMissing",
+      "tag": 6,
+      "fields": []
+    },
+    {
+      "variant": "BindOk",
+      "tag": 7,
+      "fields": [
+        "env:OptionEnv"
+      ]
+    },
+    {
+      "variant": "BindBad",
+      "tag": 8,
+      "fields": []
+    },
+    {
+      "variant": "AppendDone",
+      "tag": 9,
+      "fields": [
+        "seq:Slice"
+      ]
+    },
+    {
+      "variant": "ScalarValue",
+      "tag": 10,
+      "fields": [
+        "value:Ref"
+      ]
+    },
+    {
+      "variant": "ScalarError",
+      "tag": 11,
+      "fields": [
+        "code:u8"
+      ]
+    },
+    {
+      "variant": "ScalarSelector",
+      "tag": 12,
+      "fields": [
+        "sel:BoolSelector"
+      ]
+    },
+    {
+      "variant": "ScalarTypeTest",
+      "tag": 13,
+      "fields": [
+        "ok:bool"
+      ]
+    },
+    {
+      "variant": "EqualDone",
+      "tag": 14,
+      "fields": [
+        "value:Ref"
+      ]
+    },
+    {
+      "variant": "MatchMatched",
+      "tag": 15,
+      "fields": [
+        "env:OptionEnv"
+      ]
+    },
+    {
+      "variant": "MatchNoMatch",
+      "tag": 16,
+      "fields": []
+    },
+    {
+      "variant": "PlanMatched",
+      "tag": 17,
+      "fields": [
+        "arm:usize",
+        "env:OptionEnv"
+      ]
+    },
+    {
+      "variant": "PlanNoMatch",
+      "tag": 18,
+      "fields": []
+    },
+    {
+      "variant": "BuildDone",
+      "tag": 19,
+      "fields": [
+        "value:Ref"
+      ]
+    }
+  ],
+  "taskVariants": [
+    {
+      "variant": "ValidateTask",
+      "tag": 0,
+      "fields": [
+        "r:Ref",
+        "visit:TaskVisitC",
+        "cursor:usize"
+      ]
+    },
+    {
+      "variant": "EqualTask",
+      "tag": 1,
+      "fields": [
+        "left:Ref",
+        "right:Ref",
+        "visit:TaskVisitC",
+        "cursor:usize"
+      ]
+    },
+    {
+      "variant": "PairTask",
+      "tag": 2,
+      "fields": [
+        "binder:usize",
+        "sort:usize",
+        "arg:Ref"
+      ]
+    }
+  ],
+  "ScalarStaged": [
+    {
+      "variant": "None",
+      "tag": 0,
+      "payload": "0"
+    },
+    {
+      "variant": "U128Value",
+      "tag": 1,
+      "payload": "n:u128"
+    },
+    {
+      "variant": "BoolValue",
+      "tag": 2,
+      "payload": "bool(b)"
+    },
+    {
+      "variant": "PendingNode",
+      "tag": 3,
+      "payload": "NodeKind(tag)"
+    },
+    {
+      "variant": "PrimError",
+      "tag": 4,
+      "payload": "code:u8"
+    },
+    {
+      "variant": "Selector",
+      "tag": 5,
+      "payload": "BoolSelector(sel)"
+    },
+    {
+      "variant": "TypeTest",
+      "tag": 6,
+      "payload": "bool(ok)"
+    }
+  ],
+  "enumTags": {
+    "SiteTag": {
+      "EvalLiteral": 0,
+      "EvalVar": 1,
+      "EvalLet": 2,
+      "EvalBinary": 3,
+      "EvalUnary": 4,
+      "EvalIf": 5,
+      "EvalMatch": 6,
+      "EvalCall": 7,
+      "Push": 8,
+      "RetLet": 9,
+      "RetLeft": 10,
+      "RetRight": 11,
+      "RetUnary": 12,
+      "RetIf": 13,
+      "RetMatch": 14,
+      "RetArgs": 15,
+      "RetCall": 16,
+      "RetScope": 17,
+      "Invoke": 18,
+      "Enter": 19,
+      "Bound": 20,
+      "Cases": 21,
+      "CaseResult": 22,
+      "Prim": 23,
+      "EvalConstruct": 24,
+      "RetCtorFields": 25,
+      "Materialize": 26
+    },
+    "ScalarMode": {
+      "Add": 0,
+      "Sub": 1,
+      "Mul": 2,
+      "Lt": 3,
+      "Cons": 4,
+      "Branch": 5,
+      "Leaf": 6,
+      "Not": 7,
+      "TestBool": 8,
+      "TestType": 9
+    },
+    "ScalarPhase": {
+      "First": 0,
+      "Second": 1,
+      "Done": 2
+    },
+    "NodeKind": {
+      "Cons": 0,
+      "Leaf": 1,
+      "Branch": 2
+    },
+    "BoolSelector": {
+      "True": 0,
+      "False": 1,
+      "NotBool": 2
+    },
+    "TriStatus": {
+      "Pending": 0,
+      "Positive": 1,
+      "Negative": 2
+    },
+    "BindPhase": {
+      "Pairing": 0,
+      "UnwindType": 1,
+      "UnwindDup": 2,
+      "UnwindInsert": 3,
+      "Propagate": 4,
+      "Finished": 5
+    },
+    "BindStatus": {
+      "Ok": 0,
+      "Bad": 1
+    },
+    "AppendPhase": {
+      "Copy": 0,
+      "Tail": 1,
+      "Done": 2
+    },
+    "MatchPhase": {
+      "Arm": 0,
+      "Tag": 1,
+      "Distinct": 2,
+      "Field": 3,
+      "Bind": 4,
+      "Ready": 5,
+      "NoMatchReady": 6,
+      "Done": 7
+    },
+    "PlanPhase": {
+      "Walk": 0,
+      "Test": 1,
+      "Bind": 2,
+      "Ready": 3,
+      "NoMatchReady": 4,
+      "Done": 5
+    },
+    "PlanAfterWalk": {
+      "Test": 0,
+      "Bind": 1
+    },
+    "BuildPhase": {
+      "Copy": 0,
+      "Done": 1
+    },
+    "PatternTag": {
+      "PVar": 0,
+      "PNil": 1,
+      "PCons": 2,
+      "PLeaf": 3,
+      "PBranch": 4,
+      "WildcardExtensionReserved": 5,
+      "ConstructorExtensionReserved": 6
+    },
+    "TaskVisitC": {
+      "Unvisited": 0,
+      "Fields": 1
+    }
+  },
+  "section": "[magic,version,sectionTag,tasks.length] ++ helperRecord23 ++ resultRecord4 ++ concat(taskRecords7 in original bottom-to-top order). Exact length31+7*tasks.length. No task cursor stored."
+}
