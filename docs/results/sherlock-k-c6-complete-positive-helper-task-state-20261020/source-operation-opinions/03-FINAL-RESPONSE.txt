@@ -1,0 +1,98 @@
+**Reviewer:** Muse Code powered by muse-wonder-1.0 HIGH, independent non-author reviewer. Earlier Opus labels are historical only. No tools, commands, subjects, providers, files, or private bodies were executed or opened; this judgment rests on the complete inline bodies supplied, not on hashes alone.
+
+## Top finding
+
+Both mandatory caller fixes are correctly implemented. I find **no mandatory source/API finding** in the changed caller.
+
+The exact7 is **not eligible yet**, solely because the five seals are still literal `None` and the external ACK does not yet exist. After Root performs only the bounded five-literal seal, verifies the exact inverse back to the reviewed unbound caller, and creates the external ACK binding this fresh review and the sealed caller, the already reviewed exact7 becomes **prospectively eligible for one dispatch**.
+
+## Coverage read for this focused review
+
+I read in full, from the inline packet:
+
+- Body 1: new 34350B two-fix caller, [ROOT-SELECT-EXACT7-STATE-TWOFIX-UNBOUND.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/caller/ROOT-SELECT-EXACT7-STATE-TWOFIX-UNBOUND.py)
+- Body 2: old 32751B caller, [ROOT-SELECT-EXACT7-STATE-UNBOUND.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/caller/ROOT-SELECT-EXACT7-STATE-UNBOUND.py)
+- Body 3: exact six-hunk forward diff
+- Body 4: mechanical forward/inverse proof record
+- Body 5: passive metadata/API readback for caller revision02
+- Body 6: prior complete71body independent review, 11218B
+- Body 7: designated-owner six literal OLD/NEW hunks implementing the two fixes
+- Body 8: unchanged [state_runtime.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/source/state_runtime.py), as affected API context for `decode()`/`CAPTURE_FAIL`
+- Body 9: unchanged [test_state_runtime.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/tests/test_state_runtime.py), as affected API context for the 15-test claim
+- Body 10: new revision02 plan, [PROPOSED-OPERATIONS-CALLER-REVISION02.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/PROPOSED-OPERATIONS-CALLER-REVISION02.json)
+- Body 11: [ROOT-CONDITIONS.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/ROOT-CONDITIONS.json)
+- Body 12: [OPAQUE-ORACLE-BINDINGS.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/runtime-qa-postcompile-01/OPAQUE-ORACLE-BINDINGS.json)
+- Body 13: F03 used-callable closure text supplied as unchanged dependency context
+
+I do **not** assert a fresh re-read of the external old 71 bodies, the underlying Core Rust snapshots, compiled payloads, or either private expected body. Those remain prior-review/external provenance exactly as limited in Body 6. Warning441 classification, 427 deprecation and 14 unused, remains semantically **UNADJUDICATED** and is not converted into approval here.
+
+## Fix 1 judgment — unit00 stderr gate: SATISFIED
+
+In the new caller, `unit00_stderr_ok(stderr)` operates on the full retained `stderr` bytes read from the phase stream. It is not a suffix, clipped sample, proxy, or hash.
+
+It returns true only when all of the following hold conjunctively:
+
+- the bytes decode as UTF-8;
+- the nonempty stripped line sequence is nonempty and its final line is exactly `OK`;
+- exactly one line starts with `Ran `;
+- that line is exactly `Ran 15 tests` or starts with `Ran 15 tests in `;
+- no stripped line starts with `FAIL:`, `ERROR:`, or `FAILED`.
+
+The phase-00 acceptance block is gated by the pre-existing clean state first: `unit00_ok = unit00_stderr_ok(stderr) if ok else False`, where `ok` already requires clean F03 exit, return code 0, no timeout, no containment breach, no remaining processes, no unexpected files, and the declared product condition. It then persists `UNIT00-ACCEPTANCE.json`, records `unit00_stderr_ran15_final_ok`, and folds the result into acceptance with `ok = ok and unit00_ok`. If that is false, `results[-1]['accepted']` is false and the existing fail-stop raises before the next loop iteration, so phase 01 is not dispatched.
+
+This satisfies the prior condition: actual 15-run evidence, final `OK`, and no failure/error result are required from the complete stream. It does not falsely approve a no-run: empty stderr, `OK` without a `Ran 15 tests` line, a `Ran` line without final `OK`, a wrong count, duplicate `Ran` lines, non-UTF-8 bytes, or a failure/error line all fail closed. The acceptance receipt reuses the single conjunctive boolean for its subfields; that is a reporting compression, but it cannot create a false acceptance because the gate itself is the same conjunction.
+
+No synthetic regression or actual pass is claimed. The 15 tests remain **UNRUN**.
+
+## Fix 2 judgment — distinct CAPTURE_FAIL terminal class: SATISFIED
+
+The branch ordering in the new caller is correct.
+
+First, phase 05 reaches the capture branch only after the ordinary per-phase persistence has already occurred: launch record, stage inventory, stream pins, product pins, postcheck, and produced-row registration all precede the phase-specific acceptance logic. In the runtime API context, `decode()` likewise writes common, internal, wire, and report products before printing `CAPTURE_PASS` or `CAPTURE_FAIL`.
+
+Second, `capture_status(phase, operand)` is called only if `ok` is already true, meaning clean exit 0 with all declared products present and nonempty. That function structurally validates the stdout status as `CAPTURE_PASS` or `CAPTURE_FAIL`, canonical product/report pins, report/status agreement, source-input and printed operands, profile, grouped case IDs, module, sort, observation count 46 with counts 18/20/3/3/2, native-bool `decoded_source_whole_equal`, the identity fields tied to that bool, `expected_body_reads` native int 0, the PASS-iff-decoded-true consistency rule, and the complete common/internal/wire structures before returning.
+
+Third, the new classification is set only on the narrow validated branch:
+
+```python
+if ok and check.get('status') == CAPTURE_FAIL and check.get('decoded_source_whole_equal') is False:
+    capture_class = 'CAPTURE_SOURCE_IDENTITY_MISMATCH'
+```
+
+The caller then records `capture_classification` and still sets acceptance from `check.get('status') == CAPTURE_PASS`, so a validated `CAPTURE_FAIL` remains unaccepted and the fail-stop fires before phase 06. The separate pre-06 guard requiring `CAPTURE_PASS` is therefore never bypassed; it is simply unreachable on this path, which is the correct stop order.
+
+Fourth, the final status precedence gives that captured class its own terminal token, `C6_HELPER_TASK_STATE_CAPTURE_SOURCE_IDENTITY_MISMATCH`, before the phase06 mismatch token and before `INFRASTRUCTURE_STOP`. Phase06 unknown/partial read-count semantics are untouched: `expected_reads` remains native int `0` unless phase 06 is actually selected, becomes `None` on 06 dispatch, and becomes `2` only on a structurally valid complete comparison. Exceptions, malformed capture output, missing products, unclean F03 results, and non-evaluated phase05 runs do not set `capture_class`; they remain infrastructure stops. No private expected body is opened on the capture-mismatch path, and Root private expected semantic reads remain 0.
+
+This satisfies the prior requirement without importing fixture-specific semantics into the caller.
+
+## Plan revision02 and seal-cycle judgment
+
+Body 10 differs from the old plan only in the typed `Root_unbound_caller` descriptor, pointing to the new two-fix unbound caller. The seven phase objects, argv, environments, cwds, products, and limits are unchanged, and the caller still revalidates order, limits, phase metadata, JVM flags for phase 02, expected unit count 15, dynamic render/decode/manifest operand placement, compiled15, label-map identity, stdlib/parser counts, callback pins, and F03 constants before dispatch.
+
+The five caller seals, `PLAN_PIN`, `FREEZE_PIN`, `CONDITIONS_PIN`, `BINDING_PIN`, and `LABELQ_PIN`, remain literal `None` in the reviewed new caller. That is the intended unbound state, not a source defect. SOURCE-FREEZE excludes caller, plan, conditions, and binding, so replacing only those five literals creates no source-freeze seal cycle. The revision02 plan pins the reviewed unbound caller, while the later external ACK must bind the actual sealed caller bytes; those are different objects by design and must not be conflated.
+
+## Missing premises, stated explicitly
+
+The following are **not** supplied as completed facts in this packet and are not approved by implication:
+
+- a sealed caller body after the five `None` replacements;
+- the external ACK file content binding this fresh review;
+- any execution of the 15 tests or the seven runtime phases;
+- any actual `actual/` result tree;
+- either private expected semantic body;
+- fresh native correspondence for the underlying Core Rust snapshots;
+- semantic adjudication of the 441 compile warnings.
+
+Those absences do not block the prospective source judgment. They do block present eligibility and any runtime-result claim.
+
+## Final disposition
+
+- **Changed caller source/API:** `APPROVE`
+- **Fix 1, complete unit00 stderr gate:** `SATISFIED`
+- **Fix 2, distinct clean CAPTURE_FAIL terminal classification:** `SATISFIED`
+- **Mandatory findings:** `NONE`
+- **Exact7 as currently presented, five seals None and no external ACK:** `NOT_YET_ELIGIBLE`
+- **Exact7 after Root binds only the five real metadata descriptors for revision02 plan, unchanged freeze, conditions, opaque binding, and actual label map; verifies the seal inverse restores the reviewed unbound caller; and records an external ACK binding this nonempty fresh review, the sealed current caller, the revision02 plan, freeze, conditions, and opaque index:** `APPROVE_ONE_PROSPECTIVE_EXACT7`
+- **Runtime pass, helper execution, admission, native/SDK correspondence, refinement, clock, HOST, or EARS result:** `NOT APPROVED`
+
+Prospective eligibility only. The actual pipeline must still run once after Root review, sealing, and ACK; reviewer or hash identity is not a runtime pass.

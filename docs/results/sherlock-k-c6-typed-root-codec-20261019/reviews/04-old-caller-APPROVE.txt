@@ -1,0 +1,169 @@
+# Fresh non-author source/API review: Opus Root caller `ROOT-SELECT-EXACT7-TYPED-ROOT.py` (28167 B, `e3a1b74a…`)
+
+## Verdict
+
+**SOURCE/API: APPROVE**, for the caller's source and API only. No source change to the caller is required.
+
+This verdict has four limits:
+
+- **No execution approval.** `PLAN_PIN` (`f19e394f…`) and `FREEZE_PIN` (`4f6712e7…`) bind `root_data.py` `a78089f5…`. That is the rejected adapter. Its S1 defect is a guaranteed `RecursionError` in `compare`, so exact7 as frozen stays **INELIGIBLE** and all 7 children stay **UNRUN**.
+- **The caller cannot veto the old adapter.** If Root wrote `ROOT-ACTUAL-REVIEW-SELECTION.json` for the current pins, this caller would run it. The only gate is that Root does not write the ACK.
+- **Not a self-approval.** This does not resolve the independent adapter findings S1, S2 or S3.
+- **Nothing was re-verified by me.** I ran no tools, imported nothing, executed nothing and re-hashed nothing. All pins are taken as the supplied metadata.
+
+**Fail-closed property I verified from the source.** An in-place correction of `source/root_data.py` makes this caller STOP at preflight before `actual/` exists:
+
+- If the freeze is unchanged, the freeze member pin no longer matches.
+- If `SOURCE-FREEZE.json` is rewritten, `FREEZE_PIN` no longer matches.
+
+So the caller cannot silently select either adapter version.
+
+**Materialization.** The offsets are arithmetically consistent: 28710 − 543 = 28167. The supplied fence body matches the supplied file body. I accept `inverse_exact` as Root-recorded; I did not re-hash it.
+
+---
+
+## R1–R4 against the actual source
+
+### R1: source pins before 01 and before 05 — satisfied
+
+**Before 01:**
+- At preflight, the caller asserts `render == {'source_input': public, 'compiled_definition': definition[0]}`.
+- `public` comes from the hash-pinned `SOURCE-FREEZE.json`, which contains literal `SAFE/INPUTS.json` 726918 B `6f029ff2…`.
+- The plan's `dyn.before05.source_input` is independently hash-pinned and must equal the same `public`.
+- `RENDER_PIN` is re-hashed in every ROOT-PRECHECK and POSTCHECK, so the content cannot change before dispatch.
+- After 01, `carrier_status` also requires the INVARIANT-REPORT `source_input` to equal `public`.
+
+**Before 05:**
+- Root itself writes the decode manifest as `{'source_input': public, 'printed': <04 stdout pin>}`.
+- It reads the manifest back and requires exact equality.
+- It adds the manifest to `produced`, so it is re-pinned in the 05 precheck.
+- After 05, `capture_status` requires the CAPTURE-REPORT `source_input` and `printed` to equal that operand.
+
+The literal is enforced through two independent hash pins rather than a constant in the caller. That is equivalent under the frozen bytes. A literal assertion would be optional only.
+
+### R2: barrier before 06 — satisfied
+
+`freeze06` does the following:
+
+1. Requires the actual to be canonical and equal to the current on-disk 05 `complete-actual.json`.
+2. Builds the members with `merge()` over local static rows, produced rows, every file under `actual/`, and every past-compile file. `merge` enforces exact typed 3-key pins and raises on path/pin conflicts.
+3. Requires the actual to be a member.
+4. For every member, re-checks the pin and calls `fsync`.
+5. Calls `fsync` on every directory under `actual/` (deepest first), on every member's parent directory, and on `A`, `Q` and `M`.
+
+Barrier content and manifest:
+
+- The barrier records `expected_body_reads: 0` (int) and `expected_body_read_scope` equal to the conditions string `independent-complete-C6-typed-root-codec-17answers`.
+- The manifest is exactly `{actual, expected, durable_freeze}`.
+- `expected` must equal both the binding pin and the plan pin (613495 B, `4ca15348…`).
+- The manifest is read back and compared.
+
+Canonical paths:
+
+- The expected and private freeze are checked as resolve-equal and symlink-free at preflight.
+- `actual/` is shown canonical transitively by the `canonical_pin` checks on the 01 and 05 products.
+- The barrier and manifest are created with `xb` inside that directory.
+
+Opaque handling:
+
+- The expected and private freeze are only hashed, in every PRECHECK and POSTCHECK through `opaque_hash_only`.
+- They are never parsed, never barrier members, and excluded from read counts.
+
+### R3: 06 classification — satisfied
+
+- `expected_reads = None` is set immediately before `f03.launch` for 06, after `selected.append`.
+  - A failure in `freeze06`, PRECHECK, COMMAND or READSET correctly leaves 06 unselected with a count of 0.
+  - A launch-error after that point stays `None`, which is conservative and never zero.
+- The comparison is classified only when all of these hold:
+  - the run is clean (exited, not timed out, no containment breach, `remaining == []`, no unexpected files);
+  - stderr is empty;
+  - the whole stdout parses as one JSON object (trailing data is rejected);
+  - the echoed `actual` equals the 05 product pin and the echoed `expected` equals the opaque pin.
+- PASS requires rc 0, `COMPARE_PASS` and `whole_typed_equal is True`.
+- MISMATCH requires rc 1, `FAIL` and `whole_typed_equal is False`.
+- An rc 1 traceback, including S1's `RecursionError`, has non-empty stderr and empty stdout. It is classified `INFRASTRUCTURE_EXCEPTION_OR_INVALID_COMPARISON_STREAM` with the count left at `None`, never MISMATCH.
+- Retained evidence:
+  - the full F03 record (LAUNCH-RESULT);
+  - COMMAND.json with argv, env and cwd, read back and compared to the frozen phase;
+  - STAGE-INVENTORY;
+  - stream and product pins.
+
+Root's own `same()` is used only in `capture_status`, on argument 0 (the case-ID String) and argument 1 (the original source root). It never touches argument 2 (the CTLanes chain) or argument 3 (the decoded root). Root-depth recursion is roughly 4 frames per constructor level over a 17-frame chain, about 80–150 frames, far below 1000. This is not the rejected whole-lane comparator.
+
+### R4: launch and closure — satisfied
+
+**Preflight runs before any dispatch, as real checks.** Before the first `f03.launch`, the caller:
+
+- checks all 6 FROZEN pins;
+- checks the ACK and binds it to the current caller, plan, freeze, conditions and opaque index;
+- checks the plan's order, operands and limits;
+- checks each phase's layout against F03: cwd parent and name, `stdout`/`stderr`, HOME and TMPDIR, token, `inherit_environment` false, `DEVNULL`, and the limits;
+- checks `-Xmx512m`;
+- checks the dynamic paths and argv positions: `argv[-3]` for 05 and `argv[-1]` for 06;
+- checks the compiled15/definition/map/labelq cross-binding;
+- checks every static row: freeze members, model, SAFE, registry, helpers, compiled15, tool entries (including the `/usr/bin/python3` → `python3.14` `resolved_path`), the JAR list, the builtin closure, the callback triple, labelq and SAFE_handoff;
+- checks the 17 unique case IDs and the `ctAnswer` registry row;
+- checks that the hard FSIZE limit is at least 512 MiB;
+- imports F03 only after its pin is checked, then checks F03's constants (30, 3, 536870912, token name);
+- takes the past-compile tree baseline;
+- runs `all_pins()`;
+- requires `actual/` to be absent.
+
+**Every child, before and after:**
+- exact source and test directory membership from freeze data (includes `TEST-FIRST-RECORD.json`);
+- no `__pycache__` in `Q/source`, `Q/tests` or `BASE/source`;
+- exact compiled15 bytes and membership, symlink-free;
+- past-compile `tree()` equality;
+- classpath JAR glob equals the pinned membership;
+- every static and produced pin;
+- opaque hash-only checks.
+
+**Fresh directories.** Each cwd, `home` and `tmp` is created 0700 once. Before each phase the cwd must contain exactly `home` and `tmp`, both empty.
+
+**Allowed stage files.** The top level is restricted to `home`, `tmp`, `stdout`, `stderr` and the declared product basenames. `hs_err`, any stray file, or any symlink (through `tree_pins`) STOPs. Scratch inside `home` and `tmp` is retained and pinned.
+
+**No reset, retry or adjustment.** There is no loop, no delete and no in-flight edit. Every exception inside the loop STOPs. Preflight exceptions raise before `actual/` exists.
+
+**F03 API.**
+- `launch(record, command, env, cwd, token, fsize)` matches the closure.
+- Hard FSIZE is pre-checked because the child calls `setrlimit(fsize, fsize)`.
+- The record keys used (`outcome`, `timed_out`, `containment_breach`, `remaining`, `returncode`, `elapsed_seconds`) match the closure.
+- `tree()` returns a list of `{path, mode, kind[, size, sha256 | target, resolved…]}`, or `[{path, kind: 'absent'}]`. The caller uses it for equality, for inventory, and for `kind == 'file'` re-pinning only. It never treats `size` as a pin.
+- Import-time statements per the AST projection are literals plus `dict`, `tuple`, `range`, `re.compile` and `join`. There is no I/O, and the `__main__` guard does not fire under the custom module name.
+- Everything serialized (record, tree rows, pins, check dicts) is JSON-safe under `allow_nan=False` with string keys.
+
+### Data API cross-check (consumed shapes only)
+
+- **01 status and report.** `render` prints `{status, product, report}`. The report keys (`source_input`, `compiled_definition` = map definition, `compiled_label_map` = `LABEL_MAP_PIN`, `actual_label_count` = 67, `case_count`, flags, reads 0) match every caller predicate.
+- **05 status and report.** The `decode` report keys match. The wire is `{schema, profile, answers}` with each answer `{sort, constructor, arguments}` from `base.tree`. Registry `ctAnswer` is `[String, CTRoot, CTLanes, CTRoot]`, so the per-argument sort checks are exact.
+- **Pin conventions.** `c6_data.pin` resolves paths while the caller's `pin` does not. The two agree because canonicality is enforced (`canonical_pin`, plus transitive canonicality of `actual/`).
+- **Root JSON parsing of the about-540-level `complete-actual.json`.** This uses the C scanner (`object_pairs_hook` and `parse_constant` are supported there). The hook is not nested, so Python frame depth stays small.
+
+---
+
+## Non-blocking residuals
+
+Record these; do not change the caller in flight.
+
+1. **06 key set.** The comparison JSON key set and `expected_body_reads == 1` are not asserted exactly, unlike the 01 and 05 status checks. The output is fixed by the pinned source, so this is hardening only.
+2. **Exceptions outside the `try`.** These cover phase-directory creation and `ROOT-SELECTION`, plus non-`Exception` interrupts (F03 used `BaseException`). They STOP without writing `ROOT-RESULT.json`, and `actual/` is retained. A launch exception before Popen returns leaves no LAUNCH-RESULT.
+3. **Postcheck failure after 06.** If a postcheck fails after 06 was dispatched, the result reports `comparison_classification: NOT_REACHED`. The count is correctly `None` with `expected_parse_attempted_count_unknown: true`. The label is cosmetic.
+4. **Duplicate rows.** Rows deduplicate with last-wins, so the closure's 3-key rows for java, kore-exec and kprint drop the tool-entry `resolved_path` check. Bytes are still pinned, so nothing material is lost.
+5. **Umask.** The caller does not assert umask. Root must invoke it under umask 077 as instructed; children get 077 from F03 regardless.
+6. **ROOT-READSET relative paths.** `os.path.isfile()` on relative argv tokens resolves against Root's cwd. This is cosmetic.
+7. **Unverified history.** The predecessor "new8 27149B c3b7a088…" was not supplied and is unverified. The compile warning `53062B ec611a63` remains UNADJUDICATED. JVM heap fit is unobserved. The Python stdlib is unpinned. The hash-then-reread qualification is retained.
+
+---
+
+## Required before any execution (separate tasks, not caller changes)
+
+1. **Adapter owner S1, S2 and recommended S3**, with a fresh non-author review and a new TEST-FIRST record. The caller follows `test_exact_directory` from the freeze automatically.
+2. **Exact mechanical pin update, separately checked.**
+   - Change only the `bytes` and `sha256` of `FREEZE_PIN` (for the new `SOURCE-FREEZE.json`) and `PLAN_PIN` (for the plan, whose `source_freeze` pin changes).
+   - Change `CONDITIONS_PIN` only if the bytes of `ROOT-CONDITIONS.json` change.
+   - `BINDING_PIN`, `RENDER_PIN`, `LABELQ_PIN` and all logic must be byte-identical.
+   - The diff must be confined to those constant lines.
+   - The new caller pin must then get a fresh Root ACK whose `actual_final_opinion` is the approving review of the corrected adapter.
+   - Nothing may be selected implicitly.
+
+No model, fixture, expected, cap, compile or prefix-replay change is implied. Scope stays proposed C6P1, unadmitted, common-domain positive codec only.

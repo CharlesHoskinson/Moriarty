@@ -2112,7 +2112,8 @@ pub fn admit_ext_program(
         body: Arc::new(AdmittedBody {
             identity,
             bounds: *bounds,
-            view,
+            view: Some(view),
+            fin: None,
             layout: layout.clone(),
         }),
     };

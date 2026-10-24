@@ -1212,9 +1212,7 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
         || !v.plan_nodes.is_empty() || !v.plan_cases.is_empty() || !v.field_paths.is_empty()
         || v.expressions.iter().any(|e| matches!(e, ExpressionRowC::Construct { .. } | ExpressionRowC::Match { plan: Some(_), .. }))
         || v.patterns.iter().any(|p| matches!(p, PatternRowC::Wildcard | PatternRowC::Constructor { .. }))
-        || v.constants.iter().any(|c| matches!(c, RawConstRow::Constructor { .. }))
-        || v.parameters.iter().any(|p| p.sort.0 >= 4)
-        || v.functions.iter().any(|f| f.return_type.0 >= 4);
+        || v.constants.iter().any(|c| matches!(c, RawConstRow::Constructor { .. }));
     let caps: [(&str, usize, u128); 15] = [
         ("expressions", v.expressions.len(), b.code_rows as u128),
         ("occurrences", v.occurrences.len(), b.code_rows as u128),
@@ -1335,7 +1333,6 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
     }
     // V4 functions: contiguous params, body root, names in range.
     let mut expect_start: usize = 0;
-    let n_types = if is_generic { v.types.len() } else { 4 };
     for (fi, f) in v.functions.iter().enumerate() {
         if f.function_name >= v.names.len() { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "name")); }
         if !slice_inside(&f.params, v.parameters.len()) || (f.params.len > 0 && f.params.start != expect_start) {
@@ -1344,10 +1341,9 @@ pub fn check_program_view(v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC)
         expect_start = expect_start.checked_add(f.params.len).ok_or_else(|| pv_err(ViewCheck::V4, "functions", Some(fi), "parameter offset overflow"))?;
         if f.body >= n_expr || parent[f.body].is_some() || fn_of_root[f.body] != Some(fi) {
             return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "body not function root")); }
-        if f.return_type.0 >= n_types { return Err(pv_err(ViewCheck::V4, "functions", Some(fi), "return_type")); }
         if f.params.len > 0 { for pid in f.params.start..f.params.start + f.params.len {
-            if v.parameters[pid].binder >= v.names.len() || v.parameters[pid].sort.0 >= n_types {
-                return Err(pv_err(ViewCheck::V4, "parameters", Some(pid), "binder/sort")); } } }
+            if v.parameters[pid].binder >= v.names.len() {
+                return Err(pv_err(ViewCheck::V4, "parameters", Some(pid), "binder")); } } }
     }
     if expect_start != v.parameters.len() { return Err(pv_err(ViewCheck::V4, "parameters", None, "trailing parameters")); }
     // V5 patterns.
@@ -1648,8 +1644,9 @@ pub fn admit(p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC)
         finance: FinanceInput::Absent, layout_version: l.layout_version.clone(),
         layout_digest: DigestC::Unselected, bounds_digest: DigestC::Unselected,
         field_id: l.field_id.clone(), program_membership_digest: DigestC::Unselected };
-    Ok(Admitted { body: Arc::new(AdmittedBody { identity, bounds: *b, view,
-        layout: l.clone() }) })
+    Ok(Admitted { body: Arc::new(AdmittedBody {
+        identity, bounds: *b, view: Some(view), fin: None, layout: l.clone(),
+    }) })
 }
 
 // ---------------------------------------------------------------- admit_run
@@ -1667,19 +1664,18 @@ pub(super) fn genesis(a: &Admitted, run_id: Arc<RunIdC>, valid: bool, fuel: u128
         alloc: AllocCounters::default(), active: ActiveLengths::default(),
         seg_base: host_implied_prefix::SegBase::genesis_uncut(),
         helper: None, result: None,
+        fin: None,
         data: Vec::new(), data_fields: Vec::new(), env: Vec::new(),
         frames: Vec::new(), tasks: Vec::new(), value_slots: Vec::new(),
     }
 }
-pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
-    finance: &FinanceInput) -> Result<MachineImage, Tooling> {
+fn genesis_image(
+    a: &Admitted,
+    fuel: &RunIntC,
+    stack_limit: &RunIntC,
+) -> Result<MachineImage, Tooling> {
     let bounds = a.body.bounds;
     let caps = a.body.layout.capacities;
-    // R1 finance.
-    if *finance != FinanceInput::Absent {
-        return Err(Tooling::UnsupportedFeature {
-            feature: FeatureKind::FinancialInput, locator: None });
-    }
     // RunId (schema identity.RunId) from the original three-class inputs,
     // built before R2 returns and before R3/R4 convert fuel and stack_limit.
     let run_id = Arc::new(RunIdC { identity: a.body.identity.clone(),
@@ -1693,7 +1689,6 @@ pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
         RunIntC::Nat(v) => *v,
         RunIntC::NatAboveU128 => return Err(cap_err_above_u128(
             CapacityKind::MaxReferenceWork, bounds.max_reference_work, None)),
-        // Already returned by R2 above; same genesis disposition, no panic.
         RunIntC::Negative => return Ok(genesis(a, run_id, false, 0, 0)),
     };
     if fuel_v > bounds.max_reference_work {
@@ -1705,7 +1700,6 @@ pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
         RunIntC::Nat(v) => *v,
         RunIntC::NatAboveU128 => return Err(cap_err_above_u128(
             CapacityKind::Frames, bounds.frames as u128, None)),
-        // Already returned by R2 above; same genesis disposition, no panic.
         RunIntC::Negative => return Ok(genesis(a, run_id, false, 0, 0)),
     };
     if stack_v > bounds.frames as u128 {
@@ -1715,14 +1709,223 @@ pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
     if fuel_v > caps.value_slots as u128 {
         return Err(cap_err(CapacityKind::ValueSlots, fuel_v, caps.value_slots as u128, None));
     }
-    // R6 genesis_valid. stack_v <= frames (usize) so conversion cannot fail;
-    // fail closed instead of unwrapping.
+    // R6 genesis_valid.
     let stack_usize = usize::try_from(stack_v).map_err(|_| cap_err(
         CapacityKind::Frames, stack_v, bounds.frames as u128, None))?;
     Ok(genesis(a, run_id, true, fuel_v, stack_usize))
+}
+
+pub fn admit_run(a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC,
+    finance: &FinanceInput) -> Result<MachineImage, Tooling> {
+    // R1 finance: this public entry is pure-only. A financial admission is
+    // consumed only through admit_fin_run; no marker pair manufactures an
+    // Admitted/financial-image pair here.
+    match (finance, a.body.fin.is_some()) {
+        (FinanceInput::Absent, false) => genesis_image(a, fuel, stack_limit),
+        _ => Err(Tooling::UnsupportedFeature {
+            feature: FeatureKind::FinancialInput, locator: None }),
+    }
+}
+
+pub fn admit_fin(
+    prepared: fin_carrier::FinPreparedStagedSource,
+    b: &BoundsC,
+    l: &LayoutSchemaC,
+) -> Result<Admitted, Tooling> {
+    // AD-0a layout.bounds == bounds, authoritative copy is the `b` argument.
+    if l.bounds != *b {
+        return Err(Tooling::AdmissionRejected {
+            reason: AdmissionReason::LayoutBoundsMismatch,
+            detail: "layout.bounds != bounds".to_string(),
+            locator: field_loc("layout.bounds"),
+        });
+    }
+    // AD-1 stepCap.
+    if b.step_cap < 1 {
+        return Err(cap_err(CapacityKind::StepCap, 1, b.step_cap, field_loc("bounds.stepCap")));
+    }
+    // AD-2a counter widths in WorkCounter, HelperCounter, ReferenceCursor
+    // order, then AD-2b index widths, then the HostOnly recordWidths refusal.
+    // This is the pure admission precedence, not a claim that the financial
+    // source was prepared by the pure view checker.
+    if let Some(w) = &l.widths {
+        let checks: [(CounterWidthField, u128, &str); 3] = [
+            (CounterWidthField::WorkCounter, bitlen_count(b.max_reference_work), "WorkCounter"),
+            (CounterWidthField::HelperCounter, bitlen_count(b.max_helper_work), "HelperCounter"),
+            (CounterWidthField::ReferenceCursor, bitlen_count(b.max_reference_work), "ReferenceCursor"),
+        ];
+        for (field, needed, nm) in checks {
+            let limit = w.counter_width(&field) as u128;
+            if limit < needed {
+                return Err(cap_err(CapacityKind::CounterWidth { field }, needed, limit,
+                    field_loc(&format!("layout.widths.counterWidths.{nm}"))));
+            }
+        }
+        let idx: [(&str, u128); 20] = [
+            ("ExprId", bitlen_id(b.code_rows as u128)),
+            ("ChildPos", bitlen_count(b.code_child_slots as u128)),
+            ("FunctionRowId", bitlen_id(b.function_rows as u128)),
+            ("FunctionCursor", bitlen_count(b.function_rows as u128)),
+            ("ParamPos", bitlen_count(b.parameter_slots as u128)),
+            ("ArmId", bitlen_id(b.match_arm_rows as u128)),
+            ("ArmPos", bitlen_count(b.match_arm_rows as u128)),
+            ("PatternRowId", bitlen_id(b.pattern_rows as u128)),
+            ("ConstId", bitlen_id(b.constant_nodes as u128)),
+            ("ConstFieldPos", bitlen_count(b.constant_field_slots as u128)),
+            ("DataId", bitlen_id(b.data_nodes as u128)),
+            ("FieldPos", bitlen_count(b.data_field_slots as u128)),
+            ("EnvId", bitlen_id(b.environment_cells as u128)),
+            ("NameId", bitlen_id(l.capacities.name_rows as u128)),
+            ("OccPathPos", bitlen_count(l.capacities.occurrence_path_slots as u128)),
+            ("ChildPosition", bitlen_count((b.max_arity as u128)
+                .max(b.match_arm_rows as u128 + 1))),
+            ("ValueSlotPos", bitlen_count(l.capacities.value_slots as u128)),
+            ("ArityCount", bitlen_count(b.max_arity as u128)),
+            ("Depth", bitlen_count(b.frames as u128)),
+            ("TaskCount", bitlen_count(b.helper_tasks as u128)),
+        ];
+        for (nm, needed) in idx {
+            let limit = w.index_width(nm) as u128;
+            if limit < needed {
+                return Err(Tooling::AdmissionRejected {
+                    reason: AdmissionReason::LayoutWidthTooSmall,
+                    detail: nm.to_string(),
+                    locator: field_loc(&format!("layout.widths.indexWidths.{nm}")) });
+            }
+        }
+        return Err(Tooling::AdmissionRejected {
+            reason: AdmissionReason::LayoutWidthTooSmall,
+            detail: "recordWidths".to_string(),
+            locator: field_loc("layout.widths.recordWidths") });
+    }
+    // AD-3 maxArity.
+    if b.max_arity < 2 {
+        return Err(cap_err(CapacityKind::MaxArity, 2, b.max_arity as u128,
+            field_loc("bounds.maxArity")));
+    }
+    // AD-6 boundary capacities must be absent.
+    if l.boundary_capacities_present {
+        return Err(Tooling::UnsupportedFeature {
+            feature: FeatureKind::BoundarySection,
+            locator: field_loc("layout.boundaryCapacities") });
+    }
+    // Financial rebind: the retained prepared source is rechecked against
+    // this admission layout's name capacities and its own retained
+    // FinCapacitiesC. same_source is not used as layout identity.
+    let rebound = fin_carrier::bind_fin_staged_source(
+        prepared.staged(), l, &prepared.bound_source().capacities(),
+    ).map_err(|e| match e {
+        fin_carrier::FinBindError::NameRowsExceeded { needed, limit } => cap_err(
+            CapacityKind::NameRows, needed as u128, limit as u128,
+            field_loc("layout.capacities.nameRows")),
+        fin_carrier::FinBindError::NameBytesExceeded { needed, limit } => cap_err(
+            CapacityKind::NameBytes, needed, limit as u128,
+            field_loc("layout.capacities.nameBytes")),
+        other => Tooling::AdmissionRejected {
+            reason: AdmissionReason::ProgramViewMalformed,
+            detail: format!("financial rebind: {other:?}"), locator: None },
+    })?;
+    if rebound != *prepared.bound_source() {
+        return Err(Tooling::AdmissionRejected {
+            reason: AdmissionReason::ProgramViewMalformed,
+            detail: "financial rebind mismatch".to_string(), locator: None });
+    }
+    let identity = IdentityC {
+        profile_id: 2,
+        grammar_domain: GrammarDomain::DedicatedSorts,
+        finance: FinanceInput::TypedExtensionReserved,
+        layout_version: l.layout_version.clone(),
+        layout_digest: DigestC::Unselected,
+        bounds_digest: DigestC::Unselected,
+        field_id: l.field_id.clone(),
+        program_membership_digest: DigestC::Unselected,
+    };
+    Ok(Admitted { body: Arc::new(AdmittedBody {
+        identity, bounds: *b, view: None, fin: Some(prepared), layout: l.clone(),
+    }) })
+}
+
+pub fn admit_fin_run(
+    a: &Admitted,
+    fuel: &RunIntC,
+    stack_limit: &RunIntC,
+    request: &fin_carrier::FinGenesisRequest,
+) -> Result<MachineImage, fin_carrier::FinRunError> {
+    use fin_carrier::{FinGenesisError, FinInputBinding, FinRunError};
+    let Some(prepared) = a.body.fin.as_ref() else {
+        return Err(FinRunError::Genesis(FinGenesisError::NotFinancialAdmission));
+    };
+    let Some(action_index) = prepared.action_index(&request.action) else {
+        return Err(FinRunError::Genesis(FinGenesisError::UnknownAction(request.action.clone())));
+    };
+    let Some(source_action) = prepared.action(&request.action) else {
+        return Err(FinRunError::Genesis(FinGenesisError::UnknownAction(request.action.clone())));
+    };
+    let Some(fin_action) = prepared.fin_plan().actions.get(action_index) else {
+        return Err(FinRunError::Genesis(FinGenesisError::PlanActionMismatch));
+    };
+    if fin_action.name != source_action.name {
+        return Err(FinRunError::Genesis(FinGenesisError::PlanActionMismatch));
+    }
+    let core_snapshot = crate::runtime::scenario_snapshot(
+        prepared.program(), source_action, &request.scenario,
+    ).map_err(|e| FinRunError::Genesis(FinGenesisError::Scenario(e)))?;
+    if let Some(limit) = request.cap {
+        if fin_action.plan_total > limit.0 {
+            return Err(FinRunError::Genesis(FinGenesisError::CapExceeded {
+                plan_total: fin_action.plan_total, cap: limit.0,
+            }));
+        }
+    }
+    let snapshot = fin_carrier::FinSnapshot::from_core(prepared.bound_source(), &core_snapshot)
+        .map_err(|e| FinRunError::Genesis(FinGenesisError::from(e)))?;
+    if fin_action.committed_before.first() != Some(&0u128) {
+        return Err(FinRunError::Genesis(FinGenesisError::CommittedBeforeMismatch));
+    }
+    let mut inputs = Vec::with_capacity(source_action.inputs.len());
+    for input in &source_action.inputs {
+        let Some(value) = request.scenario.inputs.get(&input.name) else {
+            return Err(FinRunError::Genesis(FinGenesisError::Scenario(crate::Error::new(
+                "input",
+                format!("Missing or wrong type for input {:?}.", input.name),
+            ))));
+        };
+        inputs.push(FinInputBinding {
+            name: input.name.clone(), ty: input.ty, value: value.clone(),
+        });
+    }
+    // A negative run input is a genesis-invalid pure image in admit_run.
+    // On this financial path it is refused instead of being returned as a
+    // financial image. R3/R4/R5 keep their Tooling errors below.
+    if matches!(fuel, RunIntC::Negative) || matches!(stack_limit, RunIntC::Negative) {
+        return Err(FinRunError::Genesis(FinGenesisError::GenesisInvalid));
+    }
+    let mut image =
+        genesis_image(a, fuel, stack_limit).map_err(FinRunError::Tooling)?;
+    let exec = super::fin_exec_state::fin_exec_genesis(&snapshot, &inputs);
+    let fin_state = FinImageState {
+        action_index,
+        inputs,
+        snapshot,
+        core_snapshot,
+        cap: request.cap,
+        committed: crate::UInt(0),
+        exec,
+    };
+    super::fin_exec_state::check_fin_exec_genesis_invariant(
+        &fin_state,
+        prepared,
+    )
+    .map_err(|error| {
+        FinRunError::Genesis(FinGenesisError::ExecInvariant(error))
+    })?;
+    image.fin = Some(fin_state);
+    Ok(image)
 }
 
 #[cfg(test)]
 mod v4_empty_params_tests;
 #[cfg(test)]
 mod nominal_decl_producer_tests;
+#[cfg(test)]
+mod generic_routing_tests;

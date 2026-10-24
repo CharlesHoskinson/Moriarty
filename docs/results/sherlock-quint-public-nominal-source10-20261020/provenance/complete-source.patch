@@ -1,0 +1,261 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/preimages/nominalConstruction.qnt
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSimulation.qnt
+@@ -1,4 +1,4 @@
+-module nominalConstruction {
++module nominalPublicSimulation {
+   // Separate finite semantic profile, not new K/B rule tags or native ABI.
+   // Closed admitted expressions; source occurrence is distinct from nominal identity.
+   type Token = UIntToken(int) | BoolToken(bool)
+@@ -14,7 +14,7 @@
+   type PatternMatch = {matched: bool, bindings: Environment}
+   type Arm = {pattern: Pattern, body: int}
+   type Op = Add | Sub | Equal
+-  type Expression = Literal(Value) | Variable(int)
++  type Expression = Literal(Value) | Variable(int) | BooleanNot(int)
+     | Let({name: int, value: int, body: int})
+     | Binary({op: Op, left: int, right: int})
+     | If({condition: int, yes: int, no: int})
+@@ -29,6 +29,7 @@
+     | ScopeFrame(Environment)
+     | LeftFrame({op: Op, right: int, saved: Environment})
+     | RightFrame({op: Op, left: Value})
++    | NotFrame
+     | IfFrame({yes: int, no: int, saved: Environment})
+     | ArgumentsFrame({function: int, completed: List[Value], remaining: List[int], saved: Environment})
+     | ReturnFrame({resultType: int, saved: Environment})
+@@ -38,7 +39,7 @@
+     | Cases({value: Value, remaining: List[Arm], saved: Environment, source: int, index: int})
+     | Stopped
+   type Outcome = Pending | Done(Value) | Exhausted | OutsideDomain
+-  type Event = Start | LiteralEvent | VariableEvent | LetEvent | BinaryEvent | IfEvent
++  type Event = Start | LiteralEvent | VariableEvent | LetEvent | BinaryEvent | UnaryEvent | IfEvent
+     | ConstructorIntroduce | ConstructorFieldReturn | ConstructorBuild
+     | CallEvent | ArgumentReturn | CallEnter | CallReturn | ScopeReturn
+     | MatchEvent | MatchReturn | MatchMiss | MatchSelect | PrimitiveReturn | BranchSelect
+@@ -52,7 +53,7 @@
+     enteredArguments: List[List[Value]], maxDepth: int,
+   }
+   var machine: Snapshot
+-  pure val PROFILE = "sherlock-quint-nominal-pattern-worklist/1"
++  pure val PROFILE = "sherlock-quint-public-nominal-source-cases/1"
+   pure val TERMINAL_PUBLICATION_CHARGE = 1
+   pure val FROZEN_K_A_TERMINAL_PUBLICATION_CHARGE = 0
+   pure val MAX_SCALAR = 255
+@@ -172,6 +173,7 @@
+       | Literal(v) => if (validValue(s.program, v)) emit(marked, LiteralEvent, Return(v)) else stopDomain(marked)
+       | Variable(name) => if (s.environment.keys().contains(name))
+           emit(marked, VariableEvent, Return(s.environment.get(name))) else stopDomain(marked)
++      | BooleanNot(operand) => push(marked, NotFrame, operand, s.environment, UnaryEvent)
+       | Let(e) => push(marked, LetFrame({name: e.name, body: e.body, saved: s.environment}), e.value, s.environment, LetEvent)
+       | Binary(e) => push(marked, LeftFrame({op: e.op, right: e.right, saved: s.environment}), e.left, s.environment, BinaryEvent)
+       | If(e) => push(marked, IfFrame({yes: e.yes, no: e.no, saved: s.environment}), e.condition, s.environment, IfEvent)
+@@ -191,6 +193,12 @@
+       val n = if (op == Add) scalar(left) + scalar(right) else scalar(left) - scalar(right)
+       if (n < 0 or n > MAX_SCALAR) stopDomain(s) else emit(s, PrimitiveReturn, Return(uint(n)))
+     }
++  // General ordinary positive Bool negation; uses the same return/frame path.
++  // Other values remain outside this finite typed profile, not a Core refusal.
++  pure def booleanNot(s: Snapshot, value: Value): Snapshot =
++    if (value == List(BoolToken(true))) emit(s, PrimitiveReturn, Return(List(BoolToken(false))))
++    else if (value == List(BoolToken(false))) emit(s, PrimitiveReturn, Return(List(BoolToken(true))))
++    else stopDomain(s)
+   pure def returnField(s: Snapshot, c: Construction, value: Value): Snapshot = {
+     val complete = {...c, completed: c.completed.append(value)}
+     if (c.remaining.length() == 0)
+@@ -208,6 +216,7 @@
+         | ScopeFrame(saved) => {...popped, environment: saved, control: Return(value), event: ScopeReturn}
+         | LeftFrame(f) => push(popped, RightFrame({op: f.op, left: value}), f.right, f.saved, BinaryEvent)
+         | RightFrame(f) => primitive(popped, f.op, f.left, value)
++        | NotFrame => booleanNot(popped, value)
+         | IfFrame(f) => if (value == List(BoolToken(true)))
+             {...popped, environment: f.saved, control: Eval(f.yes), event: BranchSelect}
+           else if (value == List(BoolToken(false)))
+--- /dev/null
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSourceExpected.qnt
+@@ -0,0 +1,19 @@
++module nominalPublicSourceExpected {
++  import nominalPublicSimulation.* from "./nominalPublicSimulation"
++  // DATA literals mechanically corresponding to pre-code manual typed trees.
++  // IDs/type arguments are a declared finite projection, not canonical compiler IDs.
++  pure val q10MapExpected:Value = List(
++    ConstructorToken({typeId:20,ctorId:0,arity:2}),
++    ConstructorToken({typeId:10,ctorId:1,arity:2}),UIntToken(5),
++    ConstructorToken({typeId:10,ctorId:1,arity:2}),UIntToken(10),
++    ConstructorToken({typeId:10,ctorId:0,arity:0}),BoolToken(true))
++  pure val q10MirrorExpected:Value = List(
++    ConstructorToken({typeId:40,ctorId:0,arity:2}),
++    ConstructorToken({typeId:30,ctorId:1,arity:2}),
++    ConstructorToken({typeId:30,ctorId:1,arity:2}),
++    ConstructorToken({typeId:30,ctorId:0,arity:1}),BoolToken(false),
++    ConstructorToken({typeId:30,ctorId:0,arity:1}),BoolToken(true),
++    ConstructorToken({typeId:30,ctorId:0,arity:1}),BoolToken(false),UIntToken(41))
++  pure val q10MapArms:List[int] = List(1,1,0)
++  pure val q10MirrorArms:List[int] = List(1,1,0,0,0)
++}
+--- /dev/null
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSourceInputs.qnt
+@@ -0,0 +1,72 @@
++module nominalPublicSourceInputs {
++  import nominalPublicSimulation.* from "./nominalPublicSimulation"
++  // Exact declaration field order, deliberately z_* before a_*.
++  // These labels/type-argument lists are public binding metadata; evaluator
++  // uses these same monomorphic IDs/layout order, not lexical field sorting.
++  type Q10TypeBinding = {typeId:int,name:str,args:List[str]}
++  pure val q10TypeBindings:List[Q10TypeBinding] = List(
++    {typeId:10,name:"Queue",args:List("UInt")},
++    {typeId:20,name:"Envelope",args:List("Queue<UInt>","Bool")},
++    {typeId:30,name:"Arbor",args:List("Bool")},
++    {typeId:40,name:"Stamp",args:List("Arbor<Bool>","UInt")})
++  pure val q10FieldNames:(int,int) -> List[str] = Map(
++    (10,0)->List(),(10,1)->List("z_item","a_tail"),
++    (20,0)->List("z_items","a_marker"),(30,0)->List("z_value"),
++    (30,1)->List("z_left","a_right"),(40,0)->List("z_tree","a_code"))
++  pure val q10MapProgram:Program = {
++    entry:0,
++    layouts:Map((10,0)->{typeId:10,ctorId:0,fields:List()},
++      (10,1)->{typeId:10,ctorId:1,fields:List(0,10)},
++      (20,0)->{typeId:20,ctorId:0,fields:List(10,1)}),
++    functions:Map(
++      0->{name:0,parameters:List(100),parameterTypes:List(10),resultType:10,body:10},
++      1->{name:1,parameters:List(200),parameterTypes:List(10),resultType:20,body:6}),
++    expressions:Map(
++      0->Call({function:1,arguments:List(1)}),
++      1->Constructor({typeId:10,ctorId:1,occurrence:1,fields:List(2,3)}),
++      2->Literal(List(UIntToken(3))),
++      3->Constructor({typeId:10,ctorId:1,occurrence:3,fields:List(4,5)}),
++      4->Literal(List(UIntToken(8))),
++      5->Constructor({typeId:10,ctorId:0,occurrence:5,fields:List()}),
++      6->Constructor({typeId:20,ctorId:0,occurrence:6,fields:List(7,8)}),
++      7->Call({function:0,arguments:List(9)}),8->Literal(List(BoolToken(true))),
++      9->Variable(200),
++      10->Match({value:11,arms:List(
++        {pattern:ConstructorPattern({typeId:10,ctorId:0,binders:List()}),body:12},
++        {pattern:ConstructorPattern({typeId:10,ctorId:1,binders:List(101,102)}),body:13})}),
++      11->Variable(100),
++      12->Constructor({typeId:10,ctorId:0,occurrence:12,fields:List()}),
++      13->Constructor({typeId:10,ctorId:1,occurrence:13,fields:List(14,15)}),
++      14->Binary({op:Add,left:16,right:17}),15->Call({function:0,arguments:List(18)}),
++      16->Variable(101),17->Literal(List(UIntToken(2))),18->Variable(102))}
++  pure val q10MirrorProgram:Program = {
++    entry:0,
++    layouts:Map((30,0)->{typeId:30,ctorId:0,fields:List(1)},
++      (30,1)->{typeId:30,ctorId:1,fields:List(30,30)},
++      (40,0)->{typeId:40,ctorId:0,fields:List(30,0)}),
++    functions:Map(
++      0->{name:0,parameters:List(300),parameterTypes:List(30),resultType:30,body:13},
++      1->{name:1,parameters:List(400),parameterTypes:List(30),resultType:40,body:9}),
++    expressions:Map(
++      0->Call({function:1,arguments:List(1)}),
++      1->Constructor({typeId:30,ctorId:1,occurrence:1,fields:List(2,4)}),
++      2->Constructor({typeId:30,ctorId:0,occurrence:2,fields:List(3)}),
++      3->Literal(List(BoolToken(true))),
++      4->Constructor({typeId:30,ctorId:1,occurrence:4,fields:List(5,7)}),
++      5->Constructor({typeId:30,ctorId:0,occurrence:5,fields:List(6)}),
++      6->Literal(List(BoolToken(false))),
++      7->Constructor({typeId:30,ctorId:0,occurrence:7,fields:List(8)}),
++      8->Literal(List(BoolToken(true))),
++      9->Constructor({typeId:40,ctorId:0,occurrence:9,fields:List(10,11)}),
++      10->Call({function:0,arguments:List(12)}),11->Literal(List(UIntToken(41))),
++      12->Variable(400),
++      13->Match({value:14,arms:List(
++        {pattern:ConstructorPattern({typeId:30,ctorId:0,binders:List(301)}),body:15},
++        {pattern:ConstructorPattern({typeId:30,ctorId:1,binders:List(302,303)}),body:18})}),
++      14->Variable(300),
++      15->Constructor({typeId:30,ctorId:0,occurrence:15,fields:List(16)}),
++      16->BooleanNot(17),17->Variable(301),
++      18->Constructor({typeId:30,ctorId:1,occurrence:18,fields:List(19,20)}),
++      19->Call({function:0,arguments:List(21)}),20->Call({function:0,arguments:List(22)}),
++      21->Variable(303),22->Variable(302))}
++}
+--- /dev/null
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSourceRuntime.qnt
+@@ -0,0 +1,9 @@
++module nominalPublicSourceRuntime {
++  import nominalPublicSimulation.* from "./nominalPublicSimulation"
++  import nominalPublicSourceInputs.* from "./nominalPublicSourceInputs"
++  action init:bool = initProgram(q10MirrorProgram,256)
++  val mirroredNominalPublished:bool = match machine.outcome {
++    | Done(v) => rootType(v) == 40 and machine.constructorNodes == 11
++      and machine.selectedArms == List(1,1,0,0,0)
++    | _ => false }
++}
+--- /dev/null
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSourceTest.qnt
+@@ -0,0 +1,77 @@
++module nominalPublicSourceTest {
++  import nominalPublicSimulation.* from "./nominalPublicSimulation"
++  import nominalPublicSourceInputs.* from "./nominalPublicSourceInputs"
++  import nominalPublicSourceExpected.* from "./nominalPublicSourceExpected"
++  // Finite driver ONLY calls the existing model's general advance; no alternate evaluator.
++  pure def q10Trace(p:Program):List[Snapshot] =
++    range(0,256).foldl(List(initial(p,256)),(traceArg,ignored) => {
++      val lastArg = traceArg.nth(traceArg.length()-1)
++      if(lastArg.outcome == Pending) traceArg.append(advance(lastArg)) else traceArg
++    })
++  pure def q10Final(traceArg:List[Snapshot]):Snapshot = traceArg.nth(traceArg.length()-1)
++  pure def q10PrimitiveEvents(traceArg:List[Snapshot]):int =
++    traceArg.foldl(0,(n,s) => n+(if(s.event == PrimitiveReturn) 1 else 0))
++  pure def q10CompleteAccounting(traceArg:List[Snapshot]):bool =
++    traceArg.foldl(true,(okArg,s) => okArg and and {
++      s.remaining >= 0,s.consumed+s.remaining == 256,s.helperWork == 0,
++      s.constructorNodes == s.builds.length(),
++      s.constructorFieldSlots == s.builds.foldl(0,(n,b) => n+b.fields.length()),
++      s.frames.length() <= FRAME_LIMIT,s.maxDepth <= FRAME_LIMIT,
++      s.environment.keys().forall(n => validValue(s.program,s.environment.get(n))),
++      s.builds.foldl(true,(good,b) => good and validValue(s.program,b.value)),
++    })
++  run q10MapQueueTypedReturnAndOrderTest = {
++    val traceArg = q10Trace(q10MapProgram)
++    val finalArg = q10Final(traceArg)
++    and {finalArg.outcome == Done(q10MapExpected),q10CompleteAccounting(traceArg),
++      finalArg.selectedArms == q10MapArms,finalArg.enteredArguments.length() == 4,
++      finalArg.constructorNodes == 7,finalArg.constructorFieldSlots == 10,
++      q10PrimitiveEvents(traceArg) == 2,
++      q10TypeBindings.nth(1).args == List("Queue<UInt>","Bool"),
++      q10FieldNames.get((10,1)) == List("z_item","a_tail"),
++      finalArg.builds.nth(4).fields.head() == uint(10),
++      finalArg.builds.nth(5).fields.head() == uint(5),
++      finalArg.builds.nth(6).fields == List(fieldsOf(q10MapExpected).head(),List(BoolToken(true)))}
++  }
++  run q10MirrorArborTypedShapeAndOrderTest = {
++    val traceArg = q10Trace(q10MirrorProgram)
++    val finalArg = q10Final(traceArg)
++    and {finalArg.outcome == Done(q10MirrorExpected),q10CompleteAccounting(traceArg),
++      finalArg.selectedArms == q10MirrorArms,finalArg.enteredArguments.length() == 6,
++      finalArg.constructorNodes == 11,finalArg.constructorFieldSlots == 16,
++      q10PrimitiveEvents(traceArg) == 3,
++      q10TypeBindings.nth(3).args == List("Arbor<Bool>","UInt"),
++      q10FieldNames.get((30,1)) == List("z_left","a_right"),
++      finalArg.builds.nth(5).fields == List(List(BoolToken(false))),
++      finalArg.builds.nth(6).fields == List(List(BoolToken(true))),
++      finalArg.builds.nth(8).fields == List(List(BoolToken(false))),
++      finalArg.builds.nth(10).fields.nth(1) == uint(41)}
++  }
++  run q10SameTypeFieldSwapIsDistinguishedTest = {
++    val finalArg = q10Final(q10Trace(q10MirrorProgram))
++    match finalArg.outcome {
++      | Done(v) => {
++        val treeArg = fieldsOf(v).head()
++        val childrenArg = fieldsOf(treeArg)
++        val swappedArg = List(ConstructorToken({typeId:30,ctorId:1,arity:2}))
++          .concat(childrenArg.nth(1)).concat(childrenArg.nth(0))
++        and {v == q10MirrorExpected,
++          childrenArg.nth(0).head() == ConstructorToken({typeId:30,ctorId:1,arity:2}),
++          childrenArg.nth(1).head() == ConstructorToken({typeId:30,ctorId:0,arity:1}),
++          validValue(q10MirrorProgram,swappedArg),swappedArg != treeArg}
++      }
++      | _ => false }
++  }
++  run q10ExistingCallBuildPathAndPreservationTest = {
++    val left = q10Trace(q10MapProgram)
++    val right = q10Trace(q10MirrorProgram)
++    and {left.foldl(true,(okArg,s) => okArg and s.program == q10MapProgram),
++      right.foldl(true,(okArg,s) => okArg and s.program == q10MirrorProgram),
++      q10Final(left).environment == Map(),q10Final(left).frames == List(),
++      q10Final(right).environment == Map(),q10Final(right).frames == List(),
++      q10Final(left).event == TerminalPublication,q10Final(right).event == TerminalPublication,
++      right.foldl(0,(n,s) => n+(if(s.event == UnaryEvent) 1 else 0)) == 3,
++      left.foldl(0,(n,s) => n+(if(s.event == CallEnter) 1 else 0)) == 4,
++      right.foldl(0,(n,s) => n+(if(s.event == CallEnter) 1 else 0)) == 6}
++  }
++}

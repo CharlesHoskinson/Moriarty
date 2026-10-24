@@ -504,6 +504,15 @@ impl OwnerWire for HostViolation {
 impl OwnerWire for HostViolationKind {
     fn owner_wire(&self) -> Value {
         match self {
+            Self::FinancialUnsupportedBeyondGenesis { op } => match op {
+                FinUnsupportedOp::Step => json!("FinancialUnsupportedBeyondGenesis.Step"),
+                FinUnsupportedOp::Run => json!("FinancialUnsupportedBeyondGenesis.Run"),
+                FinUnsupportedOp::Select => json!("FinancialUnsupportedBeyondGenesis.Select"),
+                FinUnsupportedOp::Capture => json!("FinancialUnsupportedBeyondGenesis.Capture"),
+                FinUnsupportedOp::Codec => json!("FinancialUnsupportedBeyondGenesis.Codec"),
+                FinUnsupportedOp::ObservePure => json!("FinancialUnsupportedBeyondGenesis.ObservePure"),
+                FinUnsupportedOp::StepInv => json!("FinancialUnsupportedBeyondGenesis.StepInv"),
+            },
             Self::StepInvViolated => json!("StepInvViolated"),
             Self::SelectUndefined => json!("SelectUndefined"),
             Self::ReadOutOfBounds => json!("ReadOutOfBounds"),
@@ -513,6 +522,61 @@ impl OwnerWire for HostViolationKind {
             Self::PhysicalCapacityExceeded => json!("PhysicalCapacityExceeded"),
             Self::ArithmeticUndefined => json!("ArithmeticUndefined"),
         }
+    }
+}
+
+impl OwnerWire for fin_selection::FinRuleId {
+    fn owner_wire(&self) -> Value {
+        Value::String(self.retained_name().to_owned())
+    }
+}
+
+impl OwnerWire for fin_selection::FinStatementKind {
+    fn owner_wire(&self) -> Value {
+        match self {
+            Self::Let => json!("Let"),
+            Self::Liability => json!("Liability"),
+            Self::Transfer => json!("Transfer"),
+            Self::Fee => json!("Fee"),
+            Self::Discharge => json!("Discharge"),
+            Self::Next => json!("Next"),
+            Self::Emit => json!("Emit"),
+            Self::Requires => json!("Requires"),
+            Self::Ensures => json!("Ensures"),
+            Self::Await => json!("Await"),
+        }
+    }
+}
+
+impl OwnerWire for fin_selection::FinSelectionHeader {
+    fn owner_wire(&self) -> Value {
+        json!({
+            "format": self.format,
+            "rule": self.rule.owner_wire(),
+            "action_index": self.action_index.owner_wire(),
+            "action_name": self.action_name.owner_wire(),
+            "statement_cursor": self.statement_cursor.owner_wire(),
+            "segment_index": self.segment_index.owner_wire(),
+            "statement_kind": self.statement_kind.owner_wire(),
+            "committed_before": self.committed_before.owner_wire(),
+            "segment_src_cost": self.segment_src_cost.owner_wire(),
+            "plan_total": self.plan_total.owner_wire(),
+        })
+    }
+}
+
+impl OwnerWire for fin_selection::FinEventHeader {
+    fn owner_wire(&self) -> Value {
+        json!({
+            "format": self.format,
+            "rule": self.rule.owner_wire(),
+            "action_index": self.action_index.owner_wire(),
+            "action_name": self.action_name.owner_wire(),
+            "statement_cursor": self.statement_cursor.owner_wire(),
+            "segment_index": self.segment_index.owner_wire(),
+            "outcome": self.outcome.owner_wire(),
+            "boundary": self.boundary.owner_wire(),
+        })
     }
 }
 
@@ -1481,4 +1545,38 @@ pub fn image(value: &ImageObservation<'_>) -> Value {
             "alloc":value.seg_base.alloc().owner_wire(),
             "consumed_work":value.seg_base.consumed_work().owner_wire()}
     })
+}
+
+// Nominal preparation reports use the same explicit, output-only owner wire.
+impl OwnerWire for PreparationReportC {
+    fn owner_wire(&self) -> Value {
+        let PreparationReportC { work_map } = self;
+        json!({"work_map": work_map.owner_wire()})
+    }
+}
+
+impl OwnerWire for WorkMapEntryC {
+    fn owner_wire(&self) -> Value {
+        let WorkMapEntryC { source_match, live_arms, field_path, events_per_visit } = self;
+        json!({"source_match": source_match.owner_wire(), "live_arms": live_arms.owner_wire(),
+            "field_path": field_path.owner_wire(), "events_per_visit": events_per_visit.owner_wire()})
+    }
+}
+
+#[cfg(test)]
+mod nominal_preparation_tests {
+    use super::*;
+    #[test]
+    fn preparation_report_retains_nonempty_ordered_work_map() {
+        let report=PreparationReportC {work_map:vec![
+            WorkMapEntryC {source_match:9,live_arms:vec![2,0],field_path:vec![1,3],
+                events_per_visit:vec![RuleIdC::KMachineEvalMatch,RuleIdC::KMachineCasesTry]},
+            WorkMapEntryC {source_match:4,live_arms:vec![],field_path:vec![],events_per_visit:vec![]},
+        ]};
+        assert_eq!(report.owner_wire(),json!({"work_map":[
+            {"source_match":"9","live_arms":["2","0"],"field_path":["1","3"],
+             "events_per_visit":["KMachineEvalMatch","KMachineCasesTry"]},
+            {"source_match":"4","live_arms":[],"field_path":[],"events_per_visit":[]}
+        ]}));
+    }
 }

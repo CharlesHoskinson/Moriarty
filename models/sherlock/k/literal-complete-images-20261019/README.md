@@ -1,5 +1,14 @@
 # Complete logical-image literal counterpart
 
+The source-specific definition compiled successfully: exit 0 in 14.951 s. Its finite two-event K observation subsequently matched an independently prefrozen complete expectation, including all 335 statement lanes. Root's host/K comparison also passed 2,262 typed recursive checks with zero mismatches across all eight machine positions, full tables and padding, both envelopes and all statement lanes. [Qualified source and result metadata](../../../../docs/results/sherlock-k-literal-complete-runtime-20261019/README.md) preserves the source audits, original framing failure, synthetic 20-case unit and successful tail.
+
+The parser correction changes only empty K-continuation framing. Original runtime children 01–05 were reused; the failed original 06 remains immutable. Unit 20 and new 06/07/08 passed, with all 89 actual files frozen before expected access. SAFE, raw K images, host capture and independent expectation/constructor bodies remain private. Public metadata cannot by itself reproduce those instance comparisons. Source/result publication review is pending Root.
+
+There is no original main.k rule-fired trace, context authentication, binding of the caller context to this counterpart source, general refinement, native proof, recursive verification, stagenet or global EARS acceptance. `context_binds_counterpart_source=false`. The historical design note below retains the original proposal premises; its earlier uncompiled, unrun and pending statuses are superseded only by the finite observations above.
+
+## Original source-design note
+
+
 Source-only, unreviewed, uncompiled and unrun. This isolated K family computes
 one positive UInt-literal `Init -> Return -> Done` path over the existing complete
 logical-image geometry. It does not modify or import the legacy nine-cell

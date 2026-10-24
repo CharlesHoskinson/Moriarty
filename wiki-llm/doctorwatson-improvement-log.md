@@ -2010,3 +2010,292 @@ Root reports Moriarty commit `34a8593b` and Fenrir commit `9250d9ed` pushing at 
 ### DW120 later creative-publication observation — October 19
 
 The actual Opus 5.5 HIGH DESIGN012 author returned successfully after 254.400744 seconds. Its complete note and README append are materialized verbatim, with explicit marker spans and an exact reconstruction proof; no Sol creative replacement is presented as Opus. The [separate status](sherlock-circuit-atlas/DESIGN-012-STATUS-AND-PROVENANCE.md) preserves the author's input cut while recording Root's later actual merged readbacks for Moriarty PR294 and Fenrir PR35. A later 6,106-byte uncompiled anchor source is also Root-reported, with fresh review pending; it does not imply target integration. Keep the original source-cut facts, raw review qualifications and all old concept notes intact. The site still launches only when the full Sherlock goal is complete and accepted, and this documentation adds no native/circuit build hold, recursive proof, deployment or EARS closure.
+
+
+## Proposed DoctorWatson improvement — Complete expectations and byte-bound observability
+
+Status: documentation draft only; no new checker, source fix, execution or acceptance decision. Base: Sherlock `35931362` (PR297).
+
+A successful author exit does not issue an independent expectation. The recorded327-lane enumeration failed the required335-lane geometry and remains rejected without repair or comparison. Keep that raw failure and the original contract; a fresh deterministic constructor is a changed approach, pending its own actual review/validation. Validate full shape before comparison without feeding actual values or old differences to the new author. Freeze the output before parsing and the actual before any independent expected read. No private expected/capture arrays belong in the public improvement log.
+
+Treat observability as a source change when source bytes enter identity. Both current9-file A102 and13-file complete relation lists include `literal_bridge.rs`; contexts incorporate the relation hash. Logging in that file changes the identity inputs. The deferred diagnostic candidate therefore inherits no saved-proof/context result, and does not justify another observability build. Preserve the old proof and current source cut separately; semantic equivalence and exact source identity are separate questions.
+
+Publish only newly observed predicates and eligible reviewed bytes. Do not rerun passing prefixes to refresh a dashboard or call unrun K/Quint/Clean/native stages passed. Keep the full Sherlock goal and all permanent lanes active; private Fenrir research stays private. A later outcome entry must cite actual new terminal records and state precisely what was compared before any currentness or acceptance change.
+
+Later dated observation: B24's actual new frontend and one sample both exited0. Root's original `[ok]` classifier failure is retained; whole-output `ok` adjudication corrects classification without rerun or changing the model/test/expectation. Preserve exact CLI-envelope recognition and require the full named outcome, not invented punctuation. The output is121bytes; a parent shorthand126 is corrected by the retained raw bytes. K's new actual reduction passed, then decoding failed on the reported empty-continuation seam; freeze the59 actual-file pins and continue only the changed decoder/unit/tail once eligible. Its07/08 comparison stages remain UNRUN. These are scoped new observations, not whole-K/Rust correspondence or EARS closure.
+
+Later K tail observation: all four newly selected operations passed (20 synthetic grammar cases; changed decode; complete335-lane audit; whole typed independent-prefrozen comparison). No engine/kast/print prefix was replayed. Retain the original decode failure/59-pin freeze and actual-before-expected order. This is typed equality with different raw hashes, under the declared shared mapping, not original main.k firing, context authentication, native proof/target or EARS evidence. Preserve source identity and result scope while continuing the new optimization EARS/OpenSpec work in its exclusive owner worktree.
+
+Later host-to-K data observation: Root's prefrozen-field-mapping comparison reports2262 typed recursive checks/zero mismatches over all8machine positions,15Program/6State physical tables/padding,2envelopes and335lanes, after only canonical host decimal-string-to-UInt128 conversion. Neither43824-byte host nor6886-byte K observation changed. Host-only metadata/coordinate names remain unpaired, old `NOT_ISSUED` capture wording is historical, and context binding remainsfalse. This passive data comparison is not new SDK/circuit execution, original main.k trace/refinement, context authentication, native proof, target acceptance or EARS adoption.
+
+
+## October19 lesson — Name the normal Core and selected-handler observation
+
+The [body-typed nominal24-operation observation](../docs/sherlock/reference/nominal-body-typed-cli-observation-20261019.md) passed a full normal Core build and an external consumer with actual production Args, source reading, selected handler and publication modules. That explicit consumer scope is useful evidence; it does not stand in for a whole backend-linked `mori` executable or native/target journey. Report which real modules were linked and invoked beside each result.
+
+Keep test listing as an independently checked membership predicate: the default-pretty listing contained exactly21 names and its21-test footer; each subsequent exact invocation passed1 with20 filtered. A zero exit alone does not identify the selected harness. Preserve the initial20 pre-wiring freezes, incremental21st before its later retention behavior, and post-wiring/pre-execution UInt/Bool corrections separately. Date earlier UNRUN records and append actual results without rewriting their original provenance. This is an observed documentation lesson, not a new approval policy, security judgment or EARS closure.
+
+
+## October 20 actual-batch lessons — source05, cohort05 and repair03
+
+Proposed documentation lessons only, grounded in the [dated receipts and pins](../docs/results/sherlock-source-workflow-batch-20261020/BATCH-SCOPE.md). These do not change reviewer ownership, caps, operation authority or product acceptance. Retained typed lesson 84 and earlier log entries remain unchanged.
+
+1. **A source/API approval is not a parser result.** Lean05 received prospective source/API and one-operation eligibility approval, then the actual leaf failed at 32:72 and 148:70 on doc comments before `mutual`. The 89:12 unused-simp warning also violates the existing strict zero-output requirement. Keep the failed raw result. The source06 doc-placement and simp correction received its own fresh review and strict kernel pass (0.554462 seconds, zero streams, five products). This advances only the isolated logical-Value equality theorem and seven examples; it never relabels source05 or accepts the whole B55 Host/native bridge.
+2. **Select tests by their declared run names.** `--match=.*` selected imported stateful declarations as tests. 34 authored tests passed, yet the command exited 1. Keep that original failure and report corrected 24+5+1 selectors separately. A passing subset never rewrites the enclosing command's result.
+3. **Quantifiers have runtime cost.** Repair 03 contains nested universal checks over retained histories. The requested 10,000-sample run timed out after 30.032008 s with empty output, while the directed path passed. Treat quantifier cost as a hypothesis needing measurement; no profile proves it caused this timeout. Do not turn a timeout into coverage, an invariant failure, a silent bound increase or an invariant waiver.
+4. **Recover the whole immutable cohort, not just familiar filenames.** Root's exact 1,735-file/87,569,159-byte check binds membership, contents, read-only modes and manifest SHA256. It does not approve dispatch, execute native code or establish continuous immutability after that check. Preserve the manifest and original receipt when selecting a separately eligible operation.
+5. **Public fixture hashing is not SDK execution.** ScalarConstruct05 has five complete source files and 26 test functions, all uncompiled/unrun; literal raw count 14 supersedes the owner's stated 11. Source presence, syntax/name inventories and hashes establish different predicates from Rust typing, preprocessing, synthesis or proof. Draft PR361's native test source adds no native result.
+6. **Bind recovery to the original process and result.** The finite workflow model checks task/token/attempt/fingerprint/original-result dependencies; it does not authenticate a real executor. Keep unknown originals immutable and require evidence for the same original operation before resolution, rather than borrowing another process's output or resending an already-consumed identity. Lesson 84's format-decoder and unverified-settlement warning still applies; parseable JSON or a coherent owner flag is not settlement or proof verification.
+
+Current next actions are exact-source Construct review/checks, the remaining B55 Host/serialization bridge, bounded workflow-cost diagnosis and real producer/attempt/output binding. Producer revision02 now has a separate source-with-limits approval; its 14 tests and native path remain unrun. None implies full39, StepInv, P1/native issuer, finance, recursion, stagenet or EARS closure. The designated Muse/Opus circuit concepts remain separate creative source; the finished site goes live only after full Sherlock completion.
+
+
+## October 20 later lessons — comparison domains, bounded resources and real entry paths
+
+Proposed factual lessons from [this exact later batch](../docs/results/sherlock-source-workflow-limits-20261020/SCOPE.md), not a new runner, review policy or acceptance gate. Earlier entries and actual failure records stay unchanged.
+
+1. **Name the resource amendment precisely.** Full Clean09 passed only after two fresh votes and Root adopted one invocation's per-file 16 → 64 MiB change. The existing `resourcesPerLeafNotRaised:true` description was explicitly inaccurate for that limit. Record the actual changed dimension and preserved limits; neither success nor a matching hash converts a one-run amendment into a standing policy or whole native bridge.
+2. **Check comparability before claiming equality.** K compiled with classified warnings and later qualified36symbols, yet six independent local-row specimens do not share the retained normal-window event-site contract. Keep NONCOMPARABLE distinct from mismatch, pass and missing-source assertions. Declared source-site support and a valid comparison-domain mapping are separate predicates.
+3. **Keep directed coverage and incomplete sampling apart.** Quint06's96 named tests and20 directed witness rows passed while its sampled deadline failed with all witness counts UNKNOWN. Performance07 binds actual installed TypeScript cache/invalidation source and retains10,000 × 60/seed1/30 s / 256 MiB; this is source-supported optimization work, not a measured speedup or permission to weaken workload/invariants. Earlier04zero counts belong only to04.
+4. **Exercise the actual entry and cleanup premises.** The two native07 reviewers found an unlaunchable real provisioning/config order and abort ownership problems despite author mock successes and fixes to the three earlier defects. They also identified GNU `time -o` output precreation, outer fingerprint/helper identity, mount-absence and typed-debit seams. Preserve these attributed findings; a return-zero fake operator is not evidence for the actual process, filesystem or receiving contract. Source and eventual real execution still need their distinct evidence.
+5. **Record failed delivery as failed delivery.** Muse429 and actual Opus quota failures deliver no new completed source approval. An availability response or dispatched fallback handle is not an implemented correction. Preserve source ownership and actual returned identity; use the standing authorized fallback without adding a human approval flow or relabelling a failed attempt. Marker32source and the separate Core1candidate retain their UNRUN status.
+
+The user beta override remains human-free with the existing objective source/resource/correctness conditions. No SDK/native/proof/target acceptance, full39/frontend U0–U7, finance/refinement or EARS closure follows. Website concepts remain designated Muse/Opus creative source, unchanged and unpublished until full completion. No new visitor copy is authored in this append.
+
+
+## October 21 UTC — bind the review to the receiving source
+
+These are dated factual lessons from [this batch](../docs/results/sherlock-receiving-boundary-lessons-20261021/SOURCE-PINS.json), not new policy, permissions or acceptance rules. Earlier failures, approvals and resource records remain unchanged.
+
+1. **Mock success and actual receiving compatibility are different predicates.** Root’s selected source08 suite passed170 tests, including41 adapter mocks. Fresh Opus laneC nevertheless returned REVISE: its N1 identifies the actual guard’s flag-prefixed, long process argv versus the decoder’s absolute-first-token/128-element assumption; N2 identifies nonexistent guard constants leaving intended remaining-wall and D/E-freeze branches inactive; N3 identifies an unguarded post-native directory failure that could prevent terminal records. These are attributed reviewer findings, not Sol security rules. A fixture that invents the receiving process shape can agree with an incorrect decoder.
+2. **A returned APPROVE is not usable evidence when it describes another API.** Root withheld reviewerB’s source08 opinion after checking absent function names, wrong context paths and the wrong time-binary hash. Preserve that returned opinion and the withholding record together. Re-labeling the verdict or repairing only its prose cannot bind it to the real candidate.
+3. **A new namespace does not erase old attempts.** The explicitly new DoctorWatson build namespace has its own initial empty history/reconciliation records. Its provenance retains the actual legacy references, source/resource accounting, unknowns, cleanup duties and stopped C13. Empty local lists are not a global counter reset or authority to replay an old attempt.
+4. **Keep an executed public route separate from its next source change.** PR363’s real nominal compiler-to-CompletedRun handoff passed six selected operations and three positive tests. Event/value comparisons were source-author assertions and shared-owner comparisons; complete compared values were not separately serialized. The nine-file source06 simulate change and its revision02 test-only environment-macro correction remain a different, unexecuted cut. Do not turn compatibility with a dep-info gate into a CLI execution result or rewrite the unchanged guard/helper to accommodate a fixture.
+5. **Report each formal layer’s exact domain.** K’s15 finite Boolean-law checks passed separately from compilation; Quint’s five tests plus one installation witness and Clean’s seven mathematical theorems plus two examples answer different questions. Compilation products alone are not evaluated laws; synthetic UNADMITTED observations are not genuine Core admission; conditional mathematics is not an SDK/Rust extraction proof. Their exact actual receipts and open premises must accompany any reported pass.
+6. **Correct receipt-contract prose without rewriting authored history.** The fresh Opus ValidateEntry opinion and Root’s scoped adoption say `const_found`, `const_count` and `const_row` are all ungated derived receipts. UPDATE026’s exception parenthetical is false; its five creative strings remain immutable, with a separate engineering erratum required. Consumers bind constrained carrier lanes, not candidate receipt values. The opinion approves only the exact bounded emitter source, not a later consumer/test source, native proof, measured degree or performance. Reviewer elapsed wall time does not measure reviewer CPU.
+
+The next work remains the actual circuit/consumer source and eligible native path. Source09 author work is recorded only as in progress at Root’s task cut, not delivered source or a result. Full frontendU0–U7,39selectors, StepInv, finance, formal correspondence, native recursion, stagenet settlement and EARS obligations remain open. The human-free beta override remains unchanged. Website concepts remain designated-author prose; the site stays unpublished until full Sherlock completion.
+
+
+## 2026-10-21 — DW-FLOW-04: integrate ready source before expanding the queue
+
+**Status: documented workflow revision; execution and acceptance remain separate.**
+The [receiving-boundary lessons](../docs/results/sherlock-receiving-boundary-lessons-20261021/SOURCE-PINS.json)
+record why source review must use the actual receiver: a returned approval can
+describe an absent API, and passing mocks can miss the real producer shape.
+More workers help independent missing relations but also add integration load.
+Prefer Root integrating ready source, then the next executable consumer check,
+before opening more research.
+
+The [current loop](../docs/sherlock/implementation-loop.md#current-operational-queue)
+now names one integration owner and a queue toward native build, linked recursive
+proofs, independent verification, stagenet effects and Fenrir measurements. Each
+task names one product predicate, actual API and immediate next call in one
+current continuation. Clean, Quint, K and handwritten implementation stay active.
+Root generates exact identity metadata mechanically; semantic reviews quote
+changed source and adjacent APIs or give counterexamples. Test-only edits use
+focused checks, and two same-class failures require a changed approach.
+
+Next owner: Root integrates the exact reviewed documentation and affected trace
+pins, then advances the eligible receiving source/check. Validate improvement
+against actual integrated behavior and observed review/check latency; this entry
+claims no measured speedup, armed runtime, native success or acceptance. Earlier
+failures, dissent, resource/cleanup history and security obligations remain.
+
+
+## October21 UTC — actual receiving APIs and complete-data checks
+
+Dated implementation results; prior failures remain immutable.
+
+1. **Compile the actual receiver early.** Ordinary compilation found E0609 field errors and E0433 (`FuelPolicy`) missed by static review. Keep the failure receipts and dated normal05/cfg06 qualification. A static review is not a typecheck.
+2. **Use one declared-schema mapping across all callers.** Public artifact admission has six fields; complete-snapshot admission has four. Source07 corrected the top-level test, but the next quote run found the same invalid whole-object equality in its shared assertion helper. Source09 must centralize the full-value mapping and inspect all callers before another run. Keep exact field sets and semantic expectations. The original twelve attempted Core tests produced eight passes and four failures; eighteen remained unrun. The later source07 quote failure is separate evidence, not a passing semantic comparison.
+3. **Preserve full data within the real export limits.** Fitting the compact trace budget did not ensure its pretty diagnostic fit the public exporter. The designated source08 remedy must preserve every represented field and record under the existing limits. Keep the direct-export assertion and independent71/145 expectations intact; do not substitute a summary or larger cap.
+4. **Compose owned functions, then inspect their receiving boundary.** Root combined native03 policy and native04's three owned parser functions, discarding overlapping alternatives. Two remaining seams were identified: author/voter PROMPT visibility inside the worker and honest unknown-returned-identity routing. Source06 addresses those seams. Composition and source delivery alone do not establish native readiness or a successful build.
+5. **Report the exact formal result.** K's twelve new return-projection tests passed. Both complete recursive typed return trees and original23-field source identity matched unchanged independent expectations. Full NG states and ordered74/108 events remain retained without an independent whole-state/event comparison. This is no Core-clock, admission, refinement, native proof or EARS closure.
+6. **Publish private formal source with its limits.** Clean PR72/73 merged twenty-nine exact source/evidence additions into the private fork. Source15 derives the represented logical observation window from source-pool premises. Native occurrence joining, charged Rust schedule correspondence, full Lake and target proof remain separate obligations. Public references must preserve the private-fork boundary.
+
+Continue the existing DoctorWatson loop with local affected checks and regular reviewed integration. Retain all Sherlock, financial, native, recursive, stagenet and release obligations. UPDATE026's five creative strings remain unchanged; the site remains unpublished until full Sherlock completion.
+
+
+### 2026-10-21 — Execute the affected boundary and keep source delivery separate from provider status
+
+The first current native-prerequisite check executed all 121 named tests once in 7.715 seconds: 78 passed, one failed and 42 errored. All 307 pinned source/dependency inputs stayed unchanged and temporary files were cleaned. The failures exposed an undefined adapter helper, a fixture method missing from its actual class, and identical synthesized author/voter result records that correctly triggered duplicate-result rejection. The next repair is limited to the adapter and its fixtures; guard checks, candidate accounting, resource caps and stopped C13 stay intact. Agreeing source opinions did not establish executable compatibility. Run the affected consumer early and retain the complete failure before correcting its actual cause.
+
+Two review reports invented APIs or routing and were excluded from approval. The replacement report cited the real functions. Literal citation checks must distinguish fabricated code from equivalent line wrapping or adjacent string literals; a matching digest establishes identity, not source correctness. Preserve rejected reports and scoped qualifications.
+
+Independent product work continued: the existing compile-only and quote-observation command handlers passed their selected tests; Clean's occurrence-table adapter was merged in private Fenrir PR74. The next K window has separately frozen, hand-derived expectations from a fresh author who saw no actual captures. ValidateField produced four actual Rust files before its provider ended with a capacity error; those bytes require independent review and remain uncompiled and unrun. Provider success, source delivery, checked behavior and release acceptance are distinct facts. No current native ELF, linked recursive proof or stagenet settlement follows from this iteration.
+
+
+## October21 UTC — distinguish metadata, fixture setup and semantic checks
+
+This later Root-selected receipt cut adds to prior API/runtime lessons; it does not replace their failures or qualification.
+
+1. **A metadata probe and its tests answer different questions.** The real read-only native11 metadata probe passed in1.112seconds with all315pins unchanged and temporary space empty. The first five new tests then failed with five setup errors. Preserve that failure; fix02 is source-only and its fresh review was pending at the selected cut. Neither result is a native compile, proof or stagenet check.
+2. **Read the selected operation before naming a model pass.** Quint source03 OP1 passed two positive data inverses in0.56699seconds, with679file pins/four links stable. Root compared the complete selected six-field admission,23-field view,23-field image/root and retained raw envelopes. No frontend or semantic test ran in that operation; a lossless input bridge is not model correspondence.
+3. **A reviewed proof repair still needs its kernel result.** Clean18 R4 failed with three errors and no products;8278pins and85read-only origins remained stable and the unit closed. Keep those facts separate from the pending designated-author exact-API diagnosis05. Do not import failed products or count planned repairs as theorems.
+4. **Publication and delivery do not upgrade execution scope.** PR381/382 merged their exact21/62blobs. ValidateEmpty delivered four source files and16declared tests, still uncompiled/unrun with source review being prepared. Native accounting source02 has no adoption at this cut. Graph20 is dated, noncanonical navigation, not an execution receipt.
+
+The next useful work remains the actual fixture/API corrections, applicable source review and affected checks under existing DoctorWatson. No new queue, resource rule, native build, linked recursive proof, measured k/performance, target settlement or EARS acceptance follows. Site concepts remain designated-author material: all five UPDATE026 strings stay immutable. The website WILL go live when Sherlock is finished; it is unpublished today.
+
+
+## October21 UTC — scope accounting checks, operational discharge and wallet readiness separately (source07)
+
+This dated proposal supersedes unapplied source06; earlier attempts and raw classifications remain immutable. The source07 receipt set A1–A2/N1–N2/W1–W2/Q1–Q3/C1 and Root-attributed R1 cut support these lessons.
+
+1. **A reviewed accounting correction still needs its own execution result.** Two independent source02 reviews agree on the exact source/resource candidate, with unknown backend attestation qualified. All133 ordinary tests subsequently passed in12 disjoint groups under unchanged caps. These are guard/helper/outer/fixture checks, not a current native build. Native12's three Rust errors and reviewed applied source fixes remain history; the corrected ledger9 ELF, proof and stagenet result are not established.
+2. **An operational debt discharge cannot repair missing historical observations.** Root adopted an operation-specific failed-attempt cleanup disposition after independent reviews. Available failed-run evidence was retained and the selected envelope restored; four downstream success-only artifacts were causally inapplicable to this discharge. The original raw cleanup OWED classification and false automatic preservation predicate remain unchanged. No-script reexecution and the90-host-output/34-run-unit post-audit remain permanently unobserved, with possible historical policy violation retained. This is not compiler, native, security, proof or target acceptance.
+3. **Package integrity, same-process compatibility and current funds are different checks.** Wallet B2 passed the selected same-physical SDK class/address restoration and close operation in4.672590seconds; Root attributes the run to two opened facades. This documentation read only safe Root observations, not private wallet JSON or raw SDK streams. Current synchronization, NIGHT, DUST and fees remain unknown. No signing, proof, submission or settlement result follows.
+4. **A reversible input transport is not a completed formal run.** The205-record ordered paired-delta inverse passed in1.692530seconds with whole native kinds/list order verified. Its generated frontend then hit the60.002201-second wall deadline, leaving operation10 unrun. Preserve both outcomes; do not convert structural equality into semantic correspondence. Clean D05's strict2.547250-second pass accepts nine focused diagnostic declarations, not Source21's six public contracts or a whole source/native proof.
+
+Continue the existing affected source/build path with the retained bounds and actual receipts. Postdeployment target benchmark measurements remain mandatory; no circuit degree/performance or EARS completion is inferred. UPDATE026's five creative fields are unchanged. The website WILL go live when full Sherlock is finished; it is unpublished today.
+
+
+## October 22 UTC — current source, executable readiness and cycle cleanup
+
+The audit found an operational source split: the old parallel implementation
+worktree is f935feb, while the published sherlock baseline is c26859a5. Recovery
+must name the source it actually inspects. The canonical source contains the
+public nominal compile/B ADT consumer and existing Build9 capture/terminal route;
+old-checkout absence is not a current defect. Source, installed code, tests,
+integration and native/target observations remain separate facts.
+
+Extend the existing DoctorWatson rather than replacing its engine. Share actual
+adapter capabilities across assessment and dispatch, deduplicate file checks only
+inside one assessment, require explicit complete execution history, and connect
+the strict local verifier consumer. The independent fresh use-time check remains.
+A verifier fake child establishes protocol wiring, not cryptographic validity or
+native resource qualification. Empty provider success is missing output; retain
+it before recovering the same conversation or assigning a fresh reviewer.
+
+Every cycle now needs finalization: refresh affected graph context, append the
+actual outcome and lessons here, and retire redundant inactive merged branches
+and pristine worktrees. Protect unique/unknown work, active tasks, PR heads/bases,
+retained roots and tracked/untracked/ignored data. A worktree is not a permanent
+exemption. Use current exact-tip reachability and merged-only ref transactions;
+remote deletion needs a fresh exact-head lease. Record failures and retention
+reasons with owners and revisit events. Graph/wiki failure stops destructive
+cleanup; a plan never counts as completed cleanup. This is local housekeeping,
+not another scheduler, branch quota or public developer permission.
+
+The earlier 18,446-byte receiver-log history gap and unapplied source13/14 remain
+unresolved historical records; this append does not reconcile them. The original
+implementation goal stays paused during the audit. No new proof, wallet or
+stagenet result is claimed. The website WILL go live when full Sherlock is
+finished; its prior creative material remains unchanged.
+
+
+## October 22 UTC — completed local validation and shared AgentBus publication
+
+The assembled DoctorWatson source passed 264 ordinary tests; two requirement-digest cache checks also passed. Cleanup revision02 resolves the independently reproduced nested-Git data-loss and retirement-history defects; 31 author checks and five independent regressions passed. The actual first inspect refused missing stale refs after external changes. A subsequent explicitly empty retirement selection verified the affected graph and appended the cycle log, performing zero Git deletions. Preserve that failed inspection; do not invent our receipts for external removals.
+
+Shared AgentBus refinements merged in ProjectFenrir PR84, commit01c7202b9963881fe3b3e2771e031bc75be19223, preserving its newly published operations/health changes. The combined source passed 177 offline tests and the full seeded fuzz campaign. Moriarty contains only the optional thin adapter; live services and host hooks were not activated. This complements the recursion cleanup audit and does not resume the paused native goal. Public results: docs/audits/2026-10-22/LOCAL-RESULTS.json.
+
+
+## October 22 UTC — first restarted cycle: inspect exact sources, preserve uncertain outcomes
+
+PR405 merged the rewritten loop at `07d4608f87a10848e806f7414c5b88c8f49ead9d`. This resumes the user-selected implementation loop; the older audit-pause entries above retain their historical dates. The new source-integration history is not native execution history. Actual DoctorWatson inspection found valid records and the Source44 integration candidate, with `ready_for_dispatch: []`: the source adapter has no executor, so Root and the source owner perform the source work. No fake native dispatch follows from that candidate list.
+
+The first changed ordinary consumers now have actual results: Source33 R2's 22 classifier cases and syntax check passed; Source32 R3's 14 synthetic whole-wrapper cases and syntax check passed. They exercise typed errors, exact identity/hash/bytes handling and failure/close behavior. They do not establish chain inclusion. Root then selected one actual read-only Source32 R3 query: terminal exit2, full captured streams, no controller failure, `NOT_INDEXED_IN_THIS_OBSERVATION`, transaction status UNKNOWN and financial acceptance false. This is one observation, not evidence of permanent absence, safe duplicate submission, current funds or DUST sufficiency. No signing or submission occurred in that read.
+
+Quint's new first-loop model passed typecheck, 20 directed cases and 1,000 sampled traces. The sampled target, benchmark and complete witnesses were all ZERO. A directed full path passes only with explicitly supplied verification, reconciliation, target and importer premises; it is not an observed native/ledger run. Clean's current full-structure correspondence packet adds obligations, not new accepted Lean proofs. K's parent/child join adds source and 14 laws, still uncompiled and unrun at this cut. Keep these distinct from retained earlier successes.
+
+The native R2 review found a concrete caller defect before execution: its exclusive one-shot marker was still the consumed Source43 marker. Preserve that marker; bind the new Source44 marker rather than delete history. R3 source/caller and actual mount qualification are being prepared separately; no new native attempt is claimed here. The same review corrected a placement assumption: an absolute `/home/charl/...` path can sit on bounded tmpfs. Observe the exact warm target, cargo-home, evidence and TMPDIR mount identities, capacities, free bytes/inodes and host memory at use; do not equate pathname with storage medium or migrate a working cache by reflex. Keep larger future proof scratch under its own reviewed placement and finite envelope.
+
+Source44's clocks and original-accumulator reuse are now specific documentation subjects. A stage marker means that source boundary was reported, not that all hidden SDK work or a proof completed. The original lhs/rhs ordered bases, scalars and named fixed-base maps must survive the checked clone's resolve/collapse/pairing branch before the A102→A80 fold. The proposed UPDATE027 explains those two structures separately in the Moriarty Tron/PCB/Three.js circuit timeline. It is a concept, not a deployed asset or a measured speedup; all UPDATE026 creative fields and earlier log bytes remain unchanged. The website WILL go live after full Sherlock completion and is unpublished today.
+
+Next: finish the exact R3 source/caller review and selected real consumer checks; retain the historical build/VK and failed parent attempts; then select the phase-observed parent experiment only within its prospective envelope. Build9/MP2, opening-aware D, finalized full-effects stagenet acceptance, exact-intent lifting/range topology and the benchmark matrix remain separate missing results. Cycle graph/wiki/cleanup receipts likewise record what actually happened rather than implying a complete product.
+
+
+### Cycle02 actual native build and formal coverage corrections — October22
+
+The Source44 R3 normal release CLI build is now independently accepted: compiler capture208.047278s, whole controlled operation212.591883s, complete4950-byte diagnostics, retained22,753,592-byte executable and observed owned cleanup. Its SHA256 is fe220ad89e4085ec359544697064ba77717cd3cb586bc676f270b06e6bac3a57. Preserve the single300P/S295whole charge; the pre-exit CPU snapshot is not a final-family total. Library test bodies and parent proving are still pending.
+
+Review caught a K equality import omission and a Quint financial-premise coverage gap. The K import is corrected with14cases still unrun. Two new Quint paired tests and a separate1,000-trace false-premise scenario passed, including seven otherwise-ready refusals; original20/default1,000 receipts and zero sampled target/benchmark/completion witnesses remain unchanged. These are scoped formal observations, not cryptographic or ledger acceptance. The original wallet exact-ID read-only query returned not indexed and grants no resend or financial acceptance. Next: real library-test compile and genuine consumer checks, then one phase-observed parent proof through the existing route.
+
+
+### Cycle03 subsequent library compile and exact formatter observation — October22
+
+The real Source44 recl9 release library-test harness is now compiled: 43.529498 s compiler capture and 48.204170 s complete outer operation, with full diagnostics and observed owned cleanup. Independent actual-result review accepted it and Root adopted it. The retained 11,608,984-byte harness has SHA-256 `8855af90fd9b2fd9a6396124e9ee4802f27c73abbefb1984ce07101ab623b785`. This compiles the strengthened structural and ignored genuine-child tests; the compile ran no test bodies.
+
+A separate exact formatter invocation then passed `sherlock_link::tests::parent_proof_phase_records_have_only_fixed_labels_and_elapsed`: one pass, 18 filtered out, zero failures/ignored tests, 209-byte full stdout, zero stderr and 0.004613481 s outer elapsed. The retained original stayed unchanged. Independent actual-result review of this formatter result is pending at this publication cut. A formatter pass does not execute proof-phase callsites or genuine-child cryptography.
+
+Preserve the cycle02 graph as its dated extraction/result cut: its earlier library-uncompiled/unrun labels are qualified by these later observations, not rewritten. K/Quint source and prior outcomes, all creative atlas bytes, old failures, holds and stopped C13 remain unchanged. Genuine-child regressions, the parent proof, terminal/stagenet full effects, exact-intent benchmark and full Sherlock EARS are still open. The website WILL go live after full Sherlock completion and remains unpublished.
+
+
+### Subsequent exact-formatter review — 2026-10-22T17:36:55.668567+00:00
+
+Independent actual-result review accepted the one passing real-library formatter test, and Root adopted that exact scope. Its full result is one pass,18 filtered,empty stderr and complete209-byte stdout; the retained harness remains unchanged. The preceding pending-review statement records the earlier author handoff, now superseded by this observation. Child cryptographic tests,parent proof,stagenet acceptance and benchmarks remain open. Preserve the single35P/S/whole-second hold and all prior charges; no test rerun or new circuit acceptance follows.
+
+
+### Subsequent genuine-child checks, first K law and new wallet uncertainty — October22
+
+Documentation observation cut: 2026-10-22T18:22:26.036307+00:00; canonical Git source `f11817c26392b2b0b87a89bad158fb5e61846af7` (merged PR406). Root reports one phase-observed parent attempt running at the requested cut. This entry consumes no terminal parent result or private phase payload and claims no completed parent proof. Later observations need their own dated entry.
+
+The two exact genuine-child regressions now passed on the real retained library harness: 2 passes, 17 filtered, 0 failures/ignored, 0.239868 s native and 4.322171 s outer. Independent actual-result review accepted them and Root adopted the scoped child-test prerequisite. The checks cover complete ordered lhs/rhs bases, scalars and named fixed-base maps, unchanged originals after pairing-clone mutation, the ordered A102→A80 fold and retained refusals. They are stronger than comparing evaluated points or flattened encodings, but they do not produce or accept the parent, terminal decider or target proof. Full historical holds and stopped C13 remain intact.
+
+K completed four selected phases and its first finite symbolic law returned strict whole Bool `true`; Root adopted that exact scope after independent review. Thirteen laws remain UNRUN. The commitment constructor remains uninterpreted: no numeric Poseidon, Rust/circuit refinement, accumulator-preservation theorem or ledger result follows. Clean's full-structure correspondence obligations remain separate from the observed Rust child tests.
+
+The dated adopted wallet read recorded 5,000,000,000 available unregistered STAR, no registered NIGHT UTxOs and zero available/pending DUST specks; the finalized clock was after the original retained TTL. Historical execution and fees remain unknown. A separately selected NEW registration then passed its full financial guard and typed node admission, but terminated after 32.784030 s with signed-transaction uncertainty: no qualifying typed RPC code, no accepted registration, no checkpoint, and owned resources reported closed. Its exact new identity remains distinct from the old one; actual new execution and fees are UNKNOWN. No resign, rebuild, resend or automatic financial retry follows. A WebSocket disconnect/lifecycle race is under source investigation, not a confirmed historical cause. Next work is public source/connection-lifecycle diagnosis and, only if separately selected, exact-new-identity read-only reconciliation.
+
+Keep the operational lessons concrete:
+
+- A message to a completed agent does not start a new turn. Use `followup_task` for an assigned continuation; preserve the actual returned result rather than infer progress from message delivery.
+- Node24 emitted default spec output where a wrapper expected TAP. Reclassifying the same complete raw result recovered the actual named cases; no subject rerun was needed. Match the real reporter before assigning a test failure.
+- Current factory inspection is read-only and has no native child/proof executor. The earlier task-data revision therefore remains a dated candidate/source record; the accepted direct Root-native receipts above stay external, with their original provenance. Add a new immutable task-data revision when consuming them; do not forge factory dispatch or another reviewer's adoption.
+- The current capture buffers the short child phase stream until close. Absence of a live file update is not phase inactivity. Do not alter in-flight helper713119 or restart the proof for telemetry. After it ends, propose an exact copied helper that flushes phase chunks or disables buffering, preserving full streams, bounds and failure handling; check that future copy on a harmless short producer before selection.
+- Resolve source through the canonical Git object, not stale W. The bridge source study finds financial step/run beyond genesis explicitly unsupported, no general C6 child exporter, and no general range parent. Source44's A102 literal/A80 pair is a genuine recursion foundation, not a financial synthetic16 Sherlock ledger proof. Next source work is a reusable selected-note-ledger program/typed adapter, actual trace/required-chiplet coverage, then separately defined C6 range children, ordered range parent and bound terminal statement. Preserve the current relation and passing key identities; a native importer or literal expected result cannot replace those gaps.
+
+UPDATE028 proposes a Moriarty Tron/PCB/Three.js view of the two checked child originals and their clone branches, plus twenty start/complete clock ports toward the native parent. It supplies no image, running site or proof result. Earlier concepts and log bytes remain unchanged; the website WILL go live after full Sherlock completion and is unpublished today.
+
+
+### Subsequent adopted fixed-relation parent proof — October22
+
+Revision02 documentation observation: 2026-10-22T18:49:46.149492+00:00, source base `f11817c26392b2b0b87a89bad158fb5e61846af7`. The earlier running/pending statement records the 18:22 UTC draft cut. Root's 18:46:05 UTC adoption now accepts one completed genuine k20 parent proof for the fixed A102 literal→A80 relation, producer-internal stdlib and full pairing verification, and complete observed owned cleanup. Its independent actual report is a non-author source/result review, not a separately executed verifier. The parent proof is 6,432 bytes; outer wall time was 954.127131 s and native capture 951.614262 s. All twenty source-defined start/complete markers were present.
+
+Measured setup_pk took 62.328385 s and prove, including PK destruction, took 882.589555 s; the phase clock ended at 950.705306 s. Proving dominates this run, but the old Source43 timeout was censored and uninstrumented, so this is no controlled speedup comparison. The last pre-controller-exit service observations were 1,820.361367 CPU seconds and about 14.601 GiB peak memory, with no recorded OOM events. Final manager counters were unavailable after unit removal; these are pre-final observations, not complete final-family totals or a future fit guarantee. Retain the entire selected hold, prior failures and stopped C13; no automatic retry or downstream selection follows.
+
+The next executable gap is a separately launched verifier. The saved-artifact verify-only CLI is an active Source45 source task, not an observed result. It must become a real end-to-end receiving operation: read the accepted artifact envelope, validate exact source/key/statement pins, perform the actual checks and retained tamper cases, and produce full typed verdict/stream/cleanup evidence. A factory candidate, source delivery or metadata row cannot stand in for that command's implementation and execution. Reuse the saved proof; do not repeat proving merely to manufacture an independent receipt. Build9, compiled-PI MP2 capture, opening-aware D and stagenet acceptance remain UNRUN. This fixed two-child proof does not establish the financial synthetic16 relation.
+
+The exact NEW wallet identity was queried read-only once at 18:41:39 UTC and was not indexed in that observation. The scoped actual review and Root adoption preserve old and new execution/fees/expiry/recovery as UNKNOWN; no repeated query or financial retry is automatically selected. The public NodeClient source study pins upstream fix `38e42a77ef916e78583d516ef3b0f66707f5694b`: its asynchronous metadata socket-close handoff matches the actual first-submit control path. A remote close can yield the same error, so the historical initiator and delivery remain unproved. The narrow owned submission-service fix is offline source work in progress, preserving Finalized, ownership/recovery and every financial/node guard; it is no installed live repair or retry permission.
+
+The general selected-note-ledger checker now has actual source: 41,752 bytes and 168 functions, alongside the typed scalar adapter and whole-value test source. Compiler and subject checks remain UNRUN at this cut. Its success constructor is `ScalarValidPendingNativeChecks`, not native validity. Required financial cryptographic checks, actual C6 range children, a general ordered range parent and the bound terminal statement remain implementation gaps. Record these separately from the accepted literal/publication parent.
+
+UPDATE028 revision02 adds this observed phase-cost/proof milestone to the proposed Moriarty PCB/optic-clock journey. Producer verification, independent actual review and separately executed verification occupy different indicators. It supplies no raw field values, wallet identities, image or deployed asset. The website WILL launch after full Sherlock completion and remains unpublished; earlier creative chapters and all canonical log prefixes are unchanged.
+
+
+## 2026-10-22 — Revision03: separate parent verification, keyed Build9 and the next real parser boundary
+
+This is a subsequent observation after the revision02 parent milestone, based on the source/result cut recorded with this draft. The canonical source base remains `f11817c26392b2b0b87a89bad158fb5e61846af7`; the old worktree and dated graph remain historical cuts. Earlier UNRUN statements retain their original dates. These additions do not rewrite their receipts, imply that later source is merged, or close Sherlock's remaining requirements. The compact [evidence reference](../docs/sherlock/reference/recursion-evidence-2026-10-22.md) separates the new observations and their next dependencies.
+
+Root adopted Source45's normal CLI build and then the fixed A102→A80 parent's separately launched verifier result. The genuine case returned both standard-library and full-pairing verification true: 23.519816 ms inside verification and 77.034966 ms for that process capture. These are different clocks. This is the existing cryptographic implementation in a separate process, not independently implemented cryptography. All five declared negative cases met their exact oracles. Four returned typed rejection with exit zero; the malformed verifying-key suffix returned a decoder error. The wrong-key case can reject on input shape, so it does not isolate a pairing failure. No public statement values or proof payloads are reproduced here.
+
+The second keyed Build9 operation is also adopted: thirteen files totalling 1,080,985 bytes, including the two prover/verifier pairs, with a joint native capture of 0.778633937 s and outer duration of 1.174783625 s. Preserve the earlier pre-keygen failure: its temporary-file assertion and complete cleanup remain actual history; its errno was unobserved. These artifacts do not establish compiled-public-input MP2 agreement, terminal D acceptance, a financial interpreter proof or stagenet settlement. Existing holds and stopped obligations remain recorded; fast completion does not create another attempt.
+
+All fourteen prepared K laws now have observed adopted finite symbolic result-equality results. The thirteen new laws used thirty-nine new phases, without recompiling or replaying the first law. `rjCommit` remains uninterpreted. This is neither native cryptography nor financial/ledger correspondence or general EARS closure.
+
+The real fresh normal Core compiled, and all nine new typed-AST API cases passed with current source/tool/Core pins held. They cover structural bounds and argument/error fidelity, including a real owner-genesis receiving case. The complete compact checker lexed at 7,944 tokens including EOF, within the unchanged 8,192-token and 65,536-byte limits. Then the thirteen representation cases exposed the next boundary: eleven passed and two failed when the shared lexer supplied reserved `None` where the nominal grammar expected a name. Lexical success did not establish parse/body/admission success. R4's contextual-name correction is source only and under review at this cut; it changes no library ABI, fixtures, lexer, financial parser or limits. Its new Core compile, seven new parser cases, two previously failing cases and full owner-ten suite remain unrun. Keep the eleven and nine already passing cases as their original observations.
+
+The real installed SDK metadata smoke returned pass in 5.638736608 s. It reached the actual constructor once, preserved the namespace and closed the owned service. Its fresh nonauthor actual review is still pending at this cut. It opened no wallet, constructed no transaction and called no submit or financial operation. Financial registration has not been selected from this result. The old/new signed uncertainties and the unproved historical cause remain; this smoke supplies no settlement or retry instruction.
+
+Concrete DoctorWatson improvements follow these receiving boundaries:
+
+- Budget required journals, source inventories and full streams against actual free bytes and inodes before launch. The original tmpfs placement could not fit even the mandatory journal lower bound; the accepted CLI build used corrected disk-backed ext4 output/control placement with the existing limits intact.
+- Check hardcoded compiler scratch behavior as well as configured temporary variables. The successful keyed operation supplied a private alias for the compiler's fixed system temporary directory inside its existing isolation. Preserve the first failure and do not invent its errno.
+- Separate program text from typed data AST input. Count data structure nodes/depth on that path while retaining source lexical bounds. Do not raise the token cap, truncate the ledger, or shrink the fixture to disguise parser/representation failures.
+- Exercise the real metadata constructor and owned close before selecting a signed transaction whose validity interval can expire during initialization. Require the positive constructor marker; a close that merely tolerates failed initialization is insufficient.
+- Classify RPC by its actual purpose and call path. A blanket prohibition on `state_call` is wrong because public runtime metadata initialization can use it. That does not authorize financial RPC, signing, send/watch or a new registration.
+
+The next source/result sequence is R4 review → fresh Core → seven new parser regressions and the two old failures → full owner checks and supported financial trace → required native checks and range/terminal binding. MP2, D and target acceptance each need their own current artifacts and selected execution; the fixed parent and keys do not stand in for them. The [UPDATE028 concept](../wiki/research/sherlock-circuit-atlas/UPDATE-028-TWO-VERIFIED-CHILDREN-AND-TWENTY-CLOCK-PORTS.md) adds the separate verifier and keyed connector beside the measured twenty-port rail. It remains a public Moriarty Tron/PCB/Three.js design note. The website WILL launch after full Sherlock completion; no site, image or private payload is published by this draft.
+
+## Operational lessons
+
+The SDK deploy02 operation failed without an accepted deployment. The strict failure projector refused classification, leaving cause and exposure unknown. Preserve private streams; proceed only with the finite crash-classifier source/tests A/B and an actual read-only projection. No SDK retry is selected. Record failure only after capture, post-run pins and cleanup checks are complete.
+
+Keep host, native and stagenet evidence separate. A successful host execution does not establish a retained full trace or native proof. Passing pure checks do not establish that a later SDK operation succeeded. Keep the D3 pure result and deploy02 failure as separate milestones.
+
+
+## 2026-10-24 — first recursive call remains the delivery boundary
+
+The current loop is revision13 and blocked on the applicable corrected-call assembly review or reviewer-routing change. The user appointed an actual Opus5.5 coordinator; its provider withheld the response, so it supplied no direction or approval. Stop peripheral preparation from becoming a new prerequisite to the already keyed proof/call. Preserve scoped formal and build results without counting them as target acceptance.
+
+[Current lessons](../docs/sherlock/doctorwatson-current-improvement-2026-10-24.md), [status](../docs/sherlock/stagenet-rescue-current-2026-10-24.md), and [exact-source checkpoint](../raw/audits/2026-10-24/README.md) record the current limits. The existing contract deployment finalized; a current SDK-bound recursive-proof call and synthetic rollup benchmark remain open.

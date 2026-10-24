@@ -1,0 +1,57 @@
+--- /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/runtime-qa-postcompile-01/source/root_data.py
++++ /home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/runtime-qa-postcompile-01/revision02-corrected-source-01/source/root_data.py
+@@ -13,6 +13,7 @@
+ INPUT_PIN={'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/SAFE/INPUTS.json', 'bytes': 726918, 'sha256': '6f029ff29655ff4eb73d0718b0471fce048664ad77d1bbe18b4e711e899dbc20'}
+ REGISTRY_PIN={'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/SAFE/PUBLIC-REGISTRY.json', 'bytes': 11263, 'sha256': 'cef0dc4bdb59a5b982593629587a7c44551b1bdfb66cead06459710642abdcf7'}
+ LABEL_MAP_PIN={'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/runtime-qa-postcompile-01/context/COMPILED-KLABEL-MAP.json', 'bytes': 87648, 'sha256': 'ed7c647f36e5acbce191554472023a23d303f4c1a790f178d952cc3a11f3a53c'}
++EXPECTED_PIN={'path': '/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/independent-actual-c6-programview-interface-oracle-20261019/K-C6-typed-root-codec-20261019/private/EXPECTED-COMPLETE-ANSWERS.json', 'bytes': 613495, 'sha256': '4ca1534806e3d002fa5dfde6653883782af9aaa5de953af14712192221752688'}
+ OUTPUT_SCHEMA='sherlock-c6-typed-root-positive-codec-wire/1'
+ PROFILE='logical-C6-typed-root-positive-codec/1'
+ PUBLIC=base.loads(base.checked(REGISTRY_PIN))
+@@ -165,8 +166,24 @@
+     finally:base.codec.REG=saved
+ 
+ 
++def same_whole(a, b):
++    stack = [(a, b)]
++    while stack:
++        x, y = stack.pop()
++        if type(x) is not type(y): return False
++        if type(x) is dict:
++            if x.keys() != y.keys(): return False
++            stack.extend((x[k], y[k]) for k in x)
++        elif type(x) is list:
++            if len(x) != len(y): return False
++            stack.extend(zip(x, y))
++        elif x != y: return False
++    return True
++
++
+ def render(manifest,output,report):
+     m=base.load(manifest);keys(m,('source_input','compiled_definition'))
++    if not same_whole(m['source_input'],INPUT_PIN):raise ValueError('source input operand differs')
+     source=base.loads(base.checked(m['source_input']))
+     definition=base.loads(base.checked(LABEL_MAP_PIN))['definition']
+     if m['compiled_definition']!=definition:raise ValueError('compiled definition operand differs')
+@@ -183,6 +200,7 @@
+ 
+ def decode(manifest,output,report):
+     m=base.load(manifest);keys(m,('source_input','printed'))
++    if not same_whole(m['source_input'],INPUT_PIN):raise ValueError('source input operand differs')
+     source=base.loads(base.checked(m['source_input']));queries(source)
+     raw=base.checked(m['printed']).decode('utf-8')
+     parsed=base.codec.parse_printed(base.complete_term(raw),'CTAnswers')
+@@ -207,10 +225,12 @@
+ def compare(manifest):
+     # Exact existing c6_data compare ordering/API policy, with profile status only.
+     m=base.load(manifest);keys(m,('actual','expected','durable_freeze'))
++    # Hash-only opaque operand binding; precedes every freeze/actual/expected body read.
++    if not same_whole(m['expected'],EXPECTED_PIN):raise ValueError('opaque expected operand differs')
+     barrier=base.loads(base.checked(m['durable_freeze']));base.validate_barrier(barrier,m['actual'])
+     actual=base.loads(base.checked(m['actual']))
+     expected=base.loads(base.checked(m['expected']))
+-    equal=base.same(actual,expected)
++    equal=same_whole(actual,expected)
+     print(json.dumps({'status':'PASS_WHOLE_TYPED_C6_ROOT_CODEC' if equal else 'FAIL',
+         'whole_typed_equal':equal,'actual':m['actual'],'expected':m['expected'],
+         'expected_body_reads':1,'scope':'UNADMITTED positive codec, no interpreter/native/refinement claim'}))

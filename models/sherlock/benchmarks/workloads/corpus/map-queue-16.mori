@@ -1,0 +1,15 @@
+language "moriarty-sherlock-nominal/1";
+program MapQueue {
+  type Queue<T> { Empty; Push(z_item: T, a_tail: Queue<T>); }
+  type Envelope<A, B> { Wrap(z_items: A, a_marker: B); }
+  fn bump(xs: Queue<UInt>): Queue<UInt> {
+    match xs {
+      Queue<UInt>::Empty() => construct Queue<UInt>::Empty(),
+      Queue<UInt>::Push(item, tail) => construct Queue<UInt>::Push(item + 2, bump(tail))
+    }
+  }
+  fn pack(xs: Queue<UInt>): Envelope<Queue<UInt>, Bool> {
+    construct Envelope<Queue<UInt>, Bool>::Wrap(bump(xs), true)
+  }
+  entry pack(construct Queue<UInt>::Push(3, construct Queue<UInt>::Push(8, construct Queue<UInt>::Push(13, construct Queue<UInt>::Push(18, construct Queue<UInt>::Push(23, construct Queue<UInt>::Push(28, construct Queue<UInt>::Push(33, construct Queue<UInt>::Push(38, construct Queue<UInt>::Push(43, construct Queue<UInt>::Push(48, construct Queue<UInt>::Push(53, construct Queue<UInt>::Push(58, construct Queue<UInt>::Push(63, construct Queue<UInt>::Push(68, construct Queue<UInt>::Push(73, construct Queue<UInt>::Push(78, construct Queue<UInt>::Empty())))))))))))))))));
+}

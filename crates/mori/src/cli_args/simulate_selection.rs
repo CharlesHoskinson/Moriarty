@@ -1,4 +1,4 @@
-//! Pure production draft selection, shared with the actual simulate handler.
+//! Pure production source selection, shared with the actual simulate handler.
 //! No input reads, runtime stepping, backend or ledger imports.
 use std::path::Path;
 use mori_core::sherlock_compile_artifact::{self as host, CompileFailure};
@@ -24,7 +24,10 @@ pub fn selection(args: &Args) -> Result<(&Path, &Path), CompileFailure> {
         CompileFailure::input("select", "selected Sherlock simulation requires explicit --source-profile"))?;
     match host::draft_contract::select_source(Some(source_profile), None, args.entry) {
         Ok(host::draft_contract::SourceSelection::DraftEntry) => {}
-        Ok(host::draft_contract::SourceSelection::CoreAction(_)) => {
+        Ok(host::draft_contract::SourceSelection::NominalEntry)
+            if source_profile == host::nominal_body_compile::NOMINAL_BODY_TYPED_PROFILE => {}
+        Ok(host::draft_contract::SourceSelection::CoreAction(_)
+            | host::draft_contract::SourceSelection::NominalEntry) => {
             return Err(CompileFailure::input("select", "selected Sherlock simulation supports the explicit dedicated draft entry"));
         }
         Err(error) => {

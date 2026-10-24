@@ -20,6 +20,18 @@ use owner_si21_closure::{si21_helper_ok, si21_result_ok, si22_helper_ok};
 fn hv(kind: HostViolationKind, clause: Option<StepInvClauseId>, rule: Option<RuleIdC>, loc: &str) -> HostViolation {
     HostViolation { kind, clause, rule, locator: Some(loc.to_string()) }
 }
+fn fin_unsupported(op: FinUnsupportedOp) -> HostViolation {
+    HostViolation {
+        kind: HostViolationKind::FinancialUnsupportedBeyondGenesis { op },
+        clause: None,
+        rule: None,
+        locator: Some("financial beyond genesis".to_string()),
+    }
+}
+fn pure_view<'a>(pre: &PreImage<'a>) -> Result<&'a ProgramView, HostViolation> {
+    pre.admitted.body.view.as_ref().ok_or_else(|| fin_unsupported(FinUnsupportedOp::StepInv))
+}
+
 fn wrong(loc: &str) -> HostViolation { hv(HostViolationKind::WrongVariant, None, None, loc) }
 fn oob(loc: &str) -> HostViolation { hv(HostViolationKind::ReadOutOfBounds, None, None, loc) }
 fn arith(loc: &str) -> HostViolation { hv(HostViolationKind::ArithmeticUndefined, None, None, loc) }
@@ -92,40 +104,42 @@ impl<'a> PreImageView for PreImage<'a> {
     fn active(&self) -> ActiveLengths { self.img.active }
     fn alloc(&self) -> AllocCounters { self.img.alloc }
     fn expr(&self, id: &usize) -> Result<&ExpressionRowC, HostViolation> {
-        self.admitted.body.view.expressions.get(*id).ok_or_else(|| oob("prog.expressions"))
+        pure_view(self)?.expressions.get(*id).ok_or_else(|| oob("prog.expressions"))
     }
     fn child(&self, pos: &usize) -> Result<usize, HostViolation> {
-        self.admitted.body.view.children.get(*pos).copied().ok_or_else(|| oob("prog.children"))
+        pure_view(self)?.children.get(*pos).copied().ok_or_else(|| oob("prog.children"))
     }
     fn function_row(&self, id: &usize) -> Result<&FunctionRowC, HostViolation> {
-        self.admitted.body.view.functions.get(*id).ok_or_else(|| oob("prog.functions"))
+        pure_view(self)?.functions.get(*id).ok_or_else(|| oob("prog.functions"))
     }
-    fn admitted_function_count(&self) -> usize { self.admitted.body.view.functions.len() }
+    fn admitted_function_count(&self) -> Result<usize, HostViolation> {
+        pure_view(self).map(|view| view.functions.len())
+    }
     fn parameter(&self, pos: &usize) -> Result<&ParameterRowC, HostViolation> {
-        self.admitted.body.view.parameters.get(*pos).ok_or_else(|| oob("prog.parameters"))
+        pure_view(self)?.parameters.get(*pos).ok_or_else(|| oob("prog.parameters"))
     }
     fn arm(&self, id: &usize) -> Result<&ArmRowC, HostViolation> {
-        self.admitted.body.view.arms.get(*id).ok_or_else(|| oob("prog.arms"))
+        pure_view(self)?.arms.get(*id).ok_or_else(|| oob("prog.arms"))
     }
     fn pattern(&self, id: &usize) -> Result<&PatternRowC, HostViolation> {
-        self.admitted.body.view.patterns.get(*id).ok_or_else(|| oob("prog.patterns"))
+        pure_view(self)?.patterns.get(*id).ok_or_else(|| oob("prog.patterns"))
     }
     fn occurrence(&self, id: &usize) -> Result<&OccurrenceRowC, HostViolation> {
-        self.admitted.body.view.occurrences.get(*id).ok_or_else(|| oob("prog.occurrences"))
+        pure_view(self)?.occurrences.get(*id).ok_or_else(|| oob("prog.occurrences"))
     }
     fn occurrence_path(&self, s: &SliceC) -> Result<&[usize], HostViolation> {
         if s.len == 0 { if s.start == 0 { return Ok(&[]); } return Err(oob("prog.occurrencePaths")); }
         let end = s.start.checked_add(s.len).ok_or_else(|| arith("occurrence path end"))?;
-        self.admitted.body.view.occurrence_paths.get(s.start..end).ok_or_else(|| oob("prog.occurrencePaths"))
+        pure_view(self)?.occurrence_paths.get(s.start..end).ok_or_else(|| oob("prog.occurrencePaths"))
     }
     fn constant_borrowed(&self, id: &usize) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation> {
-        self.admitted.body.view.constants.get(*id).map(pure_leaves::BorrowedValueRow::Const).ok_or_else(|| oob("prog.constants"))
+        pure_view(self)?.constants.get(*id).map(pure_leaves::BorrowedValueRow::Const).ok_or_else(|| oob("prog.constants"))
     }
     fn constant_field(&self, id: &usize) -> Result<usize, HostViolation> {
-        self.admitted.body.view.constant_fields.get(*id).copied().ok_or_else(|| oob("prog.constantFields"))
+        pure_view(self)?.constant_fields.get(*id).copied().ok_or_else(|| oob("prog.constantFields"))
     }
     fn marker_free(&self, id: &usize) -> Result<bool, HostViolation> {
-        self.admitted.body.view.constants.get(*id).map(raw_marker_free).ok_or_else(|| oob("prog.constants markerFree"))
+        pure_view(self)?.constants.get(*id).map(raw_marker_free).ok_or_else(|| oob("prog.constants markerFree"))
     }
     fn deref_borrowed(&self, r: &RefC) -> Result<pure_leaves::BorrowedValueRow<'_>, HostViolation> {
         match r {
@@ -136,7 +150,7 @@ impl<'a> PreImageView for PreImage<'a> {
     fn field_at(&self, r: &RefC, i: &usize) -> Result<RefC, HostViolation> {
         match r {
             RefC::Const(id) => {
-                let row = self.admitted.body.view.constants.get(*id).ok_or_else(|| oob("prog.constants"))?;
+                let row = pure_view(self)?.constants.get(*id).ok_or_else(|| oob("prog.constants"))?;
                 let (start, len) = const_fields(row);
                 if *i >= len { return Err(oob("const field index")); }
                 let pos = start.checked_add(*i).ok_or_else(|| arith("const field pos"))?;
@@ -169,14 +183,14 @@ impl<'a> PreImageView for PreImage<'a> {
     fn checked_arity(&self, k: &LogicalKind) -> Result<usize, HostViolation> {
         match *k {
             LogicalKind::Constructor { type_id, ctor_id } =>
-                adt_checked_ctor_arity(&self.admitted.body.view, type_id, ctor_id),
+                adt_checked_ctor_arity(pure_view(self)?, type_id, ctor_id),
             _ => pure_leaves::arity_of(*k).ok_or_else(|| arith("arity undefined")),
         }
     }
     fn checked_sort(&self, k: &LogicalKind) -> Result<TypeIdC, HostViolation> {
         match *k {
             LogicalKind::Constructor { type_id, ctor_id } =>
-                adt_checked_ctor_sort(&self.admitted.body.view, type_id, ctor_id),
+                adt_checked_ctor_sort(pure_view(self)?, type_id, ctor_id),
             _ => pure_leaves::sort_of_kind(*k).ok_or_else(|| arith("sort undefined")),
         }
     }
@@ -343,9 +357,9 @@ fn owner_select_when(rule: &RuleIdC, pre: &dyn PreImageView, _g: &OwnerGuards) -
         BHelperEnvPutInsert => matches!(pre.helper(), Some(HelperControlC::EnvPut { status: TriStatus::Pending, .. })),
         BHelperEnvPutExit => matches!(pre.helper(), Some(HelperControlC::EnvPut { status: TriStatus::Positive, .. })),
         BHelperFindRow => match pre.helper() { Some(HelperControlC::Find { status: TriStatus::Pending, row_cursor, .. }) =>
-            *row_cursor < pre.admitted_function_count(), _ => false },
+            (*row_cursor < pre.admitted_function_count()?), _ => false },
         BHelperFindEmpty => match pre.helper() { Some(HelperControlC::Find { status: TriStatus::Pending, row_cursor, .. }) =>
-            *row_cursor == pre.admitted_function_count(), _ => false },
+            (*row_cursor == pre.admitted_function_count()?), _ => false },
         BHelperFindExit => matches!(pre.helper(), Some(HelperControlC::Find { status: TriStatus::Positive, .. })),
         BHelperFindFailure => matches!(pre.helper(), Some(HelperControlC::Find { status: TriStatus::Negative, .. })),
         BHelperBindPair => matches!(pre.helper(), Some(HelperControlC::Bind { phase: BindPhase::Pairing, params, args, p_cursor, a_cursor, .. })
@@ -574,6 +588,9 @@ fn legacy_group(site: SiteTag) -> &'static [RuleIdC] {
 }
 /// AB is already enforced by `PreImage::bind`; a non-Running image fails SI-18 here.
 pub fn owner_select(pre: &PreImage, guards: &OwnerGuards) -> Result<Selected, HostViolation> {
+    if pre.img.fin.is_some() {
+        return Err(fin_unsupported(FinUnsupportedOp::Select));
+    }
     if pre.img.outcome != OutcomeC::Running {
         return Err(hv(HostViolationKind::StepInvViolated, Some(StepInvClauseId::SI18), None, "select on non-Running image")); }
     if let Some(h) = pre.helper() {
@@ -743,7 +760,7 @@ impl<'a> PreImageView for RecordingPreImageView<'a> {
     fn expr(&self, id: &usize) -> Result<&ExpressionRowC, HostViolation> { let row = self.inner.expr(id)?; if let ExpressionRowC::Literal { constant } = row { if *id == self.inner.control_origin() { self.record(RefC::Const(*constant)); } } Ok(row) }
     fn child(&self, pos: &usize) -> Result<usize, HostViolation> { self.inner.child(pos) }
     fn function_row(&self, id: &usize) -> Result<&FunctionRowC, HostViolation> { self.inner.function_row(id) }
-    fn admitted_function_count(&self) -> usize { self.inner.admitted_function_count() }
+    fn admitted_function_count(&self) -> Result<usize, HostViolation> { self.inner.admitted_function_count() }
     fn parameter(&self, pos: &usize) -> Result<&ParameterRowC, HostViolation> { self.inner.parameter(pos) }
     fn arm(&self, id: &usize) -> Result<&ArmRowC, HostViolation> { self.inner.arm(id) }
     fn pattern(&self, id: &usize) -> Result<&PatternRowC, HostViolation> { self.inner.pattern(id) }
@@ -828,7 +845,7 @@ fn check_written_frame_adt_ids(view: &ProgramView, f: &FrameRowC) -> Result<(), 
     Ok(())
 }
 fn check_written_code_ids(pre: &PreImage, w: &PlannedWrites) -> Result<(), HostViolation> {
-    let view = &pre.admitted.body.view;
+    let view = pure_view(pre)?;
     let mut exprs: Vec<usize> = Vec::new(); let mut fns: Vec<usize> = Vec::new(); let mut names: Vec<usize> = Vec::new();
     let mut arms: Vec<usize> = Vec::new(); let mut refs: Vec<RefC> = Vec::new();
     if let Write::Set(c) = &w.control { control_refs(c, &mut refs); match c {
@@ -914,7 +931,7 @@ fn check_slice(s: SliceC, active: usize) -> Result<(), HostViolation> {
     if slice_ok(s, active) { Ok(()) } else { Err(invalid_plan("slice normalization")) }
 }
 fn check_ref(pre: &PreImage, r: &RefC, allow_new_data: bool) -> Result<(), HostViolation> {
-    match r { RefC::Const(id) => if *id < pre.admitted.body.view.constants.len() { Ok(()) } else { Err(invalid_plan("const ref")) },
+    match r { RefC::Const(id) => if *id < pure_view(pre)?.constants.len() { Ok(()) } else { Err(invalid_plan("const ref")) },
         RefC::Data(id) => if *id < pre.img.active.data || (allow_new_data && *id == pre.img.active.data) { Ok(()) } else { Err(invalid_plan("data ref")) } }
 }
 fn check_any_ref(pre: &PreImage, r: &RefC) -> Result<(), HostViolation> { check_ref(pre, r, true) }
@@ -928,20 +945,20 @@ fn post_slot_len(pre: &PreImage, w: &PlannedWrites) -> Result<usize, HostViolati
 fn validate_slices_in_control(pre: &PreImage, w: &PlannedWrites, c: &ControlC) -> Result<(), HostViolation> {
     match c { ControlC::Invoke { args, .. } | ControlC::Enter { args, .. } => check_slice(*args, pre.img.active.value_slots),
         ControlC::Materialize { fields, .. } => check_slice(*fields, post_slot_len(pre, w)?),
-        ControlC::Cases { arms, .. } => check_slice(*arms, pre.admitted.body.view.arms.len()),
-        ControlC::CaseResult { rest, .. } => check_slice(*rest, pre.admitted.body.view.arms.len()),
+        ControlC::Cases { arms, .. } => check_slice(*arms, pure_view(pre)?.arms.len()),
+        ControlC::CaseResult { rest, .. } => check_slice(*rest, pure_view(pre)?.arms.len()),
         ControlC::ScheduleNext { frame, .. } => validate_slices_in_frame(pre, w, frame), _ => Ok(()) }
 }
 fn validate_slices_in_frame(pre: &PreImage, w: &PlannedWrites, f: &FrameRowC) -> Result<(), HostViolation> {
-    match f { FrameRowC::MatchF { arms, .. } => check_slice(*arms, pre.admitted.body.view.arms.len()),
-        FrameRowC::ArgsF { completed, rest, .. } => { check_slice(*completed, pre.img.active.value_slots)?; check_slice(*rest, pre.admitted.body.view.children.len()) }
-        FrameRowC::ConstructorFieldsF { completed, rest, .. } => { check_slice(*completed, post_slot_len(pre, w)?)?; check_slice(*rest, pre.admitted.body.view.children.len()) }
+    match f { FrameRowC::MatchF { arms, .. } => check_slice(*arms, pure_view(pre)?.arms.len()),
+        FrameRowC::ArgsF { completed, rest, .. } => { check_slice(*completed, pre.img.active.value_slots)?; check_slice(*rest, pure_view(pre)?.children.len()) }
+        FrameRowC::ConstructorFieldsF { completed, rest, .. } => { check_slice(*completed, post_slot_len(pre, w)?)?; check_slice(*rest, pure_view(pre)?.children.len()) }
         _ => Ok(()) }
 }
 fn validate_slices_in_helper(pre: &PreImage, h: &HelperControlC) -> Result<(), HostViolation> {
-    match h { HelperControlC::Bind { params, args, .. } => { check_slice(*params, pre.admitted.body.view.parameters.len())?; check_slice(*args, pre.img.active.value_slots) }
+    match h { HelperControlC::Bind { params, args, .. } => { check_slice(*params, pure_view(pre)?.parameters.len())?; check_slice(*args, pre.img.active.value_slots) }
         HelperControlC::Append { src, .. } | HelperControlC::Build { src, .. } => check_slice(*src, pre.img.active.value_slots),
-        HelperControlC::Plan { path, .. } => check_slice(*path, pre.admitted.body.view.field_paths.len()),
+        HelperControlC::Plan { path, .. } => check_slice(*path, pure_view(pre)?.field_paths.len()),
         _ => Ok(()) }
 }
 pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, read_provenance: &[RefC], read_env_provenance: &[usize]) -> Result<ValidatedPlan, HostViolation> {
@@ -1018,7 +1035,7 @@ pub fn owner_validate_plan(pre: &PreImage, sel: &Selected, plan: EffectPlan, rea
     if let Write::Set(ControlC::Error { code }) = &w.control { if !(1..=11).contains(code) { return Err(invalid_plan("error code")); } }
     if let Write::Set(ControlC::PrimResult { result: PrimOutcome::Error { code } }) = &w.control {
         if !matches!(code, 10 | 11) { return Err(invalid_plan("prim error code")); } }
-    if let Write::Set(c) = &w.control_origin { if *c >= pre.admitted.body.view.expressions.len() { return Err(invalid_plan("control origin")); } }
+    if let Write::Set(c) = &w.control_origin { if *c >= pure_view(pre)?.expressions.len() { return Err(invalid_plan("control origin")); } }
     // SC-05: every other written code id (ExprId, ArmId, FunctionRowId, ConstId, NameId) against its program table.
     check_written_code_ids(pre, w)?;
     // Result/helper membership for exit, failure, entry and legacy-consuming rows.
@@ -1243,6 +1260,9 @@ fn publish_event(a: &Admitted, pre: &Snap, img: &MachineImage, rule: RuleIdC, di
 pub fn owner_step(a: &Admitted, img: &mut MachineImage, families: &dyn FamilyPlans, guards: &OwnerGuards)
     -> Result<StepResult, HostViolation> {
     PreImage::bind(a, img)?; // AB first, before any table read.
+    if img.fin.is_some() {
+        return Err(fin_unsupported(FinUnsupportedOp::Step));
+    }
     if img.outcome != OutcomeC::Running { return Ok(StepResult::Terminal); } // P0
     let pre_snap = snap(&PreImage::bind(a, img)?)?; // pure pre-image event snapshot; no write precedes it
     // P1 publish (helper and result absent only).
@@ -1292,6 +1312,9 @@ pub fn owner_step(a: &Admitted, img: &mut MachineImage, families: &dyn FamilyPla
 pub fn owner_run(a: &Admitted, img: &mut MachineImage, families: &dyn FamilyPlans, guards: &OwnerGuards,
     sink: &mut dyn FnMut(&StepEventC)) -> Result<RunSummary, HostViolation> {
     PreImage::bind(a, img)?; // AB: no step or sink call on mismatch.
+    if img.fin.is_some() {
+        return Err(fin_unsupported(FinUnsupportedOp::Run));
+    }
     let mut events: u128 = 0;
     while img.outcome == OutcomeC::Running {
         match owner_step(a, img, families, guards)? {
@@ -1322,7 +1345,7 @@ fn const_descendants(pre: &PreImage, root: usize) -> Result<Vec<usize>, HostViol
     while let Some(id) = stack.pop() {
         if seen.contains(&id) { continue; }
         seen.push(id);
-        let row = pre.admitted.body.view.constants.get(id).ok_or_else(|| oob("prog.constants"))?;
+        let row = pure_view(pre)?.constants.get(id).ok_or_else(|| oob("prog.constants"))?;
         let (start, len) = const_fields(row);
         let mut i = 0usize;
         while i < len { let pos = start.checked_add(i).ok_or_else(|| arith("const descendant pos"))?;
@@ -1331,7 +1354,10 @@ fn const_descendants(pre: &PreImage, root: usize) -> Result<Vec<usize>, HostViol
     Ok(seen)
 }
 fn ref_in_bounds(pre: &PreImage, r: &RefC) -> bool {
-    match r { RefC::Const(id) => *id < pre.admitted.body.view.constants.len(), RefC::Data(id) => *id < pre.img.active.data }
+    match r {
+        RefC::Const(id) => pure_view(pre).map_or(false, |view| *id < view.constants.len()),
+        RefC::Data(id) => *id < pre.img.active.data,
+    }
 }
 // ---- check_step_inv private diagnostic helpers: read-only, explicit loops/worklists, no native recursion. A read Err is a violation, never a pass.
 fn frame_origin(f: &FrameRowC) -> usize {
@@ -1426,7 +1452,7 @@ fn si11_row_ok(pre: &PreImage, j: usize, row: &RawDataRow) -> Result<bool, HostV
         LogicalKind::Branch => Ok(len == 2 && matches!(kind_at(0)?, LogicalKind::Leaf | LogicalKind::Branch)
             && matches!(kind_at(1)?, LogicalKind::Leaf | LogicalKind::Branch)),
         LogicalKind::Constructor { type_id, ctor_id } => {
-            let view = &pre.admitted.body.view;
+            let view = pure_view(pre)?;
             if type_id.0 < 4 { return Ok(false); }
             let Some(trow) = view.types.get(type_id.0) else { return Ok(false); };
             if ctor_id.0 < trow.ctor_start.0 || ctor_id.0 - trow.ctor_start.0 >= trow.ctor_len { return Ok(false); }
@@ -1450,7 +1476,7 @@ fn si11_row_ok(pre: &PreImage, j: usize, row: &RawDataRow) -> Result<bool, HostV
 // MatchF.arms = expr(origin).arms, ArgsF.rest suffix of expr(origin).args with completed.len + rest.len + 1 = args.len,
 // and every frame slice inside its table.
 fn si15_frame_ok(pre: &PreImage, f: &FrameRowC) -> Result<bool, HostViolation> {
-    let view = &pre.admitted.body.view;
+    let view = pure_view(pre)?;
     let n = view.expressions.len();
     let origin = frame_origin(f);
     if origin >= n { return Ok(false); }
@@ -1526,7 +1552,7 @@ fn si20_return_ok(pre: &PreImage, top: &FrameRowC, origin: usize) -> Result<bool
             work.push(pre.child(&pos)?);
         }
         (FrameRowC::ReturnF { .. }, ExpressionRowC::Call { function_name, .. }) => {
-            let n = pre.admitted_function_count(); let mut i = 0usize;
+            let n = pre.admitted_function_count()?; let mut i = 0usize;
             while i < n { let f = *pre.function_row(&i)?; if f.function_name == *function_name { work.push(f.body); } i += 1; }
         }
         (FrameRowC::ScopeF { .. }, ExpressionRowC::Let { body, .. }) => work.push(*body),
@@ -1537,7 +1563,7 @@ fn si20_return_ok(pre: &PreImage, top: &FrameRowC, origin: usize) -> Result<bool
         }
         _ => return Ok(false),
     }
-    let mut seen: Vec<bool> = vec![false; pre.admitted.body.view.expressions.len()];
+    let mut seen: Vec<bool> = vec![false; pure_view(pre)?.expressions.len()];
     while let Some(e) = work.pop() {
         let slot = seen.get_mut(e).ok_or_else(|| oob("SI-20 tailClosure ExprId"))?;
         if *slot { continue; }
@@ -1573,7 +1599,21 @@ pub fn owner_check_step_inv(a: &Admitted, img: &MachineImage,
         return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "admitted instance mismatch")]); }
     let pre = match PreImage::bind(a, img) { Ok(p) => p, Err(_) =>
         return Err(vec![siv(StepInvClauseId::SI01, "admission binding", "bind failed")]) };
-    let b = &a.body.bounds; let view = &a.body.view; let mut v: Vec<StepInvViolation> = Vec::new();
+    let b = &a.body.bounds;
+    if a.body.fin.is_some() || img.fin.is_some() {
+        return Err(vec![siv(
+            StepInvClauseId::SI01,
+            "financial StepInv",
+            "financial StepInv unsupported beyond genesis",
+        )]);
+    }
+    let view = match pure_view(&pre) {
+        Ok(view) => view,
+        Err(_) => return Err(vec![siv(
+            StepInvClauseId::SI01, "program view", "pure view absent",
+        )]),
+    };
+    let mut v: Vec<StepInvViolation> = Vec::new();
     let mut push = |c: StepInvClauseId, l: &str, d: &str, bad: bool, vv: &mut Vec<StepInvViolation>| {
         if bad { vv.push(siv(c, l, d)); } };
     let has_ext = !view.types.is_empty() || !view.constructors.is_empty() || !view.plan_nodes.is_empty()
@@ -1826,7 +1866,13 @@ pub struct PrepareDeps {
     pub prepare_core: fn(&CoreProgram, &BoundsC, &LayoutSchemaC) -> Result<ProgramView, Tooling>,
     pub check_program_view: fn(&ProgramView, &BoundsC, &LayoutSchemaC) -> Result<(), ProgramViewViolation>,
     pub admit: fn(&CoreProgram, &BoundsC, &LayoutSchemaC) -> Result<Admitted, Tooling>,
+    pub admit_fin: fn(
+        fin_carrier::FinPreparedStagedSource, &BoundsC, &LayoutSchemaC,
+    ) -> Result<Admitted, Tooling>,
     pub admit_run: fn(&Admitted, &RunIntC, &RunIntC, &FinanceInput) -> Result<MachineImage, Tooling>,
+    pub admit_fin_run: fn(
+        &Admitted, &RunIntC, &RunIntC, &fin_carrier::FinGenesisRequest,
+    ) -> Result<MachineImage, fin_carrier::FinRunError>,
 }
 pub struct CheckedOwnerEngine<F> { families: F, guards: OwnerGuards, prepare: PrepareDeps }
 impl<F> CheckedOwnerEngine<F> {
@@ -1839,6 +1885,29 @@ impl<F: FamilyPlans> OwnerEngine for CheckedOwnerEngine<F> {
     fn check_program_view(&self, v: &ProgramView, b: &BoundsC, l: &LayoutSchemaC) -> Result<(), ProgramViewViolation> { (self.prepare.check_program_view)(v, b, l) }
     fn admit(&self, p: &CoreProgram, b: &BoundsC, l: &LayoutSchemaC) -> Result<Admitted, Tooling> { (self.prepare.admit)(p, b, l) }
     fn admit_run(&self, a: &Admitted, fuel: &RunIntC, stack_limit: &RunIntC, finance: &FinanceInput) -> Result<MachineImage, Tooling> { (self.prepare.admit_run)(a, fuel, stack_limit, finance) }
+    fn admit_fin(
+        &self,
+        prepared: fin_carrier::FinPreparedStagedSource,
+        b: &BoundsC,
+        l: &LayoutSchemaC,
+    ) -> Result<Admitted, Tooling> {
+        (self.prepare.admit_fin)(prepared, b, l)
+    }
+    fn admit_fin_run(
+        &self,
+        a: &Admitted,
+        fuel: &RunIntC,
+        stack_limit: &RunIntC,
+        request: &fin_carrier::FinGenesisRequest,
+    ) -> Result<MachineImage, fin_carrier::FinRunError> {
+        (self.prepare.admit_fin_run)(a, fuel, stack_limit, request)
+    }
+    fn select_fin(
+        &self,
+        pre: &PreImage<'_>,
+    ) -> Result<fin_selection::FinSelection, fin_selection::FinSelectionError> {
+        fin_selection::select_fin(pre)
+    }
     fn rule_id_of(&self, raw: &RawRuleId) -> RuleIdC { owner_rule_id_of(raw) }
     fn raw_rule_id(&self, rule: &RuleIdC) -> RawRuleId { owner_raw_rule_id(rule) }
     fn select(&self, pre: &PreImage<'_>) -> Result<Selected, HostViolation> { owner_select(pre, &self.guards) }
@@ -1888,6 +1957,8 @@ mod sc05_r6_owner_regression_tests {
     }
     fn deps() -> PrepareDeps {
         PrepareDeps { prepare_core: super::super::owner_prepare::prepare_core,
+            admit_fin: super::super::owner_prepare::admit_fin,
+            admit_fin_run: super::super::owner_prepare::admit_fin_run,
             check_program_view: super::super::owner_prepare::check_program_view,
             admit: super::super::owner_prepare::admit,
             admit_run: super::super::owner_prepare::admit_run }
@@ -2041,8 +2112,8 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_inactive_match_columns_phase_arm_accepted_without_names() {
         let (a, img) = admitted_image(&prog_nameless_nil(), 100);
         let pre = bind_pre(&a, &img);
-        assert_eq!(a.body.view.names.len(), 0);
-        assert_eq!(a.body.view.arms.len(), 1);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").names.len(), 0);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").arms.len(), 1);
         let mut w = PlannedWrites::default();
         w.helper = Write::Set(Some(match_helper(MatchPhase::Arm, PatternTag::PVar, 0, 0)));
         let sel = fixture_selected(RuleIdC::BHelperMatchEntry, Some(HelperKind::Match));
@@ -2060,7 +2131,7 @@ mod sc05_r6_owner_regression_tests {
             "active x at names len accepted");
         assert_invalid_plan(&e);
         let mut h = match_helper(MatchPhase::Arm, PatternTag::PVar, 0, 0);
-        if let HelperControlC::Match { arm, .. } = &mut h { *arm = a.body.view.arms.len(); }
+        if let HelperControlC::Match { arm, .. } = &mut h { *arm = a.body.view.as_ref().expect("pure admitted fixture").arms.len(); }
         let mut w2 = PlannedWrites::default(); w2.helper = Write::Set(Some(h));
         let sel2 = fixture_selected(RuleIdC::BHelperMatchOccurrence, Some(HelperKind::Match));
         let e2 = must_err_invalid(validate(&pre, &sel2, w2, &[RefC::Const(0)], &[]),
@@ -2075,8 +2146,8 @@ mod sc05_r6_owner_regression_tests {
             CorePattern::PCons { x: "a".to_string(), y: "b".to_string() }, lit(1));
         let (a, img) = admitted_image(&p, 100);
         let pre = bind_pre(&a, &img);
-        assert_eq!(a.body.view.names.len(), 2);
-        assert_eq!(a.body.view.arms.len(), 1);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").names.len(), 2);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").arms.len(), 1);
         for (tag, x, y) in [(PatternTag::PVar, 1usize, 0usize),
             (PatternTag::PLeaf, 0, 0), (PatternTag::PCons, 0, 1),
             (PatternTag::PBranch, 1, 0)] {
@@ -2107,7 +2178,7 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_h01_expr_id_at_len_rejected_last_accepted() {
         let (a, img) = admitted_image(&prog_literal(), 100);
         let pre = bind_pre(&a, &img);
-        let n = a.body.view.expressions.len();
+        let n = a.body.view.as_ref().expect("pure admitted fixture").expressions.len();
         let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
         for (expr, ok) in [(n, false), (usize::MAX, false), (n - 1, true)] {
             let mut w = PlannedWrites::default();
@@ -2129,7 +2200,7 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_h02_function_id_at_len_rejected_last_accepted() {
         let (a, img) = admitted_image(&prog_with_function(), 100);
         let pre = bind_pre(&a, &img);
-        assert_eq!(a.body.view.functions.len(), 1);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").functions.len(), 1);
         let sel = fixture_selected(RuleIdC::KMachineEnterMissing, None);
         for (f, ok) in [(Some(1usize), false), (Some(usize::MAX), false), (Some(0usize), true)] {
             let mut w = PlannedWrites::default();
@@ -2144,7 +2215,7 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_h03_name_id_invoke_and_alloc_env_binder() {
         let (a, img) = admitted_image(&prog_let(), 100);
         let pre = bind_pre(&a, &img);
-        assert_eq!(a.body.view.names.len(), 1);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").names.len(), 1);
         let sel = fixture_selected(RuleIdC::KMachineInvokeFind, None);
         for (name, ok) in [(1usize, false), (usize::MAX, false), (0usize, true)] {
             let mut w = PlannedWrites::default();
@@ -2165,7 +2236,7 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_h05_const_id_provenance_ok_but_range_rejected() {
         let (a, img) = admitted_image(&prog_literal(), 100);
         let pre = bind_pre(&a, &img);
-        let n = a.body.view.constants.len(); assert!(n >= 1);
+        let n = a.body.view.as_ref().expect("pure admitted fixture").constants.len(); assert!(n >= 1);
         let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
         let bad = RefC::Const(n);
         let mut w = PlannedWrites::default();
@@ -2182,7 +2253,7 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_h05_const_id_other_holders_rejected() {
         let (a, img) = admitted_image(&prog_let(), 100);
         let pre = bind_pre(&a, &img);
-        let n = a.body.view.constants.len(); assert!(n >= 1);
+        let n = a.body.view.as_ref().expect("pure admitted fixture").constants.len(); assert!(n >= 1);
         let bad = RefC::Const(n);
         // Validate helper root holder, root supplied in provenance.
         let mut w = PlannedWrites::default();
@@ -2223,10 +2294,10 @@ mod sc05_r6_owner_regression_tests {
     fn sc05_n05_boundary_last_ids_accepted() {
         let (a, img) = admitted_image(&prog_with_function(), 100);
         let pre = bind_pre(&a, &img);
-        let last_expr = a.body.view.expressions.len() - 1;
-        let last_const = a.body.view.constants.len() - 1;
-        let last_fn = a.body.view.functions.len() - 1;
-        let last_name = a.body.view.names.len() - 1;
+        let last_expr = a.body.view.as_ref().expect("pure admitted fixture").expressions.len() - 1;
+        let last_const = a.body.view.as_ref().expect("pure admitted fixture").constants.len() - 1;
+        let last_fn = a.body.view.as_ref().expect("pure admitted fixture").functions.len() - 1;
+        let last_name = a.body.view.as_ref().expect("pure admitted fixture").names.len() - 1;
         let sel = fixture_selected(RuleIdC::KMachineEvalLet, None);
         let mut w = PlannedWrites::default();
         w.control = Write::Set(ControlC::Eval { expr: last_expr }); w.result = Write::Set(None);
@@ -2401,7 +2472,7 @@ mod sc05_r6_owner_regression_tests {
         let p = prog(CoreExpr::Call { name: "missing".to_string(), args: Vec::new() });
         let eng = engine(HostFamilyPlans);
         let (a, mut img) = admitted_image(&p, 200);
-        assert_eq!(a.body.view.functions.len(), 0);
+        assert_eq!(a.body.view.as_ref().expect("pure admitted fixture").functions.len(), 0);
         match run_checked(&eng, &a, &mut img) {
             OutcomeC::Rejected { code: 7 } => {}
             other => panic!("missing function outcome {:?}", other), }

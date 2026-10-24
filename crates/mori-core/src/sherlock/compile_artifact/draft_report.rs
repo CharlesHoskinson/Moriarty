@@ -180,7 +180,7 @@ pub(crate) fn project_admitted_preparation(
         },
         execution_profile: EXECUTION_PROFILE,
         supported_profile: super::draft_profile::report(&config.fields),
-        input_policy: InputPolicy { kind: "closed-entry", declared: vec![], supplied: vec![] },
+        input_policy: InputPolicy { kind: "closed-entry", declared: vec![], supplied: vec![], binding: None },
         config, target,
         preparation: PreparationReport {
             kind: "dedicated-source",

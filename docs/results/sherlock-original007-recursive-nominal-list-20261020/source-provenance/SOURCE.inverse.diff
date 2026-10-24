@@ -1,0 +1,29 @@
+--- candidate02/nominal_wire.rs
++++ candidate01/nominal_wire.rs
+@@ -1,10 +1,10 @@
+ //! Complete output-only mappings for the additional public nominal diagnostics.
+ //! The unchanged historical wire.rs retains owner observations and failures.
+ use crate::wire::Wire;
+-use mori_core::sherlock_nominal_source::{DraftBudgetExceeded, DraftBudgetResource, DraftError,
+-    DraftParseBudget, SourceSpan};
++use mori_core::sherlock_draft::{DraftBudgetExceeded, DraftBudgetResource, DraftError,
++    DraftParseBudget, SourceLocation, SourceSpan};
+ use mori_core::sherlock_nominal_source as nominal;
+-use mori_core::sherlock_nominal_body_types::{SourceLocation, NominalBodyTypeError, NominalBodyTypeErrorKind};
++use mori_core::sherlock_nominal_body_types::{NominalBodyTypeError, NominalBodyTypeErrorKind};
+ use mori_core::sherlock_compile_artifact::nominal_body_compile::{
+     NominalBodyCompileError, NominalBodyCompileFailure};
+ use serde_json::{json, Value};
+--- candidate02/consumer.rs
++++ candidate01/consumer.rs
+@@ -80,8 +80,8 @@
+             || c.field_len!=[0,2][ordinal] {return Err("actual canonical constructor rows differ".into());}
+         let field_end=c.field_start.checked_add(c.field_len).ok_or("constructor field span overflow")?;
+         let fields=view.ctor_fields.get(c.field_start..field_end).ok_or("field span outside actual table")?;
+-        if ordinal==1 && (name(view,fields[0].name_id)?!="head" || fields[0].type_id!=TypeIdC::UInt
+-            || name(view,fields[1].name_id)?!="tail" || fields[1].type_id!=ty) {
++        if ordinal==1 && (name(view,fields[0].name_id)!="head" || fields[0].type_id!=TypeIdC::UInt
++            || name(view,fields[1].name_id)!="tail" || fields[1].type_id!=ty) {
+             return Err("actual canonical Cons signature differs".into());
+         }
+     }

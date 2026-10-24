@@ -1,0 +1,47 @@
+pub enum PatternTag { PVar, PNil, PCons, PLeaf, PBranch,
+    WildcardExtensionReserved, ConstructorExtensionReserved } // L1 restored
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BoundaryKind { None, Terminal, TechnicalCut,
+    SourceSuspensionExtensionReserved } // L1 restored; still refused in B-core
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LogicalKind { UInt, Bool, Nil, Cons, Leaf, Branch, Marker,
+    ConstructorExtensionReserved, Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC } }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarMode { Add, Sub, Mul, Lt, Cons, Branch, Leaf, Not, TestBool, TestType }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ScalarPhase { First, Second, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NodeKind { Cons, Leaf, Branch }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BuildPhase { Copy, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlanPhase { Walk, Test, Bind, Ready, NoMatchReady, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlanAfterWalk { Test, Bind }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BoolSelector { True, False, NotBool }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TriStatus { Pending, Positive, Negative }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BindPhase { Pairing, UnwindType, UnwindDup, UnwindInsert, Propagate, Finished }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BindStatus { Ok, Bad }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AppendPhase { Copy, Tail, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MatchPhase { Arm, Tag, Distinct, Field, Bind, Ready, NoMatchReady, Done }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HelperKind { Scalar, EnvGet, EnvPut, Find, Bind, Append, Validate, Equal, Match, Plan, Build }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FamilyId { Legacy, Scalar, EnvGet, EnvPut, Find, Bind, Append,
+    Validate, Equal, Match, BookkeepingRelease, Build, Plan }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EventKind { LegacyComplete, HelperEnter, HelperVisit, HelperExit,
+    HelperFail, Bookkeeping, Publish, Startup }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SiteTag { EvalLiteral, EvalVar, EvalLet, EvalBinary, EvalUnary, EvalIf,
+    EvalMatch, EvalCall, Push, RetLet, RetLeft, RetRight, RetUnary, RetIf,
+    RetMatch, RetArgs, RetCall, RetScope, Invoke, Enter, Bound, Cases,
+    CaseResult, Prim, EvalConstruct, RetCtorFields, Materialize }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StepInvClauseId { SI01, SI02, SI03, SI04, SI05, SI06, SI07, SI08,

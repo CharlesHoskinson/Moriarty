@@ -1,0 +1,27 @@
+{
+  "status": "ROOT_ONLY_NOT_EXECUTED_BY_LANE",
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-c",
+    "from pathlib import Path\nimport copy,hashlib,json\nledger=Path('/home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/openspec/changes/sherlock-completion-convergence/current-evidence.json')\ncandidate=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-c6-host18-catalogue-reconciliation-20261019/afterimages/openspec/changes/sherlock-completion-convergence/current-evidence.json')\noperations=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-c6-host18-catalogue-reconciliation-20261019/CATALOGUE-ONLY.operations.json')\nbackup=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-six-host-clauses-semantic-review-20261019/root-catalogue-only-application-01/LEDGER-PREIMAGE.actual.json')\nsha=lambda b:hashlib.sha256(b).hexdigest()\nbefore=ledger.read_bytes(); wanted=candidate.read_bytes(); opsraw=operations.read_bytes()\nassert sha(before)=='337ebce70a7e01d9c399dabf427672966776502b8bf2dced332166a9457b4556'\nassert sha(wanted)=='266c83d28bb0a885cfdcf147f98eae0b98b21c471fd6c4fb5ddc03036ea1c43e'\nassert sha(opsraw)=='4003959bd73aa129952577d1c044a6b6986ff88b9d7a955d4744bbf5f0554522'\nbase=json.loads(before); selected=copy.deepcopy(base); steps=json.loads(opsraw)\nassert len(steps)==144\nfor step in steps:\n    assert step['op'] in ('test','replace') and step['path'].endswith('/sha256')\n    keys=step['path'].split('/')[1:]; node=selected\n    for key in keys[:-1]: node=node[int(key)] if isinstance(node,list) else node[key]\n    key=int(keys[-1]) if isinstance(node,list) else keys[-1]\n    if step['op']=='test': assert node[key]==step['value']=='e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b'\n    else: assert step['value']=='60f6177f136341c3861f8f9619a1592178a2a0a57724f1d5c51d6b3286133370'; node[key]=step['value']\nassert selected==json.loads(wanted)\nassert before.count(b'e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b')==72\nassert before.replace(b'e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b',b'60f6177f136341c3861f8f9619a1592178a2a0a57724f1d5c51d6b3286133370')==wanted\nassert wanted.replace(b'60f6177f136341c3861f8f9619a1592178a2a0a57724f1d5c51d6b3286133370',b'e593ecbe48e902ee430fa7c9d14a681100e27f71df297c5161c5881e3fb6311b')==before\nfor i,row in enumerate(base['requirements']):\n    for key in ('predicate','implementation','validation','acceptance'):\n        assert row[key]==selected['requirements'][i][key]\nassert base['refinementRequirements']==selected['refinementRequirements']\nassert base['assessment']==selected['assessment']\nwith backup.open('xb') as f: f.write(before)\nassert ledger.read_bytes()==before\nledger.write_bytes(wanted)\nassert sha(ledger.read_bytes())=='266c83d28bb0a885cfdcf147f98eae0b98b21c471fd6c4fb5ddc03036ea1c43e'\nprint(json.dumps({'status':'EXACT_72_CATALOGUE_HASH_CELLS_APPLIED','before':sha(before),'after':sha(wanted),'replacements':72,'all_statuses_and_refinements_unchanged':True,'backup':str(backup)}))\n"
+  ],
+  "cwd": "/home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019",
+  "source": {
+    "path": "/home/charl/Moriarty/.worktrees/sherlock-c6-physical-host-codecs-20261019/openspec/changes/sherlock-completion-convergence/current-evidence.json",
+    "bytes": 847215,
+    "sha256": "337ebce70a7e01d9c399dabf427672966776502b8bf2dced332166a9457b4556"
+  },
+  "candidate": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-c6-host18-catalogue-reconciliation-20261019/afterimages/openspec/changes/sherlock-completion-convergence/current-evidence.json",
+    "bytes": 847215,
+    "sha256": "266c83d28bb0a885cfdcf147f98eae0b98b21c471fd6c4fb5ddc03036ea1c43e"
+  },
+  "operations": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-c6-host18-catalogue-reconciliation-20261019/CATALOGUE-ONLY.operations.json",
+    "bytes": 23365,
+    "sha256": "4003959bd73aa129952577d1c044a6b6986ff88b9d7a955d4744bbf5f0554522"
+  },
+  "scope": "One-off exact metadata copy after all144JSONguards/inverse, no checker/product/test/native code; original bytes preserve all Unicode/line spelling. No jsondump rewrite of ledger."
+}

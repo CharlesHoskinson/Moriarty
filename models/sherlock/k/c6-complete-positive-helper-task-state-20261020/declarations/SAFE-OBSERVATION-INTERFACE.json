@@ -1,0 +1,44 @@
+{
+  "schema": "c6-positive-helper-task-state-observation-interface/1",
+  "profile": "sherlock-c6-complete-helper-task-state-positive/1",
+  "expectedRoot": {
+    "schema": "independent-c6-positive-helper-task-state/1",
+    "profile": "sherlock-c6-complete-helper-task-state-positive/1",
+    "case_ids": "Object: exact input case_id Lists under helper_record_cases/result_record_cases/task_record_cases/helper_section_cases/state_cases in given order",
+    "helper_record_observations": "ordered List of HelperRecordObservation",
+    "result_record_observations": "ordered List of ResultRecordObservation",
+    "task_record_observations": "ordered List of TaskRecordObservation",
+    "helper_section_observations": "ordered List of HelperSectionObservation",
+    "state_observations": "ordered List of StateObservation"
+  },
+  "HelperRecordObservation": {
+    "encoded_lanes": "entire List[int]23",
+    "decoded_helper": "complete Option<HelperControlC> per JSON transport"
+  },
+  "ResultRecordObservation": {
+    "encoded_lanes": "entire List[int]4",
+    "decoded_result": "complete Option<HelperResultC>"
+  },
+  "TaskRecordObservation": {
+    "encoded_lanes": "entire List[int]7",
+    "decoded_task": "complete HelperTaskC"
+  },
+  "HelperSectionObservation": {
+    "encoded_lanes": "entire header+23helper+4result+all7task records",
+    "decoded_tables": "complete C6HelperTables, all ordered tasks",
+    "task_spans": "one ordered {index,start,length,end,lanes} per task, helper-relative start31+7*index, length7, full lanes",
+    "final_cursor": "one past full encoded section"
+  },
+  "StateObservation": {
+    "encoded_lanes": "entire41header+allthree fullchildren",
+    "decoded_state": "complete C6OwnedState root/frames/data/helper with no field drop",
+    "retained_context": "exact input context caps/ext_present/limits",
+    "capacity_descriptor": "all29caller caps in exact declaration order",
+    "child_sections": "exactthree ordered {name,tag,start,length,end,lanes}, state-relative starts and full child lanes",
+    "final_cursor": "one past entire encodedSTATE"
+  },
+  "completeEquality": "Entire expectedRoot including schema/profile/all ordered case_ids and every observation/field/array/scalar. No subset booleans/hash equality, no approximate numeric/string coercion. General roundtrip/reencode/full consumption additional, not substitute.",
+  "noExpectedInputs": "Model must derive all raw rows/sections from public typed inputs. No supplied expected raw STATE/helper output used as runtimeEvidence.",
+  "sourceFreezePolicy": "Original independent complete JSON/typed DATA transport prefrozen before model/source; sourceauthor SAFE metadata only, no privateexpected semantics/hashes/copy. Root sole opaque binding after candidatefreeze.",
+  "scope": "Complete declared positive family producer, finite directed selectedcase evidence only; no security/refusal/runtime/native/globalclaim."
+}

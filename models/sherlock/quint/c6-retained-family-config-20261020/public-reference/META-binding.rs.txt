@@ -1,0 +1,144 @@
+
+/// Caller-selected full META configuration binding. Private fields:
+/// this type is retained source data, not native authority and not a
+/// provenance guard. Constructed only by the validated constructors
+/// below, usable by a future same-crate `SourceSpec`; there is no
+/// dependency on any absent type.
+#[derive(Clone, Debug)]
+pub struct C6MetaConfigBinding {
+    admission_bounds: BoundsC,
+    layout: LayoutSnapshot,
+    limits: C6HostLimits,
+    admission_values: [u128; 22],
+    layout_values: [u128; 22],
+    capacity_values: [u128; 4],
+    layout_variable_expected: Vec<u128>,
+    layout_total_lanes: usize,
+}
+
+fn bounds_values(b: &BoundsC) -> [u128; 22] {
+    [
+        b.code_rows as u128, b.function_rows as u128, b.code_child_slots as u128,
+        b.parameter_slots as u128, b.pattern_rows as u128, b.match_plan_rows as u128,
+        b.match_arm_rows as u128, b.type_rows as u128, b.constructor_rows as u128,
+        b.constructor_field_slots as u128, b.max_arity as u128, b.constant_nodes as u128,
+        b.constant_field_slots as u128, b.data_nodes as u128, b.data_field_slots as u128,
+        b.environment_cells as u128, b.frames as u128, b.helper_tasks as u128,
+        b.serialization_bytes as u128, b.max_reference_work, b.max_helper_work, b.step_cap,
+    ]
+}
+
+fn push_text_expected(out: &mut Vec<u128>, s: &str) {
+    out.push(s.len() as u128);
+    out.extend(s.as_bytes().iter().map(|&b| u128::from(b)));
+}
+
+fn push_pair_expected(out: &mut Vec<u128>, p: &(String, String)) {
+    push_text_expected(out, &p.0);
+    push_text_expected(out, &p.1);
+}
+
+fn push_opt_pair_expected(out: &mut Vec<u128>, p: &Option<(String, String)>) {
+    match p {
+        None => out.push(0),
+        Some(pair) => { out.push(1); push_pair_expected(out, pair); }
+    }
+}
+
+fn binding_text_ok(s: &str, limits: &C6HostLimits, cum: &mut usize) -> Result<(), C6MetaCanonicalError> {
+    if s.len() > limits.max_string_bytes {
+        return Err(C6MetaCanonicalError::InvalidBinding { field: "layout.string" });
+    }
+    *cum = cum.checked_add(s.len())
+        .ok_or(C6MetaCanonicalError::InvalidBinding { field: "layout.bytes" })?;
+    if *cum > limits.max_metadata_bytes {
+        return Err(C6MetaCanonicalError::InvalidBinding { field: "layout.bytes" });
+    }
+    Ok(())
+}
+
+impl C6MetaConfigBinding {
+    /// Validated constructor from actual public Core types. Refuses a
+    /// retained layout that no metadata under `limits` could carry:
+    /// any layout string above `max_string_bytes`, layout text bytes
+    /// above `max_metadata_bytes`, or width entries above
+    /// `max_width_entries`. Admission bounds are retained separately
+    /// and are never equated with `layout.bounds`.
+    pub(crate) fn new(
+        admission_bounds: BoundsC,
+        layout: LayoutSnapshot,
+        limits: C6HostLimits,
+    ) -> Result<Self, C6MetaCanonicalError> {
+        let mut cum = 0usize;
+        binding_text_ok(&layout.layout_version.0, &limits, &mut cum)?;
+        binding_text_ok(&layout.layout_version.1, &limits, &mut cum)?;
+        if let Some(p) = &layout.field_id {
+            binding_text_ok(&p.0, &limits, &mut cum)?;
+            binding_text_ok(&p.1, &limits, &mut cum)?;
+        }
+        let mut width_entries = 0usize;
+        if let Some(w) = &layout.widths {
+            for list in [&w.index_widths, &w.counter_widths, &w.record_widths] {
+                width_entries = width_entries.checked_add(list.len())
+                    .ok_or(C6MetaCanonicalError::InvalidBinding { field: "layout.width_entries" })?;
+                if width_entries > limits.max_width_entries {
+                    return Err(C6MetaCanonicalError::InvalidBinding { field: "layout.width_entries" });
+                }
+                for (name, _) in list { binding_text_ok(name, &limits, &mut cum)?; }
+            }
+        }
+        if let Some(p) = &layout.scalar_layout_id {
+            binding_text_ok(&p.0, &limits, &mut cum)?;
+            binding_text_ok(&p.1, &limits, &mut cum)?;
+        }
+        let mut layout_variable_expected = Vec::new();
+        push_pair_expected(&mut layout_variable_expected, &layout.layout_version);
+        push_opt_pair_expected(&mut layout_variable_expected, &layout.field_id);
+        match &layout.widths {
+            None => layout_variable_expected.push(0),
+            Some(w) => {
+                layout_variable_expected.push(1);
+                for list in [&w.index_widths, &w.counter_widths, &w.record_widths] {
+                    layout_variable_expected.push(list.len() as u128);
+                    for (name, width) in list {
+                        push_text_expected(&mut layout_variable_expected, name);
+                        layout_variable_expected.push(u128::from(*width));
+                    }
+                }
+            }
+        }
+        push_opt_pair_expected(&mut layout_variable_expected, &layout.scalar_layout_id);
+        let layout_total_lanes = layout_variable_expected.len()
+            .checked_add(22).and_then(|n| n.checked_add(4)).and_then(|n| n.checked_add(1))
+            .ok_or(C6MetaCanonicalError::InvalidBinding { field: "layout.total" })?;
+        Ok(Self {
+            admission_values: bounds_values(&admission_bounds),
+            layout_values: bounds_values(&layout.bounds),
+            capacity_values: [
+                layout.capacities.name_rows as u128, layout.capacities.name_bytes as u128,
+                layout.capacities.occurrence_path_slots as u128, layout.capacities.value_slots as u128,
+            ],
+            admission_bounds,
+            layout,
+            limits,
+            layout_variable_expected,
+            layout_total_lanes,
+        })
+    }
+
+    /// Same validated binding taken from an original retained host
+    /// config. This module emits nothing outside META: any expected
+    /// CTX, derived caps, or source-checker integration remains the
+    /// separate mandatory Push/P1 integration, not this constructor.
+    pub(crate) fn from_host_config(
+        admission_bounds: BoundsC,
+        cfg: &C6HostConfig,
+        limits: C6HostLimits,
+    ) -> Result<Self, C6MetaCanonicalError> {
+        Self::new(admission_bounds, cfg.layout.clone(), limits)
+    }
+
+    pub(crate) fn admission_bounds(&self) -> BoundsC { self.admission_bounds }
+    pub(crate) fn layout(&self) -> &LayoutSnapshot { &self.layout }
+    pub(crate) fn limits(&self) -> C6HostLimits { self.limits }
+}

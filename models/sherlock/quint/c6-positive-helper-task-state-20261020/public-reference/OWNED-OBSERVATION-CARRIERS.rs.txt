@@ -1,0 +1,86 @@
+    Leaf { marker_free: bool, fields: ConstFieldsSnapshot },
+    Branch { marker_free: bool, fields: ConstFieldsSnapshot },
+    Constructor { marker_free: bool, type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: ConstFieldsSnapshot },
+    U128OutOfRange { marker_free: bool },
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DataSnapshot {
+    U128 { n: u128 },
+    Bool { b: bool },
+    Nil,
+    Cons { fields: DataFieldsSnapshot },
+    Leaf { fields: DataFieldsSnapshot },
+    Branch { fields: DataFieldsSnapshot },
+    Constructor { type_id: TypeIdC, ctor_id: adt::CtorIdC, fields: DataFieldsSnapshot },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProgramSnapshot {
+    pub entry: usize,
+    pub expressions: Vec<ExpressionSnapshot>,
+    pub occurrences: Vec<OccurrenceRowC>,
+    pub occurrence_paths: Vec<usize>,
+    pub children: Vec<usize>,
+    pub functions: Vec<FunctionRowC>,
+    pub parameters: Vec<ParameterRowC>,
+    pub arms: Vec<ArmRowC>,
+    pub patterns: Vec<PatternRowC>,
+    pub pattern_children: Vec<usize>,
+    pub types: Vec<adt::TypeRowC>,
+    pub type_args: Vec<TypeIdC>,
+    pub constructors: Vec<adt_storage::CtorRowExt>,
+    pub ctor_fields: Vec<adt_storage::CtorFieldRowExt>,
+    pub decl_param_counts: Vec<usize>,
+    pub decl_ctor_counts: Vec<usize>,
+    pub decl_templates: Vec<owner_ext_type_builder::TypeDeclSrc>,
+    pub plan_nodes: Vec<PlanNodeC>,
+    pub plan_cases: Vec<Option<usize>>,
+    pub field_paths: Vec<usize>,
+    pub constants: Vec<ConstantSnapshot>,
+    pub constant_fields: Vec<usize>,
+    pub names: Vec<String>,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AdmissionSnapshot {
+    pub identity: IdentityC,
+    pub bounds: BoundsC,
+    pub view: ProgramSnapshot,
+    pub layout: LayoutSnapshot,
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ImageSnapshot {
+    pub run_id: RunIdC,
+    pub control: ControlC,
+    pub control_origin: usize,
+    pub env_root: EnvRootC,
+    pub stack_limit: usize,
+    pub outcome: OutcomeC,
+    pub initial_fuel: u128,
+    pub remaining_work: u128,
+    pub consumed_work: u128,
+    pub helper_work: u128,
+    pub helper_visits: u128,
+    pub reference_cursor: u128,
+    pub alloc: AllocCounters,
+    pub active: ActiveLengths,
+    pub helper: Option<HelperControlC>,
+    pub result: Option<HelperResultC>,
+    pub seg_base: SegBase,
+    pub data: Vec<DataSnapshot>,
+    pub data_fields: Vec<RefC>,
+    pub env: Vec<EnvCellC>,
+    pub frames: Vec<FrameRowC>,
+    pub tasks: Vec<HelperTaskC>,
+    pub value_slots: Vec<RefC>,
+}
+impl ImageSnapshot {
+    /// Derived exactly as the existing observation; no duplicate stored counter.
+    pub fn depth(&self) -> usize { self.frames.len() }
+    pub fn task_live(&self) -> usize { self.tasks.len() }
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HostSnapshot {
+    pub admission: AdmissionSnapshot,
+    pub image: ImageSnapshot,
+}
+

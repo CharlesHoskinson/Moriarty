@@ -1,0 +1,161 @@
+# Delta review: revision02 (M1–M5 and exact16 conditions 1–6)
+
+## Verdict
+
+- **SOURCE = APPROVE.** The revised helper, the copied gate and the tests correctly close M1–M5 by inspection. No source change is required.
+  - As before, I found no false-pass path. The new checks are all fail-closed.
+  - No new admission policy, K grammar, model rule or resource change was introduced.
+- **EXACT16 = CONDITIONAL.** One plan defect must be fixed and re-pinned first (P1 below). One provenance record must be corrected (P2). After that, and with Root conditions 1–6, it is eligible.
+
+## Mandatory bounded fixes
+
+**P1 – Plan, phase `02-kast`: the JVM paths point into the old cut.**
+- Three kast argv entries still name the pre-revision directory `…/k-main-literal-complete-rule-correspondence-20261019/actual/02-kast/…`:
+  - `-XX:ErrorFile=…/hs_err_pid%p.log`
+  - `-Djava.io.tmpdir=…/tmp`
+  - `-Duser.home=…/home`
+- The phase's cwd, HOME and TMPDIR are under `revision02-input-bindings-f03-gate/actual/02-kast`, so the two disagree.
+- Consequences:
+  - If the old directory is absent, kast may fail closed.
+  - If it exists, kast writes scratch or hs_err files into the old immutable cut. Those files would fall outside the revision02 post-inventory and containment record.
+  - COMMAND.argv must equal plan argv exactly, so Root cannot correct this in flight.
+- Required:
+  - Rewrite exactly those three strings to the revision02 `actual/02-kast/{hs_err_pid%p.log,tmp,home}` paths.
+  - Re-pin the plan (87377 B / 77608c…), SOURCE-FREEZE and STATIC-INPUT-PINS.
+  - Have a non-author confirm by byte diff that only those three strings changed.
+- This is not a false-pass defect; it is a containment and immutability defect.
+
+**P2 – Test-first record.**
+- `REVISION02-TEST-FIRST.json` pins a test of 11388 B / 65ab70…. The frozen test is 12094 B / be292f….
+- So test-first ordering is attested only for a draft. The frozen test changed after that record was made.
+- Required: either re-record the test-first entry, or state explicitly that the frozen test postdates that record. Do not cite this record as covering be292f….
+- The Root phase-00 unit-first requirement is unaffected.
+
+## M1–M5 disposition
+
+**M1 – Closed.**
+- `main decode` reads `a.input` bytes.
+- `checked_run_input` requires them to be byte-equal to `render(SAFE).encode('ascii')`.
+- The actual decoded text is what gets passed to `decode_capture(run_input=…)`. There it is parsed as `uiRun` and checked against the post-startup code, entry, fuel and limit.
+- The query pin is retained as `actual_run_input_pin`.
+- Nit (non-blocking): the pin comes from a second file read rather than the checked bytes. Root's before/after pins cover this.
+
+**M2 – Closed, on the supplied copy proof.**
+- `frame` calls `parsed_problem` on the raw kast bytes before stripping and calling `arguments(term, RUN, 4)`. The prefix and suffix are unchanged.
+- `UIRUN_OPEN` is byte-equal to `RUN + b"("`.
+- The gate enforces size in (0, 64 KiB], printable ASCII, the compiled `uiRun` root, no `:`, no `\` other than `\dv{`, string skipping, and exactly one closed application. This matches the predecessor's description of F03.
+- I did not re-read the F03 source. Raw and function equality rests on `EXACT-F03-PARSED-GATE-COPY-PROOF` (function 21c4cf…).
+
+**M3 – Closed.**
+- `relate` computes `checked_carrier_pin(pin(complete_image))` in `input_pins` before `read(complete_image)`. The 6886 B / 419199… pin is a constant.
+- All four input pins are emitted: SAFE, spans, actual_main and complete_image.
+- The startup rule check works as follows:
+  - It requires a unique inventory row at start_line 74.
+  - It requires full equality of source, unique_id and all four span coordinates with `decoded['startup_probe']['rule']`.
+  - This is reached only after `comparison_ready` and no gaps.
+- The 102/80 checks are unchanged.
+- Nit: the carrier is hashed and parsed from two separate reads (minor TOCTOU), bracketed by Root's opaque pins.
+
+**M4 – Closed.**
+- `checked_barrier` enforces:
+  - the exact five-key set;
+  - `expected_body_reads` is a strict `int` equal to 0;
+  - `safe_input` is strictly the same as the original SAFE constant (751 B / 31e8ee…).
+- The binding is pin-checked (1204 B / 7cba03…) after all actual, freeze and relation checks and before it is parsed. Its fixed bytes fix the expected row (2968 B / 47ceb5…).
+- The script checks freeze membership only for actual_main and actual_relation. Completeness of the 00..12, carrier, plan and static membership is enforced by Root only.
+
+**M5 – Adequate by hand trace. Not executed; no PASS is claimed.**
+- Named-message rejections exist for:
+  - query mismatch;
+  - wrong head, wrong arity, variable, connective, trailing data, non-ASCII and oversize input;
+  - carrier pin;
+  - startup line and column;
+  - reversed 102/80 order and a column-only change;
+  - an extra barrier key, a non-original SAFE pin and `expected_body_reads=False`;
+  - binding drift;
+  - `successful` returncode, timeout, containment, remaining and argv.
+- I traced every message string to the raising site. The aliasing preserved by `deepcopy` keeps each relation mutation reaching its intended check. The broad `except` from the previous revision is gone.
+- Remaining gaps (non-blocking):
+  - CLI wiring in `main()` is verified by inspection only. This covers the carrier check in relate, the barrier and binding checks in compare, and the query check in decode.
+  - `probe` and `decode` have no synthetic log fixtures.
+  - There are no `outcome` or `id` mutations for `successful`.
+- Root's synthetic unit-first run remains mandatory.
+
+## Readsets, PATH and pins checked
+
+- **PATH matches the F03 alignment.**
+  - kast: the four roots.
+  - kore-exec phases 02c, 03, 05, 07 and 09: z3 bin only.
+  - kprint and all Python phases: no PATH.
+- **Phase 11 input_paths are complete against the actual reads** of `decode`, `probe` and `successful`:
+  - the plan;
+  - the 03..10 COMMAND and LAUNCH-RESULT files, stdout and stderr;
+  - the engine `result.kore` files;
+  - SAFE, spans and query;
+  - all import-time reads.
+- **Phase 13** declares statically the freeze, binding, relation and expected body. The selectors cover the freeze-member and SAFE reads.
+- **Pins I checked for consistency (not recomputed):**
+  - SOURCE-FREEZE equals STATIC for every source, the test, the plan and the conditions.
+  - The forward/inverse revised pins equal the frozen ones.
+  - The compiled 15 in STATIC equal the 15 in the historical receipt projection. `definition.kore` equals `DEFINITION_SHA`.
+  - The compile-input `main.k` equals `SOURCE`/`SOURCE_SHA` and the revision `main.k`. The ledger `receipt_sha256` equals the receipt pin.
+  - The binding, expected, handoff, SAFE and carrier constants all agree.
+
+## EXACT16 remaining conditions
+
+1. **P1** applied, re-pinned and confirmed by non-author diff. **P2** corrected.
+2. **Root conditions 1–6 as stated:**
+   - Fresh freeze, and selection by Root alone.
+   - Per-tool PATH as frozen.
+   - Actual readset receipts for every phase.
+   - The historical compile, receipt and ledger pins validated before and after each child.
+   - A hard RLIMIT_FSIZE ≥ 536870912 before the first launch. Otherwise a preexec launch-error is recorded as a fail-stop.
+   - Each LAUNCH-RESULT carries `id` plus the full F03 record, and COMMAND.argv equals plan argv exactly.
+   - Sequential order, unit test first, fail-stop.
+   - No grammar or cap drift.
+   - Before and after each child: static, compiled-15, tool4/JAR156, Kregular281, and opaque old-carrier and new-expected hashes.
+   - Fsync and freeze of all 00..12 products, streams and receipts, plus carrier, plan and static, with completeness of `products_streams_receipts` membership asserted by Root.
+   - Only phase 13 opens the expected body.
+
+## Coverage
+
+I read every body included inline in this request in full:
+- the README;
+- the predecessor review and its identity record;
+- the forward/inverse and copy proofs, and the TEST-FIRST record;
+- all nine sources, including `main.k`;
+- the test;
+- both patches;
+- the plan, the conditions, SOURCE-FREEZE and STATIC;
+- the unchanged-equality record, the historical compile binding, the handoff and binding;
+- the 4228 B callable closure.
+
+I did not read, and make no claim of a new full read of:
+- the F03 73962 B source or its import projection;
+- the compiled definition bodies;
+- the spans document;
+- the SAFE input body or the natural contract;
+- the old carrier, the expected bodies, or the private freeze.
+
+The JVM-path finding comes from comparing the plan's own cwd, HOME and TMPDIR with its own argv; I did not check it against F03's `kast_command` body. I recomputed no hashes and executed nothing.
+
+## Qualifications retained
+
+**Rule identity and state**
+- No false-pass path was identified in either review. All fixes are fail-closed bindings.
+- Rule identity means a logged full span equal to an inventory row. The UniqueId comes from the inventory. Rewrites and equations are not distinguished. Helper and `uiValid` evaluation is not trace evidence.
+- The old LC `source_line` origins remain distinct from the future observed main spans.
+- The printer and Root receipts are trusted and unauthenticated.
+- `generatedCounter` is kept raw only. `entry_k` is a retained annotation and `charged_steps` is derived from K fuel. Pre-startup state is logged Kore only.
+
+**Provenance and independence**
+- The link from `main.k` to the definition is historical, Root-recorded, unauthenticated provenance. The whole original receipt remains external.
+- The consumer used is 42838 B / 85e4e7…, not F03's 41478 B / 2260eb…. Its historical suite is neither selected nor run.
+- The SAFE→`uiRun` mapping is shared across render, oracle and carrier, so a shared mapping error would pass. The natural contract is shared and prescriptive, and the oracle owner's prior NG exposure is disclosed.
+
+**Out of scope**
+- The complete 335-lane carrier is retained and unpaired with the physical tables, padding and context.
+- B work and clock, admission, authentication, refinement, native, recursion, stagenet and global acceptance are all unestablished.
+- `context_binds_counterpart_source=false` stands.
+- The old 12-source / 21-op set is untouched.
+- I cast no vote on the semantics of the private expected body.

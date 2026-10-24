@@ -250,3 +250,13 @@ No proof, verifier result or recursive endpoint is claimed. Root records actual 
 
 
 Sol factual publication addendum — October 19: [DESIGN012 status and provenance](DESIGN-012-STATUS-AND-PROVENANCE.md) records the actual Opus return, later Root-attributed PR294/Fenrir35 merges and newer uncompiled anchor source. The creative note and navigation above retain their exact earlier-cut author bytes.
+
+
+## Design companion 013 — layered board and statement-lane trace
+
+[Design013](DESIGN-013-LAYERED-BOARD-RULE-SELECTORS-AND-TRACE.md) is the verbatim Opus5.5 HIGH concept for39 semantic-rule selectors, an index-only335-lane structural trace and a separate canonical/earlier-worktree construction rail. It is construction documentation, with no website implementation or deployment. Its [dated status and provenance](DESIGN-013-STATUS-AND-PROVENANCE.md) keeps later K/Quint progress, the retained decode/classifier failures and source-identity lessons separate from the immutable author body. No proof, target or EARS completion follows; the finished site launches once the full Sherlock goal is complete and accepted.
+
+
+## Design companion 014 — let scheduling and frame routing
+
+[Design014](DESIGN-014-LET-SCHEDULING-AND-FRAME-ROUTING.md) preserves the verbatim Opus 5.5 HIGH concept separating A114 scheduling from A135 frame installation and A140 capacity refusal. Its [authorship and provenance](provenance/design-014-authorship.json) records the actual author return and dated status scope. This is internal concept guidance, with no website implementation, mandatory public developer workflow or new execution claim. DESIGN013 is unchanged. The website publishes only when the full Sherlock goal is finished.

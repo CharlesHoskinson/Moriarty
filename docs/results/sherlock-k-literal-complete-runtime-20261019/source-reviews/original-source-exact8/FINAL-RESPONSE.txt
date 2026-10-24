@@ -1,0 +1,116 @@
+# Review opinion: SOURCE APPROVE · exact8 CONDITIONAL
+
+**SOURCE: APPROVE** within the declared data-only scope. **Mandatory source fixes: 0.**
+
+**exact8: CONDITIONAL.** It is not ELIGIBLE until the independent oracle is issued and privately frozen, and the conditions in §4 are met. Approving the source does not establish proof validity, refinement or a native claim.
+
+## 1. Coverage
+
+**Read in full:**
+- SCOPE-AND-PREDICATE, SOURCE-FREEZE and PROPOSED-EXACT8.
+- `balanced_kore.py`, `complete_images_runtime_data.py`, `literal-complete-images.k` and `literal_complete_images.py`.
+- The SAFE input.
+- COMPILED-CONFIGURATION-DECLARATIONS, COMPILED15, TOOL-ENTRY, K-closure (membership only) and GRAPH-FIRST.
+- SAFE-COMPATIBILITY.
+- The oracle CONTRACT, SAFE-READSET, L4 column declarations, statement-order contract and legacy lines 64–106.
+- The prior FINAL-RESPONSE.
+- The full F03 source, the launch closure and the import-AST projection.
+
+**Not recomputed:** no byte counts or hashes were recomputed. Byte-equality of the unchanged K, renderer and parser files is taken from SOURCE-FREEZE.
+
+**Not inline:**
+- The `oracle-no-tools/PROMPT` bytes. The conditions cite them, but SAFE-READSET lists no PROMPT file.
+- READ-IMPORT-PINS and the full IMPORT-TIME-AST.json.
+- The `inj` and `subsort{SortLCRun{},SortKItem{}}` declarations.
+- `syntaxDefinition.kore` and any real kast, kore-exec or kprint output.
+
+**Static checks done by reading:**
+- Geometry: Program 16+4+11+12+16+5+22 = 86, State 45+36 = 81, statement 2+86+3×81+4 = 335.
+- The `lcGoodInput` conjuncts appear satisfied by the SAFE input.
+- `lcWalk` reaches `lcFinish` with two events for N = 2.
+- The two `lcAdvance` guards are disjoint on the control tag.
+
+I deliberately do not state any derived intermediate or Done lane values here, to preserve source-author blindness.
+
+## 2. New helper (`complete_images_runtime_data.py`)
+
+### `frame`
+- It accepts either a bare `LbllcRun…{}` with arity 5 or the exact `INJECTION` bytes.
+- It builds `generatedTop(<k>(kseq(inj(run),dotk())), generatedCounter(\dv Int "0"))`.
+- It proves the inverse back to the stripped bytes, byte-exact.
+- Typing against the quoted declarations is correct: the cell arities and sorts of lines 10, 11, 211, 212 and 214, and LCRun at line 382.
+- `<k> lcRun(..) => .. </k>` with no `...` matches a single-item `kseq` with a `dotk` tail. This is the shape `initGeneratedTopCell` would produce.
+- No step is computed.
+
+### `audit`
+- It binds the complete context, capacities and Program at all four machine positions, and checks that Init equals `source.init` and final equals done.
+- It checks `event1.before/after` = initial/middle and `event2.before/after` = middle/done.
+- It checks the integer-typed envelopes (102,3,1) and (80,0,0), which distinguish charged A102 from free A80.
+- It compares all 335 lanes against the concatenation of the actual images and events.
+- It checks layout, authentication and provenance strings.
+- It predicts nothing.
+- Wording note, not a defect: `distinct_state_positions: 3` and "advancing" label positions only. Value distinctness is not checked.
+
+### `compare`
+- It reads the freeze, checks `expected_body_reads == 0` (int) and that `actual_observation == pin(--input)`.
+- It re-pins the observation, the audit and every freeze product, then checks the audit status and the audit-to-observation binding.
+- Only after that does it open the binding and then the expected body.
+- Equality is whole-object and typed: dict key sets, list order and lengths, and the `int`/`bool`/`float` distinction.
+- On FAIL it exits 1 after writing the receipt.
+
+### Imports
+- `-B -S` without `-I` puts `source/` first on `sys.path`. That is safe only under exact four-member directory membership, which is a stated condition.
+- `-B` prevents a `__pycache__` from being created and breaking that membership.
+
+## 3. Argv, module, sort, depth and caps
+
+| Phase | Check |
+|---|---|
+| 02 kast | JVM flags and classpath wildcard are identical to F03 `kast_command`. Module `MORIARTY-LITERAL-COMPLETE-IMAGES-SYNTAX` (39 B, matching `mainSyntaxModule.txt`), sort `LCRun`, `--input program --output kore`. |
+| 04 kore-exec | `definition.kore` is df05e8d6. Module `MORIARTY-LITERAL-COMPLETE-IMAGES` (32 B, matching `mainModule.txt`), `--depth 1 --smt none`. One rewrite of `lcRun`, then the result functions are evaluated during post-step simplification. There are no `--log-entries`, so which rule fired is not log-evidenced. |
+| 05 kprint | Takes `<dir> <kore> false false`, the same shape as F03. |
+| PATH | Phases 04 and 05 use the kast `JAVA_PATH`. F03 used z3/bin only for kore-exec and no PATH for kprint. This is harmless under `--smt none`, but it is not byte-identical to the F03 recipe. |
+| Caps | 30 s, 3 s sweep, CORE 0, FSIZE 512 MiB, umask 077 and JVM 512m/32m/2 are unchanged. No aggregate cap. |
+
+There are no compile, Rust, Cargo or SDK operations. Original-overall and Rust ABSTAIN remain historical and are not dependencies.
+
+## 4. Conditions for exact8 (non-source)
+
+1. **Oracle contract precision, before issuance.** The comparator is whole-object, so representation must be fixed in advance. Declare the exact JSON shape of these fields:
+   - `logical_layout.segments` as an object keyed by the seven names, each `{start,length}`, plus `statement_lanes` as an int.
+   - `afters` as the ordered list [intermediate, done].
+   - Machines as exactly `{context,capacities,program,state}`.
+
+   Without this, a FAIL could be representational rather than semantic. Re-pin the contract and SAFE-READSET afterwards. Pin the PROMPT bytes and confirm that the PROMPT contains only the SAFE-READSET material.
+2. **Exact pin rows.** `pinned()` requires each row to equal `pin(path)`, meaning exactly `{path,bytes,sha256}`. Any extra key fails. The freeze must contain:
+   - `expected_body_reads: 0`
+   - `actual_observation`, whose path string is identical to the phase-08 `--input`
+   - `actual_audit`, the 07 product
+   - a non-empty `products_streams_receipts` covering all 01–07 streams, products and Root receipts
+
+   The binding must be exactly `{"expected_complete_observation":{path,bytes,sha256}}`. The code does not enforce the other identity content in the freeze; Root owns it.
+3. **Root inventories each phase cwd**, as F03 `stage_problems` did, to catch unexpected files such as `hs_err_pid*.log`. `F03.launch` alone does not do this.
+4. **Root rechecks the expected-body hash opaquely around every child.** State explicitly that `expected_body_reads` counts reads by phases and the source author, not Root's hash-only rechecks.
+5. **Prior conditions stand:** private prefreeze and binding before phase 01, all dynamic pins, fresh 0700 roots, and the durable freeze before phase 08.
+
+## 5. Runtime risks (all unobserved; each stops fail-closed with no guessed repair)
+
+- **Phase 05 → 06 framing (highest risk; prior F5 still open).** The configuration is now a framed `generatedTop`. kprint may emit `<generatedTop>…<generatedCounter> 0…`, `lcResult(…) ~> .K`, or `#And`/`#Top` if kore-exec returns a conjunction. The unchanged decoder strips only a bare `<k>…</k>` and rejects `<` and `~`. A rejection must be recorded as a framing non-pass, not patched within this plan.
+- **Phase 03.** If kast emits `inj{SortLCRun{}, SortKItem{}}` with a space after the comma, `frame` rejects it, because `INJECTION` has no space. A bare `LbllcRun` emission is expected.
+- **Phase 04, unquoted declarations.** The `inj` and LCRun→KItem subsort declarations are not quoted, though `syntax KItem ::= LCRun` implies the subsort exists.
+- **Phase 04, engine behaviour.**
+  - Nonlinear function left-hand sides in `lcPrepend` and `lcFinish`, and `owise` rules.
+  - Side-condition evaluation under `--smt none`.
+  - Whether a cold definition load plus evaluation fits in 30 s.
+  - If `lcRun` stays unreduced, phase 06 rejects it.
+- **Phase 08 diagnostics.** A FAIL does not show which lanes differ, so it cannot separate an oracle arithmetic error from a K error. Adjudication would need Root-owned follow-up.
+- **Host dependencies.** The Python 3.14 stdlib and the libc dependencies of the kompiled `scanner` are not pinned.
+
+## 6. Unchanged scope limits
+
+- `context_binds_counterpart_source=false`; authentication is NOT_ESTABLISHED.
+- Lines 102 and 80 are counterpart origin labels only. There is no main.k rule trace, native proof, refinement, clock claim, G4, StepInv or projectA claim, and none of the other 39 events is covered.
+- Audit PASS shows serialization and continuity only.
+- Independent equality would be a different-author derivation under a shared declared mapping. It is not a validation of that mapping.
+- The host 335-lane comparison belongs to Root.
+- All 8 children are unrun.

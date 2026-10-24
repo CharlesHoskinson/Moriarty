@@ -1,0 +1,62 @@
+{
+  "schema": "sherlock.source45-declarative-reproduction/1",
+  "scope": "Recover exactly these three external backend afterimages without copying other dependency files.",
+  "workingTree": "an external backend parent directory containing recl9/",
+  "forwardPatch": "changes.patch",
+  "inversePatch": "inverse.patch",
+  "requireBeforeApply": [
+    {
+      "path": "recl9/src/lib.rs",
+      "expected": {
+        "state": "present",
+        "file": "preimage/recl9/src/lib.rs",
+        "bytes": 1369,
+        "sha256": "bda7f9a413106f412aa4cfbae76c048dc2229c8620c4b349e68a4b18c036e84e"
+      }
+    },
+    {
+      "path": "recl9/src/main.rs",
+      "expected": {
+        "state": "present",
+        "file": "preimage/recl9/src/main.rs",
+        "bytes": 45604,
+        "sha256": "6f288d6973f637058f164019ea08bdadd3ff9aba45a0ab11b1f1e2292873bf7a"
+      }
+    },
+    {
+      "path": "recl9/src/sherlock_verify.rs",
+      "expected": {
+        "state": "absent"
+      }
+    }
+  ],
+  "requireAfterApply": [
+    {
+      "path": "recl9/src/lib.rs",
+      "expected": {
+        "file": "source/recl9/src/lib.rs",
+        "bytes": 1394,
+        "sha256": "fe9ff2c738cb8785b32a8520c217fdca116993e9f91f777d3a64a5a87bd94350"
+      }
+    },
+    {
+      "path": "recl9/src/main.rs",
+      "expected": {
+        "file": "source/recl9/src/main.rs",
+        "bytes": 45694,
+        "sha256": "0c189bc0fd9cb4a18d80e348222c10f9f8cd47a9e4cd38f1f34dd88daf6b8f23"
+      }
+    },
+    {
+      "path": "recl9/src/sherlock_verify.rs",
+      "expected": {
+        "file": "source/recl9/src/sherlock_verify.rs",
+        "bytes": 4931,
+        "sha256": "768b4c0e666be2622156c71df30c16e7905d923d29155879fce3dad37257402f"
+      }
+    }
+  ],
+  "source44BaseMetadataSHA256": "1f70865aba1a31bc0450474a3d9b3af0dd942cfe3690c619283e19eaa795e3d5",
+  "source45ProductionFreezeSHA256": "6d3f652f36fbbb885820abc3c3e1654183f78334ab465738af5db263273a9366",
+  "qualification": "Hashes identify private full-closure metadata without publishing those manifests. These three files alone are not a standalone build. Apply no patch to a diverged source tree or to Moriarty backend modules by name."
+}

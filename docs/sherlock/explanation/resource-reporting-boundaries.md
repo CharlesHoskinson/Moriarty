@@ -60,3 +60,14 @@ formal/native/target obligations remain separate. K's zero-charge terminal
 publication, Quint's distinct terminal tick and B's helper microsteps retain
 separate clocks; listing them in one report supplies neither same-fuel equivalence
 nor a measured performance winner.
+
+
+## October21 UTC — a failed native compile still has measured costs
+
+The dated Native12 receipt records a real pinned ledger9 Cargo compile failure with three Rust errors, guard exit2 and outer exit1. A separate numeric Cargo exit was not retained. No current ledger9 ELF or recursive proof was produced. The subsequently applied three-line source repair is reviewed but uncompiled/unrun.
+
+The attempt records E119800871/P92784030/S27016841 microseconds, with the phase-F wall time and exact remaining supervisor allowance still unknown. Root identifies the positive worker value as exposing the frozen accounting invariant; a pending source correction is not an adopted accounting result. A failed build cannot be reported as zero worker spend.
+
+The same receipt distinguishes host restoration complete from raw cleanup owed: four conditional success artifacts were absent, so preservation debt remains unresolved in the historical record. Do not collapse physical restoration, evidence completeness, compilation and proof acceptance into one success flag. The source06 receipt capture preserves those separate fields and their pins.
+
+Quint Source12's six finite calls and locked SDK archive/install checks keep their own scopes. Archive byte agreement does not establish a single receiving SDK/module graph, live wallet compatibility, native execution or target settlement. Benchmark completion still requires actual postdeployment target lineage and measurements; no inferred degree or performance is added here.
