@@ -1,46 +1,37 @@
 # Sherlock circuit optimizations
 
-Status: DRAFT / PROPOSED, not adopted, implemented, validated or accepted. Public source reference: `35931362ca435b2ed10014ee052870716c8f10d3`. All scenarios are proposed acceptance contracts, not execution receipts.
-
-This additive package preserves the [original requirements](../../../sherlock-universal-interpreter-design/requirements.md), [completion refinements](../../../sherlock-completion-convergence/requirements.md), [recursive experiment](../../../sherlock-stagenet-recursive-rollup/requirements.md) and [product contract](../../../../../docs/MORIARTY-PRODUCT-CONTRACT.md). Existing designated-owner requirements are carried forward without new security analysis or policy.
-
 ## ADDED Requirements
 
 ### Requirement: SOPT-001 Observed recursive baseline before integration
-
-WHEN an optimization is proposed for integration, integration SHALL NOT proceed until an actual Midnight stagenet recursive child/parent/terminal baseline with its exact source, statements, keys, target receipts and complete readback is preserved; integration means any change within the traced source/context identity membership (SOPT-010) of the native recursive child, parent or terminal path, while isolated source preparation MAY precede that observation and changes outside that membership are unaffected.
+WHEN any change within the traced source/context identity membership (SOPT-010) of the native recursive child, parent or terminal path is proposed, that change is integration and SHALL NOT proceed before an actual Midnight stagenet baseline with exact source, statements, keys, target receipts and complete readback is preserved.
 
 Retains: SCON-022, SCON-023, SRPOC-001, SRPOC-002, SRPOC-007. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-001-01 preserved behavior
-
-- **GIVEN** a separately prepared helper extraction and an observed recursive stagenet baseline
+- **GIVEN** a separately prepared helper extraction and an actual Midnight stagenet recursive child/parent/terminal baseline that preserves its exact source, statements, keys, target receipts, and complete readback
+- **AND** the proposed change lies within that path's traced source/context identity membership as defined by SOPT-010
 - **WHEN** integration is considered
 - **THEN** the unchanged baseline artifacts and full readback remain available under their original identities
 
 #### Scenario: SOPT-001-02 boundary or incomplete evidence
-
 - **GIVEN** only a literal or local recursive result exists
 - **WHEN** isolated source preparation finishes
-- **THEN** the candidate remains isolated and integration awaits the missing actual recursive stagenet baseline
+- **THEN** isolated source preparation MAY precede the baseline, the candidate remains isolated, integration awaits the missing actual recursive stagenet baseline, and changes outside the traced membership remain unaffected
 
 ### Requirement: SOPT-002 Ordered source extraction equivalence
-
-WHEN the duplicated publication utilities are extracted, the emitters SHALL preserve the ordered emitted operations modulo an explicit checked bijective temporary-variable renaming that is the identity on every non-temporary identifier, whose image lies inside the reserved temporary namespace enforced by the TemporaryNameCollision check and is disjoint from every input operand; they SHALL preserve the exact input/output ABI, construction errors, refusal behavior, complete state and statement, and preserve is_reserved_{return,error}_publication_variable and the %{scope}.local.temp. prefix or record any change as an explicit ABI change.
+WHEN utilities are extracted, the emitters SHALL preserve ordered operations modulo an explicitly checked temp-ID bijection. They SHALL preserve the exact input/output ABI, construction errors, refusal behavior, complete state, statement, reserved publication variables, and temporary prefix, or record an explicit ABI change.
 
 Retains: UIREQ-024, UIREQ-030, UIREQ-031, SCON-005, SCON-012, SCON-019. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-002-01 preserved behavior
-
 - **GIVEN** independent old-emitter outputs for both publication branches
 - **WHEN** the extracted emitters process the same admitted inputs
-- **THEN** ordered operations and complete observations agree under the declared bijective renaming and identical ABI
+- **THEN** ordered operations and complete observations agree under an explicit checked bijective temporary-variable renaming. The renaming is identity on every non-temporary identifier, its image lies within the reserved temporary namespace enforced by TemporaryNameCollision, and it is disjoint from every input operand. Preserve `is_reserved_{return,error}_publication_variable` and the `%{scope}.local.temp.` prefix.
 
 #### Scenario: SOPT-002-02 boundary or incomplete evidence
-
-- **GIVEN** a candidate that changes operation order, error locator or an operand, or a renaming that maps a temporary onto a non-temporary identifier
+- **GIVEN** a candidate that changes operation order, error locator, or an operand, or a renaming that maps a temporary onto a non-temporary identifier or input operand
 - **WHEN** the ordered comparison runs
-- **THEN** the first divergence is retained and source-extraction acceptance remains open
+- **THEN** the first divergence is retained and source-extraction acceptance remains open. Record any change to the exact input/output ABI as an explicit ABI change.
 
 ### Requirement: SOPT-003 Net maintenance accounting
 
@@ -115,16 +106,14 @@ Retains: UIREQ-003, UIREQ-004, UIREQ-006, UIREQ-008, UIREQ-010, UIREQ-012, UIREQ
 - **THEN** the distinct changed event is reported and the family cannot replace the baseline
 
 ### Requirement: SOPT-007 Required grouping and residualization
-
-WHEN an optimization candidate changes a transition slice covered by baseline grouping or residualization (UIREQ-032/033, SCON-014/015), it SHALL retain the baseline-required widths 1, 2, 4 and 8, every intermediate complete boundary, earliest stop, terminal-before-fuel, observer-zero/no-next and equivalent residualized behavior under explicit bounds.
+WHEN a slice covered by baseline grouping or residualization changes, the candidate SHALL preserve baseline widths, intermediate boundaries, earliest stop, terminal-before-fuel, observer-zero/no-next, and bounded equivalent residualization.
 
 Retains: UIREQ-010, UIREQ-012, UIREQ-013, UIREQ-016, UIREQ-032, UIREQ-033, SCON-007, SCON-008, SCON-014, SCON-015. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-007-01 preserved behavior
-
-- **GIVEN** a supported slice and independently frozen complete prefixes
-- **WHEN** widths 1, 2, 4 and 8 and bounded residualization are compared
-- **THEN** each internal boundary and earliest stop matches the ungrouped baseline
+- **GIVEN** a supported slice covered by UIREQ-032/033 and SCON-014/015 with independently frozen complete prefixes
+- **WHEN** baseline widths 1, 2, 4 and 8 and bounded residualization under explicit bounds are compared
+- **THEN** every complete intermediate boundary and earliest stop matches the ungrouped baseline, including terminal-before-fuel and observer-zero/no-next behavior
 
 #### Scenario: SOPT-007-02 boundary or incomplete evidence
 
@@ -151,34 +140,28 @@ Retains: UIREQ-024, UIREQ-026, SCON-005, SCON-008, SCON-015, SCON-024. Status: p
 - **THEN** the missing owner evidence is explicit and the baseline constraints remain the integration reference
 
 ### Requirement: SOPT-009 Optional fused final parent and terminal
-
-WHERE a fused final-parent/terminal experiment is selected, it SHALL preserve the child statement, existing application predicate, accumulation discharge, complete financial and communication duties and exact ledger-call binding under a separately qualified relation and key, and SHALL account for lost reusable-parent work.
+WHERE fusion is selected, it SHALL preserve the child statement, application predicate, accumulation discharge, financial/communication duties, and exact ledger-call binding. It SHALL account for lost parent reuse.
 
 Retains: UIREQ-017, UIREQ-018, UIREQ-019, UIREQ-020, UIREQ-023, UIREQ-024, SCON-010, SCON-011, SCON-022, SCON-024, SRPOC-002, SRPOC-007. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-009-01 preserved behavior
-
-- **GIVEN** separate and fused candidates for the same child statement and application predicate
-- **WHEN** one and repeated envelope workloads are compared
-- **THEN** discharge, duties and call binding remain intact and lost parent reuse is included in total cost
+- **GIVEN** separate and fused candidates for the same child statement and application predicate, with a separately qualified relation and key
+- **WHEN** one-envelope and repeated-envelope workloads are compared
+- **THEN** accumulation discharge, financial and communication duties, and exact call binding remain intact, and the comparison includes lost reusable-parent work
 
 #### Scenario: SOPT-009-02 boundary or incomplete evidence
-
-- **GIVEN** a fused candidate with equal public vectors but unqualified relation/key or missing duty evidence
+- **GIVEN** a fused candidate with equal public vectors but an unqualified relation/key or missing duty evidence
 - **WHEN** adoption is considered
 - **THEN** fusion remains a separate unvalidated experiment and no lower k is assumed
 
-### Requirement: SOPT-010 Fresh source context and key qualification
+### Requirement: SOPT-010 Context and key qualification
+WHEN any file, feature, setting or context input within an artifact's traced source/context identity membership changes, including logging-only or expected-equivalent changes, the candidate SHALL record fresh source, relation, context and applicable key identities for each affected artifact and retain existing qualification obligations before use. Artifacts outside the changed membership SHALL retain their identities and qualification status.
 
-WHEN a file, feature, setting or context input within an artifact's traced source/context identity membership changes (including logging-only or expected-equivalent changes), the candidate SHALL record fresh source, relation, context and applicable key identities for each affected artifact and retain the existing qualification obligations before those artifacts are consumed; artifacts whose traced membership excludes the change SHALL retain their identities and qualification status.
-
-Retains: UIREQ-023, UIREQ-024, UIREQ-025, SCON-001, SCON-004, SCON-022, SRPOC-002, SRPOC-005. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-010-01 preserved behavior
-
-- **GIVEN** a source-only extraction or logging change within an artifact's traced identity membership
+- **GIVEN** a file, feature, setting, or context-input change within an artifact's traced source/context identity membership, including a logging-only or expected-equivalent change
 - **WHEN** a candidate context is prepared
-- **THEN** fresh identities and applicable qualification status are recorded for affected artifacts even if ordered operations agree; artifacts whose traced membership excludes the change retain their identities and qualification status
+- **THEN** record fresh source, relation, context, and applicable key identities and qualification status for each affected artifact, even if ordered operations agree. Artifacts whose traced membership excludes the change retain their identities and qualification status
 
 #### Scenario: SOPT-010-02 boundary or incomplete evidence
 
@@ -187,16 +170,14 @@ Retains: UIREQ-023, UIREQ-024, UIREQ-025, SCON-001, SCON-004, SCON-022, SRPOC-00
 - **THEN** the old receipt remains historical and does not qualify the new source cut
 
 ### Requirement: SOPT-011 Matched public workload comparison
-
-WHEN an optimization benchmark is compared to baseline, it SHALL use the existing experiment-selected manifest with matched deterministic public seed, input program source, ordered workload, transaction and batch counts, caps, profile, cache state, thread settings, host hardware/OS identity, build/toolchain identity and target, record both baseline and candidate implementation/circuit source identities even when they differ, and record any mismatch in the matched controls as a comparison limitation.
+WHEN an optimization benchmark is compared with baseline, it SHALL use the experiment-selected manifest and matched controls, record both implementation/circuit source identities, and report each control mismatch as a limitation.
 
 Retains: SCON-024, SRPOC-003, SRPOC-004, SRPOC-005, SRPOC-008. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-011-01 preserved behavior
-
-- **GIVEN** baseline and candidate using the same selected manifest and all matched controls
+- **GIVEN** baseline and candidate using the same experiment-selected manifest, deterministic public seed, input-program source, ordered workload, transaction and batch counts, caps, profile, cache state, thread settings, host hardware/OS identity, build/toolchain identity, and target
 - **WHEN** a comparative result is published
-- **THEN** the exact transaction/batch counts, seed, input program source, both implementation/circuit source identities and matched controls, including host hardware/OS and build/toolchain identities, accompany each result
+- **THEN** report both baseline and candidate implementation/circuit source identities even when they differ, and include every matched control with each result
 
 #### Scenario: SOPT-011-02 boundary or incomplete evidence
 
@@ -205,16 +186,13 @@ Retains: SCON-024, SRPOC-003, SRPOC-004, SRPOC-005, SRPOC-008. Status: proposed.
 - **THEN** the mismatch is explicit and the result is not relabelled as the full workload or a matched speedup
 
 ### Requirement: SOPT-012 Per-layer resource measurements
+WHEN local optimization cost is reported, the report SHALL separate child, parent and terminal phases, each with wall time, user/system CPU and peak RSS, and give actual k, capacity versus used rows, columns, lookup rows, maximum gate degree (distinct from k), proof, verifying-key and full transaction bytes, actual sample count and raw samples. Unavailable metrics SHALL name their reason.
 
-WHEN local optimization cost is reported, the report SHALL separate child, parent and terminal parameter loading/generation, prepare/witness/serialization, key generation, proving and independent verification with wall time, user/system CPU and peak RSS, actual k, domain capacity versus used rows, columns, lookup rows and maximum gate degree (distinct from k), and proof, verifying-key and full transaction bytes, retaining the actual sample count and raw per-sample measurements; unavailable metrics SHALL name the reason.
-
-Retains: UIREQ-024, UIREQ-025, SCON-024, SRPOC-005, SRPOC-009. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-012-01 preserved behavior
-
-- **GIVEN** matched measurements with raw phase records for each layer
+- **GIVEN** matched measurements with raw records for child, parent, and terminal parameter loading/generation, prepare/witness/serialization, key generation, proving, and independent verification
 - **WHEN** the comparison is summarized
-- **THEN** every requested metric, including parameter loading/generation and maximum gate degree separately from k, is reported with units, phase, actual sample count and raw per-sample values or explicitly unknown with its reason
+- **THEN** report parameter loading/generation, prepare/witness/serialization, key generation, proving, and independent verification with wall time, user/system CPU, and peak RSS. Report actual k, domain capacity versus used rows, columns, lookup rows, and maximum gate degree distinct from k. Report proof, verifying-key, and full-transaction bytes, actual sample count, and raw per-sample measurements. Name the reason for each unavailable metric
 
 #### Scenario: SOPT-012-02 boundary or incomplete evidence
 
@@ -259,22 +237,20 @@ Retains: UIREQ-021, UIREQ-024, UIREQ-025, UIREQ-026, SCON-017, SCON-018, SCON-01
 - **THEN** the finite observation retains its scope and the missing correspondence stays open
 
 ### Requirement: SOPT-015 Evidence-based optimization disposition
-
-WHEN an optimization disposition changes from proposed to validated and then retain, reject or defer, the decision SHALL cite its exact candidate, independent correctness evidence, observed matched metrics or explicit unknowns and regressions, preserving the original baseline and first-divergence/failure records without inventing performance thresholds; a maintenance retain disposition for a change within the integration membership defined by SOPT-001 SHALL remain isolated until that baseline is preserved, while changes outside that membership are unaffected.
+WHEN a disposition changes from proposed to validated and then retain, reject or defer, the decision SHALL cite the exact candidate, independent correctness evidence, matched metrics or explicit unknowns, regressions, and preserved baseline/first-failure records. It SHALL invent no performance threshold.
 
 Retains: UIREQ-024, UIREQ-025, SCON-024, SRPOC-008, SRPOC-009. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).
 
 #### Scenario: SOPT-015-01 preserved behavior
-
 - **GIVEN** a source cleanup that passes equivalence and reduces net maintenance but has unknown native cost
 - **WHEN** a disposition is recorded
-- **THEN** source-cleanup acceptance and performance adoption have distinct scoped conclusions; maintenance retain within SOPT-001 integration membership remains isolated until its baseline is preserved, while changes outside that membership are unaffected
+- **THEN** source-cleanup acceptance and performance adoption have distinct scoped conclusions. A maintenance retain disposition within the SOPT-001 integration membership remains isolated until its baseline is preserved; changes outside that membership are unaffected
 
 #### Scenario: SOPT-015-02 boundary or incomplete evidence
 
 - **GIVEN** a sharing or fusion experiment with worse matched cost or failed equivalence
 - **WHEN** the result is disposed
-- **THEN** retain, reject or defer cites the regression and preserves the baseline and failed evidence
+- **THEN** retain, reject or defer cites the regression and preserves the baseline, first-divergence record, and failure evidence
 
 ### Requirement: SOPT-016 Retained requirements and evidence boundaries
 
