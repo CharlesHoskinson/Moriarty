@@ -1,0 +1,76 @@
+**Reviewer identity and top finding:** This is an independent non-author review by Muse Code powered by muse-wonder-1.0 HIGH. Earlier Opus labels are historical only.
+
+**Top finding:** The supplied source is eligible for the proposed source/API review and for exactly one prospective K compilation, subject to the binding gates below. No code-field-order defect was found in the inline material read. This does **not** approve hidden semantic expectations, runtime execution, Rust conformance, or any broader claim.
+
+No tools, commands, subject executions, provider executions, or private files were used. Hashes were treated as identifiers only; approval is based on reading the inline bodies, not on hashes alone.
+
+## 1. SOURCE/API eligibility
+
+**Verdict: APPROVE for source/API, prospective and source-only.**
+
+The API in [PUBLIC-API-AND-SCOPE.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/PUBLIC-API-AND-SCOPE.json) matches the declarations and model entry point:
+
+- Entry: `csObserveAll(CSCohort):CSObservations` in module `SHERLOCK-C6-COMPLETE-POSITIVE-HELPER-TASK-STATE`.
+- Output root: `csObservations` with eight fields in the declared order: schema, profile, case IDs, helper records, result records, task records, helper sections, state observations.
+- Case-ID order is helper/result/task/helper-section/state.
+- Task encoding is fixed at seven lanes for ValidateTask, EqualTask, and PairTask, with the declared Ref/visit/cursor field order.
+- Helper packing is header 4 + helper 23 + result 4 + tasks × 7, read back at offsets 4, 27, and 31.
+- Owned DATA uses exact owned vector lengths: header 7, data rows 5, field refs 2, env rows 5, value-slot refs 2. It does not use capacity padding or root-active truncation.
+- STATE packing is header 41 = 12 directory/context lanes + 29 caps, followed by image, DATA, and helper children in that order. Child starts, lengths, ends, and final cursor are derived from the actual packed lanes.
+- The root bridge is lossless in the supplied declarations: `ctRoot` arguments 0–15 are the sixteen root fields and argument 16 is the complete frame list; `csOwnedState` then separates root/frames, DATA, and helper.
+- `csOwnedState`, `csHelperSection`, `csStateObservation`, `csCaps`, `csContext`, and the list constructors match their registry and JSON position-map field orders.
+- The Python port in [state_ports.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/source/state_ports.py) is field-only: it builds and inverts declared DATA carriers and does not compute K lanes. It preserves None versus Some(0), Const versus Data, Bool, full UInt128, empty slices with raw starts, context with 29 caps, and the root16/frame17 split.
+- The nine tests in [test_state_ports.py](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/tests/test_state_ports.py) are meaningful positive carrier tests, but they remain **UNRUN**. No red/green cycle is claimed.
+
+The reused CT/CH record equations, the removal of old observer wrappers, and the absence of padded DATA packing are consistent with the supplied trim/reuse records. Historical ScalarStaged provenance comments are not treated as approval of the new scalar/task/STATE semantics.
+
+### Mandatory source/API fixes
+
+None found within the inline read scope for function names, constructor order, field order, lane widths, section geometry, or the eight-field observer.
+
+### Source/API limits
+
+- Hidden B39 semantic bodies and the complete expected `CSObservations` AST remain opaque. This review cannot independently rederive the expected lane values.
+- The ScalarStaged numeric map is source-derived/proposed in the supplied material; its hidden semantic endorsement is not independently established here.
+- Checked-cap success, native width fit, UInt128/usize/u8 fit, canonical padding/zero-init, and total-lane premises remain external premises. The K source checks selected magic/size/context conditions, but it is not a complete Rust checked-cap implementation.
+- The public Rust material consists of source cuts. The inventory itself states that not every parent primitive or checked-cap callee is repeated, so full Rust agreement is not established.
+- No helper execution, task execution, primitive/control publication transition, interpreter correspondence, malformed/refusal behavior, admission/auth policy, StepInv, native/SDK, refinement, whole-HOST, whole-39, or EARS claim is approved.
+
+## 2. EXACT1 ordinary K compile eligibility
+
+**Verdict: APPROVE for exactly one prospective compile, conditional on the Root gates below. Runtime remains ineligible.**
+
+The compile proposal in [PROPOSED-EXACT1-NEW-HELPER-TASK-STATE-COMPILE.json](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/PROPOSED-EXACT1-NEW-HELPER-TASK-STATE-COMPILE.json) is coherent:
+
+- Exactly one phase: `00-compile`.
+- Main file: [c6-complete-positive-helper-task-state-laws.k](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-complete-positive-HELPER-TASK-STATE-20261020/producer-source01/source/c6-complete-positive-helper-task-state-laws.k).
+- Main and syntax module: `SHERLOCK-C6-COMPLETE-POSITIVE-HELPER-TASK-STATE-LAWS`.
+- Backend: Haskell with `--no-haskell-binary`.
+- Source closure: the ten listed `.k` files, with `domains.md` supplied from the pinned K builtin include path.
+- No expected module is compiled.
+- Callback is the unchanged `F03.launch(record, phase.argv, dict(phase.environment), phase.cwd, phase.environment[SHERLOCK_K_ATTEMPT_TOKEN], 536870912)` callable from the supplied launch closure.
+- Limits are concrete: 30 s wall, 3 s sweep, core 0, hard file-size limit 512 MiB, umask 077, new process group/token sweep, JVM heap 512 MiB, stack 32 MiB, two processors. No aggregate CPU/RSS/disk cap is established; that limitation is explicitly recorded rather than hidden.
+
+### Mandatory compile gates
+
+These are binding conditions, not optional improvements:
+
+1. **Root precheck:** Recheck every frozen source, test, SAFE input/contract, public Rust excerpt, tool/JAR/builtin, callback, and manifest pin immediately before dispatch. This reviewer did not recompute hashes, so currentness cannot rest on this review alone.
+2. **Fresh actual area:** Create only the fresh compile working directories required by the plan, with `cwd`, `home`, and `tmp` at 0700. Ensure the proposed kompiled output path is absent before dispatch. Preserve the full launch record and raw stdout/stderr even on failure.
+3. **F03 use:** Use only the imported `F03.launch` callable for this single child. Do not execute the old F03 script’s hard-wired attempt path, ledger, retry, or stage machinery.
+4. **Single-child rule:** Run only this genuinely new compile. Do not replay earlier META/CTX/DATA/helper compiles, the nine Python tests, any K runtime, or any expected-body read.
+5. **Post-compile inventory:** If compilation succeeds, inventory, fsync, and hash **all** actual products. The conventional fifteen-file expectation is not authoritative; the actual inventory is. The proposal’s single named product, `definition.kore`, must not be treated as a complete inventory.
+6. **Label qualification:** Only after actual compilation, qualify the 264 DATA constructors plus `csObserveAll` — 265 labels total — from actual symbol/klabel attributes, sorts, arity, source, and location. Do not reuse old maps or guess bare `Lbl...` names.
+7. **Diagnostics:** Read and classify the complete compile diagnostic stream against the source and preserve its raw bytes. A successful compile is not semantic approval.
+
+If any gate fails, the correct outcome is stop/report, not retry under a changed runner or guessed labels.
+
+### Compile/runtime limits
+
+- Actual compiled fifteen-file membership is currently **UNBOUND**.
+- Actual compiled labels for the 264 DATA constructors and `csObserveAll` are currently **UNBOUND**.
+- Runtime is **not eligible** until the actual label map and file membership exist and the designated-owner guarded JSONv4 rendering, strict print parsing, capture, comparison, dependency, and stdlib bindings receive fresh applicable review.
+- The field port does not replace that later designated-owner guarded parser/comparator.
+- No Quint model, actual product, or expected body was supplied or consulted for this decision.
+
+**Final disposition:** `SOURCE/API: APPROVE_PROSPECTIVE`. `EXACT1 COMPILE: APPROVE_ONE_CONDITIONAL`. `RUNTIME AND SEMANTIC CLAIMS: NOT APPROVED`.

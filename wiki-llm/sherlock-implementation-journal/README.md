@@ -2,6 +2,8 @@
 
 This journal records implementation findings, design decisions, short rationales, measured results and open questions as Sherlock develops. It is a working narrative in `wiki-llm/`, separate from the canonical `wiki/` source/claim ledger and the acceptance roadmap. It contains no private reasoning transcripts or private-fork material.
 
+- [October19: body-typed nominal normal Core and selected handler](2026-10-19-nominal-body-typed-handler.md) — actual24-operation qualification; whole backend-linked executable/native/target work remains open.
+
 - [October 16: complete observations and the first implementation comparisons](2026-10-16.md)
 - [Implementation plan](../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md)
 - [Correctness loop](../../docs/SHERLOCK-CORRECTNESS-LOOP.md)
@@ -27,3 +29,10 @@ The circuit atlas remains the separate visual concept log, with its own authorsh
 - [October18: financial await-prefix publication](2026-10-18-financial-await-prefix.md) — complete host-reference comparisons, strict-consumer compatibility and preserved historical wire cuts; no new circuit iteration.
 
 - [October18: literal035 adoption, Clean theorem slice and checked-Add source](2026-10-18-literal035-clean-circuit.md) — current16 cut, qualified Fenrir merge and unrun circuit source remain distinct.
+
+
+## October 22 workflow audit
+
+[Current source, factory improvements and next demonstrations](../doctorwatson-workflow-review-2026-10-22.md)
+include the graph/wiki/Git cleanup phase required after each cycle. Historical
+entries and the circuit atlas remain preserved at their recorded scope.

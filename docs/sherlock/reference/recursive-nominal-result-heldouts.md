@@ -1,0 +1,9 @@
+# Observe complete recursive nominal results
+
+On October 20, 2026, two closed-source `JoinedPayload` entry cases completed bodychecking, owner admission and execution to `Halted` through the production nominal compile handler. The independent safe result reports complete recursive typed-value equality, ordered generic arguments and constructor fields, and source/config/target binding equality. See the [complete result archive](../../results/sherlock-recursive-generic-adt-results-20261020/README.md).
+
+The retained consumer selects `sherlock-helper-microstep/1` and `moriarty-sherlock-nominal-body-typed/1` with `--entry --observe`, using production compile `Args`, source IO, handler and publication code. It takes `SOURCE CONFIG TARGET NEWDIR`; it does not dispatch on case names or parse an expected result. The two input programs exercise recursive append/invert and an ordinary package call returning `Payload<Chain<UInt>,Chain<Bool>>`, with declaration-order fields distinct from lexical name order.
+
+The ordinary link and both captures returned zero. Both complete production artifacts were frozen before the independent comparison. The archive retains source-time records, actual commands/results/streams/dependencies, full artifact bytes as lossless gzip, and the permitted body-free independent result. Protected oracle/checker/projector/derivation bodies remain undisclosed. The archive documents observed results; no command in this page was newly executed by its author.
+
+This adds finite observation evidence without changing compiler behavior. Closed-source entry execution supplies no external recursive nominal JSON decoder or input binding. Whole owner-state/table/trace equality, resource-sufficiency or termination theorem, universal generic/compiler correctness, default-backend CLI build, financial effects, constraints/proof/SDK/native/target, global refinement, full B04 and EARS closure remain unestablished by this check.

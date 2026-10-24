@@ -1,0 +1,50 @@
+## Verdict: APPROVE
+
+Reviewer identity: Muse Code powered by muse-wonder-1.0, acting as the independent non-author reviewer. No tools, commands, files, subjects, or providers were executed during this review.
+
+No blocking fixes are required for the stated, narrowly scoped revision02 capture.
+
+### Substantive findings
+
+- The null-variant change is correctly implemented in [the positive consumer source](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/Chunk3B-positive-helper-result-public-consumer-20261020-revision02-null-variant/source/helper_result_positive_consumer.rs).
+  - For an absent helper or result, `variant` receives the raw JSON token `null`.
+  - For a present carrier, `variant` remains a quoted exact public variant string.
+  - This matches [the additive null declaration](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/independent-actual-c6-programview-interface-oracle-20261019/Chunk3B-positive-helper-result-20261020/SAFE/VARIANT-NULL-CLARIFICATION-01.json).
+  - The change does not alter the separate decoded-carrier representation: an absent decoded helper or result also remains JSON `null`.
+
+- [The exact-two-expression inverse record](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/Chunk3B-positive-helper-result-public-consumer-20261020-revision02-null-variant/EXACT-TWO-EXPRESSION-INVERSE.json) identifies exactly the two intended expressions. On the inline evidence, no numeric literal, codec call, lane construction, decoded-carrier convention, cap, or provenance expression is changed by revision02.
+
+- [The typed SAFE inputs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/Chunk3B-positive-helper-result-public-consumer-20261020-revision02-null-variant/source/positive_inputs.rs) preserve the SAFE case IDs and ordering for the 11 helper cases and 20 result cases. The supplied static literal-inverse checker is structurally consistent with that claim, although its result was not independently rerun here.
+
+- The consumer exercises the public record and section codec paths coherently:
+  - helper and result record encode/decode roundtrips are checked against the supplied typed inputs;
+  - section slices are checked against the corresponding record lanes;
+  - empty-task sections are checked against the fixed 31-lane length;
+  - decoded section carriers are compared with the constructed tables.
+
+- The helper and result JSON serializers cover every non-Scalar helper variant present in the cohort and every declared result variant present in the cohort. Field names and field order correspond to the supplied public carrier declarations.
+
+- The uniform 4096 caps are conservatively above every capped index, count, slice end, cursor, type, constructor, arm, function, environment, and field-slot value used by the positive cohort, based on inspection of the supplied caps rules. This is not an admission or reachability claim.
+
+- [The exact-two-operation plan](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/Chunk3B-positive-helper-result-public-consumer-20261020-revision02-null-variant/EXACT-TWO-PROPOSED-OPERATIONS.json) remains appropriately bounded:
+  - one external compile and one capture;
+  - no Core rebuild;
+  - no test replay;
+  - serial fail-stop execution with no retry;
+  - closed stdin and bounded retained streams;
+  - byte-pinned staged rlib with destination absence and no overwrite;
+  - actuals must be durably frozen before the private vector body is opened.
+
+### Explicitly missing or unproven premises
+
+- The consumer remains **uncompiled and unrun**. Compilation, linking, execution, exit status, stdout completeness, and empty stderr are not proven by this review.
+- Hash equality was **not** used as the basis for approval and was not independently recomputed under the no-tool constraint.
+- `HelperControlC::Scalar` and the independent `ScalarStaged` tag mapping remain **open**. No Scalar helper approval is given.
+- Task-record codec behavior is outside this approval because every selected section has an empty task vector.
+- Owned-image convenience functions, full ABI behavior, admission, state reachability, helper semantics, hostile/security behavior, native behavior, and EARS acceptance are outside scope.
+- The inline material does not independently prove every external module-path and tuple-field visibility detail needed by the compiler. The proposed compile operation is the correct gate for those API-resolution questions; failure there must fail-stop rather than be treated as capture success.
+- Root enforcement of freeze-before-unblinding is a procedural requirement in [the source and capture contract](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/Chunk3B-positive-helper-result-public-consumer-20261020-revision02-null-variant/SOURCE-AND-CAPTURE-CONTRACT.md), not something proved by the consumer source itself.
+
+### Scope of approval
+
+APPROVE applies only to selecting revision02 for the proposed fresh compile-and-capture operation and, if that operation succeeds under its stated gates, to Root’s later whole-array comparison of `helper_vectors` and `result_vectors` after durable actual freezing. It is not approval of the Scalar helper mapping, task codec, full section expectations, admission, semantics, security, native execution, or final ABI qualification.

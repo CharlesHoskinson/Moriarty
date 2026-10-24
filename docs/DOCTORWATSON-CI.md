@@ -13,7 +13,12 @@ in order and stops on the first nonzero exit:
 ```bash
 python3 models/sherlock/qa/check.py
 python3 -m unittest discover -s models/sherlock/qa -p 'test_*.py' -v
+python3 -m unittest discover -s models/doctorwatson -p 'test_*.py' -v
 ```
+
+The explicit `--execute`, `--inspect` and `--test-selected` delivery
+routes never fall through to this default QA path; see
+[DOCTORWATSON-DELIVERY.md](DOCTORWATSON-DELIVERY.md).
 
 An existing Python 3.10 or newer interpreter and its standard library suffice. The
 default entrypoint installs no packages and invokes no network services, GitHub Actions,

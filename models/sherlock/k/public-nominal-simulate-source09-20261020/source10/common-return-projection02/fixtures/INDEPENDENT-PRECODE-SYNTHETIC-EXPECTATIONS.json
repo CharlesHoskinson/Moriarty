@@ -1,0 +1,365 @@
+{
+  "schema": "common-return-projection-source-derived-synthetic-unit-expectations/1",
+  "qualification": "same Sol author manually specified before implementation, independent of candidate execution and actual capture values; not a fresh independent oracle vote",
+  "cases": [
+    {
+      "id": "uint-zero",
+      "np": {
+        "UInt": 0
+      },
+      "ng": {
+        "UInt": 0
+      },
+      "expected": {
+        "kind": "UInt",
+        "runtimeTypeId": 0,
+        "value": "0"
+      }
+    },
+    {
+      "id": "uint-max",
+      "np": {
+        "UInt": 340282366920938463463374607431768211455
+      },
+      "ng": {
+        "UInt": 340282366920938463463374607431768211455
+      },
+      "expected": {
+        "kind": "UInt",
+        "runtimeTypeId": 0,
+        "value": "340282366920938463463374607431768211455"
+      }
+    },
+    {
+      "id": "bool-false",
+      "np": {
+        "Bool": false
+      },
+      "ng": {
+        "Bool": false
+      },
+      "expected": {
+        "kind": "Bool",
+        "runtimeTypeId": 1,
+        "value": false
+      }
+    },
+    {
+      "id": "bool-true",
+      "np": {
+        "Bool": true
+      },
+      "ng": {
+        "Bool": true
+      },
+      "expected": {
+        "kind": "Bool",
+        "runtimeTypeId": 1,
+        "value": true
+      }
+    },
+    {
+      "id": "nominal-absent",
+      "np": {
+        "Nominal": {
+          "type": {
+            "kind": "Nominal",
+            "name": "MaybeNumber",
+            "arguments": [
+              {
+                "kind": "UInt"
+              }
+            ]
+          },
+          "constructor": "Absent",
+          "fields": []
+        }
+      },
+      "ng": {
+        "Nominal": {
+          "type_id": 4,
+          "ctor_id": 0,
+          "fields": []
+        }
+      },
+      "expected": {
+        "kind": "Constructor",
+        "runtimeTypeId": 4,
+        "runtimeCtorId": 0,
+        "fields": []
+      }
+    },
+    {
+      "id": "nominal-present-zero",
+      "np": {
+        "Nominal": {
+          "type": {
+            "kind": "Nominal",
+            "name": "MaybeNumber",
+            "arguments": [
+              {
+                "kind": "UInt"
+              }
+            ]
+          },
+          "constructor": "Present",
+          "fields": [
+            {
+              "name": "item",
+              "value": {
+                "UInt": 0
+              }
+            }
+          ]
+        }
+      },
+      "ng": {
+        "Nominal": {
+          "type_id": 4,
+          "ctor_id": 1,
+          "fields": [
+            {
+              "UInt": 0
+            }
+          ]
+        }
+      },
+      "expected": {
+        "kind": "Constructor",
+        "runtimeTypeId": 4,
+        "runtimeCtorId": 1,
+        "fields": [
+          {
+            "kind": "UInt",
+            "runtimeTypeId": 0,
+            "value": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "nested-generic-and-bool",
+      "np": {
+        "Nominal": {
+          "type": {
+            "kind": "Nominal",
+            "name": "Parcel",
+            "arguments": [
+              {
+                "kind": "Nominal",
+                "name": "MaybeNumber",
+                "arguments": [
+                  {
+                    "kind": "UInt"
+                  }
+                ]
+              },
+              {
+                "kind": "Bool"
+              }
+            ]
+          },
+          "constructor": "Parcel",
+          "fields": [
+            {
+              "name": "z_first",
+              "value": {
+                "Nominal": {
+                  "type": {
+                    "kind": "Nominal",
+                    "name": "MaybeNumber",
+                    "arguments": [
+                      {
+                        "kind": "UInt"
+                      }
+                    ]
+                  },
+                  "constructor": "Present",
+                  "fields": [
+                    {
+                      "name": "item",
+                      "value": {
+                        "UInt": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "a_second",
+              "value": {
+                "Bool": false
+              }
+            }
+          ]
+        }
+      },
+      "ng": {
+        "Nominal": {
+          "type_id": 5,
+          "ctor_id": 2,
+          "fields": [
+            {
+              "Nominal": {
+                "type_id": 4,
+                "ctor_id": 1,
+                "fields": [
+                  {
+                    "UInt": 0
+                  }
+                ]
+              }
+            },
+            {
+              "Bool": false
+            }
+          ]
+        }
+      },
+      "expected": {
+        "kind": "Constructor",
+        "runtimeTypeId": 5,
+        "runtimeCtorId": 2,
+        "fields": [
+          {
+            "kind": "Constructor",
+            "runtimeTypeId": 4,
+            "runtimeCtorId": 1,
+            "fields": [
+              {
+                "kind": "UInt",
+                "runtimeTypeId": 0,
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "kind": "Bool",
+            "runtimeTypeId": 1,
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "declaration-identity-six",
+      "np": {
+        "Nominal": {
+          "type": {
+            "kind": "Nominal",
+            "name": "Coin",
+            "arguments": []
+          },
+          "constructor": "Mint",
+          "fields": []
+        }
+      },
+      "ng": {
+        "Nominal": {
+          "type_id": 6,
+          "ctor_id": 3,
+          "fields": []
+        }
+      },
+      "expected": {
+        "kind": "Constructor",
+        "runtimeTypeId": 6,
+        "runtimeCtorId": 3,
+        "fields": []
+      }
+    },
+    {
+      "id": "declaration-identity-seven",
+      "np": {
+        "Nominal": {
+          "type": {
+            "kind": "Nominal",
+            "name": "Coin",
+            "arguments": []
+          },
+          "constructor": "Mint",
+          "fields": []
+        }
+      },
+      "ng": {
+        "Nominal": {
+          "type_id": 7,
+          "ctor_id": 4,
+          "fields": []
+        }
+      },
+      "expected": {
+        "kind": "Constructor",
+        "runtimeTypeId": 7,
+        "runtimeCtorId": 4,
+        "fields": []
+      }
+    },
+    {
+      "id": "nonalphabetical-equal-field-types",
+      "np": {
+        "Nominal": {
+          "type": {
+            "kind": "Nominal",
+            "name": "Ordered",
+            "arguments": [
+              {
+                "kind": "UInt"
+              },
+              {
+                "kind": "UInt"
+              }
+            ]
+          },
+          "constructor": "Ordered",
+          "fields": [
+            {
+              "name": "z_first",
+              "value": {
+                "UInt": 13
+              }
+            },
+            {
+              "name": "a_second",
+              "value": {
+                "UInt": 29
+              }
+            }
+          ]
+        }
+      },
+      "ng": {
+        "Nominal": {
+          "type_id": 8,
+          "ctor_id": 5,
+          "fields": [
+            {
+              "UInt": 13
+            },
+            {
+              "UInt": 29
+            }
+          ]
+        }
+      },
+      "expected": {
+        "kind": "Constructor",
+        "runtimeTypeId": 8,
+        "runtimeCtorId": 5,
+        "fields": [
+          {
+            "kind": "UInt",
+            "runtimeTypeId": 0,
+            "value": "13"
+          },
+          {
+            "kind": "UInt",
+            "runtimeTypeId": 0,
+            "value": "29"
+          }
+        ]
+      }
+    }
+  ]
+}

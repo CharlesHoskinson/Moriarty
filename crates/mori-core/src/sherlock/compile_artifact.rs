@@ -1,15 +1,14 @@
 //! Selected Core scalar or explicit dedicated-draft HostOnly B preparation.
 //! Source candidate only: no constraint plan, native export or target execution.
-//! Both source routes use the existing B owner. Only the unchanged Core route
-//! has an explicit observe branch; draft preparation never executes B steps.
+//! Source routes use the existing B owner. Core scalar and body-typed nominal
+//! support explicit observation; dedicated draft compilation remains compile-only.
 use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::{json, Value};
 use crate::sherlock::helper_machine::core_action_consumer::{
     preflight_action_inputs, preflight_source_global, prepare_scalar_action_host,
-    run_scalar_action, validate_config, ConsumerError,
+    validate_config, ConsumerError,
 };
-use crate::sherlock::helper_machine::shared::StepEventC;
 use crate::sherlock_source::ScalarActionReport;
 
 #[path = "compile_artifact/config.rs"]
@@ -32,12 +31,28 @@ pub mod draft_reference;
 // Public typed ExtProgram compiler using the actual checked owner admission ABI.
 #[path = "compile_artifact/ext_compile.rs"]
 pub mod ext_compile;
+#[path = "compile_artifact/nominal_command.rs"]
+pub mod nominal_command;
+// Selected all-body nominal profile; raw nominal command remains structural.
+#[path = "compile_artifact/nominal_body_compile.rs"]
+pub mod nominal_body_compile;
+#[path = "compile_artifact/nominal_body_command.rs"]
+pub mod nominal_body_command;
 #[path = "compile_artifact/draft_simulation_report.rs"]
 pub mod draft_simulation_report;
 #[path = "compile_artifact/draft_diagnostics.rs"]
 mod draft_diagnostics;
 use config::ExecutionConfig;
 use wire::OwnerWire;
+
+#[path = "compile_artifact/complete_trace_wire.rs"]
+mod complete_trace_wire;
+#[path = "compile_artifact/core_observation.rs"]
+mod core_observation;
+
+pub use complete_trace_wire::{
+    reconstruct_step_host_snapshot, TRACE_FORMAT, TRACE_SERIALIZATION_BUDGET,
+};
 
 pub const EXECUTION_PROFILE: &str = "sherlock-helper-microstep/1";
 
@@ -68,6 +83,10 @@ pub enum Observation {
         events_forwarded: String,
         image: Value,
         resource_report: crate::sherlock::helper_machine::resource_report::ResourceReport,
+        /// Complete owner records under `TRACE_FORMAT` (`"sherlock-core1-complete-trace/2"`)
+        /// bounded per-projection by `admission.bounds.serialization_bytes` and across
+        /// the trace by `derive_trace_serialization_budget` / `crate::json::parse_limited`.
+        complete_trace: Value,
     },
 }
 impl CompileArtifact {
@@ -77,8 +96,18 @@ impl CompileArtifact {
             Observation::NotRequested { .. } => (false, "0".to_owned(), false),
             Observation::Observed { events_forwarded, .. } => (true, events_forwarded.clone(), true),
         };
-        CompileFailure { stage, actual_error:json!({"message":message.into()}),
+        let mut actual_error = json!({"message":message.into()});
+        if let Observation::Observed { complete_trace, .. } = &self.observation {
+            actual_error["complete_trace"] = complete_trace.clone();
+        }
+        CompileFailure { stage, actual_error,
             evaluation_performed, events_forwarded, completed }
+    }
+    /// Serialize the completed artifact manifest, reporting any serializer error
+    /// at the `"serialization"` stage while preserving completed-run metadata.
+    pub fn manifest(&self) -> Result<String, CompileFailure> {
+        serde_json::to_string_pretty(self)
+            .map_err(|error| self.failure("serialization", error.to_string()))
     }
 }
 
@@ -88,7 +117,20 @@ pub struct SourceIdentity {
     pub action: String, pub action_index: String, pub source_digest: String,
 }
 #[derive(Serialize)]
-pub struct InputPolicy { pub kind: &'static str, pub declared: Vec<String>, pub supplied: Vec<String> }
+pub struct InputPolicy {
+    pub kind: &'static str,
+    pub declared: Vec<String>,
+    pub supplied: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding: Option<InputBinding>,
+}
+/// Visible concrete entry arguments and the digest of the original input text.
+/// Values bind an input-specific admitted program, not private witnesses.
+#[derive(Serialize)]
+pub struct InputBinding {
+    pub values: BTreeMap<String, crate::Value>,
+    pub file_digest: String,
+}
 #[derive(Serialize)]
 pub struct ConfigIdentity { #[serde(flatten)] pub fields: ExecutionConfig, pub file_digest: String }
 #[derive(Serialize)]
@@ -116,6 +158,125 @@ impl CompileFailure {
     pub fn input(stage: &'static str, error: impl Into<String>) -> Self {
         Self { stage, actual_error: json!({"message":error.into()}),
             evaluation_performed:false, events_forwarded:"0".into(), completed:false }
+    }
+    /// Export this failure through `crate::json::export`. Normal normalized traces
+    /// pass `crate::json::export(self)` directly; if a caller constructs an oversized
+    /// diagnostic exceeding the 1 MiB / 65,536-node / 32-depth exporter bounds,
+    /// preserve `stage`, `evaluation_performed`, `events_forwarded`, `completed`,
+    /// all non-trace error metadata (`message`, `failure_boundary`,
+    /// `serialization_error`, `violation`), and the largest fitting prefix of
+    /// `complete_trace`.
+    pub fn export_diagnostic(&self) -> Result<String, crate::Error> {
+        let first_error = match crate::json::export(self) {
+            Ok(diagnostic) => return Ok(diagnostic),
+            Err(error) => error,
+        };
+        if let Some(trace_obj) = self
+            .actual_error
+            .get("complete_trace")
+            .and_then(Value::as_object)
+        {
+            let records = trace_obj
+                .get("records")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let build_candidate = |keep: usize, include_snapshots: bool| -> Self {
+                let mut err_map = self
+                    .actual_error
+                    .as_object()
+                    .cloned()
+                    .unwrap_or_default();
+                err_map.insert("diagnostic_export_error".into(), json!(&first_error));
+                let mut trimmed = serde_json::Map::new();
+                if let Some(fmt) = trace_obj.get("format") {
+                    trimmed.insert("format".into(), fmt.clone());
+                }
+                if include_snapshots {
+                    if let Some(init) = trace_obj.get("initial") {
+                        trimmed.insert("initial".into(), init.clone());
+                    }
+                } else {
+                    trimmed.insert("initial".into(), Value::Null);
+                }
+                if let Some(qual) = trace_obj.get("qualification") {
+                    trimmed.insert("qualification".into(), qual.clone());
+                }
+                trimmed.insert(
+                    "records".into(),
+                    Value::Array(records.iter().take(keep).cloned().collect()),
+                );
+                trimmed.insert("retained_records".into(), Value::String(keep.to_string()));
+                if include_snapshots {
+                    if let Some(ret) = trace_obj.get("returned") {
+                        trimmed.insert("returned".into(), ret.clone());
+                    }
+                }
+                if let Some(budget) = trace_obj.get("serialization_budget") {
+                    trimmed.insert("serialization_budget".into(), budget.clone());
+                }
+                err_map.insert("complete_trace".into(), Value::Object(trimmed));
+                Self {
+                    stage: self.stage,
+                    actual_error: Value::Object(err_map),
+                    evaluation_performed: self.evaluation_performed,
+                    events_forwarded: self.events_forwarded.clone(),
+                    completed: self.completed,
+                }
+            };
+            if let Ok(zero_export) = crate::json::export(&build_candidate(0, true)) {
+                let mut low = 0usize;
+                let mut high = records.len();
+                let mut best = zero_export;
+                while low < high {
+                    let mid = low + (high - low + 1) / 2;
+                    if let Ok(candidate_export) = crate::json::export(&build_candidate(mid, true)) {
+                        low = mid;
+                        best = candidate_export;
+                    } else {
+                        high = mid - 1;
+                    }
+                }
+                return Ok(best);
+            }
+            if let Ok(meta_export) = crate::json::export(&build_candidate(0, false)) {
+                return Ok(meta_export);
+            }
+        }
+        let mut fallback_map = self
+            .actual_error
+            .as_object()
+            .cloned()
+            .unwrap_or_default();
+        fallback_map.insert("diagnostic_export_error".into(), json!(&first_error));
+        if fallback_map.contains_key("complete_trace") {
+            fallback_map.insert("complete_trace".into(), Value::Null);
+        }
+        let without_trace = Self {
+            stage: self.stage,
+            actual_error: Value::Object(fallback_map.clone()),
+            evaluation_performed: self.evaluation_performed,
+            events_forwarded: self.events_forwarded.clone(),
+            completed: self.completed,
+        };
+        if let Ok(exported) = crate::json::export(&without_trace) {
+            return Ok(exported);
+        }
+        if let Some(fb) = fallback_map
+            .get_mut("failure_boundary")
+            .and_then(Value::as_object_mut)
+        {
+            fb.remove("before");
+            fb.remove("after");
+        }
+        let compact_boundary = Self {
+            stage: self.stage,
+            actual_error: Value::Object(fallback_map),
+            evaluation_performed: self.evaluation_performed,
+            events_forwarded: self.events_forwarded.clone(),
+            completed: self.completed,
+        };
+        crate::json::export(&compact_boundary)
     }
     fn core(stage: &'static str, error: crate::Error) -> Self {
         Self { stage, actual_error:json!(error), evaluation_performed:false,
@@ -181,20 +342,61 @@ pub fn compile_host(
     target_source: &str,
     observe: bool,
 ) -> Result<CompileArtifact, CompileFailure> {
+    compile_host_mode(source, action_name, config_source, target_source,
+        InputMode::LegacyEmpty, observe)
+}
+
+/// Bind an explicit typed map through the existing scalar prepare/run consumer.
+/// Uses the same strict JSON and Value/UInt decoding as other Core inputs.
+/// Typed values remain visible; no Scenario state, private witness, new guard,
+/// native exporter or fixed program identity is introduced by this route.
+pub fn compile_host_with_inputs(
+    source: &str,
+    action_name: &str,
+    config_source: &str,
+    target_source: &str,
+    inputs_source: &str,
+    observe: bool,
+) -> Result<CompileArtifact, CompileFailure> {
+    compile_host_mode(source, action_name, config_source, target_source,
+        InputMode::ExplicitTypedMap(inputs_source), observe)
+}
+
+enum InputMode<'a> { LegacyEmpty, ExplicitTypedMap(&'a str) }
+
+fn compile_host_mode(
+    source: &str,
+    action_name: &str,
+    config_source: &str,
+    target_source: &str,
+    mode: InputMode<'_>,
+    observe: bool,
+) -> Result<CompileArtifact, CompileFailure> {
     let config = parse_config(config_source)?;
     let consumer = config.consumer().map_err(|error| CompileFailure::input("config", error))?;
     let target_descriptor = crate::json::parse(target_source)
         .map_err(|error| CompileFailure::core("config", error))?;
     validate_config(&consumer)
         .map_err(|error| CompileFailure::consumer(ConsumerError::HostGuard(error)))?;
+    // New mode only: config/target/config policy retain precedence. Decode the
+    // entire map before source parsing; original codec failures keep their text.
+    let (inputs, binding_digest) = match mode {
+        InputMode::LegacyEmpty => (BTreeMap::<String, crate::Value>::new(), None),
+        InputMode::ExplicitTypedMap(text) => {
+            let value = crate::json::parse(text)
+                .map_err(|error| CompileFailure::core("inputs", error))?;
+            let inputs: BTreeMap<String, crate::Value> = serde_json::from_value(value)
+                .map_err(|error| CompileFailure::input("inputs", error.to_string()))?;
+            (inputs, Some(crate::intent::hash_bytes(text.as_bytes())))
+        }
+    };
     let program = crate::parse(source).map_err(|error| CompileFailure::core("parse", error))?;
     preflight_source_global(&program, &consumer).map_err(CompileFailure::consumer)?;
     let action_index = program.actions.iter().position(|action| action.name == action_name)
         .ok_or_else(|| CompileFailure::input("select", format!("unknown action: {action_name}")))?;
-    let inputs = BTreeMap::<String, crate::Value>::new();
     let action = preflight_action_inputs(&program, action_index, &inputs, &consumer)
         .map_err(CompileFailure::consumer)?;
-    if !action.inputs.is_empty() {
+    if binding_digest.is_none() && !action.inputs.is_empty() {
         return Err(CompileFailure {
             stage:"select", actual_error:json!({"unsupported":"parameterized-action",
                 "action":action.name, "action_index":action_index.to_string(),
@@ -202,19 +404,27 @@ pub fn compile_host(
             events_forwarded:"0".into(), completed:false,
         });
     }
-    // Each branch owns exactly one admission/image pair. In observe mode the
-    // pair comes only from run_scalar_action, never a separate first preparation.
+    let (kind, declared, supplied) = if binding_digest.is_some() {
+        ("explicit-typed-map", action.inputs.iter().map(|input| input.name.clone()).collect(),
+            inputs.keys().cloned().collect())
+    } else {
+        ("parameter-free", vec![], vec![])
+    };
+    // Each branch owns exactly one admission/image pair. Observe mode consumes
+    // that same shared preparation through record_step; no second admission.
     let (preparation, admission, observation) = if observe {
-        let mut sink = |_event: &StepEventC| {};
-        let run = run_scalar_action(&program, action_index, &inputs, &consumer, &mut sink)
+        let prepared = prepare_scalar_action_host(&program, action_index, &inputs, &consumer)
             .map_err(CompileFailure::consumer)?;
-        let actual = run.observe().map_err(CompileFailure::consumer)?;
+        let (run, complete_trace) = core_observation::run(prepared)?;
+        let actual = run.observe().map_err(|error|
+            core_observation::attach_completed_trace(CompileFailure::consumer(error), &complete_trace))?;
         let admission = wire::admission(&actual);
-        let resource = run.resource_report().map_err(CompileFailure::consumer)?;
+        let resource = run.resource_report().map_err(|error|
+            core_observation::attach_completed_trace(CompileFailure::consumer(error), &complete_trace))?;
         let observation = Observation::Observed {
             evaluation_performed:true, summary:run.completed.summary.owner_wire(),
             events_forwarded:run.completed.events_forwarded.to_string(),
-            image:wire::image(&actual.image), resource_report:resource,
+            image:wire::image(&actual.image), resource_report:resource, complete_trace,
         };
         (run.preparation, admission, observation)
     } else {
@@ -235,7 +445,8 @@ pub fn compile_host(
             agreement:program.name, action:action_name.to_owned(), action_index:action_index.to_string(),
             source_digest:crate::intent::hash_bytes(source.as_bytes()) },
         execution_profile:EXECUTION_PROFILE,
-        input_policy:InputPolicy { kind:"parameter-free", declared:vec![], supplied:vec![] },
+        input_policy:InputPolicy { kind, declared, supplied,
+            binding:binding_digest.map(|file_digest| InputBinding { values:inputs, file_digest }) },
         config:ConfigIdentity { fields:config.clone(), file_digest:crate::intent::hash_bytes(config_source.as_bytes()) },
         target:TargetDescriptor { descriptor:target_descriptor,
             file_digest:crate::intent::hash_bytes(target_source.as_bytes()) },

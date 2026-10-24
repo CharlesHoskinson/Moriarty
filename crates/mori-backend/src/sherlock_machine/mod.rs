@@ -371,3 +371,211 @@ mod b_scalar_completion_normal_tests;
 mod b_return_right_completion_normal_tests;
 #[cfg(test)]
 mod b_admin_publication_normal_tests;
+
+pub mod c6_a135_push;
+pub mod c6_data_canonical;
+pub mod c6_meta_canonical;
+pub mod c6_program_context_canonical;
+pub mod c6_helper_canonical;
+pub mod c6_push_step;
+pub mod c6_scalar_failure_step;
+pub mod c6_scalar_exit_step;
+pub mod c6_scalar_exit_consumer;
+pub mod c6_checked_value_read;
+pub mod c6_scalar_tag_step;
+pub mod c6_scalar_tag_consumer;
+pub mod c6_scalar_arithmetic_step;
+pub mod c6_scalar_arithmetic_consumer;
+pub mod c6_return_left_step;
+mod c6_return_left_consumer;
+pub mod c6_return_right_step;
+mod c6_return_right_consumer;
+pub mod c6_return_scope_step;
+mod c6_return_scope_consumer;
+pub mod c6_return_call_step;
+mod c6_return_call_consumer;
+pub mod c6_scalar_entry_step;
+pub mod c6_scalar_entry_consumer;
+pub mod c6_validate_field_step;
+pub mod c6_validate_field_consumer;
+#[cfg(test)]
+mod c6_scalar_tag_step_tests;
+#[cfg(test)]
+mod c6_checked_value_read_tests;
+#[cfg(test)]
+mod c6_scalar_arithmetic_step_tests;
+#[cfg(test)]
+mod c6_scalar_entry_step_tests;
+#[cfg(test)]
+mod c6_validate_field_step_tests;
+#[cfg(test)]
+mod c6_validate_field_consumer_raw_tests;
+pub use c6_a135_push::{
+    c6_lanes_to_immediates, c6_push_family, emit_c6_push_observed_operands, C6PushOperands,
+    C6_A135_FAMILY, C6_A140_FAMILY,
+};
+pub use c6_data_canonical::{
+    c6_data_geometry, emit_c6_data_canonical_block, C6DataCanonicalBlock,
+    C6DataCanonicalEmitter, C6DataCanonicalError, C6DataCanonicalInputs, C6DataGeometry,
+};
+pub use c6_meta_canonical::{
+    emit_c6_meta_bound_canonical_block, emit_c6_meta_canonical_block, C6MetaBoundCanonicalInputs,
+    C6MetaCanonicalBlock, C6MetaCanonicalEmitter, C6MetaCanonicalError, C6MetaCanonicalInputs,
+    C6MetaConfigBinding,
+};
+pub use c6_program_context_canonical::{
+    emit_c6_program_context_canonical_block, emit_c6_program_context_ctx_binding_block,
+    C6ProgramContextCanonicalBlock, C6ProgramContextCanonicalEmitter,
+    C6ProgramContextCanonicalError, C6ProgramContextCanonicalInputs,
+    C6ProgramContextCtxBindingInputs,
+};
+pub use c6_push_step::{
+    check_c6_push_step_circuit, decode_padded_state_to_owned,
+    emit_c6_push_step_block, encode_owned_state_to_padded, meta_admission_bounds_frames_offset,
+    witness_from_host_pair, witness_from_owner_step, C6PaddedCarrierGeometry,
+    C6PaddedStateLanes, C6PushFamilyParams, C6PushHostPrefixLanes, C6PushStatementBindingMode,
+    C6PushStepBlock, C6PushStepCircuit, C6PushStepError, C6PushStepInputs,
+    C6PushStepWitness, C6_PADDED_CARRIER_VERSION,
+};
+pub use c6_helper_canonical::{
+    c6_helper_geometry, emit_c6_helper_canonical_block, C6HelperCanonicalBlock,
+    C6HelperCanonicalEmitter, C6HelperCanonicalError, C6HelperCanonicalInputs, C6HelperGeometry,
+};
+pub use c6_scalar_failure_step::{
+    build_c6_scalar_failure_step_circuit, check_c6_scalar_failure_step_circuit,
+    emit_c6_scalar_failure_step_block, record_scalar_failure_step, witness_from_host_pair as witness_scalar_failure_from_host_pair,
+    witness_from_owner_record as witness_scalar_failure_from_owner_record,
+    C6ScalarFailureStepBlock, C6ScalarFailureStepCircuit, C6ScalarFailureStepEmitter,
+    C6ScalarFailureStepError, C6ScalarFailureStepInputs, C6ScalarFailureStepWitness,
+};
+pub use c6_scalar_exit_step::{
+    emit_c6_scalar_exit_step_block, C6ScalarExitStepBlock, C6ScalarExitStepEmitter,
+    C6ScalarExitStepError, C6ScalarExitStepInputs,
+};
+pub use c6_scalar_exit_consumer::{
+    build_c6_scalar_exit_step_circuit, check_c6_scalar_exit_step_circuit,
+    record_scalar_exit_step,
+    witness_from_host_pair as witness_scalar_exit_from_host_pair,
+    witness_from_owner_record as witness_scalar_exit_from_owner_record,
+    C6ScalarExitConsumerError, C6ScalarExitStepCircuit, C6ScalarExitStepWitness,
+};
+pub use c6_checked_value_read::{
+    emit_c6_checked_value_read_block, scalar_operand_view, C6CheckedValueReadBlock,
+    C6CheckedValueReadEmitter, C6CheckedValueReadError, C6CheckedValueReadInputs,
+    C6ScalarOperandView,
+};
+pub use c6_scalar_tag_step::{
+    emit_c6_scalar_tag_step_block, C6ScalarTagStepBlock, C6ScalarTagStepEmitter,
+    C6ScalarTagStepError, C6ScalarTagStepInputs,
+};
+pub use c6_scalar_arithmetic_step::{
+    emit_c6_scalar_arithmetic_step_block, C6ScalarArithmeticStepBlock,
+    C6ScalarArithmeticStepEmitter, C6ScalarArithmeticStepError,
+    C6ScalarArithmeticStepInputs,
+};
+pub use c6_scalar_arithmetic_consumer::{
+    build_c6_scalar_arithmetic_step_circuit, check_c6_scalar_arithmetic_step_circuit,
+    record_scalar_arithmetic_step,
+    witness_from_host_pair as witness_scalar_arithmetic_from_host_pair,
+    witness_from_owner_record as witness_scalar_arithmetic_from_owner_record,
+    C6ScalarArithmeticConsumerError, C6ScalarArithmeticStepCircuit,
+    C6ScalarArithmeticStepWitness,
+};
+pub use c6_scalar_entry_step::{
+    emit_c6_scalar_entry_step_block, C6ScalarEntryStepBlock, C6ScalarEntryStepEmitter,
+    C6ScalarEntryStepError, C6ScalarEntryStepInputs,
+};
+pub use c6_scalar_entry_consumer::{
+    build_c6_scalar_entry_step_circuit, check_c6_scalar_entry_step_circuit,
+    record_scalar_entry_step,
+    witness_from_host_pair as witness_scalar_entry_from_host_pair,
+    witness_from_owner_record as witness_scalar_entry_from_owner_record,
+    C6ScalarEntryConsumerError, C6ScalarEntryStepCircuit, C6ScalarEntryStepWitness,
+};
+pub use c6_scalar_tag_consumer::{
+    build_c6_scalar_tag_step_circuit, check_c6_scalar_tag_step_circuit,
+    record_scalar_tag_step,
+    witness_from_host_pair as witness_scalar_tag_from_host_pair,
+    witness_from_owner_record as witness_scalar_tag_from_owner_record,
+    C6ScalarTagConsumerError, C6ScalarTagStepCircuit, C6ScalarTagStepWitness,
+};
+pub use c6_validate_field_step::{
+    emit_c6_validate_field_step_block, C6ValidateFieldStepBlock,
+    C6ValidateFieldStepEmitter, C6ValidateFieldStepError,
+    C6ValidateFieldStepInputs,
+};
+pub use c6_validate_field_consumer::{
+    build_c6_validate_field_step_circuit, check_c6_validate_field_step_circuit,
+    record_validate_field_step,
+    witness_from_host_pair as witness_validate_field_from_host_pair,
+    witness_from_owner_record as witness_validate_field_from_owner_record,
+    C6ValidateFieldConsumerError, C6ValidateFieldStepCircuit,
+    C6ValidateFieldStepWitness,
+};
+
+pub use c6_return_call_step::{
+    emit_c6_return_call_step_block, C6ReturnCallStepBlock, C6ReturnCallStepEmitter,
+    C6ReturnCallStepError, C6ReturnCallStepInputs,
+};
+pub use c6_return_call_consumer::{
+    build_c6_return_call_step_circuit, check_c6_return_call_step_circuit,
+    witness_from_host_pair as witness_return_call_from_host_pair,
+    C6ReturnCallConsumerError, C6ReturnCallStepCircuit, C6ReturnCallStepWitness,
+};
+
+pub use c6_return_scope_step::{
+    emit_c6_return_scope_step_block, C6ReturnScopeStepBlock, C6ReturnScopeStepEmitter,
+    C6ReturnScopeStepError, C6ReturnScopeStepInputs,
+};
+pub use c6_return_scope_consumer::{
+    build_c6_return_scope_step_circuit, check_c6_return_scope_step_circuit,
+    witness_from_host_pair as witness_return_scope_from_host_pair,
+    C6ReturnScopeConsumerError, C6ReturnScopeStepCircuit, C6ReturnScopeStepWitness,
+};
+
+pub use c6_return_left_step::{
+    emit_c6_return_left_step_block, C6ReturnLeftStepBlock, C6ReturnLeftStepEmitter,
+    C6ReturnLeftStepError, C6ReturnLeftStepInputs,
+};
+pub use c6_return_left_consumer::{
+    build_c6_return_left_step_circuit, check_c6_return_left_step_circuit,
+    witness_from_host_pair as witness_return_left_from_host_pair,
+    C6ReturnLeftConsumerError, C6ReturnLeftStepCircuit, C6ReturnLeftStepWitness,
+};
+
+pub use c6_return_right_step::{
+    emit_c6_return_right_step_block, C6ReturnRightStepBlock, C6ReturnRightStepEmitter,
+    C6ReturnRightStepError, C6ReturnRightStepInputs,
+};
+pub use c6_return_right_consumer::{
+    build_c6_return_right_step_circuit, check_c6_return_right_step_circuit,
+    witness_from_host_pair as witness_return_right_from_host_pair,
+    C6ReturnRightConsumerError, C6ReturnRightStepCircuit, C6ReturnRightStepWitness,
+};
+
+pub mod c6_equal_empty_step;
+pub use c6_equal_empty_step::{
+    emit_c6_equal_empty_step_block, build_c6_equal_empty_step_circuit,
+    check_c6_equal_empty_step_circuit,
+    witness_from_host_pair as witness_equal_empty_from_host_pair,
+    C6EqualEmptyStepBlock, C6EqualEmptyStepCircuit, C6EqualEmptyStepEmitter,
+    C6EqualEmptyStepError, C6EqualEmptyStepInputs, C6EqualEmptyStepWitness,
+};
+
+// Additive Task2 fragment; complete range/provenance/native obligations remain open.
+pub mod c6_construct_nullary_step;
+pub mod c6_construct_nullary_consumer;
+pub use c6_construct_nullary_step::{
+    emit_c6_construct_nullary_step_block, C6ConstructNullaryStepBlock,
+    C6ConstructNullaryStepEmitter, C6ConstructNullaryStepError, C6ConstructNullaryStepInputs,
+};
+pub use c6_construct_nullary_consumer::{
+    build_c6_construct_nullary_step_circuit, check_c6_construct_nullary_step_circuit,
+    check_c6_construct_nullary_statement,
+    witness_from_host_pair as witness_construct_nullary_from_host_pair,
+    witness_from_owner_record as witness_construct_nullary_from_owner_record,
+    C6ConstructNullaryConsumerError, C6ConstructNullaryStepCircuit, C6ConstructNullaryStepWitness,
+};
+pub use c6_program_context_canonical::{
+    C6ProgramContextExpressionCaptureInputs, C6ProgramContextExpressionCaptureBlock,
+};

@@ -1,0 +1,1 @@
+The first passive readback assumed 655 pin rows in every phase and stopped on the list-phase count. Root correctly appended the actual generated binary and dep-info after compilation: 655 rows for compile and 657 for list and runtime. The final passive readback checks those exact ordered sets and all recorded pre/post matches. No Root receipt or subject was changed or rerun.

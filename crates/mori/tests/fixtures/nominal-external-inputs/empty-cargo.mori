@@ -1,0 +1,31 @@
+language "moriarty-sherlock-nominal/1";
+program BoundaryCabinet {
+  type Spine<V> {
+    Bare;
+    Cell(z_data: V, a_tail: Spine<V>);
+  }
+  type Input<N, F> {
+    Carry(z_numbers: N, a_flags: F);
+  }
+  type Decision<F, N> {
+    Issued(z_flags: F, a_numbers: N);
+  }
+  fn clear(nums: Spine<UInt>): Spine<UInt> {
+    match nums {
+      Spine<UInt>::Bare() => construct Spine<UInt>::Bare(),
+      Spine<UInt>::Cell(value, rest) => clear(rest)
+    }
+  }
+  fn ensure(flags: Spine<Bool>, pivot: Bool): Spine<Bool> {
+    match flags {
+      Spine<Bool>::Bare() => construct Spine<Bool>::Cell(not(pivot), construct Spine<Bool>::Bare()),
+      Spine<Bool>::Cell(bit, rest) => construct Spine<Bool>::Cell(bit, ensure(rest, pivot))
+    }
+  }
+  fn settle(pivot: Bool, cargo: Input<Spine<UInt>, Spine<Bool>>): Decision<Spine<Bool>, Spine<UInt>> {
+    match cargo {
+      Input<Spine<UInt>, Spine<Bool>>::Carry(nums, flags) => construct Decision<Spine<Bool>, Spine<UInt>>::Issued(ensure(flags, pivot), clear(nums))
+    }
+  }
+  entry true;
+}

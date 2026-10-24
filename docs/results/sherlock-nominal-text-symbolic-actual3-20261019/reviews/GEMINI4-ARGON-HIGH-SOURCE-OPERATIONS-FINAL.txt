@@ -1,0 +1,92 @@
+# Independent Non-Author Source and Ordinary-Operation Review: Passive Nominal-Text Symbolic Comparator (`revision03-split-Opus-candidate`)
+
+**Reviewer Identity:** Gemini 4 Argon HIGH via AGY (standing user-authorized outage fallback after Opus returned a monthly spend-limit error; non-author of both `symbolic_compare.py` and `test_symbolic_compare.py`).
+**Review Mode:** Pure inline source, contract, and operation-plan review. No tools, commands, filesystem reads/writes, imports, or executions were performed. No protected expected, derivation, freeze, data-writer, or actual semantic capture bodies were read or requested. All operations (`01-synthetic-only`, `02-actual-only-project`, `03-protected-compare-after-Root-freeze`) remain **UNSELECTED** and **UNRUN**.
+
+---
+
+## 1. Source Verdict and Disposition of Original Mandatory Findings
+
+### **SOURCE VERDICT: `APPROVE`**
+
+The combined candidate pair—`symbolic_compare.py` (59,696 bytes, SHA256 `d532463bc0c89176f5c9d8d36800e25e8ccd67ee5d77d2dddaaa2dccc8ba2204`) and `test_symbolic_compare.py` (43,276 bytes, SHA256 `2c076376b4a95e7a30d35bd606b6779533246a90916a3590134e1f24d48d9f92`)—is mutually coherent, matches the actual Rust owner interfaces/invariants and symbolic projection contracts, and substantively resolves every blocker, required fix, efficiency hotspot, and residual premise from the prior `CHANGES_REQUIRED` review (`d00395e6...`).
+
+### Disposition of Every Original Mandatory Finding
+
+1. **B1 (Blocker — Positional Builtin Type/Constructor/Field Seed, Padding `name_id`, Declaration Placement, and Nominal/Generic/Field Types): RESOLVED**
+   - **Positional Builtin Types (`0..3`):** `BUILTIN_TYPES` fixes `0 -> UInt (0, 0)`, `1 -> Bool (0, 0)`, `2 -> List (0, 2)`, and `3 -> Tree (2, 2)`, matching `TypeIdC`, `new_checked`, and `check_generic_program_view`. In `Projection.typ`, indices `0..3` require `decl is None`, `args == {"start": 0, "len": 0}`, `name_id == 0`, and exact `(ctor_start, ctor_len)`. `row["name_id"]` is never looked up in `program.names`.
+   - **Builtin Constructor & Field Seeds:** `Projection._builtin_rows` verifies `program.entry == 0`, `len(types) >= 4`, `len(constructors) >= 4`, `len(ctor_fields) >= 5`, and exact structural equality against `new_checked`'s four builtin constructor rows (`BUILTIN_CTORS`) and five builtin field rows (`BUILTIN_FIELDS`), all with padding `name_id: 0`.
+   - **Declaration Placement & User Nominal/Generic Types (`>= 4`):** `Projection.typ` refuses `decl is None` for `ident >= 4`, resolves `name_id` against `program.names`, checks cyclic type application via `trail`, and verifies `name == decl["name"]` and `len(args) == len(decl["parameters"]) == decl_param_counts[decl]`. `Projection.ctor` refuses builtin `TypeId`s (`tid < 4`), matching `adt_checked_ctor_arity`, and enforces `owning_type == tid` and `ctor_start <= cid < ctor_start + ctor_len`. `Projection._declarations` verifies source spans, parameter lists, constructor order, and instantiated field types via `type_expr(b["ty"], params)`.
+
+2. **R2 (Required — Owner-Layout Fixture, Full Five-File `capture_case` Lifecycle, Genuine Two-Frame Nested Checkpoints, and Discriminating Controls): RESOLVED**
+   - **Owner-Layout Fixture:** `program()` in `test_symbolic_compare.py` places `"build"` at `names[0]`, populates positional builtin types `0..3`, builtin constructors `0..3`, and builtin fields `0..4` with `name_id: 0`, and places user types `Box` (`TypeId 4`) and generic `Opt<UInt>` (`TypeId 5`) and user constructors `Wrap`/`Unit`/`Some` (`CtorId 4..6`) at indices `>= 4`.
+   - **Full Five-File `capture_case` Lifecycle:** `run()` and `write_case()` materialize all five capture files (`input.json`, `compile.json`, `records.jsonl`, `errors.jsonl`, `final.json`) plus `demo.mori` in `TMPDIR` and drive them through `sc.capture_case`, exercising:
+     - Call entry and return: `KMachineEnterBind -> KMachineBoundValid -> KMachinePushAccept(ReturnF) -> ... -> KMachineReturnCallValid` across two calls (`build(7)` and `id(k)`).
+     - Non-nullary nested ADT construction: `XAdtEvalConstructFields -> KMachinePushAccept(ConstructorFieldsF) -> XAdtReturnCtorFieldsNext -> BHelperAppendExit -> XAdtReturnCtorFieldsFinal -> XAdtHelperBuildExit -> XAdtMaterializeDone` (opening `[OUTER, INNER]` and materializing `[INNER, OUTER]`).
+     - Match plan execution: `XAdtHelperPlanEntry -> XAdtHelperPlanWalk -> XAdtHelperPlanBind -> XAdtHelperPlanExit -> XAdtCasesPlanHit`.
+     - Single publication and termination: `KAdminPublishValue` (`event_kind: "Publish"`, `disposition: "Published"`) followed by `Terminal` and `finish()`.
+     - Boundary continuity across both `{"same_as": "compile.json#/genesis/admission"}` and equality-checked `{"inline": adm}` boundaries (records 5 and 6).
+   - **Genuine Two-Frame Nested Checkpoints:** At Call 1 (`id(k)`), `pending_checkpoints[1]["pending"]` contains both enclosing live `ConstructorFieldsF` frames in outermost-first order (`construction_invocation: 0` for `Wrap` at `current_field: 1, completed_fields: [T]`, followed by `construction_invocation: 1` for `Unit` at `current_field: 0, completed_fields: []`), with verified suffixes, caller/callee environments, and `in_call: 0`.
+   - **Discriminating Expected-Opening Order Control:** `test_compare_reads_expected_only_after_projection_checks_with_pass_control` uses a valid patched `SAFE_SHA` pin for both a positive `PASS` control (proving `expected.json` is opened only after `FREEZE.json`, `PHASE-A-RECEIPT.json`, `ACTUAL-PROJECTION.json`, and `SAFE.json` are read) and a single-byte mutation of `ACTUAL-PROJECTION.json` (proving `compare_command` refuses on `proj["path"]` without ever opening `expected.json`).
+
+3. **R3 (Required — Exception Coverage on Malformed Inputs & Located Receipts): RESOLVED**
+   - `capture_case` initializes `failures, ledger, projection, errors, pins, where` before entering `try:`, updates `where` at each file and `records.jsonl:<n>` step, binds `projection, ledger = p.out, p.ledger` immediately after `Projection(...)` construction so partial observations survive later step failures, appends to `pins` only after `checked(spec)` succeeds, and catches `(Gap, KeyError, IndexError, TypeError, RecursionError, AttributeError, ValueError, OSError)` to record a located gap without losing sibling cases.
+   - `main()` catches `(Gap, OSError, KeyError, IndexError, TypeError, UnicodeError, ValueError, AttributeError, RecursionError)` and writes an exclusive `FAILURE.json` receipt (`status: "NOT_ESTABLISHED"`) without clobbering pre-existing output directories.
+
+4. **R4 (Required — Single-Read Hashed Buffer in `checked()`): RESOLVED**
+   - `pin_raw(path)` reads `Path(path).read_bytes()` once, hashes that buffer, and returns `(pin_dict, raw)`. `checked(spec)` calls `pin_raw(spec["path"])`, validates `same(actual, spec)`, and returns the exact `raw` buffer that was hashed. `json_pin(spec)` parses `checked(spec)` directly.
+
+5. **Efficiency & Op02 Resource-Handling Improvements (No Cap Increase): RESOLVED**
+   - **Inline Admission Normalization:** `boundary(bound)` verifies `same(a["inline"], admission)` when `bound["admission"]` is not the `same_as` reference, then returns `{"admission": admission, "image": bound["image"]}`. Combined with `if a is b: return True` at the top of `same(a, b)`, per-record boundary continuity checks (`same(before, previous)`) avoid re-walking the static `Program` table while preserving full image continuity and full `final.owner` comparison.
+   - **Streaming JSONL:** `jsonl(raw, name)` enforces trailing LF on non-empty buffers and yields one parsed record at a time via `raw.index(b"\n", start)` without materializing a list of all records.
+   - **Compact Located Ledger & O(1) Call Return Pairing:** Unlocated per-decode value/environment ledger rows were removed; raw environment roots and value/scrutinee refs are retained on located `call`, `match`, and `construction` ledger entries, and `KMachineReturnCallValid` updates `return_record` via a direct row reference (`self.calls.pop()["row"]["return_record"] = record`).
+   - **Empty Slice Normalization:** `cut(..., normalized=False)` enforces `start == 0` when `len == 0` only for owner-normalized `occurrence_paths` (and explicit builtin `args`), checking bounds only on other table slices.
+
+6. **All Five Required Semantic Fields & Strict Checkpoint Keying Preserved:**
+   - `SEMANTIC = ("final_value", "calls", "matches", "constructors", "pending_checkpoints")` matches `CHOSEN-SYMBOLIC-RECORD-SIGNATURES.json` and `SYMBOLIC-PROJECTION-SCHEMA.md`.
+   - `compare_case` keys `pending_checkpoints` solely by nonnegative integer `at_call` (rejecting non-integers/booleans and duplicate `at_call` entries via `Gap`, and failing when an expected `at_call` milestone is absent from observed checkpoints), while comparing the full `calls` array for extra or missing calls.
+
+---
+
+## 2. Synthetic Operation (`01-synthetic-only`) Eligibility and Envelope Check
+
+### **OP01 VERDICT: `ELIGIBLE FOR ROOT SELECTION`**
+
+1. **Cross-Delivery Source/Test/Plan Compatibility:**
+   - Hand-tracing all 23 test methods in `test_symbolic_compare.SyntheticFixtureTests` against `symbolic_compare.py` confirms complete source, API, exception-type, and assertion compatibility across all 23 tests (including `setUpClass` five-file lifecycle projection, builtin positional resolution, generic type application, `UInt128`/`Bool` JSON-type checks, lexical shadowing, dynamic construction invocations, nested outermost-first checkpoints, all six single-mutation refusals/failures, truncated capture refusal, checkpoint `at_call` selection, NUL-path and `AttributeError`/`ValueError` receipt handling, exclusive output-directory refusal, single-read `checked()`, and `compare_command` read-order verification).
+2. **Expected-Envelope Metadata Verification (No Correction Needed):**
+   - `PROPOSED-THREE-OPERATIONS.json` specifies the exact 23 AST-derived test names in file order under `/usr/bin/python3 -B -m unittest -v ...`, with unchanged resource caps (`30s` wall, `25s` CPU, `2 GiB` AS, `64 MiB` FSIZE, `0` core, `131072` stream bytes).
+   - Passing `self.subTest(...)` blocks in `unittest` do not alter `testsRun` or emit extra lines at `-v`, so `tests: 23`, `Ran 23 tests`, `OK`, `stdout: "empty"`, and exact 23 verbose `... ok` lines on `stderr` are exact as written. No metadata correction is needed.
+3. **Finite Execution Conditions for Op01:**
+   - Root must ensure `TMPDIR` (`/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-text-passive-symbolic-comparator-20261019/revision03-split-Opus-candidate/ordinary-QA/tmp`) exists prior to invocation so `tempfile` does not fall back to `/tmp`.
+   - Execute via the unchanged helper (`capture`, `static_check`, `check`, `save` only; never `helper.main` or Rust libtest parser), checking all `requiredInputs` and `STATIC-INPUT-PINS.json` before and after, saving raw `RESULT` and streams before assertions, serial fail-stop, no retry or cap raise.
+
+---
+
+## 3. Conditional Generated-Input Operations (`02-actual-only-project` and `03-protected-compare-after-Root-freeze`)
+
+### **CLASS VERDICT: `CONDITIONALLY ELIGIBLE (REMAINS UNSELECTED/UNRUN PENDING PREREQUISITES)`**
+
+Neither `02-actual-only-project` nor `03-protected-compare-after-Root-freeze` may be selected until its finite prerequisites below are satisfied. No measured runtime, memory fit, or real case outcome is predicted or assumed.
+
+### Finite Prerequisites for `02-actual-only-project` (`project`)
+1. **Op01 Pass:** `01-synthetic-only` has been executed by Root and passed all 23 tests and pre/post static pin checks with retained raw receipts/streams.
+2. **Retained Public Consumer Captures:** Both public consumer case captures have completed with retained raw results and streams, with each case's five literal non-symlink files (`input.json`, `compile.json`, `records.jsonl`, `errors.jsonl`, `final.json`) residing in its `<capture_case>` directory.
+3. **Root Case Bindings (`ROOT-CASE-BINDINGS.json`):** Root writes and pins `ROOT-CASE-BINDINGS.json` with exact keys `("source_manifest", "cases")`, binding:
+   - `source_manifest` to the canonical realpath pin of the original safe manifest (`sha256: c74ae94bcd9ce7fb11f77122beabbc28855bd4e7d873764d74a11879964e8a5b`);
+   - both `.mori` cases with exact item keys `("case", "capture_case", "source_profile", "source", "capture")`, `source_profile == "moriarty-sherlock-nominal-body-typed/1"`, `source` matching the manifest pin, and canonical realpath pins for the 10 generated capture files (Root-reported 589 and 1,340 records).
+4. **Durable Actual-Only Freeze & Absent Destination:** Root records its durable actual-only input freeze before selecting Op02, and `/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/nominal-text-passive-symbolic-comparator-20261019/revision03-split-Opus-candidate/ordinary-QA/phase-A` does not exist while its parent directory exists. No expected file is supplied or opened.
+
+### Finite Prerequisites for `03-protected-compare-after-Root-freeze` (`compare`)
+1. **Op02 Established:** `02-actual-only-project` exited `0` with both cases `"ESTABLISHED"`, `expected_read: false`, intact pre/post pin checks, and retained raw `RESULT` and streams.
+2. **External Root Pre-Unblinding Freeze (`ROOT-ACTUAL-AND-PROJECTION-FREEZE.json`):** Root externally writes and durably freezes the five-key JSON document (`schema: "root-nominal-actual-projection-freeze/1"`, `actual_and_projection_frozen_before_expected_read: true`, `phase_a_receipt`, `projection`, and `safe_bindings` with `sha256: be61b73bdf3629e02206d6e25b496823e027524bb55b317a449a00c168c063cf`).
+3. **Unchanged Opaque Expected Pin & Absent Destination:** The private expected file referenced by `safe_bindings.private_expected` matches its original sealed pin (`3c4ff1d6...`), and `.../ordinary-QA/comparison` does not exist.
+4. **Fail-Stop Preservation:** Any `NOT_ESTABLISHED`, `FAIL`, or `FAILURE.json` outcome is terminal and must be preserved as-is without expected fitting, comparator repair, retry, or cap increase.
+
+---
+
+## 4. Retained Independence, Scope, and Acceptance Exclusions
+
+- **Independence & Non-Adoption:** This review is an independent non-author source/operation assessment. It adopts no execution results, reads no sealed expected or actual capture contents, predicts no real specimen outcomes, and adds no new Root-glue review gate.
+- **Passive Consumer Scope Only:** `symbolic_compare.py` performs passive table/trace projection and symbolic comparison only. It is not a source evaluator, interpreter, schedule synthesizer, or producer re-entry path. Synthetic fixtures and bridge events in `test_symbolic_compare.py` test consumer shape and refusal logic only and are not owner-executed traces or semantic oracles.
+- **Unbound Physical & Target Exclusions:** Physical step/run IDs, work/fuel/visit counters, allocation cursors, capacity extents, and full microstep equivalence are not established by symbolic comparison. Neither this review nor any subsequent comparator pass establishes compiler admission (`PR302 ff6685d0` vs separate `98941c4a` Core), native/circuit/PCD proof validity, recursive verification, Midnight Preview deployment, or EARS/product acceptance.

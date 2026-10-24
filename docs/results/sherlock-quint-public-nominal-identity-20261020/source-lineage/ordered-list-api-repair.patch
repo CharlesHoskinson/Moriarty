@@ -1,0 +1,61 @@
+--- a/q11NominalIdentity.qnt
++++ b/q11NominalIdentity.qnt
+@@ -11,10 +11,10 @@
+   pure def q11Slice(xs:List[int],s:C6PSlice):List[int] = xs.slice(s.start,s.start+s.len)
+ 
+   pure def q11FieldBindings(v:C6PProgram,c:C6PCtorRow):List[Q11FieldBinding] =
+-    range(0,c.field_len).map(i => {
++    range(0,c.field_len).foldl(List(),(mappedRows,i) => {
+       val rowId=c.field_start+i
+       val raw=v.ctor_fields.nth(rowId)
+-      {row_id:rowId,ordinal:i,raw:raw,name:if(c.owning_type>=4) v.names.nth(raw.name_id) else List()}
++      mappedRows.append({row_id:rowId,ordinal:i,raw:raw,name:if(c.owning_type>=4) v.names.nth(raw.name_id) else List()})
+     })
+   pure def q11CtorBinding(v:C6PProgram,id:int):Q11CtorBinding = {
+     val raw=v.constructors.nth(id)
+@@ -27,8 +27,8 @@
+       args:q11Slice(v.type_args,raw.args),constructors:range(raw.ctor_start,raw.ctor_start+raw.ctor_len)}
+   }
+   pure def q11Bindings(v:C6PProgram):Q11Bindings = {
+-    retained_view:v,types:range(0,v.types.length()).map(i=>q11TypeBinding(v,i)),
+-    constructors:range(0,v.constructors.length()).map(i=>q11CtorBinding(v,i))
++    retained_view:v,types:range(0,v.types.length()).foldl(List(),(mappedRows,i)=>mappedRows.append(q11TypeBinding(v,i))),
++    constructors:range(0,v.constructors.length()).foldl(List(),(mappedRows,i)=>mappedRows.append(q11CtorBinding(v,i)))
+   }
+ 
+   // Prefix source TypeExpr tokens are related to a supplied instantiated type.
+@@ -98,7 +98,7 @@
+     range(0,v.types.length()).foldl(true,(prior,id)=>prior and q11DeclaredTypeRelates(v,id))
+ 
+   pure def q11ConstChildren(v:C6PProgram,s:C6PSlice):List[C6Ref] =
+-    q11Slice(v.constant_fields,s).map(i=>C6Const(i))
++    q11Slice(v.constant_fields,s).foldl(List(),(mappedRows,i)=>mappedRows.append(C6Const(i)))
+   pure def q11DataChildren(t:Q11ReadTables,s:C6Slice):List[C6Ref] =
+     t.data_fields.slice(s.start,s.start+s.len)
+   pure def q11CtorNode(ty:int,ctor:int,children:List[C6Ref]):Q11ReadNode =
+@@ -194,7 +194,7 @@
+       | C6PECall(p)=>List(Call({function:p.function_name,arguments:q11Slice(v.children,p.args)}))
+       | C6PEConstruct(p)=>List(Constructor({typeId:p.type_id,ctorId:p.ctor_id,occurrence:id,fields:q11Slice(v.children,p.fields)}))
+       | C6PEMatch(p)=>List(Match({value:p.scrutinee,arms:
+-          v.arms.slice(p.arms.start,p.arms.start+p.arms.len).map(a=>{pattern:q11Pattern(v,a.pattern,budget),body:a.body})}))
++          v.arms.slice(p.arms.start,p.arms.start+p.arms.len).foldl(List(),(mappedRows,a)=>mappedRows.append({pattern:q11Pattern(v,a.pattern,budget),body:a.body}))}))
+     }
+     candidates.head()
+   }
+@@ -203,13 +203,13 @@
+       (rows,id)=>rows.put(id,q11Expr(v,id,budget)))
+     val functions:int->Function=v.functions.foldl(Map(),(rows,f)=>{
+       val params=v.parameters.slice(f.params.start,f.params.start+f.params.len)
+-      rows.put(f.function_name,{name:f.function_name,parameters:params.map(p=>p.binder),
+-        parameterTypes:params.map(p=>p.sort),resultType:f.return_type,body:f.body})
++      rows.put(f.function_name,{name:f.function_name,parameters:params.foldl(List(),(mappedRows,p)=>mappedRows.append(p.binder)),
++        parameterTypes:params.foldl(List(),(mappedRows,p)=>mappedRows.append(p.sort)),resultType:f.return_type,body:f.body})
+     })
+     val layouts:(int,int)->Layout=range(0,v.constructors.length()).foldl(Map(),(rows,id)=>{
+       val c=v.constructors.nth(id)
+       rows.put((c.owning_type,id),{typeId:c.owning_type,ctorId:id,
+-        fields:v.ctor_fields.slice(c.field_start,c.field_start+c.field_len).map(f=>f.type_id)})
++        fields:v.ctor_fields.slice(c.field_start,c.field_start+c.field_len).foldl(List(),(mappedRows,f)=>mappedRows.append(f.type_id))})
+     })
+     {entry:v.entry,expressions:expressions,functions:functions,layouts:layouts}
+   }

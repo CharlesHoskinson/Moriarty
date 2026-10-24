@@ -1,0 +1,181 @@
+{
+  "schema": "sherlock.public-typed-public22-receipt/1",
+  "lane": "TC22",
+  "date": "2026-10-23",
+  "status": "ROOT_ADOPTED_22_SYNTHETIC_PURE_CASES",
+  "lineage": {
+    "rootAdoptionSha256": "23ca2c77959111897c7826f7f900264c6c9ed88aefcd2b89899ddd9a00355b80",
+    "actualResultSha256": "56394a672575d70afdb8dc9e5f9e67e9f61681320fce226e3bfd177b11f3cd67",
+    "sourceFreezeSha256": "18c079865e91c4f1d0030477b233bd1e5b968891954616ea76a4d3fdcca3d92f",
+    "actualOpusSourceReviewSha256": "b07c3827c60ad73f3e7bbf4b4a36a113626bfaa721a9756151577fc31432f694",
+    "actualOpusSourceReviewVerdict": "APPROVE_SCOPED_SOURCE",
+    "independentActualDataReviewSha256": "4db30ed1f7ad7e373c420a2287c38ac12e28ceee5b407c8b31b824e6cb7e782b",
+    "independentDataReviewer": "Codex/GPT"
+  },
+  "sourceFiles": [
+    {
+      "path": "tools/sherlock-sdk/capture-public.mjs",
+      "bytes": 9271,
+      "sha256": "732da1b84ce86c5a33c2b9b7c0cae05963c39547c4c826a286b24f93a58925f8"
+    },
+    {
+      "path": "tools/sherlock-sdk/capture-public.test.mjs",
+      "bytes": 11012,
+      "sha256": "85e71e5722be55d58c3cae45edc16400cbebf769ef875e6a7d8a1f36ad7066ef"
+    },
+    {
+      "path": "tools/sherlock-sdk/capture_public.py",
+      "bytes": 11457,
+      "sha256": "14f0d1e6b9b50daeae69c0dd9d796b1c851f74393bbd83f8b692bfc583cd4d05"
+    },
+    {
+      "path": "tools/sherlock-sdk/test_capture_public.py",
+      "bytes": 12673,
+      "sha256": "b9d0cbe95330179013423997aa9fae0c3866a38149960adbbf582ca485af18bd"
+    }
+  ],
+  "observed": {
+    "totalCases": 22,
+    "phases": [
+      {
+        "language": "Node",
+        "cases": 11,
+        "passed": 11,
+        "failed": 0,
+        "exit": 0,
+        "captureSeconds": 1.0290374319883995,
+        "rawResultSha256": "91c8172dd5070c210da88249474e9ab4a031996983ed84befe2b0fb9c6aba6e2",
+        "streams": [
+          {
+            "channel": "stdout",
+            "bytes": 1132,
+            "sha256": "769309bc4104a74ae5a355e41dd1222795c57148012af38901d66658bd596ea0",
+            "fullStreamRetained": true
+          },
+          {
+            "channel": "stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "fullStreamRetained": true
+          }
+        ]
+      },
+      {
+        "language": "Python",
+        "cases": 11,
+        "passed": 11,
+        "failed": 0,
+        "exit": 0,
+        "captureSeconds": 0.25560708399279974,
+        "rawResultSha256": "a23f3374bca5363cdfab598843bc92c4548ce26c84aed6f006f5c9fd03984661",
+        "streams": [
+          {
+            "channel": "stdout",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "fullStreamRetained": true
+          },
+          {
+            "channel": "stderr",
+            "bytes": 1586,
+            "sha256": "da9e5ff241adcbaf44334702fd342bc2813d4e6d6e2a84fda1feac5766a279df",
+            "fullStreamRetained": true
+          }
+        ]
+      }
+    ],
+    "crossLanguageGoldens": [
+      {
+        "fixture": "normal b0=10",
+        "bytes": 2974,
+        "sha256": "48b10f20716b13b64235793fbb33dcc1013a0e3e2b6662db474f6c29b9035791"
+      },
+      {
+        "fixture": "b0=P-1",
+        "bytes": 3049,
+        "sha256": "6bf33a4bf374b221b525b7ac6c1f17a52cf042c94e03564acccb409588909cd6"
+      }
+    ],
+    "goldenMeaning": "Both language suites passed assertions against the same literal expected lengths and SHA-256 identities, module canonical output and independently built fixture serialization. Actual product JSON was not emitted in the test streams.",
+    "correctedContracts": [
+      "shared literal Node/Python golden identities",
+      "validated snapshot and isolated sink copy",
+      "synthetic receipt root/address/network/closure metadata binding"
+    ],
+    "prepostSourcePinsHeld": true
+  },
+  "retainedOptionalSourceFindings": [
+    {
+      "id": "CPUB-BOM-DIVERGENCE",
+      "mandatory": false,
+      "severity": "LOW",
+      "issue": "Known and unchanged. JS derivePublic accepts a projection that starts with a BOM, while Python refuses it. Output and validatePublic are unaffected.",
+      "anchor": "new TextDecoder('utf-8',{fatal:true})"
+    },
+    {
+      "id": "CPUB-CODE-PARITY",
+      "mandatory": false,
+      "severity": "INFO",
+      "issue": "Known and unchanged. The twins agree on accept/refuse and bytes, but return different refusal codes for these inputs.",
+      "anchor": "1e999 / 15.0 / duplicate test rows"
+    },
+    {
+      "id": "CPUB-SNAPSHOT-UNBOUNDED-COPY",
+      "mandatory": false,
+      "severity": "INFO",
+      "issue": "The full candidate is copied before parse checks the 1<<16 limit, so an oversized Uint8Array is copied in full before being refused. The result is correct (JSON). Only memory use is affected.",
+      "anchor": "const snapshot=c=>{try{return c instanceof Uint8Array?Buffer.from(c):c;}catch{return null;}};"
+    },
+    {
+      "id": "CPUB-BIND-TEST-GAPS",
+      "mandatory": false,
+      "severity": "INFO",
+      "issue": "These cases are not tested: wrong outcome schema; duplicate basenames from different directories; products that are not a list, contain a non-dict, lack path, or have non-hex sha256. Whitespace-only transaction_hash/identifier is accepted, which meets the stated nonempty requirement.",
+      "anchor": "def test_bind_receipt_root_address_network_closure_binding"
+    }
+  ],
+  "remainingApiObligations": [
+    "API-EXPECTED-SOURCE-TIMING",
+    "API-GUARDS-UNRESOLVED",
+    "API-EXPECTED-AUTHENTICITY",
+    "API-WRAPPER-MISSING-BINDINGS",
+    "API-PRESEND-CLAIM-OVERSTATED",
+    "API-PROJECTION-STILL-PUBLIC-PATHS",
+    "API-PYTHON-INSPECTOR-SPEC",
+    "J6-BECOMES-PRESEND-MANDATORY"
+  ],
+  "remainingIntegration": {
+    "caller": "Unintegrated utility. Controller still needs the five-argument bind_receipt call with inspected root and frozen normalized address.",
+    "J1": "partial contract only",
+    "J2": "guards unresolved",
+    "J3": "resolver and public-input obligations open",
+    "J4": "metadata bind utility corrected; POST_VERIFY-before-first-write, controller binding and awaited goGate remain open",
+    "J5": "open",
+    "J6": "required before later SDK/native integration",
+    "J7": "partial",
+    "J8_J9_J11": "later SDK/native obligations",
+    "J10_J12": "planned only",
+    "J13": "later financial obligation"
+  },
+  "scope": [
+    "Pure synthetic module contracts and tests, not real caller integration. Expected-input authenticity remains a caller obligation.",
+    "Python bind_receipt binds fabricated outcome/product metadata only; its positive test is not a real finalized call, wallet closure, financial acceptance or proof of nonexecution. A refused real root remains DIRTY with no resend or revert.",
+    "Source comments and P6/legend constants are retained byte for byte. They do not make these pure checks evidence of deployed relation, genuine proof or complete capture.",
+    "Optional findings and untested negatives remain open; no general cross-language refusal-code or BOM parity claim.",
+    "Capture timings describe these two retained invocations only. No memory-fit, full integration, SDK/native/financial or full16 acceptance follows.",
+    "Recorded source pins and Root result booleans are retained at their actual evidence level; no independent historical controller/syscall ordering or whole-host closure is inferred."
+  ],
+  "SDKExecuted": false,
+  "nativeExecuted": false,
+  "walletOpened": false,
+  "networkUsed": false,
+  "privateOperandsUsed": false,
+  "proofGenerated": false,
+  "realCallerIntegrated": false,
+  "genuineDCall": false,
+  "financialAcceptance": false,
+  "fullGoalComplete": false,
+  "acceptanceCounts": "A5/10 B1/9 C0/6 unchanged",
+  "oldHoldsRetained": true,
+  "C13": "STOPPED_UNCHANGED"
+}

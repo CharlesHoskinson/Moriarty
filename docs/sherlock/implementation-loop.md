@@ -1,10 +1,240 @@
 # Sherlock implementation loop contract
 
+## Current delivery priority — revision13, 2026-10-24
+
+The complete Sherlock objective remains genuine recursion, independent verification, finalized full effects on Midnight ledger-9 stagenet, and an exact-intent synthetic Fenrir rollup benchmark. The recorded goal is currently **blocked** on the applicable corrected-call assembly review or reviewer-routing change. An actual Opus5.5 coordinator was requested; its provider withheld the response, so it supplied no usable direction or approval.
+
+The critical path is current SDK-bound proof → independent verify → one finalized full-effects call on the existing deployment → synthetic rollup benchmarks. Reuse the existing contract, wallet and keys. Keep prior consumed attempts, financial uncertainty, resource caps and review requirements. Do not replay unchanged attempts. The corrected preparation has eleven public source/configuration files and syntax/hash checks; its generator, bindings, decision and live attempt have not run.
+
+Clean, Quint, K, handwritten circuits, documentation, source graph and safe branch cleanup remain tracked. Their expansion cannot become a new prerequisite to the first existing keyed proof/call. K66 peripheral preparation stopped before a new composition, once record, selection or subject. Run CI locally; no new factory, daemon, per-agent branch or hosted CI.
+
+See [current status](stagenet-rescue-current-2026-10-24.md) and [machine-readable observations](status-2026-10-24.json). Earlier loop revisions below remain historical records with their original scope.
+
+
+## Active recursion loop — October 22, 2026, revision05
+
+The user instructs: **merge, rewrite and begin the loop**. This resumes the
+Sherlock implementation objective and supersedes the dated audit pause below.
+DoctorWatson is merged at `066c360b7735bddf6e8950a118c15d76b2953c78`
+on `sherlock` ([PR404](https://github.com/CharlesHoskinson/Moriarty/pull/404));
+shared AgentBus is merged at `01c7202b9963881fe3b3e2771e031bc75be19223`
+on ProjectFenrir `main` ([PR84](https://github.com/CharlesHoskinson/projectfenrir/pull/84)).
+A merge establishes published source. It does not establish live service activation
+or a native proof. The active Codex goal, current task manifest, actual agent state
+and DoctorWatson reports determine runtime progress; this document is not a daemon.
+
+The next demonstrable capability is a **genuine A102/A80 parent proof and independent
+verification**. Source43 already produced a release ELF and k20 verifying key.
+Its first proof attempt failed allocation; its second timed out after500.5487s,
+with no parent proof and no internal phase attribution. Preserve those failures.
+Source44 adds phase clocks and preserves original child accumulators for reuse.
+Its full structures, named fixed-base maps, order, transcript and refusal behavior
+need current review and actual consumer checks; equal evaluated points or `acc_pis`
+alone are insufficient. No measured speedup or successful completion is assumed.
+
+The execution order is:
+
+1. Review Source44 and strengthen its actual structural tests where needed.
+   Before any heavy build or check, obtain an explicit prospective bounded successor
+   resource decision with two substantive independent opinions and cleanup headroom.
+   The historical0.540990P/1247S/162whole remainder cannot fund a new build; retain
+   all old holds and stopped C13. Recheck host pressure and use disk-backed scratch.
+   Then materialize the exact changed source/current cache inventory through the
+   existing bounded build route, build the real consumer and run selected checks.
+2. Select one finite phase-observed parent completion experiment within its
+   separately recorded envelope. A successful build or test does not automatically
+   launch a proof, release an old hold or establish a completed proving-key setup.
+3. Independently verify the exact complete parent artifacts and actual rejection
+   cases. In parallel, prepare existing Build9 and helper source. Build9 compilation
+   does not depend on a completed parent proof.
+4. Produce actual MP2 capture with compiled-public-input equality, then the opening-aware
+   terminal D proof bound to that template and the full28-field parent statement.
+   This step prepares local artifacts only; deployment waits for wallet reconciliation.
+5. Reconcile the original wallet submission by its exact transaction identifier,
+   read-only, before another send. Preserve identifier/hash distinctions and uncertain
+   outcomes. Reuse the saved Midnight stagenet wallet and full financial guard.
+6. After wallet reconciliation, deploy D's accept verifier with the compiled settle
+   verifier through the existing stagenet deploy/accept/settle path. Independently read
+   finalized root, height, batch, sets and balances against frozen expected effects. Record the
+   real network, ledger/verifier identity, transaction IDs and public receipts.
+7. Benchmark exact-intent synthetic Fenrir workloads after that deployment. The importer
+   must preserve selected intents and native range/group topology; a seeded native
+   recipe does not substitute for those inputs. Record actual compile/setup/prove/verify,
+   k/rows/columns, CPU/RSS, proof/key/transaction bytes, fees and inclusion/settlement
+   measurements separately. Expand16/32/64/96 only where actually supported.
+
+Root integrates; the native source owner and two independent reviewers handle the
+first candidate. Dedicated Clean, Quint and K lanes track the same changed relation.
+Handwritten circuit implementation remains a permanent product lane. Update Diataxis
+documentation, the DoctorWatson improvement log and circuit-website concept log as
+meaningful implementation changes land. The website publication commitment remains.
+
+Run affected checks locally. Use current DoctorWatson readiness and exact-use
+rechecks, complete history and durable reservations for supported adapters. Where
+an adapter is collect-only or unsupported, name its missing executor and use only
+an already reviewed eligible native consumer; no plan entry invents launchability.
+Keep one heavy operation and acquire its proving lock at exactly one layer.
+Do not retry unchanged failures or replay accepted prefixes. After two same-class
+failures reduce the reproducer/change approach; after two process-only cycles or
+thirty administration minutes return to product work.
+
+Each cycle finishes with affected-source graph refresh, actual wiki-llm results
+and lessons, and fresh conservative Git cleanup. Keep unique/dirty/active work and
+all partial/unknown outcomes. AgentBus supplies optional advisory coordination;
+canonical artifacts, reviews, resources and ownership govern execution. No new
+scheduler, Foreman, per-agent branches or hosted CI is introduced.
+
+Acceptance remains the existing [SRPOC EARS](../../openspec/changes/sherlock-stagenet-recursive-rollup/requirements.md),
+[SBENCH criteria](stagenet-recursive-rollup-experiment.md) and all retained Sherlock
+requirements. This revision closes no unobserved proof, target or full-language EARS.
+
+## Current audit and cycle cleanup — October 22, 2026
+
+The user paused native implementation for the workflow review. Keep the original
+Sherlock goal paused during this audit; no source, graph or factory check resumes
+proof, wallet or target work. The full desired exit remains a genuine recursive
+proof accepted and fully read back on Midnight stagenet, followed by a benchmarked
+Fenrir synthetic rollup. Recover the [audit findings and next calls](../../wiki-llm/doctorwatson-workflow-review-2026-10-22.md).
+
+After each source/review/integration cycle: (1) update the affected graph from the
+current source cut, (2) append the actual result and lessons to wiki-llm, (3)
+inspect and safely retire redundant branches and inactive merged pristine
+worktrees, and (4) record exact deleted/retained/blocked outcomes. Finalization
+is mandatory cycle housekeeping, not a prerequisite for unrelated product
+progress. A failed graph/wiki step prevents deletion; a failed or uncertain
+cleanup cannot be reported complete. Preserve all historical results and
+acceptance obligations. Use the [cleanup contract](../DOCTORWATSON.md#cycle-finalization--october-22-2026)
+and [delivery routes](../DOCTORWATSON-DELIVERY.md), with local CI only.
+
+Use published current source rather than an old checkout's missing-feature
+claims: the audit base is `c26859a5cb0288e6b86da7dcca8b260654a0a39b`;
+the old parallel implementation worktree is at `f935febac3f9158c3ce02812ac3b3c4adb986714`.
+Source43 already built and produced a k20 verifying key; a genuine parent proof
+remains absent after allocation failure and timeout. Preserve those observations.
+Source44's phase telemetry/original-accumulator reuse is candidate source, not a
+measured optimization. Build9 capture and the opening-aware terminal route
+already exist; their keyed outputs and actual execution are the missing inputs.
+
+A task is dispatch-ready only when its dependencies and both actual collector
+and executor exist. Require complete raw execution history explicitly; inspect
+and actual use recheck current input identities separately. Provider success
+with empty output is not a review. Prefer integrating ready reviewed source
+before opening more research; reserve the heavy proving lock at exactly one
+layer to avoid nested-lock deadlock. Keep the Clean, Quint, K and handwritten
+lanes and circuit website design log in the existing continuation.
+
+## Current user override — deployment first, October 21, 2026
+
+This user-directed operational priority supersedes earlier scheduling statements
+below. Root's critical path is exclusively: **current ledger-9 build → two linked
+child proofs and their recursive parent/terminal decider → independent verification
+and tamper rejection → Midnight stagenet submission, full settlement and complete
+effects readback**. The next exit is an observed recursive stagenet transaction.
+A source merge, documentation update or passing local check does not satisfy it.
+
+Use the existing Root continuation and operation path. Keep one active correction
+for the blocking native path. Each blocker must name the exact failing command,
+selected source/attempt, observed failure and root cause, concrete correction, and
+next discriminating check. Resolve that correction in the actual receiving caller.
+Do not retry an unchanged failure or rerun an unchanged passing prefix. After two
+failures of the same class, reduce the reproducer and change the approach.
+
+The immediate deployment exit requires all of the following observed evidence:
+
+- The real transaction ID and explorer link for the accepted recursive submission
+  on Midnight stagenet, with its actual network and pinned ledger/verifier identity.
+- The selected source/compiler/tool/config cut and actual program, circuit, key,
+  proof and public-input artifact identities, linking both children through the
+  recursive parent and terminal decider to that submitted relation.
+- A positive independent verifier result for those exact artifacts, plus actual
+  rejection of the corresponding proof/public-input tampering.
+- Final settlement and complete state/effects readback against independently
+  frozen expectations, bound to that transaction and the same selected target.
+
+Pending submission, partial settlement, simulation, mock receipts, a saved literal
+proof or an unrelated proof cannot satisfy this exit. An unknown result remains
+unknown. Preserve failed, censored and consumed-operation records as they are.
+
+The complete Sherlock design and every retained requirement remain unchanged.
+Keep Clean, Quint, K and handwritten-circuit work active in parallel. Their failing
+checks block this deployment gate when they concern a relation in the deployed
+candidate's required correctness/proof/effects closure; unrelated EARS closure,
+documentation/graph maintenance and native framework extensions must not displace
+Root's critical path. This ordering does not waive any existing source, financial,
+proof, resource, cleanup, operation-counter or stopped C13 obligation. It adds no
+permission, scheduler, factory or approval flow.
+
+After successful recursive deployment and settlement, continue the Fenrir scale
+matrix and actual k, compile/prove/verify resource and serialized transaction-size
+benchmarks. Completing that measurement programme or a performance report is not
+a prerequisite to the first successful transaction. Existing native resource
+accounting still applies to every operation. The first deployment exit does not
+complete the full Sherlock goal or its downstream benchmarks and acceptance work.
+
+All earlier document content follows unchanged. Its evidence remains historical
+at its recorded scope; conflicting earlier scheduling order does not override
+this current deployment-first instruction.
+
+
 ## Current priority — stagenet recursive proof and Fenrir feasibility benchmark
 
-The October 19 user instruction makes deploying Sherlock on Midnight stagenet and validating a real recursive proof the top priority. Then generate a deterministic Fenrir-derived synthetic rollup and benchmark circuit degree k, proving/local verification costs and observed stagenet inclusion/settlement latency. Follow the [experiment](stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](../../openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md). A saved literal k18 proof is a prerequisite, not recursion evidence.
+The October 19 user instruction makes deploying Sherlock on Midnight stagenet and validating a real recursive proof the top priority. Then generate a deterministic Fenrir-derived synthetic rollup and benchmark circuit degree k, proving/local verification costs and observed stagenet inclusion/settlement latency. Follow the [experiment](stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](../../openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md). A saved literal k18 proof retains a separate verification obligation; it is not recursion evidence.
 
-Select work in this order: saved-bundle independent verify-only → missing Sherlock recursive relation and terminal ledger-9 integration → local rehearsal → stagenet deployment/recursive validation and effects readback → synthetic rollup scale/performance matrix. Source tracing and authoring for the recursive relation, the SDK-transcript/inner-adapter study and dataset preparation may proceed while P14 is pending. Only consumption of its verification result depends on P14; other native checks require their own actual eligibility under existing source/resource rules. Retain Clean, Quint, K, handwritten circuit and documentation work on those exact slices. Graph work is now maintenance supporting implementation, with narrow graph-first recovery and changed-file refresh. No new factory or infrastructure queue displaces this objective. The full active Sherlock goal and all retained acceptance/resource obligations remain in force.
+Current selection order, updated October 21: **current native build → two linked child proofs, parent and terminal decider → independent verification → Midnight stagenet recursive validation and complete effects readback → Fenrir scale/performance matrix**. The saved literal bundle retains its own independent verification obligation; its timeout neither verifies it nor supplies recursion evidence. Only consumers of that result depend on P14. Keep Clean, Quint, K and handwritten-circuit implementation permanent on these exact slices, including when native work is blocked. Graph work supports implementation through narrow recovery and changed-file maintenance. The full Sherlock revision03 design and every retained acceptance/resource obligation remain in force.
+
+### Current operational queue
+
+Root owns integration and the one current continuation. For each selected task,
+record one product predicate, source/attempt identity, owner, receiving API,
+resolved next call and inputs, applicable review/check, and first blocker. Keep
+history immutable and update the current queue rather than writing another
+summary packet for each step. An unavailable call is a named missing consumer or
+input, never an invented command or successful task. Provider terminal success
+means a response returned; source integration, observed checks and accepted
+behavior need their own evidence.
+
+| Priority / predicate | Owner | Immediate next step in the existing path |
+|---|---|---|
+| Current backend actually builds on the selected source/tool/config cut | Root integrates; designated native/security owner supplies the boundary | Integrate the ready reviewed source, retain prior failed attempts/debits and cleanup state, then inspect the current plan/history/reconciliations. Root resolves the actual selected call only when its existing source/resource conditions hold. |
+| Two linked children, their parent and terminal decider produce bound artifacts | Designated circuit/proof owner; Root integrates | Bind the receiving source's real producer/reader API and selected inputs; compile/check the affected consumer, then select the separately eligible proof operation. Preserve the child, parent and terminal distinctions. |
+| Independent verification accepts those exact artifacts | Independent verifier owner | Freeze the selected key/proof/public-input identities and actual verifier invocation. Require its positive semantic verdict, not exit zero alone. |
+| Midnight stagenet accepts the recursive relation and settles complete expected effects | Root selects target work; designated target owner | Rehearse the real verifier/anchor path, then perform the existing eligible deployment/accept/settle/readback calls with independent expectations and public receipts. |
+| Fenrir workloads yield reproducible, scoped cost/scale measurements | Benchmark owner | Consume the accepted fixture and exact workload/measurement inputs; measure supported batches and retain failed or censored outcomes. Sixteen transactions do not establish a ninety-six-transaction result. |
+| Formal and handwritten counterparts track each changed relation | Named Clean, Quint, K and handwritten owners | Continue the next missing concrete relation or discriminating check on the current source slice; record unavailable layers as gaps. A finished leaf advances its lane. |
+
+The actual public shell interfaces are separate:
+
+```sh
+scripts/doctorwatson.sh --inspect --plan P --results H --reconciliations R --next
+scripts/doctorwatson.sh --test-selected MODULE [MODULE...]
+scripts/doctorwatson.sh --execute TASK --plan P --selection S --attempt DIR --history H --reconciliations R
+```
+
+`P/H/R/S/TASK/DIR/MODULE` above are notation, not runnable selections; Root's
+current continuation supplies the existing exact paths, task and named test
+modules. Inspect is read-only and its exit zero says records are inspectable.
+It and executor prelaunch use `reconciliation.load_readiness`; the executor
+rechecks exact input bytes at use. The fixed registry in `run_selected.py`
+selects the existing operation boundary; JSON supplies no arbitrary command.
+The shown execute syntax does not make blocked adapters launchable or authorize
+proof/target work. Retain the existing selected outer operation and timing path,
+resource policy, independent reviews, unknown outcomes and stopped C13 boundary.
+See the actual [shell](../../scripts/doctorwatson.sh),
+[readiness consumer](../../models/doctorwatson/reconciliation.py) and
+[execution bridge](../../models/doctorwatson/run_selected.py).
+
+Prefer integrating ready source to launching more research. More agents help on
+independent missing relations, but increase receiving/review load; use them only
+with disjoint ownership and an immediate consumer. Review actual changed units
+with their adjacent real API and scoped results. Root generates pin/copy/result
+metadata mechanically; reviewers supply source quotes and counterexamples, not
+hand-copied hash tables. Reject invented APIs. For test-only changes, review and
+run the affected tests without rerunning an unchanged passing prefix; broaden
+only for changed composition or a concrete concern. After two failures of the
+same class, reduce the reproducer and change approach. After two process-only
+cycles or thirty administration minutes, do eligible work or name its blocker
+and owner. Use local CI only; preserve all existing security and acceptance
+requirements. This documentation is not evidence that the live loop is armed.
 
 
 Requested by the user on2026-10-17 after final design/spec integration. This uses the existing DoctorWatson factory and existing requirement/evidence records. It is not a new scheduler, campaign, permission system or replacement roadmap.
@@ -147,6 +377,7 @@ identity and execution limits remain enforced.
 4. Review exact changed source and actual result through applicable current non-author roles. Resolve material defects, integrate one candidate and publish/merge regularly. Reuse unchanged evidence with its original source/result identity.
 5. Update affected Diátaxis tutorial/how-to/reference/explanation pages with implementation/observed/unobserved acceptance status; record concrete no-impact dispositions for unaffected categories. Check links/examples/API locators. Append material DoctorWatson lessons, knowledge-graph deltas and circuit-website concept notes without claiming a deployed site or unobserved circuit.
 6. Update affected requirement and correctness-loop evidence rows. Required K, finite Quint, pure Lean, bounded Clean, handwritten witness/constraint, native and target rows remain conjunctive for acceptance; source-only completion closes only its source predicate.
+7. At batch integration and compaction/session handoff, apply the [branch cleanup procedure](../DOCTORWATSON.md#branch-cleanup-at-integration-and-handoff): reuse ongoing lane branches, delete verified merged ephemeral heads with exact remote SHA leases, and retain active/unmerged/unknown work with typed dispositions in the existing continuation.
 
 ## Churn stops and blocked work
 
@@ -154,9 +385,40 @@ Two failures of one defect class require a smallest permitted reproducer and a c
 
 For native build/proof/target work, native authority0, C4 OPEN, R2 UNSATISFIED,60460 HOLD and Amendment10's no-retry/no-rephrase/no-reroute disposition remain intact. This loop cannot rewrite those records or use another model to work around the stopped amendment. The hard-blocker resolution must name an actually permitted operation or valid new premise before any dependent execution; ordinary SDK-free product source continues. If all remaining useful work depends on an unavailable premise, record the concrete blocked exit instead of manufacturing infrastructure or claiming completion.
 
+## Post-deployment benchmark success criterion
+
+Select the explicit stages in the [benchmark reference](benchmark-reference.md)
+and run the existing Python DoctorWatson checker with all four benchmark inputs
+in the [how-to](benchmark-howto.md). The initial deployed baseline requires at
+least one actual current linked two-transition child/parent/decider chain, actual
+per-node proof/statement/VK artifacts and positive native verification, complete
+independent state/effects, current source/compiler/environment/toolchain/ledger/
+network/circuit/workload/target pins and every fixed stage metric/repetition
+predicate. A source merge, host/model fixture, scalar oracle, unavailable root,
+missing required metric or cached report cannot satisfy that stage.
+
+Host MapQueue/MirrorArbor compiler coverage qualifies through actual host receipts
+without fictitious ledger evidence. The larger 1/2/4/6 Fenrir rollup series and
+full-suite stage remain separate conjunctive obligations; initial baseline success
+does not retire them or the full Sherlock goal. Report baseline observations
+without inventing an SLA. Historical comparisons validate their own frozen source
+cut and use the shared explicitly declared comparable-profile tolerance rules.
+Actual per-layer resources and local verification remain separate from whole-run
+and RPC/ledger timings; unexposed rows/columns remain unavailable.
+
+The [additive benchmark EARS](../../openspec/changes/sherlock-moriarty-benchmarks/specs/benchmarks/spec.md)
+retain fixed known stage/case/metric minimums and checked cross-lane source pins.
+Pin the recomputed report, reviewed policy/current/historical contexts and complete
+source/receipt closure in existing evidence/currentness records; retain actual
+native verification and owner adoption separately. Preserve the original
+35 clauses, 25 refinements/68 scenarios and every broader formal/financial/native/
+release obligation. This selection adds no scheduler, native dispatch, permission,
+budget reset, setup/keygen replay or human-only approval. Existing guards,
+operation limits, C13/stopped-amendment and cleanup records remain controlling.
+
 ## Full completion
 
-Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
+Done means every retained mandatory atomic UIREQ/B/U0–U7/M/MC/SP/G and financial/formal/recursive/composition/native/target/conformance/release predicate has its own exact-candidate applicable evidence and owner disposition, including the recomputed post-deployment benchmark criterion above. Retain all35 UIREQ, full39, complete B/full96, generic declarations, persistent boundaries, required witness/DAG/grouping/residual baseline, complete ACTUS/DeFi, all five composition operators, private stages and independent developer release. A first literal transaction, host fixture, source merge or finite model pass is scoped evidence. Missing/unsupported/unrun/stale/blocked mandatory rows are not complete. The armed loop pursues this objective; it does not predict away future blockers or authorize missing operations.
 
 
 ## Prospective native policy adoption — October17
@@ -383,3 +645,10 @@ The current graph is installed at `/home/charl/Moriarty/graphify-out/graph.json`
 On every recovery, start with `graphify-out/SHERLOCK-CURRENT.md` and `SHERLOCK-CONTEXT.md`, then query the relevant named symbol with its explicit graph and source root. Check the source manifest before relying on line references, extract changed files only, and read the selected source bodies. Use relation filters or single-node lookup for narrow context. A saved graph is not a live process or accounting probe. Preserve separate source roots for historical layers; never resolve all relative source paths against the main checkout.
 
 Clean B24 is merged into the Fenrir fork in PR 31 at `1847c4e6db59c78e05e857941bd4db9581ece8dd`. The primary next task remains a verify-only consumer of the frozen proof, with no repeated proving. Keep Clean, Quint, K and handwritten circuit implementation active. The graph is an index for this work, not another execution framework.
+
+Post-deployment benchmark qualification must also exclude reused operation wrappers
+from regression statistics, retain bound partial failure/censoring observations,
+and bind the frozen catalog scalar transitions to complete native state views.
+Multi-node layer measurements require explicit all-member timing/resource scope.
+A comparison pass covers its reported tolerance subset; it does not declare an
+external performance SLA or complete the broader Sherlock goal.

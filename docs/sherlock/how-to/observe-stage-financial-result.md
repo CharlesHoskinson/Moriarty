@@ -138,3 +138,10 @@ Root has now [adopted whole UIREQ-017](../../results/sherlock-owning-financial-p
 Keep the owning `ProducedInvocation` and its program alive, then inspect `produced.observation().await_prefix()`. For `Waiting`, read `committed_boundary`, `logical`, `residual` and the optional `published_segment` alongside action/site/captures and attempted work. A false guard can return the same boundary with no advanced segment. On `Complete` or `RejectedNoReturnedCheckpoint`, inspect the full original result/financial observation; do not manufacture a returned checkpoint.
 
 Use `produced.publication()` for the shared JSON value; it includes top-level `await_prefix` and the complete existing financial observation. These accessors do not invoke another producer call. The [fixed ordinary observations](../../results/sherlock-financial-await-prefix-20261018/README.md) compare full publications in memory; they do not execute CLI dispatch or persist a financial report. Preserve authentication none/consumption untracked. Generic018/019, full013 and native settlement retain their own obligations.
+
+
+## Distinguish a stage observation from a carrier-component result
+
+For the separate financial-carrier increment, read [its current reference](../reference/financial-carrier-binding.md) and [actual qualification](../../results/sherlock-financial-carrier-unit02-source-20261020/README.md). Confirm the producing call and retained result before interpreting the pass: the sixteen checked tests exercise the sealed crate-private carrier, whereas this guide's `start_observed`/`resume_observed` route captures the existing Core/2 producer. Neither result can be renamed a completed universal financial owner pipeline or a ledger settlement.
+
+When inspecting a new report, keep the original source/input/configuration, actual admitted pair, financial genesis and first owner event distinct. Require actual observation at each claimed link; don't fill a missing link with another wrapper around the same evaluator. This section adds no runnable command, replacement evaluator or new permission requirement. Existing observed examples retain their original source cuts.

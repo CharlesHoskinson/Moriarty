@@ -1,0 +1,48 @@
+/// Checked fixed-capacity geometry. Allocation policy: all sizes are computed
+/// with `checked_mul`/`checked_add` and compared with `max_total_lanes` before
+/// any `Vec` is allocated by callers of this geometry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6PaddedCarrierGeometry {
+    pub caps: C6StateCaps,
+    pub image_total_lanes: usize,
+    pub data_nodes_lanes: usize,
+    pub data_fields_lanes: usize,
+    pub env_cells_lanes: usize,
+    pub value_slots_lanes: usize,
+    pub data_total_lanes: usize,
+    pub helper_tasks_lanes: usize,
+    pub helper_total_lanes: usize,
+    pub state_total_lanes: usize,
+}
+
+impl C6PaddedCarrierGeometry {
+    pub fn checked_new(caps: C6StateCaps, limits: C6StateLimits) -> Result<Self, C6PushStepError> {
+        let ov = |section: &'static str| C6PushStepError::GeometryOverflow { section };
+        let image_total_lanes = caps.phys.max_frames.checked_mul(FRAME_LANES)
+            .and_then(|n| n.checked_add(IMAGE_SECTION_HEADER_LANES)).ok_or_else(|| ov("image"))?;
+        let data_nodes_lanes = caps.phys.max_data_nodes.checked_mul(DATA_ROW_LANES).ok_or_else(|| ov("data.data"))?;
+        let data_fields_lanes = caps.max_data_field_slots.checked_mul(REF_LANES).ok_or_else(|| ov("data.fields"))?;
+        let env_cells_lanes = caps.phys.max_env_cells.checked_mul(ENV_ROW_LANES).ok_or_else(|| ov("data.env"))?;
+        let value_slots_lanes = caps.phys.max_value_slots.checked_mul(REF_LANES).ok_or_else(|| ov("data.values"))?;
+        let data_total_lanes = DATA_HEADER_LANES.checked_add(data_nodes_lanes)
+            .and_then(|n| n.checked_add(data_fields_lanes))
+            .and_then(|n| n.checked_add(env_cells_lanes))
+            .and_then(|n| n.checked_add(value_slots_lanes)).ok_or_else(|| ov("data"))?;
+        let helper_tasks_lanes = caps.max_helper_tasks.checked_mul(TASK_LANES).ok_or_else(|| ov("helper.tasks"))?;
+        let helper_total_lanes = HELPER_FIXED_LANES.checked_add(helper_tasks_lanes).ok_or_else(|| ov("helper"))?;
+        let state_total_lanes = image_total_lanes.checked_add(data_total_lanes)
+            .and_then(|n| n.checked_add(helper_total_lanes)).ok_or_else(|| ov("state"))?;
+        if state_total_lanes > limits.max_total_lanes {
+            return Err(C6PushStepError::StateLimitExceeded { needed: state_total_lanes, limit: limits.max_total_lanes });
+        }
+        Ok(Self { caps, image_total_lanes, data_nodes_lanes, data_fields_lanes, env_cells_lanes,
+            value_slots_lanes, data_total_lanes, helper_tasks_lanes, helper_total_lanes, state_total_lanes })
+    }
+
+    pub const fn frame_slot_offset(&self, slot: usize) -> usize {
+        IMAGE_SECTION_HEADER_LANES + slot * FRAME_LANES
+    }
+    pub const fn data_fields_base(&self) -> usize { DATA_HEADER_LANES + self.data_nodes_lanes }
+    pub const fn env_base(&self) -> usize { self.data_fields_base() + self.data_fields_lanes }
+    pub const fn value_slots_base(&self) -> usize { self.env_base() + self.env_cells_lanes }
+}

@@ -1,0 +1,132 @@
+import argparse
+
+import datetime
+
+import hashlib
+
+import json
+
+import os
+
+import re
+
+import resource
+
+import secrets
+
+import signal
+
+import stat
+
+import subprocess
+
+import sys
+
+import time
+
+CHILD_SECONDS = 30
+
+SWEEP_SECONDS = 3
+
+TOKEN_NAME = 'SHERLOCK_K_ATTEMPT_TOKEN'
+
+def utc():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+def open_exclusive(path, mode=0o600):
+    return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+
+def processes(pgid, token):
+    marker = (TOKEN_NAME + '=' + token).encode()
+    found = []
+    for name in os.listdir('/proc'):
+        if not name.isdigit() or int(name) == os.getpid():
+            continue
+        pid = int(name)
+        try:
+            with open(f'/proc/{pid}/stat', 'rb') as handle:
+                fields = handle.read().rsplit(b')', 1)[1].split()
+            state, group = fields[0].decode(), int(fields[2])
+        except (OSError, IndexError, ValueError):
+            continue
+        tagged = False
+        try:
+            with open(f'/proc/{pid}/environ', 'rb') as handle:
+                tagged = marker in handle.read().split(b'\0')
+        except OSError:
+            pass
+        if group == pgid or tagged:
+            try:
+                with open(f'/proc/{pid}/cmdline', 'rb') as handle:
+                    cmdline = [part.decode('utf-8', 'replace') for part in handle.read().split(b'\0') if part]
+            except OSError:
+                cmdline = []
+            found.append(dict(pid=pid, pgid=group, state=state, tagged=tagged,
+                              in_group=group == pgid, cmdline=cmdline))
+    return found
+
+def kill_group(pgid):
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+def sweep(pgid, token):
+    killed = []
+    deadline = time.monotonic() + SWEEP_SECONDS
+    while True:
+        live = [row for row in processes(pgid, token) if row['state'] != 'Z']
+        if not live:
+            return killed, []
+        killed.extend(live)
+        for row in live:
+            try:
+                os.kill(row['pid'], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if time.monotonic() >= deadline:
+            return killed, live
+        time.sleep(0.1)
+
+def launch(record, command, env, cwd, token, fsize):
+    def limit_child():
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+        resource.setrlimit(resource.RLIMIT_FSIZE, (fsize, fsize))
+        os.umask(0o077)
+
+    out_fd, err_fd = open_exclusive(cwd + '/stdout'), open_exclusive(cwd + '/stderr')
+    proc = None
+    try:
+        record['started_utc'] = utc()
+        started = time.monotonic()
+        try:
+            proc = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                    stdout=out_fd, stderr=err_fd, close_fds=True,
+                                    start_new_session=True, preexec_fn=limit_child)
+        except (OSError, subprocess.SubprocessError) as error:
+            record.update(outcome='launch-error', launch_error=f'{type(error).__name__}: {error}')
+            return
+        record['pid'] = proc.pid
+        timed_out = False
+        try:
+            proc.wait(timeout=max(0.0, started + CHILD_SECONDS - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            kill_group(proc.pid)
+            proc.wait()
+        code = proc.returncode
+        record.update(elapsed_seconds=round(time.monotonic() - started, 3), ended_utc=utc(),
+                      returncode=code, timed_out=timed_out,
+                      outcome='timeout-killed' if timed_out else ('exited' if code >= 0 else 'signaled'))
+    finally:
+        if proc is not None:
+            if proc.returncode is None:
+                kill_group(proc.pid)
+                proc.wait()
+            record['group_members_after_exit'] = processes(proc.pid, token)
+            kill_group(proc.pid)
+            killed, remaining = sweep(proc.pid, token)
+            record.update(swept=killed, remaining=remaining,
+                          containment_breach=bool(remaining) or any(not row['in_group'] for row in killed))
+        os.close(out_fd)
+        os.close(err_fd)

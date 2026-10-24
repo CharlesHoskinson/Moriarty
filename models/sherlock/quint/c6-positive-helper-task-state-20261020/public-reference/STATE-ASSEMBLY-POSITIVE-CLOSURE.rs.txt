@@ -1,0 +1,344 @@
+//! Assembled physical state section of sherlock-c6-phys/1 (C6P1), Chunk 3C.
+//!
+//! One outer section over the three existing codecs, used as-is: Chunk 1 root+frames
+//! (`encode_root_and_frames`/`decode_image_section`), 3A data tables and 3B
+//! helper/result/task tables. It admits nothing, constructs no `Admitted`,
+//! `MachineImage`, `RunIdC`, `IdentityC` or `AdmissionSnapshot`, and steps nothing.
+//!
+//! Layout `sherlock-c6-phys/1` state section, version `C6_PHYS_VERSION`:
+//! - 0 magic, 1 version, 2 `STATE_SECTION_TAG`, 3 child count (exactly 3);
+//! - 4..=9 directory: (tag, exact lane length) for image (`IMAGE_CHILD_TAG`),
+//!   data (`DATA_SECTION_TAG`), helper (`HELPER_SECTION_TAG`), in that fixed order;
+//! - 10 ext-capacity presence (0 absent, 1 present; caps use the effective value);
+//! - 11 reserved, zero;
+//! - 12..=40 capacity descriptor: the 27 `C6PhysCaps` fields in declaration order,
+//!   then `max_data_field_slots`, `max_helper_tasks`;
+//! - then the three children contiguously; nothing between or after them.
+//! The order is fixed, so reordered or duplicated children are tag errors.
+//! Lengths are full usize; every offset sum is checked.
+//!
+//! `decode_state` first-error order:
+//! 1. input longer than the caller lane limit: `LimitExceeded` (nothing read);
+//! 2. fewer than 41 lanes: `Truncated`; 3. `BadMagic`; 4. `BadVersion`; 5. `BadTag`;
+//! 6. lanes 3..=40 ascending: count (`BadSectionCount`); per child tag
+//!    (`BadChildTag`), length (`UsizeOverflow`) and its minimum header
+//!    (`ChildLengthRange`); ext lane (`BadBool`, then `ContextMismatch`);
+//!    reserved lane (`NonZeroPadding`); descriptor lanes (`ContextMismatch`);
+//! 7. offsets (`UsizeOverflow`), then `Truncated`, then `TrailingLanes`
+//!    (no allocation before);
+//! 8. image, data, helper children on exact slices, each with its own frozen
+//!    first-error order, wrapped as `Child { child, offset, error }`.
+//! `encode_state` order: length plan (`UsizeOverflow`), then the lane limit, then
+//! the image, data and helper encoders (their caps); the output is the unique
+//! canonical section. Both sides accept exactly the same canonical domain.
+//!
+//! Representation only: stored `alloc`/`active`/segment-base counters are carried
+//! independently of vector lengths, and the derived depth/task_live are not stored.
+//! Cross-field consistency (SI-05/SI-10, membership, StepInv) is future owner
+//! admission (Chunk 4); no normalization happens here. `max_types` rules are the
+//! existing codecs' rules, unchanged.
+//!
+//! The uncached witness comparison checks preservation under the existing
+//! `construct_plan_for`/`evaluate_uncached` implementation only. Lanes,
+//! codec equality and plan equality are not constraints, proofs or native evidence.
+
+use super::c6_phys::{
+    decode_image_section, encode_root_and_frames, C6CodecBudgets, C6PhysError, C6Root, C6_PHYS_MAGIC,
+    C6_PHYS_VERSION, FRAME_LANES, IMAGE_SECTION_HEADER_LANES,
+};
+use super::c6_phys_data::{
+    decode_data_tables, encode_data_tables, rd, rd_bool, u, zero, C6DataTables, C6StateCaps,
+    DATA_HEADER_LANES, DATA_ROW_LANES, DATA_SECTION_TAG, ENV_ROW_LANES, REF_LANES,
+};
+use super::c6_phys_helper::{
+    decode_helper_tables, encode_helper_tables, C6HelperTables, HELPER_FIXED_LANES, HELPER_SECTION_TAG,
+    TASK_LANES,
+};
+use super::complete_observation::{HostSnapshot, ImageSnapshot};
+use super::shared::host_implied_prefix::SegBase;
+use super::shared::{BoundsC, ExtCapacitiesC, FrameRowC, LayoutCapacitiesC, LayoutSchemaC};
+use super::witness_plan::{
+    construct_plan_for, evaluate_uncached, LifetimeUnit, NodeId, Operation, WitnessEvaluation,
+    WitnessFailure, WitnessPlan,
+};
+
+pub const STATE_SECTION_TAG: u128 = 0x5354_4154;
+/// Directory-only tag: the Chunk 1 image section carries no tag lane itself.
+pub const IMAGE_CHILD_TAG: u128 = 0x494D_4147;
+pub const STATE_CHILD_COUNT: u128 = 3;
+pub const L_SECTION_COUNT: usize = 3;
+pub const L_DIRECTORY: usize = 4;
+pub const L_EXT_PRESENT: usize = 10;
+pub const L_RESERVED: usize = 11;
+pub const L_CAPS: usize = 12;
+pub const CAPS_DESCRIPTOR_LANES: usize = 29;
+pub const STATE_HEADER_LANES: usize = L_CAPS + CAPS_DESCRIPTOR_LANES;
+const STATE_S: &str = "state";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum C6StateChild { Image, Data, Helper }
+
+impl C6StateChild {
+    pub const ALL: [Self; 3] = [Self::Image, Self::Data, Self::Helper];
+    const fn index(self) -> usize { match self { Self::Image => 0, Self::Data => 1, Self::Helper => 2 } }
+    pub const fn tag(self) -> u128 {
+        match self { Self::Image => IMAGE_CHILD_TAG, Self::Data => DATA_SECTION_TAG, Self::Helper => HELPER_SECTION_TAG }
+    }
+    pub const fn minimum_lanes(self) -> usize {
+        match self { Self::Image => IMAGE_SECTION_HEADER_LANES, Self::Data => DATA_HEADER_LANES, Self::Helper => HELPER_FIXED_LANES }
+    }
+}
+
+/// Local wrapper; parent `C6PhysError` values are preserved unchanged.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum C6StateError {
+    /// An outer-header error, reported against section "state".
+    Outer(C6PhysError),
+    LimitExceeded { needed: usize, limit: usize },
+    BadSectionCount { actual: u128 },
+    BadChildTag { child: C6StateChild, expected: u128, actual: u128 },
+    ChildLengthRange { child: C6StateChild, declared: usize, minimum: usize },
+    /// A header lane disagrees with the caller's supplied context.
+    ContextMismatch { lane: usize, expected: u128, actual: u128 },
+    /// A child codec error; `offset` is the child's first lane in the section.
+    Child { child: C6StateChild, offset: usize, error: C6PhysError },
+    /// Encoder self-check: the predicted child length differs from the child output.
+    ChildLengthDrift { child: C6StateChild, predicted: usize, actual: usize },
+    RetainedLayoutMismatch { field: &'static str },
+}
+pub type C6StateResult<T> = Result<T, C6StateError>;
+
+fn outer(error: C6PhysError) -> C6StateError { C6StateError::Outer(error) }
+fn child_error(child: C6StateChild, offset: usize, error: C6PhysError) -> C6StateError {
+    C6StateError::Child { child, offset, error }
+}
+
+/// Caller-required bound on the whole section, checked before decoding or assembly.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6StateLimits { pub max_total_lanes: usize }
+
+/// Caller-retained capacity context. It is an independent caller assertion and is
+/// not bound to `host.admission`; `LayoutSnapshot` has no ext capacities.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6StateContext { caps: C6StateCaps, ext_present: bool, limits: C6StateLimits }
+
+impl C6StateContext {
+    /// From the ORIGINAL admitting layout the caller retained.
+    pub fn from_layout(layout: &LayoutSchemaC, budgets: C6CodecBudgets, limits: C6StateLimits) -> Self {
+        Self { caps: C6StateCaps::from_layout(layout, budgets), ext_present: layout.ext_capacities.is_some(), limits }
+    }
+    /// Same derivation as `from_layout`; `ext` keeps absent distinct from present zero.
+    pub fn from_parts(bounds: &BoundsC, capacities: &LayoutCapacitiesC, ext: Option<ExtCapacitiesC>,
+        budgets: C6CodecBudgets, limits: C6StateLimits) -> Self {
+        let effective = ExtCapacitiesC::effective_for_extended_domain(ext);
+        Self { caps: C6StateCaps::from_parts(bounds, capacities, &effective, budgets), ext_present: ext.is_some(), limits }
+    }
+    /// Explicit caller assertion over already-derived caps (tooling and synthetic vectors).
+    pub fn from_caps_assertion(caps: C6StateCaps, ext_present: bool, limits: C6StateLimits) -> Self {
+        Self { caps, ext_present, limits }
+    }
+    pub fn caps(&self) -> &C6StateCaps { &self.caps }
+    pub fn ext_present(&self) -> bool { self.ext_present }
+    pub fn limits(&self) -> C6StateLimits { self.limits }
+    pub fn descriptor(&self) -> [u128; CAPS_DESCRIPTOR_LANES] {
+        let (c, p) = (&self.caps, &self.caps.phys);
+        [p.max_frames, p.max_expressions, p.max_names, p.max_arms, p.max_children, p.max_value_slots,
+            p.max_constants, p.max_data_nodes, p.max_env_cells, p.max_functions, p.max_arity, p.max_types,
+            p.max_occurrences, p.max_occurrence_paths, p.max_parameters, p.max_patterns,
+            p.max_pattern_children, p.max_constructors, p.max_ctor_fields, p.max_decl_templates,
+            p.max_plan_nodes, p.max_plan_cases, p.max_field_paths, p.max_constant_fields, p.max_name_bytes,
+            p.max_type_expr_nodes, p.max_template_bytes, c.max_data_field_slots, c.max_helper_tasks].map(u)
+    }
+    fn admit_total(&self, needed: usize) -> C6StateResult<()> {
+        let limit = self.limits.max_total_lanes;
+        if needed > limit { Err(C6StateError::LimitExceeded { needed, limit }) } else { Ok(()) }
+    }
+}
+
+/// Checks that the caller's retained layout equals every layout field the host
+/// snapshot carries. Ext capacities have no host counterpart.
+pub fn retained_layout_agrees_with_host(layout: &LayoutSchemaC, host: &HostSnapshot) -> C6StateResult<()> {
+    let h = &host.admission.layout;
+    let widths = match (&h.widths, &layout.widths) {
+        (None, None) => true,
+        (Some(s), Some(w)) => s.index_widths.as_slice() == w.index_width_entries()
+            && s.counter_widths.as_slice() == w.counter_width_entries()
+            && s.record_widths.as_slice() == w.record_width_entries(),
+        _ => false,
+    };
+    for (same, field) in [
+        (h.layout_version == layout.layout_version, "layout_version"),
+        (h.field_id == layout.field_id, "field_id"),
+        (widths, "widths"),
+        (h.scalar_layout_id == layout.scalar_layout_id, "scalar_layout_id"),
+        (h.bounds == layout.bounds && host.admission.bounds == layout.bounds, "bounds"),
+        (h.capacities == layout.capacities, "capacities"),
+        (h.boundary_capacities_present == layout.boundary_capacities_present, "boundary_capacities_present"),
+    ] {
+        if !same { return Err(C6StateError::RetainedLayoutMismatch { field }); }
+    }
+    Ok(())
+}
+
+/// Every encoded `ImageSnapshot` field: root registers (including the segment
+/// base), raw frames bottom-to-top, and all seven tables. `run_id` is external.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct C6OwnedState {
+    pub root: C6Root,
+    pub frames: Vec<FrameRowC>,
+    pub data: C6DataTables,
+    pub helper: C6HelperTables,
+}
+
+impl C6OwnedState {
+    pub fn from_image(image: &ImageSnapshot) -> Self {
+        Self { root: C6Root::from_image(image), frames: image.frames.clone(),
+            data: C6DataTables::from_image(image), helper: C6HelperTables::from_image(image) }
+    }
+    /// Diagnostic: overwrite every encoded field of a caller-owned image (normally
+    /// a clone); `run_id` stays external. Exhaustive destructuring makes a new
+    /// image or root field a compile error until it is accounted for.
+    pub fn replace_state_of(self, image: &mut ImageSnapshot) {
+        let C6OwnedState { root, frames, data, helper } = self;
+        let C6Root { control, control_origin, env_root, stack_limit, outcome, initial_fuel, remaining_work,
+            consumed_work, helper_work, helper_visits, reference_cursor, alloc, active, seg_active, seg_alloc,
+            seg_consumed_work } = root;
+        let C6DataTables { data, data_fields, env, value_slots } = data;
+        let C6HelperTables { helper, result, tasks } = helper;
+        let ImageSnapshot { run_id: _, control: i_control, control_origin: i_origin, env_root: i_env_root,
+            stack_limit: i_stack, outcome: i_outcome, initial_fuel: i_fuel, remaining_work: i_remaining,
+            consumed_work: i_consumed, helper_work: i_hwork, helper_visits: i_visits,
+            reference_cursor: i_cursor, alloc: i_alloc, active: i_active, helper: i_helper, result: i_result,
+            seg_base: i_seg, data: i_data, data_fields: i_fields, env: i_env, frames: i_frames,
+            tasks: i_tasks, value_slots: i_slots } = image;
+        *i_control = control; *i_origin = control_origin; *i_env_root = env_root; *i_stack = stack_limit;
+        *i_outcome = outcome; *i_fuel = initial_fuel; *i_remaining = remaining_work;
+        *i_consumed = consumed_work; *i_hwork = helper_work; *i_visits = helper_visits;
+        *i_cursor = reference_cursor; *i_alloc = alloc; *i_active = active;
+        *i_seg = SegBase::from_parts(seg_active, seg_alloc, seg_consumed_work);
+        *i_helper = helper; *i_result = result; *i_tasks = tasks;
+        *i_data = data; *i_fields = data_fields; *i_env = env; *i_slots = value_slots; *i_frames = frames;
+    }
+}
+
+/// Exact child lengths. Each child decoder checks its own exact length again.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6StateDirectory { pub image_lanes: usize, pub data_lanes: usize, pub helper_lanes: usize }
+
+impl C6StateDirectory {
+    pub fn len_of(&self, child: C6StateChild) -> usize {
+        match child { C6StateChild::Image => self.image_lanes, C6StateChild::Data => self.data_lanes,
+            C6StateChild::Helper => self.helper_lanes }
+    }
+    /// Image, data and helper start offsets, then the total length; all checked.
+    pub fn offsets(&self) -> C6StateResult<[usize; 4]> {
+        let mut o = [STATE_HEADER_LANES; 4];
+        for child in C6StateChild::ALL {
+            let (i, len) = (child.index(), self.len_of(child));
+            o[i + 1] = o[i].checked_add(len)
+                .ok_or(outer(C6PhysError::UsizeOverflow { section: STATE_S, value: u(len) }))?;
+        }
+        Ok(o)
+    }
+}
+
+/// Child lengths from counts and the public row widths (no child-private offsets).
+pub fn plan_state_lengths(state: &C6OwnedState) -> C6StateResult<C6StateDirectory> {
+    fn rows(acc: usize, count: usize, width: usize) -> C6StateResult<usize> {
+        count.checked_mul(width).and_then(|n| acc.checked_add(n))
+            .ok_or(outer(C6PhysError::UsizeOverflow { section: STATE_S, value: u(count) }))
+    }
+    let d = &state.data;
+    let data = rows(DATA_HEADER_LANES, d.data.len(), DATA_ROW_LANES)?;
+    let data = rows(data, d.data_fields.len(), REF_LANES)?;
+    let data = rows(data, d.env.len(), ENV_ROW_LANES)?;
+    Ok(C6StateDirectory {
+        image_lanes: rows(IMAGE_SECTION_HEADER_LANES, state.frames.len(), FRAME_LANES)?,
+        data_lanes: rows(data, d.value_slots.len(), REF_LANES)?,
+        helper_lanes: rows(HELPER_FIXED_LANES, state.helper.tasks.len(), TASK_LANES)?,
+    })
+}
+
+fn state_header(dir: &C6StateDirectory, ctx: &C6StateContext) -> [u128; STATE_HEADER_LANES] {
+    let mut h = [0u128; STATE_HEADER_LANES];
+    h[..L_DIRECTORY].copy_from_slice(&[C6_PHYS_MAGIC, C6_PHYS_VERSION, STATE_SECTION_TAG, STATE_CHILD_COUNT]);
+    for child in C6StateChild::ALL {
+        let at = L_DIRECTORY + 2 * child.index();
+        h[at] = child.tag();
+        h[at + 1] = u(dir.len_of(child));
+    }
+    h[L_EXT_PRESENT] = u128::from(ctx.ext_present);
+    h[L_CAPS..].copy_from_slice(&ctx.descriptor());
+    h
+}
+
+/// Canonical encoder: length plan, lane limit, then the three existing encoders.
+pub fn encode_state(state: &C6OwnedState, ctx: &C6StateContext) -> C6StateResult<Vec<u128>> {
+    use C6StateChild::*;
+    let dir = plan_state_lengths(state)?;
+    let o = dir.offsets()?;
+    ctx.admit_total(o[3])?;
+    let image = encode_root_and_frames(&state.root, &state.frames, &ctx.caps.phys)
+        .map_err(|e| child_error(Image, o[0], e))?;
+    let data = encode_data_tables(&state.data, &ctx.caps).map_err(|e| child_error(Data, o[1], e))?;
+    let helper = encode_helper_tables(&state.helper, &ctx.caps).map_err(|e| child_error(Helper, o[2], e))?;
+    let mut out = Vec::with_capacity(o[3]);
+    out.extend(state_header(&dir, ctx));
+    for (child, lanes) in [(Image, image), (Data, data), (Helper, helper)] {
+        let predicted = dir.len_of(child);
+        if lanes.len() != predicted {
+            return Err(C6StateError::ChildLengthDrift { child, predicted, actual: lanes.len() });
+        }
+        out.extend(lanes);
+    }
+    Ok(out)
+}
+
+/// Decoder; see the module documentation for the exact first-error order.
+pub fn decode_state(lanes: &[u128], ctx: &C6StateContext) -> C6StateResult<C6OwnedState> {
+    use C6StateChild::*;
+    ctx.admit_total(lanes.len())?;
+    if lanes.len() < STATE_HEADER_LANES {
+        return Err(outer(C6PhysError::Truncated { section: STATE_S, needed: STATE_HEADER_LANES, actual: lanes.len() }));
+    }
+    if lanes[0] != C6_PHYS_MAGIC { return Err(outer(C6PhysError::BadMagic { actual: lanes[0] })); }
+    if lanes[1] != C6_PHYS_VERSION { return Err(outer(C6PhysError::BadVersion { actual: lanes[1] })); }
+    if lanes[2] != STATE_SECTION_TAG { return Err(outer(C6PhysError::BadTag { section: STATE_S, tag: lanes[2] })); }
+    if lanes[L_SECTION_COUNT] != STATE_CHILD_COUNT {
+        return Err(C6StateError::BadSectionCount { actual: lanes[L_SECTION_COUNT] });
+    }
+    let mut lengths = [0usize; 3];
+    for child in C6StateChild::ALL {
+        let at = L_DIRECTORY + 2 * child.index();
+        if lanes[at] != child.tag() {
+            return Err(C6StateError::BadChildTag { child, expected: child.tag(), actual: lanes[at] });
+        }
+        let declared = rd(STATE_S, lanes[at + 1]).map_err(outer)?;
+        if declared < child.minimum_lanes() {
+            return Err(C6StateError::ChildLengthRange { child, declared, minimum: child.minimum_lanes() });
+        }
+        lengths[child.index()] = declared;
+    }
+    if rd_bool(STATE_S, lanes[L_EXT_PRESENT]).map_err(outer)? != ctx.ext_present {
+        return Err(C6StateError::ContextMismatch { lane: L_EXT_PRESENT,
+            expected: u128::from(ctx.ext_present), actual: lanes[L_EXT_PRESENT] });
+    }
+    zero(STATE_S, lanes, L_RESERVED, L_RESERVED + 1).map_err(outer)?;
+    for (k, expected) in ctx.descriptor().into_iter().enumerate() {
+        let lane = L_CAPS + k;
+        if lanes[lane] != expected { return Err(C6StateError::ContextMismatch { lane, expected, actual: lanes[lane] }); }
+    }
+    let dir = C6StateDirectory { image_lanes: lengths[0], data_lanes: lengths[1], helper_lanes: lengths[2] };
+    let o = dir.offsets()?;
+    if lanes.len() < o[3] {
+        return Err(outer(C6PhysError::Truncated { section: STATE_S, needed: o[3], actual: lanes.len() }));
+    }
+    if lanes.len() > o[3] {
+        return Err(outer(C6PhysError::TrailingLanes { section: STATE_S, extra: lanes.len() - o[3] }));
+    }
+    let (root, frames) = decode_image_section(&lanes[o[0]..o[1]], &ctx.caps.phys)
+        .map_err(|e| child_error(Image, o[0], e))?;
+    let data = decode_data_tables(&lanes[o[1]..o[2]], &ctx.caps).map_err(|e| child_error(Data, o[1], e))?;
+    let helper = decode_helper_tables(&lanes[o[2]..o[3]], &ctx.caps).map_err(|e| child_error(Helper, o[2], e))?;
+    Ok(C6OwnedState { root, frames, data, helper })
+}

@@ -1,0 +1,59 @@
+{
+  "status": "STATIC_EXACT_BASE_EXTENSION_NOT_EXECUTION",
+  "base": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/preimages/nominalConstruction.qnt",
+    "bytes": 18761,
+    "sha256": "77a487c5b7ce84569540faa0a780991d67cf8217d3a1d68a81916426d8943008"
+  },
+  "candidate": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/doctorwatson-stagenet-four-milestone-audit-20261020/quint-next-public-nominal-simulate-source10/afterimages/nominalPublicSimulation.qnt",
+    "bytes": 19394,
+    "sha256": "40459df5715b3b13417aaf32b0a77789abbc34cdf6ff8e14e97deadc67e162c5"
+  },
+  "replacements": [
+    {
+      "old": "module nominalConstruction {",
+      "new": "module nominalPublicSimulation {",
+      "count": 1
+    },
+    {
+      "old": "  type Expression = Literal(Value) | Variable(int)",
+      "new": "  type Expression = Literal(Value) | Variable(int) | BooleanNot(int)",
+      "count": 1
+    },
+    {
+      "old": "    | RightFrame({op: Op, left: Value})",
+      "new": "    | RightFrame({op: Op, left: Value})\n    | NotFrame",
+      "count": 1
+    },
+    {
+      "old": "  type Event = Start | LiteralEvent | VariableEvent | LetEvent | BinaryEvent | IfEvent",
+      "new": "  type Event = Start | LiteralEvent | VariableEvent | LetEvent | BinaryEvent | UnaryEvent | IfEvent",
+      "count": 1
+    },
+    {
+      "old": "  pure val PROFILE = \"sherlock-quint-nominal-pattern-worklist/1\"",
+      "new": "  pure val PROFILE = \"sherlock-quint-public-nominal-source-cases/1\"",
+      "count": 1
+    },
+    {
+      "old": "      | Let(e) => push(marked, LetFrame({name: e.name, body: e.body, saved: s.environment}), e.value, s.environment, LetEvent)",
+      "new": "      | BooleanNot(operand) => push(marked, NotFrame, operand, s.environment, UnaryEvent)\n      | Let(e) => push(marked, LetFrame({name: e.name, body: e.body, saved: s.environment}), e.value, s.environment, LetEvent)",
+      "count": 1
+    },
+    {
+      "old": "  pure def returnField(s: Snapshot, c: Construction, value: Value): Snapshot = {",
+      "new": "  // General ordinary positive Bool negation; uses the same return/frame path.\n  // Other values remain outside this finite typed profile, not a Core refusal.\n  pure def booleanNot(s: Snapshot, value: Value): Snapshot =\n    if (value == List(BoolToken(true))) emit(s, PrimitiveReturn, Return(List(BoolToken(false))))\n    else if (value == List(BoolToken(false))) emit(s, PrimitiveReturn, Return(List(BoolToken(true))))\n    else stopDomain(s)\n  pure def returnField(s: Snapshot, c: Construction, value: Value): Snapshot = {",
+      "count": 1
+    },
+    {
+      "old": "        | RightFrame(f) => primitive(popped, f.op, f.left, value)",
+      "new": "        | RightFrame(f) => primitive(popped, f.op, f.left, value)\n        | NotFrame => booleanNot(popped, value)",
+      "count": 1
+    }
+  ],
+  "fullInverseExact": true,
+  "preservedFields": "All17Snapshot fields/control variants/frames/call/constructor/match/advance/accounting logic unchanged except additive NotFrame and BooleanNot paths. Existing metadata witnesses carried as historical base definitions; current runtime selects its own witness.",
+  "behavior": "Recursion executes through original Call/Invoke/ReturnFrame/Match/Cases/ConstructorFields/Build transitions; no new evaluator or hardcoded case outputs in producer.",
+  "ordinaryPositiveSlice": "BooleanNot true<->false; outside typed Bool uses existing OutsideDomain mechanism, no production guard/security/error policy claim."
+}

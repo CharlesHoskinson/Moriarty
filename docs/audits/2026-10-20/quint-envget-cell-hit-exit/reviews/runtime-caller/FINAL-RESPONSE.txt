@@ -1,0 +1,103 @@
+## Top verdict
+
+**SOURCE/API CALLER_ACCEPTABLE**
+
+**FRONTEND01ELIGIBLE**
+
+**RUN02CONDITIONAL**
+
+Reviewer identity: Muse Wonder 1.0 HIGH, independent non-author review. No tools, commands, subjects, frontend, Quint run, provider, Git, or canonical action were executed. This is a bounded caller/API and two-operation applicability review only. It does not reopen the approved source model approval `4fab8ede`, and it is not approval by hashes alone.
+
+## Why the corrected caller is acceptable
+
+### M1 — review binding and result keys
+
+The caller now asserts the Muse review result with the correct keys and value:
+
+- `rv['actualExit'] == 0`
+- `rv['terminal']['terminal'] == 'completed'`
+- `rv['finalSHA'] == '4fab8edea69b0af32735c4ed5cbfda5eb78791fd04637c5637ccb167a44cc450'`
+
+That matches the actual source/API review identity supplied in the packet. The caller also distinguishes that review-result shape from the capture result shape: later it correctly uses capture fields `actual_exit`, `controller_failure`, and stream fields `bytes`, `bytes_seen`, `bytes_retained`, and `full_stream_retained`. No stale review SHA remains in the corrected caller.
+
+### M2 — capture, raw freeze, pinning, and qualification order
+
+The corrected ordering is semantically sufficient for the stated raw-first contract:
+
+1. `capture(op, phase)` returns.
+2. `RESULT.json` is durably saved immediately after capture.
+3. Available `COMMAND.json`, `stdout.bin`, and `stderr.bin` regular files are fsynced, followed by the phase directory.
+4. For operation 02, every regular non-symlink entry then present in the ITF directory is fsynced, the ITF directory is fsynced, and those entries are pinned.
+5. `ITF-RAW-PIN.json`, when ITF files exist, is durably saved before count, name, type, size, or semantic qualification.
+6. The phase and capture-root directories are fsynced before `raw_durable` is set to `True`.
+7. The full postcheck is then run and durably saved.
+8. Only after that does the caller assert ITF count, name, regular-file status, 64 MiB cap, pin equality, exit status, controller status, full-stream retention, diagnostics, ITF parsing, and window semantics.
+
+The conditional fsync form is fail-closed rather than permissive. If a stream or ITF path is missing, a symlink, or otherwise not a regular file, later checks still fail through stream completeness, ITF entry count/type, or `itfs == [pin(itf)]`. The failure record now uses the actual `raw_durable` flag instead of always claiming preservation. Failures before the raw-freeze point therefore report `rawPreserved: false`; failures after the freeze point report `true`.
+
+One bounded failure-path limit remains acceptable rather than a mandatory correction: exceptions before the `try:` block, such as precheck, selection, precheck-save, capture-directory creation, phase creation, or fresh ITF-directory creation failures, do not create `FAILURE.json`. Those failures still stop before dispatch and leave existing fresh-directory state that prevents silent retry. Inside the capture/qualification `try:`, failures are recorded with `FAIL_STOP_NO_RETRY` and re-raised.
+
+### M3 — diagnostics qualification against the supplied ITF context
+
+The diagnostics checks are sufficient for the public ITF metadata shape supplied:
+
+- Run stderr must be exactly empty.
+- Run stdout must not contain `QNT0`, `DEBUG`, or `error:`.
+- The complete raw ITF byte content must not contain the case-insensitive substring `diagnostic`.
+
+Against the installed serializer and header functions supplied, trace-level pending diagnostics are stored under `pending_diagnostics`, and per-state diagnostics are stored under state `#meta` as `diagnostics`. Either key contains the substring checked by the caller. The normal ITF header fields supplied — format, format-description, source, status, description, and timestamp — do not themselves require the word `diagnostic`. The caller does not use the unrelated helper stdout test parser, does not require a printed witness summary, does not falsely claim pretty-trace truncation, and correctly records `printedWitnessCounterClaimed: False` and `rawStreamTruncationClaimed: False`.
+
+The ITF substring check is conservative and fail-closed. It may reject a trace if the word appears in an unrelated value, but it does not create a false acceptance path for the diagnostics forms exposed by the supplied public ITF functions.
+
+## Caller/API relationship to the capture helper
+
+The caller imports the reusable helper through:
+
+```python
+runpy.run_path(str(helper), run_name='root_B41_run_itf_capture_only')
+```
+
+Because the run name is not `__main__`, the helper's unrelated `main` is not invoked. The caller uses only the reusable API surface needed for this contract: `pin`, `check`, `static_check`, `save` through `durable`, and `capture`. It does not call `helper.main`, `parse_exact_stdout`, `test_membership`, or `dep_inputs`. That satisfies the required API separation: API capture/pin/check/static_check/save only, never `helper.main`.
+
+The caller also never reads expected, Rust-after, or private mismatch diagnostics, and it performs no expected/after comparison. The only comparison-like checks are raw-output collection and qualification checks: stream completeness, ITF shape, state count, sole `machine` variable, computed-window retention, input-before retention, window-before equality, and ordered event retention.
+
+## Operation 01 eligibility
+
+**FRONTEND01ELIGIBLE**, subject to Root alone selecting exactly operation `01` in one invocation.
+
+Required scope and conditions:
+
+- Exactly one explicit Root selection: caller argument `01`.
+- No automatic next dispatch and no retry.
+- Caller must see operation `01-newActualBeforeRuntimeFrontend`.
+- Fresh state is required: the capture root and proposed ITF directory must be absent before selection.
+- Root must perform the full 4,685 pre/post checks each time: 4,670 package files, 2 Node/CLI entries, 10 source files, and 3 symlinks, plus the exact ten regular public source entries.
+- The operation remains the pinned frontend typecheck under the existing caps: 60 seconds wall, 4 MiB retained per full stream, Node `--max-old-space-size=512`, and the existing environment/cwd discipline from the pinned proposal.
+- Exit 0 alone is not sufficient. Acceptance also requires controller failure `None`, exactly two retained streams, both streams fully retained with `bytes == bytes_seen == bytes_retained`, stdout and stderr both exactly 0 bytes, postcheck match, and durable selection/precheck/result/acceptance records.
+
+## Operation 02 conditional eligibility
+
+**RUN02CONDITIONAL**, only after actual operation 01 acceptance and a separate Root selection.
+
+Required scope and conditions:
+
+- Operation 01 must have actually passed and produced the retained `ROOT-ACCEPTANCE.json` for `01-newActualBeforeRuntimeFrontend` with `accepted: true`. The caller checks that file as a regular non-symlink file and adds it to the pinned controls before precheck.
+- Root must separately select exactly operation `02` in a new single invocation. No automatic transition from 01 to 02 is authorized.
+- Caller must see operation `02-oneActualBeforeWindowComputation` and the 64 MiB ITF cap.
+- A fresh `proposed-itf` directory is required; no replacement or overwrite is allowed.
+- Full 4,685 pre/post checks and exact ten regular public sources remain mandatory.
+- COMMAND, RESULT, full stdout/stderr streams, and the complete ITF file plus directories must be durable before semantic classification, parsing, or comparison, as implemented by the corrected M2 ordering.
+- Exactly one complete raw ITF file is required, with a qualifying `actual_owner_window_*.itf.json` name, regular-file status, nonzero size, size within 64 MiB, and pin equality with the raw pin frozen before qualification.
+- Exit 0 alone is insufficient. Acceptance requires controller failure `None`, postcheck match, two fully retained streams, empty run stderr, no stdout diagnostic tokens, no ITF diagnostic substring, exactly two ITF states, exactly the sole `machine` variable, state 0 as `computed_once: false` with `Q41NoWindow`, state 1 as `computed_once: true` with `Q41ComputedWindow`, retained `input_before`, `window.before == input_before`, and the complete computed window with `before`, `after_cell`, `after_exit`, and ordered `events` retained as a list of two 28-field events.
+- The witness treatment is acceptable as derived from the complete raw ITF state plus the frozen `wholeWindowRetained` definition. The caller does not claim a printed witness counter and does not treat the pretty CLI trace as authoritative.
+- No retry, cap raise, prefix replay, native replay, expected-as-input, Rust-after comparison, private mismatch-diagnostic read, or expected-fixture comparison is authorized.
+
+## Explicit missing or bounded premises
+
+- The exact full installed tool manifest is pinned externally and was not itself inlined as a complete row-by-row semantic exhibit in this review. The caller is therefore acceptable only with Root actually performing all 4,685 pre/post checks at dispatch time. This review does not convert the manifest hash into independent proof of every current file row.
+- No actual new frontend or run has executed. Operation 01 eligibility and operation 02 conditionality are prospective only.
+- The FORMAT writer, inverse tooling, and general FORMAT proof were not reviewed and are not needed for this caller verdict. The direct literal comparison basis from the prior source/API approval remains the governing premise. The FORMAT actor's prior expected-data exposure and identity-only qualification history remain as previously qualified; this review does not relabel FORMAT as a new blind or independent semantic vote.
+- The earlier misplaced-filter raw byte-search history remains qualified. This review does not claim pristine raw-byte access or no historical search. The caller itself, as inspected, does not read expected, Rust-after, or private mismatch diagnostics and does not perform comparison against them.
+- The native whole-prefix comparison remains MISMATCH and is untouched. Nothing here infers native equivalence, reachability, admission, refinement, proof, or ledger closure.
+
+Therefore the corrected retained caller is **SOURCE/API CALLER_ACCEPTABLE** for the bounded purpose stated, operation 01 is **FRONTEND01ELIGIBLE** for separate Root selection, and operation 02 is **RUN02CONDITIONAL** on actual operation 01 acceptance plus separate Root selection and the conditions above.

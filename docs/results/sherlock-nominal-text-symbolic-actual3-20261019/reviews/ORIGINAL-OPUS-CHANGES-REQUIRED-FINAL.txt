@@ -1,0 +1,205 @@
+# Review: passive nominal-text symbolic comparator (PR302 ff6685d0 cut)
+
+**Reviewer:** Claude Opus 5.5 (`claude-opus-5-5`). I am not the comparator's author. This review uses only the inline bodies: no tools, no execution, and no expected, derivation, freeze, data-writer, capture or golden reads. All comparator, synthetic, project and compare operations remain UNRUN. Body 50 is corroborating API context only and is not treated as a vote or a result.
+
+---
+
+## 1. Source verdict: **CHANGES_REQUIRED**
+
+### B1 (blocker): builtin type identity is resolved by name instead of by position
+
+**Where:** `Projection.typ`, reached from `Projection.__init__` → `self.typ(i)` for every row.
+
+**What the code does.** For `decl is None` it computes `name = self.name(row["name_id"])` and requires that name to be in `{UInt, Bool, List, Tree}`.
+
+**What the owner does.** `owner_adt_runtime.rs::check_generic_program_view` fixes builtin rows 0..3 by position:
+- It requires `name_id == 0` for all four rows and says the nameId "is padding 0 … never resolved against prog.names".
+- It requires `decl None`, empty `args`, and `ctor_start/ctor_len` of `(0,0),(0,0),(0,2),(2,2)`.
+- User rows are at index 4 and above and must have a decl.
+
+`adt_checked_ctor_arity` (`type_id.0 < 4`) and `kind_ctor_class` (`TypeIdC::List/Tree`) confirm the positional identities.
+
+**Consequence.** All four builtin rows decode to `names[0]`, which is whatever name the program's Pass-B table interned first.
+- Most likely `names[0]` is not a builtin name. Then `Projection` construction raises a Gap and both real cases become NOT_ESTABLISHED before any record is read.
+- If `names[0]` happens to be `"UInt"`, then Bool, List and Tree are silently labelled `UInt`. That is a mislabelling, even where the chosen inputs never expose it.
+
+**Required fix:**
+- Map TypeId 0→UInt, 1→Bool, 2→List, 3→Tree positionally.
+- Check the owner's builtin-row invariants above.
+- Refuse `decl None` at index 4 or higher, and refuse `decl Some` below index 4.
+- Never resolve builtin `name_id` against `names`.
+
+The synthetic fixture `sample()` hides this because it puts `UInt` at row 0 with `name_id 0 → names[0]="UInt"` and a user type at row 1. That layout violates the owner invariants.
+
+### R2 (required): the synthetic tests do not model owner invariants or the untested lifecycle transitions
+
+op02 is one-shot and fail-stop, so these gaps matter before it runs.
+
+**Required test additions:**
+1. **Owner-layout fixture.** A fixture with builtin rows 0..3 (`name_id 0`), builtin constructors 0..3, user types and constructors at index 4 and above, and `entry == 0`. This is the regression test for B1.
+2. **Full invented lifecycle through `capture_case`.** Build five synthetic files in TMPDIR and drive them through `capture_case`. They must cover:
+   - `EnterBind → BoundValid → PushAccept(ReturnF) → … → ReturnCallValid`;
+   - `XAdtEvalConstructFields → … → XAdtReturnCtorFieldsFinal → XAdtMaterializeDone`;
+   - `XAdtHelperPlanEntry → XAdtHelperPlanBind → XAdtCasesPlanHit`;
+   - `KAdminPublishValue/Published`, followed by `Terminal`.
+
+   `Final`, `MaterializeDone`, `PlanEntry`, `PlanBind`, `ReturnCallValid`, `Publish`, `finish`-success, `boundary()` and continuity currently have zero coverage.
+
+**Test names that overclaim (fix the test or the name):**
+- `…outer_first…` uses a single frame, so it does not test ordering.
+- `test_compare_rejects_changed_projection…` cannot discriminate on ordering. Its fake `safe.json` would fail the `SAFE_SHA` check anyway, so it never proves that the projection check precedes the safe-binding read.
+- `test_failure_receipts…` never exercises `main()`'s `FAILURE.json` path.
+
+### R3 (required, small): exception coverage leaves malformed-input paths without a receipt
+
+`capture_case` catches only `Gap`, `KeyError`, `IndexError`, `TypeError` and `RecursionError`. `main` additionally catches `OSError` and `UnicodeError`.
+
+`AttributeError` and non-Unicode `ValueError` escape both handlers. For example, `variant` can return a non-dict body for `{"U128": 5}`, after which `b.get(...)` or `rule.startswith(...)` is called on a non-string. The result is an uncaught traceback:
+- The `phase-A` directory is already created but stays empty.
+- The other case's partial projection and ledger are lost.
+- No located NOT_ESTABLISHED is written.
+
+This contradicts the README's failure-preservation claim. Catch these exceptions per case and convert them into a located gap.
+
+### R4 (required, small): `checked()` returns bytes from a second read
+
+`checked` hashes the file through `pin()` and then returns `Path(...).read_bytes()` from a separate read. The bytes that get parsed, including the expected document, are therefore not the bytes that were hashed. Return the bytes that `pin()` hashed.
+
+### Strongly recommended with the fix: resource fit for op02
+
+The 25 s CPU and 2 GiB address-space caps apply to one Python process handling both cases. Records hold two full images each, and `value_slots` grows append-only toward the 4096 limit.
+
+**Hotspots:**
+- **Admission walk per record.** `same(before, previous)` re-walks the whole shared admission on every record, even when both sides are the identical `same_as` object. Normalize inline admissions, after the equality check, to the single `admission` object and short-circuit on `is`. This is sound because both sides are then the same object.
+- **Value ledger.** Every nominal decode appends an `association: value` ledger row. The rows carry no record index, so they inflate memory and output size without locating anything. Either drop them or add `record`.
+- **Memory.** All records are parsed into one list at once. Streaming the records would bound memory.
+
+No size or timing figure is established here.
+
+### Residual premises (fail-closed, not bugs, but they can block ESTABLISHED)
+
+1. **`cut()` requires normalized empty slices (`start == 0` when `len == 0`).**
+   - This is proven for occurrence paths (C4 `write_occurrence`) and is consistent with `SliceC::normalized` usage.
+   - It is not shown for code children of nullary `Construct` and zero-argument `Call`, `pattern_children` of nullary constructor patterns (`Done()`, `End()`), `type_args` of zero-arity user types, and `constant_fields` of nullary constant constructors.
+   - Fix: cite the emitter bodies, or relax `cut` to bounds-only for these program-table slices.
+2. **`image()` requires `active.* == len(table)`.** `owner_apply_validated` establishes this after every step. It is not shown for the genesis snapshot.
+3. **No `Startup`-kind event appears in `records`.** If one does, the "unexpected applied event class" refusal fires.
+4. **`input.json.configuration` equals `compile.json.configuration`.** These are wired from `config` and `report.owner.configuration`, which may be different Rust types.
+5. **All pins must be canonical realpaths.** `checked` compares against `Path.resolve()`.
+
+### Verified correct against the supplied Rust (within scope)
+
+- **Source and occurrence alignment.**
+  - C1 preorder (entry, then functions) and `nominal_source::collect` preorder agree, so ExprId equals the provenance index. Owner, path and kind are checked at every id.
+  - The membership, sharing and cycle checks are complete.
+  - The pattern association is keyed by (owner, match path, arm, field path), with whole-set consumption.
+- **Declarations.** Declarations, constructors and fields are matched in source order against original spans. Instantiated field types use structural `TypeExprSrc`/`Param` substitution.
+- **Values.**
+  - UInt is validated as a canonical decimal under 2^128.
+  - The Bool, int and float distinctions hold, and duplicate keys and non-finite numbers are rejected.
+  - Nominal values are checked for arity, field type and cycles.
+  - Dedicated `Nil/Cons/Leaf/Branch` values and `PNil/PCons/…` patterns are refused explicitly; nothing is flattened.
+- **Environment.** Lookup follows `EnvGet` first-match semantics from the root, and the raw chain is retained.
+- **Call entry.**
+  - Origin stays on the Call through `ReturnArgumentsFinal`, `InvokeFind`, `EnterBind` and `BoundValid`.
+  - `ReturnF.saved_env` is the caller root, and the callee is a fresh parameter-only Bind chain.
+  - Exactly one invocation is assigned, at `PushAccept(ReturnF)`. Overlapping or missing stages refuse.
+  - `ReturnCallValid` pairs by depth and origin.
+- **Match.**
+  - The ordinal is the global arm minus `arms.start`.
+  - Plan binds are the winner's original-preorder binders, with paths walked from the original scrutinee (`load_plan_node`). Python's recursive `pattern()` produces the same preorder.
+  - The resulting environment, the selected body, and the coordinate path `[ordinal+1]` are checked.
+- **Constructors.**
+  - Pairing is by depth, which is the frame index from `PushAccept` immediately after `ScheduleNext`.
+  - `Final` checks the last index, `checked`, empty `rest` and pop, and Materialize fields must equal the `AppendDone` vector, which must equal the `BuildDone` value.
+  - Nullary instances open and complete on the same event.
+- **Pending checkpoints.** At each call entry, frames are taken in vector order (outermost first). `index` equals the length of the completed prefix, `rest` equals the original suffix, and the field type and saved environment are checked. Every live constructor must appear.
+- **Final.** Requires `Published` followed by `Terminal`, no pending lifecycles, and `Halted` value equal to the `Return` value.
+- **Phase B.**
+  - Expected is opened only after the freeze, receipt, inputs and outputs, and `SAFE_SHA` are all verified, and all pins are rechecked afterwards.
+  - Checkpoints are selected by integer `at_call` only, and duplicates refuse.
+  - All five semantic fields are compared completely, with JSON-type exactness and a first-pointer divergence.
+  - `limitations`, author and scope are not equality targets.
+
+### Advisory (non-blocking)
+
+- Require exactly one `Published` event and no Applied events after it.
+- Validate the exact keys of each binding item.
+- Cross-check the projection's `case_status` against the receipt in Phase B.
+- `reject_pairs` reports path `"$"` instead of the file name.
+- Consider a textual check of `Construct` and pattern qualifiers against their source spans. A divergence would already surface as a FAIL, so this is not a soundness issue.
+
+---
+
+## 2. Synthetic op01 eligibility
+
+**Mechanically sound; not recommended for selection on this cut.**
+
+**Mechanically sound:**
+- argv, env and caps are exact.
+- There is no expected or actual access. The tests use invented data only, import only the new module, and write only to TMPDIR.
+- unittest writes to stderr, so the "stdout empty" envelope is consistent.
+- By hand-tracing, all 15 named tests would pass on this cut.
+
+**Why not select it now:** that pass would not evidence B1, the lifecycle transitions (R2), or the overclaimed names. Running it would also pin a source cut that must change. Run op01 on the revised, re-pinned cut after a delta review.
+
+**Root-only conditions when selected:**
+- The `ordinary-QA/tmp` directory exists. If it does not, `tempfile` silently falls back to `/tmp`.
+- `/usr/bin/python3` resolves to the pinned `python3.14`, and `/usr/bin/timeout` resolves to the pinned `coreutils/timeout`.
+- Full `STATIC-INPUT-PINS` checks run before and after.
+- Root verifies the exact 15-name verbose envelope by hand (no libtest parser), with `Ran 15 tests` and `OK`.
+- Serial, fail-stop, no retry or cap raise. Only the helper's `capture`, `static_check`, `check` and `save` are used.
+
+---
+
+## 3. Conditional generated-input class (op02 and op03)
+
+**Class verdict: conditionally eligible after B1 and R2–R4 are fixed, re-pinned and delta-reviewed, and the revised op01 passes. Not selectable now.**
+
+**op02 (`project`), Root-only prerequisites:**
+1. Both public consumer captures completed successfully with retained raw results and streams. Each case directory is named by its stem and contains all five files, with `errors.jsonl` empty.
+2. `ROOT-CASE-BINDINGS.json` contains:
+   - `source_manifest`, the realpath pin of `c74ae94b…`;
+   - per case: `case` (`.mori` basename), `capture_case` (stem), `source_profile`, a `source` pin byte-identical to its manifest row, and five canonical `capture` pins.
+3. Root performs a durable actual-only input freeze before selection.
+4. `phase-A/` is absent and its parent exists.
+5. Root records the byte and record counts of the bound captures as metadata, and the efficiency changes above are in the revised source. No cap raise is allowed.
+
+**op03 (`compare`), Root-only prerequisites:**
+1. op02 exited 0 with both cases ESTABLISHED, and its raw result and streams are retained.
+2. Root externally and durably writes the five-key freeze: `schema`, `true`, the `PHASE-A-RECEIPT` pin, the `ACTUAL-PROJECTION` pin, and the `SAFE-BINDINGS` pin `be61b73b…`. Nothing in Phase A is touched after op02.
+3. The private expected file is present and unchanged against its SAFE pin `3c4ff1d6…`.
+4. `comparison/` is absent.
+5. Any NOT_ESTABLISHED, FAIL, or `FAILURE.json` result is fail-stop and must be preserved, with no fitting, repair or retry.
+
+---
+
+## 4. Independence, exclusions and finite controls
+
+**Independence:**
+- I am a non-author reviewer and read no protected bodies.
+- I predict no specimen outcomes.
+- Source review and comparison results are separate evidence classes.
+- Body 50 remains a separate review and is not a result.
+- The corrected-Core 97378B/98941c4a lane is out of scope.
+
+**Exclusions preserved:**
+- No producer import or reentry, and no source evaluation or schedule inference.
+- Physical IDs, clocks, work, capacity and the microstep oracle stay in the ledger only and are never compared.
+- No admission, native, circuit, proof, target or EARS claim.
+- Dedicated List/Tree forms are refused.
+
+**Suggested finite controls** (synthetic, invented, to add alongside R2):
+- Owner-layout negatives:
+  - a builtin row with a nonzero `name_id`;
+  - a `decl None` row at index 4;
+  - Bool at row 1 decoded as `{"builtin":"Bool"}`.
+- Single-mutation negatives on the lifecycle fixture:
+  - global arm off by one;
+  - flipped Bool;
+  - a duplicated `PushAccept`;
+  - swapped field order in `Materialize`;
+  - an extra Applied event after `Published`.
+
+  Each must refuse or FAIL at the expected location.
+- A two-frame pending fixture asserting outermost-first order.

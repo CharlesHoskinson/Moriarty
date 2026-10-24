@@ -1,0 +1,11 @@
+This source work in progress adds six Core Rust files and two public test fixtures, and extends the existing helper-machine module exports. It includes the stream poison fix and writer-panic regression, explicit raw-codec tags and golden checks, and readonly counter-observation getters. These are exact postimages from the tested source snapshot.
+
+A scoped local 483-file snapshot compiled one Core library-test binary and passed seven selected cases: four stream cases and three raw-codec cases. Independent actual-data review and Root adoption qualify those functional byte results. Historical binary device/inode continuity was omitted, so this is not an unconditional whole execution-profile claim. The getters were compiled only; no new runtime caller exercises them and no getter behavior or refinement result follows.
+
+The compiler-recorded 208-file source closure was compared with public sherlock commit 89615789b668b83e79eccfc4a6bf7b353b8845da. Of those files, 199 were identical; this payload supplies the eight missing files and the module export change. Cargo manifests, Cargo.lock and shared types match the public baseline. The unconsumed full16 example and selected-ledger fixtures are excluded. This source comparison does not establish a public Cargo workspace build.
+
+The seven cases used a unit-wrapper CPU limit of 120 seconds; the compiler wrapper used 700 seconds. The earlier ten raw-codec tests are a separate historical run with a 300-second unit-wrapper CPU limit and are not included in this result.
+
+This payload does not establish a full16 trace, complete M2 failure custody, a proof, contract-call acceptance, SDK or financial acceptance, or a release. The legacy failure-export path remains a nonlossless diagnostic; the raw inverse is not wired to it. Producer, caller and refinement gaps remain open. The JSON records exact source and evidence hashes. Publication still requires the unchanged public baseline and exact postimage readback.
+
+The section heading "lossless failure archive (M2, component A)" in c6_complete_step_capture.rs is a stale legacy label: that export is toolchain-bound derived-Debug text with no decoder, is not lossless, and is not M2 custody. Source bytes are left unchanged to preserve the tested postimage.

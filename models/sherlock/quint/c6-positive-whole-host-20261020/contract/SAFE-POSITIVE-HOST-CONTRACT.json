@@ -1,0 +1,87 @@
+{
+  "schema": "c6-whole-host-positive-contract/1",
+  "profile": "sherlock-c6-whole-host-positive/1",
+  "status": "PROPOSED_BODYFREE_REPRESENTATION_CONTRACT_BEFORE_ORACLE_AND_CHANGED_PRODUCER",
+  "sourceIndependentOracleBoundary": "Derived public representation grammar and freshtypedinputs only, no producer/model/oldoracle/actualoutputs. Sourcefactinventory separate reviewer-only; oracle must not read it or source bodies. Shared grammar is methodcorrelation, not independent semantic adoption.",
+  "constants": {
+    "magic": 18918541878711089,
+    "version": 1,
+    "HOST_SECTION_TAG": 1213158228,
+    "HOST_SCHEMA": 1,
+    "HOST_CHILD_COUNT": 4,
+    "HOST_HEADER_LANES": 14,
+    "META_SECTION_TAG": 1296389185,
+    "PROGRAM_SECTION_TAG": 1347571527,
+    "CTX_SECTION_TAG": 1129601108,
+    "STATE_SECTION_TAG": 1398030676
+  },
+  "header": "[magic,version,HOST_SECTION_TAG,HOST_SCHEMA,4,META_SECTION_TAG,len(meta),PROGRAM_SECTION_TAG,len(prog),CTX_SECTION_TAG,22,STATE_SECTION_TAG,len(state),0]",
+  "sectionOrder": [
+    "metadata",
+    "program",
+    "context",
+    "state"
+  ],
+  "positiveComposition": {
+    "metadata": "Full C6HostMetadata {identity=host.admission.identity,bounds=host.admission.bounds,layout=host.admission.layout,run_id=host.image.run_id}, apply complete META grammar; never replace admission bounds/identity by layout bounds/run identity.",
+    "program": "Full host.admission.view with entry/all22tables, complete PROGRAM grammar; cap premises derived only from original config.state_context.phys.",
+    "context": "Original config.ext and config.budgets, complete CTX22 grammar. None!=Some(allzero), lifetime lane18 rawu128, remaining extent/budget lanes usize-fit. Budget fields mandatory; zero is not absent.",
+    "state": "Complete C6OwnedState from host.image: root directfields+seg_base getter projections, frames unchanged, DATA raw Vecs unchanged, HELPER/result/tasks unchanged. Complete STATE grammar, no zeroing active/counters, no omitted helper/task fields or run identity inside STATE.",
+    "imageAdapter": "Every C6HostImage field preserved. run_id comes fromMETA; state.root.{seg_active,seg_alloc,seg_consumed_work}=image.seg_base.{active,alloc,consumed_work}. Remaining rootfields copy image same names. Frames/data/data_fields/env/value_slots/helper/result/tasks mapped exactly to C6OwnedState; inverse restores entire image. No state/root extra fields, derived depth/task_live not stored.",
+    "callerConfig": "Positive cohort premises host.admission.layout==config.layout; decoded META layout/config.layout, decodedCTXext/config.ext and budgets/config.budgets equal. Result C6DecodedHost.config is originalconfigclone; witness values never raise/change caller config.",
+    "callerLimits": "limits retained unchanged in observation. Effective state limit is exactly limits.max_state_lanes; metadata string/cumulativebytes/widthcounts and outertotal follow existing actuallimits."
+  },
+  "capacityEquations": {
+    "max_frames": "config.layout.bounds.frames",
+    "max_expressions": "config.layout.bounds.code_rows",
+    "max_names": "config.layout.capacities.name_rows",
+    "max_arms": "config.layout.bounds.match_arm_rows",
+    "max_children": "config.layout.bounds.code_child_slots",
+    "max_value_slots": "config.layout.capacities.value_slots",
+    "max_constants": "config.layout.bounds.constant_nodes",
+    "max_data_nodes": "config.layout.bounds.data_nodes",
+    "max_env_cells": "config.layout.bounds.environment_cells",
+    "max_functions": "config.layout.bounds.function_rows",
+    "max_arity": "config.layout.bounds.max_arity",
+    "max_types": "config.layout.bounds.type_rows",
+    "max_occurrences": "config.layout.bounds.code_rows",
+    "max_occurrence_paths": "config.layout.capacities.occurrence_path_slots",
+    "max_parameters": "config.layout.bounds.parameter_slots",
+    "max_patterns": "config.layout.bounds.pattern_rows",
+    "max_pattern_children": "effective_ext.pattern_child_slots",
+    "max_constructors": "config.layout.bounds.constructor_rows",
+    "max_ctor_fields": "config.layout.bounds.constructor_field_slots",
+    "max_decl_templates": "max(config.layout.bounds.type_rows-4,0)",
+    "max_plan_nodes": "config.layout.bounds.match_plan_rows",
+    "max_plan_cases": "effective_ext.plan_case_slots",
+    "max_field_paths": "effective_ext.field_path_slots",
+    "max_constant_fields": "config.layout.bounds.constant_field_slots",
+    "max_name_bytes": "config.layout.capacities.name_bytes",
+    "max_type_expr_nodes": "config.budgets.type_expr_nodes",
+    "max_template_bytes": "config.budgets.template_bytes",
+    "max_data_field_slots": "config.layout.bounds.data_field_slots",
+    "max_helper_tasks": "config.layout.bounds.helper_tasks"
+  },
+  "capacityOrder": "Exact29field C6HCaps order in inheritedSTATE contract; no capacity inferred from admission.bounds or decodedwitness. effective_ext absent->allzero elseall16originalfields; extpresence remainsindependent.",
+  "ownedLengthsNotPadding": "HOST andSTATE concatenate actual encodedsectionlengths from actual Vec counts, not maximumcapacities. image48+13*frames.length; DATA7+5*data.length+2*data_fields.length+5*env.length+2*value_slots.length; HELPER31+7*tasks.length; STATE41+allthree. Do not use B37 capacity geometry as ownedSTATE length.",
+  "offsets": "Hostfirstchildstart14, eachnextstart=previousend=start+entirechildlength; no gaps/truncation/trailing. STATEchild relativefirststart41, subsequentendprefix sums. AbsoluteSTATEchildstart=HOSTstate.start+relative_start. FinalHOSTcursor=lastchildend=entire encodedlanes.length. Preserve every full section/child payload in observation.",
+  "decodedResult": "Standalone owned diagnostic HostSnapshot only: admission identity/bounds/view/layout decoded fromMETA+PROG, image fullrunid fromMETA+entireSTATE, configoriginalclone. No admitted/machineimage construction/import/transition.",
+  "positivePremises": [
+    "All inherited completeMETA/PROG/CTX/STATE/root/DATA/helper positive contracts apply to thisNEWcohort. Oldbatchinput/exclusion/geometry/testlabels are historical and notnewinputauthority.",
+    "NativeString/canonicalUTF8bytes and TypeExprtree/preordertokens are external inputprojection premises; arbitrary digest bytes opaque/unverified. No serializer changes/fieldcoercion.",
+    "All rawu8/u32/usize/u128 and slice/length/offset sums fit actualhost; all original positive checkedcaps/arity/resource-budget/limit calls succeed. max_total_lanes bounds completeHOST andmax_state_lanes wholeSTATE, not childpadding.",
+    "META string andcumulativemetadatabytes/widthentries directlimits; Programname/type/template budgets andall existing childcaps preserveexisting positivepremises. No newrefusal/securityvalidator authored.",
+    "Distinct admission/layoutbounds and admission/runidentities are representation data. No admission,genesis,reachability,StepInv,authenticity assumption isproved."
+  ],
+  "directedPredicates": [
+    "All3entire ninefield observations/rootmetadata equal new independentprefrozenmanualexpected; allnestedMETA6/PROG6/CTX5/STATE6 fields/lanes/cursors/decodedvalues preserved.",
+    "Cases0/1 differ only config.ext absent vsSomeallzero; preserve originalpresence, rawCTX andSTATE extflag. Effectivecaps equal while exact decodedconfig remainsdifferent. No other hidden state/outputnormalization.",
+    "Case2 changesconfigbudgets/layoutbounds/extvalues/runidentity/helper/result/tasks/frames; all29derivedcaps/sectionlengths/absolute-relativeoffsets/fullhostreconstruction reflectactualtypedinput; admissionbounds remainseparate.",
+    "Generalpositive roundtrip decode(encode(host,config,limits),config,limits) reproduces entirehost andoriginalconfig, reencode equalsfullrawvector, allsectionpayloads/cursors exactlycoverfullHOST. No fixtureIDbranch or suppliedexpectedrawsection input."
+  ],
+  "refusalBoundary": "Existing exact refusal/error types/order are source facts in separate reviewer-only document. This positivecontract requires successful-call premises; no negativecases/newguard/errorfallback/waiver authored. Any refusal-model/tests require designated security-owner source/expectations before execution.",
+  "outside": [
+    "owner/admission/StepInv/reachability/clock/transition/security/refusal policy",
+    "Rust/Quint actualcorrespondence/constraint/native/SDK/P1/target/universalrefinement/EARS; allG/E/D/N and25refinementOPEN"
+  ]
+}

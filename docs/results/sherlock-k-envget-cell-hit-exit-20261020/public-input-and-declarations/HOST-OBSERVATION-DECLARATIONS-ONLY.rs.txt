@@ -1,0 +1,66 @@
+// PUBLIC DECLARATIONS ONLY; noncontiguous source excerpts; not a compilable Rust module.
+
+// Source lines 51..113
+#[derive(Clone, Copy)]
+pub struct HostObservation<'a> {
+    pub admission: AdmissionObservation<'a>,
+    pub image: ImageObservation<'a>,
+    _sealed: (),
+}
+#[derive(Clone, Copy)]
+pub struct AdmissionObservation<'a> {
+    pub identity: &'a IdentityC,
+    pub bounds: &'a BoundsC,
+    pub view: &'a ProgramView,
+    pub layout: LayoutObservation<'a>,
+    _sealed: (),
+}
+#[derive(Clone, Copy)]
+pub struct LayoutObservation<'a> {
+    pub layout_version: &'a (String, String),
+    pub field_id: Option<&'a (String, String)>,
+    pub widths: Option<WidthTableObservation<'a>>,
+    pub scalar_layout_id: Option<&'a (String, String)>,
+    pub bounds: &'a BoundsC,
+    pub capacities: &'a LayoutCapacitiesC,
+    pub boundary_capacities_present: bool,
+    _sealed: (),
+}
+#[derive(Clone, Copy)]
+pub struct WidthTableObservation<'a> {
+    pub index_widths: &'a [(String, u32)],
+    pub counter_widths: &'a [(String, u32)],
+    pub record_widths: &'a [(String, u32)],
+    _sealed: (),
+}
+#[derive(Clone, Copy)]
+pub struct ImageObservation<'a> {
+    pub run_id: &'a RunIdC,
+    pub control: &'a ControlC,
+    pub control_origin: usize,
+    pub env_root: EnvRootC,
+    pub stack_limit: usize,
+    pub outcome: &'a OutcomeC,
+    pub initial_fuel: u128,
+    pub remaining_work: u128,
+    pub consumed_work: u128,
+    pub helper_work: u128,
+    pub helper_visits: u128,
+    pub reference_cursor: u128,
+    pub alloc: &'a AllocCounters,
+    pub active: &'a ActiveLengths,
+    pub helper: Option<&'a HelperControlC>,
+    pub result: Option<&'a HelperResultC>,
+    pub seg_base: SegBase,
+    pub data: &'a [RawDataRow],
+    pub data_fields: &'a [RefC],
+    pub env: &'a [EnvCellC],
+    pub frames: &'a [FrameRowC],
+    pub tasks: &'a [HelperTaskC],
+    pub value_slots: &'a [RefC],
+    _sealed: (),
+}
+// Normative registers depth/taskLive, derived exactly as the owner's
+// MachineImage::depth/task_live (shared.rs): frames/tasks lengths are the
+// sole active authority. No stored count, guard or policy is added; the
+// slices borrow img.frames/img.tasks whole, so the values are equal.

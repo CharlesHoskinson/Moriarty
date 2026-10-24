@@ -1,0 +1,30 @@
+language "moriarty-sherlock-nominal/1";
+program JoinedPayload {
+  type Chain<T> {
+    Done;
+    More(z_item: T, a_rest: Chain<T>);
+  }
+  type Payload<A, B> {
+    Pair(z_payload: A, a_flags: B);
+  }
+  fn package(xs: Chain<UInt>, ys: Chain<UInt>, flags: Chain<Bool>): Payload<Chain<UInt>, Chain<Bool>> {
+    construct Payload<Chain<UInt>, Chain<Bool>>::Pair(append(xs, ys), invert(flags))
+  }
+  fn append(xs: Chain<UInt>, ys: Chain<UInt>): Chain<UInt> {
+    match xs {
+      Chain<UInt>::Done() => ys,
+      Chain<UInt>::More(x, tail) => construct Chain<UInt>::More(x, append(tail, ys))
+    }
+  }
+  fn invert(flags: Chain<Bool>): Chain<Bool> {
+    match flags {
+      Chain<Bool>::Done() => construct Chain<Bool>::Done(),
+      Chain<Bool>::More(flag, tail) => construct Chain<Bool>::More(not(flag), invert(tail))
+    }
+  }
+  entry package(
+    construct Chain<UInt>::More(6, construct Chain<UInt>::More(2, construct Chain<UInt>::Done())),
+    construct Chain<UInt>::More(9, construct Chain<UInt>::Done()),
+    construct Chain<Bool>::More(true, construct Chain<Bool>::More(false, construct Chain<Bool>::Done()))
+  );
+}

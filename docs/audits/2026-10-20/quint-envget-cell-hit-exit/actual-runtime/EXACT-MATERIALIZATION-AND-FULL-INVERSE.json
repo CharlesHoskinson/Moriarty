@@ -1,0 +1,159 @@
+{
+  "status": "EXACT_FIVE_OWNER_HUNKS_MATERIALIZED_ONLY_NOT_EXECUTED",
+  "ownerResponse": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/retained-run-itf-caller-owner-request01/focused-owner-correction02/actual-MuseWonderHIGH-focused-source-owner-01/FINAL-RESPONSE.txt",
+    "bytes": 3918,
+    "sha256": "56a8268bb4758f0935abccffa0dfd94b31be171b3604815c580e352442f1a4e2"
+  },
+  "actualOwnerMetadata": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/retained-run-itf-caller-owner-request01/focused-owner-correction02/actual-MuseWonderHIGH-focused-source-owner-01/RESULT.json",
+    "bytes": 1426,
+    "sha256": "e75d2f2bc88a38b13ed5077ece70810c645058ca404b543d38c49fde72fbe644"
+  },
+  "base": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/retained-run-itf-caller-owner-request01/literal-owner-caller01/OWNER-RETURNED-CALLER.py",
+    "bytes": 7693,
+    "sha256": "1c7a9ba562d4d00e748a0ff6881c44cafa88193e831fa3dff04c11e99fc845ff"
+  },
+  "candidate": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/retained-run-itf-caller-owner-request01/focused-owner-correction02/literal-owner-caller02/OWNER-CORRECTED-CALLER.py",
+    "bytes": 8238,
+    "sha256": "e97f35561665f51482b67ee4908b9af08b3495af669fb6830d6e67cefadfa5ee"
+  },
+  "exactPatch": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/dedicated-quint-20261018/batch41-EnvGetCell-EnvGetExit-owner-positive-20261020/actual-before-runtime01/retained-run-itf-caller-owner-request01/focused-owner-correction02/literal-owner-caller02/OWNER-EXACT-HUNKS.diff",
+    "bytes": 2954,
+    "sha256": "d3ff7fab266e64b3f11fa4bb7ac50ed467ff968bdfe710f823c80dfba8a6c4b9"
+  },
+  "fenceBytes": [
+    188,
+    3142
+  ],
+  "hunks": [
+    {
+      "header": "@@ -22,1 +22,1 @@",
+      "oldLine": 22,
+      "declaredOld": 1,
+      "newLine": 22,
+      "declaredNew": 1,
+      "lines": [
+        "-assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed' and rv['finalSHA']=='aa2f35a423fe169bb9415b28c3f0c3513b5aac822e219d403c5eb0ee9b3f653d'\n",
+        "+assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed' and rv['finalSHA']=='4fab8edea69b0af32735c4ed5cbfda5eb78791fd04637c5637ccb167a44cc450'\n"
+      ],
+      "before": "assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed' and rv['finalSHA']=='aa2f35a423fe169bb9415b28c3f0c3513b5aac822e219d403c5eb0ee9b3f653d'\n",
+      "after": "assert rv['actualExit']==0 and rv['terminal']['terminal']=='completed' and rv['finalSHA']=='4fab8edea69b0af32735c4ed5cbfda5eb78791fd04637c5637ccb167a44cc450'\n",
+      "oldCountActual": 1,
+      "newCountActual": 1,
+      "uniqueBeforeAnchor": true,
+      "oldPhysicalLine": 22
+    },
+    {
+      "header": "@@ -59,3 +59,4 @@",
+      "oldLine": 59,
+      "declaredOld": 3,
+      "newLine": 59,
+      "declaredNew": 4,
+      "lines": [
+        " if sel==1:\n",
+        "  itfdir.mkdir(exist_ok=False);fsync_dir(A)\n",
+        "+raw_durable=False\n",
+        " try:\n"
+      ],
+      "before": "if sel==1:\n itfdir.mkdir(exist_ok=False);fsync_dir(A)\ntry:\n",
+      "after": "if sel==1:\n itfdir.mkdir(exist_ok=False);fsync_dir(A)\nraw_durable=False\ntry:\n",
+      "oldCountActual": 3,
+      "newCountActual": 4,
+      "uniqueBeforeAnchor": true,
+      "oldPhysicalLine": 59
+    },
+    {
+      "header": "@@ -62,15 +63,19 @@",
+      "oldLine": 62,
+      "declaredOld": 15,
+      "newLine": 63,
+      "declaredNew": 19,
+      "lines": [
+        "  a=api['capture'](op,phase)\n",
+        "+ durable(phase/'RESULT.json',a)\n",
+        "  # Freeze every raw byte before any assertion, parsing or classification.\n",
+        "  for n in ('COMMAND.json','stdout.bin','stderr.bin'):\n",
+        "-  p=phase/n;assert p.is_file() and not p.is_symlink();fsync_file(p)\n",
+        "+  p=phase/n\n",
+        "+  if p.is_file() and not p.is_symlink():fsync_file(p)\n",
+        "  fsync_dir(phase)\n",
+        "  itfs=[]\n",
+        "- if sel==1:\n",
+        "-  entries=list(itfdir.iterdir());assert len(entries)==1, 'exactly one ITF output required'\n",
+        "-  itf=entries[0];assert itf.is_file() and not itf.is_symlink() and itf.name.startswith('actual_owner_window_') and itf.name.endswith('.itf.json')\n",
+        "-  assert 0<itf.stat().st_size<=op['itfTotalBytesCap']\n",
+        "-  fsync_file(itf);fsync_dir(itfdir);itfs=[pin(itf)]\n",
+        "- durable(phase/'RESULT.json',a)\n",
+        "- if itfs:durable(phase/'ITF-RAW-PIN.json',{'files':itfs,'itfTotalBytesCap':67108864,'frozenBeforeParse':True})\n",
+        "- fsync_dir(phase);fsync_dir(C)\n",
+        "+ if sel==1 and itfdir.is_dir():\n",
+        "+  for p in list(itfdir.iterdir()):\n",
+        "+   if p.is_file() and not p.is_symlink():fsync_file(p)\n",
+        "+  fsync_dir(itfdir);itfs=[pin(p) for p in sorted(itfdir.iterdir(),key=lambda q:q.name) if p.is_file() and not p.is_symlink()]\n",
+        "+  if itfs:durable(phase/'ITF-RAW-PIN.json',{'files':itfs,'itfTotalBytesCap':67108864,'frozenBeforeParse':True})\n",
+        "+ fsync_dir(phase);fsync_dir(C);raw_durable=True\n",
+        "  after=checks();durable(phase/'ROOT-POSTCHECK.json',after)\n",
+        "+ if sel==1:\n",
+        "+  entries=list(itfdir.iterdir());assert len(entries)==1, 'exactly one ITF output required'\n",
+        "+  itf=entries[0];assert itf.is_file() and not itf.is_symlink() and itf.name.startswith('actual_owner_window_') and itf.name.endswith('.itf.json')\n",
+        "+  assert 0<itf.stat().st_size<=op['itfTotalBytesCap'] and itfs==[pin(itf)]\n"
+      ],
+      "before": " a=api['capture'](op,phase)\n # Freeze every raw byte before any assertion, parsing or classification.\n for n in ('COMMAND.json','stdout.bin','stderr.bin'):\n  p=phase/n;assert p.is_file() and not p.is_symlink();fsync_file(p)\n fsync_dir(phase)\n itfs=[]\n if sel==1:\n  entries=list(itfdir.iterdir());assert len(entries)==1, 'exactly one ITF output required'\n  itf=entries[0];assert itf.is_file() and not itf.is_symlink() and itf.name.startswith('actual_owner_window_') and itf.name.endswith('.itf.json')\n  assert 0<itf.stat().st_size<=op['itfTotalBytesCap']\n  fsync_file(itf);fsync_dir(itfdir);itfs=[pin(itf)]\n durable(phase/'RESULT.json',a)\n if itfs:durable(phase/'ITF-RAW-PIN.json',{'files':itfs,'itfTotalBytesCap':67108864,'frozenBeforeParse':True})\n fsync_dir(phase);fsync_dir(C)\n after=checks();durable(phase/'ROOT-POSTCHECK.json',after)\n",
+      "after": " a=api['capture'](op,phase)\n durable(phase/'RESULT.json',a)\n # Freeze every raw byte before any assertion, parsing or classification.\n for n in ('COMMAND.json','stdout.bin','stderr.bin'):\n  p=phase/n\n  if p.is_file() and not p.is_symlink():fsync_file(p)\n fsync_dir(phase)\n itfs=[]\n if sel==1 and itfdir.is_dir():\n  for p in list(itfdir.iterdir()):\n   if p.is_file() and not p.is_symlink():fsync_file(p)\n  fsync_dir(itfdir);itfs=[pin(p) for p in sorted(itfdir.iterdir(),key=lambda q:q.name) if p.is_file() and not p.is_symlink()]\n  if itfs:durable(phase/'ITF-RAW-PIN.json',{'files':itfs,'itfTotalBytesCap':67108864,'frozenBeforeParse':True})\n fsync_dir(phase);fsync_dir(C);raw_durable=True\n after=checks();durable(phase/'ROOT-POSTCHECK.json',after)\n if sel==1:\n  entries=list(itfdir.iterdir());assert len(entries)==1, 'exactly one ITF output required'\n  itf=entries[0];assert itf.is_file() and not itf.is_symlink() and itf.name.startswith('actual_owner_window_') and itf.name.endswith('.itf.json')\n  assert 0<itf.stat().st_size<=op['itfTotalBytesCap'] and itfs==[pin(itf)]\n",
+      "oldCountActual": 15,
+      "newCountActual": 19,
+      "uniqueBeforeAnchor": true,
+      "oldPhysicalLine": 62
+    },
+    {
+      "header": "@@ -83,2 +88,5 @@",
+      "oldLine": 83,
+      "declaredOld": 2,
+      "newLine": 88,
+      "declaredNew": 5,
+      "lines": [
+        "  else:\n",
+        "+  assert (phase/'stderr.bin').read_bytes()==b'', 'run stderr diagnostics'\n",
+        "+  assert not any(t in (phase/'stdout.bin').read_bytes() for t in (b'QNT0',b'DEBUG',b'error:')), 'run stdout diagnostics'\n",
+        "+  assert b'diagnostic' not in Path(itfs[0]['path']).read_bytes().lower(), 'ITF diagnostics'\n",
+        "   raw=itfs[0];trace=json.loads(Path(raw['path']).read_bytes())\n"
+      ],
+      "before": " else:\n  raw=itfs[0];trace=json.loads(Path(raw['path']).read_bytes())\n",
+      "after": " else:\n  assert (phase/'stderr.bin').read_bytes()==b'', 'run stderr diagnostics'\n  assert not any(t in (phase/'stdout.bin').read_bytes() for t in (b'QNT0',b'DEBUG',b'error:')), 'run stdout diagnostics'\n  assert b'diagnostic' not in Path(itfs[0]['path']).read_bytes().lower(), 'ITF diagnostics'\n  raw=itfs[0];trace=json.loads(Path(raw['path']).read_bytes())\n",
+      "oldCountActual": 2,
+      "newCountActual": 5,
+      "uniqueBeforeAnchor": true,
+      "oldPhysicalLine": 83
+    },
+    {
+      "header": "@@ -102,3 +110,3 @@",
+      "oldLine": 102,
+      "declaredOld": 3,
+      "newLine": 110,
+      "declaredNew": 3,
+      "lines": [
+        " except BaseException as e:\n",
+        "  if phase.exists() and not (phase/'FAILURE.json').exists():\n",
+        "-  durable(phase/'FAILURE.json',{'status':'FAIL_STOP_NO_RETRY','error':type(e).__name__+': '+str(e),'rawPreserved':True})\n",
+        "+  durable(phase/'FAILURE.json',{'status':'FAIL_STOP_NO_RETRY','error':type(e).__name__+': '+str(e),'rawPreserved':raw_durable})\n"
+      ],
+      "before": "except BaseException as e:\n if phase.exists() and not (phase/'FAILURE.json').exists():\n  durable(phase/'FAILURE.json',{'status':'FAIL_STOP_NO_RETRY','error':type(e).__name__+': '+str(e),'rawPreserved':True})\n",
+      "after": "except BaseException as e:\n if phase.exists() and not (phase/'FAILURE.json').exists():\n  durable(phase/'FAILURE.json',{'status':'FAIL_STOP_NO_RETRY','error':type(e).__name__+': '+str(e),'rawPreserved':raw_durable})\n",
+      "oldCountActual": 3,
+      "newCountActual": 3,
+      "uniqueBeforeAnchor": true,
+      "oldPhysicalLine": 102
+    }
+  ],
+  "allDeclaredLineCountsMatch": true,
+  "allBeforeAnchorsUnique": true,
+  "fullInverseEqualsWhole7693ByteBase": true,
+  "unchangedOutsideOwnerHunks": true,
+  "finalLFPreserved": true,
+  "pythonASTParseOnly": true,
+  "preparerGuardEdits": 0
+}

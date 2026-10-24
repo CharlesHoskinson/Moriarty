@@ -1,0 +1,37 @@
+Independent non-author review by Muse Code powered by muse-wonder-1.0, HIGH. No tools, commands, files, compilation, or subject execution were performed. All candidate02 operations remain UNRUN.
+
+## Corrected source/API: APPROVE (source-only, uncompiled)
+
+The 4 literal replacements correctly address the 8 root-cause diagnostics (6×E0603, 2×E0308) from the actual candidate01 compile (exit 1, 26947-byte stderr, Unit 20/21):
+
+- **E0603 fix is through real public routes, not Core visibility changes.** [lib.rs](/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/UIREQ007-recursive-list-next-acceptance-20261020/consumer-candidate-02/actual-public-API/lib.rs) (Unit 25) declares `mod sherlock_draft;` private, `pub mod sherlock_nominal_source`, and `pub mod sherlock_nominal_body_types`. Unit 28 shows `sherlock_nominal_source` re-exports exactly `DraftError, SourceSpan, DraftParseBudget, DraftBudgetResource, DraftBudgetExceeded` via `pub use crate::sherlock_draft::{...}`. Unit 27 shows `sherlock_nominal_body_types` re-exports `SourceLocation` via `pub use crate::sherlock_draft::SourceLocation;`. Candidate02 `nominal_wire.rs` now imports the 5 types from `sherlock_nominal_source` and `SourceLocation` from `sherlock_nominal_body_types`. Because both routes name the *same* underlying `sherlock_draft` declarations, the local `Wire` impls register for the identical types used by `NominalBodyTypeError.source`, `NominalBodyCompileFailure.span`, and the consumer's `DraftParseBudget`. No orphan-rule issue arises (local trait).
+- **E0308 fix preserves strictness.** `name()` returns `Result<&str,String>` and `identity()` returns `Result<ListIdentity,String>`; adding `?` at both Cons field-name lookups propagates the actual table-range error before `&str` equality, matching the existing `name(view,c.name_id)?` usage in the same loop. No `Ok(...)` wrapping, error ignoring, or weakened name/type/field-order assertion.
+- **No runtime premise changed.** The diff (Units 09/10, exact inverse) touches only external import paths and the two `?` operators. No Core visibility/API, owner, guard, launcher, predicate, complete-record, configuration, wire body, program (263-byte), or expectation body changed (Units 02–06 vs 07/08). Therefore I do **not** ABSTAIN on runtime-premise grounds. `wire.rs`, `EXPECTED-SEMANTICS.json`, and `configuration.rs` are byte-identical to candidate01 as bodies supplied here, not merely by hash.
+
+**Remaining errors:** none identified by inspection. This is not a compilation claim. Disappearance of the 16 cascade diagnostics (2×E0220, 14×E0599, Units 11/21) is a well-founded hypothesis only — they all trace to the failed private imports / unregistered `Wire` impls — but previously masked diagnostics can only be excluded by the actual candidate02 compile. Tree-sitter syntax checks (Unit 12) are not typechecking evidence. I make no prediction that compilation or tests pass.
+
+**Scope limits preserved:** the expectation remains source-aware, frozen pre-consumer, not implementation-unexposed and not a non-author oracle (Unit 01). No full-trace/clock golden, whole-UIREQ-007, binder (Unit 34), formal, refinement, native/SDK/proof, or EARS acceptance is approved.
+
+## Exact three operations: APPROVE each, Root-selected only
+
+Operations use the new candidate02 namespace and unique `metadata=original007_nominal_list_candidate02`, never overwriting candidate01's failed capture (Units 13/14). Same Core187 normal rlib (`be9d…`), tools/externs/directories, capture helper 713119 non-`main` mechanism, selector, 30/10/10s, CPU 25, AS 2GiB, file 64MiB, core 0, 131072-byte streams, serial fail-stop, no retry. No Core rebuild proposed.
+
+| Operation | Verdict | Conditions |
+|---|---|---|
+| 01-external-consumer-compile | APPROVE | 1,2,3,4,5,7 |
+| 02-list-one | APPROVE | 1–7 |
+| 03-exact-original007 | APPROVE | 1–7 |
+
+Conditions (Unit 17, unchanged): **1** recheck/freeze 6 sources, rlib/dep-info, toolchain, `serde_json` extern, both `-L` inventories, directory membership, namespace absence — never hashes alone; **2** create only declared build/TMPDIR/outputs-parent dirs, keep final capture dir absent; **3** compose only via capture helper non-`main` functions (`pin/save/check/static_check/capture/dep_inputs`), never historical `main`/`test_membership`/`parse_exact_stdout`; **4** exact argv/cwd/env/limits, serial fail-stop, no retry; **5** after actual compile, pin actual binary+dep-info before list/run, require exactly 6 source/include dep-info inputs and no env-dep rows; **6** terse list must contain exactly one selector accounting for libtest's `: test` suffix, then run exactly it once; **7** freeze/hash every actual output including `errors.jsonl` and the manifest; any failure/timeout/cap/nonzero stays a preserved failure with no retry or acceptance inference.
+
+Generated binary/dep-info pins are **UNISSUED** (not copied from the failed compile); runtime outputs are **UNOBSERVED**.
+
+## Evidence distinctions
+
+- **Historical runtime premise vs fresh read scope:** the complete owner/lexer/runtime body approval is the historical prior opinion (Unit 29, which approved the same 3 operations for candidate01) plus Unit 31's source APPROVE, retained as an openly applicable premise per Unit 16 (Core187 sources still equal). My fresh read covers the corrected consumer/nominal-wire bodies, before-images, diffs/inverse, all 24 diagnostics with raw stderr, and the full public API bodies (Units 23–28). I do not claim a fresh personal re-read of the 1.49MB closure.
+- **Actual failure vs proposed compile:** candidate01 compile failure is actual (Units 19–21). Candidate02 compile is proposed and unrun; this review approves the correction and operation eligibility, not a result.
+- **Missing premises stated explicitly:** corrected compile outcome, actual binary/dep-info, list output, runtime records/outputs, and Root semantic validation of the source-aware expectation. Stdlib/`serde_json`/tool internals remain unreviewed premises, as in the prior opinions.
+
+Root alone selects and executes.
+
+END_CANDIDATE02_REVIEW

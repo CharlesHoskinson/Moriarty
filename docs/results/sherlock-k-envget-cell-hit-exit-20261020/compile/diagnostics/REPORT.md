@@ -1,0 +1,7 @@
+# Complete current EnvGet compile diagnostics
+
+All128091 stderr bytes (a34c9bb00c2c3d31fd4472f2bd307a1381bee39660d6b1fb7080f9a1493b36c1) are covered by248 disjoint contiguous diagnostics. Every one has severity Warning, tag Compiler and category deprecated-klabel, an actual source/location, production display and caret payload. Zero errors, unclassified messages or uncovered bytes. Counts: CS syntax37, CH syntax135, ownedDATA syntax15, typedRoot syntax61. All four are unchanged inherited files. No warning is attributed to the new three EnvGet source/law files; this is attribution, not proof of correctness.
+
+The source lane read every payload in four complete reversible display parts. Only exact repeated header text (retaining SPACE vs LF), source prefix and tilde runs are factored. Every inverse equals its exact raw block; joining all blocks restores stderr byte-for-byte. Every displayed production is whitespace-checked against current frozen source. This is full lossless-rendered coverage, not a claim one unabridged128k output was displayed. Fullraw original retained. Root's own read/acceptance is not inferred.
+
+All warnings remain semantically UNADJUDICATED. The message requests removal of klabel or replacement by symbol; no source edit/semantic waiver is made. Classification does not establish runtime/refinement/native/A39/Bclock/EARS. The first metadata separator assertion stopped at warning35; a later report helper rejected a str path before records. Both were metadata-only stops, no subject replay or source change.

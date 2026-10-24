@@ -1,0 +1,70 @@
+## Final verdict: APPROVE — parametric source/API only
+
+Reviewer identity: Muse Wonder 1.0 HIGH, independent non-author review. No tools, subjects, Quint/frontend, Rust, provider, Git, or canonical execution were run. Approval is based on reading the supplied bodies, not hashes alone.
+
+### Coverage checked
+
+- All eight public QNT files in Bodies 1–8:
+  - Six DATA declaration modules.
+  - `q41EnvGetOwnerRelation.qnt`: general `EnvGetCell(hit) → EnvGetExit` producer.
+  - `q41EnvGetOwnerProperties.qnt`: whole-window and work/preservation predicates.
+- Contracts and boundaries in Bodies 9–18, including the independent SAFE R2 relational handoff, scope gaps, typed-window interface, author pre-code predicates, readback, frontend proposal, and capture-helper body.
+- Production API Bodies 22–26:
+  - `env_get_cell` / `env_get_exit` in `families/environment.rs`.
+  - Owner selection, P4/P7 charging, event construction, occurrence snapshot, and `build_event` logic in `owner_runtime.rs` segments Bodies 23–24.
+  - Bound-host observation in `owner_host.rs`.
+  - Native 28-field `StepEventC`, helper/result, ProgramView, and owner carriers in `shared.rs`.
+- Body 27 confirms Bodies 23–24 are adjacent segments of one complete production unit. No clipped body requiring abstention was found.
+
+### Source/API findings
+
+No mandatory source or API fix is required for the stated parametric positive scope.
+
+The Quint relation matches the production positive slice on the decisive points:
+
+- **Cell hit:** Pending `EnvGet`, `cursor = Some(index)`, and `env[index].binder == helper.binder` produce `found = Some(env[index].value)` and `status = Positive`. Cursor, common record, binder, result, control, frames, tasks, tables, admission, ProgramView, layout, and all unrelated image fields are retained by spread.
+- **Cell miss divergence is intentional domain narrowing, not a modeling error:** Rust advances `cursor` to `cell.previous` on binder mismatch, whereas Quint returns `Q41OutsidePositiveSlice`. The reviewed claim is only the hit row; the marker is not represented as a Core refusal, error, terminal state, or unchanged-host outcome.
+- **Exit:** Positive `EnvGet` with `found = Some(value)` clears the helper and stages exactly `C6HResultEnvFound({ value })`, with no Ref decoding or `Const → Data` coercion. This matches Rust `env_get_exit`.
+- **Selection:** Cell is `BHelperEnvGetCell / HelperVisit`, visits `1`; Exit is `BHelperEnvGetExit / HelperExit`, visits `0`. Site and helper kind are `Some(common.site)` and `Some("EnvGet")`, consistent with Rust under the reachable-state premise that helper `common.site` equals the owner-derived site.
+- **Owner charges:** Each step applies `remaining_work - 1`, `consumed_work + 1`, and `helper_work + 1`. Only Cell adds `helper_visits + 1`. `reference_cursor` remains unchanged because neither row is `LegacyComplete`. This matches P4/P7 and Rust `visits_of` / `build_event`.
+- **Linked window:** `q41ComputeWindow` feeds the actual computed `after_cell` host into the second `q41NormalStep`; it does not reconstruct or replace the intermediate host.
+- **Events:** All 28 event fields are computed rather than hard-coded from a literal case. Ordinal is the relevant pre-step `consumed_work`; run identity is retained; source expression is `pre.control_origin`; occurrence owner/function/path are taken from the full pre-state ProgramView occurrence slice without reordering or `[1, 0]` normalization. Cell phase/cursor are `Pending → Positive` with cursor retained; Exit is `Positive → None` with cursor cleared in the event projection. Result tag is absent for Cell and `EnvFound` for Exit. Origin cursor uses `helper.common.origin_reference_cursor`, not the current reference/work clock.
+- **Preservation:** In the combined property, `q41WholeWindowExact` pins the entire computed three-host/two-event window, so it catches unrelated mutations. One qualification: `q41PreservedOutsideWrites` by itself exempts helper and result on both steps, so it should not be quoted alone as proof that Cell preserved `result`; the combined whole-window equality is the operative preservation check. This is not a blocking defect in the delivered combined predicate.
+
+### Explicit premises and remaining GAP
+
+This approval does **not** establish a finite literal case.
+
+Still missing and not supplied:
+
+- A current DedicatedSorts canonical population/order contract for the 11 ProgramView vectors:
+  `pattern_children`, `types`, `type_args`, `constructors`, `ctor_fields`, `decl_param_counts`, `decl_ctor_counts`, `decl_templates`, `plan_nodes`, `plan_cases`, `field_paths`.
+- An independently frozen literal genesis-to-target prefix.
+- A populated `expectedRoot` QNT DATA file.
+- Any directed Quint test, Rust/K capture, native result, admission result, or runtime evidence.
+
+The 11 vectors remain opaque retained fields. No empty, builtin, ID, count, prestate, ordinal, or admission value may be guessed.
+
+The following remain external premises, not guards implemented by the Quint source:
+
+- Real AB-bound, reachable, Running host pair.
+- Successful normal P0/P1/P2/PS/P3/P4/P6/P7 path.
+- Sufficient work/helper budget and successful checked native reads, arithmetic, caps, and physical validation.
+- `active` lengths equal the full owned Vec lengths.
+- `layout.ext_capacities = None` remains an unobserved original-input seam, not a fabricated Host field.
+
+`Q41OutsidePositiveSlice` and `Q41NoWindow` are only finite-model domain markers. They assert no Core outcome, refusal, admission, terminal, security, or unchanged-state policy. Cell-miss, empty, failure, other-helper, publish, refusal, malformed-input, StepInv, Rust-refinement, native, SDK, P1, target, and EARS questions remain outside this approval; all G/E/D/N and 25 refinement obligations remain open.
+
+### Prospective frontend eligibility
+
+**Eligible for Root selection: exactly one** prospective Quint frontend operation as proposed in Body 18:
+
+- Entry: `q41EnvGetOwnerProperties.qnt`.
+- Scope of a future PASS: Quint syntax/type/effect checking only.
+- Required execution discipline remains Root-owned: exact PATH/LANG, DEVNULL stdin, 60 seconds, 4 MiB retained per stream, 512 MiB Node limit, eight regular source entries, 4,683 pre/post pin checks, faithful caller retained before dispatch, capture-helper API only and never its `main`, raw COMMAND/RESULT/full streams fsynced before classification.
+- PASS would require exit `0`, controller failure `None`, and full stdout/stderr both `0` bytes.
+- No caller or operation has been selected or run in this review. A future frontend PASS would not be a literal-case PASS, helper execution, admission proof, prefix proof, native result, or refinement proof.
+- No retry, cap increase, old-prefix substitution, new runner, framework, or security/resource policy is authorized by this review.
+
+**Mandatory fixes before the approved parametric source can be used as intended: none.**  
+**Mandatory next evidentiary step, separate from this source approval:** independent canonical 11-vector contract plus literal prefix/window DATA prefreeze and fresh Root review/selection before any fixed-case capture or directed test.

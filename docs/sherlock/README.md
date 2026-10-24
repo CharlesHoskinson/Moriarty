@@ -15,8 +15,11 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Prepare a compile-only HostOnly source artifact](how-to/prepare-host-source-artifact.md)
 - [Compile dedicated draft fixtures to HostOnly artifacts](how-to/compile-draft-program.md)
 - [Observe a Core2 stage financial result](how-to/observe-stage-financial-result.md)
+- [Prepare checked staged financial source](how-to/prepare-staged-financial-source.md)
 - [Use typed word arithmetic](how-to/use-typed-word-arithmetic.md)
 - [Prepare owned generic program types](how-to/prepare-generic-program-types.md)
+- [Observe a declared recursive nominal list through the public Rust API](how-to/observe-declared-recursive-list.md)
+- [Select a retained Push configuration family](how-to/select-retained-push-family.md)
 
 ## Reference
 
@@ -27,12 +30,15 @@ Sherlock is Moriarty’s universal interpreter and its handwritten Midnight real
 - [Resource manifest report API](reference/resource-manifest-api.md)
 - [Host machine](reference/host-machine.md)
 - [Core2 financial observation adapter](reference/financial-observation-adapter.md)
+- [Financial carrier and public staged source producer](reference/financial-carrier-binding.md)
 - [Typed word arithmetic](reference/typed-word-arithmetic.md)
 - [K-A host event grouping](reference/host-grouping.md)
 - [HostOnly source compiler API and artifact](reference/host-source-compiler.md)
 - [Dedicated draft source compiler API and artifact](reference/draft-source-compiler.md)
 - [HostOnly configuration and exact fixture](reference/host-source-config.md)
 - [Image layout](reference/image-layout.md)
+- [C6 physical host codecs and nominal DATA-row representation](reference/c6-physical-host-codecs.md)
+- [Retained Push family and checked positive K context projection](reference/c6-retained-push-family-and-context.md)
 - [Bridges and ledger](reference/bridges-ledger.md)
 - [DoctorWatson](reference/doctorwatson.md)
 
@@ -165,3 +171,13 @@ These pages describe supplied-file assembly and comparison. The archived eleven 
 - Explanation: [why the parent, terminal and anchor remain separate](explanation/recursive-proof-boundaries.md).
 
 These pages accompany actual source/results publication. They add no accepted recursive proof, deployed target, new EARS closure or separate execution route. A new tutorial is deferred until a connected actual path exists; no fictitious runnable command is introduced.
+
+
+## Declared recursive nominal list — observed October 20
+
+The [public Rust API guide](how-to/observe-declared-recursive-list.md) follows one actual `ListUInt128` source through body typing, owner admission/genesis and complete owner records. [The retained evidence](../results/sherlock-original007-recursive-nominal-list-20261020/README.md) contains 70 events, one Terminal and all nine outputs, including 846,469 raw trace bytes. This source-aware finite result does not close UIREQ007 or its binder/formal/full-consumer/refinement obligations. The [layered explanation](explanation/nominal-text-to-admission.md#observed-body-typed-owner-path-october-20) keeps K/Quint/Clean, DATA constraints, native proof and target acceptance separate.
+
+
+## Complete positive META counterpart — October 20
+
+[The B38 public source/result](../../models/sherlock/quint/c6-positive-metadata-20261020/README.md), merged in [PR326](https://github.com/CharlesHoskinson/Moriarty/pull/326), records one frontend and two directed tests passing. Its full six-field metadata observations were compared internally; no actual vector JSON or Rust codec comparison is claimed. Six public modules need a withheld seventh expected-data module to run the test entry. The [retained-family reference](reference/c6-retained-push-family-and-context.md#later-positive-meta-evidence--2026-10-20) and [inspection guide](how-to/select-retained-push-family.md#inspect-the-later-positive-meta-result-without-changing-its-scope) preserve those limits and keep the later K META compile-only result, local Fin proof, pending handwritten source and native work separate. No full EARS, recursive-proof or target acceptance follows.

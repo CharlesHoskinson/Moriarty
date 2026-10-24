@@ -29,3 +29,85 @@ tags: [moriarty, consolidation, recursion]
 ## Current reviewed R4/R5 result — 2026-10-02
 
 [[wiki/sessions/native-financial-kernel-2026-10-01|Reviewed fixed-fixture R4 financial Success and complete R5 independent verification]] (SRC-0119). Three actual-result reviews and portable evidence retained; generic correspondence, authenticated custody/history/PCD and Preview remain open.
+
+
+## Sherlock circuit atlas continuation —2026-10-20
+
+[UPDATE017](research/sherlock-circuit-atlas/UPDATE-017-PADDING-NAMESPACES-AND-RECORD-BOUNDARIES.md) is a finished-site concept proposal with separately dated source engineering status. The full Sherlock/native/stagenet goal remains unfinished; the concept log is asynchronous.
+
+
+## UPDATE017 source provenance navigation —2026-10-20
+
+[The atlas index](research/sherlock-circuit-atlas/index.md) now lists both UPDATE017 source summaries separately from the unchanged Muse concept and status. The earlier Root lint and scoped raw-path readback remain separate observations; no global lint-clean or new product/native/EARS claim follows.
+
+
+## Sherlock evidence layers —2026-10-20
+
+[The dated atlas engineering snapshot](research/sherlock-circuit-atlas/ENGINEERING-018-EVIDENCE-LAYERS.md) distinguishes current component/model/host/guard receipts from open SDK/native/recursive/target acceptance. Future concept prose remains designated Muse/Opus; the website is unpublished until full completion.
+
+
+## Sherlock UPDATE018 — completed-interpreter concept
+
+[The designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-018-MATH-GUARDS-AND-EXECUTION-LAYERS.md) explains the future finished circuit/interpreter as a cumulative board. [Internal dated status](research/sherlock-circuit-atlas/UPDATE-018-MUSE-ENGINEERING-STATUS.md) keeps actual source and acceptance gaps separate. Website unpublished; product/native work continues independently.
+
+
+## Sherlock UPDATE019 — completed-interpreter concept
+
+[The designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-019-CHECKED-READS-AND-OWNER-LOOKUP.md) explains the future finished circuit/interpreter as a cumulative board. [Internal dated status](research/sherlock-circuit-atlas/UPDATE-019-MUSE-ENGINEERING-STATUS.md) keeps actual source and acceptance gaps separate. Website unpublished; product/native work continues independently.
+
+
+## Sherlock UPDATE020 — completed-interpreter concept
+
+[The designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-020-SCALAR-TAG-SELECTORS-AND-CHECKED-WITNESSES.md) explains the future finished circuit/interpreter as a cumulative board. [Internal dated status](research/sherlock-circuit-atlas/UPDATE-020-MUSE-ENGINEERING-STATUS.md) keeps actual source and acceptance gaps separate. Website unpublished; product/native work continues independently.
+
+
+## Sherlock UPDATE021 — arithmetic concept continuation
+
+[The designated Muse chapter](research/sherlock-circuit-atlas/UPDATE-021-SCALAR-ARITHMETIC-AND-CHECKED-RESULTS.md) explains checked arithmetic in the future finished interpreter. [Author-time status](research/sherlock-circuit-atlas/UPDATE-021-MUSE-ENGINEERING-STATUS.md) and [later bounded source-review status](research/sherlock-circuit-atlas/UPDATE-021-POST-AUTHOR-STATUS.md) keep the engineering cuts separate. Website unpublished; native and product work continues independently.
+
+
+## Sherlock UPDATE022 — wide products and bound ports
+
+[The designated Muse concept](research/sherlock-circuit-atlas/UPDATE-022-WIDE-PRODUCTS-AND-BOUND-PORTS.md) follows the retained high half through the future finished interpreter. [Dated internal status](research/sherlock-circuit-atlas/UPDATE-022-MUSE-ENGINEERING-STATUS.md) and [separate engineering metadata](research/sherlock-circuit-atlas/UPDATE-022-POST-AUTHOR-STATUS.md) keep source, ordinary capture and formal results apart. Website unpublished; native and product work continues independently.
+
+
+## Sherlock UPDATE023 — Scalar Entry and frame routing
+
+[The designated Muse concept](research/sherlock-circuit-atlas/UPDATE-023-SCALAR-ENTRY-AND-FRAME-ROUTING.md) follows the actual Return and top-frame lanes through helper installation in the future finished interpreter. [Dated internal status](research/sherlock-circuit-atlas/UPDATE-023-MUSE-ENGINEERING-STATUS.md) and [separate engineering metadata](research/sherlock-circuit-atlas/UPDATE-023-POST-AUTHOR-STATUS.md) keep author-time source and later literal delivery distinct. Website unpublished; native and product work continues independently.
+
+
+## Sherlock UPDATE024 — staged nodes and allocation
+
+[The designated Muse concept](research/sherlock-circuit-atlas/UPDATE-024-STAGED-NODES-AND-ALLOCATION.md) distinguishes staged PendingNode tags from later DATA allocation in the future finished interpreter. [Dated internal status](research/sherlock-circuit-atlas/UPDATE-024-MUSE-ENGINEERING-STATUS.md) and [separate engineering metadata](research/sherlock-circuit-atlas/UPDATE-024-POST-AUTHOR-STATUS.md) keep current merged source and planned construction work distinct. Website unpublished; native and product work continues independently.
+
+
+## Sherlock UPDATE025 — concept source and later workflow observation
+
+[The literal Muse continuation](research/sherlock-circuit-atlas/UPDATE-025-ETCHED-RELATIONS-AND-LOOSE-INSERTS.md) follows UPDATE024 without replacing it. [Later dated status](research/sherlock-circuit-atlas/UPDATE-025-POST-AUTHOR-STATUS.md) distinguishes the new sampled workflow pass from zero external sampled witness coverage and the earlier timeout. The website remains unpublished; native and product acceptance are separate.
+
+
+## Sherlock UPDATE026 — literal source and validation-task concept
+
+[Exact designated Gemini concept](research/sherlock-circuit-atlas/UPDATE-026-LITERAL-ROOTS-AND-VALIDATION-TASKS.md) and [separate later engineering qualification](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md) preserve future finished-site copy versus current candidate status. Website unpublished; circuit/native/target work remains separate.
+
+
+## UPDATE026 engineering correction — 2026-10-21
+
+[The separate receipt-contract erratum](research/sherlock-circuit-atlas/UPDATE-026-RECEIPT-GATING-ERRATUM.md) corrects one historical parenthetical; the creative chapter is unchanged and the site remains unpublished.
+
+
+2026-10-21 dated source02 intake: [separate circuit engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), source `src-e4a728c21edb26d302ff`. Historical metadata/fixture/kernel/inverse scopes; no current liveness or acceptance claim.
+
+
+### 2026-10-21 — source07 historical receipt distinction
+
+[Source07 separate engineering cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md), src-b61a963c72b8a8e55ce7, is dated prebuild history, not current execution status. It separates ordinary accounting checks, operational cleanup discharge, wallet B2 and finite counterparts; site remains unpublished until full Sherlock completion.
+
+
+- Source09: current CLI, scoped child verify/tamper and parent-unrun boundary: [separate engineering receipt cut](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-5db5466cc3f32308a244](../.raw/captured/f114d04a9d67160db71e6514ec7a839ea8353d05226c2c46b8e208b8767fec66.json)
+
+
+- Source10: [dated keygen/source/sync boundary](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-ebbed65e89ce72b6c641](../.raw/captured/1e72150d338d99a6023e6529ffde9f275680fadba5d0719e0d940c81de3a7b30.json)
+
+
+- Source12: [dated build/clock/tool-limit boundaries](research/sherlock-circuit-atlas/UPDATE-026-POST-AUTHOR-STATUS.md). [src-e669a9989d96997e6612](../.raw/captured/aacfdd191d1db2ad75fa8934cbf103606331664ff0b312036e459f66679b553e.json)

@@ -1,0 +1,38 @@
+{
+  "status": "PASS_ALL67_POSTCOMPILE_LABELS_STATIC_NO_RUNTIME",
+  "actual_compile_result": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/actual/ROOT-RESULT.json",
+    "bytes": 5362,
+    "sha256": "de31c2d2703a2a2cdce553f1088a7f61c79ec38be42042f6d8cb0ddd2ed1686a"
+  },
+  "map": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/runtime-qa-postcompile-01/context/COMPILED-KLABEL-MAP.json",
+    "bytes": 87648,
+    "sha256": "ed7c647f36e5acbce191554472023a23d303f4c1a790f178d952cc3a11f3a53c"
+  },
+  "compiled15": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/runtime-qa-postcompile-01/context/COMPILED-REUSE15.json",
+    "bytes": 4121,
+    "sha256": "aa7bac56c080cfd06f0974165fa4222c5874c55f168af7c3f78e6d0c978c0be4"
+  },
+  "compiled_txt": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-typed-root-outcome-codec-20261019/actual/c6-typed-root-kompiled/compiled.txt",
+    "bytes": 355294,
+    "sha256": "ac9e066c40e3c8a0168cb10f63d4579baa43e9775a10dfbdad92991cf2e7b218"
+  },
+  "actualbarectLabels": "Absent; all67aregeneratedfullnames despiteklabelmetadata. No sourcechange/semanticexpectationamendment.",
+  "primary": {
+    "source": {
+      "path": "/nix/store/x3ybp2gyrf0vlzzf02s959skd08wn5r6-source/k-frontend/src/main/java/org/kframework/kil/Production.java",
+      "bytes": 7845,
+      "sha256": "3b08183b2b0d058d2d14a2fa524dc0ea896059c46190f73d78f18de3d34e980c"
+    },
+    "start_line": 106,
+    "end_line": 183,
+    "body": "\n  /**\n   * Gets the effective KLabel declared by the user, taking the `klabel` and `symbol` attributes\n   * into account.\n   *\n   * <p>The effective label is specified as follows:\n   *\n   * <ul>\n   *   <li>If the production has a `symbol(X)` attribute, the effective label is `X`.\n   *   <li>If the production has `klabel(X)`, then the effective label is `X`. This syntax will be\n   *       deprecated in the future.\n   *   <li>Otherwise, return null.\n   * </ul>\n   *\n   * @return A string representing the effective label, or null.\n   */\n  private String getDeclaredLabel() {\n    String symbol = getAttribute(Att.SYMBOL());\n\n    if (symbol != null && !symbol.isEmpty()) {\n      return symbol;\n    }\n\n    return getAttribute(Att.KLABEL());\n  }\n\n  /**\n   * Gets the KLabel corresponding to this production. A production has a KLabel if and only if the\n   * production flattens in KORE to a term which is of sort KItem (ie, is a function or a\n   * constructor).\n   *\n   * @return\n   */\n  public String getKLabel(boolean kore) {\n    String klabel = getDeclaredLabel();\n    if (klabel == null\n        && (isSyntacticSubsort()\n            || containsAttribute(Att.TOKEN())\n            || containsAttribute(Att.BRACKET()))) {\n      return null;\n    } else if (klabel == null || (kore && getAttribute(Att.SYMBOL()) == null)) {\n      klabel = getPrefixLabel(kore);\n    }\n    return klabel.replace(\" \", \"\");\n  }\n\n  public String getBracketLabel(boolean kore) {\n    String klabel = getDeclaredLabel();\n    if (klabel == null || (kore && getAttribute(Att.SYMBOL()) == null)) {\n      klabel = getPrefixLabel(kore);\n    }\n    return klabel.replace(\" \", \"\");\n  }\n\n  private String getPrefixLabel(boolean kore) {\n    String label = \"\";\n    List<String> sorts = new ArrayList<>();\n    for (ProductionItem pi : items) {\n      if (pi instanceof NonTerminal) {\n        label += \"_\";\n        sorts.add(((NonTerminal) pi).getSort().name());\n      } else if (pi instanceof Terminal) {\n        label += ((Terminal) pi).getTerminal();\n      } else if (pi instanceof UserList) {\n        label += \"_\" + ((UserList) pi).separator + \"_\";\n        sorts.add(((UserList) pi).sort.name());\n        sorts.add(sort.name());\n      }\n    }\n    return label\n        + \"_\"\n        + ownerModuleName\n        + (kore ? \"_\" + sorts.stream().reduce(sort.name(), (s1, s2) -> s1 + \"_\" + s2) : \"\");\n  }\n\n  public java.util.List<ProductionItem> getItems() {\n    return items;\n  }\n",
+    "specific_rule": "getKLabel(kore): ifkore andsymbolattributeabsent usesgetPrefixLabel, evenklabelmetadataexists. FrozenPUBLICregistry.declared_klabel denotes sourceattribute, notactualruntimeKLabel."
+  },
+  "expected_body_reads": 0,
+  "actual_semantic_body_reads": 0,
+  "Ksubject_provider_executions": false
+}

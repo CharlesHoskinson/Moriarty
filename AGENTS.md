@@ -1,3 +1,7 @@
+## Three-component Sol author / Opus audit maintenance exception — October 24 UTC
+
+The user approves **Sol writes; Opus audits** for actual-wrapper regression tests, the existing bounded cold-build launcher across circuit revisions, and the Quint deferred-failure framing correction. GPT-6.1 Sol high may implement and maintain those components; fresh actual non-author Opus 5.5 high review is required before changed-candidate execution. This includes the earlier pending C6 request and persists across revisions. Existing limits, original oracles, privacy, cleanup and financial/proof/target acceptance stay intact. Other security assignments remain Opus-owned. See [the exact assignment](raw/assignments/sherlock-three-component-sol-opus-maintenance-2026-10-24.md).
+
 ## Current user priority — October 19 stagenet recursion
 
 Deploy Sherlock to Midnight stagenet and validate a real recursive proof. Use a Fenrir-derived synthetic rollup as the main feasibility/performance experiment; measure actual circuit degree k and per-layer resource/validation performance. Recover the [current loop](docs/sherlock/implementation-loop.md), [experiment](docs/sherlock/stagenet-recursive-rollup-experiment.md) and [OpenSpec/EARS/tasks](openspec/changes/sherlock-stagenet-recursive-rollup/proposal.md) before historical queues. A literal proof is a prerequisite and does not establish recursion. Maintain the existing full goal, source/resource rules, permanent formal/handwritten lanes, local CI and graph-first recovery.

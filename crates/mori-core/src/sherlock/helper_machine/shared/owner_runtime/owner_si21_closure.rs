@@ -36,7 +36,7 @@ fn cursor_on_chain(pre: &PreImage, root: EnvRootC, cursor: EnvRootC, binder: usi
     }
 }
 fn least_row_named(pre: &PreImage, name: usize) -> Result<Option<usize>, HostViolation> {
-    let n = pre.admitted_function_count(); let mut i = 0usize;
+    let n = pre.admitted_function_count()?; let mut i = 0usize;
     while i < n { if pre.function_row(&i)?.function_name == name { return Ok(Some(i)); } i += 1; }
     Ok(None)
 }
@@ -128,7 +128,7 @@ fn find_si21(pre: &PreImage) -> Result<bool, HostViolation> {
     let (name, row_cursor, status) = match pre.helper() {
         Some(HelperControlC::Find { function_name, row_cursor, status, .. }) => (*function_name, *row_cursor, *status), _ => return Err(cv("Find helper absent")) };
     if invoke_name(pre) != Some(name) { return Ok(false); }
-    let n = pre.admitted_function_count(); let mut i = 0usize;
+    let n = pre.admitted_function_count()?; let mut i = 0usize;
     while i < row_cursor && i < n { if pre.function_row(&i)?.function_name == name { return Ok(false); } i += 1; }
     Ok(status != TriStatus::Positive || (row_cursor < n && pre.function_row(&row_cursor)?.function_name == name))
 }
@@ -300,7 +300,7 @@ pub(super) fn si22_helper_ok(pre: &PreImage) -> Result<bool, HostViolation> {
             TriStatus::Pending => found.is_none(), TriStatus::Positive => found.is_some() && cursor.is_some(), TriStatus::Negative => found.is_none() && cursor.is_none() },
         HelperControlC::EnvPut { new_root, status, .. } => tl == 0 && match status {
             TriStatus::Pending => new_root.is_none(), TriStatus::Positive => new_root.is_some(), TriStatus::Negative => false },
-        HelperControlC::Find { row_cursor, found, status, .. } => { let n = pre.admitted_function_count(); tl == 0 && match status {
+        HelperControlC::Find { row_cursor, found, status, .. } => { let n = pre.admitted_function_count()?; tl == 0 && match status {
             TriStatus::Pending => found.is_none() && row_cursor <= n, TriStatus::Positive => found == Some(row_cursor) && row_cursor < n,
             TriStatus::Negative => found.is_none() && row_cursor == n } }
         HelperControlC::Bind { params, args, p_cursor, a_cursor, partial, dup_cursor, phase, status, .. } => {

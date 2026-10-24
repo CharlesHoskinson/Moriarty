@@ -1,0 +1,25 @@
+{
+  "original": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-literal-complete-images-safe-runtime-preparation-20261019/source/literal_complete_images.py",
+    "bytes": 12613,
+    "sha256": "fa103a72f5c4847f5793796b2eb30e8aca1e35282f4c9711088c7200bcd8791c"
+  },
+  "candidate": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-literal-complete-images-empty-continuation-decode-tail-20261019/source/literal_complete_images.py",
+    "bytes": 12882,
+    "sha256": "b1450e5cecfa26187350cb1310f9e68c9192bad4aa38d293033a61112711fe12"
+  },
+  "changes": [
+    {
+      "old": "TOKEN = re.compile(r\"\\s*(-?[0-9]+|[A-Za-z][A-Za-z0-9_]*|[(),])\")",
+      "new": "TOKEN = re.compile(r\"\\s*(-?[0-9]+|[A-Za-z][A-Za-z0-9_]*|[(),]|~>|\\.K)\")"
+    },
+    {
+      "old": "            if not stack:\n                raise FormatError(\"trailing tokens after complete term\")",
+      "new": "            if not stack:\n                # kprint may retain the empty K-sequence continuation. It is\n                # framing only after the complete balanced constructor tree.\n                if tokens[index:] == [\"~>\", \".K\"]:\n                    index += 2\n                    break\n                raise FormatError(\"trailing tokens after complete term\")"
+    }
+  ],
+  "forward_raw_equal": true,
+  "inverse_raw_equal": true,
+  "only_TOKEN_and_parse_top_level_suffix_branch_changed": true
+}

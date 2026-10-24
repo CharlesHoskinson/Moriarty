@@ -1,0 +1,61 @@
+{
+  "status": "DECLARATION_ONLY_EXACT_FIELD_MAPPING_NO_POPULATED_EXPECTATIONS",
+  "entry": {
+    "name": "dpObserve",
+    "sort": "DPObservation",
+    "argument_sorts": [
+      "DPCaps",
+      "DPTables"
+    ]
+  },
+  "registry": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/SAFE/PUBLIC-REGISTRY.json",
+    "bytes": 3775,
+    "sha256": "ec4c9990b7d792dd1a41e7daebba954e7d9659961f09612959211328be2e232a"
+  },
+  "output_constructor": "dpObservation(DPGeometry,CTActive,CTLanes,DPTables)",
+  "exact_output_root_keys": [
+    "geometry",
+    "counts",
+    "padded_lanes",
+    "decoded_tables"
+  ],
+  "root_projection": {
+    "geometry": "arg0 dpGeometry fiveInt args -> data_base,fields_base,env_base,values_base,total",
+    "counts": "arg1 ctActive fourInt args -> ordereddata/fields/env/values physicalcounts ONLY; not rootallocation/state/cost",
+    "padded_lanes": "arg2 entire ctLane(Int,CTLanes) chain including allheader/active/inactivezero lanes, nativeInt only",
+    "decoded_tables": "arg3 dpTables arg0nodes/arg1refs/arg2envcells/arg3refs; every ordered original external variant/payload field retained"
+  },
+  "Data_variants": {
+    "dpU128(Int)": "U128{n:Int}",
+    "dpBool(Bool)": "Bool{b:Bool}",
+    "dpNil()": "Nil:null",
+    "dpCons(CTSlice)": "Cons{fields:Slice}",
+    "dpLeaf(CTSlice)": "Leaf{fields:Slice}",
+    "dpBranch(CTSlice)": "Branch{fields:Slice}",
+    "dpConstructor(Int,Int,CTSlice)": "Constructor{type_id,ctor_id,fields}"
+  },
+  "other_carriers": {
+    "CTRef": "ctConst(Int)->Const:Int | ctData(Int)->Data:Int",
+    "CTEnv": "ctEnvNone()->None:null | ctEnvSome(Int)->Some:Int",
+    "CTSlice": "ctSlice(Int,Int)->{start,len}",
+    "DPEnvCell": "dpEnvCell(Int,CTRef,CTEnv)->{binder,value,previous}"
+  },
+  "metadata_binding_only": {
+    "profile": "sherlock-c6-data-positive-padded/1",
+    "caseId": "seven-variants-partial-unequal-capacities-01",
+    "input": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/k-C6-positive-padded-DATA-20261020/SAFE/SAFE-INPUT-ONLY.proposed.json",
+      "bytes": 2512,
+      "sha256": "c1a694df525a79d158c4a07bb0ac5ecaf12083890fc8d51d74fa82717023ae2e"
+    },
+    "whole_expected": {
+      "path": "/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-review-20261017/independent-actual-c6-programview-interface-oracle-20261019/B34-positive-padded-DATA-20261020/private/EXPECTED-COMPLETE-OBSERVATION.json",
+      "bytes": 2353,
+      "sha256": "a101bc8859d93ed33c70658c52083d2458d4256fdd10414a7e4482acd04cc8f3"
+    }
+  },
+  "no_extra_output_wrapper_or_filling": true,
+  "positive_external_premises": "Complete sameSAFEcontract; capvalid refs may be beyondactive. No arbitrarymalformedjson/runtimeguard claim. Pythonprojection only consumes strict existingdecoder validated wholetypedtree.",
+  "source_author_private_body_reads": 0
+}

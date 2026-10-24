@@ -1,0 +1,13 @@
+# Six finite K law evaluations, 2026-10-20
+
+Actual result: 25/25 selected processes exited zero. Each of the six complete raw prints is `true` plus LF; each saved KORE result is a primitive Bool true, and each Bool report is `LAW_PASS`. Full raw streams, queries, source inputs, COMMANDs, F03 records, pre/post pin evidence and the aggregate are retained losslessly in `evidence/full-public-actual-and-unit-history.tar.gz`. The member manifest verifies exact original file bytes; tar metadata was normalized. No compiled binary, private expected/generator/projector, genuine capture or provider wire is included.
+
+The 637 static pins and all recorded prior dynamic products remained unchanged. Before the first K child, all six complete generated inputs matched the frozen public variants with strict native kinds and ordered lists, and all 13 render-product pins were verified. Raw records were durably retained before classification under Root's saved manual composition. A passive reread cannot independently re-prove historical fsync timing. Original compile warnings remain semantically UNADJUDICATED.
+
+History stays separate: the original 12 Python units passed in their bounded carrier scope. A later 10-unit process failed with nine passes and one error because a Bool-returning law constructor was treated as a primitive leaf. That failed stdout/stderr and prospective source approval remain unchanged. The corrected 14-unit process then passed; its four added regressions distinguish constructor nodes from literals across wire/internal/codec/KAST forms. None of these Python results alone evaluates a K law.
+
+All inputs are author-visible PUBLIC UNADMITTED synthetic snapshots, with arbitrary context and unbacked references. Five laws test shared-helper self-consistency; the sixth is a post-review concrete discriminator. These six finite source assertions are not independent semantic goldens, universal proofs, genuine Core owner observations, admission, StepInv, native/global refinement, a K/Core clock theorem, full39 or EARS evidence. The genuine capture/binding lane and earlier independent-prefix mismatch histories remain separate.
+
+`historical-source` preserves complete Python/declaration dependencies with original absolute R bindings. It is an audit snapshot, not an installed portable CLI. All local requires among the nine K sources resolve at the proposed model path; `domains.md` remains the exact pinned external K builtin. Publication-path compilation remains UNRUN.
+
+This dated afterimage is a publication proposal. Fresh actual-result review and Root current-base/preimage/copy/integration checks remain pending; no commit or merge is claimed here. Historical UNRUN/pending wording in retained raw receipts is not rewritten.

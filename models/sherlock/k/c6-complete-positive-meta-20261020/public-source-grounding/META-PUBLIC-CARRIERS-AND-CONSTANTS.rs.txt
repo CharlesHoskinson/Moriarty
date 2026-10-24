@@ -1,0 +1,23 @@
+pub const HOST_SECTION_TAG: u128 = 0x484F_5354;
+pub const META_SECTION_TAG: u128 = 0x4D45_5441;
+
+pub const META_HEADER_LANES: usize = 3;
+
+const META_S: &str = "host.meta";
+
+/// External caller authority; decoded lanes never raise these.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct C6HostLimits {
+    pub max_total_lanes: usize,
+    /// Passed to 3C as `C6StateLimits::max_total_lanes`.
+    pub max_state_lanes: usize,
+    /// Cumulative metadata text plus selected-digest bytes.
+    pub max_metadata_bytes: usize,
+    pub max_string_bytes: usize,
+    /// Cumulative entries across the three width lists.
+    pub max_width_entries: usize,
+}
+
+/// Every non-program admission field plus the complete run identity.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct C6HostMetadata { pub identity: IdentityC, pub bounds: BoundsC, pub layout: LayoutSnapshot, pub run_id: RunIdC }

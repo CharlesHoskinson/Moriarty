@@ -1,0 +1,59 @@
+module literalEnvironmentContinuityTest {
+  import literalParametricImages.* from "./literalParametricImages"
+  import literalParametricInputs.* from "./literalParametricInputs"
+  import literalEnvironmentContinuity.* from "./literalEnvironmentContinuity"
+  // NEW same-author/source-exposed positive input and assertions. No observed
+  // image, private oracle or old test module is imported. B23 runs stay absent.
+  pure val eLayout: PLayout = {...pExampleLayout,
+    programRows: pReplace(pReplace(pExampleLayout.programRows,0,3),1,3),
+    stateRows: pReplace(pExampleLayout.stateRows,2,4)}
+  pure def eSetTable(imageArg: PImage, tableIndexArg: int, rowsArg: List[PRow]): PImage = {
+    val changed = imageArg.tables.foldl({cursor:0, out:List()}, (tableScan, oldTable) => {
+      cursor: tableScan.cursor + 1,
+      out: tableScan.out.append(if (tableScan.cursor == tableIndexArg) rowsArg else oldTable),
+    })
+    {root: imageArg.root, tables: changed.out}
+  }
+  // Names "x", "y", "z": distinct exact bytes. Only x and y are bound.
+  pure val eProgramNames: PImage = eSetTable(eSetTable(pExampleProgram,0,
+    List(List(0,1),List(1,1),List(2,1))),1,List(List(120),List(121),List(122)))
+  pure val eProgram: PImage = {...eProgramNames,
+    root: pReplace(pReplace(pExampleProgram.root,1,3),2,3)}
+  // Old x -> Constant0; y -> Data1; nearest x -> Data0 shadows old x.
+  // Fourth physical cell is inactive zero padding and remains in the view.
+  pure val eRows: List[PRow] = List(
+    List(0,0,0,0,0), List(1,1,1,1,0), List(0,1,0,1,1), List(0,0,0,0,0))
+  pure def eWithEnvironment(imageArg: PImage): PImage = {
+    val withRows = eSetTable(imageArg,2,eRows)
+    {root: pReplace(pReplace(pReplace(imageArg.root,2,3),6,1),7,2), tables: withRows.tables}
+  }
+  pure val eBefore: PImage = eWithEnvironment(pWideBefore)
+  // Existing same-author handwritten normal images, not transition calls or
+  // actual traces; update only the independently specified environment region.
+  pure val eMiddle: PImage = eWithEnvironment(pWideMiddle)
+  pure val eDone: PImage = eWithEnvironment(pWideDone)
+  pure val eExpectedPhysical: EPhysical = {active:3,present:1,index:2,rows:eRows}
+  pure def eExpectedBindings(imageArg: PImage): bool =
+    eLookupAdmitted(imageArg,0) == EFound(List(1,0))
+      and eLookupAdmitted(imageArg,1) == EFound(List(1,1))
+      and eLookupAdmitted(imageArg,2) == EAbsent
+  run nonemptyCallerEnvironmentContinuityTest = pInitPair(eLayout,eProgram,eBefore,pAlpha)
+    .expect(ePhysical(eBefore) == eExpectedPhysical and eExpectedBindings(eBefore)
+      and pPairStartAllowed(eLayout,eProgram,eBefore,pAlpha)
+      and not(pCompleteStartAllowed(eLayout,eProgram,eBefore,pAlpha)))
+    .then(pStepLiteral)
+    .expect(reference.states == List(eBefore,eMiddle)
+      and reference.envelopes == List({ruleTag:3,charge:1})
+      and eExpectedBindings(reference.states.nth(1)))
+    .then(pStepPublication)
+    .expect(reference.states == List(eBefore,eMiddle,eDone)
+      and reference.envelopes == List({ruleTag:3,charge:1},{ruleTag:0,charge:0})
+      and reference.program == eProgram and reference.context == pAlpha
+      and ePhysical(reference.states.nth(2)) == eExpectedPhysical
+      and eExpectedBindings(reference.states.nth(2))
+      and eContinuity(reference.states.nth(0),reference.states.nth(1),
+        reference.states.nth(2),List(0,1,2))
+      and pPairJoin(eLayout,eProgram,pAlpha,
+        {program:eProgram,context:pAlpha,before:eBefore,after:eMiddle,envelope:{ruleTag:3,charge:1}},
+        {program:eProgram,context:pAlpha,before:eMiddle,after:eDone,envelope:{ruleTag:0,charge:0}}))
+}
