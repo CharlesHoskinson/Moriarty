@@ -1,0 +1,40 @@
+[package]
+name = "msm-cuda"
+version = "0.1.0"
+edition = "2021"
+publish = false
+[features]
+# By default, compile with ADX extension if the host supports it.
+# Binary can be executed on systems similar to the host.
+default = []
+# Compile in portable mode, without ISA extensions.
+# Binary can be executed on all systems.
+portable = [ "blst/portable" ]
+# Enable ADX even if the host CPU doesn't support it.
+# Binary can be executed on Broadwell+ and Ryzen+ systems.
+force-adx = [ "blst/force-adx" ]
+bn254 = ["ark-bn254/curve"]
+bls12\_377 = ["ark-bls12-377/curve"]
+bls12\_381 = ["ark-bls12-381/curve"]
+quiet = []
+cuda-mobile = []
+[dependencies]
+blst = "~0.3.11"
+sppark = { path = "../../rust" }
+rand\_core = { version = "0.6", features = ["std"] }
+rand\_chacha = "0.3"
+ark-std = "0.3.0"
+ark-ff = "0.3.0"
+ark-ec = { version = "0.3.0", features = [ "parallel" ] }
+ark-bls12-381 = { version = "0.3.0", optional = true }
+ark-bls12-377 = { version = "0.3.0", optional = true }
+ark-bn254 = { version = "0.3.0", optional = true }
+[build-dependencies]
+cc = "^1.0.70"
+which = "^4.0"
+sppark = { path = "../../rust", features = [ "build-poc" ] }
+[dev-dependencies]
+criterion = { version = "0.3", features = [ "html\_reports" ] }
+[[bench]]
+name = "msm"
+harness = false

@@ -1,0 +1,288 @@
+use anyhow::{anyhow, Context, Result};
+use libloading::{Library, Symbol};
+use midnight_cuda_packager::{pack_params, pack_prover_key, packed_params_magic, packed_pk_magic};
+use native_plonk_packer::pack_polys;
+use std::borrow::Cow;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
+use std::os::raw::c_char;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+fn timing_enabled() -> bool {
+    std::env::var("MIDNIGHT_CUDA_TIMING")
+        .ok()
+        .as_deref()
+        .map(|val| val == "1")
+        .unwrap_or(false)
+}
+
+fn log_duration(label: &str, duration: Option<Duration>) {
+    if let Some(value) = duration {
+        eprintln!("timing: {label}={value:?}");
+    } else {
+        eprintln!("timing: {label}=skipped");
+    }
+}
+
+fn hash_bytes(data: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    hasher.write(data);
+    hasher.finish()
+}
+
+#[repr(C)]
+pub struct mn_prove_input {
+    pub params: *const u8,
+    pub params_len: usize,
+    pub prover_key: *const u8,
+    pub prover_key_len: usize,
+    pub preproc: *const u8,
+    pub preproc_len: usize,
+    pub rng_seed: *const u8,
+}
+
+#[repr(C)]
+pub struct mn_prove_output {
+    pub out: *mut u8,
+    pub out_len: *mut usize,
+}
+
+#[allow(non_camel_case_types)]
+type mn_prove_fn = unsafe extern "C" fn(*const mn_prove_input, *mut mn_prove_output) -> i32;
+#[allow(non_camel_case_types)]
+type mn_last_error_fn = unsafe extern "C" fn() -> *const c_char;
+
+pub struct NativePlonkApi {
+    _lib: Library,
+    mn_prove: Symbol<'static, mn_prove_fn>,
+    mn_last_error: Option<Symbol<'static, mn_last_error_fn>>,
+    packed_polys_cache: Mutex<Option<PackedPolysCache>>,
+}
+
+struct PackedPolysCache {
+    params_ptr: *const u8,
+    params_len: usize,
+    params_hash: u64,
+    prover_key_ptr: *const u8,
+    prover_key_len: usize,
+    prover_key_hash: u64,
+    preproc_ptr: *const u8,
+    preproc_len: usize,
+    preproc_hash: u64,
+    rng_seed: [u8; 32],
+    packed: Arc<Vec<u8>>,
+}
+
+impl PackedPolysCache {
+    fn matches(
+        &self,
+        params: &[u8],
+        prover_key: &[u8],
+        preproc: &[u8],
+        rng_seed: &[u8; 32],
+    ) -> bool {
+        if self.rng_seed != *rng_seed {
+            return false;
+        }
+        if self.params_len != params.len()
+            || self.prover_key_len != prover_key.len()
+            || self.preproc_len != preproc.len()
+        {
+            return false;
+        }
+        let params_ptr_match = self.params_ptr == params.as_ptr();
+        let prover_key_ptr_match = self.prover_key_ptr == prover_key.as_ptr();
+        let preproc_ptr_match = self.preproc_ptr == preproc.as_ptr();
+        if params_ptr_match && prover_key_ptr_match && preproc_ptr_match {
+            return true;
+        }
+        if !params_ptr_match && self.params_hash != hash_bytes(params) {
+            return false;
+        }
+        if !prover_key_ptr_match && self.prover_key_hash != hash_bytes(prover_key) {
+            return false;
+        }
+        if !preproc_ptr_match && self.preproc_hash != hash_bytes(preproc) {
+            return false;
+        }
+        true
+    }
+}
+
+impl NativePlonkApi {
+    pub fn load() -> Result<Self> {
+        // Default name; can be overridden by LD_LIBRARY_PATH.
+        let lib = unsafe { Library::new("libmidnight_native_plonk.so") }
+            .map_err(|err| anyhow!("failed to load native PLONK library: {err}"))?;
+        let mn_prove = unsafe { lib.get::<mn_prove_fn>(b"mn_prove\0") };
+        let mn_last_error = unsafe { lib.get::<mn_last_error_fn>(b"mn_last_error\0") };
+        // Safety: we extend symbol lifetimes to match the library we own.
+        let mn_prove = unsafe { std::mem::transmute::<_, Symbol<'static, mn_prove_fn>>(mn_prove?) };
+        let mn_last_error = mn_last_error
+            .ok()
+            .map(|sym| unsafe { std::mem::transmute::<_, Symbol<'static, mn_last_error_fn>>(sym) });
+        Ok(Self {
+            _lib: lib,
+            mn_prove,
+            mn_last_error,
+            packed_polys_cache: Mutex::new(None),
+        })
+    }
+
+    pub fn prove(
+        &self,
+        params: &[u8],
+        prover_key: &[u8],
+        preproc: &[u8],
+        rng_seed: &[u8; 32],
+        out: &mut [u8],
+    ) -> Result<usize> {
+        if out.is_empty() {
+            return Err(anyhow!("output buffer must be non-empty"));
+        }
+        let timing = timing_enabled();
+        let total_start = if timing { Some(Instant::now()) } else { None };
+        let mut pack_params_time = None;
+        let mut pack_pk_time = None;
+        let mut pack_polys_time = None;
+        let mut mn_prove_time = None;
+
+        let packed_params = if params.starts_with(packed_params_magic()) {
+            Cow::Borrowed(params)
+        } else {
+            let start = if timing { Some(Instant::now()) } else { None };
+            let packed = pack_params(params).context("failed to pack params")?;
+            if let Some(start) = start {
+                pack_params_time = Some(start.elapsed());
+            }
+            Cow::Owned(packed)
+        };
+        let packed_pk = if prover_key.starts_with(packed_pk_magic()) {
+            Cow::Borrowed(prover_key)
+        } else {
+            let start = if timing { Some(Instant::now()) } else { None };
+            let packed = pack_prover_key(prover_key).context("failed to pack prover key")?;
+            if let Some(start) = start {
+                pack_pk_time = Some(start.elapsed());
+            }
+            Cow::Owned(packed)
+        };
+        let cached_polys = self
+            .packed_polys_cache
+            .lock()
+            .ok()
+            .and_then(|guard| guard.as_ref().and_then(|entry| {
+                if entry.matches(params, prover_key, preproc, rng_seed) {
+                    Some(entry.packed.clone())
+                } else {
+                    None
+                }
+            }));
+        let packed_polys = if let Some(packed) = cached_polys {
+            packed
+        } else {
+            let pack_polys_start = if timing { Some(Instant::now()) } else { None };
+            let packed = Arc::new(
+                pack_polys(packed_params.as_ref(), packed_pk.as_ref(), preproc, rng_seed)
+                    .context("failed to pack witness polynomials")?,
+            );
+            if let Some(start) = pack_polys_start {
+                pack_polys_time = Some(start.elapsed());
+            }
+            if let Ok(mut guard) = self.packed_polys_cache.lock() {
+                *guard = Some(PackedPolysCache {
+                    params_ptr: params.as_ptr(),
+                    params_len: params.len(),
+                    params_hash: hash_bytes(params),
+                    prover_key_ptr: prover_key.as_ptr(),
+                    prover_key_len: prover_key.len(),
+                    prover_key_hash: hash_bytes(prover_key),
+                    preproc_ptr: preproc.as_ptr(),
+                    preproc_len: preproc.len(),
+                    preproc_hash: hash_bytes(preproc),
+                    rng_seed: *rng_seed,
+                    packed: packed.clone(),
+                });
+            }
+            packed
+        };
+
+        let mut out_len = out.len();
+        let input = mn_prove_input {
+            params: packed_params.as_ref().as_ptr(),
+            params_len: packed_params.as_ref().len(),
+            prover_key: packed_pk.as_ref().as_ptr(),
+            prover_key_len: packed_pk.as_ref().len(),
+            preproc: packed_polys.as_ptr(),
+            preproc_len: packed_polys.len(),
+            rng_seed: rng_seed.as_ptr(),
+        };
+        let mut output = mn_prove_output {
+            out: out.as_mut_ptr(),
+            out_len: &mut out_len,
+        };
+        let mn_prove_start = if timing { Some(Instant::now()) } else { None };
+        let rc = unsafe { (self.mn_prove)(&input, &mut output) };
+        if let Some(start) = mn_prove_start {
+            mn_prove_time = Some(start.elapsed());
+        }
+        if rc != 0 {
+            let msg = self
+                .mn_last_error
+                .as_ref()
+                .and_then(|f| {
+                    let ptr = unsafe { f() };
+                    if ptr.is_null() {
+                        None
+                    } else {
+                        Some(unsafe { std::ffi::CStr::from_ptr(ptr) }.to_string_lossy().into_owned())
+                    }
+                })
+                .unwrap_or_else(|| "native mn_prove failed".to_string());
+            return Err(anyhow!(msg));
+        }
+        if out_len > out.len() {
+            return Err(anyhow!("native mn_prove returned invalid length"));
+        }
+        if timing {
+            log_duration("pack_params", pack_params_time);
+            log_duration("pack_prover_key", pack_pk_time);
+            log_duration("pack_polys", pack_polys_time);
+            log_duration("mn_prove", mn_prove_time);
+            if let Some(start) = total_start {
+                log_duration("total", Some(start.elapsed()));
+            }
+        }
+        Ok(out_len)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn api_loads_when_available() {
+        if std::env::var("MIDNIGHT_CUDA_TESTS").ok().as_deref() != Some("1") {
+            return;
+        }
+        let api = NativePlonkApi::load();
+        assert!(api.is_ok(), "native PLONK library should load");
+    }
+
+    #[test]
+    fn reject_empty_output() {
+        let api = if let Ok(api) = NativePlonkApi::load() {
+            api
+        } else {
+            return;
+        };
+        let seed = [0u8; 32];
+        let params = [0u8; 1];
+        let pk = [0u8; 1];
+        let preproc = [0u8; 1];
+        let mut out = [];
+        let result = api.prove(&params, &pk, &preproc, &seed, &mut out);
+        assert!(result.is_err());
+    }
+}

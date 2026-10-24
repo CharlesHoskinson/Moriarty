@@ -1,0 +1,500 @@
+#include "mn_prover.h"
+#include "field.cuh"
+#include "curve.cuh"
+#include "msm.cuh"
+#include "fft.cuh"
+#include "poly.h"
+
+#include <array>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace {
+thread_local std::string last_error;
+
+void set_last_error(const char *message) {
+  last_error = message ? message : "unknown CUDA error";
+}
+
+void set_cuda_error(const char *context, cudaError_t err) {
+  std::string msg = context ? context : "CUDA error";
+  msg += " [";
+  msg += cudaGetErrorName(err);
+  msg += "]: ";
+  msg += cudaGetErrorString(err);
+  set_last_error(msg.c_str());
+}
+
+bool ensure_cuda_device() {
+  int device_count = 0;
+  cudaError_t rc = cudaGetDeviceCount(&device_count);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaGetDeviceCount failed", rc);
+    return false;
+  }
+  if (device_count == 0) {
+    set_last_error("no CUDA devices available");
+    return false;
+  }
+  const char *env = std::getenv("MIDNIGHT_CUDA_DEVICE");
+  if (!env || !*env) {
+    return true;
+  }
+  char *end = nullptr;
+  long device = std::strtol(env, &end, 10);
+  if (end == env || *end != '\0' || device < 0 || device > INT_MAX) {
+    set_last_error("invalid MIDNIGHT_CUDA_DEVICE");
+    return false;
+  }
+  rc = cudaSetDevice(static_cast<int>(device));
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaSetDevice failed", rc);
+    return false;
+  }
+  return true;
+}
+
+struct FftTwiddleCache {
+  size_t n = 0;
+  uint32_t log_n = 0;
+  std::array<uint8_t, 32> omega_bytes{};
+  std::vector<midnight_cuda::Fr> twiddles;
+  midnight_cuda::Fr *d_twiddles = nullptr;
+
+  ~FftTwiddleCache() {
+    if (d_twiddles) {
+      cudaFree(d_twiddles);
+    }
+  }
+};
+
+struct FftBufferCache {
+  size_t capacity = 0;
+  midnight_cuda::Fr *d_values = nullptr;
+  uint8_t *d_bytes = nullptr;
+  cudaStream_t stream = nullptr;
+
+  ~FftBufferCache() {
+    if (stream) {
+      cudaStreamDestroy(stream);
+    }
+    if (d_values) {
+      cudaFree(d_values);
+    }
+    if (d_bytes) {
+      cudaFree(d_bytes);
+    }
+  }
+};
+
+std::mutex fft_cache_mutex;
+std::vector<std::unique_ptr<FftTwiddleCache>> fft_caches;
+thread_local FftBufferCache fft_buffers;
+
+bool ensure_fft_twiddles(const uint8_t *omega_bytes, size_t n, uint32_t log_n,
+                         const FftTwiddleCache **out) {
+  std::array<uint8_t, 32> key{};
+  std::memcpy(key.data(), omega_bytes, key.size());
+
+  std::lock_guard<std::mutex> guard(fft_cache_mutex);
+  for (const auto &cache : fft_caches) {
+    if (cache->n == n && cache->log_n == log_n && cache->omega_bytes == key) {
+      *out = cache.get();
+      return true;
+    }
+  }
+
+  auto cache = std::make_unique<FftTwiddleCache>();
+  cache->n = n;
+  cache->log_n = log_n;
+  cache->omega_bytes = key;
+  if (n > 1) {
+    cache->twiddles.resize(n - 1);
+    midnight_cuda::Fr omega;
+    midnight_cuda::fr_from_bytes(omega, key.data());
+    for (size_t m = 1; m < n; m <<= 1) {
+      size_t stride = n / (2 * m);
+      size_t offset = m - 1;
+      for (size_t j = 0; j < m; ++j) {
+        cache->twiddles[offset + j] =
+            midnight_cuda::fr_pow_u64(omega, static_cast<uint64_t>(stride * j));
+      }
+    }
+  }
+
+  if (!cache->twiddles.empty()) {
+    cudaError_t rc = cudaMalloc(&cache->d_twiddles,
+                                cache->twiddles.size() * sizeof(midnight_cuda::Fr));
+    if (rc != cudaSuccess) {
+      set_cuda_error("cudaMalloc failed in mn_fft twiddles cache", rc);
+      return false;
+    }
+    rc = cudaMemcpy(cache->d_twiddles, cache->twiddles.data(),
+                    cache->twiddles.size() * sizeof(midnight_cuda::Fr),
+                    cudaMemcpyHostToDevice);
+    if (rc != cudaSuccess) {
+      set_cuda_error("cudaMemcpy failed in mn_fft twiddles cache", rc);
+      cudaFree(cache->d_twiddles);
+      cache->d_twiddles = nullptr;
+      return false;
+    }
+  }
+
+  *out = cache.get();
+  fft_caches.emplace_back(std::move(cache));
+  return true;
+}
+} // namespace
+
+__device__ __forceinline__ uint32_t bit_reverse_u32(uint32_t v, uint32_t log_n) {
+  return __brev(v) >> (32 - log_n);
+}
+
+__global__ void fft_load_kernel(const uint8_t *in_bytes, midnight_cuda::Fr *out,
+                                uint32_t n, uint32_t log_n) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= n) {
+    return;
+  }
+  uint32_t j = bit_reverse_u32(idx, log_n);
+  midnight_cuda::Fr tmp;
+  midnight_cuda::fr_from_bytes(tmp, in_bytes + static_cast<size_t>(idx) * 32);
+  out[j] = tmp;
+}
+
+__global__ void fft_store_kernel(const midnight_cuda::Fr *in, uint8_t *out_bytes,
+                                 uint32_t n) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= n) {
+    return;
+  }
+  midnight_cuda::fr_to_bytes(out_bytes + static_cast<size_t>(idx) * 32, in[idx]);
+}
+
+__global__ void msm_reduce_kernel(const midnight_cuda::G1Jacobian *in, int count,
+                                  midnight_cuda::G1Jacobian *out) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int i = idx * 2;
+  if (i >= count) {
+    return;
+  }
+  if (i + 1 < count) {
+    midnight_cuda::g1_add(out[idx], in[i], in[i + 1]);
+  } else {
+    out[idx] = in[i];
+  }
+}
+
+extern "C" int mn_prove(const mn_prove_input *in, mn_prove_output *out) {
+  if (!in || !out || !out->out || !out->out_len) {
+    set_last_error("invalid mn_prove arguments");
+    return 1;
+  }
+  (void)in;
+  (void)out;
+  set_last_error("mn_prove unsupported in CUDA kernels library");
+  return 1;
+}
+
+extern "C" const char *mn_last_error(void) {
+  return last_error.empty() ? "no error" : last_error.c_str();
+}
+
+extern "C" int mn_msm(const mn_msm_input *in) {
+  if (!in || !in->scalars || !in->points || !in->out) {
+    set_last_error("invalid mn_msm arguments");
+    return 1;
+  }
+  if (in->scalars_len == 0 || in->points_len == 0) {
+    set_last_error("mn_msm requires non-empty inputs");
+    return 1;
+  }
+  if (in->scalars_len != in->points_len) {
+    set_last_error("mn_msm scalar/point length mismatch");
+    return 1;
+  }
+  if (in->out_len < 97) {
+    set_last_error("mn_msm output buffer too small");
+    return 1;
+  }
+  if (!ensure_cuda_device()) {
+    return 1;
+  }
+
+  size_t count = in->scalars_len;
+  const uint8_t *scalar_bytes = in->scalars;
+  const uint8_t *point_bytes = in->points;
+
+  std::vector<midnight_cuda::Fr> scalars(count);
+  std::vector<midnight_cuda::G1Affine> points(count);
+  for (size_t i = 0; i < count; ++i) {
+    midnight_cuda::fr_from_bytes(scalars[i], scalar_bytes + i * 32);
+    const uint8_t *p = point_bytes + i * 97;
+    midnight_cuda::G1Affine point;
+    point.infinity = p[0];
+    midnight_cuda::fp_from_bytes(point.x, p + 1);
+    midnight_cuda::fp_from_bytes(point.y, p + 49);
+    points[i] = point;
+  }
+
+  midnight_cuda::G1Affine *d_points = nullptr;
+  midnight_cuda::Fr *d_scalars = nullptr;
+  midnight_cuda::G1Jacobian *d_partials = nullptr;
+  cudaStream_t stream = nullptr;
+
+  size_t points_bytes = count * sizeof(midnight_cuda::G1Affine);
+  size_t scalars_bytes = count * sizeof(midnight_cuda::Fr);
+  size_t partials_bytes = count * sizeof(midnight_cuda::G1Jacobian);
+
+  cudaError_t rc = cudaMalloc(&d_points, points_bytes);
+  if (rc != cudaSuccess) {
+    std::string msg = "cudaMalloc failed in mn_msm (points, count=" +
+                      std::to_string(count) + ", bytes=" +
+                      std::to_string(points_bytes) + ")";
+    set_cuda_error(msg.c_str(), rc);
+    cudaFree(d_points);
+    return 1;
+  }
+  rc = cudaMalloc(&d_scalars, scalars_bytes);
+  if (rc != cudaSuccess) {
+    std::string msg = "cudaMalloc failed in mn_msm (scalars, count=" +
+                      std::to_string(count) + ", bytes=" +
+                      std::to_string(scalars_bytes) + ")";
+    set_cuda_error(msg.c_str(), rc);
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    return 1;
+  }
+  rc = cudaMalloc(&d_partials, partials_bytes);
+  if (rc != cudaSuccess) {
+    std::string msg = "cudaMalloc failed in mn_msm (partials, count=" +
+                      std::to_string(count) + ", bytes=" +
+                      std::to_string(partials_bytes) + ")";
+    set_cuda_error(msg.c_str(), rc);
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_partials);
+    return 1;
+  }
+
+  rc = cudaMemcpyAsync(d_points, points.data(), count * sizeof(midnight_cuda::G1Affine),
+                       cudaMemcpyHostToDevice, stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaMemcpyAsync failed in mn_msm (points)", rc);
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_partials);
+    return 1;
+  }
+  rc = cudaMemcpyAsync(d_scalars, scalars.data(), count * sizeof(midnight_cuda::Fr),
+                       cudaMemcpyHostToDevice, stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaMemcpyAsync failed in mn_msm (scalars)", rc);
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_partials);
+    return 1;
+  }
+
+  rc = midnight_cuda::msm_partial_launch(d_points, d_scalars, static_cast<int>(count),
+                                        d_partials, stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("msm_partial_launch failed", rc);
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_partials);
+    return 1;
+  }
+
+  midnight_cuda::G1Jacobian *d_reduce = nullptr;
+  if (count > 1) {
+    rc = cudaMalloc(&d_reduce, partials_bytes);
+    if (rc != cudaSuccess) {
+      set_cuda_error("cudaMalloc failed in mn_msm (reduce)", rc);
+      cudaFree(d_points);
+      cudaFree(d_scalars);
+      cudaFree(d_partials);
+      return 1;
+    }
+  }
+
+  int current = static_cast<int>(count);
+  midnight_cuda::G1Jacobian *in_buf = d_partials;
+  midnight_cuda::G1Jacobian *out_buf = d_reduce;
+  int threads = 256;
+  while (current > 1) {
+    int out_count = (current + 1) / 2;
+    int blocks = (out_count + threads - 1) / threads;
+    msm_reduce_kernel<<<blocks, threads, 0, stream>>>(in_buf, current, out_buf);
+    rc = cudaGetLastError();
+    if (rc != cudaSuccess) {
+      set_cuda_error("msm_reduce_kernel launch failed", rc);
+      cudaFree(d_points);
+      cudaFree(d_scalars);
+      cudaFree(d_partials);
+      cudaFree(d_reduce);
+      return 1;
+    }
+    current = out_count;
+    midnight_cuda::G1Jacobian *tmp = in_buf;
+    in_buf = out_buf;
+    out_buf = tmp;
+  }
+
+  midnight_cuda::G1Jacobian acc;
+  rc = cudaMemcpyAsync(&acc, in_buf, sizeof(midnight_cuda::G1Jacobian),
+                       cudaMemcpyDeviceToHost, stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaMemcpyAsync failed in mn_msm (reduce)", rc);
+    cudaFree(d_points);
+    cudaFree(d_scalars);
+    cudaFree(d_partials);
+    cudaFree(d_reduce);
+    return 1;
+  }
+  cudaStreamSynchronize(stream);
+
+  midnight_cuda::G1Affine out_affine;
+  midnight_cuda::g1_to_affine(out_affine, acc);
+  uint8_t *out = in->out;
+  out[0] = out_affine.infinity;
+  midnight_cuda::fp_to_bytes(out + 1, out_affine.x);
+  midnight_cuda::fp_to_bytes(out + 49, out_affine.y);
+
+  cudaFree(d_points);
+  cudaFree(d_scalars);
+  cudaFree(d_partials);
+  cudaFree(d_reduce);
+  return 0;
+}
+
+extern "C" int mn_fft(const mn_fft_input *in) {
+  if (!in || !in->values || !in->omega) {
+    set_last_error("invalid mn_fft arguments");
+    return 1;
+  }
+  if (in->values_len == 0) {
+    return 0;
+  }
+  size_t n = in->values_len;
+  if ((1ULL << in->log_n) != n) {
+    set_last_error("mn_fft values_len does not match log_n");
+    return 1;
+  }
+  if (in->log_n > 31) {
+    set_last_error("mn_fft log_n too large");
+    return 1;
+  }
+  if (n > static_cast<size_t>(INT_MAX)) {
+    set_last_error("mn_fft values_len too large");
+    return 1;
+  }
+  if (n == 1) {
+    return 0;
+  }
+  if (!ensure_cuda_device()) {
+    return 1;
+  }
+
+  const FftTwiddleCache *twiddles = nullptr;
+  if (!ensure_fft_twiddles(in->omega, n, in->log_n, &twiddles)) {
+    return 1;
+  }
+
+  FftBufferCache &buf = fft_buffers;
+  cudaError_t rc = cudaSuccess;
+  if (!buf.stream) {
+    rc = cudaStreamCreateWithFlags(&buf.stream, cudaStreamNonBlocking);
+    if (rc != cudaSuccess) {
+      set_cuda_error("cudaStreamCreate failed in mn_fft", rc);
+      return 1;
+    }
+  }
+  if (buf.capacity < n) {
+    if (buf.d_values) {
+      cudaFree(buf.d_values);
+      buf.d_values = nullptr;
+    }
+    if (buf.d_bytes) {
+      cudaFree(buf.d_bytes);
+      buf.d_bytes = nullptr;
+    }
+    rc = cudaMalloc(&buf.d_values, n * sizeof(midnight_cuda::Fr));
+    if (rc != cudaSuccess) {
+      set_cuda_error("cudaMalloc failed in mn_fft (values)", rc);
+      buf.capacity = 0;
+      return 1;
+    }
+    rc = cudaMalloc(&buf.d_bytes, n * 32);
+    if (rc != cudaSuccess) {
+      set_cuda_error("cudaMalloc failed in mn_fft (bytes)", rc);
+      cudaFree(buf.d_values);
+      buf.d_values = nullptr;
+      buf.capacity = 0;
+      return 1;
+    }
+    buf.capacity = n;
+  }
+
+  rc = cudaMemcpyAsync(buf.d_bytes, in->values, n * 32, cudaMemcpyHostToDevice,
+                       buf.stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaMemcpy failed in mn_fft (input bytes)", rc);
+    return 1;
+  }
+
+  int threads = 256;
+  int blocks = (static_cast<int>(n) + threads - 1) / threads;
+  fft_load_kernel<<<blocks, threads, 0, buf.stream>>>(
+      buf.d_bytes, buf.d_values, static_cast<uint32_t>(n), in->log_n);
+  if (cudaGetLastError() != cudaSuccess) {
+    set_last_error("fft_load_kernel launch failed");
+    return 1;
+  }
+
+  for (size_t m = 1; m < n; m <<= 1) {
+    int total = static_cast<int>(n / 2);
+    int stage_blocks = (total + threads - 1) / threads;
+    const midnight_cuda::Fr *stage_twiddles =
+        twiddles && twiddles->d_twiddles ? (twiddles->d_twiddles + (m - 1)) : nullptr;
+    midnight_cuda::fft_stage_kernel<<<stage_blocks, threads, 0, buf.stream>>>(
+                                                         buf.d_values,
+                                                         stage_twiddles,
+                                                         static_cast<int>(n),
+                                                         static_cast<int>(m));
+    if (cudaGetLastError() != cudaSuccess) {
+      set_last_error("fft_stage_kernel launch failed");
+      return 1;
+    }
+  }
+
+  fft_store_kernel<<<blocks, threads, 0, buf.stream>>>(
+      buf.d_values, buf.d_bytes, static_cast<uint32_t>(n));
+  if (cudaGetLastError() != cudaSuccess) {
+    set_last_error("fft_store_kernel launch failed");
+    return 1;
+  }
+
+  rc = cudaMemcpyAsync(in->values, buf.d_bytes, n * 32, cudaMemcpyDeviceToHost,
+                       buf.stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaMemcpy failed in mn_fft (output bytes)", rc);
+    return 1;
+  }
+  rc = cudaStreamSynchronize(buf.stream);
+  if (rc != cudaSuccess) {
+    set_cuda_error("cudaStreamSynchronize failed in mn_fft", rc);
+    return 1;
+  }
+  rc = cudaGetLastError();
+  if (rc != cudaSuccess) {
+    set_cuda_error("cuda error after mn_fft", rc);
+    return 1;
+  }
+  return 0;
+}

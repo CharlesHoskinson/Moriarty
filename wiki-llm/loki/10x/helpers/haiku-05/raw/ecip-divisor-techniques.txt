@@ -1,0 +1,1746 @@
+                Notes and Proofs for Divisor Techniques
+
+                       Mathias Hall-Andersen                Diego F. Aranha
+
+                                   April 27, 2026 · 681d28ac
+
+                                        ZKSECURITY
+
+
+
+
+    We revisit the protocol for proving Elliptic Curve Inner Products (ECIPs) by Eagen [Eag22].
+The goal of this document is to supersede and summarize prior material and discussions by
+Bassa [Bas24b] [Bas24a] [Bas25] and Goodell et al. [GSSS25b] [GSSS25a]. In this document,
+we provide a self-contained explanation of the techniques, from the required algebraic geometry,
+to the interactive proof and its soundness, to the composition with a simulation extractable
+non-interactive proof and the efficiency of expressing the verifier as an R1CS circuit, resulting
+in the concrete gadget of Parker [Par24b]. Along the way, we clarify proof details, including
+simplifying the soundness argument for the interactive protocol, and correct other minor issues
+in the prior works. We aim for this document to be readable (and verifiable) by an audience with
+preexisting knowledge of elliptic curves, but not wider theoretical results in algebraic geometry
+or Galois theory. Additionally, we assume an understanding of the concepts of interactive proofs,
+but provide the required formal definitions along the way.
+
+
+1    Background on Elliptic Curve Divisors
+Throughout this document we adopt the notation of Bassa, distinct from the original paper of
+Eagen [Eag22]. We lift some basic definitions and background material from [Maa04].
+    Let q be a prime and let E be an elliptic curve in short Weierstrass form over Fq , given by
+y = x3 + Ax + B. Let p be the order of a fixed prime-order subgroup G ⊆ E(Fq ). Define the
+ 2
+
+function r ∈ Fq [x, y] by r(x, y) = y 2 − (x3 + Ax + B), the coordinate ring of the affine curve by
+Fq [E] = Fq [x, y]/⟨r⟩, and the point at infinity by O. Elements of Fq [E] can be represented in
+canonical form as l(x, y) = a(x) − b(x) · y with a(x), b(x) ∈ Fq [x] by using the curve equation to
+knock down exponents of y greater than or equal to 2.
+    By taking the field of fractions of Fq [E], we obtain the function field Fq (E), such that elements
+f1 /g1 and f2 /g2 represent the same element if f1 g2 = f2 g1 . A non-zero rational function
+f ∈ Fq (E)∗ is said to be defined at a point P ∈ E \ {O} if f can be written as f = g/h for
+g, h ∈ Fq [E] with h(P ) ̸= 0. Additionally, f is said to have a zero at P if f (P ) = 0; and f is said
+to have a pole at P (denoted by f (P ) = ∞) if f is not defined at P . Equivalently, if f = g/h is
+written in reduced form (so that g and h share no common factor), then f has a pole at P if and
+only if h(P ) = 0.
+    To determine the value of a rational function f = g/h ∈ Fq (E) at O, we compare the degrees
+of the denominator and numerator by weighting x and y by 2 and 3, respectively, such that
+substituting the curve equation leaves the degrees unchanged. For non-zero f ∈ Fq [E] in
+canonical form, we define degree as:
+                         degE (f ) := max{2 · deg(a(x)), 3 + 2 · deg(b(x))}
+
+ZKSECURITY                                                                                           1
+If deg(g) < deg(h), then f (O) = 0; and if deg(g) > deg(h), then f has a pole at O. If deg(g) =
+deg(h), then f (O) = lc(g)/ lc(h), where lc returns the coefficient of the leading term of g and h
+in canonical form, respectively.
+    For every point P ∈ E, there exists a rational function u with u(P ) = 0 such that every
+non-zero rational function f ∈ Fq (E)∗ can be written as f = ud s for s ∈ Fq (E), s(P ) ̸= 0, ∞,
+and integer d. The function u is said to be a uniformizing parameter for P , and the value of d does
+not depend on the choice of u. Then the order of f at P equals d, written as vP (f ). If P is a zero
+of f , then d > 0 and the zero is said to have multiplicity d. If P is a pole, the pole is said to have
+multiplicity −d.
+    A rational function on an elliptic curve is determined       by its finite zeros and poles, up to
+a constant multiple. A divisor is a formal sum nP (P ) that records the zeros and poles of a
+                                                   P
+function, with coefficients nP = vP (f ) ∈ Z (positive at zeros, negative at poles). The divisors
+form a group denoted Div(E), where addition is given by adding the coefficients for the same
+points. The support is given by the setPSupp(D) = {P ∈ E|nP ̸= 0}. The notation (D)0 denotes
+the positive part of the divisor D, or nP >0 nP (P ).
+    A divisor D ∈ Div(E) is called principal if D = div(f ) for some rational function f . Because
+of this one-to-one correspondence between principal divisors and rational functions, it is com-
+mon to use D as both the divisor and the associated rational function. We use the following
+characterization:
+Theorem 1 ([Sil86, Corollary 3.5]). Let E be an elliptic curve and let D =
+                                                                                  P
+                                                                                    nP (P ) ∈ Div(E).
+Then D is a principal divisor if and only if both:
+                                  X                  X
+                                      nP = 0 and          [nP ]P = O
+                                  P ∈E                  P ∈E
+
+   The first condition defines the degree of the divisor as 0, and the second establishes that the
+points
+    Psum to zero under the group law. A rational function f can be evaluated on a divisor
+D = nP (P ) ∈ Div(E) that satisfies Supp(div(f )) ∩ Supp(D) = ∅ as:
+                                                Y
+                                   f (D) =             f (P )nP
+                                                P ∈Supp(D)
+
+    As an illustrating example, a line L(x, y) = y − λx − µ with slope λ is a rational function
+on E which meets the curve in 3 points. Therefore, it has 3 zeros and must have 3 poles, and
+the only pole is at O. So the divisor is div(L) = (P1 ) + (P2 ) + (P3 ) − 3(O). The coefficient of
+−3 at O comes from the fact that the line function, viewed as a rational function on the curve,
+has a pole of multiplicity 3 at O. To see this concretely, define u(x, y) = x/y as a uniformizing
+parameter for O. One can express x and y in terms of u as x = u−2 s1 and y = u−3 s2 , where s1 , s2
+are rational functions obtained by substituting u into the equation for E and solving iteratively.
+Note that the weighting above reflects the pole multiplicities of x and y at O, and that in general
+degE (D) = −vO (D), i.e. the degree equals the pole multiplicity at O.
+    The soundness of the protocol [Eag22] will rely on sampling random points from E(Fq ), so
+we need to know that the group is large. The following theorem makes this precise.
+Theorem 2 (Hasse bound [Sil86, Theorem V.1.1]). Let E be an elliptic curve over Fq . Then:
+                                                       √
+                                |#E(Fq ) − (q + 1)| ≤ 2 q
+  The following two lemmas from Bassa bound the probability of “bad” evaluation points
+when sampling A0 , A1 uniformly from E(Fq ).
+Lemma 1 (Slope Distribution [Bas24b, Lemma 4]). Let A0 , A1 ∈ E(Fq ) \ {O} be chosen uniformly
+at random. Let L be the affine line passing through A0 , A1 , with the convention that L is the tangent line
+at A0 when A0 = A1 . For a given λ ∈ Fq :
+                                                              2
+                                   Pr[Slope(L) = λ] ≤
+                                                          #E(Fq ) − 1
+
+ZKSECURITY                                                                                                2
+Proof. Consider the q affine lines Lµ (X, Y ) = Y − λX − µ of slope λ. Classify them by how they
+meet E:
+  (i) N0 lines with at most one affine rational intersection point.
+
+ (ii) N1 lines tangent to E at a rational 3-torsion point.
+
+(iii) N2 lines meeting E in two affine rational points and tangent at one of them.
+
+(iv) N3 lines meeting E in three distinct affine rational points.
+For a fixed λ, every affine rational point lies on a unique line Lµ , and a line of type (ii), (iii), or
+(iv) contains exactly 1, 2, or 3 such points, respectively. Observe that:
+
+                                   N1 + 2N2 + 3N3 ≤ #E(Fq ) − 1
+
+Note that N0 is omitted, which can only make the left quantity smaller; and any sampled line
+will have at least two intersection points with E, A0 and A1 , so we don’t care about bounding it.
+Now, for a fixed µ ∈ Fq , the number of ordered pairs (A0 , A1 ) ∈ (E(Fq ) \ {O})2 that result in Lµ
+as the line passing through them is: 0 in case (i), 1 in case (ii), 3 in case (iii), and 6 in case (iv):
+in case (ii) only (T, T ) works, where T is the rational 3-torsion point; in case (iii), if T is the
+tangency point and P the other rational point, the possibilities are (T, T ), (T, P ), and (P, T ); and
+in case (iv) the possibilities are the six ordered pairs of distinct rational points on Lµ . Therefore:
+                                                      N1 + 3N2 + 6N3
+                                Pr[Slope(L) = λ] =
+                                                      (#E(Fq ) − 1)2
+And since:
+                   N1 + 3N2 + 6N3 ≤ 2 · (N1 + 2N2 + 3N3 ) ≤ 2 · (#E(Fq ) − 1)
+We conclude:
+                                                            2
+                                  Pr[Slope(L) = λ] ≤
+                                                        #E(Fq ) − 1
+
+  Comments On Prior Work.
+  The original lemma in [Bas24b] states the bound as 2/(#E(Fq ) − 2), but the proof yields the marginally
+  tighter 2/(#E(Fq ) − 1).
+
+   Whereas Lemma 1 controls the slope of the line passing through A0 , A1 , the next lemma
+controls the points themselves: when D has few zeros, a random challenge triple {A0 , A1 , A2 }
+avoids the support of D with high probability. This is what allows the verifier’s evaluations
+D(Ai ) to be well-defined and nonzero in an honest evaluation of the protocol.
+Lemma 2 (Support Disjointness [Bas24b, Lemma 5]). Let D ∈ Fq [E] with −vO (D) = N and
+let A0 , A1 ∈ E(Fq ) \ {O} be chosen uniformly at random, A2 = −(A0 + A1 ). Assuming 3 · (N +
+1) ≤ 2 · #E(Fq ), the probability that the support of (D) is not disjoint from {A0 , A1 , A2 } is at most
+3(N + 1)/#E(Fq ).
+Proof. D has N zeros and one pole at O, so | Supp(D)| = N + 1. Since A0 , A1 ∈ E(Fq ) \ {O},
+neither can hit the pole; A2 = O requires A1 = −A0 , which occurs with probability 1/(#E(Fq ) −
+1). For zeros: A0 and A1 are each uniform on #E(Fq )−1 affine points, hitting one of the (at most)
+N rational zeros with probability at most N/(#E(Fq ) − 1). For fixed A0 , the point A2 = −(A0 +
+A1 ) is uniform on E(Fq )\{−A0 }, so it hits a zero with probability at most N/(#E(Fq )−1). By the
+union bound: 3N/(#E(Fq )−1)+1/(#E(Fq )−1) = (3N +1)/(#E(Fq )−1) ≤ 3(N +1)/#E(Fq ),
+which holds when 3(N + 1) ≤ 2 · #E(Fq ).
+
+
+
+ZKSECURITY                                                                                             3
+  Comments On Prior Work.
+  The original lemma in [Bas24b] misses the condition 3(N + 1) ≤ 2 · #E(Fq ) in the statement.
+
+     With the probability of a bad support collision under control, we turn to a related failure
+mode: even when the support of D is disjoint from {A0 , A1 , A2 }, the norm NFq (E)/Fq (L) (D) may
+still vanish at an auxiliary evaluation point L(P ) simply because the random line L happens to
+identify P with one of the zeros Qi of D. The next theorem bounds exactly this event, and its
+proof is a direct application of Lem. 1.
+     Let’s first recall the norm definition for our function fields of interest. Let L(x, y) = y −
+λx − µ ∈ Fq (E) be a non-vertical line, and let Fq (L) ⊆ Fq (E) be the subfield of the function
+field generated by L. The element L ∈ Fq (E) is clearly non-constant and thus transcendental
+over Fq . Hence Fq (L) ∼   = Fq (t), identifying t with L, and it is a rational function field in one
+variable. Furthermore, L defines a map L : E → P1 , mapping (x, y) to y − λx − µ and O ∈ E to
+O ∈ P1 . Observe that L−1 (0) consists of the three intersection points of the line L with E. In
+general, the cardinality of the fibers over the algebraic closure, and hence the degree of the map,
+is [Fq (E) : Fq (L)] = 3. Additionally, the extension is separable: observe that Fq (E) is generated
+by x over Fq (L), since we can recover y = λx + µ + t, and the minimal polynomial of x has
+distinct roots. To see this, substitute y = λx + µ + t into y 2 = x3 + Ax + B and rearrange as a
+polynomial in x:
+
+              m(X) = X 3 + AX + B − (λX + µ + t)2
+                     = X 3 − λ2 X 2 + (A − 2λ(µ + t)) X + (B − (µ + t)2 ) ∈ Fq (t)[X]
+
+Its roots are the x-coordinates of the three intersection points between E and L. Viewed as a
+polynomial in t, its discriminant has leading term −27 t4 (from the −27(B − (µ + t)2 )2 summand;
+every other summand has t-degree at most 3), so the discriminant is non-zero in Fq (t) provided
+char(Fq ) ̸= 3. Observe that this is the place where the non-verticality of L is applied: a vertical
+line L intersects E twice in the same x-coordinate, so the extension would not be separable.
+    Since m(X) is separable of degree 3, it has three distinct roots x0 , x1 , x2 in the algebraic closure
+Fq (L): the x-coordinates of the three intersection points of L with E. Each root determines an
+Fq (L)-embedding σi : Fq (E) ,→ Fq (L) by x 7→ xi , and these are all such embeddings. It is not
+generally true that the other intersection points x1 , x2 lie in Fq (E) once x0 does, so the extension
+Fq (E)/Fq (L) is not generally normal, i.e. need not be Galois.
+Example 1. A concrete example is E : y 2 = x3 − x with L = y, where m(X) = X 3 − X − y 2 has
+discriminant 4 − 3x2 , which is not a square in Fq (E) (in characteristic ̸= 2, 3).
+    For f ∈ Fq (E), the field norm from Fq (E) to Fq (L) is:
+                                                              2
+                                                              Y
+                                     NFq (E)/Fq (L) (f ) :=         σi (f )
+                                                              i=0
+
+A priori this lies in Fq (L), but the absolute Galois group of Fq (L) permutes the roots xi , and
+hence the embeddings σi , so it fixes the product: N(f ) ∈ Fq (L). The norm is multiplicative and
+vanishes only at f = 0, so it restricts to a homomorphism         Fq (E)∗ → Fq (L)∗ .
+    For f ∈ Fq [E] with poles only at O and (f )0 = k βk · (Qk ), the norm lies in the polynomial
+                                                           P
+ring Fq [t] ⊆ Fq (t) = Fq (L) and has the explicit form:
+                                                             Y
+                              NFq (E)/Fq (L) (f ) = lc(f )3 · (t − L(Qk ))βk
+                                                              k
+
+Where L(Qk ) = y(Qk ) − λ x(Qk ) − µ ∈ Fq is the value of the line function at Qk . When the line
+L is clear from context we abbreviate NFq (E)/Fq (L) (f ) by N(f ).
+
+ZKSECURITY                                                                                              4
+Theorem 3 ([Bas24b, Theorem 6]). Suppose D vanishes at Q1 , . . . , QN and suppose P ̸= Qi for
+i = 1, . . . , N . Choose random A0 , A1 ∈ E(Fq ) \ {O} with A0 ̸= −A1 and consider the line L passing
+through them. Then the probability that NFq (E)/Fq (L) (D)(L(P )) = 0 is at most 2N/(#E(Fq ) − 1).
+Proof. Since A0 , A1 ̸= O and A0 ̸= −A1 , the line L is not vertical, so L = y − λx − µ for some
+λ, µ ∈ Fq . The function NFq (E)/Fq (L) (D) has zeros exactly at L(Qi ) = y(Qi ) − λ · x(Qi ) − µ for
+i = 1, . . . , N . Hence NFq (E)/Fq (L) (D)(L(P )) = 0 iff L(P ) = L(Qi ) for some i, equivalently:
+                                      y(P ) − λ · x(P ) = y(Qi ) − λ · x(Qi )
+If x(Qi ) = x(P ) then P ̸= Qi forces y(Qi ) ̸= y(P ), so no λ satisfies the equation. Otherwise we
+           y(P )−y(Qi )
+need λ = x(P   )−x(Qi ) . There are at most N such values of λ, each occurring as the slope of L with
+probability at most 2/(#E(Fq ) − 1) by Lem. 1. By a union bound the result follows.
+
+     We now assemble the main soundness machinery for the norm-based check. Rather than
+reasoning directly about the elliptic-curve function D, the strategy is to package the discrepancy
+between the zeros of D and a claimed multiset (P1 ), . . . , (PN ) into a single polynomial f in four
+ring variables (X0 , Y0 , X1 , Y1 ), and then bound its rational zero set on E × E via a Schwartz–
+Zippel-type estimate. The next three results carry this out in stages: first we check that f really
+is a polynomial with coefficients in Fq (Lem. 3), then that it does not vanish identically on E × E
+(Lem. 4), and finally we invoke a variety-bound (Thm. 4) to count its Fq -rational zeros.
+Lemma 3 ([Bas24b, Lemma 7]). Let D ∈ Fq [E] with (D)0 = N
+                                                               P
+                                                                  i=1 (Qi ) and let P1 , . . . , PN ∈ E(Fq ).
+Define:
+                                     N
+                                     Y
+          f (X0 , Y0 , X1 , Y1 ) =         ((y(Qi ) − Y0 ) · (X1 − X0 ) − (x(Qi ) − X0 ) · (Y1 − Y0 ))
+                                     i=1
+                                       YN
+                                     −         ((y(Pi ) − Y0 ) · (X1 − X0 ) − (x(Pi ) − X0 ) · (Y1 − Y0 ))
+                                         i=1
+
+As a function on E × E. Then f (X0 , Y0 , X1 , Y1 ) ∈ Fq [X0 , Y0 , X1 , Y1 ].
+Proof. Since Pi ∈ E(Fq ), we have x(Pi ), y(Pi ) ∈ Fq , so the second product is in Fq [X0 , Y0 , X1 , Y1 ].
+The Qi are zeros of D ∈ Fq [E], so they form full Galois orbits over Fq . Hence for each factor
+(y(Qi )−Y0 )·(X1 −X0 )−(x(Qi )−X0 )·(Y1 −Y0 ) in the first product, all of its Galois conjugates also
+appear as factors. The first product is therefore Galois-invariant and lies in Fq [X0 , Y0 , X1 , Y1 ].
+
+    Rationality alone is not enough: to eventually apply a variety bound we also need f to be
+genuinely nonzero as a function on E × E, for otherwise every pair (A0 , A1 ) would satisfy
+f (A0 , A1 ) = 0 and the soundness statement would be vacuous. The following lemma        P shows
+that non-vanishing        is guaranteed   as soon as the two zero multisets, the divisors  (Qi ) and
+   (Pi ), disagree.
+P
+                                                                                           √
+Lemma 4 ([Bas24b, Lemma 8]). Assume (Qi ) ̸= (Pi ) (as divisors) and 3N ≤ q − 2 q. Then
+                                                P         P
+f (X0 , Y0 , X1 , Y1 ) does not vanish on E × E.
+Proof. As P
+          E × E is irreducible, it suffices to show that  Pf is not identically zero on E × E. Since
+  (Qi ) ̸= (Pi ), by reordering we may     assume                             i and, without loss of
+P                                                                          P
+                                                    v P1 ( (Q  ))
+                                                              i P ̸ = vP1 ( (P ))
+generality, that the coefficient of P1 in (Pi ) exceeds that in (Qi ) (exchanging the roles of {Pi }
+                                         P
+and {Qi } if necessary). Cancelling suitable powers of the quadratic factor (y(P1 ) − Y0P    )(X1 −
+X0 )−(x(P1 )−X0 )(Y1 −Y0 ), which does not vanish on E ×E, we may assume P1 ∈        / Supp ( (Qi )).
+Substituting X0 = x(P1 ), Y0 = y(P1 ) makes the i = 1 factor of the second product zero, so:
+                                     N
+                                     Y
+  f (x(P1 ), y(P1 ), X1 , Y1 ) =           ((y(Qi ) − y(P1 ))(X1 − x(P1 )) − (x(Qi ) − x(P1 ))(Y1 − y(P1 )))
+                                     i=1
+
+
+ZKSECURITY                                                                                                     5
+Since P1 ∈
+         / Supp( (Qi )), each factor is a nonzero linear form in (X1 , Y1 ). Its zero set on E
+                 P
+has at most 3 points, so the product vanishes on at most 3N points of E(Fq ). By Thm. 2,
+                    √                                 √
+#E(Fq ) ≥ q + 1 − 2 q, so the hypothesis 3N ≤ q − 2 q gives 3N ≤ #E(Fq ) − 1 < #E(Fq ),
+and f does not vanish on E(Fq ) × {(x(P1 ), y(P1 ))}.
+
+   The last ingredient is a counting tool that translates “f does not vanish identically” into a
+concrete bound on the fraction of pairs (A0 , A1 ) ∈ E(Fq ) × E(Fq ) that do satisfy f (A0 , A1 ) = 0.
+We use the affine version of the generalized Schwartz–Zippel lemma.
+Theorem 4 (Generalized Schwartz–Zippel [DKL14, Claim 7.2]). Let V be an affine variety of
+dimension n and degree d. Then:
+                                  #V (Fq ) ≤ d · q n
+
+   Comments On Prior Work.
+  [Bas24b, Theorem 9] states this bound for projective varieties, citing both [DKL14, Claim 7.2] and
+  [EOT10, Lemma A.3]. The former gives d · q n only for affine varieties; the latter gives d · (q + 1)n for
+  projective varieties. The bound d · q n fails projectively: a line in P2 has q + 1 > q rational points. The
+  affine version is what the proofs require.
+
+    Combining the three preceding results yields the first concrete soundness bound for the
+norm-based check. PIntuitively, f captures the discrepancy between the zero divisor of D and the
+claimed multiset (Pi ); Lem. 3 places f in Fq [X0 , Y0 , X1 , Y1 ], Lem. 4 ensures it is not identically
+zero on E × E whenever the claim is wrong, and Thm. 4 bounds the number of Fq -rational pairs
+(A0 , A1 ) on which f can vanish. The following theorem is the direct consequence for a monic D.
+Theorem 5 ([Bas24b, Theorem 10]). Given D ∈ Fq [E] with leading coefficient 1 and −vO (D) = N
+and P1 , . . . , PN ∈ E(Fq ). Suppose that (D)0 ̸= (P1 ) + · · · + (PN ). Choose random A0 , A1 ∈
+E(Fq ) \ {O}, with A0 ̸= ±A1 . Let L = y − λ · x − µ be the line passing through A0 , A1 . Then:
+                                         N
+                  "                                 #
+                                         Y                         18N q
+              Pr NFq (E)/Fq (L) (D)(0) =   (−L(Pi )) ≤
+                                                       (#E(Fq ) − 1)(#E(Fq ) − 3)
+                                        i=1
+                                                                  18N q          96N
+                                                        ≤         √     √      ≤
+                                                        (q − 2 q)(q − 2 q − 2)    q
+                                                                           √
+Where the middle bound follows from the Hasse bound #E(Fq ) ≥ q + 1 − 2 q (Thm. 2), and the
+rightmost bound holds for all q ≥ 16 (any cryptographic instantiation).
+Proof. For a random choice of A0 , A1 , the norm equality holds exactly when f (A0 , A1 ) = 0,
+                                                           PN
+where f is the function from Lem. 3. Writing (D)0 P     =    i=1 (Qi ) for the zero divisor of D,
+the hypothesis (D)0 ̸= (P1 ) + · · · + (PN ) is exactly (Qi ) ̸=      (Pi ) as divisors, so Lem. 4
+                                                                  P
+applies and f does not vanish identically on E × E. The surface E × E is irreducible of degree
+3 · 3 = 9 and f has bi-degree (N, N ); their intersection is a curve of degree 2N · 9 = 18N .
+By Thm. 4, the number of Fq -rational zeros of f on E × E is at most 18N q. The number
+of pairs (A0 , A1 ) ∈ (E(Fq ) \ {O})2 with A0 ̸= ±A1 is (#E(Fq ) − 1)2 − 2(#E(Fq ) − 1) =
+(#E(Fq ) − 1)(#E(Fq ) − 3), yielding the probability bound 18N q/((#E(Fq ) − 1)(#E(Fq ) − 3)).
+                                √                                            √         √
+By Thm. 2, #E(Fq ) ≥ q + 1 − 2 q, so (#E(Fq ) − 1)(#E(Fq ) − 3) ≥ (q − 2 q)(q − 2 q − 2) and
+                                        √         √
+the probability is at most 18N q/((q − 2 q)(q − 2 q − 2)). For q ≥ 16 this can be bounded above
+by 96N/q.
+
+   Comments On Prior Work.
+  Theorem 10 of [Bas24b] states the bound as 18N q/((#E(Fq ) − 1)2 − 2(#E(Fq ) − 1)) ≈ 18N/q, and
+  Theorem 11 merely as “negligible” under q ≫ N . We chain Hasse (Thm. 2) through to the explicit
+  96N/q for q ≥ 16, likewise for Thm. 6 below. Because the techniques in these works deal with
+
+
+
+ZKSECURITY                                                                                                 6
+  exponential quantities, we do this to avoid, for instance, accidentally doing a union bound over an
+  exponential number of negligible terms and having it result in something non-negligible. Furthermore,
+  the concrete bounds throughout help compute parameters for concrete security levels, e.g. the function
+  t4 /q where t is the running time of the adversary, is negligible; but would substantially affect the
+  concrete q which achieve 128-bits of security. All the components/analysis in this paper have a loss
+  linear in the adversary’s running time and an elliptic curve of ≈ 256-bits achieves 128-bits of security.
+  Observe that only the composition in Section 3 actually requires discrete log to be intractable on E(Fq ).
+
+    The following theorem due to Bassa bounds the probability that the norm-based check
+passes for a “wrong” witness function D. It generalizes Thm. 5 along two axes: D need not be
+monic (its leading coefficient may be any element of Fq , and the monic case is recovered when
+lc(D) = 1), and the claimed multiset (P1 ), . . . , (PN1 ) may have a different cardinality N1 from
+the pole order N2 = vO (D). The three cases (i)–(iii) below enumerate the possible ways the
+check can still accept a wrong witness, and each is reduced to an instance of the Lem. 3–Thm. 4
+machinery developed above.
+Theorem 6 (Schwartz–Zippel on E×E [Bas24b, Theorem 11]). Let D ∈ Fq [E] and let P1 , . . . , PN1 ∈
+E(Fq ). Choose random A0 , A1 ∈ E(Fq ) \ {O} with A0 ̸= ±A1 . Let L = y − λ · x − µ be the line
+passing through A0 , A1 . Write ∆ := (#E(Fq ) − 1)(#E(Fq ) − 3) for the number of valid pairs (A0 , A1 );
+                       √           √
+by Thm. 2, ∆ ≥ (q − 2 q)(q − 2 q − 2). Then, over the random choice of A0 , A1 , the probability that:
+                                                                N
+                                                                Y 1
+
+                                      NFq (E)/Fq (L) (D)(0) =         (−L(Pi ))
+                                                                i=1
+
+The probability is bounded in each of the following cases.
+  (i) D = 0: probability ≤ 18N1 q/∆ ≤ 96N1 /q for q ≥ 16.
+
+ (ii) D ̸= 0, (D)0 = N
+                        P 2          P       P
+                          i=1 (Qi ),   Pi ̸=   Qi : probability ≤ 18N q/∆ ≤ 96N/q for q ≥ 16, where
+      N = max{N1 , N2 }.
+
+(iii) D ̸= 0, (D)0 = N                          Qi , but lc(D)3 ̸= 1 (where lc(D) denotes the leading
+                         P 2          P       P
+                           i=1 (Qi ),   Pi =
+      coefficient of D): probability ≤ 18N2 q/∆ ≤ 96N2 /q for q ≥ 16.
+The rightmost simplifications hold for all q ≥ 16, which is satisfied in any cryptographic instantiation.
+Proof. We follow Bassa’s argument [Bas24b, Theorem 11] in each case, adapted to the labels of
+the present document.
+
+Case (i).   If D = 0, then:
+
+                         D(A0 ) · D(A1 ) · D(A2 ) = NFq (E)/Fq (L) (D) L=0 = 0
+
+The LHS of the claimed norm equality vanishes automatically; it remains to bound the probability
+that the RHS vanishes as well. Consider the following function on E × E:
+                                      N1
+                                      Y
+            g(X0 , Y0 , X1 , Y1 ) =         ((y(Pi ) − Y0 )(X1 − X0 ) − (x(Pi ) − X0 )(Y1 − Y0 ))
+                                      i=1
+
+For any (A, B) ∈ E(Fq ) \ {P1 , . . . , PN1 }, the equation g(A, B, X1 , Y1 ) = 0 defines a union of
+N1 lines, each intersecting {(A, B)} × E in at most 3 points, so g does not vanish identically
+on E × E. As in the proof of Thm. 5, the intersection of g = 0 with the surface E × E is a
+curve of degree at most 18N1 , so by Thm. 4 the number of Fq -rational zeros of g on E × E is
+at most 18N1 q. The number of valid pairs (A0 , A1 ) is ∆ = (#E(Fq ) − 1)(#E(Fq ) − 3), so the
+                                                               √           √
+probability is bounded by 18N1 q/∆. By Thm. 2, ∆ ≥ (q − 2 q)(q − 2 q − 2), which for q ≥ 16
+gives 18N1 q/∆ ≤ 96N1 /q.
+
+ZKSECURITY                                                                                                7
+             If                   Qi , then:
+                  P           P
+Case (ii).            Pi ̸=
+                                                                         N
+                                                                         Y2
+                                                                                                            
+       D(A0 ) · D(A1 ) · D(A2 ) = NFq (E)/Fq (L) (D) L=0 = c ·                 −(y(Qi ) − λ · x(Qi ) − µ)
+                                                                         i=1
+
+We need to show that with high probability:
+                        N2
+                        Y                                   N1
+                                                         Y                               
+                   c·         −(y(Qi ) − λ · x(Qi ) − µ) ̸=    −(y(Pi ) − λ · x(Pi ) − µ)
+                        i=1                                      i=1
+
+Let N = max{N1 , N2 }. Expressing λ, µ in terms of A0 , A1 and clearing denominators, this
+reduces to showing that:
+                                   N2
+                                   Y
+             (x1 − x0 )ϵ1 · c ·
+                                                                                           
+                                        (y(Qi ) − y0 )(x1 − x0 ) − (x(Qi ) − x0 )(y1 − y0 )
+                                   i=1
+                                     YN1
+                  − (x1 − x0 )ϵ2 ·
+                                                                                               
+                                            (y(Pi ) − y0 )(x1 − x0 ) − (x(Pi ) − x0 )(y1 − y0 ) ̸= 0
+                                      i=1
+
+Where ϵ1 = N − N2 if N1 > N2 and 0 otherwise, and symmetrically ϵ2 = N − N1 if N2 > N1
+and 0 otherwise. Invoking Lem. 4 (non-vanishing of f on E × E under the multiset condition)
+and the counting argument of Thm. 5, the probability is bounded by 18N q/∆, which is at most
+96N/q for q ≥ 16.
+
+Case (iii). If (D)0 = N i=1 (Qi ) agrees with   Pi as multisets but lc(D)3 ̸= 1, then the norm
+                      P 2                     P
+computation yields a nontrivial constant c = lc(D)3 ̸= 1, and we need:
+                        N
+                        Y2
+                                                         N Y2
+                                                                                          
+                  c·          −(y(Qi ) − λ · x(Qi ) − µ) ̸=    −(y(Qi ) − λ · x(Qi ) − µ)
+                        i=1                                      i=1
+
+Rewriting:
+                                               N2
+                                               Y                               
+                                   (c − 1) ·         −(y(Qi ) − λ · x(Qi ) − µ) ̸= 0
+                                               i=1
+
+This reduces to case (i) applied to the product on the right (using the points Qi in place of Pi ).
+Hence the probability is bounded by 18N2 q/∆, which is at most 96N2 /q for q ≥ 16.
+
+    The results up to this point analyze the norm-based check, which tests an equality between
+two products of linear evaluations. We now turn to a second, complementary check based on the
+logarithmic derivative, introduced in [Bas24a, Bas25]. Its soundness analysis rests on two function-
+field facts: first, that a rational function of low degree is determined by its logarithmic derivative
+up to a constant (Lem. 5), and second, that the logarithmic derivative of the norm NFq (E)/Fq (L) (D)
+admits a clean closed-form expression in terms of the three line points (Lem. 6). Together these
+yield a Schwartz–Zippel bound for the log-derivative check (Lem. 7) that parallels Thm. 6.
+
+Lemma 5 ([Bas24a, Lemma 1]). Let F/K be a function field with K perfect and the full constant field
+of F . Let δ be a derivation of F/K and let L : F × → F denote the logarithmic derivative f 7→ δ(f )/f .
+Suppose t ∈ ker(L) and degF t < p, where p is the characteristic. Then t ∈ K, i.e. the only elements
+in the kernel of the logarithmic derivative of low degree are constants. In particular for nonzero f, g of
+degree < p we have L(f ) = L(g) if and only if f = c · g for some constant c ∈ K.
+
+
+
+
+ZKSECURITY                                                                                                      8
+   The previous lemma tells us what a logarithmic-derivative equality implies; the next lemma
+gives us an explicit formula for the quantity that actually appears in the protocol, namely the
+logarithmic derivative of a norm NFq (E)/Fq (L) (D) evaluated at the zero of L. The resulting
+expression is a sum indexed by the three points A0 , A1 , A2 cut out by the line, which is what
+makes it amenable to a Schwartz–Zippel argument in the subsequent lemma.
+
+Lemma 6 ([Bas25, Lemma 5]; proved in [Bas24a, Section 4]). Let D(x, y) = a(x) − y · b(x) ∈
+Fq [E] \ {0} be a nonzero rational function on E having only poles at O, let L = y − λ · x − µ and
+consider the subfield Fq (L) of the function field Fq (E). Denote by N the field norm from Fq (E) to Fq (L).
+Let L denote the logarithmic derivative in Fq (L) with respect to L, i.e. L : Fq (L)× → Fq (L) is given by
+f 7→ δ(f )/f , where δ denotes the derivation with respect to L. Let (L = 0) be the zero of L in Fq (L).
+Then, writing xi = x(Ai ) and yi = y(Ai ):
+                                                   3xi +A2
+                                    2
+                                      X a′ (xi ) − 2y   i
+                                                          b(xi ) − yi b′ (xi )        2yi
+        L NFq (E)/Fq (L) (D) |(L=0) =                                          · 2
+                                                  a(xi ) − yi b(xi )            3xi + A − 2λ yi
+                                            i=0
+
+    The log-derivative check in the protocol tests an identity of the form:
+                                   2                   M
+                                   X D′ (Ai ) dx(Ai ) X mj
+                                             ·       =
+                                     D(Ai )     dz       L(Rj )
+                                   i=0                       j=1
+
+By Lem. 6, this is exactly the evaluation of the logarithmic derivative of NFq (E)/Fq (L) (D) at
+(L = 0), equated against a rational function whose poles encode the claimed coefficients mj at
+the points Rj . The next lemma bounds the soundness error of this check by a Schwartz–Zippel
+argument that closely mirrors the one used for Thm. 5, but with the polynomial G now derived
+from the log-derivative identity.
+
+   Comments On Prior Work.
+   Bassa [Bas25] does not bound the soundness error of the log-derivative check by a Schwartz–Zippel
+   argument; the argument instead proceeds via a k-special-soundness extractor that recovers a witness
+   from any set of at most 13kq accepting transcripts. For reasons explained later, the lemma below
+   replaces that combinatorial route with a direct Schwartz–Zippel bound, using Bassa’s own ingredients:
+   the closed form for the logarithmic derivative of the norm (Lem. 6, from [Bas24a]) and the Schwartz–
+   Zippel machinery on E × E developed in [Bas24b] for the norm check (Thm. 6). Bassa [Bas24a]
+   explicitly suggests this adaptation, pointing to the surface E × E and the Dvir–Kollár–Lovett variety
+   bounds [DKL14] as the route to a Schwartz–Zippel analogue, but does not formally carry out this
+   argument. We need it, so we do that here.
+
+Lemma 7 (Schwartz–Zippel for Log-Derivative of Norm Check). Let D ∈ Fq [E] \ {0}, let
+R1 , . . . , RM ∈ E(Fq ), and let m1 , . . . , mM ∈ Fq . For (Q0 , Q1 ) ∈ E × E with Q2 = −(Q0 + Q1 ) and
+LQ the line through Q0 , Q1 , Q2 , define:
+                                            2                   M
+                                            X D′ (Qi ) dx(Qi ) X mj
+                          f (Q0 , Q1 ) :=             ·       −
+                                              D(Qi )     dz       LQ (Rj )
+                                            i=0                    j=1
+
+If f is not identically zero on E × E, then for A0 , A1 ←$ E(Fq ) \ {O}:
+                                                               
+                                            18 degE (D) + M − 1 · q
+                    Pr[f (A0 , A1 ) = 0] ≤                         
+                                           #E(Fq ) − 1 #E(Fq ) − 3
+
+Proof. Write (D)0 = k βk · (Qk ) with Qk distinct, degE (D) = βk , and set d = #{Qk }.
+                   P                                         P
+
+
+
+
+ZKSECURITY                                                                                                9
+    Set z := y − λx (so that L = z − µ and the place (L = 0) corresponds to z = µ). By Lem. 6:
+                                                            M
+                                                           X                     mj
+                             f (Q0 , Q1 ) = L N(D) (L =0) −
+                                                              Q                 LQ (Rj )
+                                                                          j=1
+
+Since D ∈ Fq [E] has only poles at O, the norm N(D) = NFq (E)/Fq (z) (D) lies in Fq [z] and inherits
+its zeros from those of D: concretely N(D) = lc(D)3 k (z − z(Qk ))βk , where z(Qk ) = y(Qk ) −
+                                                     Q
+λ x(Qk ). Taking the logarithmic derivative (the constant lc(D)3 drops out):
+                                              X                  βk
+                                       L N(D) =
+                                                              z − z(Qk )
+                                                          k
+
+Evaluating at z = µ and noting µ − z(P ) = −LQ (P ):
+
+                                                                  X mjM
+                                              X          βk
+                           f =0      ⇐⇒                         +           =0
+                                                       LQ (Qk )    LQ (Rj )
+                                               k                      j=1
+
+   For any P ∈ E, define the bilinear form ℓP := (y(P ) − Y0 )(X1 − X0 ) − (x(P ) − X0 )(Y1 − Y0 ),
+a polynomial of degree 2 in (X0 , Y0 , X1 , Y1 ) satisfying ℓP = LQ (P ) · (X1 − X0 ). On the valid
+challenge space (where X1 ̸= X0 and all ℓQk , ℓRj are nonzero), clearing denominators gives
+f = H · G, where G is:
+                         X       Y           Y          X      Y       Y
+                   G :=      βk      ℓQk′ ·      ℓR j +    mj    ℓQk ·      ℓRj ′
+                              k     k′ ̸=k         j              j         k        j ′ ̸=j
+
+And H is a nonzero polynomial (a product of the ℓQk , ℓRj , and a power of (X1 − X0 )) that does
+not vanish identically on E × E. Hence f ̸≡ 0 on E × E implies G ̸≡ 0 on E × E.
+    Each summand of G has degree 2(d − 1 + M ) = 2(d + M − 1) in (X0 , Y0 , X1 , Y1 ), so deg G ≤
+2(d + M − 1) ≤ 2(degE (D) + M − 1) (using d ≤ degE (D)). The degree bound is attained (no
+leading-term cancellation): the k0 -th summand of the first sum is not divisible by ℓQk0 , while
+every other summand of G is.
+    As an affine subvariety of A4 , the product E × E is cut out by two cubics in disjoint variable
+sets (X0 , Y0 ) and (X1 , Y1 ), so it has dimension 2 and degree 3 · 3 = 9. By Theorem 4 applied
+to the subvariety {G = 0} ∩ (E × E), which has dimension ≤ 1 and degree ≤ 9 · 2(degE (D) +
+M − 1) = 18(degE (D) + M − 1), the number of Fq -rational zeros of G on E × E is at most
+18(degE (D) + M − 1) · q. Therefore:
+                                                        18(degE (D) + M − 1) · q
+                          Pr[f (A0 , A1 ) = 0] ≤
+                                                       (#E(Fq ) − 1)(#E(Fq ) − 3)
+
+
+
+Remark 1 (Non-Vanishing). Suppose f ≡ 0 on E × EP               and degE (D) < q. ForPeach slope λ, valid
+challenges realize ≥ q/3 distinct evaluation points µ; since k βk /(z−zλ (Qk )) + j mj /(z−zλ (Rj ))
+is a rational function of z with numerator degree < q vanishing at all these µ, it is identically zero in
+Fq (z). By uniqueness of partial fractions, the residues match at every pole. For all but finitely many λ
+(≤ d+M
+          
+       2    ), the zλ -projections of the combined support are distinct, forcing a bijection Qk = Rσ(k) with
+βk ≡ −mσ(k) (mod q), and mj = 0 for unmatched Rj .
+
+
+2    Public-Coin Interactive Proofs for Discrete Log
+In this section we formalize how the techniques of Section 1 give rise to 1-round and 3-round
+interactive proofs for showing discrete logs.
+
+ZKSECURITY                                                                                               10
+2.1   Preliminaries
+A public-coin interactive proof (IP) [GMR85] is a protocol between an efficient verifier V and a
+possibly unbounded prover P in which V’s messages are uniform coins and V eventually accepts
+or rejects.
+
+Definition 1 (Public-Coin Interactive Proof [GMR85]). A public-coin interactive proof (IP) for a
+relation R is a pair Π = (P, V) of PPT interactive algorithms in which every message sent by V is a fresh
+uniformly random string. On common input x, with P additionally holding w and sampling a random
+tape r ←$ {0, 1}∗ , the parties run ℓ ≥ 1 rounds producing a transcript τ = (π1 , c1 , π2 , c2 , . . . , cℓ−1 , πℓ ),
+where in round i the prover sends πi ← P(x, w, c1 , . . . , ci−1 ; r) and, if i < ℓ, the verifier samples
+ci ←$ {0, 1}∗ and sends it. After round ℓ the verifier outputs V(x, τ ) ∈ {accept, reject} using fresh
+coins; we write ⟨P(w), V⟩(x) for this output. Π has completeness error ϵc if for every (x, w) ∈ R:
+
+                                    Pr[⟨P(w), V⟩(x) = accept] ≥ 1 − ϵc (κ)
+
+    Knowledge soundness for an interactive proof states that there exists a polynomial-time
+algorithm that, given black-box rewinding access to any cheating prover P∗ , recovers a witness
+for the relation with almost the same probability with which the prover P∗ makes the verifier
+accept. Observe that occasionally the relation for which the IP is knowledge sound might not coincide
+with the relation for which it’s complete: the extractor may recover a witness from a "relaxed"
+relation.
+
+Definition 2 (Black-Box Knowledge Soundness [BG93]). A ℓ-round public-coin IP Π = (P, V) is
+knowledge sound for R, with knowledge error ϵs if there exists a PPT extractor E such that, for every
+(possibly unbounded) prover P∗ and every statement x, E P (x) outputs either ⊥ or a string w satisfying:
+                                                         ∗
+
+
+
+   1. Validity: whenever E P (x) ̸= ⊥, its output w satisfies (x, w) ∈ R.
+                                ∗
+
+
+
+   2. Success:                               h ∗          i
+                                           Pr E P (x) ̸= ⊥ ≥ ϵ∗ (x) − ϵs (κ)
+
+      Where ϵ∗ (x) := Pr[⟨P∗ , V⟩(x) = accept] is the acceptance probability of P∗ on statement x, taken
+      over the coins of P∗ and V.
+
+The extractor is given black-box rewinding access to P∗ : concretely, E queries the next-message function
+P∗ (x, c1 , . . . , ci−1 ; r) on any random tape r ∈ {0, 1}∗ and any prefix of challenges (c1 , . . . , ci−1 ) ∈
+({0, 1}∗ )i−1 of its choice, for any i ∈ {1, . . . , ℓ}.
+
+2.2   Relations
+Before formalizing the protocol, we define two relations: Rdlog                 dlog-honest
+                                                            Fq ,E(Fq ) [B] and RFq ,E(Fq ),d,S [B]. We
+                                                                        ⃗                       ⃗
+will show a protocol that is complete for Rdlog-honest [B],
+                                                        ⃗ but knowledge sound for Rdlog
+                                                    Fq ,E(Fq ),d,S
+                                                                                                     ⃗
+                                                                                                    [B].     Fq ,E(Fq )
+
+
+Relation (Knowledge Soundness). The protocol is parameterized by a fixed public basis
+⃗ = (B1 , . . . , Bk ) ∈ Gk with Bi ̸= Bj for all i ̸= j, and will be knowledge-sound for the relation:
+B
+                                                                                      k
+                                      (                                                                  )
+                                                                          
+                  Rdlog                    x = P ∈ G, w
+                                                                                      X
+                               ⃗ :=
+                   Fq ,E(Fq ) [B]                           = (⃗n) ∈ Fkp       |P =         [ni ] · Bi                    (1)
+                                                                                      i=1
+
+It’s easy to see that without loss of generality we can take the Bj pairwise distinct: if Bi = Bj
+for some i ̸= j, then [ni ]Bi + [nj ]Bj = [ni + nj ]Bi .
+
+
+
+
+ZKSECURITY                                                                                                                11
+Relation (Completeness). The protocol is additionally parameterized by an admissible set
+S ⊆ Fq [x]2 with (0, 0) ∈    / S. The protocol is complete for the honest subset:
+
+                                                              (x, w) ∈ Rdlog          [⃗
+                                                                                                      
+                          
+                                                                        F q ,E(F q )  B]              
+                                                                                                       
+                          
+                                                          ∃ (a(x), b(x)) ∈ S :                      
+                                                                                                       
+   dlog-honest     ⃗
+  RFq ,E(Fq ),d,S [B] :=        x = P, w = (⃗n) ∈ N≥0   k
+                          
+                          
+                                                               degE (a(x) − b(x)y) ≤ d                
+                                                                                                       
+                                                                                                       
+                                                                                          P
+                                                                (a(x) − b(x)y)0 = (−P ) + i ni · (Bi )
+                                                                                                      
+                                                                                                        (2)
+Observe that Rdlog-honest
+                   Fq ,E(Fq ),d,S [ ⃗
+                                   B] ⊆ Rdlog
+                                         Fq ,E(Fq ) [ ⃗
+                                                     B],  as expected.
+
+  Comments On Prior Work.
+  We observe that this distinction between what an honest prover can demonstrate (completeness) and
+  what the extractor can recover (knowledge soundness), is also present in prior work by Bassa / Eagen,
+  but not made explicit. In particular, in the work of Bassa, the relation is defined as:
+                                                                                    k
+                                                                                    X
+                   RDL = {(s = (s0 , . . . , sk ) ∈ Zk+1 , 0 ≤ si < p; P ∈ E)|P =          [si ] · Bi }
+                                                                                     i=0
+
+  This is equivalent to RdlogFq ,E(Fq ) [B]. Observe that in the relation the witness may be any integer
+                                         ⃗                                                               0 ≤ si < p,
+  however, it’s trivial to see that the protocol is not complete for witnesses for which si is large: the
+                                                                                                  P
+  divisor would be too large to commit to. We capture this soundness/completeness "gap" explicitly
+  using Rdlog-honest                   dlog
+           Fq ,E(Fq ),d,S [B] and RFq ,E(Fq ) [B].
+                           ⃗                    ⃗
+
+
+   In practice, the gap between Rdlog                   dlog-honest
+                                    Fq ,E(Fq ) [B] and RFq ,E(Fq ),d,S [B] can be eliminated by ensuring
+                                                ⃗                       ⃗
+that there always exists a witness in Rdlog-honest [B];
+                                                      ⃗ this will be the case in the concrete applica-
+                                             Fq ,E(Fq ),d,S
+tions considered. The following example is also outlined by Bassa, and we show it slightly more
+formally with our more explicit notation:
+Example 2 (Discrete Log via Binary Decomposition). Consider the following relation:
+
+                     Rdlog
+                      G := {(P ∈ E(Fq ), x ∈ Fp ) | P = [x] · G} ⊆ E(Fq ) × Fp
+
+We can construct a knowledge-sound and complete argument for Rdlog           G   using any IP with
+                             dlog                             dlog-honest
+knowledge soundness for RFq ,E(Fq ) [B] and completeness for RFq ,E(Fq ),d,S [B] with d = ⌈log2 (p)⌉+
+                                     ⃗                                        ⃗
+1, where B⃗ is chosen as the binary-decomposition basis:
+
+    • Let Bj := 2j−1 · G for j ∈ [k] with 2k ≥ p (so B
+                                                     ⃗ is fixed by G),
+                     
+
+    • Write φ : Fkp → Fp for the map φ(⃗n) = kj=1 nj · 2j−1
+                                              P
+
+Then for the same Rdlog
+                   G we get:
+
+   • Completeness. For every x ∈ Fp , it is efficient to find ⃗n ∈ {0, 1}k st. φ(⃗n) = x and:
+
+                                 (P, x) ∈ Rdlog
+                                           G    =⇒ (P, ⃗n) ∈ Rdlog-honest     ⃗
+                                                              Fq ,E(Fq ),d,S [B]
+
+   • Soundness. For (x = P, w = ⃗n) observe that φ(⃗n) is efficiently computable and:
+
+                                 (P, ⃗n) ∈ Rdlog        ⃗           n)) ∈ Rdlog
+                                            Fq ,E(Fq ) [B] =⇒ (P, φ(⃗      G
+
+
+    The protocol outlined by Eagen for Rdlog
+                                          Fq ,E(Fq ) [B] is a one-round interactive proof (Def. 1)
+                                                      ⃗
+shown in Fig. 1, i.e. the communication pattern is: 1. the prover sends a message, 2. the verifier
+flips some coins and decides to accept/rejectbased on the message and its random tape.
+Motivated by the concrete composition with a CP-NIZKAoK we write the protocol in a form
+where all P → V messages are vectors over Fq .
+
+ZKSECURITY                                                                                                      12
+Protocol ΠMA                ⃗
+             Fq ,E(Fq ),d,S,B
+           xw
+Prover P( , )                                                                Verifier V( )x
+// Compute Divisor Function
+Let D(x, y) = a(x) − b(x)y ∈ Fq [x, y] st.
+                       P
+  (D(x, y))0 = (−P ) + ni · (Bi )
+// Reduce Witness mod q
+Let ⃗
+    m = ⃗n mod q ∈ Fkq
+                                                  m ∈ Fkq
+                                                   ⃗
+                                             a(x), b(x) ∈ Fq [x]
+
+                                                                             // Check that P is Well-Formed
+                                                                             assert P ∈ E(Fq )
+                                                                             // Check Degree Bound
+                                                                             assert degE (a(x) − b(x)y) ≤ d
+                                                                             // Ensure D ̸= 0
+                                                                             assert (a(x), b(x)) ∈ S
+                                                                             // Sample Challenge Points
+                                                                             A0 , A1 ←$ E(Fq ) \ {O} with A0 ̸= ±A1
+                                                                             A2 ← −(A0 + A1 )
+                                                                             Let L be the line through A0 , A1 , A2
+                                                                             // Weil Reciprocity Check
+                                                                                     P2       ′
+                                                                             lhs ← i=0 D        (Ai ) dx(Ai )
+                                                                                            D(Ai ) ·    dz
+                                                                                        −1        Pk       −1
+                                                                             rhs ←             + i=1 L(B      i)
+                                                                                                                 · mi
+                                                                                     L(−P )
+                                                                             assert lhs = rhs
+
+
+
+          Figure 1: Merlin-Arthur Protocol ΠMA                  ⃗   for Rdlog        ⃗   dlog-honest     ⃗
+                                                                         Fq ,E(Fq ) [B]/RFq ,E(Fq ),d,S [B]
+                                                 Fq ,E(Fq ),d,S,B
+
+
+
+
+ZKSECURITY                                                                                                              13
+Construction 1 (One-Round Proof). Let d = poly(κ) be a protocol parameter affecting the
+knowledge error of the protocol and the completeness relation. We formalize the one-round
+protocol ΠMA        ⃗ implicit in the work of Eagen [Eag22] in Fig. 1.
+            Fq ,E(Fq ),d,S,B
+
+Observation 1 (Polynomial Degree Bound). Any d = poly(κ) suffices for a field of exponential size
+in the security parameter κ: soundness degrades only as O(d/q) which remains negligible. In particular,
+upper bounding the degree by the adversary’s running time suffices. In the concrete application d is going
+to be a constant, defined by the circuit which checks the execution of the verifier, see Section 3.
+Observation 2 (Accepting Transcript with −P ∈ {B1 , . . . , Bk }). Let B1 = −P , all other Bj can be
+arbitrary, m1 = q − 1, mj = 0 for j ≥ 2, and D = 1 i.e. a(x) = 1, b(x) = 0. Now observe:
+    • Degree Check: degE (D) = 0 ≤ d.
+    • Equality Check: D′ = 0 so lhs = 0; and using B1 = −P and −(q − 1) ≡ 1 (mod q):
+                                           −1      −(q−1)    −1        1
+                                    rhs = L(−P ) + L(B1 ) = L(−P ) + L(−P ) = 0
+
+Hence the verifier accepts with probability 1, however a naive unsigned lift ni := lift(mi ) ∈ N gives ⃗n =
+(q −1, 0, . . . , 0), which fails the relation’s inner-product check on the curve: [q −1]B1 = [q −1](−P ) ̸= P
+(since p ̸= q).
+Observation 3 (Accepting Transcript with D ≡ 0). Let a(x) = 0, b(x) = 0 (so D ≡ 0) and ⃗ m ∈ Fkq
+                IP                                        ′
+arbitrary. In Π         ⃗ , the hint check hi · D(Ai ) = D (Ai ) reduces to 0 = 0 and imposes no
+                 Fq ,E(Fq ),d,S,B
+constraint on ⃗h ∈ F3q ; the remaining equation reduces to:
+                                       2                         k
+                                                                   −m
+                                              hi · dx(A i)
+                                       X                         X
+                                                                           j
+                                                     dz    =g+         L(Bj )
+                                        i=0                      j=1
+
+This is one linear equation in three unknowns, always
+                                                 P solvable. Hence the verifier accepts any ⃗m, while
+the extractor of Thm. 7 returns ⊥ whenever P ̸= i [lift(mi )] · Bi . The soundness argument implicitly
+assumes D ̸= 0 via Lems. 6 and 7; the verifier check (a(x), b(x)) ∈ S in Figs. 1 and 2 discharges this
+hypothesis whenever (0, 0) ∈ / S.
+
+Instantiations of S. Soundness of ΠMA                   ⃗ /ΠFq ,E(Fq ),d,S,B
+                                                            IP
+                                                                           ⃗ depends on (0, 0) ∈   / S: any
+                                         Fq ,E(Fq ),d,S,B
+(a, b) ∈ S satisfies D = a(x) − b(x)y ̸= 0 in Fq [E]. The relation Rdlog-honest
+                                                                           Fq ,E(Fq ),d,S [B] depends on the
+                                                                                           ⃗
+choice of S, here are some possible constructions:
+    • Maximal: SMax := Fq [x]2 \ {(0, 0)}.
+    • Parker [Par24a, Par24b]: SParker := {(a, b) : a1 = 1} (coefficient of x in a(x) is 1).
+    • Eagen [Eag22, §3.4]: SEagen := {(a, b) : a0 = 1} (constant coefficient in a(x) is 1).
+    • Hash: SHash,⃗r := {(a, b) : ⟨⃗r, a∥b⟩ ̸= 0} for ⃗r ∈ Fnq (a∥b concatenates the coefficients).
+For the composition with Bulletproofs in Section 3 we need the check (a, b) ∈ S to have an
+efficient R1CS relation over the committed coefficients. The Maximal construction is the largest
+possible admissible set, but checking (a, b) ̸= (0, 0) over a vector of coefficients does not admit
+a cheap R1CS relation; Parker’s and Eagen’s constructions impose a single equality constraint
+instead. The Hash construction is slightly less efficient than Parker’s and Eagen’s, but has the
+advantage that completeness holds for every divisor: the verifier (or prover) can sample a fresh ⃗r
+for each run of the protocol, whereas the others have a negligible subset of divisors which can
+never be proven. The universal hash can be checked in-circuit by witnessing inv and showing
+⟨⃗r, a∥b⟩ · inv = 1, a single R1CS constraint.
+
+
+ZKSECURITY                                                                                                 14
+  Comments On Prior Work.
+   The extractor of Bassa [Bas25] fails to account for the case outlined in Observation 2; it’s implic-
+  itly assumed to not occur. The argument outlined does not hold when −P ∈ {B1 , . . . , Bk }. The
+  wraparound of coefficients from Z to Fp is flagged in [Bas24b, §6] under the clause “we can assume
+  with high probability that the z(Pi ) are distinct”; a genericity claim about the random slope λ that
+  silently presupposes the underlying Pi are distinct. The verifier in [Bas24a, Fig. 1] has no check ruling
+  this out, and the review in [GSSS25a, §3.2] does not flag it. However, in application, it is crucial: in
+  the concrete use case the prover can pick P and the B1 , . . . , Bk are fixed, hence we want a protocol
+  which is sound, even when −P ∈ {B1 , . . . , Bk }. Luckily, the fix is very simple and does not require
+  changes to the protocol: whenever −P ∈ {B1 , . . . , Bk } we can trivially compute a witness (without
+  even running the prover).
+
+    Let Edeg denote the event, over (A0 , A1 ) ←$ E(Fq )2 , that some denominator in the verifier’s
+field expression vanishes (D(Ai ) = 0, L(−P ) = 0, L(Bj ) = 0, or dx/dz denominator at Ai ). On
+Edeg the verifier’s output is implementation-defined; errors below absorb it.
+
+  Comments On Prior Work.
+  Bassa [Bas24b] proposes to enforce support disjointness (D(Ai ) ̸= 0) via verifier-side resampling:
+        “Alternatively, the verifier can just sample A0 , A1 from the set E(Fq ) \ {O}, compute
+        A2 = −A0 − A1 and check that x(A0 ) ̸= x(A1 ) and D(Ai ) ̸= 0 for i = 0, 1, 2, resampling
+        if necessary. Hence we can assume that the support of D and L are disjoint.”
+  We note that in the composition (see Section 3), it’s not possible for the verifier to check this condi-
+  tion: the challenge is sampled out-of-circuit and the out-of-circuit verifier (crucially) does not see
+  D. Rejecting any line L which intersects with D in-circuit would be very expensive and defeat the
+  purpose of the optimization. The later Bassa paper for the interactive protocol [Bas25] does not adopt
+  verifier-side resampling.
+
+Theorem 7. Assume d < min{p, q}. ΠMA                     ⃗ (Construction 1) is a 1-round IP with:
+                                          Fq ,E(Fq ),d,S,B
+
+   • Completeness for Rdlog-honest     ⃗
+                       Fq ,E(Fq ),d,S [B], with error:
+
+                                                 3(d + 1)   6(d + 1)
+                                        ϵc :=           √ ≤
+                                                q+1−2 q         q
+
+   • Knowledge Soundness for Rdlog        ⃗
+                              Fq ,E(Fq ) [B] with straight-line extraction and error:
+
+                                              18(d + k) · q      96(d + k)
+                                ϵs :=         √         √      ≤
+                                        (q − 2 q)(q − 2 q − 2)       q
+
+Both bounds include Pr[Edeg ] plus the residual on ¬Edeg . The simplified (rightmost) bounds hold for all
+q ≥ 16, which is satisfied in any cryptographic instantiation.
+
+Proof. The completeness error follows immediately by Thm. 1 and Lem. 2. One detail of note
+is that the divisor can be efficiently computed, and the original paper [Eag22] demonstrates
+how to achieve this. Since (0, 0) ∈ / S, the check (a, b) ∈ S implies (a, b) ̸= (0, 0), hence D =
+a(x) − b(x)y ̸= 0 as an element of Fq [E]; satisfying the D ̸= 0 hypothesis of Lem. 7 and Lem. 6
+(see also Observation 3). We define an extractor E P (x) for any (potentially unbounded) Turing
+                                                     ∗
+
+
+machine P∗ as follows:
+
+
+
+
+ZKSECURITY                                                                                              15
+                                     Extractor E P (x)
+                                                     ∗
+
+
+
+                                     // Special Case: −P ∈ {Bj }
+                                     if ∃ j ∗ ∈ [k] : Bj ∗ = −P :
+                                        ⃗n ← ⃗0 ∈ Fkp , nj ∗ ← −1
+                                       return ⃗n
+                                     // General Case: −P ∈/ {Bj }
+                                     r ←$ {0, 1}∗
+                                     (⃗                        x
+                                      m, a(x), b(x)) ← P∗ ( ; r)
+                                     if lift( ⃗ / [0, d]k return ⊥
+                                             m) ∈
+                                               m) mod p ∈ Fkp
+                                     ⃗n ← lift( ⃗
+                                              P
+                                      if P ̸= i [ni ] · Bi return ⊥
+                                     return ⃗n
+Writing lift(z) : Fq 7→ [0, q) ⊆ N≥0 for taking the canonical integer representative of z ∈ Fq .
+The special case handles −P ∈ {B1 , . . . , Bk }: the trivial witness nj ∗ = −1 satisfies [−1] · Bj ∗ =
+[−1](−P ) = P unconditionally, so the extractor can return it without even reading P∗ ’s message.
+In the general case (−P ∈ / {Bj }) the extractor takes the naive lift of each mj and
+                                                                                 P checks it lies in
+the degree bound. If the extractor does not return ⊥, the final check P = i [ni ] · Bi ensures
+its output is a valid witness. It remains to bound the probability that the extractor returns ⊥
+conditioned on the verifier accepting. We define two bad events and bound them separately.
+
+Define the function f : E × E 99K Fq :
+                                                                                      
+                              2                                        k
+                                                    !
+                              X D′ (Qi ) dx(Qi )              −1       X   −1
+            f (Q0 , Q1 ) :=             ·                −          +            · mj 
+                                D(Qi )     dz               LQ (−P )     LQ (Bj )
+                              i=0                                      j=1
+
+Where Q2 = −(Q0 + Q1 ) and LQ is the line through Q0 , Q1 , Q2 . Recall that the verifier accepts
+iff f (A0 , A1 ) = 0 and the degree bound on D holds.
+   • Event ENotEq : f ̸≡ 0 on E × E, yet f (A0 , A1 ) = 0. Since (A0 , A1 ) is sampled uniformly
+     from E(Fq )2 , Lem. 7 (instantiated with the k + 1 evaluation points {−P, B1 , . . . , Bk } and
+                                                                                     √
+     degE (D) ≤ d), combined with the Hasse bound Thm. 2 (#E(Fq ) ≥ q + 1 − 2 q), gives:
+                                                      18(d + k) · q
+                                Pr[ENotEq ] ≤         √         √      = ϵs
+                                                (q − 2 q)(q − 2 q − 2)
+
+   • Event EBadWit : the verifier accepts, but the extractor returns ⊥. We claim:
+                                         Pr[EBadWit | ¬ ENotEq ] = 0
+
+      Conditioned on ¬ ENotEq and the verifier accepting, we must have f ≡ 0 on E × E:
+      indeed, acceptance requires f (A0 , A1 ) = 0, and if additionally f ̸≡ 0 then ENotEq holds,
+      contradicting the conditioning. It therefore suffices to show that f ≡ 0 (together with the
+      verifier’s degree check) implies that the extractor succeeds.
+      Suppose f ≡ 0 as a rational function on E × E. Write L = Lλ,µ = y − λ · x − µ for the
+      line determined by (A0 , A1 ), equivalently by its slope λ and intercept µ. We show in the
+      following steps that f ≡ 0 forces the divisor of zeros of D to have the claimed form and
+      the extractor to return a valid witness.
+
+      Step 1. Identify the LHS of f as a log-derivative. By Lem. 6, for each fixed line L:
+                               2
+                               X D′ (Ai ) dx(Ai )                                
+                                         ·        = LL NFq (E)/Fq (L) (D) (L = 0)
+                                 D(Ai )     dz
+                               i=0
+
+
+ZKSECURITY                                                                                          16
+            Where LL is the logarithmic derivative with respect to L in the degree-3 extension
+            Fq (E)/Fq (L).
+    Step 2. Identify the RHS of f as a log-derivative. Let (D)0 = α nα ·(Qα ) be the actual divisor
+                                                                 P
+            of zeros of D, with integer multiplicities nα ≥ 1 and distinct Ppoints Qα ∈ E(Fq ).
+            Since D ∈ Fq [E] has poles only at O with order degE (D) = α nα , the norm is a
+            polynomial in t:
+                                                              Y
+                                  NFq (E)/Fq (L) (D)(t) = cL · (t − L(Qα ))nα
+                                                              α
+
+             Where cL is some constant depending on D and L. Taking the log-derivative (in
+             characteristic q, multiplicities reduce mod q) and evaluating at t = 0:
+                                                              X nα mod q
+                                 LL NFq (E)/Fq (L) (D) (0) = −
+                                                               α
+                                                                  L(Qα )
+
+             Similarly, the RHS of f is the log-derivative at t = 0 of the “expected norm”
+             eL (t) = (t − L(−P )) · Qk (t − L(Bj ))mj , giving:
+             N                        j=1
+
+                                                                     k
+                                                                 X −mj
+                                      X nα mod q         −1
+                                  −                 =          +                               (3)
+                                      α
+                                          L(Qα )        L(−P )    L(Bj )
+                                                                    j=1
+
+
+    Step 3. View (3) as an identity in (λ, µ). The hypothesis f ≡ 0 on E × E means (3) holds as
+            an identity of rational functions in (λ, µ), where each term 1/L(X) = 1/(y(X) −
+            λ · x(X) − µ) is a rational function of the line parameters.
+    Step 4. Match poles in µ for fixed generic λ. Fix λ ∈ Fq and view (3) as a rational function
+            of µ. Each 1/L(X) has a simple pole in µ at µ = µX (λ) := y(X) − λ · x(X) with
+            residue −1. For (3) to hold as a rational function in µ, the two sides must have
+            the same poles with matching residues.
+    Step 5. Separation of points by generic lines. For any two distinct points R, S ∈ E(Fq ),
+            µR (λ) = µS (λ) holds for at most one value of λ:
+               – If x(R) ̸= x(S): µR = µS gives λ = (y(R) − y(S))/(x(R) − x(S)), a single
+                 value.
+               – If x(R) = x(S): then µR = µS iff y(R) = y(S). Since R, S lie on E, are distinct,
+                 and x(R) = x(S), we have y(R) = −y(S) ̸= y(S) (assuming char ̸= 2), so
+                 µR (λ) ̸= µS (λ) for every λ ∈ Fq .
+             Hence for all but finitely many λ ∈ Fq , the values {µQα (λ)}α and {µ−P (λ)} ∪
+             {µBj (λ)}j each consist of distinct poles.
+    Step 6. Match residues to get the combined-residue identity. For such generic λ, the two sides
+            of (3) must have the same poles with matching residues (in Fq ). For each distinct
+            R ∈ E(Fq ):
+                                  nR ≡ 1[R = −P ] +
+                                                          X
+                                                                mj (mod q)                     (4)
+                                                        j : Bj =R
+
+             Where nR ∈ Z≥0 denotes the coefficient of R in (D)0 (i.e., the multiplicity of R as
+             a zero of D when R ∈ {Qα }, and 0 otherwise).
+    Step 7. Lift combined residues to integer multiplicities. Each nR is a non-negative integer
+            satisfying nR ≤ degE (D) ≤ d < q, so nR and its reduction nR mod q agree as
+            elements of [0, q). The RHS of (4) is an element of Fq ; applying lift(·) ∈ [0, q)
+
+
+ZKSECURITY                                                                                      17
+               to take its canonical integer representative, the congruence lifts to the integer
+               equality:
+
+                      nR = lift(1[R = −P ] + j : Bj =R mj ) ∈ [0, d] for every distinct R    (5)
+                                               P
+
+
+               By distinctness of B,    ⃗ the mj -sum reduces to mj when R = Bj and to 0 when
+               R∈/ {B1 , . . . , Bk }. For R ∈
+                                             / {−P, B1 , . . . , Bk } the RHS is 0 in Fq , so nR = 0; hence
+               supp((D)0 ) ⊆ {−P, B1 , . . . , Bk }.
+      Step 8. The extractor returns a valid Fp -witness. We split on whether −P ∈ {B1 , . . . , Bk }.
+              Special case, −P = Bj ∗ for some j ∗ . The extractor’s special-case branch returns
+              nj ∗ = −1 ∈ Fp and P nj = 0 for j ̸= j , without inspecting ⃗
+                                                         ∗                  m. The witness is valid
+              unconditionally: i [ni ] · Bi = [−1] · Bj ∗ = [−1](−P ) = P .
+              General case, −P ∈ / {B1 , . . . , Bk }. Then (5) at R = −P has an empty mj -sum, so
+              n−P = 1. For each j ∈ [k], (5) at R = Bj gives lift(mj ) = nBj ∈ [0, d], so the
+              extractor’s check lift(mj ) ≤ d passes (under f ≡ 0), and the extractor assigns
+              nj = lift(mj ) mod p = nBj (using nBj ≤ d ≪ p, so reduction mod p is trivial).
+              By Thm. 1, since (D) = (D)0 − degE (D) · (O) is principal, R [nR ] · R = O in
+                                                                                P
+              E(Fq ). Using n−P = 1 and supp((D)0 ) ⊆ {−P, B1 , . . . , Bk }:
+                                                  k
+                                                  X                                   k
+                                                                                      X
+                                  [1] · (−P ) +         [nBj ] · Bj = O,   i.e. P =         [nj ] · Bj
+                                                  j=1                                 j=1
+
+               So the final relation check passes.
+               In both cases the extractor returns ⃗n ∈ Fkp , a valid witness for Rdlog        ⃗
+                                                                                   Fq ,E(Fq ) [B]; EBadWit
+               does not occur. Therefore Pr[EBadWit | ¬ ENotEq ] = 0.
+
+    We conclude by the conditional decomposition:
+          h ∗                   i
+        Pr E P (x) = ⊥ ∧ accept = Pr[EBadWit ] ≤ Pr[ENotEq ] + Pr[EBadWit | ¬ ENotEq ]
+                                           ≤ ϵs + 0 = ϵs
+
+
+
+    Instead of a one-round Merlin-Arthur protocol, the prior work of Bassa [Bas25] describes
+a three-round interactive proof (IP) which maps better onto an optimized composition with a
+CP-NIZKAoK: an additional message (after the verifier challenge) enables the prover to "help"
+the verifier by providing him with field inverses. From a theoretical perspective, we note that
+this transformation is generic: any MA protocol can be transformed into a three-round IP in which
+the verifier can be expressed as a depth 1 circuit as follows: letting the last round consist of the wire
+assignment of an accepting verifier and changing the IP verifier to check the correctness of all wire
+assignments in parallel. We include a variant of the Bassa [Bas25] diagram for the three-round
+IP in Fig. 2 for completeness and prove that it is a knowledge-sound IP for Rdlog         Fq ,E(Fq ) [B] by
+                                                                                                      ⃗
+reducing to the soundness of the MA protocol.
+
+Construction 2 (Three-Round IP). We formalize the three-round protocol ΠIP             ⃗ in
+                                                                        Fq ,E(Fq ),d,S,B
+Fig. 2.
+
+Theorem 8. ΠIP                ⃗   (Construction 2) is a three-round IP with completeness for Rdlog-honest     ⃗
+                                                                                              Fq ,E(Fq ),d,S [B]
+               Fq ,E(Fq ),d,S,B
+and knowledge soundness for Rdlog
+                             Fq ,E(Fq ) [B] via a straight-line extractor; both errors match Π
+                                         ⃗                                                    MA
+                                                                                                                        ⃗
+                                                                                                         Fq ,E(Fq ),d,S,B
+(Thm. 7): ϵc = ϵMA
+                c  and ϵs = ϵMA         MA MA are the errors of ΠMA
+                             s , where ϵc , ϵs                                                ⃗ (Thm. 7).
+                                                                             Fq ,E(Fq ),d,S,B
+
+
+ZKSECURITY                                                                                                            18
+                                    dlog
+Protocol ΠIP                 ⃗ for RFq ,E(Fq ) [B]
+                                                ⃗
+              Fq ,E(Fq ),d,S,B
+Prover P( ,x w)                                                                         Verifier V( )x
+// Compute Divisor Function
+Let D(x, y) = a(x) − b(x)y ∈ Fq [x, y] st.
+                       P
+  (D(x, y))0 = (−P ) + ni · (Bi )
+// Reduce Witness mod q
+Let ⃗
+    m = ⃗n mod q ∈ Fkq
+                                                 m ∈ Fkq , a(x), b(x) ∈ Fq [x]
+                                                 ⃗
+
+                                                                                        // Check that P is Well-Formed
+                                                                                        assert P ∈ E(Fq )
+                                                                                        // Check Degree Bound
+                                                                                        assert degE (a(x) − b(x)y) ≤ d
+                                                                                        // Ensure D(x, y) ̸= 0
+                                                                                        assert (a(x), b(x)) ∈ S
+                                                                                        // Sample Challenge Points
+                                                                                        A0 , A1 ←$ E(Fq ) \ {O} with A0 ̸= ±A1
+                                                      A0 , A1 ∈ E(Fq )
+
+// Compute Helpers for Verifier
+A2 ← −(A0 + A1 )
+Let L be the line through A0 , A1 , A2
+h0 ← D′ (A0 )/D(A0 )
+h1 ← D′ (A1 )/D(A1 )
+h2 ← D′ (A2 )/D(A2 )
+g ← −1/L(−P )
+                                                      h0 , h1 , h2 , g ∈ Fq
+
+                                                                                        A2 ← −(A0 + A1 )
+                                                                                        Let L be the line through A0 , A1 , A2
+                                                                                        // Weil Reciprocity Check
+                                                                                                P2
+                                                                                        lhs ← i=0 hi · dx(A   dz
+                                                                                                                 i)
+
+                                                                                                     Pk       −1
+                                                                                        rhs ← g + i=1 L(B        i)
+                                                                                                                    · mi
+                                                                                        assert lhs = rhs
+                                                                                        // Verify Hints
+                                                                                        assert h0 · D(A0 ) = D′ (A0 )
+                                                                                        assert h1 · D(A1 ) = D′ (A1 )
+                                                                                        assert h2 · D(A2 ) = D′ (A2 )
+                                                                                        assert g · L(−P ) = −1
+
+
+
+Figure 2:        Three-Round Interactive Protocol ΠIP                               ⃗    for Rdlog
+                                                                                              Fq ,E(Fq ) [B]; conversion of
+                                                                                                          ⃗
+                                                                     Fq ,E(Fq ),d,S,B
+ΠMA              ⃗ with a “helping” prover to improve the verifier’s efficiency.
+  Fq ,E(Fq ),d,S,B
+
+
+
+
+ZKSECURITY                                                                                                                       19
+Proof. Completeness is immediate: the honest IP prover sets hi = D′ (Ai )/D(Ai ) for i ∈ {0, 1, 2}
+and g = −1/L(−P ), which satisfies the hint checks; substituting these into the IP Weil reciprocity
+check yields the MA Weil reciprocity check. Hence ϵc = ϵMA      c .
+    We reduce knowledge soundness of the IP to knowledge soundness of the MA. Fix any
+first round ( ⃗
+             m, a, b) and challenge (A0 , A1 ), and suppose the IP verifier accepts on some third-
+round message (h0 , h1 , h2 , g). On ¬Edeg we show the MA verifier accepts on (( ⃗  m, a, b), (A0 , A1 )):
+the IP hint checks hi · D(Ai ) = D (Ai ) force hi = D (Ai )/D(Ai ), and g · L(−P ) = −1 forces
+                                      ′                    ′
+
+g = −1/L(−P ). Substituting these values into the IP Weil reciprocity check recovers the MA
+Weil reciprocity check, so the MA verifier accepts. The Edeg case is absorbed into ϵMA  s . Hence IP
+accepts =⇒ MA accepts on the same (( ⃗     m, a, b), (A0 , A1 )). The IP first-round message ( ⃗m, a, b)
+coincides with the MA first-round message. Define the IP extractor as the MA extractor of
+Thm. 7 applied to this message. By the reduction, its success probability is at least that of the
+MA extractor conditioned on MA acceptance; hence ϵs = ϵMA        s .
+
+
+  Comments On Prior Work.
+  In a prior work of Bassa [Bas25], knowledge soundness of the protocol in Fig. 2 is proved by showing
+  that it is 13kq-special sound: recovering the witness from any set of 13kq accepting transcripts sharing
+  the first round message. The argument is correct (except for the fixable edge-cases discussed earlier),
+  but it does not lead to a polynomial-time extractor: even though there is an exponential gap between the
+  13kq-special soundness and the size of the challenge space ((#E(Fq ) − 1)2 ), 13kq is exponential in the
+  security parameter, which means the extractor will need to rewind the prover an exponential number of times
+  to obtain sufficiently many transcripts to recover a witness using the 13kq-special soundness extractor.
+  In particular, for the Fiat-Shamir compiled protocol, the extraction strategy of e.g. Attema, Fehr and
+  Klooß [AFK23] is (expected) polynomial time only if the tree of transcripts is also of polynomial size;
+  it is not sufficient that the set of bad challenges has inverse exponential density for the general knowledge
+  extraction strategies to apply.
+
+  As briefly noted in the subsequent Cypher Stack review [GSSS25a], all this seems intuitively unneces-
+  sary: the protocol has the prover send the purported witness in the first round. A working extractor can
+  therefore be obtained more easily, by simply recovering the witness from the first round message. All
+  that remains is to argue that this extracted witness is valid with all-but-negligible probability. With
+  this approach, it is not an issue that there is an exponential number of “bad” challenges as long as
+  the subset is exponentially sparse in the challenge space. The result is a knowledge-sound 3-round IP,
+  not a special-sound Σ-protocol, and suffices for the tight composition of Section 3: the straight-line
+  extractor feeds directly into Thm. 10, paying only the unavoidable Q · ϵs factor of any Fiat–Shamir
+  compilation (a union bound over the malicious prover’s Q candidate first-round messages).
+
+
+3 Compositions of Interactive Proofs with Non-Interactive Arguments
+We show that composing a 3-move interactive protocol with a commit-and-prove NIZKAoK in
+the ROM (random oracle model) yields a zero-knowledge and extractable argument (soundness
+is computational) for the committed relation. We furthermore observe that if the NIZKAoK is
+simulation extractable, then the composition is also simulation extractable. Prior works showing
+that Bulletproofs is simulation extractable [DG23, GOP+ 21] therefore apply and show that
+the composition of the IP of Eagen/Bassa [Eag22] [Bas24a] with Bulletproofs is simulation
+extractable.
+
+Definition 3 (Commitment Scheme). A commitment scheme is a pair of PPT algorithms (Setup, Com):
+
+   1. Setup(1κ ) → pp generates public parameters.
+
+   2. Com(pp, m; r) → cm maps a message m and randomness r to a commitment cm.
+
+
+
+
+ZKSECURITY                                                                                                 20
+Definition 4 (Perfectly Hiding). A commitment scheme (Setup, Com) is perfectly hiding if for every
+(possibly unbounded) adversary A and pp ← Setup(1κ ): given any two messages m0 , m1 in the message
+space, the distributions Com(pp, m0 ; r) and Com(pp, m1 ; r) are identical over r.
+Definition 5 (Computationally Binding). A commitment scheme (Setup, Com) is computationally
+binding if for every PPT adversary A and pp ← Setup(1κ ):
+
+                    Pr[Com(pp, m0 ; r0 ) = Com(pp, m1 ; r1 ) ∧ m0 ̸= m1 ] ≤ negl(κ)
+
+Where (m0 , r0 , m1 , r1 ) ← A(pp).
+Construction 3 (Pedersen Commitment). Let Eout be an elliptic curve over Fout with a prime-
+order subgroup Gout ⊆ Eout (Fout ) of order q. The Pedersen commitment scheme for message
+space Fnq and randomness space Fq is defined as:
+   • Setup(1κ ): sample G1 , . . . , Gn , H ←$ Gout and output pp = (G1 , . . . , Gn , H).
+
+   • Com(pp, ⃗m; r): output cm = [r] · H + ni=1 [mi ] · Gi ∈ Gout .
+                                               P
+
+The scheme is perfectly hiding (Def. 4) and computationally binding (Def. 5) under the discrete
+logarithm assumption in Gout .
+Definition 6 (CP-NIZKAoK in the ROM). Let (Setup, Com) be a commitment scheme and let R
+be a relation. A Commit-and-Prove Non-Interactive Zero-Knowledge Argument of Knowledge
+(CP-NIZKAoK) for R with respect to Com in the random oracle model is a pair of PPT algorithms
+(Prove, Verify) with oracle access to a random oracle H. On public parameters pp ← Setup(1κ ):
+   • ProveH (pp, x, w, ⃗  m, ⃗r) → π.
+                      cm, ⃗
+
+   • VerifyH (pp, x, ⃗
+                    cm, σ) → {accept, reject}
+Define the commit-and-prove relation:
+
+                 Rcp := {((x, ⃗
+                             cm), (w, ⃗
+                                      m, ⃗r))| ⃗           m; ⃗r) ∧ (x, w, ⃗
+                                              cm = Com(pp, ⃗               m) ∈ R}
+
+We require completeness, i.e. for every ((x, ⃗
+                                            cm), (w, ⃗
+                                                     m, ⃗r)) ∈ Rcp :
+
+           Pr VerifyH pp, x, ⃗cm, ProveH (pp, x, w, ⃗
+                                                                      
+                                                   cm, ⃗ m, ⃗r) = accept ≥ 1 − negl(κ)
+
+The probability is taken over the choice of H and prover/verifier randomness.
+Definition 7 (Random Oracle Reprogramming). Let H be a random oracle modeled as a lazily-
+sampled table. The reprogramming oracle RePro, on input (a, b), sets H(a) := b, overwriting any
+previously-defined value. All subsequent queries to H (by any party) return the reprogrammed value.
+Definition 8 (Zero-Knowledge). A CP-NIZKAoK (Prove, Verify) (Def. 6) is zero-knowledge if a
+PPT simulator Sim, given only (pp, x, ⃗   cm) and RePro-access to H (Def. 7), produces proofs indistin-
+guishable from real ones: for every PPT A and every ((x, ⃗cm), (w, ⃗
+                                                                   m, ⃗r)) ∈ Rcp :
+                                                     h                              i
+   Pr AH ProveH (pp, x, w, ⃗        m, ⃗r) = 1 − Pr AH SimH,RePro (pp, x, ⃗
+                                             
+                               cm, ⃗                                          cm) = 1 ≤ negl(κ)
+
+Here A sees the H as reprogrammed by Sim in the right-hand experiment.
+Definition 9 (Simulation Extractability). A CP-NIZKAoK (Prove, Verify) (Def. 6) with ZK simulator
+Sim (Def. 8) is simulation extractable if a PPT extractor E, given black-box rewinding access to A
+(including control over H and the simulation oracle), recovers a valid witness from any forgery A
+produces after seeing simulated proofs on statements of its choice. Formally, for every PPT A: sample
+pp ← Setup(1κ ), let H be a random oracle, and give A oracle access to H and to a simulation oracle
+
+ZKSECURITY                                                                                          21
+Sim′ that on query (xi , ⃗cmi ) returns σi ← SimH,RePro (pp, xi , ⃗   cmi ) (so Sim may reprogram H). Let
+QSim = {(xi , ⃗
+              cmi , σi )} collect the simulated triples; A then outputs a forgery (x∗ , ⃗
+                                                                                       cm∗ , σ ∗ ). We require:
+
+                                VerifyH (pp, x∗ , ⃗cm∗ , σ ∗ ) = accept
+                                                                      
+
+                           Pr∧(x∗ , ⃗ cm∗ , σ ∗ ) ∈
+                                                   / QSim               ≤ negl(κ)
+                                                                      
+                                ∧E (pp, x , ⃗
+                                    A       ∗      ∗  ∗
+                                               cm , σ ) = ⊥
+
+On a non-⊥ output, E produces (w, ⃗
+                                  m, ⃗r) with ((x∗ , ⃗
+                                                    cm∗ ), (w, ⃗
+                                                               m, ⃗r)) ∈ Rcp .
+
+Observation 4 (Simulation Extractability (Def. 9) Implies Non-Malleability). An adversary who
+observes a valid proof σ for (x, ⃗
+                                cm) cannot produce a fresh accepting proof σ ′ ̸= σ for the same or a related
+statement: if a simulated proof (indistinguishable from a real proof) could be mauled to produce a new
+proof string, then the extractor must recover a witness for the relation.
+
+Theorem 9 ([DG23, GOP+ 22]). Bulletproofs (viewed as a CP-NIZKAoK with Pedersen commitments)
+is simulation extractable (Def. 9) in the random oracle model under the discrete logarithm assumption.
+
+   The simulation extractability results of [DG23, GOP+ 22] are specific to the standard Bullet-
+proofs protocol; they do not immediately extend to Bulletproofs++ [EKRN24] or the Generalized
+Bulletproofs construction [Fei24]. However, both constructions likely have (k1 , . . . , klog )-special
+soundness and unique response. Dao and Grubbs [DG23] show that multi-round Fiat–Shamir
+compiled protocols satisfying computational special soundness and weak unique response are
+simulation extractable in the ROM; hence it is highly likely that Generalized Bulletproofs is also
+simulation extractable, though a formal proof has not been written.
+
+Construction 4 (Composing a 3-round IP with a CP-NIZKAoK). Let Π = (P, V) be a 3-round
+public-coin IP knowledge-sound for a relation R and complete for an honest sub-relation Rhon ⊆
+R, with transcript (π1 , c, π3 ). Let (Setup, Com) be a commitment scheme and let (Prove, Verify)
+be a CP-NIZKAoK w.r.t. Com for the committed verifier relation:
+                                                                                          
+                                                                                         
+                   RV :=           c  , π3 , (x̃ , π 1 )   V(x̃ , (π 1 , c, π 3 )) = accept
+                                    x    w
+                             |{z} |{z} | {z }
+                                                 ⃗
+                                                 m
+                                                                                           
+
+Matching the triple (x, w, ⃗   m) of Def. 6: the CP-NIZKAoK’s public statement is the challenge
+c, its non-committed witness is the IP’s third message π3 , and the committed message is the
+pair (x̃, π1 ) consisting of the IP statement x̃ and first-round message π1 . The committed witness
+(opening of cm) is therefore (x̃, π1 , r). The composed NIZKAoK Π′ = (P′ , V′ ) defined in Fig. 3
+is a NIZKAoK in the ROM, knowledge-sound for the committed relation:
+
+                 Rcm := {(cm, (x, π1 , w, r))|cm = Com(pp, (x, π1 ); r) ∧ (x, w) ∈ R}
+
+And complete for the committed honest relation Rcm,hon ⊆ Rcm :
+                     n                                                             o
+         Rcm,hon := (cm, (x, π1 , w, r)) cm = Com(pp, (x, π1 ); r) ∧ (x, w) ∈ Rhon
+
+
+Theorem 10. Let Π = (P, V) be a 3-round public-coin IP knowledge-sound for R with knowledge
+error ϵs and straight-line extractor EΠ . Let Π be complete for Rhon ⊆ R with completeness error ϵc .
+Let (Setup, Com) be a perfectly hiding commitment scheme whose commitment output is uniform over
+its range. Let (Prove, Verify) be a CP-NIZKAoK for RV w.r.t. Com that is zero-knowledge (Def. 8)
+and simulation extractable (Def. 9) with extraction advantage ϵse . Then the composed protocol Π′
+(Construction 4) is a NIZKAoK in the ROM, knowledge-sound for Rcm with knowledge error:
+
+                                                 Q · ϵs + ϵse
+
+ZKSECURITY                                                                                                  22
+                 P′ (pp, x, w)                              V′ (pp, cm, σ)
+                 // First-Round Message                     // Derive Challenge
+                 ρ ←$ {0, 1}∗                               c ← H(cm)
+                           x w; ρ)
+                 π1 ← P1 ( ,                                // Verify CP-NIZKAoK Proof
+                 // Commit and Derive Challenge             return VerifyH (pp, c, cm, σ)
+                             ∗
+                 r ←$ {0, 1}
+                                   x
+                 cm ← Com(pp, ( , π1 ); r)
+                 c ← H(cm)
+                 // Third-Round Message
+                           x w, c; ρ)
+                 π3 ← P3 ( ,
+                 // CP-NIZKAoK Proof
+                                               x
+                 σ ← ProveH (pp, c, π3 , cm, ( , π1 ), r)
+                 return (cm, σ)
+
+      Figure 3: Composed NIZKAoK from a 3-round public-coin IP and a CP-NIZKAoK.
+
+
+Where Q is the number of queries that the malicious prover A makes to H. The Q · ϵs term is a union
+bound over A’s Q candidate first-round messages. The composition is complete for Rcm,hon with error
+ϵc + negl(κ) (assuming the CP-NIZKAoK is complete), and zero-knowledge w.r.t. real proofs of Rcm,hon
+with simulator-distance at most ϵc + δzk + Q/|Ccm |, where δzk is the maximum distinguishing advantage
+against the CP-NIZKAoK simulator (Def. 8) and |Ccm | is the size of the commitment range.
+
+Proof of Simulation Extractability. We construct a simulator and extractor for Π′ .
+Simulator. The simulator Sim′ for Π′ , on input pp, works as follows: sample cm ← Com(pp, ⃗0; r)
+for fresh r (a commitment to a zero message of the appropriate length, covering both the
+first-round message and IP-statement slots), sample a fresh challenge c, program RePro(cm, c)
+so that subsequent queries return H(cm) = c, and invoke the CP-NIZKAoK simulator σ ←
+SimH,RePro (pp, c, cm), which itself may further reprogram H. Output (cm, σ).
+Simulator Distance. Fix (cm, (x, π1 , w, r)) ∈ Rcm,hon used to generate the distribution of real
+proofs. We bound the statistical/computational distance between the real prover output and
+Sim′ (pp) via a sequence of hybrids. Let δzk denote the maximum distinguishing advantage
+against the CP-NIZKAoK simulator (Def. 8).
+
+   • H0 : the real execution of P′ (Fig. 3). Namely, π1 ← P1 (x, w; ρ), cm ← Com(pp, (x, π1 ); r),
+     c ← H(cm), π3 ← P3 (x, w, c; ρ), σ ← ProveH (pp, c, π3 , cm, (x, π1 ), r); output (cm, σ).
+
+   • H1 : as H0 , but replace Prove with the CP-NIZKAoK simulator: σ ← SimH,RePro (pp, c, cm).
+     Let E be the event that the IP transcript (π1 , c, π3 ) is accepting under V; since (x, w) ∈
+     Rhon , Pr[¬E] ≤ ϵc . Conditioned on E, the tuple ((c, cm), (π3 , (x, π1 ), r)) ∈ Rcp , so zero-
+     knowledge of the CP-NIZKAoK (Def. 8) bounds the conditional advantage by δzk . Hence
+     the statistical distance between H0 and H1 is at most ϵc + δzk .
+
+   • H2 : as H1 , but commit to zero: cm ← Com(pp, ⃗0; r). By perfect hiding (Def. 4), Com(pp, (x, π1 ); r)
+     and Com(pp, ⃗0; r) are identically distributed over r; hence the joint distribution of (cm, σ)
+     is unchanged, and H1 and H2 are identically distributed.
+
+   • H3 = Sim′ (pp): as H2 , but instead of c ← H(cm), sample c fresh and program RePro(cm, c).
+     Since cm is a freshly sampled commitment independent of A’s view, H(cm) is uniformly
+     random and unqueried except when cm collides with a prior H query; over uniform cm
+     this occurs with probability at most Q/|Ccm |, where Q bounds the total number of H
+     queries (by the distinguisher and the CP-NIZKAoK simulator) and |Ccm | is the size of
+
+ZKSECURITY                                                                                         23
+      the commitment range. Conditioned on no collision, the two ways of obtaining c induce
+      the same distribution on (c, H), so the statistical distance between H2 and H3 is at most
+      Q/|Ccm |.
+
+The total distance between the real view and Sim′ (pp) is therefore at most ϵc + δzk + Q/|Ccm |.
+Extractor. Suppose a PPT adversary A making at most Q queries to H, with oracle access to Sim′
+and H, outputs a fresh accepting proof (cm∗ , σ ∗ ) for Π′ , where c∗ = H(cm∗ ), with probability
+ϵA . Since Sim′ is implemented using the CP-NIZKAoK simulator Sim (which has RePro-access
+to H), A is a valid adversary in the CP-NIZKAoK simulation extractability game (Def. 9). Run
+A once to obtain an accepting (cm∗ , σ ∗ ) and invoke the CP-NIZKAoK extractor on σ ∗ to obtain
+(x∗ , π1∗ , π3∗ , r∗ ) satisfying:
+
+                 cm∗ = Com(pp, (x∗ , π1∗ ); r∗ )   and   V(x∗ , (π1∗ , c∗ , π3∗ )) = accept
+
+Except with probability ϵse . Feed the single accepting transcript (π1∗ , c∗ , π3∗ ) into the straight-line
+IP extractor EΠ to obtain w∗ with (x∗ , w∗ ) ∈ R, except with the IP knowledge error. Union-
+bounding over A’s Q candidate commitments cmj (each fixing a first-round message via its
+CP-NIZKAoK opening), the extractor outputs (x∗ , π1∗ , w∗ , r∗ ) as the witness for Rcm , with
+knowledge error Q · ϵs + ϵse .
+
+    The factor Q is inherent to any Fiat–Shamir compilation: A can try any of its Q candidate
+first-round messages. This is asymptotically tight: there is a concrete adversary matching it,
+which simply queries the oracle Q times on Q commitments, hoping to trigger one of the bad
+events in the original MA protocol.
+    The interactive proof Π need not be zero-knowledge or non-malleable; in fact, in our appli-
+cation Π is neither. This is because the outer NIZK and commitment provide zero-knowledge,
+by hiding the transcript and providing a simulation trapdoor. The commitment scheme also
+does not need to be non-malleable; in the concrete instantiation with Pedersen commitments
+(Construction 3), it is not. Intuitively this is because the commitment is made non-malleable by
+the fact that it is provided along with a simulation extractable NIZK proving knowledge of its
+opening.
+
+  Comments On Prior Work.
+  Prior works have reflected upon the “mauling” of valid proofs/witnesses for the MA/IP of Eagen/Bassa
+  [Eag22] [Bas25]. We observe that such reflections are not needed to conclude anything about the
+  non-malleability (or simulation extractability) of the resulting composition as shown above: the outer
+  NIZK (e.g. Bulletproofs) eliminates any malleability of the inner proof/commitments.
+
+Construction 5 (NIZKAoK for RdlogFq ,E(Fq ) [B]). We construct a NIZKAoK knowledge-sound for
+                                             ⃗
+the discrete log relation Rdlog  B] and complete for Rdlog-honest [ ⃗
+                                [⃗
+                            Fq ,E(Fq )                              B] ⊆ Rdlog
+                                                           Fq ,E(Fq ),d,S       B] (Section 2),
+                                                                               [⃗    Fq ,E(Fq )
+                                                dlog                      dlog-honest
+by instantiating Construction 4 with R := RFq ,E(Fq ) [B], R
+                                                       ⃗     hon  := RFq ,E(Fq ),d,S [B],⃗ the three-round
+IP ΠIP              ⃗ (Fig. 2), Pedersen commitments over Gout (Construction 3), and Bulletproofs as
+     Fq ,E(Fq ),d,S,B
+the CP-NIZKAoK. Motivated by the notes of Parker [Par24b] we fix S = SParker for concreteness.
+Recall that the first-round message is π1 = ( ⃗ m, a(x), b(x)) ∈ Fkq × Fq [x]2 , the verifier challenge
+is c = (A0 , A1 ) ∈ E(Fq )2 , and the third-round message is π3 = (h0 , h1 , h2 , g) ∈ F4q . The degree
+bound degE (D) ≤ d fixes the maximum degrees of a(x) and b(x); their coefficient vectors
+are zero-padded to this fixed length so that the Pedersen commitment always commits to a
+vector in Fnq for a fixed n determined by d and k. The concrete committed verifier relation RV
+(Construction 4) is obtained by expanding the checks of V in ΠIP                   ⃗ (Fig. 2). Writing
+                                                                         Fq ,E(Fq ),d,S,B
+D(x, y) = a(x)−b(x)y, A2 = −(A0 +A1 ), and L for the line through A0 , A1 , A2 ; observe that since
+the Ai are derived from the (public) challenge and the Bj are protocol parameters, the verifier
+
+ZKSECURITY                                                                                             24
+can compute αi = dx(A dz
+                         i)
+                             and βj = L(B   −1
+                                              j)
+                                                 outside the NIZK. The relation RV is parameterized by
+these quantities and the Bulletproofs circuit only needs to check the linear and multiplicative
+relations over the committed values, including the IP statement P = (x(P ), y(P )) ∈ F2q , which
+is committed alongside the first-round message:
+
+                                                                y(P )2 = x(P )3 + A · x(P ) + B
+                                                                                                     
+        
+                                                                                                     
+                                                                                                      
+                                                                P2                      Pk
+                                                                            ·                   ·
+                                                                                                     
+        
+        
+                                                                   i=0 h i   α i = g +  j=1 βj   m j
+                                                                                                      
+                                                                                                      
+                                                                                                      
+                ⃗                                               hi · D(Ai ) = D (Ai ) for i = 0, 1, 2
+                                                                                    ′
+                                                              
+  RV =      (⃗
+             α, β, c), (h0 , h1 , h2 , g), (P, ⃗
+                                               m, a(x), b(x))
+                x             w
+           | {z } |          {z        } |        {z       }                                         
+                                                                g ·  L(−P    ) =  −1
+                                                                                                     
+        
+        
+                                                  ⃗
+                                                   m                                                  
+                                                                                                      
+                                                                                                      
+                                                                                                     
+                                                                a1 = 1
+
+The composed protocol is shown in Fig. 4.
+
+                                                                                           α and β⃗ into
+Observation 5. It is important that an implementation absorb the out-of-circuit quantities ⃗
+the Bulletproofs transcript for provable soundness: they define part of the relation.
+    With S = SParker , the committed verifier relation RV of Construction 5 coincides, up to
+notation, with the "DiscreteLogG " gadget of Parker [Par24b, §5.1.4]. The cost of proving an
+elliptic curve inner product with a fixed basis is 7 multiplicative constraints, broken down in Fig. 5.
+Additionally the prover must commit to d + k + 2 field elements, which for a 256-bit curve/field
+with k = 256 and d = k + 1 = 257 as in the binary decomposition of Example 2, becomes 515.
+
+
+References
+[AFK23]     Thomas Attema, Serge Fehr, and Michael Klooß. Fiat-Shamir transformation of
+            multi-round interactive proofs (extended version). Journal of Cryptology, 36(4):36,
+            October 2023.
+
+[Bas24a]    Alp Bassa. On the use of logarithmic derivatives in Eagen’s proof of sums of points.
+            Veridise Technical Report, 2024. Link.
+
+[Bas24b]    Alp Bassa. Soundness proof for Eagen’s proof of sums of points. Veridise Technical
+            Report, 2024. Link.
+
+[Bas25]     Alp Bassa. Soundness proof for an interactive protocol for the discrete logarithm
+            relation. Veridise Technical Report, 2025. Link.
+
+[BG93]      Mihir Bellare and Oded Goldreich. On defining proofs of knowledge. In Ernest F.
+            Brickell, editor, CRYPTO’92, volume 740 of LNCS, pages 390–420. Springer, Berlin,
+            Heidelberg, August 1993.
+
+[DG23]      Quang Dao and Paul Grubbs. Spartan and bulletproofs are simulation-extractable
+            (for free!). In Carmit Hazay and Martijn Stam, editors, EUROCRYPT 2023, Part II,
+            volume 14005 of LNCS, pages 531–562. Springer, Cham, April 2023.
+
+[DKL14]     Zeev Dvir, János Kollár, and Shachar Lovett. Variety evasive sets. Computational
+            Complexity, 23(4):509–529, 2014.
+
+[Eag22]     Liam Eagen. Zero knowledge proofs of elliptic curve inner products from principal
+            divisors and weil reciprocity. Cryptology ePrint Archive, Report 2022/596, 2022.
+
+[EKRN24] Liam Eagen, Sanket Kanjalkar, Tim Ruffing, and Jonas Nick. Bulletproofs++: Next
+         generation confidential transactions via reciprocal set membership arguments. In
+         Marc Joye and Gregor Leander, editors, EUROCRYPT 2024, Part V, volume 14655 of
+         LNCS, pages 249–279. Springer, Cham, May 2024.
+
+ZKSECURITY                                                                                           25
+    P′ (pp, x = P, w = ⃗n)                                     V′ (pp, cm, σ)
+    // First-Round Message                                     // Derive Challenge
+    Let D(x, y) = a(x) − b(x)y ∈ Fq [x, y] st.                 (A0 , A1 ) ← H(cm)
+                           P
+      (D(x, y))0 = (−P ) + ni · (Bi )                          A2 ← −(A0 + A1 )
+    m ← ⃗n mod q ∈ Fkq
+    ⃗                                                          Let L be the line through A0 , A1 , A2
+    Let ⃗                  m, coeffs(a), coeffs(b)) ∈ Fn+2
+        m = (x(P ), y(P ), ⃗                                   // Compute Out-of-Circuit Quantities
+                                                       q
+    // Commit and Derive Challenge                             αi ← dx(A
+                                                                      dz
+                                                                         i)
+                                                                                for i = 0, 1, 2
+        r ←$ Fq                                                      −1
+                                                               βj ← L(Bj)
+                                                                                for j = 1, . . . , k
+                       Pn+2
+    cm ← [r] · H +       i=1 [mi ] · Gi ∈ Gout                 // Verify Bulletproofs Proof
+    (A0 , A1 ) ← H(cm)                                         return BP.VerifyH (
+    // Third-Round Message                                       pp, (⃗  ⃗ (A0 , A1 )), cm, σ
+                                                                      α, β,
+    A2 ← −(A0 + A1 )                                           )
+    Let L be the line through A0 , A1 , A2
+    h0 ← D′ (A0 )/D(A0 )
+    h1 ← D′ (A1 )/D(A1 )
+    h2 ← D′ (A2 )/D(A2 )
+     g ← −1/L(−P )
+    // Compute Out-of-Circuit Quantities
+    αi ← dx(A
+           dz
+              i)
+                      for i = 0, 1, 2
+          −1
+    βj ← L(B j)
+                     for j = 1, . . . , k
+    // Bulletproofs Proof
+     σ ← BP.ProveH (
+         pp,
+         x′ = (⃗α, β,
+                   ⃗ (A0 , A1 )),
+         w = (h0 , h1 , h2 , g),
+           ′
+
+         cm, ⃗
+             m, r
+    )
+    return (cm, σ)
+
+Figure 4: Concrete NIZKAoK for Rdlog
+                                Fq ,E(Fq ) [B]: composition of Π
+                                            ⃗                    IP
+                                                                                             ⃗   (Fig. 2) with
+                                                                              Fq ,E(Fq ),d,S,B
+Bulletproofs and Pedersen commitments (Construction 3). The statement P is committed
+alongside the first-round message, so the composed verifier V′ takes only (cm, σ) as input. The
+proof σ establishes that the committed IP statement and first-round message, together with the
+helpers (h0 , h1 , h2 , g), satisfy all verifier checks of ΠIP ⃗.
+                                                         Fq ,E(Fq ),d,S,B
+
+
+
+
+ZKSECURITY                                                                                                 26
+                                 Constraint                   Mul. Count
+                       y(P )2 = x(P )3 + A · x(P ) + B             3
+                     hi · D(Ai ) = D′ (Ai ) for i = 0, 1, 2        3
+                              g · L(−P ) = −1                      1
+                                     a1 = 1                        0
+                      P2                   Pk
+                         i=0 hi · αi = g +  j=1 βj · mj            0
+                                    Total                         7
+
+
+             Figure 5: Breakdown of the R1CS constraint costs of Construction 5.
+
+
+[EOT10]    Jordan S. Ellenberg, Richard Oberlin, and Terence Tao. The Kakeya set and maximal
+           conjectures for algebraic varieties over finite fields. Mathematika, 56(1):1–25, 2010.
+
+[Fei24]    Aaron Feickert. Generalized bulletproofs. Technical Report, 2024. Link.
+
+[GMR85] Shafi Goldwasser, Silvio Micali, and Charles Rackoff. The knowledge complexity of
+        interactive proof-systems (extended abstract). In 17th ACM STOC, pages 291–304.
+        ACM Press, May 1985.
+
+[GOP+ 21] Chaya Ganesh, Claudio Orlandi, Mahak Pancholi, Akira Takahashi, and Daniel
+          Tschudi. Fiat–shamir bulletproofs are non-malleable (in the algebraic group model).
+          Cryptology ePrint Archive, Report 2021/1393, 2021.
+
+[GOP+ 22] Chaya Ganesh, Claudio Orlandi, Mahak Pancholi, Akira Takahashi, and Daniel
+          Tschudi. Fiat-Shamir bulletproofs are non-malleable (in the algebraic group model).
+          In Orr Dunkelman and Stefan Dziembowski, editors, EUROCRYPT 2022, Part II,
+          volume 13276 of LNCS, pages 397–426. Springer, Cham, May / June 2022.
+
+[GSSS25a] Brandon Goodell, Rigo Salazar, Freeman Slaughter, and Luke Szramowski. A further
+          review of the DL gadget of interest. Cypher Stack Technical Report, 2025. Link.
+
+[GSSS25b] Brandon Goodell, Rigo Salazar, Freeman Slaughter, and Luke Szramowski. A review
+          of the Veridise discrete logarithm relation gadget. Cypher Stack Technical Report,
+          2025. Link.
+
+[Maa04]    Martijn Maas. Pairing-based cryptography. Master’s thesis, Technische Universiteit
+           Eindhoven, January 2004.
+
+[Par24a]   Luke “Kayaba” Parker. FCMP++. manuscript, May 2024. May 8, 2024. Link.
+
+[Par24b]   Luke “Kayaba” Parker. A R1CS gadget for a 2k -bit scaling of a fixed generator in 7
+           multiplicative constraints. manuscript, May 2024. May 9, 2024. Link.
+
+[Sil86]    Joseph H. Silverman. The Arithmetic of Elliptic Curves, volume 106 of Graduate Texts
+           in Mathematics. Springer-Verlag, New York, 1986.
+
+
+
+
+ZKSECURITY                                                                                    27
+

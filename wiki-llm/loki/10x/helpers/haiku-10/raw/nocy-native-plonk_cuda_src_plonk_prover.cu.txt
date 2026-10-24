@@ -1,0 +1,3836 @@
+#include "plonk_prover.h"
+
+#include "blake2b.h"
+#include "chacha20.h"
+#include "domain_ops.h"
+#include "graph_eval.h"
+#include "kzg.h"
+#include "prover_utils.h"
+#include "transcript.h"
+
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <cstring>
+#include <map>
+#include <mutex>
+#include <numeric>
+#include <set>
+
+namespace midnight_plonk {
+namespace {
+
+static void derive_seed(uint8_t out[32], const uint8_t seed[32], const char *label) {
+  Blake2b hasher;
+  hasher.init_keyed(reinterpret_cast<const uint8_t *>(label), std::strlen(label), 32);
+  hasher.update(seed, 32);
+  hasher.final(out);
+}
+
+static bool h_debug_enabled() {
+  const char *env = std::getenv("MIDNIGHT_CUDA_H_DEBUG");
+  return env && std::strcmp(env, "1") == 0;
+}
+
+static bool sanity_enabled() {
+  const char *env = std::getenv("MIDNIGHT_CUDA_SANITY");
+  return env && std::strcmp(env, "1") == 0;
+}
+
+static bool timing_enabled() {
+  static int enabled = -1;
+  if (enabled < 0) {
+    const char *env = std::getenv("MIDNIGHT_CUDA_TIMING");
+    enabled = (env && std::strcmp(env, "1") == 0) ? 1 : 0;
+  }
+  return enabled == 1;
+}
+
+struct TimingEntry {
+  const char *label;
+  std::chrono::steady_clock::duration duration;
+};
+
+static void log_timings(const std::vector<TimingEntry> &timings) {
+  if (!timing_enabled()) {
+    return;
+  }
+  for (const auto &entry : timings) {
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(entry.duration).count();
+    std::fprintf(stderr, "timing: %s=%lldus\n", entry.label, static_cast<long long>(us));
+  }
+}
+
+static bool fr_equal(const Fr &a, const Fr &b) {
+  return a.limbs[0] == b.limbs[0] && a.limbs[1] == b.limbs[1] && a.limbs[2] == b.limbs[2] &&
+         a.limbs[3] == b.limbs[3];
+}
+
+static void debug_log_h_values(const char *stage, const std::vector<Fr> &values) {
+  if (!h_debug_enabled()) {
+    return;
+  }
+  const size_t size = values.size();
+  if (size == 0) {
+    return;
+  }
+  std::vector<size_t> idxs;
+  idxs.push_back(0);
+  if (size > 1) {
+    idxs.push_back(1);
+    idxs.push_back(size / 2);
+    idxs.push_back(size - 1);
+  }
+  std::sort(idxs.begin(), idxs.end());
+  idxs.erase(std::unique(idxs.begin(), idxs.end()), idxs.end());
+  std::fprintf(stderr, "h debug: stage=%s size=%zu\n", stage, size);
+  for (size_t idx : idxs) {
+    char hex[65];
+    fr_to_hex_be(values[idx], hex);
+    std::fprintf(stderr, "h debug: stage=%s idx=%zu value=%s\n", stage, idx, hex);
+  }
+}
+
+static void debug_log_rows(const char *label, const std::vector<Fr> &values, size_t n,
+                           size_t unusable_rows_start) {
+  if (!h_debug_enabled() || values.empty()) {
+    return;
+  }
+  std::vector<size_t> rows;
+  rows.push_back(0);
+  if (n > 1) {
+    rows.push_back(1);
+    rows.push_back(unusable_rows_start);
+    rows.push_back(n - 1);
+  }
+  std::sort(rows.begin(), rows.end());
+  rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
+  for (size_t row : rows) {
+    if (row >= values.size()) {
+      continue;
+    }
+    char hex[65];
+    fr_to_hex_be(values[row], hex);
+    std::fprintf(stderr, "h debug: %s row=%zu value=%s\n", label, row, hex);
+  }
+}
+
+static bool graph_gpu_enabled() {
+  static int enabled = -1;
+  if (enabled < 0) {
+    const char *env = std::getenv("MIDNIGHT_CUDA_GRAPH_GPU");
+    enabled = (env && std::strcmp(env, "0") == 0) ? 0 : 1;
+  }
+  return enabled == 1;
+}
+
+static bool graph_gpu_debug_enabled() {
+  const char *env = std::getenv("MIDNIGHT_CUDA_GRAPH_DEBUG");
+  return env && std::strcmp(env, "1") == 0;
+}
+
+constexpr uint32_t kGraphMaxRotations = 512;
+constexpr uint32_t kGraphMaxIntermediates = 1024;
+
+struct DeviceGraphValueSource {
+  uint8_t tag = 0;
+  uint32_t a = 0;
+  uint32_t b = 0;
+};
+
+struct DeviceGraphCalculation {
+  uint32_t target = 0;
+  uint8_t op = 0;
+  uint8_t pad[3] = {0, 0, 0};
+  DeviceGraphValueSource lhs;
+  DeviceGraphValueSource rhs;
+  uint32_t parts_offset = 0;
+  uint32_t parts_len = 0;
+  DeviceGraphValueSource factor;
+};
+
+struct DevicePermutationColumn {
+  uint8_t column_type = 0;
+  uint32_t index = 0;
+};
+
+struct DeviceGraph {
+  Fr *constants = nullptr;
+  int32_t *rotations = nullptr;
+  DeviceGraphCalculation *calculations = nullptr;
+  DeviceGraphValueSource *parts = nullptr;
+  uint32_t num_constants = 0;
+  uint32_t num_rotations = 0;
+  uint32_t num_calculations = 0;
+  uint32_t num_intermediates = 0;
+  uint32_t last_target = 0;
+};
+
+struct GraphColumnMap {
+  std::vector<int32_t> fixed_map;
+  std::vector<int32_t> advice_map;
+  std::vector<int32_t> instance_map;
+  std::vector<uint32_t> fixed_indices;
+  std::vector<uint32_t> advice_indices;
+  std::vector<uint32_t> instance_indices;
+};
+
+struct GraphGpuCache {
+  const ProverKey *pk = nullptr;
+  GraphColumnMap base_map;
+  GraphColumnMap ext_map;
+  DeviceGraph custom_graph;
+  std::vector<DeviceGraph> lookup_combined_graphs;
+  std::vector<DeviceGraph> lookup_input_graphs;
+  std::vector<DeviceGraph> lookup_table_graphs;
+  DevicePermutationColumn *perm_columns = nullptr;
+  uint32_t perm_columns_len = 0;
+  Fr *perm_product_cosets = nullptr;
+  size_t perm_product_len = 0;
+  Fr *perm_cosets = nullptr;
+  Fr *l0 = nullptr;
+  Fr *l_last = nullptr;
+  Fr *l_active_row = nullptr;
+  Fr *fixed_base = nullptr;
+  size_t fixed_base_len = 0;
+  Fr *fixed_ext = nullptr;
+  size_t fixed_ext_len = 0;
+  Fr *advice_ext = nullptr;
+  size_t advice_ext_len = 0;
+  Fr *instance_ext = nullptr;
+  size_t instance_ext_len = 0;
+  Fr *values_buf = nullptr;
+  size_t values_len = 0;
+  Fr *lookup_values_buf = nullptr;
+  size_t lookup_values_len = 0;
+  Fr *lookup_coset_product = nullptr;
+  Fr *lookup_coset_input = nullptr;
+  Fr *lookup_coset_table = nullptr;
+  size_t lookup_coset_len = 0;
+  Fr *beta_terms = nullptr;
+  size_t beta_terms_len = 0;
+  Fr *t_evals = nullptr;
+  size_t t_evals_len = 0;
+  Fr *fft_scratch = nullptr;
+  size_t fft_scratch_len = 0;
+  size_t base_stride = 0;
+  size_t ext_stride = 0;
+};
+
+struct GraphGpuInputs {
+  std::unique_lock<std::mutex> lock;
+  GraphGpuCache *cache = nullptr;
+  bool enabled = false;
+  Fr *d_challenges = nullptr;
+  size_t challenges_len = 0;
+  Fr *advice_base = nullptr;
+  Fr *instance_base = nullptr;
+  Fr *advice_ext = nullptr;
+  Fr *instance_ext = nullptr;
+  Fr *h_values = nullptr;
+  size_t h_values_len = 0;
+};
+
+static std::mutex graph_gpu_mutex;
+static GraphGpuCache graph_gpu_cache;
+
+__device__ __forceinline__ uint32_t rotation_index_device(uint32_t idx, int32_t rot,
+                                                          int32_t rot_scale, uint32_t isize) {
+  uint32_t mask = isize - 1;
+  int64_t delta = static_cast<int64_t>(rot) * static_cast<int64_t>(rot_scale);
+  uint32_t offset = static_cast<uint32_t>(idx) + static_cast<uint32_t>(delta);
+  return offset & mask;
+}
+
+__device__ __forceinline__ Fr value_from_source_device(
+    const DeviceGraphValueSource &source, const uint32_t *rotation_indices,
+    const Fr *constants, const Fr *intermediates, const Fr *fixed_values,
+    const Fr *advice_values, const Fr *instance_values, const Fr *challenges,
+    const Fr &beta, const Fr &gamma, const Fr &theta, const Fr &y,
+    const Fr &previous_value, uint32_t stride) {
+  switch (source.tag) {
+    case 0:
+      return constants[source.a];
+    case 1:
+      return intermediates[source.a];
+    case 2: {
+      uint32_t row = rotation_indices[source.b];
+      return fixed_values[source.a * stride + row];
+    }
+    case 3: {
+      uint32_t row = rotation_indices[source.b];
+      return advice_values[source.a * stride + row];
+    }
+    case 4: {
+      uint32_t row = rotation_indices[source.b];
+      return instance_values[source.a * stride + row];
+    }
+    case 5:
+      return challenges[source.a];
+    case 6:
+      return beta;
+    case 7:
+      return gamma;
+    case 8:
+      return theta;
+    case 9:
+      return y;
+    case 10:
+      return previous_value;
+    default: {
+      Fr zero{};
+      return zero;
+    }
+  }
+}
+
+__device__ __forceinline__ Fr evaluate_graph_value_device(
+    const DeviceGraph &graph, const Fr *fixed_values, const Fr *advice_values,
+    const Fr *instance_values, const Fr *challenges, const Fr &beta, const Fr &gamma,
+    const Fr &theta, const Fr &y, const Fr &previous_value, uint32_t idx, int32_t rot_scale,
+    uint32_t stride, uint32_t isize) {
+  if (graph.num_rotations > kGraphMaxRotations ||
+      graph.num_intermediates > kGraphMaxIntermediates) {
+    return Fr{};
+  }
+  uint32_t rotation_indices[kGraphMaxRotations];
+  for (uint32_t i = 0; i < graph.num_rotations; ++i) {
+    rotation_indices[i] = rotation_index_device(idx, graph.rotations[i], rot_scale, isize);
+  }
+
+  Fr intermediates[kGraphMaxIntermediates];
+  for (uint32_t i = 0; i < graph.num_intermediates; ++i) {
+    intermediates[i] = Fr{};
+  }
+
+  for (uint32_t i = 0; i < graph.num_calculations; ++i) {
+    const auto &calc = graph.calculations[i];
+    Fr result{};
+    switch (calc.op) {
+      case 0: {
+        Fr a = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        Fr b = value_from_source_device(calc.rhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        fr_add(result, a, b);
+        break;
+      }
+      case 1: {
+        Fr a = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        Fr b = value_from_source_device(calc.rhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        fr_sub(result, a, b);
+        break;
+      }
+      case 2: {
+        Fr a = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        Fr b = value_from_source_device(calc.rhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        fr_mul(result, a, b);
+        break;
+      }
+      case 3: {
+        Fr a = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        fr_mul(result, a, a);
+        break;
+      }
+      case 4: {
+        Fr a = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        fr_add(result, a, a);
+        break;
+      }
+      case 5: {
+        Fr a = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                        intermediates, fixed_values, advice_values,
+                                        instance_values, challenges, beta, gamma,
+                                        theta, y, previous_value, stride);
+        Fr zero{};
+        fr_sub(result, zero, a);
+        break;
+      }
+      case 6: {
+        Fr value = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                            intermediates, fixed_values, advice_values,
+                                            instance_values, challenges, beta, gamma,
+                                            theta, y, previous_value, stride);
+        Fr factor = value_from_source_device(calc.factor, rotation_indices, graph.constants,
+                                             intermediates, fixed_values, advice_values,
+                                             instance_values, challenges, beta, gamma,
+                                             theta, y, previous_value, stride);
+        for (uint32_t p = 0; p < calc.parts_len; ++p) {
+          const auto &part = graph.parts[calc.parts_offset + p];
+          Fr part_value = value_from_source_device(part, rotation_indices, graph.constants,
+                                                   intermediates, fixed_values, advice_values,
+                                                   instance_values, challenges, beta, gamma,
+                                                   theta, y, previous_value, stride);
+          Fr tmp;
+          fr_mul(tmp, value, factor);
+          fr_add(value, tmp, part_value);
+        }
+        result = value;
+        break;
+      }
+      case 7: {
+        result = value_from_source_device(calc.lhs, rotation_indices, graph.constants,
+                                          intermediates, fixed_values, advice_values,
+                                          instance_values, challenges, beta, gamma,
+                                          theta, y, previous_value, stride);
+        break;
+      }
+      default: {
+        Fr zero{};
+        result = zero;
+        break;
+      }
+    }
+    if (calc.target < graph.num_intermediates) {
+      intermediates[calc.target] = result;
+    }
+  }
+
+  if (graph.num_calculations > 0 && graph.last_target < graph.num_intermediates) {
+    return intermediates[graph.last_target];
+  }
+  return Fr{};
+}
+
+__global__ void graph_eval_kernel(DeviceGraph graph, const Fr *fixed_values,
+                                  const Fr *advice_values, const Fr *instance_values,
+                                  const Fr *challenges, Fr beta, Fr gamma, Fr theta, Fr y,
+                                  Fr previous_value, Fr *out, uint32_t stride,
+                                  int32_t rot_scale, uint32_t isize) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= stride) {
+    return;
+  }
+  out[idx] = evaluate_graph_value_device(graph, fixed_values, advice_values, instance_values,
+                                         challenges, beta, gamma, theta, y, previous_value, idx,
+                                         rot_scale, stride, isize);
+}
+
+__global__ void permutation_kernel(Fr *values, const Fr *perm_product_cosets, uint32_t perm_sets,
+                                   const Fr *perm_cosets, const DevicePermutationColumn *columns,
+                                   uint32_t columns_len, const Fr *advice_cosets,
+                                   const Fr *fixed_cosets, const Fr *instance_cosets,
+                                   const Fr *beta_terms, Fr delta_start, Fr delta_const,
+                                   const Fr *l0, const Fr *l_last, const Fr *l_active_row,
+                                   Fr beta, Fr gamma, Fr y, uint32_t size, int32_t rot_scale,
+                                   int32_t last_rotation, uint32_t chunk_len) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= size) {
+    return;
+  }
+  if (!values || !perm_product_cosets || !perm_cosets || !columns || !beta_terms || !l0 ||
+      !l_last || !l_active_row || chunk_len == 0 || columns_len == 0 || perm_sets == 0) {
+    return;
+  }
+
+  uint32_t r_next = rotation_index_device(idx, 1, rot_scale, size);
+  uint32_t r_last = rotation_index_device(idx, last_rotation, rot_scale, size);
+
+  Fr value = values[idx];
+  Fr one = fr_one();
+
+  const Fr *first_set = perm_product_cosets;
+  const Fr *last_set = perm_product_cosets + (perm_sets - 1) * size;
+
+  Fr tmp;
+  fr_sub(tmp, one, first_set[idx]);
+  fr_mul(tmp, tmp, l0[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, tmp);
+
+  Fr last_eval = last_set[idx];
+  Fr last_sq;
+  fr_mul(last_sq, last_eval, last_eval);
+  fr_sub(last_sq, last_sq, last_eval);
+  fr_mul(last_sq, last_sq, l_last[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, last_sq);
+
+  if (perm_sets > 1) {
+    for (uint32_t set_idx = 1; set_idx < perm_sets; ++set_idx) {
+      const Fr *set_coset = perm_product_cosets + set_idx * size;
+      const Fr *prev_coset = perm_product_cosets + (set_idx - 1) * size;
+      Fr diff;
+      fr_sub(diff, set_coset[idx], prev_coset[r_last]);
+      fr_mul(diff, diff, l0[idx]);
+      fr_mul(value, value, y);
+      fr_add(value, value, diff);
+    }
+  }
+
+  Fr current_delta;
+  fr_mul(current_delta, delta_start, beta_terms[idx]);
+
+  uint32_t col_offset = 0;
+  while (col_offset < columns_len) {
+    uint32_t chunk_end = col_offset + chunk_len;
+    if (chunk_end > columns_len) {
+      chunk_end = columns_len;
+    }
+    uint32_t set_idx = col_offset / chunk_len;
+    const Fr *set_coset = perm_product_cosets + set_idx * size;
+
+    Fr left = set_coset[r_next];
+    for (uint32_t col_idx = col_offset; col_idx < chunk_end; ++col_idx) {
+      DevicePermutationColumn col = columns[col_idx];
+      const Fr *values_col = nullptr;
+      if (col.column_type == 0) {
+        values_col = advice_cosets;
+      } else if (col.column_type == 1) {
+        values_col = fixed_cosets;
+      } else {
+        values_col = instance_cosets;
+      }
+      if (!values_col) {
+        return;
+      }
+      Fr perm_val = perm_cosets[col_idx * size + idx];
+      Fr term;
+      fr_mul(term, perm_val, beta);
+      fr_add(term, term, gamma);
+      fr_add(term, term, values_col[col.index * size + idx]);
+      fr_mul(left, left, term);
+    }
+
+    Fr right = set_coset[idx];
+    for (uint32_t col_idx = col_offset; col_idx < chunk_end; ++col_idx) {
+      DevicePermutationColumn col = columns[col_idx];
+      const Fr *values_col = nullptr;
+      if (col.column_type == 0) {
+        values_col = advice_cosets;
+      } else if (col.column_type == 1) {
+        values_col = fixed_cosets;
+      } else {
+        values_col = instance_cosets;
+      }
+      if (!values_col) {
+        return;
+      }
+      Fr term;
+      fr_add(term, current_delta, gamma);
+      fr_add(term, term, values_col[col.index * size + idx]);
+      fr_mul(right, right, term);
+      Fr next_delta;
+      fr_mul(next_delta, current_delta, delta_const);
+      current_delta = next_delta;
+    }
+
+    Fr diff;
+    fr_sub(diff, left, right);
+    fr_mul(diff, diff, l_active_row[idx]);
+    fr_mul(value, value, y);
+    fr_add(value, value, diff);
+
+    col_offset = chunk_end;
+  }
+
+  values[idx] = value;
+}
+
+__global__ void lookup_kernel(Fr *values, const Fr *product_coset, const Fr *permuted_input_coset,
+                              const Fr *permuted_table_coset, const Fr *lookup_values,
+                              const Fr *l0, const Fr *l_last, const Fr *l_active_row, Fr beta,
+                              Fr gamma, Fr y, uint32_t size, int32_t rot_scale) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= size) {
+    return;
+  }
+  if (!values || !product_coset || !permuted_input_coset || !permuted_table_coset || !lookup_values ||
+      !l0 || !l_last || !l_active_row) {
+    return;
+  }
+
+  uint32_t r_next = rotation_index_device(idx, 1, rot_scale, size);
+  uint32_t r_prev = rotation_index_device(idx, -1, rot_scale, size);
+
+  Fr value = values[idx];
+  Fr one = fr_one();
+
+  Fr a_minus_s;
+  fr_sub(a_minus_s, permuted_input_coset[idx], permuted_table_coset[idx]);
+
+  Fr term;
+  fr_sub(term, one, product_coset[idx]);
+  fr_mul(term, term, l0[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, term);
+
+  Fr term2;
+  fr_mul(term2, product_coset[idx], product_coset[idx]);
+  fr_sub(term2, term2, product_coset[idx]);
+  fr_mul(term2, term2, l_last[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, term2);
+
+  Fr left = product_coset[r_next];
+  Fr tmp;
+  fr_add(tmp, permuted_input_coset[idx], beta);
+  fr_mul(left, left, tmp);
+  fr_add(tmp, permuted_table_coset[idx], gamma);
+  fr_mul(left, left, tmp);
+
+  Fr right = product_coset[idx];
+  fr_mul(right, right, lookup_values[idx]);
+
+  Fr diff;
+  fr_sub(diff, left, right);
+  fr_mul(diff, diff, l_active_row[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, diff);
+
+  Fr l0_term;
+  fr_mul(l0_term, a_minus_s, l0[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, l0_term);
+
+  Fr prev_diff;
+  fr_sub(prev_diff, permuted_input_coset[idx], permuted_input_coset[r_prev]);
+  fr_mul(prev_diff, prev_diff, a_minus_s);
+  fr_mul(prev_diff, prev_diff, l_active_row[idx]);
+  fr_mul(value, value, y);
+  fr_add(value, value, prev_diff);
+
+  values[idx] = value;
+}
+
+__global__ void scale_kernel(Fr *values, Fr scale, uint32_t size) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (!values || idx >= size) {
+    return;
+  }
+  Fr tmp;
+  fr_mul(tmp, values[idx], scale);
+  values[idx] = tmp;
+}
+
+__global__ void mul_pointwise_mod_kernel(Fr *values, const Fr *factors, uint32_t size,
+                                         uint32_t factors_len) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (!values || !factors || idx >= size || factors_len == 0) {
+    return;
+  }
+  uint32_t factor_idx = idx % factors_len;
+  Fr tmp;
+  fr_mul(tmp, values[idx], factors[factor_idx]);
+  values[idx] = tmp;
+}
+
+__global__ void distribute_powers_zeta_kernel(Fr *values, uint32_t base_len, uint32_t stride,
+                                              uint32_t batch, Fr g_coset, Fr g_coset_inv,
+                                              uint8_t into_coset) {
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  uint32_t total = base_len * batch;
+  if (!values || idx >= total || base_len == 0) {
+    return;
+  }
+  uint32_t poly_idx = idx / base_len;
+  uint32_t row = idx - poly_idx * base_len;
+  uint32_t mod = row % 3;
+  if (mod == 0) {
+    return;
+  }
+  Fr factor = (mod == 1)
+                  ? (into_coset ? g_coset : g_coset_inv)
+                  : (into_coset ? g_coset_inv : g_coset);
+  Fr tmp;
+  uint32_t offset = poly_idx * stride + row;
+  fr_mul(tmp, values[offset], factor);
+  values[offset] = tmp;
+}
+
+static void log_fr_mismatch(const char *label, size_t idx, const Fr &expected, const Fr &got) {
+  char expected_hex[65];
+  char got_hex[65];
+  fr_to_hex_be(expected, expected_hex);
+  fr_to_hex_be(got, got_hex);
+  std::fprintf(stderr, "sanity: %s idx=%zu expected=%s got=%s\n", label, idx, expected_hex,
+               got_hex);
+}
+
+static void check_t_evaluations(const ProverKey &pk) {
+  if (!sanity_enabled()) {
+    return;
+  }
+  const auto &t_evals = pk.domain.t_evaluations;
+  if (t_evals.empty()) {
+    std::fprintf(stderr, "sanity: t_evaluations empty\n");
+    return;
+  }
+  size_t t_len = t_evals.size();
+  size_t idxs[] = {0, 1, t_len / 2, t_len - 1};
+  for (size_t idx : idxs) {
+    if (idx >= t_len) {
+      continue;
+    }
+    Fr omega_i = fr_pow_u64(pk.domain.extended_omega, static_cast<uint64_t>(idx));
+    Fr x;
+    fr_mul(x, omega_i, pk.domain.g_coset);
+    Fr xn = fr_pow_u64(x, static_cast<uint64_t>(1ULL << pk.domain.k));
+    Fr t;
+    fr_sub(t, xn, fr_one());
+    Fr t_inv;
+    fr_inv(t_inv, t);
+    if (!fr_equal(t_inv, t_evals[idx])) {
+      log_fr_mismatch("t_evaluation", idx, t_inv, t_evals[idx]);
+    }
+  }
+}
+
+static void check_lagrange_polys(const ProverKey &pk) {
+  if (!sanity_enabled()) {
+    return;
+  }
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  size_t extended_len = static_cast<size_t>(1ULL << pk.domain.extended_k);
+  if (pk.l0.values.size() != extended_len || pk.l_last.values.size() != extended_len ||
+      pk.l_active_row.values.size() != extended_len) {
+    std::fprintf(stderr, "sanity: lagrange poly size mismatch\n");
+    return;
+  }
+  std::vector<Fr> l0_vals(n, Fr{});
+  std::vector<Fr> l_last_vals(n, Fr{});
+  std::vector<Fr> l_blind_vals(n, Fr{});
+
+  l0_vals[0] = fr_one();
+  size_t last_row = n - (pk.blinding_factors + 1);
+  if (last_row < n) {
+    l_last_vals[last_row] = fr_one();
+  }
+  for (size_t idx = n - pk.blinding_factors; idx < n; ++idx) {
+    l_blind_vals[idx] = fr_one();
+  }
+
+  PolynomialFr l0_lagrange{std::move(l0_vals)};
+  PolynomialFr l_last_lagrange{std::move(l_last_vals)};
+  PolynomialFr l_blind_lagrange{std::move(l_blind_vals)};
+
+  PolynomialFr l0_coeff = lagrange_to_coeff(l0_lagrange, pk.domain);
+  PolynomialFr l_last_coeff = lagrange_to_coeff(l_last_lagrange, pk.domain);
+  PolynomialFr l_blind_coeff = lagrange_to_coeff(l_blind_lagrange, pk.domain);
+
+  PolynomialFr l0_ext = coeff_to_extended(l0_coeff, pk.domain);
+  PolynomialFr l_last_ext = coeff_to_extended(l_last_coeff, pk.domain);
+  PolynomialFr l_blind_ext = coeff_to_extended(l_blind_coeff, pk.domain);
+
+  std::vector<Fr> l_active_ext(extended_len);
+  for (size_t i = 0; i < extended_len; ++i) {
+    Fr tmp;
+    fr_add(tmp, l_last_ext.values[i], l_blind_ext.values[i]);
+    fr_sub(l_active_ext[i], fr_one(), tmp);
+  }
+
+  size_t idxs[] = {0, 1, extended_len / 2, extended_len - 1};
+  for (size_t idx : idxs) {
+    if (idx >= extended_len) {
+      continue;
+    }
+    if (!fr_equal(l0_ext.values[idx], pk.l0.values[idx])) {
+      log_fr_mismatch("l0", idx, l0_ext.values[idx], pk.l0.values[idx]);
+    }
+    if (!fr_equal(l_last_ext.values[idx], pk.l_last.values[idx])) {
+      log_fr_mismatch("l_last", idx, l_last_ext.values[idx], pk.l_last.values[idx]);
+    }
+    if (!fr_equal(l_active_ext[idx], pk.l_active_row.values[idx])) {
+      log_fr_mismatch("l_active_row", idx, l_active_ext[idx], pk.l_active_row.values[idx]);
+    }
+  }
+}
+
+static void check_permutation_data(const ProverKey &pk) {
+  if (!sanity_enabled()) {
+    return;
+  }
+  size_t poly_count = pk.permutation_polys.size();
+  size_t perm_count = pk.permutation_permutations.size();
+  size_t coset_count = pk.permutation_cosets.size();
+  if (poly_count == 0) {
+    return;
+  }
+  if (poly_count != perm_count || poly_count != coset_count) {
+    std::fprintf(stderr,
+                 "sanity: permutation size mismatch polys=%zu permutations=%zu cosets=%zu\n",
+                 poly_count, perm_count, coset_count);
+    return;
+  }
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  size_t extended_len = static_cast<size_t>(1ULL << pk.domain.extended_k);
+
+  size_t col_idxs[] = {0, 1, poly_count / 2, poly_count - 1};
+  size_t row_idxs[] = {0, 1, n / 2, n - 1};
+  size_t coset_idxs[] = {0, 1, extended_len / 2, extended_len - 1};
+
+  for (size_t col : col_idxs) {
+    if (col >= poly_count) {
+      continue;
+    }
+    PolynomialFr computed_coset = coeff_to_extended(pk.permutation_polys[col], pk.domain);
+    for (size_t idx : coset_idxs) {
+      if (idx >= computed_coset.values.size() || idx >= pk.permutation_cosets[col].values.size()) {
+        continue;
+      }
+      if (!fr_equal(computed_coset.values[idx], pk.permutation_cosets[col].values[idx])) {
+        log_fr_mismatch("permutation_coset", idx, computed_coset.values[idx],
+                        pk.permutation_cosets[col].values[idx]);
+      }
+    }
+
+    for (size_t row : row_idxs) {
+      if (row >= n || row >= pk.permutation_permutations[col].values.size()) {
+        continue;
+      }
+      Fr point = fr_pow_u64(pk.domain.omega, static_cast<uint64_t>(row));
+      Fr eval = poly_eval(pk.permutation_polys[col].values, point);
+      if (!fr_equal(eval, pk.permutation_permutations[col].values[row])) {
+        log_fr_mismatch("permutation_eval", row, eval,
+                        pk.permutation_permutations[col].values[row]);
+      }
+    }
+  }
+}
+
+static void free_device_graph(DeviceGraph &graph) {
+  if (graph.constants) {
+    cudaFree(graph.constants);
+  }
+  if (graph.rotations) {
+    cudaFree(graph.rotations);
+  }
+  if (graph.calculations) {
+    cudaFree(graph.calculations);
+  }
+  if (graph.parts) {
+    cudaFree(graph.parts);
+  }
+  graph = DeviceGraph{};
+}
+
+static void free_device_graphs(std::vector<DeviceGraph> &graphs) {
+  for (auto &graph : graphs) {
+    free_device_graph(graph);
+  }
+  graphs.clear();
+}
+
+static void free_graph_gpu_cache(GraphGpuCache &cache) {
+  free_device_graph(cache.custom_graph);
+  free_device_graphs(cache.lookup_combined_graphs);
+  free_device_graphs(cache.lookup_input_graphs);
+  free_device_graphs(cache.lookup_table_graphs);
+  if (cache.perm_columns) {
+    cudaFree(cache.perm_columns);
+  }
+  if (cache.perm_product_cosets) {
+    cudaFree(cache.perm_product_cosets);
+  }
+  if (cache.perm_cosets) {
+    cudaFree(cache.perm_cosets);
+  }
+  if (cache.l0) {
+    cudaFree(cache.l0);
+  }
+  if (cache.l_last) {
+    cudaFree(cache.l_last);
+  }
+  if (cache.l_active_row) {
+    cudaFree(cache.l_active_row);
+  }
+  if (cache.fixed_base) {
+    cudaFree(cache.fixed_base);
+  }
+  if (cache.fixed_ext) {
+    cudaFree(cache.fixed_ext);
+  }
+  if (cache.advice_ext) {
+    cudaFree(cache.advice_ext);
+  }
+  if (cache.instance_ext) {
+    cudaFree(cache.instance_ext);
+  }
+  if (cache.values_buf) {
+    cudaFree(cache.values_buf);
+  }
+  if (cache.lookup_values_buf) {
+    cudaFree(cache.lookup_values_buf);
+  }
+  if (cache.lookup_coset_product) {
+    cudaFree(cache.lookup_coset_product);
+  }
+  if (cache.lookup_coset_input) {
+    cudaFree(cache.lookup_coset_input);
+  }
+  if (cache.lookup_coset_table) {
+    cudaFree(cache.lookup_coset_table);
+  }
+  if (cache.beta_terms) {
+    cudaFree(cache.beta_terms);
+  }
+  if (cache.t_evals) {
+    cudaFree(cache.t_evals);
+  }
+  if (cache.fft_scratch) {
+    cudaFree(cache.fft_scratch);
+  }
+  cache = GraphGpuCache{};
+}
+
+static bool ensure_device_buffer(Fr **ptr, size_t &len, size_t desired, std::string &error) {
+  if (len >= desired && *ptr) {
+    return true;
+  }
+  if (*ptr) {
+    cudaFree(*ptr);
+    *ptr = nullptr;
+    len = 0;
+  }
+  if (desired == 0) {
+    return true;
+  }
+  if (cudaMalloc(ptr, desired * sizeof(Fr)) != cudaSuccess) {
+    error = "cudaMalloc buffer failed";
+    return false;
+  }
+  len = desired;
+  return true;
+}
+
+static bool ensure_fft_scratch(GraphGpuCache &cache, size_t required, std::string &error) {
+  return ensure_device_buffer(&cache.fft_scratch, cache.fft_scratch_len, required, error);
+}
+
+static void collect_graph_sources(const GraphEvaluator &graph, std::vector<uint32_t> &fixed_cols,
+                                  std::vector<uint32_t> &advice_cols,
+                                  std::vector<uint32_t> &instance_cols) {
+  auto record = [&](const GraphValueSource &src) {
+    if (src.tag == 2) {
+      fixed_cols.push_back(src.a);
+    } else if (src.tag == 3) {
+      advice_cols.push_back(src.a);
+    } else if (src.tag == 4) {
+      instance_cols.push_back(src.a);
+    }
+  };
+
+  for (const auto &calc : graph.calculations) {
+    switch (calc.op) {
+      case 0:
+      case 1:
+      case 2:
+        record(calc.lhs);
+        record(calc.rhs);
+        break;
+      case 3:
+      case 4:
+      case 5:
+      case 7:
+        record(calc.lhs);
+        break;
+      case 6:
+        record(calc.lhs);
+        for (const auto &part : calc.parts) {
+          record(part);
+        }
+        record(calc.factor);
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+static bool build_column_map(uint32_t fixed_count, uint32_t advice_count, uint32_t instance_count,
+                             const std::vector<const GraphEvaluator *> &graphs,
+                             const std::vector<PermutationColumn> *perm_columns,
+                             GraphColumnMap &out, std::string &error) {
+  std::vector<uint32_t> fixed_cols;
+  std::vector<uint32_t> advice_cols;
+  std::vector<uint32_t> instance_cols;
+  for (const auto *graph : graphs) {
+    if (!graph) {
+      continue;
+    }
+    collect_graph_sources(*graph, fixed_cols, advice_cols, instance_cols);
+  }
+  if (perm_columns) {
+    for (const auto &col : *perm_columns) {
+      if (col.column_type == 0) {
+        advice_cols.push_back(col.index);
+      } else if (col.column_type == 1) {
+        fixed_cols.push_back(col.index);
+      } else {
+        instance_cols.push_back(col.index);
+      }
+    }
+  }
+
+  auto uniq = [](std::vector<uint32_t> &vals) {
+    std::sort(vals.begin(), vals.end());
+    vals.erase(std::unique(vals.begin(), vals.end()), vals.end());
+  };
+  uniq(fixed_cols);
+  uniq(advice_cols);
+  uniq(instance_cols);
+
+  out.fixed_map.assign(fixed_count, -1);
+  out.advice_map.assign(advice_count, -1);
+  out.instance_map.assign(instance_count, -1);
+  out.fixed_indices = fixed_cols;
+  out.advice_indices = advice_cols;
+  out.instance_indices = instance_cols;
+
+  for (size_t i = 0; i < fixed_cols.size(); ++i) {
+    if (fixed_cols[i] >= fixed_count) {
+      error = "graph fixed column index out of range";
+      return false;
+    }
+    out.fixed_map[fixed_cols[i]] = static_cast<int32_t>(i);
+  }
+  for (size_t i = 0; i < advice_cols.size(); ++i) {
+    if (advice_cols[i] >= advice_count) {
+      error = "graph advice column index out of range";
+      return false;
+    }
+    out.advice_map[advice_cols[i]] = static_cast<int32_t>(i);
+  }
+  for (size_t i = 0; i < instance_cols.size(); ++i) {
+    if (instance_cols[i] >= instance_count) {
+      error = "graph instance column index out of range";
+      return false;
+    }
+    out.instance_map[instance_cols[i]] = static_cast<int32_t>(i);
+  }
+  return true;
+}
+
+static bool map_value_source(const GraphValueSource &src, const GraphColumnMap &map,
+                             DeviceGraphValueSource &out, std::string &error) {
+  out.tag = src.tag;
+  out.a = src.a;
+  out.b = src.b;
+  if (src.tag == 2) {
+    if (src.a >= map.fixed_map.size() || map.fixed_map[src.a] < 0) {
+      error = "graph fixed column mapping missing";
+      return false;
+    }
+    out.a = static_cast<uint32_t>(map.fixed_map[src.a]);
+  } else if (src.tag == 3) {
+    if (src.a >= map.advice_map.size() || map.advice_map[src.a] < 0) {
+      error = "graph advice column mapping missing";
+      return false;
+    }
+    out.a = static_cast<uint32_t>(map.advice_map[src.a]);
+  } else if (src.tag == 4) {
+    if (src.a >= map.instance_map.size() || map.instance_map[src.a] < 0) {
+      error = "graph instance column mapping missing";
+      return false;
+    }
+    out.a = static_cast<uint32_t>(map.instance_map[src.a]);
+  }
+  return true;
+}
+
+static bool build_device_graph(const GraphEvaluator &graph, const GraphColumnMap &map,
+                               DeviceGraph &out, std::string &error) {
+  out.num_constants = static_cast<uint32_t>(graph.constants.size());
+  out.num_rotations = static_cast<uint32_t>(graph.rotations.size());
+  out.num_calculations = static_cast<uint32_t>(graph.calculations.size());
+  out.num_intermediates = static_cast<uint32_t>(graph.num_intermediates);
+  out.last_target = graph.calculations.empty()
+                        ? 0
+                        : static_cast<uint32_t>(graph.calculations.back().target);
+
+  if (out.num_constants > 0) {
+    if (cudaMalloc(&out.constants, out.num_constants * sizeof(Fr)) != cudaSuccess) {
+      error = "cudaMalloc constants failed";
+      return false;
+    }
+    if (cudaMemcpy(out.constants, graph.constants.data(),
+                   out.num_constants * sizeof(Fr), cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy constants failed";
+      return false;
+    }
+  }
+
+  if (out.num_rotations > 0) {
+    if (cudaMalloc(&out.rotations, out.num_rotations * sizeof(int32_t)) != cudaSuccess) {
+      error = "cudaMalloc rotations failed";
+      return false;
+    }
+    if (cudaMemcpy(out.rotations, graph.rotations.data(),
+                   out.num_rotations * sizeof(int32_t), cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy rotations failed";
+      return false;
+    }
+  }
+
+  std::vector<DeviceGraphCalculation> calc_host;
+  std::vector<DeviceGraphValueSource> parts_host;
+  calc_host.reserve(graph.calculations.size());
+
+  for (const auto &calc : graph.calculations) {
+    DeviceGraphCalculation dev{};
+    dev.target = calc.target;
+    dev.op = calc.op;
+    switch (calc.op) {
+      case 0:
+      case 1:
+      case 2:
+        if (!map_value_source(calc.lhs, map, dev.lhs, error) ||
+            !map_value_source(calc.rhs, map, dev.rhs, error)) {
+          return false;
+        }
+        break;
+      case 3:
+      case 4:
+      case 5:
+      case 7:
+        if (!map_value_source(calc.lhs, map, dev.lhs, error)) {
+          return false;
+        }
+        break;
+      case 6:
+        if (!map_value_source(calc.lhs, map, dev.lhs, error)) {
+          return false;
+        }
+        dev.parts_offset = static_cast<uint32_t>(parts_host.size());
+        dev.parts_len = static_cast<uint32_t>(calc.parts.size());
+        for (const auto &part : calc.parts) {
+          DeviceGraphValueSource mapped{};
+          if (!map_value_source(part, map, mapped, error)) {
+            return false;
+          }
+          parts_host.push_back(mapped);
+        }
+        if (!map_value_source(calc.factor, map, dev.factor, error)) {
+          return false;
+        }
+        break;
+      default:
+        break;
+    }
+    calc_host.push_back(dev);
+  }
+
+  if (!calc_host.empty()) {
+    if (cudaMalloc(&out.calculations,
+                   calc_host.size() * sizeof(DeviceGraphCalculation)) != cudaSuccess) {
+      error = "cudaMalloc calculations failed";
+      return false;
+    }
+    if (cudaMemcpy(out.calculations, calc_host.data(),
+                   calc_host.size() * sizeof(DeviceGraphCalculation),
+                   cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy calculations failed";
+      return false;
+    }
+  }
+
+  if (!parts_host.empty()) {
+    if (cudaMalloc(&out.parts, parts_host.size() * sizeof(DeviceGraphValueSource)) !=
+        cudaSuccess) {
+      error = "cudaMalloc parts failed";
+      return false;
+    }
+    if (cudaMemcpy(out.parts, parts_host.data(),
+                   parts_host.size() * sizeof(DeviceGraphValueSource),
+                   cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy parts failed";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool copy_polys_subset_to_device(const std::vector<PolynomialFr> &polys,
+                                        const std::vector<uint32_t> &indices,
+                                        size_t expected_len, Fr **out, size_t &out_len,
+                                        std::string &error) {
+  *out = nullptr;
+  out_len = 0;
+  if (indices.empty()) {
+    return true;
+  }
+  size_t total = indices.size() * expected_len;
+  if (cudaMalloc(out, total * sizeof(Fr)) != cudaSuccess) {
+    error = "cudaMalloc polys failed";
+    return false;
+  }
+  auto fail = [&]() {
+    cudaFree(*out);
+    *out = nullptr;
+    out_len = 0;
+    return false;
+  };
+  for (size_t i = 0; i < indices.size(); ++i) {
+    uint32_t idx = indices[i];
+    if (idx >= polys.size() || polys[idx].values.size() != expected_len) {
+      error = "polys length mismatch";
+      return fail();
+    }
+    const Fr *src = polys[idx].values.data();
+    Fr *dst = *out + (i * expected_len);
+    if (cudaMemcpy(dst, src, expected_len * sizeof(Fr), cudaMemcpyHostToDevice) !=
+        cudaSuccess) {
+      error = "cudaMemcpy polys failed";
+      return fail();
+    }
+  }
+  out_len = total;
+  return true;
+}
+
+static bool init_graph_gpu_cache(const ProverKey &pk, GraphGpuCache &cache, std::string &error) {
+  if (cache.pk == &pk) {
+    return true;
+  }
+  free_graph_gpu_cache(cache);
+
+  cache.pk = &pk;
+  cache.base_stride = static_cast<size_t>(1ULL << pk.domain.k);
+  cache.ext_stride = static_cast<size_t>(1ULL << pk.domain.extended_k);
+
+  std::vector<const GraphEvaluator *> base_graphs;
+  base_graphs.reserve(pk.lookup_input_graphs.size() + pk.lookup_table_graphs.size());
+  for (const auto &graph : pk.lookup_input_graphs) {
+    base_graphs.push_back(&graph);
+  }
+  for (const auto &graph : pk.lookup_table_graphs) {
+    base_graphs.push_back(&graph);
+  }
+
+  std::vector<const GraphEvaluator *> ext_graphs;
+  ext_graphs.reserve(1 + pk.lookup_combined_graphs.size());
+  ext_graphs.push_back(&pk.custom_gates);
+  for (const auto &graph : pk.lookup_combined_graphs) {
+    ext_graphs.push_back(&graph);
+  }
+
+  if (!build_column_map(static_cast<uint32_t>(pk.fixed_values.size()), pk.num_advice_columns,
+                        pk.num_instance_columns, base_graphs, nullptr, cache.base_map, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+  if (!build_column_map(static_cast<uint32_t>(pk.fixed_cosets.size()), pk.num_advice_columns,
+                        pk.num_instance_columns, ext_graphs, &pk.permutation_columns,
+                        cache.ext_map, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+
+  if (!build_device_graph(pk.custom_gates, cache.ext_map, cache.custom_graph, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+
+  cache.lookup_combined_graphs.resize(pk.lookup_combined_graphs.size());
+  for (size_t i = 0; i < pk.lookup_combined_graphs.size(); ++i) {
+    if (!build_device_graph(pk.lookup_combined_graphs[i], cache.ext_map,
+                            cache.lookup_combined_graphs[i], error)) {
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+  }
+
+  cache.lookup_input_graphs.resize(pk.lookup_input_graphs.size());
+  cache.lookup_table_graphs.resize(pk.lookup_table_graphs.size());
+  for (size_t i = 0; i < pk.lookup_input_graphs.size(); ++i) {
+    if (!build_device_graph(pk.lookup_input_graphs[i], cache.base_map,
+                            cache.lookup_input_graphs[i], error)) {
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+  }
+  for (size_t i = 0; i < pk.lookup_table_graphs.size(); ++i) {
+    if (!build_device_graph(pk.lookup_table_graphs[i], cache.base_map,
+                            cache.lookup_table_graphs[i], error)) {
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+  }
+
+  if (!copy_polys_subset_to_device(pk.fixed_values, cache.base_map.fixed_indices,
+                                   cache.base_stride, &cache.fixed_base,
+                                   cache.fixed_base_len, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+  if (!copy_polys_subset_to_device(pk.fixed_cosets, cache.ext_map.fixed_indices, cache.ext_stride,
+                                   &cache.fixed_ext, cache.fixed_ext_len, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+
+  cache.perm_columns_len = static_cast<uint32_t>(pk.permutation_columns.size());
+  if (cache.perm_columns_len > 0) {
+    std::vector<DevicePermutationColumn> perm_cols;
+    perm_cols.reserve(cache.perm_columns_len);
+    for (const auto &col : pk.permutation_columns) {
+      DevicePermutationColumn dev{};
+      dev.column_type = col.column_type;
+      if (col.column_type == 0) {
+        if (col.index >= cache.ext_map.advice_map.size() ||
+            cache.ext_map.advice_map[col.index] < 0) {
+          error = "perm advice column mapping missing";
+          free_graph_gpu_cache(cache);
+          return false;
+        }
+        dev.index = static_cast<uint32_t>(cache.ext_map.advice_map[col.index]);
+      } else if (col.column_type == 1) {
+        if (col.index >= cache.ext_map.fixed_map.size() ||
+            cache.ext_map.fixed_map[col.index] < 0) {
+          error = "perm fixed column mapping missing";
+          free_graph_gpu_cache(cache);
+          return false;
+        }
+        dev.index = static_cast<uint32_t>(cache.ext_map.fixed_map[col.index]);
+      } else {
+        if (col.index >= cache.ext_map.instance_map.size() ||
+            cache.ext_map.instance_map[col.index] < 0) {
+          error = "perm instance column mapping missing";
+          free_graph_gpu_cache(cache);
+          return false;
+        }
+        dev.index = static_cast<uint32_t>(cache.ext_map.instance_map[col.index]);
+      }
+      perm_cols.push_back(dev);
+    }
+    if (cudaMalloc(&cache.perm_columns,
+                   perm_cols.size() * sizeof(DevicePermutationColumn)) != cudaSuccess) {
+      error = "cudaMalloc perm columns failed";
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+    if (cudaMemcpy(cache.perm_columns, perm_cols.data(),
+                   perm_cols.size() * sizeof(DevicePermutationColumn),
+                   cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy perm columns failed";
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+
+    size_t perm_cosets_len = pk.permutation_cosets.size();
+    if (perm_cosets_len != pk.permutation_columns.size()) {
+      error = "perm cosets size mismatch";
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+    size_t total_perm = perm_cosets_len * cache.ext_stride;
+    if (total_perm > 0) {
+      if (cudaMalloc(&cache.perm_cosets, total_perm * sizeof(Fr)) != cudaSuccess) {
+        error = "cudaMalloc perm cosets failed";
+        free_graph_gpu_cache(cache);
+        return false;
+      }
+      for (size_t i = 0; i < perm_cosets_len; ++i) {
+        if (pk.permutation_cosets[i].values.size() != cache.ext_stride) {
+          error = "perm coset length mismatch";
+          free_graph_gpu_cache(cache);
+          return false;
+        }
+        Fr *dst = cache.perm_cosets + i * cache.ext_stride;
+        if (cudaMemcpy(dst, pk.permutation_cosets[i].values.data(),
+                       cache.ext_stride * sizeof(Fr), cudaMemcpyHostToDevice) != cudaSuccess) {
+          error = "cudaMemcpy perm cosets failed";
+          free_graph_gpu_cache(cache);
+          return false;
+        }
+      }
+    }
+  }
+
+  if (pk.l0.values.size() == cache.ext_stride &&
+      pk.l_last.values.size() == cache.ext_stride &&
+      pk.l_active_row.values.size() == cache.ext_stride) {
+    if (cudaMalloc(&cache.l0, cache.ext_stride * sizeof(Fr)) != cudaSuccess ||
+        cudaMalloc(&cache.l_last, cache.ext_stride * sizeof(Fr)) != cudaSuccess ||
+        cudaMalloc(&cache.l_active_row, cache.ext_stride * sizeof(Fr)) != cudaSuccess) {
+      error = "cudaMalloc lagrange polys failed";
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+    if (cudaMemcpy(cache.l0, pk.l0.values.data(), cache.ext_stride * sizeof(Fr),
+                   cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(cache.l_last, pk.l_last.values.data(), cache.ext_stride * sizeof(Fr),
+                   cudaMemcpyHostToDevice) != cudaSuccess ||
+        cudaMemcpy(cache.l_active_row, pk.l_active_row.values.data(),
+                   cache.ext_stride * sizeof(Fr), cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy lagrange polys failed";
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+  } else {
+    error = "lagrange polys size mismatch";
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+
+  if (!ensure_device_buffer(&cache.beta_terms, cache.beta_terms_len, cache.ext_stride, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+  std::vector<Fr> beta_terms(cache.ext_stride);
+  if (!beta_terms.empty()) {
+    beta_terms[0] = fr_one();
+    for (size_t i = 1; i < beta_terms.size(); ++i) {
+      fr_mul(beta_terms[i], beta_terms[i - 1], pk.domain.extended_omega);
+    }
+  }
+  if (cache.ext_stride > 0) {
+    if (cudaMemcpy(cache.beta_terms, beta_terms.data(), cache.ext_stride * sizeof(Fr),
+                   cudaMemcpyHostToDevice) != cudaSuccess) {
+      error = "cudaMemcpy beta_terms failed";
+      free_graph_gpu_cache(cache);
+      return false;
+    }
+  }
+
+  size_t t_eval_len = pk.domain.t_evaluations.size();
+  if (t_eval_len == 0) {
+    error = "t_evaluations empty";
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+  if (!ensure_device_buffer(&cache.t_evals, cache.t_evals_len, t_eval_len, error)) {
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+  if (cudaMemcpy(cache.t_evals, pk.domain.t_evaluations.data(), t_eval_len * sizeof(Fr),
+                 cudaMemcpyHostToDevice) != cudaSuccess) {
+    error = "cudaMemcpy t_evaluations failed";
+    free_graph_gpu_cache(cache);
+    return false;
+  }
+
+  if (graph_gpu_debug_enabled()) {
+    std::fprintf(stderr,
+                 "graph gpu: base fixed=%zu advice=%zu instance=%zu graphs=%zu, ext fixed=%zu "
+                 "advice=%zu instance=%zu graphs=%zu\n",
+                 cache.base_map.fixed_indices.size(), cache.base_map.advice_indices.size(),
+                 cache.base_map.instance_indices.size(), base_graphs.size(),
+                 cache.ext_map.fixed_indices.size(), cache.ext_map.advice_indices.size(),
+                 cache.ext_map.instance_indices.size(), ext_graphs.size());
+  }
+
+  return true;
+}
+
+static void free_graph_gpu_inputs(GraphGpuInputs &inputs) {
+  if (inputs.d_challenges) {
+    cudaFree(inputs.d_challenges);
+  }
+  if (inputs.advice_base) {
+    cudaFree(inputs.advice_base);
+  }
+  if (inputs.instance_base) {
+    cudaFree(inputs.instance_base);
+  }
+  if (inputs.advice_ext && (!inputs.cache || inputs.advice_ext != inputs.cache->advice_ext)) {
+    cudaFree(inputs.advice_ext);
+  }
+  if (inputs.instance_ext && (!inputs.cache || inputs.instance_ext != inputs.cache->instance_ext)) {
+    cudaFree(inputs.instance_ext);
+  }
+  inputs.advice_base = nullptr;
+  inputs.instance_base = nullptr;
+  inputs.advice_ext = nullptr;
+  inputs.instance_ext = nullptr;
+  inputs.d_challenges = nullptr;
+  inputs.challenges_len = 0;
+  inputs.h_values = nullptr;
+  inputs.h_values_len = 0;
+  inputs.cache = nullptr;
+  inputs.enabled = false;
+  if (inputs.lock.owns_lock()) {
+    inputs.lock.unlock();
+  }
+}
+
+struct DeviceGraphInputs {
+  const Fr *fixed = nullptr;
+  const Fr *advice = nullptr;
+  const Fr *instance = nullptr;
+  size_t stride = 0;
+};
+
+static bool evaluate_graph_values_gpu(const DeviceGraph &graph, const DeviceGraphInputs &inputs,
+                                      const std::vector<Fr> &challenges, const Fr &beta,
+                                      const Fr &gamma, const Fr &theta, const Fr &y,
+                                      const Fr &previous_value, size_t size, int32_t rot_scale,
+                                      int32_t isize, std::vector<Fr> &out, std::string &error) {
+  if (graph.num_rotations > kGraphMaxRotations ||
+      graph.num_intermediates > kGraphMaxIntermediates) {
+    error = "graph size exceeds gpu limits";
+    return false;
+  }
+  if (inputs.stride != size) {
+    error = "graph gpu stride mismatch";
+    return false;
+  }
+  if (size == 0) {
+    out.clear();
+    return true;
+  }
+
+  Fr *d_challenges = nullptr;
+  Fr *d_out = nullptr;
+
+  if (!challenges.empty()) {
+    if (cudaMalloc(&d_challenges, challenges.size() * sizeof(Fr)) != cudaSuccess) {
+      error = "cudaMalloc challenges failed";
+      return false;
+    }
+    if (cudaMemcpy(d_challenges, challenges.data(), challenges.size() * sizeof(Fr),
+                   cudaMemcpyHostToDevice) != cudaSuccess) {
+      cudaFree(d_challenges);
+      error = "cudaMemcpy challenges failed";
+      return false;
+    }
+  }
+
+  if (cudaMalloc(&d_out, size * sizeof(Fr)) != cudaSuccess) {
+    if (d_challenges) {
+      cudaFree(d_challenges);
+    }
+    error = "cudaMalloc out failed";
+    return false;
+  }
+
+  int threads = 256;
+  int blocks = static_cast<int>((size + threads - 1) / threads);
+  graph_eval_kernel<<<blocks, threads>>>(
+      graph, inputs.fixed, inputs.advice, inputs.instance,
+      d_challenges ? d_challenges : nullptr, beta, gamma, theta, y, previous_value, d_out,
+      static_cast<uint32_t>(size), rot_scale, static_cast<uint32_t>(isize));
+  if (cudaGetLastError() != cudaSuccess) {
+    if (d_challenges) {
+      cudaFree(d_challenges);
+    }
+    cudaFree(d_out);
+    error = "graph_eval_kernel launch failed";
+    return false;
+  }
+  if (cudaDeviceSynchronize() != cudaSuccess) {
+    if (d_challenges) {
+      cudaFree(d_challenges);
+    }
+    cudaFree(d_out);
+    error = "graph_eval_kernel sync failed";
+    return false;
+  }
+
+  out.resize(size);
+  if (cudaMemcpy(out.data(), d_out, size * sizeof(Fr), cudaMemcpyDeviceToHost) != cudaSuccess) {
+    error = "cudaMemcpy out failed";
+    if (d_challenges) {
+      cudaFree(d_challenges);
+    }
+    cudaFree(d_out);
+    return false;
+  }
+  if (d_challenges) {
+    cudaFree(d_challenges);
+  }
+  cudaFree(d_out);
+  return true;
+}
+
+static bool evaluate_graph_values_gpu_device(const DeviceGraph &graph,
+                                             const DeviceGraphInputs &inputs,
+                                             const Fr *d_challenges, size_t challenges_len,
+                                             const Fr &beta, const Fr &gamma, const Fr &theta,
+                                             const Fr &y, const Fr &previous_value, size_t size,
+                                             int32_t rot_scale, int32_t isize, Fr *d_out,
+                                             std::string &error) {
+  if (graph.num_rotations > kGraphMaxRotations ||
+      graph.num_intermediates > kGraphMaxIntermediates) {
+    error = "graph size exceeds gpu limits";
+    return false;
+  }
+  if (inputs.stride != size) {
+    error = "graph gpu stride mismatch";
+    return false;
+  }
+  if (!d_out) {
+    error = "graph gpu output missing";
+    return false;
+  }
+
+  const Fr *challenges_ptr = nullptr;
+  if (challenges_len > 0) {
+    if (!d_challenges) {
+      error = "graph gpu challenges missing";
+      return false;
+    }
+    challenges_ptr = d_challenges;
+  }
+
+  int threads = 256;
+  int blocks = static_cast<int>((size + threads - 1) / threads);
+  graph_eval_kernel<<<blocks, threads>>>(
+      graph, inputs.fixed, inputs.advice, inputs.instance, challenges_ptr, beta, gamma, theta, y,
+      previous_value, d_out, static_cast<uint32_t>(size), rot_scale,
+      static_cast<uint32_t>(isize));
+  if (cudaGetLastError() != cudaSuccess) {
+    error = "graph_eval_kernel launch failed";
+    return false;
+  }
+  if (cudaDeviceSynchronize() != cudaSuccess) {
+    error = "graph_eval_kernel sync failed";
+    return false;
+  }
+  return true;
+}
+
+static bool fft_in_place_device_batched(Fr *d_values, size_t n, size_t batch, const Fr &omega,
+                                        Fr *scratch, size_t scratch_len, std::string &error) {
+  if (!d_values || batch == 0 || n == 0) {
+    return true;
+  }
+  if ((n & (n - 1)) != 0) {
+    error = "fft_in_place_device_batched requires power-of-two length";
+    return false;
+  }
+  size_t total = batch * n;
+  if (!scratch || scratch_len < total) {
+    error = "fft_in_place_device_batched scratch too small";
+    return false;
+  }
+  if (!ensure_fft_cache(n, omega, error)) {
+    return false;
+  }
+
+  size_t log_n = 0;
+  while ((1ULL << log_n) < n) {
+    ++log_n;
+  }
+
+  int threads = 256;
+  int blocks = static_cast<int>((total + threads - 1) / threads);
+  fft_bit_reverse_kernel<<<blocks, threads>>>(d_values, scratch, static_cast<int>(n),
+                                              static_cast<int>(log_n), static_cast<int>(batch));
+  if (cudaGetLastError() != cudaSuccess) {
+    error = "fft_bit_reverse_kernel launch failed";
+    return false;
+  }
+  if (cudaMemcpy(d_values, scratch, total * sizeof(Fr), cudaMemcpyDeviceToDevice) !=
+      cudaSuccess) {
+    error = "fft_bit_reverse_kernel copy failed";
+    return false;
+  }
+
+  int half = static_cast<int>(n / 2);
+  int total_stage = static_cast<int>(batch * half);
+  for (size_t stage = 0; stage < fft_cache.m_values.size(); ++stage) {
+    size_t m = fft_cache.m_values[stage];
+    Fr *d_twiddles = fft_cache.d_twiddles[stage];
+    int blocks_stage = (total_stage + threads - 1) / threads;
+    fft_stage_kernel_batched<<<blocks_stage, threads>>>(
+        d_values, d_twiddles, static_cast<int>(n), static_cast<int>(m), static_cast<int>(batch));
+    if (cudaGetLastError() != cudaSuccess) {
+      error = "fft_stage_kernel_batched launch failed";
+      return false;
+    }
+  }
+  if (cudaDeviceSynchronize() != cudaSuccess) {
+    error = "fft_stage_kernel_batched sync failed";
+    return false;
+  }
+  return true;
+}
+
+static bool coeffs_to_extended_device_subset_batched(const std::vector<PolynomialFr> &coeffs,
+                                                     const std::vector<uint32_t> &indices,
+                                                     const DomainConstants &domain, Fr *out,
+                                                     size_t out_len, Fr *scratch,
+                                                     size_t scratch_len, std::string &error) {
+  if (indices.empty()) {
+    return true;
+  }
+  size_t base_len = static_cast<size_t>(1ULL << domain.k);
+  size_t size = static_cast<size_t>(1ULL << domain.extended_k);
+  size_t total = indices.size() * size;
+  if (!out || out_len < total) {
+    error = "coset output buffer too small";
+    return false;
+  }
+  if (cudaMemset(out, 0, total * sizeof(Fr)) != cudaSuccess) {
+    error = "cudaMemset coset output failed";
+    return false;
+  }
+  for (size_t i = 0; i < indices.size(); ++i) {
+    uint32_t idx = indices[i];
+    if (idx >= coeffs.size()) {
+      error = "coset coeff index out of range";
+      return false;
+    }
+    const auto &values = coeffs[idx].values;
+    if (values.size() > base_len) {
+      error = "coset coeff length mismatch";
+      return false;
+    }
+    Fr *dst = out + i * size;
+    if (!values.empty()) {
+      if (cudaMemcpy(dst, values.data(), values.size() * sizeof(Fr), cudaMemcpyHostToDevice) !=
+          cudaSuccess) {
+        error = "cudaMemcpy cosets failed";
+        return false;
+      }
+    }
+  }
+  if (base_len > 0) {
+    int threads = 256;
+    int blocks = static_cast<int>((indices.size() * base_len + threads - 1) / threads);
+    distribute_powers_zeta_kernel<<<blocks, threads>>>(
+        out, static_cast<uint32_t>(base_len), static_cast<uint32_t>(size),
+        static_cast<uint32_t>(indices.size()), domain.g_coset, domain.g_coset_inv, 1);
+    if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) {
+      error = "distribute_powers_zeta_kernel failed";
+      return false;
+    }
+  }
+  if (!fft_in_place_device_batched(out, size, indices.size(), domain.extended_omega, scratch,
+                                   scratch_len, error)) {
+    return false;
+  }
+  return true;
+}
+
+static bool scale_device(Fr *values, size_t size, const Fr &scale, std::string &error) {
+  if (!values || size == 0) {
+    return true;
+  }
+  int threads = 256;
+  int blocks = static_cast<int>((size + threads - 1) / threads);
+  scale_kernel<<<blocks, threads>>>(values, scale, static_cast<uint32_t>(size));
+  if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) {
+    error = "scale_kernel failed";
+    return false;
+  }
+  return true;
+}
+
+static bool mul_pointwise_mod_device(Fr *values, const Fr *factors, size_t size,
+                                     size_t factors_len, std::string &error) {
+  if (!values || !factors || size == 0) {
+    return true;
+  }
+  if (factors_len == 0) {
+    error = "mul_pointwise_mod factors empty";
+    return false;
+  }
+  int threads = 256;
+  int blocks = static_cast<int>((size + threads - 1) / threads);
+  mul_pointwise_mod_kernel<<<blocks, threads>>>(
+      values, factors, static_cast<uint32_t>(size), static_cast<uint32_t>(factors_len));
+  if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) {
+    error = "mul_pointwise_mod_kernel failed";
+    return false;
+  }
+  return true;
+}
+
+static bool distribute_powers_zeta_device(Fr *values, size_t base_len, size_t stride,
+                                          size_t batch, const DomainConstants &domain,
+                                          bool into_coset, std::string &error) {
+  if (!values || base_len == 0 || batch == 0) {
+    return true;
+  }
+  int threads = 256;
+  int blocks = static_cast<int>((base_len * batch + threads - 1) / threads);
+  distribute_powers_zeta_kernel<<<blocks, threads>>>(
+      values, static_cast<uint32_t>(base_len), static_cast<uint32_t>(stride),
+      static_cast<uint32_t>(batch), domain.g_coset, domain.g_coset_inv, into_coset ? 1 : 0);
+  if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) {
+    error = "distribute_powers_zeta_kernel failed";
+    return false;
+  }
+  return true;
+}
+
+static bool extended_to_coeff_gpu(const PolynomialFr &poly, const DomainConstants &domain,
+                                  size_t quotient_poly_degree, GraphGpuCache &cache,
+                                  PolynomialFr &out, std::string &error) {
+  size_t size = static_cast<size_t>(1ULL << domain.extended_k);
+  if (poly.values.size() != size) {
+    error = "extended_to_coeff_gpu size mismatch";
+    return false;
+  }
+  if (!ensure_device_buffer(&cache.values_buf, cache.values_len, size, error)) {
+    return false;
+  }
+  if (!ensure_fft_scratch(cache, size, error)) {
+    return false;
+  }
+  if (cudaMemcpy(cache.values_buf, poly.values.data(), size * sizeof(Fr),
+                 cudaMemcpyHostToDevice) != cudaSuccess) {
+    error = "cudaMemcpy h_div to device failed";
+    return false;
+  }
+  if (!fft_in_place_device_batched(cache.values_buf, size, 1, domain.extended_omega_inv,
+                                   cache.fft_scratch, cache.fft_scratch_len, error)) {
+    return false;
+  }
+  if (!scale_device(cache.values_buf, size, domain.extended_ifft_divisor, error)) {
+    return false;
+  }
+  size_t n = static_cast<size_t>(1ULL << domain.k);
+  size_t target_len = n * quotient_poly_degree;
+  size_t out_len = size;
+  if (target_len < out_len) {
+    out_len = target_len;
+  }
+  if (!distribute_powers_zeta_device(cache.values_buf, out_len, size, 1, domain, false, error)) {
+    return false;
+  }
+  out.values.resize(out_len);
+  if (cudaMemcpy(out.values.data(), cache.values_buf, out_len * sizeof(Fr),
+                 cudaMemcpyDeviceToHost) != cudaSuccess) {
+    error = "cudaMemcpy coeffs from device failed";
+    return false;
+  }
+  return true;
+}
+
+static bool extended_to_coeff_gpu_vanishing(const PolynomialFr &poly,
+                                            const DomainConstants &domain,
+                                            size_t quotient_poly_degree, GraphGpuCache &cache,
+                                            PolynomialFr &out, std::string &error) {
+  size_t size = static_cast<size_t>(1ULL << domain.extended_k);
+  if (poly.values.size() != size) {
+    error = "extended_to_coeff_gpu size mismatch";
+    return false;
+  }
+  if (!cache.t_evals || cache.t_evals_len == 0) {
+    error = "t_evaluations buffer missing";
+    return false;
+  }
+  if (!ensure_device_buffer(&cache.values_buf, cache.values_len, size, error)) {
+    return false;
+  }
+  if (!ensure_fft_scratch(cache, size, error)) {
+    return false;
+  }
+  if (cudaMemcpy(cache.values_buf, poly.values.data(), size * sizeof(Fr),
+                 cudaMemcpyHostToDevice) != cudaSuccess) {
+    error = "cudaMemcpy h_poly to device failed";
+    return false;
+  }
+  if (!mul_pointwise_mod_device(cache.values_buf, cache.t_evals, size, cache.t_evals_len,
+                                error)) {
+    return false;
+  }
+  if (!fft_in_place_device_batched(cache.values_buf, size, 1, domain.extended_omega_inv,
+                                   cache.fft_scratch, cache.fft_scratch_len, error)) {
+    return false;
+  }
+  if (!scale_device(cache.values_buf, size, domain.extended_ifft_divisor, error)) {
+    return false;
+  }
+  size_t n = static_cast<size_t>(1ULL << domain.k);
+  size_t target_len = n * quotient_poly_degree;
+  size_t out_len = size;
+  if (target_len < out_len) {
+    out_len = target_len;
+  }
+  if (!distribute_powers_zeta_device(cache.values_buf, out_len, size, 1, domain, false, error)) {
+    return false;
+  }
+  out.values.resize(out_len);
+  if (cudaMemcpy(out.values.data(), cache.values_buf, out_len * sizeof(Fr),
+                 cudaMemcpyDeviceToHost) != cudaSuccess) {
+    error = "cudaMemcpy vanishing coeffs failed";
+    return false;
+  }
+  return true;
+}
+
+static bool extended_to_coeff_gpu_vanishing_device(Fr *values, size_t values_len,
+                                                   const DomainConstants &domain,
+                                                   size_t quotient_poly_degree,
+                                                   GraphGpuCache &cache, PolynomialFr &out,
+                                                   std::string &error) {
+  size_t size = static_cast<size_t>(1ULL << domain.extended_k);
+  if (values_len != size) {
+    error = "extended_to_coeff_gpu size mismatch";
+    return false;
+  }
+  if (!cache.t_evals || cache.t_evals_len == 0) {
+    error = "t_evaluations buffer missing";
+    return false;
+  }
+  if (!ensure_fft_scratch(cache, size, error)) {
+    return false;
+  }
+  if (!mul_pointwise_mod_device(values, cache.t_evals, size, cache.t_evals_len, error)) {
+    return false;
+  }
+  if (!fft_in_place_device_batched(values, size, 1, domain.extended_omega_inv, cache.fft_scratch,
+                                   cache.fft_scratch_len, error)) {
+    return false;
+  }
+  if (!scale_device(values, size, domain.extended_ifft_divisor, error)) {
+    return false;
+  }
+  size_t n = static_cast<size_t>(1ULL << domain.k);
+  size_t target_len = n * quotient_poly_degree;
+  size_t out_len = size;
+  if (target_len < out_len) {
+    out_len = target_len;
+  }
+  if (!distribute_powers_zeta_device(values, out_len, size, 1, domain, false, error)) {
+    return false;
+  }
+  out.values.resize(out_len);
+  if (cudaMemcpy(out.values.data(), values, out_len * sizeof(Fr), cudaMemcpyDeviceToHost) !=
+      cudaSuccess) {
+    error = "cudaMemcpy vanishing coeffs failed";
+    return false;
+  }
+  return true;
+}
+
+struct GraphGpuGuard {
+  GraphGpuInputs *inputs = nullptr;
+  ~GraphGpuGuard() {
+    if (inputs) {
+      free_graph_gpu_inputs(*inputs);
+    }
+  }
+};
+
+static bool permutation_sanity_check(const ProverKey &pk,
+                                     const std::vector<PolynomialFr> &advice_values,
+                                     const std::vector<PolynomialFr> &instance_values,
+                                     const Fr &beta, const Fr &gamma, size_t chunk_start,
+                                     size_t chunk_end, const std::vector<Fr> &z_values,
+                                     const Fr &last_z, std::string &error) {
+  if (!sanity_enabled()) {
+    return true;
+  }
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  if (z_values.size() != n) {
+    error = "permutation sanity z size mismatch";
+    return false;
+  }
+  if (!fr_equal(z_values[0], last_z)) {
+    log_fr_mismatch("permutation_z0", 0, last_z, z_values[0]);
+  }
+  uint32_t blinding_factors = pk.blinding_factors;
+  if (n <= static_cast<size_t>(blinding_factors + 1)) {
+    return true;
+  }
+  size_t max_row = n - static_cast<size_t>(blinding_factors + 2);
+  size_t row_idxs[] = {0, 1, max_row / 2, max_row};
+
+  Fr delta_const = fr_delta();
+  Fr omega = pk.domain.omega;
+
+  for (size_t row : row_idxs) {
+    if (row > max_row) {
+      continue;
+    }
+    size_t next_row = row + 1;
+    if (next_row >= z_values.size()) {
+      continue;
+    }
+    Fr omega_row = fr_pow_u64(omega, static_cast<uint64_t>(row));
+    Fr delta_pow = fr_pow_u64(delta_const, static_cast<uint64_t>(chunk_start));
+    Fr numerator = fr_one();
+    Fr denominator = fr_one();
+    for (size_t col_idx = chunk_start; col_idx < chunk_end; ++col_idx) {
+      const auto &column = pk.permutation_columns[col_idx];
+      const auto &permuted = pk.permutation_permutations[col_idx];
+      const std::vector<Fr> *values = nullptr;
+      if (column.column_type == 0) {
+        values = &advice_values[column.index].values;
+      } else if (column.column_type == 1) {
+        values = &pk.fixed_values[column.index].values;
+      } else {
+        values = &instance_values[column.index].values;
+      }
+
+      Fr denom = permuted.values[row];
+      fr_mul(denom, denom, beta);
+      fr_add(denom, denom, gamma);
+      Fr value = (*values)[row];
+      fr_add(denom, denom, value);
+      fr_mul(denominator, denominator, denom);
+
+      Fr num;
+      fr_mul(num, delta_pow, omega_row);
+      fr_mul(num, num, beta);
+      fr_add(num, num, gamma);
+      fr_add(num, num, value);
+      fr_mul(numerator, numerator, num);
+
+      Fr next_delta_pow;
+      fr_mul(next_delta_pow, delta_pow, delta_const);
+      delta_pow = next_delta_pow;
+    }
+    if (fr_is_zero(denominator)) {
+      error = "permutation sanity denominator zero";
+      return false;
+    }
+    Fr denom_inv;
+    fr_inv(denom_inv, denominator);
+    Fr fraction;
+    fr_mul(fraction, numerator, denom_inv);
+    Fr expected;
+    fr_mul(expected, z_values[row], fraction);
+    if (!fr_equal(expected, z_values[next_row])) {
+      log_fr_mismatch("permutation_product", row, expected, z_values[next_row]);
+      error = "permutation sanity product mismatch";
+      return false;
+    }
+  }
+  return true;
+}
+
+struct LookupPermuted {
+  PolynomialFr compressed_input_expression;
+  PolynomialFr permuted_input_expression;
+  PolynomialFr permuted_input_poly;
+  PolynomialFr compressed_table_expression;
+  PolynomialFr permuted_table_expression;
+  PolynomialFr permuted_table_poly;
+};
+
+struct LookupCommitted {
+  PolynomialFr permuted_input_poly;
+  PolynomialFr permuted_table_poly;
+  PolynomialFr product_poly;
+};
+
+struct LookupEvaluated {
+  LookupCommitted committed;
+  Fr product_eval{};
+  Fr product_next_eval{};
+  Fr permuted_input_eval{};
+  Fr permuted_input_inv_eval{};
+  Fr permuted_table_eval{};
+};
+
+static bool lookup_sanity_check(const ProverKey &pk, const LookupPermuted &perm,
+                                const std::vector<Fr> &z_values, const Fr &beta,
+                                const Fr &gamma, std::string &error) {
+  if (!sanity_enabled()) {
+    return true;
+  }
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  size_t usable_rows = n - (pk.blinding_factors + 1);
+  if (z_values.size() <= usable_rows) {
+    error = "lookup sanity z size mismatch";
+    return false;
+  }
+
+  Fr diff;
+  fr_sub(diff, z_values[0], fr_one());
+  if (!fr_is_zero(diff)) {
+    log_fr_mismatch("lookup_z0", 0, fr_one(), z_values[0]);
+    error = "lookup sanity z0 mismatch";
+    return false;
+  }
+
+  for (size_t i = 0; i < usable_rows; ++i) {
+    Fr left = z_values[i + 1];
+    Fr tmp;
+    fr_add(tmp, perm.permuted_input_expression.values[i], beta);
+    fr_mul(left, left, tmp);
+    fr_add(tmp, perm.permuted_table_expression.values[i], gamma);
+    fr_mul(left, left, tmp);
+
+    Fr right = z_values[i];
+    Fr num_left = perm.compressed_input_expression.values[i];
+    fr_add(num_left, num_left, beta);
+    Fr num_right = perm.compressed_table_expression.values[i];
+    fr_add(num_right, num_right, gamma);
+    Fr prod;
+    fr_mul(prod, num_left, num_right);
+    fr_mul(right, right, prod);
+
+    Fr diff_row;
+    fr_sub(diff_row, left, right);
+    if (!fr_is_zero(diff_row)) {
+      char left_hex[65];
+      char right_hex[65];
+      fr_to_hex_be(left, left_hex);
+      fr_to_hex_be(right, right_hex);
+      std::fprintf(stderr,
+                   "sanity: lookup_row_mismatch row=%zu left=%s right=%s\n", i, left_hex,
+                   right_hex);
+      error = "lookup sanity product mismatch";
+      return false;
+    }
+  }
+
+  Fr diff_last;
+  fr_sub(diff_last, z_values[usable_rows], fr_one());
+  if (!fr_is_zero(diff_last)) {
+    log_fr_mismatch("lookup_z_last", usable_rows, fr_one(), z_values[usable_rows]);
+    error = "lookup sanity last row mismatch";
+    return false;
+  }
+
+  return true;
+}
+
+struct PermutationSet {
+  PolynomialFr permutation_product_poly;
+};
+
+struct PermutationCommitted {
+  std::vector<PermutationSet> sets;
+};
+
+struct PermutationEvaluated {
+  PermutationCommitted committed;
+};
+
+struct VanishingCommitted {
+  PolynomialFr random_poly;
+};
+
+struct VanishingConstructed {
+  std::vector<PolynomialFr> h_pieces;
+  VanishingCommitted committed;
+};
+
+struct VanishingEvaluated {
+  PolynomialFr h_poly;
+  VanishingCommitted committed;
+};
+
+static bool permute_expression_pair(const ProverKey &pk, const PolynomialFr &input_expression,
+                                    const PolynomialFr &table_expression, ChaCha20Rng &rng,
+                                    PolynomialFr &permuted_input, PolynomialFr &permuted_table,
+                                    std::string &error) {
+  uint32_t blinding_factors = pk.blinding_factors;
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  size_t usable_rows = n - (blinding_factors + 1);
+
+  std::vector<Fr> permuted_input_vals = input_expression.values;
+  if (permuted_input_vals.size() > usable_rows) {
+    permuted_input_vals.resize(usable_rows);
+  }
+  std::sort(permuted_input_vals.begin(), permuted_input_vals.end(), FrLess());
+
+  std::vector<Fr> table_vals;
+  table_vals.reserve(usable_rows);
+  size_t table_limit = std::min(usable_rows, table_expression.values.size());
+  for (size_t i = 0; i < table_limit; ++i) {
+    table_vals.push_back(table_expression.values[i]);
+  }
+  std::sort(table_vals.begin(), table_vals.end(), FrLess());
+
+  struct TableRun {
+    Fr value;
+    uint32_t count;
+  };
+  std::vector<TableRun> table_runs;
+  table_runs.reserve(table_vals.size());
+  for (const auto &value : table_vals) {
+    if (table_runs.empty() || !fr_equal(table_runs.back().value, value)) {
+      table_runs.push_back({value, 1});
+    } else {
+      table_runs.back().count += 1;
+    }
+  }
+
+  std::vector<Fr> permuted_table_vals(usable_rows, Fr{});
+  std::vector<size_t> repeated_input_rows;
+  repeated_input_rows.reserve(usable_rows);
+
+  for (size_t row = 0; row < permuted_input_vals.size(); ++row) {
+    const Fr &input_value = permuted_input_vals[row];
+    bool is_first = (row == 0) || !(!FrLess()(permuted_input_vals[row - 1], input_value) &&
+                                     !FrLess()(input_value, permuted_input_vals[row - 1]));
+    if (is_first) {
+      permuted_table_vals[row] = input_value;
+      auto it = std::lower_bound(
+          table_runs.begin(), table_runs.end(), input_value,
+          [](const TableRun &run, const Fr &val) { return FrLess()(run.value, val); });
+      if (it == table_runs.end() || !fr_equal(it->value, input_value) || it->count == 0) {
+        error = "lookup input value missing from table";
+        return false;
+      }
+      it->count -= 1;
+    } else {
+      repeated_input_rows.push_back(row);
+    }
+  }
+
+  for (const auto &run : table_runs) {
+    for (uint32_t i = 0; i < run.count; ++i) {
+      if (repeated_input_rows.empty()) {
+        error = "lookup permutation rows underflow";
+        return false;
+      }
+      size_t row = repeated_input_rows.back();
+      repeated_input_rows.pop_back();
+      permuted_table_vals[row] = run.value;
+    }
+  }
+
+  if (!repeated_input_rows.empty()) {
+    error = "lookup permutation rows leftover";
+    return false;
+  }
+
+  if (sanity_enabled()) {
+    size_t max_rows = std::min(usable_rows, static_cast<size_t>(8));
+    for (size_t row = 0; row < max_rows; ++row) {
+      char input_hex[65];
+      char table_hex[65];
+      fr_to_hex_be(permuted_input_vals[row], input_hex);
+      fr_to_hex_be(permuted_table_vals[row], table_hex);
+      std::fprintf(stderr, "sanity: lookup_perm row=%zu input=%s table=%s\n", row, input_hex,
+                   table_hex);
+    }
+    for (size_t row = 0; row < usable_rows; ++row) {
+      if (!fr_equal(permuted_input_vals[row], permuted_table_vals[row])) {
+        if (row == 0 || !fr_equal(permuted_input_vals[row], permuted_input_vals[row - 1])) {
+          char input_hex[65];
+          char table_hex[65];
+          fr_to_hex_be(permuted_input_vals[row], input_hex);
+          fr_to_hex_be(permuted_table_vals[row], table_hex);
+          std::fprintf(stderr,
+                       "sanity: lookup_perm_mismatch row=%zu input=%s table=%s\n", row,
+                       input_hex, table_hex);
+          error = "lookup permutation order mismatch";
+          return false;
+        }
+      }
+    }
+  }
+
+  for (uint32_t i = 0; i < blinding_factors + 1; ++i) {
+    permuted_input_vals.push_back(fr_random(rng));
+    permuted_table_vals.push_back(fr_random(rng));
+  }
+
+  if (permuted_input_vals.size() != n || permuted_table_vals.size() != n) {
+    error = "lookup permutation size mismatch";
+    return false;
+  }
+
+  permuted_input.values = std::move(permuted_input_vals);
+  permuted_table.values = std::move(permuted_table_vals);
+  return true;
+}
+
+static bool lookup_commit_permuted(const ParamsKZG &params, const ProverKey &pk,
+                                   size_t lookup_idx, const GraphEvaluator &input_graph,
+                                   const GraphEvaluator &table_graph,
+                                   const std::vector<PolynomialFr> &advice_values,
+                                   const std::vector<PolynomialFr> &instance_values,
+                                   const std::vector<Fr> &challenges, const Fr &theta,
+                                   GraphGpuInputs *gpu_inputs, ChaCha20Rng &rng,
+                                   ProofTranscript &transcript, LookupPermuted &out,
+                                   std::string &error) {
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  PolynomialFr compressed_input;
+  PolynomialFr compressed_table;
+
+  bool gpu_ok = false;
+  if (gpu_inputs && gpu_inputs->enabled && gpu_inputs->cache &&
+      lookup_idx < gpu_inputs->cache->lookup_input_graphs.size() &&
+      lookup_idx < gpu_inputs->cache->lookup_table_graphs.size()) {
+    DeviceGraphInputs inputs;
+    inputs.fixed = gpu_inputs->cache->fixed_base;
+    inputs.advice = gpu_inputs->advice_base;
+    inputs.instance = gpu_inputs->instance_base;
+    inputs.stride = gpu_inputs->cache->base_stride;
+
+    bool fixed_ok = gpu_inputs->cache->base_map.fixed_indices.empty() || inputs.fixed;
+    bool advice_ok = gpu_inputs->cache->base_map.advice_indices.empty() || inputs.advice;
+    bool instance_ok = gpu_inputs->cache->base_map.instance_indices.empty() || inputs.instance;
+    if (fixed_ok && advice_ok && instance_ok) {
+      std::string gpu_error;
+      Fr zero{};
+      if (evaluate_graph_values_gpu(gpu_inputs->cache->lookup_input_graphs[lookup_idx], inputs,
+                                    challenges, zero, zero, theta, zero, zero, n, 1,
+                                    static_cast<int32_t>(n), compressed_input.values,
+                                    gpu_error) &&
+          evaluate_graph_values_gpu(gpu_inputs->cache->lookup_table_graphs[lookup_idx], inputs,
+                                    challenges, zero, zero, theta, zero, zero, n, 1,
+                                    static_cast<int32_t>(n), compressed_table.values,
+                                    gpu_error)) {
+        gpu_ok = true;
+      } else if (graph_gpu_debug_enabled()) {
+        std::fprintf(stderr, "graph gpu fallback (lookup_commit_permuted): %s\n",
+                     gpu_error.c_str());
+      }
+    } else if (graph_gpu_debug_enabled()) {
+      std::fprintf(stderr, "graph gpu fallback (lookup_commit_permuted): missing inputs\n");
+    }
+  }
+
+  if (!gpu_ok) {
+    compressed_input.values = evaluate_graph_values(input_graph, pk.fixed_values, advice_values,
+                                                    instance_values, challenges, Fr{}, Fr{},
+                                                    theta, Fr{}, Fr{}, n, 1,
+                                                    static_cast<int32_t>(n));
+    compressed_table.values = evaluate_graph_values(table_graph, pk.fixed_values, advice_values,
+                                                    instance_values, challenges, Fr{}, Fr{},
+                                                    theta, Fr{}, Fr{}, n, 1,
+                                                    static_cast<int32_t>(n));
+  }
+
+  PolynomialFr permuted_input;
+  PolynomialFr permuted_table;
+  if (!permute_expression_pair(pk, compressed_input, compressed_table, rng, permuted_input,
+                               permuted_table, error)) {
+    return false;
+  }
+
+  G1Affine input_commitment;
+  if (!kzg_commit_lagrange(params, permuted_input.values, input_commitment, error)) {
+    return false;
+  }
+  transcript.write_g1(input_commitment);
+
+  G1Affine table_commitment;
+  if (!kzg_commit_lagrange(params, permuted_table.values, table_commitment, error)) {
+    return false;
+  }
+  transcript.write_g1(table_commitment);
+
+  out.compressed_input_expression = std::move(compressed_input);
+  out.compressed_table_expression = std::move(compressed_table);
+  out.permuted_input_expression = permuted_input;
+  out.permuted_table_expression = permuted_table;
+  out.permuted_input_poly = lagrange_to_coeff(permuted_input, pk.domain);
+  out.permuted_table_poly = lagrange_to_coeff(permuted_table, pk.domain);
+  return true;
+}
+
+static bool lookup_commit_product(const ParamsKZG &params, const ProverKey &pk,
+                                  const LookupPermuted &perm, const Fr &beta,
+                                  const Fr &gamma, ChaCha20Rng &rng,
+                                  ProofTranscript &transcript, LookupCommitted &out,
+                                  std::string &error) {
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  uint32_t blinding_factors = pk.blinding_factors;
+
+  std::vector<Fr> lookup_product(n, Fr{});
+  for (size_t i = 0; i < n; ++i) {
+    Fr tmp = perm.permuted_input_expression.values[i];
+    fr_add(tmp, tmp, beta);
+    Fr tmp2 = perm.permuted_table_expression.values[i];
+    fr_add(tmp2, tmp2, gamma);
+    fr_mul(lookup_product[i], tmp, tmp2);
+  }
+
+  batch_invert(lookup_product);
+
+  for (size_t i = 0; i < n; ++i) {
+    Fr num_left = perm.compressed_input_expression.values[i];
+    fr_add(num_left, num_left, beta);
+    Fr num_right = perm.compressed_table_expression.values[i];
+    fr_add(num_right, num_right, gamma);
+    Fr prod;
+    fr_mul(prod, num_left, num_right);
+    fr_mul(lookup_product[i], lookup_product[i], prod);
+  }
+
+  std::vector<Fr> z_values;
+  z_values.reserve(n);
+  Fr acc = fr_one();
+  z_values.push_back(acc);
+  for (size_t i = 0; i + 1 < n; ++i) {
+    Fr tmp;
+    fr_mul(tmp, acc, lookup_product[i]);
+    acc = tmp;
+    z_values.push_back(acc);
+  }
+  size_t usable_rows = n - (blinding_factors + 1);
+  size_t keep_rows = usable_rows + 1;
+  if (z_values.size() < keep_rows) {
+    error = "lookup product size mismatch";
+    return false;
+  }
+  z_values.resize(keep_rows);
+  if (!lookup_sanity_check(pk, perm, z_values, beta, gamma, error)) {
+    return false;
+  }
+  for (uint32_t i = 0; i < blinding_factors; ++i) {
+    z_values.push_back(fr_random(rng));
+  }
+  if (z_values.size() != n) {
+    error = "lookup product size mismatch";
+    return false;
+  }
+
+  PolynomialFr z_poly;
+  z_poly.values = std::move(z_values);
+  G1Affine commitment;
+  if (!kzg_commit_lagrange(params, z_poly.values, commitment, error)) {
+    return false;
+  }
+  transcript.write_g1(commitment);
+
+  out.permuted_input_poly = perm.permuted_input_poly;
+  out.permuted_table_poly = perm.permuted_table_poly;
+  out.product_poly = lagrange_to_coeff(z_poly, pk.domain);
+  return true;
+}
+
+static bool lookup_evaluate(const ProverKey &pk, const LookupCommitted &committed, const Fr &x,
+                            LookupEvaluated &out, std::string &error) {
+  Fr x_inv = rotate_omega(x, -1, pk.domain.omega, pk.domain.omega_inv);
+  Fr x_next = rotate_omega(x, 1, pk.domain.omega, pk.domain.omega_inv);
+
+  out.product_eval = poly_eval(committed.product_poly.values, x);
+  out.product_next_eval = poly_eval(committed.product_poly.values, x_next);
+  out.permuted_input_eval = poly_eval(committed.permuted_input_poly.values, x);
+  out.permuted_input_inv_eval = poly_eval(committed.permuted_input_poly.values, x_inv);
+  out.permuted_table_eval = poly_eval(committed.permuted_table_poly.values, x);
+
+  out.committed = committed;
+  (void)error;
+  return true;
+}
+
+static void lookup_open(const ProverKey &pk, const LookupEvaluated &eval, const Fr &x,
+                        std::vector<ProverQuery> &queries) {
+  Fr x_inv = rotate_omega(x, -1, pk.domain.omega, pk.domain.omega_inv);
+  Fr x_next = rotate_omega(x, 1, pk.domain.omega, pk.domain.omega_inv);
+
+  queries.push_back({x, &eval.committed.product_poly});
+  queries.push_back({x, &eval.committed.permuted_input_poly});
+  queries.push_back({x, &eval.committed.permuted_table_poly});
+  queries.push_back({x_inv, &eval.committed.permuted_input_poly});
+  queries.push_back({x_next, &eval.committed.product_poly});
+}
+
+static bool permutation_commit(const ParamsKZG &params, const ProverKey &pk,
+                               const std::vector<PolynomialFr> &advice_values,
+                               const std::vector<PolynomialFr> &instance_values, const Fr &beta,
+                               const Fr &gamma, ChaCha20Rng &rng, ProofTranscript &transcript,
+                               PermutationCommitted &out, std::string &error) {
+  uint32_t blinding_factors = pk.blinding_factors;
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  size_t chunk_len = pk.cs_degree - 2;
+  if (chunk_len == 0) {
+    error = "invalid permutation chunk length";
+    return false;
+  }
+
+  Fr delta_const = fr_delta();
+  Fr deltaomega = fr_one();
+  Fr last_z = fr_one();
+  size_t column_count = pk.permutation_columns.size();
+  size_t perm_count = pk.permutation_permutations.size();
+  if (perm_count != column_count) {
+    error = "permutation columns mismatch";
+    return false;
+  }
+
+  for (size_t chunk_start = 0; chunk_start < column_count; chunk_start += chunk_len) {
+    size_t chunk_end = std::min(chunk_start + chunk_len, column_count);
+    std::vector<Fr> modified_values(n, fr_one());
+
+    for (size_t col_idx = chunk_start; col_idx < chunk_end; ++col_idx) {
+      const auto &column = pk.permutation_columns[col_idx];
+      const auto &permuted = pk.permutation_permutations[col_idx];
+      const std::vector<Fr> *values = nullptr;
+      if (column.column_type == 0) {
+        values = &advice_values[column.index].values;
+      } else if (column.column_type == 1) {
+        values = &pk.fixed_values[column.index].values;
+      } else {
+        values = &instance_values[column.index].values;
+      }
+      for (size_t i = 0; i < n; ++i) {
+        Fr tmp = permuted.values[i];
+        fr_mul(tmp, tmp, beta);
+        fr_add(tmp, tmp, gamma);
+        Fr tmp2 = (*values)[i];
+        fr_add(tmp, tmp, tmp2);
+        fr_mul(modified_values[i], modified_values[i], tmp);
+      }
+    }
+
+    batch_invert(modified_values);
+
+    for (size_t col_idx = chunk_start; col_idx < chunk_end; ++col_idx) {
+      const auto &column = pk.permutation_columns[col_idx];
+      const std::vector<Fr> *values = nullptr;
+      if (column.column_type == 0) {
+        values = &advice_values[column.index].values;
+      } else if (column.column_type == 1) {
+        values = &pk.fixed_values[column.index].values;
+      } else {
+        values = &instance_values[column.index].values;
+      }
+
+      Fr delta_row = deltaomega;
+      for (size_t i = 0; i < n; ++i) {
+        Fr tmp = delta_row;
+        fr_mul(tmp, tmp, beta);
+        fr_add(tmp, tmp, gamma);
+        Fr tmp2 = (*values)[i];
+        fr_add(tmp, tmp, tmp2);
+        fr_mul(modified_values[i], modified_values[i], tmp);
+        Fr next_delta;
+        fr_mul(next_delta, delta_row, pk.domain.omega);
+        delta_row = next_delta;
+      }
+      Fr next_deltaomega;
+      fr_mul(next_deltaomega, deltaomega, delta_const);
+      deltaomega = next_deltaomega;
+    }
+
+    std::vector<Fr> z_values;
+    z_values.reserve(n);
+    z_values.push_back(last_z);
+    for (size_t row = 1; row < n; ++row) {
+      Fr tmp;
+      fr_mul(tmp, z_values[row - 1], modified_values[row - 1]);
+      z_values.push_back(tmp);
+    }
+    if (z_values.size() != n) {
+      error = "permutation product size mismatch";
+      return false;
+    }
+    if (!permutation_sanity_check(pk, advice_values, instance_values, beta, gamma, chunk_start,
+                                  chunk_end, z_values, last_z, error)) {
+      return false;
+    }
+
+    for (uint32_t i = 0; i < blinding_factors; ++i) {
+      z_values[n - 1 - i] = fr_random(rng);
+    }
+    last_z = z_values[n - (blinding_factors + 1)];
+
+    PolynomialFr z_poly;
+    z_poly.values = std::move(z_values);
+    G1Affine commitment;
+    if (!kzg_commit_lagrange(params, z_poly.values, commitment, error)) {
+      return false;
+    }
+    transcript.write_g1(commitment);
+
+    PermutationSet set;
+    set.permutation_product_poly = lagrange_to_coeff(z_poly, pk.domain);
+    out.sets.push_back(std::move(set));
+  }
+  return true;
+}
+
+static bool permutation_evaluate(const ProverKey &pk, const PermutationCommitted &committed,
+                                 const Fr &x, ProofTranscript &transcript,
+                                 PermutationEvaluated &out, std::string &error) {
+  uint32_t blinding_factors = pk.blinding_factors;
+  Fr x_next = rotate_omega(x, 1, pk.domain.omega, pk.domain.omega_inv);
+  int32_t last_rot = -static_cast<int32_t>(blinding_factors + 1);
+  Fr x_last = rotate_omega(x, last_rot, pk.domain.omega, pk.domain.omega_inv);
+
+  struct PermEval {
+    Fr eval{};
+    Fr eval_next{};
+    Fr eval_last{};
+  };
+  std::vector<PermEval> evals(committed.sets.size());
+  if (!committed.sets.empty()) {
+    constexpr size_t kMinChunk = 1;
+    parallel_for_chunks(committed.sets.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        const auto &set = committed.sets[i];
+        evals[i].eval = poly_eval(set.permutation_product_poly.values, x);
+        evals[i].eval_next = poly_eval(set.permutation_product_poly.values, x_next);
+        if (i + 1 < committed.sets.size()) {
+          evals[i].eval_last = poly_eval(set.permutation_product_poly.values, x_last);
+        }
+      }
+    });
+  }
+  for (size_t i = 0; i < evals.size(); ++i) {
+    transcript.write_fr(evals[i].eval);
+    transcript.write_fr(evals[i].eval_next);
+    if (i + 1 < evals.size()) {
+      transcript.write_fr(evals[i].eval_last);
+    }
+  }
+
+  out.committed = committed;
+  (void)error;
+  return true;
+}
+
+static void permutation_open(const ProverKey &pk, const PermutationEvaluated &eval, const Fr &x,
+                             std::vector<ProverQuery> &queries) {
+  uint32_t blinding_factors = pk.blinding_factors;
+  Fr x_next = rotate_omega(x, 1, pk.domain.omega, pk.domain.omega_inv);
+  int32_t last_rot = -static_cast<int32_t>(blinding_factors + 1);
+  Fr x_last = rotate_omega(x, last_rot, pk.domain.omega, pk.domain.omega_inv);
+
+  for (const auto &set : eval.committed.sets) {
+    queries.push_back({x, &set.permutation_product_poly});
+    queries.push_back({x_next, &set.permutation_product_poly});
+  }
+  if (eval.committed.sets.size() > 1) {
+    for (size_t i = eval.committed.sets.size() - 1; i-- > 0;) {
+      queries.push_back({x_last, &eval.committed.sets[i].permutation_product_poly});
+    }
+  }
+}
+
+static bool vanishing_commit(const ParamsKZG &params, const ProverKey &pk, ChaCha20Rng &rng,
+                             ProofTranscript &transcript, VanishingCommitted &out,
+                             std::string &error) {
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  std::vector<Fr> rand_vec(n);
+  for (size_t i = 0; i < n; ++i) {
+    rand_vec[i] = fr_random(rng);
+  }
+  out.random_poly.values = std::move(rand_vec);
+
+  G1Affine commitment;
+  if (!kzg_commit(params, out.random_poly.values, commitment, error)) {
+    return false;
+  }
+  transcript.write_g1(commitment);
+  return true;
+}
+
+static bool vanishing_construct(const ParamsKZG &params, const ProverKey &pk,
+                                const PolynomialFr &h_poly, ProofTranscript &transcript,
+                                const VanishingCommitted &committed, GraphGpuInputs *gpu_inputs,
+                                VanishingConstructed &out, std::string &error) {
+  size_t quotient_poly_degree = pk.cs_degree > 0 ? static_cast<size_t>(pk.cs_degree - 1) : 0;
+  size_t size = static_cast<size_t>(1ULL << pk.domain.extended_k);
+  PolynomialFr coeff;
+  bool coeff_ok = false;
+  const PolynomialFr *h_host = &h_poly;
+  PolynomialFr h_host_storage;
+  if (gpu_inputs && gpu_inputs->enabled && gpu_inputs->cache) {
+    std::string gpu_error;
+    if (gpu_inputs->h_values && gpu_inputs->h_values_len == size) {
+      if (extended_to_coeff_gpu_vanishing_device(gpu_inputs->h_values, gpu_inputs->h_values_len,
+                                                  pk.domain, quotient_poly_degree,
+                                                  *gpu_inputs->cache, coeff, gpu_error)) {
+        coeff_ok = true;
+      } else if (graph_gpu_debug_enabled()) {
+        std::fprintf(stderr, "vanishing_construct gpu fallback: %s\n", gpu_error.c_str());
+      }
+    }
+    if (!coeff_ok && !h_poly.values.empty()) {
+      if (extended_to_coeff_gpu_vanishing(h_poly, pk.domain, quotient_poly_degree,
+                                          *gpu_inputs->cache, coeff, gpu_error)) {
+        coeff_ok = true;
+      } else if (graph_gpu_debug_enabled()) {
+        std::fprintf(stderr, "vanishing_construct gpu fallback: %s\n", gpu_error.c_str());
+      }
+    }
+  }
+  if (!coeff_ok) {
+    if (h_poly.values.empty() && gpu_inputs && gpu_inputs->h_values &&
+        gpu_inputs->h_values_len == size) {
+      h_host_storage.values.resize(size);
+      if (cudaMemcpy(h_host_storage.values.data(), gpu_inputs->h_values, size * sizeof(Fr),
+                     cudaMemcpyDeviceToHost) != cudaSuccess) {
+        error = "cudaMemcpy h values failed";
+        return false;
+      }
+      h_host = &h_host_storage;
+    }
+    PolynomialFr h_div = divide_by_vanishing(*h_host, pk.domain);
+    if (gpu_inputs && gpu_inputs->enabled && gpu_inputs->cache) {
+      std::string gpu_error;
+      if (extended_to_coeff_gpu(h_div, pk.domain, quotient_poly_degree, *gpu_inputs->cache, coeff,
+                                gpu_error)) {
+        coeff_ok = true;
+      } else if (graph_gpu_debug_enabled()) {
+        std::fprintf(stderr, "vanishing_construct gpu fallback: %s\n", gpu_error.c_str());
+      }
+    }
+    if (!coeff_ok) {
+      coeff = extended_to_coeff(h_div, pk.domain, quotient_poly_degree);
+    }
+  }
+
+  size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+  if (coeff.values.size() % n != 0) {
+    error = "vanishing polynomial size mismatch";
+    return false;
+  }
+  size_t pieces = coeff.values.size() / n;
+  out.h_pieces.resize(pieces);
+  for (size_t i = 0; i < pieces; ++i) {
+    PolynomialFr piece;
+    piece.values.assign(coeff.values.begin() + i * n, coeff.values.begin() + (i + 1) * n);
+    out.h_pieces[i] = std::move(piece);
+  }
+
+  for (const auto &piece : out.h_pieces) {
+    G1Affine commitment;
+    if (!kzg_commit(params, piece.values, commitment, error)) {
+      return false;
+    }
+    transcript.write_g1(commitment);
+  }
+
+  out.committed = committed;
+  return true;
+}
+
+static bool vanishing_evaluate(const ProverKey &pk, const VanishingConstructed &constructed,
+                               const Fr &x, ProofTranscript &transcript, VanishingEvaluated &out,
+                               std::string &error) {
+  Fr xn = fr_pow_u64(x, static_cast<uint64_t>(1ULL << pk.domain.k));
+  if (constructed.h_pieces.empty()) {
+    error = "vanishing pieces empty";
+    return false;
+  }
+  PolynomialFr acc = constructed.h_pieces.back();
+  for (size_t idx = constructed.h_pieces.size() - 1; idx-- > 0;) {
+    PolynomialFr tmp = acc;
+    for (auto &coef : tmp.values) {
+      fr_mul(coef, coef, xn);
+    }
+    std::vector<Fr> sum = poly_add(tmp.values, constructed.h_pieces[idx].values);
+    acc.values = std::move(sum);
+  }
+
+  Fr random_eval = poly_eval(constructed.committed.random_poly.values, x);
+  transcript.write_fr(random_eval);
+
+  out.h_poly = std::move(acc);
+  out.committed = constructed.committed;
+  (void)error;
+  return true;
+}
+
+static PolynomialFr evaluate_h_cpu(const ProverKey &pk,
+                                   const std::vector<PolynomialFr> &advice_coeffs,
+                                   const std::vector<PolynomialFr> &instance_coeffs,
+                                   const std::vector<Fr> &challenges, const Fr &y, const Fr &beta,
+                                   const Fr &gamma, const Fr &theta,
+                                   const std::vector<LookupCommitted> &lookups,
+                                   const PermutationCommitted &permutation) {
+  size_t size = static_cast<size_t>(1ULL << pk.domain.extended_k);
+  int32_t rot_scale = 1 << (pk.domain.extended_k - pk.domain.k);
+  int32_t isize = static_cast<int32_t>(size);
+  constexpr size_t kMinChunk = 1024;
+  bool timing = timing_enabled();
+  std::vector<TimingEntry> eval_timings;
+  auto mark_eval = [&](const char *label, std::chrono::steady_clock::time_point start) {
+    if (timing) {
+      eval_timings.push_back({label, std::chrono::steady_clock::now() - start});
+    }
+  };
+
+  auto advice_cosets_start = std::chrono::steady_clock::now();
+  std::vector<PolynomialFr> advice_cosets;
+  advice_cosets.reserve(advice_coeffs.size());
+  for (const auto &poly : advice_coeffs) {
+    advice_cosets.push_back(coeff_to_extended(poly, pk.domain));
+  }
+  mark_eval("h_advice_cosets", advice_cosets_start);
+
+  auto instance_cosets_start = std::chrono::steady_clock::now();
+  std::vector<PolynomialFr> instance_cosets;
+  instance_cosets.reserve(instance_coeffs.size());
+  for (const auto &poly : instance_coeffs) {
+    instance_cosets.push_back(coeff_to_extended(poly, pk.domain));
+  }
+  mark_eval("h_instance_cosets", instance_cosets_start);
+
+  if (h_debug_enabled()) {
+    if (!advice_cosets.empty()) {
+      debug_log_h_values("advice_coset_0", advice_cosets[0].values);
+    }
+    if (!instance_cosets.empty()) {
+      debug_log_h_values("instance_coset_0", instance_cosets[0].values);
+    }
+    if (!pk.fixed_cosets.empty()) {
+      debug_log_h_values("fixed_coset_0", pk.fixed_cosets[0].values);
+    }
+    if (!advice_cosets.empty() && !advice_coeffs.empty()) {
+      size_t size = static_cast<size_t>(1ULL << pk.domain.extended_k);
+      size_t idxs[] = {0, size > 1 ? static_cast<size_t>(1) : 0,
+                       size > 0 ? size / 2 : 0, size > 0 ? size - 1 : 0};
+      for (size_t idx : idxs) {
+        if (idx >= advice_cosets[0].values.size()) {
+          continue;
+        }
+        Fr omega_i = fr_pow_u64(pk.domain.extended_omega, static_cast<uint64_t>(idx));
+        Fr x;
+        fr_mul(x, omega_i, pk.domain.g_coset);
+        Fr eval = poly_eval(advice_coeffs[0].values, x);
+        char eval_hex[65];
+        char expected_hex[65];
+        fr_to_hex_be(eval, eval_hex);
+        fr_to_hex_be(advice_cosets[0].values[idx], expected_hex);
+        std::fprintf(stderr, "h debug: advice_coset_eval idx=%zu eval=%s expected=%s\n", idx,
+                     eval_hex, expected_hex);
+      }
+    }
+  }
+
+  std::vector<Fr> values(size, Fr{});
+  auto custom_eval_start = std::chrono::steady_clock::now();
+  auto custom_worker = [&](size_t start, size_t end) {
+    std::vector<size_t> rotation_indices;
+    std::vector<Fr> intermediates;
+    for (size_t idx = start; idx < end; ++idx) {
+      values[idx] = evaluate_graph_cached(pk.custom_gates, pk.fixed_cosets, advice_cosets,
+                                          instance_cosets, challenges, beta, gamma, theta, y,
+                                          values[idx], idx, rot_scale, isize, rotation_indices,
+                                          intermediates);
+    }
+  };
+  parallel_for_chunks(size, kMinChunk, custom_worker);
+  mark_eval("h_custom_eval", custom_eval_start);
+  debug_log_h_values("custom", values);
+
+  if (!permutation.sets.empty()) {
+    uint32_t blinding_factors = pk.blinding_factors;
+    int32_t last_rotation = -static_cast<int32_t>(blinding_factors + 1);
+    size_t chunk_len = pk.cs_degree - 2;
+    Fr delta_start;
+    fr_mul(delta_start, beta, pk.domain.g_coset);
+
+    auto perm_cosets_start = std::chrono::steady_clock::now();
+    std::vector<PolynomialFr> permutation_product_cosets;
+    permutation_product_cosets.reserve(permutation.sets.size());
+    for (const auto &set : permutation.sets) {
+      permutation_product_cosets.push_back(coeff_to_extended(set.permutation_product_poly, pk.domain));
+    }
+    mark_eval("h_permutation_cosets", perm_cosets_start);
+
+    const auto &first_set = permutation_product_cosets.front();
+    const auto &last_set = permutation_product_cosets.back();
+    std::vector<Fr> beta_terms(size);
+    beta_terms[0] = fr_one();
+    for (size_t idx = 1; idx < size; ++idx) {
+      fr_mul(beta_terms[idx], beta_terms[idx - 1], pk.domain.extended_omega);
+    }
+
+    std::vector<const std::vector<Fr> *> permutation_column_values;
+    permutation_column_values.reserve(pk.permutation_columns.size());
+    for (const auto &col : pk.permutation_columns) {
+      if (col.column_type == 0) {
+        permutation_column_values.push_back(&advice_cosets[col.index].values);
+      } else if (col.column_type == 1) {
+        permutation_column_values.push_back(&pk.fixed_cosets[col.index].values);
+      } else {
+        permutation_column_values.push_back(&instance_cosets[col.index].values);
+      }
+    }
+
+    std::vector<const std::vector<Fr> *> permutation_coset_values;
+    permutation_coset_values.reserve(pk.permutation_cosets.size());
+    for (const auto &poly : pk.permutation_cosets) {
+      permutation_coset_values.push_back(&poly.values);
+    }
+
+    auto perm_eval_start = std::chrono::steady_clock::now();
+    auto permute_worker = [&](size_t start, size_t end) {
+      for (size_t idx = start; idx < end; ++idx) {
+        size_t r_next = rotation_index(idx, 1, rot_scale, isize);
+        size_t r_last = rotation_index(idx, last_rotation, rot_scale, isize);
+
+        Fr value = values[idx];
+        Fr one = fr_one();
+
+        Fr tmp;
+        fr_sub(tmp, one, first_set.values[idx]);
+        fr_mul(tmp, tmp, pk.l0.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, tmp);
+
+        Fr last_eval = last_set.values[idx];
+        Fr last_sq;
+        fr_mul(last_sq, last_eval, last_eval);
+        fr_sub(last_sq, last_sq, last_eval);
+        fr_mul(last_sq, last_sq, pk.l_last.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, last_sq);
+
+        if (permutation.sets.size() > 1) {
+          for (size_t set_idx = 1; set_idx < permutation.sets.size(); ++set_idx) {
+            Fr diff;
+            fr_sub(diff, permutation_product_cosets[set_idx].values[idx],
+                   permutation_product_cosets[set_idx - 1].values[r_last]);
+            fr_mul(diff, diff, pk.l0.values[idx]);
+            fr_mul(value, value, y);
+            fr_add(value, value, diff);
+          }
+        }
+
+        Fr current_delta;
+        fr_mul(current_delta, delta_start, beta_terms[idx]);
+
+        size_t col_offset = 0;
+        while (col_offset < pk.permutation_columns.size()) {
+          size_t chunk_end = std::min(col_offset + chunk_len, pk.permutation_columns.size());
+
+          Fr left = permutation_product_cosets[col_offset / chunk_len].values[r_next];
+          for (size_t col_idx = col_offset; col_idx < chunk_end; ++col_idx) {
+            const auto &values_col = *permutation_column_values[col_idx];
+            const auto &perm_values = *permutation_coset_values[col_idx];
+            Fr perm_val = perm_values[idx];
+            Fr term;
+            fr_mul(term, perm_val, beta);
+            fr_add(term, term, gamma);
+            fr_add(term, term, values_col[idx]);
+            fr_mul(left, left, term);
+          }
+
+          Fr right = permutation_product_cosets[col_offset / chunk_len].values[idx];
+          for (size_t col_idx = col_offset; col_idx < chunk_end; ++col_idx) {
+            const auto &values_col = *permutation_column_values[col_idx];
+            Fr term;
+            fr_add(term, current_delta, gamma);
+            fr_add(term, term, values_col[idx]);
+            fr_mul(right, right, term);
+            Fr next_delta;
+            fr_mul(next_delta, current_delta, fr_delta());
+            current_delta = next_delta;
+          }
+
+          Fr diff;
+          fr_sub(diff, left, right);
+          fr_mul(diff, diff, pk.l_active_row.values[idx]);
+          fr_mul(value, value, y);
+          fr_add(value, value, diff);
+
+          col_offset = chunk_end;
+        }
+
+        values[idx] = value;
+      }
+    };
+    parallel_for_chunks(size, kMinChunk, permute_worker);
+    mark_eval("h_permutation_eval", perm_eval_start);
+    debug_log_h_values("permutation", values);
+  }
+
+  std::chrono::steady_clock::duration lookup_cosets_total{};
+  std::chrono::steady_clock::duration lookup_eval_total{};
+  for (size_t lookup_idx = 0; lookup_idx < lookups.size(); ++lookup_idx) {
+    const auto &lookup = lookups[lookup_idx];
+    auto lookup_cosets_start = std::chrono::steady_clock::now();
+    PolynomialFr product_coset = coeff_to_extended(lookup.product_poly, pk.domain);
+    PolynomialFr permuted_input_coset = coeff_to_extended(lookup.permuted_input_poly, pk.domain);
+    PolynomialFr permuted_table_coset = coeff_to_extended(lookup.permuted_table_poly, pk.domain);
+    lookup_cosets_total += std::chrono::steady_clock::now() - lookup_cosets_start;
+    const auto &lookup_graph = pk.lookup_combined_graphs[lookup_idx];
+
+    auto lookup_eval_start = std::chrono::steady_clock::now();
+    auto lookup_worker = [&](size_t start, size_t end) {
+      std::vector<size_t> rotation_indices;
+      std::vector<Fr> intermediates;
+      for (size_t idx = start; idx < end; ++idx) {
+        Fr table_value = evaluate_graph_cached(
+            lookup_graph, pk.fixed_cosets, advice_cosets, instance_cosets, challenges, beta, gamma,
+            theta, y, Fr{}, idx, rot_scale, isize, rotation_indices, intermediates);
+        size_t r_next = rotation_index(idx, 1, rot_scale, isize);
+        size_t r_prev = rotation_index(idx, -1, rot_scale, isize);
+
+        Fr value = values[idx];
+        Fr one = fr_one();
+
+        Fr a_minus_s;
+        fr_sub(a_minus_s, permuted_input_coset.values[idx], permuted_table_coset.values[idx]);
+
+        Fr term;
+        fr_sub(term, one, product_coset.values[idx]);
+        fr_mul(term, term, pk.l0.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, term);
+
+        Fr term2;
+        fr_mul(term2, product_coset.values[idx], product_coset.values[idx]);
+        fr_sub(term2, term2, product_coset.values[idx]);
+        fr_mul(term2, term2, pk.l_last.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, term2);
+
+        Fr left = product_coset.values[r_next];
+        Fr tmp;
+        fr_add(tmp, permuted_input_coset.values[idx], beta);
+        fr_mul(left, left, tmp);
+        fr_add(tmp, permuted_table_coset.values[idx], gamma);
+        fr_mul(left, left, tmp);
+
+        Fr right = product_coset.values[idx];
+        fr_mul(right, right, table_value);
+
+        Fr diff;
+        fr_sub(diff, left, right);
+        fr_mul(diff, diff, pk.l_active_row.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, diff);
+
+        Fr l0_term;
+        fr_mul(l0_term, a_minus_s, pk.l0.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, l0_term);
+
+        Fr prev_diff;
+        fr_sub(prev_diff, permuted_input_coset.values[idx], permuted_input_coset.values[r_prev]);
+        fr_mul(prev_diff, prev_diff, a_minus_s);
+        fr_mul(prev_diff, prev_diff, pk.l_active_row.values[idx]);
+        fr_mul(value, value, y);
+        fr_add(value, value, prev_diff);
+
+        values[idx] = value;
+      }
+    };
+    parallel_for_chunks(size, kMinChunk, lookup_worker);
+    lookup_eval_total += std::chrono::steady_clock::now() - lookup_eval_start;
+    if (h_debug_enabled()) {
+      std::string stage = "lookup_" + std::to_string(lookup_idx);
+      debug_log_h_values(stage.c_str(), values);
+    }
+  }
+  if (timing) {
+    eval_timings.push_back({"h_lookup_cosets", lookup_cosets_total});
+    eval_timings.push_back({"h_lookup_eval", lookup_eval_total});
+  }
+
+  PolynomialFr out;
+  out.values = std::move(values);
+  debug_log_h_values("final", out.values);
+  log_timings(eval_timings);
+  return out;
+}
+
+static bool evaluate_h_gpu(const ProverKey &pk, const std::vector<PolynomialFr> &advice_coeffs,
+                           const std::vector<PolynomialFr> &instance_coeffs,
+                           const std::vector<Fr> &challenges, const Fr &y, const Fr &beta,
+                           const Fr &gamma, const Fr &theta, GraphGpuInputs &gpu_inputs,
+                           const std::vector<LookupCommitted> &lookups,
+                           const PermutationCommitted &permutation, PolynomialFr &out,
+                           bool copy_to_host, std::string &error) {
+  if (!gpu_inputs.enabled || !gpu_inputs.cache) {
+    error = "graph gpu not initialized";
+    return false;
+  }
+  auto *cache = gpu_inputs.cache;
+  size_t size = static_cast<size_t>(1ULL << pk.domain.extended_k);
+  int32_t rot_scale = 1 << (pk.domain.extended_k - pk.domain.k);
+  int32_t isize = static_cast<int32_t>(size);
+
+  size_t advice_total = cache->ext_map.advice_indices.size() * size;
+  size_t instance_total = cache->ext_map.instance_indices.size() * size;
+  size_t scratch_needed = std::max(advice_total, instance_total);
+  if (!ensure_fft_scratch(*cache, scratch_needed, error)) {
+    return false;
+  }
+
+  if (advice_total > 0) {
+    if (!ensure_device_buffer(&cache->advice_ext, cache->advice_ext_len, advice_total, error)) {
+      return false;
+    }
+    gpu_inputs.advice_ext = cache->advice_ext;
+    if (!coeffs_to_extended_device_subset_batched(advice_coeffs, cache->ext_map.advice_indices,
+                                                   pk.domain, cache->advice_ext,
+                                                   cache->advice_ext_len, cache->fft_scratch,
+                                                   cache->fft_scratch_len, error)) {
+      return false;
+    }
+  }
+  if (instance_total > 0) {
+    if (!ensure_device_buffer(&cache->instance_ext, cache->instance_ext_len, instance_total,
+                              error)) {
+      return false;
+    }
+    gpu_inputs.instance_ext = cache->instance_ext;
+    if (!coeffs_to_extended_device_subset_batched(instance_coeffs, cache->ext_map.instance_indices,
+                                                   pk.domain, cache->instance_ext,
+                                                   cache->instance_ext_len, cache->fft_scratch,
+                                                   cache->fft_scratch_len, error)) {
+      return false;
+    }
+  }
+
+  DeviceGraphInputs ext_inputs;
+  ext_inputs.fixed = cache->fixed_ext;
+  ext_inputs.advice = cache->advice_ext;
+  ext_inputs.instance = cache->instance_ext;
+  ext_inputs.stride = cache->ext_stride;
+  if (ext_inputs.stride != size) {
+    error = "graph gpu ext stride mismatch";
+    return false;
+  }
+  if ((!cache->ext_map.fixed_indices.empty() && !ext_inputs.fixed) ||
+      (!cache->ext_map.advice_indices.empty() && !ext_inputs.advice) ||
+      (!cache->ext_map.instance_indices.empty() && !ext_inputs.instance)) {
+    error = "graph gpu ext inputs missing";
+    return false;
+  }
+
+  if (gpu_inputs.d_challenges == nullptr || gpu_inputs.challenges_len != challenges.size()) {
+    if (gpu_inputs.d_challenges) {
+      cudaFree(gpu_inputs.d_challenges);
+      gpu_inputs.d_challenges = nullptr;
+      gpu_inputs.challenges_len = 0;
+    }
+    if (!challenges.empty()) {
+      if (cudaMalloc(&gpu_inputs.d_challenges, challenges.size() * sizeof(Fr)) != cudaSuccess) {
+        error = "graph gpu challenge alloc failed";
+        return false;
+      }
+      if (cudaMemcpy(gpu_inputs.d_challenges, challenges.data(),
+                     challenges.size() * sizeof(Fr), cudaMemcpyHostToDevice) != cudaSuccess) {
+        cudaFree(gpu_inputs.d_challenges);
+        gpu_inputs.d_challenges = nullptr;
+        gpu_inputs.challenges_len = 0;
+        error = "graph gpu challenge copy failed";
+        return false;
+      }
+      gpu_inputs.challenges_len = challenges.size();
+    }
+  }
+
+  if (!ensure_device_buffer(&cache->values_buf, cache->values_len, size, error)) {
+    return false;
+  }
+  Fr *d_values = cache->values_buf;
+
+  Fr zero{};
+  if (!evaluate_graph_values_gpu_device(cache->custom_graph, ext_inputs, gpu_inputs.d_challenges,
+                                        gpu_inputs.challenges_len, beta, gamma, theta, y, zero,
+                                        size, rot_scale, isize, d_values, error)) {
+    return false;
+  }
+
+  if (!permutation.sets.empty()) {
+    if (cache->perm_columns_len == 0 || !cache->perm_columns || !cache->perm_cosets ||
+        !cache->l0 || !cache->l_last || !cache->l_active_row) {
+      error = "perm gpu cache missing";
+      return false;
+    }
+    std::vector<PolynomialFr> perm_polys;
+    perm_polys.reserve(permutation.sets.size());
+    for (const auto &set : permutation.sets) {
+      perm_polys.push_back(set.permutation_product_poly);
+    }
+    size_t perm_total = permutation.sets.size() * size;
+    if (!ensure_device_buffer(&cache->perm_product_cosets, cache->perm_product_len, perm_total,
+                              error)) {
+      return false;
+    }
+    if (!ensure_fft_scratch(*cache, perm_total, error)) {
+      return false;
+    }
+    std::vector<uint32_t> perm_indices;
+    perm_indices.reserve(permutation.sets.size());
+    for (uint32_t i = 0; i < permutation.sets.size(); ++i) {
+      perm_indices.push_back(i);
+    }
+    if (!coeffs_to_extended_device_subset_batched(perm_polys, perm_indices, pk.domain,
+                                                   cache->perm_product_cosets,
+                                                   cache->perm_product_len, cache->fft_scratch,
+                                                   cache->fft_scratch_len, error)) {
+      return false;
+    }
+
+    uint32_t blinding_factors = pk.blinding_factors;
+    int32_t last_rotation = -static_cast<int32_t>(blinding_factors + 1);
+    uint32_t chunk_len = pk.cs_degree > 2 ? static_cast<uint32_t>(pk.cs_degree - 2) : 0;
+    if (chunk_len == 0) {
+      error = "perm chunk len invalid";
+      return false;
+    }
+
+    Fr delta_start;
+    fr_mul(delta_start, beta, pk.domain.g_coset);
+    Fr delta_const = fr_delta();
+
+    int threads = 256;
+    int blocks = static_cast<int>((size + threads - 1) / threads);
+    permutation_kernel<<<blocks, threads>>>(
+        d_values, cache->perm_product_cosets, static_cast<uint32_t>(permutation.sets.size()),
+        cache->perm_cosets, cache->perm_columns, cache->perm_columns_len, gpu_inputs.advice_ext,
+        cache->fixed_ext, gpu_inputs.instance_ext, cache->beta_terms, delta_start, delta_const,
+        cache->l0, cache->l_last, cache->l_active_row, beta, gamma, y,
+        static_cast<uint32_t>(size), rot_scale, last_rotation, chunk_len);
+    if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) {
+      error = "perm kernel failed";
+      return false;
+    }
+  }
+
+  if (!lookups.empty()) {
+    if (!ensure_device_buffer(&cache->lookup_values_buf, cache->lookup_values_len, size, error)) {
+      return false;
+    }
+    Fr *d_lookup_values = cache->lookup_values_buf;
+    if (!ensure_device_buffer(&cache->lookup_coset_product, cache->lookup_coset_len, size,
+                              error) ||
+        !ensure_device_buffer(&cache->lookup_coset_input, cache->lookup_coset_len, size, error) ||
+        !ensure_device_buffer(&cache->lookup_coset_table, cache->lookup_coset_len, size, error)) {
+      return false;
+    }
+
+    for (size_t lookup_idx = 0; lookup_idx < lookups.size(); ++lookup_idx) {
+      if (lookup_idx >= cache->lookup_combined_graphs.size()) {
+        error = "lookup graph cache missing";
+        return false;
+      }
+      if (!evaluate_graph_values_gpu_device(cache->lookup_combined_graphs[lookup_idx], ext_inputs,
+                                            gpu_inputs.d_challenges, gpu_inputs.challenges_len,
+                                            beta, gamma, theta, y, zero, size, rot_scale, isize,
+                                            d_lookup_values, error)) {
+        return false;
+      }
+
+      if (!ensure_fft_scratch(*cache, size, error)) {
+        return false;
+      }
+      std::vector<PolynomialFr> tmp;
+      std::vector<uint32_t> idxs = {0};
+      tmp.clear();
+      tmp.push_back(lookups[lookup_idx].product_poly);
+      if (!coeffs_to_extended_device_subset_batched(tmp, idxs, pk.domain,
+                                                     cache->lookup_coset_product,
+                                                     cache->lookup_coset_len, cache->fft_scratch,
+                                                     cache->fft_scratch_len, error)) {
+        return false;
+      }
+      tmp[0] = lookups[lookup_idx].permuted_input_poly;
+      if (!coeffs_to_extended_device_subset_batched(tmp, idxs, pk.domain,
+                                                     cache->lookup_coset_input,
+                                                     cache->lookup_coset_len, cache->fft_scratch,
+                                                     cache->fft_scratch_len, error)) {
+        return false;
+      }
+      tmp[0] = lookups[lookup_idx].permuted_table_poly;
+      if (!coeffs_to_extended_device_subset_batched(tmp, idxs, pk.domain,
+                                                     cache->lookup_coset_table,
+                                                     cache->lookup_coset_len, cache->fft_scratch,
+                                                     cache->fft_scratch_len, error)) {
+        return false;
+      }
+
+      int threads = 256;
+      int blocks = static_cast<int>((size + threads - 1) / threads);
+      lookup_kernel<<<blocks, threads>>>(
+          d_values, cache->lookup_coset_product, cache->lookup_coset_input,
+          cache->lookup_coset_table, d_lookup_values, cache->l0, cache->l_last,
+          cache->l_active_row, beta, gamma, y, static_cast<uint32_t>(size), rot_scale);
+      if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) {
+        error = "lookup kernel failed";
+        return false;
+      }
+    }
+  }
+
+  gpu_inputs.h_values = d_values;
+  gpu_inputs.h_values_len = size;
+  if (copy_to_host) {
+    out.values.resize(size);
+    if (cudaMemcpy(out.values.data(), d_values, size * sizeof(Fr), cudaMemcpyDeviceToHost) !=
+        cudaSuccess) {
+      error = "cudaMemcpy h values failed";
+      return false;
+    }
+  } else {
+    out.values.clear();
+  }
+  return true;
+}
+
+static PolynomialFr evaluate_h(const ProverKey &pk, const std::vector<PolynomialFr> &advice_coeffs,
+                               const std::vector<PolynomialFr> &instance_coeffs,
+                               const std::vector<Fr> &challenges, const Fr &y, const Fr &beta,
+                               const Fr &gamma, const Fr &theta, GraphGpuInputs *gpu_inputs,
+                               const std::vector<LookupCommitted> &lookups,
+                               const PermutationCommitted &permutation) {
+  if (gpu_inputs && gpu_inputs->enabled) {
+    gpu_inputs->h_values = nullptr;
+    gpu_inputs->h_values_len = 0;
+    PolynomialFr out;
+    std::string gpu_error;
+    if (evaluate_h_gpu(pk, advice_coeffs, instance_coeffs, challenges, y, beta, gamma, theta,
+                       *gpu_inputs, lookups, permutation, out, false, gpu_error)) {
+      return out;
+    }
+    gpu_inputs->h_values = nullptr;
+    gpu_inputs->h_values_len = 0;
+    if (graph_gpu_debug_enabled()) {
+      std::fprintf(stderr, "evaluate_h gpu fallback: %s\n", gpu_error.c_str());
+    }
+  }
+  return evaluate_h_cpu(pk, advice_coeffs, instance_coeffs, challenges, y, beta, gamma, theta,
+                        lookups, permutation);
+}
+
+}  // namespace
+
+ProveStatus plonk_prove(const ParamsKZG &params, const ProverKey &pk, const PackedPolys &polys,
+                        const uint8_t *rng_seed, size_t rng_seed_len, PlonkProof &out) {
+  if (!rng_seed || rng_seed_len != 32) {
+    return {false, "rng_seed must be 32 bytes"};
+  }
+  if (polys.num_advice != pk.num_advice_columns) {
+    return {false, "packed polys advice column mismatch"};
+  }
+  if (polys.num_instance != pk.num_instance_columns) {
+    return {false, "packed polys instance column mismatch"};
+  }
+  if (polys.advice_commitments.size() != polys.num_advice) {
+    return {false, "packed polys advice commitments missing"};
+  }
+
+  if (h_debug_enabled()) {
+    size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+    size_t unusable_rows_start = n - (pk.blinding_factors + 1);
+    if (!polys.advice_values.empty()) {
+      debug_log_rows("advice_lagrange_0", polys.advice_values[0].values, n, unusable_rows_start);
+    }
+    if (!polys.instance_values.empty()) {
+      debug_log_rows("instance_lagrange_0", polys.instance_values[0].values, n,
+                     unusable_rows_start);
+    }
+    for (size_t i = 0; i < pk.fixed_values.size(); ++i) {
+      const auto &values = pk.fixed_values[i].values;
+      size_t rows[] = {0, n > 1 ? static_cast<size_t>(1) : 0, unusable_rows_start,
+                       n > 0 ? n - 1 : 0};
+      bool any_nonzero = false;
+      for (size_t row : rows) {
+        if (row < values.size() && !fr_is_zero(values[row])) {
+          any_nonzero = true;
+          break;
+        }
+      }
+      if (any_nonzero) {
+        std::string label = "fixed_lagrange_" + std::to_string(i);
+        debug_log_rows(label.c_str(), values, n, unusable_rows_start);
+      }
+    }
+  }
+  if (sanity_enabled()) {
+    check_t_evaluations(pk);
+    check_lagrange_polys(pk);
+    check_permutation_data(pk);
+  }
+
+  bool timing = timing_enabled();
+  std::vector<TimingEntry> timings;
+  auto total_start = std::chrono::steady_clock::now();
+  auto mark_timing = [&](const char *label, std::chrono::steady_clock::time_point start) {
+    if (timing) {
+      timings.push_back({label, std::chrono::steady_clock::now() - start});
+    }
+  };
+
+  uint8_t prover_seed[32];
+  derive_seed(prover_seed, rng_seed, "midnight-cuda-prover");
+  ChaCha20Rng rng;
+  rng.init(prover_seed);
+
+  ProofTranscript transcript;
+  transcript.common_fr(pk.transcript_repr);
+
+  auto instance_commit_start = std::chrono::steady_clock::now();
+  for (size_t col = 0; col < polys.num_instance; ++col) {
+    if (col < polys.nb_committed_instances) {
+      G1Affine commitment;
+      std::string error;
+      if (!kzg_commit_lagrange(params, polys.instance_values[col].values, commitment, error)) {
+        return {false, error};
+      }
+      uint8_t bytes[48];
+      g1_compress(bytes, commitment);
+      transcript.common_g1_bytes(bytes, sizeof(bytes));
+    } else {
+      Fr len_fr = fr_from_u64(polys.instance_lens[col]);
+      transcript.common_fr(len_fr);
+      uint32_t len = polys.instance_lens[col];
+      if (len > polys.instance_values[col].values.size()) {
+        return {false, "packed polys instance length out of range"};
+      }
+      for (uint32_t row = 0; row < len; ++row) {
+        transcript.common_fr(polys.instance_values[col].values[row]);
+      }
+    }
+  }
+  mark_timing("instance_commit", instance_commit_start);
+
+  std::vector<Fr> challenges(pk.num_challenges);
+  std::vector<uint8_t> challenge_seen(pk.num_challenges, 0);
+
+  uint8_t max_phase = 0;
+  for (auto phase : pk.advice_phases) {
+    if (phase > max_phase) {
+      max_phase = phase;
+    }
+  }
+  for (auto phase : pk.challenge_phases) {
+    if (phase > max_phase) {
+      max_phase = phase;
+    }
+  }
+
+  auto challenge_start = std::chrono::steady_clock::now();
+  for (uint8_t phase = 0; phase <= max_phase; ++phase) {
+    for (size_t col = 0; col < pk.advice_phases.size(); ++col) {
+      if (pk.advice_phases[col] == phase) {
+        const auto &bytes = polys.advice_commitments[col];
+        transcript.write_g1_bytes(bytes.data(), bytes.size());
+      }
+    }
+    for (size_t idx = 0; idx < pk.challenge_phases.size(); ++idx) {
+      if (pk.challenge_phases[idx] == phase) {
+        challenges[idx] = transcript.challenge_fr();
+        challenge_seen[idx] = 1;
+      }
+    }
+  }
+  mark_timing("challenge_phases", challenge_start);
+
+  for (size_t i = 0; i < challenge_seen.size(); ++i) {
+    if (challenge_seen[i] == 0) {
+      return {false, "challenge not sampled"};
+    }
+  }
+
+  GraphGpuInputs gpu_inputs;
+  GraphGpuGuard gpu_guard{&gpu_inputs};
+  if (graph_gpu_enabled()) {
+    gpu_inputs.lock = std::unique_lock<std::mutex>(graph_gpu_mutex);
+    std::string gpu_error;
+    if (init_graph_gpu_cache(pk, graph_gpu_cache, gpu_error)) {
+      gpu_inputs.cache = &graph_gpu_cache;
+      gpu_inputs.enabled = true;
+      if (!graph_gpu_cache.base_map.advice_indices.empty()) {
+        size_t out_len = 0;
+        if (!copy_polys_subset_to_device(polys.advice_values,
+                                         graph_gpu_cache.base_map.advice_indices,
+                                         graph_gpu_cache.base_stride, &gpu_inputs.advice_base,
+                                         out_len, gpu_error) &&
+            graph_gpu_debug_enabled()) {
+          std::fprintf(stderr, "graph gpu base advice copy failed: %s\n", gpu_error.c_str());
+        }
+      }
+      if (!graph_gpu_cache.base_map.instance_indices.empty()) {
+        size_t out_len = 0;
+        if (!copy_polys_subset_to_device(polys.instance_values,
+                                         graph_gpu_cache.base_map.instance_indices,
+                                         graph_gpu_cache.base_stride, &gpu_inputs.instance_base,
+                                         out_len, gpu_error) &&
+            graph_gpu_debug_enabled()) {
+          std::fprintf(stderr, "graph gpu base instance copy failed: %s\n", gpu_error.c_str());
+        }
+      }
+    } else if (graph_gpu_debug_enabled()) {
+      std::fprintf(stderr, "graph gpu cache init failed: %s\n", gpu_error.c_str());
+    }
+    if (!gpu_inputs.enabled) {
+      if (gpu_inputs.lock.owns_lock()) {
+        gpu_inputs.lock.unlock();
+      }
+    }
+  }
+
+  if (gpu_inputs.enabled && gpu_inputs.cache && gpu_inputs.d_challenges == nullptr) {
+    if (!challenges.empty()) {
+      if (cudaMalloc(&gpu_inputs.d_challenges, challenges.size() * sizeof(Fr)) == cudaSuccess) {
+        if (cudaMemcpy(gpu_inputs.d_challenges, challenges.data(),
+                       challenges.size() * sizeof(Fr), cudaMemcpyHostToDevice) == cudaSuccess) {
+          gpu_inputs.challenges_len = challenges.size();
+        } else {
+          cudaFree(gpu_inputs.d_challenges);
+          gpu_inputs.d_challenges = nullptr;
+          gpu_inputs.challenges_len = 0;
+          if (graph_gpu_debug_enabled()) {
+            std::fprintf(stderr, "graph gpu challenge copy failed\n");
+          }
+        }
+      } else if (graph_gpu_debug_enabled()) {
+        std::fprintf(stderr, "graph gpu challenge alloc failed\n");
+      }
+    }
+  }
+
+  auto advice_coeffs_start = std::chrono::steady_clock::now();
+  std::vector<PolynomialFr> advice_coeffs;
+  advice_coeffs.reserve(polys.advice_values.size());
+  for (const auto &poly : polys.advice_values) {
+    advice_coeffs.push_back(lagrange_to_coeff(poly, pk.domain));
+  }
+  mark_timing("advice_coeffs", advice_coeffs_start);
+
+  if (h_debug_enabled() && !polys.advice_values.empty()) {
+    size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+    size_t unusable_rows_start = n - (pk.blinding_factors + 1);
+    size_t rows[] = {0, n > 1 ? static_cast<size_t>(1) : 0, unusable_rows_start,
+                     n > 0 ? n - 1 : 0};
+    for (size_t row : rows) {
+      if (row >= polys.advice_values[0].values.size()) {
+        continue;
+      }
+      Fr point = fr_pow_u64(pk.domain.omega, static_cast<uint64_t>(row));
+      Fr eval = poly_eval(advice_coeffs[0].values, point);
+      char eval_hex[65];
+      char expected_hex[65];
+      fr_to_hex_be(eval, eval_hex);
+      fr_to_hex_be(polys.advice_values[0].values[row], expected_hex);
+      std::fprintf(stderr, "h debug: advice_eval row=%zu eval=%s expected=%s\n", row, eval_hex,
+                   expected_hex);
+    }
+  }
+
+  auto instance_coeffs_start = std::chrono::steady_clock::now();
+  std::vector<PolynomialFr> instance_coeffs;
+  instance_coeffs.reserve(polys.instance_values.size());
+  for (const auto &poly : polys.instance_values) {
+    instance_coeffs.push_back(lagrange_to_coeff(poly, pk.domain));
+  }
+  mark_timing("instance_coeffs", instance_coeffs_start);
+  if (h_debug_enabled()) {
+    size_t n = static_cast<size_t>(1ULL << pk.domain.k);
+    size_t unusable_rows_start = n - (pk.blinding_factors + 1);
+    for (size_t i = 0; i < pk.fixed_values.size() && i < pk.fixed_polys.size(); ++i) {
+      const auto &values = pk.fixed_values[i].values;
+      if (values.empty()) {
+        continue;
+      }
+      size_t rows[] = {0, n > 1 ? static_cast<size_t>(1) : 0, unusable_rows_start,
+                       n > 0 ? n - 1 : 0};
+      bool any_nonzero = false;
+      for (size_t row : rows) {
+        if (row < values.size() && !fr_is_zero(values[row])) {
+          any_nonzero = true;
+          break;
+        }
+      }
+      if (!any_nonzero) {
+        continue;
+      }
+      for (size_t row : rows) {
+        if (row >= values.size()) {
+          continue;
+        }
+        Fr point = fr_pow_u64(pk.domain.omega, static_cast<uint64_t>(row));
+        Fr eval = poly_eval(pk.fixed_polys[i].values, point);
+        char eval_hex[65];
+        char expected_hex[65];
+        fr_to_hex_be(eval, eval_hex);
+        fr_to_hex_be(values[row], expected_hex);
+        std::fprintf(stderr, "h debug: fixed_eval col=%zu row=%zu eval=%s expected=%s\n", i, row,
+                     eval_hex, expected_hex);
+      }
+    }
+  }
+
+  Fr theta = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    debug_log_fr("plonk theta", theta);
+  }
+
+  auto lookup_perm_start = std::chrono::steady_clock::now();
+  std::vector<LookupPermuted> lookup_permuted;
+  lookup_permuted.resize(pk.lookup_input_graphs.size());
+  for (size_t i = 0; i < pk.lookup_input_graphs.size(); ++i) {
+    std::string error;
+    if (!lookup_commit_permuted(params, pk, i, pk.lookup_input_graphs[i], pk.lookup_table_graphs[i],
+                                polys.advice_values, polys.instance_values, challenges, theta,
+                                &gpu_inputs, rng, transcript, lookup_permuted[i], error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("lookup_commit_permuted", lookup_perm_start);
+
+  Fr beta = transcript.challenge_fr();
+  Fr gamma = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    debug_log_fr("plonk beta", beta);
+    debug_log_fr("plonk gamma", gamma);
+  }
+
+  auto permutation_start = std::chrono::steady_clock::now();
+  PermutationCommitted permutation;
+  {
+    std::string error;
+    if (!permutation_commit(params, pk, polys.advice_values, polys.instance_values, beta, gamma,
+                            rng, transcript, permutation, error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("permutation_commit", permutation_start);
+
+  auto lookup_prod_start = std::chrono::steady_clock::now();
+  std::vector<LookupCommitted> lookup_committed;
+  lookup_committed.resize(lookup_permuted.size());
+  for (size_t i = 0; i < lookup_permuted.size(); ++i) {
+    std::string error;
+    if (!lookup_commit_product(params, pk, lookup_permuted[i], beta, gamma, rng, transcript,
+                               lookup_committed[i], error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("lookup_commit_product", lookup_prod_start);
+
+  auto vanishing_commit_start = std::chrono::steady_clock::now();
+  VanishingCommitted vanishing_committed;
+  {
+    std::string error;
+    if (!vanishing_commit(params, pk, rng, transcript, vanishing_committed, error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("vanishing_commit", vanishing_commit_start);
+
+  Fr y = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    debug_log_fr("plonk y", y);
+  }
+
+  auto h_start = std::chrono::steady_clock::now();
+  PolynomialFr h_poly = evaluate_h(pk, advice_coeffs, instance_coeffs, challenges, y, beta, gamma,
+                                   theta, &gpu_inputs, lookup_committed, permutation);
+  mark_timing("evaluate_h", h_start);
+
+  auto vanishing_construct_start = std::chrono::steady_clock::now();
+  VanishingConstructed vanishing_constructed;
+  {
+    std::string error;
+    if (!vanishing_construct(params, pk, h_poly, transcript, vanishing_committed, &gpu_inputs,
+                             vanishing_constructed, error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("vanishing_construct", vanishing_construct_start);
+
+  Fr x = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    debug_log_fr("plonk x", x);
+  }
+
+  auto evals_start = std::chrono::steady_clock::now();
+  std::vector<Query> instance_reqs;
+  instance_reqs.reserve(pk.instance_queries.size());
+  for (const auto &query : pk.instance_queries) {
+    if (query.column >= polys.nb_committed_instances) {
+      continue;
+    }
+    if (query.column >= instance_coeffs.size()) {
+      return {false, "instance query column out of range"};
+    }
+    instance_reqs.push_back(query);
+  }
+  std::vector<Fr> instance_evals(instance_reqs.size());
+  if (!instance_reqs.empty()) {
+    constexpr size_t kMinChunk = 4;
+    parallel_for_chunks(instance_reqs.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        const auto &query = instance_reqs[i];
+        Fr point = rotate_omega(x, query.rotation, pk.domain.omega, pk.domain.omega_inv);
+        instance_evals[i] = poly_eval(instance_coeffs[query.column].values, point);
+      }
+    });
+  }
+  for (const auto &eval : instance_evals) {
+    transcript.write_fr(eval);
+  }
+
+  if (!pk.advice_queries.empty()) {
+    for (const auto &query : pk.advice_queries) {
+      if (query.column >= advice_coeffs.size()) {
+        return {false, "advice query column out of range"};
+      }
+    }
+  }
+  std::vector<Fr> advice_evals(pk.advice_queries.size());
+  if (!pk.advice_queries.empty()) {
+    constexpr size_t kMinChunk = 4;
+    parallel_for_chunks(pk.advice_queries.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        const auto &query = pk.advice_queries[i];
+        Fr point = rotate_omega(x, query.rotation, pk.domain.omega, pk.domain.omega_inv);
+        advice_evals[i] = poly_eval(advice_coeffs[query.column].values, point);
+      }
+    });
+  }
+  for (const auto &eval : advice_evals) {
+    transcript.write_fr(eval);
+  }
+
+  if (!pk.fixed_queries.empty()) {
+    for (const auto &query : pk.fixed_queries) {
+      if (query.column >= pk.fixed_polys.size()) {
+        return {false, "fixed query column out of range"};
+      }
+    }
+  }
+  std::vector<Fr> fixed_evals(pk.fixed_queries.size());
+  if (!pk.fixed_queries.empty()) {
+    constexpr size_t kMinChunk = 4;
+    parallel_for_chunks(pk.fixed_queries.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        const auto &query = pk.fixed_queries[i];
+        Fr point = rotate_omega(x, query.rotation, pk.domain.omega, pk.domain.omega_inv);
+        fixed_evals[i] = poly_eval(pk.fixed_polys[query.column].values, point);
+      }
+    });
+  }
+  for (const auto &eval : fixed_evals) {
+    transcript.write_fr(eval);
+  }
+  mark_timing("write_evaluations", evals_start);
+
+  VanishingEvaluated vanishing_evaluated;
+  {
+    std::string error;
+    if (!vanishing_evaluate(pk, vanishing_constructed, x, transcript, vanishing_evaluated, error)) {
+      return {false, error};
+    }
+  }
+  if (kzg_debug_enabled()) {
+    Fr h_eval = poly_eval(vanishing_evaluated.h_poly.values, x);
+    debug_log_fr("plonk h_eval", h_eval);
+    Fr xn = fr_pow_u64(x, static_cast<uint64_t>(1ULL << pk.domain.k));
+    Fr xn_minus_one;
+    fr_sub(xn_minus_one, xn, fr_one());
+    Fr h_num;
+    fr_mul(h_num, h_eval, xn_minus_one);
+    debug_log_fr("plonk h_num", h_num);
+  }
+
+  std::vector<Fr> perm_poly_evals(pk.permutation_polys.size());
+  if (!pk.permutation_polys.empty()) {
+    constexpr size_t kMinChunk = 4;
+    parallel_for_chunks(pk.permutation_polys.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        perm_poly_evals[i] = poly_eval(pk.permutation_polys[i].values, x);
+      }
+    });
+  }
+  for (const auto &eval : perm_poly_evals) {
+    transcript.write_fr(eval);
+  }
+
+  auto permutation_eval_start = std::chrono::steady_clock::now();
+  PermutationEvaluated permutation_evaluated;
+  {
+    std::string error;
+    if (!permutation_evaluate(pk, permutation, x, transcript, permutation_evaluated, error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("permutation_evaluate", permutation_eval_start);
+
+  auto lookup_eval_start = std::chrono::steady_clock::now();
+  std::vector<LookupEvaluated> lookup_evaluated(lookup_committed.size());
+  std::atomic<bool> lookup_ok(true);
+  std::string lookup_error;
+  std::mutex lookup_mutex;
+  if (!lookup_committed.empty()) {
+    constexpr size_t kMinChunk = 1;
+    parallel_for_chunks(lookup_committed.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        if (!lookup_ok.load(std::memory_order_relaxed)) {
+          return;
+        }
+        std::string error;
+        if (!lookup_evaluate(pk, lookup_committed[i], x, lookup_evaluated[i], error)) {
+          lookup_ok.store(false, std::memory_order_relaxed);
+          std::lock_guard<std::mutex> lock(lookup_mutex);
+          if (lookup_error.empty()) {
+            lookup_error = error;
+          }
+          return;
+        }
+      }
+    });
+  }
+  if (!lookup_ok.load(std::memory_order_relaxed)) {
+    return {false, lookup_error.empty() ? "lookup evaluate failed" : lookup_error};
+  }
+  for (const auto &eval : lookup_evaluated) {
+    transcript.write_fr(eval.product_eval);
+    transcript.write_fr(eval.product_next_eval);
+    transcript.write_fr(eval.permuted_input_eval);
+    transcript.write_fr(eval.permuted_input_inv_eval);
+    transcript.write_fr(eval.permuted_table_eval);
+  }
+  mark_timing("lookup_evaluate", lookup_eval_start);
+
+  std::vector<ProverQuery> queries;
+  queries.reserve(64);
+
+  for (size_t i = 0; i < pk.instance_queries.size() && i < polys.nb_committed_instances; ++i) {
+    const auto &query = pk.instance_queries[i];
+    if (query.column >= instance_coeffs.size()) {
+      return {false, "instance query column out of range"};
+    }
+    Fr point = rotate_omega(x, query.rotation, pk.domain.omega, pk.domain.omega_inv);
+    queries.push_back({point, &instance_coeffs[query.column]});
+  }
+
+  for (const auto &query : pk.advice_queries) {
+    if (query.column >= advice_coeffs.size()) {
+      return {false, "advice query column out of range"};
+    }
+    Fr point = rotate_omega(x, query.rotation, pk.domain.omega, pk.domain.omega_inv);
+    queries.push_back({point, &advice_coeffs[query.column]});
+  }
+
+  permutation_open(pk, permutation_evaluated, x, queries);
+
+  for (const auto &eval : lookup_evaluated) {
+    lookup_open(pk, eval, x, queries);
+  }
+
+  for (const auto &query : pk.fixed_queries) {
+    if (query.column >= pk.fixed_polys.size()) {
+      return {false, "fixed query column out of range"};
+    }
+    Fr point = rotate_omega(x, query.rotation, pk.domain.omega, pk.domain.omega_inv);
+    queries.push_back({point, &pk.fixed_polys[query.column]});
+  }
+
+  for (const auto &poly : pk.permutation_polys) {
+    queries.push_back({x, &poly});
+  }
+
+  queries.push_back({x, &vanishing_evaluated.h_poly});
+  queries.push_back({x, &vanishing_evaluated.committed.random_poly});
+
+  auto multi_open_start = std::chrono::steady_clock::now();
+  {
+    std::string error;
+    if (!kzg_multi_open(params, queries, transcript, error)) {
+      return {false, error};
+    }
+  }
+  mark_timing("kzg_multi_open", multi_open_start);
+
+  out.bytes = transcript.finalize();
+  if (timing) {
+    timings.push_back({"total", std::chrono::steady_clock::now() - total_start});
+    log_timings(timings);
+  }
+  return {true, ""};
+}
+
+}  // namespace midnight_plonk

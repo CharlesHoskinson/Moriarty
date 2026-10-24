@@ -1,0 +1,167 @@
+#pragma once
+
+#include "curve.cuh"
+#include "field.cuh"
+
+namespace midnight_plonk {
+
+MIDNIGHT_PLONK_HD bool fp_is_zero_hd(const Fp &a) {
+  uint64_t acc = 0;
+  for (int i = 0; i < 6; ++i) {
+    acc |= a.limbs[i];
+  }
+  return acc == 0;
+}
+
+__device__ __forceinline__ int fr_get_bit(const Fr &s, int bit) {
+  int limb = bit / 64;
+  int shift = bit % 64;
+  if (limb < 0 || limb >= 4) {
+    return 0;
+  }
+  return (s.limbs[limb] >> shift) & 1ULL;
+}
+
+__device__ __forceinline__ uint32_t fr_get_window(const Fr &s, int offset, int width) {
+  int limb = offset / 64;
+  int shift = offset % 64;
+  uint64_t lo = limb >= 0 && limb < 4 ? s.limbs[limb] : 0;
+  uint64_t hi = (limb + 1) >= 0 && (limb + 1) < 4 ? s.limbs[limb + 1] : 0;
+  uint64_t word = 0;
+  if (shift == 0) {
+    word = lo;
+  } else if (shift < 64) {
+    word = (lo >> shift) | (hi << (64 - shift));
+  } else {
+    word = hi;
+  }
+  uint32_t mask = (width >= 32) ? 0xFFFFFFFFU : ((1U << width) - 1U);
+  return static_cast<uint32_t>(word) & mask;
+}
+
+MIDNIGHT_PLONK_HD void g1_add(G1Jacobian &out, const G1Jacobian &p, const G1Jacobian &q) {
+  if (p.infinity) {
+    out = q;
+    return;
+  }
+  if (q.infinity) {
+    out = p;
+    return;
+  }
+
+  Fp z1z1, z2z2, u1, u2, s1, s2, h, i, j, r, v;
+  fp_square(z1z1, p.z);
+  fp_square(z2z2, q.z);
+
+  fp_mul(u1, p.x, z2z2);
+  fp_mul(u2, q.x, z1z1);
+
+  fp_mul(s1, p.y, q.z);
+  fp_mul(s1, s1, z2z2);
+
+  fp_mul(s2, q.y, p.z);
+  fp_mul(s2, s2, z1z1);
+
+  fp_sub(h, u2, u1);
+  fp_add(i, h, h);
+  fp_square(i, i);
+  fp_mul(j, h, i);
+
+  fp_sub(r, s2, s1);
+  fp_add(r, r, r);
+
+  if (fp_is_zero_hd(h)) {
+    if (fp_is_zero_hd(r)) {
+      g1_double(out, p);
+    } else {
+      g1_set_infinity(out);
+    }
+    return;
+  }
+
+  fp_mul(v, u1, i);
+
+  fp_square(out.x, r);
+  fp_sub(out.x, out.x, j);
+  fp_sub(out.x, out.x, v);
+  fp_sub(out.x, out.x, v);
+
+  fp_sub(out.y, v, out.x);
+  fp_mul(out.y, out.y, r);
+  fp_mul(s1, s1, j);
+  fp_add(s1, s1, s1);
+  fp_sub(out.y, out.y, s1);
+
+  fp_add(out.z, p.z, q.z);
+  fp_square(out.z, out.z);
+  fp_sub(out.z, out.z, z1z1);
+  fp_sub(out.z, out.z, z2z2);
+  fp_mul(out.z, out.z, h);
+
+  out.infinity = 0;
+}
+
+__device__ __forceinline__ void g1_scalar_mul(G1Jacobian &out, const G1Affine &p,
+                                              const Fr &scalar) {
+  constexpr int window_bits = 4;
+  constexpr int table_size = 1 << window_bits;
+  constexpr int scalar_bits = 256;
+  constexpr int windows = (scalar_bits + window_bits - 1) / window_bits;
+
+  G1Jacobian table[table_size];
+  g1_set_infinity(table[0]);
+  g1_from_affine(table[1], p);
+  for (int i = 2; i < table_size; ++i) {
+    g1_add(table[i], table[i - 1], table[1]);
+  }
+
+  G1Jacobian acc;
+  g1_set_infinity(acc);
+  Fr scalar_normal;
+  fr_from_mont(scalar_normal, scalar);
+  for (int w = windows - 1; w >= 0; --w) {
+    for (int i = 0; i < window_bits; ++i) {
+      g1_double(acc, acc);
+    }
+    uint32_t bucket = fr_get_window(scalar_normal, w * window_bits, window_bits);
+    if (bucket != 0) {
+      g1_add(acc, acc, table[bucket]);
+    }
+  }
+  out = acc;
+}
+
+static __global__ void msm_naive_kernel(const G1Affine *points, const Fr *scalars,
+                                        int count, G1Jacobian *out) {
+  if (blockIdx.x != 0 || threadIdx.x != 0) {
+    return;
+  }
+  G1Jacobian acc;
+  g1_set_infinity(acc);
+  for (int i = 0; i < count; ++i) {
+    G1Jacobian tmp;
+    g1_scalar_mul(tmp, points[i], scalars[i]);
+    g1_add(acc, acc, tmp);
+  }
+  out[0] = acc;
+}
+
+cudaError_t msm_naive_launch(const G1Affine *points, const Fr *scalars, int count,
+                             G1Jacobian *out, cudaStream_t stream);
+
+static __global__ void msm_partial_kernel(const G1Affine *points, const Fr *scalars,
+                                          int count, G1Jacobian *out) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= count) {
+    return;
+  }
+  g1_scalar_mul(out[idx], points[idx], scalars[idx]);
+}
+
+cudaError_t msm_partial_launch(const G1Affine *points, const Fr *scalars, int count,
+                               G1Jacobian *out, cudaStream_t stream);
+
+cudaError_t msm_reduce_launch(const G1Jacobian *in, G1Jacobian *out, int count,
+                              cudaStream_t stream);
+
+}  // namespace midnight_plonk

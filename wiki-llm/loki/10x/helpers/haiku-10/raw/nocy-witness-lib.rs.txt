@@ -1,0 +1,562 @@
+use anyhow::{anyhow, bail};
+use base_crypto::hash::persistent_hash;
+use base_crypto::repr::BinaryHashRepr;
+use transient_crypto::curve::{EmbeddedGroupAffine, Fr, FR_BITS, FR_BYTES, FR_BYTES_STORED};
+use transient_crypto::fab::{AlignmentExt, ValueReprAlignedValue};
+use transient_crypto::hash::{hash_to_curve, transient_commit, transient_hash};
+use transient_crypto::proofs::{ProofPreimage, ProvingError};
+use serialize::tagged_deserialize;
+use transient_crypto::repr::FieldRepr;
+use tracing::{error, trace};
+use zkir::{Instruction as I, IrSource, Preprocessed};
+
+pub fn preprocess_ir(ir: &IrSource, preimage: &ProofPreimage) -> Result<Preprocessed, ProvingError> {
+    if preimage.inputs.len() != ir.num_inputs as usize {
+        bail!(
+            "Expected {} inputs, received {}",
+            ir.num_inputs,
+            preimage.inputs.len()
+        );
+    }
+
+    let mut memory: Vec<_> = preimage.inputs.clone();
+    let mut pis = vec![preimage.binding_input];
+    if ir.do_communications_commitment {
+        pis.push(
+            preimage
+                .communications_commitment
+                .ok_or(anyhow!("Expected communications commitment"))?
+                .0,
+        );
+    }
+    let mut pi_skips = Vec::new();
+    let mut public_transcript_inputs_idx: usize = 0;
+    let mut public_transcript_outputs_idx: usize = 0;
+    let mut private_transcript_outputs_idx: usize = 0;
+    let mut outputs = Vec::new();
+
+    let idx = |memory: &[Fr], i: u32| {
+        let res = memory
+            .get(i as usize)
+            .copied()
+            .ok_or(anyhow!("index out of bounds: {i}"));
+        trace!(?res, "retrieved from {i}");
+        res
+    };
+    let idx_bool = |memory: &[Fr], i: u32| {
+        idx(memory, i).and_then(|val| {
+            if val == 0.into() {
+                Ok(false)
+            } else if val == 1.into() {
+                Ok(true)
+            } else {
+                bail!("Expected boolean, found: {val:?}");
+            }
+        })
+    };
+    let idx_point = |memory: &[Fr], x: u32, y: u32| {
+        let x = idx(memory, x)?;
+        let y = idx(memory, y)?;
+        EmbeddedGroupAffine::new(x, y)
+            .ok_or(anyhow!("Elliptic curve point not on curve: ({x:?}, {y:?})"))
+    };
+    let idx_bits = |memory: &[Fr], i: u32, constrain: Option<u32>| {
+        idx(memory, i).and_then(|val| {
+            let mut bits = val
+                .0
+                .to_bytes_le()
+                .into_iter()
+                .flat_map(|byte| {
+                    [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80]
+                        .into_iter()
+                        .map(move |mask| byte & mask != 0)
+                })
+                .collect::<Vec<_>>();
+            if let Some(n) = constrain {
+                if n as usize >= FR_BITS {
+                    bail!("Excessive bit bound");
+                }
+                if bits[n as usize..].iter().any(|b| *b) {
+                    bail!("Bit bound failed: {val:?} is not {n}-bit");
+                }
+                bits.truncate(n as usize);
+            }
+            Ok(bits)
+        })
+    };
+    let from_point =
+        |p: EmbeddedGroupAffine| [p.x().unwrap_or(0.into()), p.y().unwrap_or(0.into())];
+    fn from_bits<I: DoubleEndedIterator<Item = bool>>(bits: I) -> Fr {
+        bits.rev()
+            .fold(0.into(), |acc, bit| acc * 2.into() + bit.into())
+    }
+
+    for ins in ir.instructions.iter() {
+        trace!(?ins, "preprocess gate");
+        let start_idx = memory.len();
+        match ins {
+            I::Add { a, b } => memory.push(idx(&memory, *a)? + idx(&memory, *b)?),
+            I::Mul { a, b } => memory.push(idx(&memory, *a)? * idx(&memory, *b)?),
+            I::Neg { a } => memory.push(-idx(&memory, *a)?),
+            I::Not { a } => memory.push((!idx_bool(&memory, *a)?).into()),
+            I::ConstrainEq { a, b } => {
+                if idx(&memory, *a)? != idx(&memory, *b)? {
+                    bail!(
+                        "Failed equality constraint: {:?} != {:?}",
+                        idx(&memory, *a)?,
+                        idx(&memory, *b)?
+                    );
+                }
+            }
+            I::CondSelect { bit, a, b } => {
+                let (bit, a, b) = (
+                    idx_bool(&memory, *bit)?,
+                    idx(&memory, *a)?,
+                    idx(&memory, *b)?,
+                );
+                memory.push(if bit { a } else { b })
+            }
+            I::Assert { cond } => {
+                if !idx_bool(&memory, *cond)? {
+                    bail!("Failed direct assertion");
+                }
+            }
+            I::TestEq { a, b } => memory.push((idx(&memory, *a)? == idx(&memory, *b)?).into()),
+            I::PublicInput { guard } => {
+                let val = match guard {
+                    Some(guard) if !idx_bool(&memory, *guard)? => 0.into(),
+                    _ => {
+                        public_transcript_outputs_idx += 1;
+                        preimage
+                            .public_transcript_outputs
+                            .get(public_transcript_outputs_idx - 1)
+                            .copied()
+                            .ok_or(anyhow!("Ran out of public transcript outputs"))?
+                    }
+                };
+                memory.push(val);
+            }
+            I::DeclarePubInput { var } => {
+                pis.push(idx(&memory, *var)?);
+                public_transcript_inputs_idx += 1;
+            }
+            I::PrivateInput { guard } => match guard {
+                Some(guard) if !idx_bool(&memory, *guard)? => memory.push(0.into()),
+                _ => {
+                    memory.push(
+                        preimage
+                            .private_transcript
+                            .get(private_transcript_outputs_idx)
+                            .copied()
+                            .ok_or(anyhow!("Ran out of private transcript outputs"))?,
+                    );
+                    private_transcript_outputs_idx += 1;
+                }
+            },
+            I::Copy { var } => memory.push(idx(&memory, *var)?),
+            I::ConstrainToBoolean { var } => drop(idx_bool(&memory, *var)?),
+            I::ConstrainBits { var, bits } => drop(idx_bits(&memory, *var, Some(*bits))?),
+            I::DivModPowerOfTwo { var, bits } => {
+                if *bits as usize > FR_BYTES_STORED * 8 {
+                    bail!("Excessive bit count");
+                }
+                let var_bits = idx_bits(&memory, *var, None)?;
+                memory.push(from_bits(var_bits[*bits as usize..].iter().copied()));
+                memory.push(from_bits(var_bits[..*bits as usize].iter().copied()));
+            }
+            I::ReconstituteField {
+                divisor,
+                modulus,
+                bits,
+            } => {
+                if *bits as usize > FR_BYTES_STORED * 8 {
+                    bail!("Excessive bit count");
+                }
+                let fr_max = Fr::from(-1);
+                let max_bits = idx_bits(&[fr_max], 0, None)?;
+                let modulus_bits = idx_bits(&memory, *modulus, Some(*bits))?;
+                let divisor_bits = idx_bits(&memory, *divisor, Some(FR_BITS as u32 - *bits))?;
+                let cmp = modulus_bits
+                    .iter()
+                    .chain(divisor_bits.iter())
+                    .rev()
+                    .zip(max_bits[..FR_BITS].iter().rev())
+                    .map(|(ab, max)| ab.cmp(max))
+                    .fold(
+                        std::cmp::Ordering::Equal,
+                        |prefix, local| if prefix.is_eq() { local } else { prefix },
+                    );
+                if cmp.is_gt() {
+                    bail!("Reconstituted element overflows field");
+                }
+                let power = (0..*bits).fold(Fr::from(1), |acc, _| Fr::from(2) * acc);
+                memory.push(power * idx(&memory, *divisor)? + idx(&memory, *modulus)?);
+            }
+            I::LessThan { a, b, bits } => memory.push(
+                (from_bits(idx_bits(&memory, *a, Some(*bits))?.into_iter())
+                    < from_bits(idx_bits(&memory, *b, Some(*bits))?.into_iter()))
+                .into(),
+            ),
+            I::TransientHash { inputs } => memory.push(transient_hash(
+                &inputs
+                    .iter()
+                    .map(|i| idx(&memory, *i))
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
+            I::PersistentHash { alignment, inputs } => {
+                let inputs = inputs
+                    .iter()
+                    .map(|i| idx(&memory, *i))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let value = alignment.parse_field_repr(&inputs).ok_or_else(|| {
+                    error!(
+                        "Inputs did not match alignment (inputs: {inputs:?}, alignment: {alignment:?})"
+                    );
+                    anyhow!(
+                        "Inputs did not match alignment (inputs: {inputs:?}, alignment: {alignment:?})"
+                    )
+                })?;
+                let mut repr = Vec::new();
+                ValueReprAlignedValue(value).binary_repr(&mut repr);
+                trace!(bytes = ?repr, "bytes decoded out-of-circuit");
+                let hash = persistent_hash(&repr);
+                memory.extend(hash.field_vec());
+            }
+            I::PiSkip { guard, count } => match guard {
+                Some(guard) if !idx_bool(&memory, *guard)? => {
+                    pi_skips.push(Some(*count as usize));
+                    public_transcript_inputs_idx -= *count as usize;
+                }
+                _ => {
+                    pi_skips.push(None);
+                    for i in 0..(*count as usize) {
+                        let idx = public_transcript_inputs_idx - *count as usize + i;
+                        let expected = preimage.public_transcript_inputs.get(idx).copied();
+                        let computed = Some(pis[pis.len() - *count as usize + i]);
+                        if expected != computed {
+                            error!(
+                                ?idx,
+                                ?expected,
+                                ?computed,
+                                ?memory,
+                                ?pis,
+                                "Public transcript input mismatch"
+                            );
+                            bail!(
+                                "Public transcript input mismatch for input {idx}; expected: {expected:?}, computed: {computed:?}"
+                            );
+                        }
+                    }
+                }
+            },
+            I::LoadImm { imm } => memory.push(*imm),
+            I::Output { var } => outputs.push(idx(&memory, *var)?),
+            I::EcAdd { a_x, a_y, b_x, b_y } => memory.extend(from_point(
+                idx_point(&memory, *a_x, *a_y)? + idx_point(&memory, *b_x, *b_y)?,
+            )),
+            I::HashToCurve { inputs } => {
+                let inputs = inputs
+                    .iter()
+                    .map(|var| idx(&memory, *var))
+                    .collect::<Result<Vec<_>, _>>()?;
+                memory.extend(from_point(hash_to_curve(&inputs)))
+            }
+            I::EcMul { a_x, a_y, scalar } => memory.extend(from_point(
+                idx_point(&memory, *a_x, *a_y)? * idx(&memory, *scalar)?,
+            )),
+            I::EcMulGenerator { scalar } => memory.extend(from_point(
+                EmbeddedGroupAffine::generator() * idx(&memory, *scalar)?,
+            )),
+        }
+        trace!(
+            delta = ?memory[start_idx..],
+            "Memory delta {}..{}",
+            start_idx,
+            memory.len()
+        );
+    }
+
+    trace!(?outputs, "Finished instructions with output");
+    if preimage.public_transcript_inputs.len() != public_transcript_inputs_idx
+        || preimage.public_transcript_outputs.len() != public_transcript_outputs_idx
+        || preimage.private_transcript.len() != private_transcript_outputs_idx
+    {
+        error!(
+            public_transcript_inputs = ?preimage.public_transcript_inputs,
+            public_transcript_outputs = ?preimage.public_transcript_outputs,
+            private_transcript_outputs = ?preimage.private_transcript,
+            ?public_transcript_inputs_idx,
+            ?public_transcript_outputs_idx,
+            ?private_transcript_outputs_idx,
+            "Transcripts not fully consumed"
+        );
+        bail!("Transcripts not fully consumed");
+    }
+
+    if ir.do_communications_commitment {
+        let comm_comm = preimage
+            .communications_commitment
+            .ok_or(anyhow!("Expected communications randomness"))?;
+        let mut comm_comm_inputs: Vec<Fr> = Vec::new();
+        comm_comm_inputs.extend(preimage.inputs.iter());
+        comm_comm_inputs.extend(outputs.iter());
+        if comm_comm.0 != transient_commit(&comm_comm_inputs[..], comm_comm.1) {
+            error!(?comm_comm, ?comm_comm_inputs, "Communications commitment mismatch");
+            bail!("Communications commitment mismatch");
+        }
+    }
+
+    Ok(Preprocessed {
+        memory: memory.into_iter().map(|x| x.0).collect(),
+        pis: pis.into_iter().map(|x| x.0).collect(),
+        pi_skips,
+        binding_input: preimage.binding_input.0,
+        comm_comm: preimage
+            .communications_commitment
+            .map(|(comm, rand)| (comm.0, rand.0)),
+    })
+}
+
+pub fn pack_preprocessed(preproc: &Preprocessed) -> Result<Vec<u8>, ProvingError> {
+    let memory_len = u32::try_from(preproc.memory.len())
+        .map_err(|_| anyhow!("preprocessed memory too large"))?;
+    let pis_len =
+        u32::try_from(preproc.pis.len()).map_err(|_| anyhow!("preprocessed pis too large"))?;
+    let pi_skips_len = u32::try_from(preproc.pi_skips.len())
+        .map_err(|_| anyhow!("preprocessed pi_skips too large"))?;
+    let has_comm = preproc.comm_comm.is_some() as u8;
+
+    let mut out = Vec::with_capacity(
+        4 + 4 + 4 + 1
+            + (preproc.memory.len() + preproc.pis.len() + 1 + 2 * (has_comm as usize)) * FR_BYTES
+            + preproc.pi_skips.len() * 4,
+    );
+    out.extend_from_slice(&memory_len.to_le_bytes());
+    out.extend_from_slice(&pis_len.to_le_bytes());
+    out.extend_from_slice(&pi_skips_len.to_le_bytes());
+    out.push(has_comm);
+
+    for value in &preproc.memory {
+        out.extend_from_slice(&value.to_bytes_le());
+    }
+    for value in &preproc.pis {
+        out.extend_from_slice(&value.to_bytes_le());
+    }
+    for skip in &preproc.pi_skips {
+        let encoded = match skip {
+            Some(value) => u32::try_from(*value)
+                .map_err(|_| anyhow!("pi_skip entry too large"))?,
+            None => u32::MAX,
+        };
+        out.extend_from_slice(&encoded.to_le_bytes());
+    }
+
+    out.extend_from_slice(&preproc.binding_input.to_bytes_le());
+    if let Some((comm, rand)) = preproc.comm_comm {
+        out.extend_from_slice(&comm.to_bytes_le());
+        out.extend_from_slice(&rand.to_bytes_le());
+    }
+
+    Ok(out)
+}
+
+pub fn unpack_preprocessed(bytes: &[u8]) -> Result<Preprocessed, ProvingError> {
+    let mut offset = 0usize;
+    fn read_u32(data: &[u8], offset: &mut usize) -> Result<u32, ProvingError> {
+        if *offset + 4 > data.len() {
+            bail!("preprocessed buffer truncated");
+        }
+        let value = u32::from_le_bytes(data[*offset..*offset + 4].try_into().unwrap());
+        *offset += 4;
+        Ok(value)
+    }
+
+    fn read_u8(data: &[u8], offset: &mut usize) -> Result<u8, ProvingError> {
+        if *offset + 1 > data.len() {
+            bail!("preprocessed buffer truncated");
+        }
+        let value = data[*offset];
+        *offset += 1;
+        Ok(value)
+    }
+
+    fn read_fr(data: &[u8], offset: &mut usize) -> Result<Fr, ProvingError> {
+        if *offset + FR_BYTES > data.len() {
+            bail!("preprocessed buffer truncated");
+        }
+        let fr = Fr::from_le_bytes(&data[*offset..*offset + FR_BYTES])
+            .ok_or(anyhow!("invalid field element"))?;
+        *offset += FR_BYTES;
+        Ok(fr)
+    }
+
+    let memory_len = read_u32(bytes, &mut offset)? as usize;
+    let pis_len = read_u32(bytes, &mut offset)? as usize;
+    let pi_skips_len = read_u32(bytes, &mut offset)? as usize;
+    let has_comm = read_u8(bytes, &mut offset)? != 0;
+
+    let mut memory = Vec::with_capacity(memory_len);
+    for _ in 0..memory_len {
+        memory.push(read_fr(bytes, &mut offset)?.0);
+    }
+    let mut pis = Vec::with_capacity(pis_len);
+    for _ in 0..pis_len {
+        pis.push(read_fr(bytes, &mut offset)?.0);
+    }
+    let mut pi_skips = Vec::with_capacity(pi_skips_len);
+    for _ in 0..pi_skips_len {
+        let raw = read_u32(bytes, &mut offset)?;
+        if raw == u32::MAX {
+            pi_skips.push(None);
+        } else {
+            pi_skips.push(Some(raw as usize));
+        }
+    }
+
+    let binding_input = read_fr(bytes, &mut offset)?.0;
+    let comm_comm = if has_comm {
+        let comm = read_fr(bytes, &mut offset)?.0;
+        let rand = read_fr(bytes, &mut offset)?.0;
+        Some((comm, rand))
+    } else {
+        None
+    };
+
+    Ok(Preprocessed {
+        memory,
+        pis,
+        pi_skips,
+        binding_input,
+        comm_comm,
+    })
+}
+
+pub fn preprocess_and_pack(
+    ir: &IrSource,
+    preimage: &ProofPreimage,
+) -> Result<Vec<u8>, ProvingError> {
+    let preproc = preprocess_ir(ir, preimage)?;
+    pack_preprocessed(&preproc)
+}
+
+pub fn preprocess_and_pack_tagged(
+    ir_bytes: &[u8],
+    preimage_bytes: &[u8],
+) -> Result<Vec<u8>, ProvingError> {
+    let ir: IrSource = tagged_deserialize(&mut &ir_bytes[..])?;
+    let preimage: ProofPreimage = tagged_deserialize(&mut &preimage_bytes[..])?;
+    preprocess_and_pack(&ir, &preimage)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::executor::block_on;
+    use midnight_circuits::compact_std_lib::{setup_pk, setup_vk, MidnightCircuit};
+    use midnight_curves::Bls12;
+    use midnight_proofs::poly::kzg::params::ParamsKZG;
+    use midnight_proofs::utils::SerdeFormat;
+    use rand_chacha::ChaCha20Rng;
+    use rand_core::SeedableRng;
+    use transient_crypto::proofs::{
+        ParamsProver, ParamsProverProvider, ProverKey as TaggedProverKey, Zkir,
+    };
+    use zkir::Instruction as I;
+
+    fn fr(val: u64) -> transient_crypto::curve::outer::Scalar {
+        Fr::from(val).0
+    }
+
+    #[test]
+    fn pack_unpack_roundtrip_no_comm() {
+        let preproc = Preprocessed {
+            memory: vec![fr(1), fr(2)],
+            pis: vec![fr(3)],
+            pi_skips: vec![Some(0), None],
+            binding_input: fr(4),
+            comm_comm: None,
+        };
+        let packed = pack_preprocessed(&preproc).unwrap();
+        let unpacked = unpack_preprocessed(&packed).unwrap();
+        assert_eq!(preproc.memory, unpacked.memory);
+        assert_eq!(preproc.pis, unpacked.pis);
+        assert_eq!(preproc.pi_skips, unpacked.pi_skips);
+        assert_eq!(preproc.binding_input, unpacked.binding_input);
+        assert_eq!(preproc.comm_comm, unpacked.comm_comm);
+    }
+
+    #[test]
+    fn pack_unpack_roundtrip_with_comm() {
+        let preproc = Preprocessed {
+            memory: vec![fr(5)],
+            pis: vec![fr(6), fr(7)],
+            pi_skips: vec![],
+            binding_input: fr(8),
+            comm_comm: Some((fr(9), fr(10))),
+        };
+        let packed = pack_preprocessed(&preproc).unwrap();
+        let unpacked = unpack_preprocessed(&packed).unwrap();
+        assert_eq!(preproc.memory, unpacked.memory);
+        assert_eq!(preproc.pis, unpacked.pis);
+        assert_eq!(preproc.pi_skips, unpacked.pi_skips);
+        assert_eq!(preproc.binding_input, unpacked.binding_input);
+        assert_eq!(preproc.comm_comm, unpacked.comm_comm);
+    }
+
+    #[test]
+    fn preprocess_matches_ir_prove_pis_and_skips() {
+        let ir = IrSource {
+            num_inputs: 1,
+            do_communications_commitment: false,
+            instructions: std::sync::Arc::new(vec![I::Assert { cond: 0 }]),
+        };
+        let preimage = ProofPreimage {
+            inputs: vec![Fr::from(1)],
+            private_transcript: vec![],
+            public_transcript_inputs: vec![],
+            public_transcript_outputs: vec![],
+            binding_input: Fr::from(42),
+            communications_commitment: None,
+            key_location: transient_crypto::proofs::KeyLocation("test".into()),
+        };
+
+        let preproc = preprocess_ir(&ir, &preimage).unwrap();
+
+        let k = MidnightCircuit::from_relation(&ir).min_k();
+        let params = ParamsKZG::<Bls12>::unsafe_setup(k, ChaCha20Rng::from_seed([3u8; 32]));
+        let vk = setup_vk(&params, &ir);
+        let pk = setup_pk(&ir, &vk);
+        let tagged_pk: TaggedProverKey<IrSource> = TaggedProverKey::from(pk);
+
+        let mut params_bytes = Vec::new();
+        params
+            .write_custom(&mut params_bytes, SerdeFormat::RawBytesUnchecked)
+            .unwrap();
+        let params_prover = ParamsProver::read(&params_bytes[..]).unwrap();
+
+        struct TestParams {
+            params: ParamsProver,
+        }
+
+        impl ParamsProverProvider for TestParams {
+            async fn get_params(&self, _k: u8) -> std::io::Result<ParamsProver> {
+                Ok(self.params.clone())
+            }
+        }
+
+        let rng = ChaCha20Rng::from_seed([4u8; 32]);
+        let (_proof, pis, pi_skips) = block_on(ir.prove(
+            rng,
+            &TestParams {
+                params: params_prover,
+            },
+            tagged_pk,
+            &preimage,
+        ))
+        .unwrap();
+
+        let expected_pis: Vec<Fr> = preproc.pis.iter().copied().map(Fr).collect();
+        assert_eq!(expected_pis, pis);
+        assert_eq!(preproc.pi_skips, pi_skips);
+    }
+}

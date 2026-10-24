@@ -1,0 +1,583 @@
+#pragma once
+
+#include <cuda_runtime.h>
+#include <stdint.h>
+
+#define MIDNIGHT_PLONK_HD __host__ __device__ __forceinline__
+
+namespace midnight_plonk {
+
+struct Fr {
+  uint64_t limbs[4];
+};
+
+struct Fp {
+  uint64_t limbs[6];
+};
+
+MIDNIGHT_PLONK_HD void fr_from_bytes(Fr &out, const uint8_t *bytes);
+MIDNIGHT_PLONK_HD void fp_from_bytes(Fp &out, const uint8_t *bytes);
+
+MIDNIGHT_PLONK_HD uint64_t add_carry(uint64_t a, uint64_t b, uint64_t *carry) {
+  uint64_t sum = a + b;
+  uint64_t c1 = sum < a;
+  sum += *carry;
+  uint64_t c2 = sum < *carry;
+  *carry = c1 + c2;
+  return sum;
+}
+
+MIDNIGHT_PLONK_HD uint64_t sub_borrow(uint64_t a, uint64_t b, uint64_t *borrow) {
+  uint64_t diff = a - b;
+  uint64_t b1 = a < b;
+  uint64_t diff2 = diff - *borrow;
+  uint64_t b2 = diff < *borrow;
+  *borrow = b1 + b2;
+  return diff2;
+}
+
+MIDNIGHT_PLONK_HD void mul64(uint64_t a, uint64_t b, uint64_t *hi, uint64_t *lo) {
+#if defined(__CUDA_ARCH__)
+  *lo = a * b;
+  *hi = __umul64hi(a, b);
+#else
+  unsigned __int128 prod = static_cast<unsigned __int128>(a) * b;
+  *lo = static_cast<uint64_t>(prod);
+  *hi = static_cast<uint64_t>(prod >> 64);
+#endif
+}
+
+// Fr modulus and Montgomery constants (little-endian limbs).
+__device__ __constant__ uint64_t FR_MODULUS_DEVICE[4] = {
+    0xffffffff00000001ULL,
+    0x53bda402fffe5bfeULL,
+    0x3339d80809a1d805ULL,
+    0x73eda753299d7d48ULL,
+};
+__device__ __constant__ uint64_t FR_R2_DEVICE[4] = {
+    0xc999e990f3f29c6dULL,
+    0x2b6cedcb87925c23ULL,
+    0x05d314967254398fULL,
+    0x0748d9d99f59ff11ULL,
+};
+__device__ __constant__ uint64_t FR_INV_DEVICE = 0xfffffffeffffffffULL;
+
+static constexpr uint64_t FR_MODULUS_HOST[4] = {
+    0xffffffff00000001ULL,
+    0x53bda402fffe5bfeULL,
+    0x3339d80809a1d805ULL,
+    0x73eda753299d7d48ULL,
+};
+static constexpr uint64_t FR_R2_HOST[4] = {
+    0xc999e990f3f29c6dULL,
+    0x2b6cedcb87925c23ULL,
+    0x05d314967254398fULL,
+    0x0748d9d99f59ff11ULL,
+};
+static constexpr uint64_t FR_INV_HOST = 0xfffffffeffffffffULL;
+__device__ __constant__ uint64_t FR_TWO_256_DEVICE[4] = {
+    0x00000001fffffffeULL,
+    0x5884b7fa00034802ULL,
+    0x998c4fefecbc4ff5ULL,
+    0x1824b159acc5056fULL,
+};
+static constexpr uint64_t FR_TWO_256_HOST[4] = {
+    0x00000001fffffffeULL,
+    0x5884b7fa00034802ULL,
+    0x998c4fefecbc4ff5ULL,
+    0x1824b159acc5056fULL,
+};
+
+// Fp modulus and Montgomery constants (little-endian limbs).
+__device__ __constant__ uint64_t FP_MODULUS_DEVICE[6] = {
+    0xb9feffffffffaaabULL,
+    0x1eabfffeb153ffffULL,
+    0x6730d2a0f6b0f624ULL,
+    0x64774b84f38512bfULL,
+    0x4b1ba7b6434bacd7ULL,
+    0x1a0111ea397fe69aULL,
+};
+__device__ __constant__ uint64_t FP_R2_DEVICE[6] = {
+    0xf4df1f341c341746ULL,
+    0x0a76e6a609d104f1ULL,
+    0x8de5476c4c95b6d5ULL,
+    0x67eb88a9939d83c0ULL,
+    0x9a793e85b519952dULL,
+    0x11988fe592cae3aaULL,
+};
+__device__ __constant__ uint64_t FP_INV_DEVICE = 0x89f3fffcfffcfffdULL;
+
+static constexpr uint64_t FP_MODULUS_HOST[6] = {
+    0xb9feffffffffaaabULL,
+    0x1eabfffeb153ffffULL,
+    0x6730d2a0f6b0f624ULL,
+    0x64774b84f38512bfULL,
+    0x4b1ba7b6434bacd7ULL,
+    0x1a0111ea397fe69aULL,
+};
+static constexpr uint64_t FP_R2_HOST[6] = {
+    0xf4df1f341c341746ULL,
+    0x0a76e6a609d104f1ULL,
+    0x8de5476c4c95b6d5ULL,
+    0x67eb88a9939d83c0ULL,
+    0x9a793e85b519952dULL,
+    0x11988fe592cae3aaULL,
+};
+static constexpr uint64_t FP_INV_HOST = 0x89f3fffcfffcfffdULL;
+
+MIDNIGHT_PLONK_HD void fr_add(Fr &out, const Fr &a, const Fr &b) {
+  uint64_t carry = 0;
+  for (int i = 0; i < 4; ++i) {
+    out.limbs[i] = add_carry(a.limbs[i], b.limbs[i], &carry);
+  }
+  // Conditional subtract modulus
+  uint64_t borrow = 0;
+  Fr tmp;
+  for (int i = 0; i < 4; ++i) {
+    uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+    mod = FR_MODULUS_DEVICE[i];
+#else
+    mod = FR_MODULUS_HOST[i];
+#endif
+    tmp.limbs[i] = sub_borrow(out.limbs[i], mod, &borrow);
+  }
+  if (carry != 0 || borrow == 0) {
+    out = tmp;
+  }
+}
+
+MIDNIGHT_PLONK_HD void fr_sub(Fr &out, const Fr &a, const Fr &b) {
+  uint64_t borrow = 0;
+  for (int i = 0; i < 4; ++i) {
+    out.limbs[i] = sub_borrow(a.limbs[i], b.limbs[i], &borrow);
+  }
+  if (borrow != 0) {
+    uint64_t carry = 0;
+    for (int i = 0; i < 4; ++i) {
+      uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+      mod = FR_MODULUS_DEVICE[i];
+#else
+      mod = FR_MODULUS_HOST[i];
+#endif
+      out.limbs[i] = add_carry(out.limbs[i], mod, &carry);
+    }
+  }
+}
+
+MIDNIGHT_PLONK_HD void fr_mont_reduce(uint64_t t[8], Fr &out) {
+  for (int i = 0; i < 4; ++i) {
+    uint64_t inv = 0;
+#if defined(__CUDA_ARCH__)
+    inv = FR_INV_DEVICE;
+#else
+    inv = FR_INV_HOST;
+#endif
+    uint64_t u = t[i] * inv;
+    uint64_t carry = 0;
+    uint64_t carry_high = 0;
+    for (int j = 0; j < 4; ++j) {
+      uint64_t hi, lo;
+      uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+      mod = FR_MODULUS_DEVICE[j];
+#else
+      mod = FR_MODULUS_HOST[j];
+#endif
+      mul64(u, mod, &hi, &lo);
+      uint64_t sum = t[i + j];
+      uint64_t c1 = 0;
+      sum = add_carry(sum, lo, &c1);
+      uint64_t c2 = 0;
+      sum = add_carry(sum, carry, &c2);
+      t[i + j] = sum;
+      uint64_t carry_out = c1 + c2;
+      if (carry_high) {
+        ++carry_out;
+      }
+      uint64_t new_carry = hi + carry_out;
+      uint64_t new_carry_high = new_carry < hi ? 1 : 0;
+      carry = new_carry;
+      carry_high = new_carry_high;
+    }
+    int idx = i + 4;
+    uint64_t carry2 = carry_high;
+    t[idx] = add_carry(t[idx], carry, &carry2);
+    int k = idx + 1;
+    while (carry2 != 0 && k < 8) {
+      t[k] = add_carry(t[k], 0, &carry2);
+      ++k;
+    }
+  }
+  for (int i = 0; i < 4; ++i) {
+    out.limbs[i] = t[i + 4];
+  }
+  uint64_t borrow = 0;
+  Fr tmp;
+  for (int i = 0; i < 4; ++i) {
+    uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+    mod = FR_MODULUS_DEVICE[i];
+#else
+    mod = FR_MODULUS_HOST[i];
+#endif
+    tmp.limbs[i] = sub_borrow(out.limbs[i], mod, &borrow);
+  }
+  if (borrow == 0) {
+    out = tmp;
+  }
+}
+
+MIDNIGHT_PLONK_HD void fr_mul(Fr &out, const Fr &a, const Fr &b) {
+  uint64_t t[8] = {0};
+  for (int i = 0; i < 4; ++i) {
+    uint64_t carry = 0;
+    uint64_t carry_high = 0;
+    for (int j = 0; j < 4; ++j) {
+      uint64_t hi, lo;
+      mul64(a.limbs[i], b.limbs[j], &hi, &lo);
+      uint64_t sum = t[i + j];
+      uint64_t c1 = 0;
+      sum = add_carry(sum, lo, &c1);
+      uint64_t c2 = 0;
+      sum = add_carry(sum, carry, &c2);
+      t[i + j] = sum;
+      uint64_t carry_out = c1 + c2;
+      if (carry_high) {
+        ++carry_out;
+      }
+      uint64_t new_carry = hi + carry_out;
+      uint64_t new_carry_high = new_carry < hi ? 1 : 0;
+      carry = new_carry;
+      carry_high = new_carry_high;
+    }
+    int idx = i + 4;
+    uint64_t c = carry_high;
+    t[idx] = add_carry(t[idx], carry, &c);
+    int k = idx + 1;
+    while (c != 0 && k < 8) {
+      t[k] = add_carry(t[k], 0, &c);
+      ++k;
+    }
+  }
+  fr_mont_reduce(t, out);
+}
+
+MIDNIGHT_PLONK_HD void fr_from_bytes(Fr &out, const uint8_t *bytes) {
+  for (int i = 0; i < 4; ++i) {
+    uint64_t limb = 0;
+    for (int j = 0; j < 8; ++j) {
+      limb |= static_cast<uint64_t>(bytes[i * 8 + j]) << (8 * j);
+    }
+    out.limbs[i] = limb;
+  }
+  Fr r2;
+  for (int i = 0; i < 4; ++i) {
+    uint64_t r2_limb = 0;
+#if defined(__CUDA_ARCH__)
+    r2_limb = FR_R2_DEVICE[i];
+#else
+    r2_limb = FR_R2_HOST[i];
+#endif
+    r2.limbs[i] = r2_limb;
+  }
+  Fr tmp = out;
+  fr_mul(out, tmp, r2);
+}
+
+MIDNIGHT_PLONK_HD void fr_from_uniform_bytes(Fr &out, const uint8_t *bytes) {
+  Fr lo;
+  Fr hi;
+  fr_from_bytes(lo, bytes);
+  fr_from_bytes(hi, bytes + 32);
+
+  Fr r2;
+  for (int i = 0; i < 4; ++i) {
+    uint64_t limb = 0;
+#if defined(__CUDA_ARCH__)
+    limb = FR_R2_DEVICE[i];
+#else
+    limb = FR_R2_HOST[i];
+#endif
+    r2.limbs[i] = limb;
+  }
+
+  Fr hi_scaled;
+  fr_mul(hi_scaled, hi, r2);
+  fr_add(out, lo, hi_scaled);
+}
+
+MIDNIGHT_PLONK_HD void fr_to_bytes(uint8_t *out_bytes, const Fr &a) {
+  Fr one;
+  one.limbs[0] = 1;
+  one.limbs[1] = 0;
+  one.limbs[2] = 0;
+  one.limbs[3] = 0;
+  Fr tmp;
+  fr_mul(tmp, a, one);
+  for (int i = 0; i < 4; ++i) {
+    uint64_t limb = tmp.limbs[i];
+    for (int j = 0; j < 8; ++j) {
+      out_bytes[i * 8 + j] = static_cast<uint8_t>(limb >> (8 * j));
+    }
+  }
+}
+
+MIDNIGHT_PLONK_HD void fr_from_mont(Fr &out, const Fr &a) {
+  Fr one;
+  one.limbs[0] = 1;
+  one.limbs[1] = 0;
+  one.limbs[2] = 0;
+  one.limbs[3] = 0;
+  fr_mul(out, a, one);
+}
+
+MIDNIGHT_PLONK_HD void fp_add(Fp &out, const Fp &a, const Fp &b) {
+  uint64_t carry = 0;
+  for (int i = 0; i < 6; ++i) {
+    out.limbs[i] = add_carry(a.limbs[i], b.limbs[i], &carry);
+  }
+  uint64_t borrow = 0;
+  Fp tmp;
+  for (int i = 0; i < 6; ++i) {
+    uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+    mod = FP_MODULUS_DEVICE[i];
+#else
+    mod = FP_MODULUS_HOST[i];
+#endif
+    tmp.limbs[i] = sub_borrow(out.limbs[i], mod, &borrow);
+  }
+  if (carry != 0 || borrow == 0) {
+    out = tmp;
+  }
+}
+
+MIDNIGHT_PLONK_HD void fp_sub(Fp &out, const Fp &a, const Fp &b) {
+  uint64_t borrow = 0;
+  for (int i = 0; i < 6; ++i) {
+    out.limbs[i] = sub_borrow(a.limbs[i], b.limbs[i], &borrow);
+  }
+  if (borrow != 0) {
+    uint64_t carry = 0;
+    for (int i = 0; i < 6; ++i) {
+      uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+      mod = FP_MODULUS_DEVICE[i];
+#else
+      mod = FP_MODULUS_HOST[i];
+#endif
+      out.limbs[i] = add_carry(out.limbs[i], mod, &carry);
+    }
+  }
+}
+
+MIDNIGHT_PLONK_HD void fp_mont_reduce(uint64_t t[12], Fp &out) {
+  for (int i = 0; i < 6; ++i) {
+    uint64_t inv = 0;
+#if defined(__CUDA_ARCH__)
+    inv = FP_INV_DEVICE;
+#else
+    inv = FP_INV_HOST;
+#endif
+    uint64_t u = t[i] * inv;
+    uint64_t carry = 0;
+    uint64_t carry_high = 0;
+    for (int j = 0; j < 6; ++j) {
+      uint64_t hi, lo;
+      uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+      mod = FP_MODULUS_DEVICE[j];
+#else
+      mod = FP_MODULUS_HOST[j];
+#endif
+      mul64(u, mod, &hi, &lo);
+      uint64_t sum = t[i + j];
+      uint64_t c1 = 0;
+      sum = add_carry(sum, lo, &c1);
+      uint64_t c2 = 0;
+      sum = add_carry(sum, carry, &c2);
+      t[i + j] = sum;
+      uint64_t carry_out = c1 + c2;
+      if (carry_high) {
+        ++carry_out;
+      }
+      uint64_t new_carry = hi + carry_out;
+      uint64_t new_carry_high = new_carry < hi ? 1 : 0;
+      carry = new_carry;
+      carry_high = new_carry_high;
+    }
+    int idx = i + 6;
+    uint64_t carry2 = carry_high;
+    t[idx] = add_carry(t[idx], carry, &carry2);
+    int k = idx + 1;
+    while (carry2 != 0 && k < 12) {
+      t[k] = add_carry(t[k], 0, &carry2);
+      ++k;
+    }
+  }
+  for (int i = 0; i < 6; ++i) {
+    out.limbs[i] = t[i + 6];
+  }
+  uint64_t borrow = 0;
+  Fp tmp;
+  for (int i = 0; i < 6; ++i) {
+    uint64_t mod = 0;
+#if defined(__CUDA_ARCH__)
+    mod = FP_MODULUS_DEVICE[i];
+#else
+    mod = FP_MODULUS_HOST[i];
+#endif
+    tmp.limbs[i] = sub_borrow(out.limbs[i], mod, &borrow);
+  }
+  if (borrow == 0) {
+    out = tmp;
+  }
+}
+
+MIDNIGHT_PLONK_HD void fp_mul(Fp &out, const Fp &a, const Fp &b) {
+  uint64_t t[12] = {0};
+  for (int i = 0; i < 6; ++i) {
+    uint64_t carry = 0;
+    uint64_t carry_high = 0;
+    for (int j = 0; j < 6; ++j) {
+      uint64_t hi, lo;
+      mul64(a.limbs[i], b.limbs[j], &hi, &lo);
+      uint64_t sum = t[i + j];
+      uint64_t c1 = 0;
+      sum = add_carry(sum, lo, &c1);
+      uint64_t c2 = 0;
+      sum = add_carry(sum, carry, &c2);
+      t[i + j] = sum;
+      uint64_t carry_out = c1 + c2;
+      if (carry_high) {
+        ++carry_out;
+      }
+      uint64_t new_carry = hi + carry_out;
+      uint64_t new_carry_high = new_carry < hi ? 1 : 0;
+      carry = new_carry;
+      carry_high = new_carry_high;
+    }
+    int idx = i + 6;
+    uint64_t c = carry_high;
+    t[idx] = add_carry(t[idx], carry, &c);
+    int k = idx + 1;
+    while (c != 0 && k < 12) {
+      t[k] = add_carry(t[k], 0, &c);
+      ++k;
+    }
+  }
+  fp_mont_reduce(t, out);
+}
+
+MIDNIGHT_PLONK_HD void fp_square(Fp &out, const Fp &a) {
+  fp_mul(out, a, a);
+}
+
+MIDNIGHT_PLONK_HD Fp fp_one() {
+  Fp one{};
+  uint8_t bytes[48] = {0};
+  bytes[0] = 1;
+  fp_from_bytes(one, bytes);
+  return one;
+}
+
+MIDNIGHT_PLONK_HD void fp_pow(Fp &out, const Fp &a, const uint64_t exp[6]) {
+  Fp result = fp_one();
+  Fp base = a;
+  for (int limb = 5; limb >= 0; --limb) {
+    for (int bit = 63; bit >= 0; --bit) {
+      fp_square(result, result);
+      if ((exp[limb] >> bit) & 1ULL) {
+        fp_mul(result, result, base);
+      }
+    }
+  }
+  out = result;
+}
+
+MIDNIGHT_PLONK_HD void fp_inv(Fp &out, const Fp &a) {
+  const uint64_t exp[6] = {
+      0xb9feffffffffaaa9ULL,
+      0x1eabfffeb153ffffULL,
+      0x6730d2a0f6b0f624ULL,
+      0x64774b84f38512bfULL,
+      0x4b1ba7b6434bacd7ULL,
+      0x1a0111ea397fe69aULL,
+  };
+  fp_pow(out, a, exp);
+}
+
+MIDNIGHT_PLONK_HD void fp_from_bytes(Fp &out, const uint8_t *bytes) {
+  for (int i = 0; i < 6; ++i) {
+    uint64_t limb = 0;
+    for (int j = 0; j < 8; ++j) {
+      limb |= static_cast<uint64_t>(bytes[i * 8 + j]) << (8 * j);
+    }
+    out.limbs[i] = limb;
+  }
+  Fp r2;
+  for (int i = 0; i < 6; ++i) {
+    uint64_t r2_limb = 0;
+#if defined(__CUDA_ARCH__)
+    r2_limb = FP_R2_DEVICE[i];
+#else
+    r2_limb = FP_R2_HOST[i];
+#endif
+    r2.limbs[i] = r2_limb;
+  }
+  Fp tmp = out;
+  fp_mul(out, tmp, r2);
+}
+
+MIDNIGHT_PLONK_HD void fp_to_bytes(uint8_t *out_bytes, const Fp &a) {
+  Fp one;
+  one.limbs[0] = 1;
+  one.limbs[1] = 0;
+  one.limbs[2] = 0;
+  one.limbs[3] = 0;
+  one.limbs[4] = 0;
+  one.limbs[5] = 0;
+  Fp tmp;
+  fp_mul(tmp, a, one);
+  for (int i = 0; i < 6; ++i) {
+    uint64_t limb = tmp.limbs[i];
+    for (int j = 0; j < 8; ++j) {
+      out_bytes[i * 8 + j] = static_cast<uint8_t>(limb >> (8 * j));
+    }
+  }
+}
+
+MIDNIGHT_PLONK_HD void fr_square(Fr &out, const Fr &a) {
+  fr_mul(out, a, a);
+}
+
+MIDNIGHT_PLONK_HD void fr_pow(Fr &out, const Fr &a, const uint64_t exp[4]) {
+  Fr result{};
+  uint8_t one_bytes[32] = {0};
+  one_bytes[0] = 1;
+  fr_from_bytes(result, one_bytes);
+  Fr base = a;
+  for (int limb = 3; limb >= 0; --limb) {
+    for (int bit = 63; bit >= 0; --bit) {
+      fr_square(result, result);
+      if ((exp[limb] >> bit) & 1ULL) {
+        fr_mul(result, result, base);
+      }
+    }
+  }
+  out = result;
+}
+
+MIDNIGHT_PLONK_HD void fr_inv(Fr &out, const Fr &a) {
+  const uint64_t exp[4] = {
+      0xfffffffeffffffffULL,
+      0x53bda402fffe5bfeULL,
+      0x3339d80809a1d805ULL,
+      0x73eda753299d7d48ULL,
+  };
+  fr_pow(out, a, exp);
+}
+
+}  // namespace midnight_plonk

@@ -1,0 +1,593 @@
+#pragma once
+
+#include "graph_eval.h"
+#include "msm.cuh"
+#include "params.h"
+#include "poly.h"
+#include "transcript.h"
+
+#include <algorithm>
+#include <array>
+#include <cuda_runtime.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
+namespace midnight_plonk {
+
+struct KzgPointsCache {
+  const G1Affine *host_ptr = nullptr;
+  size_t capacity = 0;
+  G1Affine *device_ptr = nullptr;
+};
+
+struct KzgWorkCache {
+  size_t capacity = 0;
+  Fr *d_scalars = nullptr;
+  G1Jacobian *d_partials = nullptr;
+  G1Jacobian *d_reduce = nullptr;
+};
+
+static thread_local KzgPointsCache kzg_monomial_cache;
+static thread_local KzgPointsCache kzg_lagrange_cache;
+static thread_local KzgWorkCache kzg_work_cache;
+
+inline void clear_kzg_points_cache(KzgPointsCache &cache) {
+  if (cache.device_ptr) {
+    cudaFree(cache.device_ptr);
+  }
+  cache.device_ptr = nullptr;
+  cache.host_ptr = nullptr;
+  cache.capacity = 0;
+}
+
+inline void clear_kzg_work_cache() {
+  if (kzg_work_cache.d_scalars) {
+    cudaFree(kzg_work_cache.d_scalars);
+  }
+  if (kzg_work_cache.d_partials) {
+    cudaFree(kzg_work_cache.d_partials);
+  }
+  if (kzg_work_cache.d_reduce) {
+    cudaFree(kzg_work_cache.d_reduce);
+  }
+  kzg_work_cache.d_scalars = nullptr;
+  kzg_work_cache.d_partials = nullptr;
+  kzg_work_cache.d_reduce = nullptr;
+  kzg_work_cache.capacity = 0;
+}
+
+inline bool ensure_kzg_points_cache(KzgPointsCache &cache, const G1Affine *host_ptr,
+                                    size_t count, const char *label, std::string &error) {
+  if (cache.device_ptr && cache.host_ptr == host_ptr && cache.capacity >= count) {
+    return true;
+  }
+  clear_kzg_points_cache(cache);
+  if (cudaMalloc(&cache.device_ptr, count * sizeof(G1Affine)) != cudaSuccess) {
+    error = std::string("cudaMalloc failed in ") + label;
+    clear_kzg_points_cache(cache);
+    return false;
+  }
+  if (cudaMemcpy(cache.device_ptr, host_ptr, count * sizeof(G1Affine), cudaMemcpyHostToDevice) !=
+      cudaSuccess) {
+    error = std::string("cudaMemcpy failed in ") + label;
+    clear_kzg_points_cache(cache);
+    return false;
+  }
+  cache.host_ptr = host_ptr;
+  cache.capacity = count;
+  return true;
+}
+
+inline bool ensure_kzg_work_cache(size_t count, const char *label, std::string &error) {
+  if (kzg_work_cache.capacity >= count) {
+    return true;
+  }
+  clear_kzg_work_cache();
+  if (cudaMalloc(&kzg_work_cache.d_scalars, count * sizeof(Fr)) != cudaSuccess ||
+      cudaMalloc(&kzg_work_cache.d_partials, count * sizeof(G1Jacobian)) != cudaSuccess ||
+      cudaMalloc(&kzg_work_cache.d_reduce, count * sizeof(G1Jacobian)) != cudaSuccess) {
+    error = std::string("cudaMalloc failed in ") + label;
+    clear_kzg_work_cache();
+    return false;
+  }
+  kzg_work_cache.capacity = count;
+  return true;
+}
+
+inline bool kzg_commit_impl(const G1Affine *points, const std::vector<Fr> &scalars, size_t count,
+                            KzgPointsCache &points_cache, const char *label, G1Affine &out,
+                            std::string &error) {
+  if (count == 0) {
+    G1Jacobian acc;
+    g1_set_infinity(acc);
+    g1_to_affine(out, acc);
+    return true;
+  }
+
+  cudaStream_t stream = nullptr;
+
+  if (!ensure_kzg_points_cache(points_cache, points, count, label, error)) {
+    return false;
+  }
+  if (!ensure_kzg_work_cache(count, label, error)) {
+    return false;
+  }
+
+  if (cudaMemcpyAsync(kzg_work_cache.d_scalars, scalars.data(), count * sizeof(Fr),
+                      cudaMemcpyHostToDevice, stream) != cudaSuccess) {
+    error = std::string("cudaMemcpyAsync failed in ") + label;
+    return false;
+  }
+
+  cudaError_t launch = msm_partial_launch(points_cache.device_ptr, kzg_work_cache.d_scalars,
+                                          static_cast<int>(count), kzg_work_cache.d_partials,
+                                          stream);
+  if (launch != cudaSuccess) {
+    error = std::string("msm_partial_launch failed in ") + label;
+    return false;
+  }
+
+  int current = static_cast<int>(count);
+  G1Jacobian *d_in = kzg_work_cache.d_partials;
+  G1Jacobian *d_out = kzg_work_cache.d_reduce;
+  while (current > 1) {
+    cudaError_t reduce_launch = msm_reduce_launch(d_in, d_out, current, stream);
+    if (reduce_launch != cudaSuccess) {
+      error = std::string("msm_reduce_launch failed in ") + label;
+      return false;
+    }
+    current = (current + 1) / 2;
+    std::swap(d_in, d_out);
+  }
+
+  G1Jacobian jac;
+  if (cudaMemcpyAsync(&jac, d_in, sizeof(G1Jacobian), cudaMemcpyDeviceToHost, stream) !=
+      cudaSuccess) {
+    error = std::string("cudaMemcpyAsync failed in ") + label;
+    return false;
+  }
+
+  cudaStreamSynchronize(stream);
+
+  G1Affine aff;
+  g1_to_affine(aff, jac);
+  out = aff;
+
+  return true;
+}
+
+inline bool kzg_commit(const ParamsKZG &params, const std::vector<Fr> &coeffs, G1Affine &out,
+                       std::string &error) {
+  if (coeffs.size() > params.g1_monomial.size()) {
+    error = "polynomial degree exceeds SRS size";
+    return false;
+  }
+  size_t count = coeffs.size();
+  return kzg_commit_impl(params.g1_monomial.data(), coeffs, count, kzg_monomial_cache,
+                         "kzg_commit", out, error);
+}
+
+inline bool kzg_commit_lagrange(const ParamsKZG &params, const std::vector<Fr> &values,
+                                G1Affine &out, std::string &error) {
+  if (values.size() > params.g1_lagrange.size()) {
+    error = "lagrange polynomial degree exceeds SRS size";
+    return false;
+  }
+  size_t count = values.size();
+  return kzg_commit_impl(params.g1_lagrange.data(), values, count, kzg_lagrange_cache,
+                         "kzg_commit_lagrange", out, error);
+}
+
+inline bool kzg_open(const ParamsKZG &params, const std::vector<Fr> &coeffs, const Fr &z,
+                     Fr &eval, G1Affine &proof, std::string &error) {
+  eval = poly_eval(coeffs, z);
+  std::vector<Fr> shifted = coeffs;
+  if (!shifted.empty()) {
+    fr_sub(shifted[0], shifted[0], eval);
+  }
+  std::vector<Fr> quotient = poly_divide_by_linear(shifted, z);
+  if (!kzg_commit(params, quotient, proof, error)) {
+    return false;
+  }
+  return true;
+}
+
+struct ProverQuery {
+  Fr point;
+  const PolynomialFr *poly;
+};
+
+struct CommitmentData {
+  const PolynomialFr *poly = nullptr;
+  size_t set_index = 0;
+  std::vector<size_t> point_indices;
+  std::vector<Fr> evals;
+};
+
+inline std::array<uint8_t, 32> fr_to_key(const Fr &value) {
+  std::array<uint8_t, 32> out{};
+  uint8_t tmp[32];
+  fr_to_bytes(tmp, value);
+  for (size_t i = 0; i < 32; ++i) {
+    out[i] = tmp[31 - i];
+  }
+  return out;
+}
+
+inline bool kzg_debug_enabled() {
+  const char *env = std::getenv("MIDNIGHT_CUDA_KZG_DEBUG");
+  return env && std::strcmp(env, "1") == 0;
+}
+
+inline void fr_to_hex_be(const Fr &value, char out[65]) {
+  uint8_t tmp[32];
+  fr_to_bytes(tmp, value);
+  for (size_t i = 0; i < 32; ++i) {
+    uint8_t byte = tmp[31 - i];
+    std::snprintf(out + i * 2, 3, "%02x", byte);
+  }
+  out[64] = '\0';
+}
+
+inline void debug_log_fr(const char *label, const Fr &value) {
+  if (!kzg_debug_enabled()) {
+    return;
+  }
+  char hex[65];
+  fr_to_hex_be(value, hex);
+  std::fprintf(stderr, "kzg debug: %s=%s\n", label, hex);
+}
+
+inline void debug_log_point_sets(const std::vector<std::vector<Fr>> &point_sets,
+                                 const char *label) {
+  if (!kzg_debug_enabled()) {
+    return;
+  }
+  constexpr size_t max_points = 8;
+  std::fprintf(stderr, "kzg debug: %s sets=%zu\n", label, point_sets.size());
+  for (size_t idx = 0; idx < point_sets.size(); ++idx) {
+    const auto &set = point_sets[idx];
+    std::fprintf(stderr, "kzg debug: %s set %zu len=%zu points=", label, idx, set.size());
+    for (size_t i = 0; i < set.size() && i < max_points; ++i) {
+      char hex[65];
+      fr_to_hex_be(set[i], hex);
+      std::fprintf(stderr, "%s%s", (i > 0) ? "," : "", hex);
+    }
+    if (set.size() > max_points) {
+      std::fprintf(stderr, "...(+%zu)", set.size() - max_points);
+    }
+    std::fprintf(stderr, "\n");
+  }
+}
+
+inline PolynomialFr poly_inner_product(const std::vector<PolynomialFr> &polys, const Fr &x) {
+  PolynomialFr acc;
+  if (polys.empty()) {
+    return acc;
+  }
+  size_t max_len = 0;
+  for (const auto &poly : polys) {
+    if (poly.values.size() > max_len) {
+      max_len = poly.values.size();
+    }
+  }
+  if (max_len == 0) {
+    return acc;
+  }
+
+  acc.values.assign(max_len, Fr{});
+  std::vector<Fr> powers(polys.size());
+  if (!powers.empty()) {
+    powers[0] = fr_one();
+    for (size_t i = 1; i < powers.size(); ++i) {
+      fr_mul(powers[i], powers[i - 1], x);
+    }
+  }
+
+  constexpr size_t kMinChunk = 2048;
+  parallel_for_chunks(max_len, kMinChunk, [&](size_t start, size_t end) {
+    for (size_t idx = start; idx < end; ++idx) {
+      Fr sum{};
+      for (size_t i = 0; i < polys.size(); ++i) {
+        if (idx >= polys[i].values.size()) {
+          continue;
+        }
+        Fr term;
+        fr_mul(term, polys[i].values[idx], powers[i]);
+        fr_add(sum, sum, term);
+      }
+      acc.values[idx] = sum;
+    }
+  });
+  return acc;
+}
+
+inline std::vector<Fr> evals_inner_product(const std::vector<std::vector<Fr>> &evals,
+                                           const Fr &x) {
+  std::vector<Fr> acc;
+  if (evals.empty()) {
+    return acc;
+  }
+  size_t max_len = 0;
+  for (const auto &eval_set : evals) {
+    if (eval_set.size() > max_len) {
+      max_len = eval_set.size();
+    }
+  }
+  if (max_len == 0) {
+    return acc;
+  }
+  acc.assign(max_len, Fr{});
+  std::vector<Fr> powers(evals.size());
+  if (!powers.empty()) {
+    powers[0] = fr_one();
+    for (size_t i = 1; i < powers.size(); ++i) {
+      fr_mul(powers[i], powers[i - 1], x);
+    }
+  }
+
+  constexpr size_t kMinChunk = 2048;
+  parallel_for_chunks(max_len, kMinChunk, [&](size_t start, size_t end) {
+    for (size_t idx = start; idx < end; ++idx) {
+      Fr sum{};
+      for (size_t i = 0; i < evals.size(); ++i) {
+        if (idx >= evals[i].size()) {
+          continue;
+        }
+        Fr term;
+        fr_mul(term, evals[i][idx], powers[i]);
+        fr_add(sum, sum, term);
+      }
+      acc[idx] = sum;
+    }
+  });
+  return acc;
+}
+
+inline bool construct_intermediate_sets(
+    const std::vector<ProverQuery> &queries, std::vector<CommitmentData> &commitment_map,
+    std::vector<std::vector<Fr>> &point_sets, std::string &error) {
+  std::map<std::array<uint8_t, 32>, size_t> point_index_map;
+  std::vector<Fr> point_values;
+
+  for (const auto &query : queries) {
+    auto key = fr_to_key(query.point);
+    auto it = point_index_map.find(key);
+    size_t point_idx = 0;
+    if (it == point_index_map.end()) {
+      point_idx = point_index_map.size();
+      point_index_map[key] = point_idx;
+      point_values.push_back(query.point);
+    } else {
+      point_idx = it->second;
+    }
+
+    auto existing = std::find_if(commitment_map.begin(), commitment_map.end(),
+                                 [&](const CommitmentData &data) { return data.poly == query.poly; });
+    if (existing != commitment_map.end()) {
+      if (std::find(existing->point_indices.begin(), existing->point_indices.end(), point_idx) !=
+          existing->point_indices.end()) {
+        error = "duplicate query";
+        return false;
+      }
+      existing->point_indices.push_back(point_idx);
+    } else {
+      CommitmentData data;
+      data.poly = query.poly;
+      data.point_indices.push_back(point_idx);
+      commitment_map.push_back(std::move(data));
+    }
+  }
+
+  std::map<std::set<size_t>, size_t> point_idx_sets;
+  std::vector<std::pair<const PolynomialFr *, std::set<size_t>>> commitment_set_map;
+
+  for (const auto &data : commitment_map) {
+    std::set<size_t> idx_set(data.point_indices.begin(), data.point_indices.end());
+    commitment_set_map.push_back({data.poly, idx_set});
+    if (point_idx_sets.find(idx_set) == point_idx_sets.end()) {
+      size_t next_index = point_idx_sets.size();
+      point_idx_sets.emplace(idx_set, next_index);
+    }
+  }
+
+  for (auto &data : commitment_map) {
+    data.evals.assign(data.point_indices.size(), Fr{});
+  }
+
+  for (const auto &query : queries) {
+    auto key = fr_to_key(query.point);
+    auto point_idx_it = point_index_map.find(key);
+    if (point_idx_it == point_index_map.end()) {
+      error = "missing point index";
+      return false;
+    }
+    size_t point_idx = point_idx_it->second;
+
+    std::set<size_t> idx_set;
+    for (const auto &entry : commitment_set_map) {
+      if (entry.first == query.poly) {
+        idx_set = entry.second;
+        break;
+      }
+    }
+    if (idx_set.empty()) {
+      error = "missing commitment set";
+      return false;
+    }
+    auto set_it = point_idx_sets.find(idx_set);
+    if (set_it == point_idx_sets.end()) {
+      error = "missing point set index";
+      return false;
+    }
+    size_t set_index = set_it->second;
+
+    std::vector<size_t> idx_vec(idx_set.begin(), idx_set.end());
+    auto pos_it = std::find(idx_vec.begin(), idx_vec.end(), point_idx);
+    if (pos_it == idx_vec.end()) {
+      error = "point index missing in set";
+      return false;
+    }
+    size_t point_pos = static_cast<size_t>(pos_it - idx_vec.begin());
+
+    for (auto &data : commitment_map) {
+      if (data.poly == query.poly) {
+        data.set_index = set_index;
+        Fr eval = poly_eval(query.poly->values, query.point);
+        if (point_pos >= data.evals.size()) {
+          error = "eval index out of range";
+          return false;
+        }
+        data.evals[point_pos] = eval;
+      }
+    }
+  }
+
+  point_sets.assign(point_idx_sets.size(), {});
+  for (const auto &entry : point_idx_sets) {
+    size_t set_index = entry.second;
+    for (auto idx : entry.first) {
+      if (idx >= point_values.size()) {
+        error = "point index out of range";
+        return false;
+      }
+      point_sets[set_index].push_back(point_values[idx]);
+    }
+  }
+  return true;
+}
+
+inline bool kzg_multi_open(const ParamsKZG &params, const std::vector<ProverQuery> &queries,
+                           ProofTranscript &transcript, std::string &error) {
+  if (queries.empty()) {
+    error = "kzg_multi_open requires queries";
+    return false;
+  }
+
+  Fr x1 = transcript.challenge_fr();
+  Fr x2 = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    std::fprintf(stderr, "kzg debug: multi_open queries=%zu\n", queries.size());
+    debug_log_fr("multi_open x1", x1);
+    debug_log_fr("multi_open x2", x2);
+  }
+
+  std::vector<CommitmentData> commitment_map;
+  std::vector<std::vector<Fr>> point_sets;
+  if (!construct_intermediate_sets(queries, commitment_map, point_sets, error)) {
+    return false;
+  }
+  if (kzg_debug_enabled()) {
+    debug_log_point_sets(point_sets, "multi_open point_sets");
+    std::fprintf(stderr, "kzg debug: multi_open commitment_map len=%zu\n",
+                 commitment_map.size());
+    for (size_t idx = 0; idx < commitment_map.size(); ++idx) {
+      const auto &data = commitment_map[idx];
+      std::fprintf(stderr, "kzg debug: multi_open commitment %zu set_index=%zu points=[", idx,
+                   data.set_index);
+      for (size_t j = 0; j < data.point_indices.size(); ++j) {
+        std::fprintf(stderr, "%s%zu", (j > 0) ? "," : "", data.point_indices[j]);
+      }
+      std::fprintf(stderr, "]\n");
+    }
+  }
+
+  std::vector<std::vector<PolynomialFr>> q_polys(point_sets.size());
+  for (const auto &data : commitment_map) {
+    if (data.poly == nullptr) {
+      error = "invalid polynomial in commitment";
+      return false;
+    }
+    if (data.set_index >= q_polys.size()) {
+      error = "commitment set index out of range";
+      return false;
+    }
+    q_polys[data.set_index].push_back(*data.poly);
+  }
+
+  std::vector<PolynomialFr> q_poly_sets;
+  q_poly_sets.reserve(q_polys.size());
+  for (const auto &polys : q_polys) {
+    q_poly_sets.push_back(poly_inner_product(polys, x1));
+  }
+
+  std::vector<PolynomialFr> f_polys;
+  f_polys.resize(point_sets.size());
+  size_t target_len = static_cast<size_t>(1ULL << params.k);
+  if (!point_sets.empty()) {
+    constexpr size_t kMinChunk = 1;
+    parallel_for_chunks(point_sets.size(), kMinChunk, [&](size_t start, size_t end) {
+      std::vector<Fr> scratch;
+      for (size_t i = start; i < end; ++i) {
+        PolynomialFr poly = q_poly_sets[i];
+        scratch.clear();
+        scratch.reserve(poly.values.size());
+        for (const auto &point : point_sets[i]) {
+          poly_divide_by_linear_into(poly.values, point, scratch);
+          poly.values.swap(scratch);
+        }
+        poly.values.resize(target_len);
+        f_polys[i] = std::move(poly);
+      }
+    });
+  }
+
+  PolynomialFr f_poly = poly_inner_product(f_polys, x2);
+
+  G1Affine f_commitment;
+  if (!kzg_commit(params, f_poly.values, f_commitment, error)) {
+    return false;
+  }
+  transcript.write_g1(f_commitment);
+
+  Fr x3 = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    debug_log_fr("multi_open x3", x3);
+  }
+
+  std::vector<Fr> q_evals(q_poly_sets.size());
+  if (!q_poly_sets.empty()) {
+    constexpr size_t kMinChunk = 1;
+    parallel_for_chunks(q_poly_sets.size(), kMinChunk, [&](size_t start, size_t end) {
+      for (size_t i = start; i < end; ++i) {
+        q_evals[i] = poly_eval(q_poly_sets[i].values, x3);
+      }
+    });
+  }
+  for (const auto &eval : q_evals) {
+    if (kzg_debug_enabled()) {
+      debug_log_fr("multi_open q_eval_on_x3", eval);
+    }
+    transcript.write_fr(eval);
+  }
+
+  Fr x4 = transcript.challenge_fr();
+  if (kzg_debug_enabled()) {
+    debug_log_fr("multi_open x4", x4);
+  }
+
+  std::vector<PolynomialFr> final_polys = q_poly_sets;
+  final_polys.push_back(f_poly);
+  PolynomialFr final_poly = poly_inner_product(final_polys, x4);
+  Fr v = poly_eval(final_poly.values, x3);
+
+  std::vector<Fr> shifted = final_poly.values;
+  if (!shifted.empty()) {
+    fr_sub(shifted[0], shifted[0], v);
+  }
+  std::vector<Fr> pi_coeffs = poly_divide_by_linear(shifted, x3);
+  G1Affine pi_commitment;
+  if (!kzg_commit(params, pi_coeffs, pi_commitment, error)) {
+    return false;
+  }
+  transcript.write_g1(pi_commitment);
+
+  return true;
+}
+
+}  // namespace midnight_plonk
