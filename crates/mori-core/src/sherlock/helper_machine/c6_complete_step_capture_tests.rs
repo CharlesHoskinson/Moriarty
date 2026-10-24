@@ -378,3 +378,118 @@ fn stream_writer_panic_holds_actual_capture_poisons_and_never_steps_again(){
  assert!(custody.held().is_none());assert_eq!(capture(&a,&image).unwrap(),expected_host(true,7),"no second owner step after catch/unwind/extraction");
  let (output,_)=stream.into_partial();assert_eq!(output.bytes.as_slice(),&independent[..6834]);
 }
+
+// Source-only saved-counter getter checks. Literal tuples are the frozen plan
+// expectations (initial,remaining,consumed,helper,reference), never getter
+// output. Every carrier comes from the real owner capture route or fixture.
+#[test]
+fn counter_observation_capture_fuel7_event_reads_saved_before_after_owner_advance() {
+    let (admitted, mut image) = pair_at_nullary(7);
+    let captured = record_c6_complete_step(&admitted, &mut image, &layout(), budgets(), &limits())
+        .expect("actual fuel7 nullary capture");
+    assert_independent_nullary(captured.observed(), 7);
+    assert_eq!(capture(&admitted, &image).expect("advanced pair"), expected_host(true, 7));
+    let c = captured.before_counter_observation();
+    assert_eq!((c.initial_fuel(), c.remaining_work(), c.consumed_work(), c.helper_work(),
+        c.reference_cursor()), (7, 5, 2, 0, 2), "saved BEFORE, not AFTER (7,4,3,0,3)");
+    assert_eq!(c.remaining_checked_add_consumed(), Some(7));
+    assert_eq!(c.consumed_checked_sub_helper(), Some(2));
+    assert!(c.fuel_sum_matches_initial()); assert!(c.cursor_difference_matches_reference());
+    assert!(c.remaining_work_is_positive());
+    assert_independent_nullary(captured.observed(), 7);
+    assert_eq!(capture(&admitted, &image).expect("getter never steps owner"), expected_host(true, 7));
+}
+
+#[test]
+fn counter_observation_capture_lastfuel3_event_reads_positive_saved_before() {
+    let (admitted, mut image) = pair_at_nullary(3);
+    let captured = record_c6_complete_step(&admitted, &mut image, &layout(), budgets(), &limits())
+        .expect("actual last-fuel nullary capture");
+    assert_independent_nullary(captured.observed(), 3);
+    assert_eq!(capture(&admitted, &image).expect("advanced pair"), expected_host(true, 3));
+    let c = captured.before_counter_observation();
+    assert_eq!((c.initial_fuel(), c.remaining_work(), c.consumed_work(), c.helper_work(),
+        c.reference_cursor()), (3, 1, 2, 0, 2), "saved BEFORE, not AFTER (3,0,3,0,3)");
+    assert_eq!(c.remaining_checked_add_consumed(), Some(3));
+    assert_eq!(c.consumed_checked_sub_helper(), Some(2));
+    assert!(c.fuel_sum_matches_initial()); assert!(c.cursor_difference_matches_reference());
+    assert!(c.remaining_work_is_positive(), "BEFORE fuel1, not post-charge fuel0");
+    assert_independent_nullary(captured.observed(), 3);
+    assert_eq!(capture(&admitted, &image).expect("getter never steps owner"), expected_host(true, 3));
+}
+
+#[test]
+fn counter_observation_capture_fuel3_terminal_reads_equal_saved_boundary() {
+    let (admitted, mut image) = pair_at_nullary(3);
+    let nullary = record_c6_complete_step(&admitted, &mut image, &layout(), budgets(), &limits())
+        .expect("last-fuel nullary");
+    assert_independent_nullary(nullary.observed(), 3);
+    let publication = record_c6_complete_step(&admitted, &mut image, &layout(), budgets(), &limits())
+        .expect("actual uncharged fuel publication");
+    match publication.observed() {
+        ObservedStep::Event(r) => {
+            assert_eq!(r.event.rule_id, RuleIdC::KAdminPublishExhausted);
+            assert_eq!(r.event.work_delta, 0); assert_eq!(r.after.image.consumed_work, 3);
+        }
+        _ => panic!("publication precedes Terminal"),
+    }
+    let terminal = record_c6_complete_step(&admitted, &mut image, &layout(), budgets(), &limits())
+        .expect("actual terminal capture");
+    let mut expected = expected_host(true, 3);
+    expected.image.outcome = OutcomeC::Exhausted { reason: ExhaustReason::Fuel };
+    assert!(matches!(terminal.observed(), ObservedStep::Terminal { before, after }
+        if before == &expected && after == &expected), "actual Terminal with equal saved boundaries");
+    assert_eq!(capture(&admitted, &image).expect("terminal pair"), expected);
+    let c = terminal.before_counter_observation();
+    assert_eq!((c.initial_fuel(), c.remaining_work(), c.consumed_work(), c.helper_work(),
+        c.reference_cursor()), (3, 0, 3, 0, 3));
+    assert_eq!(c.remaining_checked_add_consumed(), Some(3));
+    assert_eq!(c.consumed_checked_sub_helper(), Some(3));
+    assert!(c.fuel_sum_matches_initial()); assert!(c.cursor_difference_matches_reference());
+    assert!(!c.remaining_work_is_positive(), "Terminal accounting holds with no positive fuel");
+    assert!(matches!(terminal.observed(), ObservedStep::Terminal { before, after }
+        if before == &expected && after == &expected), "getter leaves Terminal unchanged");
+    assert_eq!(capture(&admitted, &image).expect("getter never steps owner"), expected);
+}
+
+#[test]
+fn counter_observation_inflight_writer_unwind_reads_saved_before() {
+    let (a, mut image) = pair_at_nullary(7); let initial = capture(&a, &image).unwrap();
+    let output = PanicStream { bytes: Vec::new(), panic_at: 6834 };
+    let mut stream = C6RangeStream::begin(output, &initial, config(), &limits(), stream_bounds(), stream_binding())
+        .unwrap_or_else(|_| panic!("begin"));
+    let mut custody = C6StepCustody::default();
+    let unwound = std::panic::catch_unwind(std::panic::AssertUnwindSafe(||
+        stream.record_next(&a, &mut image, &layout(), budgets(), &limits(), &mut custody)));
+    let payload = match unwound { Err(p) => p, Ok(_) => panic!("writer panic must unwind out of record_next") };
+    assert_eq!(payload.downcast_ref::<&str>(), Some(&"injected writer panic"), "unwind is the injected writer, not another fault");
+    let held = custody.held().expect("unwind leaves the actual step in custody");
+    assert_independent_nullary(held.observed(), 7);
+    assert_eq!(held.before_lanes(), Some(compact_host(false).as_slice()));
+    assert_eq!(held.after_lanes(), Some(compact_host(true).as_slice()));
+    let c = held.before_counter_observation();
+    assert_eq!((c.initial_fuel(), c.remaining_work(), c.consumed_work(), c.helper_work(),
+        c.reference_cursor()), (7, 5, 2, 0, 2), "saved BEFORE, not AFTER (7,4,3,0,3)");
+    assert_eq!(c.remaining_checked_add_consumed(), Some(7));
+    assert_eq!(c.consumed_checked_sub_helper(), Some(2));
+    assert!(c.fuel_sum_matches_initial()); assert!(c.cursor_difference_matches_reference());
+    assert!(c.remaining_work_is_positive());
+    assert_independent_nullary(held.observed(), 7);
+    let p = stream.progress();
+    assert!(p.poisoned && !p.complete && !p.terminal, "unwound publish leaves the stream poisoned");
+    assert_eq!((p.records, p.bytes, p.completed_intents), (0, 6834, 0));
+    assert_eq!(capture(&a, &image).unwrap(), expected_host(true, 7), "exactly one owner step");
+    let inflight = custody.take().expect("custody extraction"); assert!(custody.held().is_none());
+    assert_independent_nullary(inflight.observed(), 7);
+    let e = match stream.record_next(&a, &mut image, &layout(), budgets(), &limits(), &mut custody) {
+        Err(e) => e, Ok(_) => panic!("poisoned stream must refuse") };
+    assert_eq!(e.owner_advance(), OwnerAdvance::NotStepped);
+    let RangeCaptureError::Stream { failure: StreamFailure::Poisoned, capture: None, progress } = e else {
+        panic!("refusal must be Poisoned before any owner step") };
+    assert!(progress.poisoned && !progress.complete); assert_eq!((progress.records, progress.bytes), (0, 6834));
+    assert!(custody.held().is_none());
+    assert_eq!(capture(&a, &image).unwrap(), expected_host(true, 7), "no second owner step after catch/unwind/extraction");
+    let independent = include_bytes!("testdata/c6_stream_nullary_prefix01.bin");
+    let (output, _) = stream.into_partial();
+    assert_eq!(output.bytes.as_slice(), &independent[..6834]);
+}
