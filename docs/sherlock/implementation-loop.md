@@ -1,5 +1,9 @@
 # Sherlock implementation loop contract
 
+## October 24 default-branch recovery
+
+Continue from `main` after consolidation. Historical commit IDs are translated by [the public map](../../deliverables/main-consolidation-2026-10-24/commit-map.tsv); unique unmerged experiments are listed in [the archive manifest](../../deliverables/main-consolidation-2026-10-24/branch-archives.json). The [integration report](main-consolidation-2026-10-24.md) separates passing source checks from stale evidence. This Git cleanup does not change native holds, qualify archived experiments, run the formal lanes or establish a recursive stagenet result. Resume the retained deployment-first source task and Clean, Quint, K, handwritten-circuit and documentation lanes under the current instructions.
+
 ## Current delivery priority — revision13, 2026-10-24
 
 The complete Sherlock objective remains genuine recursion, independent verification, finalized full effects on Midnight ledger-9 stagenet, and an exact-intent synthetic Fenrir rollup benchmark. The recorded goal is currently **blocked** on the applicable corrected-call assembly review or reviewer-routing change. An actual Opus5.5 coordinator was requested; its provider withheld the response, so it supplied no usable direction or approval.
