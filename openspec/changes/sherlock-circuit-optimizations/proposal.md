@@ -6,6 +6,17 @@ Status: DRAFT / PROPOSED; not adopted, implemented, validated or accepted. Publi
 
 Sherlock's return and error publication emitters contain an identical 132-line, 3,903-byte utility block: `crates/mori-backend/src/sherlock_machine/return_publication_step.rs:78–209` and `error_publication_step.rs:79–210`. Direct text readback gives SHA-256 `5acaa85d4ff99c201c3e908dcd2dcfc66403cabcc12c45a11d40bf98aad2126a`. This establishes duplication only. Ordered emitted-operation equivalence, net maintained-line reduction, circuit rows, k, CPU, memory and proof sizes remain unmeasured.
 
+## Scope preserved
+
+This additive package preserves the [original requirements](../../../sherlock-universal-interpreter-design/requirements.md), [completion refinements](../../../sherlock-completion-convergence/requirements.md), [recursive experiment](../../../sherlock-stagenet-recursive-rollup/requirements.md) and [product contract](../../../../../docs/MORIARTY-PRODUCT-CONTRACT.md). Existing designated-owner requirements are carried forward without new security analysis or policy. All scenarios are proposed acceptance contracts, not execution receipts.
+
+## Requirement metadata retained
+
+The traceability and status metadata for the two length-adjusted clauses is unchanged:
+
+- SOPT-010: `Retains: UIREQ-023, UIREQ-024, UIREQ-025, SCON-001, SCON-004, SCON-022, SRPOC-002, SRPOC-005. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).`
+- SOPT-012: `Retains: UIREQ-024, UIREQ-025, SCON-024, SRPOC-005, SRPOC-009. Status: proposed. QA: [qa.md](../../qa.md#clause-checks).`
+
 ## What Changes
 
 Propose source sharing first, then a typed layout/encoding seam with separate constraint, witness and export plans. Organize the existing 39 semantic events into eight maintenance families without reducing their distinct selectors. Specify a conditional same-cell constraint-sharing experiment and an optional final-parent/terminal fusion experiment, each judged against preserved baseline semantics and measured costs.
