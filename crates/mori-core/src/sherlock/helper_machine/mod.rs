@@ -17,6 +17,8 @@ pub mod c6_phys_data;
 pub mod c6_phys_helper;
 pub mod c6_phys_state;
 pub mod c6_phys_host;
+// Actual one-step saved-boundary codec adapter; no trace/proof authority.
+pub mod c6_complete_step_capture;
 pub mod witness_plan;
 pub mod complete_comparison;
 
@@ -41,3 +43,10 @@ mod core_action_operator_pipeline_tests;
 
 // Read-only diagnostic reference prefixes from saved actual B observations.
 pub mod reference_projection;
+
+// Bounded lossless actual C6 storage, not proof or source authority.
+pub mod c6_stream_event;
+pub mod c6_range_stream;
+pub mod c6_range_stream_read;
+// Raw HostSnapshot value archive; diagnostic inverse, no owner authority.
+pub mod c6_raw_snapshot_archive;
