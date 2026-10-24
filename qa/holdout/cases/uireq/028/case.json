@@ -1,0 +1,47 @@
+{
+  "id": "uireq-028",
+  "suite": "uireq",
+  "uireq": "UIREQ-028",
+  "title": "Bounded helper microsteps",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 204,
+    "anchor": "### Requirement: UIREQ-028 Bounded helper microsteps"
+  },
+  "requirement": "WHEN the proposed sherlock-helper-microstep/1 profile performs helper work, it SHALL advance through explicit helper controls with a declared finite bound per transition.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Lookup and equality cursors",
+      "specLine": 207,
+      "when": "A lookup crosses two ordered entries or equality visits two occurrences of a shared subtree.",
+      "then": "Function/environment lookup, binding, validation, argument/field accumulation, equality and match cursors expose each bounded helper transition and complete resume state. The proposed schedule charges one per completed legacy machine transition and one per helper transition, with startup, terminal publication and error publication zero-cost; code/data/environment/frame/serialization/helper-work capacities are declared. The mapped A state remains at the origin until the helper interval completes. W_B = W_A + H_B is only a proposed completed-interval mapping under common-domain/cap premises, never a same-fuel or implemented-refinement claim.",
+      "status": "runnable",
+      "expected": {
+        "charge": "one per completed legacy machine transition plus one per helper transition; startup, terminal and error publication zero-cost",
+        "observable": "consumed_work = reference_cursor + helper_work; fuel equal to consumed_work halts, one less exhausts Fuel"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "per-transition finite helper bound",
+        "mapped A-state staying at origin during a helper interval",
+        "complete resume state of each cursor"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "work-identity",
+            "label": "lookup across two ordered entries",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn a(n: UInt): UInt { n + 1 }\n  fn b(n: UInt): UInt { n + 2 }\n  fn c(n: UInt): UInt { b(n) }\n  entry c(1);\n}\n"
+          },
+          {
+            "kind": "work-identity",
+            "label": "equality over a shared subtree",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn same(t: Tree): Bool { t == t }\n  entry same(branch(leaf(4), leaf(4)));\n}\n"
+          }
+        ]
+      }
+    }
+  ]
+}

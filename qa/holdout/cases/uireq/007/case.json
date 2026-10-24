@@ -1,0 +1,81 @@
+{
+  "id": "uireq-007",
+  "suite": "uireq",
+  "uireq": "UIREQ-007",
+  "title": "Typed inductive values",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 49,
+    "anchor": "### Requirement: UIREQ-007 Typed inductive values"
+  },
+  "requirement": "WHEN a declared constructor is evaluated, the interpreter SHALL produce a finite immutable value of its declared nominal type.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Recursive list value",
+      "specLine": 52,
+      "when": "Cons(1,Cons(2,Nil)) is built under ListUInt128 declarations.",
+      "then": "The result has the stated ordered fields and recursive list type.",
+      "status": "runnable",
+      "expected": {
+        "value": [
+          1,
+          2
+        ],
+        "type": "ListUInt128 recursive list"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "nominal type identity of the result (report exposes structural list only)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "Cons(1,Cons(2,Nil))",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn id(xs: List): List { xs }\n  entry id(cons(1, cons(2, nil)));\n}\n",
+            "expect": [
+              1,
+              2
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "October 19 refinement: every arm has distinct binders (UIREQ-007 / UIREQ-008)",
+      "specLine": 281,
+      "when": "any arm repeats a source-preorder binder.",
+      "then": "body typing SHALL reject it while permitting separate-arm name reuse; the diagnostic retains its typed name and arm-body source path.",
+      "status": "runnable",
+      "coverage": "full",
+      "unasserted": [],
+      "expected": {
+        "repeated binder in one arm": "rejected, DuplicatePatternBinder x",
+        "same name in separate arms": "accepted"
+      },
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "failure",
+            "engine": "nominal",
+            "label": "repeated binder rejected with typed name",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn pick(s: Schedule): UInt { match s { Schedule::Pay(x, x) => x, Schedule::Done() => 0 } }\n  entry pick(construct Schedule::Done());\n}\n",
+            "expect_stage": "body-type",
+            "expect_error_kind": "DuplicatePatternBinder",
+            "expect_name": "x"
+          },
+          {
+            "kind": "typed-completed",
+            "engine": "nominal",
+            "label": "separate-arm name reuse permitted",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn pick(s: Schedule): UInt { match s { Schedule::Pay(x, y) => x, Schedule::Done() => 0 } }\n  fn other(s: Schedule): UInt { match s { Schedule::Pay(x, y) => y, Schedule::Done() => 1 } }\n  entry pick(construct Schedule::Done());\n}\n",
+            "expect_kind": "Halted"
+          }
+        ]
+      }
+    }
+  ]
+}

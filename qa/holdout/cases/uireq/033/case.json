@@ -1,0 +1,37 @@
+{
+  "id": "uireq-033",
+  "suite": "uireq",
+  "uireq": "UIREQ-033",
+  "title": "Bounded static residualization",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 239,
+    "anchor": "### Requirement: UIREQ-033 Bounded static residualization"
+  },
+  "requirement": "WHEN a reference step is specialized, the specializer SHALL produce bounded ResidualStepIR preserving every dynamic reference boundary.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Three realization masks",
+      "specLine": 242,
+      "when": "Empty, fixed-family or fixed-ProgramImage static bindings are applied to the same reference step.",
+      "then": "Only immutable code/declarations/layout facts are folded; runtime control, data, environments, frames, fuel/work, capacity checks and outcomes remain dynamic. A finite worklist and residual-size limit fall back to generic dispatch without application exhaustion. Recursion remains runtime calls, with no depth/fuel/local-value specialization or source recursion unrolling; rule/source-occurrence maps retain intermediate stops and charges in universal, family and per-program realizations.",
+      "status": "unimplemented",
+      "expected": {
+        "folded": "only immutable code/declarations/layout facts",
+        "dynamic": [
+          "control",
+          "data",
+          "environments",
+          "frames",
+          "fuel/work",
+          "capacity checks",
+          "outcomes"
+        ],
+        "worklist/size limit": "falls back to generic dispatch without application exhaustion"
+      },
+      "coverage": "none",
+      "blocker": "needs a bounded static residualizer producing ResidualStepIR for empty, fixed-family and fixed-ProgramImage static bindings"
+    }
+  ]
+}

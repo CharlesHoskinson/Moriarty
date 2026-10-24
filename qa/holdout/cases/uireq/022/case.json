@@ -1,0 +1,51 @@
+{
+  "id": "uireq-022",
+  "suite": "uireq",
+  "uireq": "UIREQ-022",
+  "title": "Compiler semantic mapping",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 154,
+    "anchor": "### Requirement: UIREQ-022 Compiler semantic mapping"
+  },
+  "requirement": "WHEN compilation claims support for a construct, its lowering SHALL have a named semantic correspondence obligation.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "New supported program",
+      "specLine": 157,
+      "when": "A new nested-call/list program is compiled through the public pipeline.",
+      "then": "The mapping covers returned values, defined failures, order, resource observations and applicable effects/duties; host evaluation does not supply missing circuit evidence.",
+      "status": "runnable",
+      "expected": {
+        "result of dbl(sum([1,2]))": 6,
+        "mapping": "named semantic correspondence obligation for every supported construct used (Program, Function, Call, Match, Binary.Cons, Binary.Add, Literal, Var), each covering returned values, defined failures, order, resource observations and effects/duties",
+        "evidence": "host evaluation does not supply circuit evidence: constraint plan missing, correspondence unproved"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "`mori compile` public command output (the simulate preparation section is the same host artifact)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "correspondence",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn dbl(n: UInt): UInt { n + n }\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry dbl(sum(cons(1, cons(2, nil))));\n}\n",
+            "expect": 6,
+            "constructs": [
+              "Program",
+              "Function",
+              "Call",
+              "Match",
+              "Binary.Cons",
+              "Binary.Add",
+              "Literal",
+              "Var"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

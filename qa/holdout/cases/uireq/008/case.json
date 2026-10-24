@@ -1,0 +1,47 @@
+{
+  "id": "uireq-008",
+  "suite": "uireq",
+  "uireq": "UIREQ-008",
+  "title": "Selected match branch",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 56,
+    "anchor": "### Requirement: UIREQ-008 Selected match branch"
+  },
+  "requirement": "WHEN an ordered constructor match completes its scrutinee, the interpreter SHALL evaluate the first matching source arm under its declared field bindings.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Tree fold",
+      "specLine": 59,
+      "when": "sum(Node(Leaf(4),Leaf(5))) executes.",
+      "then": "Both leaves are visited through their selected cases and the result is 9; the scrutinee is evaluated once and unselected arm bodies do not execute.",
+      "status": "runnable",
+      "expected": {
+        "sum(Node(Leaf(4),Leaf(5)))": 9,
+        "unselected arm body": "does not execute (an unselected arm containing a runtime failure must not fail the run)"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "scrutinee evaluated exactly once (not observable without an event stream)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "tree fold",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(leaf(4), leaf(5)));\n}\n",
+            "expect": 9
+          },
+          {
+            "kind": "value",
+            "label": "unselected arm not executed",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn pick(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => 0 - 1 } }\n  entry pick(leaf(4));\n}\n",
+            "expect": 4
+          }
+        ]
+      }
+    }
+  ]
+}

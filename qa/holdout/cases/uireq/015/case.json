@@ -1,0 +1,28 @@
+{
+  "id": "uireq-015",
+  "suite": "uireq",
+  "uireq": "UIREQ-015",
+  "title": "Pending-return resumption",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 105,
+    "anchor": "### Requirement: UIREQ-015 Pending-return resumption"
+  },
+  "requirement": "WHEN a valid pending observation resumes a supported waiting callee, execution SHALL continue through its retained caller frames.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Resume inner call",
+      "specLine": 108,
+      "when": "In the future extension, inner(3) resumes and returns 4 inside 10+inner(3).",
+      "then": "The machine returns 14; a false/not-yet-ready observation leaves the waiting checkpoint unchanged.",
+      "status": "unimplemented",
+      "expected": {
+        "10+inner(3) with inner resuming and returning 4": 14,
+        "false / not-yet-ready observation": "waiting checkpoint unchanged"
+      },
+      "coverage": "none",
+      "blocker": "needs the future suspension extension (pending-return resume entrypoint)"
+    }
+  ]
+}

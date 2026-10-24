@@ -1,0 +1,94 @@
+{
+  "id": "uireq-006",
+  "suite": "uireq",
+  "uireq": "UIREQ-006",
+  "title": "Exact scalar arithmetic",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 42,
+    "anchor": "### Requirement: UIREQ-006 Exact scalar arithmetic"
+  },
+  "requirement": "WHEN a scalar primitive executes, the interpreter SHALL produce its declared checked UInt128 or Bool outcome.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Normal arithmetic",
+      "specLine": 45,
+      "when": "add(2,3), sub(7,2), mul(3,4), and lt(2,3) execute.",
+      "then": "Their results are 5, 5, 12, and true under the selected primitive table.",
+      "status": "runnable",
+      "expected": {
+        "add(2,3)": 5,
+        "sub(7,2)": 5,
+        "mul(3,4)": 12,
+        "lt(2,3)": true
+      },
+      "coverage": "full",
+      "unasserted": [],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "add",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry add(2, 3);\n}\n",
+            "expect": 5
+          },
+          {
+            "kind": "value",
+            "label": "sub",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry sub(7, 2);\n}\n",
+            "expect": 5
+          },
+          {
+            "kind": "value",
+            "label": "mul",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry mul(3, 4);\n}\n",
+            "expect": 12
+          },
+          {
+            "kind": "value",
+            "label": "lt",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry lt(2, 3);\n}\n",
+            "expect": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "October 19 refinement: nominal structural equality typing (UIREQ-009 / UIREQ-006)",
+      "specLine": 273,
+      "when": "both Eq operands individually typecheck.",
+      "then": "body typing SHALL produce Bool whether or not their canonical types agree; an illtyped operand SHALL retain its error.",
+      "status": "runnable",
+      "coverage": "full",
+      "unasserted": [
+        "supplies no runtime observation or correspondence theorem (spec)"
+      ],
+      "expected": {
+        "unlike operands": "Bool typing completes",
+        "illtyped operand": "typed error retained at stage body-type"
+      },
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "typed-completed",
+            "engine": "nominal",
+            "label": "Eq of unlike canonical types types as Bool",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn f(s: Schedule): Bool { s == 1 }\n  entry f(construct Schedule::Done());\n}\n",
+            "expect_kind": "Halted"
+          },
+          {
+            "kind": "failure",
+            "engine": "nominal",
+            "label": "illtyped Eq operand retains its error",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn f(s: Schedule): Bool { s == (true + 1) }\n  entry f(construct Schedule::Done());\n}\n",
+            "expect_stage": "body-type",
+            "expect_error_kind": "Expected"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "uireq-011",
+  "suite": "uireq",
+  "uireq": "UIREQ-011",
+  "title": "Complete pure result",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 77,
+    "anchor": "### Requirement: UIREQ-011 Complete pure result"
+  },
+  "requirement": "WHEN a pure value returns with no remaining frames, the interpreter SHALL expose that value as a completed pure result.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Completed versus pending",
+      "specLine": 80,
+      "when": "The final list-sum return has value 6 and an empty frame stack.",
+      "then": "The result is Halted(6), distinct from an intermediate Return(6) with remaining frames.",
+      "status": "runnable",
+      "expected": {
+        "final": "Halted(6) with an empty frame stack",
+        "intermediate": "Return with remaining frames is not a completed result"
+      },
+      "coverage": "full",
+      "unasserted": [],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "depth-sweep",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry sum(cons(1, cons(2, cons(3, nil))));\n}\n",
+            "expect": 6,
+            "require_intermediate_return": true
+          }
+        ]
+      }
+    }
+  ]
+}

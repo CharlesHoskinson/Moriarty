@@ -1,0 +1,43 @@
+{
+  "id": "d1-reordered-child-bindings",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "d-reordered-batch",
+  "title": "Swap the A102 and A80 child binding lanes (scalar indices 11 and 12)",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-swap",
+    "indices": [
+      11,
+      12
+    ],
+    "fields": [
+      "bind_a102",
+      "bind_a80"
+    ],
+    "description": "child binding lanes exchanged; all other scalars unchanged"
+  },
+  "seed": {
+    "status": "derived-from-requirements",
+    "note": "No Source45 reordering case exists; derived from ZR08 (semantic mismatches caused by reordering) and MNR01 (semantically changed parent ordering).",
+    "files": [
+      "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+      "docs/results/sherlock-native-source44-20261022/source/sherlock_link.rs#L77-L80"
+    ]
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L22 ZR08",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L81 MNR01"
+  ],
+  "rationale": "Reordering the children of the batch changes the statement semantics and must reject; only sound order-insensitive batching may accept.",
+  "unimplemented": null
+}

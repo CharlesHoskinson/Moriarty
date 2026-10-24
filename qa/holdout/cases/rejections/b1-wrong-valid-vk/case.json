@@ -1,0 +1,39 @@
+{
+  "id": "b1-wrong-valid-vk",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "b-mismatched-verifying-key",
+  "title": "Substitute a different, valid child verifying key",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "vk",
+    "op": "vk-substitute",
+    "needsFixture": "wrongValidChildVk",
+    "description": "known valid child VK in place of the parent VK"
+  },
+  "seed": {
+    "status": "existing",
+    "oracleId": "wrong_valid_vk",
+    "note": "Source45 selected negative case 'wrong_valid_vk' (note: may reject on public-input shape; pairing not isolated).",
+    "files": [
+      "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json",
+      "raw/audits/2026-10-22/sherlock-source45/RESULTS.json",
+      "raw/audits/2026-10-22/sherlock-source45/README.md"
+    ],
+    "existingEvidence": "docs/sherlock/reference/recursion-evidence-2026-10-22.md (Selected negative verifier cases)"
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L19 ZR05",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L83 MNR03"
+  ],
+  "rationale": "A prover must not select another relation by substituting a key (ZR05: wrong VK rejects).",
+  "unimplemented": null
+}

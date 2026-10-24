@@ -1,0 +1,20 @@
+{
+  "schema": "doctorwatson.holdout.parent-verifier/1",
+  "comment": "Discovery contract for the real Sherlock parent verifier. Environment variables win; repo-relative candidates are tried next. The verifier must accept: <exe> sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE and print the sherlock-parent-independent-verify JSON (Source45 interface).",
+  "invocation": ["sherlock-verify-parent"],
+  "verifierEnv": "DW_PARENT_VERIFIER",
+  "verifierCandidates": ["target/release/recl9", "target/debug/recl9", "target/release/sherlock-verify-parent"],
+  "fixtureDirEnv": "DW_PARENT_FIXTURE_DIR",
+  "fixtureDirCandidates": ["artifacts/sherlock/parent-k20", "target/sherlock/parent-k20"],
+  "fixtureFiles": {
+    "vk": "vk.bin",
+    "proof": "proof.bin",
+    "instance": "instance.json",
+    "wrongValidChildVk": "wrong-valid-child-vk.bin"
+  },
+  "srs14Env": "DW_SRS14",
+  "srs14Candidates": ["artifacts/sherlock/srs14.bin"],
+  "srs14Sha256": "fc253016885ec830e97808c9ec920bb5cab5c21af590380a6cb5eb0538e2b244",
+  "outputKind": "sherlock-parent-independent-verify",
+  "timeoutSeconds": 300
+}

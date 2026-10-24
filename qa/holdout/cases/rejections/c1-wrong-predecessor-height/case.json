@@ -1,0 +1,42 @@
+{
+  "id": "c1-wrong-predecessor-height",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "c-wrong-predecessor-root-or-height",
+  "title": "Change the predecessor height h_pre (scalar index 7) from 0 to 1",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-set",
+    "index": 7,
+    "field": "h_pre",
+    "from": "0000000000000000000000000000000000000000000000000000000000000000",
+    "to": "0100000000000000000000000000000000000000000000000000000000000000",
+    "description": "canonical h_pre scalar index 7 zero to one; all other scalars unchanged"
+  },
+  "seed": {
+    "status": "existing",
+    "oracleId": "public_statement",
+    "note": "Source45 selected negative case 'public_statement' (corrected index 7 = h_pre; the draft's index 1 was wrong).",
+    "files": [
+      "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json",
+      "raw/audits/2026-10-22/sherlock-source45/RESULTS.json",
+      "raw/audits/2026-10-22/sherlock-source45/README.md"
+    ],
+    "existingEvidence": "docs/sherlock/reference/recursion-evidence-2026-10-22.md (Selected negative verifier cases)"
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L17 ZR03",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L24 ZR10"
+  ],
+  "rationale": "Mutating any statement component individually while keeping the other objects valid must reject (ZR03).",
+  "unimplemented": null
+}

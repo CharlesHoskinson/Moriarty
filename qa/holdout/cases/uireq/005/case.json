@@ -1,0 +1,52 @@
+{
+  "id": "uireq-005",
+  "suite": "uireq",
+  "uireq": "UIREQ-005",
+  "title": "Named recursive calls",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 35,
+    "anchor": "### Requirement: UIREQ-005 Named recursive calls"
+  },
+  "requirement": "WHEN a named function calls itself or another named function, the interpreter SHALL apply the ordinary call/return relation.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Self and mutual recursion",
+      "specLine": 38,
+      "when": "factorial(3), even(4), and odd(5) execute within declared bounds.",
+      "then": "They return 6, true, and true without adding program-specific rules.",
+      "status": "runnable",
+      "expected": {
+        "factorial(3)": 6,
+        "even(4)": true,
+        "odd(5)": true
+      },
+      "coverage": "full",
+      "unasserted": [],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "factorial(3)",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+            "expect": 6
+          },
+          {
+            "kind": "value",
+            "label": "even(4)",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn even(n: UInt): Bool { if n == 0 { true } else { odd(n - 1) } }\n  fn odd(n: UInt): Bool { if n == 0 { false } else { even(n - 1) } }\n  entry even(4);\n}\n",
+            "expect": true
+          },
+          {
+            "kind": "value",
+            "label": "odd(5)",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn even(n: UInt): Bool { if n == 0 { true } else { odd(n - 1) } }\n  fn odd(n: UInt): Bool { if n == 0 { false } else { even(n - 1) } }\n  entry odd(5);\n}\n",
+            "expect": true
+          }
+        ]
+      }
+    }
+  ]
+}

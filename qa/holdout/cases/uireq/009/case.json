@@ -1,0 +1,81 @@
+{
+  "id": "uireq-009",
+  "suite": "uireq",
+  "uireq": "UIREQ-009",
+  "title": "Structural value meaning",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 63,
+    "anchor": "### Requirement: UIREQ-009 Structural value meaning"
+  },
+  "requirement": "WHEN an implementation shares an immutable subvalue physically, the interpreter SHALL preserve its structural observations and declared traversal accounting.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Repeated subtree",
+      "specLine": 66,
+      "when": "A tree has two occurrences of Leaf(4), represented either separately or by one shared node.",
+      "then": "Its fold returns 8 and charges both semantic visits under the same traversal schedule.",
+      "status": "runnable",
+      "expected": {
+        "separate Leaf(4) occurrences": 8,
+        "shared Leaf(4) node": 8,
+        "traversal accounting": "both semantic visits charged under the same schedule"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "equal traversal charge for separate vs shared representation (the host report does not expose the fold phase charge separately)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "separate occurrences",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry fold(branch(leaf(4), leaf(4)));\n}\n",
+            "expect": 8
+          },
+          {
+            "kind": "value",
+            "label": "shared binding",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fold(t: Tree): UInt { match t { leaf(x) => x, branch(l, r) => fold(l) + fold(r) } }\n  entry (let s = leaf(4) in fold(branch(s, s)));\n}\n",
+            "expect": 8
+          }
+        ]
+      }
+    },
+    {
+      "name": "October 19 refinement: nominal structural equality typing (UIREQ-009 / UIREQ-006)",
+      "specLine": 273,
+      "when": "both Eq operands individually typecheck.",
+      "then": "body typing SHALL produce Bool whether or not their canonical types agree; an illtyped operand SHALL retain its error.",
+      "status": "runnable",
+      "coverage": "full",
+      "unasserted": [],
+      "expected": {
+        "unlike operands": "Bool typing completes",
+        "illtyped operand": "typed error retained"
+      },
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "typed-completed",
+            "engine": "nominal",
+            "label": "Eq of unlike canonical types types as Bool",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn f(s: Schedule): Bool { s == 1 }\n  entry f(construct Schedule::Done());\n}\n",
+            "expect_kind": "Halted"
+          },
+          {
+            "kind": "failure",
+            "engine": "nominal",
+            "label": "illtyped Eq operand retains its error",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn f(s: Schedule): Bool { s == (true + 1) }\n  entry f(construct Schedule::Done());\n}\n",
+            "expect_stage": "body-type",
+            "expect_error_kind": "Expected"
+          }
+        ]
+      }
+    }
+  ]
+}

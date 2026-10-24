@@ -1,0 +1,41 @@
+{
+  "id": "uireq-010",
+  "suite": "uireq",
+  "uireq": "UIREQ-010",
+  "title": "Explicit pending return",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 70,
+    "anchor": "### Requirement: UIREQ-010 Explicit pending return"
+  },
+  "requirement": "WHEN a non-tail call is entered, the interpreter SHALL retain its pending caller computation in explicit frames.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Factorial multiplication",
+      "specLine": 73,
+      "when": "factorial(3) enters factorial(2).",
+      "then": "The pending multiplication by 3 remains represented until the callee returns.",
+      "status": "runnable",
+      "expected": {
+        "result": 6,
+        "pending caller computation": "at least three simultaneously pending frames at the deepest point of factorial(3), none at Halted"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "identity of the specific pending multiplication-by-3 frame (frame contents are not decoded)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "depth-sweep",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+            "expect": 6,
+            "min_depth": 3
+          }
+        ]
+      }
+    }
+  ]
+}

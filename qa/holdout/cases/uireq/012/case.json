@@ -1,0 +1,49 @@
+{
+  "id": "uireq-012",
+  "suite": "uireq",
+  "uireq": "UIREQ-012",
+  "title": "Explicit bounded outcome",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 84,
+    "anchor": "### Requirement: UIREQ-012 Explicit bounded outcome"
+  },
+  "requirement": "WHEN a declared execution profile cannot perform its next transition within its runtime bounds, the interpreter SHALL publish the bound outcome defined by that profile.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Finite recursive attempt",
+      "specLine": 87,
+      "when": "An otherwise valid recursive run reaches its fuel limit after making progress.",
+      "then": "The result is Exhausted(Fuel), with consumed work reported separately from an application return. Under sherlock-k-a/1 a frame push at capacity remains Rejected(error4); Candidate B new node/environment/helper-scratch/serialization capacity outcomes are named Exhausted(capacityKind). AdmissionRejected and tooling Unsupported remain outside the application outcome schema; their domain/refinement premises are pending.",
+      "status": "runnable",
+      "expected": {
+        "outcome": "Exhausted(Fuel)",
+        "consumed work": "reported (equals the fuel limit) and separate from any application return"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "sherlock-k-a/1 frame-push-at-capacity Rejected(error4) (profile not selectable through the CLI)",
+        "capacityKind exhaustion names"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "outcome",
+            "label": "fuel exhaustion after progress",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(4);\n}\n",
+            "fuel": 64,
+            "expect_kind": "Exhausted",
+            "expect_detail": {
+              "reason": "Fuel"
+            },
+            "consumed_work_equals_fuel": true,
+            "no_result": true,
+            "progress": true
+          }
+        ]
+      }
+    }
+  ]
+}

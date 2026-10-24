@@ -1,0 +1,39 @@
+{
+  "id": "uireq-003",
+  "suite": "uireq",
+  "uireq": "UIREQ-003",
+  "title": "Lexical call scope",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 21,
+    "anchor": "### Requirement: UIREQ-003 Lexical call scope"
+  },
+  "requirement": "WHEN a named call enters its body, the interpreter SHALL evaluate it under the declared parameter bindings and global function table.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Caller-local preservation",
+      "specLine": 24,
+      "when": "An outer let binds x=7 while a called function binds its own x=2 and returns 2.",
+      "then": "The caller still reads x=7 after return.",
+      "status": "runnable",
+      "expected": {
+        "result": 9,
+        "meaning": "f(2) returns 2 from its own x; caller x remains 7, so 2 + 7"
+      },
+      "coverage": "full",
+      "unasserted": [],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "caller-local x preserved",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(x: UInt): UInt { x }\n  fn g(y: UInt): UInt { let x = 7 in f(2) + x }\n  entry g(0);\n}\n",
+            "expect": 9
+          }
+        ]
+      }
+    }
+  ]
+}

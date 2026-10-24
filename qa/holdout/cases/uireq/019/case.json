@@ -1,0 +1,30 @@
+{
+  "id": "uireq-019",
+  "suite": "uireq",
+  "uireq": "UIREQ-019",
+  "title": "Local segment failure outcome",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 133,
+    "anchor": "### Requirement: UIREQ-019 Local segment failure outcome"
+  },
+  "requirement": "WHEN a future financial segment fails locally, the adapter SHALL distinguish its discarded tentative delta from the retained committed prefix, consumed work and residual duties.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Second segment fails before commit",
+      "specLine": 136,
+      "when": "After the 68-reserve/10-liability prefix, a later local segment fails before its financial commit.",
+      "then": "The retained prefix still reports reserve 68 and liability 10, plus later consumed work; no global ledger rollback is inferred.",
+      "status": "unimplemented",
+      "expected": {
+        "retained prefix reserve": 68,
+        "retained prefix liability": 10,
+        "later consumed work": "reported",
+        "global ledger rollback": "not inferred"
+      },
+      "coverage": "none",
+      "blocker": "needs the future financial extension (segment-failure adapter reporting discarded delta vs retained prefix)"
+    }
+  ]
+}

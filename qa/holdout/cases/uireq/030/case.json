@@ -1,0 +1,65 @@
+{
+  "id": "uireq-030",
+  "suite": "uireq",
+  "uireq": "UIREQ-030",
+  "title": "Typed arithmetic component API",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 218,
+    "anchor": "### Requirement: UIREQ-030 Typed arithmetic component API"
+  },
+  "requirement": "WHEN arithmetic lowering selects a word layout, it SHALL expose named full-result components with the exact checked UInt128 semantic wrapper.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Carry, borrow and full product",
+      "specLine": 221,
+      "when": "b is 32 or 64 and checkedU128Add/Sub/Mul use little-endian limbs.",
+      "then": "addCarry_b(a,bv,carryIn) returns named {low,carryOut}, subBorrow_b(a,bv,borrowIn) returns {low,borrowOut}, and mulWide_b(a,bv) returns {low,high}; carry/borrow bits and multiply-accumulate whole-word carries have distinct types. The wrappers retain K mathematical-result/error10 meaning, including the full up-to-256-bit product before checked UInt128 selection. Independently specified normal results are (2^32−3)+8 = 2^32+5, (2^64+9)−7 = 2^64+2, and (2^48+1)·3 = 3·2^48+3; no layout or row-cost winner is selected.",
+      "status": "runnable",
+      "expected": {
+        "(2^32-3)+8": 4294967301,
+        "(2^64+9)-7": 18446744073709551618,
+        "(2^48+1)*3": 844424930131971,
+        "product beyond UInt128": "K error10"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "named component API addCarry_b / subBorrow_b / mulWide_b returning {low,carryOut}/{low,borrowOut}/{low,high} (not exposed through the CLI)",
+        "word-layout selection b=32|64"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "2^32-3 + 8",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry add(4294967293, 8);\n}\n",
+            "expect": 4294967301
+          },
+          {
+            "kind": "value",
+            "label": "2^64+9 - 7",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry sub(18446744073709551625, 7);\n}\n",
+            "expect": 18446744073709551618
+          },
+          {
+            "kind": "value",
+            "label": "(2^48+1)*3",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry mul(281474976710657, 3);\n}\n",
+            "expect": 844424930131971
+          },
+          {
+            "kind": "outcome",
+            "label": "full product above UInt128 is error10",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  fn sub(a: UInt, b: UInt): UInt { a - b }\n  fn mul(a: UInt, b: UInt): UInt { a * b }\n  fn lt(a: UInt, b: UInt): Bool { a < b }\n  entry mul(170141183460469231731687303715884105728, 2);\n}\n",
+            "expect_kind": "Rejected",
+            "expect_detail": {
+              "code": 10
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

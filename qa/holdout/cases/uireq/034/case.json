@@ -1,0 +1,51 @@
+{
+  "id": "uireq-034",
+  "suite": "uireq",
+  "uireq": "UIREQ-034",
+  "title": "Declaration-driven ordered matching",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 246,
+    "anchor": "### Requirement: UIREQ-034 Declaration-driven ordered matching"
+  },
+  "requirement": "WHEN the generic ADT extension elaborates an admitted closed nominal declaration group, it SHALL produce TypeDecl/CtorLayout/MatchPlan mappings preserving the first matching source arm.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "New recursive Schedule declaration",
+      "specLine": 249,
+      "when": "Schedule = Done | Pay(UInt128,Schedule) | Both(Schedule,Schedule) is matched by ordered arms Both(Pay(x,_),_)→x; Both(_,r)→sum(r); Pay(x,t)→x+sum(t); Done→0 on Both(Pay(4,Done),Pay(5,Done)).",
+      "then": "The selected arm is source arm one and the result is 4; a separate structural sum is 9. Nominal/constructor identity, source field order, binder occurrence paths and workMap are retained independently of compact tags or arena indices. Closed monomorphic mutually recursive groups are the initial extension; parameterized specialization needs its own finite bound, and closures/GADTs/or-patterns remain outside this adapter. Existing dedicated list/tree forms do not count as this extension's implementation.",
+      "status": "runnable",
+      "expected": {
+        "ordered match on Both(Pay(4,Done),Pay(5,Done))": 4,
+        "selected arm": "source arm one (arm two would give 5)",
+        "separate structural sum": 9
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "nominal/constructor identity, source field order and binder occurrence paths independent of compact tags",
+        "workMap retention"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "ordered arms select arm one",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: Schedule); Both(a_left: Schedule, b_right: Schedule); }\n  fn pick(s: Schedule): UInt {\n    match s {\n      Schedule::Both(Schedule::Pay(x, y), z) => x,\n      Schedule::Both(q, r) => total(r),\n      Schedule::Pay(x, t) => x + total(t),\n      Schedule::Done() => 0\n    }\n  }\n  fn total(s: Schedule): UInt {\n    match s {\n      Schedule::Done() => 0,\n      Schedule::Pay(x, t) => x + total(t),\n      Schedule::Both(l, r) => total(l) + total(r)\n    }\n  }\n  entry pick(construct Schedule::Both(construct Schedule::Pay(4, construct Schedule::Done()), construct Schedule::Pay(5, construct Schedule::Done())));\n}\n",
+            "expect": 4,
+            "engine": "nominal"
+          },
+          {
+            "kind": "value",
+            "label": "structural sum",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: Schedule); Both(a_left: Schedule, b_right: Schedule); }\n  fn pick(s: Schedule): UInt {\n    match s {\n      Schedule::Both(Schedule::Pay(x, y), z) => x,\n      Schedule::Both(q, r) => total(r),\n      Schedule::Pay(x, t) => x + total(t),\n      Schedule::Done() => 0\n    }\n  }\n  fn total(s: Schedule): UInt {\n    match s {\n      Schedule::Done() => 0,\n      Schedule::Pay(x, t) => x + total(t),\n      Schedule::Both(l, r) => total(l) + total(r)\n    }\n  }\n  entry total(construct Schedule::Both(construct Schedule::Pay(4, construct Schedule::Done()), construct Schedule::Pay(5, construct Schedule::Done())));\n}\n",
+            "expect": 9,
+            "engine": "nominal"
+          }
+        ]
+      }
+    }
+  ]
+}

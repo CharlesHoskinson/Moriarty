@@ -1,0 +1,74 @@
+{
+  "id": "uireq-002",
+  "suite": "uireq",
+  "uireq": "UIREQ-002",
+  "title": "Explicit supported profile",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 14,
+    "anchor": "### Requirement: UIREQ-002 Explicit supported profile"
+  },
+  "requirement": "WHEN a program is admitted, tooling SHALL report its exact supported grammar and versioned execution profile.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "First-order fragment",
+      "specLine": 17,
+      "when": "A program uses named calls, UInt128, Bool, constructor and match expressions.",
+      "then": "Its report names those constructs, numeric domains, schedule and code/data/frame/environment/serialization/helper-work bounds; closed-body and unique-function admission remain explicit implementation work, while higher-order closures/letrec remain extensions. AdmissionRejected and tooling Unsupported are distinguished from runtime outcomes.",
+      "status": "runnable",
+      "expected": {
+        "report names": [
+          "Call",
+          "Literal",
+          "Match",
+          "Binary.Cons",
+          "Binary.Eq",
+          "UInt128 domain",
+          "Bool domain",
+          "schedule",
+          "code/data/frame/environment/serialization/helper-work bounds"
+        ],
+        "failure classes": "admission failure reported outside the runtime outcome schema; runtime Rejected is a separate application outcome"
+      },
+      "coverage": "full",
+      "unasserted": [
+        "closed-body and unique-function admission (stated as remaining implementation work in the spec)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "supported-profile-report",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry sum(cons(fact(2),nil));\n}\n",
+            "expressions": [
+              "Call",
+              "Literal",
+              "Match",
+              "Binary.Cons",
+              "Binary.Eq",
+              "If"
+            ],
+            "bound_keys": [
+              "code_rows",
+              "data_nodes",
+              "frames",
+              "environment_cells",
+              "serialization_bytes"
+            ]
+          },
+          {
+            "kind": "distinct-failure-class",
+            "admission_source": {
+              "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(n: UInt): UInt { true }\n  entry f(1);\n}\n"
+            },
+            "runtime_source": {
+              "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn deep(n: UInt): UInt { if n == 0 { 0 } else { 1 + deep(n - 1) } }\n  entry deep(50);\n}\n",
+              "stack": 4
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

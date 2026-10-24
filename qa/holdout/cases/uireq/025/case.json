@@ -1,0 +1,40 @@
+{
+  "id": "uireq-025",
+  "suite": "uireq",
+  "uireq": "UIREQ-025",
+  "title": "Evidence-class report",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 179,
+    "anchor": "### Requirement: UIREQ-025 Evidence-class report"
+  },
+  "requirement": "WHEN an interpreter capability is reported, its evidence record SHALL identify predicate, source tree, profile, consumer, bounds, target and evidence class.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Pure models only",
+      "specLine": 182,
+      "when": "Unchanged Candidate A model observations accompany the new Candidate B design.",
+      "then": "The report identifies exactly the source-specific K frontend-only check and repaired scalar15 Quint tests/samples, then labels every new B helper/image/arithmetic/plan/residual/ADT acceptance scenario unexecuted. Old observations do not validate changed B semantics; compiler/circuit correspondence, native proof acceptance and ledger qualification remain open.",
+      "status": "runnable",
+      "expected": {
+        "report identifies": "source identity, profile, bounds, target and evidence class",
+        "evidence class": "host-only; native, target unrun; acceptance unestablished; no compiler/circuit correspondence, proof or ledger claim"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "predicate/source-tree/consumer fields of a model-observation evidence record",
+        "unexecuted labelling of Candidate B scenarios"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "evidence-class",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n"
+          }
+        ]
+      }
+    }
+  ]
+}

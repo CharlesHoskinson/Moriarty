@@ -1,0 +1,37 @@
+{
+  "id": "e1-replay-different-keys-domain",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "e-replayed-statement",
+  "title": "Replay the genuine proof under a different keys_id (scalar index 0)",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-flip-low-bit",
+    "index": 0,
+    "field": "keys_id",
+    "description": "genuine proof presented with a statement naming another relation-keys identity"
+  },
+  "seed": {
+    "status": "derived-from-requirements",
+    "note": "ZR10: 'replay across domains' must reject; verifier-level replay model: a valid proof re-presented under a different statement domain.",
+    "files": [
+      "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+      "docs/results/sherlock-native-source44-20261022/source/sherlock_link.rs#L77-L80"
+    ]
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L24 ZR10",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L29 ZR15"
+  ],
+  "rationale": "A proof must not authorize a statement for a different domain/keys identity.",
+  "unimplemented": null
+}

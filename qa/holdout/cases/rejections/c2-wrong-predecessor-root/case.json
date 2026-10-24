@@ -1,0 +1,37 @@
+{
+  "id": "c2-wrong-predecessor-root",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "c-wrong-predecessor-root-or-height",
+  "title": "Alter the predecessor root pre_root (scalar index 6)",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-flip-low-bit",
+    "index": 6,
+    "field": "pre_root",
+    "description": "lowest bit of pre_root flipped; all other scalars unchanged"
+  },
+  "seed": {
+    "status": "derived-from-requirements",
+    "note": "No Source45 case mutates pre_root; derived from the 16-field statement layout (FIELD_NAMES) and ZR03.",
+    "files": [
+      "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+      "docs/results/sherlock-native-source44-20261022/source/sherlock_link.rs#L77-L80"
+    ]
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L17 ZR03",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L24 ZR10"
+  ],
+  "rationale": "pre_root is a bound statement component; an unauthorized predecessor root must reject.",
+  "unimplemented": null
+}

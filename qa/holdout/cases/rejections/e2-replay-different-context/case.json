@@ -1,0 +1,37 @@
+{
+  "id": "e2-replay-different-context",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "e-replayed-statement",
+  "title": "Replay the genuine proof under a different A102 context (scalar index 1)",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-flip-low-bit",
+    "index": 1,
+    "field": "a102_ctx_lo",
+    "description": "genuine proof presented with a different A102 context lane"
+  },
+  "seed": {
+    "status": "derived-from-requirements",
+    "note": "ZR10 replay-across-domains, context lane variant.",
+    "files": [
+      "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+      "docs/results/sherlock-native-source44-20261022/source/sherlock_link.rs#L77-L80"
+    ]
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L24 ZR10",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L51 authoritative-context paragraph"
+  ],
+  "rationale": "Context lanes bind the proof to its context; replay under another context must reject.",
+  "unimplemented": null
+}

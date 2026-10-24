@@ -1,0 +1,43 @@
+{
+  "id": "d3-reordered-mid-post",
+  "suite": "rejections",
+  "scope": "local",
+  "category": "d-reordered-batch",
+  "title": "Swap mid_root and post_root (scalar indices 8 and 9)",
+  "expectedVerdict": "REJECT",
+  "verdictRule": "Reject means verifies=false with exit 0, or a typed decoder refusal with exit 1; exit 0 alone is not the oracle (source45 README).",
+  "target": {
+    "kind": "local-verifier",
+    "artifact": "Sherlock A102->A80 k20 parent proof (6,432 bytes)",
+    "entrypoint": "sherlock-verify-parent --vk FILE --proof FILE --instance FILE --srs14 FILE",
+    "interface": "raw/audits/2026-10-22/sherlock-source45/SOURCE-EXPECTATIONS.json (entrypoint, output)",
+    "implementationSource": "raw/audits/2026-10-22/sherlock-source45/source/recl9/src/sherlock_verify.rs"
+  },
+  "mutation": {
+    "artifact": "instance",
+    "op": "scalar-swap",
+    "indices": [
+      8,
+      9
+    ],
+    "fields": [
+      "mid_root",
+      "post_root"
+    ],
+    "description": "intermediate and final roots exchanged"
+  },
+  "seed": {
+    "status": "derived-from-requirements",
+    "note": "Derived from ZR08/MNR01 ordering requirements and the ordered trace commitment trace_c.",
+    "files": [
+      "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+      "docs/results/sherlock-native-source44-20261022/source/sherlock_link.rs#L77-L80"
+    ]
+  },
+  "requirementRefs": [
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L22 ZR08",
+    "docs/MORIARTY-BACKEND-REQUIREMENTS.md#L81 MNR01"
+  ],
+  "rationale": "Swapping step outputs reorders the transitions and must reject.",
+  "unimplemented": null
+}

@@ -1,0 +1,57 @@
+{
+  "id": "uireq-004",
+  "suite": "uireq",
+  "uireq": "UIREQ-004",
+  "title": "Strict evaluation order",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 28,
+    "anchor": "### Requirement: UIREQ-004 Strict evaluation order"
+  },
+  "requirement": "WHEN an expression has multiple evaluated operands or fields, the interpreter SHALL evaluate them once each from left to right.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Nested arguments",
+      "specLine": 31,
+      "when": "add(double(2),increment(3)) executes.",
+      "then": "The trace finishes double(2) before starting increment(3), returning 8.",
+      "status": "runnable",
+      "expected": {
+        "result": 8,
+        "order": "left operand's first runtime failure is reported before the right operand is evaluated, and vice versa"
+      },
+      "coverage": "full",
+      "unasserted": [
+        "literal trace event order (the CLI does not retain events)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "add(double(2),increment(3))",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn double(n: UInt): UInt { n + n }\n  fn increment(n: UInt): UInt { n + 1 }\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  entry add(double(2), increment(3));\n}\n",
+            "expect": 8
+          },
+          {
+            "kind": "left-to-right",
+            "stack": 8,
+            "cases": [
+              {
+                "label": "left depth failure first",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn deep(n: UInt): UInt { if n == 0 { 0 } else { 1 + deep(n - 1) } }\n  fn under(a: UInt, b: UInt): UInt { a - b }\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  entry add(deep(100), under(0, 1));\n}\n",
+                "expect_code": 4
+              },
+              {
+                "label": "left underflow first",
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn deep(n: UInt): UInt { if n == 0 { 0 } else { 1 + deep(n - 1) } }\n  fn under(a: UInt, b: UInt): UInt { a - b }\n  fn add(a: UInt, b: UInt): UInt { a + b }\n  entry add(under(0, 1), deep(100));\n}\n",
+                "expect_code": 10
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

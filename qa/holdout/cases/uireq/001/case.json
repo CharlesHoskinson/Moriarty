@@ -1,0 +1,59 @@
+{
+  "id": "uireq-001",
+  "suite": "uireq",
+  "uireq": "UIREQ-001",
+  "title": "Fixed interpreter relation",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 7,
+    "anchor": "### Requirement: UIREQ-001 Fixed interpreter relation"
+  },
+  "requirement": "WHEN a supported program is supplied as input, the interpreter SHALL evaluate it using the same versioned transition rules used for other supported programs.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Two distinct programs",
+      "specLine": 10,
+      "when": "Factorial and list sum are loaded under the same interpreter configuration.",
+      "then": "Each uses the unchanged machine definition; only program/declaration/input data differ.",
+      "status": "runnable",
+      "expected": {
+        "factorial(3)": 6,
+        "list sum [2,5]": 7,
+        "machine definition": "identical supported profile, execution profile, configuration and run identity for both programs"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "textual identity of the transition-rule source (only profile/configuration identity is observable)"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "value",
+            "label": "factorial(3)",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n",
+            "expect": 6
+          },
+          {
+            "kind": "value",
+            "label": "list sum",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry sum(cons(2,cons(5,nil)));\n}\n",
+            "expect": 7
+          },
+          {
+            "kind": "same-machine",
+            "sources": [
+              {
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn fact(n: UInt): UInt { if n == 0 { 1 } else { n * fact(n - 1) } }\n  entry fact(3);\n}\n"
+              },
+              {
+                "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn sum(xs: List): UInt { match xs { nil => 0, cons(h,t) => h + sum(t) } }\n  entry sum(cons(2,cons(5,nil)));\n}\n"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

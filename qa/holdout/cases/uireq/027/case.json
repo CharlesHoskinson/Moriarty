@@ -1,0 +1,71 @@
+{
+  "id": "uireq-027",
+  "suite": "uireq",
+  "uireq": "UIREQ-027",
+  "title": "Indexed program-image provenance",
+  "source": {
+    "file": "openspec/changes/sherlock-universal-interpreter-design/specs/universal-interpreter/spec.md",
+    "line": 197,
+    "anchor": "### Requirement: UIREQ-027 Indexed program-image provenance"
+  },
+  "requirement": "WHEN preparation indexes a supported source program, it SHALL produce a ProgramImage preserving source membership, original function-table order and SourceOccurrenceId provenance.",
+  "expectedSource": "spec text only; no expectation was derived from implementation behavior",
+  "scenarios": [
+    {
+      "name": "Distinct occurrences and recursive references",
+      "specLine": 200,
+      "when": "Two source sites contain the same expression and a named function recursively calls itself.",
+      "then": "They retain distinct SourceOccurrenceId values while recursive calls remain function-table references; expanded implementation-step IDs map back to those sites. Ordered child/parameter slices and first-match lookup remain as in the source until a separately admitted unique-function profile applies; preparation neither evaluates the selected path nor unrolls recursion.",
+      "status": "runnable",
+      "expected": {
+        "identical source sites": "two textually identical f(n - 1) call sites keep distinct occurrence ids",
+        "recursion": "calls name the function-table entry (3 call sites: entry plus two) and are not unrolled (image size independent of entry argument)"
+      },
+      "coverage": "primary",
+      "unasserted": [
+        "expanded implementation-step ID to site mapping",
+        "ordered child/parameter slice layout"
+      ],
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "occurrences",
+            "source": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(n: UInt): UInt { if n == 0 { 0 } else { f(n - 1) + f(n - 1) } }\n  entry f(2);\n}\n",
+            "source_other_entry": "language \"moriarty-sherlock-draft/1\";\nprogram P {\n  fn f(n: UInt): UInt { if n == 0 { 0 } else { f(n - 1) + f(n - 1) } }\n  entry f(9);\n}\n",
+            "function": "f",
+            "expect_calls_to_function": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "October 19 refinement: every declaration and repeated parameter (UIREQ-027)",
+      "specLine": 277,
+      "when": "body typing visits declarations, including unused and later same-named declarations.",
+      "then": "a repeated parameter SHALL fail at its second binder, consistent with owner V4.",
+      "status": "runnable",
+      "coverage": "full",
+      "unasserted": [
+        "unused/later same-named declarations; first-match signature lookup vs owner V3"
+      ],
+      "expected": {
+        "repeated parameter": "DuplicateParameter at index 1 name s"
+      },
+      "exec": {
+        "entrypoint": "mori simulate --execution-profile sherlock-helper-microstep/1 --entry (non-native build)",
+        "checks": [
+          {
+            "kind": "failure",
+            "engine": "nominal",
+            "label": "repeated parameter fails at second binder",
+            "source": "language \"moriarty-sherlock-nominal/1\";\nprogram P {\n  type Schedule { Done; Pay(a_amount: UInt, b_next: UInt); }\n  fn pick(s: Schedule, s: UInt): UInt { 0 }\n  entry pick(construct Schedule::Done(), 1);\n}\n",
+            "expect_stage": "body-type",
+            "expect_error_kind": "DuplicateParameter",
+            "expect_name": "s"
+          }
+        ]
+      }
+    }
+  ]
+}
